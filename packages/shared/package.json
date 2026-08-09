@@ -1,0 +1,12 @@
+{
+  "name": "@ecopac/shared",
+  "private": true,
+  "version": "0.1.0",
+  "main": "index.js",
+  "scripts": {
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.112.2"
+  }
+}

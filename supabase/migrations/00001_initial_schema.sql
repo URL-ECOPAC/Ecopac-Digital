@@ -1,0 +1,9 @@
+-- Ecopac Digital - Esquema de base de datos (versionado)
+-- Este es el punto de partida del esquema. La migracion inicial se agrega aqui cuando se
+-- disene, siguiendo estas convenciones:
+--   - Una migracion por archivo, nombradas con prefijo numerico: 00001_, 00002_, ...
+--   - Tablas y columnas en snake_case.
+--   - RLS habilitado en todas las tablas: la base de datos es la ultima linea de defensa.
+--   - Nunca se suben datos reales de pacientes (regla de confidencialidad).
+--
+-- Referencia: docs/Ecopac_Digital_Plan_de_Trabajo.md (epica 0, esquema inicial).

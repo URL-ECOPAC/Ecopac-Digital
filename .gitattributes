@@ -1,0 +1,16 @@
+# Normaliza los saltos de línea: todo se guarda como LF en el repositorio.
+# Git lo convierte a CRLF automáticamente al hacer checkout en Windows si el
+# usuario tiene core.autocrlf configurado, pero en el repo siempre queda LF.
+* text=auto eol=lf
+
+# Binarios: nunca se tocan, y evita que Git intente calcular diffs de texto sobre ellos.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.ico binary
+*.svg binary
+*.pdf binary
+*.ttf binary
+*.otf binary
+*.woff binary
+*.woff2 binary

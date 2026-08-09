@@ -1,0 +1,47 @@
+# Entorno de desarrollo local con Docker.
+# Levanta la aplicacion web con hot reload. No reemplaza a Supabase en la nube.
+#
+# Uso:
+#   docker compose up --build                  -> web en http://localhost:5173
+#   docker compose --profile db-local up       -> agrega un Postgres local (opcional)
+#
+# Para produccion usa docker-compose.prod.yml:
+#   docker compose -f docker-compose.prod.yml up --build -d
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      target: development
+    container_name: ecopac-web
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./apps/web:/app/apps/web
+      - ./packages:/app/packages
+      - /app/node_modules
+    env_file:
+      - path: .env.development
+        required: false
+    command: npm run dev:web
+
+  # Postgres local opcional para probar el esquema sin depender de internet.
+  # Para trabajar contra Supabase real, usa el CLI oficial: supabase start
+  db-local:
+    image: postgres:16-alpine
+    container_name: ecopac-db-local
+    environment:
+      POSTGRES_USER: ecopac
+      POSTGRES_PASSWORD: ecopac_dev_local
+      POSTGRES_DB: ecopac_local
+    ports:
+      - "5432:5432"
+    volumes:
+      - db-local-data:/var/lib/postgresql/data
+      - ./supabase/migrations:/docker-entrypoint-initdb.d
+    profiles:
+      - db-local
+
+volumes:
+  db-local-data:

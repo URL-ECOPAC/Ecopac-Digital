@@ -1,0 +1,81 @@
+name: CI Backend (Supabase)
+
+# Valida en cada PR que las migraciones de base de datos y las Edge Functions
+# de Supabase sean correctas, sin tocar los ambientes remotos (dev/prod).
+# Usa el stack local de Supabase (Docker) con supabase/config.toml.
+#
+# Mientras el secret SUPABASE_ACCESS_TOKEN no este configurado (Settings >
+# Secrets and variables > Actions), los pasos se omiten y el workflow termina
+# en verde (no falla), igual que supabase-migrations.yml.
+
+on:
+  pull_request:
+    branches: [develop, main]
+    paths:
+      - "supabase/**"
+      - ".github/workflows/backend-ci.yml"
+  push:
+    branches: [develop, main]
+    paths:
+      - "supabase/**"
+      - ".github/workflows/backend-ci.yml"
+
+jobs:
+  validate:
+    name: Validar migraciones y funciones
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+    steps:
+      - name: Descargar el codigo
+        uses: actions/checkout@v4
+
+      - name: Verificar configuracion de Supabase
+        id: check
+        run: |
+          if [ -n "$SUPABASE_ACCESS_TOKEN" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "El secret SUPABASE_ACCESS_TOKEN no esta configurado; se omite la validacion de Supabase."
+            echo "Configuralo en: Settings > Secrets and variables > Actions"
+          fi
+
+      - name: Instalar Supabase CLI
+        if: steps.check.outputs.ready == 'true'
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Iniciar stack local de Supabase
+        if: steps.check.outputs.ready == 'true'
+        # Se excluyen servicios pesados que no participan en la validacion
+        # de migraciones (studio, logflare, edge-runtime, etc.) para
+        # acelerar el CI. El esquema auth/storage sigue presente en la
+        # imagen de Postgres, asi que las migraciones se validan igual.
+        run: |
+          supabase start -x studio,mailpit,edge-runtime,logflare,vector,supavisor,imgproxy,postgres-meta
+
+      - name: Aplicar migraciones desde cero
+        # Recrea la base de datos local y aplica supabase/migrations/*.sql
+        # en orden. Falla si una migracion tiene errores SQL.
+        if: steps.check.outputs.ready == 'true'
+        run: supabase db reset
+
+      - name: Lint de la base de datos
+        # plpgsql_check: detecta errores de PL/pgSQL y esquema.
+        # Falla si hay warnings o errores para mantener la calidad.
+        if: steps.check.outputs.ready == 'true'
+        run: supabase db lint --local --fail-on warning
+
+      - name: Lint de Edge Functions
+        if: steps.check.outputs.ready == 'true'
+        # Solo hay funciones cuando exista supabase/functions/<nombre>/
+        run: |
+          if ls supabase/functions/*/index.* >/dev/null 2>&1; then
+            supabase functions lint
+          else
+            echo "No hay Edge Functions todavia; se omite el lint."
+          fi

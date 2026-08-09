@@ -1,0 +1,9 @@
+{
+  "name": "@ecopac/ui-tokens",
+  "private": true,
+  "version": "0.1.0",
+  "main": "index.js",
+  "scripts": {
+    "lint": "eslint ."
+  }
+}
