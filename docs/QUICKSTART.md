@@ -87,6 +87,9 @@ npm run docker:prod
 
 Compila la web y la sirve con nginx en http://localhost:80.
 
+Nota: dev y prod usan project names distintos (`ecopac-dev` / `ecopac-prod`), asi que pueden
+correr al mismo tiempo sin reemplazar sus contenedores.
+
 ## Comandos utiles
 
 ```bash
@@ -138,6 +141,10 @@ Detalles en [CONTRIBUTING.md](./CONTRIBUTING.md).
   `packages/shared` exista.
 - Docker no levanta la web -> verificar que el puerto 5173 este libre y que `.env.development`
   exista (aunque sea con valores vacios).
+- Agregue una dependencia y el container sigue usando la vieja -> el `node_modules` vive dentro
+  de la imagen (no se monta desde el host), asi que despues de tocar `package.json` hay que
+  rebuildar: `npm run docker:dev`. Si quedo un volumen anonimo de una configuracion anterior:
+  `docker compose down -v` y levante de nuevo.
 - Expo no abre -> reiniciar con `npm run dev:mobile` y luego `npm run dev:mobile -- --clear`.
 - Las variables de entorno no cargan -> reiniciar el servidor despues de editar
   `.env.development`.

@@ -11,17 +11,16 @@
 FROM node:22-alpine AS base
 WORKDIR /app
 
-# Copia .npmrc para que npm ci use la misma configuracion que en local
-# (legacy-peer-deps=true) y los package.json de todos los workspaces para
-# que "npm ci" instale el grafo completo.
-COPY .npmrc ./
+# Se instala SOLO el workspace web (sin Expo/mobile, que no se usa aqui).
+# No se copia el .npmrc del repo porque su legacy-peer-deps=true (necesario
+# para Expo en local) hace que npm anide "react" bajo apps/web/node_modules
+# en vez de hoistearlo, y rompe el build de produccion.
 COPY package.json package-lock.json ./
 COPY apps/web/package.json apps/web/package.json
-COPY apps/mobile/package.json apps/mobile/package.json
 COPY packages/shared/package.json packages/shared/package.json
 COPY packages/ui-tokens/package.json packages/ui-tokens/package.json
 
-RUN npm ci
+RUN npm ci --workspace=apps/web
 
 # ---------- Development ----------
 FROM base AS development
@@ -31,6 +30,10 @@ CMD ["npm", "run", "dev:web"]
 
 # ---------- Build ----------
 FROM base AS build
+# Vite inyecta estas variables en el bundle en tiempo de build. En desarrollo
+# se pasan en runtime; en produccion se pasan como build-args desde compose.
+ARG VITE_SUPABASE_URL
+ARG VITE_SUPABASE_ANON_KEY
 COPY . .
 RUN npm run build --workspace=apps/web
 

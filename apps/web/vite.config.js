@@ -18,5 +18,9 @@ export default defineConfig({
       "@ecopac/shared": path.resolve(__dirname, "../../packages/shared/index.js"),
       "@ecopac/ui-tokens": path.resolve(__dirname, "../../packages/ui-tokens/index.js"),
     },
+    // El monorepo tiene react en dos versiones (web 19.2.8 y mobile 19.2.3,
+    // fijada por Expo). Dedupe garantiza que Vite use una sola copia de
+    // react/react-dom al compilar la web, evitando el "duplicate React".
+    dedupe: ["react", "react-dom"],
   },
 });

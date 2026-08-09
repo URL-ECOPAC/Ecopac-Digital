@@ -7,6 +7,11 @@
 #
 # Para produccion usa docker-compose.prod.yml:
 #   docker compose -f docker-compose.prod.yml up --build -d
+#
+# El project name es distinto al de produccion (ecopac-prod) para que ambos
+# entornos puedan correr al mismo tiempo sin reemplazar sus contenedores.
+
+name: ecopac-dev
 
 services:
   web:
@@ -18,13 +23,18 @@ services:
     ports:
       - "5173:5173"
     volumes:
-      - ./apps/web:/app/apps/web
+      # Se monta SOLO el codigo fuente del host (hot reload). El node_modules
+      # queda exclusivamente dentro de la imagen: asi el node_modules del host
+      # (Windows/macOS) no tapa el de Linux ni quedan volumenes desactualizados
+      # al cambiar dependencias (basta con rebuildar la imagen).
+      - ./apps/web/src:/app/apps/web/src
+      - ./apps/web/public:/app/apps/web/public
+      - ./apps/web/index.html:/app/apps/web/index.html
+      - ./apps/web/vite.config.js:/app/apps/web/vite.config.js
       - ./packages:/app/packages
-      - /app/node_modules
     env_file:
       - path: .env.development
         required: false
-    command: npm run dev:web
 
   # Postgres local opcional para probar el esquema sin depender de internet.
   # Para trabajar contra Supabase real, usa el CLI oficial: supabase start
