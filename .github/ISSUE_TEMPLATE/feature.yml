@@ -1,0 +1,95 @@
+name: Requerimiento Funcional
+description: Proponer una nueva funcionalidad o mejora del sistema
+title: "[RF] "
+labels: ["type:feature"]
+body:
+  - type: markdown
+    attributes:
+      value: Usa esta plantilla para funcionalidades nuevas. Si es una tarea tecnica, usa la plantilla de Tarea Tecnica.
+
+  - type: textarea
+    id: descripcion
+    attributes:
+      label: Descripcion de la funcionalidad
+      description: Que hace la funcionalidad? Cual es el problema que resuelve?
+      placeholder: "Permite buscar pacientes por comunidad para atenderlos mas rapido"
+    validations:
+      required: true
+
+  - type: textarea
+    id: criterios
+    attributes:
+      label: Criterios de aceptacion
+      description: Condiciones que deben cumplirse para considerar la funcionalidad terminada.
+      placeholder: |
+        - [ ] Criterio 1
+        - [ ] Criterio 2
+        - [ ] Criterio 3
+    validations:
+      required: true
+
+  - type: input
+    id: rf_relacionado
+    attributes:
+      label: Requerimiento funcional relacionado
+      description: Identificador del RF.
+      placeholder: "RF-14"
+    validations:
+      required: false
+
+  - type: dropdown
+    id: modulo
+    attributes:
+      label: Modulo
+      description: Modulo al que pertenece la funcionalidad.
+      options:
+        - module:usuarios
+        - module:pacientes
+        - module:inventario
+        - module:jornadas
+        - module:donaciones
+        - module:reportes
+        - module:infra
+    validations:
+      required: true
+
+  - type: dropdown
+    id: plataforma
+    attributes:
+      label: Plataforma
+      description: Donde se implementa la funcionalidad.
+      options:
+        - platform:web
+        - platform:mobile
+        - platform:shared
+    validations:
+      required: true
+
+  - type: dropdown
+    id: prioridad
+    attributes:
+      label: Prioridad
+      description: Importancia de la funcionalidad para el proximo sprint.
+      options:
+        - priority:alta
+        - priority:media
+        - priority:baja
+    validations:
+      required: true
+
+  - type: textarea
+    id: diseno
+    attributes:
+      label: Diseno
+      description: Enlace o descripcion del prototipo en Figma.
+      placeholder: "Ver wireframe en Figma: enlace"
+    validations:
+      required: false
+
+  - type: textarea
+    id: notas
+    attributes:
+      label: Notas tecnicas
+      description: "Detalles relevantes: dependencias con otros issues, tablas involucradas, etc."
+    validations:
+      required: false

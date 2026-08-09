@@ -1,0 +1,32 @@
+# Entorno de produccion con Docker.
+# Compila la web y la sirve con nginx. Ajusta el puerto y las variables de entorno
+# segun tu despliegue.
+#
+# Uso:
+#   cp .env.example .env.production
+#   # llena las variables reales en .env.production (VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY)
+#   npm run docker:prod
+#   # o directamente: docker compose --env-file .env.production -f docker-compose.prod.yml up --build -d
+#
+# --env-file hace que las variables VITE_* de .env.production se inyecten como
+# build-args (Vite las embebe en el bundle en tiempo de build).
+# La app queda en http://localhost:80
+#
+# El project name es distinto al de desarrollo (ecopac-dev) para que ambos
+# entornos puedan correr al mismo tiempo sin reemplazar sus contenedores.
+
+name: ecopac-prod
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      target: production
+      args:
+        VITE_SUPABASE_URL: ${VITE_SUPABASE_URL:-}
+        VITE_SUPABASE_ANON_KEY: ${VITE_SUPABASE_ANON_KEY:-}
+    container_name: ecopac-web-prod
+    ports:
+      - "80:80"
+    restart: unless-stopped

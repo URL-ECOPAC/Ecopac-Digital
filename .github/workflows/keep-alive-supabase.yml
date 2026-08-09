@@ -1,0 +1,37 @@
+name: Mantener Supabase activo
+
+# El plan gratuito de Supabase pausa el proyecto tras 7 dias sin actividad.
+# Esta tarea hace una consulta minima cada 3 dias para evitar la pausa.
+# Mientras los secrets no esten configurados, el paso se omite y el workflow
+# termina en verde (no falla).
+#
+# Configurar los secrets en: Settings > Secrets and variables > Actions del repositorio.
+#   - SUPABASE_URL_DEV        (URL del proyecto ecopac-dev)
+#   - SUPABASE_ANON_KEY_DEV   (anon key publica del proyecto ecopac-dev)
+
+on:
+  schedule:
+    - cron: "0 12 */3 * *" # cada 3 dias, 12:00 UTC
+  workflow_dispatch: # tambien se puede correr manualmente
+
+jobs:
+  ping:
+    name: Ping a la base de datos
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_URL_DEV: ${{ secrets.SUPABASE_URL_DEV }}
+      SUPABASE_ANON_KEY_DEV: ${{ secrets.SUPABASE_ANON_KEY_DEV }}
+
+    steps:
+      - name: Verificar secrets configurados
+        if: env.SUPABASE_URL_DEV == '' || env.SUPABASE_ANON_KEY_DEV == ''
+        run: |
+          echo "Los secrets de Supabase no estan configurados; se omite el ping."
+          echo "Configuralos en: Settings > Secrets and variables > Actions"
+
+      - name: Consulta minima a Supabase
+        if: env.SUPABASE_URL_DEV != '' && env.SUPABASE_ANON_KEY_DEV != ''
+        run: |
+          curl -s -X GET "$SUPABASE_URL_DEV/rest/v1/?select=1" \
+            -H "apikey: $SUPABASE_ANON_KEY_DEV" \
+            -H "Authorization: Bearer $SUPABASE_ANON_KEY_DEV"

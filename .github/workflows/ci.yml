@@ -1,0 +1,41 @@
+name: CI
+
+# Corre en cada Pull Request hacia develop o main, y en cada push a esas ramas.
+on:
+  pull_request:
+    branches: [develop, main]
+  push:
+    branches: [develop, main]
+
+jobs:
+  lint-and-build:
+    name: Lint y build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Descargar el código
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Ejecutar lint en todos los workspaces
+        run: npm run lint
+
+      - name: Construir la aplicación web
+        run: npm run build --workspace=apps/web
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL_DEV }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY_DEV }}
+
+      # La app móvil no se "compila" en cada PR (eso lo hace Expo/EAS por separado),
+      # pero el lint de arriba ya la cubre porque apps/mobile tiene su propio script.
+      # Si en el futuro se agrega type-check, se puede habilitar aquí:
+      # - name: Verificar la aplicación móvil
+      #   run: npx tsc --noEmit
