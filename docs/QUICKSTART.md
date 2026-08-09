@@ -15,8 +15,21 @@ Para el flujo completo de contribucion, ver [CONTRIBUTING.md](./CONTRIBUTING.md)
 cp .env.example .env.development
 ```
 
-Edita `.env.development` con los valores de Supabase (pidelos al PM). Si aun no tienes
-Supabase configurado, el esqueleto corre igualmente con valores vacios.
+Llena `.env.development` con los valores de tu proyecto Supabase. Todo se encuentra en el
+dashboard: **Project Settings (engranaje) > API**. Ahí estan la "Project URL" y las "Project
+API keys".
+
+| Variable                        | Valor a pegar                      | Donde encontrarlo                         |
+| ------------------------------- | ---------------------------------- | ----------------------------------------- |
+| `VITE_SUPABASE_URL`             | Project URL                        | Project Settings > API > Project URL      |
+| `VITE_SUPABASE_ANON_KEY`        | Llave "anon/public" (JWT `eyJ...`) | Project Settings > API > Project API keys |
+| `EXPO_PUBLIC_SUPABASE_URL`      | Misma Project URL                  | Idem                                      |
+| `EXPO_PUBLIC_SUPABASE_ANON_KEY` | Misma llave anon/public            | Idem                                      |
+
+La llave anon/public es publica por diseno (puede viajar en el bundle del cliente). La llave
+`service_role` JAMAS va en el frontend ni en los `.env`. Quien cree el proyecto comparte estos
+2 valores (URL + llave anon/public) con el resto del equipo. Si aun no hay Supabase
+configurado, el esqueleto corre igualmente con valores vacios.
 
 ## Secrets de GitHub Actions (CI/CD)
 
@@ -25,20 +38,30 @@ del repositorio en GitHub. No van en ningun archivo del repo (solo `.env.example
 vacios). Mientras no esten configurados, los workflows de Supabase se omiten y terminan en
 verde, sin errores.
 
-| Secret                       | Para que se usa               | De donde sale                                                           |
-| ---------------------------- | ----------------------------- | ----------------------------------------------------------------------- |
-| `VITE_SUPABASE_URL_DEV`      | Build de la web (CI)          | Proyecto Supabase `ecopac-dev`                                          |
-| `VITE_SUPABASE_ANON_KEY_DEV` | Build de la web (CI)          | Proyecto Supabase `ecopac-dev`                                          |
-| `SUPABASE_URL_DEV`           | Keep-alive de Supabase        | Proyecto Supabase `ecopac-dev`                                          |
-| `SUPABASE_ANON_KEY_DEV`      | Keep-alive de Supabase        | Proyecto Supabase `ecopac-dev`                                          |
-| `SUPABASE_ACCESS_TOKEN`      | CLI de Supabase (migraciones) | Panel de Supabase, Account > Access tokens                              |
-| `SUPABASE_DB_PASSWORD`       | CLI de Supabase (migraciones) | Password de la base del proyecto                                        |
-| `SUPABASE_PROJECT_REF_DEV`   | Migraciones en `develop`      | Project ref de `ecopac-dev` (parte de la URL del proyecto)              |
-| `SUPABASE_PROJECT_REF_PROD`  | Migraciones en `main`         | Project ref de `ecopac-prod` (se configura al final, antes de entregar) |
+| Secret                       | Para que se usa               | De donde sale / donde encontrarlo                                                                           |
+| ---------------------------- | ----------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `VITE_SUPABASE_URL_DEV`      | Build de la web (CI)          | Project URL de `ecopac-dev`: Project Settings > API > Project URL                                           |
+| `VITE_SUPABASE_ANON_KEY_DEV` | Build de la web (CI)          | Llave "anon/public" de `ecopac-dev`: Project Settings > API > Project API keys                              |
+| `SUPABASE_URL_DEV`           | Keep-alive de Supabase        | Misma Project URL (idem)                                                                                    |
+| `SUPABASE_ANON_KEY_DEV`      | Keep-alive de Supabase        | Misma llave anon/public (idem)                                                                              |
+| `SUPABASE_ACCESS_TOKEN`      | CLI de Supabase (migraciones) | Avatar (arriba a la derecha) > Account > Access tokens > Generate new token                                 |
+| `SUPABASE_DB_PASSWORD`       | CLI de Supabase (migraciones) | Password definido al crear el proyecto; si se pierde, Project Settings > Database > Reset database password |
+| `SUPABASE_PROJECT_REF_DEV`   | Migraciones en `develop`      | El `<ref>` de la URL `https://<ref>.supabase.co` (Project Settings > API > Project URL)                     |
+| `SUPABASE_PROJECT_REF_PROD`  | Migraciones en `main`         | Idem, del proyecto `ecopac-prod` (se configura al final, antes de entregar)                                 |
 
 Recomendacion: crear el proyecto `ecopac-dev` al inicio del Sprint 0 y configurar los secrets
 de desarrollo. El proyecto de produccion (`ecopac-prod`) se crea cerca de la entrega final
 (el plan gratuito de Supabase solo permite 2 proyectos).
+
+### Acceso del equipo a Supabase
+
+- Para usar la app (web/mobile): basta con tener la URL + la llave anon/public en el `.env`;
+  no se necesita acceso al dashboard.
+- Para tareas de base de datos (migraciones, ver/crear tablas, `supabase db push`,
+  `supabase start`) si se necesita ser miembro del proyecto: desde el dashboard,
+  **Settings > Organization > Team** y agrega a la persona (o usa "Invite team members").
+- El password de la base y el access token solo los necesita quien administra el esquema/CI,
+  no el equipo que solo desarrolla la app.
 
 ## Ejecutar la web con Docker (recomendado)
 
