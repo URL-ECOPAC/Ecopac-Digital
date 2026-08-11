@@ -103,6 +103,7 @@ Una rama por issue, PRs hacia `develop` con "Closes #X", merge con squash.
 | [docs/QUICKSTART.md](./docs/QUICKSTART.md)                                         | Guia de inicio rapido                              |
 | [docs/CONTRIBUTING.md](./docs/CONTRIBUTING.md)                                     | Guia de contribucion (ramas, commits, PRs, issues) |
 | [AGENTS.md](./AGENTS.md)                                                           | Contexto del repositorio para asistentes de IA     |
+| [SUPABASE.md](./SUPABASE.md)         | Como funciona Supabase: nube vs local, y el flujo de migraciones        |
 
 ## Links utiles
 
