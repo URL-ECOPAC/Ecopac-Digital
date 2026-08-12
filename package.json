@@ -9,6 +9,7 @@
     "dev": "npm run dev:web",
     "dev:web": "npm run dev --workspace=apps/web -- --host",
     "dev:mobile": "npm run start --workspace=apps/mobile",
+    "dev:mobilet": "npm run start --workspace=apps/mobile -- --tunnel",
     "lint": "npm run lint --workspaces --if-present",
     "build": "npm run build --workspaces --if-present",
     "docker:dev": "docker compose up --build",
