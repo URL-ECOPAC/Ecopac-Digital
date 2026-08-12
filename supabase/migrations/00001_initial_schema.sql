@@ -6,4 +6,3 @@
 --   - RLS habilitado en todas las tablas: la base de datos es la ultima linea de defensa.
 --   - Nunca se suben datos reales de pacientes (regla de confidencialidad).
 --
--- Referencia: docs/Ecopac_Digital_Plan_de_Trabajo.md (epica 0, esquema inicial).
