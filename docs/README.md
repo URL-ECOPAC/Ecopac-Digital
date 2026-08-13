@@ -13,12 +13,12 @@ configuracion de GitHub (plantillas de issues, PR y los workflows de CI/CD) esta
 
 ## Dependencias y Herramientas
 
-| Documento                                    | Para que sirve                                                            |
-| -------------------------------------------- | ------------------------------------------------------------------------- |
-| [DEPENDENCIES.md](./DEPENDENCIES.md)         | Estrategia de versionado de paquetes, cuando actualizar y por que         |
-
+| Documento                            | Para que sirve                                                    |
+| ------------------------------------ | ----------------------------------------------------------------- |
+| [DEPENDENCIES.md](./DEPENDENCIES.md) | Estrategia de versionado de paquetes, cuando actualizar y por que |
 
 ## Contexto para asistentes de IA
+
 - [AGENTS.md](../AGENTS.md) - contexto del repositorio para opencode, GitHub Copilot,
   Claude Code, Cursor, etc.
 

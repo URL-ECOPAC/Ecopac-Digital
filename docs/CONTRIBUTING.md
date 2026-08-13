@@ -69,7 +69,7 @@ Reglas:
 3. Abrir un Pull Request hacia `develop`, con la plantilla
    (`.github/pull_request_template.md`) y el issue enlazado con `Closes #X`.
 
-4. Mergear con "Squash and merge" para mantener el historial de `develop` limpio, lo hace el PM. 
+4. Mergear con "Squash and merge" para mantener el historial de `develop` limpio, lo hace el PM.
 
 5. La promocion de `develop` a `main` la hace el PM cuando el entregable este listo.
 

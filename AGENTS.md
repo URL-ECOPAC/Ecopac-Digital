@@ -19,7 +19,7 @@ apps/
   mobile/     Aplicacion React Native + Expo (operaciones en campo)
 packages/
   shared/     Logica de negocio compartida sin JSX (API, validaciones, tipos, hooks)
-  ui-tokens/  Diseno tokens: colores, tipografia, textos comunes
+  ui-tokens/  Diseño tokens: colores, tipografía y textos comunes
 supabase/
   migrations/ Esquema de base de datos versionado (SQL)
   functions/  Rutinas programadas (alertas de vencimiento)
