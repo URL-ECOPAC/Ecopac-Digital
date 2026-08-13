@@ -10,7 +10,7 @@ Estan en **dependencias transitivas profundas** de Expo/Metro:
 
 **No se pueden resolver sin romper Expo 57.** El equipo de Expo trabaja en actualizarlas.
 
-**Riesgo:** Muy bajo en desarrollo. En produccion, estas afectan el *build process*, no el
+**Riesgo:** Muy bajo en desarrollo. En produccion, estas afectan el _build process_, no el
 codigo ejecutable.
 
 ## Reglas de Versioning

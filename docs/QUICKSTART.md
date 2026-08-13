@@ -49,10 +49,6 @@ verde, sin errores.
 | `SUPABASE_PROJECT_REF_DEV`   | Migraciones en `develop`      | El `<ref>` de la URL `https://<ref>.supabase.co` (Project Settings > API > Project URL)                     |
 | `SUPABASE_PROJECT_REF_PROD`  | Migraciones en `main`         | Idem, del proyecto `ecopac-prod` (se configura al final, antes de entregar)                                 |
 
-Recomendacion: crear el proyecto `ecopac-dev` al inicio del Sprint 0 y configurar los secrets
-de desarrollo. El proyecto de produccion (`ecopac-prod`) se crea cerca de la entrega final
-(el plan gratuito de Supabase solo permite 2 proyectos).
-
 ### Acceso del equipo a Supabase
 
 - Para usar la app (web/mobile): basta con tener la URL + la llave anon/public en el `.env`;

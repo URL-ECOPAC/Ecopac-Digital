@@ -35,7 +35,7 @@ apps/
   mobile/     Aplicacion React Native + Expo (operaciones en campo)
 packages/
   shared/     Logica de negocio compartida sin JSX (API, validaciones, tipos, hooks)
-  ui-tokens/  Colores, tipografia y textos comunes
+  ui-tokens/  Diseño tokens: colores, tipografía y textos comunes
 supabase/
   migrations/ Esquema de base de datos versionado
   functions/  Rutinas programadas (alertas de vencimiento)
@@ -177,13 +177,13 @@ Una rama por issue, PRs hacia `develop` con "Closes #X", merge con squash.
 
 ## Documentacion
 
-| Documento                                                                          | Para que sirve                                     |
-| ---------------------------------------------------------------------------------- | -------------------------------------------------- |
-| [docs/README.md](./docs/README.md)                                                 | Indice de documentacion                            |
-| [docs/QUICKSTART.md](./docs/QUICKSTART.md)                                         | Guia de inicio rapido                              |
-| [docs/CONTRIBUTING.md](./docs/CONTRIBUTING.md)                                     | Guia de contribucion (ramas, commits, PRs, issues) |
-| [AGENTS.md](./AGENTS.md)                                                           | Contexto del repositorio para asistentes de IA     |
-| [SUPABASE.md](./SUPABASE.md)         | Como funciona Supabase: nube vs local, y el flujo de migraciones        |
+| Documento                                      | Para que sirve                                                   |
+| ---------------------------------------------- | ---------------------------------------------------------------- |
+| [docs/README.md](./docs/README.md)             | Indice de documentacion                                          |
+| [docs/QUICKSTART.md](./docs/QUICKSTART.md)     | Guia de inicio rapido                                            |
+| [docs/CONTRIBUTING.md](./docs/CONTRIBUTING.md) | Guia de contribucion (ramas, commits, PRs, issues)               |
+| [AGENTS.md](./AGENTS.md)                       | Contexto del repositorio para asistentes de IA                   |
+| [SUPABASE.md](./SUPABASE.md)                   | Como funciona Supabase: nube vs local, y el flujo de migraciones |
 
 ## Links utiles
 
