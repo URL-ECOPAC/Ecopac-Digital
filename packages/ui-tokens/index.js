@@ -51,9 +51,24 @@ export const typography = {
   },
 };
 
-// Textos comunes para no duplicar strings entre las dos apps.
-// export const labels = {
-//   medicamentoVencido: "",
-//   proximoAVencer: "",
-//   pendienteDeValidacion: "",
-// };
+/**
+ * Textos y etiquetas comunes compartidos entre web y móvil para evitar duplicación.
+ * Los estados de jornada coinciden exactamente con los enum de la base de datos.
+ */
+export const labels = {
+  medicamentoVencido: 'Medicamento vencido',
+  proximoAVencer: 'Próximo a vencer',
+  pendienteDeValidacion: 'Pendiente de validación',
+  jornadaPlanificada: 'Planificada',
+  jornadaEnCurso: 'En curso',
+  jornadaFinalizada: 'Finalizada',
+  sinResultados: 'No se encontraron resultados',
+  errorDeConexion: 'Error de conexión con el servidor',
+};
+
+export default {
+  colors,
+  spacing,
+  typography,
+  labels,
+};
