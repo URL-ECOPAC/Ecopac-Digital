@@ -18,22 +18,57 @@ export const colors = {
   textMuted: '#4B5563', // Texto secundario, descripciones y placeholders
 };
 
-// export const spacing = {
-//   xs: 0,
-//   sm: 0,
-//   md: 0,
-//   lg: 0,
-//   xl: 0,
-// };
+/**
+ * Escala de espaciado basada en un sistema de 4px / 8px.
+ * Valores numéricos puros para permitir unidades nativas (px en web, dp en React Native).
+ */
+export const spacing = {
+  xs: 4,
+  sm: 8,
+  md: 16,
+  lg: 24,
+  xl: 32,
+};
 
-// export const typography = {
-//   fontFamilyBase: "",
-//   sizes: { sm: 0, md: 0, lg: 0, xl: 0 },
-// };
+/**
+ * Configuración de tipografía orientada a alta legibilidad y facilidad de lectura en campo.
+ * Tamaño base (md) de 16px/dp conforme a la definición de terminado.
+ */
+export const typography = {
+  fontFamilyBase: 'System',
+  sizes: {
+    xs: 12,
+    sm: 14,
+    md: 16, // Tamaño base mínimo de lectura para personal en campo
+    lg: 20,
+    xl: 24,
+  },
+  weights: {
+    regular: '400',
+    medium: '500',
+    semibold: '600',
+    bold: '700',
+  },
+};
 
-// Textos comunes para no duplicar strings entre las dos apps.
-// export const labels = {
-//   medicamentoVencido: "",
-//   proximoAVencer: "",
-//   pendienteDeValidacion: "",
-// };
+/**
+ * Textos y etiquetas comunes compartidos entre web y móvil para evitar duplicación.
+ * Los estados de jornada coinciden exactamente con los enum de la base de datos.
+ */
+export const labels = {
+  medicamentoVencido: 'Medicamento vencido',
+  proximoAVencer: 'Próximo a vencer',
+  pendienteDeValidacion: 'Pendiente de validación',
+  jornadaPlanificada: 'Planificada',
+  jornadaEnCurso: 'En curso',
+  jornadaFinalizada: 'Finalizada',
+  sinResultados: 'No se encontraron resultados',
+  errorDeConexion: 'Error de conexión con el servidor',
+};
+
+export default {
+  colors,
+  spacing,
+  typography,
+  labels,
+};
