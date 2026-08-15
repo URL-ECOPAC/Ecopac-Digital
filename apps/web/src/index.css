@@ -1,21 +1,80 @@
+@import 'bootstrap/dist/css/bootstrap.min.css';
+
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  color-scheme: light dark;
-  line-height: 1.5;
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
+  /* Variables de Tokens - Colores (ui-tokens) */
+  --color-primary: #1D4ED8;
+  --color-secondary: #4B5563;
+  --color-danger: #DC2626;
+  --color-warning: #D97706;
+  --color-success: #15803D;
+  --color-background: #F9FAFB;
+  --color-text: #111827;
+  --color-text-muted: #4B5563;
+
+  /* Variables de Tokens - Espaciado (px) */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+
+  /* Sobrescritura de variables CSS globales de Bootstrap */
+  --bs-primary: var(--color-primary);
+  --bs-secondary: var(--color-secondary);
+  --bs-danger: var(--color-danger);
+  --bs-warning: var(--color-warning);
+  --bs-success: var(--color-success);
+  --bs-body-bg: var(--color-background);
+  --bs-body-color: var(--color-text);
+  --bs-secondary-color: var(--color-text-muted);
 }
 
-body {
-  margin: 0;
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-color: #f5f5f5;
+/* Sobrescritura específica de componentes Bootstrap */
+.btn-primary {
+  --bs-btn-bg: var(--color-primary);
+  --bs-btn-border-color: var(--color-primary);
+  --bs-btn-hover-bg: #1e40af;
+  --bs-btn-hover-border-color: #1e40af;
 }
 
-.app-shell {
-  text-align: center;
-  color: #1c1c1c;
+.btn-secondary {
+  --bs-btn-bg: var(--color-secondary);
+  --bs-btn-border-color: var(--color-secondary);
+  --bs-btn-hover-bg: #374151;
+  --bs-btn-hover-border-color: #374151;
+}
+
+.btn-danger {
+  --bs-btn-bg: var(--color-danger);
+  --bs-btn-border-color: var(--color-danger);
+}
+
+.btn-warning {
+  --bs-btn-bg: var(--color-warning);
+  --bs-btn-border-color: var(--color-warning);
+  --bs-btn-color: #ffffff;
+}
+
+.btn-success {
+  --bs-btn-bg: var(--color-success);
+  --bs-btn-border-color: var(--color-success);
+}
+
+/* Alertas de React Bootstrap */
+.alert-danger {
+  --bs-alert-color: #991b1b;
+  --bs-alert-bg: #fef2f2;
+  --bs-alert-border-color: #fecaca;
+}
+
+.alert-warning {
+  --bs-alert-color: #92400e;
+  --bs-alert-bg: #fffbeb;
+  --bs-alert-border-color: #fef3c7;
+}
+
+.alert-success {
+  --bs-alert-color: #166534;
+  --bs-alert-bg: #f0fdf4;
+  --bs-alert-border-color: #bbf7d0;
 }
