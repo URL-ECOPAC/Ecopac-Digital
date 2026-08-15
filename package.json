@@ -28,5 +28,8 @@
     "xcode": {
       "uuid": "^11.0.0"
     }
+  },
+  "dependencies": {
+    "docker": "^1.0.0"
   }
 }
