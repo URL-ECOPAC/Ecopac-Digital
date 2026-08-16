@@ -16,7 +16,7 @@ No existe forma de escribir JSX de React DOM y que corra tal cual en React Nativ
 | **Logica en shared, UI por plataforma** | **~75%** | **Se escribe dos veces el JSX de presentacion, que en este proyecto ya es distinto** |
 
 Se eligio la tercera. La razon concreta es que en este diseno la web y el movil no son la misma
-interfaz: la web tiene sidebar de nueve modulos, tabla multi-bodega de seis columnas y kanban de
+interfaz: la web tiene sidebar de nueve modulos y kanban de
 tres etapas; el movil tiene tab bar de cinco, esas mismas existencias como tarjetas apiladas y
 un kanban de cinco etapas que sigue al paciente en vez de a la jornada. Con React Native Web
 habria que escribir layouts condicionales para cada una de esas pantallas, asi que la ganancia
@@ -26,11 +26,6 @@ real seria mucho menor que la nominal, a cambio de tirar Bootstrap.
 
 > Una pantalla es **un hook y unos descriptores en `packages/shared`**, mas **un componente por
 > app**. Todo lo que no sea JSX ni estilos vive en `shared`.
-
-Esto es mas estricto que la regla vieja ("lo que no es JSX vive en shared"), que dejaba fuera la
-logica *de pantalla* — que campos tiene el formulario, que valida cada uno, que columnas tiene
-la tabla, que filtros hay, que puede hacer cada rol, que pasa al guardar — y esa es la mayor
-parte del trabajo.
 
 ## Estructura de un modulo compartido
 
