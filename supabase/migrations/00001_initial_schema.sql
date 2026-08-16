@@ -11,11 +11,18 @@
 -- ============================================================================
 -- Extensiones
 -- ============================================================================
-CREATE EXTENSION IF NOT EXISTS pgcrypto; -- gen_random_uuid() para llaves primarias UUID
-CREATE EXTENSION IF NOT EXISTS pg_trgm; -- busqueda por similitud de texto (trigramas)
-CREATE EXTENSION IF NOT EXISTS unaccent; -- busqueda insensible a acentos
-CREATE EXTENSION IF NOT EXISTS citext; -- texto case-insensitive (ej. email)
-CREATE EXTENSION IF NOT EXISTS btree_gist; -- indices GiST para constraints de exclusion
+-- Se instalan explicitamente en el schema "extensions" (convencion de Supabase, ver
+-- extra_search_path en supabase/config.toml) en lugar de dejar que cada entorno decida
+-- donde caen: en el Postgres local del CLI un CREATE EXTENSION sin SCHEMA cae en
+-- "public", pero en Supabase Cloud cae en "extensions", y las migraciones siguientes
+-- referencian estos objetos con el schema calificado para funcionar igual en ambos.
+CREATE SCHEMA IF NOT EXISTS extensions;
+
+CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA extensions; -- gen_random_uuid() para llaves primarias UUID
+CREATE EXTENSION IF NOT EXISTS pg_trgm WITH SCHEMA extensions; -- busqueda por similitud de texto (trigramas)
+CREATE EXTENSION IF NOT EXISTS unaccent WITH SCHEMA extensions; -- busqueda insensible a acentos
+CREATE EXTENSION IF NOT EXISTS citext WITH SCHEMA extensions; -- texto case-insensitive (ej. email)
+CREATE EXTENSION IF NOT EXISTS btree_gist WITH SCHEMA extensions; -- indices GiST para constraints de exclusion
 
 -- ============================================================================
 -- Tipos enumerados del dominio
