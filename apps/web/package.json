@@ -10,6 +10,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@ecopac/shared": "*",
+    "@ecopac/ui-tokens": "*",
     "@supabase/supabase-js": "^2.112.2",
     "bootstrap": "^5.3.8",
     "react": "^19.2.8",

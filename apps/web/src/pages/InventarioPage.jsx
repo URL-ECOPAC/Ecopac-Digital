@@ -1,3 +1,5 @@
+import PaginaPendiente from './PaginaPendiente';
+
 export default function InventarioPage() {
-  return <h1 style={{ color: '#111827' }}>Módulo de Inventario</h1>;
+  return <PaginaPendiente titulo="Control de inventario" issues="#153 a #162" />;
 }

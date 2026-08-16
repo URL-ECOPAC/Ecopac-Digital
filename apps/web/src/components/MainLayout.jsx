@@ -1,88 +1,114 @@
-import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
-import { Navbar, Nav, Container, Button, Badge } from 'react-bootstrap';
+import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
+import { Button } from 'react-bootstrap';
+import { MODULOS, seccionesVisibles, etiquetaDeRol } from '@ecopac/shared';
+import { useUsuarioActual } from '../hooks/useUsuarioActual';
+import './MainLayout.css';
 
-
-const MOCK_USER = {
-  nombre: 'Dr. Jesús Quemé',
-  rol: 'Administrador', // Cambiar a 'Medico' para probar el filtrado de navegación
+// Subtitulo de cada modulo en el encabezado de pagina, segun el prototipo.
+const SUBTITULOS = {
+  inicio: 'Panel general del sistema',
+  pacientes: 'Expedientes clinicos',
+  donaciones: 'Ingresos registrados',
+  inventario: 'Existencias y alertas de caducidad',
+  presupuestos: 'Administracion financiera por jornada y proyecto',
+  proyectos: 'Proyectos sociales y su avance',
+  reportes: 'Indicadores de impacto',
+  jornadas: 'Tablero de jornadas medicas',
+  voluntarios: 'Medicos y voluntarios',
 };
 
-// Configuración de módulos de navegación y permisos por rol
-const NAV_ITEMS = [
-  { path: '/', label: 'Inicio', roles: ['Administrador', 'Medico', 'Voluntario'] },
-  { path: '/pacientes', label: 'Pacientes', roles: ['Administrador', 'Medico', 'Voluntario'] },
-  { path: '/jornadas', label: 'Jornadas', roles: ['Administrador', 'Medico', 'Voluntario'] },
-  { path: '/inventario', label: 'Inventario', roles: ['Administrador', 'Medico'] },
-  { path: '/donaciones', label: 'Donaciones', roles: ['Administrador'] },
-  { path: '/usuarios', label: 'Usuarios', roles: ['Administrador'] },
-  { path: '/reportes', label: 'Reportes', roles: ['Administrador'] },
-];
+function moduloDeRuta(pathname) {
+  // La ruta mas especifica gana, para que /pacientes/123 siga marcando Pacientes.
+  return [...MODULOS]
+    .sort((a, b) => b.ruta.length - a.ruta.length)
+    .find((m) => (m.ruta === '/' ? pathname === '/' : pathname.startsWith(m.ruta)));
+}
 
 export default function MainLayout() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { usuario } = useUsuarioActual();
 
-  const handleLogout = () => {
-    // Redirigir a la pantalla de login al cerrar sesión
-    navigate('/login');
-  };
+  const secciones = seccionesVisibles(usuario.rol);
+  const actual = moduloDeRuta(location.pathname);
 
-  // Filtrar módulos visibles según el rol del usuario
-  const visibleNavItems = NAV_ITEMS.filter((item) =>
-    item.roles.includes(MOCK_USER.rol)
-  );
+  const iniciales = `${usuario.nombres[0] ?? ''}${usuario.apellidos[0] ?? ''}`.toUpperCase();
+  const fecha = new Date().toLocaleDateString('es-GT', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  });
+
+  const handleLogout = () => navigate('/login');
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-      {/* Barra Superior (Navbar) */}
-      <Navbar bg="dark" variant="dark" expand="lg" sticky="top" className="px-3">
-        <Navbar.Brand as={Link} to="/" className="fw-bold">
-          EcoPac Digital
-        </Navbar.Brand>
-        <Navbar.Toggle aria-controls="main-navbar-nav" />
-        <Navbar.Collapse id="main-navbar-nav" className="justify-content-end">
-          <div className="d-flex align-items-center gap-3">
-            <div className="text-light text-end">
-              <span className="d-block fw-semibold">{MOCK_USER.nombre}</span>
-              <Badge bg="primary">{MOCK_USER.rol}</Badge>
+    <div className="app-shell">
+      <aside className="app-sidebar">
+        <div className="app-brand">
+          <span className="app-brand__mark" aria-hidden="true" />
+          <span>
+            <span className="app-brand__name">Ecopac</span>
+            <span className="app-brand__tagline">Jornadas medicas</span>
+          </span>
+        </div>
+
+        <nav className="app-nav" aria-label="Navegacion principal">
+          {secciones.map((seccion) => (
+            <div key={seccion.id} className="app-nav__group">
+              <p className="app-nav__title">{seccion.titulo}</p>
+              {seccion.modulos.map((modulo) => (
+                <NavLink
+                  key={modulo.id}
+                  to={modulo.ruta}
+                  end={modulo.ruta === '/'}
+                  className={({ isActive }) =>
+                    `app-nav__item${isActive ? ' app-nav__item--active' : ''}`
+                  }
+                >
+                  {modulo.etiqueta}
+                </NavLink>
+              ))}
             </div>
-            <Button variant="outline-light" size="sm" onClick={handleLogout}>
-              Cerrar sesión
+          ))}
+        </nav>
+
+        <div className="app-user">
+          <span className="app-user__avatar" aria-hidden="true">
+            {iniciales}
+          </span>
+          <span className="app-user__data">
+            <span className="app-user__name">
+              {usuario.nombres} {usuario.apellidos}
+            </span>
+            <span className="app-user__role">
+              {etiquetaDeRol(usuario.rol)}
+              {usuario.area ? ` · ${usuario.area}` : ''}
+            </span>
+          </span>
+        </div>
+      </aside>
+
+      <div className="app-main">
+        <header className="app-header">
+          <div>
+            <h1 className="app-header__title">{actual?.etiqueta ?? 'Ecopac Digital'}</h1>
+            <p className="app-header__subtitle">
+              {actual ? SUBTITULOS[actual.id] : 'Ecopac Guatemala'} · {fecha}
+            </p>
+          </div>
+          <div className="app-header__actions">
+            <span className="app-status" title="Estado del sistema">
+              <span className="app-status__dot" aria-hidden="true" />
+              Sistema activo
+            </span>
+            <Button variant="outline-secondary" size="sm" onClick={handleLogout}>
+              Cerrar sesion
             </Button>
           </div>
-        </Navbar.Collapse>
-      </Navbar>
+        </header>
 
-      <div style={{ display: 'flex', flex: 1 }}>
-        {/* Navegación Lateral (Sidebar) */}
-        <aside
-          className="bg-light border-end p-3"
-          style={{ width: '240px', minWidth: '240px' }}
-        >
-          <Nav className="flex-column gap-1">
-            {visibleNavItems.map((item) => {
-              const isActive = location.pathname === item.path;
-              return (
-                <Nav.Link
-                  key={item.path}
-                  as={Link}
-                  to={item.path}
-                  className={`rounded px-3 py-2 ${
-                    isActive ? 'bg-primary text-white fw-bold' : 'text-dark'
-                  }`}
-                >
-                  {item.label}
-                </Nav.Link>
-              );
-            })}
-          </Nav>
-        </aside>
-
-        {/* Área de Contenido Principal */}
-        <main style={{ flex: 1 }} className="p-4 bg-body-tertiary">
-          <Container fluid>
-            <Outlet />
-          </Container>
+        <main className="app-content">
+          <Outlet />
         </main>
       </div>
     </div>

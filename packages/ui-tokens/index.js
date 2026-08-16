@@ -1,21 +1,65 @@
 // Valores de diseño compartidos entre web (Bootstrap) y mobile (StyleSheet de React Native).
 // Solo valores puros aquí (colores, espaciado, tipografía, textos comunes) — nada de
 // componentes ni lógica.
+//
+// Los valores de color se midieron sobre el prototipo navegable de Figma:
+// https://www.figma.com/make/OMT8OXRXlNdbwwEh4yXGYd/Control-de-inventario?p=f
+// Ver docs/DISENO.md para el detalle de cada pantalla.
 
 /**
- * Paleta de colores principal para EcoPac.
- * Cumple con un ratio de contraste WCAG AA (>= 4.5:1) sobre el color de fondo
- * para asegurar la legibilidad en jornadas comunitarias en exteriores.
+ * Paleta principal de EcoPac. La marca es verde (matiz ~127°), no azul.
+ * Los contrastes de text y textMuted sobre background superan WCAG AA (>= 4.5:1),
+ * lo que importa porque las jornadas se atienden en exteriores con luz directa.
  */
 export const colors = {
-  primary: '#1D4ED8', // Botones principales, encabezados y elementos activos
+  primary: '#2A9C36', // Marca, botones principales, elementos activos y estado Disponible
+  primaryDark: '#1E7E2A', // Extremo oscuro del degradado del banner; hover de botón primario
+  primaryLight: '#36AE42', // Extremo claro del degradado del banner
   secondary: '#4B5563', // Botones secundarios, bordes e iconos de menor jerarquía
-  danger: '#DC2626', // Alertas de medicamento vencido y errores críticos
-  warning: '#D97706', // Alertas de medicamento próximo a vencer
-  success: '#15803D', // Confirmaciones y badges de éxito
-  background: '#F9FAFB', // Fondo general de pantallas y tarjetas
+  danger: '#B81F6F', // Crítico: medicamento vencido, sin stock y movimiento rechazado
+  warning: '#F1A239', // Próximo a vencer y advertencias que no bloquean
+  success: '#2A9C36', // Confirmaciones y estado aprobado; misma familia que primary
+  info: '#3C9CC0', // Pendiente de validación y valores informativos
+  background: '#F7F8FA', // Fondo general de las pantallas
+  surface: '#FFFFFF', // Tarjetas, sidebar y superficies elevadas
+  border: '#E9E9E9', // Bordes de tarjeta, separadores y pistas de barra de progreso
   text: '#111827', // Texto principal, títulos y cuerpo de contenido
   textMuted: '#4B5563', // Texto secundario, descripciones y placeholders
+};
+
+/**
+ * Color de acento con el que el diseño identifica cada módulo en tarjetas,
+ * puntos de KPI e iconos de navegación.
+ */
+export const moduleAccents = {
+  pacientes: colors.primary,
+  donaciones: colors.info,
+  inventario: colors.warning,
+  presupuestos: colors.danger,
+  proyectos: colors.primary,
+  reportes: colors.info,
+  jornadas: colors.primary,
+  voluntarios: colors.info,
+};
+
+/**
+ * Color de los chips de estado. Las claves coinciden exactamente con los valores de los
+ * enums de supabase/migrations/00001_initial_schema.sql, que son la fuente de verdad.
+ */
+export const statusColors = {
+  // estado_movimiento
+  'pendiente de validacion': colors.info,
+  aprobado: colors.success,
+  rechazado: colors.danger,
+  // estado_jornada
+  planificada: colors.info,
+  'en curso': colors.primary,
+  finalizada: colors.secondary,
+  cancelada: colors.danger,
+  // estados de existencia, derivados de la fecha de vencimiento
+  disponible: colors.success,
+  'por vencer': colors.warning,
+  critico: colors.danger,
 };
 
 /**
@@ -53,21 +97,29 @@ export const typography = {
 
 /**
  * Textos y etiquetas comunes compartidos entre web y móvil para evitar duplicación.
- * Los estados de jornada coinciden exactamente con los enum de la base de datos.
+ * Los estados coinciden exactamente con los enum de la base de datos.
  */
 export const labels = {
   medicamentoVencido: 'Medicamento vencido',
   proximoAVencer: 'Próximo a vencer',
   pendienteDeValidacion: 'Pendiente de validación',
+  aprobado: 'Aprobado',
+  rechazado: 'Rechazado',
+  disponible: 'Disponible',
+  critico: 'Crítico',
+  sinStock: 'Sin stock',
   jornadaPlanificada: 'Planificada',
   jornadaEnCurso: 'En curso',
   jornadaFinalizada: 'Finalizada',
+  jornadaCancelada: 'Cancelada',
   sinResultados: 'No se encontraron resultados',
   errorDeConexion: 'Error de conexión con el servidor',
 };
 
 export default {
   colors,
+  moduleAccents,
+  statusColors,
   spacing,
   typography,
   labels,
