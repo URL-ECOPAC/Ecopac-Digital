@@ -10,6 +10,7 @@ configuracion de GitHub (plantillas de issues, PR y los workflows de CI/CD) esta
 | ------------------------------------ | ----------------------------------------------------------------------- |
 | [QUICKSTART.md](./QUICKSTART.md)     | Guia de inicio rapido: instalar y correr el proyecto (con y sin Docker) |
 | [CONTRIBUTING.md](./CONTRIBUTING.md) | Como contribuir: ramas, commits, PRs, issues y el tablero               |
+| [CI-CD.md](./CI-CD.md)               | Que valida y despliega cada workflow, y que hacer cuando falla         |
 
 ## Dependencias y Herramientas
 

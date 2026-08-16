@@ -7,10 +7,18 @@ on:
   push:
     branches: [develop, main]
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   lint-and-build:
     name: Lint y build
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
       - name: Descargar el código
@@ -28,14 +36,51 @@ jobs:
       - name: Ejecutar lint en todos los workspaces
         run: npm run lint
 
-      - name: Construir la aplicación web
+      # Cada rama se construye con la configuración de su ambiente. Antes se usaban
+      # siempre los secrets _DEV, así que main nunca se validaba contra producción y un
+      # secret de producción mal configurado no aparecía hasta el despliegue.
+      - name: Elegir el ambiente del build
+        id: ambiente
+        run: |
+          if [ "$GITHUB_REF_NAME" = "main" ] || [ "$GITHUB_BASE_REF" = "main" ]; then
+            echo "nombre=produccion" >> "$GITHUB_OUTPUT"
+          else
+            echo "nombre=desarrollo" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Construir la aplicación web (desarrollo)
+        if: steps.ambiente.outputs.nombre == 'desarrollo'
         run: npm run build --workspace=apps/web
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL_DEV }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY_DEV }}
 
+      - name: Construir la aplicación web (producción)
+        if: steps.ambiente.outputs.nombre == 'produccion'
+        run: npm run build --workspace=apps/web
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL_PROD }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY_PROD }}
+
+      - name: Avisar si faltan los secrets de producción
+        if: steps.ambiente.outputs.nombre == 'produccion'
+        env:
+          VITE_SUPABASE_URL_PROD: ${{ secrets.VITE_SUPABASE_URL_PROD }}
+          VITE_SUPABASE_ANON_KEY_PROD: ${{ secrets.VITE_SUPABASE_ANON_KEY_PROD }}
+        run: |
+          if [ -n "$VITE_SUPABASE_URL_PROD" ] && [ -n "$VITE_SUPABASE_ANON_KEY_PROD" ]; then
+            echo "Los secrets de producción están configurados."
+            exit 0
+          fi
+
+          echo "::warning::La web se construyó sin VITE_SUPABASE_URL_PROD ni VITE_SUPABASE_ANON_KEY_PROD."
+          {
+            echo "## Build de producción sin configuración"
+            echo
+            echo "Faltan \`VITE_SUPABASE_URL_PROD\` y/o \`VITE_SUPABASE_ANON_KEY_PROD\`."
+            echo "El bundle se generó apuntando a ningún lado. Configúralos en"
+            echo "Settings > Secrets and variables > Actions antes de desplegar."
+          } >> "$GITHUB_STEP_SUMMARY"
+
       # La app móvil no se "compila" en cada PR (eso lo hace Expo/EAS por separado),
       # pero el lint de arriba ya la cubre porque apps/mobile tiene su propio script.
-      # Si en el futuro se agrega type-check, se puede habilitar aquí:
-      # - name: Verificar la aplicación móvil
-      #   run: npx tsc --noEmit
