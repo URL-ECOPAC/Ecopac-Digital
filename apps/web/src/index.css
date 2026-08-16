@@ -1,47 +1,36 @@
 @import 'bootstrap/dist/css/bootstrap.min.css';
 
+/* Las variables --color-*, --spacing-*, --accent-* y --estado-* las publica
+   src/theme.js a partir de packages/ui-tokens. Aqui no se escribe ningun color
+   a mano: si hace falta un valor nuevo, se agrega primero al paquete de tokens. */
+
 :root {
-  /* Variables de Tokens - Colores (ui-tokens) */
-  --color-primary: #1D4ED8;
-  --color-secondary: #4B5563;
-  --color-danger: #DC2626;
-  --color-warning: #D97706;
-  --color-success: #15803D;
-  --color-background: #F9FAFB;
-  --color-text: #111827;
-  --color-text-muted: #4B5563;
-
-  /* Variables de Tokens - Espaciado (px) */
-  --spacing-xs: 4px;
-  --spacing-sm: 8px;
-  --spacing-md: 16px;
-  --spacing-lg: 24px;
-  --spacing-xl: 32px;
-
-  /* Sobrescritura de variables CSS globales de Bootstrap */
+  /* Sobrescritura de las variables globales de Bootstrap con la paleta del proyecto */
   --bs-primary: var(--color-primary);
   --bs-secondary: var(--color-secondary);
   --bs-danger: var(--color-danger);
   --bs-warning: var(--color-warning);
   --bs-success: var(--color-success);
+  --bs-info: var(--color-info);
   --bs-body-bg: var(--color-background);
   --bs-body-color: var(--color-text);
   --bs-secondary-color: var(--color-text-muted);
+  --bs-border-color: var(--color-border);
 }
 
-/* Sobrescritura específica de componentes Bootstrap */
+/* Botones */
 .btn-primary {
   --bs-btn-bg: var(--color-primary);
   --bs-btn-border-color: var(--color-primary);
-  --bs-btn-hover-bg: #1e40af;
-  --bs-btn-hover-border-color: #1e40af;
+  --bs-btn-hover-bg: var(--color-primary-dark);
+  --bs-btn-hover-border-color: var(--color-primary-dark);
+  --bs-btn-active-bg: var(--color-primary-dark);
+  --bs-btn-active-border-color: var(--color-primary-dark);
 }
 
 .btn-secondary {
   --bs-btn-bg: var(--color-secondary);
   --bs-btn-border-color: var(--color-secondary);
-  --bs-btn-hover-bg: #374151;
-  --bs-btn-hover-border-color: #374151;
 }
 
 .btn-danger {
@@ -52,7 +41,7 @@
 .btn-warning {
   --bs-btn-bg: var(--color-warning);
   --bs-btn-border-color: var(--color-warning);
-  --bs-btn-color: #ffffff;
+  --bs-btn-color: var(--color-surface);
 }
 
 .btn-success {
@@ -60,21 +49,35 @@
   --bs-btn-border-color: var(--color-success);
 }
 
-/* Alertas de React Bootstrap */
+.btn-outline-primary {
+  --bs-btn-color: var(--color-primary);
+  --bs-btn-border-color: var(--color-primary);
+  --bs-btn-hover-bg: var(--color-primary);
+  --bs-btn-hover-border-color: var(--color-primary);
+}
+
+/* Alertas: se tinen del color de estado con transparencia, en vez de fijar
+   un segundo juego de hex que habria que mantener en paralelo. */
 .alert-danger {
-  --bs-alert-color: #991b1b;
-  --bs-alert-bg: #fef2f2;
-  --bs-alert-border-color: #fecaca;
+  --bs-alert-color: var(--color-danger);
+  --bs-alert-bg: color-mix(in srgb, var(--color-danger) 8%, white);
+  --bs-alert-border-color: color-mix(in srgb, var(--color-danger) 25%, white);
 }
 
 .alert-warning {
-  --bs-alert-color: #92400e;
-  --bs-alert-bg: #fffbeb;
-  --bs-alert-border-color: #fef3c7;
+  --bs-alert-color: var(--color-warning);
+  --bs-alert-bg: color-mix(in srgb, var(--color-warning) 12%, white);
+  --bs-alert-border-color: color-mix(in srgb, var(--color-warning) 30%, white);
 }
 
 .alert-success {
-  --bs-alert-color: #166534;
-  --bs-alert-bg: #f0fdf4;
-  --bs-alert-border-color: #bbf7d0;
+  --bs-alert-color: var(--color-success);
+  --bs-alert-bg: color-mix(in srgb, var(--color-success) 8%, white);
+  --bs-alert-border-color: color-mix(in srgb, var(--color-success) 25%, white);
+}
+
+.alert-info {
+  --bs-alert-color: var(--color-info);
+  --bs-alert-bg: color-mix(in srgb, var(--color-info) 10%, white);
+  --bs-alert-border-color: color-mix(in srgb, var(--color-info) 28%, white);
 }

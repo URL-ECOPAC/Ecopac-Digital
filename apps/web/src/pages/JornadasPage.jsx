@@ -1,3 +1,5 @@
+import PaginaPendiente from './PaginaPendiente';
+
 export default function JornadasPage() {
-  return <h1 style={{ color: '#111827' }}>Módulo de Jornadas</h1>;
+  return <PaginaPendiente titulo="Kanban de jornadas" issues="#178 a #183" />;
 }

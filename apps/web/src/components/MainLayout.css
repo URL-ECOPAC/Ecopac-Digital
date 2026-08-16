@@ -1,0 +1,217 @@
+/* Layout principal de la aplicacion web.
+   Todos los colores salen de las custom properties que publica src/theme.js
+   a partir de packages/ui-tokens: aqui no se escribe ningun valor a mano. */
+
+.app-shell {
+  display: flex;
+  min-height: 100vh;
+  background: var(--color-background);
+}
+
+/* ---------------------------------------------------------------- Sidebar */
+
+.app-sidebar {
+  display: flex;
+  flex-direction: column;
+  width: 232px;
+  min-width: 232px;
+  background: var(--color-surface);
+  border-right: 1px solid var(--color-border);
+}
+
+.app-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-lg) var(--spacing-md);
+}
+
+.app-brand__mark {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--color-primary-light), var(--color-primary-dark));
+}
+
+.app-brand__name {
+  display: block;
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: var(--color-primary);
+  line-height: 1.1;
+}
+
+.app-brand__tagline {
+  display: block;
+  font-size: 0.62rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.app-nav {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 var(--spacing-sm);
+}
+
+.app-nav__group + .app-nav__group {
+  margin-top: var(--spacing-md);
+}
+
+.app-nav__title {
+  margin: 0 0 var(--spacing-xs);
+  padding: 0 var(--spacing-sm);
+  font-size: 0.62rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.app-nav__item {
+  display: block;
+  padding: var(--spacing-sm) var(--spacing-sm);
+  border-radius: var(--spacing-sm);
+  color: var(--color-text);
+  text-decoration: none;
+  font-size: 0.92rem;
+}
+
+.app-nav__item:hover {
+  background: color-mix(in srgb, var(--color-primary) 7%, transparent);
+  color: var(--color-primary);
+}
+
+.app-nav__item--active {
+  background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+.app-nav__item:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.app-user {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md);
+  border-top: 1px solid var(--color-border);
+}
+
+.app-user__avatar {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--color-primary) 15%, transparent);
+  color: var(--color-primary);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.app-user__name {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.app-user__role {
+  display: block;
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+}
+
+/* ---------------------------------------------------------------- Contenido */
+
+.app-main {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md) var(--spacing-lg);
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.app-header__title {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.app-header__subtitle {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+.app-header__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+.app-status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+  color: var(--color-primary);
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.app-status__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--color-primary);
+}
+
+.app-content {
+  flex: 1;
+  padding: var(--spacing-lg);
+  min-width: 0;
+}
+
+/* La aplicacion administrativa se usa en laptops de 1366x768; por debajo de eso
+   el sidebar se colapsa a una franja de iconos para no comerse el contenido. */
+@media (max-width: 991px) {
+  .app-sidebar {
+    width: 64px;
+    min-width: 64px;
+  }
+
+  .app-brand__name,
+  .app-brand__tagline,
+  .app-nav__title,
+  .app-user__data {
+    display: none;
+  }
+
+  .app-nav__item {
+    text-align: center;
+    font-size: 0.65rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .app-content {
+    padding: var(--spacing-md);
+  }
+}

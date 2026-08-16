@@ -30,20 +30,45 @@ scripts/      Scripts de soporte del equipo
 
 ## Regla de arquitectura clave
 
-Todo lo que no es JSX/CSS debe vivir en `packages/shared` (llamadas a Supabase, validaciones,
-formateo de fechas, reglas de negocio). Las apps `web` y `mobile` solo importan esa logica y
-la envuelven en componentes visuales. Esto evita duplicar codigo entre plataformas.
+El frontend se escribe una sola vez y se reutiliza en las dos plataformas. La regla completa
+esta en `docs/ARQUITECTURA-FRONTEND.md` y es de lectura obligatoria antes de tocar `apps/` o
+`packages/shared`. En resumen:
 
-Cuando construyas una feature: escribe la logica en `shared` primero y luego el componente UI
-en la app correspondiente.
+> Una pantalla es **un hook y unos descriptores en `packages/shared`**, mas **un componente por
+> app**.
+
+En `packages/shared/<modulo>/` van `api.js`, `validaciones.js`, `campos.js` (esquema de
+formulario), `columnas.js` (columnas de tabla y campos de tarjeta), `filtros.js`, `permisos.js`
+y un `use<Pantalla>.js` por pantalla. Las apps solo renderizan eso: web con `react-bootstrap`,
+movil con los componentes de `apps/mobile/src/components/`. `packages/shared/pacientes/` es el
+ejemplar de referencia.
+
+Ambas apps implementan el **mismo catalogo de componentes con las mismas props**
+(`FilterBar`, `DataList`, `TextField`, `StatusChip`, ...), de modo que portar una pantalla de
+web a movil sea mecanico.
 
 Restricciones:
 
-- No usar APIs web-only (localStorage, document) dentro de `shared`.
+- `packages/shared` no puede importar `react-dom`, `react-native` ni `react-bootstrap`, ni usar
+  `document`, `window`, `localStorage` o `AsyncStorage`, ni devolver JSX.
+- `apps/web` y `apps/mobile` no pueden importar `@supabase/supabase-js` directamente, ni
+  escribir validaciones, formateo, reglas de negocio o decisiones de permisos dentro de un
+  componente.
+- Ningun color, espaciado ni tamano de fuente se escribe a mano: todo sale de
+  `@ecopac/ui-tokens`. En la web se consumen como `var(--color-*)`, publicadas por
+  `apps/web/src/theme.js`.
 - No importar componentes UI de `web` en `mobile` ni viceversa.
+- Los roles nunca se escriben como string suelto: se usan los de
+  `packages/shared/usuarios/roles.js`, que replican el enum `rol_usuario` de la migracion 00001.
 - La app movil usa Expo v57.0.0: leer la documentacion versionada
   https://docs.expo.dev/versions/v57.0.0/ antes de escribir codigo movil (ver
   `apps/mobile/AGENTS.md`).
+
+## Fuente de verdad
+
+Cuando el codigo, la documentacion y la base de datos no coincidan, manda **lo que ya esta en
+`supabase/migrations/`**. Las migraciones aplicadas no se editan: los cambios entran como una
+migracion nueva.
 
 ## Stack
 
