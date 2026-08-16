@@ -1,4 +1,5 @@
-import { BrowserRouter, Routes, Route, Outlet } from 'react-router-dom';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import MainLayout from './components/MainLayout';
 import LoginPage from './pages/LoginPage';
 import HomePage from './pages/HomePage';
 import UsuariosPage from './pages/UsuariosPage';
@@ -8,23 +9,14 @@ import JornadasPage from './pages/JornadasPage';
 import DonacionesPage from './pages/DonacionesPage';
 import ReportesPage from './pages/ReportesPage';
 
-// Layout base para rutas autenticadas (listo para integrar el Navbar/Sidebar en #51)
-function MainLayout() {
-  return (
-    <main style={{ padding: '1rem' }}>
-      <Outlet />
-    </main>
-  );
-}
-
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Ruta pública fuera del layout principal */}
+        {/* Ruta pública fuera del layout autenticado */}
         <Route path="/login" element={<LoginPage />} />
 
-        {/* Rutas autenticadas agrupadas en MainLayout */}
+        {/* Rutas autenticadas con el layout principal */}
         <Route element={<MainLayout />}>
           <Route path="/" element={<HomePage />} />
           <Route path="/usuarios" element={<UsuariosPage />} />
