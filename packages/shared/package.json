@@ -8,6 +8,7 @@
     "lint": "eslint ."
   },
   "dependencies": {
+    "@ecopac/ui-tokens": "*",
     "@supabase/supabase-js": "^2.112.2"
   }
 }

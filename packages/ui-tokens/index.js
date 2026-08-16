@@ -60,6 +60,8 @@ export const statusColors = {
   disponible: colors.success,
   'por vencer': colors.warning,
   critico: colors.danger,
+  activo: colors.success,
+  inactivo: colors.secondary,
 };
 
 /**
@@ -108,6 +110,8 @@ export const labels = {
   disponible: 'Disponible',
   critico: 'Crítico',
   sinStock: 'Sin stock',
+  usuarioActivo: 'Activo',
+  usuarioInactivo: 'Inactivo',
   jornadaPlanificada: 'Planificada',
   jornadaEnCurso: 'En curso',
   jornadaFinalizada: 'Finalizada',
