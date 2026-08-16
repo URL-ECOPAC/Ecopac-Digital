@@ -7,11 +7,11 @@ se prueban los cambios de esquema, y como se sincronizan ambos. Complementa a
 
 ## Dos formas distintas de trabajar con Supabase
 
-### 1. El proyecto en la nube (`ecopac-dev` / `ecopac-prod`)
+### 1. El proyecto en la nube (`Ecopac-Digital-Dev` / `Ecopac-Digital-Prod`)
 
 Es el proyecto real creado en supabase.com. Ahi es donde la app (web y movil) se conecta
 cuando alguien la corre normalmente - las variables `VITE_SUPABASE_URL` /
-`EXPO_PUBLIC_SUPABASE_URL` en `.env.development` apuntan a `ecopac-dev`.
+`EXPO_PUBLIC_SUPABASE_URL` en `.env.development` apuntan a `Ecopac-Digital-Dev`.
 
 Desde el dashboard de Supabase (Studio en la nube) se puede ver el contenido de las tablas,
 los usuarios de autenticacion, los archivos en storage, etc. Es el equivalente al panel de
@@ -38,7 +38,7 @@ supabase stop           # apaga el stack local
 ```
 
 Sirve para probar una migracion nueva antes de que toque el proyecto real, sin arriesgar los
-datos de `ecopac-dev`.
+datos de `Ecopac-Digital-Dev`.
 
 **Esto no es lo mismo que el servicio `db-local` de `docker-compose.yml`.** Ese servicio es un
 Postgres generico, sin Auth ni Storage ni Studio, pensado solo como respaldo rapido para
@@ -55,8 +55,8 @@ realmente usa) es el que levanta `supabase start`.
    revisa el esquema (supabase db lint). Si hay un error de SQL, el PR falla ahi.
 4. Se aprueba y mergea el PR
 5. El workflow supabase-migrations.yml aplica esa migracion contra el
-   proyecto real en la nube (supabase db push): ecopac-dev si el push
-   fue a develop, ecopac-prod si fue a main.
+   proyecto real en la nube (supabase db push): Ecopac-Digital-Dev si el push
+   fue a develop, Ecopac-Digital-Prod si fue a main.
 6. La app conectada a ese proyecto ya tiene el cambio, sin que nadie
    lo haya escrito a mano en el dashboard.
 ```
@@ -70,7 +70,7 @@ no para modificar el esquema.
 - Tener Docker corriendo (la Supabase CLI lo necesita para levantar Postgres, Auth, etc.).
 - Instalar la Supabase CLI: ver
   [supabase.com/docs/guides/cli/getting-started](https://supabase.com/docs/guides/cli/getting-started).
-- No hace falta el stack local para simplemente usar la app conectada a `ecopac-dev` - solo
+- No hace falta el stack local para simplemente usar la app conectada a `Ecopac-Digital-Dev` - solo
   hace falta para quien va a escribir o probar migraciones de base de datos.
 
 ## Acceso al proyecto en la nube

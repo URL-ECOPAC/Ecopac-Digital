@@ -34,11 +34,11 @@ mergear.
 
 | Rama | Proyecto Supabase | Secret del project-ref | Despliegue web |
 | ---- | ----------------- | ---------------------- | -------------- |
-| `develop` | ecopac-dev | `SUPABASE_PROJECT_REF_DEV` | Vercel Preview |
-| `main` | ecopac-prod | `SUPABASE_PROJECT_REF_PROD` | Vercel Produccion |
+| `develop` | Ecopac-Digital-Dev | `SUPABASE_PROJECT_REF_DEV` | Local |
+| `main` | Ecopac-Digital-Prod | `SUPABASE_PROJECT_REF_PROD` | Vercel Produccion |
 
-Cada migracion se aplica **una vez por base**. El push a `develop` va contra `ecopac-dev` y el
-push a `main` contra `ecopac-prod`: son bases distintas, no una doble aplicacion. Ademas
+Cada migracion se aplica **una vez por base**. El push a `develop` va contra `Ecopac-Digital-Dev` y el
+push a `main` contra `Ecopac-Digital-Prod`: son bases distintas, no una doble aplicacion. Ademas
 `supabase db push` consulta `supabase_migrations.schema_migrations` del destino y aplica solo
 lo pendiente, asi que aunque el workflow corriera dos veces no repetiria nada.
 
@@ -78,20 +78,12 @@ Mientras nadie edite una migracion aplicada, los dos escenarios coinciden y el C
 lo que va a pasar. En cuanto alguien la edita, dejan de coincidir: el CI queda verde y el
 despliegue falla despues del merge.
 
-Ya paso una vez. El commit #290 califico las extensiones con `WITH SCHEMA extensions` editando
-la migracion 00001, que ya estaba aplicada en `ecopac-dev`. En esa base `citext` seguia en
-`public`, y la 00002 fallo al referenciar `extensions.citext`. El CI del PR habia pasado en
-verde. El workflow de despliegue fallo cuatro corridas seguidas sin que nadie lo notara.
-
-De ahi salen dos cosas de este documento: la guarda **Migraciones no editadas** y la issue
-automatica al fallar.
-
 ### Como corregir una migracion aplicada
 
 Hacia adelante, con una migracion nueva. Nunca editando la anterior.
 
 `supabase/migrations/00005_corregir_schema_de_extensiones.sql` es el ejemplo: mueve las
-extensiones al schema correcto **solo si hace falta**, de modo que corrige `ecopac-dev` y es un
+extensiones al schema correcto **solo si hace falta**, de modo que corrige `Ecopac-Digital-Dev` y es un
 no-op en una base fresca. El mismo archivo sirve para los tres destinos.
 
 ### Cuando de verdad hay que editarla
