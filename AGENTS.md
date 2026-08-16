@@ -67,8 +67,26 @@ Las variables de entorno se copian desde `.env.example` a `.env.development` o
 `.env.production`. Nunca se suben llaves reales al repositorio.
 
 Los secrets del CI/CD se configuran en GitHub (Settings > Secrets and variables > Actions) y
-los nombres que usan los workflows estan documentados en `docs/QUICKSTART.md`. Mientras no
-esten configurados, los workflows de Supabase se omiten y terminan en verde (no fallan).
+los nombres que usan los workflows estan documentados en `docs/CI-CD.md`. Mientras no esten
+configurados, los workflows de Supabase avisan de forma visible en el resumen de la corrida
+pero no fallan.
+
+## Migraciones de base de datos
+
+**Una migracion ya aplicada no se edita nunca.** Supabase la registra en
+`supabase_migrations.schema_migrations` y no vuelve a ejecutarla, asi que editarla cambia lo
+que valida el CI (que aplica todo desde cero) pero no cambia nada en las bases reales. La
+divergencia aparece despues del merge, cuando ya es tarde.
+
+Para corregir una migracion aplicada se escribe una migracion nueva que corrija hacia adelante.
+`supabase/migrations/00005_corregir_schema_de_extensiones.sql` es el ejemplo a seguir.
+
+La regla la hace cumplir el job **Migraciones no editadas** del workflow de Supabase: falla el
+PR si modifica o borra un archivo de `supabase/migrations/` que ya existe en la rama base.
+Editar una migracion agregada en el mismo PR si esta permitido. La salida de emergencia es la
+etiqueta `migracion-editada-a-proposito` en el PR.
+
+Detalle completo en `docs/CI-CD.md`.
 
 ## Comandos
 

@@ -1,0 +1,371 @@
+name: Supabase
+
+# Un solo workflow para la base de datos: valida en el PR y despliega al mergear.
+#
+# Antes eran dos workflows separados (backend-ci.yml y supabase-migrations.yml) y el que
+# aplicaba las migraciones no dependia del que las validaba: una validacion en rojo no
+# impedia que el despliegue corriera igual. Ahora "Aplicar migraciones" lleva needs.
+#
+# Por que no hay filtros paths: un check requerido que no corre deja el PR esperando para
+# siempre. Los jobs corren siempre y son los pasos los que llevan el if, asi el check
+# siempre reporta. Un PR que no toca supabase/ gasta segundos, no los dos minutos del
+# stack local.
+
+on:
+  pull_request:
+    branches: [develop, main]
+  push:
+    branches: [develop, main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: supabase-${{ github.ref }}
+  # Nunca se cancela un despliegue a medias: solo se cancelan corridas de PR superadas.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  # --------------------------------------------------------------------------------
+  cambios:
+    name: Detectar cambios
+    runs-on: ubuntu-latest
+    outputs:
+      supabase: ${{ steps.detectar.outputs.supabase }}
+    steps:
+      - name: Descargar el codigo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detectar si el cambio toca supabase/
+        id: detectar
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            # En develop y main siempre se valida, sin importar que archivos vinieron.
+            echo "supabase=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          git fetch --no-tags origin "$GITHUB_BASE_REF"
+          base="$(git merge-base "origin/$GITHUB_BASE_REF" HEAD)"
+
+          if git diff --quiet "$base" HEAD -- supabase/; then
+            echo "supabase=false" >> "$GITHUB_OUTPUT"
+            echo "El PR no toca supabase/; la validacion pesada se omite."
+          else
+            echo "supabase=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  # --------------------------------------------------------------------------------
+  inmutabilidad:
+    name: Migraciones no editadas
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar el codigo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verificar que no se editen migraciones ya aplicadas
+        if: >-
+          github.event_name == 'pull_request' &&
+          !contains(github.event.pull_request.labels.*.name, 'migracion-editada-a-proposito')
+        run: |
+          git fetch --no-tags origin "$GITHUB_BASE_REF"
+          base="$(git merge-base "origin/$GITHUB_BASE_REF" HEAD)"
+
+          # Solo se admite agregar migraciones (estado A). Modificar (M), borrar (D) o
+          # renombrar (R) una que ya existe en la rama base rompe las bases donde ya se
+          # aplico: Supabase la tiene registrada y nunca vuelve a ejecutarla.
+          tocadas="$(git diff --name-status --diff-filter=MDR "$base" HEAD -- supabase/migrations/)"
+
+          if [ -z "$tocadas" ]; then
+            echo "Ninguna migracion existente fue modificada."
+            exit 0
+          fi
+
+          echo "::error::Este PR modifica o borra migraciones que ya existen en $GITHUB_BASE_REF."
+          echo "$tocadas"
+
+          {
+            echo "## Migraciones ya aplicadas modificadas"
+            echo
+            echo "Una migracion que ya corrio queda registrada en \`supabase_migrations.schema_migrations\`"
+            echo "de cada base, y Supabase no la vuelve a ejecutar. Editarla cambia lo que valida el CI"
+            echo "(que aplica todo desde cero) pero no cambia nada en las bases reales: ahi es donde"
+            echo "aparece la divergencia, ya despues del merge."
+            echo
+            echo "Archivos:"
+            echo
+            echo '```'
+            echo "$tocadas"
+            echo '```'
+            echo
+            echo "**Que hacer:** dejar la migracion como esta y corregir hacia adelante con una"
+            echo "migracion nueva. Ver \`docs/CI-CD.md\`."
+            echo
+            echo "Si el cambio es intencional y ninguna base la aplico todavia, agrega la etiqueta"
+            echo "\`migracion-editada-a-proposito\` al PR."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          exit 1
+
+      - name: Aviso de guarda desactivada
+        if: >-
+          github.event_name == 'pull_request' &&
+          contains(github.event.pull_request.labels.*.name, 'migracion-editada-a-proposito')
+        run: |
+          echo "::warning::La guarda de migraciones se salto por la etiqueta migracion-editada-a-proposito."
+          echo "## Guarda de migraciones desactivada" >> "$GITHUB_STEP_SUMMARY"
+          echo "Este PR lleva la etiqueta \`migracion-editada-a-proposito\`, asi que se permitio editar migraciones existentes." >> "$GITHUB_STEP_SUMMARY"
+
+  # --------------------------------------------------------------------------------
+  validar:
+    name: Validar migraciones y funciones
+    needs: cambios
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Descargar el codigo
+        uses: actions/checkout@v4
+
+      - name: Sin cambios en supabase/
+        if: needs.cambios.outputs.supabase != 'true'
+        run: echo "El PR no toca supabase/; no hay migraciones ni funciones que validar." >> "$GITHUB_STEP_SUMMARY"
+
+      # El stack local corre sobre Docker y no necesita SUPABASE_ACCESS_TOKEN: ese token
+      # sirve para hablar con proyectos remotos. Antes la validacion entera estaba
+      # condicionada a el, asi que rotar el secret la apagaba en silencio dejando el
+      # workflow en verde.
+      - name: Instalar Supabase CLI
+        if: needs.cambios.outputs.supabase == 'true'
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Iniciar stack local de Supabase
+        if: needs.cambios.outputs.supabase == 'true'
+        # Se excluyen servicios pesados que no participan en la validacion de migraciones.
+        # El esquema auth/storage sigue presente en la imagen de Postgres.
+        run: supabase start -x studio,mailpit,edge-runtime,logflare,vector,supavisor,imgproxy,postgres-meta
+
+      - name: Aplicar migraciones desde cero
+        if: needs.cambios.outputs.supabase == 'true'
+        run: supabase db reset
+
+      - name: Lint de la base de datos
+        if: needs.cambios.outputs.supabase == 'true'
+        run: supabase db lint --local --fail-on warning
+
+      - name: Lint de Edge Functions
+        if: needs.cambios.outputs.supabase == 'true'
+        run: |
+          if ls supabase/functions/*/index.* >/dev/null 2>&1; then
+            supabase functions lint
+          else
+            echo "No hay Edge Functions todavia; se omite el lint."
+          fi
+
+  # --------------------------------------------------------------------------------
+  remoto:
+    name: Estado de la base remota
+    needs: cambios
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_PROJECT_REF_DEV: ${{ secrets.SUPABASE_PROJECT_REF_DEV }}
+    steps:
+      - name: Descargar el codigo
+        uses: actions/checkout@v4
+
+      - name: Verificar secrets
+        id: check
+        if: needs.cambios.outputs.supabase == 'true'
+        run: |
+          faltan=""
+          [ -z "$SUPABASE_ACCESS_TOKEN" ] && faltan="$faltan SUPABASE_ACCESS_TOKEN"
+          [ -z "$SUPABASE_DB_PASSWORD" ] && faltan="$faltan SUPABASE_DB_PASSWORD"
+          [ -z "$SUPABASE_PROJECT_REF_DEV" ] && faltan="$faltan SUPABASE_PROJECT_REF_DEV"
+
+          if [ -n "$faltan" ]; then
+            echo "listo=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::No se pudo consultar ecopac-dev; faltan estos secrets:$faltan"
+            echo "## Estado de la base remota no verificado" >> "$GITHUB_STEP_SUMMARY"
+            echo "Faltan los secrets:\`$faltan\`. Configuralos en Settings > Secrets and variables > Actions." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "listo=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Instalar Supabase CLI
+        if: steps.check.outputs.listo == 'true'
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Vincular con ecopac-dev
+        if: steps.check.outputs.listo == 'true'
+        run: supabase link --project-ref "$SUPABASE_PROJECT_REF_DEV" -p "$SUPABASE_DB_PASSWORD"
+
+      - name: Comparar historial local y remoto
+        if: steps.check.outputs.listo == 'true'
+        run: |
+          {
+            echo "## Migraciones en ecopac-dev"
+            echo
+            echo '```'
+            supabase migration list --linked 2>&1 || true
+            echo '```'
+            echo
+            echo "### Se aplicarian al mergear"
+            echo
+            echo '```'
+            supabase db push --dry-run 2>&1 || true
+            echo '```'
+            echo
+            echo "> El dry-run confirma la conexion y lista lo pendiente, pero no ejecuta el SQL:"
+            echo "> un error dentro de una migracion no aparece aqui. Quien cubre eso es la guarda"
+            echo "> **Migraciones no editadas**, que evita la unica forma en que el escenario"
+            echo "> incremental se aparta del que valida el CI."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # --------------------------------------------------------------------------------
+  aplicar:
+    name: Aplicar migraciones
+    # La migracion no corre si la validacion fallo. Antes eran workflows independientes.
+    needs: [validar, inmutabilidad]
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_PROJECT_REF_DEV: ${{ secrets.SUPABASE_PROJECT_REF_DEV }}
+      SUPABASE_PROJECT_REF_PROD: ${{ secrets.SUPABASE_PROJECT_REF_PROD }}
+    steps:
+      - name: Descargar el codigo
+        uses: actions/checkout@v4
+
+      - name: Instalar Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Determinar ambiente y verificar secrets
+        id: check
+        run: |
+          case "$GITHUB_REF_NAME" in
+            develop) proyecto="$SUPABASE_PROJECT_REF_DEV";  ambiente="ecopac-dev";  nombre_secret="SUPABASE_PROJECT_REF_DEV" ;;
+            main)    proyecto="$SUPABASE_PROJECT_REF_PROD"; ambiente="ecopac-prod"; nombre_secret="SUPABASE_PROJECT_REF_PROD" ;;
+            *)       proyecto="";                           ambiente="desconocido"; nombre_secret="" ;;
+          esac
+
+          faltan=""
+          [ -z "$SUPABASE_ACCESS_TOKEN" ] && faltan="$faltan SUPABASE_ACCESS_TOKEN"
+          [ -z "$SUPABASE_DB_PASSWORD" ] && faltan="$faltan SUPABASE_DB_PASSWORD"
+          [ -z "$proyecto" ] && faltan="$faltan $nombre_secret"
+
+          echo "ambiente=$ambiente" >> "$GITHUB_OUTPUT"
+
+          # Cuando falta un secret el workflow avisa de forma visible pero no falla, para no
+          # bloquear al equipo mientras termina de configurar los ambientes. Lo que no puede
+          # pasar es que la omision se vea igual que un despliegue exitoso.
+          if [ -n "$faltan" ]; then
+            echo "listo=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Las migraciones NO se aplicaron en $ambiente. Faltan los secrets:$faltan"
+            {
+              echo "## Migraciones omitidas en $ambiente"
+              echo
+              echo "**No se aplico ninguna migracion.** Faltan estos secrets:"
+              echo
+              for s in $faltan; do echo "- \`$s\`"; done
+              echo
+              echo "Configuralos en Settings > Secrets and variables > Actions."
+              echo "Mientras tanto, la base de \`$ambiente\` queda desactualizada respecto del repositorio."
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "listo=true" >> "$GITHUB_OUTPUT"
+            echo "proyecto=$proyecto" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Vincular proyecto
+        if: steps.check.outputs.listo == 'true'
+        run: supabase link --project-ref "${{ steps.check.outputs.proyecto }}" -p "$SUPABASE_DB_PASSWORD"
+
+      - name: Aplicar migraciones
+        if: steps.check.outputs.listo == 'true'
+        run: supabase db push
+
+      - name: Resumen del despliegue
+        if: steps.check.outputs.listo == 'true'
+        run: |
+          {
+            echo "## Migraciones aplicadas en ${{ steps.check.outputs.ambiente }}"
+            echo
+            echo '```'
+            supabase migration list --linked 2>&1 || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # --------------------------------------------------------------------------------
+  avisar:
+    name: Avisar fallo
+    needs: [validar, inmutabilidad, aplicar]
+    if: failure() && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      # El fallo de un despliegue paso desapercibido cuatro corridas seguidas. Una issue
+      # abierta es mas dificil de ignorar que un check rojo en la lista de commits.
+      - name: Abrir issue si no hay una ya
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const rama = context.ref.replace('refs/heads/', '');
+            const titulo = `[BUG] Fallo el despliegue de base de datos en ${rama}`;
+            const corrida = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+
+            const abiertas = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'type:bug,module:infra',
+            });
+
+            const yaExiste = abiertas.data.some((i) => i.title === titulo);
+            if (yaExiste) {
+              core.notice(`Ya hay una issue abierta para el fallo en ${rama}; no se duplica.`);
+              return;
+            }
+
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: titulo,
+              labels: ['type:bug', 'module:infra', 'priority:alta', 'platform:shared'],
+              body: [
+                '### Que paso',
+                '',
+                `El workflow de Supabase fallo tras un push a \`${rama}\`, asi que la base de ese`,
+                'ambiente quedo desactualizada respecto del repositorio.',
+                '',
+                `Corrida: ${corrida}`,
+                `Commit: ${context.sha}`,
+                '',
+                '### Que revisar',
+                '',
+                '- [ ] Abrir el log de la corrida y ver en que migracion se detuvo',
+                '- [ ] Confirmar si alguna migracion ya aplicada fue editada (esa es la causa mas comun)',
+                '- [ ] Corregir hacia adelante con una migracion nueva, sin editar las existentes',
+                '- [ ] Confirmar con `supabase migration list --linked` que la base quedo al dia',
+                '',
+                'Ver `docs/CI-CD.md`.',
+                '',
+                '_Issue abierta automaticamente por el workflow de Supabase._',
+              ].join('\n'),
+            });
