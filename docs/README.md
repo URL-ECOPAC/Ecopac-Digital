@@ -12,6 +12,7 @@ configuracion de GitHub (plantillas de issues, PR y los workflows de CI/CD) esta
 | [CONTRIBUTING.md](./CONTRIBUTING.md) | Como contribuir: ramas, commits, PRs, issues y el tablero               |
 | [DISENO.md](./DISENO.md)             | Referencia de diseno: pantallas, navegacion y trazabilidad con issues  |
 | [ARQUITECTURA-FRONTEND.md](./ARQUITECTURA-FRONTEND.md) | Como se comparte el frontend entre web y movil        |
+| [CI-CD.md](./CI-CD.md)               | Que valida y despliega cada workflow, y que hacer cuando falla         |
 
 ## Dependencias y Herramientas
 

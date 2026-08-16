@@ -6,7 +6,7 @@
 -- Tablas
 -- ============================================================================
 CREATE TABLE permisos (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id UUID PRIMARY KEY DEFAULT extensions.gen_random_uuid(),
   clave VARCHAR(100) UNIQUE NOT NULL,
   modulo VARCHAR(50) NOT NULL,
   descripcion TEXT

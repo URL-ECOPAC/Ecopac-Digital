@@ -9,7 +9,7 @@ CREATE TABLE perfiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   nombres VARCHAR(100) NOT NULL,
   apellidos VARCHAR(100) NOT NULL,
-  email CITEXT UNIQUE NOT NULL,
+  email extensions.citext UNIQUE NOT NULL,
   telefono VARCHAR(20),
   rol rol_usuario NOT NULL DEFAULT 'voluntario general',
   activo BOOLEAN NOT NULL DEFAULT TRUE,
