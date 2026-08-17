@@ -31,6 +31,13 @@ La llave anon/public es publica por diseno (puede viajar en el bundle del client
 2 valores (URL + llave anon/public) con el resto del equipo. Si aun no hay Supabase
 configurado, el esqueleto corre igualmente con valores vacios.
 
+Estas cuatro variables las lee y valida `packages/shared/entorno`. Cuando algo esta mal la
+aplicacion falla al arrancar, no a media consulta, y el mensaje nombra la variable exacta y el
+archivo donde definirla. El modulo tambien rechaza en codigo una llave `service_role` (o
+`sb_secret_...`) puesta por error en el `.env`: no basta con la regla escrita, porque esa llave
+salta todas las politicas RLS. Solo se acepta `http://` contra la instancia local de Supabase;
+para cualquier otro host se exige `https://`.
+
 ## Secrets de GitHub Actions (CI/CD)
 
 Los workflows de CI/CD leen los secrets desde **Settings > Secrets and variables > Actions**
