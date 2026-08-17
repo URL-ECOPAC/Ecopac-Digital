@@ -6,7 +6,7 @@
 // react-dom, react-native, react-bootstrap, ni usar document, window o localStorage.
 
 export * from "./navegacion.js";
-export * from "./usuarios/roles.js";
+export * from "./usuarios/index.js";
 
 // Modulos de dominio
 export * from "./pacientes/index.js";
