@@ -10,3 +10,4 @@
 export * from "./almacenamiento.js";
 export * from "./cliente.js";
 export * from "./errores.js";
+export * from "./errores-de-supabase.js";
