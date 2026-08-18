@@ -8,6 +8,9 @@
 export * from "./navegacion.js";
 export * from "./usuarios/index.js";
 
+// Configuracion de entorno: la URL y la llave anonima de Supabase, validadas al arrancar.
+export * from "./entorno/index.js";
+
 // Modulos de dominio
 export * from "./pacientes/index.js";
 export * from "./api/index.js";
