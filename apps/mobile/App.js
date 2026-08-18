@@ -1,8 +1,9 @@
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { inicializarSupabase } from '@ecopac/shared';
+import { inicializarSupabase, useSesion } from '@ecopac/shared';
 
 import { almacenamientoMovil } from './src/almacenamiento';
 import AppNavigator from './src/navigation/AppNavigator';
+import RestaurandoSesionScreen from './src/screens/RestaurandoSesionScreen';
 
 // El cliente de Supabase se crea una sola vez, aqui, con AsyncStorage como almacenamiento.
 // Va en el ambito del modulo y no dentro del componente: no debe rehacerse en cada render
@@ -20,9 +21,15 @@ try {
 }
 
 export default function App() {
+  const { estadoRestauracion, haySesion } = useSesion();
+
   return (
     <SafeAreaProvider>
-      <AppNavigator />
+      {estadoRestauracion === 'cargando' ? (
+        <RestaurandoSesionScreen />
+      ) : (
+        <AppNavigator haySesion={haySesion} />
+      )}
     </SafeAreaProvider>
   );
 }

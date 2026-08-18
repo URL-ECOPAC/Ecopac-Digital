@@ -1,5 +1,29 @@
-import ScreenPlaceholder from './ScreenPlaceholder';
+import { StyleSheet, Text, View } from 'react-native';
+import { useSesion } from '@ecopac/shared';
+import { colors, spacing, typography } from '@ecopac/ui-tokens';
+
+import { PrimaryButton, ScreenContainer } from '../components';
 
 export default function AjustesScreen() {
-  return <ScreenPlaceholder name="Ajustes" />;
+  const { logout } = useSesion();
+
+  return (
+    <ScreenContainer>
+      <View style={styles.contenido}>
+        <Text style={styles.titulo}>Ajustes</Text>
+        <PrimaryButton label="Cerrar sesión" onPress={logout} />
+      </View>
+    </ScreenContainer>
+  );
 }
+
+const styles = StyleSheet.create({
+  contenido: {
+    gap: spacing.lg,
+  },
+  titulo: {
+    color: colors.text,
+    fontSize: typography.sizes.lg,
+    fontWeight: typography.weights.semibold,
+  },
+});
