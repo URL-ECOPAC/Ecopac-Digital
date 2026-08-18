@@ -22,7 +22,7 @@ IMMUTABLE
 STRICT
 PARALLEL SAFE
 AS $$
-  SELECT extensions.unaccent('unaccent', texto);
+  SELECT extensions.unaccent('extensions.unaccent'::regdictionary, texto);
 $$;
 
 COMMENT ON FUNCTION public.f_unaccent(TEXT) IS
@@ -31,10 +31,5 @@ COMMENT ON FUNCTION public.f_unaccent(TEXT) IS
 -- ============================================================================
 -- Indice de trigramas
 -- ============================================================================
--- El nombre completo se normaliza a minusculas y sin acentos antes de indexar. La
--- consulta de busqueda (issue #115) debe usar EXACTAMENTE esta misma expresion para
--- que el planificador reconozca el indice:
---
---   lower(public.f_unaccent(nombres || ' ' || apellidos))
 CREATE INDEX idx_pacientes_nombre_completo_trgm ON pacientes
-USING GIN (lower(public.f_unaccent(nombres || ' ' || apellidos)) extensions.gin_trgm_ops);
+USING GIN ((lower(public.f_unaccent(nombres || ' ' || apellidos))) extensions.gin_trgm_ops);
