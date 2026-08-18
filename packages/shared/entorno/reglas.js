@@ -132,10 +132,22 @@ function rolDeclaradoEnLaLlave(llave) {
   }
 }
 
+/**
+ * Forma minima de una URL absoluta: esquema, dos puntos y dos barras.
+ *
+ * React Native trae su propia clase URL (Libraries/Blob/URL.js, registrada como global por
+ * setUpXHR.js) que resuelve todo con expresiones regulares y NO lanza con una cadena
+ * malformada, a diferencia del navegador y de Node. Sin esta comprobacion previa, un valor
+ * basura daria en movil el mensaje de "debe usar https", que manda a buscar el problema
+ * equivocado. Se valida la forma a mano para que las dos plataformas digan lo mismo.
+ */
+const FORMA_DE_URL_ABSOLUTA = /^[a-z][a-z\d+\-.]*:\/\//i;
+
 /** Valida y normaliza la URL del proyecto de Supabase. */
 function validarUrl(valor, nombreDeVariable, plataforma) {
   let url;
   try {
+    if (!FORMA_DE_URL_ABSOLUTA.test(valor)) throw new TypeError("URL sin esquema");
     url = new URL(valor);
   } catch {
     throw new ErrorDeEntorno(
