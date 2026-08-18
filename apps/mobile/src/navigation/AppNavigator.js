@@ -124,12 +124,15 @@ function TabsNavigator() {
   );
 }
 
-export default function AppNavigator() {
+export default function AppNavigator({ haySesion }) {
   return (
     <NavigationContainer>
-      <Root.Navigator initialRouteName={ROUTES.LOGIN} screenOptions={{ headerShown: false }}>
-        <Root.Screen name={ROUTES.LOGIN} component={LoginScreen} />
-        <Root.Screen name={ROUTES.TABS} component={TabsNavigator} />
+      <Root.Navigator screenOptions={{ headerShown: false }}>
+        {haySesion ? (
+          <Root.Screen name={ROUTES.TABS} component={TabsNavigator} />
+        ) : (
+          <Root.Screen name={ROUTES.LOGIN} component={LoginScreen} />
+        )}
       </Root.Navigator>
     </NavigationContainer>
   );
