@@ -4,15 +4,32 @@
 // localStorage ni AsyncStorage (regla de la frontera, ver docs/ARQUITECTURA-FRONTEND.md).
 // Por eso el almacenamiento entra por parametro: cada app entrega el suyo.
 //
-// La forma que debe cumplir un adaptador es la que espera supabase-js:
-//
-//   getItem(clave)          -> string | null            (puede ser asincrono)
-//   setItem(clave, valor)   -> void                     (puede ser asincrono)
-//   removeItem(clave)       -> void                     (puede ser asincrono)
-//
-// El contrato formal y las implementaciones por plataforma (localStorage en web,
-// AsyncStorage en movil) son la issue #46. Aqui solo vive lo que el cliente necesita para
-// arrancar: un respaldo en memoria y la verificacion de que el adaptador recibido sirve.
+// Este archivo es el contrato. Las implementaciones viven en cada app:
+// apps/web/src/almacenamiento.js (localStorage) y apps/mobile/src/almacenamiento.js
+// (AsyncStorage).
+
+/**
+ * Adaptador de almacenamiento de la sesion.
+ *
+ * Es la forma que espera supabase-js. Los tres metodos pueden ser sincronos o devolver una
+ * promesa: supabase-js siempre hace await, asi que localStorage (sincrono) y AsyncStorage
+ * (asincrono) encajan igual sin adaptar nada mas.
+ *
+ * Quien elige las claves es supabase-js, no la app: son de la forma sb-<proyecto>-auth-token.
+ * Una app nunca debe escribir ni borrar esas claves por su cuenta.
+ *
+ * Un adaptador tiene que ser duradero para que la sesion sobreviva a recargar la pagina o a
+ * cerrar la app. Si la plataforma no puede garantizarlo, es preferible caer al respaldo en
+ * memoria de este archivo -la sesion se pierde, pero nada se rompe- que dejar a supabase-js
+ * escribiendo en un sitio que falla.
+ *
+ * @typedef {object} AdaptadorDeAlmacenamiento
+ * @property {(clave: string) => string | null | Promise<string | null>} getItem Valor
+ *   guardado, o null si esa clave no existe. Nunca debe lanzar.
+ * @property {(clave: string, valor: string) => void | Promise<void>} setItem Guarda el valor.
+ * @property {(clave: string) => void | Promise<void>} removeItem Borra la clave. No es error
+ *   que la clave no exista.
+ */
 
 import { ErrorDeCliente, CODIGOS_DE_ERROR_DE_CLIENTE } from "./errores.js";
 

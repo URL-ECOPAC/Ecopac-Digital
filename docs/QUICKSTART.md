@@ -31,6 +31,10 @@ La llave anon/public es publica por diseno (puede viajar en el bundle del client
 2 valores (URL + llave anon/public) con el resto del equipo. Si aun no hay Supabase
 configurado, el esqueleto corre igualmente con valores vacios.
 
+El archivo va en la **raiz del monorepo** y de ahi lo leen las dos apps, tanto en local como en
+Docker: `apps/web/vite.config.js` apunta `envDir` a la raiz y `apps/mobile/metro.config.js` carga
+de ahi las variables `EXPO_PUBLIC_`. No hace falta duplicarlo dentro de `apps/`.
+
 Estas cuatro variables las lee y valida `packages/shared/entorno`. Cuando algo esta mal la
 aplicacion falla al arrancar, no a media consulta, y el mensaje nombra la variable exacta y el
 archivo donde definirla. El modulo tambien rechaza en codigo una llave `service_role` (o
