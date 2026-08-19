@@ -27,6 +27,7 @@ export const CODIGOS_DE_ERROR_DE_SUPABASE = {
   PERMISO_DENEGADO: "permiso_denegado",
   SESION_EXPIRADA: "sesion_expirada",
   CREDENCIALES_INVALIDAS: "credenciales_invalidas",
+  CUENTA_DESACTIVADA: "cuenta_desactivada",
   SIN_RESULTADOS: "sin_resultados",
   FALLO_DE_RED: "fallo_de_red",
   DESCONOCIDO: "desconocido",
@@ -73,6 +74,8 @@ const MENSAJES = {
     "Tu sesion expiro. Inicia sesion de nuevo para continuar.",
   [CODIGOS_DE_ERROR_DE_SUPABASE.CREDENCIALES_INVALIDAS]:
     "El correo o la contrasena no son correctos.",
+  [CODIGOS_DE_ERROR_DE_SUPABASE.CUENTA_DESACTIVADA]:
+    "Tu usuario esta desactivado. Pide a la administradora que lo reactive para volver a entrar.",
   [CODIGOS_DE_ERROR_DE_SUPABASE.SIN_RESULTADOS]: "No se encontro el registro que buscabas.",
   [CODIGOS_DE_ERROR_DE_SUPABASE.FALLO_DE_RED]:
     `${labels.errorDeConexion}. Revisa tu conexion e intenta de nuevo; ` +
@@ -202,6 +205,28 @@ function construirDetalle(error) {
 }
 
 /**
+ * Arma el objeto uniforme a partir de una clasificacion ya decidida.
+ *
+ * No todo error nace de una respuesta del servidor. Que un perfil este desactivado es una
+ * regla del sistema que el cliente comprueba por su cuenta, y aun asi tiene que llegar a la
+ * pantalla con la misma forma que los demas para que quien la muestra no distinga de donde
+ * vino. El texto sigue saliendo de MENSAJES, que es la regla 1 de este archivo.
+ *
+ * @param {string} codigo Uno de CODIGOS_DE_ERROR_DE_SUPABASE.
+ * @param {string} [detalle] Contexto tecnico para el log. Ya saneado por quien llama.
+ * @returns {{ codigo: string, mensaje: string, detalle: string, esReintentable: boolean }}
+ */
+export function construirError(codigo, detalle = "") {
+  return {
+    codigo,
+    // Siempre hay mensaje: quedarse sin texto que mostrar es peor que un texto generico.
+    mensaje: MENSAJES[codigo] ?? MENSAJES[CODIGOS_DE_ERROR_DE_SUPABASE.DESCONOCIDO],
+    detalle,
+    esReintentable: REINTENTABLES.has(codigo),
+  };
+}
+
+/**
  * Convierte cualquier error de Supabase en un objeto uniforme.
  *
  * @param {unknown} error Lo que devolvio supabase-js, o lo que sea que llego.
@@ -223,11 +248,5 @@ export function normalizarError(error) {
     codigo = CODIGOS_DE_ERROR_DE_SUPABASE.DESCONOCIDO;
   }
 
-  return {
-    codigo,
-    // Siempre hay mensaje: quedarse sin texto que mostrar es peor que un texto generico.
-    mensaje: MENSAJES[codigo] ?? MENSAJES[CODIGOS_DE_ERROR_DE_SUPABASE.DESCONOCIDO],
-    detalle: construirDetalle(error),
-    esReintentable: REINTENTABLES.has(codigo),
-  };
+  return construirError(codigo, construirDetalle(error));
 }
