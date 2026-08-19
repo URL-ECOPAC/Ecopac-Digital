@@ -1,6 +1,11 @@
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from 'react-bootstrap';
-import { MODULOS, seccionesVisibles, etiquetaDeRol } from '@ecopac/shared';
+import {
+  MODULOS,
+  seccionesVisibles,
+  etiquetaDeRol,
+  formatearFechaCorta,
+} from '@ecopac/shared';
 import { useUsuarioActual } from '../hooks/useUsuarioActual';
 import './MainLayout.css';
 
@@ -33,11 +38,8 @@ export default function MainLayout() {
   const actual = moduloDeRuta(location.pathname);
 
   const iniciales = `${usuario.nombres[0] ?? ''}${usuario.apellidos[0] ?? ''}`.toUpperCase();
-  const fecha = new Date().toLocaleDateString('es-GT', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  });
+  // El formato sale de shared para que la web y el movil muestren la fecha igual.
+  const fecha = formatearFechaCorta(new Date());
 
   const handleLogout = () => navigate('/login');
 
