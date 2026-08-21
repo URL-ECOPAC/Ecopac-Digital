@@ -10,6 +10,7 @@ import ProyectosPage from './pages/ProyectosPage';
 import ReportesPage from './pages/ReportesPage';
 import JornadasPage from './pages/JornadasPage';
 import VoluntariosPage from './pages/VoluntariosPage';
+import NotFoundPage from './pages/NotFoundPage';
 
 // Las rutas siguen la definicion unica de MODULOS en packages/shared/navegacion.js:
 // si se agrega un modulo alli, hay que registrar aqui su ruta.
@@ -31,6 +32,8 @@ export default function App() {
           <Route path="/reportes" element={<ReportesPage />} />
           <Route path="/jornadas" element={<JornadasPage />} />
           <Route path="/voluntarios" element={<VoluntariosPage />} />
+          {/* Ruta comodín 404 */}
+          <Route path="*" element={<NotFoundPage />} />
         </Route>
       </Routes>
     </BrowserRouter>
