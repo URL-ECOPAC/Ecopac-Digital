@@ -114,7 +114,298 @@ la misma interfaz, no dos disenos distintos.
 
 `FilterBar` y `DataList` son los que hacen el trabajo: consumen los descriptores de `shared` y
 deciden como dibujarlos. La app movil ya tiene `ScreenContainer`, `TextField`, `Selector`,
-`PrimaryButton` y `SecondaryButton` implementados y con tokens; sirven de referencia.
+`PrimaryButton` y `SecondaryButton` implementados (`apps/mobile/src/components/`), y la web ya
+tiene `EmptyState`, `LoadingState` y `ErrorState` (`apps/web/src/components/common/`); estos ocho
+son la referencia real de la API, el contrato de abajo se escribio a partir de ellos. El resto
+todavia no existe: su contrato es la propuesta a implementar, no una descripcion de codigo ya
+escrito.
+
+### Excepciones de nombres entre plataformas
+
+La regla es "mismos nombres, mismas props", con dos excepciones que vienen de la plataforma
+subyacente y no tiene sentido esconder detras de una capa de traduccion:
+
+- **Evento de cambio de texto**: la web usa `onChange` (evento DOM de `Form.Control`), el movil
+  usa `onChangeText` (convencion de `TextInput` de React Native, recibe el string directo en vez
+  de un evento). Aplica a `TextField`.
+- **Evento de toque/click**: la web usa `onClick` (`Button` de `react-bootstrap`), el movil usa
+  `onPress` (convencion de `Pressable`). Aplica a `PrimaryButton`, `SecondaryButton` y a
+  cualquier componente con `Card` interactiva.
+
+Todas las demas props (`label`, `value`, `error`, `disabled`, `title`, etc.) se llaman igual en
+las dos plataformas.
+
+### Contrato de FilterBar y DataList
+
+Estos dos son deliberadamente "tontos": no conocen los filtros ni las columnas de ningun modulo
+especifico, solo saben interpretar la forma generica de un descriptor. El mismo `FilterBar` sirve
+para pacientes, inventario o donaciones porque toda la informacion especifica del modulo vive en
+`shared`, no en el componente.
+
+**`FilterBar`**
+
+| Prop | Tipo | Descripcion |
+| ---- | ---- | ----------- |
+| `campos` | array | Descriptores de `filtros.js` del modulo, ej. `FILTROS_PACIENTE`. Cada uno trae `id`, `tipo`, `label` y, segun el tipo, `placeholder`, `opcionesDesde`, `min`/`max` (ver `packages/shared/pacientes/filtros.js`). |
+| `valores` | objeto | Valor actual de cada filtro, indexado por `id` (ej. `{ busqueda: '', comunidad: null }`). |
+| `onChange` | fn(id, valor) | Se llama cuando el usuario cambia un filtro. `FilterBar` no guarda estado propio: quien lo usa decide que hacer con el valor nuevo. |
+
+Por cada entrada de `campos`, `FilterBar` dibuja el control segun `tipo` (los valores de
+`TIPOS_DE_FILTRO`): `busqueda` se vuelve un `TextField`, `select` un `Selector` (resolviendo sus
+opciones de `opcionesDesde`), `rango` un par de `NumberField` acotados por `min`/`max`.
+
+- **Web**: una fila de controles (`Form.Select`/`Form.Control`) sobre el listado.
+- **Movil**: panel colapsable con boton "Aplicar", para no ocupar toda la pantalla en un
+  dispositivo angosto.
+
+**`DataList`**
+
+| Prop | Tipo | Descripcion |
+| ---- | ---- | ----------- |
+| `columnas` | array | Descriptores de `columnas.js` del modulo, ej. `COLUMNAS_PACIENTE`. Cada uno trae `id`, `label`, `tipo` y, segun el caso, `principal`, `anchoWeb`, `desde` (de que campo de la fila sale el valor, si no es `id`) y `sufijo` (ver `packages/shared/pacientes/columnas.js`). |
+| `datos` | array | Las filas a mostrar. |
+| `cargando` | bool | Si es `true`, `DataList` delega en `LoadingState` en vez de dibujar filas. |
+| `vacio` | string \| nodo | Mensaje o contenido para `EmptyState` cuando `datos` esta vacio. |
+| `onRowPress` | fn(fila) | Opcional. Se llama al tocar/hacer click en una fila. |
+
+Por cada entrada de `columnas`, `DataList` sabe pintar el `tipo` declarado (`texto`, `numero`,
+`chips`, `avatar`, ...), tomando el valor de la fila por `id` o por `desde` si la columna lo
+declara.
+
+- **Web**: se vuelve una `<Table>` de `react-bootstrap`; cada columna es un `<td>`.
+- **Movil**: se vuelve un `FlatList` de tarjetas; cada `columna` se apila dentro de la tarjeta en
+  el mismo orden declarado (no hay filas ni columnas literales en una pantalla angosta).
+
+### Contrato de cada componente
+
+Convenciones de la tabla: **Default** es el valor si la prop no se pasa; "—" quiere decir que la
+prop es requerida o que no aplica un default. **Estado** indica si el componente ya existe
+(referencia real) o si su contrato es una propuesta para implementarlo.
+
+**`ScreenContainer`** — implementado en movil (`apps/mobile/src/components/ScreenContainer.js`)
+
+| Prop | Tipo | Default | Descripcion |
+| ---- | ---- | ------- | ----------- |
+| `children` | nodo | — | Contenido de la pantalla. |
+| `scrollable` | bool | `true` | Si `false`, el contenido no se vuelve scrolleable (para pantallas con su propio scroll interno, ej. una lista). |
+| `style` | estilo | — | Estilo del contenedor raiz. |
+| `contentContainerStyle` | estilo | — | Estilo del contenido interno. |
+
+Envuelve toda pantalla de la app. En movil evita ademas que el teclado tape los campos
+enfocados (`KeyboardAvoidingView`); en web el navegador ya lo resuelve solo.
+
+- **Web**: contenedor simple con padding.
+- **Movil**: `SafeAreaView` + `KeyboardAvoidingView` + `ScrollView` condicional (implementado).
+
+**`PageHeader`** — propuesta
+
+| Prop | Tipo | Default | Descripcion |
+| ---- | ---- | ------- | ----------- |
+| `title` | string | — | Titulo de la pantalla. |
+| `subtitle` | string | — | Subtitulo opcional. |
+| `actions` | array de `{ label, onPress/onClick, variant }` | `[]` | Botones de accion asociados a la pantalla (ej. "Nuevo paciente"). |
+
+- **Web**: titulo/subtitulo a la izquierda, acciones alineadas a la derecha en la misma fila.
+- **Movil**: titulo/subtitulo arriba, acciones en una fila debajo (para no romper en ancho
+  angosto).
+
+**`TextField`** — implementado en movil (`apps/mobile/src/components/TextField.js`)
+
+| Prop | Tipo | Default | Descripcion |
+| ---- | ---- | ------- | ----------- |
+| `label` | string | — | Etiqueta sobre el campo. |
+| `error` | string | — | Mensaje de error bajo el campo; si esta presente, el borde cambia de color. |
+| `style` | estilo | — | Estilo del contenedor. |
+| resto de props | — | — | Cualquier prop nativa del input subyacente pasa directo: `value`, `placeholder`, `keyboardType`, `secureTextEntry`, etc. (ver la excepcion `onChange`/`onChangeText` arriba). |
+
+Area tactil minima de 48 dp en movil (el personal a veces llena formularios con guantes). El
+borde cambia de color al enfocar y al haber error.
+
+- **Web**: `Form.Control` de `react-bootstrap`.
+- **Movil**: `TextInput` de React Native (implementado).
+
+**`Selector`** — implementado en movil (`apps/mobile/src/components/Selector.js`)
+
+| Prop | Tipo | Default | Descripcion |
+| ---- | ---- | ------- | ----------- |
+| `label` | string | — | Etiqueta sobre el selector. |
+| `value` | string \| number | — | Valor seleccionado actualmente. |
+| `options` | array de `{ label, value }` | — | Opciones disponibles. |
+| `onSelect` | fn(value) | — | Se llama con el `value` ya resuelto (no un evento) al elegir una opcion. Mismo nombre en ambas plataformas. |
+| `placeholder` | string | `'Seleccionar'` | Texto cuando no hay valor elegido. |
+| `error` | string | — | Mensaje de error bajo el selector. |
+| `style` | estilo | — | Estilo del contenedor. |
+
+- **Web**: `Form.Select` nativo de `react-bootstrap`.
+- **Movil**: boton que abre una hoja inferior con la lista de opciones (`Modal` transparente +
+  `FlatList`), implementado. Este es el patron de hoja inferior que `Modal` y `DateField`
+  reutilizan en movil.
+
+**`DateField`** — propuesta
+
+| Prop | Tipo | Default | Descripcion |
+| ---- | ---- | ------- | ----------- |
+| `label` | string | — | Etiqueta sobre el campo. |
+| `value` | string ISO `'YYYY-MM-DD'` \| `null` | `null` | Fecha seleccionada. |
+| `onChange` | fn(value) | — | Mismo nombre en ambas plataformas (no es un input de texto libre, no aplica la excepcion `onChangeText`). |
+| `minDate`, `maxDate` | string ISO | — | Limites opcionales. |
+| `error` | string | — | Mensaje de error bajo el campo. |
+| `style` | estilo | — | Estilo del contenedor. |
+
+Mismo patron visual que `TextField` (label arriba, error abajo), pero el valor se elige, no se
+escribe.
+
+- **Web**: `input type="date"` o un date-picker de `react-bootstrap`.
+- **Movil**: abre un selector nativo en hoja inferior, mismo patron que `Selector`.
+
+**`NumberField`** — propuesta
+
+| Prop | Tipo | Default | Descripcion |
+| ---- | ---- | ------- | ----------- |
+| `label` | string | — | Etiqueta sobre el campo. |
+| `value` | number \| `null` | `null` | Valor actual. |
+| `onChange` | fn(value) | — | Mismo nombre en ambas plataformas. |
+| `min`, `max` | number | — | Limites opcionales. |
+| `step` | number | `1` | Incremento. |
+| `suffix` | string | — | Texto pegado al valor (ej. `'anios'`, ver `sufijo` en `COLUMNAS_PACIENTE`). |
+| `error` | string | — | Mensaje de error bajo el campo. |
+| `style` | estilo | — | Estilo del contenedor. |
+
+- **Web**: `input type="number"` de `react-bootstrap`.
+- **Movil**: `TextInput` con `keyboardType="numeric"`, mismo componente base que `TextField`.
+
+**`PrimaryButton`** — implementado en movil (`apps/mobile/src/components/PrimaryButton.js`)
+
+| Prop | Tipo | Default | Descripcion |
+| ---- | ---- | ------- | ----------- |
+| `title` | string | — | Texto del boton. |
+| `onPress` / `onClick` | fn | — | Ver excepcion de nombres arriba. |
+| `disabled` | bool | `false` | Deshabilita el boton. |
+| `loading` | bool | `false` | Muestra un spinner en vez del texto y deshabilita el boton. |
+| `style` | estilo | — | Estilo del boton. |
+
+Altura minima de 48 dp en movil.
+
+- **Web**: `Button` de `react-bootstrap`, con `Spinner` de `react-bootstrap` cuando `loading`.
+- **Movil**: `Pressable` con `ActivityIndicator` cuando `loading` (implementado).
+
+**`SecondaryButton`** — implementado en movil (`apps/mobile/src/components/SecondaryButton.js`)
+
+| Prop | Tipo | Default | Descripcion |
+| ---- | ---- | ------- | ----------- |
+| `title` | string | — | Texto del boton. |
+| `onPress` / `onClick` | fn | — | Ver excepcion de nombres arriba. |
+| `disabled` | bool | `false` | Deshabilita el boton. |
+| `style` | estilo | — | Estilo del boton. |
+
+A diferencia de `PrimaryButton`, no tiene `loading`: se usa para acciones que no disparan una
+espera (ej. "Cancelar", "Volver").
+
+- **Web**: `Button variant="outline-..."` de `react-bootstrap`.
+- **Movil**: `Pressable` con borde, sin relleno (implementado).
+
+**`FilterBar`** y **`DataList`** — propuesta, ver la seccion anterior para su contrato completo.
+
+**`StatusChip`** — propuesta (su fuente de color ya existe en `@ecopac/ui-tokens`)
+
+| Prop | Tipo | Default | Descripcion |
+| ---- | ---- | ------- | ----------- |
+| `status` | string | — | Debe ser exactamente un valor de un enum de `supabase/migrations/00001_initial_schema.sql` (ej. `'pendiente de validacion'`). Se usa tal cual como indice de `statusColors`, sin tabla de traduccion propia. |
+| `label` | string | valor crudo de `status` | Texto a mostrar, si debe diferir del valor del enum. |
+
+Si `status` no esta en `statusColors` (`@ecopac/ui-tokens`), usa `colors.secondary` como color
+neutro por defecto en vez de fallar.
+
+- **Web**: `Badge` de `react-bootstrap`.
+- **Movil**: `View` con `backgroundColor` de `statusColors` y `Text`.
+
+**`Card`** — propuesta
+
+| Prop | Tipo | Default | Descripcion |
+| ---- | ---- | ------- | ----------- |
+| `children` | nodo | — | Contenido de la tarjeta. |
+| `title` | string | — | Titulo opcional dentro de la tarjeta. |
+| `onPress` / `onClick` | fn | — | Opcional; si esta presente, la tarjeta es interactiva (ver excepcion de nombres arriba). |
+| `style` | estilo | — | Estilo del contenedor. |
+
+Base visual de las tarjetas de `DataList` en movil y de cualquier bloque agrupado en un
+dashboard.
+
+- **Web**: `div` con borde/sombra de Bootstrap.
+- **Movil**: `View` con sombra/borde equivalentes de los tokens de espaciado.
+
+**`EmptyState`** — implementado en web (`apps/web/src/components/common/EmptyState.jsx`)
+
+| Prop | Tipo | Default | Descripcion |
+| ---- | ---- | ------- | ----------- |
+| `message` | string | `labels.sinResultados` | Mensaje central. |
+| `actionLabel` | string | — | Texto del boton de accion. |
+| `onAction` | fn | — | Handler del boton. El boton solo se muestra si `actionLabel` **y** `onAction` estan presentes. |
+
+Lo usa `DataList` cuando `datos` esta vacio, o cualquier pantalla sin resultados.
+
+- **Web**: contenedor centrado con texto y `Button` opcional (implementado).
+- **Movil**: mismo patron con `View`/`Text`/`PrimaryButton`.
+
+**`LoadingState`** — implementado en web (`apps/web/src/components/common/LoadingState.jsx`)
+
+| Prop | Tipo | Default | Descripcion |
+| ---- | ---- | ------- | ----------- |
+| `message` | string | `labels.cargando` | Mensaje junto al spinner. |
+
+Lo usa `DataList` mientras `cargando` es `true`, o cualquier pantalla que espera datos.
+
+- **Web**: `Spinner` de `react-bootstrap`, centrado (implementado).
+- **Movil**: `ActivityIndicator` de React Native.
+
+**`ErrorState`** — implementado en web (`apps/web/src/components/common/ErrorState.jsx`)
+
+| Prop | Tipo | Default | Descripcion |
+| ---- | ---- | ------- | ----------- |
+| `message` | string | `labels.errorDeConexion` | Mensaje del error. |
+| `onRetry` | fn | — | Si esta presente, muestra un boton "Reintentar". |
+
+- **Web**: `Alert variant="danger"` de `react-bootstrap` (implementado).
+- **Movil**: mismo patron con `colors.danger`.
+
+**`KanbanBoard`** — propuesta
+
+| Prop | Tipo | Default | Descripcion |
+| ---- | ---- | ------- | ----------- |
+| `columnas` | array de `{ id, titulo, tarjetas }` | — | El componente no sabe cuantas columnas hay ni que representan: las declara el modulo que lo usa (ej. `jornadas` con 3 etapas en web, `pacientes` con 5 en movil — ver "El problema" arriba). |
+| `renderTarjeta` | fn(tarjeta) | — | Que pintar dentro de cada tarjeta, normalmente usando `Card`. |
+| `onMover` | fn(tarjetaId, columnaOrigenId, columnaDestinoId) | — | Se llama cuando una tarjeta cambia de columna. |
+
+- **Web**: arrastrar y soltar entre columnas visibles simultaneamente.
+- **Movil**: columnas en pestañas o scroll horizontal, con un boton "Mover" en la tarjeta en vez
+  de arrastrar (arrastrar es poco confiable dentro de un `ScrollView` tactil).
+
+**`Tabs`** — propuesta
+
+| Prop | Tipo | Default | Descripcion |
+| ---- | ---- | ------- | ----------- |
+| `tabs` | array de `{ id, label }` | — | Pestañas disponibles. |
+| `activo` | string | — | `id` de la pestaña activa. |
+| `onChange` | fn(id) | — | Se llama al cambiar de pestaña. |
+| `children` | nodo | — | Contenido de la pestaña activa. |
+
+Navegacion dentro de una misma pantalla, no cambia de ruta.
+
+- **Web**: `Tabs`/`Nav` de `react-bootstrap`.
+- **Movil**: fila de botones tipo pill (React Native no tiene tabs nativos de layout).
+
+**`Modal`** — propuesta (el patron de hoja inferior ya existe dentro de `Selector`)
+
+| Prop | Tipo | Default | Descripcion |
+| ---- | ---- | ------- | ----------- |
+| `visible` | bool | `false` | Si el modal esta abierto. |
+| `onClose` | fn | — | Se llama al cerrar (fondo, boton de cierre o boton atras en Android). |
+| `title` | string | — | Titulo opcional. |
+| `children` | nodo | — | Contenido. |
+
+- **Web**: `Modal` de `react-bootstrap`, centrado.
+- **Movil**: se abre como hoja inferior que sube desde abajo, el mismo patron que `Selector` ya
+  implementa internamente (`Modal` transparente + `View` con la hoja).
 
 ## La frontera, en concreto
 
