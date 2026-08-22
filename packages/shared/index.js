@@ -16,6 +16,11 @@ export * from "./formato/index.js";
 
 // Modulos de dominio
 export * from "./pacientes/index.js";
+export * from "./inventario/index.js";
+export * from "./jornadas/index.js";
+export * from "./donaciones/index.js";
+export * from "./presupuestos/index.js";
+export * from "./reportes/index.js";
 export * from "./api/index.js";
 export * from "./hooks/index.js";
 export * from "./types/index.js";
