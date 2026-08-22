@@ -44,6 +44,20 @@ packages/shared/<modulo>/
 `packages/shared/pacientes/` esta escrito como **ejemplar de referencia**: sus descriptores de
 filtros y columnas muestran el patron a copiar en el resto de modulos.
 
+### Convencion de nombres de export
+
+- Los **descriptores** (los arrays y objetos declarativos de `campos.js`, `columnas.js` y
+  `filtros.js`) se exportan en `MAYUSCULAS_CON_GUION_BAJO`: `FILTROS_PACIENTE`,
+  `COLUMNAS_PACIENTE`, `CAMPOS_USUARIO`, `TIPOS_DE_FILTRO`. Son constantes, no datos que
+  cambien en tiempo de ejecucion.
+- Los **hooks de pantalla** (`use<Pantalla>.js`) se exportan con prefijo `use` en camelCase,
+  igual que cualquier hook de React: `usePacientesListado`, `useJornadasKanban`.
+- Las **funciones** de `api.js`, `validaciones.js` y `permisos.js` van en camelCase sin
+  prefijo especial: `crearPaciente`, `esAdministrador`, `puedeAprobarMovimiento`.
+
+Cada modulo expone un `index.js` que re-exporta sus archivos (`export * from './archivo.js'`),
+y el `index.js` de la raiz de `packages/shared` re-exporta cada modulo.
+
 ## Ejemplo completo
 
 El listado de pacientes, que es la issue #124 en web y la #133 en movil:
