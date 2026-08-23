@@ -78,8 +78,9 @@ Reglas:
 Checklist antes de abrir un PR:
 
 - [ ] El codigo pasa el linter: `npm run lint`
+- [ ] Las pruebas pasan: `npm test`
 - [ ] El build funciona: `npm run build`
-- [ ] Se agregaron tests si aplica
+- [ ] Se agregaron pruebas si aplica
 - [ ] Se actualizo la documentacion si aplica
 - [ ] El PR referencia el issue con `Closes #X`
 

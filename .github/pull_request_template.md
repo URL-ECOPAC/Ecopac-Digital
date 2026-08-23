@@ -32,8 +32,9 @@ Closes #
 ## Checklist
 
 - [ ] El codigo pasa el linter: `npm run lint`
+- [ ] Las pruebas pasan: `npm test`
 - [ ] El build funciona: `npm run build`
-- [ ] Se agregaron tests si aplica
+- [ ] Se agregaron pruebas si aplica
 - [ ] Se actualizo la documentacion si aplica
 - [ ] No se usan datos reales de pacientes en pruebas
 
