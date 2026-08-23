@@ -21,14 +21,7 @@
 // lotes_existencias, no de lotes. Es un problema estructural preexistente, no de
 // este issue.
 
-export const TIPOS_DE_CAMPO = {
-  TEXTO: 'texto',
-  TEXTO_LARGO: 'texto_largo',
-  NUMERO: 'numero',
-  FECHA: 'fecha',
-  SELECT: 'select',
-  BOOLEANO: 'booleano',
-};
+import { TIPOS_DE_CAMPO } from '../descriptores.js';
 
 /** Valores de presentacion_medicamento (supabase/migrations/00001_initial_schema.sql). */
 export const OPCIONES_PRESENTACION = [

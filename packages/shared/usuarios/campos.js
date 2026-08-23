@@ -1,15 +1,6 @@
 import { labels } from '@ecopac/ui-tokens';
 import { ROLES, TODOS_LOS_ROLES, ETIQUETAS_ROL } from './roles.js';
-
-export const TIPOS_DE_CAMPO = {
-  TEXTO: 'texto',
-  EMAIL: 'email',
-  TELEFONO: 'telefono',
-  SELECT: 'select',
-  FECHA: 'fecha',
-  BOOLEANO: 'booleano',
-  ETIQUETAS: 'etiquetas',
-};
+import { TIPOS_DE_CAMPO } from '../descriptores.js';
 
 export const ESTADOS_USUARIO = [
   { valor: true, clave: 'activo', etiqueta: labels.usuarioActivo },

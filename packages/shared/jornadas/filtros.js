@@ -2,11 +2,7 @@
 // kanban comparten el mismo filtro de busqueda/estado/comunidad; el kanban ademas
 // agrupa por estado en vez de filtrar por un solo valor a la vez.
 
-export const TIPOS_DE_FILTRO = {
-  BUSQUEDA: 'busqueda',
-  SELECT: 'select',
-  RANGO: 'rango',
-};
+import { TIPOS_DE_FILTRO } from '../descriptores.js';
 
 /** Valores de estado_jornada (supabase/migrations/00001_initial_schema.sql). */
 export const OPCIONES_ESTADO_JORNADA = [
