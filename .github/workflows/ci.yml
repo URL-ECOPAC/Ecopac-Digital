@@ -36,6 +36,12 @@ jobs:
       - name: Ejecutar lint en todos los workspaces
         run: npm run lint
 
+      # Antes del build a proposito: una prueba rota se ve en segundos, sin esperar a que
+      # la web compile. Corre en el mismo job que el lint para que el check requerido siga
+      # llamandose "Lint y build" y no haya que tocar la proteccion de ramas.
+      - name: Ejecutar las pruebas de todos los workspaces
+        run: npm test
+
       # Cada rama se construye con la configuración de su ambiente. Antes se usaban
       # siempre los secrets _DEV, así que main nunca se validaba contra producción y un
       # secret de producción mal configurado no aparecía hasta el despliegue.

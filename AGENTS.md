@@ -123,6 +123,7 @@ cp .env.example .env.development
 npm run dev:web        # web en http://localhost:5173
 npm run dev:mobile     # Expo, mobile en http://localhost:8081
 npm run lint
+npm test              # pruebas de todos los workspaces (vitest)
 npm run build
 ```
 

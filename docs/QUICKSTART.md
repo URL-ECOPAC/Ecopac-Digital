@@ -64,9 +64,11 @@ verde, sin errores.
 
 - Para usar la app (web/mobile): basta con tener la URL + la llave anon/public en el `.env`;
   no se necesita acceso al dashboard.
-- Para tareas de base de datos (migraciones, ver/crear tablas, `supabase db push`,
-  `supabase start`) si se necesita ser miembro del proyecto: desde el dashboard,
+- Para tareas contra la base de datos remota (`supabase link`, `supabase db push`, ver o crear
+  tablas desde el dashboard) si se necesita ser miembro del proyecto: desde el dashboard,
   **Settings > Organization > Team** y agrega a la persona (o usa "Invite team members").
+- `supabase start`, `supabase db reset` y `supabase db lint --local` **no** necesitan cuenta ni
+  membresia: levantan un stack local en Docker y no hablan con la nube.
 - El password de la base y el access token solo los necesita quien administra el esquema/CI,
   no el equipo que solo desarrolla la app.
 
@@ -124,6 +126,7 @@ correr al mismo tiempo sin reemplazar sus contenedores.
 
 ```bash
 npm run lint              # linter de todos los workspaces
+npm test                  # pruebas de todos los workspaces
 npm run build             # build de todos los workspaces
 npm run dev:web           # web con hot reload
 npm run dev:mobile        # expo (mobile)

@@ -14,6 +14,19 @@ El despliegue de la web **no** es un workflow: lo hace la app de Vercel conectad
 repositorio. Vercel publica un preview por cada PR y produccion desde `main`, al margen del
 CI, asi que un CI en rojo no detiene un deploy de Vercel.
 
+## Que hace el workflow de CI
+
+Un solo job, **Lint y build**, que corre en este orden:
+
+1. `npm run lint` en todos los workspaces.
+2. `npm test` en todos los workspaces que tengan el script (issue #218).
+3. Build de la web con los secrets del ambiente que corresponde a la rama.
+
+Las pruebas van antes del build a proposito: una prueba rota se ve en segundos, sin esperar a
+que la web compile. Y van dentro de este job y no en uno propio porque **Lint y build** ya es
+check requerido en `develop` y `main`; un job nuevo no lo seria hasta que alguien lo agregue en
+Settings > Branches, y mientras tanto un PR con pruebas en rojo se podria mergear igual.
+
 ## Que hace el workflow de Supabase
 
 Seis jobs. Los tres primeros validan; los ultimos despliegan y avisan.
@@ -109,15 +122,24 @@ ambiente hereda el problema.
 
 ## Correr las validaciones en local
 
+Lo que corre el job **Lint y build**:
+
+```bash
+npm run lint
+npm test
+npm run build
+```
+
+Lo que corre el job **Validar migraciones y funciones**:
+
 ```bash
 supabase start
 supabase db reset          # aplica todas las migraciones desde cero
 supabase db lint --local --fail-on warning
 ```
 
-Esto reproduce el job **Validar migraciones y funciones**. Lo que no reproduce es el escenario
-incremental contra una base con historial, que es justo lo que la guarda de inmutabilidad
-protege.
+Esto ultimo reproduce el job. Lo que no reproduce es el escenario incremental contra una base
+con historial, que es justo lo que la guarda de inmutabilidad protege.
 
 ## Ramas protegidas
 
