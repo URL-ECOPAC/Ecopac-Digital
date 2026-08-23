@@ -121,6 +121,7 @@ export const labels = {
   jornadaEnCurso: 'En curso',
   jornadaFinalizada: 'Finalizada',
   jornadaCancelada: 'Cancelada',
+  cargando: 'Cargando...',
   sinResultados: 'No se encontraron resultados',
   errorDeConexion: 'Error de conexión con el servidor',
 };

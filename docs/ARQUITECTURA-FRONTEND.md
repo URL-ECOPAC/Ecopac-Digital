@@ -113,12 +113,12 @@ la misma interfaz, no dos disenos distintos.
 | `KanbanBoard`, `Tabs`, `Modal` | | `Modal` se vuelve hoja inferior |
 
 `FilterBar` y `DataList` son los que hacen el trabajo: consumen los descriptores de `shared` y
-deciden como dibujarlos. La app movil ya tiene `ScreenContainer`, `TextField`, `Selector`,
-`PrimaryButton` y `SecondaryButton` implementados (`apps/mobile/src/components/`), y la web ya
-tiene `EmptyState`, `LoadingState` y `ErrorState` (`apps/web/src/components/common/`); estos ocho
-son la referencia real de la API, el contrato de abajo se escribio a partir de ellos. El resto
-todavia no existe: su contrato es la propuesta a implementar, no una descripcion de codigo ya
-escrito.
+deciden como dibujarlos.
+
+**La web tiene los 18 implementados** en `apps/web/src/components/`, planos y con un barril
+`index.js` (issue #280). La app movil tiene cinco: `ScreenContainer`, `TextField`, `Selector`,
+`PrimaryButton` y `SecondaryButton` (`apps/mobile/src/components/`); los trece que le faltan son
+la issue #281, y su referencia es la implementacion web, que ya siguio este contrato.
 
 ### Excepciones de nombres entre plataformas
 
@@ -149,6 +149,7 @@ para pacientes, inventario o donaciones porque toda la informacion especifica de
 | `campos` | array | Descriptores de `filtros.js` del modulo, ej. `FILTROS_PACIENTE`. Cada uno trae `id`, `tipo`, `label` y, segun el tipo, `placeholder`, `opcionesDesde`, `min`/`max` (ver `packages/shared/pacientes/filtros.js`). |
 | `valores` | objeto | Valor actual de cada filtro, indexado por `id` (ej. `{ busqueda: '', comunidad: null }`). |
 | `onChange` | fn(id, valor) | Se llama cuando el usuario cambia un filtro. `FilterBar` no guarda estado propio: quien lo usa decide que hacer con el valor nuevo. |
+| `catalogos` | objeto | Listas de opciones indexadas por el nombre que declara `opcionesDesde`, ej. `{ roles: [...], comunidades: [...] }`. Ver "Resolucion de catalogos" abajo. |
 
 Por cada entrada de `campos`, `FilterBar` dibuja el control segun `tipo` (los valores de
 `TIPOS_DE_FILTRO`): `busqueda` se vuelve un `TextField`, `select` un `Selector` (resolviendo sus
@@ -167,6 +168,7 @@ opciones de `opcionesDesde`), `rango` un par de `NumberField` acotados por `min`
 | `cargando` | bool | Si es `true`, `DataList` delega en `LoadingState` en vez de dibujar filas. |
 | `vacio` | string \| nodo | Mensaje o contenido para `EmptyState` cuando `datos` esta vacio. |
 | `onRowPress` | fn(fila) | Opcional. Se llama al tocar/hacer click en una fila. |
+| `catalogos` | objeto | Igual que en `FilterBar`. Lo consumen las columnas que declaran `etiquetasDesde`, y las de `tipo: 'estado'` cuyo valor no es el del enum. |
 
 Por cada entrada de `columnas`, `DataList` sabe pintar el `tipo` declarado (`texto`, `numero`,
 `chips`, `avatar`, ...), tomando el valor de la fila por `id` o por `desde` si la columna lo
@@ -175,6 +177,27 @@ declara.
 - **Web**: se vuelve una `<Table>` de `react-bootstrap`; cada columna es un `<td>`.
 - **Movil**: se vuelve un `FlatList` de tarjetas; cada `columna` se apila dentro de la tarjeta en
   el mismo orden declarado (no hay filas ni columnas literales en una pantalla angosta).
+
+### Resolucion de catalogos
+
+Un descriptor declara **de donde** salen las opciones de un filtro, no cuales son:
+`opcionesDesde: 'comunidades'` en `packages/shared/pacientes/filtros.js`, `etiquetasDesde:
+'roles'` en `usuarios/columnas.js`. Tiene que ser asi porque varias de esas listas -comunidades,
+especialidades- salen de la base de datos y no se pueden escribir en el descriptor.
+
+Quien tiene esos datos -la pantalla o su hook- los pasa por la prop `catalogos`, y el componente
+hace `catalogos[campo.opcionesDesde] ?? []`. Asi `FilterBar` y `DataList` siguen sin conocer
+ningun modulo ni pedir datos por su cuenta.
+
+Un catalogo que todavia no cargo deja el select vacio y **deshabilitado**, en vez de mostrar un
+desplegable que no hace nada.
+
+**Forma de una opcion.** El contrato dice `{ label, value }`, pero los catalogos que ya publica
+`shared` usan `{ etiqueta, valor }` (`OPCIONES_ROL` y `ESTADOS_USUARIO` en
+`packages/shared/usuarios/campos.js`). `Selector` acepta las dos formas y normaliza por dentro:
+si la conversion viviera en quien llama, olvidarla daria opciones en blanco y claves repetidas,
+que es un fallo silencioso. `ESTADOS_USUARIO` ademas trae `clave`, que es la que indexa
+`statusColors` cuando el valor guardado es un booleano.
 
 ### Contrato de cada componente
 
@@ -197,7 +220,7 @@ enfocados (`KeyboardAvoidingView`); en web el navegador ya lo resuelve solo.
 - **Web**: contenedor simple con padding.
 - **Movil**: `SafeAreaView` + `KeyboardAvoidingView` + `ScrollView` condicional (implementado).
 
-**`PageHeader`** — propuesta
+**`PageHeader`** — implementado en web (`apps/web/src/components/PageHeader.jsx`)
 
 | Prop | Tipo | Default | Descripcion |
 | ---- | ---- | ------- | ----------- |
@@ -241,7 +264,7 @@ borde cambia de color al enfocar y al haber error.
   `FlatList`), implementado. Este es el patron de hoja inferior que `Modal` y `DateField`
   reutilizan en movil.
 
-**`DateField`** — propuesta
+**`DateField`** — implementado en web (`apps/web/src/components/DateField.jsx`)
 
 | Prop | Tipo | Default | Descripcion |
 | ---- | ---- | ------- | ----------- |
@@ -258,7 +281,7 @@ escribe.
 - **Web**: `input type="date"` o un date-picker de `react-bootstrap`.
 - **Movil**: abre un selector nativo en hoja inferior, mismo patron que `Selector`.
 
-**`NumberField`** — propuesta
+**`NumberField`** — implementado en web (`apps/web/src/components/NumberField.jsx`)
 
 | Prop | Tipo | Default | Descripcion |
 | ---- | ---- | ------- | ----------- |
@@ -304,9 +327,10 @@ espera (ej. "Cancelar", "Volver").
 - **Web**: `Button variant="outline-..."` de `react-bootstrap`.
 - **Movil**: `Pressable` con borde, sin relleno (implementado).
 
-**`FilterBar`** y **`DataList`** — propuesta, ver la seccion anterior para su contrato completo.
+**`FilterBar`** y **`DataList`** — implementados en web (`apps/web/src/components/`), ver la
+seccion anterior para su contrato completo.
 
-**`StatusChip`** — propuesta (su fuente de color ya existe en `@ecopac/ui-tokens`)
+**`StatusChip`** — implementado en web (`apps/web/src/components/StatusChip.jsx`)
 
 | Prop | Tipo | Default | Descripcion |
 | ---- | ---- | ------- | ----------- |
@@ -319,7 +343,7 @@ neutro por defecto en vez de fallar.
 - **Web**: `Badge` de `react-bootstrap`.
 - **Movil**: `View` con `backgroundColor` de `statusColors` y `Text`.
 
-**`Card`** — propuesta
+**`Card`** — implementado en web (`apps/web/src/components/Card.jsx`)
 
 | Prop | Tipo | Default | Descripcion |
 | ---- | ---- | ------- | ----------- |
@@ -334,7 +358,7 @@ dashboard.
 - **Web**: `div` con borde/sombra de Bootstrap.
 - **Movil**: `View` con sombra/borde equivalentes de los tokens de espaciado.
 
-**`EmptyState`** — implementado en web (`apps/web/src/components/common/EmptyState.jsx`)
+**`EmptyState`** — implementado en web (`apps/web/src/components/EmptyState.jsx`)
 
 | Prop | Tipo | Default | Descripcion |
 | ---- | ---- | ------- | ----------- |
@@ -347,7 +371,7 @@ Lo usa `DataList` cuando `datos` esta vacio, o cualquier pantalla sin resultados
 - **Web**: contenedor centrado con texto y `Button` opcional (implementado).
 - **Movil**: mismo patron con `View`/`Text`/`PrimaryButton`.
 
-**`LoadingState`** — implementado en web (`apps/web/src/components/common/LoadingState.jsx`)
+**`LoadingState`** — implementado en web (`apps/web/src/components/LoadingState.jsx`)
 
 | Prop | Tipo | Default | Descripcion |
 | ---- | ---- | ------- | ----------- |
@@ -358,7 +382,7 @@ Lo usa `DataList` mientras `cargando` es `true`, o cualquier pantalla que espera
 - **Web**: `Spinner` de `react-bootstrap`, centrado (implementado).
 - **Movil**: `ActivityIndicator` de React Native.
 
-**`ErrorState`** — implementado en web (`apps/web/src/components/common/ErrorState.jsx`)
+**`ErrorState`** — implementado en web (`apps/web/src/components/ErrorState.jsx`)
 
 | Prop | Tipo | Default | Descripcion |
 | ---- | ---- | ------- | ----------- |
@@ -368,7 +392,7 @@ Lo usa `DataList` mientras `cargando` es `true`, o cualquier pantalla que espera
 - **Web**: `Alert variant="danger"` de `react-bootstrap` (implementado).
 - **Movil**: mismo patron con `colors.danger`.
 
-**`KanbanBoard`** — propuesta
+**`KanbanBoard`** — implementado en web (`apps/web/src/components/KanbanBoard.jsx`)
 
 | Prop | Tipo | Default | Descripcion |
 | ---- | ---- | ------- | ----------- |
@@ -380,7 +404,7 @@ Lo usa `DataList` mientras `cargando` es `true`, o cualquier pantalla que espera
 - **Movil**: columnas en pestañas o scroll horizontal, con un boton "Mover" en la tarjeta en vez
   de arrastrar (arrastrar es poco confiable dentro de un `ScrollView` tactil).
 
-**`Tabs`** — propuesta
+**`Tabs`** — implementado en web (`apps/web/src/components/Tabs.jsx`)
 
 | Prop | Tipo | Default | Descripcion |
 | ---- | ---- | ------- | ----------- |
@@ -394,7 +418,8 @@ Navegacion dentro de una misma pantalla, no cambia de ruta.
 - **Web**: `Tabs`/`Nav` de `react-bootstrap`.
 - **Movil**: fila de botones tipo pill (React Native no tiene tabs nativos de layout).
 
-**`Modal`** — propuesta (el patron de hoja inferior ya existe dentro de `Selector`)
+**`Modal`** — implementado en web (`apps/web/src/components/Modal.jsx`); en movil el patron de
+hoja inferior ya existe dentro de `Selector`
 
 | Prop | Tipo | Default | Descripcion |
 | ---- | ---- | ------- | ----------- |

@@ -5,7 +5,7 @@ export const COLUMNAS_USUARIO = [
   { id: 'nombreCompleto', label: 'Nombre', tipo: 'texto', principal: true },
   { id: 'email', label: 'Correo', tipo: 'texto' },
   { id: 'rol', label: 'Rol', tipo: 'texto', etiquetasDesde: 'roles' },
-  { id: 'estado', label: 'Estado', tipo: 'estado', desde: 'activo' },
+  { id: 'estado', label: 'Estado', tipo: 'estado', desde: 'activo', etiquetasDesde: 'estadoUsuario' },
   { id: 'fechaIngreso', label: 'Ingreso', tipo: 'fecha' },
 ];
 
@@ -16,5 +16,5 @@ export const CAMPOS_FICHA_VOLUNTARIO = [
   { id: 'rol', label: 'Rol', tipo: 'texto', etiquetasDesde: 'roles' },
   { id: 'especialidades', label: 'Especialidades', tipo: 'chips' },
   { id: 'fechaIngreso', label: 'Fecha de ingreso', tipo: 'fecha' },
-  { id: 'estado', label: 'Estado', tipo: 'estado', desde: 'activo' },
+  { id: 'estado', label: 'Estado', tipo: 'estado', desde: 'activo', etiquetasDesde: 'estadoUsuario' },
 ];
