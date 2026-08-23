@@ -18,6 +18,8 @@ export { default as NumberField } from './NumberField';
 export { default as PrimaryButton } from './PrimaryButton';
 export { default as SecondaryButton } from './SecondaryButton';
 
+export { default as FilterBar } from './FilterBar';
+export { default as DataList } from './DataList';
 export { default as StatusChip } from './StatusChip';
 export { default as Card } from './Card';
 

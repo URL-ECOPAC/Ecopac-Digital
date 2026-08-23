@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { FlatList, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors, spacing, typography } from '@ecopac/ui-tokens';
+import { normalizarOpciones } from './opciones';
 
 const MIN_TOUCH_HEIGHT = 48;
 
@@ -8,7 +9,10 @@ const MIN_TOUCH_HEIGHT = 48;
  * Selector tipo dropdown, implementado sin dependencias externas para no
  * atar el proyecto a una libreria de picker especifica.
  *
- * options: [{ label: string, value: string | number }]
+ * options: [{ label: string, value: string | number }]. Se normalizan aqui dentro y no en
+ * quien llama, porque los catalogos que publica shared usan { etiqueta, valor } (ver
+ * OPCIONES_ROL y ESTADOS_USUARIO en packages/shared/usuarios/campos.js): si cada pantalla
+ * tuviera que mapearlos, olvidarlo daria opciones en blanco sin ningun error visible.
  */
 export default function Selector({
   label,
@@ -20,7 +24,8 @@ export default function Selector({
   style,
 }) {
   const [isOpen, setIsOpen] = useState(false);
-  const selectedOption = options.find((option) => option.value === value);
+  const opciones = normalizarOpciones(options);
+  const selectedOption = opciones.find((option) => option.value === value);
 
   return (
     <View style={[styles.container, style]}>
@@ -58,7 +63,7 @@ export default function Selector({
 
           <View style={styles.sheet}>
             <FlatList
-              data={options}
+              data={opciones}
               keyExtractor={(item) => String(item.value)}
               renderItem={({ item }) => (
                 <Pressable
