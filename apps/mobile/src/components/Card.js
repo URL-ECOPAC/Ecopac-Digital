@@ -6,12 +6,19 @@ import { colors, spacing, typography } from '@ecopac/ui-tokens';
  *
  * Base visual de las tarjetas de DataList y de cualquier bloque agrupado. Si viene
  * `onPress` la tarjeta es interactiva; si no, es un View y no captura toques.
+ *
+ * Un hijo que sea texto suelto se envuelve en <Text>. En la web <Card>texto</Card> es
+ * valido y aqui React Native lanza "Text strings must be rendered within a <Text>
+ * component": envolverlo aqui es lo que permite escribir la misma linea en las dos
+ * plataformas, que es el proposito del catalogo.
  */
 export default function Card({ children, title, onPress, style }) {
+  const esTextoSuelto = typeof children === 'string' || typeof children === 'number';
+
   const contenido = (
     <>
       {title ? <Text style={styles.titulo}>{title}</Text> : null}
-      {children}
+      {esTextoSuelto ? <Text style={styles.texto}>{children}</Text> : children}
     </>
   );
 
@@ -40,6 +47,11 @@ const styles = StyleSheet.create({
   },
   cardPressed: {
     opacity: 0.85,
+  },
+  texto: {
+    fontFamily: typography.fontFamilyBase,
+    fontSize: typography.sizes.md,
+    color: colors.text,
   },
   titulo: {
     fontFamily: typography.fontFamilyBase,

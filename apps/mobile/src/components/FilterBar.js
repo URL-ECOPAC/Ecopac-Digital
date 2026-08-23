@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { TIPOS_DE_FILTRO } from '@ecopac/shared';
 import { colors, spacing, typography } from '@ecopac/ui-tokens';
+import DateField from './DateField';
 import NumberField from './NumberField';
 import PrimaryButton from './PrimaryButton';
 import Selector from './Selector';
@@ -21,9 +22,15 @@ const MIN_TOUCH_HEIGHT = 48;
  * onChange al pulsar "Aplicar". Es lo que espera quien filtra en un telefono, donde cada
  * cambio suelto dispararia una consulta a mitad de la seleccion.
  *
- * Sobre `catalogos`: los descriptores declaran de DONDE salen las opciones de un select
- * (`opcionesDesde: 'comunidades'`), no cuales son, porque varias listas salen de la base de
- * datos. Un catalogo que todavia no cargo deja el select vacio y deshabilitado.
+ * Sobre las opciones de un select: un descriptor puede traerlas ya escritas (`opciones`, las
+ * de un enum cerrado como estado o presentacion) o decir de que catalogo salen
+ * (`opcionesDesde: 'comunidades'`, las que vienen de la base de datos). Un catalogo que
+ * todavia no cargo deja el select vacio y deshabilitado.
+ *
+ * Un rango puede ser numerico (rangoEdad) o de fecha (rangoFecha, fechaVencimiento): se
+ * distinguen por `subtipo: 'fecha'` si el descriptor lo declara, y si no por si trae limites
+ * numericos. Lo correcto seria que el descriptor siempre lo dijera; mientras tanto esta
+ * heuristica acierta con los que existen hoy.
  */
 export default function FilterBar({ campos = [], valores = {}, onChange, catalogos = {} }) {
   const [abierto, setAbierto] = useState(false);
@@ -82,7 +89,7 @@ export default function FilterBar({ campos = [], valores = {}, onChange, catalog
             }
 
             if (campo.tipo === TIPOS_DE_FILTRO.SELECT) {
-              const opciones = catalogos[campo.opcionesDesde] ?? [];
+              const opciones = campo.opciones ?? catalogos[campo.opcionesDesde] ?? [];
               return (
                 <Selector
                   key={campo.id}
@@ -98,25 +105,34 @@ export default function FilterBar({ campos = [], valores = {}, onChange, catalog
 
             if (campo.tipo === TIPOS_DE_FILTRO.RANGO) {
               const rango = valor ?? {};
+              const esFecha =
+                campo.subtipo === 'fecha' ||
+                (typeof campo.min !== 'number' && typeof campo.max !== 'number');
+              const Campo = esFecha ? DateField : NumberField;
+              const limites = esFecha
+                ? [{ maxDate: rango.max ?? undefined }, { minDate: rango.min ?? undefined }]
+                : [
+                    { min: campo.min, max: rango.max ?? campo.max },
+                    { min: rango.min ?? campo.min, max: campo.max },
+                  ];
+
               return (
                 <View key={campo.id} style={styles.rango}>
                   <Text style={styles.rangoLabel}>{campo.label}</Text>
                   <View style={styles.rangoFila}>
-                    <NumberField
+                    <Campo
                       label="Desde"
                       value={rango.min ?? null}
-                      min={campo.min}
-                      max={rango.max ?? campo.max}
                       onChange={(nuevo) => editar(campo.id, { ...rango, min: nuevo })}
                       style={styles.rangoCampo}
+                      {...limites[0]}
                     />
-                    <NumberField
+                    <Campo
                       label="Hasta"
                       value={rango.max ?? null}
-                      min={rango.min ?? campo.min}
-                      max={campo.max}
                       onChange={(nuevo) => editar(campo.id, { ...rango, max: nuevo })}
                       style={styles.rangoCampo}
+                      {...limites[1]}
                     />
                   </View>
                 </View>

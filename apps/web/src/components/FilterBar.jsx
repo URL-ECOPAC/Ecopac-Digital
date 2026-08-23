@@ -1,4 +1,5 @@
 import { TIPOS_DE_FILTRO } from '@ecopac/shared';
+import DateField from './DateField';
 import NumberField from './NumberField';
 import Selector from './Selector';
 import TextField from './TextField';
@@ -17,7 +18,10 @@ import TextField from './TextField';
  * desplegable que no hace nada.
  *
  * Un filtro de rango se representa como { min, max }; cualquiera de los dos extremos puede
- * ser null, que significa "sin limite por ese lado".
+ * ser null, que significa "sin limite por ese lado". Hay rangos numericos (rangoEdad) y de
+ * fecha (rangoFecha, fechaVencimiento): se distinguen por `subtipo: 'fecha'` si el
+ * descriptor lo declara, y si no por si trae limites numericos. Lo correcto seria que el
+ * descriptor siempre lo dijera; mientras tanto esta heuristica acierta con los que existen.
  */
 export default function FilterBar({ campos = [], valores = {}, onChange, catalogos = {} }) {
   const cambiar = (id, valor) => onChange?.(id, valor);
@@ -41,8 +45,10 @@ export default function FilterBar({ campos = [], valores = {}, onChange, catalog
         }
 
         if (campo.tipo === TIPOS_DE_FILTRO.SELECT) {
-          // Selector normaliza la forma de cada opcion; aqui solo se elige el catalogo.
-          const opciones = catalogos[campo.opcionesDesde] ?? [];
+          // Un descriptor puede traer sus opciones ya escritas (las de un enum cerrado, como
+          // presentacion o estado) o decir de que catalogo salen (las que vienen de la base
+          // de datos). Selector normaliza la forma de cada opcion.
+          const opciones = campo.opciones ?? catalogos[campo.opcionesDesde] ?? [];
           return (
             <Selector
               key={campo.id}
@@ -59,6 +65,34 @@ export default function FilterBar({ campos = [], valores = {}, onChange, catalog
 
         if (campo.tipo === TIPOS_DE_FILTRO.RANGO) {
           const rango = valor ?? {};
+          const esFecha =
+            campo.subtipo === 'fecha' ||
+            (typeof campo.min !== 'number' && typeof campo.max !== 'number');
+
+          if (esFecha) {
+            return (
+              <fieldset key={campo.id} className="border-0 p-0 m-0" style={{ flex: '0 1 320px' }}>
+                <legend className="form-label fs-6">{campo.label}</legend>
+                <div className="d-flex align-items-start gap-2">
+                  <DateField
+                    label="Desde"
+                    value={rango.min ?? null}
+                    maxDate={rango.max ?? undefined}
+                    onChange={(nuevo) => cambiar(campo.id, { ...rango, min: nuevo })}
+                    style={{ marginBottom: 0 }}
+                  />
+                  <DateField
+                    label="Hasta"
+                    value={rango.max ?? null}
+                    minDate={rango.min ?? undefined}
+                    onChange={(nuevo) => cambiar(campo.id, { ...rango, max: nuevo })}
+                    style={{ marginBottom: 0 }}
+                  />
+                </div>
+              </fieldset>
+            );
+          }
+
           return (
             <fieldset key={campo.id} className="border-0 p-0 m-0" style={{ flex: '0 1 240px' }}>
               <legend className="form-label fs-6">{campo.label}</legend>

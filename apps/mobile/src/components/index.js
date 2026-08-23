@@ -23,6 +23,10 @@ export { default as DataList } from './DataList';
 export { default as StatusChip } from './StatusChip';
 export { default as Card } from './Card';
 
+export { default as KanbanBoard } from './KanbanBoard';
+export { default as Tabs } from './Tabs';
+export { default as Modal } from './Modal';
+
 export { default as EmptyState } from './EmptyState';
 export { default as LoadingState } from './LoadingState';
 export { default as ErrorState } from './ErrorState';

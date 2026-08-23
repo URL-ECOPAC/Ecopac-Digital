@@ -16,6 +16,12 @@ import { normalizarOpciones } from './opciones';
  * literales, y forzar una tabla obligaria a desplazarse en horizontal para leer un dato.
  *
  * El valor de cada celda sale de la fila por `id`, o por `desde` si la columna lo declara.
+ *
+ * COMO COMPONERLO. Este es un FlatList, y React Native avisa -con razon- si se anida un
+ * FlatList dentro de un ScrollView con la misma orientacion: se rompe el reciclado de filas
+ * y una lista larga se vuelve lenta. La pantalla que muestre un DataList debe usar
+ * <ScreenContainer scrollable={false}> y dejar que el scroll lo haga la lista, que es
+ * justamente para lo que ScreenContainer tiene esa prop.
  */
 
 /** Iniciales de un nombre, para el avatar. Dos como maximo, que es lo que cabe. */
