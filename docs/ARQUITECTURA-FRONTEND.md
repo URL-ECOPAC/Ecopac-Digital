@@ -170,13 +170,25 @@ opciones de `opcionesDesde`), `rango` un par de `NumberField` acotados por `min`
 | `onRowPress` | fn(fila) | Opcional. Se llama al tocar/hacer click en una fila. |
 | `catalogos` | objeto | Igual que en `FilterBar`. Lo consumen las columnas que declaran `etiquetasDesde`, y las de `tipo: 'estado'` cuyo valor no es el del enum. |
 
-Por cada entrada de `columnas`, `DataList` sabe pintar el `tipo` declarado (`texto`, `numero`,
-`chips`, `avatar`, ...), tomando el valor de la fila por `id` o por `desde` si la columna lo
-declara.
+Por cada entrada de `columnas`, `DataList` sabe pintar el `tipo` declarado, tomando el valor de
+la fila por `id` o por `desde` si la columna lo declara. Los tipos que interpreta son `texto`,
+`numero` (con `sufijo`), `fecha` (con `formatearFechaCorta` de `shared`, nunca `Intl`), `estado`
+(resuelto por catalogo, porque el valor guardado puede ser un booleano), `chip` (el valor ya es
+el del enum, indexa `statusColors` directo), `chips`, `booleano` ("Si" / "No") y `avatar`.
 
-- **Web**: se vuelve una `<Table>` de `react-bootstrap`; cada columna es un `<td>`.
-- **Movil**: se vuelve un `FlatList` de tarjetas; cada `columna` se apila dentro de la tarjeta en
-  el mismo orden declarado (no hay filas ni columnas literales en una pantalla angosta).
+- **Web**: se vuelve una `<Table>` de `react-bootstrap`; cada columna es un `<td>`, en el orden
+  declarado. La columna `principal` solo se resalta en negrita: no hace falta moverla, porque el
+  encabezado de la tabla ya dice que es cada celda.
+- **Movil**: se vuelve un `FlatList` de tarjetas; cada `columna` se apila dentro de la tarjeta
+  (no hay filas ni columnas literales en una pantalla angosta).
+
+**Orden dentro de una tarjeta.** El movil respeta el orden declarado con una sola excepcion: el
+`avatar` y la columna `principal` suben al tope. Una tarjeta no tiene encabezado, asi que su
+primera linea funciona como titulo. `COLUMNAS_MOVIMIENTO` declara `tipo` antes que `medicamento`,
+y sin la excepcion la tarjeta empezaba con "Tipo: ingreso" y el nombre del medicamento quedaba a
+media altura, leyendose como un dato mas. Lo que las dos plataformas comparten es el descriptor,
+no la disposicion: es la misma clase de diferencia que `FilterBar` (fila en web, panel colapsable
+en movil) o `Modal` (centrado en web, hoja inferior en movil).
 
 ### Resolucion de catalogos
 

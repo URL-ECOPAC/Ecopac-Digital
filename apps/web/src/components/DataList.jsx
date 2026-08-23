@@ -61,6 +61,15 @@ function Celda({ columna, fila, catalogos }) {
       // y una cadena AAAA-MM-DD no se puede leer como instante o se corre un dia.
       return formatearFechaCorta(valor);
 
+    case 'chip':
+      // A diferencia de 'estado', aqui el valor guardado YA es el del enum (ver
+      // COLUMNAS_MOVIMIENTO y COLUMNAS_JORNADA), asi que indexa statusColors directamente.
+      return <StatusChip status={valor} />;
+
+    case 'booleano':
+      if (valor === null || valor === undefined) return null;
+      return valor ? 'Si' : 'No';
+
     case 'estado': {
       // Una columna de estado puede guardar un booleano y no el valor del enum (COLUMNAS_USUARIO
       // lee 'activo'). El catalogo trae la clave del enum en `clave` y el texto en `label`, que
