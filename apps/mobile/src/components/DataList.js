@@ -12,8 +12,15 @@ import { normalizarOpciones } from './opciones';
  * descriptor de columnas, pero lo dibuja distinto.
  *
  * En web cada columna es un <td> de una fila; aqui cada columna se apila dentro de una
- * tarjeta, en el orden declarado. En una pantalla angosta no hay filas ni columnas
- * literales, y forzar una tabla obligaria a desplazarse en horizontal para leer un dato.
+ * tarjeta. En una pantalla angosta no hay filas ni columnas literales, y forzar una tabla
+ * obligaria a desplazarse en horizontal para leer un dato.
+ *
+ * ORDEN DENTRO DE LA TARJETA. Se respeta el orden declarado con una sola excepcion: el
+ * avatar y la columna `principal` suben al tope. En una tabla el orden de las columnas es
+ * libre porque el encabezado dice que es cada celda, pero una tarjeta necesita un titulo
+ * arriba: COLUMNAS_MOVIMIENTO declara `tipo` antes que `medicamento`, y sin esta excepcion
+ * la tarjeta empezaba con "Tipo: ingreso" y el nombre del medicamento quedaba a media
+ * altura, leyendose como un dato mas.
  *
  * El valor de cada celda sale de la fila por `id`, o por `desde` si la columna lo declara.
  *
@@ -127,6 +134,17 @@ function Fila({ columna, fila, catalogos }) {
   );
 }
 
+/**
+ * Ordena las columnas para la tarjeta: primero el avatar, luego la principal, y el resto
+ * como venga declarado. No muta el descriptor que le pasan.
+ */
+function ordenarParaTarjeta(columnas) {
+  const avatar = columnas.filter((columna) => columna.tipo === 'avatar');
+  const principal = columnas.filter((columna) => columna.principal && columna.tipo !== 'avatar');
+  const resto = columnas.filter((columna) => columna.tipo !== 'avatar' && !columna.principal);
+  return [...avatar, ...principal, ...resto];
+}
+
 export default function DataList({
   columnas = [],
   datos = [],
@@ -141,6 +159,8 @@ export default function DataList({
     return typeof vacio === 'string' || vacio === undefined ? <EmptyState message={vacio} /> : vacio;
   }
 
+  const enOrden = ordenarParaTarjeta(columnas);
+
   return (
     <FlatList
       data={datos}
@@ -148,7 +168,7 @@ export default function DataList({
       ItemSeparatorComponent={() => <View style={styles.separador} />}
       renderItem={({ item }) => (
         <Card onPress={onRowPress ? () => onRowPress(item) : undefined}>
-          {columnas.map((columna) => (
+          {enOrden.map((columna) => (
             <Fila key={columna.id} columna={columna} fila={item} catalogos={catalogos} />
           ))}
         </Card>
