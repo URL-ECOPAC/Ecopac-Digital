@@ -9,15 +9,7 @@
 // formulario: los mueve el kanban (arrastrar una tarjeta) y las acciones de iniciar/
 // finalizar jornada, no una edicion manual.
 
-export const TIPOS_DE_CAMPO = {
-  TEXTO: 'texto',
-  TEXTO_LARGO: 'texto_largo',
-  NUMERO: 'numero',
-  FECHA: 'fecha',
-  HORA: 'hora',
-  SELECT: 'select',
-  BOOLEANO: 'booleano',
-};
+import { TIPOS_DE_CAMPO } from '../descriptores.js';
 
 /** Valores de rol_usuario (00001_initial_schema.sql), para el rol que se ejerce en la jornada. */
 export const OPCIONES_ROL_EN_JORNADA = [

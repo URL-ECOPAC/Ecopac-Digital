@@ -5,6 +5,11 @@
 // formulario, columnas y filtros, y los hooks de pantalla. Este paquete no puede importar
 // react-dom, react-native, react-bootstrap, ni usar document, window o localStorage.
 
+// Vocabulario de los descriptores. Se exporta desde aqui y no desde cada modulo: un
+// nombre que el barril reciba por varias estrellas queda ambiguo y ESM lo excluye
+// del namespace, que es lo que rompio la issue #365.
+export * from "./descriptores.js";
+
 export * from "./navegacion.js";
 export * from "./usuarios/index.js";
 

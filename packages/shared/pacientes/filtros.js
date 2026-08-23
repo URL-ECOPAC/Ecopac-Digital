@@ -6,12 +6,7 @@
 //
 // Fuente: wireframe de gestion de pacientes (Entregable Semana 6, p. 62 web y p. 66 movil).
 
-/** Tipos de filtro que el componente FilterBar de cada app sabe renderizar. */
-export const TIPOS_DE_FILTRO = {
-  BUSQUEDA: 'busqueda',
-  SELECT: 'select',
-  RANGO: 'rango',
-};
+import { TIPOS_DE_FILTRO } from '../descriptores.js';
 
 export const FILTROS_PACIENTE = [
   {

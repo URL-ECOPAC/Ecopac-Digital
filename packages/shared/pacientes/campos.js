@@ -7,16 +7,7 @@
 // de datos del entregable y la migracion aplicada no coinciden, manda la migracion
 // (ver AGENTS.md, "Fuente de verdad").
 
-export const TIPOS_DE_CAMPO = {
-  TEXTO: 'texto',
-  TEXTO_LARGO: 'texto_largo',
-  NUMERO: 'numero',
-  FECHA: 'fecha',
-  TELEFONO: 'telefono',
-  SELECT: 'select',
-  MULTI_SELECT: 'multi_select',
-  LISTA_REPETIBLE: 'lista_repetible',
-};
+import { TIPOS_DE_CAMPO } from '../descriptores.js';
 
 /** Valores de idioma_preferido (supabase/migrations/00001_initial_schema.sql). */
 export const OPCIONES_IDIOMA = [

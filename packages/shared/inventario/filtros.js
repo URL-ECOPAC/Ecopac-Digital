@@ -7,11 +7,7 @@
 // que migracion define cada uno): no se inventan valores nuevos ni se reusan los del
 // diccionario de datos original cuando la migracion aplicada los cambio.
 
-export const TIPOS_DE_FILTRO = {
-  BUSQUEDA: 'busqueda',
-  SELECT: 'select',
-  RANGO: 'rango',
-};
+import { TIPOS_DE_FILTRO } from '../descriptores.js';
 
 export const FILTROS_MEDICAMENTOS = [
   { id: 'busqueda', tipo: TIPOS_DE_FILTRO.BUSQUEDA, label: 'Buscar medicamento', placeholder: 'Nombre, marca o concentracion' },

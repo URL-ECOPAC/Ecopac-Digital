@@ -1,4 +1,4 @@
-import { TIPOS_DE_CAMPO } from './campos.js';
+import { TIPOS_DE_CAMPO } from '../descriptores.js';
 
 export const COLUMNAS_USUARIO = [
   { id: 'avatar', label: '', tipo: 'avatar', desde: 'nombreCompleto', anchoWeb: '48px' },

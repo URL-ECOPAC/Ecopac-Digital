@@ -1,4 +1,4 @@
-import { TIPOS_DE_FILTRO } from '../pacientes/filtros.js';
+import { TIPOS_DE_FILTRO } from '../descriptores.js';
 
 export const FILTROS_USUARIO = [
   {
