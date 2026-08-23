@@ -12,3 +12,9 @@
 // Carpeta creada por el issue #278 para dejar montada la estructura del modulo. El
 // contenido lo construyen sus issues (ver packages/shared/pacientes/ como ejemplar de
 // referencia de filtros.js y columnas.js).
+
+// Proyectos sociales (issue #194). Los archivos van por entidad y no como un api.js unico
+// porque esta carpeta la escriben nueve issues repartidas entre cinco personas.
+export * from "./proyectos.api.js";
+export * from "./proyectos.validaciones.js";
+export * from "./proyectos.permisos.js";
