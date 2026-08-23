@@ -47,10 +47,15 @@ export const moduleAccents = {
  * enums de supabase/migrations/00001_initial_schema.sql, que son la fuente de verdad.
  */
 export const statusColors = {
-  // estado_movimiento
-  'pendiente de validacion': colors.info,
+  // estado_movimiento (movimientos_inventario.estado, supabase/migrations/00023).
+  // 00023 elimino y recreo el estado_movimiento original de 00001 con valores mas
+  // cortos ('pendiente' en vez de 'pendiente de validacion'): la clave de aqui sigue
+  // al enum vigente, no al de 00001.
+  pendiente: colors.info,
   aprobado: colors.success,
   rechazado: colors.danger,
+  // estado_alerta (alertas_caducidad.estado, 00021)
+  atendida: colors.success,
   // estado_jornada
   planificada: colors.info,
   'en curso': colors.primary,

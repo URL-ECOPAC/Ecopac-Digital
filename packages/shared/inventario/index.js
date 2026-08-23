@@ -9,6 +9,9 @@
 //   permisos.js      que puede hacer cada rol en el modulo
 //   use<Pantalla>.js view model de una pantalla: datos, estado y handlers
 //
-// Carpeta creada por el issue #278 para dejar montada la estructura del modulo. El
-// contenido lo construyen sus issues (ver packages/shared/pacientes/ como ejemplar de
-// referencia de filtros.js y columnas.js).
+// campos.js, columnas.js y filtros.js estan escritos (issue #285). api.js,
+// validaciones.js, permisos.js y los hooks de pantalla los construyen sus issues.
+
+export * from './campos.js';
+export * from './columnas.js';
+export * from './filtros.js';
