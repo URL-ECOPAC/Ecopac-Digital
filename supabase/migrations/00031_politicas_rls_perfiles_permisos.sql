@@ -12,6 +12,28 @@
 CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 
 -- ============================================================================
+-- GRANT: RLS no sustituye los privilegios SQL estandar
+-- ============================================================================
+-- Ninguna migracion anterior habia otorgado GRANT sobre perfiles, permisos,
+-- rol_permiso ni usuario_permiso a los roles anon/authenticated: sin esto, Postgres
+-- rechaza la consulta con "permission denied" antes siquiera de evaluar las politicas
+-- RLS de abajo. Se otorga amplio a nivel de tabla (sin DELETE donde no hay politica de
+-- DELETE) y las politicas de esta misma migracion son las que de verdad restringen por
+-- fila, que es el patron estandar de Supabase: privilegios de tabla amplios, RLS como
+-- filtro real.
+GRANT SELECT, INSERT, UPDATE ON perfiles TO anon, authenticated;
+GRANT SELECT ON permisos TO anon, authenticated;
+GRANT SELECT ON rol_permiso TO anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON usuario_permiso TO anon, authenticated;
+
+-- eventos_auditoria (00026) tiene el mismo vacio: su politica de solo-lectura para
+-- administrador nunca pudo ejercerse sin este GRANT. 00026 ya esta aplicada, asi que
+-- se corrige hacia adelante aqui en vez de editarla (mismo criterio que la 00005 con
+-- la 00001). Solo SELECT: el INSERT del trigger registrar_evento_auditoria() corre
+-- SECURITY DEFINER y no depende de los privilegios de quien dispara el trigger.
+GRANT SELECT ON eventos_auditoria TO anon, authenticated;
+
+-- ============================================================================
 -- perfiles
 -- ============================================================================
 -- El rol no se cambia por RLS porque una politica no puede comparar el valor viejo
