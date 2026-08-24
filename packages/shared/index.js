@@ -30,3 +30,6 @@ export * from "./api/index.js";
 export * from "./hooks/index.js";
 export * from "./types/index.js";
 export * from "./validations/index.js";
+
+export * from './utils/permisos';
+export * from './hooks/usePermisos';
