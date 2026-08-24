@@ -10,7 +10,13 @@ import { normalizarError } from "../api/errores-de-supabase.js";
 // Las columnas se enumeran en lugar de pedir "*" para que una columna nueva en perfiles no
 // empiece a viajar sola hasta el cliente. Aqui no va perfil_especialidad: quien la necesite
 // la pide aparte y no la carga toda la aplicacion en cada arranque.
-const COLUMNAS_DEL_PERFIL = "id, nombres, apellidos, email, telefono, rol, activo, fecha_ingreso";
+//
+// fecha_ingreso se pide con alias en camelCase porque asi la declaran los descriptores que
+// consumen las pantallas (COLUMNAS_USUARIO y CAMPOS_USUARIO). DataList busca el valor por el
+// id de la columna, asi que devolverla en snake_case dejaba esa columna vacia sin avisar de
+// nada. Es la misma convencion que sigue donaciones/proyectos.api.js.
+const COLUMNAS_DEL_PERFIL =
+  "id, nombres, apellidos, email, telefono, rol, activo, fechaIngreso:fecha_ingreso";
 
 /**
  * Lee el perfil de un usuario autenticado.
