@@ -6,7 +6,7 @@ import {
   construirError,
   normalizarError,
 } from "../api/errores-de-supabase.js";
-import { obtenerPerfil } from "../usuarios/api.js";
+import { cerrarSesion, evaluarPerfilDeSesion, requiereCerrarSesion } from "../api/sesion.js";
 
 const ESTADOS_DE_RESTAURACION = {
   CARGANDO: "cargando",
@@ -19,16 +19,6 @@ const SIN_SESION = {
   cargando: false,
   error: null,
 };
-
-async function cerrarSesionLocal(cliente) {
-  try {
-    await cliente.auth.signOut({ scope: "local" });
-  } catch {
-    // Si el cierre reporta un error, el cliente ya no debe conservar estado autenticado.
-  } finally {
-    cliente.auth.stopAutoRefresh();
-  }
-}
 
 /**
  * Estado compartido de la sesion: quien es el usuario, cual es su perfil y cual su rol.
@@ -84,6 +74,22 @@ export function useSesion() {
       setSesion({ ...SIN_SESION, error: error ?? null });
     }
 
+    /**
+     * Cierra la sesion local para un cierre que decidimos aqui mismo (perfil ausente, cuenta
+     * desactivada, o un error al restaurar), no uno que pidio la persona con logout().
+     *
+     * Marca cierreIntencional ANTES de llamar a cerrarSesion(): el signOut que dispara por
+     * dentro emite un SIGNED_OUT sincronicamente (onAuthStateChange lo espera antes de que
+     * signOut() resuelva), y sin esta marca ese evento se leeria como "la sesion expiro sola"
+     * y pintaria ese aviso un instante antes de que el codigo de aqui abajo lo reemplace por
+     * el error especifico. La escritura final ya era la correcta sin esta marca (la de aqui
+     * abajo siempre llega despues), pero con la marca no hay ni ese parpadeo intermedio.
+     */
+    async function cerrarSesionInterna() {
+      cierreIntencional.current = true;
+      await cerrarSesion();
+    }
+
     /** Guarda al usuario de la sesion y resuelve su perfil. */
     async function aplicarSesion(sesionDeSupabase) {
       const turno = (resolucion.current += 1);
@@ -102,30 +108,24 @@ export function useSesion() {
         }));
       }
 
-      const { perfil, error } = await obtenerPerfil(usuario.id);
+      const { perfil, error } = await evaluarPerfilDeSesion(usuario);
 
       // Llego otro evento mientras se leia: esta respuesta ya no describe la sesion actual.
       if (!activo.current || turno !== resolucion.current) return;
 
       if (error) {
-        // La sesion es valida aunque el perfil no se haya podido leer. Se conserva para que la
-        // aplicacion pueda reintentar, en vez de mandar al login a alguien que si tiene sesion.
-        setSesion({ usuario, perfil: null, cargando: false, error });
-        return;
-      }
+        if (!requiereCerrarSesion(error)) {
+          // Fallo transitorio leyendo el perfil (red, servidor): la sesion sigue siendo
+          // valida. Se conserva para que la aplicacion pueda reintentar, en vez de mandar al
+          // login a alguien que si tiene sesion.
+          setSesion({ usuario, perfil: null, cargando: false, error });
+          return;
+        }
 
-      if (!perfil) {
-        // Hay token pero no hay fila que leer: o el perfil no existe o RLS no lo deja ver.
-        // Sin perfil no hay rol, y sin rol no se puede autorizar nada.
-        await cerrarSesionLocal(cliente);
-        limpiarSesion(construirError(CODIGOS_DE_ERROR_DE_SUPABASE.PERMISO_DENEGADO));
-        return;
-      }
-
-      if (perfil.activo === false) {
-        // RNF-10: dar de baja a alguien tiene que surtir efecto aunque su token siga vigente.
-        await cerrarSesionLocal(cliente);
-        limpiarSesion(construirError(CODIGOS_DE_ERROR_DE_SUPABASE.CUENTA_DESACTIVADA));
+        // Perfil ausente o cuenta desactivada (RNF-10): dar de baja a alguien tiene que
+        // surtir efecto aunque su token siga vigente.
+        await cerrarSesionInterna();
+        limpiarSesion(error);
         return;
       }
 
@@ -145,7 +145,7 @@ export function useSesion() {
         const sesionDeSupabase = data?.session;
 
         if (error) {
-          await cerrarSesionLocal(cliente);
+          await cerrarSesionInterna();
           limpiarSesion(normalizarError(error));
           return;
         }
@@ -158,7 +158,7 @@ export function useSesion() {
 
         await aplicarSesion(sesionDeSupabase);
       } catch (error) {
-        await cerrarSesionLocal(cliente);
+        await cerrarSesionInterna();
         limpiarSesion(normalizarError(error));
       } finally {
         if (activo.current) {
@@ -211,8 +211,7 @@ export function useSesion() {
   const logout = useCallback(async () => {
     // Se marca antes de cerrar, porque signOut() dispara SIGNED_OUT antes de resolver.
     cierreIntencional.current = true;
-    const cliente = obtenerSupabase();
-    await cerrarSesionLocal(cliente);
+    await cerrarSesion();
     resolucion.current += 1;
     setSesion({ ...SIN_SESION });
   }, []);
