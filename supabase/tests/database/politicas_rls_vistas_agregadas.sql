@@ -1,5 +1,5 @@
 -- Pruebas de las politicas RLS de vistas agregadas: vista_reporte_impacto,
--- vista_lotes_disponibles y pacientes_reporte (issue #90, migracion 00040).
+-- vista_lotes_disponibles y pacientes_reporte (issue #90, migracion 00041).
 -- Corre con: supabase test db
 --
 -- Mismo patron que las suites ya mergeadas (#87/#88/00039): SET LOCAL ROLE
