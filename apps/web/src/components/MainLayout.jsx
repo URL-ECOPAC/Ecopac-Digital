@@ -6,7 +6,7 @@ import {
   etiquetaDeRol,
   formatearFechaCorta,
 } from '@ecopac/shared';
-import { useUsuarioActual } from '../hooks/useUsuarioActual';
+import { useSesionCompartida } from '../contexto/SesionProvider';
 import './MainLayout.css';
 
 // Subtitulo de cada modulo en el encabezado de pagina, segun el prototipo.
@@ -32,16 +32,24 @@ function moduloDeRuta(pathname) {
 export default function MainLayout() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { usuario } = useUsuarioActual();
+  // El layout solo se monta detras de RutaProtegida, que ya comprobo que hay sesion y perfil.
+  // Por eso aqui se puede leer el perfil sin defensas: si llegara nulo, el guard tendria un
+  // hueco y es mejor que se note que taparlo con un valor inventado.
+  const { perfil, logout } = useSesionCompartida();
 
-  const secciones = seccionesVisibles(usuario.rol);
+  const secciones = seccionesVisibles(perfil.rol);
   const actual = moduloDeRuta(location.pathname);
 
-  const iniciales = `${usuario.nombres[0] ?? ''}${usuario.apellidos[0] ?? ''}`.toUpperCase();
+  const iniciales = `${perfil.nombres[0] ?? ''}${perfil.apellidos[0] ?? ''}`.toUpperCase();
   // El formato sale de shared para que la web y el movil muestren la fecha igual.
   const fecha = formatearFechaCorta(new Date());
 
-  const handleLogout = () => navigate('/login');
+  // Cerrar sesion de verdad y no solo navegar al login: sin esto el token seguiria vivo y
+  // volver atras devolveria a la aplicacion como si nada.
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login', { replace: true });
+  };
 
   return (
     <div className="app-shell">
@@ -80,11 +88,11 @@ export default function MainLayout() {
           </span>
           <span className="app-user__data">
             <span className="app-user__name">
-              {usuario.nombres} {usuario.apellidos}
+              {perfil.nombres} {perfil.apellidos}
             </span>
             <span className="app-user__role">
-              {etiquetaDeRol(usuario.rol)}
-              {usuario.area ? ` · ${usuario.area}` : ''}
+              {etiquetaDeRol(perfil.rol)}
+              {perfil.area ? ` · ${perfil.area}` : ''}
             </span>
           </span>
         </div>
