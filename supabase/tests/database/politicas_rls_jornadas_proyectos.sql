@@ -1,5 +1,5 @@
 -- Pruebas de las politicas RLS de jornadas, jornada_personal, historiales de estado
--- y proyectos (issue #90, migracion 00037). Corre con:
+-- y proyectos (issue #90, migracion 00039). Corre con:
 -- supabase test db
 --
 -- Mismo patron que las suites de #87/#88: SET LOCAL ROLE authenticated +
