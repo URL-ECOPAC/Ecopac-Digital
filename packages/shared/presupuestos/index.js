@@ -12,3 +12,5 @@
 // Carpeta creada por el issue #278 para dejar montada la estructura del modulo. El
 // contenido lo construyen sus issues (ver packages/shared/pacientes/ como ejemplar de
 // referencia de filtros.js y columnas.js).
+
+export * from "./api.js";
