@@ -1,7 +1,8 @@
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { inicializarSupabase, useSesion } from '@ecopac/shared';
+import { ESTADOS_DE_RESTAURACION, inicializarSupabase } from '@ecopac/shared';
 
 import { almacenamientoMovil } from './src/almacenamiento';
+import { SesionProvider, useSesionCompartida } from './src/contexto/SesionProvider';
 import AppNavigator from './src/navigation/AppNavigator';
 import RestaurandoSesionScreen from './src/screens/RestaurandoSesionScreen';
 
@@ -21,15 +22,25 @@ try {
 }
 
 export default function App() {
-  const { estadoRestauracion, haySesion } = useSesion();
-
   return (
     <SafeAreaProvider>
-      {estadoRestauracion === 'cargando' ? (
-        <RestaurandoSesionScreen />
-      ) : (
-        <AppNavigator haySesion={haySesion} />
-      )}
+      <SesionProvider>
+        <Raiz />
+      </SesionProvider>
     </SafeAreaProvider>
+  );
+}
+
+/**
+ * Va aparte de App porque el proveedor tiene que estar montado por encima de quien lo lee:
+ * un componente no puede consumir un contexto que el mismo declara.
+ */
+function Raiz() {
+  const { estadoRestauracion, haySesion } = useSesionCompartida();
+
+  return estadoRestauracion === ESTADOS_DE_RESTAURACION.CARGANDO ? (
+    <RestaurandoSesionScreen />
+  ) : (
+    <AppNavigator haySesion={haySesion} />
   );
 }
