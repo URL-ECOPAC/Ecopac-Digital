@@ -86,8 +86,8 @@ WITH CHECK (
 --------------------------------------------------------------------------------
 
 -- Lectura: Solo Administrador y Junta Directiva
-CREATE POLICY "Permitir lectura de detalle a Administrador y Junta Directiva"
-ON public.donacion_detalle
+CREATE POLICY "Permitir lectura de donantes a Administrador y Junta Directiva"
+ON public.donantes
 FOR SELECT
 TO authenticated
 USING (
