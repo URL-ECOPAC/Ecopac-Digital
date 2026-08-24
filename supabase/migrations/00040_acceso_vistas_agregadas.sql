@@ -46,6 +46,11 @@ COMMENT ON VIEW pacientes_reporte IS
 -- ============================================================================
 -- 2. Politicas SELECT para junta directiva en tablas base de vista_reporte_impacto
 -- ============================================================================
+-- comunidades: id, nombre (necesario para el JOIN en vista_reporte_impacto)
+CREATE POLICY "Administrador y junta directiva leen comunidades para reportes"
+  ON comunidades FOR SELECT TO authenticated
+  USING (public.es_administrador() OR public.rol_actual() = 'junta directiva');
+
 -- atenciones: jornada_id, paciente_id (FKs, no dato sensible individual)
 CREATE POLICY "Junta directiva lee atenciones para reportes"
   ON atenciones FOR SELECT TO authenticated
@@ -77,7 +82,7 @@ COMMENT ON VIEW vista_lotes_disponibles IS
    medicamentos y bodegas (00034).';
 
 -- ============================================================================
--- 4. Grants en vistas agregadas: SELECT para autenticados, nada para anon
+-- 4. Grants en vistas agregadas y tablas base necesarias: SELECT para autenticados
 -- ============================================================================
 GRANT SELECT ON vista_reporte_impacto TO authenticated;
 REVOKE ALL ON vista_reporte_impacto FROM anon;
@@ -87,6 +92,9 @@ REVOKE ALL ON vista_lotes_disponibles FROM anon;
 
 GRANT SELECT ON pacientes_reporte TO authenticated;
 REVOKE ALL ON pacientes_reporte FROM anon;
+
+-- comunidades es necesaria para el JOIN en vista_reporte_impacto
+GRANT SELECT ON comunidades TO authenticated;
 
 -- ============================================================================
 -- RLS ya esta habilitado en todas las tablas base por 00030 (denegacion por

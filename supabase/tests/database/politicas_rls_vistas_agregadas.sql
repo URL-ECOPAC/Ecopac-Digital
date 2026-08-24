@@ -60,7 +60,7 @@ UPDATE jornadas SET estado = 'en curso' WHERE id = '40000000-0000-0000-0000-0000
 
 INSERT INTO jornada_personal (jornada_id, perfil_id, rol_en_jornada, hora_inicio, hora_fin) VALUES
   ('40000000-0000-0000-0000-000000001a01', '00000000-0000-0000-0000-000000001004', 'medico', '08:00', '13:00'),
-  ('40000000-0000-0000-0000-000000001a01', '00000000-0000-0000-0000-000000001005', 'voluntario', '08:00', '13:00');
+  ('40000000-0000-0000-0000-000000001a01', '00000000-0000-0000-0000-000000001005', 'voluntario general', '08:00', '13:00');
 
 -- Cadena clinica: atencion -> consulta -> receta -> receta_detalle.
 -- consultas (00018) exige expediente_id, atencion_id, medico_id, jornada_id y
