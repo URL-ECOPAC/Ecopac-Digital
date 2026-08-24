@@ -28,7 +28,9 @@ export * from "./presupuestos/index.js";
 export * from "./reportes/index.js";
 export * from "./api/index.js";
 export * from "./hooks/index.js";
-export * from "./types/index.js";
+// Sin extension: el archivo es types/index.ts desde el PR #377. Vite resuelve el cambio de
+// .js a .ts por su cuenta, pero Metro no, y el barril dejaba de resolver en el movil.
+export * from "./types";
 export * from "./validations/index.js";
 
 export * from './utils/permisos';
