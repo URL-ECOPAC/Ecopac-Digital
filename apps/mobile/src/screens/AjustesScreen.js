@@ -11,7 +11,7 @@ export default function AjustesScreen() {
     <ScreenContainer>
       <View style={styles.contenido}>
         <Text style={styles.titulo}>Ajustes</Text>
-        <PrimaryButton label="Cerrar sesión" onPress={logout} />
+        <PrimaryButton title="Cerrar sesión" onPress={logout} />
       </View>
     </ScreenContainer>
   );
