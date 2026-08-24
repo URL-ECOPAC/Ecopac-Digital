@@ -153,8 +153,12 @@ export async function listarProyectos({ estado, responsableId } = {}) {
  * sin querer.
  */
 export async function actualizarProyecto(id, datos) {
-  const { estado: _estado, ...resto } = datos ?? {};
-  const fila = aColumnasDeTabla(resto);
+  // El estado se quita a proposito: moverlo es tarea de cambiarEstadoProyecto(), que valida la
+  // transicion. Se borra de una copia en vez de desestructurarlo para no dejar una variable sin
+  // usar, que el linter marca con razon.
+  const sinEstado = { ...(datos ?? {}) };
+  delete sinEstado.estado;
+  const fila = aColumnasDeTabla(sinEstado);
 
   if (Object.keys(fila).length === 0) {
     return { proyecto: null, error: null };
