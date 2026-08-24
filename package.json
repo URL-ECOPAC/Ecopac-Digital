@@ -8,7 +8,7 @@
   "scripts": {
     "dev": "npm run dev:web",
     "dev:web": "npm run dev --workspace=apps/web -- --host",
-    "dev:mobile": "npm run start --workspace=apps/mobile",
+    "dev:mobile": "npm run start --workspace=apps/mobile --",
     "dev:mobilet": "npm run start --workspace=apps/mobile -- --tunnel",
     "lint": "npm run lint --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
