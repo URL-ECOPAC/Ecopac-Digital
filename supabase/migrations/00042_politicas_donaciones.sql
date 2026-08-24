@@ -73,21 +73,18 @@ USING (
 )
 WITH CHECK (
   (auth.jwt() -> 'app_metadata' ->> 'role') IN ('Administrador', 'Junta Directiva')
-  AND estado = 'ANULADA'
+  AND estado::text IN ('ANULADA', 'anulada')
   AND motivo_anulacion IS NOT NULL
   AND length(trim(motivo_anulacion)) > 0
 );
-
--- Impedir DELETE explícitamente (No se pueden borrar donaciones)
--- Al no haber política FOR DELETE, Supabase / PostgreSQL deniega el DELETE por defecto.
 
 --------------------------------------------------------------------------------
 -- POLÍTICAS PARA TABLA: donacion_detalle
 --------------------------------------------------------------------------------
 
 -- Lectura: Solo Administrador y Junta Directiva
-CREATE POLICY "Permitir lectura de donantes a Administrador y Junta Directiva"
-ON public.donantes
+CREATE POLICY "Permitir lectura de detalle a Administrador y Junta Directiva"
+ON public.donacion_detalle
 FOR SELECT
 TO authenticated
 USING (
