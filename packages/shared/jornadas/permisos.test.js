@@ -13,6 +13,7 @@ import {
   permisosDeJornadas,
   puedeAdministrarJornadas,
   puedeEditarJornada,
+  puedeReabrirJornada,
   puedeVerJornadas,
 } from "./permisos.js";
 
@@ -44,19 +45,37 @@ describe("permisos de jornadas", () => {
     expect(puedeEditarJornada(ROLES.MEDICO, ESTADOS_JORNADA.PLANIFICADA)).toBe(false);
   });
 
+  it("solo Administrador reabre una jornada finalizada, como pide el criterio de aceptacion", () => {
+    expect(puedeReabrirJornada(ROLES.ADMINISTRADOR)).toBe(true);
+
+    expect(puedeReabrirJornada(ROLES.JUNTA_DIRECTIVA)).toBe(false);
+    expect(puedeReabrirJornada(ROLES.SOCIO_FUNDADOR)).toBe(false);
+    expect(puedeReabrirJornada(ROLES.MEDICO)).toBe(false);
+    expect(puedeReabrirJornada(ROLES.VOLUNTARIO)).toBe(false);
+  });
+
   it("un rol que no existe no puede nada", () => {
     expect(permisosDeJornadas("coordinador")).toEqual({
       puedeVer: false,
       puedeCrear: false,
       puedeEditar: false,
+      puedeReabrir: false,
     });
   });
 
-  it("agrupa los permisos para que un hook no llame a las tres por separado", () => {
+  it("agrupa los permisos para que un hook no llame a las cuatro por separado", () => {
     expect(permisosDeJornadas(ROLES.MEDICO)).toEqual({
       puedeVer: true,
       puedeCrear: false,
       puedeEditar: false,
+      puedeReabrir: false,
+    });
+
+    expect(permisosDeJornadas(ROLES.ADMINISTRADOR)).toEqual({
+      puedeVer: true,
+      puedeCrear: true,
+      puedeEditar: true,
+      puedeReabrir: true,
     });
   });
 });

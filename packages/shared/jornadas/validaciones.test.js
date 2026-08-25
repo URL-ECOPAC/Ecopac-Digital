@@ -8,10 +8,15 @@
 
 import { describe, expect, it } from "vitest";
 
+import { ROLES } from "../usuarios/roles.js";
+import { ESTADOS_JORNADA } from "./permisos.js";
 import {
   advertirChoqueDeHorario,
+  esTransicionDeJornadaValida,
+  transicionesDeJornadaDesde,
   validarAsignaciones,
   validarAsignacionPersonal,
+  validarCambioDeEstadoJornada,
   validarJornada,
 } from "./validaciones.js";
 
@@ -129,6 +134,113 @@ describe("validarAsignaciones", () => {
 
   it("ignora las filas sin perfil elegido", () => {
     expect(validarAsignaciones([{ perfil: "a" }, { perfil: "" }, {}])).toEqual({});
+  });
+});
+
+describe("transicionesDeJornadaDesde / esTransicionDeJornadaValida", () => {
+  it("las 3 transiciones de la issue #171 son validas", () => {
+    expect(
+      esTransicionDeJornadaValida(ESTADOS_JORNADA.PLANIFICADA, ESTADOS_JORNADA.EN_CURSO),
+    ).toBe(true);
+    expect(
+      esTransicionDeJornadaValida(ESTADOS_JORNADA.EN_CURSO, ESTADOS_JORNADA.FINALIZADA),
+    ).toBe(true);
+    expect(
+      esTransicionDeJornadaValida(ESTADOS_JORNADA.FINALIZADA, ESTADOS_JORNADA.EN_CURSO),
+    ).toBe(true);
+  });
+
+  it("cancelada esta fuera de alcance: no admite ninguna transicion de entrada ni de salida", () => {
+    expect(transicionesDeJornadaDesde(ESTADOS_JORNADA.CANCELADA)).toEqual([]);
+    expect(
+      esTransicionDeJornadaValida(ESTADOS_JORNADA.PLANIFICADA, ESTADOS_JORNADA.CANCELADA),
+    ).toBe(false);
+    expect(
+      esTransicionDeJornadaValida(ESTADOS_JORNADA.CANCELADA, ESTADOS_JORNADA.EN_CURSO),
+    ).toBe(false);
+  });
+
+  it("no se puede saltar directo de planificada a finalizada", () => {
+    expect(
+      esTransicionDeJornadaValida(ESTADOS_JORNADA.PLANIFICADA, ESTADOS_JORNADA.FINALIZADA),
+    ).toBe(false);
+  });
+});
+
+describe("validarCambioDeEstadoJornada", () => {
+  it("acepta las 3 transiciones permitidas", () => {
+    expect(
+      validarCambioDeEstadoJornada(
+        ESTADOS_JORNADA.PLANIFICADA,
+        ESTADOS_JORNADA.EN_CURSO,
+        ROLES.MEDICO,
+      ),
+    ).toEqual({});
+    expect(
+      validarCambioDeEstadoJornada(
+        ESTADOS_JORNADA.EN_CURSO,
+        ESTADOS_JORNADA.FINALIZADA,
+        ROLES.MEDICO,
+      ),
+    ).toEqual({});
+  });
+
+  it("rechaza un estado que no existe en el enum", () => {
+    const errores = validarCambioDeEstadoJornada(ESTADOS_JORNADA.PLANIFICADA, "en pausa");
+    expect(errores).toHaveProperty("estado");
+  });
+
+  it("rechaza quedarse en el mismo estado", () => {
+    const errores = validarCambioDeEstadoJornada(
+      ESTADOS_JORNADA.EN_CURSO,
+      ESTADOS_JORNADA.EN_CURSO,
+    );
+    expect(errores.estado).toContain("ya esta en ese estado");
+  });
+
+  it("rechaza el salto planificada -> finalizada", () => {
+    const errores = validarCambioDeEstadoJornada(
+      ESTADOS_JORNADA.PLANIFICADA,
+      ESTADOS_JORNADA.FINALIZADA,
+      ROLES.ADMINISTRADOR,
+    );
+    expect(errores).toHaveProperty("estado");
+  });
+
+  it("rechaza cualquier transicion que involucre cancelada", () => {
+    expect(
+      validarCambioDeEstadoJornada(
+        ESTADOS_JORNADA.PLANIFICADA,
+        ESTADOS_JORNADA.CANCELADA,
+        ROLES.ADMINISTRADOR,
+      ),
+    ).toHaveProperty("estado");
+    expect(
+      validarCambioDeEstadoJornada(
+        ESTADOS_JORNADA.CANCELADA,
+        ESTADOS_JORNADA.PLANIFICADA,
+        ROLES.ADMINISTRADOR,
+      ),
+    ).toHaveProperty("estado");
+  });
+
+  it("rechaza la reapertura (finalizada -> en curso) sin rol administrador", () => {
+    const errores = validarCambioDeEstadoJornada(
+      ESTADOS_JORNADA.FINALIZADA,
+      ESTADOS_JORNADA.EN_CURSO,
+      ROLES.MEDICO,
+    );
+    expect(errores.estado).toContain("administrador");
+  });
+
+  it("acepta la reapertura (finalizada -> en curso) con rol administrador", () => {
+    expect(
+      validarCambioDeEstadoJornada(
+        ESTADOS_JORNADA.FINALIZADA,
+        ESTADOS_JORNADA.EN_CURSO,
+        ROLES.ADMINISTRADOR,
+      ),
+    ).toEqual({});
   });
 });
 
