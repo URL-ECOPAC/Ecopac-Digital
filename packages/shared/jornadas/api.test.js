@@ -23,9 +23,16 @@ vi.mock("../api/cliente.js", () => ({
 const { CODIGOS_DE_ERROR_DE_SUPABASE } = await import("../api/errores-de-supabase.js");
 const { ROLES } = await import("../usuarios/roles.js");
 const { ESTADOS_JORNADA } = await import("./permisos.js");
-const { actualizarJornada, listarJornadas, obtenerJornada, registrarJornada } = await import(
-  "./api.js"
-);
+const {
+  actualizarJornada,
+  asignarPersonal,
+  desasignarPersonal,
+  listarJornadas,
+  obtenerAsignacionesDelDia,
+  obtenerJornada,
+  obtenerJornadasDePersona,
+  registrarJornada,
+} = await import("./api.js");
 
 /**
  * Doble minimo de un query builder de supabase-js: cada metodo de la cadena registra el paso
@@ -36,7 +43,8 @@ const { actualizarJornada, listarJornadas, obtenerJornada, registrarJornada } = 
  *
  * `respuestasPorTabla` acepta una respuesta unica o un arreglo: actualizarJornada() consulta
  * "jornadas" dos veces (lee el estado, despues actualiza), asi que esos casos necesitan una
- * respuesta distinta para cada llamada.
+ * respuesta distinta para cada llamada. Una clave `"rpc:<nombre>"` configura la respuesta de
+ * `.rpc(nombre, argumentos)`, que no pasa por `.from()`.
  */
 function crearCliente(respuestasPorTabla) {
   const llamadas = [];
@@ -72,12 +80,20 @@ function crearCliente(respuestasPorTabla) {
           llamadas.push({ paso: "update", tabla, valores });
           return encadenable;
         },
+        delete() {
+          llamadas.push({ paso: "delete", tabla });
+          return encadenable;
+        },
         select(columnas) {
           llamadas.push({ paso: "select", tabla, columnas });
           return encadenable;
         },
         eq(columna, valor) {
           llamadas.push({ paso: "eq", tabla, columna, valor });
+          return encadenable;
+        },
+        neq(columna, valor) {
+          llamadas.push({ paso: "neq", tabla, columna, valor });
           return encadenable;
         },
         gte(columna, valor) {
@@ -100,6 +116,11 @@ function crearCliente(respuestasPorTabla) {
       };
 
       return encadenable;
+    },
+    rpc(nombre, argumentos) {
+      llamadas.push({ paso: "rpc", nombre, argumentos });
+      const respuesta = siguienteRespuesta(`rpc:${nombre}`);
+      return respuesta instanceof Error ? Promise.reject(respuesta) : Promise.resolve(respuesta);
     },
   };
 }
@@ -405,5 +426,316 @@ describe("actualizarJornada", () => {
 
     const actualizacion = cliente.llamadas.find((llamada) => llamada.paso === "update");
     expect(actualizacion.valores).toEqual({ nombre: "Nuevo nombre" });
+  });
+});
+
+describe("asignarPersonal", () => {
+  it("inserta la fila mapeada a snake_case, incluido el id de la jornada", async () => {
+    const cliente = crearCliente({
+      jornada_personal: [
+        { data: { id: "asignacion-1", perfilId: "perfil-1", rolEnJornada: "medico" }, error: null },
+        { data: [], error: null },
+      ],
+      jornadas: { data: { fecha: "2026-09-01" }, error: null },
+    });
+    dobles.cliente = cliente;
+
+    const { asignacion, advertencias, error } = await asignarPersonal("jornada-1", {
+      perfil: "perfil-1",
+      rolEnJornada: "medico",
+      horaInicio: "08:00",
+      horaFin: "13:00",
+    });
+
+    expect(error).toBeNull();
+    expect(advertencias).toEqual([]);
+    expect(asignacion).toEqual({
+      id: "asignacion-1",
+      perfilId: "perfil-1",
+      rolEnJornada: "medico",
+    });
+    expect(cliente.llamadas).toContainEqual({
+      paso: "insert",
+      tabla: "jornada_personal",
+      valores: {
+        jornada_id: "jornada-1",
+        perfil_id: "perfil-1",
+        rol_en_jornada: "medico",
+        hora_inicio: "08:00",
+        hora_fin: "13:00",
+      },
+    });
+  });
+
+  it("advierte, sin bloquear, cuando la persona ya esta asignada a otra jornada el mismo dia", async () => {
+    const cliente = crearCliente({
+      jornada_personal: [
+        { data: { id: "asignacion-1" }, error: null },
+        {
+          data: [
+            {
+              perfil: "perfil-1",
+              jornadaId: "jornada-2",
+              jornada: { nombre: "Jornada en Peten", fecha: "2026-09-01" },
+            },
+          ],
+          error: null,
+        },
+      ],
+      jornadas: { data: { fecha: "2026-09-01" }, error: null },
+    });
+    dobles.cliente = cliente;
+
+    const { asignacion, advertencias, error } = await asignarPersonal("jornada-1", {
+      perfil: "perfil-1",
+      rolEnJornada: "medico",
+      horaInicio: "08:00",
+      horaFin: "13:00",
+    });
+
+    expect(error).toBeNull();
+    expect(asignacion).toEqual({ id: "asignacion-1" });
+    expect(advertencias).toHaveLength(1);
+    expect(advertencias[0]).toContain("Jornada en Peten");
+  });
+
+  it("no toca el cliente si no hay jornadaId", async () => {
+    const { asignacion, advertencias, error } = await asignarPersonal(undefined, {
+      perfil: "perfil-1",
+    });
+
+    expect(asignacion).toBeNull();
+    expect(advertencias).toEqual([]);
+    expect(error).toBeNull();
+  });
+
+  it("clasifica como unicidad la violacion del UNIQUE(jornada_id, perfil_id): criterio 2", async () => {
+    dobles.cliente = crearCliente({
+      jornada_personal: { data: null, error: { code: "23505" } },
+    });
+
+    const { asignacion, advertencias, error } = await asignarPersonal("jornada-1", {
+      perfil: "perfil-1",
+    });
+
+    expect(asignacion).toBeNull();
+    expect(advertencias).toEqual([]);
+    expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.UNICIDAD);
+  });
+
+  it("clasifica como campo requerido omitir horaInicio u horaFin (NOT NULL en la tabla)", async () => {
+    dobles.cliente = crearCliente({
+      jornada_personal: { data: null, error: { code: "23502" } },
+    });
+
+    const { error } = await asignarPersonal("jornada-1", { perfil: "perfil-1" });
+
+    expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.CAMPO_REQUERIDO);
+  });
+});
+
+describe("obtenerAsignacionesDelDia", () => {
+  it("no toca el cliente si no hay fecha", async () => {
+    const { asignaciones, error } = await obtenerAsignacionesDelDia(undefined);
+
+    expect(asignaciones).toEqual([]);
+    expect(error).toBeNull();
+  });
+
+  it("filtra por la fecha de la jornada embebida y excluye la jornada indicada", async () => {
+    const cliente = crearCliente({ jornada_personal: { data: [], error: null } });
+    dobles.cliente = cliente;
+
+    await obtenerAsignacionesDelDia("2026-09-01", { excluirJornada: "jornada-1" });
+
+    expect(cliente.llamadas).toContainEqual({
+      paso: "eq",
+      tabla: "jornada_personal",
+      columna: "jornada.fecha",
+      valor: "2026-09-01",
+    });
+    expect(cliente.llamadas).toContainEqual({
+      paso: "neq",
+      tabla: "jornada_personal",
+      columna: "jornada_id",
+      valor: "jornada-1",
+    });
+  });
+
+  it("sin excluirJornada no manda ningun neq", async () => {
+    const cliente = crearCliente({ jornada_personal: { data: [], error: null } });
+    dobles.cliente = cliente;
+
+    await obtenerAsignacionesDelDia("2026-09-01");
+
+    expect(cliente.llamadas.some((llamada) => llamada.paso === "neq")).toBe(false);
+  });
+
+  it("mapea perfil, jornadaId y el nombre de la jornada embebida", async () => {
+    dobles.cliente = crearCliente({
+      jornada_personal: {
+        data: [
+          {
+            perfil: "perfil-1",
+            jornadaId: "jornada-2",
+            jornada: { nombre: "Jornada en Peten", fecha: "2026-09-01" },
+          },
+        ],
+        error: null,
+      },
+    });
+
+    const { asignaciones, error } = await obtenerAsignacionesDelDia("2026-09-01");
+
+    expect(error).toBeNull();
+    expect(asignaciones).toEqual([
+      { perfil: "perfil-1", jornadaId: "jornada-2", jornadaNombre: "Jornada en Peten" },
+    ]);
+  });
+
+  it("normaliza el error del servidor", async () => {
+    dobles.cliente = crearCliente({
+      jornada_personal: { data: null, error: { code: "42501" } },
+    });
+
+    const { asignaciones, error } = await obtenerAsignacionesDelDia("2026-09-01");
+
+    expect(asignaciones).toEqual([]);
+    expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.PERMISO_DENEGADO);
+  });
+});
+
+describe("obtenerJornadasDePersona", () => {
+  it("no toca el cliente si no hay perfilId", async () => {
+    const { jornadas, error } = await obtenerJornadasDePersona(undefined);
+
+    expect(jornadas).toEqual([]);
+    expect(error).toBeNull();
+  });
+
+  it("filtra jornada_personal por perfil_id y desenvuelve la jornada embebida", async () => {
+    const cliente = crearCliente({
+      jornada_personal: {
+        data: [
+          { jornada: { id: "jornada-1", nombre: "Jornada en Solola" } },
+          { jornada: { id: "jornada-2", nombre: "Jornada en Peten" } },
+        ],
+        error: null,
+      },
+    });
+    dobles.cliente = cliente;
+
+    const { jornadas, error } = await obtenerJornadasDePersona("perfil-1");
+
+    expect(error).toBeNull();
+    expect(jornadas).toEqual([
+      { id: "jornada-1", nombre: "Jornada en Solola" },
+      { id: "jornada-2", nombre: "Jornada en Peten" },
+    ]);
+    expect(cliente.llamadas).toContainEqual({
+      paso: "eq",
+      tabla: "jornada_personal",
+      columna: "perfil_id",
+      valor: "perfil-1",
+    });
+  });
+
+  it("ignora filas sin jornada embebida (la jornada no existe o RLS no la deja ver)", async () => {
+    dobles.cliente = crearCliente({
+      jornada_personal: { data: [{ jornada: null }], error: null },
+    });
+
+    const { jornadas, error } = await obtenerJornadasDePersona("perfil-1");
+
+    expect(error).toBeNull();
+    expect(jornadas).toEqual([]);
+  });
+
+  it("normaliza el error del servidor", async () => {
+    dobles.cliente = crearCliente({
+      jornada_personal: { data: null, error: { code: "42501" } },
+    });
+
+    const { jornadas, error } = await obtenerJornadasDePersona("perfil-1");
+
+    expect(jornadas).toEqual([]);
+    expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.PERMISO_DENEGADO);
+  });
+});
+
+describe("desasignarPersonal", () => {
+  it("no toca el cliente si falta jornadaId o perfilId", async () => {
+    const { desasignado, error } = await desasignarPersonal(undefined, "perfil-1");
+
+    expect(desasignado).toBe(false);
+    expect(error).toBeNull();
+  });
+
+  it("borra la fila cuando la persona no registro atenciones en la jornada", async () => {
+    const cliente = crearCliente({
+      "rpc:personal_registro_atenciones": { data: false, error: null },
+      jornada_personal: { data: null, error: null },
+    });
+    dobles.cliente = cliente;
+
+    const { desasignado, error } = await desasignarPersonal("jornada-1", "perfil-1");
+
+    expect(error).toBeNull();
+    expect(desasignado).toBe(true);
+    expect(cliente.llamadas).toContainEqual({
+      paso: "rpc",
+      nombre: "personal_registro_atenciones",
+      argumentos: { p_jornada_id: "jornada-1", p_perfil_id: "perfil-1" },
+    });
+    expect(cliente.llamadas).toContainEqual({ paso: "delete", tabla: "jornada_personal" });
+    expect(cliente.llamadas).toContainEqual({
+      paso: "eq",
+      tabla: "jornada_personal",
+      columna: "jornada_id",
+      valor: "jornada-1",
+    });
+    expect(cliente.llamadas).toContainEqual({
+      paso: "eq",
+      tabla: "jornada_personal",
+      columna: "perfil_id",
+      valor: "perfil-1",
+    });
+  });
+
+  it("bloquea el borrado, sin llegar al DELETE, cuando la persona ya registro atenciones: criterio 4", async () => {
+    const cliente = crearCliente({
+      "rpc:personal_registro_atenciones": { data: true, error: null },
+    });
+    dobles.cliente = cliente;
+
+    const { desasignado, error } = await desasignarPersonal("jornada-1", "perfil-1");
+
+    expect(desasignado).toBe(false);
+    expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.CHECK);
+    expect(error.mensaje).toContain("atenciones");
+    expect(cliente.llamadas.some((llamada) => llamada.paso === "delete")).toBe(false);
+  });
+
+  it("normaliza el error si la comprobacion por RPC falla", async () => {
+    dobles.cliente = crearCliente({
+      "rpc:personal_registro_atenciones": { data: null, error: { code: "42501" } },
+    });
+
+    const { desasignado, error } = await desasignarPersonal("jornada-1", "perfil-1");
+
+    expect(desasignado).toBe(false);
+    expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.PERMISO_DENEGADO);
+  });
+
+  it("normaliza el error si RLS impide el DELETE (quien llama no es administrador)", async () => {
+    dobles.cliente = crearCliente({
+      "rpc:personal_registro_atenciones": { data: false, error: null },
+      jornada_personal: { data: null, error: { code: "42501" } },
+    });
+
+    const { desasignado, error } = await desasignarPersonal("jornada-1", "perfil-1");
+
+    expect(desasignado).toBe(false);
+    expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.PERMISO_DENEGADO);
   });
 });

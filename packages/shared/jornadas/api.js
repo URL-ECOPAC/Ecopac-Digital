@@ -5,13 +5,20 @@
 // lugar del monorepo que lee y escribe las tablas jornadas, jornada_personal y
 // vista_reporte_impacto.
 //
+// desasignarPersonal() necesita saber si la persona ya registro una consulta o un triaje en la
+// jornada (issue #174, criterio 4), pero esas tablas no son propiedad de este archivo. En vez
+// de leerlas aqui, la comprobacion vive en personal_registro_atenciones(), una funcion SQL
+// (migracion 00043) que este archivo solo invoca por RPC: la propiedad de tabla declarada
+// arriba se mantiene intacta.
+//
 // Todas las funciones devuelven `{ dato, error }` en vez de lanzar, igual que supabase-js:
 // quien las consume es un hook que tiene que reflejar el fallo en pantalla, no reventar el
 // render.
 //
 // Los ids de los campos van en camelCase para coincidir con los descriptores (CAMPOS_JORNADA
 // de campos.js) y con las columnas (COLUMNAS_JORNADA de columnas.js). El mapeo a snake_case se
-// hace aqui, en aColumnasDeTabla(), y solo se envia lo que venga en el objeto.
+// hace aqui, en aColumnasDeTabla() y aColumnasDePersonal(), y solo se envia lo que venga en el
+// objeto.
 
 import { obtenerSupabase } from "../api/cliente.js";
 import {
@@ -21,6 +28,7 @@ import {
 } from "../api/errores-de-supabase.js";
 import { esAdministrador } from "../usuarios/roles.js";
 import { ESTADOS_JORNADA } from "./permisos.js";
+import { advertirChoqueDeHorario } from "./validaciones.js";
 
 // Las columnas se enumeran en lugar de pedir "*" para que una columna nueva en jornadas no
 // empiece a viajar sola hasta el cliente.
@@ -87,6 +95,28 @@ function aColumnasDeTabla(datos = {}) {
     presupuestoAsignado: "presupuesto_asignado",
     cupoEstimado: "cupo_estimado",
     botiquinBodega: "botiquin_bodega_id",
+  };
+
+  const fila = {};
+  for (const [campo, columna] of Object.entries(mapa)) {
+    if (Object.prototype.hasOwnProperty.call(datos, campo)) fila[columna] = datos[campo];
+  }
+  return fila;
+}
+
+/**
+ * Traduce del camelCase de CAMPOS_ASIGNACION_PERSONAL al snake_case de jornada_personal, mas
+ * `jornada` (el id de la jornada, que no es un campo del formulario sino el parametro de
+ * asignarPersonal()).
+ */
+function aColumnasDePersonal(datos = {}) {
+  const mapa = {
+    jornada: "jornada_id",
+    perfil: "perfil_id",
+    rolEnJornada: "rol_en_jornada",
+    horaInicio: "hora_inicio",
+    horaFin: "hora_fin",
+    responsabilidad: "responsabilidad",
   };
 
   const fila = {};
@@ -269,5 +299,199 @@ export async function actualizarJornada(id, datos, { rol } = {}) {
     return { jornada: data ?? null, error: null };
   } catch (error) {
     return { jornada: null, error: normalizarError(error) };
+  }
+}
+
+/**
+ * Asigna una persona a una jornada, con su rol y su horario.
+ *
+ * El UNIQUE (jornada_id, perfil_id) de la migracion 00012 es quien impide de verdad asignar dos
+ * veces a la misma persona en la misma jornada (criterio 2): esta funcion no revalida nada por
+ * su cuenta, solo deja que normalizarError() traduzca el 23505 a CODIGOS_DE_ERROR_DE_SUPABASE.UNICIDAD.
+ *
+ * Ademas de crear la fila, advierte -sin bloquear- si la persona ya esta asignada a otra
+ * jornada el mismo dia (criterio 3): calcula la advertencia aqui mismo, con
+ * obtenerAsignacionesDelDia() y advertirChoqueDeHorario() (validaciones.js), para que quien
+ * consume esta funcion no tenga que orquestar dos llamadas para cumplir un solo criterio de
+ * aceptacion. Si esa segunda consulta falla, la asignacion ya se guardo: se responde sin
+ * advertencias en vez de convertir un fallo secundario en un error de toda la operacion.
+ *
+ * @param {string} jornadaId UUID de la jornada.
+ * @param {object} datos Campos en camelCase, los ids de CAMPOS_ASIGNACION_PERSONAL (perfil,
+ *   rolEnJornada, horaInicio, horaFin, responsabilidad). horaInicio y horaFin son NOT NULL en
+ *   jornada_personal (00012): omitirlas hace fallar el INSERT con CAMPO_REQUERIDO aunque el
+ *   criterio de aceptacion no las mencione.
+ * @returns {Promise<{ asignacion: object|null, advertencias: string[], error: object|null }>}
+ */
+export async function asignarPersonal(jornadaId, datos) {
+  if (!jornadaId) return { asignacion: null, advertencias: [], error: null };
+
+  try {
+    const { data: asignacion, error } = await obtenerSupabase()
+      .from("jornada_personal")
+      .insert(aColumnasDePersonal({ jornada: jornadaId, ...datos }))
+      .select(COLUMNAS_DE_PERSONAL)
+      .single();
+
+    if (error) return { asignacion: null, advertencias: [], error: normalizarError(error) };
+
+    const advertencias = await advertenciasDeChoqueAlAsignar(jornadaId, datos?.perfil);
+
+    return { asignacion: asignacion ?? null, advertencias, error: null };
+  } catch (error) {
+    return { asignacion: null, advertencias: [], error: normalizarError(error) };
+  }
+}
+
+/**
+ * Calcula la advertencia del criterio 3 para una asignacion recien creada.
+ *
+ * Lee la fecha de la jornada, trae las asignaciones de ese mismo dia en cualquier otra jornada
+ * (obtenerAsignacionesDelDia()) y deja que advertirChoqueDeHorario() decida el texto. Cualquier
+ * fallo en esta parte se traga en silencio: es una mejora informativa sobre una escritura que
+ * ya tuvo exito, no una segunda operacion que deba poder hacer fallar a la primera.
+ */
+async function advertenciasDeChoqueAlAsignar(jornadaId, perfilId) {
+  if (!perfilId) return [];
+
+  const { data: filaJornada } = await obtenerSupabase()
+    .from("jornadas")
+    .select("fecha")
+    .eq("id", jornadaId)
+    .maybeSingle();
+
+  if (!filaJornada?.fecha) return [];
+
+  const { asignaciones } = await obtenerAsignacionesDelDia(filaJornada.fecha, {
+    excluirJornada: jornadaId,
+  });
+
+  const advertencia = advertirChoqueDeHorario({
+    perfil: perfilId,
+    jornadaActualId: jornadaId,
+    asignacionesDelDia: asignaciones,
+  });
+
+  return advertencia ? [advertencia] : [];
+}
+
+/**
+ * Personal asignado a cualquier jornada en una fecha dada.
+ *
+ * Es la fuente de datos que advertirChoqueDeHorario() (validaciones.js) necesita para el
+ * criterio 3. asignarPersonal() ya la invoca por su cuenta al asignar; queda publica ademas para
+ * quien necesite recalcular la advertencia sin guardar todavia (por ejemplo, el formulario de la
+ * issue #182 mientras la persona elige a quien asignar, antes de enviar el formulario).
+ *
+ * @param {string} fecha Fecha AAAA-MM-DD.
+ * @param {{ excluirJornada?: string }} [opciones] Jornada a excluir del resultado (normalmente
+ *   la propia jornada donde se esta asignando, que no cuenta como choque contra si misma).
+ * @returns {Promise<{ asignaciones: Array<{ jornadaId: string, jornadaNombre: string, perfil: string }>, error: object|null }>}
+ */
+export async function obtenerAsignacionesDelDia(fecha, { excluirJornada } = {}) {
+  if (!fecha) return { asignaciones: [], error: null };
+
+  try {
+    let consulta = obtenerSupabase()
+      .from("jornada_personal")
+      .select("perfil:perfil_id, jornadaId:jornada_id, jornada:jornadas!inner(nombre, fecha)")
+      .eq("jornada.fecha", fecha);
+
+    if (excluirJornada) consulta = consulta.neq("jornada_id", excluirJornada);
+
+    const { data, error } = await consulta;
+
+    if (error) return { asignaciones: [], error: normalizarError(error) };
+
+    const asignaciones = (data ?? []).map((fila) => ({
+      jornadaId: fila.jornadaId,
+      jornadaNombre: fila.jornada?.nombre ?? "",
+      perfil: fila.perfil,
+    }));
+
+    return { asignaciones, error: null };
+  } catch (error) {
+    return { asignaciones: [], error: normalizarError(error) };
+  }
+}
+
+/**
+ * Jornadas donde participa un perfil, como personal asignado (criterio 5).
+ *
+ * No filtra por quien pregunta: RLS de jornada_personal (00039) ya decide si la respuesta trae
+ * filas (administrador y junta directiva ven cualquier perfil; el resto solo se ve a si mismo).
+ * Devuelve la misma forma de fila que listarJornadas() y obtenerJornada(), para que una pantalla
+ * pueda reusar el mismo COLUMNAS_JORNADA sin traducir nada.
+ *
+ * @param {string} perfilId UUID del perfil.
+ * @returns {Promise<{ jornadas: object[], error: object|null }>}
+ */
+export async function obtenerJornadasDePersona(perfilId) {
+  if (!perfilId) return { jornadas: [], error: null };
+
+  try {
+    const { data, error } = await obtenerSupabase()
+      .from("jornada_personal")
+      .select(`jornada:jornadas(${COLUMNAS_DE_JORNADA})`)
+      .eq("perfil_id", perfilId);
+
+    if (error) return { jornadas: [], error: normalizarError(error) };
+
+    const jornadas = (data ?? []).map((fila) => fila.jornada).filter(Boolean);
+
+    return { jornadas, error: null };
+  } catch (error) {
+    return { jornadas: [], error: normalizarError(error) };
+  }
+}
+
+/**
+ * Quita a una persona de una jornada.
+ *
+ * Antes de borrar, comprueba con personal_registro_atenciones() (funcion SQL de la migracion
+ * 00043, invocada por RPC) si esa persona ya registro una consulta o un triaje en esta jornada.
+ * Si es asi, ni siquiera intenta el DELETE: devuelve un error de negocio explicando por que
+ * (criterio 4). Quien de verdad impide el borrado a cualquiera que no sea administrador es la
+ * politica RLS "Solo administrador desasigna personal de jornadas" de esa misma migracion; esta
+ * comprobacion cubre la regla que RLS no puede expresar por si sola.
+ *
+ * @param {string} jornadaId UUID de la jornada.
+ * @param {string} perfilId UUID del perfil a desasignar.
+ * @returns {Promise<{ desasignado: boolean, error: object|null }>}
+ */
+export async function desasignarPersonal(jornadaId, perfilId) {
+  if (!jornadaId || !perfilId) return { desasignado: false, error: null };
+
+  try {
+    const supabase = obtenerSupabase();
+
+    const { data: yaRegistroAtenciones, error: errorDeChequeo } = await supabase.rpc(
+      "personal_registro_atenciones",
+      { p_jornada_id: jornadaId, p_perfil_id: perfilId },
+    );
+
+    if (errorDeChequeo) return { desasignado: false, error: normalizarError(errorDeChequeo) };
+
+    if (yaRegistroAtenciones) {
+      return {
+        desasignado: false,
+        error: {
+          ...construirError(CODIGOS_DE_ERROR_DE_SUPABASE.CHECK),
+          mensaje:
+            "No se puede desasignar a alguien que ya registro atenciones en esta jornada.",
+        },
+      };
+    }
+
+    const { error } = await supabase
+      .from("jornada_personal")
+      .delete()
+      .eq("jornada_id", jornadaId)
+      .eq("perfil_id", perfilId);
+
+    if (error) return { desasignado: false, error: normalizarError(error) };
+    return { desasignado: true, error: null };
+  } catch (error) {
+    return { desasignado: false, error: normalizarError(error) };
   }
 }
