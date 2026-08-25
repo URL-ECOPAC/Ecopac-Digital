@@ -18,3 +18,4 @@
 export * from "./proyectos.api.js";
 export * from "./proyectos.validaciones.js";
 export * from "./proyectos.permisos.js";
+export * from "./avance.api.js";
