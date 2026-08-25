@@ -21,12 +21,6 @@ vi.mock("../api/cliente.js", () => ({
 }));
 
 const { CODIGOS_DE_ERROR_DE_SUPABASE } = await import("../api/errores-de-supabase.js");
-const {
-  asignarPresupuestoJornada,
-  obtenerPresupuestoJornada,
-  obtenerPresupuestoProyecto,
-  obtenerPresupuestoSistema,
-} = await import("./api.js");
 
 function clienteRpc(respuesta) {
   const llamadas = [];
