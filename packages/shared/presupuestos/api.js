@@ -91,3 +91,163 @@ export async function obtenerPresupuestoProyecto(idProyecto) {
 export async function obtenerPresupuestoSistema() {
   return consultar("presupuesto_del_sistema", {}, { ...PRESUPUESTO_VACIO });
 }
+
+// ============================================================================
+// Funciones API para la gestión de Gastos
+// ============================================================================
+
+export async function registrarGasto(datosGasto) {
+  try {
+    const { concepto, categoria, monto, fecha, encargado_id, jornada_id } = datosGasto || {};
+
+    const { data, error } = await obtenerSupabase()
+      .from("gastos")
+      .insert({
+        concepto,
+        categoria,
+        monto: aNumero(monto),
+        fecha,
+        encargado_id: encargado_id || null,
+        jornada_id,
+      })
+      .select(`
+        *,
+        jornadas (
+          id,
+          proyecto_id,
+          proyectos (
+            id,
+            nombre
+          )
+        )
+      `)
+      .single();
+
+    if (error) {
+      return { gasto: null, error: normalizarError(error) };
+    }
+
+    return { gasto: data, error: null };
+  } catch (error) {
+    return { gasto: null, error: normalizarError(error) };
+  }
+}
+
+export async function editarGasto(idGasto, datosGasto) {
+  if (!idGasto) {
+    return { gasto: null, error: null };
+  }
+
+  try {
+    const supabase = obtenerSupabase();
+
+    // Validar que el gasto no esté en estado 'aprobado'
+    const { data: gastoExistente, error: errorConsulta } = await supabase
+      .from("gastos")
+      .select("estado")
+      .eq("id", idGasto)
+      .maybeSingle();
+
+    if (errorConsulta) {
+      return { gasto: null, error: normalizarError(errorConsulta) };
+    }
+
+    if (gastoExistente && gastoExistente.estado === "aprobado") {
+      return {
+        gasto: null,
+        error: normalizarError({
+          message: "Un gasto aprobado no se puede editar",
+          code: "GASTO_APROBADO_NO_EDITABLE",
+        }),
+      };
+    }
+
+    const { concepto, categoria, monto, fecha, encargado_id } = datosGasto || {};
+    const updates = {};
+
+    if (concepto !== undefined) updates.concepto = concepto;
+    if (categoria !== undefined) updates.categoria = categoria;
+    if (monto !== undefined) updates.monto = aNumero(monto);
+    if (fecha !== undefined) updates.fecha = fecha;
+    if (encargado_id !== undefined) updates.encargado_id = encargado_id || null;
+
+    const { data, error } = await supabase
+      .from("gastos")
+      .update(updates)
+      .eq("id", idGasto)
+      .select(`
+        *,
+        jornadas (
+          id,
+          proyecto_id,
+          proyectos (
+            id,
+            nombre
+          )
+        )
+      `)
+      .single();
+
+    if (error) {
+      return { gasto: null, error: normalizarError(error) };
+    }
+
+    return { gasto: data, error: null };
+  } catch (error) {
+    return { gasto: null, error: normalizarError(error) };
+  }
+}
+
+export async function listarGastos(filtros = {}) {
+  try {
+    const { estado, categoria, jornada_id, proyecto_id, fecha_inicio, fecha_fin } = filtros;
+
+    let query = obtenerSupabase()
+      .from("gastos")
+      .select(`
+        *,
+        jornadas!inner (
+          id,
+          proyecto_id,
+          proyectos (
+            id,
+            nombre
+          )
+        )
+      `);
+
+    if (estado) {
+      query = query.eq("estado", estado);
+    }
+
+    if (categoria) {
+      query = query.eq("categoria", categoria);
+    }
+
+    if (jornada_id) {
+      query = query.eq("jornada_id", jornada_id);
+    }
+
+    if (proyecto_id) {
+      query = query.eq("jornadas.proyecto_id", proyecto_id);
+    }
+
+    if (fecha_inicio) {
+      query = query.gte("fecha", fecha_inicio);
+    }
+
+    if (fecha_fin) {
+      query = query.lte("fecha", fecha_fin);
+    }
+
+    const { data, error } = await query.order("created_at", { ascending: false });
+
+    if (error) {
+      return { gastos: [], error: normalizarError(error) };
+    }
+
+    return { gastos: data || [], error: null };
+  } catch (error) {
+    return { gastos: [], error: normalizarError(error) };
+  }
+}
