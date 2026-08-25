@@ -9,6 +9,10 @@
 
 import { TIPOS_DE_FILTRO } from '../descriptores.js';
 
+export const FILTROS_PRINCIPIOS_ACTIVOS = [
+  { id: 'busqueda', tipo: TIPOS_DE_FILTRO.BUSQUEDA, label: 'Buscar principio activo', placeholder: 'Nombre del principio activo' },
+];
+
 export const FILTROS_MEDICAMENTOS = [
   { id: 'busqueda', tipo: TIPOS_DE_FILTRO.BUSQUEDA, label: 'Buscar medicamento', placeholder: 'Nombre, marca o concentracion' },
   {

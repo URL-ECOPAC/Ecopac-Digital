@@ -9,9 +9,14 @@
 //   permisos.js      que puede hacer cada rol en el modulo
 //   use<Pantalla>.js view model de una pantalla: datos, estado y handlers
 //
-// campos.js, columnas.js y filtros.js estan escritos (issue #285). api.js,
-// validaciones.js, permisos.js y los hooks de pantalla los construyen sus issues.
+// campos.js, columnas.js y filtros.js estan escritos (issue #285). api.js de
+// principios activos y sus permisos tambien (issue "API del catalogo de principios
+// activos"). El resto de inventario (medicamentos, lotes, movimientos...), las
+// validaciones de principios activos y los hooks de pantalla los construyen sus
+// propias issues.
 
 export * from './campos.js';
 export * from './columnas.js';
 export * from './filtros.js';
+export * from './principios-activos.api.js';
+export * from './principios-activos.permisos.js';
