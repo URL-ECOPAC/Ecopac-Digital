@@ -59,6 +59,15 @@ export const OPCIONES_ACCION_ALERTA = [
   { valor: 'descartado', etiqueta: 'Descartado' },
 ];
 
+/**
+ * Alta y edicion de un principio activo del catalogo (principios_activos, 00016).
+ * nombreNormalizado no es un campo del formulario: lo calcula la base de datos
+ * (columna generada de 00046) para la unicidad y la busqueda sin acentos.
+ */
+export const CAMPOS_PRINCIPIO_ACTIVO = [
+  { id: 'nombre', label: 'Nombre', tipo: TIPOS_DE_CAMPO.TEXTO, validacion: { requerido: true, maxLongitud: 100 } },
+];
+
 /** Alta de medicamento en el catalogo (medicamentos, 00016). */
 export const CAMPOS_MEDICAMENTO = [
   { id: 'nombre', label: 'Nombre', tipo: TIPOS_DE_CAMPO.TEXTO, validacion: { requerido: true, maxLongitud: 150 } },

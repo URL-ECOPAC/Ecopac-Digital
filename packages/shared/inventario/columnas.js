@@ -2,6 +2,10 @@
 // packages/shared/pacientes/columnas.js: una sola definicion, DataList la vuelve
 // <Table> en web y tarjetas en movil.
 
+export const COLUMNAS_PRINCIPIO_ACTIVO = [
+  { id: 'nombre', label: 'Nombre', tipo: 'texto', principal: true },
+];
+
 export const COLUMNAS_MEDICAMENTO = [
   { id: 'nombre', label: 'Nombre', tipo: 'texto', principal: true },
   { id: 'concentracion', label: 'Concentracion', tipo: 'texto' },
