@@ -1,6 +1,6 @@
-import { useState } from 'react';
-import { Navigate, useLocation, useNavigate } from 'react-router-dom';
-import { ESTADOS_DE_RESTAURACION, iniciarSesion } from '@ecopac/shared';
+import React, { useState } from 'react';
+import { Navigate, useLocation } from 'react-router-dom';
+import { ESTADOS_DE_RESTAURACION, useInicioSesion } from '@ecopac/shared';
 import { useSesionCompartida } from '../contexto/SesionProvider';
 import {
   Card,
@@ -11,78 +11,117 @@ import {
   TextField,
 } from '../components';
 
-/**
- * FORMULARIO PROVISIONAL. La pantalla de inicio de sesion es la issue #100 y va con el diseno
- * del prototipo, recuperacion de contrasena y todo lo demas.
- *
- * Este formulario existe solo porque #52 conecto el guard de rutas: sin una forma de entrar, la
- * web quedaria inaccesible en local hasta que #100 se mergee. Quien tome #100 debe REEMPLAZARLO
- * entero, no partir de aqui.
- *
- * Ruta publica: queda fuera del layout autenticado, asi que trae su propio contenedor.
- */
 export default function LoginPage() {
-  const navigate = useNavigate();
   const location = useLocation();
   const { estadoRestauracion, haySesion } = useSesionCompartida();
 
-  const [correo, setCorreo] = useState('');
-  const [contrasena, setContrasena] = useState('');
-  const [erroresDeCampo, setErroresDeCampo] = useState({});
-  const [error, setError] = useState(null);
-  const [enviando, setEnviando] = useState(false);
+  const rutaPrevia = location.state?.from?.pathname;
 
-  // A donde queria ir antes de que el guard lo mandara aqui. Es lo que cierra el criterio de
-  // "conservando el destino original": entrar devuelve a esa ruta y no siempre al inicio.
-  const destino = location.state?.from?.pathname ?? '/';
+  const {
+    correo,
+    setCorreo,
+    contrasena,
+    setContrasena,
+    erroresDeCampo: erroresDelHook,
+    error: errorDelHook,
+    enviando,
+    handleSubmit: ejecutarLogin,
+    destinoPorDefecto,
+  } = useInicioSesion({ rutaPrevia });
+
+  // Estado local independiente para alternar la visibilidad de la contraseña
+  const [verPassword, setVerPassword] = useState(false);
+  const [erroresLocales, setErroresLocales] = useState({});
 
   if (estadoRestauracion === ESTADOS_DE_RESTAURACION.CARGANDO) {
-    return <LoadingState message="Comprobando tu sesion..." />;
+    return <LoadingState message="Comprobando tu sesión..." />;
   }
 
-  // Ya hay sesion: no tiene sentido volver al formulario estando dentro.
   if (haySesion) {
-    return <Navigate to={destino} replace />;
+    return <Navigate to={destinoPorDefecto || '/'} replace />;
   }
 
-  const enviar = async (evento) => {
-    evento.preventDefault();
-    setEnviando(true);
-    setError(null);
-    setErroresDeCampo({});
+  const errores = { ...erroresDelHook, ...erroresLocales };
 
-    const resultado = await iniciarSesion(correo, contrasena);
+  const ManejarEnvioFormulario = (e) => {
+    e.preventDefault();
 
-    setEnviando(false);
-    setErroresDeCampo(resultado.erroresDeCampo ?? {});
-    setError(resultado.error ?? null);
+    const nuevosErrores = {};
+    if (!correo?.trim()) {
+      nuevosErrores.correo = 'El correo electrónico es requerido.';
+    }
+    if (!contrasena) {
+      nuevosErrores.contrasena = 'La contraseña es requerida.';
+    }
 
-    if (resultado.sesion) navigate(destino, { replace: true });
+    if (Object.keys(nuevosErrores).length > 0) {
+      setErroresLocales(nuevosErrores);
+      return;
+    }
+
+    setErroresLocales({});
+    ejecutarLogin(e);
   };
 
   return (
     <ScreenContainer>
-      <Card title="Iniciar sesion">
-        {error && <ErrorState message={error.mensaje} />}
+      <Card title="Iniciar sesión">
+        {errorDelHook && <ErrorState message={errorDelHook.mensaje || errorDelHook} />}
 
-        <form onSubmit={enviar}>
+        <form onSubmit={ManejarEnvioFormulario} noValidate>
           <TextField
-            label="Correo electronico"
+            label="Correo electrónico"
             type="email"
             autoComplete="username"
             value={correo}
-            onChange={(evento) => setCorreo(evento.target.value)}
-            error={erroresDeCampo.email}
+            onChange={(e) => {
+              setCorreo(e.target.value);
+              if (erroresLocales.correo) {
+                setErroresLocales((prev) => ({ ...prev, correo: null }));
+              }
+            }}
+            error={errores?.correo || errores?.email}
+            disabled={enviando}
           />
-          <TextField
-            label="Contrasena"
-            type="password"
-            autoComplete="current-password"
-            value={contrasena}
-            onChange={(evento) => setContrasena(evento.target.value)}
-            error={erroresDeCampo.contrasena}
-          />
-          <PrimaryButton title="Entrar" type="submit" loading={enviando} />
+
+          <div className="position-relative mb-3">
+            <TextField
+              label="Contraseña"
+              type={verPassword ? 'text' : 'password'}
+              autoComplete="current-password"
+              value={contrasena}
+              onChange={(e) => {
+                setContrasena(e.target.value);
+                if (erroresLocales.contrasena) {
+                  setErroresLocales((prev) => ({ ...prev, contrasena: null }));
+                }
+              }}
+              error={errores?.contrasena}
+              disabled={enviando}
+            />
+            <button
+              type="button"
+              className="btn btn-link btn-sm position-absolute text-decoration-none text-muted"
+              style={{
+                right: '12px',
+                top: errores?.contrasena ? '32px' : '38px',
+                zIndex: 5,
+                fontSize: '0.85rem',
+              }}
+              onClick={() => setVerPassword(!verPassword)}
+              tabIndex={-1}
+            >
+              {verPassword ? 'Ocultar' : 'Mostrar'}
+            </button>
+          </div>
+
+          <div className="mt-4">
+            <PrimaryButton
+              title={enviando ? 'Entrando...' : 'Entrar'}
+              type="submit"
+              disabled={enviando}
+            />
+          </div>
         </form>
       </Card>
     </ScreenContainer>
