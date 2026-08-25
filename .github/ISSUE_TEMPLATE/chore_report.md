@@ -18,6 +18,10 @@ labels: type:chore
 - [ ] Paso 1
 - [ ] Paso 2
 
+<!-- Si la tarea crea una migración, no escribas aquí su número: pon "revisar qué migración
+     corresponde". El número se elige al abrir la rama y se vuelve a verificar antes de
+     mergear, porque otra rama pudo tomarlo mientras tanto. Ver docs/CI-CD.md. -->
+
 ## Detalles
 
 - **Módulo:** <!-- Elige uno: [infra, usuarios, pacientes, inventario, jornadas, donaciones, reportes] -->

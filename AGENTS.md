@@ -111,6 +111,15 @@ PR si modifica o borra un archivo de `supabase/migrations/` que ya existe en la 
 Editar una migracion agregada en el mismo PR si esta permitido. La salida de emergencia es la
 etiqueta `migracion-editada-a-proposito` en el PR.
 
+**El numero se elige al abrir la rama y se vuelve a verificar antes de mergear**, porque otra
+rama pudo tomarlo mientras tanto. Se toma el siguiente al ultimo que haya en `develop` en ese
+momento. Una migracion nueva por debajo de la ultima de la rama base rompe el despliegue:
+`supabase db push` corre sin `--include-all` y aborta al encontrarla. Se corrige renumerando
+por encima con `git mv`, nunca pasando `--include-all`. Lo comprueba el job **Numeracion de
+migraciones**, que tambien falla si dos archivos comparten prefijo.
+
+Una issue **nunca** prescribe un numero de migracion: dice "revisar que migracion corresponde".
+
 Detalle completo en `docs/CI-CD.md`.
 
 ## Comandos

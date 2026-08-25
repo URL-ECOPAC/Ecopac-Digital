@@ -121,6 +121,121 @@ jobs:
           echo "Este PR lleva la etiqueta \`migracion-editada-a-proposito\`, asi que se permitio editar migraciones existentes." >> "$GITHUB_STEP_SUMMARY"
 
   # --------------------------------------------------------------------------------
+  numeracion:
+    name: Numeracion de migraciones
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar el codigo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verificar la numeracion sobre el arbol resultante
+        env:
+          ES_PR: ${{ github.event_name == 'pull_request' }}
+        run: |
+          # Esta guarda es distinta de "Migraciones no editadas": no mira el diff, mira el
+          # arbol que queda tras el merge. El choque lo produce la suma de dos PRs que por
+          # separado son correctos.
+          #
+          # Las versiones se comparan como texto, no como numero, porque asi es como Supabase
+          # decide el orden de aplicacion. Con prefijos de cinco digitos el resultado coincide
+          # con el orden numerico, y un timestamp (2026...) siempre queda despues de un 000NN.
+          export LC_ALL=C
+
+          versiones() {
+            git ls-tree --name-only "$1" supabase/migrations/ |
+              sed -n 's#^supabase/migrations/\([^_]*\)_.*\.sql$#\1#p'
+          }
+
+          # ---- Choque: dos archivos con el mismo prefijo -------------------------------
+          duplicados="$(versiones HEAD | sort | uniq -d)"
+
+          if [ -n "$duplicados" ]; then
+            archivos="$(git ls-tree --name-only HEAD supabase/migrations/ |
+              grep -E "/($(echo "$duplicados" | paste -sd'|' -))_")"
+
+            echo "::error::Dos migraciones comparten el mismo numero."
+            echo "$archivos"
+
+            {
+              echo "## Numeros de migracion duplicados"
+              echo
+              echo "Dos archivos de \`supabase/migrations/\` comparten prefijo. Cual corre primero"
+              echo "pasa a depender del resto del nombre, no de la intencion de quien las escribio,"
+              echo "y nada volveria a avisar."
+              echo
+              echo "Archivos:"
+              echo
+              echo '```'
+              echo "$archivos"
+              echo '```'
+              echo
+              echo "**Que hacer:** renumerar la mas nueva. Renombrar una migracion que ninguna base"
+              echo "aplico todavia no tiene coste."
+            } >> "$GITHUB_STEP_SUMMARY"
+
+            exit 1
+          fi
+
+          if [ "$ES_PR" != "true" ]; then
+            echo "Sin numeros duplicados."
+            exit 0
+          fi
+
+          # ---- Orden: una migracion nueva por debajo de la ultima de la rama base ------
+          git fetch --no-tags origin "$GITHUB_BASE_REF"
+          base="$(git merge-base "origin/$GITHUB_BASE_REF" HEAD)"
+
+          # La ultima sale de la PUNTA de la rama base, no del merge-base: lo que hay que
+          # detectar es justamente lo que mergearon otros despues de que esta rama se separo.
+          ultima_base="$(versiones "origin/$GITHUB_BASE_REF" | sort | tail -n 1)"
+          nuevas="$(git diff --name-only --diff-filter=A "$base" HEAD -- supabase/migrations/ |
+            sed -n 's#^supabase/migrations/\([^_]*\)_.*\.sql$#\1#p')"
+
+          atrasadas=""
+          for v in $nuevas; do
+            if [ -n "$ultima_base" ] && [ "$v" \< "$ultima_base" ]; then
+              atrasadas="$atrasadas $v"
+            fi
+          done
+
+          if [ -z "$atrasadas" ]; then
+            echo "La numeracion va en orden. Ultima en $GITHUB_BASE_REF: ${ultima_base:-ninguna}."
+            exit 0
+          fi
+
+          echo "::error::Este PR agrega migraciones anteriores a la ultima de $GITHUB_BASE_REF ($ultima_base)."
+          echo "Atrasadas:$atrasadas"
+
+          {
+            echo "## Migraciones fuera de orden"
+            echo
+            echo "Este PR agrega \`${atrasadas# }\`, por debajo de \`$ultima_base\`, que ya esta en"
+            echo "\`$GITHUB_BASE_REF\`. Mientras el PR esperaba revision, otras ramas mergearon."
+            echo
+            echo "El despliegue corre \`supabase db push\` sin \`--include-all\`, asi que aborta al"
+            echo "encontrar una migracion local anterior a la ultima aplicada en remoto:"
+            echo
+            echo '```'
+            echo "Found local migration files to be inserted before the last migration on remote database."
+            echo '```'
+            echo
+            echo "Y no se resuelve pasando \`--include-all\`: aplicar fuera de orden separa el estado"
+            echo "real del que valida el CI, que aplica todo desde cero. Es la misma divergencia que"
+            echo "evita la guarda **Migraciones no editadas**."
+            echo
+            echo "**Que hacer:** renumerar por encima de \`$ultima_base\` con \`git mv\`. El archivo aun"
+            echo "no lo aplico ninguna base, y contra la rama base sigue figurando como archivo nuevo,"
+            echo "asi que la otra guarda no se dispara."
+            echo
+            echo "El numero se elige al abrir la rama y **se vuelve a verificar antes de mergear**,"
+            echo "porque otra rama pudo tomarlo mientras tanto. Ver \`docs/CI-CD.md\`."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          exit 1
+
+  # --------------------------------------------------------------------------------
   validar:
     name: Validar migraciones y funciones
     needs: cambios
@@ -236,7 +351,7 @@ jobs:
   aplicar:
     name: Aplicar migraciones
     # La migracion no corre si la validacion fallo. Antes eran workflows independientes.
-    needs: [validar, inmutabilidad]
+    needs: [validar, inmutabilidad, numeracion]
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 15
