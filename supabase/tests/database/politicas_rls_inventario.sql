@@ -6,12 +6,12 @@
 
 BEGIN;
 
-SELECT plan(17);
+SELECT plan(19);
 
 -- ============================================================================
--- Setup: dos administradores (para probar que uno no aprueba lo que registra el
--- otro), un medico, un voluntario, junta directiva, un medicamento y un lote con
--- existencias.
+-- Setup: dos administradores (uno aprueba por UPDATE lo que el mismo registro,
+-- issue #410; el otro aprueba lo que registro un medico), un medico, un
+-- voluntario, junta directiva, un medicamento y un lote con existencias.
 -- ============================================================================
 INSERT INTO auth.users (id, email) VALUES
   ('00000000-0000-0000-0000-000000000301', 'admin91a@test.ecopac.local'),
@@ -37,9 +37,9 @@ INSERT INTO lotes_existencias (id, medicamento_id, numero_lote, fecha_vencimient
 VALUES ('80000000-0000-0000-0000-000000000001', '70000000-0000-0000-0000-000000000001', 'LOTE-91', CURRENT_DATE + 365, 100);
 
 -- Fixture: un movimiento pendiente registrado por admin91a, insertado con los
--- triggers desactivados para poder probar la regla "nadie aprueba lo que registro,
--- ni siquiera un administrador" sin que tr_autoaprobar_movimiento_inventario lo
--- aprueba de entrada.
+-- triggers desactivados para poder probar por separado la aprobacion manual por
+-- UPDATE (issue #410: un administrador si puede aprobar lo que el mismo registro)
+-- sin que tr_autoaprobar_movimiento_inventario lo apruebe de entrada.
 ALTER TABLE movimientos_inventario DISABLE TRIGGER USER;
 
 INSERT INTO movimientos_inventario (id, tipo, lote_id, cantidad, motivo, estado, registrado_por)
@@ -151,15 +151,27 @@ SELECT is(
   'el ajuste de existencias se aplico automaticamente (100 + 20 del ingreso auto-aprobado)'
 );
 
--- Admin91a intenta aprobar el fixture que el mismo registro: bloqueado incluso siendo
--- administrador. El UPDATE bloqueado por RLS no lanza excepcion (ver #88): se verifica
--- que el estado no cambio.
-UPDATE movimientos_inventario SET estado = 'aprobado' WHERE id = '90000000-0000-0000-0000-000000000001';
+-- Admin91a aprueba por UPDATE el fixture que el mismo registro (issue #410: gana el
+-- comportamiento de 00028, el administrador aprueba lo que registra tanto en INSERT
+-- como en UPDATE).
+SELECT lives_ok(
+  $$ UPDATE movimientos_inventario SET estado = 'aprobado' WHERE id = '90000000-0000-0000-0000-000000000001' $$,
+  'un administrador puede aprobar por UPDATE un movimiento que el mismo registro'
+);
 
 SELECT is(
   (SELECT estado::text FROM movimientos_inventario WHERE id = '90000000-0000-0000-0000-000000000001'),
-  'pendiente',
-  'un administrador no puede aprobar un movimiento que el mismo registro'
+  'aprobado',
+  'el movimiento queda aprobado tras el UPDATE de admin91a sobre su propio fixture'
+);
+
+-- aprobacion_automatica sigue distinguiendo el historial (issue #410, criterio 5): esta
+-- aprobacion fue manual por UPDATE, no la puso tr_autoaprobar_movimiento_inventario en el
+-- INSERT (ese trigger se desactivo para insertar el fixture), asi que debe quedar FALSE.
+SELECT is(
+  (SELECT aprobacion_automatica FROM movimientos_inventario WHERE id = '90000000-0000-0000-0000-000000000001'),
+  FALSE,
+  'la aprobacion manual por UPDATE deja aprobacion_automatica en FALSE, a diferencia del INSERT auto-aprobado'
 );
 
 -- ============================================================================
