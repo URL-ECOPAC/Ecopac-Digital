@@ -33,8 +33,18 @@ ALTER TABLE perfiles ENABLE TRIGGER USER;
 INSERT INTO medicamentos (id, nombre, concentracion, presentacion, marca)
 VALUES ('70000000-0000-0000-0000-000000000001', 'Paracetamol prueba 89', '500 mg', 'tableta', 'Generico');
 
-INSERT INTO lotes_existencias (id, medicamento_id, numero_lote, fecha_vencimiento, cantidad)
-VALUES ('80000000-0000-0000-0000-000000000001', '70000000-0000-0000-0000-000000000001', 'LOTE-91', CURRENT_DATE + 365, 100);
+INSERT INTO proveedores (id, nombre, tipo)
+VALUES ('71000000-0000-0000-0000-000000000001', 'Proveedor prueba 91', 'comercial');
+
+INSERT INTO bodegas (id, nombre)
+VALUES ('72000000-0000-0000-0000-000000000001', 'Bodega prueba 91');
+
+INSERT INTO lotes (id, medicamento_id, numero_lote, proveedor_id, origen, cantidad_ingresada, fecha_vencimiento)
+VALUES ('80000000-0000-0000-0000-000000000001', '70000000-0000-0000-0000-000000000001',
+        'LOTE-91', '71000000-0000-0000-0000-000000000001', 'compra', 100, CURRENT_DATE + 365);
+
+INSERT INTO existencias (lote_id, bodega_id, cantidad_disponible)
+VALUES ('80000000-0000-0000-0000-000000000001', '72000000-0000-0000-0000-000000000001', 100);
 
 -- Fixture: un movimiento pendiente registrado por admin91a, insertado con los
 -- triggers desactivados para poder probar la regla "nadie aprueba lo que registro,
@@ -42,9 +52,10 @@ VALUES ('80000000-0000-0000-0000-000000000001', '70000000-0000-0000-0000-0000000
 -- aprueba de entrada.
 ALTER TABLE movimientos_inventario DISABLE TRIGGER USER;
 
-INSERT INTO movimientos_inventario (id, tipo, lote_id, cantidad, motivo, estado, registrado_por)
+INSERT INTO movimientos_inventario (id, tipo, lote_id, bodega_id, cantidad, motivo, estado, registrado_por)
 VALUES (
   '90000000-0000-0000-0000-000000000001', 'ingreso', '80000000-0000-0000-0000-000000000001',
+  '72000000-0000-0000-0000-000000000001',
   5, 'Fixture de administrador pendiente', 'pendiente', '00000000-0000-0000-0000-000000000301'
 );
 
@@ -75,7 +86,7 @@ SELECT throws_ok(
 SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000305';
 
 SELECT ok(
-  (SELECT count(*) FROM lotes_existencias) > 0,
+  (SELECT count(*) FROM existencias) > 0,
   'junta directiva (como cualquier autenticado) puede consultar existencias'
 );
 
@@ -85,8 +96,9 @@ SELECT ok(
 SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000303';
 
 SELECT lives_ok(
-  $$ INSERT INTO movimientos_inventario (id, tipo, lote_id, cantidad, motivo, registrado_por)
+  $$ INSERT INTO movimientos_inventario (id, tipo, lote_id, bodega_id, cantidad, motivo, registrado_por)
      VALUES ('90000000-0000-0000-0000-000000000002', 'ingreso', '80000000-0000-0000-0000-000000000001',
+             '72000000-0000-0000-0000-000000000001',
              10, 'Ingreso registrado por medico', '00000000-0000-0000-0000-000000000303') $$,
   'medico puede registrar un movimiento propio'
 );
@@ -98,18 +110,18 @@ SELECT is(
 );
 
 SELECT throws_ok(
-  $$ INSERT INTO movimientos_inventario (tipo, lote_id, cantidad, motivo, estado, registrado_por)
-     VALUES ('ingreso', '80000000-0000-0000-0000-000000000001', 1, 'Intento de auto-aprobacion',
-             'aprobado', '00000000-0000-0000-0000-000000000303') $$,
+  $$ INSERT INTO movimientos_inventario (tipo, lote_id, bodega_id, cantidad, motivo, estado, registrado_por)
+     VALUES ('ingreso', '80000000-0000-0000-0000-000000000001', '72000000-0000-0000-0000-000000000001',
+             1, 'Intento de auto-aprobacion', 'aprobado', '00000000-0000-0000-0000-000000000303') $$,
   '42501',
   NULL,
   'medico no puede registrar un movimiento directamente en estado aprobado'
 );
 
 SELECT throws_ok(
-  $$ INSERT INTO movimientos_inventario (tipo, lote_id, cantidad, motivo, registrado_por)
-     VALUES ('ingreso', '80000000-0000-0000-0000-000000000001', 1, 'A nombre de otro perfil',
-             '00000000-0000-0000-0000-000000000304') $$,
+  $$ INSERT INTO movimientos_inventario (tipo, lote_id, bodega_id, cantidad, motivo, registrado_por)
+     VALUES ('ingreso', '80000000-0000-0000-0000-000000000001', '72000000-0000-0000-0000-000000000001',
+             1, 'A nombre de otro perfil', '00000000-0000-0000-0000-000000000304') $$,
   '42501',
   NULL,
   'medico no puede registrar un movimiento a nombre de otro perfil'
@@ -121,8 +133,9 @@ SELECT throws_ok(
 SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000304';
 
 SELECT lives_ok(
-  $$ INSERT INTO movimientos_inventario (id, tipo, lote_id, cantidad, motivo, registrado_por)
+  $$ INSERT INTO movimientos_inventario (id, tipo, lote_id, bodega_id, cantidad, motivo, registrado_por)
      VALUES ('90000000-0000-0000-0000-000000000003', 'ingreso', '80000000-0000-0000-0000-000000000001',
+             '72000000-0000-0000-0000-000000000001',
              7, 'Ingreso registrado por voluntario', '00000000-0000-0000-0000-000000000304') $$,
   'voluntario puede registrar un movimiento propio'
 );
@@ -133,8 +146,9 @@ SELECT lives_ok(
 SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000301';
 
 SELECT lives_ok(
-  $$ INSERT INTO movimientos_inventario (id, tipo, lote_id, cantidad, motivo, registrado_por)
+  $$ INSERT INTO movimientos_inventario (id, tipo, lote_id, bodega_id, cantidad, motivo, registrado_por)
      VALUES ('90000000-0000-0000-0000-000000000004', 'ingreso', '80000000-0000-0000-0000-000000000001',
+             '72000000-0000-0000-0000-000000000001',
              20, 'Ingreso registrado por administrador', '00000000-0000-0000-0000-000000000301') $$,
   'administrador puede registrar un movimiento'
 );
@@ -146,7 +160,9 @@ SELECT is(
 );
 
 SELECT is(
-  (SELECT cantidad FROM lotes_existencias WHERE id = '80000000-0000-0000-0000-000000000001'),
+  (SELECT cantidad_disponible FROM existencias
+     WHERE lote_id = '80000000-0000-0000-0000-000000000001'
+       AND bodega_id = '72000000-0000-0000-0000-000000000001'),
   120,
   'el ajuste de existencias se aplico automaticamente (100 + 20 del ingreso auto-aprobado)'
 );
