@@ -8,7 +8,7 @@
 // desasignarPersonal() necesita saber si la persona ya registro una consulta o un triaje en la
 // jornada (issue #174, criterio 4), pero esas tablas no son propiedad de este archivo. En vez
 // de leerlas aqui, la comprobacion vive en personal_registro_atenciones(), una funcion SQL
-// (migracion 00043) que este archivo solo invoca por RPC: la propiedad de tabla declarada
+// (migracion 00044) que este archivo solo invoca por RPC: la propiedad de tabla declarada
 // arriba se mantiene intacta.
 //
 // Todas las funciones devuelven `{ dato, error }` en vez de lanzar, igual que supabase-js:
@@ -449,7 +449,7 @@ export async function obtenerJornadasDePersona(perfilId) {
  * Quita a una persona de una jornada.
  *
  * Antes de borrar, comprueba con personal_registro_atenciones() (funcion SQL de la migracion
- * 00043, invocada por RPC) si esa persona ya registro una consulta o un triaje en esta jornada.
+ * 00044, invocada por RPC) si esa persona ya registro una consulta o un triaje en esta jornada.
  * Si es asi, ni siquiera intenta el DELETE: devuelve un error de negocio explicando por que
  * (criterio 4). Quien de verdad impide el borrado a cualquiera que no sea administrador es la
  * politica RLS "Solo administrador desasigna personal de jornadas" de esa misma migracion; esta
