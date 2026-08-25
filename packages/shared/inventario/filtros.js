@@ -14,7 +14,7 @@ export const FILTROS_PRINCIPIOS_ACTIVOS = [
 ];
 
 export const FILTROS_MEDICAMENTOS = [
-  { id: 'busqueda', tipo: TIPOS_DE_FILTRO.BUSQUEDA, label: 'Buscar medicamento', placeholder: 'Nombre, marca o concentracion' },
+  { id: 'busqueda', tipo: TIPOS_DE_FILTRO.BUSQUEDA, label: 'Buscar medicamento', placeholder: 'Nombre, marca, concentracion o principio activo' },
   {
     id: 'presentacion',
     tipo: TIPOS_DE_FILTRO.SELECT,
@@ -27,6 +27,17 @@ export const FILTROS_MEDICAMENTOS = [
       { valor: 'pomada', etiqueta: 'Pomada' },
       { valor: 'gotas ophthalmic', etiqueta: 'Gotas oftalmicas' },
       { valor: 'gotas otic', etiqueta: 'Gotas oticas' },
+    ],
+  },
+  // Valores como texto ('true'/'false'), igual que el resto de filtros SELECT del modulo: el
+  // hook de pantalla los convierte al tipo real antes de llamar listarMedicamentos({ esPediatrico }).
+  {
+    id: 'esPediatrico',
+    tipo: TIPOS_DE_FILTRO.SELECT,
+    label: 'Poblacion',
+    opciones: [
+      { valor: 'true', etiqueta: 'Pediatrico' },
+      { valor: 'false', etiqueta: 'Adulto' },
     ],
   },
 ];

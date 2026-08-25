@@ -68,12 +68,18 @@ export const CAMPOS_PRINCIPIO_ACTIVO = [
   { id: 'nombre', label: 'Nombre', tipo: TIPOS_DE_CAMPO.TEXTO, validacion: { requerido: true, maxLongitud: 100 } },
 ];
 
-/** Alta de medicamento en el catalogo (medicamentos, 00016). */
+/**
+ * Alta de medicamento en el catalogo (medicamentos, 00016; activo agregado en 00050).
+ * principiosActivos es obligatorio (issue #142, criterio de aceptacion): registrarMedicamento()
+ * lo envia como principiosActivosIds a fn_registrar_medicamento (00050), que inserta el
+ * medicamento y sus principios activos en una sola transaccion.
+ */
 export const CAMPOS_MEDICAMENTO = [
   { id: 'nombre', label: 'Nombre', tipo: TIPOS_DE_CAMPO.TEXTO, validacion: { requerido: true, maxLongitud: 150 } },
   { id: 'concentracion', label: 'Concentracion', tipo: TIPOS_DE_CAMPO.TEXTO, validacion: { requerido: true, maxLongitud: 100 } },
   { id: 'presentacion', label: 'Presentacion', tipo: TIPOS_DE_CAMPO.SELECT, opciones: OPCIONES_PRESENTACION, validacion: { requerido: true } },
   { id: 'marca', label: 'Marca', tipo: TIPOS_DE_CAMPO.TEXTO, validacion: { requerido: true, maxLongitud: 100 } },
+  { id: 'principiosActivos', label: 'Principios activos', tipo: TIPOS_DE_CAMPO.MULTI_SELECT, opcionesDesde: 'principiosActivos', validacion: { requerido: true } },
   { id: 'formaFarmaceutica', label: 'Forma farmaceutica', tipo: TIPOS_DE_CAMPO.TEXTO, validacion: { requerido: false, maxLongitud: 100 } },
   { id: 'esPediatrico', label: 'Es pediatrico', tipo: TIPOS_DE_CAMPO.BOOLEANO, validacion: { requerido: false } },
 ];

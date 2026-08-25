@@ -12,6 +12,7 @@ export const COLUMNAS_MEDICAMENTO = [
   { id: 'presentacion', label: 'Presentacion', tipo: 'texto' },
   { id: 'marca', label: 'Marca', tipo: 'texto' },
   { id: 'esPediatrico', label: 'Pediatrico', tipo: 'booleano' },
+  { id: 'activo', label: 'Activo', tipo: 'chip' },
 ];
 
 export const COLUMNAS_LOTE = [
