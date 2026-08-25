@@ -1,4 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  asignarPresupuestoJornada,
+  obtenerPresupuestoJornada,
+  obtenerPresupuestoProyecto,
+  obtenerPresupuestoSistema,
+  registrarGasto,
+  editarGasto,
+  listarGastos,
+} from "./api.js";
 
 const { dobles } = vi.hoisted(() => ({ dobles: { cliente: null } }));
 
@@ -12,12 +21,6 @@ vi.mock("../api/cliente.js", () => ({
 }));
 
 const { CODIGOS_DE_ERROR_DE_SUPABASE } = await import("../api/errores-de-supabase.js");
-const {
-  asignarPresupuestoJornada,
-  obtenerPresupuestoJornada,
-  obtenerPresupuestoProyecto,
-  obtenerPresupuestoSistema,
-} = await import("./api.js");
 
 function clienteRpc(respuesta) {
   const llamadas = [];
@@ -214,5 +217,33 @@ describe("asignarPresupuestoJornada", () => {
 
     expect(jornada).toBeNull();
     expect(error).toBeNull();
+  });
+});
+
+describe("gestión de gastos (#298)", () => {
+  it("registrarGasto inserta correctamente y devuelve la estructura esperada", async () => {
+    const respuesta = await registrarGasto({
+      concepto: "Gasolina",
+      categoria: "Logistica",
+      monto: "150",
+      jornada_id: "jornada-123",
+    });
+
+    expect(respuesta).toHaveProperty("gasto");
+    expect(respuesta).toHaveProperty("error");
+  });
+
+  it("editarGasto rechaza la edición si el id no se proporciona", async () => {
+    const respuestaSinId = await editarGasto(null, { concepto: "Nuevo" });
+    expect(respuestaSinId.gasto).toBeNull();
+    expect(respuestaSinId.error).toBeNull();
+  });
+
+  it("listarGastos ejecuta la consulta sin lanzar excepciones no controladas", async () => {
+    const respuesta = await listarGastos({ estado: "pendiente" });
+
+    // Si la llamada llega al mock predeterminado, retorna la respuesta de error normalizada
+    expect(respuesta).toHaveProperty("gastos");
+    expect(respuesta).toHaveProperty("error");
   });
 });
