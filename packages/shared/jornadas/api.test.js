@@ -26,6 +26,8 @@ const { ESTADOS_JORNADA } = await import("./permisos.js");
 const {
   actualizarJornada,
   asignarPersonal,
+  cambiarEstadoJornada,
+  contarAtencionesIncompletas,
   desasignarPersonal,
   listarJornadas,
   obtenerAsignacionesDelDia,
@@ -426,6 +428,149 @@ describe("actualizarJornada", () => {
 
     const actualizacion = cliente.llamadas.find((llamada) => llamada.paso === "update");
     expect(actualizacion.valores).toEqual({ nombre: "Nuevo nombre" });
+  });
+});
+
+describe("cambiarEstadoJornada", () => {
+  it("solo consulta jornadas: no trae personal ni contadores para leer el estado actual", async () => {
+    const cliente = crearCliente({
+      jornadas: [
+        { data: { estado: ESTADOS_JORNADA.PLANIFICADA }, error: null },
+        { data: { id: "jornada-1", estado: ESTADOS_JORNADA.EN_CURSO }, error: null },
+      ],
+    });
+    dobles.cliente = cliente;
+
+    await cambiarEstadoJornada("jornada-1", ESTADOS_JORNADA.EN_CURSO, { rol: ROLES.MEDICO });
+
+    const tablasConsultadas = new Set(
+      cliente.llamadas.filter((llamada) => llamada.paso === "from").map((llamada) => llamada.tabla),
+    );
+    expect(tablasConsultadas).toEqual(new Set(["jornadas"]));
+  });
+
+  it("planificada -> en curso tiene exito y actualiza el estado", async () => {
+    const cliente = crearCliente({
+      jornadas: [
+        { data: { estado: ESTADOS_JORNADA.PLANIFICADA }, error: null },
+        { data: { id: "jornada-1", estado: ESTADOS_JORNADA.EN_CURSO }, error: null },
+      ],
+    });
+    dobles.cliente = cliente;
+
+    const { jornada, error } = await cambiarEstadoJornada(
+      "jornada-1",
+      ESTADOS_JORNADA.EN_CURSO,
+      { rol: ROLES.MEDICO },
+    );
+
+    expect(error).toBeNull();
+    expect(jornada).toEqual({ id: "jornada-1", estado: ESTADOS_JORNADA.EN_CURSO });
+    expect(cliente.llamadas).toContainEqual({
+      paso: "update",
+      tabla: "jornadas",
+      valores: { estado: ESTADOS_JORNADA.EN_CURSO },
+    });
+  });
+
+  it("rechaza un salto invalido (planificada -> finalizada) sin llegar a actualizar", async () => {
+    const cliente = crearCliente({
+      jornadas: { data: { estado: ESTADOS_JORNADA.PLANIFICADA }, error: null },
+    });
+    dobles.cliente = cliente;
+
+    const { jornada, error } = await cambiarEstadoJornada(
+      "jornada-1",
+      ESTADOS_JORNADA.FINALIZADA,
+      { rol: ROLES.ADMINISTRADOR },
+    );
+
+    expect(jornada).toBeNull();
+    expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.CHECK);
+    expect(cliente.llamadas.some((llamada) => llamada.paso === "update")).toBe(false);
+  });
+
+  it("rechaza la reapertura de una jornada finalizada para quien no es administrador", async () => {
+    const cliente = crearCliente({
+      jornadas: { data: { estado: ESTADOS_JORNADA.FINALIZADA }, error: null },
+    });
+    dobles.cliente = cliente;
+
+    const { jornada, error } = await cambiarEstadoJornada(
+      "jornada-1",
+      ESTADOS_JORNADA.EN_CURSO,
+      { rol: ROLES.MEDICO },
+    );
+
+    expect(jornada).toBeNull();
+    expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.CHECK);
+    expect(error.mensaje).toContain("administrador");
+    expect(cliente.llamadas.some((llamada) => llamada.paso === "update")).toBe(false);
+  });
+
+  it("permite que la administradora reabra una jornada finalizada", async () => {
+    const cliente = crearCliente({
+      jornadas: [
+        { data: { estado: ESTADOS_JORNADA.FINALIZADA }, error: null },
+        { data: { id: "jornada-1", estado: ESTADOS_JORNADA.EN_CURSO }, error: null },
+      ],
+    });
+    dobles.cliente = cliente;
+
+    const { jornada, error } = await cambiarEstadoJornada(
+      "jornada-1",
+      ESTADOS_JORNADA.EN_CURSO,
+      { rol: ROLES.ADMINISTRADOR },
+    );
+
+    expect(error).toBeNull();
+    expect(jornada).toEqual({ id: "jornada-1", estado: ESTADOS_JORNADA.EN_CURSO });
+  });
+
+  it("devuelve sin resultados cuando la jornada no existe", async () => {
+    dobles.cliente = crearCliente({ jornadas: { data: null, error: null } });
+
+    const { jornada, error } = await cambiarEstadoJornada("jornada-ajena", ESTADOS_JORNADA.EN_CURSO);
+
+    expect(jornada).toBeNull();
+    expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.SIN_RESULTADOS);
+  });
+});
+
+describe("contarAtencionesIncompletas", () => {
+  it("no toca el cliente si no hay jornadaId", async () => {
+    const { cantidad, error } = await contarAtencionesIncompletas(undefined);
+
+    expect(cantidad).toBe(0);
+    expect(error).toBeNull();
+  });
+
+  it("llama el rpc con el id de la jornada y devuelve la cantidad", async () => {
+    const cliente = crearCliente({
+      "rpc:fn_contar_atenciones_incompletas": { data: 3, error: null },
+    });
+    dobles.cliente = cliente;
+
+    const { cantidad, error } = await contarAtencionesIncompletas("jornada-1");
+
+    expect(error).toBeNull();
+    expect(cantidad).toBe(3);
+    expect(cliente.llamadas).toContainEqual({
+      paso: "rpc",
+      nombre: "fn_contar_atenciones_incompletas",
+      argumentos: { p_jornada_id: "jornada-1" },
+    });
+  });
+
+  it("normaliza el error del servidor", async () => {
+    dobles.cliente = crearCliente({
+      "rpc:fn_contar_atenciones_incompletas": { data: null, error: { code: "42501" } },
+    });
+
+    const { cantidad, error } = await contarAtencionesIncompletas("jornada-1");
+
+    expect(cantidad).toBe(0);
+    expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.PERMISO_DENEGADO);
   });
 });
 

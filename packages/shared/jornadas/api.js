@@ -28,7 +28,7 @@ import {
 } from "../api/errores-de-supabase.js";
 import { esAdministrador } from "../usuarios/roles.js";
 import { ESTADOS_JORNADA } from "./permisos.js";
-import { advertirChoqueDeHorario } from "./validaciones.js";
+import { advertirChoqueDeHorario, validarCambioDeEstadoJornada } from "./validaciones.js";
 
 // Las columnas se enumeran en lugar de pedir "*" para que una columna nueva en jornadas no
 // empiece a viajar sola hasta el cliente.
@@ -303,6 +303,68 @@ export async function actualizarJornada(id, datos, { rol } = {}) {
 }
 
 /**
+ * Cambia el estado de una jornada, validando que la transicion sea legal (issue #171).
+ *
+ * Solo se lee la columna estado (no obtenerJornada() completa): igual que actualizarJornada(),
+ * no hay razon para traer el personal asignado ni los contadores de vista_reporte_impacto solo
+ * para leer un campo.
+ *
+ * validarCambioDeEstadoJornada() (validaciones.js) decide si la transicion es legal y, para la
+ * reapertura (finalizada -> en curso), si el rol alcanza (criterio de aceptacion: solo
+ * administrador reabre). El trigger tr_validar_transicion_estado_jornada (migracion 00051)
+ * vuelve a comprobar ambas cosas en el servidor: esta validacion es para dar un mensaje util,
+ * no para sustituirla. Quien registra el cambio (quien y cuando) lo sigue haciendo el trigger
+ * ya existente registrar_cambio_estado_jornada() (00012) sobre jornada_estado_historial, sin
+ * cambios aqui.
+ *
+ * @param {string} id UUID de la jornada.
+ * @param {string} nuevoEstado Uno de ESTADOS_JORNADA.
+ * @param {object} [opciones]
+ * @param {string} [opciones.rol] Rol de quien hace el cambio, para la regla de reapertura.
+ * @returns {Promise<{ jornada: object|null, error: object|null }>}
+ */
+export async function cambiarEstadoJornada(id, nuevoEstado, { rol } = {}) {
+  try {
+    const supabase = obtenerSupabase();
+
+    const { data: filaActual, error: errorDeLectura } = await supabase
+      .from("jornadas")
+      .select("estado")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (errorDeLectura) return { jornada: null, error: normalizarError(errorDeLectura) };
+
+    if (!filaActual) {
+      return {
+        jornada: null,
+        error: construirError(CODIGOS_DE_ERROR_DE_SUPABASE.SIN_RESULTADOS, "jornada no encontrada"),
+      };
+    }
+
+    const errores = validarCambioDeEstadoJornada(filaActual.estado, nuevoEstado, rol);
+    if (errores.estado) {
+      return {
+        jornada: null,
+        error: { ...construirError(CODIGOS_DE_ERROR_DE_SUPABASE.CHECK), mensaje: errores.estado },
+      };
+    }
+
+    const { data, error } = await supabase
+      .from("jornadas")
+      .update({ estado: nuevoEstado })
+      .eq("id", id)
+      .select(COLUMNAS_DE_JORNADA)
+      .maybeSingle();
+
+    if (error) return { jornada: null, error: normalizarError(error) };
+    return { jornada: data ?? null, error: null };
+  } catch (error) {
+    return { jornada: null, error: normalizarError(error) };
+  }
+}
+
+/**
  * Asigna una persona a una jornada, con su rol y su horario.
  *
  * El UNIQUE (jornada_id, perfil_id) de la migracion 00012 es quien impide de verdad asignar dos
@@ -493,5 +555,37 @@ export async function desasignarPersonal(jornadaId, perfilId) {
     return { desasignado: true, error: null };
   } catch (error) {
     return { desasignado: false, error: normalizarError(error) };
+  }
+}
+
+/**
+ * Cuenta las atenciones de una jornada que todavia no tienen consulta (issue #171, criterio de
+ * aceptacion 4: advertir antes de finalizar si hay atenciones incompletas).
+ *
+ * Es una funcion SQL por RPC (fn_contar_atenciones_incompletas, migracion 00051) y no una
+ * consulta directa a atenciones y consultas: ninguna de esas dos tablas es propiedad de este
+ * archivo, mismo motivo por el que personal_registro_atenciones existe como funcion para
+ * desasignarPersonal().
+ *
+ * No bloquea nada por su cuenta: el criterio de aceptacion dice "advierte", no "impide". Quien
+ * construya la pantalla de finalizar llama esta funcion antes de cambiarEstadoJornada() y
+ * decide si muestra una confirmacion, igual que advertirChoqueDeHorario()/asignarPersonal() ya
+ * hacen para el choque de horario.
+ *
+ * @param {string} jornadaId UUID de la jornada.
+ * @returns {Promise<{ cantidad: number, error: object|null }>}
+ */
+export async function contarAtencionesIncompletas(jornadaId) {
+  if (!jornadaId) return { cantidad: 0, error: null };
+
+  try {
+    const { data, error } = await obtenerSupabase().rpc("fn_contar_atenciones_incompletas", {
+      p_jornada_id: jornadaId,
+    });
+
+    if (error) return { cantidad: 0, error: normalizarError(error) };
+    return { cantidad: data ?? 0, error: null };
+  } catch (error) {
+    return { cantidad: 0, error: normalizarError(error) };
   }
 }

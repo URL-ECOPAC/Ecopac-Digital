@@ -12,11 +12,85 @@
 // packages/shared/donaciones/proyectos.validaciones.js.
 
 import { aFechaLocal } from "../formato/fechas.js";
+import { esAdministrador } from "../usuarios/roles.js";
 import { combinarErrores, esTextoVacio, validarConDescriptores } from "../validations/index.js";
 import { CAMPOS_ASIGNACION_PERSONAL, CAMPOS_JORNADA } from "./campos.js";
+import { ESTADOS_JORNADA } from "./permisos.js";
 
 /** Cadena de hora HH:MM; los minutos van obligados, las horas de uno o dos digitos. */
 const FORMA_DE_HORA = /^(\d{1,2}):(\d{2})$/;
+
+/**
+ * Transiciones de estado permitidas, indexadas por estado de origen.
+ *
+ * Es un ESPEJO del trigger tr_validar_transicion_estado_jornada (migracion 00051), no una
+ * segunda fuente de verdad. Sirve para dar un mensaje entendible antes de gastar una llamada al
+ * servidor y para deshabilitar en pantalla lo que no se puede hacer; quien de verdad impide una
+ * transicion invalida sigue siendo la base de datos. Mismo patron que
+ * packages/shared/donaciones/proyectos.validaciones.js (TRANSICIONES_PROYECTO).
+ *
+ * `cancelada` queda fuera de alcance de la issue #171: ninguna transicion a/desde ese estado
+ * esta en la lista.
+ */
+export const TRANSICIONES_JORNADA = Object.freeze({
+  [ESTADOS_JORNADA.PLANIFICADA]: [ESTADOS_JORNADA.EN_CURSO],
+  [ESTADOS_JORNADA.EN_CURSO]: [ESTADOS_JORNADA.FINALIZADA],
+  [ESTADOS_JORNADA.FINALIZADA]: [ESTADOS_JORNADA.EN_CURSO],
+  [ESTADOS_JORNADA.CANCELADA]: [],
+});
+
+/** Estados a los que se puede mover una jornada desde donde esta. Lista vacia si es terminal. */
+export function transicionesDeJornadaDesde(estado) {
+  return TRANSICIONES_JORNADA[estado] ?? [];
+}
+
+/** Indica si una jornada puede pasar de un estado a otro. */
+export function esTransicionDeJornadaValida(desde, hacia) {
+  return transicionesDeJornadaDesde(desde).includes(hacia);
+}
+
+/**
+ * Valida un cambio de estado de jornada antes de mandarlo al servidor.
+ *
+ * La reapertura (finalizada -> en curso) es la unica transicion que ademas exige rol: el
+ * criterio de aceptacion de la #171 la restringe a administrador. El resto de transiciones no
+ * llevan chequeo de rol aqui porque ya las acota la politica RLS de escritura de jornadas
+ * (00039: es_administrador() OR tiene_permiso('jornadas.gestionar')) -- este archivo no conoce
+ * el permiso fino, asi que no puede replicar esa parte (mismo motivo documentado en
+ * permisos.js).
+ *
+ * @param {string} estadoActual Uno de ESTADOS_JORNADA.
+ * @param {string} estadoNuevo Uno de ESTADOS_JORNADA.
+ * @param {string} [rol] Rol de quien hace el cambio, para la regla de reapertura.
+ * @returns {Record<string, string>} Vacio si la transicion es legal.
+ */
+export function validarCambioDeEstadoJornada(estadoActual, estadoNuevo, rol) {
+  const estados = Object.values(ESTADOS_JORNADA);
+
+  if (!estados.includes(estadoNuevo)) {
+    return { estado: `Elige un estado de la lista: ${estados.join(", ")}.` };
+  }
+
+  if (estadoActual === estadoNuevo) {
+    return { estado: "La jornada ya esta en ese estado." };
+  }
+
+  if (!esTransicionDeJornadaValida(estadoActual, estadoNuevo)) {
+    const posibles = transicionesDeJornadaDesde(estadoActual);
+    return {
+      estado:
+        posibles.length === 0
+          ? `Una jornada ${estadoActual} ya no cambia de estado.`
+          : `Una jornada ${estadoActual} solo puede pasar a: ${posibles.join(" o ")}.`,
+    };
+  }
+
+  if (estadoActual === ESTADOS_JORNADA.FINALIZADA && !esAdministrador(rol)) {
+    return { estado: "Solo un administrador puede reabrir una jornada finalizada." };
+  }
+
+  return {};
+}
 
 /**
  * Valida los datos de una jornada.

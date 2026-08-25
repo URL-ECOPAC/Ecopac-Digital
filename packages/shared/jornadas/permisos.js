@@ -64,6 +64,18 @@ export function puedeEditarJornada(rol, estado) {
 }
 
 /**
+ * Puede reabrir una jornada finalizada (volverla a 'en curso').
+ *
+ * Espejo del trigger tr_validar_transicion_estado_jornada (migracion 00051, issue #171): la
+ * reapertura exige es_administrador() ahi, sin excepcion del permiso fino. Igual que el resto
+ * de este archivo, esto decide que muestra la interfaz; quien impide de verdad la reapertura es
+ * el trigger.
+ */
+export function puedeReabrirJornada(rol) {
+  return esAdministrador(rol);
+}
+
+/**
  * Permisos de un rol, en la forma que consume una pantalla.
  *
  * Se devuelven juntos para que un hook no tenga que llamar a las tres por separado ni
@@ -74,5 +86,6 @@ export function permisosDeJornadas(rol) {
     puedeVer: puedeVerJornadas(rol),
     puedeCrear: puedeAdministrarJornadas(rol),
     puedeEditar: puedeAdministrarJornadas(rol),
+    puedeReabrir: puedeReabrirJornada(rol),
   };
 }
