@@ -65,6 +65,35 @@ El punto clave: ningun cambio de esquema llega al proyecto real sin pasar primer
 revisado y una prueba automatica local. El dashboard de Supabase se usa para consultar datos,
 no para modificar el esquema.
 
+## Privilegios: que rol puede tocar que tabla
+
+Supabase expone la base por PostgREST con dos roles de PostgreSQL, y la diferencia entre ellos
+es de donde viene la peticion:
+
+| Rol             | Quien es                                                                                             | Que puede tocar en `public`                                                                            |
+| --------------- | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `anon`          | Cualquier peticion **sin sesion**, con la llave anonima que viaja publica en el bundle del navegador | **Nada.** Ni una tabla, ni una vista                                                                   |
+| `authenticated` | Una peticion con el JWT de un usuario que inicio sesion                                              | SELECT, INSERT, UPDATE y DELETE segun lo que conceda cada migracion de politicas, y **nunca** TRUNCATE |
+
+**`anon` no necesita acceso a ninguna tabla.** El inicio de sesion no pasa por PostgREST:
+`iniciarSesion()` de `packages/shared/api/sesion.js` llama a `auth.signInWithPassword`, que es un
+endpoint de GoTrue, y el perfil se lee despues, ya con el JWT del usuario. Tampoco hay registro
+de cuentas desde el cliente.
+
+Si alguna vez hace falta exponer algo a `anon`, se concede explicitamente en su propia migracion
+y se justifica ahi por que. Lo que no se hace es agregar `anon` a la lista de un `GRANT` por
+costumbre.
+
+**RLS no es suficiente por si sola.** Las politicas de fila gobiernan SELECT, INSERT, UPDATE y
+DELETE, pero `TRUNCATE` se controla unicamente por el privilegio del mismo nombre: ninguna policy
+llega a evaluarse. Por eso el `GRANT` es la segunda capa, y por eso ni `anon` ni `authenticated`
+tienen TRUNCATE sobre ninguna tabla.
+
+La migracion `00049_retirar_privilegios_anon.sql` deja ese estado y ademas blinda los privilegios
+por defecto del esquema, para que una tabla creada por una migracion futura no vuelva a nacer
+concediendole TRUNCATE a `anon`. La prueba
+`supabase/tests/database/privilegios_anon.sql` lo verifica; corre con `supabase test db`.
+
 ## Requisitos para trabajar con el stack local
 
 - Tener Docker corriendo (la Supabase CLI lo necesita para levantar Postgres, Auth, etc.).
