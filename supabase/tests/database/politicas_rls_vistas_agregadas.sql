@@ -85,9 +85,19 @@ INSERT INTO receta_detalle (id, receta_id, medicamento_id, dosis, frecuencia, du
   ('80000000-0000-0000-0000-000000001e01', '70000000-0000-0000-0000-000000001d01',
    'a0000000-0000-0000-0000-0000000010a1', '500 mg', 'cada 8 horas', '7 dias', 2);
 
--- Lote vigente con stock para vista_lotes_disponibles (00024/00023).
-INSERT INTO lotes_existencias (id, medicamento_id, numero_lote, fecha_vencimiento, cantidad) VALUES
-  ('b0000000-0000-0000-0000-0000000010b1', 'a0000000-0000-0000-0000-0000000010a1', 'LOTE-91-001', CURRENT_DATE + 60, 100);
+-- Lote vigente con stock para vista_lotes_disponibles (00019/00020, unificado en 00047).
+INSERT INTO proveedores (id, nombre, tipo) VALUES
+  ('c0000000-0000-0000-0000-0000000010c1', 'Proveedor prueba vistas 91', 'comercial');
+
+INSERT INTO bodegas (id, nombre) VALUES
+  ('d0000000-0000-0000-0000-0000000010d1', 'Bodega prueba vistas 91');
+
+INSERT INTO lotes (id, medicamento_id, numero_lote, proveedor_id, origen, cantidad_ingresada, fecha_vencimiento) VALUES
+  ('b0000000-0000-0000-0000-0000000010b1', 'a0000000-0000-0000-0000-0000000010a1', 'LOTE-91-001',
+   'c0000000-0000-0000-0000-0000000010c1', 'compra', 100, CURRENT_DATE + 60);
+
+INSERT INTO existencias (lote_id, bodega_id, cantidad_disponible) VALUES
+  ('b0000000-0000-0000-0000-0000000010b1', 'd0000000-0000-0000-0000-0000000010d1', 100);
 
 -- Proyecto: da contenido a proyecto_estado_historial (trigger de 00029) para que
 -- la negativa de lectura de junta se pruebe sobre una tabla con datos.

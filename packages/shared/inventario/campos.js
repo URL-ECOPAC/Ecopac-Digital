@@ -4,8 +4,9 @@
 // Los campos y su validacion reflejan las columnas y los CHECK reales de las
 // migraciones ya aplicadas (medicamentos/principios_activos en 00016, proveedores/
 // bodegas en 00017, lotes en 00019+00020, alertas_caducidad en 00021,
-// movimientos_inventario en 00023+00028), no el diccionario de datos original del
-// entregable: donde difieren, manda la migracion (ver AGENTS.md, "Fuente de verdad").
+// movimientos_inventario en 00023+00028+00047), no el diccionario de datos original
+// del entregable: donde difieren, manda la migracion (ver AGENTS.md, "Fuente de
+// verdad").
 //
 // Diferencia estructural importante, documentada tambien en el PR de este issue: el
 // diccionario de datos original de MOVIMIENTO_INVENTARIO tiene bodega_origen_id,
@@ -14,12 +15,11 @@
 // ninguna de esas columnas: una sola bodega_id, motivo (no motivo_rechazo), sin
 // vinculo a jornada ni a receta. CAMPOS_MOVIMIENTO refleja la tabla real.
 //
-// Ademas, movimientos_inventario.lote_id referencia lotes_existencias (00023), una
-// tabla de stock paralela a lotes/existencias (00019/00020) que usan
-// receta_detalle/alertas_caducidad/donaciones. CAMPOS_LOTE es el formulario de la
-// tabla lotes; el selector de lote en CAMPOS_MOVIMIENTO resuelve sus opciones de
-// lotes_existencias, no de lotes. Es un problema estructural preexistente, no de
-// este issue.
+// movimientos_inventario.lote_id referencia lotes (issue #369/00047: el esquema
+// tenia dos tablas de stock paralelas, lotes/existencias y lotes_existencias; se
+// unificaron en lotes/existencias, que trackea cantidad por bodega). Por eso
+// CAMPOS_MOVIMIENTO exige tambien bodega: sin bodega no hay fila de existencias que
+// ajustar.
 
 import { TIPOS_DE_CAMPO } from '../descriptores.js';
 
@@ -109,16 +109,18 @@ export const CAMPOS_LOTE = [
 ];
 
 /**
- * Registro de un movimiento de inventario (movimientos_inventario, 00023+00028).
+ * Registro de un movimiento de inventario (movimientos_inventario, 00023+00028+00047).
  * estado, registradoPor, aprobadoPor y fechaAprobacion no son campos del formulario:
  * los fija la base de datos (columna DEFAULT y el trigger de auto-aprobacion de la
  * 00028), nunca el cliente.
  */
 export const CAMPOS_MOVIMIENTO = [
   { id: 'tipo', label: 'Tipo', tipo: TIPOS_DE_CAMPO.SELECT, opciones: OPCIONES_TIPO_MOVIMIENTO, validacion: { requerido: true } },
-  // Ver el comentario de arriba: las opciones salen de lotes_existencias, no de lotes.
-  { id: 'lote', label: 'Lote', tipo: TIPOS_DE_CAMPO.SELECT, opcionesDesde: 'lotesExistencias', validacion: { requerido: true } },
-  { id: 'bodega', label: 'Bodega', tipo: TIPOS_DE_CAMPO.SELECT, opcionesDesde: 'bodegas', validacion: { requerido: false } },
+  // Opciones desde vista_lotes_disponibles: solo lotes con stock vigente (00047).
+  { id: 'lote', label: 'Lote', tipo: TIPOS_DE_CAMPO.SELECT, opcionesDesde: 'lotesDisponibles', validacion: { requerido: true } },
+  // bodega_id es NOT NULL en movimientos_inventario desde la 00047: sin bodega no hay
+  // fila de existencias que ajustar.
+  { id: 'bodega', label: 'Bodega', tipo: TIPOS_DE_CAMPO.SELECT, opcionesDesde: 'bodegas', validacion: { requerido: true } },
   { id: 'cantidad', label: 'Cantidad', tipo: TIPOS_DE_CAMPO.NUMERO, validacion: { requerido: true, min: 1 } },
   { id: 'motivo', label: 'Motivo', tipo: TIPOS_DE_CAMPO.TEXTO_LARGO, validacion: { requerido: true } },
 ];
