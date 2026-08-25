@@ -26,6 +26,12 @@
 -- 1. Redefinir las funciones de ajuste de stock para que operen contra existencias
 -- ============================================================================
 
+-- fn_aplicar_ajuste_existencias cambia de firma (gana p_bodega_id): CREATE OR REPLACE
+-- FUNCTION no reemplaza una funcion cuando la lista de parametros difiere, crea una
+-- sobrecarga nueva y deja la de 3 parametros (00028) intacta, todavia apuntando a
+-- lotes_existencias ya eliminada. Hay que borrarla explicitamente por firma.
+DROP FUNCTION IF EXISTS fn_aplicar_ajuste_existencias(UUID, tipo_movimiento, INT);
+
 CREATE OR REPLACE FUNCTION fn_aplicar_ajuste_existencias(
   p_lote_id UUID,
   p_bodega_id UUID,
