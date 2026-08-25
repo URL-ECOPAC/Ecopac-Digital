@@ -92,9 +92,9 @@ AFTER UPDATE OF porcentaje_avance ON proyectos
 FOR EACH ROW
 EXECUTE FUNCTION registrar_avance_de_proyecto();
 
-GRANT SELECT ON proyecto_hitos TO anon, authenticated;
+GRANT SELECT ON proyecto_hitos TO authenticated;
 GRANT INSERT, UPDATE, DELETE ON proyecto_hitos TO authenticated;
-GRANT SELECT ON proyecto_seguimiento TO anon, authenticated;
+GRANT SELECT ON proyecto_seguimiento TO authenticated;
 GRANT INSERT ON proyecto_seguimiento TO authenticated;
 
 CREATE POLICY "Administrador y junta directiva leen los hitos"
