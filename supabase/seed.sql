@@ -410,3 +410,23 @@ INSERT INTO public.municipios (id, departamento_id, nombre) VALUES
   (2216, 22, 'San José Acatempa'),
   (2217, 22, 'Quezada')
 ON CONFLICT (id) DO UPDATE SET departamento_id = EXCLUDED.departamento_id, nombre = EXCLUDED.nombre;
+
+
+-- =============================================================================
+-- 2. APROVISIONAMIENTO DEL ADMINISTRADOR INICIAL (BOOTSTRAP)
+-- =============================================================================
+
+INSERT INTO public.perfiles (id, nombres, apellidos, email, rol, activo)
+SELECT 
+  id,
+  'Admin',
+  'EcoPac',
+  email,
+  'administrador',
+  true
+FROM auth.users
+WHERE email = 'admin@ecopac.org'
+ON CONFLICT (id) DO UPDATE 
+SET 
+  rol = 'administrador',
+  activo = true;
