@@ -99,3 +99,45 @@ export const CAMPOS_RECETA = [
     ],
   },
 ];
+
+export const CAMPOS_PACIENTE = Object.freeze([
+  {
+    id: "nombres",
+    label: "Nombres",
+    validacion: {
+      requerido: true,
+      maxLongitud: 100,
+    },
+  },
+  {
+    id: "apellidos",
+    label: "Apellidos",
+    validacion: {
+      requerido: true,
+      maxLongitud: 100,
+    },
+  },
+  {
+    id: "fechaNacimiento",
+    label: "Fecha de nacimiento",
+    validacion: {
+      requerido: true,
+    },
+  },
+  {
+    id: "dpi",
+    label: "DPI",
+    validacion: {
+      requerido: false,
+      maxLongitud: 13,
+    },
+  },
+  {
+    id: "comunidad",
+    label: "Comunidad",
+    validacion: {
+      requerido: true,
+      maxLongitud: 100,
+    },
+  },
+]);

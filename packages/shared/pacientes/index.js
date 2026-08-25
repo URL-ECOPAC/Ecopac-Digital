@@ -16,3 +16,4 @@
 export * from './campos.js';
 export * from './filtros.js';
 export * from './columnas.js';
+export * from "./validaciones.js";
