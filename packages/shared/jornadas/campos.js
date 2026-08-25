@@ -20,6 +20,18 @@ export const OPCIONES_ROL_EN_JORNADA = [
   { valor: 'voluntario general', etiqueta: 'Voluntario' },
 ];
 
+/**
+ * Responsabilidad funcional dentro de la jornada (issue #174, criterio 1): triaje, consulta o
+ * farmacia. Vive en jornada_personal.responsabilidad, una columna TEXT sin CHECK (00012): esta
+ * lista es una guia para el formulario, no una restriccion de la base de datos, asi que una
+ * fila existente con otro texto en esa columna sigue siendo valida.
+ */
+export const OPCIONES_RESPONSABILIDAD_JORNADA = [
+  { valor: 'triaje', etiqueta: 'Triaje' },
+  { valor: 'consulta', etiqueta: 'Consulta' },
+  { valor: 'farmacia', etiqueta: 'Farmacia' },
+];
+
 /** Formulario de creacion/edicion de una jornada (jornadas, 00012 + 00036). */
 export const CAMPOS_JORNADA = [
   { id: 'nombre', label: 'Nombre', tipo: TIPOS_DE_CAMPO.TEXTO, validacion: { requerido: true, maxLongitud: 150 } },
@@ -42,7 +54,7 @@ export const CAMPOS_ASIGNACION_PERSONAL = [
   { id: 'rolEnJornada', label: 'Rol en la jornada', tipo: TIPOS_DE_CAMPO.SELECT, opciones: OPCIONES_ROL_EN_JORNADA, validacion: { requerido: true } },
   { id: 'horaInicio', label: 'Hora de inicio', tipo: TIPOS_DE_CAMPO.HORA, validacion: { requerido: true } },
   { id: 'horaFin', label: 'Hora de fin', tipo: TIPOS_DE_CAMPO.HORA, validacion: { requerido: true, mayorQueCampo: 'horaInicio' } },
-  { id: 'responsabilidad', label: 'Responsabilidad', tipo: TIPOS_DE_CAMPO.TEXTO_LARGO, validacion: { requerido: false } },
+  { id: 'responsabilidad', label: 'Responsabilidad', tipo: TIPOS_DE_CAMPO.SELECT, opciones: OPCIONES_RESPONSABILIDAD_JORNADA, validacion: { requerido: false } },
 ];
 
 /** Marcar la asistencia de un perfil ya asignado (jornada_personal.asistio, 00036). */
