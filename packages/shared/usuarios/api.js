@@ -211,3 +211,75 @@ export function desactivarUsuario(idUsuario) {
 export function reactivarUsuario(idUsuario) {
   return cambiarActivo(idUsuario, true);
 }
+
+/**
+ * Inicia sesión utilizando email y contraseña con Supabase Auth.
+ *
+ * @param {string} email Correo electrónico del usuario.
+ * @param {string} contrasena Contraseña del usuario.
+ * @returns {Promise<{ sesion: object|null, usuario: object|null, error: object|null, erroresDeCampo: object }>}
+ */
+
+export async function iniciarSesion(email, contrasena) {
+  const erroresDeCampo = {};
+
+  if (!email?.trim()) {
+    erroresDeCampo.email = "El correo electrónico es obligatorio.";
+  }
+  if (!contrasena) {
+    erroresDeCampo.contrasena = "La contraseña es obligatoria.";
+  }
+
+  if (Object.keys(erroresDeCampo).length > 0) {
+    return {
+      sesion: null,
+      usuario: null,
+      error: { mensaje: "Por favor llena los campos requeridos." },
+      erroresDeCampo,
+    };
+  }
+
+  try {
+    const { data, error } = await obtenerSupabase().auth.signInWithPassword({
+      email,
+      password: contrasena,
+    });
+
+    if (error) {
+      // Mensaje genérico por seguridad (criterio del issue #100)
+      return {
+        sesion: null,
+        usuario: null,
+        error: { mensaje: "Credenciales inválidas. Verifica tus datos." },
+        erroresDeCampo: {},
+      };
+    }
+
+    return {
+      sesion: data.session,
+      usuario: data.user,
+      error: null,
+      erroresDeCampo: {},
+    };
+  } catch (error) {
+    return {
+      sesion: null,
+      usuario: null,
+      error: normalizarError(error),
+      erroresDeCampo: {},
+    };
+  }
+}
+
+/**
+ * Cierra la sesión activa en Supabase Auth.
+ */
+export async function cerrarSesion() {
+  try {
+    const { error } = await obtenerSupabase().auth.signOut();
+    if (error) return { error: normalizarError(error) };
+    return { error: null };
+  } catch (error) {
+    return { error: normalizarError(error) };
+  }
+}
