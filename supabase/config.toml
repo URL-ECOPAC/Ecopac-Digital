@@ -19,6 +19,14 @@ port = 54322
 shadow_port = 54320
 major_version = 15
 
+[db.seed]
+enabled = true
+# seed.sql: catalogo geografico real (departamentos/municipios), util en cualquier ambiente.
+# seed-demo.sql: datos ficticios de demostracion (issue #94), solo para desarrollo. Ambos
+# corren con "supabase db reset" (local y el job "validar" del CI); "supabase db push"
+# (lo que llega a ecopac-dev/ecopac-prod) nunca ejecuta seeds. Ver docs/DATOS-DEMO.md.
+sql_paths = ["seed.sql", "seed-demo.sql"]
+
 [studio]
 enabled = true
 port = 54323
