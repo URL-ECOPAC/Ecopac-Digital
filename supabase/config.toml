@@ -44,8 +44,26 @@ file_size_limit = "50MiB"
 enabled = true
 site_url = "http://127.0.0.1:3000"
 additional_redirect_urls = ["*"]
+# jwt_expiry: cuanto dura una sesion sin que el cliente la refresque (issue #230, criterio 3).
+# El numero de segundos que corresponde esta pendiente de confirmar con la organizacion (ver
+# docs/SEGURIDAD.md); 3600 es el default de la CLI, no un acuerdo. enable_refresh_token_rotation
+# y refresh_token_reuse_interval tambien son el default de la CLI: se dejan explicitos aqui
+# porque, junto con jwt_expiry, son el control real de expiracion de sesion del lado servidor
+# (el temporizador de inactividad del cliente, en packages/shared/hooks/useExpiracionPorInactividad.js,
+# es una comodidad de interfaz, no una garantia).
 jwt_expiry = 3600
 enable_signup = true
+enable_refresh_token_rotation = true
+refresh_token_reuse_interval = 10
+
+# Limites de inicio de sesion/registro por IP en una ventana de 5 minutos. Son el default de la
+# CLI, dejados explicitos por la misma razon de arriba. IMPORTANTE: esto NO es el bloqueo por
+# cuenta del criterio 2 de la issue #230 (ese salio del alcance de #230, ver docs/SEGURIDAD.md):
+# es un limite por IP compartida, no por cuenta, y no deja un registro consultable de intentos.
+[auth.rate_limit]
+sign_in_sign_ups = 30
+token_verifications = 30
+token_refresh = 150
 
 [auth.email]
 enable_signup = true

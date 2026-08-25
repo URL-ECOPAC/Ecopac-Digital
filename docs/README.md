@@ -13,6 +13,7 @@ configuracion de GitHub (plantillas de issues, PR y los workflows de CI/CD) esta
 | [DISENO.md](./DISENO.md)             | Referencia de diseno: pantallas, navegacion y trazabilidad con issues  |
 | [ARQUITECTURA-FRONTEND.md](./ARQUITECTURA-FRONTEND.md) | Como se comparte el frontend entre web y movil        |
 | [CI-CD.md](./CI-CD.md)               | Que valida y despliega cada workflow, y que hacer cuando falla         |
+| [SEGURIDAD.md](./SEGURIDAD.md)       | Politica de contrasenas, expiracion de sesion y almacenamiento de credenciales |
 
 ## Dependencias y Herramientas
 

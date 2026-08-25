@@ -1,3 +1,4 @@
+import { useCallback, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from 'react-bootstrap';
 import {
@@ -5,11 +6,16 @@ import {
   seccionesVisibles,
   etiquetaDeRol,
   formatearFechaCorta,
+  useExpiracionPorInactividad,
+  MINUTOS_INACTIVIDAD_POR_DEFECTO,
 } from '@ecopac/shared';
 import { useSesionCompartida } from '../contexto/SesionProvider';
 import './MainLayout.css';
 
-// Subtitulo de cada modulo en el encabezado de pagina, segun el prototipo.
+
+const EVENTOS_DE_ACTIVIDAD = ['mousemove', 'keydown', 'mousedown', 'touchstart', 'scroll'];
+
+
 const SUBTITULOS = {
   inicio: 'Panel general del sistema',
   pacientes: 'Expedientes clinicos',
@@ -23,7 +29,6 @@ const SUBTITULOS = {
 };
 
 function moduloDeRuta(pathname) {
-  // La ruta mas especifica gana, para que /pacientes/123 siga marcando Pacientes.
   return [...MODULOS]
     .sort((a, b) => b.ruta.length - a.ruta.length)
     .find((m) => (m.ruta === '/' ? pathname === '/' : pathname.startsWith(m.ruta)));
@@ -32,24 +37,35 @@ function moduloDeRuta(pathname) {
 export default function MainLayout() {
   const navigate = useNavigate();
   const location = useLocation();
-  // El layout solo se monta detras de RutaProtegida, que ya comprobo que hay sesion y perfil.
-  // Por eso aqui se puede leer el perfil sin defensas: si llegara nulo, el guard tendria un
-  // hueco y es mejor que se note que taparlo con un valor inventado.
+
   const { perfil, logout } = useSesionCompartida();
 
   const secciones = seccionesVisibles(perfil.rol);
   const actual = moduloDeRuta(location.pathname);
 
   const iniciales = `${perfil.nombres[0] ?? ''}${perfil.apellidos[0] ?? ''}`.toUpperCase();
-  // El formato sale de shared para que la web y el movil muestren la fecha igual.
+
   const fecha = formatearFechaCorta(new Date());
 
-  // Cerrar sesion de verdad y no solo navegar al login: sin esto el token seguiria vivo y
-  // volver atras devolveria a la aplicacion como si nada.
-  const handleLogout = async () => {
+
+  const handleLogout = useCallback(async () => {
     await logout();
     navigate('/login', { replace: true });
-  };
+  }, [logout, navigate]);
+
+  const { registrarActividad } = useExpiracionPorInactividad({
+    minutos: MINUTOS_INACTIVIDAD_POR_DEFECTO,
+    alVencer: handleLogout,
+  });
+
+  useEffect(() => {
+    EVENTOS_DE_ACTIVIDAD.forEach((evento) => window.addEventListener(evento, registrarActividad));
+    return () => {
+      EVENTOS_DE_ACTIVIDAD.forEach((evento) =>
+        window.removeEventListener(evento, registrarActividad),
+      );
+    };
+  }, [registrarActividad]);
 
   return (
     <div className="app-shell">
