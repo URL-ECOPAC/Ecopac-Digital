@@ -178,9 +178,14 @@ SELECT throws_ok(
 RESET request.jwt.claim.sub;
 SET LOCAL ROLE anon;
 
-SELECT is(
-  (SELECT count(*)::int FROM perfiles), 0,
-  'sin sesion (anon) no se ve ninguna fila de perfiles'
+-- Desde la 00049 (issue #408) anon no tiene ningun privilegio sobre public, asi que la
+-- peticion sin sesion ya no devuelve cero filas: se rechaza antes de que RLS llegue a
+-- evaluarse. Es la misma garantia, una capa mas abajo y mas fuerte.
+SELECT throws_ok(
+  $$ SELECT count(*) FROM perfiles $$,
+  '42501',
+  NULL,
+  'sin sesion (anon) ni siquiera se puede consultar perfiles'
 );
 
 SELECT * FROM finish();
