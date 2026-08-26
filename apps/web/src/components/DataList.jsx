@@ -1,5 +1,5 @@
 import { Badge, Table } from 'react-bootstrap';
-import { formatearFechaCorta } from '@ecopac/shared';
+import { formatearFechaCorta, formatearMoneda } from '@ecopac/shared';
 import EmptyState from './EmptyState';
 import LoadingState from './LoadingState';
 import StatusChip from './StatusChip';
@@ -55,6 +55,12 @@ function Celda({ columna, fila, catalogos }) {
     case 'numero':
       if (valor === null || valor === undefined) return null;
       return columna.sufijo ? `${valor} ${columna.sufijo}` : String(valor);
+
+    case 'moneda':
+      // Mismo motivo que 'fecha': el importe se formatea en shared para que web y movil escriban
+      // el mismo numero. Devuelve null si no hay valor, para no hacer pasar por cero un dato que
+      // no se registro.
+      return formatearMoneda(valor);
 
     case 'fecha':
       // Sale de shared y no de Intl: el resultado tiene que ser identico en web y en movil,

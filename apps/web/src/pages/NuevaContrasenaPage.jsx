@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Navigate } from 'react-router-dom';
 import { useNuevaContrasena } from '@ecopac/shared';
 import {
   Card,
@@ -17,10 +18,24 @@ export default function NuevaContrasenaPage() {
     enviando,
     errorGlobal,
     erroresDeCampo,
+    exito,
     actualizarContrasena,
   } = useNuevaContrasena();
 
   const [verPassword, setVerPassword] = useState(false);
+
+  // La navegacion vive aqui y no en el hook: packages/shared no puede depender de
+  // react-router-dom (docs/ARQUITECTURA-FRONTEND.md). El hook solo avisa de que la contrasena
+  // quedo guardada y de que ya se cerro la sesion de recuperacion.
+  if (exito) {
+    return (
+      <Navigate
+        to="/login"
+        replace
+        state={{ mensaje: 'Contraseña actualizada. Inicia sesión con la nueva.' }}
+      />
+    );
+  }
 
   return (
     <ScreenContainer>

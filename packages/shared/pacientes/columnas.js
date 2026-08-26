@@ -7,25 +7,27 @@
 //
 // Fuente: wireframe de gestion de pacientes (Entregable Semana 6, p. 62 y p. 66).
 
+import { TIPOS_DE_PRESENTACION } from '../descriptores.js';
+
 export const COLUMNAS_PACIENTE = [
-  { id: 'avatar', label: '', tipo: 'avatar', desde: 'nombreCompleto', anchoWeb: '48px' },
-  { id: 'nombreCompleto', label: 'Nombre', tipo: 'texto', principal: true },
-  { id: 'edad', label: 'Edad', tipo: 'numero', sufijo: 'anios' },
-  { id: 'sexo', label: 'Genero', tipo: 'texto' },
-  { id: 'comunidad', label: 'Municipio', tipo: 'texto' },
-  { id: 'condiciones', label: 'Condiciones', tipo: 'chips' },
+  { id: 'avatar', label: '', tipo: TIPOS_DE_PRESENTACION.AVATAR, desde: 'nombreCompleto', anchoWeb: '48px' },
+  { id: 'nombreCompleto', label: 'Nombre', tipo: TIPOS_DE_PRESENTACION.TEXTO, principal: true },
+  { id: 'edad', label: 'Edad', tipo: TIPOS_DE_PRESENTACION.NUMERO, sufijo: 'anios' },
+  { id: 'sexo', label: 'Genero', tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  { id: 'comunidad', label: 'Municipio', tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  { id: 'condiciones', label: 'Condiciones', tipo: TIPOS_DE_PRESENTACION.CHIPS },
 ];
 
 /** Datos de la ficha clinica, en el orden en que el diseno los presenta. */
 export const CAMPOS_FICHA_PACIENTE = [
-  { id: 'codigoFicha', label: 'Numero de ficha', tipo: 'texto' },
-  { id: 'dpi', label: 'DPI', tipo: 'texto' },
-  { id: 'fechaNacimiento', label: 'Fecha de nacimiento', tipo: 'fecha' },
-  { id: 'sexo', label: 'Genero', tipo: 'texto' },
-  { id: 'tipoSangre', label: 'Tipo sanguineo', tipo: 'texto' },
-  { id: 'idioma', label: 'Idioma', tipo: 'texto' },
-  { id: 'comunidad', label: 'Comunidad', tipo: 'texto' },
-  { id: 'telefono', label: 'Telefono', tipo: 'telefono' },
-  { id: 'nombreResponsable', label: 'Responsable', tipo: 'texto' },
-  { id: 'parentescoResponsable', label: 'Parentesco', tipo: 'texto' },
+  { id: 'codigoFicha', label: 'Numero de ficha', tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  { id: 'dpi', label: 'DPI', tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  { id: 'fechaNacimiento', label: 'Fecha de nacimiento', tipo: TIPOS_DE_PRESENTACION.FECHA },
+  { id: 'sexo', label: 'Genero', tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  { id: 'tipoSangre', label: 'Tipo sanguineo', tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  { id: 'idioma', label: 'Idioma', tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  { id: 'comunidad', label: 'Comunidad', tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  { id: 'telefono', label: 'Telefono', tipo: TIPOS_DE_PRESENTACION.TELEFONO },
+  { id: 'nombreResponsable', label: 'Responsable', tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  { id: 'parentescoResponsable', label: 'Parentesco', tipo: TIPOS_DE_PRESENTACION.TEXTO },
 ];

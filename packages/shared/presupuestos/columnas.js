@@ -7,24 +7,31 @@
 // `gastos` tal cual (snake_case). La version anterior declaraba `fecha_gasto` y `usuario_registro`,
 // que no existen: las columnas son `fecha` y `registrado_por` (00025_presupuesto_gastos.sql).
 //
+// `estado` va como CHIP y no como ESTADO: gastos.estado guarda directamente el valor del enum
+// ('pendiente', 'aprobado', 'rechazado'), que es lo que StatusChip sabe indexar. ESTADO es para
+// las columnas que guardan otra cosa -un booleano, por ejemplo- y necesitan un catalogo que las
+// traduzca (ver COLUMNAS_USUARIO, que lee `activo`).
+//
 // Ver packages/shared/pacientes/columnas.js, que es el ejemplar de referencia.
 
+import { TIPOS_DE_PRESENTACION } from '../descriptores.js';
+
 export const COLUMNAS_GASTO = [
-  { id: "fecha", label: "Fecha", tipo: "fecha" },
-  { id: "concepto", label: "Concepto", tipo: "texto", principal: true },
-  { id: "categoria", label: "Categoria", tipo: "texto" },
-  { id: "monto", label: "Monto", tipo: "moneda" },
-  { id: "estado", label: "Estado", tipo: "estado" },
-  { id: "registrado_por", label: "Registrado por", tipo: "texto" },
+  { id: "fecha", label: "Fecha", tipo: TIPOS_DE_PRESENTACION.FECHA },
+  { id: "concepto", label: "Concepto", tipo: TIPOS_DE_PRESENTACION.TEXTO, principal: true },
+  { id: "categoria", label: "Categoria", tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  { id: "monto", label: "Monto", tipo: TIPOS_DE_PRESENTACION.MONEDA },
+  { id: "estado", label: "Estado", tipo: TIPOS_DE_PRESENTACION.CHIP },
+  { id: "registrado_por", label: "Registrado por", tipo: TIPOS_DE_PRESENTACION.TEXTO },
 ];
 
 /** Datos de la ficha de un gasto, en el orden en que el diseno los presenta. */
 export const CAMPOS_FICHA_GASTO = [
-  { id: "concepto", label: "Concepto", tipo: "texto", principal: true },
-  { id: "categoria", label: "Categoria", tipo: "texto" },
-  { id: "monto", label: "Monto", tipo: "moneda" },
-  { id: "fecha", label: "Fecha", tipo: "fecha" },
-  { id: "estado", label: "Estado", tipo: "estado" },
-  { id: "encargado_id", label: "Encargado", tipo: "texto" },
-  { id: "registrado_por", label: "Registrado por", tipo: "texto" },
+  { id: "concepto", label: "Concepto", tipo: TIPOS_DE_PRESENTACION.TEXTO, principal: true },
+  { id: "categoria", label: "Categoria", tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  { id: "monto", label: "Monto", tipo: TIPOS_DE_PRESENTACION.MONEDA },
+  { id: "fecha", label: "Fecha", tipo: TIPOS_DE_PRESENTACION.FECHA },
+  { id: "estado", label: "Estado", tipo: TIPOS_DE_PRESENTACION.CHIP },
+  { id: "encargado_id", label: "Encargado", tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  { id: "registrado_por", label: "Registrado por", tipo: TIPOS_DE_PRESENTACION.TEXTO },
 ];

@@ -36,6 +36,11 @@ export * from "./validations/index.js";
 
 export * from './utils/permisos';
 export * from './hooks/usePermisos';
-export { useInicioSesion } from './usuarios/useInicioSesion';
-export { iniciarSesion, cerrarSesion, obtenerPerfil } from './usuarios/api.js';
-export * from './presupuestos/index.js';
+
+// Desempate explicito de iniciarSesion y cerrarSesion. Los dos nombres nacen en dos archivos
+// -api/sesion.js y usuarios/api.js-, asi que el barril los recibe por dos estrellas y ESM los
+// excluye del namespace por ambiguos (issue #365). Se resuelven a la version de api/sesion.js,
+// que es la que valida las credenciales, normaliza el error, resuelve el perfil y cierra la
+// sesion si la cuenta esta desactivada. Unificar las dos implementaciones es trabajo aparte.
+export { iniciarSesion, cerrarSesion } from './api/sesion.js';
+export { obtenerPerfil } from './usuarios/api.js';
