@@ -49,3 +49,56 @@ export function motivoLoteNoEntregable(lote, hoy = new Date()) {
   if (dias >= 0) return null;
   return `El lote vencio el ${formatearFechaCorta(fecha)} y no se puede entregar.`;
 }
+/**
+ * Evalúa los lotes de un medicamento y sugiere la asignación siguiendo la regla FEFO.
+ *
+ * @param {Array} lotes - Lista de lotes disponibles [{ id, fecha_vencimiento, cantidad_disponible }]
+ * @param {number} cantidadSolicitada - Cantidad requerida
+ * @param {Date|string} [fechaReferencia=new Date()] - Fecha base para evaluar vencimiento
+ * @returns {Object} { lotesSugeridos, suficiente, cantidadFaltante }
+ */
+export function sugerirLote(lotes = [], cantidadSolicitada = 0, fechaReferencia = new Date()) {
+  if (!Array.isArray(lotes) || cantidadSolicitada <= 0) {
+    return {
+      lotesSugeridos: [],
+      suficiente: false,
+      cantidadFaltante: Math.max(0, cantidadSolicitada),
+    };
+  }
+
+  const hoy = new Date(fechaReferencia);
+  hoy.setHours(0, 0, 0, 0);
+
+  // Filtrar no vencidos con stock disponible y ordenar por vencimiento ascendente (FEFO)
+  const lotesValidos = lotes
+    .filter((lote) => {
+      if (!lote || !lote.fecha_vencimiento) return false;
+      const fechaVenc = new Date(lote.fecha_vencimiento);
+      return fechaVenc >= hoy && Number(lote.cantidad_disponible) > 0;
+    })
+    .sort((a, b) => new Date(a.fecha_vencimiento) - new Date(b.fecha_vencimiento));
+
+  let restante = cantidadSolicitada;
+  const lotesSugeridos = [];
+
+  for (const lote of lotesValidos) {
+    if (restante <= 0) break;
+
+    const disponible = Number(lote.cantidad_disponible);
+    const cantidadAAsignar = Math.min(disponible, restante);
+
+    lotesSugeridos.push({
+      lote_id: lote.id,
+      cantidad: cantidadAAsignar,
+      fecha_vencimiento: lote.fecha_vencimiento,
+    });
+
+    restante -= cantidadAAsignar;
+  }
+
+  return {
+    lotesSugeridos,
+    suficiente: restante === 0,
+    cantidadFaltante: restante > 0 ? restante : 0,
+  };
+}
