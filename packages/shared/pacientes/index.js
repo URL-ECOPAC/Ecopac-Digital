@@ -23,3 +23,5 @@ export * from "./validaciones.js";
 export * from "./api.js";
 export * from "./triaje.validaciones.js";
 export * from "./triaje.api.js";
+export * from "./consultas.api.js";
+export * from "./recetas.api.js";

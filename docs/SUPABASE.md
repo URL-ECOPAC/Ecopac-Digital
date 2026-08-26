@@ -48,18 +48,29 @@ realmente usa) es el que levanta `supabase start`.
 ## El flujo completo de una migracion
 
 ```
-1. Alguien edita o crea un archivo en supabase/migrations/*.sql
+1. Alguien crea un archivo en supabase/migrations/, con el nombre
+   NNNNN_descripcion_en_snake_case.sql y un numero MAYOR que el ultimo
+   que haya en develop (ver mas abajo: el numero se elige dos veces)
 2. Abre un Pull Request hacia develop
-3. El workflow backend-ci.yml levanta un Supabase local desechable,
+3. El workflow supabase.yml levanta un Supabase local desechable,
    aplica todas las migraciones desde cero (supabase db reset) y
    revisa el esquema (supabase db lint). Si hay un error de SQL, el PR falla ahi.
+   Ahi mismo se comprueba que la numeracion no choque con otra rama.
 4. Se aprueba y mergea el PR
-5. El workflow supabase-migrations.yml aplica esa migracion contra el
-   proyecto real en la nube (supabase db push): Ecopac-Digital-Dev si el push
-   fue a develop, Ecopac-Digital-Prod si fue a main.
+5. Ese mismo workflow aplica la migracion contra el proyecto real en la
+   nube (supabase db push): Ecopac-Digital-Dev si el push fue a develop,
+   Ecopac-Digital-Prod si fue a main.
 6. La app conectada a ese proyecto ya tiene el cambio, sin que nadie
    lo haya escrito a mano en el dashboard.
 ```
+
+### El numero se elige dos veces
+
+El paso 1 tiene una trampa: el numero se elige al abrir la rama, pero **hay que volver a
+verificarlo antes de mergear**, porque otra rama pudo tomarlo mientras tanto. Repetir un numero
+o quedar por debajo del ultimo de `develop` rompe el despliegue, no solo el orden. El CI lo
+comprueba, y el detalle de que pasa exactamente en cada caso esta en
+`docs/CI-CD.md` > "La otra regla: el numero se elige dos veces".
 
 El punto clave: ningun cambio de esquema llega al proyecto real sin pasar primero por un PR
 revisado y una prueba automatica local. El dashboard de Supabase se usa para consultar datos,

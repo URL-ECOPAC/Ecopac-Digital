@@ -2,13 +2,14 @@
 
 Que corre automaticamente, cuando, contra que ambiente, y que hacer cuando algo falla.
 
-## Los tres workflows
+## Los cuatro workflows
 
-| Workflow | Archivo | Cuando corre |
-| -------- | ------- | ------------ |
-| CI | `.github/workflows/ci.yml` | PR hacia develop o main, y push a esas ramas |
-| Supabase | `.github/workflows/supabase.yml` | PR hacia develop o main, y push a esas ramas |
-| Mantener Supabase activo | `.github/workflows/keep-alive-supabase.yml` | Cada 3 dias, y a mano |
+| Workflow                 | Archivo                                      | Cuando corre                                 |
+| ------------------------ | -------------------------------------------- | -------------------------------------------- |
+| CI                       | `.github/workflows/ci.yml`                   | PR hacia develop o main, y push a esas ramas |
+| Supabase                 | `.github/workflows/supabase.yml`             | PR hacia develop o main, y push a esas ramas |
+| Verificar despliegue     | `.github/workflows/verificar-despliegue.yml` | Todos los dias a las 13:00 UTC, y a mano     |
+| Mantener Supabase activo | `.github/workflows/keep-alive-supabase.yml`  | Cada 3 dias, y a mano                        |
 
 El despliegue de la web **no** es un workflow: lo hace la app de Vercel conectada al
 repositorio. Vercel publica un preview por cada PR y produccion desde `main`, al margen del
@@ -29,26 +30,48 @@ Settings > Branches, y mientras tanto un PR con pruebas en rojo se podria mergea
 
 ## Que hace el workflow de Supabase
 
-Seis jobs. Los tres primeros validan; los ultimos despliegan y avisan.
+Siete jobs. Los tres primeros validan, los siguientes despliegan y avisan, y el ultimo
+resume el resultado de todos.
 
-| Job | Cuando | Que hace |
-| --- | ------ | -------- |
-| Detectar cambios | siempre | Averigua si el cambio toca `supabase/`, para no levantar el stack local sin necesidad |
-| **Migraciones no editadas** | PR | Falla si el PR modifica o borra una migracion que ya existe en la rama base |
-| **Validar migraciones y funciones** | PR y push | Levanta el stack local, aplica todas las migraciones desde cero, corre `db lint` y el lint de Edge Functions |
-| Estado de la base remota | PR | Lista que migraciones estan aplicadas en `ecopac-dev` y cuales se aplicarian al mergear |
-| Aplicar migraciones | push a develop o main | `supabase db push` contra el proyecto del ambiente. Depende de que los dos jobs en negrita hayan pasado |
-| Avisar fallo | si algo fallo en un push | Abre una issue con el paso que fallo y **si las migraciones se aplicaron o no** |
+| Job                                 | Cuando                   | Que hace                                                                                                                                  |
+| ----------------------------------- | ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| Detectar cambios                    | siempre                  | Averigua si el cambio toca `supabase/`, para no levantar el stack local sin necesidad                                                     |
+| **Migraciones no editadas**         | PR y push                | Falla si el PR modifica o borra una migracion que ya existe en la rama base, y si la numeracion de `supabase/migrations/` tiene un choque |
+| **Validar migraciones y funciones** | PR y push                | Levanta el stack local, aplica todas las migraciones desde cero, corre `db lint` y el lint de Edge Functions                              |
+| Estado de la base remota            | PR                       | Lista que migraciones estan aplicadas en `Ecopac-Digital-Dev` y cuales se aplicarian al mergear                                           |
+| Aplicar migraciones                 | push a develop o main    | `supabase db push` contra el proyecto del ambiente. Depende de que los dos jobs en negrita hayan pasado                                   |
+| Avisar fallo                        | si algo fallo en un push | Abre una issue con el paso que fallo y **si las migraciones se aplicaron o no**                                                           |
+| Supabase completo                   | siempre                  | Mira el resultado de los cuatro jobs de validacion y falla si alguno termino en `failure` o `cancelled`                                   |
 
-Los jobs en negrita son **checks requeridos**: sin ellos en verde, la rama protegida no deja
-mergear.
+Los jobs en negrita son **checks requeridos** hoy: sin ellos en verde, la rama protegida no
+deja mergear. **Supabase completo** esta pensado para reemplazarlos a los dos, pero eso se
+configura a mano en Settings; mientras no se haga, es un job mas que corre sin bloquear nada.
+Ver "Ramas protegidas".
+
+### Por que existe Supabase completo
+
+Por dos motivos, y el primero es una trampa que no se ve:
+
+1. **Un check requerido que termina en `skipped` cuenta como aprobado.** No como fallo, ni como
+   pendiente: como aprobado. `Estado de la base remota` solo corre en `pull_request`, asi que en
+   cada push queda `skipped`, y como check requerido eso se ve igual que si hubiera pasado.
+   Marcar cada job por separado da una lista larga que aparenta cobertura, pero algunos de esos
+   nombres se satisfacen solos. **Supabase completo** mira el resultado job por job y decide
+   explicitamente: acepta `success` y `skipped`, rechaza `failure` y `cancelled`.
+2. **Deja la lista de checks requeridos en un nombre por workflow.** Los nombres de los checks no
+   viven en el repositorio: renombrar un job obliga a ir a Settings a corregirlo, y si nadie lo
+   hace, el PR queda esperando un check que ya no existe. Con un solo nombre por workflow,
+   renombrar o agregar jobs adentro ya no rompe la configuracion.
+
+No se puede llegar a **un** unico check para todo el repositorio: `Lint y build` vive en otro
+workflow y un job no puede declarar `needs` de un workflow ajeno. El minimo son dos nombres.
 
 ## Ambientes
 
-| Rama | Proyecto Supabase | Secret del project-ref | Despliegue web |
-| ---- | ----------------- | ---------------------- | -------------- |
-| `develop` | Ecopac-Digital-Dev | `SUPABASE_PROJECT_REF_DEV` | Local |
-| `main` | Ecopac-Digital-Prod | `SUPABASE_PROJECT_REF_PROD` | Vercel Produccion |
+| Rama      | Proyecto Supabase   | Secret del project-ref      | Despliegue web    |
+| --------- | ------------------- | --------------------------- | ----------------- |
+| `develop` | Ecopac-Digital-Dev  | `SUPABASE_PROJECT_REF_DEV`  | Local             |
+| `main`    | Ecopac-Digital-Prod | `SUPABASE_PROJECT_REF_PROD` | Vercel Produccion |
 
 Cada migracion se aplica **una vez por base**. El push a `develop` va contra `Ecopac-Digital-Dev` y el
 push a `main` contra `Ecopac-Digital-Prod`: son bases distintas, no una doble aplicacion. Ademas
@@ -59,15 +82,15 @@ lo pendiente, asi que aunque el workflow corriera dos veces no repetiria nada.
 
 Se configuran en Settings > Secrets and variables > Actions.
 
-| Secret | Lo usa |
-| ------ | ------ |
-| `SUPABASE_ACCESS_TOKEN` | Vincular con proyectos remotos |
-| `SUPABASE_DB_PASSWORD` | Vincular con proyectos remotos |
-| `SUPABASE_PROJECT_REF_DEV` | Aplicar migraciones en develop |
-| `SUPABASE_PROJECT_REF_PROD` | Aplicar migraciones en main |
-| `SUPABASE_URL_DEV`, `SUPABASE_ANON_KEY_DEV` | Keep-alive |
-| `VITE_SUPABASE_URL_DEV`, `VITE_SUPABASE_ANON_KEY_DEV` | Build de la web en develop |
-| `VITE_SUPABASE_URL_PROD`, `VITE_SUPABASE_ANON_KEY_PROD` | Build de la web en main |
+| Secret                                                  | Lo usa                         |
+| ------------------------------------------------------- | ------------------------------ |
+| `SUPABASE_ACCESS_TOKEN`                                 | Vincular con proyectos remotos |
+| `SUPABASE_DB_PASSWORD`                                  | Vincular con proyectos remotos |
+| `SUPABASE_PROJECT_REF_DEV`                              | Aplicar migraciones en develop |
+| `SUPABASE_PROJECT_REF_PROD`                             | Aplicar migraciones en main    |
+| `SUPABASE_URL_DEV`, `SUPABASE_ANON_KEY_DEV`             | Keep-alive                     |
+| `VITE_SUPABASE_URL_DEV`, `VITE_SUPABASE_ANON_KEY_DEV`   | Build de la web en develop     |
+| `VITE_SUPABASE_URL_PROD`, `VITE_SUPABASE_ANON_KEY_PROD` | Build de la web en main        |
 
 Cuando falta un secret, el workflow **avisa de forma visible pero no falla**: deja un bloque en
 el resumen de la corrida y una anotacion de warning. La idea es no bloquear al equipo mientras
@@ -82,9 +105,9 @@ despues no cambia nada en esa base.
 
 Eso crea una divergencia silenciosa:
 
-| | Que ejecuta |
-| --- | --- |
-| El CI en el PR | `supabase db reset`: aplica **todo desde cero** en una base limpia |
+|                          | Que ejecuta                                                           |
+| ------------------------ | --------------------------------------------------------------------- |
+| El CI en el PR           | `supabase db reset`: aplica **todo desde cero** en una base limpia    |
 | El despliegue al mergear | `supabase db push`: aplica **solo lo pendiente sobre el estado real** |
 
 Mientras nadie edite una migracion aplicada, los dos escenarios coinciden y el CI predice bien
@@ -107,11 +130,108 @@ mismo PR. Ahi la guarda ya la deja pasar, porque contra la rama base figura como
 Si aun asi hace falta saltarse la guarda, se agrega la etiqueta
 `migracion-editada-a-proposito` al PR. Queda registrado en la corrida que se salto y por que.
 
+## La otra regla: el numero se elige dos veces
+
+El nombre de una migracion es `NNNNN_descripcion_en_snake_case.sql`, con cinco digitos y
+numeracion secuencial. Elegir mal el numero rompe el despliegue de dos formas distintas, y las
+dos las comprueba el paso **Verificar la numeracion de las migraciones**.
+
+### Repetir un numero
+
+En `supabase_migrations.schema_migrations`, la columna `version` es **el prefijo numerico solo**
+\-`00065`, sin el nombre, que va en otra columna- y es **clave primaria**. Medido contra una base
+local con dos archivos `00066`:
+
+```
+Applying migration 00066_prueba_dup_a.sql...
+Applying migration 00066_prueba_dup_b.sql...
+ERROR: duplicate key value violates unique constraint "schema_migrations_pkey" (SQLSTATE 23505)
+Key (version)=(00066) already exists.
+```
+
+El primero se aplica y se registra. El segundo ejecuta su SQL, choca al registrarse, y **toda su
+transaccion se revierte**: ni esa migracion ni las que vinieran despues quedan aplicadas, y
+`db push` sale con codigo 1. No es un problema de orden, como podria parecer: es un despliegue
+roto.
+
+Y limpiarlo despues del merge es mas caro de lo que parece, porque renumerar el archivo es
+renombrarlo, y renombrar un archivo que ya existe en la rama base es justo lo que bloquea la
+guarda de inmutabilidad: hace falta la etiqueta `migracion-editada-a-proposito`.
+
+### Usar un numero por debajo del ultimo
+
+`supabase db push` se niega a aplicar una migracion anterior a la ultima que la base ya registro:
+aborta con `Found local migration files to be inserted before the last migration on remote
+database` y exige `--include-all`. **La salida correcta es renumerar por encima con `git mv`,
+nunca pasar `--include-all`**, que aplicaria la migracion fuera de orden en unas bases y no en
+otras.
+
+### Por eso el numero se verifica dos veces
+
+Se elige al abrir la rama y **se vuelve a verificar antes de mergear**, porque otra rama pudo
+tomarlo mientras tanto. La comprobacion compara contra el **tip actual** de la rama base, no
+contra el punto donde nacio la rama, asi que cada vez que el check se reejecuta usa el estado de
+`develop` de ese momento.
+
+Eso deja un unico hueco, y conviene conocerlo: **dos PR abiertos a la vez que reserven el mismo
+numero pasan los dos**, porque cuando cada uno se evaluo el numero todavia estaba libre. Si
+ninguno se reejecuta entre un merge y el otro, el duplicado entra. Tres cosas lo acotan:
+
+1. La comprobacion corre tambien en `push`, asi que `develop` se pone rojo en el momento del
+   merge, y no cuando falle el despliegue.
+2. Cualquier commit nuevo en el segundo PR lo reevalua contra el `develop` ya avanzado, y ahi si
+   lo caza.
+3. Activar `strict` en `develop` (exigir la rama al dia antes de mergear) fuerza esa reevaluacion
+   siempre y cierra el hueco del todo. `main` ya lo tiene activo; `develop` no. Ver
+   "Ramas protegidas".
+
+### Caso de estudio: la `00061` y la `00062` duplicadas
+
+`00061_agregar_rls_bodegas_y_proveedores.sql` y `00062_agregar_rls_bodegas_y_proveedores.sql`
+crean las mismas cuatro politicas sobre las mismas dos tablas. La `00062` es la `00061` mas un
+`DROP POLICY IF EXISTS` antes de cada `CREATE POLICY`; por eso, aplicadas en ese orden, la
+segunda reemplaza a la primera sin error y el CI, que aplica todo desde cero, sale en verde.
+
+**No se corrigen.** Las dos ya estan aplicadas en `Ecopac-Digital-Dev`, asi que borrar o editar
+cualquiera de las dos seria justo lo que prohibe la regla de arriba: cambiaria lo que valida el
+CI sin cambiar nada en las bases reales. Quedan como estan, documentadas aqui.
+
+Como se llego a eso: los PR #444 a #449 se crearon **unos encima de otros** en vez de cada uno
+desde `develop`, asi que cada rama arrastraba los commits de la anterior y el mismo cambio de RLS
+viajo en dos PR distintos con dos numeros de migracion.
+
+De ahi la regla que ya esta en `AGENTS.md` y que conviene recordar con el caso concreto:
+
+> **Una rama por issue, y siempre desde `develop` recien actualizado.** Nunca desde otra rama de
+> trabajo, aunque lo que se necesite de ella parezca imprescindible.
+
+Si de verdad hace falta algo que todavia esta en revision, es mejor esperar el merge que apilar:
+apilar convierte cada PR en una revision de todo lo anterior, y ahi es donde un duplicado pasa
+inadvertido.
+
+### Caso de estudio: la `00031` que no existe
+
+La secuencia tiene huecos en `00014`, `00015`, `00031` y `00043`. No son migraciones borradas:
+esos numeros **nunca existieron**. Son numeros que una rama reservo y tuvo que abandonar porque
+otra mergeo primero. El PR #395 llego a describir su archivo como `00043` en el cuerpo del PR y
+termino mergeando como `00044`.
+
+El hueco en si no hace dano. Lo que quedo es peor: los comentarios de la `00032`, la `00033` y la
+`00034` **citan una `00031` que no existe**, y le atribuyen un `GRANT SELECT ON eventos_auditoria`
+que en realidad esta en la `00032` y la `00038`. Tres migraciones aplicadas documentan mal el
+esquema, y como no se pueden editar, ese error es permanente.
+
+Es el argumento de por que la guarda de numeracion existe: el numero equivocado no solo rompe un
+despliegue, tambien deja referencias cruzadas que ya no se pueden arreglar.
+
 ## Que hacer cuando falla el despliegue
 
 El workflow abre una issue automatica. **Lo primero es leer que dice sobre el estado de la base**,
-porque hay dos desenlaces muy distintos y se arreglan de forma opuesta. La issue lo afirma leyendo
+porque hay desenlaces muy distintos y se arreglan de forma opuesta. La issue lo afirma leyendo
 el resultado de cada paso de la corrida, no suponiendolo.
+
+Los casos 1 y 2 son los que avisa el propio workflow de Supabase. El caso 3 es el que **ningun
+workflow puede avisar de si mismo**, y por eso lo detecta otro workflow aparte.
 
 ### Caso 1: el paso `Aplicar migraciones` no llego a correr
 
@@ -138,10 +258,67 @@ Ahi si se detuvo dentro de una migracion y **la base puede haber quedado a media
 Nunca se arregla editando la migracion que fallo: eso deja la base a medias y el proximo
 ambiente hereda el problema.
 
+### Caso 3: la corrida nunca se creo
+
+Es el mas dificil de ver, porque **no hay nada rojo que mirar**. No falla un paso: no existe la
+corrida.
+
+El 26 de agosto GitHub Actions tardo horas en despachar workflows. En el commit `864d3e5`
+-el merge del PR #447 en `develop`- solo se crearon dos check-runs, `Lint y build` y el
+`Supabase Preview` de Vercel. **El workflow de Supabase nunca se creo para ese push**, asi que
+`Aplicar migraciones` no corrio y la `00062` no se desplego.
+
+Y nadie se entero, por una razon estructural: el job `Avisar fallo` vive **dentro de ese mismo
+workflow**. Si el workflow no se crea, tampoco se crea el job que avisa.
+
+> **Un workflow no puede avisar de que el mismo no existio.** Cualquier alerta que dependa de la
+> corrida que fallo en crearse no sirve para esto.
+
+#### Como se detecta
+
+Con el workflow **Verificar despliegue**, que corre por su cuenta todos los dias y no depende de
+ninguna corrida de despliegue. En vez de vigilar el proceso, mira el resultado: pregunta a cada
+ambiente si tiene aplicadas todas las migraciones del repositorio.
+
+```bash
+supabase db push --dry-run --linked --output-format json
+# {"upToDate":true,"dryRun":true,"migrations":[],...}
+```
+
+`--dry-run` no aplica nada. Si `upToDate` es `false`, `migrations` trae exactamente las que no
+llegaron, y el workflow abre una issue con esa lista. Si ya hay una issue abierta para ese
+ambiente, no la duplica.
+
+Lo mismo se puede correr a mano en cualquier momento, o desde Actions con **Run workflow**.
+
+#### Que hacer cuando aparece esa issue
+
+1. Buscar el commit de merge que introdujo la primera migracion pendiente.
+2. Abrir su pagina de checks y ver si tiene corrida del workflow de Supabase.
+3. Si **no la tiene**, es este caso: relanzar el despliegue con `gh workflow run supabase.yml
+--ref develop`, o con un commit vacio a la rama.
+4. Si **si la tiene y fallo**, no es este caso: seguir el Caso 1 o el Caso 2 de arriba.
+5. Confirmar con `supabase migration list --linked` que la base quedo al dia y cerrar la issue.
+
+#### Que hacer si Actions no esta despachando corridas ahora mismo
+
+Cuando se nota que un PR lleva minutos sin que aparezcan sus checks (o
+[status.github.com](https://www.githubstatus.com/) reporta incidencia en Actions):
+
+- **No mergear** un PR al que le falten checks porque no llegaron a crearse. Un check ausente no
+  es un check en verde.
+- Forzar la corrida con un push vacio (`git commit --allow-empty`) o con `gh run rerun`.
+- **Nunca** usar el merge de administrador para saltarse un check que no aparecio. Es
+  precisamente lo que deja una migracion sin desplegar sin que quede rastro.
+
+Conviene saber que hoy **`enforce_admins` esta desactivado en `develop` y en `main`**, o sea que
+esa puerta esta abierta y solo la cierra la disciplina del equipo. Ver "Ramas protegidas".
+
 ## La version del CLI de Supabase va fija
 
-Los tres pasos `Instalar Supabase CLI` del workflow declaran `version: 2.115.0` y **no**
-`version: latest`. No es por gusto:
+Los cuatro pasos `Instalar Supabase CLI` -tres en `supabase.yml` y uno en
+`verificar-despliegue.yml`- declaran `version: 2.115.0` y **no** `version: latest`. No es por
+gusto:
 
 `setup-cli` resuelve `latest` consultando la API de releases de GitHub **sin autenticar**, y los
 runners comparten esa cuota por IP. El 25 de agosto el despliegue de `develop` murio con
@@ -152,8 +329,8 @@ repetirse.
 De paso, el CI valida con la misma version que tiene instalada el equipo, en vez de con la que
 resulte ser la ultima ese dia.
 
-**Al subirla hay que cambiarla en los tres pasos a la vez**, y conviene que coincida con la que
-usa el equipo en local (`supabase --version`).
+**Al subirla hay que cambiarla en los cuatro pasos a la vez**, y conviene que coincida con la
+que usa el equipo en local (`supabase --version`).
 
 ## Correr las validaciones en local
 
@@ -179,21 +356,57 @@ con historial, que es justo lo que la guarda de inmutabilidad protege.
 ## Ramas protegidas
 
 `develop` y `main` requieren Pull Request y no admiten push directo, force-push ni borrado.
-Checks requeridos: **Lint y build**, **Migraciones no editadas** y **Validar migraciones y
-funciones**.
 
-Si se renombra un job, hay que actualizar el check requerido en Settings > Branches. Los
-nombres de los checks no viven en el repositorio: un PR esperando un check que ya no existe
-queda bloqueado para siempre.
+Los nombres de los checks requeridos **no viven en el repositorio**: se configuran en
+Settings > Branches y solo se cambian ahi. Es la unica parte del CI/CD que no entra por PR, y
+por eso conviene tener escrito cual es el estado y cual deberia ser.
+
+### Estado configurado hoy
+
+|                                                      | `develop`                                                                    | `main`          |
+| ---------------------------------------------------- | ---------------------------------------------------------------------------- | --------------- |
+| Checks requeridos                                    | `Lint y build`, `Migraciones no editadas`, `Validar migraciones y funciones` | los mismos tres |
+| Exigir la rama al dia (`strict`)                     | no                                                                           | si              |
+| Aplicar tambien a administradores (`enforce_admins`) | **no**                                                                       | **no**          |
+
+### Lo que conviene cambiar
+
+1. **Reemplazar los dos checks de Supabase por `Supabase completo`.** Los checks requeridos
+   quedan en dos nombres, `Lint y build` y `Supabase completo`, y dejan de romperse cada vez que
+   se renombra o se agrega un job. El porque esta en "Por que existe Supabase completo".
+2. **Activar `enforce_admins` en las dos ramas.** Hoy un administrador puede mergear saltandose
+   un check que no aparecio, que es exactamente como se cuela una migracion sin desplegar. Es un
+   cambio de politica del equipo, no una decision tecnica: conviene acordarlo antes de activarlo,
+   porque tambien quita la salida de emergencia para desbloquear un PR atascado.
+
+3. **Activar `strict` en `develop`** (exigir la rama al dia antes de mergear). `main` ya lo tiene.
+   Es lo unico que cierra del todo el hueco de dos PR que reservan el mismo numero de migracion,
+   porque obliga a reevaluar el PR contra el `develop` ya avanzado. El coste es que hay que
+   actualizar la rama antes de mergear cuando develop avanzo.
+
+Cuidado con el orden al hacer el cambio 1: **agregar `Supabase completo` primero, comprobar en un
+PR que aparece, y solo entonces quitar los otros dos.** Si se agrega un check que todavia no
+existe en ningun workflow, los PR abiertos quedan esperando para siempre un check que nadie va a
+reportar.
+
+Y al reves: quitar un check requerido no rompe nada, pero deja de bloquear en el momento. Los dos
+cambios se hacen en Settings > Branches > Edit, en la seccion "Require status checks to pass
+before merging".
 
 ## Cuando toman efecto los cambios a los workflows
 
-| Disparador | De donde toma el archivo | Cuando aplica |
-| ---------- | ------------------------ | ------------- |
-| `pull_request` | Del merge ref (base + PR) | En el propio PR que lo introduce |
-| `push` | Del commit pusheado | Al mergear a develop o a main |
-| `schedule`, `workflow_dispatch` | De la rama por defecto (`main`) | Solo tras promover develop a main |
-| Ramas protegidas | No vive en el repositorio | Al configurarlo en Settings, sin depender de ningun merge |
+| Disparador                      | De donde toma el archivo        | Cuando aplica                                             |
+| ------------------------------- | ------------------------------- | --------------------------------------------------------- |
+| `pull_request`                  | Del merge ref (base + PR)       | En el propio PR que lo introduce                          |
+| `push`                          | Del commit pusheado             | Al mergear a develop o a main                             |
+| `schedule`, `workflow_dispatch` | De la rama por defecto (`main`) | Solo tras promover develop a main                         |
+| Ramas protegidas                | No vive en el repositorio       | Al configurarlo en Settings, sin depender de ningun merge |
 
 Por eso un cambio al keep-alive no surte efecto hasta que `develop` llegue a `main`, aunque el
 archivo ya este en develop.
+
+**Y por eso `Verificar despliegue` no va a correr solo al mergearlo a `develop`.** Se dispara por
+`schedule`, asi que GitHub lo lee de `main`: hasta la siguiente promocion a produccion, la
+comprobacion diaria no existe. Mientras tanto se puede correr a mano desde Actions >
+Verificar despliegue > Run workflow, eligiendo la rama, porque `workflow_dispatch` si permite
+escoger de donde tomar el archivo.
