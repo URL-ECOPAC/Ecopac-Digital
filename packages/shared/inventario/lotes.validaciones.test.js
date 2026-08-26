@@ -1,6 +1,9 @@
-import { describe, expect, it } from "vitest";
-
-import { esLoteEntregable, motivoLoteNoEntregable } from "./lotes.validaciones.js";
+import { describe, it, expect } from "vitest";
+import {
+  esLoteEntregable,
+  motivoLoteNoEntregable,
+  sugerirLote,
+} from "./lotes.validaciones.js";
 
 const HOY = new Date("2026-06-15T10:30:00");
 
@@ -77,9 +80,6 @@ describe("motivoLoteNoEntregable", () => {
     }
   });
 });
-
-import { describe, it, expect } from "vitest";
-import { sugerirLote } from "./lotes.validaciones.js";
 
 describe("sugerirLote (Criterio FEFO)", () => {
   const lotesEjemplo = [
