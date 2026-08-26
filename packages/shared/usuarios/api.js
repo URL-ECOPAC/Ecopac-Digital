@@ -14,8 +14,10 @@ import { ESTADOS_USUARIO } from "./campos.js";
 import { validarPerfil } from "./validaciones.js";
 
 // Las columnas se enumeran en lugar de pedir "*" para que una columna nueva en perfiles no
-// empiece a viajar sola hasta el cliente. Aqui no va perfil_especialidad: quien la necesite
-// la pide aparte y no la carga toda la aplicacion en cada arranque.
+// empiece a viajar sola hasta el cliente. Aqui no va perfil_especialidad: la comparten
+// obtenerPerfil(), cambiarActivo() y actualizarUsuario(), y ninguna de las tres necesita las
+// especialidades. listarUsuarios() si las necesita (issue #175, criterio 3): las pide en su
+// propio select(), aparte de esta constante, para no cambiarles el retorno a las otras tres.
 //
 // fecha_ingreso se pide con alias en camelCase porque asi la declaran los descriptores que
 // consumen las pantallas (COLUMNAS_USUARIO y CAMPOS_USUARIO). DataList busca el valor por el
@@ -23,6 +25,12 @@ import { validarPerfil } from "./validaciones.js";
 // nada. Es la misma convencion que sigue donaciones/proyectos.api.js.
 const COLUMNAS_DEL_PERFIL =
   "id, nombres, apellidos, email, telefono, rol, activo, fechaIngreso:fecha_ingreso";
+
+// Especialidades embebidas para listarUsuarios() (issue #175, criterio 3): perfil_especialidad
+// no tiene columna id, solo la pareja (perfil_id, nombre_especialidad), asi que no hay mas que
+// pedir. Requiere la politica RLS de la migracion 00058; sin ella, cada perfil llega con
+// especialidades: [] para cualquiera, incluida la administradora.
+const ESPECIALIDADES_DEL_PERFIL = "especialidades:perfil_especialidad(nombre_especialidad)";
 
 /**
  * Lee el perfil de un usuario autenticado.
@@ -106,11 +114,61 @@ async function cambiarActivo(idUsuario, activo) {
   }
 }
 
-export async function listarUsuarios({ busqueda, rol, estado } = {}) {
+/**
+ * Ids de perfil con una especialidad dada.
+ *
+ * Dos consultas encadenadas (perfil_especialidad -> perfiles) en vez de un embed filtrado, mismo
+ * patron y mismo motivo que idsPorPrincipioActivo() en inventario/medicamentos.api.js: un embed
+ * con `!inner` para filtrar tambien recorta que filas del embed se devuelven, y listarUsuarios()
+ * necesita el arreglo COMPLETO de especialidades de cada perfil (criterio 3) al mismo tiempo que
+ * filtra por una sola (criterio 1). Lanza en vez de devolver `{ error }`, igual que su modelo:
+ * el try/catch de listarUsuarios() la atrapa y normaliza el error ahi.
+ */
+async function idsDePerfilPorEspecialidad(especialidad) {
+  const { data, error } = await obtenerSupabase()
+    .from("perfil_especialidad")
+    .select("perfil_id")
+    .eq("nombre_especialidad", especialidad);
+
+  if (error) throw error;
+  return (data ?? []).map((fila) => fila.perfil_id);
+}
+
+/**
+ * Lista el personal, opcionalmente filtrado.
+ *
+ * `rol` acepta cualquiera de los cinco valores de ROLES (roles.js): esta funcion no restringe
+ * cuales, la columna `rol` de perfiles ya los admite todos (issue #175, criterio 5). Quien SI
+ * restringe cuantas filas llegan es RLS: la politica de perfiles (00038) solo deja ver todo el
+ * personal a la administradora; cualquier otro perfil autenticado solo se ve a si mismo, sin
+ * error (RLS filtra filas, no avisa). No es un limite de esta funcion: es la politica de
+ * perfiles funcionando como esta escrita.
+ *
+ * `especialidad` filtra por una sola especialidad a la vez (FILTROS_USUARIO la declara
+ * `TIPOS_DE_FILTRO.SELECT`, no MULTI_SELECT): primero resuelve que perfiles la tienen
+ * (idsDePerfilPorEspecialidad()), despues acota la consulta principal con `.in("id", ids)`. Si
+ * ningun perfil tiene esa especialidad, corta ahi devolviendo lista vacia sin tocar `perfiles`
+ * (mismo guard que medicamentos.api.js con `idsDePrincipioActivo`).
+ *
+ * Cada perfil devuelto trae `especialidades` como arreglo de strings (issue #175, criterio 3),
+ * nunca de objetos: es la forma que espera el render `chips` de DataList (ver
+ * CAMPOS_FICHA_VOLUNTARIO.especialidades en columnas.js). Requiere la politica RLS de la
+ * migracion 00058: sin ella, el embed llega vacio para cualquiera, incluida la administradora.
+ *
+ * @param {{ busqueda?: string, rol?: string, estado?: string|boolean, especialidad?: string }} [filtros]
+ * @returns {Promise<{ usuarios: object[], error: object|null }>}
+ */
+export async function listarUsuarios({ busqueda, rol, estado, especialidad } = {}) {
   try {
+    let idsFiltrados = null;
+    if (especialidad) {
+      idsFiltrados = await idsDePerfilPorEspecialidad(especialidad);
+      if (idsFiltrados.length === 0) return { usuarios: [], error: null };
+    }
+
     let consulta = obtenerSupabase()
       .from("perfiles")
-      .select(COLUMNAS_DEL_PERFIL)
+      .select(`${COLUMNAS_DEL_PERFIL}, ${ESPECIALIDADES_DEL_PERFIL}`)
       .order("apellidos", { ascending: true })
       .order("nombres", { ascending: true });
 
@@ -127,12 +185,58 @@ export async function listarUsuarios({ busqueda, rol, estado } = {}) {
       );
     }
 
+    if (idsFiltrados) consulta = consulta.in("id", idsFiltrados);
+
     const { data, error } = await consulta;
 
     if (error) return { usuarios: [], error: normalizarError(error) };
-    return { usuarios: data ?? [], error: null };
+
+    const usuarios = (data ?? []).map((fila) => ({
+      ...fila,
+      especialidades: (fila.especialidades ?? []).map((item) => item.nombre_especialidad),
+    }));
+
+    return { usuarios, error: null };
   } catch (error) {
     return { usuarios: [], error: normalizarError(error) };
+  }
+}
+
+/**
+ * Catalogo de especialidades para poblar el filtro `especialidad` de FILTROS_USUARIO (issue
+ * #175, criterio 2).
+ *
+ * perfil_especialidad no tiene una tabla catalogo aparte (nombre_especialidad es texto libre,
+ * ver migracion 00002): este catalogo es literalmente el conjunto de especialidades ya
+ * asignadas a algun perfil, sin deduplicar en SQL (PostgREST no expone DISTINCT) sino en JS con
+ * un Set. No filtra por perfiles.activo: una especialidad de un perfil desactivado sigue
+ * apareciendo, para no esconder una opcion que podria volver a hacer falta si ese perfil se
+ * reactiva.
+ *
+ * Requiere la politica RLS de la migracion 00058: para cualquiera que no sea administrador, el
+ * catalogo solo refleja sus propias especialidades, no las de todo el personal (mismo limite
+ * que listarUsuarios(), ver su comentario arriba).
+ *
+ * @returns {Promise<{ especialidades: Array<{ etiqueta: string, valor: string }>, error: object|null }>}
+ */
+export async function listarCatalogoEspecialidades() {
+  try {
+    const { data, error } = await obtenerSupabase()
+      .from("perfil_especialidad")
+      .select("nombre_especialidad");
+
+    if (error) return { especialidades: [], error: normalizarError(error) };
+
+    const nombres = [...new Set((data ?? []).map((fila) => fila.nombre_especialidad))].sort(
+      (a, b) => a.localeCompare(b),
+    );
+
+    return {
+      especialidades: nombres.map((nombre) => ({ valor: nombre, etiqueta: nombre })),
+      error: null,
+    };
+  } catch (error) {
+    return { especialidades: [], error: normalizarError(error) };
   }
 }
 
