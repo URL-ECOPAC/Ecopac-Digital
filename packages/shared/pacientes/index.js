@@ -25,3 +25,4 @@ export * from "./triaje.validaciones.js";
 export * from "./triaje.api.js";
 export * from "./consultas.api.js";
 export * from "./recetas.api.js";
+export * from "./historial.api.js";
