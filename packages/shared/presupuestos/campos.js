@@ -1,4 +1,4 @@
-import { ESTADOS_GASTO } from '@ecopac/ui-tokens';
+
 
 export const CAMPOS_GASTO = {
   concepto: {
