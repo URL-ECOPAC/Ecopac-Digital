@@ -13,6 +13,7 @@ import { ESTADOS_JORNADA } from "./permisos.js";
 import {
   advertirChoqueDeHorario,
   esTransicionDeJornadaValida,
+  puedeRegistrarEnJornada,
   transicionesDeJornadaDesde,
   validarAsignaciones,
   validarAsignacionPersonal,
@@ -241,6 +242,62 @@ describe("validarCambioDeEstadoJornada", () => {
         ROLES.ADMINISTRADOR,
       ),
     ).toEqual({});
+  });
+});
+
+describe("puedeRegistrarEnJornada", () => {
+  it("solo la jornada en curso admite registro", () => {
+    expect(puedeRegistrarEnJornada(ESTADOS_JORNADA.EN_CURSO)).toEqual({ puede: true, motivo: "" });
+  });
+
+  it("cubre los cuatro estados del enum, no solo tres", () => {
+    // El criterio de aceptacion habla de tres estados, pero estado_jornada (00001) tiene cuatro.
+    // Si el enum crece y esta prueba no se entera, el estado nuevo cae en el motivo generico y
+    // se bloquea: esa es la respuesta segura, y aqui se deja fijada.
+    const veredictos = Object.values(ESTADOS_JORNADA).map((estado) => [
+      estado,
+      puedeRegistrarEnJornada(estado).puede,
+    ]);
+
+    expect(veredictos).toEqual([
+      [ESTADOS_JORNADA.PLANIFICADA, false],
+      [ESTADOS_JORNADA.EN_CURSO, true],
+      [ESTADOS_JORNADA.FINALIZADA, false],
+      [ESTADOS_JORNADA.CANCELADA, false],
+    ]);
+  });
+
+  it("cada motivo nombra el estado y dice como continuar", () => {
+    // Criterio de aceptacion 2. Un "no se puede" a secas deja a quien esta en campo sin saber
+    // si esperar, avisarle a alguien o cambiarse de jornada.
+    expect(puedeRegistrarEnJornada(ESTADOS_JORNADA.PLANIFICADA).motivo).toMatch(/planificada/i);
+    expect(puedeRegistrarEnJornada(ESTADOS_JORNADA.PLANIFICADA).motivo).toMatch(/inicie/i);
+
+    expect(puedeRegistrarEnJornada(ESTADOS_JORNADA.FINALIZADA).motivo).toMatch(/finalizada/i);
+    expect(puedeRegistrarEnJornada(ESTADOS_JORNADA.FINALIZADA).motivo).toMatch(/reabrir/i);
+
+    expect(puedeRegistrarEnJornada(ESTADOS_JORNADA.CANCELADA).motivo).toMatch(/cancelada/i);
+  });
+
+  it("un estado desconocido o ausente bloquea, no deja pasar", () => {
+    // Ante la duda se bloquea en el cliente y la ultima palabra la tiene el trigger. Al reves
+    // -dejar pasar lo que no se reconoce- la persona llena el formulario y el servidor lo
+    // rechaza al final.
+    for (const valor of ["en pausa", "", null, undefined]) {
+      expect(puedeRegistrarEnJornada(valor).puede).toBe(false);
+      expect(puedeRegistrarEnJornada(valor).motivo).not.toBe("");
+    }
+  });
+
+  it("nunca devuelve motivo vacio cuando bloquea", () => {
+    // La pantalla pinta el motivo tal cual: quedarse sin texto seria un cartel en blanco.
+    const bloqueados = Object.values(ESTADOS_JORNADA).filter(
+      (estado) => estado !== ESTADOS_JORNADA.EN_CURSO,
+    );
+
+    for (const estado of bloqueados) {
+      expect(puedeRegistrarEnJornada(estado).motivo.length).toBeGreaterThan(0);
+    }
   });
 });
 

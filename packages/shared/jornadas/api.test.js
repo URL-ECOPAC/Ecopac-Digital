@@ -23,6 +23,8 @@ vi.mock("../api/cliente.js", () => ({
 const { CODIGOS_DE_ERROR_DE_SUPABASE } = await import("../api/errores-de-supabase.js");
 const { ROLES } = await import("../usuarios/roles.js");
 const { ESTADOS_JORNADA } = await import("./permisos.js");
+// Se importa la regla pura para comparar contra ella en vez de repetir sus textos aqui.
+const { puedeRegistrarEnJornada } = await import("./validaciones.js");
 const {
   actualizarJornada,
   asignarPersonal,
@@ -33,6 +35,7 @@ const {
   obtenerAsignacionesDelDia,
   obtenerJornada,
   obtenerJornadasDePersona,
+  puedeRegistrarConsulta,
   registrarJornada,
 } = await import("./api.js");
 
@@ -882,5 +885,86 @@ describe("desasignarPersonal", () => {
 
     expect(desasignado).toBe(false);
     expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.PERMISO_DENEGADO);
+  });
+});
+
+
+describe("puedeRegistrarConsulta", () => {
+  it("solo pide la columna estado de jornadas, nada mas", async () => {
+    // Se llama antes de cada registro: traer personal y contadores de vista_reporte_impacto
+    // para leer un campo seria caro sin motivo. Mismo criterio que cambiarEstadoJornada().
+    const cliente = crearCliente({
+      jornadas: [{ data: { estado: ESTADOS_JORNADA.EN_CURSO }, error: null }],
+    });
+    dobles.cliente = cliente;
+
+    await puedeRegistrarConsulta("jornada-1");
+
+    const tablasConsultadas = new Set(
+      cliente.llamadas.filter((llamada) => llamada.paso === "from").map((llamada) => llamada.tabla),
+    );
+    expect(tablasConsultadas).toEqual(new Set(["jornadas"]));
+  });
+
+  it("una jornada en curso deja registrar y no da motivo", async () => {
+    dobles.cliente = crearCliente({
+      jornadas: [{ data: { estado: ESTADOS_JORNADA.EN_CURSO }, error: null }],
+    });
+
+    expect(await puedeRegistrarConsulta("jornada-1")).toEqual({
+      puede: true,
+      motivo: "",
+      error: null,
+    });
+  });
+
+  it("delega el motivo en la regla pura, no lo reescribe", async () => {
+    // Si este archivo tuviera su propia copia del texto, web y movil dirian cosas distintas
+    // segun por donde entraran.
+    for (const estado of [
+      ESTADOS_JORNADA.PLANIFICADA,
+      ESTADOS_JORNADA.FINALIZADA,
+      ESTADOS_JORNADA.CANCELADA,
+    ]) {
+      dobles.cliente = crearCliente({ jornadas: [{ data: { estado }, error: null }] });
+
+      const resultado = await puedeRegistrarConsulta("jornada-1");
+
+      expect(resultado.puede).toBe(false);
+      expect(resultado.error).toBeNull();
+      expect(resultado.motivo).toBe(puedeRegistrarEnJornada(estado).motivo);
+    }
+  });
+
+  it("una jornada que no existe -o que RLS esconde- bloquea sin lanzar", async () => {
+    dobles.cliente = crearCliente({ jornadas: [{ data: null, error: null }] });
+
+    const { puede, motivo, error } = await puedeRegistrarConsulta("jornada-fantasma");
+
+    expect(puede).toBe(false);
+    expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.SIN_RESULTADOS);
+    expect(motivo).toBe(error.mensaje);
+  });
+
+  it("sin id no consulta al servidor", async () => {
+    // dobles.cliente en null hace reventar el mock si alguien llega a obtenerSupabase().
+    dobles.cliente = null;
+
+    const { puede, error } = await puedeRegistrarConsulta("");
+
+    expect(puede).toBe(false);
+    expect(error).toBeNull();
+  });
+
+  it("un fallo del servidor bloquea y el motivo es el del error normalizado", async () => {
+    dobles.cliente = crearCliente({
+      jornadas: [{ data: null, error: { message: "network error" } }],
+    });
+
+    const { puede, motivo, error } = await puedeRegistrarConsulta("jornada-1");
+
+    expect(puede).toBe(false);
+    expect(error).not.toBeNull();
+    expect(motivo).toBe(error.mensaje);
   });
 });
