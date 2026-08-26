@@ -11,9 +11,15 @@
 //
 // api.js (issue #113) y validaciones.js (issue #112) ya estan. permisos.js y los hooks de
 // pantalla los construyen sus propias issues.
+//
+// El triaje va en archivos propios -- triaje.api.js y triaje.validaciones.js (issue #117) --
+// porque es otra entidad dentro del mismo modulo, con su propia tabla. Mismo patron de nombres
+// que donaciones/ usa con proyectos.api.js y avance.api.js.
 
 export * from './campos.js';
 export * from './filtros.js';
 export * from './columnas.js';
 export * from "./validaciones.js";
 export * from "./api.js";
+export * from "./triaje.validaciones.js";
+export * from "./triaje.api.js";
