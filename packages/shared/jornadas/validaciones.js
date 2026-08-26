@@ -93,6 +93,55 @@ export function validarCambioDeEstadoJornada(estadoActual, estadoNuevo, rol) {
 }
 
 /**
+ * Motivo por el que una jornada no admite registro, indexado por estado.
+ *
+ * Cada mensaje dice el estado en el que esta la jornada y que hacer para continuar, que es lo
+ * que pide el criterio de aceptacion 2 de la issue #172: un "no se puede" a secas deja a quien
+ * esta en campo sin saber si tiene que esperar, avisarle a alguien o cambiarse de jornada.
+ *
+ * `en curso` no aparece: es el unico estado que si admite registro.
+ */
+const MOTIVO_POR_ESTADO = Object.freeze({
+  [ESTADOS_JORNADA.PLANIFICADA]:
+    "La jornada todavia esta planificada. Pedile a quien la coordina que la inicie para poder registrar.",
+  [ESTADOS_JORNADA.FINALIZADA]:
+    "La jornada ya esta finalizada. Solo un administrador puede reabrirla para seguir registrando.",
+  [ESTADOS_JORNADA.CANCELADA]:
+    "La jornada esta cancelada y no admite registros. Registra la atencion en la jornada que corresponda.",
+});
+
+/**
+ * Indica si una jornada admite registrar atenciones y consultas, y por que no cuando no.
+ *
+ * Es un ESPEJO del trigger de base, no la garantia: `validar_jornada_en_curso()` (migracion
+ * 00018) protege `consultas` y `validar_jornada_en_curso_atenciones()` (migracion 00055)
+ * protege `atenciones`. Esta funcion sirve para deshabilitar el formulario y explicar el
+ * motivo antes de gastar una llamada que el servidor va a rechazar igual. Mismo criterio que
+ * TRANSICIONES_JORNADA con su propio trigger.
+ *
+ * Recibe el estado y no un id a proposito: una pantalla que ya cargo la jornada no tiene por
+ * que volver a consultarla. Cuando solo se tiene el id, la envoltura es
+ * puedeRegistrarConsulta() en api.js.
+ *
+ * Un estado desconocido -o ausente- se trata como que NO admite registro. Es lo unico seguro:
+ * si el enum crece y este archivo no se entera, la respuesta segura es bloquear en el cliente
+ * y dejar que el servidor tenga la ultima palabra, no al reves.
+ *
+ * @param {string} estado Uno de ESTADOS_JORNADA.
+ * @returns {{ puede: boolean, motivo: string }} `motivo` es cadena vacia cuando `puede` es true.
+ */
+export function puedeRegistrarEnJornada(estado) {
+  if (estado === ESTADOS_JORNADA.EN_CURSO) return { puede: true, motivo: "" };
+
+  return {
+    puede: false,
+    motivo:
+      MOTIVO_POR_ESTADO[estado] ??
+      "No se pudo confirmar que la jornada este en curso, asi que no se puede registrar todavia.",
+  };
+}
+
+/**
  * Valida los datos de una jornada.
  *
  * Lo que el descriptor puede expresar -obligatorio, longitud maxima- se aplica desde

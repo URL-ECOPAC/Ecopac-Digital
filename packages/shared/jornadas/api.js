@@ -28,7 +28,11 @@ import {
 } from "../api/errores-de-supabase.js";
 import { esAdministrador } from "../usuarios/roles.js";
 import { ESTADOS_JORNADA } from "./permisos.js";
-import { advertirChoqueDeHorario, validarCambioDeEstadoJornada } from "./validaciones.js";
+import {
+  advertirChoqueDeHorario,
+  puedeRegistrarEnJornada,
+  validarCambioDeEstadoJornada,
+} from "./validaciones.js";
 
 // Las columnas se enumeran en lugar de pedir "*" para que una columna nueva en jornadas no
 // empiece a viajar sola hasta el cliente.
@@ -587,5 +591,65 @@ export async function contarAtencionesIncompletas(jornadaId) {
     return { cantidad: data ?? 0, error: null };
   } catch (error) {
     return { cantidad: 0, error: normalizarError(error) };
+  }
+}
+
+
+/**
+ * Indica si se puede registrar una atencion o una consulta en una jornada, y por que no.
+ *
+ * Es la envoltura de puedeRegistrarEnJornada() (validaciones.js) para cuando solo se tiene el
+ * id: lee el estado y delega la decision. La regla vive alla, no aqui, porque este archivo es
+ * el de las consultas y no el de las reglas de negocio.
+ *
+ * Solo pide la columna `estado`, no obtenerJornada() completa: se llama antes de cada registro
+ * y no hay razon para traer el personal asignado y los contadores de vista_reporte_impacto para
+ * leer un campo. Mismo criterio que actualizarJornada() y cambiarEstadoJornada().
+ *
+ * **No es la garantia.** Los triggers `validar_jornada_en_curso()` sobre `consultas` (migracion
+ * 00018) y `validar_jornada_en_curso_atenciones()` sobre `atenciones` (migracion 00055) son
+ * quienes de verdad lo impiden. Esta funcion existe para poder deshabilitar el formulario y
+ * explicar el motivo, en vez de dejar que la persona llene todo y reciba un error del servidor.
+ *
+ * Una jornada que no existe -o que RLS no deja ver- devuelve `puede: false` con el mismo error
+ * SIN_RESULTADOS que usa cambiarEstadoJornada(), no una excepcion: quien llama es una pantalla.
+ *
+ * @param {string} jornadaId UUID de la jornada.
+ * @returns {Promise<{ puede: boolean, motivo: string, error: object|null }>}
+ */
+export async function puedeRegistrarConsulta(jornadaId) {
+  if (!jornadaId) {
+    return {
+      puede: false,
+      motivo: "No hay una jornada seleccionada.",
+      error: null,
+    };
+  }
+
+  try {
+    const { data, error } = await obtenerSupabase()
+      .from("jornadas")
+      .select("estado")
+      .eq("id", jornadaId)
+      .maybeSingle();
+
+    if (error) {
+      const normalizado = normalizarError(error);
+      return { puede: false, motivo: normalizado.mensaje, error: normalizado };
+    }
+
+    if (!data) {
+      const noEncontrada = construirError(
+        CODIGOS_DE_ERROR_DE_SUPABASE.SIN_RESULTADOS,
+        "jornada no encontrada",
+      );
+      return { puede: false, motivo: noEncontrada.mensaje, error: noEncontrada };
+    }
+
+    const { puede, motivo } = puedeRegistrarEnJornada(data.estado);
+    return { puede, motivo, error: null };
+  } catch (error) {
+    const normalizado = normalizarError(error);
+    return { puede: false, motivo: normalizado.mensaje, error: normalizado };
   }
 }
