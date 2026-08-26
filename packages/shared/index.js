@@ -44,3 +44,6 @@ export * from './hooks/usePermisos';
 // sesion si la cuenta esta desactivada. Unificar las dos implementaciones es trabajo aparte.
 export { iniciarSesion, cerrarSesion } from './api/sesion.js';
 export { obtenerPerfil } from './usuarios/api.js';
+
+export * from "./inventario/index.js";
+export * from "./donaciones/index.js";

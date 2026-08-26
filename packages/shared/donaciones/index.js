@@ -25,5 +25,3 @@ export * from "./avance.api.js";
 // types/donaciones.ts que este archivo reemplaza.
 export * from "./validaciones.js";
 export * from "./donantes.api.js";
-export * from "./inventario/index.js";
-export * from "./donaciones/index.js";
