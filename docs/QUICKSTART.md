@@ -187,3 +187,16 @@ Detalles en [CONTRIBUTING.md](./CONTRIBUTING.md).
 - [README.md](../README.md) - overview del proyecto
 - [CONTRIBUTING.md](./CONTRIBUTING.md) - flujo de trabajo completo
 - [AGENTS.md](../AGENTS.md) - contexto del repositorio para asistentes de IA
+
+
+## Aprovisionamiento del Primer Administrador (#111)
+
+Debido a las políticas de seguridad **Row Level Security (RLS)** activas en Supabase, las tablas del sistema restringen la escritura a usuarios autenticados con rol `administrador`. 
+
+### Entorno de Desarrollo (Local y Supabase Dev)
+
+Al iniciar un proyecto desde una base de datos vacía, ejecuta el script de *seed* que crea al administrador inicial con las credenciales demo:
+
+1. Levanta los servicios locales de Supabase o aplica las migraciones:
+   ```bash
+   npx supabase db reset
