@@ -17,3 +17,4 @@
 // no salia por el barril, asi que ninguna de las dos apps podia importarlo.
 export * from "./api.js";
 export * from "./inventario.api.js";
+export * from "./pacientes.api.js";
