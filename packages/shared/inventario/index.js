@@ -10,10 +10,10 @@
 //   use<Pantalla>.js view model de una pantalla: datos, estado y handlers
 //
 // campos.js, columnas.js y filtros.js estan escritos (issue #285). api.js y permisos.js de
-// principios activos tambien (issue "API del catalogo de principios activos"), y los de
-// medicamentos igual (issue #142). El resto de inventario (lotes, movimientos...), las
-// validaciones de principios activos y medicamentos, y los hooks de pantalla los construyen
-// sus propias issues.
+// principios activos tambien (issue "API del catalogo de principios activos"), los de
+// medicamentos igual (issue #142), y los de lotes tambien (issue "API de lotes de medicamentos
+// en shared", RF-14). El resto de inventario (movimientos...), las validaciones de principios
+// activos, medicamentos y lotes, y los hooks de pantalla los construyen sus propias issues.
 
 export * from './campos.js';
 export * from './columnas.js';
@@ -22,3 +22,5 @@ export * from './principios-activos.api.js';
 export * from './principios-activos.permisos.js';
 export * from './medicamentos.api.js';
 export * from './medicamentos.permisos.js';
+export * from './lotes.api.js';
+export * from './lotes.permisos.js';
