@@ -120,6 +120,127 @@ jobs:
           echo "## Guarda de migraciones desactivada" >> "$GITHUB_STEP_SUMMARY"
           echo "Este PR lleva la etiqueta \`migracion-editada-a-proposito\`, asi que se permitio editar migraciones existentes." >> "$GITHUB_STEP_SUMMARY"
 
+      # Un numero de migracion duplicado no es un problema de orden: en
+      # supabase_migrations.schema_migrations la columna `version` es el prefijo numerico solo y
+      # es clave primaria, asi que el despliegue aborta con SQLSTATE 23505 al llegar al segundo
+      # archivo y no aplica ni esa migracion ni las siguientes (issue #411).
+      #
+      # Corre en pull_request y en push. La comparacion de la regla 2 es contra el TIP de la rama
+      # base, no contra el merge-base: por eso una reejecucion caza el caso de dos PR abiertos a la
+      # vez que reservaron el mismo numero, aunque cada uno por separado estuviera en verde.
+      - name: Verificar la numeracion de las migraciones
+        run: |
+          MIGRACIONES=supabase/migrations
+
+          archivos="$(find "$MIGRACIONES" -maxdepth 1 -name '*.sql' -printf '%f\n' 2>/dev/null | sort)"
+          if [ -z "$archivos" ]; then
+            echo "No hay migraciones que comprobar."
+            exit 0
+          fi
+
+          problemas=""
+
+          # Regla 0: el patron. Va primero porque las otras dos leen el prefijo de estos nombres; un
+          # archivo fuera de patron las haria comparar basura y pasar en verde sin comprobar nada.
+          fuera="$(echo "$archivos" | grep -Ev '^[0-9]{5}_[a-z0-9_]+\.sql$' || true)"
+          if [ -n "$fuera" ]; then
+            problemas="$problemas
+          ### Nombres fuera de patron
+
+          El nombre tiene que ser \`NNNNN_descripcion_en_snake_case.sql\`, con cinco digitos:
+
+          \`\`\`
+          $fuera
+          \`\`\`
+          "
+          fi
+
+          # Regla 1: ningun prefijo repetido en el arbol resultante. Corre sobre el arbol y no sobre el
+          # diff a proposito: el choque lo produce la suma de dos PR que por separado son correctos.
+          repetidos="$(echo "$archivos" | cut -d_ -f1 | sort | uniq -d)"
+          if [ -n "$repetidos" ]; then
+            detalle=""
+            for numero in $repetidos; do
+              detalle="$detalle$numero lo usan:
+          $(echo "$archivos" | grep "^${numero}_" | sed 's/^/  /')
+          "
+            done
+            problemas="$problemas
+          ### Numeros de migracion repetidos
+
+          \`\`\`
+          $detalle\`\`\`
+
+          En \`supabase_migrations.schema_migrations\` la columna \`version\` es **el prefijo numerico solo**
+          y es **clave primaria**. Dos archivos con el mismo prefijo no se aplican en mal orden: el
+          despliegue falla al llegar al segundo con
+          \`duplicate key value violates unique constraint \"schema_migrations_pkey\" (SQLSTATE 23505)\`,
+          y ni esa migracion ni las que vengan despues se aplican.
+          "
+          fi
+
+          # Regla 2: ninguna migracion nueva por debajo o igual a la ultima de la rama base. Solo tiene
+          # sentido en un PR: despues del merge ya no hay rama base contra la que comparar.
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+            git fetch --no-tags --quiet origin "$GITHUB_BASE_REF"
+            base_merge="$(git merge-base "origin/$GITHUB_BASE_REF" HEAD)"
+            nuevas="$(git diff --name-only --diff-filter=A "$base_merge" HEAD -- "$MIGRACIONES" | xargs -r -n1 basename)"
+            ultima_base="$(git ls-tree --name-only "origin/$GITHUB_BASE_REF" "$MIGRACIONES/" | xargs -r -n1 basename | cut -d_ -f1 | sort | tail -1)"
+
+            bajas=""
+            for archivo in $nuevas; do
+              numero="${archivo%%_*}"
+              if [ -n "$ultima_base" ] && ! [ "$numero" \> "$ultima_base" ]; then
+                bajas="$bajas  $archivo ($numero) no supera la ultima de $GITHUB_BASE_REF ($ultima_base)
+          "
+              fi
+            done
+
+            if [ -n "$bajas" ]; then
+              problemas="$problemas
+          ### Numeros por debajo de la ultima de \`$GITHUB_BASE_REF\`
+
+          \`\`\`
+          $bajas\`\`\`
+
+          \`supabase db push\` se niega a aplicar una migracion anterior a la ultima que ya registro la base:
+          aborta con \`Found local migration files to be inserted before the last migration on remote
+          database\`. La salida es renumerar por encima, no pasar \`--include-all\`.
+          "
+            fi
+          fi
+
+          if [ -z "$problemas" ]; then
+            echo "Numeracion correcta en $(echo "$archivos" | wc -l) migraciones."
+            exit 0
+          fi
+
+          # El proximo numero libre sale solo de los nombres que casan el patron: el "prefijo" de un
+          # archivo fuera de patron no es un numero y la aritmetica reventaria.
+          validos="$(echo "$archivos" | grep -E '^[0-9]{5}_' || true)"
+          if [ -n "$validos" ]; then
+            libre="$(printf '%05d' "$(( 10#$(echo "$validos" | cut -d_ -f1 | sort | tail -1) + 1 ))")"
+            pista=" El proximo numero libre es $libre."
+          else
+            libre=""
+            pista=""
+          fi
+
+          echo "::error::Hay un problema con la numeracion de las migraciones.$pista"
+          printf '%s\n' "$problemas"
+
+          {
+            echo "## Numeracion de migraciones"
+            printf '%s\n' "$problemas"
+            echo "**Que hacer:** renumerar con \`git mv\` la migracion mas nueva, la que agrega este PR."
+            [ -n "$libre" ] && echo "El proximo numero libre es \`$libre\`."
+            echo "Renumerar un archivo que todavia no se aplico en ninguna base no tiene coste. El numero se"
+            echo "elige al abrir la rama y **se vuelve a verificar antes de mergear**, porque otra rama pudo"
+            echo "tomarlo mientras tanto. Ver \`docs/CI-CD.md\`."
+          } >> "${GITHUB_STEP_SUMMARY:-/dev/null}"
+
+          exit 1
+
   # --------------------------------------------------------------------------------
   validar:
     name: Validar migraciones y funciones

@@ -33,15 +33,15 @@ Settings > Branches, y mientras tanto un PR con pruebas en rojo se podria mergea
 Siete jobs. Los tres primeros validan, los siguientes despliegan y avisan, y el ultimo
 resume el resultado de todos.
 
-| Job                                 | Cuando                   | Que hace                                                                                                     |
-| ----------------------------------- | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
-| Detectar cambios                    | siempre                  | Averigua si el cambio toca `supabase/`, para no levantar el stack local sin necesidad                        |
-| **Migraciones no editadas**         | PR                       | Falla si el PR modifica o borra una migracion que ya existe en la rama base                                  |
-| **Validar migraciones y funciones** | PR y push                | Levanta el stack local, aplica todas las migraciones desde cero, corre `db lint` y el lint de Edge Functions |
-| Estado de la base remota            | PR                       | Lista que migraciones estan aplicadas en `Ecopac-Digital-Dev` y cuales se aplicarian al mergear              |
-| Aplicar migraciones                 | push a develop o main    | `supabase db push` contra el proyecto del ambiente. Depende de que los dos jobs en negrita hayan pasado      |
-| Avisar fallo                        | si algo fallo en un push | Abre una issue con el paso que fallo y **si las migraciones se aplicaron o no**                              |
-| Supabase completo                   | siempre                  | Mira el resultado de los cuatro jobs de validacion y falla si alguno termino en `failure` o `cancelled`      |
+| Job                                 | Cuando                   | Que hace                                                                                                                                  |
+| ----------------------------------- | ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| Detectar cambios                    | siempre                  | Averigua si el cambio toca `supabase/`, para no levantar el stack local sin necesidad                                                     |
+| **Migraciones no editadas**         | PR y push                | Falla si el PR modifica o borra una migracion que ya existe en la rama base, y si la numeracion de `supabase/migrations/` tiene un choque |
+| **Validar migraciones y funciones** | PR y push                | Levanta el stack local, aplica todas las migraciones desde cero, corre `db lint` y el lint de Edge Functions                              |
+| Estado de la base remota            | PR                       | Lista que migraciones estan aplicadas en `Ecopac-Digital-Dev` y cuales se aplicarian al mergear                                           |
+| Aplicar migraciones                 | push a develop o main    | `supabase db push` contra el proyecto del ambiente. Depende de que los dos jobs en negrita hayan pasado                                   |
+| Avisar fallo                        | si algo fallo en un push | Abre una issue con el paso que fallo y **si las migraciones se aplicaron o no**                                                           |
+| Supabase completo                   | siempre                  | Mira el resultado de los cuatro jobs de validacion y falla si alguno termino en `failure` o `cancelled`                                   |
 
 Los jobs en negrita son **checks requeridos** hoy: sin ellos en verde, la rama protegida no
 deja mergear. **Supabase completo** esta pensado para reemplazarlos a los dos, pero eso se
@@ -130,6 +130,61 @@ mismo PR. Ahi la guarda ya la deja pasar, porque contra la rama base figura como
 Si aun asi hace falta saltarse la guarda, se agrega la etiqueta
 `migracion-editada-a-proposito` al PR. Queda registrado en la corrida que se salto y por que.
 
+## La otra regla: el numero se elige dos veces
+
+El nombre de una migracion es `NNNNN_descripcion_en_snake_case.sql`, con cinco digitos y
+numeracion secuencial. Elegir mal el numero rompe el despliegue de dos formas distintas, y las
+dos las comprueba el paso **Verificar la numeracion de las migraciones**.
+
+### Repetir un numero
+
+En `supabase_migrations.schema_migrations`, la columna `version` es **el prefijo numerico solo**
+\-`00065`, sin el nombre, que va en otra columna- y es **clave primaria**. Medido contra una base
+local con dos archivos `00066`:
+
+```
+Applying migration 00066_prueba_dup_a.sql...
+Applying migration 00066_prueba_dup_b.sql...
+ERROR: duplicate key value violates unique constraint "schema_migrations_pkey" (SQLSTATE 23505)
+Key (version)=(00066) already exists.
+```
+
+El primero se aplica y se registra. El segundo ejecuta su SQL, choca al registrarse, y **toda su
+transaccion se revierte**: ni esa migracion ni las que vinieran despues quedan aplicadas, y
+`db push` sale con codigo 1. No es un problema de orden, como podria parecer: es un despliegue
+roto.
+
+Y limpiarlo despues del merge es mas caro de lo que parece, porque renumerar el archivo es
+renombrarlo, y renombrar un archivo que ya existe en la rama base es justo lo que bloquea la
+guarda de inmutabilidad: hace falta la etiqueta `migracion-editada-a-proposito`.
+
+### Usar un numero por debajo del ultimo
+
+`supabase db push` se niega a aplicar una migracion anterior a la ultima que la base ya registro:
+aborta con `Found local migration files to be inserted before the last migration on remote
+database` y exige `--include-all`. **La salida correcta es renumerar por encima con `git mv`,
+nunca pasar `--include-all`**, que aplicaria la migracion fuera de orden en unas bases y no en
+otras.
+
+### Por eso el numero se verifica dos veces
+
+Se elige al abrir la rama y **se vuelve a verificar antes de mergear**, porque otra rama pudo
+tomarlo mientras tanto. La comprobacion compara contra el **tip actual** de la rama base, no
+contra el punto donde nacio la rama, asi que cada vez que el check se reejecuta usa el estado de
+`develop` de ese momento.
+
+Eso deja un unico hueco, y conviene conocerlo: **dos PR abiertos a la vez que reserven el mismo
+numero pasan los dos**, porque cuando cada uno se evaluo el numero todavia estaba libre. Si
+ninguno se reejecuta entre un merge y el otro, el duplicado entra. Tres cosas lo acotan:
+
+1. La comprobacion corre tambien en `push`, asi que `develop` se pone rojo en el momento del
+   merge, y no cuando falle el despliegue.
+2. Cualquier commit nuevo en el segundo PR lo reevalua contra el `develop` ya avanzado, y ahi si
+   lo caza.
+3. Activar `strict` en `develop` (exigir la rama al dia antes de mergear) fuerza esa reevaluacion
+   siempre y cierra el hueco del todo. `main` ya lo tiene activo; `develop` no. Ver
+   "Ramas protegidas".
+
 ### Caso de estudio: la `00061` y la `00062` duplicadas
 
 `00061_agregar_rls_bodegas_y_proveedores.sql` y `00062_agregar_rls_bodegas_y_proveedores.sql`
@@ -153,6 +208,21 @@ De ahi la regla que ya esta en `AGENTS.md` y que conviene recordar con el caso c
 Si de verdad hace falta algo que todavia esta en revision, es mejor esperar el merge que apilar:
 apilar convierte cada PR en una revision de todo lo anterior, y ahi es donde un duplicado pasa
 inadvertido.
+
+### Caso de estudio: la `00031` que no existe
+
+La secuencia tiene huecos en `00014`, `00015`, `00031` y `00043`. No son migraciones borradas:
+esos numeros **nunca existieron**. Son numeros que una rama reservo y tuvo que abandonar porque
+otra mergeo primero. El PR #395 llego a describir su archivo como `00043` en el cuerpo del PR y
+termino mergeando como `00044`.
+
+El hueco en si no hace dano. Lo que quedo es peor: los comentarios de la `00032`, la `00033` y la
+`00034` **citan una `00031` que no existe**, y le atribuyen un `GRANT SELECT ON eventos_auditoria`
+que en realidad esta en la `00032` y la `00038`. Tres migraciones aplicadas documentan mal el
+esquema, y como no se pueden editar, ese error es permanente.
+
+Es el argumento de por que la guarda de numeracion existe: el numero equivocado no solo rompe un
+despliegue, tambien deja referencias cruzadas que ya no se pueden arreglar.
 
 ## Que hacer cuando falla el despliegue
 
@@ -308,6 +378,11 @@ por eso conviene tener escrito cual es el estado y cual deberia ser.
    un check que no aparecio, que es exactamente como se cuela una migracion sin desplegar. Es un
    cambio de politica del equipo, no una decision tecnica: conviene acordarlo antes de activarlo,
    porque tambien quita la salida de emergencia para desbloquear un PR atascado.
+
+3. **Activar `strict` en `develop`** (exigir la rama al dia antes de mergear). `main` ya lo tiene.
+   Es lo unico que cierra del todo el hueco de dos PR que reservan el mismo numero de migracion,
+   porque obliga a reevaluar el PR contra el `develop` ya avanzado. El coste es que hay que
+   actualizar la rama antes de mergear cuando develop avanzo.
 
 Cuidado con el orden al hacer el cambio 1: **agregar `Supabase completo` primero, comprobar en un
 PR que aparece, y solo entonces quitar los otros dos.** Si se agrega un check que todavia no
