@@ -2,20 +2,14 @@
 ALTER TABLE bodegas ENABLE ROW LEVEL SECURITY;
 ALTER TABLE proveedores ENABLE ROW LEVEL SECURITY;
 
--- Política para Bodegas
+-- Políticas para la tabla 'bodegas'
+CREATE POLICY "Lectura de bodegas para usuarios autenticados"
+  ON bodegas FOR SELECT
+  TO authenticated
+  USING (true);
+
 CREATE POLICY "Solo Administrador puede modificar bodegas"
   ON bodegas FOR ALL
-  TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1 FROM public.perfiles
-      WHERE perfiles.id = auth.uid() AND perfiles.rol = 'administrador'
-    )
-  );
-
--- Política para Proveedores
-CREATE POLICY "Solo Administrador puede modificar proveedores"
-  ON proveedores FOR ALL
   TO authenticated
   USING (
     EXISTS (
@@ -35,7 +29,7 @@ CREATE POLICY "Solo Administrador puede modificar proveedores"
   TO authenticated
   USING (
     EXISTS (
-      SELECT 1 FROM public.usuarios
-      WHERE usuarios.id = auth.uid() AND usuarios.rol = 'administrador'
+      SELECT 1 FROM public.perfiles
+      WHERE perfiles.id = auth.uid() AND perfiles.rol = 'administrador'
     )
   );
