@@ -1,0 +1,230 @@
+name: Verificar despliegue
+
+# Comprueba que la base de cada ambiente tenga aplicadas todas las migraciones del repositorio,
+# y abre una issue si alguna quedo atras (issue #457).
+#
+# POR QUE ESTO NO PUEDE VIVIR EN EL WORKFLOW DE SUPABASE
+#
+# El 26 de agosto, en el merge del PR #447 a develop (commit 864d3e5), GitHub Actions **nunca
+# creo la corrida del workflow de Supabase**. Solo hay check-runs de "Lint y build". Como
+# consecuencia, "Aplicar migraciones" no corrio y la 00062 no se desplego.
+#
+# Y el aviso tampoco llego: el job "Avisar fallo" vive DENTRO de ese mismo workflow, asi que si
+# el workflow no se crea, no hay quien avise. **Un workflow no puede avisar de que el mismo no
+# existio.**
+#
+# Por eso esta comprobacion corre por su cuenta, en otro workflow y con otro disparador. No
+# depende de que la corrida del despliegue haya existido: mira el resultado -- que la base este
+# al dia -- en vez del proceso.
+#
+# Si en algun momento el equipo activa checks requeridos que impidan mergear sin corrida, esto
+# sigue haciendo falta igual: el push a develop ocurre DESPUES del merge, y ahi ya no hay
+# ninguna compuerta.
+
+on:
+  schedule:
+    - cron: "0 13 * * *" # todos los dias, 13:00 UTC (07:00 en Guatemala)
+  workflow_dispatch: # para comprobarlo a mano despues de un incidente
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  verificar:
+    name: Migraciones pendientes en los ambientes
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - ambiente: Ecopac-Digital-Dev
+            rama: develop
+            secret: SUPABASE_PROJECT_REF_DEV
+          - ambiente: Ecopac-Digital-Prod
+            rama: main
+            secret: SUPABASE_PROJECT_REF_PROD
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      PROYECTO: ${{ secrets[matrix.secret] }}
+    steps:
+      - name: Descargar el codigo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ matrix.rama }}
+
+      - name: Verificar secrets
+        id: check
+        run: |
+          # `if` y no `[ ... ] && faltan=...`: Actions corre estos scripts con `set -e`, y una
+          # lista `&&` cuyo test da falso devuelve 1. Con la forma corta, la comprobacion que
+          # quedara de ultima haria fallar el paso justo cuando todos los secrets estan puestos.
+          faltan=""
+          if [ -z "$SUPABASE_ACCESS_TOKEN" ]; then faltan="$faltan SUPABASE_ACCESS_TOKEN"; fi
+          if [ -z "$SUPABASE_DB_PASSWORD" ]; then faltan="$faltan SUPABASE_DB_PASSWORD"; fi
+          if [ -z "$PROYECTO" ]; then faltan="$faltan ${{ matrix.secret }}"; fi
+
+          # Mismo criterio que el resto de los workflows: sin secrets se avisa de forma visible
+          # pero no se falla, para no llenar el tablero de rojo mientras se termina de
+          # configurar un ambiente. Lo que no puede pasar es que se vea igual que una
+          # comprobacion exitosa.
+          if [ -n "$faltan" ]; then
+            echo "listo=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::No se pudo comprobar ${{ matrix.ambiente }}; faltan los secrets:$faltan"
+            {
+              echo "## ${{ matrix.ambiente }}: no se pudo comprobar"
+              echo
+              echo "Faltan estos secrets:"
+              for s in $faltan; do echo "- \`$s\`"; done
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "listo=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Version fija y no `latest`, por la issue #422: setup-cli resuelve `latest` contra la API
+      # de releases sin autenticar y se topa con el rate limit. Al subirla, cambiarla tambien en
+      # los tres pasos de supabase.yml.
+      - name: Instalar Supabase CLI
+        if: steps.check.outputs.listo == 'true'
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.115.0
+
+      - name: Vincular con ${{ matrix.ambiente }}
+        if: steps.check.outputs.listo == 'true'
+        run: supabase link --project-ref "$PROYECTO" -p "$SUPABASE_DB_PASSWORD"
+
+      - name: Comprobar si la base esta al dia
+        id: estado
+        if: steps.check.outputs.listo == 'true'
+        run: |
+          # `db push --dry-run` no aplica nada y devuelve JSON:
+          #   {"upToDate": true, "dryRun": true, "migrations": [], ...}
+          # Cuando upToDate es false, `migrations` trae las que faltan por aplicar. Es la forma
+          # legible por maquina de preguntar "¿llego todo lo del repositorio a esta base?".
+          supabase db push --dry-run --linked --output-format json > respuesta.json 2>&1 || true
+
+          # El JSON no es necesariamente la ultima linea: el CLI mezcla en la misma salida sus
+          # avisos ("Connecting to local database...", "A new version of Supabase CLI is
+          # available"). Tomar `splitlines()[-1]` a ciegas lee el aviso de version y reporta
+          # "desconocido" con la base perfectamente al dia. Se busca la linea que de verdad
+          # sea un objeto JSON con la clave `upToDate`.
+          python3 - <<'PY' > estado.env
+          import json
+
+          respuesta = None
+          for linea in open("respuesta.json", encoding="utf-8", errors="replace"):
+              linea = linea.strip()
+              if not linea.startswith("{"):
+                  continue
+              try:
+                  candidato = json.loads(linea)
+              except ValueError:
+                  continue
+              if isinstance(candidato, dict) and "upToDate" in candidato:
+                  respuesta = candidato
+
+          if respuesta is None:
+              print("al_dia=desconocido")
+              print("pendientes=")
+          else:
+              print("al_dia=" + ("true" if respuesta.get("upToDate") else "false"))
+              print("pendientes=" + " ".join(respuesta.get("migrations") or []))
+          PY
+
+          cat estado.env >> "$GITHUB_OUTPUT"
+          al_dia="$(sed -n 's/^al_dia=//p' estado.env)"
+          pendientes="$(sed -n 's/^pendientes=//p' estado.env)"
+
+          {
+            echo "## ${{ matrix.ambiente }}"
+            echo
+            if [ "$al_dia" = "true" ]; then
+              echo "Al dia: no hay migraciones pendientes."
+            elif [ "$al_dia" = "false" ]; then
+              echo "**Hay migraciones sin aplicar:** \`$pendientes\`"
+            else
+              echo "**No se pudo determinar el estado.** Salida del CLI:"
+              echo '```'
+              cat respuesta.json
+              echo '```'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          # Si no se pudo determinar el estado, el paso falla a proposito. Sin esto, un proyecto
+          # pausado o unas credenciales vencidas dejarian la corrida en verde sin haber
+          # comprobado nada, que es exactamente el fallo silencioso que este workflow existe
+          # para evitar. Sin secrets si se termina en verde, pero eso se decide antes y se avisa.
+          if [ "$al_dia" = "desconocido" ]; then
+            echo "::error::No se pudo comprobar ${{ matrix.ambiente }}; revisar la salida del CLI."
+            exit 1
+          fi
+
+      - name: Abrir issue si la base quedo atras
+        if: steps.check.outputs.listo == 'true' && steps.estado.outputs.al_dia == 'false'
+        uses: actions/github-script@v7
+        env:
+          AMBIENTE: ${{ matrix.ambiente }}
+          RAMA: ${{ matrix.rama }}
+          PENDIENTES: ${{ steps.estado.outputs.pendientes }}
+        with:
+          script: |
+            const ambiente = process.env.AMBIENTE;
+            const rama = process.env.RAMA;
+            const pendientes = (process.env.PENDIENTES || '').split(' ').filter(Boolean);
+            const titulo = `[BUG] ${ambiente} tiene migraciones sin aplicar`;
+            const corrida = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+
+            // Misma deduplicacion que el job "Avisar fallo" de supabase.yml: esta comprobacion
+            // corre todos los dias, y sin esto abriria una issue por dia hasta que alguien la
+            // atienda.
+            const abiertas = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'type:bug,module:infra',
+            });
+
+            if (abiertas.data.some((i) => i.title === titulo)) {
+              core.notice(`Ya hay una issue abierta para ${ambiente}; no se duplica.`);
+              return;
+            }
+
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: titulo,
+              labels: ['type:bug', 'module:infra', 'priority:alta', 'platform:shared'],
+              body: [
+                '### Que paso',
+                '',
+                `La comprobacion diaria encontro que \`${ambiente}\` no tiene aplicadas todas las`,
+                `migraciones que hay en la rama \`${rama}\`.`,
+                '',
+                '### Migraciones pendientes',
+                '',
+                ...pendientes.map((m) => `- \`${m}\``),
+                '',
+                `Comprobacion: ${corrida}`,
+                '',
+                '### Por que puede haber pasado',
+                '',
+                'La causa mas comun no es un error de SQL, sino que **la corrida del despliegue',
+                'nunca se creo**: si GitHub Actions no despacha el workflow de Supabase para el',
+                'push del merge, `Aplicar migraciones` no corre y nadie se entera, porque el job',
+                'que avisa vive en ese mismo workflow. Fue lo que ocurrio el 26 de agosto con el',
+                'commit `864d3e5` (issue #457).',
+                '',
+                '### Que hacer',
+                '',
+                '- [ ] Buscar el commit de merge que introdujo la primera migracion pendiente y',
+                '      mirar si tiene corrida del workflow de Supabase',
+                '- [ ] Si no la tiene, relanzarla con `gh workflow run` o con un push vacio',
+                '- [ ] Si la tiene y fallo, seguir `docs/CI-CD.md` > "Que hacer cuando falla el despliegue"',
+                '- [ ] Confirmar con `supabase migration list --linked` que la base quedo al dia',
+                '',
+                '_Issue abierta automaticamente por el workflow "Verificar despliegue"._',
+              ].join('\n'),
+            });

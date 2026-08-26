@@ -468,3 +468,62 @@ jobs:
                 '_Issue abierta automaticamente por el workflow de Supabase._',
               ].join('\n'),
             });
+
+  # --------------------------------------------------------------------------------
+  completo:
+    name: Supabase completo
+    needs: [cambios, inmutabilidad, validar, remoto]
+    # `always()` es imprescindible: sin el, este job se saltaria en cuanto uno de los `needs`
+    # fallara, y un check que se salta cuenta como aprobado para la proteccion de rama. Seria
+    # justo lo contrario de lo que se busca.
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      # POR QUE EXISTE ESTE JOB
+      #
+      # 1. Para la proteccion de rama, un check requerido que termina en `skipped` cuenta como
+      #    aprobado. `remoto` se salta en los push (solo corre en pull_request) y `validar`
+      #    puede saltarse cuando no hay cambios en supabase/. Marcarlos como requeridos uno por
+      #    uno da una sensacion de cobertura que no es real. Aqui se mira el resultado de cada
+      #    job y se decide a mano.
+      #
+      # 2. Reduce la lista de checks requeridos a un nombre por workflow. Cinco nombres hay que
+      #    mantenerlos sincronizados con el YAML cada vez que se renombra o se agrega un job;
+      #    uno solo, no. Renombrar un job de aqui adentro ya no rompe la configuracion.
+      #
+      # `skipped` se acepta a proposito: es el resultado legitimo de un job que no aplicaba a
+      # este evento. Lo que no se acepta es `failure` ni `cancelled`.
+      - name: Revisar el resultado de cada job
+        env:
+          CAMBIOS: ${{ needs.cambios.result }}
+          INMUTABILIDAD: ${{ needs.inmutabilidad.result }}
+          VALIDAR: ${{ needs.validar.result }}
+          REMOTO: ${{ needs.remoto.result }}
+        run: |
+          fallidos=""
+          for job in "Detectar cambios:$CAMBIOS" \
+                     "Migraciones no editadas:$INMUTABILIDAD" \
+                     "Validar migraciones y funciones:$VALIDAR" \
+                     "Estado de la base remota:$REMOTO"; do
+            nombre="${job%:*}"
+            resultado="${job##*:}"
+            case "$resultado" in
+              success | skipped) echo "OK       $nombre ($resultado)" ;;
+              *)
+                echo "FALLO    $nombre ($resultado)"
+                fallidos="$fallidos\n- $nombre: \`$resultado\`"
+                ;;
+            esac
+          done
+
+          if [ -n "$fallidos" ]; then
+            {
+              echo "## Supabase completo: fallo"
+              echo
+              echo "Estos jobs no terminaron bien:"
+              printf "%b\n" "$fallidos"
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+
+          echo "## Supabase completo: todo en orden" >> "$GITHUB_STEP_SUMMARY"
