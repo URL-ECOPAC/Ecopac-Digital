@@ -35,3 +35,4 @@ export * from './bodegas.api.js';
 export * from './proveedores.api.js';
 export * from './bodegas.permisos.js';
 export * from "./movimientos.api.js";
+export * from "./validacion.api.js";
