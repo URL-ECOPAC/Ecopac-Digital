@@ -34,10 +34,22 @@ export const OPCIONES_PRESENTACION = [
   { valor: 'gotas otic', etiqueta: 'Gotas oticas' },
 ];
 
-/** Valores de tipo_proveedor (00017_proveedores_bodegas.sql). */
+/**
+ * Valores de tipo_proveedor (00017_proveedores_bodegas.sql).
+ *
+ * TIPOS_DE_PROVEEDOR es la forma con la que el codigo compara (proveedores.api.js); las opciones
+ * de abajo son la forma con la que se dibuja un select. Los dos nacen aqui y en ningun otro sitio:
+ * un nombre que el barril reciba desde dos archivos queda ambiguo y ESM lo excluye del namespace
+ * (issue #365).
+ */
+export const TIPOS_DE_PROVEEDOR = {
+  COMERCIAL: 'comercial',
+  DONANTE: 'donante',
+};
+
 export const OPCIONES_TIPO_PROVEEDOR = [
-  { valor: 'comercial', etiqueta: 'Comercial' },
-  { valor: 'donante', etiqueta: 'Donante' },
+  { valor: TIPOS_DE_PROVEEDOR.COMERCIAL, etiqueta: 'Comercial' },
+  { valor: TIPOS_DE_PROVEEDOR.DONANTE, etiqueta: 'Donante' },
 ];
 
 /** Valores de origen_lote (00020_lotes_existencias.sql). */
