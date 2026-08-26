@@ -138,11 +138,19 @@ jobs:
       # sirve para hablar con proyectos remotos. Antes la validacion entera estaba
       # condicionada a el, asi que rotar el secret la apagaba en silencio dejando el
       # workflow en verde.
+      # La version va FIJA y no `latest` a proposito (issue #422). Con `latest`, setup-cli
+      # resuelve el numero consultando la API de releases de GitHub SIN autenticar, y los
+      # runners comparten esa cuota por IP: el 25 de agosto el despliegue de develop murio con
+      # "Failed to resolve latest Supabase CLI release: rate limit exceeded" antes de aplicar
+      # una sola migracion. Con una version concreta esa llamada no se hace.
+      #
+      # De paso el CI valida con la misma version que tiene instalada el equipo, en vez de con
+      # la que resulte ser la ultima ese dia. Al subirla, cambiarla en los TRES pasos.
       - name: Instalar Supabase CLI
         if: needs.cambios.outputs.supabase == 'true'
         uses: supabase/setup-cli@v1
         with:
-          version: latest
+          version: 2.115.0
 
       - name: Iniciar stack local de Supabase
         if: needs.cambios.outputs.supabase == 'true'
@@ -200,11 +208,12 @@ jobs:
             echo "listo=true" >> "$GITHUB_OUTPUT"
           fi
 
+      # Version fija: ver el comentario del job "Validar migraciones y funciones" (issue #422).
       - name: Instalar Supabase CLI
         if: steps.check.outputs.listo == 'true'
         uses: supabase/setup-cli@v1
         with:
-          version: latest
+          version: 2.115.0
 
       - name: Vincular con ecopac-dev
         if: steps.check.outputs.listo == 'true'
@@ -249,10 +258,12 @@ jobs:
       - name: Descargar el codigo
         uses: actions/checkout@v4
 
+      # Version fija: ver el comentario del job "Validar migraciones y funciones" (issue #422).
+      # Este es el paso donde el rate limit tumbo el despliegue del 25 de agosto.
       - name: Instalar Supabase CLI
         uses: supabase/setup-cli@v1
         with:
-          version: latest
+          version: 2.115.0
 
       - name: Determinar ambiente y verificar secrets
         id: check
@@ -319,6 +330,9 @@ jobs:
     permissions:
       contents: read
       issues: write
+      # actions: read permite leer el resultado de cada paso de esta misma corrida, que es lo
+      # que deja decir si las migraciones se aplicaron o no en vez de suponerlo (issue #422).
+      actions: read
     steps:
       # El fallo de un despliegue paso desapercibido cuatro corridas seguidas. Una issue
       # abierta es mas dificil de ignorar que un check rojo en la lista de commits.
@@ -343,6 +357,75 @@ jobs:
               return;
             }
 
+            // Que paso exactamente, leido de la propia corrida en vez de darlo por hecho.
+            //
+            // El texto anterior afirmaba siempre "la base quedo desactualizada" y mandaba a
+            // "ver en que migracion se detuvo". El 25 de agosto las dos cosas eran falsas: el
+            // job murio instalando el CLI y el `db push` ni siquiera llego a ejecutarse, asi
+            // que quien leyera la issue iba a buscar una migracion rota que no existia.
+            let pasosFallidos = [];
+            let estadoDelPush = 'desconocido';
+
+            try {
+              const { data } = await github.rest.actions.listJobsForWorkflowRun({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                run_id: context.runId,
+              });
+
+              for (const job of data.jobs) {
+                for (const paso of job.steps ?? []) {
+                  if (paso.conclusion === 'failure') {
+                    pasosFallidos.push(`${job.name} -> ${paso.name}`);
+                  }
+                  // El paso que de verdad escribe en la base remota. Su nombre coincide con el
+                  // del job, por eso se compara tambien el job.
+                  if (job.name === 'Aplicar migraciones' && paso.name === 'Aplicar migraciones') {
+                    estadoDelPush = paso.conclusion ?? 'desconocido';
+                  }
+                }
+              }
+            } catch (error) {
+              core.warning(`No se pudieron leer los pasos de la corrida: ${error.message}`);
+            }
+
+            // Tres desenlaces distintos, y cada uno se arregla de otra forma.
+            const diagnostico =
+              estadoDelPush === 'failure'
+                ? [
+                    `**La base de \`${rama}\` puede haber quedado a medias.** El paso \`Aplicar migraciones\``,
+                    'empezo a correr y fallo, asi que se detuvo dentro de una migracion.',
+                    '',
+                    '- [ ] Abrir el log de la corrida y ver en que migracion se detuvo',
+                    '- [ ] Confirmar si alguna migracion ya aplicada fue editada (esa es la causa mas comun)',
+                    '- [ ] Corregir hacia adelante con una migracion nueva, sin editar las existentes',
+                    '- [ ] Confirmar con `supabase migration list --linked` que la base quedo al dia',
+                  ]
+                : estadoDelPush === 'skipped'
+                  ? [
+                      `**No se aplico ninguna migracion, y la base de \`${rama}\` no quedo a medias.**`,
+                      'El paso `Aplicar migraciones` no llego a ejecutarse: algo fallo antes.',
+                      '',
+                      'No hay que buscar una migracion rota. Lo que corresponde es mirar el paso que si',
+                      'fallo y volver a lanzar la corrida; el proximo push aplica lo pendiente igual,',
+                      'porque `supabase db push` sube todo lo que falte.',
+                      '',
+                      '- [ ] Ver el paso que fallo, listado arriba',
+                      '- [ ] Relanzar la corrida (Re-run failed jobs) y confirmar que queda en verde',
+                      '- [ ] Confirmar con `supabase migration list --linked` que la base esta al dia',
+                    ]
+                  : [
+                      'No se pudo determinar si las migraciones se aplicaron.',
+                      '',
+                      '- [ ] Abrir el log de la corrida y revisar el job `Aplicar migraciones`',
+                      '- [ ] Confirmar con `supabase migration list --linked` que la base quedo al dia',
+                    ];
+
+            const detalleDeFallos =
+              pasosFallidos.length > 0
+                ? ['### Pasos que fallaron', '', ...pasosFallidos.map((p) => `- \`${p}\``), '']
+                : [];
+
             await github.rest.issues.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -351,18 +434,15 @@ jobs:
               body: [
                 '### Que paso',
                 '',
-                `El workflow de Supabase fallo tras un push a \`${rama}\`, asi que la base de ese`,
-                'ambiente quedo desactualizada respecto del repositorio.',
+                `El workflow de Supabase fallo tras un push a \`${rama}\`.`,
                 '',
                 `Corrida: ${corrida}`,
                 `Commit: ${context.sha}`,
                 '',
-                '### Que revisar',
+                ...detalleDeFallos,
+                '### Estado de la base',
                 '',
-                '- [ ] Abrir el log de la corrida y ver en que migracion se detuvo',
-                '- [ ] Confirmar si alguna migracion ya aplicada fue editada (esa es la causa mas comun)',
-                '- [ ] Corregir hacia adelante con una migracion nueva, sin editar las existentes',
-                '- [ ] Confirmar con `supabase migration list --linked` que la base quedo al dia',
+                ...diagnostico,
                 '',
                 'Ver `docs/CI-CD.md`.',
                 '',
