@@ -34,5 +34,4 @@ export * from './existencias.validaciones.js';
 export * from './bodegas.api.js';
 export * from './proveedores.api.js';
 export * from './bodegas.permisos.js';
-export * from "./validaciones.js";
 export * from "./movimientos.api.js";
