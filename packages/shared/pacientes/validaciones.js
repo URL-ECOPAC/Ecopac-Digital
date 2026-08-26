@@ -4,7 +4,7 @@ import {
   normalizarTexto,
   esTextoVacio,
 } from "../validations/index.js";
-import { CAMPOS_PACIENTE } from "./campos.js";
+import { CAMPOS_PACIENTE, CAMPOS_REGISTRO_PACIENTE } from "./campos.js";
 
 const REGEX_DPI = /^\d{13}$/;
 const EDAD_MAXIMA_ANOS = 120;
@@ -23,17 +23,15 @@ export function normalizarDatosPaciente(datos = {}) {
 }
 
 /**
- * Aplica las reglas de negocio y descriptores para validar un paciente.
- * @param {object} datosObjeto
- * @returns {Record<string, string>} Errores agrupados por campo.
+ * Reglas de negocio sobre fecha de nacimiento y DPI, comunes a cualquier formulario de paciente.
+ * Son independientes del descriptor de campos que decide que es "requerido": validarPaciente()
+ * (CAMPOS_PACIENTE) y validarRegistroPaciente() (CAMPOS_REGISTRO_PACIENTE) las comparten sin
+ * repetirlas.
+ *
+ * @param {object} datos Ya normalizados (normalizarDatosPaciente()).
+ * @returns {Record<string, string>}
  */
-export function validarPaciente(datosObjeto) {
-  const datos = normalizarDatosPaciente(datosObjeto);
-
-  // 1. Validaciones estructurales de descriptores
-  const erroresDescriptores = validarConDescriptores(CAMPOS_PACIENTE, datos);
-
-  // 2. Reglas de negocio específicas
+function erroresDeNegocioPaciente(datos) {
   const erroresNegocio = {};
 
   // Validar Fecha de Nacimiento
@@ -60,6 +58,35 @@ export function validarPaciente(datosObjeto) {
     erroresNegocio.dpi = "El DPI debe contener exactamente 13 dígitos numéricos.";
   }
 
-  // 3. Combinar prioridad de errores
+  return erroresNegocio;
+}
+
+/**
+ * Aplica las reglas de negocio y descriptores para validar un paciente contra CAMPOS_PACIENTE
+ * (issue #112): nombres, apellidos, fecha de nacimiento, DPI y comunidad.
+ * @param {object} datosObjeto
+ * @returns {Record<string, string>} Errores agrupados por campo.
+ */
+export function validarPaciente(datosObjeto) {
+  const datos = normalizarDatosPaciente(datosObjeto);
+  const erroresDescriptores = validarConDescriptores(CAMPOS_PACIENTE, datos);
+  const erroresNegocio = erroresDeNegocioPaciente(datos);
+  return combinarErrores(erroresDescriptores, erroresNegocio);
+}
+
+/**
+ * Valida el formulario completo de registro de un paciente nuevo (CAMPOS_REGISTRO_PACIENTE,
+ * campos.js): ademas de lo que ya cubre validarPaciente(), exige sexo, telefonoContacto e
+ * idioma (NOT NULL en pacientes, 00009) y numeroFicha (NOT NULL en expedientes, 00009), que
+ * fn_registrar_paciente (migracion 00057) inserta junto con el paciente. Mismas reglas de
+ * negocio que validarPaciente(): la fecha de nacimiento y el DPI no cambian segun el
+ * formulario.
+ * @param {object} datosObjeto
+ * @returns {Record<string, string>} Errores agrupados por campo.
+ */
+export function validarRegistroPaciente(datosObjeto) {
+  const datos = normalizarDatosPaciente(datosObjeto);
+  const erroresDescriptores = validarConDescriptores(CAMPOS_REGISTRO_PACIENTE, datos);
+  const erroresNegocio = erroresDeNegocioPaciente(datos);
   return combinarErrores(erroresDescriptores, erroresNegocio);
 }

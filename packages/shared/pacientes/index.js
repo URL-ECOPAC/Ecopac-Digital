@@ -9,11 +9,11 @@
 //   permisos.js      que puede hacer cada rol en el modulo
 //   use<Pantalla>.js view model de una pantalla: datos, estado y handlers
 //
-// De momento solo estan los descriptores (campos, columnas, filtros), como ejemplar
-// de referencia. api.js, validaciones.js, permisos.js y los hooks de pantalla los
-// construyen sus issues.
+// api.js (issue #113) y validaciones.js (issue #112) ya estan. permisos.js y los hooks de
+// pantalla los construyen sus propias issues.
 
 export * from './campos.js';
 export * from './filtros.js';
 export * from './columnas.js';
 export * from "./validaciones.js";
+export * from "./api.js";
