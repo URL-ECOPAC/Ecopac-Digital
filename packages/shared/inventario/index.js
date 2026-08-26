@@ -29,6 +29,8 @@ export * from './medicamentos.permisos.js';
 export * from './lotes.api.js';
 export * from './existencias.api.js';
 export * from './lotes.permisos.js';
+export * from './lotes.validaciones.js';
+export * from './existencias.validaciones.js';
 export * from './bodegas.api.js';
 export * from './proveedores.api.js';
 export * from './bodegas.permisos.js';
