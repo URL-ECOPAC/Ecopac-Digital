@@ -38,7 +38,7 @@ Seis jobs. Los tres primeros validan; los ultimos despliegan y avisan.
 | **Validar migraciones y funciones** | PR y push | Levanta el stack local, aplica todas las migraciones desde cero, corre `db lint` y el lint de Edge Functions |
 | Estado de la base remota | PR | Lista que migraciones estan aplicadas en `ecopac-dev` y cuales se aplicarian al mergear |
 | Aplicar migraciones | push a develop o main | `supabase db push` contra el proyecto del ambiente. Depende de que los dos jobs en negrita hayan pasado |
-| Avisar fallo | si algo fallo en un push | Abre una issue con el enlace a la corrida |
+| Avisar fallo | si algo fallo en un push | Abre una issue con el paso que fallo y **si las migraciones se aplicaron o no** |
 
 Los jobs en negrita son **checks requeridos**: sin ellos en verde, la rama protegida no deja
 mergear.
@@ -109,7 +109,25 @@ Si aun asi hace falta saltarse la guarda, se agrega la etiqueta
 
 ## Que hacer cuando falla el despliegue
 
-El workflow abre una issue con el enlace a la corrida. El procedimiento:
+El workflow abre una issue automatica. **Lo primero es leer que dice sobre el estado de la base**,
+porque hay dos desenlaces muy distintos y se arreglan de forma opuesta. La issue lo afirma leyendo
+el resultado de cada paso de la corrida, no suponiendolo.
+
+### Caso 1: el paso `Aplicar migraciones` no llego a correr
+
+Algo fallo antes -instalar el CLI, vincular el proyecto, un secret que falta- y el `supabase db
+push` quedo en `skipped`. **No se aplico nada y la base no quedo a medias.**
+
+No hay ninguna migracion rota que buscar. Se mira el paso que si fallo, se corrige la causa y se
+relanza la corrida; el siguiente push aplica lo pendiente igual, porque `db push` sube todo lo que
+falte.
+
+Es lo que paso en la issue #422: `setup-cli` no pudo resolver la version del CLI y el despliegue
+murio en su primer paso. La base se puso al dia sola en el merge siguiente.
+
+### Caso 2: el paso `Aplicar migraciones` corrio y fallo
+
+Ahi si se detuvo dentro de una migracion y **la base puede haber quedado a medias**:
 
 1. Abrir el log del job **Aplicar migraciones** y ver en que migracion se detuvo.
 2. Preguntarse primero si alguna migracion ya aplicada fue editada. Es la causa mas comun.
@@ -119,6 +137,23 @@ El workflow abre una issue con el enlace a la corrida. El procedimiento:
 
 Nunca se arregla editando la migracion que fallo: eso deja la base a medias y el proximo
 ambiente hereda el problema.
+
+## La version del CLI de Supabase va fija
+
+Los tres pasos `Instalar Supabase CLI` del workflow declaran `version: 2.115.0` y **no**
+`version: latest`. No es por gusto:
+
+`setup-cli` resuelve `latest` consultando la API de releases de GitHub **sin autenticar**, y los
+runners comparten esa cuota por IP. El 25 de agosto el despliegue de `develop` murio con
+`Failed to resolve latest Supabase CLI release: rate limit exceeded` sin aplicar una sola
+migracion (issue #422). Con una version concreta esa llamada no se hace y el fallo no puede
+repetirse.
+
+De paso, el CI valida con la misma version que tiene instalada el equipo, en vez de con la que
+resulte ser la ultima ese dia.
+
+**Al subirla hay que cambiarla en los tres pasos a la vez**, y conviene que coincida con la que
+usa el equipo en local (`supabase --version`).
 
 ## Correr las validaciones en local
 
