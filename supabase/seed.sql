@@ -411,64 +411,21 @@ INSERT INTO public.municipios (id, departamento_id, nombre) VALUES
   (2217, 22, 'Quezada')
 ON CONFLICT (id) DO UPDATE SET departamento_id = EXCLUDED.departamento_id, nombre = EXCLUDED.nombre;
 
-
 -- =============================================================================
--- 2. APROVISIONAMIENTO DEL ADMINISTRADOR INICIAL (BOOTSTRAP)
+-- 2. APROVISIONAMIENTO DEL ADMINISTRADOR INICIAL
 -- =============================================================================
-
--- Crear el primer usuario en el esquema nativo de autenticación de Supabase (auth.users)
--- Desactivar únicamente los triggers de usuario (mantiene las FKs del sistema intactas)
-ALTER TABLE public.perfiles DISABLE TRIGGER USER;
-
--- Insertar el usuario de autenticación nativo
-INSERT INTO auth.users (
-  instance_id,
-  id,
-  aud,
-  role,
-  email,
-  encrypted_password,
-  email_confirmed_at,
-  raw_app_meta_data,
-  raw_user_meta_data,
-  created_at,
-  updated_at
-) VALUES (
-  '00000000-0000-0000-0000-000000000000',
-  'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
-  'authenticated',
-  'authenticated',
-  'admin@ecopac.org',
-  crypt('Admin123!', gen_salt('bf')),
-  NOW(),
-  '{"provider": "email", "providers": ["email"]}',
-  '{"nombres": "Administrador", "apellidos": "Sistema"}',
-  NOW(),
-  NOW()
-) ON CONFLICT (id) DO NOTHING;
-
--- Insertar o actualizar el perfil de administrador
-INSERT INTO public.perfiles (
-  id,
-  email,
-  nombres,
-  apellidos,
-  rol,
-  activo,
-  created_at,
-  updated_at
-) VALUES (
-  'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
-  'admin@ecopac.org',
-  'Administrador',
-  'Sistema',
-  'administrador',
-  true,
-  NOW(),
-  NOW()
-) ON CONFLICT (id) DO UPDATE SET 
-  email = EXCLUDED.email,
-  rol = 'administrador';
-
--- Reactivar los triggers de usuario
-ALTER TABLE public.perfiles ENABLE TRIGGER USER;
+--
+-- Ya no va aqui: lo hace supabase/migrations/00063_aprovisionar_primer_admin.sql, que corre
+-- antes que este seed y es idempotente.
+--
+-- Estaba duplicado en los dos sitios (PR #446) y con la migracion corregida el seed chocaba
+-- contra el usuario que la migracion acababa de crear:
+--
+--   failed to send batch: ERROR: duplicate key value violates unique constraint
+--   "users_email_partial_key" (SQLSTATE 23505)
+--
+-- El bloque anterior ademas horneaba una contrasena fija en un repositorio publico y
+-- apagaba TODOS los triggers de usuario de perfiles con DISABLE TRIGGER USER, incluidos el de
+-- updated_at y el de auditoria de la 00026.
+--
+-- Ver docs/QUICKSTART.md para como se fija la contrasena del administrador.
