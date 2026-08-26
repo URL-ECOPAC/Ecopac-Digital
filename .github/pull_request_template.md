@@ -37,6 +37,8 @@ Closes #
 - [ ] Se agregaron pruebas si aplica
 - [ ] Se actualizo la documentacion si aplica
 - [ ] No se usan datos reales de pacientes en pruebas
+- [ ] Si agrega una migracion: el numero sigue siendo mayor que el ultimo de `develop` (se
+      reverifica antes de mergear, no solo al abrir la rama)
 
 ## Notas de deploy
 

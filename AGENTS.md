@@ -111,6 +111,26 @@ PR si modifica o borra un archivo de `supabase/migrations/` que ya existe en la 
 Editar una migracion agregada en el mismo PR si esta permitido. La salida de emergencia es la
 etiqueta `migracion-editada-a-proposito` en el PR.
 
+### Como se numera una migracion nueva
+
+El nombre es `NNNNN_descripcion_en_snake_case.sql`, con **cinco digitos** y numeracion
+secuencial. No se usa el timestamp que genera `supabase migration new` por defecto.
+
+**El numero se elige al abrir la rama y se vuelve a verificar antes de mergear**, porque otra
+rama pudo tomarlo mientras tanto. Tiene que ser **mayor** que el ultimo de `develop`:
+
+- Repetir un numero rompe el despliegue. En `supabase_migrations.schema_migrations` la columna
+  `version` es el prefijo numerico solo y es clave primaria: `db push` aborta con SQLSTATE 23505
+  al llegar al segundo archivo, y no aplica ni esa migracion ni las siguientes.
+- Un numero por debajo del ultimo tampoco se aplica: `db push` se niega y exige `--include-all`.
+  La salida correcta es renumerar por encima con `git mv`.
+
+Lo comprueba el paso **Verificar la numeracion de las migraciones** del job "Migraciones no
+editadas".
+
+**Una issue nunca prescribe un numero de migracion.** Para cuando se trabaje, ese numero ya puede
+estar tomado. Se escribe "revisar que migracion corresponde", no "crear la 00067".
+
 Detalle completo en `docs/CI-CD.md`.
 
 ## Comandos
