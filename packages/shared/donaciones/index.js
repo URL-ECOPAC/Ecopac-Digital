@@ -24,3 +24,4 @@ export * from "./avance.api.js";
 // estado_donacion nacen aqui: son los del enum de la migracion 00022, no los que declaraba el
 // types/donaciones.ts que este archivo reemplaza.
 export * from "./validaciones.js";
+export * from "./donantes.api.js";
