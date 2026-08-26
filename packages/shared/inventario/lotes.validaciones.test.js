@@ -77,3 +77,55 @@ describe("motivoLoteNoEntregable", () => {
     }
   });
 });
+
+import { describe, it, expect } from "vitest";
+import { sugerirLote } from "./lotes.validaciones.js";
+
+describe("sugerirLote (Criterio FEFO)", () => {
+  const lotesEjemplo = [
+    { id: "LOTE-C", fecha_vencimiento: "2026-12-01", cantidad_disponible: 50 },
+    { id: "LOTE-A", fecha_vencimiento: "2026-09-15", cantidad_disponible: 20 },
+    { id: "LOTE-B", fecha_vencimiento: "2026-10-20", cantidad_disponible: 30 },
+    { id: "LOTE-VENCIDO", fecha_vencimiento: "2026-01-01", cantidad_disponible: 100 },
+  ];
+
+  it("devuelve el lote no vencido con la fecha de vencimiento más próxima y existencia suficiente", () => {
+    const resultado = sugerirLote(lotesEjemplo, 15, "2026-08-26");
+
+    expect(resultado.suficiente).toBe(true);
+    expect(resultado.lotesSugeridos).toHaveLength(1);
+    expect(resultado.lotesSugeridos[0].lote_id).toBe("LOTE-A");
+    expect(resultado.lotesSugeridos[0].cantidad).toBe(15);
+  });
+
+  it("sugiere la combinación de lotes necesaria si ningún lote individual alcanza", () => {
+    const resultado = sugerirLote(lotesEjemplo, 40, "2026-08-26");
+
+    expect(resultado.suficiente).toBe(true);
+    expect(resultado.lotesSugeridos).toHaveLength(2);
+    expect(resultado.lotesSugeridos[0]).toEqual({
+      lote_id: "LOTE-A",
+      cantidad: 20,
+      fecha_vencimiento: "2026-09-15",
+    });
+    expect(resultado.lotesSugeridos[1]).toEqual({
+      lote_id: "LOTE-B",
+      cantidad: 20,
+      fecha_vencimiento: "2026-10-20",
+    });
+  });
+
+  it("ignora los lotes vencidos", () => {
+    const resultado = sugerirLote(lotesEjemplo, 10, "2026-08-26");
+
+    const contieneVencido = resultado.lotesSugeridos.some((l) => l.lote_id === "LOTE-VENCIDO");
+    expect(contieneVencido).toBe(false);
+  });
+
+  it("indica falta de stock si la demanda supera la suma de lotes válidos", () => {
+    const resultado = sugerirLote(lotesEjemplo, 200, "2026-08-26");
+
+    expect(resultado.suficiente).toBe(false);
+    expect(resultado.cantidadFaltante).toBe(100);
+  });
+});
