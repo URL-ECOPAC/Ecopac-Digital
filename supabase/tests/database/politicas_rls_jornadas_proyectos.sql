@@ -47,7 +47,7 @@ INSERT INTO jornadas (id, nombre, fecha, comunidad_id, responsable_id) VALUES
 
 INSERT INTO jornada_personal (jornada_id, perfil_id, rol_en_jornada, hora_inicio, hora_fin) VALUES
   ('40000000-0000-0000-0000-000000000a01', '00000000-0000-0000-0000-000000000904', 'medico', '08:00', '13:00'),
-  ('40000000-0000-0000-0000-000000000a01', '00000000-0000-0000-0000-000000000905', 'voluntario', '08:00', '13:00');
+  ('40000000-0000-0000-0000-000000000a01', '00000000-0000-0000-0000-000000000905', 'voluntario general', '08:00', '13:00');
 
 INSERT INTO proyectos (id, nombre) VALUES
   ('50000000-0000-0000-0000-000000000901', 'Proyecto de prueba 90');
@@ -86,9 +86,13 @@ SELECT lives_ok(
   'administrador puede editar proyectos'
 );
 
+-- rol_en_jornada es del tipo rol_usuario (00012), asi que solo admite los cinco valores del
+-- enum de la 00001. Decia 'coordinador', que no existe y nunca existio: por eso esta suite fallaba
+-- entera antes de correr una sola asercion. El perfil ...902 es junta directiva, que es lo que el
+-- comentario del conteo de mas abajo ya daba por hecho.
 SELECT lives_ok(
   $$ INSERT INTO jornada_personal (jornada_id, perfil_id, rol_en_jornada, hora_inicio, hora_fin)
-     VALUES ('40000000-0000-0000-0000-000000000a02', '00000000-0000-0000-0000-000000000902', 'coordinador', '08:00', '13:00') $$,
+     VALUES ('40000000-0000-0000-0000-000000000a02', '00000000-0000-0000-0000-000000000902', 'junta directiva', '08:00', '13:00') $$,
   'administrador puede asignar personal a una jornada'
 );
 
@@ -217,7 +221,7 @@ SELECT ok(
 
 SELECT throws_ok(
   $$ INSERT INTO jornada_personal (jornada_id, perfil_id, rol_en_jornada, hora_inicio, hora_fin)
-     VALUES ('40000000-0000-0000-0000-000000000a02', '00000000-0000-0000-0000-000000000905', 'voluntario', '08:00', '13:00') $$,
+     VALUES ('40000000-0000-0000-0000-000000000a02', '00000000-0000-0000-0000-000000000905', 'voluntario general', '08:00', '13:00') $$,
   '42501',
   NULL,
   'voluntario no puede asignar personal'

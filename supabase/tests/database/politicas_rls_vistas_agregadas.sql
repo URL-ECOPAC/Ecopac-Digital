@@ -173,9 +173,19 @@ SELECT ok(
 -- ============================================================================
 SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000001003';
 
+-- CAMBIO DE CONTRATO (migracion 00054, issue de reportes agregados sin filas clinicas).
+-- Antes socio fundador no veia la vista. Esa migracion quito las cuatro politicas de
+-- "junta directiva lee ... para reportes" sobre atenciones, consultas, recetas y receta_detalle
+-- -- para que los roles consultivos dejaran de tener acceso a filas clinicas -- y a cambio dejo
+-- la vista agregando como owner, con este WHERE:
+--
+--   WHERE public.es_administrador()
+--      OR public.rol_actual() IN ('junta directiva', 'socio fundador')
+--
+-- O sea que socio fundador si ve los AGREGADOS, y nunca las filas de las que salen.
 SELECT ok(
-  (SELECT count(*) FROM vista_reporte_impacto) = 0,
-  'socio fundador NO ve vista_reporte_impacto'
+  (SELECT count(*) FROM vista_reporte_impacto) > 0,
+  'socio fundador SI ve los agregados de vista_reporte_impacto (00054)'
 );
 
 SELECT ok(
@@ -193,9 +203,12 @@ SELECT ok(
 -- ============================================================================
 SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000001004';
 
+-- CAMBIO DE CONTRATO (00054): el WHERE de la vista solo admite administrador, junta directiva y
+-- socio fundador. El personal de campo dejo de verla, aunque este asignado a la jornada: para
+-- trabajar tiene la cola de la jornada (vista_cola_jornada, 00060), no el reporte de impacto.
 SELECT ok(
-  (SELECT count(*) FROM vista_reporte_impacto WHERE jornada_id = '40000000-0000-0000-0000-000000001a01') = 1,
-  'medico ve su jornada asignada en vista_reporte_impacto'
+  (SELECT count(*) FROM vista_reporte_impacto WHERE jornada_id = '40000000-0000-0000-0000-000000001a01') = 0,
+  'medico ya NO ve vista_reporte_impacto, ni su propia jornada (00054)'
 );
 
 SELECT ok(
@@ -218,9 +231,10 @@ SELECT ok(
 -- ============================================================================
 SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000001005';
 
+-- CAMBIO DE CONTRATO (00054): mismo motivo que con el medico.
 SELECT ok(
-  (SELECT count(*) FROM vista_reporte_impacto WHERE jornada_id = '40000000-0000-0000-0000-000000001a01') = 1,
-  'voluntario ve su jornada asignada en vista_reporte_impacto'
+  (SELECT count(*) FROM vista_reporte_impacto WHERE jornada_id = '40000000-0000-0000-0000-000000001a01') = 0,
+  'voluntario ya NO ve vista_reporte_impacto, ni su propia jornada (00054)'
 );
 
 SELECT ok(
@@ -241,9 +255,14 @@ SELECT ok(
 -- ============================================================================
 -- Verificaciones estructurales: security_invoker y columnas expuestas
 -- ============================================================================
+-- CAMBIO DE CONTRATO (00054): vista_reporte_impacto paso a security_invoker = FALSE A PROPOSITO.
+-- Es lo que le permite agregar sobre atenciones, consultas y recetas sin que junta directiva ni
+-- socio fundador tengan politica de lectura sobre esas tablas. Quien acota las filas es el WHERE
+-- de la vista, no RLS. vista_lotes_disponibles sigue en TRUE, que es lo correcto para ella:
+-- su contenido no es clinico y las politicas de inventario ya lo gobiernan.
 SELECT ok(
-  (SELECT reloptions @> ARRAY['security_invoker=true'] FROM pg_class WHERE relname = 'vista_reporte_impacto'),
-  'vista_reporte_impacto tiene security_invoker = TRUE'
+  (SELECT reloptions @> ARRAY['security_invoker=false'] FROM pg_class WHERE relname = 'vista_reporte_impacto'),
+  'vista_reporte_impacto tiene security_invoker = FALSE (00054)'
 );
 
 SELECT ok(
