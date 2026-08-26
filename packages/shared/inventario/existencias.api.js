@@ -23,7 +23,7 @@ function aExistencia(fila) {
  * Inventario disponible agregado por medicamento, para que el medico sepa que puede recetar
  * antes de recetarlo (RF-18).
  *
- * Llama por RPC a fn_existencias_disponibles (00064), que agrupa en la base: la suma por
+ * Llama por RPC a fn_existencias_disponibles (00065), que agrupa en la base: la suma por
  * medicamento y la fecha de vencimiento mas proxima no se pueden pedir por PostgREST, y
  * agregarlas aqui obligaria a traer el catalogo entero antes de paginar.
  *
