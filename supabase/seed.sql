@@ -416,17 +416,59 @@ ON CONFLICT (id) DO UPDATE SET departamento_id = EXCLUDED.departamento_id, nombr
 -- 2. APROVISIONAMIENTO DEL ADMINISTRADOR INICIAL (BOOTSTRAP)
 -- =============================================================================
 
-INSERT INTO public.perfiles (id, nombres, apellidos, email, rol, activo)
-SELECT 
+-- Crear el primer usuario en el esquema nativo de autenticación de Supabase (auth.users)
+-- Desactivar únicamente los triggers de usuario (mantiene las FKs del sistema intactas)
+ALTER TABLE public.perfiles DISABLE TRIGGER USER;
+
+-- Insertar el usuario de autenticación nativo
+INSERT INTO auth.users (
+  instance_id,
   id,
-  'Admin',
-  'EcoPac',
+  aud,
+  role,
   email,
+  encrypted_password,
+  email_confirmed_at,
+  raw_app_meta_data,
+  raw_user_meta_data,
+  created_at,
+  updated_at
+) VALUES (
+  '00000000-0000-0000-0000-000000000000',
+  'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+  'authenticated',
+  'authenticated',
+  'admin@ecopac.org',
+  crypt('Admin123!', gen_salt('bf')),
+  NOW(),
+  '{"provider": "email", "providers": ["email"]}',
+  '{"nombres": "Administrador", "apellidos": "Sistema"}',
+  NOW(),
+  NOW()
+) ON CONFLICT (id) DO NOTHING;
+
+-- Insertar o actualizar el perfil de administrador
+INSERT INTO public.perfiles (
+  id,
+  email,
+  nombres,
+  apellidos,
+  rol,
+  activo,
+  created_at,
+  updated_at
+) VALUES (
+  'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+  'admin@ecopac.org',
+  'Administrador',
+  'Sistema',
   'administrador',
-  true
-FROM auth.users
-WHERE email = 'admin@ecopac.org'
-ON CONFLICT (id) DO UPDATE 
-SET 
-  rol = 'administrador',
-  activo = true;
+  true,
+  NOW(),
+  NOW()
+) ON CONFLICT (id) DO UPDATE SET 
+  email = EXCLUDED.email,
+  rol = 'administrador';
+
+-- Reactivar los triggers de usuario
+ALTER TABLE public.perfiles ENABLE TRIGGER USER;
