@@ -12,13 +12,14 @@ vi.mock("../api/cliente.js", () => ({
 }));
 
 const { CODIGOS_DE_ERROR_DE_SUPABASE } = await import("../api/errores-de-supabase.js");
-const { ROLES } = await import("./roles.js");
+const { ROLES, TODOS_LOS_ROLES } = await import("./roles.js");
 const modulo = await import("./api.js");
 const {
   actualizarUsuario,
   crearUsuario,
   desactivarUsuario,
   FUNCION_DE_INVITACION,
+  listarCatalogoEspecialidades,
   listarUsuarios,
   reactivarUsuario,
 } = modulo;
@@ -41,6 +42,10 @@ function doble(respuesta) {
     },
     eq(columna, valor) {
       llamadas.push({ paso: "eq", columna, valor });
+      return cadena;
+    },
+    in(columna, valores) {
+      llamadas.push({ paso: "in", columna, valores });
       return cadena;
     },
     or(expresion) {
@@ -76,6 +81,71 @@ function doble(respuesta) {
 
 function pasos(llamadas, paso) {
   return llamadas.filter((llamada) => llamada.paso === paso);
+}
+
+/**
+ * Doble que distingue por tabla, para las pruebas que necesitan dos consultas con respuestas
+ * distintas (el filtro de especialidad de listarUsuarios() primero consulta perfil_especialidad
+ * y despues perfiles). Mismo patron que crearCliente() de jornadas/api.test.js: cada tabla tiene
+ * su propia cola de respuestas, para no mezclar la de una con la de otra.
+ */
+function dobleMultiTabla(respuestasPorTabla) {
+  const llamadas = [];
+  const colas = new Map(
+    Object.entries(respuestasPorTabla).map(([tabla, respuesta]) => [
+      tabla,
+      Array.isArray(respuesta) ? [...respuesta] : [respuesta],
+    ]),
+  );
+
+  function siguienteRespuesta(tabla) {
+    const cola = colas.get(tabla);
+    if (!cola || cola.length === 0) {
+      throw new Error(`La prueba no configuro una respuesta para la tabla "${tabla}".`);
+    }
+    return cola.length > 1 ? cola.shift() : cola[0];
+  }
+
+  return {
+    llamadas,
+    cliente: {
+      from(tabla) {
+        llamadas.push({ paso: "from", tabla });
+        const respuesta = siguienteRespuesta(tabla);
+        const resolver = () =>
+          respuesta instanceof Error ? Promise.reject(respuesta) : Promise.resolve(respuesta);
+
+        const cadena = {
+          select(columnas) {
+            llamadas.push({ paso: "select", tabla, columnas });
+            return cadena;
+          },
+          eq(columna, valor) {
+            llamadas.push({ paso: "eq", tabla, columna, valor });
+            return cadena;
+          },
+          in(columna, valores) {
+            llamadas.push({ paso: "in", tabla, columna, valores });
+            return cadena;
+          },
+          or(expresion) {
+            llamadas.push({ paso: "or", tabla, expresion });
+            return cadena;
+          },
+          order(columna, opciones) {
+            llamadas.push({ paso: "order", tabla, columna, opciones });
+            return cadena;
+          },
+          maybeSingle: resolver,
+          then(alCumplir, alFallar) {
+            return resolver().then(alCumplir, alFallar);
+          },
+        };
+
+        return cadena;
+      },
+    },
+  };
 }
 
 function usuarioValido(cambios = {}) {
@@ -201,6 +271,173 @@ describe("listarUsuarios", () => {
     expect(usuarios).toEqual([]);
     expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.PERMISO_DENEGADO);
     expect(error.mensaje).toContain("permiso");
+  });
+
+  it("los cinco roles filtran, no solo medico y voluntario", async () => {
+    for (const rol of TODOS_LOS_ROLES) {
+      const { cliente, llamadas } = doble({ data: [], error: null });
+      dobles.cliente = cliente;
+
+      await listarUsuarios({ rol });
+
+      expect(pasos(llamadas, "eq")[0]).toEqual({ paso: "eq", columna: "rol", valor: rol });
+    }
+  });
+
+  it("cada perfil trae sus especialidades como arreglo de strings, no de objetos", async () => {
+    const { cliente } = doble({
+      data: [
+        { id: "u1", especialidades: [{ nombre_especialidad: "Pediatria" }, { nombre_especialidad: "Odontologia" }] },
+        { id: "u2", especialidades: [] },
+        { id: "u3" },
+      ],
+      error: null,
+    });
+    dobles.cliente = cliente;
+
+    const { usuarios, error } = await listarUsuarios();
+
+    expect(error).toBeNull();
+    expect(usuarios).toEqual([
+      { id: "u1", especialidades: ["Pediatria", "Odontologia"] },
+      { id: "u2", especialidades: [] },
+      { id: "u3", especialidades: [] },
+    ]);
+  });
+
+  it("pide el embed de perfil_especialidad en el mismo select, no en una consulta aparte", async () => {
+    const { cliente, llamadas } = doble({ data: [], error: null });
+    dobles.cliente = cliente;
+
+    await listarUsuarios();
+
+    expect(pasos(llamadas, "from")).toHaveLength(1);
+    expect(pasos(llamadas, "select")[0].columnas).toContain(
+      "especialidades:perfil_especialidad(nombre_especialidad)",
+    );
+  });
+
+  describe("filtro de especialidad", () => {
+    it("resuelve los ids en perfil_especialidad y despues acota perfiles con .in()", async () => {
+      const { cliente, llamadas } = dobleMultiTabla({
+        perfil_especialidad: { data: [{ perfil_id: "u1" }, { perfil_id: "u2" }], error: null },
+        perfiles: { data: [{ id: "u1" }, { id: "u2" }], error: null },
+      });
+      dobles.cliente = cliente;
+
+      const { usuarios, error } = await listarUsuarios({ especialidad: "Pediatria" });
+
+      expect(error).toBeNull();
+      expect(usuarios).toHaveLength(2);
+      expect(llamadas).toContainEqual({
+        paso: "eq",
+        tabla: "perfil_especialidad",
+        columna: "nombre_especialidad",
+        valor: "Pediatria",
+      });
+      expect(llamadas).toContainEqual({
+        paso: "in",
+        tabla: "perfiles",
+        columna: "id",
+        valores: ["u1", "u2"],
+      });
+    });
+
+    it("sin ningun perfil con esa especialidad, corta sin tocar perfiles", async () => {
+      const { cliente, llamadas } = dobleMultiTabla({
+        perfil_especialidad: { data: [], error: null },
+      });
+      dobles.cliente = cliente;
+
+      const { usuarios, error } = await listarUsuarios({ especialidad: "Cardiologia" });
+
+      expect(error).toBeNull();
+      expect(usuarios).toEqual([]);
+      expect(pasos(llamadas, "from").map(({ tabla }) => tabla)).toEqual(["perfil_especialidad"]);
+    });
+
+    it("se combina con rol y estado en la misma consulta", async () => {
+      const { cliente, llamadas } = dobleMultiTabla({
+        perfil_especialidad: { data: [{ perfil_id: "u1" }], error: null },
+        perfiles: { data: [], error: null },
+      });
+      dobles.cliente = cliente;
+
+      await listarUsuarios({ especialidad: "Pediatria", rol: ROLES.MEDICO, estado: "activo" });
+
+      expect(llamadas).toContainEqual({
+        paso: "eq",
+        tabla: "perfiles",
+        columna: "rol",
+        valor: ROLES.MEDICO,
+      });
+      expect(llamadas).toContainEqual({
+        paso: "eq",
+        tabla: "perfiles",
+        columna: "activo",
+        valor: true,
+      });
+      expect(llamadas).toContainEqual({
+        paso: "in",
+        tabla: "perfiles",
+        columna: "id",
+        valores: ["u1"],
+      });
+    });
+
+    it("un error al resolver los ids se normaliza igual que cualquier otro", async () => {
+      const { cliente } = dobleMultiTabla({
+        perfil_especialidad: { data: null, error: { code: "42501" } },
+      });
+      dobles.cliente = cliente;
+
+      const { usuarios, error } = await listarUsuarios({ especialidad: "Pediatria" });
+
+      expect(usuarios).toEqual([]);
+      expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.PERMISO_DENEGADO);
+    });
+  });
+});
+
+describe("listarCatalogoEspecialidades", () => {
+  it("deduplica, ordena alfabeticamente y da la forma { valor, etiqueta }", async () => {
+    const { cliente } = doble({
+      data: [
+        { nombre_especialidad: "Pediatria" },
+        { nombre_especialidad: "Odontologia" },
+        { nombre_especialidad: "Pediatria" },
+      ],
+      error: null,
+    });
+    dobles.cliente = cliente;
+
+    const { especialidades, error } = await listarCatalogoEspecialidades();
+
+    expect(error).toBeNull();
+    expect(especialidades).toEqual([
+      { valor: "Odontologia", etiqueta: "Odontologia" },
+      { valor: "Pediatria", etiqueta: "Pediatria" },
+    ]);
+  });
+
+  it("sin ninguna especialidad asignada devuelve un arreglo vacio", async () => {
+    const { cliente } = doble({ data: [], error: null });
+    dobles.cliente = cliente;
+
+    const { especialidades, error } = await listarCatalogoEspecialidades();
+
+    expect(error).toBeNull();
+    expect(especialidades).toEqual([]);
+  });
+
+  it("ante un error devuelve arreglo vacio y el error normalizado", async () => {
+    const { cliente } = doble({ data: null, error: { code: "42501" } });
+    dobles.cliente = cliente;
+
+    const { especialidades, error } = await listarCatalogoEspecialidades();
+
+    expect(especialidades).toEqual([]);
+    expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.PERMISO_DENEGADO);
   });
 });
 

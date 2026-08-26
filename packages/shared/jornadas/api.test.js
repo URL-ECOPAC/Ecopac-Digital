@@ -761,12 +761,84 @@ describe("obtenerJornadasDePersona", () => {
     expect(error).toBeNull();
   });
 
-  it("filtra jornada_personal por perfil_id y desenvuelve la jornada embebida", async () => {
+  it("filtra jornada_personal por perfil_id, desenvuelve la jornada embebida y agrega atencionesPersona en cero cuando la RPC no trae nada para esa jornada", async () => {
     const cliente = crearCliente({
       jornada_personal: {
         data: [
           { jornada: { id: "jornada-1", nombre: "Jornada en Solola" } },
           { jornada: { id: "jornada-2", nombre: "Jornada en Peten" } },
+        ],
+        error: null,
+      },
+      "rpc:fn_atenciones_de_persona_por_jornada": { data: [], error: null },
+    });
+    dobles.cliente = cliente;
+
+    const { jornadas, error } = await obtenerJornadasDePersona("perfil-1");
+
+    expect(error).toBeNull();
+    expect(jornadas).toEqual([
+      {
+        id: "jornada-1",
+        nombre: "Jornada en Solola",
+        atencionesPersona: { consultas: 0, triajes: 0, pacientes: 0 },
+      },
+      {
+        id: "jornada-2",
+        nombre: "Jornada en Peten",
+        atencionesPersona: { consultas: 0, triajes: 0, pacientes: 0 },
+      },
+    ]);
+    expect(cliente.llamadas).toContainEqual({
+      paso: "eq",
+      tabla: "jornada_personal",
+      columna: "perfil_id",
+      valor: "perfil-1",
+    });
+    expect(cliente.llamadas).toContainEqual({
+      paso: "rpc",
+      nombre: "fn_atenciones_de_persona_por_jornada",
+      argumentos: { p_perfil_id: "perfil-1" },
+    });
+  });
+
+  it("ignora filas sin jornada embebida (la jornada no existe o RLS no la deja ver)", async () => {
+    dobles.cliente = crearCliente({
+      jornada_personal: { data: [{ jornada: null }], error: null },
+      "rpc:fn_atenciones_de_persona_por_jornada": { data: [], error: null },
+    });
+
+    const { jornadas, error } = await obtenerJornadasDePersona("perfil-1");
+
+    expect(error).toBeNull();
+    expect(jornadas).toEqual([]);
+  });
+
+  it("normaliza el error del servidor cuando falla jornada_personal", async () => {
+    dobles.cliente = crearCliente({
+      jornada_personal: { data: null, error: { code: "42501" } },
+      "rpc:fn_atenciones_de_persona_por_jornada": { data: [], error: null },
+    });
+
+    const { jornadas, error } = await obtenerJornadasDePersona("perfil-1");
+
+    expect(jornadas).toEqual([]);
+    expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.PERMISO_DENEGADO);
+  });
+
+  it("junta cada jornada con sus contadores por jornada_id, sin importar el orden en que llega la RPC", async () => {
+    const cliente = crearCliente({
+      jornada_personal: {
+        data: [
+          { jornada: { id: "jornada-1", nombre: "Jornada en Solola" } },
+          { jornada: { id: "jornada-2", nombre: "Jornada en Peten" } },
+        ],
+        error: null,
+      },
+      "rpc:fn_atenciones_de_persona_por_jornada": {
+        data: [
+          { jornada_id: "jornada-2", consultas: 1, triajes: 0, pacientes: 1 },
+          { jornada_id: "jornada-1", consultas: 2, triajes: 1, pacientes: 2 },
         ],
         error: null,
       },
@@ -777,32 +849,28 @@ describe("obtenerJornadasDePersona", () => {
 
     expect(error).toBeNull();
     expect(jornadas).toEqual([
-      { id: "jornada-1", nombre: "Jornada en Solola" },
-      { id: "jornada-2", nombre: "Jornada en Peten" },
+      {
+        id: "jornada-1",
+        nombre: "Jornada en Solola",
+        atencionesPersona: { consultas: 2, triajes: 1, pacientes: 2 },
+      },
+      {
+        id: "jornada-2",
+        nombre: "Jornada en Peten",
+        atencionesPersona: { consultas: 1, triajes: 0, pacientes: 1 },
+      },
     ]);
-    expect(cliente.llamadas).toContainEqual({
-      paso: "eq",
-      tabla: "jornada_personal",
-      columna: "perfil_id",
-      valor: "perfil-1",
-    });
   });
 
-  it("ignora filas sin jornada embebida (la jornada no existe o RLS no la deja ver)", async () => {
-    dobles.cliente = crearCliente({
-      jornada_personal: { data: [{ jornada: null }], error: null },
+  it("si la RPC de atenciones falla, falla cerrado: ninguna jornada, ni con contadores en cero", async () => {
+    const cliente = crearCliente({
+      jornada_personal: {
+        data: [{ jornada: { id: "jornada-1", nombre: "Jornada en Solola" } }],
+        error: null,
+      },
+      "rpc:fn_atenciones_de_persona_por_jornada": { data: null, error: { code: "42501" } },
     });
-
-    const { jornadas, error } = await obtenerJornadasDePersona("perfil-1");
-
-    expect(error).toBeNull();
-    expect(jornadas).toEqual([]);
-  });
-
-  it("normaliza el error del servidor", async () => {
-    dobles.cliente = crearCliente({
-      jornada_personal: { data: null, error: { code: "42501" } },
-    });
+    dobles.cliente = cliente;
 
     const { jornadas, error } = await obtenerJornadasDePersona("perfil-1");
 

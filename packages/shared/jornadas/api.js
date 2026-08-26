@@ -9,7 +9,9 @@
 // jornada (issue #174, criterio 4), pero esas tablas no son propiedad de este archivo. En vez
 // de leerlas aqui, la comprobacion vive en personal_registro_atenciones(), una funcion SQL
 // (migracion 00044) que este archivo solo invoca por RPC: la propiedad de tabla declarada
-// arriba se mantiene intacta.
+// arriba se mantiene intacta. obtenerJornadasDePersona() sigue el mismo patron para contar
+// consultas y triajes por jornada (issue #175, criterio 4): invoca por RPC a
+// fn_atenciones_de_persona_por_jornada() (migracion 00059) en vez de leer esas tablas aqui.
 //
 // Todas las funciones devuelven `{ dato, error }` en vez de lanzar, igual que supabase-js:
 // quien las consume es un hook que tiene que reflejar el fallo en pantalla, no reventar el
@@ -482,28 +484,71 @@ export async function obtenerAsignacionesDelDia(fecha, { excluirJornada } = {}) 
 }
 
 /**
- * Jornadas donde participa un perfil, como personal asignado (criterio 5).
+ * Jornadas donde participa un perfil, como personal asignado (criterio 5), con cuantos
+ * pacientes atendio en cada una (issue #175, criterio 4).
  *
  * No filtra por quien pregunta: RLS de jornada_personal (00039) ya decide si la respuesta trae
  * filas (administrador y junta directiva ven cualquier perfil; el resto solo se ve a si mismo).
- * Devuelve la misma forma de fila que listarJornadas() y obtenerJornada(), para que una pantalla
- * pueda reusar el mismo COLUMNAS_JORNADA sin traducir nada.
+ * Devuelve la misma forma de fila que listarJornadas() y obtenerJornada(), mas el campo nuevo
+ * `atencionesPersona` (aditivo: una pantalla que ya reusaba COLUMNAS_JORNADA sin traducir nada
+ * sigue funcionando igual).
+ *
+ * `atencionesPersona` sale de fn_atenciones_de_persona_por_jornada() (RPC, migracion 00059):
+ * consultas y triajes no son propiedad de este archivo (ver el encabezado), mismo motivo por el
+ * que desasignarPersonal() y contarAtencionesIncompletas() ya invocan funciones SQL en vez de
+ * leer esas tablas aqui. Las dos consultas corren en paralelo (Promise.all, igual que
+ * obtenerJornada()); si cualquiera de las dos falla, la funcion entera falla cerrado -
+ * devuelve `{ jornadas: [], error }`, nunca una lista con contadores en cero o ausentes -
+ * porque nada en la respuesta permitiria distinguir "no atendio a nadie" de "fallo la
+ * consulta". Una jornada sin fila en el resultado de la RPC (sin actividad clinica visible
+ * para quien pregunta) recibe `{ consultas: 0, triajes: 0, pacientes: 0 }` aqui mismo: junta
+ * directiva y socio fundador, que no tienen SELECT sobre consultas/triajes/atenciones, ven
+ * todas sus jornadas en cero aunque haya actividad real (documentado en la migracion 00059) -
+ * no es un caso que esta funcion pueda corregir sin decidir permisos por su cuenta, que es lo
+ * que prohibe el criterio de aceptacion 6.
  *
  * @param {string} perfilId UUID del perfil.
- * @returns {Promise<{ jornadas: object[], error: object|null }>}
+ * @returns {Promise<{ jornadas: object[], error: object|null }>} Cada jornada trae
+ *   `atencionesPersona: { consultas: number, triajes: number, pacientes: number }`.
  */
 export async function obtenerJornadasDePersona(perfilId) {
   if (!perfilId) return { jornadas: [], error: null };
 
   try {
-    const { data, error } = await obtenerSupabase()
-      .from("jornada_personal")
-      .select(`jornada:jornadas(${COLUMNAS_DE_JORNADA})`)
-      .eq("perfil_id", perfilId);
+    const supabase = obtenerSupabase();
+    const [respuestaPersonal, respuestaAtenciones] = await Promise.all([
+      supabase
+        .from("jornada_personal")
+        .select(`jornada:jornadas(${COLUMNAS_DE_JORNADA})`)
+        .eq("perfil_id", perfilId),
+      supabase.rpc("fn_atenciones_de_persona_por_jornada", { p_perfil_id: perfilId }),
+    ]);
 
-    if (error) return { jornadas: [], error: normalizarError(error) };
+    if (respuestaPersonal.error) {
+      return { jornadas: [], error: normalizarError(respuestaPersonal.error) };
+    }
+    if (respuestaAtenciones.error) {
+      return { jornadas: [], error: normalizarError(respuestaAtenciones.error) };
+    }
 
-    const jornadas = (data ?? []).map((fila) => fila.jornada).filter(Boolean);
+    const atencionesPorJornada = new Map(
+      (respuestaAtenciones.data ?? []).map((fila) => [
+        fila.jornada_id,
+        { consultas: fila.consultas, triajes: fila.triajes, pacientes: fila.pacientes },
+      ]),
+    );
+
+    const jornadas = (respuestaPersonal.data ?? [])
+      .map((fila) => fila.jornada)
+      .filter(Boolean)
+      .map((jornada) => ({
+        ...jornada,
+        atencionesPersona: atencionesPorJornada.get(jornada.id) ?? {
+          consultas: 0,
+          triajes: 0,
+          pacientes: 0,
+        },
+      }));
 
     return { jornadas, error: null };
   } catch (error) {
