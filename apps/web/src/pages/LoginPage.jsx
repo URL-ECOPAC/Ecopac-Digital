@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
+import { Link, Navigate, useLocation } from 'react-router-dom';
 import { ESTADOS_DE_RESTAURACION, useInicioSesion } from '@ecopac/shared';
 import { useSesionCompartida } from '../contexto/SesionProvider';
 import {
@@ -123,6 +123,16 @@ export default function LoginPage() {
             />
           </div>
         </form>
+
+        {/* Sin este enlace la pantalla de restablecimiento no se alcanza desde ningun sitio. */}
+        <div className="text-center mt-3">
+          <Link
+            to="/restablecer-contrasena"
+            className="btn btn-link btn-sm text-decoration-none"
+          >
+            ¿Olvidaste tu contraseña?
+          </Link>
+        </div>
       </Card>
     </ScreenContainer>
   );

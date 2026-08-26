@@ -4,3 +4,4 @@
 // inventario y reportes. Aqui no hay reglas de negocio: solo presentacion y calendario.
 
 export * from "./fechas.js";
+export * from "./moneda.js";

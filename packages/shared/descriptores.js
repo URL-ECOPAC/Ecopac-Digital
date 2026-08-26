@@ -39,3 +39,40 @@ export const TIPOS_DE_FILTRO = {
   SELECT: 'select',
   RANGO: 'rango',
 };
+
+/**
+ * Tipos de presentacion que el componente DataList de cada app sabe dibujar, en una columna de
+ * tabla (web) o en un campo de tarjeta (movil).
+ *
+ * Es el tercer vocabulario del contrato y faltaba. TIPOS_DE_CAMPO y TIPOS_DE_FILTRO estaban
+ * declarados, pero los tipos de columna se venian escribiendo como cadena suelta en el
+ * columnas.js de cada modulo, y ya habian empezado a divergir: 'moneda' se colo en presupuestos
+ * sin que ningun DataList supiera dibujarlo, asi que el importe caia al caso por defecto y se
+ * pintaba en crudo. Es la misma deriva que TIPOS_DE_FILTRO evita, con la diferencia de que aqui
+ * no revienta: se ve mal y nadie se entera.
+ *
+ * Los valores son exactamente los `case` del switch de apps/web/src/components/DataList.jsx y
+ * apps/mobile/src/components/DataList.js. Agregar uno aqui obliga a agregarlo en los dos.
+ */
+export const TIPOS_DE_PRESENTACION = {
+  /** Texto tal cual. Es el caso por defecto del DataList. */
+  TEXTO: 'texto',
+  /** Numero, con `sufijo` opcional en el descriptor. */
+  NUMERO: 'numero',
+  /** Importe en quetzales, con formatearMoneda() de formato/moneda.js. */
+  MONEDA: 'moneda',
+  /** Fecha corta, con formatearFechaCorta(); nunca con Intl desde la app. */
+  FECHA: 'fecha',
+  /** Telefono. */
+  TELEFONO: 'telefono',
+  /** Iniciales en un circulo; `desde` indica de que columna sale el texto. */
+  AVATAR: 'avatar',
+  /** Una etiqueta de color cuyo valor guardado YA es el del enum. */
+  CHIP: 'chip',
+  /** Varias etiquetas a partir de un arreglo. */
+  CHIPS: 'chips',
+  /** Si / No. */
+  BOOLEANO: 'booleano',
+  /** Etiqueta de color que resuelve su texto contra el catalogo de `etiquetasDesde`. */
+  ESTADO: 'estado',
+};

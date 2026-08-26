@@ -1,5 +1,5 @@
 import { FlatList, StyleSheet, Text, View } from 'react-native';
-import { formatearFechaCorta } from '@ecopac/shared';
+import { formatearFechaCorta, formatearMoneda } from '@ecopac/shared';
 import { colors, spacing, typography } from '@ecopac/ui-tokens';
 import Card from './Card';
 import EmptyState from './EmptyState';
@@ -61,6 +61,11 @@ function Valor({ columna, fila, catalogos }) {
     case 'numero':
       if (valor === null || valor === undefined) return null;
       return <Text style={styles.texto}>{columna.sufijo ? `${valor} ${columna.sufijo}` : String(valor)}</Text>;
+
+    case 'moneda':
+      // Mismo motivo que 'fecha': el importe se formatea en shared para que web y movil escriban
+      // el mismo numero.
+      return <Text style={styles.texto}>{formatearMoneda(valor)}</Text>;
 
     case 'fecha':
       // Sale de shared y no de Intl: en React Native el resultado de Intl depende de los

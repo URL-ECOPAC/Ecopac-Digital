@@ -12,3 +12,7 @@
 // Carpeta creada por el issue #278 para dejar montada la estructura del modulo. El
 // contenido lo construyen sus issues (ver packages/shared/pacientes/ como ejemplar de
 // referencia de filtros.js y columnas.js).
+
+// Indicadores de impacto (issue #205). Este export faltaba: api.js existia desde el 25/08 pero
+// no salia por el barril, asi que ninguna de las dos apps podia importarlo.
+export * from "./api.js";

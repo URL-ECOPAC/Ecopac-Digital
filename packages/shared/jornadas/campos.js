@@ -10,15 +10,20 @@
 // finalizar jornada, no una edicion manual.
 
 import { TIPOS_DE_CAMPO } from '../descriptores.js';
+import { TODOS_LOS_ROLES, etiquetaDeRol } from '../usuarios/roles.js';
 
-/** Valores de rol_usuario (00001_initial_schema.sql), para el rol que se ejerce en la jornada. */
-export const OPCIONES_ROL_EN_JORNADA = [
-  { valor: 'administrador', etiqueta: 'Administrador' },
-  { valor: 'junta directiva', etiqueta: 'Junta directiva' },
-  { valor: 'socio fundador', etiqueta: 'Socio fundador' },
-  { valor: 'medico', etiqueta: 'Medico' },
-  { valor: 'voluntario general', etiqueta: 'Voluntario' },
-];
+/**
+ * Valores de rol_usuario (00001_initial_schema.sql), para el rol que se ejerce en la jornada.
+ *
+ * Se derivan de roles.js en vez de escribirse a mano. AGENTS.md lo pide explicitamente ("Los roles
+ * nunca se escriben como string suelto"), y el motivo es concreto: esta lista ya estaba duplicada,
+ * y una copia que se queda atras produce un INSERT que Postgres rechaza por enum invalido. Un rol
+ * nuevo en el enum ahora aparece aqui solo.
+ */
+export const OPCIONES_ROL_EN_JORNADA = TODOS_LOS_ROLES.map((rol) => ({
+  valor: rol,
+  etiqueta: etiquetaDeRol(rol),
+}));
 
 /**
  * Responsabilidad funcional dentro de la jornada (issue #174, criterio 1): triaje, consulta o

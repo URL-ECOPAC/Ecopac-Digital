@@ -16,7 +16,11 @@ export default function RestablecerContrasenaPage() {
     mensajeExito,
     errorCampo,
     solicitarRestablecimiento,
-  } = useRestablecerContrasena();
+    // La URL de retorno la arma la app y no el hook: packages/shared no puede tocar `window`
+    // (docs/ARQUITECTURA-FRONTEND.md), porque el mismo hook lo consume la app movil.
+  } = useRestablecerContrasena({
+    urlDeRetorno: `${window.location.origin}/nueva-contrasena`,
+  });
 
   return (
     <ScreenContainer>

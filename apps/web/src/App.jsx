@@ -4,6 +4,8 @@ import { SesionProvider } from './contexto/SesionProvider';
 import MainLayout from './components/MainLayout';
 import RutaProtegida from './components/RutaProtegida';
 import LoginPage from './pages/LoginPage';
+import RestablecerContrasenaPage from './pages/RestablecerContrasenaPage';
+import NuevaContrasenaPage from './pages/NuevaContrasenaPage';
 import HomePage from './pages/HomePage';
 import PacientesPage from './pages/PacientesPage';
 import DonacionesPage from './pages/DonacionesPage';
@@ -28,8 +30,14 @@ export default function App() {
     <BrowserRouter>
       <SesionProvider>
         <Routes>
-        {/* Ruta publica: el unico punto de entrada sin sesion */}
+        {/* Rutas publicas: los puntos de entrada sin sesion.
+            Las dos de contrasena tienen que ser publicas por definicion: quien no puede entrar es
+            justo quien las necesita. /nueva-contrasena es ademas el destino del enlace que Supabase
+            manda por correo, y el que usa el primer administrador que la migracion 00063 crea sin
+            contrasena. */}
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/restablecer-contrasena" element={<RestablecerContrasenaPage />} />
+        <Route path="/nueva-contrasena" element={<NuevaContrasenaPage />} />
 
         {/* Rutas autenticadas.
             El guard de sesion va POR ENCIMA de MainLayout: el layout dibuja el nombre y el rol
