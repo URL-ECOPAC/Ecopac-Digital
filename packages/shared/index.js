@@ -38,3 +38,4 @@ export * from './utils/permisos';
 export * from './hooks/usePermisos';
 export { useInicioSesion } from './usuarios/useInicioSesion';
 export { iniciarSesion, cerrarSesion, obtenerPerfil } from './usuarios/api.js';
+export * from './presupuestos/index.js';
