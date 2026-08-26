@@ -91,8 +91,30 @@ tienen TRUNCATE sobre ninguna tabla.
 
 La migracion `00049_retirar_privilegios_anon.sql` deja ese estado y ademas blinda los privilegios
 por defecto del esquema, para que una tabla creada por una migracion futura no vuelva a nacer
-concediendole TRUNCATE a `anon`. La prueba
-`supabase/tests/database/privilegios_anon.sql` lo verifica; corre con `supabase test db`.
+concediendole TRUNCATE a `anon`.
+
+**El CI hace cumplir la regla.** El job "Validar migraciones y funciones" corre el paso
+`Verificar que anon no tenga privilegios`, que despues de aplicar todas las migraciones desde cero
+ejecuta:
+
+```bash
+supabase test db supabase/tests/database/privilegios_anon.sql
+```
+
+Si tu PR deja a `anon` con cualquier privilegio sobre `public`, ese paso falla y nombra la tabla.
+Comprueba el **estado real** de la base, no el texto de las migraciones: da igual como se conceda.
+
+Hizo falta porque ya paso una vez. La `00052` volvio a escribir `GRANT SELECT ON gastos TO anon,
+authenticated` copiando el patron de las migraciones anteriores a la `00049` (issue #435). Esas
+migraciones estan aplicadas y no se pueden editar, asi que el mal ejemplo sigue visible: lo unico
+que puede impedir la proxima copia es la guarda.
+
+Para comprobarlo a mano en cualquier momento, la `00056` deja una vista que debe devolver siempre
+cero filas:
+
+```sql
+SELECT * FROM privilegios_de_anon;
+```
 
 ## Requisitos para trabajar con el stack local
 

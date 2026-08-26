@@ -166,6 +166,23 @@ jobs:
         if: needs.cambios.outputs.supabase == 'true'
         run: supabase db lint --local --fail-on warning
 
+      # Guarda de la issue #435. La 00049 le quito a anon todo acceso al esquema publico, y la
+      # 00052 se lo devolvio sobre gastos copiando el patron de 00034/00039. Esas migraciones
+      # estan aplicadas y no se pueden editar, asi que el mal ejemplo sigue ahi: lo unico que
+      # puede impedir la proxima copia es una guarda.
+      #
+      # Comprueba el ESTADO REAL de la base recien reconstruida, no el texto de las migraciones.
+      # Un grep se esquiva con TO "anon" o con un DO block; esto no: da igual como se conceda el
+      # privilegio, si anon termina con algo sobre public el PR falla, y el mensaje nombra la
+      # tabla culpable.
+      #
+      # Corre UN archivo y no el directorio entero a proposito: hoy hay tres suites rojas en
+      # develop que no tienen que ver con esto (ver issue #221). Cuando esas se arreglen, aqui
+      # solo hay que cambiar la ruta por supabase/tests/database y la red queda completa.
+      - name: Verificar que anon no tenga privilegios
+        if: needs.cambios.outputs.supabase == 'true'
+        run: supabase test db supabase/tests/database/privilegios_anon.sql
+
       - name: Lint de Edge Functions
         if: needs.cambios.outputs.supabase == 'true'
         run: |
