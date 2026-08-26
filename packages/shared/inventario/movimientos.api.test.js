@@ -1,10 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
-  listarMovimientos,
   registrarIngreso,
   registrarSalida,
   editarMovimiento,
-  cancelarMovimiento,
 } from "./movimientos.api.js";
 import { obtenerSupabase } from "../api/cliente.js";
 
