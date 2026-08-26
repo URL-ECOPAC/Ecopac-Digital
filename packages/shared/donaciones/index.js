@@ -19,3 +19,8 @@ export * from "./proyectos.api.js";
 export * from "./proyectos.validaciones.js";
 export * from "./proyectos.permisos.js";
 export * from "./avance.api.js";
+
+// Donantes y donaciones (issue #189). Los valores de tipo_donante, tipo_donacion y
+// estado_donacion nacen aqui: son los del enum de la migracion 00022, no los que declaraba el
+// types/donaciones.ts que este archivo reemplaza.
+export * from "./validaciones.js";

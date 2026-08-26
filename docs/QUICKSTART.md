@@ -182,21 +182,35 @@ Detalles en [CONTRIBUTING.md](./CONTRIBUTING.md).
 - Las variables de entorno no cargan -> reiniciar el servidor despues de editar
   `.env.development`.
 
+## Aprovisionamiento del primer administrador
+
+Con Row Level Security activo, casi todas las tablas exigen un usuario autenticado con rol
+`administrador` para escribir. En una base vacia no hay ninguno, asi que nadie puede crear el
+primero desde la aplicacion. Lo resuelve la migracion
+`supabase/migrations/00063_aprovisionar_primer_admin.sql`, que corre sola con el resto del
+esquema.
+
+La migracion es idempotente: si el correo `admin@ecopac.org` ya existe, reutiliza ese usuario en
+vez de crear otro, y se limita a asegurar que su perfil tenga rol `administrador`. Se puede
+aplicar tantas veces como haga falta.
+
+**La migracion no fija ninguna contrasena.** Crea el usuario con `encrypted_password` en NULL a
+proposito: una contrasena versionada en un repositorio publico es una credencial publicada. La
+contrasena se establece despues, por uno de estos dos caminos:
+
+- Desde la aplicacion, con "olvide mi contrasena" sobre `admin@ecopac.org`. Es el camino normal
+  en `ecopac-dev` y en produccion.
+- Desde el panel de Supabase (Authentication > Users > el usuario > Reset password), o con el CLI
+  desde una maquina de confianza. Nunca desde el CI, que no debe manejar credenciales de personas.
+
+En local, tras `npx supabase db reset` el usuario existe igual y el correo de recuperacion se lee
+en Inbucket, en http://localhost:54324.
+
+Ninguno de los dos caminos expone la llave `service_role` fuera del entorno seguro, que es el
+criterio que pedia la issue #111.
+
 ## Documentacion adicional
 
 - [README.md](../README.md) - overview del proyecto
 - [CONTRIBUTING.md](./CONTRIBUTING.md) - flujo de trabajo completo
 - [AGENTS.md](../AGENTS.md) - contexto del repositorio para asistentes de IA
-
-
-## Aprovisionamiento del Primer Administrador (#111)
-
-Debido a las políticas de seguridad **Row Level Security (RLS)** activas en Supabase, las tablas del sistema restringen la escritura a usuarios autenticados con rol `administrador`. 
-
-### Entorno de Desarrollo (Local y Supabase Dev)
-
-Al iniciar un proyecto desde una base de datos vacía, ejecuta el script de *seed* que crea al administrador inicial con las credenciales demo:
-
-1. Levanta los servicios locales de Supabase o aplica las migraciones:
-   ```bash
-   npx supabase db reset
