@@ -12,10 +12,7 @@ CREATE POLICY "Solo Administrador puede modificar bodegas"
   ON bodegas FOR ALL
   TO authenticated
   USING (
-    EXISTS (
-      SELECT 1 FROM public.usuarios
-      WHERE usuarios.id = auth.uid() AND usuarios.rol = 'administrador'
-    )
+    (auth.jwt() -> 'app_metadata' ->> 'rol') = 'administrador'
   );
 
 -- Políticas para la tabla 'proveedores'
