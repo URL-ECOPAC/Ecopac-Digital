@@ -27,6 +27,7 @@ export * from './principios-activos.permisos.js';
 export * from './medicamentos.api.js';
 export * from './medicamentos.permisos.js';
 export * from './lotes.api.js';
+export * from './existencias.api.js';
 export * from './lotes.permisos.js';
 export * from './bodegas.api.js';
 export * from './proveedores.api.js';
