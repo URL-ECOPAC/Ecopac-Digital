@@ -17,6 +17,7 @@ const modulo = await import("./api.js");
 const {
   actualizarUsuario,
   crearUsuario,
+  contarJornadasPorPerfil,
   desactivarUsuario,
   FUNCION_DE_INVITACION,
   listarCatalogoEspecialidades,
@@ -32,8 +33,12 @@ function doble(respuesta) {
   }
 
   const cadena = {
-    select(columnas) {
-      llamadas.push({ paso: "select", columnas });
+    select(columnas, opciones) {
+      llamadas.push({ paso: "select", columnas, opciones });
+      return cadena;
+    },
+    range(desde, hasta) {
+      llamadas.push({ paso: "range", desde, hasta });
       return cadena;
     },
     update(valores) {
@@ -569,5 +574,133 @@ describe("borrado fisico", () => {
     );
 
     expect(sospechosas).toEqual([]);
+  });
+});
+
+describe("listarUsuarios: paginacion (issue #105, criterio 4)", () => {
+  it("sin limite se comporta como antes: ni range ni count", async () => {
+    const { cliente, llamadas } = doble({ data: [{ id: "u1" }], error: null });
+    dobles.cliente = cliente;
+
+    const { total } = await listarUsuarios();
+
+    expect(pasos(llamadas, "range")).toHaveLength(0);
+    expect(pasos(llamadas, "select")[0].opciones).toBeUndefined();
+    // Sin paginar, el total es lo que llego.
+    expect(total).toBe(1);
+  });
+
+  it("con limite pide el rango de la primera pagina y el conteo exacto", async () => {
+    const { cliente, llamadas } = doble({ data: [], error: null, count: 45 });
+    dobles.cliente = cliente;
+
+    const { total } = await listarUsuarios({ limite: 20 });
+
+    expect(pasos(llamadas, "range")[0]).toEqual({ paso: "range", desde: 0, hasta: 19 });
+    expect(pasos(llamadas, "select")[0].opciones).toEqual({ count: "exact" });
+    expect(total).toBe(45);
+  });
+
+  it.each([
+    [1, 0, 19],
+    [2, 20, 39],
+    [3, 40, 59],
+  ])("la pagina %i pide el rango %i-%i", async (pagina, desde, hasta) => {
+    const { cliente, llamadas } = doble({ data: [], error: null, count: 100 });
+    dobles.cliente = cliente;
+
+    await listarUsuarios({ limite: 20, pagina });
+
+    expect(pasos(llamadas, "range")[0]).toEqual({ paso: "range", desde, hasta });
+  });
+
+  it("una pagina menor que 1 se trata como la primera", async () => {
+    const { cliente, llamadas } = doble({ data: [], error: null, count: 10 });
+    dobles.cliente = cliente;
+
+    await listarUsuarios({ limite: 20, pagina: 0 });
+
+    expect(pasos(llamadas, "range")[0].desde).toBe(0);
+  });
+
+  it("el total viaja tambien cuando la pagina viene vacia", async () => {
+    const { cliente } = doble({ data: [], error: null, count: 45 });
+    dobles.cliente = cliente;
+
+    const { usuarios, total } = await listarUsuarios({ limite: 20, pagina: 3 });
+
+    expect(usuarios).toEqual([]);
+    expect(total).toBe(45);
+  });
+
+  it("un error devuelve total cero, no el conteo anterior", async () => {
+    const { cliente } = doble({ data: null, error: { code: "42501" }, count: 45 });
+    dobles.cliente = cliente;
+
+    const { usuarios, total, error } = await listarUsuarios({ limite: 20 });
+
+    expect(usuarios).toEqual([]);
+    expect(total).toBe(0);
+    expect(error).not.toBeNull();
+  });
+});
+
+describe("contarJornadasPorPerfil", () => {
+  it("sin perfiles no llama al cliente", async () => {
+    const { conteos, error } = await contarJornadasPorPerfil([]);
+
+    expect(conteos).toEqual({});
+    expect(error).toBeNull();
+  });
+
+  it("cuenta cuantas filas tiene cada perfil", async () => {
+    const { cliente } = doble({
+      data: [
+        { perfil_id: "p1" },
+        { perfil_id: "p1" },
+        { perfil_id: "p2" },
+        { perfil_id: "p1" },
+      ],
+      error: null,
+    });
+    dobles.cliente = cliente;
+
+    const { conteos } = await contarJornadasPorPerfil(["p1", "p2"]);
+
+    expect(conteos).toEqual({ p1: 3, p2: 1 });
+  });
+
+  it("pide todos los perfiles en UNA sola consulta, no una por persona", async () => {
+    const { cliente, llamadas } = doble({ data: [], error: null });
+    dobles.cliente = cliente;
+
+    await contarJornadasPorPerfil(["p1", "p2", "p3"]);
+
+    expect(pasos(llamadas, "from")).toHaveLength(1);
+    expect(pasos(llamadas, "from")[0].tabla).toBe("jornada_personal");
+    expect(pasos(llamadas, "in")[0]).toEqual({
+      paso: "in",
+      columna: "perfil_id",
+      valores: ["p1", "p2", "p3"],
+    });
+  });
+
+  it("un perfil sin jornadas no aparece en el resultado", async () => {
+    const { cliente } = doble({ data: [{ perfil_id: "p1" }], error: null });
+    dobles.cliente = cliente;
+
+    const { conteos } = await contarJornadasPorPerfil(["p1", "p2"]);
+
+    expect(conteos.p2).toBeUndefined();
+  });
+
+  it("un error devuelve conteos vacios y no revienta", async () => {
+    const { cliente } = doble({ data: null, error: { code: "42501" } });
+    dobles.cliente = cliente;
+
+    const { conteos, error } = await contarJornadasPorPerfil(["p1"]);
+
+    expect(conteos).toEqual({});
+    expect(error).not.toBeNull();
   });
 });

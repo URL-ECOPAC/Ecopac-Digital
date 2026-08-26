@@ -5,6 +5,8 @@ export const COLUMNAS_USUARIO = [
   { id: 'nombreCompleto', label: 'Nombre', tipo: TIPOS_DE_PRESENTACION.TEXTO, principal: true },
   { id: 'email', label: 'Correo', tipo: TIPOS_DE_PRESENTACION.TEXTO },
   { id: 'rol', label: 'Rol', tipo: TIPOS_DE_PRESENTACION.TEXTO, etiquetasDesde: 'roles' },
+  { id: 'especialidades', label: 'Especialidades', tipo: TIPOS_DE_PRESENTACION.CHIPS },
+  { id: 'jornadas', label: 'Jornadas', tipo: TIPOS_DE_PRESENTACION.NUMERO },
   { id: 'estado', label: 'Estado', tipo: TIPOS_DE_PRESENTACION.ESTADO, desde: 'activo', etiquetasDesde: 'estadoUsuario' },
   { id: 'fechaIngreso', label: 'Ingreso', tipo: TIPOS_DE_PRESENTACION.FECHA },
 ];

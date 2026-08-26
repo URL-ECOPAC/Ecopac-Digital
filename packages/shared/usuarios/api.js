@@ -155,20 +155,40 @@ async function idsDePerfilPorEspecialidad(especialidad) {
  * CAMPOS_FICHA_VOLUNTARIO.especialidades en columnas.js). Requiere la politica RLS de la
  * migracion 00058: sin ella, el embed llega vacio para cualquiera, incluida la administradora.
  *
- * @param {{ busqueda?: string, rol?: string, estado?: string|boolean, especialidad?: string }} [filtros]
- * @returns {Promise<{ usuarios: object[], error: object|null }>}
+ * `limite` y `pagina` acotan el resultado con `.range()` y piden el total con `count: "exact"`
+ * (issue #105, criterio 4: la lista pagina y no carga todos los perfiles de una vez). Ambos son
+ * opcionales: sin ellos la funcion se comporta como antes y devuelve todo, para no romper a
+ * quien ya la llamaba. `total` es la cantidad de filas que cumplen los filtros, sin paginar, y
+ * es lo que necesita la pantalla para saber cuantas paginas hay.
+ *
+ * @param {{ busqueda?: string, rol?: string, estado?: string|boolean, especialidad?: string,
+ *   limite?: number, pagina?: number }} [filtros]
+ * @returns {Promise<{ usuarios: object[], total: number, error: object|null }>}
  */
-export async function listarUsuarios({ busqueda, rol, estado, especialidad } = {}) {
+export async function listarUsuarios({
+  busqueda,
+  rol,
+  estado,
+  especialidad,
+  limite,
+  pagina = 1,
+} = {}) {
   try {
     let idsFiltrados = null;
     if (especialidad) {
       idsFiltrados = await idsDePerfilPorEspecialidad(especialidad);
-      if (idsFiltrados.length === 0) return { usuarios: [], error: null };
+      if (idsFiltrados.length === 0) return { usuarios: [], total: 0, error: null };
     }
+
+    const pagina_ = Math.max(1, Number(pagina) || 1);
+    const porPagina = limite === undefined || limite === null ? null : Math.max(1, Number(limite));
 
     let consulta = obtenerSupabase()
       .from("perfiles")
-      .select(`${COLUMNAS_DEL_PERFIL}, ${ESPECIALIDADES_DEL_PERFIL}`)
+      .select(
+        `${COLUMNAS_DEL_PERFIL}, ${ESPECIALIDADES_DEL_PERFIL}`,
+        porPagina === null ? undefined : { count: "exact" },
+      )
       .order("apellidos", { ascending: true })
       .order("nombres", { ascending: true });
 
@@ -187,18 +207,62 @@ export async function listarUsuarios({ busqueda, rol, estado, especialidad } = {
 
     if (idsFiltrados) consulta = consulta.in("id", idsFiltrados);
 
-    const { data, error } = await consulta;
+    if (porPagina !== null) {
+      const desde = (pagina_ - 1) * porPagina;
+      consulta = consulta.range(desde, desde + porPagina - 1);
+    }
 
-    if (error) return { usuarios: [], error: normalizarError(error) };
+    const { data, error, count } = await consulta;
+
+    if (error) return { usuarios: [], total: 0, error: normalizarError(error) };
 
     const usuarios = (data ?? []).map((fila) => ({
       ...fila,
       especialidades: (fila.especialidades ?? []).map((item) => item.nombre_especialidad),
     }));
 
-    return { usuarios, error: null };
+    return { usuarios, total: count ?? usuarios.length, error: null };
   } catch (error) {
-    return { usuarios: [], error: normalizarError(error) };
+    return { usuarios: [], total: 0, error: normalizarError(error) };
+  }
+}
+
+/**
+ * Cuenta en cuantas jornadas participo cada perfil de la lista que se le pase.
+ *
+ * Una sola consulta a jornada_personal para todos los perfiles de la pagina, y el conteo se
+ * hace aqui. Es a proposito: obtenerJornadasDePersona() de jornadas/api.js resuelve una persona
+ * a la vez, y llamarla por fila seria el N+1 que fn_atenciones_de_persona_por_jornada (00059) se
+ * escribio justamente para evitar.
+ *
+ * Devuelve un objeto plano `{ [perfilId]: numero }`. Un perfil sin jornadas no aparece en el
+ * resultado: quien lo consume le asigna cero, igual que hace obtenerJornadasDePersona() con las
+ * jornadas ausentes.
+ *
+ * @param {string[]} perfilIds UUIDs de los perfiles a contar.
+ * @returns {Promise<{ conteos: object, error: object|null }>}
+ */
+export async function contarJornadasPorPerfil(perfilIds = []) {
+  if (!Array.isArray(perfilIds) || perfilIds.length === 0) {
+    return { conteos: {}, error: null };
+  }
+
+  try {
+    const { data, error } = await obtenerSupabase()
+      .from("jornada_personal")
+      .select("perfil_id")
+      .in("perfil_id", perfilIds);
+
+    if (error) return { conteos: {}, error: normalizarError(error) };
+
+    const conteos = {};
+    for (const fila of data ?? []) {
+      conteos[fila.perfil_id] = (conteos[fila.perfil_id] ?? 0) + 1;
+    }
+
+    return { conteos, error: null };
+  } catch (error) {
+    return { conteos: {}, error: normalizarError(error) };
   }
 }
 
