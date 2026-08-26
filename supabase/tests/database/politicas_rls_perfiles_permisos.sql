@@ -52,9 +52,15 @@ FROM permisos WHERE clave = 'inventario.aprobar';
 SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000001';
 
+-- Se cuentan SOLO los perfiles del fixture (ids ...0001 a ...0006) y no la tabla entera.
+-- El seed de datos ficticios (#94, migracion de la PR #419) tambien inserta perfiles, asi que
+-- un count(*) sin acotar cuenta los suyos y falla. Cambiar el 6 por el total de hoy volveria a
+-- romper esta prueba la proxima vez que el seed crezca; lo que hay que fijar es que el
+-- administrador vea TODOS los del fixture, que es lo que la politica promete.
 SELECT is(
-  (SELECT count(*)::int FROM perfiles), 6,
-  'administrador ve las 6 filas de perfiles'
+  (SELECT count(*)::int FROM perfiles WHERE id BETWEEN '00000000-0000-0000-0000-000000000001'
+                     AND '00000000-0000-0000-0000-000000000006'), 6,
+  'administrador ve las 6 filas de perfiles del fixture'
 );
 
 SELECT lives_ok(
@@ -97,9 +103,11 @@ SELECT is(
   'junta directiva solo ve su propia fila en la tabla base perfiles (no la de los demas)'
 );
 
+-- Acotado al fixture por el mismo motivo que el conteo del administrador.
 SELECT is(
-  (SELECT count(*)::int FROM perfiles_directorio), 6,
-  'junta directiva ve las 6 filas a traves de perfiles_directorio'
+  (SELECT count(*)::int FROM perfiles_directorio WHERE id BETWEEN '00000000-0000-0000-0000-000000000001'
+                     AND '00000000-0000-0000-0000-000000000006'), 6,
+  'junta directiva ve las 6 filas del fixture a traves de perfiles_directorio'
 );
 
 SELECT is(

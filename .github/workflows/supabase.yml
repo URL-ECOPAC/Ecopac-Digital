@@ -166,22 +166,24 @@ jobs:
         if: needs.cambios.outputs.supabase == 'true'
         run: supabase db lint --local --fail-on warning
 
-      # Guarda de la issue #435. La 00049 le quito a anon todo acceso al esquema publico, y la
-      # 00052 se lo devolvio sobre gastos copiando el patron de 00034/00039. Esas migraciones
-      # estan aplicadas y no se pueden editar, asi que el mal ejemplo sigue ahi: lo unico que
-      # puede impedir la proxima copia es una guarda.
+      # La red de seguridad de la base de datos (issue #221).
       #
-      # Comprueba el ESTADO REAL de la base recien reconstruida, no el texto de las migraciones.
-      # Un grep se esquiva con TO "anon" o con un DO block; esto no: da igual como se conceda el
-      # privilegio, si anon termina con algo sobre public el PR falla, y el mensaje nombra la
-      # tabla culpable.
+      # Corre TODAS las suites pgTAP de supabase/tests/database contra la base recien
+      # reconstruida desde cero. Comprueban el estado real: las politicas RLS rol por rol, los
+      # triggers y los privilegios. Un grep sobre las migraciones no serviria -- se esquiva con
+      # `TO "anon"` o con un DO block --; esto no, porque mira lo que quedo en la base.
       #
-      # Corre UN archivo y no el directorio entero a proposito: hoy hay tres suites rojas en
-      # develop que no tienen que ver con esto (ver issue #221). Cuando esas se arreglen, aqui
-      # solo hay que cambiar la ruta por supabase/tests/database y la red queda completa.
-      - name: Verificar que anon no tenga privilegios
+      # Hasta la #221 este paso corria un solo archivo, privilegios_anon.sql, porque habia tres
+      # suites en rojo en develop. Esa es exactamente la razon por la que la regresion de la
+      # issue #435 llego a mergearse: la prueba que la detectaba existia y llevaba dias en rojo
+      # sin que nadie la mirara. Ahora las catorce estan en verde y el directorio entero es
+      # requisito.
+      #
+      # Si se agrega una tabla con politicas, su suite va aqui: es lo unico que impide que una
+      # politica nueva llegue a develop sin que nadie haya comprobado que hace lo que dice.
+      - name: Pruebas de la base de datos
         if: needs.cambios.outputs.supabase == 'true'
-        run: supabase test db supabase/tests/database/privilegios_anon.sql
+        run: supabase test db
 
       - name: Lint de Edge Functions
         if: needs.cambios.outputs.supabase == 'true'
