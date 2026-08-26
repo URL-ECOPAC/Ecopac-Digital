@@ -22,11 +22,22 @@ export function normalizarTexto(valor) {
   return typeof valor === "string" ? valor.trim() : "";
 }
 
-/** Un campo esta vacio si no hay texto, o si es una lista sin elementos. */
+/**
+ * Un campo esta vacio si no hay texto, o si es una lista sin elementos.
+ *
+ * Los numeros NO estan vacios, y hay que decirlo explicitamente: normalizarTexto() devuelve
+ * cadena vacia para todo lo que no sea string, asi que sin esta linea un `120` en un campo
+ * obligatorio se reportaba como "es obligatorio". Nadie lo habia notado porque hasta la issue
+ * #117 ningun modulo validaba campos numericos con validarConDescriptores(): afectaba tambien a
+ * cantidadEntregada de CAMPOS_RECETA y a cantidadIngresada de CAMPOS_INGRESO.
+ *
+ * NaN si cuenta como vacio: es lo que produce un `Number("")` o un input numerico sin llenar.
+ */
 export function esTextoVacio(valor) {
   if (Array.isArray(valor)) return valor.length === 0;
   if (valor === null || valor === undefined) return true;
   if (typeof valor === "boolean") return false;
+  if (typeof valor === "number") return Number.isNaN(valor);
   return normalizarTexto(valor) === "";
 }
 
