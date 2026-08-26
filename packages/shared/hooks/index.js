@@ -4,3 +4,4 @@
 // - usePendingApprovals(): consultas pendientes de aprobación
 // - Funcionan en React y React Native
 export * from "./useSesion.js";
+export * from "./useExpiracionPorInactividad.js";
