@@ -23,6 +23,7 @@ export * from "./formato/index.js";
 export * from "./pacientes/index.js";
 export * from "./inventario/index.js";
 export * from "./jornadas/index.js";
+export * from "./atenciones/index.js";
 export * from "./donaciones/index.js";
 export * from "./presupuestos/index.js";
 export * from "./reportes/index.js";
