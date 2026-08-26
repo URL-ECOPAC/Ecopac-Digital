@@ -13,3 +13,4 @@ export * from './validaciones.js';
 export * from './useInicioSesion.js';
 export * from './useRestablecerContrasena.js';
 export * from './useNuevaContrasena.js';
+export * from './useUsuariosListado.js';
