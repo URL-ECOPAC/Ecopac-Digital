@@ -16,3 +16,4 @@
 // Indicadores de impacto (issue #205). Este export faltaba: api.js existia desde el 25/08 pero
 // no salia por el barril, asi que ninguna de las dos apps podia importarlo.
 export * from "./api.js";
+export * from "./inventario.api.js";
