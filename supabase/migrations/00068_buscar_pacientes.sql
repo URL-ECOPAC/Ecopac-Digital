@@ -89,6 +89,8 @@
 -- columna de salida homonima de tres columnas de entrada es el tipo de colision que conviene
 -- evitar por diseno.
 
+SELECT extensions.word_similarity('', '');
+
 CREATE OR REPLACE FUNCTION fn_buscar_pacientes(
   p_termino TEXT DEFAULT NULL,
   p_comunidad_id UUID DEFAULT NULL,
