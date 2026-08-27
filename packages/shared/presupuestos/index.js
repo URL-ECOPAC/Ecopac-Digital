@@ -19,3 +19,4 @@ export * from './columnas.js';
 export * from './filtros.js';
 export * from './validaciones.js';
 export * from './permisos.js';
+export * from "./aprobacionGastosApi.js";
