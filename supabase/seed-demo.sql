@@ -56,31 +56,44 @@ ON CONFLICT (id) DO NOTHING;
 -- necesita para resolver el login por el proveedor "email"; el patron minimo de
 -- supabase/tests/database (solo id + email en auth.users) alcanza para simular auth.uid()
 -- en pgTAP, pero no para iniciar sesion de verdad desde la app.
+--
+-- Las cuatro columnas de token van explicitas en '' y no se omiten: auth.users no les pone
+-- DEFAULT '', y GoTrue las escanea como texto no nulo. Dejadas en NULL, toda busqueda de
+-- usuario por correo aborta -login y recuperacion de contrasena por igual- con un 500
+-- "Database error querying schema". Ver la migracion 00069.
 INSERT INTO auth.users (
   instance_id, id, aud, role, email, encrypted_password,
-  email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at
+  email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at,
+  confirmation_token, recovery_token, email_change, email_change_token_new
 ) VALUES
   ('00000000-0000-0000-0000-000000000000', 'de000001-0000-0000-0000-000000000001', 'authenticated', 'authenticated',
    'admin.demo@ecopac.test', extensions.crypt('EcopacDemo#2026', extensions.gen_salt('bf')), NOW(),
-   '{"provider":"email","providers":["email"]}', '{"nombres":"Administradora","apellidos":"Demo"}', NOW(), NOW()),
+   '{"provider":"email","providers":["email"]}', '{"nombres":"Administradora","apellidos":"Demo"}', NOW(), NOW(),
+   '', '', '', ''),
   ('00000000-0000-0000-0000-000000000000', 'de000001-0000-0000-0000-000000000002', 'authenticated', 'authenticated',
    'junta.demo@ecopac.test', extensions.crypt('EcopacDemo#2026', extensions.gen_salt('bf')), NOW(),
-   '{"provider":"email","providers":["email"]}', '{"nombres":"Junta","apellidos":"Directiva Demo"}', NOW(), NOW()),
+   '{"provider":"email","providers":["email"]}', '{"nombres":"Junta","apellidos":"Directiva Demo"}', NOW(), NOW(),
+   '', '', '', ''),
   ('00000000-0000-0000-0000-000000000000', 'de000001-0000-0000-0000-000000000003', 'authenticated', 'authenticated',
    'socio.demo@ecopac.test', extensions.crypt('EcopacDemo#2026', extensions.gen_salt('bf')), NOW(),
-   '{"provider":"email","providers":["email"]}', '{"nombres":"Socio","apellidos":"Fundador Demo"}', NOW(), NOW()),
+   '{"provider":"email","providers":["email"]}', '{"nombres":"Socio","apellidos":"Fundador Demo"}', NOW(), NOW(),
+   '', '', '', ''),
   ('00000000-0000-0000-0000-000000000000', 'de000001-0000-0000-0000-000000000004', 'authenticated', 'authenticated',
    'medico.demo@ecopac.test', extensions.crypt('EcopacDemo#2026', extensions.gen_salt('bf')), NOW(),
-   '{"provider":"email","providers":["email"]}', '{"nombres":"Mario","apellidos":"Medico Demo"}', NOW(), NOW()),
+   '{"provider":"email","providers":["email"]}', '{"nombres":"Mario","apellidos":"Medico Demo"}', NOW(), NOW(),
+   '', '', '', ''),
   ('00000000-0000-0000-0000-000000000000', 'de000001-0000-0000-0000-000000000005', 'authenticated', 'authenticated',
    'medico2.demo@ecopac.test', extensions.crypt('EcopacDemo#2026', extensions.gen_salt('bf')), NOW(),
-   '{"provider":"email","providers":["email"]}', '{"nombres":"Miriam","apellidos":"Medico Demo"}', NOW(), NOW()),
+   '{"provider":"email","providers":["email"]}', '{"nombres":"Miriam","apellidos":"Medico Demo"}', NOW(), NOW(),
+   '', '', '', ''),
   ('00000000-0000-0000-0000-000000000000', 'de000001-0000-0000-0000-000000000006', 'authenticated', 'authenticated',
    'voluntario.demo@ecopac.test', extensions.crypt('EcopacDemo#2026', extensions.gen_salt('bf')), NOW(),
-   '{"provider":"email","providers":["email"]}', '{"nombres":"Victor","apellidos":"Voluntario Demo"}', NOW(), NOW()),
+   '{"provider":"email","providers":["email"]}', '{"nombres":"Victor","apellidos":"Voluntario Demo"}', NOW(), NOW(),
+   '', '', '', ''),
   ('00000000-0000-0000-0000-000000000000', 'de000001-0000-0000-0000-000000000007', 'authenticated', 'authenticated',
    'voluntario2.demo@ecopac.test', extensions.crypt('EcopacDemo#2026', extensions.gen_salt('bf')), NOW(),
-   '{"provider":"email","providers":["email"]}', '{"nombres":"Valeria","apellidos":"Voluntario Demo"}', NOW(), NOW())
+   '{"provider":"email","providers":["email"]}', '{"nombres":"Valeria","apellidos":"Voluntario Demo"}', NOW(), NOW(),
+   '', '', '', '')
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO auth.identities (id, user_id, provider_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
