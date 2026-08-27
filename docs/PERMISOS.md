@@ -76,11 +76,15 @@ la funcion es inalcanzable. Las dos situaciones son defectos, y las que hay esta
 | `consulta_diagnostico`    | C R           | —                                | C R    | —                  | `00033`                                                                                                                |
 | `recetas`                 | C R U         | —                                | C R U  | —                  | `00033`; anulacion en `00066`                                                                                          |
 | `receta_detalle`          | C R           | —                                | C R    | —                  | `00033`                                                                                                                |
-| `padecimientos_cronicos`  | C R U D       | —                                | C R U  | —                  | `00010`. Unica tabla clinica con DELETE, y solo para administrador                                                     |
+| `padecimientos_cronicos`  | C R U D       | —                                | C R U  | —                  | `00010`. Unica tabla clinica con DELETE, y solo para administrador. Auditada desde la `00070`                          |
 | `diagnosticos` (catalogo) | R             | —                                | R      | —                  | `00033`. Catalogo de solo lectura: nadie lo puede poblar por la API                                                    |
 
 **Ninguna tabla clinica tiene politica de DELETE** (salvo `padecimientos_cronicos`). La baja es
-logica, no fisica.
+logica, no fisica. En `padecimientos_cronicos` esa excepcion existe para corregir un alta
+equivocada, no para dar de alta a un paciente de su condicion: para eso se pasa el estado a
+`resuelta`, que es lo que hace `desasociarCondicion()` en `packages/shared/pacientes`. Por ser el
+unico borrado real del esquema clinico, la `00070` le puso el trigger de auditoria que la `00026`
+le habia dejado fuera.
 
 > **Los roles consultivos no leen ninguna fila clinica, y es deliberado.** `00041` les habia dado
 > lectura sobre `atenciones`, `consultas`, `recetas` y `receta_detalle` para que cuadrara un

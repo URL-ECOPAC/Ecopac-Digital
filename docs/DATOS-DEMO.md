@@ -14,6 +14,10 @@ este seed corresponde a una persona o lugar real (regla de confidencialidad de
   `voluntario general`).
 - 3 comunidades ficticias.
 - 12 pacientes ficticios con su expediente.
+- 11 condiciones cronicas repartidas entre 9 de esos pacientes (issue #122): cubren las tres
+  comunidades y los tres estados de `estado_condicion_cronica`, con un paciente que tiene dos
+  condiciones a la vez y otro cuya condicion ya esta `resuelta` - el caso que los listados de
+  cronicos excluyen por defecto.
 - 2 jornadas: una `finalizada` (hace 30 dias) y una `en curso` (hoy).
 - 7 medicamentos y 4 lotes: uno ya vencido, uno que vence dentro del mes y dos con
   vencimiento lejano - para probar alertas de caducidad y el bloqueo de salida de
@@ -69,6 +73,9 @@ ningun comando de este repositorio que lo intente: el job que aplica migraciones
 
 ## Fuera de alcance de este seed
 
-No incluye `proyectos`, `atenciones`/`consultas`/`recetas`, `donantes`/`donaciones` ni
-`condiciones_cronicas`: no estan en el alcance del issue #94. Se puede ampliar en un seed
-posterior si el equipo lo necesita.
+No incluye `proyectos`, `atenciones`/`consultas`/`recetas` ni `donantes`/`donaciones`: no estan
+en el alcance del issue #94. Se puede ampliar en un seed posterior si el equipo lo necesita.
+
+Las condiciones cronicas si estaban fuera de ese alcance y entraron despues, con la issue #122:
+la API expone un listado de pacientes cronicos por comunidad, y sin datos no habia forma de ver
+esa pantalla funcionando en local.

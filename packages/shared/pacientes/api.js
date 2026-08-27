@@ -56,7 +56,11 @@ const COLUMNAS_DEL_EXPEDIENTE = [
 
 // condicion se pide embebida (condiciones_cronicas.nombre) por el mismo motivo que comunidad
 // arriba: la pantalla no deberia hacer una segunda consulta solo para mostrar el nombre.
-const COLUMNAS_DE_CONDICION_CRONICA = [
+//
+// Se exporta porque condiciones.api.js (issue #122), que es quien escribe esta tabla, lee las
+// mismas columnas: una lista duplicada se desincroniza en cuanto alguien agregue una columna en
+// un archivo y no en el otro. La regla del bug #365 aplica igual dentro de un modulo.
+export const COLUMNAS_DE_CONDICION_CRONICA = [
   "id",
   "condicionId:condicion_id",
   "fechaDiagnostico:fecha_diagnostico",
