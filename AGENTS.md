@@ -60,6 +60,8 @@ Restricciones:
 - No importar componentes UI de `web` en `mobile` ni viceversa.
 - Los roles nunca se escriben como string suelto: se usan los de
   `packages/shared/usuarios/roles.js`, que replican el enum `rol_usuario` de la migracion 00001.
+  Que puede hacer cada rol esta en `docs/PERMISOS.md`, y quien protege de verdad es RLS, no el
+  cliente. Un PR que cambia una politica o un GRANT actualiza ese documento en el mismo PR.
 - La app movil usa Expo v57.0.0: leer la documentacion versionada
   https://docs.expo.dev/versions/v57.0.0/ antes de escribir codigo movil (ver
   `apps/mobile/AGENTS.md`).
@@ -199,6 +201,9 @@ Commits (Conventional Commits):
 
 ## Documentacion de referencia
 
+- `docs/PERMISOS.md` - **la matriz de permisos por rol**: que puede hacer cada rol en cada
+  modulo, que politica RLS lo implementa, y las divergencias abiertas. Es la fuente de verdad
+  del control de acceso.
 - `docs/README.md` - indice de documentacion.
 - `docs/QUICKSTART.md` - guia de inicio rapido.
 - `docs/CONTRIBUTING.md` - guia de contribucion.

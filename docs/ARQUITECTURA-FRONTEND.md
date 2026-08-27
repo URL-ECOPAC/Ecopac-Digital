@@ -53,7 +53,7 @@ filtros y columnas muestran el patron a copiar en el resto de modulos.
 - Los **hooks de pantalla** (`use<Pantalla>.js`) se exportan con prefijo `use` en camelCase,
   igual que cualquier hook de React: `usePacientesListado`, `useJornadasKanban`.
 - Las **funciones** de `api.js`, `validaciones.js` y `permisos.js` van en camelCase sin
-  prefijo especial: `crearPaciente`, `esAdministrador`, `puedeAprobarMovimiento`.
+  prefijo especial: `registrarPaciente`, `puedeVerJornadas`, `puedeAprobarGasto`.
 
 Cada modulo expone un `index.js` que re-exporta sus archivos (`export * from './archivo.js'`),
 y el `index.js` de la raiz de `packages/shared` re-exporta cada modulo.
@@ -462,8 +462,12 @@ Si puede importar `react` (para `useState` y `useEffect` dentro de los hooks) y
   de un componente;
 - escribir un color a mano: todo sale de `@ecopac/ui-tokens`.
 
-Estas reglas se hacen cumplir con `no-restricted-imports` en `eslint.config`, para que la
-frontera no dependa de la disciplina de ocho personas.
+Las dos primeras se hacen cumplir con `no-restricted-imports` en `eslint.config`, para que la
+frontera no dependa de la disciplina de ocho personas. **La de los permisos no la comprueba
+ningun lint todavia**: depende de que cada quien la respete.
+
+Que puede hacer cada rol no se decide aqui ni se repite en cada modulo: esta en
+[PERMISOS.md](./PERMISOS.md), con la politica RLS que implementa cada celda.
 
 ## Tokens de diseno
 
@@ -484,11 +488,14 @@ se pueda usar como indice sin traducir.
 del sidebar, el modulo de permisos al que corresponde y los roles que lo ven. El sidebar de la
 web usa `seccionesVisibles(rol)` y la tab bar del movil usa `tabsMoviles(rol)`.
 
-Ocultar una opcion del menu **no es control de acceso**: la restriccion real vive en las
-politicas RLS y en el guard de rutas.
+Ocultar una opcion del menu **no es control de acceso**, y el guard de rutas tampoco lo es:
+los dos viven en el cliente. La unica capa que protege son las politicas RLS y los `GRANT`.
+Las cuatro capas y cual hace que estan explicadas en [PERMISOS.md](./PERMISOS.md).
 
 Los roles son los del enum `rol_usuario` de la migracion 00001, expuestos en
-`packages/shared/usuarios/roles.js`. Nunca se escribe un rol como string suelto.
+`packages/shared/usuarios/roles.js`. Nunca se escribe un rol como string suelto. **Que puede
+hacer cada uno esta en [PERMISOS.md](./PERMISOS.md)**, no aqui: este documento describe donde
+va cada capa, no que decide.
 
 ## Como construir una pantalla nueva
 
