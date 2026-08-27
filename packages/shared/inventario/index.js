@@ -36,3 +36,4 @@ export * from './proveedores.api.js';
 export * from './bodegas.permisos.js';
 export * from "./movimientos.api.js";
 export * from "./validacion.api.js";
+export * from "./useCatalogoMedicamentos.js";
