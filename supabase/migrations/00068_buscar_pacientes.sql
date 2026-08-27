@@ -30,6 +30,34 @@
 -- pero NO indexable (es una funcion, no un operador), y forzaria el recorrido secuencial que el
 -- criterio 5 prohibe.
 --
+-- POR QUE ESTE ARCHIVO CARGA pg_trgm ANTES DEL CREATE FUNCTION (issue #487)
+--
+-- Tal como se mergeo, esta migracion fallaba en Supabase gestionado:
+--
+--   ERROR: permission denied to set parameter "pg_trgm.word_similarity_threshold"
+--          (SQLSTATE 42501)
+--
+-- No es un problema del umbral ni del rol: es de que la GUC todavia no existe cuando corre el
+-- CREATE FUNCTION. Postgres valida la clausula SET contra el catalogo de GUCs conocidas
+-- (validate_option_array_item en guc.c). Si el modulo de la extension no esta cargado en la
+-- sesion, `pg_trgm.word_similarity_threshold` no es una GUC conocida sino un "placeholder" con
+-- prefijo custom, y para fijar un placeholder Postgres exige superusuario -no puede comprobar el
+-- permiso de una variable que aun no sabe si sera USERSET o SUSET-. El rol de despliegue de
+-- Supabase no es superusuario, asi que ahi falla. El CI no lo detecta porque `supabase db reset`
+-- corre sobre una instancia local donde el rol SI es superusuario: el placeholder se acepta y la
+-- migracion pasa.
+--
+-- Basta con que pg_trgm este cargada en la sesion antes del CREATE FUNCTION: entonces la GUC ya
+-- es conocida, se comprueba como lo que es -PGC_USERSET- y cualquier rol puede fijarla. Llamar a
+-- una funcion C de la extension carga su libreria y ejecuta su _PG_init, que es justamente donde
+-- se define la GUC. Por eso el SELECT de abajo: no filtra nada ni deja rastro, solo fuerza la
+-- carga. Va en ESTE archivo, no en una migracion posterior, porque asi queda garantizado que la
+-- carga y el CREATE FUNCTION ocurren en la misma sesion.
+--
+-- En tiempo de llamada no hace falta nada equivalente: si el backend que atiende la llamada aun
+-- no tiene pg_trgm cargada, la clausula SET crea el placeholder con el valor 0.4 y el cuerpo de
+-- la funcion carga la libreria al usar <%, momento en que _PG_init adopta ese valor.
+--
 -- El termino se normaliza con la MISMA funcion que calculo el indice (public.f_unaccent, 00011):
 -- una sola regla de normalizacion en todo el sistema, para que shared y la base nunca diverjan.
 --
@@ -88,6 +116,10 @@
 -- tienen las tres una columna "id", y aunque el cuerpo las califica todas (pa./co./ex.), una
 -- columna de salida homonima de tres columnas de entrada es el tipo de colision que conviene
 -- evitar por diseno.
+
+-- Carga pg_trgm en esta sesion para que la clausula SET de abajo tenga una GUC real que fijar y
+-- no un placeholder que exigiria superusuario (ver cabecera). Sin efectos: devuelve 0.
+SELECT extensions.word_similarity('', '');
 
 CREATE OR REPLACE FUNCTION fn_buscar_pacientes(
   p_termino TEXT DEFAULT NULL,
