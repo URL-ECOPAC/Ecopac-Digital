@@ -66,6 +66,33 @@ Por dos motivos, y el primero es una trampa que no se ve:
 No se puede llegar a **un** unico check para todo el repositorio: `Lint y build` vive en otro
 workflow y un job no puede declarar `needs` de un workflow ajeno. El minimo son dos nombres.
 
+### Lo que el CI no puede predecir: los privilegios del rol
+
+`Validar migraciones y funciones` aplica todo desde cero, pero lo hace en el stack local, donde
+el rol que corre las migraciones **es superusuario**. En Supabase gestionado no lo es. Todo lo
+que dependa de ese privilegio pasa el CI en verde y falla en el despliegue.
+
+Es lo que ocurrio con la `00068` (issue #487). La funcion `fn_buscar_pacientes` llevaba
+`SET pg_trgm.word_similarity_threshold = 0.4` en el `CREATE FUNCTION`, y el despliegue murio con:
+
+```
+ERROR: permission denied to set parameter "pg_trgm.word_similarity_threshold" (SQLSTATE 42501)
+```
+
+Postgres valida la clausula `SET` contra las GUCs que conoce. Si la libreria de la extension no
+esta cargada en la sesion, `pg_trgm.word_similarity_threshold` todavia no es una GUC: es un
+placeholder con prefijo custom, y fijar un placeholder exige superusuario, porque Postgres no
+puede saber aun si la variable sera `USERSET` o `SUSET`. En local el rol es superusuario y pasa;
+en Supabase no. La solucion no fue bajar el umbral ni cambiar de rol, sino **cargar pg_trgm antes
+del `CREATE FUNCTION`**, en el mismo archivo -llamar a una funcion C de la extension ejecuta su
+`_PG_init`, que es donde la GUC se define-. Con la GUC ya conocida, el permiso se comprueba como
+lo que es, `USERSET`, y cualquier rol puede fijarla.
+
+La leccion general: **verde en el CI no prueba que el despliegue vaya a pasar** cuando la
+migracion toca privilegios, GUCs de extensiones, roles o propiedad de objetos. Eso se prueba
+corriendo el SQL como un rol `NOSUPERUSER` (basta un cluster desechable con `initdb`), no
+mirando el check.
+
 ## Ambientes
 
 | Rama      | Proyecto Supabase   | Secret del project-ref      | Despliegue web    |
@@ -255,8 +282,25 @@ Ahi si se detuvo dentro de una migracion y **la base puede haber quedado a media
 4. Tras el merge, confirmar con `supabase migration list --linked` que la base quedo al dia.
 5. Cerrar la issue.
 
-Nunca se arregla editando la migracion que fallo: eso deja la base a medias y el proximo
-ambiente hereda el problema.
+Nunca se arregla editando una migracion que **si llego a quedar aplicada**: eso deja la base a
+medias y el proximo ambiente hereda el problema.
+
+#### La excepcion: la migracion que fallo no quedo registrada
+
+`supabase db push` aplica cada archivo **en una transaccion**. Si el error salta dentro de esa
+transaccion, se revierte entera: ni el SQL ni la fila de `supabase_migrations.schema_migrations`
+quedan. Esa migracion sigue **pendiente**, y el proximo push la vuelve a intentar **antes** que
+cualquier archivo posterior.
+
+Ahi corregir hacia adelante **no funciona**: la migracion nueva nunca se alcanza, porque el push
+muere otra vez en la que ya falla. La unica salida es corregir el archivo que falla, con la
+etiqueta `migracion-editada-a-proposito` en el PR. Es exactamente el caso que la seccion
+[Cuando de verdad hay que editarla](#cuando-de-verdad-hay-que-editarla) autoriza: no se aplico en
+ninguna base, asi que editarla no divide nada.
+
+Antes de editar hay que **confirmarlo**, no suponerlo: `supabase migration list --linked` tiene
+que mostrar esa version como pendiente en todas las bases (`develop` y `main`). Si alguna la
+tiene aplicada, se vuelve al camino normal, migracion nueva.
 
 ### Caso 3: la corrida nunca se creo
 
