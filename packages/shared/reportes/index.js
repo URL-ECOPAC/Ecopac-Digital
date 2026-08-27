@@ -18,3 +18,4 @@
 export * from "./api.js";
 export * from "./inventario.api.js";
 export * from "./pacientes.api.js";
+export * from "./jornada.api.js";
