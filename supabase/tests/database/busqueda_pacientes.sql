@@ -99,8 +99,12 @@ SELECT is(
   'una ficha inexistente no devuelve fila (buscarPacientePorFicha() la traduce a paciente: null, no a error)'
 );
 
+-- Se acota a la comunidad 115-A: sin este filtro, fn_buscar_pacientes('ana baja') tambien
+-- escanea el seed de demo (supabase db reset lo carga antes de las pruebas, 00068) y
+-- "Ana Lopez Demo" (seed-demo.sql) cruza el umbral de word_similarity (0.44 > 0.4), lo que
+-- hacia fallar esta prueba con datos ajenos al escenario que se quiere probar.
 SELECT is(
-  (SELECT count(*)::int FROM fn_buscar_pacientes('ana baja')),
+  (SELECT count(*)::int FROM fn_buscar_pacientes('ana baja', '10000000-0000-0000-0000-000000000115')),
   0,
   'administrador: un paciente dado de baja no aparece aunque el nombre coincida exacto'
 );
