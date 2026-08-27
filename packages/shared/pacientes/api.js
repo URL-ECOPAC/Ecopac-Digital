@@ -21,6 +21,7 @@ import {
   construirError,
   normalizarError,
 } from "../api/errores-de-supabase.js";
+import { normalizarTexto } from "../validations/index.js";
 import { validarRegistroPaciente } from "./validaciones.js";
 
 // Las columnas se enumeran en lugar de pedir "*" para que una columna nueva en pacientes no
@@ -307,5 +308,205 @@ export async function actualizarPaciente(id, datos = {}) {
     return { paciente: data ?? null, errores: {}, error: null };
   } catch (error) {
     return { paciente: null, errores: {}, error: normalizarError(error) };
+  }
+}
+
+// ============================================================================
+// Busqueda de pacientes (issue #115)
+// ============================================================================
+// EXCEPCION DE ALCANCE AUTORIZADA: fn_buscar_pacientes (migracion 00068) existe porque
+// PostgREST no puede reproducir la expresion del indice de trigramas de #70
+// (00011_indices_busqueda_pacientes.sql) ni ordenar por similarity(), que depende del
+// termino de busqueda y por eso no puede ser una columna que .order() acepte. Ver la
+// cabecera de 00068 para el detalle completo.
+//
+// Bajo un solo cuadro de busqueda (FILTROS_PACIENTE.busqueda, filtros.js) conviven tres
+// modos: nombre (tolerante a acentos y errores de tipeo), comunidad y numero de ficha
+// exacto. buscarPacientes() no decide cual es "el" modo por el formato del termino:
+// numero_ficha es VARCHAR(30) sin CHECK ni prefijo (00009), asi que cualquier heuristica
+// de formato se equivocaria tarde o temprano. En su lugar prueba los dos caminos en
+// paralelo -la sonda exacta de ficha es una lectura por indice unico, practicamente
+// gratis- y combina lo que encuentre.
+
+// Nombres de menos de 3 caracteres no generan un trigrama completo: pg_trgm los rellena
+// y la similitud contra un nombre completo cae muy por debajo de cualquier umbral util,
+// asi que la busqueda por nombre no aporta nada por debajo de este limite. La sonda de
+// ficha NO tiene este limite (ver mas abajo): numero_ficha no tiene formato minimo.
+const LONGITUD_MINIMA_BUSQUEDA_POR_NOMBRE = 3;
+
+const POR_PAGINA_POR_DEFECTO = 20;
+
+// Mismas columnas que necesita la ficha clinica (COLUMNAS_DEL_PACIENTE), pero solo el
+// subconjunto minimo para una lista de resultados de busqueda (columnas.js,
+// COLUMNAS_PACIENTE): sin condiciones cronicas ni datos de contacto, que no ayudan a
+// elegir entre resultados y cuestan una consulta o un join de mas. fechaBaja viaja para
+// poder excluir de buscarPacientePorFicha() a quien este dado de baja (mismo criterio que
+// fn_buscar_pacientes) y se descarta antes de devolver el paciente.
+const COLUMNAS_DE_BUSQUEDA_PACIENTE = [
+  "id",
+  "nombres",
+  "apellidos",
+  "fechaNacimiento:fecha_nacimiento",
+  "sexo",
+  "comunidadId:comunidad_id",
+  "fechaBaja:fecha_baja",
+  "comunidad:comunidades(nombre)",
+].join(", ");
+
+/** Traduce una fila de fn_buscar_pacientes (snake_case) a un paciente de resultado de busqueda. */
+function aPacienteDeBusqueda(fila) {
+  return {
+    id: fila.paciente_id,
+    nombres: fila.nombres,
+    apellidos: fila.apellidos,
+    fechaNacimiento: fila.fecha_nacimiento,
+    sexo: fila.sexo,
+    comunidadId: fila.comunidad_id,
+    comunidad: fila.comunidad_nombre ? { nombre: fila.comunidad_nombre } : null,
+    numeroFicha: fila.numero_ficha,
+    relevancia: fila.relevancia,
+  };
+}
+
+/**
+ * Busca un paciente por su numero de ficha exacto (criterio de aceptacion 3 de la issue
+ * #115: "de inmediato"). No pasa por trigramas ni por fn_buscar_pacientes: numero_ficha es
+ * UNIQUE (00009), asi que es una lectura por indice unico normal, sin RPC.
+ *
+ * Excluye pacientes dados de baja, igual que fn_buscar_pacientes (00068): una ficha vieja
+ * de alguien dado de baja no deberia aparecer como si estuviera activo.
+ *
+ * @param {string} numeroFicha
+ * @returns {Promise<{ paciente: object|null, error: object|null }>}
+ */
+export async function buscarPacientePorFicha(numeroFicha) {
+  const ficha = normalizarTexto(numeroFicha);
+  if (ficha === "") return { paciente: null, error: null };
+
+  try {
+    const { data, error } = await obtenerSupabase()
+      .from("expedientes")
+      .select(`numeroFicha:numero_ficha, paciente:pacientes(${COLUMNAS_DE_BUSQUEDA_PACIENTE})`)
+      .eq("numero_ficha", ficha)
+      .maybeSingle();
+
+    if (error) return { paciente: null, error: normalizarError(error) };
+    if (!data?.paciente || data.paciente.fechaBaja) return { paciente: null, error: null };
+
+    const paciente = { ...data.paciente, numeroFicha: data.numeroFicha };
+    delete paciente.fechaBaja;
+    return { paciente, error: null };
+  } catch (error) {
+    return { paciente: null, error: normalizarError(error) };
+  }
+}
+
+/**
+ * Busca pacientes por nombre (tolerante a acentos y errores de tipeo), opcionalmente
+ * filtrado por comunidad, y en paralelo prueba si el termino es un numero de ficha exacto.
+ *
+ * Sin termino ni comunidad devuelve vacio sin error: una pantalla recien abierta, con los
+ * filtros en FILTROS_PACIENTE_VACIOS, no deberia mostrar un error antes de que nadie
+ * escriba nada. Con comunidad y sin termino devuelve el listado paginado de esa comunidad
+ * (fn_buscar_pacientes lo resuelve solo, filtrando por comunidad_id sin condicion de
+ * nombre).
+ *
+ * Si la pagina pedida cae despues de la ultima con resultados, fn_buscar_pacientes
+ * devuelve la ultima pagina real en vez de una lista vacia (ver comentario de cabecera de
+ * la migracion 00068): por eso `pagina` y `porPagina` en la respuesta reflejan lo que el
+ * servidor efectivamente sirvio, no necesariamente lo pedido.
+ *
+ * Si cualquiera de las dos consultas (la busqueda por nombre o la sonda de ficha) falla,
+ * la funcion falla cerrado: devuelve el error normalizado y nunca
+ * `{ pacientes: [], total: 0, error: null }`, porque esa forma es indistinguible de "no
+ * hay resultados" para quien la llama.
+ *
+ * @param {{ termino?: string, comunidadId?: string, pagina?: number, porPagina?: number }} [filtros]
+ * @returns {Promise<{
+ *   pacientes: object[],
+ *   total: number,
+ *   pagina: number,
+ *   porPagina: number,
+ *   coincidenciaExacta: boolean,
+ *   terminoDemasiadoCorto: boolean,
+ *   error: object|null,
+ * }>}
+ */
+export async function buscarPacientes({
+  termino,
+  comunidadId,
+  pagina = 1,
+  porPagina = POR_PAGINA_POR_DEFECTO,
+} = {}) {
+  const terminoNormalizado = normalizarTexto(termino).replace(/\s+/g, " ");
+  const hayTermino = terminoNormalizado !== "";
+  const terminoDemasiadoCorto =
+    hayTermino && terminoNormalizado.length < LONGITUD_MINIMA_BUSQUEDA_POR_NOMBRE;
+
+  const respuestaVacia = (error = null) => ({
+    pacientes: [],
+    total: 0,
+    pagina,
+    porPagina,
+    coincidenciaExacta: false,
+    terminoDemasiadoCorto,
+    error,
+  });
+
+  // Sin termino y sin comunidad no hay nada que filtrar: devolver la tabla entera
+  // paginada no es lo que pidio nadie, y no es un error tampoco (una pantalla recien
+  // abierta, con los filtros vacios, no deberia mostrar uno). No llega a tocar el
+  // cliente.
+  if (!hayTermino && !comunidadId) return respuestaVacia();
+
+  // El corte de 3 caracteres se aplica solo al camino por nombre: un termino corto no
+  // produce trigramas utiles (ver LONGITUD_MINIMA_BUSQUEDA_POR_NOMBRE). Si ademas hay
+  // comunidad, igual conviene llamar a fn_buscar_pacientes -sin el termino- para servir
+  // el listado de esa comunidad en vez de nada; terminoDemasiadoCorto sigue en true para
+  // que la pantalla explique por que el nombre no filtro.
+  const terminoParaBusquedaPorNombre = hayTermino && !terminoDemasiadoCorto ? terminoNormalizado : null;
+  const debeConsultarBusqueda = terminoParaBusquedaPorNombre !== null || Boolean(comunidadId);
+
+  try {
+    const supabase = obtenerSupabase();
+
+    const [respuestaBusqueda, respuestaFicha] = await Promise.all([
+      debeConsultarBusqueda
+        ? supabase.rpc("fn_buscar_pacientes", {
+            p_termino: terminoParaBusquedaPorNombre,
+            p_comunidad_id: comunidadId || null,
+            p_pagina: pagina,
+            p_por_pagina: porPagina,
+          })
+        : Promise.resolve({ data: [], error: null }),
+      // La sonda de ficha no tiene minimo de longitud: numero_ficha no tiene formato ni
+      // prefijo (00009), asi que un termino corto puede ser una ficha valida.
+      hayTermino ? buscarPacientePorFicha(terminoNormalizado) : Promise.resolve({ paciente: null, error: null }),
+    ]);
+
+    if (respuestaBusqueda.error) return respuestaVacia(normalizarError(respuestaBusqueda.error));
+    if (respuestaFicha.error) return respuestaVacia(respuestaFicha.error);
+
+    const filas = respuestaBusqueda.data ?? [];
+    const pacientePorFicha = respuestaFicha.paciente;
+    const pacientesPorNombre = filas.map(aPacienteDeBusqueda);
+
+    const pacientes =
+      pacientePorFicha && !pacientesPorNombre.some((p) => p.id === pacientePorFicha.id)
+        ? [pacientePorFicha, ...pacientesPorNombre]
+        : pacientesPorNombre;
+
+    const primeraFila = filas[0];
+    return {
+      pacientes,
+      total: primeraFila ? Number(primeraFila.total) : pacientes.length,
+      pagina: primeraFila ? primeraFila.pagina : 1,
+      porPagina: primeraFila ? primeraFila.por_pagina : porPagina,
+      coincidenciaExacta: Boolean(pacientePorFicha),
+      terminoDemasiadoCorto,
+      error: null,
+    };
+  } catch (error) {
+    return respuestaVacia(normalizarError(error));
   }
 }

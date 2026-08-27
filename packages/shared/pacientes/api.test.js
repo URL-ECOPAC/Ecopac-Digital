@@ -23,7 +23,8 @@ vi.mock("../api/cliente.js", () => ({
 }));
 
 const { CODIGOS_DE_ERROR_DE_SUPABASE } = await import("../api/errores-de-supabase.js");
-const { actualizarPaciente, obtenerPaciente, registrarPaciente } = await import("./api.js");
+const { actualizarPaciente, buscarPacientePorFicha, buscarPacientes, obtenerPaciente, registrarPaciente } =
+  await import("./api.js");
 
 /**
  * Doble minimo de un query builder de supabase-js: cada metodo de la cadena registra el paso
@@ -389,6 +390,339 @@ describe("actualizarPaciente", () => {
     });
 
     expect(paciente).toBeNull();
+    expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.PERMISO_DENEGADO);
+  });
+});
+
+describe("buscarPacientePorFicha", () => {
+  it("no toca el cliente si la ficha viene vacia o solo espacios", async () => {
+    const { paciente, error } = await buscarPacientePorFicha("   ");
+
+    expect(paciente).toBeNull();
+    expect(error).toBeNull();
+  });
+
+  it("devuelve el paciente cuando la ficha existe y no esta dado de baja", async () => {
+    const cliente = crearCliente({
+      expedientes: {
+        data: {
+          numeroFicha: "F-001",
+          paciente: {
+            id: "paciente-1",
+            nombres: "Maria",
+            apellidos: "Xoc",
+            fechaBaja: null,
+            comunidad: { nombre: "Solola" },
+          },
+        },
+        error: null,
+      },
+    });
+    dobles.cliente = cliente;
+
+    const { paciente, error } = await buscarPacientePorFicha("F-001");
+
+    expect(error).toBeNull();
+    expect(paciente).toEqual({
+      id: "paciente-1",
+      nombres: "Maria",
+      apellidos: "Xoc",
+      comunidad: { nombre: "Solola" },
+      numeroFicha: "F-001",
+    });
+    expect(cliente.llamadas).toContainEqual({ paso: "eq", tabla: "expedientes", columna: "numero_ficha", valor: "F-001" });
+  });
+
+  it("devuelve null sin error cuando la ficha no existe", async () => {
+    dobles.cliente = crearCliente({ expedientes: { data: null, error: null } });
+
+    const { paciente, error } = await buscarPacientePorFicha("F-999");
+
+    expect(paciente).toBeNull();
+    expect(error).toBeNull();
+  });
+
+  it("devuelve null sin error cuando el paciente de esa ficha esta dado de baja", async () => {
+    dobles.cliente = crearCliente({
+      expedientes: {
+        data: {
+          numeroFicha: "F-002",
+          paciente: { id: "paciente-2", nombres: "Juan", fechaBaja: "2025-01-01" },
+        },
+        error: null,
+      },
+    });
+
+    const { paciente, error } = await buscarPacientePorFicha("F-002");
+
+    expect(paciente).toBeNull();
+    expect(error).toBeNull();
+  });
+
+  it("normaliza el error si el cliente falla", async () => {
+    dobles.cliente = crearCliente({ expedientes: { data: null, error: { code: "42501" } } });
+
+    const { paciente, error } = await buscarPacientePorFicha("F-001");
+
+    expect(paciente).toBeNull();
+    expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.PERMISO_DENEGADO);
+  });
+});
+
+describe("buscarPacientes", () => {
+  it("sin termino y sin comunidad devuelve vacio sin tocar el cliente", async () => {
+    const { pacientes, total, error, terminoDemasiadoCorto } = await buscarPacientes();
+
+    expect(pacientes).toEqual([]);
+    expect(total).toBe(0);
+    expect(error).toBeNull();
+    expect(terminoDemasiadoCorto).toBe(false);
+  });
+
+  it("un termino de menos de 3 caracteres no llama a fn_buscar_pacientes, pero si prueba la ficha", async () => {
+    // Ningun "rpc:fn_buscar_pacientes" configurado: si buscarPacientes() lo llamara, el
+    // doble lanzaria "La prueba no configuro una respuesta para...", y la prueba fallaria.
+    dobles.cliente = crearCliente({ expedientes: { data: null, error: null } });
+
+    const { pacientes, total, terminoDemasiadoCorto, error } = await buscarPacientes({ termino: "jo" });
+
+    expect(error).toBeNull();
+    expect(pacientes).toEqual([]);
+    expect(total).toBe(0);
+    expect(terminoDemasiadoCorto).toBe(true);
+  });
+
+  it("un termino corto SI encuentra una ficha exacta que coincida", async () => {
+    dobles.cliente = crearCliente({
+      expedientes: {
+        data: { numeroFicha: "42", paciente: { id: "paciente-1", nombres: "Ana", fechaBaja: null } },
+        error: null,
+      },
+    });
+
+    const { pacientes, coincidenciaExacta, terminoDemasiadoCorto, error } = await buscarPacientes({
+      termino: "42",
+    });
+
+    expect(error).toBeNull();
+    expect(terminoDemasiadoCorto).toBe(true);
+    expect(coincidenciaExacta).toBe(true);
+    expect(pacientes).toEqual([{ id: "paciente-1", nombres: "Ana", numeroFicha: "42" }]);
+  });
+
+  it("termino corto con comunidad SI llama a fn_buscar_pacientes, sin termino, para listar la comunidad", async () => {
+    const cliente = crearCliente({
+      "rpc:fn_buscar_pacientes": {
+        data: [
+          {
+            paciente_id: "paciente-1",
+            nombres: "Ana",
+            apellidos: "Lopez",
+            fecha_nacimiento: "2000-01-01",
+            sexo: "femenino",
+            comunidad_id: "comunidad-1",
+            comunidad_nombre: "Solola",
+            numero_ficha: "F-010",
+            relevancia: 0,
+            pagina: 1,
+            por_pagina: 20,
+            total: 1,
+          },
+        ],
+        error: null,
+      },
+      expedientes: { data: null, error: null },
+    });
+    dobles.cliente = cliente;
+
+    const { pacientes, total, terminoDemasiadoCorto } = await buscarPacientes({
+      termino: "jo",
+      comunidadId: "comunidad-1",
+    });
+
+    expect(terminoDemasiadoCorto).toBe(true);
+    expect(total).toBe(1);
+    expect(pacientes).toHaveLength(1);
+    expect(cliente.llamadas).toContainEqual({
+      paso: "rpc",
+      nombre: "fn_buscar_pacientes",
+      argumentos: { p_termino: null, p_comunidad_id: "comunidad-1", p_pagina: 1, p_por_pagina: 20 },
+    });
+  });
+
+  it("comunidad sin termino devuelve el listado paginado de esa comunidad", async () => {
+    const cliente = crearCliente({
+      "rpc:fn_buscar_pacientes": {
+        data: [
+          {
+            paciente_id: "paciente-1",
+            nombres: "Ana",
+            apellidos: "Lopez",
+            fecha_nacimiento: "2000-01-01",
+            sexo: "femenino",
+            comunidad_id: "comunidad-1",
+            comunidad_nombre: "Solola",
+            numero_ficha: "F-010",
+            relevancia: 0,
+            pagina: 1,
+            por_pagina: 20,
+            total: 3,
+          },
+        ],
+        error: null,
+      },
+      expedientes: { data: null, error: null },
+    });
+    dobles.cliente = cliente;
+
+    const { pacientes, total, pagina, porPagina } = await buscarPacientes({ comunidadId: "comunidad-1" });
+
+    expect(total).toBe(3);
+    expect(pagina).toBe(1);
+    expect(porPagina).toBe(20);
+    expect(pacientes[0]).toEqual({
+      id: "paciente-1",
+      nombres: "Ana",
+      apellidos: "Lopez",
+      fechaNacimiento: "2000-01-01",
+      sexo: "femenino",
+      comunidadId: "comunidad-1",
+      comunidad: { nombre: "Solola" },
+      numeroFicha: "F-010",
+      relevancia: 0,
+    });
+    expect(cliente.llamadas).toContainEqual({
+      paso: "rpc",
+      nombre: "fn_buscar_pacientes",
+      argumentos: { p_termino: null, p_comunidad_id: "comunidad-1", p_pagina: 1, p_por_pagina: 20 },
+    });
+  });
+
+  it("un termino de 3 caracteres o mas llama a fn_buscar_pacientes con el termino normalizado", async () => {
+    const cliente = crearCliente({
+      "rpc:fn_buscar_pacientes": { data: [], error: null },
+      expedientes: { data: null, error: null },
+    });
+    dobles.cliente = cliente;
+
+    await buscarPacientes({ termino: "  maria   jose  " });
+
+    expect(cliente.llamadas).toContainEqual({
+      paso: "rpc",
+      nombre: "fn_buscar_pacientes",
+      argumentos: { p_termino: "maria jose", p_comunidad_id: null, p_pagina: 1, p_por_pagina: 20 },
+    });
+  });
+
+  it("combina la coincidencia exacta de ficha con los resultados por nombre, sin duplicar", async () => {
+    dobles.cliente = crearCliente({
+      "rpc:fn_buscar_pacientes": {
+        data: [
+          {
+            paciente_id: "paciente-2",
+            nombres: "Pedro",
+            apellidos: "Vasquez",
+            fecha_nacimiento: "1990-01-01",
+            sexo: "masculino",
+            comunidad_id: "comunidad-1",
+            comunidad_nombre: "Solola",
+            numero_ficha: "F-002",
+            relevancia: 0.5,
+            pagina: 1,
+            por_pagina: 20,
+            total: 1,
+          },
+        ],
+        error: null,
+      },
+      expedientes: {
+        data: {
+          numeroFicha: "F-002",
+          paciente: { id: "paciente-2", nombres: "Pedro", fechaBaja: null },
+        },
+        error: null,
+      },
+    });
+
+    const { pacientes, coincidenciaExacta } = await buscarPacientes({ termino: "F-002" });
+
+    expect(coincidenciaExacta).toBe(true);
+    // paciente-2 aparece en ambas respuestas: no se duplica en el resultado combinado.
+    expect(pacientes).toHaveLength(1);
+  });
+
+  it("pagina mas alla del final: usa la pagina y el total que devuelve la funcion, no lo pedido", async () => {
+    dobles.cliente = crearCliente({
+      "rpc:fn_buscar_pacientes": {
+        data: [
+          {
+            paciente_id: "paciente-3",
+            nombres: "Marta",
+            apellidos: "Xiloj",
+            fecha_nacimiento: "1958-03-12",
+            sexo: "femenino",
+            comunidad_id: "comunidad-1",
+            comunidad_nombre: "Solola",
+            numero_ficha: "F-003",
+            relevancia: 0,
+            pagina: 2,
+            por_pagina: 2,
+            total: 3,
+          },
+        ],
+        error: null,
+      },
+      expedientes: { data: null, error: null },
+    });
+
+    const { pagina, porPagina, total, pacientes } = await buscarPacientes({
+      comunidadId: "comunidad-1",
+      pagina: 99,
+      porPagina: 2,
+    });
+
+    expect(pagina).toBe(2);
+    expect(porPagina).toBe(2);
+    expect(total).toBe(3);
+    expect(pacientes).toHaveLength(1);
+  });
+
+  it("sin resultados reales infiere total 0 y pagina 1 (fn_buscar_pacientes no devuelve filas)", async () => {
+    dobles.cliente = crearCliente({
+      "rpc:fn_buscar_pacientes": { data: [], error: null },
+      expedientes: { data: null, error: null },
+    });
+
+    const { pacientes, total, pagina, error } = await buscarPacientes({ termino: "zzzz" });
+
+    expect(error).toBeNull();
+    expect(pacientes).toEqual([]);
+    expect(total).toBe(0);
+    expect(pagina).toBe(1);
+  });
+
+  it("falla cerrado si fn_buscar_pacientes devuelve error: nunca error null con la forma de vacio", async () => {
+    dobles.cliente = crearCliente({
+      "rpc:fn_buscar_pacientes": { data: null, error: { code: "PGRST000" } },
+      expedientes: { data: null, error: null },
+    });
+
+    const { pacientes, total, error } = await buscarPacientes({ termino: "maria" });
+
+    expect(pacientes).toEqual([]);
+    expect(total).toBe(0);
+    expect(error).not.toBeNull();
+  });
+
+  it("falla cerrado si la sonda de ficha falla, aunque la busqueda por nombre haya funcionado", async () => {
+    dobles.cliente = crearCliente({
+      "rpc:fn_buscar_pacientes": { data: [], error: null },
+      expedientes: { data: null, error: { code: "42501" } },
+    });
+
+    const { pacientes, error } = await buscarPacientes({ termino: "maria" });
+
+    expect(pacientes).toEqual([]);
     expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.PERMISO_DENEGADO);
   });
 });
