@@ -22,7 +22,9 @@ const {
   FUNCION_DE_INVITACION,
   listarCatalogoEspecialidades,
   listarUsuarios,
+  obtenerEspecialidadesDePerfil,
   reactivarUsuario,
+  reverificarContrasena,
 } = modulo;
 
 function doble(respuesta) {
@@ -702,5 +704,99 @@ describe("contarJornadasPorPerfil", () => {
 
     expect(conteos).toEqual({});
     expect(error).not.toBeNull();
+  });
+});
+
+describe("obtenerEspecialidadesDePerfil", () => {
+  it("devuelve los nombres como arreglo plano de strings", async () => {
+    const { cliente, llamadas } = doble({
+      data: [{ nombre_especialidad: "Pediatria" }, { nombre_especialidad: "Odontologia" }],
+      error: null,
+    });
+    dobles.cliente = cliente;
+
+    const { especialidades, error } = await obtenerEspecialidadesDePerfil("u1");
+
+    expect(error).toBeNull();
+    expect(especialidades).toEqual(["Pediatria", "Odontologia"]);
+    expect(pasos(llamadas, "select")[0].columnas).toBe("nombre_especialidad");
+    expect(pasos(llamadas, "eq")[0]).toEqual({ paso: "eq", columna: "perfil_id", valor: "u1" });
+  });
+
+  it("un perfil sin especialidades devuelve arreglo vacio, no error", async () => {
+    const { cliente } = doble({ data: [], error: null });
+    dobles.cliente = cliente;
+
+    const { especialidades, error } = await obtenerEspecialidadesDePerfil("u1");
+
+    expect(especialidades).toEqual([]);
+    expect(error).toBeNull();
+  });
+
+  it("sin identificador no gasta una llamada", async () => {
+    dobles.cliente = { from: () => { throw new Error("no debia llamarse"); } };
+
+    const { especialidades, error } = await obtenerEspecialidadesDePerfil(undefined);
+
+    expect(especialidades).toEqual([]);
+    expect(error).toBeNull();
+  });
+
+  it("ante un error de RLS devuelve arreglo vacio y el error normalizado", async () => {
+    const { cliente } = doble({ data: null, error: { code: "42501" } });
+    dobles.cliente = cliente;
+
+    const { especialidades, error } = await obtenerEspecialidadesDePerfil("u1");
+
+    expect(especialidades).toEqual([]);
+    expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.PERMISO_DENEGADO);
+  });
+});
+
+describe("reverificarContrasena", () => {
+  function clienteDeAuth(signInWithPassword) {
+    return { auth: { signInWithPassword } };
+  }
+
+  it("contrasena correcta: valida en true, sin error", async () => {
+    const signInWithPassword = vi.fn().mockResolvedValue({ error: null });
+    dobles.cliente = clienteDeAuth(signInWithPassword);
+
+    const { valida, error } = await reverificarContrasena("ana@ejemplo.org", "ClaveValida123");
+
+    expect(valida).toBe(true);
+    expect(error).toBeNull();
+    expect(signInWithPassword).toHaveBeenCalledWith({
+      email: "ana@ejemplo.org",
+      password: "ClaveValida123",
+    });
+  });
+
+  it("contrasena incorrecta: valida en false, error clasificado como credenciales invalidas", async () => {
+    const signInWithPassword = vi.fn().mockResolvedValue({
+      error: {
+        __isAuthError: true,
+        name: "AuthApiError",
+        code: "invalid_credentials",
+        status: 400,
+        message: "Invalid login credentials",
+      },
+    });
+    dobles.cliente = clienteDeAuth(signInWithPassword);
+
+    const { valida, error } = await reverificarContrasena("ana@ejemplo.org", "Incorrecta1");
+
+    expect(valida).toBe(false);
+    expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.CREDENCIALES_INVALIDAS);
+  });
+
+  it("sin correo o sin contrasena no llama a Supabase", async () => {
+    const signInWithPassword = vi.fn();
+    dobles.cliente = clienteDeAuth(signInWithPassword);
+
+    const resultado = await reverificarContrasena("", "algo");
+
+    expect(resultado).toEqual({ valida: false, error: null });
+    expect(signInWithPassword).not.toHaveBeenCalled();
   });
 });

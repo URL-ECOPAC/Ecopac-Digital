@@ -451,3 +451,78 @@ export async function cerrarSesion() {
     return { error: normalizarError(error) };
   }
 }
+
+/**
+ * Comprueba que una contraseña sea la actual de la sesión, sin cerrarla.
+ *
+ * Supabase no tiene un endpoint dedicado para "verificar la contraseña actual": la unica forma
+ * de confirmar que alguien la conoce es volver a autenticarse con ella. Un
+ * signInWithPassword() que falla no toca la sesion existente (GoTrue no guarda nada ni emite
+ * evento si hay error); uno que tiene exito SI reemplaza los tokens de la sesion activa y
+ * dispara un SIGNED_IN, pero como es el mismo usuario eso solo hace que useSesion() vuelva a
+ * leer su propio perfil (issue #102, verificacion A del plan) - no cierra sesion, no cambia de
+ * usuario, no parpadea la pantalla.
+ *
+ * A proposito NO se llama a usuarios/api.js#iniciarSesion() de este mismo archivo para esto:
+ * esa funcion es la copia divergente que no revisa perfil.activo (bug conocido, ver
+ * docs/PERMISOS.md), y reusarla aqui heredaria ese hueco justo en el punto donde se confirma
+ * una contrasena.
+ *
+ * @param {string} email Correo del perfil de la sesion actual (perfiles.email es citext).
+ * @param {string} contrasenaActual
+ * @returns {Promise<{ valida: boolean, error: object|null }>}
+ */
+export async function reverificarContrasena(email, contrasenaActual) {
+  if (!email || !contrasenaActual) {
+    return { valida: false, error: null };
+  }
+
+  try {
+    const { error } = await obtenerSupabase().auth.signInWithPassword({
+      email,
+      password: contrasenaActual,
+    });
+
+    if (error) return { valida: false, error: normalizarError(error) };
+    return { valida: true, error: null };
+  } catch (error) {
+    return { valida: false, error: normalizarError(error) };
+  }
+}
+
+/**
+ * Especialidades de un solo perfil.
+ *
+ * obtenerPerfil() las excluye a proposito (ver su comentario, mas arriba en este archivo:
+ * las comparte con cambiarActivo() y actualizarUsuario(), que no las necesitan) y
+ * listarUsuarios() las trae embebidas pero para un listado paginado completo, no para un
+ * perfil suelto. Hace falta esta funcion aparte para la pantalla de perfil propio (issue #102).
+ *
+ * Requiere la politica RLS de la migracion 00058 (administrador o el propio perfil); es de
+ * solo lectura, no hay escritura de especialidades todavia (issue #405). Una lista vacia no es
+ * un error: puede ser que el perfil no tenga ninguna, o que RLS haya filtrado la fila sin
+ * avisar (RLS filtra filas, no las anuncia, mismo criterio que el resto del modulo) - las dos
+ * cosas se ven igual desde aqui y a quien llama no le hace falta distinguirlas.
+ *
+ * @param {string} idUsuario UUID de perfiles.id.
+ * @returns {Promise<{ especialidades: string[], error: object|null }>}
+ */
+export async function obtenerEspecialidadesDePerfil(idUsuario) {
+  if (!idUsuario) return { especialidades: [], error: null };
+
+  try {
+    const { data, error } = await obtenerSupabase()
+      .from("perfil_especialidad")
+      .select("nombre_especialidad")
+      .eq("perfil_id", idUsuario);
+
+    if (error) return { especialidades: [], error: normalizarError(error) };
+
+    return {
+      especialidades: (data ?? []).map((fila) => fila.nombre_especialidad),
+      error: null,
+    };
+  } catch (error) {
+    return { especialidades: [], error: normalizarError(error) };
+  }
+}
