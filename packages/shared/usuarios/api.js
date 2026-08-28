@@ -388,7 +388,7 @@ export function reactivarUsuario(idUsuario) {
  * a un administrador activo, la pantalla pregunta esto para poder avisar con un mensaje
  * especifico en vez de dejar que la unica senal sea el error generico del servidor. Es UX, no
  * la defensa real -esa la hace el trigger impedir_dejar_sin_administrador_activo() de la
- * migracion 00071, porque un chequeo que solo viviera aca seria evadible con la misma
+ * migracion 00072, porque un chequeo que solo viviera aca seria evadible con la misma
  * anon/authenticated key que usa cualquier cliente legitimo llamando a Supabase directo.
  *
  * `count: "exact", head: true` pide solo el numero, sin traer filas: no hace falta el

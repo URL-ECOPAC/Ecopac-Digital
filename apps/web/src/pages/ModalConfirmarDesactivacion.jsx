@@ -14,7 +14,7 @@ import SecondaryButton from '../components/SecondaryButton';
 // packages/shared/usuarios/) es UX: evita llamar al servidor para una operacion que va a
 // rechazar, mostrando un mensaje propio y especifico. La defensa real son los triggers
 // impedir_autodesactivacion() e impedir_dejar_sin_administrador_activo() de la migracion
-// 00071 (issue #107, PLAN.md paso 1).
+// 00072 (issue #107, PLAN.md paso 1).
 //
 // El texto NO dice que la persona "pierde el acceso de inmediato": una sesion ya abierta sigue
 // teniendo acceso real a los datos hasta que expire o alguien la cierre (hallazgo (c) del plan

@@ -6,13 +6,13 @@
 // que el servidor va a rechazar, con un mensaje propio y especifico en vez del generico que
 // deja el error del servidor (ver PLAN.md de #107, verificacion B)-, no la defensa real. La
 // defensa real son los triggers impedir_autodesactivacion() e
-// impedir_dejar_sin_administrador_activo() de la migracion 00071: un chequeo que solo viviera
+// impedir_dejar_sin_administrador_activo() de la migracion 00072: un chequeo que solo viviera
 // aca seria evadible con la misma anon/authenticated key que usa cualquier cliente legitimo,
 // llamando a Supabase directo.
 //
 // No revisa perfil.activo del propio perfil para decidir "no sos vos": compara ids nomas,
 // porque impedir_autodesactivacion() tampoco distingue rol (ver el encabezado de la
-// migracion 00071) y este hook tiene que anticipar exactamente lo que el servidor va a
+// migracion 00072) y este hook tiene que anticipar exactamente lo que el servidor va a
 // rechazar.
 
 import { useCallback, useState } from "react";
