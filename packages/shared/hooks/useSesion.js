@@ -42,6 +42,7 @@ const SIN_SESION = {
  *   estadoRestauracion: string,
  *   haySesion: boolean,
  *   logout: () => Promise<void>,
+ *   refrescarPerfil: () => Promise<void>,
  * }}
  */
 export function useSesion() {
@@ -216,6 +217,54 @@ export function useSesion() {
     setSesion({ ...SIN_SESION });
   }, []);
 
+  /**
+   * Vuelve a leer de la base el perfil del usuario de la sesion actual.
+   *
+   * Hace falta porque un UPDATE a la tabla perfiles hecho por fuera de este hook (por ejemplo
+   * actualizarUsuario() en usuarios/api.js, al guardar la pantalla de perfil propio, issue
+   * #102) no dispara ningun evento de onAuthStateChange: sin esto, la sesion compartida se
+   * queda con el perfil viejo hasta el proximo evento de Auth, que puede tardar en llegar o no
+   * llegar nunca en esa pestana. Se relee de la base en vez de aceptar los datos que quien
+   * llama cree haber guardado, para que la sesion nunca muestre algo que RLS o el trigger de
+   * rol (impedir_cambio_de_rol_propio, migracion 00038) terminaron rechazando.
+   *
+   * Reutiliza el mismo mecanismo de turnos (resolucion) que ya usa aplicarSesion() dentro del
+   * efecto, para que una respuesta tardia de esta funcion no pise un estado mas nuevo ni al
+   * reves; no abre ninguna suscripcion nueva ni toca el efecto de arriba.
+   *
+   * Si el usuario ya no tiene perfil o quedo desactivado justo antes de refrescar (por ejemplo
+   * un administrador que se cambio el rol a si mismo y perdio acceso, o alguien que otro
+   * administrador desactivo mientras tanto), cierra la sesion local igual que aplicarSesion().
+   * No hace nada si no hay sesion.
+   */
+  const refrescarPerfil = useCallback(async () => {
+    if (!sesion.usuario) return;
+
+    const cliente = obtenerSupabase();
+    const usuarioActual = sesion.usuario;
+    const turno = (resolucion.current += 1);
+
+    const { perfil, error } = await evaluarPerfilDeSesion(usuarioActual);
+
+    if (!activo.current || turno !== resolucion.current) return;
+
+    if (error) {
+      if (!requiereCerrarSesion(error)) {
+        setSesion((anterior) => ({ ...anterior, error }));
+        return;
+      }
+
+      cierreIntencional.current = true;
+      await cerrarSesion();
+      resolucion.current += 1;
+      cliente.auth.stopAutoRefresh();
+      setSesion({ ...SIN_SESION, error });
+      return;
+    }
+
+    setSesion((anterior) => ({ ...anterior, usuario: usuarioActual, perfil, error: null }));
+  }, [sesion.usuario]);
+
   return {
     usuario: sesion.usuario,
     perfil: sesion.perfil,
@@ -227,6 +276,7 @@ export function useSesion() {
     estadoRestauracion,
     haySesion: sesion.usuario !== null,
     logout,
+    refrescarPerfil,
   };
 }
 

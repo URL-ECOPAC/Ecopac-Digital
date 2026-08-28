@@ -196,6 +196,42 @@ export function validarPerfil(valores) {
 }
 
 /**
+ * Valida el formulario de cambio de contrasena de la pantalla de perfil propio (issue #102).
+ *
+ * La contrasena actual solo tiene que no estar vacia: no es una contrasena nueva, no le aplica
+ * REGLAS_DE_CONTRASENA (una cuenta creada antes de esa politica tiene que poder seguir
+ * confirmando la suya). La nueva SI pasa por validarContrasena(), y ademas tiene que coincidir
+ * con su confirmacion. Que la actual sea realmente correcta no lo decide esta funcion, lo
+ * confirma el servidor (reverificarContrasena() en usuarios/api.js): esto es validacion de
+ * formulario, no de negocio.
+ *
+ * @param {{ actual?: string, nueva?: string, confirmarNueva?: string }} valores
+ * @returns {Record<string, string>} Errores por campo: actual, nueva, confirmarNueva.
+ */
+export function validarCambioContrasena({ actual, nueva, confirmarNueva } = {}) {
+  const errores = {};
+
+  if (esTextoVacio(actual)) {
+    errores.actual = "Escribe tu contrasena actual.";
+  }
+
+  // validarContrasena() reporta su error bajo la clave "contrasena" (pensada para un
+  // formulario con un solo campo de contrasena, ver useNuevaContrasena.js). Aqui hay dos
+  // campos de contrasena (actual y nueva), asi que se remapea a "nueva" para que el mensaje
+  // se pinte bajo el campo que corresponde.
+  const { errores: erroresDeNueva } = validarContrasena(nueva);
+  if (erroresDeNueva.contrasena) errores.nueva = erroresDeNueva.contrasena;
+
+  if (!errores.nueva && !esTextoVacio(confirmarNueva) && nueva !== confirmarNueva) {
+    errores.confirmarNueva = "Las contrasenas no coinciden.";
+  } else if (!errores.nueva && esTextoVacio(confirmarNueva)) {
+    errores.confirmarNueva = "Confirma la contrasena nueva.";
+  }
+
+  return errores;
+}
+
+/**
  * Valida las credenciales de inicio de sesion.
  *
  * Es lo que consume la API de autenticacion. A proposito NO aplica las reglas de fortaleza:
