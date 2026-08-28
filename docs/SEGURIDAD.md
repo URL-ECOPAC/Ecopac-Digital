@@ -117,7 +117,7 @@ nuevo.
 | --- | --- | --- |
 | `enable_signup = false` en `[auth]` | `supabase/config.toml` | Stack local y CI. **No alcanza los proyectos remotos** |
 | Ajuste "Allow new users to sign up" | Dashboard de cada proyecto | Solo el proyecto donde se toca |
-| Trigger de la migracion `00073` | Base de datos | **Los tres ambientes**, porque viaja con `db push` |
+| Trigger de la migracion `00074` | Base de datos | **Los tres ambientes**, porque viaja con `db push` |
 
 La tercera es la que importa, por lo que explica la seccion 4 de este documento: `config.toml` no
 se sincroniza con los proyectos remotos. El trigger rechaza cualquier alta que venga de GoTrue sin
@@ -136,12 +136,12 @@ activar el ajuste en un Dashboard.
   sign up" estaba **activado**. "Confirm email" tambien, lo que obliga a confirmar el correo antes
   de poder iniciar sesion, pero **el perfil se crea igual** con rol `voluntario general`, y quien
   use un buzon propio completa el paso sin problema. Cerrar ese ajuste es una tarea de Dashboard,
-  no de este repositorio; hasta que se haga, **quien protege a dev es el trigger de la `00073`**,
+  no de este repositorio; hasta que se haga, **quien protege a dev es el trigger de la `00074`**,
   y por eso la defensa no se dejo solo en `config.toml`.
 - **`Ecopac-Digital-Prod`**: existe y esta **pausado**, asi que su API no responde y su
   configuracion no se puede leer sin reanudarlo. **Al reanudarlo hay que comprobar y cerrar el
   registro antes de exponerlo**: el default de Supabase al crear un proyecto es tenerlo abierto.
-  La migracion `00073` lo protege en cuanto se le apliquen las migraciones.
+  La migracion `00074` lo protege en cuanto se le apliquen las migraciones.
 
 ### Como se da de alta a una persona
 

@@ -1,4 +1,4 @@
--- Pruebas del cierre del registro publico de cuentas (issue #508, migracion 00073).
+-- Pruebas del cierre del registro publico de cuentas (issue #508, migracion 00074).
 -- Corre con: supabase test db
 --
 -- QUE COMPRUEBA Y QUE NO
@@ -74,7 +74,7 @@ SELECT is(
 SELECT is(
   (SELECT rol::text FROM perfiles WHERE id = '00000000-0000-0000-0000-000000508001'),
   'voluntario general',
-  'y sigue dejando el rol por defecto, que es lo que la 00073 no cambia'
+  'y sigue dejando el rol por defecto, que es lo que la 00074 no cambia'
 );
 
 -- ============================================================================

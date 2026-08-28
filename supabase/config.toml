@@ -61,7 +61,7 @@ jwt_expiry = 3600
 # ESTA LINEA NO PROTEGE A ecopac-dev NI A ecopac-prod. El workflow de despliegue solo corre
 # `supabase db push`, nunca `supabase config push`, asi que este archivo gobierna el stack local
 # y el CI, y en los proyectos remotos manda el Dashboard. La defensa que si viaja con las
-# migraciones es la 00073. Ver docs/SEGURIDAD.md, "Alta de cuentas".
+# migraciones es la 00074. Ver docs/SEGURIDAD.md, "Alta de cuentas".
 #
 # Es la unica clave que hace falta tocar: ver el comentario de [auth.email] mas abajo antes de
 # anadir la de alli, que apaga el login.
