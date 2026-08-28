@@ -16,4 +16,6 @@ export * from './useRestablecerContrasena.js';
 export * from './useNuevaContrasena.js';
 export * from './useUsuariosListado.js';
 export * from './useAltaUsuario.js';
+export * from './useEdicionUsuario.js';
+export * from './useDesactivacionUsuario.js';
 export * from './usePerfilPropio.js';

@@ -11,6 +11,7 @@ import {
   normalizarError,
 } from "../api/errores-de-supabase.js";
 import { ESTADOS_USUARIO } from "./campos.js";
+import { ROLES } from "./roles.js";
 import { validarPerfil } from "./validaciones.js";
 
 // Las columnas se enumeran en lugar de pedir "*" para que una columna nueva en perfiles no
@@ -378,6 +379,37 @@ export function desactivarUsuario(idUsuario) {
 
 export function reactivarUsuario(idUsuario) {
   return cambiarActivo(idUsuario, true);
+}
+
+/**
+ * Cuenta cuantos administradores activos hay en todo el sistema.
+ *
+ * Es el chequeo de cliente del criterio 5 (issue #107): antes de desactivar o cambiarle el rol
+ * a un administrador activo, la pantalla pregunta esto para poder avisar con un mensaje
+ * especifico en vez de dejar que la unica senal sea el error generico del servidor. Es UX, no
+ * la defensa real -esa la hace el trigger impedir_dejar_sin_administrador_activo() de la
+ * migracion 00072, porque un chequeo que solo viviera aca seria evadible con la misma
+ * anon/authenticated key que usa cualquier cliente legitimo llamando a Supabase directo.
+ *
+ * `count: "exact", head: true` pide solo el numero, sin traer filas: no hace falta el
+ * contenido de ningun perfil para esto, y evita que la lista completa de administradores viaje
+ * al cliente solo para contarla.
+ *
+ * @returns {Promise<{ total: number, error: object|null }>}
+ */
+export async function contarAdministradoresActivos() {
+  try {
+    const { count, error } = await obtenerSupabase()
+      .from("perfiles")
+      .select("id", { count: "exact", head: true })
+      .eq("rol", ROLES.ADMINISTRADOR)
+      .eq("activo", true);
+
+    if (error) return { total: 0, error: normalizarError(error) };
+    return { total: count ?? 0, error: null };
+  } catch (error) {
+    return { total: 0, error: normalizarError(error) };
+  }
 }
 
 /**

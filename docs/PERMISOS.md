@@ -180,9 +180,27 @@ independientes que detalla la seccion de divergencias.
 valor viejo con el nuevo- sino el trigger `impedir_cambio_de_rol_propio` (`00038`), que lanza
 `insufficient_privilege`.
 
-Reflejo en el cliente: `usuarios/permisos.js` (issue #396). `puedeVerListadoUsuarios` excluye a
-socio fundador a proposito: espejo de `perfiles_directorio`, cuyo `WHERE` solo nombra a junta
-directiva.
+**Nadie puede desactivar su propia fila, y nunca puede quedar el sistema sin ningun
+administrador activo.** Issue #107, migracion `00072`, mismo patron que el trigger anterior
+(`BEFORE UPDATE`, no puede ser una politica). Dos triggers nuevos sobre `perfiles`:
+
+- `impedir_autodesactivacion` bloquea `UPDATE perfiles SET activo = false` cuando `id =
+  auth.uid()`. Es mas amplio que el criterio 4 del issue, que solo habla del administrador:
+  aplica a los cinco roles por igual, porque la politica de UPDATE de `00038` ya le permite a
+  cualquiera desactivar su propia fila y no hay ningun flujo legitimo que dependa de eso.
+- `impedir_dejar_sin_administrador_activo` bloquea desactivar **o** cambiarle el rol al ultimo
+  administrador activo -las dos puertas del mismo escenario de bloqueo total-, contando sobre
+  toda la tabla con un `pg_advisory_xact_lock` para que dos desactivaciones concurrentes no lo
+  esquiven.
+
+Los dos lanzan `check_violation` (`23514`), no `insufficient_privilege` (`42501`) como el
+trigger de rol: `errores-de-supabase.js` traduce `42501` a "pideselo a la administradora", que
+no tiene sentido cuando quien esta bloqueada ya es la administradora.
+
+**Ninguno de los dos cubre el `DELETE`.** `perfiles.id` es `FK` a `auth.users(id) ON DELETE
+CASCADE` (`00002`): borrar al ultimo administrador desde el Dashboard de Supabase o la Admin
+API de GoTrue borra `auth.users` y en cascada su perfil sin pasar por ningun `BEFORE UPDATE`,
+dejando el sistema sin administrador igual. Ver Divergencia 15.
 
 ### Territorio y catalogos
 
@@ -275,7 +293,11 @@ afectar filas**, en silencio, y PostgREST responde 204. Una prueba que espere un
 hay cero filas pasa en verde sin comprobar nada.
 
 **La escalada de rol la para un trigger, no una politica**, porque una politica no puede comparar
-el valor viejo con el nuevo (`impedir_cambio_de_rol_propio`, `00038`).
+el valor viejo con el nuevo (`impedir_cambio_de_rol_propio`, `00038`). Lo mismo vale para
+autodesactivarse y para quedarse sin ningun administrador activo
+(`impedir_autodesactivacion` / `impedir_dejar_sin_administrador_activo`, `00072`): ninguna de
+las dos preguntas ("¿el rol cambio?", "¿quedaria alguien mas?") se puede expresar en un `USING`
+o un `WITH CHECK`.
 
 ## Como se comprueba que esta matriz es cierta
 
@@ -322,6 +344,7 @@ Lo que hoy no coincide con la matriz. Cada fila con la issue que la cierra, cuan
 | 12  | La politica `FOR ALL` de `00062` sobre `bodegas` y `proveedores` abarca DELETE, pero no hay `GRANT DELETE`. Ademas duplica en otro estilo lo que ya decia `00034`                                                                                                                                                     | El borrado muere en `42501` antes de llegar a RLS. Las dos tablas acaban con cinco politicas, dos redundantes                                        | sin issue                    |
 | 13  | ~~Cinco funciones de permiso por rol viven **fuera** de un `permisos.js`... Y cinco modulos no tienen `permisos.js` ninguno~~ (resuelto: `puedeVerHistorial`, `puedeCorregirTriaje` y `puedeTomarTriaje` se mudaron a `pacientes/permisos.js`; `puedeVerIndicadoresDeImpacto` y `puedeVerReporteDePacientes` a `reportes/permisos.js`; `pacientes`, `inventario`, `usuarios` y `reportes` ya tienen su `permisos.js`, y `presupuestos` ya lo tenia) | La matriz del cliente esta repartida y es dificil de auditar                                                                                         | resuelto por **#396**        |
 | 14  | `navegacion.js` y los `permisos.js` no coinciden en cuatro sitios: presupuestos concede registrar gasto a roles que no pueden abrir la ruta; `socio fundador` entra a Reportes y `puedeVerReporteDePacientes` lo excluye; proyectos; y Pacientes frente a `puedeVerHistorial`                                         | Funciones inalcanzables, o pantallas que se vacian                                                                                                   | sin issue                    |
+| 15  | Los triggers `impedir_autodesactivacion` e `impedir_dejar_sin_administrador_activo` (`00072`) son `BEFORE UPDATE`. `perfiles.id` es `FK ON DELETE CASCADE` a `auth.users`, y un `DELETE` -desde el Dashboard de Supabase o la Admin API de GoTrue, no desde esta aplicacion- no dispara ningun `BEFORE UPDATE`         | Borrar al ultimo administrador (o a cualquiera, incluyendose a si mismo) desde fuera de la aplicacion deja el sistema sin administrador, sin que ningun trigger lo impida | sin issue                    |
 
 ## Donde esta cada cosa
 

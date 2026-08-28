@@ -17,6 +17,7 @@ const modulo = await import("./api.js");
 const {
   actualizarUsuario,
   crearUsuario,
+  contarAdministradoresActivos,
   contarJornadasPorPerfil,
   desactivarUsuario,
   FUNCION_DE_INVITACION,
@@ -566,6 +567,46 @@ describe("desactivarUsuario y reactivarUsuario", () => {
 
     expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.PERMISO_DENEGADO);
     expect(error.mensaje).toContain("permiso");
+  });
+});
+
+describe("contarAdministradoresActivos", () => {
+  it("pide solo el conteo, sin traer filas, filtrando por rol y activo", async () => {
+    const { cliente, llamadas } = doble({ count: 2, error: null });
+    dobles.cliente = cliente;
+
+    const { total, error } = await contarAdministradoresActivos();
+
+    expect(error).toBeNull();
+    expect(total).toBe(2);
+    expect(pasos(llamadas, "select")[0]).toEqual({
+      paso: "select",
+      columnas: "id",
+      opciones: { count: "exact", head: true },
+    });
+    expect(pasos(llamadas, "eq")).toEqual([
+      { paso: "eq", columna: "rol", valor: ROLES.ADMINISTRADOR },
+      { paso: "eq", columna: "activo", valor: true },
+    ]);
+  });
+
+  it("sin conteo (null) devuelve cero, no null ni undefined", async () => {
+    const { cliente } = doble({ count: null, error: null });
+    dobles.cliente = cliente;
+
+    const { total, error } = await contarAdministradoresActivos();
+
+    expect(error).toBeNull();
+    expect(total).toBe(0);
+  });
+
+  it("un fallo del servidor se normaliza igual que el resto del modulo", async () => {
+    dobles.cliente = doble({ count: null, error: { code: "42501" } }).cliente;
+
+    const { total, error } = await contarAdministradoresActivos();
+
+    expect(total).toBe(0);
+    expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.PERMISO_DENEGADO);
   });
 });
 
