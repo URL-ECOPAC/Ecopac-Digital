@@ -1,7 +1,10 @@
+import { useState } from 'react';
+
 import {
   COLUMNAS_JORNADA,
   FILTROS_JORNADA,
   formatearFechaCorta,
+  puedeEditarJornada,
   useJornadasKanban,
 } from '@ecopac/shared';
 
@@ -16,6 +19,7 @@ import {
   StatusChip,
 } from '../components';
 import { useSesionCompartida } from '../contexto/SesionProvider';
+import ModalJornada from './ModalJornada';
 
 // Pantalla de jornadas (issue #178): el tablero kanban de tres etapas que ya nombraba el
 // placeholder que reemplaza ("Kanban de jornadas", issues #178 a #183) y que
@@ -29,16 +33,24 @@ import { useSesionCompartida } from '../contexto/SesionProvider';
 //   #171) es trabajo del rango de issues #179-#183.
 // - Una barra de progreso de cupo: ningun criterio de #178 la pide y `cupoEstimado` no se pinta
 //   en esta pantalla (ver COLUMNAS_JORNADA en columnas.js).
-// - El formulario para crear una jornada: el boton "Nueva jornada" solo aparece para quien
-//   puedeCrear (Administrador), que es lo que pide el criterio 5, pero abrir un formulario reusa
-//   el mismo patron que el alta de personal (#106, ModalAltaUsuario) y no esta en el alcance de
-//   este issue de listado.
 //
-// La version movil de esta misma pantalla es la #186 y deberia consumir el mismo hook.
+// El formulario de alta y edicion (issue #179) reusa el mismo patron que el alta de personal
+// (#106, ModalAltaUsuario): un modal montado desde aca con estado local, sin ruta propia. El
+// boton "Nueva jornada" abre ModalJornada sin `jornada` (alta); hacer click en una tarjeta la
+// abre con la jornada de esa tarjeta (edicion), solo si puedeEditarJornada(rol, tarjeta.estado)
+// lo permite -esa funcion ya encapsula la regla de #170 de que una jornada finalizada no se
+// edita salvo la administradora, ver jornadas/permisos.js-. No se toca KanbanBoard.jsx para
+// esto: el onClick vive en el <Card> que TarjetaJornada ya envuelve, dentro del renderTarjeta
+// que esta pagina controla.
+//
+// La version movil de esta misma pantalla es la #186 y deberia consumir el mismo hook. No hay
+// un issue de movil identificado para el formulario de #179 (ver PLAN.md, punto 8).
 export default function JornadasPage() {
   const { rol } = useSesionCompartida();
   const { columnas, filtros, setFiltro, cargando, error, recargar, total, catalogos, puedeCrear } =
     useJornadasKanban(rol);
+  const [mostrarAlta, setMostrarAlta] = useState(false);
+  const [jornadaEnEdicion, setJornadaEnEdicion] = useState(null);
 
   // El criterio 2 solo pide filtrar por estado, comunidad y rango de fechas. FILTROS_JORNADA
   // (filtros.js) tambien declara 'busqueda', pero listarJornadas() (#170, ya cerrada) no acepta
@@ -61,7 +73,7 @@ export default function JornadasPage() {
       <PageHeader
         title="Jornadas"
         subtitle={total === 1 ? '1 jornada' : `${total} jornadas`}
-        actions={puedeCrear ? [{ label: 'Nueva jornada' }] : []}
+        actions={puedeCrear ? [{ label: 'Nueva jornada', onClick: () => setMostrarAlta(true) }] : []}
       />
 
       <FilterBar
@@ -76,7 +88,38 @@ export default function JornadasPage() {
       ) : (
         <KanbanBoard
           columnas={columnas}
-          renderTarjeta={(tarjeta) => <TarjetaJornada jornada={tarjeta} />}
+          renderTarjeta={(tarjeta) => (
+            <TarjetaJornada
+              jornada={tarjeta}
+              onEditar={
+                puedeEditarJornada(rol, tarjeta.estado) ? () => setJornadaEnEdicion(tarjeta) : null
+              }
+            />
+          )}
+        />
+      )}
+
+      {mostrarAlta && (
+        <ModalJornada
+          rol={rol}
+          onClose={() => setMostrarAlta(false)}
+          onGuardado={() => {
+            setMostrarAlta(false);
+            recargar();
+          }}
+        />
+      )}
+
+      {jornadaEnEdicion && (
+        <ModalJornada
+          key={jornadaEnEdicion.id}
+          jornada={jornadaEnEdicion}
+          rol={rol}
+          onClose={() => setJornadaEnEdicion(null)}
+          onGuardado={() => {
+            setJornadaEnEdicion(null);
+            recargar();
+          }}
         />
       )}
     </ScreenContainer>
@@ -112,12 +155,20 @@ function colorDeEstado(estado) {
  * si ayuda a distinguir el estado de un vistazo dentro de una columna larga y, sobre todo, si
  * esta pantalla alguna vez deja de agrupar por columna (por ejemplo en una vista movil futura,
  * #186, que apile las tarjetas en una lista).
+ *
+ * `onEditar` (issue #179) abre el modal de edicion. Card ya se vuelve interactiva y responde al
+ * teclado en cuanto recibe un `onClick` (ver components/Card.jsx); sin `onEditar` la tarjeta
+ * sigue siendo de solo lectura, que es lo que pasa cuando puedeEditarJornada(rol, jornada.estado)
+ * es falso (JornadasPage.jsx decide eso, no este componente).
  */
-function TarjetaJornada({ jornada }) {
+function TarjetaJornada({ jornada, onEditar }) {
   const tienePacientes = Object.prototype.hasOwnProperty.call(jornada, 'pacientesAtendidos');
 
   return (
-    <Card style={{ borderLeft: `4px solid ${colorDeEstado(jornada.estado)}` }}>
+    <Card
+      onClick={onEditar ?? undefined}
+      style={{ borderLeft: `4px solid ${colorDeEstado(jornada.estado)}` }}
+    >
       <div className="d-flex justify-content-between align-items-start gap-2 mb-2">
         <span className="fw-semibold">{jornada.nombre}</span>
         <StatusChip status={jornada.estado} />

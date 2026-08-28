@@ -66,3 +66,28 @@ export const CAMPOS_ASIGNACION_PERSONAL = [
 export const CAMPOS_MARCAR_ASISTENCIA = [
   { id: 'asistio', label: 'Asistio', tipo: TIPOS_DE_CAMPO.BOOLEANO, validacion: { requerido: false } },
 ];
+
+/**
+ * Subconjunto de CAMPOS_JORNADA para el formulario de alta/edicion de jornada (issue #179).
+ *
+ * Los cinco campos que la revision del plan confirmo: nombre, fecha, comunidad, responsable y
+ * proyecto (PLAN.md, seccion 7, decision 3). Quedan fuera codigo, cupoEstimado,
+ * presupuestoAsignado y botiquinBodega: ninguno esta en el objetivo del issue.
+ *
+ * Hallazgo de esa misma revision: ninguna pantalla del repo escribe cupoEstimado. Al no estar en
+ * este formulario tampoco, la columna cupo_estimado queda NULL en toda jornada nueva, y
+ * cualquier futura barra de progreso de cupo (COLUMNAS_JORNADA ya reserva esa clave, ver
+ * columnas.js) se dibujaria vacia hasta que otro issue la resuelva.
+ *
+ * "observaciones" no aparece: el objetivo original del issue #179 la nombra, pero la tabla
+ * jornadas (00012 + 00036) no tiene esa columna. No se propone ninguna migracion para agregarla
+ * (PLAN.md, seccion 7, decision 2).
+ *
+ * No se repiten aca ni el label ni el tipo ni las opciones: se filtra el descriptor completo,
+ * mismo patron que CAMPOS_ALTA_USUARIO en usuarios/useAltaUsuario.js.
+ */
+const IDS_CAMPOS_FORMULARIO_JORNADA = ['nombre', 'fecha', 'comunidad', 'responsable', 'proyecto'];
+
+export const CAMPOS_FORMULARIO_JORNADA = CAMPOS_JORNADA.filter((campo) =>
+  IDS_CAMPOS_FORMULARIO_JORNADA.includes(campo.id),
+);

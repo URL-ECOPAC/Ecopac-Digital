@@ -1,0 +1,48 @@
+-- Ecopac Digital - Completar el permiso de lectura de departamentos y municipios
+-- Issue #406.
+--
+-- ESTO NO ES UN CAMBIO DE POLITICA, ES COMPLETAR UN PERMISO QUE 00006 YA DECLARO
+--
+-- 00006_departamentos_municipios.sql ya dejo estas dos tablas con una politica RLS de lectura
+-- publica:
+--
+--   CREATE POLICY "Lectura publica departamentos" ON departamentos FOR SELECT USING (true);
+--   CREATE POLICY "Lectura publica municipios" ON municipios FOR SELECT USING (true);
+--
+-- Pero RLS no sustituye los privilegios SQL estandar (GRANT/REVOKE): son dos capas distintas, y
+-- esa migracion nunca escribio el GRANT que le da a un rol la entrada a esa politica en primer
+-- lugar. El sintoma se documenta en tres lugares independientes: 00049_retirar_privilegios_anon.sql
+-- (linea 23, el barrido de "las 39 tablas de public" encontro "comunidades, municipios y
+-- departamentos, donde nadie escribio un GRANT"), docs/PERMISOS.md ("nadie: issue #406" en la
+-- fila de ambas tablas) y su propia Divergencia 4 ("El catalogo geografico sembrado en seed.sql
+-- es ilegible por la API; no se puede armar el selector de lugar en cascada"). Es la misma clase
+-- de vacio que 00041 ya habia cerrado para comunidades con una sola linea
+-- (GRANT SELECT ON comunidades TO authenticated;), sin tocar su politica tampoco.
+--
+-- Es la mitad que faltaba de un permiso que el equipo ya decidio dar en 00006: la politica
+-- "lectura publica" no tiene sentido si ningun rol puede siquiera intentar el SELECT. No es una
+-- decision nueva de acceso, es terminar de aplicar la que ya estaba escrita.
+--
+-- POR QUE SOLO A AUTHENTICATED, NUNCA A ANON
+--
+-- 00049 (issue #408) retiro deliberadamente todo privilegio de anon sobre el esquema publico
+-- completo, con REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM anon y con
+-- ALTER DEFAULT PRIVILEGES para que ninguna tabla futura vuelva a concederselo por accidente. La
+-- regla que establecio esa migracion es explicita: "Si alguna vez hace falta exponer algo a
+-- anon, se concede explicitamente en su propia migracion y se justifica ahi por que. Lo que no
+-- se hace nunca mas es agregar anon a la lista de un GRANT por costumbre." Esta migracion no
+-- justifica exponer el catalogo geografico a peticiones sin sesion -PostgREST no necesita leer
+-- departamentos/municipios antes de que alguien inicie sesion-, asi que anon se queda exactamente
+-- donde 00049 lo dejo: sin nada. Solo authenticated recibe el GRANT.
+--
+-- QUE NO HACE ESTA MIGRACION
+--
+-- No agrega ni modifica ninguna politica RLS (00006 ya las tiene y no se tocan). No agrega
+-- REVOKE: 00049 ya dejo a anon sin privilegios sobre estas dos tablas, y agregar uno redundante
+-- no cambiaria nada. No siembra datos: seed.sql (22 departamentos, 340 municipios) sigue sin
+-- correr en ecopac-dev/ecopac-prod porque "supabase db push" nunca ejecuta seeds (ver
+-- docs/CI-CD.md y docs/DATOS-DEMO.md) -cargarlos ahi es una tarea operativa aparte, no de esta
+-- migracion.
+
+GRANT SELECT ON departamentos TO authenticated;
+GRANT SELECT ON municipios TO authenticated;

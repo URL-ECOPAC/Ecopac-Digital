@@ -231,6 +231,35 @@ export function advertirChoqueDeHorario({ perfil, jornadaActualId, asignacionesD
     : "Esta persona ya esta asignada a otra jornada el mismo dia.";
 }
 
+/**
+ * Advierte si ya existe una jornada en la misma comunidad y fecha (issue #179, criterio 4).
+ *
+ * No es un error: no hay ningun UNIQUE en la base sobre (comunidad_id, fecha)
+ * (00012_jornadas.sql no declara ninguno), asi que dos jornadas ahi conviven sin problema para
+ * el servidor. Es una advertencia para que quien crea o edita se fije antes de guardar, y nunca
+ * debe impedir el guardado -- mismo criterio que advertirChoqueDeHorario() de mas arriba.
+ *
+ * @param {object} args
+ * @param {object[]} args.jornadas Filas de listarJornadas({ comunidad, fechaInicio: fecha,
+ *   fechaFin: fecha }).
+ * @param {string} [args.jornadaActualId] Id de la jornada que se esta editando, para no advertir
+ *   contra si misma. En el alta no hay id todavia, asi que ninguna fila se excluye.
+ * @returns {string|null} Texto de la advertencia, o null si no hay coincidencia.
+ */
+export function advertirJornadaDuplicada({ jornadas, jornadaActualId } = {}) {
+  const coincidencias = (jornadas ?? []).filter((jornada) => jornada.id !== jornadaActualId);
+  if (coincidencias.length === 0) return null;
+
+  const nombres = coincidencias
+    .map((jornada) => jornada.nombre)
+    .filter(Boolean)
+    .join(", ");
+
+  return nombres
+    ? `Ya existe una jornada en esta comunidad y fecha: ${nombres}.`
+    : "Ya existe una jornada en esta comunidad y fecha.";
+}
+
 /** Reglas de la fecha de una jornada, mas alla de lo que expresa el descriptor. */
 function validarFechaJornada(valores) {
   const fecha = valores?.fecha;
