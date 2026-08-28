@@ -10,13 +10,15 @@
 //   use<Pantalla>.js view model de una pantalla: datos, estado y handlers
 //
 // campos.js, columnas.js y filtros.js estan escritos (issue #286); validaciones.js
-// (reglas), api.js (CRUD) y permisos.js tambien. useJornadasKanban.js (issue #178) es el
-// primer hook de pantalla del modulo; el resto de hooks de pantalla los construyen sus issues.
+// (reglas), api.js (CRUD) y permisos.js tambien. useJornadasKanban.js (issue #178) y
+// useJornadaActiva.js (issue #177) son los hooks de pantalla del modulo; el resto los
+// construyen sus issues.
 
 export * from './api.js';
 export * from './campos.js';
 export * from './columnas.js';
 export * from './filtros.js';
 export * from './permisos.js';
+export * from './useJornadaActiva.js';
 export * from './useJornadasKanban.js';
 export * from './validaciones.js';

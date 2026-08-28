@@ -9,7 +9,9 @@
 //   permisos.js  que puede hacer cada rol
 //
 // Todavia no hay campos.js ni columnas.js: la cola no es un formulario ni una tabla de listado,
-// y el panel que la consume (#187) es un diseno propio. Los hooks de pantalla los construye #177.
+// y el panel que la consume (#187) es un diseno propio. El hook de pantalla que consume esta
+// cola es useJornadaActiva() (issue #177), en jornadas/useJornadaActiva.js: la jornada es el
+// eje de esa pantalla, la cola es uno de sus datos.
 
 export * from "./api.js";
 export * from "./etapas.js";
