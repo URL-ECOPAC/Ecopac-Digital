@@ -13,21 +13,21 @@ export const COLUMNAS_PACIENTE = [
   { id: 'avatar', label: '', tipo: TIPOS_DE_PRESENTACION.AVATAR, desde: 'nombreCompleto', anchoWeb: '48px' },
   { id: 'nombreCompleto', label: 'Nombre', tipo: TIPOS_DE_PRESENTACION.TEXTO, principal: true },
   { id: 'edad', label: 'Edad', tipo: TIPOS_DE_PRESENTACION.NUMERO, sufijo: 'anios' },
-  { id: 'sexo', label: 'Genero', tipo: TIPOS_DE_PRESENTACION.TEXTO },
-  { id: 'comunidad', label: 'Municipio', tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  { id: 'sexo', label: 'Sexo', tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  { id: 'comunidad', label: 'Comunidad', tipo: TIPOS_DE_PRESENTACION.TEXTO },
   { id: 'condiciones', label: 'Condiciones', tipo: TIPOS_DE_PRESENTACION.CHIPS },
 ];
 
 /** Datos de la ficha clinica, en el orden en que el diseno los presenta. */
 export const CAMPOS_FICHA_PACIENTE = [
-  { id: 'codigoFicha', label: 'Numero de ficha', tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  { id: 'numeroFicha', label: 'Numero de ficha', tipo: TIPOS_DE_PRESENTACION.TEXTO },
   { id: 'dpi', label: 'DPI', tipo: TIPOS_DE_PRESENTACION.TEXTO },
   { id: 'fechaNacimiento', label: 'Fecha de nacimiento', tipo: TIPOS_DE_PRESENTACION.FECHA },
-  { id: 'sexo', label: 'Genero', tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  { id: 'sexo', label: 'Sexo', tipo: TIPOS_DE_PRESENTACION.TEXTO },
   { id: 'tipoSangre', label: 'Tipo sanguineo', tipo: TIPOS_DE_PRESENTACION.TEXTO },
   { id: 'idioma', label: 'Idioma', tipo: TIPOS_DE_PRESENTACION.TEXTO },
   { id: 'comunidad', label: 'Comunidad', tipo: TIPOS_DE_PRESENTACION.TEXTO },
-  { id: 'telefono', label: 'Telefono', tipo: TIPOS_DE_PRESENTACION.TELEFONO },
+  { id: 'telefonoContacto', label: 'Telefono', tipo: TIPOS_DE_PRESENTACION.TEXTO },
   { id: 'nombreResponsable', label: 'Responsable', tipo: TIPOS_DE_PRESENTACION.TEXTO },
   { id: 'parentescoResponsable', label: 'Parentesco', tipo: TIPOS_DE_PRESENTACION.TEXTO },
 ];
