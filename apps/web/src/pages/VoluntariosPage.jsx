@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   COLUMNAS_USUARIO,
@@ -11,6 +12,7 @@ import FilterBar from '../components/FilterBar';
 import PageHeader from '../components/PageHeader';
 import ScreenContainer from '../components/ScreenContainer';
 import SecondaryButton from '../components/SecondaryButton';
+import ModalAltaUsuario from './ModalAltaUsuario';
 
 // Pantalla de personal (issue #105). Solo presentacion: los datos, los filtros, la paginacion
 // y los catalogos salen de useUsuariosListado(), en packages/shared/usuarios/. Aqui no se
@@ -22,6 +24,7 @@ import SecondaryButton from '../components/SecondaryButton';
 // descriptores; lo unico que cambia es que DataList se dibuja como tarjetas.
 export default function VoluntariosPage() {
   const navigate = useNavigate();
+  const [mostrarAlta, setMostrarAlta] = useState(false);
   const {
     filas,
     filtros,
@@ -54,6 +57,7 @@ export default function VoluntariosPage() {
       <PageHeader
         title="Voluntarios y medicos"
         subtitle={total === 1 ? '1 persona' : `${total} personas`}
+        actions={[{ label: 'Nuevo voluntario', onClick: () => setMostrarAlta(true) }]}
       />
 
       <FilterBar
@@ -96,6 +100,12 @@ export default function VoluntariosPage() {
           <SecondaryButton title="Limpiar filtros" onClick={limpiarFiltros} />
         </div>
       )}
+
+      <ModalAltaUsuario
+        visible={mostrarAlta}
+        onClose={() => setMostrarAlta(false)}
+        onUsuarioCreado={recargar}
+      />
     </ScreenContainer>
   );
 }
