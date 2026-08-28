@@ -1,34 +1,167 @@
-import { describe, it, expect } from "vitest";
-import {
-  listarGastosPendientes,
-  aprobarGasto,
-  rechazarGasto,
-} from "./aprobacionGastosApi.js";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { listarGastosPendientes, aprobarGasto, rechazarGasto } from "./aprobacionGastosApi.js";
 
-describe("API de Aprobación de Gastos (#299)", () => {
-  it("exige motivo al rechazar un gasto", async () => {
-    const resSinMotivo = await rechazarGasto(
-      {
-        gastoId: "123",
-        usuarioId: "admin-1",
-        motivo: "",
-      },
-      {}
+const { dobles } = vi.hoisted(() => ({ dobles: { cliente: null } }));
+
+vi.mock("../api/cliente.js", () => ({
+  obtenerSupabase: () => {
+    if (dobles.cliente === null) {
+      throw new Error("Ninguna prueba debia llegar hasta el cliente de Supabase.");
+    }
+    return dobles.cliente;
+  },
+}));
+
+const { CODIGOS_DE_ERROR_DE_SUPABASE } = await import("../api/errores-de-supabase.js");
+
+function clienteUpdate(respuesta) {
+  const llamadas = [];
+  const encadenable = {
+    update(valores) {
+      llamadas.push({ paso: "update", valores });
+      return encadenable;
+    },
+    eq(columna, valor) {
+      llamadas.push({ paso: "eq", columna, valor });
+      return encadenable;
+    },
+    select(columnas) {
+      llamadas.push({ paso: "select", columnas });
+      return encadenable;
+    },
+    order(columna, opciones) {
+      llamadas.push({ paso: "order", columna, opciones });
+      return encadenable;
+    },
+    single: async () => (respuesta instanceof Error ? Promise.reject(respuesta) : respuesta),
+    then(resolve, reject) {
+      const promesa = respuesta instanceof Error ? Promise.reject(respuesta) : Promise.resolve(respuesta);
+      return promesa.then(resolve, reject);
+    },
+  };
+
+  return {
+    llamadas,
+    from(tabla) {
+      llamadas.push({ paso: "from", tabla });
+      return encadenable;
+    },
+  };
+}
+
+beforeEach(() => {
+  dobles.cliente = null;
+});
+
+describe("listarGastosPendientes", () => {
+  it("filtra por estado pendiente y devuelve { gastos, error }", async () => {
+    const cliente = clienteUpdate({ data: [{ id: "gasto-1" }], error: null });
+    dobles.cliente = cliente;
+
+    const { gastos, error } = await listarGastosPendientes();
+
+    expect(error).toBeNull();
+    expect(gastos).toEqual([{ id: "gasto-1" }]);
+    expect(cliente.llamadas).toContainEqual({ paso: "from", tabla: "gastos" });
+    expect(cliente.llamadas).toContainEqual({ paso: "eq", columna: "estado", valor: "pendiente" });
+  });
+
+  it("devuelve arreglo vacio, no null, cuando la consulta no trae filas", async () => {
+    dobles.cliente = clienteUpdate({ data: null, error: null });
+
+    const { gastos, error } = await listarGastosPendientes();
+
+    expect(error).toBeNull();
+    expect(gastos).toEqual([]);
+  });
+
+  it("normaliza el error del servidor en lugar de reenviarlo", async () => {
+    dobles.cliente = clienteUpdate({ data: null, error: { code: "42501" } });
+
+    const { gastos, error } = await listarGastosPendientes();
+
+    expect(gastos).toEqual([]);
+    expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.PERMISO_DENEGADO);
+    expect(error.mensaje).toContain("permiso");
+  });
+});
+
+describe("aprobarGasto", () => {
+  it("retorna error de campo requerido si faltan los IDs, sin tocar el cliente", async () => {
+    const { gasto, error } = await aprobarGasto({ gastoId: null, usuarioId: null });
+
+    expect(gasto).toBeNull();
+    expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.CAMPO_REQUERIDO);
+  });
+
+  it("actualiza estado, aprobado_por y fecha_aprobacion sin llamar a ningun RPC", async () => {
+    const cliente = clienteUpdate({ data: { id: "gasto-1", estado: "aprobado" }, error: null });
+    dobles.cliente = cliente;
+
+    const { gasto, error } = await aprobarGasto({ gastoId: "gasto-1", usuarioId: "admin-1" });
+
+    expect(error).toBeNull();
+    expect(gasto).toEqual({ id: "gasto-1", estado: "aprobado" });
+
+    const pasoUpdate = cliente.llamadas.find((llamada) => llamada.paso === "update");
+    expect(pasoUpdate.valores).toEqual(
+      expect.objectContaining({ estado: "aprobado", aprobado_por: "admin-1" }),
     );
+    expect(pasoUpdate.valores).toHaveProperty("fecha_aprobacion");
+    expect(cliente.llamadas.some((llamada) => llamada.paso === "rpc")).toBe(false);
+  });
+});
 
-    expect(resSinMotivo.data).toBeNull();
-    expect(resSinMotivo.error).not.toBeNull();
-    expect(resSinMotivo.error.message).toContain("motivo de rechazo es obligatorio");
+describe("rechazarGasto", () => {
+  it("retorna error de campo requerido si faltan los IDs, sin tocar el cliente", async () => {
+    const { gasto, error } = await rechazarGasto({ gastoId: null, usuarioId: null, motivo: "Fuera de presupuesto" });
+
+    expect(gasto).toBeNull();
+    expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.CAMPO_REQUERIDO);
   });
 
-  it("retorna error normalizado si faltan IDs obligatorios en aprobación", async () => {
-    const res = await aprobarGasto({ gastoId: null, usuarioId: null }, {});
-    expect(res.data).toBeNull();
-    expect(res.error).toHaveProperty("message");
-    expect(res.error).toHaveProperty("code");
+  it("exige motivo, sin tocar el cliente", async () => {
+    const { gasto, error } = await rechazarGasto({ gastoId: "gasto-1", usuarioId: "admin-1", motivo: "   " });
+
+    expect(gasto).toBeNull();
+    expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.CAMPO_REQUERIDO);
+    expect(error.mensaje).not.toBe("");
   });
 
-  it("valida la exportación de listarGastosPendientes", () => {
-    expect(typeof listarGastosPendientes).toBe("function");
+  it("escribe motivo_rechazo, aprobado_por y fecha_aprobacion; nunca rechazado_por ni fecha_rechazo", async () => {
+    const cliente = clienteUpdate({ data: { id: "gasto-1", estado: "rechazado" }, error: null });
+    dobles.cliente = cliente;
+
+    const { gasto, error } = await rechazarGasto({
+      gastoId: "gasto-1",
+      usuarioId: "admin-1",
+      motivo: "Fuera de presupuesto",
+    });
+
+    expect(error).toBeNull();
+    expect(gasto).toEqual({ id: "gasto-1", estado: "rechazado" });
+
+    const pasoUpdate = cliente.llamadas.find((llamada) => llamada.paso === "update");
+    expect(pasoUpdate.valores).toEqual({
+      estado: "rechazado",
+      aprobado_por: "admin-1",
+      fecha_aprobacion: expect.any(String),
+      motivo_rechazo: "Fuera de presupuesto",
+    });
+    expect(pasoUpdate.valores).not.toHaveProperty("rechazado_por");
+    expect(pasoUpdate.valores).not.toHaveProperty("fecha_rechazo");
+  });
+
+  it("normaliza la violacion del CHECK de coherencia del motivo", async () => {
+    dobles.cliente = clienteUpdate({ data: null, error: { code: "23514" } });
+
+    const { gasto, error } = await rechazarGasto({
+      gastoId: "gasto-1",
+      usuarioId: "admin-1",
+      motivo: "Fuera de presupuesto",
+    });
+
+    expect(gasto).toBeNull();
+    expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.CHECK);
   });
 });
