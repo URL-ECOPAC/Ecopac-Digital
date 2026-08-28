@@ -151,10 +151,10 @@ describe("validarCambioDeEstadoProyecto", () => {
 });
 
 describe("permisos", () => {
-  it("solo Administrador y Junta Directiva administran, como pide la issue", () => {
+  it("solo Administrador administra, como exige la politica de proyectos (00039)", () => {
     expect(puedeAdministrarProyectos(ROLES.ADMINISTRADOR)).toBe(true);
-    expect(puedeAdministrarProyectos(ROLES.JUNTA_DIRECTIVA)).toBe(true);
 
+    expect(puedeAdministrarProyectos(ROLES.JUNTA_DIRECTIVA)).toBe(false);
     expect(puedeAdministrarProyectos(ROLES.SOCIO_FUNDADOR)).toBe(false);
     expect(puedeAdministrarProyectos(ROLES.MEDICO)).toBe(false);
     expect(puedeAdministrarProyectos(ROLES.VOLUNTARIO)).toBe(false);

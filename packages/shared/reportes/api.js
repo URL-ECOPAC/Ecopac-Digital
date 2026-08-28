@@ -27,7 +27,8 @@
 
 import { obtenerSupabase } from "../api/cliente.js";
 import { normalizarError } from "../api/errores-de-supabase.js";
-import { esAdministrador, esConsultivo } from "../usuarios/roles.js";
+export { puedeVerIndicadoresDeImpacto } from "./permisos.js";
+import { puedeVerIndicadoresDeImpacto } from "./permisos.js";
 
 /** Columnas de vista_reporte_impacto que necesita el reporte. */
 const COLUMNAS_DEL_REPORTE = [
@@ -56,11 +57,6 @@ const INDICADORES = [
   "tratamientos_entregados",
   "medicamentos_utilizados",
 ];
-
-/** Puede consultar los indicadores: administrador y los roles consultivos, igual que la vista. */
-export function puedeVerIndicadoresDeImpacto(rol) {
-  return esAdministrador(rol) || esConsultivo(rol);
-}
 
 /** '2026-08-14' -> '2026-08'. La vista no trae el mes: se deriva de la fecha. */
 function mesDe(fecha) {

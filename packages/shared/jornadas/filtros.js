@@ -18,3 +18,17 @@ export const FILTROS_JORNADA = [
   { id: 'comunidad', tipo: TIPOS_DE_FILTRO.SELECT, label: 'Comunidad', opcionesDesde: 'comunidades' },
   { id: 'rangoFecha', tipo: TIPOS_DE_FILTRO.RANGO, label: 'Fecha' },
 ];
+
+/**
+ * Estado inicial de los filtros del tablero de jornadas (issue #178).
+ *
+ * Solo trae estado, comunidad y rangoFecha: `busqueda` queda declarado en FILTROS_JORNADA (lo
+ * usaria un listado que si lo soporte) pero listarJornadas() (#170, api.js) no acepta ningun
+ * parametro de busqueda de texto, asi que la pantalla del tablero no lo pasa a FilterBar ni le
+ * reserva estado aqui. Mismo patron que FILTROS_USUARIO_VACIOS en usuarios/filtros.js.
+ */
+export const FILTROS_JORNADA_VACIOS = {
+  estado: null,
+  comunidad: null,
+  rangoFecha: null,
+};
