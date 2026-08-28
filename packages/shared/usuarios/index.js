@@ -1,5 +1,6 @@
 export * from './api.js';
 export * from './permisos.api.js';
+export * from './permisos.js';
 export * from './roles.js';
 export * from './campos.js';
 export * from './columnas.js';

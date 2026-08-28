@@ -25,6 +25,7 @@ export * from './filtros.js';
 export * from './columnas.js';
 export * from "./validaciones.js";
 export * from "./api.js";
+export * from "./permisos.js";
 export * from "./triaje.validaciones.js";
 export * from "./triaje.api.js";
 export * from "./consultas.api.js";

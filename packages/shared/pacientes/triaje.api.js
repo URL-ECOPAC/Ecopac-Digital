@@ -32,7 +32,7 @@ import {
   construirError,
   normalizarError,
 } from "../api/errores-de-supabase.js";
-import { esAdministrador, ROLES } from "../usuarios/roles.js";
+export { puedeCorregirTriaje, puedeTomarTriaje } from "./permisos.js";
 import { validarCambioDeTriaje, validarTriaje } from "./triaje.validaciones.js";
 
 /**
@@ -242,24 +242,4 @@ export async function obtenerTriajes(pacienteId) {
   } catch (error) {
     return { triajes: [], error: normalizarError(error) };
   }
-}
-
-/**
- * Puede corregir un triaje ya registrado.
- *
- * Espejo de la politica de UPDATE de la 00033, mas estrecha que la de INSERT. Sirve para que la
- * pantalla no le ofrezca a un voluntario un boton que el servidor le va a negar con un 42501.
- */
-export function puedeCorregirTriaje(rol) {
-  return esAdministrador(rol) || rol === ROLES.MEDICO;
-}
-
-/**
- * Puede tomar el triaje de una atencion.
- *
- * Espejo de la politica de INSERT de la 00033: en campo el triaje lo toma quien esta disponible,
- * incluido el voluntariado.
- */
-export function puedeTomarTriaje(rol) {
-  return esAdministrador(rol) || rol === ROLES.MEDICO || rol === ROLES.VOLUNTARIO;
 }
