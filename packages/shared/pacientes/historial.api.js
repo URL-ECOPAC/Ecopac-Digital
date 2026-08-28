@@ -4,7 +4,8 @@ import {
   construirError,
   normalizarError,
 } from "../api/errores-de-supabase.js";
-import { ROLES, esAdministrador } from "./../usuarios/roles.js";
+export { puedeVerHistorial } from "./permisos.js";
+import { puedeVerHistorial } from "./permisos.js";
 
 export const TIPOS_DE_EVENTO = {
   TRIAJE: "triaje",
@@ -151,11 +152,6 @@ export function ordenarCronologicamente(eventos = []) {
     if (Number.isNaN(b)) return -1;
     return b - a;
   });
-}
-
-/** Roles que pueden leer un historial clinico, segun las politicas de la 00033. */
-export function puedeVerHistorial(rol) {
-  return esAdministrador(rol) || rol === ROLES.MEDICO;
 }
 
 /**
