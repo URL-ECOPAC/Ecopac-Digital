@@ -253,10 +253,9 @@ export default function LoginPage() {
             gap: '8px',
             color: '#64748B'
           }}>
-            <Link to="/registro" style={{ color: '#2563EB', textDecoration: 'none', fontWeight: '500' }}>
-              ¿No tienes cuenta?
-            </Link>
-            <span style={{ color: '#CBD5E1' }}>|</span>
+            {/* Aqui habia un enlace "¿No tienes cuenta?" hacia /registro. Se quito con la issue
+                #508: la ruta no existia en App.jsx, y anunciaba un auto-registro que el servidor
+                ahora rechaza. En este sistema las cuentas las crea la administradora. */}
             <Link to="/restablecer-contrasena" style={{ color: '#2563EB', textDecoration: 'none', fontWeight: '500' }}>
               ¿Olvidaste tu contraseña?
             </Link>
