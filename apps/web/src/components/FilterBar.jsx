@@ -70,19 +70,30 @@ export default function FilterBar({ campos = [], valores = {}, onChange, catalog
             (typeof campo.min !== 'number' && typeof campo.max !== 'number');
 
           if (esFecha) {
+            // Sin `label` en cada DateField a proposito: con label, cada campo agrega su propia
+            // fila ("Desde"/"Hasta") ademas de la del legend ("Fecha"), y el bloque completo
+            // termina una fila mas abajo que un filtro de un solo control (Estado, Comunidad).
+            // "Desde"/"Hasta" se pintan en linea, junto al control, para que este filtro quede en
+            // las mismas dos filas -etiqueta y control- que cualquier otro.
             return (
               <fieldset key={campo.id} className="border-0 p-0 m-0" style={{ flex: '0 1 320px' }}>
                 <legend className="form-label fs-6">{campo.label}</legend>
-                <div className="d-flex align-items-start gap-2">
+                <div className="d-flex align-items-center gap-2">
+                  <span className="small" style={{ color: 'var(--color-text-muted)' }}>
+                    Desde
+                  </span>
                   <DateField
-                    label="Desde"
+                    aria-label="Desde"
                     value={rango.min ?? null}
                     maxDate={rango.max ?? undefined}
                     onChange={(nuevo) => cambiar(campo.id, { ...rango, min: nuevo })}
                     style={{ marginBottom: 0 }}
                   />
+                  <span className="small" style={{ color: 'var(--color-text-muted)' }}>
+                    Hasta
+                  </span>
                   <DateField
-                    label="Hasta"
+                    aria-label="Hasta"
                     value={rango.max ?? null}
                     minDate={rango.min ?? undefined}
                     onChange={(nuevo) => cambiar(campo.id, { ...rango, max: nuevo })}
