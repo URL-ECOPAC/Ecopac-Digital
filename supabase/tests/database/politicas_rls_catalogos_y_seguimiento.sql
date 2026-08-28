@@ -5,22 +5,30 @@
 -- medicamento_principio, consulta_diagnostico, alertas_caducidad, proyecto_hitos y
 -- proyecto_seguimiento.
 --
+-- Se suman aqui, ademas, dos pruebas de departamentos y municipios (issue #406, migracion
+-- 00073): una positiva y una negativa por tabla, en el mismo estilo GRANT-primero que ya usan
+-- las negativas de condiciones_cronicas y principios_activos mas abajo -- no hace falta simular
+-- RLS filtrando filas, porque antes de 00073 la operacion moria por falta de GRANT sin llegar a
+-- evaluar ninguna politica, y la negativa de anon sigue probando exactamente eso.
+--
 -- QUE NO ESTA AQUI, Y POR QUE
 --
--- Quedan cinco tablas del esquema sin cobertura: donantes, donaciones y donacion_detalle
--- (issue #403) y departamentos y municipios (issue #406). Las cinco tienen politicas pero
--- NINGUN GRANT, asi que hoy estan denegadas a todos los roles: una prueba escrita ahora
--- fallaria, y como el CI pasa a correr este directorio entero (criterio 5), dejaria el pipeline
--- en rojo por un bug que es de otras issues. Se cubren cuando esas dos se arreglen.
+-- Quedan tres tablas del esquema sin cobertura: donantes, donaciones y donacion_detalle (issue
+-- #403). Tienen politicas pero ningun GRANT -- la misma clase de vacio que tenian departamentos
+-- y municipios antes de 00073 -- asi que hoy estan denegadas a todos los roles: una prueba
+-- escrita ahora fallaria, y como el CI corre este directorio entero (criterio 5), dejaria el
+-- pipeline en rojo por un bug de otra issue. Se cubren cuando #403 se arregle.
 --
 -- Mismo patron de simulacion de rol que las suites vecinas: SET LOCAL ROLE authenticated +
 -- SET LOCAL request.jwt.claim.sub. El setup corre como el rol dueno, exento de RLS.
 --
--- Ningun dato real: pacientes, comunidades y proyectos son inventados.
+-- Ningun dato real: pacientes, comunidades, departamentos, municipios y proyectos son
+-- inventados. Los ids de departamentos/municipios de prueba (900221) estan fuera del rango real
+-- de Guatemala (1-22 y 101-2299 aprox., ver supabase/seed.sql) para no chocar con esas filas.
 
 BEGIN;
 
-SELECT plan(26);
+SELECT plan(30);
 
 -- ============================================================================
 -- Setup: un perfil por cada rol que estas politicas distinguen, y las filas
@@ -38,6 +46,14 @@ UPDATE perfiles SET rol = 'junta directiva' WHERE id = '00000000-0000-0000-0000-
 UPDATE perfiles SET rol = 'medico'          WHERE id = '00000000-0000-0000-0000-000000221003';
 -- voluntario221 se queda con el rol por defecto (voluntario general).
 ALTER TABLE perfiles ENABLE TRIGGER USER;
+
+-- Ids fuera del rango real de Guatemala (departamentos 1-22, municipios ~101-2299, ver
+-- supabase/seed.sql) para no chocar con las filas reales que carga ese seed.
+INSERT INTO departamentos (id, nombre) VALUES
+  (900221, 'Departamento de prueba 221');
+
+INSERT INTO municipios (id, departamento_id, nombre) VALUES
+  (900221, 900221, 'Municipio de prueba 221');
 
 INSERT INTO comunidades (id, municipio_id, nombre) VALUES
   ('10000000-0000-0000-0000-000000221001', 101, 'Comunidad 221');
@@ -129,6 +145,41 @@ SELECT throws_ok(
   NULL,
   'NEGATIVA condiciones_cronicas: sin GRANT de INSERT, ni el voluntario ni nadie escribe'
 );
+
+-- ============================================================================
+-- departamentos y municipios: catalogo de lectura abierta (issue #406, 2 politicas)
+-- ============================================================================
+-- Mismo patron que condiciones_cronicas arriba: RLS ya tenia la politica publica desde 00006,
+-- lo que faltaba era el GRANT que la migracion 00073 completo. La negativa de anon prueba esa
+-- capa exacta: sin GRANT, la sentencia muere con 42501 antes de que la politica USING (true)
+-- llegue a evaluarse.
+SELECT ok(
+  (SELECT count(*) FROM departamentos WHERE id = 900221) > 0,
+  'POSITIVA departamentos SELECT: un voluntario lee el catalogo de departamentos'
+);
+
+SELECT ok(
+  (SELECT count(*) FROM municipios WHERE id = 900221) > 0,
+  'POSITIVA municipios SELECT: un voluntario lee el catalogo de municipios'
+);
+
+SET LOCAL ROLE anon;
+
+SELECT throws_ok(
+  $$ SELECT count(*) FROM departamentos $$,
+  '42501',
+  NULL,
+  'NEGATIVA departamentos SELECT: anon no tiene GRANT, ni siquiera llega a evaluar la politica publica'
+);
+
+SELECT throws_ok(
+  $$ SELECT count(*) FROM municipios $$,
+  '42501',
+  NULL,
+  'NEGATIVA municipios SELECT: anon no tiene GRANT, ni siquiera llega a evaluar la politica publica'
+);
+
+SET LOCAL ROLE authenticated;
 
 -- ============================================================================
 -- padecimientos_cronicos: medico y administrador leen, registran y actualizan;
