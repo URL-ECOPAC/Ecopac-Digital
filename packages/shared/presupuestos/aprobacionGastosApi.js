@@ -1,57 +1,43 @@
-/**
- * Normaliza los errores retornados por las operaciones.
- */
-function normalizarError(error) {
-  if (!error) return null;
-  return {
-    message: error.message || "Error al procesar la solicitud de gastos",
-    details: error.details || null,
-    code: error.code || "UNKNOWN_ERROR",
-  };
-}
+import { obtenerSupabase } from "../api/cliente.js";
+import { construirError, normalizarError, CODIGOS_DE_ERROR_DE_SUPABASE } from "../api/errores-de-supabase.js";
 
 /**
  * Obtiene la lista de gastos pendientes de aprobación ordenados por fecha.
  */
-export async function listarGastosPendientes(client) {
-  if (!client) {
-    return { data: null, error: normalizarError(new Error("Cliente de Supabase no proporcionado")) };
-  }
-
+export async function listarGastosPendientes() {
   try {
-    const { data, error } = await client
+    const { data, error } = await obtenerSupabase()
       .from("gastos")
       .select("*")
       .eq("estado", "pendiente")
       .order("fecha", { ascending: true });
 
     if (error) throw error;
-    return { data, error: null };
+    return { gastos: data || [], error: null };
   } catch (error) {
-    return { data: null, error: normalizarError(error) };
+    return { gastos: [], error: normalizarError(error) };
   }
 }
 
 /**
  * Aprueba un gasto pendiente registrando el usuario y la fecha actual.
- * Al aprobar, actualiza los montos ejecutados en jornada y proyecto.
+ *
+ * El ejecutado de la jornada/proyecto no se materializa aqui: presupuesto_de_jornada(),
+ * presupuesto_de_proyecto() y presupuesto_del_sistema() (00040) lo calculan en vivo sumando
+ * gastos aprobados en el momento de consultarlo.
  */
-export async function aprobarGasto({ gastoId, usuarioId }, client) {
+export async function aprobarGasto({ gastoId, usuarioId }) {
   if (!gastoId || !usuarioId) {
     return {
-      data: null,
-      error: normalizarError(new Error("gastoId y usuarioId son requeridos")),
+      gasto: null,
+      error: construirError(CODIGOS_DE_ERROR_DE_SUPABASE.CAMPO_REQUERIDO, "gastoId y usuarioId son requeridos"),
     };
-  }
-
-  if (!client) {
-    return { data: null, error: normalizarError(new Error("Cliente de Supabase no proporcionado")) };
   }
 
   try {
     const timestamp = new Date().toISOString();
 
-    const { data: gastoActualizado, error: errorGasto } = await client
+    const { data, error } = await obtenerSupabase()
       .from("gastos")
       .update({
         estado: "aprobado",
@@ -62,70 +48,53 @@ export async function aprobarGasto({ gastoId, usuarioId }, client) {
       .select()
       .single();
 
-    if (errorGasto) throw errorGasto;
-
-    if (gastoActualizado?.monto && typeof client.rpc === "function") {
-      const { error: errorRpc } = await client.rpc(
-        "actualizar_ejecutado_gastos",
-        {
-          p_gasto_id: gastoId,
-          p_monto: gastoActualizado.monto,
-          p_jornada_id: gastoActualizado.jornada_id || null,
-          p_proyecto_id: gastoActualizado.proyecto_id || null,
-        }
-      );
-
-      if (errorRpc && errorRpc.code !== "PGRST202") {
-        console.warn("Advertencia al actualizar ejecutado:", errorRpc.message);
-      }
-    }
-
-    return { data: gastoActualizado, error: null };
+    if (error) throw error;
+    return { gasto: data, error: null };
   } catch (error) {
-    return { data: null, error: normalizarError(error) };
+    return { gasto: null, error: normalizarError(error) };
   }
 }
 
 /**
  * Rechaza un gasto pendiente exigiendo un motivo obligatorio.
+ *
+ * Reutiliza aprobado_por/fecha_aprobacion para la auditoria de la decision, igual que
+ * movimientos_inventario (00023): no hay rechazado_por ni fecha_rechazo. motivo_rechazo
+ * (00071) es la unica columna nueva.
  */
-export async function rechazarGasto({ gastoId, usuarioId, motivo }, client) {
+export async function rechazarGasto({ gastoId, usuarioId, motivo }) {
   if (!gastoId || !usuarioId) {
     return {
-      data: null,
-      error: normalizarError(new Error("gastoId y usuarioId son requeridos")),
+      gasto: null,
+      error: construirError(CODIGOS_DE_ERROR_DE_SUPABASE.CAMPO_REQUERIDO, "gastoId y usuarioId son requeridos"),
     };
   }
 
   if (!motivo || !motivo.trim()) {
     return {
-      data: null,
-      error: normalizarError(new Error("El motivo de rechazo es obligatorio")),
+      gasto: null,
+      error: construirError(CODIGOS_DE_ERROR_DE_SUPABASE.CAMPO_REQUERIDO, "El motivo de rechazo es obligatorio"),
     };
-  }
-
-  if (!client) {
-    return { data: null, error: normalizarError(new Error("Cliente de Supabase no proporcionado")) };
   }
 
   try {
     const timestamp = new Date().toISOString();
 
-    const { data, error } = await client
+    const { data, error } = await obtenerSupabase()
       .from("gastos")
       .update({
         estado: "rechazado",
-        rechazado_por: usuarioId,
+        aprobado_por: usuarioId,
+        fecha_aprobacion: timestamp,
         motivo_rechazo: motivo.trim(),
-        fecha_rechazo: timestamp,
       })
       .eq("id", gastoId)
       .select()
       .single();
 
     if (error) throw error;
-    return { data, error: null };
+    return { gasto: data, error: null };
   } catch (error) {
-    return { data: null, error: normalizarError(error) };
+    return { gasto: null, error: normalizarError(error) };
   }
 }

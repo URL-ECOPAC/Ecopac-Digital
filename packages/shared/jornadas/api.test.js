@@ -30,6 +30,7 @@ const {
   asignarPersonal,
   cambiarEstadoJornada,
   contarAtencionesIncompletas,
+  contarPacientesAtendidosPorJornada,
   desasignarPersonal,
   listarJornadas,
   obtenerAsignacionesDelDia,
@@ -99,6 +100,10 @@ function crearCliente(respuestasPorTabla) {
         },
         neq(columna, valor) {
           llamadas.push({ paso: "neq", tabla, columna, valor });
+          return encadenable;
+        },
+        in(columna, valores) {
+          llamadas.push({ paso: "in", tabla, columna, valores });
           return encadenable;
         },
         gte(columna, valor) {
@@ -573,6 +578,62 @@ describe("contarAtencionesIncompletas", () => {
     const { cantidad, error } = await contarAtencionesIncompletas("jornada-1");
 
     expect(cantidad).toBe(0);
+    expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.PERMISO_DENEGADO);
+  });
+});
+
+describe("contarPacientesAtendidosPorJornada", () => {
+  it("sin ids no toca el cliente", async () => {
+    const { conteos, error } = await contarPacientesAtendidosPorJornada([]);
+
+    expect(conteos).toEqual({});
+    expect(error).toBeNull();
+  });
+
+  it("mapea cada jornada a su numero de pacientes atendidos", async () => {
+    const cliente = crearCliente({
+      vista_reporte_impacto: {
+        data: [
+          { jornadaId: "j1", pacientesAtendidos: 12 },
+          { jornadaId: "j2", pacientesAtendidos: 0 },
+        ],
+        error: null,
+      },
+    });
+    dobles.cliente = cliente;
+
+    const { conteos, error } = await contarPacientesAtendidosPorJornada(["j1", "j2", "j3"]);
+
+    expect(error).toBeNull();
+    expect(conteos).toEqual({ j1: 12, j2: 0 });
+    expect(cliente.llamadas).toContainEqual({
+      paso: "in",
+      tabla: "vista_reporte_impacto",
+      columna: "jornada_id",
+      valores: ["j1", "j2", "j3"],
+    });
+  });
+
+  it("una jornada sin fila en la respuesta queda ausente del mapa, no en cero: medico y voluntario no tienen SELECT sobre la vista (00064)", async () => {
+    dobles.cliente = crearCliente({
+      vista_reporte_impacto: { data: [], error: null },
+    });
+
+    const { conteos, error } = await contarPacientesAtendidosPorJornada(["j1"]);
+
+    expect(error).toBeNull();
+    expect(conteos).toEqual({});
+    expect(conteos).not.toHaveProperty("j1");
+  });
+
+  it("normaliza el error del servidor", async () => {
+    dobles.cliente = crearCliente({
+      vista_reporte_impacto: { data: null, error: { code: "42501" } },
+    });
+
+    const { conteos, error } = await contarPacientesAtendidosPorJornada(["j1"]);
+
+    expect(conteos).toEqual({});
     expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.PERMISO_DENEGADO);
   });
 });

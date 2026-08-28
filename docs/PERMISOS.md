@@ -99,6 +99,10 @@ le habia dejado fuera.
 > completas"-, y es coherente con la regla de `00054`: una politica de lectura le entregaria
 > sintomas, tratamiento y observaciones enteros.
 
+Reflejo en el cliente: `pacientes/permisos.js` (issue #396), que tambien absorbio
+`puedeVerHistorial` y `puedeCorregirTriaje`/`puedeTomarTriaje`, sueltas hasta ahora fuera de un
+`permisos.js`. `pacientes/condiciones.permisos.js` cubre `padecimientos_cronicos` por separado.
+
 ### Inventario
 
 | Tabla                    | administrador | junta directiva / socio fundador | medico | voluntario general | Como se implementa                                                                                          |
@@ -120,7 +124,8 @@ aprueba. El trigger `fn_autoaprobar_movimiento_inventario` (`00047`) hace nacer 
 registra el propio administrador.
 
 Reflejo en el cliente: `inventario/medicamentos.permisos.js`, `lotes.permisos.js`,
-`bodegas.permisos.js`, `principios-activos.permisos.js`.
+`bodegas.permisos.js`, `principios-activos.permisos.js`, y `inventario/permisos.js` para
+`movimientos_inventario` (issue #396).
 
 ### Jornadas
 
@@ -224,6 +229,11 @@ tabla:
 `fn_reporte_pacientes_atendidos` (`00067`) es la unica funcion de negocio con la comprobacion de
 rol escrita en su cuerpo, porque es DEFINER y tiene que sustituir a la politica que no la protege.
 
+Reflejo en el cliente: `reportes/permisos.js` (issue #396), que absorbio
+`puedeVerIndicadoresDeImpacto` y `puedeVerReporteDePacientes`, sueltas hasta ahora fuera de un
+`permisos.js`. Este ultimo excluye a socio fundador a proposito, espejo de la guarda de
+`fn_reporte_pacientes_atendidos`.
+
 ## Los permisos finos
 
 Junto al rol base hay un mecanismo de excepciones **por persona**: tres tablas de `00003`
@@ -325,14 +335,14 @@ Lo que hoy no coincide con la matriz. Cada fila con la issue que la cierra, cuan
 | 3   | `perfil_especialidad` tiene lectura desde `00058`, pero **ninguna politica ni `GRANT` de escritura**                                                                                                                                                                                                                  | Nadie puede editar especialidades, ni el administrador                                                                                               | **#405**                     |
 | 4   | `departamentos` y `municipios` tienen politica de lectura publica y **ningun `GRANT`**                                                                                                                                                                                                                                | El catalogo geografico sembrado en `seed.sql` es ilegible por la API; no se puede armar el selector de lugar en cascada                              | **#406**                     |
 | 5   | Seis de los nueve permisos finos no los consulta ninguna politica                                                                                                                                                                                                                                                     | Concederlos o revocarlos no cambia nada                                                                                                              | **#409**                     |
-| 6   | `proyectos.permisos.js` concede administracion de proyectos a `junta directiva`                                                                                                                                                                                                                                       | El cliente ofrece lo que la base niega                                                                                                               | **#423**                     |
+| 6   | ~~`proyectos.permisos.js` concede administracion de proyectos a `junta directiva`~~ (resuelto: solo administrador queda en `ROLES_QUE_ADMINISTRAN_PROYECTOS`)                                                                                                                                                         | El cliente ofrece lo que la base niega                                                                                                               | #423, resuelto por **#396**  |
 | 7   | El sidebar ofrece Pacientes a los dos roles consultivos                                                                                                                                                                                                                                                               | Llegan a una pantalla que la base les vacia                                                                                                          | **#426**                     |
 | 8   | La app movil no aplica ningun control de acceso por rol                                                                                                                                                                                                                                                               | Los cinco roles ven las mismas pantallas; `tabsMoviles(rol)` existe en `navegacion.js` y no la usa nadie                                             | **#427**                     |
-| 9   | `packages/shared` exporta **dos sistemas de roles** por el mismo barril: `usuarios/roles.js` (cinco roles, espejo del enum) y `types/index.ts` + `utils/permisos.ts` + `hooks/usePermisos.ts` (cuatro roles capitalizados que no existen en la base, con matriz de permisos propia), **con pruebas que lo legitiman** | Un `import` desde `@ecopac/shared` expone las dos matrices en el mismo espacio de nombres. Ningun perfil real puede tener uno de esos cuatro valores | sin issue; toca a #396 y #48 |
+| 9   | ~~`packages/shared` exporta **dos sistemas de roles** por el mismo barril: `usuarios/roles.js` y `types/index.ts` + `utils/permisos.ts` + `hooks/usePermisos.ts`~~ (resuelto: el Modelo B se elimino entero)                                                                                                        | Un `import` desde `@ecopac/shared` expone las dos matrices en el mismo espacio de nombres. Ningun perfil real puede tener uno de esos cuatro valores | resuelto por **#396**        |
 | 10  | `comunidades` tiene la politica `USING (true)` de `00008` **y** la restringida de `00041`. Como son permisivas y se combinan con OR, la segunda no restringe nada                                                                                                                                                     | Cualquier autenticado lee todas las comunidades. Si `00041` pretendia limitarlo, no lo logra                                                         | sin issue                    |
 | 11  | `00066` agrego la anulacion de recetas sin politica propia, asi que se ejerce con el UPDATE generico de `00033`                                                                                                                                                                                                       | **Cualquier medico puede anular la receta de otro**                                                                                                  | sin issue                    |
 | 12  | La politica `FOR ALL` de `00062` sobre `bodegas` y `proveedores` abarca DELETE, pero no hay `GRANT DELETE`. Ademas duplica en otro estilo lo que ya decia `00034`                                                                                                                                                     | El borrado muere en `42501` antes de llegar a RLS. Las dos tablas acaban con cinco politicas, dos redundantes                                        | sin issue                    |
-| 13  | Cinco funciones de permiso por rol viven **fuera** de un `permisos.js`: `puedeVerHistorial` y las dos de triaje en `pacientes/`, y las dos de `reportes/`. Y cinco modulos no tienen `permisos.js` ninguno                                                                                                            | La matriz del cliente esta repartida y es dificil de auditar                                                                                         | sin issue                    |
+| 13  | ~~Cinco funciones de permiso por rol viven **fuera** de un `permisos.js`... Y cinco modulos no tienen `permisos.js` ninguno~~ (resuelto: `puedeVerHistorial`, `puedeCorregirTriaje` y `puedeTomarTriaje` se mudaron a `pacientes/permisos.js`; `puedeVerIndicadoresDeImpacto` y `puedeVerReporteDePacientes` a `reportes/permisos.js`; `pacientes`, `inventario`, `usuarios` y `reportes` ya tienen su `permisos.js`, y `presupuestos` ya lo tenia) | La matriz del cliente esta repartida y es dificil de auditar                                                                                         | resuelto por **#396**        |
 | 14  | `navegacion.js` y los `permisos.js` no coinciden en cuatro sitios: presupuestos concede registrar gasto a roles que no pueden abrir la ruta; `socio fundador` entra a Reportes y `puedeVerReporteDePacientes` lo excluye; proyectos; y Pacientes frente a `puedeVerHistorial`                                         | Funciones inalcanzables, o pantallas que se vacian                                                                                                   | sin issue                    |
 | 15  | Los triggers `impedir_autodesactivacion` e `impedir_dejar_sin_administrador_activo` (`00072`) son `BEFORE UPDATE`. `perfiles.id` es `FK ON DELETE CASCADE` a `auth.users`, y un `DELETE` -desde el Dashboard de Supabase o la Admin API de GoTrue, no desde esta aplicacion- no dispara ningun `BEFORE UPDATE`         | Borrar al ultimo administrador (o a cualquiera, incluyendose a si mismo) desde fuera de la aplicacion deja el sistema sin administrador, sin que ningun trigger lo impida | sin issue                    |
 

@@ -641,6 +641,47 @@ export async function contarAtencionesIncompletas(jornadaId) {
 
 
 /**
+ * Cuenta los pacientes atendidos de cada jornada, en lote (issue #178, criterio 1).
+ *
+ * Consulta vista_reporte_impacto (00027/00054/00064) con `.in('jornada_id', ids)`, mismo patron
+ * que contarJornadasPorPerfil() en usuarios/api.js: una sola consulta para todas las tarjetas del
+ * tablero en vez de una por jornada.
+ *
+ * La vista restringe sus filas a administrador, junta directiva y socio fundador (00064:71-72):
+ * medico y voluntario no tienen SELECT sobre ella en absoluto, asi que para esos roles esta
+ * funcion no falla, simplemente no recibe ninguna fila. El objeto que devuelve solo trae una
+ * clave por cada jornada que SI vino en la respuesta: una jornada ausente del resultado no
+ * significa "cero pacientes", significa "sin permiso para leerlo", y quien consuma este mapa
+ * tiene que distinguir los dos casos (id ausente vs. id presente con 0) en vez de asumir 0 por
+ * defecto.
+ *
+ * @param {string[]} jornadaIds
+ * @returns {Promise<{ conteos: Record<string, number>, error: object|null }>}
+ */
+export async function contarPacientesAtendidosPorJornada(jornadaIds = []) {
+  if (!Array.isArray(jornadaIds) || jornadaIds.length === 0) {
+    return { conteos: {}, error: null };
+  }
+
+  try {
+    const { data, error } = await obtenerSupabase()
+      .from("vista_reporte_impacto")
+      .select("jornadaId:jornada_id, pacientesAtendidos:pacientes_atendidos")
+      .in("jornada_id", jornadaIds);
+
+    if (error) return { conteos: {}, error: normalizarError(error) };
+
+    const conteos = {};
+    for (const fila of data ?? []) {
+      conteos[fila.jornadaId] = fila.pacientesAtendidos;
+    }
+    return { conteos, error: null };
+  } catch (error) {
+    return { conteos: {}, error: normalizarError(error) };
+  }
+}
+
+/**
  * Indica si se puede registrar una atencion o una consulta en una jornada, y por que no.
  *
  * Es la envoltura de puedeRegistrarEnJornada() (validaciones.js) para cuando solo se tiene el

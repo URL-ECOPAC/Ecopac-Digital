@@ -34,9 +34,6 @@ export * from "./hooks/index.js";
 export * from "./types";
 export * from "./validations/index.js";
 
-export * from './utils/permisos';
-export * from './hooks/usePermisos';
-
 // Desempate explicito de iniciarSesion y cerrarSesion. Los dos nombres nacen en dos archivos
 // -api/sesion.js y usuarios/api.js-, asi que el barril los recibe por dos estrellas y ESM los
 // excluye del namespace por ambiguos (issue #365). Se resuelven a la version de api/sesion.js,

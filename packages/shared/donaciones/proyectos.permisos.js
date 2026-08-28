@@ -4,24 +4,24 @@
 //
 // La distincion importa: un boton escondido no es seguridad, solo es una pantalla que no
 // ofrece lo que la persona no puede hacer. Quien de verdad impide escribir es Row Level
-// Security en la base de datos, y las politicas de proyectos son la issue #90. Hasta que esa
-// aterrice, la tabla niega todo por la denegacion por defecto de la migracion 00030.
+// Security en la base de datos: las politicas de proyectos son la migracion 00039, ya aplicada.
+// INSERT y UPDATE de proyectos exigen unicamente es_administrador(); junta directiva solo tiene
+// la politica de SELECT (00039_politicas_rls_jornadas_proyectos.sql).
 //
 // Por eso ninguna funcion de proyectos.api.js consulta este archivo antes de llamar: si lo
 // hiciera, un fallo aqui se veria como "no tienes permiso" cuando en realidad el servidor
 // habria dejado pasar la operacion, o al reves. El cliente pregunta para dibujar; el servidor
 // decide.
 //
-// Criterio de aceptacion de la issue #194: solo Administrador y Junta Directiva administran
-// los proyectos.
+// Version anterior (issue #423, ampliada por #396): este archivo declaraba
+// ROLES_QUE_ADMINISTRAN_PROYECTOS = [ADMINISTRADOR, JUNTA_DIRECTIVA], citando el criterio de
+// aceptacion de la issue #194 (ya cerrada). Ese criterio quedo superado por la migracion 00039:
+// junta directiva y socio fundador son de solo lectura sobre proyectos, sin excepcion.
 
 import { ROLES } from "../usuarios/roles.js";
 
-/** Roles que pueden crear, editar y cambiar el estado de un proyecto. */
-export const ROLES_QUE_ADMINISTRAN_PROYECTOS = Object.freeze([
-  ROLES.ADMINISTRADOR,
-  ROLES.JUNTA_DIRECTIVA,
-]);
+/** Rol que puede crear, editar y cambiar el estado de un proyecto: solo administrador (00039). */
+export const ROLES_QUE_ADMINISTRAN_PROYECTOS = Object.freeze([ROLES.ADMINISTRADOR]);
 
 /** Puede crear, editar, cambiar de estado y asociar jornadas. */
 export function puedeAdministrarProyectos(rol) {
