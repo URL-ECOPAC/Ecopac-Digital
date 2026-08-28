@@ -169,7 +169,7 @@ independientes que detalla la seccion de divergencias.
 
 | Tabla                 | administrador | junta directiva / socio fundador | medico      | voluntario general | Como se implementa                             |
 | --------------------- | ------------- | -------------------------------- | ----------- | ------------------ | ---------------------------------------------- |
-| `perfiles`            | C R U         | R el propio                      | R el propio | R el propio        | `00038`. Cada quien lee y edita solo su perfil |
+| `perfiles`            | C R U         | R el propio                      | R el propio | R el propio        | `00038`. Cada quien lee y edita solo su perfil. La fila la crea el trigger de la `00002`, que desde la `00074` rechaza el alta si viene del registro publico |
 | `perfil_especialidad` | R             | R la propia                      | R la propia | R la propia        | `00058`. **Falta la escritura: issue #405**    |
 | `permisos`            | R             | R                                | R           | R                  | `00038`. Catalogo de solo lectura              |
 | `rol_permiso`         | R             | R                                | R           | R                  | `00038`. Solo lectura                          |
@@ -179,6 +179,15 @@ independientes que detalla la seccion de divergencias.
 **Nadie puede cambiar su propio rol.** Eso no lo impide una politica -RLS no puede comparar el
 valor viejo con el nuevo- sino el trigger `impedir_cambio_de_rol_propio` (`00038`), que lanza
 `insufficient_privilege`.
+
+**Nadie se da de alta a si mismo.** Issue #508, migracion `00074`. El trigger
+`trg_auth_users_crear_perfil` de la `00002` creaba el perfil de toda cuenta nueva con el rol por
+defecto `voluntario general` y `activo = TRUE`, y el registro publico de GoTrue estaba abierto:
+cualquiera con la llave anonima obtenia escritura sobre pacientes, expedientes, atenciones y
+triajes. Ahora ese trigger rechaza el alta salvo que venga de una migracion o traiga la marca
+administrativa en `raw_app_meta_data`, que el cliente no puede escribir. La via de alta es
+`fn_crear_usuario_administrativo()`, que no se le concede a ningun rol de la aplicacion. Detalle
+en `docs/SEGURIDAD.md`, "Alta de cuentas".
 
 **Nadie puede desactivar su propia fila, y nunca puede quedar el sistema sin ningun
 administrador activo.** Issue #107, migracion `00072`, mismo patron que el trigger anterior
