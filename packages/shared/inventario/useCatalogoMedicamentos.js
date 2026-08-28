@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 
 export const CATEGORIAS_PILLS = [
   "Todos",
@@ -10,29 +10,44 @@ export const CATEGORIAS_PILLS = [
 ];
 
 /**
- * Hook para la gestión del catálogo de medicamentos en la app móvil.
+ * Hook para la gestión y filtrado del catálogo de inventario/medicamentos en cliente.
  */
 export function useCatalogoMedicamentos({ inventarioInicial = [], bodegas = [] } = {}) {
   const [busqueda, setBusqueda] = useState("");
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState("Todos");
   const [bodegaSeleccionada, setBodegaSeleccionada] = useState("Todas");
 
-  // Filtrado reactivo por nombre/principio activo, categoría y bodega
+  // Filtrado optimizado soporta camelCase (API) y snake_case (Vistas DB)
   const inventarioFiltrado = useMemo(() => {
-    return inventarioInicial.filter((item) => {
-      const coincideBusqueda =
-        !busqueda ||
-        item.nombre?.toLowerCase().includes(busqueda.toLowerCase()) ||
-        item.principio_activo?.toLowerCase().includes(busqueda.toLowerCase());
+    const terminoBusqueda = busqueda.trim().toLowerCase();
 
+    return inventarioInicial.filter((item) => {
+      // Búsqueda por nombre o principio activo
+      const nombre = item.nombre?.toLowerCase() || "";
+      const principioActivo = (
+        item.principioActivo || 
+        item.principio_activo || 
+        ""
+      ).toLowerCase();
+
+      const coincideBusqueda =
+        !terminoBusqueda ||
+        nombre.includes(terminoBusqueda) ||
+        principioActivo.includes(terminoBusqueda);
+
+      // Categoría
       const coincideCategoria =
         categoriaSeleccionada === "Todos" ||
         item.categoria === categoriaSeleccionada;
 
+      // Bodega (Soporta filtrado por ID o por Nombre)
+      const bodegaId = item.bodegaId || item.bodega_id;
+      const bodegaNombre = item.bodegaNombre || item.bodega_nombre;
+
       const coincideBodega =
         bodegaSeleccionada === "Todas" ||
-        item.bodega_id === bodegaSeleccionada ||
-        item.bodega_nombre === bodegaSeleccionada;
+        bodegaId === bodegaSeleccionada ||
+        bodegaNombre === bodegaSeleccionada;
 
       return coincideBusqueda && coincideCategoria && coincideBodega;
     });
@@ -43,11 +58,11 @@ export function useCatalogoMedicamentos({ inventarioInicial = [], bodegas = [] }
     categoriaSeleccionada !== "Todos" ||
     bodegaSeleccionada !== "Todas";
 
-  const limpiarFiltros = () => {
+  const limpiarFiltros = useCallback(() => {
     setBusqueda("");
     setCategoriaSeleccionada("Todos");
     setBodegaSeleccionada("Todas");
-  };
+  }, []);
 
   return {
     busqueda,
