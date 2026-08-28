@@ -15,6 +15,7 @@ import ProyectosPage from './pages/ProyectosPage';
 import ReportesPage from './pages/ReportesPage';
 import JornadasPage from './pages/JornadasPage';
 import VoluntariosPage from './pages/VoluntariosPage';
+import PerfilPage from './pages/PerfilPage';
 import NotFoundPage from './pages/NotFoundPage';
 
 // Las rutas siguen la definicion unica de MODULOS en packages/shared/navegacion.js:
@@ -72,6 +73,12 @@ export default function App() {
             <Route element={<RutaProtegida roles={rolesDe('/voluntarios')} />}>
               <Route path="/voluntarios" element={<VoluntariosPage />} />
             </Route>
+
+            {/* /perfil no es uno de los MODULOS: es la cuenta de quien entro, no un modulo de
+                negocio, asi que no aparece en el sidebar ni tiene una lista de roles que
+                consultar en navegacion.js. Solo exige que haya sesion, igual que la 404 de
+                abajo. Se llega desde el bloque .app-user de MainLayout.jsx (issue #102). */}
+            <Route path="/perfil" element={<PerfilPage />} />
 
             {/* La 404 queda dentro del layout y detras de la sesion, pero sin filtro de rol:
               una ruta que no existe no depende de permisos. */}

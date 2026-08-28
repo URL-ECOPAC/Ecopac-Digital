@@ -98,7 +98,10 @@ export default function MainLayout() {
           ))}
         </nav>
 
-        <div className="app-user">
+        {/* Punto de entrada a /perfil (issue #102): unica excepcion de alcance de este layout,
+            que sigue siendo el de la issue #51 en todo lo demas. No es un boton nuevo ni un
+            item de MODULOS, solo el mismo bloque de siempre vuelto navegable. */}
+        <NavLink to="/perfil" className="app-user app-user--link">
           <span className="app-user__avatar" aria-hidden="true">
             {iniciales}
           </span>
@@ -111,7 +114,7 @@ export default function MainLayout() {
               {perfil.area ? ` · ${perfil.area}` : ''}
             </span>
           </span>
-        </div>
+        </NavLink>
       </aside>
 
       <div className="app-main">
