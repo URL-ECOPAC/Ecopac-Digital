@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import {
   describirMedicamento,
@@ -12,6 +12,7 @@ import EmptyState from '../components/EmptyState';
 import ErrorState from '../components/ErrorState';
 import LoadingState from '../components/LoadingState';
 import StatusChip from '../components/StatusChip';
+import RecetaImprimible from './RecetaImprimible';
 
 function Detalle({ receta }) {
   if (receta.detalle.length === 0) {
@@ -39,7 +40,7 @@ function Detalle({ receta }) {
   );
 }
 
-function Receta({ receta, abierta, onAlternar }) {
+function Receta({ receta, abierta, onAlternar, onImprimir }) {
   return (
     <Card style={{ marginBottom: '1rem', opacity: receta.anulada ? 0.75 : 1 }}>
       <div className="d-flex flex-wrap align-items-center gap-2">
@@ -53,6 +54,9 @@ function Receta({ receta, abierta, onAlternar }) {
           aria-expanded={abierta}
         >
           {abierta ? 'Ocultar detalle' : 'Ver detalle'}
+        </button>
+        <button type="button" className="btn btn-link btn-sm p-0" onClick={onImprimir}>
+          Imprimir o guardar PDF
         </button>
       </div>
 
@@ -75,9 +79,23 @@ function Receta({ receta, abierta, onAlternar }) {
   );
 }
 
-export default function PestaniaRecetasPaciente({ pacienteId, rol }) {
-  const { recetas, conteo, cargando, error, recargar } = useRecetasPaciente(pacienteId, { rol });
+export default function PestaniaRecetasPaciente({ paciente, rol }) {
+  const { recetas, conteo, cargando, error, recargar } = useRecetasPaciente(paciente?.id, { rol });
   const [abiertas, setAbiertas] = useState(() => new Set());
+  const [aImprimir, setAImprimir] = useState(null);
+
+  useEffect(() => {
+    if (!aImprimir) return undefined;
+
+    const limpiar = () => setAImprimir(null);
+    window.addEventListener('afterprint', limpiar);
+    const cuadro = window.requestAnimationFrame(() => window.print());
+
+    return () => {
+      window.removeEventListener('afterprint', limpiar);
+      window.cancelAnimationFrame(cuadro);
+    };
+  }, [aImprimir]);
 
   const alternar = (id) =>
     setAbiertas((anteriores) => {
@@ -108,8 +126,11 @@ export default function PestaniaRecetasPaciente({ pacienteId, rol }) {
           receta={receta}
           abierta={abiertas.has(receta.id)}
           onAlternar={() => alternar(receta.id)}
+          onImprimir={() => setAImprimir(receta)}
         />
       ))}
+
+      {aImprimir && <RecetaImprimible receta={aImprimir} paciente={paciente} />}
     </div>
   );
 }

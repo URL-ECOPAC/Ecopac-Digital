@@ -5,6 +5,7 @@ import {
   COLUMNAS_PACIENTE,
   FILTROS_PACIENTE,
   puedeRegistrarPaciente,
+  puedeVerCondiciones,
   usePacientesListado,
 } from '@ecopac/shared';
 
@@ -53,9 +54,19 @@ export default function PacientesPage() {
     recargar,
   } = usePacientesListado();
 
-  const acciones = puedeRegistrarPaciente(rol)
-    ? [{ label: 'Nuevo paciente', onClick: () => setRegistrando(true) }]
-    : [];
+  const acciones = [];
+
+  if (puedeVerCondiciones(rol)) {
+    acciones.push({
+      label: 'Pacientes cronicos',
+      onClick: () => navigate('/pacientes/cronicos'),
+      variant: 'secondary',
+    });
+  }
+
+  if (puedeRegistrarPaciente(rol)) {
+    acciones.push({ label: 'Nuevo paciente', onClick: () => setRegistrando(true) });
+  }
 
   if (error) {
     return (
