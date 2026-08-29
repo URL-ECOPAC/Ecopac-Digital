@@ -25,6 +25,7 @@ import {
 import { useSesionCompartida } from '../contexto/SesionProvider';
 import ModalEdicionPaciente from './ModalEdicionPaciente';
 import NotFoundPage from './NotFoundPage';
+import PestaniaHistorialPaciente from './PestaniaHistorialPaciente';
 import PaginaPendiente from './PaginaPendiente';
 
 const PARAMETRO_PESTANIA = 'pestania';
@@ -138,9 +139,7 @@ export default function FichaPacientePage() {
         )}
 
         {pestaniaActiva === 'historial' && (
-          <Card>
-            <PaginaPendiente titulo="Historial clinico" issues="#128" />
-          </Card>
+          <PestaniaHistorialPaciente pacienteId={paciente.id} rol={rol} />
         )}
 
         {pestaniaActiva === 'signos' && (
