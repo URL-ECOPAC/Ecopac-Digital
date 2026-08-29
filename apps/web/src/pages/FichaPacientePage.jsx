@@ -23,11 +23,12 @@ import {
   Tabs,
 } from '../components';
 import { useSesionCompartida } from '../contexto/SesionProvider';
+import ModalCondicionesPaciente from './ModalCondicionesPaciente';
 import ModalEdicionPaciente from './ModalEdicionPaciente';
 import NotFoundPage from './NotFoundPage';
 import PestaniaHistorialPaciente from './PestaniaHistorialPaciente';
+import PestaniaRecetasPaciente from './PestaniaRecetasPaciente';
 import PestaniaSignosPaciente from './PestaniaSignosPaciente';
-import PaginaPendiente from './PaginaPendiente';
 
 const PARAMETRO_PESTANIA = 'pestania';
 
@@ -45,6 +46,7 @@ export default function FichaPacientePage() {
   const { rol } = useSesionCompartida();
   const { paciente, cargando, error, recargar } = usePaciente(id, { rol });
   const [editando, setEditando] = useState(false);
+  const [gestionandoCondiciones, setGestionandoCondiciones] = useState(false);
 
   const pestanias = pestaniasDeFicha(rol);
   const permisos = permisosDeFicha(rol);
@@ -91,6 +93,11 @@ export default function FichaPacientePage() {
 
   if (permisos.puedeEditar) {
     acciones.push({ label: 'Editar datos', onClick: () => setEditando(true) });
+    acciones.push({
+      label: 'Condiciones cronicas',
+      onClick: () => setGestionandoCondiciones(true),
+      variant: 'secondary',
+    });
   }
 
   const alGuardar = async () => {
@@ -148,9 +155,7 @@ export default function FichaPacientePage() {
         )}
 
         {pestaniaActiva === 'recetas' && (
-          <Card>
-            <PaginaPendiente titulo="Recetas emitidas" issues="#130" />
-          </Card>
+          <PestaniaRecetasPaciente paciente={paciente} rol={rol} />
         )}
       </Tabs>
 
@@ -159,6 +164,15 @@ export default function FichaPacientePage() {
           paciente={paciente}
           onClose={() => setEditando(false)}
           onGuardado={alGuardar}
+        />
+      )}
+
+      {gestionandoCondiciones && (
+        <ModalCondicionesPaciente
+          pacienteId={paciente.id}
+          rol={rol}
+          onClose={() => setGestionandoCondiciones(false)}
+          onCambio={recargar}
         />
       )}
     </ScreenContainer>
