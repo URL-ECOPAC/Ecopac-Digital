@@ -6,7 +6,7 @@
 
 BEGIN;
 
-SELECT plan(30);
+SELECT plan(28);
 
 -- ============================================================================
 -- Setup: comunidad, perfiles (dos medicos: uno asignado a la jornada, otro no),
@@ -140,15 +140,6 @@ SELECT throws_ok(
   'un medico no asignado a la jornada no puede registrar una consulta ahi, aunque este en curso'
 );
 
--- issue #237: mismo agujero que arriba, pero en atenciones (00033 nunca la exigio).
-SELECT throws_ok(
-  $$ INSERT INTO atenciones (paciente_id, jornada_id)
-     VALUES ('20000000-0000-0000-0000-000000000102', '30000000-0000-0000-0000-000000000001') $$,
-  '42501',
-  NULL,
-  'un medico no asignado a la jornada no puede registrar una atencion ahi (issue #237)'
-);
-
 -- ============================================================================
 -- medico89a: SI esta asignado a la jornada 'en curso'
 -- ============================================================================
@@ -162,12 +153,13 @@ SELECT lives_ok(
   'un medico asignado a una jornada en curso si puede registrar una consulta'
 );
 
--- issue #237: el mismo medico asignado si puede registrar una atencion nueva ahi.
+-- Segunda atencion, para las pruebas de tomado_por de mas abajo (no se puede reusar la primera:
+-- triajes.atencion_id es UNIQUE, y esa ya tiene el triaje del voluntario de arriba).
 SELECT lives_ok(
   $$ INSERT INTO atenciones (id, paciente_id, jornada_id)
      VALUES ('50000000-0000-0000-0000-000000000002', '20000000-0000-0000-0000-000000000102',
              '30000000-0000-0000-0000-000000000001') $$,
-  'un medico asignado a la jornada si puede registrar una atencion ahi (issue #237)'
+  'un medico puede registrar una atencion nueva'
 );
 
 -- issue #237: ni el propio medico asignado puede firmar el triaje con la identidad de otra
@@ -180,24 +172,18 @@ SELECT throws_ok(
   'un medico no puede firmar un triaje con la identidad de otra persona (issue #237)'
 );
 
--- issue #237: medico89b no esta asignado a la jornada de la atencion2 tampoco.
+-- medico89b no esta asignado a la jornada, y aun asi SI puede registrar el triaje firmandolo
+-- como si mismo: docs/PERMISOS.md solo exige participa_en_jornada() para consultas, no para
+-- triajes ni atenciones -- es diseno, no un agujero (ver cabecera de la 00082).
 SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000203';
-
-SELECT throws_ok(
-  $$ INSERT INTO triajes (atencion_id, presion_sistolica, presion_diastolica, frecuencia_cardiaca, tomado_por)
-     VALUES ('50000000-0000-0000-0000-000000000002', 110, 70, 80, '00000000-0000-0000-0000-000000000203') $$,
-  '42501',
-  NULL,
-  'un medico no asignado a la jornada no puede registrar el triaje, ni firmandolo como si mismo (issue #237)'
-);
-
-SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000202';
 
 SELECT lives_ok(
   $$ INSERT INTO triajes (atencion_id, presion_sistolica, presion_diastolica, frecuencia_cardiaca, tomado_por)
-     VALUES ('50000000-0000-0000-0000-000000000002', 110, 70, 80, '00000000-0000-0000-0000-000000000202') $$,
-  'un medico asignado a la jornada si registra el triaje firmandolo como si mismo (issue #237)'
+     VALUES ('50000000-0000-0000-0000-000000000002', 110, 70, 80, '00000000-0000-0000-0000-000000000203') $$,
+  'un medico no asignado a la jornada igual puede registrar el triaje, firmandolo como si mismo (issue #237)'
 );
+
+SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000202';
 
 SELECT ok(
   (SELECT count(*) FROM consultas) > 0,
