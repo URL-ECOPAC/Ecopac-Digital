@@ -4,12 +4,16 @@ import { esLoteEntregable } from "./lotes.validaciones.js";
 
 /**
  * Consulta la lista de movimientos de inventario aplicando filtros opcionales.
+ *
+ * No hay filtro por jornada: un movimiento cuelga de una bodega (bodega_id), no de una
+ * jornada (issue #491). El botiquin de una jornada es jornadas.botiquin_bodega_id (00036);
+ * quien necesite "movimientos del botiquin de esta jornada" resuelve ese id primero y filtra
+ * por bodega_id aqui.
  */
 export async function listarMovimientos({
   tipo,
   estado,
   bodega_id,
-  jornada_id,
   fecha_inicio,
   fecha_fin,
 } = {}) {
@@ -24,7 +28,6 @@ export async function listarMovimientos({
     if (tipo) query = query.eq("tipo", tipo);
     if (estado) query = query.eq("estado", estado);
     if (bodega_id) query = query.eq("bodega_id", bodega_id);
-    if (jornada_id) query = query.eq("jornada_id", jornada_id);
     if (fecha_inicio) query = query.gte("created_at", fecha_inicio);
     if (fecha_fin) query = query.lte("created_at", fecha_fin);
 
@@ -39,6 +42,15 @@ export async function listarMovimientos({
 
 /**
  * Registra un ingreso de medicamentos (compra o donación). Crea el lote si no existe.
+ *
+ * `origen` solo valida la intencion de quien llama (compra/donacion): movimientos_inventario
+ * no tiene esa columna, la procedencia se reconstruye siguiendo lote_id hasta donacion_detalle
+ * (packages/shared/donaciones/ingreso.api.js, issue #192) o hasta un proveedor de compra.
+ *
+ * El ajuste de existencias no lo hace este cliente: lo hace tr_autoaprobar_movimiento_inventario
+ * (00028/00047) si quien registra es administrador -el movimiento nace ya 'aprobado'-, o
+ * tr_actualizar_existencias cuando alguien lo aprueba despues (validacion.api.js). Escribir
+ * existencias.cantidad_disponible aqui lo duplicaria.
  */
 export async function registrarIngreso({
   origen,
@@ -49,7 +61,7 @@ export async function registrarIngreso({
   fecha_vencimiento,
   cantidad,
   motivo,
-  jornada_id,
+  usuarioId,
 }) {
   try {
     if (!["compra", "donacion"].includes(origen)) {
@@ -66,10 +78,19 @@ export async function registrarIngreso({
       };
     }
 
+    if (!usuarioId) {
+      return {
+        datos: null,
+        error: { mensaje: "Se requiere el usuario que registra el movimiento." },
+      };
+    }
+
     const supabase = obtenerSupabase();
     let idLoteFinal = lote_id;
 
-    // Si no se proporciona un lote existente, se crea un lote nuevo
+    // Si no se proporciona un lote existente, se crea un lote nuevo. lotes no tiene columna
+    // de cantidad desde la 00047 (issue #369): la cantidad vive en existencias, particionada
+    // por (lote_id, bodega_id), y la crea/ajusta el trigger al aprobar el movimiento.
     if (!idLoteFinal) {
       if (!numero_lote || !fecha_vencimiento) {
         return {
@@ -84,7 +105,6 @@ export async function registrarIngreso({
           medicamento_id,
           numero_lote,
           fecha_vencimiento,
-          cantidad_disponible: 0,
         })
         .select()
         .single();
@@ -93,17 +113,18 @@ export async function registrarIngreso({
       idLoteFinal = nuevoLote.id;
     }
 
-    // Registrar el movimiento SIN enviar campo de estado (lo gestiona el trigger de la BD)
+    // Registrar el movimiento SIN enviar campo de estado (lo gestiona el trigger de la BD).
+    // registrado_por es NOT NULL y sin default (00023): la politica RLS de INSERT para
+    // medico/voluntario exige ademas que sea exactamente auth.uid() (00034).
     const { data, error } = await supabase
       .from("movimientos_inventario")
       .insert({
         tipo: "ingreso",
-        origen,
         bodega_id,
         lote_id: idLoteFinal,
         cantidad,
         motivo,
-        jornada_id,
+        registrado_por: usuarioId,
       })
       .select()
       .single();
@@ -123,7 +144,7 @@ export async function registrarSalida({
   lote_id,
   cantidad,
   motivo,
-  jornada_id,
+  usuarioId,
 }) {
   try {
     if (!cantidad || cantidad <= 0) {
@@ -133,9 +154,17 @@ export async function registrarSalida({
       };
     }
 
+    if (!usuarioId) {
+      return {
+        datos: null,
+        error: { mensaje: "Se requiere el usuario que registra el movimiento." },
+      };
+    }
+
     const supabase = obtenerSupabase();
 
-    // Validar lote existente, disponibilidad y vencimiento
+    // Validar lote existente y vencimiento. La cantidad disponible vive en existencias, no
+    // en lotes (00047): se consulta aparte, filtrada por lote y bodega.
     const { data: lote, error: errorLote } = await supabase
       .from("lotes")
       .select("*")
@@ -153,7 +182,17 @@ export async function registrarSalida({
       };
     }
 
-    if (lote.cantidad_disponible < cantidad) {
+    const { data: existencia } = await supabase
+      .from("existencias")
+      .select("cantidad_disponible")
+      .eq("lote_id", lote_id)
+      .eq("bodega_id", bodega_id)
+      .maybeSingle();
+
+    // Sin fila de existencias para esa combinacion (lote, bodega) es lo mismo que stock 0,
+    // mismo criterio que fn_aplicar_ajuste_existencias (00047).
+    const disponible = existencia?.cantidad_disponible ?? 0;
+    if (disponible < cantidad) {
       return {
         datos: null,
         error: { mensaje: "La cantidad solicitada supera la existencia disponible del lote." },
@@ -169,7 +208,7 @@ export async function registrarSalida({
         lote_id,
         cantidad,
         motivo,
-        jornada_id,
+        registrado_por: usuarioId,
       })
       .select()
       .single();
@@ -182,7 +221,7 @@ export async function registrarSalida({
 }
 
 /**
- * Edita un movimiento existente únicamente si se encuentra en estado 'pendiente_validacion'
+ * Edita un movimiento existente únicamente si se encuentra en estado 'pendiente'
  * y la modificación es realizada por la misma persona que lo registró.
  */
 export async function editarMovimiento(idMovimiento, datosNuevos, usuarioActualId) {
@@ -199,17 +238,17 @@ export async function editarMovimiento(idMovimiento, datosNuevos, usuarioActualI
       return { datos: null, error: { mensaje: "El movimiento no existe." } };
     }
 
-    if (mov.estado !== "pendiente_validacion" && mov.estado !== "pendiente") {
+    if (mov.estado !== "pendiente") {
       return {
         datos: null,
         error: { mensaje: "Solo se pueden editar movimientos en estado pendiente." },
       };
     }
 
-    if (mov.creado_por && mov.creado_por !== usuarioActualId) {
+    if (mov.registrado_por && mov.registrado_por !== usuarioActualId) {
       return {
         datos: null,
-        error: { mensaje: "Solo el usuario que creo el movimiento puede editarlo." },
+        error: { mensaje: "Solo el usuario que registro el movimiento puede editarlo." },
       };
     }
 

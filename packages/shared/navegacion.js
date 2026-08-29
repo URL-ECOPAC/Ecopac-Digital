@@ -11,6 +11,16 @@ import { ROLES, ROLES_CONSULTIVOS, TODOS_LOS_ROLES } from './usuarios/roles.js';
 
 const ADMIN = [ROLES.ADMINISTRADOR];
 const ADMIN_Y_CONSULTIVOS = [ROLES.ADMINISTRADOR, ...ROLES_CONSULTIVOS];
+
+// Dos grupos "operativos" a proposito, no uno (issue #426): los roles consultivos
+// (junta directiva, socio fundador) son de solo lectura en casi todo, pero por decision de la
+// organizacion -misma que documenta la 00032 del lado de la base de datos- NO ven informacion
+// clinica ni pacientes identificables, solo agregados. Un modulo con datos clinicos usa
+// OPERATIVOS_CLINICOS; el resto (inventario, jornadas), donde los consultivos si tienen
+// lectura, usa OPERATIVOS. El proximo modulo clinico que se agregue elige entre estas dos
+// listas ya existentes, en vez de enumerar roles a mano y arriesgarse a repetir el error de
+// incluir a los consultivos donde no corresponde.
+const OPERATIVOS_CLINICOS = [ROLES.ADMINISTRADOR, ROLES.MEDICO, ROLES.VOLUNTARIO];
 const OPERATIVOS = [ROLES.ADMINISTRADOR, ...ROLES_CONSULTIVOS, ROLES.MEDICO, ROLES.VOLUNTARIO];
 
 /** Secciones del sidebar, en el orden del prototipo. */
@@ -45,7 +55,7 @@ export const MODULOS = [
     ruta: '/pacientes',
     seccion: 'atencion',
     modulo: 'pacientes',
-    roles: OPERATIVOS,
+    roles: OPERATIVOS_CLINICOS,
     tabMovil: 'Pacientes',
   },
   {

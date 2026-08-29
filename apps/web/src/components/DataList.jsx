@@ -1,4 +1,4 @@
-import { Badge, Table } from 'react-bootstrap';
+import { Badge, Button, Table } from 'react-bootstrap';
 import { formatearFechaCorta, formatearMoneda } from '@ecopac/shared';
 import EmptyState from './EmptyState';
 import LoadingState from './LoadingState';
@@ -12,6 +12,13 @@ import { normalizarOpciones } from './opciones';
  *
  * El valor de cada celda sale de la fila por `id`, o por `desde` si la columna lo declara
  * (ej. la columna 'estado' de COLUMNAS_USUARIO lee el campo 'activo').
+ *
+ * `accionSecundaria` (issue #108) agrega una segunda accion por fila, independiente de
+ * `onRowPress`: una columna final sin encabezado con un boton que llama a `onClick(fila)`. Sin
+ * esta prop la tabla se ve exactamente igual que antes -es aditiva-, y el click del boton no
+ * dispara tambien `onRowPress` (se corta la propagacion en la celda que lo contiene). No hay
+ * equivalente todavia en apps/mobile/src/components/DataList.js: queda pendiente para cuando
+ * la pantalla que la necesite se porte a movil.
  */
 
 /** Iniciales de un nombre, para el avatar. Dos como maximo, que es lo que cabe en el circulo. */
@@ -118,6 +125,7 @@ export default function DataList({
   cargando = false,
   vacio,
   onRowPress,
+  accionSecundaria,
   catalogos = {},
 }) {
   if (cargando) return <LoadingState />;
@@ -131,6 +139,7 @@ export default function DataList({
   }
 
   const interactiva = typeof onRowPress === 'function';
+  const tieneAccionSecundaria = typeof accionSecundaria?.onClick === 'function';
 
   return (
     // Las tablas densas del diseno (bodega, gastos, reportes) tienen mas columnas de las que
@@ -145,6 +154,7 @@ export default function DataList({
                 {columna.label}
               </th>
             ))}
+            {tieneAccionSecundaria && <th scope="col" aria-hidden="true" />}
           </tr>
         </thead>
         <tbody>
@@ -159,6 +169,23 @@ export default function DataList({
                   <Celda columna={columna} fila={fila} catalogos={catalogos} />
                 </td>
               ))}
+              {tieneAccionSecundaria && (
+                <td
+                  className="text-end"
+                  // Corta la propagacion: sin esto, el click del boton tambien dispararia
+                  // onRowPress porque el <tr> escucha el evento en burbuja.
+                  onClick={(evento) => evento.stopPropagation()}
+                >
+                  <Button
+                    variant="link"
+                    size="sm"
+                    className="p-0"
+                    onClick={() => accionSecundaria.onClick(fila)}
+                  >
+                    {accionSecundaria.label}
+                  </Button>
+                </td>
+              )}
             </tr>
           ))}
         </tbody>

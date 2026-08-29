@@ -107,6 +107,10 @@ function InventarioNavigator() {
 function TabsNavigator() {
   return (
     <Tabs.Navigator
+      // Jornadas y no Inicio (issue #109, criterio 3): tanto al iniciar sesion como al
+      // reabrir la app ya logueada, el personal de campo tiene que llegar directo a elegir
+      // jornada, sin pasar por Inicio primero (RNF-02).
+      initialRouteName={ROUTES.TAB_JORNADAS}
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: colors.primary,

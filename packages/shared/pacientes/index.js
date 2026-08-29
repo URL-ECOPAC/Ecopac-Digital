@@ -38,3 +38,5 @@ export * from "./condiciones.permisos.js";
 export * from "./condiciones.validaciones.js";
 export * from "./condiciones.api.js";
 export * from "./usePacientesListado.js";
+export * from "./usePaciente.js";
+export * from "./useRegistroPaciente.js";

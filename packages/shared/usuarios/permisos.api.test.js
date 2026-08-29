@@ -18,6 +18,7 @@ const {
   concederPermiso,
   listarCatalogoPermisos,
   obtenerPermisosEfectivos,
+  permisoGobiernaAlgunaPolitica,
   restablecerPermiso,
   revocarPermiso,
 } = await import("./permisos.api.js");
@@ -270,6 +271,27 @@ describe("concederPermiso y revocarPermiso", () => {
     const { error } = await concederPermiso("u1", "jornadas.gestionar");
 
     expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.PERMISO_DENEGADO);
+  });
+});
+
+describe("permisoGobiernaAlgunaPolitica", () => {
+  it("los tres permisos conectados a una politica real devuelven true", () => {
+    expect(permisoGobiernaAlgunaPolitica("jornadas.gestionar")).toBe(true);
+    expect(permisoGobiernaAlgunaPolitica("presupuestos.registrar")).toBe(true);
+    expect(permisoGobiernaAlgunaPolitica("presupuestos.aprobar")).toBe(true);
+  });
+
+  it("los seis restantes, incluido usuarios.gestionar_permisos, devuelven false (issue #409)", () => {
+    expect(permisoGobiernaAlgunaPolitica("usuarios.gestionar_permisos")).toBe(false);
+    expect(permisoGobiernaAlgunaPolitica("pacientes.editar")).toBe(false);
+    expect(permisoGobiernaAlgunaPolitica("inventario.aprobar")).toBe(false);
+    expect(permisoGobiernaAlgunaPolitica("donaciones.registrar")).toBe(false);
+    expect(permisoGobiernaAlgunaPolitica("proyectos.gestionar")).toBe(false);
+    expect(permisoGobiernaAlgunaPolitica("reportes.exportar")).toBe(false);
+  });
+
+  it("una clave que no existe en el catalogo tambien es inerte", () => {
+    expect(permisoGobiernaAlgunaPolitica("modulo.inexistente")).toBe(false);
   });
 });
 

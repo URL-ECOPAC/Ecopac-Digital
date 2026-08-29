@@ -1,4 +1,11 @@
-import { COLUMNAS_PACIENTE, FILTROS_PACIENTE, usePacientesListado } from '@ecopac/shared';
+import { useState } from 'react';
+
+import {
+  COLUMNAS_PACIENTE,
+  FILTROS_PACIENTE,
+  puedeRegistrarPaciente,
+  usePacientesListado,
+} from '@ecopac/shared';
 
 import DataList from '../components/DataList';
 import EmptyState from '../components/EmptyState';
@@ -6,6 +13,8 @@ import ErrorState from '../components/ErrorState';
 import FilterBar from '../components/FilterBar';
 import PageHeader from '../components/PageHeader';
 import ScreenContainer from '../components/ScreenContainer';
+import { useSesionCompartida } from '../contexto/SesionProvider';
+import ModalAltaPaciente from './ModalAltaPaciente';
 import SecondaryButton from '../components/SecondaryButton';
 
 // Pantalla principal del modulo de pacientes (issue #124). Solo presentacion: los datos, los
@@ -19,14 +28,15 @@ import SecondaryButton from '../components/SecondaryButton';
 // busqueda, Lugar, Genero y Rango de edad. La condicion cronica es un quinto filtro que el
 // wireframe no dibuja pero que pide el criterio 3.
 //
-// Ni la fila ni la cabecera navegan todavia: la ficha del paciente es la #125 y el formulario
-// de registro la #126, y ninguna de esas rutas existe aun en App.jsx. Enlazarlas ahora daria un
-// 404, que es exactamente lo que paso en la #105 y que la #107 tuvo que limpiar. Cuando esas
-// dos issues existan, aqui se agregan el onRowPress y la accion de cabecera.
+// La cabecera ya ofrece registrar un paciente, que es la #126: el alta vive en un modal, asi
+// que no hace falta ninguna ruta nueva. La fila todavia no navega porque la ficha es la #125 y
+// su ruta no esta en App.jsx; enlazarla ahora daria el 404 que la #107 tuvo que limpiar.
 //
 // La version movil de esta misma pantalla es la #133 y consume el mismo hook con los mismos
 // descriptores; lo unico que cambia es que DataList se dibuja como tarjetas.
 export default function PacientesPage() {
+  const { rol } = useSesionCompartida();
+  const [registrando, setRegistrando] = useState(false);
   const {
     filas,
     filtros,
@@ -38,7 +48,12 @@ export default function PacientesPage() {
     hayMas,
     cargarMas,
     catalogos,
+    recargar,
   } = usePacientesListado();
+
+  const acciones = puedeRegistrarPaciente(rol)
+    ? [{ label: 'Nuevo paciente', onClick: () => setRegistrando(true) }]
+    : [];
 
   if (error) {
     return (
@@ -58,6 +73,7 @@ export default function PacientesPage() {
       <PageHeader
         title="Gestion de pacientes"
         subtitle={total === 1 ? '1 paciente' : `${total} pacientes`}
+        actions={acciones}
       />
 
       <FilterBar
@@ -82,7 +98,11 @@ export default function PacientesPage() {
               onAction={limpiarFiltros}
             />
           ) : (
-            <EmptyState message="Todavia no hay pacientes registrados. Registra el primero para empezar." />
+            <EmptyState
+              message="Todavia no hay pacientes registrados."
+              actionLabel={puedeRegistrarPaciente(rol) ? 'Registrar el primero' : undefined}
+              onAction={puedeRegistrarPaciente(rol) ? () => setRegistrando(true) : undefined}
+            />
           )
         }
       />
@@ -97,6 +117,10 @@ export default function PacientesPage() {
             disabled={cargando}
           />
         </div>
+      )}
+
+      {registrando && (
+        <ModalAltaPaciente onClose={() => setRegistrando(false)} onRegistrado={recargar} />
       )}
     </ScreenContainer>
   );

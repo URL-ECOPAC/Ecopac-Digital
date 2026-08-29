@@ -23,10 +23,13 @@ describe("permisos de proyectos", () => {
     expect(puedeAdministrarProyectos(ROLES.VOLUNTARIO)).toBe(false);
   });
 
-  it("cualquier rol conocido puede ver los proyectos", () => {
-    for (const rol of Object.values(ROLES)) {
-      expect(puedeVerProyectos(rol)).toBe(true);
-    }
+  it("administrador y los dos roles consultivos ven proyectos; medico y voluntario no, espejo de la 00080", () => {
+    expect(puedeVerProyectos(ROLES.ADMINISTRADOR)).toBe(true);
+    expect(puedeVerProyectos(ROLES.JUNTA_DIRECTIVA)).toBe(true);
+    expect(puedeVerProyectos(ROLES.SOCIO_FUNDADOR)).toBe(true);
+
+    expect(puedeVerProyectos(ROLES.MEDICO)).toBe(false);
+    expect(puedeVerProyectos(ROLES.VOLUNTARIO)).toBe(false);
   });
 
   it("un rol que no existe no puede nada", () => {
@@ -48,12 +51,29 @@ describe("permisos de proyectos", () => {
       puedeAsociarJornadas: false,
     });
 
+    // socio fundador es identico a junta directiva: los dos son roles consultivos (00080).
+    expect(permisosDeProyectos(ROLES.SOCIO_FUNDADOR)).toEqual({
+      puedeVer: true,
+      puedeCrear: false,
+      puedeEditar: false,
+      puedeCambiarEstado: false,
+      puedeAsociarJornadas: false,
+    });
+
     expect(permisosDeProyectos(ROLES.ADMINISTRADOR)).toEqual({
       puedeVer: true,
       puedeCrear: true,
       puedeEditar: true,
       puedeCambiarEstado: true,
       puedeAsociarJornadas: true,
+    });
+
+    expect(permisosDeProyectos(ROLES.MEDICO)).toEqual({
+      puedeVer: false,
+      puedeCrear: false,
+      puedeEditar: false,
+      puedeCambiarEstado: false,
+      puedeAsociarJornadas: false,
     });
   });
 });

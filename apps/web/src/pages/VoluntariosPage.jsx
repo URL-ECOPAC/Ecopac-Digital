@@ -14,6 +14,7 @@ import SecondaryButton from '../components/SecondaryButton';
 import { useSesionCompartida } from '../contexto/SesionProvider';
 import ModalAltaUsuario from './ModalAltaUsuario';
 import ModalEdicionUsuario from './ModalEdicionUsuario';
+import ModalPermisosUsuario from './ModalPermisosUsuario';
 
 // Pantalla de personal (issue #105). Solo presentacion: los datos, los filtros, la paginacion
 // y los catalogos salen de useUsuariosListado(), en packages/shared/usuarios/. Aqui no se
@@ -29,12 +30,20 @@ import ModalEdicionUsuario from './ModalEdicionUsuario';
 // navegaba a esa misma ruta inexistente y caia en la pantalla 404 -no es un arreglo aparte,
 // es lo que #107 vino a resolver.
 //
+// Permisos individuales (issue #108) sigue el mismo criterio que #107 sobre la ficha
+// inexistente, pero como accion HERMANA de Editar, no anidada adentro de su modal (PLAN.md,
+// decision 2): onRowPress sigue abriendo ModalEdicionUsuario sin cambios, y Permisos usa la
+// prop accionSecundaria de DataList (agregada para este issue) para tener su propio punto de
+// entrada directo desde la fila.
+//
 // La version movil de esta misma pantalla es la #272 y consume este mismo hook con los mismos
-// descriptores; lo unico que cambia es que DataList se dibuja como tarjetas.
+// descriptores; lo unico que cambia es que DataList se dibuja como tarjetas. accionSecundaria
+// no tiene todavia equivalente movil (ver DataList.jsx): ModalPermisosUsuario es solo de web.
 export default function VoluntariosPage() {
   const { perfil: perfilDeSesion } = useSesionCompartida();
   const [mostrarAlta, setMostrarAlta] = useState(false);
   const [perfilEnEdicion, setPerfilEnEdicion] = useState(null);
+  const [perfilEnPermisos, setPerfilEnPermisos] = useState(null);
   const {
     filas,
     filtros,
@@ -84,6 +93,7 @@ export default function VoluntariosPage() {
         catalogos={catalogos}
         vacio="No hay personal que coincida con los filtros."
         onRowPress={(fila) => setPerfilEnEdicion(fila)}
+        accionSecundaria={{ label: 'Permisos', onClick: (fila) => setPerfilEnPermisos(fila) }}
       />
 
       {/* La paginacion solo estorba cuando hay una sola pagina. */}
@@ -127,6 +137,14 @@ export default function VoluntariosPage() {
             setPerfilEnEdicion(null);
             recargar();
           }}
+        />
+      )}
+
+      {perfilEnPermisos && (
+        <ModalPermisosUsuario
+          key={perfilEnPermisos.id}
+          perfil={perfilEnPermisos}
+          onClose={() => setPerfilEnPermisos(null)}
         />
       )}
     </ScreenContainer>
