@@ -32,7 +32,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-import { listarProyectos } from "../donaciones/proyectos.api.js";
+import { listarProyectos } from "../proyectos/api.js";
 import {
   listarComunidades,
   listarDepartamentos,

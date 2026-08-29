@@ -14,7 +14,7 @@
 //
 // El triaje va en archivos propios -- triaje.api.js y triaje.validaciones.js (issue #117) --
 // porque es otra entidad dentro del mismo modulo, con su propia tabla. Mismo patron de nombres
-// que donaciones/ usa con proyectos.api.js y avance.api.js.
+// que proyectos/ usa con avance.api.js.
 //
 // Las condiciones cronicas (issue #122) siguen ese mismo patron y son las primeras del modulo
 // que traen el juego completo: api, validaciones, permisos, campos, columnas y filtros. Escriben
