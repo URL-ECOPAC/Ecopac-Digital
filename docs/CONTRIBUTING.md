@@ -84,6 +84,12 @@ Checklist antes de abrir un PR:
 - [ ] Se actualizo la documentacion si aplica
 - [ ] El PR referencia el issue con `Closes #X`
 
+**Una validacion nueva llega con sus pruebas.** `npm test` comprueba la cobertura de
+`packages/shared/**/validaciones*.js` y el umbral de funciones es del 100%, asi que una funcion
+de validacion sin ejercer deja el CI en rojo. Se pide caso valido, invalido y de borde, que es lo
+que exige la issue #219. El detalle esta en `docs/CI-CD.md` > "La guarda de cobertura de las
+validaciones".
+
 ## Issues
 
 Usar las plantillas de `.github/ISSUE_TEMPLATE/`:

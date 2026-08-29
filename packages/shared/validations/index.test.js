@@ -103,6 +103,48 @@ describe("normalizarTexto", () => {
   });
 });
 
+describe("validarConDescriptores con maxLongitudPorEtiqueta", () => {
+  // Es la unica regla de validarConDescriptores que no ejercia ninguna prueba, y la usa un campo
+  // real: `especialidades` en usuarios/campos.js, de tipo ETIQUETAS y con un tope de 100. Al ser
+  // la ultima rama del bucle, un fallo aqui no rompe nada visible: la etiqueta larga se guarda y
+  // la base la rechaza despues.
+  const campos = [
+    {
+      id: "especialidades",
+      label: "Especialidades",
+      validacion: { requerido: false, maxLongitudPorEtiqueta: 10 },
+    },
+  ];
+
+  it("acepta una lista cuyas etiquetas caben todas", () => {
+    expect(validarConDescriptores(campos, { especialidades: ["Pediatria", "Interna"] })).toEqual(
+      {},
+    );
+  });
+
+  it("acepta la etiqueta que mide exactamente el tope: el limite es inclusivo", () => {
+    expect(validarConDescriptores(campos, { especialidades: ["0123456789"] })).toEqual({});
+  });
+
+  it("rechaza la lista si una sola etiqueta pasa del tope", () => {
+    const errores = validarConDescriptores(campos, {
+      especialidades: ["Pediatria", "01234567890"],
+    });
+
+    expect(errores.especialidades).toContain("10");
+  });
+
+  it("la regla solo aplica a listas: un texto suelto no la dispara", () => {
+    // maxLongitudPorEtiqueta comprueba Array.isArray antes de recorrer. Un string tambien tiene
+    // longitud, y sin esa guarda "una cadena larguisima" se reportaria etiqueta por etiqueta.
+    expect(validarConDescriptores(campos, { especialidades: "01234567890" })).toEqual({});
+  });
+
+  it("una lista vacia no es una lista con etiquetas largas", () => {
+    expect(validarConDescriptores(campos, { especialidades: [] })).toEqual({});
+  });
+});
+
 describe("hayErrores y combinarErrores", () => {
   it("hayErrores distingue el objeto vacio", () => {
     expect(hayErrores({})).toBe(false);
