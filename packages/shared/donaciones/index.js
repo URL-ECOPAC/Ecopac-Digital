@@ -22,6 +22,7 @@
 // types/donaciones.ts que validaciones.js reemplazo.
 export * from "./validaciones.js";
 export * from "./donantes.api.js";
+export * from "./ingreso.api.js";
 export * from "./campos.js";
 export * from "./columnas.js";
 export * from "./filtros.js";
