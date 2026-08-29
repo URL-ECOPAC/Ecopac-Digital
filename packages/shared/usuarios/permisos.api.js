@@ -22,6 +22,29 @@ export const ORIGEN_PERMISO = Object.freeze({
 });
 
 /**
+ * Claves de permisos finos que hoy gobiernan de verdad alguna politica RLS (docs/PERMISOS.md,
+ * seccion "Los permisos finos"): jornadas.gestionar en la 00039, presupuestos.registrar y
+ * presupuestos.aprobar en la 00052. Los otros seis del catalogo -incluido
+ * usuarios.gestionar_permisos, que en teoria protegeria esta misma gestion- existen en la
+ * tabla `permisos` pero ninguna politica los consulta: concederlos o revocarlos no cambia nada
+ * en el servidor hasta que la issue #409 los conecte.
+ *
+ * Se declara la lista de los que SI funcionan, no la de los inertes: cuando #409 conecte uno,
+ * alcanza con agregar su clave aca (un solo lugar), en vez de borrarlo de una lista de
+ * excepciones que crece al reves.
+ */
+const PERMISOS_QUE_GOBIERNAN_UNA_POLITICA = new Set([
+  "jornadas.gestionar",
+  "presupuestos.registrar",
+  "presupuestos.aprobar",
+]);
+
+/** Si conceder o revocar este permiso cambia de verdad lo que el servidor permite hoy. */
+export function permisoGobiernaAlgunaPolitica(clave) {
+  return PERMISOS_QUE_GOBIERNAN_UNA_POLITICA.has(clave);
+}
+
+/**
  * Agrupa una lista plana de permisos por su columna `modulo`, preservando el orden en que
  * llegaron (la consulta ya los trae ordenados por modulo y clave).
  */

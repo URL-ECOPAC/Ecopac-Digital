@@ -19,3 +19,4 @@ export * from './useAltaUsuario.js';
 export * from './useEdicionUsuario.js';
 export * from './useDesactivacionUsuario.js';
 export * from './usePerfilPropio.js';
+export * from './useGestionPermisos.js';
