@@ -28,3 +28,4 @@ export * from "./columnas.js";
 export * from "./filtros.js";
 export * from "./useRegistroDonacion.js";
 export * from "./useHistorialDonaciones.js";
+export * from "./useConstanciaDonacion.js";
