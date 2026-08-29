@@ -13,11 +13,10 @@
 --
 -- QUE NO ESTA AQUI, Y POR QUE
 --
--- Quedan tres tablas del esquema sin cobertura: donantes, donaciones y donacion_detalle (issue
--- #403). Tienen politicas pero ningun GRANT -- la misma clase de vacio que tenian departamentos
--- y municipios antes de 00073 -- asi que hoy estan denegadas a todos los roles: una prueba
--- escrita ahora fallaria, y como el CI corre este directorio entero (criterio 5), dejaria el
--- pipeline en rojo por un bug de otra issue. Se cubren cuando #403 se arregle.
+-- donantes, donaciones y donacion_detalle no estan en esta suite: tenian politicas pero ningun
+-- GRANT -- la misma clase de vacio que tenian departamentos y municipios antes de 00073 -- y
+-- ademas las politicas mismas estaban rotas (issue #403, migracion 00083). Su cobertura vive en
+-- politicas_rls_donaciones.sql, aparte, porque es su propio modulo y su propia issue.
 --
 -- Mismo patron de simulacion de rol que las suites vecinas: SET LOCAL ROLE authenticated +
 -- SET LOCAL request.jwt.claim.sub. El setup corre como el rol dueno, exento de RLS.
