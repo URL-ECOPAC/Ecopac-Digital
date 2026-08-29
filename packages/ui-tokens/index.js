@@ -76,6 +76,13 @@ export const statusColors = {
   planificado: colors.info,
   finalizado: colors.secondary,
   cancelado: colors.danger,
+  // estado_receta (recetas.estado, 00066_recetas_anulacion_y_generacion.sql). 'anulada' ya
+  // estaba arriba con estado_donacion, que usa el mismo valor y el mismo color.
+  emitida: colors.success,
+  // estado_condicion_cronica (padecimientos_cronicos.estado, 00010_condiciones_cronicas.sql)
+  activa: colors.warning,
+  controlada: colors.success,
+  resuelta: colors.secondary,
 };
 
 /**

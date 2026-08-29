@@ -20,7 +20,7 @@ const COLUMNAS_DEL_HISTORIAL = [
   "id",
   "jornadaId:jornada_id",
   "createdAt:created_at",
-  "jornada:jornadas(nombre, fecha)",
+  "jornada:jornadas(nombre, fecha, comunidad:comunidades(nombre))",
   [
     "triajes(",
     "id, tomadoEn:tomado_en, tomadoPor:tomado_por,",
@@ -61,7 +61,14 @@ export function aEventos(atencion) {
 
   const jornada = atencion.jornada?.nombre ?? null;
   const fechaDeJornada = atencion.jornada?.fecha ?? null;
-  const comun = { atencionId: atencion.id, jornadaId: atencion.jornadaId, jornada, fechaDeJornada };
+  const comunidad = atencion.jornada?.comunidad?.nombre ?? null;
+  const comun = {
+    atencionId: atencion.id,
+    jornadaId: atencion.jornadaId,
+    jornada,
+    fechaDeJornada,
+    comunidad,
+  };
   const eventos = [];
 
   // triajes_atencion_id_key (migracion 00013) hace de atencion_id -> triaje una relacion 1:1, asi

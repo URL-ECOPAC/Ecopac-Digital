@@ -1,9 +1,11 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 import {
   COLUMNAS_PACIENTE,
   FILTROS_PACIENTE,
   puedeRegistrarPaciente,
+  puedeVerCondiciones,
   usePacientesListado,
 } from '@ecopac/shared';
 
@@ -28,13 +30,14 @@ import SecondaryButton from '../components/SecondaryButton';
 // busqueda, Lugar, Genero y Rango de edad. La condicion cronica es un quinto filtro que el
 // wireframe no dibuja pero que pide el criterio 3.
 //
-// La cabecera ya ofrece registrar un paciente, que es la #126: el alta vive en un modal, asi
-// que no hace falta ninguna ruta nueva. La fila todavia no navega porque la ficha es la #125 y
-// su ruta no esta en App.jsx; enlazarla ahora daria el 404 que la #107 tuvo que limpiar.
+// Las dos cosas que la #124 dejo anotadas como pendientes ya existen: la cabecera ofrece
+// registrar un paciente (#126, en un modal, sin ruta nueva) y cada fila navega a la ficha
+// (#125, que si agrega su ruta en App.jsx).
 //
 // La version movil de esta misma pantalla es la #133 y consume el mismo hook con los mismos
 // descriptores; lo unico que cambia es que DataList se dibuja como tarjetas.
 export default function PacientesPage() {
+  const navigate = useNavigate();
   const { rol } = useSesionCompartida();
   const [registrando, setRegistrando] = useState(false);
   const {
@@ -51,9 +54,19 @@ export default function PacientesPage() {
     recargar,
   } = usePacientesListado();
 
-  const acciones = puedeRegistrarPaciente(rol)
-    ? [{ label: 'Nuevo paciente', onClick: () => setRegistrando(true) }]
-    : [];
+  const acciones = [];
+
+  if (puedeVerCondiciones(rol)) {
+    acciones.push({
+      label: 'Pacientes cronicos',
+      onClick: () => navigate('/pacientes/cronicos'),
+      variant: 'secondary',
+    });
+  }
+
+  if (puedeRegistrarPaciente(rol)) {
+    acciones.push({ label: 'Nuevo paciente', onClick: () => setRegistrando(true) });
+  }
 
   if (error) {
     return (
@@ -88,6 +101,7 @@ export default function PacientesPage() {
         datos={filas}
         cargando={cargando}
         catalogos={catalogos}
+        onRowPress={(fila) => navigate(`/pacientes/${fila.id}`)}
         // El estado vacio sugiere registrar, que es lo que pide el criterio 4. Si hay filtros
         // puestos, lo que falta no es un paciente nuevo sino aflojar la busqueda.
         vacio={
