@@ -24,12 +24,10 @@ import { FILTROS_PACIENTE } from "./filtros.js";
 // padecimientos_cronicos). busqueda es un filtro de texto libre sobre varios campos a la vez, y
 // rangoEdad filtra sobre la edad derivada. numeroFicha lo genera el servidor (issue #114,
 // fn_registrar_paciente): quien registra no lo escribe, asi que no tiene contraparte de
-// formulario. Ninguno de los siete tiene ni deberia tener contraparte en
+// formulario. ultimaAtencion sale de jornadas.fecha a traves de atenciones, y condicionCronica
+// filtra la misma relacion con padecimientos_cronicos que ya cubre la columna condiciones; los
+// dos entraron con la #124. Ninguno de los nueve tiene ni deberia tener contraparte en
 // CAMPOS_REGISTRO_PACIENTE.
-// rangoEdad filtra sobre la edad derivada. ultimaAtencion sale de jornadas.fecha a traves de
-// atenciones, y condicionCronica filtra la misma relacion con padecimientos_cronicos que ya cubre
-// la columna condiciones; los dos entraron con la #124. Ninguno de los ocho tiene ni deberia
-// tener contraparte en CAMPOS_REGISTRO_PACIENTE.
 const IDS_DERIVADOS = new Set([
   "avatar",
   "nombreCompleto",

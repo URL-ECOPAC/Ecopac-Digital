@@ -106,7 +106,7 @@ COMMENT ON FUNCTION fn_registrar_paciente(
 ) IS
   'Inserta un paciente y su expediente en una sola transaccion. numero_ficha ya no es un '
   'parametro: lo genera el DEFAULT de expedientes (nextval de expedientes_numero_ficha_seq, '
-  '00080), formateado a 6 digitos con ceros a la izquierda. nextval() es atomico y nunca '
+  '00081), formateado a 6 digitos con ceros a la izquierda. nextval() es atomico y nunca '
   'repite valor entre sesiones concurrentes, asi que dos dispositivos registrando a la vez '
   'en la misma jornada no pueden colisionar. No es SECURITY DEFINER: las politicas de INSERT '
   'de pacientes y expedientes (00032) siguen decidiendo quien puede llamarla.';
