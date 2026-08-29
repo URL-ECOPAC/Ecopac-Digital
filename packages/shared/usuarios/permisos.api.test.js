@@ -275,22 +275,22 @@ describe("concederPermiso y revocarPermiso", () => {
 });
 
 describe("permisoGobiernaAlgunaPolitica", () => {
-  it("los tres permisos conectados a una politica real devuelven true", () => {
+  it("los tres permisos conectados desde antes de la issue #409 devuelven true", () => {
     expect(permisoGobiernaAlgunaPolitica("jornadas.gestionar")).toBe(true);
     expect(permisoGobiernaAlgunaPolitica("presupuestos.registrar")).toBe(true);
     expect(permisoGobiernaAlgunaPolitica("presupuestos.aprobar")).toBe(true);
   });
 
-  it("los seis restantes, incluido usuarios.gestionar_permisos, devuelven false (issue #409)", () => {
-    expect(permisoGobiernaAlgunaPolitica("usuarios.gestionar_permisos")).toBe(false);
-    expect(permisoGobiernaAlgunaPolitica("pacientes.editar")).toBe(false);
-    expect(permisoGobiernaAlgunaPolitica("inventario.aprobar")).toBe(false);
-    expect(permisoGobiernaAlgunaPolitica("donaciones.registrar")).toBe(false);
-    expect(permisoGobiernaAlgunaPolitica("proyectos.gestionar")).toBe(false);
-    expect(permisoGobiernaAlgunaPolitica("reportes.exportar")).toBe(false);
+  it("los seis que la issue #409 conecta, incluido usuarios.gestionar_permisos, tambien devuelven true", () => {
+    expect(permisoGobiernaAlgunaPolitica("usuarios.gestionar_permisos")).toBe(true);
+    expect(permisoGobiernaAlgunaPolitica("pacientes.editar")).toBe(true);
+    expect(permisoGobiernaAlgunaPolitica("inventario.aprobar")).toBe(true);
+    expect(permisoGobiernaAlgunaPolitica("donaciones.registrar")).toBe(true);
+    expect(permisoGobiernaAlgunaPolitica("proyectos.gestionar")).toBe(true);
+    expect(permisoGobiernaAlgunaPolitica("reportes.exportar")).toBe(true);
   });
 
-  it("una clave que no existe en el catalogo tambien es inerte", () => {
+  it("una clave que no existe en el catalogo es inerte", () => {
     expect(permisoGobiernaAlgunaPolitica("modulo.inexistente")).toBe(false);
   });
 });

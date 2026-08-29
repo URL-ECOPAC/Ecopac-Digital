@@ -12,7 +12,7 @@
 
 BEGIN;
 
-SELECT plan(24);
+SELECT plan(29);
 
 -- ============================================================================
 -- Setup: cuatro perfiles (administrador, junta directiva, socio fundador, medico) y una
@@ -218,6 +218,50 @@ SELECT is(
 SELECT is(
   (SELECT count(*)::int FROM donacion_detalle), 0,
   'medico no lee donacion_detalle'
+);
+
+-- ============================================================================
+-- donaciones.registrar concedido puntualmente a medico (issue #409): el INSERT, antes
+-- exclusivo de administrador, ahora se permite. Con RETURNING a proposito: Postgres exige que
+-- la fila recien insertada tambien pase una politica de SELECT para devolverla, que es el
+-- patron real de supabase-js (`.insert(...).select()`, usado por registrarDonante() en
+-- packages/shared/donaciones/donantes.api.js). Sin RETURNING, un INSERT a secas no habria
+-- detectado que las politicas de SELECT de las tres tablas (00083) se quedaban cortas hasta
+-- que la 00086 les agrego tambien tiene_permiso('donaciones.registrar').
+-- ============================================================================
+SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000403';
+
+SELECT lives_ok(
+  $$ INSERT INTO usuario_permiso (perfil_id, permiso_id, concedido, otorgado_por)
+     SELECT '00000000-0000-0000-0000-000000000406', id, true, '00000000-0000-0000-0000-000000000403'
+     FROM permisos WHERE clave = 'donaciones.registrar' $$,
+  'administrador concede donaciones.registrar a medico406 (issue #409)'
+);
+
+SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000406';
+
+SELECT lives_ok(
+  $$ INSERT INTO donantes (nombre, tipo) VALUES ('Donante de medico con permiso 403', 'persona') RETURNING id $$,
+  'medico con donaciones.registrar concedido puntualmente si puede registrar un donante (issue #409)'
+);
+
+SELECT lives_ok(
+  $$ INSERT INTO donaciones (donante_id, tipo, registrada_por)
+     VALUES ('d0000000-0000-0000-0000-000000000001', 'servicios', '00000000-0000-0000-0000-000000000406') RETURNING id $$,
+  'medico con donaciones.registrar concedido puntualmente si puede registrar una donacion (issue #409)'
+);
+
+SELECT lives_ok(
+  $$ INSERT INTO donacion_detalle (donacion_id, descripcion)
+     VALUES ('d0000000-0000-0000-0000-000000000102', 'Renglon de medico con permiso 403') RETURNING id $$,
+  'medico con donaciones.registrar concedido puntualmente si puede registrar un renglon de detalle (issue #409)'
+);
+
+-- El permiso tambien amplia el SELECT de las tres tablas (mismo OR que el INSERT): no es un
+-- efecto colateral, es necesario para que el INSERT con RETURNING de arriba funcione.
+SELECT ok(
+  (SELECT count(*) FROM donantes) > 0,
+  'medico con donaciones.registrar concedido puntualmente tambien puede leer donantes (issue #409)'
 );
 
 SELECT * FROM finish();
