@@ -6,9 +6,11 @@ import {
   COLUMNAS_JORNADA,
   COLUMNAS_PACIENTES_ATENDIDOS_JORNADA,
   COLUMNAS_PERSONAL_JORNADA,
+  contarPersonalPorRol,
   ESTADOS_JORNADA,
   formatearFechaConHora,
   formatearFechaCorta,
+  puedeVerRosterCompleto,
   useDetalleJornada,
 } from '@ecopac/shared';
 
@@ -26,6 +28,8 @@ import {
   Tabs,
 } from '../components';
 import { useSesionCompartida } from '../contexto/SesionProvider';
+import ModalAsignarPersonal from './ModalAsignarPersonal';
+import ModalConfirmarDesasignacion from './ModalConfirmarDesasignacion';
 import NotFoundPage from './NotFoundPage';
 
 // Detalle de una jornada (issue #181): sus datos, el personal asignado, los pacientes
@@ -69,6 +73,7 @@ export default function DetalleJornadaPage() {
     cargando,
     error,
     recargar,
+    recargarPersonal,
     permisos,
     destinos,
     cambiarEstado,
@@ -81,6 +86,11 @@ export default function DetalleJornadaPage() {
   } = useDetalleJornada({ jornadaId: id, rol });
 
   const [pestaniaActiva, setPestaniaActiva] = useState('resumen');
+  // Issue #182: modal de buscar/asignar y confirmacion de desasignar, ambos gateados por
+  // permisos.puedeEditar mas abajo (espejo de la politica RLS de INSERT/DELETE de
+  // jornada_personal, 00039:71-73 y 00044:24-26, ver useAsignacionPersonal.js).
+  const [mostrarAsignar, setMostrarAsignar] = useState(false);
+  const [personaADesasignar, setPersonaADesasignar] = useState(null);
 
   // Primera carga (o al navegar a otro id): todavia no hay nada que mostrar en el encabezado
   // (el titulo sale de jornada.nombre), asi que la pantalla completa es un spinner.
@@ -129,8 +139,15 @@ export default function DetalleJornadaPage() {
     return true;
   });
 
+  // perfilId viaja ademas de lo que pinta COLUMNAS_PERSONAL_JORNADA: lo necesita
+  // ModalConfirmarDesasignacion (issue #182) para llamar a desasignarPersonal(jornadaId,
+  // perfilId) -- fila.id es el id de la fila de jornada_personal, no el del perfil, y
+  // desasignarPersonal() pide el segundo.
+  const puedeVerEquipoCompleto = puedeVerRosterCompleto(rol);
+  const conteoPorRol = contarPersonalPorRol(jornada.personal);
   const filasPersonal = (jornada.personal ?? []).map((fila) => ({
     id: fila.id,
+    perfilId: fila.perfilId,
     perfil: nombreDePerfil(fila.perfil) ?? '—',
     rolEnJornada: fila.rolEnJornada,
     horaInicio: fila.horaInicio,
@@ -252,21 +269,48 @@ export default function DetalleJornadaPage() {
 
         {pestaniaActiva === 'equipo' && (
           <>
-            {/* Aca engancha el boton "Asignar personal" que construye la issue #182 (criterio 4
-                de #181, alcance explicitamente diferido: ver PLAN.md decision del 2026-08-28).
-                Ya existen y estan listas para usarse: asignarPersonal() y
-                obtenerAsignacionesDelDia() (packages/shared/jornadas/api.js), el descriptor
-                CAMPOS_ASIGNACION_PERSONAL (jornadas/campos.js), y el permiso -mismo criterio
-                que el resto de este modulo, espejo de la politica RLS de INSERT sobre
-                jornada_personal, 00039:71-73- es puedeAdministrarJornadas(rol), ya expuesto
-                aqui como `permisos.puedeEditar`. Cuando #182 agregue el boton, debe llamar a
-                `recargarPersonal()` de useDetalleJornada() despues de guardar -- no a
-                `recargar()` completo, que tambien releeria el historial y los pacientes
-                atendidos sin necesidad. */}
+            {/* Asignar/desasignar personal (issue #182). El gate es permisos.puedeEditar
+                (puedeAdministrarJornadas(rol), jornadas/permisos.js), espejo exacto de las
+                politicas de INSERT y DELETE de jornada_personal (00039:71-73, 00044:24-26): las
+                dos exigen unicamente es_administrador(), sin la excepcion de permiso fino que si
+                tiene la tabla jornadas. Guardar/desasignar llama a recargarPersonal(), no a
+                recargar(): relee solo jornada_personal, sin releer historial ni contadores. */}
+            <div className="d-flex justify-content-between align-items-start gap-2 mb-3">
+              {/* Conteo por rol (criterio 5): jornada.personal ya viene filtrado por la politica
+                  de SELECT de jornada_personal (00039:63-69) antes de llegar aca -- administrador
+                  y junta directiva ven todas las filas, cualquier otro rol solo la suya, sin
+                  error. Un conteo sobre una lista parcial se veria identico a uno completo, asi
+                  que puedeVerRosterCompleto() (jornadas/permisos.js) decide cual de los dos
+                  se muestra; nunca un numero sin marca de que puede estar incompleto. */}
+              {puedeVerEquipoCompleto ? (
+                <div className="d-flex flex-wrap gap-2">
+                  {conteoPorRol.length === 0 ? (
+                    <span className="text-muted small">Todavia no hay personal asignado.</span>
+                  ) : (
+                    conteoPorRol.map((fila) => (
+                      <span key={fila.rol} className="badge text-bg-light border">
+                        {fila.etiqueta}: {fila.cantidad}
+                      </span>
+                    ))
+                  )}
+                </div>
+              ) : (
+                <span className="text-muted small">
+                  Esta vista solo muestra tu propia asignacion, si tienes una: el conteo por rol
+                  no esta disponible para tu rol.
+                </span>
+              )}
+
+              {permisos.puedeEditar && (
+                <PrimaryButton title="Asignar personal" onClick={() => setMostrarAsignar(true)} />
+              )}
+            </div>
+
             <DataList
               columnas={COLUMNAS_PERSONAL_JORNADA}
               datos={filasPersonal}
               vacio="Todavia no hay personal asignado a esta jornada."
+              onRowPress={permisos.puedeEditar ? (fila) => setPersonaADesasignar(fila) : undefined}
             />
           </>
         )}
@@ -306,6 +350,30 @@ export default function DetalleJornadaPage() {
             />
           </div>
         </Modal>
+      )}
+
+      {/* Issue #182. onAsignado/onDesasignado llaman a recargarPersonal() (useDetalleJornada.js),
+          no a recargar(): ver el comentario de la pestaña Equipo mas arriba. */}
+      <ModalAsignarPersonal
+        visible={mostrarAsignar}
+        jornadaId={id}
+        jornadaFecha={jornada.fecha}
+        personal={jornada.personal}
+        onClose={() => setMostrarAsignar(false)}
+        onAsignado={recargarPersonal}
+      />
+
+      {personaADesasignar && (
+        <ModalConfirmarDesasignacion
+          visible
+          jornadaId={id}
+          persona={personaADesasignar}
+          onClose={() => setPersonaADesasignar(null)}
+          onDesasignado={() => {
+            setPersonaADesasignar(null);
+            recargarPersonal();
+          }}
+        />
       )}
     </ScreenContainer>
   );

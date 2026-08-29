@@ -74,7 +74,6 @@ export default function MainLayout() {
           <span className="app-brand__mark" aria-hidden="true" />
           <span>
             <span className="app-brand__name">Ecopac</span>
-            <span className="app-brand__tagline">Jornadas medicas</span>
           </span>
         </div>
 

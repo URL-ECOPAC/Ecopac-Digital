@@ -41,6 +41,37 @@ export function puedeAdministrarJornadas(rol) {
 }
 
 /**
+ * Puede ver el personal COMPLETO asignado a una jornada, o solo su propia fila (issue #182,
+ * criterio 5).
+ *
+ * Espejo exacto de la politica de SELECT de jornada_personal
+ * (supabase/migrations/00039_politicas_rls_jornadas_proyectos.sql:63-69):
+ *
+ *   CREATE POLICY "Administrador y junta directiva leen asignaciones; cada quien lee la suya"
+ *     ON jornada_personal FOR SELECT TO authenticated
+ *     USING (
+ *       public.es_administrador()
+ *       OR public.rol_actual() = 'junta directiva'
+ *       OR perfil_id = auth.uid()
+ *     );
+ *
+ * A proposito NO usa un helper que agrupe consultivos (del tipo es_consultivo(), que si junta a
+ * junta directiva y socio fundador en otras tablas, por ejemplo 00052_politicas_rls_gastos.sql):
+ * esta politica en particular nombra 'junta directiva' por su valor literal y deja afuera a
+ * socio fundador, que en jornada_personal solo puede leer su propia fila (perfil_id = auth.uid())
+ * igual que medico y voluntario. Si esta politica cambia (por ejemplo si un dia agrupa a socio
+ * fundador con junta directiva), esta funcion queda desactualizada sin que nada lo avise: RLS no
+ * lanza en lecturas, asi que el sintoma seria una pantalla que dice "vista limitada" a alguien
+ * que en realidad ya puede ver todo, o viceversa. Ver Notas de deploy del PR de #182.
+ *
+ * No vive en un archivo aparte ni en el hook de #182: es una regla de "que puede ver cada rol",
+ * que es exactamente lo que este archivo declara para el resto del modulo.
+ */
+export function puedeVerRosterCompleto(rol) {
+  return esAdministrador(rol) || rol === ROLES.JUNTA_DIRECTIVA;
+}
+
+/**
  * Puede ver el listado y la ficha de una jornada.
  *
  * Cualquier rol conocido: lo que ve de cada fila lo acota RLS, no esta funcion. Un medico o

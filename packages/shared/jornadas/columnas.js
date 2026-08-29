@@ -39,6 +39,18 @@ export const COLUMNAS_PERSONAL_JORNADA = [
 ];
 
 /**
+ * Resultados de buscar personal para asignar a una jornada (issue #182).
+ *
+ * `nombreCompleto` y `rolEtiqueta` llegan ya resueltos en cada fila (armarFilaDeResultado(),
+ * jornadas/useAsignacionPersonal.js): no se resuelven por catalogo, a diferencia de otras
+ * columnas de este archivo que usan `etiquetasDesde`.
+ */
+export const COLUMNAS_RESULTADOS_ASIGNACION_PERSONAL = [
+  { id: 'nombreCompleto', label: 'Nombre', tipo: TIPOS_DE_PRESENTACION.TEXTO, principal: true },
+  { id: 'rolEtiqueta', label: 'Rol', tipo: TIPOS_DE_PRESENTACION.TEXTO },
+];
+
+/**
  * Pacientes atendidos en una jornada, con su diagnostico principal (issue #181, criterio 2).
  *
  * Solo tiene sentido pintarla para quien puedeVerHistorial() de pacientes/permisos.js (espejo

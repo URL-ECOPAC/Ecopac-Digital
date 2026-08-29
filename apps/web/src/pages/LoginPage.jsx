@@ -90,7 +90,6 @@ export default function LoginPage() {
             </div>
             <div style={{ textAlign: 'left' }}>
               <span style={{ display: 'block', fontSize: '22px', fontWeight: '800', color: '#1E293B', lineHeight: '1' }}>EcoPac</span>
-              <span style={{ display: 'block', fontSize: '9px', fontWeight: '700', letterSpacing: '1px', color: '#64748B', textTransform: 'uppercase', marginTop: '2px' }}>Jornadas Médicas</span>
             </div>
           </div>
 
