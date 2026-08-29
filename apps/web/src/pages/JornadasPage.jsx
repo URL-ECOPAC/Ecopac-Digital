@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 import {
   COLUMNAS_JORNADA,
@@ -44,15 +45,19 @@ import ModalJornada from './ModalJornada';
 // seccion 2 decision 3): "Editar", "Atras" y "Avanzar" reemplazan el onClick que el Card de
 // #179 le ponia a toda la tarjeta. Un Card con onClick es un elemento interactivo (role="button")
 // con otros elementos interactivos anidados si se le agregan botones adentro -HTML invalido y
-// semantica rota para lector de pantalla-, asi que el Card deja de ser clicable: los tres
-// botones son ahora los unicos elementos interactivos, cada uno con su propio nombre accesible.
+// semantica rota para lector de pantalla-, asi que el Card deja de ser clicable: los botones
+// son ahora los unicos elementos interactivos, cada uno con su propio nombre accesible.
 // Esto cambia el gesto que entrego #179 (antes, click en cualquier parte de la tarjeta abria la
 // edicion); es deliberado, ver PLAN.md seccion 2, decision 3.
 //
-// Cada boton se muestra solo si el rol lo permite (nunca se ve un boton que va a fallar):
-// "Editar" con puedeEditarJornada(rol, tarjeta.estado) (regla de #170, sin cambios); "Avanzar" y
-// "Atras" con `puedeEditar` del hook, y el destino finalizada -> en curso ademas con
-// `puedeReabrir` (regla de reapertura de #171, solo administrador).
+// "Ver detalle" (issue #181) se suma a ese mismo grupo de botones, sin condicion de permiso: es
+// la unica ruta hacia /jornadas/:id (DetalleJornadaPage.jsx), que despues decide seccion por
+// seccion que ve cada rol. No reemplaza a los otros tres ni cambia sus reglas.
+//
+// Cada uno de los otros botones se muestra solo si el rol lo permite (nunca se ve un boton que
+// va a fallar): "Editar" con puedeEditarJornada(rol, tarjeta.estado) (regla de #170, sin
+// cambios); "Avanzar" y "Atras" con `puedeEditar` del hook, y el destino finalizada -> en curso
+// ademas con `puedeReabrir` (regla de reapertura de #171, solo administrador).
 //
 // Advertencia de atenciones incompletas al finalizar (issue #171, criterio 4; issue #180,
 // PLAN.md seccion 2 decision 4, alcance añadido sobre los criterios textuales de #180): la unica
@@ -81,6 +86,7 @@ import ModalJornada from './ModalJornada';
 // apps/mobile/src/components/KanbanBoard.js). No hay un issue de movil identificado para el
 // formulario de #179 (ver PLAN.md, punto 8).
 export default function JornadasPage() {
+  const navigate = useNavigate();
   const { rol } = useSesionCompartida();
   const {
     columnas,
@@ -167,6 +173,7 @@ export default function JornadasPage() {
                 puedeEditarJornada(rol, tarjeta.estado) ? () => setJornadaEnEdicion(tarjeta) : null
               }
               onMover={moverJornada}
+              onVerDetalle={() => navigate(`/jornadas/${tarjeta.id}`)}
             />
           )}
         />
@@ -253,10 +260,13 @@ function colorDeEstado(estado) {
  * (components/Card.jsx). Agregarle botones adentro a un Card asi habria anidado un elemento
  * interactivo dentro de otro -HTML invalido, semantica rota para lector de pantalla-, y
  * ademas duplicaba el punto de foco que ya pone KanbanBoard.jsx en el div que envuelve cada
- * tarjeta (arrastre + flechas). Los tres botones de aqui abajo son ahora los unicos elementos
+ * tarjeta (arrastre + flechas). Los botones de aqui abajo son ahora los unicos elementos
  * interactivos de la tarjeta.
  *
- * Cada boton se muestra solo si el rol puede usarlo -nunca un boton que va a fallar-:
+ * Cada boton se muestra solo si el rol puede usarlo -nunca un boton que va a fallar-, con la
+ * unica excepcion de "Ver detalle" (issue #181): va siempre, sin condicion, porque no cambia
+ * nada -es la ruta hacia /jornadas/:id (DetalleJornadaPage.jsx), que decide seccion por seccion
+ * que ve cada rol- y cualquier rol que ve el tablero puede ver el detalle de una jornada.
  * - "Editar" (issue #179): con puedeEditarJornada(rol, jornada.estado), sin cambios de regla.
  * - "Avanzar" / "Atras" (issue #180, criterio 5): con `destino`, el unico siguiente estado que
  *   transicionesDeJornadaDesde() (validaciones.js, via @ecopac/shared) declara para el estado
@@ -266,7 +276,15 @@ function colorDeEstado(estado) {
  * - Los dos llaman al mismo `onMover` que recibe KanbanBoard como `onMover` (PLAN.md seccion 2
  *   decision 2: un solo handler, para que arrastre y botones nunca diverjan).
  */
-function TarjetaJornada({ jornada, puedeEditar, puedeReabrir, moviendo, onEditar, onMover }) {
+function TarjetaJornada({
+  jornada,
+  puedeEditar,
+  puedeReabrir,
+  moviendo,
+  onEditar,
+  onMover,
+  onVerDetalle,
+}) {
   const tienePacientes = Object.prototype.hasOwnProperty.call(jornada, 'pacientesAtendidos');
 
   const esReapertura = jornada.estado === ESTADOS_JORNADA.FINALIZADA;
@@ -290,29 +308,33 @@ function TarjetaJornada({ jornada, puedeEditar, puedeReabrir, moviendo, onEditar
         </div>
       </div>
 
-      {(onEditar || puedeMover) && (
-        <div className="d-flex justify-content-between align-items-center gap-2 mt-2">
-          <div>
-            {puedeMover && esReapertura && (
-              <SecondaryButton
-                title="← Atras"
-                onClick={() => onMover(jornada.id, jornada.estado, destino)}
-                disabled={moviendo}
-              />
-            )}
-          </div>
-          <div className="d-flex gap-2">
-            {onEditar && <SecondaryButton title="Editar" onClick={onEditar} disabled={moviendo} />}
-            {puedeMover && !esReapertura && (
-              <PrimaryButton
-                title="Avanzar →"
-                onClick={() => onMover(jornada.id, jornada.estado, destino)}
-                disabled={moviendo}
-              />
-            )}
-          </div>
+      {/* "Ver detalle" (issue #181) es el unico boton sin condicion de permiso: la pantalla de
+          destino (/jornadas/:id) es la que decide, seccion por seccion, que ve cada rol -- lo
+          mismo que ya hace esta tarjeta con `puedeVer` en el guard de la ruta /jornadas. Va
+          siempre a la izquierda, separado de "Editar"/"Atras"/"Avanzar" (issue #180, que no se
+          tocan), para no confundir "ver" con las acciones que si cambian algo. */}
+      <div className="d-flex justify-content-between align-items-center gap-2 mt-2">
+        <div className="d-flex gap-2">
+          <SecondaryButton title="Ver detalle" onClick={onVerDetalle} disabled={moviendo} />
+          {puedeMover && esReapertura && (
+            <SecondaryButton
+              title="← Atras"
+              onClick={() => onMover(jornada.id, jornada.estado, destino)}
+              disabled={moviendo}
+            />
+          )}
         </div>
-      )}
+        <div className="d-flex gap-2">
+          {onEditar && <SecondaryButton title="Editar" onClick={onEditar} disabled={moviendo} />}
+          {puedeMover && !esReapertura && (
+            <PrimaryButton
+              title="Avanzar →"
+              onClick={() => onMover(jornada.id, jornada.estado, destino)}
+              disabled={moviendo}
+            />
+          )}
+        </div>
+      </div>
     </Card>
   );
 }

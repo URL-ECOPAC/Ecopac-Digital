@@ -37,3 +37,43 @@ export const COLUMNAS_PERSONAL_JORNADA = [
   { id: 'horaFin', label: 'Hora fin', tipo: TIPOS_DE_PRESENTACION.TEXTO },
   { id: 'asistio', label: 'Asistio', tipo: TIPOS_DE_PRESENTACION.BOOLEANO },
 ];
+
+/**
+ * Pacientes atendidos en una jornada, con su diagnostico principal (issue #181, criterio 2).
+ *
+ * Solo tiene sentido pintarla para quien puedeVerHistorial() de pacientes/permisos.js (espejo
+ * de la 00033, administrador o medico): para el resto la pantalla oculta la seccion entera en
+ * vez de mostrar esta tabla vacia (ver useDetalleJornada.js).
+ */
+export const COLUMNAS_PACIENTES_ATENDIDOS_JORNADA = [
+  { id: 'paciente', label: 'Paciente', tipo: TIPOS_DE_PRESENTACION.TEXTO, principal: true },
+  {
+    id: 'diagnosticoPrincipal',
+    label: 'Diagnostico principal',
+    tipo: TIPOS_DE_PRESENTACION.TEXTO,
+  },
+];
+
+/**
+ * Historial de cambios de estado de una jornada (issue #181, criterio 3: "con quien y cuando").
+ *
+ * Solo tiene sentido pintarla para quien puedeVerHistorialJornada() de permisos.js (espejo de
+ * la 00039:83-85, solo administrador): para el resto la pantalla oculta la seccion entera en vez
+ * de mostrar esta tabla vacia (ver useDetalleJornada.js).
+ *
+ * `estadoAnterior`/`estadoNuevo` usan el mismo tipo CHIP que 'estado' en COLUMNAS_JORNADA: son
+ * el valor crudo del enum estado_jornada, que StatusChip indexa directo contra las variables
+ * --estado-* (mismo color que ya usa el tablero). La fila de creacion de la jornada trae
+ * `estadoAnterior` nulo -StatusChip ya sabe pintar nada en ese caso (Chip.jsx:20)-, no un texto
+ * inventado como "Creacion".
+ *
+ * `cambiadoPor` y `cuando` llegan pre-formateados por el hook (nombre completo del perfil,
+ * formatearFechaConHora()) porque DataList no tiene un tipo de columna para fecha-con-hora
+ * (solo TIPOS_DE_PRESENTACION.FECHA, sin hora) y este descriptor no puede ampliar ese catalogo.
+ */
+export const COLUMNAS_HISTORIAL_JORNADA = [
+  { id: 'estadoAnterior', label: 'Estado anterior', tipo: TIPOS_DE_PRESENTACION.CHIP },
+  { id: 'estadoNuevo', label: 'Estado nuevo', tipo: TIPOS_DE_PRESENTACION.CHIP, principal: true },
+  { id: 'cambiadoPor', label: 'Quien', tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  { id: 'cuando', label: 'Cuando', tipo: TIPOS_DE_PRESENTACION.TEXTO },
+];

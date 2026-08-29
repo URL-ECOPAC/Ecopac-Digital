@@ -14,6 +14,7 @@ import PresupuestosPage from './pages/PresupuestosPage';
 import ProyectosPage from './pages/ProyectosPage';
 import ReportesPage from './pages/ReportesPage';
 import JornadasPage from './pages/JornadasPage';
+import DetalleJornadaPage from './pages/DetalleJornadaPage';
 import VoluntariosPage from './pages/VoluntariosPage';
 import PerfilPage from './pages/PerfilPage';
 import NotFoundPage from './pages/NotFoundPage';
@@ -69,6 +70,11 @@ export default function App() {
             </Route>
             <Route element={<RutaProtegida roles={rolesDe('/jornadas')} />}>
               <Route path="/jornadas" element={<JornadasPage />} />
+              {/* /jornadas/:id (issue #181): excepcion de alcance autorizada para esta unica
+                  ruta, con el mismo guard y los mismos roles que ya protegen /jornadas -- no se
+                  declara en navegacion.js/MODULOS (rolesDe() solo lee de ahi), mismo patron que
+                  /perfil mas abajo, que tampoco es un modulo del sidebar. */}
+              <Route path="/jornadas/:id" element={<DetalleJornadaPage />} />
             </Route>
             <Route element={<RutaProtegida roles={rolesDe('/voluntarios')} />}>
               <Route path="/voluntarios" element={<VoluntariosPage />} />
