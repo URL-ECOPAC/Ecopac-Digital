@@ -8,7 +8,7 @@
 
 BEGIN;
 
-SELECT plan(25);
+SELECT plan(28);
 
 -- ============================================================================
 -- Setup: una comunidad, un usuario de cada rol, dos jornadas (una con personal
@@ -142,18 +142,39 @@ SELECT ok(
 );
 
 -- ============================================================================
--- socio fundador: fuera de las cinco tablas (lectura literal del DoD)
+-- socio fundador: mismos permisos que junta directiva (issue #404, es_consultivo()).
+-- La 00039 original decia "fuera de las cinco tablas, lectura literal del DoD" -- ese
+-- comentario quedo corregido en la 00078, que es la que este bloque verifica.
 -- ============================================================================
 SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000903';
 
 SELECT ok(
-  (SELECT count(*) FROM jornadas) = 0,
-  'socio fundador no lee jornadas'
+  (SELECT count(*) FROM jornadas) >= 2,
+  'socio fundador lee jornadas, igual que junta directiva'
 );
 
 SELECT ok(
-  (SELECT count(*) FROM proyectos) = 0,
-  'socio fundador no lee proyectos'
+  (SELECT count(*) FROM proyectos) >= 1,
+  'socio fundador lee proyectos, igual que junta directiva'
+);
+
+SELECT throws_ok(
+  $$ INSERT INTO jornadas (nombre, fecha, comunidad_id, responsable_id)
+     VALUES ('Jornada de socio 90', CURRENT_DATE + 33,
+             '10000000-0000-0000-0000-000000000090', '00000000-0000-0000-0000-000000000902') $$,
+  '42501',
+  NULL,
+  'socio fundador no puede crear jornadas'
+);
+
+SELECT is_empty(
+  $$ UPDATE proyectos SET nombre = 'Intento de socio' WHERE id = '50000000-0000-0000-0000-000000000901' RETURNING id $$,
+  'socio fundador no puede editar proyectos'
+);
+
+SELECT ok(
+  (SELECT count(*) FROM jornada_estado_historial) = 0,
+  'socio fundador no lee el historial de estados (solo administrador)'
 );
 
 SELECT throws_ok(
