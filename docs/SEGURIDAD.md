@@ -241,17 +241,22 @@ De esas cuatro afirmaciones **solo la primera lo era**, y ya tampoco:
   desempate se retiro. Una prueba en `packages/shared/usuarios/api.test.js` impide que la segunda
   puerta vuelva a aparecer.
 
-### Lo que si sigue abierto, y no es lo mismo
+### Lo que quedaba abierto, y ya no (issue #529)
 
-**Desactivar una cuenta es hoy un control de cliente.** `iniciarSesion()` cierra la sesion, pero
-lo hace *despues* de que GoTrue ya emitio un JWT valido. Ese token sigue sirviendo hasta que
-expire, y quien llame a `/auth/v1/token` directamente con la llave anonima obtiene uno sin pasar
-por la aplicacion.
+Cuando se cerro #512 quedaba un hueco distinto y mas serio: **desactivar una cuenta era un control
+de cliente**. `iniciarSesion()` cierra la sesion, pero lo hace *despues* de que GoTrue emitio un
+JWT valido, y quien llamara a `/auth/v1/token` directamente con la llave anonima obtenia uno sin
+pasar por la aplicacion. La base no lo frenaba: `rol_actual()` (`00004`) resolvia el rol sin mirar
+`activo`, y de esa funcion cuelgan 77 de las 104 politicas del esquema. Comprobado contra el stack
+local: una cuenta dada de baja leyo la tabla `pacientes`.
 
-La base no lo frena: `rol_actual()` (`00004`) resuelve el rol con
-`SELECT rol FROM perfiles WHERE id = auth.uid()`, **sin mirar `activo`**, y toda la matriz RLS
-cuelga de esa funcion. Comprobado con grep sobre las 71 migraciones: ninguna politica ni funcion
-de autorizacion consulta esa columna.
+**La migracion `00079` lo cerro.** Un perfil desactivado ya no tiene rol efectivo, no lee ni
+escribe, y -lo que anulaba el arreglo hasta descubrirlo- **no puede reactivarse a si mismo**. El
+detalle esta en `docs/PERMISOS.md`, "Un perfil desactivado no tiene rol efectivo".
 
-Es la misma leccion que dejo la issue #508: el cliente decide que dibujar, el servidor decide
-quien pasa. Tiene issue propia.
+Lo unico que conserva es leer su propia fila de `perfiles`, a proposito: es lo que permite
+distinguir "tu cuenta esta desactivada" de un "permiso denegado" que no explica nada.
+
+**Lo que sigue sin resolverse** es que el token ya emitido no se revoca: deja de servir para leer
+o escribir, pero existe hasta que expire (`jwt_expiry = 3600`). Invalidarlo de verdad exige la
+Admin API de GoTrue y es otra decision.
