@@ -79,12 +79,15 @@ no pasaban por ahi:
 deliberado: es como `evaluarPerfilDeSesion()` averigua que la cuenta esta de baja para decirlo en
 pantalla en vez de responder un "permiso denegado" que no explica nada.
 
-Dos cosas que el arreglo **no** alcanza, y conviene tener escritas:
+Una cosa que el arreglo **no** alcanza, y conviene tener escrita:
 
-- Las siete politicas de donaciones (`00042`) leen el rol de `auth.jwt() -> app_metadata`, no de
-  `perfiles`. Es la Divergencia 1, issue #403.
 - El token ya emitido **no se revoca**: deja de servir para leer o escribir, pero existe hasta que
   expire (`jwt_expiry`). Invalidarlo exige la Admin API de GoTrue.
+
+(Las siete politicas de donaciones leian el rol de `auth.jwt() -> app_metadata`, no de
+`perfiles` -era la Divergencia 1, issue #403-, asi que tampoco pasaban por `rol_actual()` y
+quedaban fuera de este arreglo. La `00083` las corrigio a `es_administrador()`/`es_consultivo()`:
+desde ahi ya heredan el mismo blindaje que las demas 77 politicas.)
 
 Nota para quien lea la `00072`: el comentario de su cabecera justifica el `SECURITY DEFINER` de
 `impedir_dejar_sin_administrador_activo()` diciendo que "la unica forma de que `OLD.rol` ya sea
@@ -192,14 +195,14 @@ reabrir una jornada finalizada **solo al administrador**. Reflejo en el cliente:
 
 ### Donaciones
 
-| Tabla              | administrador | junta directiva / socio fundador | medico | voluntario general | Como se implementa                |
-| ------------------ | ------------- | -------------------------------- | ------ | ------------------ | --------------------------------- |
-| `donantes`         | C R U         | R                                | —      | —                  | **Nada funciona hoy: issue #403** |
-| `donaciones`       | C R U         | R                                | —      | —                  | **Nada funciona hoy: issue #403** |
-| `donacion_detalle` | C R           | R                                | —      | —                  | **Nada funciona hoy: issue #403** |
+| Tabla              | administrador | junta directiva / socio fundador | medico | voluntario general | Como se implementa                                       |
+| ------------------ | ------------- | -------------------------------- | ------ | ------------------ | --------------------------------------------------------- |
+| `donantes`         | C R U         | R                                | —      | —                  | `00083`. `es_administrador()` escribe, `es_consultivo()` lee |
+| `donaciones`       | C R U         | R                                | —      | —                  | `00083`. La anulacion (UPDATE) exige `estado = 'anulada'` y `motivo_anulacion` |
+| `donacion_detalle` | C R           | R                                | —      | —                  | `00083`. Sin UPDATE para nadie: el detalle no se corrige, se anula la donacion completa |
 
-Las tres tablas estan **denegadas a los cinco roles, incluido el administrador**, por dos motivos
-independientes que detalla la seccion de divergencias.
+Hasta la `00083`, las tres tablas estaban **denegadas a los cinco roles, incluido el
+administrador**, por dos motivos independientes que detalla la Divergencia 1 (resuelta).
 
 ### Usuarios y permisos
 
@@ -375,7 +378,7 @@ Lo que hoy no coincide con la matriz. Cada fila con la issue que la cierra, cuan
 
 | #   | Divergencia                                                                                                                                                                                                                                                                                                           | Efecto                                                                                                                                               | Issue                        |
 | --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
-| 1   | Las tres tablas de donaciones leen el rol de `auth.jwt() -> 'app_metadata' ->> 'role'`, que **nada en el repositorio escribe**, y lo comparan con literales capitalizados que no existen en el enum. Ademas no tienen ningun `GRANT`                                                                                  | Denegadas a los cinco roles, administrador incluido. Bloquea diez issues del modulo                                                                  | **#403**                     |
+| 1   | ~~Las tres tablas de donaciones leian el rol de `auth.jwt() -> 'app_metadata' ->> 'role'`, que nada en el repositorio escribe, y lo comparaban con literales capitalizados que no existen en el enum. Ademas no tenian ningun `GRANT`~~ (resuelto: `00083` las reescribe con `es_administrador()`/`es_consultivo()`, agrega el `GRANT`, quita el `FOR ALL` y corrige el valor de `estado` en la anulacion) | Denegadas a los cinco roles, administrador incluido. Bloqueaba diez issues del modulo                                                                | resuelto por **#403**        |
 | 2   | `socio fundador` aparece en **una sola politica** de todo el esquema (lectura de `gastos`), frente a siete que nombran a `junta directiva`. No existe `es_consultivo()`                                                                                                                                               | Un socio fundador ve cuatro modulos en el menu y recibe cero filas en casi todos                                                                     | **#404**                     |
 | 3   | `perfil_especialidad` tiene lectura desde `00058`, pero **ninguna politica ni `GRANT` de escritura**                                                                                                                                                                                                                  | Nadie puede editar especialidades, ni el administrador                                                                                               | **#405**                     |
 | 4   | ~~`departamentos` y `municipios` tienen politica de lectura publica y ningun `GRANT`~~ (resuelto: `00073` agrega `GRANT SELECT ... TO authenticated` sobre las dos tablas, issue #179)                                                                                                                               | El catalogo geografico sembrado en `seed.sql` ya es legible por la API: el selector de lugar en cascada se puede armar. Sigue sin sembrarse en `ecopac-dev`/`ecopac-prod` (`db push` no corre seeds, ver docs/DATOS-DEMO.md) -- eso es un problema de datos, no de permisos, y queda fuera de esta divergencia | resuelto por **#179**        |
