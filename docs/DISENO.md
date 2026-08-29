@@ -45,8 +45,14 @@ fiables; conviene que el autor del diseno confirme los valores finales.
 
 Tras autenticarse, el usuario entra a un punto distinto segun su rol:
 
-- **Administrador y Junta Directiva** entran al Dashboard / Metricas de Impacto.
-- **Medico y Voluntario** entran al Tablero de Jornadas Activas.
+- **administrador, junta directiva y socio fundador** entran al Dashboard / Metricas de Impacto.
+  Socio fundador entra al mismo destino que junta directiva: los dos son roles de gobernanza
+  de solo lectura con permisos identicos (issue #404).
+- **medico y voluntario general** entran al Tablero de Jornadas Activas.
+
+Los cinco nombres son los valores del enum `rol_usuario` (`packages/shared/usuarios/roles.js`),
+no las etiquetas que se muestran en pantalla: el rol es `voluntario general`, aunque la interfaz
+lo muestre como "Voluntario" (`ETIQUETAS_ROL`).
 
 Esconder una opcion del menu no es control de acceso: la restriccion real vive en las
 politicas RLS y en el guard de rutas.
