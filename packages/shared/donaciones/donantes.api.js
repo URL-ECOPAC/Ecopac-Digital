@@ -24,6 +24,26 @@ function validarRolLectura(rolUsuario) {
 }
 
 /**
+ * Columnas escribibles de `donantes` (00022_donantes_donaciones.sql). Se enumeran para que un
+ * campo que el formulario invente no viaje hasta PostgREST: la issue #509 entro por
+ * `documento_identidad`, que nunca existio en el esquema y hacia fallar el alta entera con
+ * 42703.
+ */
+const COLUMNAS_DE_DONANTE = ["nombre", "tipo", "contacto", "telefono", "email", "direccion", "activo"];
+
+/**
+ * Deja de un objeto solo las claves que son columnas de `donantes`.
+ *
+ * @param {object} datos
+ * @returns {object}
+ */
+function soloColumnasDeDonante(datos = {}) {
+  return Object.fromEntries(
+    Object.entries(datos).filter(([clave]) => COLUMNAS_DE_DONANTE.includes(clave)),
+  );
+}
+
+/**
  * Registra un nuevo donante (persona u organización).
  */
 export async function registrarDonante(datosDonante, { rolUsuario }) {
@@ -31,7 +51,7 @@ export async function registrarDonante(datosDonante, { rolUsuario }) {
   if (errorRol) return errorRol;
 
   try {
-    const { tipo, nombre, documento_identidad, telefono, email, direccion } = datosDonante;
+    const { tipo, nombre, contacto, telefono, email, direccion } = datosDonante;
 
     if (!["persona", "organizacion"].includes(tipo)) {
       return {
@@ -53,7 +73,7 @@ export async function registrarDonante(datosDonante, { rolUsuario }) {
       .insert({
         tipo,
         nombre,
-        documento_identidad,
+        contacto,
         telefono,
         email,
         direccion,
@@ -116,7 +136,7 @@ export async function actualizarDonante(idDonante, datosNuevos, { rolUsuario }) 
 
     const { data, error } = await supabase
       .from("donantes")
-      .update(datosNuevos)
+      .update(soloColumnasDeDonante(datosNuevos))
       .eq("id", idDonante)
       .select()
       .single();
