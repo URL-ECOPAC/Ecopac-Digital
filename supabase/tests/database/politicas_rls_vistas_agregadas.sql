@@ -168,8 +168,9 @@ SELECT ok(
 );
 
 -- ============================================================================
--- socio fundador: fuera del reporte de impacto y de pacientes_reporte; el
--- inventario es lectura abierta para autenticados (00034), incluido socio
+-- socio fundador: mismos permisos que junta directiva sobre las vistas agregadas
+-- (issue #404, es_consultivo()); el inventario es lectura abierta para autenticados
+-- (00034), incluido socio
 -- ============================================================================
 SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000001003';
 
@@ -179,8 +180,7 @@ SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000001003';
 -- -- para que los roles consultivos dejaran de tener acceso a filas clinicas -- y a cambio dejo
 -- la vista agregando como owner, con este WHERE:
 --
---   WHERE public.es_administrador()
---      OR public.rol_actual() IN ('junta directiva', 'socio fundador')
+--   WHERE public.es_administrador() OR public.es_consultivo()
 --
 -- O sea que socio fundador si ve los AGREGADOS, y nunca las filas de las que salen.
 SELECT ok(
@@ -188,9 +188,13 @@ SELECT ok(
   'socio fundador SI ve los agregados de vista_reporte_impacto (00054)'
 );
 
+-- CAMBIO DE CONTRATO (issue #404, migracion 00078): pacientes_reporte tambien es un
+-- subconjunto no identificable (id, comunidad_id), no una fila clinica. El WHERE de la
+-- vista comparaba antes solo contra 'junta directiva' a mano y dejaba fuera a socio
+-- fundador; ahora usa es_consultivo() y los dos roles ven exactamente lo mismo.
 SELECT ok(
-  (SELECT count(*) FROM pacientes_reporte) = 0,
-  'socio fundador NO ve pacientes_reporte'
+  (SELECT count(*) FROM pacientes_reporte) >= 1,
+  'socio fundador ve pacientes_reporte, igual que junta directiva (issue #404)'
 );
 
 SELECT ok(
