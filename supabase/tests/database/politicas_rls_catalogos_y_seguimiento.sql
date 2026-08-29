@@ -27,7 +27,7 @@
 
 BEGIN;
 
-SELECT plan(30);
+SELECT plan(32);
 
 -- ============================================================================
 -- Setup: un perfil por cada rol que estas politicas distinguen, y las filas
@@ -160,6 +160,23 @@ SELECT ok(
 SELECT ok(
   (SELECT count(*) FROM municipios WHERE id = 900221) > 0,
   'POSITIVA municipios SELECT: un voluntario lee el catalogo de municipios'
+);
+
+-- La negativa de un catalogo de lectura abierta es que NADIE lo escriba desde la aplicacion
+-- (mismo patron y mismo motivo que condiciones_cronicas arriba: sin GRANT de INSERT para
+-- authenticated, la sentencia muere con 42501 antes de que RLS llegue a evaluarse).
+SELECT throws_ok(
+  $$ INSERT INTO departamentos (id, nombre) VALUES (900222, 'Intento 221') $$,
+  '42501',
+  NULL,
+  'NEGATIVA departamentos: sin GRANT de INSERT, ni el voluntario ni nadie escribe'
+);
+
+SELECT throws_ok(
+  $$ INSERT INTO municipios (id, departamento_id, nombre) VALUES (900222, 900221, 'Intento 221') $$,
+  '42501',
+  NULL,
+  'NEGATIVA municipios: sin GRANT de INSERT, ni el voluntario ni nadie escribe'
 );
 
 SET LOCAL ROLE anon;
