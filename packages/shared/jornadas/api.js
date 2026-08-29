@@ -2,8 +2,12 @@
 //
 // packages/shared/api es la infraestructura del cliente; las consultas de cada modulo van en
 // el api.js de su carpeta, como indica el encabezado de api/index.js. Este archivo es el unico
-// lugar del monorepo que lee y escribe las tablas jornadas, jornada_personal y
-// vista_reporte_impacto.
+// lugar del monorepo que lee y escribe las tablas jornadas, jornada_personal,
+// jornada_estado_historial y vista_reporte_impacto. jornada_estado_historial se suma aqui en la
+// issue #181: a diferencia de consultas/atenciones (propiedad de otros modulos, ver el
+// comentario de abajo), es una tabla propia del dominio de jornadas que ningun otro archivo
+// declara suya, y solo la escribe el trigger SECURITY DEFINER de la 00012 -- este archivo nunca
+// hace INSERT/UPDATE/DELETE sobre ella, solo lee.
 //
 // desasignarPersonal() necesita saber si la persona ya registro una consulta o un triaje en la
 // jornada (issue #174, criterio 4), pero esas tablas no son propiedad de este archivo. En vez
@@ -29,7 +33,7 @@ import {
   normalizarError,
 } from "../api/errores-de-supabase.js";
 import { esAdministrador } from "../usuarios/roles.js";
-import { ESTADOS_JORNADA } from "./permisos.js";
+import { ESTADOS_JORNADA, puedeVerHistorialJornada } from "./permisos.js";
 import {
   advertirChoqueDeHorario,
   puedeRegistrarEnJornada,
@@ -82,6 +86,16 @@ const COLUMNAS_DE_CONTADORES = [
   "consultasRealizadas:consultas_realizadas",
   "tratamientosEntregados:tratamientos_entregados",
   "medicamentosUtilizados:medicamentos_utilizados",
+].join(", ");
+
+// Historial de cambios de estado de la jornada (issue #181, criterio 3), con quien lo hizo
+// embebido para no pedirlo aparte.
+const COLUMNAS_DE_HISTORIAL = [
+  "id",
+  "estadoAnterior:estado_anterior",
+  "estadoNuevo:estado_nuevo",
+  "createdAt:created_at",
+  "cambiadoPor:perfiles(nombres, apellidos)",
 ].join(", ");
 
 /**
@@ -247,6 +261,82 @@ export async function obtenerJornada(id) {
     };
   } catch (error) {
     return { jornada: null, error: normalizarError(error) };
+  }
+}
+
+/**
+ * Lee unicamente el personal asignado a una jornada, sin la fila de jornadas ni los contadores
+ * de vista_reporte_impacto (issue #181, criterio 4).
+ *
+ * `obtenerJornada()` ya trae `personal` embebido, pero recarga tambien la jornada y los
+ * contadores: quien asigna o desasigna a alguien (la #182, sobre esta misma pantalla) solo
+ * necesita refrescar la lista de personal, no todo el detalle. Mismo criterio que
+ * refrescarPerfil() en usuarios/useSesion.js (issue #102) o el recargar() de las pantallas de
+ * listado: una escritura puntual no debe forzar a releer lo que no cambio.
+ *
+ * @param {string} jornadaId UUID de la jornada.
+ * @returns {Promise<{ personal: object[], error: object|null }>}
+ */
+export async function obtenerPersonalDeJornada(jornadaId) {
+  if (!jornadaId) return { personal: [], error: null };
+
+  try {
+    const { data, error } = await obtenerSupabase()
+      .from("jornada_personal")
+      .select(COLUMNAS_DE_PERSONAL)
+      .eq("jornada_id", jornadaId)
+      .order("hora_inicio", { ascending: true });
+
+    if (error) return { personal: [], error: normalizarError(error) };
+    return { personal: data ?? [], error: null };
+  } catch (error) {
+    return { personal: [], error: normalizarError(error) };
+  }
+}
+
+/**
+ * Lee el historial de cambios de estado de una jornada, del mas reciente al mas antiguo (issue
+ * #181, criterio 3: "con quien y cuando").
+ *
+ * `cambiadoPor` llega embebido como el perfil completo (nombres, apellidos), no solo el id: la
+ * pantalla no tiene que resolverlo con una segunda consulta. Puede llegar `null` en la fila de
+ * creacion si el trigger corrio sin `auth.uid()` (poblado por una migracion, por ejemplo).
+ *
+ * El chequeo de `rol` (si se pasa) evita disparar una consulta que la politica de SELECT de
+ * jornada_estado_historial (00039:83-85, solo administrador) va a devolver vacia de todas
+ * formas para cualquier otro rol -- mismo patron que puedeVerHistorial() en
+ * pacientes/historial.api.js. No es la restriccion real: la politica RLS de la base es quien de
+ * verdad decide (puedeVerHistorialJornada() en permisos.js es su espejo en el cliente).
+ *
+ * @param {string} jornadaId UUID de la jornada.
+ * @param {object} [opciones]
+ * @param {string} [opciones.rol] Rol de quien consulta, para el chequeo previo.
+ * @returns {Promise<{ historial: object[], error: object|null }>}
+ */
+export async function obtenerHistorialDeJornada(jornadaId, { rol } = {}) {
+  if (!jornadaId) return { historial: [], error: null };
+
+  if (rol !== undefined && !puedeVerHistorialJornada(rol)) {
+    return {
+      historial: [],
+      error: {
+        ...construirError(CODIGOS_DE_ERROR_DE_SUPABASE.PERMISO_DENEGADO),
+        mensaje: "Solo la administradora puede ver el historial de cambios de estado.",
+      },
+    };
+  }
+
+  try {
+    const { data, error } = await obtenerSupabase()
+      .from("jornada_estado_historial")
+      .select(COLUMNAS_DE_HISTORIAL)
+      .eq("jornada_id", jornadaId)
+      .order("created_at", { ascending: false });
+
+    if (error) return { historial: [], error: normalizarError(error) };
+    return { historial: data ?? [], error: null };
+  } catch (error) {
+    return { historial: [], error: normalizarError(error) };
   }
 }
 
