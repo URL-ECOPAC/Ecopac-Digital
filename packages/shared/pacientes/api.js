@@ -103,9 +103,10 @@ function aColumnasDeTabla(datos = {}) {
 /**
  * Traduce una fila de pacientes en snake_case a las claves camelCase de COLUMNAS_DEL_PACIENTE.
  *
- * fn_registrar_paciente retorna el tipo completo de la tabla (RETURNS pacientes, migracion
- * 00057), asi que entrega las columnas tal cual se llaman en Postgres, sin la comunidad
- * embebida. Deja la fila recien registrada en el mismo idioma que la que devuelven
+ * fn_registrar_paciente retorna las columnas de pacientes explicitas mas numero_ficha
+ * (RETURNS TABLE, migracion 00077), asi que entrega las columnas tal cual se llaman en
+ * Postgres, sin la comunidad embebida; aPaciente() ignora numero_ficha (registrarPaciente() la
+ * lee aparte). Deja la fila recien registrada en el mismo idioma que la que devuelven
  * obtenerPaciente() y actualizarPaciente(), salvo por ese embed.
  */
 function aPaciente(fila) {
@@ -136,13 +137,15 @@ function aPaciente(fila) {
  * validarRegistroPaciente() (validaciones.js) valida contra CAMPOS_REGISTRO_PACIENTE, el
  * formulario completo de registro (campos.js): a diferencia de validarPaciente() (issue #112,
  * un subconjunto de 5 campos), cubre tambien sexo, comunidad, telefonoContacto e idioma -NOT
- * NULL en pacientes, 00009- y numeroFicha -NOT NULL en expedientes, 00009-, que
- * fn_registrar_paciente inserta junto con el paciente. Nada llega al servidor sin pasar antes
- * por esta validacion.
+ * NULL en pacientes, 00009-. Nada llega al servidor sin pasar antes por esta validacion.
  *
- * La atomicidad la da fn_registrar_paciente (migracion 00057): un numero_ficha duplicado, o
- * cualquier otra violacion que la validacion no haya detectado, revierte tambien el insert de
- * pacientes, para que nunca quede un paciente sin expediente.
+ * numeroFicha no es un campo del formulario: fn_registrar_paciente lo genera del lado del
+ * servidor (DEFAULT de expedientes.numero_ficha, migracion 00077) y lo devuelve en la misma
+ * llamada.
+ *
+ * La atomicidad la da fn_registrar_paciente (migraciones 00057, 00077): cualquier violacion
+ * que la validacion no haya detectado revierte tambien el insert de pacientes, para que nunca
+ * quede un paciente sin expediente.
  *
  * @param {object} datos Campos en camelCase, los ids de CAMPOS_REGISTRO_PACIENTE.
  * @returns {Promise<{ paciente: object|null, errores: Record<string, string>, error: object|null }>}
@@ -171,7 +174,6 @@ export async function registrarPaciente(datos = {}) {
         p_comunidad_id: datos.comunidad,
         p_telefono_contacto: datos.telefonoContacto,
         p_idioma: datos.idioma,
-        p_numero_ficha: datos.numeroFicha,
         p_dpi: datos.dpi ?? null,
         p_tipo_sangre: datos.tipoSangre ?? null,
         p_nombre_responsable: datos.nombreResponsable ?? null,
@@ -182,7 +184,7 @@ export async function registrarPaciente(datos = {}) {
     if (error) return { paciente: null, errores: {}, error: normalizarError(error) };
 
     return {
-      paciente: { ...aPaciente(data), expediente: { numeroFicha: datos.numeroFicha } },
+      paciente: { ...aPaciente(data), expediente: { numeroFicha: data.numero_ficha } },
       errores: {},
       error: null,
     };
@@ -327,15 +329,18 @@ export async function actualizarPaciente(id, datos = {}) {
 // Bajo un solo cuadro de busqueda (FILTROS_PACIENTE.busqueda, filtros.js) conviven tres
 // modos: nombre (tolerante a acentos y errores de tipeo), comunidad y numero de ficha
 // exacto. buscarPacientes() no decide cual es "el" modo por el formato del termino:
-// numero_ficha es VARCHAR(30) sin CHECK ni prefijo (00009), asi que cualquier heuristica
-// de formato se equivocaria tarde o temprano. En su lugar prueba los dos caminos en
+// numero_ficha es VARCHAR(30) sin CHECK (00009). Lo que genera fn_registrar_paciente de aqui
+// en adelante tiene un formato fijo (6 digitos, migracion 00077), pero la columna sigue sin
+// una restriccion que lo obligue -por si algun dia hay que buscar un numero heredado con otro
+// formato-, asi que la busqueda sigue sin asumirlo. En su lugar prueba los dos caminos en
 // paralelo -la sonda exacta de ficha es una lectura por indice unico, practicamente
 // gratis- y combina lo que encuentre.
 
 // Nombres de menos de 3 caracteres no generan un trigrama completo: pg_trgm los rellena
 // y la similitud contra un nombre completo cae muy por debajo de cualquier umbral util,
 // asi que la busqueda por nombre no aporta nada por debajo de este limite. La sonda de
-// ficha NO tiene este limite (ver mas abajo): numero_ficha no tiene formato minimo.
+// ficha NO tiene este limite (ver mas abajo): la columna no impone un formato minimo,
+// aunque lo generado desde la 00077 siempre tenga 6 digitos.
 const LONGITUD_MINIMA_BUSQUEDA_POR_NOMBRE = 3;
 
 const POR_PAGINA_POR_DEFECTO = 20;

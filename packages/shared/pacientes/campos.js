@@ -30,8 +30,9 @@ export const OPCIONES_TIPO_SANGRE = [
 ];
 
 /**
- * Formulario de registro de un paciente nuevo. Cubre pacientes (00009, 00035) y el
- * numero de ficha de expedientes (00009): las dos filas se crean juntas.
+ * Formulario de registro de un paciente nuevo. Cubre pacientes (00009, 00035). El numero de
+ * ficha del expediente (00009) no es un campo del formulario: fn_registrar_paciente (00057,
+ * 00077) lo genera del lado del servidor, la persona que registra no lo escribe.
  */
 export const CAMPOS_REGISTRO_PACIENTE = [
   { id: 'nombres', label: 'Nombres', tipo: TIPOS_DE_CAMPO.TEXTO, validacion: { requerido: true, maxLongitud: 100 } },
@@ -45,7 +46,6 @@ export const CAMPOS_REGISTRO_PACIENTE = [
   { id: 'tipoSangre', label: 'Tipo sanguineo', tipo: TIPOS_DE_CAMPO.SELECT, opciones: OPCIONES_TIPO_SANGRE, validacion: { requerido: false } },
   { id: 'nombreResponsable', label: 'Nombre del responsable', tipo: TIPOS_DE_CAMPO.TEXTO, validacion: { requerido: false, maxLongitud: 150 } },
   { id: 'parentescoResponsable', label: 'Parentesco del responsable', tipo: TIPOS_DE_CAMPO.TEXTO, validacion: { requerido: false, maxLongitud: 50 } },
-  { id: 'numeroFicha', label: 'Numero de ficha', tipo: TIPOS_DE_CAMPO.TEXTO, validacion: { requerido: true, maxLongitud: 30 } },
 ];
 
 /**
