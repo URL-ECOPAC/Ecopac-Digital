@@ -22,8 +22,10 @@ import { FILTROS_PACIENTE } from "./filtros.js";
 // avatar/nombreCompleto/edad/condiciones son presentacion derivada (nombreCompleto de
 // nombres+apellidos, edad de fechaNacimiento, condiciones de la relacion con
 // padecimientos_cronicos). busqueda es un filtro de texto libre sobre varios campos a la vez, y
-// rangoEdad filtra sobre la edad derivada. Ninguno de los seis tiene ni deberia tener
-// contraparte en CAMPOS_REGISTRO_PACIENTE.
+// rangoEdad filtra sobre la edad derivada. ultimaAtencion sale de jornadas.fecha a traves de
+// atenciones, y condicionCronica filtra la misma relacion con padecimientos_cronicos que ya cubre
+// la columna condiciones; los dos entraron con la #124. Ninguno de los ocho tiene ni deberia
+// tener contraparte en CAMPOS_REGISTRO_PACIENTE.
 const IDS_DERIVADOS = new Set([
   "avatar",
   "nombreCompleto",
@@ -31,6 +33,8 @@ const IDS_DERIVADOS = new Set([
   "condiciones",
   "busqueda",
   "rangoEdad",
+  "ultimaAtencion",
+  "condicionCronica",
 ]);
 
 const IDS_DE_CAMPOS_REGISTRO = new Set(CAMPOS_REGISTRO_PACIENTE.map((campo) => campo.id));

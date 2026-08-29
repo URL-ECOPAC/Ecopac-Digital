@@ -368,6 +368,7 @@ function aPacienteDeBusqueda(fila) {
     comunidadId: fila.comunidad_id,
     comunidad: fila.comunidad_nombre ? { nombre: fila.comunidad_nombre } : null,
     numeroFicha: fila.numero_ficha,
+    ultimaAtencion: fila.ultima_atencion ?? null,
     relevancia: fila.relevancia,
   };
 }
@@ -425,7 +426,9 @@ export async function buscarPacientePorFicha(numeroFicha) {
  * `{ pacientes: [], total: 0, error: null }`, porque esa forma es indistinguible de "no
  * hay resultados" para quien la llama.
  *
- * @param {{ termino?: string, comunidadId?: string, pagina?: number, porPagina?: number }} [filtros]
+ * @param {{ termino?: string, comunidadId?: string, condicionCronicaId?: string,
+ *   sexo?: string, edadMin?: number, edadMax?: number, listarTodos?: boolean,
+ *   pagina?: number, porPagina?: number }} [filtros]
  * @returns {Promise<{
  *   pacientes: object[],
  *   total: number,
@@ -439,6 +442,11 @@ export async function buscarPacientePorFicha(numeroFicha) {
 export async function buscarPacientes({
   termino,
   comunidadId,
+  condicionCronicaId,
+  sexo,
+  edadMin,
+  edadMax,
+  listarTodos = false,
   pagina = 1,
   porPagina = POR_PAGINA_POR_DEFECTO,
 } = {}) {
@@ -461,7 +469,19 @@ export async function buscarPacientes({
   // paginada no es lo que pidio nadie, y no es un error tampoco (una pantalla recien
   // abierta, con los filtros vacios, no deberia mostrar uno). No llega a tocar el
   // cliente.
-  if (!hayTermino && !comunidadId) return respuestaVacia();
+  // La guarda original (issue #115) solo miraba termino y comunidad, asi que filtrar unicamente
+  // por sexo, edad o condicion cronica tambien devolvia vacio sin consultar. Ahora cualquier
+  // filtro cuenta como criterio.
+  const hayAlgunFiltro = Boolean(
+    comunidadId || condicionCronicaId || sexo || edadMin != null || edadMax != null,
+  );
+
+  // `listarTodos` es la puerta explicita para una pantalla de LISTADO, no de busqueda: la #124
+  // necesita mostrar pacientes al entrar, sin que nadie haya escrito nada. Se pide con una
+  // bandera en vez de relajar la guarda para todos, porque el comportamiento por defecto de
+  // esta funcion -no volcar la tabla entera a quien no pidio nada- es deliberado de la #115 y
+  // sigue intacto. El volcado no es tal: fn_buscar_pacientes pagina de 20 en 20.
+  if (!hayTermino && !hayAlgunFiltro && !listarTodos) return respuestaVacia();
 
   // El corte de 3 caracteres se aplica solo al camino por nombre: un termino corto no
   // produce trigramas utiles (ver LONGITUD_MINIMA_BUSQUEDA_POR_NOMBRE). Si ademas hay
@@ -469,7 +489,8 @@ export async function buscarPacientes({
   // el listado de esa comunidad en vez de nada; terminoDemasiadoCorto sigue en true para
   // que la pantalla explique por que el nombre no filtro.
   const terminoParaBusquedaPorNombre = hayTermino && !terminoDemasiadoCorto ? terminoNormalizado : null;
-  const debeConsultarBusqueda = terminoParaBusquedaPorNombre !== null || Boolean(comunidadId);
+  const debeConsultarBusqueda =
+    terminoParaBusquedaPorNombre !== null || hayAlgunFiltro || listarTodos;
 
   try {
     const supabase = obtenerSupabase();
@@ -481,6 +502,10 @@ export async function buscarPacientes({
             p_comunidad_id: comunidadId || null,
             p_pagina: pagina,
             p_por_pagina: porPagina,
+            p_condicion_cronica_id: condicionCronicaId || null,
+            p_sexo: sexo || null,
+            p_edad_min: edadMin ?? null,
+            p_edad_max: edadMax ?? null,
           })
         : Promise.resolve({ data: [], error: null }),
       // La sonda de ficha no tiene minimo de longitud: numero_ficha no tiene formato ni

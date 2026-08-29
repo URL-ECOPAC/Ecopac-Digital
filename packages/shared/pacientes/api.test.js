@@ -546,7 +546,16 @@ describe("buscarPacientes", () => {
     expect(cliente.llamadas).toContainEqual({
       paso: "rpc",
       nombre: "fn_buscar_pacientes",
-      argumentos: { p_termino: null, p_comunidad_id: "comunidad-1", p_pagina: 1, p_por_pagina: 20 },
+      argumentos: {
+        p_termino: null,
+        p_comunidad_id: "comunidad-1",
+        p_pagina: 1,
+        p_por_pagina: 20,
+        p_condicion_cronica_id: null,
+        p_sexo: null,
+        p_edad_min: null,
+        p_edad_max: null,
+      },
     });
   });
 
@@ -589,12 +598,22 @@ describe("buscarPacientes", () => {
       comunidadId: "comunidad-1",
       comunidad: { nombre: "Solola" },
       numeroFicha: "F-010",
+      ultimaAtencion: null,
       relevancia: 0,
     });
     expect(cliente.llamadas).toContainEqual({
       paso: "rpc",
       nombre: "fn_buscar_pacientes",
-      argumentos: { p_termino: null, p_comunidad_id: "comunidad-1", p_pagina: 1, p_por_pagina: 20 },
+      argumentos: {
+        p_termino: null,
+        p_comunidad_id: "comunidad-1",
+        p_pagina: 1,
+        p_por_pagina: 20,
+        p_condicion_cronica_id: null,
+        p_sexo: null,
+        p_edad_min: null,
+        p_edad_max: null,
+      },
     });
   });
 
@@ -610,7 +629,16 @@ describe("buscarPacientes", () => {
     expect(cliente.llamadas).toContainEqual({
       paso: "rpc",
       nombre: "fn_buscar_pacientes",
-      argumentos: { p_termino: "maria jose", p_comunidad_id: null, p_pagina: 1, p_por_pagina: 20 },
+      argumentos: {
+        p_termino: "maria jose",
+        p_comunidad_id: null,
+        p_pagina: 1,
+        p_por_pagina: 20,
+        p_condicion_cronica_id: null,
+        p_sexo: null,
+        p_edad_min: null,
+        p_edad_max: null,
+      },
     });
   });
 
