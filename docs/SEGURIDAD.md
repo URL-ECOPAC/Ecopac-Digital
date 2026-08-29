@@ -16,8 +16,8 @@ alcance del issue durante su revision:
   un mecanismo del lado de GoTrue, no de `packages/shared`. Ver "Bloqueo por intentos fallidos
   (fuera de alcance)" mas abajo.
 - **El bug de wiring del login web** (dos implementaciones de `iniciarSesion`, una de las
-  cuales no revisa `perfil.activo`): es anterior a #230 y se corrige en un bug aparte. Ver
-  "Login web: bug de wiring conocido (fuera de alcance)" mas abajo.
+  cuales no revisaba `perfil.activo`): era anterior a #230 y se corrigio aparte, con la issue
+  #512. Ver "Login web: el bug de wiring que hubo (resuelto)" mas abajo.
 
 ## 1. Politica de contrasenas (criterio 1)
 
@@ -208,23 +208,50 @@ opciones evaluadas, esta en el issue):
   contrasena sin importar el cliente que lo origino. Su disponibilidad depende del plan
   contratado del proyecto (verificar antes de decidir el enfoque).
 
-## Login web: bug de wiring conocido (fuera de alcance de #230)
+## Login web: el bug de wiring que hubo (resuelto)
 
-Durante la investigacion de #230 se encontro un bug preexistente en el formulario de login
-web, anterior e independiente de este issue. Queda para un bug aparte; se documenta aqui para
-que no se pierda:
+**Esta seccion es historica.** Se conserva porque describio durante semanas un agujero como
+abierto, y quien la leyera pudo tomar decisiones sobre esa base. Lo que decia ya no es cierto.
 
-`packages/shared` tiene dos implementaciones independientes de `iniciarSesion`. La cuidadosa
-(`packages/shared/api/sesion.js`, issue #97) valida con `validarCredenciales`, revisa
-`perfil.activo` antes de dar la sesion por valida, y devuelve el mismo error generico tanto
-para una contrasena incorrecta como para una cuenta desactivada. La pantalla web, sin embargo,
-esta conectada a una segunda implementacion (`packages/shared/usuarios/api.js#iniciarSesion`,
-agregada en el PR #424, commit `26d05b6`, issue #100) que **no llama a `evaluarPerfilDeSesion`
-y por lo tanto no revisa `perfil.activo`**. Ademas, `apps/web/src/pages/LoginPage.jsx`
-desestructura del hook (`packages/shared/usuarios/useInicioSesion.js`) las claves
-`erroresDeCampo`, `error`, `enviando` y `destinoPorDefecto`, ninguna de las cuales existe en lo
-que ese hook realmente devuelve — asi que **ningun error de login se muestra hoy en la pantalla
-web**. Dos consecuencias concretas: (1) una cuenta desactivada (`perfil.activo = false`) puede
-seguir iniciando sesion por la web, y (2) un mensaje de error del servidor — incluido un futuro
-mensaje de bloqueo del issue de arriba — no llegaria a verse en pantalla hasta que se corrija
-este wiring.
+### Que se afirmaba
+
+Que `packages/shared` tenia dos implementaciones de `iniciarSesion`; que la pantalla web estaba
+conectada a la mala, la de `packages/shared/usuarios/api.js` (PR #424, issue #100), que no
+comprueba `perfil.activo`; que `LoginPage.jsx` desestructuraba del hook claves que no existian y
+por eso **ningun error de login se mostraba en pantalla**; y como consecuencia, que una cuenta
+desactivada podia entrar por la web.
+
+### Que es cierto hoy
+
+De esas cuatro afirmaciones **solo la primera lo era**, y ya tampoco:
+
+- **El wiring se corrigio antes.** `packages/shared/usuarios/useInicioSesion.js` se reescribio e
+  importa `iniciarSesion` de `../api/sesion.js`, la que valida credenciales, resuelve el perfil y
+  cierra la sesion si la cuenta esta desactivada. Su cabecera enumera los cinco defectos de la
+  version anterior.
+- **Los errores si se ven.** Las claves que `apps/web/src/pages/LoginPage.jsx` desestructura
+  -`erroresDeCampo`, `error`, `enviando`, `destinoPorDefecto`- son exactamente las que el hook
+  devuelve; se comprobaron una a una.
+- **Una cuenta desactivada no entra por la web.** `evaluarPerfilDeSesion()` la rechaza y
+  `iniciarSesion()` cierra la sesion recien emitida.
+- **Ya no hay dos implementaciones.** La issue #512 borro la copia de `usuarios/api.js` -y con
+  ella un `cerrarSesion` duplicado que hacia `signOut()` global, revocando los refresh tokens del
+  usuario en todos sus dispositivos-. El barril tenia que desempatar los dos nombres a mano
+  porque ESM excluye del namespace un nombre que le llega por dos estrellas (bug #365); ese
+  desempate se retiro. Una prueba en `packages/shared/usuarios/api.test.js` impide que la segunda
+  puerta vuelva a aparecer.
+
+### Lo que si sigue abierto, y no es lo mismo
+
+**Desactivar una cuenta es hoy un control de cliente.** `iniciarSesion()` cierra la sesion, pero
+lo hace *despues* de que GoTrue ya emitio un JWT valido. Ese token sigue sirviendo hasta que
+expire, y quien llame a `/auth/v1/token` directamente con la llave anonima obtiene uno sin pasar
+por la aplicacion.
+
+La base no lo frena: `rol_actual()` (`00004`) resuelve el rol con
+`SELECT rol FROM perfiles WHERE id = auth.uid()`, **sin mirar `activo`**, y toda la matriz RLS
+cuelga de esa funcion. Comprobado con grep sobre las 71 migraciones: ninguna politica ni funcion
+de autorizacion consulta esa columna.
+
+Es la misma leccion que dejo la issue #508: el cliente decide que dibujar, el servidor decide
+quien pasa. Tiene issue propia.
