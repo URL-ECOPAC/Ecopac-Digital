@@ -124,7 +124,6 @@ const DATOS_VALIDOS = {
   comunidad: "comunidad-1",
   telefonoContacto: "50212345678",
   idioma: "espanol",
-  numeroFicha: "F-001",
 };
 
 beforeEach(() => {
@@ -132,17 +131,6 @@ beforeEach(() => {
 });
 
 describe("registrarPaciente", () => {
-  it("sin numero de ficha devuelve errores sin llamar al cliente", async () => {
-    const { paciente, errores, error } = await registrarPaciente({
-      ...DATOS_VALIDOS,
-      numeroFicha: undefined,
-    });
-
-    expect(paciente).toBeNull();
-    expect(errores.numeroFicha).toBeTruthy();
-    expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.CHECK);
-  });
-
   it("sin nombres devuelve errores de validarRegistroPaciente sin llamar al cliente", async () => {
     const { paciente, errores, error } = await registrarPaciente({
       ...DATOS_VALIDOS,
@@ -191,6 +179,7 @@ describe("registrarPaciente", () => {
           fecha_baja: null,
           created_at: "2026-01-01T00:00:00Z",
           updated_at: "2026-01-01T00:00:00Z",
+          numero_ficha: "000001",
         },
         error: null,
       },
@@ -217,7 +206,7 @@ describe("registrarPaciente", () => {
       fechaBaja: null,
       createdAt: "2026-01-01T00:00:00Z",
       updatedAt: "2026-01-01T00:00:00Z",
-      expediente: { numeroFicha: "F-001" },
+      expediente: { numeroFicha: "000001" },
     });
     expect(cliente.llamadas).toContainEqual({
       paso: "rpc",
@@ -230,7 +219,6 @@ describe("registrarPaciente", () => {
         p_comunidad_id: "comunidad-1",
         p_telefono_contacto: "50212345678",
         p_idioma: "espanol",
-        p_numero_ficha: "F-001",
         p_dpi: null,
         p_tipo_sangre: null,
         p_nombre_responsable: null,
