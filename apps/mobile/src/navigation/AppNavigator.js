@@ -3,6 +3,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { colors, typography } from '@ecopac/ui-tokens';
 
+import { ROUTES } from './rutas';
 import LoginScreen from '../screens/LoginScreen';
 import InicioScreen from '../screens/InicioScreen';
 import AjustesScreen from '../screens/AjustesScreen';
@@ -19,33 +20,9 @@ import ProyectosScreen from '../screens/ProyectosScreen';
 import PresupuestosScreen from '../screens/PresupuestosScreen';
 import VoluntariosScreen from '../screens/VoluntariosScreen';
 
-// Nombres de ruta centralizados para evitar strings sueltos en el resto de la app.
-export const ROUTES = {
-  LOGIN: 'Login',
-  TABS: 'Tabs',
+// Se reexporta para no romper a quien ya importaba ROUTES desde aqui.
+export { ROUTES };
 
-  // Tabs (los cinco destinos del diseno)
-  TAB_INICIO: 'Inicio',
-  TAB_PACIENTES: 'Pacientes',
-  TAB_JORNADAS: 'Jornadas',
-  TAB_INVENTARIO: 'Inventario',
-  TAB_AJUSTES: 'Ajustes',
-
-  // Pantallas dentro de cada stack
-  INICIO: 'InicioPanel',
-  DONACIONES: 'Donaciones',
-  PROYECTOS: 'Proyectos',
-  PRESUPUESTOS: 'Presupuestos',
-  VOLUNTARIOS: 'Voluntarios',
-  BUSQUEDA_PACIENTE: 'BusquedaPaciente',
-  REGISTRO_PACIENTE: 'RegistroPaciente',
-  TRIAJE: 'Triaje',
-  CONSULTA: 'Consulta',
-  RECETA: 'Receta',
-  SELECCION_JORNADA: 'SeleccionJornada',
-  JORNADA_EN_CURSO: 'JornadaEnCurso',
-  STOCK: 'Stock',
-};
 
 const Root = createNativeStackNavigator();
 const Tabs = createBottomTabNavigator();

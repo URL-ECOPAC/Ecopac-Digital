@@ -21,6 +21,10 @@ export const COLUMNAS_PACIENTE = [
 ];
 
 /** Datos de la ficha clinica, en el orden en que el diseno los presenta. */
+export const COLUMNAS_PACIENTE_MOVIL = COLUMNAS_PACIENTE.filter((columna) =>
+  ['avatar', 'nombreCompleto', 'numeroFicha', 'edad', 'comunidad'].includes(columna.id),
+);
+
 export const CAMPOS_FICHA_PACIENTE = [
   { id: 'numeroFicha', label: 'Numero de ficha', tipo: TIPOS_DE_PRESENTACION.TEXTO },
   { id: 'dpi', label: 'DPI', tipo: TIPOS_DE_PRESENTACION.TEXTO },
