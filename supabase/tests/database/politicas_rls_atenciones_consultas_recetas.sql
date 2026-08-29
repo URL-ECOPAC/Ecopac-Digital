@@ -6,7 +6,7 @@
 
 BEGIN;
 
-SELECT plan(21);
+SELECT plan(30);
 
 -- ============================================================================
 -- Setup: comunidad, perfiles (dos medicos: uno asignado a la jornada, otro no),
@@ -73,6 +73,22 @@ VALUES (
   '30000000-0000-0000-0000-000000000001'
 );
 
+-- Fixtures para las pruebas de IDOR de la issue #237: un segundo paciente (nueva atencion),
+-- un diagnostico y un medicamento, para no reusar filas que las pruebas de anulacion de mas
+-- abajo (issue #510) van a modificar.
+INSERT INTO pacientes (id, nombres, apellidos, fecha_nacimiento, sexo, comunidad_id, telefono_contacto, idioma)
+VALUES (
+  '20000000-0000-0000-0000-000000000102',
+  'Paciente', 'Prueba89b', '1998-01-01', 'M',
+  '10000000-0000-0000-0000-000000000002', '5555-2002', 'espanol'
+);
+
+INSERT INTO diagnosticos (id, nombre) VALUES
+  ('90000000-0000-0000-0000-000000000001', 'Diagnostico de prueba 89');
+
+INSERT INTO medicamentos (id, nombre, concentracion, presentacion, marca) VALUES
+  ('70000000-0000-0000-0000-000000000001', 'Medicamento de prueba 89', '500mg', 'tableta', 'Generico');
+
 -- ============================================================================
 -- voluntario: registra triaje, no lee informacion clinica
 -- ============================================================================
@@ -124,6 +140,15 @@ SELECT throws_ok(
   'un medico no asignado a la jornada no puede registrar una consulta ahi, aunque este en curso'
 );
 
+-- issue #237: mismo agujero que arriba, pero en atenciones (00033 nunca la exigio).
+SELECT throws_ok(
+  $$ INSERT INTO atenciones (paciente_id, jornada_id)
+     VALUES ('20000000-0000-0000-0000-000000000102', '30000000-0000-0000-0000-000000000001') $$,
+  '42501',
+  NULL,
+  'un medico no asignado a la jornada no puede registrar una atencion ahi (issue #237)'
+);
+
 -- ============================================================================
 -- medico89a: SI esta asignado a la jornada 'en curso'
 -- ============================================================================
@@ -137,6 +162,43 @@ SELECT lives_ok(
   'un medico asignado a una jornada en curso si puede registrar una consulta'
 );
 
+-- issue #237: el mismo medico asignado si puede registrar una atencion nueva ahi.
+SELECT lives_ok(
+  $$ INSERT INTO atenciones (id, paciente_id, jornada_id)
+     VALUES ('50000000-0000-0000-0000-000000000002', '20000000-0000-0000-0000-000000000102',
+             '30000000-0000-0000-0000-000000000001') $$,
+  'un medico asignado a la jornada si puede registrar una atencion ahi (issue #237)'
+);
+
+-- issue #237: ni el propio medico asignado puede firmar el triaje con la identidad de otra
+-- persona (tomado_por no ataba con la sesion).
+SELECT throws_ok(
+  $$ INSERT INTO triajes (atencion_id, presion_sistolica, presion_diastolica, frecuencia_cardiaca, tomado_por)
+     VALUES ('50000000-0000-0000-0000-000000000002', 110, 70, 80, '00000000-0000-0000-0000-000000000203') $$,
+  '42501',
+  NULL,
+  'un medico no puede firmar un triaje con la identidad de otra persona (issue #237)'
+);
+
+-- issue #237: medico89b no esta asignado a la jornada de la atencion2 tampoco.
+SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000203';
+
+SELECT throws_ok(
+  $$ INSERT INTO triajes (atencion_id, presion_sistolica, presion_diastolica, frecuencia_cardiaca, tomado_por)
+     VALUES ('50000000-0000-0000-0000-000000000002', 110, 70, 80, '00000000-0000-0000-0000-000000000203') $$,
+  '42501',
+  NULL,
+  'un medico no asignado a la jornada no puede registrar el triaje, ni firmandolo como si mismo (issue #237)'
+);
+
+SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000202';
+
+SELECT lives_ok(
+  $$ INSERT INTO triajes (atencion_id, presion_sistolica, presion_diastolica, frecuencia_cardiaca, tomado_por)
+     VALUES ('50000000-0000-0000-0000-000000000002', 110, 70, 80, '00000000-0000-0000-0000-000000000202') $$,
+  'un medico asignado a la jornada si registra el triaje firmandolo como si mismo (issue #237)'
+);
+
 SELECT ok(
   (SELECT count(*) FROM consultas) > 0,
   'medico89a puede leer consultas'
@@ -148,6 +210,42 @@ SELECT lives_ok(
   $$ INSERT INTO recetas (id, consulta_id, medico_id) VALUES ('80000000-0000-0000-0000-000000000001', '60000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000202') $$,
   'el medico que atendio la consulta puede emitir una receta como si mismo'
 );
+
+-- issue #237: el medico dueno de la consulta si diagnostica y prescribe.
+SELECT lives_ok(
+  $$ INSERT INTO consulta_diagnostico (consulta_id, diagnostico_id)
+     VALUES ('60000000-0000-0000-0000-000000000001', '90000000-0000-0000-0000-000000000001') $$,
+  'el medico dueno de la consulta puede adjuntarle un diagnostico (issue #237)'
+);
+
+SELECT lives_ok(
+  $$ INSERT INTO receta_detalle (receta_id, medicamento_id, dosis, frecuencia, duracion, cantidad_entregada)
+     VALUES ('80000000-0000-0000-0000-000000000001', '70000000-0000-0000-0000-000000000001',
+             '1 tableta', 'cada 8 horas', '5 dias', 15) $$,
+  'el medico dueno de la receta puede agregarle un renglon de medicamento (issue #237)'
+);
+
+-- issue #237: medico89b no es dueno ni de la consulta ni de la receta de medico89a.
+SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000203';
+
+SELECT throws_ok(
+  $$ INSERT INTO consulta_diagnostico (consulta_id, diagnostico_id)
+     VALUES ('60000000-0000-0000-0000-000000000001', '90000000-0000-0000-0000-000000000001') $$,
+  '42501',
+  NULL,
+  'un medico no puede adjuntar un diagnostico a la consulta de otro medico (issue #237)'
+);
+
+SELECT throws_ok(
+  $$ INSERT INTO receta_detalle (receta_id, medicamento_id, dosis, frecuencia, duracion, cantidad_entregada)
+     VALUES ('80000000-0000-0000-0000-000000000001', '70000000-0000-0000-0000-000000000001',
+             '1 tableta', 'cada 8 horas', '5 dias', 15) $$,
+  '42501',
+  NULL,
+  'un medico no puede agregar un renglon a la receta de otro medico (issue #237)'
+);
+
+SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000202';
 
 SELECT lives_ok(
   $$ UPDATE consultas SET observaciones = 'Reevaluado' WHERE id = '60000000-0000-0000-0000-000000000001' $$,
