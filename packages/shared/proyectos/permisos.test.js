@@ -11,7 +11,7 @@ import {
   permisosDeProyectos,
   puedeAdministrarProyectos,
   puedeVerProyectos,
-} from "./proyectos.permisos.js";
+} from "./permisos.js";
 
 describe("permisos de proyectos", () => {
   it("solo Administrador administra, espejo de la politica de proyectos (00039)", () => {

@@ -507,6 +507,19 @@ va cada capa, no que decide.
 Si al escribir el paso 3 o el 4 aparece una condicion de negocio, va al paso 1 o 2: es senal de
 que se estaba a punto de duplicar logica.
 
+## Modulos que comparten etiqueta de GitHub
+
+`packages/shared/proyectos/` es un modulo propio desde la issue #400, separado de
+`packages/shared/donaciones/` porque proyectos sociales no es lo mismo que donantes y
+donaciones aunque las dos issues originales (#194 y #189) hayan nacido en la misma carpeta.
+
+Las issues de proyectos (#194 ya cerrada, mas #200, #201, #271, #307, #308, #309) siguen
+etiquetadas `module:donaciones` en GitHub: crear la etiqueta `module:proyectos` y reasignarla
+es una accion manual en GitHub que la issue #400 deja pendiente, no una decision de que los dos
+modulos deban compartir etiqueta. Quien tenga permisos de escritura en el repositorio puede
+crear la etiqueta y mover esas issues cuando le quede comodo; el codigo ya no depende de que
+eso pase.
+
 ## Documentos relacionados
 
 - [DISENO.md](./DISENO.md) - pantallas, navegacion y trazabilidad con las issues.

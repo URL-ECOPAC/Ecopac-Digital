@@ -22,7 +22,7 @@ import {
   construirError,
   normalizarError,
 } from "../api/errores-de-supabase.js";
-import { ESTADOS_PROYECTO, validarCambioDeEstadoProyecto } from "./proyectos.validaciones.js";
+import { ESTADOS_PROYECTO, validarCambioDeEstadoProyecto } from "./validaciones.js";
 
 // Las columnas se enumeran en lugar de pedir "*" para que una columna nueva en proyectos no
 // empiece a viajar sola hasta el cliente.
