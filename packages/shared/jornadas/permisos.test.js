@@ -14,6 +14,7 @@ import {
   puedeAdministrarJornadas,
   puedeEditarJornada,
   puedeReabrirJornada,
+  puedeVerHistorialJornada,
   puedeVerJornadas,
 } from "./permisos.js";
 
@@ -54,21 +55,32 @@ describe("permisos de jornadas", () => {
     expect(puedeReabrirJornada(ROLES.VOLUNTARIO)).toBe(false);
   });
 
+  it("solo Administrador lee el historial de estados, espejo de 00039:83-85", () => {
+    expect(puedeVerHistorialJornada(ROLES.ADMINISTRADOR)).toBe(true);
+
+    expect(puedeVerHistorialJornada(ROLES.JUNTA_DIRECTIVA)).toBe(false);
+    expect(puedeVerHistorialJornada(ROLES.SOCIO_FUNDADOR)).toBe(false);
+    expect(puedeVerHistorialJornada(ROLES.MEDICO)).toBe(false);
+    expect(puedeVerHistorialJornada(ROLES.VOLUNTARIO)).toBe(false);
+  });
+
   it("un rol que no existe no puede nada", () => {
     expect(permisosDeJornadas("coordinador")).toEqual({
       puedeVer: false,
       puedeCrear: false,
       puedeEditar: false,
       puedeReabrir: false,
+      puedeVerHistorial: false,
     });
   });
 
-  it("agrupa los permisos para que un hook no llame a las cuatro por separado", () => {
+  it("agrupa los permisos para que un hook no llame a las cinco por separado", () => {
     expect(permisosDeJornadas(ROLES.MEDICO)).toEqual({
       puedeVer: true,
       puedeCrear: false,
       puedeEditar: false,
       puedeReabrir: false,
+      puedeVerHistorial: false,
     });
 
     expect(permisosDeJornadas(ROLES.ADMINISTRADOR)).toEqual({
@@ -76,6 +88,7 @@ describe("permisos de jornadas", () => {
       puedeCrear: true,
       puedeEditar: true,
       puedeReabrir: true,
+      puedeVerHistorial: true,
     });
   });
 });

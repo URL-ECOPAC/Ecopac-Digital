@@ -12,9 +12,13 @@ vi.mock("../api/cliente.js", () => ({
 }));
 
 const { CODIGOS_DE_ERROR_DE_SUPABASE } = await import("../api/errores-de-supabase.js");
-const { registrarConsulta, obtenerConsulta, actualizarConsulta } = await import(
-  "./consultas.api.js"
-);
+const { ROLES } = await import("../usuarios/roles.js");
+const {
+  registrarConsulta,
+  obtenerConsulta,
+  actualizarConsulta,
+  listarPacientesAtendidosDeJornada,
+} = await import("./consultas.api.js");
 
 /**
  * Doble de Supabase que responde distinto segun la tabla. Cada tabla admite una respuesta o una
@@ -344,5 +348,87 @@ describe("actualizarConsulta", () => {
     expect(error).toBeNull();
     expect(consulta.id).toBe("con-1");
     expect(cliente.llamadas.some((l) => l.paso === "update")).toBe(false);
+  });
+});
+
+describe("listarPacientesAtendidosDeJornada", () => {
+  const FILA_DE_PACIENTE_ATENDIDO = {
+    id: "con-1",
+    atencion: { pacienteId: "pac-1", paciente: { nombres: "Maria", apellidos: "Lopez" } },
+    diagnosticos: [
+      { esPrincipal: false, diagnostico: { id: "dx-2", codigo: "J00", nombre: "Resfriado" } },
+      { esPrincipal: true, diagnostico: { id: "dx-1", codigo: "R51", nombre: "Cefalea" } },
+    ],
+  };
+
+  it("sin jornadaId no llama al cliente", async () => {
+    const { pacientes, error } = await listarPacientesAtendidosDeJornada();
+
+    expect(pacientes).toEqual([]);
+    expect(error).toBeNull();
+  });
+
+  it("arma el nombre del paciente y el diagnostico principal desde la atencion", async () => {
+    dobles.cliente = crearCliente({ consultas: { data: [FILA_DE_PACIENTE_ATENDIDO], error: null } });
+
+    const { pacientes, error } = await listarPacientesAtendidosDeJornada("jor-1", {
+      rol: ROLES.MEDICO,
+    });
+
+    expect(error).toBeNull();
+    expect(pacientes).toHaveLength(1);
+    expect(pacientes[0].paciente).toBe("Maria Lopez");
+    expect(pacientes[0].pacienteId).toBe("pac-1");
+    expect(pacientes[0].diagnosticoPrincipal.nombre).toBe("Cefalea");
+  });
+
+  it("filtra por jornada_id, no por otra columna", async () => {
+    const cliente = crearCliente({ consultas: { data: [], error: null } });
+    dobles.cliente = cliente;
+
+    await listarPacientesAtendidosDeJornada("jor-1", { rol: ROLES.ADMINISTRADOR });
+
+    const filtro = cliente.llamadas.find((l) => l.paso === "eq");
+    expect(filtro.columna).toBe("jornada_id");
+    expect(filtro.valor).toBe("jor-1");
+  });
+
+  it("un rol sin permiso no llega a llamar al cliente y recibe el motivo", async () => {
+    const { pacientes, error } = await listarPacientesAtendidosDeJornada("jor-1", {
+      rol: ROLES.VOLUNTARIO,
+    });
+
+    expect(pacientes).toEqual([]);
+    expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.PERMISO_DENEGADO);
+  });
+
+  it("junta directiva tampoco puede verlos", async () => {
+    const { pacientes, error } = await listarPacientesAtendidosDeJornada("jor-1", {
+      rol: ROLES.JUNTA_DIRECTIVA,
+    });
+
+    expect(pacientes).toEqual([]);
+    expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.PERMISO_DENEGADO);
+  });
+
+  it("sin rol no bloquea: deja que RLS decida", async () => {
+    dobles.cliente = crearCliente({ consultas: { data: [], error: null } });
+
+    const { error } = await listarPacientesAtendidosDeJornada("jor-1");
+
+    expect(error).toBeNull();
+  });
+
+  it("una consulta sin atencion embebida (RLS la esconde) no revienta", async () => {
+    dobles.cliente = crearCliente({
+      consultas: { data: [{ id: "con-1", atencion: null, diagnosticos: [] }], error: null },
+    });
+
+    const { pacientes } = await listarPacientesAtendidosDeJornada("jor-1", {
+      rol: ROLES.ADMINISTRADOR,
+    });
+
+    expect(pacientes[0].paciente).toBeNull();
+    expect(pacientes[0].diagnosticoPrincipal).toBeNull();
   });
 });

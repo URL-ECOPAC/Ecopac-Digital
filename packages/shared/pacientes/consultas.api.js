@@ -5,6 +5,7 @@ import {
   normalizarError,
 } from "../api/errores-de-supabase.js";
 import { puedeRegistrarEnJornada } from "../jornadas/validaciones.js";
+import { puedeVerHistorial } from "./permisos.js";
 
 const COLUMNAS_DE_LA_CONSULTA = [
   "id",
@@ -281,5 +282,85 @@ export async function actualizarConsulta(id, datos = {}) {
     return await obtenerConsulta(id);
   } catch (error) {
     return { consulta: null, error: normalizarError(error) };
+  }
+}
+
+const COLUMNAS_DE_PACIENTE_ATENDIDO = [
+  "id",
+  "atencion:atenciones(pacienteId:paciente_id, paciente:pacientes(nombres, apellidos))",
+  "diagnosticos:consulta_diagnostico(esPrincipal:es_principal, diagnostico:diagnosticos(id, codigo, nombre))",
+].join(", ");
+
+function aPacienteAtendido(fila) {
+  const diagnosticos = (fila.diagnosticos ?? []).map((union) => ({
+    id: union.diagnostico?.id ?? null,
+    codigo: union.diagnostico?.codigo ?? null,
+    nombre: union.diagnostico?.nombre ?? null,
+    esPrincipal: union.esPrincipal === true,
+  }));
+
+  return {
+    consultaId: fila.id,
+    pacienteId: fila.atencion?.pacienteId ?? null,
+    paciente:
+      [fila.atencion?.paciente?.nombres, fila.atencion?.paciente?.apellidos]
+        .filter(Boolean)
+        .join(" ") || null,
+    diagnosticos,
+    diagnosticoPrincipal: diagnosticos.find((diagnostico) => diagnostico.esPrincipal) ?? null,
+  };
+}
+
+/**
+ * Lista los pacientes atendidos en una jornada, con su diagnostico principal (issue #181,
+ * criterio 2).
+ *
+ * `consultas.jornada_id` (00018) filtra directo, sin pasar por `atenciones`: cada fila trae el
+ * nombre del paciente embebido a traves de `atencion_id` (`atenciones.paciente_id`), no de
+ * `expediente_id`. Los dos caminos son igual de directos para PostgREST (un solo salto extra
+ * cada uno, sin una segunda consulta), pero `atencion_id` es el que ata la consulta a ESTA
+ * jornada -es la misma atencion que registro la llegada del paciente a esta jornada-, mientras
+ * que `expediente_id` es el historial clinico completo de la persona, ajeno a en cual jornada
+ * ocurrio. Mismo criterio de "cual FK describe el hecho" que ya distingue `expedienteId` de
+ * `atencionId` en `obtenerConsulta()`.
+ *
+ * El chequeo de `rol` (si se pasa) evita disparar una consulta que la politica de SELECT de
+ * `consultas` (00033: solo administrador y medico) va a devolver vacia de todas formas para
+ * cualquier otro rol -- mismo patron que `obtenerHistorialMedico()` en historial.api.js. No es
+ * la restriccion real: la politica RLS de la base es quien de verdad decide que fila llega
+ * (docs/PERMISOS.md:75-80). Sin `rol`, la funcion deja pasar la consulta igual (permite que
+ * quien ya sepa que puede ver esto se salte el chequeo, como hace `obtenerHistorialMedico()`).
+ *
+ * @param {string} jornadaId UUID de la jornada.
+ * @param {object} [opciones]
+ * @param {string} [opciones.rol] Rol de quien consulta, para el chequeo previo.
+ * @returns {Promise<{ pacientes: object[], error: object|null }>} Cada fila trae
+ *   `diagnosticos` (arreglo) y `diagnosticoPrincipal` (el que tenga `esPrincipal`, o `null`).
+ */
+export async function listarPacientesAtendidosDeJornada(jornadaId, { rol } = {}) {
+  if (!jornadaId) return { pacientes: [], error: null };
+
+  if (rol !== undefined && !puedeVerHistorial(rol)) {
+    return {
+      pacientes: [],
+      error: {
+        ...construirError(CODIGOS_DE_ERROR_DE_SUPABASE.PERMISO_DENEGADO),
+        mensaje:
+          "Solo el personal medico y la administracion pueden ver los pacientes atendidos con su diagnostico.",
+      },
+    };
+  }
+
+  try {
+    const { data, error } = await obtenerSupabase()
+      .from("consultas")
+      .select(COLUMNAS_DE_PACIENTE_ATENDIDO)
+      .eq("jornada_id", jornadaId);
+
+    if (error) return { pacientes: [], error: normalizarError(error) };
+
+    return { pacientes: (data ?? []).map(aPacienteAtendido), error: null };
+  } catch (error) {
+    return { pacientes: [], error: normalizarError(error) };
   }
 }
