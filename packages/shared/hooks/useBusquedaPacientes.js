@@ -73,11 +73,16 @@ export function hayMasResultados(cargados, total) {
  *
  * @param {object} [opciones]
  * @param {string} [opciones.comunidad] UUID de comunidad para acotar la busqueda.
+ * @param {object} [opciones.filtros] Filtros extra que se reenvian tal cual a
+ *   buscarPacientes(): condicionCronicaId, sexo, edadMin y edadMax. Se pasa un objeto en vez
+ *   de una lista de parametros para que agregar un filtro nuevo en el servidor no obligue a
+ *   cambiar la firma de este hook (issue #124).
  * @param {number} [opciones.porPagina] Tamano de pagina.
  * @param {number} [opciones.retardoMs] Retardo antes de consultar; se baja en las pruebas.
  */
 export function useBusquedaPacientes({
   comunidad,
+  filtros,
   porPagina,
   retardoMs = RETARDO_DE_BUSQUEDA_MS,
 } = {}) {
@@ -93,6 +98,10 @@ export function useBusquedaPacientes({
   // no debe redibujar nada: solo sirve para decidir que respuesta se pinta.
   const peticionVigente = useRef(0);
 
+  // Los filtros llegan como objeto nuevo en cada render, asi que compararlos por identidad
+  // dispararia una consulta por render. Se compara su contenido serializado.
+  const claveDeFiltros = JSON.stringify(filtros ?? {});
+
   const consultar = useCallback(
     async (paginaAConsultar) => {
       peticionVigente.current += 1;
@@ -102,6 +111,7 @@ export function useBusquedaPacientes({
       setError(null);
 
       const respuesta = await buscarPacientes({
+        ...filtros,
         termino,
         comunidadId: comunidad,
         pagina: paginaAConsultar,
@@ -126,7 +136,7 @@ export function useBusquedaPacientes({
       setPagina(paginaAConsultar);
       setCargando(false);
     },
-    [termino, comunidad, porPagina],
+    [termino, comunidad, porPagina, claveDeFiltros],
   );
 
   useEffect(() => {

@@ -36,6 +36,14 @@ export const FILTROS_PACIENTE = [
     min: 0,
     max: 120,
   },
+  {
+    // El wireframe (p. 62) no lo dibuja, pero el criterio 3 de la #124 lo pide. Se agrega
+    // como quinto filtro en vez de reemplazar a los del diseno, para no perder ninguno.
+    id: 'condicionCronica',
+    tipo: TIPOS_DE_FILTRO.SELECT,
+    label: 'Condicion cronica',
+    opcionesDesde: 'condicionesCronicas',
+  },
 ];
 
 /** Valor inicial de los filtros, para que ambas apps arranquen en el mismo estado. */
@@ -44,4 +52,5 @@ export const FILTROS_PACIENTE_VACIOS = {
   comunidad: null,
   sexo: null,
   rangoEdad: null,
+  condicionCronica: null,
 };
