@@ -10,6 +10,8 @@ import AjustesScreen from '../screens/AjustesScreen';
 import SeleccionJornadaScreen from '../screens/SeleccionJornadaScreen';
 import JornadaEnCursoScreen from '../screens/JornadaEnCursoScreen';
 import BusquedaPacienteScreen from '../screens/BusquedaPacienteScreen';
+import FichaPacienteScreen from '../screens/FichaPacienteScreen';
+import HistorialPacienteScreen from '../screens/HistorialPacienteScreen';
 import RegistroPacienteScreen from '../screens/RegistroPacienteScreen';
 import TriajeScreen from '../screens/TriajeScreen';
 import ConsultaScreen from '../screens/ConsultaScreen';
@@ -56,7 +58,9 @@ function PacientesNavigator() {
   return (
     <PacientesStack.Navigator screenOptions={opcionesStack}>
       <PacientesStack.Screen name={ROUTES.BUSQUEDA_PACIENTE} component={BusquedaPacienteScreen} options={{ title: 'Pacientes' }} />
+      <PacientesStack.Screen name={ROUTES.FICHA_PACIENTE} component={FichaPacienteScreen} options={{ title: 'Ficha del paciente' }} />
       <PacientesStack.Screen name={ROUTES.REGISTRO_PACIENTE} component={RegistroPacienteScreen} options={{ title: 'Registro de paciente' }} />
+      <PacientesStack.Screen name={ROUTES.HISTORIAL_PACIENTE} component={HistorialPacienteScreen} options={{ title: 'Historial' }} />
       <PacientesStack.Screen name={ROUTES.TRIAJE} component={TriajeScreen} options={{ title: 'Triaje' }} />
       <PacientesStack.Screen name={ROUTES.CONSULTA} component={ConsultaScreen} options={{ title: 'Consulta' }} />
       <PacientesStack.Screen name={ROUTES.RECETA} component={RecetaScreen} options={{ title: 'Receta' }} />

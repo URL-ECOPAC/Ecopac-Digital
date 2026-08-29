@@ -18,6 +18,8 @@ export const ROUTES = {
   PRESUPUESTOS: 'Presupuestos',
   VOLUNTARIOS: 'Voluntarios',
   BUSQUEDA_PACIENTE: 'BusquedaPaciente',
+  FICHA_PACIENTE: 'FichaPaciente',
+  HISTORIAL_PACIENTE: 'HistorialPaciente',
   REGISTRO_PACIENTE: 'RegistroPaciente',
   TRIAJE: 'Triaje',
   CONSULTA: 'Consulta',

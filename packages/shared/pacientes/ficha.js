@@ -78,6 +78,20 @@ export function valoresDeFichaPaciente(paciente) {
   };
 }
 
+export function resumenDeUltimaAtencion(paciente) {
+  const evento = paciente?.ultimaAtencion;
+  if (!evento) return null;
+
+  return {
+    tipo: evento.tipo ?? null,
+    fecha: evento.fecha ?? evento.fechaDeJornada ?? null,
+    jornada: evento.jornada ?? null,
+    comunidad: evento.comunidad ?? null,
+    profesional: evento.profesional ?? null,
+    diagnostico: evento.diagnosticoPrincipal?.nombre ?? null,
+  };
+}
+
 export function permisosDeFicha(rol) {
   return {
     puedeEditar: puedeEditarPaciente(rol),
