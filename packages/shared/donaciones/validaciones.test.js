@@ -6,13 +6,8 @@
 
 import { describe, expect, it } from "vitest";
 
-import {
-  TIPOS_DE_DONACION,
-  TIPOS_DE_DONANTE,
-  validarAnulacionDeDonacion,
-  validarDonacion,
-  validarDonante,
-} from "./validaciones.js";
+import { TIPOS_DE_DONACION, TIPOS_DE_DONANTE } from "./campos.js";
+import { validarAnulacionDeDonacion, validarDonacion, validarDonante } from "./validaciones.js";
 
 function hoy() {
   return new Date().toISOString();

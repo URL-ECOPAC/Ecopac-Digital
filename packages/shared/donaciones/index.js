@@ -18,7 +18,10 @@
 // packages/shared/proyectos/, para que esta carpeta quede solo para donantes y donaciones.
 
 // Donantes y donaciones (issue #189). Los valores de tipo_donante, tipo_donacion y
-// estado_donacion nacen aqui: son los del enum de la migracion 00022, no los que declaraba el
-// types/donaciones.ts que este archivo reemplaza.
+// estado_donacion (enum de la migracion 00022) nacen en campos.js (issue #287), no en el
+// types/donaciones.ts que validaciones.js reemplazo.
 export * from "./validaciones.js";
 export * from "./donantes.api.js";
+export * from "./campos.js";
+export * from "./columnas.js";
+export * from "./filtros.js";

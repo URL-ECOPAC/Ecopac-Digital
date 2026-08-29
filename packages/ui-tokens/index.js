@@ -67,6 +67,15 @@ export const statusColors = {
   critico: colors.danger,
   activo: colors.success,
   inactivo: colors.secondary,
+  // estado_donacion (donaciones.estado, supabase/migrations/00022_donantes_donaciones.sql)
+  registrada: colors.info,
+  anulada: colors.danger,
+  // estado_proyecto (proyectos.estado, supabase/migrations/00007_proyectos.sql). Formas
+  // MASCULINAS: valores distintos de las femeninas de estado_jornada de arriba, salvo
+  // 'en curso', identico en los dos enums.
+  planificado: colors.info,
+  finalizado: colors.secondary,
+  cancelado: colors.danger,
 };
 
 /**
@@ -124,6 +133,14 @@ export const labels = {
   cargando: 'Cargando...',
   sinResultados: 'No se encontraron resultados',
   errorDeConexion: 'Error de conexión con el servidor',
+  donacionRegistrada: 'Registrada', // estado_donacion (00022_donantes_donaciones.sql)
+  donacionAnulada: 'Anulada',
+  proyectoPlanificado: 'Planificado', // estado_proyecto (00007_proyectos.sql), forma masculina
+  proyectoFinalizado: 'Finalizado',
+  proyectoCancelado: 'Cancelado',
+  // proyecto 'en curso' reutiliza jornadaEnCurso: mismo texto exacto en los dos enums.
+  activo: 'Activo', // generico: donantes.activo (00022) y cualquier otra entidad con esa misma columna
+  inactivo: 'Inactivo',
 };
 
 export default {
