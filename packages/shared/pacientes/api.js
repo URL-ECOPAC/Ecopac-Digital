@@ -104,7 +104,7 @@ function aColumnasDeTabla(datos = {}) {
  * Traduce una fila de pacientes en snake_case a las claves camelCase de COLUMNAS_DEL_PACIENTE.
  *
  * fn_registrar_paciente retorna las columnas de pacientes explicitas mas numero_ficha
- * (RETURNS TABLE, migracion 00079), asi que entrega las columnas tal cual se llaman en
+ * (RETURNS TABLE, migracion 00080), asi que entrega las columnas tal cual se llaman en
  * Postgres, sin la comunidad embebida; aPaciente() ignora numero_ficha (registrarPaciente() la
  * lee aparte). Deja la fila recien registrada en el mismo idioma que la que devuelven
  * obtenerPaciente() y actualizarPaciente(), salvo por ese embed.
@@ -140,10 +140,10 @@ function aPaciente(fila) {
  * NULL en pacientes, 00009-. Nada llega al servidor sin pasar antes por esta validacion.
  *
  * numeroFicha no es un campo del formulario: fn_registrar_paciente lo genera del lado del
- * servidor (DEFAULT de expedientes.numero_ficha, migracion 00079) y lo devuelve en la misma
+ * servidor (DEFAULT de expedientes.numero_ficha, migracion 00080) y lo devuelve en la misma
  * llamada.
  *
- * La atomicidad la da fn_registrar_paciente (migraciones 00057, 00079): cualquier violacion
+ * La atomicidad la da fn_registrar_paciente (migraciones 00057, 00080): cualquier violacion
  * que la validacion no haya detectado revierte tambien el insert de pacientes, para que nunca
  * quede un paciente sin expediente.
  *
@@ -330,7 +330,7 @@ export async function actualizarPaciente(id, datos = {}) {
 // modos: nombre (tolerante a acentos y errores de tipeo), comunidad y numero de ficha
 // exacto. buscarPacientes() no decide cual es "el" modo por el formato del termino:
 // numero_ficha es VARCHAR(30) sin CHECK (00009). Lo que genera fn_registrar_paciente de aqui
-// en adelante tiene un formato fijo (6 digitos, migracion 00079), pero la columna sigue sin
+// en adelante tiene un formato fijo (6 digitos, migracion 00080), pero la columna sigue sin
 // una restriccion que lo obligue -por si algun dia hay que buscar un numero heredado con otro
 // formato-, asi que la busqueda sigue sin asumirlo. En su lugar prueba los dos caminos en
 // paralelo -la sonda exacta de ficha es una lectura por indice unico, practicamente
@@ -340,7 +340,7 @@ export async function actualizarPaciente(id, datos = {}) {
 // y la similitud contra un nombre completo cae muy por debajo de cualquier umbral util,
 // asi que la busqueda por nombre no aporta nada por debajo de este limite. La sonda de
 // ficha NO tiene este limite (ver mas abajo): la columna no impone un formato minimo,
-// aunque lo generado desde la 00079 siempre tenga 6 digitos.
+// aunque lo generado desde la 00080 siempre tenga 6 digitos.
 const LONGITUD_MINIMA_BUSQUEDA_POR_NOMBRE = 3;
 
 const POR_PAGINA_POR_DEFECTO = 20;

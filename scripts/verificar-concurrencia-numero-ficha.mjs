@@ -1,11 +1,11 @@
 #!/usr/bin/env node
-// Prueba manual de concurrencia real para numero_ficha (issue #114, migracion 00079).
+// Prueba manual de concurrencia real para numero_ficha (issue #114, migracion 00080).
 //
 // pgTAP (supabase/tests/database/) corre en una sola sesion/transaccion y no puede probar dos
 // conexiones simultaneas de verdad. Este script si abre conexiones paralelas reales contra el
 // Postgres local que levanta `supabase start` (puerto 54322, ver supabase/config.toml) y llama
 // fn_registrar_paciente() al mismo tiempo desde varias de ellas, para comprobar que
-// expedientes_numero_ficha_seq (00079) nunca reparte el mismo numero_ficha dos veces.
+// expedientes_numero_ficha_seq (00080) nunca reparte el mismo numero_ficha dos veces.
 //
 // Manual y local: no corre en npm test ni en CI (no hay un Postgres real disponible ahi para
 // esto, igual que db-local en docker-compose.yml es un paso opcional). Requiere `supabase
