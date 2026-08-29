@@ -8,6 +8,7 @@ import {
   condicionesDestacadas,
   nombreCompletoDePaciente,
   permisosDeFicha,
+  resumenDeUltimaAtencion,
   PESTANIA_FICHA_POR_DEFECTO,
   pestaniasDeFicha,
   resolverPestaniaDeFicha,
@@ -157,5 +158,46 @@ describe("nombreCompletoDePaciente", () => {
     expect(nombreCompletoDePaciente({ nombres: "Ana", apellidos: "Lopez" })).toBe("Ana Lopez");
     expect(nombreCompletoDePaciente({ nombres: "Ana" })).toBe("Ana");
     expect(nombreCompletoDePaciente({})).toBeNull();
+  });
+});
+
+describe("resumenDeUltimaAtencion", () => {
+  it("saca fecha, jornada y diagnostico de una consulta", () => {
+    const resumen = resumenDeUltimaAtencion({
+      ultimaAtencion: {
+        tipo: "consulta",
+        fecha: "2026-05-10T15:30:00Z",
+        jornada: "Jornada Chuicutama",
+        comunidad: "Chuicutama",
+        profesional: "Luis Perez",
+        diagnosticoPrincipal: { nombre: "Hipertension" },
+      },
+    });
+
+    expect(resumen.fecha).toBe("2026-05-10T15:30:00Z");
+    expect(resumen.jornada).toBe("Jornada Chuicutama");
+    expect(resumen.diagnostico).toBe("Hipertension");
+  });
+
+  it("deja el diagnostico en null cuando el evento no lo lleva", () => {
+    const resumen = resumenDeUltimaAtencion({
+      ultimaAtencion: { tipo: "receta", fecha: "2026-05-10T15:40:00Z", folio: "REC-1" },
+    });
+
+    expect(resumen.tipo).toBe("receta");
+    expect(resumen.diagnostico).toBeNull();
+  });
+
+  it("cae a la fecha de la jornada si el evento no trae la suya", () => {
+    const resumen = resumenDeUltimaAtencion({
+      ultimaAtencion: { tipo: "triaje", fechaDeJornada: "2026-03-01" },
+    });
+
+    expect(resumen.fecha).toBe("2026-03-01");
+  });
+
+  it("es null si el paciente no tiene atenciones", () => {
+    expect(resumenDeUltimaAtencion({ id: "p-1" })).toBeNull();
+    expect(resumenDeUltimaAtencion(null)).toBeNull();
   });
 });
