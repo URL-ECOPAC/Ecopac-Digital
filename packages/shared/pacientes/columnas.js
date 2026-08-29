@@ -11,11 +11,13 @@ import { TIPOS_DE_PRESENTACION } from '../descriptores.js';
 
 export const COLUMNAS_PACIENTE = [
   { id: 'avatar', label: '', tipo: TIPOS_DE_PRESENTACION.AVATAR, desde: 'nombreCompleto', anchoWeb: '48px' },
+  { id: 'numeroFicha', label: 'Ficha', tipo: TIPOS_DE_PRESENTACION.TEXTO },
   { id: 'nombreCompleto', label: 'Nombre', tipo: TIPOS_DE_PRESENTACION.TEXTO, principal: true },
   { id: 'edad', label: 'Edad', tipo: TIPOS_DE_PRESENTACION.NUMERO, sufijo: 'anios' },
   { id: 'sexo', label: 'Sexo', tipo: TIPOS_DE_PRESENTACION.TEXTO },
   { id: 'comunidad', label: 'Comunidad', tipo: TIPOS_DE_PRESENTACION.TEXTO },
   { id: 'condiciones', label: 'Condiciones', tipo: TIPOS_DE_PRESENTACION.CHIPS },
+  { id: 'ultimaAtencion', label: 'Ultima atencion', tipo: TIPOS_DE_PRESENTACION.FECHA },
 ];
 
 /** Datos de la ficha clinica, en el orden en que el diseno los presenta. */

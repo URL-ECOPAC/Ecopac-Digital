@@ -34,8 +34,10 @@ const {
   desasignarPersonal,
   listarJornadas,
   obtenerAsignacionesDelDia,
+  obtenerHistorialDeJornada,
   obtenerJornada,
   obtenerJornadasDePersona,
+  obtenerPersonalDeJornada,
   puedeRegistrarConsulta,
   registrarJornada,
 } = await import("./api.js");
@@ -323,6 +325,111 @@ describe("obtenerJornada", () => {
     const { jornada, error } = await obtenerJornada("jornada-1");
 
     expect(jornada).toBeNull();
+    expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.PERMISO_DENEGADO);
+  });
+});
+
+describe("obtenerPersonalDeJornada", () => {
+  it("no toca el cliente si no hay jornadaId", async () => {
+    const { personal, error } = await obtenerPersonalDeJornada();
+
+    expect(personal).toEqual([]);
+    expect(error).toBeNull();
+  });
+
+  it("solo consulta jornada_personal, no jornadas ni vista_reporte_impacto", async () => {
+    const cliente = crearCliente({
+      jornada_personal: {
+        data: [{ id: "asignacion-1", perfilId: "perfil-1" }],
+        error: null,
+      },
+    });
+    dobles.cliente = cliente;
+
+    const { personal, error } = await obtenerPersonalDeJornada("jornada-1");
+
+    expect(error).toBeNull();
+    expect(personal).toEqual([{ id: "asignacion-1", perfilId: "perfil-1" }]);
+
+    const tablasConsultadas = new Set(
+      cliente.llamadas.filter((l) => l.paso === "from").map((l) => l.tabla),
+    );
+    expect(tablasConsultadas).toEqual(new Set(["jornada_personal"]));
+  });
+
+  it("propaga el error si la consulta falla", async () => {
+    dobles.cliente = crearCliente({
+      jornada_personal: { data: null, error: { code: "42501" } },
+    });
+
+    const { personal, error } = await obtenerPersonalDeJornada("jornada-1");
+
+    expect(personal).toEqual([]);
+    expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.PERMISO_DENEGADO);
+  });
+});
+
+describe("obtenerHistorialDeJornada", () => {
+  it("no toca el cliente si no hay jornadaId", async () => {
+    const { historial, error } = await obtenerHistorialDeJornada();
+
+    expect(historial).toEqual([]);
+    expect(error).toBeNull();
+  });
+
+  it("un rol distinto de administrador no llega a llamar al cliente", async () => {
+    const { historial, error } = await obtenerHistorialDeJornada("jornada-1", {
+      rol: ROLES.MEDICO,
+    });
+
+    expect(historial).toEqual([]);
+    expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.PERMISO_DENEGADO);
+  });
+
+  it("administrador trae el historial ordenado del mas reciente al mas antiguo", async () => {
+    const cliente = crearCliente({
+      jornada_estado_historial: {
+        data: [
+          { id: "h-2", estadoAnterior: "planificada", estadoNuevo: "en curso", cambiadoPor: { nombres: "Ana", apellidos: "Ruiz" } },
+          { id: "h-1", estadoAnterior: null, estadoNuevo: "planificada", cambiadoPor: { nombres: "Ana", apellidos: "Ruiz" } },
+        ],
+        error: null,
+      },
+    });
+    dobles.cliente = cliente;
+
+    const { historial, error } = await obtenerHistorialDeJornada("jornada-1", {
+      rol: ROLES.ADMINISTRADOR,
+    });
+
+    expect(error).toBeNull();
+    expect(historial).toHaveLength(2);
+
+    const orden = cliente.llamadas.find((l) => l.paso === "order");
+    expect(orden.columna).toBe("created_at");
+    expect(orden.opciones).toEqual({ ascending: false });
+  });
+
+  it("sin rol no bloquea: deja que RLS decida", async () => {
+    dobles.cliente = crearCliente({
+      jornada_estado_historial: { data: [], error: null },
+    });
+
+    const { error } = await obtenerHistorialDeJornada("jornada-1");
+
+    expect(error).toBeNull();
+  });
+
+  it("propaga el error si la consulta falla", async () => {
+    dobles.cliente = crearCliente({
+      jornada_estado_historial: { data: null, error: { code: "42501" } },
+    });
+
+    const { historial, error } = await obtenerHistorialDeJornada("jornada-1", {
+      rol: ROLES.ADMINISTRADOR,
+    });
+
+    expect(historial).toEqual([]);
     expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.PERMISO_DENEGADO);
   });
 });

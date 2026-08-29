@@ -1,7 +1,5 @@
-import {
-  cambiarEstadoProyecto,
-  transicionesDeProyectoDesde,
-} from "./proyectos.api.js"; // O la exportación centralizada en index.js
+import { cambiarEstadoProyecto } from "./api.js";
+import { transicionesDeProyectoDesde } from "./validaciones.js"; // O la exportación centralizada en index.js
 
 /**
  * Normaliza los errores para respuestas uniformes.

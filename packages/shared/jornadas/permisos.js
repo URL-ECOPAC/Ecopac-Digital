@@ -76,10 +76,30 @@ export function puedeReabrirJornada(rol) {
 }
 
 /**
+ * Puede ver el historial de cambios de estado de una jornada (issue #181, criterio 3).
+ *
+ * Espejo exacto de la politica de SELECT de jornada_estado_historial (00039:83-85): solo
+ * administrador, sin la excepcion de tiene_permiso('jornadas.gestionar') que si tienen otras
+ * escrituras de este modulo. Para cualquier otro rol la consulta a esa tabla no falla, RLS la
+ * filtra y devuelve una lista vacia sin error -- por eso la pantalla debe ocultar la seccion
+ * entera en vez de mostrarla vacia (mismo criterio que el guion de pacientesAtendidos en
+ * useJornadasKanban.js): una lista vacia visible diria "esta jornada no tiene historial" cuando
+ * en realidad es "no tenes permiso para verlo".
+ *
+ * No es una funcion "espejo" de puedeVerHistorial() de pacientes/permisos.js: esa cubre
+ * consultas/recetas (00033, administrador o medico); esta cubre jornada_estado_historial
+ * (00039, solo administrador). Son dos politicas RLS distintas, sobre tablas distintas, y por
+ * eso dos funciones distintas.
+ */
+export function puedeVerHistorialJornada(rol) {
+  return esAdministrador(rol);
+}
+
+/**
  * Permisos de un rol, en la forma que consume una pantalla.
  *
- * Se devuelven juntos para que un hook no tenga que llamar a las tres por separado ni
- * acordarse de cuales existen.
+ * Se devuelven juntos para que un hook no tenga que llamar a las funciones sueltas ni acordarse
+ * de cuales existen.
  */
 export function permisosDeJornadas(rol) {
   return {
@@ -87,5 +107,6 @@ export function permisosDeJornadas(rol) {
     puedeCrear: puedeAdministrarJornadas(rol),
     puedeEditar: puedeAdministrarJornadas(rol),
     puedeReabrir: puedeReabrirJornada(rol),
+    puedeVerHistorial: puedeVerHistorialJornada(rol),
   };
 }
