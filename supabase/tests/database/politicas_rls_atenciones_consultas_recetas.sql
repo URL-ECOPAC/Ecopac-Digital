@@ -6,7 +6,7 @@
 
 BEGIN;
 
-SELECT plan(17);
+SELECT plan(21);
 
 -- ============================================================================
 -- Setup: comunidad, perfiles (dos medicos: uno asignado a la jornada, otro no),
@@ -142,14 +142,33 @@ SELECT ok(
   'medico89a puede leer consultas'
 );
 
+-- El id va explicito porque los asserts de anulacion de mas abajo (issue #510) tienen que
+-- referirse a esta misma receta.
 SELECT lives_ok(
-  $$ INSERT INTO recetas (consulta_id, medico_id) VALUES ('60000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000202') $$,
+  $$ INSERT INTO recetas (id, consulta_id, medico_id) VALUES ('80000000-0000-0000-0000-000000000001', '60000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000202') $$,
   'el medico que atendio la consulta puede emitir una receta como si mismo'
 );
 
 SELECT lives_ok(
   $$ UPDATE consultas SET observaciones = 'Reevaluado' WHERE id = '60000000-0000-0000-0000-000000000001' $$,
   'el medico que creo la consulta puede editarla'
+);
+
+-- ============================================================================
+-- Anulacion de recetas (issue #510, migracion 00075)
+-- ============================================================================
+-- Las dos mitades de la politica fallan distinto, y por eso se comprueban distinto:
+-- el USING excluye la fila y el UPDATE corre sin afectar nada; el WITH CHECK si lanza 42501.
+
+-- medico89a es el dueno, pero no puede registrar a otro como responsable de la anulacion.
+SELECT throws_ok(
+  $$ UPDATE recetas
+     SET estado = 'anulada', motivo_anulacion = 'En nombre de otro',
+         anulada_por = '00000000-0000-0000-0000-000000000203', anulada_en = NOW()
+     WHERE id = '80000000-0000-0000-0000-000000000001' $$,
+  '42501',
+  NULL,
+  'ni el dueno puede anular registrando a otra persona como quien la anulo'
 );
 
 -- ============================================================================
@@ -165,6 +184,46 @@ SELECT is(
   (SELECT observaciones FROM consultas WHERE id = '60000000-0000-0000-0000-000000000001'),
   'Reevaluado',
   'un medico distinto al que creo la consulta no puede editarla'
+);
+
+-- El bug de la issue #510: hasta la 00075 este UPDATE anulaba la receta de otro medico.
+UPDATE recetas
+SET estado = 'anulada', motivo_anulacion = 'Intento ajeno',
+    anulada_por = '00000000-0000-0000-0000-000000000203', anulada_en = NOW()
+WHERE id = '80000000-0000-0000-0000-000000000001';
+
+SELECT is(
+  (SELECT estado::text FROM recetas WHERE id = '80000000-0000-0000-0000-000000000001'),
+  'emitida',
+  'un medico distinto al que firmo la receta no puede anularla'
+);
+
+-- ============================================================================
+-- medico89a: anula la suya una vez, y no la vuelve a tocar (issue #510)
+-- ============================================================================
+SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000202';
+
+UPDATE recetas
+SET estado = 'anulada', motivo_anulacion = 'Dosis equivocada',
+    anulada_por = '00000000-0000-0000-0000-000000000202', anulada_en = NOW()
+WHERE id = '80000000-0000-0000-0000-000000000001';
+
+SELECT is(
+  (SELECT estado::text FROM recetas WHERE id = '80000000-0000-0000-0000-000000000001'),
+  'anulada',
+  'el medico que firmo la receta si puede anularla'
+);
+
+-- Ya anulada, la clausula USING deja de alcanzarla: anular es un hecho registrado y reescribirlo
+-- destruiria la trazabilidad. Si hubo un error, lo corrige la administradora.
+UPDATE recetas
+SET motivo_anulacion = 'Motivo reescrito por el medico'
+WHERE id = '80000000-0000-0000-0000-000000000001';
+
+SELECT is(
+  (SELECT motivo_anulacion FROM recetas WHERE id = '80000000-0000-0000-0000-000000000001'),
+  'Dosis equivocada',
+  'una vez anulada, el medico ya no la vuelve a tocar'
 );
 
 -- ============================================================================

@@ -239,8 +239,21 @@ export async function obtenerRecetas(pacienteId, { soloEmitidas = false } = {}) 
  * chk_recetas_anulacion_coherente (00066) impide dejarla anulada sin motivo aunque alguien
  * llame a la tabla directamente.
  *
+ * QUIEN PUEDE, Y COMO SE VE CUANDO NO PUEDE
+ *
+ * La politica de UPDATE de la 00075 deja anular al medico que firmo la receta -y solo mientras
+ * siga emitida-, y a la administradora siempre. Las dos mitades de esa politica fallan distinto,
+ * y por eso aqui se tratan por separado (regla de la issue #221):
+ *
+ *   - Receta ajena, o ya anulada: la clausula USING excluye la fila. El UPDATE **no lanza**,
+ *     corre afectando cero filas. Sin el .select() de abajo esto devolveria exito y la pantalla
+ *     diria "anulada" con la receta intacta.
+ *   - anulada_por que no es quien ejecuta: lo rechaza el WITH CHECK, que si lanza 42501 y
+ *     normalizarError() ya traduce a permiso denegado.
+ *
  * @param {string} id UUID de la receta.
- * @param {{ motivo: string, anuladaPor: string }} datos
+ * @param {{ motivo: string, anuladaPor: string }} datos `anuladaPor` tiene que ser el perfil de
+ *   la sesion: el servidor lo exige salvo que quien anule sea la administradora.
  * @returns {Promise<{ receta: object|null, error: object|null }>}
  */
 export async function anularReceta(id, { motivo, anuladaPor } = {}) {
@@ -259,7 +272,8 @@ export async function anularReceta(id, { motivo, anuladaPor } = {}) {
   }
 
   try {
-    const { error } = await obtenerSupabase()
+    // El .select("id") no es para leer: es para saber si el UPDATE alcanzo alguna fila.
+    const { data, error } = await obtenerSupabase()
       .from("recetas")
       .update({
         estado: ESTADOS_RECETA.ANULADA,
@@ -267,9 +281,24 @@ export async function anularReceta(id, { motivo, anuladaPor } = {}) {
         anulada_por: anuladaPor,
         anulada_en: new Date().toISOString(),
       })
-      .eq("id", id);
+      .eq("id", id)
+      .select("id");
 
     if (error) return { receta: null, error: normalizarError(error) };
+
+    if (!data || data.length === 0) {
+      return {
+        receta: null,
+        error: {
+          ...construirError(CODIGOS_DE_ERROR_DE_SUPABASE.PERMISO_DENEGADO),
+          mensaje:
+            "No se pudo anular la receta. Solo puede anularla quien la emitio, y solo mientras " +
+            "siga vigente; si ya estaba anulada o la firmo otra persona, pideselo a la " +
+            "administradora.",
+        },
+      };
+    }
+
     return await obtenerReceta(id);
   } catch (error) {
     return { receta: null, error: normalizarError(error) };
