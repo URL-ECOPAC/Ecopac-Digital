@@ -44,3 +44,5 @@ export * from "./useEdicionPaciente.js";
 export * from "./useRegistroPaciente.js";
 export * from "./historial.filtros.js";
 export * from "./useHistorialPaciente.js";
+export * from "./signos.js";
+export * from "./useEvolucionSignos.js";
