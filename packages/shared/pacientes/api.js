@@ -19,9 +19,11 @@ import { obtenerSupabase } from "../api/cliente.js";
 import {
   CODIGOS_DE_ERROR_DE_SUPABASE,
   construirError,
+  esErrorDeCancelacion,
   normalizarError,
 } from "../api/errores-de-supabase.js";
 import { normalizarTexto } from "../validations/index.js";
+import { ESTADOS_CONDICION_CRONICA } from "./condiciones.campos.js";
 import { validarRegistroPaciente } from "./validaciones.js";
 
 // Las columnas se enumeran en lugar de pedir "*" para que una columna nueva en pacientes no
@@ -347,8 +349,10 @@ const POR_PAGINA_POR_DEFECTO = 20;
 
 // Mismas columnas que necesita la ficha clinica (COLUMNAS_DEL_PACIENTE), pero solo el
 // subconjunto minimo para una lista de resultados de busqueda (columnas.js,
-// COLUMNAS_PACIENTE): sin condiciones cronicas ni datos de contacto, que no ayudan a
-// elegir entre resultados y cuestan una consulta o un join de mas. fechaBaja viaja para
+// COLUMNAS_PACIENTE): sin datos de contacto, que no ayudan a elegir entre resultados y
+// cuestan un join de mas. Las condiciones cronicas SI viajan desde la issue #535: la
+// columna de chips que COLUMNAS_PACIENTE declara desde el PR #311 no tenia de donde leer,
+// y se resuelven con un embebido en vez de una segunda consulta. fechaBaja viaja para
 // poder excluir de buscarPacientePorFicha() a quien este dado de baja (mismo criterio que
 // fn_buscar_pacientes) y se descarta antes de devolver el paciente.
 const COLUMNAS_DE_BUSQUEDA_PACIENTE = [
@@ -360,7 +364,27 @@ const COLUMNAS_DE_BUSQUEDA_PACIENTE = [
   "comunidadId:comunidad_id",
   "fechaBaja:fecha_baja",
   "comunidad:comunidades(nombre)",
+  `condicionesCronicas:padecimientos_cronicos(${COLUMNAS_DE_CONDICION_CRONICA})`,
 ].join(", ");
+
+/**
+ * Reduce los padecimientos de un paciente a los nombres de los que sigue padeciendo.
+ *
+ * Vigente es estado distinto de resuelta -- o sea activa y controlada -- misma definicion que
+ * usa soloVigentes en obtenerCondicionesDelPaciente() (#122): una condicion controlada se sigue
+ * padeciendo. La 00077 aplica esta misma regla del lado del servidor, para la busqueda por
+ * nombre; aqui se repite porque la sonda por numero de ficha no pasa por esa funcion.
+ *
+ * @param {object[]} padecimientos
+ * @returns {string[]} Nombres ordenados, listos para la columna de chips.
+ */
+function nombresDeCondicionesVigentes(padecimientos = []) {
+  return padecimientos
+    .filter((uno) => uno?.estado !== ESTADOS_CONDICION_CRONICA.RESUELTA)
+    .map((uno) => uno?.condicion?.nombre)
+    .filter(Boolean)
+    .sort((uno, otro) => uno.localeCompare(otro, "es"));
+}
 
 /** Traduce una fila de fn_buscar_pacientes (snake_case) a un paciente de resultado de busqueda. */
 function aPacienteDeBusqueda(fila) {
@@ -373,6 +397,10 @@ function aPacienteDeBusqueda(fila) {
     comunidadId: fila.comunidad_id,
     comunidad: fila.comunidad_nombre ? { nombre: fila.comunidad_nombre } : null,
     numeroFicha: fila.numero_ficha,
+    ultimaAtencion: fila.ultima_atencion ?? null,
+    // La 00077 la devuelve siempre como arreglo, vacio incluido. El ?? [] cubre a un cliente
+    // que todavia hable con una base sin esa migracion aplicada.
+    condiciones: fila.condiciones ?? [],
     relevancia: fila.relevancia,
   };
 }
@@ -388,24 +416,36 @@ function aPacienteDeBusqueda(fila) {
  * @param {string} numeroFicha
  * @returns {Promise<{ paciente: object|null, error: object|null }>}
  */
-export async function buscarPacientePorFicha(numeroFicha) {
+export async function buscarPacientePorFicha(numeroFicha, { signal } = {}) {
   const ficha = normalizarTexto(numeroFicha);
   if (ficha === "") return { paciente: null, error: null };
 
   try {
-    const { data, error } = await obtenerSupabase()
+    let consulta = obtenerSupabase()
       .from("expedientes")
       .select(`numeroFicha:numero_ficha, paciente:pacientes(${COLUMNAS_DE_BUSQUEDA_PACIENTE})`)
-      .eq("numero_ficha", ficha)
-      .maybeSingle();
+      .eq("numero_ficha", ficha);
 
+    // Solo se encadena cuando hay senal: abortSignal(undefined) dejaria la consulta atada a un
+    // AbortSignal inexistente, y quien llama sin cancelacion no tiene por que pagar ese paso.
+    if (signal) consulta = consulta.abortSignal(signal);
+
+    const { data, error } = await consulta.maybeSingle();
+
+    if (esErrorDeCancelacion(error)) return { paciente: null, error: null, cancelada: true };
     if (error) return { paciente: null, error: normalizarError(error) };
     if (!data?.paciente || data.paciente.fechaBaja) return { paciente: null, error: null };
 
-    const paciente = { ...data.paciente, numeroFicha: data.numeroFicha };
+    const paciente = {
+      ...data.paciente,
+      numeroFicha: data.numeroFicha,
+      condiciones: nombresDeCondicionesVigentes(data.paciente.condicionesCronicas),
+    };
     delete paciente.fechaBaja;
+    delete paciente.condicionesCronicas;
     return { paciente, error: null };
   } catch (error) {
+    if (esErrorDeCancelacion(error)) return { paciente: null, error: null, cancelada: true };
     return { paciente: null, error: normalizarError(error) };
   }
 }
@@ -430,7 +470,9 @@ export async function buscarPacientePorFicha(numeroFicha) {
  * `{ pacientes: [], total: 0, error: null }`, porque esa forma es indistinguible de "no
  * hay resultados" para quien la llama.
  *
- * @param {{ termino?: string, comunidadId?: string, pagina?: number, porPagina?: number }} [filtros]
+ * @param {{ termino?: string, comunidadId?: string, condicionCronicaId?: string,
+ *   sexo?: string, edadMin?: number, edadMax?: number, listarTodos?: boolean,
+ *   pagina?: number, porPagina?: number }} [filtros]
  * @returns {Promise<{
  *   pacientes: object[],
  *   total: number,
@@ -444,8 +486,14 @@ export async function buscarPacientePorFicha(numeroFicha) {
 export async function buscarPacientes({
   termino,
   comunidadId,
+  condicionCronicaId,
+  sexo,
+  edadMin,
+  edadMax,
+  listarTodos = false,
   pagina = 1,
   porPagina = POR_PAGINA_POR_DEFECTO,
+  signal,
 } = {}) {
   const terminoNormalizado = normalizarTexto(termino).replace(/\s+/g, " ");
   const hayTermino = terminoNormalizado !== "";
@@ -460,13 +508,31 @@ export async function buscarPacientes({
     coincidenciaExacta: false,
     terminoDemasiadoCorto,
     error,
+    cancelada: false,
   });
+
+  // Una peticion abortada no es un fallo: es lo que se pidio. Se devuelve marcada para que
+  // quien llama sepa que no debe pintar nada -ni resultados vacios ni un error-, en vez de
+  // hacerle deducir el aborto de una respuesta vacia indistinguible de "no hubo coincidencias".
+  const respuestaCancelada = () => ({ ...respuestaVacia(), cancelada: true });
 
   // Sin termino y sin comunidad no hay nada que filtrar: devolver la tabla entera
   // paginada no es lo que pidio nadie, y no es un error tampoco (una pantalla recien
   // abierta, con los filtros vacios, no deberia mostrar uno). No llega a tocar el
   // cliente.
-  if (!hayTermino && !comunidadId) return respuestaVacia();
+  // La guarda original (issue #115) solo miraba termino y comunidad, asi que filtrar unicamente
+  // por sexo, edad o condicion cronica tambien devolvia vacio sin consultar. Ahora cualquier
+  // filtro cuenta como criterio.
+  const hayAlgunFiltro = Boolean(
+    comunidadId || condicionCronicaId || sexo || edadMin != null || edadMax != null,
+  );
+
+  // `listarTodos` es la puerta explicita para una pantalla de LISTADO, no de busqueda: la #124
+  // necesita mostrar pacientes al entrar, sin que nadie haya escrito nada. Se pide con una
+  // bandera en vez de relajar la guarda para todos, porque el comportamiento por defecto de
+  // esta funcion -no volcar la tabla entera a quien no pidio nada- es deliberado de la #115 y
+  // sigue intacto. El volcado no es tal: fn_buscar_pacientes pagina de 20 en 20.
+  if (!hayTermino && !hayAlgunFiltro && !listarTodos) return respuestaVacia();
 
   // El corte de 3 caracteres se aplica solo al camino por nombre: un termino corto no
   // produce trigramas utiles (ver LONGITUD_MINIMA_BUSQUEDA_POR_NOMBRE). Si ademas hay
@@ -474,24 +540,44 @@ export async function buscarPacientes({
   // el listado de esa comunidad en vez de nada; terminoDemasiadoCorto sigue en true para
   // que la pantalla explique por que el nombre no filtro.
   const terminoParaBusquedaPorNombre = hayTermino && !terminoDemasiadoCorto ? terminoNormalizado : null;
-  const debeConsultarBusqueda = terminoParaBusquedaPorNombre !== null || Boolean(comunidadId);
+  const debeConsultarBusqueda =
+    terminoParaBusquedaPorNombre !== null || hayAlgunFiltro || listarTodos;
 
   try {
     const supabase = obtenerSupabase();
 
+    // Solo se encadena abortSignal cuando hay senal, por el mismo motivo que en
+    // buscarPacientePorFicha: quien no necesita cancelar no tiene por que pagar ese paso.
+    const consultaDeBusqueda = (argumentos) => {
+      const consulta = supabase.rpc("fn_buscar_pacientes", argumentos);
+      return signal ? consulta.abortSignal(signal) : consulta;
+    };
+
     const [respuestaBusqueda, respuestaFicha] = await Promise.all([
       debeConsultarBusqueda
-        ? supabase.rpc("fn_buscar_pacientes", {
+        ? consultaDeBusqueda({
             p_termino: terminoParaBusquedaPorNombre,
             p_comunidad_id: comunidadId || null,
             p_pagina: pagina,
             p_por_pagina: porPagina,
+            p_condicion_cronica_id: condicionCronicaId || null,
+            p_sexo: sexo || null,
+            p_edad_min: edadMin ?? null,
+            p_edad_max: edadMax ?? null,
           })
         : Promise.resolve({ data: [], error: null }),
       // La sonda de ficha no tiene minimo de longitud: numero_ficha no tiene formato ni
       // prefijo (00009), asi que un termino corto puede ser una ficha valida.
-      hayTermino ? buscarPacientePorFicha(terminoNormalizado) : Promise.resolve({ paciente: null, error: null }),
+      hayTermino
+        ? buscarPacientePorFicha(terminoNormalizado, { signal })
+        : Promise.resolve({ paciente: null, error: null }),
     ]);
+
+    // El aborto se comprueba antes que el error: las dos consultas viajan con la misma senal,
+    // asi que cancelar deja a las dos con un error que no hay que ensenarle a nadie.
+    if (esErrorDeCancelacion(respuestaBusqueda.error) || respuestaFicha.cancelada === true) {
+      return respuestaCancelada();
+    }
 
     if (respuestaBusqueda.error) return respuestaVacia(normalizarError(respuestaBusqueda.error));
     if (respuestaFicha.error) return respuestaVacia(respuestaFicha.error);
@@ -514,8 +600,10 @@ export async function buscarPacientes({
       coincidenciaExacta: Boolean(pacientePorFicha),
       terminoDemasiadoCorto,
       error: null,
+      cancelada: false,
     };
   } catch (error) {
+    if (esErrorDeCancelacion(error)) return respuestaCancelada();
     return respuestaVacia(normalizarError(error));
   }
 }

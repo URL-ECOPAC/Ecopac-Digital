@@ -5,7 +5,7 @@
 // lugar del monorepo que lee y escribe la tabla principios_activos. Se llama
 // principios-activos.api.js y no api.js porque inventario/ lo va a construir mas de una
 // issue en paralelo (medicamentos, lotes, movimientos...); un api.js unico seria un iman de
-// conflictos, mismo criterio que packages/shared/donaciones/proyectos.api.js.
+// conflictos, mismo criterio que packages/shared/proyectos/api.js.
 //
 // Todas las funciones devuelven `{ dato, error }` en vez de lanzar, igual que supabase-js:
 // quien las consume es un hook que tiene que reflejar el fallo en pantalla, no reventar el

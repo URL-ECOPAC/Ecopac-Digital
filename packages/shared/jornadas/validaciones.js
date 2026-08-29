@@ -9,7 +9,7 @@
 // Las claves del objeto de errores son los ids de CAMPOS_JORNADA y CAMPOS_ASIGNACION_PERSONAL,
 // para que un formulario pueda pintar cada mensaje debajo de su campo sin traducir nada. Es la
 // misma forma que devuelven packages/shared/usuarios/validaciones.js y
-// packages/shared/donaciones/proyectos.validaciones.js.
+// packages/shared/proyectos/validaciones.js.
 
 import { aFechaLocal } from "../formato/fechas.js";
 import { esAdministrador } from "../usuarios/roles.js";
@@ -27,7 +27,7 @@ const FORMA_DE_HORA = /^(\d{1,2}):(\d{2})$/;
  * segunda fuente de verdad. Sirve para dar un mensaje entendible antes de gastar una llamada al
  * servidor y para deshabilitar en pantalla lo que no se puede hacer; quien de verdad impide una
  * transicion invalida sigue siendo la base de datos. Mismo patron que
- * packages/shared/donaciones/proyectos.validaciones.js (TRANSICIONES_PROYECTO).
+ * packages/shared/proyectos/validaciones.js (TRANSICIONES_PROYECTO).
  *
  * `cancelada` queda fuera de alcance de la issue #171: ninguna transicion a/desde ese estado
  * esta en la lista.

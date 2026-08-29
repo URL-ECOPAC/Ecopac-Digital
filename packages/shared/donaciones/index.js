@@ -12,13 +12,10 @@
 // Carpeta creada por el issue #278 para dejar montada la estructura del modulo. El
 // contenido lo construyen sus issues (ver packages/shared/pacientes/ como ejemplar de
 // referencia de filtros.js y columnas.js).
-
-// Proyectos sociales (issue #194). Los archivos van por entidad y no como un api.js unico
-// porque esta carpeta la escriben nueve issues repartidas entre cinco personas.
-export * from "./proyectos.api.js";
-export * from "./proyectos.validaciones.js";
-export * from "./proyectos.permisos.js";
-export * from "./avance.api.js";
+//
+// Proyectos sociales (issue #194) vivio aqui como proyectos.api.js, proyectos.validaciones.js,
+// proyectos.permisos.js y avance.api.js. La issue #400 lo movio a su propio modulo,
+// packages/shared/proyectos/, para que esta carpeta quede solo para donantes y donaciones.
 
 // Donantes y donaciones (issue #189). Los valores de tipo_donante, tipo_donacion y
 // estado_donacion nacen aqui: son los del enum de la migracion 00022, no los que declaraba el

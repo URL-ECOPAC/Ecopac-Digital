@@ -17,12 +17,12 @@ import {
   transicionesDeProyectoDesde,
   validarCambioDeEstadoProyecto,
   validarProyecto,
-} from "./proyectos.validaciones.js";
+} from "./validaciones.js";
 import {
   permisosDeProyectos,
   puedeAdministrarProyectos,
   puedeVerProyectos,
-} from "./proyectos.permisos.js";
+} from "./permisos.js";
 
 /** Proyecto valido minimo, para que cada prueba altere solo el campo que le interesa. */
 function proyectoValido(cambios = {}) {

@@ -22,6 +22,28 @@ export function esRespuestaVigente(idDeLaRespuesta, idVigente) {
 }
 
 /**
+ * Decide si una respuesta debe tirarse sin tocar el estado de la pantalla.
+ *
+ * Son dos motivos distintos que terminan igual. Que la respuesta sea vieja ya lo resolvia
+ * esRespuestaVigente(). Que la peticion se haya abortado es lo que agrega la #520: una peticion
+ * cancelada devuelve cancelada en true y ningun error, porque abortar es lo que se pidio y
+ * pintarlo como fallo seria mentir. Sin esta comprobacion, un aborto sin peticion posterior
+ * -el del desmontaje- dejaria el estado a medias.
+ *
+ * Es una funcion aparte y exportada para poder probar la decision sin montar el hook, igual que
+ * esRespuestaVigente(): packages/shared corre sin DOM a proposito.
+ *
+ * @param {{ cancelada?: boolean }} respuesta Lo que devolvio buscarPacientes().
+ * @param {number} idDeLaRespuesta Numero con el que salio la peticion.
+ * @param {number} idVigente Numero de la ultima peticion disparada.
+ * @returns {boolean}
+ */
+export function debeDescartarseLaRespuesta(respuesta, idDeLaRespuesta, idVigente) {
+  if (respuesta?.cancelada === true) return true;
+  return !esRespuestaVigente(idDeLaRespuesta, idVigente);
+}
+
+/**
  * Combina lo que ya estaba en pantalla con lo que acaba de llegar.
  *
  * La primera pagina reemplaza: es una busqueda nueva. Las siguientes se agregan al final, que
@@ -73,11 +95,16 @@ export function hayMasResultados(cargados, total) {
  *
  * @param {object} [opciones]
  * @param {string} [opciones.comunidad] UUID de comunidad para acotar la busqueda.
+ * @param {object} [opciones.filtros] Filtros extra que se reenvian tal cual a
+ *   buscarPacientes(): condicionCronicaId, sexo, edadMin y edadMax. Se pasa un objeto en vez
+ *   de una lista de parametros para que agregar un filtro nuevo en el servidor no obligue a
+ *   cambiar la firma de este hook (issue #124).
  * @param {number} [opciones.porPagina] Tamano de pagina.
  * @param {number} [opciones.retardoMs] Retardo antes de consultar; se baja en las pruebas.
  */
 export function useBusquedaPacientes({
   comunidad,
+  filtros,
   porPagina,
   retardoMs = RETARDO_DE_BUSQUEDA_MS,
 } = {}) {
@@ -93,24 +120,41 @@ export function useBusquedaPacientes({
   // no debe redibujar nada: solo sirve para decidir que respuesta se pinta.
   const peticionVigente = useRef(0);
 
+  // Controlador de la peticion que sigue en vuelo. Tambien en una ref: abortar no redibuja.
+  const controladorVigente = useRef(null);
+
+  // Los filtros llegan como objeto nuevo en cada render, asi que compararlos por identidad
+  // dispararia una consulta por render. Se compara su contenido serializado.
+  const claveDeFiltros = JSON.stringify(filtros ?? {});
+
   const consultar = useCallback(
     async (paginaAConsultar) => {
       peticionVigente.current += 1;
       const idDeEstaPeticion = peticionVigente.current;
 
+      // Abortar la anterior antes de disparar la siguiente. Hasta la #520 la peticion descartada
+      // seguia viajando por la red y solo se ignoraba su resultado: en una jornada, sobre red
+      // lenta, eran varias consultas simultaneas por busqueda que nadie iba a leer.
+      controladorVigente.current?.abort();
+      const controlador = new AbortController();
+      controladorVigente.current = controlador;
+
       setCargando(true);
       setError(null);
 
       const respuesta = await buscarPacientes({
+        ...filtros,
         termino,
         comunidadId: comunidad,
         pagina: paginaAConsultar,
         porPagina,
+        signal: controlador.signal,
       });
 
-      // Aqui esta la guarda contra el desorden: si mientras viajaba salio otra peticion, esta
-      // respuesta ya no le sirve a nadie y no toca el estado.
-      if (!esRespuestaVigente(idDeEstaPeticion, peticionVigente.current)) return;
+      // Aqui esta la guarda contra el desorden: si la peticion se aborto, o si mientras viajaba
+      // salio otra, esta respuesta ya no le sirve a nadie y no toca el estado. Tampoco apaga el
+      // indicador de carga: quien la reemplazo ya lo encendio y es quien va a apagarlo.
+      if (debeDescartarseLaRespuesta(respuesta, idDeEstaPeticion, peticionVigente.current)) return;
 
       if (respuesta.error) {
         setError(respuesta.error);
@@ -126,7 +170,7 @@ export function useBusquedaPacientes({
       setPagina(paginaAConsultar);
       setCargando(false);
     },
-    [termino, comunidad, porPagina],
+    [termino, comunidad, porPagina, claveDeFiltros],
   );
 
   useEffect(() => {
@@ -135,6 +179,10 @@ export function useBusquedaPacientes({
     // Cancelar el temporizador es la cancelacion de verdad: la peticion no llega a salir.
     return () => clearTimeout(temporizador);
   }, [consultar, retardoMs]);
+
+  // Al desmontar, la peticion que siga en vuelo tampoco tiene a quien contestarle. El arreglo
+  // vacio es deliberado: la ref sobrevive a los renders, asi que aborta la ultima que hubiera.
+  useEffect(() => () => controladorVigente.current?.abort(), []);
 
   const cargarMas = useCallback(() => {
     if (cargando || !hayMasResultados(resultados.length, total)) return;
