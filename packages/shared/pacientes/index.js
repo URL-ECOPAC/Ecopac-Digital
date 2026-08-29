@@ -50,3 +50,4 @@ export * from "./useRecetasPaciente.js";
 export * from "./recetas.imprimible.js";
 export * from "./useCondicionesPaciente.js";
 export * from "./usePacientesCronicos.js";
+export * from "./useRegistroTriaje.js";
