@@ -16,6 +16,7 @@ import {
   puedeReabrirJornada,
   puedeVerHistorialJornada,
   puedeVerJornadas,
+  puedeVerRosterCompleto,
 } from "./permisos.js";
 
 describe("permisos de jornadas", () => {
@@ -72,6 +73,15 @@ describe("permisos de jornadas", () => {
       puedeReabrir: false,
       puedeVerHistorial: false,
     });
+  });
+
+  it("solo administrador y junta directiva ven el personal completo, espejo de 00039:63-69 (issue #182)", () => {
+    expect(puedeVerRosterCompleto(ROLES.ADMINISTRADOR)).toBe(true);
+    expect(puedeVerRosterCompleto(ROLES.JUNTA_DIRECTIVA)).toBe(true);
+
+    expect(puedeVerRosterCompleto(ROLES.SOCIO_FUNDADOR)).toBe(false);
+    expect(puedeVerRosterCompleto(ROLES.MEDICO)).toBe(false);
+    expect(puedeVerRosterCompleto(ROLES.VOLUNTARIO)).toBe(false);
   });
 
   it("agrupa los permisos para que un hook no llame a las cinco por separado", () => {

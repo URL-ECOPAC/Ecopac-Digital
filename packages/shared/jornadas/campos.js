@@ -62,6 +62,19 @@ export const CAMPOS_ASIGNACION_PERSONAL = [
   { id: 'responsabilidad', label: 'Responsabilidad', tipo: TIPOS_DE_CAMPO.SELECT, opciones: OPCIONES_RESPONSABILIDAD_JORNADA, validacion: { requerido: false } },
 ];
 
+/**
+ * CAMPOS_ASIGNACION_PERSONAL sin el campo `perfil` (issue #182).
+ *
+ * La pantalla de asignar personal elige a quien asignar con un buscador (ModalAsignarPersonal.jsx,
+ * useAsignacionPersonal.js), no con el <select> que declara `opcionesDesde: 'perfiles'`: ese
+ * campo no tiene sentido una vez que la persona ya se eligio en el paso anterior. Se filtra aca,
+ * al lado del descriptor original, para que el resto del modulo (y la futura version movil de
+ * esta misma pantalla) lo reuse sin repetir el filtro.
+ */
+export const CAMPOS_ASIGNACION_PERSONAL_SIN_PERFIL = CAMPOS_ASIGNACION_PERSONAL.filter(
+  (campo) => campo.id !== 'perfil',
+);
+
 /** Marcar la asistencia de un perfil ya asignado (jornada_personal.asistio, 00036). */
 export const CAMPOS_MARCAR_ASISTENCIA = [
   { id: 'asistio', label: 'Asistio', tipo: TIPOS_DE_CAMPO.BOOLEANO, validacion: { requerido: false } },
