@@ -106,6 +106,7 @@ export function usePacientesListado({ porPagina } = {}) {
   const {
     termino,
     setTermino,
+    recargar,
     resultados,
     total,
     cargando,
@@ -158,6 +159,7 @@ export function usePacientesListado({ porPagina } = {}) {
     filtros: { ...filtros, busqueda: termino },
     setFiltro,
     limpiarFiltros,
+    recargar,
     cargando,
     error,
     total,

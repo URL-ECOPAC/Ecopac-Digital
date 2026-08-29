@@ -41,5 +41,6 @@ export * from "./usePacientesListado.js";
 export * from "./usePaciente.js";
 export * from "./ficha.js";
 export * from "./useEdicionPaciente.js";
+export * from "./useRegistroPaciente.js";
 export * from "./historial.filtros.js";
 export * from "./useHistorialPaciente.js";
