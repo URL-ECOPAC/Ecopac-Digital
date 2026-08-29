@@ -1,9 +1,11 @@
+import { useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
 import {
   cabeceraDePaciente,
   CAMPOS_FICHA_PACIENTE,
   formatearFechaCorta,
+  permisosDeFicha,
   pestaniasDeFicha,
   resolverPestaniaDeFicha,
   TIPOS_DE_PRESENTACION,
@@ -21,7 +23,9 @@ import {
   Tabs,
 } from '../components';
 import { useSesionCompartida } from '../contexto/SesionProvider';
+import ModalEdicionPaciente from './ModalEdicionPaciente';
 import NotFoundPage from './NotFoundPage';
+import PestaniaHistorialPaciente from './PestaniaHistorialPaciente';
 import PaginaPendiente from './PaginaPendiente';
 
 const PARAMETRO_PESTANIA = 'pestania';
@@ -39,8 +43,10 @@ export default function FichaPacientePage() {
   const [parametros, setParametros] = useSearchParams();
   const { rol } = useSesionCompartida();
   const { paciente, cargando, error, recargar } = usePaciente(id, { rol });
+  const [editando, setEditando] = useState(false);
 
   const pestanias = pestaniasDeFicha(rol);
+  const permisos = permisosDeFicha(rol);
   const pestaniaActiva = resolverPestaniaDeFicha(parametros.get(PARAMETRO_PESTANIA), rol);
 
   const cambiarPestania = (siguiente) => {
@@ -78,7 +84,18 @@ export default function FichaPacientePage() {
   const cabecera = cabeceraDePaciente(paciente);
   const valores = valoresDeFichaPaciente(paciente);
 
-  const acciones = [{ label: 'Volver', onClick: () => navigate('/pacientes'), variant: 'secondary' }];
+  const acciones = [
+    { label: 'Volver', onClick: () => navigate('/pacientes'), variant: 'secondary' },
+  ];
+
+  if (permisos.puedeEditar) {
+    acciones.push({ label: 'Editar datos', onClick: () => setEditando(true) });
+  }
+
+  const alGuardar = async () => {
+    setEditando(false);
+    await recargar();
+  };
 
   return (
     <ScreenContainer>
@@ -122,9 +139,7 @@ export default function FichaPacientePage() {
         )}
 
         {pestaniaActiva === 'historial' && (
-          <Card>
-            <PaginaPendiente titulo="Historial clinico" issues="#128" />
-          </Card>
+          <PestaniaHistorialPaciente pacienteId={paciente.id} rol={rol} />
         )}
 
         {pestaniaActiva === 'signos' && (
@@ -139,6 +154,14 @@ export default function FichaPacientePage() {
           </Card>
         )}
       </Tabs>
+
+      {editando && (
+        <ModalEdicionPaciente
+          paciente={paciente}
+          onClose={() => setEditando(false)}
+          onGuardado={alGuardar}
+        />
+      )}
     </ScreenContainer>
   );
 }

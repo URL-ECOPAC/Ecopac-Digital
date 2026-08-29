@@ -40,3 +40,6 @@ export * from "./condiciones.api.js";
 export * from "./usePacientesListado.js";
 export * from "./usePaciente.js";
 export * from "./ficha.js";
+export * from "./useEdicionPaciente.js";
+export * from "./historial.filtros.js";
+export * from "./useHistorialPaciente.js";
