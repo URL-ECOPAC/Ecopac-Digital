@@ -78,7 +78,7 @@ export function validarPaciente(datosObjeto) {
  * Valida el formulario completo de registro de un paciente nuevo (CAMPOS_REGISTRO_PACIENTE,
  * campos.js): ademas de lo que ya cubre validarPaciente(), exige sexo, telefonoContacto e
  * idioma (NOT NULL en pacientes, 00009). numeroFicha no esta en este formulario: lo genera
- * fn_registrar_paciente del lado del servidor (migraciones 00057, 00077), no lo escribe quien
+ * fn_registrar_paciente del lado del servidor (migraciones 00057, 00078), no lo escribe quien
  * registra. Mismas reglas de negocio que validarPaciente(): la fecha de nacimiento y el DPI no
  * cambian segun el formulario.
  * @param {object} datosObjeto

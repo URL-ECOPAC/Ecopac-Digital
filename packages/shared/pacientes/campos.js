@@ -32,7 +32,7 @@ export const OPCIONES_TIPO_SANGRE = [
 /**
  * Formulario de registro de un paciente nuevo. Cubre pacientes (00009, 00035). El numero de
  * ficha del expediente (00009) no es un campo del formulario: fn_registrar_paciente (00057,
- * 00077) lo genera del lado del servidor, la persona que registra no lo escribe.
+ * 00078) lo genera del lado del servidor, la persona que registra no lo escribe.
  */
 export const CAMPOS_REGISTRO_PACIENTE = [
   { id: 'nombres', label: 'Nombres', tipo: TIPOS_DE_CAMPO.TEXTO, validacion: { requerido: true, maxLongitud: 100 } },

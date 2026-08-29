@@ -1,4 +1,4 @@
--- Pruebas de la generacion server-side de numero_ficha (issue #114, migracion 00077). Corre con:
+-- Pruebas de la generacion server-side de numero_ficha (issue #114, migracion 00078). Corre con:
 -- supabase test db
 --
 -- Mismo patron de fixtures que politicas_rls_pacientes_expedientes.sql (#88): SET LOCAL ROLE
