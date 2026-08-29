@@ -64,7 +64,11 @@ export function aEventos(atencion) {
   const comun = { atencionId: atencion.id, jornadaId: atencion.jornadaId, jornada, fechaDeJornada };
   const eventos = [];
 
-  for (const triaje of atencion.triajes ?? []) {
+  // triajes_atencion_id_key (migracion 00013) hace de atencion_id -> triaje una relacion 1:1, asi
+  // que PostgREST lo embebe como un objeto (o null), no como arreglo -- a diferencia de
+  // consultas, que si puede tener varias filas por atencion.
+  const triaje = atencion.triajes;
+  if (triaje) {
     eventos.push({
       ...comun,
       tipo: TIPOS_DE_EVENTO.TRIAJE,
@@ -208,5 +212,43 @@ export async function obtenerHistorialMedico(pacienteId, { rol, desde, hasta } =
     return { eventos: ordenarCronologicamente(eventos), error: null };
   } catch (error) {
     return { eventos: [], error: normalizarError(error) };
+  }
+}
+
+/**
+ * La atencion mas reciente de un paciente (issue #123), para mostrarla en el resumen de su
+ * ficha sin traer el historial completo.
+ *
+ * Reusa las mismas columnas y el mismo aplanado que obtenerHistorialMedico(): la diferencia es
+ * el `.limit(1)` sobre `atenciones`, que evita traer anios de historial solo para quedarse con
+ * el primer evento. El chequeo de rol es el mismo (puedeVerHistorial), y por la misma razon: no
+ * es una barrera de seguridad, es no disparar una consulta que RLS va a vaciar.
+ *
+ * @param {string} pacienteId UUID del paciente.
+ * @param {object} [opciones]
+ * @param {string} [opciones.rol] Rol de quien consulta, para el chequeo previo.
+ * @returns {Promise<{ ultimaAtencion: object|null, error: object|null }>}
+ */
+export async function obtenerUltimaAtencion(pacienteId, { rol } = {}) {
+  if (!pacienteId) return { ultimaAtencion: null, error: null };
+
+  if (rol !== undefined && !puedeVerHistorial(rol)) {
+    return { ultimaAtencion: null, error: null };
+  }
+
+  try {
+    const { data, error } = await obtenerSupabase()
+      .from("atenciones")
+      .select(COLUMNAS_DEL_HISTORIAL)
+      .eq("paciente_id", pacienteId)
+      .order("created_at", { ascending: false })
+      .limit(1);
+
+    if (error) return { ultimaAtencion: null, error: normalizarError(error) };
+
+    const eventos = ordenarCronologicamente((data ?? []).flatMap(aEventos));
+    return { ultimaAtencion: eventos[0] ?? null, error: null };
+  } catch (error) {
+    return { ultimaAtencion: null, error: normalizarError(error) };
   }
 }
