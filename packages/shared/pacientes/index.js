@@ -48,3 +48,5 @@ export * from "./signos.js";
 export * from "./useEvolucionSignos.js";
 export * from "./useRecetasPaciente.js";
 export * from "./recetas.imprimible.js";
+export * from "./useCondicionesPaciente.js";
+export * from "./usePacientesCronicos.js";

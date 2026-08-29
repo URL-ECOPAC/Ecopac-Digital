@@ -9,6 +9,7 @@ import NuevaContrasenaPage from './pages/NuevaContrasenaPage';
 import HomePage from './pages/HomePage';
 import PacientesPage from './pages/PacientesPage';
 import FichaPacientePage from './pages/FichaPacientePage';
+import PacientesCronicosPage from './pages/PacientesCronicosPage';
 import DonacionesPage from './pages/DonacionesPage';
 import InventarioPage from './pages/InventarioPage';
 import PresupuestosPage from './pages/PresupuestosPage';
@@ -58,6 +59,10 @@ export default function App() {
                   el guard y los roles de /pacientes. Las pestanias clinicas de la ficha las
                   esconde ademas puedeVerHistorial(), porque no todos los roles que entran al
                   modulo pueden ver diagnosticos (RNF-09). */}
+              {/* /pacientes/cronicos (issue #132) va ANTES que /pacientes/:id: aunque React
+                  Router prioriza el segmento estatico sobre el dinamico, dejarlas en este orden
+                  hace evidente por que "cronicos" no cae en la ficha de un paciente. */}
+              <Route path="/pacientes/cronicos" element={<PacientesCronicosPage />} />
               <Route path="/pacientes/:id" element={<FichaPacientePage />} />
             </Route>
             <Route element={<RutaProtegida roles={rolesDe('/donaciones')} />}>
