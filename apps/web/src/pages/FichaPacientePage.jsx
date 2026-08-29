@@ -148,7 +148,7 @@ export default function FichaPacientePage() {
         )}
 
         {pestaniaActiva === 'recetas' && (
-          <PestaniaRecetasPaciente pacienteId={paciente.id} rol={rol} />
+          <PestaniaRecetasPaciente paciente={paciente} rol={rol} />
         )}
       </Tabs>
 
