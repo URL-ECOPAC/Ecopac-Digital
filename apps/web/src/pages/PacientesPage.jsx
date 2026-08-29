@@ -1,3 +1,5 @@
+import { useNavigate } from 'react-router-dom';
+
 import { COLUMNAS_PACIENTE, FILTROS_PACIENTE, usePacientesListado } from '@ecopac/shared';
 
 import DataList from '../components/DataList';
@@ -19,14 +21,14 @@ import SecondaryButton from '../components/SecondaryButton';
 // busqueda, Lugar, Genero y Rango de edad. La condicion cronica es un quinto filtro que el
 // wireframe no dibuja pero que pide el criterio 3.
 //
-// Ni la fila ni la cabecera navegan todavia: la ficha del paciente es la #125 y el formulario
-// de registro la #126, y ninguna de esas rutas existe aun en App.jsx. Enlazarlas ahora daria un
-// 404, que es exactamente lo que paso en la #105 y que la #107 tuvo que limpiar. Cuando esas
-// dos issues existan, aqui se agregan el onRowPress y la accion de cabecera.
+// La fila ya navega a la ficha del paciente, que existe desde la #125. La accion de cabecera
+// sigue sin ponerse: el formulario de registro es la #126 y su ruta todavia no esta en App.jsx,
+// asi que enlazarla daria el mismo 404 que la #107 tuvo que limpiar.
 //
 // La version movil de esta misma pantalla es la #133 y consume el mismo hook con los mismos
 // descriptores; lo unico que cambia es que DataList se dibuja como tarjetas.
 export default function PacientesPage() {
+  const navigate = useNavigate();
   const {
     filas,
     filtros,
@@ -72,6 +74,7 @@ export default function PacientesPage() {
         datos={filas}
         cargando={cargando}
         catalogos={catalogos}
+        onRowPress={(fila) => navigate(`/pacientes/${fila.id}`)}
         // El estado vacio sugiere registrar, que es lo que pide el criterio 4. Si hay filtros
         // puestos, lo que falta no es un paciente nuevo sino aflojar la busqueda.
         vacio={

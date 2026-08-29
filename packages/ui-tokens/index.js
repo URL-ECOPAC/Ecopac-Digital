@@ -76,6 +76,10 @@ export const statusColors = {
   planificado: colors.info,
   finalizado: colors.secondary,
   cancelado: colors.danger,
+  // estado_condicion_cronica (padecimientos_cronicos.estado, 00010_condiciones_cronicas.sql)
+  activa: colors.warning,
+  controlada: colors.success,
+  resuelta: colors.secondary,
 };
 
 /**
