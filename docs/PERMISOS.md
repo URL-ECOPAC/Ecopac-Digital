@@ -209,7 +209,7 @@ administrador**, por dos motivos independientes que detalla la Divergencia 1 (re
 | Tabla                 | administrador | junta directiva / socio fundador | medico      | voluntario general | Como se implementa                             |
 | --------------------- | ------------- | -------------------------------- | ----------- | ------------------ | ---------------------------------------------- |
 | `perfiles`            | C R U         | R el propio                      | R el propio | R el propio        | `00038`. Cada quien lee y edita solo su perfil. La fila la crea el trigger de la `00002`, que desde la `00074` rechaza el alta si viene del registro publico |
-| `perfil_especialidad` | R             | R la propia                      | R la propia | R la propia        | `00058`. **Falta la escritura: issue #405**    |
+| `perfil_especialidad` | C R D         | R                                 | C R D la propia | C R D la propia | `00058`, `00085`. `es_administrador()` lee/escribe cualquiera; `es_consultivo()` solo lee cualquiera; cada perfil crea y borra las suyas. Sin UPDATE: la PK incluye el nombre, cambiar una especialidad es borrar e insertar |
 | `permisos`            | R             | R                                | R           | R                  | `00038`. Catalogo de solo lectura              |
 | `rol_permiso`         | R             | R                                | R           | R                  | `00038`. Solo lectura                          |
 | `usuario_permiso`     | C R U D       | R el propio                      | R el propio | R el propio        | `00038`, con auditoria en `00045`              |
