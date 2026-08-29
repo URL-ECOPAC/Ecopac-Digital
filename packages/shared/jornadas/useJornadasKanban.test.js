@@ -1,15 +1,22 @@
-// Pruebas de la logica pura del tablero de jornadas (issue #178).
+// Pruebas de la logica pura del tablero de jornadas (issue #178, movimiento de tarjetas #180).
 //
 // No se monta el hook: packages/shared corre vitest con environment "node", sin DOM. Por eso
-// catalogoComunidadesDesde() y agruparJornadasPorEstado() son funciones exportadas y no codigo
-// suelto dentro de useJornadasKanban(), mismo criterio que armarFilas() en
-// usuarios/useUsuariosListado.js.
+// catalogoComunidadesDesde(), agruparJornadasPorEstado() y
+// necesitaAvisoDeAtencionesIncompletas() son funciones exportadas y no codigo suelto dentro de
+// useJornadasKanban(), mismo criterio que armarFilas() en usuarios/useUsuariosListado.js y que
+// valoresIniciales()/aDatosDeJornada() en useFormularioJornada.test.js. La orquestacion asincrona
+// del movimiento (moverJornada, aplicarMovimiento, confirmarFinalizacion) vive dentro del hook y
+// no se prueba aca, mismo criterio que enviar() en useFormularioJornada.js.
 //
 // Ningun dato real: las jornadas y comunidades son inventadas.
 
 import { describe, expect, it } from "vitest";
 
-import { agruparJornadasPorEstado, catalogoComunidadesDesde } from "./useJornadasKanban.js";
+import {
+  agruparJornadasPorEstado,
+  catalogoComunidadesDesde,
+  necesitaAvisoDeAtencionesIncompletas,
+} from "./useJornadasKanban.js";
 
 function jornada(datos) {
   return {
@@ -122,5 +129,23 @@ describe("agruparJornadasPorEstado", () => {
 
     expect(columna.tarjetas[0].comunidad).toBe("");
     expect(columna.tarjetas[0].responsable).toBe("");
+  });
+});
+
+describe("necesitaAvisoDeAtencionesIncompletas", () => {
+  it("en curso -> finalizada si necesita el aviso (issue #171, criterio 4)", () => {
+    expect(necesitaAvisoDeAtencionesIncompletas("en curso", "finalizada")).toBe(true);
+  });
+
+  it("planificada -> en curso no necesita el aviso", () => {
+    expect(necesitaAvisoDeAtencionesIncompletas("planificada", "en curso")).toBe(false);
+  });
+
+  it("finalizada -> en curso (reapertura) no necesita el aviso", () => {
+    expect(necesitaAvisoDeAtencionesIncompletas("finalizada", "en curso")).toBe(false);
+  });
+
+  it("un destino distinto de finalizada nunca lo necesita, sin importar el origen", () => {
+    expect(necesitaAvisoDeAtencionesIncompletas("en curso", "cancelada")).toBe(false);
   });
 });

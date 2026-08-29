@@ -27,6 +27,7 @@ export * from "./atenciones/index.js";
 export * from "./donaciones/index.js";
 export * from "./presupuestos/index.js";
 export * from "./reportes/index.js";
+export * from "./territorio/index.js";
 export * from "./api/index.js";
 export * from "./hooks/index.js";
 // Sin extension: el archivo es types/index.ts desde el PR #377. Vite resuelve el cambio de

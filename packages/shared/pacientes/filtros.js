@@ -26,7 +26,7 @@ export const FILTROS_PACIENTE = [
   {
     id: 'sexo',
     tipo: TIPOS_DE_FILTRO.SELECT,
-    label: 'Genero',
+    label: 'Sexo',
     opcionesDesde: 'sexo',
   },
   {

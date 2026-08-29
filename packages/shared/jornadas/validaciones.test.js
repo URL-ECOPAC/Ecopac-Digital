@@ -12,6 +12,7 @@ import { ROLES } from "../usuarios/roles.js";
 import { ESTADOS_JORNADA } from "./permisos.js";
 import {
   advertirChoqueDeHorario,
+  advertirJornadaDuplicada,
   esTransicionDeJornadaValida,
   puedeRegistrarEnJornada,
   transicionesDeJornadaDesde,
@@ -342,5 +343,48 @@ describe("advertirChoqueDeHorario", () => {
   it("no advierte si no hay perfil elegido", () => {
     expect(advertirChoqueDeHorario({ perfil: "", jornadaActualId: "j1", asignacionesDelDia: [] }))
       .toBeNull();
+  });
+});
+
+describe("advertirJornadaDuplicada", () => {
+  it("no advierte si listarJornadas no devolvio ninguna fila", () => {
+    expect(advertirJornadaDuplicada({ jornadas: [] })).toBeNull();
+  });
+
+  it("advierte con el nombre de la jornada existente", () => {
+    const advertencia = advertirJornadaDuplicada({
+      jornadas: [{ id: "j1", nombre: "Jornada en Solola" }],
+    });
+
+    expect(advertencia).toContain("Jornada en Solola");
+  });
+
+  it("junta los nombres si hay mas de una coincidencia", () => {
+    const advertencia = advertirJornadaDuplicada({
+      jornadas: [
+        { id: "j1", nombre: "Jornada matutina" },
+        { id: "j2", nombre: "Jornada vespertina" },
+      ],
+    });
+
+    expect(advertencia).toContain("Jornada matutina");
+    expect(advertencia).toContain("Jornada vespertina");
+  });
+
+  it("no cuenta la propia jornada como duplicado al editar", () => {
+    const advertencia = advertirJornadaDuplicada({
+      jornadas: [{ id: "j1", nombre: "La propia" }],
+      jornadaActualId: "j1",
+    });
+
+    expect(advertencia).toBeNull();
+  });
+
+  it("en el alta (sin jornadaActualId) advierte contra cualquier fila que llegue", () => {
+    const advertencia = advertirJornadaDuplicada({
+      jornadas: [{ id: "j1", nombre: "Jornada existente" }],
+    });
+
+    expect(advertencia).not.toBeNull();
   });
 });

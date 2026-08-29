@@ -82,9 +82,11 @@ que actualizar los dos lugares.
 Ya se cumple; no hubo que cambiar codigo.
 
 - Supabase Auth (GoTrue) guarda las contrasenas hasheadas con **bcrypt** en
-  `auth.users.encrypted_password`. El repositorio nunca toca esa columna ni la tabla
-  `auth.users` directamente: solo llama a `auth.signInWithPassword` / `auth.signUp` de
-  `supabase-js`, que nunca devuelve el hash al cliente.
+  `auth.users.encrypted_password`. El repositorio nunca toca esa columna: solo llama a
+  `auth.signInWithPassword` de `supabase-js`, que nunca devuelve el hash al cliente. (Antes esta
+  linea decia tambien `auth.signUp`; se corrigio con la issue #508, porque **no hay ninguna
+  llamada a `signUp` en el repositorio** y mencionarla daba a entender que el registro desde el
+  cliente era parte del diseno.)
 - Se revisaron todos los `console.log/error/warn` de `packages/shared` y las pantallas de login
   de ambas apps. Ninguno loguea el objeto de credenciales completo (`{correo, contrasena}`).
   Los dos `console.warn` de
@@ -95,6 +97,70 @@ Ya se cumple; no hubo que cambiar codigo.
   #101, no de esta; se dejo sin tocar.
 - `apps/mobile/src/screens/LoginScreen.js` es un placeholder sin logica de login todavia, asi
   que no hay nada que revisar ahi por ahora.
+
+## Alta de cuentas: quien entra al sistema y como (issue #508)
+
+**En este sistema nadie se da de alta a si mismo.** El registro publico esta cerrado.
+
+Estuvo abierto hasta el 28 de agosto de 2026, y no era teorico: un `POST /auth/v1/signup` con la
+llave anonima -que viaja en el bundle del navegador y es publica por diseno- devolvia una sesion
+utilizable. El trigger `trg_auth_users_crear_perfil` de la `00002` creaba entonces el perfil sin
+`rol` ni `activo`, que caen a sus DEFAULT: `voluntario general` y `TRUE`. Ese rol no es de solo
+lectura -por las politicas de la `00032` y la `00033` lee y registra pacientes, expedientes,
+atenciones y triajes-, asi que cualquiera obtenia acceso de escritura a datos clinicos. Se
+comprobo contra el stack local: la cuenta recien creada leyo la tabla `pacientes` y registro uno
+nuevo.
+
+### Las dos capas que lo cierran
+
+| Capa | Donde | Que alcanza |
+| --- | --- | --- |
+| `enable_signup = false` en `[auth]` | `supabase/config.toml` | Stack local y CI. **No alcanza los proyectos remotos** |
+| Ajuste "Allow new users to sign up" | Dashboard de cada proyecto | Solo el proyecto donde se toca |
+| Trigger de la migracion `00074` | Base de datos | **Los tres ambientes**, porque viaja con `db push` |
+
+La tercera es la que importa, por lo que explica la seccion 4 de este documento: `config.toml` no
+se sincroniza con los proyectos remotos. El trigger rechaza cualquier alta que venga de GoTrue sin
+la marca administrativa en `raw_app_meta_data`, columna que **el cliente no puede escribir**: un
+`signup` solo controla `raw_user_meta_data`. Asi la proteccion no depende de que nadie vuelva a
+activar el ajuste en un Dashboard.
+
+> **Cuidado al tocar `config.toml`:** basta con `enable_signup = false` en `[auth]`. Ponerlo
+> **tambien** en `[auth.email]` apaga el proveedor de correo entero y el login empieza a
+> responder `422 email_provider_disabled`: deja de entrar todo el mundo. Comprobado.
+
+### Estado de cada ambiente
+
+- **Local y CI**: cerrado por `config.toml`.
+- **`Ecopac-Digital-Dev`**: revisado en el Dashboard el 28 de agosto de 2026. "Allow new users to
+  sign up" estaba **activado**. "Confirm email" tambien, lo que obliga a confirmar el correo antes
+  de poder iniciar sesion, pero **el perfil se crea igual** con rol `voluntario general`, y quien
+  use un buzon propio completa el paso sin problema. Cerrar ese ajuste es una tarea de Dashboard,
+  no de este repositorio; hasta que se haga, **quien protege a dev es el trigger de la `00074`**,
+  y por eso la defensa no se dejo solo en `config.toml`.
+- **`Ecopac-Digital-Prod`**: existe y esta **pausado**, asi que su API no responde y su
+  configuracion no se puede leer sin reanudarlo. **Al reanudarlo hay que comprobar y cerrar el
+  registro antes de exponerlo**: el default de Supabase al crear un proyecto es tenerlo abierto.
+  La migracion `00074` lo protege en cuanto se le apliquen las migraciones.
+
+### Como se da de alta a una persona
+
+La via prevista es la Edge Function `invitar-usuario`, que `packages/shared/usuarios/api.js`
+invoca desde `crearUsuario()`. **Esa funcion todavia no existe** (`supabase/functions/` solo tiene
+un `.gitkeep`), asi que el alta desde la aplicacion no funciona; tiene su propia issue.
+
+Mientras tanto, la administradora ejecuta desde el SQL editor del Dashboard:
+
+```sql
+SELECT fn_crear_usuario_administrativo(
+  'persona@ejemplo.org', 'Nombres', 'Apellidos', 'medico'
+);
+```
+
+La funcion crea la cuenta con la marca administrativa, su fila en `auth.identities` y el perfil
+con el rol indicado. **No fija contrasena**, por el mismo criterio que el primer administrador de
+la `00063`: la persona la establece con "olvide mi contrasena". Es tambien lo que llamara la Edge
+Function cuando se escriba.
 
 ## 4. `supabase/config.toml`: que aplica y que no
 

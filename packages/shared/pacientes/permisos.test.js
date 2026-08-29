@@ -9,6 +9,7 @@ import { describe, expect, it } from "vitest";
 import { ROLES } from "../usuarios/roles.js";
 import {
   permisosDePacientes,
+  puedeAnularReceta,
   puedeCorregirTriaje,
   puedeCrearExpediente,
   puedeEditarExpediente,
@@ -78,6 +79,14 @@ describe("permisos de pacientes y expedientes", () => {
     });
   });
 
+  it("no arrastra configuracion: importar permisos.js no exige entorno ni conexion", async () => {
+    // permisos.js importa ESTADOS_RECETA de recetas.api.js, que a su vez llega a
+    // @supabase/supabase-js. Es seguro porque obtenerSupabase() crea el cliente al llamarlo, no
+    // al importar el modulo; esta prueba lo fija para que nadie convierta eso en efecto de
+    // importacion sin enterarse.
+    await expect(import("./permisos.js")).resolves.toBeTruthy();
+  });
+
   it("agrupa los permisos para que un hook no llame a las funciones sueltas", () => {
     expect(permisosDePacientes(ROLES.VOLUNTARIO)).toEqual({
       puedeVer: true,
@@ -96,5 +105,43 @@ describe("permisos de pacientes y expedientes", () => {
       puedeTomarTriaje: true,
       puedeCorregirTriaje: true,
     });
+  });
+});
+
+describe("puedeAnularReceta", () => {
+  const RECETA_PROPIA_EMITIDA = { medicoId: "per-medico", estado: "emitida" };
+
+  it("el medico anula la receta que el firmo mientras siga emitida", () => {
+    expect(puedeAnularReceta(ROLES.MEDICO, RECETA_PROPIA_EMITIDA, "per-medico")).toBe(true);
+  });
+
+  it("no anula la receta de otro medico: es el bug de la issue #510", () => {
+    const ajena = { medicoId: "per-otro", estado: "emitida" };
+
+    expect(puedeAnularReceta(ROLES.MEDICO, ajena, "per-medico")).toBe(false);
+  });
+
+  it("no vuelve a tocar la suya una vez anulada", () => {
+    const anulada = { medicoId: "per-medico", estado: "anulada" };
+
+    expect(puedeAnularReceta(ROLES.MEDICO, anulada, "per-medico")).toBe(false);
+  });
+
+  it("la administradora anula cualquiera, en cualquier estado: es la via de correccion", () => {
+    const ajena = { medicoId: "per-otro", estado: "anulada" };
+
+    expect(puedeAnularReceta(ROLES.ADMINISTRADOR, ajena, "per-admin")).toBe(true);
+    expect(puedeAnularReceta(ROLES.ADMINISTRADOR, null, null)).toBe(true);
+  });
+
+  it("los demas roles no anulan nada", () => {
+    for (const rol of [ROLES.VOLUNTARIO, ROLES.JUNTA_DIRECTIVA, ROLES.SOCIO_FUNDADOR]) {
+      expect(puedeAnularReceta(rol, RECETA_PROPIA_EMITIDA, "per-medico")).toBe(false);
+    }
+  });
+
+  it("sin receta o sin perfil no concede nada a un medico", () => {
+    expect(puedeAnularReceta(ROLES.MEDICO, null, "per-medico")).toBe(false);
+    expect(puedeAnularReceta(ROLES.MEDICO, RECETA_PROPIA_EMITIDA, null)).toBe(false);
   });
 });

@@ -17,6 +17,9 @@
 // (padecimientos_cronicos, 00010) con su propia matriz de roles, y se queda como esta.
 
 import { esAdministrador, ROLES } from "../usuarios/roles.js";
+// El estado se importa en vez de escribir 'emitida' a mano: el enum estado_receta lo define la
+// 00066 y su unica copia en shared vive en recetas.api.js (regla del bug #365).
+import { ESTADOS_RECETA } from "./recetas.api.js";
 
 /**
  * Puede ver pacientes.
@@ -93,10 +96,42 @@ export function puedeCorregirTriaje(rol) {
 }
 
 /**
+ * Puede anular una receta concreta.
+ *
+ * Espejo de la politica de UPDATE de recetas (00075, issue #510). Es la primera funcion de este
+ * archivo que **no depende solo del rol**, y por eso su firma es distinta: la regla mira quien
+ * firmo la receta y en que estado esta.
+ *
+ *   - La administradora anula cualquiera, en cualquier estado. Es la via de correccion.
+ *   - El medico anula unicamente las que el firmo, y solo mientras sigan emitidas: anular es un
+ *     hecho registrado, y reescribirlo destruiria la trazabilidad que protege la 00026.
+ *
+ * @param {string} rol Rol de quien mira la pantalla.
+ * @param {{ medicoId?: string, estado?: string }} receta La receta, como la devuelve
+ *   obtenerReceta(): en camelCase.
+ * @param {string} perfilId UUID del perfil de la sesion.
+ * @returns {boolean}
+ */
+export function puedeAnularReceta(rol, receta, perfilId) {
+  if (esAdministrador(rol)) return true;
+  if (!receta || !perfilId) return false;
+
+  return (
+    rol === ROLES.MEDICO &&
+    receta.medicoId === perfilId &&
+    receta.estado === ESTADOS_RECETA.EMITIDA
+  );
+}
+
+/**
  * Permisos de un rol, en la forma que consume una pantalla.
  *
  * Se devuelven juntos para que un hook no tenga que llamar a las funciones sueltas ni acordarse
  * de cuales existen.
+ *
+ * puedeAnularReceta no esta aqui a proposito: no depende solo del rol, sino de la receta que se
+ * este mirando, asi que se pregunta fila por fila y meterla en este objeto obligaria a recalcular
+ * el bloque entero por cada receta de la lista.
  */
 export function permisosDePacientes(rol) {
   return {
