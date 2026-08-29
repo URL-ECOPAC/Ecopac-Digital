@@ -23,6 +23,7 @@ import {
   normalizarError,
 } from "../api/errores-de-supabase.js";
 import { normalizarTexto } from "../validations/index.js";
+import { ESTADOS_CONDICION_CRONICA } from "./condiciones.campos.js";
 import { validarRegistroPaciente } from "./validaciones.js";
 
 // Las columnas se enumeran en lugar de pedir "*" para que una columna nueva en pacientes no
@@ -343,8 +344,10 @@ const POR_PAGINA_POR_DEFECTO = 20;
 
 // Mismas columnas que necesita la ficha clinica (COLUMNAS_DEL_PACIENTE), pero solo el
 // subconjunto minimo para una lista de resultados de busqueda (columnas.js,
-// COLUMNAS_PACIENTE): sin condiciones cronicas ni datos de contacto, que no ayudan a
-// elegir entre resultados y cuestan una consulta o un join de mas. fechaBaja viaja para
+// COLUMNAS_PACIENTE): sin datos de contacto, que no ayudan a elegir entre resultados y
+// cuestan un join de mas. Las condiciones cronicas SI viajan desde la issue #535: la
+// columna de chips que COLUMNAS_PACIENTE declara desde el PR #311 no tenia de donde leer,
+// y se resuelven con un embebido en vez de una segunda consulta. fechaBaja viaja para
 // poder excluir de buscarPacientePorFicha() a quien este dado de baja (mismo criterio que
 // fn_buscar_pacientes) y se descarta antes de devolver el paciente.
 const COLUMNAS_DE_BUSQUEDA_PACIENTE = [
@@ -356,7 +359,27 @@ const COLUMNAS_DE_BUSQUEDA_PACIENTE = [
   "comunidadId:comunidad_id",
   "fechaBaja:fecha_baja",
   "comunidad:comunidades(nombre)",
+  `condicionesCronicas:padecimientos_cronicos(${COLUMNAS_DE_CONDICION_CRONICA})`,
 ].join(", ");
+
+/**
+ * Reduce los padecimientos de un paciente a los nombres de los que sigue padeciendo.
+ *
+ * Vigente es estado distinto de resuelta -- o sea activa y controlada -- misma definicion que
+ * usa soloVigentes en obtenerCondicionesDelPaciente() (#122): una condicion controlada se sigue
+ * padeciendo. La 00077 aplica esta misma regla del lado del servidor, para la busqueda por
+ * nombre; aqui se repite porque la sonda por numero de ficha no pasa por esa funcion.
+ *
+ * @param {object[]} padecimientos
+ * @returns {string[]} Nombres ordenados, listos para la columna de chips.
+ */
+function nombresDeCondicionesVigentes(padecimientos = []) {
+  return padecimientos
+    .filter((uno) => uno?.estado !== ESTADOS_CONDICION_CRONICA.RESUELTA)
+    .map((uno) => uno?.condicion?.nombre)
+    .filter(Boolean)
+    .sort((uno, otro) => uno.localeCompare(otro, "es"));
+}
 
 /** Traduce una fila de fn_buscar_pacientes (snake_case) a un paciente de resultado de busqueda. */
 function aPacienteDeBusqueda(fila) {
@@ -370,6 +393,9 @@ function aPacienteDeBusqueda(fila) {
     comunidad: fila.comunidad_nombre ? { nombre: fila.comunidad_nombre } : null,
     numeroFicha: fila.numero_ficha,
     ultimaAtencion: fila.ultima_atencion ?? null,
+    // La 00077 la devuelve siempre como arreglo, vacio incluido. El ?? [] cubre a un cliente
+    // que todavia hable con una base sin esa migracion aplicada.
+    condiciones: fila.condiciones ?? [],
     relevancia: fila.relevancia,
   };
 }
@@ -405,8 +431,13 @@ export async function buscarPacientePorFicha(numeroFicha, { signal } = {}) {
     if (error) return { paciente: null, error: normalizarError(error) };
     if (!data?.paciente || data.paciente.fechaBaja) return { paciente: null, error: null };
 
-    const paciente = { ...data.paciente, numeroFicha: data.numeroFicha };
+    const paciente = {
+      ...data.paciente,
+      numeroFicha: data.numeroFicha,
+      condiciones: nombresDeCondicionesVigentes(data.paciente.condicionesCronicas),
+    };
     delete paciente.fechaBaja;
+    delete paciente.condicionesCronicas;
     return { paciente, error: null };
   } catch (error) {
     if (esErrorDeCancelacion(error)) return { paciente: null, error: null, cancelada: true };
