@@ -90,3 +90,37 @@ export function validarRegistroPaciente(datosObjeto) {
   const erroresNegocio = erroresDeNegocioPaciente(datos);
   return combinarErrores(erroresDescriptores, erroresNegocio);
 }
+function claveDeNombre(nombres, apellidos) {
+  return [nombres, apellidos]
+    .map((parte) => normalizarTexto(parte))
+    .join(" ")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
+export function advertirPacienteDuplicado({ pacientes, nombres, apellidos, fechaNacimiento } = {}) {
+  if (esTextoVacio(fechaNacimiento)) return null;
+
+  const clave = claveDeNombre(nombres, apellidos);
+  if (!clave) return null;
+
+  const coincidencias = (pacientes ?? []).filter(
+    (paciente) =>
+      paciente?.fechaNacimiento === fechaNacimiento &&
+      claveDeNombre(paciente?.nombres, paciente?.apellidos) === clave,
+  );
+
+  if (coincidencias.length === 0) return null;
+
+  const fichas = coincidencias
+    .map((paciente) => paciente.expediente?.numeroFicha ?? paciente.numeroFicha)
+    .filter(Boolean)
+    .join(", ");
+
+  return fichas
+    ? `Ya existe un paciente con ese nombre y fecha de nacimiento: ficha ${fichas}. Revisa antes de crear un expediente nuevo.`
+    : "Ya existe un paciente con ese nombre y fecha de nacimiento. Revisa antes de crear un expediente nuevo.";
+}

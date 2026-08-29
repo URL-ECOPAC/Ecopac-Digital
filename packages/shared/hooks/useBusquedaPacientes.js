@@ -189,9 +189,12 @@ export function useBusquedaPacientes({
     consultar(pagina + 1);
   }, [cargando, resultados.length, total, pagina, consultar]);
 
+  const recargar = useCallback(() => consultar(1), [consultar]);
+
   return {
     termino,
     setTermino,
+    recargar,
     resultados,
     total,
     cargando,
