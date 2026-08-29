@@ -5,10 +5,16 @@ import { calcularEdad } from "../formato/fechas.js";
 import { obtenerCatalogoDeCondiciones } from "./condiciones.api.js";
 import { FILTROS_PACIENTE_VACIOS } from "./filtros.js";
 
-/** Opciones del filtro de genero. Coinciden con lo que guarda pacientes.sexo (00009). */
+/**
+ * Opciones del filtro de sexo.
+ *
+ * El valor es la etiqueta, y no una inicial, porque pacientes.sexo es un varchar(20) sin CHECK
+ * que guarda la palabra completa. Mandar "F" hacia fn_buscar_pacientes comparaba "F" con
+ * "Femenino" y devolvia cero filas sin error: el filtro parecia funcionar y no filtraba nada.
+ */
 export const OPCIONES_SEXO = [
-  { valor: "F", etiqueta: "Femenino" },
-  { valor: "M", etiqueta: "Masculino" },
+  { valor: "Femenino", etiqueta: "Femenino" },
+  { valor: "Masculino", etiqueta: "Masculino" },
 ];
 
 /**
@@ -40,6 +46,11 @@ export function catalogoComunidadesDePacientes(pacientes = []) {
  * misma utilidad que usa el resto del sistema, y la regla de la arquitectura es que las apps no
  * formatean ni calculan nada.
  *
+ * De calcularEdad() se toma solo .anios: devuelve { anios, meses, texto } desde el PR #335, y la
+ * columna esta declarada NUMERO con sufijo "anios", asi que recibir el objeto entero pintaba
+ * "[object Object] anios". Una fecha invalida o futura deja la celda vacia, que es lo que
+ * calcularEdad() indica devolviendo null.
+ *
  * @param {object[]} pacientes
  * @returns {object[]}
  */
@@ -47,7 +58,7 @@ export function armarFilasDePacientes(pacientes = []) {
   return pacientes.map((paciente) => ({
     ...paciente,
     nombreCompleto: [paciente.nombres, paciente.apellidos].filter(Boolean).join(" ").trim(),
-    edad: calcularEdad(paciente.fechaNacimiento),
+    edad: calcularEdad(paciente.fechaNacimiento)?.anios ?? null,
     comunidad: paciente.comunidad?.nombre ?? null,
   }));
 }
