@@ -160,10 +160,13 @@ describe("permisos", () => {
     expect(puedeAdministrarProyectos(ROLES.VOLUNTARIO)).toBe(false);
   });
 
-  it("cualquier rol conocido puede ver los proyectos", () => {
-    for (const rol of Object.values(ROLES)) {
-      expect(puedeVerProyectos(rol)).toBe(true);
-    }
+  it("administrador y los dos roles consultivos ven proyectos; medico y voluntario no, espejo de la 00080", () => {
+    expect(puedeVerProyectos(ROLES.ADMINISTRADOR)).toBe(true);
+    expect(puedeVerProyectos(ROLES.JUNTA_DIRECTIVA)).toBe(true);
+    expect(puedeVerProyectos(ROLES.SOCIO_FUNDADOR)).toBe(true);
+
+    expect(puedeVerProyectos(ROLES.MEDICO)).toBe(false);
+    expect(puedeVerProyectos(ROLES.VOLUNTARIO)).toBe(false);
   });
 
   it("un rol que no existe no puede nada", () => {
@@ -178,7 +181,7 @@ describe("permisos", () => {
 
   it("agrupa los permisos para que un hook no llame a las tres por separado", () => {
     expect(permisosDeProyectos(ROLES.MEDICO)).toEqual({
-      puedeVer: true,
+      puedeVer: false,
       puedeCrear: false,
       puedeEditar: false,
       puedeCambiarEstado: false,
