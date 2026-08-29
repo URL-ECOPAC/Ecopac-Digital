@@ -19,14 +19,66 @@ CI, asi que un CI en rojo no detiene un deploy de Vercel.
 
 Un solo job, **Lint y build**, que corre en este orden:
 
-1. `npm run lint` en todos los workspaces.
-2. `npm test` en todos los workspaces que tengan el script (issue #218).
-3. Build de la web con los secrets del ambiente que corresponde a la rama.
+1. **Guarda de esquema**: `packages/shared` contra `supabase/migrations/` (issue #492).
+2. `npm run lint` en todos los workspaces.
+3. `npm test` en todos los workspaces que tengan el script (issue #218).
+4. Build de la web con los secrets del ambiente que corresponde a la rama.
 
-Las pruebas van antes del build a proposito: una prueba rota se ve en segundos, sin esperar a
-que la web compile. Y van dentro de este job y no en uno propio porque **Lint y build** ya es
-check requerido en `develop` y `main`; un job nuevo no lo seria hasta que alguien lo agregue en
-Settings > Branches, y mientras tanto un PR con pruebas en rojo se podria mergear igual.
+Cada paso va antes del siguiente por lo que cuesta: la guarda de esquema es analisis de texto y
+tarda un segundo; una prueba rota se ve en segundos, sin esperar a que la web compile. Y todo va
+dentro de este job y no en uno propio porque **Lint y build** ya es check requerido en `develop`
+y `main`; un job nuevo no lo seria hasta que alguien lo agregue en Settings > Branches, y
+mientras tanto un PR en rojo se podria mergear igual.
+
+### La guarda de esquema
+
+`scripts/verificar-shared-vs-esquema.mjs` lee las migraciones, construye el inventario de tablas,
+columnas y funciones, y lo compara con lo que `packages/shared` pide. **Falla el PR** si shared
+nombra algo que no existe, diciendo archivo, linea y nombre.
+
+Existe porque **siete issues describen el mismo defecto** (#454, #396, #489, #490, #491, #509,
+#523): codigo de shared que consulta columnas inexistentes, mergeado con el CI en verde. Las
+pruebas no lo detectan y no es descuido: el doble del cliente de Supabase se escribe leyendo el
+codigo que se va a probar, no la migracion, asi que reproduce el mismo error y lo verifica contra
+si mismo. Pasaria en verde aunque el esquema no existiera.
+
+Comprueba, para cada `.from("tabla")` y dentro del mismo statement:
+
+| Que                         | Donde                                                              |
+| --------------------------- | ------------------------------------------------------------------ |
+| que la tabla exista         | `.from()`                                                          |
+| las columnas pedidas        | `.select()`, literal o por constante                               |
+| las columnas de los filtros | `.eq .neq .gt .gte .lt .lte .in .is .like .ilike .contains .order` |
+| **las claves escritas**     | `.insert()`, `.update()`, `.upsert()`                              |
+| que la funcion exista       | `.rpc()`                                                           |
+
+Las claves de escritura son la fila que importa: por ahi entraron #490, #491 y #509, y es lo que
+una revision por encima no mira.
+
+**Lo que no comprueba, a proposito**, y lo dice en cada corrida en vez de callarlo:
+
+- **Las columnas de las vistas.** Salen del `SELECT` que las define, y `vista_reporte_impacto` se
+  redefine en la 00027, la 00054 y la 00064. Los siete defectos conocidos eran sobre tablas.
+- **Los `.rpc()` con nombre dinamico**, que no se resuelven sin ejecutar el codigo.
+- **Los `.select()` cuya constante no se pueda resolver.** Hoy son dos, las dos de
+  `historial.api.js`, que compone la lista con arrays anidados.
+- **Las Edge Functions.** La comprobacion **esta escrita y probada pero apagada** tras la
+  constante `VERIFICAR_EDGE_FUNCTIONS`: hoy encontraria `invitar-usuario`, que es la issue #523 y
+  tiene dueno. Se enciende poniendola en `true` en el mismo PR que escriba la funcion.
+
+Avisa aparte, sin fallar, de los archivos de `shared` que **ningun barril reexporta**: `vite build`
+no los compila, asi que un error suyo no aparece hasta que alguien conecta la pantalla. Fue el
+segundo motivo por el que #454 paso el CI.
+
+**Salida de emergencia:** la etiqueta **`esquema-verificado-a-mano`** en el PR salta la guarda,
+igual que `migracion-editada-a-proposito` con la de migraciones. Deja un aviso visible en el
+resumen de la corrida, y la descripcion del PR tiene que decir por que.
+
+El analizador tiene sus propias pruebas: `npm run verificar:shared-esquema -- --autoprueba` corre
+catorce casos que cubren las trampas reales del repositorio -`ALTER TABLE` multi-clausula,
+relaciones embebidas anidadas, objetos dentro de llamadas, propiedades shorthand, constantes-.
+`scripts/` no es un workspace, asi que `npm test` no lo alcanza; por eso la autoprueba es un paso
+propio del CI.
 
 ## Que hace el workflow de Supabase
 
@@ -381,6 +433,8 @@ que usa el equipo en local (`supabase --version`).
 Lo que corre el job **Lint y build**:
 
 ```bash
+npm run verificar:shared-esquema
+npm run verificar:shared-esquema -- --autoprueba
 npm run lint
 npm test
 npm run build

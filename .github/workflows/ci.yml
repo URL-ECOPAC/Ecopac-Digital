@@ -33,6 +33,37 @@ jobs:
       - name: Instalar dependencias
         run: npm ci
 
+      # Va primero de las comprobaciones porque es la mas barata: no usa la base de datos ni
+      # credenciales, solo compara texto entre packages/shared y supabase/migrations/, y tarda
+      # un segundo. Corre en el mismo job que el lint para que el check requerido siga
+      # llamandose "Lint y build" y no haya que tocar la proteccion de ramas (issue #492).
+      #
+      # Siete issues describen el mismo defecto -shared consultando columnas que no existen,
+      # mergeado en verde-. Las pruebas no lo detectan porque el doble del cliente de Supabase
+      # se escribe leyendo el codigo que se va a probar, no la migracion.
+      - name: Verificar packages/shared contra el esquema
+        if: >-
+          github.event_name != 'pull_request' ||
+          !contains(github.event.pull_request.labels.*.name, 'esquema-verificado-a-mano')
+        run: npm run verificar:shared-esquema
+
+      - name: Aviso de guarda de esquema desactivada
+        if: >-
+          github.event_name == 'pull_request' &&
+          contains(github.event.pull_request.labels.*.name, 'esquema-verificado-a-mano')
+        run: |
+          echo "::warning::La guarda de esquema se salto por la etiqueta esquema-verificado-a-mano."
+          {
+            echo "## Guarda de esquema desactivada"
+            echo
+            echo "Este PR lleva la etiqueta \`esquema-verificado-a-mano\`, asi que no se comparo"
+            echo "\`packages/shared\` con \`supabase/migrations/\`. La descripcion del PR tiene que"
+            echo "decir por que, y quien revise tiene que comprobar los nombres a mano."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Comprobar el analizador de esquema contra sus propios casos
+        run: npm run verificar:shared-esquema -- --autoprueba
+
       - name: Ejecutar lint en todos los workspaces
         run: npm run lint
 
