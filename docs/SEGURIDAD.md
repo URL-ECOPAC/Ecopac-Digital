@@ -91,10 +91,11 @@ Ya se cumple; no hubo que cambiar codigo.
   de ambas apps. Ninguno loguea el objeto de credenciales completo (`{correo, contrasena}`).
   Los dos `console.warn` de
   [`packages/shared/api/cliente.js`](../packages/shared/api/cliente.js) son mensajes fijos sin
-  datos de usuario. El `console.error` de
-  [`packages/shared/usuarios/useRestablecerContrasena.js:27`](../packages/shared/usuarios/useRestablecerContrasena.js#L27)
-  solo puede traer un correo (esa llamada nunca recibe una contrasena) y es alcance de la issue
-  #101, no de esta; se dejo sin tocar.
+  datos de usuario. `solicitarRestablecimiento()` en
+  [`packages/shared/usuarios/useRestablecerContrasena.js`](../packages/shared/usuarios/useRestablecerContrasena.js)
+  tiene un `catch` vacio a proposito -ni siquiera loguea el correo, que en este proyecto es dato
+  de contacto de una persona real- y el comentario del propio archivo explica por que: distinguir
+  "correo enviado" de "esa cuenta no existe" permitiria enumerar usuarios (issue #101).
 - `apps/mobile/src/screens/LoginScreen.js` es un placeholder sin logica de login todavia, asi
   que no hay nada que revisar ahi por ahora.
 
