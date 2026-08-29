@@ -11,6 +11,7 @@ import { describe, expect, it } from "vitest";
 import {
   RETARDO_DE_BUSQUEDA_MS,
   combinarResultados,
+  debeDescartarseLaRespuesta,
   esRespuestaVigente,
   hayMasResultados,
 } from "./useBusquedaPacientes.js";
@@ -95,5 +96,40 @@ describe("hayMasResultados", () => {
   it("valores ausentes no rompen la comprobacion", () => {
     expect(hayMasResultados(undefined, undefined)).toBe(false);
     expect(hayMasResultados(0, undefined)).toBe(false);
+  });
+});
+
+// Cancelacion de peticiones en vuelo (issue #520).
+//
+// El hook aborta la peticion anterior antes de disparar la siguiente. Lo que se comprueba aqui
+// es la decision que toma al volver una respuesta: cual se pinta y cual se tira. Es la misma
+// razon por la que esRespuestaVigente esta exportada -- sin DOM no se puede montar el hook, asi
+// que la logica que importa vive en una funcion pura.
+describe("debeDescartarseLaRespuesta", () => {
+  it("una respuesta abortada no toca el estado, aunque sea la peticion vigente", () => {
+    expect(debeDescartarseLaRespuesta({ cancelada: true }, 3, 3)).toBe(true);
+  });
+
+  it("el caso del desmontaje: se aborta y no sale ninguna peticion despues", () => {
+    expect(debeDescartarseLaRespuesta({ cancelada: true, error: null }, 1, 1)).toBe(true);
+  });
+
+  it("la respuesta vigente y no abortada si se pinta", () => {
+    expect(debeDescartarseLaRespuesta({ cancelada: false, pacientes: [] }, 4, 4)).toBe(false);
+  });
+
+  it("una respuesta vieja se sigue descartando aunque no venga marcada como cancelada", () => {
+    expect(debeDescartarseLaRespuesta({ cancelada: false }, 2, 5)).toBe(true);
+  });
+
+  it("un error de verdad no se descarta: la pantalla tiene que poder mostrarlo", () => {
+    expect(debeDescartarseLaRespuesta({ cancelada: false, error: { codigo: "x" } }, 7, 7)).toBe(
+      false,
+    );
+  });
+
+  it("una respuesta ausente se trata por su vigencia y no revienta", () => {
+    expect(debeDescartarseLaRespuesta(undefined, 1, 1)).toBe(false);
+    expect(debeDescartarseLaRespuesta(undefined, 1, 2)).toBe(true);
   });
 });

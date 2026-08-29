@@ -7,6 +7,9 @@
 // packages/shared/inventario/medicamentos.api.test.js, porque registrarPaciente() llama
 // fn_registrar_paciente().single().
 //
+// El doble tambien acepta .abortSignal(), que es lo que encadena buscarPacientes cuando recibe
+// una senal de cancelacion (issue #520).
+//
 // Ningun dato real: nombres, DPI y numeros de ficha son inventados.
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -80,6 +83,10 @@ function crearCliente(respuestasPorTabla) {
           llamadas.push({ paso: "eq", tabla, columna, valor });
           return encadenable;
         },
+        abortSignal(signal) {
+          llamadas.push({ paso: "abortSignal", tabla, signal });
+          return encadenable;
+        },
         single: resolver,
         maybeSingle: resolver,
         then(resolve, reject) {
@@ -94,6 +101,10 @@ function crearCliente(respuestasPorTabla) {
       const resolver = resolverDesde(siguienteRespuesta(`rpc:${nombre}`));
 
       const encadenable = {
+        abortSignal(signal) {
+          llamadas.push({ paso: "abortSignal", nombre, signal });
+          return encadenable;
+        },
         single: resolver,
         maybeSingle: resolver,
         then(resolve, reject) {
@@ -751,6 +762,129 @@ describe("buscarPacientes", () => {
     const { pacientes, error } = await buscarPacientes({ termino: "maria" });
 
     expect(pacientes).toEqual([]);
+    expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.PERMISO_DENEGADO);
+  });
+});
+
+// Cancelacion de peticiones en vuelo (issue #520).
+//
+// Hasta esta issue una busqueda descartada seguia viajando por la red: el hook ignoraba la
+// respuesta, pero la consulta ya habia salido. Lo que se comprueba aqui es el contrato que el
+// hook necesita para poder abortar de verdad: que la senal llegue a las dos consultas, y que un
+// aborto se distinga de un fallo.
+describe("buscarPacientes con cancelacion", () => {
+  it("sin senal no encadena abortSignal: quien no cancela no paga ese paso", async () => {
+    const cliente = crearCliente({
+      "rpc:fn_buscar_pacientes": { data: [], error: null },
+      expedientes: { data: null, error: null },
+    });
+    dobles.cliente = cliente;
+
+    await buscarPacientes({ termino: "maria" });
+
+    expect(cliente.llamadas.some((l) => l.paso === "abortSignal")).toBe(false);
+  });
+
+  it("con senal la encadena en la busqueda por nombre y en la sonda de ficha", async () => {
+    const cliente = crearCliente({
+      "rpc:fn_buscar_pacientes": { data: [], error: null },
+      expedientes: { data: null, error: null },
+    });
+    dobles.cliente = cliente;
+    const { signal } = new AbortController();
+
+    await buscarPacientes({ termino: "maria", signal });
+
+    const abortos = cliente.llamadas.filter((l) => l.paso === "abortSignal");
+    expect(abortos).toHaveLength(2);
+    expect(abortos.every((l) => l.signal === signal)).toBe(true);
+    expect(abortos.map((l) => l.nombre ?? l.tabla).sort()).toEqual([
+      "expedientes",
+      "fn_buscar_pacientes",
+    ]);
+  });
+
+  it("un aborto de la busqueda devuelve cancelada, no un error que la pantalla tenga que pintar", async () => {
+    dobles.cliente = crearCliente({
+      "rpc:fn_buscar_pacientes": { data: null, error: { name: "AbortError", message: "The operation was aborted" } },
+      expedientes: { data: null, error: null },
+    });
+
+    const { pacientes, error, cancelada } = await buscarPacientes({
+      termino: "maria",
+      signal: new AbortController().signal,
+    });
+
+    expect(cancelada).toBe(true);
+    expect(error).toBeNull();
+    expect(pacientes).toEqual([]);
+  });
+
+  it("un aborto de la sonda de ficha tambien cancela, aunque la busqueda por nombre respondiera", async () => {
+    dobles.cliente = crearCliente({
+      "rpc:fn_buscar_pacientes": { data: [], error: null },
+      expedientes: { data: null, error: { name: "AbortError", message: "The operation was aborted" } },
+    });
+
+    const { error, cancelada } = await buscarPacientes({
+      termino: "maria",
+      signal: new AbortController().signal,
+    });
+
+    expect(cancelada).toBe(true);
+    expect(error).toBeNull();
+  });
+
+  it("un aborto lanzado como excepcion tampoco se reporta como fallo", async () => {
+    const aborto = new Error("The user aborted a request.");
+    aborto.name = "AbortError";
+    dobles.cliente = crearCliente({
+      "rpc:fn_buscar_pacientes": aborto,
+      expedientes: { data: null, error: null },
+    });
+
+    const { error, cancelada } = await buscarPacientes({
+      termino: "maria",
+      signal: new AbortController().signal,
+    });
+
+    expect(cancelada).toBe(true);
+    expect(error).toBeNull();
+  });
+
+  // El aborto llega con forma distinta segun quien lo lance: DOMException en el navegador,
+  // code ABORT_ERR en Node, y PostgREST puede envolverlo dejando solo el mensaje.
+  it.each([
+    ["DOMException del navegador", { name: "AbortError", message: "signal is aborted" }],
+    ["error de Node", { code: "ABORT_ERR", message: "This operation was aborted" }],
+    ["solo el mensaje, envuelto por PostgREST", { message: "AbortError: The operation was aborted" }],
+  ])("reconoce el aborto que llega como %s", async (_caso, errorDeAborto) => {
+    dobles.cliente = crearCliente({
+      "rpc:fn_buscar_pacientes": { data: null, error: errorDeAborto },
+      expedientes: { data: null, error: null },
+    });
+
+    const { error, cancelada } = await buscarPacientes({
+      termino: "maria",
+      signal: new AbortController().signal,
+    });
+
+    expect(cancelada).toBe(true);
+    expect(error).toBeNull();
+  });
+
+  it("un fallo real sigue siendo un fallo: cancelada en false y error presente", async () => {
+    dobles.cliente = crearCliente({
+      "rpc:fn_buscar_pacientes": { data: null, error: { code: "42501" } },
+      expedientes: { data: null, error: null },
+    });
+
+    const { error, cancelada } = await buscarPacientes({
+      termino: "maria",
+      signal: new AbortController().signal,
+    });
+
+    expect(cancelada).toBe(false);
     expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.PERMISO_DENEGADO);
   });
 });
