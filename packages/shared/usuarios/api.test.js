@@ -620,6 +620,29 @@ describe("borrado fisico", () => {
   });
 });
 
+describe("autenticacion: este modulo no la reimplementa (issue #512)", () => {
+  it("no expone iniciarSesion ni cerrarSesion", () => {
+    // Aqui hubo una segunda copia de las dos. La de iniciarSesion no leia el perfil, asi que no
+    // comprobaba perfil.activo y una cuenta desactivada obtenia sesion valida; la de
+    // cerrarSesion hacia signOut() global, revocando los tokens en todos los dispositivos.
+    //
+    // Esta guarda es lo que impide que vuelvan: mientras nazcan en dos archivos, el barril las
+    // recibe por dos estrellas y ESM las excluye del namespace por ambiguas (bug #365), asi que
+    // el sintoma seria un `undefined` en tiempo de ejecucion y no un error de compilacion.
+    const nombres = Object.keys(modulo);
+
+    expect(nombres).not.toContain("iniciarSesion");
+    expect(nombres).not.toContain("cerrarSesion");
+  });
+
+  it("tampoco ninguna otra funcion de sesion: la autenticacion vive en api/sesion.js", () => {
+    const sospechosas = Object.keys(modulo).filter((nombre) => /sesion/i.test(nombre));
+
+    // reverificarContrasena si autentica, pero no abre ni cierra sesion: confirma una contrasena.
+    expect(sospechosas).toEqual([]);
+  });
+});
+
 describe("listarUsuarios: paginacion (issue #105, criterio 4)", () => {
   it("sin limite se comporta como antes: ni range ni count", async () => {
     const { cliente, llamadas } = doble({ data: [{ id: "u1" }], error: null });

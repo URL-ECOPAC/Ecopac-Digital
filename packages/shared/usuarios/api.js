@@ -412,77 +412,18 @@ export async function contarAdministradoresActivos() {
   }
 }
 
-/**
- * Inicia sesión utilizando email y contraseña con Supabase Auth.
- *
- * @param {string} email Correo electrónico del usuario.
- * @param {string} contrasena Contraseña del usuario.
- * @returns {Promise<{ sesion: object|null, usuario: object|null, error: object|null, erroresDeCampo: object }>}
- */
-
-export async function iniciarSesion(email, contrasena) {
-  const erroresDeCampo = {};
-
-  if (!email?.trim()) {
-    erroresDeCampo.email = "El correo electrónico es obligatorio.";
-  }
-  if (!contrasena) {
-    erroresDeCampo.contrasena = "La contraseña es obligatoria.";
-  }
-
-  if (Object.keys(erroresDeCampo).length > 0) {
-    return {
-      sesion: null,
-      usuario: null,
-      error: { mensaje: "Por favor llena los campos requeridos." },
-      erroresDeCampo,
-    };
-  }
-
-  try {
-    const { data, error } = await obtenerSupabase().auth.signInWithPassword({
-      email,
-      password: contrasena,
-    });
-
-    if (error) {
-      // Mensaje genérico por seguridad (criterio del issue #100)
-      return {
-        sesion: null,
-        usuario: null,
-        error: { mensaje: "Credenciales inválidas. Verifica tus datos." },
-        erroresDeCampo: {},
-      };
-    }
-
-    return {
-      sesion: data.session,
-      usuario: data.user,
-      error: null,
-      erroresDeCampo: {},
-    };
-  } catch (error) {
-    return {
-      sesion: null,
-      usuario: null,
-      error: normalizarError(error),
-      erroresDeCampo: {},
-    };
-  }
-}
-
-/**
- * Cierra la sesión activa en Supabase Auth.
- */
-export async function cerrarSesion() {
-  try {
-    const { error } = await obtenerSupabase().auth.signOut();
-    if (error) return { error: normalizarError(error) };
-    return { error: null };
-  } catch (error) {
-    return { error: normalizarError(error) };
-  }
-}
+// La autenticacion NO vive en este archivo. iniciarSesion() y cerrarSesion() estan en
+// packages/shared/api/sesion.js, que es el unico sitio donde se resuelven.
+//
+// Aqui hubo una segunda copia de las dos, agregada por el PR #424 (issue #100), y divergia en lo
+// que importa: no leia el perfil, asi que **no comprobaba perfil.activo** y una cuenta
+// desactivada obtenia una sesion valida; y su cerrarSesion() hacia signOut() sin scope, o sea
+// global, revocando los refresh tokens del usuario en todos sus dispositivos. El barril tenia que
+// desempatar los dos nombres a mano porque ESM excluye del namespace un nombre que llega por dos
+// estrellas (bug #365).
+//
+// Se borraron con la issue #512. Si hace falta autenticar desde este modulo, se importa de
+// api/sesion.js; no se reimplementa.
 
 /**
  * Comprueba que una contraseña sea la actual de la sesión, sin cerrarla.
@@ -495,10 +436,10 @@ export async function cerrarSesion() {
  * leer su propio perfil (issue #102, verificacion A del plan) - no cierra sesion, no cambia de
  * usuario, no parpadea la pantalla.
  *
- * A proposito NO se llama a usuarios/api.js#iniciarSesion() de este mismo archivo para esto:
- * esa funcion es la copia divergente que no revisa perfil.activo (bug conocido, ver
- * docs/PERMISOS.md), y reusarla aqui heredaria ese hueco justo en el punto donde se confirma
- * una contrasena.
+ * No se llama a iniciarSesion() de api/sesion.js: esa funcion resuelve el perfil y **cierra la
+ * sesion** si la cuenta esta desactivada, que es justo lo que aqui no se quiere -se esta
+ * confirmando una contrasena, no entrando-. Antes este comentario advertia de no reusar la copia
+ * divergente de este mismo archivo; esa copia se borro con la issue #512.
  *
  * @param {string} email Correo del perfil de la sesion actual (perfiles.email es citext).
  * @param {string} contrasenaActual

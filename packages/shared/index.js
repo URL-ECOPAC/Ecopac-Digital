@@ -35,13 +35,12 @@ export * from "./hooks/index.js";
 export * from "./types";
 export * from "./validations/index.js";
 
-// Desempate explicito de iniciarSesion y cerrarSesion. Los dos nombres nacen en dos archivos
-// -api/sesion.js y usuarios/api.js-, asi que el barril los recibe por dos estrellas y ESM los
-// excluye del namespace por ambiguos (issue #365). Se resuelven a la version de api/sesion.js,
-// que es la que valida las credenciales, normaliza el error, resuelve el perfil y cierra la
-// sesion si la cuenta esta desactivada. Unificar las dos implementaciones es trabajo aparte.
-export { iniciarSesion, cerrarSesion } from './api/sesion.js';
-export { obtenerPerfil } from './usuarios/api.js';
+// Aqui habia un desempate explicito de iniciarSesion y cerrarSesion: los dos nombres nacian en
+// api/sesion.js y en usuarios/api.js, el barril los recibia por dos estrellas y ESM los excluia
+// del namespace por ambiguos (bug #365). La issue #512 borro la copia de usuarios/api.js, asi
+// que ya no hay ambiguedad que resolver: los dos llegan por ./api/index.js, que es donde estan
+// declarados como puntos de entrada publicos. obtenerPerfil se reexportaba junto a ellos y
+// tampoco hace falta: solo se define una vez y llega por ./usuarios/index.js.
 
 export * from "./inventario/index.js";
 export * from "./donaciones/index.js";
