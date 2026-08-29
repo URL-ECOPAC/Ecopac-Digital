@@ -440,6 +440,7 @@ describe("buscarPacientePorFicha", () => {
       apellidos: "Xoc",
       comunidad: { nombre: "Solola" },
       numeroFicha: "F-001",
+      condiciones: [],
     });
     expect(cliente.llamadas).toContainEqual({ paso: "eq", tabla: "expedientes", columna: "numero_ficha", valor: "F-001" });
   });
@@ -518,7 +519,9 @@ describe("buscarPacientes", () => {
     expect(error).toBeNull();
     expect(terminoDemasiadoCorto).toBe(true);
     expect(coincidenciaExacta).toBe(true);
-    expect(pacientes).toEqual([{ id: "paciente-1", nombres: "Ana", numeroFicha: "42" }]);
+    expect(pacientes).toEqual([
+      { id: "paciente-1", nombres: "Ana", numeroFicha: "42", condiciones: [] },
+    ]);
   });
 
   it("termino corto con comunidad SI llama a fn_buscar_pacientes, sin termino, para listar la comunidad", async () => {
@@ -610,6 +613,7 @@ describe("buscarPacientes", () => {
       comunidad: { nombre: "Solola" },
       numeroFicha: "F-010",
       ultimaAtencion: null,
+      condiciones: [],
       relevancia: 0,
     });
     expect(cliente.llamadas).toContainEqual({
@@ -886,5 +890,162 @@ describe("buscarPacientes con cancelacion", () => {
 
     expect(cancelada).toBe(false);
     expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.PERMISO_DENEGADO);
+  });
+});
+
+// Condiciones cronicas en los resultados de busqueda (issue #535).
+//
+// La columna de chips que COLUMNAS_PACIENTE declara desde el PR #311 no tenia de donde leer: el
+// PR #482 habia decidido omitir las condiciones del subconjunto de busqueda. Ahora viajan por los
+// dos caminos que puede tomar un resultado -- la RPC por nombre y la sonda por numero de ficha --
+// y en los dos "vigente" significa estado distinto de resuelta.
+//
+// Ningun dato real: los nombres y las fichas son inventados.
+describe("condiciones cronicas en los resultados", () => {
+  const filaDeRpc = (extra = {}) => ({
+    paciente_id: "paciente-1",
+    nombres: "Ana",
+    apellidos: "Lopez",
+    fecha_nacimiento: "2000-01-01",
+    sexo: "Femenino",
+    comunidad_id: "comunidad-1",
+    comunidad_nombre: "Solola",
+    numero_ficha: "F-010",
+    relevancia: 0,
+    pagina: 1,
+    por_pagina: 20,
+    total: 1,
+    ...extra,
+  });
+
+  it("la busqueda por nombre entrega los nombres que devuelve la 00077", async () => {
+    dobles.cliente = crearCliente({
+      "rpc:fn_buscar_pacientes": {
+        data: [filaDeRpc({ condiciones: ["Diabetes", "Hipertension"] })],
+        error: null,
+      },
+      expedientes: { data: null, error: null },
+    });
+
+    const { pacientes } = await buscarPacientes({ comunidadId: "comunidad-1" });
+
+    expect(pacientes[0].condiciones).toEqual(["Diabetes", "Hipertension"]);
+  });
+
+  it("un paciente sin condiciones trae un arreglo vacio, no null", async () => {
+    dobles.cliente = crearCliente({
+      "rpc:fn_buscar_pacientes": { data: [filaDeRpc({ condiciones: [] })], error: null },
+      expedientes: { data: null, error: null },
+    });
+
+    const { pacientes } = await buscarPacientes({ comunidadId: "comunidad-1" });
+
+    expect(pacientes[0].condiciones).toEqual([]);
+  });
+
+  it("contra una base sin la 00077 aplicada no rompe la fila: devuelve vacio", async () => {
+    dobles.cliente = crearCliente({
+      "rpc:fn_buscar_pacientes": { data: [filaDeRpc()], error: null },
+      expedientes: { data: null, error: null },
+    });
+
+    const { pacientes } = await buscarPacientes({ comunidadId: "comunidad-1" });
+
+    expect(pacientes[0].condiciones).toEqual([]);
+  });
+
+  it("la sonda por ficha pide las condiciones embebidas, no en una segunda consulta", async () => {
+    const cliente = crearCliente({
+      expedientes: { data: null, error: null },
+    });
+    dobles.cliente = cliente;
+
+    await buscarPacientePorFicha("F-001");
+
+    const select = cliente.llamadas.find((l) => l.paso === "select" && l.tabla === "expedientes");
+    expect(select.columnas).toContain("padecimientos_cronicos(");
+    expect(select.columnas).toContain("condiciones_cronicas(nombre)");
+  });
+
+  it("la sonda por ficha descarta las resueltas y conserva activa y controlada", async () => {
+    dobles.cliente = crearCliente({
+      expedientes: {
+        data: {
+          numeroFicha: "F-001",
+          paciente: {
+            id: "paciente-1",
+            nombres: "Maria",
+            fechaBaja: null,
+            condicionesCronicas: [
+              { estado: "resuelta", condicion: { nombre: "Desnutricion" } },
+              { estado: "controlada", condicion: { nombre: "Asma" } },
+              { estado: "activa", condicion: { nombre: "Diabetes" } },
+            ],
+          },
+        },
+        error: null,
+      },
+    });
+
+    const { paciente } = await buscarPacientePorFicha("F-001");
+
+    expect(paciente.condiciones).toEqual(["Asma", "Diabetes"]);
+  });
+
+  it("la sonda por ficha no deja escapar la forma cruda del embebido", async () => {
+    dobles.cliente = crearCliente({
+      expedientes: {
+        data: {
+          numeroFicha: "F-001",
+          paciente: {
+            id: "paciente-1",
+            fechaBaja: null,
+            condicionesCronicas: [{ estado: "activa", condicion: { nombre: "Asma" } }],
+          },
+        },
+        error: null,
+      },
+    });
+
+    const { paciente } = await buscarPacientePorFicha("F-001");
+
+    expect(paciente).not.toHaveProperty("condicionesCronicas");
+    expect(paciente).not.toHaveProperty("fechaBaja");
+  });
+
+  it("un padecimiento sin nombre de catalogo no cuela un hueco entre los chips", async () => {
+    dobles.cliente = crearCliente({
+      expedientes: {
+        data: {
+          numeroFicha: "F-001",
+          paciente: {
+            id: "paciente-1",
+            fechaBaja: null,
+            condicionesCronicas: [
+              { estado: "activa", condicion: null },
+              { estado: "activa", condicion: { nombre: "Epilepsia" } },
+            ],
+          },
+        },
+        error: null,
+      },
+    });
+
+    const { paciente } = await buscarPacientePorFicha("F-001");
+
+    expect(paciente.condiciones).toEqual(["Epilepsia"]);
+  });
+
+  it("un paciente sin padecimientos embebidos devuelve un arreglo vacio", async () => {
+    dobles.cliente = crearCliente({
+      expedientes: {
+        data: { numeroFicha: "F-001", paciente: { id: "paciente-1", fechaBaja: null } },
+        error: null,
+      },
+    });
+
+    const { paciente } = await buscarPacientePorFicha("F-001");
+
+    expect(paciente.condiciones).toEqual([]);
   });
 });
