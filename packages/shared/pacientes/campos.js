@@ -38,7 +38,7 @@ export const CAMPOS_REGISTRO_PACIENTE = [
   { id: 'nombres', label: 'Nombres', tipo: TIPOS_DE_CAMPO.TEXTO, validacion: { requerido: true, maxLongitud: 100 } },
   { id: 'apellidos', label: 'Apellidos', tipo: TIPOS_DE_CAMPO.TEXTO, validacion: { requerido: true, maxLongitud: 100 } },
   { id: 'fechaNacimiento', label: 'Fecha de nacimiento', tipo: TIPOS_DE_CAMPO.FECHA, validacion: { requerido: true } },
-  { id: 'sexo', label: 'Sexo', tipo: TIPOS_DE_CAMPO.TEXTO, validacion: { requerido: true, maxLongitud: 20 } },
+  { id: 'sexo', label: 'Sexo', tipo: TIPOS_DE_CAMPO.SELECT, opcionesDesde: 'sexo', validacion: { requerido: true, maxLongitud: 20 } },
   { id: 'comunidad', label: 'Comunidad', tipo: TIPOS_DE_CAMPO.SELECT, opcionesDesde: 'comunidades', validacion: { requerido: true } },
   { id: 'telefonoContacto', label: 'Telefono de contacto', tipo: TIPOS_DE_CAMPO.TELEFONO, validacion: { requerido: true, maxLongitud: 20 } },
   { id: 'idioma', label: 'Idioma', tipo: TIPOS_DE_CAMPO.SELECT, opciones: OPCIONES_IDIOMA, validacion: { requerido: true } },
