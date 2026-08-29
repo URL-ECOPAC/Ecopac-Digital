@@ -6,7 +6,7 @@
 
 BEGIN;
 
-SELECT plan(19);
+SELECT plan(25);
 
 -- ============================================================================
 -- Setup: un perfil de cada rol y una comunidad para poder registrar pacientes.
@@ -112,7 +112,33 @@ SELECT ok(
   'la baja logica de un paciente queda auditada en eventos_auditoria (verificado como administrador, la unica que puede leerla)'
 );
 
+-- Prueba inversa que pide el DoD de la issue #409: revocar un permiso que el rol si daba le
+-- quita el acceso. La 00086 quito el branch hardcodeado "rol_actual() = 'medico'" de estas dos
+-- politicas de UPDATE, justamente para que esta revocacion puntual tenga efecto real.
+SELECT lives_ok(
+  $$ INSERT INTO usuario_permiso (perfil_id, permiso_id, concedido, otorgado_por)
+     SELECT '00000000-0000-0000-0000-000000000104', id, false, '00000000-0000-0000-0000-000000000101'
+     FROM permisos WHERE clave = 'pacientes.editar' $$,
+  'administrador revoca pacientes.editar a medico104 (issue #409)'
+);
+
 SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000104';
+
+UPDATE pacientes SET telefono_contacto = '5555-9999' WHERE id = '20000000-0000-0000-0000-000000000002';
+
+SELECT is(
+  (SELECT telefono_contacto FROM pacientes WHERE id = '20000000-0000-0000-0000-000000000002'),
+  '5555-1002',
+  'medico sin pacientes.editar (revocado puntualmente) ya no puede editar pacientes, aunque su rol es medico (issue #409)'
+);
+
+UPDATE expedientes SET numero_ficha = 'F-0002-C' WHERE paciente_id = '20000000-0000-0000-0000-000000000002';
+
+SELECT is(
+  (SELECT numero_ficha FROM expedientes WHERE paciente_id = '20000000-0000-0000-0000-000000000002'),
+  'F-0002-B',
+  'medico sin pacientes.editar (revocado puntualmente) ya no puede editar expedientes (issue #409)'
+);
 
 -- ============================================================================
 -- voluntario general
@@ -154,6 +180,31 @@ SELECT is(
   (SELECT numero_ficha FROM expedientes WHERE paciente_id = '20000000-0000-0000-0000-000000000003'),
   'F-0003',
   'voluntario no puede editar un expediente ya creado (el UPDATE no afecta ninguna fila)'
+);
+
+-- ============================================================================
+-- pacientes.editar concedido puntualmente a voluntario (issue #409): la operacion que las dos
+-- pruebas de arriba mostraron negada ahora se permite.
+-- ============================================================================
+SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000101';
+
+SELECT lives_ok(
+  $$ INSERT INTO usuario_permiso (perfil_id, permiso_id, concedido, otorgado_por)
+     SELECT '00000000-0000-0000-0000-000000000105', id, true, '00000000-0000-0000-0000-000000000101'
+     FROM permisos WHERE clave = 'pacientes.editar' $$,
+  'administrador concede pacientes.editar a voluntario105 (issue #409)'
+);
+
+SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000105';
+
+SELECT lives_ok(
+  $$ UPDATE pacientes SET telefono_contacto = '5555-9003' WHERE id = '20000000-0000-0000-0000-000000000003' $$,
+  'voluntario con pacientes.editar concedido puntualmente si puede editar un paciente (issue #409)'
+);
+
+SELECT lives_ok(
+  $$ UPDATE expedientes SET numero_ficha = 'F-0003-C' WHERE paciente_id = '20000000-0000-0000-0000-000000000003' $$,
+  'voluntario con pacientes.editar concedido puntualmente si puede editar un expediente (issue #409)'
 );
 
 -- ============================================================================

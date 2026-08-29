@@ -6,7 +6,7 @@
 
 BEGIN;
 
-SELECT plan(19);
+SELECT plan(22);
 
 -- ============================================================================
 -- Setup: dos administradores (uno aprueba por UPDATE lo que el mismo registro,
@@ -240,6 +240,32 @@ SELECT is(
   (SELECT estado::text FROM movimientos_inventario WHERE id = '90000000-0000-0000-0000-000000000003'),
   'pendiente',
   'medico no puede aprobar el movimiento pendiente de voluntario: no es administrador'
+);
+
+-- ============================================================================
+-- inventario.aprobar concedido puntualmente a voluntario (issue #409): la aprobacion, antes
+-- exclusiva de administrador, ahora se permite sobre el movimiento pendiente de voluntario304.
+-- ============================================================================
+SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000301';
+
+SELECT lives_ok(
+  $$ INSERT INTO usuario_permiso (perfil_id, permiso_id, concedido, otorgado_por)
+     SELECT '00000000-0000-0000-0000-000000000304', id, true, '00000000-0000-0000-0000-000000000301'
+     FROM permisos WHERE clave = 'inventario.aprobar' $$,
+  'administrador concede inventario.aprobar a voluntario304 (issue #409)'
+);
+
+SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000304';
+
+SELECT lives_ok(
+  $$ UPDATE movimientos_inventario SET estado = 'aprobado' WHERE id = '90000000-0000-0000-0000-000000000003' $$,
+  'voluntario con inventario.aprobar concedido puntualmente si puede aprobar un movimiento (issue #409)'
+);
+
+SELECT is(
+  (SELECT estado::text FROM movimientos_inventario WHERE id = '90000000-0000-0000-0000-000000000003'),
+  'aprobado',
+  'el movimiento queda aprobado tras el UPDATE de voluntario304 con el permiso concedido'
 );
 
 SELECT * FROM finish();

@@ -8,7 +8,7 @@
 
 BEGIN;
 
-SELECT plan(28);
+SELECT plan(31);
 
 -- ============================================================================
 -- Setup: una comunidad, un usuario de cada rol, dos jornadas (una con personal
@@ -251,6 +251,36 @@ SELECT throws_ok(
 SELECT ok(
   (SELECT count(*) FROM jornada_estado_historial) = 0,
   'voluntario no lee el historial de estados'
+);
+
+-- ============================================================================
+-- proyectos.gestionar concedido puntualmente a voluntario (issue #409): crear y editar
+-- proyectos, antes exclusivo de administrador, ahora se permite.
+-- ============================================================================
+SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000901';
+
+SELECT lives_ok(
+  $$ INSERT INTO usuario_permiso (perfil_id, permiso_id, concedido, otorgado_por)
+     SELECT '00000000-0000-0000-0000-000000000905', id, true, '00000000-0000-0000-0000-000000000901'
+     FROM permisos WHERE clave = 'proyectos.gestionar' $$,
+  'administrador concede proyectos.gestionar a voluntario905 (issue #409)'
+);
+
+SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000905';
+
+-- Con RETURNING a proposito, no solo INSERT a secas: Postgres exige ademas que la fila pase
+-- una politica de SELECT para poder devolverla, que es justo el patron real de supabase-js
+-- (`.insert(...).select()`, usado por crearProyecto() en packages/shared/proyectos/api.js). Un
+-- INSERT sin RETURNING no habria detectado que la politica de SELECT de proyectos (00039) se
+-- quedo corta hasta que la 00086 le agrego tambien tiene_permiso('proyectos.gestionar').
+SELECT lives_ok(
+  $$ INSERT INTO proyectos (id, nombre) VALUES ('50000000-0000-0000-0000-000000000903', 'Proyecto de voluntario con permiso 90') RETURNING id $$,
+  'voluntario con proyectos.gestionar concedido puntualmente si puede crear un proyecto (issue #409)'
+);
+
+SELECT lives_ok(
+  $$ UPDATE proyectos SET nombre = 'Proyecto editado por voluntario 90' WHERE id = '50000000-0000-0000-0000-000000000903' RETURNING id $$,
+  'voluntario con proyectos.gestionar concedido puntualmente si puede editar un proyecto (issue #409)'
 );
 
 SELECT * FROM finish();

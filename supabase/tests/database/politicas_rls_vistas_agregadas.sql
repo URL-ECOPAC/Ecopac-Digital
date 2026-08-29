@@ -12,7 +12,7 @@
 
 BEGIN;
 
-SELECT plan(26);
+SELECT plan(30);
 
 -- ============================================================================
 -- Setup
@@ -254,6 +254,36 @@ SELECT ok(
 SELECT ok(
   (SELECT count(*) FROM jornada_estado_historial) = 0,
   'voluntario NO ve jornada_estado_historial'
+);
+
+-- ============================================================================
+-- reportes.exportar concedido puntualmente a voluntario (issue #409): las vistas y la funcion
+-- de reportes, antes exclusivas de administrador y los roles consultivos, ahora se permiten.
+-- ============================================================================
+SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000001001';
+
+SELECT lives_ok(
+  $$ INSERT INTO usuario_permiso (perfil_id, permiso_id, concedido, otorgado_por)
+     SELECT '00000000-0000-0000-0000-000000001005', id, true, '00000000-0000-0000-0000-000000001001'
+     FROM permisos WHERE clave = 'reportes.exportar' $$,
+  'administrador concede reportes.exportar a voluntario1005 (issue #409)'
+);
+
+SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000001005';
+
+SELECT ok(
+  (SELECT count(*) FROM vista_reporte_impacto) >= 1,
+  'voluntario con reportes.exportar concedido puntualmente ve vista_reporte_impacto (issue #409)'
+);
+
+SELECT ok(
+  (SELECT count(*) FROM pacientes_reporte) >= 1,
+  'voluntario con reportes.exportar concedido puntualmente ve pacientes_reporte (issue #409)'
+);
+
+SELECT lives_ok(
+  $$ SELECT * FROM fn_reporte_pacientes_atendidos() $$,
+  'voluntario con reportes.exportar concedido puntualmente puede llamar fn_reporte_pacientes_atendidos (issue #409)'
 );
 
 -- ============================================================================

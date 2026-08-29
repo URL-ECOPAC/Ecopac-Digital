@@ -107,8 +107,8 @@ la migracion esta aplicada y no se edita.
 
 | Tabla                     | administrador | junta directiva / socio fundador | medico | voluntario general | Como se implementa                                                                                                     |
 | ------------------------- | ------------- | -------------------------------- | ------ | ------------------ | ---------------------------------------------------------------------------------------------------------------------- |
-| `pacientes`               | C R U         | —                                | C R U  | C R                | `00032`. Sin DELETE para nadie; ademas el trigger de `00026` bloquea el borrado fisico                                 |
-| `expedientes`             | C R U         | —                                | C R U  | C R                | `00032`                                                                                                                |
+| `pacientes`               | C R U         | —                                | C R U  | C R                | `00032` + `00086` (editar paso de `rol_actual() = 'medico'` a `tiene_permiso('pacientes.editar')`, que medico recibe por rol desde la `00003`). Sin DELETE para nadie; ademas el trigger de `00026` bloquea el borrado fisico |
+| `expedientes`             | C R U         | —                                | C R U  | C R                | `00032` + `00086`, mismo cambio                                                                                       |
 | `triajes`                 | C R U         | —                                | C R U  | C R U              | `00033`. El voluntario crea y corrige el triaje; el `imc` es columna generada y no se envia                            |
 | `atenciones`              | C R U         | —                                | C R U  | C R                | `00033`; cola de la jornada en `00060`                                                                                 |
 | `consultas`               | C R U         | —                                | C R U  | —                  | `00033`. El INSERT exige `medico_id = auth.uid()` **y** `participa_en_jornada()`; el UPDATE, ser el medico que atendio |
@@ -154,7 +154,7 @@ Reflejo en el cliente: `pacientes/permisos.js` (issue #396), que tambien absorbi
 | `bodegas`                | C R U         | R                                | R      | R                  | `00034` **+ `00062` duplicada** (ver divergencias)                                                          |
 | `proveedores`            | C R U         | R                                | R      | R                  | `00034` **+ `00062` duplicada**                                                                             |
 | `alertas_caducidad`      | R U           | R                                | R      | R                  | `00034`. Sin INSERT para nadie: las genera una rutina con `service_role`                                    |
-| `movimientos_inventario` | R **A**       | R                                | C R    | C R                | `00034` + `00048`                                                                                           |
+| `movimientos_inventario` | R **A**       | R                                | C R    | C R                | `00034` + `00048` + `00086` (aprobar admite tambien `tiene_permiso('inventario.aprobar')`)                  |
 
 **El circuito de aprobacion del inventario** es el patron central del modulo: medico y voluntario
 crean un movimiento y la politica de INSERT (`00034`) les exige `estado = 'pendiente'` y
@@ -182,7 +182,7 @@ reabrir una jornada finalizada **solo al administrador**. Reflejo en el cliente:
 
 | Tabla                       | administrador | junta directiva / socio fundador | medico           | voluntario general | Como se implementa                                                |
 | --------------------------- | ------------- | -------------------------------- | ---------------- | ------------------ | ----------------------------------------------------------------- |
-| `proyectos`                 | C R U         | R (solo junta directiva)         | —                | —                  | `00039`                                                           |
+| `proyectos`                 | C R U         | R (solo junta directiva)         | —                | —                  | `00039` + `00086` (crear/editar, y tambien SU LECTURA, admiten `tiene_permiso('proyectos.gestionar')`: sin eso, `INSERT ... RETURNING` -patron real de `crearProyecto()`- falla igual aunque el `WITH CHECK` del INSERT ya lo permita) |
 | `proyecto_hitos`            | C R U D       | R (solo junta directiva)         | —                | —                  | `00053`                                                           |
 | `proyecto_seguimiento`      | C R           | R (solo junta directiva)         | —                | —                  | `00053`                                                           |
 | `proyecto_estado_historial` | R             | —                                | —                | —                  | `00039`                                                           |
@@ -197,9 +197,9 @@ reabrir una jornada finalizada **solo al administrador**. Reflejo en el cliente:
 
 | Tabla              | administrador | junta directiva / socio fundador | medico | voluntario general | Como se implementa                                       |
 | ------------------ | ------------- | -------------------------------- | ------ | ------------------ | --------------------------------------------------------- |
-| `donantes`         | C R U         | R                                | —      | —                  | `00083`. `es_administrador()` escribe, `es_consultivo()` lee |
-| `donaciones`       | C R U         | R                                | —      | —                  | `00083`. La anulacion (UPDATE) exige `estado = 'anulada'` y `motivo_anulacion` |
-| `donacion_detalle` | C R           | R                                | —      | —                  | `00083`. Sin UPDATE para nadie: el detalle no se corrige, se anula la donacion completa |
+| `donantes`         | C R U         | R                                | —      | —                  | `00083` + `00086` (registrar Y SU LECTURA admiten `tiene_permiso('donaciones.registrar')`, mismo motivo que `proyectos`: `registrarDonante()` hace `.insert().select()`). `es_administrador()` escribe, `es_consultivo()` o el permiso fino leen |
+| `donaciones`       | C R U         | R                                | —      | —                  | `00083` + `00086`, mismo cambio. La anulacion (UPDATE) exige `estado = 'anulada'` y `motivo_anulacion` |
+| `donacion_detalle` | C R           | R                                | —      | —                  | `00083` + `00086`, mismo cambio. Sin UPDATE para nadie: el detalle no se corrige, se anula la donacion completa |
 
 Hasta la `00083`, las tres tablas estaban **denegadas a los cinco roles, incluido el
 administrador**, por dos motivos independientes que detalla la Divergencia 1 (resuelta).
@@ -212,7 +212,7 @@ administrador**, por dos motivos independientes que detalla la Divergencia 1 (re
 | `perfil_especialidad` | C R D         | R                                 | C R D la propia | C R D la propia | `00058`, `00085`. `es_administrador()` lee/escribe cualquiera; `es_consultivo()` solo lee cualquiera; cada perfil crea y borra las suyas. Sin UPDATE: la PK incluye el nombre, cambiar una especialidad es borrar e insertar |
 | `permisos`            | R             | R                                | R           | R                  | `00038`. Catalogo de solo lectura              |
 | `rol_permiso`         | R             | R                                | R           | R                  | `00038`. Solo lectura                          |
-| `usuario_permiso`     | C R U D       | R el propio                      | R el propio | R el propio        | `00038`, con auditoria en `00045`              |
+| `usuario_permiso`     | C R U D       | R el propio                      | R el propio | R el propio        | `00038`, con auditoria en `00045`; escribir Y LEER LA FILA AJENA QUE SE ACABA DE ESCRIBIR admiten `tiene_permiso('usuarios.gestionar_permisos')` desde `00086` |
 | `eventos_auditoria`   | R             | —                                | —           | —                  | `00026`. Lo escriben triggers DEFINER          |
 
 **Nadie puede cambiar su propio rol.** Eso no lo impide una politica -RLS no puede comparar el
@@ -266,16 +266,17 @@ tabla:
 
 | Vista                     | Modo                    | Quien la lee                                                                       | Migracion                 |
 | ------------------------- | ----------------------- | ---------------------------------------------------------------------------------- | ------------------------- |
-| `vista_reporte_impacto`   | **DEFINER**             | administrador y los dos consultivos, por el `WHERE`                                | `00027`, `00054`, `00064` |
-| `pacientes_reporte`       | **DEFINER**             | administrador y junta directiva, por el `WHERE`. Solo expone `id` y `comunidad_id` | `00041`                   |
+| `vista_reporte_impacto`   | **DEFINER**             | administrador, los dos consultivos y quien tiene `reportes.exportar`, por el `WHERE` | `00027`, `00054`, `00064`, `00080`, `00086` |
+| `pacientes_reporte`       | **DEFINER**             | administrador, los dos consultivos y quien tiene `reportes.exportar`, por el `WHERE`. Solo expone `id` y `comunidad_id` | `00041`, `00080`, `00086` |
 | `perfiles_directorio`     | **DEFINER**             | administrador, junta directiva y el propio; enmascara telefono y correo            | `00038`                   |
 | `vista_cola_jornada`      | **DEFINER**             | administrador y quien participa en la jornada                                      | `00060`                   |
 | `vista_lotes_disponibles` | `security_invoker=true` | cualquier autenticado, con su propia RLS                                           | `00024`, `00041`, `00047` |
 | `privilegios_de_anon`     | DEFINER                 | nadie: es una guarda de CI                                                         | `00056`                   |
 | `tablas_sin_rls`          | DEFINER                 | nadie: es introspeccion                                                            | `00030`                   |
 
-`fn_reporte_pacientes_atendidos` (`00067`) es la unica funcion de negocio con la comprobacion de
-rol escrita en su cuerpo, porque es DEFINER y tiene que sustituir a la politica que no la protege.
+`fn_reporte_pacientes_atendidos` (`00067`, guarda actualizada en `00080` y `00086`) es la unica
+funcion de negocio con la comprobacion de rol escrita en su cuerpo, porque es DEFINER y tiene que
+sustituir a la politica que no la protege.
 
 Reflejo en el cliente: `reportes/permisos.js` (issue #396), que absorbio
 `puedeVerIndicadoresDeImpacto` y `puedeVerReporteDePacientes`, sueltas hasta ahora fuera de un
@@ -292,29 +293,29 @@ por defecto de su rol.
 Sirve para lo que el rol base no sabe expresar: **darle a una persona concreta una atribucion que
 su rol no tiene, sin cambiarle el rol.**
 
-| Permiso                       | Por defecto lo tienen                          | Gobierna alguna politica?                        |
-| ----------------------------- | ---------------------------------------------- | ------------------------------------------------ |
-| `jornadas.gestionar`          | administrador                                  | **Si** — INSERT y UPDATE de `jornadas` (`00039`) |
-| `presupuestos.registrar`      | administrador                                  | **Si** — INSERT de `gastos` (`00052`)            |
-| `presupuestos.aprobar`        | administrador                                  | **Si** — UPDATE de `gastos` (`00052`)            |
-| `pacientes.editar`            | administrador, medico                          | No                                               |
-| `inventario.aprobar`          | administrador                                  | No                                               |
-| `donaciones.registrar`        | administrador                                  | No                                               |
-| `proyectos.gestionar`         | administrador                                  | No                                               |
-| `usuarios.gestionar_permisos` | administrador                                  | No                                               |
-| `reportes.exportar`           | administrador, junta directiva, socio fundador | No                                               |
+| Permiso                       | Por defecto lo tienen                          | Gobierna alguna politica?                                                             |
+| ----------------------------- | ----------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `jornadas.gestionar`          | administrador                                  | **Si** — INSERT y UPDATE de `jornadas` (`00039`)                                     |
+| `presupuestos.registrar`      | administrador                                  | **Si** — INSERT de `gastos` (`00052`)                                                |
+| `presupuestos.aprobar`        | administrador                                  | **Si** — UPDATE de `gastos` (`00052`)                                                |
+| `pacientes.editar`            | administrador, medico                          | **Si** — UPDATE de `pacientes` y `expedientes` (`00086`)                             |
+| `inventario.aprobar`          | administrador                                  | **Si** — UPDATE de `movimientos_inventario` (`00086`)                                |
+| `donaciones.registrar`        | administrador                                  | **Si** — INSERT de `donantes`, `donaciones` y `donacion_detalle` (`00086`)           |
+| `proyectos.gestionar`         | administrador                                  | **Si** — INSERT y UPDATE de `proyectos` (`00086`)                                    |
+| `usuarios.gestionar_permisos` | administrador                                  | **Si** — INSERT/UPDATE/DELETE de `usuario_permiso` (`00086`)                         |
+| `reportes.exportar`           | administrador, junta directiva, socio fundador | **Si** — `vista_reporte_impacto`, `pacientes_reporte`, `fn_reporte_pacientes_atendidos` (`00086`) |
 
-**De los nueve permisos, tres gobiernan de verdad una politica y seis son inertes**: concederlos o
-revocarlos no cambia nada en la base. Es la issue #409.
+**Los nueve permisos gobiernan de verdad una politica.** Concederlos o revocarlos en
+`usuario_permiso` cambia lo que el servidor permite. Resuelto por la issue #409 (migracion
+`00086`).
 
-Dos consecuencias practicas:
+Consecuencia practica: `permisos` y `rol_permiso` son de **solo lectura** para todos: no hay
+forma de anadir un permiso ni de cambiar el default de un rol desde la aplicacion, solo por
+migracion. `usuario_permiso` si tiene CRUD completo y auditoria propia, asi que la excepcion por
+persona si es manejable.
 
-- `permisos` y `rol_permiso` son de **solo lectura** para todos: no hay forma de anadir un permiso
-  ni de cambiar el default de un rol desde la aplicacion, solo por migracion. `usuario_permiso` si
-  tiene CRUD completo y auditoria propia, asi que la excepcion por persona si es manejable.
-- `usuarios.gestionar_permisos` es el caso mas llamativo: el permiso que existe para delegar la
-  gestion de permisos **no lo consulta la politica que gobierna esa gestion**, que exige
-  `es_administrador()` a secas.
+Guardia asociado: ningun permiso fino de escritura puede concederse a un perfil `junta
+directiva` o `socio fundador` (son consultivos por definicion). Ver la regla dedicada mas abajo.
 
 ## Las reglas que explican el diseno
 
@@ -346,6 +347,25 @@ autodesactivarse y para quedarse sin ningun administrador activo
 (`impedir_autodesactivacion` / `impedir_dejar_sin_administrador_activo`, `00072`): ninguna de
 las dos preguntas ("¿el rol cambio?", "¿quedaria alguien mas?") se puede expresar en un `USING`
 o un `WITH CHECK`.
+
+**Conectar un permiso fino a un INSERT/UPDATE no alcanza si el cliente pide `RETURNING`.**
+Cuando el comando lleva `RETURNING` -el patron real de `supabase-js`, `.insert(...).select()`,
+usado por `crearProyecto()` y `registrarDonante()`-, Postgres exige ademas que la fila pase una
+politica de **SELECT**: si no la pasa, el `INSERT` entero falla con "new row violates row-level
+security policy", **aunque el `WITH CHECK` del INSERT ya lo permitiera**. Se encontro probando
+en vivo contra Postgres real (issue #409): un `INSERT` sin `RETURNING` en una prueba pgTAP pasa
+en verde y no lo detecta. Por eso la `00086` amplio con el mismo `OR tiene_permiso(...)` tanto
+la politica de escritura como la de lectura de `proyectos`, `donantes`, `donaciones`,
+`donacion_detalle` y `usuario_permiso`. Al conectar un permiso fino nuevo a una politica de
+escritura, la prueba pgTAP correspondiente debe usar `RETURNING` (o `.select()` si se prueba
+contra la API real) para que este defecto no se repita en silencio.
+
+**Ningun permiso fino puede convertir a un rol consultivo en escritor.** Mismo motivo que la
+regla anterior: la pregunta es sobre el rol del *perfil objetivo* de la fila de
+`usuario_permiso`, no sobre quien ejecuta la operacion, asi que tampoco es expresable en un
+`USING`/`WITH CHECK`. El trigger `impedir_permiso_escritura_a_consultivo` (`00086`) bloquea
+conceder cualquier permiso salvo `reportes.exportar` (el unico de lectura) a un perfil `junta
+directiva` o `socio fundador`.
 
 ## Como se comprueba que esta matriz es cierta
 
@@ -382,7 +402,7 @@ Lo que hoy no coincide con la matriz. Cada fila con la issue que la cierra, cuan
 | 2   | `socio fundador` aparece en **una sola politica** de todo el esquema (lectura de `gastos`), frente a siete que nombran a `junta directiva`. No existe `es_consultivo()`                                                                                                                                               | Un socio fundador ve cuatro modulos en el menu y recibe cero filas en casi todos                                                                     | **#404**                     |
 | 3   | `perfil_especialidad` tiene lectura desde `00058`, pero **ninguna politica ni `GRANT` de escritura**                                                                                                                                                                                                                  | Nadie puede editar especialidades, ni el administrador                                                                                               | **#405**                     |
 | 4   | ~~`departamentos` y `municipios` tienen politica de lectura publica y ningun `GRANT`~~ (resuelto: `00073` agrega `GRANT SELECT ... TO authenticated` sobre las dos tablas, issue #179)                                                                                                                               | El catalogo geografico sembrado en `seed.sql` ya es legible por la API: el selector de lugar en cascada se puede armar. Sigue sin sembrarse en `ecopac-dev`/`ecopac-prod` (`db push` no corre seeds, ver docs/DATOS-DEMO.md) -- eso es un problema de datos, no de permisos, y queda fuera de esta divergencia | resuelto por **#179**        |
-| 5   | Seis de los nueve permisos finos no los consulta ninguna politica                                                                                                                                                                                                                                                     | Concederlos o revocarlos no cambia nada                                                                                                              | **#409**                     |
+| 5   | ~~Seis de los nueve permisos finos no los consulta ninguna politica~~ (resuelto: `00086` conecta los seis restantes -`pacientes.editar`, `inventario.aprobar`, `donaciones.registrar`, `proyectos.gestionar`, `usuarios.gestionar_permisos`, `reportes.exportar`- y agrega el trigger que impide que un permiso fino convierta a un rol consultivo en escritor) | Concederlos o revocarlos no cambiaba nada                                                                                                            | resuelto por **#409**        |
 | 6   | ~~`proyectos.permisos.js` concede administracion de proyectos a `junta directiva`~~ (resuelto: solo administrador queda en `ROLES_QUE_ADMINISTRAN_PROYECTOS`)                                                                                                                                                         | El cliente ofrece lo que la base niega                                                                                                               | #423, resuelto por **#396**  |
 | 7   | El sidebar ofrece Pacientes a los dos roles consultivos                                                                                                                                                                                                                                                               | Llegan a una pantalla que la base les vacia                                                                                                          | **#426**                     |
 | 8   | La app movil no aplica ningun control de acceso por rol                                                                                                                                                                                                                                                               | Los cinco roles ven las mismas pantallas; `tabsMoviles(rol)` existe en `navegacion.js` y no la usa nadie                                             | **#427**                     |
@@ -401,6 +421,7 @@ Lo que hoy no coincide con la matriz. Cada fila con la issue que la cierra, cuan
 | El enum de roles              | `supabase/migrations/00001_initial_schema.sql`                     |
 | Las funciones de autorizacion | `supabase/migrations/00004_funciones_autorizacion_rls.sql`         |
 | Los permisos finos            | `00003_permisos.sql` y `00037_permisos_proyectos_presupuestos.sql` |
+| Conectar permisos finos a politicas | `00039` (jornadas), `00052` (gastos), `00086` (los otros seis y el guardia anti-escalada consultivo) |
 | La denegacion por defecto     | `00030_rls_denegacion_por_defecto.sql`                             |
 | Los roles en el codigo        | `packages/shared/usuarios/roles.js`                                |
 | Que modulo ve cada rol        | `packages/shared/navegacion.js`                                    |

@@ -23,20 +23,25 @@ export const ORIGEN_PERMISO = Object.freeze({
 
 /**
  * Claves de permisos finos que hoy gobiernan de verdad alguna politica RLS (docs/PERMISOS.md,
- * seccion "Los permisos finos"): jornadas.gestionar en la 00039, presupuestos.registrar y
- * presupuestos.aprobar en la 00052. Los otros seis del catalogo -incluido
- * usuarios.gestionar_permisos, que en teoria protegeria esta misma gestion- existen en la
- * tabla `permisos` pero ninguna politica los consulta: concederlos o revocarlos no cambia nada
- * en el servidor hasta que la issue #409 los conecte.
+ * seccion "Los permisos finos"). Los nueve del catalogo estan conectados desde la issue #409:
+ * jornadas.gestionar (00039), presupuestos.registrar y presupuestos.aprobar (00052), y
+ * pacientes.editar, inventario.aprobar, donaciones.registrar, proyectos.gestionar,
+ * usuarios.gestionar_permisos y reportes.exportar (00086).
  *
- * Se declara la lista de los que SI funcionan, no la de los inertes: cuando #409 conecte uno,
- * alcanza con agregar su clave aca (un solo lugar), en vez de borrarlo de una lista de
- * excepciones que crece al reves.
+ * Se declara la lista de los que SI funcionan, no la de los inertes: si el catalogo crece con
+ * un permiso nuevo que todavia no gobierna ninguna politica, alcanza con no agregarlo aca (un
+ * solo lugar), en vez de mantener una lista de excepciones que crece al reves.
  */
 const PERMISOS_QUE_GOBIERNAN_UNA_POLITICA = new Set([
   "jornadas.gestionar",
   "presupuestos.registrar",
   "presupuestos.aprobar",
+  "pacientes.editar",
+  "inventario.aprobar",
+  "donaciones.registrar",
+  "proyectos.gestionar",
+  "usuarios.gestionar_permisos",
+  "reportes.exportar",
 ]);
 
 /** Si conceder o revocar este permiso cambia de verdad lo que el servidor permite hoy. */
