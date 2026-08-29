@@ -26,8 +26,8 @@ import { useSesionCompartida } from '../contexto/SesionProvider';
 import ModalEdicionPaciente from './ModalEdicionPaciente';
 import NotFoundPage from './NotFoundPage';
 import PestaniaHistorialPaciente from './PestaniaHistorialPaciente';
+import PestaniaRecetasPaciente from './PestaniaRecetasPaciente';
 import PestaniaSignosPaciente from './PestaniaSignosPaciente';
-import PaginaPendiente from './PaginaPendiente';
 
 const PARAMETRO_PESTANIA = 'pestania';
 
@@ -148,9 +148,7 @@ export default function FichaPacientePage() {
         )}
 
         {pestaniaActiva === 'recetas' && (
-          <Card>
-            <PaginaPendiente titulo="Recetas emitidas" issues="#130" />
-          </Card>
+          <PestaniaRecetasPaciente pacienteId={paciente.id} rol={rol} />
         )}
       </Tabs>
 
