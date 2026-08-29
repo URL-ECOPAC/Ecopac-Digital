@@ -19,6 +19,7 @@ import { obtenerSupabase } from "../api/cliente.js";
 import {
   CODIGOS_DE_ERROR_DE_SUPABASE,
   construirError,
+  esErrorDeCancelacion,
   normalizarError,
 } from "../api/errores-de-supabase.js";
 import { normalizarTexto } from "../validations/index.js";
@@ -384,17 +385,23 @@ function aPacienteDeBusqueda(fila) {
  * @param {string} numeroFicha
  * @returns {Promise<{ paciente: object|null, error: object|null }>}
  */
-export async function buscarPacientePorFicha(numeroFicha) {
+export async function buscarPacientePorFicha(numeroFicha, { signal } = {}) {
   const ficha = normalizarTexto(numeroFicha);
   if (ficha === "") return { paciente: null, error: null };
 
   try {
-    const { data, error } = await obtenerSupabase()
+    let consulta = obtenerSupabase()
       .from("expedientes")
       .select(`numeroFicha:numero_ficha, paciente:pacientes(${COLUMNAS_DE_BUSQUEDA_PACIENTE})`)
-      .eq("numero_ficha", ficha)
-      .maybeSingle();
+      .eq("numero_ficha", ficha);
 
+    // Solo se encadena cuando hay senal: abortSignal(undefined) dejaria la consulta atada a un
+    // AbortSignal inexistente, y quien llama sin cancelacion no tiene por que pagar ese paso.
+    if (signal) consulta = consulta.abortSignal(signal);
+
+    const { data, error } = await consulta.maybeSingle();
+
+    if (esErrorDeCancelacion(error)) return { paciente: null, error: null, cancelada: true };
     if (error) return { paciente: null, error: normalizarError(error) };
     if (!data?.paciente || data.paciente.fechaBaja) return { paciente: null, error: null };
 
@@ -402,6 +409,7 @@ export async function buscarPacientePorFicha(numeroFicha) {
     delete paciente.fechaBaja;
     return { paciente, error: null };
   } catch (error) {
+    if (esErrorDeCancelacion(error)) return { paciente: null, error: null, cancelada: true };
     return { paciente: null, error: normalizarError(error) };
   }
 }
@@ -449,6 +457,7 @@ export async function buscarPacientes({
   listarTodos = false,
   pagina = 1,
   porPagina = POR_PAGINA_POR_DEFECTO,
+  signal,
 } = {}) {
   const terminoNormalizado = normalizarTexto(termino).replace(/\s+/g, " ");
   const hayTermino = terminoNormalizado !== "";
@@ -463,7 +472,13 @@ export async function buscarPacientes({
     coincidenciaExacta: false,
     terminoDemasiadoCorto,
     error,
+    cancelada: false,
   });
+
+  // Una peticion abortada no es un fallo: es lo que se pidio. Se devuelve marcada para que
+  // quien llama sepa que no debe pintar nada -ni resultados vacios ni un error-, en vez de
+  // hacerle deducir el aborto de una respuesta vacia indistinguible de "no hubo coincidencias".
+  const respuestaCancelada = () => ({ ...respuestaVacia(), cancelada: true });
 
   // Sin termino y sin comunidad no hay nada que filtrar: devolver la tabla entera
   // paginada no es lo que pidio nadie, y no es un error tampoco (una pantalla recien
@@ -495,9 +510,16 @@ export async function buscarPacientes({
   try {
     const supabase = obtenerSupabase();
 
+    // Solo se encadena abortSignal cuando hay senal, por el mismo motivo que en
+    // buscarPacientePorFicha: quien no necesita cancelar no tiene por que pagar ese paso.
+    const consultaDeBusqueda = (argumentos) => {
+      const consulta = supabase.rpc("fn_buscar_pacientes", argumentos);
+      return signal ? consulta.abortSignal(signal) : consulta;
+    };
+
     const [respuestaBusqueda, respuestaFicha] = await Promise.all([
       debeConsultarBusqueda
-        ? supabase.rpc("fn_buscar_pacientes", {
+        ? consultaDeBusqueda({
             p_termino: terminoParaBusquedaPorNombre,
             p_comunidad_id: comunidadId || null,
             p_pagina: pagina,
@@ -510,8 +532,16 @@ export async function buscarPacientes({
         : Promise.resolve({ data: [], error: null }),
       // La sonda de ficha no tiene minimo de longitud: numero_ficha no tiene formato ni
       // prefijo (00009), asi que un termino corto puede ser una ficha valida.
-      hayTermino ? buscarPacientePorFicha(terminoNormalizado) : Promise.resolve({ paciente: null, error: null }),
+      hayTermino
+        ? buscarPacientePorFicha(terminoNormalizado, { signal })
+        : Promise.resolve({ paciente: null, error: null }),
     ]);
+
+    // El aborto se comprueba antes que el error: las dos consultas viajan con la misma senal,
+    // asi que cancelar deja a las dos con un error que no hay que ensenarle a nadie.
+    if (esErrorDeCancelacion(respuestaBusqueda.error) || respuestaFicha.cancelada === true) {
+      return respuestaCancelada();
+    }
 
     if (respuestaBusqueda.error) return respuestaVacia(normalizarError(respuestaBusqueda.error));
     if (respuestaFicha.error) return respuestaVacia(respuestaFicha.error);
@@ -534,8 +564,10 @@ export async function buscarPacientes({
       coincidenciaExacta: Boolean(pacientePorFicha),
       terminoDemasiadoCorto,
       error: null,
+      cancelada: false,
     };
   } catch (error) {
+    if (esErrorDeCancelacion(error)) return respuestaCancelada();
     return respuestaVacia(normalizarError(error));
   }
 }
