@@ -59,11 +59,11 @@ la funcion es inalcanzable. Las dos situaciones son defectos, y las que hay esta
 
 ### Un perfil desactivado no tiene rol efectivo (issue #529)
 
-`perfiles.activo` era hasta la `00078` un control de **cliente**: la aplicacion lo respetaba y la
+`perfiles.activo` era hasta la `00079` un control de **cliente**: la aplicacion lo respetaba y la
 capa 4 no lo miraba. Una cuenta dada de baja conservaba un JWT valido y la base le seguia
 entregando filas -comprobado: leyo la tabla `pacientes`-.
 
-Desde la `00078`, **`rol_actual()` devuelve NULL para un perfil desactivado**, y con ella
+Desde la `00079`, **`rol_actual()` devuelve NULL para un perfil desactivado**, y con ella
 `es_administrador()` devuelve FALSE. Como de esas dos cuelgan 77 de las 104 politicas del esquema,
 dar de baja a alguien le retira el acceso de verdad. Se blindaron ademas las otras cuatro vias que
 no pasaban por ahi:
@@ -89,7 +89,7 @@ Dos cosas que el arreglo **no** alcanza, y conviene tener escritas:
 Nota para quien lea la `00072`: el comentario de su cabecera justifica el `SECURITY DEFINER` de
 `impedir_dejar_sin_administrador_activo()` diciendo que "la unica forma de que `OLD.rol` ya sea
 'administrador' en la fila propia es que la sesion actual lo sea, porque `rol_actual()` lee la
-fila ya confirmada". **Ese razonamiento dejo de ser cierto con la `00078`**: ahora podria ser un
+fila ya confirmada". **Ese razonamiento dejo de ser cierto con la `00079`**: ahora podria ser un
 administrador desactivado. No hay defecto -el `SECURITY DEFINER` es justo lo que lo salva-, pero
 la migracion esta aplicada y no se edita.
 
@@ -386,7 +386,7 @@ Lo que hoy no coincide con la matriz. Cada fila con la issue que la cierra, cuan
 | 9   | ~~`packages/shared` exporta **dos sistemas de roles** por el mismo barril: `usuarios/roles.js` y `types/index.ts` + `utils/permisos.ts` + `hooks/usePermisos.ts`~~ (resuelto: el Modelo B se elimino entero)                                                                                                        | Un `import` desde `@ecopac/shared` expone las dos matrices en el mismo espacio de nombres. Ningun perfil real puede tener uno de esos cuatro valores | resuelto por **#396**        |
 | 10  | `comunidades` tiene la politica `USING (true)` de `00008` **y** la restringida de `00041`. Como son permisivas y se combinan con OR, la segunda no restringe nada                                                                                                                                                     | Cualquier autenticado lee todas las comunidades. Si `00041` pretendia limitarlo, no lo logra                                                         | sin issue                    |
 | 11  | ~~`00066` agrego la anulacion de recetas sin politica propia, asi que se ejerce con el UPDATE generico de `00033`~~ (resuelto: la `00075` borra esa politica y la recrea exigiendo `medico_id = auth.uid()` y `estado = 'emitida'`, mas `anulada_por = auth.uid()` en el `WITH CHECK`)                                    | Cualquier medico podia anular la receta de otro                                                                                                      | resuelto por **#510**        |
-| 12  | ~~La politica `FOR ALL` de `00062` sobre `bodegas` y `proveedores` abarca DELETE, pero no hay `GRANT DELETE`. Ademas duplica en otro estilo lo que ya decia `00034`~~ (resuelto: la `00078` borra las cuatro politicas de la `00062`; mandan las de la `00034`, que si pasan por `es_administrador()`) | El borrado muere en `42501` antes de llegar a RLS. Las dos tablas acaban con cinco politicas, dos redundantes                                        | resuelto por **#529**        |
+| 12  | ~~La politica `FOR ALL` de `00062` sobre `bodegas` y `proveedores` abarca DELETE, pero no hay `GRANT DELETE`. Ademas duplica en otro estilo lo que ya decia `00034`~~ (resuelto: la `00079` borra las cuatro politicas de la `00062`; mandan las de la `00034`, que si pasan por `es_administrador()`) | El borrado muere en `42501` antes de llegar a RLS. Las dos tablas acaban con cinco politicas, dos redundantes                                        | resuelto por **#529**        |
 | 13  | ~~Cinco funciones de permiso por rol viven **fuera** de un `permisos.js`... Y cinco modulos no tienen `permisos.js` ninguno~~ (resuelto: `puedeVerHistorial`, `puedeCorregirTriaje` y `puedeTomarTriaje` se mudaron a `pacientes/permisos.js`; `puedeVerIndicadoresDeImpacto` y `puedeVerReporteDePacientes` a `reportes/permisos.js`; `pacientes`, `inventario`, `usuarios` y `reportes` ya tienen su `permisos.js`, y `presupuestos` ya lo tenia) | La matriz del cliente esta repartida y es dificil de auditar                                                                                         | resuelto por **#396**        |
 | 14  | `navegacion.js` y los `permisos.js` no coinciden en cuatro sitios: presupuestos concede registrar gasto a roles que no pueden abrir la ruta; `socio fundador` entra a Reportes y `puedeVerReporteDePacientes` lo excluye; proyectos; y Pacientes frente a `puedeVerHistorial`                                         | Funciones inalcanzables, o pantallas que se vacian                                                                                                   | sin issue                    |
 | 15  | Los triggers `impedir_autodesactivacion` e `impedir_dejar_sin_administrador_activo` (`00072`) son `BEFORE UPDATE`. `perfiles.id` es `FK ON DELETE CASCADE` a `auth.users`, y un `DELETE` -desde el Dashboard de Supabase o la Admin API de GoTrue, no desde esta aplicacion- no dispara ningun `BEFORE UPDATE`         | Borrar al ultimo administrador (o a cualquiera, incluyendose a si mismo) desde fuera de la aplicacion deja el sistema sin administrador, sin que ningun trigger lo impida | sin issue                    |

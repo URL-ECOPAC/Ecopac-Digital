@@ -1,4 +1,4 @@
--- Pruebas de que un perfil desactivado no tiene privilegios (issue #529, migracion 00078).
+-- Pruebas de que un perfil desactivado no tiene privilegios (issue #529, migracion 00079).
 -- Corre con: supabase test db
 --
 -- POR QUE ES UNA SUITE PROPIA Y NO ASSERTS REPARTIDOS
@@ -8,7 +8,7 @@
 -- la comprobacion por las veinte suites de tablas dejaria la regla sin un sitio donde leerla
 -- entera, y sin nadie que la vigile cuando alguien agregue una tabla nueva.
 --
--- Hasta la 00078, `perfiles.activo` era un control de CLIENTE: la aplicacion lo respetaba y la
+-- Hasta la 00079, `perfiles.activo` era un control de CLIENTE: la aplicacion lo respetaba y la
 -- base no lo miraba. Estas pruebas cubren las cuatro vias que se comprobaron abiertas contra el
 -- stack local antes del arreglo, incluida la que lo anulaba entero: un desactivado podia
 -- reactivarse a si mismo.

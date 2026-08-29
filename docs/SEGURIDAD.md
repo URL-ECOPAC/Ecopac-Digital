@@ -250,7 +250,7 @@ pasar por la aplicacion. La base no lo frenaba: `rol_actual()` (`00004`) resolvi
 `activo`, y de esa funcion cuelgan 77 de las 104 politicas del esquema. Comprobado contra el stack
 local: una cuenta dada de baja leyo la tabla `pacientes`.
 
-**La migracion `00078` lo cerro.** Un perfil desactivado ya no tiene rol efectivo, no lee ni
+**La migracion `00079` lo cerro.** Un perfil desactivado ya no tiene rol efectivo, no lee ni
 escribe, y -lo que anulaba el arreglo hasta descubrirlo- **no puede reactivarse a si mismo**. El
 detalle esta en `docs/PERMISOS.md`, "Un perfil desactivado no tiene rol efectivo".
 
