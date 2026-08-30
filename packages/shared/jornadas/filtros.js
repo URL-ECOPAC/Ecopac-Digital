@@ -2,7 +2,7 @@
 // kanban comparten el mismo filtro de busqueda/estado/comunidad; el kanban ademas
 // agrupa por estado en vez de filtrar por un solo valor a la vez.
 
-import { TIPOS_DE_FILTRO } from "../descriptores.js";
+import { SUBTIPOS_DE_RANGO, TIPOS_DE_FILTRO } from "../descriptores.js";
 import { ESTADOS_JORNADA, ETIQUETAS_ESTADO_JORNADA, opcionesDe } from "../enums.js";
 
 /** Valores de estado_jornada (supabase/migrations/00001_initial_schema.sql). */
@@ -27,7 +27,12 @@ export const FILTROS_JORNADA = [
     label: "Comunidad",
     opcionesDesde: "comunidades",
   },
-  { id: "rangoFecha", tipo: TIPOS_DE_FILTRO.RANGO, label: "Fecha" },
+  {
+    id: "rangoFecha",
+    tipo: TIPOS_DE_FILTRO.RANGO,
+    subtipo: SUBTIPOS_DE_RANGO.FECHA,
+    label: "Fecha",
+  },
 ];
 
 /**

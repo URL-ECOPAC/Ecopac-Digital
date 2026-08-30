@@ -6,7 +6,7 @@
 //
 // Fuente: wireframe de gestion de pacientes (Entregable Semana 6, p. 62 web y p. 66 movil).
 
-import { TIPOS_DE_FILTRO } from "../descriptores.js";
+import { SUBTIPOS_DE_RANGO, TIPOS_DE_FILTRO } from "../descriptores.js";
 
 export const FILTROS_PACIENTE = [
   {
@@ -32,6 +32,7 @@ export const FILTROS_PACIENTE = [
   {
     id: "rangoEdad",
     tipo: TIPOS_DE_FILTRO.RANGO,
+    subtipo: SUBTIPOS_DE_RANGO.NUMERO,
     label: "Rango de edad",
     min: 0,
     max: 120,

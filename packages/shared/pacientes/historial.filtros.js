@@ -1,4 +1,4 @@
-import { TIPOS_DE_FILTRO } from "../descriptores.js";
+import { SUBTIPOS_DE_RANGO, TIPOS_DE_FILTRO } from "../descriptores.js";
 import { TIPOS_DE_EVENTO } from "./historial.api.js";
 
 export const OPCIONES_TIPO_DE_EVENTO = [
@@ -12,8 +12,8 @@ export const ETIQUETAS_TIPO_DE_EVENTO = Object.fromEntries(
 );
 
 export const FILTROS_HISTORIAL = [
-  { id: "desde", label: "Desde", tipo: TIPOS_DE_FILTRO.RANGO, subtipo: "fecha" },
-  { id: "hasta", label: "Hasta", tipo: TIPOS_DE_FILTRO.RANGO, subtipo: "fecha" },
+  { id: "desde", label: "Desde", tipo: TIPOS_DE_FILTRO.RANGO, subtipo: SUBTIPOS_DE_RANGO.FECHA },
+  { id: "hasta", label: "Hasta", tipo: TIPOS_DE_FILTRO.RANGO, subtipo: SUBTIPOS_DE_RANGO.FECHA },
   {
     id: "tipo",
     label: "Tipo de evento",

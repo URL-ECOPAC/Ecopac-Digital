@@ -41,6 +41,23 @@ export const TIPOS_DE_FILTRO = {
 };
 
 /**
+ * De que es el rango de un filtro TIPOS_DE_FILTRO.RANGO (issue #386).
+ *
+ * Un rango se dibuja con dos campos muy distintos segun de que sea -DateField o NumberField-, y
+ * el tipo solo no lo dice. Antes FilterBar lo adivinaba: si el descriptor traia `min` o `max`
+ * numericos lo tomaba por numerico, y si no por de fechas. Acertaba con los ocho rangos que
+ * existen, pero un rango numerico sin limites declarados -perfectamente legitimo- habria
+ * dibujado selectores de fecha, y eso no se ve hasta usarlo.
+ *
+ * Ahora lo dice el descriptor y FilterBar no adivina nada. Que ningun rango se quede sin
+ * declararlo lo comprueba packages/shared/filtros.test.js.
+ */
+export const SUBTIPOS_DE_RANGO = {
+  FECHA: "fecha",
+  NUMERO: "numero",
+};
+
+/**
  * Tipos de presentacion que el componente DataList de cada app sabe dibujar, en una columna de
  * tabla (web) o en un campo de tarjeta (movil).
  *

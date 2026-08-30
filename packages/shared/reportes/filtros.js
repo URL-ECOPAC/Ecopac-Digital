@@ -15,13 +15,14 @@
 // version ya corregida por la issue #398, todavia no mergeada a develop en el momento de
 // escribir esto -- ver el contexto del plan).
 
-import { TIPOS_DE_FILTRO } from "../descriptores.js";
+import { SUBTIPOS_DE_RANGO, TIPOS_DE_FILTRO } from "../descriptores.js";
 import { ESTADOS_DE_VENCIMIENTO_REPORTE } from "./campos.js";
 
 export const FILTROS_REPORTES = [
   {
     id: "periodo",
     tipo: TIPOS_DE_FILTRO.RANGO,
+    subtipo: SUBTIPOS_DE_RANGO.FECHA,
     label: "Periodo",
     // obtenerIndicadoresImpacto() y obtenerReportePacientesAtendidos() reciben el rango con
     // nombres distintos (periodo:{fechaInicio,fechaFin} vs. desde/hasta sueltos): homogeneizar

@@ -1,4 +1,4 @@
-import { TIPOS_DE_FILTRO } from "@ecopac/shared";
+import { SUBTIPOS_DE_RANGO, TIPOS_DE_FILTRO } from "@ecopac/shared";
 import DateField from "./DateField";
 import NumberField from "./NumberField";
 import Selector from "./Selector";
@@ -18,10 +18,14 @@ import TextField from "./TextField";
  * desplegable que no hace nada.
  *
  * Un filtro de rango se representa como { min, max }; cualquiera de los dos extremos puede
- * ser null, que significa "sin limite por ese lado". Hay rangos numericos (rangoEdad) y de
- * fecha (rangoFecha, fechaVencimiento): se distinguen por `subtipo: 'fecha'` si el
- * descriptor lo declara, y si no por si trae limites numericos. Lo correcto seria que el
- * descriptor siempre lo dijera; mientras tanto esta heuristica acierta con los que existen.
+ * ser null, que significa "sin limite por ese lado". De que es el rango lo dice el descriptor
+ * en `subtipo` (issue #386), y aqui no se adivina: antes, si no lo declaraba, se miraba si
+ * traia limites numericos, y un rango numerico sin limites -legitimo- habria dibujado
+ * selectores de fecha sin que nadie lo notara hasta usarlo.
+ *
+ * Un rango sin `subtipo` cae en NumberField. Es a proposito y no al reves: siete de los ocho
+ * rangos son de fecha, asi que el defecto contrario taparia el olvido. Que no llegue a pasar
+ * lo comprueba packages/shared/filtros.test.js.
  */
 export default function FilterBar({ campos = [], valores = {}, onChange, catalogos = {} }) {
   const cambiar = (id, valor) => onChange?.(id, valor);
@@ -65,9 +69,7 @@ export default function FilterBar({ campos = [], valores = {}, onChange, catalog
 
         if (campo.tipo === TIPOS_DE_FILTRO.RANGO) {
           const rango = valor ?? {};
-          const esFecha =
-            campo.subtipo === "fecha" ||
-            (typeof campo.min !== "number" && typeof campo.max !== "number");
+          const esFecha = campo.subtipo === SUBTIPOS_DE_RANGO.FECHA;
 
           if (esFecha) {
             // Sin `label` en cada DateField a proposito: con label, cada campo agrega su propia
