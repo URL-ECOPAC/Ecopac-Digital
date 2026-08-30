@@ -18,6 +18,13 @@
 -- ============================================================================
 CREATE TYPE estado_gasto AS ENUM ('pendiente', 'aprobado', 'rechazado');
 
+-- La politica de INSERT de 00052 referencia estado en su WITH CHECK: Postgres no la actualiza
+-- sola como haria con un RENAME COLUMN, bloquea directo el ALTER COLUMN TYPE mientras la
+-- politica exista ("cannot alter type of a column used in a policy definition", SQLSTATE
+-- 0A000). Se elimina y se vuelve a crear identica despues del cambio de tipo.
+DROP POLICY "Administrador registra cualquier gasto; el personal asignado registra los de su jornada"
+  ON gastos;
+
 -- DROP DEFAULT antes del cambio de tipo: un DEFAULT que referencia al tipo viejo bloquea el
 -- ALTER COLUMN TYPE. El USING castea cada fila por su representacion de texto -- 'pendiente',
 -- 'aprobado' y 'rechazado' existen identicos en los dos enums, asi que no hay valor que se
@@ -26,6 +33,18 @@ ALTER TABLE gastos ALTER COLUMN estado DROP DEFAULT;
 ALTER TABLE gastos
   ALTER COLUMN estado TYPE estado_gasto USING estado::text::estado_gasto;
 ALTER TABLE gastos ALTER COLUMN estado SET DEFAULT 'pendiente';
+
+CREATE POLICY "Administrador registra cualquier gasto; el personal asignado registra los de su jornada"
+  ON gastos FOR INSERT TO authenticated
+  WITH CHECK (
+    public.es_administrador()
+    OR public.tiene_permiso('presupuestos.registrar')
+    OR (
+      public.participa_en_jornada(jornada_id)
+      AND estado = 'pendiente'
+      AND registrado_por = auth.uid()
+    )
+  );
 
 COMMENT ON TYPE estado_gasto IS
   'Estados del flujo de aprobacion de un gasto. Vocabulario propio de gastos, separado de '
