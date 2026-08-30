@@ -306,11 +306,21 @@ jobs:
         if: needs.cambios.outputs.supabase == 'true'
         run: supabase test db
 
+      # supabase functions lint no existe en el CLI (nunca existio, verificado contra la
+      # referencia oficial): las Edge Functions corren en Deno, y Deno no viene preinstalado en
+      # el runner de GitHub Actions, asi que hace falta instalarlo antes de poder lintear algo
+      # (issue #166, primera Edge Function real del repo).
+      - name: Instalar Deno
+        if: needs.cambios.outputs.supabase == 'true'
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
       - name: Lint de Edge Functions
         if: needs.cambios.outputs.supabase == 'true'
         run: |
           if ls supabase/functions/*/index.* >/dev/null 2>&1; then
-            supabase functions lint
+            deno lint supabase/functions
           else
             echo "No hay Edge Functions todavia; se omite el lint."
           fi
