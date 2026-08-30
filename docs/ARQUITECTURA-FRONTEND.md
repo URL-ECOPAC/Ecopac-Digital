@@ -477,6 +477,26 @@ Las dos primeras se hacen cumplir con `no-restricted-imports` en `eslint.config`
 frontera no dependa de la disciplina de ocho personas. **La de los permisos no la comprueba
 ningun lint todavia**: depende de que cada quien la respete.
 
+### `packages/shared` se escribe en JavaScript
+
+Los tipos del dominio se documentan con **JSDoc** (`@typedef` en `packages/shared/types/index.js`),
+no con TypeScript. Es la decision A de la issue #493, y no es una preferencia de estilo: el bloque
+de la frontera de `eslint.config.mjs` se aplica a `packages/shared/**/*.{js,jsx}`, asi que **un
+`.ts` queda fuera de todo lo que ese bloque protege**.
+
+Se comprobo antes de decidir: un archivo con `import { View } from "react-native";` pasa el lint
+limpio si se llama `prueba.ts`, y falla con el mensaje de la regla si se llama `prueba.js`. Mismo
+contenido, distinta extension.
+
+No se arregla agrandando el glob, porque el parser por defecto de ESLint no entiende sintaxis de
+TypeScript y fallaria con errores que no tienen que ver con la frontera. Cubrirlo de verdad pide
+`typescript` como dependencia, un `tsconfig.json` y un `tsc --noEmit` en el CI; es mucho coste
+para un paquete sin una sola linea de TypeScript ejecutable.
+
+Lo hace cumplir `packages/shared/typescript.test.js`, que falla si aparece un `.ts` en el paquete.
+Quien quiera TypeScript aqui no tiene que borrar esa prueba: tiene que montar lo de arriba y
+borrarla en el mismo PR.
+
 Que puede hacer cada rol no se decide aqui ni se repite en cada modulo: esta en
 [PERMISOS.md](./PERMISOS.md), con la politica RLS que implementa cada celda.
 
