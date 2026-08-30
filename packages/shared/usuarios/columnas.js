@@ -20,3 +20,19 @@ export const CAMPOS_FICHA_VOLUNTARIO = [
   { id: 'fechaIngreso', label: 'Fecha de ingreso', tipo: TIPOS_DE_PRESENTACION.FECHA },
   { id: 'estado', label: 'Estado', tipo: TIPOS_DE_PRESENTACION.ESTADO, desde: 'activo', etiquetasDesde: 'estadoUsuario' },
 ];
+
+/**
+ * Historial de jornadas de una persona, dentro de su ficha.
+ *
+ * 'responsabilidad' es la de ESA persona en ESA jornada (jornada_personal.responsabilidad), no
+ * el responsable de la jornada completa (jornadas.responsable_id): son dos columnas de dos
+ * tablas distintas que solo se parecen en el nombre. 'pacientesAtendidos' es lo que esa persona
+ * atendio en esa jornada puntual, no el total de la jornada.
+ */
+export const COLUMNAS_HISTORIAL_VOLUNTARIO = [
+  { id: 'nombre', label: 'Jornada', tipo: TIPOS_DE_PRESENTACION.TEXTO, principal: true },
+  { id: 'fecha', label: 'Fecha', tipo: TIPOS_DE_PRESENTACION.FECHA },
+  { id: 'estado', label: 'Estado', tipo: TIPOS_DE_PRESENTACION.CHIP },
+  { id: 'responsabilidad', label: 'Responsabilidad', tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  { id: 'pacientesAtendidos', label: 'Pacientes atendidos', tipo: TIPOS_DE_PRESENTACION.NUMERO },
+];

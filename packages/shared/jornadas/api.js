@@ -575,13 +575,20 @@ export async function obtenerAsignacionesDelDia(fecha, { excluirJornada } = {}) 
 
 /**
  * Jornadas donde participa un perfil, como personal asignado (criterio 5), con cuantos
- * pacientes atendio en cada una (issue #175, criterio 4).
+ * pacientes atendio en cada una (issue #175, criterio 4), mas el papel y la responsabilidad de
+ * esa persona en cada una.
  *
  * No filtra por quien pregunta: RLS de jornada_personal (00039) ya decide si la respuesta trae
  * filas (administrador y junta directiva ven cualquier perfil; el resto solo se ve a si mismo).
- * Devuelve la misma forma de fila que listarJornadas() y obtenerJornada(), mas el campo nuevo
- * `atencionesPersona` (aditivo: una pantalla que ya reusaba COLUMNAS_JORNADA sin traducir nada
- * sigue funcionando igual).
+ * Devuelve la misma forma de fila que listarJornadas() y obtenerJornada(), mas tres campos
+ * nuevos (aditivo: una pantalla que ya reusaba COLUMNAS_JORNADA sin traducir nada sigue
+ * funcionando igual).
+ *
+ * `rolEnJornada` y `responsabilidad` salen de la misma fila de jornada_personal que ya se
+ * consulta para resolver la jornada embebida, asi que no cuestan una segunda consulta. Son el
+ * papel y la responsabilidad de ESTA persona en ESA jornada puntual, no el responsable de la
+ * jornada completa (que ya viaja aparte, embebido en la jornada como `responsable`): dos
+ * columnas de dos tablas distintas que solo se parecen en el nombre.
  *
  * `atencionesPersona` sale de fn_atenciones_de_persona_por_jornada() (RPC, migracion 00059):
  * consultas y triajes no son propiedad de este archivo (ver el encabezado), mismo motivo por el
@@ -595,10 +602,12 @@ export async function obtenerAsignacionesDelDia(fecha, { excluirJornada } = {}) 
  * directiva y socio fundador, que no tienen SELECT sobre consultas/triajes/atenciones, ven
  * todas sus jornadas en cero aunque haya actividad real (documentado en la migracion 00059) -
  * no es un caso que esta funcion pueda corregir sin decidir permisos por su cuenta, que es lo
- * que prohibe el criterio de aceptacion 6.
+ * que prohibe el criterio de aceptacion 6. Quien consuma este campo no puede asumir que un cero
+ * sea siempre real.
  *
  * @param {string} perfilId UUID del perfil.
  * @returns {Promise<{ jornadas: object[], error: object|null }>} Cada jornada trae
+ *   `rolEnJornada: string`, `responsabilidad: string|null` y
  *   `atencionesPersona: { consultas: number, triajes: number, pacientes: number }`.
  */
 export async function obtenerJornadasDePersona(perfilId) {
@@ -609,7 +618,9 @@ export async function obtenerJornadasDePersona(perfilId) {
     const [respuestaPersonal, respuestaAtenciones] = await Promise.all([
       supabase
         .from("jornada_personal")
-        .select(`jornada:jornadas(${COLUMNAS_DE_JORNADA})`)
+        .select(
+          `rolEnJornada:rol_en_jornada, responsabilidad, jornada:jornadas(${COLUMNAS_DE_JORNADA})`,
+        )
         .eq("perfil_id", perfilId),
       supabase.rpc("fn_atenciones_de_persona_por_jornada", { p_perfil_id: perfilId }),
     ]);
@@ -629,11 +640,12 @@ export async function obtenerJornadasDePersona(perfilId) {
     );
 
     const jornadas = (respuestaPersonal.data ?? [])
-      .map((fila) => fila.jornada)
-      .filter(Boolean)
-      .map((jornada) => ({
-        ...jornada,
-        atencionesPersona: atencionesPorJornada.get(jornada.id) ?? {
+      .filter((fila) => fila.jornada)
+      .map((fila) => ({
+        ...fila.jornada,
+        rolEnJornada: fila.rolEnJornada,
+        responsabilidad: fila.responsabilidad,
+        atencionesPersona: atencionesPorJornada.get(fila.jornada.id) ?? {
           consultas: 0,
           triajes: 0,
           pacientes: 0,
