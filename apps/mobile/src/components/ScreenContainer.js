@@ -1,7 +1,6 @@
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors, spacing } from '@ecopac/ui-tokens';
-
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { colors, spacing } from "@ecopac/ui-tokens";
 
 export default function ScreenContainer({
   children,
@@ -10,11 +9,11 @@ export default function ScreenContainer({
   contentContainerStyle,
 }) {
   return (
-    <SafeAreaView style={[styles.safeArea, style]} edges={['top', 'bottom', 'left', 'right']}>
+    <SafeAreaView style={[styles.safeArea, style]} edges={["top", "bottom", "left", "right"]}>
       <KeyboardAvoidingView
         style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : spacing.lg}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : spacing.lg}
       >
         {scrollable ? (
           <ScrollView

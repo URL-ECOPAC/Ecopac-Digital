@@ -1,6 +1,6 @@
-import { useCallback, useEffect } from 'react';
-import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { Button } from 'react-bootstrap';
+import { useCallback, useEffect } from "react";
+import { Outlet, NavLink, useNavigate, useLocation } from "react-router-dom";
+import { Button } from "react-bootstrap";
 import {
   MODULOS,
   seccionesVisibles,
@@ -8,30 +8,28 @@ import {
   formatearFechaCorta,
   useExpiracionPorInactividad,
   MINUTOS_INACTIVIDAD_POR_DEFECTO,
-} from '@ecopac/shared';
-import { useSesionCompartida } from '../contexto/SesionProvider';
-import './MainLayout.css';
+} from "@ecopac/shared";
+import { useSesionCompartida } from "../contexto/SesionProvider";
+import "./MainLayout.css";
 
-
-const EVENTOS_DE_ACTIVIDAD = ['mousemove', 'keydown', 'mousedown', 'touchstart', 'scroll'];
-
+const EVENTOS_DE_ACTIVIDAD = ["mousemove", "keydown", "mousedown", "touchstart", "scroll"];
 
 const SUBTITULOS = {
-  inicio: 'Panel general del sistema',
-  pacientes: 'Expedientes clinicos',
-  donaciones: 'Ingresos registrados',
-  inventario: 'Existencias y alertas de caducidad',
-  presupuestos: 'Administracion financiera por jornada y proyecto',
-  proyectos: 'Proyectos sociales y su avance',
-  reportes: 'Indicadores de impacto',
-  jornadas: 'Tablero de jornadas medicas',
-  voluntarios: 'Medicos y voluntarios',
+  inicio: "Panel general del sistema",
+  pacientes: "Expedientes clinicos",
+  donaciones: "Ingresos registrados",
+  inventario: "Existencias y alertas de caducidad",
+  presupuestos: "Administracion financiera por jornada y proyecto",
+  proyectos: "Proyectos sociales y su avance",
+  reportes: "Indicadores de impacto",
+  jornadas: "Tablero de jornadas medicas",
+  voluntarios: "Medicos y voluntarios",
 };
 
 function moduloDeRuta(pathname) {
   return [...MODULOS]
     .sort((a, b) => b.ruta.length - a.ruta.length)
-    .find((m) => (m.ruta === '/' ? pathname === '/' : pathname.startsWith(m.ruta)));
+    .find((m) => (m.ruta === "/" ? pathname === "/" : pathname.startsWith(m.ruta)));
 }
 
 export default function MainLayout() {
@@ -43,14 +41,13 @@ export default function MainLayout() {
   const secciones = seccionesVisibles(perfil.rol);
   const actual = moduloDeRuta(location.pathname);
 
-  const iniciales = `${perfil.nombres[0] ?? ''}${perfil.apellidos[0] ?? ''}`.toUpperCase();
+  const iniciales = `${perfil.nombres[0] ?? ""}${perfil.apellidos[0] ?? ""}`.toUpperCase();
 
   const fecha = formatearFechaCorta(new Date());
 
-
   const handleLogout = useCallback(async () => {
     await logout();
-    navigate('/login', { replace: true });
+    navigate("/login", { replace: true });
   }, [logout, navigate]);
 
   const { registrarActividad } = useExpiracionPorInactividad({
@@ -85,9 +82,9 @@ export default function MainLayout() {
                 <NavLink
                   key={modulo.id}
                   to={modulo.ruta}
-                  end={modulo.ruta === '/'}
+                  end={modulo.ruta === "/"}
                   className={({ isActive }) =>
-                    `app-nav__item${isActive ? ' app-nav__item--active' : ''}`
+                    `app-nav__item${isActive ? " app-nav__item--active" : ""}`
                   }
                 >
                   {modulo.etiqueta}
@@ -110,7 +107,7 @@ export default function MainLayout() {
             </span>
             <span className="app-user__role">
               {etiquetaDeRol(perfil.rol)}
-              {perfil.area ? ` · ${perfil.area}` : ''}
+              {perfil.area ? ` · ${perfil.area}` : ""}
             </span>
           </span>
         </NavLink>
@@ -119,9 +116,9 @@ export default function MainLayout() {
       <div className="app-main">
         <header className="app-header">
           <div>
-            <h1 className="app-header__title">{actual?.etiqueta ?? 'Ecopac Digital'}</h1>
+            <h1 className="app-header__title">{actual?.etiqueta ?? "Ecopac Digital"}</h1>
             <p className="app-header__subtitle">
-              {actual ? SUBTITULOS[actual.id] : 'Ecopac Guatemala'} · {fecha}
+              {actual ? SUBTITULOS[actual.id] : "Ecopac Guatemala"} · {fecha}
             </p>
           </div>
           <div className="app-header__actions">

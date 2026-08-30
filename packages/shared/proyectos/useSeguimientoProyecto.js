@@ -43,9 +43,14 @@ export function useSeguimientoProyecto({
   // Indicadores agregados de las jornadas vinculadas
   const indicadoresJornadas = useMemo(() => {
     const totalJornadas = jornadas.length;
-    const completadas = jornadas.filter((j) => j.estado === "Completada" || j.estado === "Finalizada").length;
+    const completadas = jornadas.filter(
+      (j) => j.estado === "Completada" || j.estado === "Finalizada",
+    ).length;
     const presupuestoTotal = jornadas.reduce((sum, j) => sum + (Number(j.presupuesto) || 0), 0);
-    const beneficiariosTotales = jornadas.reduce((sum, j) => sum + (Number(j.beneficiarios) || 0), 0);
+    const beneficiariosTotales = jornadas.reduce(
+      (sum, j) => sum + (Number(j.beneficiarios) || 0),
+      0,
+    );
 
     return {
       totalJornadas,
@@ -116,7 +121,9 @@ export function useSeguimientoProyecto({
     let fechaRealActualizada = completado ? fechaHoy : null;
 
     if (proyecto?.id) {
-      const res = completado ? await marcarHitoCumplido(hitoId, fechaRealActualizada) : await reabrirHito(hitoId);
+      const res = completado
+        ? await marcarHitoCumplido(hitoId, fechaRealActualizada)
+        : await reabrirHito(hitoId);
       if (res.error) {
         setErrorAccion(res.error.mensaje || "Error al actualizar hito.");
         setCargando(false);
@@ -125,7 +132,7 @@ export function useSeguimientoProyecto({
     }
 
     setHitos((prev) =>
-      prev.map((h) => (h.id === hitoId ? { ...h, fechaReal: fechaRealActualizada } : h))
+      prev.map((h) => (h.id === hitoId ? { ...h, fechaReal: fechaRealActualizada } : h)),
     );
     setCargando(false);
   };

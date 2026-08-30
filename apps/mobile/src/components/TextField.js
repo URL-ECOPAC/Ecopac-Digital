@@ -1,6 +1,6 @@
-import { forwardRef, useState } from 'react';
-import { StyleSheet, Text, TextInput, View } from 'react-native';
-import { colors, spacing, typography } from '@ecopac/ui-tokens';
+import { forwardRef, useState } from "react";
+import { StyleSheet, Text, TextInput, View } from "react-native";
+import { colors, spacing, typography } from "@ecopac/ui-tokens";
 
 // El personal llena formularios con una mano y a veces con guantes,
 // por lo que el area tactil minima recomendada (Material/HIG) es 48dp.

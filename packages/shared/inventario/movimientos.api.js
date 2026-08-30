@@ -11,13 +11,7 @@ import { ESTADOS_MOVIMIENTO, ORIGENES_DE_LOTE, TIPOS_DE_MOVIMIENTO } from "../en
  * quien necesite "movimientos del botiquin de esta jornada" resuelve ese id primero y filtra
  * por bodega_id aqui.
  */
-export async function listarMovimientos({
-  tipo,
-  estado,
-  bodega_id,
-  fecha_inicio,
-  fecha_fin,
-} = {}) {
+export async function listarMovimientos({ tipo, estado, bodega_id, fecha_inicio, fecha_fin } = {}) {
   try {
     const supabase = obtenerSupabase();
     let query = supabase.from("movimientos_inventario").select(`
@@ -96,7 +90,9 @@ export async function registrarIngreso({
       if (!numero_lote || !fecha_vencimiento) {
         return {
           datos: null,
-          error: { mensaje: "Se requiere numero de lote y fecha de vencimiento para crear un nuevo lote." },
+          error: {
+            mensaje: "Se requiere numero de lote y fecha de vencimiento para crear un nuevo lote.",
+          },
         };
       }
 
@@ -140,13 +136,7 @@ export async function registrarIngreso({
 /**
  * Registra una salida de medicamentos previa validación de disponibilidad y fecha de vencimiento.
  */
-export async function registrarSalida({
-  bodega_id,
-  lote_id,
-  cantidad,
-  motivo,
-  usuarioId,
-}) {
+export async function registrarSalida({ bodega_id, lote_id, cantidad, motivo, usuarioId }) {
   try {
     if (!cantidad || cantidad <= 0) {
       return {

@@ -45,7 +45,10 @@ describe("filtrarJornadasEnCurso", () => {
 
 describe("elegirJornadaInicial", () => {
   it("elige la persistida si sigue en curso", () => {
-    const enCurso = [jornada("J1", ESTADOS_JORNADA.EN_CURSO), jornada("J2", ESTADOS_JORNADA.EN_CURSO)];
+    const enCurso = [
+      jornada("J1", ESTADOS_JORNADA.EN_CURSO),
+      jornada("J2", ESTADOS_JORNADA.EN_CURSO),
+    ];
     expect(elegirJornadaInicial(enCurso, "J2")).toBe("J2");
   });
 
@@ -65,12 +68,18 @@ describe("elegirJornadaInicial", () => {
   });
 
   it("con varias candidatas y sin persistida que decida, devuelve null (criterio 2: elige la pantalla)", () => {
-    const enCurso = [jornada("J1", ESTADOS_JORNADA.EN_CURSO), jornada("J2", ESTADOS_JORNADA.EN_CURSO)];
+    const enCurso = [
+      jornada("J1", ESTADOS_JORNADA.EN_CURSO),
+      jornada("J2", ESTADOS_JORNADA.EN_CURSO),
+    ];
     expect(elegirJornadaInicial(enCurso, null)).toBeNull();
   });
 
   it("con varias candidatas, la persistida SI decide si esta entre ellas", () => {
-    const enCurso = [jornada("J1", ESTADOS_JORNADA.EN_CURSO), jornada("J2", ESTADOS_JORNADA.EN_CURSO)];
+    const enCurso = [
+      jornada("J1", ESTADOS_JORNADA.EN_CURSO),
+      jornada("J2", ESTADOS_JORNADA.EN_CURSO),
+    ];
     expect(elegirJornadaInicial(enCurso, "J2")).toBe("J2");
   });
 });

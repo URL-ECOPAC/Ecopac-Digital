@@ -8,7 +8,11 @@ export const SECCIONES_CONSULTA = Object.freeze([
     titulo: "Diagnostico y tratamiento",
     campos: ["diagnosticos", "tratamiento"],
   },
-  { id: "seguimiento", titulo: "Observaciones y seguimiento", campos: ["observaciones", "planSeguimiento"] },
+  {
+    id: "seguimiento",
+    titulo: "Observaciones y seguimiento",
+    campos: ["observaciones", "planSeguimiento"],
+  },
 ]);
 
 export function camposDeSeccion(seccion) {

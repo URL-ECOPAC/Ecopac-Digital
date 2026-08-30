@@ -13,6 +13,8 @@
     "lint": "npm run lint --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
     "build": "npm run build --workspaces --if-present",
+    "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json}\"",
+    "format:check": "prettier --check \"**/*.{js,jsx,ts,tsx,json}\"",
     "docker:dev": "docker compose up --build",
     "docker:prod": "docker compose --env-file .env.production -f docker-compose.prod.yml up --build -d",
     "verificar:concurrencia-ficha": "node scripts/verificar-concurrencia-numero-ficha.mjs",

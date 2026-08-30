@@ -25,11 +25,7 @@ const ALTA_VALIDA = {
 
 describe("ESTADOS_CONDICION_CRONICA", () => {
   it("tiene los tres valores del enum estado_condicion_cronica de la 00010", () => {
-    expect(Object.values(ESTADOS_CONDICION_CRONICA)).toEqual([
-      "activa",
-      "controlada",
-      "resuelta",
-    ]);
+    expect(Object.values(ESTADOS_CONDICION_CRONICA)).toEqual(["activa", "controlada", "resuelta"]);
   });
 
   it("cada estado tiene su etiqueta para la pantalla", () => {

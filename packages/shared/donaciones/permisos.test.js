@@ -1,11 +1,7 @@
 import { describe, it, expect } from "vitest";
 
 import { ROLES } from "../usuarios/roles.js";
-import {
-  permisosDeDonaciones,
-  puedeRegistrarDonaciones,
-  puedeVerDonaciones,
-} from "./permisos.js";
+import { permisosDeDonaciones, puedeRegistrarDonaciones, puedeVerDonaciones } from "./permisos.js";
 
 describe("permisos de donaciones (#598)", () => {
   describe("puedeVerDonaciones", () => {

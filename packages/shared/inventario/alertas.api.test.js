@@ -123,9 +123,18 @@ describe("listarAlertas", () => {
     dobles.cliente = crearCliente({
       respuesta: {
         data: [
-          filaDeAlerta({ id: "lejos", lote: { ...filaDeAlerta().lote, fechaVencimiento: "2027-01-01" } }),
-          filaDeAlerta({ id: "vencida", lote: { ...filaDeAlerta().lote, fechaVencimiento: "2020-01-01" } }),
-          filaDeAlerta({ id: "cerca", lote: { ...filaDeAlerta().lote, fechaVencimiento: "2026-01-01" } }),
+          filaDeAlerta({
+            id: "lejos",
+            lote: { ...filaDeAlerta().lote, fechaVencimiento: "2027-01-01" },
+          }),
+          filaDeAlerta({
+            id: "vencida",
+            lote: { ...filaDeAlerta().lote, fechaVencimiento: "2020-01-01" },
+          }),
+          filaDeAlerta({
+            id: "cerca",
+            lote: { ...filaDeAlerta().lote, fechaVencimiento: "2026-01-01" },
+          }),
         ],
         error: null,
       },

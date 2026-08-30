@@ -1,5 +1,5 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import { useNavigation, useRoute } from "@react-navigation/native";
 
 import {
   describirExistencia,
@@ -7,8 +7,8 @@ import {
   nombreCompletoDePaciente,
   usePaciente,
   useGeneracionReceta,
-} from '@ecopac/shared';
-import { colors, spacing, typography } from '@ecopac/ui-tokens';
+} from "@ecopac/shared";
+import { colors, spacing, typography } from "@ecopac/ui-tokens";
 
 import {
   Card,
@@ -20,9 +20,9 @@ import {
   SecondaryButton,
   Selector,
   TextField,
-} from '../components';
-import { useSesionCompartida } from '../contexto/SesionProvider';
-import { ROUTES } from '../navigation/rutas';
+} from "../components";
+import { useSesionCompartida } from "../contexto/SesionProvider";
+import { ROUTES } from "../navigation/rutas";
 
 function Disponible({ medicamento, onAgregar }) {
   return (
@@ -40,7 +40,7 @@ function Disponible({ medicamento, onAgregar }) {
             {medicamento.cantidadDisponible} disponibles
             {medicamento.fechaVencimientoProxima
               ? ` · vence ${formatearFechaCorta(medicamento.fechaVencimientoProxima)}`
-              : ''}
+              : ""}
           </Text>
         ) : (
           <Text style={styles.motivo}>{medicamento.motivoNoSeleccionable}</Text>
@@ -70,8 +70,8 @@ function Renglon({ renglon, lotes, problema, onEditar, onQuitar, deshabilitado }
         }))}
         onSelect={(valor) => {
           const elegido = (lotes ?? []).find((lote) => lote.loteId === valor);
-          onEditar(renglon.clave, 'loteId', valor);
-          onEditar(renglon.clave, 'bodegaId', elegido?.bodegaId ?? null);
+          onEditar(renglon.clave, "loteId", valor);
+          onEditar(renglon.clave, "bodegaId", elegido?.bodegaId ?? null);
         }}
         placeholder="Elegir lote"
         disabled={deshabilitado}
@@ -80,25 +80,25 @@ function Renglon({ renglon, lotes, problema, onEditar, onQuitar, deshabilitado }
       <TextField
         label="Dosis"
         value={renglon.dosis}
-        onChangeText={(texto) => onEditar(renglon.clave, 'dosis', texto)}
+        onChangeText={(texto) => onEditar(renglon.clave, "dosis", texto)}
         editable={!deshabilitado}
       />
       <TextField
         label="Frecuencia"
         value={renglon.frecuencia}
-        onChangeText={(texto) => onEditar(renglon.clave, 'frecuencia', texto)}
+        onChangeText={(texto) => onEditar(renglon.clave, "frecuencia", texto)}
         editable={!deshabilitado}
       />
       <TextField
         label="Duracion"
         value={renglon.duracion}
-        onChangeText={(texto) => onEditar(renglon.clave, 'duracion', texto)}
+        onChangeText={(texto) => onEditar(renglon.clave, "duracion", texto)}
         editable={!deshabilitado}
       />
       <NumberField
         label="Cantidad a entregar"
-        value={renglon.cantidadEntregada === '' ? null : renglon.cantidadEntregada}
-        onChange={(valor) => onEditar(renglon.clave, 'cantidadEntregada', valor ?? '')}
+        value={renglon.cantidadEntregada === "" ? null : renglon.cantidadEntregada}
+        onChange={(valor) => onEditar(renglon.clave, "cantidadEntregada", valor ?? "")}
         min={1}
         editable={!deshabilitado}
       />
@@ -155,8 +155,8 @@ export default function RecetaScreen() {
   if (receta) {
     return (
       <ScreenContainer>
-        <Card title={`Receta ${receta.folio ?? ''}`}>
-          <Text style={styles.texto}>{nombreCompletoDePaciente(paciente) ?? 'Paciente'}</Text>
+        <Card title={`Receta ${receta.folio ?? ""}`}>
+          <Text style={styles.texto}>{nombreCompletoDePaciente(paciente) ?? "Paciente"}</Text>
           {receta.detalle?.map((renglon) => (
             <Text key={renglon.id} style={styles.texto}>
               {renglon.medicamento} — {renglon.dosis}, {renglon.frecuencia}, {renglon.duracion} (
@@ -166,9 +166,7 @@ export default function RecetaScreen() {
           {receta.indicacionesGenerales && (
             <Text style={styles.textoTenue}>{receta.indicacionesGenerales}</Text>
           )}
-          <Text style={styles.textoTenue}>
-            Mostra esta pantalla en el puesto de entrega.
-          </Text>
+          <Text style={styles.textoTenue}>Mostra esta pantalla en el puesto de entrega.</Text>
         </Card>
 
         {avisoDeSalidas && (
@@ -187,7 +185,7 @@ export default function RecetaScreen() {
 
   return (
     <ScreenContainer>
-      <Text style={styles.paciente}>{nombreCompletoDePaciente(paciente) ?? 'Paciente'}</Text>
+      <Text style={styles.paciente}>{nombreCompletoDePaciente(paciente) ?? "Paciente"}</Text>
 
       {error && (
         <Card style={styles.tarjeta}>
@@ -270,11 +268,11 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   opcion: {
-    alignItems: 'center',
+    alignItems: "center",
     borderBottomColor: colors.border,
     borderBottomWidth: 1,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
     minHeight: 48,
     paddingVertical: spacing.xs,
   },
@@ -282,9 +280,9 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   cabeceraRenglon: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
     minHeight: 48,
   },
   medicamento: {

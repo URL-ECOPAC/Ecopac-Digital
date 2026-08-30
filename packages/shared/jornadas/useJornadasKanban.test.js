@@ -94,10 +94,7 @@ describe("agruparJornadasPorEstado", () => {
   });
 
   it("la tarjeta trae exactamente los seis datos del criterio 1", () => {
-    const [columna] = agruparJornadasPorEstado(
-      [jornada({ id: "j1" })],
-      { j1: 12 },
-    );
+    const [columna] = agruparJornadasPorEstado([jornada({ id: "j1" })], { j1: 12 });
 
     expect(columna.tarjetas[0]).toEqual({
       id: "j1",

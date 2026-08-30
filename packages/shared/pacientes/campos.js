@@ -7,8 +7,8 @@
 // de datos del entregable y la migracion aplicada no coinciden, manda la migracion
 // (ver AGENTS.md, "Fuente de verdad").
 
-import { TIPOS_DE_CAMPO } from '../descriptores.js';
-import { ETIQUETAS_IDIOMA, IDIOMAS, TIPOS_SANGUINEOS, opcionesDe } from '../enums.js';
+import { TIPOS_DE_CAMPO } from "../descriptores.js";
+import { ETIQUETAS_IDIOMA, IDIOMAS, TIPOS_SANGUINEOS, opcionesDe } from "../enums.js";
 
 /** Valores de idioma_preferido (supabase/migrations/00001_initial_schema.sql). */
 export const OPCIONES_IDIOMA = opcionesDe(IDIOMAS, ETIQUETAS_IDIOMA);
@@ -22,17 +22,76 @@ export const OPCIONES_TIPO_SANGRE = opcionesDe(TIPOS_SANGUINEOS, {});
  * 00081) lo genera del lado del servidor, la persona que registra no lo escribe.
  */
 export const CAMPOS_REGISTRO_PACIENTE = [
-  { id: 'nombres', label: 'Nombres', tipo: TIPOS_DE_CAMPO.TEXTO, validacion: { requerido: true, maxLongitud: 100 } },
-  { id: 'apellidos', label: 'Apellidos', tipo: TIPOS_DE_CAMPO.TEXTO, validacion: { requerido: true, maxLongitud: 100 } },
-  { id: 'fechaNacimiento', label: 'Fecha de nacimiento', tipo: TIPOS_DE_CAMPO.FECHA, validacion: { requerido: true } },
-  { id: 'sexo', label: 'Sexo', tipo: TIPOS_DE_CAMPO.SELECT, opcionesDesde: 'sexo', validacion: { requerido: true, maxLongitud: 20 } },
-  { id: 'comunidad', label: 'Comunidad', tipo: TIPOS_DE_CAMPO.SELECT, opcionesDesde: 'comunidades', validacion: { requerido: true } },
-  { id: 'telefonoContacto', label: 'Telefono de contacto', tipo: TIPOS_DE_CAMPO.TELEFONO, validacion: { requerido: true, maxLongitud: 20 } },
-  { id: 'idioma', label: 'Idioma', tipo: TIPOS_DE_CAMPO.SELECT, opciones: OPCIONES_IDIOMA, validacion: { requerido: true } },
-  { id: 'dpi', label: 'DPI', tipo: TIPOS_DE_CAMPO.TEXTO, validacion: { requerido: false, maxLongitud: 20 } },
-  { id: 'tipoSangre', label: 'Tipo sanguineo', tipo: TIPOS_DE_CAMPO.SELECT, opciones: OPCIONES_TIPO_SANGRE, validacion: { requerido: false } },
-  { id: 'nombreResponsable', label: 'Nombre del responsable', tipo: TIPOS_DE_CAMPO.TEXTO, validacion: { requerido: false, maxLongitud: 150 } },
-  { id: 'parentescoResponsable', label: 'Parentesco del responsable', tipo: TIPOS_DE_CAMPO.TEXTO, validacion: { requerido: false, maxLongitud: 50 } },
+  {
+    id: "nombres",
+    label: "Nombres",
+    tipo: TIPOS_DE_CAMPO.TEXTO,
+    validacion: { requerido: true, maxLongitud: 100 },
+  },
+  {
+    id: "apellidos",
+    label: "Apellidos",
+    tipo: TIPOS_DE_CAMPO.TEXTO,
+    validacion: { requerido: true, maxLongitud: 100 },
+  },
+  {
+    id: "fechaNacimiento",
+    label: "Fecha de nacimiento",
+    tipo: TIPOS_DE_CAMPO.FECHA,
+    validacion: { requerido: true },
+  },
+  {
+    id: "sexo",
+    label: "Sexo",
+    tipo: TIPOS_DE_CAMPO.SELECT,
+    opcionesDesde: "sexo",
+    validacion: { requerido: true, maxLongitud: 20 },
+  },
+  {
+    id: "comunidad",
+    label: "Comunidad",
+    tipo: TIPOS_DE_CAMPO.SELECT,
+    opcionesDesde: "comunidades",
+    validacion: { requerido: true },
+  },
+  {
+    id: "telefonoContacto",
+    label: "Telefono de contacto",
+    tipo: TIPOS_DE_CAMPO.TELEFONO,
+    validacion: { requerido: true, maxLongitud: 20 },
+  },
+  {
+    id: "idioma",
+    label: "Idioma",
+    tipo: TIPOS_DE_CAMPO.SELECT,
+    opciones: OPCIONES_IDIOMA,
+    validacion: { requerido: true },
+  },
+  {
+    id: "dpi",
+    label: "DPI",
+    tipo: TIPOS_DE_CAMPO.TEXTO,
+    validacion: { requerido: false, maxLongitud: 20 },
+  },
+  {
+    id: "tipoSangre",
+    label: "Tipo sanguineo",
+    tipo: TIPOS_DE_CAMPO.SELECT,
+    opciones: OPCIONES_TIPO_SANGRE,
+    validacion: { requerido: false },
+  },
+  {
+    id: "nombreResponsable",
+    label: "Nombre del responsable",
+    tipo: TIPOS_DE_CAMPO.TEXTO,
+    validacion: { requerido: false, maxLongitud: 150 },
+  },
+  {
+    id: "parentescoResponsable",
+    label: "Parentesco del responsable",
+    tipo: TIPOS_DE_CAMPO.TEXTO,
+    validacion: { requerido: false, maxLongitud: 50 },
+  },
 ];
 
 /**
@@ -41,13 +100,55 @@ export const CAMPOS_REGISTRO_PACIENTE = [
  * con la de la base de datos.
  */
 export const CAMPOS_TRIAJE = [
-  { id: 'presionSistolica', label: 'Presion sistolica', tipo: TIPOS_DE_CAMPO.NUMERO, sufijo: 'mmHg', validacion: { requerido: true, min: 40, max: 300 } },
-  { id: 'presionDiastolica', label: 'Presion diastolica', tipo: TIPOS_DE_CAMPO.NUMERO, sufijo: 'mmHg', validacion: { requerido: true, min: 20, max: 200 } },
-  { id: 'frecuenciaCardiaca', label: 'Frecuencia cardiaca', tipo: TIPOS_DE_CAMPO.NUMERO, sufijo: 'lpm', validacion: { requerido: true, min: 20, max: 250 } },
-  { id: 'glucosa', label: 'Glucosa', tipo: TIPOS_DE_CAMPO.NUMERO, sufijo: 'mg/dL', validacion: { requerido: false, min: 20, max: 800 } },
-  { id: 'peso', label: 'Peso', tipo: TIPOS_DE_CAMPO.NUMERO, sufijo: 'kg', validacion: { requerido: false, min: 1, max: 400 } },
-  { id: 'talla', label: 'Talla', tipo: TIPOS_DE_CAMPO.NUMERO, sufijo: 'cm', validacion: { requerido: false, min: 30, max: 250 } },
-  { id: 'temperatura', label: 'Temperatura', tipo: TIPOS_DE_CAMPO.NUMERO, sufijo: '°C', validacion: { requerido: false, min: 25, max: 45 } },
+  {
+    id: "presionSistolica",
+    label: "Presion sistolica",
+    tipo: TIPOS_DE_CAMPO.NUMERO,
+    sufijo: "mmHg",
+    validacion: { requerido: true, min: 40, max: 300 },
+  },
+  {
+    id: "presionDiastolica",
+    label: "Presion diastolica",
+    tipo: TIPOS_DE_CAMPO.NUMERO,
+    sufijo: "mmHg",
+    validacion: { requerido: true, min: 20, max: 200 },
+  },
+  {
+    id: "frecuenciaCardiaca",
+    label: "Frecuencia cardiaca",
+    tipo: TIPOS_DE_CAMPO.NUMERO,
+    sufijo: "lpm",
+    validacion: { requerido: true, min: 20, max: 250 },
+  },
+  {
+    id: "glucosa",
+    label: "Glucosa",
+    tipo: TIPOS_DE_CAMPO.NUMERO,
+    sufijo: "mg/dL",
+    validacion: { requerido: false, min: 20, max: 800 },
+  },
+  {
+    id: "peso",
+    label: "Peso",
+    tipo: TIPOS_DE_CAMPO.NUMERO,
+    sufijo: "kg",
+    validacion: { requerido: false, min: 1, max: 400 },
+  },
+  {
+    id: "talla",
+    label: "Talla",
+    tipo: TIPOS_DE_CAMPO.NUMERO,
+    sufijo: "cm",
+    validacion: { requerido: false, min: 30, max: 250 },
+  },
+  {
+    id: "temperatura",
+    label: "Temperatura",
+    tipo: TIPOS_DE_CAMPO.NUMERO,
+    sufijo: "°C",
+    validacion: { requerido: false, min: 25, max: 45 },
+  },
 ];
 
 /**
@@ -55,14 +156,55 @@ export const CAMPOS_TRIAJE = [
  * sobre el catalogo de diagnosticos (consulta_diagnostico es la tabla de union).
  */
 export const CAMPOS_CONSULTA = [
-  { id: 'motivoConsulta', label: 'Motivo de consulta', tipo: TIPOS_DE_CAMPO.TEXTO_LARGO, validacion: { requerido: true } },
-  { id: 'antecedentes', label: 'Antecedentes', tipo: TIPOS_DE_CAMPO.TEXTO_LARGO, validacion: { requerido: false } },
-  { id: 'sintomas', label: 'Sintomas', tipo: TIPOS_DE_CAMPO.TEXTO_LARGO, validacion: { requerido: false } },
-  { id: 'exploracion', label: 'Exploracion', tipo: TIPOS_DE_CAMPO.TEXTO_LARGO, validacion: { requerido: false } },
-  { id: 'diagnosticos', label: 'Diagnosticos', tipo: TIPOS_DE_CAMPO.MULTI_SELECT, opcionesDesde: 'diagnosticos', validacion: { requerido: false } },
-  { id: 'tratamiento', label: 'Tratamiento', tipo: TIPOS_DE_CAMPO.TEXTO_LARGO, validacion: { requerido: false } },
-  { id: 'observaciones', label: 'Observaciones', tipo: TIPOS_DE_CAMPO.TEXTO_LARGO, validacion: { requerido: false } },
-  { id: 'planSeguimiento', label: 'Plan de seguimiento', tipo: TIPOS_DE_CAMPO.TEXTO_LARGO, validacion: { requerido: false } },
+  {
+    id: "motivoConsulta",
+    label: "Motivo de consulta",
+    tipo: TIPOS_DE_CAMPO.TEXTO_LARGO,
+    validacion: { requerido: true },
+  },
+  {
+    id: "antecedentes",
+    label: "Antecedentes",
+    tipo: TIPOS_DE_CAMPO.TEXTO_LARGO,
+    validacion: { requerido: false },
+  },
+  {
+    id: "sintomas",
+    label: "Sintomas",
+    tipo: TIPOS_DE_CAMPO.TEXTO_LARGO,
+    validacion: { requerido: false },
+  },
+  {
+    id: "exploracion",
+    label: "Exploracion",
+    tipo: TIPOS_DE_CAMPO.TEXTO_LARGO,
+    validacion: { requerido: false },
+  },
+  {
+    id: "diagnosticos",
+    label: "Diagnosticos",
+    tipo: TIPOS_DE_CAMPO.MULTI_SELECT,
+    opcionesDesde: "diagnosticos",
+    validacion: { requerido: false },
+  },
+  {
+    id: "tratamiento",
+    label: "Tratamiento",
+    tipo: TIPOS_DE_CAMPO.TEXTO_LARGO,
+    validacion: { requerido: false },
+  },
+  {
+    id: "observaciones",
+    label: "Observaciones",
+    tipo: TIPOS_DE_CAMPO.TEXTO_LARGO,
+    validacion: { requerido: false },
+  },
+  {
+    id: "planSeguimiento",
+    label: "Plan de seguimiento",
+    tipo: TIPOS_DE_CAMPO.TEXTO_LARGO,
+    validacion: { requerido: false },
+  },
 ];
 
 /**
@@ -70,19 +212,56 @@ export const CAMPOS_CONSULTA = [
  * repetible: cada fila que el usuario agrega se vuelve un receta_detalle.
  */
 export const CAMPOS_RECETA = [
-  { id: 'indicacionesGenerales', label: 'Indicaciones generales', tipo: TIPOS_DE_CAMPO.TEXTO_LARGO, validacion: { requerido: false } },
   {
-    id: 'medicamentos',
-    label: 'Medicamentos recetados',
+    id: "indicacionesGenerales",
+    label: "Indicaciones generales",
+    tipo: TIPOS_DE_CAMPO.TEXTO_LARGO,
+    validacion: { requerido: false },
+  },
+  {
+    id: "medicamentos",
+    label: "Medicamentos recetados",
     tipo: TIPOS_DE_CAMPO.LISTA_REPETIBLE,
     validacion: { requerido: true, minItems: 1 },
     campos: [
-      { id: 'medicamento', label: 'Medicamento', tipo: TIPOS_DE_CAMPO.SELECT, opcionesDesde: 'medicamentos', validacion: { requerido: true } },
-      { id: 'lote', label: 'Lote', tipo: TIPOS_DE_CAMPO.SELECT, opcionesDesde: 'lotes', validacion: { requerido: false } },
-      { id: 'dosis', label: 'Dosis', tipo: TIPOS_DE_CAMPO.TEXTO, validacion: { requerido: true, maxLongitud: 100 } },
-      { id: 'frecuencia', label: 'Frecuencia', tipo: TIPOS_DE_CAMPO.TEXTO, validacion: { requerido: true, maxLongitud: 100 } },
-      { id: 'duracion', label: 'Duracion', tipo: TIPOS_DE_CAMPO.TEXTO, validacion: { requerido: true, maxLongitud: 100 } },
-      { id: 'cantidadEntregada', label: 'Cantidad entregada', tipo: TIPOS_DE_CAMPO.NUMERO, validacion: { requerido: true, min: 1 } },
+      {
+        id: "medicamento",
+        label: "Medicamento",
+        tipo: TIPOS_DE_CAMPO.SELECT,
+        opcionesDesde: "medicamentos",
+        validacion: { requerido: true },
+      },
+      {
+        id: "lote",
+        label: "Lote",
+        tipo: TIPOS_DE_CAMPO.SELECT,
+        opcionesDesde: "lotes",
+        validacion: { requerido: false },
+      },
+      {
+        id: "dosis",
+        label: "Dosis",
+        tipo: TIPOS_DE_CAMPO.TEXTO,
+        validacion: { requerido: true, maxLongitud: 100 },
+      },
+      {
+        id: "frecuencia",
+        label: "Frecuencia",
+        tipo: TIPOS_DE_CAMPO.TEXTO,
+        validacion: { requerido: true, maxLongitud: 100 },
+      },
+      {
+        id: "duracion",
+        label: "Duracion",
+        tipo: TIPOS_DE_CAMPO.TEXTO,
+        validacion: { requerido: true, maxLongitud: 100 },
+      },
+      {
+        id: "cantidadEntregada",
+        label: "Cantidad entregada",
+        tipo: TIPOS_DE_CAMPO.NUMERO,
+        validacion: { requerido: true, min: 1 },
+      },
     ],
   },
 ];

@@ -13,11 +13,11 @@
 
 /** Misma transformacion que usa theme.js: las claves del enum llevan espacios. */
 function variableDeEstado(status) {
-  return `--estado-${String(status).replace(/ /g, '-')}`;
+  return `--estado-${String(status).replace(/ /g, "-")}`;
 }
 
 export default function StatusChip({ status, label }) {
-  if (status === null || status === undefined || status === '') return null;
+  if (status === null || status === undefined || status === "") return null;
 
   // React no pinta booleanos: sin esto, un estado que llega como true (la columna 'estado' de
   // COLUMNAS_USUARIO lee el campo 'activo') dejaria la celda en blanco sin avisar de nada.
@@ -28,7 +28,7 @@ export default function StatusChip({ status, label }) {
       className="badge rounded-pill"
       style={{
         backgroundColor: `var(${variableDeEstado(status)}, var(--color-secondary))`,
-        color: 'var(--color-surface)',
+        color: "var(--color-surface)",
       }}
     >
       {texto}

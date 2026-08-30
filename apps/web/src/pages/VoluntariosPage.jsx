@@ -1,20 +1,16 @@
-import { useState } from 'react';
-import {
-  COLUMNAS_USUARIO,
-  FILTROS_USUARIO,
-  useUsuariosListado,
-} from '@ecopac/shared';
+import { useState } from "react";
+import { COLUMNAS_USUARIO, FILTROS_USUARIO, useUsuariosListado } from "@ecopac/shared";
 
-import DataList from '../components/DataList';
-import ErrorState from '../components/ErrorState';
-import FilterBar from '../components/FilterBar';
-import PageHeader from '../components/PageHeader';
-import ScreenContainer from '../components/ScreenContainer';
-import SecondaryButton from '../components/SecondaryButton';
-import { useSesionCompartida } from '../contexto/SesionProvider';
-import ModalAltaUsuario from './ModalAltaUsuario';
-import ModalEdicionUsuario from './ModalEdicionUsuario';
-import ModalPermisosUsuario from './ModalPermisosUsuario';
+import DataList from "../components/DataList";
+import ErrorState from "../components/ErrorState";
+import FilterBar from "../components/FilterBar";
+import PageHeader from "../components/PageHeader";
+import ScreenContainer from "../components/ScreenContainer";
+import SecondaryButton from "../components/SecondaryButton";
+import { useSesionCompartida } from "../contexto/SesionProvider";
+import ModalAltaUsuario from "./ModalAltaUsuario";
+import ModalEdicionUsuario from "./ModalEdicionUsuario";
+import ModalPermisosUsuario from "./ModalPermisosUsuario";
 
 // Pantalla de personal (issue #105). Solo presentacion: los datos, los filtros, la paginacion
 // y los catalogos salen de useUsuariosListado(), en packages/shared/usuarios/. Aqui no se
@@ -75,8 +71,8 @@ export default function VoluntariosPage() {
     <ScreenContainer>
       <PageHeader
         title="Voluntarios y medicos"
-        subtitle={total === 1 ? '1 persona' : `${total} personas`}
-        actions={[{ label: 'Nuevo voluntario', onClick: () => setMostrarAlta(true) }]}
+        subtitle={total === 1 ? "1 persona" : `${total} personas`}
+        actions={[{ label: "Nuevo voluntario", onClick: () => setMostrarAlta(true) }]}
       />
 
       <FilterBar
@@ -93,7 +89,7 @@ export default function VoluntariosPage() {
         catalogos={catalogos}
         vacio="No hay personal que coincida con los filtros."
         onRowPress={(fila) => setPerfilEnEdicion(fila)}
-        accionSecundaria={{ label: 'Permisos', onClick: (fila) => setPerfilEnPermisos(fila) }}
+        accionSecundaria={{ label: "Permisos", onClick: (fila) => setPerfilEnPermisos(fila) }}
       />
 
       {/* La paginacion solo estorba cuando hay una sola pagina. */}
@@ -104,7 +100,7 @@ export default function VoluntariosPage() {
             onClick={irAPaginaAnterior}
             disabled={!hayPaginaAnterior}
           />
-          <span style={{ color: 'var(--color-textMuted)' }}>
+          <span style={{ color: "var(--color-textMuted)" }}>
             Pagina {pagina} de {paginas}
           </span>
           <SecondaryButton

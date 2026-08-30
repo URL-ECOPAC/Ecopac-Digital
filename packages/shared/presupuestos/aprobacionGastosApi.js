@@ -1,5 +1,9 @@
 import { obtenerSupabase } from "../api/cliente.js";
-import { construirError, normalizarError, CODIGOS_DE_ERROR_DE_SUPABASE } from "../api/errores-de-supabase.js";
+import {
+  construirError,
+  normalizarError,
+  CODIGOS_DE_ERROR_DE_SUPABASE,
+} from "../api/errores-de-supabase.js";
 
 /**
  * Obtiene la lista de gastos pendientes de aprobación ordenados por fecha.
@@ -30,7 +34,10 @@ export async function aprobarGasto({ gastoId, usuarioId }) {
   if (!gastoId || !usuarioId) {
     return {
       gasto: null,
-      error: construirError(CODIGOS_DE_ERROR_DE_SUPABASE.CAMPO_REQUERIDO, "gastoId y usuarioId son requeridos"),
+      error: construirError(
+        CODIGOS_DE_ERROR_DE_SUPABASE.CAMPO_REQUERIDO,
+        "gastoId y usuarioId son requeridos",
+      ),
     };
   }
 
@@ -66,14 +73,20 @@ export async function rechazarGasto({ gastoId, usuarioId, motivo }) {
   if (!gastoId || !usuarioId) {
     return {
       gasto: null,
-      error: construirError(CODIGOS_DE_ERROR_DE_SUPABASE.CAMPO_REQUERIDO, "gastoId y usuarioId son requeridos"),
+      error: construirError(
+        CODIGOS_DE_ERROR_DE_SUPABASE.CAMPO_REQUERIDO,
+        "gastoId y usuarioId son requeridos",
+      ),
     };
   }
 
   if (!motivo || !motivo.trim()) {
     return {
       gasto: null,
-      error: construirError(CODIGOS_DE_ERROR_DE_SUPABASE.CAMPO_REQUERIDO, "El motivo de rechazo es obligatorio"),
+      error: construirError(
+        CODIGOS_DE_ERROR_DE_SUPABASE.CAMPO_REQUERIDO,
+        "El motivo de rechazo es obligatorio",
+      ),
     };
   }
 

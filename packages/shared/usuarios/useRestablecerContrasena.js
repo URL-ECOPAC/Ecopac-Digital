@@ -13,10 +13,10 @@
 // administrador SIN contrasena a proposito, para no versionar una credencial en un repositorio
 // publico. Esta pantalla es el camino por el que ese administrador entra por primera vez.
 
-import { useState } from 'react';
+import { useState } from "react";
 
-import { obtenerSupabase } from '../api/cliente.js';
-import { validarCorreo } from './validaciones.js';
+import { obtenerSupabase } from "../api/cliente.js";
+import { validarCorreo } from "./validaciones.js";
 
 /**
  * @param {{ urlDeRetorno?: string }} [opciones] Direccion a la que Supabase manda a la persona
@@ -24,10 +24,10 @@ import { validarCorreo } from './validaciones.js';
  *   pantalla la pasa, el hook no la adivina.
  */
 export function useRestablecerContrasena({ urlDeRetorno } = {}) {
-  const [correo, setCorreo] = useState('');
+  const [correo, setCorreo] = useState("");
   const [enviando, setEnviando] = useState(false);
   const [mensajeExito, setMensajeExito] = useState(false);
-  const [errorCampo, setErrorCampo] = useState('');
+  const [errorCampo, setErrorCampo] = useState("");
 
   async function solicitarRestablecimiento(evento) {
     evento?.preventDefault?.();
@@ -40,7 +40,7 @@ export function useRestablecerContrasena({ urlDeRetorno } = {}) {
       return;
     }
 
-    setErrorCampo('');
+    setErrorCampo("");
     setEnviando(true);
 
     try {

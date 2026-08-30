@@ -1,11 +1,10 @@
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-import { inicializarSupabase } from '@ecopac/shared';
-import App from './App';
-import './index.css';
-import { almacenamientoWeb } from './almacenamiento';
-import { aplicarTokens } from './theme';
-
+import React from "react";
+import ReactDOM from "react-dom/client";
+import { inicializarSupabase } from "@ecopac/shared";
+import App from "./App";
+import "./index.css";
+import { almacenamientoWeb } from "./almacenamiento";
+import { aplicarTokens } from "./theme";
 
 // Publica los tokens de diseno como custom properties antes del primer render, para que
 // index.css y los componentes de react-bootstrap ya encuentren las variables resueltas.
@@ -22,13 +21,13 @@ try {
   inicializarSupabase({ almacenamiento: almacenamientoWeb });
 } catch (error) {
   console.error(
-    'Supabase no se inicializo: la aplicacion arranca pero no habra datos.',
-    error.message
+    "Supabase no se inicializo: la aplicacion arranca pero no habra datos.",
+    error.message,
   );
 }
 
-ReactDOM.createRoot(document.getElementById('root')).render(
+ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <App />
-  </React.StrictMode>
+  </React.StrictMode>,
 );

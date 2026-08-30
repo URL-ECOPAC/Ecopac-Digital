@@ -16,7 +16,10 @@ const { generarReceta, obtenerReceta, obtenerRecetas, anularReceta } =
   await import("./recetas.api.js");
 const { ESTADOS_RECETA } = await import("../enums.js");
 
-function crearCliente({ rpc = { data: "rec-1", error: null }, tabla = { data: null, error: null } } = {}) {
+function crearCliente({
+  rpc = { data: "rec-1", error: null },
+  tabla = { data: null, error: null },
+} = {}) {
   const llamadas = [];
 
   const cadena = {
@@ -36,8 +39,7 @@ function crearCliente({ rpc = { data: "rec-1", error: null }, tabla = { data: nu
       llamadas.push({ paso: "order", columna, opciones });
       return cadena;
     },
-    maybeSingle: async () =>
-      tabla instanceof Error ? Promise.reject(tabla) : tabla,
+    maybeSingle: async () => (tabla instanceof Error ? Promise.reject(tabla) : tabla),
     then(resolve, reject) {
       const resultado = tabla instanceof Error ? Promise.reject(tabla) : Promise.resolve(tabla);
       return resultado.then(resolve, reject);

@@ -1,8 +1,8 @@
-import { Navigate, Outlet, useLocation } from 'react-router-dom';
-import { ESTADOS_DE_RESTAURACION } from '@ecopac/shared';
-import { useSesionCompartida } from '../contexto/SesionProvider';
-import AccesoDenegadoPage from '../pages/AccesoDenegadoPage';
-import LoadingState from './LoadingState';
+import { Navigate, Outlet, useLocation } from "react-router-dom";
+import { ESTADOS_DE_RESTAURACION } from "@ecopac/shared";
+import { useSesionCompartida } from "../contexto/SesionProvider";
+import AccesoDenegadoPage from "../pages/AccesoDenegadoPage";
+import LoadingState from "./LoadingState";
 
 /**
  * Guard de rutas: bloquea una ruta cuando no hay sesion o cuando el rol no alcanza el modulo.

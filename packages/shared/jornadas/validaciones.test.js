@@ -113,8 +113,9 @@ describe("validarAsignacionPersonal", () => {
   });
 
   it("acepta una hora de fin posterior en el mismo dia", () => {
-    expect(validarAsignacionPersonal(asignacionValida({ horaInicio: "07:00", horaFin: "13:00" })))
-      .toEqual({});
+    expect(
+      validarAsignacionPersonal(asignacionValida({ horaInicio: "07:00", horaFin: "13:00" })),
+    ).toEqual({});
   });
 
   it("rechaza una hora que no cumple el formato HH:MM", () => {
@@ -142,15 +143,15 @@ describe("validarAsignaciones", () => {
 
 describe("transicionesDeJornadaDesde / esTransicionDeJornadaValida", () => {
   it("las 3 transiciones de la issue #171 son validas", () => {
-    expect(
-      esTransicionDeJornadaValida(ESTADOS_JORNADA.PLANIFICADA, ESTADOS_JORNADA.EN_CURSO),
-    ).toBe(true);
-    expect(
-      esTransicionDeJornadaValida(ESTADOS_JORNADA.EN_CURSO, ESTADOS_JORNADA.FINALIZADA),
-    ).toBe(true);
-    expect(
-      esTransicionDeJornadaValida(ESTADOS_JORNADA.FINALIZADA, ESTADOS_JORNADA.EN_CURSO),
-    ).toBe(true);
+    expect(esTransicionDeJornadaValida(ESTADOS_JORNADA.PLANIFICADA, ESTADOS_JORNADA.EN_CURSO)).toBe(
+      true,
+    );
+    expect(esTransicionDeJornadaValida(ESTADOS_JORNADA.EN_CURSO, ESTADOS_JORNADA.FINALIZADA)).toBe(
+      true,
+    );
+    expect(esTransicionDeJornadaValida(ESTADOS_JORNADA.FINALIZADA, ESTADOS_JORNADA.EN_CURSO)).toBe(
+      true,
+    );
   });
 
   it("cancelada esta fuera de alcance: no admite ninguna transicion de entrada ni de salida", () => {
@@ -158,9 +159,9 @@ describe("transicionesDeJornadaDesde / esTransicionDeJornadaValida", () => {
     expect(
       esTransicionDeJornadaValida(ESTADOS_JORNADA.PLANIFICADA, ESTADOS_JORNADA.CANCELADA),
     ).toBe(false);
-    expect(
-      esTransicionDeJornadaValida(ESTADOS_JORNADA.CANCELADA, ESTADOS_JORNADA.EN_CURSO),
-    ).toBe(false);
+    expect(esTransicionDeJornadaValida(ESTADOS_JORNADA.CANCELADA, ESTADOS_JORNADA.EN_CURSO)).toBe(
+      false,
+    );
   });
 
   it("no se puede saltar directo de planificada a finalizada", () => {
@@ -174,9 +175,7 @@ describe("transicionesDeJornadaDesde / esTransicionDeJornadaValida", () => {
     // transicionesDeJornadaDesde() devuelve [] tanto para un estado terminal como para uno que
     // se olvidaron de declarar, y los dos casos se ven igual desde fuera. Si alguien agrega un
     // valor al enum rol de la migracion y no lo declara aqui, esta prueba lo dice.
-    expect(Object.keys(TRANSICIONES_JORNADA).sort()).toEqual(
-      Object.values(ESTADOS_JORNADA).sort(),
-    );
+    expect(Object.keys(TRANSICIONES_JORNADA).sort()).toEqual(Object.values(ESTADOS_JORNADA).sort());
   });
 
   it("ningun destino declarado cae fuera del enum", () => {
@@ -326,9 +325,7 @@ describe("advertirChoqueDeHorario", () => {
     const advertencia = advertirChoqueDeHorario({
       perfil: "p1",
       jornadaActualId: "j1",
-      asignacionesDelDia: [
-        { jornadaId: "j2", jornadaNombre: "Jornada en Peten", perfil: "p2" },
-      ],
+      asignacionesDelDia: [{ jornadaId: "j2", jornadaNombre: "Jornada en Peten", perfil: "p2" }],
     });
 
     expect(advertencia).toBeNull();
@@ -338,9 +335,7 @@ describe("advertirChoqueDeHorario", () => {
     const advertencia = advertirChoqueDeHorario({
       perfil: "p1",
       jornadaActualId: "j1",
-      asignacionesDelDia: [
-        { jornadaId: "j2", jornadaNombre: "Jornada en Peten", perfil: "p1" },
-      ],
+      asignacionesDelDia: [{ jornadaId: "j2", jornadaNombre: "Jornada en Peten", perfil: "p1" }],
     });
 
     expect(advertencia).toContain("otra jornada");
@@ -351,17 +346,16 @@ describe("advertirChoqueDeHorario", () => {
     const advertencia = advertirChoqueDeHorario({
       perfil: "p1",
       jornadaActualId: "j1",
-      asignacionesDelDia: [
-        { jornadaId: "j1", jornadaNombre: "La propia", perfil: "p1" },
-      ],
+      asignacionesDelDia: [{ jornadaId: "j1", jornadaNombre: "La propia", perfil: "p1" }],
     });
 
     expect(advertencia).toBeNull();
   });
 
   it("no advierte si no hay perfil elegido", () => {
-    expect(advertirChoqueDeHorario({ perfil: "", jornadaActualId: "j1", asignacionesDelDia: [] }))
-      .toBeNull();
+    expect(
+      advertirChoqueDeHorario({ perfil: "", jornadaActualId: "j1", asignacionesDelDia: [] }),
+    ).toBeNull();
   });
 });
 

@@ -26,8 +26,13 @@ vi.mock("../api/cliente.js", () => ({
 }));
 
 const { CODIGOS_DE_ERROR_DE_SUPABASE } = await import("../api/errores-de-supabase.js");
-const { actualizarPaciente, buscarPacientePorFicha, buscarPacientes, obtenerPaciente, registrarPaciente } =
-  await import("./api.js");
+const {
+  actualizarPaciente,
+  buscarPacientePorFicha,
+  buscarPacientes,
+  obtenerPaciente,
+  registrarPaciente,
+} = await import("./api.js");
 
 /**
  * Doble minimo de un query builder de supabase-js: cada metodo de la cadena registra el paso
@@ -430,7 +435,12 @@ describe("buscarPacientePorFicha", () => {
       numeroFicha: "F-001",
       condiciones: [],
     });
-    expect(cliente.llamadas).toContainEqual({ paso: "eq", tabla: "expedientes", columna: "numero_ficha", valor: "F-001" });
+    expect(cliente.llamadas).toContainEqual({
+      paso: "eq",
+      tabla: "expedientes",
+      columna: "numero_ficha",
+      valor: "F-001",
+    });
   });
 
   it("devuelve null sin error cuando la ficha no existe", async () => {
@@ -484,7 +494,9 @@ describe("buscarPacientes", () => {
     // doble lanzaria "La prueba no configuro una respuesta para...", y la prueba fallaria.
     dobles.cliente = crearCliente({ expedientes: { data: null, error: null } });
 
-    const { pacientes, total, terminoDemasiadoCorto, error } = await buscarPacientes({ termino: "jo" });
+    const { pacientes, total, terminoDemasiadoCorto, error } = await buscarPacientes({
+      termino: "jo",
+    });
 
     expect(error).toBeNull();
     expect(pacientes).toEqual([]);
@@ -495,7 +507,10 @@ describe("buscarPacientes", () => {
   it("un termino corto SI encuentra una ficha exacta que coincida", async () => {
     dobles.cliente = crearCliente({
       expedientes: {
-        data: { numeroFicha: "42", paciente: { id: "paciente-1", nombres: "Ana", fechaBaja: null } },
+        data: {
+          numeroFicha: "42",
+          paciente: { id: "paciente-1", nombres: "Ana", fechaBaja: null },
+        },
         error: null,
       },
     });
@@ -586,7 +601,9 @@ describe("buscarPacientes", () => {
     });
     dobles.cliente = cliente;
 
-    const { pacientes, total, pagina, porPagina } = await buscarPacientes({ comunidadId: "comunidad-1" });
+    const { pacientes, total, pagina, porPagina } = await buscarPacientes({
+      comunidadId: "comunidad-1",
+    });
 
     expect(total).toBe(3);
     expect(pagina).toBe(1);
@@ -798,7 +815,10 @@ describe("buscarPacientes con cancelacion", () => {
 
   it("un aborto de la busqueda devuelve cancelada, no un error que la pantalla tenga que pintar", async () => {
     dobles.cliente = crearCliente({
-      "rpc:fn_buscar_pacientes": { data: null, error: { name: "AbortError", message: "The operation was aborted" } },
+      "rpc:fn_buscar_pacientes": {
+        data: null,
+        error: { name: "AbortError", message: "The operation was aborted" },
+      },
       expedientes: { data: null, error: null },
     });
 
@@ -815,7 +835,10 @@ describe("buscarPacientes con cancelacion", () => {
   it("un aborto de la sonda de ficha tambien cancela, aunque la busqueda por nombre respondiera", async () => {
     dobles.cliente = crearCliente({
       "rpc:fn_buscar_pacientes": { data: [], error: null },
-      expedientes: { data: null, error: { name: "AbortError", message: "The operation was aborted" } },
+      expedientes: {
+        data: null,
+        error: { name: "AbortError", message: "The operation was aborted" },
+      },
     });
 
     const { error, cancelada } = await buscarPacientes({
@@ -849,7 +872,10 @@ describe("buscarPacientes con cancelacion", () => {
   it.each([
     ["DOMException del navegador", { name: "AbortError", message: "signal is aborted" }],
     ["error de Node", { code: "ABORT_ERR", message: "This operation was aborted" }],
-    ["solo el mensaje, envuelto por PostgREST", { message: "AbortError: The operation was aborted" }],
+    [
+      "solo el mensaje, envuelto por PostgREST",
+      { message: "AbortError: The operation was aborted" },
+    ],
   ])("reconoce el aborto que llega como %s", async (_caso, errorDeAborto) => {
     dobles.cliente = crearCliente({
       "rpc:fn_buscar_pacientes": { data: null, error: errorDeAborto },

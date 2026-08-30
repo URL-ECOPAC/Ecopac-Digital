@@ -36,7 +36,15 @@ function validarRolLectura(rolUsuario) {
  * `documento_identidad`, que nunca existio en el esquema y hacia fallar el alta entera con
  * 42703.
  */
-const COLUMNAS_DE_DONANTE = ["nombre", "tipo", "contacto", "telefono", "email", "direccion", "activo"];
+const COLUMNAS_DE_DONANTE = [
+  "nombre",
+  "tipo",
+  "contacto",
+  "telefono",
+  "email",
+  "direccion",
+  "activo",
+];
 
 /**
  * Deja de un objeto solo las claves que son columnas de `donantes`.
@@ -183,7 +191,7 @@ export async function obtenerHistoricoDonante(idDonante, { rolUsuario }) {
 
     const totalAcumulado = (donaciones || []).reduce(
       (acc, d) => acc + (Number(d.monto_total) || 0),
-      0
+      0,
     );
 
     return {

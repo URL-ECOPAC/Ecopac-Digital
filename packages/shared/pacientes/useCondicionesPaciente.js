@@ -146,6 +146,9 @@ export function useCondicionesPaciente(pacienteId, { rol } = {}) {
     marcarResuelta,
     borrar,
     recargar: cargar,
-    catalogos: { condicionesCronicas: catalogo, estadosCondicionCronica: OPCIONES_ESTADO_CONDICION },
+    catalogos: {
+      condicionesCronicas: catalogo,
+      estadosCondicionCronica: OPCIONES_ESTADO_CONDICION,
+    },
   };
 }

@@ -75,7 +75,10 @@ export function useRegistroTriaje({
     setGuardado(null);
   }, []);
 
-  const imc = useMemo(() => calcularImc(valores.peso, valores.talla), [valores.peso, valores.talla]);
+  const imc = useMemo(
+    () => calcularImc(valores.peso, valores.talla),
+    [valores.peso, valores.talla],
+  );
 
   const advertencias = useMemo(
     () => advertenciasDeTriaje(valores, calcularEdad(fechaNacimiento)),

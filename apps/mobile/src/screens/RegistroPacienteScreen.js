@@ -1,6 +1,6 @@
-import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useState } from "react";
+import { StyleSheet, Text, View } from "react-native";
+import { useNavigation, useRoute } from "@react-navigation/native";
 
 import {
   TIPOS_DE_CAMPO,
@@ -8,8 +8,8 @@ import {
   pasosConError,
   useJornadaActiva,
   useRegistroPaciente,
-} from '@ecopac/shared';
-import { colors, spacing, typography } from '@ecopac/ui-tokens';
+} from "@ecopac/shared";
+import { colors, spacing, typography } from "@ecopac/ui-tokens";
 
 import {
   Card,
@@ -19,10 +19,10 @@ import {
   SecondaryButton,
   Selector,
   TextField,
-} from '../components';
-import { almacenamientoMovil } from '../almacenamiento';
-import { useSesionCompartida } from '../contexto/SesionProvider';
-import { ROUTES } from '../navigation/rutas';
+} from "../components";
+import { almacenamientoMovil } from "../almacenamiento";
+import { useSesionCompartida } from "../contexto/SesionProvider";
+import { ROUTES } from "../navigation/rutas";
 
 const PASOS = pasosConCampos();
 
@@ -54,7 +54,7 @@ export default function RegistroPacienteScreen() {
     catalogos,
   } = useRegistroPaciente({
     comunidadInicial: jornada?.comunidadId ?? null,
-    nombresInicial: params?.termino ?? '',
+    nombresInicial: params?.termino ?? "",
   });
 
   const [indice, setIndice] = useState(0);
@@ -75,18 +75,16 @@ export default function RegistroPacienteScreen() {
     return (
       <ScreenContainer>
         <Card title="Paciente registrado">
-          <Text style={styles.ficha}>{registrado.expediente?.numeroFicha ?? '—'}</Text>
+          <Text style={styles.ficha}>{registrado.expediente?.numeroFicha ?? "—"}</Text>
           <Text style={styles.texto}>
-            {[registrado.nombres, registrado.apellidos].filter(Boolean).join(' ')}
+            {[registrado.nombres, registrado.apellidos].filter(Boolean).join(" ")}
           </Text>
           <Text style={styles.tenue}>Anota ese numero en la ficha de papel.</Text>
         </Card>
 
         <PrimaryButton
           title="Ir a la ficha del paciente"
-          onPress={() =>
-            navigation.navigate(ROUTES.FICHA_PACIENTE, { pacienteId: registrado.id })
-          }
+          onPress={() => navigation.navigate(ROUTES.FICHA_PACIENTE, { pacienteId: registrado.id })}
         />
         <SecondaryButton
           title="Registrar otro"
@@ -122,7 +120,7 @@ export default function RegistroPacienteScreen() {
       {error && <Text style={styles.errorGeneral}>{error.mensaje}</Text>}
 
       {paso.campos.map((campo) => {
-        if (campo.id === 'comunidad') {
+        if (campo.id === "comunidad") {
           return (
             <View key="comunidad">
               <Selector
@@ -145,7 +143,7 @@ export default function RegistroPacienteScreen() {
                 label={campo.label}
                 value={valores.comunidad || null}
                 options={catalogos.comunidades}
-                onSelect={(valor) => setCampo('comunidad', valor)}
+                onSelect={(valor) => setCampo("comunidad", valor)}
                 placeholder="Comunidad"
                 error={errores.comunidad}
                 disabled={enviando || !municipioId || catalogos.comunidades.length === 0}
@@ -188,9 +186,9 @@ export default function RegistroPacienteScreen() {
           <TextField
             key={campo.id}
             label={campo.label}
-            value={valores[campo.id] ?? ''}
+            value={valores[campo.id] ?? ""}
             onChangeText={(texto) => setCampo(campo.id, texto)}
-            keyboardType={campo.tipo === TIPOS_DE_CAMPO.TELEFONO ? 'phone-pad' : 'default'}
+            keyboardType={campo.tipo === TIPOS_DE_CAMPO.TELEFONO ? "phone-pad" : "default"}
             maxLength={campo.validacion?.maxLongitud}
             error={errores[campo.id]}
             editable={!enviando}
@@ -229,7 +227,7 @@ export default function RegistroPacienteScreen() {
 
 const styles = StyleSheet.create({
   progreso: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: spacing.xs,
     marginBottom: spacing.xs,
   },
@@ -275,7 +273,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   navegacion: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: spacing.sm,
     marginTop: spacing.md,
   },

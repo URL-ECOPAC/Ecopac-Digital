@@ -10,17 +10,17 @@
 //    una letra y al menos un numero. Dos definiciones de la misma regla acaban divergiendo, y la
 //    de aqui ya era mas laxa que la del registro.
 
-import { useState } from 'react';
+import { useState } from "react";
 
-import { obtenerSupabase } from '../api/cliente.js';
-import { cerrarSesion } from '../api/sesion.js';
-import { validarContrasena } from './validaciones.js';
+import { obtenerSupabase } from "../api/cliente.js";
+import { cerrarSesion } from "../api/sesion.js";
+import { validarContrasena } from "./validaciones.js";
 
 export function useNuevaContrasena() {
-  const [contrasena, setContrasena] = useState('');
-  const [confirmarContrasena, setConfirmarContrasena] = useState('');
+  const [contrasena, setContrasena] = useState("");
+  const [confirmarContrasena, setConfirmarContrasena] = useState("");
   const [enviando, setEnviando] = useState(false);
-  const [errorGlobal, setErrorGlobal] = useState('');
+  const [errorGlobal, setErrorGlobal] = useState("");
   const [erroresDeCampo, setErroresDeCampo] = useState({});
   const [exito, setExito] = useState(false);
 
@@ -29,7 +29,7 @@ export function useNuevaContrasena() {
     const todos = { ...errores };
 
     if (contrasena !== confirmarContrasena) {
-      todos.confirmarContrasena = 'Las contrasenas no coinciden.';
+      todos.confirmarContrasena = "Las contrasenas no coinciden.";
     }
 
     setErroresDeCampo(todos);
@@ -39,7 +39,7 @@ export function useNuevaContrasena() {
   async function actualizarContrasena(evento) {
     evento?.preventDefault?.();
 
-    setErrorGlobal('');
+    setErrorGlobal("");
     if (!validar()) return;
 
     setEnviando(true);
@@ -48,7 +48,7 @@ export function useNuevaContrasena() {
       const { error } = await obtenerSupabase().auth.updateUser({ password: contrasena });
 
       if (error) {
-        setErrorGlobal(error.message || 'El enlace ha caducado o no es valido.');
+        setErrorGlobal(error.message || "El enlace ha caducado o no es valido.");
         return;
       }
 
@@ -57,7 +57,7 @@ export function useNuevaContrasena() {
       await cerrarSesion();
       setExito(true);
     } catch (error) {
-      setErrorGlobal(error?.message || 'El enlace ha caducado o no es valido.');
+      setErrorGlobal(error?.message || "El enlace ha caducado o no es valido.");
     } finally {
       setEnviando(false);
     }

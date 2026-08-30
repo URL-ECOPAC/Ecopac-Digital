@@ -1,5 +1,5 @@
-import { Pressable, StyleSheet, Text } from 'react-native';
-import { colors, spacing, typography } from '@ecopac/ui-tokens';
+import { Pressable, StyleSheet, Text } from "react-native";
+import { colors, spacing, typography } from "@ecopac/ui-tokens";
 
 const MIN_TOUCH_HEIGHT = 48;
 
@@ -33,8 +33,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.primary,
     backgroundColor: colors.background,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     paddingHorizontal: spacing.lg,
   },
   buttonPressed: {

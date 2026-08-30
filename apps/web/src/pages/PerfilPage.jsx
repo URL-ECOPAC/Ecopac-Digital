@@ -1,7 +1,15 @@
-import { TIPOS_DE_CAMPO, etiquetaDeRol, usePerfilPropio } from '@ecopac/shared';
+import { TIPOS_DE_CAMPO, etiquetaDeRol, usePerfilPropio } from "@ecopac/shared";
 
-import { Card, ErrorState, PrimaryButton, ScreenContainer, Selector, StatusChip, TextField } from '../components';
-import { useSesionCompartida } from '../contexto/SesionProvider';
+import {
+  Card,
+  ErrorState,
+  PrimaryButton,
+  ScreenContainer,
+  Selector,
+  StatusChip,
+  TextField,
+} from "../components";
+import { useSesionCompartida } from "../contexto/SesionProvider";
 
 // Pantalla de perfil propio y cambio de contrasena (issue #102). Solo presentacion: los datos,
 // la edicion, la reverificacion de contrasena y el refresco de la sesion compartida salen de
@@ -62,9 +70,14 @@ export default function PerfilPage() {
               );
             }
 
-            if (campo.id === 'rol' && !campo.editable) {
+            if (campo.id === "rol" && !campo.editable) {
               return (
-                <TextField key={campo.id} label={campo.label} value={etiquetaDeRol(valores.rol)} disabled />
+                <TextField
+                  key={campo.id}
+                  label={campo.label}
+                  value={etiquetaDeRol(valores.rol)}
+                  disabled
+                />
               );
             }
 
@@ -86,8 +99,10 @@ export default function PerfilPage() {
               <TextField
                 key={campo.id}
                 label={campo.label}
-                value={valores[campo.id] ?? ''}
-                onChange={campo.editable ? (evento) => setCampo(campo.id, evento.target.value) : undefined}
+                value={valores[campo.id] ?? ""}
+                onChange={
+                  campo.editable ? (evento) => setCampo(campo.id, evento.target.value) : undefined
+                }
                 error={erroresDeCampo?.[campo.id]}
                 disabled={!campo.editable || guardando}
               />
@@ -96,7 +111,7 @@ export default function PerfilPage() {
 
           <div className="mt-3">
             <PrimaryButton
-              title={guardando ? 'Guardando...' : 'Guardar cambios'}
+              title={guardando ? "Guardando..." : "Guardar cambios"}
               type="submit"
               disabled={guardando}
               loading={guardando}
@@ -116,7 +131,7 @@ export default function PerfilPage() {
               type="password"
               autoComplete="current-password"
               value={contrasena.actual}
-              onChange={(evento) => setCampoDeContrasena('actual', evento.target.value)}
+              onChange={(evento) => setCampoDeContrasena("actual", evento.target.value)}
               error={erroresDeContrasena?.actual}
               disabled={cambiandoContrasena}
             />
@@ -125,7 +140,7 @@ export default function PerfilPage() {
               type="password"
               autoComplete="new-password"
               value={contrasena.nueva}
-              onChange={(evento) => setCampoDeContrasena('nueva', evento.target.value)}
+              onChange={(evento) => setCampoDeContrasena("nueva", evento.target.value)}
               error={erroresDeContrasena?.nueva}
               disabled={cambiandoContrasena}
             />
@@ -134,20 +149,22 @@ export default function PerfilPage() {
               type="password"
               autoComplete="new-password"
               value={contrasena.confirmarNueva}
-              onChange={(evento) => setCampoDeContrasena('confirmarNueva', evento.target.value)}
+              onChange={(evento) => setCampoDeContrasena("confirmarNueva", evento.target.value)}
               error={erroresDeContrasena?.confirmarNueva}
               disabled={cambiandoContrasena}
             />
 
             <div className="mt-3">
               <PrimaryButton
-                title={cambiandoContrasena ? 'Guardando...' : 'Cambiar contraseña'}
+                title={cambiandoContrasena ? "Guardando..." : "Cambiar contraseña"}
                 type="submit"
                 disabled={cambiandoContrasena}
                 loading={cambiandoContrasena}
               />
             </div>
-            {contrasenaCambiada && <p className="text-success mt-2 mb-0">Contraseña actualizada.</p>}
+            {contrasenaCambiada && (
+              <p className="text-success mt-2 mb-0">Contraseña actualizada.</p>
+            )}
           </form>
         </Card>
       </div>

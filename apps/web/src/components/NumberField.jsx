@@ -1,5 +1,5 @@
-import { Form, InputGroup } from 'react-bootstrap';
-import { useId } from 'react';
+import { Form, InputGroup } from "react-bootstrap";
+import { useId } from "react";
 
 /**
  * Campo numerico.
@@ -27,7 +27,7 @@ export default function NumberField({
 
   const alCambiar = (evento) => {
     const crudo = evento.target.value;
-    if (crudo === '') {
+    if (crudo === "") {
       onChange?.(null);
       return;
     }
@@ -39,7 +39,7 @@ export default function NumberField({
     <Form.Control
       id={id}
       type="number"
-      value={value ?? ''}
+      value={value ?? ""}
       min={min}
       max={max}
       step={step}

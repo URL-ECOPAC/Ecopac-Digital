@@ -1,10 +1,10 @@
-import { CAMPOS_ALTA_USUARIO, useAltaUsuario } from '@ecopac/shared';
+import { CAMPOS_ALTA_USUARIO, useAltaUsuario } from "@ecopac/shared";
 
-import Modal from '../components/Modal';
-import PrimaryButton from '../components/PrimaryButton';
-import Selector from '../components/Selector';
-import SecondaryButton from '../components/SecondaryButton';
-import TextField from '../components/TextField';
+import Modal from "../components/Modal";
+import PrimaryButton from "../components/PrimaryButton";
+import Selector from "../components/Selector";
+import SecondaryButton from "../components/SecondaryButton";
+import TextField from "../components/TextField";
 
 // Modal de alta de usuario (issue #106), montado desde VoluntariosPage.jsx con estado local: no
 // tiene ruta propia. No va en components/: ese barril es el catalogo de #280, y este modal es
@@ -21,9 +21,9 @@ import TextField from '../components/TextField';
 // pantallas tactiles, no una validacion: la validacion real sigue siendo la de
 // packages/shared/usuarios/validaciones.js.
 const TIPO_DE_INPUT = {
-  texto: 'text',
-  email: 'email',
-  telefono: 'tel',
+  texto: "text",
+  email: "email",
+  telefono: "tel",
 };
 
 export default function ModalAltaUsuario({ visible, onClose, onUsuarioCreado }) {
@@ -51,7 +51,7 @@ export default function ModalAltaUsuario({ visible, onClose, onUsuarioCreado }) 
       )}
 
       {CAMPOS_ALTA_USUARIO.map((campo) =>
-        campo.tipo === 'select' ? (
+        campo.tipo === "select" ? (
           <Selector
             key={campo.id}
             label={campo.label}
@@ -64,10 +64,10 @@ export default function ModalAltaUsuario({ visible, onClose, onUsuarioCreado }) 
           <TextField
             key={campo.id}
             label={campo.label}
-            type={TIPO_DE_INPUT[campo.tipo] ?? 'text'}
+            type={TIPO_DE_INPUT[campo.tipo] ?? "text"}
             placeholder={campo.placeholder}
             maxLength={campo.validacion?.maxLongitud}
-            value={valores[campo.id] ?? ''}
+            value={valores[campo.id] ?? ""}
             onChange={(evento) => setCampo(campo.id, evento.target.value)}
             error={errores[campo.id]}
           />

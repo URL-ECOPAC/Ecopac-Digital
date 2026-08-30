@@ -12,7 +12,11 @@ const ATENCION = {
   id: "a-1",
   jornadaId: "j-1",
   createdAt: "2026-05-10T15:00:00Z",
-  jornada: { nombre: "Jornada Chuicutama", fecha: "2026-05-10", comunidad: { nombre: "Chuicutama" } },
+  jornada: {
+    nombre: "Jornada Chuicutama",
+    fecha: "2026-05-10",
+    comunidad: { nombre: "Chuicutama" },
+  },
   triajes: {
     id: "t-1",
     tomadoEn: "2026-05-10T15:05:00Z",
@@ -27,7 +31,15 @@ const ATENCION = {
       motivoConsulta: "Dolor de cabeza",
       profesional: { nombres: "Luis", apellidos: "Perez" },
       diagnosticos: [],
-      recetas: [{ id: "r-1", folio: "REC-1", estado: "emitida", createdAt: "2026-05-10T15:40:00Z", detalle: [] }],
+      recetas: [
+        {
+          id: "r-1",
+          folio: "REC-1",
+          estado: "emitida",
+          createdAt: "2026-05-10T15:40:00Z",
+          detalle: [],
+        },
+      ],
     },
   ],
 };
@@ -62,8 +74,20 @@ describe("agruparPorJornada", () => {
 
   it("respeta el orden en que llegan los eventos, que ya viene invertido", () => {
     const grupos = agruparPorJornada([
-      { jornadaId: "j-2", jornada: "Mayo", fechaDeJornada: "2026-05-01", tipo: "consulta", id: "1" },
-      { jornadaId: "j-1", jornada: "Marzo", fechaDeJornada: "2026-03-01", tipo: "consulta", id: "2" },
+      {
+        jornadaId: "j-2",
+        jornada: "Mayo",
+        fechaDeJornada: "2026-05-01",
+        tipo: "consulta",
+        id: "1",
+      },
+      {
+        jornadaId: "j-1",
+        jornada: "Marzo",
+        fechaDeJornada: "2026-03-01",
+        tipo: "consulta",
+        id: "2",
+      },
     ]);
 
     expect(grupos.map((grupo) => grupo.jornada)).toEqual(["Mayo", "Marzo"]);

@@ -7,11 +7,7 @@
 import { describe, expect, it } from "vitest";
 
 import { ORIGEN_PERMISO } from "./permisos.api.js";
-import {
-  accionesDisponibles,
-  buscarPermiso,
-  huboCambioEnPermiso,
-} from "./useGestionPermisos.js";
+import { accionesDisponibles, buscarPermiso, huboCambioEnPermiso } from "./useGestionPermisos.js";
 
 const MODULOS = [
   {

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState } from "react";
 
 import {
   ETIQUETAS_TIPO_DE_EVENTO,
@@ -8,28 +8,28 @@ import {
   OPCIONES_TIPO_DE_EVENTO,
   TIPOS_DE_EVENTO,
   useHistorialPaciente,
-} from '@ecopac/shared';
+} from "@ecopac/shared";
 
-import Card from '../components/Card';
-import DateField from '../components/DateField';
-import EmptyState from '../components/EmptyState';
-import ErrorState from '../components/ErrorState';
-import LoadingState from '../components/LoadingState';
-import SecondaryButton from '../components/SecondaryButton';
-import Selector from '../components/Selector';
-import StatusChip from '../components/StatusChip';
+import Card from "../components/Card";
+import DateField from "../components/DateField";
+import EmptyState from "../components/EmptyState";
+import ErrorState from "../components/ErrorState";
+import LoadingState from "../components/LoadingState";
+import SecondaryButton from "../components/SecondaryButton";
+import Selector from "../components/Selector";
+import StatusChip from "../components/StatusChip";
 
 function Signos({ signos }) {
   const renglones = [
     signos.presionSistolica && signos.presionDiastolica
-      ? ['Presion', `${signos.presionSistolica}/${signos.presionDiastolica} mmHg`]
+      ? ["Presion", `${signos.presionSistolica}/${signos.presionDiastolica} mmHg`]
       : null,
-    signos.frecuenciaCardiaca ? ['Frecuencia cardiaca', `${signos.frecuenciaCardiaca} lpm`] : null,
-    signos.glucosa ? ['Glucosa', `${signos.glucosa} mg/dL`] : null,
-    signos.peso ? ['Peso', `${signos.peso} kg`] : null,
-    signos.talla ? ['Talla', `${signos.talla} cm`] : null,
-    signos.temperatura ? ['Temperatura', `${signos.temperatura} °C`] : null,
-    signos.imc ? ['IMC', signos.imc] : null,
+    signos.frecuenciaCardiaca ? ["Frecuencia cardiaca", `${signos.frecuenciaCardiaca} lpm`] : null,
+    signos.glucosa ? ["Glucosa", `${signos.glucosa} mg/dL`] : null,
+    signos.peso ? ["Peso", `${signos.peso} kg`] : null,
+    signos.talla ? ["Talla", `${signos.talla} cm`] : null,
+    signos.temperatura ? ["Temperatura", `${signos.temperatura} °C`] : null,
+    signos.imc ? ["IMC", signos.imc] : null,
   ].filter(Boolean);
 
   if (renglones.length === 0) return <p className="text-body-secondary mb-0">Sin mediciones.</p>;
@@ -48,9 +48,9 @@ function Signos({ signos }) {
 
 function DetalleConsulta({ evento }) {
   const campos = [
-    ['Motivo de consulta', evento.motivoConsulta],
-    ['Tratamiento', evento.tratamiento],
-    ['Plan de seguimiento', evento.planSeguimiento],
+    ["Motivo de consulta", evento.motivoConsulta],
+    ["Tratamiento", evento.tratamiento],
+    ["Plan de seguimiento", evento.planSeguimiento],
   ].filter(([, valor]) => valor);
 
   return (
@@ -60,9 +60,9 @@ function DetalleConsulta({ evento }) {
           <span className="text-body-secondary">Diagnosticos: </span>
           {evento.diagnosticos
             .map((diagnostico) =>
-              [diagnostico.codigo, diagnostico.nombre].filter(Boolean).join(' '),
+              [diagnostico.codigo, diagnostico.nombre].filter(Boolean).join(" "),
             )
-            .join(', ')}
+            .join(", ")}
         </p>
       )}
       {campos.map(([etiqueta, valor]) => (
@@ -89,11 +89,11 @@ function DetalleReceta({ evento }) {
         <li key={`${evento.id}-${indice}`}>
           {[renglon.medicamento, renglon.concentracion, renglon.presentacion]
             .filter(Boolean)
-            .join(' ')}
-          {renglon.dosis ? ` — ${renglon.dosis}` : ''}
-          {renglon.frecuencia ? `, ${renglon.frecuencia}` : ''}
-          {renglon.duracion ? `, ${renglon.duracion}` : ''}
-          {renglon.cantidadEntregada ? ` (${renglon.cantidadEntregada})` : ''}
+            .join(" ")}
+          {renglon.dosis ? ` — ${renglon.dosis}` : ""}
+          {renglon.frecuencia ? `, ${renglon.frecuencia}` : ""}
+          {renglon.duracion ? `, ${renglon.duracion}` : ""}
+          {renglon.cantidadEntregada ? ` (${renglon.cantidadEntregada})` : ""}
         </li>
       ))}
     </ul>
@@ -121,7 +121,7 @@ function Evento({ evento, expandido, onAlternar }) {
             onClick={onAlternar}
             aria-expanded={expandido}
           >
-            {expandido ? 'Ocultar detalle' : 'Ver detalle'}
+            {expandido ? "Ocultar detalle" : "Ver detalle"}
           </button>
         )}
       </div>
@@ -143,8 +143,17 @@ function Evento({ evento, expandido, onAlternar }) {
 }
 
 export default function PestaniaHistorialPaciente({ pacienteId, rol }) {
-  const { grupos, total, filtros, setFiltro, limpiarFiltros, hayFiltros, cargando, error, recargar } =
-    useHistorialPaciente(pacienteId, { rol });
+  const {
+    grupos,
+    total,
+    filtros,
+    setFiltro,
+    limpiarFiltros,
+    hayFiltros,
+    cargando,
+    error,
+    recargar,
+  } = useHistorialPaciente(pacienteId, { rol });
   const [expandidos, setExpandidos] = useState(() => new Set());
 
   const alternar = (id) =>
@@ -163,20 +172,20 @@ export default function PestaniaHistorialPaciente({ pacienteId, rol }) {
         <DateField
           label={desde.label}
           value={filtros.desde || null}
-          onChange={(valor) => setFiltro('desde', valor)}
+          onChange={(valor) => setFiltro("desde", valor)}
           maxDate={filtros.hasta || undefined}
         />
         <DateField
           label={hasta.label}
           value={filtros.hasta || null}
-          onChange={(valor) => setFiltro('hasta', valor)}
+          onChange={(valor) => setFiltro("hasta", valor)}
           minDate={filtros.desde || undefined}
         />
         <Selector
           label={tipo.label}
           value={filtros.tipo || null}
           options={OPCIONES_TIPO_DE_EVENTO}
-          onSelect={(valor) => setFiltro('tipo', valor)}
+          onSelect={(valor) => setFiltro("tipo", valor)}
           placeholder="Todos"
         />
         {hayFiltros && <SecondaryButton title="Limpiar" onClick={limpiarFiltros} />}
@@ -189,10 +198,10 @@ export default function PestaniaHistorialPaciente({ pacienteId, rol }) {
         <EmptyState
           message={
             hayFiltros
-              ? 'Ningun evento del historial coincide con los filtros.'
-              : 'Este paciente todavia no tiene atenciones registradas.'
+              ? "Ningun evento del historial coincide con los filtros."
+              : "Este paciente todavia no tiene atenciones registradas."
           }
-          actionLabel={hayFiltros ? 'Limpiar filtros' : undefined}
+          actionLabel={hayFiltros ? "Limpiar filtros" : undefined}
           onAction={hayFiltros ? limpiarFiltros : undefined}
         />
       )}
@@ -200,9 +209,9 @@ export default function PestaniaHistorialPaciente({ pacienteId, rol }) {
       {!cargando &&
         !error &&
         grupos.map((grupo) => (
-          <Card key={grupo.clave} style={{ marginBottom: '1rem' }}>
+          <Card key={grupo.clave} style={{ marginBottom: "1rem" }}>
             <div className="mb-1">
-              <strong>{grupo.jornada ?? 'Atencion sin jornada'}</strong>
+              <strong>{grupo.jornada ?? "Atencion sin jornada"}</strong>
               {grupo.comunidad && <span className="text-body-secondary"> · {grupo.comunidad}</span>}
             </div>
             <div className="text-body-secondary small">{formatearFechaCorta(grupo.fecha)}</div>

@@ -42,7 +42,18 @@ export default [
     },
   },
   {
-    files: ["**/*.config.js", "**/*.config.mjs", "eslint.config.mjs", "eslint.config.js"],
+    // vitest.setup.js/vitest.react-patch.setup.js/vitest.react-loader.mjs (apps/web) no son
+    // "*.config.*", pero corren en el mismo contexto de Node que un archivo de config: los
+    // globals de browser no les sirven y si les faltaran los de Node.
+    files: [
+      "**/*.config.js",
+      "**/*.config.mjs",
+      "eslint.config.mjs",
+      "eslint.config.js",
+      "**/vitest.setup.js",
+      "**/vitest.react-patch.setup.js",
+      "**/vitest.react-loader.mjs",
+    ],
     languageOptions: {
       globals: globals.node,
     },

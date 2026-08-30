@@ -59,9 +59,7 @@ describe("hayCambiosDeTriaje", () => {
   });
 
   it("se prende al escribir un campo", () => {
-    expect(hayCambiosDeTriaje({ ...VALORES_INICIALES, presionSistolica: "120" }, null)).toBe(
-      true,
-    );
+    expect(hayCambiosDeTriaje({ ...VALORES_INICIALES, presionSistolica: "120" }, null)).toBe(true);
   });
 
   it("se apaga tras un guardar exitoso, aunque los valores sigan capturados", () => {

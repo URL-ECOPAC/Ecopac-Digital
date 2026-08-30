@@ -28,9 +28,7 @@ export function useGestionLotes({
     return lotesIniciales
       .map((lote) => {
         const fechaVenc = new Date(lote.fecha_vencimiento);
-        const diasRestantes = Math.ceil(
-          (fechaVenc - ahora) / (1000 * 60 * 60 * 24)
-        );
+        const diasRestantes = Math.ceil((fechaVenc - ahora) / (1000 * 60 * 60 * 24));
 
         let estadoAlerta = "normal";
         if (diasRestantes <= 0) {
@@ -42,11 +40,11 @@ export function useGestionLotes({
         // Calcular existencias por bodega seleccionada o total
         const existenciasRelacionadas = lote.existencias || [];
         const existenciaFiltrada = existenciasRelacionadas.filter(
-          (e) => bodegaSeleccionada === "Todas" || e.bodega_id === bodegaSeleccionada
+          (e) => bodegaSeleccionada === "Todas" || e.bodega_id === bodegaSeleccionada,
         );
         const stockTotal = existenciaFiltrada.reduce(
           (acc, curr) => acc + (curr.cantidad_disponible || 0),
-          0
+          0,
         );
 
         return { ...lote, diasRestantes, estadoAlerta, stockTotal };
@@ -102,7 +100,7 @@ export function useGestionLotes({
 
     if (new Date(fecha_vencimiento) <= new Date(fecha_ingreso)) {
       setErrorValidacion(
-        "La fecha de vencimiento debe ser estrictamente posterior a la fecha de ingreso (chk_lotes_vencimiento_posterior)."
+        "La fecha de vencimiento debe ser estrictamente posterior a la fecha de ingreso (chk_lotes_vencimiento_posterior).",
       );
       return false;
     }
@@ -139,7 +137,7 @@ export function useGestionLotes({
       setErrorValidacion(null);
       return datosCierre;
     },
-    [usuario]
+    [usuario],
   );
 
   return {

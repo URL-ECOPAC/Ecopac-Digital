@@ -1,7 +1,4 @@
-
-
 import { useCallback, useEffect, useRef } from "react";
-
 
 export const MINUTOS_INACTIVIDAD_POR_DEFECTO = 30;
 

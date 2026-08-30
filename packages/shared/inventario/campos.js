@@ -21,7 +21,7 @@
 // CAMPOS_MOVIMIENTO exige tambien bodega: sin bodega no hay fila de existencias que
 // ajustar.
 
-import { TIPOS_DE_CAMPO } from '../descriptores.js';
+import { TIPOS_DE_CAMPO } from "../descriptores.js";
 import {
   ACCIONES_DE_ALERTA,
   ETIQUETAS_ACCION_ALERTA,
@@ -34,7 +34,7 @@ import {
   TIPOS_DE_MOVIMIENTO,
   TIPOS_DE_PROVEEDOR,
   opcionesDe,
-} from '../enums.js';
+} from "../enums.js";
 
 export const OPCIONES_PRESENTACION = opcionesDe(
   PRESENTACIONES_DE_MEDICAMENTO,
@@ -45,10 +45,7 @@ export const OPCIONES_TIPO_PROVEEDOR = opcionesDe(TIPOS_DE_PROVEEDOR, ETIQUETAS_
 
 export const OPCIONES_ORIGEN_LOTE = opcionesDe(ORIGENES_DE_LOTE, ETIQUETAS_ORIGEN_LOTE);
 
-export const OPCIONES_TIPO_MOVIMIENTO = opcionesDe(
-  TIPOS_DE_MOVIMIENTO,
-  ETIQUETAS_TIPO_MOVIMIENTO,
-);
+export const OPCIONES_TIPO_MOVIMIENTO = opcionesDe(TIPOS_DE_MOVIMIENTO, ETIQUETAS_TIPO_MOVIMIENTO);
 
 export const OPCIONES_ACCION_ALERTA = opcionesDe(ACCIONES_DE_ALERTA, ETIQUETAS_ACCION_ALERTA);
 
@@ -58,7 +55,12 @@ export const OPCIONES_ACCION_ALERTA = opcionesDe(ACCIONES_DE_ALERTA, ETIQUETAS_A
  * (columna generada de 00046) para la unicidad y la busqueda sin acentos.
  */
 export const CAMPOS_PRINCIPIO_ACTIVO = [
-  { id: 'nombre', label: 'Nombre', tipo: TIPOS_DE_CAMPO.TEXTO, validacion: { requerido: true, maxLongitud: 100 } },
+  {
+    id: "nombre",
+    label: "Nombre",
+    tipo: TIPOS_DE_CAMPO.TEXTO,
+    validacion: { requerido: true, maxLongitud: 100 },
+  },
 ];
 
 /**
@@ -68,27 +70,95 @@ export const CAMPOS_PRINCIPIO_ACTIVO = [
  * medicamento y sus principios activos en una sola transaccion.
  */
 export const CAMPOS_MEDICAMENTO = [
-  { id: 'nombre', label: 'Nombre', tipo: TIPOS_DE_CAMPO.TEXTO, validacion: { requerido: true, maxLongitud: 150 } },
-  { id: 'concentracion', label: 'Concentracion', tipo: TIPOS_DE_CAMPO.TEXTO, validacion: { requerido: true, maxLongitud: 100 } },
-  { id: 'presentacion', label: 'Presentacion', tipo: TIPOS_DE_CAMPO.SELECT, opciones: OPCIONES_PRESENTACION, validacion: { requerido: true } },
-  { id: 'marca', label: 'Marca', tipo: TIPOS_DE_CAMPO.TEXTO, validacion: { requerido: true, maxLongitud: 100 } },
-  { id: 'principiosActivos', label: 'Principios activos', tipo: TIPOS_DE_CAMPO.MULTI_SELECT, opcionesDesde: 'principiosActivos', validacion: { requerido: true } },
-  { id: 'formaFarmaceutica', label: 'Forma farmaceutica', tipo: TIPOS_DE_CAMPO.TEXTO, validacion: { requerido: false, maxLongitud: 100 } },
-  { id: 'esPediatrico', label: 'Es pediatrico', tipo: TIPOS_DE_CAMPO.BOOLEANO, validacion: { requerido: false } },
+  {
+    id: "nombre",
+    label: "Nombre",
+    tipo: TIPOS_DE_CAMPO.TEXTO,
+    validacion: { requerido: true, maxLongitud: 150 },
+  },
+  {
+    id: "concentracion",
+    label: "Concentracion",
+    tipo: TIPOS_DE_CAMPO.TEXTO,
+    validacion: { requerido: true, maxLongitud: 100 },
+  },
+  {
+    id: "presentacion",
+    label: "Presentacion",
+    tipo: TIPOS_DE_CAMPO.SELECT,
+    opciones: OPCIONES_PRESENTACION,
+    validacion: { requerido: true },
+  },
+  {
+    id: "marca",
+    label: "Marca",
+    tipo: TIPOS_DE_CAMPO.TEXTO,
+    validacion: { requerido: true, maxLongitud: 100 },
+  },
+  {
+    id: "principiosActivos",
+    label: "Principios activos",
+    tipo: TIPOS_DE_CAMPO.MULTI_SELECT,
+    opcionesDesde: "principiosActivos",
+    validacion: { requerido: true },
+  },
+  {
+    id: "formaFarmaceutica",
+    label: "Forma farmaceutica",
+    tipo: TIPOS_DE_CAMPO.TEXTO,
+    validacion: { requerido: false, maxLongitud: 100 },
+  },
+  {
+    id: "esPediatrico",
+    label: "Es pediatrico",
+    tipo: TIPOS_DE_CAMPO.BOOLEANO,
+    validacion: { requerido: false },
+  },
 ];
 
 /** Alta de proveedor (proveedores, 00017). */
 export const CAMPOS_PROVEEDOR = [
-  { id: 'nombre', label: 'Nombre', tipo: TIPOS_DE_CAMPO.TEXTO, validacion: { requerido: true, maxLongitud: 150 } },
-  { id: 'contacto', label: 'Contacto', tipo: TIPOS_DE_CAMPO.TEXTO, validacion: { requerido: false, maxLongitud: 150 } },
-  { id: 'tipo', label: 'Tipo', tipo: TIPOS_DE_CAMPO.SELECT, opciones: OPCIONES_TIPO_PROVEEDOR, validacion: { requerido: true } },
+  {
+    id: "nombre",
+    label: "Nombre",
+    tipo: TIPOS_DE_CAMPO.TEXTO,
+    validacion: { requerido: true, maxLongitud: 150 },
+  },
+  {
+    id: "contacto",
+    label: "Contacto",
+    tipo: TIPOS_DE_CAMPO.TEXTO,
+    validacion: { requerido: false, maxLongitud: 150 },
+  },
+  {
+    id: "tipo",
+    label: "Tipo",
+    tipo: TIPOS_DE_CAMPO.SELECT,
+    opciones: OPCIONES_TIPO_PROVEEDOR,
+    validacion: { requerido: true },
+  },
 ];
 
 /** Alta de bodega (bodegas, 00017). */
 export const CAMPOS_BODEGA = [
-  { id: 'nombre', label: 'Nombre', tipo: TIPOS_DE_CAMPO.TEXTO, validacion: { requerido: true, maxLongitud: 100 } },
-  { id: 'ubicacion', label: 'Ubicacion', tipo: TIPOS_DE_CAMPO.TEXTO, validacion: { requerido: false, maxLongitud: 200 } },
-  { id: 'esMovil', label: 'Es movil', tipo: TIPOS_DE_CAMPO.BOOLEANO, validacion: { requerido: false } },
+  {
+    id: "nombre",
+    label: "Nombre",
+    tipo: TIPOS_DE_CAMPO.TEXTO,
+    validacion: { requerido: true, maxLongitud: 100 },
+  },
+  {
+    id: "ubicacion",
+    label: "Ubicacion",
+    tipo: TIPOS_DE_CAMPO.TEXTO,
+    validacion: { requerido: false, maxLongitud: 200 },
+  },
+  {
+    id: "esMovil",
+    label: "Es movil",
+    tipo: TIPOS_DE_CAMPO.BOOLEANO,
+    validacion: { requerido: false },
+  },
 ];
 
 /**
@@ -98,13 +168,51 @@ export const CAMPOS_BODEGA = [
  * solo contra hoy.
  */
 export const CAMPOS_LOTE = [
-  { id: 'medicamento', label: 'Medicamento', tipo: TIPOS_DE_CAMPO.SELECT, opcionesDesde: 'medicamentos', validacion: { requerido: true } },
-  { id: 'numeroLote', label: 'Numero de lote', tipo: TIPOS_DE_CAMPO.TEXTO, validacion: { requerido: true, maxLongitud: 50 } },
-  { id: 'proveedor', label: 'Proveedor', tipo: TIPOS_DE_CAMPO.SELECT, opcionesDesde: 'proveedores', validacion: { requerido: true } },
-  { id: 'origen', label: 'Origen', tipo: TIPOS_DE_CAMPO.SELECT, opciones: OPCIONES_ORIGEN_LOTE, validacion: { requerido: true } },
-  { id: 'cantidadIngresada', label: 'Cantidad ingresada', tipo: TIPOS_DE_CAMPO.NUMERO, validacion: { requerido: true, min: 1 } },
-  { id: 'fechaIngreso', label: 'Fecha de ingreso', tipo: TIPOS_DE_CAMPO.FECHA, validacion: { requerido: false } },
-  { id: 'fechaVencimiento', label: 'Fecha de vencimiento', tipo: TIPOS_DE_CAMPO.FECHA, validacion: { requerido: true, minFechaDesdeCampo: 'fechaIngreso' } },
+  {
+    id: "medicamento",
+    label: "Medicamento",
+    tipo: TIPOS_DE_CAMPO.SELECT,
+    opcionesDesde: "medicamentos",
+    validacion: { requerido: true },
+  },
+  {
+    id: "numeroLote",
+    label: "Numero de lote",
+    tipo: TIPOS_DE_CAMPO.TEXTO,
+    validacion: { requerido: true, maxLongitud: 50 },
+  },
+  {
+    id: "proveedor",
+    label: "Proveedor",
+    tipo: TIPOS_DE_CAMPO.SELECT,
+    opcionesDesde: "proveedores",
+    validacion: { requerido: true },
+  },
+  {
+    id: "origen",
+    label: "Origen",
+    tipo: TIPOS_DE_CAMPO.SELECT,
+    opciones: OPCIONES_ORIGEN_LOTE,
+    validacion: { requerido: true },
+  },
+  {
+    id: "cantidadIngresada",
+    label: "Cantidad ingresada",
+    tipo: TIPOS_DE_CAMPO.NUMERO,
+    validacion: { requerido: true, min: 1 },
+  },
+  {
+    id: "fechaIngreso",
+    label: "Fecha de ingreso",
+    tipo: TIPOS_DE_CAMPO.FECHA,
+    validacion: { requerido: false },
+  },
+  {
+    id: "fechaVencimiento",
+    label: "Fecha de vencimiento",
+    tipo: TIPOS_DE_CAMPO.FECHA,
+    validacion: { requerido: true, minFechaDesdeCampo: "fechaIngreso" },
+  },
 ];
 
 /**
@@ -114,14 +222,42 @@ export const CAMPOS_LOTE = [
  * 00028), nunca el cliente.
  */
 export const CAMPOS_MOVIMIENTO = [
-  { id: 'tipo', label: 'Tipo', tipo: TIPOS_DE_CAMPO.SELECT, opciones: OPCIONES_TIPO_MOVIMIENTO, validacion: { requerido: true } },
+  {
+    id: "tipo",
+    label: "Tipo",
+    tipo: TIPOS_DE_CAMPO.SELECT,
+    opciones: OPCIONES_TIPO_MOVIMIENTO,
+    validacion: { requerido: true },
+  },
   // Opciones desde vista_lotes_disponibles: solo lotes con stock vigente (00047).
-  { id: 'lote', label: 'Lote', tipo: TIPOS_DE_CAMPO.SELECT, opcionesDesde: 'lotesDisponibles', validacion: { requerido: true } },
+  {
+    id: "lote",
+    label: "Lote",
+    tipo: TIPOS_DE_CAMPO.SELECT,
+    opcionesDesde: "lotesDisponibles",
+    validacion: { requerido: true },
+  },
   // bodega_id es NOT NULL en movimientos_inventario desde la 00047: sin bodega no hay
   // fila de existencias que ajustar.
-  { id: 'bodega', label: 'Bodega', tipo: TIPOS_DE_CAMPO.SELECT, opcionesDesde: 'bodegas', validacion: { requerido: true } },
-  { id: 'cantidad', label: 'Cantidad', tipo: TIPOS_DE_CAMPO.NUMERO, validacion: { requerido: true, min: 1 } },
-  { id: 'motivo', label: 'Motivo', tipo: TIPOS_DE_CAMPO.TEXTO_LARGO, validacion: { requerido: true } },
+  {
+    id: "bodega",
+    label: "Bodega",
+    tipo: TIPOS_DE_CAMPO.SELECT,
+    opcionesDesde: "bodegas",
+    validacion: { requerido: true },
+  },
+  {
+    id: "cantidad",
+    label: "Cantidad",
+    tipo: TIPOS_DE_CAMPO.NUMERO,
+    validacion: { requerido: true, min: 1 },
+  },
+  {
+    id: "motivo",
+    label: "Motivo",
+    tipo: TIPOS_DE_CAMPO.TEXTO_LARGO,
+    validacion: { requerido: true },
+  },
 ];
 
 /**
@@ -130,5 +266,11 @@ export const CAMPOS_MOVIMIENTO = [
  * 'atendida': por eso accion es requerido aqui, aunque la columna en si sea nullable.
  */
 export const CAMPOS_ATENDER_ALERTA = [
-  { id: 'accion', label: 'Accion tomada', tipo: TIPOS_DE_CAMPO.SELECT, opciones: OPCIONES_ACCION_ALERTA, validacion: { requerido: true } },
+  {
+    id: "accion",
+    label: "Accion tomada",
+    tipo: TIPOS_DE_CAMPO.SELECT,
+    opciones: OPCIONES_ACCION_ALERTA,
+    validacion: { requerido: true },
+  },
 ];

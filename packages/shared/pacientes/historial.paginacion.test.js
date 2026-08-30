@@ -32,9 +32,27 @@ describe("paginacion del historial por atencion", () => {
 
   it("varios eventos de una misma atencion cuentan como una sola", () => {
     const grupos = agruparPorJornada([
-      { jornadaId: "j-1", jornada: "Mayo", tipo: "triaje", id: "t-1", fecha: "2026-05-10T15:00:00Z" },
-      { jornadaId: "j-1", jornada: "Mayo", tipo: "consulta", id: "c-1", fecha: "2026-05-10T15:30:00Z" },
-      { jornadaId: "j-1", jornada: "Mayo", tipo: "receta", id: "r-1", fecha: "2026-05-10T15:40:00Z" },
+      {
+        jornadaId: "j-1",
+        jornada: "Mayo",
+        tipo: "triaje",
+        id: "t-1",
+        fecha: "2026-05-10T15:00:00Z",
+      },
+      {
+        jornadaId: "j-1",
+        jornada: "Mayo",
+        tipo: "consulta",
+        id: "c-1",
+        fecha: "2026-05-10T15:30:00Z",
+      },
+      {
+        jornadaId: "j-1",
+        jornada: "Mayo",
+        tipo: "receta",
+        id: "r-1",
+        fecha: "2026-05-10T15:40:00Z",
+      },
     ]);
 
     expect(grupos).toHaveLength(1);
@@ -44,10 +62,6 @@ describe("paginacion del historial por atencion", () => {
   it("el corte respeta el orden que ya trae la consulta", () => {
     const grupos = agruparPorJornada(atencionesDe(5)).slice(0, 3);
 
-    expect(grupos.map((grupo) => grupo.jornada)).toEqual([
-      "Jornada 0",
-      "Jornada 1",
-      "Jornada 2",
-    ]);
+    expect(grupos.map((grupo) => grupo.jornada)).toEqual(["Jornada 0", "Jornada 1", "Jornada 2"]);
   });
 });

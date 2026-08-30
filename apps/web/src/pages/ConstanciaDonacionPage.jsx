@@ -1,26 +1,13 @@
 import { useConstanciaDonacion } from "@ecopac/shared";
-import {
-  Container,
-  Row,
-  Col,
-  Button,
-  Table,
-  Card,
-  Badge,
-  Alert,
-} from "react-bootstrap";
+import { Container, Row, Col, Button, Table, Card, Badge, Alert } from "react-bootstrap";
 
 export default function ConstanciaDonacionPage({ usuarioRol, donacion }) {
-  const {
-    tieneAccesoLectura,
-    esValidaParaConstancia,
-    correlativo,
-    manejarImpresion,
-  } = useConstanciaDonacion({
-    usuarioRol,
-    donacion,
-    onImprimir: () => window.print(),
-  });
+  const { tieneAccesoLectura, esValidaParaConstancia, correlativo, manejarImpresion } =
+    useConstanciaDonacion({
+      usuarioRol,
+      donacion,
+      onImprimir: () => window.print(),
+    });
 
   if (!tieneAccesoLectura) {
     return (
@@ -35,9 +22,7 @@ export default function ConstanciaDonacionPage({ usuarioRol, donacion }) {
   if (!donacion) {
     return (
       <Container className="my-4">
-        <Alert variant="secondary">
-          No se ha seleccionado ninguna donación.
-        </Alert>
+        <Alert variant="secondary">No se ha seleccionado ninguna donación.</Alert>
       </Container>
     );
   }
@@ -48,8 +33,8 @@ export default function ConstanciaDonacionPage({ usuarioRol, donacion }) {
         <Alert variant="danger">
           <Alert.Heading as="h5">Constancia No Disponible</Alert.Heading>
           <p className="mb-0">
-            Esta donación se encuentra en estado <strong>ANULADA</strong>. Las
-            donaciones anuladas no pueden generar una constancia de respaldo.
+            Esta donación se encuentra en estado <strong>ANULADA</strong>. Las donaciones anuladas
+            no pueden generar una constancia de respaldo.
           </p>
         </Alert>
       </Container>
@@ -71,12 +56,8 @@ export default function ConstanciaDonacionPage({ usuarioRol, donacion }) {
           {/* Encabezado de la Organización */}
           <div className="border-bottom pb-3 mb-4 d-flex justify-content-between align-items-center">
             <div>
-              <h1 className="h4 fw-bold text-uppercase mb-1 tracking-wide">
-                Ecopac Digital
-              </h1>
-              <p className="small text-muted mb-0">
-                Comité Agrícola de Desarrollo Integral
-              </p>
+              <h1 className="h4 fw-bold text-uppercase mb-1 tracking-wide">Ecopac Digital</h1>
+              <p className="small text-muted mb-0">Comité Agrícola de Desarrollo Integral</p>
               <p className="extra-small text-muted mb-0">
                 Guatemala · Registro de Aportes y Donaciones
               </p>
@@ -85,9 +66,7 @@ export default function ConstanciaDonacionPage({ usuarioRol, donacion }) {
               <Badge bg="secondary" className="font-monospace fs-6 px-3 py-2">
                 {correlativo}
               </Badge>
-              <p className="small text-muted mt-2 mb-0">
-                Fecha: {donacion.fecha}
-              </p>
+              <p className="small text-muted mt-2 mb-0">Fecha: {donacion.fecha}</p>
             </div>
           </div>
 
@@ -102,16 +81,14 @@ export default function ConstanciaDonacionPage({ usuarioRol, donacion }) {
                 <strong>Donante:</strong> {donacion.donante_nombre}
               </p>
               <p className="mb-1">
-                <strong>Identificación / Teléfono:</strong>{" "}
-                {donacion.donante_contacto || "N/A"}
+                <strong>Identificación / Teléfono:</strong> {donacion.donante_contacto || "N/A"}
               </p>
               <p className="mb-1">
                 <strong>Tipo de Aporte:</strong>{" "}
                 <span className="text-capitalize">{donacion.tipo}</span>
               </p>
               <p className="mb-0">
-                <strong>Proyecto Asignado:</strong>{" "}
-                {donacion.proyecto_nombre || "Fondo General"}
+                <strong>Proyecto Asignado:</strong> {donacion.proyecto_nombre || "Fondo General"}
               </p>
             </Card.Body>
           </Card>
@@ -169,9 +146,7 @@ export default function ConstanciaDonacionPage({ usuarioRol, donacion }) {
                 className="border-bottom border-dark mx-auto mb-2"
                 style={{ width: "75%" }}
               ></div>
-              <p className="fw-semibold mb-0">
-                Por Ecopac Digital (Administración)
-              </p>
+              <p className="fw-semibold mb-0">Por Ecopac Digital (Administración)</p>
             </Col>
           </Row>
         </Card.Body>

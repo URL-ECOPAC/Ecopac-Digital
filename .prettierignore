@@ -1,0 +1,13 @@
+# Generado, no se formatea a mano.
+node_modules
+dist
+build
+coverage
+.expo
+package-lock.json
+
+# Prettier no soporta SQL bien (necesitaria un plugin que no esta instalado) y el equipo
+# decidio no tocar Markdown/YAML en el formateo masivo (issue #515): docs/*.md tiene tablas
+# armadas a mano y .github/workflows/*.yml comentarios alineados a proposito.
+supabase
+docs

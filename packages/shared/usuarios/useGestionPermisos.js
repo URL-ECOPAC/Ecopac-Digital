@@ -147,5 +147,14 @@ export function useGestionPermisos(idUsuario) {
     [ejecutar, idUsuario],
   );
 
-  return { modulos, cargando, error, claveEnProceso, avisoSinEfecto, conceder, revocar, restablecer };
+  return {
+    modulos,
+    cargando,
+    error,
+    claveEnProceso,
+    avisoSinEfecto,
+    conceder,
+    revocar,
+    restablecer,
+  };
 }

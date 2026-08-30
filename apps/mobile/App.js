@@ -1,11 +1,11 @@
-import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { ESTADOS_DE_RESTAURACION, inicializarSupabase } from '@ecopac/shared';
+import { SafeAreaProvider } from "react-native-safe-area-context";
+import { ESTADOS_DE_RESTAURACION, inicializarSupabase } from "@ecopac/shared";
 
-import { almacenamientoMovil } from './src/almacenamiento';
-import { RegistroSinGuardarProvider } from './src/contexto/RegistroSinGuardarProvider';
-import { SesionProvider, useSesionCompartida } from './src/contexto/SesionProvider';
-import AppNavigator from './src/navigation/AppNavigator';
-import RestaurandoSesionScreen from './src/screens/RestaurandoSesionScreen';
+import { almacenamientoMovil } from "./src/almacenamiento";
+import { RegistroSinGuardarProvider } from "./src/contexto/RegistroSinGuardarProvider";
+import { SesionProvider, useSesionCompartida } from "./src/contexto/SesionProvider";
+import AppNavigator from "./src/navigation/AppNavigator";
+import RestaurandoSesionScreen from "./src/screens/RestaurandoSesionScreen";
 // Aqui vivia un intento de simular `import.meta.env` para reutilizar la lectura de entorno
 // de Vite. No podia funcionar y ademas tumbaba la app entera al arrancar: `import.meta` es
 // sintaxis, no una propiedad de globalThis, asi que asignar `globalThis.import` no la crea,
@@ -29,8 +29,8 @@ try {
   inicializarSupabase({ almacenamiento: almacenamientoMovil });
 } catch (error) {
   console.error(
-    'Supabase no se inicializo: la aplicacion arranca pero no habra datos.',
-    error.message
+    "Supabase no se inicializo: la aplicacion arranca pero no habra datos.",
+    error.message,
   );
 }
 

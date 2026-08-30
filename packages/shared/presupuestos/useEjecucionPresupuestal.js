@@ -28,7 +28,7 @@ const KPIS_VACIOS = { asignado: 0, gastado: 0, disponible: 0, pendiente: 0, porc
 export function calcularPorcentajeEjecutado(asignado, gastado) {
   const total = Number(asignado) || 0;
   if (total <= 0) return 0;
-  return (Number(gastado) || 0) / total * 100;
+  return ((Number(gastado) || 0) / total) * 100;
 }
 
 /**
@@ -112,7 +112,9 @@ export function useEjecucionPresupuestal(rol) {
     const presupuestosPorProyecto = {};
     await Promise.all(
       filas.map(async (proyecto) => {
-        const { presupuesto: presupuestoDelProyecto } = await obtenerPresupuestoProyecto(proyecto.id);
+        const { presupuesto: presupuestoDelProyecto } = await obtenerPresupuestoProyecto(
+          proyecto.id,
+        );
         if (presupuestoDelProyecto) presupuestosPorProyecto[proyecto.id] = presupuestoDelProyecto;
       }),
     );

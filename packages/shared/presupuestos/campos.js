@@ -27,10 +27,7 @@ import {
   opcionesDe,
 } from "../enums.js";
 
-export const OPCIONES_CATEGORIA_GASTO = opcionesDe(
-  CATEGORIAS_DE_GASTO,
-  ETIQUETAS_CATEGORIA_GASTO,
-);
+export const OPCIONES_CATEGORIA_GASTO = opcionesDe(CATEGORIAS_DE_GASTO, ETIQUETAS_CATEGORIA_GASTO);
 
 export const OPCIONES_ESTADO_GASTO = opcionesDe(ESTADOS_DE_GASTO, ETIQUETAS_ESTADO_GASTO);
 

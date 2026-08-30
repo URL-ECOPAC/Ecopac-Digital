@@ -18,13 +18,13 @@ export default function ScreenContainer({
   return (
     <div
       style={{
-        backgroundColor: 'var(--color-background)',
-        height: scrollable ? undefined : '100%',
-        overflow: scrollable ? undefined : 'hidden',
+        backgroundColor: "var(--color-background)",
+        height: scrollable ? undefined : "100%",
+        overflow: scrollable ? undefined : "hidden",
         ...style,
       }}
     >
-      <div style={{ padding: 'var(--spacing-md)', ...contentContainerStyle }}>{children}</div>
+      <div style={{ padding: "var(--spacing-md)", ...contentContainerStyle }}>{children}</div>
     </div>
   );
 }

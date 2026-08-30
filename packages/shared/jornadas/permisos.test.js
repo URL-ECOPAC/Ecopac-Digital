@@ -8,7 +8,15 @@
 import { describe, expect, it } from "vitest";
 
 import { ROLES } from "../usuarios/roles.js";
-import { permisosDeJornadas, puedeAdministrarJornadas, puedeEditarJornada, puedeReabrirJornada, puedeVerHistorialJornada, puedeVerJornadas, puedeVerRosterCompleto } from "./permisos.js";
+import {
+  permisosDeJornadas,
+  puedeAdministrarJornadas,
+  puedeEditarJornada,
+  puedeReabrirJornada,
+  puedeVerHistorialJornada,
+  puedeVerJornadas,
+  puedeVerRosterCompleto,
+} from "./permisos.js";
 import { ESTADOS_JORNADA } from "../enums.js";
 
 describe("permisos de jornadas", () => {

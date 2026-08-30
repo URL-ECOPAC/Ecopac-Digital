@@ -5,7 +5,7 @@
 // Cuando el diccionario de datos del entregable y la migracion aplicada no coinciden, manda la
 // migracion (AGENTS.md, "Fuente de verdad").
 
-import { TIPOS_DE_CAMPO } from '../descriptores.js';
+import { TIPOS_DE_CAMPO } from "../descriptores.js";
 import { ESTADOS_CONDICION_CRONICA, ETIQUETAS_ESTADO_CONDICION, opcionesDe } from "../enums.js";
 
 export const OPCIONES_ESTADO_CONDICION = opcionesDe(
@@ -25,28 +25,28 @@ export const OPCIONES_ESTADO_CONDICION = opcionesDe(
  */
 export const CAMPOS_CONDICION_CRONICA = [
   {
-    id: 'condicion',
-    label: 'Condicion',
+    id: "condicion",
+    label: "Condicion",
     tipo: TIPOS_DE_CAMPO.SELECT,
-    opcionesDesde: 'condicionesCronicas',
+    opcionesDesde: "condicionesCronicas",
     validacion: { requerido: true },
   },
   {
-    id: 'fechaDiagnostico',
-    label: 'Fecha de diagnostico',
+    id: "fechaDiagnostico",
+    label: "Fecha de diagnostico",
     tipo: TIPOS_DE_CAMPO.FECHA,
     validacion: { requerido: true },
   },
   {
-    id: 'estado',
-    label: 'Estado',
+    id: "estado",
+    label: "Estado",
     tipo: TIPOS_DE_CAMPO.SELECT,
     opciones: OPCIONES_ESTADO_CONDICION,
     validacion: { requerido: false },
   },
   {
-    id: 'notas',
-    label: 'Notas',
+    id: "notas",
+    label: "Notas",
     tipo: TIPOS_DE_CAMPO.TEXTO_LARGO,
     validacion: { requerido: false },
   },

@@ -108,7 +108,9 @@ export function useJornadaActiva({ perfilId, almacenamiento } = {}) {
 
   const almacen = useRef(null);
   if (almacen.current === null) {
-    almacen.current = almacenamiento ? validarAlmacenamiento(almacenamiento) : crearAlmacenamientoEnMemoria();
+    almacen.current = almacenamiento
+      ? validarAlmacenamiento(almacenamiento)
+      : crearAlmacenamientoEnMemoria();
   }
 
   /** Trae la cola y la vigencia de la jornada seleccionada. No toca jornadasAsignadas. */

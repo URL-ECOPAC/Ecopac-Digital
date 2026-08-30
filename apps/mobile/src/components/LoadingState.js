@@ -1,5 +1,5 @@
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
-import { colors, labels, spacing, typography } from '@ecopac/ui-tokens';
+import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
+import { colors, labels, spacing, typography } from "@ecopac/ui-tokens";
 
 /**
  * Estado de carga. Espejo de apps/web/src/components/LoadingState.jsx.
@@ -17,8 +17,8 @@ export default function LoadingState({ message = labels.cargando }) {
 
 const styles = StyleSheet.create({
   container: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     paddingVertical: spacing.xl,
   },
   text: {

@@ -45,11 +45,7 @@ export default function ProyectosSocialesPage({
             Gestión de proyectos, presupuestos y jornadas de campo
           </p>
         </div>
-        {puedeEditar && (
-          <Button variant="primary">
-            + Nuevo Proyecto
-          </Button>
-        )}
+        {puedeEditar && <Button variant="primary">+ Nuevo Proyecto</Button>}
       </div>
 
       {/* Controles de Filtrado */}
@@ -58,9 +54,7 @@ export default function ProyectosSocialesPage({
           <Row className="g-3">
             <Col md={4} lg={3}>
               <Form.Group>
-                <Form.Label className="small fw-semibold text-secondary mb-1">
-                  Estado
-                </Form.Label>
+                <Form.Label className="small fw-semibold text-secondary mb-1">Estado</Form.Label>
                 <Form.Select
                   value={filtrosState.estado}
                   onChange={(e) =>
@@ -129,9 +123,7 @@ export default function ProyectosSocialesPage({
                     {p.fecha_inicio} - {p.fecha_fin}
                   </td>
                   <td className="py-3 px-3">
-                    <Badge
-                      bg={p.estado === "En Ejecución" ? "success" : "secondary"}
-                    >
+                    <Badge bg={p.estado === "En Ejecución" ? "success" : "secondary"}>
                       {p.estado}
                     </Badge>
                   </td>
@@ -176,9 +168,7 @@ export default function ProyectosSocialesPage({
             <Modal.Title as="h5">{proyectoDetalle.nombre}</Modal.Title>
           </Modal.Header>
           <Modal.Body>
-            <p className="text-secondary small mb-3">
-              {proyectoDetalle.descripcion}
-            </p>
+            <p className="text-secondary small mb-3">{proyectoDetalle.descripcion}</p>
 
             {/* Tabs de Detalle */}
             <Nav
@@ -187,15 +177,13 @@ export default function ProyectosSocialesPage({
               onSelect={(selectedKey) => setTabActivo(selectedKey)}
               className="mb-3"
             >
-              {["resumen", "equipo", "jornadas", "insumos", "gastos"].map(
-                (tab) => (
-                  <Nav.Item key={tab}>
-                    <Nav.Link eventKey={tab} className="text-capitalize">
-                      {tab}
-                    </Nav.Link>
-                  </Nav.Item>
-                )
-              )}
+              {["resumen", "equipo", "jornadas", "insumos", "gastos"].map((tab) => (
+                <Nav.Item key={tab}>
+                  <Nav.Link eventKey={tab} className="text-capitalize">
+                    {tab}
+                  </Nav.Link>
+                </Nav.Item>
+              ))}
             </Nav>
 
             {/* Contenido según Tab Activo */}
@@ -205,12 +193,10 @@ export default function ProyectosSocialesPage({
                   <strong>Responsable:</strong> {proyectoDetalle.responsable}
                 </p>
                 <p className="mb-2">
-                  <strong>Presupuesto:</strong> Q{" "}
-                  {proyectoDetalle.presupuesto || "0.00"}
+                  <strong>Presupuesto:</strong> Q {proyectoDetalle.presupuesto || "0.00"}
                 </p>
                 <p className="mb-0">
-                  <strong>Avance actual:</strong>{" "}
-                  {proyectoDetalle.porcentaje_avance || 0}%
+                  <strong>Avance actual:</strong> {proyectoDetalle.porcentaje_avance || 0}%
                 </p>
               </div>
             )}
@@ -240,16 +226,13 @@ export default function ProyectosSocialesPage({
 
             {tabActivo === "gastos" && (
               <Alert variant="warning" className="mb-0 py-2 px-3 small">
-                El tab Gastos depende del módulo de Presupuestos (#274),
-                actualmente pendiente de asignación.
+                El tab Gastos depende del módulo de Presupuestos (#274), actualmente pendiente de
+                asignación.
               </Alert>
             )}
           </Modal.Body>
           <Modal.Footer>
-            <Button
-              variant="secondary"
-              onClick={() => setProyectoSeleccionadoId(null)}
-            >
+            <Button variant="secondary" onClick={() => setProyectoSeleccionadoId(null)}>
               Cerrar
             </Button>
           </Modal.Footer>

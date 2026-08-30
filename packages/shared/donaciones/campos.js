@@ -130,9 +130,25 @@ export const CAMPOS_DONACION = [
         tipo: TIPOS_DE_CAMPO.TEXTO,
         validacion: { requerido: true, maxLongitud: 200 },
       },
-      { id: "cantidad", label: "Cantidad", tipo: TIPOS_DE_CAMPO.NUMERO, validacion: { requerido: false, min: 0 } },
-      { id: "unidad", label: "Unidad", tipo: TIPOS_DE_CAMPO.TEXTO, validacion: { requerido: false, maxLongitud: 30 } },
-      { id: "monto", label: "Monto", tipo: TIPOS_DE_CAMPO.NUMERO, sufijo: "Q", validacion: { requerido: false, min: 0 } },
+      {
+        id: "cantidad",
+        label: "Cantidad",
+        tipo: TIPOS_DE_CAMPO.NUMERO,
+        validacion: { requerido: false, min: 0 },
+      },
+      {
+        id: "unidad",
+        label: "Unidad",
+        tipo: TIPOS_DE_CAMPO.TEXTO,
+        validacion: { requerido: false, maxLongitud: 30 },
+      },
+      {
+        id: "monto",
+        label: "Monto",
+        tipo: TIPOS_DE_CAMPO.NUMERO,
+        sufijo: "Q",
+        validacion: { requerido: false, min: 0 },
+      },
       {
         id: "fechaVencimiento",
         label: "Fecha de vencimiento",

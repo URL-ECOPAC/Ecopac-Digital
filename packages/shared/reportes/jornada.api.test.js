@@ -106,16 +106,12 @@ describe("Módulo de Reportes - API Resultados por Jornada (#489)", () => {
         {
           id: "R1",
           consulta_id: "C1",
-          receta_detalle: [
-            { cantidad_entregada: 10, medicamentos: { nombre: "Paracetamol" } },
-          ],
+          receta_detalle: [{ cantidad_entregada: 10, medicamentos: { nombre: "Paracetamol" } }],
         },
         {
           id: "R2",
           consulta_id: "C2",
-          receta_detalle: [
-            { cantidad_entregada: 5, medicamentos: { nombre: "Amoxicilina" } },
-          ],
+          receta_detalle: [{ cantidad_entregada: 5, medicamentos: { nombre: "Amoxicilina" } }],
         },
       ],
     });

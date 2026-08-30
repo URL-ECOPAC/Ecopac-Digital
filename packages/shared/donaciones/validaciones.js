@@ -78,7 +78,8 @@ export function validarDonante(donante = {}) {
     estaVacio(donante.contacto) && estaVacio(donante.telefono) && estaVacio(donante.email);
 
   if (sinContacto) {
-    errores.contacto = "Debe proporcionar al menos un dato de contacto (persona, telefono o correo).";
+    errores.contacto =
+      "Debe proporcionar al menos un dato de contacto (persona, telefono o correo).";
   }
 
   return errores;
@@ -109,7 +110,8 @@ function validarDetalle(detalle = {}, indice, tipoDeDonacion) {
 
   if (TIPOS_QUE_EXIGEN_CANTIDAD.includes(tipoDeDonacion)) {
     if (estaVacio(detalle.cantidad) || Number(detalle.cantidad) <= 0) {
-      errores[`${prefijo}_cantidad`] = `El renglon ${renglon} debe incluir una cantidad mayor a cero.`;
+      errores[`${prefijo}_cantidad`] =
+        `El renglon ${renglon} debe incluir una cantidad mayor a cero.`;
     }
   } else if (!estaVacio(detalle.cantidad) && Number(detalle.cantidad) <= 0) {
     // Fuera de medicamentos e insumos la cantidad es opcional, pero si viene tiene que ser

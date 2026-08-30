@@ -1,4 +1,4 @@
-import { colors, spacing, moduleAccents, statusColors } from '@ecopac/ui-tokens';
+import { colors, spacing, moduleAccents, statusColors } from "@ecopac/ui-tokens";
 
 // Publica los tokens de diseno como custom properties de CSS.
 //
@@ -23,6 +23,6 @@ export function aplicarTokens(elemento = document.documentElement) {
 
   // Las claves de estado vienen de los enum de la base de datos y llevan espacios.
   for (const [estado, valor] of Object.entries(statusColors)) {
-    elemento.style.setProperty(`--estado-${estado.replace(/ /g, '-')}`, valor);
+    elemento.style.setProperty(`--estado-${estado.replace(/ /g, "-")}`, valor);
   }
 }

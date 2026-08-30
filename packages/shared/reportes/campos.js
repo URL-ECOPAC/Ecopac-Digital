@@ -33,10 +33,7 @@ export const ESTADOS_DE_VENCIMIENTO_REPORTE = [
  * etiquetas ya existen en ui-tokens; este catalogo solo los agrupa en la forma que
  * columnas.js/DataList esperan.
  */
-export const ESTADOS_JORNADA_REPORTE = opcionesConClave(
-  ESTADOS_JORNADA,
-  ETIQUETAS_ESTADO_JORNADA,
-);
+export const ESTADOS_JORNADA_REPORTE = opcionesConClave(ESTADOS_JORNADA, ETIQUETAS_ESTADO_JORNADA);
 
 /** Las cuatro metricas de obtenerIndicadoresImpacto(), para el selector de #214. */
 export const OPCIONES_METRICA_IMPACTO = [

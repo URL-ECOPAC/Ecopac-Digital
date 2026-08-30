@@ -6,22 +6,22 @@
 // valor de estado_jornada) y cada tarjeta usa COLUMNAS_JORNADA igual que la fila de
 // una tabla, via el mismo mecanismo de DataList/Card que ya interpreta 'principal'.
 
-import { TIPOS_DE_PRESENTACION } from '../descriptores.js';
+import { TIPOS_DE_PRESENTACION } from "../descriptores.js";
 
 export const COLUMNAS_JORNADA = [
-  { id: 'nombre', label: 'Nombre', tipo: TIPOS_DE_PRESENTACION.TEXTO, principal: true },
-  { id: 'codigo', label: 'Codigo', tipo: TIPOS_DE_PRESENTACION.TEXTO },
-  { id: 'comunidad', label: 'Comunidad', tipo: TIPOS_DE_PRESENTACION.TEXTO },
-  { id: 'fecha', label: 'Fecha', tipo: TIPOS_DE_PRESENTACION.FECHA },
-  { id: 'estado', label: 'Estado', tipo: TIPOS_DE_PRESENTACION.CHIP },
-  { id: 'responsable', label: 'Responsable', tipo: TIPOS_DE_PRESENTACION.TEXTO },
-  { id: 'cupoEstimado', label: 'Cupo estimado', tipo: TIPOS_DE_PRESENTACION.NUMERO },
+  { id: "nombre", label: "Nombre", tipo: TIPOS_DE_PRESENTACION.TEXTO, principal: true },
+  { id: "codigo", label: "Codigo", tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  { id: "comunidad", label: "Comunidad", tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  { id: "fecha", label: "Fecha", tipo: TIPOS_DE_PRESENTACION.FECHA },
+  { id: "estado", label: "Estado", tipo: TIPOS_DE_PRESENTACION.CHIP },
+  { id: "responsable", label: "Responsable", tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  { id: "cupoEstimado", label: "Cupo estimado", tipo: TIPOS_DE_PRESENTACION.NUMERO },
   // Issue #178, criterio 1. No sale de listarJornadas(): se mezcla en el hook de pantalla desde
   // contarPacientesAtendidosPorJornada() (api.js), que consulta vista_reporte_impacto en lote.
   // Esa vista no da SELECT a medico ni voluntario (00064): para esos roles la tarjeta no trae
   // esta clave, y la pantalla pinta un guion en vez de inventar un 0 que afirmaria una atencion
   // nula que no se puede confirmar.
-  { id: 'pacientesAtendidos', label: 'Pacientes atendidos', tipo: TIPOS_DE_PRESENTACION.NUMERO },
+  { id: "pacientesAtendidos", label: "Pacientes atendidos", tipo: TIPOS_DE_PRESENTACION.NUMERO },
 ];
 
 // `codigo` y `cupoEstimado` quedan arriba para quien mas los necesite (por ejemplo el detalle de
@@ -31,11 +31,11 @@ export const COLUMNAS_JORNADA = [
 
 /** Personal asignado a una jornada (jornada_personal), dentro de su detalle. */
 export const COLUMNAS_PERSONAL_JORNADA = [
-  { id: 'perfil', label: 'Nombre', tipo: TIPOS_DE_PRESENTACION.TEXTO, principal: true },
-  { id: 'rolEnJornada', label: 'Rol', tipo: TIPOS_DE_PRESENTACION.TEXTO },
-  { id: 'horaInicio', label: 'Hora inicio', tipo: TIPOS_DE_PRESENTACION.TEXTO },
-  { id: 'horaFin', label: 'Hora fin', tipo: TIPOS_DE_PRESENTACION.TEXTO },
-  { id: 'asistio', label: 'Asistio', tipo: TIPOS_DE_PRESENTACION.BOOLEANO },
+  { id: "perfil", label: "Nombre", tipo: TIPOS_DE_PRESENTACION.TEXTO, principal: true },
+  { id: "rolEnJornada", label: "Rol", tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  { id: "horaInicio", label: "Hora inicio", tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  { id: "horaFin", label: "Hora fin", tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  { id: "asistio", label: "Asistio", tipo: TIPOS_DE_PRESENTACION.BOOLEANO },
 ];
 
 /**
@@ -46,8 +46,8 @@ export const COLUMNAS_PERSONAL_JORNADA = [
  * columnas de este archivo que usan `etiquetasDesde`.
  */
 export const COLUMNAS_RESULTADOS_ASIGNACION_PERSONAL = [
-  { id: 'nombreCompleto', label: 'Nombre', tipo: TIPOS_DE_PRESENTACION.TEXTO, principal: true },
-  { id: 'rolEtiqueta', label: 'Rol', tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  { id: "nombreCompleto", label: "Nombre", tipo: TIPOS_DE_PRESENTACION.TEXTO, principal: true },
+  { id: "rolEtiqueta", label: "Rol", tipo: TIPOS_DE_PRESENTACION.TEXTO },
 ];
 
 /**
@@ -58,10 +58,10 @@ export const COLUMNAS_RESULTADOS_ASIGNACION_PERSONAL = [
  * vez de mostrar esta tabla vacia (ver useDetalleJornada.js).
  */
 export const COLUMNAS_PACIENTES_ATENDIDOS_JORNADA = [
-  { id: 'paciente', label: 'Paciente', tipo: TIPOS_DE_PRESENTACION.TEXTO, principal: true },
+  { id: "paciente", label: "Paciente", tipo: TIPOS_DE_PRESENTACION.TEXTO, principal: true },
   {
-    id: 'diagnosticoPrincipal',
-    label: 'Diagnostico principal',
+    id: "diagnosticoPrincipal",
+    label: "Diagnostico principal",
     tipo: TIPOS_DE_PRESENTACION.TEXTO,
   },
 ];
@@ -84,8 +84,8 @@ export const COLUMNAS_PACIENTES_ATENDIDOS_JORNADA = [
  * (solo TIPOS_DE_PRESENTACION.FECHA, sin hora) y este descriptor no puede ampliar ese catalogo.
  */
 export const COLUMNAS_HISTORIAL_JORNADA = [
-  { id: 'estadoAnterior', label: 'Estado anterior', tipo: TIPOS_DE_PRESENTACION.CHIP },
-  { id: 'estadoNuevo', label: 'Estado nuevo', tipo: TIPOS_DE_PRESENTACION.CHIP, principal: true },
-  { id: 'cambiadoPor', label: 'Quien', tipo: TIPOS_DE_PRESENTACION.TEXTO },
-  { id: 'cuando', label: 'Cuando', tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  { id: "estadoAnterior", label: "Estado anterior", tipo: TIPOS_DE_PRESENTACION.CHIP },
+  { id: "estadoNuevo", label: "Estado nuevo", tipo: TIPOS_DE_PRESENTACION.CHIP, principal: true },
+  { id: "cambiadoPor", label: "Quien", tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  { id: "cuando", label: "Cuando", tipo: TIPOS_DE_PRESENTACION.TEXTO },
 ];
