@@ -487,6 +487,8 @@ Si puede importar `react` (para `useState` y `useEffect` dentro de los hooks) y
   de un componente;
 - escribir un color a mano: todo sale de `@ecopac/ui-tokens`.
 
+La tab bar del móvil consume dinámicamente `tabsMoviles(rol)` proveniente de `@ecopac/shared`, filtrando los módulos según el rol de la sesión activa (`SesionProvider`). Los módulos administrativos secundarios dentro de la pantalla de inicio se restringen mediante `modulosVisibles(rol, { plataforma: 'mobile' })`, garantizando paridad de permisos entre las versiones web y móvil.
+
 Las dos primeras se hacen cumplir con `no-restricted-imports` en `eslint.config`, para que la
 frontera no dependa de la disciplina de ocho personas. **La de los permisos no la comprueba
 ningun lint todavia**: depende de que cada quien la respete.
