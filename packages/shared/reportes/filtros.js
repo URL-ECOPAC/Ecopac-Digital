@@ -49,9 +49,19 @@ export const FILTROS_REPORTES = [
   },
 ];
 
-/** Valor inicial de la barra comun, para que las cuatro pantallas arranquen igual. */
+/**
+ * Valor inicial de la barra comun, para que las cuatro pantallas arranquen igual.
+ *
+ * `periodo` usa `{ min, max }` y no `{ fechaInicio, fechaFin }` -pese a que el descriptor de
+ * arriba documenta esos nombres como destino de traduccion- porque es el contrato real, ya en
+ * produccion, que FilterBar (apps/web/src/components/FilterBar.jsx y su equivalente movil)
+ * espera leer y escribir para cualquier filtro `TIPOS_DE_FILTRO.RANGO`: mismo patron que
+ * `rangoEdad` en pacientes/filtros.js. Corregido en la issue #208 al construir
+ * useFiltrosReportes.js y notar que esta constante, tal como estaba, no coincidia con lo que
+ * FilterBar de verdad ata -un valor que nunca se habia probado contra el componente real-.
+ */
 export const FILTROS_REPORTES_VACIOS = {
-  periodo: { fechaInicio: null, fechaFin: null },
+  periodo: { min: null, max: null },
   comunidad: null,
   jornada: null,
   proyecto: null,

@@ -23,3 +23,4 @@ export * from "./inventario.api.js";
 export * from "./pacientes.api.js";
 export * from "./jornada.api.js";
 export * from "./permisos.js";
+export * from "./useFiltrosReportes.js";
