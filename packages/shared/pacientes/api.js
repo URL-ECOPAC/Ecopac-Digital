@@ -23,7 +23,7 @@ import {
   normalizarError,
 } from "../api/errores-de-supabase.js";
 import { normalizarTexto } from "../validations/index.js";
-import { ESTADOS_CONDICION_CRONICA } from "./condiciones.campos.js";
+import { ESTADOS_CONDICION_CRONICA } from "../enums.js";
 import { validarRegistroPaciente } from "./validaciones.js";
 
 // Las columnas se enumeran en lugar de pedir "*" para que una columna nueva en pacientes no

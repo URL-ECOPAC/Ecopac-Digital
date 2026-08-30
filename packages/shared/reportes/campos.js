@@ -12,6 +12,7 @@
 
 import { labels } from "@ecopac/ui-tokens";
 import { TIPOS_DE_CAMPO } from "../descriptores.js";
+import { ESTADOS_JORNADA, ETIQUETAS_ESTADO_JORNADA, opcionesConClave } from "../enums.js";
 import { AGRUPACIONES_DE_IMPACTO } from "./api.js";
 import { ESTADOS_DE_VENCIMIENTO } from "./inventario.api.js";
 
@@ -32,12 +33,7 @@ export const ESTADOS_DE_VENCIMIENTO_REPORTE = [
  * etiquetas ya existen en ui-tokens; este catalogo solo los agrupa en la forma que
  * columnas.js/DataList esperan.
  */
-export const ESTADOS_JORNADA_REPORTE = [
-  { value: "planificada", clave: "planificada", label: labels.jornadaPlanificada },
-  { value: "en curso", clave: "en curso", label: labels.jornadaEnCurso },
-  { value: "finalizada", clave: "finalizada", label: labels.jornadaFinalizada },
-  { value: "cancelada", clave: "cancelada", label: labels.jornadaCancelada },
-];
+export const ESTADOS_JORNADA_REPORTE = opcionesConClave(ESTADOS_JORNADA, ETIQUETAS_ESTADO_JORNADA);
 
 /** Las cuatro metricas de obtenerIndicadoresImpacto(), para el selector de #214. */
 export const OPCIONES_METRICA_IMPACTO = [

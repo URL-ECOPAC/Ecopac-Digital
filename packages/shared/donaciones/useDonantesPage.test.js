@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 
-import { TIPOS_DE_DONANTE } from "./campos.js";
+import { TIPOS_DE_DONANTE } from "../enums.js";
 import { TIPO_DONANTE_TODOS, filtrarDonantes } from "./useDonantesPage.js";
 
 const DONANTES = [

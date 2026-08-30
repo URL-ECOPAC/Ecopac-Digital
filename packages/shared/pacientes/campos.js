@@ -8,26 +8,13 @@
 // (ver AGENTS.md, "Fuente de verdad").
 
 import { TIPOS_DE_CAMPO } from "../descriptores.js";
+import { ETIQUETAS_IDIOMA, IDIOMAS, TIPOS_SANGUINEOS, opcionesDe } from "../enums.js";
 
 /** Valores de idioma_preferido (supabase/migrations/00001_initial_schema.sql). */
-export const OPCIONES_IDIOMA = [
-  { value: "espanol", label: "Español" },
-  { value: "quiche", label: "K'iche'" },
-  { value: "mam", label: "Mam" },
-  { value: "otros", label: "Otro" },
-];
+export const OPCIONES_IDIOMA = opcionesDe(IDIOMAS, ETIQUETAS_IDIOMA);
 
 /** Valores de tipo_sanguineo (supabase/migrations/00035_pacientes_tipo_sangre_responsable.sql). */
-export const OPCIONES_TIPO_SANGRE = [
-  { value: "A+", label: "A+" },
-  { value: "A-", label: "A-" },
-  { value: "B+", label: "B+" },
-  { value: "B-", label: "B-" },
-  { value: "AB+", label: "AB+" },
-  { value: "AB-", label: "AB-" },
-  { value: "O+", label: "O+" },
-  { value: "O-", label: "O-" },
-];
+export const OPCIONES_TIPO_SANGRE = opcionesDe(TIPOS_SANGUINEOS, {});
 
 /**
  * Formulario de registro de un paciente nuevo. Cubre pacientes (00009, 00035). El numero de

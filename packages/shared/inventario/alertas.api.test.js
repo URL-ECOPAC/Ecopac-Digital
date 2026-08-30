@@ -20,8 +20,8 @@ vi.mock("../api/cliente.js", () => ({
 }));
 
 const { CODIGOS_DE_ERROR_DE_SUPABASE } = await import("../api/errores-de-supabase.js");
-const { listarAlertas, historialAlertas, atenderAlerta, ACCIONES_DE_ALERTA } =
-  await import("./alertas.api.js");
+const { listarAlertas, historialAlertas, atenderAlerta } = await import("./alertas.api.js");
+const { ACCIONES_DE_ALERTA } = await import("../enums.js");
 
 /** Doble de un cliente de Supabase que resuelve con una unica respuesta configurada. */
 function crearCliente({ respuesta = { data: [], error: null } } = {}) {
@@ -236,6 +236,6 @@ describe("atenderAlerta", () => {
   });
 
   it("ACCIONES_DE_ALERTA expone los tres valores del enum accion_alerta (00021)", () => {
-    expect(ACCIONES_DE_ALERTA).toEqual(["donado", "reubicado", "descartado"]);
+    expect(Object.values(ACCIONES_DE_ALERTA)).toEqual(["donado", "reubicado", "descartado"]);
   });
 });

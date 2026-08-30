@@ -6,6 +6,7 @@ import {
 } from "../api/errores-de-supabase.js";
 export { puedeVerHistorial } from "./permisos.js";
 import { puedeVerHistorial } from "./permisos.js";
+import { ESTADOS_RECETA } from "../enums.js";
 
 export const TIPOS_DE_EVENTO = {
   TRIAJE: "triaje",
@@ -130,7 +131,7 @@ export function aEventos(atencion) {
         profesionalId: consulta.medicoId ?? null,
         consultaId: consulta.id,
         folio: receta.folio ?? null,
-        anulada: receta.estado === "anulada",
+        anulada: receta.estado === ESTADOS_RECETA.ANULADA,
         medicamentos: (receta.detalle ?? []).map((renglon) => ({
           medicamento: renglon.medicamento?.nombre ?? null,
           concentracion: renglon.medicamento?.concentracion ?? null,

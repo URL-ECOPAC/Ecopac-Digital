@@ -11,7 +11,7 @@
 // (ver el encabezado de presupuestos/index.js).
 
 import { esAdministrador, ROLES, ROLES_CONSULTIVOS } from "../usuarios/roles.js";
-import { ESTADOS_DE_GASTO } from "./campos.js";
+import { ESTADOS_DE_GASTO } from "../enums.js";
 
 /**
  * Puede ver la bandeja de gastos completa.

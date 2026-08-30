@@ -10,7 +10,6 @@ import { describe, expect, it } from "vitest";
 
 import { ROLES } from "../usuarios/roles.js";
 import {
-  ESTADOS_PROYECTO,
   esTransicionDeProyectoValida,
   LONGITUD_MAXIMA_NOMBRE_PROYECTO,
   TODOS_LOS_ESTADOS_PROYECTO,
@@ -19,6 +18,7 @@ import {
   validarCambioDeEstadoProyecto,
   validarProyecto,
 } from "./validaciones.js";
+import { ESTADOS_PROYECTO } from "../enums.js";
 import { permisosDeProyectos, puedeAdministrarProyectos, puedeVerProyectos } from "./permisos.js";
 
 /** Proyecto valido minimo, para que cada prueba altere solo el campo que le interesa. */

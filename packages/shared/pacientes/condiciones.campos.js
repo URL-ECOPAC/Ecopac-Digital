@@ -6,24 +6,12 @@
 // migracion (AGENTS.md, "Fuente de verdad").
 
 import { TIPOS_DE_CAMPO } from "../descriptores.js";
+import { ESTADOS_CONDICION_CRONICA, ETIQUETAS_ESTADO_CONDICION, opcionesDe } from "../enums.js";
 
-/**
- * Valores del enum estado_condicion_cronica (migracion 00010).
- *
- * La base de datos es la fuente de verdad, igual que en usuarios/roles.js: un valor que el enum
- * no tenga hace fallar el INSERT en tiempo de ejecucion.
- */
-export const ESTADOS_CONDICION_CRONICA = {
-  ACTIVA: "activa",
-  CONTROLADA: "controlada",
-  RESUELTA: "resuelta",
-};
-
-export const OPCIONES_ESTADO_CONDICION = [
-  { value: ESTADOS_CONDICION_CRONICA.ACTIVA, label: "Activa" },
-  { value: ESTADOS_CONDICION_CRONICA.CONTROLADA, label: "Controlada" },
-  { value: ESTADOS_CONDICION_CRONICA.RESUELTA, label: "Resuelta" },
-];
+export const OPCIONES_ESTADO_CONDICION = opcionesDe(
+  ESTADOS_CONDICION_CRONICA,
+  ETIQUETAS_ESTADO_CONDICION,
+);
 
 /**
  * Formulario para asociar una condicion cronica a un paciente.

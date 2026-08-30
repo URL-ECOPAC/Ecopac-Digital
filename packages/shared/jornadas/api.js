@@ -33,7 +33,8 @@ import {
   normalizarError,
 } from "../api/errores-de-supabase.js";
 import { esAdministrador } from "../usuarios/roles.js";
-import { ESTADOS_JORNADA, puedeVerHistorialJornada } from "./permisos.js";
+import { puedeVerHistorialJornada } from "./permisos.js";
+import { ESTADOS_JORNADA } from "../enums.js";
 import {
   advertirChoqueDeHorario,
   puedeRegistrarEnJornada,

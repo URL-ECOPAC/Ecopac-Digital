@@ -1,6 +1,7 @@
 import { obtenerSupabase } from "../api/cliente.js";
 import { normalizarError } from "../api/errores-de-supabase.js";
 import { esAdministrador } from "../usuarios/roles.js";
+import { ESTADOS_MOVIMIENTO, TIPOS_DE_MOVIMIENTO } from "../enums.js";
 
 /**
  * Aprueba un movimiento de inventario pendiente.
@@ -37,14 +38,14 @@ export async function aprobarMovimiento(idMovimiento, { usuarioId, rolUsuario })
       return { datos: null, error: { mensaje: "El movimiento especificado no existe." } };
     }
 
-    if (mov.estado !== "pendiente") {
+    if (mov.estado !== ESTADOS_MOVIMIENTO.PENDIENTE) {
       return { datos: null, error: { mensaje: "El movimiento no está pendiente de aprobación." } };
     }
 
     // Si es una salida, validar existencia suficiente antes de aprobar. Es una validacion de
     // experiencia de usuario: la garantia real la da fn_aplicar_ajuste_existencias (00047), que
     // vuelve a comprobarlo y rechaza la aprobacion si no alcanza.
-    if (mov.tipo === "salida") {
+    if (mov.tipo === TIPOS_DE_MOVIMIENTO.SALIDA) {
       const { data: existencia } = await supabase
         .from("existencias")
         .select("cantidad_disponible")
@@ -65,7 +66,7 @@ export async function aprobarMovimiento(idMovimiento, { usuarioId, rolUsuario })
     const { data: movAprobado, error: errorUpdateMov } = await supabase
       .from("movimientos_inventario")
       .update({
-        estado: "aprobado",
+        estado: ESTADOS_MOVIMIENTO.APROBADO,
         aprobado_por: usuarioId,
         aprobado_en: new Date().toISOString(),
       })
@@ -115,14 +116,14 @@ export async function rechazarMovimiento(idMovimiento, { motivo, usuarioId, rolU
       return { datos: null, error: { mensaje: "El movimiento especificado no existe." } };
     }
 
-    if (mov.estado !== "pendiente") {
+    if (mov.estado !== ESTADOS_MOVIMIENTO.PENDIENTE) {
       return { datos: null, error: { mensaje: "El movimiento no está pendiente." } };
     }
 
     const { data: movRechazado, error: errorUpdate } = await supabase
       .from("movimientos_inventario")
       .update({
-        estado: "rechazado",
+        estado: ESTADOS_MOVIMIENTO.RECHAZADO,
         motivo_rechazo: motivo.trim(),
         aprobado_por: usuarioId,
         aprobado_en: new Date().toISOString(),

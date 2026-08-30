@@ -20,7 +20,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { crearAlmacenamientoEnMemoria, validarAlmacenamiento } from "../api/almacenamiento.js";
 import { obtenerJornadasDePersona, puedeRegistrarConsulta } from "./api.js";
-import { ESTADOS_JORNADA } from "./permisos.js";
+import { ESTADOS_JORNADA } from "../enums.js";
 import { obtenerCola } from "../atenciones/api.js";
 import { ORDEN_DE_ETAPAS } from "../atenciones/etapas.js";
 

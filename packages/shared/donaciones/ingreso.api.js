@@ -20,6 +20,7 @@
 import { obtenerSupabase } from "../api/cliente.js";
 import { normalizarError } from "../api/errores-de-supabase.js";
 import { registrarIngreso } from "../inventario/movimientos.api.js";
+import { ORIGENES_DE_LOTE } from "../enums.js";
 
 /**
  * Genera el movimiento de ingreso de inventario correspondiente a un renglon de una donacion, y
@@ -67,7 +68,7 @@ export async function generarIngresoDesdeDonacion(
     }
 
     const { datos: movimiento, error: errorMovimiento } = await registrarIngreso({
-      origen: "donacion",
+      origen: ORIGENES_DE_LOTE.DONACION,
       bodega_id: bodegaId,
       medicamento_id: medicamentoId,
       numero_lote: numeroLote,

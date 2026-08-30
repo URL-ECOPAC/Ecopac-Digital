@@ -10,6 +10,10 @@
 // del namespace, que es lo que rompio la issue #365.
 export * from "./descriptores.js";
 
+// Los enums del dominio, por el mismo motivo y con la misma regla (issue #397): cada valor de
+// enum nace aqui una sola vez, y no en el modulo que lo consume.
+export * from "./enums.js";
+
 export * from "./navegacion.js";
 export * from "./usuarios/index.js";
 
