@@ -1,9 +1,9 @@
 import { useMemo } from "react";
 
-const ROLES_LECTURA = ["Administrador", "Junta Directiva", "Socio Fundador"];
+import { puedeVerDonaciones } from "./permisos.js";
 
 export function useConstanciaDonacion({ usuarioRol, donacion, onImprimir }) {
-  const tieneAccesoLectura = ROLES_LECTURA.includes(usuarioRol);
+  const tieneAccesoLectura = puedeVerDonaciones(usuarioRol);
 
   const esValidaParaConstancia = useMemo(() => {
     if (!donacion) return false;

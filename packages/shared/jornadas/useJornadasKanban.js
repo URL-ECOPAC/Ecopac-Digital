@@ -49,7 +49,7 @@ function aFiltrosDeApi(filtros = {}) {
  * embed en null (api.js:44-45) y se omite del catalogo, no como una entrada rota.
  *
  * @param {object[]} jornadas
- * @returns {{ valor: string, etiqueta: string }[]}
+ * @returns {{ value: string, label: string }[]}
  */
 export function catalogoComunidadesDesde(jornadas = []) {
   const mapa = new Map();
@@ -58,8 +58,8 @@ export function catalogoComunidadesDesde(jornadas = []) {
       mapa.set(jornada.comunidadId, jornada.comunidad.nombre);
     }
   }
-  return Array.from(mapa, ([valor, etiqueta]) => ({ valor, etiqueta })).sort((a, b) =>
-    a.etiqueta.localeCompare(b.etiqueta, "es"),
+  return Array.from(mapa, ([value, label]) => ({ value, label })).sort((a, b) =>
+    a.label.localeCompare(b.label, "es"),
   );
 }
 
@@ -129,8 +129,8 @@ export function necesitaAvisoDeAtencionesIncompletas(estadoActual, destinoId) {
  */
 export function agruparJornadasPorEstado(jornadas = [], pacientesPorJornada = {}) {
   const columnas = OPCIONES_ESTADO_JORNADA.map((opcion) => ({
-    id: opcion.valor,
-    titulo: opcion.etiqueta,
+    id: opcion.value,
+    titulo: opcion.label,
     tarjetas: [],
   }));
   const columnaPorEstado = new Map(columnas.map((columna) => [columna.id, columna]));

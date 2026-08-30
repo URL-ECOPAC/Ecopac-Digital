@@ -42,7 +42,7 @@ export async function aprobarGasto({ gastoId, usuarioId }) {
       .update({
         estado: "aprobado",
         aprobado_por: usuarioId,
-        fecha_aprobacion: timestamp,
+        aprobado_en: timestamp,
       })
       .eq("id", gastoId)
       .select()
@@ -58,7 +58,7 @@ export async function aprobarGasto({ gastoId, usuarioId }) {
 /**
  * Rechaza un gasto pendiente exigiendo un motivo obligatorio.
  *
- * Reutiliza aprobado_por/fecha_aprobacion para la auditoria de la decision, igual que
+ * Reutiliza aprobado_por/aprobado_en para la auditoria de la decision, igual que
  * movimientos_inventario (00023): no hay rechazado_por ni fecha_rechazo. motivo_rechazo
  * (00071) es la unica columna nueva.
  */
@@ -85,7 +85,7 @@ export async function rechazarGasto({ gastoId, usuarioId, motivo }) {
       .update({
         estado: "rechazado",
         aprobado_por: usuarioId,
-        fecha_aprobacion: timestamp,
+        aprobado_en: timestamp,
         motivo_rechazo: motivo.trim(),
       })
       .eq("id", gastoId)

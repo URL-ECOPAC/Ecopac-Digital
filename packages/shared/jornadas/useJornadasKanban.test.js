@@ -39,8 +39,8 @@ describe("catalogoComunidadesDesde", () => {
     ]);
 
     expect(catalogo).toEqual([
-      { valor: "c2", etiqueta: "Antigua" },
-      { valor: "c1", etiqueta: "San Juan" },
+      { value: "c2", label: "Antigua" },
+      { value: "c1", label: "San Juan" },
     ]);
   });
 

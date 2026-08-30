@@ -318,7 +318,7 @@ ON CONFLICT (id) DO NOTHING;
 
 -- Aprobados: los cuatro ingresos que crean stock y la salida que lo consume en parte.
 UPDATE movimientos_inventario
-  SET estado = 'aprobado', aprobado_por = 'de000001-0000-0000-0000-000000000001', fecha_aprobacion = NOW()
+  SET estado = 'aprobado', aprobado_por = 'de000001-0000-0000-0000-000000000001', aprobado_en = NOW()
   WHERE id IN (
     'de00000c-0000-0000-0000-000000000001', 'de00000c-0000-0000-0000-000000000002',
     'de00000c-0000-0000-0000-000000000003', 'de00000c-0000-0000-0000-000000000004'
@@ -327,14 +327,14 @@ UPDATE movimientos_inventario
 -- La salida depende de que el ingreso al lote por vencer ya haya creado stock en la
 -- bodega movil (fila anterior), por eso va en un UPDATE aparte y despues.
 UPDATE movimientos_inventario
-  SET estado = 'aprobado', aprobado_por = 'de000001-0000-0000-0000-000000000001', fecha_aprobacion = NOW()
+  SET estado = 'aprobado', aprobado_por = 'de000001-0000-0000-0000-000000000001', aprobado_en = NOW()
   WHERE id = 'de00000c-0000-0000-0000-000000000005' AND estado = 'pendiente';
 
 -- Rechazado: no ajusta existencias (fn_actualizar_existencias solo actua si NEW.estado
 -- = 'aprobado'). motivo_rechazo es obligatorio en este estado desde la 00084 (issue #491).
 UPDATE movimientos_inventario
   SET estado = 'rechazado', aprobado_por = 'de000001-0000-0000-0000-000000000001',
-      fecha_aprobacion = NOW(), motivo_rechazo = 'Cantidad reportada no coincide con el conteo fisico'
+      aprobado_en = NOW(), motivo_rechazo = 'Cantidad reportada no coincide con el conteo fisico'
   WHERE id = 'de00000c-0000-0000-0000-000000000007' AND estado = 'pendiente';
 
 -- 'de00000c-...-0000000006' se deja tal cual, en 'pendiente': es la fila que puebla la

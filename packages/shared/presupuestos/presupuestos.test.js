@@ -27,11 +27,11 @@ const COLUMNAS_DE_LA_TABLA = [
   'categoria',
   'monto',
   'fecha',
-  'encargado_id',
+  'responsable_id',
   'estado',
   'registrado_por',
   'aprobado_por',
-  'fecha_aprobacion',
+  'aprobado_en',
   'created_at',
   'updated_at',
 ];
@@ -68,7 +68,7 @@ describe('CAMPOS_GASTO', () => {
     expect(ids).not.toContain('estado');
     expect(ids).not.toContain('registrado_por');
     expect(ids).not.toContain('aprobado_por');
-    expect(ids).not.toContain('fecha_aprobacion');
+    expect(ids).not.toContain('aprobado_en');
   });
 });
 
@@ -127,7 +127,7 @@ describe('valores de enum del modulo', () => {
     ]);
   });
 
-  it('ESTADOS_DE_GASTO usa los valores vigentes de estado_movimiento, los de la 00023', () => {
+  it('ESTADOS_DE_GASTO usa los valores de estado_gasto (00089)', () => {
     expect(Object.values(ESTADOS_DE_GASTO)).toEqual(['pendiente', 'aprobado', 'rechazado']);
   });
 });

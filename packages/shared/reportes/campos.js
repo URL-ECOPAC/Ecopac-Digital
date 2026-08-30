@@ -5,8 +5,8 @@
 // cada uno con su propia forma de dato. Lo que va aqui son los controles reales de
 // configuracion/analisis que las pantallas exponen, no un formulario de alta.
 //
-// Los catalogos de estado siguen el patron de usuarios/campos.js (ESTADOS_USUARIO): un valor
-// que coincide con lo que la API devuelve, una clave para indexar statusColors, y una etiqueta
+// Los catalogos de estado siguen el patron de usuarios/campos.js (ESTADOS_USUARIO): un `value`
+// que coincide con lo que la API devuelve, una `clave` para indexar statusColors, y un `label`
 // que sale de @ecopac/ui-tokens -- nunca un texto suelto -- para que la columna ESTADO
 // correspondiente en columnas.js resuelva ambas cosas por el mismo catalogo.
 
@@ -22,8 +22,8 @@ import { ESTADOS_DE_VENCIMIENTO } from "./inventario.api.js";
  * que ya existen en ui-tokens: son las mismas dos ideas (una unidad se puede usar o no).
  */
 export const ESTADOS_DE_VENCIMIENTO_REPORTE = [
-  { valor: ESTADOS_DE_VENCIMIENTO.VIGENTES, clave: "disponible", etiqueta: labels.disponible },
-  { valor: ESTADOS_DE_VENCIMIENTO.VENCIDOS, clave: "critico", etiqueta: labels.critico },
+  { value: ESTADOS_DE_VENCIMIENTO.VIGENTES, clave: "disponible", label: labels.disponible },
+  { value: ESTADOS_DE_VENCIMIENTO.VENCIDOS, clave: "critico", label: labels.critico },
 ];
 
 /**
@@ -33,26 +33,26 @@ export const ESTADOS_DE_VENCIMIENTO_REPORTE = [
  * columnas.js/DataList esperan.
  */
 export const ESTADOS_JORNADA_REPORTE = [
-  { valor: "planificada", clave: "planificada", etiqueta: labels.jornadaPlanificada },
-  { valor: "en curso", clave: "en curso", etiqueta: labels.jornadaEnCurso },
-  { valor: "finalizada", clave: "finalizada", etiqueta: labels.jornadaFinalizada },
-  { valor: "cancelada", clave: "cancelada", etiqueta: labels.jornadaCancelada },
+  { value: "planificada", clave: "planificada", label: labels.jornadaPlanificada },
+  { value: "en curso", clave: "en curso", label: labels.jornadaEnCurso },
+  { value: "finalizada", clave: "finalizada", label: labels.jornadaFinalizada },
+  { value: "cancelada", clave: "cancelada", label: labels.jornadaCancelada },
 ];
 
 /** Las cuatro metricas de obtenerIndicadoresImpacto(), para el selector de #214. */
 export const OPCIONES_METRICA_IMPACTO = [
-  { valor: "pacientes_atendidos", etiqueta: "Pacientes atendidos" },
-  { valor: "tratamientos_entregados", etiqueta: "Tratamientos entregados" },
-  { valor: "medicamentos_utilizados", etiqueta: "Medicamentos utilizados" },
-  { valor: "comunidades_beneficiadas", etiqueta: "Comunidades beneficiadas" },
+  { value: "pacientes_atendidos", label: "Pacientes atendidos" },
+  { value: "tratamientos_entregados", label: "Tratamientos entregados" },
+  { value: "medicamentos_utilizados", label: "Medicamentos utilizados" },
+  { value: "comunidades_beneficiadas", label: "Comunidades beneficiadas" },
 ];
 
 /** Deriva de AGRUPACIONES_DE_IMPACTO (api.js) en vez de repetir los valores del enum. */
 export const OPCIONES_AGRUPACION_IMPACTO = [
-  { valor: AGRUPACIONES_DE_IMPACTO.MES, etiqueta: "Mes" },
-  { valor: AGRUPACIONES_DE_IMPACTO.COMUNIDAD, etiqueta: "Comunidad" },
-  { valor: AGRUPACIONES_DE_IMPACTO.JORNADA, etiqueta: "Jornada" },
-  { valor: AGRUPACIONES_DE_IMPACTO.PROYECTO, etiqueta: "Proyecto" },
+  { value: AGRUPACIONES_DE_IMPACTO.MES, label: "Mes" },
+  { value: AGRUPACIONES_DE_IMPACTO.COMUNIDAD, label: "Comunidad" },
+  { value: AGRUPACIONES_DE_IMPACTO.JORNADA, label: "Jornada" },
+  { value: AGRUPACIONES_DE_IMPACTO.PROYECTO, label: "Proyecto" },
 ];
 
 /**

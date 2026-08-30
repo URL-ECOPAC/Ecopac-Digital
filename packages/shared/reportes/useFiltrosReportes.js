@@ -130,16 +130,16 @@ export function resolverFiltrosReportesDesdeParametros(parametros = {}) {
 }
 
 /**
- * Traduce filas de catalogo `{id, nombre}` a la forma `{valor, etiqueta}` que espera el prop
+ * Traduce filas de catalogo `{id, nombre}` a la forma `{label, value}` que espera el prop
  * `catalogos` de FilterBar. Mismo criterio que catalogoComunidadesDePacientes() en
  * pacientes/usePacientesListado.js.
  *
  * @param {object[]} filas
- * @param {{ valor?: string, etiqueta?: string }} [claves]
- * @returns {Array<{ valor: string, etiqueta: string }>}
+ * @param {{ valor?: string, etiqueta?: string }} [claves] Que columna de la fila alimenta cada lado.
+ * @returns {Array<{ label: string, value: string }>}
  */
 export function mapearCatalogoAOpciones(filas, { valor = "id", etiqueta = "nombre" } = {}) {
-  return (filas ?? []).map((fila) => ({ valor: fila[valor], etiqueta: fila[etiqueta] }));
+  return (filas ?? []).map((fila) => ({ value: fila[valor], label: fila[etiqueta] }));
 }
 
 /**

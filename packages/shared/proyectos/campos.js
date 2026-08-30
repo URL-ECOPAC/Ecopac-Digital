@@ -16,10 +16,10 @@ import { ESTADOS_PROYECTO, LONGITUD_MAXIMA_NOMBRE_PROYECTO } from "./validacione
  * dos enums y reutiliza la misma etiqueta.
  */
 export const OPCIONES_ESTADO_PROYECTO = [
-  { valor: ESTADOS_PROYECTO.PLANIFICADO, clave: "planificado", etiqueta: labels.proyectoPlanificado },
-  { valor: ESTADOS_PROYECTO.EN_CURSO, clave: "en curso", etiqueta: labels.jornadaEnCurso },
-  { valor: ESTADOS_PROYECTO.FINALIZADO, clave: "finalizado", etiqueta: labels.proyectoFinalizado },
-  { valor: ESTADOS_PROYECTO.CANCELADO, clave: "cancelado", etiqueta: labels.proyectoCancelado },
+  { value: ESTADOS_PROYECTO.PLANIFICADO, clave: "planificado", label: labels.proyectoPlanificado },
+  { value: ESTADOS_PROYECTO.EN_CURSO, clave: "en curso", label: labels.jornadaEnCurso },
+  { value: ESTADOS_PROYECTO.FINALIZADO, clave: "finalizado", label: labels.proyectoFinalizado },
+  { value: ESTADOS_PROYECTO.CANCELADO, clave: "cancelado", label: labels.proyectoCancelado },
 ];
 
 /**

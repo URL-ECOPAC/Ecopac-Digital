@@ -6,10 +6,10 @@ import { TIPOS_DE_FILTRO } from '../descriptores.js';
 
 /** Valores de estado_jornada (supabase/migrations/00001_initial_schema.sql). */
 export const OPCIONES_ESTADO_JORNADA = [
-  { valor: 'planificada', etiqueta: 'Planificada' },
-  { valor: 'en curso', etiqueta: 'En curso' },
-  { valor: 'finalizada', etiqueta: 'Finalizada' },
-  { valor: 'cancelada', etiqueta: 'Cancelada' },
+  { value: 'planificada', label: 'Planificada' },
+  { value: 'en curso', label: 'En curso' },
+  { value: 'finalizada', label: 'Finalizada' },
+  { value: 'cancelada', label: 'Cancelada' },
 ];
 
 export const FILTROS_JORNADA = [

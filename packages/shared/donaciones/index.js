@@ -26,6 +26,12 @@ export * from "./ingreso.api.js";
 export * from "./campos.js";
 export * from "./columnas.js";
 export * from "./filtros.js";
+export * from "./permisos.js";
 export * from "./useRegistroDonacion.js";
 export * from "./useHistorialDonaciones.js";
 export * from "./useConstanciaDonacion.js";
+// useDonantesPage faltaba en el barril desde la issue #196. La #598 descubrio que exportarlo a
+// secas rompia la compilacion de la web: el hook llamaba a un objeto `donantesApi` que
+// donantes.api.js nunca exporto. Reescrito contra la API real -listarDonantes() y compania, que
+// resuelven el cliente con obtenerSupabase()-, ya se puede exportar.
+export * from "./useDonantesPage.js";

@@ -8,9 +8,40 @@ const PRESUPUESTO_VACIO = {
   pendiente: 0,
 };
 
+/**
+ * Convierte a numero para LEER un valor que la base ya devolvio.
+ *
+ * Cae en 0 cuando no hay numero porque leyendo eso es lo correcto: una jornada sin gastos
+ * aprobados tiene cero gastado, no un gastado desconocido.
+ *
+ * NO sirve para validar lo que se va a ESCRIBIR: ahi un valor ilegible tiene que fallar, no
+ * convertirse en cero. Para eso esta aNumeroAEscribir().
+ */
 function aNumero(valor) {
   const numero = Number(valor);
   return Number.isFinite(numero) ? numero : 0;
+}
+
+/**
+ * Convierte a numero para ESCRIBIR, o devuelve null si el valor no es un numero utilizable.
+ *
+ * Rechaza null, undefined, la cadena vacia, la cadena de espacios y cualquier cosa que no sea
+ * un numero finito. `Number("")` y `Number(null)` son 0, y `Number("  ")` tambien, asi que
+ * comprobar solo con Number.isFinite() no basta: hay que descartar antes el vacio.
+ *
+ * Existe por la issue #597. asignarPresupuestoJornada() validaba con aNumero(), que devuelve 0
+ * para todo lo ilegible: un monto que llegara como "abc", undefined o un campo de formulario
+ * vacio no fallaba la guarda de negativo, pasaba como 0 y se escribia como el presupuesto de la
+ * jornada. La jornada quedaba en cero sin ninguna senal de que algo salio mal, y desde ahi
+ * presupuesto_de_jornada() reportaba disponible cero y la pantalla parecia estar diciendo la
+ * verdad.
+ */
+function aNumeroAEscribir(valor) {
+  if (valor === null || valor === undefined) return null;
+  if (typeof valor === "string" && valor.trim() === "") return null;
+
+  const numero = Number(valor);
+  return Number.isFinite(numero) ? numero : null;
 }
 
 function aPresupuesto(fila) {
@@ -47,8 +78,10 @@ export async function asignarPresupuestoJornada(idJornada, monto) {
     return { jornada: null, error: null };
   }
 
-  const cantidad = aNumero(monto);
-  if (cantidad < 0) {
+  // Un monto ilegible y uno negativo se rechazan igual y con el mismo codigo: los dos son
+  // datos que la jornada no puede aceptar, y quien llama solo necesita saber que no se guardo.
+  const cantidad = aNumeroAEscribir(monto);
+  if (cantidad === null || cantidad < 0) {
     return { jornada: null, error: normalizarError({ code: "23514" }) };
   }
 
@@ -98,7 +131,7 @@ export async function obtenerPresupuestoSistema() {
 
 export async function registrarGasto(datosGasto) {
   try {
-    const { concepto, categoria, monto, fecha, encargado_id, jornada_id } = datosGasto || {};
+    const { concepto, categoria, monto, fecha, responsable_id, jornada_id } = datosGasto || {};
 
     const { data, error } = await obtenerSupabase()
       .from("gastos")
@@ -107,7 +140,7 @@ export async function registrarGasto(datosGasto) {
         categoria,
         monto: aNumero(monto),
         fecha,
-        encargado_id: encargado_id || null,
+        responsable_id: responsable_id || null,
         jornada_id,
       })
       .select(`
@@ -162,14 +195,14 @@ export async function editarGasto(idGasto, datosGasto) {
       };
     }
 
-    const { concepto, categoria, monto, fecha, encargado_id } = datosGasto || {};
+    const { concepto, categoria, monto, fecha, responsable_id } = datosGasto || {};
     const updates = {};
 
     if (concepto !== undefined) updates.concepto = concepto;
     if (categoria !== undefined) updates.categoria = categoria;
     if (monto !== undefined) updates.monto = aNumero(monto);
     if (fecha !== undefined) updates.fecha = fecha;
-    if (encargado_id !== undefined) updates.encargado_id = encargado_id || null;
+    if (responsable_id !== undefined) updates.responsable_id = responsable_id || null;
 
     const { data, error } = await supabase
       .from("gastos")

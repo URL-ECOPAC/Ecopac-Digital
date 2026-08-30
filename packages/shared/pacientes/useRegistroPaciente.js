@@ -18,7 +18,7 @@ const VALORES_INICIALES = CAMPOS_REGISTRO_PACIENTE.reduce((valores, campo) => {
 }, {});
 
 function aOpciones(filas = []) {
-  return filas.map((fila) => ({ valor: fila.id, etiqueta: fila.nombre }));
+  return filas.map((fila) => ({ value: fila.id, label: fila.nombre }));
 }
 
 export function useRegistroPaciente({ comunidadInicial = null, nombresInicial = "" } = {}) {

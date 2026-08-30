@@ -5,7 +5,6 @@ import Card from './Card';
 import EmptyState from './EmptyState';
 import LoadingState from './LoadingState';
 import StatusChip from './StatusChip';
-import { normalizarOpciones } from './opciones';
 
 /**
  * Listado generico. Espejo de apps/web/src/components/DataList.jsx: interpreta el MISMO
@@ -80,7 +79,7 @@ function Valor({ columna, fila, catalogos }) {
     case 'estado': {
       // El valor puede ser un booleano en vez del valor del enum (COLUMNAS_USUARIO lee el
       // campo activo). El catalogo trae la clave del enum en `clave` y el texto en `label`.
-      const catalogo = normalizarOpciones(catalogos[columna.etiquetasDesde]);
+      const catalogo = catalogos[columna.etiquetasDesde] ?? [];
       const entrada = catalogo.find((opcion) => opcion.value === valor);
       return <StatusChip status={entrada?.clave ?? valor} label={entrada?.label} />;
     }
@@ -107,7 +106,7 @@ function Valor({ columna, fila, catalogos }) {
       // Una columna puede declarar que su texto se traduce por un catalogo, como el rol de
       // COLUMNAS_USUARIO, que guarda el valor del enum pero muestra su etiqueta legible.
       if (columna.etiquetasDesde) {
-        const catalogo = normalizarOpciones(catalogos[columna.etiquetasDesde]);
+        const catalogo = catalogos[columna.etiquetasDesde] ?? [];
         const opcion = catalogo.find((entrada) => entrada.value === valor);
         return <Text style={styles.texto}>{opcion ? opcion.label : (valor ?? '')}</Text>;
       }

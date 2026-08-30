@@ -165,24 +165,24 @@ describe("filtros.js solo usa el vocabulario de TIPOS_DE_FILTRO", () => {
 
 describe("los catalogos de estado reflejan los enum reales", () => {
   it("OPCIONES_ESTADO_DONACION cubre exactamente registrada/anulada, con etiqueta de ui-tokens", () => {
-    const valores = OPCIONES_ESTADO_DONACION.map((e) => e.valor);
+    const valores = OPCIONES_ESTADO_DONACION.map((e) => e.value);
     expect(valores.sort()).toEqual(Object.values(ESTADOS_DE_DONACION).sort());
-    expect(OPCIONES_ESTADO_DONACION.find((e) => e.valor === ESTADOS_DE_DONACION.REGISTRADA).etiqueta).toBe(
+    expect(OPCIONES_ESTADO_DONACION.find((e) => e.value === ESTADOS_DE_DONACION.REGISTRADA).label).toBe(
       labels.donacionRegistrada,
     );
-    expect(OPCIONES_ESTADO_DONACION.find((e) => e.valor === ESTADOS_DE_DONACION.ANULADA).etiqueta).toBe(
+    expect(OPCIONES_ESTADO_DONACION.find((e) => e.value === ESTADOS_DE_DONACION.ANULADA).label).toBe(
       labels.donacionAnulada,
     );
   });
 
   it("ESTADOS_DONANTE cubre el booleano activo/inactivo, con etiqueta de ui-tokens", () => {
-    expect(ESTADOS_DONANTE.map((e) => e.valor)).toEqual([true, false]);
-    expect(ESTADOS_DONANTE.find((e) => e.valor === true).etiqueta).toBe(labels.activo);
-    expect(ESTADOS_DONANTE.find((e) => e.valor === false).etiqueta).toBe(labels.inactivo);
+    expect(ESTADOS_DONANTE.map((e) => e.value)).toEqual([true, false]);
+    expect(ESTADOS_DONANTE.find((e) => e.value === true).label).toBe(labels.activo);
+    expect(ESTADOS_DONANTE.find((e) => e.value === false).label).toBe(labels.inactivo);
   });
 
   it("OPCIONES_TIPO_DONANTE y OPCIONES_TIPO_DONACION cubren exactamente su enum, sin inventar valores", () => {
-    expect(OPCIONES_TIPO_DONANTE.map((o) => o.valor).sort()).toEqual(Object.values(TIPOS_DE_DONANTE).sort());
-    expect(OPCIONES_TIPO_DONACION.map((o) => o.valor).sort()).toEqual(Object.values(TIPOS_DE_DONACION).sort());
+    expect(OPCIONES_TIPO_DONANTE.map((o) => o.value).sort()).toEqual(Object.values(TIPOS_DE_DONANTE).sort());
+    expect(OPCIONES_TIPO_DONACION.map((o) => o.value).sort()).toEqual(Object.values(TIPOS_DE_DONACION).sort());
   });
 });

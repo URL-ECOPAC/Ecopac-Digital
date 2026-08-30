@@ -65,8 +65,8 @@ function Renglon({ renglon, lotes, problema, onEditar, onQuitar, deshabilitado }
         label="Lote"
         value={renglon.loteId}
         options={(lotes ?? []).map((lote) => ({
-          valor: lote.loteId,
-          etiqueta: `${lote.numeroLote} · vence ${formatearFechaCorta(lote.fechaVencimiento)} · ${lote.cantidadDisponible} en ${lote.bodega}`,
+          value: lote.loteId,
+          label: `${lote.numeroLote} · vence ${formatearFechaCorta(lote.fechaVencimiento)} · ${lote.cantidadDisponible} en ${lote.bodega}`,
         }))}
         onSelect={(valor) => {
           const elegido = (lotes ?? []).find((lote) => lote.loteId === valor);

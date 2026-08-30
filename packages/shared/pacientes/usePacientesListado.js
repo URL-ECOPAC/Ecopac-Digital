@@ -8,13 +8,13 @@ import { FILTROS_PACIENTE_VACIOS } from "./filtros.js";
 /**
  * Opciones del filtro de sexo.
  *
- * El valor es la etiqueta, y no una inicial, porque pacientes.sexo es un varchar(20) sin CHECK
+ * El `value` es el mismo texto que el `label`, y no una inicial, porque pacientes.sexo es un varchar(20) sin CHECK
  * que guarda la palabra completa. Mandar "F" hacia fn_buscar_pacientes comparaba "F" con
  * "Femenino" y devolvia cero filas sin error: el filtro parecia funcionar y no filtraba nada.
  */
 export const OPCIONES_SEXO = [
-  { valor: "Femenino", etiqueta: "Femenino" },
-  { valor: "Masculino", etiqueta: "Masculino" },
+  { value: "Femenino", label: "Femenino" },
+  { value: "Masculino", label: "Masculino" },
 ];
 
 /**
@@ -25,7 +25,7 @@ export const OPCIONES_SEXO = [
  * hace falta una consulta aparte al catalogo completo.
  *
  * @param {object[]} pacientes
- * @returns {{ valor: string, etiqueta: string }[]}
+ * @returns {{ value: string, label: string }[]}
  */
 export function catalogoComunidadesDePacientes(pacientes = []) {
   const mapa = new Map();
@@ -34,8 +34,8 @@ export function catalogoComunidadesDePacientes(pacientes = []) {
       mapa.set(paciente.comunidadId, paciente.comunidad.nombre);
     }
   }
-  return Array.from(mapa, ([valor, etiqueta]) => ({ valor, etiqueta })).sort((uno, otro) =>
-    uno.etiqueta.localeCompare(otro.etiqueta, "es"),
+  return Array.from(mapa, ([value, label]) => ({ value, label })).sort((uno, otro) =>
+    uno.label.localeCompare(otro.label, "es"),
   );
 }
 
@@ -125,7 +125,7 @@ export function usePacientesListado({ porPagina } = {}) {
       if (!vigente) return;
       const catalogo = respuesta.condiciones ?? respuesta.catalogo ?? [];
       setCondicionesCronicas(
-        catalogo.map((condicion) => ({ valor: condicion.id, etiqueta: condicion.nombre })),
+        catalogo.map((condicion) => ({ value: condicion.id, label: condicion.nombre })),
       );
     });
     return () => {

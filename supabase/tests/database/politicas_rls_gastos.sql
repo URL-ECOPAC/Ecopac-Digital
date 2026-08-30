@@ -72,7 +72,7 @@ SELECT ok(
 
 SELECT lives_ok(
   $$ UPDATE gastos SET estado = 'aprobado', aprobado_por = '00000000-0000-0000-0000-000000029201',
-       fecha_aprobacion = NOW()
+       aprobado_en = NOW()
      WHERE id = '60000000-0000-0000-0000-000000029201' $$,
   'administrador aprueba el gasto que el mismo registro (issue #410)'
 );

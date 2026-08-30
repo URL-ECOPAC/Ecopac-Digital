@@ -1,4 +1,5 @@
 import { cambiarEstadoProyecto } from "./api.js";
+import { puedeAdministrarProyectos } from "./permisos.js";
 import { transicionesDeProyectoDesde } from "./validaciones.js"; // O la exportación centralizada en index.js
 
 /**
@@ -53,10 +54,10 @@ export async function obtenerProyectosTablero(client) {
  * Mueve un proyecto a otra etapa delegando la validación en la primitiva cambiarEstadoProyecto.
  */
 export async function moverProyectoAEtapa({ proyectoId, nuevaEtapa, usuarioRol }, client) {
-  if (usuarioRol !== "Administrador") {
+  if (!puedeAdministrarProyectos(usuarioRol)) {
     return {
       data: null,
-      error: normalizarError(new Error("Solo Administrador puede cambiar la etapa de un proyecto")),
+      error: normalizarError(new Error("Solo la administradora puede cambiar la etapa de un proyecto")),
     };
   }
 
@@ -69,10 +70,10 @@ export async function moverProyectoAEtapa({ proyectoId, nuevaEtapa, usuarioRol }
  * Reordena tarjetas dentro de una etapa actualizando `orden_columna`.
  */
 export async function reordenarProyectosColumna({ ordenamiento, usuarioRol }, client) {
-  if (usuarioRol !== "Administrador") {
+  if (!puedeAdministrarProyectos(usuarioRol)) {
     return {
       data: null,
-      error: normalizarError(new Error("Solo Administrador puede reordenar proyectos")),
+      error: normalizarError(new Error("Solo la administradora puede reordenar proyectos")),
     };
   }
 

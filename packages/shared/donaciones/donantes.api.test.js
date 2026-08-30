@@ -6,6 +6,7 @@ import {
   obtenerHistoricoDonante,
 } from "./donantes.api.js";
 import { obtenerSupabase } from "../api/cliente.js";
+import { ROLES } from "../usuarios/roles.js";
 
 vi.mock("../api/cliente.js", () => ({
   obtenerSupabase: vi.fn(),
@@ -33,7 +34,7 @@ describe("Módulo de Donaciones - Catálogo de Donantes (#190)", () => {
   it("permite registrar donante solo al Administrador", async () => {
     const resDenegado = await registrarDonante(
       { tipo: "persona", nombre: "Juan" },
-      { rolUsuario: "junta_directiva" }
+      { rolUsuario: ROLES.JUNTA_DIRECTIVA }
     );
     expect(resDenegado.error.mensaje).toContain("Administrador");
 
@@ -44,7 +45,7 @@ describe("Módulo de Donaciones - Catálogo de Donantes (#190)", () => {
 
     const resExito = await registrarDonante(
       { tipo: "persona", nombre: "Juan" },
-      { rolUsuario: "administrador" }
+      { rolUsuario: ROLES.ADMINISTRADOR }
     );
     expect(resExito.datos.id).toBe("DON-1");
   });
@@ -52,9 +53,9 @@ describe("Módulo de Donaciones - Catálogo de Donantes (#190)", () => {
   it("permite lecturas a Administrador, Junta Directiva y Socio Fundador", async () => {
     mockSupabase.order.mockResolvedValue({ data: [], error: null });
 
-    const resJunta = await listarDonantes({}, { rolUsuario: "junta_directiva" });
-    const resSocio = await listarDonantes({}, { rolUsuario: "socio_fundador" });
-    const resOtro = await listarDonantes({}, { rolUsuario: "operador" });
+    const resJunta = await listarDonantes({}, { rolUsuario: ROLES.JUNTA_DIRECTIVA });
+    const resSocio = await listarDonantes({}, { rolUsuario: ROLES.SOCIO_FUNDADOR });
+    const resOtro = await listarDonantes({}, { rolUsuario: ROLES.MEDICO });
 
     expect(resJunta.error).toBeNull();
     expect(resSocio.error).toBeNull();
@@ -67,7 +68,7 @@ describe("Módulo de Donaciones - Catálogo de Donantes (#190)", () => {
       error: null,
     });
 
-    const res = await listarDonantes({ busqueda: "Esperanza" }, { rolUsuario: "administrador" });
+    const res = await listarDonantes({ busqueda: "Esperanza" }, { rolUsuario: ROLES.ADMINISTRADOR });
 
     expect(mockSupabase.ilike).toHaveBeenCalledWith("nombre", "%Esperanza%");
     expect(res.datos).toHaveLength(1);
@@ -79,7 +80,7 @@ describe("Módulo de Donaciones - Catálogo de Donantes (#190)", () => {
       error: null,
     });
 
-    const res = await darDeBajaDonante("DON-1", { rolUsuario: "administrador" });
+    const res = await darDeBajaDonante("DON-1", { rolUsuario: ROLES.ADMINISTRADOR });
 
     expect(mockSupabase.update).toHaveBeenCalledWith({ activo: false });
     expect(res.datos.activo).toBe(false);
@@ -94,7 +95,7 @@ describe("Módulo de Donaciones - Catálogo de Donantes (#190)", () => {
       error: null,
     });
 
-    const res = await obtenerHistoricoDonante("DON-1", { rolUsuario: "socio_fundador" });
+    const res = await obtenerHistoricoDonante("DON-1", { rolUsuario: ROLES.SOCIO_FUNDADOR });
 
     expect(mockSupabase.neq).toHaveBeenCalledWith("estado", "anulada");
     expect(res.datos.totalAcumulado).toBe(350);

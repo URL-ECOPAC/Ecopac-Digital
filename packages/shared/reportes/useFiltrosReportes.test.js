@@ -113,15 +113,15 @@ describe("serializarFiltrosReportes / resolverFiltrosReportesDesdeParametros", (
 });
 
 describe("mapearCatalogoAOpciones", () => {
-  it("traduce id/nombre a valor/etiqueta", () => {
+  it("traduce id/nombre a label/value", () => {
     const filas = [
       { id: "c1", nombre: "San Marcos" },
       { id: "c2", nombre: "Solola" },
     ];
 
     expect(mapearCatalogoAOpciones(filas)).toEqual([
-      { valor: "c1", etiqueta: "San Marcos" },
-      { valor: "c2", etiqueta: "Solola" },
+      { value: "c1", label: "San Marcos" },
+      { value: "c2", label: "Solola" },
     ]);
   });
 

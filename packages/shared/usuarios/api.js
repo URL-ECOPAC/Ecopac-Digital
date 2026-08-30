@@ -82,7 +82,7 @@ const CAMPOS_EDITABLES = {
 function aFiltroDeActivo(estado) {
   if (typeof estado === "boolean") return estado;
   const opcion = ESTADOS_USUARIO.find(({ clave }) => clave === estado);
-  return opcion ? opcion.valor : null;
+  return opcion ? opcion.value : null;
 }
 
 function aColumnasEditables(datos = {}) {
@@ -282,7 +282,7 @@ export async function contarJornadasPorPerfil(perfilIds = []) {
  * catalogo solo refleja sus propias especialidades, no las de todo el personal (mismo limite
  * que listarUsuarios(), ver su comentario arriba).
  *
- * @returns {Promise<{ especialidades: Array<{ etiqueta: string, valor: string }>, error: object|null }>}
+ * @returns {Promise<{ especialidades: Array<{ label: string, value: string }>, error: object|null }>}
  */
 export async function listarCatalogoEspecialidades() {
   try {
@@ -297,7 +297,7 @@ export async function listarCatalogoEspecialidades() {
     );
 
     return {
-      especialidades: nombres.map((nombre) => ({ valor: nombre, etiqueta: nombre })),
+      especialidades: nombres.map((nombre) => ({ value: nombre, label: nombre })),
       error: null,
     };
   } catch (error) {
