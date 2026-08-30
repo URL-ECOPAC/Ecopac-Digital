@@ -9,7 +9,7 @@
 // Los ids son los de las columnas de gastos en 00025_presupuesto_gastos.sql:
 //
 //   gastos (id, jornada_id, concepto, categoria, monto, fecha, responsable_id, estado,
-//           registrado_por, aprobado_por, fecha_aprobacion, created_at, updated_at)
+//           registrado_por, aprobado_por, aprobado_en, created_at, updated_at)
 //
 // La version anterior declaraba `categoria_id`, `fecha_gasto`, `proyecto_id`, `comprobante_url` y
 // `observaciones`. Las tres ultimas no existen en la tabla, y las dos primeras se llaman
@@ -70,7 +70,7 @@ export const OPCIONES_ESTADO_GASTO = [
 /**
  * Formulario de registro y edicion de un gasto.
  *
- * `estado`, `registrado_por`, `aprobado_por` y `fecha_aprobacion` no estan aqui a proposito: no
+ * `estado`, `registrado_por`, `aprobado_por` y `aprobado_en` no estan aqui a proposito: no
  * los escribe quien registra el gasto. `estado` nace en 'pendiente' por DEFAULT de la tabla y solo
  * cambia por la bandeja de aprobacion (issue #299).
  */

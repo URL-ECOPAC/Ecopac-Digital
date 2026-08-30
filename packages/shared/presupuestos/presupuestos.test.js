@@ -31,7 +31,7 @@ const COLUMNAS_DE_LA_TABLA = [
   'estado',
   'registrado_por',
   'aprobado_por',
-  'fecha_aprobacion',
+  'aprobado_en',
   'created_at',
   'updated_at',
 ];
@@ -68,7 +68,7 @@ describe('CAMPOS_GASTO', () => {
     expect(ids).not.toContain('estado');
     expect(ids).not.toContain('registrado_por');
     expect(ids).not.toContain('aprobado_por');
-    expect(ids).not.toContain('fecha_aprobacion');
+    expect(ids).not.toContain('aprobado_en');
   });
 });
 

@@ -10,7 +10,7 @@
 -- dos rutas de aprobacion -- era una media tinta, no una separacion de responsabilidades real.
 --
 -- La 00048 dejo escrito donde vive la trazabilidad desde entonces: en las columnas
--- registrado_por / aprobado_por / fecha_aprobacion de la propia fila, y en los eventos que
+-- registrado_por / aprobado_por / aprobado_en de la propia fila, y en los eventos que
 -- trg_movimientos_inventario_auditoria (00026) escribe en eventos_auditoria.
 --
 -- Asi que esta suite verifica LA REGLA QUE SI RIGE -- que la aprobacion sigue estando acotada al
@@ -105,7 +105,7 @@ SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000222001';
 
 SELECT isnt_empty(
   $$ UPDATE movimientos_inventario
-     SET estado = 'aprobado', aprobado_por = '00000000-0000-0000-0000-000000222001', fecha_aprobacion = NOW()
+     SET estado = 'aprobado', aprobado_por = '00000000-0000-0000-0000-000000222001', aprobado_en = NOW()
      WHERE id = '90000000-0000-0000-0000-000000222001' RETURNING id $$,
   'POSITIVA UPDATE: el administrador aprueba el movimiento del medico'
 );

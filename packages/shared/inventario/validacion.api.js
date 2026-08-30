@@ -14,7 +14,7 @@ import { esAdministrador } from "../usuarios/roles.js";
  * la quito a proposito de la politica RLS, porque la 00028 ya deja nacer aprobado cualquier
  * movimiento que registre un administrador (auto-aprobacion, sin excepcion) y mantenerla solo
  * en el UPDATE manual era una restriccion a medias. La trazabilidad sigue viva en
- * registrado_por/aprobado_por/fecha_aprobacion y en eventos_auditoria (00026).
+ * registrado_por/aprobado_por/aprobado_en y en eventos_auditoria (00026).
  */
 export async function aprobarMovimiento(idMovimiento, { usuarioId, rolUsuario }) {
   try {
@@ -67,7 +67,7 @@ export async function aprobarMovimiento(idMovimiento, { usuarioId, rolUsuario })
       .update({
         estado: "aprobado",
         aprobado_por: usuarioId,
-        fecha_aprobacion: new Date().toISOString(),
+        aprobado_en: new Date().toISOString(),
       })
       .eq("id", idMovimiento)
       .select()
@@ -125,7 +125,7 @@ export async function rechazarMovimiento(idMovimiento, { motivo, usuarioId, rolU
         estado: "rechazado",
         motivo_rechazo: motivo.trim(),
         aprobado_por: usuarioId,
-        fecha_aprobacion: new Date().toISOString(),
+        aprobado_en: new Date().toISOString(),
       })
       .eq("id", idMovimiento)
       .select()

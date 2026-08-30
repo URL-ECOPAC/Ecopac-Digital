@@ -128,7 +128,7 @@ export const CAMPOS_LOTE = [
 
 /**
  * Registro de un movimiento de inventario (movimientos_inventario, 00023+00028+00047).
- * estado, registradoPor, aprobadoPor y fechaAprobacion no son campos del formulario:
+ * estado, registradoPor, aprobadoPor y aprobadoEn no son campos del formulario:
  * los fija la base de datos (columna DEFAULT y el trigger de auto-aprobacion de la
  * 00028), nunca el cliente.
  */
