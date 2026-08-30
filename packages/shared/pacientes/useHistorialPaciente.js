@@ -42,8 +42,9 @@ export function hayFiltrosDeHistorial(filtros = {}) {
   );
 }
 
-export function useHistorialPaciente(pacienteId, { rol } = {}) {
+export function useHistorialPaciente(pacienteId, { rol, limiteInicial = null } = {}) {
   const [filtros, setFiltros] = useState(FILTROS_HISTORIAL_VACIOS);
+  const [limite, setLimite] = useState(limiteInicial);
   const [eventos, setEventos] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
@@ -65,12 +66,13 @@ export function useHistorialPaciente(pacienteId, { rol } = {}) {
       rol,
       desde: desde || undefined,
       hasta: hasta || undefined,
+      limite: limite ? limite + 1 : undefined,
     });
 
     setEventos(respuesta.eventos ?? []);
     setError(respuesta.error);
     setCargando(false);
-  }, [pacienteId, rol, permitido, desde, hasta]);
+  }, [pacienteId, rol, permitido, desde, hasta, limite]);
 
   useEffect(() => {
     cargar();
@@ -83,12 +85,20 @@ export function useHistorialPaciente(pacienteId, { rol } = {}) {
   const limpiarFiltros = useCallback(() => setFiltros(FILTROS_HISTORIAL_VACIOS), []);
 
   const visibles = useMemo(() => filtrarPorTipo(eventos, tipo), [eventos, tipo]);
-  const grupos = useMemo(() => agruparPorJornada(visibles), [visibles]);
+  const todosLosGrupos = useMemo(() => agruparPorJornada(visibles), [visibles]);
+
+  const hayMas = Boolean(limite) && todosLosGrupos.length > limite;
+  const grupos = hayMas ? todosLosGrupos.slice(0, limite) : todosLosGrupos;
+  const eventosVisibles = hayMas ? grupos.flatMap((grupo) => grupo.eventos) : visibles;
+
+  const verMas = useCallback(() => setLimite(null), []);
 
   return {
     grupos,
-    eventos: visibles,
-    total: visibles.length,
+    eventos: eventosVisibles,
+    total: eventosVisibles.length,
+    hayMas,
+    verMas,
     filtros,
     setFiltro,
     limpiarFiltros,

@@ -188,12 +188,13 @@ export function ordenarCronologicamente(eventos = []) {
  * @param {string} [opciones.hasta] Fecha ISO final del periodo.
  * @returns {Promise<{ eventos: object[], error: object|null }>}
  */
-export async function obtenerHistorialMedico(pacienteId, { rol, desde, hasta } = {}) {
-  if (!pacienteId) return { eventos: [], error: null };
+export async function obtenerHistorialMedico(pacienteId, { rol, desde, hasta, limite } = {}) {
+  if (!pacienteId) return { eventos: [], atenciones: 0, error: null };
 
   if (rol !== undefined && !puedeVerHistorial(rol)) {
     return {
       eventos: [],
+      atenciones: 0,
       error: {
         ...construirError(CODIGOS_DE_ERROR_DE_SUPABASE.PERMISO_DENEGADO),
         mensaje: "Solo el personal medico y la administracion pueden ver un historial clinico.",
@@ -210,15 +211,17 @@ export async function obtenerHistorialMedico(pacienteId, { rol, desde, hasta } =
 
     if (desde) consulta = consulta.gte("created_at", desde);
     if (hasta) consulta = consulta.lte("created_at", hasta);
+    if (limite) consulta = consulta.limit(limite);
 
     const { data, error } = await consulta;
 
-    if (error) return { eventos: [], error: normalizarError(error) };
+    if (error) return { eventos: [], atenciones: 0, error: normalizarError(error) };
 
-    const eventos = (data ?? []).flatMap(aEventos);
-    return { eventos: ordenarCronologicamente(eventos), error: null };
+    const filas = data ?? [];
+    const eventos = filas.flatMap(aEventos);
+    return { eventos: ordenarCronologicamente(eventos), atenciones: filas.length, error: null };
   } catch (error) {
-    return { eventos: [], error: normalizarError(error) };
+    return { eventos: [], atenciones: 0, error: normalizarError(error) };
   }
 }
 
