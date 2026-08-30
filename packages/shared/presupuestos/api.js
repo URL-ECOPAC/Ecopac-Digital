@@ -129,7 +129,21 @@ export async function obtenerPresupuestoSistema() {
 // Funciones API para la gestión de Gastos
 // ============================================================================
 
-export async function registrarGasto(datosGasto) {
+/**
+ * Registra un gasto.
+ *
+ * `usuarioId` es obligatorio: `gastos.registrado_por` es NOT NULL sin DEFAULT (00025) y la
+ * politica de INSERT (00089) exige ademas, para quien no es administrador ni tiene
+ * `presupuestos.registrar`, que sea exactamente `auth.uid()` -- mismo contrato que
+ * `registrarIngreso()` en `inventario/movimientos.api.js`. Bug encontrado al verificar la #300
+ * contra datos reales: esta funcion nunca lo enviaba y el INSERT reventaba con 23502 para
+ * cualquier rol; las pruebas no lo detectaban porque no llegaban a un cliente real (issue #298).
+ *
+ * @param {object} datosGasto
+ * @param {{ usuarioId: string }} contexto
+ * @returns {Promise<{ gasto: object|null, error: object|null }>}
+ */
+export async function registrarGasto(datosGasto, { usuarioId } = {}) {
   try {
     const { concepto, categoria, monto, fecha, responsable_id, jornada_id } = datosGasto || {};
 
@@ -142,6 +156,7 @@ export async function registrarGasto(datosGasto) {
         fecha,
         responsable_id: responsable_id || null,
         jornada_id,
+        registrado_por: usuarioId,
       })
       .select(`
         *,
