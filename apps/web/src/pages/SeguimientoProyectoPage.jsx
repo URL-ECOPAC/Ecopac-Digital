@@ -1,4 +1,14 @@
 import { useSeguimientoProyecto } from "@ecopac/shared/proyectos";
+import {
+  Container,
+  Row,
+  Col,
+  Card,
+  Form,
+  Button,
+  Badge,
+  Alert,
+} from "react-bootstrap";
 
 export default function SeguimientoProyectoPage({
   proyectoInicial,
@@ -31,193 +41,262 @@ export default function SeguimientoProyectoPage({
 
   if (!proyecto) {
     return (
-      <div className="p-6 text-center text-gray-500">
-        <p>No se seleccionó ningún proyecto para el seguimiento.</p>
+      <Container className="my-5 text-center">
+        <p className="text-muted">
+          No se seleccionó ningún proyecto para el seguimiento.
+        </p>
         {onVolver && (
-          <button
-            onClick={onVolver}
-            className="mt-4 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md text-sm font-medium"
-          >
+          <Button variant="secondary" size="sm" onClick={onVolver} className="mt-2">
             Volver
-          </button>
+          </Button>
         )}
-      </div>
+      </Container>
     );
   }
 
   return (
-    <div className="p-6 max-w-6xl mx-auto space-y-6">
+    <Container fluid style={{ maxWidth: "1140px" }} className="py-4">
       {/* Encabezado */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b pb-4 gap-4">
+      <div className="border-bottom pb-3 mb-4 d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-3">
         <div>
           {onVolver && (
-            <button
+            <Button
+              variant="link"
               onClick={onVolver}
-              className="mb-2 text-sm text-indigo-600 hover:underline flex items-center gap-1"
+              className="p-0 text-decoration-none text-primary mb-2 small d-inline-flex align-items-center gap-1"
             >
               ← Volver al listado
-            </button>
+            </Button>
           )}
-          <h1 className="text-2xl font-bold text-gray-900">{proyecto.nombre}</h1>
-          <p className="text-sm text-gray-500 mt-1">{proyecto.descripcion || "Sin descripción disponible."}</p>
+          <h1 className="h3 mb-1 text-dark">{proyecto.nombre}</h1>
+          <p className="text-muted small mb-0">
+            {proyecto.descripcion || "Sin descripción disponible."}
+          </p>
         </div>
-        <div className="flex items-center gap-3">
-          <span className="px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
+        <div>
+          <Badge bg="primary" className="fs-6 px-3 py-2 fw-normal">
             {proyecto.estado || "En progreso"}
-          </span>
+          </Badge>
         </div>
       </div>
 
       {/* Indicadores Agregados de Jornadas */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-          <p className="text-xs font-medium text-gray-500 uppercase">Total Jornadas</p>
-          <p className="text-2xl font-bold text-gray-900 mt-1">{indicadoresJornadas.totalJornadas}</p>
-        </div>
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-          <p className="text-xs font-medium text-gray-500 uppercase">Jornadas Completadas</p>
-          <p className="text-2xl font-bold text-green-600 mt-1">{indicadoresJornadas.completadas}</p>
-        </div>
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-          <p className="text-xs font-medium text-gray-500 uppercase">Presupuesto Total</p>
-          <p className="text-2xl font-bold text-gray-900 mt-1">
-            Q{indicadoresJornadas.presupuestoTotal.toLocaleString()}
-          </p>
-        </div>
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-          <p className="text-xs font-medium text-gray-500 uppercase">Beneficiarios Alcanzados</p>
-          <p className="text-2xl font-bold text-indigo-600 mt-1">{indicadoresJornadas.beneficiariosTotales}</p>
-        </div>
-      </div>
+      <Row className="g-3 mb-4">
+        <Col sm={6} lg={3}>
+          <Card className="border shadow-sm h-100">
+            <Card.Body>
+              <Card.Subtitle className="text-uppercase text-muted extra-small fw-bold mb-1">
+                Total Jornadas
+              </Card.Subtitle>
+              <Card.Title className="fs-2 fw-bold text-dark mb-0">
+                {indicadoresJornadas.totalJornadas}
+              </Card.Title>
+            </Card.Body>
+          </Card>
+        </Col>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <Col sm={6} lg={3}>
+          <Card className="border shadow-sm h-100">
+            <Card.Body>
+              <Card.Subtitle className="text-uppercase text-muted extra-small fw-bold mb-1">
+                Jornadas Completadas
+              </Card.Subtitle>
+              <Card.Title className="fs-2 fw-bold text-success mb-0">
+                {indicadoresJornadas.completadas}
+              </Card.Title>
+            </Card.Body>
+          </Card>
+        </Col>
+
+        <Col sm={6} lg={3}>
+          <Card className="border shadow-sm h-100">
+            <Card.Body>
+              <Card.Subtitle className="text-uppercase text-muted extra-small fw-bold mb-1">
+                Presupuesto Total
+              </Card.Subtitle>
+              <Card.Title className="fs-2 fw-bold text-dark mb-0">
+                Q{indicadoresJornadas.presupuestoTotal.toLocaleString()}
+              </Card.Title>
+            </Card.Body>
+          </Card>
+        </Col>
+
+        <Col sm={6} lg={3}>
+          <Card className="border shadow-sm h-100">
+            <Card.Body>
+              <Card.Subtitle className="text-uppercase text-muted extra-small fw-bold mb-1">
+                Beneficiarios Alcanzados
+              </Card.Subtitle>
+              <Card.Title className="fs-2 fw-bold text-primary mb-0">
+                {indicadoresJornadas.beneficiariosTotales}
+              </Card.Title>
+            </Card.Body>
+          </Card>
+        </Col>
+      </Row>
+
+      <Row className="g-4">
         {/* Columna Izquierda: Avance y Bitácora */}
-        <div className="lg:col-span-2 space-y-6">
+        <Col lg={8}>
           {/* Formulario de Actualización de Avance */}
-          <div className="bg-white p-5 rounded-lg shadow-sm border border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-800 mb-4">Actualizar Avance y Bitácora</h2>
-            {errorAccion && (
-              <div className="mb-4 p-3 bg-red-50 text-red-700 text-sm rounded-md border border-red-200">
-                {errorAccion}
-              </div>
-            )}
-            <div className="space-y-4">
-              <div>
-                <div className="flex justify-between items-center mb-1">
-                  <label className="text-sm font-medium text-gray-700">Porcentaje de avance (%)</label>
-                  <span className="text-sm font-bold text-indigo-600">{nuevoPorcentaje}%</span>
+          <Card className="border shadow-sm mb-4">
+            <Card.Body className="p-4">
+              <Card.Title as="h5" className="mb-3 text-dark fw-bold">
+                Actualizar Avance y Bitácora
+              </Card.Title>
+
+              {errorAccion && (
+                <Alert variant="danger" className="py-2 px-3 small mb-3">
+                  {errorAccion}
+                </Alert>
+              )}
+
+              <Form className="d-flex flex-column gap-3">
+                <div>
+                  <div className="d-flex justify-content-between align-items-center mb-1">
+                    <Form.Label className="small fw-medium mb-0">
+                      Porcentaje de avance (%)
+                    </Form.Label>
+                    <span className="fw-bold text-primary">{nuevoPorcentaje}%</span>
+                  </div>
+                  <Form.Range
+                    min={0}
+                    max={100}
+                    value={nuevoPorcentaje}
+                    onChange={(e) => setNuevoPorcentaje(Number(e.target.value))}
+                  />
                 </div>
-                <input
-                  type="range"
-                  min="0"
-                  max="100"
-                  value={nuevoPorcentaje}
-                  onChange={(e) => setNuevoPorcentaje(Number(e.target.value))}
-                  className="w-full accent-indigo-600 cursor-pointer"
-                />
-              </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Nota de seguimiento</label>
-                <textarea
-                  rows="3"
-                  value={nuevaNota}
-                  onChange={(e) => setNuevaNota(e.target.value)}
-                  placeholder="Escribe los detalles o avances alcanzados..."
-                  className="w-full p-2.5 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                />
-              </div>
+                <Form.Group>
+                  <Form.Label className="small fw-medium mb-1">
+                    Nota de seguimiento
+                  </Form.Label>
+                  <Form.Control
+                    as="textarea"
+                    rows={3}
+                    value={nuevaNota}
+                    onChange={(e) => setNuevaNota(e.target.value)}
+                    placeholder="Escribe los detalles o avances alcanzados..."
+                  />
+                </Form.Group>
 
-              <div className="flex justify-end">
-                <button
-                  type="button"
-                  onClick={guardarSeguimiento}
-                  disabled={cargando}
-                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-md text-sm transition-colors disabled:opacity-50"
-                >
-                  {cargando ? "Guardando..." : "Guardar Actualización"}
-                </button>
-              </div>
-            </div>
-          </div>
+                <div className="d-flex justify-content-end">
+                  <Button
+                    variant="primary"
+                    onClick={guardarSeguimiento}
+                    disabled={cargando}
+                  >
+                    {cargando ? "Guardando..." : "Guardar Actualización"}
+                  </Button>
+                </div>
+              </Form>
+            </Card.Body>
+          </Card>
 
           {/* Historial de Bitácora */}
-          <div className="bg-white p-5 rounded-lg shadow-sm border border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-800 mb-4">Bitácora de Notas</h2>
-            {bitacora.length === 0 ? (
-              <p className="text-sm text-gray-500 italic text-center py-4">No hay notas de seguimiento registradas.</p>
-            ) : (
-              <div className="space-y-4">
-                {bitacora.map((item) => (
-                  <div key={item.id} className="p-3 bg-gray-50 rounded-md border border-gray-100">
-                    <p className="text-sm text-gray-800">{item.nota}</p>
-                    <div className="mt-2 flex flex-wrap justify-between text-xs text-gray-500 border-t border-gray-200 pt-2">
-                      <span>
-                        Registrado por: <strong>{item.registradoPor || usuarioActual}</strong>
-                      </span>
-                      <span>{item.createdAt ? new Date(item.createdAt).toLocaleString() : "Recientemente"}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
+          <Card className="border shadow-sm">
+            <Card.Body className="p-4">
+              <Card.Title as="h5" className="mb-3 text-dark fw-bold">
+                Bitácora de Notas
+              </Card.Title>
+
+              {bitacora.length === 0 ? (
+                <p className="text-muted fst-italic text-center py-3 mb-0 small">
+                  No hay notas de seguimiento registradas.
+                </p>
+              ) : (
+                <div className="d-flex flex-column gap-3">
+                  {bitacora.map((item) => (
+                    <Card key={item.id} className="bg-light border-0">
+                      <Card.Body className="p-3">
+                        <p className="small mb-2 text-dark">{item.nota}</p>
+                        <div className="d-flex justify-content-between text-muted extra-small pt-2 border-top">
+                          <span>
+                            Registrado por:{" "}
+                            <strong>{item.registradoPor || usuarioActual}</strong>
+                          </span>
+                          <span>
+                            {item.createdAt
+                              ? new Date(item.createdAt).toLocaleString()
+                              : "Recientemente"}
+                          </span>
+                        </div>
+                      </Card.Body>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </Card.Body>
+          </Card>
+        </Col>
 
         {/* Columna Derecha: Hitos */}
-        <div className="space-y-6">
-          <div className="bg-white p-5 rounded-lg shadow-sm border border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-800 mb-4">Hitos del Proyecto</h2>
-            {hitos.length === 0 ? (
-              <p className="text-sm text-gray-500 italic text-center py-4">No hay hitos asignados a este proyecto.</p>
-            ) : (
-              <div className="space-y-3">
-                {hitos.map((hito) => (
-                  <div
-                    key={hito.id}
-                    className={`p-3 rounded-lg border transition-colors ${
-                      hito.esVencido
-                        ? "bg-red-50 border-red-300"
-                        : hito.esCumplido
-                        ? "bg-green-50 border-green-200"
-                        : "bg-white border-gray-200"
-                    }`}
-                  >
-                    <div className="flex items-start gap-2">
-                      <input
-                        type="checkbox"
-                        checked={hito.esCumplido}
-                        onChange={(e) => cambiarEstadoHito(hito.id, e.target.checked)}
-                        className="mt-1 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
-                      />
-                      <div className="flex-1">
-                        <p
-                          className={`text-sm font-medium ${
-                            hito.esCumplido ? "line-through text-gray-500" : "text-gray-900"
-                          }`}
-                        >
-                          {hito.nombre}
-                        </p>
-                        <p className="text-xs text-gray-500 mt-0.5">
-                          Previsto: {hito.fechaPrevista || "Sin fecha"}
-                        </p>
-                        {hito.esVencido && (
-                          <span className="inline-block mt-1 px-2 py-0.5 text-xs font-semibold bg-red-100 text-red-800 rounded">
-                            ¡Vencido!
-                          </span>
-                        )}
-                        {hito.esCumplido && hito.fechaReal && (
-                          <p className="text-xs text-green-700 mt-1">Cumplido el: {hito.fechaReal}</p>
-                        )}
+        <Col lg={4}>
+          <Card className="border shadow-sm">
+            <Card.Body className="p-4">
+              <Card.Title as="h5" className="mb-3 text-dark fw-bold">
+                Hitos del Proyecto
+              </Card.Title>
+
+              {hitos.length === 0 ? (
+                <p className="text-muted fst-italic text-center py-3 mb-0 small">
+                  No hay hitos asignados a este proyecto.
+                </p>
+              ) : (
+                <div className="d-flex flex-column gap-2">
+                  {hitos.map((hito) => {
+                    let cardVariant = "bg-white border";
+                    if (hito.esVencido) cardVariant = "bg-danger-subtle border-danger";
+                    else if (hito.esCumplido) cardVariant = "bg-success-subtle border-success-subtle";
+
+                    return (
+                      <div
+                        key={hito.id}
+                        className={`p-3 rounded ${cardVariant}`}
+                      >
+                        <div className="d-flex align-items-start gap-2">
+                          <Form.Check
+                            type="checkbox"
+                            checked={hito.esCumplido}
+                            onChange={(e) =>
+                              cambiarEstadoHito(hito.id, e.target.checked)
+                            }
+                            className="mt-1"
+                          />
+                          <div className="flex-grow-1">
+                            <p
+                              className={`small fw-medium mb-1 ${
+                                hito.esCumplido
+                                  ? "text-decoration-line-through text-muted"
+                                  : "text-dark"
+                              }`}
+                            >
+                              {hito.nombre}
+                            </p>
+                            <p className="extra-small text-muted mb-0">
+                              Previsto: {hito.fechaPrevista || "Sin fecha"}
+                            </p>
+                            {hito.esVencido && (
+                              <Badge bg="danger" className="mt-1">
+                                ¡Vencido!
+                              </Badge>
+                            )}
+                            {hito.esCumplido && hito.fechaReal && (
+                              <p className="extra-small text-success mt-1 mb-0">
+                                Cumplido el: {hito.fechaReal}
+                              </p>
+                            )}
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
+                    );
+                  })}
+                </div>
+              )}
+            </Card.Body>
+          </Card>
+        </Col>
+      </Row>
+    </Container>
   );
 }
