@@ -31,6 +31,7 @@ export * from "./triaje.api.js";
 export * from "./consultas.api.js";
 export * from "./recetas.api.js";
 export * from "./historial.api.js";
+export * from "./duplicados.api.js";
 export * from "./condiciones.campos.js";
 export * from "./condiciones.columnas.js";
 export * from "./condiciones.filtros.js";

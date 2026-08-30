@@ -14,6 +14,7 @@ import {
   puedeCrearExpediente,
   puedeEditarExpediente,
   puedeEditarPaciente,
+  puedeFusionarPacientes,
   puedeRegistrarPaciente,
   puedeTomarTriaje,
   puedeVerExpedientes,
@@ -68,6 +69,14 @@ describe("permisos de pacientes y expedientes", () => {
     expect(puedeCorregirTriaje(ROLES.SOCIO_FUNDADOR)).toBe(false);
   });
 
+  it("solo administrador fusiona expedientes (issue #140)", () => {
+    expect(puedeFusionarPacientes(ROLES.ADMINISTRADOR)).toBe(true);
+    expect(puedeFusionarPacientes(ROLES.MEDICO)).toBe(false);
+    expect(puedeFusionarPacientes(ROLES.VOLUNTARIO)).toBe(false);
+    expect(puedeFusionarPacientes(ROLES.JUNTA_DIRECTIVA)).toBe(false);
+    expect(puedeFusionarPacientes(ROLES.SOCIO_FUNDADOR)).toBe(false);
+  });
+
   it("un rol que no existe no puede nada", () => {
     expect(permisosDePacientes("coordinador")).toEqual({
       puedeVer: false,
@@ -76,6 +85,7 @@ describe("permisos de pacientes y expedientes", () => {
       puedeVerHistorial: false,
       puedeTomarTriaje: false,
       puedeCorregirTriaje: false,
+      puedeFusionarPacientes: false,
     });
   });
 
@@ -95,6 +105,7 @@ describe("permisos de pacientes y expedientes", () => {
       puedeVerHistorial: false,
       puedeTomarTriaje: true,
       puedeCorregirTriaje: false,
+      puedeFusionarPacientes: false,
     });
 
     expect(permisosDePacientes(ROLES.ADMINISTRADOR)).toEqual({
@@ -104,6 +115,7 @@ describe("permisos de pacientes y expedientes", () => {
       puedeVerHistorial: true,
       puedeTomarTriaje: true,
       puedeCorregirTriaje: true,
+      puedeFusionarPacientes: true,
     });
   });
 });

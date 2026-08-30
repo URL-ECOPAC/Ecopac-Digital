@@ -117,6 +117,7 @@ la migracion esta aplicada y no se edita.
 | `receta_detalle`          | C R           | —                                | C R    | —                  | `00033`                                                                                                                |
 | `padecimientos_cronicos`  | C R U D       | —                                | C R U  | —                  | `00010`. Unica tabla clinica con DELETE, y solo para administrador. Auditada desde la `00070`                          |
 | `diagnosticos` (catalogo) | R             | —                                | R      | —                  | `00033`. Catalogo de solo lectura: nadie lo puede poblar por la API                                                    |
+| `fusiones_pacientes`      | R             | —                                | —      | —                  | `00101` (issue #140). Solo administrador lee; sin politicas de escritura, la unica que inserta es `fn_fusionar_pacientes()` (SECURITY DEFINER) |
 
 **Ninguna tabla clinica tiene politica de DELETE** (salvo `padecimientos_cronicos`). La baja es
 logica, no fisica. En `padecimientos_cronicos` esa excepcion existe para corregir un alta
@@ -141,6 +142,18 @@ le habia dejado fuera.
 Reflejo en el cliente: `pacientes/permisos.js` (issue #396), que tambien absorbio
 `puedeVerHistorial` y `puedeCorregirTriaje`/`puedeTomarTriaje`, sueltas hasta ahora fuera de un
 `permisos.js`. `pacientes/condiciones.permisos.js` cubre `padecimientos_cronicos` por separado.
+
+`fn_detectar_pacientes_duplicados()` (`00101`, issue #140) es SECURITY INVOKER: la ve quien ya
+puede leer `pacientes` (administrador, medico, voluntario general), porque el criterio de
+aceptacion no restringe la lectura de posibles duplicados, solo la fusion. `fn_fusionar_pacientes()`
+si es SECURITY DEFINER con el chequeo de administrador escrito en su cuerpo -mismo motivo que
+`fn_reporte_pacientes_atendidos` mas abajo-: tiene que quedar mas restringida que la politica
+UPDATE de `pacientes` (que tambien alcanza a medico via `pacientes.editar`, `00086`). Reasigna
+`atenciones`, `padecimientos_cronicos` y `consultas` del expediente absorbido al sobreviviente
+dentro de una sola transaccion, salvo la fila puntual que chocaria con una restriccion UNIQUE del
+sobreviviente (misma jornada ya atendida, misma condicion cronica ya registrada): esa se conserva
+sin reasignar, bajo el absorbido. Reflejo en el cliente: `puedeFusionarPacientes()` en
+`pacientes/permisos.js`.
 
 ### Inventario
 
