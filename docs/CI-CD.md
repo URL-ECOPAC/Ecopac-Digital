@@ -31,6 +31,24 @@ dentro de este job y no en uno propio porque **Lint y build** ya es check requer
 y `main`; un job nuevo no lo seria hasta que alguien lo agregue en Settings > Branches, y
 mientras tanto un PR en rojo se podria mergear igual.
 
+### `apps/mobile` sin script `test` todavia (issue #515)
+
+Hasta la issue #515, `npm test` en la raiz corria `npm run test --workspaces --if-present`, y
+**ni `apps/web` ni `apps/mobile` tenian script `test`**: el paso "Ejecutar las pruebas de todos
+los workspaces" del CI las saltaba en silencio, sin ninguna senal de que las 193 pruebas de
+`packages/shared` en verde no cubrian ni una linea de las dos apps. La 00515 le agrego a
+`apps/web` un script `test` real (Vitest + `@testing-library/react`, con al menos una prueba de
+`RutaProtegida`, el guard de acceso).
+
+`apps/mobile` sigue sin uno, a proposito y no por descuido: React Native + Expo necesita un stack
+de pruebas distinto al de `apps/web` y `packages/shared` (Jest con el preset `jest-expo`,
+`@testing-library/react-native`, y mocks de los modulos nativos que Expo trae -camara,
+almacenamiento seguro, notificaciones-), no una extension del mismo Vitest que ya usan los otros
+dos workspaces. Es un esfuerzo de otro tamano y de otro tipo -otro framework de pruebas entero,
+no una configuracion mas-, y no encajaba en el alcance de infraestructura de #515. Queda como
+trabajo pendiente, con esta nota para que la proxima vez que alguien revise `npm test` sepa por
+que la cobertura sigue siendo cero ahi y no tenga que volver a investigarlo desde cero.
+
 ### La guarda de cobertura de las validaciones
 
 Las validaciones de `packages/shared` son las reglas de negocio del sistema: vencimiento de
