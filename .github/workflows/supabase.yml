@@ -21,8 +21,20 @@ permissions:
   contents: read
 
 concurrency:
-  group: supabase-${{ github.ref }}
-  # Nunca se cancela un despliegue a medias: solo se cancelan corridas de PR superadas.
+  # En push el grupo lleva el SHA, asi que cada commit a develop/main tiene el suyo y ninguno
+  # descarta a otro. Antes el grupo era solo la rama, y ahi `cancel-in-progress: false` no
+  # alcanza: protege a la corrida que ya arranco, pero GitHub guarda UNA sola corrida en cola
+  # por grupo, asi que cada push nuevo cancelaba a la que esperaba turno. Los pushes 676acb3 y
+  # c71692f se perdieron exactamente asi, con cero jobs ejecutados; el siguiente (93666b6)
+  # fallo, y con el se rompio la cadena de recuperacion que los cubria.
+  #
+  # El precio es que dos despliegues pueden solaparse. Se prefiere a perder uno en silencio:
+  # `db push` aplica migracion por migracion y el peor caso del solape es un fallo que se
+  # reintenta, no una base a medias. Ademas el paso "Comprobar el historial remoto" lo detecta
+  # y lo explica.
+  #
+  # En PR se conserva el grupo por rama, que es donde si conviene cancelar lo superado.
+  group: supabase-${{ github.ref }}-${{ github.event_name == 'push' && github.sha || 'pr' }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
@@ -34,7 +46,7 @@ jobs:
       supabase: ${{ steps.detectar.outputs.supabase }}
     steps:
       - name: Descargar el codigo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -63,7 +75,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Descargar el codigo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -249,7 +261,7 @@ jobs:
     timeout-minutes: 20
     steps:
       - name: Descargar el codigo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Sin cambios en supabase/
         if: needs.cambios.outputs.supabase != 'true'
@@ -266,10 +278,16 @@ jobs:
       # una sola migracion. Con una version concreta esa llamada no se hace.
       #
       # De paso el CI valida con la misma version que tiene instalada el equipo, en vez de con
-      # la que resulte ser la ultima ese dia. Al subirla, cambiarla en los TRES pasos.
+      # la que resulte ser la ultima ese dia. Al subirla, cambiarla en los CUATRO pasos que
+      # instalan el CLI: los tres de este archivo y el de verificar-despliegue.yml.
+      #
+      # La accion va en v3 y no en v1 porque la v1 corre sobre Node 20, que GitHub ya esta
+      # retirando. La v3 es composite e instala el CLI desde npm, asi que ademas deja de tocar
+      # la API de releases: la causa del incidente del 25 de agosto desaparece de raiz, no solo
+      # se esquiva fijando la version.
       - name: Instalar Supabase CLI
         if: needs.cambios.outputs.supabase == 'true'
-        uses: supabase/setup-cli@v1
+        uses: supabase/setup-cli@v3
         with:
           version: 2.115.0
 
@@ -344,7 +362,7 @@ jobs:
       SUPABASE_PROJECT_REF_DEV: ${{ secrets.SUPABASE_PROJECT_REF_DEV }}
     steps:
       - name: Descargar el codigo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Verificar secrets
         id: check
@@ -367,7 +385,7 @@ jobs:
       # Version fija: ver el comentario del job "Validar migraciones y funciones" (issue #422).
       - name: Instalar Supabase CLI
         if: steps.check.outputs.listo == 'true'
-        uses: supabase/setup-cli@v1
+        uses: supabase/setup-cli@v3
         with:
           version: 2.115.0
 
@@ -412,12 +430,12 @@ jobs:
       SUPABASE_PROJECT_REF_PROD: ${{ secrets.SUPABASE_PROJECT_REF_PROD }}
     steps:
       - name: Descargar el codigo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       # Version fija: ver el comentario del job "Validar migraciones y funciones" (issue #422).
       # Este es el paso donde el rate limit tumbo el despliegue del 25 de agosto.
       - name: Instalar Supabase CLI
-        uses: supabase/setup-cli@v1
+        uses: supabase/setup-cli@v3
         with:
           version: 2.115.0
 
@@ -462,6 +480,86 @@ jobs:
         if: steps.check.outputs.listo == 'true'
         run: supabase link --project-ref "${{ steps.check.outputs.proyecto }}" -p "$SUPABASE_DB_PASSWORD"
 
+      # La deriva de historial explicada en cristiano, antes de que `db push` la escupa en
+      # crudo (el merge de 93666b6).
+      #
+      # Si la base tiene aplicada una migracion cuyo archivo no esta en esta rama, `db push`
+      # aborta con "Remote migration versions not found in local migrations directory" y un
+      # `migration repair` sugerido. Ese mensaje no dice lo unico que importa: que el fallo
+      # casi nunca es del commit que lo desencadena. `db push` valida el historial COMPLETO
+      # antes de mirar si hay algo pendiente, asi que mientras dura la deriva tumba todo push
+      # a develop, traiga SQL o no. Fue lo que paso el 30 de agosto: la 00088 se aplico a mano
+      # contra ecopac-dev antes de que su PR (#586) se mergeara, y el merge que se comio el
+      # fallo fue #588, un hook de reportes sin una sola linea de SQL.
+      #
+      # El detector es `db push --dry-run` en vez de comparar `migration list` a mano: no
+      # aplica nada, pero hace exactamente la misma comprobacion de historial que el `db push`
+      # de abajo. Asi el diagnostico y el despliegue no pueden discrepar. Si el CLI cambiara el
+      # texto, este paso deja pasar y `db push` vuelve a fallar solo: se degrada a lo de antes,
+      # nunca a un verde falso.
+      - name: Comprobar el historial remoto
+        if: steps.check.outputs.listo == 'true'
+        run: |
+          if salida="$(supabase db push --dry-run 2>&1)"; then
+            echo "$salida"
+            exit 0
+          fi
+
+          echo "$salida"
+          limpia="$(printf '%s' "$salida" | sed 's/\x1B\[[0-9;]*[a-zA-Z]//g')"
+
+          if ! printf '%s' "$limpia" | grep -q 'Remote migration versions not found'; then
+            # Fallo por otra cosa: conexion, credenciales, una migracion rota. No es deriva y
+            # no toca diagnosticarla aqui; se deja seguir para que `Aplicar migraciones` falle
+            # con su propio mensaje, que es el que sirve en ese caso.
+            echo "::warning::El dry-run fallo por algo que no es deriva de historial; sigue el despliegue."
+            exit 0
+          fi
+
+          # Las versiones las nombra el propio CLI en la linea del repair que sugiere.
+          versiones="$(printf '%s' "$limpia" \
+            | sed -n 's/.*migration repair --status reverted //p' \
+            | tr -s ' ' '\n' | grep -E '^[0-9]+$' | sort -u | xargs)"
+
+          {
+            echo "## La base de ${{ steps.check.outputs.ambiente }} y esta rama no coinciden"
+            echo
+            echo "**No se aplico ninguna migracion y la base no quedo a medias.**"
+            echo
+            echo "Estas versiones estan aplicadas en \`${{ steps.check.outputs.ambiente }}\` pero no"
+            echo "tienen archivo en \`supabase/migrations/\` en este commit:"
+            echo
+            for v in $versiones; do echo "- \`$v\`"; done
+            echo
+            echo "### Por que suele pasar"
+            echo
+            echo "Casi siempre porque esa migracion se aplico **a mano** contra la base, desde una"
+            echo "rama, antes de que su PR se mergeara. Mientras el archivo no este en la rama,"
+            echo "\`supabase db push\` falla en **todo** push, traiga migraciones o no: valida el"
+            echo "historial completo antes de mirar si hay algo pendiente. Por eso este fallo puede"
+            echo "no tener nada que ver con el commit que lo disparo."
+            echo
+            echo "La otra causa posible es un despliegue mas nuevo que se adelanto a este."
+            echo
+            echo "### Como se sale"
+            echo
+            echo "1. Buscar el PR que trae esos archivos y mergearlo. Con eso se arregla solo, y es"
+            echo "   lo que corresponde si la migracion es legitima y solo llego antes de tiempo."
+            echo "2. Si la migracion se descarto de verdad y no va a existir nunca, entonces se"
+            echo "   despega el registro de la base:"
+            echo
+            echo '   ```'
+            echo "   supabase migration repair --status reverted $versiones"
+            echo '   ```'
+            echo
+            echo "No se edita ninguna migracion ya aplicada para salir de esto."
+            echo
+            echo "> Recordatorio: las migraciones se aplican mergeando, no a mano. Ver \`docs/CI-CD.md\`."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          echo "::error::La base de ${{ steps.check.outputs.ambiente }} tiene migraciones que esta rama no ($versiones). No se aplico nada; ver el resumen de la corrida."
+          exit 1
+
       - name: Aplicar migraciones
         if: steps.check.outputs.listo == 'true'
         run: supabase db push
@@ -493,7 +591,7 @@ jobs:
       # El fallo de un despliegue paso desapercibido cuatro corridas seguidas. Una issue
       # abierta es mas dificil de ignorar que un check rojo en la lista de commits.
       - name: Abrir issue si no hay una ya
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const rama = context.ref.replace('refs/heads/', '');
@@ -545,9 +643,31 @@ jobs:
               core.warning(`No se pudieron leer los pasos de la corrida: ${error.message}`);
             }
 
-            // Tres desenlaces distintos, y cada uno se arregla de otra forma.
-            const diagnostico =
-              estadoDelPush === 'failure'
+            // La deriva de historial se diagnostica aparte y va primero. Deja `Aplicar
+            // migraciones` en `skipped`, y el texto de ese caso manda a relanzar la corrida:
+            // para la deriva eso es falso, relanzar vuelve a fallar igual porque el problema
+            // esta en la base, no en la corrida.
+            const hayDeriva = pasosFallidos.some((p) => p.endsWith('Comprobar el historial remoto'));
+
+            // Cuatro desenlaces distintos, y cada uno se arregla de otra forma.
+            const diagnostico = hayDeriva
+              ? [
+                  `**No se aplico ninguna migracion, y la base de \`${rama}\` no quedo a medias.**`,
+                  '',
+                  'La base tiene aplicadas migraciones cuyo archivo no esta en esta rama, asi que',
+                  '`supabase db push` se nego a tocarla. El resumen de la corrida dice cuales son.',
+                  '',
+                  'Casi siempre es una migracion aplicada **a mano** contra la base antes de que su',
+                  'PR se mergeara. Mientras eso dure, falla **todo** push a la rama, traiga',
+                  'migraciones o no: por eso este fallo puede no tener nada que ver con el commit',
+                  'que lo disparo. Relanzar la corrida no lo arregla.',
+                  '',
+                  '- [ ] Abrir el resumen de la corrida y ver que versiones sobran en la base',
+                  '- [ ] Buscar el PR que trae esos archivos y mergearlo (con eso se arregla solo)',
+                  '- [ ] Si esa migracion se descarto de verdad, `supabase migration repair --status reverted <version>`',
+                  '- [ ] Confirmar con `supabase migration list --linked` que la base quedo al dia',
+                ]
+              : estadoDelPush === 'failure'
                 ? [
                     `**La base de \`${rama}\` puede haber quedado a medias.** El paso \`Aplicar migraciones\``,
                     'empezo a correr y fallo, asi que se detuvo dentro de una migracion.',

@@ -119,15 +119,15 @@ propio del CI.
 Siete jobs. Los tres primeros validan, los siguientes despliegan y avisan, y el ultimo
 resume el resultado de todos.
 
-| Job                                 | Cuando                   | Que hace                                                                                                                                  |
-| ----------------------------------- | ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| Detectar cambios                    | siempre                  | Averigua si el cambio toca `supabase/`, para no levantar el stack local sin necesidad                                                     |
-| **Migraciones no editadas**         | PR y push                | Falla si el PR modifica o borra una migracion que ya existe en la rama base, y si la numeracion de `supabase/migrations/` tiene un choque |
-| **Validar migraciones y funciones** | PR y push                | Levanta el stack local, aplica todas las migraciones desde cero, corre `db lint` y el lint de Edge Functions                              |
-| Estado de la base remota            | PR                       | Lista que migraciones estan aplicadas en `Ecopac-Digital-Dev` y cuales se aplicarian al mergear                                           |
-| Aplicar migraciones                 | push a develop o main    | `supabase db push` contra el proyecto del ambiente. Depende de que los dos jobs en negrita hayan pasado                                   |
-| Avisar fallo                        | si algo fallo en un push | Abre una issue con el paso que fallo y **si las migraciones se aplicaron o no**                                                           |
-| Supabase completo                   | siempre                  | Mira el resultado de los cuatro jobs de validacion y falla si alguno termino en `failure` o `cancelled`                                   |
+| Job                                 | Cuando                   | Que hace                                                                                                                                                                   |
+| ----------------------------------- | ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Detectar cambios                    | siempre                  | Averigua si el cambio toca `supabase/`, para no levantar el stack local sin necesidad                                                                                      |
+| **Migraciones no editadas**         | PR y push                | Falla si el PR modifica o borra una migracion que ya existe en la rama base, y si la numeracion de `supabase/migrations/` tiene un choque                                  |
+| **Validar migraciones y funciones** | PR y push                | Levanta el stack local, aplica todas las migraciones desde cero, corre `db lint` y el lint de Edge Functions                                                               |
+| Estado de la base remota            | PR                       | Lista que migraciones estan aplicadas en `Ecopac-Digital-Dev` y cuales se aplicarian al mergear                                                                            |
+| Aplicar migraciones                 | push a develop o main    | Comprueba que el historial de la base coincida con la rama y corre `supabase db push` contra el proyecto del ambiente. Depende de que los dos jobs en negrita hayan pasado |
+| Avisar fallo                        | si algo fallo en un push | Abre una issue con el paso que fallo y **si las migraciones se aplicaron o no**                                                                                            |
+| Supabase completo                   | siempre                  | Mira el resultado de los cuatro jobs de validacion y falla si alguno termino en `failure` o `cancelled`                                                                    |
 
 Los jobs en negrita son **checks requeridos** hoy: sin ellos en verde, la rama protegida no
 deja mergear. **Supabase completo** esta pensado para reemplazarlos a los dos, pero eso se
@@ -244,6 +244,32 @@ mismo PR. Ahi la guarda ya la deja pasar, porque contra la rama base figura como
 Si aun asi hace falta saltarse la guarda, se agrega la etiqueta
 `migracion-editada-a-proposito` al PR. Queda registrado en la corrida que se salto y por que.
 
+## Las migraciones se aplican mergeando, no a mano
+
+**Nadie corre `supabase db push` contra `ecopac-dev` ni `ecopac-prod` desde su maquina.** Una
+migracion llega a una base de un solo modo: se mergea su PR y la aplica el workflow.
+
+La razon no es de estilo. `db push` valida el historial completo antes de aplicar nada, asi que
+en cuanto la base tiene registrada una version cuyo archivo no esta en la rama, **todo push a esa
+rama falla**, lo traiga o no:
+
+```
+Remote migration versions not found in local migrations directory.
+```
+
+El que aplica a mano no rompe su propio trabajo: rompe el de todos los demas, hasta que su PR
+entre. Y el fallo aparece en el merge de otra persona, que no toco SQL y no tiene forma de
+adivinar por que. Es el [Caso 4](#caso-4-la-base-tiene-una-migracion-que-la-rama-no).
+
+Para probar una migracion antes de mergear esta el stack local:
+
+```bash
+supabase start
+supabase db reset   # aplica todo desde cero, igual que el CI
+```
+
+Eso es tambien lo que corre el CI en el PR, asi que si pasa ahi, pasa al mergear.
+
 ## La otra regla: el numero se elige dos veces
 
 El nombre de una migracion es `NNNNN_descripcion_en_snake_case.sql`, con cinco digitos y
@@ -344,8 +370,9 @@ El workflow abre una issue automatica. **Lo primero es leer que dice sobre el es
 porque hay desenlaces muy distintos y se arreglan de forma opuesta. La issue lo afirma leyendo
 el resultado de cada paso de la corrida, no suponiendolo.
 
-Los casos 1 y 2 son los que avisa el propio workflow de Supabase. El caso 3 es el que **ningun
-workflow puede avisar de si mismo**, y por eso lo detecta otro workflow aparte.
+Los casos 1, 2 y 4 son los que avisa el propio workflow de Supabase. Los casos 3 y 5 son los que
+**ningun workflow puede avisar de si mismo**: en uno la corrida nunca se creo y en el otro se
+cancelo antes de arrancar, asi que el job que avisa tampoco existio.
 
 ### Caso 1: el paso `Aplicar migraciones` no llego a correr
 
@@ -444,6 +471,67 @@ Cuando se nota que un PR lleva minutos sin que aparezcan sus checks (o
 
 Conviene saber que hoy **`enforce_admins` esta desactivado en `develop` y en `main`**, o sea que
 esa puerta esta abierta y solo la cierra la disciplina del equipo. Ver "Ramas protegidas".
+
+### Caso 4: la base tiene una migracion que la rama no
+
+El paso **Comprobar el historial remoto** falla y `Aplicar migraciones` queda en `skipped`. **No
+se aplico nada y la base no quedo a medias.** El resumen de la corrida lista las versiones que
+sobran en la base.
+
+Sin ese paso, el sintoma es el mensaje crudo del CLI:
+
+```
+Remote migration versions not found in local migrations directory.
+supabase migration repair --status reverted 00088
+```
+
+Lo que hay detras: la base tiene registrada una migracion cuyo archivo no esta en la rama.
+`supabase db push` valida el historial **completo** antes de mirar si hay algo pendiente, asi
+que mientras eso dure **falla todo push a la rama, traiga migraciones o no**.
+
+> Por eso este caso se reconoce por una senal rara: **fallo el despliegue de un merge que no
+> toca una sola linea de SQL**. El commit que lo dispara casi nunca es el culpable.
+
+La causa casi siempre es que alguien aplico esa migracion **a mano** contra `ecopac-dev` antes
+de mergear su PR. Ver [Las migraciones se aplican mergeando, no a
+mano](#las-migraciones-se-aplican-mergeando-no-a-mano).
+
+Como se sale:
+
+1. Buscar el PR que trae ese archivo y mergearlo. Con eso se arregla solo, y es lo que
+   corresponde si la migracion es legitima y solo llego antes de tiempo.
+2. Solo si esa migracion se descarto de verdad y no va a existir nunca, despegar el registro de
+   la base con `supabase migration repair --status reverted <version>`.
+3. Confirmar con `supabase migration list --linked` que la base quedo al dia.
+
+Relanzar la corrida **no sirve**: el problema esta en la base, no en la corrida.
+
+Caso real: el 30 de agosto la `00088` se aplico a mano contra `ecopac-dev` antes de que su PR
+(#586) se mergeara. El merge que se comio el fallo fue el #588, un hook de filtros de reportes
+sin nada de SQL. Se resolvio solo al entrar el #586.
+
+### Caso 5: la corrida se cancelo sin ejecutar ningun job
+
+Aparece como `cancelled` en la lista de Actions, pero al abrirla **no tiene ni un job**. Nadie la
+cancelo a mano: la descarto la cola de concurrencia.
+
+GitHub guarda **una sola corrida en espera** por grupo de concurrencia. Cuando el grupo era solo
+la rama, cada push nuevo a `develop` descartaba a la que todavia no habia arrancado -y
+`cancel-in-progress: false` no lo evita, porque solo protege a la que ya esta corriendo. El 30 de
+agosto se perdieron asi los despliegues de `676acb3` y `c71692f`.
+
+Hoy el grupo incluye el SHA en los push, asi que cada commit tiene el suyo y ninguno descarta a
+otro:
+
+```yaml
+group: supabase-${{ github.ref }}-${{ github.event_name == 'push' && github.sha || 'pr' }}
+```
+
+En los PR se conserva el grupo por rama, que es donde si conviene cancelar lo superado.
+
+Si aun asi aparece una corrida cancelada sin jobs, se trata como el Caso 3: la base pudo quedarse
+atras y quien lo detecta es **Verificar despliegue**. Se relanza con `gh workflow run
+supabase.yml --ref develop`.
 
 ## La version del CLI de Supabase va fija
 
