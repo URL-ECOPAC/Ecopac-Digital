@@ -2,13 +2,13 @@ import { TIPOS_DE_FILTRO } from "../descriptores.js";
 import { TIPOS_DE_EVENTO } from "./historial.api.js";
 
 export const OPCIONES_TIPO_DE_EVENTO = [
-  { valor: TIPOS_DE_EVENTO.TRIAJE, etiqueta: "Signos vitales" },
-  { valor: TIPOS_DE_EVENTO.CONSULTA, etiqueta: "Consulta" },
-  { valor: TIPOS_DE_EVENTO.RECETA, etiqueta: "Receta" },
+  { value: TIPOS_DE_EVENTO.TRIAJE, label: "Signos vitales" },
+  { value: TIPOS_DE_EVENTO.CONSULTA, label: "Consulta" },
+  { value: TIPOS_DE_EVENTO.RECETA, label: "Receta" },
 ];
 
 export const ETIQUETAS_TIPO_DE_EVENTO = Object.fromEntries(
-  OPCIONES_TIPO_DE_EVENTO.map((opcion) => [opcion.valor, opcion.etiqueta]),
+  OPCIONES_TIPO_DE_EVENTO.map((opcion) => [opcion.value, opcion.label]),
 );
 
 export const FILTROS_HISTORIAL = [

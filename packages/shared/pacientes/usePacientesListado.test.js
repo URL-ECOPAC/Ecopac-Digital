@@ -91,12 +91,12 @@ describe("OPCIONES_SEXO", () => {
   // contra pacientes.sexo -- un varchar(20) que guarda "Femenino". El filtro devolvia cero filas
   // sin dar error, asi que parecia funcionar.
   it("el valor es la palabra completa, no la inicial", () => {
-    expect(OPCIONES_SEXO.map((o) => o.valor)).toEqual(["Femenino", "Masculino"]);
+    expect(OPCIONES_SEXO.map((o) => o.value)).toEqual(["Femenino", "Masculino"]);
   });
 
   it("ninguna opcion manda una sola letra al servidor", () => {
     for (const opcion of OPCIONES_SEXO) {
-      expect(opcion.valor.length).toBeGreaterThan(1);
+      expect(opcion.value.length).toBeGreaterThan(1);
     }
   });
 });
@@ -110,18 +110,18 @@ describe("catalogoComunidadesDePacientes", () => {
     ]);
 
     expect(catalogo).toEqual([
-      { valor: "c1", etiqueta: "Aldea Norte" },
-      { valor: "c2", etiqueta: "Aldea Sur" },
+      { value: "c1", label: "Aldea Norte" },
+      { value: "c2", label: "Aldea Sur" },
     ]);
   });
 
-  it("ordena por etiqueta en espanol", () => {
+  it("ordena por label en espanol", () => {
     const catalogo = catalogoComunidadesDePacientes([
       { ...PACIENTE, comunidadId: "c2", comunidad: { nombre: "Zunil" } },
       { ...PACIENTE, comunidadId: "c1", comunidad: { nombre: "Almolonga" } },
     ]);
 
-    expect(catalogo.map((c) => c.etiqueta)).toEqual(["Almolonga", "Zunil"]);
+    expect(catalogo.map((c) => c.label)).toEqual(["Almolonga", "Zunil"]);
   });
 
   it("ignora a quien no trae comunidad", () => {

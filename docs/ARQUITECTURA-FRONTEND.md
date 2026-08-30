@@ -168,7 +168,7 @@ opciones de `opcionesDesde`), `rango` un par de `NumberField` acotados por `min`
 | `cargando` | bool | Si es `true`, `DataList` delega en `LoadingState` en vez de dibujar filas. |
 | `vacio` | string \| nodo | Mensaje o contenido para `EmptyState` cuando `datos` esta vacio. |
 | `onRowPress` | fn(fila) | Opcional. Se llama al tocar/hacer click en una fila. |
-| `catalogos` | objeto | Igual que en `FilterBar`. Lo consumen las columnas que declaran `etiquetasDesde`, y las de `tipo: 'estado'` cuyo valor no es el del enum. |
+| `catalogos` | objeto | Igual que en `FilterBar`: listas de `{ label, value }`. Lo consumen las columnas que declaran `etiquetasDesde`, y las de `tipo: 'estado'` cuyo valor no es el del enum. Una opcion de ese catalogo puede traer un tercer campo `clave`: `DataList` se lo pasa a `StatusChip` como `status` -es lo que indexa `statusColors`- y usa `label` como texto. Sin `clave`, una columna booleana pintaria `true` en lugar de un estado legible. |
 
 Por cada entrada de `columnas`, `DataList` sabe pintar el `tipo` declarado, tomando el valor de
 la fila por `id` o por `desde` si la columna lo declara. Los tipos que interpreta son `texto`,
@@ -204,12 +204,23 @@ ningun modulo ni pedir datos por su cuenta.
 Un catalogo que todavia no cargo deja el select vacio y **deshabilitado**, en vez de mostrar un
 desplegable que no hace nada.
 
-**Forma de una opcion.** El contrato dice `{ label, value }`, pero los catalogos que ya publica
-`shared` usan `{ etiqueta, valor }` (`OPCIONES_ROL` y `ESTADOS_USUARIO` en
-`packages/shared/usuarios/campos.js`). `Selector` acepta las dos formas y normaliza por dentro:
-si la conversion viviera en quien llama, olvidarla daria opciones en blanco y claves repetidas,
-que es un fallo silencioso. `ESTADOS_USUARIO` ademas trae `clave`, que es la que indexa
-`statusColors` cuando el valor guardado es un booleano.
+**Forma de una opcion.** Una opcion es `{ label, value }`, y **es la unica forma que existe**:
+la publican asi todos los catalogos de `shared` -los escritos a mano, como `OPCIONES_ROL` en
+`packages/shared/usuarios/campos.js`, y los que se arman en tiempo de ejecucion desde la base de
+datos, como las comunidades-. `Selector` la consume tal cual, sin normalizar nada.
+
+Hasta la issue #399 convivian dos formas, `{ label, value }` y `{ etiqueta, valor }`, y cada app
+cargaba un adaptador que aceptaba las dos. El problema no era el adaptador sino lo que tapaba:
+un descriptor nuevo podia nacer con cualquiera de las dos y nadie lo notaba. Si al escribir un
+catalogo dudas, es `{ label, value }`.
+
+**El tercer campo, `clave`.** Un catalogo de estado puede traer ademas `clave`, y **eso no es la
+forma vieja**: `value` es lo que guarda la columna y `clave` es el valor del enum que indexa
+`statusColors`. Hacen falta los dos cuando no coinciden, que es el caso de una columna booleana
+-`ESTADOS_USUARIO` guarda `true`/`false` en `value` y `'activo'`/`'inactivo'` en `clave`- y el de
+un enum que se muestra traducido. Lo llevan `ESTADOS_USUARIO`, `ESTADOS_DONANTE`,
+`OPCIONES_ESTADO_DONACION`, `OPCIONES_ESTADO_PROYECTO`, `ESTADOS_DE_VENCIMIENTO_REPORTE` y
+`ESTADOS_JORNADA_REPORTE`.
 
 ### Contrato de cada componente
 

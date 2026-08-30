@@ -21,8 +21,8 @@ import { TODOS_LOS_ROLES, etiquetaDeRol } from '../usuarios/roles.js';
  * nuevo en el enum ahora aparece aqui solo.
  */
 export const OPCIONES_ROL_EN_JORNADA = TODOS_LOS_ROLES.map((rol) => ({
-  valor: rol,
-  etiqueta: etiquetaDeRol(rol),
+  value: rol,
+  label: etiquetaDeRol(rol),
 }));
 
 /**
@@ -32,9 +32,9 @@ export const OPCIONES_ROL_EN_JORNADA = TODOS_LOS_ROLES.map((rol) => ({
  * fila existente con otro texto en esa columna sigue siendo valida.
  */
 export const OPCIONES_RESPONSABILIDAD_JORNADA = [
-  { valor: 'triaje', etiqueta: 'Triaje' },
-  { valor: 'consulta', etiqueta: 'Consulta' },
-  { valor: 'farmacia', etiqueta: 'Farmacia' },
+  { value: 'triaje', label: 'Triaje' },
+  { value: 'consulta', label: 'Consulta' },
+  { value: 'farmacia', label: 'Farmacia' },
 ];
 
 /** Formulario de creacion/edicion de una jornada (jornadas, 00012 + 00036). */

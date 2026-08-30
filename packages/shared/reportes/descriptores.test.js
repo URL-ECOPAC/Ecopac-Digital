@@ -174,30 +174,30 @@ describe("filtros.js solo usa el vocabulario de TIPOS_DE_FILTRO", () => {
 
 describe("los catalogos de estado reflejan los enum reales", () => {
   it("ESTADOS_DE_VENCIMIENTO_REPORTE cubre vigentes y vencidos, nunca 'todos'", () => {
-    const valores = ESTADOS_DE_VENCIMIENTO_REPORTE.map((e) => e.valor);
+    const valores = ESTADOS_DE_VENCIMIENTO_REPORTE.map((e) => e.value);
     expect(valores).toEqual([ESTADOS_DE_VENCIMIENTO.VIGENTES, ESTADOS_DE_VENCIMIENTO.VENCIDOS]);
     expect(valores).not.toContain(ESTADOS_DE_VENCIMIENTO.TODOS);
     for (const estado of ESTADOS_DE_VENCIMIENTO_REPORTE) {
-      expect(estado.etiqueta).toBeTruthy();
+      expect(estado.label).toBeTruthy();
     }
   });
 
   it("ESTADOS_JORNADA_REPORTE tiene los cuatro valores de estado_jornada, con etiqueta", () => {
-    const valores = ESTADOS_JORNADA_REPORTE.map((e) => e.valor);
+    const valores = ESTADOS_JORNADA_REPORTE.map((e) => e.value);
     expect(valores).toEqual(["planificada", "en curso", "finalizada", "cancelada"]);
     for (const estado of ESTADOS_JORNADA_REPORTE) {
-      expect(estado.etiqueta).toBeTruthy();
+      expect(estado.label).toBeTruthy();
     }
   });
 
   it("OPCIONES_AGRUPACION_IMPACTO deriva de AGRUPACIONES_DE_IMPACTO, no lo duplica a mano", () => {
-    expect(OPCIONES_AGRUPACION_IMPACTO.map((o) => o.valor).sort()).toEqual(
+    expect(OPCIONES_AGRUPACION_IMPACTO.map((o) => o.value).sort()).toEqual(
       Object.values(AGRUPACIONES_DE_IMPACTO).sort(),
     );
   });
 
   it("OPCIONES_METRICA_IMPACTO tiene las cuatro metricas del reporte de impacto", () => {
-    expect(OPCIONES_METRICA_IMPACTO.map((o) => o.valor).sort()).toEqual(
+    expect(OPCIONES_METRICA_IMPACTO.map((o) => o.value).sort()).toEqual(
       [
         "pacientes_atendidos",
         "tratamientos_entregados",

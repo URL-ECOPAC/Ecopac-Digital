@@ -3,13 +3,13 @@ import { ROLES, TODOS_LOS_ROLES, ETIQUETAS_ROL } from './roles.js';
 import { TIPOS_DE_CAMPO } from '../descriptores.js';
 
 export const ESTADOS_USUARIO = [
-  { valor: true, clave: 'activo', etiqueta: labels.usuarioActivo },
-  { valor: false, clave: 'inactivo', etiqueta: labels.usuarioInactivo },
+  { value: true, clave: 'activo', label: labels.usuarioActivo },
+  { value: false, clave: 'inactivo', label: labels.usuarioInactivo },
 ];
 
 export const OPCIONES_ROL = TODOS_LOS_ROLES.map((rol) => ({
-  valor: rol,
-  etiqueta: ETIQUETAS_ROL[rol],
+  value: rol,
+  label: ETIQUETAS_ROL[rol],
 }));
 
 export const CAMPOS_USUARIO = [

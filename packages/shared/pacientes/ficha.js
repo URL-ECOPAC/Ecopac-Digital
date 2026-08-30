@@ -14,7 +14,7 @@ export const PESTANIA_FICHA_POR_DEFECTO = PESTANIAS_FICHA_PACIENTE[0].id;
 
 function etiquetaDeOpcion(opciones, valor) {
   if (valor === null || valor === undefined || valor === "") return null;
-  return opciones.find((opcion) => opcion.valor === valor)?.etiqueta ?? valor;
+  return opciones.find((opcion) => opcion.value === valor)?.label ?? valor;
 }
 
 export function nombreCompletoDePaciente(paciente) {

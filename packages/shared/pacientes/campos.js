@@ -11,22 +11,22 @@ import { TIPOS_DE_CAMPO } from '../descriptores.js';
 
 /** Valores de idioma_preferido (supabase/migrations/00001_initial_schema.sql). */
 export const OPCIONES_IDIOMA = [
-  { valor: 'espanol', etiqueta: 'Español' },
-  { valor: 'quiche', etiqueta: "K'iche'" },
-  { valor: 'mam', etiqueta: 'Mam' },
-  { valor: 'otros', etiqueta: 'Otro' },
+  { value: 'espanol', label: 'Español' },
+  { value: 'quiche', label: "K'iche'" },
+  { value: 'mam', label: 'Mam' },
+  { value: 'otros', label: 'Otro' },
 ];
 
 /** Valores de tipo_sanguineo (supabase/migrations/00035_pacientes_tipo_sangre_responsable.sql). */
 export const OPCIONES_TIPO_SANGRE = [
-  { valor: 'A+', etiqueta: 'A+' },
-  { valor: 'A-', etiqueta: 'A-' },
-  { valor: 'B+', etiqueta: 'B+' },
-  { valor: 'B-', etiqueta: 'B-' },
-  { valor: 'AB+', etiqueta: 'AB+' },
-  { valor: 'AB-', etiqueta: 'AB-' },
-  { valor: 'O+', etiqueta: 'O+' },
-  { valor: 'O-', etiqueta: 'O-' },
+  { value: 'A+', label: 'A+' },
+  { value: 'A-', label: 'A-' },
+  { value: 'B+', label: 'B+' },
+  { value: 'B-', label: 'B-' },
+  { value: 'AB+', label: 'AB+' },
+  { value: 'AB-', label: 'AB-' },
+  { value: 'O+', label: 'O+' },
+  { value: 'O-', label: 'O-' },
 ];
 
 /**

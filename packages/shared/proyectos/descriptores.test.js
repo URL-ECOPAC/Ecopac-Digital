@@ -131,16 +131,16 @@ describe("filtros.js solo usa el vocabulario de TIPOS_DE_FILTRO", () => {
 
 describe("los catalogos de estado reflejan estado_proyecto (00007)", () => {
   it("OPCIONES_ESTADO_PROYECTO tiene los cuatro valores de TODOS_LOS_ESTADOS_PROYECTO, con etiqueta de ui-tokens", () => {
-    expect(OPCIONES_ESTADO_PROYECTO.map((o) => o.valor).sort()).toEqual([...TODOS_LOS_ESTADOS_PROYECTO].sort());
+    expect(OPCIONES_ESTADO_PROYECTO.map((o) => o.value).sort()).toEqual([...TODOS_LOS_ESTADOS_PROYECTO].sort());
 
-    expect(OPCIONES_ESTADO_PROYECTO.find((o) => o.valor === "planificado").etiqueta).toBe(
+    expect(OPCIONES_ESTADO_PROYECTO.find((o) => o.value === "planificado").label).toBe(
       labels.proyectoPlanificado,
     );
-    expect(OPCIONES_ESTADO_PROYECTO.find((o) => o.valor === "en curso").etiqueta).toBe(labels.jornadaEnCurso);
-    expect(OPCIONES_ESTADO_PROYECTO.find((o) => o.valor === "finalizado").etiqueta).toBe(
+    expect(OPCIONES_ESTADO_PROYECTO.find((o) => o.value === "en curso").label).toBe(labels.jornadaEnCurso);
+    expect(OPCIONES_ESTADO_PROYECTO.find((o) => o.value === "finalizado").label).toBe(
       labels.proyectoFinalizado,
     );
-    expect(OPCIONES_ESTADO_PROYECTO.find((o) => o.valor === "cancelado").etiqueta).toBe(
+    expect(OPCIONES_ESTADO_PROYECTO.find((o) => o.value === "cancelado").label).toBe(
       labels.proyectoCancelado,
     );
   });

@@ -39,8 +39,8 @@ export function useEdicionPaciente(paciente) {
       if (!vigente) return;
       setComunidades(
         (respuesta.comunidades ?? []).map((comunidad) => ({
-          valor: comunidad.id,
-          etiqueta: comunidad.nombre,
+          value: comunidad.id,
+          label: comunidad.nombre,
         })),
       );
     });

@@ -25,13 +25,13 @@ import { TIPOS_DE_CAMPO } from '../descriptores.js';
 
 /** Valores de presentacion_medicamento (supabase/migrations/00001_initial_schema.sql). */
 export const OPCIONES_PRESENTACION = [
-  { valor: 'tableta', etiqueta: 'Tableta' },
-  { valor: 'jarabe', etiqueta: 'Jarabe' },
-  { valor: 'capsula', etiqueta: 'Capsula' },
-  { valor: 'inyectable', etiqueta: 'Inyectable' },
-  { valor: 'pomada', etiqueta: 'Pomada' },
-  { valor: 'gotas ophthalmic', etiqueta: 'Gotas oftalmicas' },
-  { valor: 'gotas otic', etiqueta: 'Gotas oticas' },
+  { value: 'tableta', label: 'Tableta' },
+  { value: 'jarabe', label: 'Jarabe' },
+  { value: 'capsula', label: 'Capsula' },
+  { value: 'inyectable', label: 'Inyectable' },
+  { value: 'pomada', label: 'Pomada' },
+  { value: 'gotas ophthalmic', label: 'Gotas oftalmicas' },
+  { value: 'gotas otic', label: 'Gotas oticas' },
 ];
 
 /**
@@ -48,27 +48,27 @@ export const TIPOS_DE_PROVEEDOR = {
 };
 
 export const OPCIONES_TIPO_PROVEEDOR = [
-  { valor: TIPOS_DE_PROVEEDOR.COMERCIAL, etiqueta: 'Comercial' },
-  { valor: TIPOS_DE_PROVEEDOR.DONANTE, etiqueta: 'Donante' },
+  { value: TIPOS_DE_PROVEEDOR.COMERCIAL, label: 'Comercial' },
+  { value: TIPOS_DE_PROVEEDOR.DONANTE, label: 'Donante' },
 ];
 
 /** Valores de origen_lote (00020_lotes_existencias.sql). */
 export const OPCIONES_ORIGEN_LOTE = [
-  { valor: 'compra', etiqueta: 'Compra' },
-  { valor: 'donacion', etiqueta: 'Donacion' },
+  { value: 'compra', label: 'Compra' },
+  { value: 'donacion', label: 'Donacion' },
 ];
 
 /** Valores de tipo_movimiento vigente (00023_movimientos_inventario.sql redefine el de 00001). */
 export const OPCIONES_TIPO_MOVIMIENTO = [
-  { valor: 'ingreso', etiqueta: 'Ingreso' },
-  { valor: 'salida', etiqueta: 'Salida' },
+  { value: 'ingreso', label: 'Ingreso' },
+  { value: 'salida', label: 'Salida' },
 ];
 
 /** Valores de accion_alerta (00021_alertas_caducidad.sql). */
 export const OPCIONES_ACCION_ALERTA = [
-  { valor: 'donado', etiqueta: 'Donado' },
-  { valor: 'reubicado', etiqueta: 'Reubicado' },
-  { valor: 'descartado', etiqueta: 'Descartado' },
+  { value: 'donado', label: 'Donado' },
+  { value: 'reubicado', label: 'Reubicado' },
+  { value: 'descartado', label: 'Descartado' },
 ];
 
 /**
