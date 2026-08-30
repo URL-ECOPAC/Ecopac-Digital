@@ -78,7 +78,7 @@ export async function aprobarMovimiento(idMovimiento, { usuarioId, rolUsuario })
 
     return { datos: movAprobado, error: null };
   } catch (error) {
-    return normalizarError(error);
+    return { datos: null, error: normalizarError(error) };
   }
 }
 
@@ -136,7 +136,7 @@ export async function rechazarMovimiento(idMovimiento, { motivo, usuarioId, rolU
 
     return { datos: movRechazado, error: null };
   } catch (error) {
-    return normalizarError(error);
+    return { datos: null, error: normalizarError(error) };
   }
 }
 

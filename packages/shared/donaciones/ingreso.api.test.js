@@ -91,18 +91,25 @@ describe("Módulo de Donaciones - API Ingreso", () => {
         bodegaId: "B-1",
         numeroLote: "LOT-100",
         fechaVencimiento: "2027-06-01",
+        proveedorId: "P-1",
+        usuarioId: "U-1",
       });
 
-      expect(registrarIngreso).toHaveBeenCalledWith(
-        expect.objectContaining({
-          origen: "donacion",
-          bodega_id: "B-1",
-          medicamento_id: "M-1",
-          numero_lote: "LOT-100",
-          fecha_vencimiento: "2027-06-01",
-          cantidad: 100,
-        }),
-      );
+      // La forma EXACTA, no objectContaining: con objectContaining esta prueba pasaba en verde
+      // mientras faltaban usuarioId y proveedor_id, que son justo los dos que hacian imposible
+      // completar la operacion contra la base real (issue #222). Una asercion que solo mira
+      // algunas claves no puede ver una que falta.
+      expect(registrarIngreso).toHaveBeenCalledWith({
+        origen: "donacion",
+        bodega_id: "B-1",
+        medicamento_id: "M-1",
+        numero_lote: "LOT-100",
+        fecha_vencimiento: "2027-06-01",
+        proveedor_id: "P-1",
+        cantidad: 100,
+        motivo: "Donacion: Paracetamol 500mg",
+        usuarioId: "U-1",
+      });
       expect(res.error).toBeNull();
       expect(res.datos.movimiento.id).toBe("MOV-1");
       expect(res.datos.detalle.lote_id).toBe("LOTE-NUEVO");
