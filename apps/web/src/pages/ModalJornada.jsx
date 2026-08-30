@@ -1,11 +1,11 @@
-import { CAMPOS_FORMULARIO_JORNADA, TIPOS_DE_CAMPO, useFormularioJornada } from '@ecopac/shared';
+import { CAMPOS_FORMULARIO_JORNADA, TIPOS_DE_CAMPO, useFormularioJornada } from "@ecopac/shared";
 
-import DateField from '../components/DateField';
-import Modal from '../components/Modal';
-import PrimaryButton from '../components/PrimaryButton';
-import Selector from '../components/Selector';
-import SecondaryButton from '../components/SecondaryButton';
-import TextField from '../components/TextField';
+import DateField from "../components/DateField";
+import Modal from "../components/Modal";
+import PrimaryButton from "../components/PrimaryButton";
+import Selector from "../components/Selector";
+import SecondaryButton from "../components/SecondaryButton";
+import TextField from "../components/TextField";
 
 // Modal de alta y edicion de jornada (issue #179), montado desde JornadasPage.jsx con estado
 // local: no tiene ruta propia, mismo patron que ModalAltaUsuario.jsx/ModalEdicionUsuario.jsx
@@ -22,7 +22,7 @@ import TextField from '../components/TextField';
 // formulario -- jornadas no guarda departamento ni municipio -- asi que no aparecen en
 // CAMPOS_FORMULARIO_JORNADA; solo acotan las opciones del Selector real de comunidad.
 const TIPO_DE_INPUT = {
-  texto: 'text',
+  texto: "text",
 };
 
 export default function ModalJornada({ visible = true, jornada, rol, onClose, onGuardado }) {
@@ -63,7 +63,11 @@ export default function ModalJornada({ visible = true, jornada, rol, onClose, on
   };
 
   return (
-    <Modal visible={visible} onClose={cerrar} title={esEdicion ? 'Editar jornada' : 'Nueva jornada'}>
+    <Modal
+      visible={visible}
+      onClose={cerrar}
+      title={esEdicion ? "Editar jornada" : "Nueva jornada"}
+    >
       {error && (
         <div className="alert alert-danger" role="alert">
           {error.mensaje}
@@ -77,7 +81,7 @@ export default function ModalJornada({ visible = true, jornada, rol, onClose, on
       )}
 
       {CAMPOS_FORMULARIO_JORNADA.map((campo) => {
-        if (campo.id === 'comunidad') {
+        if (campo.id === "comunidad") {
           return (
             <div key="comunidad-cascada">
               <Selector
@@ -100,7 +104,7 @@ export default function ModalJornada({ visible = true, jornada, rol, onClose, on
                 label={campo.label}
                 value={valores.comunidad || null}
                 options={catalogos.comunidades}
-                onSelect={(valor) => setCampo('comunidad', valor)}
+                onSelect={(valor) => setCampo("comunidad", valor)}
                 placeholder="Selecciona una comunidad"
                 disabled={bloqueado || !municipioId || catalogos.comunidades.length === 0}
                 error={errores.comunidad}
@@ -131,7 +135,7 @@ export default function ModalJornada({ visible = true, jornada, rol, onClose, on
               value={valores[campo.id] || null}
               options={opciones}
               onSelect={(valor) => setCampo(campo.id, valor)}
-              placeholder={opciones.length === 0 ? 'Cargando...' : 'Seleccionar'}
+              placeholder={opciones.length === 0 ? "Cargando..." : "Seleccionar"}
               disabled={bloqueado || opciones.length === 0}
               error={errores[campo.id]}
             />
@@ -142,9 +146,9 @@ export default function ModalJornada({ visible = true, jornada, rol, onClose, on
           <TextField
             key={campo.id}
             label={campo.label}
-            type={TIPO_DE_INPUT[campo.tipo] ?? 'text'}
+            type={TIPO_DE_INPUT[campo.tipo] ?? "text"}
             maxLength={campo.validacion?.maxLongitud}
-            value={valores[campo.id] ?? ''}
+            value={valores[campo.id] ?? ""}
             onChange={(evento) => setCampo(campo.id, evento.target.value)}
             error={errores[campo.id]}
             disabled={bloqueado}
@@ -155,7 +159,7 @@ export default function ModalJornada({ visible = true, jornada, rol, onClose, on
       <div className="d-flex justify-content-end gap-2 mt-3">
         <SecondaryButton title="Cancelar" onClick={cerrar} disabled={enviando} />
         <PrimaryButton
-          title={esEdicion ? 'Guardar' : 'Crear'}
+          title={esEdicion ? "Guardar" : "Crear"}
           onClick={guardar}
           disabled={cargando}
           loading={enviando}

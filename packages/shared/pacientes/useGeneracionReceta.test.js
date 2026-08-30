@@ -8,7 +8,13 @@ import {
 } from "./useGeneracionReceta.js";
 
 const CATALOGO = [
-  { id: "m-1", nombre: "Amoxicilina", concentracion: "500 mg", presentacion: "capsula", marca: "X" },
+  {
+    id: "m-1",
+    nombre: "Amoxicilina",
+    concentracion: "500 mg",
+    presentacion: "capsula",
+    marca: "X",
+  },
   { id: "m-2", nombre: "Ibuprofeno", concentracion: "400 mg", presentacion: "tableta" },
 ];
 

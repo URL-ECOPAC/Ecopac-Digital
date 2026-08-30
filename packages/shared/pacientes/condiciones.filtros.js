@@ -6,26 +6,26 @@
 // Son los tres que acepta obtenerPacientesConCondicion() en condiciones.api.js, para que la
 // pantalla no pueda ofrecer un filtro que la consulta no sabe aplicar.
 
-import { TIPOS_DE_FILTRO } from '../descriptores.js';
+import { TIPOS_DE_FILTRO } from "../descriptores.js";
 
 export const FILTROS_PACIENTE_CRONICO = [
   {
-    id: 'comunidad',
+    id: "comunidad",
     tipo: TIPOS_DE_FILTRO.SELECT,
-    label: 'Comunidad',
-    opcionesDesde: 'comunidades',
+    label: "Comunidad",
+    opcionesDesde: "comunidades",
   },
   {
-    id: 'condicion',
+    id: "condicion",
     tipo: TIPOS_DE_FILTRO.SELECT,
-    label: 'Condicion',
-    opcionesDesde: 'condicionesCronicas',
+    label: "Condicion",
+    opcionesDesde: "condicionesCronicas",
   },
   {
-    id: 'estado',
+    id: "estado",
     tipo: TIPOS_DE_FILTRO.SELECT,
-    label: 'Estado',
-    opcionesDesde: 'estadosCondicionCronica',
+    label: "Estado",
+    opcionesDesde: "estadosCondicionCronica",
   },
 ];
 

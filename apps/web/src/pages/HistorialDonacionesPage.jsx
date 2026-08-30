@@ -17,17 +17,12 @@ export default function HistorialDonacionesPage({
   donacionesIniciales = [],
   proyectosOptions = [],
 }) {
-  const {
-    tieneAccesoLectura,
-    donaciones,
-    totalesPorTipo,
-    filtros,
-    modalDetalle,
-  } = useHistorialDonaciones({
-    usuarioRol,
-    donacionesIniciales,
-    proyectosOptions,
-  });
+  const { tieneAccesoLectura, donaciones, totalesPorTipo, filtros, modalDetalle } =
+    useHistorialDonaciones({
+      usuarioRol,
+      donacionesIniciales,
+      proyectosOptions,
+    });
 
   if (!tieneAccesoLectura) {
     return (
@@ -143,11 +138,7 @@ export default function HistorialDonacionesPage({
           </Row>
 
           <div className="d-flex justify-content-end mt-3">
-            <Button
-              variant="outline-secondary"
-              size="sm"
-              onClick={filtros.limpiarFiltros}
-            >
+            <Button variant="outline-secondary" size="sm" onClick={filtros.limpiarFiltros}>
               Limpiar Filtros
             </Button>
           </div>
@@ -180,20 +171,11 @@ export default function HistorialDonacionesPage({
                 donaciones.map((d) => {
                   const esAnulada = d.estado === "anulada";
                   return (
-                    <tr
-                      key={d.id}
-                      className={esAnulada ? "table-danger text-muted" : ""}
-                    >
+                    <tr key={d.id} className={esAnulada ? "table-danger text-muted" : ""}>
                       <td>{d.fecha}</td>
                       <td className="fw-semibold">{d.donante_nombre}</td>
                       <td className="text-capitalize">{d.tipo}</td>
-                      <td>
-                        {esAnulada ? (
-                          <del>{d.resumen || "-"}</del>
-                        ) : (
-                          d.resumen || "-"
-                        )}
-                      </td>
+                      <td>{esAnulada ? <del>{d.resumen || "-"}</del> : d.resumen || "-"}</td>
                       <td>
                         {esAnulada ? (
                           <Badge bg="danger">Anulada</Badge>
@@ -221,11 +203,7 @@ export default function HistorialDonacionesPage({
 
       {/* Modal de Detalle Completo */}
       {modalDetalle.modalDetalleAbierto && modalDetalle.donacionSeleccionada && (
-        <Modal
-          show={modalDetalle.modalDetalleAbierto}
-          onHide={modalDetalle.cerrarDetalle}
-          centered
-        >
+        <Modal show={modalDetalle.modalDetalleAbierto} onHide={modalDetalle.cerrarDetalle} centered>
           <Modal.Header closeButton>
             <Modal.Title as="h5">
               Detalle de Donación #{modalDetalle.donacionSeleccionada.id}
@@ -234,8 +212,7 @@ export default function HistorialDonacionesPage({
           <Modal.Body>
             <div className="mb-3">
               <p className="mb-1">
-                <strong>Donante:</strong>{" "}
-                {modalDetalle.donacionSeleccionada.donante_nombre}
+                <strong>Donante:</strong> {modalDetalle.donacionSeleccionada.donante_nombre}
               </p>
               <p className="mb-1">
                 <strong>Tipo:</strong> {modalDetalle.donacionSeleccionada.tipo}
@@ -252,8 +229,7 @@ export default function HistorialDonacionesPage({
               <Alert variant="danger" className="mb-3">
                 <p className="mb-1">
                   <strong>Motivo de Anulación:</strong>{" "}
-                  {modalDetalle.donacionSeleccionada.motivo_anulacion ||
-                    "No informado"}
+                  {modalDetalle.donacionSeleccionada.motivo_anulacion || "No informado"}
                 </p>
                 <p className="mb-1">
                   <strong>Anulada por:</strong>{" "}

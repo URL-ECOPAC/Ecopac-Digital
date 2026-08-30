@@ -9,8 +9,8 @@
 // formulario: los mueve el kanban (arrastrar una tarjeta) y las acciones de iniciar/
 // finalizar jornada, no una edicion manual.
 
-import { TIPOS_DE_CAMPO } from '../descriptores.js';
-import { TODOS_LOS_ROLES, etiquetaDeRol } from '../usuarios/roles.js';
+import { TIPOS_DE_CAMPO } from "../descriptores.js";
+import { TODOS_LOS_ROLES, etiquetaDeRol } from "../usuarios/roles.js";
 
 /**
  * Valores de rol_usuario (00001_initial_schema.sql), para el rol que se ejerce en la jornada.
@@ -32,22 +32,71 @@ export const OPCIONES_ROL_EN_JORNADA = TODOS_LOS_ROLES.map((rol) => ({
  * fila existente con otro texto en esa columna sigue siendo valida.
  */
 export const OPCIONES_RESPONSABILIDAD_JORNADA = [
-  { value: 'triaje', label: 'Triaje' },
-  { value: 'consulta', label: 'Consulta' },
-  { value: 'farmacia', label: 'Farmacia' },
+  { value: "triaje", label: "Triaje" },
+  { value: "consulta", label: "Consulta" },
+  { value: "farmacia", label: "Farmacia" },
 ];
 
 /** Formulario de creacion/edicion de una jornada (jornadas, 00012 + 00036). */
 export const CAMPOS_JORNADA = [
-  { id: 'nombre', label: 'Nombre', tipo: TIPOS_DE_CAMPO.TEXTO, validacion: { requerido: true, maxLongitud: 150 } },
-  { id: 'codigo', label: 'Codigo', tipo: TIPOS_DE_CAMPO.TEXTO, validacion: { requerido: false, maxLongitud: 30 } },
-  { id: 'fecha', label: 'Fecha', tipo: TIPOS_DE_CAMPO.FECHA, validacion: { requerido: true, minFecha: 'hoy' } },
-  { id: 'comunidad', label: 'Comunidad', tipo: TIPOS_DE_CAMPO.SELECT, opcionesDesde: 'comunidades', validacion: { requerido: true } },
-  { id: 'responsable', label: 'Responsable', tipo: TIPOS_DE_CAMPO.SELECT, opcionesDesde: 'perfiles', validacion: { requerido: true } },
-  { id: 'proyecto', label: 'Proyecto', tipo: TIPOS_DE_CAMPO.SELECT, opcionesDesde: 'proyectos', validacion: { requerido: false } },
-  { id: 'cupoEstimado', label: 'Cupo estimado', tipo: TIPOS_DE_CAMPO.NUMERO, validacion: { requerido: false, min: 0 } },
-  { id: 'presupuestoAsignado', label: 'Presupuesto asignado', tipo: TIPOS_DE_CAMPO.NUMERO, validacion: { requerido: false, min: 0 } },
-  { id: 'botiquinBodega', label: 'Bodega de botiquin', tipo: TIPOS_DE_CAMPO.SELECT, opcionesDesde: 'bodegas', validacion: { requerido: false } },
+  {
+    id: "nombre",
+    label: "Nombre",
+    tipo: TIPOS_DE_CAMPO.TEXTO,
+    validacion: { requerido: true, maxLongitud: 150 },
+  },
+  {
+    id: "codigo",
+    label: "Codigo",
+    tipo: TIPOS_DE_CAMPO.TEXTO,
+    validacion: { requerido: false, maxLongitud: 30 },
+  },
+  {
+    id: "fecha",
+    label: "Fecha",
+    tipo: TIPOS_DE_CAMPO.FECHA,
+    validacion: { requerido: true, minFecha: "hoy" },
+  },
+  {
+    id: "comunidad",
+    label: "Comunidad",
+    tipo: TIPOS_DE_CAMPO.SELECT,
+    opcionesDesde: "comunidades",
+    validacion: { requerido: true },
+  },
+  {
+    id: "responsable",
+    label: "Responsable",
+    tipo: TIPOS_DE_CAMPO.SELECT,
+    opcionesDesde: "perfiles",
+    validacion: { requerido: true },
+  },
+  {
+    id: "proyecto",
+    label: "Proyecto",
+    tipo: TIPOS_DE_CAMPO.SELECT,
+    opcionesDesde: "proyectos",
+    validacion: { requerido: false },
+  },
+  {
+    id: "cupoEstimado",
+    label: "Cupo estimado",
+    tipo: TIPOS_DE_CAMPO.NUMERO,
+    validacion: { requerido: false, min: 0 },
+  },
+  {
+    id: "presupuestoAsignado",
+    label: "Presupuesto asignado",
+    tipo: TIPOS_DE_CAMPO.NUMERO,
+    validacion: { requerido: false, min: 0 },
+  },
+  {
+    id: "botiquinBodega",
+    label: "Bodega de botiquin",
+    tipo: TIPOS_DE_CAMPO.SELECT,
+    opcionesDesde: "bodegas",
+    validacion: { requerido: false },
+  },
 ];
 
 /**
@@ -55,11 +104,39 @@ export const CAMPOS_JORNADA = [
  * asistio no esta aqui: se marca despues, con CAMPOS_MARCAR_ASISTENCIA.
  */
 export const CAMPOS_ASIGNACION_PERSONAL = [
-  { id: 'perfil', label: 'Perfil', tipo: TIPOS_DE_CAMPO.SELECT, opcionesDesde: 'perfiles', validacion: { requerido: true } },
-  { id: 'rolEnJornada', label: 'Rol en la jornada', tipo: TIPOS_DE_CAMPO.SELECT, opciones: OPCIONES_ROL_EN_JORNADA, validacion: { requerido: true } },
-  { id: 'horaInicio', label: 'Hora de inicio', tipo: TIPOS_DE_CAMPO.HORA, validacion: { requerido: true } },
-  { id: 'horaFin', label: 'Hora de fin', tipo: TIPOS_DE_CAMPO.HORA, validacion: { requerido: true, mayorQueCampo: 'horaInicio' } },
-  { id: 'responsabilidad', label: 'Responsabilidad', tipo: TIPOS_DE_CAMPO.SELECT, opciones: OPCIONES_RESPONSABILIDAD_JORNADA, validacion: { requerido: false } },
+  {
+    id: "perfil",
+    label: "Perfil",
+    tipo: TIPOS_DE_CAMPO.SELECT,
+    opcionesDesde: "perfiles",
+    validacion: { requerido: true },
+  },
+  {
+    id: "rolEnJornada",
+    label: "Rol en la jornada",
+    tipo: TIPOS_DE_CAMPO.SELECT,
+    opciones: OPCIONES_ROL_EN_JORNADA,
+    validacion: { requerido: true },
+  },
+  {
+    id: "horaInicio",
+    label: "Hora de inicio",
+    tipo: TIPOS_DE_CAMPO.HORA,
+    validacion: { requerido: true },
+  },
+  {
+    id: "horaFin",
+    label: "Hora de fin",
+    tipo: TIPOS_DE_CAMPO.HORA,
+    validacion: { requerido: true, mayorQueCampo: "horaInicio" },
+  },
+  {
+    id: "responsabilidad",
+    label: "Responsabilidad",
+    tipo: TIPOS_DE_CAMPO.SELECT,
+    opciones: OPCIONES_RESPONSABILIDAD_JORNADA,
+    validacion: { requerido: false },
+  },
 ];
 
 /**
@@ -72,12 +149,17 @@ export const CAMPOS_ASIGNACION_PERSONAL = [
  * esta misma pantalla) lo reuse sin repetir el filtro.
  */
 export const CAMPOS_ASIGNACION_PERSONAL_SIN_PERFIL = CAMPOS_ASIGNACION_PERSONAL.filter(
-  (campo) => campo.id !== 'perfil',
+  (campo) => campo.id !== "perfil",
 );
 
 /** Marcar la asistencia de un perfil ya asignado (jornada_personal.asistio, 00036). */
 export const CAMPOS_MARCAR_ASISTENCIA = [
-  { id: 'asistio', label: 'Asistio', tipo: TIPOS_DE_CAMPO.BOOLEANO, validacion: { requerido: false } },
+  {
+    id: "asistio",
+    label: "Asistio",
+    tipo: TIPOS_DE_CAMPO.BOOLEANO,
+    validacion: { requerido: false },
+  },
 ];
 
 /**
@@ -99,7 +181,7 @@ export const CAMPOS_MARCAR_ASISTENCIA = [
  * No se repiten aca ni el label ni el tipo ni las opciones: se filtra el descriptor completo,
  * mismo patron que CAMPOS_ALTA_USUARIO en usuarios/useAltaUsuario.js.
  */
-const IDS_CAMPOS_FORMULARIO_JORNADA = ['nombre', 'fecha', 'comunidad', 'responsable', 'proyecto'];
+const IDS_CAMPOS_FORMULARIO_JORNADA = ["nombre", "fecha", "comunidad", "responsable", "proyecto"];
 
 export const CAMPOS_FORMULARIO_JORNADA = CAMPOS_JORNADA.filter((campo) =>
   IDS_CAMPOS_FORMULARIO_JORNADA.includes(campo.id),

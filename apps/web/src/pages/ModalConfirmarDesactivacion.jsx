@@ -1,10 +1,10 @@
-import { useEffect } from 'react';
+import { useEffect } from "react";
 
-import { useDesactivacionUsuario } from '@ecopac/shared';
+import { useDesactivacionUsuario } from "@ecopac/shared";
 
-import Modal from '../components/Modal';
-import PrimaryButton from '../components/PrimaryButton';
-import SecondaryButton from '../components/SecondaryButton';
+import Modal from "../components/Modal";
+import PrimaryButton from "../components/PrimaryButton";
+import SecondaryButton from "../components/SecondaryButton";
 
 // Dialogo de confirmacion de desactivar/reactivar un usuario (issue #107, criterio 2). No es
 // un componente nuevo de catalogo: compone Modal + PrimaryButton + SecondaryButton, mismo
@@ -20,7 +20,12 @@ import SecondaryButton from '../components/SecondaryButton';
 // teniendo acceso real a los datos hasta que expire o alguien la cierre (hallazgo (c) del plan
 // de #107 -- va a un issue nuevo, no se resuelve aca). Dice que no podra volver a iniciar
 // sesion, que es lo unico que el sistema si garantiza hoy.
-export default function ModalConfirmarDesactivacion({ perfil, idSesionActual, onClose, onResuelto }) {
+export default function ModalConfirmarDesactivacion({
+  perfil,
+  idSesionActual,
+  onClose,
+  onResuelto,
+}) {
   const { verificando, bloqueo, enviando, error, abrir, confirmar } = useDesactivacionUsuario({
     idSesionActual,
   });
@@ -32,8 +37,8 @@ export default function ModalConfirmarDesactivacion({ perfil, idSesionActual, on
   }, [perfil?.id]);
 
   const desactivando = perfil?.activo === true;
-  const titulo = desactivando ? 'Desactivar voluntario' : 'Reactivar voluntario';
-  const nombre = [perfil?.nombres, perfil?.apellidos].filter(Boolean).join(' ');
+  const titulo = desactivando ? "Desactivar voluntario" : "Reactivar voluntario";
+  const nombre = [perfil?.nombres, perfil?.apellidos].filter(Boolean).join(" ");
 
   const confirmarAccion = async () => {
     const resultado = await confirmar();
@@ -65,10 +70,14 @@ export default function ModalConfirmarDesactivacion({ perfil, idSesionActual, on
       )}
 
       <div className="d-flex justify-content-end gap-2 mt-3">
-        <SecondaryButton title={bloqueo ? 'Cerrar' : 'Cancelar'} onClick={onClose} disabled={enviando} />
+        <SecondaryButton
+          title={bloqueo ? "Cerrar" : "Cancelar"}
+          onClick={onClose}
+          disabled={enviando}
+        />
         {!bloqueo && (
           <PrimaryButton
-            title={desactivando ? 'Desactivar' : 'Reactivar'}
+            title={desactivando ? "Desactivar" : "Reactivar"}
             onClick={confirmarAccion}
             loading={enviando}
             disabled={verificando}

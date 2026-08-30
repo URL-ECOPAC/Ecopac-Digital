@@ -175,7 +175,8 @@ async function obtenerIdDePermiso(clave) {
     .maybeSingle();
 
   if (error) return { id: null, error: normalizarError(error) };
-  if (!data) return { id: null, error: construirError(CODIGOS_DE_ERROR_DE_SUPABASE.SIN_RESULTADOS) };
+  if (!data)
+    return { id: null, error: construirError(CODIGOS_DE_ERROR_DE_SUPABASE.SIN_RESULTADOS) };
   return { id: data.id, error: null };
 }
 

@@ -21,10 +21,12 @@ Un solo job, **Lint y build**, que corre en este orden:
 
 1. **Guarda de esquema**: `packages/shared` contra `supabase/migrations/` (issue #492).
 2. `npm run lint` en todos los workspaces.
-3. `npm test` en todos los workspaces que tengan el script (issue #218), que desde la issue
-   **#219** comprueba ademas **cobertura de las validaciones**.
-4. **Resumen de las pruebas** en la pagina de la corrida (issue #223).
-5. Build de la web con los secrets del ambiente que corresponde a la rama.
+3. `npm run format:check` con Prettier, alcance JS/JSX/TS/TSX/JSON (issue #515).
+4. `npm test` en todos los workspaces que tengan el script (issue #218), que desde la issue
+   **#219** comprueba ademas **cobertura de las validaciones**. El mismo paso avisa (issue
+   #515) que workspaces se saltaron por no tener script `test`.
+5. **Resumen de las pruebas** en la pagina de la corrida (issue #223).
+6. Build de la web con los secrets del ambiente que corresponde a la rama.
 
 Cada paso va antes del siguiente por lo que cuesta: la guarda de esquema es analisis de texto y
 tarda un segundo; una prueba rota se ve en segundos, sin esperar a que la web compile. Y todo va
@@ -78,6 +80,24 @@ Detalles que conviene conocer antes de tocarlo:
 - Se eligio el resumen y no un comentario en el PR porque escribir en `$GITHUB_STEP_SUMMARY` no
   pide permisos: el workflow sigue con `contents: read`. Comentar obligaria a
   `pull-requests: write` y a ensuciar el hilo en cada push.
+
+### `apps/mobile` sin script `test` todavia (issue #515)
+
+Hasta la issue #515, `npm test` en la raiz corria `npm run test --workspaces --if-present`, y
+**ni `apps/web` ni `apps/mobile` tenian script `test`**: el paso "Ejecutar las pruebas de todos
+los workspaces" del CI las saltaba en silencio, sin ninguna senal de que las 193 pruebas de
+`packages/shared` en verde no cubrian ni una linea de las dos apps. La 00515 le agrego a
+`apps/web` un script `test` real (Vitest + `@testing-library/react`, con al menos una prueba de
+`RutaProtegida`, el guard de acceso).
+
+`apps/mobile` sigue sin uno, a proposito y no por descuido: React Native + Expo necesita un stack
+de pruebas distinto al de `apps/web` y `packages/shared` (Jest con el preset `jest-expo`,
+`@testing-library/react-native`, y mocks de los modulos nativos que Expo trae -camara,
+almacenamiento seguro, notificaciones-), no una extension del mismo Vitest que ya usan los otros
+dos workspaces. Es un esfuerzo de otro tamano y de otro tipo -otro framework de pruebas entero,
+no una configuracion mas-, y no encajaba en el alcance de infraestructura de #515. Queda como
+trabajo pendiente, con esta nota para que la proxima vez que alguien revise `npm test` sepa por
+que la cobertura sigue siendo cero ahi y no tenga que volver a investigarlo desde cero.
 
 ### La guarda de cobertura de las validaciones
 
@@ -175,7 +195,7 @@ resume el resultado de todos.
 | Estado de la base remota            | PR                       | Lista que migraciones estan aplicadas en `Ecopac-Digital-Dev` y cuales se aplicarian al mergear                                                                            |
 | Aplicar migraciones                 | push a develop o main    | Comprueba que el historial de la base coincida con la rama y corre `supabase db push` contra el proyecto del ambiente. Depende de que los dos jobs en negrita hayan pasado |
 | Avisar fallo                        | si algo fallo en un push | Abre una issue con el paso que fallo y **si las migraciones se aplicaron o no**                                                                                            |
-| Supabase completo                   | siempre                  | Mira el resultado de los cuatro jobs de validacion y falla si alguno termino en `failure` o `cancelled`                                                                    |
+| Supabase completo                   | siempre                  | Mira el resultado de los otros cinco jobs -validacion **y despliegue**- y falla si alguno termino en `failure` o `cancelled`                                               |
 
 Los jobs en negrita son **checks requeridos** hoy: sin ellos en verde, la rama protegida no
 deja mergear. **Supabase completo** esta pensado para reemplazarlos a los dos, pero eso se
@@ -196,6 +216,32 @@ Por dos motivos, y el primero es una trampa que no se ve:
    viven en el repositorio: renombrar un job obliga a ir a Settings a corregirlo, y si nadie lo
    hace, el PR queda esperando un check que ya no existe. Con un solo nombre por workflow,
    renombrar o agregar jobs adentro ya no rompe la configuracion.
+
+**`Aplicar migraciones` entra en esa cuenta**, aunque solo corra en push. No estaba, y por eso un
+despliegue fallido se reportaba como exito: el 30 de agosto los merges de #606 y #607 tumbaron el
+despliegue -deriva de historial, y ninguno de los dos traia una linea de SQL- y **Supabase
+completo** dijo `success` en las dos corridas. El resumen que explica el fallo estaba escrito y
+bien escrito; lo que fallaba era que nada lo senalaba, y hay que saber que existe un job aparte
+para ir a abrirlo. En un `pull_request` el job sale `skipped` y cuenta como aprobado, asi que
+incluirlo no cambia nada ahi.
+
+### La deriva de historial se avisa en el PR
+
+Mientras la base de `ecopac-dev` tenga aplicada una migracion cuyo archivo no esta en `develop`,
+`supabase db push` falla en **todo** push a esa rama, traiga SQL o no: valida el historial
+completo antes de mirar si hay algo pendiente. El fallo le aparece a quien mergee despues, que
+normalmente no tiene nada que ver.
+
+`Estado de la base remota` ya corria el `--dry-run` que lo detecta, pero su salida caia dentro de
+un bloque de codigo del resumen y no la miraba nadie. Ahora, cuando aparece deriva, ese job emite
+un `::warning::` y una seccion propia diciendo que el PR no la causa y que no la empeora. **Sigue
+sin fallar nunca**: depende de secrets y de la red, y convertirlo en guarda haria que un corte de
+conexion bloquee PRs ajenos. Quien corta es `Aplicar migraciones`, despues del merge.
+
+Lo que ninguna de las dos cosas arregla es una **rama que se quedo vieja**: ningun check se vuelve
+a correr solo cuando `develop` avanza, asi que dos PRs pueden reservar el mismo numero de
+migracion y las dos pasar en verde. Eso lo cierra `strict` ("Require branches to be up to date"),
+que vive en Settings > Branches.
 
 No se puede llegar a **un** unico check para todo el repositorio: `Lint y build` vive en otro
 workflow y un job no puede declarar `needs` de un workflow ajeno. El minimo son dos nombres.
@@ -249,9 +295,8 @@ Se configuran en Settings > Secrets and variables > Actions.
 | `SUPABASE_DB_PASSWORD`                                  | Vincular con proyectos remotos |
 | `SUPABASE_PROJECT_REF_DEV`                              | Aplicar migraciones en develop |
 | `SUPABASE_PROJECT_REF_PROD`                             | Aplicar migraciones en main    |
-| `SUPABASE_URL_DEV`, `SUPABASE_ANON_KEY_DEV`             | Keep-alive                     |
-| `SUPABASE_SERVICE_ROLE_KEY_DEV`                         | Disparar alertas-vencimiento   |
-| `VITE_SUPABASE_URL_DEV`, `VITE_SUPABASE_ANON_KEY_DEV`   | Build de la web en develop     |
+| `SUPABASE_SERVICE_ROLE_KEY_DEV`                         | Disparar alertas-vencimiento y keep-alive |
+| `VITE_SUPABASE_URL_DEV`, `VITE_SUPABASE_ANON_KEY_DEV`   | Build de la web en develop y keep-alive |
 | `VITE_SUPABASE_URL_PROD`, `VITE_SUPABASE_ANON_KEY_PROD` | Build de la web en main        |
 
 Cuando falta un secret, el workflow **avisa de forma visible pero no falla**: deja un bloque en

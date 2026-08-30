@@ -1,6 +1,6 @@
-import { StyleSheet, Text, View } from 'react-native';
-import { colors, labels, spacing, typography } from '@ecopac/ui-tokens';
-import PrimaryButton from './PrimaryButton';
+import { StyleSheet, Text, View } from "react-native";
+import { colors, labels, spacing, typography } from "@ecopac/ui-tokens";
+import PrimaryButton from "./PrimaryButton";
 
 /**
  * Estado vacio. Espejo de apps/web/src/components/EmptyState.jsx.
@@ -21,8 +21,8 @@ export default function EmptyState({ message = labels.sinResultados, actionLabel
 
 const styles = StyleSheet.create({
   container: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     paddingVertical: spacing.xl,
     paddingHorizontal: spacing.md,
     backgroundColor: colors.surface,
@@ -34,10 +34,10 @@ const styles = StyleSheet.create({
     fontFamily: typography.fontFamilyBase,
     fontSize: typography.sizes.md,
     color: colors.textMuted,
-    textAlign: 'center',
+    textAlign: "center",
   },
   boton: {
     marginTop: spacing.md,
-    alignSelf: 'stretch',
+    alignSelf: "stretch",
   },
 });

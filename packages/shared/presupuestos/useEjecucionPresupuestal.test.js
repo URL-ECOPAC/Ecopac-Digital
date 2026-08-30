@@ -8,7 +8,10 @@
 
 import { describe, expect, it } from "vitest";
 
-import { calcularPorcentajeEjecutado, combinarProyectosConPresupuesto } from "./useEjecucionPresupuestal.js";
+import {
+  calcularPorcentajeEjecutado,
+  combinarProyectosConPresupuesto,
+} from "./useEjecucionPresupuestal.js";
 
 describe("calcularPorcentajeEjecutado", () => {
   it("calcula el porcentaje normal", () => {
@@ -42,8 +45,22 @@ describe("combinarProyectosConPresupuesto", () => {
     };
 
     expect(combinarProyectosConPresupuesto(proyectos, presupuestos)).toEqual([
-      { id: "p1", nombre: "Proyecto Uno", asignado: 1000, gastado: 400, disponible: 600, porcentaje: 40 },
-      { id: "p2", nombre: "Proyecto Dos", asignado: 500, gastado: 500, disponible: 0, porcentaje: 100 },
+      {
+        id: "p1",
+        nombre: "Proyecto Uno",
+        asignado: 1000,
+        gastado: 400,
+        disponible: 600,
+        porcentaje: 40,
+      },
+      {
+        id: "p2",
+        nombre: "Proyecto Dos",
+        asignado: 500,
+        gastado: 500,
+        disponible: 0,
+        porcentaje: 100,
+      },
     ]);
   });
 
@@ -51,7 +68,14 @@ describe("combinarProyectosConPresupuesto", () => {
     const proyectos = [{ id: "p1", nombre: "Proyecto Sin Datos" }];
 
     expect(combinarProyectosConPresupuesto(proyectos, {})).toEqual([
-      { id: "p1", nombre: "Proyecto Sin Datos", asignado: 0, gastado: 0, disponible: 0, porcentaje: 0 },
+      {
+        id: "p1",
+        nombre: "Proyecto Sin Datos",
+        asignado: 0,
+        gastado: 0,
+        disponible: 0,
+        porcentaje: 0,
+      },
     ]);
   });
 

@@ -64,8 +64,10 @@ describe("datosDeRecetaImprimible", () => {
   });
 
   it("arma cada medicamento con su descripcion y posologia", () => {
-    const [medicamento] = datosDeRecetaImprimible({ receta: RECETA, paciente: PACIENTE })
-      .medicamentos;
+    const [medicamento] = datosDeRecetaImprimible({
+      receta: RECETA,
+      paciente: PACIENTE,
+    }).medicamentos;
 
     expect(medicamento.descripcion).toBe("Amoxicilina 500 mg capsula");
     expect(medicamento.posologia).toBe("1 capsula, cada 8 horas, 7 dias");

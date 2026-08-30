@@ -20,11 +20,7 @@ export function useCatalogoMedicamentos({ inventarioInicial = [], bodegas = [] }
     return (inventarioInicial || []).filter((item) => {
       if (!item) return false;
       const nombre = item.nombre?.toLowerCase() || "";
-      const principioActivo = (
-        item.principioActivo || 
-        item.principio_activo || 
-        ""
-      ).toLowerCase();
+      const principioActivo = (item.principioActivo || item.principio_activo || "").toLowerCase();
 
       const coincideBusqueda =
         !terminoBusqueda ||
@@ -32,8 +28,7 @@ export function useCatalogoMedicamentos({ inventarioInicial = [], bodegas = [] }
         principioActivo.includes(terminoBusqueda);
 
       const coincideCategoria =
-        categoriaSeleccionada === "Todos" ||
-        item.categoria === categoriaSeleccionada;
+        categoriaSeleccionada === "Todos" || item.categoria === categoriaSeleccionada;
 
       const bodegaId = item.bodegaId || item.bodega_id;
       const bodegaNombre = item.bodegaNombre || item.bodega_nombre;
@@ -48,9 +43,7 @@ export function useCatalogoMedicamentos({ inventarioInicial = [], bodegas = [] }
   }, [inventarioInicial, busqueda, categoriaSeleccionada, bodegaSeleccionada]);
 
   const hayFiltrosActivos =
-    busqueda.trim() !== "" ||
-    categoriaSeleccionada !== "Todos" ||
-    bodegaSeleccionada !== "Todas";
+    busqueda.trim() !== "" || categoriaSeleccionada !== "Todos" || bodegaSeleccionada !== "Todas";
 
   const limpiarFiltros = useCallback(() => {
     setBusqueda("");

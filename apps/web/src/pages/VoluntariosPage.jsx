@@ -62,8 +62,8 @@ export default function VoluntariosPage() {
     <ScreenContainer>
       <PageHeader
         title="Voluntarios y medicos"
-        subtitle={total === 1 ? '1 persona' : `${total} personas`}
-        actions={[{ label: 'Nuevo voluntario', onClick: () => setMostrarAlta(true) }]}
+        subtitle={total === 1 ? "1 persona" : `${total} personas`}
+        actions={[{ label: "Nuevo voluntario", onClick: () => setMostrarAlta(true) }]}
       />
 
       <FilterBar
@@ -90,7 +90,7 @@ export default function VoluntariosPage() {
             onClick={irAPaginaAnterior}
             disabled={!hayPaginaAnterior}
           />
-          <span style={{ color: 'var(--color-textMuted)' }}>
+          <span style={{ color: "var(--color-textMuted)" }}>
             Pagina {pagina} de {paginas}
           </span>
           <SecondaryButton

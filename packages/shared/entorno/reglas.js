@@ -175,7 +175,10 @@ function validarUrl(valor, nombreDeVariable, plataforma, esDesarrollo) {
   const esIpDeLanEnDesarrolloMovil =
     esDesarrollo && plataforma === PLATAFORMAS.MOVIL && PATRON_IP_PRIVADA.test(url.hostname);
 
-  if (url.protocol !== "https:" && !(url.protocol === "http:" && (esLocal || esIpDeLanEnDesarrolloMovil))) {
+  if (
+    url.protocol !== "https:" &&
+    !(url.protocol === "http:" && (esLocal || esIpDeLanEnDesarrolloMovil))
+  ) {
     throw new ErrorDeEntorno(
       `${nombreDeVariable} debe usar https. Solo se acepta http contra la instancia local ` +
         `de Supabase (${HOSTS_LOCALES.join(", ")}) o, en desarrollo movil, contra una IP de LAN ` +

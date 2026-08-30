@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useState } from "react";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 
 import {
   cabeceraDePaciente,
@@ -11,7 +11,7 @@ import {
   TIPOS_DE_PRESENTACION,
   usePaciente,
   valoresDeFichaPaciente,
-} from '@ecopac/shared';
+} from "@ecopac/shared";
 
 import {
   Card,
@@ -21,20 +21,20 @@ import {
   ScreenContainer,
   StatusChip,
   Tabs,
-} from '../components';
-import { useSesionCompartida } from '../contexto/SesionProvider';
-import ModalCondicionesPaciente from './ModalCondicionesPaciente';
-import ModalEdicionPaciente from './ModalEdicionPaciente';
-import NotFoundPage from './NotFoundPage';
-import PestaniaHistorialPaciente from './PestaniaHistorialPaciente';
-import PestaniaRecetasPaciente from './PestaniaRecetasPaciente';
-import PestaniaSignosPaciente from './PestaniaSignosPaciente';
+} from "../components";
+import { useSesionCompartida } from "../contexto/SesionProvider";
+import ModalCondicionesPaciente from "./ModalCondicionesPaciente";
+import ModalEdicionPaciente from "./ModalEdicionPaciente";
+import NotFoundPage from "./NotFoundPage";
+import PestaniaHistorialPaciente from "./PestaniaHistorialPaciente";
+import PestaniaRecetasPaciente from "./PestaniaRecetasPaciente";
+import PestaniaSignosPaciente from "./PestaniaSignosPaciente";
 
-const PARAMETRO_PESTANIA = 'pestania';
+const PARAMETRO_PESTANIA = "pestania";
 
 function valorDeCampo(campo, valores) {
   const valor = valores[campo.id];
-  if (valor === null || valor === undefined || valor === '') return '—';
+  if (valor === null || valor === undefined || valor === "") return "—";
   if (campo.tipo === TIPOS_DE_PRESENTACION.FECHA) return formatearFechaCorta(valor);
   return valor;
 }
@@ -72,7 +72,7 @@ export default function FichaPacientePage() {
         <PageHeader
           title="Ficha del paciente"
           actions={[
-            { label: 'Volver', onClick: () => navigate('/pacientes'), variant: 'secondary' },
+            { label: "Volver", onClick: () => navigate("/pacientes"), variant: "secondary" },
           ]}
         />
         <ErrorState message={error.mensaje} onRetry={recargar} />
@@ -88,15 +88,15 @@ export default function FichaPacientePage() {
   const valores = valoresDeFichaPaciente(paciente);
 
   const acciones = [
-    { label: 'Volver', onClick: () => navigate('/pacientes'), variant: 'secondary' },
+    { label: "Volver", onClick: () => navigate("/pacientes"), variant: "secondary" },
   ];
 
   if (permisos.puedeEditar) {
-    acciones.push({ label: 'Editar datos', onClick: () => setEditando(true) });
+    acciones.push({ label: "Editar datos", onClick: () => setEditando(true) });
     acciones.push({
-      label: 'Condiciones cronicas',
+      label: "Condiciones cronicas",
       onClick: () => setGestionandoCondiciones(true),
-      variant: 'secondary',
+      variant: "secondary",
     });
   }
 
@@ -108,14 +108,14 @@ export default function FichaPacientePage() {
   return (
     <ScreenContainer>
       <PageHeader
-        title={cabecera.nombreCompleto ?? 'Paciente sin nombre'}
+        title={cabecera.nombreCompleto ?? "Paciente sin nombre"}
         subtitle={[
           cabecera.numeroFicha ? `Ficha ${cabecera.numeroFicha}` : null,
           cabecera.edad,
           cabecera.comunidad,
         ]
           .filter(Boolean)
-          .join(' · ')}
+          .join(" · ")}
         actions={acciones}
       />
 
@@ -133,7 +133,7 @@ export default function FichaPacientePage() {
       )}
 
       <Tabs tabs={pestanias} activo={pestaniaActiva} onChange={cambiarPestania}>
-        {pestaniaActiva === 'generales' && (
+        {pestaniaActiva === "generales" && (
           <Card>
             <dl className="row mb-0">
               {CAMPOS_FICHA_PACIENTE.map((campo) => (
@@ -146,17 +146,15 @@ export default function FichaPacientePage() {
           </Card>
         )}
 
-        {pestaniaActiva === 'historial' && (
+        {pestaniaActiva === "historial" && (
           <PestaniaHistorialPaciente pacienteId={paciente.id} rol={rol} />
         )}
 
-        {pestaniaActiva === 'signos' && (
+        {pestaniaActiva === "signos" && (
           <PestaniaSignosPaciente pacienteId={paciente.id} rol={rol} />
         )}
 
-        {pestaniaActiva === 'recetas' && (
-          <PestaniaRecetasPaciente paciente={paciente} rol={rol} />
-        )}
+        {pestaniaActiva === "recetas" && <PestaniaRecetasPaciente paciente={paciente} rol={rol} />}
       </Tabs>
 
       {editando && (

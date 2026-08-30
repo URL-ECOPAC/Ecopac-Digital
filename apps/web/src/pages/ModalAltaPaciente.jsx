@@ -1,15 +1,15 @@
-import { TIPOS_DE_CAMPO, useRegistroPaciente } from '@ecopac/shared';
+import { TIPOS_DE_CAMPO, useRegistroPaciente } from "@ecopac/shared";
 
-import DateField from '../components/DateField';
-import Modal from '../components/Modal';
-import PrimaryButton from '../components/PrimaryButton';
-import SecondaryButton from '../components/SecondaryButton';
-import Selector from '../components/Selector';
-import TextField from '../components/TextField';
+import DateField from "../components/DateField";
+import Modal from "../components/Modal";
+import PrimaryButton from "../components/PrimaryButton";
+import SecondaryButton from "../components/SecondaryButton";
+import Selector from "../components/Selector";
+import TextField from "../components/TextField";
 
 const TIPO_DE_INPUT = {
-  [TIPOS_DE_CAMPO.TEXTO]: 'text',
-  [TIPOS_DE_CAMPO.TELEFONO]: 'tel',
+  [TIPOS_DE_CAMPO.TEXTO]: "text",
+  [TIPOS_DE_CAMPO.TELEFONO]: "tel",
 };
 
 export default function ModalAltaPaciente({ onClose, onRegistrado }) {
@@ -46,9 +46,9 @@ export default function ModalAltaPaciente({ onClose, onRegistrado }) {
     return (
       <Modal visible onClose={cerrar} title="Paciente registrado">
         <p className="mb-1">Anota este numero en la ficha de papel:</p>
-        <p className="fs-3 fw-bold mb-3">{registrado.expediente?.numeroFicha ?? '—'}</p>
+        <p className="fs-3 fw-bold mb-3">{registrado.expediente?.numeroFicha ?? "—"}</p>
         <p className="text-body-secondary">
-          {[registrado.nombres, registrado.apellidos].filter(Boolean).join(' ')}
+          {[registrado.nombres, registrado.apellidos].filter(Boolean).join(" ")}
         </p>
         <div className="d-flex justify-content-end gap-2 mt-3">
           <SecondaryButton title="Registrar otro" onClick={registrarOtro} />
@@ -73,7 +73,7 @@ export default function ModalAltaPaciente({ onClose, onRegistrado }) {
       )}
 
       {campos.map((campo) => {
-        if (campo.id === 'comunidad') {
+        if (campo.id === "comunidad") {
           return (
             <div key="comunidad-cascada">
               <Selector
@@ -96,7 +96,7 @@ export default function ModalAltaPaciente({ onClose, onRegistrado }) {
                 label={campo.label}
                 value={valores.comunidad || null}
                 options={catalogos.comunidades}
-                onSelect={(valor) => setCampo('comunidad', valor)}
+                onSelect={(valor) => setCampo("comunidad", valor)}
                 placeholder="Selecciona una comunidad"
                 error={errores.comunidad}
                 disabled={enviando || !municipioId || catalogos.comunidades.length === 0}
@@ -139,9 +139,9 @@ export default function ModalAltaPaciente({ onClose, onRegistrado }) {
           <TextField
             key={campo.id}
             label={campo.label}
-            type={TIPO_DE_INPUT[campo.tipo] ?? 'text'}
+            type={TIPO_DE_INPUT[campo.tipo] ?? "text"}
             maxLength={campo.validacion?.maxLongitud}
-            value={valores[campo.id] ?? ''}
+            value={valores[campo.id] ?? ""}
             onChange={(evento) => setCampo(campo.id, evento.target.value)}
             error={errores[campo.id]}
             disabled={enviando}

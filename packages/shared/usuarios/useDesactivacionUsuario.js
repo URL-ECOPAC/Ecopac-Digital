@@ -53,7 +53,11 @@ export function evaluarBloqueoSincronico(perfilObjetivo, idSesionActual) {
  * @returns {boolean}
  */
 export function requiereContarAdministradoresActivos(perfilObjetivo) {
-  return Boolean(perfilObjetivo) && perfilObjetivo.activo === true && perfilObjetivo.rol === ROLES.ADMINISTRADOR;
+  return (
+    Boolean(perfilObjetivo) &&
+    perfilObjetivo.activo === true &&
+    perfilObjetivo.rol === ROLES.ADMINISTRADOR
+  );
 }
 
 /**

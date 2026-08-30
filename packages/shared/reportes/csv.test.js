@@ -70,17 +70,17 @@ describe("exportarFilasACSV", () => {
   it("separa encabezado y filas, y las filas entre si, con CRLF", () => {
     const csv = exportarFilasACSV(
       [{ nombre: "Ana", fechaNacimiento: "2020-01-15", saldo: 100 }],
-      columnas
+      columnas,
     );
     expect(csv).toBe(
-      `${BOM}Nombre,Fecha de nacimiento,Saldo\r\nAna,15/01/2020,${formatearMoneda(100)}`
+      `${BOM}Nombre,Fecha de nacimiento,Saldo\r\nAna,15/01/2020,${formatearMoneda(100)}`,
     );
   });
 
   it("formatea una columna FECHA con formatearFechaCorta", () => {
     const csv = exportarFilasACSV(
       [{ nombre: "Ana", fechaNacimiento: "2026-08-18", saldo: null }],
-      columnas
+      columnas,
     );
     expect(csv).toContain("18/08/2026");
   });
@@ -88,7 +88,7 @@ describe("exportarFilasACSV", () => {
   it("deja vacia la celda de una columna FECHA con valor invalido", () => {
     const csv = exportarFilasACSV(
       [{ nombre: "Ana", fechaNacimiento: "no es una fecha", saldo: null }],
-      columnas
+      columnas,
     );
     expect(csv).toBe(`${BOM}Nombre,Fecha de nacimiento,Saldo\r\nAna,,`);
   });
@@ -96,7 +96,7 @@ describe("exportarFilasACSV", () => {
   it("formatea MONEDA y escapa la coma de miles resultante", () => {
     const csv = exportarFilasACSV(
       [{ nombre: "Ana", fechaNacimiento: null, saldo: 1250 }],
-      columnas
+      columnas,
     );
     expect(csv).toContain(`"${formatearMoneda(1250)}"`);
   });
@@ -104,7 +104,7 @@ describe("exportarFilasACSV", () => {
   it("deja vacia la celda de una columna MONEDA sin valor", () => {
     const csv = exportarFilasACSV(
       [{ nombre: "Ana", fechaNacimiento: null, saldo: null }],
-      columnas
+      columnas,
     );
     expect(csv.endsWith("Ana,,")).toBe(true);
   });
@@ -117,7 +117,7 @@ describe("exportarFilasACSV", () => {
   it("escapa un valor de texto que trae coma, comillas o salto de linea", () => {
     const csv = exportarFilasACSV(
       [{ nombre: 'Comunidad "El Progreso", zona 3', fechaNacimiento: null, saldo: null }],
-      columnas
+      columnas,
     );
     expect(csv).toContain('"Comunidad ""El Progreso"", zona 3"');
   });
@@ -130,9 +130,7 @@ describe("exportarFilasACSV", () => {
 
   it("no lanza si filas no es un arreglo", () => {
     expect(() => exportarFilasACSV(undefined, columnas)).not.toThrow();
-    expect(exportarFilasACSV(undefined, columnas)).toBe(
-      `${BOM}Nombre,Fecha de nacimiento,Saldo`
-    );
+    expect(exportarFilasACSV(undefined, columnas)).toBe(`${BOM}Nombre,Fecha de nacimiento,Saldo`);
   });
 
   it("es compatible con un descriptor real (COLUMNAS_INVENTARIO_REPORTE)", () => {
@@ -146,7 +144,7 @@ describe("exportarFilasACSV", () => {
           vencido: 0,
         },
       ],
-      COLUMNAS_INVENTARIO_REPORTE
+      COLUMNAS_INVENTARIO_REPORTE,
     );
     expect(csv).toContain("Medicamento,Concentracion,Presentacion,Disponible,Vencido");
     expect(csv).toContain("Ibuprofeno,400mg,Tableta,120,0");

@@ -182,13 +182,7 @@ export async function registrarJornada(datos) {
  *   fechaFin?: string }} [filtros]
  * @returns {Promise<{ jornadas: object[], error: object|null }>}
  */
-export async function listarJornadas({
-  estado,
-  comunidad,
-  proyecto,
-  fechaInicio,
-  fechaFin,
-} = {}) {
+export async function listarJornadas({ estado, comunidad, proyecto, fechaInicio, fechaFin } = {}) {
   try {
     let consulta = obtenerSupabase()
       .from("jornadas")
@@ -244,9 +238,12 @@ export async function obtenerJornada(id) {
         .maybeSingle(),
     ]);
 
-    if (respuestaJornada.error) return { jornada: null, error: normalizarError(respuestaJornada.error) };
-    if (respuestaPersonal.error) return { jornada: null, error: normalizarError(respuestaPersonal.error) };
-    if (respuestaContadores.error) return { jornada: null, error: normalizarError(respuestaContadores.error) };
+    if (respuestaJornada.error)
+      return { jornada: null, error: normalizarError(respuestaJornada.error) };
+    if (respuestaPersonal.error)
+      return { jornada: null, error: normalizarError(respuestaPersonal.error) };
+    if (respuestaContadores.error)
+      return { jornada: null, error: normalizarError(respuestaContadores.error) };
 
     const fila = respuestaJornada.data;
     if (!fila) return { jornada: null, error: null };
@@ -690,8 +687,7 @@ export async function desasignarPersonal(jornadaId, perfilId) {
         desasignado: false,
         error: {
           ...construirError(CODIGOS_DE_ERROR_DE_SUPABASE.CHECK),
-          mensaje:
-            "No se puede desasignar a alguien que ya registro atenciones en esta jornada.",
+          mensaje: "No se puede desasignar a alguien que ya registro atenciones en esta jornada.",
         },
       };
     }
@@ -740,7 +736,6 @@ export async function contarAtencionesIncompletas(jornadaId) {
     return { cantidad: 0, error: normalizarError(error) };
   }
 }
-
 
 /**
  * Cuenta los pacientes atendidos de cada jornada, en lote (issue #178, criterio 1).

@@ -37,8 +37,7 @@ const {
  */
 function crearCliente(respuesta) {
   const llamadas = [];
-  const resolver = async () =>
-    respuesta instanceof Error ? Promise.reject(respuesta) : respuesta;
+  const resolver = async () => (respuesta instanceof Error ? Promise.reject(respuesta) : respuesta);
 
   const encadenable = {
     llamadas,

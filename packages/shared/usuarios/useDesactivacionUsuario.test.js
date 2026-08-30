@@ -39,21 +39,19 @@ describe("evaluarBloqueoSincronico", () => {
 
 describe("requiereContarAdministradoresActivos", () => {
   it("hace falta contar cuando el objetivo es un administrador activo", () => {
-    expect(
-      requiereContarAdministradoresActivos({ activo: true, rol: ROLES.ADMINISTRADOR }),
-    ).toBe(true);
+    expect(requiereContarAdministradoresActivos({ activo: true, rol: ROLES.ADMINISTRADOR })).toBe(
+      true,
+    );
   });
 
   it("reactivar (activo: false) nunca puede dejar el sistema sin administrador", () => {
-    expect(
-      requiereContarAdministradoresActivos({ activo: false, rol: ROLES.ADMINISTRADOR }),
-    ).toBe(false);
+    expect(requiereContarAdministradoresActivos({ activo: false, rol: ROLES.ADMINISTRADOR })).toBe(
+      false,
+    );
   });
 
   it("desactivar a alguien que no es administrador tampoco lo pone en riesgo", () => {
-    expect(requiereContarAdministradoresActivos({ activo: true, rol: ROLES.MEDICO })).toBe(
-      false,
-    );
+    expect(requiereContarAdministradoresActivos({ activo: true, rol: ROLES.MEDICO })).toBe(false);
   });
 
   it("sin perfil objetivo no hace falta contar nada", () => {

@@ -23,9 +23,21 @@ import { TIPOS_DE_PRESENTACION } from "../descriptores.js";
 export const COLUMNAS_INDICADORES_IMPACTO = [
   { id: "etiqueta", label: "Periodo / grupo", tipo: TIPOS_DE_PRESENTACION.TEXTO, principal: true },
   { id: "pacientes_atendidos", label: "Pacientes atendidos", tipo: TIPOS_DE_PRESENTACION.NUMERO },
-  { id: "tratamientos_entregados", label: "Tratamientos entregados", tipo: TIPOS_DE_PRESENTACION.NUMERO },
-  { id: "medicamentos_utilizados", label: "Medicamentos utilizados", tipo: TIPOS_DE_PRESENTACION.NUMERO },
-  { id: "comunidades_beneficiadas", label: "Comunidades beneficiadas", tipo: TIPOS_DE_PRESENTACION.NUMERO },
+  {
+    id: "tratamientos_entregados",
+    label: "Tratamientos entregados",
+    tipo: TIPOS_DE_PRESENTACION.NUMERO,
+  },
+  {
+    id: "medicamentos_utilizados",
+    label: "Medicamentos utilizados",
+    tipo: TIPOS_DE_PRESENTACION.NUMERO,
+  },
+  {
+    id: "comunidades_beneficiadas",
+    label: "Comunidades beneficiadas",
+    tipo: TIPOS_DE_PRESENTACION.NUMERO,
+  },
 ];
 
 /**
@@ -85,8 +97,16 @@ export const CAMPOS_FICHA_LOTE_INVENTARIO = [
 export const CAMPOS_TOTALES_INVENTARIO_REPORTE = [
   { id: "unidadesDisponibles", label: "Unidades disponibles", tipo: TIPOS_DE_PRESENTACION.NUMERO },
   { id: "unidadesVencidas", label: "Unidades vencidas", tipo: TIPOS_DE_PRESENTACION.NUMERO },
-  { id: "medicamentosDistintos", label: "Medicamentos distintos", tipo: TIPOS_DE_PRESENTACION.NUMERO },
-  { id: "renglonesDeInventario", label: "Renglones de inventario", tipo: TIPOS_DE_PRESENTACION.NUMERO },
+  {
+    id: "medicamentosDistintos",
+    label: "Medicamentos distintos",
+    tipo: TIPOS_DE_PRESENTACION.NUMERO,
+  },
+  {
+    id: "renglonesDeInventario",
+    label: "Renglones de inventario",
+    tipo: TIPOS_DE_PRESENTACION.NUMERO,
+  },
 ];
 
 /**

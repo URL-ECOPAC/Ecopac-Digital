@@ -11,10 +11,14 @@
 -- Las tres primeras pruebas no usan fixtures ni impersonacion: leen el catalogo. La cuarta si
 -- crea una tabla, porque es la unica forma de demostrar que el blindaje de ALTER DEFAULT
 -- PRIVILEGES funciona sobre lo que todavia no existe.
+--
+-- Las pruebas 8 y 9 (issue #511) hacen lo mismo que las de tablas, pero para funciones: la
+-- 00049 dejo un cabo suelto declarado en su propia cabecera -funciones de public ejecutables
+-- por cualquiera porque el EXECUTE a PUBLIC es el default de Postgres- que cerro la 00102.
 
 BEGIN;
 
-SELECT plan(7);
+SELECT plan(9);
 
 -- ============================================================================
 -- 1. anon no tiene ningun privilegio sobre ninguna tabla ni vista de public
@@ -113,6 +117,46 @@ SELECT is_empty(
   $$,
   'una tabla recien creada no le concede ningun privilegio a anon'
 );
+
+-- ============================================================================
+-- 8. anon no tiene EXECUTE en ninguna funcion invocable de public (issue #511)
+-- ============================================================================
+-- Se excluyen las RETURNS TRIGGER a proposito: Postgres no permite invocarlas fuera de un
+-- trigger sin importar el GRANT ("trigger functions can only be called as triggers"), asi que
+-- barrerlas aqui no probaria nada real y solo obligaria a mantener una lista que crece con cada
+-- trigger nuevo del esquema.
+SELECT is_empty(
+  $$
+    SELECT p.proname
+    FROM pg_proc p
+    JOIN pg_namespace n ON n.oid = p.pronamespace
+    WHERE n.nspname = 'public'
+      AND pg_get_function_result(p.oid) <> 'trigger'
+      AND has_function_privilege('anon', p.oid, 'EXECUTE')
+  $$,
+  'anon no tiene EXECUTE en ninguna funcion invocable (no-trigger) de public'
+);
+
+-- ============================================================================
+-- 9. El barrido no se paso de la raya: authenticated conserva lo que las politicas RLS usan
+-- ============================================================================
+SELECT ok(
+  has_function_privilege('authenticated', 'es_administrador()', 'EXECUTE')
+    AND has_function_privilege('authenticated', 'es_consultivo()', 'EXECUTE')
+    AND has_function_privilege('authenticated', 'rol_actual()', 'EXECUTE')
+    AND has_function_privilege('authenticated', 'tiene_permiso(text)', 'EXECUTE')
+    AND has_function_privilege('authenticated', 'participa_en_jornada(uuid)', 'EXECUTE')
+    AND has_function_privilege('authenticated', 'f_unaccent(text)', 'EXECUTE')
+    AND has_function_privilege(
+      'authenticated', 'fn_aplicar_ajuste_existencias(uuid, uuid, tipo_movimiento, integer)', 'EXECUTE'
+    ),
+  'authenticated conserva EXECUTE en las funciones que las politicas RLS y sus triggers necesitan'
+);
+
+-- No hay una prueba 10 con una funcion nueva, a diferencia de la 4 con la tabla de prueba: se
+-- intento (ALTER DEFAULT PRIVILEGES ... ON FUNCTIONS FROM PUBLIC, ver 00102) y no suprime el
+-- EXECUTE a PUBLIC que Postgres concede por defecto a una funcion nueva en este entorno. Queda
+-- como limitacion conocida, no como prueba que finja demostrar algo que no pasa.
 
 SELECT * FROM finish();
 ROLLBACK;

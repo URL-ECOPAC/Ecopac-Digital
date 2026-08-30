@@ -1,24 +1,34 @@
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from "react-router-dom";
 
 import {
   COLUMNAS_PACIENTE_CRONICO,
   FILTROS_PACIENTE_CRONICO,
   usePacientesCronicos,
-} from '@ecopac/shared';
+} from "@ecopac/shared";
 
-import DataList from '../components/DataList';
-import EmptyState from '../components/EmptyState';
-import ErrorState from '../components/ErrorState';
-import FilterBar from '../components/FilterBar';
-import PageHeader from '../components/PageHeader';
-import ScreenContainer from '../components/ScreenContainer';
-import { useSesionCompartida } from '../contexto/SesionProvider';
+import DataList from "../components/DataList";
+import EmptyState from "../components/EmptyState";
+import ErrorState from "../components/ErrorState";
+import FilterBar from "../components/FilterBar";
+import PageHeader from "../components/PageHeader";
+import ScreenContainer from "../components/ScreenContainer";
+import { useSesionCompartida } from "../contexto/SesionProvider";
 
 export default function PacientesCronicosPage() {
   const navigate = useNavigate();
   const { rol } = useSesionCompartida();
-  const { filas, total, filtros, setFiltro, limpiarFiltros, hayFiltros, cargando, error, recargar, catalogos } =
-    usePacientesCronicos({ rol });
+  const {
+    filas,
+    total,
+    filtros,
+    setFiltro,
+    limpiarFiltros,
+    hayFiltros,
+    cargando,
+    error,
+    recargar,
+    catalogos,
+  } = usePacientesCronicos({ rol });
 
   if (error) {
     return (
@@ -26,7 +36,7 @@ export default function PacientesCronicosPage() {
         <PageHeader
           title="Pacientes cronicos"
           actions={[
-            { label: 'Volver', onClick: () => navigate('/pacientes'), variant: 'secondary' },
+            { label: "Volver", onClick: () => navigate("/pacientes"), variant: "secondary" },
           ]}
         />
         <ErrorState message={error.mensaje} onRetry={recargar} />
@@ -38,10 +48,8 @@ export default function PacientesCronicosPage() {
     <ScreenContainer>
       <PageHeader
         title="Pacientes cronicos"
-        subtitle={total === 1 ? '1 condicion registrada' : `${total} condiciones registradas`}
-        actions={[
-          { label: 'Volver', onClick: () => navigate('/pacientes'), variant: 'secondary' },
-        ]}
+        subtitle={total === 1 ? "1 condicion registrada" : `${total} condiciones registradas`}
+        actions={[{ label: "Volver", onClick: () => navigate("/pacientes"), variant: "secondary" }]}
       />
 
       <FilterBar

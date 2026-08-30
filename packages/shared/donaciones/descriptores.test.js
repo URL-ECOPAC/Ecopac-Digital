@@ -55,7 +55,9 @@ const CATALOGOS_CONOCIDOS = new Set([
 
 /** Aplana un campo LISTA_REPETIBLE en sus campos anidados, para revisarlos con las mismas reglas. */
 function conCamposAnidados(lista) {
-  return lista.flatMap((campo) => (Array.isArray(campo.campos) ? [campo, ...campo.campos] : [campo]));
+  return lista.flatMap((campo) =>
+    Array.isArray(campo.campos) ? [campo, ...campo.campos] : [campo],
+  );
 }
 
 describe("campos.js solo usa el vocabulario de TIPOS_DE_CAMPO", () => {
@@ -165,8 +167,12 @@ describe("filtros.js solo usa el vocabulario de TIPOS_DE_FILTRO", () => {
   });
 
   it("los *_VACIOS tienen exactamente las mismas claves que su lista de filtros", () => {
-    expect(Object.keys(FILTROS_DONANTE_VACIOS).sort()).toEqual(FILTROS_DONANTE.map((f) => f.id).sort());
-    expect(Object.keys(FILTROS_DONACION_VACIOS).sort()).toEqual(FILTROS_DONACION.map((f) => f.id).sort());
+    expect(Object.keys(FILTROS_DONANTE_VACIOS).sort()).toEqual(
+      FILTROS_DONANTE.map((f) => f.id).sort(),
+    );
+    expect(Object.keys(FILTROS_DONACION_VACIOS).sort()).toEqual(
+      FILTROS_DONACION.map((f) => f.id).sort(),
+    );
   });
 });
 
@@ -174,12 +180,12 @@ describe("los catalogos de estado reflejan los enum reales", () => {
   it("OPCIONES_ESTADO_DONACION cubre exactamente registrada/anulada, con etiqueta de ui-tokens", () => {
     const valores = OPCIONES_ESTADO_DONACION.map((e) => e.value);
     expect(valores.sort()).toEqual(Object.values(ESTADOS_DE_DONACION).sort());
-    expect(OPCIONES_ESTADO_DONACION.find((e) => e.value === ESTADOS_DE_DONACION.REGISTRADA).label).toBe(
-      labels.donacionRegistrada,
-    );
-    expect(OPCIONES_ESTADO_DONACION.find((e) => e.value === ESTADOS_DE_DONACION.ANULADA).label).toBe(
-      labels.donacionAnulada,
-    );
+    expect(
+      OPCIONES_ESTADO_DONACION.find((e) => e.value === ESTADOS_DE_DONACION.REGISTRADA).label,
+    ).toBe(labels.donacionRegistrada);
+    expect(
+      OPCIONES_ESTADO_DONACION.find((e) => e.value === ESTADOS_DE_DONACION.ANULADA).label,
+    ).toBe(labels.donacionAnulada);
   });
 
   it("ESTADOS_DONANTE cubre el booleano activo/inactivo, con etiqueta de ui-tokens", () => {
@@ -189,7 +195,11 @@ describe("los catalogos de estado reflejan los enum reales", () => {
   });
 
   it("OPCIONES_TIPO_DONANTE y OPCIONES_TIPO_DONACION cubren exactamente su enum, sin inventar valores", () => {
-    expect(OPCIONES_TIPO_DONANTE.map((o) => o.value).sort()).toEqual(Object.values(TIPOS_DE_DONANTE).sort());
-    expect(OPCIONES_TIPO_DONACION.map((o) => o.value).sort()).toEqual(Object.values(TIPOS_DE_DONACION).sort());
+    expect(OPCIONES_TIPO_DONANTE.map((o) => o.value).sort()).toEqual(
+      Object.values(TIPOS_DE_DONANTE).sort(),
+    );
+    expect(OPCIONES_TIPO_DONACION.map((o) => o.value).sort()).toEqual(
+      Object.values(TIPOS_DE_DONACION).sort(),
+    );
   });
 });

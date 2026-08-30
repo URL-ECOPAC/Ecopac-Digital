@@ -1,11 +1,11 @@
-export * from './api.js';
-export * from './permisos.api.js';
-export * from './permisos.js';
-export * from './roles.js';
-export * from './campos.js';
-export * from './columnas.js';
-export * from './filtros.js';
-export * from './validaciones.js';
+export * from "./api.js";
+export * from "./permisos.api.js";
+export * from "./permisos.js";
+export * from "./roles.js";
+export * from "./campos.js";
+export * from "./columnas.js";
+export * from "./filtros.js";
+export * from "./validaciones.js";
 
 // Hooks de pantalla del modulo. useNuevaContrasena y useRestablecerContrasena faltaban aqui, asi
 // que `import { useRestablecerContrasena } from '@ecopac/shared'` devolvia undefined y las dos

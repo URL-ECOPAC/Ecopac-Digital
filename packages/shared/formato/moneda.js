@@ -6,10 +6,10 @@
 // gasto acabaria escrito 'Q1,250.00' en una pantalla y 'Q1.250,00' en la otra.
 
 /** Todo el sistema opera en quetzales; no hay multi-moneda en el esquema. */
-export const MONEDA = 'GTQ';
+export const MONEDA = "GTQ";
 
-const FORMATO = new Intl.NumberFormat('es-GT', {
-  style: 'currency',
+const FORMATO = new Intl.NumberFormat("es-GT", {
+  style: "currency",
   currency: MONEDA,
   minimumFractionDigits: 2,
   maximumFractionDigits: 2,
@@ -25,7 +25,7 @@ const FORMATO = new Intl.NumberFormat('es-GT', {
  * @returns {string|null}
  */
 export function formatearMoneda(valor) {
-  if (valor === null || valor === undefined || valor === '') return null;
+  if (valor === null || valor === undefined || valor === "") return null;
 
   const numero = Number(valor);
   if (Number.isNaN(numero)) return null;

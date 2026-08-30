@@ -1,5 +1,5 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors, spacing, typography } from '@ecopac/ui-tokens';
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import { colors, spacing, typography } from "@ecopac/ui-tokens";
 
 /**
  * Tarjeta. Espejo de apps/web/src/components/Card.jsx.
@@ -13,7 +13,7 @@ import { colors, spacing, typography } from '@ecopac/ui-tokens';
  * plataformas, que es el proposito del catalogo.
  */
 export default function Card({ children, title, onPress, style }) {
-  const esTextoSuelto = typeof children === 'string' || typeof children === 'number';
+  const esTextoSuelto = typeof children === "string" || typeof children === "number";
 
   const contenido = (
     <>
@@ -22,7 +22,7 @@ export default function Card({ children, title, onPress, style }) {
     </>
   );
 
-  if (typeof onPress !== 'function') {
+  if (typeof onPress !== "function") {
     return <View style={[styles.card, style]}>{contenido}</View>;
   }
 

@@ -4,7 +4,11 @@
 // depende del rol, y el rol vive en perfiles, no en el usuario de auth.users.
 
 import { obtenerSupabase } from "./cliente.js";
-import { CODIGOS_DE_ERROR_DE_SUPABASE, construirError, normalizarError } from "./errores-de-supabase.js";
+import {
+  CODIGOS_DE_ERROR_DE_SUPABASE,
+  construirError,
+  normalizarError,
+} from "./errores-de-supabase.js";
 import { obtenerPerfil } from "../usuarios/api.js";
 import { validarCredenciales } from "../usuarios/validaciones.js";
 import { SIN_ERRORES, hayErrores } from "../validations/index.js";
@@ -76,7 +80,11 @@ export async function evaluarPerfilDeSesion(usuario) {
     // mal la causa real (falta un dato, no falta un permiso), pero corregir el texto es un
     // cambio de copy en errores-de-supabase.js que queda fuera de este issue a proposito,
     // para no alterar un mensaje que useSesion() ya venia mostrando en produccion.
-    return { perfil: null, rol: null, error: construirError(CODIGOS_DE_ERROR_DE_SUPABASE.PERMISO_DENEGADO) };
+    return {
+      perfil: null,
+      rol: null,
+      error: construirError(CODIGOS_DE_ERROR_DE_SUPABASE.PERMISO_DENEGADO),
+    };
   }
 
   if (perfil.activo === false) {
@@ -198,7 +206,8 @@ export async function iniciarSesion(correo, contrasena) {
       await cerrarSesion();
     }
 
-    const esCuentaDesactivada = errorDePerfil.codigo === CODIGOS_DE_ERROR_DE_SUPABASE.CUENTA_DESACTIVADA;
+    const esCuentaDesactivada =
+      errorDePerfil.codigo === CODIGOS_DE_ERROR_DE_SUPABASE.CUENTA_DESACTIVADA;
     const error = esCuentaDesactivada ? ERROR_CREDENCIALES_INVALIDAS : errorDePerfil;
     return { sesion: null, perfil: null, rol: null, error, erroresDeCampo: SIN_ERRORES };
   }

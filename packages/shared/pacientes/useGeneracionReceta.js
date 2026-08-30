@@ -109,7 +109,8 @@ export function useGeneracionReceta({ consultaId, perfilId } = {}) {
 
   const agregarMedicamento = useCallback(
     async (medicamento) => {
-      if (!medicamento.seleccionable) return { ok: false, motivo: medicamento.motivoNoSeleccionable };
+      if (!medicamento.seleccionable)
+        return { ok: false, motivo: medicamento.motivoNoSeleccionable };
 
       const lotes = lotesPorMedicamento[medicamento.id] ?? (await cargarLotes(medicamento.id));
 
@@ -135,7 +136,9 @@ export function useGeneracionReceta({ consultaId, perfilId } = {}) {
 
   const editarRenglon = useCallback((clave, campo, valor) => {
     setRenglones((anteriores) =>
-      anteriores.map((renglon) => (renglon.clave === clave ? { ...renglon, [campo]: valor } : renglon)),
+      anteriores.map((renglon) =>
+        renglon.clave === clave ? { ...renglon, [campo]: valor } : renglon,
+      ),
     );
   }, []);
 

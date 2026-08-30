@@ -6,7 +6,11 @@ export const PASOS_REGISTRO_PACIENTE = Object.freeze([
     titulo: "Identidad",
     campos: ["nombres", "apellidos", "fechaNacimiento", "sexo"],
   },
-  { id: "ubicacion", titulo: "Ubicacion y contacto", campos: ["comunidad", "telefonoContacto", "idioma"] },
+  {
+    id: "ubicacion",
+    titulo: "Ubicacion y contacto",
+    campos: ["comunidad", "telefonoContacto", "idioma"],
+  },
   { id: "documentos", titulo: "Documentos y salud", campos: ["dpi", "tipoSangre"] },
   {
     id: "responsable",

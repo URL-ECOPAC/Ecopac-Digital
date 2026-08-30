@@ -5,7 +5,12 @@ import { TIPOS_DE_PRESENTACION } from "../descriptores.js";
 export const COLUMNAS_PROYECTO = [
   { id: "nombre", label: "Nombre", tipo: TIPOS_DE_PRESENTACION.TEXTO, principal: true },
   // No es columna de `proyectos`: sale del join con responsable_id (perfiles).
-  { id: "responsable", label: "Responsable", tipo: TIPOS_DE_PRESENTACION.TEXTO, desde: "responsableNombre" },
+  {
+    id: "responsable",
+    label: "Responsable",
+    tipo: TIPOS_DE_PRESENTACION.TEXTO,
+    desde: "responsableNombre",
+  },
   { id: "fechaInicio", label: "Inicio", tipo: TIPOS_DE_PRESENTACION.FECHA },
   { id: "fechaFin", label: "Fin", tipo: TIPOS_DE_PRESENTACION.FECHA },
   // proyectos.estado guarda el valor del enum tal cual (00007): CHIP, no ESTADO. Se usa la
@@ -18,7 +23,12 @@ export const COLUMNAS_PROYECTO = [
 export const CAMPOS_FICHA_PROYECTO = [
   { id: "nombre", label: "Nombre", tipo: TIPOS_DE_PRESENTACION.TEXTO },
   { id: "descripcion", label: "Descripcion", tipo: TIPOS_DE_PRESENTACION.TEXTO },
-  { id: "responsable", label: "Responsable", tipo: TIPOS_DE_PRESENTACION.TEXTO, desde: "responsableNombre" },
+  {
+    id: "responsable",
+    label: "Responsable",
+    tipo: TIPOS_DE_PRESENTACION.TEXTO,
+    desde: "responsableNombre",
+  },
   { id: "fechaInicio", label: "Inicio", tipo: TIPOS_DE_PRESENTACION.FECHA },
   { id: "fechaFin", label: "Fin", tipo: TIPOS_DE_PRESENTACION.FECHA },
   { id: "estado", label: "Estado", tipo: TIPOS_DE_PRESENTACION.CHIP },

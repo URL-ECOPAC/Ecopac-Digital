@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 import {
   COLUMNAS_JORNADA,
@@ -9,7 +9,7 @@ import {
   puedeEditarJornada,
   transicionesDeJornadaDesde,
   useJornadasKanban,
-} from '@ecopac/shared';
+} from "@ecopac/shared";
 
 import {
   Card,
@@ -23,9 +23,9 @@ import {
   ScreenContainer,
   SecondaryButton,
   StatusChip,
-} from '../components';
-import { useSesionCompartida } from '../contexto/SesionProvider';
-import ModalJornada from './ModalJornada';
+} from "../components";
+import { useSesionCompartida } from "../contexto/SesionProvider";
+import ModalJornada from "./ModalJornada";
 
 // Pantalla de jornadas: el tablero kanban de tres etapas que ya nombraba el placeholder que
 // reemplaza ("Kanban de jornadas", issues #178 a #183) y que docs/ARQUITECTURA-FRONTEND.md:19-21
@@ -116,7 +116,7 @@ export default function JornadasPage() {
   // ningun parametro de busqueda de texto: se omite aqui en vez de pasarlo a un filtro que no
   // hace nada. El descriptor no se toca (lo seguiria necesitando cualquier listado futuro que si
   // busque por texto).
-  const filtrosDelTablero = FILTROS_JORNADA.filter((campo) => campo.id !== 'busqueda');
+  const filtrosDelTablero = FILTROS_JORNADA.filter((campo) => campo.id !== "busqueda");
 
   if (error) {
     return (
@@ -131,8 +131,10 @@ export default function JornadasPage() {
     <ScreenContainer scrollable={false}>
       <PageHeader
         title="Jornadas"
-        subtitle={total === 1 ? '1 jornada' : `${total} jornadas`}
-        actions={puedeCrear ? [{ label: 'Nueva jornada', onClick: () => setMostrarAlta(true) }] : []}
+        subtitle={total === 1 ? "1 jornada" : `${total} jornadas`}
+        actions={
+          puedeCrear ? [{ label: "Nueva jornada", onClick: () => setMostrarAlta(true) }] : []
+        }
       />
 
       <FilterBar
@@ -183,8 +185,8 @@ export default function JornadasPage() {
         <Modal visible onClose={cancelarFinalizacion} title="Finalizar jornada">
           <div className="alert alert-warning" role="alert">
             {confirmacionFinalizar.cantidad === 1
-              ? 'Esta jornada tiene 1 atencion registrada sin consulta todavia.'
-              : `Esta jornada tiene ${confirmacionFinalizar.cantidad} atenciones registradas sin consulta todavia.`}{' '}
+              ? "Esta jornada tiene 1 atencion registrada sin consulta todavia."
+              : `Esta jornada tiene ${confirmacionFinalizar.cantidad} atenciones registradas sin consulta todavia.`}{" "}
             ¿Confirmas finalizarla de todas formas?
           </div>
           <div className="d-flex justify-content-end gap-2 mt-3">
@@ -237,7 +239,7 @@ const ETIQUETAS = Object.fromEntries(
  * la tarjeta y el chip de su propio encabezado sean siempre el mismo color por construccion.
  */
 function colorDeEstado(estado) {
-  return `var(--estado-${String(estado).replace(/ /g, '-')}, var(--color-secondary))`;
+  return `var(--estado-${String(estado).replace(/ /g, "-")}, var(--color-secondary))`;
 }
 
 /**
@@ -285,7 +287,7 @@ function TarjetaJornada({
   onMover,
   onVerDetalle,
 }) {
-  const tienePacientes = Object.prototype.hasOwnProperty.call(jornada, 'pacientesAtendidos');
+  const tienePacientes = Object.prototype.hasOwnProperty.call(jornada, "pacientesAtendidos");
 
   const esReapertura = jornada.estado === ESTADOS_JORNADA.FINALIZADA;
   const [destino] = transicionesDeJornadaDesde(jornada.estado);
@@ -297,14 +299,14 @@ function TarjetaJornada({
         <span className="fw-semibold">{jornada.nombre}</span>
         <StatusChip status={jornada.estado} />
       </div>
-      <div className="small" style={{ color: 'var(--color-text-muted)' }}>
+      <div className="small" style={{ color: "var(--color-text-muted)" }}>
         <div>{formatearFechaCorta(jornada.fecha)}</div>
-        <div>{jornada.comunidad || '—'}</div>
+        <div>{jornada.comunidad || "—"}</div>
         <div>
-          {ETIQUETAS.responsable}: {jornada.responsable || '—'}
+          {ETIQUETAS.responsable}: {jornada.responsable || "—"}
         </div>
         <div>
-          {ETIQUETAS.pacientesAtendidos}: {tienePacientes ? jornada.pacientesAtendidos : '—'}
+          {ETIQUETAS.pacientesAtendidos}: {tienePacientes ? jornada.pacientesAtendidos : "—"}
         </div>
       </div>
 

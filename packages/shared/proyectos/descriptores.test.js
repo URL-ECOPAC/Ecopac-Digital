@@ -6,7 +6,12 @@ import { describe, expect, it } from "vitest";
 import { labels } from "@ecopac/ui-tokens";
 
 import { TIPOS_DE_CAMPO, TIPOS_DE_FILTRO, TIPOS_DE_PRESENTACION } from "../descriptores.js";
-import { CAMPOS_HITO, CAMPOS_PROYECTO, CAMPOS_SEGUIMIENTO, OPCIONES_ESTADO_PROYECTO } from "./campos.js";
+import {
+  CAMPOS_HITO,
+  CAMPOS_PROYECTO,
+  CAMPOS_SEGUIMIENTO,
+  OPCIONES_ESTADO_PROYECTO,
+} from "./campos.js";
 import {
   CAMPOS_FICHA_PROYECTO,
   COLUMNAS_HITO,
@@ -131,12 +136,16 @@ describe("filtros.js solo usa el vocabulario de TIPOS_DE_FILTRO", () => {
 
 describe("los catalogos de estado reflejan estado_proyecto (00007)", () => {
   it("OPCIONES_ESTADO_PROYECTO tiene los cuatro valores de TODOS_LOS_ESTADOS_PROYECTO, con etiqueta de ui-tokens", () => {
-    expect(OPCIONES_ESTADO_PROYECTO.map((o) => o.value).sort()).toEqual([...TODOS_LOS_ESTADOS_PROYECTO].sort());
+    expect(OPCIONES_ESTADO_PROYECTO.map((o) => o.value).sort()).toEqual(
+      [...TODOS_LOS_ESTADOS_PROYECTO].sort(),
+    );
 
     expect(OPCIONES_ESTADO_PROYECTO.find((o) => o.value === "planificado").label).toBe(
       labels.proyectoPlanificado,
     );
-    expect(OPCIONES_ESTADO_PROYECTO.find((o) => o.value === "en curso").label).toBe(labels.jornadaEnCurso);
+    expect(OPCIONES_ESTADO_PROYECTO.find((o) => o.value === "en curso").label).toBe(
+      labels.jornadaEnCurso,
+    );
     expect(OPCIONES_ESTADO_PROYECTO.find((o) => o.value === "finalizado").label).toBe(
       labels.proyectoFinalizado,
     );

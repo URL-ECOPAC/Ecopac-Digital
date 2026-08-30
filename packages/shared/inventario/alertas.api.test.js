@@ -20,9 +20,8 @@ vi.mock("../api/cliente.js", () => ({
 }));
 
 const { CODIGOS_DE_ERROR_DE_SUPABASE } = await import("../api/errores-de-supabase.js");
-const { listarAlertas, historialAlertas, atenderAlerta, ACCIONES_DE_ALERTA } = await import(
-  "./alertas.api.js"
-);
+const { listarAlertas, historialAlertas, atenderAlerta, ACCIONES_DE_ALERTA } =
+  await import("./alertas.api.js");
 
 /** Doble de un cliente de Supabase que resuelve con una unica respuesta configurada. */
 function crearCliente({ respuesta = { data: [], error: null } } = {}) {
@@ -124,9 +123,18 @@ describe("listarAlertas", () => {
     dobles.cliente = crearCliente({
       respuesta: {
         data: [
-          filaDeAlerta({ id: "lejos", lote: { ...filaDeAlerta().lote, fechaVencimiento: "2027-01-01" } }),
-          filaDeAlerta({ id: "vencida", lote: { ...filaDeAlerta().lote, fechaVencimiento: "2020-01-01" } }),
-          filaDeAlerta({ id: "cerca", lote: { ...filaDeAlerta().lote, fechaVencimiento: "2026-01-01" } }),
+          filaDeAlerta({
+            id: "lejos",
+            lote: { ...filaDeAlerta().lote, fechaVencimiento: "2027-01-01" },
+          }),
+          filaDeAlerta({
+            id: "vencida",
+            lote: { ...filaDeAlerta().lote, fechaVencimiento: "2020-01-01" },
+          }),
+          filaDeAlerta({
+            id: "cerca",
+            lote: { ...filaDeAlerta().lote, fechaVencimiento: "2026-01-01" },
+          }),
         ],
         error: null,
       },

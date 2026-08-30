@@ -69,7 +69,10 @@ export function resolverRangoDePreset(preset, hoy = new Date()) {
     case PRESETS_DE_RANGO.ESTE_MES:
       return { min: aCadenaFecha(new Date(hoy.getFullYear(), hoy.getMonth(), 1)), max };
     case PRESETS_DE_RANGO.ULTIMO_TRIMESTRE:
-      return { min: aCadenaFecha(new Date(hoy.getFullYear(), hoy.getMonth() - 3, hoy.getDate())), max };
+      return {
+        min: aCadenaFecha(new Date(hoy.getFullYear(), hoy.getMonth() - 3, hoy.getDate())),
+        max,
+      };
     case PRESETS_DE_RANGO.ESTE_ANIO:
       return { min: aCadenaFecha(new Date(hoy.getFullYear(), 0, 1)), max };
     default:
@@ -194,10 +197,7 @@ export function aParametrosDeReportePacientes(filtrosAplicados) {
  *
  * @param {{ retardoMs?: number, valoresIniciales?: { valores: object, presetActivo: string|null } }} [opciones]
  */
-export function useFiltrosReportes({
-  retardoMs = RETARDO_DE_FILTROS_MS,
-  valoresIniciales,
-} = {}) {
+export function useFiltrosReportes({ retardoMs = RETARDO_DE_FILTROS_MS, valoresIniciales } = {}) {
   const [valores, setValores] = useState(valoresIniciales?.valores ?? FILTROS_REPORTES_VACIOS);
   const [filtrosAplicados, setFiltrosAplicados] = useState(
     valoresIniciales?.valores ?? FILTROS_REPORTES_VACIOS,
@@ -259,8 +259,11 @@ export function useFiltrosReportes({
       setCargandoCatalogos(true);
       setErrorDeCatalogos(null);
 
-      const [{ comunidades, error: errorDeComunidades }, { jornadas, error: errorDeJornadas }, { proyectos, error: errorDeProyectos }] =
-        await Promise.all([listarComunidades(), listarJornadas(), listarProyectos()]);
+      const [
+        { comunidades, error: errorDeComunidades },
+        { jornadas, error: errorDeJornadas },
+        { proyectos, error: errorDeProyectos },
+      ] = await Promise.all([listarComunidades(), listarJornadas(), listarProyectos()]);
 
       if (cancelado) return;
 

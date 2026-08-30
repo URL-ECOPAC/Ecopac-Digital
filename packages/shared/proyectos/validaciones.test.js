@@ -19,11 +19,7 @@ import {
   validarCambioDeEstadoProyecto,
   validarProyecto,
 } from "./validaciones.js";
-import {
-  permisosDeProyectos,
-  puedeAdministrarProyectos,
-  puedeVerProyectos,
-} from "./permisos.js";
+import { permisosDeProyectos, puedeAdministrarProyectos, puedeVerProyectos } from "./permisos.js";
 
 /** Proyecto valido minimo, para que cada prueba altere solo el campo que le interesa. */
 function proyectoValido(cambios = {}) {
@@ -65,8 +61,9 @@ describe("validarProyecto", () => {
 
   it("acepta que un proyecto empiece y termine el mismo dia", () => {
     // Con new Date() en vez de aFechaLocal() esto podria fallar por el desfase de zona horaria.
-    expect(validarProyecto(proyectoValido({ fechaInicio: "2026-03-10", fechaFin: "2026-03-10" })))
-      .toEqual({});
+    expect(
+      validarProyecto(proyectoValido({ fechaInicio: "2026-03-10", fechaFin: "2026-03-10" })),
+    ).toEqual({});
   });
 
   it("las dos fechas son opcionales", () => {
@@ -128,7 +125,9 @@ describe("transiciones de estado", () => {
     // estado terminal que para uno que se olvidaron de declarar. Los dos casos de arriba
     // -"finalizado y cancelado son terminales" y "un estado desconocido"- pasarian identicos si
     // el mapa se quedara vacio.
-    expect(Object.keys(TRANSICIONES_PROYECTO).sort()).toEqual([...TODOS_LOS_ESTADOS_PROYECTO].sort());
+    expect(Object.keys(TRANSICIONES_PROYECTO).sort()).toEqual(
+      [...TODOS_LOS_ESTADOS_PROYECTO].sort(),
+    );
   });
 
   it("ningun destino declarado cae fuera del enum", () => {

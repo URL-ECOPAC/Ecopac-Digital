@@ -181,9 +181,9 @@ describe("contarPersonalPorRol", () => {
 
 describe("mensajeDeErrorDeAsignacion", () => {
   it("reemplaza el mensaje generico de unicidad por uno especifico de esta pantalla", () => {
-    expect(mensajeDeErrorDeAsignacion({ codigo: "unicidad", mensaje: "Ese registro ya existe." })).toBe(
-      "Esta persona ya esta asignada a esta jornada.",
-    );
+    expect(
+      mensajeDeErrorDeAsignacion({ codigo: "unicidad", mensaje: "Ese registro ya existe." }),
+    ).toBe("Esta persona ya esta asignada a esta jornada.");
   });
 
   it("deja pasar tal cual cualquier otro codigo", () => {

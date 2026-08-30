@@ -5,7 +5,11 @@ import { CAMPOS_PROYECTO } from "./campos.js";
 import { validarProyecto } from "./validaciones.js";
 import { puedeAdministrarProyectos } from "./permisos.js";
 
-export function useProyectosSociales({ usuarioRol, proyectosIniciales = [], jornadasIniciales = [] }) {
+export function useProyectosSociales({
+  usuarioRol,
+  proyectosIniciales = [],
+  jornadasIniciales = [],
+}) {
   const [proyectos] = useState(proyectosIniciales);
   const [jornadas] = useState(jornadasIniciales);
   const [filtrosState, setFiltrosState] = useState({ estado: "", responsable: "" });
@@ -20,7 +24,8 @@ export function useProyectosSociales({ usuarioRol, proyectosIniciales = [], jorn
   const proyectosFiltrados = useMemo(() => {
     return proyectos.filter((p) => {
       const coincideEstado = !filtrosState.estado || p.estado === filtrosState.estado;
-      const coincideResponsable = !filtrosState.responsable || p.responsable === filtrosState.responsable;
+      const coincideResponsable =
+        !filtrosState.responsable || p.responsable === filtrosState.responsable;
       return coincideEstado && coincideResponsable;
     });
   }, [proyectos, filtrosState]);

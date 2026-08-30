@@ -32,7 +32,11 @@ const PACIENTE = {
   condicionesCronicas: [
     { id: "c-1", estado: ESTADOS_CONDICION_CRONICA.ACTIVA, condicion: { nombre: "Diabetes" } },
     { id: "c-2", estado: ESTADOS_CONDICION_CRONICA.RESUELTA, condicion: { nombre: "Anemia" } },
-    { id: "c-3", estado: ESTADOS_CONDICION_CRONICA.CONTROLADA, condicion: { nombre: "Hipertension" } },
+    {
+      id: "c-3",
+      estado: ESTADOS_CONDICION_CRONICA.CONTROLADA,
+      condicion: { nombre: "Hipertension" },
+    },
   ],
 };
 
@@ -65,9 +69,7 @@ describe("resolverPestaniaDeFicha", () => {
   });
 
   it("cae a la de por defecto si el rol no puede ver esa pestania", () => {
-    expect(resolverPestaniaDeFicha("historial", ROLES.VOLUNTARIO)).toBe(
-      PESTANIA_FICHA_POR_DEFECTO,
-    );
+    expect(resolverPestaniaDeFicha("historial", ROLES.VOLUNTARIO)).toBe(PESTANIA_FICHA_POR_DEFECTO);
   });
 });
 

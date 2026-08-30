@@ -1,11 +1,11 @@
-import { createPortal } from 'react-dom';
+import { createPortal } from "react-dom";
 
-import { datosDeRecetaImprimible, formatearFechaCorta } from '@ecopac/shared';
+import { datosDeRecetaImprimible, formatearFechaCorta } from "@ecopac/shared";
 
 function Dato({ etiqueta, valor }) {
   return (
     <p className="receta-imprimible__dato">
-      <span className="receta-imprimible__etiqueta">{etiqueta}:</span> {valor ?? '—'}
+      <span className="receta-imprimible__etiqueta">{etiqueta}:</span> {valor ?? "—"}
     </p>
   );
 }
@@ -20,15 +20,15 @@ export default function RecetaImprimible({ receta, paciente }) {
         <h1 className="receta-imprimible__organizacion">{datos.organizacion}</h1>
         <p className="receta-imprimible__documento">{datos.documento}</p>
         <p className="receta-imprimible__folio">
-          Folio {datos.folio ?? 'sin folio'} · {formatearFechaCorta(datos.fecha)}
+          Folio {datos.folio ?? "sin folio"} · {formatearFechaCorta(datos.fecha)}
         </p>
       </header>
 
       {datos.anulada && (
         <p className="receta-imprimible__anulada">
           RECETA ANULADA
-          {datos.anuladaEn ? ` el ${formatearFechaCorta(datos.anuladaEn)}` : ''}
-          {datos.motivoAnulacion ? `: ${datos.motivoAnulacion}` : ''}
+          {datos.anuladaEn ? ` el ${formatearFechaCorta(datos.anuladaEn)}` : ""}
+          {datos.motivoAnulacion ? `: ${datos.motivoAnulacion}` : ""}
         </p>
       )}
 
@@ -77,7 +77,7 @@ export default function RecetaImprimible({ receta, paciente }) {
 
       <footer className="receta-imprimible__firma">
         <span className="receta-imprimible__linea" />
-        <p>{datos.medico ?? 'Firma del medico'}</p>
+        <p>{datos.medico ?? "Firma del medico"}</p>
       </footer>
     </article>,
     document.body,

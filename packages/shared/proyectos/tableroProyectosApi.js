@@ -19,7 +19,10 @@ function normalizarError(error) {
  */
 export async function obtenerProyectosTablero(client) {
   if (!client) {
-    return { data: null, error: normalizarError(new Error("Cliente de Supabase no proporcionado")) };
+    return {
+      data: null,
+      error: normalizarError(new Error("Cliente de Supabase no proporcionado")),
+    };
   }
 
   try {
@@ -57,12 +60,17 @@ export async function moverProyectoAEtapa({ proyectoId, nuevaEtapa, usuarioRol }
   if (!puedeAdministrarProyectos(usuarioRol)) {
     return {
       data: null,
-      error: normalizarError(new Error("Solo la administradora puede cambiar la etapa de un proyecto")),
+      error: normalizarError(
+        new Error("Solo la administradora puede cambiar la etapa de un proyecto"),
+      ),
     };
   }
 
   // Se delega a la primitiva que ya valida el trigger y transiciones permitidas
-  const resultado = await cambiarEstadoProyecto({ id: proyectoId, nuevoEstado: nuevaEtapa }, client);
+  const resultado = await cambiarEstadoProyecto(
+    { id: proyectoId, nuevoEstado: nuevaEtapa },
+    client,
+  );
   return resultado;
 }
 
@@ -85,7 +93,10 @@ export async function reordenarProyectosColumna({ ordenamiento, usuarioRol }, cl
   }
 
   if (!client) {
-    return { data: null, error: normalizarError(new Error("Cliente de Supabase no proporcionado")) };
+    return {
+      data: null,
+      error: normalizarError(new Error("Cliente de Supabase no proporcionado")),
+    };
   }
 
   try {
