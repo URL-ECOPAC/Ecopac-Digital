@@ -82,3 +82,40 @@ export function consultarExistenciasDeBodega(bodegaId, opciones = {}) {
   if (!bodegaId) return Promise.resolve({ existencias: [], total: 0, error: null });
   return consultarExistencias({ ...opciones, bodega: bodegaId });
 }
+
+/**
+ * Lotes concretos con existencia de un medicamento, con su bodega.
+ *
+ * consultarExistencias() agrega por medicamento y devuelve `lotesDisponibles` como un CONTEO,
+ * no como una lista: sirve para buscar, no para recetar. Para generar una receta hace falta el
+ * lote y la bodega concretos (issue #138), que es lo que devuelve esta funcion.
+ *
+ * La vista ya excluye lo vencido y lo que esta en cero (00047), asi que todo lo que vuelve de
+ * aqui se puede entregar.
+ *
+ * @param {string} medicamentoId
+ * @param {{ bodega?: string }} [opciones]
+ * @returns {Promise<{ lotes: object[], error: object|null }>}
+ */
+export async function consultarLotesDisponibles(medicamentoId, { bodega } = {}) {
+  if (!medicamentoId) return { lotes: [], error: null };
+
+  try {
+    let consulta = obtenerSupabase()
+      .from("vista_lotes_disponibles")
+      .select(
+        "loteId:lote_id, medicamentoId:medicamento_id, numeroLote:numero_lote, fechaVencimiento:fecha_vencimiento, cantidadDisponible:cantidad_disponible, bodegaId:bodega_id, bodega:bodega_nombre",
+      )
+      .eq("medicamento_id", medicamentoId)
+      .order("fecha_vencimiento", { ascending: true });
+
+    if (bodega) consulta = consulta.eq("bodega_id", bodega);
+
+    const { data, error } = await consulta;
+
+    if (error) return { lotes: [], error: normalizarError(error) };
+    return { lotes: data ?? [], error: null };
+  } catch (error) {
+    return { lotes: [], error: normalizarError(error) };
+  }
+}

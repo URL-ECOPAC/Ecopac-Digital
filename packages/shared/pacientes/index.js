@@ -53,3 +53,4 @@ export * from "./usePacientesCronicos.js";
 export * from "./useRegistroTriaje.js";
 export * from "./consultas.secciones.js";
 export * from "./useRegistroConsulta.js";
+export * from "./useGeneracionReceta.js";
