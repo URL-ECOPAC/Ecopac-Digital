@@ -124,6 +124,17 @@ export function puedeAnularReceta(rol, receta, perfilId) {
 }
 
 /**
+ * Puede fusionar dos expedientes duplicados.
+ *
+ * Espejo del chequeo interno de fn_fusionar_pacientes (00101): solo administrador, mas estrecho
+ * que puedeEditarPaciente (que tambien alcanza a medico). La deteccion de posibles duplicados no
+ * tiene guarda propia: la ve quien ya puede ver pacientes (puedeVerPacientes).
+ */
+export function puedeFusionarPacientes(rol) {
+  return esAdministrador(rol);
+}
+
+/**
  * Permisos de un rol, en la forma que consume una pantalla.
  *
  * Se devuelven juntos para que un hook no tenga que llamar a las funciones sueltas ni acordarse
@@ -141,5 +152,6 @@ export function permisosDePacientes(rol) {
     puedeVerHistorial: puedeVerHistorial(rol),
     puedeTomarTriaje: puedeTomarTriaje(rol),
     puedeCorregirTriaje: puedeCorregirTriaje(rol),
+    puedeFusionarPacientes: puedeFusionarPacientes(rol),
   };
 }
