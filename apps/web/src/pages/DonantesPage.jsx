@@ -1,15 +1,5 @@
 import { useDonantesPage } from "@ecopac/shared";
-import {
-  Container,
-  Row,
-  Col,
-  Button,
-  Table,
-  Form,
-  Card,
-  Alert,
-  Spinner,
-} from "react-bootstrap";
+import { Container, Row, Col, Button, Table, Form, Card, Alert, Spinner } from "react-bootstrap";
 
 export default function DonantesPage({ usuarioRol }) {
   const {
@@ -32,9 +22,7 @@ export default function DonantesPage({ usuarioRol }) {
   if (!permisos?.tieneAccesoLectura) {
     return (
       <Container className="my-4">
-        <Alert variant="danger">
-          Acceso denegado: No cuenta con permisos para ver donantes.
-        </Alert>
+        <Alert variant="danger">Acceso denegado: No cuenta con permisos para ver donantes.</Alert>
       </Container>
     );
   }
@@ -60,10 +48,7 @@ export default function DonantesPage({ usuarioRol }) {
           />
         </Col>
         <Col md={6}>
-          <Form.Select
-            value={filtroTipo}
-            onChange={(e) => setFiltroTipo(e.target.value)}
-          >
+          <Form.Select value={filtroTipo} onChange={(e) => setFiltroTipo(e.target.value)}>
             <option value="todos">Todos los tipos</option>
             <option value="individual">Individual</option>
             <option value="empresa">Empresa</option>
@@ -101,22 +86,14 @@ export default function DonantesPage({ usuarioRol }) {
               </tr>
             ) : (
               donantes.map((row) => (
-                <tr
-                  key={row.id}
-                  onClick={() => verFicha(row.id)}
-                  style={{ cursor: "pointer" }}
-                >
+                <tr key={row.id} onClick={() => verFicha(row.id)} style={{ cursor: "pointer" }}>
                   {(columnas || []).map((col) => {
                     const key = col.key || col.accessor;
                     return <td key={key}>{row[key]}</td>;
                   })}
                   {permisos?.puedeEscribir && (
                     <td onClick={(e) => e.stopPropagation()}>
-                      <Button
-                        size="sm"
-                        variant="outline-primary"
-                        onClick={() => abrirEdicion(row)}
-                      >
+                      <Button size="sm" variant="outline-primary" onClick={() => abrirEdicion(row)}>
                         Editar
                       </Button>
                     </td>
@@ -130,9 +107,7 @@ export default function DonantesPage({ usuarioRol }) {
 
       {donanteSeleccionado && !modalAbierto && (
         <Card className="mt-4">
-          <Card.Header as="h5">
-            Ficha: {donanteSeleccionado.nombre}
-          </Card.Header>
+          <Card.Header as="h5">Ficha: {donanteSeleccionado.nombre}</Card.Header>
           <Card.Body>
             <Card.Text>
               <strong>Tipo:</strong> {donanteSeleccionado.tipo}
@@ -144,8 +119,7 @@ export default function DonantesPage({ usuarioRol }) {
             <ul className="mb-0">
               {(donanteSeleccionado.donaciones || []).map((donacion) => (
                 <li key={donacion.id}>
-                  {donacion.fecha} -{" "}
-                  {donacion.monto ? `$${donacion.monto}` : donacion.descripcion}
+                  {donacion.fecha} - {donacion.monto ? `$${donacion.monto}` : donacion.descripcion}
                 </li>
               ))}
             </ul>

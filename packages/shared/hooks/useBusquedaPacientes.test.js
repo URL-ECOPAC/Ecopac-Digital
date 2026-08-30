@@ -65,7 +65,11 @@ describe("combinarResultados", () => {
   it("no repite a alguien que ya estaba en pantalla", () => {
     // Si se registra un paciente mientras se pagina, las filas se recorren y uno de la pagina 1
     // puede reaparecer en la 2.
-    const combinados = combinarResultados(PAGINA_1, [{ id: "p2", nombres: "Luis" }, ...PAGINA_2], 2);
+    const combinados = combinarResultados(
+      PAGINA_1,
+      [{ id: "p2", nombres: "Luis" }, ...PAGINA_2],
+      2,
+    );
 
     expect(combinados.map((p) => p.id)).toEqual(["p1", "p2", "p3", "p4"]);
   });

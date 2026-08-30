@@ -16,10 +16,11 @@ export function CatalogoMedicamentosScreen({
   navigation,
 }) {
   // Manejo seguro del Hook para evitar colapsos por undefined
-  const hookState = useCatalogoMedicamentos({
-    inventarioInicial: inventarioInicial || [],
-    bodegas: bodegas || [],
-  }) || {};
+  const hookState =
+    useCatalogoMedicamentos({
+      inventarioInicial: inventarioInicial || [],
+      bodegas: bodegas || [],
+    }) || {};
 
   const {
     busqueda = "",
@@ -65,7 +66,8 @@ export function CatalogoMedicamentosScreen({
     if (!item) return null;
 
     const codigo = item.codigo || item.id || "REF-000";
-    const descripcion = item.descripcion || item.nombre || item.nombre_comercial || "Sin descripción";
+    const descripcion =
+      item.descripcion || item.nombre || item.nombre_comercial || "Sin descripción";
     const lote = item.lote || item.serie || "S/L";
     const bodega = item.bodega || "Central";
     const caducidad = item.caducidad || item.fechaVencimiento || "N/A";
@@ -176,7 +178,9 @@ export function CatalogoMedicamentosScreen({
               style={[styles.pill, categoriaSeleccionada === cat && styles.pillActive]}
               onPress={() => setCategoriaSeleccionada(cat)}
             >
-              <Text style={[styles.pillText, categoriaSeleccionada === cat && styles.pillTextActive]}>
+              <Text
+                style={[styles.pillText, categoriaSeleccionada === cat && styles.pillTextActive]}
+              >
                 {cat}
               </Text>
             </TouchableOpacity>
@@ -227,17 +231,45 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   bodegasContainer: { flexDirection: "row", gap: 6, marginBottom: 10 },
-  bodegaBtn: { flex: 1, paddingVertical: 6, borderRadius: 8, backgroundColor: "#ffffff", alignItems: "center", borderWidth: 1, borderColor: "#e2e8f0" },
+  bodegaBtn: {
+    flex: 1,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: "#ffffff",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+  },
   bodegaBtnActiva: { backgroundColor: "#dcfce7", borderColor: "#86efac" },
   bodegaBtnText: { fontSize: 11, color: "#64748b" },
   bodegaBtnTextActiva: { color: "#166534", fontWeight: "bold" },
-  pill: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, backgroundColor: "#ffffff", marginRight: 8, borderWidth: 1, borderColor: "#e2e8f0" },
+  pill: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: "#ffffff",
+    marginRight: 8,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+  },
   pillActive: { backgroundColor: "#dcfce7", borderColor: "#86efac" },
   pillText: { color: "#64748b", fontSize: 11 },
   pillTextActive: { color: "#166534", fontWeight: "bold" },
-  itemCard: { backgroundColor: "#ffffff", borderRadius: 12, padding: 12, marginBottom: 10, borderWidth: 1, borderColor: "#e2e8f0" },
+  itemCard: {
+    backgroundColor: "#ffffff",
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+  },
   cardNoDisponible: { opacity: 0.6 },
-  cardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 6 },
+  cardHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 6,
+  },
   codigoText: { color: "#059669", fontWeight: "bold", fontSize: 12 },
   badgeBase: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 12 },
   badgeDisponible: { backgroundColor: "#dcfce7" },
@@ -252,7 +284,14 @@ const styles = StyleSheet.create({
   detalleLabel: { fontSize: 11, color: "#64748b" },
   detalleVal: { color: "#0f172a" },
   bodegaHighlight: { color: "#059669", fontWeight: "bold" },
-  cardFooter: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-end", borderTopWidth: 1, borderTopColor: "#f1f5f9", paddingTop: 8 },
+  cardFooter: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-end",
+    borderTopWidth: 1,
+    borderTopColor: "#f1f5f9",
+    paddingTop: 8,
+  },
   caducidadLabel: { fontSize: 10, color: "#94a3b8" },
   caducidadValue: { fontSize: 11, color: "#334155", fontWeight: "500" },
   stockText: { fontSize: 14, fontWeight: "bold", color: "#0f172a" },

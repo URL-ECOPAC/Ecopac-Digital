@@ -4,14 +4,14 @@ import {
   accionesDisponibles,
   permisoGobiernaAlgunaPolitica,
   useGestionPermisos,
-} from '@ecopac/shared';
+} from "@ecopac/shared";
 
-import ErrorState from '../components/ErrorState';
-import LoadingState from '../components/LoadingState';
-import Modal from '../components/Modal';
-import PrimaryButton from '../components/PrimaryButton';
-import SecondaryButton from '../components/SecondaryButton';
-import StatusChip from '../components/StatusChip';
+import ErrorState from "../components/ErrorState";
+import LoadingState from "../components/LoadingState";
+import Modal from "../components/Modal";
+import PrimaryButton from "../components/PrimaryButton";
+import SecondaryButton from "../components/SecondaryButton";
+import StatusChip from "../components/StatusChip";
 
 // Modal de permisos individuales de un usuario (issue #108), abierto DIRECTO desde la fila del
 // listado en VoluntariosPage.jsx -no desde adentro de ModalEdicionUsuario-: es una accion
@@ -31,10 +31,18 @@ const ETIQUETAS_MODULO = Object.fromEntries(
 );
 
 export default function ModalPermisosUsuario({ perfil, onClose }) {
-  const { modulos, cargando, error, claveEnProceso, avisoSinEfecto, conceder, revocar, restablecer } =
-    useGestionPermisos(perfil?.id);
+  const {
+    modulos,
+    cargando,
+    error,
+    claveEnProceso,
+    avisoSinEfecto,
+    conceder,
+    revocar,
+    restablecer,
+  } = useGestionPermisos(perfil?.id);
 
-  const nombre = [perfil?.nombres, perfil?.apellidos].filter(Boolean).join(' ');
+  const nombre = [perfil?.nombres, perfil?.apellidos].filter(Boolean).join(" ");
 
   return (
     <Modal visible onClose={onClose} title={`Permisos de ${nombre}`} size="xl">
@@ -57,7 +65,9 @@ export default function ModalPermisosUsuario({ perfil, onClose }) {
 
       {cargando && <LoadingState />}
 
-      {!cargando && !error && modulos.length === 0 && <ErrorState message="No hay permisos que mostrar." />}
+      {!cargando && !error && modulos.length === 0 && (
+        <ErrorState message="No hay permisos que mostrar." />
+      )}
 
       {!cargando &&
         modulos.map(({ modulo, permisos }) => (
@@ -82,7 +92,7 @@ export default function ModalPermisosUsuario({ perfil, onClose }) {
                       <span className="fw-semibold">{permiso.descripcion || permiso.clave}</span>
                       <StatusChip
                         status={permiso.origen}
-                        label={esIndividual ? 'Individual' : 'Del rol'}
+                        label={esIndividual ? "Individual" : "Del rol"}
                       />
                     </div>
 

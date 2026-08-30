@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 import {
   COLUMNAS_PACIENTE,
@@ -7,17 +7,17 @@ import {
   puedeRegistrarPaciente,
   puedeVerCondiciones,
   usePacientesListado,
-} from '@ecopac/shared';
+} from "@ecopac/shared";
 
-import DataList from '../components/DataList';
-import EmptyState from '../components/EmptyState';
-import ErrorState from '../components/ErrorState';
-import FilterBar from '../components/FilterBar';
-import PageHeader from '../components/PageHeader';
-import ScreenContainer from '../components/ScreenContainer';
-import { useSesionCompartida } from '../contexto/SesionProvider';
-import ModalAltaPaciente from './ModalAltaPaciente';
-import SecondaryButton from '../components/SecondaryButton';
+import DataList from "../components/DataList";
+import EmptyState from "../components/EmptyState";
+import ErrorState from "../components/ErrorState";
+import FilterBar from "../components/FilterBar";
+import PageHeader from "../components/PageHeader";
+import ScreenContainer from "../components/ScreenContainer";
+import { useSesionCompartida } from "../contexto/SesionProvider";
+import ModalAltaPaciente from "./ModalAltaPaciente";
+import SecondaryButton from "../components/SecondaryButton";
 
 // Pantalla principal del modulo de pacientes (issue #124). Solo presentacion: los datos, los
 // filtros, la paginacion, el calculo de la edad y los catalogos salen de usePacientesListado(),
@@ -58,14 +58,14 @@ export default function PacientesPage() {
 
   if (puedeVerCondiciones(rol)) {
     acciones.push({
-      label: 'Pacientes cronicos',
-      onClick: () => navigate('/pacientes/cronicos'),
-      variant: 'secondary',
+      label: "Pacientes cronicos",
+      onClick: () => navigate("/pacientes/cronicos"),
+      variant: "secondary",
     });
   }
 
   if (puedeRegistrarPaciente(rol)) {
-    acciones.push({ label: 'Nuevo paciente', onClick: () => setRegistrando(true) });
+    acciones.push({ label: "Nuevo paciente", onClick: () => setRegistrando(true) });
   }
 
   if (error) {
@@ -78,14 +78,14 @@ export default function PacientesPage() {
   }
 
   const hayFiltrosActivos = Object.values(filtros).some(
-    (valor) => valor !== null && valor !== undefined && valor !== '',
+    (valor) => valor !== null && valor !== undefined && valor !== "",
   );
 
   return (
     <ScreenContainer>
       <PageHeader
         title="Gestion de pacientes"
-        subtitle={total === 1 ? '1 paciente' : `${total} pacientes`}
+        subtitle={total === 1 ? "1 paciente" : `${total} pacientes`}
         actions={acciones}
       />
 
@@ -114,7 +114,7 @@ export default function PacientesPage() {
           ) : (
             <EmptyState
               message="Todavia no hay pacientes registrados."
-              actionLabel={puedeRegistrarPaciente(rol) ? 'Registrar el primero' : undefined}
+              actionLabel={puedeRegistrarPaciente(rol) ? "Registrar el primero" : undefined}
               onAction={puedeRegistrarPaciente(rol) ? () => setRegistrando(true) : undefined}
             />
           )
@@ -126,7 +126,7 @@ export default function PacientesPage() {
       {hayMas && (
         <div className="d-flex justify-content-center mt-3">
           <SecondaryButton
-            title={cargando ? 'Cargando...' : 'Cargar mas pacientes'}
+            title={cargando ? "Cargando..." : "Cargar mas pacientes"}
             onClick={cargarMas}
             disabled={cargando}
           />

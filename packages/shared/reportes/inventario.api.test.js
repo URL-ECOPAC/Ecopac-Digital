@@ -11,9 +11,7 @@ vi.mock("../api/cliente.js", () => ({
   },
 }));
 
-const { obtenerReporteDeInventario, ESTADOS_DE_VENCIMIENTO } = await import(
-  "./inventario.api.js"
-);
+const { obtenerReporteDeInventario, ESTADOS_DE_VENCIMIENTO } = await import("./inventario.api.js");
 
 function crearCliente({ respuesta = { data: [], error: null } } = {}) {
   const llamadas = [];
@@ -105,11 +103,7 @@ describe("obtenerReporteDeInventario", () => {
 
     const amoxicilina = reporte.medicamentos.find((m) => m.medicamentoId === "med-1");
     expect(amoxicilina.lotes).toHaveLength(3);
-    expect(amoxicilina.lotes.map((l) => l.bodega)).toEqual([
-      "Bodega A",
-      "Bodega B",
-      "Bodega A",
-    ]);
+    expect(amoxicilina.lotes.map((l) => l.bodega)).toEqual(["Bodega A", "Bodega B", "Bodega A"]);
   });
 
   it("lo vencido se reporta aparte y NO engrosa lo disponible", async () => {
@@ -137,7 +131,10 @@ describe("obtenerReporteDeInventario", () => {
 
   it("un lote que vence hoy cuenta como disponible", async () => {
     dobles.cliente = crearCliente({
-      respuesta: { data: [fila({ cantidad: 7, vence: "2026-06-15", lote: "L9", bodega: "A" })], error: null },
+      respuesta: {
+        data: [fila({ cantidad: 7, vence: "2026-06-15", lote: "L9", bodega: "A" })],
+        error: null,
+      },
     });
 
     const { reporte } = await obtenerReporteDeInventario({}, HOY);

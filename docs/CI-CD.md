@@ -21,10 +21,12 @@ Un solo job, **Lint y build**, que corre en este orden:
 
 1. **Guarda de esquema**: `packages/shared` contra `supabase/migrations/` (issue #492).
 2. `npm run lint` en todos los workspaces.
-3. `npm test` en todos los workspaces que tengan el script (issue #218), que desde la issue
-   **#219** comprueba ademas **cobertura de las validaciones**.
-4. **Resumen de las pruebas** en la pagina de la corrida (issue #223).
-5. Build de la web con los secrets del ambiente que corresponde a la rama.
+3. `npm run format:check` con Prettier, alcance JS/JSX/TS/TSX/JSON (issue #515).
+4. `npm test` en todos los workspaces que tengan el script (issue #218), que desde la issue
+   **#219** comprueba ademas **cobertura de las validaciones**. El mismo paso avisa (issue
+   #515) que workspaces se saltaron por no tener script `test`.
+5. **Resumen de las pruebas** en la pagina de la corrida (issue #223).
+6. Build de la web con los secrets del ambiente que corresponde a la rama.
 
 Cada paso va antes del siguiente por lo que cuesta: la guarda de esquema es analisis de texto y
 tarda un segundo; una prueba rota se ve en segundos, sin esperar a que la web compile. Y todo va
@@ -78,6 +80,24 @@ Detalles que conviene conocer antes de tocarlo:
 - Se eligio el resumen y no un comentario en el PR porque escribir en `$GITHUB_STEP_SUMMARY` no
   pide permisos: el workflow sigue con `contents: read`. Comentar obligaria a
   `pull-requests: write` y a ensuciar el hilo en cada push.
+
+### `apps/mobile` sin script `test` todavia (issue #515)
+
+Hasta la issue #515, `npm test` en la raiz corria `npm run test --workspaces --if-present`, y
+**ni `apps/web` ni `apps/mobile` tenian script `test`**: el paso "Ejecutar las pruebas de todos
+los workspaces" del CI las saltaba en silencio, sin ninguna senal de que las 193 pruebas de
+`packages/shared` en verde no cubrian ni una linea de las dos apps. La 00515 le agrego a
+`apps/web` un script `test` real (Vitest + `@testing-library/react`, con al menos una prueba de
+`RutaProtegida`, el guard de acceso).
+
+`apps/mobile` sigue sin uno, a proposito y no por descuido: React Native + Expo necesita un stack
+de pruebas distinto al de `apps/web` y `packages/shared` (Jest con el preset `jest-expo`,
+`@testing-library/react-native`, y mocks de los modulos nativos que Expo trae -camara,
+almacenamiento seguro, notificaciones-), no una extension del mismo Vitest que ya usan los otros
+dos workspaces. Es un esfuerzo de otro tamano y de otro tipo -otro framework de pruebas entero,
+no una configuracion mas-, y no encajaba en el alcance de infraestructura de #515. Queda como
+trabajo pendiente, con esta nota para que la proxima vez que alguien revise `npm test` sepa por
+que la cobertura sigue siendo cero ahi y no tenga que volver a investigarlo desde cero.
 
 ### La guarda de cobertura de las validaciones
 
@@ -275,9 +295,8 @@ Se configuran en Settings > Secrets and variables > Actions.
 | `SUPABASE_DB_PASSWORD`                                  | Vincular con proyectos remotos |
 | `SUPABASE_PROJECT_REF_DEV`                              | Aplicar migraciones en develop |
 | `SUPABASE_PROJECT_REF_PROD`                             | Aplicar migraciones en main    |
-| `SUPABASE_URL_DEV`, `SUPABASE_ANON_KEY_DEV`             | Keep-alive                     |
-| `SUPABASE_SERVICE_ROLE_KEY_DEV`                         | Disparar alertas-vencimiento   |
-| `VITE_SUPABASE_URL_DEV`, `VITE_SUPABASE_ANON_KEY_DEV`   | Build de la web en develop     |
+| `SUPABASE_SERVICE_ROLE_KEY_DEV`                         | Disparar alertas-vencimiento y keep-alive |
+| `VITE_SUPABASE_URL_DEV`, `VITE_SUPABASE_ANON_KEY_DEV`   | Build de la web en develop y keep-alive |
 | `VITE_SUPABASE_URL_PROD`, `VITE_SUPABASE_ANON_KEY_PROD` | Build de la web en main        |
 
 Cuando falta un secret, el workflow **avisa de forma visible pero no falla**: deja un bloque en

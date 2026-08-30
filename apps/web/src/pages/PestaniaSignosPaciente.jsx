@@ -3,17 +3,17 @@ import {
   formatearFechaCorta,
   ultimaMedicion,
   useEvolucionSignos,
-} from '@ecopac/shared';
+} from "@ecopac/shared";
 
-import Card from '../components/Card';
-import EmptyState from '../components/EmptyState';
-import ErrorState from '../components/ErrorState';
-import LoadingState from '../components/LoadingState';
+import Card from "../components/Card";
+import EmptyState from "../components/EmptyState";
+import ErrorState from "../components/ErrorState";
+import LoadingState from "../components/LoadingState";
 
 const ANCHO = 560;
 const ALTO = 180;
 const MARGEN = { arriba: 12, derecha: 12, abajo: 28, izquierda: 44 };
-const COLORES_DE_LINEA = ['var(--color-primary)', 'var(--color-info)'];
+const COLORES_DE_LINEA = ["var(--color-primary)", "var(--color-info)"];
 
 function escala(serie) {
   const min = serie.min ?? 0;
@@ -41,7 +41,7 @@ function Grafica({ serie }) {
   return (
     <svg
       viewBox={`0 0 ${ANCHO} ${ALTO}`}
-      style={{ width: '100%', height: 'auto' }}
+      style={{ width: "100%", height: "auto" }}
       role="img"
       aria-label={`Evolucion de ${serie.label}`}
     >
@@ -102,7 +102,7 @@ function Grafica({ serie }) {
 
       {serie.lineas.map((linea, indice) => {
         const color = COLORES_DE_LINEA[indice % COLORES_DE_LINEA.length];
-        const trazo = linea.puntos.map((punto, i) => `${x(i)},${y(punto.valor)}`).join(' ');
+        const trazo = linea.puntos.map((punto, i) => `${x(i)},${y(punto.valor)}`).join(" ");
 
         return (
           <g key={linea.id}>
@@ -115,9 +115,7 @@ function Grafica({ serie }) {
                 cx={x(i)}
                 cy={y(punto.valor)}
                 r="4"
-                fill={
-                  estaFueraDeRango(punto.valor, linea.normal) ? 'var(--color-danger)' : color
-                }
+                fill={estaFueraDeRango(punto.valor, linea.normal) ? "var(--color-danger)" : color}
               >
                 <title>{`${linea.label}: ${punto.valor} ${serie.sufijo} · ${formatearFechaCorta(punto.fecha)}`}</title>
               </circle>
@@ -138,9 +136,9 @@ function Leyenda({ serie }) {
             style={{
               width: 10,
               height: 10,
-              borderRadius: '50%',
+              borderRadius: "50%",
               backgroundColor: COLORES_DE_LINEA[indice % COLORES_DE_LINEA.length],
-              display: 'inline-block',
+              display: "inline-block",
             }}
           />
           {linea.label}
@@ -154,7 +152,7 @@ function Leyenda({ serie }) {
 function Serie({ serie }) {
   if (serie.mediciones === 0) {
     return (
-      <Card title={serie.label} style={{ marginBottom: '1rem' }}>
+      <Card title={serie.label} style={{ marginBottom: "1rem" }}>
         <p className="text-body-secondary mb-0">Sin mediciones registradas.</p>
       </Card>
     );
@@ -164,12 +162,12 @@ function Serie({ serie }) {
     const unica = ultimaMedicion(serie);
 
     return (
-      <Card title={serie.label} style={{ marginBottom: '1rem' }}>
+      <Card title={serie.label} style={{ marginBottom: "1rem" }}>
         <p className="mb-1">
           {serie.lineas
             .filter((linea) => linea.puntos.length > 0)
             .map((linea) => `${linea.label}: ${linea.puntos[0].valor} ${serie.sufijo}`)
-            .join(' · ')}
+            .join(" · ")}
         </p>
         <p className="text-body-secondary small mb-0">
           Una sola medicion ({formatearFechaCorta(unica.fecha)}): todavia no hay evolucion que
@@ -180,7 +178,7 @@ function Serie({ serie }) {
   }
 
   return (
-    <Card title={serie.label} style={{ marginBottom: '1rem' }}>
+    <Card title={serie.label} style={{ marginBottom: "1rem" }}>
       <Grafica serie={serie} />
       <Leyenda serie={serie} />
     </Card>

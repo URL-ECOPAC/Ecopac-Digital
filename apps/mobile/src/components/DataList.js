@@ -1,10 +1,10 @@
-import { FlatList, StyleSheet, Text, View } from 'react-native';
-import { formatearFechaCorta, formatearMoneda } from '@ecopac/shared';
-import { colors, spacing, typography } from '@ecopac/ui-tokens';
-import Card from './Card';
-import EmptyState from './EmptyState';
-import LoadingState from './LoadingState';
-import StatusChip from './StatusChip';
+import { FlatList, StyleSheet, Text, View } from "react-native";
+import { formatearFechaCorta, formatearMoneda } from "@ecopac/shared";
+import { colors, spacing, typography } from "@ecopac/ui-tokens";
+import Card from "./Card";
+import EmptyState from "./EmptyState";
+import LoadingState from "./LoadingState";
+import StatusChip from "./StatusChip";
 
 /**
  * Listado generico. Espejo de apps/web/src/components/DataList.jsx: interpreta el MISMO
@@ -32,12 +32,12 @@ import StatusChip from './StatusChip';
 
 /** Iniciales de un nombre, para el avatar. Dos como maximo, que es lo que cabe. */
 function iniciales(texto) {
-  return String(texto ?? '')
+  return String(texto ?? "")
     .trim()
     .split(/\s+/)
     .slice(0, 2)
-    .map((palabra) => palabra[0] ?? '')
-    .join('')
+    .map((palabra) => palabra[0] ?? "")
+    .join("")
     .toUpperCase();
 }
 
@@ -54,29 +54,33 @@ function Valor({ columna, fila, catalogos }) {
   const valor = fila?.[columna.desde ?? columna.id];
 
   switch (columna.tipo) {
-    case 'avatar':
+    case "avatar":
       return <Avatar texto={valor} />;
 
-    case 'numero':
+    case "numero":
       if (valor === null || valor === undefined) return null;
-      return <Text style={styles.texto}>{columna.sufijo ? `${valor} ${columna.sufijo}` : String(valor)}</Text>;
+      return (
+        <Text style={styles.texto}>
+          {columna.sufijo ? `${valor} ${columna.sufijo}` : String(valor)}
+        </Text>
+      );
 
-    case 'moneda':
+    case "moneda":
       // Mismo motivo que 'fecha': el importe se formatea en shared para que web y movil escriban
       // el mismo numero.
       return <Text style={styles.texto}>{formatearMoneda(valor)}</Text>;
 
-    case 'fecha':
+    case "fecha":
       // Sale de shared y no de Intl: en React Native el resultado de Intl depende de los
       // datos ICU del sistema, y la fecha tiene que verse igual que en la web.
       return <Text style={styles.texto}>{formatearFechaCorta(valor)}</Text>;
 
-    case 'chip':
+    case "chip":
       // A diferencia de 'estado', aqui el valor guardado YA es el del enum (ver
       // COLUMNAS_MOVIMIENTO y COLUMNAS_JORNADA), asi que indexa statusColors directamente.
       return <StatusChip status={valor} />;
 
-    case 'estado': {
+    case "estado": {
       // El valor puede ser un booleano en vez del valor del enum (COLUMNAS_USUARIO lee el
       // campo activo). El catalogo trae la clave del enum en `clave` y el texto en `label`.
       const catalogo = catalogos[columna.etiquetasDesde] ?? [];
@@ -84,11 +88,11 @@ function Valor({ columna, fila, catalogos }) {
       return <StatusChip status={entrada?.clave ?? valor} label={entrada?.label} />;
     }
 
-    case 'booleano':
+    case "booleano":
       if (valor === null || valor === undefined) return null;
-      return <Text style={styles.texto}>{valor ? 'Si' : 'No'}</Text>;
+      return <Text style={styles.texto}>{valor ? "Si" : "No"}</Text>;
 
-    case 'chips': {
+    case "chips": {
       const elementos = Array.isArray(valor) ? valor : [];
       if (elementos.length === 0) return null;
       return (
@@ -108,7 +112,7 @@ function Valor({ columna, fila, catalogos }) {
       if (columna.etiquetasDesde) {
         const catalogo = catalogos[columna.etiquetasDesde] ?? [];
         const opcion = catalogo.find((entrada) => entrada.value === valor);
-        return <Text style={styles.texto}>{opcion ? opcion.label : (valor ?? '')}</Text>;
+        return <Text style={styles.texto}>{opcion ? opcion.label : (valor ?? "")}</Text>;
       }
       if (valor === null || valor === undefined) return null;
       return <Text style={styles.texto}>{String(valor)}</Text>;
@@ -121,10 +125,10 @@ function Fila({ columna, fila, catalogos }) {
   // encima del nombre no aporta nada en una tarjeta.
   if (columna.principal) {
     const valor = fila?.[columna.desde ?? columna.id];
-    return <Text style={styles.principal}>{String(valor ?? '')}</Text>;
+    return <Text style={styles.principal}>{String(valor ?? "")}</Text>;
   }
 
-  if (columna.tipo === 'avatar') {
+  if (columna.tipo === "avatar") {
     return <Valor columna={columna} fila={fila} catalogos={catalogos} />;
   }
 
@@ -143,9 +147,9 @@ function Fila({ columna, fila, catalogos }) {
  * como venga declarado. No muta el descriptor que le pasan.
  */
 function ordenarParaTarjeta(columnas) {
-  const avatar = columnas.filter((columna) => columna.tipo === 'avatar');
-  const principal = columnas.filter((columna) => columna.principal && columna.tipo !== 'avatar');
-  const resto = columnas.filter((columna) => columna.tipo !== 'avatar' && !columna.principal);
+  const avatar = columnas.filter((columna) => columna.tipo === "avatar");
+  const principal = columnas.filter((columna) => columna.principal && columna.tipo !== "avatar");
+  const resto = columnas.filter((columna) => columna.tipo !== "avatar" && !columna.principal);
   return [...avatar, ...principal, ...resto];
 }
 
@@ -160,7 +164,11 @@ export default function DataList({
   if (cargando) return <LoadingState />;
 
   if (!datos || datos.length === 0) {
-    return typeof vacio === 'string' || vacio === undefined ? <EmptyState message={vacio} /> : vacio;
+    return typeof vacio === "string" || vacio === undefined ? (
+      <EmptyState message={vacio} />
+    ) : (
+      vacio
+    );
   }
 
   const enOrden = ordenarParaTarjeta(columnas);
@@ -191,9 +199,9 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   campo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingVertical: spacing.xs / 2,
     gap: spacing.sm,
   },
@@ -202,20 +210,20 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.sm,
     color: colors.textMuted,
   },
-  valor: { flexShrink: 1, alignItems: 'flex-end' },
+  valor: { flexShrink: 1, alignItems: "flex-end" },
   texto: {
     fontFamily: typography.fontFamilyBase,
     fontSize: typography.sizes.sm,
     color: colors.text,
-    textAlign: 'right',
+    textAlign: "right",
   },
   avatar: {
     width: 40,
     height: 40,
     borderRadius: 20,
     backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginBottom: spacing.xs,
   },
   avatarTexto: {
@@ -224,7 +232,7 @@ const styles = StyleSheet.create({
     fontWeight: typography.weights.semibold,
     color: colors.surface,
   },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, justifyContent: 'flex-end' },
+  chips: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs, justifyContent: "flex-end" },
   chip: {
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs / 2,

@@ -11,7 +11,11 @@
 
 import { describe, expect, it } from "vitest";
 
-import { normalizarDatosPaciente, validarPaciente, validarRegistroPaciente } from "./validaciones.js";
+import {
+  normalizarDatosPaciente,
+  validarPaciente,
+  validarRegistroPaciente,
+} from "./validaciones.js";
 
 /** Paciente valido minimo para validarPaciente(): solo los 5 campos de CAMPOS_PACIENTE. */
 function pacienteValido(cambios = {}) {

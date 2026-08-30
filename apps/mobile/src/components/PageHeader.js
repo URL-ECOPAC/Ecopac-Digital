@@ -1,7 +1,7 @@
-import { StyleSheet, Text, View } from 'react-native';
-import { colors, spacing, typography } from '@ecopac/ui-tokens';
-import PrimaryButton from './PrimaryButton';
-import SecondaryButton from './SecondaryButton';
+import { StyleSheet, Text, View } from "react-native";
+import { colors, spacing, typography } from "@ecopac/ui-tokens";
+import PrimaryButton from "./PrimaryButton";
+import SecondaryButton from "./SecondaryButton";
 
 /**
  * Encabezado de pantalla. Espejo de apps/web/src/components/PageHeader.jsx.
@@ -21,7 +21,7 @@ export default function PageHeader({ title, subtitle, actions = [] }) {
       {actions.length > 0 ? (
         <View style={styles.acciones}>
           {actions.map((accion) => {
-            const Boton = accion.variant === 'secondary' ? SecondaryButton : PrimaryButton;
+            const Boton = accion.variant === "secondary" ? SecondaryButton : PrimaryButton;
             return (
               <Boton
                 key={accion.label}
@@ -54,8 +54,8 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
   },
   acciones: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: spacing.sm,
     marginTop: spacing.md,
   },

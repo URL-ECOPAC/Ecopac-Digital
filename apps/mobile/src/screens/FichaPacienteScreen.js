@@ -1,5 +1,5 @@
-import { StyleSheet, Text, View } from 'react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { StyleSheet, Text, View } from "react-native";
+import { useNavigation, useRoute } from "@react-navigation/native";
 
 import {
   cabeceraDePaciente,
@@ -7,8 +7,8 @@ import {
   permisosDeFicha,
   resumenDeUltimaAtencion,
   usePaciente,
-} from '@ecopac/shared';
-import { colors, spacing, typography } from '@ecopac/ui-tokens';
+} from "@ecopac/shared";
+import { colors, spacing, typography } from "@ecopac/ui-tokens";
 
 import {
   Card,
@@ -18,15 +18,15 @@ import {
   ScreenContainer,
   SecondaryButton,
   StatusChip,
-} from '../components';
-import { useSesionCompartida } from '../contexto/SesionProvider';
-import { ROUTES } from '../navigation/rutas';
+} from "../components";
+import { useSesionCompartida } from "../contexto/SesionProvider";
+import { ROUTES } from "../navigation/rutas";
 
 function Dato({ etiqueta, valor }) {
   return (
     <View style={styles.dato}>
       <Text style={styles.etiqueta}>{etiqueta}</Text>
-      <Text style={styles.valor}>{valor ?? '—'}</Text>
+      <Text style={styles.valor}>{valor ?? "—"}</Text>
     </View>
   );
 }
@@ -68,11 +68,15 @@ export default function FichaPacienteScreen() {
 
   return (
     <ScreenContainer>
-      <Text style={styles.nombre}>{cabecera.nombreCompleto ?? 'Paciente sin nombre'}</Text>
+      <Text style={styles.nombre}>{cabecera.nombreCompleto ?? "Paciente sin nombre"}</Text>
       <Text style={styles.subtitulo}>
-        {[cabecera.numeroFicha ? `Ficha ${cabecera.numeroFicha}` : null, cabecera.edad, cabecera.comunidad]
+        {[
+          cabecera.numeroFicha ? `Ficha ${cabecera.numeroFicha}` : null,
+          cabecera.edad,
+          cabecera.comunidad,
+        ]
           .filter(Boolean)
-          .join(' · ')}
+          .join(" · ")}
       </Text>
 
       {cabecera.condiciones.length > 0 && (
@@ -91,7 +95,10 @@ export default function FichaPacienteScreen() {
         <Card title="Ultima atencion" style={styles.tarjeta}>
           {ultima ? (
             <>
-              <Dato etiqueta="Fecha" valor={ultima.fecha ? formatearFechaCorta(ultima.fecha) : null} />
+              <Dato
+                etiqueta="Fecha"
+                valor={ultima.fecha ? formatearFechaCorta(ultima.fecha) : null}
+              />
               <Dato etiqueta="Diagnostico" valor={ultima.diagnostico} />
               <Dato etiqueta="Jornada" valor={ultima.jornada} />
             </>
@@ -137,8 +144,8 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   condiciones: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: spacing.xs,
     marginBottom: spacing.sm,
   },
@@ -146,8 +153,8 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   dato: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
     marginBottom: spacing.xs,
   },
   etiqueta: {
@@ -158,7 +165,7 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: typography.sizes.sm,
     flexShrink: 1,
-    textAlign: 'right',
+    textAlign: "right",
   },
   vacio: {
     color: colors.textMuted,

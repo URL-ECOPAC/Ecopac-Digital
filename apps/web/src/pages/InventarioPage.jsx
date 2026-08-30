@@ -27,7 +27,7 @@ export default function InventarioPage() {
   const [lotesRaw, setLotesRaw] = useState([]);
   const [bodegas, setBodegas] = useState([]);
   const [proveedores, setProveedores] = useState([]);
-  
+
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
 
@@ -82,10 +82,7 @@ export default function InventarioPage() {
       setCargando(true);
       setError(null);
 
-      const [resMed, resPA] = await Promise.all([
-        listarMedicamentos(),
-        listarPrincipiosActivos(),
-      ]);
+      const [resMed, resPA] = await Promise.all([listarMedicamentos(), listarPrincipiosActivos()]);
 
       if (resMed.error) {
         setError(resMed.error.mensaje || "Error al cargar medicamentos");
@@ -174,7 +171,7 @@ export default function InventarioPage() {
         item.nombre?.toLowerCase() === formData.nombre?.toLowerCase() &&
         item.concentracion?.toLowerCase() === formData.concentracion?.toLowerCase() &&
         item.presentacion?.toLowerCase() === formData.presentacion?.toLowerCase() &&
-        item.marca?.toLowerCase() === formData.marca?.toLowerCase()
+        item.marca?.toLowerCase() === formData.marca?.toLowerCase(),
     );
 
     if (duplicado) {
@@ -202,9 +199,7 @@ export default function InventarioPage() {
           presentacion: formData.presentacion,
           marca: formData.marca,
           formaFarmaceutica: formData.formaFarmaceutica,
-          principiosActivosIds: formData.principio_activo_id
-            ? [formData.principio_activo_id]
-            : [],
+          principiosActivosIds: formData.principio_activo_id ? [formData.principio_activo_id] : [],
         });
 
         if (errorReg) return;
@@ -238,12 +233,21 @@ export default function InventarioPage() {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "20px", padding: "24px", fontFamily: "system-ui, -apple-system, sans-serif" }}>
-
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: "20px",
+        padding: "24px",
+        fontFamily: "system-ui, -apple-system, sans-serif",
+      }}
+    >
       {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div>
-          <h1 style={{ fontSize: "24px", fontWeight: "800", color: "#1e293b", margin: 0 }}>Control de Inventario</h1>
+          <h1 style={{ fontSize: "24px", fontWeight: "800", color: "#1e293b", margin: 0 }}>
+            Control de Inventario
+          </h1>
           <p style={{ fontSize: "13px", color: "#94a3b8", margin: "4px 0 0 0" }}>
             Trazabilidad multi-bodega • Lote y serie • Alertas de caducidad
           </p>
@@ -328,7 +332,14 @@ export default function InventarioPage() {
 
       {/* Tira de Alertas Críticas (Visible si existen lotes por vencer) */}
       {alertasCriticas.length > 0 && (
-        <div style={{ padding: "12px 16px", backgroundColor: "#fffbeb", border: "1px solid #fef3c7", borderRadius: "12px" }}>
+        <div
+          style={{
+            padding: "12px 16px",
+            backgroundColor: "#fffbeb",
+            border: "1px solid #fef3c7",
+            borderRadius: "12px",
+          }}
+        >
           <span style={{ fontSize: "12px", fontWeight: "700", color: "#b45309" }}>
             Alertas Críticas de Caducidad ({alertasCriticas.length})
           </span>
@@ -371,27 +382,75 @@ export default function InventarioPage() {
       )}
 
       {error && (
-        <div style={{ padding: "12px 16px", backgroundColor: "#fef2f2", color: "#991b1b", borderRadius: "12px", fontSize: "13px" }}>
+        <div
+          style={{
+            padding: "12px 16px",
+            backgroundColor: "#fef2f2",
+            color: "#991b1b",
+            borderRadius: "12px",
+            fontSize: "13px",
+          }}
+        >
           {error}
         </div>
       )}
 
       {/* Métricas */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px" }}>
-        <div style={{ backgroundColor: "#ffffff", padding: "16px", borderRadius: "16px", border: "1px solid #f1f5f9" }}>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+          gap: "16px",
+        }}
+      >
+        <div
+          style={{
+            backgroundColor: "#ffffff",
+            padding: "16px",
+            borderRadius: "16px",
+            border: "1px solid #f1f5f9",
+          }}
+        >
           <span style={{ fontSize: "11px", fontWeight: "700", color: "#10b981" }}>REFERENCIAS</span>
-          <h2 style={{ fontSize: "24px", margin: "4px 0 0 0", color: "#10b981" }}>{inventarioRaw.length}</h2>
+          <h2 style={{ fontSize: "24px", margin: "4px 0 0 0", color: "#10b981" }}>
+            {inventarioRaw.length}
+          </h2>
         </div>
-        <div style={{ backgroundColor: "#ffffff", padding: "16px", borderRadius: "16px", border: "1px solid #f1f5f9" }}>
+        <div
+          style={{
+            backgroundColor: "#ffffff",
+            padding: "16px",
+            borderRadius: "16px",
+            border: "1px solid #f1f5f9",
+          }}
+        >
           <span style={{ fontSize: "11px", fontWeight: "700", color: "#f59e0b" }}>POR VENCER</span>
-          <h2 style={{ fontSize: "24px", margin: "4px 0 0 0", color: "#f59e0b" }}>{alertasCriticas.length}</h2>
+          <h2 style={{ fontSize: "24px", margin: "4px 0 0 0", color: "#f59e0b" }}>
+            {alertasCriticas.length}
+          </h2>
         </div>
-        <div style={{ backgroundColor: "#ffffff", padding: "16px", borderRadius: "16px", border: "1px solid #f1f5f9" }}>
+        <div
+          style={{
+            backgroundColor: "#ffffff",
+            padding: "16px",
+            borderRadius: "16px",
+            border: "1px solid #f1f5f9",
+          }}
+        >
           <span style={{ fontSize: "11px", fontWeight: "700", color: "#ec4899" }}>SIN STOCK</span>
           <h2 style={{ fontSize: "24px", margin: "4px 0 0 0", color: "#ec4899" }}>0</h2>
         </div>
-        <div style={{ backgroundColor: "#ffffff", padding: "16px", borderRadius: "16px", border: "1px solid #f1f5f9" }}>
-          <span style={{ fontSize: "11px", fontWeight: "700", color: "#06b6d4" }}>VALOR INVENTARIO</span>
+        <div
+          style={{
+            backgroundColor: "#ffffff",
+            padding: "16px",
+            borderRadius: "16px",
+            border: "1px solid #f1f5f9",
+          }}
+        >
+          <span style={{ fontSize: "11px", fontWeight: "700", color: "#06b6d4" }}>
+            VALOR INVENTARIO
+          </span>
           <h2 style={{ fontSize: "24px", margin: "4px 0 0 0", color: "#06b6d4" }}>Q 0</h2>
         </div>
       </div>
@@ -403,9 +462,24 @@ export default function InventarioPage() {
           placeholder="Código, descripción o lote..."
           value={busqueda}
           onChange={(e) => setBusqueda(e.target.value)}
-          style={{ flex: 1, padding: "10px 16px", borderRadius: "9999px", border: "1px solid #e2e8f0", fontSize: "13px", outline: "none" }}
+          style={{
+            flex: 1,
+            padding: "10px 16px",
+            borderRadius: "9999px",
+            border: "1px solid #e2e8f0",
+            fontSize: "13px",
+            outline: "none",
+          }}
         />
-        <div style={{ display: "flex", backgroundColor: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "9999px", padding: "3px" }}>
+        <div
+          style={{
+            display: "flex",
+            backgroundColor: "#ffffff",
+            border: "1px solid #e2e8f0",
+            borderRadius: "9999px",
+            padding: "3px",
+          }}
+        >
           {["Todas", "Central", "Norte", "Sur"].map((b) => (
             <button
               key={b}
@@ -416,8 +490,14 @@ export default function InventarioPage() {
                 border: "none",
                 cursor: "pointer",
                 fontSize: "12px",
-                backgroundColor: (bodegaSeleccionada === b || (b === "Todas" && !bodegaSeleccionada)) ? "#e8f5e9" : "transparent",
-                color: (bodegaSeleccionada === b || (b === "Todas" && !bodegaSeleccionada)) ? "#2e7d32" : "#64748b",
+                backgroundColor:
+                  bodegaSeleccionada === b || (b === "Todas" && !bodegaSeleccionada)
+                    ? "#e8f5e9"
+                    : "transparent",
+                color:
+                  bodegaSeleccionada === b || (b === "Todas" && !bodegaSeleccionada)
+                    ? "#2e7d32"
+                    : "#64748b",
               }}
             >
               {b}
@@ -428,8 +508,22 @@ export default function InventarioPage() {
 
       {/* Vista Tab: Catálogo de Medicamentos */}
       {tabActiva === "catalogo" && (
-        <div style={{ backgroundColor: "#ffffff", borderRadius: "24px", border: "1px solid #f1f5f9", overflow: "hidden" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", fontSize: "13px" }}>
+        <div
+          style={{
+            backgroundColor: "#ffffff",
+            borderRadius: "24px",
+            border: "1px solid #f1f5f9",
+            overflow: "hidden",
+          }}
+        >
+          <table
+            style={{
+              width: "100%",
+              borderCollapse: "collapse",
+              textAlign: "left",
+              fontSize: "13px",
+            }}
+          >
             <thead>
               <tr style={{ borderBottom: "1px solid #f1f5f9", color: "#94a3b8", fontSize: "10px" }}>
                 <th style={{ padding: "16px" }}>CÓDIGO</th>
@@ -443,27 +537,53 @@ export default function InventarioPage() {
             </thead>
             <tbody>
               {cargando ? (
-                <tr><td colSpan={esAdmin ? 7 : 6} style={{ padding: "32px", textAlign: "center", color: "#94a3b8" }}>Cargando inventario...</td></tr>
+                <tr>
+                  <td
+                    colSpan={esAdmin ? 7 : 6}
+                    style={{ padding: "32px", textAlign: "center", color: "#94a3b8" }}
+                  >
+                    Cargando inventario...
+                  </td>
+                </tr>
               ) : inventarioFiltrado.length === 0 ? (
-                <tr><td colSpan={esAdmin ? 7 : 6} style={{ padding: "32px", textAlign: "center", color: "#94a3b8" }}>No hay referencias registradas.</td></tr>
+                <tr>
+                  <td
+                    colSpan={esAdmin ? 7 : 6}
+                    style={{ padding: "32px", textAlign: "center", color: "#94a3b8" }}
+                  >
+                    No hay referencias registradas.
+                  </td>
+                </tr>
               ) : (
                 inventarioFiltrado.map((item) => (
                   <tr key={item.id} style={{ borderBottom: "1px solid #f8fafc" }}>
-                    <td style={{ padding: "16px", color: "#10b981", fontFamily: "monospace" }}>{item.id ? item.id.substring(0, 8).toUpperCase() : "FAR-0000"}</td>
+                    <td style={{ padding: "16px", color: "#10b981", fontFamily: "monospace" }}>
+                      {item.id ? item.id.substring(0, 8).toUpperCase() : "FAR-0000"}
+                    </td>
                     <td style={{ padding: "16px", fontWeight: "700", color: "#1e293b" }}>
                       {item.nombre} {item.concentracion ? `(${item.concentracion})` : ""}
                     </td>
                     <td style={{ padding: "16px", color: "#64748b" }}>
-                      {item.marca || "Generico"} {item.formaFarmaceutica ? `• ${item.formaFarmaceutica}` : ""}
+                      {item.marca || "Generico"}{" "}
+                      {item.formaFarmaceutica ? `• ${item.formaFarmaceutica}` : ""}
                     </td>
-                    <td style={{ padding: "16px", fontFamily: "monospace" }}>{item.lote || "N/A"}</td>
+                    <td style={{ padding: "16px", fontFamily: "monospace" }}>
+                      {item.lote || "N/A"}
+                    </td>
                     <td style={{ padding: "16px" }}>{item.bodega || "CENTRAL"}</td>
                     <td style={{ padding: "16px", fontWeight: "700" }}>{item.stock ?? 0}</td>
                     {esAdmin && (
                       <td style={{ padding: "16px", textAlign: "center" }}>
                         <button
                           onClick={() => abrirModalEditar(item)}
-                          style={{ border: "none", background: "none", color: "#0ea5e9", cursor: "pointer", fontWeight: "600", fontSize: "12px" }}
+                          style={{
+                            border: "none",
+                            background: "none",
+                            color: "#0ea5e9",
+                            cursor: "pointer",
+                            fontWeight: "600",
+                            fontSize: "12px",
+                          }}
                         >
                           Editar
                         </button>
@@ -479,8 +599,22 @@ export default function InventarioPage() {
 
       {/* Vista Tab: Gestión de Lotes y FEFO */}
       {tabActiva === "lotes" && (
-        <div style={{ backgroundColor: "#ffffff", borderRadius: "24px", border: "1px solid #f1f5f9", overflow: "hidden" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", fontSize: "13px" }}>
+        <div
+          style={{
+            backgroundColor: "#ffffff",
+            borderRadius: "24px",
+            border: "1px solid #f1f5f9",
+            overflow: "hidden",
+          }}
+        >
+          <table
+            style={{
+              width: "100%",
+              borderCollapse: "collapse",
+              textAlign: "left",
+              fontSize: "13px",
+            }}
+          >
             <thead>
               <tr style={{ borderBottom: "1px solid #f1f5f9", color: "#94a3b8", fontSize: "10px" }}>
                 <th style={{ padding: "16px" }}>NÚMERO LOTE</th>
@@ -493,12 +627,23 @@ export default function InventarioPage() {
             </thead>
             <tbody>
               {lotesFiltrados.length === 0 ? (
-                <tr><td colSpan="6" style={{ padding: "32px", textAlign: "center", color: "#94a3b8" }}>No hay lotes registrados.</td></tr>
+                <tr>
+                  <td
+                    colSpan="6"
+                    style={{ padding: "32px", textAlign: "center", color: "#94a3b8" }}
+                  >
+                    No hay lotes registrados.
+                  </td>
+                </tr>
               ) : (
                 lotesFiltrados.map((item) => (
                   <tr key={item.id} style={{ borderBottom: "1px solid #f8fafc" }}>
-                    <td style={{ padding: "16px", fontFamily: "monospace", fontWeight: "700" }}>{item.numero_lote}</td>
-                    <td style={{ padding: "16px", fontWeight: "600" }}>{item.medicamento?.nombre}</td>
+                    <td style={{ padding: "16px", fontFamily: "monospace", fontWeight: "700" }}>
+                      {item.numero_lote}
+                    </td>
+                    <td style={{ padding: "16px", fontWeight: "600" }}>
+                      {item.medicamento?.nombre}
+                    </td>
                     <td style={{ padding: "16px", textTransform: "capitalize" }}>{item.origen}</td>
                     <td style={{ padding: "16px" }}>{item.fecha_vencimiento}</td>
                     <td style={{ padding: "16px", fontWeight: "700" }}>{item.stockTotal} u.</td>
@@ -513,21 +658,21 @@ export default function InventarioPage() {
                             item.estadoAlerta === "danger"
                               ? "#fee2e2"
                               : item.estadoAlerta === "warning"
-                              ? "#fef3c7"
-                              : "#d1fae5",
+                                ? "#fef3c7"
+                                : "#d1fae5",
                           color:
                             item.estadoAlerta === "danger"
                               ? "#991b1b"
                               : item.estadoAlerta === "warning"
-                              ? "#92400e"
-                              : "#065f46",
+                                ? "#92400e"
+                                : "#065f46",
                         }}
                       >
                         {item.estadoAlerta === "danger"
                           ? "Vencido"
                           : item.estadoAlerta === "warning"
-                          ? "Próximo a Vencer"
-                          : "Vigente"}
+                            ? "Próximo a Vencer"
+                            : "Vigente"}
                       </span>
                     </td>
                   </tr>

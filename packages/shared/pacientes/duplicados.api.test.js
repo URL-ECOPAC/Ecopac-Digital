@@ -22,8 +22,7 @@ const { listarPosiblesDuplicados, fusionarPacientes } = await import("./duplicad
 /** Doble minimo: solo necesita soportar .rpc(nombre, argumentos) con .single() opcional. */
 function crearCliente(respuesta) {
   const llamadas = [];
-  const resolver = async () =>
-    respuesta instanceof Error ? Promise.reject(respuesta) : respuesta;
+  const resolver = async () => (respuesta instanceof Error ? Promise.reject(respuesta) : respuesta);
 
   return {
     llamadas,
@@ -106,7 +105,9 @@ describe("listarPosiblesDuplicados", () => {
   it("sin resultados devuelve una lista vacia sin reventar", async () => {
     dobles.cliente = crearCliente({ data: [], error: null });
 
-    const { duplicados, error } = await listarPosiblesDuplicados({ rolUsuario: "voluntario general" });
+    const { duplicados, error } = await listarPosiblesDuplicados({
+      rolUsuario: "voluntario general",
+    });
 
     expect(error).toBeNull();
     expect(duplicados).toEqual([]);
@@ -131,14 +132,18 @@ describe("fusionarPacientes", () => {
   });
 
   it("rechaza fusionar un paciente consigo mismo, sin llegar a Supabase", async () => {
-    const { fusion, error } = await fusionarPacientes("pac-1", "pac-1", { rolUsuario: "administrador" });
+    const { fusion, error } = await fusionarPacientes("pac-1", "pac-1", {
+      rolUsuario: "administrador",
+    });
 
     expect(fusion).toBeNull();
     expect(error.mensaje).toContain("dos pacientes distintos");
   });
 
   it("rechaza ids vacios, sin llegar a Supabase", async () => {
-    const { fusion, error } = await fusionarPacientes(null, "pac-2", { rolUsuario: "administrador" });
+    const { fusion, error } = await fusionarPacientes(null, "pac-2", {
+      rolUsuario: "administrador",
+    });
 
     expect(fusion).toBeNull();
     expect(error).not.toBeNull();
@@ -157,7 +162,9 @@ describe("fusionarPacientes", () => {
     });
     dobles.cliente = cliente;
 
-    const { fusion, error } = await fusionarPacientes("pac-1", "pac-2", { rolUsuario: "administrador" });
+    const { fusion, error } = await fusionarPacientes("pac-1", "pac-2", {
+      rolUsuario: "administrador",
+    });
 
     expect(error).toBeNull();
     expect(cliente.llamadas[0]).toEqual({
@@ -177,10 +184,15 @@ describe("fusionarPacientes", () => {
   it("un rechazo del servidor (rol, paciente ya fusionado) se normaliza", async () => {
     dobles.cliente = crearCliente({
       data: null,
-      error: { code: "P0001", message: "El expediente que se quiere absorber ya esta dado de baja o ya fue fusionado." },
+      error: {
+        code: "P0001",
+        message: "El expediente que se quiere absorber ya esta dado de baja o ya fue fusionado.",
+      },
     });
 
-    const { fusion, error } = await fusionarPacientes("pac-1", "pac-2", { rolUsuario: "administrador" });
+    const { fusion, error } = await fusionarPacientes("pac-1", "pac-2", {
+      rolUsuario: "administrador",
+    });
 
     expect(fusion).toBeNull();
     expect(error).not.toBeNull();
@@ -189,7 +201,9 @@ describe("fusionarPacientes", () => {
   it("un fallo de red se normaliza", async () => {
     dobles.cliente = crearCliente(new Error("Failed to fetch"));
 
-    const { fusion, error } = await fusionarPacientes("pac-1", "pac-2", { rolUsuario: "administrador" });
+    const { fusion, error } = await fusionarPacientes("pac-1", "pac-2", {
+      rolUsuario: "administrador",
+    });
 
     expect(fusion).toBeNull();
     expect(error).not.toBeNull();

@@ -1,8 +1,8 @@
-import { StyleSheet, Text, View } from 'react-native';
-import { etiquetaDeRol } from '@ecopac/shared';
-import { colors, spacing, typography } from '@ecopac/ui-tokens';
+import { StyleSheet, Text, View } from "react-native";
+import { etiquetaDeRol } from "@ecopac/shared";
+import { colors, spacing, typography } from "@ecopac/ui-tokens";
 
-import { useSesionCompartida } from '../contexto/SesionProvider';
+import { useSesionCompartida } from "../contexto/SesionProvider";
 
 /**
  * Nombre y rol de quien tiene la sesion activa (issue #110, criterio 5).
@@ -18,13 +18,13 @@ export default function UsuarioActivo({ compacto = true }) {
 
   if (!perfil) return null;
 
-  const nombre = `${perfil.nombres ?? ''} ${perfil.apellidos ?? ''}`.trim();
+  const nombre = `${perfil.nombres ?? ""} ${perfil.apellidos ?? ""}`.trim();
   const lineas = compacto ? 1 : undefined;
 
   return (
     <View style={compacto ? styles.compacto : styles.expandido}>
       <Text style={styles.nombre} numberOfLines={lineas}>
-        {nombre || 'Sesion activa'}
+        {nombre || "Sesion activa"}
       </Text>
       <Text style={styles.rol} numberOfLines={lineas}>
         {etiquetaDeRol(perfil.rol)}
@@ -36,11 +36,11 @@ export default function UsuarioActivo({ compacto = true }) {
 const styles = StyleSheet.create({
   compacto: {
     maxWidth: 140,
-    alignItems: 'flex-end',
+    alignItems: "flex-end",
     marginRight: spacing.md,
   },
   expandido: {
-    alignItems: 'flex-start',
+    alignItems: "flex-start",
   },
   nombre: {
     fontFamily: typography.fontFamilyBase,

@@ -1,11 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { CAMPOS_REGISTRO_PACIENTE } from "./campos.js";
-import {
-  PASOS_REGISTRO_PACIENTE,
-  pasosConCampos,
-  pasosConError,
-} from "./registro.pasos.js";
+import { PASOS_REGISTRO_PACIENTE, pasosConCampos, pasosConError } from "./registro.pasos.js";
 
 describe("pasosConCampos", () => {
   it("cubre los once campos del descriptor sin repetir ninguno", () => {

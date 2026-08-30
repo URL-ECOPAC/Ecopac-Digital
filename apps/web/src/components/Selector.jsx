@@ -1,5 +1,5 @@
-import { Form } from 'react-bootstrap';
-import { useId } from 'react';
+import { Form } from "react-bootstrap";
+import { useId } from "react";
 
 /**
  * Selector tipo dropdown.
@@ -20,7 +20,7 @@ export default function Selector({
   value,
   options = [],
   onSelect,
-  placeholder = 'Seleccionar',
+  placeholder = "Seleccionar",
   error,
   style,
   disabled = false,
@@ -30,7 +30,7 @@ export default function Selector({
 
   const alCambiar = (evento) => {
     const crudo = evento.target.value;
-    if (crudo === '') {
+    if (crudo === "") {
       onSelect?.(null);
       return;
     }
@@ -45,7 +45,7 @@ export default function Selector({
       {label && <Form.Label htmlFor={id}>{label}</Form.Label>}
       <Form.Select
         id={id}
-        value={value ?? ''}
+        value={value ?? ""}
         onChange={alCambiar}
         isInvalid={Boolean(error)}
         disabled={disabled}

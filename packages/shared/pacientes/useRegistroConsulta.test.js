@@ -2,11 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { CAMPOS_CONSULTA } from "./campos.js";
 import { SECCIONES_CONSULTA, seccionesConCampos } from "./consultas.secciones.js";
-import {
-  aDatosDeConsulta,
-  claveDeBorrador,
-  hayBorradorConDatos,
-} from "./useRegistroConsulta.js";
+import { aDatosDeConsulta, claveDeBorrador, hayBorradorConDatos } from "./useRegistroConsulta.js";
 
 describe("seccionesConCampos", () => {
   it("cubre los ocho campos de CAMPOS_CONSULTA sin repetir ninguno", () => {
@@ -38,9 +34,9 @@ describe("claveDeBorrador", () => {
 
 describe("hayBorradorConDatos", () => {
   it("un formulario recien abierto no genera borrador", () => {
-    expect(
-      hayBorradorConDatos({ motivoConsulta: "", antecedentes: "", diagnosticos: [] }),
-    ).toBe(false);
+    expect(hayBorradorConDatos({ motivoConsulta: "", antecedentes: "", diagnosticos: [] })).toBe(
+      false,
+    );
     expect(hayBorradorConDatos({})).toBe(false);
   });
 

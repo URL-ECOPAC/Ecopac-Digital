@@ -11,9 +11,8 @@ vi.mock("../api/cliente.js", () => ({
   },
 }));
 
-const { obtenerReporteDeVencimientos, ESTADOS_DE_VENCIMIENTO } = await import(
-  "./vencimientos.api.js"
-);
+const { obtenerReporteDeVencimientos, ESTADOS_DE_VENCIMIENTO } =
+  await import("./vencimientos.api.js");
 
 function crearCliente({ respuesta = { data: [], error: null } } = {}) {
   const llamadas = [];
@@ -173,7 +172,10 @@ describe("obtenerReporteDeVencimientos", () => {
 
   it("cada renglon trae medicamento, lote, cantidad, bodega, fecha de vencimiento y dias restantes", async () => {
     dobles.cliente = crearCliente({
-      respuesta: { data: [fila({ cantidad: 50, vence: "2026-07-02", lote: "L1", bodega: "A" })], error: null },
+      respuesta: {
+        data: [fila({ cantidad: 50, vence: "2026-07-02", lote: "L1", bodega: "A" })],
+        error: null,
+      },
     });
 
     const { reporte } = await obtenerReporteDeVencimientos({}, HOY);

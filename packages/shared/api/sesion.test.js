@@ -188,7 +188,12 @@ describe("iniciarSesion", () => {
     obtenerSupabase.mockReturnValue(cliente);
     obtenerPerfil.mockResolvedValue({
       perfil: null,
-      error: { codigo: CODIGOS_DE_ERROR_DE_SUPABASE.FALLO_DE_RED, mensaje: "x", detalle: "", esReintentable: true },
+      error: {
+        codigo: CODIGOS_DE_ERROR_DE_SUPABASE.FALLO_DE_RED,
+        mensaje: "x",
+        detalle: "",
+        esReintentable: true,
+      },
     });
 
     const resultado = await iniciarSesion(CORREO, CONTRASENA);
@@ -276,15 +281,13 @@ describe("obtenerSesion", () => {
 
 describe("evaluarPerfilDeSesion / requiereCerrarSesion", () => {
   it("requiereCerrarSesion() es verdadero solo para cuenta desactivada y perfil ausente", () => {
-    expect(
-      requiereCerrarSesion({ codigo: CODIGOS_DE_ERROR_DE_SUPABASE.CUENTA_DESACTIVADA }),
-    ).toBe(true);
+    expect(requiereCerrarSesion({ codigo: CODIGOS_DE_ERROR_DE_SUPABASE.CUENTA_DESACTIVADA })).toBe(
+      true,
+    );
     expect(requiereCerrarSesion({ codigo: CODIGOS_DE_ERROR_DE_SUPABASE.PERMISO_DENEGADO })).toBe(
       true,
     );
-    expect(requiereCerrarSesion({ codigo: CODIGOS_DE_ERROR_DE_SUPABASE.FALLO_DE_RED })).toBe(
-      false,
-    );
+    expect(requiereCerrarSesion({ codigo: CODIGOS_DE_ERROR_DE_SUPABASE.FALLO_DE_RED })).toBe(false);
     expect(requiereCerrarSesion(null)).toBe(false);
   });
 

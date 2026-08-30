@@ -32,7 +32,13 @@ import { advertirChoqueDeHorario, validarAsignacionPersonal } from "./validacion
  */
 export const LIMITE_BUSQUEDA_PERSONAL = 20;
 
-const VALORES_VACIOS = { perfil: "", rolEnJornada: "", horaInicio: "", horaFin: "", responsabilidad: "" };
+const VALORES_VACIOS = {
+  perfil: "",
+  rolEnJornada: "",
+  horaInicio: "",
+  horaFin: "",
+  responsabilidad: "",
+};
 
 /**
  * Si un perfil ya esta en la lista de personal de esta jornada.
@@ -105,7 +111,8 @@ export function calcularLimiteDeBusqueda(personal) {
 export function armarResultadosDeBusqueda(usuarios, personal) {
   const limiteSolicitado = calcularLimiteDeBusqueda(personal);
   const filtrados = excluirYaAsignados(usuarios, personal);
-  const truncado = filtrados.length > LIMITE_BUSQUEDA_PERSONAL || (usuarios?.length ?? 0) === limiteSolicitado;
+  const truncado =
+    filtrados.length > LIMITE_BUSQUEDA_PERSONAL || (usuarios?.length ?? 0) === limiteSolicitado;
 
   return {
     resultados: filtrados.slice(0, LIMITE_BUSQUEDA_PERSONAL).map(armarFilaDeResultado),
@@ -266,7 +273,11 @@ export function useAsignacionPersonal({ jornadaId, jornadaFecha, personal } = {}
       }
 
       setAdvertenciaChoque(
-        advertirChoqueDeHorario({ perfil: perfilId, jornadaActualId: jornadaId, asignacionesDelDia: asignaciones }),
+        advertirChoqueDeHorario({
+          perfil: perfilId,
+          jornadaActualId: jornadaId,
+          asignacionesDelDia: asignaciones,
+        }),
       );
     },
     [jornadaFecha, jornadaId],
@@ -401,7 +412,10 @@ export function useDesasignacionPersonal({ jornadaId } = {}) {
 
     setEnviando(true);
     setError(null);
-    const { desasignado, error: errorDeDesasignacion } = await desasignarPersonal(jornadaId, perfilId);
+    const { desasignado, error: errorDeDesasignacion } = await desasignarPersonal(
+      jornadaId,
+      perfilId,
+    );
     setEnviando(false);
 
     if (errorDeDesasignacion || !desasignado) {

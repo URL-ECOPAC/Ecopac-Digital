@@ -7,11 +7,7 @@
 import { describe, expect, it } from "vitest";
 
 import { ROLES } from "../usuarios/roles.js";
-import {
-  permisosDeProyectos,
-  puedeAdministrarProyectos,
-  puedeVerProyectos,
-} from "./permisos.js";
+import { permisosDeProyectos, puedeAdministrarProyectos, puedeVerProyectos } from "./permisos.js";
 
 describe("permisos de proyectos", () => {
   it("solo Administrador administra, espejo de la politica de proyectos (00039)", () => {

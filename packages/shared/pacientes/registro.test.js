@@ -58,7 +58,11 @@ describe("advertirPacienteDuplicado", () => {
 
   it("no avisa mientras falte la fecha de nacimiento o el nombre", () => {
     expect(
-      advertirPacienteDuplicado({ pacientes: [EXISTENTE], nombres: "María", apellidos: "Chun Tzoc" }),
+      advertirPacienteDuplicado({
+        pacientes: [EXISTENTE],
+        nombres: "María",
+        apellidos: "Chun Tzoc",
+      }),
     ).toBeNull();
     expect(
       advertirPacienteDuplicado({ pacientes: [EXISTENTE], fechaNacimiento: "1990-03-15" }),

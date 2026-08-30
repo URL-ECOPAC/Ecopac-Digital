@@ -6,49 +6,49 @@
 //
 // Fuente: wireframe de gestion de pacientes (Entregable Semana 6, p. 62 web y p. 66 movil).
 
-import { TIPOS_DE_FILTRO } from '../descriptores.js';
+import { TIPOS_DE_FILTRO } from "../descriptores.js";
 
 export const FILTROS_PACIENTE = [
   {
-    id: 'busqueda',
+    id: "busqueda",
     tipo: TIPOS_DE_FILTRO.BUSQUEDA,
-    label: 'Buscar paciente',
-    placeholder: 'Nombre, numero de ficha o DPI',
+    label: "Buscar paciente",
+    placeholder: "Nombre, numero de ficha o DPI",
   },
   {
-    id: 'comunidad',
+    id: "comunidad",
     tipo: TIPOS_DE_FILTRO.SELECT,
-    label: 'Lugar',
+    label: "Lugar",
     // Las opciones se cargan del catalogo de comunidades; el descriptor solo declara
     // de donde salen para que ambas apps las resuelvan igual.
-    opcionesDesde: 'comunidades',
+    opcionesDesde: "comunidades",
   },
   {
-    id: 'sexo',
+    id: "sexo",
     tipo: TIPOS_DE_FILTRO.SELECT,
-    label: 'Sexo',
-    opcionesDesde: 'sexo',
+    label: "Sexo",
+    opcionesDesde: "sexo",
   },
   {
-    id: 'rangoEdad',
+    id: "rangoEdad",
     tipo: TIPOS_DE_FILTRO.RANGO,
-    label: 'Rango de edad',
+    label: "Rango de edad",
     min: 0,
     max: 120,
   },
   {
     // El wireframe (p. 62) no lo dibuja, pero el criterio 3 de la #124 lo pide. Se agrega
     // como quinto filtro en vez de reemplazar a los del diseno, para no perder ninguno.
-    id: 'condicionCronica',
+    id: "condicionCronica",
     tipo: TIPOS_DE_FILTRO.SELECT,
-    label: 'Condicion cronica',
-    opcionesDesde: 'condicionesCronicas',
+    label: "Condicion cronica",
+    opcionesDesde: "condicionesCronicas",
   },
 ];
 
 /** Valor inicial de los filtros, para que ambas apps arranquen en el mismo estado. */
 export const FILTROS_PACIENTE_VACIOS = {
-  busqueda: '',
+  busqueda: "",
   comunidad: null,
   sexo: null,
   rangoEdad: null,

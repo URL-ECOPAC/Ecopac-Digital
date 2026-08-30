@@ -1,14 +1,5 @@
 import { useSeguimientoProyecto } from "@ecopac/shared/proyectos";
-import {
-  Container,
-  Row,
-  Col,
-  Card,
-  Form,
-  Button,
-  Badge,
-  Alert,
-} from "react-bootstrap";
+import { Container, Row, Col, Card, Form, Button, Badge, Alert } from "react-bootstrap";
 
 export default function SeguimientoProyectoPage({
   proyectoInicial,
@@ -42,9 +33,7 @@ export default function SeguimientoProyectoPage({
   if (!proyecto) {
     return (
       <Container className="my-5 text-center">
-        <p className="text-muted">
-          No se seleccionó ningún proyecto para el seguimiento.
-        </p>
+        <p className="text-muted">No se seleccionó ningún proyecto para el seguimiento.</p>
         {onVolver && (
           <Button variant="secondary" size="sm" onClick={onVolver} className="mt-2">
             Volver
@@ -168,9 +157,7 @@ export default function SeguimientoProyectoPage({
                 </div>
 
                 <Form.Group>
-                  <Form.Label className="small fw-medium mb-1">
-                    Nota de seguimiento
-                  </Form.Label>
+                  <Form.Label className="small fw-medium mb-1">Nota de seguimiento</Form.Label>
                   <Form.Control
                     as="textarea"
                     rows={3}
@@ -181,11 +168,7 @@ export default function SeguimientoProyectoPage({
                 </Form.Group>
 
                 <div className="d-flex justify-content-end">
-                  <Button
-                    variant="primary"
-                    onClick={guardarSeguimiento}
-                    disabled={cargando}
-                  >
+                  <Button variant="primary" onClick={guardarSeguimiento} disabled={cargando}>
                     {cargando ? "Guardando..." : "Guardar Actualización"}
                   </Button>
                 </div>
@@ -212,8 +195,7 @@ export default function SeguimientoProyectoPage({
                         <p className="small mb-2 text-dark">{item.nota}</p>
                         <div className="d-flex justify-content-between text-muted extra-small pt-2 border-top">
                           <span>
-                            Registrado por:{" "}
-                            <strong>{item.registradoPor || usuarioActual}</strong>
+                            Registrado por: <strong>{item.registradoPor || usuarioActual}</strong>
                           </span>
                           <span>
                             {item.createdAt
@@ -247,20 +229,16 @@ export default function SeguimientoProyectoPage({
                   {hitos.map((hito) => {
                     let cardVariant = "bg-white border";
                     if (hito.esVencido) cardVariant = "bg-danger-subtle border-danger";
-                    else if (hito.esCumplido) cardVariant = "bg-success-subtle border-success-subtle";
+                    else if (hito.esCumplido)
+                      cardVariant = "bg-success-subtle border-success-subtle";
 
                     return (
-                      <div
-                        key={hito.id}
-                        className={`p-3 rounded ${cardVariant}`}
-                      >
+                      <div key={hito.id} className={`p-3 rounded ${cardVariant}`}>
                         <div className="d-flex align-items-start gap-2">
                           <Form.Check
                             type="checkbox"
                             checked={hito.esCumplido}
-                            onChange={(e) =>
-                              cambiarEstadoHito(hito.id, e.target.checked)
-                            }
+                            onChange={(e) => cambiarEstadoHito(hito.id, e.target.checked)}
                             className="mt-1"
                           />
                           <div className="flex-grow-1">

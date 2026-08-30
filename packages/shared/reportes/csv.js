@@ -82,7 +82,7 @@ export function exportarFilasACSV(filas, columnas) {
   const lineas = filasSeguras.map((fila) =>
     columnasSeguras
       .map((columna) => escaparCampoCSV(formatearValorDeCelda(fila?.[columna.id], columna)))
-      .join(SEPARADOR_CAMPO)
+      .join(SEPARADOR_CAMPO),
   );
 
   return BOM_UTF8 + [encabezado, ...lineas].join(SEPARADOR_LINEA);

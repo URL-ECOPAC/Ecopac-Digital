@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useRef } from 'react';
+import { createContext, useCallback, useContext, useRef } from "react";
 
 /**
  * Registro cross-pantalla de formularios con cambios sin guardar (issue #110, criterio 2).
@@ -54,7 +54,7 @@ export function useRegistroSinGuardar() {
   const contexto = useContext(ContextoDeRegistroSinGuardar);
 
   if (contexto === null) {
-    throw new Error('useRegistroSinGuardar() se llamo fuera de <RegistroSinGuardarProvider>.');
+    throw new Error("useRegistroSinGuardar() se llamo fuera de <RegistroSinGuardarProvider>.");
   }
 
   return contexto;

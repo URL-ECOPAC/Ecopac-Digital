@@ -1,9 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import {
-  registrarIngreso,
-  registrarSalida,
-  editarMovimiento,
-} from "./movimientos.api.js";
+import { registrarIngreso, registrarSalida, editarMovimiento } from "./movimientos.api.js";
 import { obtenerSupabase } from "../api/cliente.js";
 
 vi.mock("../api/cliente.js", () => ({
@@ -137,7 +133,10 @@ describe("Módulo de Inventario - API Movimientos", () => {
 
     it("registra la salida cuando hay existencia suficiente", async () => {
       mockSupabase.single
-        .mockResolvedValueOnce({ data: { id: "LOTE-1", fecha_vencimiento: "2099-01-01" }, error: null })
+        .mockResolvedValueOnce({
+          data: { id: "LOTE-1", fecha_vencimiento: "2099-01-01" },
+          error: null,
+        })
         .mockResolvedValueOnce({ data: { id: "MOV-3", tipo: "salida" }, error: null });
       mockSupabase.maybeSingle.mockResolvedValueOnce({
         data: { cantidad_disponible: 20 },

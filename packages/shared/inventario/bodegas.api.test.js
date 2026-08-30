@@ -24,9 +24,8 @@ vi.mock("../api/cliente.js", () => ({
 }));
 
 const { CODIGOS_DE_ERROR_DE_SUPABASE } = await import("../api/errores-de-supabase.js");
-const { actualizarBodega, listarBodegas, obtenerBodega, registrarBodega } = await import(
-  "./bodegas.api.js"
-);
+const { actualizarBodega, listarBodegas, obtenerBodega, registrarBodega } =
+  await import("./bodegas.api.js");
 const { listarProveedores, registrarProveedor } = await import("./proveedores.api.js");
 
 function crearCliente({ respuesta = { data: [], error: null } } = {}) {

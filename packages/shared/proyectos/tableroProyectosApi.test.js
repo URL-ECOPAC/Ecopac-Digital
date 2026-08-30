@@ -1,9 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { ROLES } from "../usuarios/roles.js";
-import {
-  obtenerProyectosTablero,
-  moverProyectoAEtapa,
-} from "./tableroProyectosApi.js";
+import { obtenerProyectosTablero, moverProyectoAEtapa } from "./tableroProyectosApi.js";
 
 describe("API Tablero de Proyectos (#307)", () => {
   // Antes esta prueba pasaba el rol como "Junta Directiva", con iniciales en mayuscula. El enum
@@ -13,7 +10,7 @@ describe("API Tablero de Proyectos (#307)", () => {
   it("no deja a junta directiva mover una etapa", async () => {
     const res = await moverProyectoAEtapa(
       { proyectoId: "p1", nuevaEtapa: "en_ejecucion", usuarioRol: ROLES.JUNTA_DIRECTIVA },
-      {}
+      {},
     );
 
     expect(res.data).toBeNull();
@@ -23,7 +20,7 @@ describe("API Tablero de Proyectos (#307)", () => {
   it("deja pasar a administrador por la guarda de rol", async () => {
     const res = await moverProyectoAEtapa(
       { proyectoId: "p1", nuevaEtapa: "en_ejecucion", usuarioRol: ROLES.ADMINISTRADOR },
-      {}
+      {},
     );
 
     // Con un cliente vacio la llamada falla mas adelante; lo que esta prueba fija es que el

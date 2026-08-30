@@ -43,7 +43,10 @@ describe("Módulo de Inventario - API Validación y Aprobación", () => {
         error: null,
       });
 
-      const res = await aprobarMovimiento("MOV-1", { usuarioId: "ADMIN-1", rolUsuario: "administrador" });
+      const res = await aprobarMovimiento("MOV-1", {
+        usuarioId: "ADMIN-1",
+        rolUsuario: "administrador",
+      });
       expect(res.error.mensaje).toContain("pendiente");
     });
 
@@ -64,19 +67,32 @@ describe("Módulo de Inventario - API Validación y Aprobación", () => {
         error: null,
       });
 
-      const res = await aprobarMovimiento("MOV-1", { usuarioId: "ADMIN-1", rolUsuario: "administrador" });
+      const res = await aprobarMovimiento("MOV-1", {
+        usuarioId: "ADMIN-1",
+        rolUsuario: "administrador",
+      });
       expect(res.error.mensaje).toContain("Stock insuficiente");
     });
 
     it("aprueba sin tocar lotes/existencias: el trigger de la base hace el ajuste", async () => {
       mockSupabase.single
         .mockResolvedValueOnce({
-          data: { id: "MOV-1", tipo: "ingreso", cantidad: 50, estado: "pendiente", lote_id: "L-1", bodega_id: "B-1" },
+          data: {
+            id: "MOV-1",
+            tipo: "ingreso",
+            cantidad: 50,
+            estado: "pendiente",
+            lote_id: "L-1",
+            bodega_id: "B-1",
+          },
           error: null,
         })
         .mockResolvedValueOnce({ data: { id: "MOV-1", estado: "aprobado" }, error: null });
 
-      const res = await aprobarMovimiento("MOV-1", { usuarioId: "ADMIN-1", rolUsuario: "administrador" });
+      const res = await aprobarMovimiento("MOV-1", {
+        usuarioId: "ADMIN-1",
+        rolUsuario: "administrador",
+      });
 
       expect(res.error).toBeNull();
       // Un solo UPDATE (el del movimiento); nunca se llama .from("lotes") ni .from("existencias")
@@ -90,7 +106,10 @@ describe("Módulo de Inventario - API Validación y Aprobación", () => {
 
   describe("rechazarMovimiento", () => {
     it("exige un motivo obligatorio", async () => {
-      const res = await rechazarMovimiento("MOV-1", { usuarioId: "ADMIN-1", rolUsuario: "administrador" });
+      const res = await rechazarMovimiento("MOV-1", {
+        usuarioId: "ADMIN-1",
+        rolUsuario: "administrador",
+      });
       expect(res.error.mensaje).toContain("motivo");
     });
 
@@ -124,7 +143,13 @@ describe("Módulo de Inventario - API Validación y Aprobación", () => {
     it("reporta por separado los que se aprobaron y los que fallaron", async () => {
       mockSupabase.single
         .mockResolvedValueOnce({
-          data: { id: "MOV-1", tipo: "ingreso", estado: "pendiente", lote_id: "L-1", bodega_id: "B-1" },
+          data: {
+            id: "MOV-1",
+            tipo: "ingreso",
+            estado: "pendiente",
+            lote_id: "L-1",
+            bodega_id: "B-1",
+          },
           error: null,
         })
         .mockResolvedValueOnce({ data: { id: "MOV-1", estado: "aprobado" }, error: null })

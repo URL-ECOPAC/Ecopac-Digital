@@ -1,11 +1,6 @@
 import React, { useState } from "react";
 
-export function ModalAtenderAlerta({
-  alerta,
-  onClose,
-  onResolver,
-  errorValidacion,
-}) {
+export function ModalAtenderAlerta({ alerta, onClose, onResolver, errorValidacion }) {
   const [accion, setAccion] = useState("descartado");
 
   if (!alerta) return null;

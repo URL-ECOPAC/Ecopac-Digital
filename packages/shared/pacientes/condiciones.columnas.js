@@ -7,19 +7,19 @@
 // La columna `condiciones` de tipo CHIPS que ya declara columnas.js:18 es otra cosa: es el
 // resumen que va en la fila del listado general de pacientes. Aqui se describe el detalle.
 
-import { TIPOS_DE_PRESENTACION } from '../descriptores.js';
+import { TIPOS_DE_PRESENTACION } from "../descriptores.js";
 
 /** Una condicion en la ficha del paciente. */
 export const COLUMNAS_CONDICION_DEL_PACIENTE = [
-  { id: 'condicion', label: 'Condicion', tipo: TIPOS_DE_PRESENTACION.TEXTO, principal: true },
-  { id: 'fechaDiagnostico', label: 'Diagnosticada', tipo: TIPOS_DE_PRESENTACION.FECHA },
+  { id: "condicion", label: "Condicion", tipo: TIPOS_DE_PRESENTACION.TEXTO, principal: true },
+  { id: "fechaDiagnostico", label: "Diagnosticada", tipo: TIPOS_DE_PRESENTACION.FECHA },
   {
-    id: 'estado',
-    label: 'Estado',
+    id: "estado",
+    label: "Estado",
     tipo: TIPOS_DE_PRESENTACION.ESTADO,
-    etiquetasDesde: 'estadosCondicionCronica',
+    etiquetasDesde: "estadosCondicionCronica",
   },
-  { id: 'notas', label: 'Notas', tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  { id: "notas", label: "Notas", tipo: TIPOS_DE_PRESENTACION.TEXTO },
 ];
 
 /**
@@ -30,15 +30,21 @@ export const COLUMNAS_CONDICION_DEL_PACIENTE = [
  * paciente, y las dos ultimas columnas no existen en aquella.
  */
 export const COLUMNAS_PACIENTE_CRONICO = [
-  { id: 'avatar', label: '', tipo: TIPOS_DE_PRESENTACION.AVATAR, desde: 'nombreCompleto', anchoWeb: '48px' },
-  { id: 'nombreCompleto', label: 'Nombre', tipo: TIPOS_DE_PRESENTACION.TEXTO, principal: true },
-  { id: 'comunidad', label: 'Comunidad', tipo: TIPOS_DE_PRESENTACION.TEXTO },
-  { id: 'condicion', label: 'Condicion', tipo: TIPOS_DE_PRESENTACION.TEXTO },
-  { id: 'fechaDiagnostico', label: 'Diagnosticada', tipo: TIPOS_DE_PRESENTACION.FECHA },
   {
-    id: 'estado',
-    label: 'Estado',
+    id: "avatar",
+    label: "",
+    tipo: TIPOS_DE_PRESENTACION.AVATAR,
+    desde: "nombreCompleto",
+    anchoWeb: "48px",
+  },
+  { id: "nombreCompleto", label: "Nombre", tipo: TIPOS_DE_PRESENTACION.TEXTO, principal: true },
+  { id: "comunidad", label: "Comunidad", tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  { id: "condicion", label: "Condicion", tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  { id: "fechaDiagnostico", label: "Diagnosticada", tipo: TIPOS_DE_PRESENTACION.FECHA },
+  {
+    id: "estado",
+    label: "Estado",
     tipo: TIPOS_DE_PRESENTACION.ESTADO,
-    etiquetasDesde: 'estadosCondicionCronica',
+    etiquetasDesde: "estadosCondicionCronica",
   },
 ];

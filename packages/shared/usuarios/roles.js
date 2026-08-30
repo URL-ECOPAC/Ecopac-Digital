@@ -6,20 +6,20 @@
 // y ninguna politica RLS lo reconoce.
 
 export const ROLES = {
-  ADMINISTRADOR: 'administrador',
-  JUNTA_DIRECTIVA: 'junta directiva',
-  SOCIO_FUNDADOR: 'socio fundador',
-  MEDICO: 'medico',
-  VOLUNTARIO: 'voluntario general',
+  ADMINISTRADOR: "administrador",
+  JUNTA_DIRECTIVA: "junta directiva",
+  SOCIO_FUNDADOR: "socio fundador",
+  MEDICO: "medico",
+  VOLUNTARIO: "voluntario general",
 };
 
 /** Etiqueta legible de cada rol, para mostrar en la interfaz. */
 export const ETIQUETAS_ROL = {
-  [ROLES.ADMINISTRADOR]: 'Administradora',
-  [ROLES.JUNTA_DIRECTIVA]: 'Junta directiva',
-  [ROLES.SOCIO_FUNDADOR]: 'Socio fundador',
-  [ROLES.MEDICO]: 'Medico',
-  [ROLES.VOLUNTARIO]: 'Voluntario',
+  [ROLES.ADMINISTRADOR]: "Administradora",
+  [ROLES.JUNTA_DIRECTIVA]: "Junta directiva",
+  [ROLES.SOCIO_FUNDADOR]: "Socio fundador",
+  [ROLES.MEDICO]: "Medico",
+  [ROLES.VOLUNTARIO]: "Voluntario",
 };
 
 /** Roles con acceso administrativo completo. */

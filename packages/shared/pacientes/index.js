@@ -20,9 +20,9 @@
 // que traen el juego completo: api, validaciones, permisos, campos, columnas y filtros. Escriben
 // padecimientos_cronicos, la tabla que api.js declara ajena en su cabecera.
 
-export * from './campos.js';
-export * from './filtros.js';
-export * from './columnas.js';
+export * from "./campos.js";
+export * from "./filtros.js";
+export * from "./columnas.js";
 export * from "./validaciones.js";
 export * from "./api.js";
 export * from "./permisos.js";

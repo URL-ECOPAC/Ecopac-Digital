@@ -81,11 +81,11 @@ npm run docker:dev
 
 La web queda en http://localhost:5173 con hot reload.
 
-Postgres local opcional para probar el esquema sin internet:
-
-```bash
-docker compose --profile db-local up
-```
+Para el esquema completo (RLS, roles `anon`/`authenticated`/`service_role`, esquema `auth`), no
+un Postgres pelado: `supabase start` (ver arriba, "Acceso del equipo a Supabase"). El perfil
+`db-local` que este archivo describia antes se retiro en la issue #515: montaba
+`supabase/migrations` sobre `postgres:16-alpine` liso, que no tiene nada de lo que la primera
+migracion ya asume, asi que nunca llegaba a aplicar ni una.
 
 ## Ejecutar sin Docker
 

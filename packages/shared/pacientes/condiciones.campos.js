@@ -5,7 +5,7 @@
 // Cuando el diccionario de datos del entregable y la migracion aplicada no coinciden, manda la
 // migracion (AGENTS.md, "Fuente de verdad").
 
-import { TIPOS_DE_CAMPO } from '../descriptores.js';
+import { TIPOS_DE_CAMPO } from "../descriptores.js";
 
 /**
  * Valores del enum estado_condicion_cronica (migracion 00010).
@@ -14,15 +14,15 @@ import { TIPOS_DE_CAMPO } from '../descriptores.js';
  * no tenga hace fallar el INSERT en tiempo de ejecucion.
  */
 export const ESTADOS_CONDICION_CRONICA = {
-  ACTIVA: 'activa',
-  CONTROLADA: 'controlada',
-  RESUELTA: 'resuelta',
+  ACTIVA: "activa",
+  CONTROLADA: "controlada",
+  RESUELTA: "resuelta",
 };
 
 export const OPCIONES_ESTADO_CONDICION = [
-  { value: ESTADOS_CONDICION_CRONICA.ACTIVA, label: 'Activa' },
-  { value: ESTADOS_CONDICION_CRONICA.CONTROLADA, label: 'Controlada' },
-  { value: ESTADOS_CONDICION_CRONICA.RESUELTA, label: 'Resuelta' },
+  { value: ESTADOS_CONDICION_CRONICA.ACTIVA, label: "Activa" },
+  { value: ESTADOS_CONDICION_CRONICA.CONTROLADA, label: "Controlada" },
+  { value: ESTADOS_CONDICION_CRONICA.RESUELTA, label: "Resuelta" },
 ];
 
 /**
@@ -37,28 +37,28 @@ export const OPCIONES_ESTADO_CONDICION = [
  */
 export const CAMPOS_CONDICION_CRONICA = [
   {
-    id: 'condicion',
-    label: 'Condicion',
+    id: "condicion",
+    label: "Condicion",
     tipo: TIPOS_DE_CAMPO.SELECT,
-    opcionesDesde: 'condicionesCronicas',
+    opcionesDesde: "condicionesCronicas",
     validacion: { requerido: true },
   },
   {
-    id: 'fechaDiagnostico',
-    label: 'Fecha de diagnostico',
+    id: "fechaDiagnostico",
+    label: "Fecha de diagnostico",
     tipo: TIPOS_DE_CAMPO.FECHA,
     validacion: { requerido: true },
   },
   {
-    id: 'estado',
-    label: 'Estado',
+    id: "estado",
+    label: "Estado",
     tipo: TIPOS_DE_CAMPO.SELECT,
     opciones: OPCIONES_ESTADO_CONDICION,
     validacion: { requerido: false },
   },
   {
-    id: 'notas',
-    label: 'Notas',
+    id: "notas",
+    label: "Notas",
     tipo: TIPOS_DE_CAMPO.TEXTO_LARGO,
     validacion: { requerido: false },
   },

@@ -1,10 +1,10 @@
-import { useRef, useState } from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors, spacing, typography } from '@ecopac/ui-tokens';
-import { useInicioSesion } from '@ecopac/shared';
+import { useRef, useState } from "react";
+import { Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { colors, spacing, typography } from "@ecopac/ui-tokens";
+import { useInicioSesion } from "@ecopac/shared";
 
-import LOGO from '../../assets/icon.png';
-import { Card, PrimaryButton, ScreenContainer, TextField } from '../components';
+import LOGO from "../../assets/icon.png";
+import { Card, PrimaryButton, ScreenContainer, TextField } from "../components";
 
 export default function LoginScreen() {
   const {
@@ -55,7 +55,7 @@ export default function LoginScreen() {
         <View style={styles.encabezadoContrasena}>
           <Text style={styles.labelContrasena}>Contraseña</Text>
           <Pressable onPress={() => setVerContrasena((valor) => !valor)} hitSlop={8}>
-            <Text style={styles.toggleContrasena}>{verContrasena ? 'Ocultar' : 'Mostrar'}</Text>
+            <Text style={styles.toggleContrasena}>{verContrasena ? "Ocultar" : "Mostrar"}</Text>
           </Pressable>
         </View>
         <TextField
@@ -87,14 +87,14 @@ export default function LoginScreen() {
 
 const styles = StyleSheet.create({
   contenido: {
-    justifyContent: 'center',
+    justifyContent: "center",
   },
   tarjeta: {
     padding: spacing.lg,
   },
   encabezado: {
     marginBottom: spacing.xl,
-    alignItems: 'center',
+    alignItems: "center",
   },
   logo: {
     width: 72,
@@ -126,12 +126,12 @@ const styles = StyleSheet.create({
     fontFamily: typography.fontFamilyBase,
     fontSize: typography.sizes.sm,
     color: colors.danger,
-    textAlign: 'center',
+    textAlign: "center",
   },
   encabezadoContrasena: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: spacing.xs,
   },
   labelContrasena: {

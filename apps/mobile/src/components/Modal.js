@@ -1,5 +1,5 @@
-import { Modal as ModalNativo, Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors, spacing, typography } from '@ecopac/ui-tokens';
+import { Modal as ModalNativo, Pressable, StyleSheet, Text, View } from "react-native";
+import { colors, spacing, typography } from "@ecopac/ui-tokens";
 
 const MIN_TOUCH_HEIGHT = 48;
 
@@ -15,12 +15,7 @@ const MIN_TOUCH_HEIGHT = 48;
  */
 export default function Modal({ visible = false, onClose, title, children }) {
   return (
-    <ModalNativo
-      visible={visible}
-      transparent
-      animationType="slide"
-      onRequestClose={onClose}
-    >
+    <ModalNativo visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.root}>
         {/* Capa de fondo separada del contenido: asi la opacidad solo afecta al fondo y no
             oscurece la hoja ni su texto. */}
@@ -45,19 +40,19 @@ export default function Modal({ visible = false, onClose, title, children }) {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, justifyContent: 'flex-end' },
+  root: { flex: 1, justifyContent: "flex-end" },
   backdrop: { flex: 1, backgroundColor: colors.text, opacity: 0.5 },
   sheet: {
-    maxHeight: '85%',
+    maxHeight: "85%",
     backgroundColor: colors.background,
     borderTopLeftRadius: spacing.md,
     borderTopRightRadius: spacing.md,
     padding: spacing.md,
   },
   cabecera: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     marginBottom: spacing.md,
   },
   titulo: {
@@ -69,7 +64,7 @@ const styles = StyleSheet.create({
   },
   cerrar: {
     minHeight: MIN_TOUCH_HEIGHT,
-    justifyContent: 'center',
+    justifyContent: "center",
     paddingHorizontal: spacing.sm,
   },
   cerrarTexto: {

@@ -42,7 +42,9 @@ describe("CAMPOS_FORMULARIO_JORNADA", () => {
 
 describe("CAMPOS_ASIGNACION_PERSONAL_SIN_PERFIL", () => {
   it("no incluye el campo perfil: se elige por busqueda, no por select (issue #182)", () => {
-    expect(CAMPOS_ASIGNACION_PERSONAL_SIN_PERFIL.some((campo) => campo.id === "perfil")).toBe(false);
+    expect(CAMPOS_ASIGNACION_PERSONAL_SIN_PERFIL.some((campo) => campo.id === "perfil")).toBe(
+      false,
+    );
   });
 
   it("conserva el resto de los campos del formulario, en el mismo orden", () => {

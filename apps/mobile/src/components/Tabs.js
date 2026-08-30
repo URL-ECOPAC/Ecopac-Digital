@@ -1,5 +1,5 @@
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { colors, spacing, typography } from '@ecopac/ui-tokens';
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { colors, spacing, typography } from "@ecopac/ui-tokens";
 
 const MIN_TOUCH_HEIGHT = 48;
 
@@ -46,10 +46,10 @@ export default function Tabs({ tabs = [], activo, onChange, children }) {
 }
 
 const styles = StyleSheet.create({
-  fila: { flexDirection: 'row', gap: spacing.sm, paddingVertical: spacing.xs },
+  fila: { flexDirection: "row", gap: spacing.sm, paddingVertical: spacing.xs },
   pill: {
     minHeight: MIN_TOUCH_HEIGHT,
-    justifyContent: 'center',
+    justifyContent: "center",
     paddingHorizontal: spacing.md,
     borderRadius: MIN_TOUCH_HEIGHT / 2,
     borderWidth: 1,

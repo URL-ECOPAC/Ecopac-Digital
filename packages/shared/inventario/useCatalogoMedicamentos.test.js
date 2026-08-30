@@ -1,25 +1,43 @@
 import { describe, it, expect } from "vitest";
 
 const mockInventario = [
-  { id: "1", nombre: "Paracetamol", principio_activo: "Acetaminofén", categoria: "Medicamentos", bodega_nombre: "Central" },
-  { id: "2", nombre: "Jeringa 5ml", principio_activo: "N/A", categoria: "Suministros", bodega_nombre: "Norte" },
-  { id: "3", nombre: "Ibuprofeno", principio_activo: "Ibuprofeno", categoria: "Medicamentos", bodega_nombre: "Central" },
+  {
+    id: "1",
+    nombre: "Paracetamol",
+    principio_activo: "Acetaminofén",
+    categoria: "Medicamentos",
+    bodega_nombre: "Central",
+  },
+  {
+    id: "2",
+    nombre: "Jeringa 5ml",
+    principio_activo: "N/A",
+    categoria: "Suministros",
+    bodega_nombre: "Norte",
+  },
+  {
+    id: "3",
+    nombre: "Ibuprofeno",
+    principio_activo: "Ibuprofeno",
+    categoria: "Medicamentos",
+    bodega_nombre: "Central",
+  },
 ];
 
-function filtrarInventario(inventario, { busqueda = "", categoria = "Todos", bodega = "Todas" } = {}) {
+function filtrarInventario(
+  inventario,
+  { busqueda = "", categoria = "Todos", bodega = "Todas" } = {},
+) {
   return inventario.filter((item) => {
     const coincideBusqueda =
       !busqueda ||
       item.nombre?.toLowerCase().includes(busqueda.toLowerCase()) ||
       item.principio_activo?.toLowerCase().includes(busqueda.toLowerCase());
 
-    const coincideCategoria =
-      categoria === "Todos" || item.categoria === categoria;
+    const coincideCategoria = categoria === "Todos" || item.categoria === categoria;
 
     const coincideBodega =
-      bodega === "Todas" ||
-      item.bodega_id === bodega ||
-      item.bodega_nombre === bodega;
+      bodega === "Todas" || item.bodega_id === bodega || item.bodega_nombre === bodega;
 
     return coincideBusqueda && coincideCategoria && coincideBodega;
   });

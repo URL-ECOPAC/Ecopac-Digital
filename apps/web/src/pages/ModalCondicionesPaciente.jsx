@@ -3,15 +3,15 @@ import {
   ESTADOS_CONDICION_CRONICA,
   TIPOS_DE_CAMPO,
   useCondicionesPaciente,
-} from '@ecopac/shared';
+} from "@ecopac/shared";
 
-import DataList from '../components/DataList';
-import DateField from '../components/DateField';
-import Modal from '../components/Modal';
-import PrimaryButton from '../components/PrimaryButton';
-import SecondaryButton from '../components/SecondaryButton';
-import Selector from '../components/Selector';
-import TextField from '../components/TextField';
+import DataList from "../components/DataList";
+import DateField from "../components/DateField";
+import Modal from "../components/Modal";
+import PrimaryButton from "../components/PrimaryButton";
+import SecondaryButton from "../components/SecondaryButton";
+import Selector from "../components/Selector";
+import TextField from "../components/TextField";
 
 export default function ModalCondicionesPaciente({ pacienteId, rol, onClose, onCambio }) {
   const {
@@ -126,8 +126,8 @@ export default function ModalCondicionesPaciente({ pacienteId, rol, onClose, onC
               <TextField
                 key={campo.id}
                 label={campo.label}
-                as={campo.tipo === TIPOS_DE_CAMPO.TEXTO_LARGO ? 'textarea' : undefined}
-                value={valores[campo.id] ?? ''}
+                as={campo.tipo === TIPOS_DE_CAMPO.TEXTO_LARGO ? "textarea" : undefined}
+                value={valores[campo.id] ?? ""}
                 onChange={(evento) => setCampo(campo.id, evento.target.value)}
                 error={errores[campo.id]}
                 disabled={enviando}

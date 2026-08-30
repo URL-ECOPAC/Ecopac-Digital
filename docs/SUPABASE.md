@@ -40,10 +40,13 @@ supabase stop           # apaga el stack local
 Sirve para probar una migracion nueva antes de que toque el proyecto real, sin arriesgar los
 datos de `Ecopac-Digital-Dev`.
 
-**Esto no es lo mismo que el servicio `db-local` de `docker-compose.yml`.** Ese servicio es un
-Postgres generico, sin Auth ni Storage ni Studio, pensado solo como respaldo rapido para
-probar SQL sin depender de internet. El stack real de Supabase (con todo lo que la app
-realmente usa) es el que levanta `supabase start`.
+`docker-compose.yml` tenia antes un servicio `db-local`, un Postgres generico sin Auth ni
+Storage ni Studio, pensado como respaldo rapido para probar SQL sin depender de internet. Se
+retiro en la issue #515: montaba `supabase/migrations` sobre `postgres:16-alpine` liso, que no
+tiene el esquema `auth`, el esquema `extensions` ni los roles `anon`/`authenticated`/
+`service_role` que la primera migracion ya asume, asi que nunca llegaba a aplicar ni una. El
+stack real de Supabase (con todo lo que la app realmente usa) es el que levanta
+`supabase start`, y es el unico camino local desde esta issue.
 
 ## El flujo completo de una migracion
 

@@ -1,18 +1,18 @@
-import { useState } from 'react';
+import { useState } from "react";
 
 import {
   CAMPOS_ASIGNACION_PERSONAL_SIN_PERFIL,
   COLUMNAS_RESULTADOS_ASIGNACION_PERSONAL,
   OPCIONES_ROL,
   useAsignacionPersonal,
-} from '@ecopac/shared';
+} from "@ecopac/shared";
 
-import DataList from '../components/DataList';
-import Modal from '../components/Modal';
-import PrimaryButton from '../components/PrimaryButton';
-import SecondaryButton from '../components/SecondaryButton';
-import Selector from '../components/Selector';
-import TextField from '../components/TextField';
+import DataList from "../components/DataList";
+import Modal from "../components/Modal";
+import PrimaryButton from "../components/PrimaryButton";
+import SecondaryButton from "../components/SecondaryButton";
+import Selector from "../components/Selector";
+import TextField from "../components/TextField";
 
 // Modal de buscar y asignar personal a una jornada (issue #182). No va en components/: es
 // especifico de esta pantalla, mismo motivo que ModalAltaUsuario.jsx (#106) -no es una pieza
@@ -29,10 +29,17 @@ import TextField from '../components/TextField';
 // montarlo (mismo criterio que el resto de la pestaña Equipo); este componente no vuelve a
 // preguntar.
 const TIPO_DE_INPUT = {
-  hora: 'time',
+  hora: "time",
 };
 
-export default function ModalAsignarPersonal({ visible, jornadaId, jornadaFecha, personal, onClose, onAsignado }) {
+export default function ModalAsignarPersonal({
+  visible,
+  jornadaId,
+  jornadaFecha,
+  personal,
+  onClose,
+  onAsignado,
+}) {
   const {
     busqueda,
     setBusqueda,
@@ -110,9 +117,9 @@ export default function ModalAsignarPersonal({ visible, jornadaId, jornadaFecha,
               cargando={buscando}
               onRowPress={elegirPersona}
               vacio={
-                busqueda.trim() === '' && !rolFiltro
-                  ? 'Escribe un nombre, un correo o elige un rol para buscar.'
-                  : 'No hay personal activo que coincida con la busqueda.'
+                busqueda.trim() === "" && !rolFiltro
+                  ? "Escribe un nombre, un correo o elige un rol para buscar."
+                  : "No hay personal activo que coincida con la busqueda."
               }
             />
           )}
@@ -133,11 +140,14 @@ export default function ModalAsignarPersonal({ visible, jornadaId, jornadaFecha,
       {personaElegida && !recienGuardado && (
         <>
           <p className="mb-3">
-            Asignando a <strong>{personaElegida.nombreCompleto}</strong> ({personaElegida.rolEtiqueta}).{' '}
+            Asignando a <strong>{personaElegida.nombreCompleto}</strong> (
+            {personaElegida.rolEtiqueta}).{" "}
             <SecondaryButton title="Cambiar" onClick={volverABuscar} disabled={enviando} />
           </p>
 
-          {verificandoChoque && <p className="text-muted small">Comprobando otras jornadas del mismo dia...</p>}
+          {verificandoChoque && (
+            <p className="text-muted small">Comprobando otras jornadas del mismo dia...</p>
+          )}
 
           {/* Nunca se afirma "no hay choque": si la comprobacion fallo, se dice explicitamente
               que no se pudo verificar en vez de dejar pasar el silencio como una garantia
@@ -162,7 +172,7 @@ export default function ModalAsignarPersonal({ visible, jornadaId, jornadaFecha,
           )}
 
           {CAMPOS_ASIGNACION_PERSONAL_SIN_PERFIL.map((campo) =>
-            campo.tipo === 'select' ? (
+            campo.tipo === "select" ? (
               <Selector
                 key={campo.id}
                 label={campo.label}
@@ -176,8 +186,8 @@ export default function ModalAsignarPersonal({ visible, jornadaId, jornadaFecha,
               <TextField
                 key={campo.id}
                 label={campo.label}
-                type={TIPO_DE_INPUT[campo.tipo] ?? 'text'}
-                value={valores[campo.id] ?? ''}
+                type={TIPO_DE_INPUT[campo.tipo] ?? "text"}
+                value={valores[campo.id] ?? ""}
                 onChange={(evento) => setCampo(campo.id, evento.target.value)}
                 error={errores[campo.id]}
                 disabled={enviando}

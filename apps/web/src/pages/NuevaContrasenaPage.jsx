@@ -1,13 +1,7 @@
-import React, { useState } from 'react';
-import { Navigate } from 'react-router-dom';
-import { useNuevaContrasena } from '@ecopac/shared';
-import {
-  Card,
-  ErrorState,
-  PrimaryButton,
-  ScreenContainer,
-  TextField,
-} from '../components';
+import React, { useState } from "react";
+import { Navigate } from "react-router-dom";
+import { useNuevaContrasena } from "@ecopac/shared";
+import { Card, ErrorState, PrimaryButton, ScreenContainer, TextField } from "../components";
 
 export default function NuevaContrasenaPage() {
   const {
@@ -32,7 +26,7 @@ export default function NuevaContrasenaPage() {
       <Navigate
         to="/login"
         replace
-        state={{ mensaje: 'Contraseña actualizada. Inicia sesión con la nueva.' }}
+        state={{ mensaje: "Contraseña actualizada. Inicia sesión con la nueva." }}
       />
     );
   }
@@ -46,7 +40,7 @@ export default function NuevaContrasenaPage() {
           <div className="position-relative mb-3">
             <TextField
               label="Nueva contraseña"
-              type={verPassword ? 'text' : 'password'}
+              type={verPassword ? "text" : "password"}
               autoComplete="new-password"
               value={contrasena}
               onChange={(e) => setContrasena(e.target.value)}
@@ -57,21 +51,21 @@ export default function NuevaContrasenaPage() {
               type="button"
               className="btn btn-link btn-sm position-absolute text-decoration-none text-muted"
               style={{
-                right: '12px',
-                top: erroresDeCampo?.contrasena ? '32px' : '38px',
+                right: "12px",
+                top: erroresDeCampo?.contrasena ? "32px" : "38px",
                 zIndex: 5,
-                fontSize: '0.85rem',
+                fontSize: "0.85rem",
               }}
               onClick={() => setVerPassword(!verPassword)}
               tabIndex={-1}
             >
-              {verPassword ? 'Ocultar' : 'Mostrar'}
+              {verPassword ? "Ocultar" : "Mostrar"}
             </button>
           </div>
 
           <TextField
             label="Confirmar contraseña"
-            type={verPassword ? 'text' : 'password'}
+            type={verPassword ? "text" : "password"}
             autoComplete="new-password"
             value={confirmarContrasena}
             onChange={(e) => setConfirmarContrasena(e.target.value)}
@@ -81,7 +75,7 @@ export default function NuevaContrasenaPage() {
 
           <div className="mt-4">
             <PrimaryButton
-              title={enviando ? 'Guardando...' : 'Guardar nueva contraseña'}
+              title={enviando ? "Guardando..." : "Guardar nueva contraseña"}
               type="submit"
               disabled={enviando}
             />

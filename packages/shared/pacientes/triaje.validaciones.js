@@ -1,5 +1,3 @@
-
-
 import { CAMPOS_TRIAJE } from "./campos.js";
 import { combinarErrores, esTextoVacio, validarConDescriptores } from "../validations/index.js";
 
@@ -9,7 +7,6 @@ const TRAMOS_DE_EDAD = Object.freeze({
   PEDIATRICO: "pediatrico",
   ADULTO: "adulto",
 });
-
 
 const UMBRALES_DE_ALARMA_PENDIENTES_DE_REVISION = Object.freeze({
   [TRAMOS_DE_EDAD.PEDIATRICO]: {
@@ -96,7 +93,10 @@ function erroresDeRangoTriaje(valores = {}) {
  * @returns {Record<string, string>} Errores por campo. Vacio si todo esta bien.
  */
 export function validarTriaje(valores) {
-  return combinarErrores(validarConDescriptores(CAMPOS_TRIAJE, valores), erroresDeRangoTriaje(valores));
+  return combinarErrores(
+    validarConDescriptores(CAMPOS_TRIAJE, valores),
+    erroresDeRangoTriaje(valores),
+  );
 }
 
 /**
@@ -142,7 +142,9 @@ export const SIGNOS_OPCIONALES = Object.freeze(
  */
 function elegirTramoDeEdad(edad) {
   if (edad === null) return TRAMOS_DE_EDAD.ADULTO;
-  return edad.anios < EDAD_CORTE_PEDIATRICO_ANIOS ? TRAMOS_DE_EDAD.PEDIATRICO : TRAMOS_DE_EDAD.ADULTO;
+  return edad.anios < EDAD_CORTE_PEDIATRICO_ANIOS
+    ? TRAMOS_DE_EDAD.PEDIATRICO
+    : TRAMOS_DE_EDAD.ADULTO;
 }
 
 /**

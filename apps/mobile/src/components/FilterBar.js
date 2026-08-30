@@ -1,12 +1,12 @@
-import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { TIPOS_DE_FILTRO } from '@ecopac/shared';
-import { colors, spacing, typography } from '@ecopac/ui-tokens';
-import DateField from './DateField';
-import NumberField from './NumberField';
-import PrimaryButton from './PrimaryButton';
-import Selector from './Selector';
-import TextField from './TextField';
+import { useState } from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import { TIPOS_DE_FILTRO } from "@ecopac/shared";
+import { colors, spacing, typography } from "@ecopac/ui-tokens";
+import DateField from "./DateField";
+import NumberField from "./NumberField";
+import PrimaryButton from "./PrimaryButton";
+import Selector from "./Selector";
+import TextField from "./TextField";
 
 const MIN_TOUCH_HEIGHT = 48;
 
@@ -54,7 +54,7 @@ export default function FilterBar({ campos = [], valores = {}, onChange, catalog
 
   const activos = campos.filter((campo) => {
     const valor = valores[campo.id];
-    return valor !== null && valor !== undefined && valor !== '';
+    return valor !== null && valor !== undefined && valor !== "";
   }).length;
 
   return (
@@ -65,10 +65,8 @@ export default function FilterBar({ campos = [], valores = {}, onChange, catalog
         accessibilityRole="button"
         accessibilityState={{ expanded: abierto }}
       >
-        <Text style={styles.cabeceraTexto}>
-          Filtros{activos > 0 ? ` (${activos})` : ''}
-        </Text>
-        <Text style={styles.cabeceraTexto}>{abierto ? '-' : '+'}</Text>
+        <Text style={styles.cabeceraTexto}>Filtros{activos > 0 ? ` (${activos})` : ""}</Text>
+        <Text style={styles.cabeceraTexto}>{abierto ? "-" : "+"}</Text>
       </Pressable>
 
       {abierto ? (
@@ -82,7 +80,7 @@ export default function FilterBar({ campos = [], valores = {}, onChange, catalog
                   key={campo.id}
                   label={campo.label}
                   placeholder={campo.placeholder}
-                  value={valor ?? ''}
+                  value={valor ?? ""}
                   onChangeText={(texto) => editar(campo.id, texto)}
                 />
               );
@@ -97,7 +95,7 @@ export default function FilterBar({ campos = [], valores = {}, onChange, catalog
                   value={valor ?? null}
                   options={opciones}
                   onSelect={(elegido) => editar(campo.id, elegido)}
-                  placeholder={opciones.length === 0 ? 'Sin opciones' : 'Todos'}
+                  placeholder={opciones.length === 0 ? "Sin opciones" : "Todos"}
                   style={opciones.length === 0 ? styles.deshabilitado : undefined}
                 />
               );
@@ -106,8 +104,8 @@ export default function FilterBar({ campos = [], valores = {}, onChange, catalog
             if (campo.tipo === TIPOS_DE_FILTRO.RANGO) {
               const rango = valor ?? {};
               const esFecha =
-                campo.subtipo === 'fecha' ||
-                (typeof campo.min !== 'number' && typeof campo.max !== 'number');
+                campo.subtipo === "fecha" ||
+                (typeof campo.min !== "number" && typeof campo.max !== "number");
               const Campo = esFecha ? DateField : NumberField;
               const limites = esFecha
                 ? [{ maxDate: rango.max ?? undefined }, { minDate: rango.min ?? undefined }]
@@ -155,9 +153,9 @@ const styles = StyleSheet.create({
   container: { marginBottom: spacing.md },
   cabecera: {
     minHeight: MIN_TOUCH_HEIGHT,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: spacing.md,
     borderWidth: 1,
     borderColor: colors.border,
@@ -188,6 +186,6 @@ const styles = StyleSheet.create({
     color: colors.text,
     marginBottom: spacing.xs,
   },
-  rangoFila: { flexDirection: 'row', gap: spacing.sm },
+  rangoFila: { flexDirection: "row", gap: spacing.sm },
   rangoCampo: { flex: 1 },
 });

@@ -28,12 +28,8 @@ vi.mock("../api/cliente.js", () => ({
 }));
 
 const { CODIGOS_DE_ERROR_DE_SUPABASE } = await import("../api/errores-de-supabase.js");
-const {
-  actualizarMedicamento,
-  desactivarMedicamento,
-  listarMedicamentos,
-  registrarMedicamento,
-} = await import("./medicamentos.api.js");
+const { actualizarMedicamento, desactivarMedicamento, listarMedicamentos, registrarMedicamento } =
+  await import("./medicamentos.api.js");
 
 /**
  * Doble de un cliente de Supabase que resuelve por tabla y por funcion de rpc.

@@ -46,8 +46,7 @@ const COMUNIDAD = "10000000-0000-0000-0000-000000122001";
 /** Doble minimo de un query builder de supabase-js. */
 function crearCliente(respuesta = { data: [], error: null }) {
   const llamadas = [];
-  const resolver = async () =>
-    respuesta instanceof Error ? Promise.reject(respuesta) : respuesta;
+  const resolver = async () => (respuesta instanceof Error ? Promise.reject(respuesta) : respuesta);
 
   const encadenable = {
     insert(valores) {

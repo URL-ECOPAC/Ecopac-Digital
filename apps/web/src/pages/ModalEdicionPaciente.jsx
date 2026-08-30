@@ -1,17 +1,17 @@
-import { useState } from 'react';
+import { useState } from "react";
 
-import { TIPOS_DE_CAMPO, useEdicionPaciente } from '@ecopac/shared';
+import { TIPOS_DE_CAMPO, useEdicionPaciente } from "@ecopac/shared";
 
-import DateField from '../components/DateField';
-import Modal from '../components/Modal';
-import PrimaryButton from '../components/PrimaryButton';
-import SecondaryButton from '../components/SecondaryButton';
-import Selector from '../components/Selector';
-import TextField from '../components/TextField';
+import DateField from "../components/DateField";
+import Modal from "../components/Modal";
+import PrimaryButton from "../components/PrimaryButton";
+import SecondaryButton from "../components/SecondaryButton";
+import Selector from "../components/Selector";
+import TextField from "../components/TextField";
 
 const TIPO_DE_INPUT = {
-  [TIPOS_DE_CAMPO.TEXTO]: 'text',
-  [TIPOS_DE_CAMPO.TELEFONO]: 'tel',
+  [TIPOS_DE_CAMPO.TEXTO]: "text",
+  [TIPOS_DE_CAMPO.TELEFONO]: "tel",
 };
 
 export default function ModalEdicionPaciente({ paciente, onClose, onGuardado }) {
@@ -97,9 +97,9 @@ export default function ModalEdicionPaciente({ paciente, onClose, onGuardado }) 
             <TextField
               key={campo.id}
               label={campo.label}
-              type={TIPO_DE_INPUT[campo.tipo] ?? 'text'}
+              type={TIPO_DE_INPUT[campo.tipo] ?? "text"}
               maxLength={campo.validacion?.maxLongitud}
-              value={valores[campo.id] ?? ''}
+              value={valores[campo.id] ?? ""}
               onChange={(evento) => setCampo(campo.id, evento.target.value)}
               error={errores[campo.id]}
               disabled={enviando}

@@ -34,7 +34,7 @@ export function useRegistroDonacion({ _client, usuarioRol, onGuardarExito }) {
 
   const actualizarRenglon = (id, campo, valor) => {
     setDetalles((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, [campo]: valor } : item))
+      prev.map((item) => (item.id === id ? { ...item, [campo]: valor } : item)),
     );
   };
 

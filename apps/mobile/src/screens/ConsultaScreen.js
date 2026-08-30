@@ -1,6 +1,6 @@
-import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useState } from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import { useNavigation, useRoute } from "@react-navigation/native";
 
 import {
   TIPOS_DE_CAMPO,
@@ -8,8 +8,8 @@ import {
   usePaciente,
   useJornadaActiva,
   useRegistroConsulta,
-} from '@ecopac/shared';
-import { colors, spacing, typography } from '@ecopac/ui-tokens';
+} from "@ecopac/shared";
+import { colors, spacing, typography } from "@ecopac/ui-tokens";
 
 import {
   Card,
@@ -20,10 +20,10 @@ import {
   SecondaryButton,
   Selector,
   TextField,
-} from '../components';
-import { almacenamientoMovil } from '../almacenamiento';
-import { useSesionCompartida } from '../contexto/SesionProvider';
-import { ROUTES } from '../navigation/rutas';
+} from "../components";
+import { almacenamientoMovil } from "../almacenamiento";
+import { useSesionCompartida } from "../contexto/SesionProvider";
+import { ROUTES } from "../navigation/rutas";
 
 function CabeceraDeSignos({ signos }) {
   if (!signos) {
@@ -47,7 +47,7 @@ function CabeceraDeSignos({ signos }) {
 
   return (
     <Card title="Signos vitales" style={styles.tarjeta}>
-      <Text style={styles.signos}>{renglones.join('  ·  ')}</Text>
+      <Text style={styles.signos}>{renglones.join("  ·  ")}</Text>
     </Card>
   );
 }
@@ -75,7 +75,7 @@ function Diagnosticos({ campo, valor, opciones, onChange, deshabilitado }) {
       {elegidos.map((id, indice) => (
         <Pressable key={id} onPress={() => quitar(id)} style={styles.diagnostico}>
           <Text style={styles.textoDiagnostico}>
-            {indice === 0 ? 'Principal: ' : ''}
+            {indice === 0 ? "Principal: " : ""}
             {opciones.find((opcion) => opcion.value === id)?.label ?? id}
           </Text>
           <Text style={styles.quitar}>Quitar</Text>
@@ -150,7 +150,7 @@ export default function ConsultaScreen() {
       <ScreenContainer>
         <Card title="Consulta registrada">
           <Text style={styles.texto}>
-            Queda guardada para {nombreCompletoDePaciente(paciente) ?? 'el paciente'}.
+            Queda guardada para {nombreCompletoDePaciente(paciente) ?? "el paciente"}.
           </Text>
         </Card>
         <PrimaryButton
@@ -170,7 +170,7 @@ export default function ConsultaScreen() {
 
   return (
     <ScreenContainer>
-      <Text style={styles.paciente}>{nombreCompletoDePaciente(paciente) ?? 'Paciente'}</Text>
+      <Text style={styles.paciente}>{nombreCompletoDePaciente(paciente) ?? "Paciente"}</Text>
       {jornada?.nombre && <Text style={styles.jornada}>{jornada.nombre}</Text>}
 
       <CabeceraDeSignos signos={signos} />
@@ -188,7 +188,7 @@ export default function ConsultaScreen() {
           <Card key={seccion.id} style={styles.tarjeta}>
             <Pressable onPress={() => alternar(seccion.id)} style={styles.cabeceraSeccion}>
               <Text style={styles.tituloSeccion}>{seccion.titulo}</Text>
-              <Text style={styles.textoTenue}>{abierta ? 'Ocultar' : 'Mostrar'}</Text>
+              <Text style={styles.textoTenue}>{abierta ? "Ocultar" : "Mostrar"}</Text>
             </Pressable>
 
             {abierta &&
@@ -206,7 +206,7 @@ export default function ConsultaScreen() {
                   <TextField
                     key={campo.id}
                     label={campo.validacion?.requerido ? `${campo.label} *` : campo.label}
-                    value={valores[campo.id] ?? ''}
+                    value={valores[campo.id] ?? ""}
                     onChangeText={(texto) => setCampo(campo.id, texto)}
                     multiline
                     numberOfLines={3}
@@ -249,9 +249,9 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   cabeceraSeccion: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
     minHeight: 48,
   },
   tituloSeccion: {
@@ -264,9 +264,9 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.md,
   },
   diagnostico: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
     minHeight: 48,
   },
   textoDiagnostico: {

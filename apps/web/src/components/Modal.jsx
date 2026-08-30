@@ -1,4 +1,4 @@
-import { Modal as ModalBootstrap } from 'react-bootstrap';
+import { Modal as ModalBootstrap } from "react-bootstrap";
 
 /**
  * Dialogo modal.

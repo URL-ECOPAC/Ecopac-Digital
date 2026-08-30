@@ -34,7 +34,7 @@ describe("Módulo de Donaciones - Catálogo de Donantes (#190)", () => {
   it("permite registrar donante solo al Administrador", async () => {
     const resDenegado = await registrarDonante(
       { tipo: "persona", nombre: "Juan" },
-      { rolUsuario: ROLES.JUNTA_DIRECTIVA }
+      { rolUsuario: ROLES.JUNTA_DIRECTIVA },
     );
     expect(resDenegado.error.mensaje).toContain("Administrador");
 
@@ -45,7 +45,7 @@ describe("Módulo de Donaciones - Catálogo de Donantes (#190)", () => {
 
     const resExito = await registrarDonante(
       { tipo: "persona", nombre: "Juan" },
-      { rolUsuario: ROLES.ADMINISTRADOR }
+      { rolUsuario: ROLES.ADMINISTRADOR },
     );
     expect(resExito.datos.id).toBe("DON-1");
   });
@@ -68,7 +68,10 @@ describe("Módulo de Donaciones - Catálogo de Donantes (#190)", () => {
       error: null,
     });
 
-    const res = await listarDonantes({ busqueda: "Esperanza" }, { rolUsuario: ROLES.ADMINISTRADOR });
+    const res = await listarDonantes(
+      { busqueda: "Esperanza" },
+      { rolUsuario: ROLES.ADMINISTRADOR },
+    );
 
     expect(mockSupabase.ilike).toHaveBeenCalledWith("nombre", "%Esperanza%");
     expect(res.datos).toHaveLength(1);

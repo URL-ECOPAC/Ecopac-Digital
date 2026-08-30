@@ -224,12 +224,18 @@ export async function obtenerPaciente(id) {
         .select(COLUMNAS_DEL_EXPEDIENTE)
         .eq("paciente_id", id)
         .maybeSingle(),
-      supabase.from("padecimientos_cronicos").select(COLUMNAS_DE_CONDICION_CRONICA).eq("paciente_id", id),
+      supabase
+        .from("padecimientos_cronicos")
+        .select(COLUMNAS_DE_CONDICION_CRONICA)
+        .eq("paciente_id", id),
     ]);
 
-    if (respuestaPaciente.error) return { paciente: null, error: normalizarError(respuestaPaciente.error) };
-    if (respuestaExpediente.error) return { paciente: null, error: normalizarError(respuestaExpediente.error) };
-    if (respuestaCondiciones.error) return { paciente: null, error: normalizarError(respuestaCondiciones.error) };
+    if (respuestaPaciente.error)
+      return { paciente: null, error: normalizarError(respuestaPaciente.error) };
+    if (respuestaExpediente.error)
+      return { paciente: null, error: normalizarError(respuestaExpediente.error) };
+    if (respuestaCondiciones.error)
+      return { paciente: null, error: normalizarError(respuestaCondiciones.error) };
 
     const fila = respuestaPaciente.data;
     if (!fila) return { paciente: null, error: null };
@@ -539,7 +545,8 @@ export async function buscarPacientes({
   // comunidad, igual conviene llamar a fn_buscar_pacientes -sin el termino- para servir
   // el listado de esa comunidad en vez de nada; terminoDemasiadoCorto sigue en true para
   // que la pantalla explique por que el nombre no filtro.
-  const terminoParaBusquedaPorNombre = hayTermino && !terminoDemasiadoCorto ? terminoNormalizado : null;
+  const terminoParaBusquedaPorNombre =
+    hayTermino && !terminoDemasiadoCorto ? terminoNormalizado : null;
   const debeConsultarBusqueda =
     terminoParaBusquedaPorNombre !== null || hayAlgunFiltro || listarTodos;
 

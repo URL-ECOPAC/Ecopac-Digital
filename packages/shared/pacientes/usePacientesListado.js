@@ -103,21 +103,12 @@ export function usePacientesListado({ porPagina } = {}) {
 
   const filtrosDeServidor = useMemo(() => aFiltrosDeBusqueda(filtros), [filtros]);
 
-  const {
-    termino,
-    setTermino,
-    recargar,
-    resultados,
-    total,
-    cargando,
-    error,
-    hayMas,
-    cargarMas,
-  } = useBusquedaPacientes({
-    comunidad: filtros.comunidad || undefined,
-    filtros: filtrosDeServidor,
-    porPagina,
-  });
+  const { termino, setTermino, recargar, resultados, total, cargando, error, hayMas, cargarMas } =
+    useBusquedaPacientes({
+      comunidad: filtros.comunidad || undefined,
+      filtros: filtrosDeServidor,
+      porPagina,
+    });
 
   useEffect(() => {
     let vigente = true;

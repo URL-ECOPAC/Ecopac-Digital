@@ -20,10 +20,10 @@
 // nombre en el paquete; la de api/sesion.js es la que valida credenciales, normaliza el error,
 // resuelve el perfil y cierra sesion si la cuenta esta desactivada.
 
-import { useState } from 'react';
+import { useState } from "react";
 
-import { iniciarSesion } from '../api/sesion.js';
-import { modulosVisibles } from '../navegacion.js';
+import { iniciarSesion } from "../api/sesion.js";
+import { modulosVisibles } from "../navegacion.js";
 
 /**
  * Primera ruta que el rol puede ver, segun la definicion unica de MODULOS.
@@ -33,7 +33,7 @@ import { modulosVisibles } from '../navegacion.js';
  * a /dashboard y /jornadas-activas, dos rutas que App.jsx no declara.
  */
 function rutaInicialDe(rol) {
-  return modulosVisibles(rol)[0]?.ruta ?? '/';
+  return modulosVisibles(rol)[0]?.ruta ?? "/";
 }
 
 /**
@@ -41,8 +41,8 @@ function rutaInicialDe(rol) {
  *   de que el guard la mandara al login. Si viene, gana sobre el destino por rol.
  */
 export function useInicioSesion({ rutaPrevia } = {}) {
-  const [correo, setCorreo] = useState('');
-  const [contrasena, setContrasena] = useState('');
+  const [correo, setCorreo] = useState("");
+  const [contrasena, setContrasena] = useState("");
   const [erroresDeCampo, setErroresDeCampo] = useState({});
   const [error, setError] = useState(null);
   const [enviando, setEnviando] = useState(false);

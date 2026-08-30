@@ -23,9 +23,24 @@ const {
   revocarPermiso,
 } = await import("./permisos.api.js");
 
-const PERMISO_JORNADAS = { id: "p-jornadas", clave: "jornadas.gestionar", modulo: "jornadas", descripcion: "" };
-const PERMISO_PACIENTES = { id: "p-pacientes", clave: "pacientes.editar", modulo: "pacientes", descripcion: "" };
-const PERMISO_REPORTES = { id: "p-reportes", clave: "reportes.exportar", modulo: "reportes", descripcion: "" };
+const PERMISO_JORNADAS = {
+  id: "p-jornadas",
+  clave: "jornadas.gestionar",
+  modulo: "jornadas",
+  descripcion: "",
+};
+const PERMISO_PACIENTES = {
+  id: "p-pacientes",
+  clave: "pacientes.editar",
+  modulo: "pacientes",
+  descripcion: "",
+};
+const PERMISO_REPORTES = {
+  id: "p-reportes",
+  clave: "reportes.exportar",
+  modulo: "reportes",
+  descripcion: "",
+};
 
 /**
  * Doble de obtenerSupabase() que responde distinto por tabla, para poder probar

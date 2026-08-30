@@ -1,9 +1,5 @@
 import { describe, it, expect } from "vitest";
-import {
-  esLoteEntregable,
-  motivoLoteNoEntregable,
-  sugerirLote,
-} from "./lotes.validaciones.js";
+import { esLoteEntregable, motivoLoteNoEntregable, sugerirLote } from "./lotes.validaciones.js";
 
 const HOY = new Date("2026-06-15T10:30:00");
 

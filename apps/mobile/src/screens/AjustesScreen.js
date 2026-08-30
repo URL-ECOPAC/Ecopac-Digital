@@ -1,10 +1,16 @@
-import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { colors, spacing, typography } from '@ecopac/ui-tokens';
+import { useState } from "react";
+import { StyleSheet, Text, View } from "react-native";
+import { colors, spacing, typography } from "@ecopac/ui-tokens";
 
-import { Modal, PrimaryButton, ScreenContainer, SecondaryButton, UsuarioActivo } from '../components';
-import { useRegistroSinGuardar } from '../contexto/RegistroSinGuardarProvider';
-import { useSesionCompartida } from '../contexto/SesionProvider';
+import {
+  Modal,
+  PrimaryButton,
+  ScreenContainer,
+  SecondaryButton,
+  UsuarioActivo,
+} from "../components";
+import { useRegistroSinGuardar } from "../contexto/RegistroSinGuardarProvider";
+import { useSesionCompartida } from "../contexto/SesionProvider";
 
 export default function AjustesScreen() {
   const { logout } = useSesionCompartida();
@@ -41,8 +47,8 @@ export default function AjustesScreen() {
         title="Hay cambios sin guardar"
       >
         <Text style={styles.textoModal}>
-          Si cerrás sesión ahora se pierden los cambios que hiciste en un formulario que todavía
-          no guardaste.
+          Si cerrás sesión ahora se pierden los cambios que hiciste en un formulario que todavía no
+          guardaste.
         </Text>
         <View style={styles.accionesModal}>
           <SecondaryButton title="Seguir editando" onPress={() => setConfirmando(false)} />
@@ -69,8 +75,8 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   accionesModal: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
+    flexDirection: "row",
+    justifyContent: "flex-end",
     gap: spacing.sm,
   },
 });

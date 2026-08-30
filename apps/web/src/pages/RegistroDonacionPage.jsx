@@ -1,14 +1,5 @@
 import { useRegistroDonacion } from "@ecopac/shared";
-import {
-  Container,
-  Row,
-  Col,
-  Card,
-  Form,
-  Button,
-  Alert,
-  Modal,
-} from "react-bootstrap";
+import { Container, Row, Col, Card, Form, Button, Alert, Modal } from "react-bootstrap";
 
 export default function RegistroDonacionPage({ usuarioRol }) {
   const {
@@ -150,9 +141,7 @@ export default function RegistroDonacionPage({ usuarioRol }) {
                       placeholder="Concepto / Observación"
                       disabled={!permisos?.puedeEscribir}
                       value={item.concepto || ""}
-                      onChange={(e) =>
-                        actualizarRenglon(item.id, "concepto", e.target.value)
-                      }
+                      onChange={(e) => actualizarRenglon(item.id, "concepto", e.target.value)}
                     />
                   </Col>
                   <Col md={4}>
@@ -161,9 +150,7 @@ export default function RegistroDonacionPage({ usuarioRol }) {
                       placeholder="Monto"
                       disabled={!permisos?.puedeEscribir}
                       value={item.monto || ""}
-                      onChange={(e) =>
-                        actualizarRenglon(item.id, "monto", e.target.value)
-                      }
+                      onChange={(e) => actualizarRenglon(item.id, "monto", e.target.value)}
                     />
                   </Col>
                 </>
@@ -176,9 +163,7 @@ export default function RegistroDonacionPage({ usuarioRol }) {
                       placeholder="Nombre de Medicamento / Lote"
                       disabled={!permisos?.puedeEscribir}
                       value={item.concepto || ""}
-                      onChange={(e) =>
-                        actualizarRenglon(item.id, "concepto", e.target.value)
-                      }
+                      onChange={(e) => actualizarRenglon(item.id, "concepto", e.target.value)}
                     />
                   </Col>
                   <Col md={4}>
@@ -187,9 +172,7 @@ export default function RegistroDonacionPage({ usuarioRol }) {
                       placeholder="Cantidad"
                       disabled={!permisos?.puedeEscribir}
                       value={item.cantidad || ""}
-                      onChange={(e) =>
-                        actualizarRenglon(item.id, "cantidad", e.target.value)
-                      }
+                      onChange={(e) => actualizarRenglon(item.id, "cantidad", e.target.value)}
                     />
                   </Col>
                 </>
@@ -202,9 +185,7 @@ export default function RegistroDonacionPage({ usuarioRol }) {
                       placeholder="Descripción del insumo"
                       disabled={!permisos?.puedeEscribir}
                       value={item.concepto || ""}
-                      onChange={(e) =>
-                        actualizarRenglon(item.id, "concepto", e.target.value)
-                      }
+                      onChange={(e) => actualizarRenglon(item.id, "concepto", e.target.value)}
                     />
                   </Col>
                   <Col md={4}>
@@ -213,9 +194,7 @@ export default function RegistroDonacionPage({ usuarioRol }) {
                       placeholder="Cantidad"
                       disabled={!permisos?.puedeEscribir}
                       value={item.cantidad || ""}
-                      onChange={(e) =>
-                        actualizarRenglon(item.id, "cantidad", e.target.value)
-                      }
+                      onChange={(e) => actualizarRenglon(item.id, "cantidad", e.target.value)}
                     />
                   </Col>
                 </>
@@ -223,11 +202,7 @@ export default function RegistroDonacionPage({ usuarioRol }) {
 
               {permisos?.puedeEscribir && detalles.length > 1 && (
                 <Col md={1} className="text-end">
-                  <Button
-                    variant="outline-danger"
-                    size="sm"
-                    onClick={() => quitarRenglon(item.id)}
-                  >
+                  <Button variant="outline-danger" size="sm" onClick={() => quitarRenglon(item.id)}>
                     ✕
                   </Button>
                 </Col>
@@ -236,12 +211,7 @@ export default function RegistroDonacionPage({ usuarioRol }) {
           ))}
 
           {permisos?.puedeEscribir && (
-            <Button
-              variant="outline-secondary"
-              size="sm"
-              onClick={agregarRenglon}
-              className="mt-2"
-            >
+            <Button variant="outline-secondary" size="sm" onClick={agregarRenglon} className="mt-2">
               + Agregar Renglón
             </Button>
           )}
@@ -250,11 +220,7 @@ export default function RegistroDonacionPage({ usuarioRol }) {
 
       {permisos?.puedeEscribir && (
         <div className="d-flex justify-content-end mb-4">
-          <Button
-            variant="primary"
-            onClick={guardarDonacion}
-            disabled={guardando}
-          >
+          <Button variant="primary" onClick={guardarDonacion} disabled={guardando}>
             {guardando ? "Guardando..." : "Guardar Donación"}
           </Button>
         </div>
@@ -271,8 +237,7 @@ export default function RegistroDonacionPage({ usuarioRol }) {
               <strong>Fecha:</strong> {resumenRegistro.fecha}
             </Card.Text>
             <Card.Text>
-              <strong>Renglones registrados:</strong>{" "}
-              {resumenRegistro.detalles?.length || 0}
+              <strong>Renglones registrados:</strong> {resumenRegistro.detalles?.length || 0}
             </Card.Text>
           </Card.Body>
         </Card>
@@ -288,31 +253,21 @@ export default function RegistroDonacionPage({ usuarioRol }) {
         </Modal.Header>
         <Modal.Body>
           <p className="mb-0">
-            Se ha registrado una donación de medicamentos. ¿Desea generar
-            automáticamente el registro de ingreso en el módulo de Inventario?
+            Se ha registrado una donación de medicamentos. ¿Desea generar automáticamente el
+            registro de ingreso en el módulo de Inventario?
           </p>
         </Modal.Body>
         <Modal.Footer>
-          <Button
-            variant="secondary"
-            onClick={() => setOfrecerIngresoInventario(false)}
-          >
+          <Button variant="secondary" onClick={() => setOfrecerIngresoInventario(false)}>
             No, omitir
           </Button>
-          <Button
-            variant="primary"
-            onClick={() => setOfrecerIngresoInventario(false)}
-          >
+          <Button variant="primary" onClick={() => setOfrecerIngresoInventario(false)}>
             Sí, ingresar a Inventario
           </Button>
         </Modal.Footer>
       </Modal>
 
-      <Modal
-        show={modalNuevoDonante}
-        onHide={() => setModalNuevoDonante(false)}
-        centered
-      >
+      <Modal show={modalNuevoDonante} onHide={() => setModalNuevoDonante(false)} centered>
         <Modal.Header closeButton>
           <Modal.Title as="h5">Registrar Nuevo Donante</Modal.Title>
         </Modal.Header>
@@ -325,10 +280,7 @@ export default function RegistroDonacionPage({ usuarioRol }) {
           </Form.Group>
         </Modal.Body>
         <Modal.Footer>
-          <Button
-            variant="primary"
-            onClick={() => setModalNuevoDonante(false)}
-          >
+          <Button variant="primary" onClick={() => setModalNuevoDonante(false)}>
             Guardar y Seleccionar
           </Button>
         </Modal.Footer>

@@ -20,7 +20,14 @@ import { validarCambioContrasena } from "./validaciones.js";
  * declara (nombres, apellidos, email, telefono, rol, especialidades). fechaIngreso y activo
  * quedan fuera: el issue no pide mostrarlos aqui.
  */
-const IDS_CAMPOS_PERFIL_PROPIO = ["nombres", "apellidos", "email", "telefono", "rol", "especialidades"];
+const IDS_CAMPOS_PERFIL_PROPIO = [
+  "nombres",
+  "apellidos",
+  "email",
+  "telefono",
+  "rol",
+  "especialidades",
+];
 
 /** Ids editables por cualquier rol, sin condicion (criterio 2 del issue #102). */
 const IDS_SIEMPRE_EDITABLES = new Set(["nombres", "apellidos", "telefono"]);

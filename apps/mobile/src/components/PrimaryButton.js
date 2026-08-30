@@ -1,10 +1,15 @@
-import { ActivityIndicator, Pressable, StyleSheet, Text } from 'react-native';
-import { colors, spacing, typography } from '@ecopac/ui-tokens';
+import { ActivityIndicator, Pressable, StyleSheet, Text } from "react-native";
+import { colors, spacing, typography } from "@ecopac/ui-tokens";
 
 const MIN_TOUCH_HEIGHT = 48;
 
-
-export default function PrimaryButton({ title, onPress, disabled = false, loading = false, style }) {
+export default function PrimaryButton({
+  title,
+  onPress,
+  disabled = false,
+  loading = false,
+  style,
+}) {
   const isInactive = disabled || loading;
 
   return (
@@ -34,8 +39,8 @@ const styles = StyleSheet.create({
     minHeight: MIN_TOUCH_HEIGHT,
     borderRadius: spacing.xs,
     backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     paddingHorizontal: spacing.lg,
   },
   buttonPressed: {
