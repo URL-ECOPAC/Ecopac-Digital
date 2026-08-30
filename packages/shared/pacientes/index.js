@@ -54,3 +54,4 @@ export * from "./useRegistroTriaje.js";
 export * from "./consultas.secciones.js";
 export * from "./useRegistroConsulta.js";
 export * from "./registro.pasos.js";
+export * from "./useGeneracionReceta.js";

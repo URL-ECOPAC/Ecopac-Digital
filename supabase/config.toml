@@ -2,7 +2,7 @@
 # https://supabase.com/docs/guides/cli/config#config.toml
 # Este archivo lo genera supabase init y se versiona en el repo.
 # Se usa tanto para el desarrollo local (supabase start / db reset) como
-# para el CI de backend (backend-ci.yml).
+# para el workflow de Supabase (supabase.yml), que absorbio al antiguo backend-ci.yml.
 
 # Project ID: nombre unico del proyecto local. No es el project-ref remoto.
 project_id = "ecopac-digital"
