@@ -14,7 +14,7 @@
 --
 -- Las pruebas 8 y 9 (issue #511) hacen lo mismo que las de tablas, pero para funciones: la
 -- 00049 dejo un cabo suelto declarado en su propia cabecera -funciones de public ejecutables
--- por cualquiera porque el EXECUTE a PUBLIC es el default de Postgres- que cerro la 00097.
+-- por cualquiera porque el EXECUTE a PUBLIC es el default de Postgres- que cerro la 00102.
 
 BEGIN;
 
@@ -154,7 +154,7 @@ SELECT ok(
 );
 
 -- No hay una prueba 10 con una funcion nueva, a diferencia de la 4 con la tabla de prueba: se
--- intento (ALTER DEFAULT PRIVILEGES ... ON FUNCTIONS FROM PUBLIC, ver 00097) y no suprime el
+-- intento (ALTER DEFAULT PRIVILEGES ... ON FUNCTIONS FROM PUBLIC, ver 00102) y no suprime el
 -- EXECUTE a PUBLIC que Postgres concede por defecto a una funcion nueva en este entorno. Queda
 -- como limitacion conocida, no como prueba que finja demostrar algo que no pasa.
 

@@ -333,7 +333,7 @@ SELECT ok(
 
 -- ============================================================================
 -- comunidades tiene una sola politica de SELECT (issue #511, caso 3): la restringida de 00041
--- se retiro en la 00099 porque nunca excluia a nadie que la de 00008 (USING (true)) no dejara
+-- se retiro en la 00104 porque nunca excluia a nadie que la de 00008 (USING (true)) no dejara
 -- pasar ya -las politicas del mismo comando se combinan con OR-, y solo confundia a quien leia
 -- el esquema.
 -- ============================================================================

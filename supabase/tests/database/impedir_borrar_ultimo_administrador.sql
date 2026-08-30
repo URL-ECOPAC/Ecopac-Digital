@@ -1,4 +1,4 @@
--- Pruebas de impedir_borrar_ultimo_administrador() (issue #511, migracion 00098).
+-- Pruebas de impedir_borrar_ultimo_administrador() (issue #511, migracion 00103).
 -- Corre con: supabase test db
 --
 -- seed-demo.sql (siempre presente) y la 00063 (aprovisionar_primer_admin) ya dejan dos
