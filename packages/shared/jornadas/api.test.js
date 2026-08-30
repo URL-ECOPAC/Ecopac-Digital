@@ -934,12 +934,20 @@ describe("obtenerJornadasDePersona", () => {
     expect(error).toBeNull();
   });
 
-  it("filtra jornada_personal por perfil_id, desenvuelve la jornada embebida y agrega atencionesPersona en cero cuando la RPC no trae nada para esa jornada", async () => {
+  it("filtra jornada_personal por perfil_id, desenvuelve la jornada embebida, trae el rol/responsabilidad de esa persona en esa jornada y agrega atencionesPersona en cero cuando la RPC no trae nada para esa jornada", async () => {
     const cliente = crearCliente({
       jornada_personal: {
         data: [
-          { jornada: { id: "jornada-1", nombre: "Jornada en Solola" } },
-          { jornada: { id: "jornada-2", nombre: "Jornada en Peten" } },
+          {
+            jornada: { id: "jornada-1", nombre: "Jornada en Solola" },
+            rolEnJornada: ROLES.MEDICO,
+            responsabilidad: "Consulta general",
+          },
+          {
+            jornada: { id: "jornada-2", nombre: "Jornada en Peten" },
+            rolEnJornada: ROLES.VOLUNTARIO,
+            responsabilidad: null,
+          },
         ],
         error: null,
       },
@@ -954,11 +962,15 @@ describe("obtenerJornadasDePersona", () => {
       {
         id: "jornada-1",
         nombre: "Jornada en Solola",
+        rolEnJornada: ROLES.MEDICO,
+        responsabilidad: "Consulta general",
         atencionesPersona: { consultas: 0, triajes: 0, pacientes: 0 },
       },
       {
         id: "jornada-2",
         nombre: "Jornada en Peten",
+        rolEnJornada: ROLES.VOLUNTARIO,
+        responsabilidad: null,
         atencionesPersona: { consultas: 0, triajes: 0, pacientes: 0 },
       },
     ]);
