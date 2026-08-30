@@ -24,8 +24,9 @@ const { CODIGOS_DE_ERROR_DE_SUPABASE } = await import("../api/errores-de-supabas
 const { ROLES } = await import("../usuarios/roles.js");
 const { ESTADOS_JORNADA } = await import("../enums.js");
 // Se importa la regla pura para comparar contra ella en vez de repetir sus textos aqui.
-const { puedeRegistrarEnJornada } = await import("./validaciones.js");
+const { puedeRegistrarEnJornada, validarEdicionTurno } = await import("./validaciones.js");
 const {
+  actualizarAsignacionPersonal,
   actualizarJornada,
   asignarPersonal,
   cambiarEstadoJornada,
@@ -367,6 +368,43 @@ describe("obtenerPersonalDeJornada", () => {
     expect(personal).toEqual([]);
     expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.PERMISO_DENEGADO);
   });
+
+  it(
+    "normaliza horaInicio/horaFin a HH:MM: la base los devuelve como TIME (HH:MM:SS) y de aca " +
+      "para adentro el modulo solo entiende HH:MM (bug reportado: editar una fila del cuadro de " +
+      "turnos SIN tocar los campos de hora fallaba con 'Escribe la hora en formato HH:MM')",
+    async () => {
+      dobles.cliente = crearCliente({
+        jornada_personal: {
+          data: [
+            {
+              id: "asignacion-1",
+              perfilId: "perfil-1",
+              horaInicio: "08:00:00",
+              horaFin: "10:00:00",
+              responsabilidad: "triaje",
+            },
+          ],
+          error: null,
+        },
+      });
+
+      const { personal } = await obtenerPersonalDeJornada("jornada-1");
+
+      expect(personal[0].horaInicio).toBe("08:00");
+      expect(personal[0].horaFin).toBe("10:00");
+
+      // Reproduccion exacta del sintoma: sembrar el formulario de edicion con la fila tal como la
+      // devuelve este modulo (sin tocar los campos de hora) y validar, igual que hace guardar() en
+      // useEdicionTurno.js. Si esto reporta un error de formato, el bug sigue presente.
+      const errores = validarEdicionTurno({
+        horaInicio: personal[0].horaInicio,
+        horaFin: personal[0].horaFin,
+        responsabilidad: personal[0].responsabilidad,
+      });
+      expect(errores).toEqual({});
+    },
+  );
 });
 
 describe("obtenerHistorialDeJornada", () => {
@@ -820,6 +858,40 @@ describe("asignarPersonal", () => {
     expect(advertencias[0]).toContain("Jornada en Peten");
   });
 
+  it("advierte, sin bloquear, cuando el horario se traslapa de verdad con otra jornada el mismo dia (issue #185)", async () => {
+    dobles.cliente = crearCliente({
+      jornada_personal: [
+        { data: { id: "asignacion-1" }, error: null },
+        {
+          data: [
+            {
+              perfil: "perfil-1",
+              jornadaId: "jornada-2",
+              horaInicio: "09:00:00",
+              horaFin: "11:00:00",
+              jornada: { nombre: "Jornada en Peten", fecha: "2026-09-01" },
+            },
+          ],
+          error: null,
+        },
+      ],
+      jornadas: { data: { fecha: "2026-09-01" }, error: null },
+    });
+
+    const { advertencias, error } = await asignarPersonal("jornada-1", {
+      perfil: "perfil-1",
+      rolEnJornada: "medico",
+      horaInicio: "08:00",
+      horaFin: "10:00",
+    });
+
+    expect(error).toBeNull();
+    // Las dos advertencias conviven: la misma fila dispara el choque de dia completo (#182) Y el
+    // traslape real de horas (#185), porque 08:00-10:00 se pisa con 09:00-11:00.
+    expect(advertencias).toHaveLength(2);
+    expect(advertencias.some((advertencia) => advertencia.includes("se traslapa"))).toBe(true);
+  });
+
   it("no toca el cliente si no hay jornadaId", async () => {
     const { asignacion, advertencias, error } = await asignarPersonal(undefined, {
       perfil: "perfil-1",
@@ -852,6 +924,96 @@ describe("asignarPersonal", () => {
     const { error } = await asignarPersonal("jornada-1", { perfil: "perfil-1" });
 
     expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.CAMPO_REQUERIDO);
+  });
+});
+
+describe("actualizarAsignacionPersonal", () => {
+  it("no toca el cliente si falta jornadaId o perfilId", async () => {
+    const sinJornada = await actualizarAsignacionPersonal(undefined, "perfil-1", {
+      horaInicio: "08:00",
+    });
+    const sinPerfil = await actualizarAsignacionPersonal("jornada-1", undefined, {
+      horaInicio: "08:00",
+    });
+
+    expect(sinJornada).toEqual({ asignacion: null, error: null });
+    expect(sinPerfil).toEqual({ asignacion: null, error: null });
+  });
+
+  it("no toca el cliente cuando no hay campos que actualizar", async () => {
+    const { asignacion, error } = await actualizarAsignacionPersonal("jornada-1", "perfil-1", {});
+
+    expect(asignacion).toBeNull();
+    expect(error).toBeNull();
+  });
+
+  it("actualiza por jornada_id y perfil_id, mapeado a snake_case, y devuelve la fila normalizada a HH:MM", async () => {
+    const cliente = crearCliente({
+      jornada_personal: {
+        // La base devuelve TIME como "HH:MM:SS": la fila que llega aca trae eso, y esta funcion
+        // tiene que recortarla a "HH:MM" antes de devolverla (bug reportado: sembrar el
+        // formulario de edicion con este valor sin tocarlo fallaba la validacion de horario).
+        data: { id: "asignacion-1", horaInicio: "09:00:00", horaFin: "11:00:00" },
+        error: null,
+      },
+    });
+    dobles.cliente = cliente;
+
+    const { asignacion, error } = await actualizarAsignacionPersonal("jornada-1", "perfil-1", {
+      horaInicio: "09:00",
+      horaFin: "11:00",
+      responsabilidad: "triaje",
+    });
+
+    expect(error).toBeNull();
+    expect(asignacion).toEqual({ id: "asignacion-1", horaInicio: "09:00", horaFin: "11:00" });
+    expect(cliente.llamadas).toContainEqual({
+      paso: "update",
+      tabla: "jornada_personal",
+      valores: { hora_inicio: "09:00", hora_fin: "11:00", responsabilidad: "triaje" },
+    });
+    expect(cliente.llamadas).toContainEqual({
+      paso: "eq",
+      tabla: "jornada_personal",
+      columna: "jornada_id",
+      valor: "jornada-1",
+    });
+    expect(cliente.llamadas).toContainEqual({
+      paso: "eq",
+      tabla: "jornada_personal",
+      columna: "perfil_id",
+      valor: "perfil-1",
+    });
+  });
+
+  it("no manda perfil ni jornada_id como columnas a actualizar, aunque vengan en datos", async () => {
+    const cliente = crearCliente({
+      jornada_personal: { data: { id: "asignacion-1" }, error: null },
+    });
+    dobles.cliente = cliente;
+
+    await actualizarAsignacionPersonal("jornada-1", "perfil-1", {
+      horaInicio: "09:00",
+      horaFin: "11:00",
+      perfil: "otro-perfil",
+      jornada: "otra-jornada",
+    });
+
+    const actualizacion = cliente.llamadas.find((llamada) => llamada.paso === "update");
+    expect(actualizacion.valores).toEqual({ hora_inicio: "09:00", hora_fin: "11:00" });
+  });
+
+  it("normaliza el error del servidor", async () => {
+    dobles.cliente = crearCliente({
+      jornada_personal: { data: null, error: { code: "42501" } },
+    });
+
+    const { asignacion, error } = await actualizarAsignacionPersonal("jornada-1", "perfil-1", {
+      horaInicio: "09:00",
+    });
+
+    expect(asignacion).toBeNull();
+    expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.PERMISO_DENEGADO);
   });
 });
 
@@ -892,7 +1054,40 @@ describe("obtenerAsignacionesDelDia", () => {
     expect(cliente.llamadas.some((llamada) => llamada.paso === "neq")).toBe(false);
   });
 
-  it("mapea perfil, jornadaId y el nombre de la jornada embebida", async () => {
+  it("mapea perfil, jornadaId y el nombre de la jornada embebida, con el horario normalizado a HH:MM", async () => {
+    dobles.cliente = crearCliente({
+      jornada_personal: {
+        data: [
+          {
+            perfil: "perfil-1",
+            jornadaId: "jornada-2",
+            // La base devuelve TIME como "HH:MM:SS": este mapeo tiene que recortarlo, no
+            // repetirlo tal cual (bug reportado: sin esto, advertirTraslapeDeHorario() nunca
+            // tenia con que comparar horas guardadas).
+            horaInicio: "08:00:00",
+            horaFin: "10:00:00",
+            jornada: { nombre: "Jornada en Peten", fecha: "2026-09-01" },
+          },
+        ],
+        error: null,
+      },
+    });
+
+    const { asignaciones, error } = await obtenerAsignacionesDelDia("2026-09-01");
+
+    expect(error).toBeNull();
+    expect(asignaciones).toEqual([
+      {
+        perfil: "perfil-1",
+        jornadaId: "jornada-2",
+        jornadaNombre: "Jornada en Peten",
+        horaInicio: "08:00",
+        horaFin: "10:00",
+      },
+    ]);
+  });
+
+  it("un horario ausente en la fila embebida queda en null, no en undefined", async () => {
     dobles.cliente = crearCliente({
       jornada_personal: {
         data: [
@@ -906,12 +1101,10 @@ describe("obtenerAsignacionesDelDia", () => {
       },
     });
 
-    const { asignaciones, error } = await obtenerAsignacionesDelDia("2026-09-01");
+    const { asignaciones } = await obtenerAsignacionesDelDia("2026-09-01");
 
-    expect(error).toBeNull();
-    expect(asignaciones).toEqual([
-      { perfil: "perfil-1", jornadaId: "jornada-2", jornadaNombre: "Jornada en Peten" },
-    ]);
+    expect(asignaciones[0].horaInicio).toBeNull();
+    expect(asignaciones[0].horaFin).toBeNull();
   });
 
   it("normaliza el error del servidor", async () => {

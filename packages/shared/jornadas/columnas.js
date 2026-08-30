@@ -29,12 +29,18 @@ export const COLUMNAS_JORNADA = [
 // nombre, fecha, comunidad, responsable, estado y pacientesAtendidos. JornadasPage.jsx elige esas
 // seis claves a mano en vez de recorrer COLUMNAS_JORNADA completo.
 
-/** Personal asignado a una jornada (jornada_personal), dentro de su detalle. */
+/**
+ * Personal asignado a una jornada (jornada_personal), dentro de su detalle.
+ *
+ * `responsabilidad` se agrega en la issue #185 (cuadro de turnos): #182 ya traia la columna en
+ * COLUMNAS_DE_PERSONAL (api.js) pero no la pintaba en esta tabla.
+ */
 export const COLUMNAS_PERSONAL_JORNADA = [
   { id: "perfil", label: "Nombre", tipo: TIPOS_DE_PRESENTACION.TEXTO, principal: true },
   { id: "rolEnJornada", label: "Rol", tipo: TIPOS_DE_PRESENTACION.TEXTO },
   { id: "horaInicio", label: "Hora inicio", tipo: TIPOS_DE_PRESENTACION.TEXTO },
   { id: "horaFin", label: "Hora fin", tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  { id: "responsabilidad", label: "Responsabilidad", tipo: TIPOS_DE_PRESENTACION.TEXTO },
   { id: "asistio", label: "Asistio", tipo: TIPOS_DE_PRESENTACION.BOOLEANO },
 ];
 

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import {
@@ -11,6 +11,7 @@ import {
   formatearFechaConHora,
   formatearFechaCorta,
   puedeVerRosterCompleto,
+  useCuadroTurnos,
   useDetalleJornada,
 } from "@ecopac/shared";
 
@@ -28,8 +29,9 @@ import {
   Tabs,
 } from "../components";
 import { useSesionCompartida } from "../contexto/SesionProvider";
+import CuadroTurnosImprimible from "./CuadroTurnosImprimible";
 import ModalAsignarPersonal from "./ModalAsignarPersonal";
-import ModalConfirmarDesasignacion from "./ModalConfirmarDesasignacion";
+import ModalEdicionTurno from "./ModalEdicionTurno";
 import NotFoundPage from "./NotFoundPage";
 
 // Detalle de una jornada (issue #181): sus datos, el personal asignado, los pacientes
@@ -85,12 +87,41 @@ export default function DetalleJornadaPage() {
     cancelarFinalizacion,
   } = useDetalleJornada({ jornadaId: id, rol });
 
+  // Issue #185: advertencias de horario del cuadro de turnos (choque de dia completo de #182 +
+  // traslape real de horas, las dos conviven). Se llama incondicionalmente, antes de los early
+  // return de mas abajo, porque `jornada` todavia puede ser null en el primer render (reglas de
+  // hooks) -- el propio hook ya sabe esperar a que llegue jornadaFecha.
+  const { advertencias, asignacionesDelDia, errorAdvertencias } = useCuadroTurnos({
+    jornadaId: id,
+    jornadaFecha: jornada?.fecha,
+    personal: jornada?.personal,
+  });
+
   const [pestaniaActiva, setPestaniaActiva] = useState("resumen");
-  // Issue #182: modal de buscar/asignar y confirmacion de desasignar, ambos gateados por
-  // permisos.puedeEditar mas abajo (espejo de la politica RLS de INSERT/DELETE de
-  // jornada_personal, 00039:71-73 y 00044:24-26, ver useAsignacionPersonal.js).
+  // Issue #182: modal de buscar/asignar, gateado por permisos.puedeEditar mas abajo (espejo de
+  // la politica RLS de INSERT de jornada_personal, 00039:71-73, ver useAsignacionPersonal.js).
   const [mostrarAsignar, setMostrarAsignar] = useState(false);
-  const [personaADesasignar, setPersonaADesasignar] = useState(null);
+  // Issue #185: click en una fila abre la edicion de horario/responsabilidad; Desasignar (#182,
+  // 00044:24-26) vive ahora adentro de ese modal (ModalEdicionTurno.jsx), no en la fila.
+  const [filaEnEdicion, setFilaEnEdicion] = useState(null);
+  // Issue #185, criterio 4: version imprimible, montada en un portal fuera de esta pantalla
+  // mientras `aImprimir` es true (CuadroTurnosImprimible.jsx). Mismo patron que
+  // PestaniaRecetasPaciente.jsx (#131): requestAnimationFrame para esperar al primer pintado del
+  // portal antes de llamar a window.print(), y "afterprint" para desmontarlo despues.
+  const [aImprimir, setAImprimir] = useState(false);
+
+  useEffect(() => {
+    if (!aImprimir) return undefined;
+
+    const limpiar = () => setAImprimir(false);
+    window.addEventListener("afterprint", limpiar);
+    const cuadro = window.requestAnimationFrame(() => window.print());
+
+    return () => {
+      window.removeEventListener("afterprint", limpiar);
+      window.cancelAnimationFrame(cuadro);
+    };
+  }, [aImprimir]);
 
   // Primera carga (o al navegar a otro id): todavia no hay nada que mostrar en el encabezado
   // (el titulo sale de jornada.nombre), asi que la pantalla completa es un spinner.
@@ -143,9 +174,9 @@ export default function DetalleJornadaPage() {
   });
 
   // perfilId viaja ademas de lo que pinta COLUMNAS_PERSONAL_JORNADA: lo necesita
-  // ModalConfirmarDesasignacion (issue #182) para llamar a desasignarPersonal(jornadaId,
-  // perfilId) -- fila.id es el id de la fila de jornada_personal, no el del perfil, y
-  // desasignarPersonal() pide el segundo.
+  // ModalConfirmarDesasignacion (issue #182, ahora anidado en ModalEdicionTurno.jsx de #185) para
+  // llamar a desasignarPersonal(jornadaId, perfilId) -- fila.id es el id de la fila de
+  // jornada_personal, no el del perfil, y desasignarPersonal() pide el segundo.
   const puedeVerEquipoCompleto = puedeVerRosterCompleto(rol);
   const conteoPorRol = contarPersonalPorRol(jornada.personal);
   const filasPersonal = (jornada.personal ?? []).map((fila) => ({
@@ -155,8 +186,17 @@ export default function DetalleJornadaPage() {
     rolEnJornada: fila.rolEnJornada,
     horaInicio: fila.horaInicio,
     horaFin: fila.horaFin,
+    responsabilidad: fila.responsabilidad,
     asistio: fila.asistio,
   }));
+
+  // Issue #185, criterio 3: filas con alguna advertencia de horario activa (choque de dia
+  // completo y/o traslape real), para las alertas debajo del boton de asignar. `advertencias` ya
+  // viene indexado por perfilId (useCuadroTurnos.js).
+  const filasConAdvertencia = filasPersonal.filter((fila) => {
+    const advertencia = advertencias[fila.perfilId];
+    return Boolean(advertencia?.choque || advertencia?.traslape);
+  });
 
   const filasPacientes = pacientesAtendidos.map((fila) => ({
     id: fila.consultaId,
@@ -272,12 +312,12 @@ export default function DetalleJornadaPage() {
 
           {pestaniaActiva === "equipo" && (
             <>
-              {/* Asignar/desasignar personal (issue #182). El gate es permisos.puedeEditar
+              {/* Asignar personal (issue #182). El gate es permisos.puedeEditar
                 (puedeAdministrarJornadas(rol), jornadas/permisos.js), espejo exacto de las
-                politicas de INSERT y DELETE de jornada_personal (00039:71-73, 00044:24-26): las
-                dos exigen unicamente es_administrador(), sin la excepcion de permiso fino que si
-                tiene la tabla jornadas. Guardar/desasignar llama a recargarPersonal(), no a
-                recargar(): relee solo jornada_personal, sin releer historial ni contadores. */}
+                politicas de INSERT y UPDATE de jornada_personal (00039:71-78): las dos exigen
+                unicamente es_administrador(), sin la excepcion de permiso fino que si tiene la
+                tabla jornadas. Guardar/desasignar llama a recargarPersonal(), no a recargar():
+                relee solo jornada_personal, sin releer historial ni contadores. */}
               <div className="d-flex justify-content-between align-items-start gap-2 mb-3">
                 {/* Conteo por rol (criterio 5): jornada.personal ya viene filtrado por la politica
                   de SELECT de jornada_personal (00039:63-69) antes de llegar aca -- administrador
@@ -304,18 +344,55 @@ export default function DetalleJornadaPage() {
                   </span>
                 )}
 
-                {permisos.puedeEditar && (
-                  <PrimaryButton title="Asignar personal" onClick={() => setMostrarAsignar(true)} />
-                )}
+                <div className="d-flex gap-2">
+                  {/* Imprimir (issue #185, criterio 4) se gatea por puedeVerRosterCompleto(rol),
+                    no por permisos.puedeEditar: es una accion de lectura, y solo tiene sentido
+                    para quien ve el cuadro COMPLETO. Un medico o voluntario que solo ve su propia
+                    fila (RLS de jornada_personal, 00039:63-69) no ve este boton -- imprimir un
+                    cuadro de una sola fila y pegarlo como si fuera el completo seria peor que no
+                    ofrecer el boton. */}
+                  {puedeVerEquipoCompleto && (
+                    <SecondaryButton title="Imprimir" onClick={() => setAImprimir(true)} />
+                  )}
+                  {permisos.puedeEditar && (
+                    <PrimaryButton
+                      title="Asignar personal"
+                      onClick={() => setMostrarAsignar(true)}
+                    />
+                  )}
+                </div>
               </div>
+
+              {/* Advertencias de horario (issue #185, criterio 3): el choque de dia completo de
+                #182 y el traslape real de horas de esta issue conviven como señales
+                independientes -- ver useCuadroTurnos.js. alert-danger para el traslape porque es
+                la señal mas fuerte. */}
+              {errorAdvertencias && (
+                <div className="alert alert-warning" role="alert">
+                  No se pudo comprobar si hay traslapes de horario con otras jornadas. Revisa
+                  manualmente antes de confiar en que no hay ninguno.
+                </div>
+              )}
+              {!errorAdvertencias &&
+                filasConAdvertencia.map((fila) => {
+                  const advertencia = advertencias[fila.perfilId];
+                  return (
+                    <div
+                      key={fila.id}
+                      className={`alert ${advertencia.traslape ? "alert-danger" : "alert-warning"} py-2`}
+                      role="alert"
+                    >
+                      <strong>{fila.perfil}:</strong>{" "}
+                      {[advertencia.traslape, advertencia.choque].filter(Boolean).join(" ")}
+                    </div>
+                  );
+                })}
 
               <DataList
                 columnas={COLUMNAS_PERSONAL_JORNADA}
                 datos={filasPersonal}
                 vacio="Todavia no hay personal asignado a esta jornada."
-                onRowPress={
-                  permisos.puedeEditar ? (fila) => setPersonaADesasignar(fila) : undefined
-                }
+                onRowPress={permisos.puedeEditar ? (fila) => setFilaEnEdicion(fila) : undefined}
               />
             </>
           )}
@@ -357,8 +434,8 @@ export default function DetalleJornadaPage() {
         </Modal>
       )}
 
-      {/* Issue #182. onAsignado/onDesasignado llaman a recargarPersonal() (useDetalleJornada.js),
-          no a recargar(): ver el comentario de la pestaña Equipo mas arriba. */}
+      {/* Issue #182. onAsignado llama a recargarPersonal() (useDetalleJornada.js), no a
+          recargar(): ver el comentario de la pestaña Equipo mas arriba. */}
       <ModalAsignarPersonal
         visible={mostrarAsignar}
         jornadaId={id}
@@ -368,18 +445,29 @@ export default function DetalleJornadaPage() {
         onAsignado={recargarPersonal}
       />
 
-      {personaADesasignar && (
-        <ModalConfirmarDesasignacion
-          visible
+      {/* Issue #185. key={filaEnEdicion.id}: useEdicionTurno() precarga sus valores desde `fila`
+          una sola vez (mismo criterio que useEdicionUsuario.js, #107), asi que cada fila que se
+          edite necesita una instancia nueva del componente. onGuardado/onDesasignado llaman a
+          recargarPersonal(), igual que el modal de alta. */}
+      {filaEnEdicion && (
+        <ModalEdicionTurno
+          key={filaEnEdicion.id}
           jornadaId={id}
-          persona={personaADesasignar}
-          onClose={() => setPersonaADesasignar(null)}
+          fila={filaEnEdicion}
+          asignacionesDelDia={asignacionesDelDia}
+          onClose={() => setFilaEnEdicion(null)}
+          onGuardado={() => {
+            setFilaEnEdicion(null);
+            recargarPersonal();
+          }}
           onDesasignado={() => {
-            setPersonaADesasignar(null);
+            setFilaEnEdicion(null);
             recargarPersonal();
           }}
         />
       )}
+
+      {aImprimir && <CuadroTurnosImprimible jornada={jornada} />}
     </ScreenContainer>
   );
 }

@@ -1,4 +1,4 @@
-@import 'bootstrap/dist/css/bootstrap.min.css';
+@import "bootstrap/dist/css/bootstrap.min.css";
 
 /* Las variables --color-*, --spacing-*, --accent-* y --estado-* las publica
    src/theme.js a partir de packages/ui-tokens. Aqui no se escribe ningun color
@@ -89,6 +89,15 @@
 /* Receta imprimible (issue #131). En pantalla no se ve: solo existe para la impresion, que es
    donde el navegador tambien ofrece "Guardar como PDF". */
 .receta-imprimible {
+  display: none;
+}
+
+/* Cuadro de turnos imprimible (issue #185). Mismo patron que .receta-imprimible de arriba: oculto
+   en pantalla, solo existe para la impresion. Reusa el @page de abajo (media carta) en vez de
+   declarar uno propio: dos reglas @page en la misma hoja de estilos no se combinan por clase,
+   compiten por el documento entero, asi que declarar una segunda aca le cambiaria el tamano de
+   pagina tambien a las recetas. */
+.turnos-imprimible {
   display: none;
 }
 
@@ -183,5 +192,45 @@
     display: block;
     margin: 0 auto 2pt;
     width: 60%;
+  }
+
+  .turnos-imprimible {
+    display: block;
+    font-size: 10pt;
+    line-height: 1.35;
+  }
+
+  .turnos-imprimible__encabezado {
+    border-bottom: 1pt solid var(--color-text);
+    margin-bottom: 8pt;
+    padding-bottom: 4pt;
+    text-align: center;
+  }
+
+  .turnos-imprimible__organizacion {
+    font-size: 13pt;
+    margin: 0;
+  }
+
+  .turnos-imprimible__documento {
+    font-size: 11pt;
+    font-weight: 600;
+    margin: 0;
+  }
+
+  .turnos-imprimible__jornada {
+    margin: 0;
+  }
+
+  .turnos-imprimible__tabla {
+    border-collapse: collapse;
+    width: 100%;
+  }
+
+  .turnos-imprimible__tabla th,
+  .turnos-imprimible__tabla td {
+    border: 0.5pt solid var(--color-text);
+    padding: 3pt 5pt;
+    text-align: left;
   }
 }

@@ -13,6 +13,7 @@ import { ESTADOS_JORNADA } from "../enums.js";
 import {
   advertirChoqueDeHorario,
   advertirJornadaDuplicada,
+  advertirTraslapeDeHorario,
   esTransicionDeJornadaValida,
   puedeRegistrarEnJornada,
   TRANSICIONES_JORNADA,
@@ -20,6 +21,7 @@ import {
   validarAsignaciones,
   validarAsignacionPersonal,
   validarCambioDeEstadoJornada,
+  validarEdicionTurno,
   validarJornada,
 } from "./validaciones.js";
 
@@ -122,6 +124,27 @@ describe("validarAsignacionPersonal", () => {
     expect(validarAsignacionPersonal(asignacionValida({ horaFin: "13" }))).toHaveProperty(
       "horaFin",
     );
+  });
+});
+
+describe("validarEdicionTurno", () => {
+  it("no reporta nada cuando horario y responsabilidad estan completos", () => {
+    expect(validarEdicionTurno(asignacionValida())).toEqual({});
+  });
+
+  it("exige hora de inicio y hora de fin, pero no perfil ni rolEnJornada", () => {
+    expect(validarEdicionTurno(asignacionValida({ horaInicio: "" }))).toHaveProperty("horaInicio");
+    expect(validarEdicionTurno(asignacionValida({ horaFin: "" }))).toHaveProperty("horaFin");
+    expect(validarEdicionTurno(asignacionValida({ perfil: "" }))).toEqual({});
+    expect(validarEdicionTurno(asignacionValida({ rolEnJornada: "" }))).toEqual({});
+  });
+
+  it("responsabilidad sigue siendo opcional", () => {
+    expect(validarEdicionTurno(asignacionValida({ responsabilidad: "" }))).toEqual({});
+  });
+
+  it("rechaza una hora de fin igual o anterior a la de inicio, mismo CHECK que el alta", () => {
+    expect(validarEdicionTurno(asignacionValida({ horaFin: "07:00" }))).toHaveProperty("horaFin");
   });
 });
 
@@ -356,6 +379,203 @@ describe("advertirChoqueDeHorario", () => {
     expect(
       advertirChoqueDeHorario({ perfil: "", jornadaActualId: "j1", asignacionesDelDia: [] }),
     ).toBeNull();
+  });
+});
+
+describe("advertirTraslapeDeHorario", () => {
+  it("advierte cuando las horas de otra jornada se pisan de verdad", () => {
+    const advertencia = advertirTraslapeDeHorario({
+      perfil: "p1",
+      horaInicio: "09:00",
+      horaFin: "11:00",
+      jornadaActualId: "j1",
+      asignacionesDelDia: [
+        {
+          jornadaId: "j2",
+          jornadaNombre: "Jornada en Peten",
+          perfil: "p1",
+          horaInicio: "10:00",
+          horaFin: "12:00",
+        },
+      ],
+    });
+
+    expect(advertencia).toContain("se traslapa");
+    expect(advertencia).toContain("Jornada en Peten");
+  });
+
+  it("no advierte cuando las horas no se pisan, aunque sea la misma persona el mismo dia", () => {
+    const advertencia = advertirTraslapeDeHorario({
+      perfil: "p1",
+      horaInicio: "09:00",
+      horaFin: "10:00",
+      jornadaActualId: "j1",
+      asignacionesDelDia: [
+        {
+          jornadaId: "j2",
+          jornadaNombre: "Jornada en Peten",
+          perfil: "p1",
+          horaInicio: "10:00",
+          horaFin: "12:00",
+        },
+      ],
+    });
+
+    expect(advertencia).toBeNull();
+  });
+
+  it("un relevo de turno (fin de una igual al inicio de la otra) no es traslape", () => {
+    const advertencia = advertirTraslapeDeHorario({
+      perfil: "p1",
+      horaInicio: "08:00",
+      horaFin: "10:00",
+      jornadaActualId: "j1",
+      asignacionesDelDia: [
+        {
+          jornadaId: "j2",
+          jornadaNombre: "Jornada en Peten",
+          perfil: "p1",
+          horaInicio: "10:00",
+          horaFin: "12:00",
+        },
+      ],
+    });
+
+    expect(advertencia).toBeNull();
+  });
+
+  it("no cuenta la propia jornada como traslape", () => {
+    const advertencia = advertirTraslapeDeHorario({
+      perfil: "p1",
+      horaInicio: "09:00",
+      horaFin: "11:00",
+      jornadaActualId: "j1",
+      asignacionesDelDia: [
+        {
+          jornadaId: "j1",
+          jornadaNombre: "La propia",
+          perfil: "p1",
+          horaInicio: "10:00",
+          horaFin: "12:00",
+        },
+      ],
+    });
+
+    expect(advertencia).toBeNull();
+  });
+
+  it("no advierte si la otra fila es de otra persona, aunque las horas se pisen", () => {
+    const advertencia = advertirTraslapeDeHorario({
+      perfil: "p1",
+      horaInicio: "09:00",
+      horaFin: "11:00",
+      jornadaActualId: "j1",
+      asignacionesDelDia: [
+        {
+          jornadaId: "j2",
+          jornadaNombre: "Jornada en Peten",
+          perfil: "p2",
+          horaInicio: "10:00",
+          horaFin: "12:00",
+        },
+      ],
+    });
+
+    expect(advertencia).toBeNull();
+  });
+
+  it("no advierte sin perfil, sin horario, o con un horario que no cumple el formato HH:MM", () => {
+    const asignaciones = [
+      {
+        jornadaId: "j2",
+        jornadaNombre: "Jornada en Peten",
+        perfil: "p1",
+        horaInicio: "10:00",
+        horaFin: "12:00",
+      },
+    ];
+
+    expect(
+      advertirTraslapeDeHorario({
+        perfil: "",
+        horaInicio: "09:00",
+        horaFin: "11:00",
+        jornadaActualId: "j1",
+        asignacionesDelDia: asignaciones,
+      }),
+    ).toBeNull();
+
+    expect(
+      advertirTraslapeDeHorario({
+        perfil: "p1",
+        horaInicio: "",
+        horaFin: "",
+        jornadaActualId: "j1",
+        asignacionesDelDia: asignaciones,
+      }),
+    ).toBeNull();
+
+    expect(
+      advertirTraslapeDeHorario({
+        perfil: "p1",
+        horaInicio: "9",
+        horaFin: "11:00",
+        jornadaActualId: "j1",
+        asignacionesDelDia: asignaciones,
+      }),
+    ).toBeNull();
+  });
+
+  it("compara horas guardadas en formato HH:MM:SS (columna TIME via supabase-js), no solo HH:MM del formulario", () => {
+    const advertencia = advertirTraslapeDeHorario({
+      perfil: "p1",
+      horaInicio: "08:00",
+      horaFin: "10:00",
+      jornadaActualId: "j1",
+      asignacionesDelDia: [
+        {
+          jornadaId: "j2",
+          jornadaNombre: "Jornada en Peten",
+          perfil: "p1",
+          horaInicio: "09:00:00",
+          horaFin: "11:00:00",
+        },
+      ],
+    });
+
+    expect(advertencia).toContain("se traslapa");
+  });
+
+  it("tambien acepta HH:MM:SS del lado de la franja que se esta evaluando (valor inicial sin editar en el modal de edicion)", () => {
+    const advertencia = advertirTraslapeDeHorario({
+      perfil: "p1",
+      horaInicio: "08:00:00",
+      horaFin: "10:00:00",
+      jornadaActualId: "j1",
+      asignacionesDelDia: [
+        {
+          jornadaId: "j2",
+          jornadaNombre: "Jornada en Peten",
+          perfil: "p1",
+          horaInicio: "09:00:00",
+          horaFin: "11:00:00",
+        },
+      ],
+    });
+
+    expect(advertencia).toContain("se traslapa");
+  });
+
+  it("no revienta cuando la fila de la otra jornada no trae horario (obtenerAsignacionesDelDia previo a #185)", () => {
+    const advertencia = advertirTraslapeDeHorario({
+      perfil: "p1",
+      horaInicio: "09:00",
+      horaFin: "11:00",
+      jornadaActualId: "j1",
+      asignacionesDelDia: [{ jornadaId: "j2", jornadaNombre: "Jornada en Peten", perfil: "p1" }],
+    });
+
+    expect(advertencia).toBeNull();
   });
 });
 

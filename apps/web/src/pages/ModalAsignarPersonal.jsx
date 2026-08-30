@@ -57,6 +57,7 @@ export default function ModalAsignarPersonal({
     setCampo,
     verificandoChoque,
     advertenciaChoque,
+    advertenciaTraslape,
     errorVerificacionChoque,
     enviando,
     error,
@@ -162,6 +163,17 @@ export default function ModalAsignarPersonal({
           {!verificandoChoque && !errorVerificacionChoque && advertenciaChoque && (
             <div className="alert alert-warning" role="alert">
               {advertenciaChoque}
+            </div>
+          )}
+
+          {/* Traslape real de horas (issue #185), aparte del choque de dia completo de arriba:
+              misma logica que usa el cuadro de turnos (advertirTraslapeDeHorario(),
+              validaciones.js), en alert-danger porque es una señal mas fuerte que el choque de
+              dia completo. Solo aparece una vez que horaInicio y horaFin tienen un valor valido;
+              mientras tanto la funcion devuelve null. */}
+          {!verificandoChoque && !errorVerificacionChoque && advertenciaTraslape && (
+            <div className="alert alert-danger" role="alert">
+              {advertenciaTraslape}
             </div>
           )}
 
