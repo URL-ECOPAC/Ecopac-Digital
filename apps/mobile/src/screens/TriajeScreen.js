@@ -1,4 +1,4 @@
-import { createRef, useMemo } from 'react';
+import { createRef, useEffect, useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 
@@ -20,7 +20,11 @@ import {
   SecondaryButton,
 } from '../components';
 import { almacenamientoMovil } from '../almacenamiento';
+import { useRegistroSinGuardar } from '../contexto/RegistroSinGuardarProvider';
 import { useSesionCompartida } from '../contexto/SesionProvider';
+
+// Id fijo: solo hay un formulario de Triaje montado a la vez (una atencion por pantalla).
+const ID_FORMULARIO = 'triaje';
 
 export default function TriajeScreen() {
   const navigation = useNavigation();
@@ -44,6 +48,7 @@ export default function TriajeScreen() {
     guardado,
     imc,
     permitido,
+    hayCambios,
     setCampo,
     reiniciar,
     guardar,
@@ -55,6 +60,19 @@ export default function TriajeScreen() {
     perfilId: perfil?.id,
     rol,
   });
+
+  const { registrar, desregistrar } = useRegistroSinGuardar();
+
+  // Se registra mientras haya algo sin guardar (issue #110, criterio 2) y se desregistra solo:
+  // el cleanup de este efecto corre tanto cuando hayCambios pasa a false (guardar() exitoso, ya
+  // que useRegistroTriaje apaga hayCambios en cuanto guardado deja de ser null) como al
+  // desmontar la pantalla. Salir de Triaje sin guardar ya pierde los datos sin aviso hoy -esto
+  // no lo resuelve, solo evita que quede un aviso fantasma para la proxima pantalla sucia.
+  useEffect(() => {
+    if (!hayCambios) return;
+    registrar(ID_FORMULARIO);
+    return () => desregistrar(ID_FORMULARIO);
+  }, [hayCambios, registrar, desregistrar]);
 
   const referencias = useMemo(
     () => Object.fromEntries(campos.map((campo) => [campo.id, createRef()])),

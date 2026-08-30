@@ -64,6 +64,18 @@ export class ErrorDeEntorno extends Error {
 /** Hosts donde se acepta http:// porque son la instancia local de Supabase. */
 const HOSTS_LOCALES = ["localhost", "127.0.0.1", "0.0.0.0", "[::1]"];
 
+/**
+ * Rangos de IP privada (RFC 1918) donde se acepta http:// en desarrollo movil.
+ *
+ * Expo Go en un telefono fisico no puede resolver "localhost" -eso apunta al propio telefono-
+ * asi que el .env de desarrollo movil apunta al host de Metro por su IP de LAN
+ * (192.168.x.x, 10.x.x.x o 172.16-31.x.x). Esa red no tiene certificado https valido, y pedirlo
+ * bloquearia probar en dispositivo. Nunca se activa fuera de desarrollo movil: ver esDesarrollo
+ * en validarUrl.
+ */
+const PATRON_IP_PRIVADA =
+  /^(10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3})$/;
+
 /** Prefijo de las llaves publicables del formato nuevo de Supabase. */
 const PREFIJO_LLAVE_PUBLICA = "sb_publishable_";
 
@@ -144,7 +156,7 @@ function rolDeclaradoEnLaLlave(llave) {
 const FORMA_DE_URL_ABSOLUTA = /^[a-z][a-z\d+\-.]*:\/\//i;
 
 /** Valida y normaliza la URL del proyecto de Supabase. */
-function validarUrl(valor, nombreDeVariable, plataforma) {
+function validarUrl(valor, nombreDeVariable, plataforma, esDesarrollo) {
   let url;
   try {
     if (!FORMA_DE_URL_ABSOLUTA.test(valor)) throw new TypeError("URL sin esquema");
@@ -158,10 +170,16 @@ function validarUrl(valor, nombreDeVariable, plataforma) {
   }
 
   const esLocal = HOSTS_LOCALES.includes(url.hostname);
-  if (url.protocol !== "https:" && !(url.protocol === "http:" && esLocal)) {
+  // Gateado a desarrollo movil a proposito: en produccion (o en web) http contra una IP de LAN
+  // sigue rechazado, la sesion viajaria sin TLS fuera de la maquina de quien desarrolla.
+  const esIpDeLanEnDesarrolloMovil =
+    esDesarrollo && plataforma === PLATAFORMAS.MOVIL && PATRON_IP_PRIVADA.test(url.hostname);
+
+  if (url.protocol !== "https:" && !(url.protocol === "http:" && (esLocal || esIpDeLanEnDesarrolloMovil))) {
     throw new ErrorDeEntorno(
       `${nombreDeVariable} debe usar https. Solo se acepta http contra la instancia local ` +
-        `de Supabase (${HOSTS_LOCALES.join(", ")}). ${comoCorregir(plataforma)}`,
+        `de Supabase (${HOSTS_LOCALES.join(", ")}) o, en desarrollo movil, contra una IP de LAN ` +
+        `(192.168.x.x, 10.x.x.x, 172.16-31.x.x). ${comoCorregir(plataforma)}`,
       { codigo: CODIGOS_DE_ERROR.URL_INVALIDA, variable: nombreDeVariable },
     );
   }
@@ -235,9 +253,12 @@ function exigirPresencia(valor, nombreDeVariable, plataforma) {
  * @param {object} fuente
  * @param {"web"|"movil"} fuente.plataforma
  * @param {{ url?: string, anonKey?: string }} fuente.valores
+ * @param {boolean} [fuente.esDesarrollo] Ambiente de desarrollo segun el bundler de la
+ *   plataforma (import.meta.env.DEV en Vite, __DEV__ en Expo/Metro). Solo habilita la
+ *   excepcion de http:// contra IP de LAN en movil; en produccion o en web no cambia nada.
  * @returns {{ supabaseUrl: string, supabaseAnonKey: string, plataforma: string }}
  */
-export function resolverEntorno({ plataforma, valores } = {}) {
+export function resolverEntorno({ plataforma, valores, esDesarrollo = false } = {}) {
   const nombres = NOMBRES_DE_VARIABLES[plataforma];
   if (!nombres) {
     throw new ErrorDeEntorno(
@@ -251,7 +272,7 @@ export function resolverEntorno({ plataforma, valores } = {}) {
   const llaveCruda = exigirPresencia(normalizar(valores?.anonKey), nombres.anonKey, plataforma);
 
   return {
-    supabaseUrl: validarUrl(urlCruda, nombres.url, plataforma),
+    supabaseUrl: validarUrl(urlCruda, nombres.url, plataforma, esDesarrollo),
     supabaseAnonKey: validarLlaveAnonima(llaveCruda, nombres.anonKey, plataforma),
     plataforma,
   };

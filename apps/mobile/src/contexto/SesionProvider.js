@@ -1,6 +1,8 @@
 import { createContext, useContext } from 'react';
 import { useSesion } from '@ecopac/shared';
 
+import { almacenamientoMovil } from '../almacenamiento';
+
 /**
  * Sesion compartida por toda la app movil.
  *
@@ -24,7 +26,7 @@ import { useSesion } from '@ecopac/shared';
 const ContextoDeSesion = createContext(null);
 
 export function SesionProvider({ children }) {
-  const sesion = useSesion();
+  const sesion = useSesion({ almacenamiento: almacenamientoMovil });
   return <ContextoDeSesion.Provider value={sesion}>{children}</ContextoDeSesion.Provider>;
 }
 
