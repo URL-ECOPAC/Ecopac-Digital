@@ -1,0 +1,41 @@
+name: Alertas de vencimiento
+
+# Dispara diariamente la Edge Function alertas-vencimiento (issue #166, RF-19), que genera una
+# alerta pendiente por cada lote con existencia positiva que vence en 30 dias o menos. El
+# proyecto esta en el plan gratuito de Supabase, que no incluye pg_cron: este workflow es el
+# cron externo que reemplaza esa pieza.
+#
+# Mientras los secrets no esten configurados, el paso se omite y el workflow termina en verde
+# (no falla), igual que mantener-supabase-activo.yml.
+#
+# Configurar los secrets en: Settings > Secrets and variables > Actions del repositorio.
+#   - SUPABASE_URL_DEV                (ya existe, reusado del keep-alive)
+#   - SUPABASE_SERVICE_ROLE_KEY_DEV   (llave de servicio del proyecto ecopac-dev, nueva)
+
+on:
+  schedule:
+    - cron: "0 6 * * *" # todos los dias, 06:00 UTC
+  workflow_dispatch: # tambien se puede correr manualmente
+
+jobs:
+  disparar:
+    name: Disparar alertas-vencimiento
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_URL_DEV: ${{ secrets.SUPABASE_URL_DEV }}
+      SUPABASE_SERVICE_ROLE_KEY_DEV: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY_DEV }}
+
+    steps:
+      - name: Verificar secrets configurados
+        if: env.SUPABASE_URL_DEV == '' || env.SUPABASE_SERVICE_ROLE_KEY_DEV == ''
+        run: |
+          echo "Los secrets de Supabase no estan configurados; se omite el disparo."
+          echo "Configuralos en: Settings > Secrets and variables > Actions"
+
+      - name: Invocar alertas-vencimiento
+        if: env.SUPABASE_URL_DEV != '' && env.SUPABASE_SERVICE_ROLE_KEY_DEV != ''
+        run: |
+          curl -sS -X POST "$SUPABASE_URL_DEV/functions/v1/alertas-vencimiento" \
+            -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY_DEV" \
+            -H "Content-Type: application/json" \
+            --fail-with-body

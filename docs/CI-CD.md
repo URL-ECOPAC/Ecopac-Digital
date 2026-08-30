@@ -202,6 +202,7 @@ Se configuran en Settings > Secrets and variables > Actions.
 | `SUPABASE_PROJECT_REF_DEV`                              | Aplicar migraciones en develop |
 | `SUPABASE_PROJECT_REF_PROD`                             | Aplicar migraciones en main    |
 | `SUPABASE_URL_DEV`, `SUPABASE_ANON_KEY_DEV`             | Keep-alive                     |
+| `SUPABASE_SERVICE_ROLE_KEY_DEV`                         | Disparar alertas-vencimiento   |
 | `VITE_SUPABASE_URL_DEV`, `VITE_SUPABASE_ANON_KEY_DEV`   | Build de la web en develop     |
 | `VITE_SUPABASE_URL_PROD`, `VITE_SUPABASE_ANON_KEY_PROD` | Build de la web en main        |
 
