@@ -4,15 +4,6 @@ import { colors, spacing, typography } from "@ecopac/ui-tokens";
 
 import { useSesionCompartida } from "../contexto/SesionProvider";
 
-/**
- * Nombre y rol de quien tiene la sesion activa (issue #110, criterio 5).
- *
- * `compacto` (por defecto) es para el headerRight de AppNavigator: comparte fila con el titulo
- * de la pantalla, asi que trunca a una linea y nunca empuja el titulo ("Junta directiva" no
- * puede desbordar). AjustesScreen no tiene header propio (Tabs.Navigator usa
- * headerShown: false para ese tab) y lo pone en el cuerpo con compacto={false}, sin el limite
- * de ancho ni el truncado.
- */
 export default function UsuarioActivo({ compacto = true }) {
   const { perfil } = useSesionCompartida();
 
@@ -23,10 +14,18 @@ export default function UsuarioActivo({ compacto = true }) {
 
   return (
     <View style={compacto ? styles.compacto : styles.expandido}>
-      <Text style={styles.nombre} numberOfLines={lineas}>
+      <Text 
+        style={styles.nombre} 
+        numberOfLines={lineas}
+        ellipsizeMode="tail"
+      >
         {nombre || "Sesion activa"}
       </Text>
-      <Text style={styles.rol} numberOfLines={lineas}>
+      <Text 
+        style={styles.rol} 
+        numberOfLines={lineas}
+        ellipsizeMode="tail"
+      >
         {etiquetaDeRol(perfil.rol)}
       </Text>
     </View>
@@ -35,9 +34,10 @@ export default function UsuarioActivo({ compacto = true }) {
 
 const styles = StyleSheet.create({
   compacto: {
-    maxWidth: 140,
+    maxWidth: 110, // Reducido para evitar el desbordamiento en el header
     alignItems: "flex-end",
-    marginRight: spacing.md,
+    marginRight: spacing.sm,
+    justifyContent: "center",
   },
   expandido: {
     alignItems: "flex-start",

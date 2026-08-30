@@ -1,3 +1,4 @@
+import { Text } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
@@ -23,7 +24,6 @@ import ProyectosScreen from "../screens/ProyectosScreen";
 import PresupuestosScreen from "../screens/PresupuestosScreen";
 import VoluntariosScreen from "../screens/VoluntariosScreen";
 
-// Se reexporta para no romper a quien ya importaba ROUTES desde aqui.
 export { ROUTES };
 
 const Root = createNativeStackNavigator();
@@ -37,14 +37,9 @@ const opcionesStack = {
   headerStyle: { backgroundColor: colors.surface },
   headerTintColor: colors.text,
   headerTitleStyle: { fontSize: typography.sizes.md, fontWeight: typography.weights.semibold },
-  // Quien esta con la sesion activa, siempre a la vista (issue #110, criterio 5). Comparte la
-  // fila del header que ya existe en los cuatro stacks anidados: cero espacio vertical nuevo.
   headerRight: () => <UsuarioActivo />,
 };
 
-// El tab de Inicio concentra los modulos administrativos que no tienen tab propio:
-// el diseno los alcanza desde el grid de modulos de la pantalla de inicio.
-// Reportes no aparece: ese modulo existe unicamente en la version web.
 function InicioNavigator() {
   return (
     <InicioStack.Navigator screenOptions={opcionesStack}>
@@ -151,23 +146,43 @@ function InventarioNavigator() {
 function TabsNavigator() {
   return (
     <Tabs.Navigator
-      // Jornadas y no Inicio (issue #109, criterio 3): tanto al iniciar sesion como al
-      // reabrir la app ya logueada, el personal de campo tiene que llegar directo a elegir
-      // jornada, sin pasar por Inicio primero (RNF-02).
-      initialRouteName={ROUTES.TAB_JORNADAS}
-      screenOptions={{
+      initialRouteName={ROUTES.TAB_INICIO}
+      screenOptions={({ route }) => ({
         headerShown: false,
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textMuted,
         tabBarStyle: { backgroundColor: colors.surface, borderTopColor: colors.border },
         tabBarLabelStyle: { fontSize: typography.sizes.xs },
-      }}
+        tabBarIcon: ({ color, size }) => {
+          let simbolo;
+          switch (route.name) {
+            case ROUTES.TAB_INICIO:
+              simbolo = "⌂";
+              break;
+            case ROUTES.TAB_PACIENTES:
+              simbolo = "𐀔";
+              break;
+            case ROUTES.TAB_JORNADAS:
+              simbolo = "📅";
+              break;
+            case ROUTES.TAB_INVENTARIO:
+              simbolo = "📦";
+              break;
+            case ROUTES.TAB_AJUSTES:
+              simbolo = "⚙";
+              break;
+            default:
+              simbolo = "•";
+          }
+          return <Text style={{ color, fontSize: size - 2, fontWeight: "bold" }}>{simbolo}</Text>;
+        },
+      })}
     >
-      <Tabs.Screen name={ROUTES.TAB_INICIO} component={InicioNavigator} />
-      <Tabs.Screen name={ROUTES.TAB_PACIENTES} component={PacientesNavigator} />
-      <Tabs.Screen name={ROUTES.TAB_JORNADAS} component={JornadasNavigator} />
-      <Tabs.Screen name={ROUTES.TAB_INVENTARIO} component={InventarioNavigator} />
-      <Tabs.Screen name={ROUTES.TAB_AJUSTES} component={AjustesScreen} />
+      <Tabs.Screen name={ROUTES.TAB_INICIO} component={InicioNavigator} options={{ tabBarLabel: "Inicio" }} />
+      <Tabs.Screen name={ROUTES.TAB_PACIENTES} component={PacientesNavigator} options={{ tabBarLabel: "Pacientes" }} />
+      <Tabs.Screen name={ROUTES.TAB_JORNADAS} component={JornadasNavigator} options={{ tabBarLabel: "Jornadas" }} />
+      <Tabs.Screen name={ROUTES.TAB_INVENTARIO} component={InventarioNavigator} options={{ tabBarLabel: "Inventario" }} />
+      <Tabs.Screen name={ROUTES.TAB_AJUSTES} component={AjustesScreen} options={{ tabBarLabel: "Ajustes" }} />
     </Tabs.Navigator>
   );
 }
