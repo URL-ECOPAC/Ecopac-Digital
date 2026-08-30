@@ -26,4 +26,5 @@ export * from "./tableroProyectosApi.js";
 export * from "./campos.js";
 export * from "./columnas.js";
 export * from "./filtros.js";
-export * from "./useProyectosSociales.js";
+export { useProyectosSociales } from "./useProyectosSociales.js";
+export { useSeguimientoProyecto } from "./useSeguimientoProyecto.js";
