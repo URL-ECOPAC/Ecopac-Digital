@@ -364,3 +364,24 @@ export async function listarPacientesAtendidosDeJornada(jornadaId, { rol } = {})
     return { pacientes: [], error: normalizarError(error) };
   }
 }
+
+/**
+ * Catalogo de diagnosticos, que es lo que alimenta `opcionesDesde: 'diagnosticos'` de
+ * CAMPOS_CONSULTA. Hasta la issue #137 ese descriptor declaraba un catalogo que nadie
+ * publicaba.
+ *
+ * @returns {Promise<{ diagnosticos: object[], error: object|null }>}
+ */
+export async function listarDiagnosticos() {
+  try {
+    const { data, error } = await obtenerSupabase()
+      .from("diagnosticos")
+      .select("id, codigo, nombre")
+      .order("nombre", { ascending: true });
+
+    if (error) return { diagnosticos: [], error: normalizarError(error) };
+    return { diagnosticos: data ?? [], error: null };
+  } catch (error) {
+    return { diagnosticos: [], error: normalizarError(error) };
+  }
+}

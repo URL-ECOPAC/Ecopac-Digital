@@ -18,60 +18,52 @@
 // archivo: la issue #57, que ajusta el comportamiento de restaurar y limpiar la sesion, tiene
 // asi un solo sitio donde tocar.
 
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import * as SecureStore from "expo-secure-store";
-import * as Crypto from "expo-crypto";
+import { Platform } from 'react-native';
+import * as SecureStore from 'expo-secure-store';
 
-const PREFIJO_LLAVE_DE_CIFRADO = "llave-cifrado-";
-
-/** Recupera la llave AES de esta clave desde SecureStore, o la crea si no existe. */
-async function obtenerOCrearLlave(clave) {
-  const claveEnSecureStore = PREFIJO_LLAVE_DE_CIFRADO + clave;
-  const llaveGuardada = await SecureStore.getItemAsync(claveEnSecureStore);
-
-  if (llaveGuardada) {
-    return Crypto.AESEncryptionKey.import(llaveGuardada, "base64");
-  }
-
-  const llaveNueva = await Crypto.AESEncryptionKey.generate(256);
-  const llaveCodificada = await llaveNueva.encoded("base64");
-  await SecureStore.setItemAsync(claveEnSecureStore, llaveCodificada);
-  return llaveNueva;
-}
-
+/**
+ * Adaptador de almacenamiento híbrido (Web / Nativo)
+ * Mantiene la compatibilidad con expo-secure-store en móviles
+ * y recurre a localStorage cuando se ejecuta en el navegador.
+ */
 export const almacenamientoMovil = {
-  async getItem(clave) {
-    const valorCifrado = await AsyncStorage.getItem(clave);
-    if (!valorCifrado) return valorCifrado;
-
-    const claveEnSecureStore = PREFIJO_LLAVE_DE_CIFRADO + clave;
-    const llaveCodificada = await SecureStore.getItemAsync(claveEnSecureStore);
-
-    if (!llaveCodificada) {
-      // Hay blob cifrado pero no la llave para abrirlo (dispositivo restaurado desde un
-      // backup de AsyncStorage sin su Keychain/Keystore, por ejemplo). Es irrecuperable: se
-      // descarta en vez de fallar, y supabase-js lo trata como "no hay sesion" (pide login
-      // de nuevo) en vez de reventar con un blob que no puede descifrar.
-      await AsyncStorage.removeItem(clave);
+  getItem: async (key) => {
+    try {
+      if (Platform.OS === 'web') {
+        return typeof window !== 'undefined' ? localStorage.getItem(key) : null;
+      }
+      return await SecureStore.getItemAsync(key);
+    } catch (error) {
+      console.error(`Error al leer la clave "${key}":`, error);
       return null;
     }
-
-    const llave = await Crypto.AESEncryptionKey.import(llaveCodificada, "base64");
-    const sellado = Crypto.AESSealedData.fromCombined(valorCifrado);
-    const bytesDescifrados = await Crypto.aesDecryptAsync(sellado, llave);
-    return new TextDecoder().decode(bytesDescifrados);
   },
 
-  async setItem(clave, valor) {
-    const llave = await obtenerOCrearLlave(clave);
-    const bytesDelValor = new TextEncoder().encode(valor);
-    const sellado = await Crypto.aesEncryptAsync(bytesDelValor, llave);
-    const combinado = await sellado.combined("base64");
-    await AsyncStorage.setItem(clave, combinado);
+  setItem: async (key, value) => {
+    try {
+      if (Platform.OS === 'web') {
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(key, value);
+        }
+        return;
+      }
+      await SecureStore.setItemAsync(key, value);
+    } catch (error) {
+      console.error(`Error al guardar la clave "${key}":`, error);
+    }
   },
 
-  async removeItem(clave) {
-    await AsyncStorage.removeItem(clave);
-    await SecureStore.deleteItemAsync(PREFIJO_LLAVE_DE_CIFRADO + clave);
+  removeItem: async (key) => {
+    try {
+      if (Platform.OS === 'web') {
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem(key);
+        }
+        return;
+      }
+      await SecureStore.deleteItemAsync(key);
+    } catch (error) {
+      console.error(`Error al eliminar la clave "${key}":`, error);
+    }
   },
 };

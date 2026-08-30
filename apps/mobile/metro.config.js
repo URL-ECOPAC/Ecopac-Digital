@@ -60,6 +60,6 @@ config.resolver.nodeModulesPaths = [
 
 // 3. Evita que Metro resuelva dos copias distintas de React/React Native si
 //    quedaron instaladas tanto en la raíz como dentro de apps/mobile.
-config.resolver.disableHierarchicalLookup = false;
+config.resolver.disableHierarchicalLookup = true;
 
 module.exports = config;

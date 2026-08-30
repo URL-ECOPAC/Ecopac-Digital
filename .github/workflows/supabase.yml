@@ -306,21 +306,27 @@ jobs:
         if: needs.cambios.outputs.supabase == 'true'
         run: supabase test db
 
-      # supabase functions lint no existe en el CLI (nunca existio, verificado contra la
-      # referencia oficial): las Edge Functions corren en Deno, y Deno no viene preinstalado en
-      # el runner de GitHub Actions, asi que hace falta instalarlo antes de poder lintear algo
-      # (issue #166, primera Edge Function real del repo).
+      # `supabase functions lint` ya no existe en el CLI (confirmado contra la 2.115.0, la misma
+      # que fija el paso de arriba: ni `functions --help` ni `--experimental` lo listan). Este
+      # paso nunca se habia ejecutado de verdad -el guardia de abajo caia siempre a la rama del
+      # "else" porque no habia ninguna funcion-, asi que el comando roto quedo en verde en
+      # silencio hasta la issue #523, la primera en agregar una. Se reemplaza por lo que el CLI
+      # llamaba por debajo: `deno lint`/`deno check` directo sobre supabase/functions.
       - name: Instalar Deno
         if: needs.cambios.outputs.supabase == 'true'
         uses: denoland/setup-deno@v2
         with:
-          deno-version: v2.x
+          deno-version: "2.9.6"
 
       - name: Lint de Edge Functions
         if: needs.cambios.outputs.supabase == 'true'
         run: |
+          deno --version
           if ls supabase/functions/*/index.* >/dev/null 2>&1; then
-            deno lint supabase/functions
+            deno lint --config supabase/functions/deno.json supabase/functions
+            for archivo in supabase/functions/*/index.*; do
+              deno check --config supabase/functions/deno.json "$archivo"
+            done
           else
             echo "No hay Edge Functions todavia; se omite el lint."
           fi
