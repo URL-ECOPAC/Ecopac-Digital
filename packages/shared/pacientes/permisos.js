@@ -151,5 +151,20 @@ export function permisosDePacientes(rol) {
     puedeTomarTriaje: puedeTomarTriaje(rol),
     puedeCorregirTriaje: puedeCorregirTriaje(rol),
     puedeFusionarPacientes: puedeFusionarPacientes(rol),
+    puedeAdministrarDiagnosticos: puedeAdministrarDiagnosticos(rol),
   };
+}
+
+/**
+ * Puede mantener el catalogo de diagnosticos: agregar uno nuevo y corregir los existentes.
+ *
+ * Espejo de las politicas de INSERT y UPDATE de la 00105, que son es_administrador(). Leerlo es
+ * mas amplio -medico tambien (00033)-, pero mantenerlo no: un catalogo que cada quien edita deja
+ * de ser un catalogo.
+ *
+ * No hay `puedeEliminarDiagnostico`: consulta_diagnostico referencia diagnosticos ON DELETE
+ * RESTRICT (00018) y no hay GRANT de DELETE. Un diagnostico ya usado es historia clinica.
+ */
+export function puedeAdministrarDiagnosticos(rol) {
+  return esAdministrador(rol);
 }

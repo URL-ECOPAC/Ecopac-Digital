@@ -9,6 +9,7 @@ import { describe, expect, it } from "vitest";
 import { ROLES } from "../usuarios/roles.js";
 import {
   permisosDePacientes,
+  puedeAdministrarDiagnosticos,
   puedeAnularReceta,
   puedeCorregirTriaje,
   puedeCrearExpediente,
@@ -86,6 +87,7 @@ describe("permisos de pacientes y expedientes", () => {
       puedeTomarTriaje: false,
       puedeCorregirTriaje: false,
       puedeFusionarPacientes: false,
+      puedeAdministrarDiagnosticos: false,
     });
   });
 
@@ -106,6 +108,7 @@ describe("permisos de pacientes y expedientes", () => {
       puedeTomarTriaje: true,
       puedeCorregirTriaje: false,
       puedeFusionarPacientes: false,
+      puedeAdministrarDiagnosticos: false,
     });
 
     expect(permisosDePacientes(ROLES.ADMINISTRADOR)).toEqual({
@@ -116,7 +119,19 @@ describe("permisos de pacientes y expedientes", () => {
       puedeTomarTriaje: true,
       puedeCorregirTriaje: true,
       puedeFusionarPacientes: true,
+      puedeAdministrarDiagnosticos: true,
     });
+  });
+
+  it("mantener el catalogo de diagnosticos es solo de la administradora (issue #625)", () => {
+    // Leerlo es mas amplio -- el medico tambien (00033) -- pero mantenerlo no: un catalogo que
+    // cada quien edita deja de ser un catalogo. Espejo de las politicas de la 00105.
+    expect(puedeAdministrarDiagnosticos(ROLES.ADMINISTRADOR)).toBe(true);
+
+    expect(puedeAdministrarDiagnosticos(ROLES.MEDICO)).toBe(false);
+    expect(puedeAdministrarDiagnosticos(ROLES.VOLUNTARIO)).toBe(false);
+    expect(puedeAdministrarDiagnosticos(ROLES.JUNTA_DIRECTIVA)).toBe(false);
+    expect(puedeAdministrarDiagnosticos(ROLES.SOCIO_FUNDADOR)).toBe(false);
   });
 });
 
