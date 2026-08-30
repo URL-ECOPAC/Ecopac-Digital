@@ -1,4 +1,3 @@
-import React from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ESTADOS_DE_RESTAURACION, inicializarSupabase } from '@ecopac/shared';
 
@@ -6,14 +5,14 @@ import { almacenamientoMovil } from './src/almacenamiento';
 import { SesionProvider, useSesionCompartida } from './src/contexto/SesionProvider';
 import AppNavigator from './src/navigation/AppNavigator';
 import RestaurandoSesionScreen from './src/screens/RestaurandoSesionScreen';
-
 // 1. Simular import.meta.env para paquetes web (Vite) en entorno Expo/Metro
-if (typeof import.meta === 'undefined') {
-  global.import = { meta: { env: {} } };
-} else if (!import.meta.env) {
-  import.meta.env = {};
+/* eslint-disable no-undef */
+if (typeof globalThis.import === "undefined") {
+  globalThis.import = { meta: { env: {} } };
+} else if (!globalThis.import.meta?.env) {
+  globalThis.import.meta = { env: {} };
 }
-
+/* eslint-enable no-undef */
 // Mapear las variables EXPO_PUBLIC a import.meta.env
 import.meta.env.VITE_SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL;
 import.meta.env.VITE_SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
