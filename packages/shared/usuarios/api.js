@@ -305,6 +305,31 @@ export async function listarCatalogoEspecialidades() {
   }
 }
 
+/**
+ * Normaliza el error que devuelve `functions.invoke()` al llamar a invitar-usuario.
+ *
+ * Cuando la Edge Function responde con un status distinto de 2xx, supabase-js no trae el cuerpo
+ * JSON de la respuesta (con nuestro `{ code, message }`) en el error mismo: lo deja sin leer en
+ * `error.context`, un `Response` (`FunctionsHttpError`). normalizarError() solo mira
+ * `error?.code`, asi que sin este paso todo error real de la funcion caeria en DESCONOCIDO. Se
+ * detecta por duck-typing (`error.context.json` existe) en vez de con `instanceof
+ * FunctionsHttpError` para no depender de esa clase: las pruebas de este archivo pasan un error
+ * plano (`{ code: "..." }`, sin `context`), que sigue el camino de siempre.
+ */
+async function normalizarErrorDeFuncion(error) {
+  if (error && typeof error.context?.json === "function") {
+    try {
+      const cuerpo = await error.context.json();
+      return normalizarError({ ...error, ...cuerpo });
+    } catch {
+      // El cuerpo no era JSON (relay error, function caida, etc.): se normaliza el error tal
+      // cual llego, que es lo mejor que hay.
+    }
+  }
+
+  return normalizarError(error);
+}
+
 export async function crearUsuario(datos) {
   const errores = validarPerfil(datos ?? {});
   if (Object.keys(errores).length > 0) {
@@ -325,10 +350,10 @@ export async function crearUsuario(datos) {
       body: { nombres, apellidos, email, telefono, rol },
     });
 
-    if (error) return { usuario: null, errores: {}, error: normalizarError(error) };
+    if (error) return { usuario: null, errores: {}, error: await normalizarErrorDeFuncion(error) };
     return { usuario: data ?? null, errores: {}, error: null };
   } catch (error) {
-    return { usuario: null, errores: {}, error: normalizarError(error) };
+    return { usuario: null, errores: {}, error: await normalizarErrorDeFuncion(error) };
   }
 }
 

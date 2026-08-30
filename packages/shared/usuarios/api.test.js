@@ -495,6 +495,38 @@ describe("crearUsuario", () => {
     expect(usuario).toBeNull();
     expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.PERMISO_DENEGADO);
   });
+
+  it("desempaca el cuerpo JSON de un FunctionsHttpError real antes de normalizar", async () => {
+    // Forma real de lo que devuelve functions.invoke() cuando invitar-usuario responde con un
+    // status distinto de 2xx: el error no trae `code` propio, lo trae sin leer en
+    // error.context (un Response). Sin desempacarlo, este caso caeria en DESCONOCIDO.
+    const errorReal = {
+      name: "FunctionsHttpError",
+      context: {
+        json: () =>
+          Promise.resolve({ code: "23505", message: "Ya existe una cuenta con ese correo." }),
+      },
+    };
+    dobles.cliente = doble({ data: null, error: errorReal }).cliente;
+
+    const { usuario, error } = await crearUsuario(usuarioValido());
+
+    expect(usuario).toBeNull();
+    expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.UNICIDAD);
+  });
+
+  it("si el cuerpo del FunctionsHttpError no es JSON valido, normaliza el error original", async () => {
+    const errorSinCuerpoJson = {
+      name: "FunctionsHttpError",
+      context: { json: () => Promise.reject(new Error("body ya consumido")) },
+    };
+    dobles.cliente = doble({ data: null, error: errorSinCuerpoJson }).cliente;
+
+    const { usuario, error } = await crearUsuario(usuarioValido());
+
+    expect(usuario).toBeNull();
+    expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.DESCONOCIDO);
+  });
 });
 
 describe("actualizarUsuario", () => {
