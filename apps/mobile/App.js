@@ -2,20 +2,10 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ESTADOS_DE_RESTAURACION, inicializarSupabase } from '@ecopac/shared';
 
 import { almacenamientoMovil } from './src/almacenamiento';
+import { RegistroSinGuardarProvider } from './src/contexto/RegistroSinGuardarProvider';
 import { SesionProvider, useSesionCompartida } from './src/contexto/SesionProvider';
 import AppNavigator from './src/navigation/AppNavigator';
 import RestaurandoSesionScreen from './src/screens/RestaurandoSesionScreen';
-// 1. Simular import.meta.env para paquetes web (Vite) en entorno Expo/Metro
-/* eslint-disable no-undef */
-if (typeof globalThis.import === "undefined") {
-  globalThis.import = { meta: { env: {} } };
-} else if (!globalThis.import.meta?.env) {
-  globalThis.import.meta = { env: {} };
-}
-/* eslint-enable no-undef */
-// Mapear las variables EXPO_PUBLIC a import.meta.env
-import.meta.env.VITE_SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL;
-import.meta.env.VITE_SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 
 // El cliente de Supabase se crea una sola vez, aqui, con AsyncStorage como almacenamiento.
 // Va en el ambito del modulo y no dentro del componente: no debe rehacerse en cada render
@@ -33,7 +23,7 @@ try {
   );
 }
 
-// 3. Componente interno Raiz
+// Componente interno Raiz
 function Raiz() {
   const { estadoRestauracion, haySesion } = useSesionCompartida();
 
@@ -44,12 +34,14 @@ function Raiz() {
   );
 }
 
-// 4. Componente principal App
+// Componente principal App
 export default function App() {
   return (
     <SafeAreaProvider>
       <SesionProvider>
-        <Raiz />
+        <RegistroSinGuardarProvider>
+          <Raiz />
+        </RegistroSinGuardarProvider>
       </SesionProvider>
     </SafeAreaProvider>
   );

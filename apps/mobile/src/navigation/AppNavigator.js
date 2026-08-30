@@ -4,6 +4,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { colors, typography } from '@ecopac/ui-tokens';
 
 import { ROUTES } from './rutas';
+import UsuarioActivo from '../components/UsuarioActivo';
 import LoginScreen from '../screens/LoginScreen';
 import InicioScreen from '../screens/InicioScreen';
 import AjustesScreen from '../screens/AjustesScreen';
@@ -37,6 +38,9 @@ const opcionesStack = {
   headerStyle: { backgroundColor: colors.surface },
   headerTintColor: colors.text,
   headerTitleStyle: { fontSize: typography.sizes.md, fontWeight: typography.weights.semibold },
+  // Quien esta con la sesion activa, siempre a la vista (issue #110, criterio 5). Comparte la
+  // fila del header que ya existe en los cuatro stacks anidados: cero espacio vertical nuevo.
+  headerRight: () => <UsuarioActivo />,
 };
 
 // El tab de Inicio concentra los modulos administrativos que no tienen tab propio:

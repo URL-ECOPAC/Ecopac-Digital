@@ -50,27 +50,27 @@ no esta cifrado por el sistema operativo -en un telefono con root/jailbreak, o e
 cifrar, el contenido es legible por cualquier app con acceso al almacenamiento del dispositivo.
 La sesion es una credencial de larga duracion (`persistSession: true`, `autoRefreshToken: true`
 en `packages/shared/api/cliente.js`), asi que guardarla en texto plano es exactamente el tipo de
-hallazgo que pide el criterio 2.
+hallazgo que pide el criterio 2. Ahora se guarda con `expo-secure-store`
+(`SecureStore.setItemAsync`/`getItemAsync`/`deleteItemAsync`), cifrado por el Keychain de iOS o
+el Keystore de Android. Ver [`apps/mobile/src/almacenamiento.js`](../apps/mobile/src/almacenamiento.js).
 
-`expo-secure-store` por si solo no alcanza: tiene un limite historico de valor de ~2048 bytes en
-iOS, y la sesion completa de Supabase (los dos tokens JWT mas la metadata del usuario) lo supera.
-La solucion, documentada por el propio Supabase para apps Expo/React Native, es un patron
-hibrido: la sesion se cifra con AES-GCM y el blob cifrado se guarda en AsyncStorage (sin limite
-de tamano practico); solo la LLAVE de cifrado -pequena, 32 bytes en base64- vive en SecureStore,
-protegida por el Keychain de iOS o el Keystore de Android. Sin la llave, el blob en AsyncStorage
-es basura ilegible.
+**Intento descartado:** se probo un patron hibrido -la sesion cifrada con AES-GCM en un blob de
+`AsyncStorage` (sin limite practico de tamano) y solo la llave de cifrado, pequena, en
+`SecureStore`- para evitar el limite historico de `expo-secure-store` de ~2048 bytes por valor en
+iOS, ya que la sesion completa de Supabase (los dos JWT mas la metadata del usuario) puede
+acercarse a ese limite. La implementacion usaba el modulo `expo-crypto`
+(`AESEncryptionKey`/`AESSealedData`/`aesEncryptAsync`/`aesDecryptAsync`), nativo desde el SDK 57.
+Se escribio y se verifico contra la documentacion y los tipos del paquete instalado, pero nunca
+se probo en un dispositivo o emulador real, y al probarla fallo: esa API nativa es muy reciente
+y Expo Go (la app generica, sin un dev client propio del proyecto) no la sirve de forma
+confiable -las llamadas nativas devolvian errores vacios en vez de cifrar/descifrar-, asi que la
+sesion nunca persistia entre arranques de la app. Se revirtio a `SecureStore` directo, que si es
+estable en Expo Go.
 
-A diferencia del patron que documenta el blog de Supabase (que depende de la libreria externa
-`aes-js` mas un polyfill de `crypto.getRandomValues`), esta implementacion usa el modulo
-`expo-crypto` (`AESEncryptionKey`, `AESSealedData`, `aesEncryptAsync`/`aesDecryptAsync`), nativo
-desde el SDK 57, sin dependencias externas de cifrado. Ver
-[`apps/mobile/src/almacenamiento.js`](../apps/mobile/src/almacenamiento.js).
-
-**Pendiente:** este cambio se escribio y se verifico contra la documentacion y los tipos reales
-del paquete instalado (`node_modules/expo-crypto`), pero no se pudo probar en un dispositivo o
-emulador real desde este entorno. Antes de confiar en que el login persiste correctamente entre
-sesiones, hay que probarlo a mano: cerrar y volver a abrir la app sin cerrar sesion, y confirmar
-que sigue autenticado.
+**Pendiente:** si en pruebas reales `SecureStore.setItemAsync` empieza a fallar por el tamano de
+la sesion (mas probable en iOS que en Android), hay que retomar el patron hibrido de arriba, pero
+probando `expo-crypto` en un dispositivo real o con un dev client propio antes de darlo por
+bueno -no alcanza con verificarlo contra los tipos del paquete.
 
 ## 3. Cifrado adicional a nivel de columna (criterio 3 del DoD)
 
