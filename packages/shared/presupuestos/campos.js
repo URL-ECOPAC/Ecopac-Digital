@@ -8,7 +8,7 @@
 //
 // Los ids son los de las columnas de gastos en 00025_presupuesto_gastos.sql:
 //
-//   gastos (id, jornada_id, concepto, categoria, monto, fecha, encargado_id, estado,
+//   gastos (id, jornada_id, concepto, categoria, monto, fecha, responsable_id, estado,
 //           registrado_por, aprobado_por, fecha_aprobacion, created_at, updated_at)
 //
 // La version anterior declaraba `categoria_id`, `fecha_gasto`, `proyecto_id`, `comprobante_url` y
@@ -112,8 +112,8 @@ export const CAMPOS_GASTO = [
     validacion: { requerido: true },
   },
   {
-    id: "encargado_id",
-    label: "Encargado",
+    id: "responsable_id",
+    label: "Responsable",
     tipo: TIPOS_DE_CAMPO.SELECT,
     opcionesDesde: "perfiles",
   },

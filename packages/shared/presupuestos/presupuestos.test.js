@@ -27,7 +27,7 @@ const COLUMNAS_DE_LA_TABLA = [
   'categoria',
   'monto',
   'fecha',
-  'encargado_id',
+  'responsable_id',
   'estado',
   'registrado_por',
   'aprobado_por',
