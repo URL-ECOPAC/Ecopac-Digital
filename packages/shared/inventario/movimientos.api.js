@@ -131,6 +131,12 @@ export async function registrarIngreso({
           // con existencias.cantidad_disponible, que es lo que queda hoy y por bodega: esta
           // columna es el historico de cuanto entro (00047, issue #369).
           cantidad_ingresada: cantidad,
+          // Un medico o un voluntario si pueden dar de alta el lote de su ingreso, pero la
+          // politica de la 00107 les exige atribuirselo (registrado_por = auth.uid()) y que
+          // nazca provisional. `confirmado` no se envia: su DEFAULT es FALSE y mandarlo desde
+          // el cliente invitaria a mandarlo en TRUE. Lo pone en TRUE la aprobacion del ingreso,
+          // dentro de fn_aplicar_ajuste_existencias.
+          registrado_por: usuarioId,
         })
         .select()
         .single();
@@ -243,6 +249,18 @@ export async function registrarSalida({ bodega_id, lote_id, cantidad, motivo, us
 /**
  * Edita un movimiento existente únicamente si se encuentra en estado 'pendiente'
  * y la modificación es realizada por la misma persona que lo registró.
+ *
+ * Hasta la issue #625 esto era falso para todo el mundo menos la administradora: la politica de
+ * UPDATE (00048/00086) solo admitia es_administrador() o tiene_permiso('inventario.aprobar'), asi
+ * que el UPDATE de un medico o un voluntario no alcanzaba ninguna fila y PostgREST devolvia exito
+ * sin haber cambiado nada. La 00106 puso la politica de acuerdo con lo que este comentario ya
+ * prometia, de modo que las dos comprobaciones de aqui abajo dejaron de ser la unica barrera y
+ * pasaron a ser lo que deben ser: un mensaje mejor que el de la base.
+ *
+ * Lo que esta funcion NO puede hacer, aunque le pasen esos campos, es aprobar: la politica exige
+ * `estado = 'pendiente'` tambien en la fila nueva, y fn_proteger_decision_de_movimiento (00106)
+ * rechaza que quien registro toque aprobado_por, aprobado_en, motivo_rechazo o
+ * aprobacion_automatica. Aprobar y rechazar viven en validacion.api.js.
  */
 export async function editarMovimiento(idMovimiento, datosNuevos, usuarioActualId) {
   try {
