@@ -182,6 +182,36 @@ Detalles en [CONTRIBUTING.md](./CONTRIBUTING.md).
 - Las variables de entorno no cargan -> reiniciar el servidor despues de editar
   `.env.development`.
 
+## Configurar el proyecto Supabase remoto (lo que no viaja en el repositorio)
+
+`supabase/config.toml` gobierna **el stack local y el CI, no los proyectos remotos**: el
+despliegue solo corre `supabase db push`, nunca `supabase config push`. En `ecopac-dev` y
+`ecopac-prod` manda el Dashboard, y esto hay que ponerlo a mano una vez por proyecto.
+
+| Dónde en el Dashboard                        | Que poner                                        | Que se rompe si falta                                                                    |
+| -------------------------------------------- | ------------------------------------------------ | ---------------------------------------------------------------------------------------- |
+| Authentication > URL Configuration > Site URL | La URL real de la web                            | El enlace de "olvide mi contrasena" apunta a otro sitio y nadie puede fijar su contrasena |
+| Authentication > URL Configuration > Redirect | Agregar la ruta `/nueva-contrasena`              | Igual que arriba: Supabase rechaza el destino del enlace                                  |
+| Authentication > Providers > Email > Signup   | **Desactivado**                                  | Cualquiera con la llave anonima -que viaja en el bundle- se da de alta solo                |
+| Authentication > SMTP Settings                | Un proveedor de correo propio                    | Los correos de invitacion y recuperacion no salen (ver abajo)                              |
+
+Sobre `enable_signup`: la linea de `config.toml` **no protege a los proyectos remotos**, solo al
+stack local. La defensa que si viaja con las migraciones es la `00074`, que cierra el alta publica
+en la base. Apagarlo tambien en el Dashboard es la segunda capa, no la unica.
+
+### El correo: por que hace falta SMTP propio
+
+Supabase trae un servicio de correo integrado, pero **solo envia a miembros de la organizacion del
+proyecto** y va limitado a unos pocos mensajes por hora. Sirve para que el equipo pruebe entre si;
+no sirve para el personal de la organizacion.
+
+El sistema manda muy poco correo -invitacion al crear una cuenta y recuperacion de contrasena, un
+punado al mes-, asi que cualquier capa gratuita alcanza de sobra. Se configura en Authentication >
+SMTP Settings con los datos que de el proveedor (host, puerto 465 o 587, usuario y contrasena).
+
+Sin SMTP configurado, `invitar-usuario` **crea igual la cuenta**: lo que no llega es el correo para
+establecer la contrasena, y esa se puede fijar desde el Dashboard mientras tanto.
+
 ## Aprovisionamiento del primer administrador
 
 Con Row Level Security activo, casi todas las tablas exigen un usuario autenticado con rol

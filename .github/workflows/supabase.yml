@@ -652,6 +652,48 @@ jobs:
         if: steps.check.outputs.listo == 'true'
         run: supabase db push
 
+      # Las Edge Functions tambien son despliegue, y hasta ahora no las desplegaba nadie.
+      #
+      # POR QUE ESTE PASO TENDRIA QUE HABER EXISTIDO DESDE LA PRIMERA FUNCION
+      #
+      # `supabase db push` aplica migraciones y nada mas. El codigo de supabase/functions/ vivia
+      # en el repositorio sin llegar nunca al proyecto, asi que las dos funciones respondian 404
+      # en ecopac-dev. Las consecuencias no eran teoricas:
+      #
+      #   - crearUsuario() (packages/shared/usuarios/api.js) invoca `invitar-usuario`. Es el
+      #     unico camino para dar de alta a una persona desde la aplicacion, y el registro
+      #     publico esta cerrado (00074). Sin la funcion desplegada, la administradora no podia
+      #     crear a nadie: habia que hacerlo a mano desde el panel de Supabase.
+      #   - El cron diario de alertas-vencimiento.yml habria dado 404 en cuanto empezara a correr
+      #     desde main, y su unica senal habria sido la issue que abre al fallar.
+      #
+      # POR QUE SE DESPLIEGAN TODAS Y NO SOLO LAS QUE CAMBIARON
+      #
+      # Porque el estado que importa es el del proyecto, no el del commit. Desplegar solo lo que
+      # cambio deja fuera el caso que de verdad duele: una funcion que nunca se desplego, o un
+      # proyecto nuevo (ecopac-prod, issue #252) que arranca vacio. `functions deploy` sin
+      # argumentos sube todas las de supabase/functions/, es idempotente y tarda segundos.
+      #
+      # No falla el job si el despliegue de funciones falla: las migraciones ya se aplicaron y
+      # dejar el job en rojo sugeriria que la base quedo a medias, que es lo contrario de lo que
+      # paso. El resultado se reporta abajo y el job "Avisar fallo" no se dispara por esto.
+      - name: Desplegar Edge Functions
+        id: funciones
+        if: steps.check.outputs.listo == 'true'
+        continue-on-error: true
+        run: |
+          if ! ls supabase/functions/*/index.* >/dev/null 2>&1; then
+            echo "No hay Edge Functions que desplegar."
+            exit 0
+          fi
+          # --use-api empaqueta del lado del servidor. Sin el, el CLI levanta un contenedor para
+          # hacer el bundle, y este job no usa Docker para ninguna otra cosa: no vale la pena
+          # atarlo a que el runner lo tenga.
+          #
+          # Sin --prune a proposito: borraria del proyecto cualquier funcion que no este en el
+          # repositorio, y eso convierte un despliegue rutinario en algo destructivo.
+          supabase functions deploy --use-api
+
       - name: Resumen del despliegue
         if: steps.check.outputs.listo == 'true'
         run: |
@@ -661,6 +703,24 @@ jobs:
             echo '```'
             supabase migration list --linked 2>&1 || true
             echo '```'
+            echo
+            echo "## Edge Functions"
+            echo
+            if [ "${{ steps.funciones.outcome }}" = "success" ]; then
+              echo "Desplegadas en \`${{ steps.check.outputs.ambiente }}\`:"
+              echo
+              for f in supabase/functions/*/index.*; do
+                nombre="$(basename "$(dirname "$f")")"
+                echo "- \`$nombre\`"
+              done
+            else
+              echo "**El despliegue de las Edge Functions fallo** (\`${{ steps.funciones.outcome }}\`)."
+              echo "Las migraciones si se aplicaron: la base no quedo a medias."
+              echo
+              echo "Mientras las funciones no esten desplegadas, \`crearUsuario()\` responde 404 y"
+              echo "nadie puede dar de alta una persona desde la aplicacion (el registro publico"
+              echo "esta cerrado por la \`00074\`). Revisa el log del paso."
+            fi
           } >> "$GITHUB_STEP_SUMMARY"
 
   # --------------------------------------------------------------------------------
