@@ -146,11 +146,28 @@ activar el ajuste en un Dashboard.
 
 ### Como se da de alta a una persona
 
-La via prevista es la Edge Function `invitar-usuario`, que `packages/shared/usuarios/api.js`
-invoca desde `crearUsuario()`. **Esa funcion todavia no existe** (`supabase/functions/` solo tiene
-un `.gitkeep`), asi que el alta desde la aplicacion no funciona; tiene su propia issue.
+La via normal es la Edge Function `invitar-usuario` (`supabase/functions/invitar-usuario/`, issue
+#523), que `packages/shared/usuarios/api.js` invoca desde `crearUsuario()`. El flujo completo:
 
-Mientras tanto, la administradora ejecuta desde el SQL editor del Dashboard:
+1. `ModalAltaUsuario.jsx` recoge nombres, apellidos, correo, telefono y rol, y llama a
+   `crearUsuario()`.
+2. `crearUsuario()` valida los datos en el cliente y llama a `invitar-usuario` con el JWT de la
+   sesion actual.
+3. La Edge Function comprueba que quien llama sea administrador **contra la base**, no contra lo
+   que diga el cliente (el modal no tiene ningun chequeo de rol propio: el guard de rutas decide
+   quien entra a `/voluntarios`, no quien puede invitar). Si no lo es, responde 403.
+4. Reutiliza `fn_crear_usuario_administrativo()` con la llave de servicio -la unica forma de
+   llamarla, esta `REVOKE ALL FROM PUBLIC`- para crear la cuenta, su fila en `auth.identities` y
+   el perfil con el rol pedido. La funcion valida `rol` contra el enum `rol_usuario` de Postgres
+   sola; un valor que no exista en el enum se traduce en un 400.
+5. La funcion dispara `auth.resetPasswordForEmail()` -el mismo mecanismo que la pantalla "olvide
+   mi contrasena", `useRestablecerContrasena.js`- para que la persona reciba el correo y
+   establezca su contrasena. **No fija contrasena** por el mismo criterio que el primer
+   administrador de la `00063`.
+
+Salida de emergencia, si la Edge Function no esta desplegada en un ambiente o algo la bloquea: la
+administradora puede ejecutar el mismo `fn_crear_usuario_administrativo()` a mano desde el SQL
+editor del Dashboard -
 
 ```sql
 SELECT fn_crear_usuario_administrativo(
@@ -158,10 +175,12 @@ SELECT fn_crear_usuario_administrativo(
 );
 ```
 
-La funcion crea la cuenta con la marca administrativa, su fila en `auth.identities` y el perfil
-con el rol indicado. **No fija contrasena**, por el mismo criterio que el primer administrador de
-la `00063`: la persona la establece con "olvide mi contrasena". Es tambien lo que llamara la Edge
-Function cuando se escriba.
+-pero en ese camino nadie dispara el correo de "olvide mi contrasena": hay que enviarselo aparte
+o guiar a la persona a pedirlo desde el login.
+
+**Nota de despliegue:** el workflow de CI (`supabase.yml`) hace lint de la funcion (`deno lint` +
+`deno check`) en cada PR, pero no tiene ningun paso `supabase functions deploy`: escribirla no la
+publica sola en `ecopac-dev`/`ecopac-prod`, hace falta desplegarla aparte.
 
 ## 4. `supabase/config.toml`: que aplica y que no
 
