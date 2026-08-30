@@ -83,7 +83,11 @@ describe("Módulo de Inventario - API Movimientos", () => {
         proveedor_id: "P-1",
         origen: "donacion",
         cantidad_ingresada: 50,
+        // La politica de INSERT de la 00107 exige que quien no es administrador se atribuya el
+        // lote. `confirmado` no viaja: su DEFAULT es FALSE y lo pone en TRUE la aprobacion.
+        registrado_por: "U-1",
       });
+      expect(mockSupabase.insert.mock.calls[0][0]).not.toHaveProperty("confirmado");
       // cantidad_disponible vive en existencias desde la 00047, no en lotes.
       expect(mockSupabase.insert.mock.calls[0][0]).not.toHaveProperty("cantidad_disponible");
     });

@@ -522,7 +522,7 @@
 
 /**
  * Fila de `lotes` (00019_recetas_medicas_detalle.sql; proveedor_id, origen, cantidad_ingresada y
- * fecha_ingreso los agrega la 00020).
+ * fecha_ingreso los agrega la 00020, y registrado_por y confirmado la 00107).
  *
  * @typedef {object} Lote
  * @property {string} id
@@ -536,6 +536,11 @@
  *   proveedor (00090).
  * @property {number} cantidadIngresada
  * @property {string} fechaIngreso
+ * @property {string|null} registradoPor Quien dio de alta el lote. Null en los anteriores a la
+ *   00107 y en los del seed.
+ * @property {boolean} confirmado False mientras sea la propuesta que acompania a un ingreso
+ *   pendiente; true cuando la administradora aprueba ese ingreso. Un lote sin confirmar no tiene
+ *   existencias, asi que no se puede dispensar ni recetar.
  */
 
 /**

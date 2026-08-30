@@ -116,7 +116,7 @@ la migracion esta aplicada y no se edita.
 | `recetas`                 | C R U         | —                                | C R U  | —                  | `00033`; anulacion en `00066`. El UPDATE exige ser el medico que la firmo **y** que siga `emitida` (`00075`)           |
 | `receta_detalle`          | C R           | —                                | C R    | —                  | `00033`                                                                                                                |
 | `padecimientos_cronicos`  | C R U D       | —                                | C R U  | —                  | `00010`. Unica tabla clinica con DELETE, y solo para administrador. Auditada desde la `00070`                          |
-| `diagnosticos` (catalogo) | R             | —                                | R      | —                  | `00033`. Catalogo de solo lectura: nadie lo puede poblar por la API                                                    |
+| `diagnosticos` (catalogo) | C R U         | —                                | R      | —                  | `00033` (lectura) + `00105` (mantenimiento). Hasta la `00105` era un catalogo VACIO y de solo lectura -nadie lo podia poblar por la API-, asi que el paso "diagnostico CIE-10" del flujo clinico no existia; esa migracion siembra el conjunto inicial y deja el mantenimiento a la administradora. **Sin DELETE:** `consulta_diagnostico` lo referencia `ON DELETE RESTRICT` (`00018`) y un diagnostico ya usado es historia clinica |
 | `fusiones_pacientes`      | R             | —                                | —      | —                  | `00101` (issue #140). Solo administrador lee; sin politicas de escritura, la unica que inserta es `fn_fusionar_pacientes()` (SECURITY DEFINER) |
 
 **Ninguna tabla clinica tiene politica de DELETE** (salvo `padecimientos_cronicos`). La baja es
@@ -162,18 +162,44 @@ sin reasignar, bajo el absorbido. Reflejo en el cliente: `puedeFusionarPacientes
 | `medicamentos`           | C R U         | R                                | R      | R                  | `00034`, alta por `fn_registrar_medicamento` (`00050`). La lectura la endurecio la `00079` a `rol_actual() IS NOT NULL`: un perfil desactivado deja de verla |
 | `principios_activos`     | C R U D       | R                                | R      | R                  | `00034` + `00046`                                                                                           |
 | `medicamento_principio`  | C R           | R                                | R      | R                  | `00034`                                                                                                     |
-| `lotes`                  | C R U         | R                                | R      | R                  | `00034`                                                                                                     |
+| `lotes`                  | C R U         | R                                | C R U\* | C R U\*            | `00034` + `00107`. \*Medico y voluntario dan de alta el lote que acompania a su ingreso, pero **nace provisional** (`confirmado = FALSE`) y solo lo pueden editar mientras siga asi; al aprobar el ingreso pasa a firme y deja de ser suyo. La politica les exige ademas `registrado_por = auth.uid()`. **Sin DELETE para nadie** |
 | `existencias`            | C R U         | R                                | R      | R                  | `00034`; disponibilidad por `fn_existencias_disponibles` (`00065`)                                          |
 | `bodegas`                | C R U         | R                                | R      | R                  | `00034`, con la lectura endurecida por la `00079` a `rol_actual() IS NOT NULL`. Las politicas duplicadas de la `00061`/`00062` las retiro esa misma migracion (era la Divergencia 12). **Sin DELETE para nadie**, y no solo por politica: la `00034` nunca otorgo `GRANT DELETE`, asi que el borrado muere en `42501` antes de llegar a RLS. Cubierto rol por rol en `politicas_rls_inventario.sql` (issue #513)                                                          |
 | `proveedores`            | C R U         | R                                | R      | R                  | `00034`, con la lectura endurecida por la `00079` a `rol_actual() IS NOT NULL`. Las politicas duplicadas de la `00061`/`00062` las retiro esa misma migracion (era la Divergencia 12). **Sin DELETE para nadie**, y no solo por politica: la `00034` nunca otorgo `GRANT DELETE`, asi que el borrado muere en `42501` antes de llegar a RLS. Cubierto rol por rol en `politicas_rls_inventario.sql` (issue #513)                                                                             |
 | `alertas_caducidad`      | R U           | R                                | R      | R                  | `00034`. Sin INSERT para nadie: las genera una rutina con `service_role`                                    |
-| `movimientos_inventario` | R **A**       | R                                | C R    | C R                | `00034` + `00048` + `00086` (aprobar admite tambien `tiene_permiso('inventario.aprobar')`)                  |
+| `movimientos_inventario` | R U **A**     | R                                | C R U\* | C R U\*            | `00034` + `00048` + `00086` (aprobar admite tambien `tiene_permiso('inventario.aprobar')`) + `00106`. \*Solo el **propio** movimiento y solo mientras siga `pendiente` |
 
 **El circuito de aprobacion del inventario** es el patron central del modulo: medico y voluntario
 crean un movimiento y la politica de INSERT (`00034`) les exige `estado = 'pendiente'` y
-`registrado_por = auth.uid()`. Solo el administrador puede hacer UPDATE (`00048`), que es como se
-aprueba. El trigger `fn_autoaprobar_movimiento_inventario` (`00047`) hace nacer ya aprobado lo que
-registra el propio administrador.
+`registrado_por = auth.uid()`. El trigger `fn_autoaprobar_movimiento_inventario` (`00047`) hace
+nacer ya aprobado lo que registra el propio administrador.
+
+**De quien es un movimiento, y hasta cuando** (`00106`, issue #625). La propiedad cambia con el
+estado, y con ella quien puede editarlo:
+
+| Estado                  | Quien lo edita                                                    |
+| ----------------------- | ----------------------------------------------------------------- |
+| `pendiente`             | Quien lo registro (y la administradora, que es quien lo resuelve) |
+| `aprobado` / `rechazado`| Solo la administradora, y solo el texto                           |
+
+Hasta la `00106` la politica de UPDATE admitia unicamente al administrador, asi que
+`editarMovimiento()` -que documenta editar "si la modificacion es realizada por la misma persona
+que lo registro"- **no podia funcionar para nadie mas**: el UPDATE no alcanzaba ninguna fila y
+PostgREST devolvia exito sin haber cambiado nada.
+
+Dos guardas acompanian a esa apertura:
+
+- `fn_proteger_decision_de_movimiento` (`00106`) impide que quien registro cambie `estado` o
+  escriba `aprobado_por`, `aprobado_en`, `motivo_rechazo` o `aprobacion_automatica`. **Es el que
+  frena la autoaprobacion**, y no el `WITH CHECK` de la politica: los triggers `BEFORE` corren
+  antes de que Postgres evalue el `WITH CHECK`, asi que el error que se ve es un `P0001`, no un
+  `42501`.
+- `fn_bloquear_movimiento_finalizado` (`00023`, reescrita por la `00106`) congela `tipo`,
+  `lote_id`, `bodega_id`, `cantidad`, `estado` y `registrado_por` de un movimiento ya resuelto
+  **incluso para la administradora**: eso ya ajusto existencias y se corrige con un movimiento
+  compensatorio, no reescribiendo la historia. Lo que si puede corregir ella es el texto
+  (`motivo`, `motivo_rechazo`), que antes tambien quedaba congelado sin que eso protegiera
+  ninguna integridad. El DELETE sigue prohibido para todos.
 
 Reflejo en el cliente: `inventario/medicamentos.permisos.js`, `lotes.permisos.js`,
 `bodegas.permisos.js`, `principios-activos.permisos.js`, y `inventario/permisos.js` para

@@ -38,6 +38,7 @@ import { CUENTAS, entrarComo, salir } from "./sesiones.js";
 const CANTIDAD_APROBADA = 30;
 const CANTIDAD_RECHAZADA = 12;
 const CANTIDAD_LOTE_NUEVO = 45;
+const CANTIDAD_LOTE_PROVISIONAL = 18;
 
 const creados = { movimientos: [], lotes: [] };
 
@@ -104,8 +105,10 @@ describe("Flujo critico: ingreso de inventario con aprobacion", () => {
     expect(datos).toBeNull();
     expect(error.mensaje).toMatch(/exclusiva para el rol Administrador/i);
 
-    // Y si el cliente no lo hubiera parado, la politica de UPDATE (00086) tampoco lo deja: solo
-    // admite es_administrador() o tiene_permiso('inventario.aprobar').
+    // Y si el cliente no lo hubiera parado, la politica de UPDATE tampoco lo deja. El movimiento
+    // lo registro el VOLUNTARIO, asi que para el medico no aplica ninguna de las tres ramas de la
+    // politica (00086 + 00106): ni es administrador, ni tiene inventario.aprobar, ni es suyo. La
+    // clausula USING lo filtra y el UPDATE no alcanza ninguna fila.
     //
     // Este es el unico sitio de estas pruebas donde se usa el cliente crudo en vez de una funcion
     // de shared, y es a proposito: lo que se comprueba es justo lo que pasa cuando alguien SE
@@ -240,30 +243,72 @@ describe("Flujo critico: ingreso de inventario con aprobacion", () => {
     expect(await existenciaDe(datos.lote_id, bodega)).toBe(CANTIDAD_LOTE_NUEVO);
   });
 
-  it("9. un voluntario no puede crear un lote nuevo, solo mover los que existen", async () => {
-    // No es un fallo: es la politica de INSERT de `lotes` (00034), que reserva el alta del
-    // catalogo a la administradora. Se deja escrito para que quede claro que el ingreso "en
-    // campo" de un voluntario es siempre sobre un lote ya dado de alta.
+  it("9. un voluntario da de alta el lote de su ingreso, y nace provisional", async () => {
+    // Hasta la issue #625 esto estaba prohibido: la politica de INSERT de `lotes` era
+    // es_administrador() a secas, asi que el ingreso "en campo" solo funcionaba sobre lotes que
+    // ya existian. Ahora si puede, con dos condiciones que la 00107 comprueba sobre la fila
+    // nueva: que se lo atribuya a si mismo y que nazca sin confirmar.
     await entrarComo(CUENTAS.VOLUNTARIO);
 
     const { datos, error } = await registrarIngreso({
-      origen: "compra",
+      origen: "donacion",
       bodega_id: bodega,
       medicamento_id: DEMO.medicamentoSano,
-      numero_lote: "LOTE-E2E-DENEGADO",
+      numero_lote: "LOTE-E2E-PROVISIONAL",
       fecha_vencimiento: "2030-12-31",
       proveedor_id: DEMO.proveedorComercial,
-      cantidad: 10,
-      motivo: "Intento de alta de lote por un voluntario (prueba e2e)",
+      cantidad: CANTIDAD_LOTE_PROVISIONAL,
+      motivo: "Donacion recibida en la comunidad (prueba e2e)",
       usuarioId: CUENTAS.VOLUNTARIO.perfilId,
     });
 
-    expect(datos).toBeNull();
-    expect(error).not.toBeNull();
+    expect(error).toBeNull();
+    expect(datos?.lote_id).toBeTruthy();
 
-    const huerfanos = await consultar("SELECT id FROM lotes WHERE numero_lote = $1", [
-      "LOTE-E2E-DENEGADO",
+    creados.movimientos.push(datos.id);
+    creados.lotes.push(datos.lote_id);
+
+    const lote = await consultar("SELECT confirmado, registrado_por FROM lotes WHERE id = $1", [
+      datos.lote_id,
     ]);
-    expect(huerfanos).toEqual([]);
+    expect(lote[0]).toEqual({
+      confirmado: false,
+      registrado_por: CUENTAS.VOLUNTARIO.perfilId,
+    });
+
+    // Y no es inventario todavia: sin aprobar no hay existencias, asi que no se puede dispensar.
+    expect(datos.estado).toBe("pendiente");
+    expect(await existenciaDe(datos.lote_id, bodega)).toBe(0);
+  });
+
+  it("10. un lote provisional no aparece entre los disponibles para dispensar", async () => {
+    const disponibles = await consultar(
+      "SELECT lote_id FROM vista_lotes_disponibles WHERE lote_id = $1",
+      [creados.lotes[creados.lotes.length - 1]],
+    );
+
+    expect(disponibles).toEqual([]);
+  });
+
+  it("11. aprobar el ingreso es lo que vuelve firme al lote", async () => {
+    await entrarComo(CUENTAS.ADMINISTRADORA);
+
+    const loteProvisional = creados.lotes[creados.lotes.length - 1];
+    const movimiento = creados.movimientos[creados.movimientos.length - 1];
+
+    const { datos, error } = await aprobarMovimiento(movimiento, {
+      usuarioId: CUENTAS.ADMINISTRADORA.perfilId,
+      rolUsuario: CUENTAS.ADMINISTRADORA.rol,
+    });
+
+    expect(error).toBeNull();
+    expect(datos.estado).toBe("aprobado");
+
+    const lote = await consultar("SELECT confirmado FROM lotes WHERE id = $1", [loteProvisional]);
+    expect(lote[0].confirmado).toBe(true);
+
+    // La confirmacion y las existencias ocurren en la misma operacion, dentro de
+    // fn_aplicar_ajuste_existencias: no son dos pasos que alguien pueda dejar a medias.
+    expect(await existenciaDe(loteProvisional, bodega)).toBe(CANTIDAD_LOTE_PROVISIONAL);
   });
 });
