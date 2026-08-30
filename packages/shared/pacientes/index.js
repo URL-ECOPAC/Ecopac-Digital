@@ -51,3 +51,5 @@ export * from "./recetas.imprimible.js";
 export * from "./useCondicionesPaciente.js";
 export * from "./usePacientesCronicos.js";
 export * from "./useRegistroTriaje.js";
+export * from "./consultas.secciones.js";
+export * from "./useRegistroConsulta.js";
