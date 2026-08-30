@@ -36,7 +36,7 @@ ALTER TABLE perfiles ENABLE TRIGGER USER;
 INSERT INTO donantes (id, nombre, tipo) VALUES
   ('d0000000-0000-0000-0000-000000000001', 'Donante de prueba 403', 'organizacion');
 
-INSERT INTO donaciones (id, donante_id, tipo, registrada_por) VALUES
+INSERT INTO donaciones (id, donante_id, tipo, registrado_por) VALUES
   ('d0000000-0000-0000-0000-000000000101', 'd0000000-0000-0000-0000-000000000001',
    'medicamentos', '00000000-0000-0000-0000-000000000403');
 
@@ -72,7 +72,7 @@ SELECT lives_ok(
 );
 
 SELECT lives_ok(
-  $$ INSERT INTO donaciones (id, donante_id, tipo, registrada_por)
+  $$ INSERT INTO donaciones (id, donante_id, tipo, registrado_por)
      VALUES ('d0000000-0000-0000-0000-000000000102', 'd0000000-0000-0000-0000-000000000001',
              'insumos', '00000000-0000-0000-0000-000000000403') $$,
   'administrador registra una donacion'
@@ -120,7 +120,7 @@ SELECT throws_ok(
 );
 
 SELECT throws_ok(
-  $$ INSERT INTO donaciones (donante_id, tipo, registrada_por)
+  $$ INSERT INTO donaciones (donante_id, tipo, registrado_por)
      VALUES ('d0000000-0000-0000-0000-000000000001', 'dinero',
              '00000000-0000-0000-0000-000000000404') $$,
   '42501',
@@ -175,7 +175,7 @@ SELECT throws_ok(
 );
 
 SELECT throws_ok(
-  $$ INSERT INTO donaciones (donante_id, tipo, registrada_por)
+  $$ INSERT INTO donaciones (donante_id, tipo, registrado_por)
      VALUES ('d0000000-0000-0000-0000-000000000001', 'servicios',
              '00000000-0000-0000-0000-000000000405') $$,
   '42501',
@@ -246,7 +246,7 @@ SELECT lives_ok(
 );
 
 SELECT lives_ok(
-  $$ INSERT INTO donaciones (donante_id, tipo, registrada_por)
+  $$ INSERT INTO donaciones (donante_id, tipo, registrado_por)
      VALUES ('d0000000-0000-0000-0000-000000000001', 'servicios', '00000000-0000-0000-0000-000000000406') RETURNING id $$,
   'medico con donaciones.registrar concedido puntualmente si puede registrar una donacion (issue #409)'
 );
