@@ -37,6 +37,7 @@ import { puedeVerHistorialJornada } from "./permisos.js";
 import { ESTADOS_JORNADA } from "../enums.js";
 import {
   advertirChoqueDeHorario,
+  advertirTraslapeDeHorario,
   puedeRegistrarEnJornada,
   validarCambioDeEstadoJornada,
 } from "./validaciones.js";
@@ -148,6 +149,43 @@ function aColumnasDePersonal(datos = {}) {
 }
 
 /**
+ * Recorta una hora al formato HH:MM.
+ *
+ * `hora_inicio`/`hora_fin` son TIME en la base (00012), que supabase-js devuelve como cadena
+ * "HH:MM:SS". De aca para adentro, el modulo entero (validarHorario(), aMinutos(),
+ * advertirTraslapeDeHorario() y el `<input type="time">` de los formularios de asignacion y
+ * edicion) solo entiende "HH:MM": es la unica forma que existe una vez que un valor cruza esta
+ * frontera. No es una segunda forma de parsear horas -- aMinutos() en validaciones.js sigue
+ * siendo la unica que interpreta una hora como minutos, y solo tiene que aceptar HH:MM porque
+ * ningun HH:MM:SS llega ya hasta ahi.
+ */
+function aHoraCorta(hora) {
+  return typeof hora === "string" ? hora.slice(0, 5) : hora;
+}
+
+/**
+ * Normaliza horaInicio/horaFin de una fila de jornada_personal ya traducida a camelCase
+ * (COLUMNAS_DE_PERSONAL), en el borde donde esa fila entra al modulo: obtenerJornada() (el
+ * personal embebido), obtenerPersonalDeJornada(), asignarPersonal() y
+ * actualizarAsignacionPersonal() son los cuatro puntos que seleccionan esas columnas, y los
+ * cuatro pasan su resultado por aca antes de devolverlo. Solo toca las claves que la fila ya
+ * trae (no las agrega): una fila de prueba u otra consulta que no pida horaInicio/horaFin sigue
+ * llegando igual, sin que esta funcion le invente el campo.
+ */
+function aFilaDePersonalNormalizada(fila) {
+  if (!fila) return fila;
+
+  const normalizada = { ...fila };
+  if (Object.prototype.hasOwnProperty.call(fila, "horaInicio")) {
+    normalizada.horaInicio = aHoraCorta(fila.horaInicio);
+  }
+  if (Object.prototype.hasOwnProperty.call(fila, "horaFin")) {
+    normalizada.horaFin = aHoraCorta(fila.horaFin);
+  }
+  return normalizada;
+}
+
+/**
  * Registra una jornada.
  *
  * Los datos obligatorios en la tabla (nombre, fecha, comunidad_id, responsable_id) los exige la
@@ -252,7 +290,7 @@ export async function obtenerJornada(id) {
     return {
       jornada: {
         ...fila,
-        personal: respuestaPersonal.data ?? [],
+        personal: (respuestaPersonal.data ?? []).map(aFilaDePersonalNormalizada),
         contadores: respuestaContadores.data ?? null,
       },
       error: null,
@@ -286,7 +324,7 @@ export async function obtenerPersonalDeJornada(jornadaId) {
       .order("hora_inicio", { ascending: true });
 
     if (error) return { personal: [], error: normalizarError(error) };
-    return { personal: data ?? [], error: null };
+    return { personal: (data ?? []).map(aFilaDePersonalNormalizada), error: null };
   } catch (error) {
     return { personal: [], error: normalizarError(error) };
   }
@@ -491,11 +529,78 @@ export async function asignarPersonal(jornadaId, datos) {
 
     if (error) return { asignacion: null, advertencias: [], error: normalizarError(error) };
 
-    const advertencias = await advertenciasDeChoqueAlAsignar(jornadaId, datos?.perfil);
+    const advertencias = await advertenciasDeChoqueAlAsignar(jornadaId, datos);
 
-    return { asignacion: asignacion ?? null, advertencias, error: null };
+    return {
+      asignacion: aFilaDePersonalNormalizada(asignacion) ?? null,
+      advertencias,
+      error: null,
+    };
   } catch (error) {
     return { asignacion: null, advertencias: [], error: normalizarError(error) };
+  }
+}
+
+/**
+ * Traduce a snake_case unicamente los tres campos que useEdicionTurno.js edita, omitiendo lo no
+ * enviado. A diferencia de aColumnasDePersonal(), que aColumnasDePersonal() de proposito general
+ * para el alta, esta funcion NO reconoce `perfil` ni `jornada`: aunque alguien los mande por
+ * error, no hay forma de que actualizarAsignacionPersonal() reasigne de perfil o de jornada la
+ * fila que edita, que ya llega fijada por sus dos parametros, no por `datos`.
+ */
+function aColumnasDeEdicionDeTurno(datos = {}) {
+  const mapa = {
+    horaInicio: "hora_inicio",
+    horaFin: "hora_fin",
+    responsabilidad: "responsabilidad",
+  };
+
+  const fila = {};
+  for (const [campo, columna] of Object.entries(mapa)) {
+    if (Object.prototype.hasOwnProperty.call(datos, campo)) fila[columna] = datos[campo];
+  }
+  return fila;
+}
+
+/**
+ * Edita el horario y la responsabilidad de alguien que YA esta asignado a una jornada (issue
+ * #185, criterio 2). No crea ni borra filas: el alta sigue siendo asignarPersonal() (#182) y la
+ * baja desasignarPersonal() (#174); esta funcion solo hace UPDATE sobre la fila que ya existe.
+ *
+ * `jornadaId` y `perfilId` fijan CUAL fila se edita (en el WHERE); `datos` no puede cambiar esas
+ * dos columnas ni `rolEnJornada` (ver aColumnasDeEdicionDeTurno()): el criterio de aceptacion
+ * solo pide editar horario y responsabilidad.
+ *
+ * La politica RLS de UPDATE de jornada_personal (00039) exige unicamente es_administrador(), sin
+ * la excepcion de permiso fino que si tiene la tabla jornadas: quien no sea administrador recibe
+ * `asignacion: null` sin fila que actualizar, no un error, porque RLS filtra el UPDATE en vez de
+ * lanzar.
+ *
+ * @param {string} jornadaId UUID de la jornada.
+ * @param {string} perfilId UUID del perfil cuya fila se edita.
+ * @param {object} datos Campos en camelCase a actualizar (horaInicio, horaFin, responsabilidad).
+ *   Un campo ausente no se toca, mismo criterio que actualizarJornada().
+ * @returns {Promise<{ asignacion: object|null, error: object|null }>}
+ */
+export async function actualizarAsignacionPersonal(jornadaId, perfilId, datos) {
+  if (!jornadaId || !perfilId) return { asignacion: null, error: null };
+
+  const fila = aColumnasDeEdicionDeTurno(datos);
+  if (Object.keys(fila).length === 0) return { asignacion: null, error: null };
+
+  try {
+    const { data, error } = await obtenerSupabase()
+      .from("jornada_personal")
+      .update(fila)
+      .eq("jornada_id", jornadaId)
+      .eq("perfil_id", perfilId)
+      .select(COLUMNAS_DE_PERSONAL)
+      .maybeSingle();
+
+    if (error) return { asignacion: null, error: normalizarError(error) };
+    return { asignacion: aFilaDePersonalNormalizada(data) ?? null, error: null };
+  } catch (error) {
+    return { asignacion: null, error: normalizarError(error) };
   }
 }
 
@@ -507,7 +612,8 @@ export async function asignarPersonal(jornadaId, datos) {
  * fallo en esta parte se traga en silencio: es una mejora informativa sobre una escritura que
  * ya tuvo exito, no una segunda operacion que deba poder hacer fallar a la primera.
  */
-async function advertenciasDeChoqueAlAsignar(jornadaId, perfilId) {
+async function advertenciasDeChoqueAlAsignar(jornadaId, datos) {
+  const perfilId = datos?.perfil;
   if (!perfilId) return [];
 
   const { data: filaJornada } = await obtenerSupabase()
@@ -522,13 +628,23 @@ async function advertenciasDeChoqueAlAsignar(jornadaId, perfilId) {
     excluirJornada: jornadaId,
   });
 
-  const advertencia = advertirChoqueDeHorario({
-    perfil: perfilId,
-    jornadaActualId: jornadaId,
-    asignacionesDelDia: asignaciones,
-  });
-
-  return advertencia ? [advertencia] : [];
+  // Las dos advertencias de horario conviven (issue #185): el choque de dia completo de #182,
+  // sin comparar horas, y el traslape real de #185, que si las compara. Una asignacion recien
+  // creada puede disparar una, la otra, las dos o ninguna.
+  return [
+    advertirChoqueDeHorario({
+      perfil: perfilId,
+      jornadaActualId: jornadaId,
+      asignacionesDelDia: asignaciones,
+    }),
+    advertirTraslapeDeHorario({
+      perfil: perfilId,
+      horaInicio: datos?.horaInicio,
+      horaFin: datos?.horaFin,
+      jornadaActualId: jornadaId,
+      asignacionesDelDia: asignaciones,
+    }),
+  ].filter(Boolean);
 }
 
 /**
@@ -539,10 +655,17 @@ async function advertenciasDeChoqueAlAsignar(jornadaId, perfilId) {
  * quien necesite recalcular la advertencia sin guardar todavia (por ejemplo, el formulario de la
  * issue #182 mientras la persona elige a quien asignar, antes de enviar el formulario).
  *
+ * `horaInicio`/`horaFin` viajan desde la issue #185: la #182 original solo pedia perfil,
+ * jornadaId y el nombre de la jornada, suficiente para advertirChoqueDeHorario() (que no compara
+ * horas). advertirTraslapeDeHorario() (issue #185) si las necesita, y es aditivo: nadie que ya
+ * leia el resultado sin esperar estas dos claves se rompe por que ahora tambien lleguen. Vienen
+ * recortadas a HH:MM con aHoraCorta(): la base las devuelve como TIME ("HH:MM:SS"), y de esta
+ * funcion para adentro del modulo solo existe HH:MM (ver aFilaDePersonalNormalizada()).
+ *
  * @param {string} fecha Fecha AAAA-MM-DD.
  * @param {{ excluirJornada?: string }} [opciones] Jornada a excluir del resultado (normalmente
  *   la propia jornada donde se esta asignando, que no cuenta como choque contra si misma).
- * @returns {Promise<{ asignaciones: Array<{ jornadaId: string, jornadaNombre: string, perfil: string }>, error: object|null }>}
+ * @returns {Promise<{ asignaciones: Array<{ jornadaId: string, jornadaNombre: string, perfil: string, horaInicio: string, horaFin: string }>, error: object|null }>}
  */
 export async function obtenerAsignacionesDelDia(fecha, { excluirJornada } = {}) {
   if (!fecha) return { asignaciones: [], error: null };
@@ -550,7 +673,10 @@ export async function obtenerAsignacionesDelDia(fecha, { excluirJornada } = {}) 
   try {
     let consulta = obtenerSupabase()
       .from("jornada_personal")
-      .select("perfil:perfil_id, jornadaId:jornada_id, jornada:jornadas!inner(nombre, fecha)")
+      .select(
+        "perfil:perfil_id, jornadaId:jornada_id, horaInicio:hora_inicio, horaFin:hora_fin, " +
+          "jornada:jornadas!inner(nombre, fecha)",
+      )
       .eq("jornada.fecha", fecha);
 
     if (excluirJornada) consulta = consulta.neq("jornada_id", excluirJornada);
@@ -563,6 +689,8 @@ export async function obtenerAsignacionesDelDia(fecha, { excluirJornada } = {}) 
       jornadaId: fila.jornadaId,
       jornadaNombre: fila.jornada?.nombre ?? "",
       perfil: fila.perfil,
+      horaInicio: aHoraCorta(fila.horaInicio) ?? null,
+      horaFin: aHoraCorta(fila.horaFin) ?? null,
     }));
 
     return { asignaciones, error: null };

@@ -14,7 +14,7 @@
 import { aFechaLocal } from "../formato/fechas.js";
 import { esAdministrador } from "../usuarios/roles.js";
 import { combinarErrores, esTextoVacio, validarConDescriptores } from "../validations/index.js";
-import { CAMPOS_ASIGNACION_PERSONAL, CAMPOS_JORNADA } from "./campos.js";
+import { CAMPOS_ASIGNACION_PERSONAL, CAMPOS_EDICION_TURNO, CAMPOS_JORNADA } from "./campos.js";
 import { ESTADOS_JORNADA } from "../enums.js";
 
 /** Cadena de hora HH:MM; los minutos van obligados, las horas de uno o dos digitos. */
@@ -174,6 +174,20 @@ export function validarAsignacionPersonal(valores) {
 }
 
 /**
+ * Valida la edicion de horario y responsabilidad de alguien que YA esta asignado a la jornada
+ * (issue #185, criterio 2). Mismas reglas de horario que validarAsignacionPersonal() (la hora de
+ * fin posterior a la de inicio, espejo del mismo CHECK chk_jornada_personal_horario), pero contra
+ * CAMPOS_EDICION_TURNO: sin `perfil` ni `rolEnJornada`, que esta pantalla no edita.
+ *
+ * @param {object} valores Valores indexados por el id de CAMPOS_EDICION_TURNO.
+ * @returns {Record<string, string>} Errores por campo. Vacio si todo esta bien.
+ */
+export function validarEdicionTurno(valores) {
+  const porDescriptor = validarConDescriptores(CAMPOS_EDICION_TURNO, valores);
+  return combinarErrores(porDescriptor, validarHorario(valores));
+}
+
+/**
  * Valida el conjunto de asignaciones de una jornada.
  *
  * La regla de campo no alcanza para esto: el mismo perfil puede aparecer una sola vez en la
@@ -229,6 +243,73 @@ export function advertirChoqueDeHorario({ perfil, jornadaActualId, asignacionesD
   return nombre
     ? `Esta persona ya esta asignada a otra jornada el mismo dia: ${nombre}.`
     : "Esta persona ya esta asignada a otra jornada el mismo dia.";
+}
+
+/**
+ * Advierte si el horario de una persona en esta jornada se pisa DE VERDAD con el horario que
+ * tiene en otra jornada distinta el mismo dia (issue #185, criterio 3).
+ *
+ * Distinta de advertirChoqueDeHorario(): esa avisa por estar asignada a otra jornada el mismo
+ * dia SIN comparar horas (issue #182, criterio 3 -- hay traslado entre comunidades de por medio,
+ * asi que el choque existe aunque las horas no se pisen). Esta compara de verdad los rangos de
+ * horas. Las dos conviven como señales independientes: una persona puede disparar una, la otra,
+ * las dos o ninguna. No se sustituyen entre si.
+ *
+ * El traslape solo puede darse ENTRE jornadas distintas: el UNIQUE (jornada_id, perfil_id) de la
+ * migracion 00012 impide que la misma persona tenga dos filas en la MISMA jornada, asi que no
+ * hay traslape que detectar dentro de una sola jornada.
+ *
+ * Se comparan minutos desde medianoche (aMinutosDeHorario(), mas abajo), tratando el fin como
+ * exclusivo: una franja que termina a las 10:00 y otra que empieza a las 10:00 son un relevo de
+ * turno, no un traslape.
+ *
+ * Usa aMinutosDeHorario() y NO aMinutos(): esta funcion compara horario que puede venir de dos
+ * origenes -- lo que se esta escribiendo en un `<input type="time">` (HH:MM) y lo que ya trae
+ * guardado jornada.personal/asignacionesDelDia, tal como lo devuelve una columna TIME de
+ * Postgres via supabase-js (HH:MM:SS) -- y aMinutos() solo acepta el primero (documentado y
+ * probado como tal para validarHorario(), que solo valida el formulario).
+ *
+ * @param {object} args
+ * @param {string} args.perfil Id del perfil que se esta evaluando.
+ * @param {string} args.horaInicio Hora de inicio de la franja que se esta evaluando en esta
+ *   jornada, en HH:MM o HH:MM:SS.
+ * @param {string} args.horaFin Hora de fin de esa misma franja, en HH:MM o HH:MM:SS.
+ * @param {string} args.jornadaActualId Id de la jornada que se edita (sus propias asignaciones
+ *   no cuentan como traslape contra si misma).
+ * @param {Array<{ jornadaId: string, jornadaNombre: string, perfil: string, horaInicio: string,
+ *   horaFin: string }>} args.asignacionesDelDia Asignaciones de todas las jornadas que caen en la
+ *   misma fecha, con su horario (obtenerAsignacionesDelDia()).
+ * @returns {string|null} Texto de la advertencia, o null si no hay traslape real.
+ */
+export function advertirTraslapeDeHorario({
+  perfil,
+  horaInicio,
+  horaFin,
+  jornadaActualId,
+  asignacionesDelDia,
+} = {}) {
+  if (esTextoVacio(perfil)) return null;
+
+  const inicio = aMinutosDeHorario(horaInicio);
+  const fin = aMinutosDeHorario(horaFin);
+  if (inicio === null || fin === null) return null;
+
+  const traslape = (asignacionesDelDia ?? []).find((asignacion) => {
+    if (asignacion?.perfil !== perfil || asignacion?.jornadaId === jornadaActualId) return false;
+
+    const otroInicio = aMinutosDeHorario(asignacion?.horaInicio);
+    const otroFin = aMinutosDeHorario(asignacion?.horaFin);
+    if (otroInicio === null || otroFin === null) return false;
+
+    return inicio < otroFin && otroInicio < fin;
+  });
+
+  if (!traslape) return null;
+
+  const nombre = traslape.jornadaNombre?.trim();
+  return nombre
+    ? `El horario se traslapa con otra jornada el mismo dia: ${nombre}.`
+    : "El horario se traslapa con otra jornada el mismo dia.";
 }
 
 /**
@@ -301,6 +382,35 @@ function validarHorario(valores) {
 /** Dia de calendario de una fecha, como milisegundos de su medianoche local. */
 function aDiaDeCalendario(fecha) {
   return new Date(fecha.getFullYear(), fecha.getMonth(), fecha.getDate()).getTime();
+}
+
+/**
+ * Cadena de hora HH:MM con segundos opcionales (:SS): la forma HH:MM:SS que devuelve una columna
+ * TIME de Postgres via supabase-js. Distinta de FORMA_DE_HORA (mas arriba), que a proposito NO
+ * acepta segundos porque valida exclusivamente lo que un <input type="time"> del formulario
+ * puede escribir.
+ */
+const FORMA_DE_HORA_CON_SEGUNDOS_OPCIONALES = /^(\d{1,2}):(\d{2})(?::\d{2})?$/;
+
+/**
+ * Minutos desde medianoche de una hora en HH:MM o HH:MM:SS, o null si no se puede interpretar.
+ *
+ * La usa advertirTraslapeDeHorario(), que compara horario recien escrito en un formulario (HH:MM)
+ * contra horario ya guardado en jornada.personal/asignacionesDelDia (HH:MM:SS): aMinutos(), mas
+ * abajo, es a proposito mas estricta porque solo valida el formulario (validarHorario()), nunca
+ * un valor que ya viene de la base de datos.
+ */
+function aMinutosDeHorario(hora) {
+  if (typeof hora !== "string") return null;
+
+  const partes = FORMA_DE_HORA_CON_SEGUNDOS_OPCIONALES.exec(hora.trim());
+  if (!partes) return null;
+
+  const horas = Number(partes[1]);
+  const minutos = Number(partes[2]);
+  if (horas > 23 || minutos > 59) return null;
+
+  return horas * 60 + minutos;
 }
 
 /** Minutos desde la medianoche de una cadena HH:MM, o null si no es una hora valida. */

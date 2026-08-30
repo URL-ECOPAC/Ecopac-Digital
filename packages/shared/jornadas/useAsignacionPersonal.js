@@ -23,7 +23,11 @@ import { listarUsuarios } from "../usuarios/api.js";
 import { TODOS_LOS_ROLES, etiquetaDeRol } from "../usuarios/roles.js";
 import { nombreCompletoDe } from "../usuarios/useUsuariosListado.js";
 import { asignarPersonal, desasignarPersonal, obtenerAsignacionesDelDia } from "./api.js";
-import { advertirChoqueDeHorario, validarAsignacionPersonal } from "./validaciones.js";
+import {
+  advertirChoqueDeHorario,
+  advertirTraslapeDeHorario,
+  validarAsignacionPersonal,
+} from "./validaciones.js";
 
 /**
  * Cuantos resultados se muestran como maximo de una busqueda de personal (issue #182, criterio 1).
@@ -204,6 +208,10 @@ export function useAsignacionPersonal({ jornadaId, jornadaFecha, personal } = {}
   const [verificandoChoque, setVerificandoChoque] = useState(false);
   const [advertenciaChoque, setAdvertenciaChoque] = useState(null);
   const [errorVerificacionChoque, setErrorVerificacionChoque] = useState(null);
+  // Se guarda la lista cruda (no solo el texto de advertirChoqueDeHorario()) para poder
+  // recalcular advertirTraslapeDeHorario() (issue #185) cada vez que cambie horaInicio/horaFin
+  // en `valores`, sin repetir la consulta: las dos advertencias comparten el mismo dato.
+  const [asignacionesDelDia, setAsignacionesDelDia] = useState([]);
 
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState(null);
@@ -254,6 +262,7 @@ export function useAsignacionPersonal({ jornadaId, jornadaFecha, personal } = {}
     async (perfilId) => {
       setAdvertenciaChoque(null);
       setErrorVerificacionChoque(null);
+      setAsignacionesDelDia([]);
 
       if (!jornadaFecha) return;
 
@@ -272,6 +281,7 @@ export function useAsignacionPersonal({ jornadaId, jornadaFecha, personal } = {}
         return;
       }
 
+      setAsignacionesDelDia(asignaciones);
       setAdvertenciaChoque(
         advertirChoqueDeHorario({
           perfil: perfilId,
@@ -302,6 +312,7 @@ export function useAsignacionPersonal({ jornadaId, jornadaFecha, personal } = {}
     setError(null);
     setAdvertenciaChoque(null);
     setErrorVerificacionChoque(null);
+    setAsignacionesDelDia([]);
     setAdvertenciasGuardado([]);
   }, []);
 
@@ -348,6 +359,18 @@ export function useAsignacionPersonal({ jornadaId, jornadaFecha, personal } = {}
     volverABuscar();
   }, [volverABuscar]);
 
+  // Traslape real de horas (issue #185), aparte del choque de dia completo de arriba: se
+  // recalcula en cada render con el horaInicio/horaFin que se este escribiendo, no solo una vez
+  // al elegir a la persona (a diferencia de advertenciaChoque, que no depende de horario). Antes
+  // de que haya un horario valido, advertirTraslapeDeHorario() devuelve null por su cuenta.
+  const advertenciaTraslape = advertirTraslapeDeHorario({
+    perfil: personaElegida?.id,
+    horaInicio: valores.horaInicio,
+    horaFin: valores.horaFin,
+    jornadaActualId: jornadaId,
+    asignacionesDelDia,
+  });
+
   return {
     busqueda,
     setBusqueda,
@@ -365,6 +388,7 @@ export function useAsignacionPersonal({ jornadaId, jornadaFecha, personal } = {}
     setCampo,
     verificandoChoque,
     advertenciaChoque,
+    advertenciaTraslape,
     errorVerificacionChoque,
     enviando,
     error,

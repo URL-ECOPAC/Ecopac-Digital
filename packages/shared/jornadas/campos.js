@@ -152,6 +152,19 @@ export const CAMPOS_ASIGNACION_PERSONAL_SIN_PERFIL = CAMPOS_ASIGNACION_PERSONAL.
   (campo) => campo.id !== "perfil",
 );
 
+/**
+ * Subconjunto de CAMPOS_ASIGNACION_PERSONAL para editar el horario y la responsabilidad de
+ * alguien que YA esta asignado a la jornada (issue #185, criterio 2). Sin `perfil` (se edita una
+ * fila existente, no se elige a quien) ni `rolEnJornada` (el criterio de aceptacion solo pide
+ * editar horario y responsabilidad; el rol en la jornada se define al asignar, en el modal de
+ * #182, y esta pantalla no lo toca).
+ */
+const IDS_CAMPOS_EDICION_TURNO = ["horaInicio", "horaFin", "responsabilidad"];
+
+export const CAMPOS_EDICION_TURNO = CAMPOS_ASIGNACION_PERSONAL.filter((campo) =>
+  IDS_CAMPOS_EDICION_TURNO.includes(campo.id),
+);
+
 /** Marcar la asistencia de un perfil ya asignado (jornada_personal.asistio, 00036). */
 export const CAMPOS_MARCAR_ASISTENCIA = [
   {
