@@ -9,20 +9,16 @@ export const CATEGORIAS_PILLS = [
   "Programas",
 ];
 
-/**
- * Hook para la gestión y filtrado del catálogo de inventario/medicamentos en cliente.
- */
 export function useCatalogoMedicamentos({ inventarioInicial = [], bodegas = [] } = {}) {
   const [busqueda, setBusqueda] = useState("");
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState("Todos");
   const [bodegaSeleccionada, setBodegaSeleccionada] = useState("Todas");
 
-  // Filtrado optimizado soporta camelCase (API) y snake_case (Vistas DB)
   const inventarioFiltrado = useMemo(() => {
     const terminoBusqueda = busqueda.trim().toLowerCase();
 
-    return inventarioInicial.filter((item) => {
-      // Búsqueda por nombre o principio activo
+    return (inventarioInicial || []).filter((item) => {
+      if (!item) return false;
       const nombre = item.nombre?.toLowerCase() || "";
       const principioActivo = (
         item.principioActivo || 
@@ -35,12 +31,10 @@ export function useCatalogoMedicamentos({ inventarioInicial = [], bodegas = [] }
         nombre.includes(terminoBusqueda) ||
         principioActivo.includes(terminoBusqueda);
 
-      // Categoría
       const coincideCategoria =
         categoriaSeleccionada === "Todos" ||
         item.categoria === categoriaSeleccionada;
 
-      // Bodega (Soporta filtrado por ID o por Nombre)
       const bodegaId = item.bodegaId || item.bodega_id;
       const bodegaNombre = item.bodegaNombre || item.bodega_nombre;
 
@@ -78,3 +72,6 @@ export function useCatalogoMedicamentos({ inventarioInicial = [], bodegas = [] }
     limpiarFiltros,
   };
 }
+
+// Exportación por defecto obligatoria para compatibilidad con Metro/Expo
+export default useCatalogoMedicamentos;
