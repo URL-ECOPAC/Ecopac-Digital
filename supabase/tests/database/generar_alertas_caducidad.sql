@@ -55,6 +55,15 @@ INSERT INTO existencias (lote_id, bodega_id, cantidad_disponible) VALUES
 INSERT INTO alertas_caducidad (id, lote_id, estado, cantidad_afectada) VALUES
   ('a5000000-0000-0000-0000-000000000001', 'a4000000-0000-0000-0000-000000000004', 'pendiente', 3);
 
+-- config.toml (db.seed) corre seed.sql y seed-demo.sql antes de las pruebas, tanto local como
+-- en el job "validar" del CI. seed-demo.sql (issue #94) trae su propio lote "por vencer"
+-- (LOTE-DEMO-POR-VENCER, vence en 20 dias, con existencia real en bodega movil) que tambien
+-- cumple el criterio de la funcion. Se le da una alerta pendiente ya existente, igual que el
+-- lote 4 de arriba, para que esta prueba dependa solo de sus propios fixtures y no de las
+-- fechas o el stock que tenga el seed de demo en un momento dado.
+INSERT INTO alertas_caducidad (lote_id, cantidad_afectada)
+SELECT id, 1 FROM lotes WHERE numero_lote = 'LOTE-DEMO-POR-VENCER';
+
 -- ============================================================================
 -- Primera corrida
 -- ============================================================================
@@ -113,8 +122,9 @@ SELECT is(
 
 SELECT is(
   (SELECT count(*)::int FROM alertas_caducidad),
-  3,
-  'el total de alertas no cambio: las 2 nuevas de la primera corrida mas la que ya existia'
+  4,
+  'el total de alertas no cambio: las 2 nuevas de la primera corrida mas las 2 que ya existian '
+  '(el lote 4 y el lote de seed-demo, neutralizados arriba)'
 );
 
 SELECT * FROM finish();
