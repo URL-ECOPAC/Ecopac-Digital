@@ -12,7 +12,7 @@
 
 BEGIN;
 
-SELECT plan(30);
+SELECT plan(32);
 
 -- ============================================================================
 -- Setup
@@ -330,6 +330,31 @@ SELECT ok(
   ),
   'pacientes_reporte SOLO expone id y comunidad_id'
 );
+
+-- ============================================================================
+-- comunidades tiene una sola politica de SELECT (issue #511, caso 3): la restringida de 00041
+-- se retiro en la 00099 porque nunca excluia a nadie que la de 00008 (USING (true)) no dejara
+-- pasar ya -las politicas del mismo comando se combinan con OR-, y solo confundia a quien leia
+-- el esquema.
+-- ============================================================================
+SELECT is(
+  (SELECT count(*)::int FROM pg_policies WHERE schemaname = 'public' AND tablename = 'comunidades' AND cmd = 'SELECT'),
+  1,
+  'comunidades tiene una sola politica de SELECT, no dos que se pisan'
+);
+
+-- voluntario general (el rol sin ningun privilegio especial en la matriz de permisos) lee
+-- comunidades igual que cualquier otro: la lectura es abierta a proposito, mismo criterio que
+-- departamentos y municipios (00006/00073), porque es catalogo geografico, no dato sensible.
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000001005';
+
+SELECT isnt_empty(
+  $$ SELECT id FROM comunidades WHERE id = '10000000-0000-0000-0000-000000000091' $$,
+  'voluntario general lee comunidades: la politica de lectura publica no quedo con ningun hueco tras retirar la muerta'
+);
+
+RESET ROLE;
 
 SELECT * FROM finish();
 ROLLBACK;
