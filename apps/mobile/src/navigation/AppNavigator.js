@@ -3,7 +3,9 @@ import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { colors, typography } from "@ecopac/ui-tokens";
+import { tabsMoviles, modulosVisibles } from "@ecopac/shared";
 
+import { useSesionCompartida } from "../contexto/SesionProvider";
 import { ROUTES } from "./rutas";
 import UsuarioActivo from "../components/UsuarioActivo";
 import LoginScreen from "../screens/LoginScreen";
@@ -40,7 +42,46 @@ const opcionesStack = {
   headerRight: () => <UsuarioActivo />,
 };
 
+// Mapeo entre los identificadores de tabMovil (navegacion.js) y la navegacion React Native
+const CONFIGURACION_TABS = {
+  Inicio: {
+    routeName: ROUTES.TAB_INICIO,
+    component: InicioNavigator,
+    label: "Inicio",
+    icon: "⌂",
+  },
+  Pacientes: {
+    routeName: ROUTES.TAB_PACIENTES,
+    component: PacientesNavigator,
+    label: "Pacientes",
+    icon: "𐀔",
+  },
+  Jornadas: {
+    routeName: ROUTES.TAB_JORNADAS,
+    component: JornadasNavigator,
+    label: "Jornadas",
+    icon: "📅",
+  },
+  Inventario: {
+    routeName: ROUTES.TAB_INVENTARIO,
+    component: InventarioNavigator,
+    label: "Inventario",
+    icon: "📦",
+  },
+};
+
+const TAB_AJUSTES_CONFIG = {
+  routeName: ROUTES.TAB_AJUSTES,
+  component: AjustesScreen,
+  label: "Ajustes",
+  icon: "⚙",
+};
+
 function InicioNavigator() {
+  const { perfil } = useSesionCompartida();
+  const modulos = modulosVisibles(perfil?.rol, { plataforma: "mobile" });
+  const idsVisibles = modulos.map((m) => m.id);
+
   return (
     <InicioStack.Navigator screenOptions={opcionesStack}>
       <InicioStack.Screen
@@ -48,26 +89,34 @@ function InicioNavigator() {
         component={InicioScreen}
         options={{ title: "Inicio" }}
       />
-      <InicioStack.Screen
-        name={ROUTES.DONACIONES}
-        component={DonacionesScreen}
-        options={{ title: "Donaciones" }}
-      />
-      <InicioStack.Screen
-        name={ROUTES.PROYECTOS}
-        component={ProyectosScreen}
-        options={{ title: "Proyectos" }}
-      />
-      <InicioStack.Screen
-        name={ROUTES.PRESUPUESTOS}
-        component={PresupuestosScreen}
-        options={{ title: "Presupuestos" }}
-      />
-      <InicioStack.Screen
-        name={ROUTES.VOLUNTARIOS}
-        component={VoluntariosScreen}
-        options={{ title: "Voluntarios y medicos" }}
-      />
+      {idsVisibles.includes("donaciones") && (
+        <InicioStack.Screen
+          name={ROUTES.DONACIONES}
+          component={DonacionesScreen}
+          options={{ title: "Donaciones" }}
+        />
+      )}
+      {idsVisibles.includes("proyectos") && (
+        <InicioStack.Screen
+          name={ROUTES.PROYECTOS}
+          component={ProyectosScreen}
+          options={{ title: "Proyectos" }}
+        />
+      )}
+      {idsVisibles.includes("presupuestos") && (
+        <InicioStack.Screen
+          name={ROUTES.PRESUPUESTOS}
+          component={PresupuestosScreen}
+          options={{ title: "Presupuestos" }}
+        />
+      )}
+      {idsVisibles.includes("voluntarios") && (
+        <InicioStack.Screen
+          name={ROUTES.VOLUNTARIOS}
+          component={VoluntariosScreen}
+          options={{ title: "Voluntarios y medicos" }}
+        />
+      )}
     </InicioStack.Navigator>
   );
 }
@@ -144,65 +193,45 @@ function InventarioNavigator() {
 }
 
 function TabsNavigator() {
+  const { perfil } = useSesionCompartida();
+  const modulosPermitidos = tabsMoviles(perfil?.rol);
+
+  // Mapea los módulos autorizados y agrega Ajustes al final
+  const tabsAAgregar = modulosPermitidos.map((m) => CONFIGURACION_TABS[m.tabMovil]).filter(Boolean);
+
+  tabsAAgregar.push(TAB_AJUSTES_CONFIG);
+
+  // Define la ruta inicial basada en la primera pestaña disponible
+  const rutaInicial = tabsAAgregar[0]?.routeName || ROUTES.TAB_INICIO;
+
   return (
     <Tabs.Navigator
-      initialRouteName={ROUTES.TAB_INICIO}
-      screenOptions={({ route }) => ({
-        headerShown: false,
-        tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.textMuted,
-        tabBarStyle: { backgroundColor: colors.surface, borderTopColor: colors.border },
-        tabBarLabelStyle: { fontSize: typography.sizes.xs },
-        tabBarIcon: ({ color, size }) => {
-          let simbolo;
-          switch (route.name) {
-            case ROUTES.TAB_INICIO:
-              simbolo = "⌂";
-              break;
-            case ROUTES.TAB_PACIENTES:
-              simbolo = "𐀔";
-              break;
-            case ROUTES.TAB_JORNADAS:
-              simbolo = "📅";
-              break;
-            case ROUTES.TAB_INVENTARIO:
-              simbolo = "📦";
-              break;
-            case ROUTES.TAB_AJUSTES:
-              simbolo = "⚙";
-              break;
-            default:
-              simbolo = "•";
-          }
-          return <Text style={{ color, fontSize: size - 2, fontWeight: "bold" }}>{simbolo}</Text>;
-        },
-      })}
+      initialRouteName={rutaInicial}
+      screenOptions={({ route }) => {
+        const configTab =
+          Object.values(CONFIGURACION_TABS).find((c) => c.routeName === route.name) ||
+          TAB_AJUSTES_CONFIG;
+
+        return {
+          headerShown: false,
+          tabBarActiveTintColor: colors.primary,
+          tabBarInactiveTintColor: colors.textMuted,
+          tabBarStyle: { backgroundColor: colors.surface, borderTopColor: colors.border },
+          tabBarLabelStyle: { fontSize: typography.sizes.xs },
+          tabBarIcon: ({ color, size }) => (
+            <Text style={{ color, fontSize: size - 2, fontWeight: "bold" }}>{configTab.icon}</Text>
+          ),
+        };
+      }}
     >
-      <Tabs.Screen
-        name={ROUTES.TAB_INICIO}
-        component={InicioNavigator}
-        options={{ tabBarLabel: "Inicio" }}
-      />
-      <Tabs.Screen
-        name={ROUTES.TAB_PACIENTES}
-        component={PacientesNavigator}
-        options={{ tabBarLabel: "Pacientes" }}
-      />
-      <Tabs.Screen
-        name={ROUTES.TAB_JORNADAS}
-        component={JornadasNavigator}
-        options={{ tabBarLabel: "Jornadas" }}
-      />
-      <Tabs.Screen
-        name={ROUTES.TAB_INVENTARIO}
-        component={InventarioNavigator}
-        options={{ tabBarLabel: "Inventario" }}
-      />
-      <Tabs.Screen
-        name={ROUTES.TAB_AJUSTES}
-        component={AjustesScreen}
-        options={{ tabBarLabel: "Ajustes" }}
-      />
+      {tabsAAgregar.map((tab) => (
+        <Tabs.Screen
+          key={tab.routeName}
+          name={tab.routeName}
+          component={tab.component}
+          options={{ tabBarLabel: tab.label }}
+        />
+      ))}
     </Tabs.Navigator>
   );
 }
