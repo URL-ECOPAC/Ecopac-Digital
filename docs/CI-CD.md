@@ -2,7 +2,7 @@
 
 Que corre automaticamente, cuando, contra que ambiente, y que hacer cuando algo falla.
 
-## Los cuatro workflows
+## Los cinco workflows
 
 | Workflow                 | Archivo                                      | Cuando corre                                 |
 | ------------------------ | -------------------------------------------- | -------------------------------------------- |
@@ -10,6 +10,7 @@ Que corre automaticamente, cuando, contra que ambiente, y que hacer cuando algo 
 | Supabase                 | `.github/workflows/supabase.yml`             | PR hacia develop o main, y push a esas ramas |
 | Verificar despliegue     | `.github/workflows/verificar-despliegue.yml` | Todos los dias a las 13:00 UTC, y a mano     |
 | Mantener Supabase activo | `.github/workflows/keep-alive-supabase.yml`  | Cada 3 dias, y a mano                        |
+| Alertas de vencimiento   | `.github/workflows/alertas-vencimiento.yml`  | Todos los dias a las 06:00 UTC, y a mano     |
 
 El despliegue de la web **no** es un workflow: lo hace la app de Vercel conectada al
 repositorio. Vercel publica un preview por cada PR y produccion desde `main`, al margen del
@@ -189,9 +190,9 @@ resume el resultado de todos.
 
 | Job                                 | Cuando                   | Que hace                                                                                                                                                                   |
 | ----------------------------------- | ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Detectar cambios                    | siempre                  | Averigua si el cambio toca `supabase/`, para no levantar el stack local sin necesidad                                                                                      |
+| Detectar cambios                    | siempre                  | Averigua si el cambio toca `supabase/`, `packages/shared/` o `pruebas/`, para no levantar el stack local sin necesidad                                                     |
 | **Migraciones no editadas**         | PR y push                | Falla si el PR modifica o borra una migracion que ya existe en la rama base, y si la numeracion de `supabase/migrations/` tiene un choque                                  |
-| **Validar migraciones y funciones** | PR y push                | Levanta el stack local, aplica todas las migraciones desde cero, corre `db lint` y el lint de Edge Functions                                                               |
+| **Validar migraciones y funciones** | PR y push                | Levanta el stack local, aplica todas las migraciones desde cero, corre `db lint`, las suites pgTAP, **las pruebas de flujos criticos** y el lint de Edge Functions         |
 | Estado de la base remota            | PR                       | Lista que migraciones estan aplicadas en `Ecopac-Digital-Dev` y cuales se aplicarian al mergear                                                                            |
 | Aplicar migraciones                 | push a develop o main    | Comprueba que el historial de la base coincida con la rama y corre `supabase db push` contra el proyecto del ambiente. Depende de que los dos jobs en negrita hayan pasado |
 | Avisar fallo                        | si algo fallo en un push | Abre una issue con el paso que fallo y **si las migraciones se aplicaron o no**                                                                                            |
@@ -272,6 +273,73 @@ La leccion general: **verde en el CI no prueba que el despliegue vaya a pasar** 
 migracion toca privilegios, GUCs de extensiones, roles o propiedad de objetos. Eso se prueba
 corriendo el SQL como un rol `NOSUPERUSER` (basta un cluster desechable con `initdb`), no
 mirando el check.
+
+### Las pruebas de flujos criticos (issue #222)
+
+`pruebas/e2e/` recorre de punta a punta los tres flujos que no pueden fallar el dia de una
+jornada:
+
+| Archivo                             | Flujo                                                                     |
+| ----------------------------------- | ------------------------------------------------------------------------- |
+| `atencion-clinica.e2e.test.js`      | Registrar paciente, ponerlo en cola, consulta con diagnostico, receta y descuento de existencias |
+| `inventario-validacion.e2e.test.js` | Ingreso que nace pendiente, bandeja de validacion, aprobacion y rechazo    |
+| `medicamento-vencido.e2e.test.js`   | El bloqueo de un lote vencido en las tres capas donde puede romperse       |
+
+Corren dentro del job **Validar migraciones y funciones**, aprovechando el stack local que ese
+job ya levanto. En local:
+
+```bash
+supabase start
+supabase db reset     # imprescindible: siembra las cuentas y los datos que las pruebas usan
+npm run test:e2e
+```
+
+**No entran en `npm test`** a proposito: `npm test` recorre los workspaces y tiene que seguir
+funcionando en una maquina sin Docker.
+
+Tres cosas que conviene saber antes de escribir una prueba nueva aqui:
+
+- **Inician sesion de verdad**, con las cuentas del seed demo (`supabase/seed-demo.sql`), y cada
+  paso lo ejecuta el rol que lo ejecutaria en campo. Las politicas RLS son parte de lo que se
+  prueba, no un obstaculo que rodear con un administrador.
+- **Corren en serie.** `packages/shared` mantiene una sola instancia del cliente de Supabase, asi
+  que la sesion es un recurso global del proceso.
+- **Limpian lo que crean**, incluidas las existencias que hayan movido. La base queda como estaba.
+
+Lo que justifica su existencia es lo que ninguna de las otras dos capas puede ver. `npm test`
+prueba `packages/shared` contra un doble de Supabase escrito a mano, que acepta cualquier
+consulta que el codigo bajo prueba quiera hacer -- incluido un `INSERT` al que le faltan tres
+columnas `NOT NULL`. pgTAP prueba la base desde dentro, simulando la sesion con
+`SET request.jwt.claim.sub`, y nunca ejecuta el codigo del cliente. El hueco entre las dos es por
+donde se colaron el defecto de `registrarGasto()` (issue #300) y el de `registrarIngreso()` que
+encontro esta issue: los dos, un `INSERT` al que le faltaban columnas obligatorias, verdes en las
+dos suites.
+
+### La programacion de las alertas de vencimiento (issue #167)
+
+`fn_generar_alertas_caducidad` (migracion 00088) genera una alerta pendiente por cada lote con
+existencia positiva que vence en 30 dias o menos. Quien la invoca es la Edge Function
+`alertas-vencimiento`, y quien invoca a la funcion es el workflow del mismo nombre, todos los
+dias a las 06:00 UTC.
+
+**No es pg_cron.** El plan gratuito de Supabase no lo incluye, asi que el cron vive en GitHub
+Actions. Eso arrastra dos consecuencias que hay que tener presentes:
+
+1. **`schedule` se lee de `main`.** Mientras el archivo solo este en `develop`, el horario no
+   corre ni una vez, y no hay ninguna senal de ello: la pestania Actions simplemente no muestra
+   corridas. Se puede forzar antes con Actions > Alertas de vencimiento > Run workflow.
+2. **GitHub desactiva los workflows programados tras 60 dias sin actividad en el repositorio.** Si
+   las alertas dejan de llegar y aqui no hay corridas, ese es el primer sitio donde mirar.
+
+Cada corrida deja en el resumen la fecha, el resultado y cuantas alertas genero. Si falla, el job
+**Avisar fallo** abre una issue (`type:bug`, `module:inventario`, `priority:alta`) y, si vuelve a
+fallar, comenta en la que ya existe en vez de abrir otra. La razon de que exista ese aviso es que
+un cron que falla en silencio es peor que no tenerlo: la organizacion cree que alguien vigila los
+vencimientos y nadie lo hace, y la pantalla de alertas se ve igual de vacia cuando no hay nada que
+alertar que cuando la rutina no corrio.
+
+Volver a dispararlo a mano es seguro: `fn_generar_alertas_caducidad` es idempotente y no duplica
+alertas de un lote que ya tiene una pendiente.
 
 ## Ambientes
 
@@ -670,12 +738,17 @@ Lo que corre el job **Validar migraciones y funciones**:
 
 ```bash
 supabase start
-supabase db reset          # aplica todas las migraciones desde cero
+supabase db reset          # aplica todas las migraciones desde cero y siembra los seeds
 supabase db lint --local --fail-on warning
+supabase test db           # las suites pgTAP
+npm run test:e2e           # los flujos criticos
 ```
 
 Esto ultimo reproduce el job. Lo que no reproduce es el escenario incremental contra una base
 con historial, que es justo lo que la guarda de inmutabilidad protege.
+
+`npm run test:e2e` necesita el `supabase db reset` previo: las cuentas y los datos que usa los
+siembra `supabase/seed-demo.sql`, no las migraciones.
 
 ## Ramas protegidas
 

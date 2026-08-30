@@ -37,11 +37,7 @@ describe("Módulo de Inventario - API Movimientos", () => {
       expect(res.error.mensaje).toContain("usuario");
     });
 
-    it("crea lote nuevo sin cantidad_disponible (columna que ya no existe en lotes)", async () => {
-      mockSupabase.single
-        .mockResolvedValueOnce({ data: { id: "LOTE-NUEVO" }, error: null })
-        .mockResolvedValueOnce({ data: { id: "MOV-1", tipo: "ingreso" }, error: null });
-
+    it("exige el proveedor cuando hay que crear el lote", async () => {
       const res = await registrarIngreso({
         origen: "donacion",
         bodega_id: "B-1",
@@ -52,11 +48,44 @@ describe("Módulo de Inventario - API Movimientos", () => {
         usuarioId: "U-1",
       });
 
+      expect(res.datos).toBeNull();
+      expect(res.error.mensaje).toContain("proveedor");
+      expect(mockSupabase.insert).not.toHaveBeenCalled();
+    });
+
+    it("crea el lote nuevo con todas sus columnas obligatorias (issue #222)", async () => {
+      mockSupabase.single
+        .mockResolvedValueOnce({ data: { id: "LOTE-NUEVO" }, error: null })
+        .mockResolvedValueOnce({ data: { id: "MOV-1", tipo: "ingreso" }, error: null });
+
+      const res = await registrarIngreso({
+        origen: "donacion",
+        bodega_id: "B-1",
+        medicamento_id: "M-1",
+        numero_lote: "LOT-100",
+        fecha_vencimiento: "2027-01-01",
+        proveedor_id: "P-1",
+        cantidad: 50,
+        usuarioId: "U-1",
+      });
+
       expect(res.datos.id).toBe("MOV-1");
       expect(mockSupabase.insert).toHaveBeenCalledTimes(2);
-      // El primer insert es el lote: sin cantidad_disponible, columna que 00047 elimino.
+
+      // El primer insert es el lote. proveedor_id, origen y cantidad_ingresada son NOT NULL sin
+      // DEFAULT (00020): faltaban las tres y el INSERT reventaba con 23502 contra la base real,
+      // aunque este doble lo aceptara. Este doble no puede detectarlo por si solo -- lo detecta
+      // pruebas/e2e/inventario-validacion.e2e.test.js --, asi que aqui se fija la forma exacta.
+      expect(mockSupabase.insert.mock.calls[0][0]).toEqual({
+        medicamento_id: "M-1",
+        numero_lote: "LOT-100",
+        fecha_vencimiento: "2027-01-01",
+        proveedor_id: "P-1",
+        origen: "donacion",
+        cantidad_ingresada: 50,
+      });
+      // cantidad_disponible vive en existencias desde la 00047, no en lotes.
       expect(mockSupabase.insert.mock.calls[0][0]).not.toHaveProperty("cantidad_disponible");
-      expect(mockSupabase.insert.mock.calls[0][0]).not.toHaveProperty("cantidad");
     });
 
     it("no envia origen ni jornada_id al insertar el movimiento (columnas que no existen)", async () => {

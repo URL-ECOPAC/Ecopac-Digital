@@ -29,13 +29,27 @@ import { ORIGENES_DE_LOTE } from "../enums.js";
  * El movimiento queda en el mismo estado pendiente que cualquier otro ingreso: registrarIngreso()
  * no envia estado, lo decide el trigger de la base (issue #192, criterio 2).
  *
+ * `usuarioId` y `proveedorId` son obligatorios y hasta la issue #222 no se enviaban ninguno de
+ * los dos, asi que esta funcion no podia completarse nunca: `registrarIngreso()` cortaba en su
+ * guarda de usuario, y de haberla pasado, el INSERT del lote habria fallado con 23502 por
+ * `lotes.proveedor_id`. Este es el unico camino del sistema que llega a `registrarIngreso()` sin
+ * `lote_id`, o sea el unico que crea un lote, de modo que el defecto no se notaba en ningun otro
+ * sitio.
+ *
+ * El proveedor de un lote donado es el registro de `proveedores` con `tipo = 'donante'` que
+ * corresponde a quien dono. No se deriva del `donante_id` de la donacion: son dos catalogos
+ * distintos (`donantes` y `proveedores`) y no existe correspondencia automatica entre ellos, asi
+ * que elegirlo es parte de la misma decision que ya toma quien genera el ingreso -- que
+ * medicamento, que bodega, que numero de lote -- y viaja como un parametro mas.
+ *
  * @param {string} donacionDetalleId
- * @param {{ medicamentoId: string, bodegaId: string, numeroLote: string, fechaVencimiento: string }} datos
+ * @param {{ medicamentoId: string, bodegaId: string, numeroLote: string,
+ *   fechaVencimiento: string, proveedorId: string, usuarioId: string }} datos
  * @returns {Promise<{ datos: { movimiento: object, detalle: object }|null, error: object|null }>}
  */
 export async function generarIngresoDesdeDonacion(
   donacionDetalleId,
-  { medicamentoId, bodegaId, numeroLote, fechaVencimiento } = {},
+  { medicamentoId, bodegaId, numeroLote, fechaVencimiento, proveedorId, usuarioId } = {},
 ) {
   try {
     const supabase = obtenerSupabase();
@@ -73,8 +87,10 @@ export async function generarIngresoDesdeDonacion(
       medicamento_id: medicamentoId,
       numero_lote: numeroLote,
       fecha_vencimiento: fechaVencimiento,
+      proveedor_id: proveedorId,
       cantidad: detalle.cantidad,
       motivo: `Donacion: ${detalle.descripcion}`,
+      usuarioId,
     });
 
     if (errorMovimiento) {
@@ -93,7 +109,7 @@ export async function generarIngresoDesdeDonacion(
 
     return { datos: { movimiento, detalle: detalleEnlazado }, error: null };
   } catch (error) {
-    return normalizarError(error);
+    return { datos: null, error: normalizarError(error) };
   }
 }
 
@@ -117,6 +133,6 @@ export async function obtenerDonacionDeLote(loteId) {
     if (error) throw error;
     return { datos: data, error: null };
   } catch (error) {
-    return normalizarError(error);
+    return { datos: null, error: normalizarError(error) };
   }
 }

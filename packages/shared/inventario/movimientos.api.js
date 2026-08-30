@@ -31,16 +31,29 @@ export async function listarMovimientos({ tipo, estado, bodega_id, fecha_inicio,
 
     return { datos: data || [], error: null };
   } catch (error) {
-    return normalizarError(error);
+    // Lista vacia y no null: quien la consume la recorre, y un null aqui convertiria un error
+    // de lectura en un TypeError lejos de donde ocurrio. Mismo criterio que obtenerCola()
+    // (atenciones/api.js), que ante un error devuelve la forma vacia junto al error.
+    return { datos: [], error: normalizarError(error) };
   }
 }
 
 /**
  * Registra un ingreso de medicamentos (compra o donación). Crea el lote si no existe.
  *
- * `origen` solo valida la intencion de quien llama (compra/donacion): movimientos_inventario
- * no tiene esa columna, la procedencia se reconstruye siguiendo lote_id hasta donacion_detalle
- * (packages/shared/donaciones/ingreso.api.js, issue #192) o hasta un proveedor de compra.
+ * `origen` no viaja a movimientos_inventario, que no tiene esa columna: es `lotes.origen` del
+ * lote que se crea. La procedencia de un lote que ya existia se reconstruye siguiendo lote_id
+ * hasta donacion_detalle (packages/shared/donaciones/ingreso.api.js, issue #192) o hasta su
+ * proveedor de compra.
+ *
+ * `proveedor_id` solo hace falta cuando hay que crear el lote, y entonces es obligatorio:
+ * `lotes.proveedor_id` es NOT NULL sin DEFAULT (00020). Mismo caso que `origen` y
+ * `cantidad_ingresada`. Hasta la issue #222 esta funcion insertaba el lote con tres columnas y
+ * ninguna de esas tres, asi que **crear un lote nuevo fallaba siempre** con 23502 y se llevaba
+ * por delante el ingreso de donaciones completo, que es el unico camino que llega aqui sin
+ * lote_id. Es el mismo defecto que ya habia corregido `registrarGasto()` (issue #300) y por la
+ * misma razon: las pruebas con doble de Supabase no lo ven porque el doble acepta cualquier
+ * INSERT. Lo caza pruebas/e2e/inventario-validacion.e2e.test.js, contra la base real.
  *
  * El ajuste de existencias no lo hace este cliente: lo hace tr_autoaprobar_movimiento_inventario
  * (00028/00047) si quien registra es administrador -el movimiento nace ya 'aprobado'-, o
@@ -54,6 +67,7 @@ export async function registrarIngreso({
   lote_id,
   numero_lote,
   fecha_vencimiento,
+  proveedor_id,
   cantidad,
   motivo,
   usuarioId,
@@ -96,12 +110,27 @@ export async function registrarIngreso({
         };
       }
 
+      if (!proveedor_id) {
+        return {
+          datos: null,
+          error: {
+            mensaje: "Se requiere el proveedor de procedencia para crear un nuevo lote.",
+          },
+        };
+      }
+
       const { data: nuevoLote, error: errorLote } = await supabase
         .from("lotes")
         .insert({
           medicamento_id,
           numero_lote,
           fecha_vencimiento,
+          proveedor_id,
+          origen,
+          // La cantidad con la que nace el lote es la del ingreso que lo crea. No se confunde
+          // con existencias.cantidad_disponible, que es lo que queda hoy y por bodega: esta
+          // columna es el historico de cuanto entro (00047, issue #369).
+          cantidad_ingresada: cantidad,
         })
         .select()
         .single();
@@ -129,7 +158,7 @@ export async function registrarIngreso({
     if (error) throw error;
     return { datos: data, error: null };
   } catch (error) {
-    return normalizarError(error);
+    return { datos: null, error: normalizarError(error) };
   }
 }
 
@@ -207,7 +236,7 @@ export async function registrarSalida({ bodega_id, lote_id, cantidad, motivo, us
     if (error) throw error;
     return { datos: data, error: null };
   } catch (error) {
-    return normalizarError(error);
+    return { datos: null, error: normalizarError(error) };
   }
 }
 
@@ -253,13 +282,23 @@ export async function editarMovimiento(idMovimiento, datosNuevos, usuarioActualI
     if (error) throw error;
     return { datos: data, error: null };
   } catch (error) {
-    return normalizarError(error);
+    return { datos: null, error: normalizarError(error) };
   }
 }
 
-/**
- * Cancela un movimiento en estado pendiente.
- */
-export async function cancelarMovimiento(idMovimiento, usuarioActualId) {
-  return editarMovimiento(idMovimiento, { estado: "cancelado" }, usuarioActualId);
-}
+// AQUI ESTABA cancelarMovimiento(), BORRADA POR LA ISSUE #617
+//
+// Escribia el literal 'cancelado' en movimientos_inventario.estado, y el enum estado_movimiento
+// solo tiene 'pendiente', 'aprobado' y 'rechazado' (00023). Postgres rechazaba el UPDATE con
+// 22P02, asi que la operacion nunca pudo funcionar. No la llamaba nadie: era codigo muerto.
+//
+// Se borra en vez de agregar 'cancelado' al enum porque cancelar no es una operacion del dominio:
+// ni docs/PERMISOS.md ni la bandeja de validacion (issue #158) la contemplan -- ahi la
+// administradora aprueba o rechaza, y nada mas. Tampoco se mapea a RECHAZADO: rechazar es la
+// decision de quien valida y cancelar seria la de quien registro, y hacerlas pasar por la misma
+// falsearia la trazabilidad de aprobado_por.
+//
+// Si algun dia se necesita que quien registro pueda retirar su propio movimiento pendiente, es una
+// funcionalidad a disenar entera: valor nuevo en el enum via migracion, politica RLS que lo
+// permita -- la de UPDATE de hoy solo admite administrador o `inventario.aprobar` (00086) -- y su
+// fila en la matriz de permisos.

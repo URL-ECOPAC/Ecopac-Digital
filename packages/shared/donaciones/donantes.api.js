@@ -100,7 +100,7 @@ export async function registrarDonante(datosDonante, { rolUsuario }) {
     if (error) throw error;
     return { datos: data, error: null };
   } catch (error) {
-    return normalizarError(error);
+    return { datos: null, error: normalizarError(error) };
   }
 }
 
@@ -128,7 +128,8 @@ export async function listarDonantes({ busqueda, soloActivos = true } = {}, { ro
 
     return { datos: data || [], error: null };
   } catch (error) {
-    return normalizarError(error);
+    // Lista vacia y no null, por lo mismo que listarMovimientos(): quien la consume la recorre.
+    return { datos: [], error: normalizarError(error) };
   }
 }
 
@@ -159,7 +160,7 @@ export async function actualizarDonante(idDonante, datosNuevos, { rolUsuario }) 
     if (error) throw error;
     return { datos: data, error: null };
   } catch (error) {
-    return normalizarError(error);
+    return { datos: null, error: normalizarError(error) };
   }
 }
 
@@ -202,6 +203,6 @@ export async function obtenerHistoricoDonante(idDonante, { rolUsuario }) {
       error: null,
     };
   } catch (error) {
-    return normalizarError(error);
+    return { datos: null, error: normalizarError(error) };
   }
 }

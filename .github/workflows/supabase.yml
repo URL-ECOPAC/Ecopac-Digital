@@ -50,7 +50,13 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Detectar si el cambio toca supabase/
+      # Se miran tres rutas, no solo supabase/ (issue #222).
+      #
+      # Las pruebas de flujos criticos de pruebas/e2e corren contra el stack local que levanta el
+      # job "validar", pero ejercitan packages/shared: un cambio ahi puede romperlas sin tocar una
+      # sola migracion. Si el detector solo mirara supabase/, esas pruebas se saltarian justo en
+      # los PR que mas falta hacen -- los que cambian la capa de API.
+      - name: Detectar si el cambio toca la base de datos o lo que corre contra ella
         id: detectar
         run: |
           if [ "${{ github.event_name }}" = "push" ]; then
@@ -62,9 +68,9 @@ jobs:
           git fetch --no-tags origin "$GITHUB_BASE_REF"
           base="$(git merge-base "origin/$GITHUB_BASE_REF" HEAD)"
 
-          if git diff --quiet "$base" HEAD -- supabase/; then
+          if git diff --quiet "$base" HEAD -- supabase/ packages/shared/ pruebas/; then
             echo "supabase=false" >> "$GITHUB_OUTPUT"
-            echo "El PR no toca supabase/; la validacion pesada se omite."
+            echo "El PR no toca supabase/, packages/shared/ ni pruebas/; la validacion pesada se omite."
           else
             echo "supabase=true" >> "$GITHUB_OUTPUT"
           fi
@@ -328,6 +334,39 @@ jobs:
       - name: Pruebas de la base de datos
         if: needs.cambios.outputs.supabase == 'true'
         run: supabase test db
+
+      # Los tres flujos que no pueden fallar el dia de una jornada (issue #222).
+      #
+      # POR QUE VAN AQUI Y NO EN ci.yml
+      #
+      # Porque necesitan el stack local, y el stack local ya esta levantado en este job. Montarlo
+      # una segunda vez en el otro workflow costaria los dos minutos mas caros del pipeline para
+      # tener exactamente la misma base.
+      #
+      # QUE CUBREN QUE NO CUBRA NADA DE LO DE ARRIBA
+      #
+      # pgTAP prueba la base desde dentro, con `SET request.jwt.claim.sub`. Estas pruebas la
+      # recorren desde fuera: inician sesion de verdad, pasan por PostgREST y llaman a las mismas
+      # funciones de packages/shared que llaman las pantallas. Ahi aparecen los defectos que
+      # ninguna de las dos capas ve por separado -- un INSERT al que le faltan columnas NOT NULL
+      # pasa el doble de Supabase de `npm test` y ni siquiera lo ejecuta el pgTAP.
+      - name: Configurar Node.js
+        if: needs.cambios.outputs.supabase == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Instalar dependencias
+        if: needs.cambios.outputs.supabase == 'true'
+        run: npm ci
+
+      # Sin variables de entorno: la suite lee la URL y la llave anonima de `supabase status`
+      # ella sola (pruebas/e2e/stack-local.js). Ninguna credencial pasa por el YAML ni por el
+      # log, que es lo que pide la revision de configuracion (issue #241).
+      - name: Pruebas de los flujos criticos
+        if: needs.cambios.outputs.supabase == 'true'
+        run: npm run test:e2e
 
       # `supabase functions lint` ya no existe en el CLI (confirmado contra la 2.115.0, la misma
       # que fija el paso de arriba: ni `functions --help` ni `--experimental` lo listan). Este
