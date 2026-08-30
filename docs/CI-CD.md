@@ -54,28 +54,30 @@ no es tiempo que nadie este esperando.
 **Un tope no es una meta.** Si un dia una corrida se acerca a los diez minutos, lo que hay que
 averiguar es que la hizo crecer; subir el numero es la ultima opcion, no la primera.
 
-### El resumen de las pruebas
+### El resultado de las pruebas en el PR
 
-La DoD de la #223 pide que el resultado de las pruebas **se vea en el PR**. El check en verde no
-dice cuantas pruebas corrieron ni si la cobertura quedo pegada al umbral, y para saberlo habia
-que abrir el log crudo del paso.
+La DoD de la #223 pide que el resultado de las pruebas **se vea en el PR**. Se reparte en dos, y
+conviene saber cual pone cada parte:
 
-`scripts/resumen-de-pruebas.mjs` arma con eso el resumen que GitHub muestra en la pagina de la
-corrida, a un clic del PR: las lineas de cierre de vitest y una tabla de cobertura contra su
-umbral. Detalles que conviene conocer antes de tocarlo:
+- **El conteo lo publica vitest solo.** Cuando detecta que corre en Actions agrega su reporter
+  `github-actions`, que escribe un "Vitest Test Report" en el resumen de la corrida con cuantos
+  archivos y cuantas pruebas pasaron. **No se ve al correr las pruebas en local**, porque ese
+  reporter solo se activa con `GITHUB_ACTIONS`, y por eso es facil creer que no existe.
+- **La cobertura la publica `scripts/resumen-de-pruebas.mjs`**, que es lo que vitest no trae. Y es
+  el numero que hace falta vigilar: desde la #219 la cobertura de las validaciones es una guarda
+  con umbral, no una estadistica, asi que ver cuanto margen queda vale mas que repetir el conteo.
 
-- **Los umbrales no se copian al workflow**: los lee de `packages/shared/vitest.config.js`, que
-  es donde los declara la guarda de la #219. Una segunda copia podria divergir en silencio.
-- **Corre con `if: always()`**, porque el resumen de una corrida en rojo es el que mas falta
-  hace, y **nunca falla**: si le faltan los archivos que lee, escribe una nota y sale con 0. Es
-  un reporte, no una guarda.
-- **El paso de las pruebas lleva `set -o pipefail`.** El shell por defecto de Actions es
-  `bash -e {0}`, que no lo trae; sin el, la tuberia hacia `tee` devuelve el codigo de `tee`
-  -siempre 0- y **una prueba rota dejaria el job en verde**. Es la trampa de este cambio: lo que
-  se agrego para cumplir el cuarto punto de la DoD podia romper el segundo.
+Detalles que conviene conocer antes de tocarlo:
+
+- **Los umbrales no se copian al workflow**: se leen de `packages/shared/vitest.config.js`, que es
+  donde los declara la guarda de la #219. Una segunda copia podria divergir en silencio.
+- **Corre con `if: always()`** -el resumen de una corrida en rojo es el que mas falta hace- y
+  **nunca falla**: si el informe de cobertura no existe, escribe una nota y sale con 0. Es un
+  reporte, no una guarda. En una corrida roja ese informe no existe, y no es un caso raro: vitest
+  limpia su directorio de cobertura al arrancar y no lo reescribe si las pruebas fallan.
 - Se eligio el resumen y no un comentario en el PR porque escribir en `$GITHUB_STEP_SUMMARY` no
-  pide permisos: el workflow sigue con `contents: read`. Comentar obligaria a `pull-requests:
-write` y a ensuciar el hilo en cada push.
+  pide permisos: el workflow sigue con `contents: read`. Comentar obligaria a
+  `pull-requests: write` y a ensuciar el hilo en cada push.
 
 ### La guarda de cobertura de las validaciones
 
@@ -609,14 +611,15 @@ npm test
 npm run build
 ```
 
-El resumen de las pruebas se puede ver tal como quedara en el PR capturando la salida igual que
-el CI, que es tambien la forma de comprobar que `pipefail` sigue haciendo su trabajo:
+La tabla de cobertura que se publica en el PR se puede ver igual en local, despues de correr
+`npm test`:
 
 ```bash
-set -o pipefail
-npm test 2>&1 | tee /tmp/pruebas.log        # devuelve != 0 si una prueba falla
-node scripts/resumen-de-pruebas.mjs /tmp/pruebas.log
+node scripts/resumen-de-pruebas.mjs
 ```
+
+El conteo de pruebas que acompana a esa tabla en el PR **no sale en local**: lo agrega el reporter
+`github-actions` de vitest, que solo se activa dentro de Actions.
 
 Lo que corre el job **Validar migraciones y funciones**:
 

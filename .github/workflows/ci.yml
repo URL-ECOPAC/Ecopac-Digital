@@ -74,21 +74,19 @@ jobs:
       # la web compile. Corre en el mismo job que el lint para que el check requerido siga
       # llamandose "Lint y build" y no haya que tocar la proteccion de ramas.
       #
-      # `set -o pipefail` no es decorativo. El shell por defecto de Actions es `bash -e {0}`, que
-      # no lo trae, y sin el la tuberia devuelve el codigo de `tee` -siempre 0- en vez del de
-      # `npm test`: una prueba rota dejaria el job en verde, que es justo lo que este paso existe
-      # para impedir (issue #223, segundo punto de la DoD).
+      # El paso corre `npm test` a secas, sin capturar la salida: vitest detecta Actions y agrega
+      # su reporter `github-actions`, que ya publica el conteo de pruebas en el resumen de la
+      # corrida. No se ve al correr las pruebas en local, y por eso es facil no saber que existe.
       - name: Ejecutar las pruebas de todos los workspaces
-        run: |
-          set -o pipefail
-          npm test 2>&1 | tee "$RUNNER_TEMP/pruebas.log"
+        run: npm test
 
-      # `if: always()` porque el resumen de una corrida en rojo es el que mas falta hace. El
-      # script nunca falla: es un reporte, no una guarda, y quien decide si el CI pasa es el
-      # paso de arriba.
-      - name: Resumen de las pruebas
+      # Lo que vitest no publica es la cobertura, que desde la #219 es una guarda con umbral y no
+      # una estadistica. `if: always()` porque el resumen de una corrida en rojo es el que mas
+      # falta hace; el script nunca falla, es un reporte y no una guarda, y quien decide si el CI
+      # pasa es el paso de arriba.
+      - name: Publicar la cobertura en el resumen
         if: always()
-        run: node scripts/resumen-de-pruebas.mjs "$RUNNER_TEMP/pruebas.log" >> "$GITHUB_STEP_SUMMARY"
+        run: node scripts/resumen-de-pruebas.mjs >> "$GITHUB_STEP_SUMMARY"
 
       # Cada rama se construye con la configuración de su ambiente. Antes se usaban
       # siempre los secrets _DEV, así que main nunca se validaba contra producción y un
