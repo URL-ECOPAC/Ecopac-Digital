@@ -357,7 +357,7 @@ seccion anterior para su contrato completo.
 
 | Prop | Tipo | Default | Descripcion |
 | ---- | ---- | ------- | ----------- |
-| `status` | string | — | Debe ser exactamente un valor de un enum de `supabase/migrations/00001_initial_schema.sql` (ej. `'pendiente de validacion'`). Se usa tal cual como indice de `statusColors`, sin tabla de traduccion propia. |
+| `status` | string | — | Debe ser exactamente un valor de un enum del esquema, tal como lo declara `packages/shared/enums.js` (ej. `ESTADOS_MOVIMIENTO.PENDIENTE`). Se usa tal cual como indice de `statusColors`, sin tabla de traduccion propia. |
 | `label` | string | valor crudo de `status` | Texto a mostrar, si debe diferir del valor del enum. |
 
 Si `status` no esta en `statusColors` (`@ecopac/ui-tokens`), usa `colors.secondary` como color

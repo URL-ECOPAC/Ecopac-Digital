@@ -21,11 +21,14 @@ import {
   construirError,
   normalizarError,
 } from "../api/errores-de-supabase.js";
+import { ACCIONES_DE_ALERTA, ESTADOS_ALERTA } from "../enums.js";
 import { diasHastaVencimiento } from "../formato/fechas.js";
 import { esAdministrador } from "../usuarios/roles.js";
 
-/** Los tres valores del enum accion_alerta (00021), para que el formulario de cierre no invente los suyos. */
-export const ACCIONES_DE_ALERTA = Object.freeze(["donado", "reubicado", "descartado"]);
+// accion_alerta (00021) se declara en enums.js, no aqui: era la tercera copia de los mismos
+// tres valores -las otras dos en campos.js y en useGestionLotes.js- y nada obligaba a que
+// coincidieran (issue #397).
+const ACCIONES_VALIDAS = Object.values(ACCIONES_DE_ALERTA);
 
 // lote y medicamento se piden embebidos (solo lo que hace falta para pintar la alerta) para no
 // necesitar una segunda consulta por fila.
@@ -84,7 +87,7 @@ export async function listarAlertas() {
     const { data, error } = await obtenerSupabase()
       .from("alertas_caducidad")
       .select(COLUMNAS_DE_LA_ALERTA)
-      .eq("estado", "pendiente");
+      .eq("estado", ESTADOS_ALERTA.PENDIENTE);
 
     if (error) return { alertas: [], error: normalizarError(error) };
 
@@ -106,7 +109,7 @@ export async function historialAlertas() {
     const { data, error } = await obtenerSupabase()
       .from("alertas_caducidad")
       .select(COLUMNAS_DE_LA_ALERTA)
-      .eq("estado", "atendida")
+      .eq("estado", ESTADOS_ALERTA.ATENDIDA)
       .order("atendida_en", { ascending: false });
 
     if (error) return { alertas: [], error: normalizarError(error) };
@@ -133,12 +136,12 @@ export async function atenderAlerta(idAlerta, { accion, usuarioId, rolUsuario } 
     };
   }
 
-  if (!ACCIONES_DE_ALERTA.includes(accion)) {
+  if (!ACCIONES_VALIDAS.includes(accion)) {
     return {
       alerta: null,
       error: construirError(
         CODIGOS_DE_ERROR_DE_SUPABASE.CAMPO_REQUERIDO,
-        `La accion tomada es obligatoria y debe ser una de: ${ACCIONES_DE_ALERTA.join(", ")}.`,
+        `La accion tomada es obligatoria y debe ser una de: ${ACCIONES_VALIDAS.join(", ")}.`,
       ),
     };
   }
@@ -157,7 +160,7 @@ export async function atenderAlerta(idAlerta, { accion, usuarioId, rolUsuario } 
     const { data, error } = await obtenerSupabase()
       .from("alertas_caducidad")
       .update({
-        estado: "atendida",
+        estado: ESTADOS_ALERTA.ATENDIDA,
         accion,
         atendida_por: usuarioId,
         atendida_en: new Date().toISOString(),

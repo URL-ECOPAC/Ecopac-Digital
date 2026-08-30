@@ -9,7 +9,7 @@
 import { describe, expect, it } from "vitest";
 
 import { ROLES } from "../usuarios/roles.js";
-import { ESTADOS_JORNADA } from "./permisos.js";
+import { ESTADOS_JORNADA } from "../enums.js";
 import {
   advertirChoqueDeHorario,
   advertirJornadaDuplicada,

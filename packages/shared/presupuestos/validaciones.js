@@ -11,7 +11,7 @@
 // que cada pantalla trajera su propia copia, que es el bug que esta misma rama corrige en
 // donaciones.
 
-import { CATEGORIAS_DE_GASTO } from "./campos.js";
+import { CATEGORIAS_DE_GASTO } from "../enums.js";
 
 const CATEGORIAS_VALIDAS = Object.values(CATEGORIAS_DE_GASTO);
 

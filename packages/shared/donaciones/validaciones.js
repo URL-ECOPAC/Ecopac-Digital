@@ -27,7 +27,8 @@
 // y CAMPOS_DONANTE viven ahora en campos.js (issue #287): este archivo solo reimporta lo que
 // necesita para sus chequeos de pertenencia al enum.
 
-import { TIPOS_DE_DONACION, TIPOS_DE_DONANTE } from "./campos.js";
+import { TIPOS_DE_DONACION } from "../enums.js";
+import { TIPOS_DE_DONANTE } from "../enums.js";
 
 // Tipos que exigen al menos un renglon de detalle con cantidad: lo que se recibe se cuenta.
 // 'servicios' queda fuera a proposito: una jornada de voluntariado medico no tiene unidades.

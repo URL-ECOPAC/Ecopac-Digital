@@ -11,6 +11,7 @@
 
 import { aFechaLocal } from "../formato/fechas.js";
 import { combinarErrores, esTextoVacio, normalizarTexto } from "../validations/index.js";
+import { ESTADOS_PROYECTO } from "../enums.js";
 
 /**
  * Estados de un proyecto.
@@ -19,13 +20,6 @@ import { combinarErrores, esTextoVacio, normalizarTexto } from "../validations/i
  * supabase/migrations/00007_proyectos.sql. La base de datos es la fuente de verdad: si aqui se
  * escribe un estado que el enum no tiene, la consulta falla en tiempo de ejecucion.
  */
-export const ESTADOS_PROYECTO = {
-  PLANIFICADO: "planificado",
-  EN_CURSO: "en curso",
-  FINALIZADO: "finalizado",
-  CANCELADO: "cancelado",
-};
-
 export const TODOS_LOS_ESTADOS_PROYECTO = Object.values(ESTADOS_PROYECTO);
 
 /** Longitud maxima del nombre, la del VARCHAR(150) de la tabla. */

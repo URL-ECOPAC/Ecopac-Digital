@@ -16,19 +16,7 @@
 // llamar: el cliente pregunta para dibujar; el servidor decide.
 
 import { esAdministrador, ROLES } from "../usuarios/roles.js";
-
-/**
- * Estados del enum estado_jornada (00001_initial_schema.sql).
- *
- * La base de datos es la fuente de verdad: si aqui se escribe un estado que el enum no tiene,
- * la consulta falla en tiempo de ejecucion.
- */
-export const ESTADOS_JORNADA = Object.freeze({
-  PLANIFICADA: "planificada",
-  EN_CURSO: "en curso",
-  FINALIZADA: "finalizada",
-  CANCELADA: "cancelada",
-});
+import { ESTADOS_JORNADA } from "../enums.js";
 
 /**
  * Puede crear y modificar jornadas (asignacion de personal incluida).

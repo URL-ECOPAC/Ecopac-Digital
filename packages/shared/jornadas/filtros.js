@@ -3,14 +3,10 @@
 // agrupa por estado en vez de filtrar por un solo valor a la vez.
 
 import { TIPOS_DE_FILTRO } from "../descriptores.js";
+import { ESTADOS_JORNADA, ETIQUETAS_ESTADO_JORNADA, opcionesDe } from "../enums.js";
 
 /** Valores de estado_jornada (supabase/migrations/00001_initial_schema.sql). */
-export const OPCIONES_ESTADO_JORNADA = [
-  { value: "planificada", label: "Planificada" },
-  { value: "en curso", label: "En curso" },
-  { value: "finalizada", label: "Finalizada" },
-  { value: "cancelada", label: "Cancelada" },
-];
+export const OPCIONES_ESTADO_JORNADA = opcionesDe(ESTADOS_JORNADA, ETIQUETAS_ESTADO_JORNADA);
 
 export const FILTROS_JORNADA = [
   {

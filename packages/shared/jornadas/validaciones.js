@@ -15,7 +15,7 @@ import { aFechaLocal } from "../formato/fechas.js";
 import { esAdministrador } from "../usuarios/roles.js";
 import { combinarErrores, esTextoVacio, validarConDescriptores } from "../validations/index.js";
 import { CAMPOS_ASIGNACION_PERSONAL, CAMPOS_JORNADA } from "./campos.js";
-import { ESTADOS_JORNADA } from "./permisos.js";
+import { ESTADOS_JORNADA } from "../enums.js";
 
 /** Cadena de hora HH:MM; los minutos van obligados, las horas de uno o dos digitos. */
 const FORMA_DE_HORA = /^(\d{1,2}):(\d{2})$/;

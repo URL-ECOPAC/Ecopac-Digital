@@ -9,38 +9,20 @@
 import { labels } from "@ecopac/ui-tokens";
 
 import { TIPOS_DE_CAMPO } from "../descriptores.js";
+import {
+  ESTADOS_DE_DONACION,
+  ETIQUETAS_ESTADO_DONACION,
+  ETIQUETAS_TIPO_DONACION,
+  ETIQUETAS_TIPO_DONANTE,
+  TIPOS_DE_DONACION,
+  TIPOS_DE_DONANTE,
+  opcionesConClave,
+  opcionesDe,
+} from "../enums.js";
 
-/** Valores del enum tipo_donante (00022_donantes_donaciones.sql). */
-export const TIPOS_DE_DONANTE = {
-  PERSONA: "persona",
-  ORGANIZACION: "organizacion",
-};
+export const OPCIONES_TIPO_DONANTE = opcionesDe(TIPOS_DE_DONANTE, ETIQUETAS_TIPO_DONANTE);
 
-/** Valores del enum tipo_donacion (00022). */
-export const TIPOS_DE_DONACION = {
-  MEDICAMENTOS: "medicamentos",
-  INSUMOS: "insumos",
-  DINERO: "dinero",
-  SERVICIOS: "servicios",
-};
-
-/** Valores del enum estado_donacion (00022). */
-export const ESTADOS_DE_DONACION = {
-  REGISTRADA: "registrada",
-  ANULADA: "anulada",
-};
-
-export const OPCIONES_TIPO_DONANTE = [
-  { value: TIPOS_DE_DONANTE.PERSONA, label: "Persona" },
-  { value: TIPOS_DE_DONANTE.ORGANIZACION, label: "Organizacion" },
-];
-
-export const OPCIONES_TIPO_DONACION = [
-  { value: TIPOS_DE_DONACION.MEDICAMENTOS, label: "Medicamentos" },
-  { value: TIPOS_DE_DONACION.INSUMOS, label: "Insumos" },
-  { value: TIPOS_DE_DONACION.DINERO, label: "Dinero" },
-  { value: TIPOS_DE_DONACION.SERVICIOS, label: "Servicios" },
-];
+export const OPCIONES_TIPO_DONACION = opcionesDe(TIPOS_DE_DONACION, ETIQUETAS_TIPO_DONACION);
 
 /**
  * Catalogo de estado_donacion (00022) para filtros y ficha de detalle. La columna
@@ -50,10 +32,10 @@ export const OPCIONES_TIPO_DONACION = [
  * -filtro de estado, ficha de detalle-, y por eso la etiqueta sale de ui-tokens, no de un texto
  * suelto (criterio de aceptacion de la issue #287).
  */
-export const OPCIONES_ESTADO_DONACION = [
-  { value: ESTADOS_DE_DONACION.REGISTRADA, clave: "registrada", label: labels.donacionRegistrada },
-  { value: ESTADOS_DE_DONACION.ANULADA, clave: "anulada", label: labels.donacionAnulada },
-];
+export const OPCIONES_ESTADO_DONACION = opcionesConClave(
+  ESTADOS_DE_DONACION,
+  ETIQUETAS_ESTADO_DONACION,
+);
 
 /**
  * Catalogo de donantes.activo (00022), mismo patron que ESTADOS_USUARIO en usuarios/campos.js:

@@ -6,7 +6,8 @@
 
 import { describe, expect, it } from "vitest";
 
-import { TIPOS_DE_DONACION, TIPOS_DE_DONANTE } from "./campos.js";
+import { TIPOS_DE_DONACION } from "../enums.js";
+import { TIPOS_DE_DONANTE } from "../enums.js";
 import { validarAnulacionDeDonacion, validarDonacion, validarDonante } from "./validaciones.js";
 
 function hoy() {

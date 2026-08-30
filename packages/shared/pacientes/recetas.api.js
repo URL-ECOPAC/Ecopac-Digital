@@ -5,11 +5,7 @@ import {
   normalizarError,
 } from "../api/errores-de-supabase.js";
 import { motivoSinDisponibilidad } from "../inventario/existencias.validaciones.js";
-
-export const ESTADOS_RECETA = {
-  EMITIDA: "emitida",
-  ANULADA: "anulada",
-};
+import { ESTADOS_RECETA } from "../enums.js";
 
 const COLUMNAS_DE_LA_RECETA = [
   "id",
