@@ -1,28 +1,37 @@
 import React, { useState, useEffect } from "react";
 import ModalMedicamento from "./ModalMedicamento.jsx";
+import { ModalAltaLote } from "./ModalAltaLote.jsx";
+import { ModalAtenderAlerta } from "./ModalAtenderAlerta.jsx";
 
-// Importaciones nombradas exactas desde el API de medicamentos
+// API Medicamentos y Principios Activos (#154)
 import {
   listarMedicamentos,
   registrarMedicamento,
   actualizarMedicamento,
 } from "../../../../packages/shared/inventario/medicamentos.api.js";
 
-// Importaciones nombradas exactas del API de principios activos
 import {
   listarPrincipiosActivos,
   registrarPrincipioActivo,
 } from "../../../../packages/shared/inventario/principios-activos.api.js";
 
 import { useCatalogoMedicamentos } from "../../../../packages/shared/inventario/useCatalogoMedicamentos.js";
+import { useGestionLotes } from "../../../../packages/shared/inventario/useGestionLotes.js";
 
 export default function InventarioPage() {
+  // Pestaña Activa: 'catalogo' | 'lotes'
+  const [tabActiva, setTabActiva] = useState("catalogo");
+
   const [inventarioRaw, setInventarioRaw] = useState([]);
   const [principiosActivos, setPrincipiosActivos] = useState([]);
+  const [lotesRaw, setLotesRaw] = useState([]);
+  const [bodegas, setBodegas] = useState([]);
+  const [proveedores, setProveedores] = useState([]);
+  
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
 
-  // Estados del Modal
+  // Estados Modales Medicamentos (#154)
   const [modalAbierto, setModalAbierto] = useState(false);
   const [modoEdicion, setModoEdicion] = useState(false);
   const [cargandoGuardar, setCargandoGuardar] = useState(false);
@@ -36,9 +45,13 @@ export default function InventarioPage() {
     formaFarmaceutica: "",
   });
 
-  // Requerimiento Issue #154: Vista y permisos de Administrador
+  // Estados Modales Lotes (#155)
+  const [modalAltaLoteAbierto, setModalAltaLoteAbierto] = useState(false);
+  const [alertaSeleccionada, setAlertaSeleccionada] = useState(null);
+
   const esAdmin = true;
 
+  // Hooks Shared
   const {
     busqueda,
     setBusqueda,
@@ -50,6 +63,20 @@ export default function InventarioPage() {
     inventarioFiltrado,
   } = useCatalogoMedicamentos({ inventarioInicial: inventarioRaw });
 
+  const {
+    lotesFiltrados,
+    alertasCriticas,
+    validarNuevoLote,
+    atenderAlertaCaducidad,
+    errorValidacion: errorLotes,
+    setErrorValidacion: setErrorLotes,
+  } = useGestionLotes({
+    lotesIniciales: lotesRaw,
+    bodegas,
+    proveedores,
+    usuario: { id: "user-admin-uuid", rol: esAdmin ? "Administrador" : "Usuario" },
+  });
+
   const cargarDatos = async () => {
     try {
       setCargando(true);
@@ -60,14 +87,12 @@ export default function InventarioPage() {
         listarPrincipiosActivos(),
       ]);
 
-      // Extraer arreglo de medicamentos
       if (resMed.error) {
         setError(resMed.error.mensaje || "Error al cargar medicamentos");
       } else {
         setInventarioRaw(resMed.medicamentos || []);
       }
 
-      // Extraer arreglo de principios activos según firma real { principiosActivos, error }
       if (resPA.error) {
         console.error("Error cargando principios activos:", resPA.error);
       } else {
@@ -85,6 +110,7 @@ export default function InventarioPage() {
     cargarDatos();
   }, []);
 
+  // Handlers Medicamento (#154)
   const abrirModalNuevo = () => {
     setModoEdicion(false);
     setFormData({
@@ -119,7 +145,6 @@ export default function InventarioPage() {
     if (!nuevoNombre || !nuevoNombre.trim()) return;
 
     try {
-      // Llamada directa usando la función de la API de principios activos
       const { principioActivo, error: errorPA } = await registrarPrincipioActivo({
         nombre: nuevoNombre.trim(),
       });
@@ -130,10 +155,7 @@ export default function InventarioPage() {
       }
 
       if (principioActivo && principioActivo.id) {
-        // 1. Añadirlo inmediatamente a la lista local para renderizarlo en el select
         setPrincipiosActivos((prev) => [...prev, principioActivo]);
-
-        // 2. Seleccionar automáticamente el ID recién registrado en el formulario
         setFormData((prev) => ({
           ...prev,
           principio_activo_id: principioActivo.id,
@@ -146,7 +168,6 @@ export default function InventarioPage() {
   };
 
   const handleGuardarMedicamento = async () => {
-    // Validar combinación duplicada: Nombre + Concentración + Presentación + Marca (Issue #154)
     const duplicado = inventarioRaw.some(
       (item) =>
         item.id !== formData.id &&
@@ -173,10 +194,7 @@ export default function InventarioPage() {
           formaFarmaceutica: formData.formaFarmaceutica,
         });
 
-        if (errorUpdate) {
-          console.error("Error al actualizar medicamento:", errorUpdate);
-          return;
-        }
+        if (errorUpdate) return;
       } else {
         const { error: errorReg } = await registrarMedicamento({
           nombre: formData.nombre,
@@ -189,18 +207,33 @@ export default function InventarioPage() {
             : [],
         });
 
-        if (errorReg) {
-          console.error("Error al registrar medicamento:", errorReg);
-          return;
-        }
+        if (errorReg) return;
       }
 
       setModalAbierto(false);
       await cargarDatos();
     } catch (err) {
-      console.error("Error inesperado al guardar medicamento:", err);
+      console.error("Error al guardar medicamento:", err);
     } finally {
       setCargandoGuardar(false);
+    }
+  };
+
+  // Handlers Lotes (#155)
+  const handleGuardarLote = (datosLote) => {
+    if (validarNuevoLote(datosLote)) {
+      setModalAltaLoteAbierto(false);
+      // Aquí se conectaría la llamada a la API de registro de lotes
+      cargarDatos();
+    }
+  };
+
+  const handleResolverAlerta = (alertaId, accion) => {
+    const datosCierre = atenderAlertaCaducidad(alertaId, accion);
+    if (datosCierre) {
+      setAlertaSeleccionada(null);
+      // Aquí se conectaría la llamada a la API de actualización de alerta
+      cargarDatos();
     }
   };
 
@@ -216,26 +249,126 @@ export default function InventarioPage() {
           </p>
         </div>
 
-        {/* Botón visible solo si es Admin (#154) */}
+        {/* Acciones de Admin */}
         {esAdmin && (
-          <button
-            onClick={abrirModalNuevo}
-            style={{
-              padding: "10px 20px",
-              borderRadius: "9999px",
-              border: "none",
-              backgroundColor: "#10b981",
-              color: "#ffffff",
-              fontSize: "13px",
-              fontWeight: "700",
-              cursor: "pointer",
-              boxShadow: "0 2px 4px rgba(16, 185, 129, 0.2)",
-            }}
-          >
-            + Nuevo Medicamento
-          </button>
+          <div style={{ display: "flex", gap: "8px" }}>
+            {tabActiva === "catalogo" ? (
+              <button
+                onClick={abrirModalNuevo}
+                style={{
+                  padding: "10px 20px",
+                  borderRadius: "9999px",
+                  border: "none",
+                  backgroundColor: "#10b981",
+                  color: "#ffffff",
+                  fontSize: "13px",
+                  fontWeight: "700",
+                  cursor: "pointer",
+                }}
+              >
+                + Nuevo Medicamento
+              </button>
+            ) : (
+              <button
+                onClick={() => {
+                  setErrorLotes(null);
+                  setModalAltaLoteAbierto(true);
+                }}
+                style={{
+                  padding: "10px 20px",
+                  borderRadius: "9999px",
+                  border: "none",
+                  backgroundColor: "#2563eb",
+                  color: "#ffffff",
+                  fontSize: "13px",
+                  fontWeight: "700",
+                  cursor: "pointer",
+                }}
+              >
+                + Registrar Lote
+              </button>
+            )}
+          </div>
         )}
       </div>
+
+      {/* Pestañas de Navegación Módulo */}
+      <div style={{ display: "flex", borderBottom: "1px solid #e2e8f0", gap: "16px" }}>
+        <button
+          onClick={() => setTabActiva("catalogo")}
+          style={{
+            padding: "8px 16px",
+            fontSize: "13px",
+            fontWeight: "700",
+            border: "none",
+            background: "none",
+            cursor: "pointer",
+            borderBottom: tabActiva === "catalogo" ? "2px solid #10b981" : "2px solid transparent",
+            color: tabActiva === "catalogo" ? "#10b981" : "#64748b",
+          }}
+        >
+          Catálogo Medicamentos
+        </button>
+        <button
+          onClick={() => setTabActiva("lotes")}
+          style={{
+            padding: "8px 16px",
+            fontSize: "13px",
+            fontWeight: "700",
+            border: "none",
+            background: "none",
+            cursor: "pointer",
+            borderBottom: tabActiva === "lotes" ? "2px solid #2563eb" : "2px solid transparent",
+            color: tabActiva === "lotes" ? "#2563eb" : "#64748b",
+          }}
+        >
+          Lotes y Caducidades
+        </button>
+      </div>
+
+      {/* Tira de Alertas Críticas (Visible si existen lotes por vencer) */}
+      {alertasCriticas.length > 0 && (
+        <div style={{ padding: "12px 16px", backgroundColor: "#fffbeb", border: "1px solid #fef3c7", borderRadius: "12px" }}>
+          <span style={{ fontSize: "12px", fontWeight: "700", color: "#b45309" }}>
+            Alertas Críticas de Caducidad ({alertasCriticas.length})
+          </span>
+          <div style={{ display: "flex", gap: "8px", marginTop: "8px", flexWrap: "wrap" }}>
+            {alertasCriticas.map((lote) => (
+              <div
+                key={lote.id}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  padding: "4px 10px",
+                  borderRadius: "6px",
+                  fontSize: "11px",
+                  backgroundColor: lote.estadoAlerta === "danger" ? "#fee2e2" : "#fef3c7",
+                  color: lote.estadoAlerta === "danger" ? "#991b1b" : "#92400e",
+                }}
+              >
+                <span>
+                  {lote.medicamento?.nombre} (Lote: {lote.numero_lote}) -{" "}
+                  {lote.diasRestantes <= 0 ? "VENCIDO" : `${lote.diasRestantes} días`}
+                </span>
+                <button
+                  onClick={() => setAlertaSeleccionada(lote)}
+                  style={{
+                    padding: "2px 6px",
+                    fontSize: "10px",
+                    borderRadius: "4px",
+                    border: "1px solid #ccc",
+                    backgroundColor: "#fff",
+                    cursor: "pointer",
+                  }}
+                >
+                  Atender
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {error && (
         <div style={{ padding: "12px 16px", backgroundColor: "#fef2f2", color: "#991b1b", borderRadius: "12px", fontSize: "13px" }}>
@@ -251,7 +384,7 @@ export default function InventarioPage() {
         </div>
         <div style={{ backgroundColor: "#ffffff", padding: "16px", borderRadius: "16px", border: "1px solid #f1f5f9" }}>
           <span style={{ fontSize: "11px", fontWeight: "700", color: "#f59e0b" }}>POR VENCER</span>
-          <h2 style={{ fontSize: "24px", margin: "4px 0 0 0", color: "#f59e0b" }}>0</h2>
+          <h2 style={{ fontSize: "24px", margin: "4px 0 0 0", color: "#f59e0b" }}>{alertasCriticas.length}</h2>
         </div>
         <div style={{ backgroundColor: "#ffffff", padding: "16px", borderRadius: "16px", border: "1px solid #f1f5f9" }}>
           <span style={{ fontSize: "11px", fontWeight: "700", color: "#ec4899" }}>SIN STOCK</span>
@@ -263,7 +396,7 @@ export default function InventarioPage() {
         </div>
       </div>
 
-      {/* Buscador y Bodegas */}
+      {/* Buscador y Filtros */}
       <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
         <input
           type="text"
@@ -293,80 +426,119 @@ export default function InventarioPage() {
         </div>
       </div>
 
-      {/* Categorías Pills */}
-      {categoriasPills && (
-        <div style={{ display: "flex", gap: "8px", overflowX: "auto" }}>
-          {categoriasPills.map((cat) => (
-            <button
-              key={cat}
-              onClick={() => setCategoriaSeleccionada(cat)}
-              style={{
-                padding: "6px 16px",
-                borderRadius: "9999px",
-                fontSize: "12px",
-                border: "1px solid",
-                cursor: "pointer",
-                backgroundColor: categoriaSeleccionada === cat ? "#ecfdf5" : "#ffffff",
-                color: categoriaSeleccionada === cat ? "#047857" : "#64748b",
-                borderColor: categoriaSeleccionada === cat ? "#a7f3d0" : "#e2e8f0",
-              }}
-            >
-              {cat}
-            </button>
-          ))}
+      {/* Vista Tab: Catálogo de Medicamentos */}
+      {tabActiva === "catalogo" && (
+        <div style={{ backgroundColor: "#ffffff", borderRadius: "24px", border: "1px solid #f1f5f9", overflow: "hidden" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", fontSize: "13px" }}>
+            <thead>
+              <tr style={{ borderBottom: "1px solid #f1f5f9", color: "#94a3b8", fontSize: "10px" }}>
+                <th style={{ padding: "16px" }}>CÓDIGO</th>
+                <th style={{ padding: "16px" }}>DESCRIPCIÓN</th>
+                <th style={{ padding: "16px" }}>MARCA / FORMA</th>
+                <th style={{ padding: "16px" }}>LOTE / SERIE</th>
+                <th style={{ padding: "16px" }}>BODEGA</th>
+                <th style={{ padding: "16px" }}>STOCK</th>
+                {esAdmin && <th style={{ padding: "16px", textAlign: "center" }}>ACCIONES</th>}
+              </tr>
+            </thead>
+            <tbody>
+              {cargando ? (
+                <tr><td colSpan={esAdmin ? 7 : 6} style={{ padding: "32px", textAlign: "center", color: "#94a3b8" }}>Cargando inventario...</td></tr>
+              ) : inventarioFiltrado.length === 0 ? (
+                <tr><td colSpan={esAdmin ? 7 : 6} style={{ padding: "32px", textAlign: "center", color: "#94a3b8" }}>No hay referencias registradas.</td></tr>
+              ) : (
+                inventarioFiltrado.map((item) => (
+                  <tr key={item.id} style={{ borderBottom: "1px solid #f8fafc" }}>
+                    <td style={{ padding: "16px", color: "#10b981", fontFamily: "monospace" }}>{item.id ? item.id.substring(0, 8).toUpperCase() : "FAR-0000"}</td>
+                    <td style={{ padding: "16px", fontWeight: "700", color: "#1e293b" }}>
+                      {item.nombre} {item.concentracion ? `(${item.concentracion})` : ""}
+                    </td>
+                    <td style={{ padding: "16px", color: "#64748b" }}>
+                      {item.marca || "Generico"} {item.formaFarmaceutica ? `• ${item.formaFarmaceutica}` : ""}
+                    </td>
+                    <td style={{ padding: "16px", fontFamily: "monospace" }}>{item.lote || "N/A"}</td>
+                    <td style={{ padding: "16px" }}>{item.bodega || "CENTRAL"}</td>
+                    <td style={{ padding: "16px", fontWeight: "700" }}>{item.stock ?? 0}</td>
+                    {esAdmin && (
+                      <td style={{ padding: "16px", textAlign: "center" }}>
+                        <button
+                          onClick={() => abrirModalEditar(item)}
+                          style={{ border: "none", background: "none", color: "#0ea5e9", cursor: "pointer", fontWeight: "600", fontSize: "12px" }}
+                        >
+                          Editar
+                        </button>
+                      </td>
+                    )}
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
       )}
 
-      {/* Tabla */}
-      <div style={{ backgroundColor: "#ffffff", borderRadius: "24px", border: "1px solid #f1f5f9", overflow: "hidden" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", fontSize: "13px" }}>
-          <thead>
-            <tr style={{ borderBottom: "1px solid #f1f5f9", color: "#94a3b8", fontSize: "10px" }}>
-              <th style={{ padding: "16px" }}>CÓDIGO</th>
-              <th style={{ padding: "16px" }}>DESCRIPCIÓN</th>
-              <th style={{ padding: "16px" }}>MARCA / FORMA</th>
-              <th style={{ padding: "16px" }}>LOTE / SERIE</th>
-              <th style={{ padding: "16px" }}>BODEGA</th>
-              <th style={{ padding: "16px" }}>STOCK</th>
-              {esAdmin && <th style={{ padding: "16px", textAlign: "center" }}>ACCIONES</th>}
-            </tr>
-          </thead>
-          <tbody>
-            {cargando ? (
-              <tr><td colSpan={esAdmin ? 7 : 6} style={{ padding: "32px", textAlign: "center", color: "#94a3b8" }}>Cargando inventario...</td></tr>
-            ) : inventarioFiltrado.length === 0 ? (
-              <tr><td colSpan={esAdmin ? 7 : 6} style={{ padding: "32px", textAlign: "center", color: "#94a3b8" }}>No hay referencias registradas.</td></tr>
-            ) : (
-              inventarioFiltrado.map((item) => (
-                <tr key={item.id} style={{ borderBottom: "1px solid #f8fafc" }}>
-                  <td style={{ padding: "16px", color: "#10b981", fontFamily: "monospace" }}>{item.id ? item.id.substring(0, 8).toUpperCase() : "FAR-0000"}</td>
-                  <td style={{ padding: "16px", fontWeight: "700", color: "#1e293b" }}>
-                    {item.nombre} {item.concentracion ? `(${item.concentracion})` : ""}
-                  </td>
-                  <td style={{ padding: "16px", color: "#64748b" }}>
-                    {item.marca || "Generico"} {item.formaFarmaceutica ? `• ${item.formaFarmaceutica}` : ""}
-                  </td>
-                  <td style={{ padding: "16px", fontFamily: "monospace" }}>{item.lote || "N/A"}</td>
-                  <td style={{ padding: "16px" }}>{item.bodega || "CENTRAL"}</td>
-                  <td style={{ padding: "16px", fontWeight: "700" }}>{item.stock ?? 0}</td>
-                  {esAdmin && (
-                    <td style={{ padding: "16px", textAlign: "center" }}>
-                      <button
-                        onClick={() => abrirModalEditar(item)}
-                        style={{ border: "none", background: "none", color: "#0ea5e9", cursor: "pointer", fontWeight: "600", fontSize: "12px" }}
+      {/* Vista Tab: Gestión de Lotes y FEFO */}
+      {tabActiva === "lotes" && (
+        <div style={{ backgroundColor: "#ffffff", borderRadius: "24px", border: "1px solid #f1f5f9", overflow: "hidden" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", fontSize: "13px" }}>
+            <thead>
+              <tr style={{ borderBottom: "1px solid #f1f5f9", color: "#94a3b8", fontSize: "10px" }}>
+                <th style={{ padding: "16px" }}>NÚMERO LOTE</th>
+                <th style={{ padding: "16px" }}>MEDICAMENTO</th>
+                <th style={{ padding: "16px" }}>ORIGEN</th>
+                <th style={{ padding: "16px" }}>FECHA CADUCIDAD</th>
+                <th style={{ padding: "16px" }}>STOCK DISPONIBLE</th>
+                <th style={{ padding: "16px" }}>ESTADO</th>
+              </tr>
+            </thead>
+            <tbody>
+              {lotesFiltrados.length === 0 ? (
+                <tr><td colSpan="6" style={{ padding: "32px", textAlign: "center", color: "#94a3b8" }}>No hay lotes registrados.</td></tr>
+              ) : (
+                lotesFiltrados.map((item) => (
+                  <tr key={item.id} style={{ borderBottom: "1px solid #f8fafc" }}>
+                    <td style={{ padding: "16px", fontFamily: "monospace", fontWeight: "700" }}>{item.numero_lote}</td>
+                    <td style={{ padding: "16px", fontWeight: "600" }}>{item.medicamento?.nombre}</td>
+                    <td style={{ padding: "16px", textTransform: "capitalize" }}>{item.origen}</td>
+                    <td style={{ padding: "16px" }}>{item.fecha_vencimiento}</td>
+                    <td style={{ padding: "16px", fontWeight: "700" }}>{item.stockTotal} u.</td>
+                    <td style={{ padding: "16px" }}>
+                      <span
+                        style={{
+                          padding: "4px 8px",
+                          borderRadius: "9999px",
+                          fontSize: "11px",
+                          fontWeight: "700",
+                          backgroundColor:
+                            item.estadoAlerta === "danger"
+                              ? "#fee2e2"
+                              : item.estadoAlerta === "warning"
+                              ? "#fef3c7"
+                              : "#d1fae5",
+                          color:
+                            item.estadoAlerta === "danger"
+                              ? "#991b1b"
+                              : item.estadoAlerta === "warning"
+                              ? "#92400e"
+                              : "#065f46",
+                        }}
                       >
-                        Editar
-                      </button>
+                        {item.estadoAlerta === "danger"
+                          ? "Vencido"
+                          : item.estadoAlerta === "warning"
+                          ? "Próximo a Vencer"
+                          : "Vigente"}
+                      </span>
                     </td>
-                  )}
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
 
-      {/* Componente Modal */}
+      {/* Modales Medicamentos */}
       <ModalMedicamento
         isOpen={modalAbierto}
         onClose={() => setModalAbierto(false)}
@@ -378,6 +550,24 @@ export default function InventarioPage() {
         onCrearPrincipioActivo={handleCrearPrincipioActivo}
         advertenciaDuplicado={advertenciaDuplicado}
         cargando={cargandoGuardar}
+      />
+
+      {/* Modales Lotes */}
+      <ModalAltaLote
+        abierto={modalAltaLoteAbierto}
+        onClose={() => setModalAltaLoteAbierto(false)}
+        onGuardar={handleGuardarLote}
+        medicamentos={inventarioRaw}
+        proveedores={proveedores}
+        bodegas={bodegas}
+        errorValidacion={errorLotes}
+      />
+
+      <ModalAtenderAlerta
+        alerta={alertaSeleccionada}
+        onClose={() => setAlertaSeleccionada(null)}
+        onResolver={handleResolverAlerta}
+        errorValidacion={errorLotes}
       />
     </div>
   );
