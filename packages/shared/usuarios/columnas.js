@@ -48,9 +48,9 @@ export const CAMPOS_FICHA_VOLUNTARIO = [
  * atendio en esa jornada puntual, no el total de la jornada.
  */
 export const COLUMNAS_HISTORIAL_VOLUNTARIO = [
-  { id: 'nombre', label: 'Jornada', tipo: TIPOS_DE_PRESENTACION.TEXTO, principal: true },
-  { id: 'fecha', label: 'Fecha', tipo: TIPOS_DE_PRESENTACION.FECHA },
-  { id: 'estado', label: 'Estado', tipo: TIPOS_DE_PRESENTACION.CHIP },
-  { id: 'responsabilidad', label: 'Responsabilidad', tipo: TIPOS_DE_PRESENTACION.TEXTO },
-  { id: 'pacientesAtendidos', label: 'Pacientes atendidos', tipo: TIPOS_DE_PRESENTACION.NUMERO },
+  { id: "nombre", label: "Jornada", tipo: TIPOS_DE_PRESENTACION.TEXTO, principal: true },
+  { id: "fecha", label: "Fecha", tipo: TIPOS_DE_PRESENTACION.FECHA },
+  { id: "estado", label: "Estado", tipo: TIPOS_DE_PRESENTACION.CHIP },
+  { id: "responsabilidad", label: "Responsabilidad", tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  { id: "pacientesAtendidos", label: "Pacientes atendidos", tipo: TIPOS_DE_PRESENTACION.NUMERO },
 ];

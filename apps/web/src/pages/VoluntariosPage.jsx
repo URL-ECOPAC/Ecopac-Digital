@@ -1,18 +1,14 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import {
-  COLUMNAS_USUARIO,
-  FILTROS_USUARIO,
-  useUsuariosListado,
-} from '@ecopac/shared';
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { COLUMNAS_USUARIO, FILTROS_USUARIO, useUsuariosListado } from "@ecopac/shared";
 
-import DataList from '../components/DataList';
-import ErrorState from '../components/ErrorState';
-import FilterBar from '../components/FilterBar';
-import PageHeader from '../components/PageHeader';
-import ScreenContainer from '../components/ScreenContainer';
-import SecondaryButton from '../components/SecondaryButton';
-import ModalAltaUsuario from './ModalAltaUsuario';
+import DataList from "../components/DataList";
+import ErrorState from "../components/ErrorState";
+import FilterBar from "../components/FilterBar";
+import PageHeader from "../components/PageHeader";
+import ScreenContainer from "../components/ScreenContainer";
+import SecondaryButton from "../components/SecondaryButton";
+import ModalAltaUsuario from "./ModalAltaUsuario";
 
 // Pantalla de personal (issue #105). Solo presentacion: los datos, los filtros, la paginacion
 // y los catalogos salen de useUsuariosListado(), en packages/shared/usuarios/. Aqui no se

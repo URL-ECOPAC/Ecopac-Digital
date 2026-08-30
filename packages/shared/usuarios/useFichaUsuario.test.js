@@ -32,7 +32,11 @@ describe("combinarFichaUsuario", () => {
     const respuestaEspecialidades = { especialidades: [], error: null };
     const respuestaHistorial = { jornadas: [], error: null };
 
-    const { perfil } = combinarFichaUsuario(respuestaPerfil, respuestaEspecialidades, respuestaHistorial);
+    const { perfil } = combinarFichaUsuario(
+      respuestaPerfil,
+      respuestaEspecialidades,
+      respuestaHistorial,
+    );
 
     expect(perfil.especialidades).toEqual([]);
   });
@@ -42,7 +46,11 @@ describe("combinarFichaUsuario", () => {
     const respuestaEspecialidades = { especialidades: [], error: { codigo: "desconocido" } };
     const respuestaHistorial = { jornadas: [], error: null };
 
-    const { perfil, error } = combinarFichaUsuario(respuestaPerfil, respuestaEspecialidades, respuestaHistorial);
+    const { perfil, error } = combinarFichaUsuario(
+      respuestaPerfil,
+      respuestaEspecialidades,
+      respuestaHistorial,
+    );
 
     expect(error).toBeNull();
     expect(perfil.especialidades).toEqual([]);
@@ -69,7 +77,11 @@ describe("combinarFichaUsuario", () => {
     const respuestaEspecialidades = { especialidades: [], error: null };
     const respuestaHistorial = { jornadas: [], error: null };
 
-    const { perfil, error } = combinarFichaUsuario(respuestaPerfil, respuestaEspecialidades, respuestaHistorial);
+    const { perfil, error } = combinarFichaUsuario(
+      respuestaPerfil,
+      respuestaEspecialidades,
+      respuestaHistorial,
+    );
 
     expect(perfil).toBeNull();
     expect(error).toEqual({ codigo: "desconocido" });

@@ -84,7 +84,13 @@ export function useFichaUsuario(perfilId) {
 
   const cargar = useCallback(async () => {
     if (!perfilId) {
-      setEstado({ perfil: null, historial: [], cargando: false, error: null, errorHistorial: null });
+      setEstado({
+        perfil: null,
+        historial: [],
+        cargando: false,
+        error: null,
+        errorHistorial: null,
+      });
       return;
     }
 
@@ -96,7 +102,11 @@ export function useFichaUsuario(perfilId) {
       obtenerJornadasDePersona(perfilId),
     ]);
 
-    const combinado = combinarFichaUsuario(respuestaPerfil, respuestaEspecialidades, respuestaHistorial);
+    const combinado = combinarFichaUsuario(
+      respuestaPerfil,
+      respuestaEspecialidades,
+      respuestaHistorial,
+    );
     setEstado({ ...combinado, cargando: false });
   }, [perfilId]);
 

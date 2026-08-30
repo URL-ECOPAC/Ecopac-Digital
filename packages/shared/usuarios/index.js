@@ -11,14 +11,14 @@ export * from "./validaciones.js";
 // que `import { useRestablecerContrasena } from '@ecopac/shared'` devolvia undefined y las dos
 // paginas de contrasena de la web reventaban al renderizar. El barril no lo detecta al construir:
 // con export * encadenados el bundler no puede probar la ausencia de un nombre.
-export * from './useInicioSesion.js';
-export * from './useRestablecerContrasena.js';
-export * from './useNuevaContrasena.js';
-export * from './useUsuariosListado.js';
-export * from './useAltaUsuario.js';
-export * from './useEdicionUsuario.js';
-export * from './useDesactivacionUsuario.js';
-export * from './usePerfilPropio.js';
-export * from './useGestionPermisos.js';
-export * from './ficha.js';
-export * from './useFichaUsuario.js';
+export * from "./useInicioSesion.js";
+export * from "./useRestablecerContrasena.js";
+export * from "./useNuevaContrasena.js";
+export * from "./useUsuariosListado.js";
+export * from "./useAltaUsuario.js";
+export * from "./useEdicionUsuario.js";
+export * from "./useDesactivacionUsuario.js";
+export * from "./usePerfilPropio.js";
+export * from "./useGestionPermisos.js";
+export * from "./ficha.js";
+export * from "./useFichaUsuario.js";

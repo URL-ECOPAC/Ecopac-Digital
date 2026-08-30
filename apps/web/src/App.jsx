@@ -1,26 +1,26 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { MODULOS } from '@ecopac/shared';
-import { SesionProvider } from './contexto/SesionProvider';
-import MainLayout from './components/MainLayout';
-import RutaProtegida from './components/RutaProtegida';
-import LoginPage from './pages/LoginPage';
-import RestablecerContrasenaPage from './pages/RestablecerContrasenaPage';
-import NuevaContrasenaPage from './pages/NuevaContrasenaPage';
-import HomePage from './pages/HomePage';
-import PacientesPage from './pages/PacientesPage';
-import FichaPacientePage from './pages/FichaPacientePage';
-import PacientesCronicosPage from './pages/PacientesCronicosPage';
-import DonacionesPage from './pages/DonacionesPage';
-import InventarioPage from './pages/InventarioPage';
-import PresupuestosPage from './pages/PresupuestosPage';
-import ProyectosPage from './pages/ProyectosPage';
-import ReportesPage from './pages/ReportesPage';
-import JornadasPage from './pages/JornadasPage';
-import DetalleJornadaPage from './pages/DetalleJornadaPage';
-import VoluntariosPage from './pages/VoluntariosPage';
-import FichaUsuarioPage from './pages/FichaUsuarioPage';
-import PerfilPage from './pages/PerfilPage';
-import NotFoundPage from './pages/NotFoundPage';
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { MODULOS } from "@ecopac/shared";
+import { SesionProvider } from "./contexto/SesionProvider";
+import MainLayout from "./components/MainLayout";
+import RutaProtegida from "./components/RutaProtegida";
+import LoginPage from "./pages/LoginPage";
+import RestablecerContrasenaPage from "./pages/RestablecerContrasenaPage";
+import NuevaContrasenaPage from "./pages/NuevaContrasenaPage";
+import HomePage from "./pages/HomePage";
+import PacientesPage from "./pages/PacientesPage";
+import FichaPacientePage from "./pages/FichaPacientePage";
+import PacientesCronicosPage from "./pages/PacientesCronicosPage";
+import DonacionesPage from "./pages/DonacionesPage";
+import InventarioPage from "./pages/InventarioPage";
+import PresupuestosPage from "./pages/PresupuestosPage";
+import ProyectosPage from "./pages/ProyectosPage";
+import ReportesPage from "./pages/ReportesPage";
+import JornadasPage from "./pages/JornadasPage";
+import DetalleJornadaPage from "./pages/DetalleJornadaPage";
+import VoluntariosPage from "./pages/VoluntariosPage";
+import FichaUsuarioPage from "./pages/FichaUsuarioPage";
+import PerfilPage from "./pages/PerfilPage";
+import NotFoundPage from "./pages/NotFoundPage";
 
 // Las rutas siguen la definicion unica de MODULOS en packages/shared/navegacion.js:
 // si se agrega un modulo alli, hay que registrar aqui su ruta.
@@ -87,15 +87,15 @@ export default function App() {
                   ruta, con el mismo guard y los mismos roles que ya protegen /jornadas -- no se
                   declara en navegacion.js/MODULOS (rolesDe() solo lee de ahi), mismo patron que
                   /perfil mas abajo, que tampoco es un modulo del sidebar. */}
-              <Route path="/jornadas/:id" element={<DetalleJornadaPage />} />
-            </Route>
-            <Route element={<RutaProtegida roles={rolesDe('/voluntarios')} />}>
-              <Route path="/voluntarios" element={<VoluntariosPage />} />
-              {/* /voluntarios/:id: misma excepcion de alcance que /pacientes/:id y /jornadas/:id
+                <Route path="/jornadas/:id" element={<DetalleJornadaPage />} />
+              </Route>
+              <Route element={<RutaProtegida roles={rolesDe("/voluntarios")} />}>
+                <Route path="/voluntarios" element={<VoluntariosPage />} />
+                {/* /voluntarios/:id: misma excepcion de alcance que /pacientes/:id y /jornadas/:id
                   -- no es un modulo del sidebar, asi que no se declara en navegacion.js, y hereda
                   el guard y los roles de /voluntarios. */}
-              <Route path="/voluntarios/:id" element={<FichaUsuarioPage />} />
-            </Route>
+                <Route path="/voluntarios/:id" element={<FichaUsuarioPage />} />
+              </Route>
 
               {/* /perfil no es uno de los MODULOS: es la cuenta de quien entro, no un modulo de
                 negocio, asi que no aparece en el sidebar ni tiene una lista de roles que

@@ -1,6 +1,6 @@
-import { useState } from 'react';
-import { Badge } from 'react-bootstrap';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useState } from "react";
+import { Badge } from "react-bootstrap";
+import { useNavigate, useParams } from "react-router-dom";
 
 import {
   CAMPOS_FICHA_VOLUNTARIO,
@@ -15,7 +15,7 @@ import {
   TIPOS_DE_PRESENTACION,
   useFichaUsuario,
   valoresDeFichaVoluntario,
-} from '@ecopac/shared';
+} from "@ecopac/shared";
 
 import {
   Card,
@@ -26,11 +26,11 @@ import {
   ScreenContainer,
   StatusChip,
   Tabs,
-} from '../components';
-import { useSesionCompartida } from '../contexto/SesionProvider';
-import ModalEdicionUsuario from './ModalEdicionUsuario';
-import ModalPermisosUsuario from './ModalPermisosUsuario';
-import NotFoundPage from './NotFoundPage';
+} from "../components";
+import { useSesionCompartida } from "../contexto/SesionProvider";
+import ModalEdicionUsuario from "./ModalEdicionUsuario";
+import ModalPermisosUsuario from "./ModalPermisosUsuario";
+import NotFoundPage from "./NotFoundPage";
 
 // Ficha de una persona del equipo: sus datos y el historial de jornadas en las que participo,
 // en pestañas. Solo dibuja lo que useFichaUsuario() ya resuelve: no llama a Supabase, no valida,
@@ -54,13 +54,15 @@ function valorDeCampo(campo, valores) {
   const valor = valores[campo.desde ?? campo.id];
 
   if (campo.tipo === TIPOS_DE_PRESENTACION.ESTADO) {
-    const opcion = (CATALOGOS_FICHA[campo.etiquetasDesde] ?? []).find((entrada) => entrada.value === valor);
+    const opcion = (CATALOGOS_FICHA[campo.etiquetasDesde] ?? []).find(
+      (entrada) => entrada.value === valor,
+    );
     return <StatusChip status={opcion?.clave ?? valor} label={opcion?.label} />;
   }
 
   if (campo.tipo === TIPOS_DE_PRESENTACION.CHIPS) {
     const elementos = Array.isArray(valor) ? valor : [];
-    if (elementos.length === 0) return '—';
+    if (elementos.length === 0) return "—";
     return (
       <span className="d-inline-flex flex-wrap gap-1">
         {elementos.map((elemento) => (
@@ -73,14 +75,16 @@ function valorDeCampo(campo, valores) {
   }
 
   if (campo.etiquetasDesde) {
-    return valor === null || valor === undefined ? '—' : etiquetaDeCatalogo(campo.etiquetasDesde, valor);
+    return valor === null || valor === undefined
+      ? "—"
+      : etiquetaDeCatalogo(campo.etiquetasDesde, valor);
   }
 
   if (campo.tipo === TIPOS_DE_PRESENTACION.FECHA) {
-    return valor ? formatearFechaCorta(valor) : '—';
+    return valor ? formatearFechaCorta(valor) : "—";
   }
 
-  return valor === null || valor === undefined || valor === '' ? '—' : valor;
+  return valor === null || valor === undefined || valor === "" ? "—" : valor;
 }
 
 export default function FichaUsuarioPage() {
@@ -105,7 +109,9 @@ export default function FichaUsuarioPage() {
       <ScreenContainer>
         <PageHeader
           title="Ficha del personal"
-          actions={[{ label: 'Volver', onClick: () => navigate('/voluntarios'), variant: 'secondary' }]}
+          actions={[
+            { label: "Volver", onClick: () => navigate("/voluntarios"), variant: "secondary" },
+          ]}
         />
         <ErrorState message={error.mensaje} onRetry={recargar} />
       </ScreenContainer>
@@ -123,28 +129,30 @@ export default function FichaUsuarioPage() {
   const permisos = permisosDeUsuarios(rol);
   const filas = filasDeHistorial(historial);
 
-  const acciones = [{ label: 'Volver', onClick: () => navigate('/voluntarios'), variant: 'secondary' }];
+  const acciones = [
+    { label: "Volver", onClick: () => navigate("/voluntarios"), variant: "secondary" },
+  ];
   if (permisos.puedeEditarOtro) {
-    acciones.push({ label: 'Editar', onClick: () => setEditando(true) });
+    acciones.push({ label: "Editar", onClick: () => setEditando(true) });
   }
   if (permisos.puedeGestionarPermisosFinos) {
     acciones.push({
-      label: 'Permisos',
+      label: "Permisos",
       onClick: () => setGestionandoPermisos(true),
-      variant: 'secondary',
+      variant: "secondary",
     });
   }
 
   return (
     <ScreenContainer>
       <PageHeader
-        title={valores.nombreCompleto || 'Sin nombre'}
-        subtitle={etiquetaDeCatalogo('roles', perfil.rol)}
+        title={valores.nombreCompleto || "Sin nombre"}
+        subtitle={etiquetaDeCatalogo("roles", perfil.rol)}
         actions={acciones}
       />
 
       <Tabs tabs={PESTANIAS_FICHA_VOLUNTARIO} activo={pestaniaActiva} onChange={setPestaniaActiva}>
-        {pestaniaActiva === 'datos' && (
+        {pestaniaActiva === "datos" && (
           <Card>
             <dl className="row mb-0">
               {CAMPOS_FICHA_VOLUNTARIO.map((campo) => (
@@ -157,7 +165,7 @@ export default function FichaUsuarioPage() {
           </Card>
         )}
 
-        {pestaniaActiva === 'historial' &&
+        {pestaniaActiva === "historial" &&
           (errorHistorial ? (
             <ErrorState message={errorHistorial.mensaje} onRetry={recargar} />
           ) : (
