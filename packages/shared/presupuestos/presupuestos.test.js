@@ -127,7 +127,7 @@ describe('valores de enum del modulo', () => {
     ]);
   });
 
-  it('ESTADOS_DE_GASTO usa los valores vigentes de estado_movimiento, los de la 00023', () => {
+  it('ESTADOS_DE_GASTO usa los valores de estado_gasto (00089)', () => {
     expect(Object.values(ESTADOS_DE_GASTO)).toEqual(['pendiente', 'aprobado', 'rechazado']);
   });
 });

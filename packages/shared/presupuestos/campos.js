@@ -45,10 +45,11 @@ export const OPCIONES_CATEGORIA_GASTO = [
 ];
 
 /**
- * Valores del enum estado_movimiento, que gastos.estado reutiliza (00025).
+ * Valores del enum estado_gasto (00089, issue #412).
  *
- * El enum se redefinio en 00023_movimientos_inventario.sql: los valores vigentes son
- * 'pendiente', 'aprobado' y 'rechazado', no los de la 00001.
+ * Hasta la 00089, gastos.estado reutilizaba estado_movimiento (pensado para
+ * movimientos_inventario, 00023); ahora tiene su propio tipo, con el mismo vocabulario:
+ * 'pendiente', 'aprobado' y 'rechazado'.
  *
  * Esta constante es la que el PR #448 intentaba importar de @ecopac/ui-tokens como
  * `ESTADOS_GASTO`, y por eso rompio el build: ui-tokens no exporta eso ni deberia, porque un
