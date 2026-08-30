@@ -1,3 +1,4 @@
+import React from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ESTADOS_DE_RESTAURACION, inicializarSupabase } from '@ecopac/shared';
 
@@ -6,12 +7,24 @@ import { SesionProvider, useSesionCompartida } from './src/contexto/SesionProvid
 import AppNavigator from './src/navigation/AppNavigator';
 import RestaurandoSesionScreen from './src/screens/RestaurandoSesionScreen';
 
+// 1. Simular import.meta.env para paquetes web (Vite) en entorno Expo/Metro
+if (typeof import.meta === 'undefined') {
+  global.import = { meta: { env: {} } };
+} else if (!import.meta.env) {
+  import.meta.env = {};
+}
+
+// Mapear las variables EXPO_PUBLIC a import.meta.env
+import.meta.env.VITE_SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL;
+import.meta.env.VITE_SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+
 // El cliente de Supabase se crea una sola vez, aqui, con AsyncStorage como almacenamiento.
 // Va en el ambito del modulo y no dentro del componente: no debe rehacerse en cada render
 // ni depender de que un efecto llegue a ejecutarse.
 //
 // Si falta configuracion no se tumba la aplicacion, igual que en la web: el error se
 // registra y las pantallas sin datos siguen navegables.
+// Inicialización de Supabase con URL y AnonKey pasadas explícitamente
 try {
   inicializarSupabase({ almacenamiento: almacenamientoMovil });
 } catch (error) {
@@ -21,20 +34,7 @@ try {
   );
 }
 
-export default function App() {
-  return (
-    <SafeAreaProvider>
-      <SesionProvider>
-        <Raiz />
-      </SesionProvider>
-    </SafeAreaProvider>
-  );
-}
-
-/**
- * Va aparte de App porque el proveedor tiene que estar montado por encima de quien lo lee:
- * un componente no puede consumir un contexto que el mismo declara.
- */
+// 3. Componente interno Raiz
 function Raiz() {
   const { estadoRestauracion, haySesion } = useSesionCompartida();
 
@@ -42,5 +42,16 @@ function Raiz() {
     <RestaurandoSesionScreen />
   ) : (
     <AppNavigator haySesion={haySesion} />
+  );
+}
+
+// 4. Componente principal App
+export default function App() {
+  return (
+    <SafeAreaProvider>
+      <SesionProvider>
+        <Raiz />
+      </SesionProvider>
+    </SafeAreaProvider>
   );
 }
