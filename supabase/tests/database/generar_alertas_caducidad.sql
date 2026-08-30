@@ -2,7 +2,7 @@
 -- Corre con: supabase test db
 --
 -- No se simula ningun rol: la funcion es SECURITY DEFINER sin GRANT a authenticated/anon
--- (00087), pensada para que solo la Edge Function con la llave de servicio la invoque. El
+-- (00088), pensada para que solo la Edge Function con la llave de servicio la invoque. El
 -- rol dueno de las pruebas, exento de RLS, puede llamarla igual que un service_role -- lo que
 -- se prueba aqui es el resultado de la funcion, no quien tiene permiso de correrla.
 --
