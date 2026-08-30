@@ -2,7 +2,7 @@
 // (issue #287). Mismo patron que packages/shared/pacientes/filtros.js: cada FILTROS_X trae su
 // FILTROS_X_VACIOS, el estado inicial que consume la pantalla antes de que la persona toque nada.
 
-import { TIPOS_DE_FILTRO } from "../descriptores.js";
+import { SUBTIPOS_DE_RANGO, TIPOS_DE_FILTRO } from "../descriptores.js";
 import {
   OPCIONES_ESTADO_DONACION,
   OPCIONES_TIPO_DONACION,
@@ -56,6 +56,7 @@ export const FILTROS_DONACION = [
   {
     id: "rangoFecha",
     tipo: TIPOS_DE_FILTRO.RANGO,
+    subtipo: SUBTIPOS_DE_RANGO.FECHA,
     label: "Fecha",
     desde: "fechaInicio",
     hasta: "fechaFin",

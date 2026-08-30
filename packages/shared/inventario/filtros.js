@@ -8,7 +8,7 @@
 // tipos de movimiento estaban byte a byte en campos.js y otra vez aqui-, y nada obligaba a que
 // las dos copias coincidieran.
 
-import { TIPOS_DE_FILTRO } from "../descriptores.js";
+import { SUBTIPOS_DE_RANGO, TIPOS_DE_FILTRO } from "../descriptores.js";
 import {
   ESTADOS_ALERTA,
   ESTADOS_MOVIMIENTO,
@@ -75,7 +75,12 @@ export const FILTROS_LOTES = [
     label: "Proveedor",
     opcionesDesde: "proveedores",
   },
-  { id: "fechaVencimiento", tipo: TIPOS_DE_FILTRO.RANGO, label: "Vence entre" },
+  {
+    id: "fechaVencimiento",
+    tipo: TIPOS_DE_FILTRO.RANGO,
+    subtipo: SUBTIPOS_DE_RANGO.FECHA,
+    label: "Vence entre",
+  },
 ];
 
 // La bandeja de validacion es este mismo listado con el filtro estado fijado en

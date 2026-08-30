@@ -146,7 +146,7 @@ para pacientes, inventario o donaciones porque toda la informacion especifica de
 
 | Prop | Tipo | Descripcion |
 | ---- | ---- | ----------- |
-| `campos` | array | Descriptores de `filtros.js` del modulo, ej. `FILTROS_PACIENTE`. Cada uno trae `id`, `tipo`, `label` y, segun el tipo, `placeholder`, `opcionesDesde`, `min`/`max` (ver `packages/shared/pacientes/filtros.js`). |
+| `campos` | array | Descriptores de `filtros.js` del modulo, ej. `FILTROS_PACIENTE`. Cada uno trae `id`, `tipo`, `label` y, segun el tipo, `placeholder`, `opcionesDesde`, `min`/`max` (ver `packages/shared/pacientes/filtros.js`). Un `tipo: RANGO` trae ademas **`subtipo`** (ver abajo). |
 | `valores` | objeto | Valor actual de cada filtro, indexado por `id` (ej. `{ busqueda: '', comunidad: null }`). |
 | `onChange` | fn(id, valor) | Se llama cuando el usuario cambia un filtro. `FilterBar` no guarda estado propio: quien lo usa decide que hacer con el valor nuevo. |
 | `catalogos` | objeto | Listas de opciones indexadas por el nombre que declara `opcionesDesde`, ej. `{ roles: [...], comunidades: [...] }`. Ver "Resolucion de catalogos" abajo. |
@@ -203,6 +203,20 @@ ningun modulo ni pedir datos por su cuenta.
 
 Un catalogo que todavia no cargo deja el select vacio y **deshabilitado**, en vez de mostrar un
 desplegable que no hace nada.
+
+**De que es un rango.** Un filtro `TIPOS_DE_FILTRO.RANGO` se dibuja con dos componentes muy
+distintos -`DateField` o `NumberField`-, y el tipo solo no lo dice. Lo declara el descriptor en
+`subtipo`, con `SUBTIPOS_DE_RANGO` de `descriptores.js`: `FECHA` o `NUMERO`. **`FilterBar` no lo
+adivina.**
+
+Antes si lo adivinaba: si el descriptor traia `min` o `max` numericos lo tomaba por numerico, y si
+no por de fechas. Acertaba con los ocho rangos que existen, pero un rango numerico sin limites
+declarados -perfectamente legitimo- habria dibujado selectores de fecha, y eso no revienta: se ve
+mal, y solo cuando alguien lo usa (issue #386).
+
+Un rango sin `subtipo` cae en `NumberField`. Es a proposito y no al reves: siete de los ocho son
+de fecha, asi que el defecto contrario taparia el olvido. Que ninguno se quede sin declararlo lo
+comprueba `packages/shared/filtros.test.js`.
 
 **Forma de una opcion.** Una opcion es `{ label, value }`, y **es la unica forma que existe**:
 la publican asi todos los catalogos de `shared` -los escritos a mano, como `OPCIONES_ROL` en
