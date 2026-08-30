@@ -67,6 +67,15 @@ jobs:
       - name: Ejecutar lint en todos los workspaces
         run: npm run lint
 
+      # Prettier estaba configurado (.prettierrc) y en devDependencies desde antes, pero sin
+      # script format/format:check ni paso de CI que lo llamara: la configuracion era
+      # decorativa y el repositorio mezclaba estilos hasta dentro del mismo archivo (issue
+      # #515). Alcance JS/JSX/TS/TSX/JSON unicamente (ver .prettierignore): supabase/ (SQL) y
+      # docs/ (Markdown con tablas armadas a mano) y .github/ (YAML con comentarios alineados a
+      # proposito) quedan fuera a proposito, no por descuido.
+      - name: Comprobar formato con Prettier
+        run: npm run format:check
+
       # Antes del build a proposito: una prueba rota se ve en segundos, sin esperar a que
       # la web compile. Corre en el mismo job que el lint para que el check requerido siga
       # llamandose "Lint y build" y no haya que tocar la proteccion de ramas.
