@@ -9,16 +9,8 @@
 import { describe, expect, it } from "vitest";
 
 import { ROLES } from "../usuarios/roles.js";
-import {
-  ESTADOS_PROYECTO,
-  esTransicionDeProyectoValida,
-  LONGITUD_MAXIMA_NOMBRE_PROYECTO,
-  TODOS_LOS_ESTADOS_PROYECTO,
-  TRANSICIONES_PROYECTO,
-  transicionesDeProyectoDesde,
-  validarCambioDeEstadoProyecto,
-  validarProyecto,
-} from "./validaciones.js";
+import { esTransicionDeProyectoValida, LONGITUD_MAXIMA_NOMBRE_PROYECTO, TODOS_LOS_ESTADOS_PROYECTO, TRANSICIONES_PROYECTO, transicionesDeProyectoDesde, validarCambioDeEstadoProyecto, validarProyecto } from "./validaciones.js";
+import { ESTADOS_PROYECTO } from "../enums.js";
 import {
   permisosDeProyectos,
   puedeAdministrarProyectos,

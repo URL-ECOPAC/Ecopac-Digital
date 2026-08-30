@@ -8,16 +8,8 @@
 import { describe, expect, it } from "vitest";
 
 import { ROLES } from "../usuarios/roles.js";
-import {
-  ESTADOS_JORNADA,
-  permisosDeJornadas,
-  puedeAdministrarJornadas,
-  puedeEditarJornada,
-  puedeReabrirJornada,
-  puedeVerHistorialJornada,
-  puedeVerJornadas,
-  puedeVerRosterCompleto,
-} from "./permisos.js";
+import { permisosDeJornadas, puedeAdministrarJornadas, puedeEditarJornada, puedeReabrirJornada, puedeVerHistorialJornada, puedeVerJornadas, puedeVerRosterCompleto } from "./permisos.js";
+import { ESTADOS_JORNADA } from "../enums.js";
 
 describe("permisos de jornadas", () => {
   it("solo Administrador administra, como pide el criterio de aceptacion", () => {

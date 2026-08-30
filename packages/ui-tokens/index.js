@@ -19,7 +19,7 @@ export const colors = {
   danger: '#B81F6F', // Crítico: medicamento vencido, sin stock y movimiento rechazado
   warning: '#F1A239', // Próximo a vencer y advertencias que no bloquean
   success: '#2A9C36', // Confirmaciones y estado aprobado; misma familia que primary
-  info: '#3C9CC0', // Pendiente de validación y valores informativos
+  info: '#3C9CC0', // Estados pendientes y valores informativos
   background: '#F7F8FA', // Fondo general de las pantallas
   surface: '#FFFFFF', // Tarjetas, sidebar y superficies elevadas
   border: '#E9E9E9', // Bordes de tarjeta, separadores y pistas de barra de progreso
@@ -125,7 +125,6 @@ export const typography = {
 export const labels = {
   medicamentoVencido: 'Medicamento vencido',
   proximoAVencer: 'Próximo a vencer',
-  pendienteDeValidacion: 'Pendiente de validación',
   aprobado: 'Aprobado',
   rechazado: 'Rechazado',
   disponible: 'Disponible',

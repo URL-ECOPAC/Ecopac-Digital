@@ -28,7 +28,7 @@ import {
   normalizarError,
 } from "../api/errores-de-supabase.js";
 import { COLUMNAS_DE_CONDICION_CRONICA } from "./api.js";
-import { ESTADOS_CONDICION_CRONICA } from "./condiciones.campos.js";
+import { ESTADOS_CONDICION_CRONICA } from "../enums.js";
 import {
   normalizarDatosCondicion,
   validarCambioDeCondicion,

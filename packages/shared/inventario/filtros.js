@@ -2,12 +2,24 @@
 // medicamentos, lotes, movimientos (incluida la bandeja de validacion, que es el
 // mismo listado filtrado por estado = 'pendiente'), existencias y alertas.
 //
-// Los valores de select que vienen de un enum de la base de datos se escriben
-// literales, tal como estan en la migracion vigente (ver campos.js para el detalle de
-// que migracion define cada uno): no se inventan valores nuevos ni se reusan los del
-// diccionario de datos original cuando la migracion aplicada los cambio.
+// Los valores de select que vienen de un enum de la base de datos NO se escriben aqui: se
+// derivan de enums.js, que es donde cada enum esta declarado una sola vez y con la migracion
+// que lo define (issue #397). Antes se repetian literales -las siete presentaciones y los dos
+// tipos de movimiento estaban byte a byte en campos.js y otra vez aqui-, y nada obligaba a que
+// las dos copias coincidieran.
 
 import { TIPOS_DE_FILTRO } from '../descriptores.js';
+import {
+  ESTADOS_ALERTA,
+  ESTADOS_MOVIMIENTO,
+  ETIQUETAS_ESTADO_ALERTA,
+  ETIQUETAS_ESTADO_MOVIMIENTO,
+  ETIQUETAS_PRESENTACION,
+  ETIQUETAS_TIPO_MOVIMIENTO,
+  PRESENTACIONES_DE_MEDICAMENTO,
+  TIPOS_DE_MOVIMIENTO,
+  opcionesDe,
+} from '../enums.js';
 
 export const FILTROS_PRINCIPIOS_ACTIVOS = [
   { id: 'busqueda', tipo: TIPOS_DE_FILTRO.BUSQUEDA, label: 'Buscar principio activo', placeholder: 'Nombre del principio activo' },
@@ -19,15 +31,7 @@ export const FILTROS_MEDICAMENTOS = [
     id: 'presentacion',
     tipo: TIPOS_DE_FILTRO.SELECT,
     label: 'Presentacion',
-    opciones: [
-      { value: 'tableta', label: 'Tableta' },
-      { value: 'jarabe', label: 'Jarabe' },
-      { value: 'capsula', label: 'Capsula' },
-      { value: 'inyectable', label: 'Inyectable' },
-      { value: 'pomada', label: 'Pomada' },
-      { value: 'gotas ophthalmic', label: 'Gotas oftalmicas' },
-      { value: 'gotas otic', label: 'Gotas oticas' },
-    ],
+    opciones: opcionesDe(PRESENTACIONES_DE_MEDICAMENTO, ETIQUETAS_PRESENTACION),
   },
   // Valores como texto ('true'/'false'), igual que el resto de filtros SELECT del modulo: el
   // hook de pantalla los convierte al tipo real antes de llamar listarMedicamentos({ esPediatrico }).
@@ -56,20 +60,13 @@ export const FILTROS_MOVIMIENTOS = [
     id: 'tipo',
     tipo: TIPOS_DE_FILTRO.SELECT,
     label: 'Tipo',
-    opciones: [
-      { value: 'ingreso', label: 'Ingreso' },
-      { value: 'salida', label: 'Salida' },
-    ],
+    opciones: opcionesDe(TIPOS_DE_MOVIMIENTO, ETIQUETAS_TIPO_MOVIMIENTO),
   },
   {
     id: 'estado',
     tipo: TIPOS_DE_FILTRO.SELECT,
     label: 'Estado',
-    opciones: [
-      { value: 'pendiente', label: 'Pendiente' },
-      { value: 'aprobado', label: 'Aprobado' },
-      { value: 'rechazado', label: 'Rechazado' },
-    ],
+    opciones: opcionesDe(ESTADOS_MOVIMIENTO, ETIQUETAS_ESTADO_MOVIMIENTO),
   },
   { id: 'bodega', tipo: TIPOS_DE_FILTRO.SELECT, label: 'Bodega', opcionesDesde: 'bodegas' },
 ];
@@ -84,9 +81,6 @@ export const FILTROS_ALERTAS = [
     id: 'estado',
     tipo: TIPOS_DE_FILTRO.SELECT,
     label: 'Estado',
-    opciones: [
-      { value: 'pendiente', label: 'Pendiente' },
-      { value: 'atendida', label: 'Atendida' },
-    ],
+    opciones: opcionesDe(ESTADOS_ALERTA, ETIQUETAS_ESTADO_ALERTA),
   },
 ];

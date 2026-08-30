@@ -14,7 +14,7 @@
 
 import { obtenerSupabase } from "../api/cliente.js";
 import { normalizarError } from "../api/errores-de-supabase.js";
-import { TIPOS_DE_DONACION } from "./campos.js";
+import { TIPOS_DE_DONACION } from "../enums.js";
 import { puedeVerDonaciones } from "./permisos.js";
 
 const COLUMNAS_DE_LA_DONACION = [

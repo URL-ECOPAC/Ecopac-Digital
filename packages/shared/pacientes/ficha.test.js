@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { ROLES } from "../usuarios/roles.js";
 import { CAMPOS_FICHA_PACIENTE } from "./columnas.js";
-import { ESTADOS_CONDICION_CRONICA } from "./condiciones.campos.js";
+import { ESTADOS_CONDICION_CRONICA } from "../enums.js";
 import {
   cabeceraDePaciente,
   condicionesDestacadas,

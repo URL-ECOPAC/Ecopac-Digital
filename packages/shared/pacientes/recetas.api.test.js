@@ -12,8 +12,9 @@ vi.mock("../api/cliente.js", () => ({
 }));
 
 const { CODIGOS_DE_ERROR_DE_SUPABASE } = await import("../api/errores-de-supabase.js");
-const { generarReceta, obtenerReceta, obtenerRecetas, anularReceta, ESTADOS_RECETA } =
+const { generarReceta, obtenerReceta, obtenerRecetas, anularReceta } =
   await import("./recetas.api.js");
+const { ESTADOS_RECETA } = await import("../enums.js");
 
 function crearCliente({ rpc = { data: "rec-1", error: null }, tabla = { data: null, error: null } } = {}) {
   const llamadas = [];

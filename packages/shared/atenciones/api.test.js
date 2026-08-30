@@ -24,7 +24,7 @@ vi.mock("../api/cliente.js", () => ({
 }));
 
 const { CODIGOS_DE_ERROR_DE_SUPABASE } = await import("../api/errores-de-supabase.js");
-const { ESTADOS_JORNADA } = await import("../jornadas/permisos.js");
+const { ESTADOS_JORNADA } = await import("../enums.js");
 const { ETAPAS_DE_COLA, ORDEN_DE_ETAPAS } = await import("./etapas.js");
 const { cerrarAtencion, iniciarAtencion, obtenerCola } = await import("./api.js");
 

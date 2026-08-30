@@ -8,7 +8,7 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { CATEGORIAS_DE_GASTO } from './campos.js';
+import { CATEGORIAS_DE_GASTO } from "../enums.js";
 import { validarGasto } from './validaciones.js';
 
 function hoy() {

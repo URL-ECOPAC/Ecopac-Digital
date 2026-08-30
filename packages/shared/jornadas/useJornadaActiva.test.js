@@ -12,7 +12,7 @@ import {
   elegirJornadaInicial,
   filtrarJornadasEnCurso,
 } from "./useJornadaActiva.js";
-import { ESTADOS_JORNADA } from "./permisos.js";
+import { ESTADOS_JORNADA } from "../enums.js";
 
 function jornada(id, estado) {
   return { id, estado };

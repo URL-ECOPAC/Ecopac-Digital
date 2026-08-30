@@ -19,53 +19,20 @@
 // Ver packages/shared/pacientes/campos.js, que es el ejemplar de referencia.
 
 import { TIPOS_DE_CAMPO } from "../descriptores.js";
+import {
+  CATEGORIAS_DE_GASTO,
+  ESTADOS_DE_GASTO,
+  ETIQUETAS_CATEGORIA_GASTO,
+  ETIQUETAS_ESTADO_GASTO,
+  opcionesDe,
+} from "../enums.js";
 
-/**
- * Valores del enum categoria_gasto (supabase/migrations/00025_presupuesto_gastos.sql).
- *
- * Van capitalizados porque asi estan declarados en la migracion, que es la fuente de verdad
- * (AGENTS.md). Se listan aqui una sola vez para que ninguna pantalla escriba el valor a mano.
- */
-export const CATEGORIAS_DE_GASTO = {
-  MEDICAMENTOS: "Medicamentos",
-  LOGISTICA: "Logistica",
-  DIAGNOSTICO: "Diagnostico",
-  HONORARIOS: "Honorarios",
-  EDUCACION: "Educacion",
-  INFRAESTRUCTURA: "Infraestructura",
-};
+export const OPCIONES_CATEGORIA_GASTO = opcionesDe(
+  CATEGORIAS_DE_GASTO,
+  ETIQUETAS_CATEGORIA_GASTO,
+);
 
-export const OPCIONES_CATEGORIA_GASTO = [
-  { value: CATEGORIAS_DE_GASTO.MEDICAMENTOS, label: "Medicamentos" },
-  { value: CATEGORIAS_DE_GASTO.LOGISTICA, label: "Logistica" },
-  { value: CATEGORIAS_DE_GASTO.DIAGNOSTICO, label: "Diagnostico" },
-  { value: CATEGORIAS_DE_GASTO.HONORARIOS, label: "Honorarios" },
-  { value: CATEGORIAS_DE_GASTO.EDUCACION, label: "Educacion" },
-  { value: CATEGORIAS_DE_GASTO.INFRAESTRUCTURA, label: "Infraestructura" },
-];
-
-/**
- * Valores del enum estado_gasto (00089, issue #412).
- *
- * Hasta la 00089, gastos.estado reutilizaba estado_movimiento (pensado para
- * movimientos_inventario, 00023); ahora tiene su propio tipo, con el mismo vocabulario:
- * 'pendiente', 'aprobado' y 'rechazado'.
- *
- * Esta constante es la que el PR #448 intentaba importar de @ecopac/ui-tokens como
- * `ESTADOS_GASTO`, y por eso rompio el build: ui-tokens no exporta eso ni deberia, porque un
- * valor de enum del dominio no es un token de diseno.
- */
-export const ESTADOS_DE_GASTO = {
-  PENDIENTE: "pendiente",
-  APROBADO: "aprobado",
-  RECHAZADO: "rechazado",
-};
-
-export const OPCIONES_ESTADO_GASTO = [
-  { value: ESTADOS_DE_GASTO.PENDIENTE, label: "Pendiente" },
-  { value: ESTADOS_DE_GASTO.APROBADO, label: "Aprobado" },
-  { value: ESTADOS_DE_GASTO.RECHAZADO, label: "Rechazado" },
-];
+export const OPCIONES_ESTADO_GASTO = opcionesDe(ESTADOS_DE_GASTO, ETIQUETAS_ESTADO_GASTO);
 
 /**
  * Formulario de registro y edicion de un gasto.

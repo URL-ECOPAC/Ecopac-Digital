@@ -22,7 +22,7 @@ vi.mock("../api/cliente.js", () => ({
 
 const { CODIGOS_DE_ERROR_DE_SUPABASE } = await import("../api/errores-de-supabase.js");
 const { ROLES } = await import("../usuarios/roles.js");
-const { ESTADOS_JORNADA } = await import("./permisos.js");
+const { ESTADOS_JORNADA } = await import("../enums.js");
 // Se importa la regla pura para comparar contra ella en vez de repetir sus textos aqui.
 const { puedeRegistrarEnJornada } = await import("./validaciones.js");
 const {

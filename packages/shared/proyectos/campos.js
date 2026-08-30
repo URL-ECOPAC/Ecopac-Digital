@@ -4,10 +4,10 @@
 // validaciones.js (los usa tambien TRANSICIONES_PROYECTO ahi mismo); este archivo los importa
 // en vez de declarar una segunda copia.
 
-import { labels } from "@ecopac/ui-tokens";
 
 import { TIPOS_DE_CAMPO } from "../descriptores.js";
-import { ESTADOS_PROYECTO, LONGITUD_MAXIMA_NOMBRE_PROYECTO } from "./validaciones.js";
+import { LONGITUD_MAXIMA_NOMBRE_PROYECTO } from "./validaciones.js";
+import { ESTADOS_PROYECTO, ETIQUETAS_ESTADO_PROYECTO, opcionesConClave } from "../enums.js";
 
 /**
  * Catalogo de estado_proyecto (00007) para filtros y ficha de detalle. Las claves de
@@ -15,12 +15,10 @@ import { ESTADOS_PROYECTO, LONGITUD_MAXIMA_NOMBRE_PROYECTO } from "./validacione
  * cancelado, distintas de las femeninas de estado_jornada); 'en curso' es identico entre los
  * dos enums y reutiliza la misma etiqueta.
  */
-export const OPCIONES_ESTADO_PROYECTO = [
-  { value: ESTADOS_PROYECTO.PLANIFICADO, clave: "planificado", label: labels.proyectoPlanificado },
-  { value: ESTADOS_PROYECTO.EN_CURSO, clave: "en curso", label: labels.jornadaEnCurso },
-  { value: ESTADOS_PROYECTO.FINALIZADO, clave: "finalizado", label: labels.proyectoFinalizado },
-  { value: ESTADOS_PROYECTO.CANCELADO, clave: "cancelado", label: labels.proyectoCancelado },
-];
+export const OPCIONES_ESTADO_PROYECTO = opcionesConClave(
+  ESTADOS_PROYECTO,
+  ETIQUETAS_ESTADO_PROYECTO,
+);
 
 /**
  * Formulario de creacion/edicion de un proyecto (proyectos, 00007). `estado` no es un campo de

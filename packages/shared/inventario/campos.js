@@ -22,54 +22,35 @@
 // ajustar.
 
 import { TIPOS_DE_CAMPO } from '../descriptores.js';
+import {
+  ACCIONES_DE_ALERTA,
+  ETIQUETAS_ACCION_ALERTA,
+  ETIQUETAS_ORIGEN_LOTE,
+  ETIQUETAS_PRESENTACION,
+  ETIQUETAS_TIPO_MOVIMIENTO,
+  ETIQUETAS_TIPO_PROVEEDOR,
+  ORIGENES_DE_LOTE,
+  PRESENTACIONES_DE_MEDICAMENTO,
+  TIPOS_DE_MOVIMIENTO,
+  TIPOS_DE_PROVEEDOR,
+  opcionesDe,
+} from '../enums.js';
 
-/** Valores de presentacion_medicamento (supabase/migrations/00001_initial_schema.sql). */
-export const OPCIONES_PRESENTACION = [
-  { value: 'tableta', label: 'Tableta' },
-  { value: 'jarabe', label: 'Jarabe' },
-  { value: 'capsula', label: 'Capsula' },
-  { value: 'inyectable', label: 'Inyectable' },
-  { value: 'pomada', label: 'Pomada' },
-  { value: 'gotas ophthalmic', label: 'Gotas oftalmicas' },
-  { value: 'gotas otic', label: 'Gotas oticas' },
-];
+export const OPCIONES_PRESENTACION = opcionesDe(
+  PRESENTACIONES_DE_MEDICAMENTO,
+  ETIQUETAS_PRESENTACION,
+);
 
-/**
- * Valores de tipo_proveedor (00017_proveedores_bodegas.sql).
- *
- * TIPOS_DE_PROVEEDOR es la forma con la que el codigo compara (proveedores.api.js); las opciones
- * de abajo son la forma con la que se dibuja un select. Los dos nacen aqui y en ningun otro sitio:
- * un nombre que el barril reciba desde dos archivos queda ambiguo y ESM lo excluye del namespace
- * (issue #365).
- */
-export const TIPOS_DE_PROVEEDOR = {
-  COMERCIAL: 'comercial',
-  DONANTE: 'donante',
-};
+export const OPCIONES_TIPO_PROVEEDOR = opcionesDe(TIPOS_DE_PROVEEDOR, ETIQUETAS_TIPO_PROVEEDOR);
 
-export const OPCIONES_TIPO_PROVEEDOR = [
-  { value: TIPOS_DE_PROVEEDOR.COMERCIAL, label: 'Comercial' },
-  { value: TIPOS_DE_PROVEEDOR.DONANTE, label: 'Donante' },
-];
+export const OPCIONES_ORIGEN_LOTE = opcionesDe(ORIGENES_DE_LOTE, ETIQUETAS_ORIGEN_LOTE);
 
-/** Valores de origen_lote (00020_lotes_existencias.sql). */
-export const OPCIONES_ORIGEN_LOTE = [
-  { value: 'compra', label: 'Compra' },
-  { value: 'donacion', label: 'Donacion' },
-];
+export const OPCIONES_TIPO_MOVIMIENTO = opcionesDe(
+  TIPOS_DE_MOVIMIENTO,
+  ETIQUETAS_TIPO_MOVIMIENTO,
+);
 
-/** Valores de tipo_movimiento vigente (00023_movimientos_inventario.sql redefine el de 00001). */
-export const OPCIONES_TIPO_MOVIMIENTO = [
-  { value: 'ingreso', label: 'Ingreso' },
-  { value: 'salida', label: 'Salida' },
-];
-
-/** Valores de accion_alerta (00021_alertas_caducidad.sql). */
-export const OPCIONES_ACCION_ALERTA = [
-  { value: 'donado', label: 'Donado' },
-  { value: 'reubicado', label: 'Reubicado' },
-  { value: 'descartado', label: 'Descartado' },
-];
+export const OPCIONES_ACCION_ALERTA = opcionesDe(ACCIONES_DE_ALERTA, ETIQUETAS_ACCION_ALERTA);
 
 /**
  * Alta y edicion de un principio activo del catalogo (principios_activos, 00016).

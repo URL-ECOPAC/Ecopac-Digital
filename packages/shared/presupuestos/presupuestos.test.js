@@ -10,14 +10,8 @@
 import { describe, expect, it } from 'vitest';
 
 import { TIPOS_DE_CAMPO, TIPOS_DE_FILTRO } from '../descriptores.js';
-import {
-  CAMPOS_FICHA_GASTO,
-  CAMPOS_GASTO,
-  CATEGORIAS_DE_GASTO,
-  COLUMNAS_GASTO,
-  ESTADOS_DE_GASTO,
-  FILTROS_GASTO,
-} from './index.js';
+import { CATEGORIAS_DE_GASTO, ESTADOS_DE_GASTO } from '../enums.js';
+import { CAMPOS_FICHA_GASTO, CAMPOS_GASTO, COLUMNAS_GASTO, FILTROS_GASTO } from './index.js';
 
 // Columnas de la tabla gastos (00025). Un descriptor cuyo id no este aqui apunta a nada.
 const COLUMNAS_DE_LA_TABLA = [

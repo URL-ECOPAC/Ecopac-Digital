@@ -19,7 +19,7 @@
 import { esAdministrador, ROLES } from "../usuarios/roles.js";
 // El estado se importa en vez de escribir 'emitida' a mano: el enum estado_receta lo define la
 // 00066 y su unica copia en shared vive en recetas.api.js (regla del bug #365).
-import { ESTADOS_RECETA } from "./recetas.api.js";
+import { ESTADOS_RECETA } from "../enums.js";
 
 /**
  * Puede ver pacientes.

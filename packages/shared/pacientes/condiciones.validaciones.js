@@ -12,7 +12,8 @@ import {
   normalizarTexto,
   validarConDescriptores,
 } from "../validations/index.js";
-import { CAMPOS_CONDICION_CRONICA, ESTADOS_CONDICION_CRONICA } from "./condiciones.campos.js";
+import { CAMPOS_CONDICION_CRONICA } from "./condiciones.campos.js";
+import { ESTADOS_CONDICION_CRONICA } from "../enums.js";
 
 const ESTADOS_VALIDOS = Object.values(ESTADOS_CONDICION_CRONICA);
 

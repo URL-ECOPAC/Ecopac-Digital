@@ -7,18 +7,10 @@ import { describe, expect, it } from "vitest";
 import { labels } from "@ecopac/ui-tokens";
 
 import { TIPOS_DE_CAMPO, TIPOS_DE_FILTRO, TIPOS_DE_PRESENTACION } from "../descriptores.js";
-import {
-  CAMPOS_ANULACION_DONACION,
-  CAMPOS_DONACION,
-  CAMPOS_DONANTE,
-  ESTADOS_DE_DONACION,
-  ESTADOS_DONANTE,
-  OPCIONES_ESTADO_DONACION,
-  OPCIONES_TIPO_DONACION,
-  OPCIONES_TIPO_DONANTE,
-  TIPOS_DE_DONACION,
-  TIPOS_DE_DONANTE,
-} from "./campos.js";
+import { CAMPOS_ANULACION_DONACION, CAMPOS_DONACION, CAMPOS_DONANTE, ESTADOS_DONANTE, OPCIONES_ESTADO_DONACION, OPCIONES_TIPO_DONACION, OPCIONES_TIPO_DONANTE } from "./campos.js";
+import { ESTADOS_DE_DONACION } from "../enums.js";
+import { TIPOS_DE_DONACION } from "../enums.js";
+import { TIPOS_DE_DONANTE } from "../enums.js";
 import {
   CAMPOS_FICHA_DONACION,
   CAMPOS_FICHA_DONANTE,

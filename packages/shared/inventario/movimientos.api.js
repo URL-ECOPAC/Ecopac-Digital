@@ -1,6 +1,7 @@
 import { obtenerSupabase } from "../api/cliente.js";
 import { normalizarError } from "../api/errores-de-supabase.js";
 import { esLoteEntregable } from "./lotes.validaciones.js";
+import { ESTADOS_MOVIMIENTO, ORIGENES_DE_LOTE, TIPOS_DE_MOVIMIENTO } from "../enums.js";
 
 /**
  * Consulta la lista de movimientos de inventario aplicando filtros opcionales.
@@ -64,7 +65,7 @@ export async function registrarIngreso({
   usuarioId,
 }) {
   try {
-    if (!["compra", "donacion"].includes(origen)) {
+    if (!Object.values(ORIGENES_DE_LOTE).includes(origen)) {
       return {
         datos: null,
         error: { mensaje: "El origen del ingreso debe ser 'compra' o 'donacion'." },
@@ -119,7 +120,7 @@ export async function registrarIngreso({
     const { data, error } = await supabase
       .from("movimientos_inventario")
       .insert({
-        tipo: "ingreso",
+        tipo: TIPOS_DE_MOVIMIENTO.INGRESO,
         bodega_id,
         lote_id: idLoteFinal,
         cantidad,
@@ -203,7 +204,7 @@ export async function registrarSalida({
     const { data, error } = await supabase
       .from("movimientos_inventario")
       .insert({
-        tipo: "salida",
+        tipo: TIPOS_DE_MOVIMIENTO.SALIDA,
         bodega_id,
         lote_id,
         cantidad,
@@ -238,7 +239,7 @@ export async function editarMovimiento(idMovimiento, datosNuevos, usuarioActualI
       return { datos: null, error: { mensaje: "El movimiento no existe." } };
     }
 
-    if (mov.estado !== "pendiente") {
+    if (mov.estado !== ESTADOS_MOVIMIENTO.PENDIENTE) {
       return {
         datos: null,
         error: { mensaje: "Solo se pueden editar movimientos en estado pendiente." },

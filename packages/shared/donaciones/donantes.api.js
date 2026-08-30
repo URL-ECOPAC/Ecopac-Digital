@@ -1,6 +1,7 @@
 import { obtenerSupabase } from "../api/cliente.js";
 import { normalizarError } from "../api/errores-de-supabase.js";
 import { puedeRegistrarDonaciones, puedeVerDonaciones } from "./permisos.js";
+import { ESTADOS_DE_DONACION, TIPOS_DE_DONANTE } from "../enums.js";
 
 // Este archivo tenia su propia lista, `["administrador", "junta_directiva", "socio_fundador"]`,
 // con guiones bajos. El enum rol_usuario de la 00001 los escribe con espacio -'junta directiva',
@@ -59,7 +60,7 @@ export async function registrarDonante(datosDonante, { rolUsuario }) {
   try {
     const { tipo, nombre, contacto, telefono, email, direccion } = datosDonante;
 
-    if (!["persona", "organizacion"].includes(tipo)) {
+    if (!Object.values(TIPOS_DE_DONANTE).includes(tipo)) {
       return {
         datos: null,
         error: { mensaje: "El tipo de donante debe ser 'persona' o 'organizacion'." },
@@ -133,7 +134,7 @@ export async function actualizarDonante(idDonante, datosNuevos, { rolUsuario }) 
   try {
     const supabase = obtenerSupabase();
 
-    if (datosNuevos.tipo && !["persona", "organizacion"].includes(datosNuevos.tipo)) {
+    if (datosNuevos.tipo && !Object.values(TIPOS_DE_DONANTE).includes(datosNuevos.tipo)) {
       return {
         datos: null,
         error: { mensaje: "El tipo de donante debe ser 'persona' o 'organizacion'." },
@@ -175,7 +176,7 @@ export async function obtenerHistoricoDonante(idDonante, { rolUsuario }) {
       .from("donaciones")
       .select("*")
       .eq("donante_id", idDonante)
-      .neq("estado", "anulada")
+      .neq("estado", ESTADOS_DE_DONACION.ANULADA)
       .order("created_at", { ascending: false });
 
     if (error) throw error;

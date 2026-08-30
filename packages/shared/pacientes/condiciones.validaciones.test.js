@@ -7,10 +7,8 @@
 
 import { describe, expect, it } from "vitest";
 
-import {
-  ESTADOS_CONDICION_CRONICA,
-  OPCIONES_ESTADO_CONDICION,
-} from "./condiciones.campos.js";
+import { OPCIONES_ESTADO_CONDICION } from "./condiciones.campos.js";
+import { ESTADOS_CONDICION_CRONICA } from "../enums.js";
 import {
   normalizarDatosCondicion,
   validarCambioDeCondicion,

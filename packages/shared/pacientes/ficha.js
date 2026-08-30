@@ -1,6 +1,7 @@
 import { calcularEdad } from "../formato/fechas.js";
 import { OPCIONES_IDIOMA, OPCIONES_TIPO_SANGRE } from "./campos.js";
-import { ESTADOS_CONDICION_CRONICA, OPCIONES_ESTADO_CONDICION } from "./condiciones.campos.js";
+import { OPCIONES_ESTADO_CONDICION } from "./condiciones.campos.js";
+import { ESTADOS_CONDICION_CRONICA } from "../enums.js";
 import { puedeEditarPaciente, puedeVerHistorial } from "./permisos.js";
 
 export const PESTANIAS_FICHA_PACIENTE = Object.freeze([
