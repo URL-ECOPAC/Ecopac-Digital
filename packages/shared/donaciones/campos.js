@@ -31,15 +31,15 @@ export const ESTADOS_DE_DONACION = {
 };
 
 export const OPCIONES_TIPO_DONANTE = [
-  { valor: TIPOS_DE_DONANTE.PERSONA, etiqueta: "Persona" },
-  { valor: TIPOS_DE_DONANTE.ORGANIZACION, etiqueta: "Organizacion" },
+  { value: TIPOS_DE_DONANTE.PERSONA, label: "Persona" },
+  { value: TIPOS_DE_DONANTE.ORGANIZACION, label: "Organizacion" },
 ];
 
 export const OPCIONES_TIPO_DONACION = [
-  { valor: TIPOS_DE_DONACION.MEDICAMENTOS, etiqueta: "Medicamentos" },
-  { valor: TIPOS_DE_DONACION.INSUMOS, etiqueta: "Insumos" },
-  { valor: TIPOS_DE_DONACION.DINERO, etiqueta: "Dinero" },
-  { valor: TIPOS_DE_DONACION.SERVICIOS, etiqueta: "Servicios" },
+  { value: TIPOS_DE_DONACION.MEDICAMENTOS, label: "Medicamentos" },
+  { value: TIPOS_DE_DONACION.INSUMOS, label: "Insumos" },
+  { value: TIPOS_DE_DONACION.DINERO, label: "Dinero" },
+  { value: TIPOS_DE_DONACION.SERVICIOS, label: "Servicios" },
 ];
 
 /**
@@ -51,18 +51,18 @@ export const OPCIONES_TIPO_DONACION = [
  * suelto (criterio de aceptacion de la issue #287).
  */
 export const OPCIONES_ESTADO_DONACION = [
-  { valor: ESTADOS_DE_DONACION.REGISTRADA, clave: "registrada", etiqueta: labels.donacionRegistrada },
-  { valor: ESTADOS_DE_DONACION.ANULADA, clave: "anulada", etiqueta: labels.donacionAnulada },
+  { value: ESTADOS_DE_DONACION.REGISTRADA, clave: "registrada", label: labels.donacionRegistrada },
+  { value: ESTADOS_DE_DONACION.ANULADA, clave: "anulada", label: labels.donacionAnulada },
 ];
 
 /**
  * Catalogo de donantes.activo (00022), mismo patron que ESTADOS_USUARIO en usuarios/campos.js:
- * `valor` es el booleano real de la columna, `clave` indexa statusColors (ya trae activo/inactivo
- * genericos) y `etiqueta` sale de ui-tokens.
+ * `value` es el booleano real de la columna, `clave` indexa statusColors (ya trae activo/inactivo
+ * genericos) y `label` sale de ui-tokens.
  */
 export const ESTADOS_DONANTE = [
-  { valor: true, clave: "activo", etiqueta: labels.activo },
-  { valor: false, clave: "inactivo", etiqueta: labels.inactivo },
+  { value: true, clave: "activo", label: labels.activo },
+  { value: false, clave: "inactivo", label: labels.inactivo },
 ];
 
 /** Formulario de alta/edicion de un donante (donantes, 00022). */

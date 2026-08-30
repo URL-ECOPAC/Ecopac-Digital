@@ -36,12 +36,12 @@ export const CATEGORIAS_DE_GASTO = {
 };
 
 export const OPCIONES_CATEGORIA_GASTO = [
-  { valor: CATEGORIAS_DE_GASTO.MEDICAMENTOS, etiqueta: "Medicamentos" },
-  { valor: CATEGORIAS_DE_GASTO.LOGISTICA, etiqueta: "Logistica" },
-  { valor: CATEGORIAS_DE_GASTO.DIAGNOSTICO, etiqueta: "Diagnostico" },
-  { valor: CATEGORIAS_DE_GASTO.HONORARIOS, etiqueta: "Honorarios" },
-  { valor: CATEGORIAS_DE_GASTO.EDUCACION, etiqueta: "Educacion" },
-  { valor: CATEGORIAS_DE_GASTO.INFRAESTRUCTURA, etiqueta: "Infraestructura" },
+  { value: CATEGORIAS_DE_GASTO.MEDICAMENTOS, label: "Medicamentos" },
+  { value: CATEGORIAS_DE_GASTO.LOGISTICA, label: "Logistica" },
+  { value: CATEGORIAS_DE_GASTO.DIAGNOSTICO, label: "Diagnostico" },
+  { value: CATEGORIAS_DE_GASTO.HONORARIOS, label: "Honorarios" },
+  { value: CATEGORIAS_DE_GASTO.EDUCACION, label: "Educacion" },
+  { value: CATEGORIAS_DE_GASTO.INFRAESTRUCTURA, label: "Infraestructura" },
 ];
 
 /**
@@ -62,9 +62,9 @@ export const ESTADOS_DE_GASTO = {
 };
 
 export const OPCIONES_ESTADO_GASTO = [
-  { valor: ESTADOS_DE_GASTO.PENDIENTE, etiqueta: "Pendiente" },
-  { valor: ESTADOS_DE_GASTO.APROBADO, etiqueta: "Aprobado" },
-  { valor: ESTADOS_DE_GASTO.RECHAZADO, etiqueta: "Rechazado" },
+  { value: ESTADOS_DE_GASTO.PENDIENTE, label: "Pendiente" },
+  { value: ESTADOS_DE_GASTO.APROBADO, label: "Aprobado" },
+  { value: ESTADOS_DE_GASTO.RECHAZADO, label: "Rechazado" },
 ];
 
 /**

@@ -1,6 +1,5 @@
 import { Form } from 'react-bootstrap';
 import { useId } from 'react';
-import { normalizarOpciones } from './opciones';
 
 /**
  * Selector tipo dropdown.
@@ -9,10 +8,9 @@ import { normalizarOpciones } from './opciones';
  * no el evento, y se llama igual en las dos plataformas: es lo que permite mover una pantalla
  * de web a movil sin tocar el handler.
  *
- * Las opciones vienen como [{ label, value }]. Se normalizan aqui dentro y no en quien llama,
- * porque los catalogos que ya publica shared usan { etiqueta, valor } (ver OPCIONES_ROL y
- * ESTADOS_USUARIO en packages/shared/usuarios/campos.js): si cada pantalla tuviera que
- * mapearlos antes de pasarlos, olvidarlo daria opciones en blanco y claves duplicadas.
+ * Las opciones vienen como [{ label, value }], que es la forma que publica shared desde la
+ * issue #399. Antes convivian dos formas y este componente normalizaba por dentro; hoy no hay
+ * nada que normalizar y un catalogo ausente se resuelve con una lista vacia.
  *
  * Un valor sin elegir se representa con '' en el DOM, que es lo que entiende <select>, pero
  * hacia afuera se conserva null.
@@ -28,7 +26,7 @@ export default function Selector({
   disabled = false,
 }) {
   const id = useId();
-  const opciones = normalizarOpciones(options);
+  const opciones = Array.isArray(options) ? options : [];
 
   const alCambiar = (evento) => {
     const crudo = evento.target.value;

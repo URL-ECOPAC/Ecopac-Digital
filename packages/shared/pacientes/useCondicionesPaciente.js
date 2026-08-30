@@ -67,7 +67,7 @@ export function useCondicionesPaciente(pacienteId, { rol } = {}) {
     obtenerCatalogoDeCondiciones().then((respuesta) => {
       if (!vigente) return;
       const filas = respuesta.condiciones ?? respuesta.catalogo ?? [];
-      setCatalogo(filas.map((fila) => ({ valor: fila.id, etiqueta: fila.nombre })));
+      setCatalogo(filas.map((fila) => ({ value: fila.id, label: fila.nombre })));
     });
     return () => {
       vigente = false;

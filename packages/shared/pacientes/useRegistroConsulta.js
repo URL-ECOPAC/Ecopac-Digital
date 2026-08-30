@@ -128,8 +128,8 @@ export function useRegistroConsulta({
       if (!vigente) return;
       setDiagnosticos(
         (respuesta.diagnosticos ?? []).map((fila) => ({
-          valor: fila.id,
-          etiqueta: [fila.codigo, fila.nombre].filter(Boolean).join(" "),
+          value: fila.id,
+          label: [fila.codigo, fila.nombre].filter(Boolean).join(" "),
         })),
       );
     });

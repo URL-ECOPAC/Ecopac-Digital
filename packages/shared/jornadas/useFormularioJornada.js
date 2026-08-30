@@ -77,9 +77,9 @@ export function aDatosDeJornada(valores) {
   return { ...valores, proyecto: valores?.proyecto || null };
 }
 
-/** Mapea filas de un catalogo a la forma { valor, etiqueta } que consumen Selector/FilterBar. */
+/** Mapea filas de un catalogo a la forma { label, value } que consumen Selector/FilterBar. */
 function aOpciones(filas, etiquetaDe) {
-  return (filas ?? []).map((fila) => ({ valor: fila.id, etiqueta: etiquetaDe(fila) }));
+  return (filas ?? []).map((fila) => ({ value: fila.id, label: etiquetaDe(fila) }));
 }
 
 function nombreDePerfil(perfil) {

@@ -3,7 +3,6 @@ import { formatearFechaCorta, formatearMoneda } from '@ecopac/shared';
 import EmptyState from './EmptyState';
 import LoadingState from './LoadingState';
 import StatusChip from './StatusChip';
-import { normalizarOpciones } from './opciones';
 
 /**
  * Listado generico. Igual que FilterBar, no conoce las columnas de ningun modulo: interpreta
@@ -87,7 +86,7 @@ function Celda({ columna, fila, catalogos }) {
       // Una columna de estado puede guardar un booleano y no el valor del enum (COLUMNAS_USUARIO
       // lee 'activo'). El catalogo trae la clave del enum en `clave` y el texto en `label`, que
       // es lo que statusColors sabe indexar y lo que la persona tiene que leer.
-      const catalogo = normalizarOpciones(catalogos[columna.etiquetasDesde]);
+      const catalogo = catalogos[columna.etiquetasDesde] ?? [];
       const entrada = catalogo.find((opcion) => opcion.value === valor);
       return <StatusChip status={entrada?.clave ?? valor} label={entrada?.label} />;
     }
@@ -110,7 +109,7 @@ function Celda({ columna, fila, catalogos }) {
       // Una columna puede declarar que su texto se traduce por un catalogo, como el rol de
       // COLUMNAS_USUARIO, que guarda el valor del enum pero muestra su etiqueta legible.
       if (columna.etiquetasDesde) {
-        const catalogo = normalizarOpciones(catalogos[columna.etiquetasDesde]);
+        const catalogo = catalogos[columna.etiquetasDesde] ?? [];
         const opcion = catalogo.find((entrada) => entrada.value === valor);
         return opcion ? opcion.label : (valor ?? null);
       }

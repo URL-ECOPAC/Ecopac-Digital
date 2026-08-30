@@ -35,11 +35,11 @@ describe("ESTADOS_CONDICION_CRONICA", () => {
   });
 
   it("cada estado tiene su etiqueta para la pantalla", () => {
-    expect(OPCIONES_ESTADO_CONDICION.map((opcion) => opcion.valor)).toEqual(
+    expect(OPCIONES_ESTADO_CONDICION.map((opcion) => opcion.value)).toEqual(
       Object.values(ESTADOS_CONDICION_CRONICA),
     );
     for (const opcion of OPCIONES_ESTADO_CONDICION) {
-      expect(opcion.etiqueta).toBeTruthy();
+      expect(opcion.label).toBeTruthy();
     }
   });
 });

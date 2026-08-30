@@ -20,9 +20,9 @@ export const ESTADOS_CONDICION_CRONICA = {
 };
 
 export const OPCIONES_ESTADO_CONDICION = [
-  { valor: ESTADOS_CONDICION_CRONICA.ACTIVA, etiqueta: 'Activa' },
-  { valor: ESTADOS_CONDICION_CRONICA.CONTROLADA, etiqueta: 'Controlada' },
-  { valor: ESTADOS_CONDICION_CRONICA.RESUELTA, etiqueta: 'Resuelta' },
+  { value: ESTADOS_CONDICION_CRONICA.ACTIVA, label: 'Activa' },
+  { value: ESTADOS_CONDICION_CRONICA.CONTROLADA, label: 'Controlada' },
+  { value: ESTADOS_CONDICION_CRONICA.RESUELTA, label: 'Resuelta' },
 ];
 
 /**

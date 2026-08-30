@@ -56,14 +56,14 @@ export function usePacientesCronicos({ rol } = {}) {
     listarComunidades().then((respuesta) => {
       if (!vigente) return;
       setComunidades(
-        (respuesta.comunidades ?? []).map((fila) => ({ valor: fila.id, etiqueta: fila.nombre })),
+        (respuesta.comunidades ?? []).map((fila) => ({ value: fila.id, label: fila.nombre })),
       );
     });
 
     obtenerCatalogoDeCondiciones().then((respuesta) => {
       if (!vigente) return;
       const filas = respuesta.condiciones ?? respuesta.catalogo ?? [];
-      setCondicionesCronicas(filas.map((fila) => ({ valor: fila.id, etiqueta: fila.nombre })));
+      setCondicionesCronicas(filas.map((fila) => ({ value: fila.id, label: fila.nombre })));
     });
 
     return () => {

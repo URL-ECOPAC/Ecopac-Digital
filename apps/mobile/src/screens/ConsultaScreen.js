@@ -67,7 +67,7 @@ function Diagnosticos({ campo, valor, opciones, onChange, deshabilitado }) {
       <Selector
         label={campo.label}
         value={null}
-        options={opciones.filter((opcion) => !elegidos.includes(opcion.valor))}
+        options={opciones.filter((opcion) => !elegidos.includes(opcion.value))}
         onSelect={agregar}
         placeholder="Agregar diagnostico"
         disabled={deshabilitado || opciones.length === 0}
@@ -76,7 +76,7 @@ function Diagnosticos({ campo, valor, opciones, onChange, deshabilitado }) {
         <Pressable key={id} onPress={() => quitar(id)} style={styles.diagnostico}>
           <Text style={styles.textoDiagnostico}>
             {indice === 0 ? 'Principal: ' : ''}
-            {opciones.find((opcion) => opcion.valor === id)?.etiqueta ?? id}
+            {opciones.find((opcion) => opcion.value === id)?.label ?? id}
           </Text>
           <Text style={styles.quitar}>Quitar</Text>
         </Pressable>

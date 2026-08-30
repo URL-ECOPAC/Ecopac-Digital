@@ -408,7 +408,7 @@ describe("listarUsuarios", () => {
 });
 
 describe("listarCatalogoEspecialidades", () => {
-  it("deduplica, ordena alfabeticamente y da la forma { valor, etiqueta }", async () => {
+  it("deduplica, ordena alfabeticamente y da la forma { label, value }", async () => {
     const { cliente } = doble({
       data: [
         { nombre_especialidad: "Pediatria" },
@@ -423,8 +423,8 @@ describe("listarCatalogoEspecialidades", () => {
 
     expect(error).toBeNull();
     expect(especialidades).toEqual([
-      { valor: "Odontologia", etiqueta: "Odontologia" },
-      { valor: "Pediatria", etiqueta: "Pediatria" },
+      { value: "Odontologia", label: "Odontologia" },
+      { value: "Pediatria", label: "Pediatria" },
     ]);
   });
 
