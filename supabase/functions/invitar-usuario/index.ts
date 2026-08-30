@@ -12,7 +12,7 @@
 // que ya levanta fn_crear_usuario_administrativo), para que el cliente lo clasifique sin
 // adivinar. crearUsuario() desempaca ese cuerpo desde error.context antes de normalizar.
 
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "@supabase/supabase-js";
 
 import { corsHeaders } from "../_shared/cors.ts";
 
