@@ -18,7 +18,10 @@ jobs:
   lint-and-build:
     name: Lint y build
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # Diez minutos es el presupuesto que fija la issue #223. Las corridas reales van en ~40 s
+    # -de los cuales las pruebas son ~10 s-, asi que el tope no aprieta: esta para que un
+    # cambio que dispare el tiempo se note aqui y no en la paciencia de quien espera el PR.
+    timeout-minutes: 10
 
     steps:
       - name: Descargar el código
@@ -70,8 +73,20 @@ jobs:
       # Antes del build a proposito: una prueba rota se ve en segundos, sin esperar a que
       # la web compile. Corre en el mismo job que el lint para que el check requerido siga
       # llamandose "Lint y build" y no haya que tocar la proteccion de ramas.
+      #
+      # El paso corre `npm test` a secas, sin capturar la salida: vitest detecta Actions y agrega
+      # su reporter `github-actions`, que ya publica el conteo de pruebas en el resumen de la
+      # corrida. No se ve al correr las pruebas en local, y por eso es facil no saber que existe.
       - name: Ejecutar las pruebas de todos los workspaces
         run: npm test
+
+      # Lo que vitest no publica es la cobertura, que desde la #219 es una guarda con umbral y no
+      # una estadistica. `if: always()` porque el resumen de una corrida en rojo es el que mas
+      # falta hace; el script nunca falla, es un reporte y no una guarda, y quien decide si el CI
+      # pasa es el paso de arriba.
+      - name: Publicar la cobertura en el resumen
+        if: always()
+        run: node scripts/resumen-de-pruebas.mjs >> "$GITHUB_STEP_SUMMARY"
 
       # Cada rama se construye con la configuración de su ambiente. Antes se usaban
       # siempre los secrets _DEV, así que main nunca se validaba contra producción y un

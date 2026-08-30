@@ -22,6 +22,7 @@ import { PLATAFORMAS } from "./reglas.js";
 export function leerFuente() {
   return {
     plataforma: PLATAFORMAS.WEB,
+    esDesarrollo: import.meta.env.DEV,
     valores: {
       url: import.meta.env.VITE_SUPABASE_URL,
       anonKey: import.meta.env.VITE_SUPABASE_ANON_KEY,

@@ -20,6 +20,7 @@ export * from "./campos.js";
 export * from "./columnas.js";
 export * from "./filtros.js";
 export * from "./inventario.api.js";
+export * from "./vencimientos.api.js";
 export * from "./pacientes.api.js";
 export * from "./jornada.api.js";
 export * from "./permisos.js";

@@ -8,10 +8,24 @@ import { puedeTomarTriaje } from "./permisos.js";
 import { registrarTriaje } from "./triaje.api.js";
 import { advertenciasDeTriaje } from "./triaje.validaciones.js";
 
-const VALORES_INICIALES = CAMPOS_TRIAJE.reduce((valores, campo) => {
+export const VALORES_INICIALES = CAMPOS_TRIAJE.reduce((valores, campo) => {
   valores[campo.id] = "";
   return valores;
 }, {});
+
+/**
+ * Si el formulario tiene algo que se perderia al salir sin guardar (issue #110).
+ *
+ * Mismo patron que hayCambiosPendientes de useEdicionPaciente.js: compara contra el estado
+ * inicial. Un guardar() exitoso apaga el flag aunque valores no se limpie -guardado no es null
+ * hasta que la persona pide explicitamente "Tomar otro triaje" (reiniciar())-, porque en ese
+ * momento la pantalla ya dejo de mostrar el formulario editable (TriajeScreen renderiza la
+ * tarjeta de confirmacion en su lugar) y no hay nada que un cierre de sesion pudiera perder.
+ */
+export function hayCambiosDeTriaje(valores, guardado) {
+  if (guardado) return false;
+  return Object.keys(VALORES_INICIALES).some((id) => valores[id] !== VALORES_INICIALES[id]);
+}
 
 export function calcularImc(peso, talla) {
   const kilos = Number(peso);
@@ -124,6 +138,7 @@ export function useRegistroTriaje({
     guardado,
     imc,
     permitido: puedeTomarTriaje(rol),
+    hayCambios: hayCambiosDeTriaje(valores, guardado),
     setCampo,
     reiniciar,
     guardar,
