@@ -94,7 +94,7 @@ describe("aprobarGasto", () => {
     expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.CAMPO_REQUERIDO);
   });
 
-  it("actualiza estado, aprobado_por y fecha_aprobacion sin llamar a ningun RPC", async () => {
+  it("actualiza estado, aprobado_por y aprobado_en sin llamar a ningun RPC", async () => {
     const cliente = clienteUpdate({ data: { id: "gasto-1", estado: "aprobado" }, error: null });
     dobles.cliente = cliente;
 
@@ -107,7 +107,7 @@ describe("aprobarGasto", () => {
     expect(pasoUpdate.valores).toEqual(
       expect.objectContaining({ estado: "aprobado", aprobado_por: "admin-1" }),
     );
-    expect(pasoUpdate.valores).toHaveProperty("fecha_aprobacion");
+    expect(pasoUpdate.valores).toHaveProperty("aprobado_en");
     expect(cliente.llamadas.some((llamada) => llamada.paso === "rpc")).toBe(false);
   });
 });
@@ -128,7 +128,7 @@ describe("rechazarGasto", () => {
     expect(error.mensaje).not.toBe("");
   });
 
-  it("escribe motivo_rechazo, aprobado_por y fecha_aprobacion; nunca rechazado_por ni fecha_rechazo", async () => {
+  it("escribe motivo_rechazo, aprobado_por y aprobado_en; nunca rechazado_por ni fecha_rechazo", async () => {
     const cliente = clienteUpdate({ data: { id: "gasto-1", estado: "rechazado" }, error: null });
     dobles.cliente = cliente;
 
@@ -145,7 +145,7 @@ describe("rechazarGasto", () => {
     expect(pasoUpdate.valores).toEqual({
       estado: "rechazado",
       aprobado_por: "admin-1",
-      fecha_aprobacion: expect.any(String),
+      aprobado_en: expect.any(String),
       motivo_rechazo: "Fuera de presupuesto",
     });
     expect(pasoUpdate.valores).not.toHaveProperty("rechazado_por");

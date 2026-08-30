@@ -98,7 +98,7 @@ export async function obtenerPresupuestoSistema() {
 
 export async function registrarGasto(datosGasto) {
   try {
-    const { concepto, categoria, monto, fecha, encargado_id, jornada_id } = datosGasto || {};
+    const { concepto, categoria, monto, fecha, responsable_id, jornada_id } = datosGasto || {};
 
     const { data, error } = await obtenerSupabase()
       .from("gastos")
@@ -107,7 +107,7 @@ export async function registrarGasto(datosGasto) {
         categoria,
         monto: aNumero(monto),
         fecha,
-        encargado_id: encargado_id || null,
+        responsable_id: responsable_id || null,
         jornada_id,
       })
       .select(`
@@ -162,14 +162,14 @@ export async function editarGasto(idGasto, datosGasto) {
       };
     }
 
-    const { concepto, categoria, monto, fecha, encargado_id } = datosGasto || {};
+    const { concepto, categoria, monto, fecha, responsable_id } = datosGasto || {};
     const updates = {};
 
     if (concepto !== undefined) updates.concepto = concepto;
     if (categoria !== undefined) updates.categoria = categoria;
     if (monto !== undefined) updates.monto = aNumero(monto);
     if (fecha !== undefined) updates.fecha = fecha;
-    if (encargado_id !== undefined) updates.encargado_id = encargado_id || null;
+    if (responsable_id !== undefined) updates.responsable_id = responsable_id || null;
 
     const { data, error } = await supabase
       .from("gastos")

@@ -202,6 +202,21 @@ Commits (Conventional Commits):
 
 - Componentes en PascalCase; hooks con prefijo `use` en camelCase; carpetas en kebab-case.
 - Tablas y columnas en PostgreSQL en snake_case.
+- Nombres de columna por concepto (issue #412, revisado y unificado donde se pudo sin romper
+  cosas ya construidas):
+  - El actor de una accion lleva sufijo `_por`: `registrado_por`, `aprobado_por`,
+    `atendida_por`, `anulada_por`, `tomado_por`, `realizado_por`.
+  - Su marca de tiempo usa la misma raiz que el actor, con sufijo `_en`, nunca el prefijo
+    `fecha_`: `aprobado_en` (no `fecha_aprobacion`), `atendida_en`, `anulada_en`, `tomado_en`,
+    `realizado_en`.
+  - La persona responsable de una entidad completa (no de una accion puntual) es
+    `responsable_id`: `jornadas.responsable_id`, `proyectos.responsable_id`,
+    `gastos.responsable_id`.
+  - Cuando dos columnas nombran cosas distintas que solo *parecen* el mismo concepto -describen
+    sujetos gramaticales distintos, o el mismo dato tiene un matiz real en una tabla que no
+    tiene en la otra (ver `tipo_proveedor`/`origen_lote` y `pacientes.telefono_contacto` en el
+    esquema)-, no se fuerza un nombre unico: se deja la diferencia y se documenta la razon con
+    `COMMENT ON` en la migracion.
 - ESLint + Prettier a nivel de monorepo.
 - No usar datos reales de pacientes en pruebas ni en logs (regla de confidencialidad).
 - No usar emojis en codigo, descripciones, mensajes de commit, issues ni PRs.

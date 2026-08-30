@@ -8,8 +8,8 @@
 //
 // Los ids son los de las columnas de gastos en 00025_presupuesto_gastos.sql:
 //
-//   gastos (id, jornada_id, concepto, categoria, monto, fecha, encargado_id, estado,
-//           registrado_por, aprobado_por, fecha_aprobacion, created_at, updated_at)
+//   gastos (id, jornada_id, concepto, categoria, monto, fecha, responsable_id, estado,
+//           registrado_por, aprobado_por, aprobado_en, created_at, updated_at)
 //
 // La version anterior declaraba `categoria_id`, `fecha_gasto`, `proyecto_id`, `comprobante_url` y
 // `observaciones`. Las tres ultimas no existen en la tabla, y las dos primeras se llaman
@@ -45,10 +45,11 @@ export const OPCIONES_CATEGORIA_GASTO = [
 ];
 
 /**
- * Valores del enum estado_movimiento, que gastos.estado reutiliza (00025).
+ * Valores del enum estado_gasto (00089, issue #412).
  *
- * El enum se redefinio en 00023_movimientos_inventario.sql: los valores vigentes son
- * 'pendiente', 'aprobado' y 'rechazado', no los de la 00001.
+ * Hasta la 00089, gastos.estado reutilizaba estado_movimiento (pensado para
+ * movimientos_inventario, 00023); ahora tiene su propio tipo, con el mismo vocabulario:
+ * 'pendiente', 'aprobado' y 'rechazado'.
  *
  * Esta constante es la que el PR #448 intentaba importar de @ecopac/ui-tokens como
  * `ESTADOS_GASTO`, y por eso rompio el build: ui-tokens no exporta eso ni deberia, porque un
@@ -69,7 +70,7 @@ export const OPCIONES_ESTADO_GASTO = [
 /**
  * Formulario de registro y edicion de un gasto.
  *
- * `estado`, `registrado_por`, `aprobado_por` y `fecha_aprobacion` no estan aqui a proposito: no
+ * `estado`, `registrado_por`, `aprobado_por` y `aprobado_en` no estan aqui a proposito: no
  * los escribe quien registra el gasto. `estado` nace en 'pendiente' por DEFAULT de la tabla y solo
  * cambia por la bandeja de aprobacion (issue #299).
  */
@@ -111,8 +112,8 @@ export const CAMPOS_GASTO = [
     validacion: { requerido: true },
   },
   {
-    id: "encargado_id",
-    label: "Encargado",
+    id: "responsable_id",
+    label: "Responsable",
     tipo: TIPOS_DE_CAMPO.SELECT,
     opcionesDesde: "perfiles",
   },
