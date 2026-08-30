@@ -194,7 +194,7 @@ resume el resultado de todos.
 | **Migraciones no editadas**         | PR y push                | Falla si el PR modifica o borra una migracion que ya existe en la rama base, y si la numeracion de `supabase/migrations/` tiene un choque                                  |
 | **Validar migraciones y funciones** | PR y push                | Levanta el stack local, aplica todas las migraciones desde cero, corre `db lint`, las suites pgTAP, **las pruebas de flujos criticos** y el lint de Edge Functions         |
 | Estado de la base remota            | PR                       | Lista que migraciones estan aplicadas en `Ecopac-Digital-Dev` y cuales se aplicarian al mergear                                                                            |
-| Aplicar migraciones                 | push a develop o main    | Comprueba que el historial de la base coincida con la rama y corre `supabase db push` contra el proyecto del ambiente. Depende de que los dos jobs en negrita hayan pasado |
+| Aplicar migraciones                 | push a develop o main    | Comprueba que el historial de la base coincida con la rama, corre `supabase db push` contra el proyecto del ambiente y **despliega las Edge Functions**. Depende de que los dos jobs en negrita hayan pasado |
 | Avisar fallo                        | si algo fallo en un push | Abre una issue con el paso que fallo y **si las migraciones se aplicaron o no**                                                                                            |
 | Supabase completo                   | siempre                  | Mira el resultado de los otros cinco jobs -validacion **y despliegue**- y falla si alguno termino en `failure` o `cancelled`                                               |
 
@@ -314,6 +314,26 @@ columnas `NOT NULL`. pgTAP prueba la base desde dentro, simulando la sesion con
 donde se colaron el defecto de `registrarGasto()` (issue #300) y el de `registrarIngreso()` que
 encontro esta issue: los dos, un `INSERT` al que le faltaban columnas obligatorias, verdes en las
 dos suites.
+
+### Las Edge Functions se despliegan con las migraciones
+
+`supabase db push` aplica migraciones y **nada mas**. Hasta que el job "Aplicar migraciones"
+incorporo `supabase functions deploy`, el codigo de `supabase/functions/` vivia en el repositorio
+sin llegar nunca al proyecto: las dos funciones respondian **404** en `ecopac-dev`.
+
+Eso no era un detalle de infraestructura. `crearUsuario()` invoca `invitar-usuario`, y es el unico
+camino para dar de alta a una persona desde la aplicacion porque el registro publico esta cerrado
+(`00074`): sin la funcion desplegada, **la administradora no podia crear a nadie** y habia que
+hacerlo a mano desde el panel de Supabase. El cron de alertas habria dado 404 por la misma razon.
+
+Se despliegan **todas** las funciones en cada push, no solo las que cambiaron: el estado que
+importa es el del proyecto, no el del commit, y desplegar solo lo modificado deja fuera el caso
+que de verdad duele -una funcion que nunca se desplego, o un proyecto nuevo que arranca vacio-.
+Es idempotente y tarda segundos.
+
+Si el despliegue de funciones falla, **el job no se pone en rojo**: las migraciones ya se
+aplicaron, y un job rojo sugeriria que la base quedo a medias, que es lo contrario de lo que paso.
+El resultado se reporta en el resumen de la corrida.
 
 ### La programacion de las alertas de vencimiento (issue #167)
 

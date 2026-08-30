@@ -42,7 +42,24 @@ file_size_limit = "50MiB"
 
 [auth]
 enabled = true
-site_url = "http://127.0.0.1:3000"
+# El puerto es el 5173, que es donde corre la web: lo fija apps/web/vite.config.js y es el que
+# publica docker-compose.yml. Decia 3000 -el default de la CLI- y ahi no hay nada escuchando, asi
+# que el enlace de "olvide mi contrasena" apuntaba a una pagina inexistente. En local se disimulaba
+# porque Inbucket (http://localhost:54324) muestra el correo y se puede copiar el token a mano.
+#
+# site_url es el destino por defecto cuando quien pide el enlace no manda `redirectTo`, que es
+# justo el caso de invitar-usuario/index.ts: corre en Deno y no tiene un window.location.origin
+# del que sacar la URL, asi que deja ganar a este valor.
+#
+# ESTE ARCHIVO NO GOBIERNA ecopac-dev NI ecopac-prod. El despliegue solo corre `supabase db push`,
+# nunca `supabase config push`: en los proyectos remotos manda el Dashboard, y ahi hay que poner
+# la URL real de la web en Authentication > URL Configuration. Mismo caso que enable_signup, mas
+# abajo.
+site_url = "http://localhost:5173"
+# El comodin vale para el stack local y solo para el: hay que aceptar tanto las rutas de la web
+# (/nueva-contrasena) como los deep links de Expo, que cambian de puerto y de esquema segun como
+# se levante la app movil. En los proyectos remotos NO se pone "*": ahi se listan los destinos
+# reales, que es parte de la revision de configuracion de la issue #241.
 additional_redirect_urls = ["*"]
 # jwt_expiry: cuanto dura una sesion sin que el cliente la refresque (issue #230, criterio 3).
 # El numero de segundos que corresponde esta pendiente de confirmar con la organizacion (ver
