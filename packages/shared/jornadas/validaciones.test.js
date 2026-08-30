@@ -15,6 +15,7 @@ import {
   advertirJornadaDuplicada,
   esTransicionDeJornadaValida,
   puedeRegistrarEnJornada,
+  TRANSICIONES_JORNADA,
   transicionesDeJornadaDesde,
   validarAsignaciones,
   validarAsignacionPersonal,
@@ -166,6 +167,24 @@ describe("transicionesDeJornadaDesde / esTransicionDeJornadaValida", () => {
     expect(
       esTransicionDeJornadaValida(ESTADOS_JORNADA.PLANIFICADA, ESTADOS_JORNADA.FINALIZADA),
     ).toBe(false);
+  });
+
+  it("el mapa declara los cuatro estados del enum, sin sobrar ninguno", () => {
+    // Es la unica propiedad del mapa que no se puede comprobar desde las funciones que lo leen:
+    // transicionesDeJornadaDesde() devuelve [] tanto para un estado terminal como para uno que
+    // se olvidaron de declarar, y los dos casos se ven igual desde fuera. Si alguien agrega un
+    // valor al enum rol de la migracion y no lo declara aqui, esta prueba lo dice.
+    expect(Object.keys(TRANSICIONES_JORNADA).sort()).toEqual(
+      Object.values(ESTADOS_JORNADA).sort(),
+    );
+  });
+
+  it("ningun destino declarado cae fuera del enum", () => {
+    for (const destinos of Object.values(TRANSICIONES_JORNADA)) {
+      for (const destino of destinos) {
+        expect(Object.values(ESTADOS_JORNADA)).toContain(destino);
+      }
+    }
   });
 });
 

@@ -21,7 +21,8 @@ Un solo job, **Lint y build**, que corre en este orden:
 
 1. **Guarda de esquema**: `packages/shared` contra `supabase/migrations/` (issue #492).
 2. `npm run lint` en todos los workspaces.
-3. `npm test` en todos los workspaces que tengan el script (issue #218).
+3. `npm test` en todos los workspaces que tengan el script (issue #218), que desde la issue
+   **#219** comprueba ademas **cobertura de las validaciones**.
 4. Build de la web con los secrets del ambiente que corresponde a la rama.
 
 Cada paso va antes del siguiente por lo que cuesta: la guarda de esquema es analisis de texto y
@@ -29,6 +30,39 @@ tarda un segundo; una prueba rota se ve en segundos, sin esperar a que la web co
 dentro de este job y no en uno propio porque **Lint y build** ya es check requerido en `develop`
 y `main`; un job nuevo no lo seria hasta que alguien lo agregue en Settings > Branches, y
 mientras tanto un PR en rojo se podria mergear igual.
+
+### La guarda de cobertura de las validaciones
+
+Las validaciones de `packages/shared` son las reglas de negocio del sistema: vencimiento de
+medicamentos, disponibilidad de stock, jornada activa, rangos de signos vitales, datos de
+paciente. Hoy las cubren **193 casos** en once archivos, con una cobertura de **97.7% de
+sentencias, 94.9% de ramas y 100% de funciones**.
+
+Nada vigilaba que eso siguiera asi. La guarda vive en `packages/shared/vitest.config.js`, y entra
+por donde ya pasa todo: el script `test` del paquete es `vitest run --coverage`, asi que la
+comprueban por igual `npm test` en la maquina de quien desarrolla y el job **Lint y build** del
+CI. **No hizo falta agregar ningun paso al workflow.**
+
+|         |                                                                       |
+| ------- | --------------------------------------------------------------------- |
+| Alcance | `**/validaciones.js`, `**/*.validaciones.js` y `validations/index.js` |
+| Umbral  | sentencias 97, ramas 94, funciones 100, lineas 98                     |
+| Coste   | la suite pasa de ~4.0 s a ~4.7 s                                      |
+
+**El umbral es un trinquete y solo sube.** Los numeros son el suelo medido, redondeado hacia
+abajo, no una aspiracion: una guarda que nace por encima de lo real solo deja el CI en rojo el
+primer dia. Quien mejore la cobertura sube el suelo en el mismo PR; quien la baje lo explica en
+la descripcion, no cambia el numero en silencio.
+
+**Que caza y que no**, comprobado a proposito y dicho aqui para que nadie le pida mas de lo que
+da:
+
+- **Una validacion nueva sin pruebas**: la caza, y es la regresion que mas importa. Los cuatro
+  umbrales fallan a la vez, porque `functions: 100` no admite una funcion sin ejercer.
+- **Una suite entera borrada**: la caza de sobra (la cobertura cae al 84%).
+- **Un solo caso de prueba borrado**: **no la caza**. Es un umbral global sobre once archivos y un
+  caso de 193 no mueve el porcentaje. Un umbral por archivo lo detectaria, pero habria que
+  bajarlo al 87% para que el repositorio lo cumpliera hoy, y eso protege menos que este.
 
 ### La guarda de esquema
 

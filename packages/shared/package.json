@@ -6,13 +6,14 @@
   "main": "index.js",
   "scripts": {
     "lint": "eslint .",
-    "test": "vitest run"
+    "test": "vitest run --coverage"
   },
   "dependencies": {
     "@ecopac/ui-tokens": "*",
     "@supabase/supabase-js": "^2.112.2"
   },
   "devDependencies": {
+    "@vitest/coverage-v8": "^4.1.11",
     "vitest": "^4.1.11"
   }
 }

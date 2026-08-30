@@ -14,6 +14,7 @@ import {
   esTransicionDeProyectoValida,
   LONGITUD_MAXIMA_NOMBRE_PROYECTO,
   TODOS_LOS_ESTADOS_PROYECTO,
+  TRANSICIONES_PROYECTO,
   transicionesDeProyectoDesde,
   validarCambioDeEstadoProyecto,
   validarProyecto,
@@ -120,6 +121,22 @@ describe("transiciones de estado", () => {
 
   it("un estado desconocido no ofrece ninguna transicion", () => {
     expect(transicionesDeProyectoDesde("pausado")).toEqual([]);
+  });
+
+  it("el mapa declara los cuatro estados del enum, sin sobrar ninguno", () => {
+    // No se puede comprobar desde transicionesDeProyectoDesde(): devuelve [] igual para un
+    // estado terminal que para uno que se olvidaron de declarar. Los dos casos de arriba
+    // -"finalizado y cancelado son terminales" y "un estado desconocido"- pasarian identicos si
+    // el mapa se quedara vacio.
+    expect(Object.keys(TRANSICIONES_PROYECTO).sort()).toEqual([...TODOS_LOS_ESTADOS_PROYECTO].sort());
+  });
+
+  it("ningun destino declarado cae fuera del enum", () => {
+    for (const destinos of Object.values(TRANSICIONES_PROYECTO)) {
+      for (const destino of destinos) {
+        expect(TODOS_LOS_ESTADOS_PROYECTO).toContain(destino);
+      }
+    }
   });
 });
 
