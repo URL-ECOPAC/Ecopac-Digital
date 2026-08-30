@@ -321,10 +321,11 @@ jobs:
       - name: Lint de Edge Functions
         if: needs.cambios.outputs.supabase == 'true'
         run: |
+          deno --version
           if ls supabase/functions/*/index.* >/dev/null 2>&1; then
-            deno lint supabase/functions
+            deno lint --config supabase/functions/deno.json supabase/functions
             for archivo in supabase/functions/*/index.*; do
-              deno check "$archivo"
+              deno check --config supabase/functions/deno.json "$archivo"
             done
           else
             echo "No hay Edge Functions todavia; se omite el lint."
