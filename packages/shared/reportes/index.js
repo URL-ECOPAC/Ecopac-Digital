@@ -24,3 +24,7 @@ export * from "./pacientes.api.js";
 export * from "./jornada.api.js";
 export * from "./permisos.js";
 export * from "./useFiltrosReportes.js";
+
+// Exportacion de reportes a CSV (issue #207). Funcion pura: no depende de Supabase ni de
+// ninguna API web-only, por eso vive junto al resto de utilidades de este modulo.
+export * from "./csv.js";
