@@ -19,6 +19,8 @@ import { PLATAFORMAS } from "./reglas.js";
 export function leerFuente() {
   return {
     plataforma: PLATAFORMAS.MOVIL,
+    // __DEV__ es el global que inyecta React Native/Metro, false en un build de release.
+    esDesarrollo: typeof __DEV__ !== "undefined" && __DEV__,
     valores: {
       url: process.env.EXPO_PUBLIC_SUPABASE_URL,
       anonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,

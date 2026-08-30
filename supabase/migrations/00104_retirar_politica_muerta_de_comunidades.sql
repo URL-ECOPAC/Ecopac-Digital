@@ -1,0 +1,22 @@
+-- Ecopac Digital - Retirar la politica de comunidades que nunca restringio nada (issue #511, caso 3)
+--
+-- docs/PERMISOS.md, Divergencia 10: comunidades tiene dos politicas de SELECT, "Lectura publica
+-- comunidades" (00008, USING (true), sin TO -> aplica a cualquier rol) y "Administrador y junta
+-- directiva leen comunidades para reportes" (00041, TO authenticated, restringida por rol). Las
+-- politicas RLS del mismo comando se combinan con OR: como la primera ya deja pasar a cualquier
+-- authenticated sin condicion, la segunda nunca excluyo a nadie que la primera no dejara pasar
+-- ya. Confirmarlo no depende de leerlo, se ve en la definicion: la de 00041 es un subconjunto
+-- estricto de "cualquiera".
+--
+-- CUAL DE LAS DOS SE RETIRA
+--
+-- comunidades es catalogo geografico -id, municipio_id, nombre, latitud, longitud,
+-- referencia_acceso-, sin ningun dato personal ni clinico, mismo tipo de tabla que
+-- departamentos y municipios (00006), que tienen la misma politica de lectura abierta sin
+-- restriccion de rol y GRANT solo a authenticated, nunca a anon (00073). anon tampoco tiene
+-- GRANT sobre comunidades (00049 se lo retiro y nadie se lo devolvio). La politica de 00008 ya
+-- es, en los hechos, la que gobierna el acceso hoy -sin ella el GRANT a authenticated no le
+-- serviria de nada, porque la de 00041 sola tambien lo dejaria pasar-, asi que se retira la de
+-- 00041: no cambia ningun comportamiento real, solo deja de confundir a quien lea el esquema
+-- pensando que comunidades esta restringida quando no lo esta.
+DROP POLICY "Administrador y junta directiva leen comunidades para reportes" ON comunidades;

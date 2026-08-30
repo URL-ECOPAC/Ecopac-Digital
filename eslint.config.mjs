@@ -154,6 +154,18 @@ export default [
       ],
     },
   },
+  {
+    // __DEV__ es un global que inyecta React Native/Metro en tiempo de ejecucion, no un import:
+    // la restriccion de plataforma de mas arriba no lo alcanza. Solo lo necesitan los archivos
+    // .native.js, que ya son el punto de entrada deliberado de lo especifico de movil dentro de
+    // packages/shared (ver packages/shared/entorno/fuente.native.js).
+    files: ["**/*.native.js"],
+    languageOptions: {
+      globals: {
+        __DEV__: "readonly",
+      },
+    },
+  },
   // Un solo `no-restricted-imports` por app, y no dos bloques separados: ESLint NO fusiona las
   // opciones de una misma regla entre bloques de configuracion -- gana el ultimo que la declare.
   // Con la prohibicion de Supabase en un bloque y la de imports cruzados en otro, la segunda

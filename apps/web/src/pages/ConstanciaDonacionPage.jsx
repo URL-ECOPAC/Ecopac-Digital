@@ -1,5 +1,5 @@
 import { useConstanciaDonacion } from "@ecopac/shared";
-import { Button } from "@ecopac/ui";
+import { Container, Row, Col, Button, Table, Card, Badge, Alert } from "react-bootstrap";
 
 export default function ConstanciaDonacionPage({ usuarioRol, donacion }) {
   const { tieneAccesoLectura, esValidaParaConstancia, correlativo, manejarImpresion } =
@@ -11,121 +11,146 @@ export default function ConstanciaDonacionPage({ usuarioRol, donacion }) {
 
   if (!tieneAccesoLectura) {
     return (
-      <div className="p-4 text-red-600">
-        Acceso denegado: No tiene permisos para consultar este módulo.
-      </div>
+      <Container className="my-4">
+        <Alert variant="danger">
+          Acceso denegado: No tiene permisos para consultar este módulo.
+        </Alert>
+      </Container>
     );
   }
 
   if (!donacion) {
-    return <div className="p-4 text-gray-500">No se ha seleccionado ninguna donación.</div>;
+    return (
+      <Container className="my-4">
+        <Alert variant="secondary">No se ha seleccionado ninguna donación.</Alert>
+      </Container>
+    );
   }
 
   if (!esValidaParaConstancia) {
     return (
-      <div className="p-6 max-w-2xl mx-auto border border-red-300 bg-red-50 text-red-700 rounded-md">
-        <h2 className="text-lg font-bold mb-2">Constancia No Disponible</h2>
-        <p>
-          Esta donación se encuentra en estado <strong>ANULADA</strong>. Las donaciones anuladas no
-          pueden generar una constancia de respaldo.
-        </p>
-      </div>
+      <Container style={{ maxWidth: "720px" }} className="my-5">
+        <Alert variant="danger">
+          <Alert.Heading as="h5">Constancia No Disponible</Alert.Heading>
+          <p className="mb-0">
+            Esta donación se encuentra en estado <strong>ANULADA</strong>. Las donaciones anuladas
+            no pueden generar una constancia de respaldo.
+          </p>
+        </Alert>
+      </Container>
     );
   }
 
   return (
-    <div className="p-6 max-w-3xl mx-auto">
+    <Container style={{ maxWidth: "800px" }} className="py-4">
       {/* Botones de acción (Ocultos al imprimir) */}
-      <div className="flex justify-end gap-3 mb-6 print:hidden">
+      <div className="d-flex justify-content-end mb-4 d-print-none">
         <Button variant="primary" onClick={manejarImpresion}>
           Imprimir / Descargar PDF
         </Button>
       </div>
 
       {/* Documento Imprimible */}
-      <div className="bg-white p-8 border rounded-md shadow-sm print:shadow-none print:border-none print:p-0">
-        {/* Encabezado de la Organización */}
-        <div className="border-b pb-4 mb-6 flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-800 uppercase tracking-wide">
-              Ecopac Digital
-            </h1>
-            <p className="text-sm text-gray-500">Comité Agrícola de Desarrollo Integral</p>
-            <p className="text-xs text-gray-400">Guatemala · Registro de Aportes y Donaciones</p>
+      <Card className="shadow-sm border border-secondary-subtle p-4 p-md-5 d-print-block">
+        <Card.Body className="p-0">
+          {/* Encabezado de la Organización */}
+          <div className="border-bottom pb-3 mb-4 d-flex justify-content-between align-items-center">
+            <div>
+              <h1 className="h4 fw-bold text-uppercase mb-1 tracking-wide">Ecopac Digital</h1>
+              <p className="small text-muted mb-0">Comité Agrícola de Desarrollo Integral</p>
+              <p className="extra-small text-muted mb-0">
+                Guatemala · Registro de Aportes y Donaciones
+              </p>
+            </div>
+            <div className="text-end">
+              <Badge bg="secondary" className="font-monospace fs-6 px-3 py-2">
+                {correlativo}
+              </Badge>
+              <p className="small text-muted mt-2 mb-0">Fecha: {donacion.fecha}</p>
+            </div>
           </div>
-          <div className="text-right">
-            <span className="inline-block px-3 py-1 bg-gray-100 text-gray-700 font-mono text-sm font-bold rounded">
-              {correlativo}
-            </span>
-            <p className="text-xs text-gray-500 mt-1">Fecha: {donacion.fecha}</p>
-          </div>
-        </div>
 
-        <h2 className="text-xl font-semibold text-center text-gray-800 mb-6 underline">
-          CONSTANCIA DE DONACIÓN RECIBIDA
-        </h2>
+          <h2 className="h5 text-center text-dark fw-bold mb-4 text-decoration-underline">
+            CONSTANCIA DE DONACIÓN RECIBIDA
+          </h2>
 
-        {/* Datos del Donante */}
-        <div className="mb-6 space-y-2 text-sm text-gray-700 bg-gray-50 p-4 rounded border print:bg-transparent">
-          <p>
-            <strong>Donante:</strong> {donacion.donante_nombre}
-          </p>
-          <p>
-            <strong>Identificación / Teléfono:</strong> {donacion.donante_contacto || "N/A"}
-          </p>
-          <p>
-            <strong>Tipo de Aporte:</strong> <span className="capitalize">{donacion.tipo}</span>
-          </p>
-          <p>
-            <strong>Proyecto Asignado:</strong> {donacion.proyecto_nombre || "Fondo General"}
-          </p>
-        </div>
+          {/* Datos del Donante */}
+          <Card className="bg-light border mb-4">
+            <Card.Body className="p-3 fs-6">
+              <p className="mb-1">
+                <strong>Donante:</strong> {donacion.donante_nombre}
+              </p>
+              <p className="mb-1">
+                <strong>Identificación / Teléfono:</strong> {donacion.donante_contacto || "N/A"}
+              </p>
+              <p className="mb-1">
+                <strong>Tipo de Aporte:</strong>{" "}
+                <span className="text-capitalize">{donacion.tipo}</span>
+              </p>
+              <p className="mb-0">
+                <strong>Proyecto Asignado:</strong> {donacion.proyecto_nombre || "Fondo General"}
+              </p>
+            </Card.Body>
+          </Card>
 
-        {/* Detalle de lo donado */}
-        <div className="mb-8">
-          <h3 className="text-md font-semibold text-gray-800 mb-3">Detalle del Aporte</h3>
-          <table className="w-full text-left text-sm border-collapse border">
-            <thead>
-              <tr className="bg-gray-100 border-b print:bg-transparent">
-                <th className="p-2 border">#</th>
-                <th className="p-2 border">Concepto / Descripción</th>
-                <th className="p-2 border text-right">Cantidad / Monto</th>
-              </tr>
-            </thead>
-            <tbody>
-              {donacion.detalles?.map((item, index) => (
-                <tr key={index} className="border-b">
-                  <td className="p-2 border text-center">{index + 1}</td>
-                  <td className="p-2 border">{item.concepto}</td>
-                  <td className="p-2 border text-right font-medium">
-                    {donacion.tipo === "economica"
-                      ? `Q ${Number(item.monto).toFixed(2)}`
-                      : item.cantidad}
-                  </td>
-                </tr>
-              )) || (
+          {/* Detalle de lo donado */}
+          <div className="mb-5">
+            <h6 className="fw-bold mb-3">Detalle del Aporte</h6>
+            <Table bordered responsive size="sm" className="align-middle">
+              <thead className="table-light">
                 <tr>
-                  <td colSpan="3" className="p-2 text-center text-gray-500">
-                    Sin detalles especificantes
-                  </td>
+                  <th className="text-center" style={{ width: "50px" }}>
+                    #
+                  </th>
+                  <th>Concepto / Descripción</th>
+                  <th className="text-end" style={{ width: "180px" }}>
+                    Cantidad / Monto
+                  </th>
                 </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {(donacion.detalles || []).length === 0 ? (
+                  <tr>
+                    <td colSpan="3" className="text-center text-muted py-3">
+                      Sin detalles especificantes
+                    </td>
+                  </tr>
+                ) : (
+                  donacion.detalles.map((item, index) => (
+                    <tr key={index}>
+                      <td className="text-center">{index + 1}</td>
+                      <td>{item.concepto}</td>
+                      <td className="text-end fw-medium">
+                        {donacion.tipo === "economica"
+                          ? `Q ${Number(item.monto || 0).toFixed(2)}`
+                          : item.cantidad}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </Table>
+          </div>
 
-        {/* Firmas de Respaldo */}
-        <div className="mt-16 pt-8 border-t grid grid-cols-2 gap-8 text-center text-xs text-gray-600">
-          <div>
-            <div className="border-b border-gray-400 mb-2 w-3/4 mx-auto font-mono"></div>
-            <p className="font-semibold">Firma de Conformidad Donante</p>
-          </div>
-          <div>
-            <div className="border-b border-gray-400 mb-2 w-3/4 mx-auto font-mono"></div>
-            <p className="font-semibold">Por Ecopac Digital (Administración)</p>
-          </div>
-        </div>
-      </div>
-    </div>
+          {/* Firmas de Respaldo */}
+          <Row className="pt-5 mt-5 border-top text-center text-muted fs-7">
+            <Col xs={6}>
+              <div
+                className="border-bottom border-dark mx-auto mb-2"
+                style={{ width: "75%" }}
+              ></div>
+              <p className="fw-semibold mb-0">Firma de Conformidad Donante</p>
+            </Col>
+            <Col xs={6}>
+              <div
+                className="border-bottom border-dark mx-auto mb-2"
+                style={{ width: "75%" }}
+              ></div>
+              <p className="fw-semibold mb-0">Por Ecopac Digital (Administración)</p>
+            </Col>
+          </Row>
+        </Card.Body>
+      </Card>
+    </Container>
   );
 }

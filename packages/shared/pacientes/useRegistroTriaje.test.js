@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { calcularImc, soloSignosCapturados } from "./useRegistroTriaje.js";
+import {
+  calcularImc,
+  hayCambiosDeTriaje,
+  soloSignosCapturados,
+  VALORES_INICIALES,
+} from "./useRegistroTriaje.js";
 
 describe("calcularImc", () => {
   it("usa la misma formula y el mismo redondeo que la columna generada de la 00013", () => {
@@ -45,5 +50,21 @@ describe("soloSignosCapturados", () => {
   it("no falla con un objeto vacio", () => {
     expect(soloSignosCapturados({})).toEqual({});
     expect(soloSignosCapturados()).toEqual({});
+  });
+});
+
+describe("hayCambiosDeTriaje", () => {
+  it("arranca en false con los valores iniciales", () => {
+    expect(hayCambiosDeTriaje(VALORES_INICIALES, null)).toBe(false);
+  });
+
+  it("se prende al escribir un campo", () => {
+    expect(hayCambiosDeTriaje({ ...VALORES_INICIALES, presionSistolica: "120" }, null)).toBe(true);
+  });
+
+  it("se apaga tras un guardar exitoso, aunque los valores sigan capturados", () => {
+    expect(
+      hayCambiosDeTriaje({ ...VALORES_INICIALES, presionSistolica: "120" }, { id: "algo" }),
+    ).toBe(false);
   });
 });

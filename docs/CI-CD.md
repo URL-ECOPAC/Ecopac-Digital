@@ -21,15 +21,65 @@ Un solo job, **Lint y build**, que corre en este orden:
 
 1. **Guarda de esquema**: `packages/shared` contra `supabase/migrations/` (issue #492).
 2. `npm run lint` en todos los workspaces.
-3. `npm test` en todos los workspaces que tengan el script (issue #218), que desde la issue
-   **#219** comprueba ademas **cobertura de las validaciones**.
-4. Build de la web con los secrets del ambiente que corresponde a la rama.
+3. `npm run format:check` con Prettier, alcance JS/JSX/TS/TSX/JSON (issue #515).
+4. `npm test` en todos los workspaces que tengan el script (issue #218), que desde la issue
+   **#219** comprueba ademas **cobertura de las validaciones**. El mismo paso avisa (issue
+   #515) que workspaces se saltaron por no tener script `test`.
+5. **Resumen de las pruebas** en la pagina de la corrida (issue #223).
+6. Build de la web con los secrets del ambiente que corresponde a la rama.
 
 Cada paso va antes del siguiente por lo que cuesta: la guarda de esquema es analisis de texto y
 tarda un segundo; una prueba rota se ve en segundos, sin esperar a que la web compile. Y todo va
 dentro de este job y no en uno propio porque **Lint y build** ya es check requerido en `develop`
 y `main`; un job nuevo no lo seria hasta que alguien lo agregue en Settings > Branches, y
 mientras tanto un PR en rojo se podria mergear igual.
+
+### El presupuesto de tiempo del pipeline
+
+**Diez minutos**, y lo fija la issue #223. Lo hacen cumplir los `timeout-minutes` de los **dos
+checks requeridos que corren en cada PR**, que son los que componen el tiempo que alguien espera
+para poder mergear:
+
+| Job                                 | Workflow       | Tope   | Medido                     |
+| ----------------------------------- | -------------- | ------ | -------------------------- |
+| **Lint y build**                    | `ci.yml`       | 10 min | 37-50 s                    |
+| **Validar migraciones y funciones** | `supabase.yml` | 10 min | 4-9 s, o 142-187 s con SQL |
+
+Dentro de **Lint y build**, `npm ci` son ~14 s, el lint ~6 s, las pruebas ~10 s y el build ~1 s.
+El job caro es el de Supabase, que levanta el stack, aplica las migraciones desde cero y corre
+las suites pgTAP; su coste crece con cada migracion y cada suite nuevas, asi que **es el que hay
+que mirar** cuando alguien se pregunte si el presupuesto sigue alcanzando.
+
+`Aplicar migraciones` se queda en 15 minutos a proposito: corre en `push`, despues del merge, y
+no es tiempo que nadie este esperando.
+
+**Un tope no es una meta.** Si un dia una corrida se acerca a los diez minutos, lo que hay que
+averiguar es que la hizo crecer; subir el numero es la ultima opcion, no la primera.
+
+### El resultado de las pruebas en el PR
+
+La DoD de la #223 pide que el resultado de las pruebas **se vea en el PR**. Se reparte en dos, y
+conviene saber cual pone cada parte:
+
+- **El conteo lo publica vitest solo.** Cuando detecta que corre en Actions agrega su reporter
+  `github-actions`, que escribe un "Vitest Test Report" en el resumen de la corrida con cuantos
+  archivos y cuantas pruebas pasaron. **No se ve al correr las pruebas en local**, porque ese
+  reporter solo se activa con `GITHUB_ACTIONS`, y por eso es facil creer que no existe.
+- **La cobertura la publica `scripts/resumen-de-pruebas.mjs`**, que es lo que vitest no trae. Y es
+  el numero que hace falta vigilar: desde la #219 la cobertura de las validaciones es una guarda
+  con umbral, no una estadistica, asi que ver cuanto margen queda vale mas que repetir el conteo.
+
+Detalles que conviene conocer antes de tocarlo:
+
+- **Los umbrales no se copian al workflow**: se leen de `packages/shared/vitest.config.js`, que es
+  donde los declara la guarda de la #219. Una segunda copia podria divergir en silencio.
+- **Corre con `if: always()`** -el resumen de una corrida en rojo es el que mas falta hace- y
+  **nunca falla**: si el informe de cobertura no existe, escribe una nota y sale con 0. Es un
+  reporte, no una guarda. En una corrida roja ese informe no existe, y no es un caso raro: vitest
+  limpia su directorio de cobertura al arrancar y no lo reescribe si las pruebas fallan.
+- Se eligio el resumen y no un comentario en el PR porque escribir en `$GITHUB_STEP_SUMMARY` no
+  pide permisos: el workflow sigue con `contents: read`. Comentar obligaria a
+  `pull-requests: write` y a ensuciar el hilo en cada push.
 
 ### `apps/mobile` sin script `test` todavia (issue #515)
 
@@ -145,7 +195,7 @@ resume el resultado de todos.
 | Estado de la base remota            | PR                       | Lista que migraciones estan aplicadas en `Ecopac-Digital-Dev` y cuales se aplicarian al mergear                                                                            |
 | Aplicar migraciones                 | push a develop o main    | Comprueba que el historial de la base coincida con la rama y corre `supabase db push` contra el proyecto del ambiente. Depende de que los dos jobs en negrita hayan pasado |
 | Avisar fallo                        | si algo fallo en un push | Abre una issue con el paso que fallo y **si las migraciones se aplicaron o no**                                                                                            |
-| Supabase completo                   | siempre                  | Mira el resultado de los cuatro jobs de validacion y falla si alguno termino en `failure` o `cancelled`                                                                    |
+| Supabase completo                   | siempre                  | Mira el resultado de los otros cinco jobs -validacion **y despliegue**- y falla si alguno termino en `failure` o `cancelled`                                               |
 
 Los jobs en negrita son **checks requeridos** hoy: sin ellos en verde, la rama protegida no
 deja mergear. **Supabase completo** esta pensado para reemplazarlos a los dos, pero eso se
@@ -166,6 +216,32 @@ Por dos motivos, y el primero es una trampa que no se ve:
    viven en el repositorio: renombrar un job obliga a ir a Settings a corregirlo, y si nadie lo
    hace, el PR queda esperando un check que ya no existe. Con un solo nombre por workflow,
    renombrar o agregar jobs adentro ya no rompe la configuracion.
+
+**`Aplicar migraciones` entra en esa cuenta**, aunque solo corra en push. No estaba, y por eso un
+despliegue fallido se reportaba como exito: el 30 de agosto los merges de #606 y #607 tumbaron el
+despliegue -deriva de historial, y ninguno de los dos traia una linea de SQL- y **Supabase
+completo** dijo `success` en las dos corridas. El resumen que explica el fallo estaba escrito y
+bien escrito; lo que fallaba era que nada lo senalaba, y hay que saber que existe un job aparte
+para ir a abrirlo. En un `pull_request` el job sale `skipped` y cuenta como aprobado, asi que
+incluirlo no cambia nada ahi.
+
+### La deriva de historial se avisa en el PR
+
+Mientras la base de `ecopac-dev` tenga aplicada una migracion cuyo archivo no esta en `develop`,
+`supabase db push` falla en **todo** push a esa rama, traiga SQL o no: valida el historial
+completo antes de mirar si hay algo pendiente. El fallo le aparece a quien mergee despues, que
+normalmente no tiene nada que ver.
+
+`Estado de la base remota` ya corria el `--dry-run` que lo detecta, pero su salida caia dentro de
+un bloque de codigo del resumen y no la miraba nadie. Ahora, cuando aparece deriva, ese job emite
+un `::warning::` y una seccion propia diciendo que el PR no la causa y que no la empeora. **Sigue
+sin fallar nunca**: depende de secrets y de la red, y convertirlo en guarda haria que un corte de
+conexion bloquee PRs ajenos. Quien corta es `Aplicar migraciones`, despues del merge.
+
+Lo que ninguna de las dos cosas arregla es una **rama que se quedo vieja**: ningun check se vuelve
+a correr solo cuando `develop` avanza, asi que dos PRs pueden reservar el mismo numero de
+migracion y las dos pasar en verde. Eso lo cierra `strict` ("Require branches to be up to date"),
+que vive en Settings > Branches.
 
 No se puede llegar a **un** unico check para todo el repositorio: `Lint y build` vive en otro
 workflow y un job no puede declarar `needs` de un workflow ajeno. El minimo son dos nombres.
@@ -579,6 +655,16 @@ npm run lint
 npm test
 npm run build
 ```
+
+La tabla de cobertura que se publica en el PR se puede ver igual en local, despues de correr
+`npm test`:
+
+```bash
+node scripts/resumen-de-pruebas.mjs
+```
+
+El conteo de pruebas que acompana a esa tabla en el PR **no sale en local**: lo agrega el reporter
+`github-actions` de vitest, que solo se activa dentro de Actions.
 
 Lo que corre el job **Validar migraciones y funciones**:
 

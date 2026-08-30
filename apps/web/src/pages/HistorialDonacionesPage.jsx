@@ -1,5 +1,16 @@
 import { useHistorialDonaciones } from "@ecopac/shared";
-import { Button, Input, Select, Card, Modal, Table } from "@ecopac/ui";
+import {
+  Container,
+  Row,
+  Col,
+  Card,
+  Form,
+  Button,
+  Table,
+  Badge,
+  Alert,
+  Modal,
+} from "react-bootstrap";
 
 export default function HistorialDonacionesPage({
   usuarioRol,
@@ -7,204 +18,251 @@ export default function HistorialDonacionesPage({
   proyectosOptions = [],
 }) {
   const { tieneAccesoLectura, donaciones, totalesPorTipo, filtros, modalDetalle } =
-    useHistorialDonaciones({ usuarioRol, donacionesIniciales });
+    useHistorialDonaciones({
+      usuarioRol,
+      donacionesIniciales,
+      proyectosOptions,
+    });
 
   if (!tieneAccesoLectura) {
     return (
-      <div className="p-4 text-red-600">
-        Acceso denegado: No tiene permisos para consultar este módulo.
-      </div>
+      <Container className="my-4">
+        <Alert variant="danger">
+          Acceso denegado: No tiene permisos para consultar este módulo.
+        </Alert>
+      </Container>
     );
   }
 
   return (
-    <div className="p-6 max-w-6xl mx-auto space-y-6">
-      <h1 className="text-2xl font-bold text-gray-800">Historial de Donaciones Recibidas</h1>
+    <Container fluid style={{ maxWidth: "1140px" }} className="py-4">
+      <h1 className="h3 mb-4">Historial de Donaciones Recibidas</h1>
 
       {/* Totales por Tipo */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="bg-blue-50 border-blue-200">
-          <p className="text-sm font-medium text-blue-800">Total Económico</p>
-          <p className="text-2xl font-bold text-blue-900">
-            Q {totalesPorTipo.economica.toFixed(2)}
-          </p>
-        </Card>
-        <Card className="bg-green-50 border-green-200">
-          <p className="text-sm font-medium text-green-800">Total Medicamentos</p>
-          <p className="text-2xl font-bold text-green-900">
-            {totalesPorTipo.medicamentos} unidades
-          </p>
-        </Card>
-        <Card className="bg-purple-50 border-purple-200">
-          <p className="text-sm font-medium text-purple-800">Total Insumos / Bienes</p>
-          <p className="text-2xl font-bold text-purple-900">{totalesPorTipo.insumos} ítems</p>
-        </Card>
-      </div>
+      <Row className="g-3 mb-4">
+        <Col md={4}>
+          <Card className="border-primary bg-light">
+            <Card.Body>
+              <Card.Subtitle className="mb-2 text-primary fw-semibold">
+                Total Económico
+              </Card.Subtitle>
+              <Card.Title className="fs-3 fw-bold text-dark mb-0">
+                Q {(totalesPorTipo?.economica || 0).toFixed(2)}
+              </Card.Title>
+            </Card.Body>
+          </Card>
+        </Col>
+        <Col md={4}>
+          <Card className="border-success bg-light">
+            <Card.Body>
+              <Card.Subtitle className="mb-2 text-success fw-semibold">
+                Total Medicamentos
+              </Card.Subtitle>
+              <Card.Title className="fs-3 fw-bold text-dark mb-0">
+                {totalesPorTipo?.medicamentos || 0} unidades
+              </Card.Title>
+            </Card.Body>
+          </Card>
+        </Col>
+        <Col md={4}>
+          <Card className="border-info bg-light">
+            <Card.Body>
+              <Card.Subtitle className="mb-2 text-info fw-semibold">
+                Total Insumos / Bienes
+              </Card.Subtitle>
+              <Card.Title className="fs-3 fw-bold text-dark mb-0">
+                {totalesPorTipo?.insumos || 0} ítems
+              </Card.Title>
+            </Card.Body>
+          </Card>
+        </Col>
+      </Row>
 
       {/* Filtros */}
-      <Card title="Filtros de Búsqueda">
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-3">
-          <Input
-            placeholder="Buscar por donante..."
-            value={filtros.filtroDonante}
-            onChange={(e) => filtros.setFiltroDonante(e.target.value)}
-          />
+      <Card className="mb-4">
+        <Card.Header as="h5">Filtros de Búsqueda</Card.Header>
+        <Card.Body>
+          <Row className="g-3">
+            <Col md={6} lg={3}>
+              <Form.Control
+                type="text"
+                placeholder="Buscar por donante..."
+                value={filtros.filtroDonante}
+                onChange={(e) => filtros.setFiltroDonante(e.target.value)}
+              />
+            </Col>
 
-          <Select
-            value={filtros.filtroTipo}
-            onChange={(e) => filtros.setFiltroTipo(e.target.value)}
-            options={[
-              { label: "Todos los tipos", value: "" },
-              { label: "Económica", value: "economica" },
-              { label: "Medicamentos", value: "medicamentos" },
-              { label: "Insumos", value: "insumos" },
-            ]}
-          />
+            <Col md={6} lg={2}>
+              <Form.Select
+                value={filtros.filtroTipo}
+                onChange={(e) => filtros.setFiltroTipo(e.target.value)}
+              >
+                <option value="">Todos los tipos</option>
+                <option value="economica">Económica</option>
+                <option value="medicamentos">Medicamentos</option>
+                <option value="insumos">Insumos</option>
+              </Form.Select>
+            </Col>
 
-          <Select
-            value={filtros.filtroProyecto}
-            onChange={(e) => filtros.setFiltroProyecto(e.target.value)}
-            options={[{ label: "Todos los proyectos", value: "" }, ...proyectosOptions]}
-          />
+            <Col md={6} lg={3}>
+              <Form.Select
+                value={filtros.filtroProyecto}
+                onChange={(e) => filtros.setFiltroProyecto(e.target.value)}
+              >
+                <option value="">Todos los proyectos</option>
+                {proyectosOptions.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </Form.Select>
+            </Col>
 
-          <Input
-            type="date"
-            placeholder="Desde"
-            value={filtros.fechaInicio}
-            onChange={(e) => filtros.setFechaInicio(e.target.value)}
-          />
+            <Col md={6} lg={2}>
+              <Form.Control
+                type="date"
+                placeholder="Desde"
+                value={filtros.fechaInicio}
+                onChange={(e) => filtros.setFechaInicio(e.target.value)}
+              />
+            </Col>
 
-          <Input
-            type="date"
-            placeholder="Hasta"
-            value={filtros.fechaFin}
-            onChange={(e) => filtros.setFechaFin(e.target.value)}
-          />
-        </div>
+            <Col md={6} lg={2}>
+              <Form.Control
+                type="date"
+                placeholder="Hasta"
+                value={filtros.fechaFin}
+                onChange={(e) => filtros.setFechaFin(e.target.value)}
+              />
+            </Col>
+          </Row>
 
-        <div className="flex justify-end mt-3">
-          <Button variant="secondary" size="sm" onClick={filtros.limpiarFiltros}>
-            Limpiar Filtros
-          </Button>
-        </div>
+          <div className="d-flex justify-content-end mt-3">
+            <Button variant="outline-secondary" size="sm" onClick={filtros.limpiarFiltros}>
+              Limpiar Filtros
+            </Button>
+          </div>
+        </Card.Body>
       </Card>
 
       {/* Tabla de Historial */}
-      <Card title="Listado de Donaciones">
-        <Table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="border-b bg-gray-50 text-xs font-semibold text-gray-600 uppercase">
-              <th className="p-3">Fecha</th>
-              <th className="p-3">Donante</th>
-              <th className="p-3">Tipo</th>
-              <th className="p-3">Resumen Detalle</th>
-              <th className="p-3">Estado</th>
-              <th className="p-3 text-right">Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {donaciones.length === 0 ? (
+      <Card>
+        <Card.Header as="h5">Listado de Donaciones</Card.Header>
+        <Card.Body className="p-0">
+          <Table responsive hover striped className="mb-0 align-middle">
+            <thead>
               <tr>
-                <td colSpan="6" className="p-4 text-center text-gray-500">
-                  No se encontraron registros de donaciones con los filtros seleccionados.
-                </td>
+                <th>Fecha</th>
+                <th>Donante</th>
+                <th>Tipo</th>
+                <th>Resumen Detalle</th>
+                <th>Estado</th>
+                <th className="text-end">Acciones</th>
               </tr>
-            ) : (
-              donaciones.map((d) => {
-                const esAnulada = d.estado === "anulada";
-                return (
-                  <tr
-                    key={d.id}
-                    className={`border-b text-sm ${esAnulada ? "bg-red-50 text-gray-400 line-through" : "hover:bg-gray-50"}`}
-                  >
-                    <td className="p-3">{d.fecha}</td>
-                    <td className="p-3 font-medium">{d.donante_nombre}</td>
-                    <td className="p-3 capitalize">{d.tipo}</td>
-                    <td className="p-3">{d.resumen || "-"}</td>
-                    <td className="p-3 no-underline">
-                      {esAnulada ? (
-                        <span className="inline-block px-2 py-0.5 text-xs font-semibold text-red-700 bg-red-100 rounded-full">
-                          Anulada
-                        </span>
-                      ) : (
-                        <span className="inline-block px-2 py-0.5 text-xs font-semibold text-green-700 bg-green-100 rounded-full">
-                          Activa
-                        </span>
-                      )}
-                    </td>
-                    <td className="p-3 text-right no-underline">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => modalDetalle.abrirDetalle(d)}
-                      >
-                        Ver Detalle
-                      </Button>
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </Table>
+            </thead>
+            <tbody>
+              {(donaciones || []).length === 0 ? (
+                <tr>
+                  <td colSpan="6" className="text-center text-muted py-4">
+                    No se encontraron registros de donaciones con los filtros seleccionados.
+                  </td>
+                </tr>
+              ) : (
+                donaciones.map((d) => {
+                  const esAnulada = d.estado === "anulada";
+                  return (
+                    <tr key={d.id} className={esAnulada ? "table-danger text-muted" : ""}>
+                      <td>{d.fecha}</td>
+                      <td className="fw-semibold">{d.donante_nombre}</td>
+                      <td className="text-capitalize">{d.tipo}</td>
+                      <td>{esAnulada ? <del>{d.resumen || "-"}</del> : d.resumen || "-"}</td>
+                      <td>
+                        {esAnulada ? (
+                          <Badge bg="danger">Anulada</Badge>
+                        ) : (
+                          <Badge bg="success">Activa</Badge>
+                        )}
+                      </td>
+                      <td className="text-end">
+                        <Button
+                          variant="outline-primary"
+                          size="sm"
+                          onClick={() => modalDetalle.abrirDetalle(d)}
+                        >
+                          Ver Detalle
+                        </Button>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </Table>
+        </Card.Body>
       </Card>
 
       {/* Modal de Detalle Completo */}
       {modalDetalle.modalDetalleAbierto && modalDetalle.donacionSeleccionada && (
-        <Modal
-          title={`Detalle de Donación #${modalDetalle.donacionSeleccionada.id}`}
-          isOpen={modalDetalle.modalDetalleAbierto}
-          onClose={modalDetalle.cerrarDetalle}
-        >
-          <div className="space-y-3 text-sm text-gray-700">
-            <p>
-              <strong>Donante:</strong> {modalDetalle.donacionSeleccionada.donante_nombre}
-            </p>
-            <p>
-              <strong>Tipo:</strong> {modalDetalle.donacionSeleccionada.tipo}
-            </p>
-            <p>
-              <strong>Fecha:</strong> {modalDetalle.donacionSeleccionada.fecha}
-            </p>
-            <p>
-              <strong>Estado:</strong> {modalDetalle.donacionSeleccionada.estado}
-            </p>
+        <Modal show={modalDetalle.modalDetalleAbierto} onHide={modalDetalle.cerrarDetalle} centered>
+          <Modal.Header closeButton>
+            <Modal.Title as="h5">
+              Detalle de Donación #{modalDetalle.donacionSeleccionada.id}
+            </Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            <div className="mb-3">
+              <p className="mb-1">
+                <strong>Donante:</strong> {modalDetalle.donacionSeleccionada.donante_nombre}
+              </p>
+              <p className="mb-1">
+                <strong>Tipo:</strong> {modalDetalle.donacionSeleccionada.tipo}
+              </p>
+              <p className="mb-1">
+                <strong>Fecha:</strong> {modalDetalle.donacionSeleccionada.fecha}
+              </p>
+              <p className="mb-1">
+                <strong>Estado:</strong> {modalDetalle.donacionSeleccionada.estado}
+              </p>
+            </div>
 
             {modalDetalle.donacionSeleccionada.estado === "anulada" && (
-              <div className="p-3 bg-red-100 text-red-800 rounded-md">
-                <p>
+              <Alert variant="danger" className="mb-3">
+                <p className="mb-1">
                   <strong>Motivo de Anulación:</strong>{" "}
                   {modalDetalle.donacionSeleccionada.motivo_anulacion || "No informado"}
                 </p>
-                <p>
+                <p className="mb-1">
                   <strong>Anulada por:</strong>{" "}
                   {modalDetalle.donacionSeleccionada.anulada_por || "-"}
                 </p>
-                <p>
+                <p className="mb-0">
                   <strong>Fecha de Anulación:</strong>{" "}
                   {modalDetalle.donacionSeleccionada.anulada_en || "-"}
                 </p>
-              </div>
+              </Alert>
             )}
 
-            <div className="border-t pt-2 mt-2">
-              <h4 className="font-semibold mb-2">Renglones del Detalle:</h4>
-              <ul className="list-disc pl-5 space-y-1">
-                {modalDetalle.donacionSeleccionada.detalles?.map((item, i) => (
+            <hr />
+            <h6 className="fw-bold mb-2">Renglones del Detalle:</h6>
+            <ul className="mb-0 ps-3">
+              {(modalDetalle.donacionSeleccionada.detalles || []).length === 0 ? (
+                <li>Sin detalles registrados</li>
+              ) : (
+                modalDetalle.donacionSeleccionada.detalles.map((item, i) => (
                   <li key={i}>
                     {item.concepto} - Cantidad/Monto: {item.cantidad || item.monto}
                   </li>
-                )) || <li>Sin detalles registrados</li>}
-              </ul>
-            </div>
-          </div>
-          <div className="flex justify-end mt-4">
+                ))
+              )}
+            </ul>
+          </Modal.Body>
+          <Modal.Footer>
             <Button variant="secondary" onClick={modalDetalle.cerrarDetalle}>
               Cerrar
             </Button>
-          </div>
+          </Modal.Footer>
         </Modal>
       )}
-    </div>
+    </Container>
   );
 }

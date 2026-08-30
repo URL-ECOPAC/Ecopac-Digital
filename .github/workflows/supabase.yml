@@ -258,7 +258,12 @@ jobs:
     name: Validar migraciones y funciones
     needs: cambios
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # Entra en el presupuesto de diez minutos de la issue #223: es check requerido y corre en
+    # cada PR, asi que cuenta para el tiempo total del pipeline. Es el job mas caro que hay
+    # -levanta el stack, aplica las migraciones desde cero y corre las suites pgTAP- y aun asi
+    # mide entre 142 s y 187 s cuando el PR toca supabase/. Si algun dia se acerca al tope, lo
+    # que hay que revisar es por que crecio tanto, no subir el numero sin mirar.
+    timeout-minutes: 10
     steps:
       - name: Descargar el codigo
         uses: actions/checkout@v5
@@ -393,9 +398,22 @@ jobs:
         if: steps.check.outputs.listo == 'true'
         run: supabase link --project-ref "$SUPABASE_PROJECT_REF_DEV" -p "$SUPABASE_DB_PASSWORD"
 
+      # La deriva se avisa aqui, en el PR, y no solo cuando ya revento el despliegue.
+      #
+      # Antes la salida del dry-run caia dentro de un bloque de codigo del resumen y se perdia:
+      # el texto estaba, pero sin aviso y sin destacar, y no lo miraba nadie. Es el mismo
+      # diagnostico que hace "Aplicar migraciones", movido a donde todavia sirve para algo,
+      # porque mientras hay deriva **todo** push a develop falla, traiga SQL o no.
+      #
+      # Este job sigue sin fallar nunca, que es su diseno: depende de secrets y de la red, y
+      # convertirlo en guarda haria que un corte de conexion bloquee PRs ajenos. Avisa fuerte,
+      # no corta. Quien corta es "Aplicar migraciones", despues del merge.
       - name: Comparar historial local y remoto
         if: steps.check.outputs.listo == 'true'
         run: |
+          salida_push="$(supabase db push --dry-run 2>&1 || true)"
+          limpia="$(printf '%s' "$salida_push" | sed 's/\x1B\[[0-9;]*[a-zA-Z]//g')"
+
           {
             echo "## Migraciones en ecopac-dev"
             echo
@@ -406,13 +424,44 @@ jobs:
             echo "### Se aplicarian al mergear"
             echo
             echo '```'
-            supabase db push --dry-run 2>&1 || true
+            printf '%s\n' "$salida_push"
             echo '```'
             echo
             echo "> El dry-run confirma la conexion y lista lo pendiente, pero no ejecuta el SQL:"
             echo "> un error dentro de una migracion no aparece aqui. Quien cubre eso es la guarda"
             echo "> **Migraciones no editadas**, que evita la unica forma en que el escenario"
             echo "> incremental se aparta del que valida el CI."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          # Mismo detector que usa "Aplicar migraciones": si el CLI cambiara el texto, esto deja
+          # de avisar y el despliegue vuelve a fallar solo. Se degrada al comportamiento de
+          # antes, nunca a un verde falso.
+          if ! printf '%s' "$limpia" | grep -q 'Remote migration versions not found'; then
+            exit 0
+          fi
+
+          versiones="$(printf '%s' "$limpia" \
+            | sed -n 's/.*migration repair --status reverted //p' \
+            | tr -s ' ' '\n' | grep -E '^[0-9]+$' | sort -u | xargs)"
+
+          echo "::warning::La base de ecopac-dev tiene migraciones que develop no ($versiones). Hoy TODO push a develop falla, traiga SQL o no."
+
+          {
+            echo
+            echo "## Aviso: la base de ecopac-dev y develop no coinciden"
+            echo
+            echo "Estas versiones estan aplicadas en \`ecopac-dev\` pero no tienen archivo en la"
+            echo "rama base:"
+            echo
+            for v in $versiones; do echo "- \`$v\`"; done
+            echo
+            echo "**Esto no lo causa este PR y mergearlo no lo empeora**, pero conviene saberlo:"
+            echo "mientras dure, \`supabase db push\` falla en **todo** push a \`develop\`, traiga"
+            echo "migraciones o no, porque valida el historial completo antes de mirar si hay algo"
+            echo "pendiente. El fallo le aparece a quien mergee despues, sin que tenga que ver."
+            echo
+            echo "Se arregla mergeando el PR que trae esos archivos. El detalle esta en"
+            echo "\`docs/CI-CD.md\`."
           } >> "$GITHUB_STEP_SUMMARY"
 
   # --------------------------------------------------------------------------------
@@ -729,7 +778,7 @@ jobs:
   # --------------------------------------------------------------------------------
   completo:
     name: Supabase completo
-    needs: [cambios, inmutabilidad, validar, remoto]
+    needs: [cambios, inmutabilidad, validar, remoto, aplicar]
     # `always()` es imprescindible: sin el, este job se saltaria en cuanto uno de los `needs`
     # fallara, y un check que se salta cuenta como aprobado para la proteccion de rama. Seria
     # justo lo contrario de lo que se busca.
@@ -750,18 +799,33 @@ jobs:
       #
       # `skipped` se acepta a proposito: es el resultado legitimo de un job que no aplicaba a
       # este evento. Lo que no se acepta es `failure` ni `cancelled`.
+      #
+      # POR QUE `aplicar` ESTA EN LA LISTA, aunque solo corra en push
+      #
+      # Porque no estaba, y por eso un despliegue fallido se reportaba como exito. El 30 de
+      # agosto los merges de #606 y #607 tumbaron "Aplicar migraciones" -deriva de historial,
+      # ninguno traia SQL- y este job dijo `success` en las dos corridas. Quien miraba el commit
+      # no veia nada raro, y el resumen que explica el fallo, que esta bien escrito, no lo leyo
+      # nadie: hay que saber que existe un job aparte para ir a abrirlo.
+      #
+      # En un pull_request `aplicar` sale `skipped` y el bucle ya lo cuenta como OK, asi que
+      # incluirlo no cambia nada ahi. Lo unico que cambia es que un despliegue roto deja de
+      # pasar por bueno. No sacarlo de aqui por parecer que "solo corre en push": es
+      # precisamente en push donde este agregado es lo unico que se mira.
       - name: Revisar el resultado de cada job
         env:
           CAMBIOS: ${{ needs.cambios.result }}
           INMUTABILIDAD: ${{ needs.inmutabilidad.result }}
           VALIDAR: ${{ needs.validar.result }}
           REMOTO: ${{ needs.remoto.result }}
+          APLICAR: ${{ needs.aplicar.result }}
         run: |
           fallidos=""
           for job in "Detectar cambios:$CAMBIOS" \
                      "Migraciones no editadas:$INMUTABILIDAD" \
                      "Validar migraciones y funciones:$VALIDAR" \
-                     "Estado de la base remota:$REMOTO"; do
+                     "Estado de la base remota:$REMOTO" \
+                     "Aplicar migraciones:$APLICAR"; do
             nombre="${job%:*}"
             resultado="${job##*:}"
             case "$resultado" in

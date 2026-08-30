@@ -44,11 +44,13 @@ const TODAS_LAS_LISTAS_DE_COLUMNAS = {
 const TODAS_LAS_LISTAS_DE_FILTROS = { FILTROS_DONANTE, FILTROS_DONACION };
 
 // Catalogos que un hook de pantalla (fuera de esta issue) tiene que pasar por `catalogos`.
+// "proyectos": issue #193 (RF-28), filtro de donaciones por donaciones.proyecto_id (00097).
 const CATALOGOS_CONOCIDOS = new Set([
   "donantes",
   "estadoDonante",
   "tiposDeDonante",
   "tiposDeDonacion",
+  "proyectos",
 ]);
 
 /** Aplana un campo LISTA_REPETIBLE en sus campos anidados, para revisarlos con las mismas reglas. */

@@ -2,6 +2,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ESTADOS_DE_RESTAURACION, inicializarSupabase } from "@ecopac/shared";
 
 import { almacenamientoMovil } from "./src/almacenamiento";
+import { RegistroSinGuardarProvider } from "./src/contexto/RegistroSinGuardarProvider";
 import { SesionProvider, useSesionCompartida } from "./src/contexto/SesionProvider";
 import AppNavigator from "./src/navigation/AppNavigator";
 import RestaurandoSesionScreen from "./src/screens/RestaurandoSesionScreen";
@@ -33,7 +34,7 @@ try {
   );
 }
 
-// 3. Componente interno Raiz
+// Componente interno Raiz
 function Raiz() {
   const { estadoRestauracion, haySesion } = useSesionCompartida();
 
@@ -44,12 +45,14 @@ function Raiz() {
   );
 }
 
-// 4. Componente principal App
+// Componente principal App
 export default function App() {
   return (
     <SafeAreaProvider>
       <SesionProvider>
-        <Raiz />
+        <RegistroSinGuardarProvider>
+          <Raiz />
+        </RegistroSinGuardarProvider>
       </SesionProvider>
     </SafeAreaProvider>
   );

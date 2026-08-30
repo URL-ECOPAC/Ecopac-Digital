@@ -60,6 +60,10 @@ export const FILTROS_DONACION = [
     desde: "fechaInicio",
     hasta: "fechaFin",
   },
+  // proyectoId: issue #193 (RF-28) agrego donaciones.proyecto_id (migracion 00097). No existia
+  // cuando se declaro este descriptor (issue #287): FILTROS_DONACION se quedo sin el a proposito
+  // hasta que la columna real existiera.
+  { id: "proyectoId", tipo: TIPOS_DE_FILTRO.SELECT, label: "Proyecto", opcionesDesde: "proyectos" },
 ];
 
 export const FILTROS_DONACION_VACIOS = {
@@ -68,4 +72,5 @@ export const FILTROS_DONACION_VACIOS = {
   tipo: null,
   estado: null,
   rangoFecha: null,
+  proyectoId: null,
 };

@@ -23,6 +23,7 @@
 export * from "./validaciones.js";
 export * from "./donantes.api.js";
 export * from "./ingreso.api.js";
+export * from "./historial.api.js";
 export * from "./campos.js";
 export * from "./columnas.js";
 export * from "./filtros.js";
