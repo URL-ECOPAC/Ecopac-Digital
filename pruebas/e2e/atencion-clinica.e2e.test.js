@@ -26,6 +26,7 @@ import {
   aprobarMovimiento,
   generarReceta,
   iniciarAtencion,
+  listarDiagnosticos,
   obtenerPaciente,
   registrarConsulta,
   registrarPaciente,
@@ -44,20 +45,15 @@ import {
 import { CUENTAS, entrarComo, salir } from "./sesiones.js";
 
 /**
- * Diagnostico ficticio que siembra esta suite.
+ * Codigo del catalogo real con el que se diagnostica en esta prueba.
  *
- * El catalogo `diagnosticos` esta VACIO en una base recien reconstruida -- ninguna migracion ni
- * seed carga CIE-10 -- y ademas no tiene politica de INSERT, solo de SELECT, asi que ni siquiera
- * un administrador puede alimentarlo desde la aplicacion. Se siembra por conexion directa, que es
- * como tendria que cargarlo una migracion de catalogo el dia que exista. Anotado como hallazgo en
- * el PR de esta issue: sin filas aqui, el paso "diagnostico CIE-10" del flujo no existe en
- * produccion.
+ * Hasta la issue #625 esta suite tenia que SEMBRAR su propio diagnostico por conexion directa: la
+ * tabla estaba vacia -ninguna migracion la cargaba- y no tenia politica de INSERT, asi que ni un
+ * administrador podia llenarla. La 00105 siembra el catalogo inicial, de modo que el paso
+ * "diagnostico CIE-10" del flujo ya se recorre con datos reales del sistema y no con un fixture
+ * inventado para la ocasion. Que este codigo exista es, ademas, parte de lo que se prueba.
  */
-const DIAGNOSTICO = {
-  id: "e2e0000d-0000-0000-0000-000000000001",
-  codigo: "J00",
-  nombre: "Rinofaringitis aguda (prueba e2e)",
-};
+const CODIGO_DIAGNOSTICO = "J00";
 
 const CANTIDAD_RECETADA = 5;
 
@@ -73,16 +69,11 @@ const flujo = {
 
 let bodega = null;
 let existenciasIniciales = [];
+let diagnosticoId = null;
 
 beforeAll(async () => {
   bodega = await bodegaPrincipal();
   existenciasIniciales = await instantaneaDeExistencias([[DEMO.loteSano, bodega]]);
-
-  await consultar(
-    `INSERT INTO diagnosticos (id, codigo, nombre) VALUES ($1, $2, $3)
-     ON CONFLICT (id) DO NOTHING`,
-    [DIAGNOSTICO.id, DIAGNOSTICO.codigo, DIAGNOSTICO.nombre],
-  );
 });
 
 afterAll(async () => {
@@ -92,7 +83,6 @@ afterAll(async () => {
     movimientos: flujo.movimientoId ? [flujo.movimientoId] : [],
     existencias: existenciasIniciales,
   });
-  await consultar("DELETE FROM diagnosticos WHERE id = $1", [DIAGNOSTICO.id]);
   await cerrarConexion();
 });
 
@@ -139,9 +129,23 @@ describe("Flujo critico: atencion clinica completa", () => {
     expect(error?.mensaje).toMatch(/ya esta registrado en la jornada/i);
   });
 
-  it("4. el medico abre el expediente y registra la consulta con su diagnostico", async () => {
+  it("4. el medico encuentra el diagnostico en el catalogo del sistema", async () => {
     await entrarComo(CUENTAS.MEDICO);
 
+    // El catalogo lo siembra la 00105 y esta es la prueba de que llega usable a una base recien
+    // reconstruida. Antes de la issue #625 esta consulta devolvia una lista vacia.
+    const { diagnosticos, error } = await listarDiagnosticos();
+
+    expect(error).toBeNull();
+    expect(diagnosticos.length).toBeGreaterThan(0);
+
+    const elegido = diagnosticos.find((d) => d.codigo === CODIGO_DIAGNOSTICO);
+    expect(elegido).toBeDefined();
+
+    diagnosticoId = elegido.id;
+  });
+
+  it("5. abre el expediente y registra la consulta con ese diagnostico", async () => {
     const { paciente, error: errorPaciente } = await obtenerPaciente(flujo.pacienteId);
     expect(errorPaciente).toBeNull();
     expect(paciente?.expediente?.id).toBeTruthy();
@@ -153,7 +157,7 @@ describe("Flujo critico: atencion clinica completa", () => {
       medico: CUENTAS.MEDICO.perfilId,
       jornada: DEMO.jornadaEnCurso,
       motivoConsulta: "Tos y dolor de garganta desde hace tres dias.",
-      diagnosticos: [{ diagnosticoId: DIAGNOSTICO.id, esPrincipal: true }],
+      diagnosticos: [{ diagnosticoId, esPrincipal: true }],
     });
 
     expect(error).toBeNull();
@@ -165,10 +169,10 @@ describe("Flujo critico: atencion clinica completa", () => {
       "SELECT diagnostico_id, es_principal FROM consulta_diagnostico WHERE consulta_id = $1",
       [flujo.consultaId],
     );
-    expect(diagnosticos).toEqual([{ diagnostico_id: DIAGNOSTICO.id, es_principal: true }]);
+    expect(diagnosticos).toEqual([{ diagnostico_id: diagnosticoId, es_principal: true }]);
   });
 
-  it("5. el medico genera la receta con el medicamento del lote vigente", async () => {
+  it("6. el medico genera la receta con el medicamento del lote vigente", async () => {
     const { receta, error } = await generarReceta({
       consulta: flujo.consultaId,
       medico: CUENTAS.MEDICO.perfilId,
@@ -191,7 +195,7 @@ describe("Flujo critico: atencion clinica completa", () => {
     flujo.recetaId = receta.id;
   });
 
-  it("6. emitir la receta todavia no toca las existencias", async () => {
+  it("7. emitir la receta todavia no toca las existencias", async () => {
     // fn_generar_receta (00066) comprueba que el lote alcance, pero no descuenta: el descuento
     // ocurre al despachar, y despachar es un movimiento de salida aprobado. Si esto cambiara sin
     // querer, el stock se descontaria dos veces.
@@ -200,7 +204,7 @@ describe("Flujo critico: atencion clinica completa", () => {
     expect(disponible).toBe(existenciasIniciales[0].cantidad);
   });
 
-  it("7. el voluntario registra la salida y nace pendiente de validacion", async () => {
+  it("8. el voluntario registra la salida y nace pendiente de validacion", async () => {
     await entrarComo(CUENTAS.VOLUNTARIO);
 
     const { datos, error } = await registrarSalida({
@@ -220,7 +224,7 @@ describe("Flujo critico: atencion clinica completa", () => {
     flujo.movimientoId = datos.id;
   });
 
-  it("8. la administradora aprueba y ahi si baja el stock", async () => {
+  it("9. la administradora aprueba y ahi si baja el stock", async () => {
     await entrarComo(CUENTAS.ADMINISTRADORA);
 
     const { datos, error } = await aprobarMovimiento(flujo.movimientoId, {

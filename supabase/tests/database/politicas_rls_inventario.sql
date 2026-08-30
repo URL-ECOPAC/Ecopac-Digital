@@ -6,7 +6,7 @@
 
 BEGIN;
 
-SELECT plan(58);
+SELECT plan(60);
 
 -- ============================================================================
 -- Setup: dos administradores (uno aprueba por UPDATE lo que el mismo registro,
@@ -195,27 +195,42 @@ SELECT is(
 );
 
 -- ============================================================================
--- medico y voluntario: no pueden aprobar sus propios movimientos (no son
--- administrador en absoluto, la politica de UPDATE los excluye por completo)
+-- medico y voluntario: no pueden aprobar sus propios movimientos
 -- ============================================================================
+-- Desde la issue #625 (migracion 00106) la politica de UPDATE ya NO los excluye por completo:
+-- pueden corregir su propio movimiento mientras siga pendiente. Lo que no pueden es cambiarle el
+-- estado, y eso ahora lo frena fn_proteger_decision_de_movimiento con un error explicito en vez
+-- de un UPDATE de cero filas.
 SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000303';
 
-UPDATE movimientos_inventario SET estado = 'aprobado' WHERE id = '90000000-0000-0000-0000-000000000002';
+SELECT throws_ok(
+  $$ UPDATE movimientos_inventario SET estado = 'aprobado'
+     WHERE id = '90000000-0000-0000-0000-000000000002' $$,
+  'P0001',
+  'Solo quien aprueba puede cambiar el estado de un movimiento de inventario.',
+  'medico no puede aprobar su propio movimiento'
+);
 
 SELECT is(
   (SELECT estado::text FROM movimientos_inventario WHERE id = '90000000-0000-0000-0000-000000000002'),
   'pendiente',
-  'medico no puede aprobar su propio movimiento'
+  'y su movimiento sigue pendiente'
 );
 
 SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000304';
 
-UPDATE movimientos_inventario SET estado = 'aprobado' WHERE id = '90000000-0000-0000-0000-000000000003';
+SELECT throws_ok(
+  $$ UPDATE movimientos_inventario SET estado = 'aprobado'
+     WHERE id = '90000000-0000-0000-0000-000000000003' $$,
+  'P0001',
+  'Solo quien aprueba puede cambiar el estado de un movimiento de inventario.',
+  'voluntario no puede aprobar su propio movimiento'
+);
 
 SELECT is(
   (SELECT estado::text FROM movimientos_inventario WHERE id = '90000000-0000-0000-0000-000000000003'),
   'pendiente',
-  'voluntario no puede aprobar su propio movimiento'
+  'y su movimiento sigue pendiente'
 );
 
 -- ============================================================================
