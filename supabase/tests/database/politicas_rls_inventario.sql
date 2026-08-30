@@ -6,7 +6,7 @@
 
 BEGIN;
 
-SELECT plan(22);
+SELECT plan(58);
 
 -- ============================================================================
 -- Setup: dos administradores (uno aprueba por UPDATE lo que el mismo registro,
@@ -18,7 +18,10 @@ INSERT INTO auth.users (id, email) VALUES
   ('00000000-0000-0000-0000-000000000302', 'admin91b@test.ecopac.local'),
   ('00000000-0000-0000-0000-000000000303', 'medico91@test.ecopac.local'),
   ('00000000-0000-0000-0000-000000000304', 'voluntario91@test.ecopac.local'),
-  ('00000000-0000-0000-0000-000000000305', 'junta91@test.ecopac.local');
+  ('00000000-0000-0000-0000-000000000305', 'junta91@test.ecopac.local'),
+  -- Socio fundador lo agrega la issue #513: la matriz de docs/PERMISOS.md le da lectura del
+  -- catalogo igual que a junta directiva, y esta suite no lo cubria.
+  ('00000000-0000-0000-0000-000000000306', 'socio91@test.ecopac.local');
 
 ALTER TABLE perfiles DISABLE TRIGGER USER;
 
@@ -26,6 +29,7 @@ UPDATE perfiles SET rol = 'administrador' WHERE id = '00000000-0000-0000-0000-00
 UPDATE perfiles SET rol = 'administrador' WHERE id = '00000000-0000-0000-0000-000000000302';
 UPDATE perfiles SET rol = 'medico' WHERE id = '00000000-0000-0000-0000-000000000303';
 UPDATE perfiles SET rol = 'junta directiva' WHERE id = '00000000-0000-0000-0000-000000000305';
+UPDATE perfiles SET rol = 'socio fundador' WHERE id = '00000000-0000-0000-0000-000000000306';
 -- voluntario91 se queda con el rol por defecto (voluntario general).
 
 ALTER TABLE perfiles ENABLE TRIGGER USER;
@@ -266,6 +270,291 @@ SELECT is(
   (SELECT estado::text FROM movimientos_inventario WHERE id = '90000000-0000-0000-0000-000000000003'),
   'aprobado',
   'el movimiento queda aprobado tras el UPDATE de voluntario304 con el permiso concedido'
+);
+
+
+-- ============================================================================
+-- El catalogo de bodegas y proveedores, rol por rol (issue #513)
+-- ============================================================================
+--
+-- Estas dos tablas quedaron con politicas duplicadas: la 00034 las goberno, y las 00061 y 00062
+-- volvieron a declararlas en otro estilo -FOR ALL, con la consulta a perfiles escrita a mano y
+-- sin mirar `activo`-. La 00079 retiro las de la 00062 (era la Divergencia 12) y dejo mandando a
+-- la 00034, con la lectura ademas endurecida a `rol_actual() IS NOT NULL`.
+--
+-- Nadie comprobaba el resultado: la suite usaba las dos tablas solo como fixture. Esto lo cubre.
+--
+-- LAS TRES NEGATIVAS NO SE COMPRUEBAN IGUAL, y confundirlas da una prueba que pasa sin mirar
+-- nada (la regla de la issue #221, tambien en docs/PERMISOS.md):
+--
+--   INSERT que no pasa el WITH CHECK  -> lanza 42501            -> throws_ok
+--   UPDATE que no pasa el USING       -> corre sin afectar filas -> is_empty(... RETURNING id)
+--   DELETE                            -> lanza 42501 para TODOS, incluido administrador,
+--                                        porque la 00034 nunca otorgo GRANT DELETE: muere en
+--                                        privilegios antes de que RLS se evalue -> throws_ok
+
+
+-- --- proveedores ---
+
+SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000301';
+SELECT isnt_empty(
+  $$ SELECT id FROM proveedores $$,
+  'POSITIVA proveedores SELECT: administrador lee el catalogo (sesion activa)'
+);
+
+SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000305';
+SELECT isnt_empty(
+  $$ SELECT id FROM proveedores $$,
+  'POSITIVA proveedores SELECT: junta directiva lee el catalogo (sesion activa)'
+);
+
+SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000306';
+SELECT isnt_empty(
+  $$ SELECT id FROM proveedores $$,
+  'POSITIVA proveedores SELECT: socio fundador lee el catalogo (sesion activa)'
+);
+
+SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000303';
+SELECT isnt_empty(
+  $$ SELECT id FROM proveedores $$,
+  'POSITIVA proveedores SELECT: medico lee el catalogo (sesion activa)'
+);
+
+SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000304';
+SELECT isnt_empty(
+  $$ SELECT id FROM proveedores $$,
+  'POSITIVA proveedores SELECT: voluntario general lee el catalogo (sesion activa)'
+);
+
+SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000301';
+SELECT lives_ok(
+  $$ INSERT INTO proveedores (nombre, tipo) VALUES ('Proveedor 513 admin', 'comercial') $$,
+  'POSITIVA proveedores INSERT: administrador crea'
+);
+
+SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000305';
+SELECT throws_ok(
+  $$ INSERT INTO proveedores (nombre, tipo) VALUES ('Proveedor 513 junta directiva', 'comercial') $$,
+  '42501',
+  NULL,
+  'NEGATIVA proveedores INSERT: junta directiva no crea (el WITH CHECK lanza 42501)'
+);
+
+SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000306';
+SELECT throws_ok(
+  $$ INSERT INTO proveedores (nombre, tipo) VALUES ('Proveedor 513 socio fundador', 'comercial') $$,
+  '42501',
+  NULL,
+  'NEGATIVA proveedores INSERT: socio fundador no crea (el WITH CHECK lanza 42501)'
+);
+
+SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000303';
+SELECT throws_ok(
+  $$ INSERT INTO proveedores (nombre, tipo) VALUES ('Proveedor 513 medico', 'comercial') $$,
+  '42501',
+  NULL,
+  'NEGATIVA proveedores INSERT: medico no crea (el WITH CHECK lanza 42501)'
+);
+
+SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000304';
+SELECT throws_ok(
+  $$ INSERT INTO proveedores (nombre, tipo) VALUES ('Proveedor 513 voluntario general', 'comercial') $$,
+  '42501',
+  NULL,
+  'NEGATIVA proveedores INSERT: voluntario general no crea (el WITH CHECK lanza 42501)'
+);
+
+SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000305';
+SELECT is_empty(
+  $$ UPDATE proveedores SET contacto = 'cambio de junta directiva'
+     WHERE id = '71000000-0000-0000-0000-000000000001' RETURNING id $$,
+  'NEGATIVA proveedores UPDATE: junta directiva no edita (el USING no afecta filas)'
+);
+
+SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000306';
+SELECT is_empty(
+  $$ UPDATE proveedores SET contacto = 'cambio de socio fundador'
+     WHERE id = '71000000-0000-0000-0000-000000000001' RETURNING id $$,
+  'NEGATIVA proveedores UPDATE: socio fundador no edita (el USING no afecta filas)'
+);
+
+SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000303';
+SELECT is_empty(
+  $$ UPDATE proveedores SET contacto = 'cambio de medico'
+     WHERE id = '71000000-0000-0000-0000-000000000001' RETURNING id $$,
+  'NEGATIVA proveedores UPDATE: medico no edita (el USING no afecta filas)'
+);
+
+SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000304';
+SELECT is_empty(
+  $$ UPDATE proveedores SET contacto = 'cambio de voluntario general'
+     WHERE id = '71000000-0000-0000-0000-000000000001' RETURNING id $$,
+  'NEGATIVA proveedores UPDATE: voluntario general no edita (el USING no afecta filas)'
+);
+
+SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000301';
+SELECT isnt_empty(
+  $$ UPDATE proveedores SET contacto = 'editado por admin'
+     WHERE id = '71000000-0000-0000-0000-000000000001' RETURNING id $$,
+  'POSITIVA proveedores UPDATE: administrador edita'
+);
+
+SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000301';
+SELECT throws_ok(
+  $$ DELETE FROM proveedores WHERE id = '71000000-0000-0000-0000-000000000001' $$,
+  '42501',
+  NULL,
+  'NEGATIVA proveedores DELETE: ni administrador borra (no hay GRANT DELETE para nadie)'
+);
+
+SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000304';
+SELECT throws_ok(
+  $$ DELETE FROM proveedores WHERE id = '71000000-0000-0000-0000-000000000001' $$,
+  '42501',
+  NULL,
+  'NEGATIVA proveedores DELETE: ni voluntario general borra (no hay GRANT DELETE para nadie)'
+);
+
+
+-- --- bodegas ---
+
+SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000301';
+SELECT isnt_empty(
+  $$ SELECT id FROM bodegas $$,
+  'POSITIVA bodegas SELECT: administrador lee el catalogo (sesion activa)'
+);
+
+SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000305';
+SELECT isnt_empty(
+  $$ SELECT id FROM bodegas $$,
+  'POSITIVA bodegas SELECT: junta directiva lee el catalogo (sesion activa)'
+);
+
+SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000306';
+SELECT isnt_empty(
+  $$ SELECT id FROM bodegas $$,
+  'POSITIVA bodegas SELECT: socio fundador lee el catalogo (sesion activa)'
+);
+
+SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000303';
+SELECT isnt_empty(
+  $$ SELECT id FROM bodegas $$,
+  'POSITIVA bodegas SELECT: medico lee el catalogo (sesion activa)'
+);
+
+SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000304';
+SELECT isnt_empty(
+  $$ SELECT id FROM bodegas $$,
+  'POSITIVA bodegas SELECT: voluntario general lee el catalogo (sesion activa)'
+);
+
+SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000301';
+SELECT lives_ok(
+  $$ INSERT INTO bodegas (nombre) VALUES ('Bodega 513 admin') $$,
+  'POSITIVA bodegas INSERT: administrador crea'
+);
+
+SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000305';
+SELECT throws_ok(
+  $$ INSERT INTO bodegas (nombre) VALUES ('Bodega 513 junta directiva') $$,
+  '42501',
+  NULL,
+  'NEGATIVA bodegas INSERT: junta directiva no crea (el WITH CHECK lanza 42501)'
+);
+
+SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000306';
+SELECT throws_ok(
+  $$ INSERT INTO bodegas (nombre) VALUES ('Bodega 513 socio fundador') $$,
+  '42501',
+  NULL,
+  'NEGATIVA bodegas INSERT: socio fundador no crea (el WITH CHECK lanza 42501)'
+);
+
+SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000303';
+SELECT throws_ok(
+  $$ INSERT INTO bodegas (nombre) VALUES ('Bodega 513 medico') $$,
+  '42501',
+  NULL,
+  'NEGATIVA bodegas INSERT: medico no crea (el WITH CHECK lanza 42501)'
+);
+
+SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000304';
+SELECT throws_ok(
+  $$ INSERT INTO bodegas (nombre) VALUES ('Bodega 513 voluntario general') $$,
+  '42501',
+  NULL,
+  'NEGATIVA bodegas INSERT: voluntario general no crea (el WITH CHECK lanza 42501)'
+);
+
+SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000305';
+SELECT is_empty(
+  $$ UPDATE bodegas SET ubicacion = 'cambio de junta directiva'
+     WHERE id = '72000000-0000-0000-0000-000000000001' RETURNING id $$,
+  'NEGATIVA bodegas UPDATE: junta directiva no edita (el USING no afecta filas)'
+);
+
+SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000306';
+SELECT is_empty(
+  $$ UPDATE bodegas SET ubicacion = 'cambio de socio fundador'
+     WHERE id = '72000000-0000-0000-0000-000000000001' RETURNING id $$,
+  'NEGATIVA bodegas UPDATE: socio fundador no edita (el USING no afecta filas)'
+);
+
+SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000303';
+SELECT is_empty(
+  $$ UPDATE bodegas SET ubicacion = 'cambio de medico'
+     WHERE id = '72000000-0000-0000-0000-000000000001' RETURNING id $$,
+  'NEGATIVA bodegas UPDATE: medico no edita (el USING no afecta filas)'
+);
+
+SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000304';
+SELECT is_empty(
+  $$ UPDATE bodegas SET ubicacion = 'cambio de voluntario general'
+     WHERE id = '72000000-0000-0000-0000-000000000001' RETURNING id $$,
+  'NEGATIVA bodegas UPDATE: voluntario general no edita (el USING no afecta filas)'
+);
+
+SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000301';
+SELECT isnt_empty(
+  $$ UPDATE bodegas SET ubicacion = 'editado por admin'
+     WHERE id = '72000000-0000-0000-0000-000000000001' RETURNING id $$,
+  'POSITIVA bodegas UPDATE: administrador edita'
+);
+
+SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000301';
+SELECT throws_ok(
+  $$ DELETE FROM bodegas WHERE id = '72000000-0000-0000-0000-000000000001' $$,
+  '42501',
+  NULL,
+  'NEGATIVA bodegas DELETE: ni administrador borra (no hay GRANT DELETE para nadie)'
+);
+
+SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000304';
+SELECT throws_ok(
+  $$ DELETE FROM bodegas WHERE id = '72000000-0000-0000-0000-000000000001' $$,
+  '42501',
+  NULL,
+  'NEGATIVA bodegas DELETE: ni voluntario general borra (no hay GRANT DELETE para nadie)'
+);
+
+
+-- Sin sesion. Desde la 00049 anon no tiene ningun privilegio sobre public, asi que ni siquiera
+-- llega a RLS: se rechaza una capa mas abajo. Las suites hermanas cierran igual; esta no lo hacia.
+RESET request.jwt.claim.sub;
+SET LOCAL ROLE anon;
+
+SELECT throws_ok(
+  $$ SELECT count(*) FROM proveedores $$,
+  '42501',
+  NULL,
+  'NEGATIVA proveedores SELECT: sin sesion (anon) no se consulta el catalogo'
+);
+
+SELECT throws_ok(
+  $$ SELECT count(*) FROM bodegas $$,
+  '42501',
+  NULL,
+  'NEGATIVA bodegas SELECT: sin sesion (anon) no se consulta el catalogo'
 );
 
 SELECT * FROM finish();
