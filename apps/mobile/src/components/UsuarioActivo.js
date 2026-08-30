@@ -14,18 +14,10 @@ export default function UsuarioActivo({ compacto = true }) {
 
   return (
     <View style={compacto ? styles.compacto : styles.expandido}>
-      <Text 
-        style={styles.nombre} 
-        numberOfLines={lineas}
-        ellipsizeMode="tail"
-      >
+      <Text style={styles.nombre} numberOfLines={lineas} ellipsizeMode="tail">
         {nombre || "Sesion activa"}
       </Text>
-      <Text 
-        style={styles.rol} 
-        numberOfLines={lineas}
-        ellipsizeMode="tail"
-      >
+      <Text style={styles.rol} numberOfLines={lineas} ellipsizeMode="tail">
         {etiquetaDeRol(perfil.rol)}
       </Text>
     </View>

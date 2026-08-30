@@ -178,11 +178,31 @@ function TabsNavigator() {
         },
       })}
     >
-      <Tabs.Screen name={ROUTES.TAB_INICIO} component={InicioNavigator} options={{ tabBarLabel: "Inicio" }} />
-      <Tabs.Screen name={ROUTES.TAB_PACIENTES} component={PacientesNavigator} options={{ tabBarLabel: "Pacientes" }} />
-      <Tabs.Screen name={ROUTES.TAB_JORNADAS} component={JornadasNavigator} options={{ tabBarLabel: "Jornadas" }} />
-      <Tabs.Screen name={ROUTES.TAB_INVENTARIO} component={InventarioNavigator} options={{ tabBarLabel: "Inventario" }} />
-      <Tabs.Screen name={ROUTES.TAB_AJUSTES} component={AjustesScreen} options={{ tabBarLabel: "Ajustes" }} />
+      <Tabs.Screen
+        name={ROUTES.TAB_INICIO}
+        component={InicioNavigator}
+        options={{ tabBarLabel: "Inicio" }}
+      />
+      <Tabs.Screen
+        name={ROUTES.TAB_PACIENTES}
+        component={PacientesNavigator}
+        options={{ tabBarLabel: "Pacientes" }}
+      />
+      <Tabs.Screen
+        name={ROUTES.TAB_JORNADAS}
+        component={JornadasNavigator}
+        options={{ tabBarLabel: "Jornadas" }}
+      />
+      <Tabs.Screen
+        name={ROUTES.TAB_INVENTARIO}
+        component={InventarioNavigator}
+        options={{ tabBarLabel: "Inventario" }}
+      />
+      <Tabs.Screen
+        name={ROUTES.TAB_AJUSTES}
+        component={AjustesScreen}
+        options={{ tabBarLabel: "Ajustes" }}
+      />
     </Tabs.Navigator>
   );
 }
