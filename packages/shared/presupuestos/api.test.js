@@ -36,6 +36,29 @@ function clienteRpc(respuesta) {
   };
 }
 
+function clienteInsert(respuesta) {
+  const llamadas = [];
+  const encadenable = {
+    insert(valores) {
+      llamadas.push({ paso: "insert", valores });
+      return encadenable;
+    },
+    select(columnas) {
+      llamadas.push({ paso: "select", columnas });
+      return encadenable;
+    },
+    single: async () => (respuesta instanceof Error ? Promise.reject(respuesta) : respuesta),
+  };
+
+  return {
+    llamadas,
+    from(tabla) {
+      llamadas.push({ paso: "from", tabla });
+      return encadenable;
+    },
+  };
+}
+
 function clienteUpdate(respuesta) {
   const llamadas = [];
   const encadenable = {
@@ -257,15 +280,37 @@ describe("asignarPresupuestoJornada", () => {
 
 describe("gestión de gastos (#298)", () => {
   it("registrarGasto inserta correctamente y devuelve la estructura esperada", async () => {
-    const respuesta = await registrarGasto({
-      concepto: "Gasolina",
-      categoria: "Logistica",
-      monto: "150",
-      jornada_id: "jornada-123",
-    });
+    const cliente = clienteInsert({ data: { id: "gasto-1" }, error: null });
+    dobles.cliente = cliente;
 
-    expect(respuesta).toHaveProperty("gasto");
-    expect(respuesta).toHaveProperty("error");
+    const respuesta = await registrarGasto(
+      {
+        concepto: "Gasolina",
+        categoria: "Logistica",
+        monto: "150",
+        jornada_id: "jornada-123",
+      },
+      { usuarioId: "usuario-1" },
+    );
+
+    expect(respuesta).toEqual({ gasto: { id: "gasto-1" }, error: null });
+    expect(cliente.llamadas).toContainEqual({ paso: "from", tabla: "gastos" });
+  });
+
+  // Bug encontrado al verificar la #300 contra datos reales: registrarGasto() nunca enviaba
+  // registrado_por, columna NOT NULL sin DEFAULT (00025); el INSERT reventaba con 23502 para
+  // cualquier rol. Esta prueba fija el contrato correcto para que no se repita.
+  it("envia registrado_por con el usuarioId recibido: gastos.registrado_por es NOT NULL (00025)", async () => {
+    const cliente = clienteInsert({ data: { id: "gasto-1" }, error: null });
+    dobles.cliente = cliente;
+
+    await registrarGasto(
+      { concepto: "Gasolina", categoria: "Logistica", monto: "150", jornada_id: "jornada-123" },
+      { usuarioId: "usuario-1" },
+    );
+
+    const insertado = cliente.llamadas.find((llamada) => llamada.paso === "insert");
+    expect(insertado.valores.registrado_por).toBe("usuario-1");
   });
 
   it("editarGasto rechaza la edición si el id no se proporciona", async () => {
