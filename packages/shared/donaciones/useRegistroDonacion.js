@@ -1,11 +1,10 @@
 import { useState } from "react";
 
-const ROLES_ESCRITURA = ["Administrador"];
-const ROLES_LECTURA = ["Administrador", "Junta Directiva", "Socio Fundador"];
+import { puedeRegistrarDonaciones, puedeVerDonaciones } from "./permisos.js";
 
 export function useRegistroDonacion({ _client, usuarioRol, onGuardarExito }) {
-  const puedeEscribir = ROLES_ESCRITURA.includes(usuarioRol);
-  const tieneAccesoLectura = ROLES_LECTURA.includes(usuarioRol);
+  const puedeEscribir = puedeRegistrarDonaciones(usuarioRol);
+  const tieneAccesoLectura = puedeVerDonaciones(usuarioRol);
 
   const [tipoDonacion, setTipoDonacion] = useState("economica");
   const [donanteId, setDonanteId] = useState("");

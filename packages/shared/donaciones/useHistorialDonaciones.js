@@ -1,9 +1,9 @@
 import { useState, useMemo } from "react";
 
-const ROLES_LECTURA = ["Administrador", "Junta Directiva", "Socio Fundador"];
+import { puedeVerDonaciones } from "./permisos.js";
 
 export function useHistorialDonaciones({ usuarioRol, donacionesIniciales = [] }) {
-  const tieneAccesoLectura = ROLES_LECTURA.includes(usuarioRol);
+  const tieneAccesoLectura = puedeVerDonaciones(usuarioRol);
 
   const [donaciones, setDonaciones] = useState(donacionesIniciales);
   const [filtroDonante, setFiltroDonante] = useState("");
