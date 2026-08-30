@@ -23,13 +23,59 @@ Un solo job, **Lint y build**, que corre en este orden:
 2. `npm run lint` en todos los workspaces.
 3. `npm test` en todos los workspaces que tengan el script (issue #218), que desde la issue
    **#219** comprueba ademas **cobertura de las validaciones**.
-4. Build de la web con los secrets del ambiente que corresponde a la rama.
+4. **Resumen de las pruebas** en la pagina de la corrida (issue #223).
+5. Build de la web con los secrets del ambiente que corresponde a la rama.
 
 Cada paso va antes del siguiente por lo que cuesta: la guarda de esquema es analisis de texto y
 tarda un segundo; una prueba rota se ve en segundos, sin esperar a que la web compile. Y todo va
 dentro de este job y no en uno propio porque **Lint y build** ya es check requerido en `develop`
 y `main`; un job nuevo no lo seria hasta que alguien lo agregue en Settings > Branches, y
 mientras tanto un PR en rojo se podria mergear igual.
+
+### El presupuesto de tiempo del pipeline
+
+**Diez minutos**, y lo fija la issue #223. Lo hacen cumplir los `timeout-minutes` de los **dos
+checks requeridos que corren en cada PR**, que son los que componen el tiempo que alguien espera
+para poder mergear:
+
+| Job                                 | Workflow       | Tope   | Medido                     |
+| ----------------------------------- | -------------- | ------ | -------------------------- |
+| **Lint y build**                    | `ci.yml`       | 10 min | 37-50 s                    |
+| **Validar migraciones y funciones** | `supabase.yml` | 10 min | 4-9 s, o 142-187 s con SQL |
+
+Dentro de **Lint y build**, `npm ci` son ~14 s, el lint ~6 s, las pruebas ~10 s y el build ~1 s.
+El job caro es el de Supabase, que levanta el stack, aplica las migraciones desde cero y corre
+las suites pgTAP; su coste crece con cada migracion y cada suite nuevas, asi que **es el que hay
+que mirar** cuando alguien se pregunte si el presupuesto sigue alcanzando.
+
+`Aplicar migraciones` se queda en 15 minutos a proposito: corre en `push`, despues del merge, y
+no es tiempo que nadie este esperando.
+
+**Un tope no es una meta.** Si un dia una corrida se acerca a los diez minutos, lo que hay que
+averiguar es que la hizo crecer; subir el numero es la ultima opcion, no la primera.
+
+### El resumen de las pruebas
+
+La DoD de la #223 pide que el resultado de las pruebas **se vea en el PR**. El check en verde no
+dice cuantas pruebas corrieron ni si la cobertura quedo pegada al umbral, y para saberlo habia
+que abrir el log crudo del paso.
+
+`scripts/resumen-de-pruebas.mjs` arma con eso el resumen que GitHub muestra en la pagina de la
+corrida, a un clic del PR: las lineas de cierre de vitest y una tabla de cobertura contra su
+umbral. Detalles que conviene conocer antes de tocarlo:
+
+- **Los umbrales no se copian al workflow**: los lee de `packages/shared/vitest.config.js`, que
+  es donde los declara la guarda de la #219. Una segunda copia podria divergir en silencio.
+- **Corre con `if: always()`**, porque el resumen de una corrida en rojo es el que mas falta
+  hace, y **nunca falla**: si le faltan los archivos que lee, escribe una nota y sale con 0. Es
+  un reporte, no una guarda.
+- **El paso de las pruebas lleva `set -o pipefail`.** El shell por defecto de Actions es
+  `bash -e {0}`, que no lo trae; sin el, la tuberia hacia `tee` devuelve el codigo de `tee`
+  -siempre 0- y **una prueba rota dejaria el job en verde**. Es la trampa de este cambio: lo que
+  se agrego para cumplir el cuarto punto de la DoD podia romper el segundo.
+- Se eligio el resumen y no un comentario en el PR porque escribir en `$GITHUB_STEP_SUMMARY` no
+  pide permisos: el workflow sigue con `contents: read`. Comentar obligaria a `pull-requests:
+write` y a ensuciar el hilo en cada push.
 
 ### La guarda de cobertura de las validaciones
 
@@ -561,6 +607,15 @@ npm run verificar:shared-esquema -- --autoprueba
 npm run lint
 npm test
 npm run build
+```
+
+El resumen de las pruebas se puede ver tal como quedara en el PR capturando la salida igual que
+el CI, que es tambien la forma de comprobar que `pipefail` sigue haciendo su trabajo:
+
+```bash
+set -o pipefail
+npm test 2>&1 | tee /tmp/pruebas.log        # devuelve != 0 si una prueba falla
+node scripts/resumen-de-pruebas.mjs /tmp/pruebas.log
 ```
 
 Lo que corre el job **Validar migraciones y funciones**:

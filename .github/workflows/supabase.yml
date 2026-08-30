@@ -258,7 +258,12 @@ jobs:
     name: Validar migraciones y funciones
     needs: cambios
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # Entra en el presupuesto de diez minutos de la issue #223: es check requerido y corre en
+    # cada PR, asi que cuenta para el tiempo total del pipeline. Es el job mas caro que hay
+    # -levanta el stack, aplica las migraciones desde cero y corre las suites pgTAP- y aun asi
+    # mide entre 142 s y 187 s cuando el PR toca supabase/. Si algun dia se acerca al tope, lo
+    # que hay que revisar es por que crecio tanto, no subir el numero sin mirar.
+    timeout-minutes: 10
     steps:
       - name: Descargar el codigo
         uses: actions/checkout@v5
