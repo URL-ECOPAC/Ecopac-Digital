@@ -511,6 +511,29 @@ Lo hace cumplir `packages/shared/typescript.test.js`, que falla si aparece un `.
 Quien quiera TypeScript aqui no tiene que borrar esa prueba: tiene que montar lo de arriba y
 borrarla en el mismo PR.
 
+Los tipos estan escritos (issue #48): `packages/shared/types/index.js` documenta **una tabla del
+esquema por `@typedef`**, las 41 que hay. Se usan desde las dos apps por el barril del paquete:
+
+```js
+/** @typedef {import("@ecopac/shared").Paciente} Paciente */
+```
+
+Tres cosas que conviene saber antes de tocarlos:
+
+- Describen **el objeto que devuelve el `api.js`**, no la fila cruda: las propiedades van en
+  camelCase, como los alias que ya pide cada `select()` (`comunidadId:comunidad_id`).
+- Las relaciones embebidas no estan, porque no son columnas de la tabla: dependen del `select()`
+  de cada consulta. Quien las necesite compone el tipo donde las pide.
+- Los valores de enum no se reescriben: se derivan de `enums.js` y de `usuarios/roles.js`, que por
+  eso van congelados con `Object.freeze`. Sin el freeze el tipo colapsa a `string`.
+- El archivo termina en `export {}` y esa linea no sobra: TypeScript solo considera exportados los
+  `@typedef` de un archivo que ya sea modulo, y un `.js` sin un solo import ni export es un script
+  global. Sin ella el barril no propaga nada y el `import(...)` de arriba falla.
+
+Lo hace cumplir `packages/shared/types/index.test.js`, que compara los `@typedef` contra
+`supabase/migrations/` y falla si falta una tabla, sobra una propiedad o falta una columna. Una
+migracion que crea una tabla la agrega aqui en el mismo PR.
+
 Que puede hacer cada rol no se decide aqui ni se repite en cada modulo: esta en
 [PERMISOS.md](./PERMISOS.md), con la politica RLS que implementa cada celda.
 
