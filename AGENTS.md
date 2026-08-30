@@ -108,6 +108,13 @@ divergencia aparece despues del merge, cuando ya es tarde.
 Para corregir una migracion aplicada se escribe una migracion nueva que corrija hacia adelante.
 `supabase/migrations/00005_corregir_schema_de_extensiones.sql` es el ejemplo a seguir.
 
+**Una migracion tampoco se aplica a mano.** Nadie corre `supabase db push` contra `ecopac-dev` ni
+`ecopac-prod` desde su maquina: se mergea el PR y la aplica el workflow. Si la base registra una
+migracion cuyo archivo no esta todavia en la rama, `db push` falla en **todos** los push a esa
+rama -traigan SQL o no- hasta que el PR entre, y el fallo le aparece a otra persona. Para probar
+antes de mergear esta el stack local (`supabase start` y `supabase db reset`), que es lo mismo que
+corre el CI. Detalle en `docs/CI-CD.md`.
+
 La regla la hace cumplir el job **Migraciones no editadas** del workflow de Supabase: falla el
 PR si modifica o borra un archivo de `supabase/migrations/` que ya existe en la rama base.
 Editar una migracion agregada en el mismo PR si esta permitido. La salida de emergencia es la
