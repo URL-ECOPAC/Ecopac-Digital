@@ -42,6 +42,7 @@ SELECT throws_ok(
              'Gasto invalido 412', 'Logistica', 50.00, 'de000001-0000-0000-0000-000000000001',
              'invalido') $$,
   '22P02',
+  NULL,
   'un estado fuera del enum sigue rechazandose igual que antes'
 );
 

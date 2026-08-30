@@ -18,12 +18,17 @@
 -- ============================================================================
 CREATE TYPE estado_gasto AS ENUM ('pendiente', 'aprobado', 'rechazado');
 
--- La politica de INSERT de 00052 referencia estado en su WITH CHECK: Postgres no la actualiza
--- sola como haria con un RENAME COLUMN, bloquea directo el ALTER COLUMN TYPE mientras la
--- politica exista ("cannot alter type of a column used in a policy definition", SQLSTATE
--- 0A000). Se elimina y se vuelve a crear identica despues del cambio de tipo.
+-- Dos objetos referencian estado y bloquean el ALTER COLUMN TYPE mientras existan -Postgres no
+-- los actualiza solo como haria con un RENAME COLUMN-: la politica de INSERT de 00052
+-- ("cannot alter type of a column used in a policy definition", SQLSTATE 0A000) y el CHECK
+-- chk_gastos_motivo_rechazo_coherente de 00071 (su literal 'rechazado' quedo tipado contra
+-- estado_movimiento al crearse; compararlo despues contra estado_gasto es "operator does not
+-- exist: estado_gasto = estado_movimiento", SQLSTATE 42883). Los dos se eliminan y se vuelven a
+-- crear identicos despues del cambio de tipo.
 DROP POLICY "Administrador registra cualquier gasto; el personal asignado registra los de su jornada"
   ON gastos;
+
+ALTER TABLE gastos DROP CONSTRAINT chk_gastos_motivo_rechazo_coherente;
 
 -- DROP DEFAULT antes del cambio de tipo: un DEFAULT que referencia al tipo viejo bloquea el
 -- ALTER COLUMN TYPE. El USING castea cada fila por su representacion de texto -- 'pendiente',
@@ -45,6 +50,12 @@ CREATE POLICY "Administrador registra cualquier gasto; el personal asignado regi
       AND registrado_por = auth.uid()
     )
   );
+
+ALTER TABLE gastos ADD CONSTRAINT chk_gastos_motivo_rechazo_coherente CHECK (
+  (estado = 'rechazado' AND motivo_rechazo IS NOT NULL AND length(trim(motivo_rechazo)) > 0)
+  OR
+  (estado <> 'rechazado' AND motivo_rechazo IS NULL)
+);
 
 COMMENT ON TYPE estado_gasto IS
   'Estados del flujo de aprobacion de un gasto. Vocabulario propio de gastos, separado de '
