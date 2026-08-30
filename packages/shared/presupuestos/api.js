@@ -59,9 +59,7 @@ function aPresupuesto(fila) {
 
 async function consultar(nombreDeFuncion, argumentos, presupuestoSinFilas) {
   try {
-    const { data, error } = await obtenerSupabase()
-      .rpc(nombreDeFuncion, argumentos)
-      .maybeSingle();
+    const { data, error } = await obtenerSupabase().rpc(nombreDeFuncion, argumentos).maybeSingle();
 
     if (error) {
       return { presupuesto: null, error: normalizarError(error) };
@@ -116,9 +114,13 @@ export async function obtenerPresupuestoProyecto(idProyecto) {
     return { presupuesto: null, error: null };
   }
 
-  return consultar("presupuesto_de_proyecto", { p_proyecto_id: idProyecto }, {
-    ...PRESUPUESTO_VACIO,
-  });
+  return consultar(
+    "presupuesto_de_proyecto",
+    { p_proyecto_id: idProyecto },
+    {
+      ...PRESUPUESTO_VACIO,
+    },
+  );
 }
 
 export async function obtenerPresupuestoSistema() {
@@ -143,7 +145,8 @@ export async function registrarGasto(datosGasto) {
         responsable_id: responsable_id || null,
         jornada_id,
       })
-      .select(`
+      .select(
+        `
         *,
         jornadas (
           id,
@@ -153,7 +156,8 @@ export async function registrarGasto(datosGasto) {
             nombre
           )
         )
-      `)
+      `,
+      )
       .single();
 
     if (error) {
@@ -208,7 +212,8 @@ export async function editarGasto(idGasto, datosGasto) {
       .from("gastos")
       .update(updates)
       .eq("id", idGasto)
-      .select(`
+      .select(
+        `
         *,
         jornadas (
           id,
@@ -218,7 +223,8 @@ export async function editarGasto(idGasto, datosGasto) {
             nombre
           )
         )
-      `)
+      `,
+      )
       .single();
 
     if (error) {
@@ -235,9 +241,7 @@ export async function listarGastos(filtros = {}) {
   try {
     const { estado, categoria, jornada_id, proyecto_id, fecha_inicio, fecha_fin } = filtros;
 
-    let query = obtenerSupabase()
-      .from("gastos")
-      .select(`
+    let query = obtenerSupabase().from("gastos").select(`
         *,
         jornadas!inner (
           id,

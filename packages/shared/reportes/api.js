@@ -52,11 +52,7 @@ export const AGRUPACIONES_DE_IMPACTO = {
   PROYECTO: "proyecto",
 };
 
-const INDICADORES = [
-  "pacientes_atendidos",
-  "tratamientos_entregados",
-  "medicamentos_utilizados",
-];
+const INDICADORES = ["pacientes_atendidos", "tratamientos_entregados", "medicamentos_utilizados"];
 
 /** '2026-08-14' -> '2026-08'. La vista no trae el mes: se deriva de la fecha. */
 function mesDe(fecha) {
@@ -113,11 +109,7 @@ function agregar(filas) {
 function variacion(actual, anterior) {
   const diferencia = actual - anterior;
   const porcentaje =
-    anterior === 0
-      ? actual > 0
-        ? 100
-        : 0
-      : Number(((diferencia / anterior) * 100).toFixed(2));
+    anterior === 0 ? (actual > 0 ? 100 : 0) : Number(((diferencia / anterior) * 100).toFixed(2));
 
   return { actual, anterior, diferencia, porcentaje };
 }

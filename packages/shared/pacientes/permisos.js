@@ -117,9 +117,7 @@ export function puedeAnularReceta(rol, receta, perfilId) {
   if (!receta || !perfilId) return false;
 
   return (
-    rol === ROLES.MEDICO &&
-    receta.medicoId === perfilId &&
-    receta.estado === ESTADOS_RECETA.EMITIDA
+    rol === ROLES.MEDICO && receta.medicoId === perfilId && receta.estado === ESTADOS_RECETA.EMITIDA
   );
 }
 

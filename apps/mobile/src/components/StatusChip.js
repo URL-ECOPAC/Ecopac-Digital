@@ -1,5 +1,5 @@
-import { StyleSheet, Text, View } from 'react-native';
-import { colors, spacing, statusColors, typography } from '@ecopac/ui-tokens';
+import { StyleSheet, Text, View } from "react-native";
+import { colors, spacing, statusColors, typography } from "@ecopac/ui-tokens";
 
 /**
  * Chip de estado. Espejo de apps/web/src/components/StatusChip.jsx.
@@ -12,7 +12,7 @@ import { colors, spacing, statusColors, typography } from '@ecopac/ui-tokens';
  * statusColors directamente, que es la misma fuente.
  */
 export default function StatusChip({ status, label }) {
-  if (status === null || status === undefined || status === '') return null;
+  if (status === null || status === undefined || status === "") return null;
 
   // React Native tampoco pinta booleanos: la columna de estado de COLUMNAS_USUARIO lee el
   // campo activo, y sin convertirlo el chip saldria vacio.
@@ -28,7 +28,7 @@ export default function StatusChip({ status, label }) {
 
 const styles = StyleSheet.create({
   chip: {
-    alignSelf: 'flex-start',
+    alignSelf: "flex-start",
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs / 2,
     borderRadius: spacing.md,

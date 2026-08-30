@@ -18,7 +18,10 @@ export function useHistorialDonaciones({ usuarioRol, donacionesIniciales = [] })
   // Filtrado de la lista
   const donacionesFiltradas = useMemo(() => {
     return donaciones.filter((item) => {
-      if (filtroDonante && !item.donante_nombre?.toLowerCase().includes(filtroDonante.toLowerCase())) {
+      if (
+        filtroDonante &&
+        !item.donante_nombre?.toLowerCase().includes(filtroDonante.toLowerCase())
+      ) {
         return false;
       }
       if (filtroTipo && item.tipo !== filtroTipo) {

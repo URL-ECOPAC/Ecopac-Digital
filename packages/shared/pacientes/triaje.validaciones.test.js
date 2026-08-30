@@ -126,9 +126,9 @@ describe("validarTriaje", () => {
     });
 
     it("acepta cuando la sistolica es estrictamente mayor", () => {
-      expect(
-        validarTriaje(triajeValido({ presionSistolica: 90, presionDiastolica: 80 })),
-      ).toEqual({});
+      expect(validarTriaje(triajeValido({ presionSistolica: 90, presionDiastolica: 80 }))).toEqual(
+        {},
+      );
     });
   });
 
@@ -230,7 +230,10 @@ describe("CAMPOS_TRIAJE", () => {
     // tercera fuente de verdad -- si alguien cambia un limite en campos.js sin querer, esto avisa
     // antes de que el cliente empiece a aceptar en silencio lo que la base rechaza.
     const limites = Object.fromEntries(
-      CAMPOS_TRIAJE.map((campo) => [campo.id, { min: campo.validacion.min, max: campo.validacion.max }]),
+      CAMPOS_TRIAJE.map((campo) => [
+        campo.id,
+        { min: campo.validacion.min, max: campo.validacion.max },
+      ]),
     );
 
     expect(limites).toEqual({

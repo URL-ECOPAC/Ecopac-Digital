@@ -1,13 +1,13 @@
-import { useState } from 'react';
+import { useState } from "react";
 
-import { CAMPOS_EDICION_USUARIO, useEdicionUsuario } from '@ecopac/shared';
+import { CAMPOS_EDICION_USUARIO, useEdicionUsuario } from "@ecopac/shared";
 
-import Modal from '../components/Modal';
-import PrimaryButton from '../components/PrimaryButton';
-import Selector from '../components/Selector';
-import SecondaryButton from '../components/SecondaryButton';
-import TextField from '../components/TextField';
-import ModalConfirmarDesactivacion from './ModalConfirmarDesactivacion';
+import Modal from "../components/Modal";
+import PrimaryButton from "../components/PrimaryButton";
+import Selector from "../components/Selector";
+import SecondaryButton from "../components/SecondaryButton";
+import TextField from "../components/TextField";
+import ModalConfirmarDesactivacion from "./ModalConfirmarDesactivacion";
 
 // Modal de edicion de usuario (issue #107), abierto al clickear una fila de
 // VoluntariosPage.jsx (issue #105): no tiene ruta propia, mismo patron que
@@ -29,8 +29,8 @@ import ModalConfirmarDesactivacion from './ModalConfirmarDesactivacion';
 // que no hay otro lugar del que "abrirse desde la fila" sin construir un componente nuevo de
 // catalogo.
 const TIPO_DE_INPUT = {
-  texto: 'text',
-  telefono: 'tel',
+  texto: "text",
+  telefono: "tel",
 };
 
 export default function ModalEdicionUsuario({ perfil, idSesionActual, onClose, onGuardado }) {
@@ -54,7 +54,7 @@ export default function ModalEdicionUsuario({ perfil, idSesionActual, onClose, o
         )}
 
         {CAMPOS_EDICION_USUARIO.map((campo) =>
-          campo.tipo === 'select' ? (
+          campo.tipo === "select" ? (
             <Selector
               key={campo.id}
               label={campo.label}
@@ -68,9 +68,9 @@ export default function ModalEdicionUsuario({ perfil, idSesionActual, onClose, o
             <TextField
               key={campo.id}
               label={campo.label}
-              type={TIPO_DE_INPUT[campo.tipo] ?? 'text'}
+              type={TIPO_DE_INPUT[campo.tipo] ?? "text"}
               maxLength={campo.validacion?.maxLongitud}
-              value={valores[campo.id] ?? ''}
+              value={valores[campo.id] ?? ""}
               onChange={(evento) => setCampo(campo.id, evento.target.value)}
               error={errores[campo.id]}
               disabled={enviando}
@@ -84,7 +84,7 @@ export default function ModalEdicionUsuario({ perfil, idSesionActual, onClose, o
               <span className="text-muted small">No puedes desactivar tu propia cuenta.</span>
             ) : (
               <SecondaryButton
-                title={perfil?.activo ? 'Desactivar' : 'Reactivar'}
+                title={perfil?.activo ? "Desactivar" : "Reactivar"}
                 onClick={() => setMostrarConfirmacion(true)}
                 disabled={enviando}
               />

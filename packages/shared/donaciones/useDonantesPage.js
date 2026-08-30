@@ -185,14 +185,7 @@ export function useDonantesPage({ usuarioRol } = {}) {
       cerrarModal();
       return { ok: true, error: null };
     },
-    [
-      puedeEscribir,
-      modoEdicion,
-      donanteSeleccionado,
-      usuarioRol,
-      cargarDonantes,
-      cerrarModal,
-    ],
+    [puedeEscribir, modoEdicion, donanteSeleccionado, usuarioRol, cargarDonantes, cerrarModal],
   );
 
   /** Da de baja a un donante. Es baja logica: donantes.activo pasa a false, la fila se queda. */

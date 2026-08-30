@@ -12,19 +12,19 @@
  * lo que importa porque las jornadas se atienden en exteriores con luz directa.
  */
 export const colors = {
-  primary: '#2A9C36', // Marca, botones principales, elementos activos y estado Disponible
-  primaryDark: '#1E7E2A', // Extremo oscuro del degradado del banner; hover de botón primario
-  primaryLight: '#36AE42', // Extremo claro del degradado del banner
-  secondary: '#4B5563', // Botones secundarios, bordes e iconos de menor jerarquía
-  danger: '#B81F6F', // Crítico: medicamento vencido, sin stock y movimiento rechazado
-  warning: '#F1A239', // Próximo a vencer y advertencias que no bloquean
-  success: '#2A9C36', // Confirmaciones y estado aprobado; misma familia que primary
-  info: '#3C9CC0', // Pendiente de validación y valores informativos
-  background: '#F7F8FA', // Fondo general de las pantallas
-  surface: '#FFFFFF', // Tarjetas, sidebar y superficies elevadas
-  border: '#E9E9E9', // Bordes de tarjeta, separadores y pistas de barra de progreso
-  text: '#111827', // Texto principal, títulos y cuerpo de contenido
-  textMuted: '#4B5563', // Texto secundario, descripciones y placeholders
+  primary: "#2A9C36", // Marca, botones principales, elementos activos y estado Disponible
+  primaryDark: "#1E7E2A", // Extremo oscuro del degradado del banner; hover de botón primario
+  primaryLight: "#36AE42", // Extremo claro del degradado del banner
+  secondary: "#4B5563", // Botones secundarios, bordes e iconos de menor jerarquía
+  danger: "#B81F6F", // Crítico: medicamento vencido, sin stock y movimiento rechazado
+  warning: "#F1A239", // Próximo a vencer y advertencias que no bloquean
+  success: "#2A9C36", // Confirmaciones y estado aprobado; misma familia que primary
+  info: "#3C9CC0", // Pendiente de validación y valores informativos
+  background: "#F7F8FA", // Fondo general de las pantallas
+  surface: "#FFFFFF", // Tarjetas, sidebar y superficies elevadas
+  border: "#E9E9E9", // Bordes de tarjeta, separadores y pistas de barra de progreso
+  text: "#111827", // Texto principal, títulos y cuerpo de contenido
+  textMuted: "#4B5563", // Texto secundario, descripciones y placeholders
 };
 
 /**
@@ -58,12 +58,12 @@ export const statusColors = {
   atendida: colors.success,
   // estado_jornada
   planificada: colors.info,
-  'en curso': colors.primary,
+  "en curso": colors.primary,
   finalizada: colors.secondary,
   cancelada: colors.danger,
   // estados de existencia, derivados de la fecha de vencimiento
   disponible: colors.success,
-  'por vencer': colors.warning,
+  "por vencer": colors.warning,
   critico: colors.danger,
   activo: colors.success,
   inactivo: colors.secondary,
@@ -102,7 +102,7 @@ export const spacing = {
  * Tamaño base (md) de 16px/dp conforme a la definición de terminado.
  */
 export const typography = {
-  fontFamilyBase: 'System',
+  fontFamilyBase: "System",
   sizes: {
     xs: 12,
     sm: 14,
@@ -111,10 +111,10 @@ export const typography = {
     xl: 24,
   },
   weights: {
-    regular: '400',
-    medium: '500',
-    semibold: '600',
-    bold: '700',
+    regular: "400",
+    medium: "500",
+    semibold: "600",
+    bold: "700",
   },
 };
 
@@ -123,31 +123,31 @@ export const typography = {
  * Los estados coinciden exactamente con los enum de la base de datos.
  */
 export const labels = {
-  medicamentoVencido: 'Medicamento vencido',
-  proximoAVencer: 'Próximo a vencer',
-  pendienteDeValidacion: 'Pendiente de validación',
-  aprobado: 'Aprobado',
-  rechazado: 'Rechazado',
-  disponible: 'Disponible',
-  critico: 'Crítico',
-  sinStock: 'Sin stock',
-  usuarioActivo: 'Activo',
-  usuarioInactivo: 'Inactivo',
-  jornadaPlanificada: 'Planificada',
-  jornadaEnCurso: 'En curso',
-  jornadaFinalizada: 'Finalizada',
-  jornadaCancelada: 'Cancelada',
-  cargando: 'Cargando...',
-  sinResultados: 'No se encontraron resultados',
-  errorDeConexion: 'Error de conexión con el servidor',
-  donacionRegistrada: 'Registrada', // estado_donacion (00022_donantes_donaciones.sql)
-  donacionAnulada: 'Anulada',
-  proyectoPlanificado: 'Planificado', // estado_proyecto (00007_proyectos.sql), forma masculina
-  proyectoFinalizado: 'Finalizado',
-  proyectoCancelado: 'Cancelado',
+  medicamentoVencido: "Medicamento vencido",
+  proximoAVencer: "Próximo a vencer",
+  pendienteDeValidacion: "Pendiente de validación",
+  aprobado: "Aprobado",
+  rechazado: "Rechazado",
+  disponible: "Disponible",
+  critico: "Crítico",
+  sinStock: "Sin stock",
+  usuarioActivo: "Activo",
+  usuarioInactivo: "Inactivo",
+  jornadaPlanificada: "Planificada",
+  jornadaEnCurso: "En curso",
+  jornadaFinalizada: "Finalizada",
+  jornadaCancelada: "Cancelada",
+  cargando: "Cargando...",
+  sinResultados: "No se encontraron resultados",
+  errorDeConexion: "Error de conexión con el servidor",
+  donacionRegistrada: "Registrada", // estado_donacion (00022_donantes_donaciones.sql)
+  donacionAnulada: "Anulada",
+  proyectoPlanificado: "Planificado", // estado_proyecto (00007_proyectos.sql), forma masculina
+  proyectoFinalizado: "Finalizado",
+  proyectoCancelado: "Cancelado",
   // proyecto 'en curso' reutiliza jornadaEnCurso: mismo texto exacto en los dos enums.
-  activo: 'Activo', // generico: donantes.activo (00022) y cualquier otra entidad con esa misma columna
-  inactivo: 'Inactivo',
+  activo: "Activo", // generico: donantes.activo (00022) y cualquier otra entidad con esa misma columna
+  inactivo: "Inactivo",
 };
 
 export default {

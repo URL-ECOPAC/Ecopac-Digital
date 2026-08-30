@@ -1,8 +1,8 @@
-import { StyleSheet, Text, View } from 'react-native';
-import { colors, spacing, typography } from '@ecopac/ui-tokens';
+import { StyleSheet, Text, View } from "react-native";
+import { colors, spacing, typography } from "@ecopac/ui-tokens";
 
-import { PrimaryButton, ScreenContainer } from '../components';
-import { useSesionCompartida } from '../contexto/SesionProvider';
+import { PrimaryButton, ScreenContainer } from "../components";
+import { useSesionCompartida } from "../contexto/SesionProvider";
 
 export default function AjustesScreen() {
   const { logout } = useSesionCompartida();

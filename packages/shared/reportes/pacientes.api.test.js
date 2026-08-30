@@ -144,9 +144,7 @@ describe("obtenerReportePacientesAtendidos", () => {
     await obtenerReportePacientesAtendidos({ rol: ROLES.ADMINISTRADOR });
 
     expect(cliente.llamadas[0].nombre).toBe("fn_reporte_pacientes_atendidos");
-    expect(cliente.llamadas[0].parametros.p_agrupar_por).toBe(
-      AGRUPACIONES_DE_PACIENTES.JORNADA,
-    );
+    expect(cliente.llamadas[0].parametros.p_agrupar_por).toBe(AGRUPACIONES_DE_PACIENTES.JORNADA);
   });
 
   it.each([

@@ -1,10 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { listarComunidades } from "../territorio/api.js";
-import {
-  obtenerCatalogoDeCondiciones,
-  obtenerPacientesConCondicion,
-} from "./condiciones.api.js";
+import { obtenerCatalogoDeCondiciones, obtenerPacientesConCondicion } from "./condiciones.api.js";
 import { OPCIONES_ESTADO_CONDICION } from "./condiciones.campos.js";
 import { FILTROS_PACIENTE_CRONICO_VACIOS } from "./condiciones.filtros.js";
 import { puedeVerCondiciones } from "./condiciones.permisos.js";

@@ -7,10 +7,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import {
-  ESTADOS_CONDICION_CRONICA,
-  OPCIONES_ESTADO_CONDICION,
-} from "./condiciones.campos.js";
+import { ESTADOS_CONDICION_CRONICA, OPCIONES_ESTADO_CONDICION } from "./condiciones.campos.js";
 import {
   normalizarDatosCondicion,
   validarCambioDeCondicion,
@@ -27,11 +24,7 @@ const ALTA_VALIDA = {
 
 describe("ESTADOS_CONDICION_CRONICA", () => {
   it("tiene los tres valores del enum estado_condicion_cronica de la 00010", () => {
-    expect(Object.values(ESTADOS_CONDICION_CRONICA)).toEqual([
-      "activa",
-      "controlada",
-      "resuelta",
-    ]);
+    expect(Object.values(ESTADOS_CONDICION_CRONICA)).toEqual(["activa", "controlada", "resuelta"]);
   });
 
   it("cada estado tiene su etiqueta para la pantalla", () => {

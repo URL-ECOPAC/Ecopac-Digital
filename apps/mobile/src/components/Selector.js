@@ -1,6 +1,6 @@
-import { useState } from 'react';
-import { FlatList, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors, spacing, typography } from '@ecopac/ui-tokens';
+import { useState } from "react";
+import { FlatList, Modal, Pressable, StyleSheet, Text, View } from "react-native";
+import { colors, spacing, typography } from "@ecopac/ui-tokens";
 
 const MIN_TOUCH_HEIGHT = 48;
 
@@ -17,7 +17,7 @@ export default function Selector({
   value,
   options,
   onSelect,
-  placeholder = 'Seleccionar',
+  placeholder = "Seleccionar",
   error,
   style,
 }) {
@@ -95,7 +95,7 @@ const styles = StyleSheet.create({
   },
   trigger: {
     minHeight: MIN_TOUCH_HEIGHT,
-    justifyContent: 'center',
+    justifyContent: "center",
     borderWidth: 1,
     borderColor: colors.secondary,
     borderRadius: spacing.xs,
@@ -126,7 +126,7 @@ const styles = StyleSheet.create({
   },
   modalRoot: {
     flex: 1,
-    justifyContent: 'flex-end',
+    justifyContent: "flex-end",
   },
   backdrop: {
     flex: 1,
@@ -134,7 +134,7 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   sheet: {
-    maxHeight: '60%',
+    maxHeight: "60%",
     backgroundColor: colors.background,
     borderTopLeftRadius: spacing.md,
     borderTopRightRadius: spacing.md,
@@ -142,7 +142,7 @@ const styles = StyleSheet.create({
   },
   option: {
     minHeight: MIN_TOUCH_HEIGHT,
-    justifyContent: 'center',
+    justifyContent: "center",
     paddingHorizontal: spacing.md,
   },
   optionPressed: {

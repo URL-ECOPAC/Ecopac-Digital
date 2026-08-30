@@ -1,5 +1,5 @@
 import { useDonantesPage } from "@ecopac/shared";
-import { Button, Table, Input, Select, Card } from "@ecopac/ui"; 
+import { Button, Table, Input, Select, Card } from "@ecopac/ui";
 
 export default function DonantesPage({ client, usuarioRol }) {
   const {
@@ -20,7 +20,11 @@ export default function DonantesPage({ client, usuarioRol }) {
   } = useDonantesPage({ client, usuarioRol });
 
   if (!permisos.tieneAccesoLectura) {
-    return <div className="p-4 text-red-600">Acceso denegado: No cuenta con permisos para ver donantes.</div>;
+    return (
+      <div className="p-4 text-red-600">
+        Acceso denegado: No cuenta con permisos para ver donantes.
+      </div>
+    );
   }
 
   return (
@@ -73,8 +77,12 @@ export default function DonantesPage({ client, usuarioRol }) {
 
       {donanteSeleccionado && !modalAbierto && (
         <Card title={`Ficha: ${donanteSeleccionado.nombre}`}>
-          <p><strong>Tipo:</strong> {donanteSeleccionado.tipo}</p>
-          <p><strong>Contacto:</strong> {donanteSeleccionado.contacto}</p>
+          <p>
+            <strong>Tipo:</strong> {donanteSeleccionado.tipo}
+          </p>
+          <p>
+            <strong>Contacto:</strong> {donanteSeleccionado.contacto}
+          </p>
           <h3 className="mt-4 font-semibold">Histórico de Aportes</h3>
           <ul>
             {(donanteSeleccionado.donaciones || []).map((donacion) => (

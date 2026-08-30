@@ -1,7 +1,11 @@
 import { useProyectosSociales } from "@ecopac/shared";
 import { Button, Badge, Select, Input, Modal } from "@ecopac/ui";
 
-export default function ProyectosSocialesPage({ usuarioRol, proyectosIniciales, jornadasIniciales }) {
+export default function ProyectosSocialesPage({
+  usuarioRol,
+  proyectosIniciales,
+  jornadasIniciales,
+}) {
   const {
     proyectos,
     proyectoDetalle,
@@ -20,13 +24,11 @@ export default function ProyectosSocialesPage({ usuarioRol, proyectosIniciales, 
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">Proyectos Sociales</h1>
-          <p className="text-sm text-gray-500">Gestión de proyectos, presupuestos y jornadas de campo</p>
+          <p className="text-sm text-gray-500">
+            Gestión de proyectos, presupuestos y jornadas de campo
+          </p>
         </div>
-        {puedeEditar && (
-          <Button variant="primary">
-            + Nuevo Proyecto
-          </Button>
-        )}
+        {puedeEditar && <Button variant="primary">+ Nuevo Proyecto</Button>}
       </div>
 
       {/* Controles de Filtrado */}
@@ -68,18 +70,31 @@ export default function ProyectosSocialesPage({ usuarioRol, proyectosIniciales, 
           </thead>
           <tbody className="divide-y divide-gray-100">
             {proyectos.map((p) => (
-              <tr key={p.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => setProyectoSeleccionadoId(p.id)}>
+              <tr
+                key={p.id}
+                className="hover:bg-gray-50 cursor-pointer"
+                onClick={() => setProyectoSeleccionadoId(p.id)}
+              >
                 <td className="p-3 font-medium text-gray-900">{p.nombre}</td>
                 <td className="p-3 text-gray-600">{p.responsable}</td>
-                <td className="p-3 text-gray-500 text-xs">{p.fecha_inicio} - {p.fecha_fin}</td>
+                <td className="p-3 text-gray-500 text-xs">
+                  {p.fecha_inicio} - {p.fecha_fin}
+                </td>
                 <td className="p-3">
-                  <Badge variant={p.estado === "En Ejecución" ? "success" : "default"}>{p.estado}</Badge>
+                  <Badge variant={p.estado === "En Ejecución" ? "success" : "default"}>
+                    {p.estado}
+                  </Badge>
                 </td>
                 <td className="p-3">
                   <div className="w-full bg-gray-200 rounded-full h-2.5 max-w-[100px]">
-                    <div className="bg-blue-600 h-2.5 rounded-full" style={{ width: `${p.porcentaje_avance || 0}%` }}></div>
+                    <div
+                      className="bg-blue-600 h-2.5 rounded-full"
+                      style={{ width: `${p.porcentaje_avance || 0}%` }}
+                    ></div>
                   </div>
-                  <span className="text-xs text-gray-500 mt-0.5 block">{p.porcentaje_avance || 0}%</span>
+                  <span className="text-xs text-gray-500 mt-0.5 block">
+                    {p.porcentaje_avance || 0}%
+                  </span>
                 </td>
                 <td className="p-3 text-right">
                   <Button variant="ghost" size="sm" onClick={() => setProyectoSeleccionadoId(p.id)}>
@@ -94,7 +109,11 @@ export default function ProyectosSocialesPage({ usuarioRol, proyectosIniciales, 
 
       {/* Modal / Panel de Detalle */}
       {proyectoDetalle && (
-        <Modal isOpen={!!proyectoDetalle} onClose={() => setProyectoSeleccionadoId(null)} title={proyectoDetalle.nombre}>
+        <Modal
+          isOpen={!!proyectoDetalle}
+          onClose={() => setProyectoSeleccionadoId(null)}
+          title={proyectoDetalle.nombre}
+        >
           <div className="space-y-4">
             <p className="text-sm text-gray-600">{proyectoDetalle.descripcion}</p>
 
@@ -114,9 +133,15 @@ export default function ProyectosSocialesPage({ usuarioRol, proyectosIniciales, 
             {/* Contenido según Tab Activo */}
             {tabActivo === "resumen" && (
               <div className="text-sm space-y-2">
-                <p><strong>Responsable:</strong> {proyectoDetalle.responsable}</p>
-                <p><strong>Presupuesto:</strong> Q {proyectoDetalle.presupuesto || "0.00"}</p>
-                <p><strong>Avance actual:</strong> {proyectoDetalle.porcentaje_avance || 0}%</p>
+                <p>
+                  <strong>Responsable:</strong> {proyectoDetalle.responsable}
+                </p>
+                <p>
+                  <strong>Presupuesto:</strong> Q {proyectoDetalle.presupuesto || "0.00"}
+                </p>
+                <p>
+                  <strong>Avance actual:</strong> {proyectoDetalle.porcentaje_avance || 0}%
+                </p>
               </div>
             )}
 
@@ -133,14 +158,17 @@ export default function ProyectosSocialesPage({ usuarioRol, proyectosIniciales, 
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-xs text-gray-400">No hay jornadas asociadas a este proyecto.</p>
+                  <p className="text-xs text-gray-400">
+                    No hay jornadas asociadas a este proyecto.
+                  </p>
                 )}
               </div>
             )}
 
             {tabActivo === "gastos" && (
               <p className="text-xs text-amber-600 bg-amber-50 p-2 rounded">
-                El tab Gastos depende del módulo de Presupuestos (#274), actualmente pendiente de asignación.
+                El tab Gastos depende del módulo de Presupuestos (#274), actualmente pendiente de
+                asignación.
               </p>
             )}
           </div>

@@ -18,8 +18,8 @@
 // archivo: la issue #57, que ajusta el comportamiento de restaurar y limpiar la sesion, tiene
 // asi un solo sitio donde tocar.
 
-import { Platform } from 'react-native';
-import * as SecureStore from 'expo-secure-store';
+import { Platform } from "react-native";
+import * as SecureStore from "expo-secure-store";
 
 /**
  * Adaptador de almacenamiento híbrido (Web / Nativo)
@@ -29,8 +29,8 @@ import * as SecureStore from 'expo-secure-store';
 export const almacenamientoMovil = {
   getItem: async (key) => {
     try {
-      if (Platform.OS === 'web') {
-        return typeof window !== 'undefined' ? localStorage.getItem(key) : null;
+      if (Platform.OS === "web") {
+        return typeof window !== "undefined" ? localStorage.getItem(key) : null;
       }
       return await SecureStore.getItemAsync(key);
     } catch (error) {
@@ -41,8 +41,8 @@ export const almacenamientoMovil = {
 
   setItem: async (key, value) => {
     try {
-      if (Platform.OS === 'web') {
-        if (typeof window !== 'undefined') {
+      if (Platform.OS === "web") {
+        if (typeof window !== "undefined") {
           localStorage.setItem(key, value);
         }
         return;
@@ -55,8 +55,8 @@ export const almacenamientoMovil = {
 
   removeItem: async (key) => {
     try {
-      if (Platform.OS === 'web') {
-        if (typeof window !== 'undefined') {
+      if (Platform.OS === "web") {
+        if (typeof window !== "undefined") {
           localStorage.removeItem(key);
         }
         return;

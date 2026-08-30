@@ -295,7 +295,13 @@ describe("listarUsuarios", () => {
   it("cada perfil trae sus especialidades como arreglo de strings, no de objetos", async () => {
     const { cliente } = doble({
       data: [
-        { id: "u1", especialidades: [{ nombre_especialidad: "Pediatria" }, { nombre_especialidad: "Odontologia" }] },
+        {
+          id: "u1",
+          especialidades: [
+            { nombre_especialidad: "Pediatria" },
+            { nombre_especialidad: "Odontologia" },
+          ],
+        },
         { id: "u2", especialidades: [] },
         { id: "u3" },
       ],
@@ -753,12 +759,7 @@ describe("contarJornadasPorPerfil", () => {
 
   it("cuenta cuantas filas tiene cada perfil", async () => {
     const { cliente } = doble({
-      data: [
-        { perfil_id: "p1" },
-        { perfil_id: "p1" },
-        { perfil_id: "p2" },
-        { perfil_id: "p1" },
-      ],
+      data: [{ perfil_id: "p1" }, { perfil_id: "p1" }, { perfil_id: "p2" }, { perfil_id: "p1" }],
       error: null,
     });
     dobles.cliente = cliente;
@@ -830,7 +831,11 @@ describe("obtenerEspecialidadesDePerfil", () => {
   });
 
   it("sin identificador no gasta una llamada", async () => {
-    dobles.cliente = { from: () => { throw new Error("no debia llamarse"); } };
+    dobles.cliente = {
+      from: () => {
+        throw new Error("no debia llamarse");
+      },
+    };
 
     const { especialidades, error } = await obtenerEspecialidadesDePerfil(undefined);
 

@@ -59,7 +59,9 @@ export default function SeguimientoProyectoPage({
             </button>
           )}
           <h1 className="text-2xl font-bold text-gray-900">{proyecto.nombre}</h1>
-          <p className="text-sm text-gray-500 mt-1">{proyecto.descripcion || "Sin descripción disponible."}</p>
+          <p className="text-sm text-gray-500 mt-1">
+            {proyecto.descripcion || "Sin descripción disponible."}
+          </p>
         </div>
         <div className="flex items-center gap-3">
           <span className="px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
@@ -72,11 +74,15 @@ export default function SeguimientoProyectoPage({
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
           <p className="text-xs font-medium text-gray-500 uppercase">Total Jornadas</p>
-          <p className="text-2xl font-bold text-gray-900 mt-1">{indicadoresJornadas.totalJornadas}</p>
+          <p className="text-2xl font-bold text-gray-900 mt-1">
+            {indicadoresJornadas.totalJornadas}
+          </p>
         </div>
         <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
           <p className="text-xs font-medium text-gray-500 uppercase">Jornadas Completadas</p>
-          <p className="text-2xl font-bold text-green-600 mt-1">{indicadoresJornadas.completadas}</p>
+          <p className="text-2xl font-bold text-green-600 mt-1">
+            {indicadoresJornadas.completadas}
+          </p>
         </div>
         <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
           <p className="text-xs font-medium text-gray-500 uppercase">Presupuesto Total</p>
@@ -86,7 +92,9 @@ export default function SeguimientoProyectoPage({
         </div>
         <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
           <p className="text-xs font-medium text-gray-500 uppercase">Beneficiarios Alcanzados</p>
-          <p className="text-2xl font-bold text-indigo-600 mt-1">{indicadoresJornadas.beneficiariosTotales}</p>
+          <p className="text-2xl font-bold text-indigo-600 mt-1">
+            {indicadoresJornadas.beneficiariosTotales}
+          </p>
         </div>
       </div>
 
@@ -95,7 +103,9 @@ export default function SeguimientoProyectoPage({
         <div className="lg:col-span-2 space-y-6">
           {/* Formulario de Actualización de Avance */}
           <div className="bg-white p-5 rounded-lg shadow-sm border border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-800 mb-4">Actualizar Avance y Bitácora</h2>
+            <h2 className="text-lg font-semibold text-gray-800 mb-4">
+              Actualizar Avance y Bitácora
+            </h2>
             {errorAccion && (
               <div className="mb-4 p-3 bg-red-50 text-red-700 text-sm rounded-md border border-red-200">
                 {errorAccion}
@@ -104,7 +114,9 @@ export default function SeguimientoProyectoPage({
             <div className="space-y-4">
               <div>
                 <div className="flex justify-between items-center mb-1">
-                  <label className="text-sm font-medium text-gray-700">Porcentaje de avance (%)</label>
+                  <label className="text-sm font-medium text-gray-700">
+                    Porcentaje de avance (%)
+                  </label>
                   <span className="text-sm font-bold text-indigo-600">{nuevoPorcentaje}%</span>
                 </div>
                 <input
@@ -118,7 +130,9 @@ export default function SeguimientoProyectoPage({
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Nota de seguimiento</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Nota de seguimiento
+                </label>
                 <textarea
                   rows="3"
                   value={nuevaNota}
@@ -145,7 +159,9 @@ export default function SeguimientoProyectoPage({
           <div className="bg-white p-5 rounded-lg shadow-sm border border-gray-200">
             <h2 className="text-lg font-semibold text-gray-800 mb-4">Bitácora de Notas</h2>
             {bitacora.length === 0 ? (
-              <p className="text-sm text-gray-500 italic text-center py-4">No hay notas de seguimiento registradas.</p>
+              <p className="text-sm text-gray-500 italic text-center py-4">
+                No hay notas de seguimiento registradas.
+              </p>
             ) : (
               <div className="space-y-4">
                 {bitacora.map((item) => (
@@ -155,7 +171,11 @@ export default function SeguimientoProyectoPage({
                       <span>
                         Registrado por: <strong>{item.registradoPor || usuarioActual}</strong>
                       </span>
-                      <span>{item.createdAt ? new Date(item.createdAt).toLocaleString() : "Recientemente"}</span>
+                      <span>
+                        {item.createdAt
+                          ? new Date(item.createdAt).toLocaleString()
+                          : "Recientemente"}
+                      </span>
                     </div>
                   </div>
                 ))}
@@ -169,7 +189,9 @@ export default function SeguimientoProyectoPage({
           <div className="bg-white p-5 rounded-lg shadow-sm border border-gray-200">
             <h2 className="text-lg font-semibold text-gray-800 mb-4">Hitos del Proyecto</h2>
             {hitos.length === 0 ? (
-              <p className="text-sm text-gray-500 italic text-center py-4">No hay hitos asignados a este proyecto.</p>
+              <p className="text-sm text-gray-500 italic text-center py-4">
+                No hay hitos asignados a este proyecto.
+              </p>
             ) : (
               <div className="space-y-3">
                 {hitos.map((hito) => (
@@ -179,8 +201,8 @@ export default function SeguimientoProyectoPage({
                       hito.esVencido
                         ? "bg-red-50 border-red-300"
                         : hito.esCumplido
-                        ? "bg-green-50 border-green-200"
-                        : "bg-white border-gray-200"
+                          ? "bg-green-50 border-green-200"
+                          : "bg-white border-gray-200"
                     }`}
                   >
                     <div className="flex items-start gap-2">
@@ -207,7 +229,9 @@ export default function SeguimientoProyectoPage({
                           </span>
                         )}
                         {hito.esCumplido && hito.fechaReal && (
-                          <p className="text-xs text-green-700 mt-1">Cumplido el: {hito.fechaReal}</p>
+                          <p className="text-xs text-green-700 mt-1">
+                            Cumplido el: {hito.fechaReal}
+                          </p>
                         )}
                       </div>
                     </div>

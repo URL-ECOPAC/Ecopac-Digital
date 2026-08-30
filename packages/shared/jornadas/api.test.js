@@ -390,8 +390,18 @@ describe("obtenerHistorialDeJornada", () => {
     const cliente = crearCliente({
       jornada_estado_historial: {
         data: [
-          { id: "h-2", estadoAnterior: "planificada", estadoNuevo: "en curso", cambiadoPor: { nombres: "Ana", apellidos: "Ruiz" } },
-          { id: "h-1", estadoAnterior: null, estadoNuevo: "planificada", cambiadoPor: { nombres: "Ana", apellidos: "Ruiz" } },
+          {
+            id: "h-2",
+            estadoAnterior: "planificada",
+            estadoNuevo: "en curso",
+            cambiadoPor: { nombres: "Ana", apellidos: "Ruiz" },
+          },
+          {
+            id: "h-1",
+            estadoAnterior: null,
+            estadoNuevo: "planificada",
+            cambiadoPor: { nombres: "Ana", apellidos: "Ruiz" },
+          },
         ],
         error: null,
       },
@@ -573,11 +583,9 @@ describe("cambiarEstadoJornada", () => {
     });
     dobles.cliente = cliente;
 
-    const { jornada, error } = await cambiarEstadoJornada(
-      "jornada-1",
-      ESTADOS_JORNADA.EN_CURSO,
-      { rol: ROLES.MEDICO },
-    );
+    const { jornada, error } = await cambiarEstadoJornada("jornada-1", ESTADOS_JORNADA.EN_CURSO, {
+      rol: ROLES.MEDICO,
+    });
 
     expect(error).toBeNull();
     expect(jornada).toEqual({ id: "jornada-1", estado: ESTADOS_JORNADA.EN_CURSO });
@@ -594,11 +602,9 @@ describe("cambiarEstadoJornada", () => {
     });
     dobles.cliente = cliente;
 
-    const { jornada, error } = await cambiarEstadoJornada(
-      "jornada-1",
-      ESTADOS_JORNADA.FINALIZADA,
-      { rol: ROLES.ADMINISTRADOR },
-    );
+    const { jornada, error } = await cambiarEstadoJornada("jornada-1", ESTADOS_JORNADA.FINALIZADA, {
+      rol: ROLES.ADMINISTRADOR,
+    });
 
     expect(jornada).toBeNull();
     expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.CHECK);
@@ -611,11 +617,9 @@ describe("cambiarEstadoJornada", () => {
     });
     dobles.cliente = cliente;
 
-    const { jornada, error } = await cambiarEstadoJornada(
-      "jornada-1",
-      ESTADOS_JORNADA.EN_CURSO,
-      { rol: ROLES.MEDICO },
-    );
+    const { jornada, error } = await cambiarEstadoJornada("jornada-1", ESTADOS_JORNADA.EN_CURSO, {
+      rol: ROLES.MEDICO,
+    });
 
     expect(jornada).toBeNull();
     expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.CHECK);
@@ -632,11 +636,9 @@ describe("cambiarEstadoJornada", () => {
     });
     dobles.cliente = cliente;
 
-    const { jornada, error } = await cambiarEstadoJornada(
-      "jornada-1",
-      ESTADOS_JORNADA.EN_CURSO,
-      { rol: ROLES.ADMINISTRADOR },
-    );
+    const { jornada, error } = await cambiarEstadoJornada("jornada-1", ESTADOS_JORNADA.EN_CURSO, {
+      rol: ROLES.ADMINISTRADOR,
+    });
 
     expect(error).toBeNull();
     expect(jornada).toEqual({ id: "jornada-1", estado: ESTADOS_JORNADA.EN_CURSO });
@@ -645,7 +647,10 @@ describe("cambiarEstadoJornada", () => {
   it("devuelve sin resultados cuando la jornada no existe", async () => {
     dobles.cliente = crearCliente({ jornadas: { data: null, error: null } });
 
-    const { jornada, error } = await cambiarEstadoJornada("jornada-ajena", ESTADOS_JORNADA.EN_CURSO);
+    const { jornada, error } = await cambiarEstadoJornada(
+      "jornada-ajena",
+      ESTADOS_JORNADA.EN_CURSO,
+    );
 
     expect(jornada).toBeNull();
     expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.SIN_RESULTADOS);
@@ -1123,7 +1128,6 @@ describe("desasignarPersonal", () => {
     expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.PERMISO_DENEGADO);
   });
 });
-
 
 describe("puedeRegistrarConsulta", () => {
   it("solo pide la columna estado de jornadas, nada mas", async () => {

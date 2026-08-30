@@ -149,23 +149,22 @@ describe("registrarConsulta", () => {
     expect(consulta.id).toBe("con-1");
   });
 
-  it.each([
-    ["planificada"],
-    ["finalizada"],
-    ["cancelada"],
-  ])("con la jornada %s se rechaza con un mensaje que explica que pasa", async (estado) => {
-    const cliente = crearCliente({});
-    dobles.cliente = cliente;
+  it.each([["planificada"], ["finalizada"], ["cancelada"]])(
+    "con la jornada %s se rechaza con un mensaje que explica que pasa",
+    async (estado) => {
+      const cliente = crearCliente({});
+      dobles.cliente = cliente;
 
-    const { consulta, error } = await registrarConsulta(CONSULTA_VALIDA, {
-      estadoDeJornada: estado,
-    });
+      const { consulta, error } = await registrarConsulta(CONSULTA_VALIDA, {
+        estadoDeJornada: estado,
+      });
 
-    expect(consulta).toBeNull();
-    expect(error.mensaje).toBeTruthy();
-    expect(error.mensaje.length).toBeGreaterThan(10);
-    expect(cliente.llamadas.some((l) => l.tabla === "consultas")).toBe(false);
-  });
+      expect(consulta).toBeNull();
+      expect(error.mensaje).toBeTruthy();
+      expect(error.mensaje.length).toBeGreaterThan(10);
+      expect(cliente.llamadas.some((l) => l.tabla === "consultas")).toBe(false);
+    },
+  );
 
   it("si no le pasan el estado, lo consulta antes de insertar", async () => {
     const cliente = crearCliente({
@@ -203,10 +202,7 @@ describe("registrarConsulta", () => {
     await registrarConsulta(
       {
         ...CONSULTA_VALIDA,
-        diagnosticos: [
-          { diagnosticoId: "dx-1", esPrincipal: true },
-          { diagnosticoId: "dx-2" },
-        ],
+        diagnosticos: [{ diagnosticoId: "dx-1", esPrincipal: true }, { diagnosticoId: "dx-2" }],
       },
       { estadoDeJornada: "en curso" },
     );
@@ -369,7 +365,9 @@ describe("listarPacientesAtendidosDeJornada", () => {
   });
 
   it("arma el nombre del paciente y el diagnostico principal desde la atencion", async () => {
-    dobles.cliente = crearCliente({ consultas: { data: [FILA_DE_PACIENTE_ATENDIDO], error: null } });
+    dobles.cliente = crearCliente({
+      consultas: { data: [FILA_DE_PACIENTE_ATENDIDO], error: null },
+    });
 
     const { pacientes, error } = await listarPacientesAtendidosDeJornada("jor-1", {
       rol: ROLES.MEDICO,

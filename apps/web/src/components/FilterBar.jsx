@@ -1,8 +1,8 @@
-import { TIPOS_DE_FILTRO } from '@ecopac/shared';
-import DateField from './DateField';
-import NumberField from './NumberField';
-import Selector from './Selector';
-import TextField from './TextField';
+import { TIPOS_DE_FILTRO } from "@ecopac/shared";
+import DateField from "./DateField";
+import NumberField from "./NumberField";
+import Selector from "./Selector";
+import TextField from "./TextField";
 
 /**
  * Barra de filtros. Es deliberadamente tonta: no conoce los filtros de ningun modulo, solo
@@ -37,9 +37,9 @@ export default function FilterBar({ campos = [], valores = {}, onChange, catalog
               key={campo.id}
               label={campo.label}
               placeholder={campo.placeholder}
-              value={valor ?? ''}
+              value={valor ?? ""}
               onChange={(evento) => cambiar(campo.id, evento.target.value)}
-              style={{ flex: '1 1 260px', marginBottom: 0 }}
+              style={{ flex: "1 1 260px", marginBottom: 0 }}
             />
           );
         }
@@ -56,9 +56,9 @@ export default function FilterBar({ campos = [], valores = {}, onChange, catalog
               value={valor ?? null}
               options={opciones}
               onSelect={(elegido) => cambiar(campo.id, elegido)}
-              placeholder={campo.placeholder ?? 'Todos'}
+              placeholder={campo.placeholder ?? "Todos"}
               disabled={opciones.length === 0}
-              style={{ flex: '0 1 200px', marginBottom: 0 }}
+              style={{ flex: "0 1 200px", marginBottom: 0 }}
             />
           );
         }
@@ -66,8 +66,8 @@ export default function FilterBar({ campos = [], valores = {}, onChange, catalog
         if (campo.tipo === TIPOS_DE_FILTRO.RANGO) {
           const rango = valor ?? {};
           const esFecha =
-            campo.subtipo === 'fecha' ||
-            (typeof campo.min !== 'number' && typeof campo.max !== 'number');
+            campo.subtipo === "fecha" ||
+            (typeof campo.min !== "number" && typeof campo.max !== "number");
 
           if (esFecha) {
             // Sin `label` en cada DateField a proposito: con label, cada campo agrega su propia
@@ -76,10 +76,10 @@ export default function FilterBar({ campos = [], valores = {}, onChange, catalog
             // "Desde"/"Hasta" se pintan en linea, junto al control, para que este filtro quede en
             // las mismas dos filas -etiqueta y control- que cualquier otro.
             return (
-              <fieldset key={campo.id} className="border-0 p-0 m-0" style={{ flex: '0 1 320px' }}>
+              <fieldset key={campo.id} className="border-0 p-0 m-0" style={{ flex: "0 1 320px" }}>
                 <legend className="form-label fs-6">{campo.label}</legend>
                 <div className="d-flex align-items-center gap-2">
-                  <span className="small" style={{ color: 'var(--color-text-muted)' }}>
+                  <span className="small" style={{ color: "var(--color-text-muted)" }}>
                     Desde
                   </span>
                   <DateField
@@ -89,7 +89,7 @@ export default function FilterBar({ campos = [], valores = {}, onChange, catalog
                     onChange={(nuevo) => cambiar(campo.id, { ...rango, min: nuevo })}
                     style={{ marginBottom: 0 }}
                   />
-                  <span className="small" style={{ color: 'var(--color-text-muted)' }}>
+                  <span className="small" style={{ color: "var(--color-text-muted)" }}>
                     Hasta
                   </span>
                   <DateField
@@ -105,7 +105,7 @@ export default function FilterBar({ campos = [], valores = {}, onChange, catalog
           }
 
           return (
-            <fieldset key={campo.id} className="border-0 p-0 m-0" style={{ flex: '0 1 240px' }}>
+            <fieldset key={campo.id} className="border-0 p-0 m-0" style={{ flex: "0 1 240px" }}>
               <legend className="form-label fs-6">{campo.label}</legend>
               <div className="d-flex align-items-start gap-2">
                 <NumberField

@@ -113,7 +113,11 @@ const ATENCION = {
               dosis: "1 capsula",
               frecuencia: "cada 8 horas",
               duracion: "7 dias",
-              medicamento: { nombre: "Amoxicilina", concentracion: "500 mg", presentacion: "capsula" },
+              medicamento: {
+                nombre: "Amoxicilina",
+                concentracion: "500 mg",
+                presentacion: "capsula",
+              },
             },
           ],
         },
@@ -187,7 +191,10 @@ describe("aEventos", () => {
     const anulada = {
       ...ATENCION,
       consultas: [
-        { ...ATENCION.consultas[0], recetas: [{ ...ATENCION.consultas[0].recetas[0], estado: "anulada" }] },
+        {
+          ...ATENCION.consultas[0],
+          recetas: [{ ...ATENCION.consultas[0].recetas[0], estado: "anulada" }],
+        },
       ],
     };
 
@@ -223,7 +230,10 @@ describe("ordenarCronologicamente", () => {
   });
 
   it("no muta el arreglo que recibe", () => {
-    const original = [{ id: "a", fecha: "2024-01-01T00:00:00Z" }, { id: "b", fecha: "2026-01-01T00:00:00Z" }];
+    const original = [
+      { id: "a", fecha: "2024-01-01T00:00:00Z" },
+      { id: "b", fecha: "2026-01-01T00:00:00Z" },
+    ];
     ordenarCronologicamente(original);
 
     expect(original.map((e) => e.id)).toEqual(["a", "b"]);

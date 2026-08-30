@@ -1,10 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  contarRecetas,
-  describirMedicamento,
-  describirPosologia,
-} from "./useRecetasPaciente.js";
+import { contarRecetas, describirMedicamento, describirPosologia } from "./useRecetasPaciente.js";
 
 const RENGLON = {
   medicamento: "Amoxicilina",

@@ -1,6 +1,6 @@
-import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { useRoute } from '@react-navigation/native';
+import { useState } from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import { useRoute } from "@react-navigation/native";
 
 import {
   ETIQUETAS_TIPO_DE_EVENTO,
@@ -10,8 +10,8 @@ import {
   formatearFechaCorta,
   permisosDeFicha,
   useHistorialPaciente,
-} from '@ecopac/shared';
-import { colors, spacing, typography } from '@ecopac/ui-tokens';
+} from "@ecopac/shared";
+import { colors, spacing, typography } from "@ecopac/ui-tokens";
 
 import {
   Card,
@@ -20,8 +20,8 @@ import {
   LoadingState,
   ScreenContainer,
   SecondaryButton,
-} from '../components';
-import { useSesionCompartida } from '../contexto/SesionProvider';
+} from "../components";
+import { useSesionCompartida } from "../contexto/SesionProvider";
 
 const ATENCIONES_INICIALES = 3;
 
@@ -35,8 +35,8 @@ function Medicamentos({ evento }) {
       {evento.medicamentos.map((renglon, indice) => (
         <Text key={`${evento.id}-${indice}`} style={styles.texto}>
           {describirMedicamento(renglon)}
-          {describirPosologia(renglon) ? ` — ${describirPosologia(renglon)}` : ''}
-          {renglon.cantidadEntregada ? ` (${renglon.cantidadEntregada})` : ''}
+          {describirPosologia(renglon) ? ` — ${describirPosologia(renglon)}` : ""}
+          {renglon.cantidadEntregada ? ` (${renglon.cantidadEntregada})` : ""}
         </Text>
       ))}
     </View>
@@ -45,9 +45,9 @@ function Medicamentos({ evento }) {
 
 function DetalleDeConsulta({ evento }) {
   const campos = [
-    ['Motivo', evento.motivoConsulta],
-    ['Tratamiento', evento.tratamiento],
-    ['Seguimiento', evento.planSeguimiento],
+    ["Motivo", evento.motivoConsulta],
+    ["Tratamiento", evento.tratamiento],
+    ["Seguimiento", evento.planSeguimiento],
   ].filter(([, valor]) => valor);
 
   if (campos.length === 0 && !evento.diagnosticos?.length) {
@@ -58,10 +58,10 @@ function DetalleDeConsulta({ evento }) {
     <View>
       {evento.diagnosticos?.length > 0 && (
         <Text style={styles.texto}>
-          Diagnosticos:{' '}
+          Diagnosticos:{" "}
           {evento.diagnosticos
-            .map((uno) => [uno.codigo, uno.nombre].filter(Boolean).join(' '))
-            .join(', ')}
+            .map((uno) => [uno.codigo, uno.nombre].filter(Boolean).join(" "))
+            .join(", ")}
         </Text>
       )}
       {campos.map(([etiqueta, valor]) => (
@@ -82,12 +82,12 @@ function Atencion({ grupo, abierta, onAlternar }) {
       <Pressable onPress={onAlternar} style={styles.cabecera}>
         <View style={styles.encabezadoTexto}>
           <Text style={styles.fecha}>{formatearFechaCorta(grupo.fecha)}</Text>
-          <Text style={styles.diagnostico}>{diagnostico ?? 'Sin diagnostico registrado'}</Text>
+          <Text style={styles.diagnostico}>{diagnostico ?? "Sin diagnostico registrado"}</Text>
           <Text style={styles.tenue}>
-            {[grupo.jornada, grupo.comunidad].filter(Boolean).join(' · ') || 'Sin jornada'}
+            {[grupo.jornada, grupo.comunidad].filter(Boolean).join(" · ") || "Sin jornada"}
           </Text>
         </View>
-        <Text style={styles.tenue}>{abierta ? 'Ocultar' : 'Ver'}</Text>
+        <Text style={styles.tenue}>{abierta ? "Ocultar" : "Ver"}</Text>
       </Pressable>
 
       {abierta && (
@@ -96,7 +96,7 @@ function Atencion({ grupo, abierta, onAlternar }) {
             <View key={`${evento.tipo}-${evento.id}`} style={styles.evento}>
               <Text style={styles.tipo}>
                 {ETIQUETAS_TIPO_DE_EVENTO[evento.tipo] ?? evento.tipo}
-                {evento.profesional ? ` · ${evento.profesional}` : ''}
+                {evento.profesional ? ` · ${evento.profesional}` : ""}
               </Text>
               {evento.tipo === TIPOS_DE_EVENTO.CONSULTA && <DetalleDeConsulta evento={evento} />}
               {evento.tipo === TIPOS_DE_EVENTO.RECETA && <Medicamentos evento={evento} />}
@@ -110,7 +110,7 @@ function Atencion({ grupo, abierta, onAlternar }) {
                     evento.signos?.peso ? `${evento.signos.peso} kg` : null,
                   ]
                     .filter(Boolean)
-                    .join('  ·  ') || 'Sin mediciones.'}
+                    .join("  ·  ") || "Sin mediciones."}
                 </Text>
               )}
             </View>
@@ -185,7 +185,7 @@ export default function HistorialPacienteScreen() {
 
       {hayMas && (
         <SecondaryButton
-          title={cargando ? 'Cargando...' : 'Ver atenciones anteriores'}
+          title={cargando ? "Cargando..." : "Ver atenciones anteriores"}
           onPress={verMas}
           disabled={cargando}
         />
@@ -199,9 +199,9 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   cabecera: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
     minHeight: 48,
   },
   encabezadoTexto: {

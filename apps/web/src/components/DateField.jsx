@@ -1,5 +1,5 @@
-import { Form } from 'react-bootstrap';
-import { useId } from 'react';
+import { Form } from "react-bootstrap";
+import { useId } from "react";
 
 /**
  * Campo de fecha. Mismo patron visual que TextField (label arriba, error abajo), pero el
@@ -31,11 +31,11 @@ export default function DateField({
       <Form.Control
         id={id}
         type="date"
-        value={value ?? ''}
+        value={value ?? ""}
         min={minDate}
         max={maxDate}
         isInvalid={Boolean(error)}
-        onChange={(evento) => onChange?.(evento.target.value === '' ? null : evento.target.value)}
+        onChange={(evento) => onChange?.(evento.target.value === "" ? null : evento.target.value)}
         {...rest}
       />
       {error && <Form.Control.Feedback type="invalid">{error}</Form.Control.Feedback>}

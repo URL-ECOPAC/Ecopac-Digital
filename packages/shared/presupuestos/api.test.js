@@ -51,8 +51,7 @@ function clienteUpdate(respuesta) {
       llamadas.push({ paso: "select", columnas });
       return encadenable;
     },
-    maybeSingle: async () =>
-      respuesta instanceof Error ? Promise.reject(respuesta) : respuesta,
+    maybeSingle: async () => (respuesta instanceof Error ? Promise.reject(respuesta) : respuesta),
   };
 
   return {

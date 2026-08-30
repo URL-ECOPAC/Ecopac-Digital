@@ -9,19 +9,19 @@
 // (RutaProtegida como elemento padre, la ruta protegida como hijo via <Outlet/>), asi que la
 // prueba ejercita Navigate/Outlet de verdad en vez de solo el render aislado del componente.
 
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
-import { MemoryRouter, Routes, Route } from 'react-router-dom';
-import RutaProtegida from './RutaProtegida';
-import { useSesionCompartida } from '../contexto/SesionProvider';
+import { describe, it, expect, vi } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { MemoryRouter, Routes, Route } from "react-router-dom";
+import RutaProtegida from "./RutaProtegida";
+import { useSesionCompartida } from "../contexto/SesionProvider";
 
-vi.mock('../contexto/SesionProvider', () => ({
+vi.mock("../contexto/SesionProvider", () => ({
   useSesionCompartida: vi.fn(),
 }));
 
 function renderConRuta({ roles = null } = {}) {
   return render(
-    <MemoryRouter initialEntries={['/protegida']}>
+    <MemoryRouter initialEntries={["/protegida"]}>
       <Routes>
         <Route element={<RutaProtegida roles={roles} />}>
           <Route path="/protegida" element={<div>Contenido protegido</div>} />
@@ -32,10 +32,10 @@ function renderConRuta({ roles = null } = {}) {
   );
 }
 
-describe('RutaProtegida', () => {
-  it('muestra el estado de carga mientras se restaura la sesion', () => {
+describe("RutaProtegida", () => {
+  it("muestra el estado de carga mientras se restaura la sesion", () => {
     useSesionCompartida.mockReturnValue({
-      estadoRestauracion: 'cargando',
+      estadoRestauracion: "cargando",
       haySesion: false,
       perfil: null,
       rol: null,
@@ -46,9 +46,9 @@ describe('RutaProtegida', () => {
     expect(screen.getByText(/comprobando tu sesion/i)).toBeInTheDocument();
   });
 
-  it('redirige a /login cuando no hay sesion', () => {
+  it("redirige a /login cuando no hay sesion", () => {
     useSesionCompartida.mockReturnValue({
-      estadoRestauracion: 'listo',
+      estadoRestauracion: "listo",
       haySesion: false,
       perfil: null,
       rol: null,
@@ -59,55 +59,55 @@ describe('RutaProtegida', () => {
     expect(screen.getByText(/pantalla de login/i)).toBeInTheDocument();
   });
 
-  it('muestra acceso denegado sin rol si hay sesion pero el perfil todavia no cargo', () => {
+  it("muestra acceso denegado sin rol si hay sesion pero el perfil todavia no cargo", () => {
     useSesionCompartida.mockReturnValue({
-      estadoRestauracion: 'listo',
+      estadoRestauracion: "listo",
       haySesion: true,
       perfil: null,
       rol: null,
     });
 
-    renderConRuta({ roles: ['administrador'] });
+    renderConRuta({ roles: ["administrador"] });
 
     expect(screen.getByText(/no se pudo confirmar tu rol/i)).toBeInTheDocument();
   });
 
-  it('muestra acceso denegado cuando el rol no esta en la lista permitida', () => {
+  it("muestra acceso denegado cuando el rol no esta en la lista permitida", () => {
     useSesionCompartida.mockReturnValue({
-      estadoRestauracion: 'listo',
+      estadoRestauracion: "listo",
       haySesion: true,
-      perfil: { id: '1' },
-      rol: 'voluntario general',
+      perfil: { id: "1" },
+      rol: "voluntario general",
     });
 
-    renderConRuta({ roles: ['administrador'] });
+    renderConRuta({ roles: ["administrador"] });
 
     expect(screen.getByText(/tu usuario tiene el rol de/i)).toBeInTheDocument();
   });
 
-  it('deja pasar cuando el rol esta en la lista permitida', () => {
+  it("deja pasar cuando el rol esta en la lista permitida", () => {
     useSesionCompartida.mockReturnValue({
-      estadoRestauracion: 'listo',
+      estadoRestauracion: "listo",
       haySesion: true,
-      perfil: { id: '1' },
-      rol: 'administrador',
+      perfil: { id: "1" },
+      rol: "administrador",
     });
 
-    renderConRuta({ roles: ['administrador'] });
+    renderConRuta({ roles: ["administrador"] });
 
-    expect(screen.getByText('Contenido protegido')).toBeInTheDocument();
+    expect(screen.getByText("Contenido protegido")).toBeInTheDocument();
   });
 
-  it('sin lista de roles (roles=null), cualquier sesion valida pasa', () => {
+  it("sin lista de roles (roles=null), cualquier sesion valida pasa", () => {
     useSesionCompartida.mockReturnValue({
-      estadoRestauracion: 'listo',
+      estadoRestauracion: "listo",
       haySesion: true,
-      perfil: { id: '1' },
-      rol: 'voluntario general',
+      perfil: { id: "1" },
+      rol: "voluntario general",
     });
 
     renderConRuta({ roles: null });
 
-    expect(screen.getByText('Contenido protegido')).toBeInTheDocument();
+    expect(screen.getByText("Contenido protegido")).toBeInTheDocument();
   });
 });

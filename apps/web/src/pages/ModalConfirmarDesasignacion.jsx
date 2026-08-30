@@ -1,10 +1,10 @@
-import { useEffect } from 'react';
+import { useEffect } from "react";
 
-import { useDesasignacionPersonal } from '@ecopac/shared';
+import { useDesasignacionPersonal } from "@ecopac/shared";
 
-import Modal from '../components/Modal';
-import PrimaryButton from '../components/PrimaryButton';
-import SecondaryButton from '../components/SecondaryButton';
+import Modal from "../components/Modal";
+import PrimaryButton from "../components/PrimaryButton";
+import SecondaryButton from "../components/SecondaryButton";
 
 // Dialogo de confirmacion de desasignar a alguien de una jornada (issue #182, criterio 4). No es
 // un componente de catalogo: compone Modal + PrimaryButton + SecondaryButton, mismo patron que
@@ -17,7 +17,13 @@ import SecondaryButton from '../components/SecondaryButton';
 // esta jornada (packages/shared/jornadas/useAsignacionPersonal.js, useDesasignacionPersonal()). El
 // boton "Desasignar" queda siempre activo; si el servidor lo bloquea, desasignarPersonal() (api.js)
 // devuelve el mismo error 'check' que se muestra aca tal cual, sin reescribirlo.
-export default function ModalConfirmarDesasignacion({ visible, jornadaId, persona, onClose, onDesasignado }) {
+export default function ModalConfirmarDesasignacion({
+  visible,
+  jornadaId,
+  persona,
+  onClose,
+  onDesasignado,
+}) {
   const { enviando, error, abrir, confirmar } = useDesasignacionPersonal({ jornadaId });
 
   useEffect(() => {
@@ -31,7 +37,7 @@ export default function ModalConfirmarDesasignacion({ visible, jornadaId, person
     if (resultado.ok) onDesasignado?.();
   };
 
-  const nombre = persona?.perfil ?? 'esta persona';
+  const nombre = persona?.perfil ?? "esta persona";
 
   return (
     <Modal visible={visible} onClose={onClose} title="Desasignar personal">
@@ -42,8 +48,8 @@ export default function ModalConfirmarDesasignacion({ visible, jornadaId, person
       )}
 
       <p>
-        ¿Quitar a <strong>{nombre}</strong> de esta jornada? Si ya registro una consulta o un
-        triaje aca, el sistema va a rechazar la desasignacion.
+        ¿Quitar a <strong>{nombre}</strong> de esta jornada? Si ya registro una consulta o un triaje
+        aca, el sistema va a rechazar la desasignacion.
       </p>
 
       <div className="d-flex justify-content-end gap-2 mt-3">

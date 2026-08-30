@@ -41,8 +41,18 @@ export const CAMPOS_PROYECTO = [
     tipo: TIPOS_DE_CAMPO.TEXTO_LARGO,
     validacion: { requerido: false },
   },
-  { id: "fechaInicio", label: "Fecha de inicio", tipo: TIPOS_DE_CAMPO.FECHA, validacion: { requerido: false } },
-  { id: "fechaFin", label: "Fecha de fin", tipo: TIPOS_DE_CAMPO.FECHA, validacion: { requerido: false } },
+  {
+    id: "fechaInicio",
+    label: "Fecha de inicio",
+    tipo: TIPOS_DE_CAMPO.FECHA,
+    validacion: { requerido: false },
+  },
+  {
+    id: "fechaFin",
+    label: "Fecha de fin",
+    tipo: TIPOS_DE_CAMPO.FECHA,
+    validacion: { requerido: false },
+  },
   {
     id: "responsableId",
     label: "Responsable",
@@ -57,17 +67,32 @@ export const CAMPOS_PROYECTO = [
  * del proyecto, no es algo que la persona elija en el formulario.
  */
 export const CAMPOS_HITO = [
-  { id: "nombre", label: "Nombre", tipo: TIPOS_DE_CAMPO.TEXTO, validacion: { requerido: true, maxLongitud: 150 } },
+  {
+    id: "nombre",
+    label: "Nombre",
+    tipo: TIPOS_DE_CAMPO.TEXTO,
+    validacion: { requerido: true, maxLongitud: 150 },
+  },
   {
     id: "descripcion",
     label: "Descripcion",
     tipo: TIPOS_DE_CAMPO.TEXTO_LARGO,
     validacion: { requerido: false },
   },
-  { id: "fechaPrevista", label: "Fecha prevista", tipo: TIPOS_DE_CAMPO.FECHA, validacion: { requerido: true } },
+  {
+    id: "fechaPrevista",
+    label: "Fecha prevista",
+    tipo: TIPOS_DE_CAMPO.FECHA,
+    validacion: { requerido: true },
+  },
   // Normalmente la pone marcarHitoCumplido()/reabrirHito() (avance.api.js), no una escritura a
   // mano; se declara para permitir una correccion administrativa puntual.
-  { id: "fechaReal", label: "Fecha real de cumplimiento", tipo: TIPOS_DE_CAMPO.FECHA, validacion: { requerido: false } },
+  {
+    id: "fechaReal",
+    label: "Fecha real de cumplimiento",
+    tipo: TIPOS_DE_CAMPO.FECHA,
+    validacion: { requerido: false },
+  },
 ];
 
 /**

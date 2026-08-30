@@ -15,7 +15,10 @@ const { CODIGOS_DE_ERROR_DE_SUPABASE } = await import("../api/errores-de-supabas
 const { generarReceta, obtenerReceta, obtenerRecetas, anularReceta, ESTADOS_RECETA } =
   await import("./recetas.api.js");
 
-function crearCliente({ rpc = { data: "rec-1", error: null }, tabla = { data: null, error: null } } = {}) {
+function crearCliente({
+  rpc = { data: "rec-1", error: null },
+  tabla = { data: null, error: null },
+} = {}) {
   const llamadas = [];
 
   const cadena = {
@@ -35,8 +38,7 @@ function crearCliente({ rpc = { data: "rec-1", error: null }, tabla = { data: nu
       llamadas.push({ paso: "order", columna, opciones });
       return cadena;
     },
-    maybeSingle: async () =>
-      tabla instanceof Error ? Promise.reject(tabla) : tabla,
+    maybeSingle: async () => (tabla instanceof Error ? Promise.reject(tabla) : tabla),
     then(resolve, reject) {
       const resultado = tabla instanceof Error ? Promise.reject(tabla) : Promise.resolve(tabla);
       return resultado.then(resolve, reject);

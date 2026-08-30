@@ -1,17 +1,20 @@
 import { useHistorialDonaciones } from "@ecopac/shared";
 import { Button, Input, Select, Card, Modal, Table } from "@ecopac/ui";
 
-export default function HistorialDonacionesPage({ usuarioRol, donacionesIniciales = [], proyectosOptions = [] }) {
-  const {
-    tieneAccesoLectura,
-    donaciones,
-    totalesPorTipo,
-    filtros,
-    modalDetalle,
-  } = useHistorialDonaciones({ usuarioRol, donacionesIniciales });
+export default function HistorialDonacionesPage({
+  usuarioRol,
+  donacionesIniciales = [],
+  proyectosOptions = [],
+}) {
+  const { tieneAccesoLectura, donaciones, totalesPorTipo, filtros, modalDetalle } =
+    useHistorialDonaciones({ usuarioRol, donacionesIniciales });
 
   if (!tieneAccesoLectura) {
-    return <div className="p-4 text-red-600">Acceso denegado: No tiene permisos para consultar este módulo.</div>;
+    return (
+      <div className="p-4 text-red-600">
+        Acceso denegado: No tiene permisos para consultar este módulo.
+      </div>
+    );
   }
 
   return (
@@ -22,11 +25,15 @@ export default function HistorialDonacionesPage({ usuarioRol, donacionesIniciale
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="bg-blue-50 border-blue-200">
           <p className="text-sm font-medium text-blue-800">Total Económico</p>
-          <p className="text-2xl font-bold text-blue-900">Q {totalesPorTipo.economica.toFixed(2)}</p>
+          <p className="text-2xl font-bold text-blue-900">
+            Q {totalesPorTipo.economica.toFixed(2)}
+          </p>
         </Card>
         <Card className="bg-green-50 border-green-200">
           <p className="text-sm font-medium text-green-800">Total Medicamentos</p>
-          <p className="text-2xl font-bold text-green-900">{totalesPorTipo.medicamentos} unidades</p>
+          <p className="text-2xl font-bold text-green-900">
+            {totalesPorTipo.medicamentos} unidades
+          </p>
         </Card>
         <Card className="bg-purple-50 border-purple-200">
           <p className="text-sm font-medium text-purple-800">Total Insumos / Bienes</p>
@@ -126,7 +133,11 @@ export default function HistorialDonacionesPage({ usuarioRol, donacionesIniciale
                       )}
                     </td>
                     <td className="p-3 text-right no-underline">
-                      <Button variant="outline" size="sm" onClick={() => modalDetalle.abrirDetalle(d)}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => modalDetalle.abrirDetalle(d)}
+                      >
                         Ver Detalle
                       </Button>
                     </td>
@@ -146,16 +157,33 @@ export default function HistorialDonacionesPage({ usuarioRol, donacionesIniciale
           onClose={modalDetalle.cerrarDetalle}
         >
           <div className="space-y-3 text-sm text-gray-700">
-            <p><strong>Donante:</strong> {modalDetalle.donacionSeleccionada.donante_nombre}</p>
-            <p><strong>Tipo:</strong> {modalDetalle.donacionSeleccionada.tipo}</p>
-            <p><strong>Fecha:</strong> {modalDetalle.donacionSeleccionada.fecha}</p>
-            <p><strong>Estado:</strong> {modalDetalle.donacionSeleccionada.estado}</p>
+            <p>
+              <strong>Donante:</strong> {modalDetalle.donacionSeleccionada.donante_nombre}
+            </p>
+            <p>
+              <strong>Tipo:</strong> {modalDetalle.donacionSeleccionada.tipo}
+            </p>
+            <p>
+              <strong>Fecha:</strong> {modalDetalle.donacionSeleccionada.fecha}
+            </p>
+            <p>
+              <strong>Estado:</strong> {modalDetalle.donacionSeleccionada.estado}
+            </p>
 
             {modalDetalle.donacionSeleccionada.estado === "anulada" && (
               <div className="p-3 bg-red-100 text-red-800 rounded-md">
-                <p><strong>Motivo de Anulación:</strong> {modalDetalle.donacionSeleccionada.motivo_anulacion || "No informado"}</p>
-                <p><strong>Anulada por:</strong> {modalDetalle.donacionSeleccionada.anulada_por || "-"}</p>
-                <p><strong>Fecha de Anulación:</strong> {modalDetalle.donacionSeleccionada.anulada_en || "-"}</p>
+                <p>
+                  <strong>Motivo de Anulación:</strong>{" "}
+                  {modalDetalle.donacionSeleccionada.motivo_anulacion || "No informado"}
+                </p>
+                <p>
+                  <strong>Anulada por:</strong>{" "}
+                  {modalDetalle.donacionSeleccionada.anulada_por || "-"}
+                </p>
+                <p>
+                  <strong>Fecha de Anulación:</strong>{" "}
+                  {modalDetalle.donacionSeleccionada.anulada_en || "-"}
+                </p>
               </div>
             )}
 

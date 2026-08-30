@@ -1,7 +1,12 @@
 import { useRegistroDonacion } from "@ecopac/shared";
 import { Button, Input, Select, Card, Modal } from "@ecopac/ui";
 
-export default function RegistroDonacionPage({ client, usuarioRol, donantesOptions = [], proyectosOptions = [] }) {
+export default function RegistroDonacionPage({
+  client,
+  usuarioRol,
+  donantesOptions = [],
+  proyectosOptions = [],
+}) {
   const {
     permisos,
     tipoDonacion,
@@ -26,7 +31,11 @@ export default function RegistroDonacionPage({ client, usuarioRol, donantesOptio
   } = useRegistroDonacion({ client, usuarioRol });
 
   if (!permisos.tieneAccesoLectura) {
-    return <div className="p-4 text-red-600">Acceso denegado: No tiene permisos para consultar este módulo.</div>;
+    return (
+      <div className="p-4 text-red-600">
+        Acceso denegado: No tiene permisos para consultar este módulo.
+      </div>
+    );
   }
 
   return (
@@ -181,9 +190,15 @@ export default function RegistroDonacionPage({ client, usuarioRol, donantesOptio
       {/* Resumen al guardar */}
       {resumenRegistro && (
         <Card title="Resumen del Registro">
-          <p><strong>Tipo:</strong> {resumenRegistro.tipo}</p>
-          <p><strong>Fecha:</strong> {resumenRegistro.fecha}</p>
-          <p><strong>Renglones registrados:</strong> {resumenRegistro.detalles.length}</p>
+          <p>
+            <strong>Tipo:</strong> {resumenRegistro.tipo}
+          </p>
+          <p>
+            <strong>Fecha:</strong> {resumenRegistro.fecha}
+          </p>
+          <p>
+            <strong>Renglones registrados:</strong> {resumenRegistro.detalles.length}
+          </p>
         </Card>
       )}
 
@@ -195,7 +210,8 @@ export default function RegistroDonacionPage({ client, usuarioRol, donantesOptio
           onClose={() => setOfrecerIngresoInventario(false)}
         >
           <p className="mb-4">
-            Se ha registrado una donación de medicamentos. ¿Desea generar automáticamente el registro de ingreso en el módulo de Inventario?
+            Se ha registrado una donación de medicamentos. ¿Desea generar automáticamente el
+            registro de ingreso en el módulo de Inventario?
           </p>
           <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={() => setOfrecerIngresoInventario(false)}>
@@ -215,7 +231,9 @@ export default function RegistroDonacionPage({ client, usuarioRol, donantesOptio
           isOpen={modalNuevoDonante}
           onClose={() => setModalNuevoDonante(false)}
         >
-          <p className="text-sm text-gray-600 mb-4">Registro rápido de donante sin salir del formulario.</p>
+          <p className="text-sm text-gray-600 mb-4">
+            Registro rápido de donante sin salir del formulario.
+          </p>
           <Input placeholder="Nombre del Donante" className="mb-3" />
           <Button variant="primary" onClick={() => setModalNuevoDonante(false)}>
             Guardar y Seleccionar

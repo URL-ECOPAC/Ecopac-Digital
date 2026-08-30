@@ -19,25 +19,25 @@
  * cambia el comportamiento de ninguno.
  */
 export const TIPOS_DE_CAMPO = {
-  TEXTO: 'texto',
-  TEXTO_LARGO: 'texto_largo',
-  NUMERO: 'numero',
-  FECHA: 'fecha',
-  HORA: 'hora',
-  EMAIL: 'email',
-  TELEFONO: 'telefono',
-  SELECT: 'select',
-  MULTI_SELECT: 'multi_select',
-  LISTA_REPETIBLE: 'lista_repetible',
-  BOOLEANO: 'booleano',
-  ETIQUETAS: 'etiquetas',
+  TEXTO: "texto",
+  TEXTO_LARGO: "texto_largo",
+  NUMERO: "numero",
+  FECHA: "fecha",
+  HORA: "hora",
+  EMAIL: "email",
+  TELEFONO: "telefono",
+  SELECT: "select",
+  MULTI_SELECT: "multi_select",
+  LISTA_REPETIBLE: "lista_repetible",
+  BOOLEANO: "booleano",
+  ETIQUETAS: "etiquetas",
 };
 
 /** Tipos de filtro que el componente FilterBar de cada app sabe renderizar. */
 export const TIPOS_DE_FILTRO = {
-  BUSQUEDA: 'busqueda',
-  SELECT: 'select',
-  RANGO: 'rango',
+  BUSQUEDA: "busqueda",
+  SELECT: "select",
+  RANGO: "rango",
 };
 
 /**
@@ -56,23 +56,23 @@ export const TIPOS_DE_FILTRO = {
  */
 export const TIPOS_DE_PRESENTACION = {
   /** Texto tal cual. Es el caso por defecto del DataList. */
-  TEXTO: 'texto',
+  TEXTO: "texto",
   /** Numero, con `sufijo` opcional en el descriptor. */
-  NUMERO: 'numero',
+  NUMERO: "numero",
   /** Importe en quetzales, con formatearMoneda() de formato/moneda.js. */
-  MONEDA: 'moneda',
+  MONEDA: "moneda",
   /** Fecha corta, con formatearFechaCorta(); nunca con Intl desde la app. */
-  FECHA: 'fecha',
+  FECHA: "fecha",
   /** Telefono. */
-  TELEFONO: 'telefono',
+  TELEFONO: "telefono",
   /** Iniciales en un circulo; `desde` indica de que columna sale el texto. */
-  AVATAR: 'avatar',
+  AVATAR: "avatar",
   /** Una etiqueta de color cuyo valor guardado YA es el del enum. */
-  CHIP: 'chip',
+  CHIP: "chip",
   /** Varias etiquetas a partir de un arreglo. */
-  CHIPS: 'chips',
+  CHIPS: "chips",
   /** Si / No. */
-  BOOLEANO: 'booleano',
+  BOOLEANO: "booleano",
   /** Etiqueta de color que resuelve su texto contra el catalogo de `etiquetasDesde`. */
-  ESTADO: 'estado',
+  ESTADO: "estado",
 };

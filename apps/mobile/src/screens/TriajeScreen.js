@@ -1,14 +1,14 @@
-import { createRef, useMemo } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { createRef, useMemo } from "react";
+import { StyleSheet, Text, View } from "react-native";
+import { useNavigation, useRoute } from "@react-navigation/native";
 
 import {
   nombreCompletoDePaciente,
   usePaciente,
   useJornadaActiva,
   useRegistroTriaje,
-} from '@ecopac/shared';
-import { colors, spacing, typography } from '@ecopac/ui-tokens';
+} from "@ecopac/shared";
+import { colors, spacing, typography } from "@ecopac/ui-tokens";
 
 import {
   Card,
@@ -18,9 +18,9 @@ import {
   PrimaryButton,
   ScreenContainer,
   SecondaryButton,
-} from '../components';
-import { almacenamientoMovil } from '../almacenamiento';
-import { useSesionCompartida } from '../contexto/SesionProvider';
+} from "../components";
+import { almacenamientoMovil } from "../almacenamiento";
+import { useSesionCompartida } from "../contexto/SesionProvider";
 
 export default function TriajeScreen() {
   const navigation = useNavigation();
@@ -95,7 +95,7 @@ export default function TriajeScreen() {
       <ScreenContainer>
         <Card title="Signos registrados">
           <Text style={styles.texto}>
-            {nombreCompletoDePaciente(paciente) ?? 'El paciente'} quedo en la cola de espera del
+            {nombreCompletoDePaciente(paciente) ?? "El paciente"} quedo en la cola de espera del
             medico.
           </Text>
           {imc !== null && <Text style={styles.texto}>IMC: {imc}</Text>}
@@ -108,7 +108,7 @@ export default function TriajeScreen() {
 
   return (
     <ScreenContainer>
-      <Text style={styles.paciente}>{nombreCompletoDePaciente(paciente) ?? 'Paciente'}</Text>
+      <Text style={styles.paciente}>{nombreCompletoDePaciente(paciente) ?? "Paciente"}</Text>
       {jornada?.nombre && <Text style={styles.jornada}>{jornada.nombre}</Text>}
 
       {error && (
@@ -122,12 +122,12 @@ export default function TriajeScreen() {
           <NumberField
             ref={referencias[campo.id]}
             label={campo.validacion?.requerido ? `${campo.label} *` : campo.label}
-            value={valores[campo.id] === '' ? null : valores[campo.id]}
-            onChange={(valor) => setCampo(campo.id, valor === null ? '' : valor)}
+            value={valores[campo.id] === "" ? null : valores[campo.id]}
+            onChange={(valor) => setCampo(campo.id, valor === null ? "" : valor)}
             suffix={campo.sufijo}
             error={errores[campo.id]}
             editable={!enviando}
-            returnKeyType={indice === campos.length - 1 ? 'done' : 'next'}
+            returnKeyType={indice === campos.length - 1 ? "done" : "next"}
             blurOnSubmit={indice === campos.length - 1}
             onSubmitEditing={() => enfocarSiguiente(indice)}
           />

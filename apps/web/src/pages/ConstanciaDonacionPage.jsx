@@ -2,19 +2,19 @@ import { useConstanciaDonacion } from "@ecopac/shared";
 import { Button } from "@ecopac/ui";
 
 export default function ConstanciaDonacionPage({ usuarioRol, donacion }) {
-  const {
-    tieneAccesoLectura,
-    esValidaParaConstancia,
-    correlativo,
-    manejarImpresion,
-  } = useConstanciaDonacion({
-    usuarioRol,
-    donacion,
-    onImprimir: () => window.print(),
-  });
+  const { tieneAccesoLectura, esValidaParaConstancia, correlativo, manejarImpresion } =
+    useConstanciaDonacion({
+      usuarioRol,
+      donacion,
+      onImprimir: () => window.print(),
+    });
 
   if (!tieneAccesoLectura) {
-    return <div className="p-4 text-red-600">Acceso denegado: No tiene permisos para consultar este módulo.</div>;
+    return (
+      <div className="p-4 text-red-600">
+        Acceso denegado: No tiene permisos para consultar este módulo.
+      </div>
+    );
   }
 
   if (!donacion) {
@@ -25,7 +25,10 @@ export default function ConstanciaDonacionPage({ usuarioRol, donacion }) {
     return (
       <div className="p-6 max-w-2xl mx-auto border border-red-300 bg-red-50 text-red-700 rounded-md">
         <h2 className="text-lg font-bold mb-2">Constancia No Disponible</h2>
-        <p>Esta donación se encuentra en estado <strong>ANULADA</strong>. Las donaciones anuladas no pueden generar una constancia de respaldo.</p>
+        <p>
+          Esta donación se encuentra en estado <strong>ANULADA</strong>. Las donaciones anuladas no
+          pueden generar una constancia de respaldo.
+        </p>
       </div>
     );
   }
@@ -44,7 +47,9 @@ export default function ConstanciaDonacionPage({ usuarioRol, donacion }) {
         {/* Encabezado de la Organización */}
         <div className="border-b pb-4 mb-6 flex justify-between items-center">
           <div>
-            <h1 className="text-2xl font-bold text-gray-800 uppercase tracking-wide">Ecopac Digital</h1>
+            <h1 className="text-2xl font-bold text-gray-800 uppercase tracking-wide">
+              Ecopac Digital
+            </h1>
             <p className="text-sm text-gray-500">Comité Agrícola de Desarrollo Integral</p>
             <p className="text-xs text-gray-400">Guatemala · Registro de Aportes y Donaciones</p>
           </div>
@@ -62,10 +67,18 @@ export default function ConstanciaDonacionPage({ usuarioRol, donacion }) {
 
         {/* Datos del Donante */}
         <div className="mb-6 space-y-2 text-sm text-gray-700 bg-gray-50 p-4 rounded border print:bg-transparent">
-          <p><strong>Donante:</strong> {donacion.donante_nombre}</p>
-          <p><strong>Identificación / Teléfono:</strong> {donacion.donante_contacto || "N/A"}</p>
-          <p><strong>Tipo de Aporte:</strong> <span className="capitalize">{donacion.tipo}</span></p>
-          <p><strong>Proyecto Asignado:</strong> {donacion.proyecto_nombre || "Fondo General"}</p>
+          <p>
+            <strong>Donante:</strong> {donacion.donante_nombre}
+          </p>
+          <p>
+            <strong>Identificación / Teléfono:</strong> {donacion.donante_contacto || "N/A"}
+          </p>
+          <p>
+            <strong>Tipo de Aporte:</strong> <span className="capitalize">{donacion.tipo}</span>
+          </p>
+          <p>
+            <strong>Proyecto Asignado:</strong> {donacion.proyecto_nombre || "Fondo General"}
+          </p>
         </div>
 
         {/* Detalle de lo donado */}
@@ -85,12 +98,16 @@ export default function ConstanciaDonacionPage({ usuarioRol, donacion }) {
                   <td className="p-2 border text-center">{index + 1}</td>
                   <td className="p-2 border">{item.concepto}</td>
                   <td className="p-2 border text-right font-medium">
-                    {donacion.tipo === "economica" ? `Q ${Number(item.monto).toFixed(2)}` : item.cantidad}
+                    {donacion.tipo === "economica"
+                      ? `Q ${Number(item.monto).toFixed(2)}`
+                      : item.cantidad}
                   </td>
                 </tr>
               )) || (
                 <tr>
-                  <td colSpan="3" className="p-2 text-center text-gray-500">Sin detalles especificantes</td>
+                  <td colSpan="3" className="p-2 text-center text-gray-500">
+                    Sin detalles especificantes
+                  </td>
                 </tr>
               )}
             </tbody>

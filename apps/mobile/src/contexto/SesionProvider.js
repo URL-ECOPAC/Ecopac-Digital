@@ -1,5 +1,5 @@
-import { createContext, useContext } from 'react';
-import { useSesion } from '@ecopac/shared';
+import { createContext, useContext } from "react";
+import { useSesion } from "@ecopac/shared";
 
 /**
  * Sesion compartida por toda la app movil.
@@ -35,7 +35,7 @@ export function useSesionCompartida() {
   if (sesion === null) {
     // Un error de programacion, no algo que el usuario final pueda provocar: se lanza para que
     // se note al primer render y no se degrade en un "perfil null" dificil de rastrear.
-    throw new Error('useSesionCompartida() se llamo fuera de <SesionProvider>.');
+    throw new Error("useSesionCompartida() se llamo fuera de <SesionProvider>.");
   }
 
   return sesion;

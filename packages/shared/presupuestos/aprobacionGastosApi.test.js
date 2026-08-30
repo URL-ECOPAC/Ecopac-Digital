@@ -35,7 +35,8 @@ function clienteUpdate(respuesta) {
     },
     single: async () => (respuesta instanceof Error ? Promise.reject(respuesta) : respuesta),
     then(resolve, reject) {
-      const promesa = respuesta instanceof Error ? Promise.reject(respuesta) : Promise.resolve(respuesta);
+      const promesa =
+        respuesta instanceof Error ? Promise.reject(respuesta) : Promise.resolve(respuesta);
       return promesa.then(resolve, reject);
     },
   };
@@ -114,14 +115,22 @@ describe("aprobarGasto", () => {
 
 describe("rechazarGasto", () => {
   it("retorna error de campo requerido si faltan los IDs, sin tocar el cliente", async () => {
-    const { gasto, error } = await rechazarGasto({ gastoId: null, usuarioId: null, motivo: "Fuera de presupuesto" });
+    const { gasto, error } = await rechazarGasto({
+      gastoId: null,
+      usuarioId: null,
+      motivo: "Fuera de presupuesto",
+    });
 
     expect(gasto).toBeNull();
     expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.CAMPO_REQUERIDO);
   });
 
   it("exige motivo, sin tocar el cliente", async () => {
-    const { gasto, error } = await rechazarGasto({ gastoId: "gasto-1", usuarioId: "admin-1", motivo: "   " });
+    const { gasto, error } = await rechazarGasto({
+      gastoId: "gasto-1",
+      usuarioId: "admin-1",
+      motivo: "   ",
+    });
 
     expect(gasto).toBeNull();
     expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.CAMPO_REQUERIDO);

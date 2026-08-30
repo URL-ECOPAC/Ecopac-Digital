@@ -1,4 +1,4 @@
-import { Card as CardBootstrap } from 'react-bootstrap';
+import { Card as CardBootstrap } from "react-bootstrap";
 
 /**
  * Tarjeta: base visual de cualquier bloque agrupado de un dashboard, y de las tarjetas que
@@ -9,15 +9,15 @@ import { Card as CardBootstrap } from 'react-bootstrap';
  * Enter y espacio. Un div con onClick y nada mas solo funciona con raton.
  */
 export default function Card({ children, title, onClick, style, ...rest }) {
-  const interactiva = typeof onClick === 'function';
+  const interactiva = typeof onClick === "function";
 
   const propsDeInteraccion = interactiva
     ? {
-        role: 'button',
+        role: "button",
         tabIndex: 0,
         onClick,
         onKeyDown: (evento) => {
-          if (evento.key === 'Enter' || evento.key === ' ') {
+          if (evento.key === "Enter" || evento.key === " ") {
             evento.preventDefault();
             onClick(evento);
           }
@@ -27,12 +27,16 @@ export default function Card({ children, title, onClick, style, ...rest }) {
 
   return (
     <CardBootstrap
-      style={{ cursor: interactiva ? 'pointer' : undefined, ...style }}
+      style={{ cursor: interactiva ? "pointer" : undefined, ...style }}
       {...propsDeInteraccion}
       {...rest}
     >
       <CardBootstrap.Body>
-        {title && <CardBootstrap.Title as="h2" className="h6">{title}</CardBootstrap.Title>}
+        {title && (
+          <CardBootstrap.Title as="h2" className="h6">
+            {title}
+          </CardBootstrap.Title>
+        )}
         {children}
       </CardBootstrap.Body>
     </CardBootstrap>

@@ -16,14 +16,14 @@
 // buscar/asignar/desasignar personal, montado sobre la pestaña Equipo de la pantalla de #181)
 // son los hooks de pantalla del modulo; el resto los construyen sus issues.
 
-export * from './api.js';
-export * from './campos.js';
-export * from './columnas.js';
-export * from './filtros.js';
-export * from './permisos.js';
-export * from './useAsignacionPersonal.js';
-export * from './useDetalleJornada.js';
-export * from './useFormularioJornada.js';
-export * from './useJornadaActiva.js';
-export * from './useJornadasKanban.js';
-export * from './validaciones.js';
+export * from "./api.js";
+export * from "./campos.js";
+export * from "./columnas.js";
+export * from "./filtros.js";
+export * from "./permisos.js";
+export * from "./useAsignacionPersonal.js";
+export * from "./useDetalleJornada.js";
+export * from "./useFormularioJornada.js";
+export * from "./useJornadaActiva.js";
+export * from "./useJornadasKanban.js";
+export * from "./validaciones.js";
