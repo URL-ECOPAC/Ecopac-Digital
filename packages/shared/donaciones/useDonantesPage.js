@@ -1,8 +1,13 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { donantesApi } from "./donantes.api.js";
-import { donantesColumnas, donantesFiltros, donantesCampos } from "./index.js";
-
-const ROLES_LECTURA = ["Administrador", "Junta Directiva", "Socio Fundador"];
+// Los descriptores se importan de su propio archivo y no del barril: hacerlo desde ./index.js
+// creaba un ciclo, porque el barril tambien exporta este hook. Los nombres anteriores
+// -donantesColumnas, donantesFiltros y donantesCampos- no los exportaba nadie y llegaban como
+// undefined; los reales son estos tres (issue #598).
+import { CAMPOS_DONANTE } from "./campos.js";
+import { COLUMNAS_DONANTE } from "./columnas.js";
+import { FILTROS_DONANTE } from "./filtros.js";
+import { puedeRegistrarDonaciones, puedeVerDonaciones } from "./permisos.js";
 
 export function useDonantesPage({ client, usuarioRol }) {
   const [donantes, setDonantes] = useState([]);
@@ -16,8 +21,8 @@ export function useDonantesPage({ client, usuarioRol }) {
   const [modalAbierto, setModalAbierto] = useState(false);
   const [modoEdicion, setModoEdicion] = useState(false);
 
-  const tieneAccesoLectura = ROLES_LECTURA.includes(usuarioRol);
-  const puedeEscribir = usuarioRol === "Administrador";
+  const tieneAccesoLectura = puedeVerDonaciones(usuarioRol);
+  const puedeEscribir = puedeRegistrarDonaciones(usuarioRol);
 
   const cargarDonantes = useCallback(async () => {
     if (!tieneAccesoLectura || !client) {
@@ -70,9 +75,9 @@ export function useDonantesPage({ client, usuarioRol }) {
     permisos: { tieneAccesoLectura, puedeEscribir },
     cargando,
     error,
-    columnas: donantesColumnas,
-    filtrosSpec: donantesFiltros,
-    camposSpec: donantesCampos,
+    columnas: COLUMNAS_DONANTE,
+    filtrosSpec: FILTROS_DONANTE,
+    camposSpec: CAMPOS_DONANTE,
     donantes: donantesFiltrados,
     busqueda,
     setBusqueda,

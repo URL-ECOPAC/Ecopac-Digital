@@ -26,6 +26,22 @@ export * from "./ingreso.api.js";
 export * from "./campos.js";
 export * from "./columnas.js";
 export * from "./filtros.js";
+export * from "./permisos.js";
 export * from "./useRegistroDonacion.js";
 export * from "./useHistorialDonaciones.js";
 export * from "./useConstanciaDonacion.js";
+
+// useDonantesPage NO se exporta todavia, a proposito (issue #598).
+//
+// Falta en el barril desde que se agrego con la issue #196, y el primer diagnostico fue que
+// bastaba con exportarlo. No basta: el hook llama a `donantesApi.obtenerDonantes(client)` y a
+// `donantesApi.obtenerDonantePorId(id, client)`, y donantes.api.js no exporta ningun objeto
+// `donantesApi` ni esas dos funciones. Lo que si exporta son listarDonantes(),
+// registrarDonante(), actualizarDonante(), darDeBajaDonante() y obtenerHistoricoDonante(), con
+// otra firma: reciben `{ rolUsuario }` y resuelven el cliente con obtenerSupabase(), en vez de
+// recibirlo por parametro.
+//
+// Exportarlo tal como esta rompe la compilacion de la web, porque mete el archivo en el grafo
+// del bundle y rolldown corta con MISSING_EXPORT. Reescribirlo contra la API real cambia su
+// contrato de carga de datos y arrastra a DonantesPage.jsx, asi que va en la parte B de la
+// #598, junto con la portacion de las pantallas.
