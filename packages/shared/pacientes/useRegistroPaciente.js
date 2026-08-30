@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { calcularEdad } from "../formato/fechas.js";
-import { listarComunidades, listarDepartamentos, listarMunicipios } from "../territorio/api.js";
+import {
+  listarComunidades,
+  listarDepartamentos,
+  listarMunicipios,
+  obtenerComunidad,
+} from "../territorio/api.js";
 import { buscarPacientes, registrarPaciente } from "./api.js";
 import { CAMPOS_REGISTRO_PACIENTE } from "./campos.js";
 import { OPCIONES_SEXO } from "./usePacientesListado.js";
@@ -16,8 +21,10 @@ function aOpciones(filas = []) {
   return filas.map((fila) => ({ valor: fila.id, etiqueta: fila.nombre }));
 }
 
-export function useRegistroPaciente() {
-  const [valores, setValores] = useState(VALORES_INICIALES);
+export function useRegistroPaciente({ comunidadInicial = null, nombresInicial = "" } = {}) {
+  const [valores, setValores] = useState(() =>
+    nombresInicial ? { ...VALORES_INICIALES, nombres: nombresInicial } : VALORES_INICIALES,
+  );
   const [errores, setErrores] = useState({});
   const [error, setError] = useState(null);
   const [enviando, setEnviando] = useState(false);
@@ -92,6 +99,22 @@ export function useRegistroPaciente() {
       vigente = false;
     };
   }, [nombres, apellidos, fechaNacimiento]);
+
+  useEffect(() => {
+    if (!comunidadInicial) return undefined;
+
+    let vigente = true;
+    obtenerComunidad(comunidadInicial).then(({ comunidad }) => {
+      if (!vigente || !comunidad) return;
+      setDepartamentoId(comunidad.departamentoId ?? null);
+      setMunicipioId(comunidad.municipioId ?? null);
+      setValores((anteriores) => ({ ...anteriores, comunidad: comunidad.id }));
+    });
+
+    return () => {
+      vigente = false;
+    };
+  }, [comunidadInicial]);
 
   const setCampo = useCallback((id, valor) => {
     setValores((anteriores) => ({ ...anteriores, [id]: valor }));
