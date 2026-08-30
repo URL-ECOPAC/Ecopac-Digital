@@ -175,7 +175,7 @@ resume el resultado de todos.
 | Estado de la base remota            | PR                       | Lista que migraciones estan aplicadas en `Ecopac-Digital-Dev` y cuales se aplicarian al mergear                                                                            |
 | Aplicar migraciones                 | push a develop o main    | Comprueba que el historial de la base coincida con la rama y corre `supabase db push` contra el proyecto del ambiente. Depende de que los dos jobs en negrita hayan pasado |
 | Avisar fallo                        | si algo fallo en un push | Abre una issue con el paso que fallo y **si las migraciones se aplicaron o no**                                                                                            |
-| Supabase completo                   | siempre                  | Mira el resultado de los cuatro jobs de validacion y falla si alguno termino en `failure` o `cancelled`                                                                    |
+| Supabase completo                   | siempre                  | Mira el resultado de los otros cinco jobs -validacion **y despliegue**- y falla si alguno termino en `failure` o `cancelled`                                               |
 
 Los jobs en negrita son **checks requeridos** hoy: sin ellos en verde, la rama protegida no
 deja mergear. **Supabase completo** esta pensado para reemplazarlos a los dos, pero eso se
@@ -196,6 +196,32 @@ Por dos motivos, y el primero es una trampa que no se ve:
    viven en el repositorio: renombrar un job obliga a ir a Settings a corregirlo, y si nadie lo
    hace, el PR queda esperando un check que ya no existe. Con un solo nombre por workflow,
    renombrar o agregar jobs adentro ya no rompe la configuracion.
+
+**`Aplicar migraciones` entra en esa cuenta**, aunque solo corra en push. No estaba, y por eso un
+despliegue fallido se reportaba como exito: el 30 de agosto los merges de #606 y #607 tumbaron el
+despliegue -deriva de historial, y ninguno de los dos traia una linea de SQL- y **Supabase
+completo** dijo `success` en las dos corridas. El resumen que explica el fallo estaba escrito y
+bien escrito; lo que fallaba era que nada lo senalaba, y hay que saber que existe un job aparte
+para ir a abrirlo. En un `pull_request` el job sale `skipped` y cuenta como aprobado, asi que
+incluirlo no cambia nada ahi.
+
+### La deriva de historial se avisa en el PR
+
+Mientras la base de `ecopac-dev` tenga aplicada una migracion cuyo archivo no esta en `develop`,
+`supabase db push` falla en **todo** push a esa rama, traiga SQL o no: valida el historial
+completo antes de mirar si hay algo pendiente. El fallo le aparece a quien mergee despues, que
+normalmente no tiene nada que ver.
+
+`Estado de la base remota` ya corria el `--dry-run` que lo detecta, pero su salida caia dentro de
+un bloque de codigo del resumen y no la miraba nadie. Ahora, cuando aparece deriva, ese job emite
+un `::warning::` y una seccion propia diciendo que el PR no la causa y que no la empeora. **Sigue
+sin fallar nunca**: depende de secrets y de la red, y convertirlo en guarda haria que un corte de
+conexion bloquee PRs ajenos. Quien corta es `Aplicar migraciones`, despues del merge.
+
+Lo que ninguna de las dos cosas arregla es una **rama que se quedo vieja**: ningun check se vuelve
+a correr solo cuando `develop` avanza, asi que dos PRs pueden reservar el mismo numero de
+migracion y las dos pasar en verde. Eso lo cierra `strict` ("Require branches to be up to date"),
+que vive en Settings > Branches.
 
 No se puede llegar a **un** unico check para todo el repositorio: `Lint y build` vive en otro
 workflow y un job no puede declarar `needs` de un workflow ajeno. El minimo son dos nombres.
