@@ -5,17 +5,17 @@ import { almacenamientoMovil } from './src/almacenamiento';
 import { SesionProvider, useSesionCompartida } from './src/contexto/SesionProvider';
 import AppNavigator from './src/navigation/AppNavigator';
 import RestaurandoSesionScreen from './src/screens/RestaurandoSesionScreen';
-// 1. Simular import.meta.env para paquetes web (Vite) en entorno Expo/Metro
-/* eslint-disable no-undef */
-if (typeof globalThis.import === "undefined") {
-  globalThis.import = { meta: { env: {} } };
-} else if (!globalThis.import.meta?.env) {
-  globalThis.import.meta = { env: {} };
-}
-/* eslint-enable no-undef */
-// Mapear las variables EXPO_PUBLIC a import.meta.env
-import.meta.env.VITE_SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL;
-import.meta.env.VITE_SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+// Aqui vivia un intento de simular `import.meta.env` para reutilizar la lectura de entorno
+// de Vite. No podia funcionar y ademas tumbaba la app entera al arrancar: `import.meta` es
+// sintaxis, no una propiedad de globalThis, asi que asignar `globalThis.import` no la crea,
+// y Hermes evaluaba `import.meta.env.VITE_SUPABASE_URL = ...` contra undefined. El error era
+// "[runtime not ready]: TypeError: Cannot set property 'VITE_SUPABASE_URL' of undefined" y
+// aparecia antes de dibujar la primera pantalla.
+//
+// No hace falta nada en su lugar: packages/shared/entorno/fuente.native.js ya lee
+// process.env.EXPO_PUBLIC_* escrito completo, que es lo unico que Metro sabe reemplazar al
+// empaquetar. La regla del repositorio sigue siendo que nadie mas lea una variable de entorno
+// por su cuenta: se pide por obtenerEntorno().
 
 // El cliente de Supabase se crea una sola vez, aqui, con AsyncStorage como almacenamiento.
 // Va en el ambito del modulo y no dentro del componente: no debe rehacerse en cada render
