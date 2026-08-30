@@ -1,10 +1,16 @@
 import { obtenerSupabase } from "../api/cliente.js";
 import { normalizarError } from "../api/errores-de-supabase.js";
+import { puedeRegistrarDonaciones, puedeVerDonaciones } from "./permisos.js";
 
-const ROLES_LECTURA = ["administrador", "junta_directiva", "socio_fundador"];
+// Este archivo tenia su propia lista, `["administrador", "junta_directiva", "socio_fundador"]`,
+// con guiones bajos. El enum rol_usuario de la 00001 los escribe con espacio -'junta directiva',
+// 'socio fundador'-, asi que los dos roles consultivos no coincidian nunca y la API les negaba
+// la lectura del catalogo de donantes aunque la politica RLS de la 00083 si se la concede. Era
+// la misma clase de error que la #598 encontro en los hooks, en otra variante de escritura.
+// Ahora los dos guardas salen de permisos.js, que es el espejo de esa politica.
 
 function validarRolEscritura(rolUsuario) {
-  if (rolUsuario !== "administrador") {
+  if (!puedeRegistrarDonaciones(rolUsuario)) {
     return {
       datos: null,
       error: { mensaje: "Operación exclusiva para el rol Administrador." },
@@ -14,7 +20,7 @@ function validarRolEscritura(rolUsuario) {
 }
 
 function validarRolLectura(rolUsuario) {
-  if (!ROLES_LECTURA.includes(rolUsuario)) {
+  if (!puedeVerDonaciones(rolUsuario)) {
     return {
       datos: null,
       error: { mensaje: "No tienes permisos de lectura para el catálogo de donantes." },

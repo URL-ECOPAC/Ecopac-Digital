@@ -194,6 +194,41 @@ describe("asignarPresupuestoJornada", () => {
     expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.CHECK);
   });
 
+  // Issue #597. Antes estos montos se convertian en 0 con aNumero(), pasaban la guarda de
+  // negativo y se escribian como el presupuesto de la jornada: quedaba en cero sin ninguna
+  // senal de que el dato venia mal. El caso realista no es alguien escribiendo letras, es un
+  // campo de formulario vacio o un valor que se perdio en el camino.
+  it.each([
+    ["una cadena que no es numero", "abc"],
+    ["undefined", undefined],
+    ["null", null],
+    ["la cadena vacia", ""],
+    ["una cadena de espacios", "   "],
+    ["NaN", Number.NaN],
+    ["Infinity", Number.POSITIVE_INFINITY],
+  ])("rechaza %s en vez de escribir cero", async (_descripcion, monto) => {
+    const { jornada, error } = await asignarPresupuestoJornada("jornada-1", monto);
+
+    expect(jornada).toBeNull();
+    expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.CHECK);
+  });
+
+  it("acepta un monto que llega como cadena numerica, que es lo que manda un formulario", async () => {
+    const cliente = clienteUpdate({
+      data: { id: "jornada-1", presupuesto_asignado: "8000.00" },
+      error: null,
+    });
+    dobles.cliente = cliente;
+
+    const { error } = await asignarPresupuestoJornada("jornada-1", "8000");
+
+    expect(error).toBeNull();
+    expect(cliente.llamadas).toContainEqual({
+      paso: "update",
+      valores: { presupuesto_asignado: 8000 },
+    });
+  });
+
   it("acepta cero, que es el valor por defecto de la columna", async () => {
     const cliente = clienteUpdate({
       data: { id: "jornada-1", presupuesto_asignado: "0.00" },
