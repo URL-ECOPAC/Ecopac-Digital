@@ -1,20 +1,22 @@
 import EmptyState from "../components/EmptyState";
 import LoadingState from "../components/LoadingState";
 
+function claseDeAvatar(sexo) {
+  const normalizado = String(sexo ?? "")
+    .trim()
+    .toLowerCase();
+  if (normalizado === "femenino") return " pac-avatar--femenino";
+  if (normalizado === "masculino") return " pac-avatar--masculino";
+  return "";
+}
+
 function resumen(fila) {
   return [fila.edad ? `${fila.edad}a` : null, fila.sexo, fila.comunidad]
     .filter(Boolean)
     .join(" · ");
 }
 
-export default function ListaPacientes({
-  filas,
-  total,
-  cargando,
-  activoId,
-  onSeleccionar,
-  vacio,
-}) {
+export default function ListaPacientes({ filas, total, cargando, activoId, onSeleccionar, vacio }) {
   return (
     <div className="pac-columna">
       <p className="pac-rotulo mb-2">
@@ -34,7 +36,7 @@ export default function ListaPacientes({
               onClick={() => onSeleccionar(fila)}
               aria-current={fila.id === activoId ? "true" : undefined}
             >
-              <span className="pac-avatar" aria-hidden="true">
+              <span className={`pac-avatar${claseDeAvatar(fila.sexo)}`} aria-hidden="true">
                 {(fila.nombreCompleto ?? "?").charAt(0)}
               </span>
 

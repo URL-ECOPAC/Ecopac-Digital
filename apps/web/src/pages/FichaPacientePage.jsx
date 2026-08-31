@@ -35,6 +35,15 @@ import PestaniaSignosPaciente from "./PestaniaSignosPaciente";
 
 const PARAMETRO_PESTANIA = "pestania";
 
+function claseDeAvatar(sexo) {
+  const normalizado = String(sexo ?? "")
+    .trim()
+    .toLowerCase();
+  if (normalizado === "femenino") return " pac-avatar--femenino";
+  if (normalizado === "masculino") return " pac-avatar--masculino";
+  return "";
+}
+
 function valorDeCampo(campo, valores) {
   const valor = valores[campo.id];
   if (valor === null || valor === undefined || valor === "") return "—";
@@ -141,7 +150,10 @@ export default function FichaPacientePage() {
               </div>
 
               <div className="pac-identidad">
-                <span className="pac-avatar pac-avatar--grande" aria-hidden="true">
+                <span
+                  className={`pac-avatar pac-avatar--grande${claseDeAvatar(valores.sexo)}`}
+                  aria-hidden="true"
+                >
                   {(cabecera.nombreCompleto ?? "?").charAt(0)}
                 </span>
                 <div>

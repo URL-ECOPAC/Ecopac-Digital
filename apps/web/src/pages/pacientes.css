@@ -353,3 +353,13 @@
   padding: var(--spacing-lg);
   text-align: center;
 }
+
+/* --- Color del avatar segun el sexo, como el prototipo --- */
+
+.modulo-pacientes .pac-avatar--femenino {
+  background-color: var(--color-danger);
+}
+
+.modulo-pacientes .pac-avatar--masculino {
+  background-color: var(--color-info);
+}
