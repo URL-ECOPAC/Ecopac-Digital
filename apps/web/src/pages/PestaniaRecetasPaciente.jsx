@@ -23,7 +23,7 @@ function Detalle({ receta }) {
     <div className="mt-2">
       {receta.indicacionesGenerales && (
         <p className="mb-2">
-          <span className="text-body-secondary">Indicaciones generales: </span>
+          <span className="pac-rotulo">Indicaciones generales </span>
           {receta.indicacionesGenerales}
         </p>
       )}
@@ -46,7 +46,7 @@ function Receta({ receta, abierta, onAlternar, onImprimir }) {
       <div className="d-flex flex-wrap align-items-center gap-2">
         <strong>{receta.folio ?? "Sin folio"}</strong>
         <StatusChip status={receta.estado} />
-        <span className="text-body-secondary small">{formatearFechaCorta(receta.createdAt)}</span>
+        <span className="pac-fecha">{formatearFechaCorta(receta.createdAt)}</span>
         <button
           type="button"
           className="btn btn-link btn-sm ms-auto p-0"
@@ -60,7 +60,7 @@ function Receta({ receta, abierta, onAlternar, onImprimir }) {
         </button>
       </div>
 
-      <div className="text-body-secondary small mt-1">
+      <div className="pac-dato-mono mt-1">
         {[receta.jornada, receta.medico ? `Dr. ${receta.medico}` : null]
           .filter(Boolean)
           .join(" · ") || "Sin jornada ni medico registrados"}

@@ -1,0 +1,365 @@
+/* Lenguaje visual del prototipo aplicado al modulo de pacientes (issue #630).
+   Todo cuelga de .modulo-pacientes para que ningun otro modulo cambie de aspecto:
+   los componentes del catalogo se visten desde aqui, no se modifican.
+   Ningun valor literal: todo sale de las variables que publica theme.js. */
+
+.modulo-pacientes {
+  --pac-radio: 14px;
+  --pac-radio-chip: 999px;
+  --pac-borde: 1px solid var(--color-border);
+  --pac-sombra:
+    0 1px 2px color-mix(in srgb, var(--color-text) 5%, transparent),
+    0 4px 12px color-mix(in srgb, var(--color-text) 5%, transparent);
+  --pac-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+
+/* --- Cabecera de pantalla --- */
+
+.modulo-pacientes .app-page-header h1,
+.modulo-pacientes .pac-titulo {
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.modulo-pacientes .pac-subtitulo {
+  color: var(--color-text-muted);
+  font-size: 0.9375rem;
+  margin: 0;
+}
+
+/* --- Micro-etiqueta: el rotulo de dato del prototipo --- */
+
+.modulo-pacientes .pac-rotulo {
+  color: var(--color-text-muted);
+  font-family: var(--pac-mono);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* --- Dato secundario monoespaciado --- */
+
+.modulo-pacientes .pac-dato-mono {
+  color: var(--color-text-muted);
+  font-family: var(--pac-mono);
+  font-size: 0.75rem;
+}
+
+/* --- Tarjetas --- */
+
+.modulo-pacientes .card {
+  border: var(--pac-borde);
+  border-radius: var(--pac-radio);
+  box-shadow: var(--pac-sombra);
+}
+
+.modulo-pacientes .card-body {
+  padding: var(--spacing-md);
+}
+
+/* --- Chips palidos, en lugar de los badges solidos de Bootstrap --- */
+
+.modulo-pacientes .badge {
+  background-color: color-mix(in srgb, var(--color-primary) 12%, var(--color-surface)) !important;
+  border-radius: var(--pac-radio-chip);
+  color: var(--color-primary);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding: 0.3rem 0.65rem;
+}
+
+/* Chips que NO son un estado de la base: tipo de sangre y sexo. No usan StatusChip a
+   proposito -- su contrato exige un valor de enum como indice de color -- sino esta clase. */
+
+.modulo-pacientes .pac-chip {
+  border-radius: var(--pac-radio-chip);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding: 0.3rem 0.65rem;
+}
+
+.modulo-pacientes .pac-chip--sangre {
+  background-color: color-mix(in srgb, var(--color-info) 14%, var(--color-surface));
+  color: var(--color-info);
+}
+
+.modulo-pacientes .pac-chip--sexo {
+  background-color: color-mix(in srgb, var(--color-danger) 12%, var(--color-surface));
+  color: var(--color-danger);
+}
+
+/* --- Avatar circular con inicial --- */
+
+.modulo-pacientes .pac-avatar {
+  align-items: center;
+  background-color: var(--accent-pacientes);
+  border-radius: 50%;
+  color: var(--color-surface);
+  display: inline-flex;
+  flex: 0 0 auto;
+  font-weight: 600;
+  height: 40px;
+  justify-content: center;
+  width: 40px;
+}
+
+.modulo-pacientes .pac-avatar--grande {
+  font-size: 1.5rem;
+  height: 64px;
+  width: 64px;
+}
+
+/* --- Panel de filtros: tarjeta blanca, cada control con su micro-etiqueta --- */
+
+.modulo-pacientes .pac-filtros {
+  background-color: var(--color-surface);
+  border: var(--pac-borde);
+  border-radius: var(--pac-radio);
+  box-shadow: var(--pac-sombra);
+  margin-bottom: var(--spacing-md);
+  padding: var(--spacing-md);
+}
+
+.modulo-pacientes .pac-filtros label,
+.modulo-pacientes .pac-filtros .form-label {
+  color: var(--color-text-muted);
+  font-family: var(--pac-mono);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  margin-bottom: 0.35rem;
+  text-transform: uppercase;
+}
+
+.modulo-pacientes .pac-filtros .form-control,
+.modulo-pacientes .pac-filtros .form-select {
+  border-color: var(--color-border);
+  border-radius: var(--pac-radio-chip);
+  font-size: 0.9375rem;
+  padding-inline: var(--spacing-md);
+}
+
+.modulo-pacientes .pac-filtros .form-control:focus,
+.modulo-pacientes .pac-filtros .form-select:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 15%, transparent);
+}
+
+/* --- Tabla del listado --- */
+
+.modulo-pacientes .table {
+  --bs-table-bg: var(--color-surface);
+  border-collapse: separate;
+  border-spacing: 0;
+  margin-bottom: 0;
+  overflow: hidden;
+}
+
+.modulo-pacientes .table > thead th {
+  background-color: var(--color-surface);
+  border-bottom: var(--pac-borde);
+  color: var(--color-text-muted);
+  font-family: var(--pac-mono);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  padding: var(--spacing-sm) var(--spacing-md);
+  text-transform: uppercase;
+}
+
+.modulo-pacientes .table > tbody td {
+  border-bottom: var(--pac-borde);
+  padding: var(--spacing-md);
+  vertical-align: middle;
+}
+
+.modulo-pacientes .table > tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.modulo-pacientes .table > tbody tr:hover td {
+  background-color: color-mix(in srgb, var(--color-primary) 4%, var(--color-surface));
+}
+
+.modulo-pacientes .pac-tabla {
+  background-color: var(--color-surface);
+  border: var(--pac-borde);
+  border-radius: var(--pac-radio);
+  box-shadow: var(--pac-sombra);
+  overflow: hidden;
+}
+
+/* --- Pestanas como pills --- */
+
+.modulo-pacientes .nav-tabs {
+  border-bottom: 0;
+  gap: var(--spacing-xs);
+  margin-bottom: var(--spacing-md);
+}
+
+.modulo-pacientes .nav-tabs .nav-link {
+  background-color: var(--color-surface);
+  border: var(--pac-borde);
+  border-radius: var(--pac-radio-chip);
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+  padding: 0.4rem 0.95rem;
+}
+
+.modulo-pacientes .nav-tabs .nav-link:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.modulo-pacientes .nav-tabs .nav-link.active {
+  background-color: color-mix(in srgb, var(--color-primary) 12%, var(--color-surface));
+  border-color: color-mix(in srgb, var(--color-primary) 35%, var(--color-surface));
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+/* --- Ficha del paciente --- */
+
+.modulo-pacientes .pac-identidad {
+  align-items: center;
+  display: flex;
+  gap: var(--spacing-md);
+}
+
+.modulo-pacientes .pac-nombre {
+  font-size: 1.625rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+.modulo-pacientes .pac-datos {
+  border-top: var(--pac-borde);
+  margin-top: var(--spacing-md);
+  padding-top: var(--spacing-md);
+}
+
+.modulo-pacientes .pac-datos dd {
+  font-size: 0.9375rem;
+  margin: 0.15rem 0 0;
+}
+
+/* --- Historial de consultas --- */
+
+.modulo-pacientes .pac-fecha {
+  color: var(--color-primary);
+  font-family: var(--pac-mono);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.modulo-pacientes .pac-entrada + .pac-entrada {
+  border-top: var(--pac-borde);
+  margin-top: var(--spacing-md);
+  padding-top: var(--spacing-md);
+}
+
+/* --- Enlaces de accion discretos --- */
+
+.modulo-pacientes .btn-link {
+  color: var(--color-primary);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.modulo-pacientes .btn-link:hover {
+  text-decoration: underline;
+}
+
+/* --- Maestro-detalle: lista a la izquierda, ficha a la derecha --- */
+
+.modulo-pacientes .pac-maestro-detalle {
+  align-items: start;
+  display: grid;
+  gap: var(--spacing-md);
+  grid-template-columns: minmax(0, 320px) minmax(0, 1fr);
+}
+
+@media (max-width: 991px) {
+  .modulo-pacientes .pac-maestro-detalle {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.modulo-pacientes .pac-lista {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.modulo-pacientes .pac-tarjeta-paciente {
+  align-items: flex-start;
+  background-color: var(--color-surface);
+  border: var(--pac-borde);
+  border-radius: var(--pac-radio);
+  box-shadow: var(--pac-sombra);
+  display: flex;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
+  text-align: left;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+  width: 100%;
+}
+
+.modulo-pacientes .pac-tarjeta-paciente:hover {
+  border-color: color-mix(in srgb, var(--color-primary) 45%, var(--color-surface));
+}
+
+.modulo-pacientes .pac-tarjeta-paciente--activa {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 1px var(--color-primary);
+}
+
+.modulo-pacientes .pac-tarjeta-datos {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.modulo-pacientes .pac-tarjeta-nombre {
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.modulo-pacientes .pac-tarjeta-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-top: 0.25rem;
+}
+
+.modulo-pacientes .pac-panel-vacio {
+  align-items: center;
+  background-color: var(--color-surface);
+  border: var(--pac-borde);
+  border-radius: var(--pac-radio);
+  box-shadow: var(--pac-sombra);
+  color: var(--color-text-muted);
+  display: flex;
+  justify-content: center;
+  min-height: 320px;
+  padding: var(--spacing-lg);
+  text-align: center;
+}
+
+/* --- Color del avatar segun el sexo, como el prototipo --- */
+
+.modulo-pacientes .pac-avatar--femenino {
+  background-color: var(--color-danger);
+}
+
+.modulo-pacientes .pac-avatar--masculino {
+  background-color: var(--color-info);
+}

@@ -38,7 +38,7 @@ function Signos({ signos }) {
     <dl className="row mb-0">
       {renglones.map(([etiqueta, valor]) => (
         <div className="col-sm-4 mb-2" key={etiqueta}>
-          <dt className="text-body-secondary fw-normal small">{etiqueta}</dt>
+          <dt className="pac-rotulo">{etiqueta}</dt>
           <dd className="mb-0">{valor}</dd>
         </div>
       ))}
@@ -57,7 +57,7 @@ function DetalleConsulta({ evento }) {
     <div className="mt-2">
       {evento.diagnosticos?.length > 0 && (
         <p className="mb-2">
-          <span className="text-body-secondary">Diagnosticos: </span>
+          <span className="pac-rotulo">Diagnosticos </span>
           {evento.diagnosticos
             .map((diagnostico) =>
               [diagnostico.codigo, diagnostico.nombre].filter(Boolean).join(" "),
@@ -67,7 +67,7 @@ function DetalleConsulta({ evento }) {
       )}
       {campos.map(([etiqueta, valor]) => (
         <p className="mb-2" key={etiqueta}>
-          <span className="text-body-secondary">{etiqueta}: </span>
+          <span className="pac-rotulo">{etiqueta} </span>
           {valor}
         </p>
       ))}
@@ -105,10 +105,10 @@ function Evento({ evento, expandido, onAlternar }) {
     evento.tipo === TIPOS_DE_EVENTO.CONSULTA || evento.tipo === TIPOS_DE_EVENTO.RECETA;
 
   return (
-    <li className="border-top py-3">
+    <li className="pac-entrada py-3">
       <div className="d-flex flex-wrap align-items-center gap-2">
         <strong>{ETIQUETAS_TIPO_DE_EVENTO[evento.tipo] ?? evento.tipo}</strong>
-        <span className="text-body-secondary small">{formatearFechaConHora(evento.fecha)}</span>
+        <span className="pac-dato-mono">{formatearFechaConHora(evento.fecha)}</span>
         {evento.profesional && <span className="small">· {evento.profesional}</span>}
         {evento.tipo === TIPOS_DE_EVENTO.RECETA && evento.folio && (
           <span className="small text-body-secondary">· folio {evento.folio}</span>
@@ -214,7 +214,7 @@ export default function PestaniaHistorialPaciente({ pacienteId, rol }) {
               <strong>{grupo.jornada ?? "Atencion sin jornada"}</strong>
               {grupo.comunidad && <span className="text-body-secondary"> · {grupo.comunidad}</span>}
             </div>
-            <div className="text-body-secondary small">{formatearFechaCorta(grupo.fecha)}</div>
+            <div className="pac-fecha">{formatearFechaCorta(grupo.fecha)}</div>
 
             <ul className="list-unstyled mb-0 mt-2">
               {grupo.eventos.map((evento) => (

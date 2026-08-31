@@ -13,6 +13,7 @@ import FilterBar from "../components/FilterBar";
 import PageHeader from "../components/PageHeader";
 import ScreenContainer from "../components/ScreenContainer";
 import { useSesionCompartida } from "../contexto/SesionProvider";
+import "./pacientes.css";
 
 export default function PacientesCronicosPage() {
   const navigate = useNavigate();
@@ -33,50 +34,64 @@ export default function PacientesCronicosPage() {
   if (error) {
     return (
       <ScreenContainer>
-        <PageHeader
-          title="Pacientes cronicos"
-          actions={[
-            { label: "Volver", onClick: () => navigate("/pacientes"), variant: "secondary" },
-          ]}
-        />
-        <ErrorState message={error.mensaje} onRetry={recargar} />
+        <div className="modulo-pacientes">
+          <PageHeader
+            title="Pacientes cronicos"
+            actions={[
+              { label: "Volver", onClick: () => navigate("/pacientes"), variant: "secondary" },
+            ]}
+          />
+          <ErrorState message={error.mensaje} onRetry={recargar} />
+        </div>
       </ScreenContainer>
     );
   }
 
   return (
     <ScreenContainer>
-      <PageHeader
-        title="Pacientes cronicos"
-        subtitle={total === 1 ? "1 condicion registrada" : `${total} condiciones registradas`}
-        actions={[{ label: "Volver", onClick: () => navigate("/pacientes"), variant: "secondary" }]}
-      />
+      <div className="modulo-pacientes">
+        <PageHeader
+          title="Pacientes cronicos"
+          subtitle="Seguimiento de condiciones cronicas"
+          actions={[
+            { label: "Volver", onClick: () => navigate("/pacientes"), variant: "secondary" },
+          ]}
+        />
 
-      <FilterBar
-        campos={FILTROS_PACIENTE_CRONICO}
-        valores={filtros}
-        onChange={setFiltro}
-        catalogos={catalogos}
-      />
+        <div className="pac-filtros">
+          <FilterBar
+            campos={FILTROS_PACIENTE_CRONICO}
+            valores={filtros}
+            onChange={setFiltro}
+            catalogos={catalogos}
+          />
+        </div>
 
-      <DataList
-        columnas={COLUMNAS_PACIENTE_CRONICO}
-        datos={filas}
-        cargando={cargando}
-        catalogos={catalogos}
-        onRowPress={(fila) => fila.pacienteId && navigate(`/pacientes/${fila.pacienteId}`)}
-        vacio={
-          hayFiltros ? (
-            <EmptyState
-              message="Ningun paciente cronico coincide con los filtros."
-              actionLabel="Limpiar filtros"
-              onAction={limpiarFiltros}
-            />
-          ) : (
-            <EmptyState message="Todavia no hay condiciones cronicas registradas." />
-          )
-        }
-      />
+        <p className="pac-rotulo mb-2">
+          {total === 1 ? "1 condicion registrada" : `${total} condiciones registradas`}
+        </p>
+
+        <div className="pac-tabla">
+          <DataList
+            columnas={COLUMNAS_PACIENTE_CRONICO}
+            datos={filas}
+            cargando={cargando}
+            catalogos={catalogos}
+            onRowPress={(fila) => fila.pacienteId && navigate(`/pacientes/${fila.pacienteId}`)}
+            vacio={
+              hayFiltros ? (
+                <EmptyState
+                  message="Ningun paciente cronico coincide con los filtros."
+                  actionLabel="Limpiar filtros"
+                  onAction={limpiarFiltros}
+                />
+              ) : (
+                <EmptyState message="Todavia no hay condiciones cronicas registradas." />
+              )
+            }
+          />
+        </div>
+      </div>
     </ScreenContainer>
   );
 }
