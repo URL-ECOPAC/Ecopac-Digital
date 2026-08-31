@@ -227,10 +227,19 @@ servidor --, por eso es un fallo que se escapa facil en las pruebas. Es el mismo
 `try_files $uri $uri/ /index.html` que ya hace `apps/web/nginx.conf` para el Docker de
 produccion.
 
-`vercel.json` se lee **dentro del Root Directory** que se configure en el proyecto. Este esta en
-`apps/web/` porque el proyecto apunta ahi. Si se decide poner el Root Directory en la raiz del
-monorepo con un build command propio, el archivo tiene que moverse a la raiz o deja de aplicarse
-en silencio.
+`vercel.json` se lee **dentro del Root Directory** que se configure en el proyecto, y ese ajuste
+vive en el Dashboard: desde el repositorio no se puede saber cual se va a elegir. Por eso hay
+**dos**, y funciona con cualquiera de las dos opciones razonables:
+
+| Root Directory                | Archivo que aplica    | Que trae                                          |
+| ----------------------------- | --------------------- | ------------------------------------------------- |
+| La raiz del monorepo (por defecto) | `vercel.json`    | El rewrite, mas `buildCommand` y `outputDirectory` |
+| `apps/web`                    | `apps/web/vercel.json` | Solo el rewrite; del build se encarga el preset de Vite |
+
+Con un solo archivo, elegir la otra opcion dejaba el rewrite sin aplicarse **en silencio**: no
+hay error de build ni aviso, simplemente vuelven los 404. La duplicacion la vigila el paso
+"Comprobar el rewrite de SPA de Vercel" del CI (`npm run verificar:rewrite-vercel`), que falla
+si los dos archivos dejan de coincidir o si falta alguno.
 
 | Donde en el Dashboard             | Que poner                                            | Que se rompe si falta                          |
 | --------------------------------- | ---------------------------------------------------- | ---------------------------------------------- |
