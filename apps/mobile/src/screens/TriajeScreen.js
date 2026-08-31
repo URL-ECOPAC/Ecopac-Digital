@@ -2,11 +2,7 @@ import { createRef, useEffect, useMemo } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 
-import {
-  nombreCompletoDePaciente,
-  usePaciente,
-  useRegistroTriaje,
-} from "@ecopac/shared";
+import { nombreCompletoDePaciente, usePaciente, useRegistroTriaje } from "@ecopac/shared";
 import { colors, spacing, typography } from "@ecopac/ui-tokens";
 
 import {

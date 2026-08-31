@@ -11,12 +11,23 @@ import {
 } from "@ecopac/shared";
 import { colors, spacing, typography } from "@ecopac/ui-tokens";
 
-import { Card, EmptyState, ErrorState, LoadingState, PrimaryButton, ScreenContainer, SecondaryButton } from "../components";
+import {
+  Card,
+  EmptyState,
+  ErrorState,
+  LoadingState,
+  PrimaryButton,
+  ScreenContainer,
+  SecondaryButton,
+} from "../components";
 import { useJornadaActivaCompartida } from "../contexto/JornadaActivaProvider";
 import { useSesionCompartida } from "../contexto/SesionProvider";
 import { ROUTES } from "../navigation/rutas";
 
-const ETAPAS_CON_CIERRE = new Set([ETAPAS_DE_COLA.ESPERA_ENTREGA, ETAPAS_DE_COLA.LISTA_PARA_CERRAR]);
+const ETAPAS_CON_CIERRE = new Set([
+  ETAPAS_DE_COLA.ESPERA_ENTREGA,
+  ETAPAS_DE_COLA.LISTA_PARA_CERRAR,
+]);
 
 function Contador({ etiqueta, valor }) {
   return (

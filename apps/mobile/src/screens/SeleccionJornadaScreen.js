@@ -3,7 +3,14 @@ import { useNavigation } from "@react-navigation/native";
 import { mensajeSinJornada } from "@ecopac/shared";
 import { colors, spacing, typography } from "@ecopac/ui-tokens";
 
-import { Card, EmptyState, ErrorState, LoadingState, PrimaryButton, ScreenContainer } from "../components";
+import {
+  Card,
+  EmptyState,
+  ErrorState,
+  LoadingState,
+  PrimaryButton,
+  ScreenContainer,
+} from "../components";
 import { useJornadaActivaCompartida } from "../contexto/JornadaActivaProvider";
 import { ROUTES } from "../navigation/rutas";
 

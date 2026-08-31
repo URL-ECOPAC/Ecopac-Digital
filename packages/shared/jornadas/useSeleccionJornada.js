@@ -23,10 +23,14 @@ export function mensajeSinJornada(jornadasAsignadas = [], jornadasEnCurso = []) 
   if (jornadasEnCurso.length > 0) return null;
 
   if (jornadasAsignadas.length === 0) {
-    return "No estas asignada a ninguna jornada todavia. Sin una jornada asignada no se pueden " +
-      "registrar consultas.";
+    return (
+      "No estas asignada a ninguna jornada todavia. Sin una jornada asignada no se pueden " +
+      "registrar consultas."
+    );
   }
 
-  return "Tenes jornadas asignadas, pero ninguna esta en curso en este momento. Sin una jornada " +
-    "en curso no se pueden registrar consultas.";
+  return (
+    "Tenes jornadas asignadas, pero ninguna esta en curso en este momento. Sin una jornada " +
+    "en curso no se pueden registrar consultas."
+  );
 }

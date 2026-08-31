@@ -2,12 +2,7 @@ import { useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 
-import {
-  TIPOS_DE_CAMPO,
-  pasosConCampos,
-  pasosConError,
-  useRegistroPaciente,
-} from "@ecopac/shared";
+import { TIPOS_DE_CAMPO, pasosConCampos, pasosConError, useRegistroPaciente } from "@ecopac/shared";
 import { colors, spacing, typography } from "@ecopac/ui-tokens";
 
 import {

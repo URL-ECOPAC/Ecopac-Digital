@@ -133,7 +133,12 @@ export default function VoluntariosPage() {
         actions={[{ label: "Nuevo voluntario", onClick: () => setMostrarAlta(true) }]}
       />
 
-      <BarraDeFiltros campos={FILTROS_USUARIO} valores={filtros} onChange={setFiltro} catalogos={catalogos} />
+      <BarraDeFiltros
+        campos={FILTROS_USUARIO}
+        valores={filtros}
+        onChange={setFiltro}
+        catalogos={catalogos}
+      />
 
       <div
         className="text-uppercase fw-semibold mb-3"
@@ -200,7 +205,11 @@ export default function VoluntariosPage() {
             >
               <p
                 className="mb-0"
-                style={{ color: "var(--color-text-muted)", fontSize: typography.sizes.lg, maxWidth: "480px" }}
+                style={{
+                  color: "var(--color-text-muted)",
+                  fontSize: typography.sizes.lg,
+                  maxWidth: "480px",
+                }}
               >
                 Selecciona un voluntario para ver su ficha completa e historial de jornadas.
               </p>
@@ -239,7 +248,15 @@ function IconoLupa() {
       style={{ color: "var(--color-text-muted)" }}
     >
       <circle cx="7" cy="7" r="5" stroke="currentColor" strokeWidth="1.5" />
-      <line x1="11" y1="11" x2="14.5" y2="14.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <line
+        x1="11"
+        y1="11"
+        x2="14.5"
+        y2="14.5"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }
@@ -326,7 +343,11 @@ function BarraDeFiltros({ campos = [], valores = {}, onChange, catalogos = {} })
             <div key={campo.id}>
               <EtiquetaDeFiltro>Filtrar por {campo.label.toLowerCase()}</EtiquetaDeFiltro>
               <div className="d-flex flex-wrap gap-2">
-                <PildoraFiltro label="Todos" active={sinElegir} onClick={() => onChange(campo.id, null)} />
+                <PildoraFiltro
+                  label="Todos"
+                  active={sinElegir}
+                  onClick={() => onChange(campo.id, null)}
+                />
                 {opciones.map((opcion) => (
                   <PildoraFiltro
                     key={String(opcion.value)}
@@ -422,7 +443,9 @@ function valorDeCampo(campo, valores, catalogos) {
   const valor = valores[campo.desde ?? campo.id];
 
   if (campo.tipo === TIPOS_DE_PRESENTACION.ESTADO) {
-    const opcion = (catalogos[campo.etiquetasDesde] ?? []).find((entrada) => entrada.value === valor);
+    const opcion = (catalogos[campo.etiquetasDesde] ?? []).find(
+      (entrada) => entrada.value === valor,
+    );
     return <StatusChip status={opcion?.clave ?? valor} label={opcion?.label} />;
   }
 
@@ -441,7 +464,9 @@ function valorDeCampo(campo, valores, catalogos) {
   }
 
   if (campo.etiquetasDesde) {
-    return valor === null || valor === undefined ? "—" : etiquetaDe(catalogos[campo.etiquetasDesde], valor);
+    return valor === null || valor === undefined
+      ? "—"
+      : etiquetaDe(catalogos[campo.etiquetasDesde], valor);
   }
 
   if (campo.tipo === TIPOS_DE_PRESENTACION.FECHA) {
@@ -495,7 +520,9 @@ function FilaVoluntario({ fila, catalogos, seleccionada, onClick }) {
       <span className="d-flex align-items-center gap-3">
         <Avatar texto={fila.nombreCompleto} activo={fila.activo} />
         <span className="flex-grow-1" style={{ minWidth: 0 }}>
-          <span className="fw-bold text-truncate d-block">{fila.nombreCompleto || "Sin nombre"}</span>
+          <span className="fw-bold text-truncate d-block">
+            {fila.nombreCompleto || "Sin nombre"}
+          </span>
           <span
             className="text-truncate d-block"
             style={{ fontSize: typography.sizes.xs, color: "var(--color-text-muted)" }}
@@ -507,7 +534,10 @@ function FilaVoluntario({ fila, catalogos, seleccionada, onClick }) {
       <span className="d-flex align-items-center flex-wrap gap-2" style={{ paddingLeft: "52px" }}>
         <PastillaRol texto={rolLabel} />
         {!fila.activo && <StatusChip status="inactivo" label={labels.usuarioInactivo} />}
-        <span className="ms-auto" style={{ fontSize: typography.sizes.xs, color: "var(--color-text-muted)" }}>
+        <span
+          className="ms-auto"
+          style={{ fontSize: typography.sizes.xs, color: "var(--color-text-muted)" }}
+        >
           {fila.jornadas} {fila.jornadas === 1 ? "jornada" : "jornadas"}
         </span>
       </span>
@@ -645,7 +675,10 @@ function PanelDetalleVoluntario({ fila, catalogos, permisos, idSesionActual, onC
                         <div className="fw-bold text-truncate">{jornada.nombre}</div>
                         <div
                           className="text-truncate"
-                          style={{ fontSize: typography.sizes.xs, color: "var(--color-text-muted)" }}
+                          style={{
+                            fontSize: typography.sizes.xs,
+                            color: "var(--color-text-muted)",
+                          }}
                         >
                           {formatearFechaCorta(jornada.fecha)}
                           {jornada.responsabilidad !== "—" ? ` · ${jornada.responsabilidad}` : ""}

@@ -40,10 +40,7 @@ function FilaDeJornada({ jornada, onPress }) {
   const muestraEstado = jornada.estado !== ESTADOS_JORNADA.PLANIFICADA;
 
   return (
-    <Card
-      style={styles.tarjeta}
-      onPress={esEnCurso ? () => onPress(jornada) : undefined}
-    >
+    <Card style={styles.tarjeta} onPress={esEnCurso ? () => onPress(jornada) : undefined}>
       {muestraEstado && (
         <View style={styles.chip}>
           <StatusChip status={jornada.estado} label={ETIQUETAS_ESTADO_JORNADA[jornada.estado]} />
