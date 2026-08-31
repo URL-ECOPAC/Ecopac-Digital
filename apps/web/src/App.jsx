@@ -6,7 +6,8 @@ import {
   useNavigate,
   useParams,
 } from "react-router-dom";
-import { MODULOS, nombreCompletoDe } from "@ecopac/shared";
+import { useEffect, useState } from "react";
+import { MODULOS, nombreCompletoDe, obtenerDonacion } from "@ecopac/shared";
 import { SesionProvider, useSesionCompartida } from "./contexto/SesionProvider";
 import MainLayout from "./components/MainLayout";
 import RutaProtegida from "./components/RutaProtegida";
@@ -55,17 +56,31 @@ const RegistroDonacionConSesion = conRolDeSesion(RegistroDonacionPage);
 const HistorialDonacionesConSesion = conRolDeSesion(HistorialDonacionesPage);
 const ProyectosSocialesConSesion = conRolDeSesion(ProyectosSocialesPage);
 
-// La constancia se identifica por la donacion en la URL, pero ConstanciaDonacionPage recibe la
-// donacion entera por prop y el modulo compartido todavia no tiene un obtenerDonacion(id): la
-// unica lectura por id que existe hoy es obtenerDonacionDeLote(). Mientras eso no exista, la
-// pantalla se alimenta de lo que le pase quien navega hacia ella (el historial, cuando se le
-// cablee el enlace) y si se entra escribiendo la URL a mano dibuja su propio vacio.
+// La constancia se identifica por la donacion en la URL y ConstanciaDonacionPage recibe la
+// donacion entera por prop. Si se llega desde el historial, la fila viene en el state de
+// navegacion y no hace falta volver a consultar; si se entra escribiendo la direccion o se
+// recarga la pagina, la resuelve obtenerDonacion(id).
 function ConstanciaDonacionEnrutada() {
   const { perfil } = useSesionCompartida();
   const { id } = useParams();
   const { state } = useLocation();
   // El :id de la URL siempre es string; el de la fila puede venir como numero desde la base.
-  const donacion = String(state?.donacion?.id) === id ? state.donacion : null;
+  const desdeElHistorial = String(state?.donacion?.id) === id ? state.donacion : null;
+
+  const [donacion, setDonacion] = useState(desdeElHistorial);
+
+  useEffect(() => {
+    if (desdeElHistorial || !id || !perfil?.rol) return undefined;
+
+    let vigente = true;
+    obtenerDonacion(id, { rolUsuario: perfil.rol }).then(({ datos }) => {
+      if (vigente) setDonacion(datos);
+    });
+    return () => {
+      vigente = false;
+    };
+  }, [id, perfil?.rol, desdeElHistorial]);
+
   return <ConstanciaDonacionPage usuarioRol={perfil?.rol} donacion={donacion} />;
 }
 

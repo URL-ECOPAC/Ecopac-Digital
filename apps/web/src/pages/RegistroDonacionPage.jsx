@@ -1,4 +1,4 @@
-import { useRegistroDonacion } from "@ecopac/shared";
+import { ETIQUETAS_TIPO_DONACION, TIPOS_DE_DONACION, useRegistroDonacion } from "@ecopac/shared";
 import { Container, Row, Col, Card, Form, Button, Alert, Modal } from "react-bootstrap";
 
 export default function RegistroDonacionPage({ usuarioRol }) {
@@ -59,9 +59,11 @@ export default function RegistroDonacionPage({ usuarioRol }) {
                   value={tipoDonacion}
                   onChange={(e) => setTipoDonacion(e.target.value)}
                 >
-                  <option value="economica">Económica</option>
-                  <option value="medicamentos">Medicamentos</option>
-                  <option value="insumos">Insumos / Bienes</option>
+                  {Object.values(TIPOS_DE_DONACION).map((tipo) => (
+                    <option key={tipo} value={tipo}>
+                      {ETIQUETAS_TIPO_DONACION[tipo]}
+                    </option>
+                  ))}
                 </Form.Select>
               </Form.Group>
             </Col>
@@ -134,7 +136,7 @@ export default function RegistroDonacionPage({ usuarioRol }) {
         <Card.Body>
           {(detalles || []).map((item) => (
             <Row key={item.id} className="g-2 align-items-center mb-3">
-              {tipoDonacion === "economica" && (
+              {tipoDonacion === TIPOS_DE_DONACION.DINERO && (
                 <>
                   <Col md={7}>
                     <Form.Control

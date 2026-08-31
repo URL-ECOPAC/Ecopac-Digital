@@ -90,3 +90,35 @@ describe("rutas de donaciones y proyectos", () => {
     expect(screen.getByText(TEXTO_NOT_FOUND)).toBeInTheDocument();
   });
 });
+
+// Enrutar las pantallas no basta: el sidebar solo enlaza /donaciones y /proyectos, asi que si el
+// hub no lleva a ellas siguen sin poder alcanzarse desde la interfaz. Estas dos pruebas fijan
+// esos enlaces.
+describe("los hubs de modulo llevan a sus pantallas", () => {
+  beforeEach(() => {
+    window.history.pushState({}, "", "/");
+  });
+
+  it("/donaciones enlaza al registro, al historial y a los donantes", () => {
+    renderEnRuta("/donaciones");
+
+    expect(screen.getByRole("link", { name: /registrar donación/i })).toHaveAttribute(
+      "href",
+      "/donaciones/registro",
+    );
+    expect(screen.getByRole("link", { name: /historial de donaciones/i })).toHaveAttribute(
+      "href",
+      "/donaciones/historial",
+    );
+    expect(screen.getByRole("link", { name: /donantes/i })).toHaveAttribute("href", "/donantes");
+  });
+
+  it("/proyectos enlaza al listado de proyectos sociales", () => {
+    renderEnRuta("/proyectos");
+
+    expect(screen.getByRole("link", { name: /proyectos sociales/i })).toHaveAttribute(
+      "href",
+      "/proyectos/sociales",
+    );
+  });
+});

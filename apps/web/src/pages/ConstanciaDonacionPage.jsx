@@ -1,4 +1,4 @@
-import { useConstanciaDonacion } from "@ecopac/shared";
+import { TIPOS_DE_DONACION, useConstanciaDonacion } from "@ecopac/shared";
 import { Container, Row, Col, Button, Table, Card, Badge, Alert } from "react-bootstrap";
 
 export default function ConstanciaDonacionPage({ usuarioRol, donacion }) {
@@ -117,13 +117,13 @@ export default function ConstanciaDonacionPage({ usuarioRol, donacion }) {
                   </tr>
                 ) : (
                   donacion.detalles.map((item, index) => (
-                    <tr key={index}>
+                    <tr key={item.id ?? index}>
                       <td className="text-center">{index + 1}</td>
-                      <td>{item.concepto}</td>
+                      <td>{item.descripcion}</td>
                       <td className="text-end fw-medium">
-                        {donacion.tipo === "economica"
+                        {donacion.tipo === TIPOS_DE_DONACION.DINERO
                           ? `Q ${Number(item.monto || 0).toFixed(2)}`
-                          : item.cantidad}
+                          : `${item.cantidad ?? "-"} ${item.unidad || ""}`.trim()}
                       </td>
                     </tr>
                   ))
