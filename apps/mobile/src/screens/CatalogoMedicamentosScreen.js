@@ -1,4 +1,7 @@
+<<<<<<< HEAD
 import React from "react";
+=======
+>>>>>>> origin/develop
 import {
   View,
   Text,
@@ -8,14 +11,24 @@ import {
   ScrollView,
   StyleSheet,
 } from "react-native";
+<<<<<<< HEAD
 import { useCatalogoMedicamentos } from "@ecopac/shared";
 
 export default function CatalogoMedicamentosScreen({
+=======
+// Agrega un "../" extra (4 niveles hacia arriba)
+import { useCatalogoMedicamentos } from "../../../../packages/shared/inventario/useCatalogoMedicamentos";
+export function CatalogoMedicamentosScreen({
+>>>>>>> origin/develop
   inventarioInicial = [],
   bodegas = [],
   route,
   navigation,
 }) {
+<<<<<<< HEAD
+=======
+  // Manejo seguro del Hook para evitar colapsos por undefined
+>>>>>>> origin/develop
   const hookState =
     useCatalogoMedicamentos({
       inventarioInicial: inventarioInicial || [],
@@ -123,6 +136,10 @@ export default function CatalogoMedicamentosScreen({
 
   return (
     <View style={styles.container}>
+<<<<<<< HEAD
+=======
+      {/* 1. Header con métricas reducidas */}
+>>>>>>> origin/develop
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.kpiContainer}>
         <View style={styles.kpiCard}>
           <View style={[styles.dotIndicator, { backgroundColor: "#10b981" }]} />
@@ -141,6 +158,10 @@ export default function CatalogoMedicamentosScreen({
         </View>
       </ScrollView>
 
+<<<<<<< HEAD
+=======
+      {/* 2. Input de Búsqueda */}
+>>>>>>> origin/develop
       <TextInput
         style={styles.searchInput}
         placeholder="🔍 Código, descripción o lote..."
@@ -149,6 +170,10 @@ export default function CatalogoMedicamentosScreen({
         placeholderTextColor="#94a3b8"
       />
 
+<<<<<<< HEAD
+=======
+      {/* 3. Selector de Bodegas */}
+>>>>>>> origin/develop
       <View style={styles.bodegasContainer}>
         {["Todas", "Central", "Norte", "Sur"].map((b) => {
           const seleccionada = bodegaSeleccionada === b;
@@ -166,6 +191,10 @@ export default function CatalogoMedicamentosScreen({
         })}
       </View>
 
+<<<<<<< HEAD
+=======
+      {/* 4. Categorías Horizontal */}
+>>>>>>> origin/develop
       <View style={{ maxHeight: 38, marginBottom: 12 }}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           {listaCategorias.map((cat) => (
@@ -184,6 +213,10 @@ export default function CatalogoMedicamentosScreen({
         </ScrollView>
       </View>
 
+<<<<<<< HEAD
+=======
+      {/* 5. Lista en Móvil */}
+>>>>>>> origin/develop
       <FlatList
         data={listaInventario}
         keyExtractor={(item, index) => item?.id?.toString() || index.toString()}
@@ -292,4 +325,8 @@ const styles = StyleSheet.create({
   stockText: { fontSize: 14, fontWeight: "bold", color: "#0f172a" },
   unitText: { fontSize: 10, fontWeight: "normal", color: "#64748b" },
   precioText: { fontSize: 11, color: "#64748b" },
+<<<<<<< HEAD
 });
+=======
+});
+>>>>>>> origin/develop

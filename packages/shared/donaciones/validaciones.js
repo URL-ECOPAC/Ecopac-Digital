@@ -22,44 +22,13 @@
 // Igual que el resto de validaciones.js del monorepo, devuelve un objeto de errores por campo (
 // vacio cuando todo esta bien) y no lanza: quien consume es un formulario que tiene que pintar el
 // error junto al campo.
+//
+// Los enums (TIPOS_DE_DONANTE, TIPOS_DE_DONACION, ESTADOS_DE_DONACION), sus catalogos de opciones
+// y CAMPOS_DONANTE viven ahora en campos.js (issue #287): este archivo solo reimporta lo que
+// necesita para sus chequeos de pertenencia al enum.
 
-import { TIPOS_DE_CAMPO } from "../descriptores.js";
-
-/**
- * Valores del enum tipo_donante (00022). Se declaran aqui una sola vez, como ROLES en
- * usuarios/roles.js: un valor escrito a mano en una pantalla es un INSERT que Postgres rechaza y
- * que nadie ve hasta que corre.
- */
-export const TIPOS_DE_DONANTE = {
-  PERSONA: "persona",
-  ORGANIZACION: "organizacion",
-};
-
-/** Valores del enum tipo_donacion (00022). */
-export const TIPOS_DE_DONACION = {
-  MEDICAMENTOS: "medicamentos",
-  INSUMOS: "insumos",
-  DINERO: "dinero",
-  SERVICIOS: "servicios",
-};
-
-/** Valores del enum estado_donacion (00022). */
-export const ESTADOS_DE_DONACION = {
-  REGISTRADA: "registrada",
-  ANULADA: "anulada",
-};
-
-export const OPCIONES_TIPO_DONANTE = [
-  { valor: TIPOS_DE_DONANTE.PERSONA, etiqueta: "Persona" },
-  { valor: TIPOS_DE_DONANTE.ORGANIZACION, etiqueta: "Organizacion" },
-];
-
-export const OPCIONES_TIPO_DONACION = [
-  { valor: TIPOS_DE_DONACION.MEDICAMENTOS, etiqueta: "Medicamentos" },
-  { valor: TIPOS_DE_DONACION.INSUMOS, etiqueta: "Insumos" },
-  { valor: TIPOS_DE_DONACION.DINERO, etiqueta: "Dinero" },
-  { valor: TIPOS_DE_DONACION.SERVICIOS, etiqueta: "Servicios" },
-];
+import { TIPOS_DE_DONACION } from "../enums.js";
+import { TIPOS_DE_DONANTE } from "../enums.js";
 
 // Tipos que exigen al menos un renglon de detalle con cantidad: lo que se recibe se cuenta.
 // 'servicios' queda fuera a proposito: una jornada de voluntariado medico no tiene unidades.
@@ -109,7 +78,8 @@ export function validarDonante(donante = {}) {
     estaVacio(donante.contacto) && estaVacio(donante.telefono) && estaVacio(donante.email);
 
   if (sinContacto) {
-    errores.contacto = "Debe proporcionar al menos un dato de contacto (persona, telefono o correo).";
+    errores.contacto =
+      "Debe proporcionar al menos un dato de contacto (persona, telefono o correo).";
   }
 
   return errores;
@@ -140,7 +110,8 @@ function validarDetalle(detalle = {}, indice, tipoDeDonacion) {
 
   if (TIPOS_QUE_EXIGEN_CANTIDAD.includes(tipoDeDonacion)) {
     if (estaVacio(detalle.cantidad) || Number(detalle.cantidad) <= 0) {
-      errores[`${prefijo}_cantidad`] = `El renglon ${renglon} debe incluir una cantidad mayor a cero.`;
+      errores[`${prefijo}_cantidad`] =
+        `El renglon ${renglon} debe incluir una cantidad mayor a cero.`;
     }
   } else if (!estaVacio(detalle.cantidad) && Number(detalle.cantidad) <= 0) {
     // Fuera de medicamentos e insumos la cantidad es opcional, pero si viene tiene que ser
@@ -239,44 +210,3 @@ export function validarAnulacionDeDonacion({ motivo } = {}) {
 
   return errores;
 }
-
-/**
- * Esquema declarativo del formulario de donante, en la forma que consumen las dos apps.
- *
- * Va aqui y no en un campos.js aparte porque el modulo todavia no tiene el resto de descriptores
- * (los construye la issue #287); cuando llegue, se mueve.
- */
-export const CAMPOS_DONANTE = [
-  {
-    id: "nombre",
-    label: "Nombre",
-    tipo: TIPOS_DE_CAMPO.TEXTO,
-    validacion: { requerido: true, maxLongitud: 150 },
-  },
-  {
-    id: "tipo",
-    label: "Tipo de donante",
-    tipo: TIPOS_DE_CAMPO.SELECT,
-    opciones: OPCIONES_TIPO_DONANTE,
-    validacion: { requerido: true },
-  },
-  {
-    id: "contacto",
-    label: "Persona de contacto",
-    tipo: TIPOS_DE_CAMPO.TEXTO,
-    validacion: { maxLongitud: 150 },
-  },
-  {
-    id: "telefono",
-    label: "Telefono",
-    tipo: TIPOS_DE_CAMPO.TELEFONO,
-    validacion: { maxLongitud: 20 },
-  },
-  { id: "email", label: "Correo", tipo: TIPOS_DE_CAMPO.EMAIL },
-  {
-    id: "direccion",
-    label: "Direccion",
-    tipo: TIPOS_DE_CAMPO.TEXTO,
-    validacion: { maxLongitud: 200 },
-  },
-];

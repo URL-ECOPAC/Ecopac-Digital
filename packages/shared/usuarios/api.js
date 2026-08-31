@@ -11,6 +11,7 @@ import {
   normalizarError,
 } from "../api/errores-de-supabase.js";
 import { ESTADOS_USUARIO } from "./campos.js";
+import { ROLES } from "./roles.js";
 import { validarPerfil } from "./validaciones.js";
 
 // Las columnas se enumeran en lugar de pedir "*" para que una columna nueva en perfiles no
@@ -22,7 +23,7 @@ import { validarPerfil } from "./validaciones.js";
 // fecha_ingreso se pide con alias en camelCase porque asi la declaran los descriptores que
 // consumen las pantallas (COLUMNAS_USUARIO y CAMPOS_USUARIO). DataList busca el valor por el
 // id de la columna, asi que devolverla en snake_case dejaba esa columna vacia sin avisar de
-// nada. Es la misma convencion que sigue donaciones/proyectos.api.js.
+// nada. Es la misma convencion que sigue proyectos/api.js.
 const COLUMNAS_DEL_PERFIL =
   "id, nombres, apellidos, email, telefono, rol, activo, fechaIngreso:fecha_ingreso";
 
@@ -81,7 +82,7 @@ const CAMPOS_EDITABLES = {
 function aFiltroDeActivo(estado) {
   if (typeof estado === "boolean") return estado;
   const opcion = ESTADOS_USUARIO.find(({ clave }) => clave === estado);
-  return opcion ? opcion.valor : null;
+  return opcion ? opcion.value : null;
 }
 
 function aColumnasEditables(datos = {}) {
@@ -281,7 +282,7 @@ export async function contarJornadasPorPerfil(perfilIds = []) {
  * catalogo solo refleja sus propias especialidades, no las de todo el personal (mismo limite
  * que listarUsuarios(), ver su comentario arriba).
  *
- * @returns {Promise<{ especialidades: Array<{ etiqueta: string, valor: string }>, error: object|null }>}
+ * @returns {Promise<{ especialidades: Array<{ label: string, value: string }>, error: object|null }>}
  */
 export async function listarCatalogoEspecialidades() {
   try {
@@ -296,12 +297,37 @@ export async function listarCatalogoEspecialidades() {
     );
 
     return {
-      especialidades: nombres.map((nombre) => ({ valor: nombre, etiqueta: nombre })),
+      especialidades: nombres.map((nombre) => ({ value: nombre, label: nombre })),
       error: null,
     };
   } catch (error) {
     return { especialidades: [], error: normalizarError(error) };
   }
+}
+
+/**
+ * Normaliza el error que devuelve `functions.invoke()` al llamar a invitar-usuario.
+ *
+ * Cuando la Edge Function responde con un status distinto de 2xx, supabase-js no trae el cuerpo
+ * JSON de la respuesta (con nuestro `{ code, message }`) en el error mismo: lo deja sin leer en
+ * `error.context`, un `Response` (`FunctionsHttpError`). normalizarError() solo mira
+ * `error?.code`, asi que sin este paso todo error real de la funcion caeria en DESCONOCIDO. Se
+ * detecta por duck-typing (`error.context.json` existe) en vez de con `instanceof
+ * FunctionsHttpError` para no depender de esa clase: las pruebas de este archivo pasan un error
+ * plano (`{ code: "..." }`, sin `context`), que sigue el camino de siempre.
+ */
+async function normalizarErrorDeFuncion(error) {
+  if (error && typeof error.context?.json === "function") {
+    try {
+      const cuerpo = await error.context.json();
+      return normalizarError({ ...error, ...cuerpo });
+    } catch {
+      // El cuerpo no era JSON (relay error, function caida, etc.): se normaliza el error tal
+      // cual llego, que es lo mejor que hay.
+    }
+  }
+
+  return normalizarError(error);
 }
 
 export async function crearUsuario(datos) {
@@ -324,10 +350,10 @@ export async function crearUsuario(datos) {
       body: { nombres, apellidos, email, telefono, rol },
     });
 
-    if (error) return { usuario: null, errores: {}, error: normalizarError(error) };
+    if (error) return { usuario: null, errores: {}, error: await normalizarErrorDeFuncion(error) };
     return { usuario: data ?? null, errores: {}, error: null };
   } catch (error) {
-    return { usuario: null, errores: {}, error: normalizarError(error) };
+    return { usuario: null, errores: {}, error: await normalizarErrorDeFuncion(error) };
   }
 }
 
@@ -381,73 +407,120 @@ export function reactivarUsuario(idUsuario) {
 }
 
 /**
- * Inicia sesión utilizando email y contraseña con Supabase Auth.
+ * Cuenta cuantos administradores activos hay en todo el sistema.
  *
- * @param {string} email Correo electrónico del usuario.
- * @param {string} contrasena Contraseña del usuario.
- * @returns {Promise<{ sesion: object|null, usuario: object|null, error: object|null, erroresDeCampo: object }>}
+ * Es el chequeo de cliente del criterio 5 (issue #107): antes de desactivar o cambiarle el rol
+ * a un administrador activo, la pantalla pregunta esto para poder avisar con un mensaje
+ * especifico en vez de dejar que la unica senal sea el error generico del servidor. Es UX, no
+ * la defensa real -esa la hace el trigger impedir_dejar_sin_administrador_activo() de la
+ * migracion 00072, porque un chequeo que solo viviera aca seria evadible con la misma
+ * anon/authenticated key que usa cualquier cliente legitimo llamando a Supabase directo.
+ *
+ * `count: "exact", head: true` pide solo el numero, sin traer filas: no hace falta el
+ * contenido de ningun perfil para esto, y evita que la lista completa de administradores viaje
+ * al cliente solo para contarla.
+ *
+ * @returns {Promise<{ total: number, error: object|null }>}
  */
+export async function contarAdministradoresActivos() {
+  try {
+    const { count, error } = await obtenerSupabase()
+      .from("perfiles")
+      .select("id", { count: "exact", head: true })
+      .eq("rol", ROLES.ADMINISTRADOR)
+      .eq("activo", true);
 
-export async function iniciarSesion(email, contrasena) {
-  const erroresDeCampo = {};
-
-  if (!email?.trim()) {
-    erroresDeCampo.email = "El correo electrónico es obligatorio.";
+    if (error) return { total: 0, error: normalizarError(error) };
+    return { total: count ?? 0, error: null };
+  } catch (error) {
+    return { total: 0, error: normalizarError(error) };
   }
-  if (!contrasena) {
-    erroresDeCampo.contrasena = "La contraseña es obligatoria.";
-  }
+}
 
-  if (Object.keys(erroresDeCampo).length > 0) {
-    return {
-      sesion: null,
-      usuario: null,
-      error: { mensaje: "Por favor llena los campos requeridos." },
-      erroresDeCampo,
-    };
+// La autenticacion NO vive en este archivo. iniciarSesion() y cerrarSesion() estan en
+// packages/shared/api/sesion.js, que es el unico sitio donde se resuelven.
+//
+// Aqui hubo una segunda copia de las dos, agregada por el PR #424 (issue #100), y divergia en lo
+// que importa: no leia el perfil, asi que **no comprobaba perfil.activo** y una cuenta
+// desactivada obtenia una sesion valida; y su cerrarSesion() hacia signOut() sin scope, o sea
+// global, revocando los refresh tokens del usuario en todos sus dispositivos. El barril tenia que
+// desempatar los dos nombres a mano porque ESM excluye del namespace un nombre que llega por dos
+// estrellas (bug #365).
+//
+// Se borraron con la issue #512. Si hace falta autenticar desde este modulo, se importa de
+// api/sesion.js; no se reimplementa.
+
+/**
+ * Comprueba que una contraseña sea la actual de la sesión, sin cerrarla.
+ *
+ * Supabase no tiene un endpoint dedicado para "verificar la contraseña actual": la unica forma
+ * de confirmar que alguien la conoce es volver a autenticarse con ella. Un
+ * signInWithPassword() que falla no toca la sesion existente (GoTrue no guarda nada ni emite
+ * evento si hay error); uno que tiene exito SI reemplaza los tokens de la sesion activa y
+ * dispara un SIGNED_IN, pero como es el mismo usuario eso solo hace que useSesion() vuelva a
+ * leer su propio perfil (issue #102, verificacion A del plan) - no cierra sesion, no cambia de
+ * usuario, no parpadea la pantalla.
+ *
+ * No se llama a iniciarSesion() de api/sesion.js: esa funcion resuelve el perfil y **cierra la
+ * sesion** si la cuenta esta desactivada, que es justo lo que aqui no se quiere -se esta
+ * confirmando una contrasena, no entrando-. Antes este comentario advertia de no reusar la copia
+ * divergente de este mismo archivo; esa copia se borro con la issue #512.
+ *
+ * @param {string} email Correo del perfil de la sesion actual (perfiles.email es citext).
+ * @param {string} contrasenaActual
+ * @returns {Promise<{ valida: boolean, error: object|null }>}
+ */
+export async function reverificarContrasena(email, contrasenaActual) {
+  if (!email || !contrasenaActual) {
+    return { valida: false, error: null };
   }
 
   try {
-    const { data, error } = await obtenerSupabase().auth.signInWithPassword({
+    const { error } = await obtenerSupabase().auth.signInWithPassword({
       email,
-      password: contrasena,
+      password: contrasenaActual,
     });
 
-    if (error) {
-      // Mensaje genérico por seguridad (criterio del issue #100)
-      return {
-        sesion: null,
-        usuario: null,
-        error: { mensaje: "Credenciales inválidas. Verifica tus datos." },
-        erroresDeCampo: {},
-      };
-    }
-
-    return {
-      sesion: data.session,
-      usuario: data.user,
-      error: null,
-      erroresDeCampo: {},
-    };
+    if (error) return { valida: false, error: normalizarError(error) };
+    return { valida: true, error: null };
   } catch (error) {
-    return {
-      sesion: null,
-      usuario: null,
-      error: normalizarError(error),
-      erroresDeCampo: {},
-    };
+    return { valida: false, error: normalizarError(error) };
   }
 }
 
 /**
- * Cierra la sesión activa en Supabase Auth.
+ * Especialidades de un solo perfil.
+ *
+ * obtenerPerfil() las excluye a proposito (ver su comentario, mas arriba en este archivo:
+ * las comparte con cambiarActivo() y actualizarUsuario(), que no las necesitan) y
+ * listarUsuarios() las trae embebidas pero para un listado paginado completo, no para un
+ * perfil suelto. Hace falta esta funcion aparte para la pantalla de perfil propio (issue #102).
+ *
+ * Requiere la politica RLS de la migracion 00058 (administrador o el propio perfil); es de
+ * solo lectura, no hay escritura de especialidades todavia (issue #405). Una lista vacia no es
+ * un error: puede ser que el perfil no tenga ninguna, o que RLS haya filtrado la fila sin
+ * avisar (RLS filtra filas, no las anuncia, mismo criterio que el resto del modulo) - las dos
+ * cosas se ven igual desde aqui y a quien llama no le hace falta distinguirlas.
+ *
+ * @param {string} idUsuario UUID de perfiles.id.
+ * @returns {Promise<{ especialidades: string[], error: object|null }>}
  */
-export async function cerrarSesion() {
+export async function obtenerEspecialidadesDePerfil(idUsuario) {
+  if (!idUsuario) return { especialidades: [], error: null };
+
   try {
-    const { error } = await obtenerSupabase().auth.signOut();
-    if (error) return { error: normalizarError(error) };
-    return { error: null };
+    const { data, error } = await obtenerSupabase()
+      .from("perfil_especialidad")
+      .select("nombre_especialidad")
+      .eq("perfil_id", idUsuario);
+
+    if (error) return { especialidades: [], error: normalizarError(error) };
+
+    return {
+      especialidades: (data ?? []).map((fila) => fila.nombre_especialidad),
+      error: null,
+    };
   } catch (error) {
-    return { error: normalizarError(error) };
+    return { especialidades: [], error: normalizarError(error) };
   }
 }

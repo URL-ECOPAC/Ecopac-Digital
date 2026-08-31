@@ -77,10 +77,10 @@ export function validarPaciente(datosObjeto) {
 /**
  * Valida el formulario completo de registro de un paciente nuevo (CAMPOS_REGISTRO_PACIENTE,
  * campos.js): ademas de lo que ya cubre validarPaciente(), exige sexo, telefonoContacto e
- * idioma (NOT NULL en pacientes, 00009) y numeroFicha (NOT NULL en expedientes, 00009), que
- * fn_registrar_paciente (migracion 00057) inserta junto con el paciente. Mismas reglas de
- * negocio que validarPaciente(): la fecha de nacimiento y el DPI no cambian segun el
- * formulario.
+ * idioma (NOT NULL en pacientes, 00009). numeroFicha no esta en este formulario: lo genera
+ * fn_registrar_paciente del lado del servidor (migraciones 00057, 00081), no lo escribe quien
+ * registra. Mismas reglas de negocio que validarPaciente(): la fecha de nacimiento y el DPI no
+ * cambian segun el formulario.
  * @param {object} datosObjeto
  * @returns {Record<string, string>} Errores agrupados por campo.
  */
@@ -89,4 +89,38 @@ export function validarRegistroPaciente(datosObjeto) {
   const erroresDescriptores = validarConDescriptores(CAMPOS_REGISTRO_PACIENTE, datos);
   const erroresNegocio = erroresDeNegocioPaciente(datos);
   return combinarErrores(erroresDescriptores, erroresNegocio);
+}
+function claveDeNombre(nombres, apellidos) {
+  return [nombres, apellidos]
+    .map((parte) => normalizarTexto(parte))
+    .join(" ")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
+export function advertirPacienteDuplicado({ pacientes, nombres, apellidos, fechaNacimiento } = {}) {
+  if (esTextoVacio(fechaNacimiento)) return null;
+
+  const clave = claveDeNombre(nombres, apellidos);
+  if (!clave) return null;
+
+  const coincidencias = (pacientes ?? []).filter(
+    (paciente) =>
+      paciente?.fechaNacimiento === fechaNacimiento &&
+      claveDeNombre(paciente?.nombres, paciente?.apellidos) === clave,
+  );
+
+  if (coincidencias.length === 0) return null;
+
+  const fichas = coincidencias
+    .map((paciente) => paciente.expediente?.numeroFicha ?? paciente.numeroFicha)
+    .filter(Boolean)
+    .join(", ");
+
+  return fichas
+    ? `Ya existe un paciente con ese nombre y fecha de nacimiento: ficha ${fichas}. Revisa antes de crear un expediente nuevo.`
+    : "Ya existe un paciente con ese nombre y fecha de nacimiento. Revisa antes de crear un expediente nuevo.";
 }

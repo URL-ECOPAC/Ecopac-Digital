@@ -17,12 +17,15 @@ const modulo = await import("./api.js");
 const {
   actualizarUsuario,
   crearUsuario,
+  contarAdministradoresActivos,
   contarJornadasPorPerfil,
   desactivarUsuario,
   FUNCION_DE_INVITACION,
   listarCatalogoEspecialidades,
   listarUsuarios,
+  obtenerEspecialidadesDePerfil,
   reactivarUsuario,
+  reverificarContrasena,
 } = modulo;
 
 function doble(respuesta) {
@@ -292,7 +295,13 @@ describe("listarUsuarios", () => {
   it("cada perfil trae sus especialidades como arreglo de strings, no de objetos", async () => {
     const { cliente } = doble({
       data: [
-        { id: "u1", especialidades: [{ nombre_especialidad: "Pediatria" }, { nombre_especialidad: "Odontologia" }] },
+        {
+          id: "u1",
+          especialidades: [
+            { nombre_especialidad: "Pediatria" },
+            { nombre_especialidad: "Odontologia" },
+          ],
+        },
         { id: "u2", especialidades: [] },
         { id: "u3" },
       ],
@@ -405,7 +414,7 @@ describe("listarUsuarios", () => {
 });
 
 describe("listarCatalogoEspecialidades", () => {
-  it("deduplica, ordena alfabeticamente y da la forma { valor, etiqueta }", async () => {
+  it("deduplica, ordena alfabeticamente y da la forma { label, value }", async () => {
     const { cliente } = doble({
       data: [
         { nombre_especialidad: "Pediatria" },
@@ -420,8 +429,8 @@ describe("listarCatalogoEspecialidades", () => {
 
     expect(error).toBeNull();
     expect(especialidades).toEqual([
-      { valor: "Odontologia", etiqueta: "Odontologia" },
-      { valor: "Pediatria", etiqueta: "Pediatria" },
+      { value: "Odontologia", label: "Odontologia" },
+      { value: "Pediatria", label: "Pediatria" },
     ]);
   });
 
@@ -491,6 +500,38 @@ describe("crearUsuario", () => {
 
     expect(usuario).toBeNull();
     expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.PERMISO_DENEGADO);
+  });
+
+  it("desempaca el cuerpo JSON de un FunctionsHttpError real antes de normalizar", async () => {
+    // Forma real de lo que devuelve functions.invoke() cuando invitar-usuario responde con un
+    // status distinto de 2xx: el error no trae `code` propio, lo trae sin leer en
+    // error.context (un Response). Sin desempacarlo, este caso caeria en DESCONOCIDO.
+    const errorReal = {
+      name: "FunctionsHttpError",
+      context: {
+        json: () =>
+          Promise.resolve({ code: "23505", message: "Ya existe una cuenta con ese correo." }),
+      },
+    };
+    dobles.cliente = doble({ data: null, error: errorReal }).cliente;
+
+    const { usuario, error } = await crearUsuario(usuarioValido());
+
+    expect(usuario).toBeNull();
+    expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.UNICIDAD);
+  });
+
+  it("si el cuerpo del FunctionsHttpError no es JSON valido, normaliza el error original", async () => {
+    const errorSinCuerpoJson = {
+      name: "FunctionsHttpError",
+      context: { json: () => Promise.reject(new Error("body ya consumido")) },
+    };
+    dobles.cliente = doble({ data: null, error: errorSinCuerpoJson }).cliente;
+
+    const { usuario, error } = await crearUsuario(usuarioValido());
+
+    expect(usuario).toBeNull();
+    expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.DESCONOCIDO);
   });
 });
 
@@ -567,12 +608,75 @@ describe("desactivarUsuario y reactivarUsuario", () => {
   });
 });
 
+describe("contarAdministradoresActivos", () => {
+  it("pide solo el conteo, sin traer filas, filtrando por rol y activo", async () => {
+    const { cliente, llamadas } = doble({ count: 2, error: null });
+    dobles.cliente = cliente;
+
+    const { total, error } = await contarAdministradoresActivos();
+
+    expect(error).toBeNull();
+    expect(total).toBe(2);
+    expect(pasos(llamadas, "select")[0]).toEqual({
+      paso: "select",
+      columnas: "id",
+      opciones: { count: "exact", head: true },
+    });
+    expect(pasos(llamadas, "eq")).toEqual([
+      { paso: "eq", columna: "rol", valor: ROLES.ADMINISTRADOR },
+      { paso: "eq", columna: "activo", valor: true },
+    ]);
+  });
+
+  it("sin conteo (null) devuelve cero, no null ni undefined", async () => {
+    const { cliente } = doble({ count: null, error: null });
+    dobles.cliente = cliente;
+
+    const { total, error } = await contarAdministradoresActivos();
+
+    expect(error).toBeNull();
+    expect(total).toBe(0);
+  });
+
+  it("un fallo del servidor se normaliza igual que el resto del modulo", async () => {
+    dobles.cliente = doble({ count: null, error: { code: "42501" } }).cliente;
+
+    const { total, error } = await contarAdministradoresActivos();
+
+    expect(total).toBe(0);
+    expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.PERMISO_DENEGADO);
+  });
+});
+
 describe("borrado fisico", () => {
   it("el modulo no expone ninguna funcion de borrado", () => {
     const sospechosas = Object.keys(modulo).filter((nombre) =>
       /borrar|eliminar|delete/i.test(nombre),
     );
 
+    expect(sospechosas).toEqual([]);
+  });
+});
+
+describe("autenticacion: este modulo no la reimplementa (issue #512)", () => {
+  it("no expone iniciarSesion ni cerrarSesion", () => {
+    // Aqui hubo una segunda copia de las dos. La de iniciarSesion no leia el perfil, asi que no
+    // comprobaba perfil.activo y una cuenta desactivada obtenia sesion valida; la de
+    // cerrarSesion hacia signOut() global, revocando los tokens en todos los dispositivos.
+    //
+    // Esta guarda es lo que impide que vuelvan: mientras nazcan en dos archivos, el barril las
+    // recibe por dos estrellas y ESM las excluye del namespace por ambiguas (bug #365), asi que
+    // el sintoma seria un `undefined` en tiempo de ejecucion y no un error de compilacion.
+    const nombres = Object.keys(modulo);
+
+    expect(nombres).not.toContain("iniciarSesion");
+    expect(nombres).not.toContain("cerrarSesion");
+  });
+
+  it("tampoco ninguna otra funcion de sesion: la autenticacion vive en api/sesion.js", () => {
+    const sospechosas = Object.keys(modulo).filter((nombre) => /sesion/i.test(nombre));
+
+    // reverificarContrasena si autentica, pero no abre ni cierra sesion: confirma una contrasena.
     expect(sospechosas).toEqual([]);
   });
 });
@@ -655,12 +759,7 @@ describe("contarJornadasPorPerfil", () => {
 
   it("cuenta cuantas filas tiene cada perfil", async () => {
     const { cliente } = doble({
-      data: [
-        { perfil_id: "p1" },
-        { perfil_id: "p1" },
-        { perfil_id: "p2" },
-        { perfil_id: "p1" },
-      ],
+      data: [{ perfil_id: "p1" }, { perfil_id: "p1" }, { perfil_id: "p2" }, { perfil_id: "p1" }],
       error: null,
     });
     dobles.cliente = cliente;
@@ -702,5 +801,103 @@ describe("contarJornadasPorPerfil", () => {
 
     expect(conteos).toEqual({});
     expect(error).not.toBeNull();
+  });
+});
+
+describe("obtenerEspecialidadesDePerfil", () => {
+  it("devuelve los nombres como arreglo plano de strings", async () => {
+    const { cliente, llamadas } = doble({
+      data: [{ nombre_especialidad: "Pediatria" }, { nombre_especialidad: "Odontologia" }],
+      error: null,
+    });
+    dobles.cliente = cliente;
+
+    const { especialidades, error } = await obtenerEspecialidadesDePerfil("u1");
+
+    expect(error).toBeNull();
+    expect(especialidades).toEqual(["Pediatria", "Odontologia"]);
+    expect(pasos(llamadas, "select")[0].columnas).toBe("nombre_especialidad");
+    expect(pasos(llamadas, "eq")[0]).toEqual({ paso: "eq", columna: "perfil_id", valor: "u1" });
+  });
+
+  it("un perfil sin especialidades devuelve arreglo vacio, no error", async () => {
+    const { cliente } = doble({ data: [], error: null });
+    dobles.cliente = cliente;
+
+    const { especialidades, error } = await obtenerEspecialidadesDePerfil("u1");
+
+    expect(especialidades).toEqual([]);
+    expect(error).toBeNull();
+  });
+
+  it("sin identificador no gasta una llamada", async () => {
+    dobles.cliente = {
+      from: () => {
+        throw new Error("no debia llamarse");
+      },
+    };
+
+    const { especialidades, error } = await obtenerEspecialidadesDePerfil(undefined);
+
+    expect(especialidades).toEqual([]);
+    expect(error).toBeNull();
+  });
+
+  it("ante un error de RLS devuelve arreglo vacio y el error normalizado", async () => {
+    const { cliente } = doble({ data: null, error: { code: "42501" } });
+    dobles.cliente = cliente;
+
+    const { especialidades, error } = await obtenerEspecialidadesDePerfil("u1");
+
+    expect(especialidades).toEqual([]);
+    expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.PERMISO_DENEGADO);
+  });
+});
+
+describe("reverificarContrasena", () => {
+  function clienteDeAuth(signInWithPassword) {
+    return { auth: { signInWithPassword } };
+  }
+
+  it("contrasena correcta: valida en true, sin error", async () => {
+    const signInWithPassword = vi.fn().mockResolvedValue({ error: null });
+    dobles.cliente = clienteDeAuth(signInWithPassword);
+
+    const { valida, error } = await reverificarContrasena("ana@ejemplo.org", "ClaveValida123");
+
+    expect(valida).toBe(true);
+    expect(error).toBeNull();
+    expect(signInWithPassword).toHaveBeenCalledWith({
+      email: "ana@ejemplo.org",
+      password: "ClaveValida123",
+    });
+  });
+
+  it("contrasena incorrecta: valida en false, error clasificado como credenciales invalidas", async () => {
+    const signInWithPassword = vi.fn().mockResolvedValue({
+      error: {
+        __isAuthError: true,
+        name: "AuthApiError",
+        code: "invalid_credentials",
+        status: 400,
+        message: "Invalid login credentials",
+      },
+    });
+    dobles.cliente = clienteDeAuth(signInWithPassword);
+
+    const { valida, error } = await reverificarContrasena("ana@ejemplo.org", "Incorrecta1");
+
+    expect(valida).toBe(false);
+    expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.CREDENCIALES_INVALIDAS);
+  });
+
+  it("sin correo o sin contrasena no llama a Supabase", async () => {
+    const signInWithPassword = vi.fn();
+    dobles.cliente = clienteDeAuth(signInWithPassword);
+
+    const resultado = await reverificarContrasena("", "algo");
+
+    expect(resultado).toEqual({ valida: false, error: null });
+    expect(signInWithPassword).not.toHaveBeenCalled();
   });
 });

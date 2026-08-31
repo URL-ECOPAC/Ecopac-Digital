@@ -1,6 +1,6 @@
-import { StyleSheet, Text, View } from 'react-native';
-import { colors, labels, spacing, typography } from '@ecopac/ui-tokens';
-import SecondaryButton from './SecondaryButton';
+import { StyleSheet, Text, View } from "react-native";
+import { colors, labels, spacing, typography } from "@ecopac/ui-tokens";
+import SecondaryButton from "./SecondaryButton";
 
 /**
  * Estado de error. Espejo de apps/web/src/components/ErrorState.jsx, que usa
@@ -20,7 +20,7 @@ export default function ErrorState({ message = labels.errorDeConexion, onRetry }
 
 const styles = StyleSheet.create({
   container: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingVertical: spacing.lg,
     paddingHorizontal: spacing.md,
     borderRadius: spacing.xs,
@@ -39,10 +39,10 @@ const styles = StyleSheet.create({
     fontFamily: typography.fontFamilyBase,
     fontSize: typography.sizes.sm,
     color: colors.text,
-    textAlign: 'center',
+    textAlign: "center",
     marginBottom: spacing.md,
   },
   boton: {
-    alignSelf: 'stretch',
+    alignSelf: "stretch",
   },
 });

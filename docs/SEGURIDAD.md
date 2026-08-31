@@ -16,8 +16,8 @@ alcance del issue durante su revision:
   un mecanismo del lado de GoTrue, no de `packages/shared`. Ver "Bloqueo por intentos fallidos
   (fuera de alcance)" mas abajo.
 - **El bug de wiring del login web** (dos implementaciones de `iniciarSesion`, una de las
-  cuales no revisa `perfil.activo`): es anterior a #230 y se corrige en un bug aparte. Ver
-  "Login web: bug de wiring conocido (fuera de alcance)" mas abajo.
+  cuales no revisaba `perfil.activo`): era anterior a #230 y se corrigio aparte, con la issue
+  #512. Ver "Login web: el bug de wiring que hubo (resuelto)" mas abajo.
 
 ## 1. Politica de contrasenas (criterio 1)
 
@@ -82,19 +82,105 @@ que actualizar los dos lugares.
 Ya se cumple; no hubo que cambiar codigo.
 
 - Supabase Auth (GoTrue) guarda las contrasenas hasheadas con **bcrypt** en
-  `auth.users.encrypted_password`. El repositorio nunca toca esa columna ni la tabla
-  `auth.users` directamente: solo llama a `auth.signInWithPassword` / `auth.signUp` de
-  `supabase-js`, que nunca devuelve el hash al cliente.
+  `auth.users.encrypted_password`. El repositorio nunca toca esa columna: solo llama a
+  `auth.signInWithPassword` de `supabase-js`, que nunca devuelve el hash al cliente. (Antes esta
+  linea decia tambien `auth.signUp`; se corrigio con la issue #508, porque **no hay ninguna
+  llamada a `signUp` en el repositorio** y mencionarla daba a entender que el registro desde el
+  cliente era parte del diseno.)
 - Se revisaron todos los `console.log/error/warn` de `packages/shared` y las pantallas de login
   de ambas apps. Ninguno loguea el objeto de credenciales completo (`{correo, contrasena}`).
   Los dos `console.warn` de
   [`packages/shared/api/cliente.js`](../packages/shared/api/cliente.js) son mensajes fijos sin
-  datos de usuario. El `console.error` de
-  [`packages/shared/usuarios/useRestablecerContrasena.js:27`](../packages/shared/usuarios/useRestablecerContrasena.js#L27)
-  solo puede traer un correo (esa llamada nunca recibe una contrasena) y es alcance de la issue
-  #101, no de esta; se dejo sin tocar.
+  datos de usuario. `solicitarRestablecimiento()` en
+  [`packages/shared/usuarios/useRestablecerContrasena.js`](../packages/shared/usuarios/useRestablecerContrasena.js)
+  tiene un `catch` vacio a proposito -ni siquiera loguea el correo, que en este proyecto es dato
+  de contacto de una persona real- y el comentario del propio archivo explica por que: distinguir
+  "correo enviado" de "esa cuenta no existe" permitiria enumerar usuarios (issue #101).
 - `apps/mobile/src/screens/LoginScreen.js` es un placeholder sin logica de login todavia, asi
   que no hay nada que revisar ahi por ahora.
+
+## Alta de cuentas: quien entra al sistema y como (issue #508)
+
+**En este sistema nadie se da de alta a si mismo.** El registro publico esta cerrado.
+
+Estuvo abierto hasta el 28 de agosto de 2026, y no era teorico: un `POST /auth/v1/signup` con la
+llave anonima -que viaja en el bundle del navegador y es publica por diseno- devolvia una sesion
+utilizable. El trigger `trg_auth_users_crear_perfil` de la `00002` creaba entonces el perfil sin
+`rol` ni `activo`, que caen a sus DEFAULT: `voluntario general` y `TRUE`. Ese rol no es de solo
+lectura -por las politicas de la `00032` y la `00033` lee y registra pacientes, expedientes,
+atenciones y triajes-, asi que cualquiera obtenia acceso de escritura a datos clinicos. Se
+comprobo contra el stack local: la cuenta recien creada leyo la tabla `pacientes` y registro uno
+nuevo.
+
+### Las dos capas que lo cierran
+
+| Capa | Donde | Que alcanza |
+| --- | --- | --- |
+| `enable_signup = false` en `[auth]` | `supabase/config.toml` | Stack local y CI. **No alcanza los proyectos remotos** |
+| Ajuste "Allow new users to sign up" | Dashboard de cada proyecto | Solo el proyecto donde se toca |
+| Trigger de la migracion `00074` | Base de datos | **Los tres ambientes**, porque viaja con `db push` |
+
+La tercera es la que importa, por lo que explica la seccion 4 de este documento: `config.toml` no
+se sincroniza con los proyectos remotos. El trigger rechaza cualquier alta que venga de GoTrue sin
+la marca administrativa en `raw_app_meta_data`, columna que **el cliente no puede escribir**: un
+`signup` solo controla `raw_user_meta_data`. Asi la proteccion no depende de que nadie vuelva a
+activar el ajuste en un Dashboard.
+
+> **Cuidado al tocar `config.toml`:** basta con `enable_signup = false` en `[auth]`. Ponerlo
+> **tambien** en `[auth.email]` apaga el proveedor de correo entero y el login empieza a
+> responder `422 email_provider_disabled`: deja de entrar todo el mundo. Comprobado.
+
+### Estado de cada ambiente
+
+- **Local y CI**: cerrado por `config.toml`.
+- **`Ecopac-Digital-Dev`**: revisado en el Dashboard el 28 de agosto de 2026. "Allow new users to
+  sign up" estaba **activado**. "Confirm email" tambien, lo que obliga a confirmar el correo antes
+  de poder iniciar sesion, pero **el perfil se crea igual** con rol `voluntario general`, y quien
+  use un buzon propio completa el paso sin problema. Cerrar ese ajuste es una tarea de Dashboard,
+  no de este repositorio; hasta que se haga, **quien protege a dev es el trigger de la `00074`**,
+  y por eso la defensa no se dejo solo en `config.toml`.
+- **`Ecopac-Digital-Prod`**: existe y esta **pausado**, asi que su API no responde y su
+  configuracion no se puede leer sin reanudarlo. **Al reanudarlo hay que comprobar y cerrar el
+  registro antes de exponerlo**: el default de Supabase al crear un proyecto es tenerlo abierto.
+  La migracion `00074` lo protege en cuanto se le apliquen las migraciones.
+
+### Como se da de alta a una persona
+
+La via normal es la Edge Function `invitar-usuario` (`supabase/functions/invitar-usuario/`, issue
+#523), que `packages/shared/usuarios/api.js` invoca desde `crearUsuario()`. El flujo completo:
+
+1. `ModalAltaUsuario.jsx` recoge nombres, apellidos, correo, telefono y rol, y llama a
+   `crearUsuario()`.
+2. `crearUsuario()` valida los datos en el cliente y llama a `invitar-usuario` con el JWT de la
+   sesion actual.
+3. La Edge Function comprueba que quien llama sea administrador **contra la base**, no contra lo
+   que diga el cliente (el modal no tiene ningun chequeo de rol propio: el guard de rutas decide
+   quien entra a `/voluntarios`, no quien puede invitar). Si no lo es, responde 403.
+4. Reutiliza `fn_crear_usuario_administrativo()` con la llave de servicio -la unica forma de
+   llamarla, esta `REVOKE ALL FROM PUBLIC`- para crear la cuenta, su fila en `auth.identities` y
+   el perfil con el rol pedido. La funcion valida `rol` contra el enum `rol_usuario` de Postgres
+   sola; un valor que no exista en el enum se traduce en un 400.
+5. La funcion dispara `auth.resetPasswordForEmail()` -el mismo mecanismo que la pantalla "olvide
+   mi contrasena", `useRestablecerContrasena.js`- para que la persona reciba el correo y
+   establezca su contrasena. **No fija contrasena** por el mismo criterio que el primer
+   administrador de la `00063`.
+
+Salida de emergencia, si la Edge Function no esta desplegada en un ambiente o algo la bloquea: la
+administradora puede ejecutar el mismo `fn_crear_usuario_administrativo()` a mano desde el SQL
+editor del Dashboard -
+
+```sql
+SELECT fn_crear_usuario_administrativo(
+  'persona@ejemplo.org', 'Nombres', 'Apellidos', 'medico'
+);
+```
+
+-pero en ese camino nadie dispara el correo de "olvide mi contrasena": hay que enviarselo aparte
+o guiar a la persona a pedirlo desde el login.
+
+**Nota de despliegue:** el workflow de CI (`supabase.yml`) hace lint de la funcion (`deno lint` +
+`deno check`) en cada PR, pero no tiene ningun paso `supabase functions deploy`: escribirla no la
+publica sola en `ecopac-dev`/`ecopac-prod`, hace falta desplegarla aparte.
 
 ## 4. `supabase/config.toml`: que aplica y que no
 
@@ -142,23 +228,55 @@ opciones evaluadas, esta en el issue):
   contrasena sin importar el cliente que lo origino. Su disponibilidad depende del plan
   contratado del proyecto (verificar antes de decidir el enfoque).
 
-## Login web: bug de wiring conocido (fuera de alcance de #230)
+## Login web: el bug de wiring que hubo (resuelto)
 
-Durante la investigacion de #230 se encontro un bug preexistente en el formulario de login
-web, anterior e independiente de este issue. Queda para un bug aparte; se documenta aqui para
-que no se pierda:
+**Esta seccion es historica.** Se conserva porque describio durante semanas un agujero como
+abierto, y quien la leyera pudo tomar decisiones sobre esa base. Lo que decia ya no es cierto.
 
-`packages/shared` tiene dos implementaciones independientes de `iniciarSesion`. La cuidadosa
-(`packages/shared/api/sesion.js`, issue #97) valida con `validarCredenciales`, revisa
-`perfil.activo` antes de dar la sesion por valida, y devuelve el mismo error generico tanto
-para una contrasena incorrecta como para una cuenta desactivada. La pantalla web, sin embargo,
-esta conectada a una segunda implementacion (`packages/shared/usuarios/api.js#iniciarSesion`,
-agregada en el PR #424, commit `26d05b6`, issue #100) que **no llama a `evaluarPerfilDeSesion`
-y por lo tanto no revisa `perfil.activo`**. Ademas, `apps/web/src/pages/LoginPage.jsx`
-desestructura del hook (`packages/shared/usuarios/useInicioSesion.js`) las claves
-`erroresDeCampo`, `error`, `enviando` y `destinoPorDefecto`, ninguna de las cuales existe en lo
-que ese hook realmente devuelve — asi que **ningun error de login se muestra hoy en la pantalla
-web**. Dos consecuencias concretas: (1) una cuenta desactivada (`perfil.activo = false`) puede
-seguir iniciando sesion por la web, y (2) un mensaje de error del servidor — incluido un futuro
-mensaje de bloqueo del issue de arriba — no llegaria a verse en pantalla hasta que se corrija
-este wiring.
+### Que se afirmaba
+
+Que `packages/shared` tenia dos implementaciones de `iniciarSesion`; que la pantalla web estaba
+conectada a la mala, la de `packages/shared/usuarios/api.js` (PR #424, issue #100), que no
+comprueba `perfil.activo`; que `LoginPage.jsx` desestructuraba del hook claves que no existian y
+por eso **ningun error de login se mostraba en pantalla**; y como consecuencia, que una cuenta
+desactivada podia entrar por la web.
+
+### Que es cierto hoy
+
+De esas cuatro afirmaciones **solo la primera lo era**, y ya tampoco:
+
+- **El wiring se corrigio antes.** `packages/shared/usuarios/useInicioSesion.js` se reescribio e
+  importa `iniciarSesion` de `../api/sesion.js`, la que valida credenciales, resuelve el perfil y
+  cierra la sesion si la cuenta esta desactivada. Su cabecera enumera los cinco defectos de la
+  version anterior.
+- **Los errores si se ven.** Las claves que `apps/web/src/pages/LoginPage.jsx` desestructura
+  -`erroresDeCampo`, `error`, `enviando`, `destinoPorDefecto`- son exactamente las que el hook
+  devuelve; se comprobaron una a una.
+- **Una cuenta desactivada no entra por la web.** `evaluarPerfilDeSesion()` la rechaza y
+  `iniciarSesion()` cierra la sesion recien emitida.
+- **Ya no hay dos implementaciones.** La issue #512 borro la copia de `usuarios/api.js` -y con
+  ella un `cerrarSesion` duplicado que hacia `signOut()` global, revocando los refresh tokens del
+  usuario en todos sus dispositivos-. El barril tenia que desempatar los dos nombres a mano
+  porque ESM excluye del namespace un nombre que le llega por dos estrellas (bug #365); ese
+  desempate se retiro. Una prueba en `packages/shared/usuarios/api.test.js` impide que la segunda
+  puerta vuelva a aparecer.
+
+### Lo que quedaba abierto, y ya no (issue #529)
+
+Cuando se cerro #512 quedaba un hueco distinto y mas serio: **desactivar una cuenta era un control
+de cliente**. `iniciarSesion()` cierra la sesion, pero lo hace *despues* de que GoTrue emitio un
+JWT valido, y quien llamara a `/auth/v1/token` directamente con la llave anonima obtenia uno sin
+pasar por la aplicacion. La base no lo frenaba: `rol_actual()` (`00004`) resolvia el rol sin mirar
+`activo`, y de esa funcion cuelgan 77 de las 104 politicas del esquema. Comprobado contra el stack
+local: una cuenta dada de baja leyo la tabla `pacientes`.
+
+**La migracion `00079` lo cerro.** Un perfil desactivado ya no tiene rol efectivo, no lee ni
+escribe, y -lo que anulaba el arreglo hasta descubrirlo- **no puede reactivarse a si mismo**. El
+detalle esta en `docs/PERMISOS.md`, "Un perfil desactivado no tiene rol efectivo".
+
+Lo unico que conserva es leer su propia fila de `perfiles`, a proposito: es lo que permite
+distinguir "tu cuenta esta desactivada" de un "permiso denegado" que no explica nada.
+
+**Lo que sigue sin resolverse** es que el token ya emitido no se revoca: deja de servir para leer
+o escribir, pero existe hasta que expire (`jwt_expiry = 3600`). Invalidarlo de verdad exige la
+Admin API de GoTrue y es otra decision.

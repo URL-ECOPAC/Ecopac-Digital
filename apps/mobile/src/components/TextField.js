@@ -1,6 +1,6 @@
-import { useState } from 'react';
-import { StyleSheet, Text, TextInput, View } from 'react-native';
-import { colors, spacing, typography } from '@ecopac/ui-tokens';
+import { forwardRef, useState } from "react";
+import { StyleSheet, Text, TextInput, View } from "react-native";
+import { colors, spacing, typography } from "@ecopac/ui-tokens";
 
 // El personal llena formularios con una mano y a veces con guantes,
 // por lo que el area tactil minima recomendada (Material/HIG) es 48dp.
@@ -9,14 +9,18 @@ const MIN_TOUCH_HEIGHT = 48;
 /**
  * Campo de texto controlado. Acepta cualquier prop nativa de TextInput
  * (value, onChangeText, keyboardType, secureTextEntry, etc.)
+ *
+ * Reenvia el ref al TextInput interno para que una pantalla pueda enfocarlo
+ * a mano (por ejemplo, saltar al siguiente campo con returnKeyType="next").
  */
-export default function TextField({ label, error, style, ...inputProps }) {
+const TextField = forwardRef(function TextField({ label, error, style, ...inputProps }, ref) {
   const [isFocused, setIsFocused] = useState(false);
 
   return (
     <View style={[styles.container, style]}>
       {label ? <Text style={styles.label}>{label}</Text> : null}
       <TextInput
+        ref={ref}
         style={[styles.input, isFocused && styles.inputFocused, error && styles.inputError]}
         placeholderTextColor={colors.textMuted}
         {...inputProps}
@@ -32,7 +36,9 @@ export default function TextField({ label, error, style, ...inputProps }) {
       {error ? <Text style={styles.errorText}>{error}</Text> : null}
     </View>
   );
-}
+});
+
+export default TextField;
 
 const styles = StyleSheet.create({
   container: {

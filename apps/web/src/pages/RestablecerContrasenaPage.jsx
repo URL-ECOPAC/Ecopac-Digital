@@ -1,12 +1,7 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
-import { useRestablecerContrasena } from '@ecopac/shared';
-import {
-  Card,
-  PrimaryButton,
-  ScreenContainer,
-  TextField,
-} from '../components';
+import React from "react";
+import { Link } from "react-router-dom";
+import { useRestablecerContrasena } from "@ecopac/shared";
+import { Card, PrimaryButton, ScreenContainer, TextField } from "../components";
 
 export default function RestablecerContrasenaPage() {
   const {
@@ -27,7 +22,8 @@ export default function RestablecerContrasenaPage() {
       <Card title="Restablecer contraseña">
         {mensajeExito ? (
           <div className="alert alert-success" role="alert">
-            Si el correo electrónico existe en nuestro sistema, recibirás un enlace con las instrucciones para restablecer tu contraseña.
+            Si el correo electrónico existe en nuestro sistema, recibirás un enlace con las
+            instrucciones para restablecer tu contraseña.
           </div>
         ) : (
           <form onSubmit={solicitarRestablecimiento} noValidate>
@@ -47,7 +43,7 @@ export default function RestablecerContrasenaPage() {
 
             <div className="mt-4">
               <PrimaryButton
-                title={enviando ? 'Enviando...' : 'Enviar enlace'}
+                title={enviando ? "Enviando..." : "Enviar enlace"}
                 type="submit"
                 disabled={enviando}
               />

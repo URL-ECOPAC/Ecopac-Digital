@@ -9,13 +9,15 @@ import { describe, expect, it } from "vitest";
 
 import { ROLES } from "../usuarios/roles.js";
 import {
-  ESTADOS_JORNADA,
   permisosDeJornadas,
   puedeAdministrarJornadas,
   puedeEditarJornada,
   puedeReabrirJornada,
+  puedeVerHistorialJornada,
   puedeVerJornadas,
+  puedeVerRosterCompleto,
 } from "./permisos.js";
+import { ESTADOS_JORNADA } from "../enums.js";
 
 describe("permisos de jornadas", () => {
   it("solo Administrador administra, como pide el criterio de aceptacion", () => {
@@ -54,21 +56,41 @@ describe("permisos de jornadas", () => {
     expect(puedeReabrirJornada(ROLES.VOLUNTARIO)).toBe(false);
   });
 
+  it("solo Administrador lee el historial de estados, espejo de 00039:83-85", () => {
+    expect(puedeVerHistorialJornada(ROLES.ADMINISTRADOR)).toBe(true);
+
+    expect(puedeVerHistorialJornada(ROLES.JUNTA_DIRECTIVA)).toBe(false);
+    expect(puedeVerHistorialJornada(ROLES.SOCIO_FUNDADOR)).toBe(false);
+    expect(puedeVerHistorialJornada(ROLES.MEDICO)).toBe(false);
+    expect(puedeVerHistorialJornada(ROLES.VOLUNTARIO)).toBe(false);
+  });
+
   it("un rol que no existe no puede nada", () => {
     expect(permisosDeJornadas("coordinador")).toEqual({
       puedeVer: false,
       puedeCrear: false,
       puedeEditar: false,
       puedeReabrir: false,
+      puedeVerHistorial: false,
     });
   });
 
-  it("agrupa los permisos para que un hook no llame a las cuatro por separado", () => {
+  it("solo administrador y junta directiva ven el personal completo, espejo de 00039:63-69 (issue #182)", () => {
+    expect(puedeVerRosterCompleto(ROLES.ADMINISTRADOR)).toBe(true);
+    expect(puedeVerRosterCompleto(ROLES.JUNTA_DIRECTIVA)).toBe(true);
+
+    expect(puedeVerRosterCompleto(ROLES.SOCIO_FUNDADOR)).toBe(false);
+    expect(puedeVerRosterCompleto(ROLES.MEDICO)).toBe(false);
+    expect(puedeVerRosterCompleto(ROLES.VOLUNTARIO)).toBe(false);
+  });
+
+  it("agrupa los permisos para que un hook no llame a las cinco por separado", () => {
     expect(permisosDeJornadas(ROLES.MEDICO)).toEqual({
       puedeVer: true,
       puedeCrear: false,
       puedeEditar: false,
       puedeReabrir: false,
+      puedeVerHistorial: false,
     });
 
     expect(permisosDeJornadas(ROLES.ADMINISTRADOR)).toEqual({
@@ -76,6 +98,7 @@ describe("permisos de jornadas", () => {
       puedeCrear: true,
       puedeEditar: true,
       puedeReabrir: true,
+      puedeVerHistorial: true,
     });
   });
 });

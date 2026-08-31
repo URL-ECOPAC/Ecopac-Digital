@@ -18,11 +18,14 @@ jobs:
   lint-and-build:
     name: Lint y build
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # Diez minutos es el presupuesto que fija la issue #223. Las corridas reales van en ~40 s
+    # -de los cuales las pruebas son ~10 s-, asi que el tope no aprieta: esta para que un
+    # cambio que dispare el tiempo se note aqui y no en la paciencia de quien espera el PR.
+    timeout-minutes: 10
 
     steps:
       - name: Descargar el código
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Configurar Node.js
         uses: actions/setup-node@v4
@@ -33,14 +36,95 @@ jobs:
       - name: Instalar dependencias
         run: npm ci
 
+      # Va primero de las comprobaciones porque es la mas barata: no usa la base de datos ni
+      # credenciales, solo compara texto entre packages/shared y supabase/migrations/, y tarda
+      # un segundo. Corre en el mismo job que el lint para que el check requerido siga
+      # llamandose "Lint y build" y no haya que tocar la proteccion de ramas (issue #492).
+      #
+      # Siete issues describen el mismo defecto -shared consultando columnas que no existen,
+      # mergeado en verde-. Las pruebas no lo detectan porque el doble del cliente de Supabase
+      # se escribe leyendo el codigo que se va a probar, no la migracion.
+      - name: Verificar packages/shared contra el esquema
+        if: >-
+          github.event_name != 'pull_request' ||
+          !contains(github.event.pull_request.labels.*.name, 'esquema-verificado-a-mano')
+        run: npm run verificar:shared-esquema
+
+      - name: Aviso de guarda de esquema desactivada
+        if: >-
+          github.event_name == 'pull_request' &&
+          contains(github.event.pull_request.labels.*.name, 'esquema-verificado-a-mano')
+        run: |
+          echo "::warning::La guarda de esquema se salto por la etiqueta esquema-verificado-a-mano."
+          {
+            echo "## Guarda de esquema desactivada"
+            echo
+            echo "Este PR lleva la etiqueta \`esquema-verificado-a-mano\`, asi que no se comparo"
+            echo "\`packages/shared\` con \`supabase/migrations/\`. La descripcion del PR tiene que"
+            echo "decir por que, y quien revise tiene que comprobar los nombres a mano."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Comprobar el analizador de esquema contra sus propios casos
+        run: npm run verificar:shared-esquema -- --autoprueba
+
       - name: Ejecutar lint en todos los workspaces
         run: npm run lint
+
+      # Prettier estaba configurado (.prettierrc) y en devDependencies desde antes, pero sin
+      # script format/format:check ni paso de CI que lo llamara: la configuracion era
+      # decorativa y el repositorio mezclaba estilos hasta dentro del mismo archivo (issue
+      # #515). Alcance JS/JSX/TS/TSX/JSON unicamente (ver .prettierignore): supabase/ (SQL) y
+      # docs/ (Markdown con tablas armadas a mano) y .github/ (YAML con comentarios alineados a
+      # proposito) quedan fuera a proposito, no por descuido.
+      - name: Comprobar formato con Prettier
+        run: npm run format:check
 
       # Antes del build a proposito: una prueba rota se ve en segundos, sin esperar a que
       # la web compile. Corre en el mismo job que el lint para que el check requerido siga
       # llamandose "Lint y build" y no haya que tocar la proteccion de ramas.
+      #
+      # El paso corre `npm test` a secas, sin capturar la salida: vitest detecta Actions y agrega
+      # su reporter `github-actions`, que ya publica el conteo de pruebas en el resumen de la
+      # corrida. No se ve al correr las pruebas en local, y por eso es facil no saber que existe.
       - name: Ejecutar las pruebas de todos los workspaces
         run: npm test
+
+      # npm test corre "npm run test --workspaces --if-present": un workspace sin script test
+      # se salta en silencio, sin que nada en la salida del paso anterior lo distinga de un
+      # workspace que si corrio (issue #515, docs/CI-CD.md tiene el detalle de por que
+      # apps/mobile sigue sin uno). Este paso no cambia ese comportamiento -sigue siendo
+      # deliberado para apps/mobile-, solo lo hace visible en vez de que haya que saberlo de
+      # memoria para notarlo.
+      - name: Avisar que workspaces no tienen script test
+        if: always()
+        run: |
+          sin_test=""
+          for pkg in apps/web apps/mobile packages/shared packages/ui-tokens; do
+            if ! grep -q '"test"' "$pkg/package.json"; then
+              sin_test="$sin_test $pkg"
+            fi
+          done
+
+          if [ -n "$sin_test" ]; then
+            echo "::warning::Workspaces sin script test (npm test los omite en silencio):$sin_test"
+            {
+              echo "## Workspaces sin script \`test\`"
+              echo
+              echo "npm test los omite en silencio (\`--workspaces --if-present\`). Detalle en docs/CI-CD.md."
+              echo
+              for pkg in $sin_test; do
+                echo "- \`$pkg\`"
+              done
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      # Lo que vitest no publica es la cobertura, que desde la #219 es una guarda con umbral y no
+      # una estadistica. `if: always()` porque el resumen de una corrida en rojo es el que mas
+      # falta hace; el script nunca falla, es un reporte y no una guarda, y quien decide si el CI
+      # pasa es el paso de arriba.
+      - name: Publicar la cobertura en el resumen
+        if: always()
+        run: node scripts/resumen-de-pruebas.mjs >> "$GITHUB_STEP_SUMMARY"
 
       # Cada rama se construye con la configuración de su ambiente. Antes se usaban
       # siempre los secrets _DEV, así que main nunca se validaba contra producción y un

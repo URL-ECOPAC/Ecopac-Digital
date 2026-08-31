@@ -17,6 +17,7 @@ vi.mock("../api/cliente.js", () => ({
 const { ROLES } = await import("../usuarios/roles.js");
 const {
   obtenerHistorialMedico,
+  obtenerUltimaAtencion,
   aEventos,
   ordenarCronologicamente,
   puedeVerHistorial,
@@ -47,6 +48,10 @@ function crearCliente({ respuesta = { data: [], error: null } } = {}) {
       llamadas.push({ paso: "order", columna, opciones });
       return cadena;
     },
+    limit(cantidad) {
+      llamadas.push({ paso: "limit", cantidad });
+      return cadena;
+    },
     then(resolve, reject) {
       const r = respuesta instanceof Error ? Promise.reject(respuesta) : Promise.resolve(respuesta);
       return r.then(resolve, reject);
@@ -67,22 +72,22 @@ const ATENCION = {
   jornadaId: "jor-1",
   createdAt: "2026-06-15T09:00:00Z",
   jornada: { nombre: "Jornada Quetzaltenango", fecha: "2026-06-15" },
-  triajes: [
-    {
-      id: "tri-1",
-      tomadoEn: "2026-06-15T09:10:00Z",
-      tomadoPor: "per-enf",
-      presionSistolica: 120,
-      presionDiastolica: 80,
-      glucosa: 95,
-      peso: 70,
-      talla: 1.7,
-      temperatura: 36.5,
-      frecuenciaCardiaca: 72,
-      imc: 24.2,
-      profesional: { nombres: "Rosa", apellidos: "Gomez" },
-    },
-  ],
+  // triajes_atencion_id_key (00013) hace de esta una relacion 1:1: PostgREST la embebe como un
+  // objeto, no como arreglo.
+  triajes: {
+    id: "tri-1",
+    tomadoEn: "2026-06-15T09:10:00Z",
+    tomadoPor: "per-enf",
+    presionSistolica: 120,
+    presionDiastolica: 80,
+    glucosa: 95,
+    peso: 70,
+    talla: 1.7,
+    temperatura: 36.5,
+    frecuenciaCardiaca: 72,
+    imc: 24.2,
+    profesional: { nombres: "Rosa", apellidos: "Gomez" },
+  },
   consultas: [
     {
       id: "con-1",
@@ -108,7 +113,11 @@ const ATENCION = {
               dosis: "1 capsula",
               frecuencia: "cada 8 horas",
               duracion: "7 dias",
-              medicamento: { nombre: "Amoxicilina", concentracion: "500 mg", presentacion: "capsula" },
+              medicamento: {
+                nombre: "Amoxicilina",
+                concentracion: "500 mg",
+                presentacion: "capsula",
+              },
             },
           ],
         },
@@ -182,7 +191,10 @@ describe("aEventos", () => {
     const anulada = {
       ...ATENCION,
       consultas: [
-        { ...ATENCION.consultas[0], recetas: [{ ...ATENCION.consultas[0].recetas[0], estado: "anulada" }] },
+        {
+          ...ATENCION.consultas[0],
+          recetas: [{ ...ATENCION.consultas[0].recetas[0], estado: "anulada" }],
+        },
       ],
     };
 
@@ -191,7 +203,7 @@ describe("aEventos", () => {
   });
 
   it("una atencion sin triaje ni consulta no produce eventos", () => {
-    expect(aEventos({ id: "ate-2", triajes: [], consultas: [] })).toEqual([]);
+    expect(aEventos({ id: "ate-2", triajes: null, consultas: [] })).toEqual([]);
     expect(aEventos(null)).toEqual([]);
   });
 });
@@ -218,7 +230,10 @@ describe("ordenarCronologicamente", () => {
   });
 
   it("no muta el arreglo que recibe", () => {
-    const original = [{ id: "a", fecha: "2024-01-01T00:00:00Z" }, { id: "b", fecha: "2026-01-01T00:00:00Z" }];
+    const original = [
+      { id: "a", fecha: "2024-01-01T00:00:00Z" },
+      { id: "b", fecha: "2026-01-01T00:00:00Z" },
+    ];
     ordenarCronologicamente(original);
 
     expect(original.map((e) => e.id)).toEqual(["a", "b"]);
@@ -338,6 +353,87 @@ describe("obtenerHistorialMedico", () => {
     const { eventos, error } = await obtenerHistorialMedico("pac-1", { rol: ROLES.MEDICO });
 
     expect(eventos).toEqual([]);
+    expect(error).not.toBeNull();
+  });
+});
+
+describe("obtenerUltimaAtencion", () => {
+  it("sin paciente devuelve vacio sin llamar al cliente", async () => {
+    const { ultimaAtencion, error } = await obtenerUltimaAtencion();
+
+    expect(ultimaAtencion).toBeNull();
+    expect(error).toBeNull();
+  });
+
+  it.each([ROLES.VOLUNTARIO, ROLES.JUNTA_DIRECTIVA, ROLES.SOCIO_FUNDADOR])(
+    "%s no puede consultarla y ni siquiera gasta la llamada",
+    async (rol) => {
+      const cliente = crearCliente();
+      dobles.cliente = cliente;
+
+      const { ultimaAtencion, error } = await obtenerUltimaAtencion("pac-1", { rol });
+
+      expect(ultimaAtencion).toBeNull();
+      expect(error).toBeNull();
+      expect(cliente.llamadas).toHaveLength(0);
+    },
+  );
+
+  it("limita la consulta a la atencion mas reciente", async () => {
+    const cliente = crearCliente({ respuesta: { data: [ATENCION], error: null } });
+    dobles.cliente = cliente;
+
+    await obtenerUltimaAtencion("pac-1", { rol: ROLES.MEDICO });
+
+    expect(cliente.llamadas.filter((l) => l.paso === "from")).toHaveLength(1);
+    expect(cliente.llamadas[0]).toEqual({ paso: "from", tabla: "atenciones" });
+    expect(cliente.llamadas).toContainEqual({ paso: "limit", cantidad: 1 });
+  });
+
+  it("devuelve el evento mas reciente de esa atencion", async () => {
+    dobles.cliente = crearCliente({ respuesta: { data: [ATENCION], error: null } });
+
+    const { ultimaAtencion, error } = await obtenerUltimaAtencion("pac-1", { rol: ROLES.MEDICO });
+
+    expect(error).toBeNull();
+    // El mas reciente dentro de la atencion es la receta (10:30), igual que en el historial.
+    expect(ultimaAtencion.tipo).toBe(TIPOS_DE_EVENTO.RECETA);
+  });
+
+  it("sin rol no bloquea: deja que decida RLS", async () => {
+    dobles.cliente = crearCliente({ respuesta: { data: [ATENCION], error: null } });
+
+    const { ultimaAtencion } = await obtenerUltimaAtencion("pac-1");
+
+    expect(ultimaAtencion).not.toBeNull();
+  });
+
+  it("un paciente sin atenciones devuelve null", async () => {
+    dobles.cliente = crearCliente({ respuesta: { data: [], error: null } });
+
+    const { ultimaAtencion, error } = await obtenerUltimaAtencion("pac-1", { rol: ROLES.MEDICO });
+
+    expect(ultimaAtencion).toBeNull();
+    expect(error).toBeNull();
+  });
+
+  it("un rechazo de RLS se normaliza", async () => {
+    dobles.cliente = crearCliente({
+      respuesta: { data: null, error: { code: "42501", message: "denegado" } },
+    });
+
+    const { ultimaAtencion, error } = await obtenerUltimaAtencion("pac-1", { rol: ROLES.MEDICO });
+
+    expect(ultimaAtencion).toBeNull();
+    expect(error).not.toBeNull();
+  });
+
+  it("un fallo de red llega como excepcion y tambien se normaliza", async () => {
+    dobles.cliente = crearCliente({ respuesta: new Error("Failed to fetch") });
+
+    const { ultimaAtencion, error } = await obtenerUltimaAtencion("pac-1", { rol: ROLES.MEDICO });
+
+    expect(ultimaAtencion).toBeNull();
     expect(error).not.toBeNull();
   });
 });

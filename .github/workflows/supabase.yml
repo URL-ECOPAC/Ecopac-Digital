@@ -21,8 +21,20 @@ permissions:
   contents: read
 
 concurrency:
-  group: supabase-${{ github.ref }}
-  # Nunca se cancela un despliegue a medias: solo se cancelan corridas de PR superadas.
+  # En push el grupo lleva el SHA, asi que cada commit a develop/main tiene el suyo y ninguno
+  # descarta a otro. Antes el grupo era solo la rama, y ahi `cancel-in-progress: false` no
+  # alcanza: protege a la corrida que ya arranco, pero GitHub guarda UNA sola corrida en cola
+  # por grupo, asi que cada push nuevo cancelaba a la que esperaba turno. Los pushes 676acb3 y
+  # c71692f se perdieron exactamente asi, con cero jobs ejecutados; el siguiente (93666b6)
+  # fallo, y con el se rompio la cadena de recuperacion que los cubria.
+  #
+  # El precio es que dos despliegues pueden solaparse. Se prefiere a perder uno en silencio:
+  # `db push` aplica migracion por migracion y el peor caso del solape es un fallo que se
+  # reintenta, no una base a medias. Ademas el paso "Comprobar el historial remoto" lo detecta
+  # y lo explica.
+  #
+  # En PR se conserva el grupo por rama, que es donde si conviene cancelar lo superado.
+  group: supabase-${{ github.ref }}-${{ github.event_name == 'push' && github.sha || 'pr' }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
@@ -34,11 +46,17 @@ jobs:
       supabase: ${{ steps.detectar.outputs.supabase }}
     steps:
       - name: Descargar el codigo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
-      - name: Detectar si el cambio toca supabase/
+      # Se miran tres rutas, no solo supabase/ (issue #222).
+      #
+      # Las pruebas de flujos criticos de pruebas/e2e corren contra el stack local que levanta el
+      # job "validar", pero ejercitan packages/shared: un cambio ahi puede romperlas sin tocar una
+      # sola migracion. Si el detector solo mirara supabase/, esas pruebas se saltarian justo en
+      # los PR que mas falta hacen -- los que cambian la capa de API.
+      - name: Detectar si el cambio toca la base de datos o lo que corre contra ella
         id: detectar
         run: |
           if [ "${{ github.event_name }}" = "push" ]; then
@@ -50,9 +68,9 @@ jobs:
           git fetch --no-tags origin "$GITHUB_BASE_REF"
           base="$(git merge-base "origin/$GITHUB_BASE_REF" HEAD)"
 
-          if git diff --quiet "$base" HEAD -- supabase/; then
+          if git diff --quiet "$base" HEAD -- supabase/ packages/shared/ pruebas/; then
             echo "supabase=false" >> "$GITHUB_OUTPUT"
-            echo "El PR no toca supabase/; la validacion pesada se omite."
+            echo "El PR no toca supabase/, packages/shared/ ni pruebas/; la validacion pesada se omite."
           else
             echo "supabase=true" >> "$GITHUB_OUTPUT"
           fi
@@ -63,7 +81,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Descargar el codigo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -246,10 +264,15 @@ jobs:
     name: Validar migraciones y funciones
     needs: cambios
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # Entra en el presupuesto de diez minutos de la issue #223: es check requerido y corre en
+    # cada PR, asi que cuenta para el tiempo total del pipeline. Es el job mas caro que hay
+    # -levanta el stack, aplica las migraciones desde cero y corre las suites pgTAP- y aun asi
+    # mide entre 142 s y 187 s cuando el PR toca supabase/. Si algun dia se acerca al tope, lo
+    # que hay que revisar es por que crecio tanto, no subir el numero sin mirar.
+    timeout-minutes: 10
     steps:
       - name: Descargar el codigo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Sin cambios en supabase/
         if: needs.cambios.outputs.supabase != 'true'
@@ -266,10 +289,16 @@ jobs:
       # una sola migracion. Con una version concreta esa llamada no se hace.
       #
       # De paso el CI valida con la misma version que tiene instalada el equipo, en vez de con
-      # la que resulte ser la ultima ese dia. Al subirla, cambiarla en los TRES pasos.
+      # la que resulte ser la ultima ese dia. Al subirla, cambiarla en los CUATRO pasos que
+      # instalan el CLI: los tres de este archivo y el de verificar-despliegue.yml.
+      #
+      # La accion va en v3 y no en v1 porque la v1 corre sobre Node 20, que GitHub ya esta
+      # retirando. La v3 es composite e instala el CLI desde npm, asi que ademas deja de tocar
+      # la API de releases: la causa del incidente del 25 de agosto desaparece de raiz, no solo
+      # se esquiva fijando la version.
       - name: Instalar Supabase CLI
         if: needs.cambios.outputs.supabase == 'true'
-        uses: supabase/setup-cli@v1
+        uses: supabase/setup-cli@v3
         with:
           version: 2.115.0
 
@@ -306,11 +335,60 @@ jobs:
         if: needs.cambios.outputs.supabase == 'true'
         run: supabase test db
 
+      # Los tres flujos que no pueden fallar el dia de una jornada (issue #222).
+      #
+      # POR QUE VAN AQUI Y NO EN ci.yml
+      #
+      # Porque necesitan el stack local, y el stack local ya esta levantado en este job. Montarlo
+      # una segunda vez en el otro workflow costaria los dos minutos mas caros del pipeline para
+      # tener exactamente la misma base.
+      #
+      # QUE CUBREN QUE NO CUBRA NADA DE LO DE ARRIBA
+      #
+      # pgTAP prueba la base desde dentro, con `SET request.jwt.claim.sub`. Estas pruebas la
+      # recorren desde fuera: inician sesion de verdad, pasan por PostgREST y llaman a las mismas
+      # funciones de packages/shared que llaman las pantallas. Ahi aparecen los defectos que
+      # ninguna de las dos capas ve por separado -- un INSERT al que le faltan columnas NOT NULL
+      # pasa el doble de Supabase de `npm test` y ni siquiera lo ejecuta el pgTAP.
+      - name: Configurar Node.js
+        if: needs.cambios.outputs.supabase == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Instalar dependencias
+        if: needs.cambios.outputs.supabase == 'true'
+        run: npm ci
+
+      # Sin variables de entorno: la suite lee la URL y la llave anonima de `supabase status`
+      # ella sola (pruebas/e2e/stack-local.js). Ninguna credencial pasa por el YAML ni por el
+      # log, que es lo que pide la revision de configuracion (issue #241).
+      - name: Pruebas de los flujos criticos
+        if: needs.cambios.outputs.supabase == 'true'
+        run: npm run test:e2e
+
+      # `supabase functions lint` ya no existe en el CLI (confirmado contra la 2.115.0, la misma
+      # que fija el paso de arriba: ni `functions --help` ni `--experimental` lo listan). Este
+      # paso nunca se habia ejecutado de verdad -el guardia de abajo caia siempre a la rama del
+      # "else" porque no habia ninguna funcion-, asi que el comando roto quedo en verde en
+      # silencio hasta la issue #523, la primera en agregar una. Se reemplaza por lo que el CLI
+      # llamaba por debajo: `deno lint`/`deno check` directo sobre supabase/functions.
+      - name: Instalar Deno
+        if: needs.cambios.outputs.supabase == 'true'
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: "2.9.6"
+
       - name: Lint de Edge Functions
         if: needs.cambios.outputs.supabase == 'true'
         run: |
+          deno --version
           if ls supabase/functions/*/index.* >/dev/null 2>&1; then
-            supabase functions lint
+            deno lint --config supabase/functions/deno.json supabase/functions
+            for archivo in supabase/functions/*/index.*; do
+              deno check --config supabase/functions/deno.json "$archivo"
+            done
           else
             echo "No hay Edge Functions todavia; se omite el lint."
           fi
@@ -328,7 +406,7 @@ jobs:
       SUPABASE_PROJECT_REF_DEV: ${{ secrets.SUPABASE_PROJECT_REF_DEV }}
     steps:
       - name: Descargar el codigo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Verificar secrets
         id: check
@@ -351,7 +429,7 @@ jobs:
       # Version fija: ver el comentario del job "Validar migraciones y funciones" (issue #422).
       - name: Instalar Supabase CLI
         if: steps.check.outputs.listo == 'true'
-        uses: supabase/setup-cli@v1
+        uses: supabase/setup-cli@v3
         with:
           version: 2.115.0
 
@@ -359,9 +437,22 @@ jobs:
         if: steps.check.outputs.listo == 'true'
         run: supabase link --project-ref "$SUPABASE_PROJECT_REF_DEV" -p "$SUPABASE_DB_PASSWORD"
 
+      # La deriva se avisa aqui, en el PR, y no solo cuando ya revento el despliegue.
+      #
+      # Antes la salida del dry-run caia dentro de un bloque de codigo del resumen y se perdia:
+      # el texto estaba, pero sin aviso y sin destacar, y no lo miraba nadie. Es el mismo
+      # diagnostico que hace "Aplicar migraciones", movido a donde todavia sirve para algo,
+      # porque mientras hay deriva **todo** push a develop falla, traiga SQL o no.
+      #
+      # Este job sigue sin fallar nunca, que es su diseno: depende de secrets y de la red, y
+      # convertirlo en guarda haria que un corte de conexion bloquee PRs ajenos. Avisa fuerte,
+      # no corta. Quien corta es "Aplicar migraciones", despues del merge.
       - name: Comparar historial local y remoto
         if: steps.check.outputs.listo == 'true'
         run: |
+          salida_push="$(supabase db push --dry-run 2>&1 || true)"
+          limpia="$(printf '%s' "$salida_push" | sed 's/\x1B\[[0-9;]*[a-zA-Z]//g')"
+
           {
             echo "## Migraciones en ecopac-dev"
             echo
@@ -372,13 +463,44 @@ jobs:
             echo "### Se aplicarian al mergear"
             echo
             echo '```'
-            supabase db push --dry-run 2>&1 || true
+            printf '%s\n' "$salida_push"
             echo '```'
             echo
             echo "> El dry-run confirma la conexion y lista lo pendiente, pero no ejecuta el SQL:"
             echo "> un error dentro de una migracion no aparece aqui. Quien cubre eso es la guarda"
             echo "> **Migraciones no editadas**, que evita la unica forma en que el escenario"
             echo "> incremental se aparta del que valida el CI."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          # Mismo detector que usa "Aplicar migraciones": si el CLI cambiara el texto, esto deja
+          # de avisar y el despliegue vuelve a fallar solo. Se degrada al comportamiento de
+          # antes, nunca a un verde falso.
+          if ! printf '%s' "$limpia" | grep -q 'Remote migration versions not found'; then
+            exit 0
+          fi
+
+          versiones="$(printf '%s' "$limpia" \
+            | sed -n 's/.*migration repair --status reverted //p' \
+            | tr -s ' ' '\n' | grep -E '^[0-9]+$' | sort -u | xargs)"
+
+          echo "::warning::La base de ecopac-dev tiene migraciones que develop no ($versiones). Hoy TODO push a develop falla, traiga SQL o no."
+
+          {
+            echo
+            echo "## Aviso: la base de ecopac-dev y develop no coinciden"
+            echo
+            echo "Estas versiones estan aplicadas en \`ecopac-dev\` pero no tienen archivo en la"
+            echo "rama base:"
+            echo
+            for v in $versiones; do echo "- \`$v\`"; done
+            echo
+            echo "**Esto no lo causa este PR y mergearlo no lo empeora**, pero conviene saberlo:"
+            echo "mientras dure, \`supabase db push\` falla en **todo** push a \`develop\`, traiga"
+            echo "migraciones o no, porque valida el historial completo antes de mirar si hay algo"
+            echo "pendiente. El fallo le aparece a quien mergee despues, sin que tenga que ver."
+            echo
+            echo "Se arregla mergeando el PR que trae esos archivos. El detalle esta en"
+            echo "\`docs/CI-CD.md\`."
           } >> "$GITHUB_STEP_SUMMARY"
 
   # --------------------------------------------------------------------------------
@@ -396,12 +518,12 @@ jobs:
       SUPABASE_PROJECT_REF_PROD: ${{ secrets.SUPABASE_PROJECT_REF_PROD }}
     steps:
       - name: Descargar el codigo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       # Version fija: ver el comentario del job "Validar migraciones y funciones" (issue #422).
       # Este es el paso donde el rate limit tumbo el despliegue del 25 de agosto.
       - name: Instalar Supabase CLI
-        uses: supabase/setup-cli@v1
+        uses: supabase/setup-cli@v3
         with:
           version: 2.115.0
 
@@ -446,9 +568,131 @@ jobs:
         if: steps.check.outputs.listo == 'true'
         run: supabase link --project-ref "${{ steps.check.outputs.proyecto }}" -p "$SUPABASE_DB_PASSWORD"
 
+      # La deriva de historial explicada en cristiano, antes de que `db push` la escupa en
+      # crudo (el merge de 93666b6).
+      #
+      # Si la base tiene aplicada una migracion cuyo archivo no esta en esta rama, `db push`
+      # aborta con "Remote migration versions not found in local migrations directory" y un
+      # `migration repair` sugerido. Ese mensaje no dice lo unico que importa: que el fallo
+      # casi nunca es del commit que lo desencadena. `db push` valida el historial COMPLETO
+      # antes de mirar si hay algo pendiente, asi que mientras dura la deriva tumba todo push
+      # a develop, traiga SQL o no. Fue lo que paso el 30 de agosto: la 00088 se aplico a mano
+      # contra ecopac-dev antes de que su PR (#586) se mergeara, y el merge que se comio el
+      # fallo fue #588, un hook de reportes sin una sola linea de SQL.
+      #
+      # El detector es `db push --dry-run` en vez de comparar `migration list` a mano: no
+      # aplica nada, pero hace exactamente la misma comprobacion de historial que el `db push`
+      # de abajo. Asi el diagnostico y el despliegue no pueden discrepar. Si el CLI cambiara el
+      # texto, este paso deja pasar y `db push` vuelve a fallar solo: se degrada a lo de antes,
+      # nunca a un verde falso.
+      - name: Comprobar el historial remoto
+        if: steps.check.outputs.listo == 'true'
+        run: |
+          if salida="$(supabase db push --dry-run 2>&1)"; then
+            echo "$salida"
+            exit 0
+          fi
+
+          echo "$salida"
+          limpia="$(printf '%s' "$salida" | sed 's/\x1B\[[0-9;]*[a-zA-Z]//g')"
+
+          if ! printf '%s' "$limpia" | grep -q 'Remote migration versions not found'; then
+            # Fallo por otra cosa: conexion, credenciales, una migracion rota. No es deriva y
+            # no toca diagnosticarla aqui; se deja seguir para que `Aplicar migraciones` falle
+            # con su propio mensaje, que es el que sirve en ese caso.
+            echo "::warning::El dry-run fallo por algo que no es deriva de historial; sigue el despliegue."
+            exit 0
+          fi
+
+          # Las versiones las nombra el propio CLI en la linea del repair que sugiere.
+          versiones="$(printf '%s' "$limpia" \
+            | sed -n 's/.*migration repair --status reverted //p' \
+            | tr -s ' ' '\n' | grep -E '^[0-9]+$' | sort -u | xargs)"
+
+          {
+            echo "## La base de ${{ steps.check.outputs.ambiente }} y esta rama no coinciden"
+            echo
+            echo "**No se aplico ninguna migracion y la base no quedo a medias.**"
+            echo
+            echo "Estas versiones estan aplicadas en \`${{ steps.check.outputs.ambiente }}\` pero no"
+            echo "tienen archivo en \`supabase/migrations/\` en este commit:"
+            echo
+            for v in $versiones; do echo "- \`$v\`"; done
+            echo
+            echo "### Por que suele pasar"
+            echo
+            echo "Casi siempre porque esa migracion se aplico **a mano** contra la base, desde una"
+            echo "rama, antes de que su PR se mergeara. Mientras el archivo no este en la rama,"
+            echo "\`supabase db push\` falla en **todo** push, traiga migraciones o no: valida el"
+            echo "historial completo antes de mirar si hay algo pendiente. Por eso este fallo puede"
+            echo "no tener nada que ver con el commit que lo disparo."
+            echo
+            echo "La otra causa posible es un despliegue mas nuevo que se adelanto a este."
+            echo
+            echo "### Como se sale"
+            echo
+            echo "1. Buscar el PR que trae esos archivos y mergearlo. Con eso se arregla solo, y es"
+            echo "   lo que corresponde si la migracion es legitima y solo llego antes de tiempo."
+            echo "2. Si la migracion se descarto de verdad y no va a existir nunca, entonces se"
+            echo "   despega el registro de la base:"
+            echo
+            echo '   ```'
+            echo "   supabase migration repair --status reverted $versiones"
+            echo '   ```'
+            echo
+            echo "No se edita ninguna migracion ya aplicada para salir de esto."
+            echo
+            echo "> Recordatorio: las migraciones se aplican mergeando, no a mano. Ver \`docs/CI-CD.md\`."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          echo "::error::La base de ${{ steps.check.outputs.ambiente }} tiene migraciones que esta rama no ($versiones). No se aplico nada; ver el resumen de la corrida."
+          exit 1
+
       - name: Aplicar migraciones
         if: steps.check.outputs.listo == 'true'
         run: supabase db push
+
+      # Las Edge Functions tambien son despliegue, y hasta ahora no las desplegaba nadie.
+      #
+      # POR QUE ESTE PASO TENDRIA QUE HABER EXISTIDO DESDE LA PRIMERA FUNCION
+      #
+      # `supabase db push` aplica migraciones y nada mas. El codigo de supabase/functions/ vivia
+      # en el repositorio sin llegar nunca al proyecto, asi que las dos funciones respondian 404
+      # en ecopac-dev. Las consecuencias no eran teoricas:
+      #
+      #   - crearUsuario() (packages/shared/usuarios/api.js) invoca `invitar-usuario`. Es el
+      #     unico camino para dar de alta a una persona desde la aplicacion, y el registro
+      #     publico esta cerrado (00074). Sin la funcion desplegada, la administradora no podia
+      #     crear a nadie: habia que hacerlo a mano desde el panel de Supabase.
+      #   - El cron diario de alertas-vencimiento.yml habria dado 404 en cuanto empezara a correr
+      #     desde main, y su unica senal habria sido la issue que abre al fallar.
+      #
+      # POR QUE SE DESPLIEGAN TODAS Y NO SOLO LAS QUE CAMBIARON
+      #
+      # Porque el estado que importa es el del proyecto, no el del commit. Desplegar solo lo que
+      # cambio deja fuera el caso que de verdad duele: una funcion que nunca se desplego, o un
+      # proyecto nuevo (ecopac-prod, issue #252) que arranca vacio. `functions deploy` sin
+      # argumentos sube todas las de supabase/functions/, es idempotente y tarda segundos.
+      #
+      # No falla el job si el despliegue de funciones falla: las migraciones ya se aplicaron y
+      # dejar el job en rojo sugeriria que la base quedo a medias, que es lo contrario de lo que
+      # paso. El resultado se reporta abajo y el job "Avisar fallo" no se dispara por esto.
+      - name: Desplegar Edge Functions
+        id: funciones
+        if: steps.check.outputs.listo == 'true'
+        continue-on-error: true
+        run: |
+          if ! ls supabase/functions/*/index.* >/dev/null 2>&1; then
+            echo "No hay Edge Functions que desplegar."
+            exit 0
+          fi
+          # --use-api empaqueta del lado del servidor. Sin el, el CLI levanta un contenedor para
+          # hacer el bundle, y este job no usa Docker para ninguna otra cosa: no vale la pena
+          # atarlo a que el runner lo tenga.
+          #
+          # Sin --prune a proposito: borraria del proyecto cualquier funcion que no este en el
+          # repositorio, y eso convierte un despliegue rutinario en algo destructivo.
+          supabase functions deploy --use-api
 
       - name: Resumen del despliegue
         if: steps.check.outputs.listo == 'true'
@@ -459,6 +703,24 @@ jobs:
             echo '```'
             supabase migration list --linked 2>&1 || true
             echo '```'
+            echo
+            echo "## Edge Functions"
+            echo
+            if [ "${{ steps.funciones.outcome }}" = "success" ]; then
+              echo "Desplegadas en \`${{ steps.check.outputs.ambiente }}\`:"
+              echo
+              for f in supabase/functions/*/index.*; do
+                nombre="$(basename "$(dirname "$f")")"
+                echo "- \`$nombre\`"
+              done
+            else
+              echo "**El despliegue de las Edge Functions fallo** (\`${{ steps.funciones.outcome }}\`)."
+              echo "Las migraciones si se aplicaron: la base no quedo a medias."
+              echo
+              echo "Mientras las funciones no esten desplegadas, \`crearUsuario()\` responde 404 y"
+              echo "nadie puede dar de alta una persona desde la aplicacion (el registro publico"
+              echo "esta cerrado por la \`00074\`). Revisa el log del paso."
+            fi
           } >> "$GITHUB_STEP_SUMMARY"
 
   # --------------------------------------------------------------------------------
@@ -477,7 +739,7 @@ jobs:
       # El fallo de un despliegue paso desapercibido cuatro corridas seguidas. Una issue
       # abierta es mas dificil de ignorar que un check rojo en la lista de commits.
       - name: Abrir issue si no hay una ya
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const rama = context.ref.replace('refs/heads/', '');
@@ -529,9 +791,31 @@ jobs:
               core.warning(`No se pudieron leer los pasos de la corrida: ${error.message}`);
             }
 
-            // Tres desenlaces distintos, y cada uno se arregla de otra forma.
-            const diagnostico =
-              estadoDelPush === 'failure'
+            // La deriva de historial se diagnostica aparte y va primero. Deja `Aplicar
+            // migraciones` en `skipped`, y el texto de ese caso manda a relanzar la corrida:
+            // para la deriva eso es falso, relanzar vuelve a fallar igual porque el problema
+            // esta en la base, no en la corrida.
+            const hayDeriva = pasosFallidos.some((p) => p.endsWith('Comprobar el historial remoto'));
+
+            // Cuatro desenlaces distintos, y cada uno se arregla de otra forma.
+            const diagnostico = hayDeriva
+              ? [
+                  `**No se aplico ninguna migracion, y la base de \`${rama}\` no quedo a medias.**`,
+                  '',
+                  'La base tiene aplicadas migraciones cuyo archivo no esta en esta rama, asi que',
+                  '`supabase db push` se nego a tocarla. El resumen de la corrida dice cuales son.',
+                  '',
+                  'Casi siempre es una migracion aplicada **a mano** contra la base antes de que su',
+                  'PR se mergeara. Mientras eso dure, falla **todo** push a la rama, traiga',
+                  'migraciones o no: por eso este fallo puede no tener nada que ver con el commit',
+                  'que lo disparo. Relanzar la corrida no lo arregla.',
+                  '',
+                  '- [ ] Abrir el resumen de la corrida y ver que versiones sobran en la base',
+                  '- [ ] Buscar el PR que trae esos archivos y mergearlo (con eso se arregla solo)',
+                  '- [ ] Si esa migracion se descarto de verdad, `supabase migration repair --status reverted <version>`',
+                  '- [ ] Confirmar con `supabase migration list --linked` que la base quedo al dia',
+                ]
+              : estadoDelPush === 'failure'
                 ? [
                     `**La base de \`${rama}\` puede haber quedado a medias.** El paso \`Aplicar migraciones\``,
                     'empezo a correr y fallo, asi que se detuvo dentro de una migracion.',
@@ -593,7 +877,7 @@ jobs:
   # --------------------------------------------------------------------------------
   completo:
     name: Supabase completo
-    needs: [cambios, inmutabilidad, validar, remoto]
+    needs: [cambios, inmutabilidad, validar, remoto, aplicar]
     # `always()` es imprescindible: sin el, este job se saltaria en cuanto uno de los `needs`
     # fallara, y un check que se salta cuenta como aprobado para la proteccion de rama. Seria
     # justo lo contrario de lo que se busca.
@@ -614,18 +898,33 @@ jobs:
       #
       # `skipped` se acepta a proposito: es el resultado legitimo de un job que no aplicaba a
       # este evento. Lo que no se acepta es `failure` ni `cancelled`.
+      #
+      # POR QUE `aplicar` ESTA EN LA LISTA, aunque solo corra en push
+      #
+      # Porque no estaba, y por eso un despliegue fallido se reportaba como exito. El 30 de
+      # agosto los merges de #606 y #607 tumbaron "Aplicar migraciones" -deriva de historial,
+      # ninguno traia SQL- y este job dijo `success` en las dos corridas. Quien miraba el commit
+      # no veia nada raro, y el resumen que explica el fallo, que esta bien escrito, no lo leyo
+      # nadie: hay que saber que existe un job aparte para ir a abrirlo.
+      #
+      # En un pull_request `aplicar` sale `skipped` y el bucle ya lo cuenta como OK, asi que
+      # incluirlo no cambia nada ahi. Lo unico que cambia es que un despliegue roto deja de
+      # pasar por bueno. No sacarlo de aqui por parecer que "solo corre en push": es
+      # precisamente en push donde este agregado es lo unico que se mira.
       - name: Revisar el resultado de cada job
         env:
           CAMBIOS: ${{ needs.cambios.result }}
           INMUTABILIDAD: ${{ needs.inmutabilidad.result }}
           VALIDAR: ${{ needs.validar.result }}
           REMOTO: ${{ needs.remoto.result }}
+          APLICAR: ${{ needs.aplicar.result }}
         run: |
           fallidos=""
           for job in "Detectar cambios:$CAMBIOS" \
                      "Migraciones no editadas:$INMUTABILIDAD" \
                      "Validar migraciones y funciones:$VALIDAR" \
-                     "Estado de la base remota:$REMOTO"; do
+                     "Estado de la base remota:$REMOTO" \
+                     "Aplicar migraciones:$APLICAR"; do
             nombre="${job%:*}"
             resultado="${job##*:}"
             case "$resultado" in

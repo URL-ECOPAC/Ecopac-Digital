@@ -21,77 +21,147 @@ describe("Módulo de Inventario - API Validación y Aprobación", () => {
       update: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
       single: vi.fn(),
+      maybeSingle: vi.fn(),
     };
     obtenerSupabase.mockReturnValue(mockSupabase);
   });
 
-  it("bloquea operaciones si el usuario no es Administrador", async () => {
-    const res = await aprobarMovimiento("MOV-1", { usuarioId: "U1", rolUsuario: "operador" });
-    expect(res.error.mensaje).toContain("Administrador");
-  });
-
-  it("impide que el usuario apruebe un movimiento que él mismo registró", async () => {
-    mockSupabase.single.mockResolvedValueOnce({
-      data: { id: "MOV-1", creado_por: "ADMIN-1", estado: "pendiente" },
-      error: null,
+  describe("aprobarMovimiento", () => {
+    it("bloquea operaciones si el usuario no es administrador", async () => {
+      const res = await aprobarMovimiento("MOV-1", { usuarioId: "U1", rolUsuario: "medico" });
+      expect(res.error.mensaje).toContain("Administrador");
     });
 
-    const res = await aprobarMovimiento("MOV-1", { usuarioId: "ADMIN-1", rolUsuario: "administrador" });
-    expect(res.error.mensaje).toContain("mismo");
-  });
+    // La 00048 (issue #410) quito a proposito la restriccion "no puedes aprobar lo tuyo": el
+    // administrador aprueba lo que registra, igual en INSERT (auto-aprobacion, 00028) que en
+    // UPDATE manual. Ya no hay nada que probar aqui -era codigo muerto, mov.creado_por nunca
+    // existio en la tabla.
 
-  it("falla al aprobar una salida sin stock suficiente y no deja stock negativo", async () => {
-    mockSupabase.single.mockResolvedValueOnce({
-      data: {
-        id: "MOV-1",
-        tipo: "salida",
-        cantidad: 50,
-        creado_por: "USER-1",
-        estado: "pendiente",
-        lote: { id: "L-1", cantidad_disponible: 10 },
-      },
-      error: null,
-    });
-
-    const res = await aprobarMovimiento("MOV-1", { usuarioId: "ADMIN-1", rolUsuario: "administrador" });
-    expect(res.error.mensaje).toContain("Stock insuficiente");
-  });
-
-  it("rechazarMovimiento exige un motivo obligatorio", async () => {
-    const res = await rechazarMovimiento("MOV-1", { motivo: "", usuarioId: "ADMIN-1", rolUsuario: "administrador" });
-    expect(res.error.mensaje).toContain("motivo");
-  });
-
-  it("aprobarMovimientosEnLote procesa múltiples y reporta fallidos", async () => {
-    // MOV-1 falla (mismo creador), MOV-2 aprueba
-    mockSupabase.single
-      .mockResolvedValueOnce({
-        data: { id: "MOV-1", creado_por: "ADMIN-1", estado: "pendiente" },
-        error: null,
-      })
-      .mockResolvedValueOnce({
-        data: {
-          id: "MOV-2",
-          tipo: "ingreso",
-          cantidad: 10,
-          creado_por: "USER-2",
-          estado: "pendiente",
-          lote: { id: "L-2", cantidad_disponible: 5 },
-        },
-        error: null,
-      })
-      .mockResolvedValueOnce({
-        data: { id: "MOV-2", estado: "aprobado" },
+    it("rechaza aprobar un movimiento que no esta pendiente", async () => {
+      mockSupabase.single.mockResolvedValueOnce({
+        data: { id: "MOV-1", estado: "aprobado" },
         error: null,
       });
 
-    const res = await aprobarMovimientosEnLote(["MOV-1", "MOV-2"], {
-      usuarioId: "ADMIN-1",
-      rolUsuario: "administrador",
+      const res = await aprobarMovimiento("MOV-1", {
+        usuarioId: "ADMIN-1",
+        rolUsuario: "administrador",
+      });
+      expect(res.error.mensaje).toContain("pendiente");
     });
 
-    expect(res.datos.fallidos).toHaveLength(1);
-    expect(res.datos.aprobados).toHaveLength(1);
-    expect(res.datos.fallidos[0].id).toBe("MOV-1");
+    it("lee la existencia disponible de existencias (lote, bodega), no de lotes.cantidad_disponible", async () => {
+      mockSupabase.single.mockResolvedValueOnce({
+        data: {
+          id: "MOV-1",
+          tipo: "salida",
+          cantidad: 50,
+          estado: "pendiente",
+          lote_id: "L-1",
+          bodega_id: "B-1",
+        },
+        error: null,
+      });
+      mockSupabase.maybeSingle.mockResolvedValueOnce({
+        data: { cantidad_disponible: 10 },
+        error: null,
+      });
+
+      const res = await aprobarMovimiento("MOV-1", {
+        usuarioId: "ADMIN-1",
+        rolUsuario: "administrador",
+      });
+      expect(res.error.mensaje).toContain("Stock insuficiente");
+    });
+
+    it("aprueba sin tocar lotes/existencias: el trigger de la base hace el ajuste", async () => {
+      mockSupabase.single
+        .mockResolvedValueOnce({
+          data: {
+            id: "MOV-1",
+            tipo: "ingreso",
+            cantidad: 50,
+            estado: "pendiente",
+            lote_id: "L-1",
+            bodega_id: "B-1",
+          },
+          error: null,
+        })
+        .mockResolvedValueOnce({ data: { id: "MOV-1", estado: "aprobado" }, error: null });
+
+      const res = await aprobarMovimiento("MOV-1", {
+        usuarioId: "ADMIN-1",
+        rolUsuario: "administrador",
+      });
+
+      expect(res.error).toBeNull();
+      // Un solo UPDATE (el del movimiento); nunca se llama .from("lotes") ni .from("existencias")
+      // para escribir cantidad.
+      expect(mockSupabase.update).toHaveBeenCalledTimes(1);
+      expect(mockSupabase.update).toHaveBeenCalledWith(
+        expect.objectContaining({ estado: "aprobado" }),
+      );
+    });
+  });
+
+  describe("rechazarMovimiento", () => {
+    it("exige un motivo obligatorio", async () => {
+      const res = await rechazarMovimiento("MOV-1", {
+        usuarioId: "ADMIN-1",
+        rolUsuario: "administrador",
+      });
+      expect(res.error.mensaje).toContain("motivo");
+    });
+
+    it("bloquea operaciones si el usuario no es administrador", async () => {
+      const res = await rechazarMovimiento("MOV-1", {
+        motivo: "Cantidad no coincide",
+        usuarioId: "U1",
+        rolUsuario: "voluntario general",
+      });
+      expect(res.error.mensaje).toContain("Administrador");
+    });
+
+    it("escribe motivo_rechazo (issue #491, columna agregada en la 00084)", async () => {
+      mockSupabase.single
+        .mockResolvedValueOnce({ data: { id: "MOV-1", estado: "pendiente" }, error: null })
+        .mockResolvedValueOnce({ data: { id: "MOV-1", estado: "rechazado" }, error: null });
+
+      await rechazarMovimiento("MOV-1", {
+        motivo: "Cantidad no coincide",
+        usuarioId: "ADMIN-1",
+        rolUsuario: "administrador",
+      });
+
+      expect(mockSupabase.update).toHaveBeenCalledWith(
+        expect.objectContaining({ estado: "rechazado", motivo_rechazo: "Cantidad no coincide" }),
+      );
+    });
+  });
+
+  describe("aprobarMovimientosEnLote", () => {
+    it("reporta por separado los que se aprobaron y los que fallaron", async () => {
+      mockSupabase.single
+        .mockResolvedValueOnce({
+          data: {
+            id: "MOV-1",
+            tipo: "ingreso",
+            estado: "pendiente",
+            lote_id: "L-1",
+            bodega_id: "B-1",
+          },
+          error: null,
+        })
+        .mockResolvedValueOnce({ data: { id: "MOV-1", estado: "aprobado" }, error: null })
+        .mockResolvedValueOnce({ data: { id: "MOV-2", estado: "aprobado" }, error: null });
+
+      const res = await aprobarMovimientosEnLote(["MOV-1", "MOV-2"], {
+        usuarioId: "ADMIN-1",
+        rolUsuario: "administrador",
+      });
+
+      expect(res.datos.aprobados).toHaveLength(1);
+      expect(res.datos.fallidos).toHaveLength(1);
+    });
   });
 });

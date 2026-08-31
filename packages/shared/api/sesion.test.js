@@ -188,7 +188,12 @@ describe("iniciarSesion", () => {
     obtenerSupabase.mockReturnValue(cliente);
     obtenerPerfil.mockResolvedValue({
       perfil: null,
-      error: { codigo: CODIGOS_DE_ERROR_DE_SUPABASE.FALLO_DE_RED, mensaje: "x", detalle: "", esReintentable: true },
+      error: {
+        codigo: CODIGOS_DE_ERROR_DE_SUPABASE.FALLO_DE_RED,
+        mensaje: "x",
+        detalle: "",
+        esReintentable: true,
+      },
     });
 
     const resultado = await iniciarSesion(CORREO, CONTRASENA);
@@ -276,15 +281,13 @@ describe("obtenerSesion", () => {
 
 describe("evaluarPerfilDeSesion / requiereCerrarSesion", () => {
   it("requiereCerrarSesion() es verdadero solo para cuenta desactivada y perfil ausente", () => {
-    expect(
-      requiereCerrarSesion({ codigo: CODIGOS_DE_ERROR_DE_SUPABASE.CUENTA_DESACTIVADA }),
-    ).toBe(true);
+    expect(requiereCerrarSesion({ codigo: CODIGOS_DE_ERROR_DE_SUPABASE.CUENTA_DESACTIVADA })).toBe(
+      true,
+    );
     expect(requiereCerrarSesion({ codigo: CODIGOS_DE_ERROR_DE_SUPABASE.PERMISO_DENEGADO })).toBe(
       true,
     );
-    expect(requiereCerrarSesion({ codigo: CODIGOS_DE_ERROR_DE_SUPABASE.FALLO_DE_RED })).toBe(
-      false,
-    );
+    expect(requiereCerrarSesion({ codigo: CODIGOS_DE_ERROR_DE_SUPABASE.FALLO_DE_RED })).toBe(false);
     expect(requiereCerrarSesion(null)).toBe(false);
   });
 
@@ -296,5 +299,28 @@ describe("evaluarPerfilDeSesion / requiereCerrarSesion", () => {
     await evaluarPerfilDeSesion({ id: PERFIL_ACTIVO.id });
 
     expect(cliente.auth.signOut).not.toHaveBeenCalled();
+  });
+});
+
+describe("es la unica implementacion de la autenticacion (issue #512)", () => {
+  // El camino de la pantalla web es LoginPage -> useInicioSesion -> este iniciarSesion. No se
+  // monta el hook para comprobarlo: packages/shared corre vitest con environment "node" y sin
+  // testing-library, a proposito (ver useDesactivacionUsuario.test.js). Lo que si se puede fijar
+  // -y es lo que fallaba- es que no exista una segunda puerta con el mismo nombre.
+  it("el modulo de usuarios ya no ofrece un iniciarSesion alternativo", async () => {
+    const usuarios = await import("../usuarios/api.js");
+
+    expect(Object.keys(usuarios)).not.toContain("iniciarSesion");
+    expect(Object.keys(usuarios)).not.toContain("cerrarSesion");
+  });
+
+  it("el hook de la pantalla web consume esta implementacion, no otra", async () => {
+    // Si alguna vez vuelve a haber dos, el barril las recibiria por dos estrellas y ESM las
+    // dejaria en undefined (bug #365): esta comprobacion lo caza como un fallo de prueba en vez
+    // de como un TypeError en produccion.
+    const barril = await import("../index.js");
+
+    expect(typeof barril.iniciarSesion).toBe("function");
+    expect(typeof barril.cerrarSesion).toBe("function");
   });
 });

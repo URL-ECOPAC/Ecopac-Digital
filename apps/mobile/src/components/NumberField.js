@@ -1,6 +1,7 @@
-import { StyleSheet, Text, View } from 'react-native';
-import { colors, spacing, typography } from '@ecopac/ui-tokens';
-import TextField from './TextField';
+import { forwardRef } from "react";
+import { StyleSheet, Text, View } from "react-native";
+import { colors, spacing, typography } from "@ecopac/ui-tokens";
+import TextField from "./TextField";
 
 /**
  * Campo numerico. Espejo de apps/web/src/components/NumberField.jsx.
@@ -19,21 +20,13 @@ import TextField from './TextField';
  * <input type="number">. Un TextInput no tiene flechas, asi que aqui no hace nada; se
  * desestructura para que no llegue al TextInput, que no sabe que hacer con ella.
  */
-export default function NumberField({
-  label,
-  value = null,
-  onChange,
-  min,
-  max,
-  step: _step,
-  suffix,
-  error,
-  style,
-  ...inputProps
-}) {
+const NumberField = forwardRef(function NumberField(
+  { label, value = null, onChange, min, max, step: _step, suffix, error, style, ...inputProps },
+  ref,
+) {
   const alCambiar = (texto) => {
-    const limpio = texto.replace(',', '.');
-    if (limpio.trim() === '') {
+    const limpio = texto.replace(",", ".");
+    if (limpio.trim() === "") {
       onChange?.(null);
       return;
     }
@@ -44,8 +37,8 @@ export default function NumberField({
   // El recorte va aqui y no en cada pulsacion, para no pelearse con quien todavia escribe.
   const alSalir = (evento) => {
     if (value !== null && value !== undefined) {
-      if (typeof min === 'number' && value < min) onChange?.(min);
-      else if (typeof max === 'number' && value > max) onChange?.(max);
+      if (typeof min === "number" && value < min) onChange?.(min);
+      else if (typeof max === "number" && value > max) onChange?.(max);
     }
     inputProps.onBlur?.(evento);
   };
@@ -54,9 +47,10 @@ export default function NumberField({
     <View style={style}>
       <View style={styles.fila}>
         <TextField
+          ref={ref}
           label={label}
           error={error}
-          value={value === null || value === undefined ? '' : String(value)}
+          value={value === null || value === undefined ? "" : String(value)}
           onChangeText={alCambiar}
           keyboardType="numeric"
           style={styles.campo}
@@ -67,12 +61,14 @@ export default function NumberField({
       </View>
     </View>
   );
-}
+});
+
+export default NumberField;
 
 const styles = StyleSheet.create({
   fila: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   campo: {
     flex: 1,

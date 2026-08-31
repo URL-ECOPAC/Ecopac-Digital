@@ -27,7 +27,8 @@
 
 import { obtenerSupabase } from "../api/cliente.js";
 import { normalizarError } from "../api/errores-de-supabase.js";
-import { esAdministrador, esConsultivo } from "../usuarios/roles.js";
+export { puedeVerIndicadoresDeImpacto } from "./permisos.js";
+import { puedeVerIndicadoresDeImpacto } from "./permisos.js";
 
 /** Columnas de vista_reporte_impacto que necesita el reporte. */
 const COLUMNAS_DEL_REPORTE = [
@@ -51,16 +52,7 @@ export const AGRUPACIONES_DE_IMPACTO = {
   PROYECTO: "proyecto",
 };
 
-const INDICADORES = [
-  "pacientes_atendidos",
-  "tratamientos_entregados",
-  "medicamentos_utilizados",
-];
-
-/** Puede consultar los indicadores: administrador y los roles consultivos, igual que la vista. */
-export function puedeVerIndicadoresDeImpacto(rol) {
-  return esAdministrador(rol) || esConsultivo(rol);
-}
+const INDICADORES = ["pacientes_atendidos", "tratamientos_entregados", "medicamentos_utilizados"];
 
 /** '2026-08-14' -> '2026-08'. La vista no trae el mes: se deriva de la fecha. */
 function mesDe(fecha) {
@@ -117,11 +109,7 @@ function agregar(filas) {
 function variacion(actual, anterior) {
   const diferencia = actual - anterior;
   const porcentaje =
-    anterior === 0
-      ? actual > 0
-        ? 100
-        : 0
-      : Number(((diferencia / anterior) * 100).toFixed(2));
+    anterior === 0 ? (actual > 0 ? 100 : 0) : Number(((diferencia / anterior) * 100).toFixed(2));
 
   return { actual, anterior, diferencia, porcentaje };
 }

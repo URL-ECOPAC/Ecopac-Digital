@@ -12,9 +12,7 @@ vi.mock("../api/cliente.js", () => ({
   },
 }));
 
-const { consultarExistencias, consultarExistenciasDeBodega } = await import(
-  "./existencias.api.js"
-);
+const { consultarExistencias, consultarExistenciasDeBodega } = await import("./existencias.api.js");
 
 function crearCliente({ respuesta = { data: [], error: null } } = {}) {
   const llamadas = [];

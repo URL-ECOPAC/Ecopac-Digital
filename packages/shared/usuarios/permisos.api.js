@@ -22,6 +22,34 @@ export const ORIGEN_PERMISO = Object.freeze({
 });
 
 /**
+ * Claves de permisos finos que hoy gobiernan de verdad alguna politica RLS (docs/PERMISOS.md,
+ * seccion "Los permisos finos"). Los nueve del catalogo estan conectados desde la issue #409:
+ * jornadas.gestionar (00039), presupuestos.registrar y presupuestos.aprobar (00052), y
+ * pacientes.editar, inventario.aprobar, donaciones.registrar, proyectos.gestionar,
+ * usuarios.gestionar_permisos y reportes.exportar (00086).
+ *
+ * Se declara la lista de los que SI funcionan, no la de los inertes: si el catalogo crece con
+ * un permiso nuevo que todavia no gobierna ninguna politica, alcanza con no agregarlo aca (un
+ * solo lugar), en vez de mantener una lista de excepciones que crece al reves.
+ */
+const PERMISOS_QUE_GOBIERNAN_UNA_POLITICA = new Set([
+  "jornadas.gestionar",
+  "presupuestos.registrar",
+  "presupuestos.aprobar",
+  "pacientes.editar",
+  "inventario.aprobar",
+  "donaciones.registrar",
+  "proyectos.gestionar",
+  "usuarios.gestionar_permisos",
+  "reportes.exportar",
+]);
+
+/** Si conceder o revocar este permiso cambia de verdad lo que el servidor permite hoy. */
+export function permisoGobiernaAlgunaPolitica(clave) {
+  return PERMISOS_QUE_GOBIERNAN_UNA_POLITICA.has(clave);
+}
+
+/**
  * Agrupa una lista plana de permisos por su columna `modulo`, preservando el orden en que
  * llegaron (la consulta ya los trae ordenados por modulo y clave).
  */
@@ -147,7 +175,8 @@ async function obtenerIdDePermiso(clave) {
     .maybeSingle();
 
   if (error) return { id: null, error: normalizarError(error) };
-  if (!data) return { id: null, error: construirError(CODIGOS_DE_ERROR_DE_SUPABASE.SIN_RESULTADOS) };
+  if (!data)
+    return { id: null, error: construirError(CODIGOS_DE_ERROR_DE_SUPABASE.SIN_RESULTADOS) };
   return { id: data.id, error: null };
 }
 

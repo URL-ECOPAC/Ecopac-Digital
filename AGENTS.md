@@ -60,6 +60,8 @@ Restricciones:
 - No importar componentes UI de `web` en `mobile` ni viceversa.
 - Los roles nunca se escriben como string suelto: se usan los de
   `packages/shared/usuarios/roles.js`, que replican el enum `rol_usuario` de la migracion 00001.
+  Que puede hacer cada rol esta en `docs/PERMISOS.md`, y quien protege de verdad es RLS, no el
+  cliente. Un PR que cambia una politica o un GRANT actualiza ese documento en el mismo PR.
 - La app movil usa Expo v57.0.0: leer la documentacion versionada
   https://docs.expo.dev/versions/v57.0.0/ antes de escribir codigo movil (ver
   `apps/mobile/AGENTS.md`).
@@ -105,6 +107,13 @@ divergencia aparece despues del merge, cuando ya es tarde.
 
 Para corregir una migracion aplicada se escribe una migracion nueva que corrija hacia adelante.
 `supabase/migrations/00005_corregir_schema_de_extensiones.sql` es el ejemplo a seguir.
+
+**Una migracion tampoco se aplica a mano.** Nadie corre `supabase db push` contra `ecopac-dev` ni
+`ecopac-prod` desde su maquina: se mergea el PR y la aplica el workflow. Si la base registra una
+migracion cuyo archivo no esta todavia en la rama, `db push` falla en **todos** los push a esa
+rama -traigan SQL o no- hasta que el PR entre, y el fallo le aparece a otra persona. Para probar
+antes de mergear esta el stack local (`supabase start` y `supabase db reset`), que es lo mismo que
+corre el CI. Detalle en `docs/CI-CD.md`.
 
 La regla la hace cumplir el job **Migraciones no editadas** del workflow de Supabase: falla el
 PR si modifica o borra un archivo de `supabase/migrations/` que ya existe en la rama base.
@@ -193,12 +202,30 @@ Commits (Conventional Commits):
 
 - Componentes en PascalCase; hooks con prefijo `use` en camelCase; carpetas en kebab-case.
 - Tablas y columnas en PostgreSQL en snake_case.
+- Nombres de columna por concepto (issue #412, revisado y unificado donde se pudo sin romper
+  cosas ya construidas):
+  - El actor de una accion lleva sufijo `_por`: `registrado_por`, `aprobado_por`,
+    `atendida_por`, `anulada_por`, `tomado_por`, `realizado_por`.
+  - Su marca de tiempo usa la misma raiz que el actor, con sufijo `_en`, nunca el prefijo
+    `fecha_`: `aprobado_en` (no `fecha_aprobacion`), `atendida_en`, `anulada_en`, `tomado_en`,
+    `realizado_en`.
+  - La persona responsable de una entidad completa (no de una accion puntual) es
+    `responsable_id`: `jornadas.responsable_id`, `proyectos.responsable_id`,
+    `gastos.responsable_id`.
+  - Cuando dos columnas nombran cosas distintas que solo *parecen* el mismo concepto -describen
+    sujetos gramaticales distintos, o el mismo dato tiene un matiz real en una tabla que no
+    tiene en la otra (ver `tipo_proveedor`/`origen_lote` y `pacientes.telefono_contacto` en el
+    esquema)-, no se fuerza un nombre unico: se deja la diferencia y se documenta la razon con
+    `COMMENT ON` en la migracion.
 - ESLint + Prettier a nivel de monorepo.
 - No usar datos reales de pacientes en pruebas ni en logs (regla de confidencialidad).
 - No usar emojis en codigo, descripciones, mensajes de commit, issues ni PRs.
 
 ## Documentacion de referencia
 
+- `docs/PERMISOS.md` - **la matriz de permisos por rol**: que puede hacer cada rol en cada
+  modulo, que politica RLS lo implementa, y las divergencias abiertas. Es la fuente de verdad
+  del control de acceso.
 - `docs/README.md` - indice de documentacion.
 - `docs/QUICKSTART.md` - guia de inicio rapido.
 - `docs/CONTRIBUTING.md` - guia de contribucion.

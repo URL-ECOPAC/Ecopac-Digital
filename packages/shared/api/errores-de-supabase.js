@@ -136,6 +136,30 @@ export function esErrorDeRed(error) {
   );
 }
 
+/**
+ * Distingue el aborto deliberado de una peticion de un fallo de verdad.
+ *
+ * Cuando se cancela una consulta con un AbortSignal, supabase-js propaga el error del fetch. No
+ * es un fallo que la pantalla deba mostrar: abortar es exactamente lo que se pidio. Se comprueban
+ * las tres formas en que llega, porque el navegador lanza un DOMException llamado AbortError,
+ * Node uno con code "ABORT_ERR", y PostgREST puede envolverlo dejando solo el mensaje.
+ *
+ * Va aparte de normalizarError() a proposito: una cancelacion no es un error que haya que
+ * clasificar, es un resultado que hay que ignorar.
+ *
+ * @param {unknown} error
+ * @returns {boolean}
+ */
+export function esErrorDeCancelacion(error) {
+  if (!error) return false;
+  if (error.name === "AbortError") return true;
+  if (error.code === "ABORT_ERR" || error.code === 20 || error.code === "20") return true;
+
+  return String(error.message ?? error)
+    .toLowerCase()
+    .includes("abort");
+}
+
 /** Un error de Supabase Auth se marca a si mismo, sin importar la subclase. */
 function esErrorDeAuth(error) {
   return Boolean(error && (error.__isAuthError || error.name?.startsWith("Auth")));

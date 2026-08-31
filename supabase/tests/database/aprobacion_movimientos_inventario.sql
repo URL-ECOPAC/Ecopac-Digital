@@ -10,7 +10,7 @@
 -- dos rutas de aprobacion -- era una media tinta, no una separacion de responsabilidades real.
 --
 -- La 00048 dejo escrito donde vive la trazabilidad desde entonces: en las columnas
--- registrado_por / aprobado_por / fecha_aprobacion de la propia fila, y en los eventos que
+-- registrado_por / aprobado_por / aprobado_en de la propia fila, y en los eventos que
 -- trg_movimientos_inventario_auditoria (00026) escribe en eventos_auditoria.
 --
 -- Asi que esta suite verifica LA REGLA QUE SI RIGE -- que la aprobacion sigue estando acotada al
@@ -21,7 +21,7 @@
 
 BEGIN;
 
-SELECT plan(10);
+SELECT plan(11);
 
 -- ============================================================================
 -- Setup: un administrador, un medico y un voluntario, mas un lote con existencias.
@@ -84,10 +84,27 @@ SELECT throws_ok(
 -- 2. Quien NO es administrador no aprueba: ni lo ajeno ni lo propio
 -- ============================================================================
 -- Es la parte del criterio 4 que sigue vigente: la aprobacion esta acotada.
-SELECT is_empty(
+--
+-- LA FORMA DE ESTE FALLO CAMBIO CON LA ISSUE #625, EL RESULTADO NO
+--
+-- Antes, la politica de UPDATE no dejaba al medico ni ver su propia fila, asi que el intento se
+-- perdia como un UPDATE de cero filas: is_empty. Desde la 00106 si la ve -- puede corregir su
+-- movimiento mientras siga pendiente -- y quien lo frena al llegar al estado es
+-- fn_proteger_decision_de_movimiento, que lanza. Un error explicito es mejor que un exito que no
+-- hizo nada: ese silencio es justo el que hizo pasar inadvertido el defecto de editarMovimiento()
+-- durante toda la vida de la funcion.
+SELECT throws_ok(
   $$ UPDATE movimientos_inventario SET estado = 'aprobado'
-     WHERE id = '90000000-0000-0000-0000-000000222001' RETURNING id $$,
+     WHERE id = '90000000-0000-0000-0000-000000222001' $$,
+  'P0001',
+  'Solo quien aprueba puede cambiar el estado de un movimiento de inventario.',
   'NEGATIVA UPDATE: el medico no aprueba ni el movimiento que el mismo registro'
+);
+
+SELECT is(
+  (SELECT estado::text FROM movimientos_inventario WHERE id = '90000000-0000-0000-0000-000000222001'),
+  'pendiente',
+  'y sigue pendiente despues del intento'
 );
 
 SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000222003';
@@ -105,7 +122,7 @@ SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000222001';
 
 SELECT isnt_empty(
   $$ UPDATE movimientos_inventario
-     SET estado = 'aprobado', aprobado_por = '00000000-0000-0000-0000-000000222001', fecha_aprobacion = NOW()
+     SET estado = 'aprobado', aprobado_por = '00000000-0000-0000-0000-000000222001', aprobado_en = NOW()
      WHERE id = '90000000-0000-0000-0000-000000222001' RETURNING id $$,
   'POSITIVA UPDATE: el administrador aprueba el movimiento del medico'
 );

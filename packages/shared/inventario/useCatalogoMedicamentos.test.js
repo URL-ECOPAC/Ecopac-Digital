@@ -1,18 +1,49 @@
 import { describe, it, expect } from "vitest";
 
 const mockInventario = [
+<<<<<<< HEAD
   { id: "1", nombre: "Paracetamol", principio_activo: "Acetaminofén", categoria: "Medicamentos", bodega_nombre: "Central" },
   { id: "2", nombre: "Jeringa 5ml", principio_activo: "N/A", categoria: "Suministros", bodega_nombre: "Norte" },
   { id: "3", nombre: "Ibuprofeno", principio_activo: "Ibuprofeno", categoria: "Medicamentos", bodega_nombre: "Central" },
 ];
 
 function filtrarInventario(inventario, { busqueda = "", categoria = "Todos", bodega = "Todas" } = {}) {
+=======
+  {
+    id: "1",
+    nombre: "Paracetamol",
+    principio_activo: "Acetaminofén",
+    categoria: "Medicamentos",
+    bodega_nombre: "Central",
+  },
+  {
+    id: "2",
+    nombre: "Jeringa 5ml",
+    principio_activo: "N/A",
+    categoria: "Suministros",
+    bodega_nombre: "Norte",
+  },
+  {
+    id: "3",
+    nombre: "Ibuprofeno",
+    principio_activo: "Ibuprofeno",
+    categoria: "Medicamentos",
+    bodega_nombre: "Central",
+  },
+];
+
+function filtrarInventario(
+  inventario,
+  { busqueda = "", categoria = "Todos", bodega = "Todas" } = {},
+) {
+>>>>>>> origin/develop
   return inventario.filter((item) => {
     const coincideBusqueda =
       !busqueda ||
       item.nombre?.toLowerCase().includes(busqueda.toLowerCase()) ||
       item.principio_activo?.toLowerCase().includes(busqueda.toLowerCase());
 
+<<<<<<< HEAD
     const coincideCategoria =
       categoria === "Todos" || item.categoria === categoria;
 
@@ -20,6 +51,12 @@ function filtrarInventario(inventario, { busqueda = "", categoria = "Todos", bod
       bodega === "Todas" ||
       item.bodega_id === bodega ||
       item.bodega_nombre === bodega;
+=======
+    const coincideCategoria = categoria === "Todos" || item.categoria === categoria;
+
+    const coincideBodega =
+      bodega === "Todas" || item.bodega_id === bodega || item.bodega_nombre === bodega;
+>>>>>>> origin/develop
 
     return coincideBusqueda && coincideCategoria && coincideBodega;
   });
@@ -46,4 +83,8 @@ describe("Lógica de filtrado de Catálogo de Medicamentos (#269)", () => {
     const res = filtrarInventario(mockInventario, { bodega: "Central" });
     expect(res).toHaveLength(2);
   });
+<<<<<<< HEAD
 });
+=======
+});
+>>>>>>> origin/develop

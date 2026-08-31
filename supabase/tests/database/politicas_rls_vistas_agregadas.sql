@@ -12,7 +12,7 @@
 
 BEGIN;
 
-SELECT plan(26);
+SELECT plan(32);
 
 -- ============================================================================
 -- Setup
@@ -168,8 +168,9 @@ SELECT ok(
 );
 
 -- ============================================================================
--- socio fundador: fuera del reporte de impacto y de pacientes_reporte; el
--- inventario es lectura abierta para autenticados (00034), incluido socio
+-- socio fundador: mismos permisos que junta directiva sobre las vistas agregadas
+-- (issue #404, es_consultivo()); el inventario es lectura abierta para autenticados
+-- (00034), incluido socio
 -- ============================================================================
 SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000001003';
 
@@ -179,8 +180,7 @@ SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000001003';
 -- -- para que los roles consultivos dejaran de tener acceso a filas clinicas -- y a cambio dejo
 -- la vista agregando como owner, con este WHERE:
 --
---   WHERE public.es_administrador()
---      OR public.rol_actual() IN ('junta directiva', 'socio fundador')
+--   WHERE public.es_administrador() OR public.es_consultivo()
 --
 -- O sea que socio fundador si ve los AGREGADOS, y nunca las filas de las que salen.
 SELECT ok(
@@ -188,9 +188,13 @@ SELECT ok(
   'socio fundador SI ve los agregados de vista_reporte_impacto (00054)'
 );
 
+-- CAMBIO DE CONTRATO (issue #404, migracion 00078): pacientes_reporte tambien es un
+-- subconjunto no identificable (id, comunidad_id), no una fila clinica. El WHERE de la
+-- vista comparaba antes solo contra 'junta directiva' a mano y dejaba fuera a socio
+-- fundador; ahora usa es_consultivo() y los dos roles ven exactamente lo mismo.
 SELECT ok(
-  (SELECT count(*) FROM pacientes_reporte) = 0,
-  'socio fundador NO ve pacientes_reporte'
+  (SELECT count(*) FROM pacientes_reporte) >= 1,
+  'socio fundador ve pacientes_reporte, igual que junta directiva (issue #404)'
 );
 
 SELECT ok(
@@ -253,6 +257,36 @@ SELECT ok(
 );
 
 -- ============================================================================
+-- reportes.exportar concedido puntualmente a voluntario (issue #409): las vistas y la funcion
+-- de reportes, antes exclusivas de administrador y los roles consultivos, ahora se permiten.
+-- ============================================================================
+SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000001001';
+
+SELECT lives_ok(
+  $$ INSERT INTO usuario_permiso (perfil_id, permiso_id, concedido, otorgado_por)
+     SELECT '00000000-0000-0000-0000-000000001005', id, true, '00000000-0000-0000-0000-000000001001'
+     FROM permisos WHERE clave = 'reportes.exportar' $$,
+  'administrador concede reportes.exportar a voluntario1005 (issue #409)'
+);
+
+SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000001005';
+
+SELECT ok(
+  (SELECT count(*) FROM vista_reporte_impacto) >= 1,
+  'voluntario con reportes.exportar concedido puntualmente ve vista_reporte_impacto (issue #409)'
+);
+
+SELECT ok(
+  (SELECT count(*) FROM pacientes_reporte) >= 1,
+  'voluntario con reportes.exportar concedido puntualmente ve pacientes_reporte (issue #409)'
+);
+
+SELECT lives_ok(
+  $$ SELECT * FROM fn_reporte_pacientes_atendidos() $$,
+  'voluntario con reportes.exportar concedido puntualmente puede llamar fn_reporte_pacientes_atendidos (issue #409)'
+);
+
+-- ============================================================================
 -- Verificaciones estructurales: security_invoker y columnas expuestas
 -- ============================================================================
 -- CAMBIO DE CONTRATO (00054): vista_reporte_impacto paso a security_invoker = FALSE A PROPOSITO.
@@ -296,6 +330,31 @@ SELECT ok(
   ),
   'pacientes_reporte SOLO expone id y comunidad_id'
 );
+
+-- ============================================================================
+-- comunidades tiene una sola politica de SELECT (issue #511, caso 3): la restringida de 00041
+-- se retiro en la 00104 porque nunca excluia a nadie que la de 00008 (USING (true)) no dejara
+-- pasar ya -las politicas del mismo comando se combinan con OR-, y solo confundia a quien leia
+-- el esquema.
+-- ============================================================================
+SELECT is(
+  (SELECT count(*)::int FROM pg_policies WHERE schemaname = 'public' AND tablename = 'comunidades' AND cmd = 'SELECT'),
+  1,
+  'comunidades tiene una sola politica de SELECT, no dos que se pisan'
+);
+
+-- voluntario general (el rol sin ningun privilegio especial en la matriz de permisos) lee
+-- comunidades igual que cualquier otro: la lectura es abierta a proposito, mismo criterio que
+-- departamentos y municipios (00006/00073), porque es catalogo geografico, no dato sensible.
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000001005';
+
+SELECT isnt_empty(
+  $$ SELECT id FROM comunidades WHERE id = '10000000-0000-0000-0000-000000000091' $$,
+  'voluntario general lee comunidades: la politica de lectura publica no quedo con ningun hueco tras retirar la muerta'
+);
+
+RESET ROLE;
 
 SELECT * FROM finish();
 ROLLBACK;

@@ -4,7 +4,9 @@ import {
   construirError,
   normalizarError,
 } from "../api/errores-de-supabase.js";
-import { ROLES, esAdministrador } from "./../usuarios/roles.js";
+export { puedeVerHistorial } from "./permisos.js";
+import { puedeVerHistorial } from "./permisos.js";
+import { ESTADOS_RECETA } from "../enums.js";
 
 export const TIPOS_DE_EVENTO = {
   TRIAJE: "triaje",
@@ -19,7 +21,7 @@ const COLUMNAS_DEL_HISTORIAL = [
   "id",
   "jornadaId:jornada_id",
   "createdAt:created_at",
-  "jornada:jornadas(nombre, fecha)",
+  "jornada:jornadas(nombre, fecha, comunidad:comunidades(nombre))",
   [
     "triajes(",
     "id, tomadoEn:tomado_en, tomadoPor:tomado_por,",
@@ -60,10 +62,21 @@ export function aEventos(atencion) {
 
   const jornada = atencion.jornada?.nombre ?? null;
   const fechaDeJornada = atencion.jornada?.fecha ?? null;
-  const comun = { atencionId: atencion.id, jornadaId: atencion.jornadaId, jornada, fechaDeJornada };
+  const comunidad = atencion.jornada?.comunidad?.nombre ?? null;
+  const comun = {
+    atencionId: atencion.id,
+    jornadaId: atencion.jornadaId,
+    jornada,
+    fechaDeJornada,
+    comunidad,
+  };
   const eventos = [];
 
-  for (const triaje of atencion.triajes ?? []) {
+  // triajes_atencion_id_key (migracion 00013) hace de atencion_id -> triaje una relacion 1:1, asi
+  // que PostgREST lo embebe como un objeto (o null), no como arreglo -- a diferencia de
+  // consultas, que si puede tener varias filas por atencion.
+  const triaje = atencion.triajes;
+  if (triaje) {
     eventos.push({
       ...comun,
       tipo: TIPOS_DE_EVENTO.TRIAJE,
@@ -118,7 +131,7 @@ export function aEventos(atencion) {
         profesionalId: consulta.medicoId ?? null,
         consultaId: consulta.id,
         folio: receta.folio ?? null,
-        anulada: receta.estado === "anulada",
+        anulada: receta.estado === ESTADOS_RECETA.ANULADA,
         medicamentos: (receta.detalle ?? []).map((renglon) => ({
           medicamento: renglon.medicamento?.nombre ?? null,
           concentracion: renglon.medicamento?.concentracion ?? null,
@@ -153,11 +166,6 @@ export function ordenarCronologicamente(eventos = []) {
   });
 }
 
-/** Roles que pueden leer un historial clinico, segun las politicas de la 00033. */
-export function puedeVerHistorial(rol) {
-  return esAdministrador(rol) || rol === ROLES.MEDICO;
-}
-
 /**
  * Linea de tiempo clinica de un paciente: triajes, consultas con sus diagnosticos, y recetas
  * con lo que se entrego, todo ordenado cronologicamente.
@@ -181,12 +189,13 @@ export function puedeVerHistorial(rol) {
  * @param {string} [opciones.hasta] Fecha ISO final del periodo.
  * @returns {Promise<{ eventos: object[], error: object|null }>}
  */
-export async function obtenerHistorialMedico(pacienteId, { rol, desde, hasta } = {}) {
-  if (!pacienteId) return { eventos: [], error: null };
+export async function obtenerHistorialMedico(pacienteId, { rol, desde, hasta, limite } = {}) {
+  if (!pacienteId) return { eventos: [], atenciones: 0, error: null };
 
   if (rol !== undefined && !puedeVerHistorial(rol)) {
     return {
       eventos: [],
+      atenciones: 0,
       error: {
         ...construirError(CODIGOS_DE_ERROR_DE_SUPABASE.PERMISO_DENEGADO),
         mensaje: "Solo el personal medico y la administracion pueden ver un historial clinico.",
@@ -203,14 +212,54 @@ export async function obtenerHistorialMedico(pacienteId, { rol, desde, hasta } =
 
     if (desde) consulta = consulta.gte("created_at", desde);
     if (hasta) consulta = consulta.lte("created_at", hasta);
+    if (limite) consulta = consulta.limit(limite);
 
     const { data, error } = await consulta;
 
-    if (error) return { eventos: [], error: normalizarError(error) };
+    if (error) return { eventos: [], atenciones: 0, error: normalizarError(error) };
 
-    const eventos = (data ?? []).flatMap(aEventos);
-    return { eventos: ordenarCronologicamente(eventos), error: null };
+    const filas = data ?? [];
+    const eventos = filas.flatMap(aEventos);
+    return { eventos: ordenarCronologicamente(eventos), atenciones: filas.length, error: null };
   } catch (error) {
-    return { eventos: [], error: normalizarError(error) };
+    return { eventos: [], atenciones: 0, error: normalizarError(error) };
+  }
+}
+
+/**
+ * La atencion mas reciente de un paciente (issue #123), para mostrarla en el resumen de su
+ * ficha sin traer el historial completo.
+ *
+ * Reusa las mismas columnas y el mismo aplanado que obtenerHistorialMedico(): la diferencia es
+ * el `.limit(1)` sobre `atenciones`, que evita traer anios de historial solo para quedarse con
+ * el primer evento. El chequeo de rol es el mismo (puedeVerHistorial), y por la misma razon: no
+ * es una barrera de seguridad, es no disparar una consulta que RLS va a vaciar.
+ *
+ * @param {string} pacienteId UUID del paciente.
+ * @param {object} [opciones]
+ * @param {string} [opciones.rol] Rol de quien consulta, para el chequeo previo.
+ * @returns {Promise<{ ultimaAtencion: object|null, error: object|null }>}
+ */
+export async function obtenerUltimaAtencion(pacienteId, { rol } = {}) {
+  if (!pacienteId) return { ultimaAtencion: null, error: null };
+
+  if (rol !== undefined && !puedeVerHistorial(rol)) {
+    return { ultimaAtencion: null, error: null };
+  }
+
+  try {
+    const { data, error } = await obtenerSupabase()
+      .from("atenciones")
+      .select(COLUMNAS_DEL_HISTORIAL)
+      .eq("paciente_id", pacienteId)
+      .order("created_at", { ascending: false })
+      .limit(1);
+
+    if (error) return { ultimaAtencion: null, error: normalizarError(error) };
+
+    const eventos = ordenarCronologicamente((data ?? []).flatMap(aEventos));
+    return { ultimaAtencion: eventos[0] ?? null, error: null };
+  } catch (error) {
+    return { ultimaAtencion: null, error: normalizarError(error) };
   }
 }

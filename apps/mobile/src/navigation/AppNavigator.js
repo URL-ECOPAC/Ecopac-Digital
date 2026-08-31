@@ -1,148 +1,251 @@
-import React, { useState } from "react";
-import { TouchableOpacity, Text, Modal, StyleSheet, View } from "react-native";
+import { Text } from "react-native";
+import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import { modulosVisibles } from "@ecopac/shared";
+import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { colors, typography } from "@ecopac/ui-tokens";
+import { tabsMoviles, modulosVisibles } from "@ecopac/shared";
+
 import { useSesionCompartida } from "../contexto/SesionProvider";
 import { ROUTES } from "./rutas";
-
-import MenuDrawer from "../components/MenuDrawer";
-
+import UsuarioActivo from "../components/UsuarioActivo";
 import LoginScreen from "../screens/LoginScreen";
 import InicioScreen from "../screens/InicioScreen";
-import BusquedaPacienteScreen from "../screens/BusquedaPacienteScreen";
-import StockScreen from "../screens/StockScreen";
-import SeleccionJornadaScreen from "../screens/SeleccionJornadaScreen";
-import DonacionesScreen from "../screens/DonacionesScreen";
-import PresupuestosScreen from "../screens/PresupuestosScreen";
-import ProyectosScreen from "../screens/ProyectosScreen";
-import VoluntariosScreen from "../screens/VoluntariosScreen";
 import AjustesScreen from "../screens/AjustesScreen";
-import AccesoDenegadoScreen from "../screens/AccesoDenegadoScreen";
+import SeleccionJornadaScreen from "../screens/SeleccionJornadaScreen";
+import JornadaEnCursoScreen from "../screens/JornadaEnCursoScreen";
+import BusquedaPacienteScreen from "../screens/BusquedaPacienteScreen";
+import FichaPacienteScreen from "../screens/FichaPacienteScreen";
+import HistorialPacienteScreen from "../screens/HistorialPacienteScreen";
+import RegistroPacienteScreen from "../screens/RegistroPacienteScreen";
+import TriajeScreen from "../screens/TriajeScreen";
+import ConsultaScreen from "../screens/ConsultaScreen";
+import RecetaScreen from "../screens/RecetaScreen";
+import StockScreen from "../screens/StockScreen";
+import DonacionesScreen from "../screens/DonacionesScreen";
+import ProyectosScreen from "../screens/ProyectosScreen";
+import PresupuestosScreen from "../screens/PresupuestosScreen";
+import VoluntariosScreen from "../screens/VoluntariosScreen";
 
-const Stack = createNativeStackNavigator();
+export { ROUTES };
 
-export default function AppNavigator() {
-  const { usuario, perfil } = useSesionCompartida();
-  const [menuVisible, setMenuVisible] = useState(false);
-  const [rutaActual, setRutaActual] = useState(ROUTES.INICIO);
+const Root = createNativeStackNavigator();
+const Tabs = createBottomTabNavigator();
+const InicioStack = createNativeStackNavigator();
+const PacientesStack = createNativeStackNavigator();
+const JornadasStack = createNativeStackNavigator();
+const InventarioStack = createNativeStackNavigator();
 
-  if (!usuario) {
-    return <LoginScreen />;
-  }
+const opcionesStack = {
+  headerStyle: { backgroundColor: colors.surface },
+  headerTintColor: colors.text,
+  headerTitleStyle: { fontSize: typography.sizes.md, fontWeight: typography.weights.semibold },
+  headerRight: () => <UsuarioActivo />,
+};
 
-  const rol = perfil?.rol || "voluntario";
-  const modulos = modulosVisibles(rol, { plataforma: "mobile" });
-  const tieneAcceso = (idModulo) => modulos.some((m) => m.id === idModulo);
+// Mapeo entre los identificadores de tabMovil (navegacion.js) y la navegacion React Native
+const CONFIGURACION_TABS = {
+  Inicio: {
+    routeName: ROUTES.TAB_INICIO,
+    component: InicioNavigator,
+    label: "Inicio",
+    icon: "⌂",
+  },
+  Pacientes: {
+    routeName: ROUTES.TAB_PACIENTES,
+    component: PacientesNavigator,
+    label: "Pacientes",
+    icon: "𐀔",
+  },
+  Jornadas: {
+    routeName: ROUTES.TAB_JORNADAS,
+    component: JornadasNavigator,
+    label: "Jornadas",
+    icon: "📅",
+  },
+  Inventario: {
+    routeName: ROUTES.TAB_INVENTARIO,
+    component: InventarioNavigator,
+    label: "Inventario",
+    icon: "📦",
+  },
+};
 
-  const toggleMenu = () => setMenuVisible(!menuVisible);
+const TAB_AJUSTES_CONFIG = {
+  routeName: ROUTES.TAB_AJUSTES,
+  component: AjustesScreen,
+  label: "Ajustes",
+  icon: "⚙",
+};
+
+function InicioNavigator() {
+  const { perfil } = useSesionCompartida();
+  const modulos = modulosVisibles(perfil?.rol, { plataforma: "mobile" });
+  const idsVisibles = modulos.map((m) => m.id);
 
   return (
-    <>
-      <Stack.Navigator
-        initialRouteName={ROUTES.INICIO}
-        screenOptions={{
-          headerStyle: { backgroundColor: "#FFFFFF" },
-          headerTintColor: "#0F172A",
-          headerTitleStyle: { fontWeight: "bold", color: "#0F172A", fontSize: 20 },
-          headerShadowVisible: false,
-        }}
-      >
-        <Stack.Screen
-          name={ROUTES.INICIO}
-          component={InicioScreen}
-          options={({ navigation }) => ({
-            title: "Inicio",
-            headerLeft: () => (
-              <TouchableOpacity onPress={toggleMenu} style={styles.btnHamburguesa}>
-                <Text style={styles.textoHamburguesa}>☰</Text>
-              </TouchableOpacity>
-            ),
-          })}
-        />
-        <Stack.Screen
-          name={ROUTES.BUSQUEDA_PACIENTE}
-          component={tieneAcceso("pacientes") ? BusquedaPacienteScreen : AccesoDenegadoScreen}
-          options={{ title: "Pacientes" }}
-        />
-        <Stack.Screen
+    <InicioStack.Navigator screenOptions={opcionesStack}>
+      <InicioStack.Screen
+        name={ROUTES.INICIO}
+        component={InicioScreen}
+        options={{ title: "Inicio" }}
+      />
+      {idsVisibles.includes("donaciones") && (
+        <InicioStack.Screen
           name={ROUTES.DONACIONES}
-          component={tieneAcceso("donaciones") ? DonacionesScreen : AccesoDenegadoScreen}
+          component={DonacionesScreen}
           options={{ title: "Donaciones" }}
         />
-        <Stack.Screen
-          name={ROUTES.STOCK}
-          component={tieneAcceso("inventario") ? StockScreen : AccesoDenegadoScreen}
-          options={{ title: "Inventario" }}
-        />
-        <Stack.Screen
-          name={ROUTES.PRESUPUESTOS}
-          component={tieneAcceso("presupuestos") ? PresupuestosScreen : AccesoDenegadoScreen}
-          options={{ title: "Presupuestos" }}
-        />
-        <Stack.Screen
+      )}
+      {idsVisibles.includes("proyectos") && (
+        <InicioStack.Screen
           name={ROUTES.PROYECTOS}
-          component={tieneAcceso("proyectos") ? ProyectosScreen : AccesoDenegadoScreen}
+          component={ProyectosScreen}
           options={{ title: "Proyectos" }}
         />
-        <Stack.Screen
-          name={ROUTES.SELECCION_JORNADA}
-          component={tieneAcceso("jornadas") ? SeleccionJornadaScreen : AccesoDenegadoScreen}
-          options={{ title: "Kanban Jornadas" }}
+      )}
+      {idsVisibles.includes("presupuestos") && (
+        <InicioStack.Screen
+          name={ROUTES.PRESUPUESTOS}
+          component={PresupuestosScreen}
+          options={{ title: "Presupuestos" }}
         />
-        <Stack.Screen
+      )}
+      {idsVisibles.includes("voluntarios") && (
+        <InicioStack.Screen
           name={ROUTES.VOLUNTARIOS}
-          component={tieneAcceso("voluntarios") ? VoluntariosScreen : AccesoDenegadoScreen}
-          options={{ title: "Voluntarios" }}
+          component={VoluntariosScreen}
+          options={{ title: "Voluntarios y medicos" }}
         />
-        <Stack.Screen
-          name={ROUTES.TAB_AJUSTES}
-          component={AjustesScreen}
-          options={{ title: "Ajustes" }}
-        />
-      </Stack.Navigator>
-
-      {/* Modal del Drawer */}
-      <Modal visible={menuVisible} animationType="fade" transparent={true} onRequestClose={() => setMenuVisible(false)}>
-        <View style={styles.contenedorModal}>
-          <View style={styles.drawerContenido}>
-            <MenuDrawer
-              onNavegar={(ruta) => {
-                setRutaActual(ruta);
-                setMenuVisible(false);
-              }}
-              onClose={() => setMenuVisible(false)}
-              rutaActual={rutaActual}
-            />
-          </View>
-          <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={() => setMenuVisible(false)} />
-        </View>
-      </Modal>
-    </>
+      )}
+    </InicioStack.Navigator>
   );
 }
 
-const styles = StyleSheet.create({
-  btnHamburguesa: {
-    marginRight: 15,
-    padding: 5,
-  },
-  textoHamburguesa: {
-    color: "#16A34A",
-    fontSize: 22,
-    fontWeight: "bold",
-  },
-  contenedorModal: {
-    flex: 1,
-    flexDirection: "row",
-  },
-  drawerContenido: {
-    width: "80%",
-    backgroundColor: "#FFFFFF",
-    height: "100%",
-  },
-  overlay: {
-    width: "20%",
-    backgroundColor: "rgba(0, 0, 0, 0.4)",
-    height: "100%",
-  },
-});
+function PacientesNavigator() {
+  return (
+    <PacientesStack.Navigator screenOptions={opcionesStack}>
+      <PacientesStack.Screen
+        name={ROUTES.BUSQUEDA_PACIENTE}
+        component={BusquedaPacienteScreen}
+        options={{ title: "Pacientes" }}
+      />
+      <PacientesStack.Screen
+        name={ROUTES.FICHA_PACIENTE}
+        component={FichaPacienteScreen}
+        options={{ title: "Ficha del paciente" }}
+      />
+      <PacientesStack.Screen
+        name={ROUTES.REGISTRO_PACIENTE}
+        component={RegistroPacienteScreen}
+        options={{ title: "Registro de paciente" }}
+      />
+      <PacientesStack.Screen
+        name={ROUTES.HISTORIAL_PACIENTE}
+        component={HistorialPacienteScreen}
+        options={{ title: "Historial" }}
+      />
+      <PacientesStack.Screen
+        name={ROUTES.TRIAJE}
+        component={TriajeScreen}
+        options={{ title: "Triaje" }}
+      />
+      <PacientesStack.Screen
+        name={ROUTES.CONSULTA}
+        component={ConsultaScreen}
+        options={{ title: "Consulta" }}
+      />
+      <PacientesStack.Screen
+        name={ROUTES.RECETA}
+        component={RecetaScreen}
+        options={{ title: "Receta" }}
+      />
+    </PacientesStack.Navigator>
+  );
+}
+
+function JornadasNavigator() {
+  return (
+    <JornadasStack.Navigator screenOptions={opcionesStack}>
+      <JornadasStack.Screen
+        name={ROUTES.SELECCION_JORNADA}
+        component={SeleccionJornadaScreen}
+        options={{ title: "Jornadas" }}
+      />
+      <JornadasStack.Screen
+        name={ROUTES.JORNADA_EN_CURSO}
+        component={JornadaEnCursoScreen}
+        options={{ title: "Jornada en curso" }}
+      />
+    </JornadasStack.Navigator>
+  );
+}
+
+function InventarioNavigator() {
+  return (
+    <InventarioStack.Navigator screenOptions={opcionesStack}>
+      <InventarioStack.Screen
+        name={ROUTES.STOCK}
+        component={StockScreen}
+        options={{ title: "Inventario" }}
+      />
+    </InventarioStack.Navigator>
+  );
+}
+
+function TabsNavigator() {
+  const { perfil } = useSesionCompartida();
+  const modulosPermitidos = tabsMoviles(perfil?.rol);
+
+  // Mapea los módulos autorizados y agrega Ajustes al final
+  const tabsAAgregar = modulosPermitidos.map((m) => CONFIGURACION_TABS[m.tabMovil]).filter(Boolean);
+
+  tabsAAgregar.push(TAB_AJUSTES_CONFIG);
+
+  // Define la ruta inicial basada en la primera pestaña disponible
+  const rutaInicial = tabsAAgregar[0]?.routeName || ROUTES.TAB_INICIO;
+
+  return (
+    <Tabs.Navigator
+      initialRouteName={rutaInicial}
+      screenOptions={({ route }) => {
+        const configTab =
+          Object.values(CONFIGURACION_TABS).find((c) => c.routeName === route.name) ||
+          TAB_AJUSTES_CONFIG;
+
+        return {
+          headerShown: false,
+          tabBarActiveTintColor: colors.primary,
+          tabBarInactiveTintColor: colors.textMuted,
+          tabBarStyle: { backgroundColor: colors.surface, borderTopColor: colors.border },
+          tabBarLabelStyle: { fontSize: typography.sizes.xs },
+          tabBarIcon: ({ color, size }) => (
+            <Text style={{ color, fontSize: size - 2, fontWeight: "bold" }}>{configTab.icon}</Text>
+          ),
+        };
+      }}
+    >
+      {tabsAAgregar.map((tab) => (
+        <Tabs.Screen
+          key={tab.routeName}
+          name={tab.routeName}
+          component={tab.component}
+          options={{ tabBarLabel: tab.label }}
+        />
+      ))}
+    </Tabs.Navigator>
+  );
+}
+
+export default function AppNavigator({ haySesion }) {
+  return (
+    <NavigationContainer>
+      <Root.Navigator screenOptions={{ headerShown: false }}>
+        {haySesion ? (
+          <Root.Screen name={ROUTES.TABS} component={TabsNavigator} />
+        ) : (
+          <Root.Screen name={ROUTES.LOGIN} component={LoginScreen} />
+        )}
+      </Root.Navigator>
+    </NavigationContainer>
+  );
+}

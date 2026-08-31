@@ -53,7 +53,7 @@ filtros y columnas muestran el patron a copiar en el resto de modulos.
 - Los **hooks de pantalla** (`use<Pantalla>.js`) se exportan con prefijo `use` en camelCase,
   igual que cualquier hook de React: `usePacientesListado`, `useJornadasKanban`.
 - Las **funciones** de `api.js`, `validaciones.js` y `permisos.js` van en camelCase sin
-  prefijo especial: `crearPaciente`, `esAdministrador`, `puedeAprobarMovimiento`.
+  prefijo especial: `registrarPaciente`, `puedeVerJornadas`, `puedeAprobarGasto`.
 
 Cada modulo expone un `index.js` que re-exporta sus archivos (`export * from './archivo.js'`),
 y el `index.js` de la raiz de `packages/shared` re-exporta cada modulo.
@@ -146,7 +146,7 @@ para pacientes, inventario o donaciones porque toda la informacion especifica de
 
 | Prop | Tipo | Descripcion |
 | ---- | ---- | ----------- |
-| `campos` | array | Descriptores de `filtros.js` del modulo, ej. `FILTROS_PACIENTE`. Cada uno trae `id`, `tipo`, `label` y, segun el tipo, `placeholder`, `opcionesDesde`, `min`/`max` (ver `packages/shared/pacientes/filtros.js`). |
+| `campos` | array | Descriptores de `filtros.js` del modulo, ej. `FILTROS_PACIENTE`. Cada uno trae `id`, `tipo`, `label` y, segun el tipo, `placeholder`, `opcionesDesde`, `min`/`max` (ver `packages/shared/pacientes/filtros.js`). Un `tipo: RANGO` trae ademas **`subtipo`** (ver abajo). |
 | `valores` | objeto | Valor actual de cada filtro, indexado por `id` (ej. `{ busqueda: '', comunidad: null }`). |
 | `onChange` | fn(id, valor) | Se llama cuando el usuario cambia un filtro. `FilterBar` no guarda estado propio: quien lo usa decide que hacer con el valor nuevo. |
 | `catalogos` | objeto | Listas de opciones indexadas por el nombre que declara `opcionesDesde`, ej. `{ roles: [...], comunidades: [...] }`. Ver "Resolucion de catalogos" abajo. |
@@ -168,7 +168,7 @@ opciones de `opcionesDesde`), `rango` un par de `NumberField` acotados por `min`
 | `cargando` | bool | Si es `true`, `DataList` delega en `LoadingState` en vez de dibujar filas. |
 | `vacio` | string \| nodo | Mensaje o contenido para `EmptyState` cuando `datos` esta vacio. |
 | `onRowPress` | fn(fila) | Opcional. Se llama al tocar/hacer click en una fila. |
-| `catalogos` | objeto | Igual que en `FilterBar`. Lo consumen las columnas que declaran `etiquetasDesde`, y las de `tipo: 'estado'` cuyo valor no es el del enum. |
+| `catalogos` | objeto | Igual que en `FilterBar`: listas de `{ label, value }`. Lo consumen las columnas que declaran `etiquetasDesde`, y las de `tipo: 'estado'` cuyo valor no es el del enum. Una opcion de ese catalogo puede traer un tercer campo `clave`: `DataList` se lo pasa a `StatusChip` como `status` -es lo que indexa `statusColors`- y usa `label` como texto. Sin `clave`, una columna booleana pintaria `true` en lugar de un estado legible. |
 
 Por cada entrada de `columnas`, `DataList` sabe pintar el `tipo` declarado, tomando el valor de
 la fila por `id` o por `desde` si la columna lo declara. Los tipos que interpreta son `texto`,
@@ -204,12 +204,37 @@ ningun modulo ni pedir datos por su cuenta.
 Un catalogo que todavia no cargo deja el select vacio y **deshabilitado**, en vez de mostrar un
 desplegable que no hace nada.
 
-**Forma de una opcion.** El contrato dice `{ label, value }`, pero los catalogos que ya publica
-`shared` usan `{ etiqueta, valor }` (`OPCIONES_ROL` y `ESTADOS_USUARIO` en
-`packages/shared/usuarios/campos.js`). `Selector` acepta las dos formas y normaliza por dentro:
-si la conversion viviera en quien llama, olvidarla daria opciones en blanco y claves repetidas,
-que es un fallo silencioso. `ESTADOS_USUARIO` ademas trae `clave`, que es la que indexa
-`statusColors` cuando el valor guardado es un booleano.
+**De que es un rango.** Un filtro `TIPOS_DE_FILTRO.RANGO` se dibuja con dos componentes muy
+distintos -`DateField` o `NumberField`-, y el tipo solo no lo dice. Lo declara el descriptor en
+`subtipo`, con `SUBTIPOS_DE_RANGO` de `descriptores.js`: `FECHA` o `NUMERO`. **`FilterBar` no lo
+adivina.**
+
+Antes si lo adivinaba: si el descriptor traia `min` o `max` numericos lo tomaba por numerico, y si
+no por de fechas. Acertaba con los ocho rangos que existen, pero un rango numerico sin limites
+declarados -perfectamente legitimo- habria dibujado selectores de fecha, y eso no revienta: se ve
+mal, y solo cuando alguien lo usa (issue #386).
+
+Un rango sin `subtipo` cae en `NumberField`. Es a proposito y no al reves: siete de los ocho son
+de fecha, asi que el defecto contrario taparia el olvido. Que ninguno se quede sin declararlo lo
+comprueba `packages/shared/filtros.test.js`.
+
+**Forma de una opcion.** Una opcion es `{ label, value }`, y **es la unica forma que existe**:
+la publican asi todos los catalogos de `shared` -los escritos a mano, como `OPCIONES_ROL` en
+`packages/shared/usuarios/campos.js`, y los que se arman en tiempo de ejecucion desde la base de
+datos, como las comunidades-. `Selector` la consume tal cual, sin normalizar nada.
+
+Hasta la issue #399 convivian dos formas, `{ label, value }` y `{ etiqueta, valor }`, y cada app
+cargaba un adaptador que aceptaba las dos. El problema no era el adaptador sino lo que tapaba:
+un descriptor nuevo podia nacer con cualquiera de las dos y nadie lo notaba. Si al escribir un
+catalogo dudas, es `{ label, value }`.
+
+**El tercer campo, `clave`.** Un catalogo de estado puede traer ademas `clave`, y **eso no es la
+forma vieja**: `value` es lo que guarda la columna y `clave` es el valor del enum que indexa
+`statusColors`. Hacen falta los dos cuando no coinciden, que es el caso de una columna booleana
+-`ESTADOS_USUARIO` guarda `true`/`false` en `value` y `'activo'`/`'inactivo'` en `clave`- y el de
+un enum que se muestra traducido. Lo llevan `ESTADOS_USUARIO`, `ESTADOS_DONANTE`,
+`OPCIONES_ESTADO_DONACION`, `OPCIONES_ESTADO_PROYECTO`, `ESTADOS_DE_VENCIMIENTO_REPORTE` y
+`ESTADOS_JORNADA_REPORTE`.
 
 ### Contrato de cada componente
 
@@ -346,7 +371,7 @@ seccion anterior para su contrato completo.
 
 | Prop | Tipo | Default | Descripcion |
 | ---- | ---- | ------- | ----------- |
-| `status` | string | — | Debe ser exactamente un valor de un enum de `supabase/migrations/00001_initial_schema.sql` (ej. `'pendiente de validacion'`). Se usa tal cual como indice de `statusColors`, sin tabla de traduccion propia. |
+| `status` | string | — | Debe ser exactamente un valor de un enum del esquema, tal como lo declara `packages/shared/enums.js` (ej. `ESTADOS_MOVIMIENTO.PENDIENTE`). Se usa tal cual como indice de `statusColors`, sin tabla de traduccion propia. |
 | `label` | string | valor crudo de `status` | Texto a mostrar, si debe diferir del valor del enum. |
 
 Si `status` no esta en `statusColors` (`@ecopac/ui-tokens`), usa `colors.secondary` como color
@@ -462,8 +487,57 @@ Si puede importar `react` (para `useState` y `useEffect` dentro de los hooks) y
   de un componente;
 - escribir un color a mano: todo sale de `@ecopac/ui-tokens`.
 
-Estas reglas se hacen cumplir con `no-restricted-imports` en `eslint.config`, para que la
-frontera no dependa de la disciplina de ocho personas.
+La tab bar del móvil consume dinámicamente `tabsMoviles(rol)` proveniente de `@ecopac/shared`, filtrando los módulos según el rol de la sesión activa (`SesionProvider`). Los módulos administrativos secundarios dentro de la pantalla de inicio se restringen mediante `modulosVisibles(rol, { plataforma: 'mobile' })`, garantizando paridad de permisos entre las versiones web y móvil.
+
+Las dos primeras se hacen cumplir con `no-restricted-imports` en `eslint.config`, para que la
+frontera no dependa de la disciplina de ocho personas. **La de los permisos no la comprueba
+ningun lint todavia**: depende de que cada quien la respete.
+
+### `packages/shared` se escribe en JavaScript
+
+Los tipos del dominio se documentan con **JSDoc** (`@typedef` en `packages/shared/types/index.js`),
+no con TypeScript. Es la decision A de la issue #493, y no es una preferencia de estilo: el bloque
+de la frontera de `eslint.config.mjs` se aplica a `packages/shared/**/*.{js,jsx}`, asi que **un
+`.ts` queda fuera de todo lo que ese bloque protege**.
+
+Se comprobo antes de decidir: un archivo con `import { View } from "react-native";` pasa el lint
+limpio si se llama `prueba.ts`, y falla con el mensaje de la regla si se llama `prueba.js`. Mismo
+contenido, distinta extension.
+
+No se arregla agrandando el glob, porque el parser por defecto de ESLint no entiende sintaxis de
+TypeScript y fallaria con errores que no tienen que ver con la frontera. Cubrirlo de verdad pide
+`typescript` como dependencia, un `tsconfig.json` y un `tsc --noEmit` en el CI; es mucho coste
+para un paquete sin una sola linea de TypeScript ejecutable.
+
+Lo hace cumplir `packages/shared/typescript.test.js`, que falla si aparece un `.ts` en el paquete.
+Quien quiera TypeScript aqui no tiene que borrar esa prueba: tiene que montar lo de arriba y
+borrarla en el mismo PR.
+
+Los tipos estan escritos (issue #48): `packages/shared/types/index.js` documenta **una tabla del
+esquema por `@typedef`**, las 41 que hay. Se usan desde las dos apps por el barril del paquete:
+
+```js
+/** @typedef {import("@ecopac/shared").Paciente} Paciente */
+```
+
+Tres cosas que conviene saber antes de tocarlos:
+
+- Describen **el objeto que devuelve el `api.js`**, no la fila cruda: las propiedades van en
+  camelCase, como los alias que ya pide cada `select()` (`comunidadId:comunidad_id`).
+- Las relaciones embebidas no estan, porque no son columnas de la tabla: dependen del `select()`
+  de cada consulta. Quien las necesite compone el tipo donde las pide.
+- Los valores de enum no se reescriben: se derivan de `enums.js` y de `usuarios/roles.js`, que por
+  eso van congelados con `Object.freeze`. Sin el freeze el tipo colapsa a `string`.
+- El archivo termina en `export {}` y esa linea no sobra: TypeScript solo considera exportados los
+  `@typedef` de un archivo que ya sea modulo, y un `.js` sin un solo import ni export es un script
+  global. Sin ella el barril no propaga nada y el `import(...)` de arriba falla.
+
+Lo hace cumplir `packages/shared/types/index.test.js`, que compara los `@typedef` contra
+`supabase/migrations/` y falla si falta una tabla, sobra una propiedad o falta una columna. Una
+migracion que crea una tabla la agrega aqui en el mismo PR.
+
+Que puede hacer cada rol no se decide aqui ni se repite en cada modulo: esta en
+[PERMISOS.md](./PERMISOS.md), con la politica RLS que implementa cada celda.
 
 ## Tokens de diseno
 
@@ -484,11 +558,14 @@ se pueda usar como indice sin traducir.
 del sidebar, el modulo de permisos al que corresponde y los roles que lo ven. El sidebar de la
 web usa `seccionesVisibles(rol)` y la tab bar del movil usa `tabsMoviles(rol)`.
 
-Ocultar una opcion del menu **no es control de acceso**: la restriccion real vive en las
-politicas RLS y en el guard de rutas.
+Ocultar una opcion del menu **no es control de acceso**, y el guard de rutas tampoco lo es:
+los dos viven en el cliente. La unica capa que protege son las politicas RLS y los `GRANT`.
+Las cuatro capas y cual hace que estan explicadas en [PERMISOS.md](./PERMISOS.md).
 
 Los roles son los del enum `rol_usuario` de la migracion 00001, expuestos en
-`packages/shared/usuarios/roles.js`. Nunca se escribe un rol como string suelto.
+`packages/shared/usuarios/roles.js`. Nunca se escribe un rol como string suelto. **Que puede
+hacer cada uno esta en [PERMISOS.md](./PERMISOS.md)**, no aqui: este documento describe donde
+va cada capa, no que decide.
 
 ## Como construir una pantalla nueva
 
@@ -499,6 +576,19 @@ Los roles son los del enum `rol_usuario` de la migracion 00001, expuestos en
 
 Si al escribir el paso 3 o el 4 aparece una condicion de negocio, va al paso 1 o 2: es senal de
 que se estaba a punto de duplicar logica.
+
+## Modulos que comparten etiqueta de GitHub
+
+`packages/shared/proyectos/` es un modulo propio desde la issue #400, separado de
+`packages/shared/donaciones/` porque proyectos sociales no es lo mismo que donantes y
+donaciones aunque las dos issues originales (#194 y #189) hayan nacido en la misma carpeta.
+
+Las issues de proyectos (#194 ya cerrada, mas #200, #201, #271, #307, #308, #309) siguen
+etiquetadas `module:donaciones` en GitHub: crear la etiqueta `module:proyectos` y reasignarla
+es una accion manual en GitHub que la issue #400 deja pendiente, no una decision de que los dos
+modulos deban compartir etiqueta. Quien tenga permisos de escritura en el repositorio puede
+crear la etiqueta y mover esas issues cuando le quede comodo; el codigo ya no depende de que
+eso pase.
 
 ## Documentos relacionados
 

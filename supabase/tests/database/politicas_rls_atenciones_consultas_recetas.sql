@@ -6,7 +6,7 @@
 
 BEGIN;
 
-SELECT plan(17);
+SELECT plan(28);
 
 -- ============================================================================
 -- Setup: comunidad, perfiles (dos medicos: uno asignado a la jornada, otro no),
@@ -73,6 +73,22 @@ VALUES (
   '30000000-0000-0000-0000-000000000001'
 );
 
+-- Fixtures para las pruebas de IDOR de la issue #237: un segundo paciente (nueva atencion),
+-- un diagnostico y un medicamento, para no reusar filas que las pruebas de anulacion de mas
+-- abajo (issue #510) van a modificar.
+INSERT INTO pacientes (id, nombres, apellidos, fecha_nacimiento, sexo, comunidad_id, telefono_contacto, idioma)
+VALUES (
+  '20000000-0000-0000-0000-000000000102',
+  'Paciente', 'Prueba89b', '1998-01-01', 'M',
+  '10000000-0000-0000-0000-000000000002', '5555-2002', 'espanol'
+);
+
+INSERT INTO diagnosticos (id, nombre) VALUES
+  ('90000000-0000-0000-0000-000000000001', 'Diagnostico de prueba 89');
+
+INSERT INTO medicamentos (id, nombre, concentracion, presentacion, marca) VALUES
+  ('70000000-0000-0000-0000-000000000001', 'Medicamento de prueba 89', '500mg', 'tableta', 'Generico');
+
 -- ============================================================================
 -- voluntario: registra triaje, no lee informacion clinica
 -- ============================================================================
@@ -137,19 +153,106 @@ SELECT lives_ok(
   'un medico asignado a una jornada en curso si puede registrar una consulta'
 );
 
+-- Segunda atencion, para las pruebas de tomado_por de mas abajo (no se puede reusar la primera:
+-- triajes.atencion_id es UNIQUE, y esa ya tiene el triaje del voluntario de arriba).
+SELECT lives_ok(
+  $$ INSERT INTO atenciones (id, paciente_id, jornada_id)
+     VALUES ('50000000-0000-0000-0000-000000000002', '20000000-0000-0000-0000-000000000102',
+             '30000000-0000-0000-0000-000000000001') $$,
+  'un medico puede registrar una atencion nueva'
+);
+
+-- issue #237: ni el propio medico asignado puede firmar el triaje con la identidad de otra
+-- persona (tomado_por no ataba con la sesion).
+SELECT throws_ok(
+  $$ INSERT INTO triajes (atencion_id, presion_sistolica, presion_diastolica, frecuencia_cardiaca, tomado_por)
+     VALUES ('50000000-0000-0000-0000-000000000002', 110, 70, 80, '00000000-0000-0000-0000-000000000203') $$,
+  '42501',
+  NULL,
+  'un medico no puede firmar un triaje con la identidad de otra persona (issue #237)'
+);
+
+-- medico89b no esta asignado a la jornada, y aun asi SI puede registrar el triaje firmandolo
+-- como si mismo: docs/PERMISOS.md solo exige participa_en_jornada() para consultas, no para
+-- triajes ni atenciones -- es diseno, no un agujero (ver cabecera de la 00082).
+SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000203';
+
+SELECT lives_ok(
+  $$ INSERT INTO triajes (atencion_id, presion_sistolica, presion_diastolica, frecuencia_cardiaca, tomado_por)
+     VALUES ('50000000-0000-0000-0000-000000000002', 110, 70, 80, '00000000-0000-0000-0000-000000000203') $$,
+  'un medico no asignado a la jornada igual puede registrar el triaje, firmandolo como si mismo (issue #237)'
+);
+
+SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000202';
+
 SELECT ok(
   (SELECT count(*) FROM consultas) > 0,
   'medico89a puede leer consultas'
 );
 
+-- El id va explicito porque los asserts de anulacion de mas abajo (issue #510) tienen que
+-- referirse a esta misma receta.
 SELECT lives_ok(
-  $$ INSERT INTO recetas (consulta_id, medico_id) VALUES ('60000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000202') $$,
+  $$ INSERT INTO recetas (id, consulta_id, medico_id) VALUES ('80000000-0000-0000-0000-000000000001', '60000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000202') $$,
   'el medico que atendio la consulta puede emitir una receta como si mismo'
 );
+
+-- issue #237: el medico dueno de la consulta si diagnostica y prescribe.
+SELECT lives_ok(
+  $$ INSERT INTO consulta_diagnostico (consulta_id, diagnostico_id)
+     VALUES ('60000000-0000-0000-0000-000000000001', '90000000-0000-0000-0000-000000000001') $$,
+  'el medico dueno de la consulta puede adjuntarle un diagnostico (issue #237)'
+);
+
+SELECT lives_ok(
+  $$ INSERT INTO receta_detalle (receta_id, medicamento_id, dosis, frecuencia, duracion, cantidad_entregada)
+     VALUES ('80000000-0000-0000-0000-000000000001', '70000000-0000-0000-0000-000000000001',
+             '1 tableta', 'cada 8 horas', '5 dias', 15) $$,
+  'el medico dueno de la receta puede agregarle un renglon de medicamento (issue #237)'
+);
+
+-- issue #237: medico89b no es dueno ni de la consulta ni de la receta de medico89a.
+SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000203';
+
+SELECT throws_ok(
+  $$ INSERT INTO consulta_diagnostico (consulta_id, diagnostico_id)
+     VALUES ('60000000-0000-0000-0000-000000000001', '90000000-0000-0000-0000-000000000001') $$,
+  '42501',
+  NULL,
+  'un medico no puede adjuntar un diagnostico a la consulta de otro medico (issue #237)'
+);
+
+SELECT throws_ok(
+  $$ INSERT INTO receta_detalle (receta_id, medicamento_id, dosis, frecuencia, duracion, cantidad_entregada)
+     VALUES ('80000000-0000-0000-0000-000000000001', '70000000-0000-0000-0000-000000000001',
+             '1 tableta', 'cada 8 horas', '5 dias', 15) $$,
+  '42501',
+  NULL,
+  'un medico no puede agregar un renglon a la receta de otro medico (issue #237)'
+);
+
+SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000202';
 
 SELECT lives_ok(
   $$ UPDATE consultas SET observaciones = 'Reevaluado' WHERE id = '60000000-0000-0000-0000-000000000001' $$,
   'el medico que creo la consulta puede editarla'
+);
+
+-- ============================================================================
+-- Anulacion de recetas (issue #510, migracion 00075)
+-- ============================================================================
+-- Las dos mitades de la politica fallan distinto, y por eso se comprueban distinto:
+-- el USING excluye la fila y el UPDATE corre sin afectar nada; el WITH CHECK si lanza 42501.
+
+-- medico89a es el dueno, pero no puede registrar a otro como responsable de la anulacion.
+SELECT throws_ok(
+  $$ UPDATE recetas
+     SET estado = 'anulada', motivo_anulacion = 'En nombre de otro',
+         anulada_por = '00000000-0000-0000-0000-000000000203', anulada_en = NOW()
+     WHERE id = '80000000-0000-0000-0000-000000000001' $$,
+  '42501',
+  NULL,
+  'ni el dueno puede anular registrando a otra persona como quien la anulo'
 );
 
 -- ============================================================================
@@ -165,6 +268,46 @@ SELECT is(
   (SELECT observaciones FROM consultas WHERE id = '60000000-0000-0000-0000-000000000001'),
   'Reevaluado',
   'un medico distinto al que creo la consulta no puede editarla'
+);
+
+-- El bug de la issue #510: hasta la 00075 este UPDATE anulaba la receta de otro medico.
+UPDATE recetas
+SET estado = 'anulada', motivo_anulacion = 'Intento ajeno',
+    anulada_por = '00000000-0000-0000-0000-000000000203', anulada_en = NOW()
+WHERE id = '80000000-0000-0000-0000-000000000001';
+
+SELECT is(
+  (SELECT estado::text FROM recetas WHERE id = '80000000-0000-0000-0000-000000000001'),
+  'emitida',
+  'un medico distinto al que firmo la receta no puede anularla'
+);
+
+-- ============================================================================
+-- medico89a: anula la suya una vez, y no la vuelve a tocar (issue #510)
+-- ============================================================================
+SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000202';
+
+UPDATE recetas
+SET estado = 'anulada', motivo_anulacion = 'Dosis equivocada',
+    anulada_por = '00000000-0000-0000-0000-000000000202', anulada_en = NOW()
+WHERE id = '80000000-0000-0000-0000-000000000001';
+
+SELECT is(
+  (SELECT estado::text FROM recetas WHERE id = '80000000-0000-0000-0000-000000000001'),
+  'anulada',
+  'el medico que firmo la receta si puede anularla'
+);
+
+-- Ya anulada, la clausula USING deja de alcanzarla: anular es un hecho registrado y reescribirlo
+-- destruiria la trazabilidad. Si hubo un error, lo corrige la administradora.
+UPDATE recetas
+SET motivo_anulacion = 'Motivo reescrito por el medico'
+WHERE id = '80000000-0000-0000-0000-000000000001';
+
+SELECT is(
+  (SELECT motivo_anulacion FROM recetas WHERE id = '80000000-0000-0000-0000-000000000001'),
+  'Dosis equivocada',
+  'una vez anulada, el medico ya no la vuelve a tocar'
 );
 
 -- ============================================================================

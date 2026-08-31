@@ -5,6 +5,7 @@ import {
   normalizarError,
 } from "../api/errores-de-supabase.js";
 import { puedeRegistrarEnJornada } from "../jornadas/validaciones.js";
+import { puedeVerHistorial } from "./permisos.js";
 
 const COLUMNAS_DE_LA_CONSULTA = [
   "id",
@@ -28,6 +29,21 @@ const COLUMNAS_CON_DETALLE = [
   "diagnosticos:consulta_diagnostico(esPrincipal:es_principal, diagnostico:diagnosticos(id, codigo, nombre))",
   "receta:recetas(id, folio, indicacionesGenerales:indicaciones_generales)",
 ].join(", ");
+
+/** Lo que se lee de una fila del catalogo de diagnosticos (00018, mantenible desde la 00105). */
+const COLUMNAS_DEL_DIAGNOSTICO = "id, codigo, nombre, descripcion";
+
+/**
+ * Texto opcional para una columna nullable: vacio y solo espacios son NULL, no "".
+ *
+ * Importa para `codigo`: el indice unico de la 00105 es parcial (WHERE codigo IS NOT NULL), asi
+ * que varios diagnosticos sin codigo conviven, pero varios con codigo "" chocarian entre si.
+ */
+function normalizarOpcional(valor) {
+  if (typeof valor !== "string") return valor ?? null;
+  const limpio = valor.trim();
+  return limpio === "" ? null : limpio;
+}
 
 const CAMPOS_EDITABLES = {
   motivoConsulta: "motivo_consulta",
@@ -281,5 +297,227 @@ export async function actualizarConsulta(id, datos = {}) {
     return await obtenerConsulta(id);
   } catch (error) {
     return { consulta: null, error: normalizarError(error) };
+  }
+}
+
+const COLUMNAS_DE_PACIENTE_ATENDIDO = [
+  "id",
+  "atencion:atenciones(pacienteId:paciente_id, paciente:pacientes(nombres, apellidos))",
+  "diagnosticos:consulta_diagnostico(esPrincipal:es_principal, diagnostico:diagnosticos(id, codigo, nombre))",
+].join(", ");
+
+function aPacienteAtendido(fila) {
+  const diagnosticos = (fila.diagnosticos ?? []).map((union) => ({
+    id: union.diagnostico?.id ?? null,
+    codigo: union.diagnostico?.codigo ?? null,
+    nombre: union.diagnostico?.nombre ?? null,
+    esPrincipal: union.esPrincipal === true,
+  }));
+
+  return {
+    consultaId: fila.id,
+    pacienteId: fila.atencion?.pacienteId ?? null,
+    paciente:
+      [fila.atencion?.paciente?.nombres, fila.atencion?.paciente?.apellidos]
+        .filter(Boolean)
+        .join(" ") || null,
+    diagnosticos,
+    diagnosticoPrincipal: diagnosticos.find((diagnostico) => diagnostico.esPrincipal) ?? null,
+  };
+}
+
+/**
+ * Lista los pacientes atendidos en una jornada, con su diagnostico principal (issue #181,
+ * criterio 2).
+ *
+ * `consultas.jornada_id` (00018) filtra directo, sin pasar por `atenciones`: cada fila trae el
+ * nombre del paciente embebido a traves de `atencion_id` (`atenciones.paciente_id`), no de
+ * `expediente_id`. Los dos caminos son igual de directos para PostgREST (un solo salto extra
+ * cada uno, sin una segunda consulta), pero `atencion_id` es el que ata la consulta a ESTA
+ * jornada -es la misma atencion que registro la llegada del paciente a esta jornada-, mientras
+ * que `expediente_id` es el historial clinico completo de la persona, ajeno a en cual jornada
+ * ocurrio. Mismo criterio de "cual FK describe el hecho" que ya distingue `expedienteId` de
+ * `atencionId` en `obtenerConsulta()`.
+ *
+ * El chequeo de `rol` (si se pasa) evita disparar una consulta que la politica de SELECT de
+ * `consultas` (00033: solo administrador y medico) va a devolver vacia de todas formas para
+ * cualquier otro rol -- mismo patron que `obtenerHistorialMedico()` en historial.api.js. No es
+ * la restriccion real: la politica RLS de la base es quien de verdad decide que fila llega
+ * (docs/PERMISOS.md:75-80). Sin `rol`, la funcion deja pasar la consulta igual (permite que
+ * quien ya sepa que puede ver esto se salte el chequeo, como hace `obtenerHistorialMedico()`).
+ *
+ * @param {string} jornadaId UUID de la jornada.
+ * @param {object} [opciones]
+ * @param {string} [opciones.rol] Rol de quien consulta, para el chequeo previo.
+ * @returns {Promise<{ pacientes: object[], error: object|null }>} Cada fila trae
+ *   `diagnosticos` (arreglo) y `diagnosticoPrincipal` (el que tenga `esPrincipal`, o `null`).
+ */
+export async function listarPacientesAtendidosDeJornada(jornadaId, { rol } = {}) {
+  if (!jornadaId) return { pacientes: [], error: null };
+
+  if (rol !== undefined && !puedeVerHistorial(rol)) {
+    return {
+      pacientes: [],
+      error: {
+        ...construirError(CODIGOS_DE_ERROR_DE_SUPABASE.PERMISO_DENEGADO),
+        mensaje:
+          "Solo el personal medico y la administracion pueden ver los pacientes atendidos con su diagnostico.",
+      },
+    };
+  }
+
+  try {
+    const { data, error } = await obtenerSupabase()
+      .from("consultas")
+      .select(COLUMNAS_DE_PACIENTE_ATENDIDO)
+      .eq("jornada_id", jornadaId);
+
+    if (error) return { pacientes: [], error: normalizarError(error) };
+
+    return { pacientes: (data ?? []).map(aPacienteAtendido), error: null };
+  } catch (error) {
+    return { pacientes: [], error: normalizarError(error) };
+  }
+}
+
+/**
+ * Catalogo de diagnosticos, que es lo que alimenta `opcionesDesde: 'diagnosticos'` de
+ * CAMPOS_CONSULTA. Hasta la issue #137 ese descriptor declaraba un catalogo que nadie
+ * publicaba.
+ *
+ * Hasta la issue #625 la tabla estaba ademas VACIA -ninguna migracion ni seed la cargaba- y no
+ * habia forma de llenarla: solo tenia GRANT SELECT y politica de SELECT. La 00105 siembra el
+ * conjunto inicial de codigos CIE-10 y abre el mantenimiento a la administradora.
+ *
+ * @returns {Promise<{ diagnosticos: object[], error: object|null }>}
+ */
+export async function listarDiagnosticos() {
+  try {
+    const { data, error } = await obtenerSupabase()
+      .from("diagnosticos")
+      .select(COLUMNAS_DEL_DIAGNOSTICO)
+      .order("nombre", { ascending: true });
+
+    if (error) return { diagnosticos: [], error: normalizarError(error) };
+    return { diagnosticos: data ?? [], error: null };
+  } catch (error) {
+    return { diagnosticos: [], error: normalizarError(error) };
+  }
+}
+
+/**
+ * Agrega un diagnostico al catalogo.
+ *
+ * Solo la administradora, y quien lo decide es la politica de INSERT de la 00105, no este
+ * archivo: `puedeAdministrarDiagnosticos()` (permisos.js) sirve para dibujar la pantalla.
+ *
+ * `codigo` es opcional -un diagnostico local sin equivalente CIE-10 es valido- pero si viene, la
+ * base exige que no se repita (idx_diagnosticos_codigo_unico, 00105). Esa colision llega
+ * normalizada como error de unicidad para que la pantalla la explique en vez de mostrar un 23505.
+ *
+ * @param {{ codigo?: string, nombre: string, descripcion?: string }} datos
+ * @returns {Promise<{ diagnostico: object|null, error: object|null }>}
+ */
+export async function crearDiagnostico({ codigo, nombre, descripcion } = {}) {
+  if (typeof nombre !== "string" || nombre.trim() === "") {
+    return {
+      diagnostico: null,
+      error: {
+        ...construirError(CODIGOS_DE_ERROR_DE_SUPABASE.CAMPO_REQUERIDO),
+        mensaje: "El nombre del diagnostico es obligatorio.",
+      },
+    };
+  }
+
+  try {
+    const { data, error } = await obtenerSupabase()
+      .from("diagnosticos")
+      .insert({
+        codigo: normalizarOpcional(codigo),
+        nombre: nombre.trim(),
+        descripcion: normalizarOpcional(descripcion),
+      })
+      .select(COLUMNAS_DEL_DIAGNOSTICO)
+      .single();
+
+    if (error) return { diagnostico: null, error: normalizarError(error) };
+    return { diagnostico: data, error: null };
+  } catch (error) {
+    return { diagnostico: null, error: normalizarError(error) };
+  }
+}
+
+/**
+ * Corrige un diagnostico del catalogo.
+ *
+ * No hay borrado, y no por olvido: consulta_diagnostico referencia diagnosticos ON DELETE
+ * RESTRICT (00018), asi que un diagnostico ya usado en una consulta es historia clinica y no se
+ * puede borrar. Uno que ya no se quiera ofrecer se corrige.
+ *
+ * @param {string} id
+ * @param {{ codigo?: string, nombre?: string, descripcion?: string }} datos
+ * @returns {Promise<{ diagnostico: object|null, error: object|null }>}
+ */
+export async function actualizarDiagnostico(id, datos = {}) {
+  if (!id) {
+    return {
+      diagnostico: null,
+      error: {
+        ...construirError(CODIGOS_DE_ERROR_DE_SUPABASE.CAMPO_REQUERIDO),
+        mensaje: "Hace falta el diagnostico que se quiere corregir.",
+      },
+    };
+  }
+
+  const cambios = {};
+  if (datos.codigo !== undefined) cambios.codigo = normalizarOpcional(datos.codigo);
+  if (datos.nombre !== undefined) cambios.nombre = String(datos.nombre).trim();
+  if (datos.descripcion !== undefined) cambios.descripcion = normalizarOpcional(datos.descripcion);
+
+  if (cambios.nombre === "") {
+    return {
+      diagnostico: null,
+      error: {
+        ...construirError(CODIGOS_DE_ERROR_DE_SUPABASE.CAMPO_REQUERIDO),
+        mensaje: "El nombre del diagnostico es obligatorio.",
+      },
+    };
+  }
+
+  if (Object.keys(cambios).length === 0) {
+    return {
+      diagnostico: null,
+      error: {
+        ...construirError(CODIGOS_DE_ERROR_DE_SUPABASE.CAMPO_REQUERIDO),
+        mensaje: "No hay nada que corregir.",
+      },
+    };
+  }
+
+  try {
+    const { data, error } = await obtenerSupabase()
+      .from("diagnosticos")
+      .update(cambios)
+      .eq("id", id)
+      .select(COLUMNAS_DEL_DIAGNOSTICO)
+      .maybeSingle();
+
+    if (error) return { diagnostico: null, error: normalizarError(error) };
+
+    // Sin fila y sin error es RLS: la politica de la 00105 no dejo pasar el UPDATE. Se traduce,
+    // porque un `null` silencioso es justo la forma en que este modulo ya fallaba antes.
+    if (!data) {
+      return {
+        diagnostico: null,
+        error: {
+          ...construirError(CODIGOS_DE_ERROR_DE_SUPABASE.PERMISO_DENEGADO),
+          mensaje: "Solo la administradora puede corregir el catalogo de diagnosticos.",
+        },
+      };
+    }
+
+    return { diagnostico: data, error: null };
+  } catch (error) {
+    return { diagnostico: null, error: normalizarError(error) };
   }
 }

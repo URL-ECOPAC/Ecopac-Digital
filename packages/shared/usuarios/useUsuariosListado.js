@@ -83,7 +83,11 @@ export function useUsuariosListado({ porPagina = USUARIOS_POR_PAGINA } = {}) {
     setCargando(true);
     setError(null);
 
-    const { usuarios: filas, total: cuantos, error: errorDeLista } = await listarUsuarios({
+    const {
+      usuarios: filas,
+      total: cuantos,
+      error: errorDeLista,
+    } = await listarUsuarios({
       ...filtros,
       limite: porPagina,
       pagina,

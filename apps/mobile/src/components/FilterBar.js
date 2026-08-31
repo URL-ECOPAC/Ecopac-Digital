@@ -1,12 +1,12 @@
-import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { TIPOS_DE_FILTRO } from '@ecopac/shared';
-import { colors, spacing, typography } from '@ecopac/ui-tokens';
-import DateField from './DateField';
-import NumberField from './NumberField';
-import PrimaryButton from './PrimaryButton';
-import Selector from './Selector';
-import TextField from './TextField';
+import { useState } from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import { SUBTIPOS_DE_RANGO, TIPOS_DE_FILTRO } from "@ecopac/shared";
+import { colors, spacing, typography } from "@ecopac/ui-tokens";
+import DateField from "./DateField";
+import NumberField from "./NumberField";
+import PrimaryButton from "./PrimaryButton";
+import Selector from "./Selector";
+import TextField from "./TextField";
 
 const MIN_TOUCH_HEIGHT = 48;
 
@@ -27,10 +27,13 @@ const MIN_TOUCH_HEIGHT = 48;
  * (`opcionesDesde: 'comunidades'`, las que vienen de la base de datos). Un catalogo que
  * todavia no cargo deja el select vacio y deshabilitado.
  *
- * Un rango puede ser numerico (rangoEdad) o de fecha (rangoFecha, fechaVencimiento): se
- * distinguen por `subtipo: 'fecha'` si el descriptor lo declara, y si no por si trae limites
- * numericos. Lo correcto seria que el descriptor siempre lo dijera; mientras tanto esta
- * heuristica acierta con los que existen hoy.
+ * De que es un rango lo dice el descriptor en `subtipo` (issue #386), y aqui no se adivina:
+ * antes, si no lo declaraba, se miraba si traia limites numericos, y un rango numerico sin
+ * limites -legitimo- habria dibujado selectores de fecha sin que nadie lo notara hasta usarlo.
+ *
+ * Un rango sin `subtipo` cae en NumberField. Es a proposito y no al reves: siete de los ocho
+ * rangos son de fecha, asi que el defecto contrario taparia el olvido. Que no llegue a pasar lo
+ * comprueba packages/shared/filtros.test.js.
  */
 export default function FilterBar({ campos = [], valores = {}, onChange, catalogos = {} }) {
   const [abierto, setAbierto] = useState(false);
@@ -54,7 +57,7 @@ export default function FilterBar({ campos = [], valores = {}, onChange, catalog
 
   const activos = campos.filter((campo) => {
     const valor = valores[campo.id];
-    return valor !== null && valor !== undefined && valor !== '';
+    return valor !== null && valor !== undefined && valor !== "";
   }).length;
 
   return (
@@ -65,10 +68,8 @@ export default function FilterBar({ campos = [], valores = {}, onChange, catalog
         accessibilityRole="button"
         accessibilityState={{ expanded: abierto }}
       >
-        <Text style={styles.cabeceraTexto}>
-          Filtros{activos > 0 ? ` (${activos})` : ''}
-        </Text>
-        <Text style={styles.cabeceraTexto}>{abierto ? '-' : '+'}</Text>
+        <Text style={styles.cabeceraTexto}>Filtros{activos > 0 ? ` (${activos})` : ""}</Text>
+        <Text style={styles.cabeceraTexto}>{abierto ? "-" : "+"}</Text>
       </Pressable>
 
       {abierto ? (
@@ -82,7 +83,7 @@ export default function FilterBar({ campos = [], valores = {}, onChange, catalog
                   key={campo.id}
                   label={campo.label}
                   placeholder={campo.placeholder}
-                  value={valor ?? ''}
+                  value={valor ?? ""}
                   onChangeText={(texto) => editar(campo.id, texto)}
                 />
               );
@@ -97,7 +98,7 @@ export default function FilterBar({ campos = [], valores = {}, onChange, catalog
                   value={valor ?? null}
                   options={opciones}
                   onSelect={(elegido) => editar(campo.id, elegido)}
-                  placeholder={opciones.length === 0 ? 'Sin opciones' : 'Todos'}
+                  placeholder={opciones.length === 0 ? "Sin opciones" : "Todos"}
                   style={opciones.length === 0 ? styles.deshabilitado : undefined}
                 />
               );
@@ -105,9 +106,7 @@ export default function FilterBar({ campos = [], valores = {}, onChange, catalog
 
             if (campo.tipo === TIPOS_DE_FILTRO.RANGO) {
               const rango = valor ?? {};
-              const esFecha =
-                campo.subtipo === 'fecha' ||
-                (typeof campo.min !== 'number' && typeof campo.max !== 'number');
+              const esFecha = campo.subtipo === SUBTIPOS_DE_RANGO.FECHA;
               const Campo = esFecha ? DateField : NumberField;
               const limites = esFecha
                 ? [{ maxDate: rango.max ?? undefined }, { minDate: rango.min ?? undefined }]
@@ -155,9 +154,9 @@ const styles = StyleSheet.create({
   container: { marginBottom: spacing.md },
   cabecera: {
     minHeight: MIN_TOUCH_HEIGHT,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: spacing.md,
     borderWidth: 1,
     borderColor: colors.border,
@@ -188,6 +187,6 @@ const styles = StyleSheet.create({
     color: colors.text,
     marginBottom: spacing.xs,
   },
-  rangoFila: { flexDirection: 'row', gap: spacing.sm },
+  rangoFila: { flexDirection: "row", gap: spacing.sm },
   rangoCampo: { flex: 1 },
 });

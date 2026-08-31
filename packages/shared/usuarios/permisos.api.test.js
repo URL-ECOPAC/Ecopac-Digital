@@ -18,13 +18,29 @@ const {
   concederPermiso,
   listarCatalogoPermisos,
   obtenerPermisosEfectivos,
+  permisoGobiernaAlgunaPolitica,
   restablecerPermiso,
   revocarPermiso,
 } = await import("./permisos.api.js");
 
-const PERMISO_JORNADAS = { id: "p-jornadas", clave: "jornadas.gestionar", modulo: "jornadas", descripcion: "" };
-const PERMISO_PACIENTES = { id: "p-pacientes", clave: "pacientes.editar", modulo: "pacientes", descripcion: "" };
-const PERMISO_REPORTES = { id: "p-reportes", clave: "reportes.exportar", modulo: "reportes", descripcion: "" };
+const PERMISO_JORNADAS = {
+  id: "p-jornadas",
+  clave: "jornadas.gestionar",
+  modulo: "jornadas",
+  descripcion: "",
+};
+const PERMISO_PACIENTES = {
+  id: "p-pacientes",
+  clave: "pacientes.editar",
+  modulo: "pacientes",
+  descripcion: "",
+};
+const PERMISO_REPORTES = {
+  id: "p-reportes",
+  clave: "reportes.exportar",
+  modulo: "reportes",
+  descripcion: "",
+};
 
 /**
  * Doble de obtenerSupabase() que responde distinto por tabla, para poder probar
@@ -270,6 +286,27 @@ describe("concederPermiso y revocarPermiso", () => {
     const { error } = await concederPermiso("u1", "jornadas.gestionar");
 
     expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.PERMISO_DENEGADO);
+  });
+});
+
+describe("permisoGobiernaAlgunaPolitica", () => {
+  it("los tres permisos conectados desde antes de la issue #409 devuelven true", () => {
+    expect(permisoGobiernaAlgunaPolitica("jornadas.gestionar")).toBe(true);
+    expect(permisoGobiernaAlgunaPolitica("presupuestos.registrar")).toBe(true);
+    expect(permisoGobiernaAlgunaPolitica("presupuestos.aprobar")).toBe(true);
+  });
+
+  it("los seis que la issue #409 conecta, incluido usuarios.gestionar_permisos, tambien devuelven true", () => {
+    expect(permisoGobiernaAlgunaPolitica("usuarios.gestionar_permisos")).toBe(true);
+    expect(permisoGobiernaAlgunaPolitica("pacientes.editar")).toBe(true);
+    expect(permisoGobiernaAlgunaPolitica("inventario.aprobar")).toBe(true);
+    expect(permisoGobiernaAlgunaPolitica("donaciones.registrar")).toBe(true);
+    expect(permisoGobiernaAlgunaPolitica("proyectos.gestionar")).toBe(true);
+    expect(permisoGobiernaAlgunaPolitica("reportes.exportar")).toBe(true);
+  });
+
+  it("una clave que no existe en el catalogo es inerte", () => {
+    expect(permisoGobiernaAlgunaPolitica("modulo.inexistente")).toBe(false);
   });
 });
 

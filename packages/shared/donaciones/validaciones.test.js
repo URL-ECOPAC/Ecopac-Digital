@@ -6,13 +6,9 @@
 
 import { describe, expect, it } from "vitest";
 
-import {
-  TIPOS_DE_DONACION,
-  TIPOS_DE_DONANTE,
-  validarAnulacionDeDonacion,
-  validarDonacion,
-  validarDonante,
-} from "./validaciones.js";
+import { TIPOS_DE_DONACION } from "../enums.js";
+import { TIPOS_DE_DONANTE } from "../enums.js";
+import { validarAnulacionDeDonacion, validarDonacion, validarDonante } from "./validaciones.js";
 
 function hoy() {
   return new Date().toISOString();
@@ -170,6 +166,88 @@ describe("validarDonacion", () => {
     });
 
     expect(errores.tipo).toBe("El tipo de donacion seleccionado no es valido.");
+  });
+
+  // Los casos de abajo son las reglas que la medicion de cobertura (issue #219) encontro sin
+  // ejercer: existian en el codigo y ninguna prueba entraba en ellas.
+
+  it("una donacion vacia reporta los tres campos obligatorios a la vez", () => {
+    const errores = validarDonacion({});
+
+    expect(errores.donanteId).toBeDefined();
+    expect(errores.tipo).toBeDefined();
+    expect(errores.fecha).toBeDefined();
+    expect(errores.detalles).toBeDefined();
+  });
+
+  it("distingue la fecha ilegible de la fecha ausente", () => {
+    // Son dos mensajes distintos a proposito: "falta la fecha" y "esa fecha no se entiende" le
+    // piden cosas distintas a quien llena el formulario.
+    expect(validarDonacion({ fecha: "" }).fecha).toBe("La fecha de la donacion es obligatoria.");
+    expect(validarDonacion({ fecha: "31/02/2026" }).fecha).toBe(
+      "La fecha proporcionada no es valida.",
+    );
+  });
+
+  it("exige descripcion en cada renglon, y dice cual", () => {
+    const errores = validarDonacion({
+      donanteId: "uuid-1",
+      tipo: TIPOS_DE_DONACION.SERVICIOS,
+      fecha: hoy(),
+      detalles: [{ descripcion: "Traslado" }, {}],
+    });
+
+    expect(errores.detalles_0_descripcion).toBeUndefined();
+    expect(errores.detalles_1_descripcion).toContain("2");
+  });
+
+  it("fuera de medicamentos e insumos la cantidad es opcional, pero si viene debe ser positiva", () => {
+    // La rama del `else if`: servicios no exige cantidad, y aun asi un cero la invalida, porque
+    // es lo que rechaza el CHECK de la tabla.
+    const sinCantidad = validarDonacion({
+      donanteId: "uuid-1",
+      tipo: TIPOS_DE_DONACION.SERVICIOS,
+      fecha: hoy(),
+      detalles: [{ descripcion: "Traslado de pacientes" }],
+    });
+    expect(sinCantidad).toEqual({});
+
+    const conCero = validarDonacion({
+      donanteId: "uuid-1",
+      tipo: TIPOS_DE_DONACION.SERVICIOS,
+      fecha: hoy(),
+      detalles: [{ descripcion: "Traslado de pacientes", cantidad: 0 }],
+    });
+    expect(conCero.detalles_0_cantidad).toContain("mayor a cero");
+  });
+
+  it("un monto negativo se rechaza; el cero no es negativo", () => {
+    const negativo = validarDonacion({
+      donanteId: "uuid-1",
+      tipo: TIPOS_DE_DONACION.SERVICIOS,
+      fecha: hoy(),
+      detalles: [{ descripcion: "Traslado", monto: -1 }],
+    });
+    expect(negativo.detalles_0_monto).toContain("no puede ser negativo");
+
+    const cero = validarDonacion({
+      donanteId: "uuid-1",
+      tipo: TIPOS_DE_DONACION.SERVICIOS,
+      fecha: hoy(),
+      detalles: [{ descripcion: "Traslado", monto: 0 }],
+    });
+    expect(cero.detalles_0_monto).toBeUndefined();
+  });
+
+  it("en medicamentos, un vencimiento ilegible no es lo mismo que un vencimiento ausente", () => {
+    const ilegible = validarDonacion({
+      donanteId: "uuid-1",
+      tipo: TIPOS_DE_DONACION.MEDICAMENTOS,
+      fecha: hoy(),
+      detalles: [{ descripcion: "Amoxicilina 500mg", cantidad: 10, fechaVencimiento: "pronto" }],
+    });
+
+    expect(ilegible.detalles_0_fechaVencimiento).toContain("no es valida");
   });
 });
 

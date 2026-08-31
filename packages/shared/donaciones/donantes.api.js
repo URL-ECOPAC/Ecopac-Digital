@@ -1,10 +1,17 @@
 import { obtenerSupabase } from "../api/cliente.js";
 import { normalizarError } from "../api/errores-de-supabase.js";
+import { puedeRegistrarDonaciones, puedeVerDonaciones } from "./permisos.js";
+import { ESTADOS_DE_DONACION, TIPOS_DE_DONANTE } from "../enums.js";
 
-const ROLES_LECTURA = ["administrador", "junta_directiva", "socio_fundador"];
+// Este archivo tenia su propia lista, `["administrador", "junta_directiva", "socio_fundador"]`,
+// con guiones bajos. El enum rol_usuario de la 00001 los escribe con espacio -'junta directiva',
+// 'socio fundador'-, asi que los dos roles consultivos no coincidian nunca y la API les negaba
+// la lectura del catalogo de donantes aunque la politica RLS de la 00083 si se la concede. Era
+// la misma clase de error que la #598 encontro en los hooks, en otra variante de escritura.
+// Ahora los dos guardas salen de permisos.js, que es el espejo de esa politica.
 
 function validarRolEscritura(rolUsuario) {
-  if (rolUsuario !== "administrador") {
+  if (!puedeRegistrarDonaciones(rolUsuario)) {
     return {
       datos: null,
       error: { mensaje: "Operación exclusiva para el rol Administrador." },
@@ -14,13 +21,41 @@ function validarRolEscritura(rolUsuario) {
 }
 
 function validarRolLectura(rolUsuario) {
-  if (!ROLES_LECTURA.includes(rolUsuario)) {
+  if (!puedeVerDonaciones(rolUsuario)) {
     return {
       datos: null,
       error: { mensaje: "No tienes permisos de lectura para el catálogo de donantes." },
     };
   }
   return null;
+}
+
+/**
+ * Columnas escribibles de `donantes` (00022_donantes_donaciones.sql). Se enumeran para que un
+ * campo que el formulario invente no viaje hasta PostgREST: la issue #509 entro por
+ * `documento_identidad`, que nunca existio en el esquema y hacia fallar el alta entera con
+ * 42703.
+ */
+const COLUMNAS_DE_DONANTE = [
+  "nombre",
+  "tipo",
+  "contacto",
+  "telefono",
+  "email",
+  "direccion",
+  "activo",
+];
+
+/**
+ * Deja de un objeto solo las claves que son columnas de `donantes`.
+ *
+ * @param {object} datos
+ * @returns {object}
+ */
+function soloColumnasDeDonante(datos = {}) {
+  return Object.fromEntries(
+    Object.entries(datos).filter(([clave]) => COLUMNAS_DE_DONANTE.includes(clave)),
+  );
 }
 
 /**
@@ -31,9 +66,9 @@ export async function registrarDonante(datosDonante, { rolUsuario }) {
   if (errorRol) return errorRol;
 
   try {
-    const { tipo, nombre, documento_identidad, telefono, email, direccion } = datosDonante;
+    const { tipo, nombre, contacto, telefono, email, direccion } = datosDonante;
 
-    if (!["persona", "organizacion"].includes(tipo)) {
+    if (!Object.values(TIPOS_DE_DONANTE).includes(tipo)) {
       return {
         datos: null,
         error: { mensaje: "El tipo de donante debe ser 'persona' o 'organizacion'." },
@@ -53,7 +88,7 @@ export async function registrarDonante(datosDonante, { rolUsuario }) {
       .insert({
         tipo,
         nombre,
-        documento_identidad,
+        contacto,
         telefono,
         email,
         direccion,
@@ -65,7 +100,7 @@ export async function registrarDonante(datosDonante, { rolUsuario }) {
     if (error) throw error;
     return { datos: data, error: null };
   } catch (error) {
-    return normalizarError(error);
+    return { datos: null, error: normalizarError(error) };
   }
 }
 
@@ -93,7 +128,8 @@ export async function listarDonantes({ busqueda, soloActivos = true } = {}, { ro
 
     return { datos: data || [], error: null };
   } catch (error) {
-    return normalizarError(error);
+    // Lista vacia y no null, por lo mismo que listarMovimientos(): quien la consume la recorre.
+    return { datos: [], error: normalizarError(error) };
   }
 }
 
@@ -107,7 +143,7 @@ export async function actualizarDonante(idDonante, datosNuevos, { rolUsuario }) 
   try {
     const supabase = obtenerSupabase();
 
-    if (datosNuevos.tipo && !["persona", "organizacion"].includes(datosNuevos.tipo)) {
+    if (datosNuevos.tipo && !Object.values(TIPOS_DE_DONANTE).includes(datosNuevos.tipo)) {
       return {
         datos: null,
         error: { mensaje: "El tipo de donante debe ser 'persona' o 'organizacion'." },
@@ -116,7 +152,7 @@ export async function actualizarDonante(idDonante, datosNuevos, { rolUsuario }) 
 
     const { data, error } = await supabase
       .from("donantes")
-      .update(datosNuevos)
+      .update(soloColumnasDeDonante(datosNuevos))
       .eq("id", idDonante)
       .select()
       .single();
@@ -124,7 +160,7 @@ export async function actualizarDonante(idDonante, datosNuevos, { rolUsuario }) 
     if (error) throw error;
     return { datos: data, error: null };
   } catch (error) {
-    return normalizarError(error);
+    return { datos: null, error: normalizarError(error) };
   }
 }
 
@@ -149,14 +185,14 @@ export async function obtenerHistoricoDonante(idDonante, { rolUsuario }) {
       .from("donaciones")
       .select("*")
       .eq("donante_id", idDonante)
-      .neq("estado", "anulada")
+      .neq("estado", ESTADOS_DE_DONACION.ANULADA)
       .order("created_at", { ascending: false });
 
     if (error) throw error;
 
     const totalAcumulado = (donaciones || []).reduce(
       (acc, d) => acc + (Number(d.monto_total) || 0),
-      0
+      0,
     );
 
     return {
@@ -167,6 +203,6 @@ export async function obtenerHistoricoDonante(idDonante, { rolUsuario }) {
       error: null,
     };
   } catch (error) {
-    return normalizarError(error);
+    return { datos: null, error: normalizarError(error) };
   }
 }

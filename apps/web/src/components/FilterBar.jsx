@@ -1,8 +1,8 @@
-import { TIPOS_DE_FILTRO } from '@ecopac/shared';
-import DateField from './DateField';
-import NumberField from './NumberField';
-import Selector from './Selector';
-import TextField from './TextField';
+import { SUBTIPOS_DE_RANGO, TIPOS_DE_FILTRO } from "@ecopac/shared";
+import DateField from "./DateField";
+import NumberField from "./NumberField";
+import Selector from "./Selector";
+import TextField from "./TextField";
 
 /**
  * Barra de filtros. Es deliberadamente tonta: no conoce los filtros de ningun modulo, solo
@@ -18,10 +18,14 @@ import TextField from './TextField';
  * desplegable que no hace nada.
  *
  * Un filtro de rango se representa como { min, max }; cualquiera de los dos extremos puede
- * ser null, que significa "sin limite por ese lado". Hay rangos numericos (rangoEdad) y de
- * fecha (rangoFecha, fechaVencimiento): se distinguen por `subtipo: 'fecha'` si el
- * descriptor lo declara, y si no por si trae limites numericos. Lo correcto seria que el
- * descriptor siempre lo dijera; mientras tanto esta heuristica acierta con los que existen.
+ * ser null, que significa "sin limite por ese lado". De que es el rango lo dice el descriptor
+ * en `subtipo` (issue #386), y aqui no se adivina: antes, si no lo declaraba, se miraba si
+ * traia limites numericos, y un rango numerico sin limites -legitimo- habria dibujado
+ * selectores de fecha sin que nadie lo notara hasta usarlo.
+ *
+ * Un rango sin `subtipo` cae en NumberField. Es a proposito y no al reves: siete de los ocho
+ * rangos son de fecha, asi que el defecto contrario taparia el olvido. Que no llegue a pasar
+ * lo comprueba packages/shared/filtros.test.js.
  */
 export default function FilterBar({ campos = [], valores = {}, onChange, catalogos = {} }) {
   const cambiar = (id, valor) => onChange?.(id, valor);
@@ -37,9 +41,9 @@ export default function FilterBar({ campos = [], valores = {}, onChange, catalog
               key={campo.id}
               label={campo.label}
               placeholder={campo.placeholder}
-              value={valor ?? ''}
+              value={valor ?? ""}
               onChange={(evento) => cambiar(campo.id, evento.target.value)}
-              style={{ flex: '1 1 260px', marginBottom: 0 }}
+              style={{ flex: "1 1 260px", marginBottom: 0 }}
             />
           );
         }
@@ -56,33 +60,42 @@ export default function FilterBar({ campos = [], valores = {}, onChange, catalog
               value={valor ?? null}
               options={opciones}
               onSelect={(elegido) => cambiar(campo.id, elegido)}
-              placeholder={campo.placeholder ?? 'Todos'}
+              placeholder={campo.placeholder ?? "Todos"}
               disabled={opciones.length === 0}
-              style={{ flex: '0 1 200px', marginBottom: 0 }}
+              style={{ flex: "0 1 200px", marginBottom: 0 }}
             />
           );
         }
 
         if (campo.tipo === TIPOS_DE_FILTRO.RANGO) {
           const rango = valor ?? {};
-          const esFecha =
-            campo.subtipo === 'fecha' ||
-            (typeof campo.min !== 'number' && typeof campo.max !== 'number');
+          const esFecha = campo.subtipo === SUBTIPOS_DE_RANGO.FECHA;
 
           if (esFecha) {
+            // Sin `label` en cada DateField a proposito: con label, cada campo agrega su propia
+            // fila ("Desde"/"Hasta") ademas de la del legend ("Fecha"), y el bloque completo
+            // termina una fila mas abajo que un filtro de un solo control (Estado, Comunidad).
+            // "Desde"/"Hasta" se pintan en linea, junto al control, para que este filtro quede en
+            // las mismas dos filas -etiqueta y control- que cualquier otro.
             return (
-              <fieldset key={campo.id} className="border-0 p-0 m-0" style={{ flex: '0 1 320px' }}>
+              <fieldset key={campo.id} className="border-0 p-0 m-0" style={{ flex: "0 1 320px" }}>
                 <legend className="form-label fs-6">{campo.label}</legend>
-                <div className="d-flex align-items-start gap-2">
+                <div className="d-flex align-items-center gap-2">
+                  <span className="small" style={{ color: "var(--color-text-muted)" }}>
+                    Desde
+                  </span>
                   <DateField
-                    label="Desde"
+                    aria-label="Desde"
                     value={rango.min ?? null}
                     maxDate={rango.max ?? undefined}
                     onChange={(nuevo) => cambiar(campo.id, { ...rango, min: nuevo })}
                     style={{ marginBottom: 0 }}
                   />
+                  <span className="small" style={{ color: "var(--color-text-muted)" }}>
+                    Hasta
+                  </span>
                   <DateField
-                    label="Hasta"
+                    aria-label="Hasta"
                     value={rango.max ?? null}
                     minDate={rango.min ?? undefined}
                     onChange={(nuevo) => cambiar(campo.id, { ...rango, max: nuevo })}
@@ -94,7 +107,7 @@ export default function FilterBar({ campos = [], valores = {}, onChange, catalog
           }
 
           return (
-            <fieldset key={campo.id} className="border-0 p-0 m-0" style={{ flex: '0 1 240px' }}>
+            <fieldset key={campo.id} className="border-0 p-0 m-0" style={{ flex: "0 1 240px" }}>
               <legend className="form-label fs-6">{campo.label}</legend>
               <div className="d-flex align-items-start gap-2">
                 <NumberField

@@ -1,4 +1,4 @@
-import { Button, Spinner } from 'react-bootstrap';
+import { Button, Spinner } from "react-bootstrap";
 
 /**
  * Boton de accion principal.

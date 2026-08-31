@@ -4,13 +4,18 @@
 // (CAMPOS_REGISTRO_PACIENTE, issue #113) comparten las mismas reglas de negocio (fecha de
 // nacimiento, formato del DPI) pero exigen un conjunto distinto de campos obligatorios: la
 // segunda cubre el formulario completo de registro, incluido lo que la primera no valida
-// (sexo, telefonoContacto, idioma, numeroFicha).
+// (sexo, telefonoContacto, idioma). numeroFicha no es un campo de ningun formulario: lo
+// genera el servidor (issue #114).
 //
-// Ningun dato real: nombres, DPI y numeros de ficha son inventados.
+// Ningun dato real: nombres y DPI son inventados.
 
 import { describe, expect, it } from "vitest";
 
-import { normalizarDatosPaciente, validarPaciente, validarRegistroPaciente } from "./validaciones.js";
+import {
+  normalizarDatosPaciente,
+  validarPaciente,
+  validarRegistroPaciente,
+} from "./validaciones.js";
 
 /** Paciente valido minimo para validarPaciente(): solo los 5 campos de CAMPOS_PACIENTE. */
 function pacienteValido(cambios = {}) {
@@ -23,14 +28,13 @@ function pacienteValido(cambios = {}) {
   };
 }
 
-/** Formulario de registro valido minimo para validarRegistroPaciente(): los 12 campos de CAMPOS_REGISTRO_PACIENTE. */
+/** Formulario de registro valido minimo para validarRegistroPaciente(): los 11 campos de CAMPOS_REGISTRO_PACIENTE. */
 function registroValido(cambios = {}) {
   return {
     ...pacienteValido(),
     sexo: "femenino",
     telefonoContacto: "50212345678",
     idioma: "espanol",
-    numeroFicha: "F-001",
     ...cambios,
   };
 }
@@ -91,11 +95,11 @@ describe("validarPaciente", () => {
 });
 
 describe("validarRegistroPaciente", () => {
-  it("no reporta errores con los 12 campos de CAMPOS_REGISTRO_PACIENTE completos", () => {
+  it("no reporta errores con los 11 campos de CAMPOS_REGISTRO_PACIENTE completos", () => {
     expect(validarRegistroPaciente(registroValido())).toEqual({});
   });
 
-  it("exige sexo, telefonoContacto, idioma y numeroFicha ademas de lo que ya exige validarPaciente", () => {
+  it("exige sexo, telefonoContacto e idioma ademas de lo que ya exige validarPaciente", () => {
     const errores = validarRegistroPaciente({});
 
     expect(errores.nombres).toBeTruthy();
@@ -105,7 +109,7 @@ describe("validarRegistroPaciente", () => {
     expect(errores.sexo).toBeTruthy();
     expect(errores.telefonoContacto).toBeTruthy();
     expect(errores.idioma).toBeTruthy();
-    expect(errores.numeroFicha).toBeTruthy();
+    expect(errores.numeroFicha).toBeUndefined();
   });
 
   it("comparte las mismas reglas de negocio de fecha de nacimiento y DPI que validarPaciente", () => {

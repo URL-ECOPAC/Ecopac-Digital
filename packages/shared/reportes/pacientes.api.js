@@ -1,6 +1,7 @@
 import { obtenerSupabase } from "../api/cliente.js";
 import { normalizarError } from "../api/errores-de-supabase.js";
-import { ROLES, esAdministrador } from "../usuarios/roles.js";
+export { puedeVerReporteDePacientes } from "./permisos.js";
+import { puedeVerReporteDePacientes } from "./permisos.js";
 
 /** Criterios de agrupacion que admite el reporte de pacientes atendidos. */
 export const AGRUPACIONES_DE_PACIENTES = {
@@ -8,11 +9,6 @@ export const AGRUPACIONES_DE_PACIENTES = {
   COMUNIDAD: "comunidad",
   PERIODO: "periodo",
 };
-
-/** Roles que pueden consultar el reporte, segun la guarda de fn_reporte_pacientes_atendidos. */
-export function puedeVerReporteDePacientes(rol) {
-  return esAdministrador(rol) || rol === ROLES.JUNTA_DIRECTIVA;
-}
 
 function aGrupo(fila) {
   return {

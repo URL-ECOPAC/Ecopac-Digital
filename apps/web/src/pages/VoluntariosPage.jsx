@@ -1,16 +1,14 @@
-import { useNavigate } from 'react-router-dom';
-import {
-  COLUMNAS_USUARIO,
-  FILTROS_USUARIO,
-  useUsuariosListado,
-} from '@ecopac/shared';
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { COLUMNAS_USUARIO, FILTROS_USUARIO, useUsuariosListado } from "@ecopac/shared";
 
-import DataList from '../components/DataList';
-import ErrorState from '../components/ErrorState';
-import FilterBar from '../components/FilterBar';
-import PageHeader from '../components/PageHeader';
-import ScreenContainer from '../components/ScreenContainer';
-import SecondaryButton from '../components/SecondaryButton';
+import DataList from "../components/DataList";
+import ErrorState from "../components/ErrorState";
+import FilterBar from "../components/FilterBar";
+import PageHeader from "../components/PageHeader";
+import ScreenContainer from "../components/ScreenContainer";
+import SecondaryButton from "../components/SecondaryButton";
+import ModalAltaUsuario from "./ModalAltaUsuario";
 
 // Pantalla de personal (issue #105). Solo presentacion: los datos, los filtros, la paginacion
 // y los catalogos salen de useUsuariosListado(), en packages/shared/usuarios/. Aqui no se
@@ -18,10 +16,17 @@ import SecondaryButton from '../components/SecondaryButton';
 //
 // Quien puede entrar lo decide el guard de rutas (#52) desde App.jsx, no este componente.
 //
-// La version movil de esta misma pantalla es la #272 y consume este mismo hook con los mismos
-// descriptores; lo unico que cambia es que DataList se dibuja como tarjetas.
+// Al hacer click en una fila se navega a su ficha (/voluntarios/:id): ahi es donde viven
+// Editar y Permisos (con ModalEdicionUsuario y ModalPermisosUsuario), no en esta pantalla. Es
+// un solo camino a cada accion, no dos: esta lista antes los abria directo desde la fila
+// -mientras la ficha no existia- y tenia ademas una accionSecundaria propia para Permisos;
+// las dos formas se retiraron de aca al mudarse a la ficha.
+//
+// La version movil de esta misma pantalla consume este mismo hook con los mismos descriptores;
+// lo unico que cambia es que DataList se dibuja como tarjetas.
 export default function VoluntariosPage() {
   const navigate = useNavigate();
+  const [mostrarAlta, setMostrarAlta] = useState(false);
   const {
     filas,
     filtros,
@@ -53,7 +58,8 @@ export default function VoluntariosPage() {
     <ScreenContainer>
       <PageHeader
         title="Voluntarios y medicos"
-        subtitle={total === 1 ? '1 persona' : `${total} personas`}
+        subtitle={total === 1 ? "1 persona" : `${total} personas`}
+        actions={[{ label: "Nuevo voluntario", onClick: () => setMostrarAlta(true) }]}
       />
 
       <FilterBar
@@ -80,7 +86,7 @@ export default function VoluntariosPage() {
             onClick={irAPaginaAnterior}
             disabled={!hayPaginaAnterior}
           />
-          <span style={{ color: 'var(--color-textMuted)' }}>
+          <span style={{ color: "var(--color-textMuted)" }}>
             Pagina {pagina} de {paginas}
           </span>
           <SecondaryButton
@@ -96,6 +102,12 @@ export default function VoluntariosPage() {
           <SecondaryButton title="Limpiar filtros" onClick={limpiarFiltros} />
         </div>
       )}
+
+      <ModalAltaUsuario
+        visible={mostrarAlta}
+        onClose={() => setMostrarAlta(false)}
+        onUsuarioCreado={recargar}
+      />
     </ScreenContainer>
   );
 }

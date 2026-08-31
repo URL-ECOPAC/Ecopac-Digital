@@ -12,10 +12,14 @@ vi.mock("../api/cliente.js", () => ({
 }));
 
 const { CODIGOS_DE_ERROR_DE_SUPABASE } = await import("../api/errores-de-supabase.js");
-const { generarReceta, obtenerReceta, obtenerRecetas, anularReceta, ESTADOS_RECETA } =
+const { generarReceta, obtenerReceta, obtenerRecetas, anularReceta } =
   await import("./recetas.api.js");
+const { ESTADOS_RECETA } = await import("../enums.js");
 
-function crearCliente({ rpc = { data: "rec-1", error: null }, tabla = { data: null, error: null } } = {}) {
+function crearCliente({
+  rpc = { data: "rec-1", error: null },
+  tabla = { data: null, error: null },
+} = {}) {
   const llamadas = [];
 
   const cadena = {
@@ -35,8 +39,7 @@ function crearCliente({ rpc = { data: "rec-1", error: null }, tabla = { data: nu
       llamadas.push({ paso: "order", columna, opciones });
       return cadena;
     },
-    maybeSingle: async () =>
-      tabla instanceof Error ? Promise.reject(tabla) : tabla,
+    maybeSingle: async () => (tabla instanceof Error ? Promise.reject(tabla) : tabla),
     then(resolve, reject) {
       const resultado = tabla instanceof Error ? Promise.reject(tabla) : Promise.resolve(tabla);
       return resultado.then(resolve, reject);
@@ -330,6 +333,32 @@ describe("anularReceta", () => {
     expect(update.valores.motivo_anulacion).toBe("Error de dosis");
     expect(update.valores.anulada_por).toBe("per-1");
     expect(update.valores.anulada_en).toBeTruthy();
+  });
+
+  it("cuando la politica no deja anular, no devuelve exito silencioso", async () => {
+    // Es el modo de fallo que hacia invisible la politica de la 00075: un UPDATE que la clausula
+    // USING excluye no lanza, afecta cero filas. Sin este caso, la pantalla diria "anulada" con
+    // la receta intacta.
+    dobles.cliente = crearCliente({ tabla: { data: [], error: null } });
+
+    const { receta, error } = await anularReceta("rec-ajena", {
+      motivo: "Error de dosis",
+      anuladaPor: "per-1",
+    });
+
+    expect(receta).toBeNull();
+    expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.PERMISO_DENEGADO);
+    expect(error.mensaje).toContain("quien la emitio");
+  });
+
+  it("pide de vuelta las filas afectadas, que es como se entera de que RLS nego", async () => {
+    const cliente = crearCliente({ tabla: { data: [{ id: "rec-1" }], error: null } });
+    dobles.cliente = cliente;
+
+    await anularReceta("rec-1", { motivo: "Error de dosis", anuladaPor: "per-1" });
+
+    const selects = cliente.llamadas.filter((l) => l.paso === "select");
+    expect(selects.some((l) => l.columnas === "id")).toBe(true);
   });
 
   it("no existe forma de editar el contenido de una receta emitida", async () => {

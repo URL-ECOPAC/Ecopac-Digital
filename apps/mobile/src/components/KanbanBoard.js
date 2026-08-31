@@ -1,7 +1,7 @@
-import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { colors, spacing, typography } from '@ecopac/ui-tokens';
-import Modal from './Modal';
+import { useState } from "react";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { colors, spacing, typography } from "@ecopac/ui-tokens";
+import Modal from "./Modal";
 
 const MIN_TOUCH_HEIGHT = 48;
 const ANCHO_COLUMNA = 280;
@@ -55,11 +55,7 @@ export default function KanbanBoard({ columnas = [], renderTarjeta, onMover }) {
         ))}
       </ScrollView>
 
-      <Modal
-        visible={moviendo !== null}
-        onClose={() => setMoviendo(null)}
-        title="Mover a"
-      >
+      <Modal visible={moviendo !== null} onClose={() => setMoviendo(null)} title="Mover a">
         {columnas
           .filter((columna) => columna.id !== moviendo?.columnaId)
           .map((columna) => (
@@ -97,8 +93,8 @@ const styles = StyleSheet.create({
   tarjetas: { gap: spacing.sm },
   mover: {
     minHeight: MIN_TOUCH_HEIGHT,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginTop: spacing.xs,
   },
   moverPressed: { opacity: 0.6 },
@@ -110,7 +106,7 @@ const styles = StyleSheet.create({
   },
   destino: {
     minHeight: MIN_TOUCH_HEIGHT,
-    justifyContent: 'center',
+    justifyContent: "center",
     paddingHorizontal: spacing.md,
     borderRadius: spacing.xs,
   },

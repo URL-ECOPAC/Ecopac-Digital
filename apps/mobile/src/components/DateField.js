@@ -1,9 +1,9 @@
-import { useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
-import { MESES } from '@ecopac/shared';
-import { colors, spacing, typography } from '@ecopac/ui-tokens';
-import PrimaryButton from './PrimaryButton';
-import Selector from './Selector';
+import { useState } from "react";
+import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
+import { MESES } from "@ecopac/shared";
+import { colors, spacing, typography } from "@ecopac/ui-tokens";
+import PrimaryButton from "./PrimaryButton";
+import Selector from "./Selector";
 
 const MIN_TOUCH_HEIGHT = 48;
 
@@ -28,13 +28,13 @@ const ANIO_ACTUAL = new Date().getFullYear();
 
 /** Parte una cadena ISO en sus tres numeros, o devuelve null si no tiene esa forma. */
 function partirIso(valor) {
-  const partes = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(valor ?? ''));
+  const partes = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(valor ?? ""));
   if (!partes) return null;
   return { anio: Number(partes[1]), mes: Number(partes[2]), dia: Number(partes[3]) };
 }
 
 function aIso({ anio, mes, dia }) {
-  return `${anio}-${String(mes).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
+  return `${anio}-${String(mes).padStart(2, "0")}-${String(dia).padStart(2, "0")}`;
 }
 
 /** Dias que tiene un mes concreto, contando los anios bisiestos. */
@@ -95,7 +95,9 @@ export default function DateField({
   };
 
   const iso = partirIso(value);
-  const textoVisible = iso ? `${String(iso.dia).padStart(2, '0')} de ${MESES[iso.mes - 1]} de ${iso.anio}` : null;
+  const textoVisible = iso
+    ? `${String(iso.dia).padStart(2, "0")} de ${MESES[iso.mes - 1]} de ${iso.anio}`
+    : null;
 
   const dias = Array.from({ length: diasDelMes(borrador.anio, borrador.mes) }, (_, i) => ({
     label: String(i + 1),
@@ -118,26 +120,41 @@ export default function DateField({
         accessibilityState={{ expanded: abierto }}
       >
         <Text style={textoVisible ? styles.valueText : styles.placeholderText}>
-          {textoVisible ?? 'Seleccionar fecha'}
+          {textoVisible ?? "Seleccionar fecha"}
         </Text>
       </Pressable>
 
       {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
-      <Modal visible={abierto} transparent animationType="fade" onRequestClose={() => setAbierto(false)}>
+      <Modal
+        visible={abierto}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setAbierto(false)}
+      >
         <View style={styles.modalRoot}>
           <Pressable style={StyleSheet.absoluteFill} onPress={() => setAbierto(false)}>
             <View style={styles.backdrop} />
           </Pressable>
 
           <View style={styles.sheet}>
-            <Selector label="Dia" value={borrador.dia} options={dias} onSelect={(d) => cambiar('dia', d)} />
-            <Selector label="Mes" value={borrador.mes} options={meses} onSelect={(m) => cambiar('mes', m)} />
+            <Selector
+              label="Dia"
+              value={borrador.dia}
+              options={dias}
+              onSelect={(d) => cambiar("dia", d)}
+            />
+            <Selector
+              label="Mes"
+              value={borrador.mes}
+              options={meses}
+              onSelect={(m) => cambiar("mes", m)}
+            />
             <Selector
               label="Anio"
               value={borrador.anio}
               options={opcionesDeAnio(minDate, maxDate)}
-              onSelect={(a) => cambiar('anio', a)}
+              onSelect={(a) => cambiar("anio", a)}
             />
             <PrimaryButton title="Aplicar" onPress={confirmar} />
             <Pressable style={styles.limpiar} onPress={limpiar} accessibilityRole="button">
@@ -161,7 +178,7 @@ const styles = StyleSheet.create({
   },
   trigger: {
     minHeight: MIN_TOUCH_HEIGHT,
-    justifyContent: 'center',
+    justifyContent: "center",
     borderWidth: 1,
     borderColor: colors.secondary,
     borderRadius: spacing.xs,
@@ -186,10 +203,10 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.xs,
     color: colors.danger,
   },
-  modalRoot: { flex: 1, justifyContent: 'flex-end' },
+  modalRoot: { flex: 1, justifyContent: "flex-end" },
   backdrop: { flex: 1, backgroundColor: colors.text, opacity: 0.5 },
   sheet: {
-    maxHeight: '85%',
+    maxHeight: "85%",
     backgroundColor: colors.background,
     borderTopLeftRadius: spacing.md,
     borderTopRightRadius: spacing.md,
@@ -197,8 +214,8 @@ const styles = StyleSheet.create({
   },
   limpiar: {
     minHeight: MIN_TOUCH_HEIGHT,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   limpiarTexto: {
     fontFamily: typography.fontFamilyBase,

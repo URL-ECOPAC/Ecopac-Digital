@@ -12,6 +12,7 @@ import { ROLES } from "./roles.js";
 import {
   LONGITUD_MINIMA_CONTRASENA,
   REGLAS_DE_CONTRASENA,
+  validarCambioContrasena,
   validarContrasena,
   validarCorreo,
   validarCredenciales,
@@ -175,5 +176,76 @@ describe("validarCredenciales", () => {
 
   it("reporta los dos campos con el formulario vacio", () => {
     expect(Object.keys(validarCredenciales().errores).sort()).toEqual(["contrasena", "email"]);
+  });
+});
+
+describe("validarCambioContrasena", () => {
+  it("sin errores cuando la actual esta presente, la nueva cumple la politica y coincide", () => {
+    const errores = validarCambioContrasena({
+      actual: "LaDeAntes1",
+      nueva: "ClaveNueva1",
+      confirmarNueva: "ClaveNueva1",
+    });
+
+    expect(errores).toEqual({});
+  });
+
+  it("pide la contrasena actual cuando falta, sin exigirle fortaleza", () => {
+    // A proposito: la actual no es una contrasena nueva, no le aplica REGLAS_DE_CONTRASENA.
+    const errores = validarCambioContrasena({
+      actual: "",
+      nueva: "ClaveNueva1",
+      confirmarNueva: "ClaveNueva1",
+    });
+
+    expect(errores.actual).toBeTruthy();
+    expect(errores.nueva).toBeUndefined();
+  });
+
+  it("la nueva SI pasa por la politica de fortaleza, bajo la clave 'nueva'", () => {
+    const errores = validarCambioContrasena({
+      actual: "LaDeAntes1",
+      nueva: "abc",
+      confirmarNueva: "abc",
+    });
+
+    expect(errores.nueva).toBeTruthy();
+    expect(errores.contrasena).toBeUndefined();
+  });
+
+  it("reporta que no coinciden cuando confirmar difiere de la nueva", () => {
+    const errores = validarCambioContrasena({
+      actual: "LaDeAntes1",
+      nueva: "ClaveNueva1",
+      confirmarNueva: "OtraCosa1",
+    });
+
+    expect(errores.confirmarNueva).toBeTruthy();
+  });
+
+  it("pide confirmar cuando la nueva es valida pero no se repitio", () => {
+    const errores = validarCambioContrasena({
+      actual: "LaDeAntes1",
+      nueva: "ClaveNueva1",
+      confirmarNueva: "",
+    });
+
+    expect(errores.confirmarNueva).toBeTruthy();
+  });
+
+  it("no revisa la coincidencia si la nueva ya tiene su propio error", () => {
+    // Que la nueva sea invalida ya es el mensaje util; no hace falta sumar "no coinciden".
+    const errores = validarCambioContrasena({
+      actual: "LaDeAntes1",
+      nueva: "abc",
+      confirmarNueva: "otra",
+    });
+
+    expect(errores.nueva).toBeTruthy();
+    expect(errores.confirmarNueva).toBeUndefined();
+  });
+
+  it("formulario vacio: reporta actual y nueva; confirmarNueva no suma nada porque nueva ya fallo", () => {
+    expect(Object.keys(validarCambioContrasena()).sort()).toEqual(["actual", "nueva"]);
   });
 });

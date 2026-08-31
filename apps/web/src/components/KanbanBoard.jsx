@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState } from "react";
 
 /**
  * Tablero kanban.
@@ -29,7 +29,7 @@ export default function KanbanBoard({ columnas = [], renderTarjeta, onMover }) {
   };
 
   const conTeclado = (evento, tarjeta, indiceColumna) => {
-    const salto = evento.key === 'ArrowLeft' ? -1 : evento.key === 'ArrowRight' ? 1 : 0;
+    const salto = evento.key === "ArrowLeft" ? -1 : evento.key === "ArrowRight" ? 1 : 0;
     if (salto === 0) return;
     const destino = columnas[indiceColumna + salto];
     if (!destino) return;
@@ -38,20 +38,20 @@ export default function KanbanBoard({ columnas = [], renderTarjeta, onMover }) {
   };
 
   return (
-    <div className="d-flex gap-3" style={{ overflowX: 'auto', alignItems: 'flex-start' }}>
+    <div className="d-flex gap-3" style={{ overflowX: "auto", alignItems: "flex-start" }}>
       {columnas.map((columna, indiceColumna) => (
         <section
           key={columna.id}
           className="rounded p-2"
           style={{
-            flex: '0 0 280px',
-            backgroundColor: 'var(--color-background)',
-            border: '1px solid var(--color-border)',
+            flex: "0 0 280px",
+            backgroundColor: "var(--color-background)",
+            border: "1px solid var(--color-border)",
           }}
           onDragOver={(evento) => evento.preventDefault()}
           onDrop={() => alSoltar(columna.id)}
         >
-          <h3 className="h6 px-1 py-2 mb-2" style={{ color: 'var(--color-text-muted)' }}>
+          <h3 className="h6 px-1 py-2 mb-2" style={{ color: "var(--color-text-muted)" }}>
             {columna.titulo}
             <span className="ms-2">{(columna.tarjetas ?? []).length}</span>
           </h3>
@@ -65,7 +65,7 @@ export default function KanbanBoard({ columnas = [], renderTarjeta, onMover }) {
                 onKeyDown={(evento) => conTeclado(evento, tarjeta, indiceColumna)}
                 onDragStart={() => setArrastrada({ tarjeta, columnaId: columna.id })}
                 onDragEnd={() => setArrastrada(null)}
-                style={{ cursor: 'grab' }}
+                style={{ cursor: "grab" }}
               >
                 {renderTarjeta?.(tarjeta)}
               </div>

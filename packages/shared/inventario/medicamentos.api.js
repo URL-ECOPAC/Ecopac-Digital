@@ -288,7 +288,7 @@ export async function actualizarMedicamento(id, datos) {
  * Desactiva un medicamento, o rechaza la operacion con un error explicativo si todavia tiene
  * existencias disponibles (fn_medicamento_tiene_existencias, migracion 00050).
  *
- * Mismo patron que cambiarEstadoProyecto (packages/shared/donaciones/proyectos.api.js) y el
+ * Mismo patron que cambiarEstadoProyecto (packages/shared/proyectos/api.js) y el
  * guard de personal_registro_atenciones (packages/shared/jornadas/api.js): se reusa la
  * clasificacion LLAVE_FORANEA (el medicamento esta relacionado con existencias) con un mensaje
  * propio.

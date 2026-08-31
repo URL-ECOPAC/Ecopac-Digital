@@ -19,21 +19,29 @@
 // bodegas y proveedores comparten bodegas.permisos.js: las politicas de las dos tablas son
 // identicas (00062) y se administran desde la misma pantalla.
 
-export * from './campos.js';
-export * from './columnas.js';
-export * from './filtros.js';
-export * from './principios-activos.api.js';
-export * from './principios-activos.permisos.js';
-export * from './medicamentos.api.js';
-export * from './medicamentos.permisos.js';
-export * from './lotes.api.js';
-export * from './existencias.api.js';
-export * from './lotes.permisos.js';
-export * from './lotes.validaciones.js';
-export * from './existencias.validaciones.js';
-export * from './bodegas.api.js';
-export * from './proveedores.api.js';
-export * from './bodegas.permisos.js';
+export * from "./campos.js";
+export * from "./columnas.js";
+export * from "./filtros.js";
+export * from "./principios-activos.api.js";
+export * from "./principios-activos.permisos.js";
+export * from "./medicamentos.api.js";
+export * from "./medicamentos.permisos.js";
+export * from "./lotes.api.js";
+export * from "./existencias.api.js";
+export * from "./lotes.permisos.js";
+export * from "./lotes.validaciones.js";
+export * from "./existencias.validaciones.js";
+export * from "./bodegas.api.js";
+export * from "./proveedores.api.js";
+export * from "./bodegas.permisos.js";
 export * from "./movimientos.api.js";
+export * from "./alertas.api.js";
+export * from "./permisos.js";
 export * from "./validacion.api.js";
+<<<<<<< HEAD
 export * from "./useCatalogoMedicamentos.js";
+=======
+export * from "./useCatalogoMedicamentos.js";
+export * from "./useInventario.js";
+export * from "./usePendientesValidacion.js";
+>>>>>>> origin/develop

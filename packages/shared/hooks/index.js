@@ -1,7 +1,8 @@
 // Hooks reutilizables sin JSX
-// - usePatientData(): obtener/actualizar datos de paciente
-// - useInventory(): gestionar inventario
-// - usePendingApprovals(): consultas pendientes de aprobación
+// - useSesion(): estado de la sesion de autenticacion
+// - useExpiracionPorInactividad(): cierre de sesion por inactividad
+// - useBusquedaPacientes(): busqueda con retardo y descarte de respuestas obsoletas
 // - Funcionan en React y React Native
 export * from "./useSesion.js";
 export * from "./useExpiracionPorInactividad.js";
+export * from "./useBusquedaPacientes.js";

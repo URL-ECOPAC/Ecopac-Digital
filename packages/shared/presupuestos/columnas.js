@@ -14,7 +14,7 @@
 //
 // Ver packages/shared/pacientes/columnas.js, que es el ejemplar de referencia.
 
-import { TIPOS_DE_PRESENTACION } from '../descriptores.js';
+import { TIPOS_DE_PRESENTACION } from "../descriptores.js";
 
 export const COLUMNAS_GASTO = [
   { id: "fecha", label: "Fecha", tipo: TIPOS_DE_PRESENTACION.FECHA },
@@ -32,6 +32,6 @@ export const CAMPOS_FICHA_GASTO = [
   { id: "monto", label: "Monto", tipo: TIPOS_DE_PRESENTACION.MONEDA },
   { id: "fecha", label: "Fecha", tipo: TIPOS_DE_PRESENTACION.FECHA },
   { id: "estado", label: "Estado", tipo: TIPOS_DE_PRESENTACION.CHIP },
-  { id: "encargado_id", label: "Encargado", tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  { id: "responsable_id", label: "Responsable", tipo: TIPOS_DE_PRESENTACION.TEXTO },
   { id: "registrado_por", label: "Registrado por", tipo: TIPOS_DE_PRESENTACION.TEXTO },
 ];

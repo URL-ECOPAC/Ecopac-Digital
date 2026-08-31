@@ -1,4 +1,4 @@
-import { Button } from 'react-bootstrap';
+import { Button } from "react-bootstrap";
 
 /**
  * Boton de accion secundaria (ej. "Cancelar", "Volver").

@@ -8,7 +8,7 @@
 
 BEGIN;
 
-SELECT plan(25);
+SELECT plan(31);
 
 -- ============================================================================
 -- Setup: una comunidad, un usuario de cada rol, dos jornadas (una con personal
@@ -142,18 +142,39 @@ SELECT ok(
 );
 
 -- ============================================================================
--- socio fundador: fuera de las cinco tablas (lectura literal del DoD)
+-- socio fundador: mismos permisos que junta directiva (issue #404, es_consultivo()).
+-- La 00039 original decia "fuera de las cinco tablas, lectura literal del DoD" -- ese
+-- comentario quedo corregido en la 00078, que es la que este bloque verifica.
 -- ============================================================================
 SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000903';
 
 SELECT ok(
-  (SELECT count(*) FROM jornadas) = 0,
-  'socio fundador no lee jornadas'
+  (SELECT count(*) FROM jornadas) >= 2,
+  'socio fundador lee jornadas, igual que junta directiva'
 );
 
 SELECT ok(
-  (SELECT count(*) FROM proyectos) = 0,
-  'socio fundador no lee proyectos'
+  (SELECT count(*) FROM proyectos) >= 1,
+  'socio fundador lee proyectos, igual que junta directiva'
+);
+
+SELECT throws_ok(
+  $$ INSERT INTO jornadas (nombre, fecha, comunidad_id, responsable_id)
+     VALUES ('Jornada de socio 90', CURRENT_DATE + 33,
+             '10000000-0000-0000-0000-000000000090', '00000000-0000-0000-0000-000000000902') $$,
+  '42501',
+  NULL,
+  'socio fundador no puede crear jornadas'
+);
+
+SELECT is_empty(
+  $$ UPDATE proyectos SET nombre = 'Intento de socio' WHERE id = '50000000-0000-0000-0000-000000000901' RETURNING id $$,
+  'socio fundador no puede editar proyectos'
+);
+
+SELECT ok(
+  (SELECT count(*) FROM jornada_estado_historial) = 0,
+  'socio fundador no lee el historial de estados (solo administrador)'
 );
 
 SELECT throws_ok(
@@ -230,6 +251,36 @@ SELECT throws_ok(
 SELECT ok(
   (SELECT count(*) FROM jornada_estado_historial) = 0,
   'voluntario no lee el historial de estados'
+);
+
+-- ============================================================================
+-- proyectos.gestionar concedido puntualmente a voluntario (issue #409): crear y editar
+-- proyectos, antes exclusivo de administrador, ahora se permite.
+-- ============================================================================
+SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000901';
+
+SELECT lives_ok(
+  $$ INSERT INTO usuario_permiso (perfil_id, permiso_id, concedido, otorgado_por)
+     SELECT '00000000-0000-0000-0000-000000000905', id, true, '00000000-0000-0000-0000-000000000901'
+     FROM permisos WHERE clave = 'proyectos.gestionar' $$,
+  'administrador concede proyectos.gestionar a voluntario905 (issue #409)'
+);
+
+SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000905';
+
+-- Con RETURNING a proposito, no solo INSERT a secas: Postgres exige ademas que la fila pase
+-- una politica de SELECT para poder devolverla, que es justo el patron real de supabase-js
+-- (`.insert(...).select()`, usado por crearProyecto() en packages/shared/proyectos/api.js). Un
+-- INSERT sin RETURNING no habria detectado que la politica de SELECT de proyectos (00039) se
+-- quedo corta hasta que la 00086 le agrego tambien tiene_permiso('proyectos.gestionar').
+SELECT lives_ok(
+  $$ INSERT INTO proyectos (id, nombre) VALUES ('50000000-0000-0000-0000-000000000903', 'Proyecto de voluntario con permiso 90') RETURNING id $$,
+  'voluntario con proyectos.gestionar concedido puntualmente si puede crear un proyecto (issue #409)'
+);
+
+SELECT lives_ok(
+  $$ UPDATE proyectos SET nombre = 'Proyecto editado por voluntario 90' WHERE id = '50000000-0000-0000-0000-000000000903' RETURNING id $$,
+  'voluntario con proyectos.gestionar concedido puntualmente si puede editar un proyecto (issue #409)'
 );
 
 SELECT * FROM finish();

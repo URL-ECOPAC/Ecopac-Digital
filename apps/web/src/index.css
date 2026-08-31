@@ -1,4 +1,4 @@
-@import 'bootstrap/dist/css/bootstrap.min.css';
+@import "bootstrap/dist/css/bootstrap.min.css";
 
 /* Las variables --color-*, --spacing-*, --accent-* y --estado-* las publica
    src/theme.js a partir de packages/ui-tokens. Aqui no se escribe ningun color
@@ -84,4 +84,153 @@
   --bs-alert-color: var(--color-info);
   --bs-alert-bg: color-mix(in srgb, var(--color-info) 10%, white);
   --bs-alert-border-color: color-mix(in srgb, var(--color-info) 28%, white);
+}
+
+/* Receta imprimible (issue #131). En pantalla no se ve: solo existe para la impresion, que es
+   donde el navegador tambien ofrece "Guardar como PDF". */
+.receta-imprimible {
+  display: none;
+}
+
+/* Cuadro de turnos imprimible (issue #185). Mismo patron que .receta-imprimible de arriba: oculto
+   en pantalla, solo existe para la impresion. Reusa el @page de abajo (media carta) en vez de
+   declarar uno propio: dos reglas @page en la misma hoja de estilos no se combinan por clase,
+   compiten por el documento entero, asi que declarar una segunda aca le cambiaria el tamano de
+   pagina tambien a las recetas. */
+.turnos-imprimible {
+  display: none;
+}
+
+@media print {
+  /* Media carta. El criterio 2 pide que quepa ahi y se lea en impresora monocromatica, asi que
+     el diseno no depende de ningun color: solo tamano, peso y lineas. */
+  @page {
+    size: 5.5in 8.5in;
+    margin: 0.4in;
+  }
+
+  /* Criterio 4: fuera la navegacion, la cabecera y el resto de la aplicacion. */
+  .app-shell {
+    display: none !important;
+  }
+
+  body {
+    background: var(--color-surface);
+    color: var(--color-text);
+  }
+
+  .receta-imprimible {
+    display: block;
+    font-size: 10pt;
+    line-height: 1.35;
+  }
+
+  .receta-imprimible__encabezado {
+    border-bottom: 1pt solid var(--color-text);
+    margin-bottom: 8pt;
+    padding-bottom: 4pt;
+    text-align: center;
+  }
+
+  .receta-imprimible__organizacion {
+    font-size: 13pt;
+    margin: 0;
+  }
+
+  .receta-imprimible__documento {
+    font-size: 11pt;
+    font-weight: 600;
+    margin: 0;
+  }
+
+  .receta-imprimible__folio,
+  .receta-imprimible__dato {
+    margin: 0 0 2pt;
+  }
+
+  .receta-imprimible__etiqueta {
+    font-weight: 600;
+  }
+
+  .receta-imprimible__bloque {
+    border-bottom: 0.5pt solid var(--color-text);
+    margin-bottom: 6pt;
+    padding-bottom: 6pt;
+  }
+
+  .receta-imprimible__titulo {
+    font-size: 11pt;
+    margin: 0 0 4pt;
+  }
+
+  .receta-imprimible__medicamentos {
+    margin: 0;
+    padding-left: 14pt;
+  }
+
+  .receta-imprimible__medicamentos li {
+    margin-bottom: 5pt;
+  }
+
+  /* La anulacion va en negrita y con marco, no en color: en monocromatica el color se pierde y
+     una receta anulada que se lea como valida es un riesgo clinico. */
+  .receta-imprimible__anulada {
+    border: 1pt solid var(--color-text);
+    font-weight: 700;
+    margin-bottom: 6pt;
+    padding: 3pt;
+    text-align: center;
+  }
+
+  .receta-imprimible__firma {
+    margin-top: 24pt;
+    text-align: center;
+  }
+
+  .receta-imprimible__linea {
+    border-top: 0.5pt solid var(--color-text);
+    display: block;
+    margin: 0 auto 2pt;
+    width: 60%;
+  }
+
+  .turnos-imprimible {
+    display: block;
+    font-size: 10pt;
+    line-height: 1.35;
+  }
+
+  .turnos-imprimible__encabezado {
+    border-bottom: 1pt solid var(--color-text);
+    margin-bottom: 8pt;
+    padding-bottom: 4pt;
+    text-align: center;
+  }
+
+  .turnos-imprimible__organizacion {
+    font-size: 13pt;
+    margin: 0;
+  }
+
+  .turnos-imprimible__documento {
+    font-size: 11pt;
+    font-weight: 600;
+    margin: 0;
+  }
+
+  .turnos-imprimible__jornada {
+    margin: 0;
+  }
+
+  .turnos-imprimible__tabla {
+    border-collapse: collapse;
+    width: 100%;
+  }
+
+  .turnos-imprimible__tabla th,
+  .turnos-imprimible__tabla td {
+    border: 0.5pt solid var(--color-text);
+    padding: 3pt 5pt;
+    text-align: left;
+  }
 }

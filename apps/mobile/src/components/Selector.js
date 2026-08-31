@@ -1,7 +1,6 @@
-import { useState } from 'react';
-import { FlatList, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors, spacing, typography } from '@ecopac/ui-tokens';
-import { normalizarOpciones } from './opciones';
+import { useState } from "react";
+import { FlatList, Modal, Pressable, StyleSheet, Text, View } from "react-native";
+import { colors, spacing, typography } from "@ecopac/ui-tokens";
 
 const MIN_TOUCH_HEIGHT = 48;
 
@@ -9,22 +8,21 @@ const MIN_TOUCH_HEIGHT = 48;
  * Selector tipo dropdown, implementado sin dependencias externas para no
  * atar el proyecto a una libreria de picker especifica.
  *
- * options: [{ label: string, value: string | number }]. Se normalizan aqui dentro y no en
- * quien llama, porque los catalogos que publica shared usan { etiqueta, valor } (ver
- * OPCIONES_ROL y ESTADOS_USUARIO en packages/shared/usuarios/campos.js): si cada pantalla
- * tuviera que mapearlos, olvidarlo daria opciones en blanco sin ningun error visible.
+ * options: [{ label: string, value: string | number }], que es la forma que publica shared
+ * desde la issue #399. Antes convivian dos formas y este componente normalizaba por dentro;
+ * hoy no hay nada que normalizar y un catalogo ausente se resuelve con una lista vacia.
  */
 export default function Selector({
   label,
   value,
   options,
   onSelect,
-  placeholder = 'Seleccionar',
+  placeholder = "Seleccionar",
   error,
   style,
 }) {
   const [isOpen, setIsOpen] = useState(false);
-  const opciones = normalizarOpciones(options);
+  const opciones = Array.isArray(options) ? options : [];
   const selectedOption = opciones.find((option) => option.value === value);
 
   return (
@@ -97,7 +95,7 @@ const styles = StyleSheet.create({
   },
   trigger: {
     minHeight: MIN_TOUCH_HEIGHT,
-    justifyContent: 'center',
+    justifyContent: "center",
     borderWidth: 1,
     borderColor: colors.secondary,
     borderRadius: spacing.xs,
@@ -128,7 +126,7 @@ const styles = StyleSheet.create({
   },
   modalRoot: {
     flex: 1,
-    justifyContent: 'flex-end',
+    justifyContent: "flex-end",
   },
   backdrop: {
     flex: 1,
@@ -136,7 +134,7 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   sheet: {
-    maxHeight: '60%',
+    maxHeight: "60%",
     backgroundColor: colors.background,
     borderTopLeftRadius: spacing.md,
     borderTopRightRadius: spacing.md,
@@ -144,7 +142,7 @@ const styles = StyleSheet.create({
   },
   option: {
     minHeight: MIN_TOUCH_HEIGHT,
-    justifyContent: 'center',
+    justifyContent: "center",
     paddingHorizontal: spacing.md,
   },
   optionPressed: {

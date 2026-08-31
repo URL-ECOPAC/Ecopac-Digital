@@ -1,9 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import {
-  registrarIngreso,
-  registrarSalida,
-  editarMovimiento,
-} from "./movimientos.api.js";
+import { registrarIngreso, registrarSalida, editarMovimiento } from "./movimientos.api.js";
 import { obtenerSupabase } from "../api/cliente.js";
 
 vi.mock("../api/cliente.js", () => ({
@@ -25,50 +21,192 @@ describe("Módulo de Inventario - API Movimientos", () => {
       lte: vi.fn().mockReturnThis(),
       order: vi.fn().mockReturnThis(),
       single: vi.fn(),
+      maybeSingle: vi.fn(),
     };
     obtenerSupabase.mockReturnValue(mockSupabase);
   });
 
-  it("registrarIngreso rechaza orígenes no válidos", async () => {
-    const res = await registrarIngreso({ origen: "invalido", cantidad: 10 });
-    expect(res.error.mensaje).toContain("compra");
-  });
-
-  it("registrarIngreso crea lote nuevo si no se proporciona lote_id", async () => {
-    mockSupabase.single
-      .mockResolvedValueOnce({ data: { id: "LOTE-NUEVO" }, error: null })
-      .mockResolvedValueOnce({ data: { id: "MOV-1", tipo: "ingreso" }, error: null });
-
-    const res = await registrarIngreso({
-      origen: "donacion",
-      bodega_id: "B-1",
-      medicamento_id: "M-1",
-      numero_lote: "LOT-100",
-      fecha_vencimiento: "2027-01-01",
-      cantidad: 50,
+  describe("registrarIngreso", () => {
+    it("rechaza orígenes no válidos", async () => {
+      const res = await registrarIngreso({ origen: "invalido", cantidad: 10, usuarioId: "U-1" });
+      expect(res.error.mensaje).toContain("compra");
     });
 
-    expect(res.datos.id).toBe("MOV-1");
-    expect(mockSupabase.insert).toHaveBeenCalledTimes(2);
-  });
-
-  it("registrarSalida rechaza lotes vencidos o sin existencia suficiente", async () => {
-    mockSupabase.single.mockResolvedValueOnce({
-      data: { id: "LOTE-1", fecha_vencimiento: "2020-01-01", cantidad_disponible: 100 },
-      error: null,
+    it("exige el usuario que registra", async () => {
+      const res = await registrarIngreso({ origen: "compra", cantidad: 10 });
+      expect(res.error.mensaje).toContain("usuario");
     });
 
-    const res = await registrarSalida({ bodega_id: "B-1", lote_id: "LOTE-1", cantidad: 10 });
-    expect(res.error.mensaje).toContain("vencido");
-  });
+    it("exige el proveedor cuando hay que crear el lote", async () => {
+      const res = await registrarIngreso({
+        origen: "donacion",
+        bodega_id: "B-1",
+        medicamento_id: "M-1",
+        numero_lote: "LOT-100",
+        fecha_vencimiento: "2027-01-01",
+        cantidad: 50,
+        usuarioId: "U-1",
+      });
 
-  it("bloquea la edición de movimientos que ya fueron aprobados", async () => {
-    mockSupabase.single.mockResolvedValueOnce({
-      data: { id: "MOV-1", estado: "aprobado", creado_por: "USR-1" },
-      error: null,
+      expect(res.datos).toBeNull();
+      expect(res.error.mensaje).toContain("proveedor");
+      expect(mockSupabase.insert).not.toHaveBeenCalled();
     });
 
-    const res = await editarMovimiento("MOV-1", { cantidad: 20 }, "USR-1");
-    expect(res.error.mensaje).toContain("pendiente");
+    it("crea el lote nuevo con todas sus columnas obligatorias (issue #222)", async () => {
+      mockSupabase.single
+        .mockResolvedValueOnce({ data: { id: "LOTE-NUEVO" }, error: null })
+        .mockResolvedValueOnce({ data: { id: "MOV-1", tipo: "ingreso" }, error: null });
+
+      const res = await registrarIngreso({
+        origen: "donacion",
+        bodega_id: "B-1",
+        medicamento_id: "M-1",
+        numero_lote: "LOT-100",
+        fecha_vencimiento: "2027-01-01",
+        proveedor_id: "P-1",
+        cantidad: 50,
+        usuarioId: "U-1",
+      });
+
+      expect(res.datos.id).toBe("MOV-1");
+      expect(mockSupabase.insert).toHaveBeenCalledTimes(2);
+
+      // El primer insert es el lote. proveedor_id, origen y cantidad_ingresada son NOT NULL sin
+      // DEFAULT (00020): faltaban las tres y el INSERT reventaba con 23502 contra la base real,
+      // aunque este doble lo aceptara. Este doble no puede detectarlo por si solo -- lo detecta
+      // pruebas/e2e/inventario-validacion.e2e.test.js --, asi que aqui se fija la forma exacta.
+      expect(mockSupabase.insert.mock.calls[0][0]).toEqual({
+        medicamento_id: "M-1",
+        numero_lote: "LOT-100",
+        fecha_vencimiento: "2027-01-01",
+        proveedor_id: "P-1",
+        origen: "donacion",
+        cantidad_ingresada: 50,
+        // La politica de INSERT de la 00107 exige que quien no es administrador se atribuya el
+        // lote. `confirmado` no viaja: su DEFAULT es FALSE y lo pone en TRUE la aprobacion.
+        registrado_por: "U-1",
+      });
+      expect(mockSupabase.insert.mock.calls[0][0]).not.toHaveProperty("confirmado");
+      // cantidad_disponible vive en existencias desde la 00047, no en lotes.
+      expect(mockSupabase.insert.mock.calls[0][0]).not.toHaveProperty("cantidad_disponible");
+    });
+
+    it("no envia origen ni jornada_id al insertar el movimiento (columnas que no existen)", async () => {
+      mockSupabase.single.mockResolvedValueOnce({ data: { id: "MOV-2" }, error: null });
+
+      await registrarIngreso({
+        origen: "compra",
+        bodega_id: "B-1",
+        lote_id: "LOTE-EXISTENTE",
+        cantidad: 20,
+        usuarioId: "U-1",
+      });
+
+      const payloadMovimiento = mockSupabase.insert.mock.calls[0][0];
+      expect(payloadMovimiento).not.toHaveProperty("origen");
+      expect(payloadMovimiento).not.toHaveProperty("jornada_id");
+      expect(payloadMovimiento.registrado_por).toBe("U-1");
+    });
+  });
+
+  describe("registrarSalida", () => {
+    it("rechaza lotes vencidos", async () => {
+      mockSupabase.single.mockResolvedValueOnce({
+        data: { id: "LOTE-1", fecha_vencimiento: "2020-01-01" },
+        error: null,
+      });
+
+      const res = await registrarSalida({
+        bodega_id: "B-1",
+        lote_id: "LOTE-1",
+        cantidad: 10,
+        usuarioId: "U-1",
+      });
+
+      expect(res.error.mensaje).toContain("vencido");
+    });
+
+    it("lee la cantidad disponible de existencias (lote, bodega), no de lotes", async () => {
+      mockSupabase.single.mockResolvedValueOnce({
+        data: { id: "LOTE-1", fecha_vencimiento: "2099-01-01" },
+        error: null,
+      });
+      mockSupabase.maybeSingle.mockResolvedValueOnce({
+        data: { cantidad_disponible: 5 },
+        error: null,
+      });
+
+      const res = await registrarSalida({
+        bodega_id: "B-1",
+        lote_id: "LOTE-1",
+        cantidad: 10,
+        usuarioId: "U-1",
+      });
+
+      expect(res.error.mensaje).toContain("supera la existencia disponible");
+    });
+
+    it("trata la ausencia de fila en existencias como stock 0", async () => {
+      mockSupabase.single.mockResolvedValueOnce({
+        data: { id: "LOTE-1", fecha_vencimiento: "2099-01-01" },
+        error: null,
+      });
+      mockSupabase.maybeSingle.mockResolvedValueOnce({ data: null, error: null });
+
+      const res = await registrarSalida({
+        bodega_id: "B-1",
+        lote_id: "LOTE-1",
+        cantidad: 1,
+        usuarioId: "U-1",
+      });
+
+      expect(res.error.mensaje).toContain("supera la existencia disponible");
+    });
+
+    it("registra la salida cuando hay existencia suficiente", async () => {
+      mockSupabase.single
+        .mockResolvedValueOnce({
+          data: { id: "LOTE-1", fecha_vencimiento: "2099-01-01" },
+          error: null,
+        })
+        .mockResolvedValueOnce({ data: { id: "MOV-3", tipo: "salida" }, error: null });
+      mockSupabase.maybeSingle.mockResolvedValueOnce({
+        data: { cantidad_disponible: 20 },
+        error: null,
+      });
+
+      const res = await registrarSalida({
+        bodega_id: "B-1",
+        lote_id: "LOTE-1",
+        cantidad: 10,
+        usuarioId: "U-1",
+      });
+
+      expect(res.error).toBeNull();
+      expect(res.datos.id).toBe("MOV-3");
+    });
+  });
+
+  describe("editarMovimiento", () => {
+    it("bloquea la edición de movimientos que ya fueron aprobados", async () => {
+      mockSupabase.single.mockResolvedValueOnce({
+        data: { id: "MOV-1", estado: "aprobado", registrado_por: "USR-1" },
+        error: null,
+      });
+
+      const res = await editarMovimiento("MOV-1", { cantidad: 20 }, "USR-1");
+      expect(res.error.mensaje).toContain("pendiente");
+    });
+
+    it("bloquea la edición por alguien distinto de quien registro el movimiento", async () => {
+      mockSupabase.single.mockResolvedValueOnce({
+        data: { id: "MOV-1", estado: "pendiente", registrado_por: "USR-1" },
+        error: null,
+      });
+
+      const res = await editarMovimiento("MOV-1", { cantidad: 20 }, "USR-2");
+      expect(res.error.mensaje).toContain("registro");
+    });
   });
 });

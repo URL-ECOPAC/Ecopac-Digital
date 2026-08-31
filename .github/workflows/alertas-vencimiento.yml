@@ -1,0 +1,171 @@
+name: Alertas de vencimiento
+
+# Dispara diariamente la Edge Function alertas-vencimiento (issue #166, RF-19), que genera una
+# alerta pendiente por cada lote con existencia positiva que vence en 30 dias o menos. El
+# proyecto esta en el plan gratuito de Supabase, que no incluye pg_cron: este workflow es el
+# cron externo que reemplaza esa pieza.
+#
+# DONDE CORRE ESTE CRON, QUE NO ES DONDE VIVE EL ARCHIVO (issue #167)
+#
+# GitHub dispara `schedule:` UNICAMENTE desde la rama por defecto del repositorio, que aqui es
+# `main`. Mientras este archivo solo exista en `develop`, el horario NO se ejecuta ni una vez, y
+# nada lo avisa: la pestania Actions simplemente no muestra corridas, que es indistinguible de
+# "todavia no toca". Empieza a correr en cuanto `develop` se mergea a `main`, y el primer disparo
+# se puede forzar antes con `workflow_dispatch` desde la rama que sea.
+#
+# Consecuencia de lo anterior: los secrets que este workflow lee son los del ambiente que se
+# quiera alertar, y hoy son los de `ecopac-dev` porque `ecopac-prod` todavia no existe (issue
+# #252). Cuando exista, este archivo tiene que apuntar a el; no se deja preparado con secrets de
+# produccion inventados, que fallarian en silencio hasta que alguien los configure.
+#
+# GitHub ademas desactiva los workflows programados de un repositorio sin actividad durante 60
+# dias. Si las alertas dejan de llegar y aqui no hay corridas, ese es el primer sitio donde mirar:
+# se reactivan a mano desde la pestania Actions.
+#
+# Mientras los secrets no esten configurados, el disparo se omite y el workflow termina en verde
+# (no falla), igual que keep-alive-supabase.yml.
+#
+# Configurar los secrets en: Settings > Secrets and variables > Actions del repositorio.
+#   - SUPABASE_URL_DEV                (ya existe, reusado del keep-alive)
+#   - SUPABASE_SERVICE_ROLE_KEY_DEV   (llave de servicio del proyecto ecopac-dev)
+
+on:
+  schedule:
+    - cron: "0 6 * * *" # todos los dias, 06:00 UTC
+  workflow_dispatch: # tambien se puede correr manualmente
+
+permissions:
+  contents: read
+
+jobs:
+  disparar:
+    name: Disparar alertas-vencimiento
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_URL_DEV: ${{ secrets.SUPABASE_URL_DEV }}
+      SUPABASE_SERVICE_ROLE_KEY_DEV: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY_DEV }}
+
+    steps:
+      - name: Verificar secrets configurados
+        if: env.SUPABASE_URL_DEV == '' || env.SUPABASE_SERVICE_ROLE_KEY_DEV == ''
+        run: |
+          echo "Los secrets de Supabase no estan configurados; se omite el disparo." >> "$GITHUB_STEP_SUMMARY"
+          echo "Configuralos en: Settings > Secrets and variables > Actions" >> "$GITHUB_STEP_SUMMARY"
+
+      # El resultado se guarda en vez de dejarlo solo en el log del paso: el criterio de la issue
+      # #167 es que cada ejecucion deje registro de COMO le fue, y "cuantas alertas genero" es el
+      # dato que dice si la rutina esta trabajando o devolviendo cero todos los dias por un
+      # problema de datos. La funcion responde {"alertasGeneradas": n}.
+      #
+      # --fail-with-body imprime el cuerpo antes de salir con codigo != 0, asi que un 500 de la
+      # funcion deja su mensaje en el resumen en lugar de un "exit 22" pelado.
+      - name: Invocar alertas-vencimiento
+        id: invocar
+        if: env.SUPABASE_URL_DEV != '' && env.SUPABASE_SERVICE_ROLE_KEY_DEV != ''
+        run: |
+          set -o pipefail
+          respuesta="$(curl -sS -X POST "$SUPABASE_URL_DEV/functions/v1/alertas-vencimiento" \
+            -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY_DEV" \
+            -H "Content-Type: application/json" \
+            --fail-with-body)"
+
+          echo "respuesta=$respuesta" >> "$GITHUB_OUTPUT"
+          echo "Respuesta de la funcion: $respuesta"
+
+      - name: Registrar el resultado
+        if: always() && env.SUPABASE_URL_DEV != '' && env.SUPABASE_SERVICE_ROLE_KEY_DEV != ''
+        run: |
+          {
+            echo "## Alertas de vencimiento"
+            echo ""
+            echo "- Fecha: $(date -u '+%Y-%m-%d %H:%M UTC')"
+            echo "- Resultado: \`${{ steps.invocar.outcome }}\`"
+            if [ "${{ steps.invocar.outcome }}" = "success" ]; then
+              echo "- Respuesta: \`${{ steps.invocar.outputs.respuesta }}\`"
+            else
+              echo "- La funcion no respondio correctamente. Revisa el log del paso y los"
+              echo "  logs de la Edge Function en el panel de Supabase."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # --------------------------------------------------------------------------------
+  # Un cron que falla en silencio es peor que no tenerlo: la organizacion cree que alguien vigila
+  # los vencimientos y nadie lo hace. Un check rojo en una pestania que nadie abre no basta --
+  # esa es la leccion que ya dejo el despliegue de base de datos, que fallo cuatro corridas
+  # seguidas sin que nadie se enterara (ver el job "Avisar fallo" de supabase.yml). Una issue
+  # abierta si se ve.
+  avisar:
+    name: Avisar fallo
+    needs: disparar
+    if: failure()
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+
+    steps:
+      - name: Abrir issue si no hay una ya
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const titulo = '[BUG] No se estan generando las alertas de vencimiento';
+            const corrida = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+
+            const abiertas = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'type:bug,module:inventario',
+            });
+
+            // Una sola issue mientras el problema siga: si falla siete dias seguidos, no se
+            // quieren siete issues iguales. Se comenta en la que ya existe para que se vea que
+            // el fallo no fue puntual.
+            const abierta = abiertas.data.find((i) => i.title === titulo);
+            if (abierta) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: abierta.number,
+                body: `Vuelve a fallar. Corrida: ${corrida}`,
+              });
+              core.notice(`Ya hay una issue abierta (#${abierta.number}); se agrego un comentario.`);
+              return;
+            }
+
+            const cuerpo = [
+              '## Que paso',
+              '',
+              'El disparo diario de la Edge Function `alertas-vencimiento` fallo.',
+              '',
+              `Corrida: ${corrida}`,
+              '',
+              '## Por que importa',
+              '',
+              'Mientras esto siga fallando, **nadie esta revisando los vencimientos**. Los lotes',
+              'que caduquen en los proximos 30 dias no van a generar su alerta, y la',
+              'administradora no tiene forma de notarlo desde la aplicacion: la pantalla de',
+              'alertas se ve igual de vacia cuando no hay nada que alertar que cuando la rutina',
+              'no corrio.',
+              '',
+              '## Por donde empezar',
+              '',
+              '1. Abrir la corrida y ver si fallo el `curl` (funcion caida, secret rotado) o el',
+              '   propio paso de verificacion de secrets.',
+              '2. Revisar los logs de la funcion en el panel de Supabase.',
+              '3. `fn_generar_alertas_caducidad` (migracion 00088) es idempotente: se puede',
+              '   volver a disparar el workflow a mano con `workflow_dispatch` sin duplicar',
+              '   alertas.',
+              '',
+              'Esta issue la abre sola el workflow `.github/workflows/alertas-vencimiento.yml`.',
+            ].join('\n');
+
+            const creada = await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: titulo,
+              body: cuerpo,
+              labels: ['type:bug', 'module:inventario', 'priority:alta'],
+            });
+
+            core.notice(`Issue abierta: #${creada.data.number}`);

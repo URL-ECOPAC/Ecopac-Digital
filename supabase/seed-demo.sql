@@ -56,31 +56,44 @@ ON CONFLICT (id) DO NOTHING;
 -- necesita para resolver el login por el proveedor "email"; el patron minimo de
 -- supabase/tests/database (solo id + email en auth.users) alcanza para simular auth.uid()
 -- en pgTAP, pero no para iniciar sesion de verdad desde la app.
+--
+-- Las cuatro columnas de token van explicitas en '' y no se omiten: auth.users no les pone
+-- DEFAULT '', y GoTrue las escanea como texto no nulo. Dejadas en NULL, toda busqueda de
+-- usuario por correo aborta -login y recuperacion de contrasena por igual- con un 500
+-- "Database error querying schema". Ver la migracion 00069.
 INSERT INTO auth.users (
   instance_id, id, aud, role, email, encrypted_password,
-  email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at
+  email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at,
+  confirmation_token, recovery_token, email_change, email_change_token_new
 ) VALUES
   ('00000000-0000-0000-0000-000000000000', 'de000001-0000-0000-0000-000000000001', 'authenticated', 'authenticated',
    'admin.demo@ecopac.test', extensions.crypt('EcopacDemo#2026', extensions.gen_salt('bf')), NOW(),
-   '{"provider":"email","providers":["email"]}', '{"nombres":"Administradora","apellidos":"Demo"}', NOW(), NOW()),
+   '{"provider":"email","providers":["email"]}', '{"nombres":"Administradora","apellidos":"Demo"}', NOW(), NOW(),
+   '', '', '', ''),
   ('00000000-0000-0000-0000-000000000000', 'de000001-0000-0000-0000-000000000002', 'authenticated', 'authenticated',
    'junta.demo@ecopac.test', extensions.crypt('EcopacDemo#2026', extensions.gen_salt('bf')), NOW(),
-   '{"provider":"email","providers":["email"]}', '{"nombres":"Junta","apellidos":"Directiva Demo"}', NOW(), NOW()),
+   '{"provider":"email","providers":["email"]}', '{"nombres":"Junta","apellidos":"Directiva Demo"}', NOW(), NOW(),
+   '', '', '', ''),
   ('00000000-0000-0000-0000-000000000000', 'de000001-0000-0000-0000-000000000003', 'authenticated', 'authenticated',
    'socio.demo@ecopac.test', extensions.crypt('EcopacDemo#2026', extensions.gen_salt('bf')), NOW(),
-   '{"provider":"email","providers":["email"]}', '{"nombres":"Socio","apellidos":"Fundador Demo"}', NOW(), NOW()),
+   '{"provider":"email","providers":["email"]}', '{"nombres":"Socio","apellidos":"Fundador Demo"}', NOW(), NOW(),
+   '', '', '', ''),
   ('00000000-0000-0000-0000-000000000000', 'de000001-0000-0000-0000-000000000004', 'authenticated', 'authenticated',
    'medico.demo@ecopac.test', extensions.crypt('EcopacDemo#2026', extensions.gen_salt('bf')), NOW(),
-   '{"provider":"email","providers":["email"]}', '{"nombres":"Mario","apellidos":"Medico Demo"}', NOW(), NOW()),
+   '{"provider":"email","providers":["email"]}', '{"nombres":"Mario","apellidos":"Medico Demo"}', NOW(), NOW(),
+   '', '', '', ''),
   ('00000000-0000-0000-0000-000000000000', 'de000001-0000-0000-0000-000000000005', 'authenticated', 'authenticated',
    'medico2.demo@ecopac.test', extensions.crypt('EcopacDemo#2026', extensions.gen_salt('bf')), NOW(),
-   '{"provider":"email","providers":["email"]}', '{"nombres":"Miriam","apellidos":"Medico Demo"}', NOW(), NOW()),
+   '{"provider":"email","providers":["email"]}', '{"nombres":"Miriam","apellidos":"Medico Demo"}', NOW(), NOW(),
+   '', '', '', ''),
   ('00000000-0000-0000-0000-000000000000', 'de000001-0000-0000-0000-000000000006', 'authenticated', 'authenticated',
    'voluntario.demo@ecopac.test', extensions.crypt('EcopacDemo#2026', extensions.gen_salt('bf')), NOW(),
-   '{"provider":"email","providers":["email"]}', '{"nombres":"Victor","apellidos":"Voluntario Demo"}', NOW(), NOW()),
+   '{"provider":"email","providers":["email"]}', '{"nombres":"Victor","apellidos":"Voluntario Demo"}', NOW(), NOW(),
+   '', '', '', ''),
   ('00000000-0000-0000-0000-000000000000', 'de000001-0000-0000-0000-000000000007', 'authenticated', 'authenticated',
    'voluntario2.demo@ecopac.test', extensions.crypt('EcopacDemo#2026', extensions.gen_salt('bf')), NOW(),
-   '{"provider":"email","providers":["email"]}', '{"nombres":"Valeria","apellidos":"Voluntario Demo"}', NOW(), NOW())
+   '{"provider":"email","providers":["email"]}', '{"nombres":"Valeria","apellidos":"Voluntario Demo"}', NOW(), NOW(),
+   '', '', '', '')
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO auth.identities (id, user_id, provider_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
@@ -172,7 +185,39 @@ INSERT INTO expedientes (id, paciente_id, numero_ficha) VALUES
 ON CONFLICT (id) DO NOTHING;
 
 -- ============================================================================
--- 5. Medicamentos y principios activos
+-- 5. Condiciones cronicas de los pacientes
+-- ============================================================================
+-- El catalogo condiciones_cronicas lo siembra la migracion 00010 con ids generados, asi que
+-- aqui se resuelve por nombre: hardcodear un UUID que la migracion no fija romperia el seed en
+-- cuanto la base se reconstruya.
+--
+-- Reparto pensado para que la vista de pacientes cronicos (issue #132) tenga algo que enseniar
+-- en cada filtro: las tres comunidades, los tres estados del enum estado_condicion_cronica, un
+-- paciente con dos condiciones a la vez y uno cuya condicion ya se resolvio, que es el caso que
+-- los listados excluyen por defecto.
+INSERT INTO padecimientos_cronicos (id, paciente_id, condicion_id, fecha_diagnostico, estado, notas)
+SELECT v.id, v.paciente_id, c.id, v.fecha_diagnostico, v.estado::estado_condicion_cronica, v.notas
+FROM (VALUES
+  -- Caserio El Rosario Demo
+  ('de00000d-0000-0000-0000-000000000001'::uuid, 'de000005-0000-0000-0000-000000000001'::uuid, 'Diabetes',     CURRENT_DATE - 900, 'activa',     'Control cada tres meses. Toma metformina.'),
+  ('de00000d-0000-0000-0000-000000000002'::uuid, 'de000005-0000-0000-0000-000000000001'::uuid, 'Hipertension', CURRENT_DATE - 700, 'controlada', 'Presion estable en las ultimas tres jornadas.'),
+  ('de00000d-0000-0000-0000-000000000003'::uuid, 'de000005-0000-0000-0000-000000000004'::uuid, 'Hipertension', CURRENT_DATE - 400, 'activa',     NULL),
+  ('de00000d-0000-0000-0000-000000000004'::uuid, 'de000005-0000-0000-0000-000000000003'::uuid, 'Desnutricion', CURRENT_DATE - 120, 'activa',     'Seguimiento nutricional mensual.'),
+  -- Aldea Vista Hermosa Demo
+  ('de00000d-0000-0000-0000-000000000005'::uuid, 'de000005-0000-0000-0000-000000000006'::uuid, 'Diabetes',     CURRENT_DATE - 1500, 'activa',    'Requiere revision de pies en cada jornada.'),
+  ('de00000d-0000-0000-0000-000000000006'::uuid, 'de000005-0000-0000-0000-000000000006'::uuid, 'Hipertension', CURRENT_DATE - 1500, 'activa',    NULL),
+  ('de00000d-0000-0000-0000-000000000007'::uuid, 'de000005-0000-0000-0000-000000000007'::uuid, 'Asma',         CURRENT_DATE - 200, 'controlada', 'Usa inhalador de rescate.'),
+  ('de00000d-0000-0000-0000-000000000008'::uuid, 'de000005-0000-0000-0000-000000000008'::uuid, 'Epilepsia',    CURRENT_DATE - 1100, 'controlada', 'Sin crisis en el ultimo anio.'),
+  -- Comunidad Nueva Esperanza Demo
+  ('de00000d-0000-0000-0000-000000000009'::uuid, 'de000005-0000-0000-0000-000000000010'::uuid, 'Hipertension', CURRENT_DATE - 600, 'activa',     NULL),
+  ('de00000d-0000-0000-0000-00000000000a'::uuid, 'de000005-0000-0000-0000-000000000012'::uuid, 'Diabetes',     CURRENT_DATE - 2000, 'controlada', 'Dieta ajustada; acude acompaniado.'),
+  ('de00000d-0000-0000-0000-00000000000b'::uuid, 'de000005-0000-0000-0000-000000000011'::uuid, 'Desnutricion', CURRENT_DATE - 800, 'resuelta',   'Alta nutricional tras seis meses de seguimiento.')
+) AS v(id, paciente_id, condicion, fecha_diagnostico, estado, notas)
+JOIN condiciones_cronicas c ON c.nombre = v.condicion
+ON CONFLICT (id) DO NOTHING;
+
+-- ============================================================================
+-- 6. Medicamentos y principios activos
 -- ============================================================================
 INSERT INTO medicamentos (id, nombre, concentracion, presentacion, marca, forma_farmaceutica, es_pediatrico) VALUES
   ('de000007-0000-0000-0000-000000000001', 'Acetaminofen', '500 mg', 'tableta', 'Generico', NULL, FALSE),
@@ -197,7 +242,7 @@ INSERT INTO medicamento_principio (medicamento_id, principio_id) VALUES
 ON CONFLICT DO NOTHING;
 
 -- ============================================================================
--- 6. Lotes (fechas relativas a CURRENT_DATE: DO UPDATE las refresca en cada corrida)
+-- 7. Lotes (fechas relativas a CURRENT_DATE: DO UPDATE las refresca en cada corrida)
 -- ============================================================================
 -- L1 vencido, L2 vence dentro del mes, L3/L4 vencimiento lejano (flujo sano).
 INSERT INTO lotes (id, medicamento_id, numero_lote, proveedor_id, origen, cantidad_ingresada, fecha_ingreso, fecha_vencimiento) VALUES
@@ -216,7 +261,7 @@ ON CONFLICT (id) DO UPDATE SET
   updated_at = NOW();
 
 -- ============================================================================
--- 7. Jornadas y personal asignado
+-- 8. Jornadas y personal asignado
 -- ============================================================================
 -- J1 finalizada: created_at se fija antes de "fecha" a proposito (chk_jornadas_fecha_no
 -- _anterior_a_creacion, 00012, exige fecha >= created_at::date; con el DEFAULT NOW() una
@@ -240,7 +285,7 @@ INSERT INTO jornada_personal (id, jornada_id, perfil_id, rol_en_jornada, hora_in
 ON CONFLICT (id) DO NOTHING;
 
 -- ============================================================================
--- 8. Movimientos de inventario en los tres estados
+-- 9. Movimientos de inventario en los tres estados
 -- ============================================================================
 -- Cada fila nace 'pendiente' (estado por defecto) y, salvo la que debe quedar en la
 -- bandeja de validacion, se transiciona con un UPDATE aparte guardado por
@@ -273,7 +318,7 @@ ON CONFLICT (id) DO NOTHING;
 
 -- Aprobados: los cuatro ingresos que crean stock y la salida que lo consume en parte.
 UPDATE movimientos_inventario
-  SET estado = 'aprobado', aprobado_por = 'de000001-0000-0000-0000-000000000001', fecha_aprobacion = NOW()
+  SET estado = 'aprobado', aprobado_por = 'de000001-0000-0000-0000-000000000001', aprobado_en = NOW()
   WHERE id IN (
     'de00000c-0000-0000-0000-000000000001', 'de00000c-0000-0000-0000-000000000002',
     'de00000c-0000-0000-0000-000000000003', 'de00000c-0000-0000-0000-000000000004'
@@ -282,13 +327,14 @@ UPDATE movimientos_inventario
 -- La salida depende de que el ingreso al lote por vencer ya haya creado stock en la
 -- bodega movil (fila anterior), por eso va en un UPDATE aparte y despues.
 UPDATE movimientos_inventario
-  SET estado = 'aprobado', aprobado_por = 'de000001-0000-0000-0000-000000000001', fecha_aprobacion = NOW()
+  SET estado = 'aprobado', aprobado_por = 'de000001-0000-0000-0000-000000000001', aprobado_en = NOW()
   WHERE id = 'de00000c-0000-0000-0000-000000000005' AND estado = 'pendiente';
 
 -- Rechazado: no ajusta existencias (fn_actualizar_existencias solo actua si NEW.estado
--- = 'aprobado').
+-- = 'aprobado'). motivo_rechazo es obligatorio en este estado desde la 00084 (issue #491).
 UPDATE movimientos_inventario
-  SET estado = 'rechazado', aprobado_por = 'de000001-0000-0000-0000-000000000001', fecha_aprobacion = NOW()
+  SET estado = 'rechazado', aprobado_por = 'de000001-0000-0000-0000-000000000001',
+      aprobado_en = NOW(), motivo_rechazo = 'Cantidad reportada no coincide con el conteo fisico'
   WHERE id = 'de00000c-0000-0000-0000-000000000007' AND estado = 'pendiente';
 
 -- 'de00000c-...-0000000006' se deja tal cual, en 'pendiente': es la fila que puebla la

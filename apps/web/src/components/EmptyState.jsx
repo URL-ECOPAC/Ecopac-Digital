@@ -1,11 +1,11 @@
-import { Container, Button } from 'react-bootstrap';
-import { labels } from '@ecopac/ui-tokens';
+import { Container, Button } from "react-bootstrap";
+import { labels } from "@ecopac/ui-tokens";
 
 /**
  * Componente para mostrar un estado vacío con mensaje y acción sugerida.
  */
 export default function EmptyState({
-  message = labels?.sinResultados || 'No hay datos disponibles.',
+  message = labels?.sinResultados || "No hay datos disponibles.",
   actionLabel,
   onAction,
 }) {

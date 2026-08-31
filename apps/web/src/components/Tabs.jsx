@@ -1,4 +1,4 @@
-import { Nav } from 'react-bootstrap';
+import { Nav } from "react-bootstrap";
 
 /**
  * Pestañas de navegacion DENTRO de una pantalla: no cambian de ruta.

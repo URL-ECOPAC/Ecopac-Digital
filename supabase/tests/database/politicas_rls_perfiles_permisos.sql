@@ -8,7 +8,7 @@
 
 BEGIN;
 
-SELECT plan(21);
+SELECT plan(25);
 
 -- ============================================================================
 -- Setup: seis perfiles de prueba, uno por rol (mas un segundo voluntario para
@@ -178,6 +178,56 @@ SELECT throws_ok(
   '42501',
   NULL,
   'un voluntario no puede otorgarse permisos a si mismo en usuario_permiso'
+);
+
+-- ============================================================================
+-- usuarios.gestionar_permisos concedido puntualmente a medico (issue #409): puede escribir
+-- usuario_permiso de un tercero, operacion antes exclusiva de administrador.
+-- ============================================================================
+SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000001';
+
+SELECT lives_ok(
+  $$ INSERT INTO usuario_permiso (perfil_id, permiso_id, concedido, otorgado_por)
+     SELECT '00000000-0000-0000-0000-000000000004', id, true, '00000000-0000-0000-0000-000000000001'
+     FROM permisos WHERE clave = 'usuarios.gestionar_permisos' $$,
+  'administrador concede usuarios.gestionar_permisos a medico004 (issue #409)'
+);
+
+SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000004';
+
+-- Con RETURNING a proposito, no INSERT a secas: Postgres exige que la fila recien insertada
+-- tambien pase una politica de SELECT para devolverla. La fila que medico004 concede es de
+-- voluntario_b (006), no la propia -"Administrador o el propio perfil leen usuario_permiso"
+-- (00038) no le alcanzaria-, asi que sin el OR tiene_permiso('usuarios.gestionar_permisos') que
+-- la 00086 le agrego a esa politica de SELECT, este INSERT con RETURNING fallaria aunque el
+-- WITH CHECK de la politica de INSERT ya lo permitiera.
+SELECT lives_ok(
+  $$ INSERT INTO usuario_permiso (perfil_id, permiso_id, concedido, otorgado_por)
+     SELECT '00000000-0000-0000-0000-000000000006', id, true, '00000000-0000-0000-0000-000000000004'
+     FROM permisos WHERE clave = 'donaciones.registrar' RETURNING perfil_id $$,
+  'medico con usuarios.gestionar_permisos concedido puntualmente si puede otorgar un permiso a un tercero (issue #409)'
+);
+
+-- ============================================================================
+-- Guardia: ningun permiso de escritura sube a un rol consultivo (issue #409, trigger
+-- impedir_permiso_escritura_a_consultivo de la 00086).
+-- ============================================================================
+SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000001';
+
+SELECT throws_ok(
+  $$ INSERT INTO usuario_permiso (perfil_id, permiso_id, concedido, otorgado_por)
+     SELECT '00000000-0000-0000-0000-000000000002', id, true, '00000000-0000-0000-0000-000000000001'
+     FROM permisos WHERE clave = 'proyectos.gestionar' $$,
+  '42501',
+  NULL,
+  'ni administrador puede conceder un permiso de escritura a junta directiva: el trigger lo bloquea (issue #409)'
+);
+
+SELECT lives_ok(
+  $$ INSERT INTO usuario_permiso (perfil_id, permiso_id, concedido, otorgado_por)
+     SELECT '00000000-0000-0000-0000-000000000003', id, true, '00000000-0000-0000-0000-000000000001'
+     FROM permisos WHERE clave = 'reportes.exportar' $$,
+  'administrador si puede conceder reportes.exportar a socio fundador: es de lectura, el trigger no lo bloquea (issue #409)'
 );
 
 -- ============================================================================

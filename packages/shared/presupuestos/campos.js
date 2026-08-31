@@ -8,8 +8,8 @@
 //
 // Los ids son los de las columnas de gastos en 00025_presupuesto_gastos.sql:
 //
-//   gastos (id, jornada_id, concepto, categoria, monto, fecha, encargado_id, estado,
-//           registrado_por, aprobado_por, fecha_aprobacion, created_at, updated_at)
+//   gastos (id, jornada_id, concepto, categoria, monto, fecha, responsable_id, estado,
+//           registrado_por, aprobado_por, aprobado_en, created_at, updated_at)
 //
 // La version anterior declaraba `categoria_id`, `fecha_gasto`, `proyecto_id`, `comprobante_url` y
 // `observaciones`. Las tres ultimas no existen en la tabla, y las dos primeras se llaman
@@ -19,57 +19,22 @@
 // Ver packages/shared/pacientes/campos.js, que es el ejemplar de referencia.
 
 import { TIPOS_DE_CAMPO } from "../descriptores.js";
+import {
+  CATEGORIAS_DE_GASTO,
+  ESTADOS_DE_GASTO,
+  ETIQUETAS_CATEGORIA_GASTO,
+  ETIQUETAS_ESTADO_GASTO,
+  opcionesDe,
+} from "../enums.js";
 
-/**
- * Valores del enum categoria_gasto (supabase/migrations/00025_presupuesto_gastos.sql).
- *
- * Van capitalizados porque asi estan declarados en la migracion, que es la fuente de verdad
- * (AGENTS.md). Se listan aqui una sola vez para que ninguna pantalla escriba el valor a mano.
- */
-export const CATEGORIAS_DE_GASTO = {
-  MEDICAMENTOS: "Medicamentos",
-  LOGISTICA: "Logistica",
-  DIAGNOSTICO: "Diagnostico",
-  HONORARIOS: "Honorarios",
-  EDUCACION: "Educacion",
-  INFRAESTRUCTURA: "Infraestructura",
-};
+export const OPCIONES_CATEGORIA_GASTO = opcionesDe(CATEGORIAS_DE_GASTO, ETIQUETAS_CATEGORIA_GASTO);
 
-export const OPCIONES_CATEGORIA_GASTO = [
-  { valor: CATEGORIAS_DE_GASTO.MEDICAMENTOS, etiqueta: "Medicamentos" },
-  { valor: CATEGORIAS_DE_GASTO.LOGISTICA, etiqueta: "Logistica" },
-  { valor: CATEGORIAS_DE_GASTO.DIAGNOSTICO, etiqueta: "Diagnostico" },
-  { valor: CATEGORIAS_DE_GASTO.HONORARIOS, etiqueta: "Honorarios" },
-  { valor: CATEGORIAS_DE_GASTO.EDUCACION, etiqueta: "Educacion" },
-  { valor: CATEGORIAS_DE_GASTO.INFRAESTRUCTURA, etiqueta: "Infraestructura" },
-];
-
-/**
- * Valores del enum estado_movimiento, que gastos.estado reutiliza (00025).
- *
- * El enum se redefinio en 00023_movimientos_inventario.sql: los valores vigentes son
- * 'pendiente', 'aprobado' y 'rechazado', no los de la 00001.
- *
- * Esta constante es la que el PR #448 intentaba importar de @ecopac/ui-tokens como
- * `ESTADOS_GASTO`, y por eso rompio el build: ui-tokens no exporta eso ni deberia, porque un
- * valor de enum del dominio no es un token de diseno.
- */
-export const ESTADOS_DE_GASTO = {
-  PENDIENTE: "pendiente",
-  APROBADO: "aprobado",
-  RECHAZADO: "rechazado",
-};
-
-export const OPCIONES_ESTADO_GASTO = [
-  { valor: ESTADOS_DE_GASTO.PENDIENTE, etiqueta: "Pendiente" },
-  { valor: ESTADOS_DE_GASTO.APROBADO, etiqueta: "Aprobado" },
-  { valor: ESTADOS_DE_GASTO.RECHAZADO, etiqueta: "Rechazado" },
-];
+export const OPCIONES_ESTADO_GASTO = opcionesDe(ESTADOS_DE_GASTO, ETIQUETAS_ESTADO_GASTO);
 
 /**
  * Formulario de registro y edicion de un gasto.
  *
- * `estado`, `registrado_por`, `aprobado_por` y `fecha_aprobacion` no estan aqui a proposito: no
+ * `estado`, `registrado_por`, `aprobado_por` y `aprobado_en` no estan aqui a proposito: no
  * los escribe quien registra el gasto. `estado` nace en 'pendiente' por DEFAULT de la tabla y solo
  * cambia por la bandeja de aprobacion (issue #299).
  */
@@ -111,8 +76,8 @@ export const CAMPOS_GASTO = [
     validacion: { requerido: true },
   },
   {
-    id: "encargado_id",
-    label: "Encargado",
+    id: "responsable_id",
+    label: "Responsable",
     tipo: TIPOS_DE_CAMPO.SELECT,
     opcionesDesde: "perfiles",
   },

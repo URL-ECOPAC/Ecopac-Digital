@@ -44,10 +44,9 @@ const COLUMNAS_DE_LA_BODEGA = [
 // Igual que la anterior, mas el total almacenado. Se pide por la relacion real
 // (bodegas <- existencias) y se suma cantidad_disponible al mapear, para que el listado se dibuje
 // sin una segunda consulta.
-const COLUMNAS_CON_EXISTENCIAS = [
-  COLUMNAS_DE_LA_BODEGA,
-  "existencias(cantidad_disponible)",
-].join(", ");
+const COLUMNAS_CON_EXISTENCIAS = [COLUMNAS_DE_LA_BODEGA, "existencias(cantidad_disponible)"].join(
+  ", ",
+);
 
 /** Traduce del camelCase de las pantallas al snake_case de la tabla bodegas. */
 function aColumnasDeTabla(datos = {}) {

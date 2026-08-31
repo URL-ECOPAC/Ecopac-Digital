@@ -42,7 +42,18 @@ export default [
     },
   },
   {
-    files: ["**/*.config.js", "**/*.config.mjs", "eslint.config.mjs", "eslint.config.js"],
+    // vitest.setup.js/vitest.react-patch.setup.js/vitest.react-loader.mjs (apps/web) no son
+    // "*.config.*", pero corren en el mismo contexto de Node que un archivo de config: los
+    // globals de browser no les sirven y si les faltaran los de Node.
+    files: [
+      "**/*.config.js",
+      "**/*.config.mjs",
+      "eslint.config.mjs",
+      "eslint.config.js",
+      "**/vitest.setup.js",
+      "**/vitest.react-patch.setup.js",
+      "**/vitest.react-loader.mjs",
+    ],
     languageOptions: {
       globals: globals.node,
     },
@@ -60,9 +71,11 @@ export default [
   // directorio desde donde se invoca eslint. Importa, porque `npm run lint` corre `eslint .`
   // dentro de cada workspace: sin eso, estas reglas no se aplicarian al correr el lint de verdad.
   {
-    // Sin .ts: el unico TypeScript del paquete es types/index.ts, y el parser por defecto no lo
-    // entiende. Agregarlo al glob haria que eslint intentara analizarlo y fallara con errores de
-    // sintaxis que no tienen que ver con la frontera.
+    // {js,jsx} cubre el paquete entero porque en packages/shared no hay TypeScript: es la
+    // decision A de la issue #493. No se agrega .ts al glob a proposito -el parser por defecto no
+    // entiende esa sintaxis y fallaria con errores que no tienen que ver con la frontera-, asi
+    // que un .ts aqui volveria a quedar fuera de estas reglas, entrando sin que nadie lo diga.
+    // Lo que impide que eso pase es la prueba packages/shared/typescript.test.js.
     files: ["packages/shared/**/*.{js,jsx}"],
     rules: {
       "no-restricted-imports": [
@@ -141,6 +154,18 @@ export default [
             "navigator no significa lo mismo en web y en React Native. Lo que dependa del dispositivo entra por parametro desde la app.",
         },
       ],
+    },
+  },
+  {
+    // __DEV__ es un global que inyecta React Native/Metro en tiempo de ejecucion, no un import:
+    // la restriccion de plataforma de mas arriba no lo alcanza. Solo lo necesitan los archivos
+    // .native.js, que ya son el punto de entrada deliberado de lo especifico de movil dentro de
+    // packages/shared (ver packages/shared/entorno/fuente.native.js).
+    files: ["**/*.native.js"],
+    languageOptions: {
+      globals: {
+        __DEV__: "readonly",
+      },
     },
   },
   // Un solo `no-restricted-imports` por app, y no dos bloques separados: ESLint NO fusiona las

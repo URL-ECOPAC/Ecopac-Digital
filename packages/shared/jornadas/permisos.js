@@ -16,19 +16,7 @@
 // llamar: el cliente pregunta para dibujar; el servidor decide.
 
 import { esAdministrador, ROLES } from "../usuarios/roles.js";
-
-/**
- * Estados del enum estado_jornada (00001_initial_schema.sql).
- *
- * La base de datos es la fuente de verdad: si aqui se escribe un estado que el enum no tiene,
- * la consulta falla en tiempo de ejecucion.
- */
-export const ESTADOS_JORNADA = Object.freeze({
-  PLANIFICADA: "planificada",
-  EN_CURSO: "en curso",
-  FINALIZADA: "finalizada",
-  CANCELADA: "cancelada",
-});
+import { ESTADOS_JORNADA } from "../enums.js";
 
 /**
  * Puede crear y modificar jornadas (asignacion de personal incluida).
@@ -38,6 +26,37 @@ export const ESTADOS_JORNADA = Object.freeze({
  */
 export function puedeAdministrarJornadas(rol) {
   return esAdministrador(rol);
+}
+
+/**
+ * Puede ver el personal COMPLETO asignado a una jornada, o solo su propia fila (issue #182,
+ * criterio 5).
+ *
+ * Espejo exacto de la politica de SELECT de jornada_personal
+ * (supabase/migrations/00039_politicas_rls_jornadas_proyectos.sql:63-69):
+ *
+ *   CREATE POLICY "Administrador y junta directiva leen asignaciones; cada quien lee la suya"
+ *     ON jornada_personal FOR SELECT TO authenticated
+ *     USING (
+ *       public.es_administrador()
+ *       OR public.rol_actual() = 'junta directiva'
+ *       OR perfil_id = auth.uid()
+ *     );
+ *
+ * A proposito NO usa un helper que agrupe consultivos (del tipo es_consultivo(), que si junta a
+ * junta directiva y socio fundador en otras tablas, por ejemplo 00052_politicas_rls_gastos.sql):
+ * esta politica en particular nombra 'junta directiva' por su valor literal y deja afuera a
+ * socio fundador, que en jornada_personal solo puede leer su propia fila (perfil_id = auth.uid())
+ * igual que medico y voluntario. Si esta politica cambia (por ejemplo si un dia agrupa a socio
+ * fundador con junta directiva), esta funcion queda desactualizada sin que nada lo avise: RLS no
+ * lanza en lecturas, asi que el sintoma seria una pantalla que dice "vista limitada" a alguien
+ * que en realidad ya puede ver todo, o viceversa. Ver Notas de deploy del PR de #182.
+ *
+ * No vive en un archivo aparte ni en el hook de #182: es una regla de "que puede ver cada rol",
+ * que es exactamente lo que este archivo declara para el resto del modulo.
+ */
+export function puedeVerRosterCompleto(rol) {
+  return esAdministrador(rol) || rol === ROLES.JUNTA_DIRECTIVA;
 }
 
 /**
@@ -76,10 +95,30 @@ export function puedeReabrirJornada(rol) {
 }
 
 /**
+ * Puede ver el historial de cambios de estado de una jornada (issue #181, criterio 3).
+ *
+ * Espejo exacto de la politica de SELECT de jornada_estado_historial (00039:83-85): solo
+ * administrador, sin la excepcion de tiene_permiso('jornadas.gestionar') que si tienen otras
+ * escrituras de este modulo. Para cualquier otro rol la consulta a esa tabla no falla, RLS la
+ * filtra y devuelve una lista vacia sin error -- por eso la pantalla debe ocultar la seccion
+ * entera en vez de mostrarla vacia (mismo criterio que el guion de pacientesAtendidos en
+ * useJornadasKanban.js): una lista vacia visible diria "esta jornada no tiene historial" cuando
+ * en realidad es "no tenes permiso para verlo".
+ *
+ * No es una funcion "espejo" de puedeVerHistorial() de pacientes/permisos.js: esa cubre
+ * consultas/recetas (00033, administrador o medico); esta cubre jornada_estado_historial
+ * (00039, solo administrador). Son dos politicas RLS distintas, sobre tablas distintas, y por
+ * eso dos funciones distintas.
+ */
+export function puedeVerHistorialJornada(rol) {
+  return esAdministrador(rol);
+}
+
+/**
  * Permisos de un rol, en la forma que consume una pantalla.
  *
- * Se devuelven juntos para que un hook no tenga que llamar a las tres por separado ni
- * acordarse de cuales existen.
+ * Se devuelven juntos para que un hook no tenga que llamar a las funciones sueltas ni acordarse
+ * de cuales existen.
  */
 export function permisosDeJornadas(rol) {
   return {
@@ -87,5 +126,6 @@ export function permisosDeJornadas(rol) {
     puedeCrear: puedeAdministrarJornadas(rol),
     puedeEditar: puedeAdministrarJornadas(rol),
     puedeReabrir: puedeReabrirJornada(rol),
+    puedeVerHistorial: puedeVerHistorialJornada(rol),
   };
 }
