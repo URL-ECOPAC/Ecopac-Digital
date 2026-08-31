@@ -1,5 +1,8 @@
 import { useState } from "react";
+import { ProgressBar } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
+
+import { typography } from "@ecopac/ui-tokens";
 
 import {
   COLUMNAS_JORNADA,
@@ -165,6 +168,8 @@ export default function JornadasPage() {
         <KanbanBoard
           columnas={columnas}
           onMover={moverJornada}
+          mensajeVacio="Sin jornadas"
+          columnaAtenuada={(id) => id === ESTADOS_JORNADA.CANCELADA}
           renderTarjeta={(tarjeta) => (
             <TarjetaJornada
               jornada={tarjeta}
@@ -243,13 +248,19 @@ function colorDeEstado(estado) {
 }
 
 /**
- * Tarjeta del kanban: exactamente los seis datos del criterio 1 de #178 (nombre, fecha,
- * comunidad, responsable, estado, pacientes atendidos), mas los botones de accion de #180.
- * `codigo` y `cupoEstimado` existen en COLUMNAS_JORNADA pero no se pintan aqui (ver columnas.js).
+ * Tarjeta del kanban: los seis datos del criterio 1 de #178 (nombre, fecha, comunidad,
+ * responsable, estado, pacientes atendidos), mas los botones de accion de #180 y la barra de
+ * progreso de pacientes atendidos sobre `cupoEstimado` (arreglo de diseno del tablero). `codigo`
+ * existe en COLUMNAS_JORNADA pero no se pinta aqui (ver columnas.js).
  *
  * `pacientesAtendidos` puede venir ausente: medico y voluntario no tienen permiso de lectura
  * sobre vista_reporte_impacto (00064), y useJornadasKanban() no inventa un 0 para ese caso. Un
- * guion distingue "sin permiso para verlo" de "cero pacientes reales".
+ * guion distingue "sin permiso para verlo" de "cero pacientes reales". Sin ese permiso no hay
+ * numerador para la barra, asi que tampoco se pinta (ver `tienePacientes` abajo).
+ *
+ * `cupoEstimado` puede venir `null` (columna opcional, 00036): sin un total la barra no tiene
+ * contra que medirse, asi que la tarjeta cae al mismo texto numerico que ya mostraba antes de
+ * este arreglo de diseno, sin inventar un cupo.
  *
  * El borde izquierdo repite el color de StatusChip (colorDeEstado): con cuatro columnas ya
  * separadas por titulo, la tarjeta no necesitaba el color para saber en que columna esta, pero
@@ -288,6 +299,11 @@ function TarjetaJornada({
   onVerDetalle,
 }) {
   const tienePacientes = Object.prototype.hasOwnProperty.call(jornada, "pacientesAtendidos");
+  const tieneCupo = typeof jornada.cupoEstimado === "number" && jornada.cupoEstimado > 0;
+  const tieneProgreso = tienePacientes && tieneCupo;
+  const porcentajeAtendido = tieneProgreso
+    ? Math.min(100, Math.round((jornada.pacientesAtendidos / jornada.cupoEstimado) * 100))
+    : 0;
 
   const esReapertura = jornada.estado === ESTADOS_JORNADA.FINALIZADA;
   const [destino] = transicionesDeJornadaDesde(jornada.estado);
@@ -296,18 +312,36 @@ function TarjetaJornada({
   return (
     <Card style={{ borderLeft: `4px solid ${colorDeEstado(jornada.estado)}` }}>
       <div className="d-flex justify-content-between align-items-start gap-2 mb-2">
-        <span className="fw-semibold">{jornada.nombre}</span>
+        <span className="fw-bold">{jornada.nombre}</span>
         <StatusChip status={jornada.estado} />
       </div>
       <div className="small" style={{ color: "var(--color-text-muted)" }}>
-        <div>{formatearFechaCorta(jornada.fecha)}</div>
-        <div>{jornada.comunidad || "—"}</div>
-        <div>
-          {ETIQUETAS.responsable}: {jornada.responsable || "—"}
-        </div>
-        <div>
-          {ETIQUETAS.pacientesAtendidos}: {tienePacientes ? jornada.pacientesAtendidos : "—"}
-        </div>
+        {jornada.comunidad || "—"} · {formatearFechaCorta(jornada.fecha)}
+      </div>
+      <div
+        className="mb-2"
+        style={{ color: "var(--color-text-muted)", fontSize: typography.sizes.xs }}
+      >
+        {ETIQUETAS.responsable}: {jornada.responsable || "—"}
+      </div>
+
+      <div className="mb-2">
+        {tieneProgreso ? (
+          <div className="d-flex align-items-center gap-2">
+            <ProgressBar
+              now={porcentajeAtendido}
+              variant="primary"
+              style={{ height: "6px", flex: "1 1 auto" }}
+            />
+            <span className="small" style={{ color: "var(--color-text-muted)" }}>
+              {jornada.pacientesAtendidos}/{jornada.cupoEstimado}
+            </span>
+          </div>
+        ) : (
+          <div className="small" style={{ color: "var(--color-text-muted)" }}>
+            {ETIQUETAS.pacientesAtendidos}: {tienePacientes ? jornada.pacientesAtendidos : "—"}
+          </div>
+        )}
       </div>
 
       {/* "Ver detalle" (issue #181) es el unico boton sin condicion de permiso: la pantalla de
