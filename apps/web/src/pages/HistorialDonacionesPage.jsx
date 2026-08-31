@@ -260,7 +260,8 @@ export default function HistorialDonacionesPage({ usuarioRol, proyectosOptions =
                   {modalDetalle.donacionSeleccionada.motivoAnulacion || "No informado"}
                 </p>
                 <p className="mb-1">
-                  <strong>Anulada por:</strong> {modalDetalle.donacionSeleccionada.anuladaPor || "-"}
+                  <strong>Anulada por:</strong>{" "}
+                  {modalDetalle.donacionSeleccionada.anuladaPor || "-"}
                 </p>
                 <p className="mb-0">
                   <strong>Fecha de Anulación:</strong>{" "}
