@@ -27,6 +27,10 @@ export const CAMPOS_FICHA_VOLUNTARIO = [
   { id: "nombreCompleto", label: "Nombre", tipo: TIPOS_DE_PRESENTACION.TEXTO },
   { id: "email", label: "Correo", tipo: TIPOS_DE_PRESENTACION.TEXTO },
   { id: "telefono", label: "Telefono", tipo: TIPOS_DE_CAMPO.TELEFONO },
+  // direccion (migracion 00108): texto libre, sin formulario que lo escriba todavia (ver esa
+  // migracion). Solo lectura por ahora, igual que 'notas', que no va en este arreglo porque su
+  // presentacion es un bloque aparte, no una celda mas de la grilla (VoluntariosPage.jsx).
+  { id: "direccion", label: "Direccion", tipo: TIPOS_DE_PRESENTACION.TEXTO },
   { id: "rol", label: "Rol", tipo: TIPOS_DE_PRESENTACION.TEXTO, etiquetasDesde: "roles" },
   { id: "especialidades", label: "Especialidades", tipo: TIPOS_DE_PRESENTACION.CHIPS },
   { id: "fechaIngreso", label: "Fecha de ingreso", tipo: TIPOS_DE_PRESENTACION.FECHA },

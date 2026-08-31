@@ -107,6 +107,8 @@
  * @property {string} apellidos
  * @property {string} email Columna `citext`: se compara sin distinguir mayusculas.
  * @property {string|null} telefono
+ * @property {string|null} direccion Texto libre (00108). Sin formulario que lo escriba todavia.
+ * @property {string|null} notas Texto libre (00108). Sin formulario que lo escriba todavia.
  * @property {RolUsuario} rol
  * @property {boolean} activo
  * @property {string|null} fechaIngreso
