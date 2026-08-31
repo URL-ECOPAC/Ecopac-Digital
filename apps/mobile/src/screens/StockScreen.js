@@ -1,5 +1,5 @@
-import ScreenPlaceholder from "./ScreenPlaceholder";
+import CatalogoMedicamentosScreen from "./CatalogoMedicamentosScreen";
 
-export default function StockScreen() {
-  return <ScreenPlaceholder name="Consulta de Stock" />;
+export default function StockScreen(props) {
+  return <CatalogoMedicamentosScreen {...props} />;
 }
