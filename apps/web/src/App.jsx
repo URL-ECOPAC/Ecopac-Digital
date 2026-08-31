@@ -1,5 +1,13 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { MODULOS } from "@ecopac/shared";
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  useLocation,
+  useNavigate,
+  useParams,
+} from "react-router-dom";
+import { useEffect, useState } from "react";
+import { MODULOS, nombreCompletoDe, obtenerDonacion } from "@ecopac/shared";
 import { SesionProvider, useSesionCompartida } from "./contexto/SesionProvider";
 import MainLayout from "./components/MainLayout";
 import RutaProtegida from "./components/RutaProtegida";
@@ -12,9 +20,14 @@ import FichaPacientePage from "./pages/FichaPacientePage";
 import PacientesCronicosPage from "./pages/PacientesCronicosPage";
 import DonacionesPage from "./pages/DonacionesPage";
 import DonantesPage from "./pages/DonantesPage";
+import RegistroDonacionPage from "./pages/RegistroDonacionPage";
+import HistorialDonacionesPage from "./pages/HistorialDonacionesPage";
+import ConstanciaDonacionPage from "./pages/ConstanciaDonacionPage";
 import InventarioPage from "./pages/InventarioPage";
 import PresupuestosPage from "./pages/PresupuestosPage";
 import ProyectosPage from "./pages/ProyectosPage";
+import ProyectosSocialesPage from "./pages/ProyectosSocialesPage";
+import SeguimientoProyectoPage from "./pages/SeguimientoProyectoPage";
 import ReportesPage from "./pages/ReportesPage";
 import JornadasPage from "./pages/JornadasPage";
 import DetalleJornadaPage from "./pages/DetalleJornadaPage";
@@ -25,9 +38,69 @@ import NotFoundPage from "./pages/NotFoundPage";
 
 const rolesDe = (ruta) => MODULOS.find((m) => m.ruta === ruta)?.roles ?? [];
 
-function DonantesConSesion() {
+// Las pantallas de donaciones y proyectos reciben el rol por prop en vez de leerlo ellas
+// mismas. Este envoltorio se lo saca a la sesion compartida para no repetir el mismo
+// useSesionCompartida() en cada una. No decide nada: quien autoriza es RutaProtegida con los
+// roles de MODULOS, y quien protege de verdad es RLS.
+function conRolDeSesion(Pagina) {
+  function PaginaConRol(props) {
+    const { perfil } = useSesionCompartida();
+    return <Pagina usuarioRol={perfil?.rol} {...props} />;
+  }
+  PaginaConRol.displayName = `conRolDeSesion(${Pagina.name})`;
+  return PaginaConRol;
+}
+
+const DonantesConSesion = conRolDeSesion(DonantesPage);
+const RegistroDonacionConSesion = conRolDeSesion(RegistroDonacionPage);
+const HistorialDonacionesConSesion = conRolDeSesion(HistorialDonacionesPage);
+const ProyectosSocialesConSesion = conRolDeSesion(ProyectosSocialesPage);
+
+// La constancia se identifica por la donacion en la URL y ConstanciaDonacionPage recibe la
+// donacion entera por prop. Si se llega desde el historial, la fila viene en el state de
+// navegacion y no hace falta volver a consultar; si se entra escribiendo la direccion o se
+// recarga la pagina, la resuelve obtenerDonacion(id).
+function ConstanciaDonacionEnrutada() {
   const { perfil } = useSesionCompartida();
-  return <DonantesPage usuarioRol={perfil?.rol} />;
+  const { id } = useParams();
+  const { state } = useLocation();
+  // El :id de la URL siempre es string; el de la fila puede venir como numero desde la base.
+  const desdeElHistorial = String(state?.donacion?.id) === id ? state.donacion : null;
+
+  const [donacion, setDonacion] = useState(desdeElHistorial);
+
+  useEffect(() => {
+    if (desdeElHistorial || !id || !perfil?.rol) return undefined;
+
+    let vigente = true;
+    obtenerDonacion(id, { rolUsuario: perfil.rol }).then(({ datos }) => {
+      if (vigente) setDonacion(datos);
+    });
+    return () => {
+      vigente = false;
+    };
+  }, [id, perfil?.rol, desdeElHistorial]);
+
+  return <ConstanciaDonacionPage usuarioRol={perfil?.rol} donacion={donacion} />;
+}
+
+// Mismo caso que la constancia: useSeguimientoProyecto recibe el proyecto, sus hitos y su
+// bitacora ya resueltos. Las lecturas existen en packages/shared/proyectos (obtenerProyecto,
+// listarHitos, listarSeguimiento, listarJornadasDelProyecto) pero ningun hook las llama
+// todavia, asi que aqui solo se resuelve el :id y la vuelta al listado.
+function SeguimientoProyectoEnrutado() {
+  const { perfil } = useSesionCompartida();
+  const { id } = useParams();
+  const { state } = useLocation();
+  const navigate = useNavigate();
+  const proyectoInicial = String(state?.proyecto?.id) === id ? state.proyecto : null;
+  return (
+    <SeguimientoProyectoPage
+      proyectoInicial={proyectoInicial}
+      usuarioActual={nombreCompletoDe(perfil ?? {}) || "Usuario"}
+      onVolver={() => navigate("/proyectos/sociales")}
+    />
+  );
 }
 
 export default function App() {
@@ -53,6 +126,9 @@ export default function App() {
               </Route>
               <Route element={<RutaProtegida roles={rolesDe("/donaciones")} />}>
                 <Route path="/donaciones" element={<DonacionesPage />} />
+                <Route path="/donaciones/registro" element={<RegistroDonacionConSesion />} />
+                <Route path="/donaciones/historial" element={<HistorialDonacionesConSesion />} />
+                <Route path="/donaciones/:id/constancia" element={<ConstanciaDonacionEnrutada />} />
                 <Route path="/donantes" element={<DonantesConSesion />} />
               </Route>
               <Route element={<RutaProtegida roles={rolesDe("/inventario")} />}>
@@ -63,6 +139,11 @@ export default function App() {
               </Route>
               <Route element={<RutaProtegida roles={rolesDe("/proyectos")} />}>
                 <Route path="/proyectos" element={<ProyectosPage />} />
+                <Route path="/proyectos/sociales" element={<ProyectosSocialesConSesion />} />
+                <Route
+                  path="/proyectos/:id/seguimiento"
+                  element={<SeguimientoProyectoEnrutado />}
+                />
               </Route>
               <Route element={<RutaProtegida roles={rolesDe("/reportes")} />}>
                 <Route path="/reportes" element={<ReportesPage />} />
