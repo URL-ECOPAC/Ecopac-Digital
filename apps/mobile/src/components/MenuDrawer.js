@@ -1,4 +1,3 @@
-
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { modulosVisibles } from "@ecopac/shared";
@@ -13,16 +12,13 @@ export default function MenuDrawer({ onClose, rutaActual, onNavegar }) {
   const rol = perfil?.rol || "voluntario";
   const modulosPermitidos = modulosVisibles(rol, { plataforma: "mobile" });
 
-  const tienePermiso = (idModulo) =>
-    modulosPermitidos.some((m) => m.id === idModulo);
+  const tienePermiso = (idModulo) => modulosPermitidos.some((m) => m.id === idModulo);
 
   // Mapeo estructurado por categorías
   const estructuraMenu = [
     {
       categoria: "PRINCIPAL",
-      items: [
-        { label: "Inicio", ruta: ROUTES.INICIO, id: "inicio", siempreVisible: true },
-      ],
+      items: [{ label: "Inicio", ruta: ROUTES.INICIO, id: "inicio", siempreVisible: true }],
     },
     {
       categoria: "ATENCIÓN MÉDICA",
@@ -58,9 +54,7 @@ export default function MenuDrawer({ onClose, rutaActual, onNavegar }) {
   const seccionesVisibles = estructuraMenu
     .map((sec) => ({
       ...sec,
-      items: sec.items.filter(
-        (item) => item.siempreVisible || tienePermiso(item.id)
-      ),
+      items: sec.items.filter((item) => item.siempreVisible || tienePermiso(item.id)),
     }))
     .filter((sec) => sec.items.length > 0);
 
