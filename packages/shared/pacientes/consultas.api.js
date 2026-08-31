@@ -381,6 +381,44 @@ export async function listarPacientesAtendidosDeJornada(jornadaId, { rol } = {})
 }
 
 /**
+ * Cuenta las consultas registradas en una jornada (issue #187, criterio 5: contadores del panel
+ * de la jornada en curso movil, "consultas realizadas").
+ *
+ * Cuenta filas de `consultas` filtradas por `jornada_id` (00018), no vista_reporte_impacto
+ * (00064, restringida a administrador/junta directiva/socio fundador -- ninguno de los dos roles
+ * de campo que tiene el panel abierto). La politica de SELECT de consultas (00033) no filtra por
+ * autor: un medico ve TODAS las consultas de la jornada, no solo las propias -- por eso
+ * fn_atenciones_de_persona_por_jornada (00059) tiene que filtrar `medico_id = p_perfil_id` por su
+ * cuenta en vez de confiar en RLS para eso. Este conteo es entonces real para administrador y
+ * medico. Voluntario general no tiene SELECT sobre consultas en absoluto (00033): para ese rol la
+ * funcion devuelve `cantidad: null` sin llamar a la base, porque un conteo en cero ahi seria RLS
+ * escondiendo filas, no la jornada sin actividad -- mismo criterio de puedeVerHistorial() que ya
+ * usa listarPacientesAtendidosDeJornada().
+ *
+ * @param {string} jornadaId UUID de la jornada.
+ * @param {object} [opciones]
+ * @param {string} [opciones.rol] Rol de quien consulta, para el chequeo previo.
+ * @returns {Promise<{ cantidad: number|null, error: object|null }>} `null` cuando el rol no
+ *   puede ver este numero, nunca un cero inventado.
+ */
+export async function contarConsultasDeJornada(jornadaId, { rol } = {}) {
+  if (!jornadaId) return { cantidad: null, error: null };
+  if (rol !== undefined && !puedeVerHistorial(rol)) return { cantidad: null, error: null };
+
+  try {
+    const { count, error } = await obtenerSupabase()
+      .from("consultas")
+      .select("id", { count: "exact", head: true })
+      .eq("jornada_id", jornadaId);
+
+    if (error) return { cantidad: null, error: normalizarError(error) };
+    return { cantidad: count ?? 0, error: null };
+  } catch (error) {
+    return { cantidad: null, error: normalizarError(error) };
+  }
+}
+
+/**
  * Catalogo de diagnosticos, que es lo que alimenta `opcionesDesde: 'diagnosticos'` de
  * CAMPOS_CONSULTA. Hasta la issue #137 ese descriptor declaraba un catalogo que nadie
  * publicaba.

@@ -731,9 +731,16 @@ export async function obtenerAsignacionesDelDia(fecha, { excluirJornada } = {}) 
  * que prohibe el criterio de aceptacion 6. Quien consuma este campo no puede asumir que un cero
  * sea siempre real.
  *
+ * `horaInicio`/`horaFin` (issue #188) salen de la misma fila de jornada_personal, recortadas a
+ * HH:MM con aHoraCorta(): es el horario de esta asignacion puntual, no de la jornada completa.
+ * Aditivo sobre la forma que ya devolvia esta funcion (agrega dos claves, no quita ni renombra
+ * ninguna): useDetalleJornada.js (issue #181) no importa esta funcion, y el otro consumidor
+ * (usuarios/useHistorialDePersona.js) hace un passthrough sin verificar el shape completo.
+ *
  * @param {string} perfilId UUID del perfil.
  * @returns {Promise<{ jornadas: object[], error: object|null }>} Cada jornada trae
- *   `rolEnJornada: string`, `responsabilidad: string|null` y
+ *   `rolEnJornada: string`, `responsabilidad: string|null`, `horaInicio: string|null`,
+ *   `horaFin: string|null` y
  *   `atencionesPersona: { consultas: number, triajes: number, pacientes: number }`.
  */
 export async function obtenerJornadasDePersona(perfilId) {
@@ -745,7 +752,8 @@ export async function obtenerJornadasDePersona(perfilId) {
       supabase
         .from("jornada_personal")
         .select(
-          `rolEnJornada:rol_en_jornada, responsabilidad, jornada:jornadas(${COLUMNAS_DE_JORNADA})`,
+          "rolEnJornada:rol_en_jornada, responsabilidad, horaInicio:hora_inicio, " +
+            `horaFin:hora_fin, jornada:jornadas(${COLUMNAS_DE_JORNADA})`,
         )
         .eq("perfil_id", perfilId),
       supabase.rpc("fn_atenciones_de_persona_por_jornada", { p_perfil_id: perfilId }),
@@ -771,6 +779,12 @@ export async function obtenerJornadasDePersona(perfilId) {
         ...fila.jornada,
         rolEnJornada: fila.rolEnJornada,
         responsabilidad: fila.responsabilidad,
+        // Issue #188, criterio 2 (movil): horario de ESTA asignacion puntual, no un horario de
+        // la jornada completa (que no existe, la jornada solo tiene `fecha`). Mismo aHoraCorta()
+        // que aFilaDePersonalNormalizada() usa para el resto del modulo: la base las devuelve
+        // como TIME ("HH:MM:SS") y de aca para adentro solo existe "HH:MM".
+        horaInicio: aHoraCorta(fila.horaInicio),
+        horaFin: aHoraCorta(fila.horaFin),
         atencionesPersona: atencionesPorJornada.get(fila.jornada.id) ?? {
           consultas: 0,
           triajes: 0,

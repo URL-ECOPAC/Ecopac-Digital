@@ -1180,6 +1180,30 @@ describe("obtenerJornadasDePersona", () => {
     });
   });
 
+  it("recorta horaInicio/horaFin de la asignacion a HH:MM (issue #188)", async () => {
+    dobles.cliente = crearCliente({
+      jornada_personal: {
+        data: [
+          {
+            jornada: { id: "jornada-1", nombre: "Jornada en Solola" },
+            rolEnJornada: ROLES.VOLUNTARIO,
+            responsabilidad: "Triaje",
+            horaInicio: "07:00:00",
+            horaFin: "13:00:00",
+          },
+        ],
+        error: null,
+      },
+      "rpc:fn_atenciones_de_persona_por_jornada": { data: [], error: null },
+    });
+
+    const { jornadas, error } = await obtenerJornadasDePersona("perfil-1");
+
+    expect(error).toBeNull();
+    expect(jornadas[0].horaInicio).toBe("07:00");
+    expect(jornadas[0].horaFin).toBe("13:00");
+  });
+
   it("ignora filas sin jornada embebida (la jornada no existe o RLS no la deja ver)", async () => {
     dobles.cliente = crearCliente({
       jornada_personal: { data: [{ jornada: null }], error: null },

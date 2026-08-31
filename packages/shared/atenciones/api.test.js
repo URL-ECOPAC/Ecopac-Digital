@@ -26,7 +26,8 @@ vi.mock("../api/cliente.js", () => ({
 const { CODIGOS_DE_ERROR_DE_SUPABASE } = await import("../api/errores-de-supabase.js");
 const { ESTADOS_JORNADA } = await import("../enums.js");
 const { ETAPAS_DE_COLA, ORDEN_DE_ETAPAS } = await import("./etapas.js");
-const { cerrarAtencion, iniciarAtencion, obtenerCola } = await import("./api.js");
+const { cerrarAtencion, contarPacientesDeJornada, iniciarAtencion, obtenerCola } =
+  await import("./api.js");
 
 /**
  * Doble minimo de un query builder de supabase-js. Cada metodo registra el paso y devuelve el
@@ -347,5 +348,49 @@ describe("cerrarAtencion", () => {
     dobles.cliente = null;
 
     expect(await cerrarAtencion("")).toEqual({ atencion: null, error: null });
+  });
+});
+
+describe("contarPacientesDeJornada", () => {
+  it("cuenta filas de atenciones por jornada, sin traerlas", async () => {
+    const cliente = crearCliente({ atenciones: { data: null, error: null, count: 5 } });
+    dobles.cliente = cliente;
+
+    const { cantidad, error } = await contarPacientesDeJornada("jornada-1");
+
+    expect(error).toBeNull();
+    expect(cantidad).toBe(5);
+    expect(cliente.llamadas).toContainEqual({
+      paso: "eq",
+      tabla: "atenciones",
+      columna: "jornada_id",
+      valor: "jornada-1",
+    });
+  });
+
+  it("sin conteo (null) devuelve cero, no null ni undefined", async () => {
+    dobles.cliente = crearCliente({ atenciones: { data: null, error: null, count: null } });
+
+    const { cantidad, error } = await contarPacientesDeJornada("jornada-1");
+
+    expect(error).toBeNull();
+    expect(cantidad).toBe(0);
+  });
+
+  it("un fallo del servidor se normaliza igual que el resto del modulo", async () => {
+    dobles.cliente = crearCliente({
+      atenciones: { data: null, error: { code: "42501" }, count: null },
+    });
+
+    const { cantidad, error } = await contarPacientesDeJornada("jornada-1");
+
+    expect(cantidad).toBe(0);
+    expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.PERMISO_DENEGADO);
+  });
+
+  it("sin jornadaId no consulta al servidor", async () => {
+    dobles.cliente = null;
+
+    expect(await contarPacientesDeJornada("")).toEqual({ cantidad: 0, error: null });
   });
 });

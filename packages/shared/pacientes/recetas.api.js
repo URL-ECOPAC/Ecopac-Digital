@@ -6,6 +6,7 @@ import {
 } from "../api/errores-de-supabase.js";
 import { motivoSinDisponibilidad } from "../inventario/existencias.validaciones.js";
 import { ESTADOS_RECETA } from "../enums.js";
+import { puedeVerHistorial } from "./permisos.js";
 
 const COLUMNAS_DE_LA_RECETA = [
   "id",
@@ -224,6 +225,40 @@ export async function obtenerRecetas(pacienteId, { soloEmitidas = false } = {}) 
     return { recetas: (data ?? []).map(aReceta), error: null };
   } catch (error) {
     return { recetas: [], error: normalizarError(error) };
+  }
+}
+
+/**
+ * Cuenta las recetas emitidas en una jornada (issue #187, criterio 5: contadores del panel de la
+ * jornada en curso movil, "entregas").
+ *
+ * `recetas` no tiene `jornada_id` propio (00019): solo `consulta_id`. El filtro viaja al
+ * embebido con `!inner`, mismo patron que obtenerRecetas() ya usa para llegar al paciente a
+ * traves de consultas/expedientes. La politica de SELECT de recetas (00033) no filtra por
+ * emisor: un medico ve TODAS las recetas de la jornada, no solo las que el mismo emitio -- mismo
+ * criterio que contarConsultasDeJornada() en consultas.api.js. Voluntario general no tiene
+ * SELECT sobre recetas en absoluto: para ese rol la funcion devuelve `cantidad: null` sin llamar
+ * a la base, nunca un cero inventado.
+ *
+ * @param {string} jornadaId UUID de la jornada.
+ * @param {object} [opciones]
+ * @param {string} [opciones.rol] Rol de quien consulta, para el chequeo previo.
+ * @returns {Promise<{ cantidad: number|null, error: object|null }>}
+ */
+export async function contarRecetasDeJornada(jornadaId, { rol } = {}) {
+  if (!jornadaId) return { cantidad: null, error: null };
+  if (rol !== undefined && !puedeVerHistorial(rol)) return { cantidad: null, error: null };
+
+  try {
+    const { count, error } = await obtenerSupabase()
+      .from("recetas")
+      .select("id, consultas!inner(jornada_id)", { count: "exact", head: true })
+      .eq("consultas.jornada_id", jornadaId);
+
+    if (error) return { cantidad: null, error: normalizarError(error) };
+    return { cantidad: count ?? 0, error: null };
+  } catch (error) {
+    return { cantidad: null, error: normalizarError(error) };
   }
 }
 

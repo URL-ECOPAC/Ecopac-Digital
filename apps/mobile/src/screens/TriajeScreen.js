@@ -5,7 +5,6 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 import {
   nombreCompletoDePaciente,
   usePaciente,
-  useJornadaActiva,
   useRegistroTriaje,
 } from "@ecopac/shared";
 import { colors, spacing, typography } from "@ecopac/ui-tokens";
@@ -19,7 +18,7 @@ import {
   ScreenContainer,
   SecondaryButton,
 } from "../components";
-import { almacenamientoMovil } from "../almacenamiento";
+import { useJornadaActivaCompartida } from "../contexto/JornadaActivaProvider";
 import { useRegistroSinGuardar } from "../contexto/RegistroSinGuardarProvider";
 import { useSesionCompartida } from "../contexto/SesionProvider";
 
@@ -33,10 +32,7 @@ export default function TriajeScreen() {
   const pacienteId = params?.pacienteId;
 
   const { paciente, cargando: cargandoPaciente } = usePaciente(pacienteId, { rol });
-  const { jornadaId, jornada } = useJornadaActiva({
-    perfilId: perfil?.id,
-    almacenamiento: almacenamientoMovil,
-  });
+  const { jornadaId, jornada } = useJornadaActivaCompartida();
 
   const {
     campos,
