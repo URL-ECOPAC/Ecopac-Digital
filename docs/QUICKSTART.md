@@ -212,6 +212,47 @@ SMTP Settings con los datos que de el proveedor (host, puerto 465 o 587, usuario
 Sin SMTP configurado, `invitar-usuario` **crea igual la cuenta**: lo que no llega es el correo para
 establecer la contrasena, y esa se puede fijar desde el Dashboard mientras tanto.
 
+## Configurar el proyecto de Vercel (lo que no viaja en el repositorio)
+
+Igual que con Supabase, la mayor parte de esto vive en el Dashboard de Vercel y hay que ponerlo
+a mano una vez. Lo unico que si viaja versionado es `apps/web/vercel.json`, que resuelve el
+punto mas facil de olvidar: **el rewrite de SPA**.
+
+Sin ese rewrite, cualquier ruta que no sea `/` da 404 al recargar la pagina, al abrir un
+marcador o al pegar un enlace. `apps/web/dist/` solo contiene `index.html`, `favicon.svg` y
+`assets/`, asi que no existe ningun archivo en la ruta `/donantes` ni en `/pacientes/cronicos`:
+tiene que servirse `index.html` y dejar que React Router resuelva del lado del cliente.
+Navegando con clics desde `/` nunca falla -- React Router usa `pushState` y no le pide nada al
+servidor --, por eso es un fallo que se escapa facil en las pruebas. Es el mismo
+`try_files $uri $uri/ /index.html` que ya hace `apps/web/nginx.conf` para el Docker de
+produccion.
+
+`vercel.json` se lee **dentro del Root Directory** que se configure en el proyecto, y ese ajuste
+vive en el Dashboard: desde el repositorio no se puede saber cual se va a elegir. Por eso hay
+**dos**, y funciona con cualquiera de las dos opciones razonables:
+
+| Root Directory                | Archivo que aplica    | Que trae                                          |
+| ----------------------------- | --------------------- | ------------------------------------------------- |
+| La raiz del monorepo (por defecto) | `vercel.json`    | El rewrite, mas `buildCommand` y `outputDirectory` |
+| `apps/web`                    | `apps/web/vercel.json` | Solo el rewrite; del build se encarga el preset de Vite |
+
+Con un solo archivo, elegir la otra opcion dejaba el rewrite sin aplicarse **en silencio**: no
+hay error de build ni aviso, simplemente vuelven los 404. La duplicacion la vigila el paso
+"Comprobar el rewrite de SPA de Vercel" del CI (`npm run verificar:rewrite-vercel`), que falla
+si los dos archivos dejan de coincidir o si falta alguno.
+
+| Donde en el Dashboard             | Que poner                                            | Que se rompe si falta                          |
+| --------------------------------- | ---------------------------------------------------- | ---------------------------------------------- |
+| Settings > General > Root Directory | `apps/web`                                          | El build no encuentra la app                    |
+| Settings > Environment Variables > Preview | `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` de `ecopac-dev` | El preview de `develop` apunta a la base equivocada |
+| Settings > Environment Variables > Production | Las mismas dos, de `ecopac-prod`             | Produccion apunta a la base equivocada          |
+| Settings > Git > Production Branch | `main`                                              | `develop` se publicaria como produccion         |
+
+Las variables `VITE_*` se embeben en el bundle en tiempo de build, asi que un cambio de valor
+exige volver a desplegar: no basta con guardarlo en el Dashboard.
+
+Cuando el proyecto exista, anotar aqui la URL de cada ambiente.
+
 ## Aprovisionamiento del primer administrador
 
 Con Row Level Security activo, casi todas las tablas exigen un usuario autenticado con rol

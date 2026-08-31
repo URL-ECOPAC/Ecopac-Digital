@@ -67,6 +67,14 @@ jobs:
       - name: Comprobar el analizador de esquema contra sus propios casos
         run: npm run verificar:shared-esquema -- --autoprueba
 
+      # Guarda del rewrite de SPA (issue #59). Vercel solo lee el vercel.json que este dentro
+      # del Root Directory del proyecto, y ese ajuste vive en el Dashboard: desde el
+      # repositorio no se puede saber cual de los dos se va a usar. Por eso hay uno en la raiz
+      # y otro en apps/web, y esto comprueba que no diverjan. Si divergen, el rewrite deja de
+      # aplicarse sin ningun error de build y las rutas empiezan a dar 404 al recargar.
+      - name: Comprobar el rewrite de SPA de Vercel
+        run: npm run verificar:rewrite-vercel
+
       - name: Ejecutar lint en todos los workspaces
         run: npm run lint
 
