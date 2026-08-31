@@ -1,4 +1,10 @@
-import { useHistorialDonaciones } from "@ecopac/shared";
+import { Link } from "react-router-dom";
+import {
+  ESTADOS_DE_DONACION,
+  ETIQUETAS_TIPO_DONACION,
+  TIPOS_DE_DONACION,
+  useHistorialDonaciones,
+} from "@ecopac/shared";
 import {
   Container,
   Row,
@@ -10,19 +16,12 @@ import {
   Badge,
   Alert,
   Modal,
+  Spinner,
 } from "react-bootstrap";
 
-export default function HistorialDonacionesPage({
-  usuarioRol,
-  donacionesIniciales = [],
-  proyectosOptions = [],
-}) {
-  const { tieneAccesoLectura, donaciones, totalesPorTipo, filtros, modalDetalle } =
-    useHistorialDonaciones({
-      usuarioRol,
-      donacionesIniciales,
-      proyectosOptions,
-    });
+export default function HistorialDonacionesPage({ usuarioRol, proyectosOptions = [] }) {
+  const { tieneAccesoLectura, cargando, error, donaciones, totalesPorTipo, filtros, modalDetalle } =
+    useHistorialDonaciones({ usuarioRol });
 
   if (!tieneAccesoLectura) {
     return (
@@ -38,16 +37,22 @@ export default function HistorialDonacionesPage({
     <Container fluid style={{ maxWidth: "1140px" }} className="py-4">
       <h1 className="h3 mb-4">Historial de Donaciones Recibidas</h1>
 
+      {error && (
+        <Alert variant="danger">
+          No se pudo cargar el historial: {error.mensaje || "error inesperado."}
+        </Alert>
+      )}
+
       {/* Totales por Tipo */}
       <Row className="g-3 mb-4">
         <Col md={4}>
           <Card className="border-primary bg-light">
             <Card.Body>
               <Card.Subtitle className="mb-2 text-primary fw-semibold">
-                Total Económico
+                Total en dinero
               </Card.Subtitle>
               <Card.Title className="fs-3 fw-bold text-dark mb-0">
-                Q {(totalesPorTipo?.economica || 0).toFixed(2)}
+                Q {Number(totalesPorTipo?.dinero || 0).toFixed(2)}
               </Card.Title>
             </Card.Body>
           </Card>
@@ -98,9 +103,11 @@ export default function HistorialDonacionesPage({
                 onChange={(e) => filtros.setFiltroTipo(e.target.value)}
               >
                 <option value="">Todos los tipos</option>
-                <option value="economica">Económica</option>
-                <option value="medicamentos">Medicamentos</option>
-                <option value="insumos">Insumos</option>
+                {Object.values(TIPOS_DE_DONACION).map((tipo) => (
+                  <option key={tipo} value={tipo}>
+                    {ETIQUETAS_TIPO_DONACION[tipo]}
+                  </option>
+                ))}
               </Form.Select>
             </Col>
 
@@ -161,7 +168,14 @@ export default function HistorialDonacionesPage({
               </tr>
             </thead>
             <tbody>
-              {(donaciones || []).length === 0 ? (
+              {cargando ? (
+                <tr>
+                  <td colSpan="6" className="text-center text-muted py-4">
+                    <Spinner animation="border" size="sm" className="me-2" />
+                    Cargando donaciones...
+                  </td>
+                </tr>
+              ) : (donaciones || []).length === 0 ? (
                 <tr>
                   <td colSpan="6" className="text-center text-muted py-4">
                     No se encontraron registros de donaciones con los filtros seleccionados.
@@ -169,12 +183,12 @@ export default function HistorialDonacionesPage({
                 </tr>
               ) : (
                 donaciones.map((d) => {
-                  const esAnulada = d.estado === "anulada";
+                  const esAnulada = d.estado === ESTADOS_DE_DONACION.ANULADA;
                   return (
                     <tr key={d.id} className={esAnulada ? "table-danger text-muted" : ""}>
                       <td>{d.fecha}</td>
-                      <td className="fw-semibold">{d.donante_nombre}</td>
-                      <td className="text-capitalize">{d.tipo}</td>
+                      <td className="fw-semibold">{d.donanteNombre || "-"}</td>
+                      <td>{ETIQUETAS_TIPO_DONACION[d.tipo] ?? d.tipo}</td>
                       <td>{esAnulada ? <del>{d.resumen || "-"}</del> : d.resumen || "-"}</td>
                       <td>
                         {esAnulada ? (
@@ -187,9 +201,21 @@ export default function HistorialDonacionesPage({
                         <Button
                           variant="outline-primary"
                           size="sm"
+                          className="me-2"
                           onClick={() => modalDetalle.abrirDetalle(d)}
                         >
                           Ver Detalle
+                        </Button>
+                        {/* La fila viaja en el state para que la constancia se dibuje sin una
+                            segunda consulta; si se entra por URL la resuelve obtenerDonacion(). */}
+                        <Button
+                          as={Link}
+                          to={`/donaciones/${d.id}/constancia`}
+                          state={{ donacion: d }}
+                          variant="outline-secondary"
+                          size="sm"
+                        >
+                          Constancia
                         </Button>
                       </td>
                     </tr>
@@ -212,10 +238,12 @@ export default function HistorialDonacionesPage({
           <Modal.Body>
             <div className="mb-3">
               <p className="mb-1">
-                <strong>Donante:</strong> {modalDetalle.donacionSeleccionada.donante_nombre}
+                <strong>Donante:</strong> {modalDetalle.donacionSeleccionada.donanteNombre || "-"}
               </p>
               <p className="mb-1">
-                <strong>Tipo:</strong> {modalDetalle.donacionSeleccionada.tipo}
+                <strong>Tipo:</strong>{" "}
+                {ETIQUETAS_TIPO_DONACION[modalDetalle.donacionSeleccionada.tipo] ??
+                  modalDetalle.donacionSeleccionada.tipo}
               </p>
               <p className="mb-1">
                 <strong>Fecha:</strong> {modalDetalle.donacionSeleccionada.fecha}
@@ -225,19 +253,19 @@ export default function HistorialDonacionesPage({
               </p>
             </div>
 
-            {modalDetalle.donacionSeleccionada.estado === "anulada" && (
+            {modalDetalle.donacionSeleccionada.estado === ESTADOS_DE_DONACION.ANULADA && (
               <Alert variant="danger" className="mb-3">
                 <p className="mb-1">
                   <strong>Motivo de Anulación:</strong>{" "}
-                  {modalDetalle.donacionSeleccionada.motivo_anulacion || "No informado"}
+                  {modalDetalle.donacionSeleccionada.motivoAnulacion || "No informado"}
                 </p>
                 <p className="mb-1">
                   <strong>Anulada por:</strong>{" "}
-                  {modalDetalle.donacionSeleccionada.anulada_por || "-"}
+                  {modalDetalle.donacionSeleccionada.anuladaPor || "-"}
                 </p>
                 <p className="mb-0">
                   <strong>Fecha de Anulación:</strong>{" "}
-                  {modalDetalle.donacionSeleccionada.anulada_en || "-"}
+                  {modalDetalle.donacionSeleccionada.anuladaEn || "-"}
                 </p>
               </Alert>
             )}
@@ -248,9 +276,15 @@ export default function HistorialDonacionesPage({
               {(modalDetalle.donacionSeleccionada.detalles || []).length === 0 ? (
                 <li>Sin detalles registrados</li>
               ) : (
-                modalDetalle.donacionSeleccionada.detalles.map((item, i) => (
-                  <li key={i}>
-                    {item.concepto} - Cantidad/Monto: {item.cantidad || item.monto}
+                modalDetalle.donacionSeleccionada.detalles.map((item) => (
+                  <li key={item.id}>
+                    {item.descripcion}
+                    {item.cantidad !== null && item.cantidad !== undefined
+                      ? ` - ${item.cantidad} ${item.unidad || "unidades"}`
+                      : ""}
+                    {item.monto !== null && item.monto !== undefined
+                      ? ` - Q ${Number(item.monto).toFixed(2)}`
+                      : ""}
                   </li>
                 ))
               )}

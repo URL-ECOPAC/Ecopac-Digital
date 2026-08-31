@@ -30,6 +30,10 @@ const COLUMNAS_DE_LA_DONACION = [
   "donanteId:donante_id",
   "proyectoId:proyecto_id",
   "donante:donantes(nombre)",
+  // Los renglones vienen con la donacion y no en una segunda consulta: el historial los usa
+  // para el resumen de cada fila y para el detalle del modal, y la constancia los imprime. Sin
+  // esto la pantalla dibujaba siempre "Sin detalles registrados".
+  "detalles:donacion_detalle(id, descripcion, cantidad, unidad, monto)",
 ].join(", ");
 
 function validarRolLectura(rolUsuario) {
@@ -74,7 +78,28 @@ function aDonacion(fila) {
     donanteId: fila.donanteId,
     proyectoId: fila.proyectoId,
     donanteNombre: fila.donante?.nombre ?? null,
+    detalles: fila.detalles ?? [],
+    // Una linea con lo que trajo la donacion, para no repetir el mismo join en cada pantalla
+    // que solo quiere mostrarlo de un vistazo. El detalle completo sigue en `detalles`.
+    resumen: resumirDetalles(fila.detalles),
   };
+}
+
+/** Resumen de una linea de los renglones: "20 unidades de Amoxicilina, Q 500.00 de Efectivo". */
+function resumirDetalles(detalles) {
+  if (!detalles?.length) return "";
+
+  return detalles
+    .map(({ descripcion, cantidad, unidad, monto }) => {
+      if (cantidad !== null && cantidad !== undefined) {
+        return `${cantidad} ${unidad || "unidades"} de ${descripcion}`;
+      }
+      if (monto !== null && monto !== undefined) {
+        return `Q ${Number(monto).toFixed(2)} de ${descripcion}`;
+      }
+      return descripcion;
+    })
+    .join(", ");
 }
 
 /**
@@ -174,6 +199,44 @@ export async function listarDonaciones(
       },
       error: null,
     };
+  } catch (error) {
+    return { datos: null, error: normalizarError(error) };
+  }
+}
+
+/**
+ * Una donacion por su id, con su donante y sus renglones.
+ *
+ * La constancia (#199) se abre por URL -`/donaciones/:id/constancia`- y hasta ahora no habia
+ * forma de resolver ese id: la unica lectura por id del modulo era obtenerDonacionDeLote(), que
+ * parte del lote y no de la donacion. Sin esto la pantalla solo funcionaba si se llegaba a ella
+ * desde el historial, con la fila entera en el state de navegacion, y se dibujaba vacia si
+ * alguien escribia la direccion a mano o recargaba.
+ *
+ * Anulada o no, la devuelve: la constancia de una donacion anulada tiene que poder consultarse
+ * para saber que lo esta. Filtrar por estado aqui es cosa de quien llama.
+ *
+ * @param {string} id UUID de la donacion.
+ * @param {{ rolUsuario: string }} contexto
+ * @returns {Promise<{ datos: object|null, error: object|null }>}
+ */
+export async function obtenerDonacion(id, { rolUsuario } = {}) {
+  const errorRol = validarRolLectura(rolUsuario);
+  if (errorRol) return errorRol;
+
+  if (!id) return { datos: null, error: { mensaje: "Falta el identificador de la donacion." } };
+
+  try {
+    const { data, error } = await obtenerSupabase()
+      .from("donaciones")
+      .select(COLUMNAS_DE_LA_DONACION)
+      .eq("id", id)
+      .maybeSingle();
+
+    if (error) return { datos: null, error: normalizarError(error) };
+    if (!data) return { datos: null, error: { mensaje: "La donacion no existe." } };
+
+    return { datos: aDonacion(data), error: null };
   } catch (error) {
     return { datos: null, error: normalizarError(error) };
   }

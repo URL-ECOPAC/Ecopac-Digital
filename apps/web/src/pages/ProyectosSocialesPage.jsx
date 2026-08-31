@@ -1,4 +1,5 @@
-import { useProyectosSociales } from "@ecopac/shared";
+import { Link } from "react-router-dom";
+import { ESTADOS_PROYECTO, ETIQUETAS_ESTADO_PROYECTO, useProyectosSociales } from "@ecopac/shared";
 import {
   Container,
   Row,
@@ -12,14 +13,14 @@ import {
   Modal,
   Nav,
   Alert,
+  Spinner,
 } from "react-bootstrap";
 
-export default function ProyectosSocialesPage({
-  usuarioRol,
-  proyectosIniciales,
-  jornadasIniciales,
-}) {
+export default function ProyectosSocialesPage({ usuarioRol }) {
   const {
+    tieneAccesoLectura,
+    cargando,
+    error,
     proyectos,
     proyectoDetalle,
     jornadasProyecto,
@@ -29,11 +30,17 @@ export default function ProyectosSocialesPage({
     setProyectoSeleccionadoId,
     tabActivo,
     setTabActivo,
-  } = useProyectosSociales({
-    usuarioRol,
-    proyectosIniciales,
-    jornadasIniciales,
-  });
+  } = useProyectosSociales({ usuarioRol });
+
+  if (!tieneAccesoLectura) {
+    return (
+      <Container className="my-4">
+        <Alert variant="danger">
+          Acceso denegado: No tiene permisos para consultar este módulo.
+        </Alert>
+      </Container>
+    );
+  }
 
   return (
     <Container fluid style={{ maxWidth: "1140px" }} className="py-4">
@@ -47,6 +54,12 @@ export default function ProyectosSocialesPage({
         </div>
         {puedeEditar && <Button variant="primary">+ Nuevo Proyecto</Button>}
       </div>
+
+      {error && (
+        <Alert variant="danger">
+          No se pudieron cargar los proyectos: {error.mensaje || "error inesperado."}
+        </Alert>
+      )}
 
       {/* Controles de Filtrado */}
       <Card className="mb-4 border-0 shadow-sm">
@@ -111,46 +124,74 @@ export default function ProyectosSocialesPage({
               </tr>
             </thead>
             <tbody>
-              {proyectos.map((p) => (
-                <tr
-                  key={p.id}
-                  style={{ cursor: "pointer" }}
-                  onClick={() => setProyectoSeleccionadoId(p.id)}
-                >
-                  <td className="py-3 px-3 fw-medium text-dark">{p.nombre}</td>
-                  <td className="py-3 px-3 text-secondary">{p.responsable}</td>
-                  <td className="py-3 px-3 text-muted small">
-                    {p.fecha_inicio} - {p.fecha_fin}
-                  </td>
-                  <td className="py-3 px-3">
-                    <Badge bg={p.estado === "En Ejecución" ? "success" : "secondary"}>
-                      {p.estado}
-                    </Badge>
-                  </td>
-                  <td className="py-3 px-3">
-                    <ProgressBar
-                      now={p.porcentaje_avance || 0}
-                      variant="primary"
-                      style={{ height: "8px" }}
-                    />
-                    <span className="extra-small text-muted d-block mt-1">
-                      {p.porcentaje_avance || 0}%
-                    </span>
-                  </td>
-                  <td className="py-3 px-3 text-end">
-                    <Button
-                      variant="outline-primary"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setProyectoSeleccionadoId(p.id);
-                      }}
-                    >
-                      Ver Detalle
-                    </Button>
+              {cargando ? (
+                <tr>
+                  <td colSpan="6" className="text-center text-muted py-4">
+                    <Spinner animation="border" size="sm" className="me-2" />
+                    Cargando proyectos...
                   </td>
                 </tr>
-              ))}
+              ) : proyectos.length === 0 ? (
+                <tr>
+                  <td colSpan="6" className="text-center text-muted py-4">
+                    No hay proyectos que coincidan con los filtros seleccionados.
+                  </td>
+                </tr>
+              ) : (
+                proyectos.map((p) => (
+                  <tr
+                    key={p.id}
+                    style={{ cursor: "pointer" }}
+                    onClick={() => setProyectoSeleccionadoId(p.id)}
+                  >
+                    <td className="py-3 px-3 fw-medium text-dark">{p.nombre}</td>
+                    <td className="py-3 px-3 text-secondary">{p.responsableNombre || "-"}</td>
+                    <td className="py-3 px-3 text-muted small">
+                      {p.fechaInicio || "-"} - {p.fechaFin || "-"}
+                    </td>
+                    <td className="py-3 px-3">
+                      <Badge bg={p.estado === ESTADOS_PROYECTO.EN_CURSO ? "success" : "secondary"}>
+                        {ETIQUETAS_ESTADO_PROYECTO[p.estado] ?? p.estado}
+                      </Badge>
+                    </td>
+                    <td className="py-3 px-3">
+                      <ProgressBar
+                        now={p.porcentajeAvance || 0}
+                        variant="primary"
+                        style={{ height: "8px" }}
+                      />
+                      <span className="extra-small text-muted d-block mt-1">
+                        {p.porcentajeAvance || 0}%
+                      </span>
+                    </td>
+                    <td className="py-3 px-3 text-end">
+                      <Button
+                        variant="outline-primary"
+                        size="sm"
+                        className="me-2"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setProyectoSeleccionadoId(p.id);
+                        }}
+                      >
+                        Ver Detalle
+                      </Button>
+                      {/* El proyecto viaja en el state para que el seguimiento no repita la
+                          consulta que este listado ya hizo. */}
+                      <Button
+                        as={Link}
+                        to={`/proyectos/${p.id}/seguimiento`}
+                        state={{ proyecto: p }}
+                        variant="outline-secondary"
+                        size="sm"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        Seguimiento
+                      </Button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </Table>
         </Card.Body>
@@ -190,13 +231,13 @@ export default function ProyectosSocialesPage({
             {tabActivo === "resumen" && (
               <div className="fs-6 space-y-2">
                 <p className="mb-2">
-                  <strong>Responsable:</strong> {proyectoDetalle.responsable}
+                  <strong>Responsable:</strong> {proyectoDetalle.responsableNombre || "-"}
                 </p>
                 <p className="mb-2">
                   <strong>Presupuesto:</strong> Q {proyectoDetalle.presupuesto || "0.00"}
                 </p>
                 <p className="mb-0">
-                  <strong>Avance actual:</strong> {proyectoDetalle.porcentaje_avance || 0}%
+                  <strong>Avance actual:</strong> {proyectoDetalle.porcentajeAvance || 0}%
                 </p>
               </div>
             )}

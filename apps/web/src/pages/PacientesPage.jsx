@@ -2,21 +2,21 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import {
-  COLUMNAS_PACIENTE,
   FILTROS_PACIENTE,
   puedeRegistrarPaciente,
   puedeVerCondiciones,
   usePacientesListado,
 } from "@ecopac/shared";
 
-import DataList from "../components/DataList";
 import EmptyState from "../components/EmptyState";
 import ErrorState from "../components/ErrorState";
 import FilterBar from "../components/FilterBar";
 import PageHeader from "../components/PageHeader";
 import ScreenContainer from "../components/ScreenContainer";
 import { useSesionCompartida } from "../contexto/SesionProvider";
+import ListaPacientes from "./ListaPacientes";
 import ModalAltaPaciente from "./ModalAltaPaciente";
+import "./pacientes.css";
 import SecondaryButton from "../components/SecondaryButton";
 
 // Pantalla principal del modulo de pacientes (issue #124). Solo presentacion: los datos, los
@@ -71,8 +71,10 @@ export default function PacientesPage() {
   if (error) {
     return (
       <ScreenContainer>
-        <PageHeader title="Gestion de pacientes" />
-        <ErrorState message={error.mensaje} />
+        <div className="modulo-pacientes">
+          <PageHeader title="Gestion de pacientes" />
+          <ErrorState message={error.mensaje} />
+        </div>
       </ScreenContainer>
     );
   }
@@ -83,59 +85,70 @@ export default function PacientesPage() {
 
   return (
     <ScreenContainer>
-      <PageHeader
-        title="Gestion de pacientes"
-        subtitle={total === 1 ? "1 paciente" : `${total} pacientes`}
-        actions={acciones}
-      />
+      <div className="modulo-pacientes">
+        <PageHeader
+          title="Gestion de pacientes"
+          subtitle="Expedientes clinicos electronicos"
+          actions={acciones}
+        />
 
-      <FilterBar
-        campos={FILTROS_PACIENTE}
-        valores={filtros}
-        onChange={setFiltro}
-        catalogos={catalogos}
-      />
-
-      <DataList
-        columnas={COLUMNAS_PACIENTE}
-        datos={filas}
-        cargando={cargando}
-        catalogos={catalogos}
-        onRowPress={(fila) => navigate(`/pacientes/${fila.id}`)}
-        // El estado vacio sugiere registrar, que es lo que pide el criterio 4. Si hay filtros
-        // puestos, lo que falta no es un paciente nuevo sino aflojar la busqueda.
-        vacio={
-          hayFiltrosActivos ? (
-            <EmptyState
-              message="Ningun paciente coincide con los filtros."
-              actionLabel="Limpiar filtros"
-              onAction={limpiarFiltros}
-            />
-          ) : (
-            <EmptyState
-              message="Todavia no hay pacientes registrados."
-              actionLabel={puedeRegistrarPaciente(rol) ? "Registrar el primero" : undefined}
-              onAction={puedeRegistrarPaciente(rol) ? () => setRegistrando(true) : undefined}
-            />
-          )
-        }
-      />
-
-      {/* "Cargar mas" en vez de paginas numeradas: la lista se recorre de arriba abajo y este
-          patron funciona igual en la pantalla movil (#133), que consume el mismo hook. */}
-      {hayMas && (
-        <div className="d-flex justify-content-center mt-3">
-          <SecondaryButton
-            title={cargando ? "Cargando..." : "Cargar mas pacientes"}
-            onClick={cargarMas}
-            disabled={cargando}
+        <div className="pac-filtros">
+          <FilterBar
+            campos={FILTROS_PACIENTE}
+            valores={filtros}
+            onChange={setFiltro}
+            catalogos={catalogos}
           />
         </div>
-      )}
 
-      {registrando && (
-        <ModalAltaPaciente onClose={() => setRegistrando(false)} onRegistrado={recargar} />
-      )}
+        <div className="pac-maestro-detalle">
+          <div>
+            <ListaPacientes
+              filas={filas}
+              total={total}
+              cargando={cargando}
+              onSeleccionar={(fila) => navigate(`/pacientes/${fila.id}`)}
+              // El estado vacio sugiere registrar, que es lo que pide el criterio 4. Si hay
+              // filtros puestos, lo que falta no es un paciente nuevo sino aflojar la busqueda.
+              vacio={
+                hayFiltrosActivos ? (
+                  <EmptyState
+                    message="Ningun paciente coincide con los filtros."
+                    actionLabel="Limpiar filtros"
+                    onAction={limpiarFiltros}
+                  />
+                ) : (
+                  <EmptyState
+                    message="Todavia no hay pacientes registrados."
+                    actionLabel={puedeRegistrarPaciente(rol) ? "Registrar el primero" : undefined}
+                    onAction={puedeRegistrarPaciente(rol) ? () => setRegistrando(true) : undefined}
+                  />
+                )
+              }
+            />
+
+            {/* "Cargar mas" en vez de paginas numeradas: la lista se recorre de arriba abajo y
+              este patron funciona igual en la pantalla movil (#133), que usa el mismo hook. */}
+            {hayMas && (
+              <div className="d-flex justify-content-center mt-3">
+                <SecondaryButton
+                  title={cargando ? "Cargando..." : "Cargar mas pacientes"}
+                  onClick={cargarMas}
+                  disabled={cargando}
+                />
+              </div>
+            )}
+          </div>
+
+          <div className="pac-panel-vacio">
+            <p className="mb-0">Selecciona un paciente de la lista para ver su ficha.</p>
+          </div>
+        </div>
+
+        {registrando && (
+          <ModalAltaPaciente onClose={() => setRegistrando(false)} onRegistrado={recargar} />
+        )}
+      </div>
     </ScreenContainer>
   );
 }

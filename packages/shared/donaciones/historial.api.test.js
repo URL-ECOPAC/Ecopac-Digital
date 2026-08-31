@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { listarDonaciones } from "./historial.api.js";
+import { listarDonaciones, obtenerDonacion } from "./historial.api.js";
 import { obtenerSupabase } from "../api/cliente.js";
 import { ROLES } from "../usuarios/roles.js";
 
@@ -221,6 +221,82 @@ describe("listarDonaciones (#193)", () => {
     });
 
     const { datos, error } = await listarDonaciones({}, { rolUsuario: ROLES.ADMINISTRADOR });
+
+    expect(datos).toBeNull();
+    expect(error).not.toBeNull();
+  });
+});
+
+describe("obtenerDonacion (#199, lectura por id de la constancia)", () => {
+  let mockSupabase;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockSupabase = {
+      from: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      maybeSingle: vi.fn(),
+    };
+    obtenerSupabase.mockReturnValue(mockSupabase);
+  });
+
+  it("deniega a los roles que no leen donaciones, sin llegar a consultar", async () => {
+    const { datos, error } = await obtenerDonacion("don-1", { rolUsuario: ROLES.MEDICO });
+
+    expect(datos).toBeNull();
+    expect(error.mensaje).toContain("permisos de lectura");
+    expect(obtenerSupabase).not.toHaveBeenCalled();
+  });
+
+  it("devuelve la donacion con su donante y sus renglones aplanados", async () => {
+    mockSupabase.maybeSingle.mockResolvedValue({
+      data: {
+        id: "don-1",
+        fecha: "2026-03-01",
+        tipo: "medicamentos",
+        estado: "registrada",
+        donante: { nombre: "Farmacia Central" },
+        detalles: [{ id: "det-1", descripcion: "Amoxicilina", cantidad: 20, unidad: "cajas" }],
+      },
+      error: null,
+    });
+
+    const { datos, error } = await obtenerDonacion("don-1", { rolUsuario: ROLES.ADMINISTRADOR });
+
+    expect(error).toBeNull();
+    expect(mockSupabase.eq).toHaveBeenCalledWith("id", "don-1");
+    expect(datos.donanteNombre).toBe("Farmacia Central");
+    expect(datos.detalles).toHaveLength(1);
+    expect(datos.resumen).toBe("20 cajas de Amoxicilina");
+  });
+
+  it("una donacion que no existe es un error, no un objeto vacio", async () => {
+    mockSupabase.maybeSingle.mockResolvedValue({ data: null, error: null });
+
+    const { datos, error } = await obtenerDonacion("no-existe", {
+      rolUsuario: ROLES.ADMINISTRADOR,
+    });
+
+    expect(datos).toBeNull();
+    expect(error.mensaje).toContain("no existe");
+  });
+
+  it("sin id no consulta nada", async () => {
+    const { datos, error } = await obtenerDonacion("", { rolUsuario: ROLES.ADMINISTRADOR });
+
+    expect(datos).toBeNull();
+    expect(error.mensaje).toContain("identificador");
+    expect(obtenerSupabase).not.toHaveBeenCalled();
+  });
+
+  it("un rechazo de RLS se normaliza", async () => {
+    mockSupabase.maybeSingle.mockResolvedValue({
+      data: null,
+      error: { code: "42501", message: "denegado" },
+    });
+
+    const { datos, error } = await obtenerDonacion("don-1", { rolUsuario: ROLES.ADMINISTRADOR });
 
     expect(datos).toBeNull();
     expect(error).not.toBeNull();

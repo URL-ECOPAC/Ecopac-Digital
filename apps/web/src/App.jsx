@@ -1,6 +1,14 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { MODULOS } from "@ecopac/shared";
-import { SesionProvider } from "./contexto/SesionProvider";
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  useLocation,
+  useNavigate,
+  useParams,
+} from "react-router-dom";
+import { useEffect, useState } from "react";
+import { MODULOS, nombreCompletoDe, obtenerDonacion } from "@ecopac/shared";
+import { SesionProvider, useSesionCompartida } from "./contexto/SesionProvider";
 import MainLayout from "./components/MainLayout";
 import RutaProtegida from "./components/RutaProtegida";
 import LoginPage from "./pages/LoginPage";
@@ -11,9 +19,15 @@ import PacientesPage from "./pages/PacientesPage";
 import FichaPacientePage from "./pages/FichaPacientePage";
 import PacientesCronicosPage from "./pages/PacientesCronicosPage";
 import DonacionesPage from "./pages/DonacionesPage";
+import DonantesPage from "./pages/DonantesPage";
+import RegistroDonacionPage from "./pages/RegistroDonacionPage";
+import HistorialDonacionesPage from "./pages/HistorialDonacionesPage";
+import ConstanciaDonacionPage from "./pages/ConstanciaDonacionPage";
 import InventarioPage from "./pages/InventarioPage";
 import PresupuestosPage from "./pages/PresupuestosPage";
 import ProyectosPage from "./pages/ProyectosPage";
+import ProyectosSocialesPage from "./pages/ProyectosSocialesPage";
+import SeguimientoProyectoPage from "./pages/SeguimientoProyectoPage";
 import ReportesPage from "./pages/ReportesPage";
 import JornadasPage from "./pages/JornadasPage";
 import DetalleJornadaPage from "./pages/DetalleJornadaPage";
@@ -21,32 +35,84 @@ import VoluntariosPage from "./pages/VoluntariosPage";
 import PerfilPage from "./pages/PerfilPage";
 import NotFoundPage from "./pages/NotFoundPage";
 
-// Las rutas siguen la definicion unica de MODULOS en packages/shared/navegacion.js:
-// si se agrega un modulo alli, hay que registrar aqui su ruta.
-//
-// Y los roles permitidos de cada ruta salen de ese mismo MODULOS, no escritos a mano aqui:
-// asi el sidebar y el guard no pueden discrepar. Esconder la opcion del menu no es control de
-// acceso, y si las dos listas vivieran por separado acabarian diciendo cosas distintas.
 const rolesDe = (ruta) => MODULOS.find((m) => m.ruta === ruta)?.roles ?? [];
+
+// Las pantallas de donaciones y proyectos reciben el rol por prop en vez de leerlo ellas
+// mismas. Este envoltorio se lo saca a la sesion compartida para no repetir el mismo
+// useSesionCompartida() en cada una. No decide nada: quien autoriza es RutaProtegida con los
+// roles de MODULOS, y quien protege de verdad es RLS.
+function conRolDeSesion(Pagina) {
+  function PaginaConRol(props) {
+    const { perfil } = useSesionCompartida();
+    return <Pagina usuarioRol={perfil?.rol} {...props} />;
+  }
+  PaginaConRol.displayName = `conRolDeSesion(${Pagina.name})`;
+  return PaginaConRol;
+}
+
+const DonantesConSesion = conRolDeSesion(DonantesPage);
+const RegistroDonacionConSesion = conRolDeSesion(RegistroDonacionPage);
+const HistorialDonacionesConSesion = conRolDeSesion(HistorialDonacionesPage);
+const ProyectosSocialesConSesion = conRolDeSesion(ProyectosSocialesPage);
+
+// La constancia se identifica por la donacion en la URL y ConstanciaDonacionPage recibe la
+// donacion entera por prop. Si se llega desde el historial, la fila viene en el state de
+// navegacion y no hace falta volver a consultar; si se entra escribiendo la direccion o se
+// recarga la pagina, la resuelve obtenerDonacion(id).
+function ConstanciaDonacionEnrutada() {
+  const { perfil } = useSesionCompartida();
+  const { id } = useParams();
+  const { state } = useLocation();
+  // El :id de la URL siempre es string; el de la fila puede venir como numero desde la base.
+  const desdeElHistorial = String(state?.donacion?.id) === id ? state.donacion : null;
+
+  const [donacion, setDonacion] = useState(desdeElHistorial);
+
+  useEffect(() => {
+    if (desdeElHistorial || !id || !perfil?.rol) return undefined;
+
+    let vigente = true;
+    obtenerDonacion(id, { rolUsuario: perfil.rol }).then(({ datos }) => {
+      if (vigente) setDonacion(datos);
+    });
+    return () => {
+      vigente = false;
+    };
+  }, [id, perfil?.rol, desdeElHistorial]);
+
+  return <ConstanciaDonacionPage usuarioRol={perfil?.rol} donacion={donacion} />;
+}
+
+// Mismo caso que la constancia: useSeguimientoProyecto recibe el proyecto, sus hitos y su
+// bitacora ya resueltos. Las lecturas existen en packages/shared/proyectos (obtenerProyecto,
+// listarHitos, listarSeguimiento, listarJornadasDelProyecto) pero ningun hook las llama
+// todavia, asi que aqui solo se resuelve el :id y la vuelta al listado.
+function SeguimientoProyectoEnrutado() {
+  const { perfil } = useSesionCompartida();
+  const { id } = useParams();
+  const { state } = useLocation();
+  const navigate = useNavigate();
+  const proyectoInicial = String(state?.proyecto?.id) === id ? state.proyecto : null;
+  return (
+    <SeguimientoProyectoPage
+      proyectoInicial={proyectoInicial}
+      usuarioActual={nombreCompletoDe(perfil ?? {}) || "Usuario"}
+      onVolver={() => navigate("/proyectos/sociales")}
+    />
+  );
+}
 
 export default function App() {
   return (
     <BrowserRouter>
       <SesionProvider>
         <Routes>
-          {/* Rutas publicas: los puntos de entrada sin sesion.
-            Las dos de contrasena tienen que ser publicas por definicion: quien no puede entrar es
-            justo quien las necesita. /nueva-contrasena es ademas el destino del enlace que Supabase
-            manda por correo, y el que usa el primer administrador que la migracion 00063 crea sin
-            contrasena. */}
+          {/* Rutas publicas */}
           <Route path="/login" element={<LoginPage />} />
           <Route path="/restablecer-contrasena" element={<RestablecerContrasenaPage />} />
           <Route path="/nueva-contrasena" element={<NuevaContrasenaPage />} />
 
-          {/* Rutas autenticadas.
-            El guard de sesion va POR ENCIMA de MainLayout: el layout dibuja el nombre y el rol
-            de quien entro, asi que no puede montarse antes de saber si hay sesion. Los roles se
-            comprueban despues, ruta por ruta, ya dentro del layout. */}
+          {/* Rutas autenticadas */}
           <Route element={<RutaProtegida />}>
             <Route element={<MainLayout />}>
               <Route element={<RutaProtegida roles={rolesDe("/")} />}>
@@ -54,19 +120,15 @@ export default function App() {
               </Route>
               <Route element={<RutaProtegida roles={rolesDe("/pacientes")} />}>
                 <Route path="/pacientes" element={<PacientesPage />} />
-                {/* /pacientes/:id (issue #125): misma excepcion de alcance que /jornadas/:id --
-                  no es un modulo del sidebar, asi que no se declara en navegacion.js, y hereda
-                  el guard y los roles de /pacientes. Las pestanias clinicas de la ficha las
-                  esconde ademas puedeVerHistorial(), porque no todos los roles que entran al
-                  modulo pueden ver diagnosticos (RNF-09). */}
-                {/* /pacientes/cronicos (issue #132) va ANTES que /pacientes/:id: aunque React
-                  Router prioriza el segmento estatico sobre el dinamico, dejarlas en este orden
-                  hace evidente por que "cronicos" no cae en la ficha de un paciente. */}
                 <Route path="/pacientes/cronicos" element={<PacientesCronicosPage />} />
                 <Route path="/pacientes/:id" element={<FichaPacientePage />} />
               </Route>
               <Route element={<RutaProtegida roles={rolesDe("/donaciones")} />}>
                 <Route path="/donaciones" element={<DonacionesPage />} />
+                <Route path="/donaciones/registro" element={<RegistroDonacionConSesion />} />
+                <Route path="/donaciones/historial" element={<HistorialDonacionesConSesion />} />
+                <Route path="/donaciones/:id/constancia" element={<ConstanciaDonacionEnrutada />} />
+                <Route path="/donantes" element={<DonantesConSesion />} />
               </Route>
               <Route element={<RutaProtegida roles={rolesDe("/inventario")} />}>
                 <Route path="/inventario" element={<InventarioPage />} />
@@ -76,16 +138,17 @@ export default function App() {
               </Route>
               <Route element={<RutaProtegida roles={rolesDe("/proyectos")} />}>
                 <Route path="/proyectos" element={<ProyectosPage />} />
+                <Route path="/proyectos/sociales" element={<ProyectosSocialesConSesion />} />
+                <Route
+                  path="/proyectos/:id/seguimiento"
+                  element={<SeguimientoProyectoEnrutado />}
+                />
               </Route>
               <Route element={<RutaProtegida roles={rolesDe("/reportes")} />}>
                 <Route path="/reportes" element={<ReportesPage />} />
               </Route>
               <Route element={<RutaProtegida roles={rolesDe("/jornadas")} />}>
                 <Route path="/jornadas" element={<JornadasPage />} />
-                {/* /jornadas/:id (issue #181): excepcion de alcance autorizada para esta unica
-                  ruta, con el mismo guard y los mismos roles que ya protegen /jornadas -- no se
-                  declara en navegacion.js/MODULOS (rolesDe() solo lee de ahi), mismo patron que
-                  /perfil mas abajo, que tampoco es un modulo del sidebar. */}
                 <Route path="/jornadas/:id" element={<DetalleJornadaPage />} />
               </Route>
               <Route element={<RutaProtegida roles={rolesDe("/voluntarios")} />}>
@@ -95,14 +158,7 @@ export default function App() {
                 <Route path="/voluntarios" element={<VoluntariosPage />} />
               </Route>
 
-              {/* /perfil no es uno de los MODULOS: es la cuenta de quien entro, no un modulo de
-                negocio, asi que no aparece en el sidebar ni tiene una lista de roles que
-                consultar en navegacion.js. Solo exige que haya sesion, igual que la 404 de
-                abajo. Se llega desde el bloque .app-user de MainLayout.jsx (issue #102). */}
               <Route path="/perfil" element={<PerfilPage />} />
-
-              {/* La 404 queda dentro del layout y detras de la sesion, pero sin filtro de rol:
-              una ruta que no existe no depende de permisos. */}
               <Route path="*" element={<NotFoundPage />} />
             </Route>
           </Route>

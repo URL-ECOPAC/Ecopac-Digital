@@ -1,4 +1,4 @@
-import { useSeguimientoProyecto } from "@ecopac/shared/proyectos";
+import { useSeguimientoProyecto } from "@ecopac/shared";
 import { Container, Row, Col, Card, Form, Button, Badge, Alert } from "react-bootstrap";
 
 export default function SeguimientoProyectoPage({
