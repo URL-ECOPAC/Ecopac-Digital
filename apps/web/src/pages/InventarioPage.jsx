@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import ModalMedicamento from "./ModalMedicamento.jsx";
 import { ModalAltaLote } from "./ModalAltaLote.jsx";
 import { ModalAtenderAlerta } from "./ModalAtenderAlerta.jsx";
+// 1. Importar el modal de registro de ingreso (#156)
+import ModalRegistroIngreso from "./ModalRegistroIngreso.jsx";
 
 // API Medicamentos y Principios Activos (#154)
 import {
@@ -27,6 +29,7 @@ export default function InventarioPage() {
   const [lotesRaw, setLotesRaw] = useState([]);
   const [bodegas, setBodegas] = useState([]);
   const [proveedores, setProveedores] = useState([]);
+  const [donaciones, setDonaciones] = useState([]);
 
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
@@ -49,7 +52,11 @@ export default function InventarioPage() {
   const [modalAltaLoteAbierto, setModalAltaLoteAbierto] = useState(false);
   const [alertaSeleccionada, setAlertaSeleccionada] = useState(null);
 
+  // 2. Estado Modal Registro de Ingreso (#156)
+  const [modalRegistroIngresoAbierto, setModalRegistroIngresoAbierto] = useState(false);
+
   const esAdmin = true;
+  const usuarioActual = { id: "user-admin-uuid", rol: esAdmin ? "Administrador" : "Usuario" };
 
   // Hooks Shared
   const {
@@ -74,7 +81,7 @@ export default function InventarioPage() {
     lotesIniciales: lotesRaw,
     bodegas,
     proveedores,
-    usuario: { id: "user-admin-uuid", rol: esAdmin ? "Administrador" : "Usuario" },
+    usuario: usuarioActual,
   });
 
   const cargarDatos = async () => {
@@ -164,6 +171,14 @@ export default function InventarioPage() {
     }
   };
 
+  const normalizarPresentacion = (valor) => {
+    if (!valor) return "";
+    return valor
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
+  };
+
   const handleGuardarMedicamento = async () => {
     const duplicado = inventarioRaw.some(
       (item) =>
@@ -171,7 +186,7 @@ export default function InventarioPage() {
         item.nombre?.toLowerCase() === formData.nombre?.toLowerCase() &&
         item.concentracion?.toLowerCase() === formData.concentracion?.toLowerCase() &&
         item.presentacion?.toLowerCase() === formData.presentacion?.toLowerCase() &&
-        item.marca?.toLowerCase() === formData.marca?.toLowerCase(),
+        item.marca?.toLowerCase() === formData.marca?.toLowerCase()
     );
 
     if (duplicado) {
@@ -184,31 +199,47 @@ export default function InventarioPage() {
 
       if (modoEdicion) {
         const { error: errorUpdate } = await actualizarMedicamento(formData.id, {
-          nombre: formData.nombre,
-          concentracion: formData.concentracion,
-          presentacion: formData.presentacion,
-          marca: formData.marca,
-          formaFarmaceutica: formData.formaFarmaceutica,
+          nombre: formData.nombre.trim(),
+          concentracion: formData.concentracion.trim(),
+          presentacion: normalizarPresentacion(formData.presentacion),
+          marca: formData.marca.trim(),
+          formaFarmaceutica: formData.formaFarmaceutica ? formData.formaFarmaceutica.trim() : null,
         });
 
-        if (errorUpdate) return;
+        if (errorUpdate) {
+          alert(`Error al actualizar: ${errorUpdate.mensaje || errorUpdate.message}`);
+          return;
+        }
       } else {
-        const { error: errorReg } = await registrarMedicamento({
-          nombre: formData.nombre,
-          concentracion: formData.concentracion,
-          presentacion: formData.presentacion,
-          marca: formData.marca,
-          formaFarmaceutica: formData.formaFarmaceutica,
-          principiosActivosIds: formData.principio_activo_id ? [formData.principio_activo_id] : [],
-        });
+        if (!formData.principioActivoId) {
+          alert("Debes seleccionar un principio activo.");
+          return;
+        }
 
-        if (errorReg) return;
+        const payload = {
+          nombre: formData.nombre.trim(),
+          concentracion: formData.concentracion.trim(),
+          presentacion: normalizarPresentacion(formData.presentacion),
+          marca: formData.marca.trim(),
+          formaFarmaceutica: formData.formaFarmaceutica ? formData.formaFarmaceutica.trim() : null,
+          esPediatrico: Boolean(formData.esPediatrico),
+          principiosActivosIds: [formData.principioActivoId],
+        };
+
+        const { error: errorReg } = await registrarMedicamento(payload);
+
+        if (errorReg) {
+          console.error("Detalle del error API:", errorReg);
+          alert(`Error al registrar: ${errorReg.mensaje || errorReg.message}`);
+          return;
+        }
       }
 
       setModalAbierto(false);
       await cargarDatos();
     } catch (err) {
-      console.error("Error al guardar medicamento:", err);
+      console.error("Error inesperado:", err);
+      alert("Error de comunicación con el servidor.");
     } finally {
       setCargandoGuardar(false);
     }
@@ -218,7 +249,6 @@ export default function InventarioPage() {
   const handleGuardarLote = (datosLote) => {
     if (validarNuevoLote(datosLote)) {
       setModalAltaLoteAbierto(false);
-      // Aquí se conectaría la llamada a la API de registro de lotes
       cargarDatos();
     }
   };
@@ -227,7 +257,6 @@ export default function InventarioPage() {
     const datosCierre = atenderAlertaCaducidad(alertaId, accion);
     if (datosCierre) {
       setAlertaSeleccionada(null);
-      // Aquí se conectaría la llamada a la API de actualización de alerta
       cargarDatos();
     }
   };
@@ -256,6 +285,23 @@ export default function InventarioPage() {
         {/* Acciones de Admin */}
         {esAdmin && (
           <div style={{ display: "flex", gap: "8px" }}>
+            {/* 3. Botón + Registrar Ingreso (#156) */}
+            <button
+              onClick={() => setModalRegistroIngresoAbierto(true)}
+              style={{
+                padding: "10px 20px",
+                borderRadius: "9999px",
+                border: "none",
+                backgroundColor: "#059669",
+                color: "#ffffff",
+                fontSize: "13px",
+                fontWeight: "700",
+                cursor: "pointer",
+              }}
+            >
+              + Registrar Ingreso
+            </button>
+
             {tabActiva === "catalogo" ? (
               <button
                 onClick={abrirModalNuevo}
@@ -330,7 +376,7 @@ export default function InventarioPage() {
         </button>
       </div>
 
-      {/* Tira de Alertas Críticas (Visible si existen lotes por vencer) */}
+      {/* Tira de Alertas Críticas */}
       {alertasCriticas.length > 0 && (
         <div
           style={{
@@ -506,7 +552,7 @@ export default function InventarioPage() {
         </div>
       </div>
 
-      {/* Vista Tab: Catálogo de Medicamentos */}
+      {/* Tab: Catálogo */}
       {tabActiva === "catalogo" && (
         <div
           style={{
@@ -597,7 +643,7 @@ export default function InventarioPage() {
         </div>
       )}
 
-      {/* Vista Tab: Gestión de Lotes y FEFO */}
+      {/* Tab: Lotes */}
       {tabActiva === "lotes" && (
         <div
           style={{
@@ -713,6 +759,22 @@ export default function InventarioPage() {
         onClose={() => setAlertaSeleccionada(null)}
         onResolver={handleResolverAlerta}
         errorValidacion={errorLotes}
+      />
+
+      {/* 4. Render del Modal Registro Ingreso (#156) */}
+      <ModalRegistroIngreso
+        abierto={modalRegistroIngresoAbierto}
+        onCerrar={() => {
+          setModalRegistroIngresoAbierto(false);
+          cargarDatos(); // Recargar inventario al cerrar o registrar un movimiento
+        }}
+        catalogos={{
+          medicamentos: inventarioRaw,
+          bodegas,
+          donaciones,
+          proveedores,
+        }}
+        usuarioActual={usuarioActual}
       />
     </div>
   );
