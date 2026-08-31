@@ -1,4 +1,11 @@
-import { BrowserRouter, Routes, Route, useLocation, useNavigate, useParams } from "react-router-dom";
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  useLocation,
+  useNavigate,
+  useParams,
+} from "react-router-dom";
 import { MODULOS, nombreCompletoDe } from "@ecopac/shared";
 import { SesionProvider, useSesionCompartida } from "./contexto/SesionProvider";
 import MainLayout from "./components/MainLayout";
@@ -118,7 +125,10 @@ export default function App() {
               <Route element={<RutaProtegida roles={rolesDe("/proyectos")} />}>
                 <Route path="/proyectos" element={<ProyectosPage />} />
                 <Route path="/proyectos/sociales" element={<ProyectosSocialesConSesion />} />
-                <Route path="/proyectos/:id/seguimiento" element={<SeguimientoProyectoEnrutado />} />
+                <Route
+                  path="/proyectos/:id/seguimiento"
+                  element={<SeguimientoProyectoEnrutado />}
+                />
               </Route>
               <Route element={<RutaProtegida roles={rolesDe("/reportes")} />}>
                 <Route path="/reportes" element={<ReportesPage />} />
