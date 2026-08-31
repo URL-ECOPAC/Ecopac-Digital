@@ -27,9 +27,4 @@ export const ROUTES = {
   SELECCION_JORNADA: "SeleccionJornada",
   JORNADA_EN_CURSO: "JornadaEnCurso",
   STOCK: "Stock",
-<<<<<<< HEAD
-  CATALOGO_MEDICAMENTOS: "CatalogoMedicamentos",
 };
-=======
-};
->>>>>>> origin/develop

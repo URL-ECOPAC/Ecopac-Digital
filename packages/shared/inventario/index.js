@@ -38,10 +38,6 @@ export * from "./movimientos.api.js";
 export * from "./alertas.api.js";
 export * from "./permisos.js";
 export * from "./validacion.api.js";
-<<<<<<< HEAD
-export * from "./useCatalogoMedicamentos.js";
-=======
 export * from "./useCatalogoMedicamentos.js";
 export * from "./useInventario.js";
 export * from "./usePendientesValidacion.js";
->>>>>>> origin/develop

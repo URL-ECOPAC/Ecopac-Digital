@@ -17,12 +17,9 @@ export default function AjustesScreen() {
   const { hayAlgoSinGuardar } = useRegistroSinGuardar();
   const [confirmando, setConfirmando] = useState(false);
 
-<<<<<<< HEAD
-=======
   // Issue #110, criterio 2: un solo dialogo, y solo cuando hace falta. Si no hay nada sin
   // guardar en ninguna pantalla registrada, cierra directo -sin esto el criterio 1 (cerrar
   // sesion en dos toques) se rompe para el caso comun, que es no tener nada sin guardar.
->>>>>>> origin/develop
   const pedirCierre = () => {
     if (hayAlgoSinGuardar()) {
       setConfirmando(true);
@@ -82,8 +79,4 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
     gap: spacing.sm,
   },
-<<<<<<< HEAD
 });
-=======
-});
->>>>>>> origin/develop

@@ -1,4 +1,4 @@
-import React from "react";
+
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { modulosVisibles } from "@ecopac/shared";

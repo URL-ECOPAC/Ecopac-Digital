@@ -1,16 +1,8 @@
 import React from "react";
-<<<<<<< HEAD
-import { StyleSheet, Text, View, ScrollView, TouchableOpacity } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { modulosVisibles } from "@ecopac/shared";
-import { useSesionCompartida } from "../contexto/SesionProvider";
-import { ROUTES } from "../navigation/rutas";
-=======
 import { StyleSheet, Text, View, ScrollView, TouchableOpacity, SafeAreaView } from "react-native";
 import { modulosVisibles } from "@ecopac/shared";
 import { useSesionCompartida } from "../contexto/SesionProvider";
 import { rutas } from "../navigation/rutas";
->>>>>>> origin/develop
 
 export default function InicioScreen({ navigation }) {
   const { perfil } = useSesionCompartida();
@@ -22,22 +14,6 @@ export default function InicioScreen({ navigation }) {
   );
 
   const navegarAModulo = (modulo) => {
-<<<<<<< HEAD
-    const mapaRutas = {
-      pacientes: ROUTES.BUSQUEDA_PACIENTE,
-      inventario: ROUTES.STOCK,
-      jornadas: ROUTES.SELECCION_JORNADA,
-      donaciones: ROUTES.DONACIONES,
-      presupuestos: ROUTES.PRESUPUESTOS,
-      proyectos: ROUTES.PROYECTOS,
-      voluntarios: ROUTES.VOLUNTARIOS,
-      ajustes: ROUTES.TAB_AJUSTES,
-    };
-
-    const rutaDestino = mapaRutas[modulo.id];
-    if (rutaDestino) {
-      navigation.navigate(rutaDestino);
-=======
     if (modulo.tabMovil) {
       navigation.navigate(modulo.tabMovil);
     } else {
@@ -50,7 +26,6 @@ export default function InicioScreen({ navigation }) {
       if (mapaRutas[modulo.id]) {
         navigation.navigate(mapaRutas[modulo.id]);
       }
->>>>>>> origin/develop
     }
   };
 
@@ -99,11 +74,7 @@ export default function InicioScreen({ navigation }) {
   ];
 
   return (
-<<<<<<< HEAD
-    <SafeAreaView style={styles.container} edges={["left", "right", "bottom"]}>
-=======
     <SafeAreaView style={styles.container}>
->>>>>>> origin/develop
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* 1. HERO BANNER */}
         <View style={styles.heroBanner}>
@@ -119,21 +90,13 @@ export default function InicioScreen({ navigation }) {
           <View style={styles.heroButtonsContainer}>
             <TouchableOpacity
               style={styles.btnPrimary}
-<<<<<<< HEAD
-              onPress={() => navigation.navigate(ROUTES.STOCK)}
-=======
               onPress={() => navigation.navigate("Inventario")}
->>>>>>> origin/develop
             >
               <Text style={styles.btnPrimaryText}>Ver inventario</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.btnSecondary}
-<<<<<<< HEAD
-              onPress={() => navigation.navigate(ROUTES.PRESUPUESTOS)}
-=======
               onPress={() => navigation.navigate(rutas.PRESUPUESTOS)}
->>>>>>> origin/develop
             >
               <Text style={styles.btnSecondaryText}>Ver presupuestos</Text>
             </TouchableOpacity>
@@ -176,11 +139,7 @@ export default function InicioScreen({ navigation }) {
               <View style={[styles.cardDot, { backgroundColor: "#F97316" }]} />
               <Text style={styles.alertsTitle}>{alertasCaducidad.length} ALERTAS DE CADUCIDAD</Text>
             </View>
-<<<<<<< HEAD
-            <TouchableOpacity onPress={() => navigation.navigate(ROUTES.STOCK)}>
-=======
             <TouchableOpacity onPress={() => navigation.navigate("Inventario")}>
->>>>>>> origin/develop
               <Text style={styles.seeAllText}>Ver todas →</Text>
             </TouchableOpacity>
           </View>
@@ -395,8 +354,4 @@ const styles = StyleSheet.create({
     color: "#DC2626",
     marginLeft: 8,
   },
-<<<<<<< HEAD
 });
-=======
-});
->>>>>>> origin/develop
