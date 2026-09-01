@@ -28,6 +28,7 @@ import DonacionesScreen from "../screens/DonacionesScreen";
 import ProyectosScreen from "../screens/ProyectosScreen";
 import PresupuestosScreen from "../screens/PresupuestosScreen";
 import VoluntariosScreen from "../screens/VoluntariosScreen";
+import FichaVoluntarioScreen from "../screens/FichaVoluntarioScreen";
 
 export { ROUTES };
 
@@ -93,6 +94,11 @@ function InicioNavigator() {
         name={ROUTES.VOLUNTARIOS}
         component={VoluntariosScreen}
         options={opcionesStack("Voluntarios y médicos")}
+      />
+      <InicioStack.Screen
+        name={ROUTES.FICHA_VOLUNTARIO}
+        component={FichaVoluntarioScreen}
+        options={opcionesStack("Ficha del personal")}
       />
     </InicioStack.Navigator>
   );
