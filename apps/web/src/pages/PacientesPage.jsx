@@ -98,7 +98,7 @@ export default function PacientesPage() {
           />
           {hayFiltros ? (
             <div className="pac-filtros-acciones">
-              <SecondaryButton onClick={limpiarFiltros}>Limpiar filtros</SecondaryButton>
+              <SecondaryButton title="Limpiar filtros" onClick={limpiarFiltros} />
             </div>
           ) : null}
         </div>
