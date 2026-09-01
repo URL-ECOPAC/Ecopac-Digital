@@ -39,37 +39,42 @@ export function useCatalogoMedicamentos({ inventarioInicial = [], bodegas = [] }
       // ----------------------------------------------------------------------
       // EXTRACCIÓN CONFORME AL ESQUEMA ECOPAC DIGITAL
       // ----------------------------------------------------------------------
-      
+
       // Nombre y especificaciones de la migración (nombre, concentracion, presentacion, marca)
       const nombre = normalizar(item.nombre || item.descripcion || item.nombre_producto);
       const concentracion = normalizar(item.concentracion);
       const marca = normalizar(item.marca);
       const codigo = normalizar(item.codigo || item.code || item.id);
-      
+
       // Principios activos (Maneja arrays u objetos concatenados)
       let principioActivo = "";
       if (Array.isArray(item.principios_activos)) {
-        principioActivo = item.principios_activos.map(p => typeof p === "object" ? p.nombre : p).join(" ");
+        principioActivo = item.principios_activos
+          .map((p) => (typeof p === "object" ? p.nombre : p))
+          .join(" ");
       } else {
-        principioActivo = item.principioActivo || item.principio_activo || item.principios_activos || "";
+        principioActivo =
+          item.principioActivo || item.principio_activo || item.principios_activos || "";
       }
       principioActivo = normalizar(principioActivo);
 
       // Lotes
-      const lote = normalizar(item.lote || item.lote_serie || item.codigo_lote || item.lotes?.codigo);
+      const lote = normalizar(
+        item.lote || item.lote_serie || item.codigo_lote || item.lotes?.codigo,
+      );
 
       // Categoría (Si no viene definida en el registro, asume 'Medicamentos' por la migración SQL)
       const catItem = normalizar(
         typeof item.categoria === "object"
           ? item.categoria?.nombre
-          : item.categoria || item.category || item.tipo || "Medicamentos"
+          : item.categoria || item.category || item.tipo || "Medicamentos",
       );
 
       // Bodega (Puede venir del JOIN entre existencias -> lotes -> bodega)
       const bodegaItem = normalizar(
         typeof item.bodega === "object"
           ? item.bodega?.nombre || item.bodega?.slug
-          : item.bodega || item.bodegaNombre || item.bodega_nombre || item.bodega_id
+          : item.bodega || item.bodegaNombre || item.bodega_nombre || item.bodega_id,
       );
 
       // ----------------------------------------------------------------------
@@ -109,7 +114,8 @@ export function useCatalogoMedicamentos({ inventarioInicial = [], bodegas = [] }
 
   const hayFiltrosActivos =
     busqueda.trim() !== "" ||
-    (normalizar(categoriaSeleccionada) !== "todas" && normalizar(categoriaSeleccionada) !== "todos") ||
+    (normalizar(categoriaSeleccionada) !== "todas" &&
+      normalizar(categoriaSeleccionada) !== "todos") ||
     (normalizar(bodegaSeleccionada) !== "todas" && normalizar(bodegaSeleccionada) !== "todos");
 
   const limpiarFiltros = useCallback(() => {

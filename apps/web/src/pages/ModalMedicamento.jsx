@@ -50,8 +50,7 @@ export default function ModalMedicamento({
           width: "100%",
           maxWidth: "540px",
           padding: "32px",
-          boxShadow:
-            "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+          boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
           position: "relative",
           margin: "16px",
           boxSizing: "border-box",
@@ -104,8 +103,8 @@ export default function ModalMedicamento({
               marginBottom: "16px",
             }}
           >
-            ⚠️ <strong>Medicamento duplicado:</strong> Ya existe un registro con el
-            mismo nombre, concentración, presentación y marca.
+            ⚠️ <strong>Medicamento duplicado:</strong> Ya existe un registro con el mismo nombre,
+            concentración, presentación y marca.
           </div>
         )}
 

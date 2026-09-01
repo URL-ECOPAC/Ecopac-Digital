@@ -4,7 +4,7 @@ export default function ModalRegistroIngreso({
   abierto,
   onClose,
   onCerrar, // Soporte para ambas convenciones de nombre
-  onExito,  // Callback para notificar al padre tras guardar
+  onExito, // Callback para notificar al padre tras guardar
   catalogos = { medicamentos: [], bodegas: [], donaciones: [] },
   usuarioActual,
 }) {
@@ -55,13 +55,10 @@ export default function ModalRegistroIngreso({
     >
       <div className="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
         <div className="modal-content rounded-4 border-0 shadow-lg">
-          
           {/* Cabecera del Modal */}
           <div className="modal-header bg-light border-bottom-0 px-4 pt-4 pb-2">
             <div>
-              <h5 className="modal-title fw-bold text-dark">
-                Registrar Ingreso de Medicamentos
-              </h5>
+              <h5 className="modal-title fw-bold text-dark">Registrar Ingreso de Medicamentos</h5>
             </div>
             <button
               type="button"
@@ -80,11 +77,15 @@ export default function ModalRegistroIngreso({
             >
               <strong>⚠️ Advertencia:</strong> Este movimiento se registrará en estado{" "}
               <strong>PENDIENTE</strong> y los lotes ingresados quedarán como{" "}
-              <strong>provisionales</strong>. <u>No afectarán el stock de inventario</u> hasta su confirmación.
+              <strong>provisionales</strong>. <u>No afectarán el stock de inventario</u> hasta su
+              confirmación.
             </div>
 
             {error && (
-              <div className="alert alert-danger border-0 rounded-3 text-sm p-3 mb-3" style={{ fontSize: "12px" }}>
+              <div
+                className="alert alert-danger border-0 rounded-3 text-sm p-3 mb-3"
+                style={{ fontSize: "12px" }}
+              >
                 {error}
               </div>
             )}
@@ -96,11 +97,22 @@ export default function ModalRegistroIngreso({
                   <span>✅</span>
                   <span className="fw-bold">Ingreso registrado con éxito (Pendiente)</span>
                 </div>
-                <div className="bg-white p-3 rounded border text-secondary" style={{ fontSize: "12px" }}>
-                  <p className="mb-1"><strong>Folio:</strong> {resumenGuardado.id}</p>
-                  <p className="mb-1"><strong>Origen:</strong> {resumenGuardado.origen?.toUpperCase()}</p>
-                  <p className="mb-1"><strong>Registrado por:</strong> {resumenGuardado.registrado_por}</p>
-                  <p className="mb-0"><strong>Total de Ítems:</strong> {resumenGuardado.items?.length}</p>
+                <div
+                  className="bg-white p-3 rounded border text-secondary"
+                  style={{ fontSize: "12px" }}
+                >
+                  <p className="mb-1">
+                    <strong>Folio:</strong> {resumenGuardado.id}
+                  </p>
+                  <p className="mb-1">
+                    <strong>Origen:</strong> {resumenGuardado.origen?.toUpperCase()}
+                  </p>
+                  <p className="mb-1">
+                    <strong>Registrado por:</strong> {resumenGuardado.registrado_por}
+                  </p>
+                  <p className="mb-0">
+                    <strong>Total de Ítems:</strong> {resumenGuardado.items?.length}
+                  </p>
                 </div>
                 <div className="d-flex justify-content-end pt-3">
                   <button
@@ -117,7 +129,10 @@ export default function ModalRegistroIngreso({
               <div className="d-flex flex-column gap-3">
                 {/* Selección de Origen */}
                 <div>
-                  <label className="form-label fw-bold text-secondary uppercase mb-2" style={{ fontSize: "11px" }}>
+                  <label
+                    className="form-label fw-bold text-secondary uppercase mb-2"
+                    style={{ fontSize: "11px" }}
+                  >
                     Origen del Ingreso *
                   </label>
                   <div className="d-flex gap-4">
@@ -131,7 +146,11 @@ export default function ModalRegistroIngreso({
                         checked={origen === "compra"}
                         onChange={() => setOrigen("compra")}
                       />
-                      <label className="form-check-label text-dark" style={{ fontSize: "14px" }} htmlFor="origenCompra">
+                      <label
+                        className="form-check-label text-dark"
+                        style={{ fontSize: "14px" }}
+                        htmlFor="origenCompra"
+                      >
                         Compra
                       </label>
                     </div>
@@ -145,7 +164,11 @@ export default function ModalRegistroIngreso({
                         checked={origen === "donacion"}
                         onChange={() => setOrigen("donacion")}
                       />
-                      <label className="form-check-label text-dark" style={{ fontSize: "14px" }} htmlFor="origenDonacion">
+                      <label
+                        className="form-check-label text-dark"
+                        style={{ fontSize: "14px" }}
+                        htmlFor="origenDonacion"
+                      >
                         Donación
                       </label>
                     </div>
@@ -156,7 +179,10 @@ export default function ModalRegistroIngreso({
                 <div className="row g-3">
                   {origen === "compra" ? (
                     <div className="col-md-6">
-                      <label className="form-label fw-semibold text-secondary" style={{ fontSize: "12px" }}>
+                      <label
+                        className="form-label fw-semibold text-secondary"
+                        style={{ fontSize: "12px" }}
+                      >
                         Proveedor *
                       </label>
                       <input
@@ -169,7 +195,10 @@ export default function ModalRegistroIngreso({
                     </div>
                   ) : (
                     <div className="col-md-6">
-                      <label className="form-label fw-semibold text-secondary" style={{ fontSize: "12px" }}>
+                      <label
+                        className="form-label fw-semibold text-secondary"
+                        style={{ fontSize: "12px" }}
+                      >
                         Vincular Donación Existente *
                       </label>
                       <select
@@ -188,7 +217,10 @@ export default function ModalRegistroIngreso({
                   )}
 
                   <div className="col-md-6">
-                    <label className="form-label fw-semibold text-secondary" style={{ fontSize: "12px" }}>
+                    <label
+                      className="form-label fw-semibold text-secondary"
+                      style={{ fontSize: "12px" }}
+                    >
                       No. Factura / Comprobante
                     </label>
                     <input
@@ -205,7 +237,10 @@ export default function ModalRegistroIngreso({
 
                 {/* Agregar Medicamentos */}
                 <div>
-                  <h6 className="fw-bold text-secondary uppercase mb-2" style={{ fontSize: "11px" }}>
+                  <h6
+                    className="fw-bold text-secondary uppercase mb-2"
+                    style={{ fontSize: "11px" }}
+                  >
                     Agregar Medicamentos
                   </h6>
                   <div className="card border-0 bg-light p-3 rounded-3 mb-3">
@@ -308,8 +343,14 @@ export default function ModalRegistroIngreso({
 
                 {/* Tabla de Medicamentos Agregados */}
                 <div className="table-responsive border rounded-3 overflow-hidden">
-                  <table className="table table-hover table-sm align-middle mb-0" style={{ fontSize: "12px" }}>
-                    <thead className="table-light text-secondary text-uppercase" style={{ fontSize: "11px" }}>
+                  <table
+                    className="table table-hover table-sm align-middle mb-0"
+                    style={{ fontSize: "12px" }}
+                  >
+                    <thead
+                      className="table-light text-secondary text-uppercase"
+                      style={{ fontSize: "11px" }}
+                    >
                       <tr>
                         <th className="py-2 px-3">Medicamento ID</th>
                         <th className="py-2 px-3">Lote</th>
@@ -373,7 +414,6 @@ export default function ModalRegistroIngreso({
               </button>
             )}
           </div>
-
         </div>
       </div>
     </div>

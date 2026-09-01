@@ -27,8 +27,15 @@ export function useRegistroIngreso({ donacionesDisponibles = [], onGuardarExitos
   };
 
   const agregarItem = () => {
-    if (!itemActual.medicamento_id || !itemActual.numero_lote || !itemActual.cantidad || !itemActual.bodega_id) {
-      setError("Completa los campos obligatorios del medicamento (Medicamento, Lote, Cantidad y Bodega).");
+    if (
+      !itemActual.medicamento_id ||
+      !itemActual.numero_lote ||
+      !itemActual.cantidad ||
+      !itemActual.bodega_id
+    ) {
+      setError(
+        "Completa los campos obligatorios del medicamento (Medicamento, Lote, Cantidad y Bodega).",
+      );
       return;
     }
 

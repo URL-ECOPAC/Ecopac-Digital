@@ -188,7 +188,10 @@ export default function InventarioPage() {
 
   const normalizarPresentacion = (valor) => {
     if (!valor) return "";
-    return valor.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    return valor
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
   };
 
   const handleGuardarMedicamento = async () => {
@@ -198,7 +201,7 @@ export default function InventarioPage() {
         item.nombre?.toLowerCase() === formData.nombre?.toLowerCase() &&
         item.concentracion?.toLowerCase() === formData.concentracion?.toLowerCase() &&
         item.presentacion?.toLowerCase() === formData.presentacion?.toLowerCase() &&
-        item.marca?.toLowerCase() === formData.marca?.toLowerCase()
+        item.marca?.toLowerCase() === formData.marca?.toLowerCase(),
     );
 
     if (duplicado) {
@@ -293,25 +296,25 @@ export default function InventarioPage() {
     alertasCriticas.length > 0
       ? alertasCriticas
       : [
-        {
-          id: "alt-1",
-          medicamento: { nombre: "Metformina 850mg Comprimidos" },
-          codigo: "FAR-0009",
-          numero_lote: "L-2024-0567",
-          bodega: "SUR",
-          diasRestantes: 12,
-          fechaCaducidad: "27 jul 2024",
-        },
-        {
-          id: "alt-2",
-          medicamento: { nombre: "Amoxicilina 500mg Cápsulas" },
-          codigo: "FAR-0041",
-          numero_lote: "L-2024-0091",
-          bodega: "CENTRAL",
-          diasRestantes: 30,
-          fechaCaducidad: "14 ago 2024",
-        },
-      ];
+          {
+            id: "alt-1",
+            medicamento: { nombre: "Metformina 850mg Comprimidos" },
+            codigo: "FAR-0009",
+            numero_lote: "L-2024-0567",
+            bodega: "SUR",
+            diasRestantes: 12,
+            fechaCaducidad: "27 jul 2024",
+          },
+          {
+            id: "alt-2",
+            medicamento: { nombre: "Amoxicilina 500mg Cápsulas" },
+            codigo: "FAR-0041",
+            numero_lote: "L-2024-0091",
+            bodega: "CENTRAL",
+            diasRestantes: 30,
+            fechaCaducidad: "14 ago 2024",
+          },
+        ];
 
   const fuenteInicial = inventarioRaw.length > 0 ? inventarioFiltradoHook : datosTablaDemo;
 
@@ -326,14 +329,23 @@ export default function InventarioPage() {
     );
   });
 
-  const listaCategorias = ["Todas", "Medicamentos", "Biológicos", "Insumos", "Dispositivos", "Diagnóstico", "EPP"];
+  const listaCategorias = [
+    "Todas",
+    "Medicamentos",
+    "Biológicos",
+    "Insumos",
+    "Dispositivos",
+    "Diagnóstico",
+    "EPP",
+  ];
 
   const itemsTabla =
     !categoriaSeleccionada || categoriaSeleccionada === "Todas"
       ? baseDatosFiltrada
       : baseDatosFiltrada.filter(
-        (item) => item.categoria?.toLowerCase().trim() === categoriaSeleccionada.toLowerCase().trim()
-      );
+          (item) =>
+            item.categoria?.toLowerCase().trim() === categoriaSeleccionada.toLowerCase().trim(),
+        );
 
   return (
     <div
@@ -474,40 +486,76 @@ export default function InventarioPage() {
         }}
       >
         <div style={cardMetricStyle}>
-          <span style={{ fontSize: "11px", fontWeight: "700", color: "#10b981", letterSpacing: "0.5px" }}>
+          <span
+            style={{
+              fontSize: "11px",
+              fontWeight: "700",
+              color: "#10b981",
+              letterSpacing: "0.5px",
+            }}
+          >
             REFERENCIAS
           </span>
-          <h2 style={{ fontSize: "28px", fontWeight: "800", margin: "4px 0 0 0", color: "#059669" }}>
+          <h2
+            style={{ fontSize: "28px", fontWeight: "800", margin: "4px 0 0 0", color: "#059669" }}
+          >
             {inventarioRaw.length || 10}
           </h2>
           <span style={{ fontSize: "11px", color: "#94a3b8" }}>en catálogo</span>
         </div>
 
         <div style={cardMetricStyle}>
-          <span style={{ fontSize: "11px", fontWeight: "700", color: "#f59e0b", letterSpacing: "0.5px" }}>
+          <span
+            style={{
+              fontSize: "11px",
+              fontWeight: "700",
+              color: "#f59e0b",
+              letterSpacing: "0.5px",
+            }}
+          >
             POR VENCER
           </span>
-          <h2 style={{ fontSize: "28px", fontWeight: "800", margin: "4px 0 0 0", color: "#d97706" }}>
+          <h2
+            style={{ fontSize: "28px", fontWeight: "800", margin: "4px 0 0 0", color: "#d97706" }}
+          >
             {alertasCriticas.length || 2}
           </h2>
           <span style={{ fontSize: "11px", color: "#94a3b8" }}>≤ 60 días</span>
         </div>
 
         <div style={cardMetricStyle}>
-          <span style={{ fontSize: "11px", fontWeight: "700", color: "#ec4899", letterSpacing: "0.5px" }}>
+          <span
+            style={{
+              fontSize: "11px",
+              fontWeight: "700",
+              color: "#ec4899",
+              letterSpacing: "0.5px",
+            }}
+          >
             SIN STOCK
           </span>
-          <h2 style={{ fontSize: "28px", fontWeight: "800", margin: "4px 0 0 0", color: "#db2777" }}>
+          <h2
+            style={{ fontSize: "28px", fontWeight: "800", margin: "4px 0 0 0", color: "#db2777" }}
+          >
             1
           </h2>
           <span style={{ fontSize: "11px", color: "#94a3b8" }}>agotados</span>
         </div>
 
         <div style={cardMetricStyle}>
-          <span style={{ fontSize: "11px", fontWeight: "700", color: "#06b6d4", letterSpacing: "0.5px" }}>
+          <span
+            style={{
+              fontSize: "11px",
+              fontWeight: "700",
+              color: "#06b6d4",
+              letterSpacing: "0.5px",
+            }}
+          >
             VALOR INVENTARIO
           </span>
-          <h2 style={{ fontSize: "28px", fontWeight: "800", margin: "4px 0 0 0", color: "#0891b2" }}>
+          <h2
+            style={{ fontSize: "28px", fontWeight: "800", margin: "4px 0 0 0", color: "#0891b2" }}
+          >
             Q 215,039
           </h2>
           <span style={{ fontSize: "11px", color: "#94a3b8" }}>stock actual</span>
@@ -527,7 +575,9 @@ export default function InventarioPage() {
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-          <span style={{ width: "8px", height: "8px", borderRadius: "50%", backgroundColor: "#f59e0b" }} />
+          <span
+            style={{ width: "8px", height: "8px", borderRadius: "50%", backgroundColor: "#f59e0b" }}
+          />
           <span
             style={{
               fontSize: "11px",
@@ -565,7 +615,14 @@ export default function InventarioPage() {
               </div>
 
               <div style={{ textAlign: "right" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "8px", justifyContent: "flex-end" }}>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    justifyContent: "flex-end",
+                  }}
+                >
                   <span
                     style={{
                       fontSize: "10px",
@@ -647,8 +704,7 @@ export default function InventarioPage() {
       <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
         {listaCategorias.map((cat) => {
           const esActiva =
-            categoriaSeleccionada === cat ||
-            (!categoriaSeleccionada && cat === "Todas");
+            categoriaSeleccionada === cat || (!categoriaSeleccionada && cat === "Todas");
 
           return (
             <button
@@ -729,7 +785,10 @@ export default function InventarioPage() {
                           ? "#0284c7"
                           : "#059669";
 
-                    const badgeEstado = getBadgeEstado(item.estado || item.estadoAlerta, item.stock);
+                    const badgeEstado = getBadgeEstado(
+                      item.estado || item.estadoAlerta,
+                      item.stock,
+                    );
 
                     return (
                       <tr
@@ -755,9 +814,7 @@ export default function InventarioPage() {
 
                         {/* DESCRIPCIÓN */}
                         <td style={{ ...tdStyle, textAlign: "left" }}>
-                          <span style={{ color: "#1e293b", fontWeight: "700" }}>
-                            {item.nombre}
-                          </span>
+                          <span style={{ color: "#1e293b", fontWeight: "700" }}>{item.nombre}</span>
                         </td>
 
                         {/* CATEGORÍA */}
@@ -789,17 +846,32 @@ export default function InventarioPage() {
                         {/* CADUCIDAD */}
                         <td style={tdStyle}>
                           {item.caducidad && item.caducidad !== "N/A" ? (
-                            <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                            <div
+                              style={{
+                                display: "flex",
+                                flexDirection: "column",
+                                alignItems: "center",
+                              }}
+                            >
                               <span
                                 style={{
                                   fontWeight: "600",
-                                  color: item.esCritico ? "#db2777" : item.esPorVencer ? "#d97706" : "#64748b",
+                                  color: item.esCritico
+                                    ? "#db2777"
+                                    : item.esPorVencer
+                                      ? "#d97706"
+                                      : "#64748b",
                                 }}
                               >
                                 {item.caducidad}
                               </span>
                               {item.diasCaducidad && (
-                                <span style={{ fontSize: "10px", color: item.esCritico ? "#db2777" : "#d97706" }}>
+                                <span
+                                  style={{
+                                    fontSize: "10px",
+                                    color: item.esCritico ? "#db2777" : "#d97706",
+                                  }}
+                                >
                                   {item.diasCaducidad}
                                 </span>
                               )}
@@ -811,7 +883,12 @@ export default function InventarioPage() {
 
                         {/* STOCK */}
                         <td style={tdStyle}>
-                          <span style={{ color: item.stock === 0 ? "#94a3b8" : "#0f172a", fontWeight: "800" }}>
+                          <span
+                            style={{
+                              color: item.stock === 0 ? "#94a3b8" : "#0f172a",
+                              fontWeight: "800",
+                            }}
+                          >
                             {item.stock ?? 0}
                           </span>{" "}
                           <span style={{ color: "#94a3b8", fontSize: "11px" }}>
