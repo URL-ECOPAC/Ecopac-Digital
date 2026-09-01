@@ -37,7 +37,9 @@ function valorDeCampo(campo, valores) {
   const valor = valores[campo.desde ?? campo.id];
 
   if (campo.tipo === TIPOS_DE_PRESENTACION.ESTADO) {
-    const opcion = (CATALOGOS[campo.etiquetasDesde] ?? []).find((entrada) => entrada.value === valor);
+    const opcion = (CATALOGOS[campo.etiquetasDesde] ?? []).find(
+      (entrada) => entrada.value === valor,
+    );
     return <StatusChip status={opcion?.clave ?? valor} label={opcion?.label} />;
   }
 
@@ -56,7 +58,9 @@ function valorDeCampo(campo, valores) {
   }
 
   if (campo.etiquetasDesde) {
-    const opcion = (CATALOGOS[campo.etiquetasDesde] ?? []).find((entrada) => entrada.value === valor);
+    const opcion = (CATALOGOS[campo.etiquetasDesde] ?? []).find(
+      (entrada) => entrada.value === valor,
+    );
     return <Text style={styles.valorTexto}>{opcion ? opcion.label : (valor ?? "—")}</Text>;
   }
 
@@ -64,7 +68,11 @@ function valorDeCampo(campo, valores) {
     return <Text style={styles.valorTexto}>{valor ? formatearFechaCorta(valor) : "—"}</Text>;
   }
 
-  return <Text style={styles.valorTexto}>{valor === null || valor === undefined || valor === "" ? "—" : String(valor)}</Text>;
+  return (
+    <Text style={styles.valorTexto}>
+      {valor === null || valor === undefined || valor === "" ? "—" : String(valor)}
+    </Text>
+  );
 }
 
 function Campo({ campo, valores }) {

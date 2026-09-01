@@ -61,9 +61,7 @@ export default function VoluntariosScreen() {
         datos={filas}
         cargando={cargando}
         catalogos={catalogos}
-        onRowPress={(fila) =>
-          navigation.navigate(ROUTES.FICHA_VOLUNTARIO, { perfilId: fila.id })
-        }
+        onRowPress={(fila) => navigation.navigate(ROUTES.FICHA_VOLUNTARIO, { perfilId: fila.id })}
         vacio={<EmptyState message="No hay personal que coincida con los filtros." />}
       />
 
