@@ -26,5 +26,6 @@ export const ROUTES = {
   RECETA: "Receta",
   SELECCION_JORNADA: "SeleccionJornada",
   JORNADA_EN_CURSO: "JornadaEnCurso",
+  JORNADAS_ASIGNADAS: "JornadasAsignadas",
   STOCK: "Stock",
 };

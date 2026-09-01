@@ -65,9 +65,15 @@ export function catalogoComunidadesDesde(jornadas = []) {
 }
 
 /**
- * Arma la tarjeta de una jornada con exactamente los seis datos del criterio 1 de #178: nombre,
- * fecha, comunidad, responsable, estado y pacientes atendidos. `codigo` y `cupoEstimado` existen
- * en COLUMNAS_JORNADA pero esta pantalla no los pinta (ver columnas.js).
+ * Arma la tarjeta de una jornada con los seis datos del criterio 1 de #178 (nombre, fecha,
+ * comunidad, responsable, estado y pacientes atendidos) mas `cupoEstimado`, que se suma para la
+ * barra de progreso del arreglo de diseno del tablero (pacientes atendidos sobre esperados).
+ * `codigo` sigue existiendo en COLUMNAS_JORNADA pero esta pantalla no lo pinta (ver columnas.js).
+ *
+ * `cupoEstimado` no tiene el problema de permisos de `pacientesAtendidos` de abajo: es una
+ * columna propia de `jornadas` que ya trae listarJornadas() para cualquiera que pueda listar
+ * jornadas, asi que se copia siempre (puede llegar `null`, jornadas.cupo_estimado es opcional,
+ * 00036).
  *
  * `pacientesAtendidos` solo se agrega cuando `pacientesPorJornada` trae una fila para esta
  * jornada: una jornada ausente de ese mapa (medico o voluntario, sin SELECT sobre
@@ -84,6 +90,7 @@ function armarTarjeta(jornada, pacientesPorJornada) {
       .filter(Boolean)
       .join(" "),
     estado: jornada.estado,
+    cupoEstimado: jornada.cupoEstimado ?? null,
   };
 
   if (Object.prototype.hasOwnProperty.call(pacientesPorJornada, jornada.id)) {

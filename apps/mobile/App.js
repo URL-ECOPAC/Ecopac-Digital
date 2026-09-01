@@ -2,6 +2,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ESTADOS_DE_RESTAURACION, inicializarSupabase } from "@ecopac/shared";
 
 import { almacenamientoMovil } from "./src/almacenamiento";
+import { JornadaActivaProvider } from "./src/contexto/JornadaActivaProvider";
 import { RegistroSinGuardarProvider } from "./src/contexto/RegistroSinGuardarProvider";
 import { SesionProvider, useSesionCompartida } from "./src/contexto/SesionProvider";
 import AppNavigator from "./src/navigation/AppNavigator";
@@ -50,9 +51,11 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <SesionProvider>
-        <RegistroSinGuardarProvider>
-          <Raiz />
-        </RegistroSinGuardarProvider>
+        <JornadaActivaProvider>
+          <RegistroSinGuardarProvider>
+            <Raiz />
+          </RegistroSinGuardarProvider>
+        </JornadaActivaProvider>
       </SesionProvider>
     </SafeAreaProvider>
   );

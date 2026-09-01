@@ -25,7 +25,7 @@ import { validarPerfil } from "./validaciones.js";
 // id de la columna, asi que devolverla en snake_case dejaba esa columna vacia sin avisar de
 // nada. Es la misma convencion que sigue proyectos/api.js.
 const COLUMNAS_DEL_PERFIL =
-  "id, nombres, apellidos, email, telefono, rol, activo, fechaIngreso:fecha_ingreso";
+  "id, nombres, apellidos, email, telefono, direccion, notas, rol, activo, fechaIngreso:fecha_ingreso";
 
 // Especialidades embebidas para listarUsuarios() (issue #175, criterio 3): perfil_especialidad
 // no tiene columna id, solo la pareja (perfil_id, nombre_especialidad), asi que no hay mas que

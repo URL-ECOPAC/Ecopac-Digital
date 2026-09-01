@@ -93,7 +93,7 @@ describe("agruparJornadasPorEstado", () => {
     expect(enCurso.tarjetas.map((tarjeta) => tarjeta.id)).toEqual(["j2"]);
   });
 
-  it("la tarjeta trae exactamente los seis datos del criterio 1", () => {
+  it("la tarjeta trae los seis datos del criterio 1, mas cupoEstimado", () => {
     const [columna] = agruparJornadasPorEstado([jornada({ id: "j1" })], { j1: 12 });
 
     expect(columna.tarjetas[0]).toEqual({
@@ -104,7 +104,14 @@ describe("agruparJornadasPorEstado", () => {
       responsable: "Ana Lopez",
       estado: "planificada",
       pacientesAtendidos: 12,
+      cupoEstimado: null,
     });
+  });
+
+  it("cupoEstimado se copia tal cual cuando la jornada lo trae", () => {
+    const [columna] = agruparJornadasPorEstado([jornada({ id: "j1", cupoEstimado: 40 })]);
+
+    expect(columna.tarjetas[0].cupoEstimado).toBe(40);
   });
 
   it("sin fila en pacientesPorJornada la tarjeta no trae la clave (guion en pantalla, nunca 0)", () => {

@@ -2,13 +2,7 @@ import { useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 
-import {
-  TIPOS_DE_CAMPO,
-  pasosConCampos,
-  pasosConError,
-  useJornadaActiva,
-  useRegistroPaciente,
-} from "@ecopac/shared";
+import { TIPOS_DE_CAMPO, pasosConCampos, pasosConError, useRegistroPaciente } from "@ecopac/shared";
 import { colors, spacing, typography } from "@ecopac/ui-tokens";
 
 import {
@@ -20,8 +14,7 @@ import {
   Selector,
   TextField,
 } from "../components";
-import { almacenamientoMovil } from "../almacenamiento";
-import { useSesionCompartida } from "../contexto/SesionProvider";
+import { useJornadaActivaCompartida } from "../contexto/JornadaActivaProvider";
 import { ROUTES } from "../navigation/rutas";
 
 const PASOS = pasosConCampos();
@@ -29,12 +22,8 @@ const PASOS = pasosConCampos();
 export default function RegistroPacienteScreen() {
   const navigation = useNavigation();
   const { params } = useRoute();
-  const { perfil } = useSesionCompartida();
 
-  const { jornada } = useJornadaActiva({
-    perfilId: perfil?.id,
-    almacenamiento: almacenamientoMovil,
-  });
+  const { jornada } = useJornadaActivaCompartida();
 
   const {
     valores,

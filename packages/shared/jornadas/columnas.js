@@ -24,10 +24,11 @@ export const COLUMNAS_JORNADA = [
   { id: "pacientesAtendidos", label: "Pacientes atendidos", tipo: TIPOS_DE_PRESENTACION.NUMERO },
 ];
 
-// `codigo` y `cupoEstimado` quedan arriba para quien mas los necesite (por ejemplo el detalle de
-// una jornada), pero el tablero de #178 no los pinta: el criterio 1 de esa issue solo pide
-// nombre, fecha, comunidad, responsable, estado y pacientesAtendidos. JornadasPage.jsx elige esas
-// seis claves a mano en vez de recorrer COLUMNAS_JORNADA completo.
+// `codigo` queda arriba para quien mas lo necesite (por ejemplo el detalle de una jornada), pero
+// el tablero no lo pinta: el criterio 1 de #178 solo pide nombre, fecha, comunidad, responsable,
+// estado y pacientesAtendidos. JornadasPage.jsx elige esas claves a mano en vez de recorrer
+// COLUMNAS_JORNADA completo. `cupoEstimado` se sumo aparte para la barra de progreso de la
+// tarjeta (pacientes atendidos sobre esperados), ver useJornadasKanban.js:armarTarjeta.
 
 /**
  * Personal asignado a una jornada (jornada_personal), dentro de su detalle.

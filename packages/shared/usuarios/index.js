@@ -21,4 +21,4 @@ export * from "./useDesactivacionUsuario.js";
 export * from "./usePerfilPropio.js";
 export * from "./useGestionPermisos.js";
 export * from "./ficha.js";
-export * from "./useFichaUsuario.js";
+export * from "./useHistorialDePersona.js";
