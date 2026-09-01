@@ -3,6 +3,7 @@ import ModalMedicamento from "./ModalMedicamento.jsx";
 import { ModalAltaLote } from "./ModalAltaLote.jsx";
 import { ModalAtenderAlerta } from "./ModalAtenderAlerta.jsx";
 import ModalRegistroIngreso from "./ModalRegistroIngreso.jsx";
+import { ModalSalidaMedicamento } from "./ModalSalidaMedicamento";
 
 // API Medicamentos y Principios Activos
 import {
@@ -10,7 +11,9 @@ import {
   registrarMedicamento,
   actualizarMedicamento,
 } from "../../../../packages/shared/inventario/medicamentos.api.js";
-
+import { listarBodegas } from "../../../../packages/shared/inventario/bodegas.api.js";
+import { generarIngresoDesdeDonacion } from '../../../../packages/shared/donaciones/ingreso.api.js';
+import { listarProveedores } from '../../../../packages/shared/inventario/proveedores.api.js';
 import {
   listarPrincipiosActivos,
   registrarPrincipioActivo,
@@ -51,6 +54,7 @@ export default function InventarioPage() {
   const [lotesRaw, setLotesRaw] = useState([]);
   const [bodegas, setBodegas] = useState([]);
   const [proveedores, setProveedores] = useState([]);
+  const [donaciones, setDonaciones] = useState([]);
 
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
@@ -71,6 +75,7 @@ export default function InventarioPage() {
 
   // Modales Lotes y Alertas
   const [modalAltaLoteAbierto, setModalAltaLoteAbierto] = useState(false);
+  const [modalSalidaAbierto, setModalSalidaAbierto] = useState(false);
   const [alertaSeleccionada, setAlertaSeleccionada] = useState(null);
   const [modalRegistroIngresoAbierto, setModalRegistroIngresoAbierto] = useState(false);
 
@@ -106,9 +111,13 @@ export default function InventarioPage() {
     try {
       setCargando(true);
       setError(null);
-
-      const [resMed, resPA] = await Promise.all([listarMedicamentos(), listarPrincipiosActivos()]);
-
+      // Agrega listarBodegas aquí
+      const [resMed, resPA, resBodegas, resProveedores] = await Promise.all([
+        listarMedicamentos(),
+        listarPrincipiosActivos(),
+        listarBodegas(),
+        listarProveedores()
+      ]);
       if (resMed.error) {
         setError(resMed.error.mensaje || "Error al cargar medicamentos");
       } else {
@@ -120,11 +129,51 @@ export default function InventarioPage() {
       } else {
         setPrincipiosActivos(resPA.principiosActivos || []);
       }
+      if (resBodegas.error) {
+        console.error("Error cargando bodegas:", resBodegas.error);
+      } else {
+        setBodegas(resBodegas.bodegas || []); // Se guardan en tu estado 'bodegas'
+      }
+      if (resProveedores.error) {
+        console.error("Error cargando proveedores:", resProveedores.error);
+      } else {
+        setProveedores(resProveedores.proveedores || []); // <-- Se asigna a setProveedores
+      }
+
     } catch (err) {
       console.error("Error cargando inventario:", err);
       setError("No se pudo cargar el inventario.");
     } finally {
       setCargando(false);
+    }
+  };
+
+  const handleGuardarIngresoDonacion = async (formData) => {
+    try {
+      // formData contendrá los datos seleccionados en el modal (ej: donacionDetalleId, medicamentoId, bodegaId, etc.)
+      const { resultado, error } = await generarIngresoDesdeDonacion(
+        formData.donacionDetalleId,
+        {
+          medicamentoId: formData.medicamentoId,
+          bodegaId: formData.bodegaId,
+          numeroLote: formData.numeroLote,
+          fechaVencimiento: formData.fechaVencimiento,
+          proveedorId: formData.proveedorId,
+          usuarioId: user?.id // El ID del usuario actual autenticado
+        }
+      );
+
+      if (error) {
+        console.error("Error al registrar ingreso desde donación:", error.mensaje);
+        alert(error.mensaje);
+        return;
+      }
+
+      // Si todo sale bien, cerramos el modal, refrescamos el inventario y notificamos éxito
+      setModalIngresoAbierto(false);
+      refrescarInventario();
+    } catch (err) {
+      console.error("Excepción inesperada al guardar ingreso:", err);
     }
   };
 
@@ -296,25 +345,25 @@ export default function InventarioPage() {
     alertasCriticas.length > 0
       ? alertasCriticas
       : [
-          {
-            id: "alt-1",
-            medicamento: { nombre: "Metformina 850mg Comprimidos" },
-            codigo: "FAR-0009",
-            numero_lote: "L-2024-0567",
-            bodega: "SUR",
-            diasRestantes: 12,
-            fechaCaducidad: "27 jul 2024",
-          },
-          {
-            id: "alt-2",
-            medicamento: { nombre: "Amoxicilina 500mg Cápsulas" },
-            codigo: "FAR-0041",
-            numero_lote: "L-2024-0091",
-            bodega: "CENTRAL",
-            diasRestantes: 30,
-            fechaCaducidad: "14 ago 2024",
-          },
-        ];
+        {
+          id: "alt-1",
+          medicamento: { nombre: "Metformina 850mg Comprimidos" },
+          codigo: "FAR-0009",
+          numero_lote: "L-2024-0567",
+          bodega: "SUR",
+          diasRestantes: 12,
+          fechaCaducidad: "27 jul 2024",
+        },
+        {
+          id: "alt-2",
+          medicamento: { nombre: "Amoxicilina 500mg Cápsulas" },
+          codigo: "FAR-0041",
+          numero_lote: "L-2024-0091",
+          bodega: "CENTRAL",
+          diasRestantes: 30,
+          fechaCaducidad: "14 ago 2024",
+        },
+      ];
 
   const fuenteInicial = inventarioRaw.length > 0 ? inventarioFiltradoHook : datosTablaDemo;
 
@@ -343,9 +392,9 @@ export default function InventarioPage() {
     !categoriaSeleccionada || categoriaSeleccionada === "Todas"
       ? baseDatosFiltrada
       : baseDatosFiltrada.filter(
-          (item) =>
-            item.categoria?.toLowerCase().trim() === categoriaSeleccionada.toLowerCase().trim(),
-        );
+        (item) =>
+          item.categoria?.toLowerCase().trim() === categoriaSeleccionada.toLowerCase().trim(),
+      );
 
   return (
     <div
@@ -386,6 +435,23 @@ export default function InventarioPage() {
               }}
             >
               + Registrar Ingreso
+            </button>
+
+            {/* Botón de Registrar Salida (Issue #157) */}
+            <button
+              onClick={() => setModalSalidaAbierto(true)}
+              style={{
+                padding: "10px 20px",
+                borderRadius: "9999px",
+                border: "none",
+                backgroundColor: "#059669", // Tono ámbar distintivo para salidas
+                color: "#ffffff",
+                fontSize: "13px",
+                fontWeight: "700",
+                cursor: "pointer",
+              }}
+            >
+              + Registrar Salida
             </button>
 
             {tabActiva === "catalogo" ? (
@@ -967,12 +1033,20 @@ export default function InventarioPage() {
         />
       )}
 
+      {/* Renderizado del Modal de Salida (Issue #157) */}
+      <ModalSalidaMedicamento
+        abierto={modalSalidaAbierto}
+        onClose={() => setModalSalidaAbierto(false)}
+        medicamentos={inventarioRaw}
+      />
+
       {modalAltaLoteAbierto && (
         <ModalAltaLote
           abierto={modalAltaLoteAbierto}
           onClose={() => setModalAltaLoteAbierto(false)}
           onGuardar={handleGuardarLote}
           errorValidacion={errorLotes}
+          medicamentos={inventarioRaw}
           bodegas={bodegas}
           proveedores={proveedores}
         />
@@ -990,7 +1064,13 @@ export default function InventarioPage() {
         <ModalRegistroIngreso
           abierto={modalRegistroIngresoAbierto}
           onClose={() => setModalRegistroIngresoAbierto(false)}
+          catalogos={{
+            medicamentos: inventarioRaw, // <-- Asegúrate de pasar tu estado con los medicamentos aquí
+            bodegas: bodegas,           // <-- Y las bodegas aquí
+            donaciones: donaciones
+          }}
           onExito={cargarDatos}
+          onGuardar={handleGuardarIngresoDonacion}
         />
       )}
     </div>
