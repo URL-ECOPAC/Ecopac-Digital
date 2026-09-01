@@ -1,7 +1,7 @@
 import { useRegistroSalida } from "../../../../packages/shared/inventario/useRegistroSalida";
 
 
-export function ModalSalidaMedicamento({ supabase, abierto, onClose, medicamentos = [] }) {
+export function ModalSalidaMedicamento({  abierto, onClose, medicamentos = [] }) {
   const {
     motivo,
     setMotivo,
