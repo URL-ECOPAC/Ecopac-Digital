@@ -149,9 +149,6 @@ export default function InventarioPage() {
 
   const handleGuardarIngresoDonacion = async (formData) => {
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
       // formData contendrá los datos seleccionados en el modal (ej: donacionDetalleId, medicamentoId, bodegaId, etc.)
       const { error } = await generarIngresoDesdeDonacion(formData.donacionDetalleId, {
         medicamentoId: formData.medicamentoId,
@@ -159,7 +156,7 @@ export default function InventarioPage() {
         numeroLote: formData.numeroLote,
         fechaVencimiento: formData.fechaVencimiento,
         proveedorId: formData.proveedorId,
-        usuarioId: user?.id, // El ID del usuario actual autenticado
+        usuarioId: formData.usuarioId, // El ID del usuario actual autenticado
       });
 
       if (error) {
