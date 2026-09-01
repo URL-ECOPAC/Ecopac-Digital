@@ -19,7 +19,8 @@
     "docker:dev": "docker compose up --build",
     "docker:prod": "docker compose --env-file .env.production -f docker-compose.prod.yml up --build -d",
     "verificar:concurrencia-ficha": "node scripts/verificar-concurrencia-numero-ficha.mjs",
-    "verificar:shared-esquema": "node scripts/verificar-shared-vs-esquema.mjs"
+    "verificar:shared-esquema": "node scripts/verificar-shared-vs-esquema.mjs",
+    "verificar:rewrite-vercel": "node scripts/verificar-rewrite-vercel.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.0.0",

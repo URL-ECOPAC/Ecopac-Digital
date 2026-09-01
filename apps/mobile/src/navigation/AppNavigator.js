@@ -7,12 +7,14 @@ import { tabsMoviles, modulosVisibles } from "@ecopac/shared";
 
 import { useSesionCompartida } from "../contexto/SesionProvider";
 import { ROUTES } from "./rutas";
+import JornadaActivaBadge from "../components/JornadaActivaBadge";
 import UsuarioActivo from "../components/UsuarioActivo";
 import LoginScreen from "../screens/LoginScreen";
 import InicioScreen from "../screens/InicioScreen";
 import AjustesScreen from "../screens/AjustesScreen";
 import SeleccionJornadaScreen from "../screens/SeleccionJornadaScreen";
 import JornadaEnCursoScreen from "../screens/JornadaEnCursoScreen";
+import JornadasAsignadasScreen from "../screens/JornadasAsignadasScreen";
 import BusquedaPacienteScreen from "../screens/BusquedaPacienteScreen";
 import FichaPacienteScreen from "../screens/FichaPacienteScreen";
 import HistorialPacienteScreen from "../screens/HistorialPacienteScreen";
@@ -35,11 +37,19 @@ const PacientesStack = createNativeStackNavigator();
 const JornadasStack = createNativeStackNavigator();
 const InventarioStack = createNativeStackNavigator();
 
+// headerRight compone dos widgets que leen su propio contexto (issue #186, criterio 4: la
+// jornada activa visible desde cualquier pantalla, mismo patron que UsuarioActivo ya usaba para
+// la sesion). Este es el unico punto de AppNavigator que se toco para esa issue.
 const opcionesStack = {
   headerStyle: { backgroundColor: colors.surface },
   headerTintColor: colors.text,
   headerTitleStyle: { fontSize: typography.sizes.md, fontWeight: typography.weights.semibold },
-  headerRight: () => <UsuarioActivo />,
+  headerRight: () => (
+    <>
+      <JornadaActivaBadge />
+      <UsuarioActivo />
+    </>
+  ),
 };
 
 // Mapeo entre los identificadores de tabMovil (navegacion.js) y la navegacion React Native
@@ -175,6 +185,11 @@ function JornadasNavigator() {
         name={ROUTES.JORNADA_EN_CURSO}
         component={JornadaEnCursoScreen}
         options={{ title: "Jornada en curso" }}
+      />
+      <JornadasStack.Screen
+        name={ROUTES.JORNADAS_ASIGNADAS}
+        component={JornadasAsignadasScreen}
+        options={{ title: "Mis jornadas" }}
       />
     </JornadasStack.Navigator>
   );

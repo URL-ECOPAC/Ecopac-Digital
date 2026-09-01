@@ -18,6 +18,7 @@ const {
   obtenerConsulta,
   actualizarConsulta,
   listarPacientesAtendidosDeJornada,
+  contarConsultasDeJornada,
 } = await import("./consultas.api.js");
 
 /**
@@ -415,6 +416,68 @@ describe("listarPacientesAtendidosDeJornada", () => {
     const { error } = await listarPacientesAtendidosDeJornada("jor-1");
 
     expect(error).toBeNull();
+  });
+});
+
+describe("contarConsultasDeJornada", () => {
+  it("sin jornadaId no toca el cliente", async () => {
+    const { cantidad, error } = await contarConsultasDeJornada();
+
+    expect(cantidad).toBeNull();
+    expect(error).toBeNull();
+  });
+
+  it("cuenta filas de consultas filtradas por jornada_id, real para medico", async () => {
+    const cliente = crearCliente({ consultas: { data: null, error: null, count: 9 } });
+    dobles.cliente = cliente;
+
+    const { cantidad, error } = await contarConsultasDeJornada("jor-1", { rol: ROLES.MEDICO });
+
+    expect(error).toBeNull();
+    expect(cantidad).toBe(9);
+    expect(cliente.llamadas).toContainEqual({
+      paso: "eq",
+      tabla: "consultas",
+      columna: "jornada_id",
+      valor: "jor-1",
+    });
+  });
+
+  it("real tambien para administrador", async () => {
+    dobles.cliente = crearCliente({ consultas: { data: null, error: null, count: 3 } });
+
+    const { cantidad } = await contarConsultasDeJornada("jor-1", { rol: ROLES.ADMINISTRADOR });
+
+    expect(cantidad).toBe(3);
+  });
+
+  it("voluntario general no tiene SELECT sobre consultas (00033): cantidad null, sin llamar al cliente", async () => {
+    const { cantidad, error } = await contarConsultasDeJornada("jor-1", {
+      rol: ROLES.VOLUNTARIO,
+    });
+
+    expect(cantidad).toBeNull();
+    expect(error).toBeNull();
+  });
+
+  it("sin rol no bloquea: deja que RLS decida", async () => {
+    dobles.cliente = crearCliente({ consultas: { data: null, error: null, count: 0 } });
+
+    const { cantidad, error } = await contarConsultasDeJornada("jor-1");
+
+    expect(cantidad).toBe(0);
+    expect(error).toBeNull();
+  });
+
+  it("normaliza el error del servidor", async () => {
+    dobles.cliente = crearCliente({
+      consultas: { data: null, error: { code: "42501" }, count: null },
+    });
+
+    const { cantidad, error } = await contarConsultasDeJornada("jor-1", { rol: ROLES.MEDICO });
+
+    expect(cantidad).toBeNull();
+    expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.PERMISO_DENEGADO);
   });
 
   it("una consulta sin atencion embebida (RLS la esconde) no revienta", async () => {

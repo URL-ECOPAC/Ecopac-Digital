@@ -32,3 +32,4 @@ export { default as LoadingState } from "./LoadingState";
 export { default as ErrorState } from "./ErrorState";
 
 export { default as UsuarioActivo } from "./UsuarioActivo";
+export { default as JornadaActivaBadge } from "./JornadaActivaBadge";

@@ -7,7 +7,7 @@ import reactRefresh from "eslint-plugin-react-refresh";
 export default [
   js.configs.recommended,
   {
-    ignores: ["**/dist/**", "**/build/**", "**/.expo/**", "**/node_modules/**"],
+    ignores: ["**/dist/**", "**/build/**", "**/.expo/**", "**/node_modules/**", 'scripts/**'],
   },
   {
     files: ["**/*.{js,jsx}"],

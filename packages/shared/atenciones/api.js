@@ -184,6 +184,36 @@ export async function obtenerCola(jornadaId) {
 }
 
 /**
+ * Cuenta los pacientes con atencion registrada en una jornada (issue #187, criterio 5).
+ *
+ * Cuenta filas de `atenciones` (abiertas y cerradas), no de `vista_cola_jornada` (solo abiertas)
+ * ni de `vista_reporte_impacto` (00064, restringida a administrador/junta directiva/socio
+ * fundador). `atenciones` tiene SELECT para administrador, medico y voluntario general (00033),
+ * asi que este numero si le llega a los tres roles que tienen el panel de #187 abierto en
+ * campo. Como `atenciones` tiene UNIQUE(paciente_id, jornada_id) (00013), contar filas equivale
+ * a contar pacientes distintos: coincide con `pacientes_atendidos` de vista_reporte_impacto sin
+ * necesitar esa vista.
+ *
+ * @param {string} jornadaId UUID de la jornada.
+ * @returns {Promise<{ cantidad: number, error: object|null }>}
+ */
+export async function contarPacientesDeJornada(jornadaId) {
+  if (!jornadaId) return { cantidad: 0, error: null };
+
+  try {
+    const { count, error } = await obtenerSupabase()
+      .from("atenciones")
+      .select("id", { count: "exact", head: true })
+      .eq("jornada_id", jornadaId);
+
+    if (error) return { cantidad: 0, error: normalizarError(error) };
+    return { cantidad: count ?? 0, error: null };
+  } catch (error) {
+    return { cantidad: 0, error: normalizarError(error) };
+  }
+}
+
+/**
  * Retira una atencion de la cola (criterio de aceptacion 5).
  *
  * No borra nada: marca cerrada_en. El historial clinico de la jornada tiene que seguir ahi.

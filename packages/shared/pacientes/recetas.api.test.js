@@ -12,9 +12,10 @@ vi.mock("../api/cliente.js", () => ({
 }));
 
 const { CODIGOS_DE_ERROR_DE_SUPABASE } = await import("../api/errores-de-supabase.js");
-const { generarReceta, obtenerReceta, obtenerRecetas, anularReceta } =
+const { generarReceta, obtenerReceta, obtenerRecetas, anularReceta, contarRecetasDeJornada } =
   await import("./recetas.api.js");
 const { ESTADOS_RECETA } = await import("../enums.js");
+const { ROLES } = await import("../usuarios/roles.js");
 
 function crearCliente({
   rpc = { data: "rec-1", error: null },
@@ -305,6 +306,56 @@ describe("obtenerRecetas", () => {
       columna: "estado",
       valor: ESTADOS_RECETA.EMITIDA,
     });
+  });
+});
+
+describe("contarRecetasDeJornada", () => {
+  it("sin jornadaId no toca el cliente", async () => {
+    const { cantidad, error } = await contarRecetasDeJornada();
+
+    expect(cantidad).toBeNull();
+    expect(error).toBeNull();
+  });
+
+  it("filtra a traves del embebido consultas!inner, real para medico", async () => {
+    const cliente = crearCliente({ tabla: { data: null, error: null, count: 5 } });
+    dobles.cliente = cliente;
+
+    const { cantidad, error } = await contarRecetasDeJornada("jor-1", { rol: ROLES.MEDICO });
+
+    expect(error).toBeNull();
+    expect(cantidad).toBe(5);
+    expect(cliente.llamadas).toContainEqual({
+      paso: "eq",
+      columna: "consultas.jornada_id",
+      valor: "jor-1",
+    });
+  });
+
+  it("real tambien para administrador", async () => {
+    dobles.cliente = crearCliente({ tabla: { data: null, error: null, count: 2 } });
+
+    const { cantidad } = await contarRecetasDeJornada("jor-1", { rol: ROLES.ADMINISTRADOR });
+
+    expect(cantidad).toBe(2);
+  });
+
+  it("voluntario general no tiene SELECT sobre recetas (00033): cantidad null, sin llamar al cliente", async () => {
+    const { cantidad, error } = await contarRecetasDeJornada("jor-1", { rol: ROLES.VOLUNTARIO });
+
+    expect(cantidad).toBeNull();
+    expect(error).toBeNull();
+  });
+
+  it("normaliza el error del servidor", async () => {
+    dobles.cliente = crearCliente({
+      tabla: { data: null, error: { code: "42501" }, count: null },
+    });
+
+    const { cantidad, error } = await contarRecetasDeJornada("jor-1", { rol: ROLES.MEDICO });
+
+    expect(cantidad).toBeNull();
+    expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.PERMISO_DENEGADO);
   });
 });
 

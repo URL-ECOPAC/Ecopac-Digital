@@ -44,7 +44,28 @@ const COLUMNAS_DEL_PROYECTO = [
   "ordenColumna:orden_columna",
   "createdAt:created_at",
   "updatedAt:updated_at",
+  // Mismo patron que jornadas/api.js: la pantalla muestra al responsable por su nombre, y sin
+  // este join solo tenia el UUID de responsable_id para pintar en la columna.
+  "responsable:perfiles(nombres, apellidos)",
 ].join(", ");
+
+/**
+ * Aplana el perfil embebido del responsable a un nombre listo para pintar.
+ *
+ * Devolver el objeto tal cual reventaba la tabla de proyectos: React no sabe renderizar
+ * `{ nombres, apellidos }` como hijo. Se conserva `responsableId` para filtrar.
+ */
+function aProyecto(fila) {
+  if (!fila) return null;
+  const { responsable, ...resto } = fila;
+  return {
+    ...resto,
+    responsableNombre: [responsable?.nombres, responsable?.apellidos]
+      .filter(Boolean)
+      .join(" ")
+      .trim(),
+  };
+}
 
 /** Traduce del camelCase de las pantallas al snake_case de la tabla, omitiendo lo no enviado. */
 function aColumnasDeTabla(datos = {}) {
@@ -82,7 +103,7 @@ export async function crearProyecto(datos) {
       .single();
 
     if (error) return { proyecto: null, error: normalizarError(error) };
-    return { proyecto: data ?? null, error: null };
+    return { proyecto: aProyecto(data), error: null };
   } catch (error) {
     // Un fallo de red no llega por el campo error sino como excepcion del fetch.
     return { proyecto: null, error: normalizarError(error) };
@@ -107,7 +128,7 @@ export async function obtenerProyecto(id) {
       .maybeSingle();
 
     if (error) return { proyecto: null, error: normalizarError(error) };
-    return { proyecto: data ?? null, error: null };
+    return { proyecto: aProyecto(data), error: null };
   } catch (error) {
     return { proyecto: null, error: normalizarError(error) };
   }
@@ -140,7 +161,7 @@ export async function listarProyectos({ estado, responsableId } = {}) {
 
     if (error) return { proyectos: [], error: normalizarError(error) };
     // Siempre un arreglo: una lista vacia se dibuja sola, un null obliga a comprobarlo cada vez.
-    return { proyectos: data ?? [], error: null };
+    return { proyectos: (data ?? []).map(aProyecto), error: null };
   } catch (error) {
     return { proyectos: [], error: normalizarError(error) };
   }
@@ -174,7 +195,7 @@ export async function actualizarProyecto(id, datos) {
       .maybeSingle();
 
     if (error) return { proyecto: null, error: normalizarError(error) };
-    return { proyecto: data ?? null, error: null };
+    return { proyecto: aProyecto(data), error: null };
   } catch (error) {
     return { proyecto: null, error: normalizarError(error) };
   }
@@ -221,7 +242,7 @@ export async function cambiarEstadoProyecto(id, nuevoEstado) {
       .maybeSingle();
 
     if (error) return { proyecto: null, error: normalizarError(error) };
-    return { proyecto: data ?? null, error: null };
+    return { proyecto: aProyecto(data), error: null };
   } catch (error) {
     return { proyecto: null, error: normalizarError(error) };
   }

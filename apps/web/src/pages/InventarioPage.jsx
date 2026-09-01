@@ -3,7 +3,10 @@ import ModalMedicamento from "./ModalMedicamento.jsx";
 import { ModalAltaLote } from "./ModalAltaLote.jsx";
 import { ModalAtenderAlerta } from "./ModalAtenderAlerta.jsx";
 import ModalRegistroIngreso from "./ModalRegistroIngreso.jsx";
+<<<<<<< HEAD
 import { ModalSalidaMedicamento } from "./ModalSalidaMedicamento";
+=======
+>>>>>>> develop
 
 // API Medicamentos y Principios Activos
 import {
@@ -345,6 +348,7 @@ export default function InventarioPage() {
     alertasCriticas.length > 0
       ? alertasCriticas
       : [
+<<<<<<< HEAD
         {
           id: "alt-1",
           medicamento: { nombre: "Metformina 850mg Comprimidos" },
@@ -364,6 +368,27 @@ export default function InventarioPage() {
           fechaCaducidad: "14 ago 2024",
         },
       ];
+=======
+          {
+            id: "alt-1",
+            medicamento: { nombre: "Metformina 850mg Comprimidos" },
+            codigo: "FAR-0009",
+            numero_lote: "L-2024-0567",
+            bodega: "SUR",
+            diasRestantes: 12,
+            fechaCaducidad: "27 jul 2024",
+          },
+          {
+            id: "alt-2",
+            medicamento: { nombre: "Amoxicilina 500mg Cápsulas" },
+            codigo: "FAR-0041",
+            numero_lote: "L-2024-0091",
+            bodega: "CENTRAL",
+            diasRestantes: 30,
+            fechaCaducidad: "14 ago 2024",
+          },
+        ];
+>>>>>>> develop
 
   const fuenteInicial = inventarioRaw.length > 0 ? inventarioFiltradoHook : datosTablaDemo;
 
@@ -392,9 +417,15 @@ export default function InventarioPage() {
     !categoriaSeleccionada || categoriaSeleccionada === "Todas"
       ? baseDatosFiltrada
       : baseDatosFiltrada.filter(
+<<<<<<< HEAD
         (item) =>
           item.categoria?.toLowerCase().trim() === categoriaSeleccionada.toLowerCase().trim(),
       );
+=======
+          (item) =>
+            item.categoria?.toLowerCase().trim() === categoriaSeleccionada.toLowerCase().trim(),
+        );
+>>>>>>> develop
 
   return (
     <div
@@ -437,6 +468,7 @@ export default function InventarioPage() {
               + Registrar Ingreso
             </button>
 
+<<<<<<< HEAD
             {/* Botón de Registrar Salida (Issue #157) */}
             <button
               onClick={() => setModalSalidaAbierto(true)}
@@ -454,6 +486,8 @@ export default function InventarioPage() {
               + Registrar Salida
             </button>
 
+=======
+>>>>>>> develop
             {tabActiva === "catalogo" ? (
               <button
                 type="button"
@@ -1033,6 +1067,7 @@ export default function InventarioPage() {
         />
       )}
 
+<<<<<<< HEAD
       {/* Renderizado del Modal de Salida (Issue #157) */}
       <ModalSalidaMedicamento
         abierto={modalSalidaAbierto}
@@ -1052,6 +1087,19 @@ export default function InventarioPage() {
         />
       )}
 
+=======
+      {modalAltaLoteAbierto && (
+        <ModalAltaLote
+          abierto={modalAltaLoteAbierto}
+          onClose={() => setModalAltaLoteAbierto(false)}
+          onGuardar={handleGuardarLote}
+          errorValidacion={errorLotes}
+          bodegas={bodegas}
+          proveedores={proveedores}
+        />
+      )}
+
+>>>>>>> develop
       {alertaSeleccionada && (
         <ModalAtenderAlerta
           alerta={alertaSeleccionada}
@@ -1064,6 +1112,7 @@ export default function InventarioPage() {
         <ModalRegistroIngreso
           abierto={modalRegistroIngresoAbierto}
           onClose={() => setModalRegistroIngresoAbierto(false)}
+<<<<<<< HEAD
           catalogos={{
             medicamentos: inventarioRaw, // <-- Asegúrate de pasar tu estado con los medicamentos aquí
             bodegas: bodegas,           // <-- Y las bodegas aquí
@@ -1071,6 +1120,9 @@ export default function InventarioPage() {
           }}
           onExito={cargarDatos}
           onGuardar={handleGuardarIngresoDonacion}
+=======
+          onExito={cargarDatos}
+>>>>>>> develop
         />
       )}
     </div>

@@ -28,6 +28,19 @@ export default defineConfig({
       "@ecopac/shared": path.resolve(__dirname, "../../packages/shared/index.js"),
       "@ecopac/ui-tokens": path.resolve(__dirname, "../../packages/ui-tokens/index.js"),
     },
+    // Mismo dedupe que vite.config.js, y por la misma razon. El alias de arriba hace que
+    // packages/shared se compile desde el fuente, asi que su `import { useRef } from "react"`
+    // lo resuelve Vite subiendo desde packages/ y encuentra la copia de la raiz (la de mobile),
+    // mientras que los componentes de apps/web usan la de este workspace. Con dos copias de
+    // react en el mismo arbol el dispatcher de hooks queda en null y cualquier componente que
+    // llame a un hook de shared revienta con "Cannot read properties of null (reading 'useRef')".
+    //
+    // No lo cubre vitest.react-patch.setup.js: ese parche es para el require() interno de
+    // react-dom, que pasa por el resolver de Node. Este import pasa por el de Vite.
+    //
+    // No se noto hasta la issue #601 porque ninguna prueba de este workspace habia renderizado
+    // todavia un componente que montara un hook de packages/shared.
+    dedupe: ["react", "react-dom"],
   },
   test: {
     environment: "jsdom",

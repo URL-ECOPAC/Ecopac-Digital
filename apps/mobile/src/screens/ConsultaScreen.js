@@ -6,7 +6,6 @@ import {
   TIPOS_DE_CAMPO,
   nombreCompletoDePaciente,
   usePaciente,
-  useJornadaActiva,
   useRegistroConsulta,
 } from "@ecopac/shared";
 import { colors, spacing, typography } from "@ecopac/ui-tokens";
@@ -22,6 +21,7 @@ import {
   TextField,
 } from "../components";
 import { almacenamientoMovil } from "../almacenamiento";
+import { useJornadaActivaCompartida } from "../contexto/JornadaActivaProvider";
 import { useSesionCompartida } from "../contexto/SesionProvider";
 import { ROUTES } from "../navigation/rutas";
 
@@ -92,10 +92,7 @@ export default function ConsultaScreen() {
   const pacienteId = params?.pacienteId;
 
   const { paciente, cargando: cargandoPaciente } = usePaciente(pacienteId, { rol });
-  const { jornadaId, jornada } = useJornadaActiva({
-    perfilId: perfil?.id,
-    almacenamiento: almacenamientoMovil,
-  });
+  const { jornadaId, jornada } = useJornadaActivaCompartida();
 
   const {
     secciones,

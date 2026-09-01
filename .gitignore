@@ -20,6 +20,11 @@ out/
 apps/web/dist/
 apps/web/.vite/
 
+# --- Vercel ---
+# Lo genera `vercel link` y lleva el projectId y el orgId de la cuenta: es de cada maquina, no
+# del repositorio. No confundir con apps/web/vercel.json, que si va versionado.
+.vercel/
+
 # --- React Native / Expo ---
 apps/mobile/.expo/
 apps/mobile/.expo-shared/

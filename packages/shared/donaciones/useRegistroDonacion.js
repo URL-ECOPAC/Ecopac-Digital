@@ -1,12 +1,16 @@
 import { useState } from "react";
 
+import { TIPOS_DE_DONACION } from "../enums.js";
 import { puedeRegistrarDonaciones, puedeVerDonaciones } from "./permisos.js";
 
 export function useRegistroDonacion({ _client, usuarioRol, onGuardarExito }) {
   const puedeEscribir = puedeRegistrarDonaciones(usuarioRol);
   const tieneAccesoLectura = puedeVerDonaciones(usuarioRol);
 
-  const [tipoDonacion, setTipoDonacion] = useState("economica");
+  // 'dinero' y no 'economica': el enum tipo_donacion de la migracion 00022 solo acepta
+  // medicamentos, insumos, dinero y servicios. Con el valor viejo, el dia que guardarDonacion()
+  // llegue a escribir en la base, el INSERT lo rechaza.
+  const [tipoDonacion, setTipoDonacion] = useState(TIPOS_DE_DONACION.DINERO);
   const [donanteId, setDonanteId] = useState("");
   const [proyectoId, setProyectoId] = useState("");
   const [fecha, setFecha] = useState(new Date().toISOString().split("T")[0]);
@@ -57,7 +61,7 @@ export function useRegistroDonacion({ _client, usuarioRol, onGuardarExito }) {
 
     setResumenRegistro(payload);
 
-    if (tipoDonacion === "medicamentos") {
+    if (tipoDonacion === TIPOS_DE_DONACION.MEDICAMENTOS) {
       setOfrecerIngresoInventario(true);
     }
 
