@@ -4,8 +4,7 @@ import { ModalAltaLote } from "./ModalAltaLote.jsx";
 import { ModalAtenderAlerta } from "./ModalAtenderAlerta.jsx";
 import ModalRegistroIngreso from "./ModalRegistroIngreso.jsx";
 import { ModalSalidaMedicamento } from "./ModalSalidaMedicamento";
-import { supabase } from '@ecopac/shared';
-
+import { supabase } from "@ecopac/shared";
 
 // API Medicamentos y Principios Activos
 import {
@@ -14,8 +13,8 @@ import {
   actualizarMedicamento,
 } from "../../../../packages/shared/inventario/medicamentos.api.js";
 import { listarBodegas } from "../../../../packages/shared/inventario/bodegas.api.js";
-import { generarIngresoDesdeDonacion } from '../../../../packages/shared/donaciones/ingreso.api.js';
-import { listarProveedores } from '../../../../packages/shared/inventario/proveedores.api.js';
+import { generarIngresoDesdeDonacion } from "../../../../packages/shared/donaciones/ingreso.api.js";
+import { listarProveedores } from "../../../../packages/shared/inventario/proveedores.api.js";
 import {
   listarPrincipiosActivos,
   registrarPrincipioActivo,
@@ -57,10 +56,7 @@ export default function InventarioPage() {
   const [bodegas, setBodegas] = useState([]);
   const [proveedores, setProveedores] = useState([]);
   const [donaciones, setDonaciones] = useState([]);
-  const { 
-  setModalIngresoAbierto, 
-  refrescarInventario, 
-}= useState([]);
+  const { setModalIngresoAbierto, refrescarInventario } = useState([]);
 
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
@@ -122,7 +118,7 @@ export default function InventarioPage() {
         listarMedicamentos(),
         listarPrincipiosActivos(),
         listarBodegas(),
-        listarProveedores()
+        listarProveedores(),
       ]);
       if (resMed.error) {
         setError(resMed.error.mensaje || "Error al cargar medicamentos");
@@ -145,7 +141,6 @@ export default function InventarioPage() {
       } else {
         setProveedores(resProveedores.proveedores || []); // <-- Se asigna a setProveedores
       }
-
     } catch (err) {
       console.error("Error cargando inventario:", err);
       setError("No se pudo cargar el inventario.");
@@ -153,22 +148,21 @@ export default function InventarioPage() {
       setCargando(false);
     }
   };
- 
+
   const handleGuardarIngresoDonacion = async (formData) => {
     try {
-     const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       // formData contendrá los datos seleccionados en el modal (ej: donacionDetalleId, medicamentoId, bodegaId, etc.)
-      const { resultado, error } = await generarIngresoDesdeDonacion(
-        formData.donacionDetalleId,
-        {
-          medicamentoId: formData.medicamentoId,
-          bodegaId: formData.bodegaId,
-          numeroLote: formData.numeroLote,
-          fechaVencimiento: formData.fechaVencimiento,
-          proveedorId: formData.proveedorId,
-          usuarioId: user?.id // El ID del usuario actual autenticado
-        }
-      );
+      const { resultado, error } = await generarIngresoDesdeDonacion(formData.donacionDetalleId, {
+        medicamentoId: formData.medicamentoId,
+        bodegaId: formData.bodegaId,
+        numeroLote: formData.numeroLote,
+        fechaVencimiento: formData.fechaVencimiento,
+        proveedorId: formData.proveedorId,
+        usuarioId: user?.id, // El ID del usuario actual autenticado
+      });
 
       if (error) {
         console.error("Error al registrar ingreso desde donación:", error.mensaje);
@@ -352,25 +346,25 @@ export default function InventarioPage() {
     alertasCriticas.length > 0
       ? alertasCriticas
       : [
-        {
-          id: "alt-1",
-          medicamento: { nombre: "Metformina 850mg Comprimidos" },
-          codigo: "FAR-0009",
-          numero_lote: "L-2024-0567",
-          bodega: "SUR",
-          diasRestantes: 12,
-          fechaCaducidad: "27 jul 2024",
-        },
-        {
-          id: "alt-2",
-          medicamento: { nombre: "Amoxicilina 500mg Cápsulas" },
-          codigo: "FAR-0041",
-          numero_lote: "L-2024-0091",
-          bodega: "CENTRAL",
-          diasRestantes: 30,
-          fechaCaducidad: "14 ago 2024",
-        },
-      ];
+          {
+            id: "alt-1",
+            medicamento: { nombre: "Metformina 850mg Comprimidos" },
+            codigo: "FAR-0009",
+            numero_lote: "L-2024-0567",
+            bodega: "SUR",
+            diasRestantes: 12,
+            fechaCaducidad: "27 jul 2024",
+          },
+          {
+            id: "alt-2",
+            medicamento: { nombre: "Amoxicilina 500mg Cápsulas" },
+            codigo: "FAR-0041",
+            numero_lote: "L-2024-0091",
+            bodega: "CENTRAL",
+            diasRestantes: 30,
+            fechaCaducidad: "14 ago 2024",
+          },
+        ];
 
   const fuenteInicial = inventarioRaw.length > 0 ? inventarioFiltradoHook : datosTablaDemo;
 
@@ -399,9 +393,9 @@ export default function InventarioPage() {
     !categoriaSeleccionada || categoriaSeleccionada === "Todas"
       ? baseDatosFiltrada
       : baseDatosFiltrada.filter(
-        (item) =>
-          item.categoria?.toLowerCase().trim() === categoriaSeleccionada.toLowerCase().trim(),
-      );
+          (item) =>
+            item.categoria?.toLowerCase().trim() === categoriaSeleccionada.toLowerCase().trim(),
+        );
 
   return (
     <div
@@ -1073,8 +1067,8 @@ export default function InventarioPage() {
           onClose={() => setModalRegistroIngresoAbierto(false)}
           catalogos={{
             medicamentos: inventarioRaw, // <-- Asegúrate de pasar tu estado con los medicamentos aquí
-            bodegas: bodegas,           // <-- Y las bodegas aquí
-            donaciones: donaciones
+            bodegas: bodegas, // <-- Y las bodegas aquí
+            donaciones: donaciones,
           }}
           onExito={cargarDatos}
           onGuardar={handleGuardarIngresoDonacion}

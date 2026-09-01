@@ -212,7 +212,7 @@ Commits (Conventional Commits):
   - La persona responsable de una entidad completa (no de una accion puntual) es
     `responsable_id`: `jornadas.responsable_id`, `proyectos.responsable_id`,
     `gastos.responsable_id`.
-  - Cuando dos columnas nombran cosas distintas que solo *parecen* el mismo concepto -describen
+  - Cuando dos columnas nombran cosas distintas que solo _parecen_ el mismo concepto -describen
     sujetos gramaticales distintos, o el mismo dato tiene un matiz real en una tabla que no
     tiene en la otra (ver `tipo_proveedor`/`origen_lote` y `pacientes.telefono_contacto` en el
     esquema)-, no se fuerza un nombre unico: se deja la diferencia y se documenta la razon con
