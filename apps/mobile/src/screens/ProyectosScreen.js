@@ -30,16 +30,10 @@ export default function ProyectosScreen({ usuarioRol }) {
   const metricas = useMemo(() => {
     const registrados = proyectos.length;
     const activos = proyectos.filter(
-      (p) => p.estado === "activo" || p.estado === "en_ejecucion"
+      (p) => p.estado === "activo" || p.estado === "en_ejecucion",
     ).length;
-    const beneficiariosTotal = proyectos.reduce(
-      (acc, p) => acc + (p.beneficiarios || 0),
-      0
-    );
-    const presupuestoTotal = proyectos.reduce(
-      (acc, p) => acc + (p.presupuesto || 0),
-      0
-    );
+    const beneficiariosTotal = proyectos.reduce((acc, p) => acc + (p.beneficiarios || 0), 0);
+    const presupuestoTotal = proyectos.reduce((acc, p) => acc + (p.presupuesto || 0), 0);
 
     return { registrados, activos, beneficiariosTotal, presupuestoTotal };
   }, [proyectos]);
@@ -56,17 +50,14 @@ export default function ProyectosScreen({ usuarioRol }) {
   if (error) {
     return (
       <View style={styles.centerContainer}>
-        <Text style={styles.errorTexto}>
-          Error al cargar proyectos: {String(error)}
-        </Text>
+        <Text style={styles.errorTexto}>Error al cargar proyectos: {String(error)}</Text>
       </View>
     );
   }
 
   // VISTA 2: Detalle del Proyecto Seleccionado
   if (proyectoDetalle) {
-    const porcentaje =
-      proyectoDetalle.porcentajeAvance ?? proyectoDetalle.avance ?? 0;
+    const porcentaje = proyectoDetalle.porcentajeAvance ?? proyectoDetalle.avance ?? 0;
 
     return (
       <SafeAreaView style={styles.container}>
@@ -94,22 +85,16 @@ export default function ProyectosScreen({ usuarioRol }) {
 
             <View style={styles.metricasDetalleHeader}>
               <View style={styles.metricaSubItem}>
-                <Text style={styles.metricaNumeroVerde}>
-                  {proyectoDetalle.beneficiarios || 0}
-                </Text>
+                <Text style={styles.metricaNumeroVerde}>{proyectoDetalle.beneficiarios || 0}</Text>
                 <Text style={styles.metricaLabelSub}>beneficiarios</Text>
               </View>
               <View style={styles.metricaSubItem}>
-                <Text style={styles.metricaNumeroAzul}>
-                  {jornadasProyecto.length}
-                </Text>
+                <Text style={styles.metricaNumeroAzul}>{jornadasProyecto.length}</Text>
                 <Text style={styles.metricaLabelSub}>jornadas</Text>
               </View>
             </View>
 
-            <Text style={styles.tituloProyectoDetalle}>
-              {proyectoDetalle.nombre}
-            </Text>
+            <Text style={styles.tituloProyectoDetalle}>{proyectoDetalle.nombre}</Text>
             <Text style={styles.descripcionProyecto}>
               {proyectoDetalle.descripcion || "Sin descripción disponible."}
             </Text>
@@ -123,24 +108,18 @@ export default function ProyectosScreen({ usuarioRol }) {
               </View>
               <View style={styles.colInfo}>
                 <Text style={styles.labelInfo}>LUGAR</Text>
-                <Text style={styles.valorInfo}>
-                  {proyectoDetalle.ubicacion || "Guatemala"}
-                </Text>
+                <Text style={styles.valorInfo}>{proyectoDetalle.ubicacion || "Guatemala"}</Text>
               </View>
             </View>
 
             <View style={styles.gridInfo}>
               <View style={styles.colInfo}>
                 <Text style={styles.labelInfo}>INICIO</Text>
-                <Text style={styles.valorInfo}>
-                  {proyectoDetalle.fechaInicio || "—"}
-                </Text>
+                <Text style={styles.valorInfo}>{proyectoDetalle.fechaInicio || "—"}</Text>
               </View>
               <View style={styles.colInfo}>
                 <Text style={styles.labelInfo}>CIERRE</Text>
-                <Text style={styles.valorInfo}>
-                  {proyectoDetalle.fechaFin || "—"}
-                </Text>
+                <Text style={styles.valorInfo}>{proyectoDetalle.fechaFin || "—"}</Text>
               </View>
             </View>
 
@@ -153,10 +132,7 @@ export default function ProyectosScreen({ usuarioRol }) {
               </View>
               <View style={styles.barBackground}>
                 <View
-                  style={[
-                    styles.barFill,
-                    { width: `${Math.min(100, Math.max(0, porcentaje))}%` },
-                  ]}
+                  style={[styles.barFill, { width: `${Math.min(100, Math.max(0, porcentaje))}%` }]}
                 />
               </View>
             </View>
@@ -166,18 +142,10 @@ export default function ProyectosScreen({ usuarioRol }) {
             {["resumen", "equipo", "jornadas", "insumos", "gastos"].map((tab) => (
               <TouchableOpacity
                 key={tab}
-                style={[
-                  styles.tabButton,
-                  tabActivo === tab && styles.tabButtonActivo,
-                ]}
+                style={[styles.tabButton, tabActivo === tab && styles.tabButtonActivo]}
                 onPress={() => setTabActivo(tab)}
               >
-                <Text
-                  style={[
-                    styles.tabTexto,
-                    tabActivo === tab && styles.tabTextoActivo,
-                  ]}
-                >
+                <Text style={[styles.tabTexto, tabActivo === tab && styles.tabTextoActivo]}>
                   {tab.charAt(0).toUpperCase() + tab.slice(1)}
                 </Text>
               </TouchableOpacity>
@@ -187,9 +155,7 @@ export default function ProyectosScreen({ usuarioRol }) {
           {tabActivo === "resumen" && (
             <View>
               <View style={styles.cardSeccion}>
-                <Text style={styles.subtituloSeccion}>
-                  🎯 Objetivos del proyecto
-                </Text>
+                <Text style={styles.subtituloSeccion}>🎯 Objetivos del proyecto</Text>
                 {proyectoDetalle.objetivos?.length ? (
                   proyectoDetalle.objetivos.map((obj, i) => (
                     <Text key={i} style={styles.bulletItem}>
@@ -197,17 +163,14 @@ export default function ProyectosScreen({ usuarioRol }) {
                     </Text>
                   ))
                 ) : (
-                  <Text style={styles.bulletItem}>
-                    • Sin objetivos registrados
-                  </Text>
+                  <Text style={styles.bulletItem}>• Sin objetivos registrados</Text>
                 )}
               </View>
 
               <View style={styles.cardSeccion}>
                 <Text style={styles.subtituloSeccion}>✅ Logros al corte</Text>
                 <Text style={styles.bulletItem}>
-                  • {proyectoDetalle.beneficiarios || 0} pacientes atendidos al
-                  corte
+                  • {proyectoDetalle.beneficiarios || 0} pacientes atendidos al corte
                 </Text>
                 <Text style={styles.bulletItem}>
                   • {jornadasProyecto.length} jornadas completadas exitosamente
@@ -220,15 +183,11 @@ export default function ProyectosScreen({ usuarioRol }) {
             <View style={styles.cardSeccion}>
               <Text style={styles.subtituloSeccion}>📋 Jornadas asociadas</Text>
               {jornadasProyecto.length === 0 ? (
-                <Text style={styles.bulletItem}>
-                  No hay jornadas registradas.
-                </Text>
+                <Text style={styles.bulletItem}>No hay jornadas registradas.</Text>
               ) : (
                 jornadasProyecto.map((j) => (
                   <View key={j.id} style={styles.jornadaItem}>
-                    <Text style={styles.jornadaTitulo}>
-                      {j.nombre || j.titulo}
-                    </Text>
+                    <Text style={styles.jornadaTitulo}>{j.nombre || j.titulo}</Text>
                     <Text style={styles.jornadaSub}>
                       {j.fecha} — {j.lugar || "Sin lugar"}
                     </Text>
@@ -250,9 +209,7 @@ export default function ProyectosScreen({ usuarioRol }) {
         <View style={styles.headerRow}>
           <View style={styles.headerTitleContainer}>
             <Text style={styles.tituloHeader}>Gestión de Proyectos</Text>
-            <Text style={styles.subtituloHeader}>
-              Módulo administrador macro
-            </Text>
+            <Text style={styles.subtituloHeader}>Módulo administrador macro</Text>
           </View>
 
           {puedeEditar && (
@@ -272,25 +229,19 @@ export default function ProyectosScreen({ usuarioRol }) {
         <View style={styles.gridMetricas}>
           <View style={styles.cardMetrica}>
             <Text style={styles.metricaHeaderLabel}>PROYECTOS</Text>
-            <Text style={[styles.metricaNumero, { color: "#22c55e" }]}>
-              {metricas.registrados}
-            </Text>
+            <Text style={[styles.metricaNumero, { color: "#22c55e" }]}>{metricas.registrados}</Text>
             <Text style={styles.metricaSub}>registrados</Text>
           </View>
 
           <View style={styles.cardMetrica}>
             <Text style={styles.metricaHeaderLabel}>EN EJECUCIÓN</Text>
-            <Text style={[styles.metricaNumero, { color: "#0284c7" }]}>
-              {metricas.activos}
-            </Text>
+            <Text style={[styles.metricaNumero, { color: "#0284c7" }]}>{metricas.activos}</Text>
             <Text style={styles.metricaSub}>activos</Text>
           </View>
 
           <View style={styles.cardMetrica}>
             <Text style={styles.metricaHeaderLabel}>PRESUPUESTO TOTAL</Text>
-            <Text
-              style={[styles.metricaNumero, { color: "#ea580c", fontSize: 18 }]}
-            >
+            <Text style={[styles.metricaNumero, { color: "#ea580c", fontSize: 18 }]}>
               Q {metricas.presupuestoTotal.toLocaleString()}
             </Text>
             <Text style={styles.metricaSub}>todos los proyectos</Text>
@@ -306,21 +257,12 @@ export default function ProyectosScreen({ usuarioRol }) {
         </View>
 
         {/* Chips de Filtro */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.chipsScroll}
-        >
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsScroll}>
           <TouchableOpacity
             style={[styles.chip, !filtrosState.estado && styles.chipActivo]}
             onPress={() => setFiltrosState((prev) => ({ ...prev, estado: "" }))}
           >
-            <Text
-              style={[
-                styles.chipTexto,
-                !filtrosState.estado && styles.chipTextoActivo,
-              ]}
-            >
+            <Text style={[styles.chipTexto, !filtrosState.estado && styles.chipTextoActivo]}>
               Todos
             </Text>
           </TouchableOpacity>
@@ -340,12 +282,7 @@ export default function ProyectosScreen({ usuarioRol }) {
                     }))
                   }
                 >
-                  <Text
-                    style={[
-                      styles.chipTexto,
-                      seleccionado && styles.chipTextoActivo,
-                    ]}
-                  >
+                  <Text style={[styles.chipTexto, seleccionado && styles.chipTextoActivo]}>
                     {opcion.label}
                   </Text>
                 </TouchableOpacity>
@@ -372,19 +309,14 @@ export default function ProyectosScreen({ usuarioRol }) {
 
               <View style={styles.cardFooter}>
                 <View style={styles.badgeEstado}>
-                  <Text style={styles.badgeTexto}>
-                    {proyecto.estado || "activo"}
-                  </Text>
+                  <Text style={styles.badgeTexto}>{proyecto.estado || "activo"}</Text>
                 </View>
                 <Text style={styles.porcentajeVal}>{avance}%</Text>
               </View>
 
               <View style={styles.barBackground}>
                 <View
-                  style={[
-                    styles.barFill,
-                    { width: `${Math.min(100, Math.max(0, avance))}%` },
-                  ]}
+                  style={[styles.barFill, { width: `${Math.min(100, Math.max(0, avance))}%` }]}
                 />
               </View>
             </TouchableOpacity>
