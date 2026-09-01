@@ -4,12 +4,6 @@ import { ModalAltaLote } from "./ModalAltaLote.jsx";
 import { ModalAtenderAlerta } from "./ModalAtenderAlerta.jsx";
 import ModalRegistroIngreso from "./ModalRegistroIngreso.jsx";
 import { ModalSalidaMedicamento } from "./ModalSalidaMedicamento";
-import { createClient } from "@supabase/supabase-js";
-
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY,
-);
 
 // API Medicamentos y Principios Activos
 import {
@@ -57,10 +51,10 @@ export default function InventarioPage() {
 
   const [inventarioRaw, setInventarioRaw] = useState([]);
   const [principiosActivos, setPrincipiosActivos] = useState([]);
-  const [lotesRaw, setLotesRaw] = useState([]);
+  const [lotesRaw] = useState([]);
   const [bodegas, setBodegas] = useState([]);
   const [proveedores, setProveedores] = useState([]);
-  const [donaciones, setDonaciones] = useState([]);
+  const [donaciones] = useState([]);
   const { setModalIngresoAbierto, refrescarInventario } = useState([]);
 
   const [cargando, setCargando] = useState(true);
@@ -101,7 +95,6 @@ export default function InventarioPage() {
   } = useCatalogoMedicamentos({ inventarioInicial: inventarioRaw });
 
   const {
-    lotesFiltrados,
     alertasCriticas,
     validarNuevoLote,
     atenderAlertaCaducidad,
@@ -160,7 +153,7 @@ export default function InventarioPage() {
         data: { user },
       } = await supabase.auth.getUser();
       // formData contendrá los datos seleccionados en el modal (ej: donacionDetalleId, medicamentoId, bodegaId, etc.)
-      const { resultado, error } = await generarIngresoDesdeDonacion(formData.donacionDetalleId, {
+      const { error } = await generarIngresoDesdeDonacion(formData.donacionDetalleId, {
         medicamentoId: formData.medicamentoId,
         bodegaId: formData.bodegaId,
         numeroLote: formData.numeroLote,
