@@ -48,7 +48,9 @@ async function limpiar(pool, idsDePacientes) {
   // este superusuario: hay que desactivar los triggers de usuario para la limpieza de datos de
   // prueba, mismo patron que ya usan los fixtures pgTAP (ALTER TABLE ... DISABLE TRIGGER USER).
   if (idsDePacientes.length > 0) {
-    await pool.query(`DELETE FROM expedientes WHERE paciente_id = ANY($1::uuid[])`, [idsDePacientes]);
+    await pool.query(`DELETE FROM expedientes WHERE paciente_id = ANY($1::uuid[])`, [
+      idsDePacientes,
+    ]);
     await pool.query(`ALTER TABLE pacientes DISABLE TRIGGER USER`);
     try {
       await pool.query(`DELETE FROM pacientes WHERE id = ANY($1::uuid[])`, [idsDePacientes]);
@@ -89,10 +91,7 @@ async function main() {
     );
     console.log([...numerosDeFicha].sort());
   } finally {
-    await limpiar(
-      pool,
-      filas.map((fila) => fila?.id).filter(Boolean),
-    );
+    await limpiar(pool, filas.map((fila) => fila?.id).filter(Boolean));
     await pool.end();
   }
 }

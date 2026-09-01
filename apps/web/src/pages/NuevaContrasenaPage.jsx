@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { Navigate } from "react-router-dom";
 import { useNuevaContrasena } from "@ecopac/shared";
 import { Card, ErrorState, PrimaryButton, ScreenContainer, TextField } from "../components";

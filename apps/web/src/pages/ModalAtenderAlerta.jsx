@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 
 export function ModalAtenderAlerta({ alerta, onClose, onResolver, errorValidacion }) {
   const [accion, setAccion] = useState("descartado");

@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-export function useRegistroIngreso({ donacionesDisponibles = [], onGuardarExitoso } = {}) {
+export function useRegistroIngreso({ onGuardarExitoso } = {}) {
   const [origen, setOrigenState] = useState("compra"); // 'compra' | 'donacion'
   const [donacionId, setDonacionId] = useState("");
   const [proveedor, setProveedor] = useState("");
