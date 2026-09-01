@@ -1,12 +1,7 @@
 import { View, Text, StyleSheet, ScrollView } from "react-native";
 import { useHistorialDonaciones } from "@ecopac/shared/donaciones";
 import { useSesionCompartida } from "../contexto/SesionProvider";
-import {
-  ScreenContainer,
-  Card,
-  LoadingState,
-  ErrorState,
-} from "../components";
+import { ScreenContainer, Card, LoadingState, ErrorState } from "../components";
 
 export function DonacionesScreen() {
   const { perfil } = useSesionCompartida();
@@ -53,11 +48,11 @@ export function DonacionesScreen() {
   }
 
   const donacionesConfirmadas = donaciones.filter(
-    (d) => d.estado === "confirmada" || !d.estado
+    (d) => d.estado === "confirmada" || !d.estado,
   ).length;
 
   const donantesUnicos = new Set(
-    donaciones.map((d) => d.donanteId || d.donanteNombre).filter(Boolean)
+    donaciones.map((d) => d.donanteId || d.donanteNombre).filter(Boolean),
   ).size;
 
   const formatearMonto = (monto) =>
@@ -97,9 +92,7 @@ export function DonacionesScreen() {
               <View style={[styles.dot, { backgroundColor: "#F59E0B" }]} />
             </View>
             <Text style={styles.kpiLabel}>PENDIENTE</Text>
-            <Text style={[styles.kpiValue, { color: "#D97706" }]}>
-              Q {formatearMonto(135900)}
-            </Text>
+            <Text style={[styles.kpiValue, { color: "#D97706" }]}>Q {formatearMonto(135900)}</Text>
             <Text style={styles.kpiSubtext}>por confirmar</Text>
           </Card>
 
@@ -109,9 +102,7 @@ export function DonacionesScreen() {
               <View style={[styles.dot, { backgroundColor: "#0B99FF" }]} />
             </View>
             <Text style={styles.kpiLabel}>N° DONANTES</Text>
-            <Text style={[styles.kpiValue, { color: "#0284C7" }]}>
-              {donantesUnicos || 6}
-            </Text>
+            <Text style={[styles.kpiValue, { color: "#0284C7" }]}>{donantesUnicos || 6}</Text>
             <Text style={styles.kpiSubtext}>registrados</Text>
           </Card>
 
@@ -171,9 +162,7 @@ export function DonacionesScreen() {
                 </Text>
                 <View style={{ flex: 1.8, alignItems: "center" }}>
                   <View style={styles.badge}>
-                    <Text style={styles.badgeText}>
-                      {(item.tipo || "ECONÓMICA").toUpperCase()}
-                    </Text>
+                    <Text style={styles.badgeText}>{(item.tipo || "ECONÓMICA").toUpperCase()}</Text>
                   </View>
                 </View>
                 <Text style={[styles.descripcionText, { flex: 2.2 }]}>
@@ -184,9 +173,7 @@ export function DonacionesScreen() {
           ) : (
             <>
               <View style={styles.tableRow}>
-                <Text style={[styles.donanteText, { flex: 2 }]}>
-                  Farmacéutica Guatemala S.A.
-                </Text>
+                <Text style={[styles.donanteText, { flex: 2 }]}>Farmacéutica Guatemala S.A.</Text>
                 <View style={{ flex: 1.8, alignItems: "center" }}>
                   <View style={styles.badge}>
                     <Text style={styles.badgeText}>MEDICAMENTOS</Text>
@@ -198,9 +185,7 @@ export function DonacionesScreen() {
               </View>
 
               <View style={styles.tableRow}>
-                <Text style={[styles.donanteText, { flex: 2 }]}>
-                  Rotary Club Guatemala Norte
-                </Text>
+                <Text style={[styles.donanteText, { flex: 2 }]}>Rotary Club Guatemala Norte</Text>
                 <View style={{ flex: 1.8, alignItems: "center" }}>
                   <View style={styles.badge}>
                     <Text style={styles.badgeText}>ECONÓMICA</Text>
@@ -212,9 +197,7 @@ export function DonacionesScreen() {
               </View>
 
               <View style={styles.tableRow}>
-                <Text style={[styles.donanteText, { flex: 2 }]}>
-                  Iglesia Evangélica Bethel
-                </Text>
+                <Text style={[styles.donanteText, { flex: 2 }]}>Iglesia Evangélica Bethel</Text>
                 <View style={{ flex: 1.8, alignItems: "center" }}>
                   <View style={styles.badge}>
                     <Text style={styles.badgeText}>INSUMOS</Text>
@@ -226,9 +209,7 @@ export function DonacionesScreen() {
               </View>
 
               <View style={styles.tableRow}>
-                <Text style={[styles.donanteText, { flex: 2 }]}>
-                  Embajada de Japón — JICA
-                </Text>
+                <Text style={[styles.donanteText, { flex: 2 }]}>Embajada de Japón — JICA</Text>
                 <View style={{ flex: 1.8, alignItems: "center" }}>
                   <View style={styles.badge}>
                     <Text style={styles.badgeText}>ECONÓMICA</Text>
@@ -240,9 +221,7 @@ export function DonacionesScreen() {
               </View>
 
               <View style={styles.tableRow}>
-                <Text style={[styles.donanteText, { flex: 2 }]}>
-                  Banco Industrial
-                </Text>
+                <Text style={[styles.donanteText, { flex: 2 }]}>Banco Industrial</Text>
                 <View style={{ flex: 1.8, alignItems: "center" }}>
                   <View style={styles.badge}>
                     <Text style={styles.badgeText}>ECONÓMICA</Text>
@@ -254,9 +233,7 @@ export function DonacionesScreen() {
               </View>
 
               <View style={styles.tableRow}>
-                <Text style={[styles.donanteText, { flex: 2 }]}>
-                  Dr. Fernando López
-                </Text>
+                <Text style={[styles.donanteText, { flex: 2 }]}>Dr. Fernando López</Text>
                 <View style={{ flex: 1.8, alignItems: "center" }}>
                   <View style={styles.badge}>
                     <Text style={styles.badgeText}>MEDICAMENTOS</Text>
