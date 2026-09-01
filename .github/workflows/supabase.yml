@@ -28,10 +28,14 @@ concurrency:
   # c71692f se perdieron exactamente asi, con cero jobs ejecutados; el siguiente (93666b6)
   # fallo, y con el se rompio la cadena de recuperacion que los cubria.
   #
-  # El precio es que dos despliegues pueden solaparse. Se prefiere a perder uno en silencio:
-  # `db push` aplica migracion por migracion y el peor caso del solape es un fallo que se
-  # reintenta, no una base a medias. Ademas el paso "Comprobar el historial remoto" lo detecta
-  # y lo explica.
+  # El precio declarado era que dos despliegues pueden solaparse, y salio caro: el mas nuevo
+  # aplica una migracion, el mas viejo la ve en la base sin tenerla en su commit y muere con
+  # "Remote migration versions not found", un fallo que no significa nada pero es identico al
+  # que si significa algo. Fue la causa de la mayoria de los despliegues rojos de agosto.
+  #
+  # Ya no se paga aqui sino en "Comprobar el historial remoto", que antes de tocar la base
+  # comprueba si su commit sigue siendo el tip de la rama y se salta el despliegue si no lo es.
+  # No se pierde nada: `db push` es acumulativo y la corrida del tip sube todo lo pendiente.
   #
   # En PR se conserva el grupo por rama, que es donde si conviene cancelar lo superado.
   group: supabase-${{ github.ref }}-${{ github.event_name == 'push' && github.sha || 'pr' }}
@@ -483,6 +487,25 @@ jobs:
             | sed -n 's/.*migration repair --status reverted //p' \
             | tr -s ' ' '\n' | grep -E '^[0-9]+$' | sort -u | xargs)"
 
+          # Lo normal es que la rama del PR no tenga las migraciones que entraron a la base DESPUES
+          # de abrirla, y eso no es deriva: es una rama desactualizada, que no le hace dano a nadie.
+          # La comparacion util es contra el tip de la rama base, no contra el commit del PR. Sin
+          # este filtro el aviso salta en casi todos los PR y deja de significar algo (issue #651).
+          git fetch --no-tags --depth=1 --quiet origin "$GITHUB_BASE_REF"
+          en_la_base="$(git ls-tree --name-only FETCH_HEAD supabase/migrations/ | xargs -r -n1 basename)"
+
+          huerfanas=""
+          for v in $versiones; do
+            printf '%s\n' "$en_la_base" | grep -q "^${v}_" || huerfanas="$huerfanas $v"
+          done
+
+          if [ -z "$huerfanas" ]; then
+            echo "Las versiones que le faltan a esta rama ($versiones) ya estan en $GITHUB_BASE_REF; no hay deriva."
+            exit 0
+          fi
+
+          versiones="$(echo "$huerfanas" | xargs)"
+
           echo "::warning::La base de ecopac-dev tiene migraciones que develop no ($versiones). Hoy TODO push a develop falla, traiga SQL o no."
 
           {
@@ -586,10 +609,55 @@ jobs:
       # texto, este paso deja pasar y `db push` vuelve a fallar solo: se degrada a lo de antes,
       # nunca a un verde falso.
       - name: Comprobar el historial remoto
+        id: historial
         if: steps.check.outputs.listo == 'true'
         run: |
+          # `desplegar` decide si los pasos que escriben en la base llegan a correr. Se escribe
+          # una sola vez, en la salida que corresponda: nada de un `true` por adelantado que luego
+          # se pise con un `false`, porque eso deja el resultado a merced de que GitHub resuelva
+          # las claves repetidas del fichero de outputs quedandose con la ultima.
+
+          # PRIMERO: ¿este commit sigue siendo el tip de la rama?
+          #
+          # Los grupos de concurrencia llevan el SHA a proposito, para no perder corridas (ver el
+          # bloque `concurrency` de arriba y el Caso 5 de docs/CI-CD.md). El precio declarado era
+          # que dos despliegues pueden solaparse -- y solaparse no es inofensivo: el mas nuevo
+          # aplica una migracion, el mas viejo la ve en la base sin tenerla en su commit, y falla
+          # con "Remote migration versions not found". Eso, y no una migracion aplicada a mano,
+          # fue la causa de la mayoria de los despliegues rojos de agosto.
+          #
+          # Se corta aqui, que es donde no cuesta nada: si ya hay un commit mas nuevo en la rama,
+          # su corrida va a desplegar todo lo pendiente -- `supabase db push` es acumulativo y
+          # sube todo lo que falte, no solo lo de su propio commit. Esta corrida no tiene nada
+          # que aportar y lo unico que puede hacer es estorbar. Sale en verde sin tocar la base.
+          #
+          # No se resuelve con `concurrency` a nivel de job: GitHub guarda UNA sola corrida en
+          # espera por grupo, asi que encolar despliegues los cancela entre si y un `cancelled`
+          # se reporta como fallo. Esto es lo mismo pero sin efectos raros.
+          git fetch --no-tags --depth=1 --quiet origin "$GITHUB_REF_NAME"
+          tip="$(git rev-parse FETCH_HEAD)"
+
+          if [ "$tip" != "$GITHUB_SHA" ]; then
+            echo "desplegar=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Ya hay un commit mas nuevo en $GITHUB_REF_NAME (${tip:0:7}); su corrida despliega todo lo pendiente. Esta no toca la base."
+            {
+              echo "## Corrida superada; no se desplego nada"
+              echo
+              echo "**No se aplico ninguna migracion y la base no quedo a medias.**"
+              echo
+              echo "Esta corrida despliega \`${GITHUB_SHA:0:7}\`, pero \`$GITHUB_REF_NAME\` ya va por"
+              echo "\`${tip:0:7}\`. \`supabase db push\` es acumulativo: la corrida del commit mas nuevo"
+              echo "sube todo lo que falte, incluido lo que traia este. Dos despliegues a la vez sobre la"
+              echo "misma base solo se pisan."
+              echo
+              echo "**No hay nada que hacer.** Si la corrida de \`${tip:0:7}\` falla, se arregla ahi."
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
           if salida="$(supabase db push --dry-run 2>&1)"; then
             echo "$salida"
+            echo "desplegar=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
@@ -601,6 +669,7 @@ jobs:
             # no toca diagnosticarla aqui; se deja seguir para que `Aplicar migraciones` falle
             # con su propio mensaje, que es el que sirve en ese caso.
             echo "::warning::El dry-run fallo por algo que no es deriva de historial; sigue el despliegue."
+            echo "desplegar=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
@@ -608,6 +677,60 @@ jobs:
           versiones="$(printf '%s' "$limpia" \
             | sed -n 's/.*migration repair --status reverted //p' \
             | tr -s ' ' '\n' | grep -E '^[0-9]+$' | sort -u | xargs)"
+
+          # DERIVA DE VERDAD O CORRIDA ADELANTADA: no son lo mismo y no se arreglan igual.
+          #
+          # El mensaje del CLI es identico en los dos casos, y hasta la issue #651 este paso los
+          # trataba a los dos como deriva: fallaba, abria issue y mandaba a buscar un PR que ya
+          # estaba mergeado. La mayoria de los despliegues rojos de agosto fueron eso.
+          #
+          # La guarda del tip, arriba, ya descarta el caso comun. Lo que queda aqui es la ventana
+          # que esa guarda no puede cerrar: el merge nuevo entro DESPUES de que se comprobo el tip
+          # y su despliegue llego a la base antes que este dry-run. Por eso se vuelve a consultar
+          # el tip -- el de hace unos segundos ya no sirve.
+          #
+          # La pregunta que separa los dos casos es una sola: **el archivo de esa version, ¿esta
+          # en el tip de la rama ahora mismo?**
+          #
+          #   - No esta -> deriva real. Alguien aplico esa migracion a mano contra la base antes
+          #     de mergear su PR. Falla, que es lo correcto: mientras dure, todo push a la rama va
+          #     a fallar y hace falta que una persona lo arregle.
+          #   - Si esta -> se adelanto un despliegue mas nuevo. `db push` es acumulativo y la
+          #     corrida de ese commit sube todo. Se salta el push y se termina en verde.
+          #
+          # Caso real: 2c12f03 (#648) y a38691c (#649) se mergearon con dos minutos de diferencia
+          # el 1 de septiembre. El #649 traia la 00108, la aplico primero, y el despliegue del
+          # #648 -que no traia SQL- fallo con "Remote migration versions not found ... 00108".
+          git fetch --no-tags --depth=1 --quiet origin "$GITHUB_REF_NAME"
+          en_el_tip="$(git ls-tree --name-only FETCH_HEAD supabase/migrations/ | xargs -r -n1 basename)"
+
+          huerfanas=""
+          for v in $versiones; do
+            printf '%s\n' "$en_el_tip" | grep -q "^${v}_" || huerfanas="$huerfanas $v"
+          done
+
+          if [ -z "$huerfanas" ]; then
+            echo "desplegar=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Un despliegue mas nuevo de $GITHUB_REF_NAME ya aplico $versiones. Esta corrida quedo atras y no tiene nada que subir."
+            {
+              echo "## Corrida superada; no se desplego nada"
+              echo
+              echo "**No se aplico ninguna migracion y la base no quedo a medias.**"
+              echo
+              echo "\`${{ steps.check.outputs.ambiente }}\` ya tiene aplicadas estas versiones, y sus archivos"
+              echo "ya estan en el tip de \`$GITHUB_REF_NAME\` -- solo que todavia no en el commit"
+              echo "\`${GITHUB_SHA:0:7}\` que despliega esta corrida:"
+              echo
+              for v in $versiones; do echo "- \`$v\`"; done
+              echo
+              echo "Pasa cuando dos PR se mergean con segundos de diferencia: sus despliegues se solapan y"
+              echo "el mas nuevo llega primero. \`supabase db push\` es acumulativo, asi que la corrida del"
+              echo "commit mas nuevo sube todo lo pendiente. **No hay nada que hacer.**"
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          versiones="$(echo "$huerfanas" | xargs)"
 
           {
             echo "## La base de ${{ steps.check.outputs.ambiente }} y esta rama no coinciden"
@@ -649,7 +772,7 @@ jobs:
           exit 1
 
       - name: Aplicar migraciones
-        if: steps.check.outputs.listo == 'true'
+        if: steps.check.outputs.listo == 'true' && steps.historial.outputs.desplegar == 'true'
         run: supabase db push
 
       # Las Edge Functions tambien son despliegue, y hasta ahora no las desplegaba nadie.
@@ -679,7 +802,7 @@ jobs:
       # paso. El resultado se reporta abajo y el job "Avisar fallo" no se dispara por esto.
       - name: Desplegar Edge Functions
         id: funciones
-        if: steps.check.outputs.listo == 'true'
+        if: steps.check.outputs.listo == 'true' && steps.historial.outputs.desplegar == 'true'
         continue-on-error: true
         run: |
           if ! ls supabase/functions/*/index.* >/dev/null 2>&1; then
@@ -695,7 +818,7 @@ jobs:
           supabase functions deploy --use-api
 
       - name: Resumen del despliegue
-        if: steps.check.outputs.listo == 'true'
+        if: steps.check.outputs.listo == 'true' && steps.historial.outputs.desplegar == 'true'
         run: |
           {
             echo "## Migraciones aplicadas en ${{ steps.check.outputs.ambiente }}"
