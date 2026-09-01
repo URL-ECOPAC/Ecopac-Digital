@@ -27,6 +27,7 @@ import DonacionesScreen from "../screens/DonacionesScreen";
 import ProyectosScreen from "../screens/ProyectosScreen";
 import PresupuestosScreen from "../screens/PresupuestosScreen";
 import VoluntariosScreen from "../screens/VoluntariosScreen";
+import FichaVoluntarioScreen from "../screens/FichaVoluntarioScreen";
 
 export { ROUTES };
 
@@ -125,6 +126,13 @@ function InicioNavigator() {
           name={ROUTES.VOLUNTARIOS}
           component={VoluntariosScreen}
           options={{ title: "Voluntarios y medicos" }}
+        />
+      )}
+      {idsVisibles.includes("voluntarios") && (
+        <InicioStack.Screen
+          name={ROUTES.FICHA_VOLUNTARIO}
+          component={FichaVoluntarioScreen}
+          options={{ title: "Ficha del personal" }}
         />
       )}
     </InicioStack.Navigator>

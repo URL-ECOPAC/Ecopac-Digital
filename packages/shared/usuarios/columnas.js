@@ -23,6 +23,16 @@ export const COLUMNAS_USUARIO = [
   { id: "fechaIngreso", label: "Ingreso", tipo: TIPOS_DE_PRESENTACION.FECHA },
 ];
 
+/**
+ * Subconjunto de COLUMNAS_USUARIO para la tarjeta movil del listado (issue #272, criterio 3:
+ * avatar, nombre, especialidad o rol y estado). Mismo patron que COLUMNAS_PACIENTE_MOVIL en
+ * pacientes/columnas.js: un filtro sobre el descriptor de la web, no una copia con nombres
+ * propios, para que las dos plataformas no puedan divergir en como se llama cada dato.
+ */
+export const COLUMNAS_USUARIO_MOVIL = COLUMNAS_USUARIO.filter((columna) =>
+  ["avatar", "nombreCompleto", "rol", "especialidades", "estado"].includes(columna.id),
+);
+
 export const CAMPOS_FICHA_VOLUNTARIO = [
   { id: "nombreCompleto", label: "Nombre", tipo: TIPOS_DE_PRESENTACION.TEXTO },
   { id: "email", label: "Correo", tipo: TIPOS_DE_PRESENTACION.TEXTO },

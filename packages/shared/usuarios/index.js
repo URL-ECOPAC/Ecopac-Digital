@@ -22,3 +22,4 @@ export * from "./usePerfilPropio.js";
 export * from "./useGestionPermisos.js";
 export * from "./ficha.js";
 export * from "./useHistorialDePersona.js";
+export * from "./useFichaVoluntario.js";

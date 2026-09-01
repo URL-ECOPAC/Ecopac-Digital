@@ -17,6 +17,7 @@ export const ROUTES = {
   PROYECTOS: "Proyectos",
   PRESUPUESTOS: "Presupuestos",
   VOLUNTARIOS: "Voluntarios",
+  FICHA_VOLUNTARIO: "FichaVoluntario",
   BUSQUEDA_PACIENTE: "BusquedaPaciente",
   FICHA_PACIENTE: "FichaPaciente",
   HISTORIAL_PACIENTE: "HistorialPaciente",
