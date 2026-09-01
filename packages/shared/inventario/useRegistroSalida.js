@@ -11,7 +11,7 @@ export function useRegistroSalida({ supabase, onExito }) {
     const [error, setError] = useState(null);
     const [cargando, setCargando] = useState(false);
 
-    useEffect(() => {
+   useEffect(() => {
         if (!medicamentoId) {
             setLotesDisponibles([]);
             setLoteSeleccionado(null);
@@ -52,7 +52,7 @@ export function useRegistroSalida({ supabase, onExito }) {
         };
 
         cargarLotesFEFO();
-    }, [medicamentoId]);
+    }, [medicamentoId, supabase]);
 
     const seleccionarLote = (lote) => {
         const hoy = new Date().toISOString().split("T")[0];
@@ -89,7 +89,7 @@ export function useRegistroSalida({ supabase, onExito }) {
         try {
             setCargando(true);
             if (onExito) onExito(payload);
-        } catch (err) {
+        } catch {
             setError("Error al registrar la salida de inventario.");
         } finally {
             setCargando(false);
