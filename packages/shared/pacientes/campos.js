@@ -8,11 +8,9 @@
 // (ver AGENTS.md, "Fuente de verdad").
 
 import { TIPOS_DE_CAMPO } from "../descriptores.js";
-import { ETIQUETAS_IDIOMA, IDIOMAS, TIPOS_SANGUINEOS, opcionesDe } from "../enums.js";
+import { TIPOS_SANGUINEOS, opcionesDe } from "../enums.js";
 
 /** Valores de idioma_preferido (supabase/migrations/00001_initial_schema.sql). */
-export const OPCIONES_IDIOMA = opcionesDe(IDIOMAS, ETIQUETAS_IDIOMA);
-
 /** Valores de tipo_sanguineo (supabase/migrations/00035_pacientes_tipo_sangre_responsable.sql). */
 export const OPCIONES_TIPO_SANGRE = opcionesDe(TIPOS_SANGUINEOS, {});
 
@@ -64,7 +62,9 @@ export const CAMPOS_REGISTRO_PACIENTE = [
     id: "idioma",
     label: "Idioma",
     tipo: TIPOS_DE_CAMPO.SELECT,
-    opciones: OPCIONES_IDIOMA,
+    // Desde la 00110 el idioma es un catalogo en la base, no un enum: la lista ya no se puede
+    // escribir aqui porque el objetivo es poder agregar idiomas sin desplegar (issue #663).
+    opcionesDesde: "idiomas",
     validacion: { requerido: true },
   },
   {

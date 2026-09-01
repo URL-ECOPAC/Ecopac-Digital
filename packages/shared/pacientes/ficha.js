@@ -1,5 +1,5 @@
 import { calcularEdad } from "../formato/fechas.js";
-import { OPCIONES_IDIOMA, OPCIONES_TIPO_SANGRE } from "./campos.js";
+import { OPCIONES_TIPO_SANGRE } from "./campos.js";
 import { OPCIONES_ESTADO_CONDICION } from "./condiciones.campos.js";
 import { ESTADOS_CONDICION_CRONICA } from "../enums.js";
 import { puedeEditarPaciente, puedeVerHistorial } from "./permisos.js";
@@ -71,7 +71,9 @@ export function valoresDeFichaPaciente(paciente) {
     fechaNacimiento: paciente.fechaNacimiento ?? null,
     sexo: paciente.sexo ?? null,
     tipoSangre: etiquetaDeOpcion(OPCIONES_TIPO_SANGRE, paciente.tipoSangre),
-    idioma: etiquetaDeOpcion(OPCIONES_IDIOMA, paciente.idioma),
+    // El nombre lo trae el catalogo embebido (00110); el codigo crudo queda de respaldo por si
+    // la consulta no pidio el embebido.
+    idioma: paciente.catalogoIdioma?.nombre ?? paciente.idioma ?? null,
     comunidad: paciente.comunidad?.nombre ?? null,
     telefonoContacto: paciente.telefonoContacto ?? null,
     nombreResponsable: paciente.nombreResponsable ?? null,
