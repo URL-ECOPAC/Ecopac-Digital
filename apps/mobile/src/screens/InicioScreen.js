@@ -2,7 +2,7 @@ import React from "react";
 import { StyleSheet, Text, View, ScrollView, TouchableOpacity, SafeAreaView } from "react-native";
 import { modulosVisibles } from "@ecopac/shared";
 import { useSesionCompartida } from "../contexto/SesionProvider";
-import { rutas } from "../navigation/rutas";
+import { ROUTES } from "../navigation/rutas";
 
 export default function InicioScreen({ navigation }) {
   const { perfil } = useSesionCompartida();
@@ -18,10 +18,10 @@ export default function InicioScreen({ navigation }) {
       navigation.navigate(modulo.tabMovil);
     } else {
       const mapaRutas = {
-        donaciones: rutas.DONACIONES,
-        presupuestos: rutas.PRESUPUESTOS,
-        proyectos: rutas.PROYECTOS,
-        voluntarios: rutas.VOLUNTARIOS,
+        donaciones: ROUTES.DONACIONES,
+        presupuestos: ROUTES.PRESUPUESTOS,
+        proyectos: ROUTES.PROYECTOS,
+        voluntarios: ROUTES.VOLUNTARIOS,
       };
       if (mapaRutas[modulo.id]) {
         navigation.navigate(mapaRutas[modulo.id]);
