@@ -95,41 +95,11 @@ function InicioNavigator() {
         component={VoluntariosScreen}
         options={opcionesStack("Voluntarios y médicos")}
       />
-      {idsVisibles.includes("donaciones") && (
-        <InicioStack.Screen
-          name={ROUTES.DONACIONES}
-          component={DonacionesScreen}
-          options={{ title: "Donaciones" }}
-        />
-      )}
-      {idsVisibles.includes("proyectos") && (
-        <InicioStack.Screen
-          name={ROUTES.PROYECTOS}
-          component={ProyectosScreen}
-          options={{ title: "Proyectos" }}
-        />
-      )}
-      {idsVisibles.includes("presupuestos") && (
-        <InicioStack.Screen
-          name={ROUTES.PRESUPUESTOS}
-          component={PresupuestosScreen}
-          options={{ title: "Presupuestos" }}
-        />
-      )}
-      {idsVisibles.includes("voluntarios") && (
-        <InicioStack.Screen
-          name={ROUTES.VOLUNTARIOS}
-          component={VoluntariosScreen}
-          options={{ title: "Voluntarios y medicos" }}
-        />
-      )}
-      {idsVisibles.includes("voluntarios") && (
-        <InicioStack.Screen
-          name={ROUTES.FICHA_VOLUNTARIO}
-          component={FichaVoluntarioScreen}
-          options={{ title: "Ficha del personal" }}
-        />
-      )}
+      <InicioStack.Screen
+        name={ROUTES.FICHA_VOLUNTARIO}
+        component={FichaVoluntarioScreen}
+        options={opcionesStack("Ficha del personal")}
+      />
     </InicioStack.Navigator>
   );
 }
