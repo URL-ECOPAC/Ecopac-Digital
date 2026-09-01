@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* global console, process */
 // Prueba manual de concurrencia real para numero_ficha (issue #114, migracion 00081).
 //
 // pgTAP (supabase/tests/database/) corre en una sola sesion/transaccion y no puede probar dos

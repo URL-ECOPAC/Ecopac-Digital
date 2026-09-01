@@ -170,7 +170,7 @@ export function useBusquedaPacientes({
       setPagina(paginaAConsultar);
       setCargando(false);
     },
-    [termino, comunidad, porPagina, claveDeFiltros],
+    [termino, comunidad, porPagina, filtros],
   );
 
   useEffect(() => {
