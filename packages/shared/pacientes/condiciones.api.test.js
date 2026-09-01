@@ -194,7 +194,9 @@ describe("asociarCondicion", () => {
     });
 
     expect(error).toBeNull();
-    expect(condicion).toEqual({ id: PADECIMIENTO });
+    // condicion viaja aplanada, igual que en la lectura: la fila cruda trae el embebido como
+    // objeto y la columna que la muestra es de texto (issue #656).
+    expect(condicion).toEqual({ id: PADECIMIENTO, condicion: null });
 
     const insertado = pasos(cliente, "insert")[0].valores;
     expect(insertado).toMatchObject({
@@ -391,5 +393,60 @@ describe("obtenerPacientesConCondicion", () => {
 
     expect(pacientes).toEqual([]);
     expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.PERMISO_DENEGADO);
+  });
+});
+
+// El fallo que motiva la issue #656: la columna Condicion de la ficha mostraba "[object Object]".
+// COLUMNAS_DE_CONDICION_CRONICA pide condiciones_cronicas(nombre) embebido, y
+// COLUMNAS_CONDICION_DEL_PACIENTE declara esa columna como texto.
+describe("la condicion viaja aplanada a su nombre", () => {
+  it("obtenerCondicionesDelPaciente devuelve el nombre, no el objeto embebido", async () => {
+    crearCliente({
+      data: [
+        { id: "pc1", estado: "activa", condicion: { nombre: "Diabetes" } },
+        { id: "pc2", estado: "controlada", condicion: { nombre: "Asma" } },
+      ],
+      error: null,
+    });
+
+    const { condiciones } = await obtenerCondicionesDelPaciente(PACIENTE);
+
+    expect(condiciones.map((una) => una.condicion)).toEqual(["Diabetes", "Asma"]);
+    for (const una of condiciones) {
+      expect(String(una.condicion)).not.toContain("[object Object]");
+    }
+  });
+
+  it("una fila sin condicion en el catalogo no revienta ni cuela un objeto", async () => {
+    crearCliente({ data: [{ id: "pc1", estado: "activa", condicion: null }], error: null });
+
+    const { condiciones } = await obtenerCondicionesDelPaciente(PACIENTE);
+
+    expect(condiciones[0].condicion).toBeNull();
+  });
+
+  it("conserva el resto de columnas de la fila", async () => {
+    crearCliente({
+      data: [
+        {
+          id: "pc1",
+          estado: "activa",
+          fechaDiagnostico: "2026-01-15",
+          notas: "control trimestral",
+          condicion: { nombre: "Hipertension" },
+        },
+      ],
+      error: null,
+    });
+
+    const { condiciones } = await obtenerCondicionesDelPaciente(PACIENTE);
+
+    expect(condiciones[0]).toEqual({
+      id: "pc1",
+      estado: "activa",
+      fechaDiagnostico: "2026-01-15",
+      notas: "control trimestral",
+      condicion: "Hipertension",
+    });
   });
 });
