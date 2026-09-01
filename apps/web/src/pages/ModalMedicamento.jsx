@@ -52,11 +52,15 @@ export default function ModalMedicamento({
           padding: "32px",
           boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
           position: "relative",
+          margin: "16px",
+          boxSizing: "border-box",
         }}
       >
-        {/* Botón cerrar */}
+        {/* Botón Cerrar */}
         <button
           onClick={onClose}
+          type="button"
+          disabled={cargando}
           style={{
             position: "absolute",
             top: "24px",
@@ -71,15 +75,22 @@ export default function ModalMedicamento({
           ✕
         </button>
 
-        {/* Encabezado */}
-        <h2 style={{ fontSize: "20px", fontWeight: "800", color: "#0f172a", margin: "0 0 4px 0" }}>
+        {/* Título */}
+        <h2
+          style={{
+            fontSize: "20px",
+            fontWeight: "800",
+            color: "#0f172a",
+            margin: "0 0 4px 0",
+          }}
+        >
           {modoEdicion ? "Editar Medicamento" : "Nuevo Medicamento"}
         </h2>
         <p style={{ fontSize: "12px", color: "#64748b", margin: "0 0 20px 0" }}>
           Define los datos generales y especificaciones técnicas
         </p>
 
-        {/* Advertencia de duplicado */}
+        {/* Advertencia Duplicado */}
         {advertenciaDuplicado && (
           <div
             style={{
@@ -97,6 +108,7 @@ export default function ModalMedicamento({
           </div>
         )}
 
+        {/* Formulario */}
         <form
           onSubmit={handleFormSubmit}
           style={{ display: "flex", flexDirection: "column", gap: "16px" }}
@@ -110,6 +122,7 @@ export default function ModalMedicamento({
                 fontWeight: "800",
                 color: "#475569",
                 marginBottom: "6px",
+                textTransform: "uppercase",
               }}
             >
               NOMBRE COMERCIAL *
@@ -118,7 +131,7 @@ export default function ModalMedicamento({
               type="text"
               name="nombre"
               required
-              placeholder="Ej. Paracetamol, Amoxicilina"
+              placeholder="Ej. Dolo Neurobion, Amoxicilina"
               value={formData.nombre || ""}
               onChange={handleChange}
               style={{
@@ -143,7 +156,14 @@ export default function ModalMedicamento({
                 marginBottom: "6px",
               }}
             >
-              <label style={{ fontSize: "10px", fontWeight: "800", color: "#475569" }}>
+              <label
+                style={{
+                  fontSize: "10px",
+                  fontWeight: "800",
+                  color: "#475569",
+                  textTransform: "uppercase",
+                }}
+              >
                 PRINCIPIO ACTIVO *
               </label>
               {!modoEdicion && (
@@ -153,7 +173,7 @@ export default function ModalMedicamento({
                   style={{
                     background: "none",
                     border: "none",
-                    color: "#10b981",
+                    color: "#059669",
                     fontSize: "11px",
                     fontWeight: "700",
                     cursor: "pointer",
@@ -164,9 +184,9 @@ export default function ModalMedicamento({
               )}
             </div>
             <select
-              name="principio_activo_id"
+              name="principioActivoId"
               required={!modoEdicion}
-              value={formData.principio_activo_id || ""}
+              value={String(formData.principioActivoId || "")}
               onChange={handleChange}
               style={{
                 width: "100%",
@@ -182,7 +202,7 @@ export default function ModalMedicamento({
               <option value="">Selecciona principio activo...</option>
               {Array.isArray(principiosActivos) &&
                 principiosActivos.map((pa) => (
-                  <option key={pa.id} value={pa.id}>
+                  <option key={pa.id} value={String(pa.id)}>
                     {pa.nombre}
                   </option>
                 ))}
@@ -190,7 +210,13 @@ export default function ModalMedicamento({
           </div>
 
           {/* Concentración y Presentación */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: "12px",
+            }}
+          >
             <div>
               <label
                 style={{
@@ -199,6 +225,7 @@ export default function ModalMedicamento({
                   fontWeight: "800",
                   color: "#475569",
                   marginBottom: "6px",
+                  textTransform: "uppercase",
                 }}
               >
                 CONCENTRACIÓN *
@@ -230,6 +257,7 @@ export default function ModalMedicamento({
                   fontWeight: "800",
                   color: "#475569",
                   marginBottom: "6px",
+                  textTransform: "uppercase",
                 }}
               >
                 PRESENTACIÓN *
@@ -261,8 +289,14 @@ export default function ModalMedicamento({
             </div>
           </div>
 
-          {/* Marca / Laboratorio y Forma Farmacéutica */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+          {/* Marca y Forma Farmacéutica */}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: "12px",
+            }}
+          >
             <div>
               <label
                 style={{
@@ -271,6 +305,7 @@ export default function ModalMedicamento({
                   fontWeight: "800",
                   color: "#475569",
                   marginBottom: "6px",
+                  textTransform: "uppercase",
                 }}
               >
                 MARCA / LABORATORIO *
@@ -302,6 +337,7 @@ export default function ModalMedicamento({
                   fontWeight: "800",
                   color: "#475569",
                   marginBottom: "6px",
+                  textTransform: "uppercase",
                 }}
               >
                 FORMA FARMACÉUTICA
@@ -325,9 +361,14 @@ export default function ModalMedicamento({
             </div>
           </div>
 
-          {/* Botones del pie del modal */}
+          {/* Botones de Acción */}
           <div
-            style={{ display: "flex", justifyContent: "flex-end", gap: "12px", marginTop: "12px" }}
+            style={{
+              display: "flex",
+              justifyContent: "flex-end",
+              gap: "12px",
+              marginTop: "12px",
+            }}
           >
             <button
               type="button"
@@ -353,11 +394,11 @@ export default function ModalMedicamento({
                 padding: "10px 28px",
                 borderRadius: "9999px",
                 border: "none",
-                backgroundColor: "#10b981",
+                backgroundColor: "#059669", // Mismo verde uniforme
                 color: "#ffffff",
                 fontSize: "13px",
                 fontWeight: "700",
-                cursor: "pointer",
+                cursor: cargando ? "not-allowed" : "pointer",
                 opacity: cargando ? 0.7 : 1,
               }}
             >

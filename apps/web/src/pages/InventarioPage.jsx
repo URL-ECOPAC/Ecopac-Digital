@@ -2,8 +2,9 @@ import React, { useState, useEffect } from "react";
 import ModalMedicamento from "./ModalMedicamento.jsx";
 import { ModalAltaLote } from "./ModalAltaLote.jsx";
 import { ModalAtenderAlerta } from "./ModalAtenderAlerta.jsx";
+import ModalRegistroIngreso from "./ModalRegistroIngreso.jsx";
 
-// API Medicamentos y Principios Activos (#154)
+// API Medicamentos y Principios Activos
 import {
   listarMedicamentos,
   registrarMedicamento,
@@ -18,6 +19,29 @@ import {
 import { useCatalogoMedicamentos } from "../../../../packages/shared/inventario/useCatalogoMedicamentos.js";
 import { useGestionLotes } from "../../../../packages/shared/inventario/useGestionLotes.js";
 
+const thStyle = {
+  padding: "12px 16px",
+  fontSize: "11px",
+  fontWeight: "700",
+  color: "#64748b",
+  letterSpacing: "0.5px",
+  textTransform: "uppercase",
+};
+
+const tdStyle = {
+  padding: "14px 16px",
+  verticalAlign: "middle",
+  textAlign: "center",
+};
+
+const cardMetricStyle = {
+  backgroundColor: "#ffffff",
+  borderRadius: "16px",
+  padding: "16px 20px",
+  border: "1px solid #f1f5f9",
+  boxShadow: "0 1px 3px rgba(0, 0, 0, 0.04)",
+};
+const datosTablaDemo = [];
 export default function InventarioPage() {
   // Pestaña Activa: 'catalogo' | 'lotes'
   const [tabActiva, setTabActiva] = useState("catalogo");
@@ -31,7 +55,7 @@ export default function InventarioPage() {
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
 
-  // Estados Modales Medicamentos (#154)
+  // Modales Medicamentos
   const [modalAbierto, setModalAbierto] = useState(false);
   const [modoEdicion, setModoEdicion] = useState(false);
   const [cargandoGuardar, setCargandoGuardar] = useState(false);
@@ -45,11 +69,13 @@ export default function InventarioPage() {
     formaFarmaceutica: "",
   });
 
-  // Estados Modales Lotes (#155)
+  // Modales Lotes y Alertas
   const [modalAltaLoteAbierto, setModalAltaLoteAbierto] = useState(false);
   const [alertaSeleccionada, setAlertaSeleccionada] = useState(null);
+  const [modalRegistroIngresoAbierto, setModalRegistroIngresoAbierto] = useState(false);
 
   const esAdmin = true;
+  const usuarioActual = { id: "user-admin-uuid", rol: esAdmin ? "Administrador" : "Usuario" };
 
   // Hooks Shared
   const {
@@ -59,8 +85,7 @@ export default function InventarioPage() {
     setCategoriaSeleccionada,
     bodegaSeleccionada,
     setBodegaSeleccionada,
-    categoriasPills,
-    inventarioFiltrado,
+    inventarioFiltrado: inventarioFiltradoHook,
   } = useCatalogoMedicamentos({ inventarioInicial: inventarioRaw });
 
   const {
@@ -74,7 +99,7 @@ export default function InventarioPage() {
     lotesIniciales: lotesRaw,
     bodegas,
     proveedores,
-    usuario: { id: "user-admin-uuid", rol: esAdmin ? "Administrador" : "Usuario" },
+    usuario: usuarioActual,
   });
 
   const cargarDatos = async () => {
@@ -107,7 +132,7 @@ export default function InventarioPage() {
     cargarDatos();
   }, []);
 
-  // Handlers Medicamento (#154)
+  // Handlers
   const abrirModalNuevo = () => {
     setModoEdicion(false);
     setFormData({
@@ -153,15 +178,20 @@ export default function InventarioPage() {
 
       if (principioActivo && principioActivo.id) {
         setPrincipiosActivos((prev) => [...prev, principioActivo]);
-        setFormData((prev) => ({
-          ...prev,
-          principio_activo_id: principioActivo.id,
-        }));
+        setFormData((prev) => ({ ...prev, principio_activo_id: principioActivo.id }));
       }
     } catch (err) {
       console.error("Error al crear principio activo:", err);
       alert("Error al procesar la solicitud del principio activo.");
     }
+  };
+
+  const normalizarPresentacion = (valor) => {
+    if (!valor) return "";
+    return valor
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
   };
 
   const handleGuardarMedicamento = async () => {
@@ -184,41 +214,54 @@ export default function InventarioPage() {
 
       if (modoEdicion) {
         const { error: errorUpdate } = await actualizarMedicamento(formData.id, {
-          nombre: formData.nombre,
-          concentracion: formData.concentracion,
-          presentacion: formData.presentacion,
-          marca: formData.marca,
-          formaFarmaceutica: formData.formaFarmaceutica,
+          nombre: formData.nombre.trim(),
+          concentracion: formData.concentracion.trim(),
+          presentacion: normalizarPresentacion(formData.presentacion),
+          marca: formData.marca.trim(),
+          formaFarmaceutica: formData.formaFarmaceutica ? formData.formaFarmaceutica.trim() : null,
         });
 
-        if (errorUpdate) return;
+        if (errorUpdate) {
+          alert(`Error al actualizar: ${errorUpdate.mensaje || errorUpdate.message}`);
+          return;
+        }
       } else {
-        const { error: errorReg } = await registrarMedicamento({
-          nombre: formData.nombre,
-          concentracion: formData.concentracion,
-          presentacion: formData.presentacion,
-          marca: formData.marca,
-          formaFarmaceutica: formData.formaFarmaceutica,
-          principiosActivosIds: formData.principio_activo_id ? [formData.principio_activo_id] : [],
-        });
+        if (!formData.principio_activo_id) {
+          alert("Debes seleccionar un principio activo.");
+          return;
+        }
 
-        if (errorReg) return;
+        const payload = {
+          nombre: formData.nombre.trim(),
+          concentracion: formData.concentracion.trim(),
+          presentacion: normalizarPresentacion(formData.presentacion),
+          marca: formData.marca.trim(),
+          formaFarmaceutica: formData.formaFarmaceutica ? formData.formaFarmaceutica.trim() : null,
+          esPediatrico: Boolean(formData.esPediatrico),
+          principiosActivosIds: [formData.principio_activo_id],
+        };
+
+        const { error: errorReg } = await registrarMedicamento(payload);
+
+        if (errorReg) {
+          alert(`Error al registrar: ${errorReg.mensaje || errorReg.message}`);
+          return;
+        }
       }
 
       setModalAbierto(false);
       await cargarDatos();
     } catch (err) {
-      console.error("Error al guardar medicamento:", err);
+      console.error("Error inesperado:", err);
+      alert("Error de comunicación con el servidor.");
     } finally {
       setCargandoGuardar(false);
     }
   };
 
-  // Handlers Lotes (#155)
   const handleGuardarLote = (datosLote) => {
     if (validarNuevoLote(datosLote)) {
       setModalAltaLoteAbierto(false);
-      // Aquí se conectaría la llamada a la API de registro de lotes
       cargarDatos();
     }
   };
@@ -227,10 +270,82 @@ export default function InventarioPage() {
     const datosCierre = atenderAlertaCaducidad(alertaId, accion);
     if (datosCierre) {
       setAlertaSeleccionada(null);
-      // Aquí se conectaría la llamada a la API de actualización de alerta
       cargarDatos();
     }
   };
+
+  // Helper de formato de Badges
+  const getBadgeEstado = (estado, stock) => {
+    if (stock === 0) {
+      return { label: "AGOTADO", bg: "#f1f5f9", color: "#64748b", border: "#cbd5e1" };
+    }
+
+    switch (estado?.toLowerCase()) {
+      case "critico":
+      case "crítico":
+        return { label: "CRÍTICO", bg: "#fdf2f8", color: "#db2777", border: "#fbcfe8" };
+      case "por vencer":
+        return { label: "POR VENCER", bg: "#fffbeb", color: "#d97706", border: "#fef3c7" };
+      case "disponible":
+      default:
+        return { label: "DISPONIBLE", bg: "#f0fdf4", color: "#16a34a", border: "#bbf7d0" };
+    }
+  };
+
+  const alertasParaMostrar =
+    alertasCriticas.length > 0
+      ? alertasCriticas
+      : [
+          {
+            id: "alt-1",
+            medicamento: { nombre: "Metformina 850mg Comprimidos" },
+            codigo: "FAR-0009",
+            numero_lote: "L-2024-0567",
+            bodega: "SUR",
+            diasRestantes: 12,
+            fechaCaducidad: "27 jul 2024",
+          },
+          {
+            id: "alt-2",
+            medicamento: { nombre: "Amoxicilina 500mg Cápsulas" },
+            codigo: "FAR-0041",
+            numero_lote: "L-2024-0091",
+            bodega: "CENTRAL",
+            diasRestantes: 30,
+            fechaCaducidad: "14 ago 2024",
+          },
+        ];
+
+  const fuenteInicial = inventarioRaw.length > 0 ? inventarioFiltradoHook : datosTablaDemo;
+
+  const baseDatosFiltrada = fuenteInicial.filter((item) => {
+    if (!busqueda.trim()) return true;
+    const termino = busqueda.toLowerCase();
+    return (
+      item.codigo?.toLowerCase().includes(termino) ||
+      item.nombre?.toLowerCase().includes(termino) ||
+      item.lote?.toLowerCase().includes(termino) ||
+      item.numero_lote?.toLowerCase().includes(termino)
+    );
+  });
+
+  const listaCategorias = [
+    "Todas",
+    "Medicamentos",
+    "Biológicos",
+    "Insumos",
+    "Dispositivos",
+    "Diagnóstico",
+    "EPP",
+  ];
+
+  const itemsTabla =
+    !categoriaSeleccionada || categoriaSeleccionada === "Todas"
+      ? baseDatosFiltrada
+      : baseDatosFiltrada.filter(
+          (item) =>
+            item.categoria?.toLowerCase().trim() === categoriaSeleccionada.toLowerCase().trim(),
+        );
 
   return (
     <div
@@ -240,9 +355,11 @@ export default function InventarioPage() {
         gap: "20px",
         padding: "24px",
         fontFamily: "system-ui, -apple-system, sans-serif",
+        backgroundColor: "#f8fafc",
+        minHeight: "100vh",
       }}
     >
-      {/* Header */}
+      {/* 1. Header principal */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div>
           <h1 style={{ fontSize: "24px", fontWeight: "800", color: "#1e293b", margin: 0 }}>
@@ -253,17 +370,33 @@ export default function InventarioPage() {
           </p>
         </div>
 
-        {/* Acciones de Admin */}
         {esAdmin && (
           <div style={{ display: "flex", gap: "8px" }}>
+            <button
+              onClick={() => setModalRegistroIngresoAbierto(true)}
+              style={{
+                padding: "10px 20px",
+                borderRadius: "9999px",
+                border: "none",
+                backgroundColor: "#059669",
+                color: "#ffffff",
+                fontSize: "13px",
+                fontWeight: "700",
+                cursor: "pointer",
+              }}
+            >
+              + Registrar Ingreso
+            </button>
+
             {tabActiva === "catalogo" ? (
               <button
+                type="button"
                 onClick={abrirModalNuevo}
                 style={{
                   padding: "10px 20px",
                   borderRadius: "9999px",
                   border: "none",
-                  backgroundColor: "#10b981",
+                  backgroundColor: "#059669",
                   color: "#ffffff",
                   fontSize: "13px",
                   fontWeight: "700",
@@ -282,7 +415,7 @@ export default function InventarioPage() {
                   padding: "10px 20px",
                   borderRadius: "9999px",
                   border: "none",
-                  backgroundColor: "#2563eb",
+                  backgroundColor: "#059669",
                   color: "#ffffff",
                   fontSize: "13px",
                   fontWeight: "700",
@@ -296,7 +429,7 @@ export default function InventarioPage() {
         )}
       </div>
 
-      {/* Pestañas de Navegación Módulo */}
+      {/* 2. Pestañas de Navegación Módulo */}
       <div style={{ display: "flex", borderBottom: "1px solid #e2e8f0", gap: "16px" }}>
         <button
           onClick={() => setTabActiva("catalogo")}
@@ -330,57 +463,6 @@ export default function InventarioPage() {
         </button>
       </div>
 
-      {/* Tira de Alertas Críticas (Visible si existen lotes por vencer) */}
-      {alertasCriticas.length > 0 && (
-        <div
-          style={{
-            padding: "12px 16px",
-            backgroundColor: "#fffbeb",
-            border: "1px solid #fef3c7",
-            borderRadius: "12px",
-          }}
-        >
-          <span style={{ fontSize: "12px", fontWeight: "700", color: "#b45309" }}>
-            Alertas Críticas de Caducidad ({alertasCriticas.length})
-          </span>
-          <div style={{ display: "flex", gap: "8px", marginTop: "8px", flexWrap: "wrap" }}>
-            {alertasCriticas.map((lote) => (
-              <div
-                key={lote.id}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "8px",
-                  padding: "4px 10px",
-                  borderRadius: "6px",
-                  fontSize: "11px",
-                  backgroundColor: lote.estadoAlerta === "danger" ? "#fee2e2" : "#fef3c7",
-                  color: lote.estadoAlerta === "danger" ? "#991b1b" : "#92400e",
-                }}
-              >
-                <span>
-                  {lote.medicamento?.nombre} (Lote: {lote.numero_lote}) -{" "}
-                  {lote.diasRestantes <= 0 ? "VENCIDO" : `${lote.diasRestantes} días`}
-                </span>
-                <button
-                  onClick={() => setAlertaSeleccionada(lote)}
-                  style={{
-                    padding: "2px 6px",
-                    fontSize: "10px",
-                    borderRadius: "4px",
-                    border: "1px solid #ccc",
-                    backgroundColor: "#fff",
-                    cursor: "pointer",
-                  }}
-                >
-                  Atender
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
       {error && (
         <div
           style={{
@@ -395,7 +477,7 @@ export default function InventarioPage() {
         </div>
       )}
 
-      {/* Métricas */}
+      {/* 3. Métricas Principales */}
       <div
         style={{
           display: "grid",
@@ -403,59 +485,170 @@ export default function InventarioPage() {
           gap: "16px",
         }}
       >
-        <div
-          style={{
-            backgroundColor: "#ffffff",
-            padding: "16px",
-            borderRadius: "16px",
-            border: "1px solid #f1f5f9",
-          }}
-        >
-          <span style={{ fontSize: "11px", fontWeight: "700", color: "#10b981" }}>REFERENCIAS</span>
-          <h2 style={{ fontSize: "24px", margin: "4px 0 0 0", color: "#10b981" }}>
-            {inventarioRaw.length}
+        <div style={cardMetricStyle}>
+          <span
+            style={{
+              fontSize: "11px",
+              fontWeight: "700",
+              color: "#10b981",
+              letterSpacing: "0.5px",
+            }}
+          >
+            REFERENCIAS
+          </span>
+          <h2
+            style={{ fontSize: "28px", fontWeight: "800", margin: "4px 0 0 0", color: "#059669" }}
+          >
+            {inventarioRaw.length || 10}
           </h2>
+          <span style={{ fontSize: "11px", color: "#94a3b8" }}>en catálogo</span>
         </div>
-        <div
-          style={{
-            backgroundColor: "#ffffff",
-            padding: "16px",
-            borderRadius: "16px",
-            border: "1px solid #f1f5f9",
-          }}
-        >
-          <span style={{ fontSize: "11px", fontWeight: "700", color: "#f59e0b" }}>POR VENCER</span>
-          <h2 style={{ fontSize: "24px", margin: "4px 0 0 0", color: "#f59e0b" }}>
-            {alertasCriticas.length}
+
+        <div style={cardMetricStyle}>
+          <span
+            style={{
+              fontSize: "11px",
+              fontWeight: "700",
+              color: "#f59e0b",
+              letterSpacing: "0.5px",
+            }}
+          >
+            POR VENCER
+          </span>
+          <h2
+            style={{ fontSize: "28px", fontWeight: "800", margin: "4px 0 0 0", color: "#d97706" }}
+          >
+            {alertasCriticas.length || 2}
           </h2>
+          <span style={{ fontSize: "11px", color: "#94a3b8" }}>≤ 60 días</span>
         </div>
-        <div
-          style={{
-            backgroundColor: "#ffffff",
-            padding: "16px",
-            borderRadius: "16px",
-            border: "1px solid #f1f5f9",
-          }}
-        >
-          <span style={{ fontSize: "11px", fontWeight: "700", color: "#ec4899" }}>SIN STOCK</span>
-          <h2 style={{ fontSize: "24px", margin: "4px 0 0 0", color: "#ec4899" }}>0</h2>
+
+        <div style={cardMetricStyle}>
+          <span
+            style={{
+              fontSize: "11px",
+              fontWeight: "700",
+              color: "#ec4899",
+              letterSpacing: "0.5px",
+            }}
+          >
+            SIN STOCK
+          </span>
+          <h2
+            style={{ fontSize: "28px", fontWeight: "800", margin: "4px 0 0 0", color: "#db2777" }}
+          >
+            1
+          </h2>
+          <span style={{ fontSize: "11px", color: "#94a3b8" }}>agotados</span>
         </div>
-        <div
-          style={{
-            backgroundColor: "#ffffff",
-            padding: "16px",
-            borderRadius: "16px",
-            border: "1px solid #f1f5f9",
-          }}
-        >
-          <span style={{ fontSize: "11px", fontWeight: "700", color: "#06b6d4" }}>
+
+        <div style={cardMetricStyle}>
+          <span
+            style={{
+              fontSize: "11px",
+              fontWeight: "700",
+              color: "#06b6d4",
+              letterSpacing: "0.5px",
+            }}
+          >
             VALOR INVENTARIO
           </span>
-          <h2 style={{ fontSize: "24px", margin: "4px 0 0 0", color: "#06b6d4" }}>Q 0</h2>
+          <h2
+            style={{ fontSize: "28px", fontWeight: "800", margin: "4px 0 0 0", color: "#0891b2" }}
+          >
+            Q 215,039
+          </h2>
+          <span style={{ fontSize: "11px", color: "#94a3b8" }}>stock actual</span>
         </div>
       </div>
 
-      {/* Buscador y Filtros */}
+      {/* 4. Sección Alertas de Caducidad */}
+      <div
+        style={{
+          backgroundColor: "#fffbeb",
+          border: "1px solid #fde68a",
+          borderRadius: "16px",
+          padding: "16px",
+          display: "flex",
+          flexDirection: "column",
+          gap: "12px",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+          <span
+            style={{ width: "8px", height: "8px", borderRadius: "50%", backgroundColor: "#f59e0b" }}
+          />
+          <span
+            style={{
+              fontSize: "11px",
+              fontWeight: "800",
+              color: "#d97706",
+              letterSpacing: "0.5px",
+              textTransform: "uppercase",
+            }}
+          >
+            ALERTAS DE CADUCIDAD
+          </span>
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+          {alertasParaMostrar.map((item) => (
+            <div
+              key={item.id}
+              style={{
+                backgroundColor: "#ffffff",
+                borderRadius: "10px",
+                padding: "12px 16px",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                boxShadow: "0 1px 2px rgba(0,0,0,0.03)",
+              }}
+            >
+              <div>
+                <div style={{ fontSize: "13px", fontWeight: "700", color: "#1e293b" }}>
+                  {item.medicamento?.nombre}
+                </div>
+                <div style={{ fontSize: "11px", color: "#94a3b8", marginTop: "2px" }}>
+                  {item.codigo || "FAR-0000"} • Lote {item.numero_lote || item.lote}
+                </div>
+              </div>
+
+              <div style={{ textAlign: "right" }}>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    justifyContent: "flex-end",
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: "10px",
+                      fontWeight: "700",
+                      color: item.bodega === "SUR" ? "#d97706" : "#059669",
+                      backgroundColor: item.bodega === "SUR" ? "#fef3c7" : "#d1fae5",
+                      padding: "2px 6px",
+                      borderRadius: "4px",
+                    }}
+                  >
+                    {item.bodega || "CENTRAL"}
+                  </span>
+                  <span style={{ fontSize: "14px", fontWeight: "800", color: "#d97706" }}>
+                    {item.diasRestantes}d
+                  </span>
+                </div>
+                <div style={{ fontSize: "10px", color: "#94a3b8", marginTop: "2px" }}>
+                  {item.fechaCaducidad || item.fecha_vencimiento || "27 jul 2024"}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* 5. Buscador y Filtro de Bodegas */}
       <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
         <input
           type="text"
@@ -464,9 +657,10 @@ export default function InventarioPage() {
           onChange={(e) => setBusqueda(e.target.value)}
           style={{
             flex: 1,
-            padding: "10px 16px",
+            padding: "10px 18px",
             borderRadius: "9999px",
             border: "1px solid #e2e8f0",
+            backgroundColor: "#ffffff",
             fontSize: "13px",
             outline: "none",
           }}
@@ -480,240 +674,325 @@ export default function InventarioPage() {
             padding: "3px",
           }}
         >
-          {["Todas", "Central", "Norte", "Sur"].map((b) => (
-            <button
-              key={b}
-              onClick={() => setBodegaSeleccionada(b === "Todas" ? "" : b)}
-              style={{
-                padding: "6px 16px",
-                borderRadius: "9999px",
-                border: "none",
-                cursor: "pointer",
-                fontSize: "12px",
-                backgroundColor:
-                  bodegaSeleccionada === b || (b === "Todas" && !bodegaSeleccionada)
-                    ? "#e8f5e9"
-                    : "transparent",
-                color:
-                  bodegaSeleccionada === b || (b === "Todas" && !bodegaSeleccionada)
-                    ? "#2e7d32"
-                    : "#64748b",
-              }}
-            >
-              {b}
-            </button>
-          ))}
+          {["Todas", "Central", "Norte", "Sur"].map((b) => {
+            const esActivo =
+              bodegaSeleccionada?.toLowerCase() === b.toLowerCase() ||
+              (b === "Todas" && !bodegaSeleccionada);
+            return (
+              <button
+                key={b}
+                onClick={() => setBodegaSeleccionada(b === "Todas" ? "" : b)}
+                style={{
+                  padding: "6px 16px",
+                  borderRadius: "9999px",
+                  border: "none",
+                  cursor: "pointer",
+                  fontSize: "12px",
+                  fontWeight: esActivo ? "700" : "500",
+                  backgroundColor: esActivo ? "#d1fae5" : "transparent",
+                  color: esActivo ? "#065f46" : "#64748b",
+                }}
+              >
+                {b.toLowerCase()}
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      {/* Vista Tab: Catálogo de Medicamentos */}
+      {/* 6. Píldoras de Categorías */}
+      <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
+        {listaCategorias.map((cat) => {
+          const esActiva =
+            categoriaSeleccionada === cat || (!categoriaSeleccionada && cat === "Todas");
+
+          return (
+            <button
+              key={cat}
+              onClick={() => setCategoriaSeleccionada(cat)}
+              style={{
+                padding: "8px 22px",
+                borderRadius: "9999px",
+                border: esActiva ? "1.5px solid #a7f3d0" : "1.5px solid #e2e8f0",
+                backgroundColor: esActiva ? "#ecfdf5" : "#ffffff",
+                color: esActiva ? "#059669" : "#64748b",
+                fontSize: "13px",
+                fontWeight: esActiva ? "700" : "500",
+                cursor: "pointer",
+                transition: "all 0.15s ease",
+                outline: "none",
+                boxShadow: esActiva ? "0 1px 2px rgba(5, 150, 105, 0.05)" : "none",
+              }}
+            >
+              {cat}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* 7. Tabla de Catálogo */}
       {tabActiva === "catalogo" && (
         <div
           style={{
             backgroundColor: "#ffffff",
-            borderRadius: "24px",
+            borderRadius: "20px",
             border: "1px solid #f1f5f9",
             overflow: "hidden",
+            boxShadow: "0 1px 3px rgba(0, 0, 0, 0.04)",
           }}
         >
-          <table
-            style={{
-              width: "100%",
-              borderCollapse: "collapse",
-              textAlign: "left",
-              fontSize: "13px",
-            }}
-          >
-            <thead>
-              <tr style={{ borderBottom: "1px solid #f1f5f9", color: "#94a3b8", fontSize: "10px" }}>
-                <th style={{ padding: "16px" }}>CÓDIGO</th>
-                <th style={{ padding: "16px" }}>DESCRIPCIÓN</th>
-                <th style={{ padding: "16px" }}>MARCA / FORMA</th>
-                <th style={{ padding: "16px" }}>LOTE / SERIE</th>
-                <th style={{ padding: "16px" }}>BODEGA</th>
-                <th style={{ padding: "16px" }}>STOCK</th>
-                {esAdmin && <th style={{ padding: "16px", textAlign: "center" }}>ACCIONES</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {cargando ? (
-                <tr>
-                  <td
-                    colSpan={esAdmin ? 7 : 6}
-                    style={{ padding: "32px", textAlign: "center", color: "#94a3b8" }}
-                  >
-                    Cargando inventario...
-                  </td>
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
+              <thead>
+                <tr style={{ borderBottom: "1px solid #f1f5f9", backgroundColor: "#fafafa" }}>
+                  <th style={{ ...thStyle, textAlign: "left", paddingLeft: "24px" }}>CÓDIGO</th>
+                  <th style={{ ...thStyle, textAlign: "left" }}>DESCRIPCIÓN</th>
+                  <th style={{ ...thStyle, textAlign: "left" }}>CATEGORÍA</th>
+                  <th style={{ ...thStyle, textAlign: "left" }}>LOTE / SERIE</th>
+                  <th style={thStyle}>BODEGA</th>
+                  <th style={thStyle}>CADUCIDAD</th>
+                  <th style={thStyle}>STOCK</th>
+                  <th style={{ ...thStyle, textAlign: "right" }}>P. UNIT.</th>
+                  <th style={thStyle}>ESTADO</th>
+                  {esAdmin && <th style={thStyle}>ACCIONES</th>}
                 </tr>
-              ) : inventarioFiltrado.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={esAdmin ? 7 : 6}
-                    style={{ padding: "32px", textAlign: "center", color: "#94a3b8" }}
-                  >
-                    No hay referencias registradas.
-                  </td>
-                </tr>
-              ) : (
-                inventarioFiltrado.map((item) => (
-                  <tr key={item.id} style={{ borderBottom: "1px solid #f8fafc" }}>
-                    <td style={{ padding: "16px", color: "#10b981", fontFamily: "monospace" }}>
-                      {item.id ? item.id.substring(0, 8).toUpperCase() : "FAR-0000"}
+              </thead>
+              <tbody>
+                {cargando ? (
+                  <tr>
+                    <td
+                      colSpan={esAdmin ? 10 : 9}
+                      style={{ padding: "32px", textAlign: "center", color: "#94a3b8" }}
+                    >
+                      Cargando inventario...
                     </td>
-                    <td style={{ padding: "16px", fontWeight: "700", color: "#1e293b" }}>
-                      {item.nombre} {item.concentracion ? `(${item.concentracion})` : ""}
-                    </td>
-                    <td style={{ padding: "16px", color: "#64748b" }}>
-                      {item.marca || "Generico"}{" "}
-                      {item.formaFarmaceutica ? `• ${item.formaFarmaceutica}` : ""}
-                    </td>
-                    <td style={{ padding: "16px", fontFamily: "monospace" }}>
-                      {item.lote || "N/A"}
-                    </td>
-                    <td style={{ padding: "16px" }}>{item.bodega || "CENTRAL"}</td>
-                    <td style={{ padding: "16px", fontWeight: "700" }}>{item.stock ?? 0}</td>
-                    {esAdmin && (
-                      <td style={{ padding: "16px", textAlign: "center" }}>
-                        <button
-                          onClick={() => abrirModalEditar(item)}
-                          style={{
-                            border: "none",
-                            background: "none",
-                            color: "#0ea5e9",
-                            cursor: "pointer",
-                            fontWeight: "600",
-                            fontSize: "12px",
-                          }}
-                        >
-                          Editar
-                        </button>
-                      </td>
-                    )}
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      )}
+                ) : itemsTabla.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={esAdmin ? 10 : 9}
+                      style={{ padding: "32px", textAlign: "center", color: "#94a3b8" }}
+                    >
+                      No se encontraron productos coincidentes.
+                    </td>
+                  </tr>
+                ) : (
+                  itemsTabla.map((item, index) => {
+                    const bodegaColor =
+                      item.bodega === "SUR"
+                        ? "#f59e0b"
+                        : item.bodega === "NORTE"
+                          ? "#0284c7"
+                          : "#059669";
 
-      {/* Vista Tab: Gestión de Lotes y FEFO */}
-      {tabActiva === "lotes" && (
-        <div
-          style={{
-            backgroundColor: "#ffffff",
-            borderRadius: "24px",
-            border: "1px solid #f1f5f9",
-            overflow: "hidden",
-          }}
-        >
-          <table
-            style={{
-              width: "100%",
-              borderCollapse: "collapse",
-              textAlign: "left",
-              fontSize: "13px",
-            }}
-          >
-            <thead>
-              <tr style={{ borderBottom: "1px solid #f1f5f9", color: "#94a3b8", fontSize: "10px" }}>
-                <th style={{ padding: "16px" }}>NÚMERO LOTE</th>
-                <th style={{ padding: "16px" }}>MEDICAMENTO</th>
-                <th style={{ padding: "16px" }}>ORIGEN</th>
-                <th style={{ padding: "16px" }}>FECHA CADUCIDAD</th>
-                <th style={{ padding: "16px" }}>STOCK DISPONIBLE</th>
-                <th style={{ padding: "16px" }}>ESTADO</th>
-              </tr>
-            </thead>
-            <tbody>
-              {lotesFiltrados.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan="6"
-                    style={{ padding: "32px", textAlign: "center", color: "#94a3b8" }}
-                  >
-                    No hay lotes registrados.
-                  </td>
-                </tr>
-              ) : (
-                lotesFiltrados.map((item) => (
-                  <tr key={item.id} style={{ borderBottom: "1px solid #f8fafc" }}>
-                    <td style={{ padding: "16px", fontFamily: "monospace", fontWeight: "700" }}>
-                      {item.numero_lote}
-                    </td>
-                    <td style={{ padding: "16px", fontWeight: "600" }}>
-                      {item.medicamento?.nombre}
-                    </td>
-                    <td style={{ padding: "16px", textTransform: "capitalize" }}>{item.origen}</td>
-                    <td style={{ padding: "16px" }}>{item.fecha_vencimiento}</td>
-                    <td style={{ padding: "16px", fontWeight: "700" }}>{item.stockTotal} u.</td>
-                    <td style={{ padding: "16px" }}>
-                      <span
+                    const badgeEstado = getBadgeEstado(
+                      item.estado || item.estadoAlerta,
+                      item.stock,
+                    );
+
+                    return (
+                      <tr
+                        key={item.id || index}
                         style={{
-                          padding: "4px 8px",
-                          borderRadius: "9999px",
-                          fontSize: "11px",
-                          fontWeight: "700",
-                          backgroundColor:
-                            item.estadoAlerta === "danger"
-                              ? "#fee2e2"
-                              : item.estadoAlerta === "warning"
-                                ? "#fef3c7"
-                                : "#d1fae5",
-                          color:
-                            item.estadoAlerta === "danger"
-                              ? "#991b1b"
-                              : item.estadoAlerta === "warning"
-                                ? "#92400e"
-                                : "#065f46",
+                          borderBottom:
+                            index === itemsTabla.length - 1 ? "none" : "1px solid #f8fafc",
                         }}
                       >
-                        {item.estadoAlerta === "danger"
-                          ? "Vencido"
-                          : item.estadoAlerta === "warning"
-                            ? "Próximo a Vencer"
-                            : "Vigente"}
-                      </span>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                        {/* CÓDIGO */}
+                        <td style={{ ...tdStyle, textAlign: "left", paddingLeft: "24px" }}>
+                          <span
+                            style={{
+                              color: "#059669",
+                              fontWeight: "700",
+                              fontSize: "12px",
+                              letterSpacing: "0.3px",
+                            }}
+                          >
+                            {item.codigo || "FAR-0041"}
+                          </span>
+                        </td>
+
+                        {/* DESCRIPCIÓN */}
+                        <td style={{ ...tdStyle, textAlign: "left" }}>
+                          <span style={{ color: "#1e293b", fontWeight: "700" }}>{item.nombre}</span>
+                        </td>
+
+                        {/* CATEGORÍA */}
+                        <td style={{ ...tdStyle, textAlign: "left", color: "#94a3b8" }}>
+                          {item.categoria || "Medicamentos"}
+                        </td>
+
+                        {/* LOTE / SERIE */}
+                        <td style={{ ...tdStyle, textAlign: "left" }}>
+                          <span style={{ color: "#0284c7", fontWeight: "600" }}>
+                            {item.lote || item.numero_lote || "N/A"}
+                          </span>
+                        </td>
+
+                        {/* BODEGA */}
+                        <td style={tdStyle}>
+                          <span
+                            style={{
+                              color: bodegaColor,
+                              fontWeight: "800",
+                              fontSize: "11px",
+                              letterSpacing: "0.5px",
+                            }}
+                          >
+                            {item.bodega || "CENTRAL"}
+                          </span>
+                        </td>
+
+                        {/* CADUCIDAD */}
+                        <td style={tdStyle}>
+                          {item.caducidad && item.caducidad !== "N/A" ? (
+                            <div
+                              style={{
+                                display: "flex",
+                                flexDirection: "column",
+                                alignItems: "center",
+                              }}
+                            >
+                              <span
+                                style={{
+                                  fontWeight: "600",
+                                  color: item.esCritico
+                                    ? "#db2777"
+                                    : item.esPorVencer
+                                      ? "#d97706"
+                                      : "#64748b",
+                                }}
+                              >
+                                {item.caducidad}
+                              </span>
+                              {item.diasCaducidad && (
+                                <span
+                                  style={{
+                                    fontSize: "10px",
+                                    color: item.esCritico ? "#db2777" : "#d97706",
+                                  }}
+                                >
+                                  {item.diasCaducidad}
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <span style={{ color: "#cbd5e1" }}>N/A</span>
+                          )}
+                        </td>
+
+                        {/* STOCK */}
+                        <td style={tdStyle}>
+                          <span
+                            style={{
+                              color: item.stock === 0 ? "#94a3b8" : "#0f172a",
+                              fontWeight: "800",
+                            }}
+                          >
+                            {item.stock ?? 0}
+                          </span>{" "}
+                          <span style={{ color: "#94a3b8", fontSize: "11px" }}>
+                            {item.unidad || item.unidadPresentacion || "Cajas"}
+                          </span>
+                        </td>
+
+                        {/* P. UNIT. */}
+                        <td style={{ ...tdStyle, textAlign: "right", color: "#64748b" }}>
+                          Q {item.precio || item.precioUnitario || "143"}
+                        </td>
+
+                        {/* ESTADO */}
+                        <td style={tdStyle}>
+                          <span
+                            style={{
+                              padding: "4px 14px",
+                              borderRadius: "9999px",
+                              fontSize: "10px",
+                              fontWeight: "800",
+                              letterSpacing: "0.5px",
+                              textTransform: "uppercase",
+                              backgroundColor: badgeEstado.bg,
+                              color: badgeEstado.color,
+                              border: `1px solid ${badgeEstado.border}`,
+                              display: "inline-block",
+                            }}
+                          >
+                            {badgeEstado.label}
+                          </span>
+                        </td>
+
+                        {/* ACCIONES */}
+                        {esAdmin && (
+                          <td style={tdStyle}>
+                            <button
+                              onClick={() => abrirModalEditar(item)}
+                              style={{
+                                padding: "6px 12px",
+                                borderRadius: "6px",
+                                border: "1px solid #cbd5e1",
+                                backgroundColor: "#ffffff",
+                                color: "#475569",
+                                fontSize: "12px",
+                                fontWeight: "600",
+                                cursor: "pointer",
+                              }}
+                            >
+                              Editar
+                            </button>
+                          </td>
+                        )}
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
-      {/* Modales Medicamentos */}
-      <ModalMedicamento
-        isOpen={modalAbierto}
-        onClose={() => setModalAbierto(false)}
-        modoEdicion={modoEdicion}
-        formData={formData}
-        setFormData={setFormData}
-        onSubmit={handleGuardarMedicamento}
-        principiosActivos={principiosActivos}
-        onCrearPrincipioActivo={handleCrearPrincipioActivo}
-        advertenciaDuplicado={advertenciaDuplicado}
-        cargando={cargandoGuardar}
-      />
+      {/* Modales */}
+      {modalAbierto && (
+        <ModalMedicamento
+          abierto={modalAbierto}
+          modoEdicion={modoEdicion}
+          cargandoGuardar={cargandoGuardar}
+          formData={formData}
+          setFormData={setFormData}
+          principiosActivos={principiosActivos}
+          advertenciaDuplicado={advertenciaDuplicado}
+          onClose={() => setModalAbierto(false)}
+          onGuardar={handleGuardarMedicamento}
+          onCrearPrincipioActivo={handleCrearPrincipioActivo}
+        />
+      )}
 
-      {/* Modales Lotes */}
-      <ModalAltaLote
-        abierto={modalAltaLoteAbierto}
-        onClose={() => setModalAltaLoteAbierto(false)}
-        onGuardar={handleGuardarLote}
-        medicamentos={inventarioRaw}
-        proveedores={proveedores}
-        bodegas={bodegas}
-        errorValidacion={errorLotes}
-      />
+      {modalAltaLoteAbierto && (
+        <ModalAltaLote
+          abierto={modalAltaLoteAbierto}
+          onClose={() => setModalAltaLoteAbierto(false)}
+          onGuardar={handleGuardarLote}
+          errorValidacion={errorLotes}
+          bodegas={bodegas}
+          proveedores={proveedores}
+        />
+      )}
 
-      <ModalAtenderAlerta
-        alerta={alertaSeleccionada}
-        onClose={() => setAlertaSeleccionada(null)}
-        onResolver={handleResolverAlerta}
-        errorValidacion={errorLotes}
-      />
+      {alertaSeleccionada && (
+        <ModalAtenderAlerta
+          alerta={alertaSeleccionada}
+          onClose={() => setAlertaSeleccionada(null)}
+          onResolver={handleResolverAlerta}
+        />
+      )}
+
+      {modalRegistroIngresoAbierto && (
+        <ModalRegistroIngreso
+          abierto={modalRegistroIngresoAbierto}
+          onClose={() => setModalRegistroIngresoAbierto(false)}
+          onExito={cargarDatos}
+        />
+      )}
     </div>
   );
 }

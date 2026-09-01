@@ -41,3 +41,4 @@ export * from "./validacion.api.js";
 export * from "./useCatalogoMedicamentos.js";
 export * from "./useInventario.js";
 export * from "./usePendientesValidacion.js";
+export * from "./useRegistroIngreso.js";
