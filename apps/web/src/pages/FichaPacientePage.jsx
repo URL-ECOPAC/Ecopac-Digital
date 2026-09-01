@@ -4,11 +4,10 @@ import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   cabeceraDePaciente,
   CAMPOS_FICHA_PACIENTE,
-  formatearFechaCorta,
   permisosDeFicha,
   pestaniasDeFicha,
   resolverPestaniaDeFicha,
-  TIPOS_DE_PRESENTACION,
+  textoDeCampoDeFicha,
   usePaciente,
   usePacientesListado,
   valoresDeFichaPaciente,
@@ -42,13 +41,6 @@ function claseDeAvatar(sexo) {
   if (normalizado === "femenino") return " pac-avatar--femenino";
   if (normalizado === "masculino") return " pac-avatar--masculino";
   return "";
-}
-
-function valorDeCampo(campo, valores) {
-  const valor = valores[campo.id];
-  if (valor === null || valor === undefined || valor === "") return "—";
-  if (campo.tipo === TIPOS_DE_PRESENTACION.FECHA) return formatearFechaCorta(valor);
-  return valor;
 }
 
 export default function FichaPacientePage() {
@@ -218,7 +210,7 @@ export default function FichaPacientePage() {
                     {CAMPOS_FICHA_PACIENTE.map((campo) => (
                       <div className="col-sm-6 mb-2" key={campo.id}>
                         <dt className="pac-rotulo">{campo.label}</dt>
-                        <dd className="mb-0">{valorDeCampo(campo, valores)}</dd>
+                        <dd className="mb-0">{textoDeCampoDeFicha(campo, valores)}</dd>
                       </div>
                     ))}
                   </dl>

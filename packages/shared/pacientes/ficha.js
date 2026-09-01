@@ -1,4 +1,5 @@
-import { calcularEdad } from "../formato/fechas.js";
+import { calcularEdad, formatearFechaCorta } from "../formato/fechas.js";
+import { TIPOS_DE_PRESENTACION } from "../descriptores.js";
 import { OPCIONES_IDIOMA, OPCIONES_TIPO_SANGRE } from "./campos.js";
 import { OPCIONES_ESTADO_CONDICION } from "./condiciones.campos.js";
 import { ESTADOS_CONDICION_CRONICA } from "../enums.js";
@@ -103,4 +104,26 @@ export function permisosDeFicha(rol) {
     puedeEditar: puedeEditarPaciente(rol),
     puedeVerDatosClinicos: puedeVerHistorial(rol),
   };
+}
+
+/**
+ * Texto que se pinta en un campo de la ficha, listo para mostrar.
+ *
+ * Vivia dentro de FichaPacientePage.jsx, que es donde no debe estar: la regla de
+ * docs/ARQUITECTURA-FRONTEND.md dice que las apps no formatean. Sube aqui porque la ficha movil
+ * (#658) necesita exactamente lo mismo, y dos copias de la misma regla de presentacion se
+ * desincronizan en cuanto una de las dos cambie.
+ *
+ * El guion largo, y no una cadena vacia, es deliberado: un campo sin dato tiene que verse como
+ * un hueco, para que se note que falta capturarlo.
+ *
+ * @param {{ id: string, tipo?: string }} campo Una entrada de CAMPOS_FICHA_PACIENTE.
+ * @param {Record<string, unknown>} valores Lo que devuelve valoresDeFichaPaciente().
+ * @returns {string}
+ */
+export function textoDeCampoDeFicha(campo, valores = {}) {
+  const valor = valores[campo?.id];
+  if (valor === null || valor === undefined || valor === "") return "—";
+  if (campo?.tipo === TIPOS_DE_PRESENTACION.FECHA) return formatearFechaCorta(valor);
+  return String(valor);
 }
