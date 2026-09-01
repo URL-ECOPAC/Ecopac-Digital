@@ -1,5 +1,5 @@
 import { StyleSheet, Text, View } from "react-native";
-import { colors, labels, spacing, typography } from "@ecopac/ui-tokens";
+import { colors, labels, radii, spacing, typography } from "@ecopac/ui-tokens";
 import SecondaryButton from "./SecondaryButton";
 
 /**
@@ -23,7 +23,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: spacing.lg,
     paddingHorizontal: spacing.md,
-    borderRadius: spacing.xs,
+    borderRadius: radii.md,
     borderWidth: 1,
     borderColor: colors.danger,
     backgroundColor: colors.surface,

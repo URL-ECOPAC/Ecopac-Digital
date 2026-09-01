@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { FlatList, Modal, Pressable, StyleSheet, Text, View } from "react-native";
-import { colors, spacing, typography } from "@ecopac/ui-tokens";
+import { colors, radii, spacing, typography } from "@ecopac/ui-tokens";
 
 const MIN_TOUCH_HEIGHT = 48;
 
@@ -98,7 +98,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderWidth: 1,
     borderColor: colors.secondary,
-    borderRadius: spacing.xs,
+    borderRadius: radii.md,
     paddingHorizontal: spacing.md,
     backgroundColor: colors.background,
   },

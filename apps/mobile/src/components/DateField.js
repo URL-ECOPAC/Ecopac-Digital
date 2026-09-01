@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import { MESES } from "@ecopac/shared";
-import { colors, spacing, typography } from "@ecopac/ui-tokens";
+import { colors, radii, spacing, typography } from "@ecopac/ui-tokens";
 import PrimaryButton from "./PrimaryButton";
 import Selector from "./Selector";
 
@@ -181,7 +181,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderWidth: 1,
     borderColor: colors.secondary,
-    borderRadius: spacing.xs,
+    borderRadius: radii.md,
     paddingHorizontal: spacing.md,
     backgroundColor: colors.background,
   },

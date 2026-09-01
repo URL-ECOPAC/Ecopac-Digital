@@ -1,6 +1,6 @@
 import { forwardRef, useState } from "react";
 import { StyleSheet, Text, TextInput, View } from "react-native";
-import { colors, spacing, typography } from "@ecopac/ui-tokens";
+import { colors, radii, spacing, typography } from "@ecopac/ui-tokens";
 
 // El personal llena formularios con una mano y a veces con guantes,
 // por lo que el area tactil minima recomendada (Material/HIG) es 48dp.
@@ -55,7 +55,7 @@ const styles = StyleSheet.create({
     minHeight: MIN_TOUCH_HEIGHT,
     borderWidth: 1,
     borderColor: colors.secondary,
-    borderRadius: spacing.xs,
+    borderRadius: radii.md,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     fontFamily: typography.fontFamilyBase,

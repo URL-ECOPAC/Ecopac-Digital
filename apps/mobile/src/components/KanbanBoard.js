@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { colors, spacing, typography } from "@ecopac/ui-tokens";
+import { colors, radii, spacing, typography } from "@ecopac/ui-tokens";
 import Modal from "./Modal";
 
 const MIN_TOUCH_HEIGHT = 48;
@@ -78,7 +78,7 @@ const styles = StyleSheet.create({
     width: ANCHO_COLUMNA,
     marginRight: spacing.md,
     padding: spacing.sm,
-    borderRadius: spacing.xs,
+    borderRadius: radii.md,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.background,
@@ -108,7 +108,7 @@ const styles = StyleSheet.create({
     minHeight: MIN_TOUCH_HEIGHT,
     justifyContent: "center",
     paddingHorizontal: spacing.md,
-    borderRadius: spacing.xs,
+    borderRadius: radii.md,
   },
   destinoPressed: { backgroundColor: colors.surface },
   destinoTexto: {

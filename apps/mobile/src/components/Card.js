@@ -1,5 +1,5 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { colors, spacing, typography } from "@ecopac/ui-tokens";
+import { colors, radii, shadows, spacing, typography } from "@ecopac/ui-tokens";
 
 /**
  * Tarjeta. Espejo de apps/web/src/components/Card.jsx.
@@ -40,10 +40,16 @@ export default function Card({ children, title, onPress, style }) {
 const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.surface,
-    borderRadius: spacing.sm,
+    // lg y no md: es el contenedor mas grande del catalogo, y con el radio pequeno de un boton
+    // se ve rigida. Mismo criterio que DataList, que ya agrupa con lg.
+    borderRadius: radii.lg,
     borderWidth: 1,
     borderColor: colors.border,
     padding: spacing.md,
+    // Misma elevacion que la .card de la web (issue #660), para que las dos plataformas se
+    // vean como el mismo producto. El borde se conserva: en Android la sombra depende de
+    // elevation y algunos fabricantes la atenuan, asi que sin borde la tarjeta se perderia.
+    ...shadows.sm.movil,
   },
   cardPressed: {
     opacity: 0.85,
