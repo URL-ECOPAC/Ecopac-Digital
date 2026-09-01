@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { SUBTIPOS_DE_RANGO, TIPOS_DE_FILTRO } from "@ecopac/shared";
-import { colors, spacing, typography } from "@ecopac/ui-tokens";
+import { colors, radii, spacing, typography } from "@ecopac/ui-tokens";
 import DateField from "./DateField";
 import NumberField from "./NumberField";
 import PrimaryButton from "./PrimaryButton";
@@ -160,7 +160,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: spacing.xs,
+    borderRadius: radii.md,
     backgroundColor: colors.surface,
   },
   cabeceraPressed: { opacity: 0.7 },
@@ -175,7 +175,7 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: spacing.xs,
+    borderRadius: radii.md,
     backgroundColor: colors.surface,
   },
   deshabilitado: { opacity: 0.5 },

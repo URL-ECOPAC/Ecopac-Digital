@@ -1,5 +1,5 @@
 import { Pressable, StyleSheet, Text } from "react-native";
-import { colors, spacing, typography } from "@ecopac/ui-tokens";
+import { colors, radii, spacing, typography } from "@ecopac/ui-tokens";
 
 const MIN_TOUCH_HEIGHT = 48;
 
@@ -29,7 +29,7 @@ export default function SecondaryButton({ title, onPress, disabled = false, styl
 const styles = StyleSheet.create({
   button: {
     minHeight: MIN_TOUCH_HEIGHT,
-    borderRadius: spacing.xs,
+    borderRadius: radii.md,
     borderWidth: 1,
     borderColor: colors.primary,
     backgroundColor: colors.background,
