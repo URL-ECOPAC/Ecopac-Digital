@@ -38,8 +38,11 @@ export const CAMPOS_FICHA_PACIENTE = [
   { id: "sexo", label: "Sexo", tipo: TIPOS_DE_PRESENTACION.TEXTO },
   { id: "tipoSangre", label: "Tipo sanguineo", tipo: TIPOS_DE_PRESENTACION.TEXTO },
   { id: "idioma", label: "Idioma", tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  { id: "departamento", label: "Departamento", tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  { id: "municipio", label: "Municipio", tipo: TIPOS_DE_PRESENTACION.TEXTO },
   { id: "comunidad", label: "Comunidad", tipo: TIPOS_DE_PRESENTACION.TEXTO },
   { id: "telefonoContacto", label: "Telefono", tipo: TIPOS_DE_PRESENTACION.TEXTO },
   { id: "nombreResponsable", label: "Responsable", tipo: TIPOS_DE_PRESENTACION.TEXTO },
   { id: "parentescoResponsable", label: "Parentesco", tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  { id: "fechaBaja", label: "Fecha de baja", tipo: TIPOS_DE_PRESENTACION.FECHA },
 ];

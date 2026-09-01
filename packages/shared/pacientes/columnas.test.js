@@ -38,6 +38,12 @@ const IDS_DERIVADOS = new Set([
   "numeroFicha",
   "ultimaAtencion",
   "condicionCronica",
+  // La #656 agrega a la ficha la cadena territorial y la fecha de baja. Ninguno es un campo del
+  // formulario de registro: departamento y municipio se derivan de la comunidad, y fechaBaja la
+  // escribe el borrado logico, no quien registra.
+  "departamento",
+  "municipio",
+  "fechaBaja",
 ]);
 
 const IDS_DE_CAMPOS_REGISTRO = new Set(CAMPOS_REGISTRO_PACIENTE.map((campo) => campo.id));

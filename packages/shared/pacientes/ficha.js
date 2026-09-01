@@ -72,10 +72,15 @@ export function valoresDeFichaPaciente(paciente) {
     sexo: paciente.sexo ?? null,
     tipoSangre: etiquetaDeOpcion(OPCIONES_TIPO_SANGRE, paciente.tipoSangre),
     idioma: etiquetaDeOpcion(OPCIONES_IDIOMA, paciente.idioma),
+    departamento: paciente.comunidad?.municipio?.departamento?.nombre ?? null,
+    municipio: paciente.comunidad?.municipio?.nombre ?? null,
     comunidad: paciente.comunidad?.nombre ?? null,
     telefonoContacto: paciente.telefonoContacto ?? null,
     nombreResponsable: paciente.nombreResponsable ?? null,
     parentescoResponsable: paciente.parentescoResponsable ?? null,
+    // La API ya traia fecha_baja pero la ficha no la dibujaba, asi que un paciente dado de baja
+    // se veia igual que uno activo (issue #656).
+    fechaBaja: paciente.fechaBaja ?? null,
   };
 }
 

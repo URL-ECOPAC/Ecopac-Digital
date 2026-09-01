@@ -17,7 +17,7 @@ import {
   OPCIONES_SEXO,
   aFiltrosDeBusqueda,
   armarFilasDePacientes,
-  catalogoComunidadesDePacientes,
+  hayFiltrosDePacientes,
 } from "./usePacientesListado.js";
 import { COLUMNAS_PACIENTE } from "./columnas.js";
 import { TIPOS_DE_PRESENTACION } from "../descriptores.js";
@@ -101,35 +101,41 @@ describe("OPCIONES_SEXO", () => {
   });
 });
 
-describe("catalogoComunidadesDePacientes", () => {
-  it("saca las comunidades de los resultados, sin repetir", () => {
-    const catalogo = catalogoComunidadesDePacientes([
-      PACIENTE,
-      { ...PACIENTE, id: "p2" },
-      { ...PACIENTE, id: "p3", comunidadId: "c2", comunidad: { nombre: "Aldea Sur" } },
-    ]);
-
-    expect(catalogo).toEqual([
-      { value: "c1", label: "Aldea Norte" },
-      { value: "c2", label: "Aldea Sur" },
-    ]);
+// El catalogo de comunidades ya no se arma desde los resultados: lo trae listarComunidades().
+// Armarlo desde los resultados dejaba el filtro con una sola opcion en cuanto se usaba, porque a
+// partir de ahi los resultados solo traen la comunidad elegida (issue #656).
+describe("hayFiltrosDePacientes", () => {
+  it("sin filtros dice que no hay", () => {
+    expect(hayFiltrosDePacientes({})).toBe(false);
+    expect(hayFiltrosDePacientes()).toBe(false);
   });
 
-  it("ordena por label en espanol", () => {
-    const catalogo = catalogoComunidadesDePacientes([
-      { ...PACIENTE, comunidadId: "c2", comunidad: { nombre: "Zunil" } },
-      { ...PACIENTE, comunidadId: "c1", comunidad: { nombre: "Almolonga" } },
-    ]);
-
-    expect(catalogo.map((c) => c.label)).toEqual(["Almolonga", "Zunil"]);
+  it("una busqueda escrita cuenta como filtro", () => {
+    expect(hayFiltrosDePacientes({ busqueda: "ana" })).toBe(true);
   });
 
-  it("ignora a quien no trae comunidad", () => {
-    expect(catalogoComunidadesDePacientes([{ ...PACIENTE, comunidad: null }])).toEqual([]);
+  it("una comunidad elegida cuenta como filtro", () => {
+    expect(hayFiltrosDePacientes({ comunidad: "c1" })).toBe(true);
   });
 
-  it("sin argumentos devuelve una lista vacia", () => {
-    expect(catalogoComunidadesDePacientes()).toEqual([]);
+  it("un rango de edad a medias tambien cuenta", () => {
+    expect(hayFiltrosDePacientes({ rangoEdad: { min: 5 } })).toBe(true);
+  });
+
+  // El calculo que vivia en PacientesPage.jsx miraba solo si el valor era distinto de null, asi
+  // que un rango ya vaciado -- que sigue siendo un objeto -- contaba como filtro puesto y dejaba
+  // el boton de limpiar encendido sin nada que limpiar.
+  it("un rango vaciado no cuenta, aunque siga siendo un objeto", () => {
+    expect(hayFiltrosDePacientes({ rangoEdad: { min: null, max: null } })).toBe(false);
+    expect(hayFiltrosDePacientes({ rangoEdad: {} })).toBe(false);
+  });
+
+  it("la cadena vacia no cuenta", () => {
+    expect(hayFiltrosDePacientes({ busqueda: "" })).toBe(false);
+  });
+
+  it("una clave que no es un filtro se ignora", () => {
+    expect(hayFiltrosDePacientes({ loQueSea: "algo" })).toBe(false);
   });
 });
 

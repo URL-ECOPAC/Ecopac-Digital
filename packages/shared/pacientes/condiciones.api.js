@@ -79,6 +79,26 @@ function aColumnasDeTabla(datos = {}) {
  * Deja `nombreCompleto` y `comunidad` en la raiz, que es lo que declara
  * COLUMNAS_PACIENTE_CRONICO en condiciones.columnas.js.
  */
+/**
+ * Aplana una fila de padecimientos_cronicos para las listas que la muestran.
+ *
+ * COLUMNAS_DE_CONDICION_CRONICA pide la condicion embebida -- condiciones_cronicas(nombre) --
+ * asi que PostgREST la devuelve como objeto. COLUMNAS_CONDICION_DEL_PACIENTE declara esa columna
+ * como TEXTO, y sin aplanarla la celda mostraba "[object Object]" (issue #656).
+ *
+ * Las tres funciones que devuelven una condicion pasan por aqui, aunque hoy solo la lectura
+ * llegue a pintarse: dos formas distintas para la misma fila es lo que provoco el fallo.
+ *
+ * @param {object|null} fila
+ * @returns {object|null}
+ */
+function aCondicionDelPaciente(fila) {
+  if (!fila) return null;
+
+  const { condicion, ...padecimiento } = fila;
+  return { ...padecimiento, condicion: condicion?.nombre ?? null };
+}
+
 function aPacienteCronico(fila) {
   if (!fila) return null;
 
@@ -144,7 +164,7 @@ export async function obtenerCondicionesDelPaciente(pacienteId, { soloVigentes =
 
     if (error) return { condiciones: [], error: normalizarError(error) };
 
-    return { condiciones: data ?? [], error: null };
+    return { condiciones: (data ?? []).map(aCondicionDelPaciente), error: null };
   } catch (error) {
     return { condiciones: [], error: normalizarError(error) };
   }
@@ -213,7 +233,7 @@ export async function asociarCondicion(datos = {}, hoy = new Date()) {
       return { condicion: null, errores: {}, error: normalizado };
     }
 
-    return { condicion: data ?? null, errores: {}, error: null };
+    return { condicion: aCondicionDelPaciente(data), errores: {}, error: null };
   } catch (error) {
     return { condicion: null, errores: {}, error: normalizarError(error) };
   }
@@ -281,7 +301,7 @@ export async function actualizarCondicion(id, cambios = {}, hoy = new Date()) {
       };
     }
 
-    return { condicion: data, errores: {}, error: null };
+    return { condicion: aCondicionDelPaciente(data), errores: {}, error: null };
   } catch (error) {
     return { condicion: null, errores: {}, error: normalizarError(error) };
   }
