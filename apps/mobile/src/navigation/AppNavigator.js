@@ -69,11 +69,31 @@ const opcionesStack = (title) => ({
 function InicioNavigator() {
   return (
     <InicioStack.Navigator>
-      <InicioStack.Screen name={ROUTES.INICIO} component={InicioScreen} options={opcionesStack("Inicio")} />
-      <InicioStack.Screen name={ROUTES.DONACIONES} component={DonacionesScreen} options={opcionesStack("Donaciones")} />
-      <InicioStack.Screen name={ROUTES.PROYECTOS} component={ProyectosScreen} options={opcionesStack("Proyectos")} />
-      <InicioStack.Screen name={ROUTES.PRESUPUESTOS} component={PresupuestosScreen} options={opcionesStack("Presupuestos")} />
-      <InicioStack.Screen name={ROUTES.VOLUNTARIOS} component={VoluntariosScreen} options={opcionesStack("Voluntarios y médicos")} />
+      <InicioStack.Screen
+        name={ROUTES.INICIO}
+        component={InicioScreen}
+        options={opcionesStack("Inicio")}
+      />
+      <InicioStack.Screen
+        name={ROUTES.DONACIONES}
+        component={DonacionesScreen}
+        options={opcionesStack("Donaciones")}
+      />
+      <InicioStack.Screen
+        name={ROUTES.PROYECTOS}
+        component={ProyectosScreen}
+        options={opcionesStack("Proyectos")}
+      />
+      <InicioStack.Screen
+        name={ROUTES.PRESUPUESTOS}
+        component={PresupuestosScreen}
+        options={opcionesStack("Presupuestos")}
+      />
+      <InicioStack.Screen
+        name={ROUTES.VOLUNTARIOS}
+        component={VoluntariosScreen}
+        options={opcionesStack("Voluntarios y médicos")}
+      />
     </InicioStack.Navigator>
   );
 }
@@ -81,13 +101,41 @@ function InicioNavigator() {
 function PacientesNavigator() {
   return (
     <PacientesStack.Navigator>
-      <PacientesStack.Screen name={ROUTES.BUSQUEDA_PACIENTE} component={BusquedaPacienteScreen} options={opcionesStack("Pacientes")} />
-      <PacientesStack.Screen name={ROUTES.FICHA_PACIENTE} component={FichaPacienteScreen} options={opcionesStack("Ficha del paciente")} />
-      <PacientesStack.Screen name={ROUTES.REGISTRO_PACIENTE} component={RegistroPacienteScreen} options={opcionesStack("Registro de paciente")} />
-      <PacientesStack.Screen name={ROUTES.HISTORIAL_PACIENTE} component={HistorialPacienteScreen} options={opcionesStack("Historial")} />
-      <PacientesStack.Screen name={ROUTES.TRIAJE} component={TriajeScreen} options={opcionesStack("Triaje")} />
-      <PacientesStack.Screen name={ROUTES.CONSULTA} component={ConsultaScreen} options={opcionesStack("Consulta")} />
-      <PacientesStack.Screen name={ROUTES.RECETA} component={RecetaScreen} options={opcionesStack("Receta")} />
+      <PacientesStack.Screen
+        name={ROUTES.BUSQUEDA_PACIENTE}
+        component={BusquedaPacienteScreen}
+        options={opcionesStack("Pacientes")}
+      />
+      <PacientesStack.Screen
+        name={ROUTES.FICHA_PACIENTE}
+        component={FichaPacienteScreen}
+        options={opcionesStack("Ficha del paciente")}
+      />
+      <PacientesStack.Screen
+        name={ROUTES.REGISTRO_PACIENTE}
+        component={RegistroPacienteScreen}
+        options={opcionesStack("Registro de paciente")}
+      />
+      <PacientesStack.Screen
+        name={ROUTES.HISTORIAL_PACIENTE}
+        component={HistorialPacienteScreen}
+        options={opcionesStack("Historial")}
+      />
+      <PacientesStack.Screen
+        name={ROUTES.TRIAJE}
+        component={TriajeScreen}
+        options={opcionesStack("Triaje")}
+      />
+      <PacientesStack.Screen
+        name={ROUTES.CONSULTA}
+        component={ConsultaScreen}
+        options={opcionesStack("Consulta")}
+      />
+      <PacientesStack.Screen
+        name={ROUTES.RECETA}
+        component={RecetaScreen}
+        options={opcionesStack("Receta")}
+      />
     </PacientesStack.Navigator>
   );
 }
@@ -95,9 +143,21 @@ function PacientesNavigator() {
 function JornadasNavigator() {
   return (
     <JornadasStack.Navigator>
-      <JornadasStack.Screen name={ROUTES.SELECCION_JORNADA} component={SeleccionJornadaScreen} options={opcionesStack("Jornadas")} />
-      <JornadasStack.Screen name={ROUTES.JORNADA_EN_CURSO} component={JornadaEnCursoScreen} options={opcionesStack("Jornada en curso")} />
-      <JornadasStack.Screen name={ROUTES.JORNADAS_ASIGNADAS} component={JornadasAsignadasScreen} options={opcionesStack("Mis jornadas")} />
+      <JornadasStack.Screen
+        name={ROUTES.SELECCION_JORNADA}
+        component={SeleccionJornadaScreen}
+        options={opcionesStack("Jornadas")}
+      />
+      <JornadasStack.Screen
+        name={ROUTES.JORNADA_EN_CURSO}
+        component={JornadaEnCursoScreen}
+        options={opcionesStack("Jornada en curso")}
+      />
+      <JornadasStack.Screen
+        name={ROUTES.JORNADAS_ASIGNADAS}
+        component={JornadasAsignadasScreen}
+        options={opcionesStack("Mis jornadas")}
+      />
     </JornadasStack.Navigator>
   );
 }
@@ -105,16 +165,35 @@ function JornadasNavigator() {
 function InventarioNavigator() {
   return (
     <InventarioStack.Navigator>
-      <InventarioStack.Screen name={ROUTES.STOCK} component={StockScreen} options={opcionesStack("Inventario")} />
+      <InventarioStack.Screen
+        name={ROUTES.STOCK}
+        component={StockScreen}
+        options={opcionesStack("Inventario")}
+      />
     </InventarioStack.Navigator>
   );
 }
 
 const CONFIGURACION_TABS = {
   Inicio: { routeName: ROUTES.TAB_INICIO, component: InicioNavigator, label: "Inicio", icon: "⌂" },
-  Pacientes: { routeName: ROUTES.TAB_PACIENTES, component: PacientesNavigator, label: "Pacientes", icon: "𐀔" },
-  Jornadas: { routeName: ROUTES.TAB_JORNADAS, component: JornadasNavigator, label: "Jornadas", icon: "📅" },
-  Inventario: { routeName: ROUTES.TAB_INVENTARIO, component: InventarioNavigator, label: "Inventario", icon: "📦" },
+  Pacientes: {
+    routeName: ROUTES.TAB_PACIENTES,
+    component: PacientesNavigator,
+    label: "Pacientes",
+    icon: "𐀔",
+  },
+  Jornadas: {
+    routeName: ROUTES.TAB_JORNADAS,
+    component: JornadasNavigator,
+    label: "Jornadas",
+    icon: "📅",
+  },
+  Inventario: {
+    routeName: ROUTES.TAB_INVENTARIO,
+    component: InventarioNavigator,
+    label: "Inventario",
+    icon: "📦",
+  },
 };
 
 const TAB_AJUSTES_CONFIG = {
@@ -128,9 +207,10 @@ function TabsNavigator() {
   const { perfil } = useSesionCompartida();
   const modulosPermitidos = tabsMoviles(perfil?.rol) || [];
 
-  let tabsAAgregar = modulosPermitidos.length > 0
-    ? modulosPermitidos.map((m) => CONFIGURACION_TABS[m.tabMovil]).filter(Boolean)
-    : Object.values(CONFIGURACION_TABS);
+  let tabsAAgregar =
+    modulosPermitidos.length > 0
+      ? modulosPermitidos.map((m) => CONFIGURACION_TABS[m.tabMovil]).filter(Boolean)
+      : Object.values(CONFIGURACION_TABS);
 
   if (!tabsAAgregar.some((tab) => tab?.routeName === ROUTES.TAB_INICIO)) {
     tabsAAgregar.unshift(CONFIGURACION_TABS.Inicio);
@@ -160,7 +240,12 @@ function TabsNavigator() {
       }}
     >
       {tabsAAgregar.map((tab) => (
-        <Tabs.Screen key={tab.routeName} name={tab.routeName} component={tab.component} options={{ tabBarLabel: tab.label }} />
+        <Tabs.Screen
+          key={tab.routeName}
+          name={tab.routeName}
+          component={tab.component}
+          options={{ tabBarLabel: tab.label }}
+        />
       ))}
     </Tabs.Navigator>
   );

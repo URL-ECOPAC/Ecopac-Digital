@@ -38,12 +38,7 @@ export default function DonacionesScreen({ usuarioRol = "administrador" }) {
       setFechaFin,
       limpiarFiltros,
     },
-    modalDetalle: {
-      donacionSeleccionada,
-      modalDetalleAbierto,
-      abrirDetalle,
-      cerrarDetalle,
-    },
+    modalDetalle: { donacionSeleccionada, modalDetalleAbierto, abrirDetalle, cerrarDetalle },
   } = useHistorialDonaciones({ usuarioRol });
 
   // Si el rol no tiene permisos de lectura según permisos.js / es_consultivo()
@@ -108,12 +103,14 @@ export default function DonacionesScreen({ usuarioRol = "administrador" }) {
           >
             <Text style={[styles.chipText, filtroTipo === "" && styles.chipTextActive]}>Todos</Text>
           </TouchableOpacity>
-          {(OPCIONES_TIPO_DONACION || [
-            { value: "dinero", label: "Dinero" },
-            { value: "medicamentos", label: "Medicamentos" },
-            { value: "insumos", label: "Insumos" },
-            { value: "servicios", label: "Servicios" },
-          ]).map((opt) => (
+          {(
+            OPCIONES_TIPO_DONACION || [
+              { value: "dinero", label: "Dinero" },
+              { value: "medicamentos", label: "Medicamentos" },
+              { value: "insumos", label: "Insumos" },
+              { value: "servicios", label: "Servicios" },
+            ]
+          ).map((opt) => (
             <TouchableOpacity
               key={opt.value}
               style={[styles.chipFilter, filtroTipo === opt.value && styles.chipFilterActive]}
@@ -199,8 +196,7 @@ export default function DonacionesScreen({ usuarioRol = "administrador" }) {
                   </View>
                 ) : (
                   donaciones.map((item) => {
-                    const isRegistrada =
-                      item.estado === "registrada" || item.estado === "RECIBIDO";
+                    const isRegistrada = item.estado === "registrada" || item.estado === "RECIBIDO";
                     return (
                       <TouchableOpacity
                         key={item.id}
@@ -228,9 +224,7 @@ export default function DonacionesScreen({ usuarioRol = "administrador" }) {
                           {item.proyectoNombre || item.vinculadoA || "General"}
                         </Text>
 
-                        <Text style={[styles.tdTextSub, { width: 95 }]}>
-                          {item.fecha || "—"}
-                        </Text>
+                        <Text style={[styles.tdTextSub, { width: 95 }]}>{item.fecha || "—"}</Text>
 
                         <Text style={[styles.tdTextBold, { width: 90 }]}>
                           {formatearMonto(item.monto || item.montoTotal || item.monto_total || "—")}

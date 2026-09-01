@@ -4,36 +4,93 @@ import { useSesionCompartida } from "../contexto/SesionProvider";
 import { ROUTES } from "../navigation/rutas";
 
 const MODULOS_FIGMA = [
-  { id: "pacientes", titulo: "Pacientes", subtitulo: "Expedientes clínicos", valor: "9", color: "#10B981", tabMovil: "Pacientes" },
-  { id: "donaciones", titulo: "Donaciones", subtitulo: "Ingresos registrados", valor: "Q 553,800", color: "#0284C7", ruta: ROUTES.DONACIONES },
-  { id: "inventario", titulo: "Inventario", subtitulo: "Alertas activas", valor: "2", color: "#F59E0B", tabMovil: "Inventario" },
-  { id: "presupuestos", titulo: "Presupuestos", subtitulo: "Ejecución global", valor: "47%", color: "#EC4899", ruta: ROUTES.PRESUPUESTOS },
-  { id: "proyectos", titulo: "Proyectos", subtitulo: "Iniciativas macro", valor: "3", color: "#8B5CF6", ruta: ROUTES.PROYECTOS },
-  { id: "reportes", titulo: "Reportes", subtitulo: "Métricas de impacto", valor: "—", color: "#6B7280" },
-  { id: "jornadas", titulo: "Jornadas", subtitulo: "Kanban en tiempo real", valor: "1", color: "#10B981", tabMovil: "Jornadas" },
-  { id: "voluntarios", titulo: "Voluntarios", subtitulo: "Personal registrado", valor: "10", color: "#0284C7", ruta: ROUTES.VOLUNTARIOS },
+  {
+    id: "pacientes",
+    titulo: "Pacientes",
+    subtitulo: "Expedientes clínicos",
+    valor: "9",
+    color: "#10B981",
+    tabMovil: "Pacientes",
+  },
+  {
+    id: "donaciones",
+    titulo: "Donaciones",
+    subtitulo: "Ingresos registrados",
+    valor: "Q 553,800",
+    color: "#0284C7",
+    ruta: ROUTES.DONACIONES,
+  },
+  {
+    id: "inventario",
+    titulo: "Inventario",
+    subtitulo: "Alertas activas",
+    valor: "2",
+    color: "#F59E0B",
+    tabMovil: "Inventario",
+  },
+  {
+    id: "presupuestos",
+    titulo: "Presupuestos",
+    subtitulo: "Ejecución global",
+    valor: "47%",
+    color: "#EC4899",
+    ruta: ROUTES.PRESUPUESTOS,
+  },
+  {
+    id: "proyectos",
+    titulo: "Proyectos",
+    subtitulo: "Iniciativas macro",
+    valor: "3",
+    color: "#8B5CF6",
+    ruta: ROUTES.PROYECTOS,
+  },
+  {
+    id: "reportes",
+    titulo: "Reportes",
+    subtitulo: "Métricas de impacto",
+    valor: "—",
+    color: "#6B7280",
+  },
+  {
+    id: "jornadas",
+    titulo: "Jornadas",
+    subtitulo: "Kanban en tiempo real",
+    valor: "1",
+    color: "#10B981",
+    tabMovil: "Jornadas",
+  },
+  {
+    id: "voluntarios",
+    titulo: "Voluntarios",
+    subtitulo: "Personal registrado",
+    valor: "10",
+    color: "#0284C7",
+    ruta: ROUTES.VOLUNTARIOS,
+  },
 ];
 
 export default function InicioScreen({ navigation }) {
   const { perfil } = useSesionCompartida();
   const rol = perfil?.rol || "administrador";
 
-  const modulosCalculados = modulosVisibles(rol, { plataforma: "mobile" })?.filter((m) => m.id !== "inicio") || [];
-  
-  const modulosDisponibles = modulosCalculados.length > 0
-    ? modulosCalculados.map((m) => {
-        const base = MODULOS_FIGMA.find((f) => f.id === m.id) || {};
-        return {
-          id: m.id,
-          titulo: m.etiqueta || base.titulo || m.id,
-          subtitulo: base.subtitulo || "Módulo activo",
-          valor: base.valor || "—",
-          color: base.color || "#10B981",
-          tabMovil: m.tabMovil || base.tabMovil,
-          ruta: base.ruta,
-        };
-      })
-    : MODULOS_FIGMA;
+  const modulosCalculados =
+    modulosVisibles(rol, { plataforma: "mobile" })?.filter((m) => m.id !== "inicio") || [];
+
+  const modulosDisponibles =
+    modulosCalculados.length > 0
+      ? modulosCalculados.map((m) => {
+          const base = MODULOS_FIGMA.find((f) => f.id === m.id) || {};
+          return {
+            id: m.id,
+            titulo: m.etiqueta || base.titulo || m.id,
+            subtitulo: base.subtitulo || "Módulo activo",
+            valor: base.valor || "—",
+            color: base.color || "#10B981",
+            tabMovil: m.tabMovil || base.tabMovil,
+            ruta: base.ruta,
+          };
+        })
+      : MODULOS_FIGMA;
 
   const navegarAModulo = (modulo) => {
     if (modulo.tabMovil) {
@@ -54,15 +111,45 @@ export default function InicioScreen({ navigation }) {
   };
 
   const metricas = [
-    { id: "1", titulo: "PACIENTES ATENDIDOS", valor: "235", subtexto: "histórico total", color: "#10B981" },
-    { id: "2", titulo: "DONACIONES RECIBIDAS", valor: "Q 553,800", subtexto: "este año", color: "#0EA5E9" },
-    { id: "3", titulo: "VOLUNTARIOS ACTIVOS", valor: "9", subtexto: "personal registrado", color: "#F97316" },
+    {
+      id: "1",
+      titulo: "PACIENTES ATENDIDOS",
+      valor: "235",
+      subtexto: "histórico total",
+      color: "#10B981",
+    },
+    {
+      id: "2",
+      titulo: "DONACIONES RECIBIDAS",
+      valor: "Q 553,800",
+      subtexto: "este año",
+      color: "#0EA5E9",
+    },
+    {
+      id: "3",
+      titulo: "VOLUNTARIOS ACTIVOS",
+      valor: "9",
+      subtexto: "personal registrado",
+      color: "#F97316",
+    },
     { id: "4", titulo: "JORNADAS 2026", valor: "4", subtexto: "1 finalizadas", color: "#EC4899" },
   ];
 
   const alertasCaducidad = [
-    { id: "1", nombre: "Amoxicilina 500mg Cápsulas", codigo: "FAR-0041", lote: "L-2024-0091", dias: "30d" },
-    { id: "2", nombre: "Metformina 850mg Comprimidos", codigo: "FAR-0099", lote: "L-2024-0567", dias: "12d" },
+    {
+      id: "1",
+      nombre: "Amoxicilina 500mg Cápsulas",
+      codigo: "FAR-0041",
+      lote: "L-2024-0091",
+      dias: "30d",
+    },
+    {
+      id: "2",
+      nombre: "Metformina 850mg Comprimidos",
+      codigo: "FAR-0099",
+      lote: "L-2024-0567",
+      dias: "12d",
+    },
   ];
 
   return (
