@@ -16,10 +16,9 @@ export default function ModalMedicamento({
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-
     setFormData((prev) => ({
       ...prev,
-      [name]: value, // Mantenlo como string directo para que el <select> coincida siempre con el value
+      [name]: value,
     }));
   };
 
@@ -55,8 +54,10 @@ export default function ModalMedicamento({
             "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
           position: "relative",
           margin: "16px",
+          boxSizing: "border-box",
         }}
       >
+        {/* Botón Cerrar */}
         <button
           onClick={onClose}
           type="button"
@@ -75,6 +76,7 @@ export default function ModalMedicamento({
           ✕
         </button>
 
+        {/* Título */}
         <h2
           style={{
             fontSize: "20px",
@@ -89,6 +91,7 @@ export default function ModalMedicamento({
           Define los datos generales y especificaciones técnicas
         </p>
 
+        {/* Advertencia Duplicado */}
         {advertenciaDuplicado && (
           <div
             style={{
@@ -106,6 +109,7 @@ export default function ModalMedicamento({
           </div>
         )}
 
+        {/* Formulario */}
         <form
           onSubmit={handleFormSubmit}
           style={{ display: "flex", flexDirection: "column", gap: "16px" }}
@@ -119,6 +123,7 @@ export default function ModalMedicamento({
                 fontWeight: "800",
                 color: "#475569",
                 marginBottom: "6px",
+                textTransform: "uppercase",
               }}
             >
               NOMBRE COMERCIAL *
@@ -153,7 +158,12 @@ export default function ModalMedicamento({
               }}
             >
               <label
-                style={{ fontSize: "10px", fontWeight: "800", color: "#475569" }}
+                style={{
+                  fontSize: "10px",
+                  fontWeight: "800",
+                  color: "#475569",
+                  textTransform: "uppercase",
+                }}
               >
                 PRINCIPIO ACTIVO *
               </label>
@@ -164,7 +174,7 @@ export default function ModalMedicamento({
                   style={{
                     background: "none",
                     border: "none",
-                    color: "#10b981",
+                    color: "#059669",
                     fontSize: "11px",
                     fontWeight: "700",
                     cursor: "pointer",
@@ -216,6 +226,7 @@ export default function ModalMedicamento({
                   fontWeight: "800",
                   color: "#475569",
                   marginBottom: "6px",
+                  textTransform: "uppercase",
                 }}
               >
                 CONCENTRACIÓN *
@@ -247,6 +258,7 @@ export default function ModalMedicamento({
                   fontWeight: "800",
                   color: "#475569",
                   marginBottom: "6px",
+                  textTransform: "uppercase",
                 }}
               >
                 PRESENTACIÓN *
@@ -294,6 +306,7 @@ export default function ModalMedicamento({
                   fontWeight: "800",
                   color: "#475569",
                   marginBottom: "6px",
+                  textTransform: "uppercase",
                 }}
               >
                 MARCA / LABORATORIO *
@@ -325,6 +338,7 @@ export default function ModalMedicamento({
                   fontWeight: "800",
                   color: "#475569",
                   marginBottom: "6px",
+                  textTransform: "uppercase",
                 }}
               >
                 FORMA FARMACÉUTICA
@@ -348,7 +362,7 @@ export default function ModalMedicamento({
             </div>
           </div>
 
-          {/* Botones */}
+          {/* Botones de Acción */}
           <div
             style={{
               display: "flex",
@@ -381,7 +395,7 @@ export default function ModalMedicamento({
                 padding: "10px 28px",
                 borderRadius: "9999px",
                 border: "none",
-                backgroundColor: "#10b981",
+                backgroundColor: "#059669", // Mismo verde uniforme
                 color: "#ffffff",
                 fontSize: "13px",
                 fontWeight: "700",

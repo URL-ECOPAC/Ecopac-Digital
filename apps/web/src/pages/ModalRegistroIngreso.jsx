@@ -2,7 +2,9 @@ import { useRegistroIngreso } from "../../../../packages/shared/inventario/useRe
 
 export default function ModalRegistroIngreso({
   abierto,
-  onCerrar,
+  onClose,
+  onCerrar, // Soporte para ambas convenciones de nombre
+  onExito,  // Callback para notificar al padre tras guardar
   catalogos = { medicamentos: [], bodegas: [], donaciones: [] },
   usuarioActual,
 }) {
@@ -30,305 +32,348 @@ export default function ModalRegistroIngreso({
 
   if (!abierto) return null;
 
-  const handleCerrar = () => {
+  // Garantiza que se llame la función de cierre correcta sin importar cuál prop envió el padre
+  const handleCerrarModal = () => {
     resetFormulario();
-    onCerrar();
+    if (onCerrar) onCerrar();
+    if (onClose) onClose();
+  };
+
+  const handleGuardar = async () => {
+    const exito = await guardarMovimiento(usuarioActual);
+    // Si la operación fue exitosa y existe callback de éxito, notifica al padre
+    if (exito && onExito) {
+      onExito(exito);
+    }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 overflow-y-auto">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh]">
-        {/* Cabecera del Modal */}
-        <div className="flex items-center justify-between px-6 py-4 border-b bg-gray-50">
-          <div>
-            <h2 className="text-xl font-bold text-gray-800">
-              Registrar Ingreso de Medicamentos
-            </h2>
-            <p className="text-xs text-gray-500">Issue #156 - RF-15 / RF-04</p>
-          </div>
-          <button
-            onClick={handleCerrar}
-            className="text-gray-400 hover:text-gray-600 font-bold text-xl p-1"
-          >
-            ✕
-          </button>
-        </div>
-
-        {/* Cuerpo del Modal */}
-        <div className="p-6 overflow-y-auto space-y-5 flex-1">
-          {/* Banner crítico de estado PENDIENTE */}
-          <div className="p-3.5 bg-amber-50 border-l-4 border-amber-500 text-amber-800 rounded text-xs leading-relaxed">
-            <strong>⚠️ Advertencia:</strong> Este movimiento se registrará en estado{" "}
-            <strong>PENDIENTE</strong> y los lotes ingresados quedarán como{" "}
-            <strong>provisionales</strong>. <u>No afectarán el stock de inventario</u> hasta su confirmación.
+    <div
+      className="modal fade show d-block"
+      tabIndex="-1"
+      style={{ backgroundColor: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}
+    >
+      <div className="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div className="modal-content rounded-4 border-0 shadow-lg">
+          
+          {/* Cabecera del Modal */}
+          <div className="modal-header bg-light border-bottom-0 px-4 pt-4 pb-2">
+            <div>
+              <h5 className="modal-title fw-bold text-dark">
+                Registrar Ingreso de Medicamentos
+              </h5>
+            </div>
+            <button
+              type="button"
+              className="btn-close"
+              onClick={handleCerrarModal}
+              aria-label="Close"
+            ></button>
           </div>
 
-          {error && (
-            <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded text-xs">
-              {error}
+          {/* Cuerpo del Modal */}
+          <div className="modal-body px-4 py-3">
+            {/* Banner crítico de estado PENDIENTE */}
+            <div
+              className="alert border-0 rounded-3 text-dark mb-3 p-3"
+              style={{ backgroundColor: "#FFF3CD", fontSize: "12px", lineHeight: "1.5" }}
+            >
+              <strong>⚠️ Advertencia:</strong> Este movimiento se registrará en estado{" "}
+              <strong>PENDIENTE</strong> y los lotes ingresados quedarán como{" "}
+              <strong>provisionales</strong>. <u>No afectarán el stock de inventario</u> hasta su confirmación.
             </div>
-          )}
 
-          {resumenGuardado ? (
-            /* Pantalla de Resumen tras guardar */
-            <div className="p-5 bg-green-50 border border-green-200 rounded-lg space-y-3">
-              <div className="flex items-center gap-2 text-green-800 font-bold text-base">
-                <span>✅</span>
-                <span>Ingreso registrado con éxito (Pendiente)</span>
+            {error && (
+              <div className="alert alert-danger border-0 rounded-3 text-sm p-3 mb-3" style={{ fontSize: "12px" }}>
+                {error}
               </div>
-              <div className="text-xs text-green-900 space-y-1 bg-white p-3 rounded border border-green-100">
-                <p><strong>Folio:</strong> {resumenGuardado.id}</p>
-                <p><strong>Origen:</strong> {resumenGuardado.origen.toUpperCase()}</p>
-                <p><strong>Registrado por:</strong> {resumenGuardado.registrado_por}</p>
-                <p><strong>Total de Ítems:</strong> {resumenGuardado.items.length}</p>
-              </div>
-              <div className="flex justify-end pt-2">
-                <button
-                  onClick={resetFormulario}
-                  className="px-4 py-2 bg-green-700 text-white rounded text-xs font-medium hover:bg-green-800"
-                >
-                  + Registrar Otro Ingreso
-                </button>
-              </div>
-            </div>
-          ) : (
-            /* Formulario Principal */
-            <div className="space-y-5">
-              {/* Selección de Origen */}
-              <div>
-                <label className="block text-xs font-bold text-gray-700 uppercase mb-2">
-                  Origen del Ingreso *
-                </label>
-                <div className="flex gap-6">
-                  <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="origen"
-                      value="compra"
-                      checked={origen === "compra"}
-                      onChange={() => setOrigen("compra")}
-                      className="text-emerald-600 focus:ring-emerald-500"
-                    />
-                    Compra
-                  </label>
-                  <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="origen"
-                      value="donacion"
-                      checked={origen === "donacion"}
-                      onChange={() => setOrigen("donacion")}
-                      className="text-emerald-600 focus:ring-emerald-500"
-                    />
-                    Donación
-                  </label>
+            )}
+
+            {resumenGuardado ? (
+              /* Pantalla de Resumen tras guardar */
+              <div className="card border-success bg-success-subtle rounded-3 p-3">
+                <div className="d-flex align-items-center gap-2 text-success font-bold mb-2">
+                  <span>✅</span>
+                  <span className="fw-bold">Ingreso registrado con éxito (Pendiente)</span>
+                </div>
+                <div className="bg-white p-3 rounded border text-secondary" style={{ fontSize: "12px" }}>
+                  <p className="mb-1"><strong>Folio:</strong> {resumenGuardado.id}</p>
+                  <p className="mb-1"><strong>Origen:</strong> {resumenGuardado.origen?.toUpperCase()}</p>
+                  <p className="mb-1"><strong>Registrado por:</strong> {resumenGuardado.registrado_por}</p>
+                  <p className="mb-0"><strong>Total de Ítems:</strong> {resumenGuardado.items?.length}</p>
+                </div>
+                <div className="d-flex justify-content-end pt-3">
+                  <button
+                    onClick={resetFormulario}
+                    className="btn btn-sm text-white px-3"
+                    style={{ backgroundColor: "#009963" }}
+                  >
+                    + Registrar Otro Ingreso
+                  </button>
                 </div>
               </div>
-
-              {/* Campos dinámicos según Origen */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {origen === "compra" ? (
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1">
-                      Proveedor *
-                    </label>
-                    <input
-                      type="text"
-                      className="w-full border rounded-lg p-2 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                      placeholder="Ej. Distribuidora Farmacéutica"
-                      value={proveedor}
-                      onChange={(e) => setProveedor(e.target.value)}
-                    />
-                  </div>
-                ) : (
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1">
-                      Vincular Donación Existente *
-                    </label>
-                    <select
-                      className="w-full border rounded-lg p-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                      value={donacionId}
-                      onChange={(e) => setDonacionId(e.target.value)}
-                    >
-                      <option value="">-- Seleccionar Donación --</option>
-                      {(catalogos?.donaciones || []).map((d) => (
-                        <option key={d.id} value={d.id}>
-                          {d.donante} ({d.fecha || "Sin fecha"})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-
+            ) : (
+              /* Formulario Principal */
+              <div className="d-flex flex-column gap-3">
+                {/* Selección de Origen */}
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">
-                    No. Factura / Comprobante
+                  <label className="form-label fw-bold text-secondary uppercase mb-2" style={{ fontSize: "11px" }}>
+                    Origen del Ingreso *
                   </label>
-                  <input
-                    type="text"
-                    className="w-full border rounded-lg p-2 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                    placeholder="Ej. FAC-1029"
-                    value={numeroComprobante}
-                    onChange={(e) => setNumeroComprobante(e.target.value)}
-                  />
-                </div>
-              </div>
-
-              <hr className="border-gray-100" />
-
-              {/* Agregar Medicamentos */}
-              <div className="space-y-3">
-                <h3 className="text-xs font-bold text-gray-700 uppercase">
-                  Agregar Medicamentos
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-5 gap-2 bg-gray-50 p-3 rounded-lg border border-gray-100">
-                  <div className="md:col-span-2">
-                    <label className="block text-[10px] text-gray-500 mb-1">Medicamento *</label>
-                    <select
-                      className="w-full border rounded p-1.5 text-xs bg-white"
-                      value={itemActual.medicamento_id}
-                      onChange={(e) =>
-                        setItemActual({ ...itemActual, medicamento_id: e.target.value })
-                      }
-                    >
-                      <option value="">Seleccionar...</option>
-                      {(catalogos?.medicamentos || []).map((m) => (
-                        <option key={m.id} value={m.id}>
-                          {m.nombre} ({m.concentracion})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] text-gray-500 mb-1">No. Lote *</label>
-                    <input
-                      type="text"
-                      placeholder="LOT-123"
-                      className="w-full border rounded p-1.5 text-xs"
-                      value={itemActual.numero_lote}
-                      onChange={(e) =>
-                        setItemActual({ ...itemActual, numero_lote: e.target.value })
-                      }
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] text-gray-500 mb-1">Bodega *</label>
-                    <select
-                      className="w-full border rounded p-1.5 text-xs bg-white"
-                      value={itemActual.bodega_id}
-                      onChange={(e) =>
-                        setItemActual({ ...itemActual, bodega_id: e.target.value })
-                      }
-                    >
-                      <option value="">Bodega...</option>
-                      {(catalogos?.bodegas || []).map((b) => (
-                        <option key={b.id} value={b.id}>
-                          {b.nombre}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] text-gray-500 mb-1">Cantidad *</label>
-                    <input
-                      type="number"
-                      placeholder="100"
-                      className="w-full border rounded p-1.5 text-xs"
-                      value={itemActual.cantidad}
-                      onChange={(e) =>
-                        setItemActual({ ...itemActual, cantidad: e.target.value })
-                      }
-                    />
-                  </div>
-
-                  <div className="md:col-span-5">
-                    <label className="block text-[10px] text-gray-500 mb-1">Fecha Vencimiento</label>
-                    <div className="flex gap-2">
+                  <div className="d-flex gap-4">
+                    <div className="form-check">
                       <input
-                        type="date"
-                        className="w-full border rounded p-1.5 text-xs"
-                        value={itemActual.fecha_vencimiento}
-                        onChange={(e) =>
-                          setItemActual({ ...itemActual, fecha_vencimiento: e.target.value })
-                        }
+                        type="radio"
+                        id="origenCompra"
+                        name="origen"
+                        className="form-check-input"
+                        value="compra"
+                        checked={origen === "compra"}
+                        onChange={() => setOrigen("compra")}
                       />
-                      <button
-                        type="button"
-                        onClick={agregarItem}
-                        className="px-3 py-1.5 bg-gray-800 text-white rounded text-xs hover:bg-gray-900 shrink-0"
-                      >
-                        + Añadir
-                      </button>
+                      <label className="form-check-label text-dark" style={{ fontSize: "14px" }} htmlFor="origenCompra">
+                        Compra
+                      </label>
+                    </div>
+                    <div className="form-check">
+                      <input
+                        type="radio"
+                        id="origenDonacion"
+                        name="origen"
+                        className="form-check-input"
+                        value="donacion"
+                        checked={origen === "donacion"}
+                        onChange={() => setOrigen("donacion")}
+                      />
+                      <label className="form-check-label text-dark" style={{ fontSize: "14px" }} htmlFor="origenDonacion">
+                        Donación
+                      </label>
                     </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Tabla de Medicamentos Agregados */}
-              <div className="border rounded-lg overflow-hidden">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-gray-100 text-gray-600 uppercase font-semibold">
-                    <tr>
-                      <th className="p-2.5">Medicamento ID</th>
-                      <th className="p-2.5">Lote</th>
-                      <th className="p-2.5">Bodega</th>
-                      <th className="p-2.5">Vencimiento</th>
-                      <th className="p-2.5">Cantidad</th>
-                      <th className="p-2.5 text-right">Acción</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y">
-                    {items.length === 0 ? (
+                {/* Campos dinámicos según Origen */}
+                <div className="row g-3">
+                  {origen === "compra" ? (
+                    <div className="col-md-6">
+                      <label className="form-label fw-semibold text-secondary" style={{ fontSize: "12px" }}>
+                        Proveedor *
+                      </label>
+                      <input
+                        type="text"
+                        className="form-control form-control-sm rounded-3"
+                        placeholder="Ej. Distribuidora Farmacéutica"
+                        value={proveedor}
+                        onChange={(e) => setProveedor(e.target.value)}
+                      />
+                    </div>
+                  ) : (
+                    <div className="col-md-6">
+                      <label className="form-label fw-semibold text-secondary" style={{ fontSize: "12px" }}>
+                        Vincular Donación Existente *
+                      </label>
+                      <select
+                        className="form-select form-select-sm rounded-3"
+                        value={donacionId}
+                        onChange={(e) => setDonacionId(e.target.value)}
+                      >
+                        <option value="">-- Seleccionar Donación --</option>
+                        {(catalogos?.donaciones || []).map((d) => (
+                          <option key={d.id} value={d.id}>
+                            {d.donante} ({d.fecha || "Sin fecha"})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  <div className="col-md-6">
+                    <label className="form-label fw-semibold text-secondary" style={{ fontSize: "12px" }}>
+                      No. Factura / Comprobante
+                    </label>
+                    <input
+                      type="text"
+                      className="form-control form-control-sm rounded-3"
+                      placeholder="Ej. FAC-1029"
+                      value={numeroComprobante}
+                      onChange={(e) => setNumeroComprobante(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <hr className="my-2 text-muted opacity-25" />
+
+                {/* Agregar Medicamentos */}
+                <div>
+                  <h6 className="fw-bold text-secondary uppercase mb-2" style={{ fontSize: "11px" }}>
+                    Agregar Medicamentos
+                  </h6>
+                  <div className="card border-0 bg-light p-3 rounded-3 mb-3">
+                    <div className="row g-2">
+                      <div className="col-md-6">
+                        <label className="form-label text-muted mb-1" style={{ fontSize: "11px" }}>
+                          Medicamento *
+                        </label>
+                        <select
+                          className="form-select form-select-sm rounded-2"
+                          value={itemActual.medicamento_id}
+                          onChange={(e) =>
+                            setItemActual({ ...itemActual, medicamento_id: e.target.value })
+                          }
+                        >
+                          <option value="">Seleccionar...</option>
+                          {(catalogos?.medicamentos || []).map((m) => (
+                            <option key={m.id} value={m.id}>
+                              {m.nombre} ({m.concentracion})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="col-md-3">
+                        <label className="form-label text-muted mb-1" style={{ fontSize: "11px" }}>
+                          No. Lote *
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="LOT-123"
+                          className="form-control form-control-sm rounded-2"
+                          value={itemActual.numero_lote}
+                          onChange={(e) =>
+                            setItemActual({ ...itemActual, numero_lote: e.target.value })
+                          }
+                        />
+                      </div>
+
+                      <div className="col-md-3">
+                        <label className="form-label text-muted mb-1" style={{ fontSize: "11px" }}>
+                          Bodega *
+                        </label>
+                        <select
+                          className="form-select form-select-sm rounded-2"
+                          value={itemActual.bodega_id}
+                          onChange={(e) =>
+                            setItemActual({ ...itemActual, bodega_id: e.target.value })
+                          }
+                        >
+                          <option value="">Bodega...</option>
+                          {(catalogos?.bodegas || []).map((b) => (
+                            <option key={b.id} value={b.id}>
+                              {b.nombre}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="col-md-4">
+                        <label className="form-label text-muted mb-1" style={{ fontSize: "11px" }}>
+                          Cantidad *
+                        </label>
+                        <input
+                          type="number"
+                          placeholder="100"
+                          className="form-control form-control-sm rounded-2"
+                          value={itemActual.cantidad}
+                          onChange={(e) =>
+                            setItemActual({ ...itemActual, cantidad: e.target.value })
+                          }
+                        />
+                      </div>
+
+                      <div className="col-md-8">
+                        <label className="form-label text-muted mb-1" style={{ fontSize: "11px" }}>
+                          Fecha Vencimiento
+                        </label>
+                        <div className="d-flex gap-2">
+                          <input
+                            type="date"
+                            className="form-control form-control-sm rounded-2"
+                            value={itemActual.fecha_vencimiento}
+                            onChange={(e) =>
+                              setItemActual({ ...itemActual, fecha_vencimiento: e.target.value })
+                            }
+                          />
+                          <button
+                            type="button"
+                            onClick={agregarItem}
+                            className="btn btn-dark btn-sm rounded-2 px-3 text-nowrap"
+                          >
+                            + Añadir
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Tabla de Medicamentos Agregados */}
+                <div className="table-responsive border rounded-3 overflow-hidden">
+                  <table className="table table-hover table-sm align-middle mb-0" style={{ fontSize: "12px" }}>
+                    <thead className="table-light text-secondary text-uppercase" style={{ fontSize: "11px" }}>
                       <tr>
-                        <td colSpan="6" className="p-4 text-center text-gray-400">
-                          No se han agregado medicamentos a la lista.
-                        </td>
+                        <th className="py-2 px-3">Medicamento ID</th>
+                        <th className="py-2 px-3">Lote</th>
+                        <th className="py-2 px-3">Bodega</th>
+                        <th className="py-2 px-3">Vencimiento</th>
+                        <th className="py-2 px-3">Cantidad</th>
+                        <th className="py-2 px-3 text-end">Acción</th>
                       </tr>
-                    ) : (
-                      items.map((item) => (
-                        <tr key={item.id} className="hover:bg-gray-50">
-                          <td className="p-2.5 font-medium text-gray-800">{item.medicamento_id}</td>
-                          <td className="p-2.5">{item.numero_lote}</td>
-                          <td className="p-2.5">{item.bodega_id}</td>
-                          <td className="p-2.5">{item.fecha_vencimiento || "N/A"}</td>
-                          <td className="p-2.5 font-bold">{item.cantidad}</td>
-                          <td className="p-2.5 text-right">
-                            <button
-                              onClick={() => eliminarItem(item.id)}
-                              className="text-red-600 hover:text-red-800 font-semibold"
-                            >
-                              Eliminar
-                            </button>
+                    </thead>
+                    <tbody>
+                      {items.length === 0 ? (
+                        <tr>
+                          <td colSpan="6" className="py-4 text-center text-muted">
+                            No se han agregado medicamentos a la lista.
                           </td>
                         </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
+                      ) : (
+                        items.map((item) => (
+                          <tr key={item.id}>
+                            <td className="px-3 fw-semibold text-dark">{item.medicamento_id}</td>
+                            <td className="px-3">{item.numero_lote}</td>
+                            <td className="px-3">{item.bodega_id}</td>
+                            <td className="px-3">{item.fecha_vencimiento || "N/A"}</td>
+                            <td className="px-3 fw-bold">{item.cantidad}</td>
+                            <td className="px-3 text-end">
+                              <button
+                                type="button"
+                                onClick={() => eliminarItem(item.id)}
+                                className="btn btn-link btn-sm text-danger text-decoration-none p-0 fw-bold"
+                              >
+                                Eliminar
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
 
-        {/* Pie del Modal */}
-        <div className="px-6 py-3 bg-gray-50 border-t flex justify-end gap-3">
-          <button
-            onClick={handleCerrar}
-            className="px-4 py-2 border rounded-lg text-xs font-medium text-gray-600 hover:bg-gray-100"
-          >
-            {resumenGuardado ? "Cerrar" : "Cancelar"}
-          </button>
-          {!resumenGuardado && (
+          {/* Pie del Modal */}
+          <div className="modal-footer bg-light border-top-0 px-4 py-3">
             <button
-              onClick={() => guardarMovimiento(usuarioActual)}
-              className="px-5 py-2 bg-emerald-600 text-white rounded-lg text-xs font-semibold hover:bg-emerald-700"
+              type="button"
+              onClick={handleCerrarModal}
+              className="btn btn-outline-secondary btn-sm rounded-3 px-3"
             >
-              Guardar Movimiento
+              {resumenGuardado ? "Cerrar" : "Cancelar"}
             </button>
-          )}
+            {!resumenGuardado && (
+              <button
+                type="button"
+                onClick={handleGuardar}
+                className="btn btn-sm text-white rounded-3 px-4 fw-semibold"
+                style={{ backgroundColor: "#009963" }}
+              >
+                Guardar Movimiento
+              </button>
+            )}
+          </div>
+
         </div>
       </div>
     </div>
