@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Outlet, NavLink, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "react-bootstrap";
 import {
@@ -35,6 +35,7 @@ function moduloDeRuta(pathname) {
 export default function MainLayout() {
   const navigate = useNavigate();
   const location = useLocation();
+  const [menuAbierto, setMenuAbierto] = useState(false);
 
   const { perfil, logout } = useSesionCompartida();
 
@@ -49,6 +50,10 @@ export default function MainLayout() {
     await logout();
     navigate("/login", { replace: true });
   }, [logout, navigate]);
+
+  useEffect(() => {
+    setMenuAbierto(false);
+  }, [location.pathname]);
 
   const { registrarActividad } = useExpiracionPorInactividad({
     minutos: MINUTOS_INACTIVIDAD_POR_DEFECTO,
@@ -66,9 +71,29 @@ export default function MainLayout() {
 
   return (
     <div className="app-shell">
-      <aside className="app-sidebar">
+      <button
+        type="button"
+        className="app-menu-toggle"
+        aria-label={menuAbierto ? "Cerrar menu" : "Abrir menu"}
+        aria-expanded={menuAbierto}
+        onClick={() => setMenuAbierto((abierto) => !abierto)}
+      >
+        <span className="app-menu-toggle__bar" aria-hidden="true" />
+        <span className="app-menu-toggle__bar" aria-hidden="true" />
+        <span className="app-menu-toggle__bar" aria-hidden="true" />
+      </button>
+
+      {menuAbierto && (
+        <div
+          className="app-sidebar__overlay"
+          role="presentation"
+          onClick={() => setMenuAbierto(false)}
+        />
+      )}
+
+      <aside className={`app-sidebar${menuAbierto ? " app-sidebar--abierto" : ""}`}>
         <div className="app-brand">
-          <span className="app-brand__mark" aria-hidden="true" />
+          <img className="app-brand__mark" src="/logo-ecopac.png" alt="Ecopac" />
           <span>
             <span className="app-brand__name">Ecopac</span>
           </span>
