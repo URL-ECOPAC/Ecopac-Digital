@@ -239,10 +239,42 @@ un `::warning::` y una seccion propia diciendo que el PR no la causa y que no la
 sin fallar nunca**: depende de secrets y de la red, y convertirlo en guarda haria que un corte de
 conexion bloquee PRs ajenos. Quien corta es `Aplicar migraciones`, despues del merge.
 
+El aviso solo salta por **deriva de verdad**: una version aplicada en la base cuyo archivo no
+esta ni en el tip de la rama base. Que a la rama del PR le falten migraciones que entraron a
+`develop` despues de abrirla no es deriva -- es una rama desactualizada, que no le hace dano a
+nadie. Sin ese filtro el aviso saltaba en casi todos los PR y dejaba de significar algo.
+
 Lo que ninguna de las dos cosas arregla es una **rama que se quedo vieja**: ningun check se vuelve
 a correr solo cuando `develop` avanza, asi que dos PRs pueden reservar el mismo numero de
 migracion y las dos pasar en verde. Eso lo cierra `strict` ("Require branches to be up to date"),
 que vive en Settings > Branches.
+
+### Un despliegue superado no despliega
+
+`Aplicar migraciones` comprueba, antes de tocar nada, si el commit que esta desplegando sigue
+siendo el tip de la rama. Si ya hay uno mas nuevo, **no despliega**: deja un `::notice::`, escribe
+por que en el resumen y termina en verde.
+
+No es una optimizacion, es correccion. Los grupos de concurrencia llevan el SHA a proposito para
+no perder corridas (ver el Caso 5), y el precio es que dos despliegues pueden solaparse. Solaparse
+no es inofensivo: el mas nuevo aplica una migracion, el mas viejo la ve en la base sin tenerla en
+su commit y muere con `Remote migration versions not found`. Ese fallo no significa nada -- pero
+es indistinguible del que si significa algo (Caso 4), abre issue y manda a buscar un PR que ya
+esta mergeado.
+
+Saltarse la corrida vieja no pierde nada: **`supabase db push` es acumulativo**, sube todo lo que
+falte y no solo lo del commit que lo dispara, asi que la corrida del tip despliega tambien lo que
+traia la que se salto. Y el tip siempre tiene corrida propia, porque su grupo de concurrencia
+lleva su SHA y nadie lo cancela.
+
+No se resuelve con `concurrency` a nivel de job: GitHub guarda **una sola corrida en espera** por
+grupo, asi que encolar despliegues los cancela entre si, y un `cancelled` lo reporta **Supabase
+completo** como fallo. Seria cambiar un falso rojo por otro.
+
+Queda una ventana que la guarda del tip no cierra: que el merge nuevo entre justo despues de la
+comprobacion. Para eso, cuando aparece `Remote migration versions not found`, el paso vuelve a
+consultar el tip y mira si los archivos de esas versiones ya estan ahi. Si estan, es lo mismo de
+arriba y termina en verde; si no, es deriva de verdad y falla.
 
 No se puede llegar a **un** unico check para todo el repositorio: `Lint y build` vive en otro
 workflow y un job no puede declarar `needs` de un workflow ajeno. El minimo son dos nombres.
@@ -654,6 +686,15 @@ Conviene saber que hoy **`enforce_admins` esta desactivado en `develop` y en `ma
 esa puerta esta abierta y solo la cierra la disciplina del equipo. Ver "Ramas protegidas".
 
 ### Caso 4: la base tiene una migracion que la rama no
+
+> **Antes de leer el resto: si el resumen de la corrida dice "Corrida superada", este no es tu
+> caso y no hay nada que hacer.** Ese texto significa que se mergearon dos PR con segundos de
+> diferencia y esta corrida quedo atras; la del commit mas nuevo desplego todo. Termina en verde
+> y no abre issue. Ver "Un despliegue superado no despliega".
+>
+> Este caso, el de abajo, es el otro: la version que sobra en la base **no tiene archivo en
+> ninguna parte de la rama**. Ahi si hay algo que arreglar, y hasta que se arregle falla todo
+> push.
 
 El paso **Comprobar el historial remoto** falla y `Aplicar migraciones` queda en `skipped`. **No
 se aplico nada y la base no quedo a medias.** El resumen de la corrida lista las versiones que
