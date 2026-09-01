@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { Navigate, useLocation, Link } from "react-router-dom";
 import { ESTADOS_DE_RESTAURACION, useInicioSesion } from "@ecopac/shared";
 import { useSesionCompartida } from "../contexto/SesionProvider";

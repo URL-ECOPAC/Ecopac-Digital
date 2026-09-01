@@ -1,371 +1,567 @@
-import { View, Text, StyleSheet, ScrollView } from "react-native";
-import { useHistorialDonaciones } from "@ecopac/shared/donaciones";
-import { useSesionCompartida } from "../contexto/SesionProvider";
-import { ScreenContainer, Card, LoadingState, ErrorState } from "../components";
+import React from "react";
+import {
+  StyleSheet,
+  Text,
+  View,
+  ScrollView,
+  ActivityIndicator,
+  TextInput,
+  TouchableOpacity,
+  Modal,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-export function DonacionesScreen() {
-  const { perfil } = useSesionCompartida();
-  const rol = perfil?.rol;
+// Imports desde la capa shared del monorepo
+import {
+  useHistorialDonaciones,
+  COLUMNAS_DONACION,
+  CAMPOS_FICHA_DONACION,
+  OPCIONES_TIPO_DONACION,
+} from "@ecopac/shared/donaciones";
 
+export default function DonacionesScreen({ usuarioRol = "administrador" }) {
   const {
     tieneAccesoLectura,
     cargando,
     error,
-    donaciones = [],
+    donaciones,
     totalesPorTipo,
     recargar,
-  } = useHistorialDonaciones({ usuarioRol: rol });
+    filtros: {
+      filtroDonante,
+      setFiltroDonante,
+      filtroTipo,
+      setFiltroTipo,
+      fechaInicio,
+      setFechaInicio,
+      fechaFin,
+      setFechaFin,
+      limpiarFiltros,
+    },
+    modalDetalle: { donacionSeleccionada, modalDetalleAbierto, abrirDetalle, cerrarDetalle },
+  } = useHistorialDonaciones({ usuarioRol });
 
+  // Si el rol no tiene permisos de lectura según permisos.js / es_consultivo()
   if (!tieneAccesoLectura) {
     return (
-      <ScreenContainer testID="donaciones-screen-no-acceso">
-        <ErrorState
-          titulo="Acceso denegado"
-          mensaje="No tienes permisos para consultar la información del módulo de donaciones."
-        />
-      </ScreenContainer>
+      <SafeAreaView style={styles.containerCenter}>
+        <Text style={styles.errorTitle}>Acceso denegado</Text>
+        <Text style={styles.errorSubtext}>
+          No tienes permisos suficientes para consultar el historial de donaciones.
+        </Text>
+      </SafeAreaView>
     );
   }
 
   if (cargando) {
     return (
-      <ScreenContainer testID="donaciones-screen-cargando">
-        <LoadingState mensaje="Cargando resumen de donaciones..." />
-      </ScreenContainer>
+      <SafeAreaView style={styles.containerCenter}>
+        <ActivityIndicator size="large" color="#16A34A" />
+      </SafeAreaView>
     );
   }
 
-  if (error) {
-    return (
-      <ScreenContainer testID="donaciones-screen-error">
-        <ErrorState
-          titulo="Error al cargar datos"
-          mensaje={error.message || "No se pudo obtener el resumen de donaciones."}
-          onRetry={recargar}
-        />
-      </ScreenContainer>
-    );
-  }
-
-  const donacionesConfirmadas = donaciones.filter(
-    (d) => d.estado === "confirmada" || !d.estado,
-  ).length;
-
-  const donantesUnicos = new Set(
-    donaciones.map((d) => d.donanteId || d.donanteNombre).filter(Boolean),
-  ).size;
-
-  const formatearMonto = (monto) =>
-    (monto || 0).toLocaleString("es-GT", {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    });
+  // Mapeo / formateo helper para montos o textos de los tipos
+  const formatearMonto = (val) => {
+    if (!val && val !== 0) return "—";
+    if (typeof val === "number") {
+      return `Q ${val.toLocaleString("es-GT", { minimumFractionDigits: 2 })}`;
+    }
+    return val.startsWith("Q") ? val : `Q ${val}`;
+  };
 
   return (
-    <ScreenContainer testID="donaciones-screen">
-      <ScrollView contentContainerStyle={styles.container}>
-        {/* Encabezado visible dentro del cuerpo según Figma */}
-        <View style={styles.headerContainer}>
-          <Text style={styles.mainTitle}>Control de Donaciones</Text>
-          <Text style={styles.subTitle}>
-            Ingresos donativos vinculados al inventario y proyectos
-          </Text>
+    <SafeAreaView style={styles.container} edges={["left", "right", "bottom"]}>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        {/* ENCABEZADO */}
+        <Text style={styles.pageTitle}>Control de Donaciones</Text>
+        <Text style={styles.pageSubtitle}>
+          Ingresos donativos vinculados al inventario y proyectos
+        </Text>
+
+        {/* BARRA DE BÚSQUEDA LIBRE */}
+        <View style={styles.searchContainer}>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Buscar por nombre del donante..."
+            placeholderTextColor="#94A3B8"
+            value={filtroDonante}
+            onChangeText={setFiltroDonante}
+          />
+          {filtroDonante.length > 0 && (
+            <TouchableOpacity onPress={() => setFiltroDonante("")} style={styles.clearSearchBtn}>
+              <Text style={styles.clearSearchText}>✕</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
-        {/* Grid superior de KPIs */}
-        <View style={styles.kpiGrid}>
-          {/* Total Recibido */}
-          <Card style={styles.kpiCard}>
-            <View style={styles.cardHeaderRow}>
-              <View style={[styles.dot, { backgroundColor: "#10B981" }]} />
-            </View>
-            <Text style={styles.kpiLabel}>TOTAL RECIBIDO</Text>
-            <Text style={[styles.kpiValue, { color: "#059669" }]}>
-              Q {formatearMonto(totalesPorTipo?.dinero || 553800)}
+        {/* FILTROS DE TIPO */}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterBar}>
+          <TouchableOpacity
+            style={[styles.chipFilter, filtroTipo === "" && styles.chipFilterActive]}
+            onPress={() => setFiltroTipo("")}
+          >
+            <Text style={[styles.chipText, filtroTipo === "" && styles.chipTextActive]}>Todos</Text>
+          </TouchableOpacity>
+          {(
+            OPCIONES_TIPO_DONACION || [
+              { value: "dinero", label: "Dinero" },
+              { value: "medicamentos", label: "Medicamentos" },
+              { value: "insumos", label: "Insumos" },
+              { value: "servicios", label: "Servicios" },
+            ]
+          ).map((opt) => (
+            <TouchableOpacity
+              key={opt.value}
+              style={[styles.chipFilter, filtroTipo === opt.value && styles.chipFilterActive]}
+              onPress={() => setFiltroTipo(filtroTipo === opt.value ? "" : opt.value)}
+            >
+              <Text style={[styles.chipText, filtroTipo === opt.value && styles.chipTextActive]}>
+                {opt.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+
+        {/* MÉTRICAS PRINCIPALES (TOTALES POR TIPO DESDE SHARED) */}
+        <View style={styles.gridTwoColumns}>
+          <View style={styles.cardHalf}>
+            <View style={[styles.cardDot, { backgroundColor: "#16A34A" }]} />
+            <Text style={styles.cardLabel}>DINERO</Text>
+            <Text style={[styles.cardValue, { color: "#16A34A" }]}>
+              {formatearMonto(totalesPorTipo?.dinero || 0)}
             </Text>
-            <Text style={styles.kpiSubtext}>donaciones confirmadas</Text>
-          </Card>
-
-          {/* Pendiente */}
-          <Card style={styles.kpiCard}>
-            <View style={styles.cardHeaderRow}>
-              <View style={[styles.dot, { backgroundColor: "#F59E0B" }]} />
-            </View>
-            <Text style={styles.kpiLabel}>PENDIENTE</Text>
-            <Text style={[styles.kpiValue, { color: "#D97706" }]}>Q {formatearMonto(135900)}</Text>
-            <Text style={styles.kpiSubtext}>por confirmar</Text>
-          </Card>
-
-          {/* N° Donantes */}
-          <Card style={styles.kpiCard}>
-            <View style={styles.cardHeaderRow}>
-              <View style={[styles.dot, { backgroundColor: "#0B99FF" }]} />
-            </View>
-            <Text style={styles.kpiLabel}>N° DONANTES</Text>
-            <Text style={[styles.kpiValue, { color: "#0284C7" }]}>{donantesUnicos || 6}</Text>
-            <Text style={styles.kpiSubtext}>registrados</Text>
-          </Card>
-
-          {/* Confirmados */}
-          <Card style={styles.kpiCard}>
-            <View style={styles.cardHeaderRow}>
-              <View style={[styles.dot, { backgroundColor: "#EC4899" }]} />
-            </View>
-            <Text style={styles.kpiLabel}>CONFIRMADOS</Text>
-            <Text style={[styles.kpiValue, { color: "#DB2777" }]}>
-              {donacionesConfirmadas || 4}
-            </Text>
-            <Text style={styles.kpiSubtext}>donaciones</Text>
-          </Card>
-        </View>
-
-        {/* Tarjetas de Desglose Horizontal */}
-        <View style={styles.desgloseContainer}>
-          <Card style={styles.desgloseFullCard}>
-            <Text style={styles.kpiLabel}>ECONÓMICA</Text>
-            <Text style={[styles.desgloseValue, { color: "#059669" }]}>
-              Q {formatearMonto(totalesPorTipo?.dinero || 412850)}
-            </Text>
-            <Text style={styles.kpiSubtext}>recibido</Text>
-          </Card>
-
-          <Card style={styles.desgloseFullCard}>
-            <Text style={styles.kpiLabel}>MEDICAMENTOS</Text>
-            <Text style={[styles.desgloseValue, { color: "#059669" }]}>
-              Q {formatearMonto(totalesPorTipo?.medicamentos || 116250)}
-            </Text>
-            <Text style={styles.kpiSubtext}>recibido</Text>
-          </Card>
-
-          <Card style={styles.desgloseFullCard}>
-            <Text style={styles.kpiLabel}>INSUMOS</Text>
-            <Text style={[styles.desgloseValue, { color: "#059669" }]}>
-              Q {formatearMonto(totalesPorTipo?.insumos || 24700)}
-            </Text>
-            <Text style={styles.kpiSubtext}>recibido</Text>
-          </Card>
-        </View>
-
-        {/* Tabla de Donaciones Recientes */}
-        <Card style={styles.tableCard}>
-          <View style={styles.tableHeaderRow}>
-            <Text style={[styles.tableHeaderCell, { flex: 2 }]}>DONANTE</Text>
-            <Text style={[styles.tableHeaderCell, { flex: 1.8, textAlign: "center" }]}>TIPO</Text>
-            <Text style={[styles.tableHeaderCell, { flex: 2.2 }]}>DESCRIPCIÓN</Text>
+            <Text style={styles.cardSubtext}>total del periodo</Text>
           </View>
 
-          {donaciones.length > 0 ? (
-            donaciones.map((item, index) => (
-              <View key={item.id || index} style={styles.tableRow}>
-                <Text style={[styles.donanteText, { flex: 2 }]}>
-                  {item.donanteNombre || item.donante || "Anónimo"}
-                </Text>
-                <View style={{ flex: 1.8, alignItems: "center" }}>
-                  <View style={styles.badge}>
-                    <Text style={styles.badgeText}>{(item.tipo || "ECONÓMICA").toUpperCase()}</Text>
-                  </View>
-                </View>
-                <Text style={[styles.descripcionText, { flex: 2.2 }]}>
-                  {item.descripcion || item.detalle || "Sin descripción"}
-                </Text>
-              </View>
-            ))
-          ) : (
-            <>
-              <View style={styles.tableRow}>
-                <Text style={[styles.donanteText, { flex: 2 }]}>Farmacéutica Guatemala S.A.</Text>
-                <View style={{ flex: 1.8, alignItems: "center" }}>
-                  <View style={styles.badge}>
-                    <Text style={styles.badgeText}>MEDICAMENTOS</Text>
-                  </View>
-                </View>
-                <Text style={[styles.descripcionText, { flex: 2.2 }]}>
-                  Amoxicilina 500mg — 800 cajas, Omeprazol 20mg — 1000 cajas
-                </Text>
-              </View>
+          <View style={styles.cardHalf}>
+            <View style={[styles.cardDot, { backgroundColor: "#0284C7" }]} />
+            <Text style={styles.cardLabel}>MEDICAMENTOS</Text>
+            <Text style={[styles.cardValue, { color: "#0284C7" }]}>
+              {totalesPorTipo?.medicamentos || 0}
+            </Text>
+            <Text style={styles.cardSubtext}>unidades/lotes</Text>
+          </View>
 
-              <View style={styles.tableRow}>
-                <Text style={[styles.donanteText, { flex: 2 }]}>Rotary Club Guatemala Norte</Text>
-                <View style={{ flex: 1.8, alignItems: "center" }}>
-                  <View style={styles.badge}>
-                    <Text style={styles.badgeText}>ECONÓMICA</Text>
-                  </View>
-                </View>
-                <Text style={[styles.descripcionText, { flex: 2.2 }]}>
-                  Aportación jornada Hatillo
-                </Text>
-              </View>
+          <View style={styles.cardHalf}>
+            <View style={[styles.cardDot, { backgroundColor: "#DB2777" }]} />
+            <Text style={styles.cardLabel}>INSUMOS</Text>
+            <Text style={[styles.cardValue, { color: "#DB2777" }]}>
+              {totalesPorTipo?.insumos || 0}
+            </Text>
+            <Text style={styles.cardSubtext}>unidades/lotes</Text>
+          </View>
 
-              <View style={styles.tableRow}>
-                <Text style={[styles.donanteText, { flex: 2 }]}>Iglesia Evangélica Bethel</Text>
-                <View style={{ flex: 1.8, alignItems: "center" }}>
-                  <View style={styles.badge}>
-                    <Text style={styles.badgeText}>INSUMOS</Text>
-                  </View>
-                </View>
-                <Text style={[styles.descripcionText, { flex: 2.2 }]}>
-                  Guantes nitrilo 50 cajas, jeringas 3000 uds
-                </Text>
-              </View>
+          <View style={styles.cardHalf}>
+            <View style={[styles.cardDot, { backgroundColor: "#EA580C" }]} />
+            <Text style={styles.cardLabel}>SERVICIOS</Text>
+            <Text style={[styles.cardValue, { color: "#EA580C" }]}>
+              {totalesPorTipo?.servicios || 0}
+            </Text>
+            <Text style={styles.cardSubtext}>registrados</Text>
+          </View>
+        </View>
 
-              <View style={styles.tableRow}>
-                <Text style={[styles.donanteText, { flex: 2 }]}>Embajada de Japón — JICA</Text>
-                <View style={{ flex: 1.8, alignItems: "center" }}>
-                  <View style={styles.badge}>
-                    <Text style={styles.badgeText}>ECONÓMICA</Text>
-                  </View>
+        {/* MUESTRA DE MENSAJE DE ERROR O TABLA */}
+        {error ? (
+          <View style={styles.errorCard}>
+            <Text style={styles.errorTitle}>Ocurrió un error al cargar</Text>
+            <Text style={styles.errorSubtext}>{String(error.message || error)}</Text>
+            <TouchableOpacity style={styles.btnRetry} onPress={recargar}>
+              <Text style={styles.btnRetryText}>Reintentar</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          /* TABLA UNIFICADA DE 7 COLUMNAS EN HORIZONTAL */
+          <View style={styles.tableCard}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              <View>
+                {/* CABECERA */}
+                <View style={styles.tableHeaderRow}>
+                  <Text style={[styles.thCell, { width: 140 }]}>DONANTE</Text>
+                  <Text style={[styles.thCell, { width: 110 }]}>TIPO</Text>
+                  <Text style={[styles.thCell, { width: 160 }]}>DESCRIPCIÓN</Text>
+                  <Text style={[styles.thCell, { width: 140 }]}>VINCULADO A</Text>
+                  <Text style={[styles.thCell, { width: 95 }]}>FECHA</Text>
+                  <Text style={[styles.thCell, { width: 90 }]}>MONTO</Text>
+                  <Text style={[styles.thCell, { width: 90 }]}>ESTADO</Text>
                 </View>
-                <Text style={[styles.descripcionText, { flex: 2.2 }]}>
-                  Financiamiento campaña vacunación escolar
-                </Text>
-              </View>
 
-              <View style={styles.tableRow}>
-                <Text style={[styles.donanteText, { flex: 2 }]}>Banco Industrial</Text>
-                <View style={{ flex: 1.8, alignItems: "center" }}>
-                  <View style={styles.badge}>
-                    <Text style={styles.badgeText}>ECONÓMICA</Text>
+                {/* FILAS */}
+                {donaciones.length === 0 ? (
+                  <View style={{ paddingVertical: 20, alignItems: "center" }}>
+                    <Text style={{ color: "#94A3B8", fontSize: 13 }}>
+                      No se encontraron donaciones con los filtros aplicados.
+                    </Text>
                   </View>
-                </View>
-                <Text style={[styles.descripcionText, { flex: 2.2 }]}>
-                  Patrocinio brigada costera sur
-                </Text>
-              </View>
+                ) : (
+                  donaciones.map((item) => {
+                    const isRegistrada = item.estado === "registrada" || item.estado === "RECIBIDO";
+                    return (
+                      <TouchableOpacity
+                        key={item.id}
+                        style={styles.tableBodyRow}
+                        onPress={() => abrirDetalle(item)}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={[styles.tdTextBold, { width: 140 }]}>
+                          {item.donanteNombre || item.donante || "Donante no especificado"}
+                        </Text>
 
-              <View style={styles.tableRow}>
-                <Text style={[styles.donanteText, { flex: 2 }]}>Dr. Fernando López</Text>
-                <View style={{ flex: 1.8, alignItems: "center" }}>
-                  <View style={styles.badge}>
-                    <Text style={styles.badgeText}>MEDICAMENTOS</Text>
-                  </View>
-                </View>
-                <Text style={[styles.descripcionText, { flex: 2.2 }]}>
-                  Insulina Glargina 80 viales, PCR 20 kits
-                </Text>
+                        <View style={{ width: 110, justifyContent: "center" }}>
+                          <View style={styles.badgePill}>
+                            <Text style={styles.badgeText}>
+                              {(item.tipo || "GENERAL").toUpperCase()}
+                            </Text>
+                          </View>
+                        </View>
+
+                        <Text style={[styles.tdTextSub, { width: 160 }]} numberOfLines={2}>
+                          {item.descripcion || item.observaciones || "—"}
+                        </Text>
+
+                        <Text style={[styles.tdLinkText, { width: 140 }]} numberOfLines={1}>
+                          {item.proyectoNombre || item.vinculadoA || "General"}
+                        </Text>
+
+                        <Text style={[styles.tdTextSub, { width: 95 }]}>{item.fecha || "—"}</Text>
+
+                        <Text style={[styles.tdTextBold, { width: 90 }]}>
+                          {formatearMonto(item.monto || item.montoTotal || item.monto_total || "—")}
+                        </Text>
+
+                        <View style={{ width: 90, justifyContent: "center" }}>
+                          <View
+                            style={[
+                              styles.statusPill,
+                              {
+                                backgroundColor: isRegistrada ? "#DCFCE7" : "#FFEDD5",
+                                borderColor: isRegistrada ? "#86EFAC" : "#FDBA74",
+                              },
+                            ]}
+                          >
+                            <Text
+                              style={[
+                                styles.statusText,
+                                { color: isRegistrada ? "#16A34A" : "#EA580C" },
+                              ]}
+                            >
+                              {(item.estado || "REGISTRADA").toUpperCase()}
+                            </Text>
+                          </View>
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  })
+                )}
               </View>
-            </>
-          )}
-        </Card>
+            </ScrollView>
+          </View>
+        )}
       </ScrollView>
-    </ScreenContainer>
+
+      {/* MODAL DE DETALLE (AL TOCAR UNA DONACIÓN) */}
+      <Modal
+        visible={modalDetalleAbierto}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={cerrarDetalle}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Detalle de Donación</Text>
+            {donacionSeleccionada && (
+              <View style={styles.modalBody}>
+                <Text style={styles.modalLabel}>Donante:</Text>
+                <Text style={styles.modalValue}>
+                  {donacionSeleccionada.donanteNombre || donacionSeleccionada.donante || "—"}
+                </Text>
+
+                <Text style={styles.modalLabel}>Tipo:</Text>
+                <Text style={styles.modalValue}>{donacionSeleccionada.tipo || "—"}</Text>
+
+                <Text style={styles.modalLabel}>Fecha:</Text>
+                <Text style={styles.modalValue}>{donacionSeleccionada.fecha || "—"}</Text>
+
+                <Text style={styles.modalLabel}>Estado:</Text>
+                <Text style={styles.modalValue}>{donacionSeleccionada.estado || "—"}</Text>
+
+                {donacionSeleccionada.observaciones && (
+                  <>
+                    <Text style={styles.modalLabel}>Observaciones:</Text>
+                    <Text style={styles.modalValue}>{donacionSeleccionada.observaciones}</Text>
+                  </>
+                )}
+              </View>
+            )}
+            <TouchableOpacity style={styles.btnCloseModal} onPress={cerrarDetalle}>
+              <Text style={styles.btnCloseModalText}>Cerrar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+    </SafeAreaView>
   );
 }
 
-export default DonacionesScreen;
-
 const styles = StyleSheet.create({
   container: {
-    padding: 16,
-    gap: 16,
+    flex: 1,
     backgroundColor: "#F8FAFC",
   },
-  headerContainer: {
+  containerCenter: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#F8FAFC",
+    padding: 20,
+  },
+  scrollContent: {
+    padding: 16,
+    paddingBottom: 40,
+  },
+  pageTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#0F172A",
     marginBottom: 4,
   },
-  mainTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#1E293B",
-  },
-  subTitle: {
+  pageSubtitle: {
     fontSize: 12,
     color: "#64748B",
-    marginTop: 2,
+    marginBottom: 14,
   },
-  kpiGrid: {
+  searchContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    marginBottom: 10,
+  },
+  searchInput: {
+    flex: 1,
+    height: 40,
+    fontSize: 13,
+    color: "#0F172A",
+  },
+  clearSearchBtn: {
+    padding: 6,
+  },
+  clearSearchText: {
+    color: "#94A3B8",
+    fontSize: 14,
+    fontWeight: "bold",
+  },
+  filterBar: {
+    flexDirection: "row",
+    marginBottom: 14,
+  },
+  chipFilter: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    backgroundColor: "#E2E8F0",
+    marginRight: 8,
+  },
+  chipFilterActive: {
+    backgroundColor: "#16A34A",
+  },
+  chipText: {
+    fontSize: 12,
+    color: "#475569",
+    fontWeight: "600",
+  },
+  chipTextActive: {
+    color: "#FFFFFF",
+  },
+  gridTwoColumns: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 12,
+    justifyContent: "space-between",
+    marginBottom: 8,
   },
-  kpiCard: {
+  cardHalf: {
     width: "48%",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
     padding: 14,
-    borderRadius: 12,
+    marginBottom: 12,
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    borderWidth: 1,
+    borderColor: "#F1F5F9",
   },
-  cardHeaderRow: {
-    marginBottom: 6,
+  cardDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginBottom: 8,
   },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  kpiLabel: {
+  cardLabel: {
     fontSize: 10,
-    color: "#64748B",
     fontWeight: "700",
+    color: "#94A3B8",
     letterSpacing: 0.5,
-    marginBottom: 4,
   },
-  kpiValue: {
-    fontSize: 22,
-    fontWeight: "800",
-    marginBottom: 2,
+  cardValue: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginVertical: 2,
   },
-  kpiSubtext: {
+  cardSubtext: {
     fontSize: 11,
     color: "#94A3B8",
   },
-  desgloseContainer: {
-    gap: 12,
-  },
-  desgloseFullCard: {
-    padding: 16,
-    borderRadius: 12,
-  },
-  desgloseValue: {
-    fontSize: 22,
-    fontWeight: "800",
-    marginTop: 2,
-    marginBottom: 2,
-  },
   tableCard: {
-    padding: 12,
-    borderRadius: 12,
-    marginTop: 4,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 14,
+    marginTop: 8,
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    borderWidth: 1,
+    borderColor: "#F1F5F9",
   },
   tableHeaderRow: {
     flexDirection: "row",
-    borderBottomWidth: 1,
-    borderBottomColor: "#E2E8F0",
-    paddingBottom: 8,
-    marginBottom: 8,
-  },
-  tableHeaderCell: {
-    fontSize: 10,
-    fontWeight: "700",
-    color: "#64748B",
-    letterSpacing: 0.5,
-  },
-  tableRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 10,
+    paddingBottom: 10,
     borderBottomWidth: 1,
     borderBottomColor: "#F1F5F9",
   },
-  donanteText: {
-    fontSize: 11,
-    fontWeight: "600",
-    color: "#1E293B",
-    paddingRight: 4,
-  },
-  descripcionText: {
+  thCell: {
     fontSize: 10,
-    color: "#475569",
-    paddingLeft: 4,
+    fontWeight: "700",
+    color: "#94A3B8",
+    paddingRight: 8,
   },
-  badge: {
+  tableBodyRow: {
+    flexDirection: "row",
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F8FAFC",
+    alignItems: "center",
+  },
+  tdTextBold: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#1E293B",
+    paddingRight: 8,
+  },
+  tdTextSub: {
+    fontSize: 11,
+    color: "#64748B",
+    paddingRight: 8,
+  },
+  tdLinkText: {
+    fontSize: 11,
+    color: "#16A34A",
+    fontWeight: "600",
+    paddingRight: 8,
+  },
+  badgePill: {
     backgroundColor: "#E0F2FE",
-    borderColor: "#BAE6FD",
-    borderWidth: 1,
-    paddingHorizontal: 6,
-    paddingVertical: 3,
     borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: "#BAE6FD",
+    alignSelf: "flex-start",
   },
   badgeText: {
-    fontSize: 8,
+    fontSize: 9,
     fontWeight: "700",
     color: "#0284C7",
+  },
+  statusPill: {
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderWidth: 1,
+    alignSelf: "flex-start",
+  },
+  statusText: {
+    fontSize: 9,
+    fontWeight: "700",
+  },
+  errorCard: {
+    backgroundColor: "#FEF2F2",
+    borderRadius: 12,
+    padding: 16,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#FCA5A5",
+  },
+  errorTitle: {
+    fontSize: 14,
+    fontWeight: "bold",
+    color: "#991B1B",
+    marginBottom: 4,
+  },
+  errorSubtext: {
+    fontSize: 12,
+    color: "#7F1D1D",
+    textAlign: "center",
+    marginBottom: 10,
+  },
+  btnRetry: {
+    backgroundColor: "#DC2626",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  btnRetryText: {
+    color: "#FFFFFF",
+    fontWeight: "bold",
+    fontSize: 12,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.4)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  modalContent: {
+    width: "100%",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 20,
+    elevation: 5,
+  },
+  modalTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#0F172A",
+    marginBottom: 14,
+  },
+  modalBody: {
+    marginBottom: 16,
+  },
+  modalLabel: {
+    fontSize: 11,
+    fontWeight: "bold",
+    color: "#64748B",
+    marginTop: 6,
+  },
+  modalValue: {
+    fontSize: 13,
+    color: "#1E293B",
+  },
+  btnCloseModal: {
+    backgroundColor: "#F1F5F9",
+    paddingVertical: 10,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  btnCloseModalText: {
+    fontWeight: "bold",
+    color: "#334155",
   },
 });

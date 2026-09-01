@@ -1,14 +1,15 @@
-import { Text } from "react-native";
+import React from "react";
+import { View, Text, StyleSheet } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import { colors, typography } from "@ecopac/ui-tokens";
-import { tabsMoviles, modulosVisibles } from "@ecopac/shared";
+import { colors } from "@ecopac/ui-tokens";
+import { tabsMoviles } from "@ecopac/shared";
 
 import { useSesionCompartida } from "../contexto/SesionProvider";
 import { ROUTES } from "./rutas";
-import JornadaActivaBadge from "../components/JornadaActivaBadge";
-import UsuarioActivo from "../components/UsuarioActivo";
+
+// IMPORTACIÓN DE PANTALLAS
 import LoginScreen from "../screens/LoginScreen";
 import InicioScreen from "../screens/InicioScreen";
 import AjustesScreen from "../screens/AjustesScreen";
@@ -38,67 +39,61 @@ const PacientesStack = createNativeStackNavigator();
 const JornadasStack = createNativeStackNavigator();
 const InventarioStack = createNativeStackNavigator();
 
-// headerRight compone dos widgets que leen su propio contexto (issue #186, criterio 4: la
-// jornada activa visible desde cualquier pantalla, mismo patron que UsuarioActivo ya usaba para
-// la sesion). Este es el unico punto de AppNavigator que se toco para esa issue.
-const opcionesStack = {
-  headerStyle: { backgroundColor: colors.surface },
-  headerTintColor: colors.text,
-  headerTitleStyle: { fontSize: typography.sizes.md, fontWeight: typography.weights.semibold },
-  headerRight: () => (
-    <>
-      <JornadaActivaBadge />
-      <UsuarioActivo />
-    </>
-  ),
-};
-
-// Mapeo entre los identificadores de tabMovil (navegacion.js) y la navegacion React Native
-const CONFIGURACION_TABS = {
-  Inicio: {
-    routeName: ROUTES.TAB_INICIO,
-    component: InicioNavigator,
-    label: "Inicio",
-    icon: "⌂",
-  },
-  Pacientes: {
-    routeName: ROUTES.TAB_PACIENTES,
-    component: PacientesNavigator,
-    label: "Pacientes",
-    icon: "𐀔",
-  },
-  Jornadas: {
-    routeName: ROUTES.TAB_JORNADAS,
-    component: JornadasNavigator,
-    label: "Jornadas",
-    icon: "📅",
-  },
-  Inventario: {
-    routeName: ROUTES.TAB_INVENTARIO,
-    component: InventarioNavigator,
-    label: "Inventario",
-    icon: "📦",
-  },
-};
-
-const TAB_AJUSTES_CONFIG = {
-  routeName: ROUTES.TAB_AJUSTES,
-  component: AjustesScreen,
-  label: "Ajustes",
-  icon: "⚙",
-};
-
-function InicioNavigator() {
+// Componente para la barra del header personalizado
+function CustomHeaderTitle({ title }) {
   const { perfil } = useSesionCompartida();
-  const modulos = modulosVisibles(perfil?.rol, { plataforma: "mobile" });
-  const idsVisibles = modulos.map((m) => m.id);
 
   return (
-    <InicioStack.Navigator screenOptions={opcionesStack}>
+    <View style={styles.headerContainer}>
+      <Text style={styles.headerTitleText}>{title}</Text>
+      <View style={styles.userContainer}>
+        <Text style={styles.nombreText} numberOfLines={1}>
+          {perfil?.nombre || "Administradora..."}
+        </Text>
+        <Text style={styles.rolText} numberOfLines={1}>
+          {perfil?.rol || "Administradora"}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+const opcionesStack = (title) => ({
+  headerStyle: { backgroundColor: colors?.surface || "#FFFFFF" },
+  headerTitle: () => <CustomHeaderTitle title={title} />,
+  headerTitleContainerStyle: {
+    width: "100%",
+    left: 0,
+  },
+});
+
+function InicioNavigator() {
+  return (
+    <InicioStack.Navigator>
       <InicioStack.Screen
         name={ROUTES.INICIO}
         component={InicioScreen}
-        options={{ title: "Inicio" }}
+        options={opcionesStack("Inicio")}
+      />
+      <InicioStack.Screen
+        name={ROUTES.DONACIONES}
+        component={DonacionesScreen}
+        options={opcionesStack("Donaciones")}
+      />
+      <InicioStack.Screen
+        name={ROUTES.PROYECTOS}
+        component={ProyectosScreen}
+        options={opcionesStack("Proyectos")}
+      />
+      <InicioStack.Screen
+        name={ROUTES.PRESUPUESTOS}
+        component={PresupuestosScreen}
+        options={opcionesStack("Presupuestos")}
+      />
+      <InicioStack.Screen
+        name={ROUTES.VOLUNTARIOS}
+        component={VoluntariosScreen}
+        options={opcionesStack("Voluntarios y médicos")}
       />
       {idsVisibles.includes("donaciones") && (
         <InicioStack.Screen
@@ -141,41 +136,41 @@ function InicioNavigator() {
 
 function PacientesNavigator() {
   return (
-    <PacientesStack.Navigator screenOptions={opcionesStack}>
+    <PacientesStack.Navigator>
       <PacientesStack.Screen
         name={ROUTES.BUSQUEDA_PACIENTE}
         component={BusquedaPacienteScreen}
-        options={{ title: "Pacientes" }}
+        options={opcionesStack("Pacientes")}
       />
       <PacientesStack.Screen
         name={ROUTES.FICHA_PACIENTE}
         component={FichaPacienteScreen}
-        options={{ title: "Ficha del paciente" }}
+        options={opcionesStack("Ficha del paciente")}
       />
       <PacientesStack.Screen
         name={ROUTES.REGISTRO_PACIENTE}
         component={RegistroPacienteScreen}
-        options={{ title: "Registro de paciente" }}
+        options={opcionesStack("Registro de paciente")}
       />
       <PacientesStack.Screen
         name={ROUTES.HISTORIAL_PACIENTE}
         component={HistorialPacienteScreen}
-        options={{ title: "Historial" }}
+        options={opcionesStack("Historial")}
       />
       <PacientesStack.Screen
         name={ROUTES.TRIAJE}
         component={TriajeScreen}
-        options={{ title: "Triaje" }}
+        options={opcionesStack("Triaje")}
       />
       <PacientesStack.Screen
         name={ROUTES.CONSULTA}
         component={ConsultaScreen}
-        options={{ title: "Consulta" }}
+        options={opcionesStack("Consulta")}
       />
       <PacientesStack.Screen
         name={ROUTES.RECETA}
         component={RecetaScreen}
-        options={{ title: "Receta" }}
+        options={opcionesStack("Receta")}
       />
     </PacientesStack.Navigator>
   );
@@ -183,21 +178,21 @@ function PacientesNavigator() {
 
 function JornadasNavigator() {
   return (
-    <JornadasStack.Navigator screenOptions={opcionesStack}>
+    <JornadasStack.Navigator>
       <JornadasStack.Screen
         name={ROUTES.SELECCION_JORNADA}
         component={SeleccionJornadaScreen}
-        options={{ title: "Jornadas" }}
+        options={opcionesStack("Jornadas")}
       />
       <JornadasStack.Screen
         name={ROUTES.JORNADA_EN_CURSO}
         component={JornadaEnCursoScreen}
-        options={{ title: "Jornada en curso" }}
+        options={opcionesStack("Jornada en curso")}
       />
       <JornadasStack.Screen
         name={ROUTES.JORNADAS_ASIGNADAS}
         component={JornadasAsignadasScreen}
-        options={{ title: "Mis jornadas" }}
+        options={opcionesStack("Mis jornadas")}
       />
     </JornadasStack.Navigator>
   );
@@ -205,31 +200,64 @@ function JornadasNavigator() {
 
 function InventarioNavigator() {
   return (
-    <InventarioStack.Navigator screenOptions={opcionesStack}>
+    <InventarioStack.Navigator>
       <InventarioStack.Screen
         name={ROUTES.STOCK}
         component={StockScreen}
-        options={{ title: "Inventario" }}
+        options={opcionesStack("Inventario")}
       />
     </InventarioStack.Navigator>
   );
 }
 
+const CONFIGURACION_TABS = {
+  Inicio: { routeName: ROUTES.TAB_INICIO, component: InicioNavigator, label: "Inicio", icon: "⌂" },
+  Pacientes: {
+    routeName: ROUTES.TAB_PACIENTES,
+    component: PacientesNavigator,
+    label: "Pacientes",
+    icon: "𐀔",
+  },
+  Jornadas: {
+    routeName: ROUTES.TAB_JORNADAS,
+    component: JornadasNavigator,
+    label: "Jornadas",
+    icon: "📅",
+  },
+  Inventario: {
+    routeName: ROUTES.TAB_INVENTARIO,
+    component: InventarioNavigator,
+    label: "Inventario",
+    icon: "📦",
+  },
+};
+
+const TAB_AJUSTES_CONFIG = {
+  routeName: ROUTES.TAB_AJUSTES,
+  component: AjustesScreen,
+  label: "Ajustes",
+  icon: "⚙",
+};
+
 function TabsNavigator() {
   const { perfil } = useSesionCompartida();
-  const modulosPermitidos = tabsMoviles(perfil?.rol);
+  const modulosPermitidos = tabsMoviles(perfil?.rol) || [];
 
-  // Mapea los módulos autorizados y agrega Ajustes al final
-  const tabsAAgregar = modulosPermitidos.map((m) => CONFIGURACION_TABS[m.tabMovil]).filter(Boolean);
+  let tabsAAgregar =
+    modulosPermitidos.length > 0
+      ? modulosPermitidos.map((m) => CONFIGURACION_TABS[m.tabMovil]).filter(Boolean)
+      : Object.values(CONFIGURACION_TABS);
 
-  tabsAAgregar.push(TAB_AJUSTES_CONFIG);
-
-  // Define la ruta inicial basada en la primera pestaña disponible
-  const rutaInicial = tabsAAgregar[0]?.routeName || ROUTES.TAB_INICIO;
+  if (!tabsAAgregar.some((tab) => tab?.routeName === ROUTES.TAB_INICIO)) {
+    tabsAAgregar.unshift(CONFIGURACION_TABS.Inicio);
+  }
+  if (!tabsAAgregar.some((tab) => tab?.routeName === ROUTES.TAB_AJUSTES)) {
+    tabsAAgregar.push(TAB_AJUSTES_CONFIG);
+  }
 
   return (
     <Tabs.Navigator
-      initialRouteName={rutaInicial}
+      initialRouteName={ROUTES.TAB_INICIO}
       screenOptions={({ route }) => {
         const configTab =
           Object.values(CONFIGURACION_TABS).find((c) => c.routeName === route.name) ||
@@ -237,10 +265,10 @@ function TabsNavigator() {
 
         return {
           headerShown: false,
-          tabBarActiveTintColor: colors.primary,
-          tabBarInactiveTintColor: colors.textMuted,
-          tabBarStyle: { backgroundColor: colors.surface, borderTopColor: colors.border },
-          tabBarLabelStyle: { fontSize: typography.sizes.xs },
+          tabBarActiveTintColor: colors?.primary || "#16A34A",
+          tabBarInactiveTintColor: colors?.textMuted || "#94A3B8",
+          tabBarStyle: { backgroundColor: colors?.surface || "#FFFFFF" },
+          tabBarLabelStyle: { fontSize: 10 },
           tabBarIcon: ({ color, size }) => (
             <Text style={{ color, fontSize: size - 2, fontWeight: "bold" }}>{configTab.icon}</Text>
           ),
@@ -272,3 +300,30 @@ export default function AppNavigator({ haySesion }) {
     </NavigationContainer>
   );
 }
+
+const styles = StyleSheet.create({
+  headerContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    width: "100%",
+    paddingRight: 16,
+  },
+  headerTitleText: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#0F172A",
+  },
+  userContainer: {
+    alignItems: "flex-end",
+  },
+  nombreText: {
+    fontSize: 12,
+    fontWeight: "bold",
+    color: "#1E293B",
+  },
+  rolText: {
+    fontSize: 10,
+    color: "#64748B",
+  },
+});

@@ -3,18 +3,100 @@ import { modulosVisibles } from "@ecopac/shared";
 import { useSesionCompartida } from "../contexto/SesionProvider";
 import { ROUTES } from "../navigation/rutas";
 
+const MODULOS_FIGMA = [
+  {
+    id: "pacientes",
+    titulo: "Pacientes",
+    subtitulo: "Expedientes clínicos",
+    valor: "9",
+    color: "#10B981",
+    tabMovil: "Pacientes",
+  },
+  {
+    id: "donaciones",
+    titulo: "Donaciones",
+    subtitulo: "Ingresos registrados",
+    valor: "Q 553,800",
+    color: "#0284C7",
+    ruta: ROUTES.DONACIONES,
+  },
+  {
+    id: "inventario",
+    titulo: "Inventario",
+    subtitulo: "Alertas activas",
+    valor: "2",
+    color: "#F59E0B",
+    tabMovil: "Inventario",
+  },
+  {
+    id: "presupuestos",
+    titulo: "Presupuestos",
+    subtitulo: "Ejecución global",
+    valor: "47%",
+    color: "#EC4899",
+    ruta: ROUTES.PRESUPUESTOS,
+  },
+  {
+    id: "proyectos",
+    titulo: "Proyectos",
+    subtitulo: "Iniciativas macro",
+    valor: "3",
+    color: "#8B5CF6",
+    ruta: ROUTES.PROYECTOS,
+  },
+  {
+    id: "reportes",
+    titulo: "Reportes",
+    subtitulo: "Métricas de impacto",
+    valor: "—",
+    color: "#6B7280",
+  },
+  {
+    id: "jornadas",
+    titulo: "Jornadas",
+    subtitulo: "Kanban en tiempo real",
+    valor: "1",
+    color: "#10B981",
+    tabMovil: "Jornadas",
+  },
+  {
+    id: "voluntarios",
+    titulo: "Voluntarios",
+    subtitulo: "Personal registrado",
+    valor: "10",
+    color: "#0284C7",
+    ruta: ROUTES.VOLUNTARIOS,
+  },
+];
+
 export default function InicioScreen({ navigation }) {
   const { perfil } = useSesionCompartida();
-  const rol = perfil?.rol;
+  const rol = perfil?.rol || "administrador";
 
-  // Filtrar módulos para la cuadrícula (excluyendo "inicio")
-  const modulosDisponibles = modulosVisibles(rol, { plataforma: "mobile" }).filter(
-    (m) => m.id !== "inicio",
-  );
+  const modulosCalculados =
+    modulosVisibles(rol, { plataforma: "mobile" })?.filter((m) => m.id !== "inicio") || [];
+
+  const modulosDisponibles =
+    modulosCalculados.length > 0
+      ? modulosCalculados.map((m) => {
+          const base = MODULOS_FIGMA.find((f) => f.id === m.id) || {};
+          return {
+            id: m.id,
+            titulo: m.etiqueta || base.titulo || m.id,
+            subtitulo: base.subtitulo || "Módulo activo",
+            valor: base.valor || "—",
+            color: base.color || "#10B981",
+            tabMovil: m.tabMovil || base.tabMovil,
+            ruta: base.ruta,
+          };
+        })
+      : MODULOS_FIGMA;
 
   const navegarAModulo = (modulo) => {
     if (modulo.tabMovil) {
       navigation.navigate(modulo.tabMovil);
+    } else if (modulo.ruta) {
+      navigation.navigate(modulo.ruta);
     } else {
       const mapaRutas = {
         donaciones: ROUTES.DONACIONES,
@@ -28,7 +110,6 @@ export default function InicioScreen({ navigation }) {
     }
   };
 
-  // Métricas de prueba según prototipo Figma
   const metricas = [
     {
       id: "1",
@@ -54,7 +135,6 @@ export default function InicioScreen({ navigation }) {
     { id: "4", titulo: "JORNADAS 2026", valor: "4", subtexto: "1 finalizadas", color: "#EC4899" },
   ];
 
-  // Panel de alertas activas de caducidad (RF-19)
   const alertasCaducidad = [
     {
       id: "1",
@@ -75,7 +155,7 @@ export default function InicioScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* 1. HERO BANNER */}
+        {/* HERO BANNER */}
         <View style={styles.heroBanner}>
           <View style={styles.heroBadge}>
             <View style={styles.dot} />
@@ -102,7 +182,7 @@ export default function InicioScreen({ navigation }) {
           </View>
         </View>
 
-        {/* 2. MÉTRICAS CLAVE */}
+        {/* MÉTRICAS CLAVE */}
         <View style={styles.gridTwoColumns}>
           {metricas.map((item) => (
             <View key={item.id} style={styles.metricCard}>
@@ -114,7 +194,7 @@ export default function InicioScreen({ navigation }) {
           ))}
         </View>
 
-        {/* 3. MÓDULOS DEL SISTEMA */}
+        {/* MÓDULOS DEL SISTEMA */}
         <Text style={styles.sectionTitle}>MÓDULOS DEL SISTEMA</Text>
         <View style={styles.gridTwoColumns}>
           {modulosDisponibles.map((modulo) => (
@@ -123,15 +203,15 @@ export default function InicioScreen({ navigation }) {
               style={styles.moduleCard}
               onPress={() => navegarAModulo(modulo)}
             >
-              <View style={[styles.cardDot, { backgroundColor: "#10B981" }]} />
-              <Text style={styles.moduleTitle}>{modulo.etiqueta}</Text>
-              <Text style={styles.cardSubtext}>Acceso directo</Text>
-              <Text style={styles.moduleArrow}>→</Text>
+              <View style={[styles.cardDot, { backgroundColor: modulo.color }]} />
+              <Text style={styles.moduleTitle}>{modulo.titulo}</Text>
+              <Text style={styles.cardSubtext}>{modulo.subtitulo}</Text>
+              <Text style={[styles.moduleValue, { color: modulo.color }]}>{modulo.valor}</Text>
             </TouchableOpacity>
           ))}
         </View>
 
-        {/* 4. PANEL DE ALERTAS DE CADUCIDAD (RF-19) */}
+        {/* ALERTAS DE CADUCIDAD */}
         <View style={styles.alertsPanel}>
           <View style={styles.alertsHeader}>
             <View style={{ flexDirection: "row", alignItems: "center" }}>
@@ -239,7 +319,7 @@ const styles = StyleSheet.create({
   gridTwoColumns: {
     flexDirection: "row",
     flexWrap: "wrap",
-    justify: "space-between",
+    justifyContent: "space-between",
     gap: 12,
     marginBottom: 20,
   },
@@ -297,10 +377,10 @@ const styles = StyleSheet.create({
     color: "#0F172A",
     marginBottom: 2,
   },
-  moduleArrow: {
+  moduleValue: {
     fontSize: 16,
-    color: "#94A3B8",
-    marginTop: 6,
+    fontWeight: "bold",
+    marginTop: 8,
   },
   alertsPanel: {
     backgroundColor: "#FFF7ED",

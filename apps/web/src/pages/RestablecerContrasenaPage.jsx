@@ -1,4 +1,3 @@
-import React from "react";
 import { Link } from "react-router-dom";
 import { useRestablecerContrasena } from "@ecopac/shared";
 import { Card, PrimaryButton, ScreenContainer, TextField } from "../components";

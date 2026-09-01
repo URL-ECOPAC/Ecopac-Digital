@@ -125,7 +125,7 @@ export function useBusquedaPacientes({
 
   // Los filtros llegan como objeto nuevo en cada render, asi que compararlos por identidad
   // dispararia una consulta por render. Se compara su contenido serializado.
-  const claveDeFiltros = JSON.stringify(filtros ?? {});
+  //const claveDeFiltros = JSON.stringify(filtros ?? {});
 
   const consultar = useCallback(
     async (paginaAConsultar) => {
