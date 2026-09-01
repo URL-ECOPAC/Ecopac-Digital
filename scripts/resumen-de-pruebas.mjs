@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* global console, process */
 // Publica la cobertura de las validaciones en el resumen de la corrida (issue #223).
 //
 // POR QUE EXISTE, Y POR QUE SOLO LA COBERTURA

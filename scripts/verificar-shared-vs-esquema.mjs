@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* global console, process */
 // Guarda de CI: comprueba que packages/shared solo nombre tablas, columnas y funciones que
 // existen en supabase/migrations/ (issue #492).
 //

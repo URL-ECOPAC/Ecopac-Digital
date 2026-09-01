@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* global console, process */
 // Guarda del rewrite de SPA de Vercel (issue #59).
 //
 // POR QUE HAY DOS vercel.json

@@ -1,4 +1,3 @@
-import React from "react";
 import { StyleSheet, Text, View, ScrollView, TouchableOpacity, SafeAreaView } from "react-native";
 import { modulosVisibles } from "@ecopac/shared";
 import { useSesionCompartida } from "../contexto/SesionProvider";
@@ -96,7 +95,7 @@ export default function InicioScreen({ navigation }) {
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.btnSecondary}
-              onPress={() => navigation.navigate(rutas.PRESUPUESTOS)}
+              onPress={() => navigation.navigate(ROUTES.PRESUPUESTOS)}
             >
               <Text style={styles.btnSecondaryText}>Ver presupuestos</Text>
             </TouchableOpacity>
@@ -170,7 +169,6 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingBottom: 32,
   },
-  // Hero Banner
   heroBanner: {
     backgroundColor: "#16A34A",
     borderRadius: 20,
@@ -238,11 +236,10 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     fontSize: 14,
   },
-  // Grid System
   gridTwoColumns: {
     flexDirection: "row",
     flexWrap: "wrap",
-    justifyContent: "space-between",
+    justify: "space-between",
     gap: 12,
     marginBottom: 20,
   },
@@ -305,7 +302,6 @@ const styles = StyleSheet.create({
     color: "#94A3B8",
     marginTop: 6,
   },
-  // Panel de Alertas
   alertsPanel: {
     backgroundColor: "#FFF7ED",
     borderColor: "#FFEDD5",
