@@ -17,7 +17,8 @@ export function useDashboardMetricas() {
         // 📡 Consulta la vista creada en tu migración
         const { data, error: errVista } = await supabase
           .from("vista_reporte_impacto")
-          .select(`
+          .select(
+            `
             jornada_id,
             jornada,
             fecha,
@@ -27,7 +28,8 @@ export function useDashboardMetricas() {
             consultas_realizadas,
             tratamientos_entregados,
             medicamentos_utilizados
-          `)
+          `,
+          )
           .order("fecha", { ascending: true });
 
         if (errVista) throw errVista;
@@ -48,15 +50,24 @@ export function useDashboardMetricas() {
 
         // 🧮 Cálculo de indicadores totales
         const indicadores = {
-          pacientesAtendidos: data.reduce((sum, fila) => sum + Number(fila.pacientes_atendidos || 0), 0),
-          comunidadesBeneficiadas: new Set(data.map(f => f.comunidad_id)).size,
-          tratamientosEntregados: data.reduce((sum, fila) => sum + Number(fila.tratamientos_entregados || 0), 0),
-          medicamentosUtilizados: data.reduce((sum, fila) => sum + Number(fila.medicamentos_utilizados || 0), 0),
+          pacientesAtendidos: data.reduce(
+            (sum, fila) => sum + Number(fila.pacientes_atendidos || 0),
+            0,
+          ),
+          comunidadesBeneficiadas: new Set(data.map((f) => f.comunidad_id)).size,
+          tratamientosEntregados: data.reduce(
+            (sum, fila) => sum + Number(fila.tratamientos_entregados || 0),
+            0,
+          ),
+          medicamentosUtilizados: data.reduce(
+            (sum, fila) => sum + Number(fila.medicamentos_utilizados || 0),
+            0,
+          ),
         };
 
         // 📈 Evolución mensual de atenciones
         const porMes = {};
-        data.forEach(fila => {
+        data.forEach((fila) => {
           const fecha = new Date(fila.fecha);
           if (isNaN(fecha.getTime())) return;
           const claveMes = fecha.toLocaleDateString("es-GT", { month: "short" });
@@ -67,7 +78,7 @@ export function useDashboardMetricas() {
 
         // 📊 Atenciones por comunidad
         const porComunidad = {};
-        data.forEach(fila => {
+        data.forEach((fila) => {
           const nombre = fila.comunidad || "Sin comunidad";
           if (!porComunidad[nombre]) porComunidad[nombre] = { nombre, cantidad: 0 };
           porComunidad[nombre].cantidad += Number(fila.pacientes_atendidos || 0);
@@ -86,7 +97,6 @@ export function useDashboardMetricas() {
           porComunidad: listaPorComunidad,
           avisos,
         });
-
       } catch (err) {
         console.error("Error cargando dashboard:", err);
         setError("No se pudo cargar el tablero de métricas. Intente más tarde.");

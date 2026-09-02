@@ -149,23 +149,23 @@ export default function App() {
                 <Route path="/reportes" element={<ReportesPage />} />
               </Route>
               <Route path="/reportes/dashboard" element={<DashboardMetricasPage />} />
-            <Route element={<RutaProtegida roles={rolesDe("/jornadas")} />}>
-              <Route path="/jornadas" element={<JornadasPage />} />
-              <Route path="/jornadas/:id" element={<DetalleJornadaPage />} />
-            </Route>
-            <Route element={<RutaProtegida roles={rolesDe("/voluntarios")} />}>
-              {/* Listado y ficha fusionados en una sola pantalla de tarjetas expandibles
+              <Route element={<RutaProtegida roles={rolesDe("/jornadas")} />}>
+                <Route path="/jornadas" element={<JornadasPage />} />
+                <Route path="/jornadas/:id" element={<DetalleJornadaPage />} />
+              </Route>
+              <Route element={<RutaProtegida roles={rolesDe("/voluntarios")} />}>
+                {/* Listado y ficha fusionados en una sola pantalla de tarjetas expandibles
                   (arreglo de diseno de 2026-08-30): ya no hay una ruta /voluntarios/:id propia.
                   Ver eme.md para el estado anterior (dos rutas separadas) si hay que revertir. */}
-              <Route path="/voluntarios" element={<VoluntariosPage />} />
-            </Route>
+                <Route path="/voluntarios" element={<VoluntariosPage />} />
+              </Route>
 
-            <Route path="/perfil" element={<PerfilPage />} />
-            <Route path="*" element={<NotFoundPage />} />
+              <Route path="/perfil" element={<PerfilPage />} />
+              <Route path="*" element={<NotFoundPage />} />
+            </Route>
           </Route>
-        </Route>
-      </Routes>
-    </SesionProvider>
-    </BrowserRouter >
+        </Routes>
+      </SesionProvider>
+    </BrowserRouter>
   );
 }
