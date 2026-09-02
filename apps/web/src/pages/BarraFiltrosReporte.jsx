@@ -106,10 +106,7 @@ export default function BarraFiltrosReporte({
         <label style={etiquetaStyle}>Rango de fechas</label>
         <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginBottom: "12px" }}>
           {rangosPredefinidos.map((r) => {
-            const esActivo =
-              !mostrarPersonalizado &&
-              filtros.fechaInicio &&
-              filtros.fechaFin;
+            const esActivo = !mostrarPersonalizado && filtros.fechaInicio && filtros.fechaFin;
             return (
               <button
                 key={r.etiqueta}
@@ -135,19 +132,41 @@ export default function BarraFiltrosReporte({
         </div>
 
         {mostrarPersonalizado && (
-          <div style={{ display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap", padding: "16px", backgroundColor: "#f8fafc", borderRadius: "12px" }}>
+          <div
+            style={{
+              display: "flex",
+              gap: "12px",
+              alignItems: "center",
+              flexWrap: "wrap",
+              padding: "16px",
+              backgroundColor: "#f8fafc",
+              borderRadius: "12px",
+            }}
+          >
             <input
               type="date"
               value={fechaInicio}
               onChange={(e) => setFechaInicio(e.target.value)}
-              style={{ padding: "10px 14px", borderRadius: "12px", border: "1px solid #e2e8f0", fontSize: "14px", outline: "none" }}
+              style={{
+                padding: "10px 14px",
+                borderRadius: "12px",
+                border: "1px solid #e2e8f0",
+                fontSize: "14px",
+                outline: "none",
+              }}
             />
             <span style={{ color: "#64748b", fontWeight: "500", fontSize: "14px" }}>hasta</span>
             <input
               type="date"
               value={fechaFin}
               onChange={(e) => setFechaFin(e.target.value)}
-              style={{ padding: "10px 14px", borderRadius: "12px", border: "1px solid #e2e8f0", fontSize: "14px", outline: "none" }}
+              style={{
+                padding: "10px 14px",
+                borderRadius: "12px",
+                border: "1px solid #e2e8f0",
+                fontSize: "14px",
+                outline: "none",
+              }}
             />
             <button
               onClick={aplicarFechasPersonalizadas}
@@ -162,8 +181,8 @@ export default function BarraFiltrosReporte({
                 cursor: "pointer",
                 transition: "background-color 0.2s ease",
               }}
-              onMouseOver={(e) => e.target.style.backgroundColor = "#059669"}
-              onMouseOut={(e) => e.target.style.backgroundColor = "#10b981"}
+              onMouseOver={(e) => (e.target.style.backgroundColor = "#059669")}
+              onMouseOut={(e) => (e.target.style.backgroundColor = "#10b981")}
             >
               Aplicar
             </button>
@@ -177,63 +196,192 @@ export default function BarraFiltrosReporte({
           <label style={etiquetaStyle}>Comunidad</label>
           <select
             value={filtros.comunidadId || ""}
-            onChange={(e) => alCambiarFiltros({ ...filtros, comunidadId: e.target.value || undefined })}
+            onChange={(e) =>
+              alCambiarFiltros({ ...filtros, comunidadId: e.target.value || undefined })
+            }
             style={selectStyle}
           >
             <option value="">Todas las comunidades</option>
-            {comunidades.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+            {comunidades.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.nombre}
+              </option>
+            ))}
           </select>
         </div>
         <div>
           <label style={etiquetaStyle}>Jornada</label>
           <select
             value={filtros.jornadaId || ""}
-            onChange={(e) => alCambiarFiltros({ ...filtros, jornadaId: e.target.value || undefined })}
+            onChange={(e) =>
+              alCambiarFiltros({ ...filtros, jornadaId: e.target.value || undefined })
+            }
             style={selectStyle}
           >
             <option value="">Todas las jornadas</option>
-            {jornadas.map((j) => <option key={j.id} value={j.id}>{j.nombre}</option>)}
+            {jornadas.map((j) => (
+              <option key={j.id} value={j.id}>
+                {j.nombre}
+              </option>
+            ))}
           </select>
         </div>
         <div>
           <label style={etiquetaStyle}>Proyecto</label>
           <select
             value={filtros.proyectoId || ""}
-            onChange={(e) => alCambiarFiltros({ ...filtros, proyectoId: e.target.value || undefined })}
+            onChange={(e) =>
+              alCambiarFiltros({ ...filtros, proyectoId: e.target.value || undefined })
+            }
             style={selectStyle}
           >
             <option value="">Todos los proyectos</option>
-            {proyectos.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+            {proyectos.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.nombre}
+              </option>
+            ))}
           </select>
         </div>
       </div>
 
       {/* Etiquetas de filtros activos */}
       {hayFiltros && (
-        <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", paddingTop: "16px", marginTop: "20px", borderTop: "1px solid #f1f5f9" }}>
-          <span style={{ fontSize: "13px", color: "#64748b", fontWeight: "600" }}>Filtros activos:</span>
+        <div
+          style={{
+            display: "flex",
+            gap: "10px",
+            flexWrap: "wrap",
+            paddingTop: "16px",
+            marginTop: "20px",
+            borderTop: "1px solid #f1f5f9",
+          }}
+        >
+          <span style={{ fontSize: "13px", color: "#64748b", fontWeight: "600" }}>
+            Filtros activos:
+          </span>
           {filtros.fechaInicio && filtros.fechaFin && (
-            <span style={{ fontSize: "13px", background: "#e0f2fe", padding: "6px 14px", borderRadius: "9999px", display: "flex", gap: "8px", alignItems: "center", color: "#0369a1", fontWeight: "500" }}>
+            <span
+              style={{
+                fontSize: "13px",
+                background: "#e0f2fe",
+                padding: "6px 14px",
+                borderRadius: "9999px",
+                display: "flex",
+                gap: "8px",
+                alignItems: "center",
+                color: "#0369a1",
+                fontWeight: "500",
+              }}
+            >
               {filtros.fechaInicio} → {filtros.fechaFin}
-              <button onClick={() => limpiarFiltro("fechaInicio")} style={{ border: "none", background: "none", cursor: "pointer", fontSize: "16px", color: "#0369a1", fontWeight: "700", padding: "0 0 0 4px" }}>×</button>
+              <button
+                onClick={() => limpiarFiltro("fechaInicio")}
+                style={{
+                  border: "none",
+                  background: "none",
+                  cursor: "pointer",
+                  fontSize: "16px",
+                  color: "#0369a1",
+                  fontWeight: "700",
+                  padding: "0 0 0 4px",
+                }}
+              >
+                ×
+              </button>
             </span>
           )}
           {filtros.comunidadId && (
-            <span style={{ fontSize: "13px", background: "#dcfce7", padding: "6px 14px", borderRadius: "9999px", display: "flex", gap: "8px", alignItems: "center", color: "#059669", fontWeight: "500" }}>
+            <span
+              style={{
+                fontSize: "13px",
+                background: "#dcfce7",
+                padding: "6px 14px",
+                borderRadius: "9999px",
+                display: "flex",
+                gap: "8px",
+                alignItems: "center",
+                color: "#059669",
+                fontWeight: "500",
+              }}
+            >
               Comunidad
-              <button onClick={() => limpiarFiltro("comunidadId")} style={{ border: "none", background: "none", cursor: "pointer", fontSize: "16px", color: "#059669", fontWeight: "700", padding: "0 0 0 4px" }}>×</button>
+              <button
+                onClick={() => limpiarFiltro("comunidadId")}
+                style={{
+                  border: "none",
+                  background: "none",
+                  cursor: "pointer",
+                  fontSize: "16px",
+                  color: "#059669",
+                  fontWeight: "700",
+                  padding: "0 0 0 4px",
+                }}
+              >
+                ×
+              </button>
             </span>
           )}
           {filtros.jornadaId && (
-            <span style={{ fontSize: "13px", background: "#fef3c7", padding: "6px 14px", borderRadius: "9999px", display: "flex", gap: "8px", alignItems: "center", color: "#b45309", fontWeight: "500" }}>
+            <span
+              style={{
+                fontSize: "13px",
+                background: "#fef3c7",
+                padding: "6px 14px",
+                borderRadius: "9999px",
+                display: "flex",
+                gap: "8px",
+                alignItems: "center",
+                color: "#b45309",
+                fontWeight: "500",
+              }}
+            >
               Jornada
-              <button onClick={() => limpiarFiltro("jornadaId")} style={{ border: "none", background: "none", cursor: "pointer", fontSize: "16px", color: "#b45309", fontWeight: "700", padding: "0 0 0 4px" }}>×</button>
+              <button
+                onClick={() => limpiarFiltro("jornadaId")}
+                style={{
+                  border: "none",
+                  background: "none",
+                  cursor: "pointer",
+                  fontSize: "16px",
+                  color: "#b45309",
+                  fontWeight: "700",
+                  padding: "0 0 0 4px",
+                }}
+              >
+                ×
+              </button>
             </span>
           )}
           {filtros.proyectoId && (
-            <span style={{ fontSize: "13px", background: "#e0e7ff", padding: "6px 14px", borderRadius: "9999px", display: "flex", gap: "8px", alignItems: "center", color: "#4338ca", fontWeight: "500" }}>
+            <span
+              style={{
+                fontSize: "13px",
+                background: "#e0e7ff",
+                padding: "6px 14px",
+                borderRadius: "9999px",
+                display: "flex",
+                gap: "8px",
+                alignItems: "center",
+                color: "#4338ca",
+                fontWeight: "500",
+              }}
+            >
               Proyecto
-              <button onClick={() => limpiarFiltro("proyectoId")} style={{ border: "none", background: "none", cursor: "pointer", fontSize: "16px", color: "#4338ca", fontWeight: "700", padding: "0 0 0 4px" }}>×</button>
+              <button
+                onClick={() => limpiarFiltro("proyectoId")}
+                style={{
+                  border: "none",
+                  background: "none",
+                  cursor: "pointer",
+                  fontSize: "16px",
+                  color: "#4338ca",
+                  fontWeight: "700",
+                  padding: "0 0 0 4px",
+                }}
+              >
+                ×
+              </button>
             </span>
           )}
         </div>
