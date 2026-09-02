@@ -17,11 +17,14 @@
 // useSesionCompartida()), mismo motivo que useJornadasKanban()/useJornadaActiva() documentan
 // para no abrir una segunda suscripcion a la sesion.
 //
-// El cambio de estado (criterio 4) reusa las mismas piezas puras que useJornadasKanban.js en vez
-// de repetir la logica: necesitaAvisoDeAtencionesIncompletas() decide si hace falta la
-// advertencia de atenciones incompletas (issue #171, criterio 4) antes de finalizar, y
-// cambiarEstadoJornada()/contarAtencionesIncompletas() son las mismas funciones de api.js que ya
-// usa el tablero. Si el kanban cambiara esa regla, este hook la hereda sin tocar nada aca.
+// El cambio de estado (criterio 4 de #171) usa cambiarEstadoJornada() de api.js, la misma funcion
+// que usa el tablero. Issue #183: `cambiarEstado()` ya NO cubre la transicion en curso ->
+// finalizada -- esa transicion la aplica unicamente useResumenCierreJornada.js (pestaña "Cierre"
+// de DetalleJornadaPage.jsx), con el resumen completo del dia en vez del aviso aislado de
+// atenciones incompletas que este hook mostraba antes (issue #171). DetalleJornadaPage.jsx nunca
+// llama a `cambiarEstado(destino)` para ese destino: en su lugar cambia de pestaña (ver PLAN.md
+// seccion 3 de #183). `cambiarEstado()` sigue sirviendo para las demas transiciones (arrancar la
+// jornada, la reapertura).
 //
 // Asignar personal (la otra mitad del criterio 4) NO esta aca: es la issue #182, que se monta
 // sobre esta misma pantalla (ver el comentario en DetalleJornadaPage.jsx, pestaña Equipo).
@@ -35,13 +38,11 @@ import { listarPacientesAtendidosDeJornada } from "../pacientes/consultas.api.js
 import { puedeVerHistorial as puedeVerDatosClinicos } from "../pacientes/permisos.js";
 import {
   cambiarEstadoJornada,
-  contarAtencionesIncompletas,
   obtenerHistorialDeJornada,
   obtenerJornada,
   obtenerPersonalDeJornada,
 } from "./api.js";
 import { permisosDeJornadas, puedeVerHistorialJornada } from "./permisos.js";
-import { necesitaAvisoDeAtencionesIncompletas } from "./useJornadasKanban.js";
 import { transicionesDeJornadaDesde } from "./validaciones.js";
 
 const ESTADO_INICIAL = {
@@ -74,15 +75,11 @@ const ESTADO_INICIAL = {
  *   moviendo: boolean,
  *   errorMovimiento: string|null,
  *   descartarErrorMovimiento: () => void,
- *   confirmacionFinalizar: { destinoId: string, cantidad: number }|null,
- *   confirmarFinalizacion: () => Promise<void>,
- *   cancelarFinalizacion: () => void,
  * }}
  */
 export function useDetalleJornada({ jornadaId, rol } = {}) {
   const [estado, setEstado] = useState(ESTADO_INICIAL);
   const [errorMovimiento, setErrorMovimiento] = useState(null);
-  const [confirmacionFinalizar, setConfirmacionFinalizar] = useState(null);
   const [moviendo, setMoviendo] = useState(false);
 
   const puedeVerHistorialDeEstados = puedeVerHistorialJornada(rol);
@@ -130,9 +127,16 @@ export function useDetalleJornada({ jornadaId, rol } = {}) {
     );
   }, [jornadaId]);
 
-  /** Ejecuta de verdad el cambio de estado, igual que aplicarMovimiento() en useJornadasKanban.js. */
-  const aplicarCambioDeEstado = useCallback(
+  /**
+   * Cambia el estado de la jornada. Issue #183: ya NO cubre en curso -> finalizada -- ese destino
+   * lo aplica unicamente useResumenCierreJornada.js (pestaña "Cierre"), y DetalleJornadaPage.jsx
+   * nunca llama a esta funcion con ese destino (cambia de pestaña en su lugar, ver el comentario
+   * del encabezado de este archivo). Sigue sirviendo para arrancar la jornada y para la
+   * reapertura.
+   */
+  const cambiarEstado = useCallback(
     async (destinoId) => {
+      setErrorMovimiento(null);
       setMoviendo(true);
       const { jornada: actualizada, error } = await cambiarEstadoJornada(jornadaId, destinoId, {
         rol,
@@ -158,39 +162,6 @@ export function useDetalleJornada({ jornadaId, rol } = {}) {
     [jornadaId, rol, cargar],
   );
 
-  /**
-   * Cambia el estado de la jornada, con la misma advertencia de atenciones incompletas que el
-   * tablero (issue #171, criterio 4) antes de finalizar.
-   */
-  const cambiarEstado = useCallback(
-    async (destinoId) => {
-      setErrorMovimiento(null);
-      const estadoActual = estado.jornada?.estado;
-
-      if (necesitaAvisoDeAtencionesIncompletas(estadoActual, destinoId)) {
-        setMoviendo(true);
-        const { cantidad, error } = await contarAtencionesIncompletas(jornadaId);
-        setMoviendo(false);
-
-        if (!error && cantidad > 0) {
-          setConfirmacionFinalizar({ destinoId, cantidad });
-          return;
-        }
-      }
-
-      await aplicarCambioDeEstado(destinoId);
-    },
-    [estado.jornada, jornadaId, aplicarCambioDeEstado],
-  );
-
-  const confirmarFinalizacion = useCallback(async () => {
-    if (!confirmacionFinalizar) return;
-    const { destinoId } = confirmacionFinalizar;
-    setConfirmacionFinalizar(null);
-    await aplicarCambioDeEstado(destinoId);
-  }, [confirmacionFinalizar, aplicarCambioDeEstado]);
-
-  const cancelarFinalizacion = useCallback(() => setConfirmacionFinalizar(null), []);
   const descartarErrorMovimiento = useCallback(() => setErrorMovimiento(null), []);
 
   const destinos = estado.jornada ? transicionesDeJornadaDesde(estado.jornada.estado) : [];
@@ -212,8 +183,5 @@ export function useDetalleJornada({ jornadaId, rol } = {}) {
     moviendo,
     errorMovimiento,
     descartarErrorMovimiento,
-    confirmacionFinalizar,
-    confirmarFinalizacion,
-    cancelarFinalizacion,
   };
 }

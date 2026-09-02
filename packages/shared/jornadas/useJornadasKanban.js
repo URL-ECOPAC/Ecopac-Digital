@@ -13,12 +13,17 @@
 // No llama a useSesion() por su cuenta: recibe `rol` de quien lo usa (en la web,
 // useSesionCompartida()), mismo motivo que usePerfilPropio() documenta en usuarios/ para no
 // abrir una segunda suscripcion a la sesion.
+//
+// Issue #183: la transicion en curso -> finalizada dejo de aplicarse desde este hook (antes lo
+// hacia moverJornada(), con su propio aviso de atenciones incompletas). Ahora moverJornada()
+// manda esa transicion a `pedirCierreEnDetalle`, y JornadasPage.jsx navega al detalle de la
+// jornada, donde la pestaña "Cierre" (useResumenCierreJornada.js) es la unica que finaliza, con
+// el resumen completo del dia. Ver PLAN.md seccion 3.
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import {
   cambiarEstadoJornada,
-  contarAtencionesIncompletas,
   contarPacientesAtendidosPorJornada,
   listarJornadas,
 } from "./api.js";
@@ -101,19 +106,21 @@ function armarTarjeta(jornada, pacientesPorJornada) {
 }
 
 /**
- * Indica si un movimiento del tablero necesita el aviso de atenciones incompletas antes de
- * aplicarse (issue #171, criterio 4; issue #180, PLAN.md seccion 2 decision 4): unicamente la
- * transicion en curso -> finalizada la necesita. Funcion pura, exportada aparte del hook para
- * poder probarla sin montarlo (environment "node", sin DOM, mismo motivo por el que
- * useFormularioJornada.test.js prueba valoresIniciales()/aDatosDeJornada() sueltas y no
- * `enviar()` completo).
+ * Indica si un movimiento del tablero ES la transicion de finalizar una jornada (issue #183):
+ * unicamente en curso -> finalizada. Se llamaba necesitaAvisoDeAtencionesIncompletas() (issue
+ * #171, criterio 4): antes solo importaba para decidir si valia la pena avisar; ahora decide si
+ * el movimiento tiene que desviarse al flujo de cierre (pestaña "Cierre" de DetalleJornadaPage.jsx,
+ * useResumenCierreJornada.js) en vez de aplicarse aca -- por eso el nombre nuevo, mismo cuerpo.
+ * Funcion pura, exportada aparte del hook para poder probarla sin montarlo (environment "node",
+ * sin DOM, mismo motivo por el que useFormularioJornada.test.js prueba
+ * valoresIniciales()/aDatosDeJornada() sueltas y no `enviar()` completo).
  *
  * @param {string} estadoActual Estado real de la jornada (releido de `jornadas`, no el
  *   `origenId` que manda KanbanBoard).
  * @param {string} destinoId Estado al que se intenta mover.
  * @returns {boolean}
  */
-export function necesitaAvisoDeAtencionesIncompletas(estadoActual, destinoId) {
+export function esFinalizacionDeJornada(estadoActual, destinoId) {
   return estadoActual === ESTADOS_JORNADA.EN_CURSO && destinoId === ESTADOS_JORNADA.FINALIZADA;
 }
 
@@ -178,12 +185,14 @@ export function useJornadasKanban(rol) {
   const [error, setError] = useState(null);
   // Estado del movimiento de tarjetas (issue #180). `errorMovimiento` es el "explica por que"
   // del criterio 3: { jornadaId, mensaje }, o null cuando no hay nada que mostrar.
-  // `confirmacionFinalizar` es la advertencia del criterio 4 de #171 (1.3 del PLAN.md): se llena
-  // solo para en curso -> finalizada con atenciones incompletas, y la pantalla decide como
-  // pedir confirmacion. `moviendo` deshabilita los botones mientras hay una llamada en curso,
-  // para no disparar dos movimientos de la misma tarjeta a la vez.
+  // `pedirCierreEnDetalle` reemplaza a la vieja `confirmacionFinalizar` (issue #171, criterio 4):
+  // en vez de guardar una advertencia para mostrar en un modal del propio tablero, guarda el id de
+  // la jornada que el tablero tiene que mandar al flujo de cierre unico (pestaña "Cierre" de
+  // DetalleJornadaPage.jsx, ver PLAN.md seccion 3 de #183) -- este hook ya no aplica el cambio a
+  // finalizada por su cuenta. `moviendo` deshabilita los botones mientras hay una llamada en
+  // curso, para no disparar dos movimientos de la misma tarjeta a la vez.
   const [errorMovimiento, setErrorMovimiento] = useState(null);
-  const [confirmacionFinalizar, setConfirmacionFinalizar] = useState(null);
+  const [pedirCierreEnDetalle, setPedirCierreEnDetalle] = useState(null);
   const [moviendo, setMoviendo] = useState(false);
 
   const cargar = useCallback(async () => {
@@ -230,8 +239,9 @@ export function useJornadasKanban(rol) {
   }, []);
 
   /**
-   * Ejecuta de verdad el cambio de estado, ya decidido (sin atenciones incompletas por
-   * confirmar, o ya confirmadas). cambiarEstadoJornada() (api.js) es quien valida la transicion
+   * Ejecuta de verdad el cambio de estado. moverJornada() ya descarto que sea la transicion de
+   * finalizar (esa se desvia a `pedirCierreEnDetalle`, ver mas abajo), asi que lo que llega aca
+   * es cualquier otra transicion. cambiarEstadoJornada() (api.js) es quien valida la transicion
    * y la reapertura contra TRANSICIONES_JORNADA/es_administrador() y arma el mensaje de
    * `errores.estado` cuando algo no procede (validaciones.js:67-93) -- no se repite esa logica
    * aca, se deja que la funcion ya construida decida y esta funcion solo refleja el resultado.
@@ -284,19 +294,23 @@ export function useJornadasKanban(rol) {
   /**
    * Handler unico de cambio de estado del tablero (issue #180, PLAN.md seccion 2 decision 2):
    * mismo camino para `onMover` de KanbanBoard (arrastre y flechas de teclado, que ya comparten
-   * un solo `mover()` interno dentro del componente) y para los botones "Atras"/"Avanzar" que
-   * arma JornadasPage.jsx. Si divergieran, una ruta permitiria algo que la otra no.
+   * un solo `mover()` interno dentro del componente) y para el boton "Avanzar" que arma
+   * JornadasPage.jsx. Si divergieran, una ruta permitiria algo que la otra no.
    *
    * Firma identica a la que ya esperan los dos KanbanBoard (web y movil):
    * `onMover(tarjetaId, origenId, destinoId)`.
    *
    * El estado de origen se relee de `jornadas` (no se confia en `origenId`, que viene de la
    * columna donde el tablero ya tenia pintada la tarjeta y podria estar desactualizado) para
-   * decidir si esta transicion es exactamente en curso -> finalizada: la unica que necesita el
-   * aviso de atenciones incompletas (issue #171, criterio 4). `contarAtencionesIncompletas()` es
-   * un aviso, no un bloqueo (api.js:610-622): si falla (red, o RLS que no deja verlo) se seguye
-   * de largo y se aplica el movimiento igual, nunca se bloquea la finalizacion por un fallo de
-   * una consulta secundaria.
+   * decidir si esta transicion es exactamente en curso -> finalizada (issue #183): esa transicion
+   * ya NO se aplica desde aca. En vez de llamar a `cambiarEstadoJornada()` (con o sin advertencia
+   * de atenciones incompletas, como hacia la version de la #171), este hook manda a
+   * `pedirCierreEnDetalle` el id de la jornada: JornadasPage.jsx navega al detalle, donde la
+   * pestaña "Cierre" (useResumenCierreJornada.js) es la unica que finaliza, con el resumen
+   * completo del dia (criterios 1-3 de #183), no solo el aviso de atenciones incompletas. Esto
+   * vale igual para el boton "Avanzar" y para soltar la tarjeta arrastrada en la columna
+   * "Finalizada": las dos rutas comparten este mismo `moverJornada`, asi que ninguna de las dos
+   * puede finalizar sin pasar por el resumen (trampa 1 de #183, PLAN.md seccion 3).
    */
   const moverJornada = useCallback(
     async (jornadaId, origenId, destinoId) => {
@@ -305,15 +319,9 @@ export function useJornadasKanban(rol) {
       const jornada = jornadas.find((fila) => fila.id === jornadaId);
       const estadoActual = jornada?.estado ?? origenId;
 
-      if (necesitaAvisoDeAtencionesIncompletas(estadoActual, destinoId)) {
-        setMoviendo(true);
-        const { cantidad, error: errorDeConteo } = await contarAtencionesIncompletas(jornadaId);
-        setMoviendo(false);
-
-        if (!errorDeConteo && cantidad > 0) {
-          setConfirmacionFinalizar({ jornadaId, destinoId, cantidad });
-          return;
-        }
+      if (esFinalizacionDeJornada(estadoActual, destinoId)) {
+        setPedirCierreEnDetalle(jornadaId);
+        return;
       }
 
       await aplicarMovimiento(jornadaId, destinoId);
@@ -321,17 +329,9 @@ export function useJornadasKanban(rol) {
     [jornadas, aplicarMovimiento],
   );
 
-  /** Confirma finalizar a pesar de la advertencia de atenciones incompletas. */
-  const confirmarFinalizacion = useCallback(async () => {
-    if (!confirmacionFinalizar) return;
-    const { jornadaId, destinoId } = confirmacionFinalizar;
-    setConfirmacionFinalizar(null);
-    await aplicarMovimiento(jornadaId, destinoId);
-  }, [confirmacionFinalizar, aplicarMovimiento]);
-
-  /** Cancela la finalizacion: la jornada se queda como estaba, sin llamar al servidor. */
-  const cancelarFinalizacion = useCallback(() => {
-    setConfirmacionFinalizar(null);
+  /** Descarta el pedido de ir al flujo de cierre, una vez que JornadasPage.jsx ya navego. */
+  const descartarPedidoCierre = useCallback(() => {
+    setPedirCierreEnDetalle(null);
   }, []);
 
   /** Descarta el mensaje de un movimiento rechazado, sin reintentar nada. */
@@ -364,8 +364,7 @@ export function useJornadasKanban(rol) {
     moviendo,
     errorMovimiento,
     descartarErrorMovimiento,
-    confirmacionFinalizar,
-    confirmarFinalizacion,
-    cancelarFinalizacion,
+    pedirCierreEnDetalle,
+    descartarPedidoCierre,
   };
 }
