@@ -181,29 +181,6 @@ export function useDashboardMetricas() {
     return ((valorActual - valorBase) / valorBase) * 100;
   };
 
-  // ─── Exportar CSV ───
-  const exportarCSV = () => {
-    if (!datos) return;
-    const encabezados = [agruparPor, "Valor Principal", "Valor Comparado", "Variación %"];
-    const filas = datos.serie.map((fila, i) => {
-      const comp = datosComparacion?.serie?.[i];
-      const varPc = comp ? calcularVariacion(fila.valor, comp.valor) : null;
-      return [
-        fila.etiqueta,
-        fila.valor,
-        comp?.valor || "-",
-        varPc !== null ? `${varPc >= 0 ? "+" : ""}${varPc.toFixed(1)}%` : "-",
-      ];
-    });
-    const contenido = [encabezados, ...filas].map((f) => f.join(",")).join("\n");
-    const blob = new Blob([contenido], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `panel-impacto-${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
 
   return {
     // Opciones
@@ -239,6 +216,5 @@ export function useDashboardMetricas() {
     seriePrincipal: datos?.serie || [],
     serieComparacion: datosComparacion?.serie || [],
     calcularVariacion,
-    exportarCSV,
   };
 }

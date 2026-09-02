@@ -2,7 +2,9 @@ import { useDashboardMetricas } from "../../../../packages/shared/reportes/useDa
 
 // 📊 Tarjeta de métrica alineada a Figma
 const TarjetaMetrica = ({ etiqueta, valor, meta, color }) => {
-  const progreso = meta ? Math.min((Number(valor) / Number(meta.replace(/[^0-9]/g, ""))) * 100, 100) : 0;
+  const progreso = meta
+    ? Math.min((Number(valor) / Number(meta.replace(/[^0-9]/g, ""))) * 100, 100)
+    : 0;
   return (
     <div
       style={{
@@ -49,7 +51,7 @@ const TarjetaMetrica = ({ etiqueta, valor, meta, color }) => {
 };
 
 export default function DashboardMetricasPage() {
-  // ✅ NUEVA estructura que devuelve el hook
+  // ✅ Extraemos TODOS los valores del hook
   const {
     cargando,
     error,
@@ -57,8 +59,6 @@ export default function DashboardMetricasPage() {
     seriePrincipal,
     serieComparacion,
     calcularVariacion,
-    exportarCSV,
-    // Filtros
     rangosDisponibles,
     rangoSeleccionado,
     setRangoSeleccionado,
@@ -71,7 +71,33 @@ export default function DashboardMetricasPage() {
     setModoComparacion,
     comunidadCompararId,
     setComunidadCompararId,
+    listaComunidades,
+    valoresEspeciales: { TODAS, NINGUNA },
   } = useDashboardMetricas();
+
+  // ✅ Función de exportación CSV — AHORA EN EL COMPONENTE
+  const exportarCSV = () => {
+    if (!seriePrincipal || seriePrincipal.length === 0) return;
+    const encabezados = [agruparPor, "Valor Principal", "Valor Comparado", "Variación %"];
+    const filas = seriePrincipal.map((fila, i) => {
+      const comp = serieComparacion?.[i];
+      const varPc = comp ? calcularVariacion(fila.valor, comp.valor) : null;
+      return [
+        fila.etiqueta,
+        fila.valor,
+        comp?.valor || "-",
+        varPc !== null ? `${varPc >= 0 ? "+" : ""}${varPc.toFixed(1)}%` : "-",
+      ];
+    });
+    const contenido = [encabezados, ...filas].map((f) => f.join(",")).join("\n");
+    const blob = new Blob([contenido], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `panel-impacto-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   if (cargando)
     return (
@@ -86,7 +112,6 @@ export default function DashboardMetricasPage() {
     );
 
   // 📊 Datos de gráfica
-  const etiquetasGrafica = seriePrincipal.map((item) => item.etiqueta);
   const valorMaximo = Math.max(...seriePrincipal.map((i) => i.valor), 1);
 
   return (
@@ -114,11 +139,11 @@ export default function DashboardMetricasPage() {
             cursor: "pointer",
           }}
         >
-           Exportar CSV
+          Exportar CSV
         </button>
       </div>
 
-      {/* 🔍 FILTROS — Nuevos controles */}
+      {/* 🔍 FILTROS */}
       <div style={{ backgroundColor: "#fff", borderRadius: "16px", padding: "20px", marginBottom: "24px", border: "1px solid #f1f5f9" }}>
         <div style={{ marginBottom: "16px" }}>
           <p style={{ fontSize: "13px", fontWeight: "600", color: "#334155", margin: "0 0 8px 0" }}>Rango de fechas</p>
@@ -157,6 +182,8 @@ export default function DashboardMetricasPage() {
               ))}
             </select>
           </div>
+
+          {/* ✅ Select con valores REALES desde el hook */}
           <div>
             <label style={{ fontSize: "12px", fontWeight: "600", color: "#64748b", display: "block", marginBottom: "6px" }}>Comunidad</label>
             <select
@@ -164,13 +191,14 @@ export default function DashboardMetricasPage() {
               onChange={(e) => setComunidadId(e.target.value)}
               style={{ width: "100%", padding: "10px", borderRadius: "10px", border: "1px solid #e2e8f0" }}
             >
-              <option value="todas">Todas las comunidades</option>
-              {/* Aquí puedes cargar tu lista real de comunidades */}
-              <option value="com1">Comunidad A</option>
-              <option value="com2">Comunidad B</option>
-              <option value="com3">Comunidad C</option>
+              <option value={TODAS}>Todas las comunidades</option>
+              {listaComunidades.map((c) => (
+                <option key={c.id} value={c.id}>{c.nombre}</option>
+              ))}
             </select>
           </div>
+
+          {/* ✅ Select de comparación con valores REALES */}
           <div>
             <label style={{ fontSize: "12px", fontWeight: "600", color: "#64748b", display: "block", marginBottom: "6px" }}>Comparar</label>
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
@@ -185,17 +213,17 @@ export default function DashboardMetricasPage() {
                 disabled={!modoComparacion}
                 style={{ flex: 1, padding: "10px", borderRadius: "10px", border: "1px solid #e2e8f0" }}
               >
-                <option value="ninguna">— Ninguna —</option>
-                <option value="com1">Comunidad A</option>
-                <option value="com2">Comunidad B</option>
-                <option value="com3">Comunidad C</option>
+                <option value={NINGUNA}>— Ninguna —</option>
+                {listaComunidades.map((c) => (
+                  <option key={c.id} value={c.id}>{c.nombre}</option>
+                ))}
               </select>
             </div>
           </div>
         </div>
       </div>
 
-      {/* 📊 Tarjetas de métricas — Nuevos nombres desde el hook */}
+      {/* 📊 Tarjetas de métricas */}
       <div
         style={{
           display: "grid",
@@ -230,7 +258,7 @@ export default function DashboardMetricasPage() {
         />
       </div>
 
-      {/* 📈 Gráfica de evolución — Adaptada a seriePrincipal */}
+      {/* 📈 Gráfica de evolución */}
       <div style={{ display: "grid", gridTemplateColumns: serieComparacion.length > 0 ? "1fr 1fr" : "1fr", gap: "24px" }}>
         <div
           style={{
@@ -258,10 +286,7 @@ export default function DashboardMetricasPage() {
             {seriePrincipal.map((item, i) => {
               const alto = valorMaximo > 0 ? Math.max((item.valor / valorMaximo) * 100, 8) : 4;
               return (
-                <div
-                  key={i}
-                  style={{ display: "flex", flexDirection: "column", alignItems: "center", flex: 1 }}
-                >
+                <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: "center", flex: 1 }}>
                   <div style={{ display: "flex", alignItems: "flex-end", height: "100%", gap: "3px" }}>
                     <div
                       style={{
@@ -299,7 +324,7 @@ export default function DashboardMetricasPage() {
           )}
         </div>
 
-        {/* 📋 Panel de variación porcentual (solo cuando hay comparación) */}
+        {/* 📋 Panel de variación porcentual */}
         {serieComparacion.length > 0 && (
           <div
             style={{
