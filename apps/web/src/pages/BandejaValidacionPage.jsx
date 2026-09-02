@@ -1,5 +1,5 @@
 import { useState } from "react";
-
+import { usePendientesValidacion } from "../../../../packages/shared/inventario/usePendientesValidacion.js";
 export default function BandejaValidacionPage() {
   // 📋 Datos de ejemplo (vienen desde el hook en tu página principal)
   const movimientosPendientes = [
@@ -19,7 +19,7 @@ export default function BandejaValidacionPage() {
   const handleAprobar = async (movimiento) => {
     setProcesandoId(movimiento.id);
     // Aquí llamas tu función aprobar(movimiento.id) desde el hook
-    console.log("✅ Aprobado:", movimiento.id);
+    console.log(" Aprobado:", movimiento.id);
     setTimeout(() => setProcesandoId(null), 800);
   };
 
@@ -28,7 +28,7 @@ export default function BandejaValidacionPage() {
     if (!motivo) return;
     setProcesandoId(movimiento.id);
     // Aquí llamas tu función rechazar(movimiento.id, motivo) desde el hook
-    console.log("❌ Rechazado:", movimiento.id, "Motivo:", motivo);
+    console.log(" Rechazado:", movimiento.id, "Motivo:", motivo);
     setTimeout(() => setProcesandoId(null), 800);
   };
 
