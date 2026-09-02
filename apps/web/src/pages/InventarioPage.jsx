@@ -7,9 +7,9 @@ import ModalRegistroIngreso from "./ModalRegistroIngreso.jsx";
 import { ModalSalidaMedicamento } from "./ModalSalidaMedicamento";
 import BandejaValidacionPage from "./BandejaValidacionPage";
 import { useVistaExistencias } from "../../../../packages/shared/inventario/useVistaExistencias.js";
-import PanelAlertasVencimiento from "./PanelAlertasVencimiento.jsx";
 import AdministracionBodegasProveedoresPage from "./AdministracionBodegasProveedoresPage.jsx";
 import { useAlertasVencimiento } from "../../../../packages/shared/inventario/useAlertasVencimiento.js";
+import KardexMovimientosPage from "./KardexMovimientosPage.jsx"
 // API Medicamentos y Principios Activos
 import {
   listarMedicamentos,
@@ -454,7 +454,7 @@ export default function InventarioPage() {
         </div>
 
         {/* ✅ BOTONES SOLO VISIBLES EN CATÁLOGO Y LOTES — OCULTOS EN VALIDACIÓN */}
-        {esAdmin && tabActiva !== "validacion" && tabActiva !== "administracion" && (
+        {esAdmin && tabActiva !== "validacion" && tabActiva !== "administracion" && tabActiva !== "kardex" && (
           <div style={{ display: "flex", gap: "8px" }}>
             <button
               onClick={() => setModalRegistroIngresoAbierto(true)}
@@ -592,6 +592,21 @@ export default function InventarioPage() {
               {cantidadPendientesAlertas}
             </span>
           )}
+        </button>
+         <button
+          onClick={() => setTabActiva("kardex")}
+          style={{
+            padding: "8px 16px",
+            fontSize: "13px",
+            fontWeight: "700",
+            border: "none",
+            background: "none",
+            cursor: "pointer",
+            borderBottom: tabActiva === "kardex" ? "2px solid #8b5cf6" : "2px solid transparent",
+            color: tabActiva === "kardex" ? "#7c3aed" : "#64748b",
+          }}
+        >
+           Kardex de Movimientos
         </button>
         <button
           onClick={() => setTabActiva("administracion")}
@@ -1616,6 +1631,10 @@ export default function InventarioPage() {
           onClose={() => setModalAbierto(false)}
           onCrearPrincipioActivo={handleCrearPrincipioActivo}
         />
+      )}
+        {/* ✅ Pestaña: Kardex de Movimientos */}
+      {tabActiva === "kardex" && (
+        <KardexMovimientosPage titulo="Historial de Movimientos" />
       )}
 
       <ModalSalidaMedicamento
