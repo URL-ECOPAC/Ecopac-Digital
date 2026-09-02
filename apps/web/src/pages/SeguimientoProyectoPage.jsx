@@ -15,9 +15,18 @@ export default function SeguimientoProyectoPage({
 
   // Resolución de propiedades (prioriza props directas, luego router location.state)
   const proyectoInicial = propProyectoInicial || state.proyectoInicial || state.proyecto;
-  const hitosIniciales = propHitos.length > 0 ? propHitos : (state.hitosIniciales || proyectoInicial?.hitosIniciales || []);
-  const bitacoraInicial = propBitacora.length > 0 ? propBitacora : (state.bitacoraInicial || proyectoInicial?.bitacoraInicial || []);
-  const jornadasIniciales = propJornadas.length > 0 ? propJornadas : (state.jornadasIniciales || proyectoInicial?.jornadasIniciales || []);
+  const hitosIniciales =
+    propHitos.length > 0
+      ? propHitos
+      : state.hitosIniciales || proyectoInicial?.hitosIniciales || [];
+  const bitacoraInicial =
+    propBitacora.length > 0
+      ? propBitacora
+      : state.bitacoraInicial || proyectoInicial?.bitacoraInicial || [];
+  const jornadasIniciales =
+    propJornadas.length > 0
+      ? propJornadas
+      : state.jornadasIniciales || proyectoInicial?.jornadasIniciales || [];
 
   const {
     proyecto,
@@ -71,12 +80,10 @@ export default function SeguimientoProyectoPage({
     0;
 
   const jornadasCompletadas =
-    indicadoresJornadas?.completadas ||
-    proyectoDatos.jornadasCompletadas ||
-    0;
+    indicadoresJornadas?.completadas || proyectoDatos.jornadasCompletadas || 0;
 
   const presupuestoTotal =
-    (indicadoresJornadas?.presupuestoTotal && indicadoresJornadas.presupuestoTotal > 0)
+    indicadoresJornadas?.presupuestoTotal && indicadoresJornadas.presupuestoTotal > 0
       ? indicadoresJornadas.presupuestoTotal
       : parsearPresupuesto(proyectoDatos.presupuestoTotal || proyectoDatos.presupuesto);
 
@@ -120,9 +127,7 @@ export default function SeguimientoProyectoPage({
               <Card.Subtitle className="text-uppercase text-muted extra-small fw-bold mb-1">
                 Total Jornadas
               </Card.Subtitle>
-              <Card.Title className="fs-2 fw-bold text-dark mb-0">
-                {totalJornadas}
-              </Card.Title>
+              <Card.Title className="fs-2 fw-bold text-dark mb-0">{totalJornadas}</Card.Title>
             </Card.Body>
           </Card>
         </Col>

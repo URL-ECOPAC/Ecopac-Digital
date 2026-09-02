@@ -47,11 +47,28 @@ export default function ProyectosPage() {
             { id: "j3", estado: "planificada", presupuesto: 15000, beneficiarios: 100 },
           ],
           hitosIniciales: [
-            { id: "h1", nombre: "Diagnóstico comunitario", esCumplido: true, fechaPrevista: "10/04/2026", fechaReal: "08/04/2026" },
-            { id: "h2", nombre: "Primera jornada médica", esCumplido: false, fechaPrevista: "12/05/2026", esVencido: false },
+            {
+              id: "h1",
+              nombre: "Diagnóstico comunitario",
+              esCumplido: true,
+              fechaPrevista: "10/04/2026",
+              fechaReal: "08/04/2026",
+            },
+            {
+              id: "h2",
+              nombre: "Primera jornada médica",
+              esCumplido: false,
+              fechaPrevista: "12/05/2026",
+              esVencido: false,
+            },
           ],
           bitacoraInicial: [
-            { id: "b1", nota: "Se completó la fase preliminar de empadronamiento comunitario.", registradoPor: "Dr. A. Juárez", createdAt: "2026-04-15T10:00:00Z" },
+            {
+              id: "b1",
+              nota: "Se completó la fase preliminar de empadronamiento comunitario.",
+              registradoPor: "Dr. A. Juárez",
+              createdAt: "2026-04-15T10:00:00Z",
+            },
           ],
         },
       ],
@@ -76,7 +93,12 @@ export default function ProyectosPage() {
             { id: "j5", estado: "completada", presupuesto: 40000, beneficiarios: 600 },
           ],
           hitosIniciales: [
-            { id: "h3", nombre: "Talleres en escuelas", esCumplido: true, fechaPrevista: "01/05/2026" },
+            {
+              id: "h3",
+              nombre: "Talleres en escuelas",
+              esCumplido: true,
+              fechaPrevista: "01/05/2026",
+            },
           ],
           bitacoraInicial: [],
         },
@@ -301,14 +323,23 @@ function TarjetaProyecto({ proyecto, onEditar, onMover, onVerDetalle }) {
         Presupuesto: {proyecto.presupuesto || "Q0"}
       </div>
 
-      <div className="mb-2" style={{ color: "var(--color-text-muted)", fontSize: typography.sizes.xs }}>
+      <div
+        className="mb-2"
+        style={{ color: "var(--color-text-muted)", fontSize: typography.sizes.xs }}
+      >
         Responsable: {proyecto.responsable || "—"}
       </div>
 
       <div className="mb-2">
         <div className="d-flex align-items-center gap-2">
-          <ProgressBar now={porcentajeAvance} variant="primary" style={{ height: "6px", flex: "1 1 auto" }} />
-          <span className="small" style={{ color: "var(--color-text-muted)" }}>{porcentajeAvance}%</span>
+          <ProgressBar
+            now={porcentajeAvance}
+            variant="primary"
+            style={{ height: "6px", flex: "1 1 auto" }}
+          />
+          <span className="small" style={{ color: "var(--color-text-muted)" }}>
+            {porcentajeAvance}%
+          </span>
         </div>
       </div>
 
@@ -316,13 +347,19 @@ function TarjetaProyecto({ proyecto, onEditar, onMover, onVerDetalle }) {
         <div className="d-flex gap-2">
           <SecondaryButton title="Ver detalle" onClick={onVerDetalle} />
           {esFinalizado && (
-            <SecondaryButton title="← Atrás" onClick={() => onMover(proyecto.id, proyecto.estado, "en_curso")} />
+            <SecondaryButton
+              title="← Atrás"
+              onClick={() => onMover(proyecto.id, proyecto.estado, "en_curso")}
+            />
           )}
         </div>
         <div className="d-flex gap-2">
           {onEditar && <SecondaryButton title="Editar" onClick={onEditar} />}
           {!esFinalizado && (
-            <PrimaryButton title="Avanzar →" onClick={() => onMover(proyecto.id, proyecto.estado)} />
+            <PrimaryButton
+              title="Avanzar →"
+              onClick={() => onMover(proyecto.id, proyecto.estado)}
+            />
           )}
         </div>
       </div>
