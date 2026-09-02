@@ -8,6 +8,7 @@ import { ModalSalidaMedicamento } from "./ModalSalidaMedicamento";
 import BandejaValidacionPage from "./BandejaValidacionPage";
 import { useVistaExistencias } from "../../../../packages/shared/inventario/useVistaExistencias.js";
 import PanelAlertasVencimiento from "./PanelAlertasVencimiento.jsx";
+import AdministracionBodegasProveedoresPage from "./AdministracionBodegasProveedoresPage.jsx";
 import { useAlertasVencimiento } from "../../../../packages/shared/inventario/useAlertasVencimiento.js";
 // API Medicamentos y Principios Activos
 import {
@@ -379,25 +380,25 @@ export default function InventarioPage() {
     alertasCriticas.length > 0
       ? alertasCriticas
       : [
-          {
-            id: "alt-1",
-            medicamento: { nombre: "Metformina 850mg Comprimidos" },
-            codigo: "FAR-0009",
-            numero_lote: "L-2024-0567",
-            bodega: "SUR",
-            diasRestantes: 12,
-            fechaCaducidad: "27 jul 2024",
-          },
-          {
-            id: "alt-2",
-            medicamento: { nombre: "Amoxicilina 500mg Cápsulas" },
-            codigo: "FAR-0041",
-            numero_lote: "L-2024-0091",
-            bodega: "CENTRAL",
-            diasRestantes: 30,
-            fechaCaducidad: "14 ago 2024",
-          },
-        ];
+        {
+          id: "alt-1",
+          medicamento: { nombre: "Metformina 850mg Comprimidos" },
+          codigo: "FAR-0009",
+          numero_lote: "L-2024-0567",
+          bodega: "SUR",
+          diasRestantes: 12,
+          fechaCaducidad: "27 jul 2024",
+        },
+        {
+          id: "alt-2",
+          medicamento: { nombre: "Amoxicilina 500mg Cápsulas" },
+          codigo: "FAR-0041",
+          numero_lote: "L-2024-0091",
+          bodega: "CENTRAL",
+          diasRestantes: 30,
+          fechaCaducidad: "14 ago 2024",
+        },
+      ];
 
   const fuenteInicial = inventarioRaw.length > 0 ? inventarioFiltradoHook : datosTablaDemo;
   const baseDatosFiltrada = fuenteInicial.filter((item) => {
@@ -425,9 +426,9 @@ export default function InventarioPage() {
     !categoriaSeleccionada || categoriaSeleccionada === "Todas"
       ? baseDatosFiltrada
       : baseDatosFiltrada.filter(
-          (item) =>
-            item.categoria?.toLowerCase().trim() === categoriaSeleccionada.toLowerCase().trim(),
-        );
+        (item) =>
+          item.categoria?.toLowerCase().trim() === categoriaSeleccionada.toLowerCase().trim(),
+      );
 
   return (
     <div
@@ -453,7 +454,7 @@ export default function InventarioPage() {
         </div>
 
         {/* ✅ BOTONES SOLO VISIBLES EN CATÁLOGO Y LOTES — OCULTOS EN VALIDACIÓN */}
-        {esAdmin && tabActiva !== "validacion" && (
+        {esAdmin && tabActiva !== "validacion" && tabActiva !== "administracion" && (
           <div style={{ display: "flex", gap: "8px" }}>
             <button
               onClick={() => setModalRegistroIngresoAbierto(true)}
@@ -591,6 +592,21 @@ export default function InventarioPage() {
               {cantidadPendientesAlertas}
             </span>
           )}
+        </button>
+        <button
+          onClick={() => setTabActiva("administracion")}
+          style={{
+            padding: "8px 16px",
+            fontSize: "13px",
+            fontWeight: "700",
+            border: "none",
+            background: "none",
+            cursor: "pointer",
+            borderBottom: tabActiva === "administracion" ? "2px solid #6366f1" : "2px solid transparent",
+            color: tabActiva === "administracion" ? "#4f46e5" : "#64748b",
+          }}
+        >
+           Administración
         </button>
         <button
           onClick={() => setTabActiva("validacion")}
@@ -1310,8 +1326,8 @@ export default function InventarioPage() {
                           <td style={{ padding: "14px 16px" }}>
                             {item.fechaVencimientoMasProxima
                               ? new Date(item.fechaVencimientoMasProxima).toLocaleDateString(
-                                  "es-GT",
-                                )
+                                "es-GT",
+                              )
                               : "Sin fecha"}
                           </td>
                           <td style={{ padding: "14px 16px" }}>
@@ -1415,8 +1431,8 @@ export default function InventarioPage() {
                                         <td style={{ padding: "8px" }}>
                                           {lote.fechaVencimiento
                                             ? new Date(lote.fechaVencimiento).toLocaleDateString(
-                                                "es-GT",
-                                              )
+                                              "es-GT",
+                                            )
                                             : "—"}
                                         </td>
                                       </tr>
@@ -1580,6 +1596,10 @@ export default function InventarioPage() {
             )}
           </div>
         </div>
+      )}
+      {/* ✅ Pestaña: Administración de Bodegas y Proveedores */}
+      {tabActiva === "administracion" && (
+        <AdministracionBodegasProveedoresPage />
       )}
 
       {/* Modales */}
