@@ -381,25 +381,25 @@ export default function InventarioPage() {
     alertasCriticas.length > 0
       ? alertasCriticas
       : [
-        {
-          id: "alt-1",
-          medicamento: { nombre: "Metformina 850mg Comprimidos" },
-          codigo: "FAR-0009",
-          numero_lote: "L-2024-0567",
-          bodega: "SUR",
-          diasRestantes: 12,
-          fechaCaducidad: "27 jul 2024",
-        },
-        {
-          id: "alt-2",
-          medicamento: { nombre: "Amoxicilina 500mg Cápsulas" },
-          codigo: "FAR-0041",
-          numero_lote: "L-2024-0091",
-          bodega: "CENTRAL",
-          diasRestantes: 30,
-          fechaCaducidad: "14 ago 2024",
-        },
-      ];
+          {
+            id: "alt-1",
+            medicamento: { nombre: "Metformina 850mg Comprimidos" },
+            codigo: "FAR-0009",
+            numero_lote: "L-2024-0567",
+            bodega: "SUR",
+            diasRestantes: 12,
+            fechaCaducidad: "27 jul 2024",
+          },
+          {
+            id: "alt-2",
+            medicamento: { nombre: "Amoxicilina 500mg Cápsulas" },
+            codigo: "FAR-0041",
+            numero_lote: "L-2024-0091",
+            bodega: "CENTRAL",
+            diasRestantes: 30,
+            fechaCaducidad: "14 ago 2024",
+          },
+        ];
 
   const fuenteInicial = inventarioRaw.length > 0 ? inventarioFiltradoHook : datosTablaDemo;
   const baseDatosFiltrada = fuenteInicial.filter((item) => {
@@ -427,240 +427,239 @@ export default function InventarioPage() {
     !categoriaSeleccionada || categoriaSeleccionada === "Todas"
       ? baseDatosFiltrada
       : baseDatosFiltrada.filter(
-        (item) =>
-          item.categoria?.toLowerCase().trim() === categoriaSeleccionada.toLowerCase().trim(),
-      );
+          (item) =>
+            item.categoria?.toLowerCase().trim() === categoriaSeleccionada.toLowerCase().trim(),
+        );
 
   return (
-  <div
-    style={{
-      display: "flex",
-      flexDirection: "column",
-      gap: "20px",
-      padding: "24px",
-      fontFamily: "system-ui, -apple-system, sans-serif",
-      backgroundColor: "#f8fafc",
-      minHeight: "100vh",
-    }}
-  >
-    {/* 1. Header principal */}
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-      <div>
-        <h1 style={{ fontSize: "24px", fontWeight: "800", color: "#1e293b", margin: 0 }}>
-          Control de Inventario
-        </h1>
-        <p style={{ fontSize: "13px", color: "#94a3b8", margin: "4px 0 0 0" }}>
-          Trazabilidad multi-bodega • Lote y serie • Alertas de caducidad
-        </p>
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: "20px",
+        padding: "24px",
+        fontFamily: "system-ui, -apple-system, sans-serif",
+        backgroundColor: "#f8fafc",
+        minHeight: "100vh",
+      }}
+    >
+      {/* 1. Header principal */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div>
+          <h1 style={{ fontSize: "24px", fontWeight: "800", color: "#1e293b", margin: 0 }}>
+            Control de Inventario
+          </h1>
+          <p style={{ fontSize: "13px", color: "#94a3b8", margin: "4px 0 0 0" }}>
+            Trazabilidad multi-bodega • Lote y serie • Alertas de caducidad
+          </p>
+        </div>
+
+        {/* ✅ BOTONES SOLO VISIBLES EN CATÁLOGO Y LOTES — OCULTOS EN VALIDACIÓN Y ADMINISTRACIÓN */}
+        {esAdmin && tabActiva !== "validacion" && tabActiva !== "administracion" && (
+          <div style={{ display: "flex", gap: "8px" }}>
+            {/* Botones comunes: siempre visibles en Catálogo y Lotes */}
+            <button
+              onClick={() => setModalRegistroIngresoAbierto(true)}
+              style={{
+                padding: "10px 20px",
+                borderRadius: "9999px",
+                border: "none",
+                backgroundColor: "#059669",
+                color: "#ffffff",
+                fontSize: "13px",
+                fontWeight: "700",
+                cursor: "pointer",
+              }}
+            >
+              + Registrar Ingreso
+            </button>
+            <button
+              onClick={() => setModalSalidaAbierto(true)}
+              style={{
+                padding: "10px 20px",
+                borderRadius: "9999px",
+                border: "none",
+                backgroundColor: "#b45309",
+                color: "#ffffff",
+                fontSize: "13px",
+                fontWeight: "700",
+                cursor: "pointer",
+              }}
+            >
+              + Registrar Salida
+            </button>
+            {/* Botón adicional según pestaña activa */}
+            {tabActiva === "catalogo" ? (
+              <button
+                type="button"
+                onClick={abrirModalNuevo}
+                style={{
+                  padding: "10px 20px",
+                  borderRadius: "9999px",
+                  border: "none",
+                  backgroundColor: "#059669",
+                  color: "#ffffff",
+                  fontSize: "13px",
+                  fontWeight: "700",
+                  cursor: "pointer",
+                }}
+              >
+                + Nuevo Medicamento
+              </button>
+            ) : tabActiva === "lotes" ? (
+              <button
+                onClick={() => {
+                  setErrorLotes(null);
+                  setModalAltaLoteAbierto(true);
+                }}
+                style={{
+                  padding: "10px 20px",
+                  borderRadius: "9999px",
+                  border: "none",
+                  backgroundColor: "#059669",
+                  color: "#ffffff",
+                  fontSize: "13px",
+                  fontWeight: "700",
+                  cursor: "pointer",
+                }}
+              >
+                + Registrar Lote
+              </button>
+            ) : null}
+          </div>
+        )}
+      </div>{" "}
+      {/* ✅ FALTABA cerrar este div del HEADER */}
+      {/* 2. Pestañas de Navegación Módulo */}
+      <div style={{ display: "flex", borderBottom: "1px solid #e2e8f0", gap: "16px" }}>
+        <button
+          onClick={() => setTabActiva("catalogo")}
+          style={{
+            padding: "8px 16px",
+            fontSize: "13px",
+            fontWeight: "700",
+            border: "none",
+            background: "none",
+            cursor: "pointer",
+            borderBottom: tabActiva === "catalogo" ? "2px solid #10b981" : "2px solid transparent",
+            color: tabActiva === "catalogo" ? "#10b981" : "#64748b",
+          }}
+        >
+          Catálogo Medicamentos
+        </button>
+        <button
+          onClick={() => setTabActiva("lotes")}
+          style={{
+            padding: "8px 16px",
+            fontSize: "13px",
+            fontWeight: "700",
+            border: "none",
+            background: "none",
+            cursor: "pointer",
+            borderBottom: tabActiva === "lotes" ? "2px solid #10b981" : "2px solid transparent",
+            color: tabActiva === "lotes" ? "#10b981" : "#64748b",
+          }}
+        >
+          Lotes y Caducidades
+        </button>
+        {/* ✅ NUEVA PESTAÑA: Alertas de Vencimiento */}
+        <button
+          onClick={() => setTabActiva("alertas")}
+          style={{
+            padding: "8px 16px",
+            fontSize: "13px",
+            fontWeight: "700",
+            border: "none",
+            background: "none",
+            cursor: "pointer",
+            borderBottom: tabActiva === "alertas" ? "2px solid #f59e0b" : "2px solid transparent",
+            color: tabActiva === "alertas" ? "#d97706" : "#64748b",
+            display: "flex",
+            alignItems: "center",
+            gap: "6px",
+          }}
+        >
+          <span>Alertas de Vencimiento</span>
+          {/* Contador visible desde la pestaña */}
+          {cantidadPendientesAlertas > 0 && (
+            <span
+              style={{
+                backgroundColor: "#fef3c7",
+                color: "#92400e",
+                fontSize: "11px",
+                padding: "2px 8px",
+                borderRadius: "9999px",
+                fontWeight: "800",
+              }}
+            >
+              {cantidadPendientesAlertas}
+            </span>
+          )}
+        </button>
+        <button
+          onClick={() => setTabActiva("administracion")}
+          style={{
+            padding: "8px 16px",
+            fontSize: "13px",
+            fontWeight: "700",
+            border: "none",
+            background: "none",
+            cursor: "pointer",
+            borderBottom:
+              tabActiva === "administracion" ? "2px solid #6366f1" : "2px solid transparent",
+            color: tabActiva === "administracion" ? "#4f46e5" : "#64748b",
+          }}
+        >
+          Administración
+        </button>
+        <button
+          onClick={() => setTabActiva("validacion")}
+          style={{
+            padding: "8px 16px",
+            fontSize: "13px",
+            fontWeight: "700",
+            border: "none",
+            background: "none",
+            cursor: "pointer",
+            borderBottom:
+              tabActiva === "validacion" ? "2px solid #10b981" : "2px solid transparent",
+            color: tabActiva === "validacion" ? "#10b981" : "#64748b",
+            display: "flex",
+            alignItems: "center",
+            gap: "6px",
+          }}
+        >
+          <span>Validación</span>
+          {/* ✅ BADGE CON EL NÚMERO DE PENDIENTES */}
+          {conteo > 0 && (
+            <span
+              style={{
+                backgroundColor: "#fbbf24",
+                color: "#78350f",
+                fontSize: "11px",
+                padding: "2px 8px",
+                borderRadius: "9999px",
+                fontWeight: "800",
+              }}
+            >
+              {conteo}
+            </span>
+          )}
+        </button>
       </div>
-      
-      {/* ✅ BOTONES SOLO VISIBLES EN CATÁLOGO Y LOTES — OCULTOS EN VALIDACIÓN Y ADMINISTRACIÓN */}
-      {esAdmin && tabActiva !== "validacion" && tabActiva !== "administracion" && (
-        <div style={{ display: "flex", gap: "8px" }}>
-          {/* Botones comunes: siempre visibles en Catálogo y Lotes */}
-          <button
-            onClick={() => setModalRegistroIngresoAbierto(true)}
-            style={{
-              padding: "10px 20px",
-              borderRadius: "9999px",
-              border: "none",
-              backgroundColor: "#059669",
-              color: "#ffffff",
-              fontSize: "13px",
-              fontWeight: "700",
-              cursor: "pointer",
-            }}
-          >
-            + Registrar Ingreso
-          </button>
-          <button
-            onClick={() => setModalSalidaAbierto(true)}
-            style={{
-              padding: "10px 20px",
-              borderRadius: "9999px",
-              border: "none",
-              backgroundColor: "#b45309",
-              color: "#ffffff",
-              fontSize: "13px",
-              fontWeight: "700",
-              cursor: "pointer",
-            }}
-          >
-            + Registrar Salida
-          </button>
-          {/* Botón adicional según pestaña activa */}
-          {tabActiva === "catalogo" ? (
-            <button
-              type="button"
-              onClick={abrirModalNuevo}
-              style={{
-                padding: "10px 20px",
-                borderRadius: "9999px",
-                border: "none",
-                backgroundColor: "#059669",
-                color: "#ffffff",
-                fontSize: "13px",
-                fontWeight: "700",
-                cursor: "pointer",
-              }}
-            >
-              + Nuevo Medicamento
-            </button>
-          ) : tabActiva === "lotes" ? (
-            <button
-              onClick={() => {
-                setErrorLotes(null);
-                setModalAltaLoteAbierto(true);
-              }}
-              style={{
-                padding: "10px 20px",
-                borderRadius: "9999px",
-                border: "none",
-                backgroundColor: "#059669",
-                color: "#ffffff",
-                fontSize: "13px",
-                fontWeight: "700",
-                cursor: "pointer",
-              }}
-            >
-              + Registrar Lote
-            </button>
-          ) : null}
+      {error && (
+        <div
+          style={{
+            padding: "12px 16px",
+            backgroundColor: "#fef2f2",
+            color: "#991b1b",
+            borderRadius: "12px",
+            fontSize: "13px",
+          }}
+        >
+          {error}
         </div>
       )}
-    </div> {/* ✅ FALTABA cerrar este div del HEADER */}
-
-    {/* 2. Pestañas de Navegación Módulo */}
-    <div style={{ display: "flex", borderBottom: "1px solid #e2e8f0", gap: "16px" }}>
-      <button
-        onClick={() => setTabActiva("catalogo")}
-        style={{
-          padding: "8px 16px",
-          fontSize: "13px",
-          fontWeight: "700",
-          border: "none",
-          background: "none",
-          cursor: "pointer",
-          borderBottom: tabActiva === "catalogo" ? "2px solid #10b981" : "2px solid transparent",
-          color: tabActiva === "catalogo" ? "#10b981" : "#64748b",
-        }}
-      >
-        Catálogo Medicamentos
-      </button>
-      <button
-        onClick={() => setTabActiva("lotes")}
-        style={{
-          padding: "8px 16px",
-          fontSize: "13px",
-          fontWeight: "700",
-          border: "none",
-          background: "none",
-          cursor: "pointer",
-          borderBottom: tabActiva === "lotes" ? "2px solid #10b981" : "2px solid transparent",
-          color: tabActiva === "lotes" ? "#10b981" : "#64748b",
-        }}
-      >
-        Lotes y Caducidades
-      </button>
-      {/* ✅ NUEVA PESTAÑA: Alertas de Vencimiento */}
-      <button
-        onClick={() => setTabActiva("alertas")}
-        style={{
-          padding: "8px 16px",
-          fontSize: "13px",
-          fontWeight: "700",
-          border: "none",
-          background: "none",
-          cursor: "pointer",
-          borderBottom: tabActiva === "alertas" ? "2px solid #f59e0b" : "2px solid transparent",
-          color: tabActiva === "alertas" ? "#d97706" : "#64748b",
-          display: "flex",
-          alignItems: "center",
-          gap: "6px",
-        }}
-      >
-        <span>Alertas de Vencimiento</span>
-        {/* Contador visible desde la pestaña */}
-        {cantidadPendientesAlertas > 0 && (
-          <span
-            style={{
-              backgroundColor: "#fef3c7",
-              color: "#92400e",
-              fontSize: "11px",
-              padding: "2px 8px",
-              borderRadius: "9999px",
-              fontWeight: "800",
-            }}
-          >
-            {cantidadPendientesAlertas}
-          </span>
-        )}
-      </button>
-      <button
-        onClick={() => setTabActiva("administracion")}
-        style={{
-          padding: "8px 16px",
-          fontSize: "13px",
-          fontWeight: "700",
-          border: "none",
-          background: "none",
-          cursor: "pointer",
-          borderBottom: tabActiva === "administracion" ? "2px solid #6366f1" : "2px solid transparent",
-          color: tabActiva === "administracion" ? "#4f46e5" : "#64748b",
-        }}
-      >
-        Administración
-      </button>
-      <button
-        onClick={() => setTabActiva("validacion")}
-        style={{
-          padding: "8px 16px",
-          fontSize: "13px",
-          fontWeight: "700",
-          border: "none",
-          background: "none",
-          cursor: "pointer",
-          borderBottom:
-            tabActiva === "validacion" ? "2px solid #10b981" : "2px solid transparent",
-          color: tabActiva === "validacion" ? "#10b981" : "#64748b",
-          display: "flex",
-          alignItems: "center",
-          gap: "6px",
-        }}
-      >
-        <span>Validación</span>
-        {/* ✅ BADGE CON EL NÚMERO DE PENDIENTES */}
-        {conteo > 0 && (
-          <span
-            style={{
-              backgroundColor: "#fbbf24",
-              color: "#78350f",
-              fontSize: "11px",
-              padding: "2px 8px",
-              borderRadius: "9999px",
-              fontWeight: "800",
-            }}
-          >
-            {conteo}
-          </span>
-        )}
-      </button>
-    </div>
-
-    {error && (
-      <div
-        style={{
-          padding: "12px 16px",
-          backgroundColor: "#fef2f2",
-          color: "#991b1b",
-          borderRadius: "12px",
-          fontSize: "13px",
-        }}
-      >
-        {error}
-      </div>
-    )}
-
       {/* ✅ CONTENIDO SEGÚN PESTAÑA ACTIVA */}
       {/* Pestaña: CATÁLOGO */}
       {tabActiva === "catalogo" && (
@@ -1138,7 +1137,6 @@ export default function InventarioPage() {
           </div>
         </>
       )}
-
       {/* ✅ Pestaña: LOTES (mantiene tu código original) */}
       {tabActiva === "lotes" && (
         <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
@@ -1329,8 +1327,8 @@ export default function InventarioPage() {
                           <td style={{ padding: "14px 16px" }}>
                             {item.fechaVencimientoMasProxima
                               ? new Date(item.fechaVencimientoMasProxima).toLocaleDateString(
-                                "es-GT",
-                              )
+                                  "es-GT",
+                                )
                               : "Sin fecha"}
                           </td>
                           <td style={{ padding: "14px 16px" }}>
@@ -1434,8 +1432,8 @@ export default function InventarioPage() {
                                         <td style={{ padding: "8px" }}>
                                           {lote.fechaVencimiento
                                             ? new Date(lote.fechaVencimiento).toLocaleDateString(
-                                              "es-GT",
-                                            )
+                                                "es-GT",
+                                              )
                                             : "—"}
                                         </td>
                                       </tr>
@@ -1455,7 +1453,6 @@ export default function InventarioPage() {
           </div>
         </div>
       )}
-
       {/* ✅ Pestaña: BANDEJA DE VALIDACIÓN */}
       {tabActiva === "validacion" && <BandejaValidacionPage />}
       {/* ✅ Pestaña: Alertas de Vencimiento */}
@@ -1601,10 +1598,7 @@ export default function InventarioPage() {
         </div>
       )}
       {/* ✅ Pestaña: Administración de Bodegas y Proveedores */}
-      {tabActiva === "administracion" && (
-        <AdministracionBodegasProveedoresPage />
-      )}
-
+      {tabActiva === "administracion" && <AdministracionBodegasProveedoresPage />}
       {/* Modales */}
       {modalAbierto && (
         <ModalMedicamento
@@ -1622,13 +1616,11 @@ export default function InventarioPage() {
       )}
       {/* ✅ Pestaña: Kardex de Movimientos */}
       {tabActiva === "kardex" && <KardexMovimientosPage titulo="Historial de Movimientos" />}
-
       <ModalSalidaMedicamento
         abierto={modalSalidaAbierto}
         onClose={() => setModalSalidaAbierto(false)}
         medicamentos={inventarioRaw}
       />
-
       {modalAltaLoteAbierto && (
         <ModalAltaLote
           abierto={modalAltaLoteAbierto}
@@ -1640,7 +1632,6 @@ export default function InventarioPage() {
           proveedores={proveedores}
         />
       )}
-
       {alertaSeleccionada && (
         <ModalAtenderAlerta
           alerta={alertaSeleccionada}
@@ -1648,7 +1639,6 @@ export default function InventarioPage() {
           onResolver={handleResolverAlerta}
         />
       )}
-
       {modalRegistroIngresoAbierto && (
         <ModalRegistroIngreso
           abierto={modalRegistroIngresoAbierto}
