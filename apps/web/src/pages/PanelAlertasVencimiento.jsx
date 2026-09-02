@@ -37,8 +37,7 @@ export default function PanelAlertasVencimiento({ lotes = [], bodegas = [] }) {
     }
   };
 
-  const formatoFecha = (fecha) =>
-    fecha ? new Date(fecha).toLocaleDateString("es-GT") : "—";
+  const formatoFecha = (fecha) => (fecha ? new Date(fecha).toLocaleDateString("es-GT") : "—");
 
   const estiloFila = (dias) => {
     if (dias < 0) return { bg: "#fef2f2", borde: "#fecaca", texto: "#dc2626" };
@@ -51,9 +50,7 @@ export default function PanelAlertasVencimiento({ lotes = [], bodegas = [] }) {
       {/* Cabecera con contador */}
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-xl font-bold text-slate-800">
-            Alertas de Vencimiento
-          </h2>
+          <h2 className="text-xl font-bold text-slate-800">Alertas de Vencimiento</h2>
           <p className="text-sm text-slate-500">
             Medicamentos próximos a caducar (próximos 30 días)
           </p>
@@ -106,7 +103,7 @@ export default function PanelAlertasVencimiento({ lotes = [], bodegas = [] }) {
 
         {porVencer.length === 0 ? (
           <p className="text-slate-400 text-sm py-4 text-center">
-            No hay lotes por vencer en los próximos 30 días 
+            No hay lotes por vencer en los próximos 30 días
           </p>
         ) : (
           <div className="overflow-x-auto rounded-lg border border-slate-100">
@@ -126,7 +123,13 @@ export default function PanelAlertasVencimiento({ lotes = [], bodegas = [] }) {
                 {porVencer.map((alerta) => {
                   const estilo = estiloFila(alerta.diasRestantes);
                   return (
-                    <tr key={alerta.id} style={{ backgroundColor: estilo.bg, borderBottom: `1px solid ${estilo.borde}` }}>
+                    <tr
+                      key={alerta.id}
+                      style={{
+                        backgroundColor: estilo.bg,
+                        borderBottom: `1px solid ${estilo.borde}`,
+                      }}
+                    >
                       <td className="px-4 py-3 font-medium">{alerta.medicamento}</td>
                       <td className="px-4 py-3 text-slate-600">{alerta.lote}</td>
                       <td className="px-4 py-3 text-right font-bold">{alerta.cantidad}</td>
@@ -162,9 +165,7 @@ export default function PanelAlertasVencimiento({ lotes = [], bodegas = [] }) {
         </h3>
 
         {vencidas.length === 0 ? (
-          <p className="text-slate-400 text-sm py-4 text-center">
-            No hay lotes vencidos 
-          </p>
+          <p className="text-slate-400 text-sm py-4 text-center">No hay lotes vencidos</p>
         ) : (
           <div className="overflow-x-auto rounded-lg border border-red-100">
             <table className="w-full text-sm">
@@ -184,8 +185,12 @@ export default function PanelAlertasVencimiento({ lotes = [], bodegas = [] }) {
                   <tr key={alerta.id} className="bg-red-50/50 border-b border-red-100">
                     <td className="px-4 py-3 font-medium text-red-700">{alerta.medicamento}</td>
                     <td className="px-4 py-3 text-red-600">{alerta.lote}</td>
-                    <td className="px-4 py-3 text-right font-bold text-red-700">{alerta.cantidad}</td>
-                    <td className="px-4 py-3 text-red-600">{formatoFecha(alerta.fechaVencimiento)}</td>
+                    <td className="px-4 py-3 text-right font-bold text-red-700">
+                      {alerta.cantidad}
+                    </td>
+                    <td className="px-4 py-3 text-red-600">
+                      {formatoFecha(alerta.fechaVencimiento)}
+                    </td>
                     <td className="px-4 py-3 text-center">
                       <span className="font-bold text-red-600">
                         {Math.abs(alerta.diasRestantes)}d

@@ -36,58 +36,60 @@ export function useAlertasVencimiento({ lotes = [], bodegas = [] }) {
   const alertas = useMemo(() => {
     const DIAS_ANTICIPACION = 30;
 
-    return lotes
-      .filter((lote) => {
-        const diasRestantes = calcularDiasRestantes(
-          lote.fechaVencimiento,
-          lote.fechaIngreso || lote.fecha_ingreso
-        );
-        // ✅ Incluye: hoy (0 días) hasta 30 días → >30 días NO se muestra
-        return diasRestantes !== null && diasRestantes <= DIAS_ANTICIPACION;
-      })
-      .map((lote) => {
-        const diasRestantes = calcularDiasRestantes(
-          lote.fechaVencimiento,
-          lote.fechaIngreso || lote.fecha_ingreso
-        );
-        return {
-          id: lote.id,
-          medicamento: lote.medicamento?.nombre || "Desconocido",
-          lote: lote.numeroLote || lote.lote,
-          cantidad: lote.cantidad,
-          fechaVencimiento: lote.fechaVencimiento,
-          diasRestantes,
-          // ✅ Hoy (0) = Por vencer | Mañana (-1) = Vencida
-          estado: diasRestantes >= 0 ? ESTADO_ALERTA.POR_VENCER : ESTADO_ALERTA.VENCIDA,
-          bodega: lote.bodega || "Central",
-          categoria: lote.medicamento?.categoria || "General",
-        };
-      })
-      .filter((alerta) => !alertasAtendidas.includes(alerta.id))
-      .filter((alerta) => {
-        const coincideBusqueda = busqueda === ""
-          || alerta.medicamento.toLowerCase().includes(busqueda.toLowerCase())
-          || alerta.lote.toLowerCase().includes(busqueda.toLowerCase());
+    return (
+      lotes
+        .filter((lote) => {
+          const diasRestantes = calcularDiasRestantes(
+            lote.fechaVencimiento,
+            lote.fechaIngreso || lote.fecha_ingreso,
+          );
+          // ✅ Incluye: hoy (0 días) hasta 30 días → >30 días NO se muestra
+          return diasRestantes !== null && diasRestantes <= DIAS_ANTICIPACION;
+        })
+        .map((lote) => {
+          const diasRestantes = calcularDiasRestantes(
+            lote.fechaVencimiento,
+            lote.fechaIngreso || lote.fecha_ingreso,
+          );
+          return {
+            id: lote.id,
+            medicamento: lote.medicamento?.nombre || "Desconocido",
+            lote: lote.numeroLote || lote.lote,
+            cantidad: lote.cantidad,
+            fechaVencimiento: lote.fechaVencimiento,
+            diasRestantes,
+            // ✅ Hoy (0) = Por vencer | Mañana (-1) = Vencida
+            estado: diasRestantes >= 0 ? ESTADO_ALERTA.POR_VENCER : ESTADO_ALERTA.VENCIDA,
+            bodega: lote.bodega || "Central",
+            categoria: lote.medicamento?.categoria || "General",
+          };
+        })
+        .filter((alerta) => !alertasAtendidas.includes(alerta.id))
+        .filter((alerta) => {
+          const coincideBusqueda =
+            busqueda === "" ||
+            alerta.medicamento.toLowerCase().includes(busqueda.toLowerCase()) ||
+            alerta.lote.toLowerCase().includes(busqueda.toLowerCase());
 
-        const coincideBodega = filtroBodega === "todas" || alerta.bodega === filtroBodega;
-        const coincideCategoria = filtroCategoria === "todas" || alerta.categoria === filtroCategoria;
+          const coincideBodega = filtroBodega === "todas" || alerta.bodega === filtroBodega;
+          const coincideCategoria =
+            filtroCategoria === "todas" || alerta.categoria === filtroCategoria;
 
-        return coincideBusqueda && coincideBodega && coincideCategoria;
-      })
-      // ✅ Orden: los que vencen antes aparecen primero
-      .sort((a, b) => a.diasRestantes - b.diasRestantes);
-  }, [
-    lotes, busqueda, filtroBodega, filtroCategoria, alertasAtendidas, calcularDiasRestantes
-  ]);
+          return coincideBusqueda && coincideBodega && coincideCategoria;
+        })
+        // ✅ Orden: los que vencen antes aparecen primero
+        .sort((a, b) => a.diasRestantes - b.diasRestantes)
+    );
+  }, [lotes, busqueda, filtroBodega, filtroCategoria, alertasAtendidas, calcularDiasRestantes]);
 
   // 📊 Secciones separadas
   const porVencer = useMemo(
     () => alertas.filter((a) => a.estado === ESTADO_ALERTA.POR_VENCER),
-    [alertas]
+    [alertas],
   );
   const vencidas = useMemo(
     () => alertas.filter((a) => a.estado === ESTADO_ALERTA.VENCIDA),
-    [alertas]
+    [alertas],
   );
 
   // 📈 Contador para indicador global
@@ -95,12 +97,12 @@ export function useAlertasVencimiento({ lotes = [], bodegas = [] }) {
 
   // ✅ Atender alerta: exige acción obligatoria
   const marcarComoAtendida = useCallback(async (alertaId, accionTomada) => {
-  if (!accionTomada || accionTomada.trim() === "") {
-    throw new Error("Debe indicar la acción tomada");
-  }
-  await atenderAlerta(alertaId, { accionTomada });
-  setAlertasAtendidas((prev) => [...prev, alertaId]);
-}, []);
+    if (!accionTomada || accionTomada.trim() === "") {
+      throw new Error("Debe indicar la acción tomada");
+    }
+    await atenderAlerta(alertaId, { accionTomada });
+    setAlertasAtendidas((prev) => [...prev, alertaId]);
+  }, []);
   // 🔄 Limpiar filtros
   const limpiarFiltros = useCallback(() => {
     setBusqueda("");
@@ -108,7 +110,7 @@ export function useAlertasVencimiento({ lotes = [], bodegas = [] }) {
     setFiltroCategoria("todas");
   }, []);
 
-    const categoriasDisponibles = useMemo(() => {
+  const categoriasDisponibles = useMemo(() => {
     if (!lotes || !Array.isArray(lotes)) return ["todas"];
     const cats = new Set();
     lotes.forEach((l) => {
@@ -126,9 +128,12 @@ export function useAlertasVencimiento({ lotes = [], bodegas = [] }) {
     vencidas,
     cantidadPendientes,
 
-    busqueda, setBusqueda,
-    filtroBodega, setFiltroBodega,
-    filtroCategoria, setFiltroCategoria,
+    busqueda,
+    setBusqueda,
+    filtroBodega,
+    setFiltroBodega,
+    filtroCategoria,
+    setFiltroCategoria,
     limpiarFiltros,
 
     bodegasDisponibles: ["todas", ...bodegas.map((b) => b.nombre || b)],
