@@ -99,7 +99,7 @@ function SeguimientoProyectoEnrutado() {
     <SeguimientoProyectoPage
       proyectoInicial={proyectoInicial}
       usuarioActual={nombreCompletoDe(perfil ?? {}) || "Usuario"}
-      onVolver={() => navigate("/proyectos/sociales")}
+      onVolver={() => navigate("/proyectos")}
     />
   );
 }

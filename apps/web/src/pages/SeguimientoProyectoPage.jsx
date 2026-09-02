@@ -1,14 +1,33 @@
+import { useLocation } from "react-router-dom";
 import { useSeguimientoProyecto } from "@ecopac/shared";
 import { Container, Row, Col, Card, Form, Button, Badge, Alert } from "react-bootstrap";
 
 export default function SeguimientoProyectoPage({
-  proyectoInicial,
-  hitosIniciales = [],
-  bitacoraInicial = [],
-  jornadasIniciales = [],
+  proyectoInicial: propProyectoInicial,
+  hitosIniciales: propHitos = [],
+  bitacoraInicial: propBitacora = [],
+  jornadasIniciales: propJornadas = [],
   usuarioActual = "Usuario Actual",
   onVolver,
 }) {
+  const location = useLocation();
+  const state = location.state || {};
+
+  // Resolución de propiedades (prioriza props directas, luego router location.state)
+  const proyectoInicial = propProyectoInicial || state.proyectoInicial || state.proyecto;
+  const hitosIniciales =
+    propHitos.length > 0
+      ? propHitos
+      : state.hitosIniciales || proyectoInicial?.hitosIniciales || [];
+  const bitacoraInicial =
+    propBitacora.length > 0
+      ? propBitacora
+      : state.bitacoraInicial || proyectoInicial?.bitacoraInicial || [];
+  const jornadasIniciales =
+    propJornadas.length > 0
+      ? propJornadas
+      : state.jornadasIniciales || proyectoInicial?.jornadasIniciales || [];
+
   const {
     proyecto,
     hitos,
@@ -30,7 +49,9 @@ export default function SeguimientoProyectoPage({
     usuarioActual,
   });
 
-  if (!proyecto) {
+  const proyectoDatos = proyecto || proyectoInicial;
+
+  if (!proyectoDatos) {
     return (
       <Container className="my-5 text-center">
         <p className="text-muted">No se seleccionó ningún proyecto para el seguimiento.</p>
@@ -42,6 +63,35 @@ export default function SeguimientoProyectoPage({
       </Container>
     );
   }
+
+  const parsearPresupuesto = (valor) => {
+    if (typeof valor === "number") return valor;
+    if (typeof valor === "string") {
+      const limpio = valor.replace(/[^0-9.]/g, "");
+      return parseFloat(limpio) || 0;
+    }
+    return 0;
+  };
+
+  const totalJornadas =
+    indicadoresJornadas?.totalJornadas ||
+    proyectoDatos.totalJornadas ||
+    jornadasIniciales.length ||
+    0;
+
+  const jornadasCompletadas =
+    indicadoresJornadas?.completadas || proyectoDatos.jornadasCompletadas || 0;
+
+  const presupuestoTotal =
+    indicadoresJornadas?.presupuestoTotal && indicadoresJornadas.presupuestoTotal > 0
+      ? indicadoresJornadas.presupuestoTotal
+      : parsearPresupuesto(proyectoDatos.presupuestoTotal || proyectoDatos.presupuesto);
+
+  const beneficiariosTotales =
+    indicadoresJornadas?.beneficiariosTotales ||
+    proyectoDatos.beneficiariosAlcanzados ||
+    proyectoDatos.beneficiarios ||
+    0;
 
   return (
     <Container fluid style={{ maxWidth: "1140px" }} className="py-4">
@@ -57,19 +107,19 @@ export default function SeguimientoProyectoPage({
               ← Volver al listado
             </Button>
           )}
-          <h1 className="h3 mb-1 text-dark">{proyecto.nombre}</h1>
+          <h1 className="h3 mb-1 text-dark">{proyectoDatos.nombre || "Proyecto sin título"}</h1>
           <p className="text-muted small mb-0">
-            {proyecto.descripcion || "Sin descripción disponible."}
+            {proyectoDatos.descripcion || "Sin descripción disponible."}
           </p>
         </div>
         <div>
-          <Badge bg="primary" className="fs-6 px-3 py-2 fw-normal">
-            {proyecto.estado || "En progreso"}
+          <Badge bg="primary" className="fs-6 px-3 py-2 fw-normal text-capitalize">
+            {proyectoDatos.estado || "planificada"}
           </Badge>
         </div>
       </div>
 
-      {/* Indicadores Agregados de Jornadas */}
+      {/* Indicadores Agregados */}
       <Row className="g-3 mb-4">
         <Col sm={6} lg={3}>
           <Card className="border shadow-sm h-100">
@@ -77,9 +127,7 @@ export default function SeguimientoProyectoPage({
               <Card.Subtitle className="text-uppercase text-muted extra-small fw-bold mb-1">
                 Total Jornadas
               </Card.Subtitle>
-              <Card.Title className="fs-2 fw-bold text-dark mb-0">
-                {indicadoresJornadas.totalJornadas}
-              </Card.Title>
+              <Card.Title className="fs-2 fw-bold text-dark mb-0">{totalJornadas}</Card.Title>
             </Card.Body>
           </Card>
         </Col>
@@ -91,7 +139,7 @@ export default function SeguimientoProyectoPage({
                 Jornadas Completadas
               </Card.Subtitle>
               <Card.Title className="fs-2 fw-bold text-success mb-0">
-                {indicadoresJornadas.completadas}
+                {jornadasCompletadas}
               </Card.Title>
             </Card.Body>
           </Card>
@@ -104,7 +152,7 @@ export default function SeguimientoProyectoPage({
                 Presupuesto Total
               </Card.Subtitle>
               <Card.Title className="fs-2 fw-bold text-dark mb-0">
-                Q{indicadoresJornadas.presupuestoTotal.toLocaleString()}
+                Q{presupuestoTotal.toLocaleString()}
               </Card.Title>
             </Card.Body>
           </Card>
@@ -117,7 +165,7 @@ export default function SeguimientoProyectoPage({
                 Beneficiarios Alcanzados
               </Card.Subtitle>
               <Card.Title className="fs-2 fw-bold text-primary mb-0">
-                {indicadoresJornadas.beneficiariosTotales}
+                {beneficiariosTotales}
               </Card.Title>
             </Card.Body>
           </Card>
@@ -127,7 +175,6 @@ export default function SeguimientoProyectoPage({
       <Row className="g-4">
         {/* Columna Izquierda: Avance y Bitácora */}
         <Col lg={8}>
-          {/* Formulario de Actualización de Avance */}
           <Card className="border shadow-sm mb-4">
             <Card.Body className="p-4">
               <Card.Title as="h5" className="mb-3 text-dark fw-bold">
@@ -176,7 +223,6 @@ export default function SeguimientoProyectoPage({
             </Card.Body>
           </Card>
 
-          {/* Historial de Bitácora */}
           <Card className="border shadow-sm">
             <Card.Body className="p-4">
               <Card.Title as="h5" className="mb-3 text-dark fw-bold">

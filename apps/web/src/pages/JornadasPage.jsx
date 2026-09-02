@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ProgressBar } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 
@@ -20,7 +20,6 @@ import {
   FilterBar,
   KanbanBoard,
   LoadingState,
-  Modal,
   PageHeader,
   PrimaryButton,
   ScreenContainer,
@@ -62,12 +61,14 @@ import ModalJornada from "./ModalJornada";
 // cambios); "Avanzar" y "Atras" con `puedeEditar` del hook, y el destino finalizada -> en curso
 // ademas con `puedeReabrir` (regla de reapertura de #171, solo administrador).
 //
-// Advertencia de atenciones incompletas al finalizar (issue #171, criterio 4; issue #180,
-// PLAN.md seccion 2 decision 4, alcance añadido sobre los criterios textuales de #180): la unica
-// pantalla que ejecuta en curso -> finalizada es esta, asi que el aviso -advierte, no impide- se
-// construye aca con el mismo patron de Modal + alert-warning + confirmar/cancelar que ya usa
-// ModalConfirmarDesactivacion.jsx (#107). Un fallo al consultar el conteo no bloquea finalizar
-// (useJornadasKanban.js, moverJornada).
+// Finalizar una jornada (issue #183): esta pantalla YA NO ejecuta en curso -> finalizada (ni con
+// "Avanzar" ni con el arrastre, que comparten moverJornada()). Antes (issue #171) el aviso de
+// atenciones incompletas se resolvia aca mismo, con un Modal propio. Ahora moverJornada() deja el
+// id en `pedirCierreEnDetalle` para esa transicion especifica, y el useEffect de mas abajo navega
+// a /jornadas/:id: la pestaña "Cierre" de esa pantalla (useResumenCierreJornada.js) es la unica
+// que finaliza, con el resumen completo del dia (pacientes, consultas, tratamientos, atenciones
+// sin consulta y movimientos pendientes), no solo el aviso aislado que habia antes. Las demas
+// transiciones (arrancar la jornada, la reapertura) se siguen aplicando aca sin cambios.
 //
 // El tablero muestra cuatro columnas, no tres (issue #180, criterio 1 -"tres columnas"-: es una
 // imprecision del issue frente al modelo real, estado_jornada tiene cuatro valores, 00001).
@@ -107,9 +108,8 @@ export default function JornadasPage() {
     moviendo,
     errorMovimiento,
     descartarErrorMovimiento,
-    confirmacionFinalizar,
-    confirmarFinalizacion,
-    cancelarFinalizacion,
+    pedirCierreEnDetalle,
+    descartarPedidoCierre,
   } = useJornadasKanban(rol);
   const [mostrarAlta, setMostrarAlta] = useState(false);
   const [jornadaEnEdicion, setJornadaEnEdicion] = useState(null);
@@ -120,6 +120,18 @@ export default function JornadasPage() {
   // hace nada. El descriptor no se toca (lo seguiria necesitando cualquier listado futuro que si
   // busque por texto).
   const filtrosDelTablero = FILTROS_JORNADA.filter((campo) => campo.id !== "busqueda");
+
+  // Issue #183, trampa 1: el kanban ya no finaliza una jornada directamente (ni con el boton
+  // "Avanzar" ni con el arrastre, que comparten el mismo moverJornada() -- ver
+  // useJornadasKanban.js). Cuando esa transicion se intenta, el hook deja el id en
+  // `pedirCierreEnDetalle` y esta pantalla navega al detalle, donde la pestaña "Cierre" es la
+  // unica que finaliza, con el resumen completo del dia. `descartarPedidoCierre()` limpia el
+  // pedido para que, si la persona vuelve al tablero sin confirmar, no navegue de nuevo sola.
+  useEffect(() => {
+    if (!pedirCierreEnDetalle) return;
+    navigate(`/jornadas/${pedirCierreEnDetalle}`);
+    descartarPedidoCierre();
+  }, [pedirCierreEnDetalle, descartarPedidoCierre, navigate]);
 
   if (error) {
     return (
@@ -184,25 +196,6 @@ export default function JornadasPage() {
             />
           )}
         />
-      )}
-
-      {confirmacionFinalizar && (
-        <Modal visible onClose={cancelarFinalizacion} title="Finalizar jornada">
-          <div className="alert alert-warning" role="alert">
-            {confirmacionFinalizar.cantidad === 1
-              ? "Esta jornada tiene 1 atencion registrada sin consulta todavia."
-              : `Esta jornada tiene ${confirmacionFinalizar.cantidad} atenciones registradas sin consulta todavia.`}{" "}
-            ¿Confirmas finalizarla de todas formas?
-          </div>
-          <div className="d-flex justify-content-end gap-2 mt-3">
-            <SecondaryButton title="Cancelar" onClick={cancelarFinalizacion} disabled={moviendo} />
-            <PrimaryButton
-              title="Finalizar de todas formas"
-              onClick={confirmarFinalizacion}
-              loading={moviendo}
-            />
-          </div>
-        </Modal>
       )}
 
       {mostrarAlta && (
