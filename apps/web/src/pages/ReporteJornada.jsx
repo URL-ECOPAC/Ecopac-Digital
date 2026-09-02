@@ -101,7 +101,7 @@ export default function ReporteJornadaPage() {
             {datos.jornada.nombre}
           </h1>
           <div style={{ display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap" }}>
-            <span style={{ fontSize: "14px", color: "#64748b" }}>📅 {datos.jornada.fecha}</span>
+            <span style={{ fontSize: "14px", color: "#64748b" }}> {datos.jornada.fecha}</span>
             <span
               style={{
                 fontSize: "13px",
@@ -130,7 +130,7 @@ export default function ReporteJornadaPage() {
               cursor: "pointer",
             }}
           >
-            🖨️ Imprimir
+             Imprimir
           </button>
           <button
             onClick={exportar}
@@ -145,7 +145,7 @@ export default function ReporteJornadaPage() {
               cursor: "pointer",
             }}
           >
-            ⬇️ Exportar
+             Exportar
           </button>
         </div>
       </div>
