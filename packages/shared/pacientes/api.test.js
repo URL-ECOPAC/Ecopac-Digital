@@ -1063,3 +1063,40 @@ describe("condiciones cronicas en los resultados", () => {
     expect(paciente.condiciones).toEqual([]);
   });
 });
+
+// La comunidad del paciente es opcional desde la #657.
+describe("registrarPaciente sin comunidad", () => {
+  it("manda p_comunidad_id en null y no lo omite", async () => {
+    const cliente = crearCliente({
+      "rpc:fn_registrar_paciente": {
+        data: { id: "paciente-1", nombres: "Ana", numero_ficha: "000001" },
+        error: null,
+      },
+    });
+    dobles.cliente = cliente;
+
+    await registrarPaciente({ ...DATOS_VALIDOS, comunidad: "" });
+
+    const rpc = cliente.llamadas.find((l) => l.paso === "rpc");
+    // PostgREST omite las claves indefinidas, y p_comunidad_id no tiene DEFAULT: enviarlo como
+    // undefined haria fallar la llamada por firma en vez de registrar al paciente.
+    expect(Object.prototype.hasOwnProperty.call(rpc.argumentos, "p_comunidad_id")).toBe(true);
+    expect(rpc.argumentos.p_comunidad_id).toBeNull();
+  });
+
+  it("con comunidad la manda tal cual", async () => {
+    const cliente = crearCliente({
+      "rpc:fn_registrar_paciente": {
+        data: { id: "paciente-1", numero_ficha: "000002" },
+        error: null,
+      },
+    });
+    dobles.cliente = cliente;
+
+    await registrarPaciente({ ...DATOS_VALIDOS, comunidad: "comunidad-1" });
+
+    expect(cliente.llamadas.find((l) => l.paso === "rpc").argumentos.p_comunidad_id).toBe(
+      "comunidad-1",
+    );
+  });
+});
