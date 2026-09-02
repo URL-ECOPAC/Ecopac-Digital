@@ -8,10 +8,11 @@ import {
   condicionesDestacadas,
   nombreCompletoDePaciente,
   permisosDeFicha,
-  resumenDeUltimaAtencion,
   PESTANIA_FICHA_POR_DEFECTO,
   pestaniasDeFicha,
   resolverPestaniaDeFicha,
+  resumenDeUltimaAtencion,
+  textoDeCampoDeFicha,
   valoresDeFichaPaciente,
 } from "./ficha.js";
 
@@ -213,5 +214,38 @@ describe("resumenDeUltimaAtencion", () => {
   it("es null si el paciente no tiene atenciones", () => {
     expect(resumenDeUltimaAtencion({ id: "p-1" })).toBeNull();
     expect(resumenDeUltimaAtencion(null)).toBeNull();
+  });
+});
+
+// El formateador subio desde FichaPacientePage.jsx cuando la ficha movil (#658) necesito el
+// mismo texto: dos copias de la misma regla de presentacion se desincronizan en cuanto una
+// cambie, y la regla de la arquitectura es que las apps no formatean.
+describe("textoDeCampoDeFicha", () => {
+  const CAMPO_TEXTO = { id: "dpi", tipo: "texto" };
+  const CAMPO_FECHA = { id: "fechaNacimiento", tipo: "fecha" };
+
+  it("devuelve el valor tal cual para un campo de texto", () => {
+    expect(textoDeCampoDeFicha(CAMPO_TEXTO, { dpi: "1234567890101" })).toBe("1234567890101");
+  });
+
+  it("un campo sin dato se ve como un hueco, no como una celda vacia", () => {
+    expect(textoDeCampoDeFicha(CAMPO_TEXTO, { dpi: null })).toBe("—");
+    expect(textoDeCampoDeFicha(CAMPO_TEXTO, { dpi: undefined })).toBe("—");
+    expect(textoDeCampoDeFicha(CAMPO_TEXTO, { dpi: "" })).toBe("—");
+  });
+
+  it("una fecha se formatea y no se muestra en ISO", () => {
+    const texto = textoDeCampoDeFicha(CAMPO_FECHA, { fechaNacimiento: "1990-05-10" });
+    expect(texto).not.toBe("1990-05-10");
+    expect(texto).not.toBe("—");
+  });
+
+  it("sin valores no revienta", () => {
+    expect(textoDeCampoDeFicha(CAMPO_TEXTO)).toBe("—");
+    expect(textoDeCampoDeFicha(undefined, {})).toBe("—");
+  });
+
+  it("un numero se convierte a texto, para que React no lo descarte", () => {
+    expect(textoDeCampoDeFicha({ id: "edad" }, { edad: 0 })).toBe("0");
   });
 });

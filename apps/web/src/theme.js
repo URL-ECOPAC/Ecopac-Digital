@@ -1,4 +1,4 @@
-import { colors, spacing, moduleAccents, statusColors } from "@ecopac/ui-tokens";
+import { colors, spacing, moduleAccents, radii, shadows, statusColors } from "@ecopac/ui-tokens";
 
 // Publica los tokens de diseno como custom properties de CSS.
 //
@@ -19,6 +19,15 @@ export function aplicarTokens(elemento = document.documentElement) {
 
   for (const [modulo, valor] of Object.entries(moduleAccents)) {
     elemento.style.setProperty(`--accent-${modulo}`, valor);
+  }
+
+  for (const [nombre, valor] of Object.entries(radii)) {
+    elemento.style.setProperty(`--radio-${nombre}`, `${valor}px`);
+  }
+
+  // De cada elevacion solo viaja su forma web: la de movil son propiedades de React Native.
+  for (const [nombre, valor] of Object.entries(shadows)) {
+    elemento.style.setProperty(`--sombra-${nombre}`, valor.web);
   }
 
   // Las claves de estado vienen de los enum de la base de datos y llevan espacios.

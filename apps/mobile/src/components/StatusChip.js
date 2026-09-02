@@ -1,5 +1,5 @@
 import { StyleSheet, Text, View } from "react-native";
-import { colors, spacing, statusColors, typography } from "@ecopac/ui-tokens";
+import { colors, radii, spacing, statusColors, typography } from "@ecopac/ui-tokens";
 
 /**
  * Chip de estado. Espejo de apps/web/src/components/StatusChip.jsx.
@@ -31,7 +31,7 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs / 2,
-    borderRadius: spacing.md,
+    borderRadius: radii.pill,
   },
   texto: {
     fontFamily: typography.fontFamilyBase,

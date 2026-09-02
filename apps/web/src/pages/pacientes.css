@@ -58,12 +58,33 @@
   padding: var(--spacing-md);
 }
 
-/* --- Chips palidos, en lugar de los badges solidos de Bootstrap --- */
+/* --- Chips palidos, en lugar de los badges solidos de Bootstrap ---
 
-.modulo-pacientes .badge {
+   El :not(.rounded-pill) deja fuera a StatusChip, que es el unico badge del modulo que se pinta
+   con esa clase. Sin esa exclusion, la regla le robaba el fondo con !important pero no el color
+   del texto -- que StatusChip fija en linea a var(--color-surface), casi blanco -- y el chip
+   quedaba blanco sobre blanco: ilegible en el listado de cronicos y en los estados de condicion
+   de la ficha (issue #656).
+
+   StatusChip conserva entonces su fondo solido con texto claro, que si contrasta y ademas
+   mantiene un color distinto por estado: un chip de estado que no distinga activa de resuelta
+   deja de informar. El arreglo no toca StatusChip.jsx ni los statusColors de @ecopac/ui-tokens
+   porque los comparten inventario, jornadas, donaciones y usuarios. */
+
+.modulo-pacientes .badge:not(.rounded-pill) {
   background-color: color-mix(in srgb, var(--color-primary) 12%, var(--color-surface)) !important;
   border-radius: var(--pac-radio-chip);
-  color: var(--color-primary);
+  color: var(--color-primary) !important;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding: 0.3rem 0.65rem;
+}
+
+/* StatusChip: solo forma y tamano, nunca color. Asi los chips de estado se ven como el resto
+   del modulo sin perder el matiz que los distingue. */
+
+.modulo-pacientes .badge.rounded-pill {
   font-size: 0.6875rem;
   font-weight: 600;
   letter-spacing: 0.02em;
@@ -89,6 +110,12 @@
 .modulo-pacientes .pac-chip--sexo {
   background-color: color-mix(in srgb, var(--color-danger) 12%, var(--color-surface));
   color: var(--color-danger);
+}
+
+.modulo-pacientes .pac-filtros-acciones {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: var(--spacing-sm);
 }
 
 /* --- Avatar circular con inicial --- */

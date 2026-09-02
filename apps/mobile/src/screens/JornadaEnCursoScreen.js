@@ -9,7 +9,7 @@ import {
   minutosEsperando,
   usePanelJornada,
 } from "@ecopac/shared";
-import { colors, spacing, typography } from "@ecopac/ui-tokens";
+import { colors, radii, spacing, typography } from "@ecopac/ui-tokens";
 
 import {
   Card,
@@ -282,7 +282,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
     marginBottom: spacing.xs,
-    borderRadius: spacing.xs,
+    borderRadius: radii.md,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surface,

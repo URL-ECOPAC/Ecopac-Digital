@@ -2,11 +2,14 @@ import { StyleSheet, Text, View } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 
 import {
+  CAMPOS_FICHA_PACIENTE,
   cabeceraDePaciente,
   formatearFechaCorta,
   permisosDeFicha,
   resumenDeUltimaAtencion,
+  textoDeCampoDeFicha,
   usePaciente,
+  valoresDeFichaPaciente,
 } from "@ecopac/shared";
 import { colors, spacing, typography } from "@ecopac/ui-tokens";
 
@@ -65,6 +68,7 @@ export default function FichaPacienteScreen() {
   const cabecera = cabeceraDePaciente(paciente);
   const permisos = permisosDeFicha(rol);
   const ultima = permisos.puedeVerDatosClinicos ? resumenDeUltimaAtencion(paciente) : null;
+  const valores = valoresDeFichaPaciente(paciente);
 
   return (
     <ScreenContainer>
@@ -107,6 +111,15 @@ export default function FichaPacienteScreen() {
           )}
         </Card>
       )}
+
+      {/* Debajo de la cabecera y de la ultima atencion a proposito: el criterio 4 de la #135
+          pide que lo critico y los accesos quepan sin desplazarse en una pantalla de 5
+          pulgadas, y trece campos no caben ahi arriba. */}
+      <Card title="Datos generales" style={styles.tarjeta}>
+        {CAMPOS_FICHA_PACIENTE.map((campo) => (
+          <Dato key={campo.id} etiqueta={campo.label} valor={textoDeCampoDeFicha(campo, valores)} />
+        ))}
+      </Card>
 
       <View style={styles.acciones}>
         <PrimaryButton

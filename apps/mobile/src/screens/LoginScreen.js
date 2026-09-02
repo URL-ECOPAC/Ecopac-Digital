@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
-import { colors, spacing, typography } from "@ecopac/ui-tokens";
+import { colors, radii, spacing, typography } from "@ecopac/ui-tokens";
 import { useInicioSesion } from "@ecopac/shared";
 
 import LOGO from "../../assets/icon.png";
@@ -117,7 +117,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
-    borderRadius: spacing.xs,
+    borderRadius: radii.md,
     borderWidth: 1,
     borderColor: colors.danger,
     backgroundColor: colors.surface,

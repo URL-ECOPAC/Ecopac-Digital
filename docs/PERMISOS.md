@@ -229,8 +229,10 @@ reabrir una jornada finalizada **solo al administrador**. Reflejo en el cliente:
 
 `gastos` es el otro circuito de aprobacion: quien participa en la jornada registra en estado
 `pendiente` y a su nombre; aprobar es un UPDATE que exige `es_administrador()` o
-`tiene_permiso('presupuestos.aprobar')`. Reflejo en el cliente: `presupuestos/permisos.js` y
-`donaciones/proyectos.permisos.js`.
+`tiene_permiso('presupuestos.aprobar')`. El trigger `fn_autoaprobar_gasto_administrador`
+(`00109`, espejo de `fn_autoaprobar_movimiento_inventario`) hace nacer ya aprobado el gasto que
+inserta el propio administrador, sin ajuste de existencias: un gasto no mueve inventario
+(`00089`). Reflejo en el cliente: `presupuestos/permisos.js` y `donaciones/proyectos.permisos.js`.
 
 ### Donaciones
 
