@@ -30,7 +30,24 @@ const encabezadoSeccion = {
 
 export default function ReporteJornadaPage() {
   const { id } = useParams();
-  const { cargando, error, datos, imprimir, exportar } = useReporteJornada(id);
+  const { cargando, error, datos } = useReporteJornada(id);
+
+  // ✅ Funciones de navegador AQUÍ en la pantalla, NO en shared
+  const imprimir = () => {
+    window.print();
+  };
+
+  const exportar = () => {
+    if (!datos) return;
+    const contenido = JSON.stringify(datos, null, 2);
+    const blob = new Blob([contenido], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `reporte-jornada-${id}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   if (cargando) {
     return <div style={{ padding: "60px 24px", textAlign: "center", color: "#64748b" }}>Cargando reporte de jornada...</div>;
@@ -58,7 +75,7 @@ export default function ReporteJornadaPage() {
             {datos.jornada.nombre}
           </h1>
           <div style={{ display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap" }}>
-            <span style={{ fontSize: "14px", color: "#64748b" }}>{datos.jornada.fecha}</span>
+            <span style={{ fontSize: "14px", color: "#64748b" }}>📅 {datos.jornada.fecha}</span>
             <span style={{ fontSize: "13px", fontWeight: "600", padding: "2px 10px", borderRadius: "9999px", backgroundColor: estadoEtiqueta.fondo, color: estadoEtiqueta.color }}>
               {estadoEtiqueta.texto}
             </span>
@@ -66,10 +83,10 @@ export default function ReporteJornadaPage() {
         </div>
         <div style={{ display: "flex", gap: "10px" }}>
           <button onClick={imprimir} style={{ padding: "10px 16px", backgroundColor: "#fff", border: "1px solid #e2e8f0", borderRadius: "12px", fontSize: "14px", fontWeight: "500", color: "#334155", cursor: "pointer" }}>
-             Imprimir
+            🖨️ Imprimir
           </button>
           <button onClick={exportar} style={{ padding: "10px 16px", backgroundColor: "#10b981", border: "none", borderRadius: "12px", fontSize: "14px", fontWeight: "600", color: "#fff", cursor: "pointer" }}>
-             Exportar
+            ⬇️ Exportar
           </button>
         </div>
       </div>
@@ -116,7 +133,7 @@ export default function ReporteJornadaPage() {
         ))}
       </div>
 
-      {/* 👥 Personal — Campos reales de jornada_personal */}
+      {/* 👥 Personal */}
       <div style={tarjeta}>
         <h3 style={encabezadoSeccion}>Personal Asignado</h3>
         {datos.personal.map((p, i) => (

@@ -86,27 +86,10 @@ export function useReporteJornada(jornadaId) {
     cargar();
   }, [jornadaId]);
 
-  const imprimir = () => {
-    window.print();
-  };
-
-  const exportar = () => {
-    if (!datos) return;
-    const contenido = JSON.stringify(datos, null, 2);
-    const blob = new Blob([contenido], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `reporte-jornada-${jornadaId}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
+  // ✅ Solo devolvemos datos — SIN funciones de navegador
   return {
     cargando,
     error,
     datos,
-    imprimir,
-    exportar,
   };
 }
