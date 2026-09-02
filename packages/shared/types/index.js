@@ -75,7 +75,6 @@
 /** @typedef {(typeof import("../enums.js").ESTADOS_MOVIMIENTO)[keyof typeof import("../enums.js").ESTADOS_MOVIMIENTO]} EstadoMovimiento */
 /** @typedef {(typeof import("../enums.js").ESTADOS_PROYECTO)[keyof typeof import("../enums.js").ESTADOS_PROYECTO]} EstadoProyecto */
 /** @typedef {(typeof import("../enums.js").ESTADOS_RECETA)[keyof typeof import("../enums.js").ESTADOS_RECETA]} EstadoReceta */
-/** @typedef {(typeof import("../enums.js").IDIOMAS)[keyof typeof import("../enums.js").IDIOMAS]} IdiomaPreferido */
 /** @typedef {(typeof import("../enums.js").ORIGENES_DE_LOTE)[keyof typeof import("../enums.js").ORIGENES_DE_LOTE]} OrigenLote */
 /** @typedef {(typeof import("../enums.js").PRESENTACIONES_DE_MEDICAMENTO)[keyof typeof import("../enums.js").PRESENTACIONES_DE_MEDICAMENTO]} PresentacionMedicamento */
 /** @typedef {(typeof import("../enums.js").TIPOS_DE_DONACION)[keyof typeof import("../enums.js").TIPOS_DE_DONACION]} TipoDonacion */
@@ -221,7 +220,7 @@
  * @property {string} comunidadId
  * @property {string} telefonoContacto No es el telefono del paciente sino el de quien se le puede
  *   contactar (00093).
- * @property {IdiomaPreferido} idioma
+ * @property {string} idioma Codigo del catalogo idiomas (00110), no un enum.
  * @property {string|null} dpi
  * @property {string|null} fechaBaja Baja logica: con valor, el paciente esta dado de baja.
  * @property {string} createdAt
@@ -243,6 +242,17 @@
  * @property {string} numeroFicha
  * @property {string} createdAt
  * @property {string} updatedAt
+ */
+
+/**
+ * Fila de `idiomas` (00110_idiomas_catalogo.sql): el catalogo de idiomas del paciente.
+ * Sustituye al enum idioma_preferido de la 00001. `pacientes.idioma` referencia `codigo`.
+ *
+ * @typedef {object} Idioma
+ * @property {string} id
+ * @property {string} codigo
+ * @property {string} nombre
+ * @property {string} createdAt
  */
 
 /**

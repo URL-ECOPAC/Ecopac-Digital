@@ -39,6 +39,9 @@ const COLUMNAS_DEL_PACIENTE = [
   "comunidadId:comunidad_id",
   "telefonoContacto:telefono_contacto",
   "idioma",
+  // El nombre legible del idioma viene embebido desde el catalogo (00110). La columna guarda el
+  // codigo, que es lo que el formulario envia; el nombre es lo que la ficha muestra.
+  "catalogoIdioma:idiomas(nombre)",
   "dpi",
   "tipoSangre:tipo_sangre",
   "nombreResponsable:nombre_responsable",

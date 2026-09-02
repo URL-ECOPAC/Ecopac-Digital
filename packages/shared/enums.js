@@ -314,20 +314,9 @@ export const ETIQUETAS_ESTADO_CONDICION = Object.freeze({
   [ESTADOS_CONDICION_CRONICA.RESUELTA]: "Resuelta",
 });
 
-/** `idioma_preferido` (00001_initial_schema.sql). */
-export const IDIOMAS = Object.freeze({
-  ESPANOL: "espanol",
-  QUICHE: "quiche",
-  MAM: "mam",
-  OTROS: "otros",
-});
-
-export const ETIQUETAS_IDIOMA = Object.freeze({
-  [IDIOMAS.ESPANOL]: "Español",
-  [IDIOMAS.QUICHE]: "K'iche'",
-  [IDIOMAS.MAM]: "Mam",
-  [IDIOMAS.OTROS]: "Otro",
-});
+// El idioma del paciente ya no es un enum: la 00110 lo convirtio en la tabla idiomas para poder
+// agregar idiomas sin desplegar (issue #663). La lista vivia aqui duplicada de la 00001; ahora la
+// lee listarIdiomas() en pacientes/idiomas.api.js, que es la unica fuente de verdad.
 
 /**
  * `tipo_sanguineo` (00035_datos_clinicos_paciente.sql).

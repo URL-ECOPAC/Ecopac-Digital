@@ -7,6 +7,7 @@ import {
   listarMunicipios,
   obtenerComunidad,
 } from "../territorio/api.js";
+import { listarIdiomas } from "./idiomas.api.js";
 import { buscarPacientes, registrarPaciente } from "./api.js";
 import { CAMPOS_REGISTRO_PACIENTE } from "./campos.js";
 import { OPCIONES_SEXO } from "./usePacientesListado.js";
@@ -35,12 +36,17 @@ export function useRegistroPaciente({ comunidadInicial = null, nombresInicial = 
   const [departamentos, setDepartamentos] = useState([]);
   const [municipios, setMunicipios] = useState([]);
   const [comunidades, setComunidades] = useState([]);
+  const [idiomas, setIdiomas] = useState([]);
   const [advertenciaDuplicado, setAdvertenciaDuplicado] = useState(null);
 
   useEffect(() => {
     let vigente = true;
     listarDepartamentos().then(({ departamentos: filas }) => {
       if (vigente) setDepartamentos(aOpciones(filas));
+    });
+    // listarIdiomas() ya devuelve las opciones con value/label, asi que no pasa por aOpciones.
+    listarIdiomas().then(({ idiomas: opciones }) => {
+      if (vigente) setIdiomas(opciones);
     });
     return () => {
       vigente = false;
@@ -181,6 +187,6 @@ export function useRegistroPaciente({ comunidadInicial = null, nombresInicial = 
     setMunicipio,
     registrar,
     reiniciar,
-    catalogos: { departamentos, municipios, comunidades, sexo: OPCIONES_SEXO },
+    catalogos: { departamentos, municipios, comunidades, idiomas, sexo: OPCIONES_SEXO },
   };
 }
