@@ -35,7 +35,10 @@ import VoluntariosPage from "./pages/VoluntariosPage";
 import PerfilPage from "./pages/PerfilPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import DashboardMetricasPage from "./pages/DashboardMetricasPage";
+<<<<<<< HEAD
 import ReporteJornada from "./pages/ReporteJornada";
+=======
+>>>>>>> develop
 
 const rolesDe = (ruta) => MODULOS.find((m) => m.ruta === ruta)?.roles ?? [];
 
@@ -99,7 +102,7 @@ function SeguimientoProyectoEnrutado() {
     <SeguimientoProyectoPage
       proyectoInicial={proyectoInicial}
       usuarioActual={nombreCompletoDe(perfil ?? {}) || "Usuario"}
-      onVolver={() => navigate("/proyectos/sociales")}
+      onVolver={() => navigate("/proyectos")}
     />
   );
 }
