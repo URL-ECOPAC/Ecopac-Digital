@@ -5,6 +5,7 @@ import { ModalAtenderAlerta } from "./ModalAtenderAlerta.jsx";
 import ModalRegistroIngreso from "./ModalRegistroIngreso.jsx";
 import { ModalSalidaMedicamento } from "./ModalSalidaMedicamento";
 import BandejaValidacionPage from "./BandejaValidacionPage";
+import { useVistaExistencias } from "../../../../packages/shared/inventario/useVistaExistencias.js";
 // API Medicamentos y Principios Activos
 import {
   listarMedicamentos,
@@ -58,6 +59,7 @@ export default function InventarioPage() {
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
 
+ 
   // Modales Medicamentos
   const [modalAbierto, setModalAbierto] = useState(false);
   const [modoEdicion, setModoEdicion] = useState(false);
@@ -80,16 +82,16 @@ export default function InventarioPage() {
 
   // ✅ USUARIO DE PRUEBA (en producción reemplaza por useAuth())
   const esAdmin = true;
-  const usuarioActual = { 
-    id: "user-admin-uuid", 
-    rol: esAdmin ? "Administrador" : "Usuario" 
+  const usuarioActual = {
+    id: "user-admin-uuid",
+    rol: esAdmin ? "Administrador" : "Usuario"
   };
 
   // ✅ HOOK DE VALIDACIÓN — LLAMADO UNA SOLA VEZ CON LOS PARÁMETROS CORRECTOS
-  const { 
-    pendientes, 
-    conteo, 
-    aprobar, 
+  const {
+    pendientes,
+    conteo,
+    aprobar,
     rechazar,
     cargando: cargandoValidacion,
     error: errorValidacion
@@ -122,6 +124,25 @@ export default function InventarioPage() {
     usuario: usuarioActual,
   });
 
+  const {
+    medicamentos,
+    columnas,
+    busqueda: busquedaLotes,
+    setBusqueda: setBusquedaLotes,
+    filtroBodega,
+    setFiltroBodega,
+    filtroEstado,
+    setFiltroEstado,
+    ocultarSinExistencia,
+    setOcultarSinExistencia,
+    limpiarFiltros,
+    filasExpandidas,
+    toggleExpandir,
+    ESTADO_EXISTENCIA,
+  } = useVistaExistencias({
+    existencias: Array.isArray(lotesRaw) ? lotesRaw : [],
+    bodegas: Array.isArray(bodegas) ? bodegas.map((b) => b.nombre || b) : [],
+  });
   const cargarDatos = async () => {
     try {
       setCargando(true);
@@ -339,25 +360,25 @@ export default function InventarioPage() {
     alertasCriticas.length > 0
       ? alertasCriticas
       : [
-          {
-            id: "alt-1",
-            medicamento: { nombre: "Metformina 850mg Comprimidos" },
-            codigo: "FAR-0009",
-            numero_lote: "L-2024-0567",
-            bodega: "SUR",
-            diasRestantes: 12,
-            fechaCaducidad: "27 jul 2024",
-          },
-          {
-            id: "alt-2",
-            medicamento: { nombre: "Amoxicilina 500mg Cápsulas" },
-            codigo: "FAR-0041",
-            numero_lote: "L-2024-0091",
-            bodega: "CENTRAL",
-            diasRestantes: 30,
-            fechaCaducidad: "14 ago 2024",
-          },
-        ];
+        {
+          id: "alt-1",
+          medicamento: { nombre: "Metformina 850mg Comprimidos" },
+          codigo: "FAR-0009",
+          numero_lote: "L-2024-0567",
+          bodega: "SUR",
+          diasRestantes: 12,
+          fechaCaducidad: "27 jul 2024",
+        },
+        {
+          id: "alt-2",
+          medicamento: { nombre: "Amoxicilina 500mg Cápsulas" },
+          codigo: "FAR-0041",
+          numero_lote: "L-2024-0091",
+          bodega: "CENTRAL",
+          diasRestantes: 30,
+          fechaCaducidad: "14 ago 2024",
+        },
+      ];
 
   const fuenteInicial = inventarioRaw.length > 0 ? inventarioFiltradoHook : datosTablaDemo;
   const baseDatosFiltrada = fuenteInicial.filter((item) => {
@@ -385,9 +406,9 @@ export default function InventarioPage() {
     !categoriaSeleccionada || categoriaSeleccionada === "Todas"
       ? baseDatosFiltrada
       : baseDatosFiltrada.filter(
-          (item) =>
-            item.categoria?.toLowerCase().trim() === categoriaSeleccionada.toLowerCase().trim(),
-        );
+        (item) =>
+          item.categoria?.toLowerCase().trim() === categoriaSeleccionada.toLowerCase().trim(),
+      );
 
   return (
     <div
@@ -869,8 +890,8 @@ export default function InventarioPage() {
                         item.bodega === "SUR"
                           ? "#f59e0b"
                           : item.bodega === "NORTE"
-                          ? "#0284c7"
-                          : "#059669";
+                            ? "#0284c7"
+                            : "#059669";
                       const badgeEstado = getBadgeEstado(
                         item.estado || item.estadoAlerta,
                         item.stock,
@@ -933,8 +954,8 @@ export default function InventarioPage() {
                                     color: item.esCritico
                                       ? "#db2777"
                                       : item.esPorVencer
-                                      ? "#d97706"
-                                      : "#64748b",
+                                        ? "#d97706"
+                                        : "#64748b",
                                   }}
                                 >
                                   {item.caducidad}
@@ -1020,11 +1041,177 @@ export default function InventarioPage() {
 
       {/* ✅ Pestaña: LOTES (mantiene tu código original) */}
       {tabActiva === "lotes" && (
-        <div style={{ padding: "20px 0", textAlign: "center", color: "#64748b" }}>
-          <h3 style={{ fontSize: "16px", fontWeight: "700", marginBottom: "8px" }}>
-            Gestión de Lotes y Caducidades
-          </h3>
-          <p>Aquí se mostrará el listado de lotes con alertas de caducidad y stock por bodega.</p>
+        <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+          <div>
+            <h3 style={{ fontSize: "16px", fontWeight: "700", margin: 0, color: "#1e293b" }}>
+              Existencias y Caducidades
+            </h3>
+            <p style={{ fontSize: "13px", color: "#94a3b8", margin: "4px 0 0 0" }}>
+              Seguimiento por lote · Estados alineados con reglas de caducidad (#597)
+            </p>
+          </div>
+
+          {/* Filtros y Buscador */}
+          <div style={{ display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap" }}>
+            <input
+              type="text"
+              placeholder="Buscar medicamento, lote o código..."
+              value={busquedaLotes}
+              onChange={(e) => setBusquedaLotes(e.target.value)}
+              style={{
+                flex: 1, minWidth: "240px",
+                padding: "10px 16px", borderRadius: "9999px",
+                border: "1px solid #e2e8f0", backgroundColor: "#fff",
+                fontSize: "13px", outline: "none",
+              }}
+            />
+            <select
+              value={filtroBodega}
+              onChange={(e) => setFiltroBodega(e.target.value)}
+              style={{ padding: "10px 14px", borderRadius: "12px", border: "1px solid #e2e8f0", fontSize: "13px" }}
+            >
+              <option value="todas">Todas las bodegas</option>
+              {bodegas.map((b, i) => (
+                <option key={i} value={b.nombre || b}>{b.nombre || b}</option>
+              ))}
+            </select>
+            <select
+              value={filtroEstado}
+              onChange={(e) => setFiltroEstado(e.target.value)}
+              style={{ padding: "10px 14px", borderRadius: "12px", border: "1px solid #e2e8f0", fontSize: "13px" }}
+            >
+              <option value="todos">Todos los estados</option>
+              {Object.values(ESTADO_EXISTENCIA).map((estado, i) => (
+                <option key={i} value={estado}>{estado}</option>
+              ))}
+            </select>
+            <label style={{ fontSize: "13px", color: "#64748b", display: "flex", alignItems: "center", gap: "6px" }}>
+              <input
+                type="checkbox"
+                checked={ocultarSinExistencia}
+                onChange={(e) => setOcultarSinExistencia(e.target.checked)}
+              />
+              Ocultar sin existencia
+            </label>
+            <button
+              onClick={limpiarFiltros}
+              style={{ fontSize: "12px", color: "#0891b2", background: "none", border: "none", cursor: "pointer" }}
+            >
+              Limpiar
+            </button>
+          </div>
+
+          {/* Tabla de Existencias */}
+          <div style={{ backgroundColor: "#fff", borderRadius: "16px", border: "1px solid #f1f5f9", overflow: "hidden" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
+              <thead>
+                <tr style={{ borderBottom: "1px solid #f1f5f9", backgroundColor: "#fafafa" }}>
+                  {columnas.map((col, i) => (
+                    <th key={i} style={{
+                      padding: "12px 16px", fontSize: "11px", fontWeight: "700",
+                      color: "#64748b", letterSpacing: "0.5px", textTransform: "uppercase",
+                      textAlign: col.alineacion === "derecha" ? "right" : "left",
+                    }}>
+                      {col.etiqueta}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {medicamentos.length === 0 ? (
+                  <tr>
+                    <td colSpan={columnas.length} style={{ padding: "40px", textAlign: "center", color: "#94a3b8" }}>
+                      {busquedaLotes || filtroBodega !== "todas" || filtroEstado !== "todos"
+                        ? "No hay resultados con los filtros aplicados."
+                        : "No hay lotes registrados aún."}
+                    </td>
+                  </tr>
+                ) : medicamentos.map((item, idx) => {
+                  const colorEstado = {
+                    [ESTADO_EXISTENCIA.DISPONIBLE]: { bg: "#f0fdf4", texto: "#16a34a", borde: "#bbf7d0" },
+                    [ESTADO_EXISTENCIA.POR_VENCER]: { bg: "#fffbeb", texto: "#d97706", borde: "#fef3c7" },
+                    [ESTADO_EXISTENCIA.VENCIDO]: { bg: "#fef2f2", texto: "#dc2626", borde: "#fecaca" },
+                    [ESTADO_EXISTENCIA.SIN_STOCK]: { bg: "#f8fafc", texto: "#64748b", borde: "#e2e8f0" },
+                  };
+                  return (
+                    <React.Fragment key={idx}>
+                      <tr style={{ borderBottom: "1px solid #f8fafc" }}>
+                        <td style={{ padding: "14px 16px" }}>
+                          <button
+                            onClick={() => toggleExpandir(item)}
+                            style={{
+                              background: "none", border: "none", padding: 0,
+                              fontSize: "inherit", color: "#0891b2", cursor: "pointer",
+                              textAlign: "left", display: "flex", alignItems: "center", gap: "6px"
+                            }}
+                          >
+                            {filasExpandidas.has(item) ? "▼" : "▶"}
+                            <span style={{ fontWeight: 600 }}>{item.nombre}</span>
+                          </button>
+                        </td>
+                        <td style={{ padding: "14px 16px" }}>{item.concentracion}</td>
+                        <td style={{ padding: "14px 16px" }}>{item.presentacion}</td>
+                        <td style={{ padding: "14px 16px" }}>{item.marca}</td>
+                        <td style={{ padding: "14px 16px", textAlign: "right", fontWeight: 700 }}>
+                          {item.stockTotal}
+                        </td>
+                        <td style={{ padding: "14px 16px" }}>
+                          {item.fechaVencimientoMasProxima
+                            ? new Date(item.fechaVencimientoMasProxima).toLocaleDateString("es-GT")
+                            : "Sin fecha"}
+                        </td>
+                        <td style={{ padding: "14px 16px" }}>
+                          <span style={{
+                            padding: "4px 12px", borderRadius: "9999px", fontSize: "11px", fontWeight: 700,
+                            backgroundColor: colorEstado[item.estado]?.bg,
+                            color: colorEstado[item.estado]?.texto,
+                            border: `1px solid ${colorEstado[item.estado]?.borde}`,
+                          }}>
+                            {item.estado}
+                          </span>
+                        </td>
+                      </tr>
+                      {filasExpandidas.has(item) && (
+                        <tr>
+                          <td colSpan={columnas.length} style={{ padding: 0, backgroundColor: "#fafafa" }}>
+                            <div style={{ padding: "16px 24px" }}>
+                              <h4 style={{ margin: "0 0 10px 0", fontSize: "13px", fontWeight: 600, color: "#475569" }}>
+                                Detalle por Lote
+                              </h4>
+                              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "12px" }}>
+                                <thead>
+                                  <tr style={{ borderBottom: "1px solid #e2e8f0" }}>
+                                    <th style={{ padding: "8px", textAlign: "left", color: "#64748b" }}>Lote</th>
+                                    <th style={{ padding: "8px", textAlign: "left", color: "#64748b" }}>Bodega</th>
+                                    <th style={{ padding: "8px", textAlign: "right", color: "#64748b" }}>Cantidad</th>
+                                    <th style={{ padding: "8px", textAlign: "left", color: "#64748b" }}>Vencimiento</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {(item.lotes || []).map((lote, i) => (
+                                    <tr key={i} style={{ borderTop: "1px solid #f1f5f9" }}>
+                                      <td style={{ padding: "8px" }}>{lote.numeroLote || lote.lote}</td>
+                                      <td style={{ padding: "8px" }}>{lote.bodega || "Central"}</td>
+                                      <td style={{ padding: "8px", textAlign: "right", fontWeight: 600 }}>{lote.cantidad}</td>
+                                      <td style={{ padding: "8px" }}>
+                                        {lote.fechaVencimiento
+                                          ? new Date(lote.fechaVencimiento).toLocaleDateString("es-GT")
+                                          : "—"}
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
@@ -1043,7 +1230,7 @@ export default function InventarioPage() {
           setFormData={setFormData}
           principiosActivos={principiosActivos}
           advertenciaDuplicado={advertenciaDuplicado}
-          onSubmit={handleGuardarMedicamento}  
+          onSubmit={handleGuardarMedicamento}
           onClose={() => setModalAbierto(false)}
           onCrearPrincipioActivo={handleCrearPrincipioActivo}
         />
