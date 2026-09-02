@@ -70,11 +70,20 @@ SELECT ok(
   'administrador lee todos los gastos'
 );
 
-SELECT lives_ok(
-  $$ UPDATE gastos SET estado = 'aprobado', aprobado_por = '00000000-0000-0000-0000-000000029201',
-       aprobado_en = NOW()
-     WHERE id = '60000000-0000-0000-0000-000000029201' $$,
-  'administrador aprueba el gasto que el mismo registro (issue #410)'
+-- Desde la 00109 (fn_autoaprobar_gasto_administrador), un gasto que registra el
+-- administrador nace ya aprobado: el INSERT de arriba dejo esta fila en estado 'aprobado',
+-- con aprobado_por y aprobado_en fijados por el trigger. Un UPDATE a 'aprobado' aqui ya no
+-- tiene nada que hacer -OLD.estado ya es 'aprobado'- y choca con
+-- fn_bloquear_gasto_finalizado. Mismo ajuste que aprobacion_movimientos_inventario.sql
+-- hizo para el espejo de este trigger en movimientos_inventario (00048/00094): se verifica
+-- el estado que deja la autoaprobacion en vez de reintentar el UPDATE. La regla de fondo de
+-- la issue #410 -nunca existio una restriccion de "nunca lo que el mismo registro"- sigue
+-- vigente.
+SELECT is(
+  (SELECT estado::text || '/' || aprobado_por::text
+   FROM gastos WHERE id = '60000000-0000-0000-0000-000000029201'),
+  'aprobado/00000000-0000-0000-0000-000000029201',
+  'administrador aprueba (por autoaprobacion, 00109) el gasto que el mismo registro (issue #410)'
 );
 
 SELECT throws_ok(
