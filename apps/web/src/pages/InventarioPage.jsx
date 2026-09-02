@@ -9,7 +9,7 @@ import BandejaValidacionPage from "./BandejaValidacionPage";
 import { useVistaExistencias } from "../../../../packages/shared/inventario/useVistaExistencias.js";
 import AdministracionBodegasProveedoresPage from "./AdministracionBodegasProveedoresPage.jsx";
 import { useAlertasVencimiento } from "../../../../packages/shared/inventario/useAlertasVencimiento.js";
-import KardexMovimientosPage from "./KardexMovimientosPage.jsx"
+import KardexMovimientosPage from "./KardexMovimientosPage.jsx";
 // API Medicamentos y Principios Activos
 import {
   listarMedicamentos,
@@ -380,25 +380,25 @@ export default function InventarioPage() {
     alertasCriticas.length > 0
       ? alertasCriticas
       : [
-        {
-          id: "alt-1",
-          medicamento: { nombre: "Metformina 850mg Comprimidos" },
-          codigo: "FAR-0009",
-          numero_lote: "L-2024-0567",
-          bodega: "SUR",
-          diasRestantes: 12,
-          fechaCaducidad: "27 jul 2024",
-        },
-        {
-          id: "alt-2",
-          medicamento: { nombre: "Amoxicilina 500mg Cápsulas" },
-          codigo: "FAR-0041",
-          numero_lote: "L-2024-0091",
-          bodega: "CENTRAL",
-          diasRestantes: 30,
-          fechaCaducidad: "14 ago 2024",
-        },
-      ];
+          {
+            id: "alt-1",
+            medicamento: { nombre: "Metformina 850mg Comprimidos" },
+            codigo: "FAR-0009",
+            numero_lote: "L-2024-0567",
+            bodega: "SUR",
+            diasRestantes: 12,
+            fechaCaducidad: "27 jul 2024",
+          },
+          {
+            id: "alt-2",
+            medicamento: { nombre: "Amoxicilina 500mg Cápsulas" },
+            codigo: "FAR-0041",
+            numero_lote: "L-2024-0091",
+            bodega: "CENTRAL",
+            diasRestantes: 30,
+            fechaCaducidad: "14 ago 2024",
+          },
+        ];
 
   const fuenteInicial = inventarioRaw.length > 0 ? inventarioFiltradoHook : datosTablaDemo;
   const baseDatosFiltrada = fuenteInicial.filter((item) => {
@@ -426,9 +426,9 @@ export default function InventarioPage() {
     !categoriaSeleccionada || categoriaSeleccionada === "Todas"
       ? baseDatosFiltrada
       : baseDatosFiltrada.filter(
-        (item) =>
-          item.categoria?.toLowerCase().trim() === categoriaSeleccionada.toLowerCase().trim(),
-      );
+          (item) =>
+            item.categoria?.toLowerCase().trim() === categoriaSeleccionada.toLowerCase().trim(),
+        );
 
   return (
     <div
@@ -454,42 +454,13 @@ export default function InventarioPage() {
         </div>
 
         {/* ✅ BOTONES SOLO VISIBLES EN CATÁLOGO Y LOTES — OCULTOS EN VALIDACIÓN */}
-        {esAdmin && tabActiva !== "validacion" && tabActiva !== "administracion" && tabActiva !== "kardex" && (
-          <div style={{ display: "flex", gap: "8px" }}>
-            <button
-              onClick={() => setModalRegistroIngresoAbierto(true)}
-              style={{
-                padding: "10px 20px",
-                borderRadius: "9999px",
-                border: "none",
-                backgroundColor: "#059669",
-                color: "#ffffff",
-                fontSize: "13px",
-                fontWeight: "700",
-                cursor: "pointer",
-              }}
-            >
-              + Registrar Ingreso
-            </button>
-            <button
-              onClick={() => setModalSalidaAbierto(true)}
-              style={{
-                padding: "10px 20px",
-                borderRadius: "9999px",
-                border: "none",
-                backgroundColor: "#b45309",
-                color: "#ffffff",
-                fontSize: "13px",
-                fontWeight: "700",
-                cursor: "pointer",
-              }}
-            >
-              + Registrar Salida
-            </button>
-            {tabActiva === "catalogo" ? (
+        {esAdmin &&
+          tabActiva !== "validacion" &&
+          tabActiva !== "administracion" &&
+          tabActiva !== "kardex" && (
+            <div style={{ display: "flex", gap: "8px" }}>
               <button
-                type="button"
-                onClick={abrirModalNuevo}
+                onClick={() => setModalRegistroIngresoAbierto(true)}
                 style={{
                   padding: "10px 20px",
                   borderRadius: "9999px",
@@ -501,30 +472,62 @@ export default function InventarioPage() {
                   cursor: "pointer",
                 }}
               >
-                + Nuevo Medicamento
+                + Registrar Ingreso
               </button>
-            ) : tabActiva === "lotes" ? (
               <button
-                onClick={() => {
-                  setErrorLotes(null);
-                  setModalAltaLoteAbierto(true);
-                }}
+                onClick={() => setModalSalidaAbierto(true)}
                 style={{
                   padding: "10px 20px",
                   borderRadius: "9999px",
                   border: "none",
-                  backgroundColor: "#059669",
+                  backgroundColor: "#b45309",
                   color: "#ffffff",
                   fontSize: "13px",
                   fontWeight: "700",
                   cursor: "pointer",
                 }}
               >
-                + Registrar Lote
+                + Registrar Salida
               </button>
-            ) : null}
-          </div>
-        )}
+              {tabActiva === "catalogo" ? (
+                <button
+                  type="button"
+                  onClick={abrirModalNuevo}
+                  style={{
+                    padding: "10px 20px",
+                    borderRadius: "9999px",
+                    border: "none",
+                    backgroundColor: "#059669",
+                    color: "#ffffff",
+                    fontSize: "13px",
+                    fontWeight: "700",
+                    cursor: "pointer",
+                  }}
+                >
+                  + Nuevo Medicamento
+                </button>
+              ) : tabActiva === "lotes" ? (
+                <button
+                  onClick={() => {
+                    setErrorLotes(null);
+                    setModalAltaLoteAbierto(true);
+                  }}
+                  style={{
+                    padding: "10px 20px",
+                    borderRadius: "9999px",
+                    border: "none",
+                    backgroundColor: "#059669",
+                    color: "#ffffff",
+                    fontSize: "13px",
+                    fontWeight: "700",
+                    cursor: "pointer",
+                  }}
+                >
+                  + Registrar Lote
+                </button>
+              ) : null}
+            </div>
+          )}
       </div>
 
       {/* 2. Pestañas de Navegación Módulo */}
@@ -593,7 +596,7 @@ export default function InventarioPage() {
             </span>
           )}
         </button>
-         <button
+        <button
           onClick={() => setTabActiva("kardex")}
           style={{
             padding: "8px 16px",
@@ -606,7 +609,7 @@ export default function InventarioPage() {
             color: tabActiva === "kardex" ? "#7c3aed" : "#64748b",
           }}
         >
-           Kardex de Movimientos
+          Kardex de Movimientos
         </button>
         <button
           onClick={() => setTabActiva("administracion")}
@@ -617,11 +620,12 @@ export default function InventarioPage() {
             border: "none",
             background: "none",
             cursor: "pointer",
-            borderBottom: tabActiva === "administracion" ? "2px solid #6366f1" : "2px solid transparent",
+            borderBottom:
+              tabActiva === "administracion" ? "2px solid #6366f1" : "2px solid transparent",
             color: tabActiva === "administracion" ? "#4f46e5" : "#64748b",
           }}
         >
-           Administración
+          Administración
         </button>
         <button
           onClick={() => setTabActiva("validacion")}
@@ -1341,8 +1345,8 @@ export default function InventarioPage() {
                           <td style={{ padding: "14px 16px" }}>
                             {item.fechaVencimientoMasProxima
                               ? new Date(item.fechaVencimientoMasProxima).toLocaleDateString(
-                                "es-GT",
-                              )
+                                  "es-GT",
+                                )
                               : "Sin fecha"}
                           </td>
                           <td style={{ padding: "14px 16px" }}>
@@ -1446,8 +1450,8 @@ export default function InventarioPage() {
                                         <td style={{ padding: "8px" }}>
                                           {lote.fechaVencimiento
                                             ? new Date(lote.fechaVencimiento).toLocaleDateString(
-                                              "es-GT",
-                                            )
+                                                "es-GT",
+                                              )
                                             : "—"}
                                         </td>
                                       </tr>
@@ -1613,9 +1617,7 @@ export default function InventarioPage() {
         </div>
       )}
       {/* ✅ Pestaña: Administración de Bodegas y Proveedores */}
-      {tabActiva === "administracion" && (
-        <AdministracionBodegasProveedoresPage />
-      )}
+      {tabActiva === "administracion" && <AdministracionBodegasProveedoresPage />}
 
       {/* Modales */}
       {modalAbierto && (
@@ -1632,10 +1634,8 @@ export default function InventarioPage() {
           onCrearPrincipioActivo={handleCrearPrincipioActivo}
         />
       )}
-        {/* ✅ Pestaña: Kardex de Movimientos */}
-      {tabActiva === "kardex" && (
-        <KardexMovimientosPage titulo="Historial de Movimientos" />
-      )}
+      {/* ✅ Pestaña: Kardex de Movimientos */}
+      {tabActiva === "kardex" && <KardexMovimientosPage titulo="Historial de Movimientos" />}
 
       <ModalSalidaMedicamento
         abierto={modalSalidaAbierto}
