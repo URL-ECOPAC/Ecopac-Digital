@@ -15,7 +15,11 @@ import { cambiarEstadoJornada } from "./api.js";
 import { hayAdvertenciasDeCierre, obtenerResumenCierre } from "./resumenCierre.js";
 
 const RESUMEN_INICIAL = {
-  indicadores: { pacientesAtendidos: null, consultasRealizadas: null, tratamientosEntregados: null },
+  indicadores: {
+    pacientesAtendidos: null,
+    consultasRealizadas: null,
+    tratamientosEntregados: null,
+  },
   atencionesIncompletas: null,
   movimientosPendientes: 0,
   error: null,

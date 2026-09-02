@@ -44,7 +44,9 @@ export default function RestablecerContrasenaPage() {
           />
 
           <div style={{ marginTop: "6px" }}>
-            <AuthButton disabled={enviando}>{enviando ? "Enviando..." : "Enviar enlace"}</AuthButton>
+            <AuthButton disabled={enviando}>
+              {enviando ? "Enviando..." : "Enviar enlace"}
+            </AuthButton>
           </div>
         </form>
       )}

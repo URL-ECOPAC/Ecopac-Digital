@@ -1,7 +1,13 @@
 import { useState } from "react";
 import { Navigate } from "react-router-dom";
 import { useNuevaContrasena } from "@ecopac/shared";
-import { AuthAlert, AuthButton, AuthField, AuthLayout, AuthPasswordToggle } from "../components/auth";
+import {
+  AuthAlert,
+  AuthButton,
+  AuthField,
+  AuthLayout,
+  AuthPasswordToggle,
+} from "../components/auth";
 
 export default function NuevaContrasenaPage() {
   const {
@@ -50,7 +56,10 @@ export default function NuevaContrasenaPage() {
           error={erroresDeCampo?.contrasena}
           disabled={enviando}
           rightAdornment={
-            <AuthPasswordToggle visible={verPassword} onToggle={() => setVerPassword(!verPassword)} />
+            <AuthPasswordToggle
+              visible={verPassword}
+              onToggle={() => setVerPassword(!verPassword)}
+            />
           }
         />
 

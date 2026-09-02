@@ -2,7 +2,13 @@ import { useState } from "react";
 import { Navigate, useLocation, Link } from "react-router-dom";
 import { ESTADOS_DE_RESTAURACION, useInicioSesion } from "@ecopac/shared";
 import { useSesionCompartida } from "../contexto/SesionProvider";
-import { AuthAlert, AuthButton, AuthField, AuthLayout, AuthPasswordToggle } from "../components/auth";
+import {
+  AuthAlert,
+  AuthButton,
+  AuthField,
+  AuthLayout,
+  AuthPasswordToggle,
+} from "../components/auth";
 
 export default function LoginPage() {
   const location = useLocation();
@@ -65,7 +71,9 @@ export default function LoginPage() {
 
   return (
     <AuthLayout title="Iniciar sesión" subtitle="Ingresa a la plataforma de gestión">
-      {errorDelHook && <AuthAlert variant="error">{errorDelHook.mensaje || errorDelHook}</AuthAlert>}
+      {errorDelHook && (
+        <AuthAlert variant="error">{errorDelHook.mensaje || errorDelHook}</AuthAlert>
+      )}
 
       <form
         onSubmit={ManejarEnvioFormulario}
@@ -99,12 +107,17 @@ export default function LoginPage() {
           error={errores?.contrasena}
           disabled={enviando}
           rightAdornment={
-            <AuthPasswordToggle visible={verPassword} onToggle={() => setVerPassword(!verPassword)} />
+            <AuthPasswordToggle
+              visible={verPassword}
+              onToggle={() => setVerPassword(!verPassword)}
+            />
           }
         />
 
         <div style={{ marginTop: "6px" }}>
-          <AuthButton disabled={enviando}>{enviando ? "Ingresando..." : "Iniciar Sesión"}</AuthButton>
+          <AuthButton disabled={enviando}>
+            {enviando ? "Ingresando..." : "Iniciar Sesión"}
+          </AuthButton>
         </div>
 
         {/* Aqui habia un enlace "¿No tienes cuenta?" hacia /registro. Se quito con la issue

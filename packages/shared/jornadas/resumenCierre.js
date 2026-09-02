@@ -127,7 +127,11 @@ export async function obtenerResumenCierre(jornada, { rol } = {}) {
 
   if (!jornadaId) {
     return {
-      indicadores: { pacientesAtendidos: null, consultasRealizadas: null, tratamientosEntregados: null },
+      indicadores: {
+        pacientesAtendidos: null,
+        consultasRealizadas: null,
+        tratamientosEntregados: null,
+      },
       atencionesIncompletas: null,
       movimientosPendientes: 0,
       error: null,

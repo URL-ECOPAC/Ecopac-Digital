@@ -53,16 +53,36 @@ export default function AuthLayout({ title, subtitle, children }) {
               }}
             >
               <span
-                style={{ backgroundColor: "#22C55E", borderRadius: "50%", width: "12px", height: "12px" }}
+                style={{
+                  backgroundColor: "#22C55E",
+                  borderRadius: "50%",
+                  width: "12px",
+                  height: "12px",
+                }}
               ></span>
               <span
-                style={{ backgroundColor: "#3B82F6", borderRadius: "50%", width: "12px", height: "12px" }}
+                style={{
+                  backgroundColor: "#3B82F6",
+                  borderRadius: "50%",
+                  width: "12px",
+                  height: "12px",
+                }}
               ></span>
               <span
-                style={{ backgroundColor: "#F59E0B", borderRadius: "50%", width: "12px", height: "12px" }}
+                style={{
+                  backgroundColor: "#F59E0B",
+                  borderRadius: "50%",
+                  width: "12px",
+                  height: "12px",
+                }}
               ></span>
               <span
-                style={{ backgroundColor: "#EC4899", borderRadius: "50%", width: "12px", height: "12px" }}
+                style={{
+                  backgroundColor: "#EC4899",
+                  borderRadius: "50%",
+                  width: "12px",
+                  height: "12px",
+                }}
               ></span>
             </div>
             <div style={{ textAlign: "left" }}>
@@ -90,7 +110,9 @@ export default function AuthLayout({ title, subtitle, children }) {
           >
             {title}
           </h2>
-          {subtitle && <p style={{ fontSize: "13px", color: "#64748B", margin: "0" }}>{subtitle}</p>}
+          {subtitle && (
+            <p style={{ fontSize: "13px", color: "#64748B", margin: "0" }}>{subtitle}</p>
+          )}
         </div>
 
         {children}

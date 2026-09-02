@@ -155,10 +155,7 @@ describe("obtenerResumenCierre", () => {
   });
 
   it("junta directiva no tiene SELECT sobre atenciones ni consultas: pacientesAtendidos y atencionesIncompletas quedan en null, nunca en 0 falso", async () => {
-    const resumen = await obtenerResumenCierre(
-      { id: "jor-1" },
-      { rol: ROLES.JUNTA_DIRECTIVA },
-    );
+    const resumen = await obtenerResumenCierre({ id: "jor-1" }, { rol: ROLES.JUNTA_DIRECTIVA });
 
     expect(resumen.indicadores.pacientesAtendidos).toBeNull();
     expect(resumen.atencionesIncompletas).toBeNull();
@@ -167,10 +164,7 @@ describe("obtenerResumenCierre", () => {
   });
 
   it("socio fundador tampoco: mismo tratamiento que junta directiva", async () => {
-    const resumen = await obtenerResumenCierre(
-      { id: "jor-1" },
-      { rol: ROLES.SOCIO_FUNDADOR },
-    );
+    const resumen = await obtenerResumenCierre({ id: "jor-1" }, { rol: ROLES.SOCIO_FUNDADOR });
 
     expect(resumen.indicadores.pacientesAtendidos).toBeNull();
     expect(resumen.atencionesIncompletas).toBeNull();

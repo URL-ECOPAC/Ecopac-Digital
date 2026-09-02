@@ -22,11 +22,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import {
-  cambiarEstadoJornada,
-  contarPacientesAtendidosPorJornada,
-  listarJornadas,
-} from "./api.js";
+import { cambiarEstadoJornada, contarPacientesAtendidosPorJornada, listarJornadas } from "./api.js";
 import { FILTROS_JORNADA_VACIOS, OPCIONES_ESTADO_JORNADA } from "./filtros.js";
 import { permisosDeJornadas } from "./permisos.js";
 import { ESTADOS_JORNADA } from "../enums.js";
