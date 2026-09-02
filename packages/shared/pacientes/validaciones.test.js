@@ -44,13 +44,20 @@ describe("validarPaciente", () => {
     expect(validarPaciente(pacienteValido())).toEqual({});
   });
 
-  it("exige nombres, apellidos, fecha de nacimiento y comunidad", () => {
+  it("exige nombres, apellidos y fecha de nacimiento", () => {
     const errores = validarPaciente({});
 
     expect(errores.nombres).toBeTruthy();
     expect(errores.apellidos).toBeTruthy();
     expect(errores.fechaNacimiento).toBeTruthy();
-    expect(errores.comunidad).toBeTruthy();
+  });
+
+  // La comunidad dejo de ser obligatoria en la #657: en jornada no siempre se sabe de donde viene
+  // la persona, y exigirla llevaba a inventar una comunidad o a no registrarla. La columna admite
+  // NULL desde la 00111 y fn_buscar_pacientes la une con LEFT JOIN para que siga apareciendo.
+  it("no exige comunidad: es opcional desde la #657", () => {
+    expect(validarPaciente({}).comunidad).toBeUndefined();
+    expect(validarPaciente(pacienteValido({ comunidad: "" })).comunidad).toBeUndefined();
   });
 
   it("no exige sexo, telefonoContacto, idioma ni numeroFicha: no estan en CAMPOS_PACIENTE", () => {
@@ -105,11 +112,15 @@ describe("validarRegistroPaciente", () => {
     expect(errores.nombres).toBeTruthy();
     expect(errores.apellidos).toBeTruthy();
     expect(errores.fechaNacimiento).toBeTruthy();
-    expect(errores.comunidad).toBeTruthy();
     expect(errores.sexo).toBeTruthy();
     expect(errores.telefonoContacto).toBeTruthy();
     expect(errores.idioma).toBeTruthy();
     expect(errores.numeroFicha).toBeUndefined();
+  });
+
+  it("tampoco exige comunidad al registrar (#657)", () => {
+    expect(validarRegistroPaciente({}).comunidad).toBeUndefined();
+    expect(validarRegistroPaciente(registroValido({ comunidad: "" })).comunidad).toBeUndefined();
   });
 
   it("comparte las mismas reglas de negocio de fecha de nacimiento y DPI que validarPaciente", () => {

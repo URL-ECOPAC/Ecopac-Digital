@@ -10,6 +10,7 @@ import { useVistaExistencias } from "../../../../packages/shared/inventario/useV
 import PanelAlertasVencimiento from "./PanelAlertasVencimiento.jsx";
 import AdministracionBodegasProveedoresPage from "./AdministracionBodegasProveedoresPage.jsx";
 import { useAlertasVencimiento } from "../../../../packages/shared/inventario/useAlertasVencimiento.js";
+import KardexMovimientosPage from "./KardexMovimientosPage.jsx";
 // API Medicamentos y Principios Activos
 import {
   listarMedicamentos,
@@ -488,8 +489,7 @@ export default function InventarioPage() {
             </button>
             {tabActiva === "catalogo" ? (
               <button
-                type="button"
-                onClick={abrirModalNuevo}
+                onClick={() => setModalRegistroIngresoAbierto(true)}
                 style={{
                   padding: "10px 20px",
                   borderRadius: "9999px",
@@ -501,30 +501,62 @@ export default function InventarioPage() {
                   cursor: "pointer",
                 }}
               >
-                + Nuevo Medicamento
+                + Registrar Ingreso
               </button>
-            ) : tabActiva === "lotes" ? (
               <button
-                onClick={() => {
-                  setErrorLotes(null);
-                  setModalAltaLoteAbierto(true);
-                }}
+                onClick={() => setModalSalidaAbierto(true)}
                 style={{
                   padding: "10px 20px",
                   borderRadius: "9999px",
                   border: "none",
-                  backgroundColor: "#059669",
+                  backgroundColor: "#b45309",
                   color: "#ffffff",
                   fontSize: "13px",
                   fontWeight: "700",
                   cursor: "pointer",
                 }}
               >
-                + Registrar Lote
+                + Registrar Salida
               </button>
-            ) : null}
-          </div>
-        )}
+              {tabActiva === "catalogo" ? (
+                <button
+                  type="button"
+                  onClick={abrirModalNuevo}
+                  style={{
+                    padding: "10px 20px",
+                    borderRadius: "9999px",
+                    border: "none",
+                    backgroundColor: "#059669",
+                    color: "#ffffff",
+                    fontSize: "13px",
+                    fontWeight: "700",
+                    cursor: "pointer",
+                  }}
+                >
+                  + Nuevo Medicamento
+                </button>
+              ) : tabActiva === "lotes" ? (
+                <button
+                  onClick={() => {
+                    setErrorLotes(null);
+                    setModalAltaLoteAbierto(true);
+                  }}
+                  style={{
+                    padding: "10px 20px",
+                    borderRadius: "9999px",
+                    border: "none",
+                    backgroundColor: "#059669",
+                    color: "#ffffff",
+                    fontSize: "13px",
+                    fontWeight: "700",
+                    cursor: "pointer",
+                  }}
+                >
+                  + Registrar Lote
+                </button>
+              ) : null}
+            </div>
+          )}
       </div>
 
       {/* 2. Pestañas de Navegación Módulo */}
@@ -1617,6 +1649,8 @@ export default function InventarioPage() {
           onCrearPrincipioActivo={handleCrearPrincipioActivo}
         />
       )}
+      {/* ✅ Pestaña: Kardex de Movimientos */}
+      {tabActiva === "kardex" && <KardexMovimientosPage titulo="Historial de Movimientos" />}
 
       <ModalSalidaMedicamento
         abierto={modalSalidaAbierto}
