@@ -50,8 +50,7 @@ const PROYECTOS_DEMO = [
 ];
 
 export default function ProyectosScreen() {
-  const { proyectos: proyectosBD, cargando, cambiarEtapaProyecto } =
-    useProyectosSociales();
+  const { proyectos: proyectosBD, cargando, cambiarEtapaProyecto } = useProyectosSociales();
 
   const [modoVista, setModoVista] = useState("kanban"); // "lista" | "kanban"
   const [filtroEstado, setFiltroEstado] = useState("todos");
@@ -69,17 +68,9 @@ export default function ProyectosScreen() {
   const metricas = useMemo(() => {
     const lista = proyectos || [];
     const total = lista.length;
-    const activos = lista.filter(
-      (p) => (p.estado || p.etapa) === "en_ejecucion"
-    ).length;
-    const presupuestoTotal = lista.reduce(
-      (acc, p) => acc + (Number(p.presupuesto) || 0),
-      0
-    );
-    const beneficiariosTotal = lista.reduce(
-      (acc, p) => acc + (Number(p.beneficiarios) || 0),
-      0
-    );
+    const activos = lista.filter((p) => (p.estado || p.etapa) === "en_ejecucion").length;
+    const presupuestoTotal = lista.reduce((acc, p) => acc + (Number(p.presupuesto) || 0), 0);
+    const beneficiariosTotal = lista.reduce((acc, p) => acc + (Number(p.beneficiarios) || 0), 0);
 
     return { total, activos, presupuestoTotal, beneficiariosTotal };
   }, [proyectos]);
@@ -97,10 +88,8 @@ export default function ProyectosScreen() {
       // Si es un proyecto local de prueba, actualizamos el estado
       setProyectosDemoState((prev) =>
         prev.map((p) =>
-          p.id === proyectoId
-            ? { ...p, etapa: nuevaEtapa, estado: nuevaEtapa }
-            : p
-        )
+          p.id === proyectoId ? { ...p, etapa: nuevaEtapa, estado: nuevaEtapa } : p,
+        ),
       );
       return;
     }
@@ -133,17 +122,13 @@ export default function ProyectosScreen() {
         <View style={styles.metricsGrid}>
           <View style={styles.metricCard}>
             <Text style={styles.metricLabel}>PROYECTOS</Text>
-            <Text style={[styles.metricValue, { color: "#10B981" }]}>
-              {metricas.total}
-            </Text>
+            <Text style={[styles.metricValue, { color: "#10B981" }]}>{metricas.total}</Text>
             <Text style={styles.metricSub}>registrados</Text>
           </View>
 
           <View style={styles.metricCard}>
             <Text style={styles.metricLabel}>EN EJECUCIÓN</Text>
-            <Text style={[styles.metricValue, { color: "#0284C7" }]}>
-              {metricas.activos}
-            </Text>
+            <Text style={[styles.metricValue, { color: "#0284C7" }]}>{metricas.activos}</Text>
             <Text style={styles.metricSub}>activos</Text>
           </View>
 
@@ -183,10 +168,7 @@ export default function ProyectosScreen() {
               ].map((f) => (
                 <TouchableOpacity
                   key={f.id}
-                  style={[
-                    styles.filterChip,
-                    filtroEstado === f.id && styles.filterChipActive,
-                  ]}
+                  style={[styles.filterChip, filtroEstado === f.id && styles.filterChipActive]}
                   onPress={() => setFiltroEstado(f.id)}
                 >
                   <Text
@@ -201,9 +183,7 @@ export default function ProyectosScreen() {
               ))}
             </View>
 
-            <Text style={styles.sectionTitle}>
-              {proyectosFiltrados.length} PROYECTOS
-            </Text>
+            <Text style={styles.sectionTitle}>{proyectosFiltrados.length} PROYECTOS</Text>
 
             {cargando ? (
               <ActivityIndicator size="large" color="#10B981" style={{ marginTop: 24 }} />
@@ -213,9 +193,7 @@ export default function ProyectosScreen() {
               proyectosFiltrados.map((item) => (
                 <View key={item.id} style={styles.projectCard}>
                   <Text style={styles.projectTitle}>{item.nombre}</Text>
-                  {item.descripcion && (
-                    <Text style={styles.projectDesc}>{item.descripcion}</Text>
-                  )}
+                  {item.descripcion && <Text style={styles.projectDesc}>{item.descripcion}</Text>}
                   <View style={styles.projectFooter}>
                     <Text style={styles.badgeText}>
                       Etapa: {item.etapa || item.estado || "planificacion"}

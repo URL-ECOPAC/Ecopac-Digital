@@ -1,13 +1,6 @@
 // apps/mobile/src/components/KanbanBoard.js
 import React, { useState } from "react";
-import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  Modal,
-  StyleSheet,
-} from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, Modal, StyleSheet } from "react-native";
 
 export default function KanbanBoard({ proyectos, etapas, onCambiarEtapa }) {
   const [proyectoSeleccionado, setProyectoSeleccionado] = useState(null);
@@ -16,9 +9,7 @@ export default function KanbanBoard({ proyectos, etapas, onCambiarEtapa }) {
     <View style={styles.kanbanContainer}>
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
         {etapas.map((etapa) => {
-          const proyectosEtapa = proyectos.filter(
-            (p) => (p.etapa || p.estado) === etapa.id
-          );
+          const proyectosEtapa = proyectos.filter((p) => (p.etapa || p.estado) === etapa.id);
 
           return (
             <View key={etapa.id} style={styles.column}>
@@ -67,9 +58,7 @@ export default function KanbanBoard({ proyectos, etapas, onCambiarEtapa }) {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Mover Proyecto</Text>
-            <Text style={styles.modalSubtitle}>
-              {proyectoSeleccionado?.nombre}
-            </Text>
+            <Text style={styles.modalSubtitle}>{proyectoSeleccionado?.nombre}</Text>
 
             {etapas.map((e) => (
               <TouchableOpacity
@@ -96,10 +85,7 @@ export default function KanbanBoard({ proyectos, etapas, onCambiarEtapa }) {
               </TouchableOpacity>
             ))}
 
-            <TouchableOpacity
-              style={styles.closeBtn}
-              onPress={() => setProyectoSeleccionado(null)}
-            >
+            <TouchableOpacity style={styles.closeBtn} onPress={() => setProyectoSeleccionado(null)}>
               <Text style={styles.closeBtnText}>Cancelar</Text>
             </TouchableOpacity>
           </View>
