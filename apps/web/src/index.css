@@ -1,8 +1,9 @@
 @import "bootstrap/dist/css/bootstrap.min.css";
 
-/* Las variables --color-*, --spacing-*, --accent-* y --estado-* las publica
-   src/theme.js a partir de packages/ui-tokens. Aqui no se escribe ningun color
-   a mano: si hace falta un valor nuevo, se agrega primero al paquete de tokens. */
+/* Las variables --color-*, --spacing-*, --accent-*, --estado-*, --radio-* y --sombra-*
+   las publica src/theme.js a partir de packages/ui-tokens. Aqui no se escribe ningun
+   color, radio ni sombra a mano: si hace falta un valor nuevo, se agrega primero al
+   paquete de tokens. */
 
 :root {
   /* Sobrescritura de las variables globales de Bootstrap con la paleta del proyecto */
@@ -16,6 +17,38 @@
   --bs-body-color: var(--color-text);
   --bs-secondary-color: var(--color-text-muted);
   --bs-border-color: var(--color-border);
+
+  /* Radios y elevaciones (issue #660). Se mapean a las variables globales de Bootstrap en
+     vez de a cada componente: asi botones, tarjetas, campos, modales y desplegables quedan
+     coherentes de una vez, y ninguna pantalla necesita escribir un radio a mano. */
+  --bs-border-radius-sm: var(--radio-sm);
+  --bs-border-radius: var(--radio-md);
+  --bs-border-radius-lg: var(--radio-lg);
+  --bs-border-radius-xl: var(--radio-lg);
+  --bs-border-radius-pill: var(--radio-pill);
+  --bs-box-shadow-sm: var(--sombra-sm);
+  --bs-box-shadow: var(--sombra-md);
+}
+
+/* Tarjetas: elevacion en lugar del borde plano por defecto. Una sola capa y muy baja, porque
+   la interfaz se usa en jornada y a plena luz; lo que tiene que leerse es el contenido, no el
+   borde. El borde se mantiene para quien navegue con alto contraste o con las sombras
+   desactivadas por el sistema. */
+.card {
+  --bs-card-border-color: var(--color-border);
+  box-shadow: var(--sombra-sm);
+}
+
+/* Los botones no heredan el radio global de Bootstrap: lo resuelven con su propia variable. */
+.btn {
+  --bs-btn-border-radius: var(--radio-md);
+}
+
+/* Quien prefiere menos movimiento tampoco quiere capas de profundidad de adorno. */
+@media (prefers-reduced-motion: reduce) {
+  .card {
+    box-shadow: none;
+  }
 }
 
 /* Botones */

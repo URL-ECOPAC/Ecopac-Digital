@@ -45,6 +45,7 @@ export default function PacientesPage() {
     filtros,
     setFiltro,
     limpiarFiltros,
+    hayFiltros,
     cargando,
     error,
     total,
@@ -79,10 +80,6 @@ export default function PacientesPage() {
     );
   }
 
-  const hayFiltrosActivos = Object.values(filtros).some(
-    (valor) => valor !== null && valor !== undefined && valor !== "",
-  );
-
   return (
     <ScreenContainer>
       <div className="modulo-pacientes">
@@ -99,6 +96,11 @@ export default function PacientesPage() {
             onChange={setFiltro}
             catalogos={catalogos}
           />
+          {hayFiltros ? (
+            <div className="pac-filtros-acciones">
+              <SecondaryButton title="Limpiar filtros" onClick={limpiarFiltros} />
+            </div>
+          ) : null}
         </div>
 
         <div className="pac-maestro-detalle">
@@ -111,7 +113,7 @@ export default function PacientesPage() {
               // El estado vacio sugiere registrar, que es lo que pide el criterio 4. Si hay
               // filtros puestos, lo que falta no es un paciente nuevo sino aflojar la busqueda.
               vacio={
-                hayFiltrosActivos ? (
+                hayFiltros ? (
                   <EmptyState
                     message="Ningun paciente coincide con los filtros."
                     actionLabel="Limpiar filtros"

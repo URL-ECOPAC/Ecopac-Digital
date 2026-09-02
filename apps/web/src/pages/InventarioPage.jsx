@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import React from "react";
 import ModalMedicamento from "./ModalMedicamento.jsx";
 import { ModalAltaLote } from "./ModalAltaLote.jsx";
 import { ModalAtenderAlerta } from "./ModalAtenderAlerta.jsx";
@@ -1047,7 +1048,6 @@ export default function InventarioPage() {
               Existencias y Caducidades
             </h3>
             <p style={{ fontSize: "13px", color: "#94a3b8", margin: "4px 0 0 0" }}>
-              Seguimiento por lote · Estados alineados con reglas de caducidad (#597)
             </p>
           </div>
 

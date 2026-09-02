@@ -46,7 +46,10 @@ const COLUMNAS_DEL_PACIENTE = [
   "fechaBaja:fecha_baja",
   "createdAt:created_at",
   "updatedAt:updated_at",
-  "comunidad:comunidades(nombre)",
+  // La cadena territorial completa (00008): la ficha muestra departamento y municipio, no solo
+  // la comunidad (issue #656). Va como embebido anidado y no como consultas aparte porque
+  // PostgREST resuelve los tres niveles en la misma peticion.
+  "comunidad:comunidades(nombre, municipio:municipios(nombre, departamento:departamentos(nombre)))",
 ].join(", ");
 
 const COLUMNAS_DEL_EXPEDIENTE = [

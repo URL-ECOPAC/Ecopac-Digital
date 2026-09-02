@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { useBusquedaPacientes } from "../hooks/useBusquedaPacientes.js";
 import { calcularEdad } from "../formato/fechas.js";
+import { listarComunidades } from "../territorio/api.js";
 import { obtenerCatalogoDeCondiciones } from "./condiciones.api.js";
 import { FILTROS_PACIENTE_VACIOS } from "./filtros.js";
 
@@ -18,25 +19,21 @@ export const OPCIONES_SEXO = [
 ];
 
 /**
- * Arma el catalogo de comunidades a partir de los pacientes ya cargados.
+ * Dice si hay algun filtro puesto, para que la pantalla decida si ofrece limpiarlos.
  *
- * Mismo criterio que catalogoComunidadesDesde() en jornadas/useJornadasKanban.js: el filtro
- * solo necesita ofrecer las comunidades que de verdad aparecen en los resultados, asi que no
- * hace falta una consulta aparte al catalogo completo.
+ * rangoEdad es un objeto `{ min, max }`, asi que un rango a medias tambien cuenta: lo que
+ * importa es si el usuario toco algo, no cuantos criterios completo. Mismo criterio y misma
+ * forma que hayFiltrosDeCronicos() en usePacientesCronicos.js.
  *
- * @param {object[]} pacientes
- * @returns {{ value: string, label: string }[]}
+ * @param {object} filtros Estado de FILTROS_PACIENTE, con la busqueda incluida.
+ * @returns {boolean}
  */
-export function catalogoComunidadesDePacientes(pacientes = []) {
-  const mapa = new Map();
-  for (const paciente of pacientes) {
-    if (paciente.comunidadId && paciente.comunidad?.nombre && !mapa.has(paciente.comunidadId)) {
-      mapa.set(paciente.comunidadId, paciente.comunidad.nombre);
-    }
-  }
-  return Array.from(mapa, ([value, label]) => ({ value, label })).sort((uno, otro) =>
-    uno.label.localeCompare(otro.label, "es"),
-  );
+export function hayFiltrosDePacientes(filtros = {}) {
+  return Object.keys(FILTROS_PACIENTE_VACIOS).some((clave) => {
+    const valor = filtros[clave];
+    if (valor && typeof valor === "object") return Object.values(valor).some((uno) => uno != null);
+    return Boolean(valor);
+  });
 }
 
 /**
@@ -100,6 +97,7 @@ export function aFiltrosDeBusqueda(filtros = {}) {
 export function usePacientesListado({ porPagina } = {}) {
   const [filtros, setFiltros] = useState(FILTROS_PACIENTE_VACIOS);
   const [condicionesCronicas, setCondicionesCronicas] = useState([]);
+  const [comunidades, setComunidades] = useState([]);
 
   const filtrosDeServidor = useMemo(() => aFiltrosDeBusqueda(filtros), [filtros]);
 
@@ -112,6 +110,17 @@ export function usePacientesListado({ porPagina } = {}) {
 
   useEffect(() => {
     let vigente = true;
+
+    // El catalogo sale del catalogo, no de los resultados. Armarlo desde los resultados dejaba
+    // el filtro con una sola opcion en cuanto se usaba, porque a partir de ahi los resultados
+    // solo traen la comunidad ya elegida (issue #656). usePacientesCronicos ya lo hacia asi.
+    listarComunidades().then((respuesta) => {
+      if (!vigente) return;
+      setComunidades(
+        (respuesta.comunidades ?? []).map((fila) => ({ value: fila.id, label: fila.nombre })),
+      );
+    });
+
     obtenerCatalogoDeCondiciones().then((respuesta) => {
       if (!vigente) return;
       const catalogo = respuesta.condiciones ?? respuesta.catalogo ?? [];
@@ -150,6 +159,7 @@ export function usePacientesListado({ porPagina } = {}) {
     filtros: { ...filtros, busqueda: termino },
     setFiltro,
     limpiarFiltros,
+    hayFiltros: hayFiltrosDePacientes({ ...filtros, busqueda: termino }),
     recargar,
     cargando,
     error,
@@ -157,7 +167,7 @@ export function usePacientesListado({ porPagina } = {}) {
     hayMas,
     cargarMas,
     catalogos: {
-      comunidades: catalogoComunidadesDePacientes(resultados),
+      comunidades,
       sexo: OPCIONES_SEXO,
       condicionesCronicas,
     },

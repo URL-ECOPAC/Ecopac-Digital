@@ -101,6 +101,56 @@ export const spacing = {
  * Configuración de tipografía orientada a alta legibilidad y facilidad de lectura en campo.
  * Tamaño base (md) de 16px/dp conforme a la definición de terminado.
  */
+/**
+ * Radios de esquina (issue #660).
+ *
+ * En pixeles y no en rem, igual que spacing, porque React Native no entiende rem: theme.js los
+ * convierte a variables CSS para la web y el movil los consume tal cual.
+ *
+ * `pill` es deliberadamente enorme en vez de un 50%: sobre un elemento mas ancho que alto, el
+ * porcentaje deforma la curva en una elipse, y un valor grande da la capsula correcta a
+ * cualquier ancho.
+ */
+export const radii = {
+  sm: 6,
+  md: 10,
+  lg: 14,
+  pill: 999,
+};
+
+/**
+ * Elevaciones (issue #660).
+ *
+ * Una sola capa y muy baja opacidad, a proposito: la interfaz se usa en jornada, muchas veces a
+ * plena luz y en pantallas pequenas, donde una sombra marcada ensucia mas de lo que separa. Lo
+ * que tiene que leerse es el contenido, no el borde de la tarjeta.
+ *
+ * `web` es una cadena de box-shadow. `movil` son las propiedades que React Native entiende:
+ * shadowColor/shadowOffset/shadowOpacity/shadowRadius en iOS y elevation en Android.
+ */
+export const shadows = {
+  sm: {
+    web: "0 1px 2px rgba(16, 24, 40, 0.06)",
+    movil: {
+      shadowColor: "#101828",
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.06,
+      shadowRadius: 2,
+      elevation: 1,
+    },
+  },
+  md: {
+    web: "0 2px 6px rgba(16, 24, 40, 0.08)",
+    movil: {
+      shadowColor: "#101828",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.08,
+      shadowRadius: 6,
+      elevation: 3,
+    },
+  },
+};
+
 export const typography = {
   fontFamilyBase: "System",
   sizes: {
@@ -154,6 +204,8 @@ export default {
   moduleAccents,
   statusColors,
   spacing,
+  radii,
+  shadows,
   typography,
   labels,
 };

@@ -1,6 +1,6 @@
 import { FlatList, StyleSheet, Text, View } from "react-native";
 import { formatearFechaCorta, formatearMoneda } from "@ecopac/shared";
-import { colors, spacing, typography } from "@ecopac/ui-tokens";
+import { colors, radii, spacing, typography } from "@ecopac/ui-tokens";
 import Card from "./Card";
 import EmptyState from "./EmptyState";
 import LoadingState from "./LoadingState";
@@ -236,7 +236,7 @@ const styles = StyleSheet.create({
   chip: {
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs / 2,
-    borderRadius: spacing.md,
+    borderRadius: radii.lg,
     backgroundColor: colors.background,
     borderWidth: 1,
     borderColor: colors.border,
