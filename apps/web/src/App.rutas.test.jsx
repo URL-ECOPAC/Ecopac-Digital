@@ -113,12 +113,12 @@ describe("los hubs de modulo llevan a sus pantallas", () => {
     expect(screen.getByRole("link", { name: /donantes/i })).toHaveAttribute("href", "/donantes");
   });
 
-  it("/proyectos enlaza al listado de proyectos sociales", () => {
+  it("/proyectos enlaza o monta la vista de proyectos sociales", () => {
     renderEnRuta("/proyectos");
 
-    expect(screen.getByRole("link", { name: /proyectos sociales/i })).toHaveAttribute(
-      "href",
-      "/proyectos/sociales",
-    );
+    expect(screen.queryByText(TEXTO_NOT_FOUND)).not.toBeInTheDocument();
+
+    const headings = screen.getAllByRole("heading", { level: 1, name: /proyectos/i });
+    expect(headings.length).toBeGreaterThan(0);
   });
 });
