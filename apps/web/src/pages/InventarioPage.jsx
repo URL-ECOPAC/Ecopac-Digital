@@ -7,6 +7,7 @@ import ModalRegistroIngreso from "./ModalRegistroIngreso.jsx";
 import { ModalSalidaMedicamento } from "./ModalSalidaMedicamento";
 import BandejaValidacionPage from "./BandejaValidacionPage";
 import { useVistaExistencias } from "../../../../packages/shared/inventario/useVistaExistencias.js";
+import PanelAlertasVencimiento from "./PanelAlertasVencimiento.jsx";
 import AdministracionBodegasProveedoresPage from "./AdministracionBodegasProveedoresPage.jsx";
 import { useAlertasVencimiento } from "../../../../packages/shared/inventario/useAlertasVencimiento.js";
 import KardexMovimientosPage from "./KardexMovimientosPage.jsx";
@@ -453,14 +454,45 @@ export default function InventarioPage() {
           </p>
         </div>
 
-        {/* ✅ BOTONES SOLO VISIBLES EN CATÁLOGO Y LOTES — OCULTOS EN VALIDACIÓN */}
-        {esAdmin &&
-          tabActiva !== "validacion" &&
-          tabActiva !== "administracion" &&
-          tabActiva !== "kardex" && (
-            <div style={{ display: "flex", gap: "8px" }}>
+        {/* ✅ BOTONES SOLO VISIBLES EN CATÁLOGO Y LOTES — OCULTOS EN VALIDACIÓN Y ADMINISTRACIÓN */}
+        {esAdmin && tabActiva !== "validacion" && tabActiva !== "administracion" && (
+          <div style={{ display: "flex", gap: "8px" }}>
+            {/* Botones comunes: siempre visibles en Catálogo y Lotes */}
+            <button
+              onClick={() => setModalRegistroIngresoAbierto(true)}
+              style={{
+                padding: "10px 20px",
+                borderRadius: "9999px",
+                border: "none",
+                backgroundColor: "#059669",
+                color: "#ffffff",
+                fontSize: "13px",
+                fontWeight: "700",
+                cursor: "pointer",
+              }}
+            >
+              + Registrar Ingreso
+            </button>
+            <button
+              onClick={() => setModalSalidaAbierto(true)}
+              style={{
+                padding: "10px 20px",
+                borderRadius: "9999px",
+                border: "none",
+                backgroundColor: "#b45309",
+                color: "#ffffff",
+                fontSize: "13px",
+                fontWeight: "700",
+                cursor: "pointer",
+              }}
+            >
+              + Registrar Salida
+            </button>
+            {/* Botón adicional según pestaña activa */}
+            {tabActiva === "catalogo" ? (
               <button
-                onClick={() => setModalRegistroIngresoAbierto(true)}
+                type="button"
+                onClick={abrirModalNuevo}
                 style={{
                   padding: "10px 20px",
                   borderRadius: "9999px",
@@ -472,64 +504,32 @@ export default function InventarioPage() {
                   cursor: "pointer",
                 }}
               >
-                + Registrar Ingreso
+                + Nuevo Medicamento
               </button>
+            ) : tabActiva === "lotes" ? (
               <button
-                onClick={() => setModalSalidaAbierto(true)}
+                onClick={() => {
+                  setErrorLotes(null);
+                  setModalAltaLoteAbierto(true);
+                }}
                 style={{
                   padding: "10px 20px",
                   borderRadius: "9999px",
                   border: "none",
-                  backgroundColor: "#b45309",
+                  backgroundColor: "#059669",
                   color: "#ffffff",
                   fontSize: "13px",
                   fontWeight: "700",
                   cursor: "pointer",
                 }}
               >
-                + Registrar Salida
+                + Registrar Lote
               </button>
-              {tabActiva === "catalogo" ? (
-                <button
-                  type="button"
-                  onClick={abrirModalNuevo}
-                  style={{
-                    padding: "10px 20px",
-                    borderRadius: "9999px",
-                    border: "none",
-                    backgroundColor: "#059669",
-                    color: "#ffffff",
-                    fontSize: "13px",
-                    fontWeight: "700",
-                    cursor: "pointer",
-                  }}
-                >
-                  + Nuevo Medicamento
-                </button>
-              ) : tabActiva === "lotes" ? (
-                <button
-                  onClick={() => {
-                    setErrorLotes(null);
-                    setModalAltaLoteAbierto(true);
-                  }}
-                  style={{
-                    padding: "10px 20px",
-                    borderRadius: "9999px",
-                    border: "none",
-                    backgroundColor: "#059669",
-                    color: "#ffffff",
-                    fontSize: "13px",
-                    fontWeight: "700",
-                    cursor: "pointer",
-                  }}
-                >
-                  + Registrar Lote
-                </button>
-              ) : null}
-            </div>
-          )}
-      </div>
-
+            ) : null}
+          </div>
+        )}
+      </div>{" "}
+      {/* ✅ FALTABA cerrar este div del HEADER */}
       {/* 2. Pestañas de Navegación Módulo */}
       <div style={{ display: "flex", borderBottom: "1px solid #e2e8f0", gap: "16px" }}>
         <button
@@ -597,21 +597,6 @@ export default function InventarioPage() {
           )}
         </button>
         <button
-          onClick={() => setTabActiva("kardex")}
-          style={{
-            padding: "8px 16px",
-            fontSize: "13px",
-            fontWeight: "700",
-            border: "none",
-            background: "none",
-            cursor: "pointer",
-            borderBottom: tabActiva === "kardex" ? "2px solid #8b5cf6" : "2px solid transparent",
-            color: tabActiva === "kardex" ? "#7c3aed" : "#64748b",
-          }}
-        >
-          Kardex de Movimientos
-        </button>
-        <button
           onClick={() => setTabActiva("administracion")}
           style={{
             padding: "8px 16px",
@@ -662,7 +647,6 @@ export default function InventarioPage() {
           )}
         </button>
       </div>
-
       {error && (
         <div
           style={{
@@ -676,7 +660,6 @@ export default function InventarioPage() {
           {error}
         </div>
       )}
-
       {/* ✅ CONTENIDO SEGÚN PESTAÑA ACTIVA */}
       {/* Pestaña: CATÁLOGO */}
       {tabActiva === "catalogo" && (
@@ -1154,7 +1137,6 @@ export default function InventarioPage() {
           </div>
         </>
       )}
-
       {/* ✅ Pestaña: LOTES (mantiene tu código original) */}
       {tabActiva === "lotes" && (
         <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
@@ -1471,7 +1453,6 @@ export default function InventarioPage() {
           </div>
         </div>
       )}
-
       {/* ✅ Pestaña: BANDEJA DE VALIDACIÓN */}
       {tabActiva === "validacion" && <BandejaValidacionPage />}
       {/* ✅ Pestaña: Alertas de Vencimiento */}
@@ -1618,7 +1599,6 @@ export default function InventarioPage() {
       )}
       {/* ✅ Pestaña: Administración de Bodegas y Proveedores */}
       {tabActiva === "administracion" && <AdministracionBodegasProveedoresPage />}
-
       {/* Modales */}
       {modalAbierto && (
         <ModalMedicamento
@@ -1636,13 +1616,11 @@ export default function InventarioPage() {
       )}
       {/* ✅ Pestaña: Kardex de Movimientos */}
       {tabActiva === "kardex" && <KardexMovimientosPage titulo="Historial de Movimientos" />}
-
       <ModalSalidaMedicamento
         abierto={modalSalidaAbierto}
         onClose={() => setModalSalidaAbierto(false)}
         medicamentos={inventarioRaw}
       />
-
       {modalAltaLoteAbierto && (
         <ModalAltaLote
           abierto={modalAltaLoteAbierto}
@@ -1654,7 +1632,6 @@ export default function InventarioPage() {
           proveedores={proveedores}
         />
       )}
-
       {alertaSeleccionada && (
         <ModalAtenderAlerta
           alerta={alertaSeleccionada}
@@ -1662,7 +1639,6 @@ export default function InventarioPage() {
           onResolver={handleResolverAlerta}
         />
       )}
-
       {modalRegistroIngresoAbierto && (
         <ModalRegistroIngreso
           abierto={modalRegistroIngresoAbierto}
