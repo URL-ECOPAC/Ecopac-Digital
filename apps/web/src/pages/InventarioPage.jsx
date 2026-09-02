@@ -76,22 +76,22 @@ export default function InventarioPage() {
     formaFarmaceutica: "",
   });
 
- const {
-  cantidadPendientes: cantidadPendientesAlertas,
-  busqueda: busquedaAlertas,           // ✅ FALTABA ESTA
-  setBusqueda: setBusquedaAlertas,     // ✅ FALTABA ESTA
-  filtroBodega: filtroBodegaAlertas,   // ✅ FALTABA ESTA
-  setFiltroBodega: setFiltroBodegaAlertas, // ✅ FALTABA ESTA
-  filtroCategoria: filtroCategoriaAlertas, // ✅ FALTABA ESTA
-  setFiltroCategoria: setFiltroCategoriaAlertas, // ✅ FALTABA ESTA
-  categoriasDisponibles: categoriasDisponiblesAlertas,
-  porVencer,
-  vencidas,
-  marcarComoAtendida,
-} = useAlertasVencimiento({
-  lotes: lotesRaw,
-  bodegas: bodegas,
-});
+  const {
+    cantidadPendientes: cantidadPendientesAlertas,
+    busqueda: busquedaAlertas,           // ✅ FALTABA ESTA
+    setBusqueda: setBusquedaAlertas,     // ✅ FALTABA ESTA
+    filtroBodega: filtroBodegaAlertas,   // ✅ FALTABA ESTA
+    setFiltroBodega: setFiltroBodegaAlertas, // ✅ FALTABA ESTA
+    filtroCategoria: filtroCategoriaAlertas, // ✅ FALTABA ESTA
+    setFiltroCategoria: setFiltroCategoriaAlertas, // ✅ FALTABA ESTA
+    categoriasDisponibles: categoriasDisponiblesAlertas,
+    porVencer,
+    vencidas,
+    marcarComoAtendida,
+  } = useAlertasVencimiento({
+    lotes: lotesRaw,
+    bodegas: bodegas,
+  });
 
   // Modales Lotes y Alertas
   const [modalAltaLoteAbierto, setModalAltaLoteAbierto] = useState(false);
@@ -1441,111 +1441,111 @@ export default function InventarioPage() {
       {tabActiva === "validacion" && <BandejaValidacionPage />}
       {/* ✅ Pestaña: Alertas de Vencimiento */}
       {tabActiva === "alertas" && (
-  <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-    {/* Cabecera — MISMO tamaño y estilo que las otras pestañas */}
-    <div>
-      <h3 style={{ 
-        fontSize: "16px", 
-        fontWeight: "700", 
-        margin: 0, 
-        color: "#1e293b" 
-      }}>
-         Alertas de Vencimiento
-      </h3>
-      <p style={{ 
-        fontSize: "13px", 
-        color: "#94a3b8", 
-        margin: "4px 0 0 0" 
-      }}>
-        Medicamentos próximos a caducar (próximos 30 días)
-      </p>
-    </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+          {/* Cabecera — MISMO tamaño y estilo que las otras pestañas */}
+          <div>
+            <h3 style={{
+              fontSize: "16px",
+              fontWeight: "700",
+              margin: 0,
+              color: "#1e293b"
+            }}>
+              Alertas de Vencimiento
+            </h3>
+            <p style={{
+              fontSize: "13px",
+              color: "#94a3b8",
+              margin: "4px 0 0 0"
+            }}>
+              Medicamentos próximos a caducar (próximos 30 días)
+            </p>
+          </div>
 
-    {/* Contador */}
-    <div style={{ 
-      alignSelf: "flex-start",
-      padding: "6px 14px", 
-      backgroundColor: "#fffbeb", 
-      borderRadius: "9999px",
-      border: "1px solid #fef3c7",
-      fontSize: "13px",
-      fontWeight: 600,
-      color: "#92400e"
-    }}>
-      {cantidadPendientesAlertas} pendientes
-    </div>
+          {/* Contador */}
+          <div style={{
+            alignSelf: "flex-start",
+            padding: "6px 14px",
+            backgroundColor: "#fffbeb",
+            borderRadius: "9999px",
+            border: "1px solid #fef3c7",
+            fontSize: "13px",
+            fontWeight: 600,
+            color: "#92400e"
+          }}>
+            {cantidadPendientesAlertas} pendientes
+          </div>
 
-    {/* Filtros — MISMO estilo */}
-    <div style={{ display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap" }}>
-      <input
-        type="text"
-        placeholder="Buscar medicamento o lote..."
-        value={busquedaAlertas}
-        onChange={(e) => setBusquedaAlertas(e.target.value)}
-        style={{
-          flex: 1, minWidth: "240px",
-          padding: "10px 16px", borderRadius: "9999px",
-          border: "1px solid #e2e8f0", backgroundColor: "#fff",
-          fontSize: "13px", outline: "none",
-        }}
-      />
-      <select
-        value={filtroBodegaAlertas}
-        onChange={(e) => setFiltroBodegaAlertas(e.target.value)}
-        style={{ padding: "10px 14px", borderRadius: "12px", border: "1px solid #e2e8f0", fontSize: "13px" }}
-      >
-        <option value="todas">Todas las bodegas</option>
-        {bodegas.map((b, i) => (
-          <option key={i} value={b.nombre || b}>{b.nombre || b}</option>
-        ))}
-      </select>
-      <select
-  value={filtroCategoriaAlertas}
-  onChange={(e) => setFiltroCategoriaAlertas(e.target.value)}
-  style={{ padding: "10px 14px", borderRadius: "12px", border: "1px solid #e2e8f0", fontSize: "13px" }}
->
-  <option value="todas">Todas las categorías</option>
-  {lotesRaw
-    .map(lote => lote.medicamento?.categoria)
-    .filter((cat, index, self) => {
-      // Quita valores vacíos y duplicados
-      return cat && cat.trim() !== "" && self.indexOf(cat) === index;
-    })
-    .sort()
-    .map((categoria, i) => (
-      <option key={i} value={categoria}>
-        {categoria}
-      </option>
-    ))}
-</select>
-    </div>
+          {/* Filtros — MISMO estilo */}
+          <div style={{ display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap" }}>
+            <input
+              type="text"
+              placeholder="Buscar medicamento o lote..."
+              value={busquedaAlertas}
+              onChange={(e) => setBusquedaAlertas(e.target.value)}
+              style={{
+                flex: 1, minWidth: "240px",
+                padding: "10px 16px", borderRadius: "9999px",
+                border: "1px solid #e2e8f0", backgroundColor: "#fff",
+                fontSize: "13px", outline: "none",
+              }}
+            />
+            <select
+              value={filtroBodegaAlertas}
+              onChange={(e) => setFiltroBodegaAlertas(e.target.value)}
+              style={{ padding: "10px 14px", borderRadius: "12px", border: "1px solid #e2e8f0", fontSize: "13px" }}
+            >
+              <option value="todas">Todas las bodegas</option>
+              {bodegas.map((b, i) => (
+                <option key={i} value={b.nombre || b}>{b.nombre || b}</option>
+              ))}
+            </select>
+            <select
+              value={filtroCategoriaAlertas}
+              onChange={(e) => setFiltroCategoriaAlertas(e.target.value)}
+              style={{ padding: "10px 14px", borderRadius: "12px", border: "1px solid #e2e8f0", fontSize: "13px" }}
+            >
+              <option value="todas">Todas las categorías</option>
+              {lotesRaw
+                .map(lote => lote.medicamento?.categoria)
+                .filter((cat, index, self) => {
+                  // Quita valores vacíos y duplicados
+                  return cat && cat.trim() !== "" && self.indexOf(cat) === index;
+                })
+                .sort()
+                .map((categoria, i) => (
+                  <option key={i} value={categoria}>
+                    {categoria}
+                  </option>
+                ))}
+            </select>
+          </div>
 
-    {/* Aquí tu tabla o contenido */}
-    <div>
-      <h4 style={{ fontSize: "14px", fontWeight: 600, color: "#d97706", margin: "0 0 12px 0" }}>
-        Próximos a vencer ({porVencer.length})
-      </h4>
-      {porVencer.length === 0 ? (
-        <p style={{ fontSize: "13px", color: "#94a3b8", textAlign: "center", padding: "20px" }}>
-          No hay lotes por vencer en los próximos 30 días 
-        </p>
-      ) : (
-        <div>Tu tabla aquí</div>
+          {/* Aquí tu tabla o contenido */}
+          <div>
+            <h4 style={{ fontSize: "14px", fontWeight: 600, color: "#d97706", margin: "0 0 12px 0" }}>
+              Próximos a vencer ({porVencer.length})
+            </h4>
+            {porVencer.length === 0 ? (
+              <p style={{ fontSize: "13px", color: "#94a3b8", textAlign: "center", padding: "20px" }}>
+                No hay lotes por vencer en los próximos 30 días
+              </p>
+            ) : (
+              <div>Tu tabla aquí</div>
+            )}
+
+            <h4 style={{ fontSize: "14px", fontWeight: 600, color: "#dc2626", margin: "24px 0 12px 0" }}>
+              Vencidos — Para dar de baja ({vencidas.length})
+            </h4>
+            {vencidas.length === 0 ? (
+              <p style={{ fontSize: "13px", color: "#94a3b8", textAlign: "center", padding: "20px" }}>
+                No hay lotes vencidos
+              </p>
+            ) : (
+              <div>Tu tabla aquí</div>
+            )}
+          </div>
+        </div>
       )}
-
-      <h4 style={{ fontSize: "14px", fontWeight: 600, color: "#dc2626", margin: "24px 0 12px 0" }}>
-        Vencidos — Para dar de baja ({vencidas.length})
-      </h4>
-      {vencidas.length === 0 ? (
-        <p style={{ fontSize: "13px", color: "#94a3b8", textAlign: "center", padding: "20px" }}>
-          No hay lotes vencidos 
-        </p>
-      ) : (
-        <div>Tu tabla aquí</div>
-      )}
-    </div>
-  </div>
-)}
 
       {/* Modales */}
       {modalAbierto && (

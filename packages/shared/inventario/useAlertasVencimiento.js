@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from "react";
-import { listarAlertas, atenderAlerta } from "./alertas.api.js";
+import { atenderAlerta } from "./alertas.api.js";
 
 export const ESTADO_ALERTA = {
   POR_VENCER: "POR_VENCER",
@@ -95,17 +95,12 @@ export function useAlertasVencimiento({ lotes = [], bodegas = [] }) {
 
   // ✅ Atender alerta: exige acción obligatoria
   const marcarComoAtendida = useCallback(async (alertaId, accionTomada) => {
-    if (!accionTomada || accionTomada.trim() === "") {
-      throw new Error("Debe indicar la acción tomada");
-    }
-    try {
-      await atenderAlerta(alertaId, { accionTomada });
-      setAlertasAtendidas((prev) => [...prev, alertaId]);
-    } catch (error) {
-      throw error;
-    }
-  }, []);
-
+  if (!accionTomada || accionTomada.trim() === "") {
+    throw new Error("Debe indicar la acción tomada");
+  }
+  await atenderAlerta(alertaId, { accionTomada });
+  setAlertasAtendidas((prev) => [...prev, alertaId]);
+}, []);
   // 🔄 Limpiar filtros
   const limpiarFiltros = useCallback(() => {
     setBusqueda("");
