@@ -13,6 +13,7 @@ import {
   puedeVerRosterCompleto,
   useCuadroTurnos,
   useDetalleJornada,
+  useResumenCierreJornada,
 } from "@ecopac/shared";
 
 import {
@@ -20,7 +21,6 @@ import {
   DataList,
   ErrorState,
   LoadingState,
-  Modal,
   PageHeader,
   PrimaryButton,
   ScreenContainer,
@@ -46,11 +46,20 @@ import NotFoundPage from "./NotFoundPage";
 // ademas es util de verdad para un equipo que se pasa un enlace. La ruta vive en App.jsx con
 // el mismo guard de roles que ya protege /jornadas; no se toco navegacion.js (una ruta puede
 // existir sin entrada en MODULOS, como ya hace /perfil).
+//
+// Pestaña "Cierre" (issue #183, excepcion de alcance autorizada: pestaña nueva, mismo
+// tratamiento que "Equipo" de #185): unica dueña de la transicion en curso -> finalizada. El
+// boton "Avanzar" de la pestaña "Resumen" (mas abajo) NO llama a cambiarEstado() para ese
+// destino -- cambia pestaniaActiva a "cierre" en su lugar. Sirve para el resumen previo (criterios
+// 1-3, con useResumenCierreJornada()) y para consultarlo despues (criterio 5): es la misma
+// pestaña, no dos -- lo que cambia es si se ofrece el boton "Confirmar cierre" (solo con la
+// jornada en curso y permiso), no el contenido que se calcula.
 const PESTANIAS = [
   { id: "resumen", label: "Resumen" },
   { id: "equipo", label: "Equipo" },
   { id: "pacientes", label: "Pacientes atendidos" },
   { id: "historial", label: "Historial" },
+  { id: "cierre", label: "Cierre" },
 ];
 
 /** Etiquetas de COLUMNAS_JORNADA, igual que JornadasPage.jsx, para no repetir texto suelto. */
@@ -82,9 +91,6 @@ export default function DetalleJornadaPage() {
     moviendo,
     errorMovimiento,
     descartarErrorMovimiento,
-    confirmacionFinalizar,
-    confirmarFinalizacion,
-    cancelarFinalizacion,
   } = useDetalleJornada({ jornadaId: id, rol });
 
   // Issue #185: advertencias de horario del cuadro de turnos (choque de dia completo de #182 +
@@ -96,6 +102,19 @@ export default function DetalleJornadaPage() {
     jornadaFecha: jornada?.fecha,
     personal: jornada?.personal,
   });
+
+  // Issue #183: resumen y confirmacion de la pestaña "Cierre". `onCerrada: recargar` es lo que
+  // hace que, al confirmar, esta pantalla vuelva a leer la jornada (useDetalleJornada.recargar) y
+  // se refleje el nuevo estado ("finalizada") en el resto de la pantalla -- mismo patron que
+  // onGuardado/onAsignado ya usan con recargarPersonal() en la pestaña Equipo.
+  const {
+    resumen: resumenCierre,
+    cargando: cargandoResumenCierre,
+    hayAdvertencias: hayAdvertenciasDeCierre,
+    confirmarCierre,
+    confirmando: confirmandoCierre,
+    errorCierre,
+  } = useResumenCierreJornada({ jornada, rol, onCerrada: recargar });
 
   const [pestaniaActiva, setPestaniaActiva] = useState("resumen");
   // Issue #182: modal de buscar/asignar, gateado por permisos.puedeEditar mas abajo (espejo de
@@ -250,12 +269,15 @@ export default function DetalleJornadaPage() {
             <Card>
               <div className="d-flex justify-content-between align-items-start gap-2 mb-3">
                 <StatusChip status={jornada.estado} />
-                {/* Cambiar estado (criterio 4): mismas piezas que el tablero (issue #180) --
-                  cambiarEstado() ya decide si hace falta la advertencia de atenciones
-                  incompletas antes de finalizar (useDetalleJornada.js). `disabled={moviendo}`
-                  evita un segundo click mientras la llamada esta en curso; por eso este control
-                  vive aca y no en PageHeader, cuyo contrato de `actions` (label/onClick/variant)
-                  no tiene forma de deshabilitar un boton. */}
+                {/* Cambiar estado: "Atras" (reapertura) sigue llamando a cambiarEstado()
+                  directamente, sin cambios. "Avanzar", cuando el destino es 'finalizada' (issue
+                  #183), YA NO llama a cambiarEstado(): cambia a la pestaña "Cierre", que es la
+                  unica dueña de esa transicion (resumen completo + confirmacion explicita, ver
+                  el comentario de PESTANIAS). Antes (issue #171) este boton finalizaba
+                  directamente, con un aviso aislado de atenciones incompletas.
+                  `disabled={moviendo}` evita un segundo click mientras la llamada esta en curso;
+                  por eso este control vive aca y no en PageHeader, cuyo contrato de `actions`
+                  (label/onClick/variant) no tiene forma de deshabilitar un boton. */}
                 {puedeMover && esReapertura && (
                   <SecondaryButton
                     title="← Atras"
@@ -266,7 +288,11 @@ export default function DetalleJornadaPage() {
                 {puedeMover && !esReapertura && (
                   <PrimaryButton
                     title="Avanzar →"
-                    onClick={() => cambiarEstado(destino)}
+                    onClick={() =>
+                      destino === ESTADOS_JORNADA.FINALIZADA
+                        ? setPestaniaActiva("cierre")
+                        : cambiarEstado(destino)
+                    }
                     loading={moviendo}
                   />
                 )}
@@ -412,26 +438,109 @@ export default function DetalleJornadaPage() {
               vacio="Esta jornada todavia no tiene cambios de estado registrados."
             />
           )}
-        </Tabs>
-      )}
 
-      {confirmacionFinalizar && (
-        <Modal visible onClose={cancelarFinalizacion} title="Finalizar jornada">
-          <div className="alert alert-warning" role="alert">
-            {confirmacionFinalizar.cantidad === 1
-              ? "Esta jornada tiene 1 atencion registrada sin consulta todavia."
-              : `Esta jornada tiene ${confirmacionFinalizar.cantidad} atenciones registradas sin consulta todavia.`}{" "}
-            ¿Confirmas finalizarla de todas formas?
-          </div>
-          <div className="d-flex justify-content-end gap-2 mt-3">
-            <SecondaryButton title="Cancelar" onClick={cancelarFinalizacion} disabled={moviendo} />
-            <PrimaryButton
-              title="Finalizar de todas formas"
-              onClick={confirmarFinalizacion}
-              loading={moviendo}
-            />
-          </div>
-        </Modal>
+          {/* Pestaña "Cierre" (issue #183). Misma pestaña antes y despues de finalizar
+              (criterio 5): lo unico que cambia es si mas abajo se ofrece "Confirmar cierre"
+              (jornada en curso + permiso), no el contenido -- ver el comentario de PESTANIAS mas
+              arriba. Los indicadores NO salen de vista_reporte_impacto (a diferencia de la
+              pestaña "Resumen"): salen de useResumenCierreJornada(), que reusa las mismas
+              funciones que el panel de la jornada en curso movil (issue #187) -- ver
+              resumenCierre.js.
+
+              Visible para los 5 roles (igual que "Resumen"), no solo administrador: quien puede
+              tocar "Confirmar cierre" es unicamente permisos.puedeEditar (administrador), pero
+              cualquiera que vea el detalle de la jornada puede consultar el resumen. pacientesAtendidos
+              y atencionesIncompletas pueden llegar en `null` para junta directiva/socio fundador (sin
+              SELECT sobre atenciones/consultas, 00033): se pintan como guion o como un aviso aparte,
+              NUNCA como 0 -- un 0 ahi diria "todo completo" cuando en realidad es "no se pudo saber",
+              justo lo que esta pantalla existe para evitar (ver resumenCierre.js). Como
+              administrador siempre tiene esas dos tablas visibles, quien de verdad puede confirmar el
+              cierre nunca ve un guion. */}
+          {pestaniaActiva === "cierre" && (
+            <Card>
+              {cargandoResumenCierre ? (
+                <LoadingState />
+              ) : (
+                <>
+                  <div className="row text-center mb-3">
+                    <div className="col-6 col-md-4 mb-3">
+                      <div className="h4 mb-0">
+                        {resumenCierre.indicadores.pacientesAtendidos ?? "—"}
+                      </div>
+                      <div className="small text-muted">Pacientes atendidos</div>
+                    </div>
+                    <div className="col-6 col-md-4 mb-3">
+                      <div className="h4 mb-0">
+                        {resumenCierre.indicadores.consultasRealizadas ?? "—"}
+                      </div>
+                      <div className="small text-muted">Consultas registradas</div>
+                    </div>
+                    <div className="col-6 col-md-4 mb-3">
+                      <div className="h4 mb-0">
+                        {resumenCierre.indicadores.tratamientosEntregados ?? "—"}
+                      </div>
+                      <div className="small text-muted">Medicamentos entregados</div>
+                    </div>
+                  </div>
+
+                  {/* Advertencias (criterio 2): informan, nunca deshabilitan "Confirmar cierre"
+                      (criterio 8 -- se advierte, no se impide, mismo criterio que el excedente de
+                      presupuesto en #303). `atencionesIncompletas` en null (rol sin acceso a datos
+                      clinicos) se avisa aparte, con un mensaje distinto: no es lo mismo "no hay
+                      atenciones sin consulta" que "no pude verificarlo". */}
+                  {resumenCierre.atencionesIncompletas === null && (
+                    <div className="alert alert-secondary" role="alert">
+                      No se pudo comprobar si hay atenciones sin consulta: tu rol no tiene acceso a
+                      esa informacion clinica.
+                    </div>
+                  )}
+                  {resumenCierre.atencionesIncompletas !== null &&
+                    resumenCierre.atencionesIncompletas > 0 && (
+                      <div className="alert alert-warning" role="alert">
+                        {resumenCierre.atencionesIncompletas === 1
+                          ? "Hay 1 atencion registrada sin consulta todavia."
+                          : `Hay ${resumenCierre.atencionesIncompletas} atenciones registradas sin consulta todavia.`}
+                      </div>
+                    )}
+                  {resumenCierre.movimientosPendientes > 0 && (
+                    <div className="alert alert-warning" role="alert">
+                      {resumenCierre.movimientosPendientes === 1
+                        ? "Hay 1 movimiento de inventario del botiquin de esta jornada pendiente de validar."
+                        : `Hay ${resumenCierre.movimientosPendientes} movimientos de inventario del botiquin de esta jornada pendientes de validar.`}
+                    </div>
+                  )}
+                  {!hayAdvertenciasDeCierre &&
+                    resumenCierre.atencionesIncompletas !== null &&
+                    jornada.estado === ESTADOS_JORNADA.EN_CURSO && (
+                      <div className="alert alert-success" role="alert">
+                        No hay atenciones sin consulta ni movimientos pendientes de validar.
+                      </div>
+                    )}
+
+                  {errorCierre && (
+                    <div className="alert alert-danger" role="alert">
+                      {errorCierre}
+                    </div>
+                  )}
+
+                  {/* Confirmar cierre (criterio 3): solo con la jornada en curso y el mismo
+                      permiso que ya gatea "Avanzar" en la pestaña "Resumen" (permisos.puedeEditar,
+                      espejo de puedeAdministrarJornadas()). Finalizada, esta pestaña se queda solo
+                      con los numeros de arriba (criterio 5). */}
+                  {jornada.estado === ESTADOS_JORNADA.EN_CURSO && permisos.puedeEditar && (
+                    <div className="d-flex justify-content-end mt-3">
+                      <PrimaryButton
+                        title="Confirmar cierre"
+                        onClick={confirmarCierre}
+                        loading={confirmandoCierre}
+                      />
+                    </div>
+                  )}
+                </>
+              )}
+            </Card>
+          )}
+        </Tabs>
       )}
 
       {/* Issue #182. onAsignado llama a recargarPersonal() (useDetalleJornada.js), no a
