@@ -184,10 +184,8 @@ export default function BandejaValidacionPage() {
                           fontSize: "11px",
                           fontWeight: "700",
                           textTransform: "uppercase",
-                          backgroundColor:
-                            mov.tipo === "ingreso" ? "#d1fae5" : "#fef3c7",
-                          color:
-                            mov.tipo === "ingreso" ? "#065f46" : "#78350f",
+                          backgroundColor: mov.tipo === "ingreso" ? "#d1fae5" : "#fef3c7",
+                          color: mov.tipo === "ingreso" ? "#065f46" : "#78350f",
                           letterSpacing: "0.5px",
                         }}
                       >
@@ -197,9 +195,7 @@ export default function BandejaValidacionPage() {
 
                     {/* Medicamento / Lote */}
                     <td style={{ padding: "16px 20px", textAlign: "left" }}>
-                      <div style={{ fontWeight: "600", color: "#1e293b" }}>
-                        {mov.medicamento}
-                      </div>
+                      <div style={{ fontWeight: "600", color: "#1e293b" }}>{mov.medicamento}</div>
                       <div
                         style={{
                           fontSize: "12px",
@@ -235,9 +231,7 @@ export default function BandejaValidacionPage() {
                     </td>
 
                     {/* Registrado por */}
-                    <td style={{ padding: "16px 20px", color: "#475569" }}>
-                      {mov.registradoPor}
-                    </td>
+                    <td style={{ padding: "16px 20px", color: "#475569" }}>{mov.registradoPor}</td>
 
                     {/* Acciones */}
                     <td
@@ -264,10 +258,7 @@ export default function BandejaValidacionPage() {
                             color: "#ffffff",
                             fontSize: "12px",
                             fontWeight: "700",
-                            cursor:
-                              procesandoId === mov.id
-                                ? "not-allowed"
-                                : "pointer",
+                            cursor: procesandoId === mov.id ? "not-allowed" : "pointer",
                             opacity: procesandoId === mov.id ? 0.6 : 1,
                             transition: "all 0.15s ease",
                           }}
@@ -285,10 +276,7 @@ export default function BandejaValidacionPage() {
                             color: "#dc2626",
                             fontSize: "12px",
                             fontWeight: "700",
-                            cursor:
-                              procesandoId === mov.id
-                                ? "not-allowed"
-                                : "pointer",
+                            cursor: procesandoId === mov.id ? "not-allowed" : "pointer",
                             opacity: procesandoId === mov.id ? 0.6 : 1,
                             transition: "all 0.15s ease",
                           }}

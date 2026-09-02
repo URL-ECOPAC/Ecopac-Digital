@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback } from "react";
 
 // ─── Estados de vencimiento ───
 // REGLAS ALINEADAS CON MIGRACIÓN #597:
@@ -6,10 +6,10 @@ import { useState, useMemo, useCallback } from 'react';
 // • Vence ANTES de hoy → VENCIDO
 // • Vence dentro de ≤30 días → PRÓXIMO A VENCER
 export const ESTADO_EXISTENCIA = {
-  DISPONIBLE: 'Disponible',
-  POR_VENCER: 'Próximo a vencer',
-  VENCIDO: 'Vencido',
-  SIN_STOCK: 'Sin existencia',
+  DISPONIBLE: "Disponible",
+  POR_VENCER: "Próximo a vencer",
+  VENCIDO: "Vencido",
+  SIN_STOCK: "Sin existencia",
 };
 
 // ─── Umbrales ───
@@ -48,8 +48,8 @@ export function calcularEstadoVencimiento(fechaCaducidad, stockDisponible) {
   if (diasRestantes === null) return ESTADO_EXISTENCIA.DISPONIBLE;
 
   // === REGLAS ALINEADAS CON #597 ===
-  if (diasRestantes < 0)   return ESTADO_EXISTENCIA.VENCIDO;          // ya venció
-  if (diasRestantes === 0) return ESTADO_EXISTENCIA.DISPONIBLE;       // vence HOY → válido
+  if (diasRestantes < 0) return ESTADO_EXISTENCIA.VENCIDO; // ya venció
+  if (diasRestantes === 0) return ESTADO_EXISTENCIA.DISPONIBLE; // vence HOY → válido
   if (diasRestantes <= DIAS_AVISO_VENCIMIENTO) return ESTADO_EXISTENCIA.POR_VENCER;
   return ESTADO_EXISTENCIA.DISPONIBLE;
 }
@@ -57,9 +57,9 @@ export function calcularEstadoVencimiento(fechaCaducidad, stockDisponible) {
 // ─── Hook principal ───
 export function useVistaExistencias({ existencias = [], bodegas = [] }) {
   // Filtros
-  const [busqueda, setBusqueda] = useState('');
-  const [filtroBodega, setFiltroBodega] = useState('todas');
-  const [filtroEstado, setFiltroEstado] = useState('todos');
+  const [busqueda, setBusqueda] = useState("");
+  const [filtroBodega, setFiltroBodega] = useState("todas");
+  const [filtroEstado, setFiltroEstado] = useState("todos");
   const [ocultarSinExistencia, setOcultarSinExistencia] = useState(false);
   const [filasExpandidas, setFilasExpandidas] = useState(new Set());
 
@@ -82,15 +82,15 @@ export function useVistaExistencias({ existencias = [], bodegas = [] }) {
         (item) =>
           item.nombre?.toLowerCase().includes(t) ||
           item.codigo?.toLowerCase().includes(t) ||
-          item.lote?.toLowerCase().includes(t)
+          item.lote?.toLowerCase().includes(t),
       );
     }
 
-    if (filtroBodega && filtroBodega !== 'todas') {
+    if (filtroBodega && filtroBodega !== "todas") {
       resultado = resultado.filter((item) => item.bodega === filtroBodega);
     }
 
-    if (filtroEstado && filtroEstado !== 'todos') {
+    if (filtroEstado && filtroEstado !== "todos") {
       resultado = resultado.filter((item) => item.estado === filtroEstado);
     }
 
@@ -147,22 +147,22 @@ export function useVistaExistencias({ existencias = [], bodegas = [] }) {
   }, []);
 
   const limpiarFiltros = useCallback(() => {
-    setBusqueda('');
-    setFiltroBodega('todas');
-    setFiltroEstado('todos');
+    setBusqueda("");
+    setFiltroBodega("todas");
+    setFiltroEstado("todos");
     setOcultarSinExistencia(false);
     setFilasExpandidas(new Set());
   }, []);
 
   // ─── Descriptores de columnas ───
   const columnas = [
-    { clave: 'nombre', etiqueta: 'Medicamento', ordenable: true },
-    { clave: 'concentracion', etiqueta: 'Concentración', ordenable: true },
-    { clave: 'presentacion', etiqueta: 'Presentación', ordenable: true },
-    { clave: 'marca', etiqueta: 'Marca', ordenable: true },
-    { clave: 'stockTotal', etiqueta: 'Disponible', ordenable: true, alineacion: 'derecha' },
-    { clave: 'fechaVencimientoMasProxima', etiqueta: 'Próximo venc.', ordenable: true },
-    { clave: 'estado', etiqueta: 'Estado', ordenable: false },
+    { clave: "nombre", etiqueta: "Medicamento", ordenable: true },
+    { clave: "concentracion", etiqueta: "Concentración", ordenable: true },
+    { clave: "presentacion", etiqueta: "Presentación", ordenable: true },
+    { clave: "marca", etiqueta: "Marca", ordenable: true },
+    { clave: "stockTotal", etiqueta: "Disponible", ordenable: true, alineacion: "derecha" },
+    { clave: "fechaVencimientoMasProxima", etiqueta: "Próximo venc.", ordenable: true },
+    { clave: "estado", etiqueta: "Estado", ordenable: false },
   ];
 
   return {
@@ -170,13 +170,18 @@ export function useVistaExistencias({ existencias = [], bodegas = [] }) {
     columnas,
     bodegasDisponibles: bodegas,
 
-    busqueda, setBusqueda,
-    filtroBodega, setFiltroBodega,
-    filtroEstado, setFiltroEstado,
-    ocultarSinExistencia, setOcultarSinExistencia,
+    busqueda,
+    setBusqueda,
+    filtroBodega,
+    setFiltroBodega,
+    filtroEstado,
+    setFiltroEstado,
+    ocultarSinExistencia,
+    setOcultarSinExistencia,
     limpiarFiltros,
 
-    filasExpandidas, toggleExpandir,
+    filasExpandidas,
+    toggleExpandir,
 
     estadosDisponibles: Object.values(ESTADO_EXISTENCIA),
     ESTADO_EXISTENCIA,
