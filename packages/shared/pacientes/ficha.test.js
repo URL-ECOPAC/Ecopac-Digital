@@ -123,11 +123,23 @@ describe("valoresDeFichaPaciente", () => {
     }
   });
 
-  it("traduce idioma y tipo de sangre a su etiqueta", () => {
-    const valores = valoresDeFichaPaciente(PACIENTE);
+  // El idioma dejo de traducirse contra una lista en el codigo: desde la 00110 es un catalogo
+  // en la base y el nombre llega embebido en la consulta (issue #663).
+  it("muestra el nombre del idioma que trae el catalogo embebido", () => {
+    const valores = valoresDeFichaPaciente({
+      ...PACIENTE,
+      catalogoIdioma: { nombre: "K'iche'" },
+    });
 
     expect(valores.idioma).toBe("K'iche'");
-    expect(valores.tipoSangre).toBe("O+");
+  });
+
+  it("sin el embebido cae al codigo crudo en vez de dejar la celda vacia", () => {
+    expect(valoresDeFichaPaciente(PACIENTE).idioma).toBe("quiche");
+  });
+
+  it("traduce el tipo de sangre a su etiqueta", () => {
+    expect(valoresDeFichaPaciente(PACIENTE).tipoSangre).toBe("O+");
   });
 
   it("deja el valor crudo si la opcion no esta en el catalogo", () => {

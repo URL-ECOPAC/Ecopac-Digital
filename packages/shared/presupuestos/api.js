@@ -252,14 +252,47 @@ export async function editarGasto(idGasto, datosGasto) {
   }
 }
 
+/**
+ * Aplana `proyecto_id` (que vive en `jornadas`, no en `gastos`) a la fila del gasto, para que
+ * `columna.id: 'proyecto_id'` de COLUMNAS_GASTO (columnas.js) tenga de donde leer sin que
+ * DataList tenga que recorrer una ruta anidada (`gasto.jornadas.proyecto_id`), cosa que no sabe
+ * hacer: lee `fila[columna.desde ?? columna.id]` como propiedad plana.
+ *
+ * @param {object[]} gastos Filas de `gastos` con el join a `jornadas` embebido.
+ * @returns {object[]}
+ */
+export function conProyectoId(gastos = []) {
+  return gastos.map((gasto) => ({ ...gasto, proyecto_id: gasto.jornadas?.proyecto_id ?? null }));
+}
+
+// Columnas explicitas de gastos (00025_presupuesto_gastos.sql), en vez de "*": una columna nueva
+// en la tabla no debe empezar a viajar sola hasta el cliente sin que alguien lo decida aca.
+const COLUMNAS_DE_GASTO = [
+  "id",
+  "jornada_id",
+  "concepto",
+  "categoria",
+  "monto",
+  "fecha",
+  "responsable_id",
+  "estado",
+  "registrado_por",
+  "aprobado_por",
+  "aprobado_en",
+  "motivo_rechazo",
+  "created_at",
+  "updated_at",
+].join(", ");
+
 export async function listarGastos(filtros = {}) {
   try {
     const { estado, categoria, jornada_id, proyecto_id, fecha_inicio, fecha_fin } = filtros;
 
     let query = obtenerSupabase().from("gastos").select(`
-        *,
+        ${COLUMNAS_DE_GASTO},
         jornadas!inner (
           id,
+          nombre,
           proyecto_id,
           proyectos (
             id,
@@ -298,7 +331,7 @@ export async function listarGastos(filtros = {}) {
       return { gastos: [], error: normalizarError(error) };
     }
 
-    return { gastos: data || [], error: null };
+    return { gastos: conProyectoId(data || []), error: null };
   } catch (error) {
     return { gastos: [], error: normalizarError(error) };
   }
