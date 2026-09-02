@@ -179,7 +179,10 @@ export async function registrarPaciente(datos = {}) {
         p_apellidos: datos.apellidos,
         p_fecha_nacimiento: datos.fechaNacimiento,
         p_sexo: datos.sexo,
-        p_comunidad_id: datos.comunidad,
+        // Sin comunidad viaja NULL y no undefined: PostgREST omite las claves indefinidas, y
+        // el parametro no tiene DEFAULT, asi que la llamada fallaria por firma en vez de
+        // registrar al paciente sin comunidad (#657).
+        p_comunidad_id: datos.comunidad || null,
         p_telefono_contacto: datos.telefonoContacto,
         p_idioma: datos.idioma,
         p_dpi: datos.dpi ?? null,

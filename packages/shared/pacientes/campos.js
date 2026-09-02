@@ -50,7 +50,9 @@ export const CAMPOS_REGISTRO_PACIENTE = [
     label: "Comunidad",
     tipo: TIPOS_DE_CAMPO.SELECT,
     opcionesDesde: "comunidades",
-    validacion: { requerido: true },
+    // Opcional desde la #657: en jornada no siempre se sabe de que comunidad viene la persona, y
+    // exigirla llevaba a inventar una o a no registrarla. La columna admite NULL desde la 00111.
+    validacion: { requerido: false },
   },
   {
     id: "telefonoContacto",
@@ -302,7 +304,9 @@ export const CAMPOS_PACIENTE = Object.freeze([
     id: "comunidad",
     label: "Comunidad",
     validacion: {
-      requerido: true,
+      // Tambien opcional al editar (#657): si se pudo registrar sin comunidad, obligar a ponerla
+      // para corregir cualquier otro dato dejaria la ficha bloqueada.
+      requerido: false,
       maxLongitud: 100,
     },
   },
