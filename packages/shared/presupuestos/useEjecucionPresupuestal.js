@@ -10,10 +10,25 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { listarProyectos } from "../proyectos/api.js";
+import { listarJornadas } from "../jornadas/api.js";
+import { listarUsuarios } from "../usuarios/api.js";
+import { nombreCompletoDe } from "../usuarios/useUsuariosListado.js";
 import { obtenerPresupuestoProyecto, obtenerPresupuestoSistema, listarGastos } from "./api.js";
 import { permisosDeGastos } from "./permisos.js";
 
 const KPIS_VACIOS = { asignado: 0, gastado: 0, disponible: 0, pendiente: 0, porcentaje: 0 };
+
+const CATALOGOS_VACIOS = { proyectos: [], jornadas: [], perfiles: [] };
+
+/**
+ * Catalogo `{ value, label }` para los `opcionesDesde` de FILTROS_GASTO/CAMPOS_GASTO
+ * (jornada_id, proyecto_id, responsable_id): mismo patron `aOpciones()` que ya usa
+ * jornadas/useFormularioJornada.js, sin reimplementarlo -- ese helper es privado de ese
+ * archivo, asi que se repite aqui su misma forma en vez de importarlo entre modulos.
+ */
+function aOpciones(filas, etiquetaDe) {
+  return (filas ?? []).map((fila) => ({ value: fila.id, label: etiquetaDe(fila) }));
+}
 
 /**
  * Porcentaje ejecutado de un presupuesto. `asignado` en 0 da 0, nunca NaN/Infinity: un
@@ -50,6 +65,39 @@ export function combinarProyectosConPresupuesto(proyectos = [], presupuestosPorP
     return {
       id: proyecto.id,
       nombre: proyecto.nombre,
+      // listarProyectos() (proyectos/api.js) ya aplana el perfil embebido del responsable a un
+      // nombre listo para pintar (aProyecto()); el criterio 2 de #301 pide mostrarlo junto al
+      // ejecutado, y esta funcion es el unico lugar que arma esa fila combinada.
+      responsable: proyecto.responsableNombre || null,
+      asignado: presupuesto.asignado,
+      gastado: presupuesto.gastado,
+      disponible: presupuesto.disponible,
+      porcentaje: calcularPorcentajeEjecutado(presupuesto.asignado, presupuesto.gastado),
+    };
+  });
+}
+
+/**
+ * Combina las jornadas de un proyecto (listarJornadasDelProyecto()) con su presupuesto
+ * (obtenerPresupuestoJornada() por id), para el detalle de #301 (criterio 3). Gemela de
+ * combinarProyectosConPresupuesto(): misma forma de fila, mismo criterio de "en ceros y no
+ * omitida" cuando el presupuesto individual no llego.
+ *
+ * @param {object[]} jornadas Filas de listarJornadasDelProyecto() (proyectos/api.js): id,
+ *   nombre, fecha, estado.
+ * @param {Record<string, {asignado:number, gastado:number, disponible:number, pendiente:number}>}
+ *   presupuestosPorJornada Mapa id de jornada -> presupuesto.
+ * @returns {{id:string, nombre:string, fecha:string, estado:string, asignado:number,
+ *   gastado:number, disponible:number, porcentaje:number}[]}
+ */
+export function combinarJornadasConPresupuesto(jornadas = [], presupuestosPorJornada = {}) {
+  return jornadas.map((jornada) => {
+    const presupuesto = presupuestosPorJornada[jornada.id] ?? KPIS_VACIOS;
+    return {
+      id: jornada.id,
+      nombre: jornada.nombre,
+      fecha: jornada.fecha,
+      estado: jornada.estado,
       asignado: presupuesto.asignado,
       gastado: presupuesto.gastado,
       disponible: presupuesto.disponible,
@@ -75,6 +123,12 @@ export function combinarProyectosConPresupuesto(proyectos = [], presupuestosPorP
  *      lista de proyectos queda vacia y el resto de la pantalla se sigue mostrando.
  *   3. listarGastos({ estado }) -> la lista de gastos filtrada (criterio 3). Tambien blando.
  *
+ * Ademas de esas tres, en paralelo con la de proyectos, se cargan los catalogos que
+ * FILTROS_GASTO y CAMPOS_GASTO (filtros.js/campos.js) declaran por `opcionesDesde`
+ * ('proyectos', 'jornadas', 'perfiles'): sin ellos FilterBar deja esos selects vacios y
+ * deshabilitados (FilterBar.jsx). Es dato tan secundario como la lista de proyectos: un fallo
+ * aqui no vacia la pantalla, solo deja ese catalogo en particular sin opciones.
+ *
  * @param {string} [rol] Rol de la sesion actual, para resolver `puedeVer` con permisosDeGastos().
  *   Un rol ausente resuelve a `false`, igual que permisosDeGastos(undefined).
  */
@@ -82,6 +136,7 @@ export function useEjecucionPresupuestal(rol) {
   const [kpis, setKpis] = useState(KPIS_VACIOS);
   const [proyectos, setProyectos] = useState([]);
   const [gastos, setGastos] = useState([]);
+  const [catalogos, setCatalogos] = useState(CATALOGOS_VACIOS);
   const [filtroEstado, setFiltroEstado] = useState("");
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
@@ -96,6 +151,7 @@ export function useEjecucionPresupuestal(rol) {
       setKpis(KPIS_VACIOS);
       setProyectos([]);
       setGastos([]);
+      setCatalogos(CATALOGOS_VACIOS);
       setError(errorSistema);
       setCargando(false);
       return;
@@ -108,7 +164,9 @@ export function useEjecucionPresupuestal(rol) {
 
     // Dato secundario: si esta parte falla, los KPIs ya cargados se quedan y la pantalla no se
     // vacia por completo (mismo criterio que pacientesPorJornada en useJornadasKanban.js).
-    const { proyectos: filas } = await listarProyectos();
+    const [{ proyectos: filas }, { jornadas: filasDeJornada }, { usuarios: filasDePerfil }] =
+      await Promise.all([listarProyectos(), listarJornadas(), listarUsuarios({ estado: true })]);
+
     const presupuestosPorProyecto = {};
     await Promise.all(
       filas.map(async (proyecto) => {
@@ -119,6 +177,12 @@ export function useEjecucionPresupuestal(rol) {
       }),
     );
     setProyectos(combinarProyectosConPresupuesto(filas, presupuestosPorProyecto));
+
+    setCatalogos({
+      proyectos: aOpciones(filas, (proyecto) => proyecto.nombre),
+      jornadas: aOpciones(filasDeJornada, (jornada) => jornada.nombre),
+      perfiles: aOpciones(filasDePerfil, nombreCompletoDe),
+    });
 
     const { gastos: filasDeGasto } = await listarGastos({ estado: filtroEstado || undefined });
     setGastos(filasDeGasto);
@@ -144,6 +208,7 @@ export function useEjecucionPresupuestal(rol) {
     kpis,
     proyectos,
     gastos,
+    catalogos,
     filtroEstado,
     cambiarFiltroEstado,
     limpiarFiltroEstado,
