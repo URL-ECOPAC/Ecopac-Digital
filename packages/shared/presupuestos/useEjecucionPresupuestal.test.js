@@ -131,7 +131,9 @@ describe("combinarJornadasConPresupuesto", () => {
   });
 
   it("una jornada sin presupuesto (la llamada individual fallo) entra en ceros, no se omite", () => {
-    const jornadas = [{ id: "j1", nombre: "Sin datos", fecha: "2026-01-01", estado: "planificada" }];
+    const jornadas = [
+      { id: "j1", nombre: "Sin datos", fecha: "2026-01-01", estado: "planificada" },
+    ];
 
     expect(combinarJornadasConPresupuesto(jornadas, {})[0]).toMatchObject({
       asignado: 0,

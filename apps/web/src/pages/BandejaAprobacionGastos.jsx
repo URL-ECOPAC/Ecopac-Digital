@@ -1,5 +1,9 @@
 import { useState } from "react";
-import { formatearFechaCorta, formatearMoneda, usePendientesAprobacionGastos } from "@ecopac/shared";
+import {
+  formatearFechaCorta,
+  formatearMoneda,
+  usePendientesAprobacionGastos,
+} from "@ecopac/shared";
 
 import {
   Card,

@@ -1,6 +1,10 @@
 import { useState } from "react";
 import { Col, ProgressBar, Row } from "react-bootstrap";
-import { formatearFechaCorta, formatearMoneda, useDetalleProyectoPresupuesto } from "@ecopac/shared";
+import {
+  formatearFechaCorta,
+  formatearMoneda,
+  useDetalleProyectoPresupuesto,
+} from "@ecopac/shared";
 
 import { Card, EmptyState, ErrorState, LoadingState, Modal } from "../components";
 
@@ -116,7 +120,13 @@ function TarjetaProyecto({ proyecto, onAbrir }) {
   );
 }
 
-export default function PanelEjecucionPresupuestal({ kpis, proyectos, cargando, error, onReintentar }) {
+export default function PanelEjecucionPresupuestal({
+  kpis,
+  proyectos,
+  cargando,
+  error,
+  onReintentar,
+}) {
   const [proyectoAbierto, setProyectoAbierto] = useState(null);
 
   if (error) return <ErrorState message={error.mensaje} onRetry={onReintentar} />;

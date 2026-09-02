@@ -421,7 +421,9 @@ describe("conProyectoId", () => {
   it("aplana jornadas.proyecto_id a la fila del gasto", () => {
     const gastos = [{ id: "g1", jornadas: { proyecto_id: "p1" } }];
 
-    expect(conProyectoId(gastos)).toEqual([{ id: "g1", jornadas: { proyecto_id: "p1" }, proyecto_id: "p1" }]);
+    expect(conProyectoId(gastos)).toEqual([
+      { id: "g1", jornadas: { proyecto_id: "p1" }, proyecto_id: "p1" },
+    ]);
   });
 
   it("un gasto sin jornada embebida (RLS o join fallido) entra con proyecto_id null", () => {

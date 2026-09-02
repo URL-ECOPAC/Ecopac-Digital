@@ -1,5 +1,10 @@
 import { useMemo, useState } from "react";
-import { COLUMNAS_GASTO, ESTADOS_DE_GASTO, ETIQUETAS_ESTADO_GASTO, FILTROS_GASTO } from "@ecopac/shared";
+import {
+  COLUMNAS_GASTO,
+  ESTADOS_DE_GASTO,
+  ETIQUETAS_ESTADO_GASTO,
+  FILTROS_GASTO,
+} from "@ecopac/shared";
 
 import { DataList, ErrorState, FilterBar, PrimaryButton, Tabs } from "../components";
 import ModalGasto from "./ModalGasto";

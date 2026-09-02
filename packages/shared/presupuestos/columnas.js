@@ -32,8 +32,18 @@ import { TIPOS_DE_PRESENTACION } from "../descriptores.js";
 export const COLUMNAS_GASTO = [
   { id: "concepto", label: "Concepto", tipo: TIPOS_DE_PRESENTACION.TEXTO, principal: true },
   { id: "categoria", label: "Categoria", tipo: TIPOS_DE_PRESENTACION.TEXTO },
-  { id: "proyecto_id", label: "Proyecto", tipo: TIPOS_DE_PRESENTACION.TEXTO, etiquetasDesde: "proyectos" },
-  { id: "jornada_id", label: "Jornada", tipo: TIPOS_DE_PRESENTACION.TEXTO, etiquetasDesde: "jornadas" },
+  {
+    id: "proyecto_id",
+    label: "Proyecto",
+    tipo: TIPOS_DE_PRESENTACION.TEXTO,
+    etiquetasDesde: "proyectos",
+  },
+  {
+    id: "jornada_id",
+    label: "Jornada",
+    tipo: TIPOS_DE_PRESENTACION.TEXTO,
+    etiquetasDesde: "jornadas",
+  },
   { id: "fecha", label: "Fecha", tipo: TIPOS_DE_PRESENTACION.FECHA },
   { id: "monto", label: "Monto", tipo: TIPOS_DE_PRESENTACION.MONEDA },
   {
