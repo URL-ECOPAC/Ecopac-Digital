@@ -128,16 +128,6 @@ export default function DashboardMetricasPage() {
           alignItems: "center",
         }}
       >
-        <div>
-          <h1
-            style={{ fontSize: "24px", fontWeight: "700", color: "#1e293b", margin: "0 0 4px 0" }}
-          >
-            Reportes e Impacto
-          </h1>
-          <p style={{ fontSize: "14px", color: "#64748b", margin: 0 }}>
-            Métricas, estadísticas y volumen de atención
-          </p>
-        </div>
         <button
           onClick={exportarCSV}
           style={{
