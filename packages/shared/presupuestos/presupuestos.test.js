@@ -67,14 +67,40 @@ describe("CAMPOS_GASTO", () => {
 });
 
 describe("COLUMNAS_GASTO y CAMPOS_FICHA_GASTO", () => {
-  it("son listas y solo nombran columnas de la tabla", () => {
+  it("son listas y no estan vacias", () => {
     for (const lista of [COLUMNAS_GASTO, CAMPOS_FICHA_GASTO]) {
       expect(Array.isArray(lista)).toBe(true);
       expect(lista.length).toBeGreaterThan(0);
-      for (const columna of lista) {
-        expect(COLUMNAS_DE_LA_TABLA).toContain(columna.id);
-      }
     }
+  });
+
+  it("CAMPOS_FICHA_GASTO solo nombra columnas que existen en la tabla gastos", () => {
+    for (const columna of CAMPOS_FICHA_GASTO) {
+      expect(COLUMNAS_DE_LA_TABLA).toContain(columna.id);
+    }
+  });
+
+  it("COLUMNAS_GASTO solo nombra columnas de la tabla, mas proyecto_id (issue #302)", () => {
+    // proyecto_id no es una columna de gastos -vive en jornadas-: listarGastos() (api.js) la
+    // aplana a la fila con conProyectoId() para que la columna "Proyecto" tenga de donde leer.
+    // Es la unica excepcion deliberada a "solo columnas de la tabla".
+    const COLUMNAS_PERMITIDAS = [...COLUMNAS_DE_LA_TABLA, "proyecto_id"];
+    for (const columna of COLUMNAS_GASTO) {
+      expect(COLUMNAS_PERMITIDAS).toContain(columna.id);
+    }
+  });
+
+  it("las 8 columnas del criterio 1 de #302 estan presentes, en ese orden", () => {
+    expect(COLUMNAS_GASTO.map((columna) => columna.id)).toEqual([
+      "concepto",
+      "categoria",
+      "proyecto_id",
+      "jornada_id",
+      "fecha",
+      "monto",
+      "responsable_id",
+      "estado",
+    ]);
   });
 });
 

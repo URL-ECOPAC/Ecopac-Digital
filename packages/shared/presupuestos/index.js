@@ -21,3 +21,6 @@ export * from "./validaciones.js";
 export * from "./permisos.js";
 export * from "./aprobacionGastosApi.js";
 export * from "./useEjecucionPresupuestal.js";
+export * from "./useDetalleProyectoPresupuesto.js";
+export * from "./useFormularioGasto.js";
+export * from "./usePendientesAprobacionGastos.js";

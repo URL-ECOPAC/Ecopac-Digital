@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   asignarPresupuestoJornada,
+  conProyectoId,
   obtenerPresupuestoJornada,
   obtenerPresupuestoProyecto,
   obtenerPresupuestoSistema,
@@ -75,6 +76,40 @@ function clienteUpdate(respuesta) {
       return encadenable;
     },
     maybeSingle: async () => (respuesta instanceof Error ? Promise.reject(respuesta) : respuesta),
+  };
+
+  return {
+    llamadas,
+    from(tabla) {
+      llamadas.push({ paso: "from", tabla });
+      return encadenable;
+    },
+  };
+}
+
+// Mock de la cadena select().eq()...order() que usa listarGastos(). Cada metodo se acumula en
+// `llamadas` y devuelve el mismo objeto encadenable; `order()` es el ultimo paso y resuelve la
+// promesa (mismo patron que usa supabase-js: la query es un thenable hasta que se le hace await).
+function clienteSelectGastos(respuesta) {
+  const llamadas = [];
+  const encadenable = {
+    select(columnas) {
+      llamadas.push({ paso: "select", columnas });
+      return encadenable;
+    },
+    eq(columna, valor) {
+      llamadas.push({ paso: "eq", columna, valor });
+      return encadenable;
+    },
+    gte(columna, valor) {
+      llamadas.push({ paso: "gte", columna, valor });
+      return encadenable;
+    },
+    lte(columna, valor) {
+      llamadas.push({ paso: "lte", columna, valor });
+      return encadenable;
+    },
+    order: async () => (respuesta instanceof Error ? Promise.reject(respuesta) : respuesta),
   };
 
   return {
@@ -324,5 +359,79 @@ describe("gestión de gastos (#298)", () => {
     // Si la llamada llega al mock predeterminado, retorna la respuesta de error normalizada
     expect(respuesta).toHaveProperty("gastos");
     expect(respuesta).toHaveProperty("error");
+  });
+
+  it("listarGastos aplica los seis filtros que declara filtros.js", async () => {
+    const cliente = clienteSelectGastos({ data: [], error: null });
+    dobles.cliente = cliente;
+
+    await listarGastos({
+      estado: "pendiente",
+      categoria: "Logistica",
+      jornada_id: "jornada-1",
+      proyecto_id: "proyecto-1",
+      fecha_inicio: "2026-01-01",
+      fecha_fin: "2026-01-31",
+    });
+
+    expect(cliente.llamadas).toContainEqual({ paso: "from", tabla: "gastos" });
+    expect(cliente.llamadas).toContainEqual({ paso: "eq", columna: "estado", valor: "pendiente" });
+    expect(cliente.llamadas).toContainEqual({
+      paso: "eq",
+      columna: "categoria",
+      valor: "Logistica",
+    });
+    expect(cliente.llamadas).toContainEqual({
+      paso: "eq",
+      columna: "jornada_id",
+      valor: "jornada-1",
+    });
+    expect(cliente.llamadas).toContainEqual({
+      paso: "eq",
+      columna: "jornadas.proyecto_id",
+      valor: "proyecto-1",
+    });
+    expect(cliente.llamadas).toContainEqual({
+      paso: "gte",
+      columna: "fecha",
+      valor: "2026-01-01",
+    });
+    expect(cliente.llamadas).toContainEqual({
+      paso: "lte",
+      columna: "fecha",
+      valor: "2026-01-31",
+    });
+  });
+
+  it("listarGastos devuelve cada fila con proyecto_id aplanado (issue #302)", async () => {
+    dobles.cliente = clienteSelectGastos({
+      data: [
+        { id: "gasto-1", jornadas: { id: "jornada-1", nombre: "J1", proyecto_id: "proyecto-1" } },
+      ],
+      error: null,
+    });
+
+    const { gastos } = await listarGastos();
+
+    expect(gastos[0].proyecto_id).toBe("proyecto-1");
+  });
+});
+
+describe("conProyectoId", () => {
+  it("aplana jornadas.proyecto_id a la fila del gasto", () => {
+    const gastos = [{ id: "g1", jornadas: { proyecto_id: "p1" } }];
+
+    expect(conProyectoId(gastos)).toEqual([
+      { id: "g1", jornadas: { proyecto_id: "p1" }, proyecto_id: "p1" },
+    ]);
+  });
+
+  it("un gasto sin jornada embebida (RLS o join fallido) entra con proyecto_id null", () => {
+    expect(conProyectoId([{ id: "g1" }])).toEqual([{ id: "g1", proyecto_id: null }]);
+  });
+
+  it("sin gastos devuelve una lista vacia", () => {
+    expect(conProyectoId([])).toEqual([]);
+    expect(conProyectoId()).toEqual([]);
   });
 });
