@@ -48,7 +48,8 @@ export function useDashboardMetricas() {
 
     let consulta = supabase
       .from("vista_reporte_impacto")
-      .select(`
+      .select(
+        `
         jornada_id,
         jornada,
         fecha,
@@ -58,7 +59,8 @@ export function useDashboardMetricas() {
         consultas_realizadas,
         tratamientos_entregados,
         medicamentos_utilizados
-      `)
+      `,
+      )
       .order("fecha", { ascending: true });
 
     // Filtrar por rango de fechas
@@ -68,7 +70,12 @@ export function useDashboardMetricas() {
 
     // ✅ SOLO filtrar si es un UUID real — NUNCA enviar valores especiales
     const idComunidad = filtros.comunidadId;
-    if (idComunidad && idComunidad !== TODAS && idComunidad !== NINGUNA && idComunidad.length > 10) {
+    if (
+      idComunidad &&
+      idComunidad !== TODAS &&
+      idComunidad !== NINGUNA &&
+      idComunidad.length > 10
+    ) {
       consulta = consulta.eq("comunidad_id", idComunidad);
     }
 
@@ -94,8 +101,14 @@ export function useDashboardMetricas() {
     const indicadores = {
       pacientesAtendidos: data.reduce((sum, f) => sum + Number(f.pacientes_atendidos || 0), 0),
       comunidadesBeneficiadas: new Set(data.map((f) => f.comunidad_id)).size,
-      tratamientosEntregados: data.reduce((sum, f) => sum + Number(f.tratamientos_entregados || 0), 0),
-      medicamentosUtilizados: data.reduce((sum, f) => sum + Number(f.medicamentos_utilizados || 0), 0),
+      tratamientosEntregados: data.reduce(
+        (sum, f) => sum + Number(f.tratamientos_entregados || 0),
+        0,
+      ),
+      medicamentosUtilizados: data.reduce(
+        (sum, f) => sum + Number(f.medicamentos_utilizados || 0),
+        0,
+      ),
     };
 
     // 📈 Agrupar datos
@@ -105,7 +118,9 @@ export function useDashboardMetricas() {
         let clave;
         if (tipo === "mes") {
           const fecha = new Date(fila.fecha);
-          clave = isNaN(fecha.getTime()) ? "Sin fecha" : fecha.toLocaleDateString("es-GT", { month: "short" });
+          clave = isNaN(fecha.getTime())
+            ? "Sin fecha"
+            : fecha.toLocaleDateString("es-GT", { month: "short" });
         } else if (tipo === "comunidad") {
           clave = fila.comunidad || "Sin comunidad";
         } else if (tipo === "jornada") {
@@ -173,14 +188,21 @@ export function useDashboardMetricas() {
     };
 
     cargar();
-  }, [rangoSeleccionado, fechaInicio, fechaFin, comunidadId, agruparPor, modoComparacion, comunidadCompararId]);
+  }, [
+    rangoSeleccionado,
+    fechaInicio,
+    fechaFin,
+    comunidadId,
+    agruparPor,
+    modoComparacion,
+    comunidadCompararId,
+  ]);
 
   // ─── Variación porcentual ───
   const calcularVariacion = (valorActual, valorBase) => {
     if (!valorBase || valorBase === 0) return null;
     return ((valorActual - valorBase) / valorBase) * 100;
   };
-
 
   return {
     // Opciones

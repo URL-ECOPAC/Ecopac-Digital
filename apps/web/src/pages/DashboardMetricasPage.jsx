@@ -40,7 +40,12 @@ const TarjetaMetrica = ({ etiqueta, valor, meta, color }) => {
             }}
           >
             <div
-              style={{ height: "100%", backgroundColor: color, borderRadius: "3px", width: `${progreso}%` }}
+              style={{
+                height: "100%",
+                backgroundColor: color,
+                borderRadius: "3px",
+                width: `${progreso}%`,
+              }}
             />
           </div>
           <div style={{ fontSize: "11px", color: "#94a3b8", textAlign: "right" }}>meta: {meta}</div>
@@ -107,9 +112,7 @@ export default function DashboardMetricasPage() {
     );
 
   if (error)
-    return (
-      <div style={{ padding: "40px", color: "#dc2626" }}>Error al cargar: {error}</div>
-    );
+    return <div style={{ padding: "40px", color: "#dc2626" }}>Error al cargar: {error}</div>;
 
   // 📊 Datos de gráfica
   const valorMaximo = Math.max(...seriePrincipal.map((i) => i.valor), 1);
@@ -117,9 +120,18 @@ export default function DashboardMetricasPage() {
   return (
     <div style={{ padding: "24px", backgroundColor: "#f8fafc", minHeight: "100vh" }}>
       {/* 📌 Título */}
-      <div style={{ marginBottom: "24px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+      <div
+        style={{
+          marginBottom: "24px",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+        }}
+      >
         <div>
-          <h1 style={{ fontSize: "24px", fontWeight: "700", color: "#1e293b", margin: "0 0 4px 0" }}>
+          <h1
+            style={{ fontSize: "24px", fontWeight: "700", color: "#1e293b", margin: "0 0 4px 0" }}
+          >
             Reportes e Impacto
           </h1>
           <p style={{ fontSize: "14px", color: "#64748b", margin: 0 }}>
@@ -144,9 +156,19 @@ export default function DashboardMetricasPage() {
       </div>
 
       {/* 🔍 FILTROS */}
-      <div style={{ backgroundColor: "#fff", borderRadius: "16px", padding: "20px", marginBottom: "24px", border: "1px solid #f1f5f9" }}>
+      <div
+        style={{
+          backgroundColor: "#fff",
+          borderRadius: "16px",
+          padding: "20px",
+          marginBottom: "24px",
+          border: "1px solid #f1f5f9",
+        }}
+      >
         <div style={{ marginBottom: "16px" }}>
-          <p style={{ fontSize: "13px", fontWeight: "600", color: "#334155", margin: "0 0 8px 0" }}>Rango de fechas</p>
+          <p style={{ fontSize: "13px", fontWeight: "600", color: "#334155", margin: "0 0 8px 0" }}>
+            Rango de fechas
+          </p>
           <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
             {rangosDisponibles.map((r) => (
               <button
@@ -169,38 +191,89 @@ export default function DashboardMetricasPage() {
           </div>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "16px", marginBottom: "16px" }}>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(3, 1fr)",
+            gap: "16px",
+            marginBottom: "16px",
+          }}
+        >
           <div>
-            <label style={{ fontSize: "12px", fontWeight: "600", color: "#64748b", display: "block", marginBottom: "6px" }}>Agrupar por</label>
+            <label
+              style={{
+                fontSize: "12px",
+                fontWeight: "600",
+                color: "#64748b",
+                display: "block",
+                marginBottom: "6px",
+              }}
+            >
+              Agrupar por
+            </label>
             <select
               value={agruparPor}
               onChange={(e) => setAgruparPor(e.target.value)}
-              style={{ width: "100%", padding: "10px", borderRadius: "10px", border: "1px solid #e2e8f0" }}
+              style={{
+                width: "100%",
+                padding: "10px",
+                borderRadius: "10px",
+                border: "1px solid #e2e8f0",
+              }}
             >
               {agrupamientosDisponibles.map((a) => (
-                <option key={a.valor} value={a.valor}>{a.etiqueta}</option>
+                <option key={a.valor} value={a.valor}>
+                  {a.etiqueta}
+                </option>
               ))}
             </select>
           </div>
 
           {/* ✅ Select con valores REALES desde el hook */}
           <div>
-            <label style={{ fontSize: "12px", fontWeight: "600", color: "#64748b", display: "block", marginBottom: "6px" }}>Comunidad</label>
+            <label
+              style={{
+                fontSize: "12px",
+                fontWeight: "600",
+                color: "#64748b",
+                display: "block",
+                marginBottom: "6px",
+              }}
+            >
+              Comunidad
+            </label>
             <select
               value={comunidadId}
               onChange={(e) => setComunidadId(e.target.value)}
-              style={{ width: "100%", padding: "10px", borderRadius: "10px", border: "1px solid #e2e8f0" }}
+              style={{
+                width: "100%",
+                padding: "10px",
+                borderRadius: "10px",
+                border: "1px solid #e2e8f0",
+              }}
             >
               <option value={TODAS}>Todas las comunidades</option>
               {listaComunidades.map((c) => (
-                <option key={c.id} value={c.id}>{c.nombre}</option>
+                <option key={c.id} value={c.id}>
+                  {c.nombre}
+                </option>
               ))}
             </select>
           </div>
 
           {/* ✅ Select de comparación con valores REALES */}
           <div>
-            <label style={{ fontSize: "12px", fontWeight: "600", color: "#64748b", display: "block", marginBottom: "6px" }}>Comparar</label>
+            <label
+              style={{
+                fontSize: "12px",
+                fontWeight: "600",
+                color: "#64748b",
+                display: "block",
+                marginBottom: "6px",
+              }}
+            >
+              Comparar
+            </label>
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
               <input
                 type="checkbox"
@@ -211,11 +284,18 @@ export default function DashboardMetricasPage() {
                 value={comunidadCompararId}
                 onChange={(e) => setComunidadCompararId(e.target.value)}
                 disabled={!modoComparacion}
-                style={{ flex: 1, padding: "10px", borderRadius: "10px", border: "1px solid #e2e8f0" }}
+                style={{
+                  flex: 1,
+                  padding: "10px",
+                  borderRadius: "10px",
+                  border: "1px solid #e2e8f0",
+                }}
               >
                 <option value={NINGUNA}>— Ninguna —</option>
                 {listaComunidades.map((c) => (
-                  <option key={c.id} value={c.id}>{c.nombre}</option>
+                  <option key={c.id} value={c.id}>
+                    {c.nombre}
+                  </option>
                 ))}
               </select>
             </div>
@@ -259,7 +339,13 @@ export default function DashboardMetricasPage() {
       </div>
 
       {/* 📈 Gráfica de evolución */}
-      <div style={{ display: "grid", gridTemplateColumns: serieComparacion.length > 0 ? "1fr 1fr" : "1fr", gap: "24px" }}>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: serieComparacion.length > 0 ? "1fr 1fr" : "1fr",
+          gap: "24px",
+        }}
+      >
         <div
           style={{
             backgroundColor: "#fff",
@@ -286,8 +372,18 @@ export default function DashboardMetricasPage() {
             {seriePrincipal.map((item, i) => {
               const alto = valorMaximo > 0 ? Math.max((item.valor / valorMaximo) * 100, 8) : 4;
               return (
-                <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: "center", flex: 1 }}>
-                  <div style={{ display: "flex", alignItems: "flex-end", height: "100%", gap: "3px" }}>
+                <div
+                  key={i}
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    flex: 1,
+                  }}
+                >
+                  <div
+                    style={{ display: "flex", alignItems: "flex-end", height: "100%", gap: "3px" }}
+                  >
                     <div
                       style={{
                         width: serieComparacion.length ? "45%" : "80%",
@@ -309,7 +405,14 @@ export default function DashboardMetricasPage() {
                       />
                     )}
                   </div>
-                  <span style={{ fontSize: "10px", color: "#64748b", marginTop: "6px", textAlign: "center" }}>
+                  <span
+                    style={{
+                      fontSize: "10px",
+                      color: "#64748b",
+                      marginTop: "6px",
+                      textAlign: "center",
+                    }}
+                  >
                     {item.etiqueta}
                   </span>
                 </div>
@@ -317,9 +420,15 @@ export default function DashboardMetricasPage() {
             })}
           </div>
           {serieComparacion.length > 0 && (
-            <div style={{ display: "flex", justifyContent: "center", gap: "20px", marginTop: "12px" }}>
-              <span style={{ fontSize: "12px", color: "#10b981", fontWeight: "500" }}>■ Selección actual</span>
-              <span style={{ fontSize: "12px", color: "#3b82f6", fontWeight: "500" }}>■ Comparación</span>
+            <div
+              style={{ display: "flex", justifyContent: "center", gap: "20px", marginTop: "12px" }}
+            >
+              <span style={{ fontSize: "12px", color: "#10b981", fontWeight: "500" }}>
+                ■ Selección actual
+              </span>
+              <span style={{ fontSize: "12px", color: "#3b82f6", fontWeight: "500" }}>
+                ■ Comparación
+              </span>
             </div>
           )}
         </div>
@@ -335,7 +444,12 @@ export default function DashboardMetricasPage() {
             }}
           >
             <h3
-              style={{ fontSize: "16px", fontWeight: "600", color: "#1e293b", margin: "0 0 20px 0" }}
+              style={{
+                fontSize: "16px",
+                fontWeight: "600",
+                color: "#1e293b",
+                margin: "0 0 20px 0",
+              }}
             >
               Variación porcentual
             </h3>

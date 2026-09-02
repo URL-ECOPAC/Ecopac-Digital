@@ -130,7 +130,7 @@ export default function ReporteJornadaPage() {
               cursor: "pointer",
             }}
           >
-             Imprimir
+            Imprimir
           </button>
           <button
             onClick={exportar}
@@ -145,7 +145,7 @@ export default function ReporteJornadaPage() {
               cursor: "pointer",
             }}
           >
-             Exportar
+            Exportar
           </button>
         </div>
       </div>
