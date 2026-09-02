@@ -24,7 +24,7 @@ export function useReporteJornada(jornadaId) {
             responsable_id: "---",
             proyecto_id: null,
             estado: "completada",
-            presupuesto_asignado: 1500.00,
+            presupuesto_asignado: 1500.0,
           },
           pacientesAtendidos: 47,
           diagnosticos: [
