@@ -34,6 +34,7 @@ import DetalleJornadaPage from "./pages/DetalleJornadaPage";
 import VoluntariosPage from "./pages/VoluntariosPage";
 import PerfilPage from "./pages/PerfilPage";
 import NotFoundPage from "./pages/NotFoundPage";
+import DashboardMetricasPage from "./pages/DashboardMetricasPage";
 
 const rolesDe = (ruta) => MODULOS.find((m) => m.ruta === ruta)?.roles ?? [];
 
@@ -147,23 +148,24 @@ export default function App() {
               <Route element={<RutaProtegida roles={rolesDe("/reportes")} />}>
                 <Route path="/reportes" element={<ReportesPage />} />
               </Route>
-              <Route element={<RutaProtegida roles={rolesDe("/jornadas")} />}>
-                <Route path="/jornadas" element={<JornadasPage />} />
-                <Route path="/jornadas/:id" element={<DetalleJornadaPage />} />
-              </Route>
-              <Route element={<RutaProtegida roles={rolesDe("/voluntarios")} />}>
-                {/* Listado y ficha fusionados en una sola pantalla de tarjetas expandibles
+              <Route path="/reportes/dashboard" element={<DashboardMetricasPage />} />
+            <Route element={<RutaProtegida roles={rolesDe("/jornadas")} />}>
+              <Route path="/jornadas" element={<JornadasPage />} />
+              <Route path="/jornadas/:id" element={<DetalleJornadaPage />} />
+            </Route>
+            <Route element={<RutaProtegida roles={rolesDe("/voluntarios")} />}>
+              {/* Listado y ficha fusionados en una sola pantalla de tarjetas expandibles
                   (arreglo de diseno de 2026-08-30): ya no hay una ruta /voluntarios/:id propia.
                   Ver eme.md para el estado anterior (dos rutas separadas) si hay que revertir. */}
-                <Route path="/voluntarios" element={<VoluntariosPage />} />
-              </Route>
-
-              <Route path="/perfil" element={<PerfilPage />} />
-              <Route path="*" element={<NotFoundPage />} />
+              <Route path="/voluntarios" element={<VoluntariosPage />} />
             </Route>
+
+            <Route path="/perfil" element={<PerfilPage />} />
+            <Route path="*" element={<NotFoundPage />} />
           </Route>
-        </Routes>
-      </SesionProvider>
-    </BrowserRouter>
+        </Route>
+      </Routes>
+    </SesionProvider>
+    </BrowserRouter >
   );
 }
