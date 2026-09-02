@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Navigate } from "react-router-dom";
 import { useNuevaContrasena } from "@ecopac/shared";
-import { Card, ErrorState, PrimaryButton, ScreenContainer, TextField } from "../components";
+import { AuthAlert, AuthButton, AuthField, AuthLayout, AuthPasswordToggle } from "../components/auth";
 
 export default function NuevaContrasenaPage() {
   const {
@@ -32,56 +32,45 @@ export default function NuevaContrasenaPage() {
   }
 
   return (
-    <ScreenContainer>
-      <Card title="Nueva contraseña">
-        {errorGlobal && <ErrorState message={errorGlobal} />}
+    <AuthLayout title="Nueva contraseña" subtitle="Elige una contraseña para tu cuenta">
+      {errorGlobal && <AuthAlert variant="error">{errorGlobal}</AuthAlert>}
 
-        <form onSubmit={actualizarContrasena} noValidate>
-          <div className="position-relative mb-3">
-            <TextField
-              label="Nueva contraseña"
-              type={verPassword ? "text" : "password"}
-              autoComplete="new-password"
-              value={contrasena}
-              onChange={(e) => setContrasena(e.target.value)}
-              error={erroresDeCampo?.contrasena}
-              disabled={enviando}
-            />
-            <button
-              type="button"
-              className="btn btn-link btn-sm position-absolute text-decoration-none text-muted"
-              style={{
-                right: "12px",
-                top: erroresDeCampo?.contrasena ? "32px" : "38px",
-                zIndex: 5,
-                fontSize: "0.85rem",
-              }}
-              onClick={() => setVerPassword(!verPassword)}
-              tabIndex={-1}
-            >
-              {verPassword ? "Ocultar" : "Mostrar"}
-            </button>
-          </div>
+      <form
+        onSubmit={actualizarContrasena}
+        noValidate
+        style={{ display: "flex", flexDirection: "column", gap: "18px" }}
+      >
+        <AuthField
+          label="Nueva contraseña"
+          type={verPassword ? "text" : "password"}
+          autoComplete="new-password"
+          placeholder="••••••••"
+          value={contrasena}
+          onChange={(e) => setContrasena(e.target.value)}
+          error={erroresDeCampo?.contrasena}
+          disabled={enviando}
+          rightAdornment={
+            <AuthPasswordToggle visible={verPassword} onToggle={() => setVerPassword(!verPassword)} />
+          }
+        />
 
-          <TextField
-            label="Confirmar contraseña"
-            type={verPassword ? "text" : "password"}
-            autoComplete="new-password"
-            value={confirmarContrasena}
-            onChange={(e) => setConfirmarContrasena(e.target.value)}
-            error={erroresDeCampo?.confirmarContrasena}
-            disabled={enviando}
-          />
+        <AuthField
+          label="Confirmar contraseña"
+          type={verPassword ? "text" : "password"}
+          autoComplete="new-password"
+          placeholder="••••••••"
+          value={confirmarContrasena}
+          onChange={(e) => setConfirmarContrasena(e.target.value)}
+          error={erroresDeCampo?.confirmarContrasena}
+          disabled={enviando}
+        />
 
-          <div className="mt-4">
-            <PrimaryButton
-              title={enviando ? "Guardando..." : "Guardar nueva contraseña"}
-              type="submit"
-              disabled={enviando}
-            />
-          </div>
-        </form>
-      </Card>
-    </ScreenContainer>
+        <div style={{ marginTop: "6px" }}>
+          <AuthButton disabled={enviando}>
+            {enviando ? "Guardando..." : "Guardar nueva contraseña"}
+          </AuthButton>
+        </div>
+      </form>
+    </AuthLayout>
   );
 }

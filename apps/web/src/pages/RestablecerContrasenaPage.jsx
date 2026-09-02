@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { useRestablecerContrasena } from "@ecopac/shared";
-import { Card, PrimaryButton, ScreenContainer, TextField } from "../components";
+import { AuthAlert, AuthButton, AuthField, AuthLayout } from "../components/auth";
 
 export default function RestablecerContrasenaPage() {
   const {
@@ -17,45 +17,50 @@ export default function RestablecerContrasenaPage() {
   });
 
   return (
-    <ScreenContainer>
-      <Card title="Restablecer contraseña">
-        {mensajeExito ? (
-          <div className="alert alert-success" role="alert">
-            Si el correo electrónico existe en nuestro sistema, recibirás un enlace con las
-            instrucciones para restablecer tu contraseña.
+    <AuthLayout
+      title="Restablecer contraseña"
+      subtitle="Te enviaremos un enlace para crear una nueva"
+    >
+      {mensajeExito ? (
+        <AuthAlert variant="success">
+          Si el correo electrónico existe en nuestro sistema, recibirás un enlace con las
+          instrucciones para restablecer tu contraseña.
+        </AuthAlert>
+      ) : (
+        <form
+          onSubmit={solicitarRestablecimiento}
+          noValidate
+          style={{ display: "flex", flexDirection: "column", gap: "18px" }}
+        >
+          <AuthField
+            label="Correo electrónico"
+            type="email"
+            autoComplete="email"
+            placeholder="ej. usuario@ecopac.org"
+            value={correo}
+            onChange={(e) => setCorreo(e.target.value)}
+            error={errorCampo}
+            disabled={enviando}
+          />
+
+          <div style={{ marginTop: "6px" }}>
+            <AuthButton disabled={enviando}>{enviando ? "Enviando..." : "Enviar enlace"}</AuthButton>
           </div>
-        ) : (
-          <form onSubmit={solicitarRestablecimiento} noValidate>
-            <p className="text-muted small mb-3">
-              Ingresa tu correo electrónico registrado para enviarte un enlace de recuperación.
-            </p>
+        </form>
+      )}
 
-            <TextField
-              label="Correo electrónico"
-              type="email"
-              autoComplete="email"
-              value={correo}
-              onChange={(e) => setCorreo(e.target.value)}
-              error={errorCampo}
-              disabled={enviando}
-            />
-
-            <div className="mt-4">
-              <PrimaryButton
-                title={enviando ? "Enviando..." : "Enviar enlace"}
-                type="submit"
-                disabled={enviando}
-              />
-            </div>
-          </form>
-        )}
-
-        <div className="mt-3 text-center">
-          <Link to="/login" className="btn btn-link btn-sm text-decoration-none">
-            Volver al inicio de sesión
-          </Link>
-        </div>
-      </Card>
-    </ScreenContainer>
+      <div
+        style={{
+          marginTop: "20px",
+          fontSize: "12px",
+          textAlign: "center",
+          color: "#64748B",
+        }}
+      >
+        <Link to="/login" style={{ color: "#2563EB", textDecoration: "none", fontWeight: "500" }}>
+          Volver al inicio de sesión
+        </Link>
+      </div>
+    </AuthLayout>
   );
 }
