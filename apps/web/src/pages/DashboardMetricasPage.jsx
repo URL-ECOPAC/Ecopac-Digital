@@ -1,292 +1,283 @@
 import { Link } from "react-router-dom";
+import { useState, useEffect } from "react";
 import { useDashboardMetricas } from "../../../../packages/shared/reportes/useDashboardMetricas.js";
+import { useFiltrosReportes } from "../../../../packages/shared/reportes/useFiltrosReportes.js";
+import BarraFiltrosReporte from "./BarraFiltrosReporte";
+import { listarBodegas } from "../../../../packages/shared/inventario/bodegas.api.js";
 import {
   CAMPOS_DASHBOARD,
   COLORES_GRAFICAS,
 } from "../../../../packages/shared/reportes/dashboard.campos.js";
-// Tarjeta de indicador principal
-const TarjetaIndicador = ({ etiqueta, valor, color = "#059669" }) => (
+
+// 📊 Tarjeta de métrica alineada a Figma
+const TarjetaMetrica = ({ etiqueta, valor, meta, color }) => (
   <div
     style={{
-      backgroundColor: "#ffffff",
+      backgroundColor: "#fff",
       borderRadius: "16px",
       padding: "20px",
       border: "1px solid #f1f5f9",
-      boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
     }}
   >
     <p
       style={{
-        margin: 0,
         fontSize: "12px",
-        fontWeight: "700",
         color: "#64748b",
+        margin: "0 0 8px 0",
         textTransform: "uppercase",
         letterSpacing: "0.5px",
       }}
     >
       {etiqueta}
     </p>
-    <h3
-      style={{
-        margin: "8px 0 0 0",
-        fontSize: "32px",
-        fontWeight: "800",
-        color: color,
-      }}
-    >
-      {valor?.toLocaleString("es-GT")}
-    </h3>
+    <p style={{ fontSize: "36px", fontWeight: "700", color: color, margin: "0 0 12px 0" }}>
+      {valor}
+    </p>
+    {meta && (
+      <div
+        style={{
+          height: "6px",
+          backgroundColor: "#e2e8f0",
+          borderRadius: "3px",
+          overflow: "hidden",
+          marginBottom: "6px",
+        }}
+      >
+        <div
+          style={{ height: "100%", backgroundColor: color, borderRadius: "3px", width: "70%" }}
+        />
+      </div>
+    )}
+    {meta && (
+      <div style={{ fontSize: "11px", color: "#94a3b8", textAlign: "right" }}>meta: {meta}</div>
+    )}
   </div>
 );
 
-// Tarjeta de aviso con enlace
-const TarjetaAviso = ({ etiqueta, valor, enlace, color }) => (
-  <Link to={enlace} style={{ textDecoration: "none" }}>
-    <div
-      style={{
-        backgroundColor: "#ffffff",
-        borderRadius: "12px",
-        padding: "16px",
-        borderLeft: `4px solid ${color}`,
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-      }}
-    >
-      <span style={{ fontSize: "14px", fontWeight: "600", color: "#334155" }}>{etiqueta}</span>
-      <span
-        style={{
-          backgroundColor: color + "15",
-          color: color,
-          padding: "4px 12px",
-          borderRadius: "9999px",
-          fontSize: "13px",
-          fontWeight: "800",
-        }}
-      >
-        {valor}
-      </span>
-    </div>
-  </Link>
-);
-
-// Gráfica de barras
-const GraficaBarras = ({ datos, etiquetaX, etiquetaY, color = "#059669", titulo }) => {
-  if (!datos || datos.length === 0) {
-    return (
-      <div
-        style={{
-          backgroundColor: "#fff",
-          borderRadius: "16px",
-          padding: "20px",
-          border: "1px solid #f1f5f9",
-          textAlign: "center",
-          color: "#94a3b8",
-        }}
-      >
-        {titulo}
-        <br />
-        Sin datos disponibles
-      </div>
-    );
-  }
-
-  const maxValor = Math.max(...datos.map((d) => d[etiquetaY]));
-
-  return (
-    <div
-      style={{
-        backgroundColor: "#fff",
-        borderRadius: "16px",
-        padding: "20px",
-        border: "1px solid #f1f5f9",
-      }}
-    >
-      <h4 style={{ margin: "0 0 16px 0", fontSize: "14px", fontWeight: "700", color: "#334155" }}>
-        {titulo}
-      </h4>
-      <div style={{ display: "flex", gap: "6px", alignItems: "flex-end", height: "180px" }}>
-        {datos.map((item, i) => {
-          const valor = item[etiquetaY];
-          const porcentaje = maxValor > 0 ? (valor / maxValor) * 100 : 0;
-          const colorBarra = Array.isArray(color) ? color[i % color.length] : color;
-          return (
-            <div
-              key={i}
-              style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center" }}
-            >
-              <span style={{ fontSize: "10px", fontWeight: "700", marginBottom: "4px" }}>
-                {valor.toLocaleString("es-GT")}
-              </span>
-              <div
-                style={{
-                  width: "100%",
-                  backgroundColor: colorBarra,
-                  borderRadius: "4px 4px 0 0",
-                  height: `${porcentaje}%`,
-                  minHeight: "6px",
-                }}
-              />
-              <span
-                style={{
-                  fontSize: "10px",
-                  color: "#64748b",
-                  marginTop: "6px",
-                  textAlign: "center",
-                }}
-              >
-                {item[etiquetaX]}
-              </span>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-};
-
 export default function DashboardMetricasPage() {
-  const { cargando, error, indicadores, evolucionMensual, porComunidad, avisos } =
-    useDashboardMetricas();
+  // Datos del dashboard desde el hook
+  const {
+    cargando,
+    error,
+    indicadores,
+    evolucionMensual,
+    porEspecialidad,
+    topDonantes,
+    estadoJornadas,
+  } = useDashboardMetricas();
 
-  if (cargando) {
+  // Filtros
+  const { filtros, alCambiarFiltros } = useFiltrosReportes();
+
+  // Listas para los desplegables
+  const [comunidades, setComunidades] = useState([]);
+  const [jornadas, setJornadas] = useState([]);
+  const [proyectos, setProyectos] = useState([]);
+
+  // ✅ Cargar comunidades desde la API al iniciar
+  useEffect(() => {
+    const cargarDatos = async () => {
+      try {
+        const datosBodegas = await listarBodegas();
+        const formateado = datosBodegas.map((b) => ({
+          id: b.id || b.codigo || b.bodega_id,
+          nombre: b.nombre || b.nombre_bodega || b.descripcion,
+        }));
+        setComunidades(formateado);
+      } catch (err) {
+        console.error("Error cargando comunidades:", err);
+      }
+    };
+    cargarDatos();
+  }, []);
+
+  if (cargando)
     return (
-      <div
-        style={{
-          padding: "60px 24px",
-          textAlign: "center",
-          color: "#64748b",
-          fontFamily: "system-ui",
-        }}
-      >
-        Cargando tablero de métricas...
+      <div style={{ padding: "40px", textAlign: "center", color: "#64748b" }}>
+        Cargando métricas...
       </div>
     );
-  }
-
-  if (error) {
+  if (error)
     return (
-      <div
-        style={{
-          padding: "24px",
-          color: "#991b1b",
-          backgroundColor: "#fef2f2",
-          borderRadius: "12px",
-          fontFamily: "system-ui",
-        }}
-      >
-        {error}
-      </div>
+      <div style={{ padding: "40px", color: "#dc2626" }}>Error al cargar: {error.message}</div>
     );
-  }
+
+  // Meses para la gráfica
+  const meses = [
+    "Ene",
+    "Feb",
+    "Mar",
+    "Abr",
+    "May",
+    "Jun",
+    "Jul",
+    "Ago",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dic",
+  ];
 
   return (
-    <div
-      style={{
-        padding: "24px",
-        fontFamily: "system-ui, -apple-system, sans-serif",
-        backgroundColor: "#f8fafc",
-        minHeight: "100vh",
-      }}
-    >
-      {/* Cabecera */}
-      <div style={{ marginBottom: "28px" }}>
-        <h1 style={{ fontSize: "24px", fontWeight: "800", color: "#1e293b", margin: 0 }}>
-          Panel de Métricas de Impacto
+    <div style={{ padding: "24px", backgroundColor: "#f8fafc", minHeight: "100vh" }}>
+      {/* Título */}
+      <div style={{ marginBottom: "24px" }}>
+        <h1 style={{ fontSize: "24px", fontWeight: "700", color: "#1e293b", margin: "0 0 4px 0" }}>
+          Reportes e Impacto
         </h1>
-        <p style={{ fontSize: "14px", color: "#64748b", margin: "4px 0 0 0" }}>
-          Resumen general de actividad y resultados
+        <p style={{ fontSize: "14px", color: "#64748b", margin: 0 }}>
+          Métricas, estadísticas y volumen de atención 2024
         </p>
       </div>
 
-      {/* Tarjetas de indicadores principales */}
+      {/* 🔍 Barra de Filtros */}
+      <BarraFiltrosReporte
+        filtros={filtros}
+        alCambiarFiltros={alCambiarFiltros}
+        comunidades={comunidades}
+        jornadas={jornadas}
+        proyectos={proyectos}
+      />
+
+      {/* 📊 Tarjetas de métricas */}
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+          gridTemplateColumns: "repeat(4, 1fr)",
           gap: "16px",
-          marginBottom: "28px",
+          marginBottom: "24px",
         }}
       >
-        <TarjetaIndicador
-          etiqueta={CAMPOS_DASHBOARD.pacientesAtendidos.etiqueta}
-          valor={indicadores.pacientesAtendidos}
+        <TarjetaMetrica
+          etiqueta="Pacientes Atendidos"
+          valor={indicadores?.pacientes || 0}
+          meta="3000"
+          color="#22c55e"
         />
-        <TarjetaIndicador
-          etiqueta={CAMPOS_DASHBOARD.comunidadesBeneficiadas.etiqueta}
-          valor={indicadores.comunidadesBeneficiadas}
-          color="#0891b2"
+        <TarjetaMetrica
+          etiqueta="Jornadas Realizadas"
+          valor={indicadores?.jornadas || 0}
+          meta="4"
+          color="#3b82f6"
         />
-        <TarjetaIndicador
-          etiqueta={CAMPOS_DASHBOARD.tratamientosEntregados.etiqueta}
-          valor={indicadores.tratamientosEntregados}
-          color="#d97706"
+        <TarjetaMetrica
+          etiqueta="Voluntarios Activos"
+          valor={indicadores?.voluntarios || 0}
+          meta="10"
+          color="#f59e0b"
         />
-        <TarjetaIndicador
-          etiqueta={CAMPOS_DASHBOARD.medicamentosUtilizados.etiqueta}
-          valor={indicadores.medicamentosUtilizados}
-          color="#4f46e5"
+        <TarjetaMetrica
+          etiqueta="Donaciones Recibidas"
+          valor={`Q ${indicadores?.donaciones || 0}`}
+          meta="Q 750,000"
+          color="#ec4899"
         />
       </div>
 
-      {/* Avisos que requieren acción */}
-      {(avisos.movimientosPendientes > 0 || avisos.alertasVencimiento > 0) && (
-        <div style={{ marginBottom: "28px" }}>
+      {/* 📈 Gráficas */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "24px" }}>
+        {/* Gráfica por mes */}
+        <div
+          style={{
+            backgroundColor: "#fff",
+            borderRadius: "16px",
+            padding: "20px",
+            border: "1px solid #f1f5f9",
+          }}
+        >
           <h3
-            style={{ fontSize: "15px", fontWeight: "700", color: "#334155", margin: "0 0 12px 0" }}
+            style={{ fontSize: "16px", fontWeight: "600", color: "#1e293b", margin: "0 0 20px 0" }}
           >
-            ⚠️ Avisos que requieren su atención
+            Pacientes atendidos por mes
           </h3>
           <div
             style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
-              gap: "12px",
+              display: "flex",
+              alignItems: "flex-end",
+              justifyContent: "space-between",
+              height: "140px",
+              padding: "0 4px",
             }}
           >
-            {avisos.movimientosPendientes > 0 && (
-              <TarjetaAviso
-                etiqueta={CAMPOS_DASHBOARD.movimientosPendientes.etiqueta}
-                valor={avisos.movimientosPendientes}
-                enlace={CAMPOS_DASHBOARD.movimientosPendientes.enlace}
-                color={COLORES_GRAFICAS.pendiente}
-              />
-            )}
-            {avisos.alertasVencimiento > 0 && (
-              <TarjetaAviso
-                etiqueta={CAMPOS_DASHBOARD.alertasVencimiento.etiqueta}
-                valor={avisos.alertasVencimiento}
-                enlace={CAMPOS_DASHBOARD.alertasVencimiento.enlace}
-                color={COLORES_GRAFICAS.alerta}
-              />
-            )}
+            {meses.map((nombre, i) => {
+              const valor = evolucionMensual?.[i] || 0;
+              const alto = valor > 0 ? Math.max((valor / 300) * 100, 8) : 4;
+              const color = valor > 0 ? "#22c55e" : "#e2e8f0";
+              return (
+                <div
+                  key={i}
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    width: "7%",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: "100%",
+                      backgroundColor: color,
+                      borderRadius: "4px 4px 0 0",
+                      height: `${alto}%`,
+                    }}
+                  />
+                  <span style={{ fontSize: "11px", color: "#64748b", marginTop: "6px" }}>
+                    {nombre}
+                  </span>
+                </div>
+              );
+            })}
           </div>
         </div>
-      )}
 
-      {/* Gráficas */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(400px, 1fr))",
-          gap: "20px",
-        }}
-      >
-        <GraficaBarras
-          datos={evolucionMensual}
-          etiquetaX="mes"
-          etiquetaY="cantidad"
-          color={COLORES_GRAFICAS.evolucion}
-          titulo="Evolución de atenciones por mes"
-        />
-        <GraficaBarras
-          datos={porComunidad}
-          etiquetaX="nombre"
-          etiquetaY="cantidad"
-          color={COLORES_GRAFICAS.comunidad}
-          titulo="Atenciones por comunidad"
-        />
+        {/* Gráfica por especialidad */}
+        <div
+          style={{
+            backgroundColor: "#fff",
+            borderRadius: "16px",
+            padding: "20px",
+            border: "1px solid #f1f5f9",
+          }}
+        >
+          <h3
+            style={{ fontSize: "16px", fontWeight: "600", color: "#1e293b", margin: "0 0 20px 0" }}
+          >
+            Atenciones por especialidad
+          </h3>
+          <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+            {porEspecialidad?.map((esp, i) => (
+              <div key={i}>
+                <div
+                  style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}
+                >
+                  <span style={{ fontSize: "14px", fontWeight: "500", color: "#334155" }}>
+                    {esp.nombre}
+                  </span>
+                  <span style={{ fontSize: "14px", fontWeight: "600", color: esp.color }}>
+                    {esp.cantidad}
+                  </span>
+                </div>
+                <div
+                  style={{
+                    height: "8px",
+                    backgroundColor: "#f1f5f9",
+                    borderRadius: "4px",
+                    overflow: "hidden",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: `${Math.min((esp.cantidad / 1540) * 100, 100)}%`,
+                      height: "100%",
+                      backgroundColor: esp.color,
+                      borderRadius: "4px",
+                    }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );
