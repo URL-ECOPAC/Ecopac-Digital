@@ -1,119 +1,229 @@
-import { useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { colors, radii, spacing, typography } from "@ecopac/ui-tokens";
-import Modal from "./Modal";
+// apps/mobile/src/components/KanbanBoard.js
+import React, { useState } from "react";
+import { View, Text, ScrollView, TouchableOpacity, Modal, StyleSheet } from "react-native";
 
-const MIN_TOUCH_HEIGHT = 48;
-const ANCHO_COLUMNA = 280;
-
-/**
- * Tablero kanban. Espejo de apps/web/src/components/KanbanBoard.jsx, con las mismas props.
- *
- * No sabe cuantas columnas hay ni que representan: las declara el modulo que lo usa, que es
- * lo que permite que jornadas lo use con tres etapas y pacientes con cinco sin tocarlo.
- *
- * Diferencia deliberada con la web, que fija el contrato: aqui la tarjeta se mueve con un
- * boton "Mover" que abre una hoja con las columnas destino, NO arrastrando. Arrastrar dentro
- * de un ScrollView tactil compite con el gesto de desplazamiento y falla a menudo; un boton
- * acierta siempre, y ademas funciona para quien usa lector de pantalla.
- */
-export default function KanbanBoard({ columnas = [], renderTarjeta, onMover }) {
-  const [moviendo, setMoviendo] = useState(null);
-
-  const elegirDestino = (destinoId) => {
-    if (moviendo && destinoId !== moviendo.columnaId) {
-      onMover?.(moviendo.tarjeta.id, moviendo.columnaId, destinoId);
-    }
-    setMoviendo(null);
-  };
+export default function KanbanBoard({ proyectos, etapas, onCambiarEtapa }) {
+  const [proyectoSeleccionado, setProyectoSeleccionado] = useState(null);
 
   return (
-    <>
+    <View style={styles.kanbanContainer}>
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        {columnas.map((columna) => (
-          <View key={columna.id} style={styles.columna}>
-            <Text style={styles.titulo}>
-              {columna.titulo} {(columna.tarjetas ?? []).length}
-            </Text>
+        {etapas.map((etapa) => {
+          const proyectosEtapa = proyectos.filter((p) => (p.etapa || p.estado) === etapa.id);
 
-            <View style={styles.tarjetas}>
-              {(columna.tarjetas ?? []).map((tarjeta) => (
-                <View key={tarjeta.id}>
-                  {renderTarjeta?.(tarjeta)}
-                  <Pressable
-                    style={({ pressed }) => [styles.mover, pressed && styles.moverPressed]}
-                    onPress={() => setMoviendo({ tarjeta, columnaId: columna.id })}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Mover a otra columna`}
-                  >
-                    <Text style={styles.moverTexto}>Mover</Text>
-                  </Pressable>
+          return (
+            <View key={etapa.id} style={styles.column}>
+              <View style={styles.columnHeader}>
+                <Text style={styles.columnTitle}>{etapa.titulo}</Text>
+                <View style={styles.badgeCount}>
+                  <Text style={styles.badgeCountText}>{proyectosEtapa.length}</Text>
                 </View>
-              ))}
+              </View>
+
+              <ScrollView nestedScrollEnabled showsVerticalScrollIndicator={false}>
+                {proyectosEtapa.map((p) => (
+                  <View key={p.id} style={styles.card}>
+                    <Text style={styles.cardTitle}>{p.nombre}</Text>
+                    {p.descripcion && (
+                      <Text style={styles.cardDesc} numberOfLines={2}>
+                        {p.descripcion}
+                      </Text>
+                    )}
+                    <View style={styles.cardFooter}>
+                      <Text style={styles.cardBudget}>
+                        Q {Number(p.presupuesto || 0).toLocaleString()}
+                      </Text>
+                      <TouchableOpacity
+                        style={styles.moveBtn}
+                        onPress={() => setProyectoSeleccionado(p)}
+                      >
+                        <Text style={styles.moveBtnText}>Mover</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ))}
+              </ScrollView>
             </View>
-          </View>
-        ))}
+          );
+        })}
       </ScrollView>
 
-      <Modal visible={moviendo !== null} onClose={() => setMoviendo(null)} title="Mover a">
-        {columnas
-          .filter((columna) => columna.id !== moviendo?.columnaId)
-          .map((columna) => (
-            <Pressable
-              key={columna.id}
-              style={({ pressed }) => [styles.destino, pressed && styles.destinoPressed]}
-              onPress={() => elegirDestino(columna.id)}
-              accessibilityRole="button"
-            >
-              <Text style={styles.destinoTexto}>{columna.titulo}</Text>
-            </Pressable>
-          ))}
+      {/* Modal para cambiar etapa */}
+      <Modal
+        visible={!!proyectoSeleccionado}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setProyectoSeleccionado(null)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Mover Proyecto</Text>
+            <Text style={styles.modalSubtitle}>{proyectoSeleccionado?.nombre}</Text>
+
+            {etapas.map((e) => (
+              <TouchableOpacity
+                key={e.id}
+                style={[
+                  styles.optionBtn,
+                  (proyectoSeleccionado?.etapa || proyectoSeleccionado?.estado) === e.id &&
+                    styles.optionBtnSelected,
+                ]}
+                onPress={() => {
+                  onCambiarEtapa(proyectoSeleccionado.id, e.id);
+                  setProyectoSeleccionado(null);
+                }}
+              >
+                <Text
+                  style={[
+                    styles.optionBtnText,
+                    (proyectoSeleccionado?.etapa || proyectoSeleccionado?.estado) === e.id &&
+                      styles.optionBtnTextSelected,
+                  ]}
+                >
+                  {e.titulo}
+                </Text>
+              </TouchableOpacity>
+            ))}
+
+            <TouchableOpacity style={styles.closeBtn} onPress={() => setProyectoSeleccionado(null)}>
+              <Text style={styles.closeBtnText}>Cancelar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       </Modal>
-    </>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  columna: {
-    width: ANCHO_COLUMNA,
-    marginRight: spacing.md,
-    padding: spacing.sm,
-    borderRadius: radii.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.background,
+  kanbanContainer: {
+    minHeight: 450, // <-- CRUCIAL: evita que el tablero colapse verticalmente
+    paddingVertical: 8,
   },
-  titulo: {
-    fontFamily: typography.fontFamilyBase,
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.semibold,
-    color: colors.textMuted,
-    marginBottom: spacing.sm,
+  column: {
+    width: 260,
+    backgroundColor: "#F1F5F9",
+    borderRadius: 12,
+    padding: 12,
+    marginRight: 12,
+    maxHeight: 500,
   },
-  tarjetas: { gap: spacing.sm },
-  mover: {
-    minHeight: MIN_TOUCH_HEIGHT,
+  columnHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
+    marginBottom: 12,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: "#CBD5E1",
+  },
+  columnTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#334155",
+  },
+  badgeCount: {
+    backgroundColor: "#CBD5E1",
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  badgeCountText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#475569",
+  },
+  card: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+  },
+  cardTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#0F172A",
+    marginBottom: 4,
+  },
+  cardDesc: {
+    fontSize: 12,
+    color: "#64748B",
+    marginBottom: 8,
+  },
+  cardFooter: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: 4,
+  },
+  cardBudget: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#16A34A",
+  },
+  moveBtn: {
+    backgroundColor: "#E0F2FE",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  moveBtnText: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#0284C7",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
     justifyContent: "center",
-    marginTop: spacing.xs,
+    alignItems: "center",
+    padding: 20,
   },
-  moverPressed: { opacity: 0.6 },
-  moverTexto: {
-    fontFamily: typography.fontFamilyBase,
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.semibold,
-    color: colors.primary,
+  modalContent: {
+    width: "100%",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 20,
   },
-  destino: {
-    minHeight: MIN_TOUCH_HEIGHT,
-    justifyContent: "center",
-    paddingHorizontal: spacing.md,
-    borderRadius: radii.md,
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#0F172A",
   },
-  destinoPressed: { backgroundColor: colors.surface },
-  destinoTexto: {
-    fontFamily: typography.fontFamilyBase,
-    fontSize: typography.sizes.md,
-    color: colors.text,
+  modalSubtitle: {
+    fontSize: 13,
+    color: "#64748B",
+    marginBottom: 16,
+  },
+  optionBtn: {
+    padding: 12,
+    borderRadius: 8,
+    backgroundColor: "#F8FAFC",
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+  },
+  optionBtnSelected: {
+    backgroundColor: "#DCFCE7",
+    borderColor: "#16A34A",
+  },
+  optionBtnText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#334155",
+  },
+  optionBtnTextSelected: {
+    color: "#15803D",
+  },
+  closeBtn: {
+    marginTop: 8,
+    padding: 12,
+    alignItems: "center",
+  },
+  closeBtnText: {
+    color: "#64748B",
+    fontWeight: "600",
   },
 });
