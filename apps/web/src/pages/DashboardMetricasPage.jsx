@@ -1,95 +1,108 @@
-import { Link } from "react-router-dom";
-import { useState, useEffect } from "react";
 import { useDashboardMetricas } from "../../../../packages/shared/reportes/useDashboardMetricas.js";
-import { useFiltrosReportes } from "../../../../packages/shared/reportes/useFiltrosReportes.js";
-import BarraFiltrosReporte from "./BarraFiltrosReporte";
-import { listarBodegas } from "../../../../packages/shared/inventario/bodegas.api.js";
-import {
-  CAMPOS_DASHBOARD,
-  COLORES_GRAFICAS,
-} from "../../../../packages/shared/reportes/dashboard.campos.js";
 
 // 📊 Tarjeta de métrica alineada a Figma
-const TarjetaMetrica = ({ etiqueta, valor, meta, color }) => (
-  <div
-    style={{
-      backgroundColor: "#fff",
-      borderRadius: "16px",
-      padding: "20px",
-      border: "1px solid #f1f5f9",
-    }}
-  >
-    <p
+const TarjetaMetrica = ({ etiqueta, valor, meta, color }) => {
+  const progreso = meta
+    ? Math.min((Number(valor) / Number(meta.replace(/[^0-9]/g, ""))) * 100, 100)
+    : 0;
+  return (
+    <div
       style={{
-        fontSize: "12px",
-        color: "#64748b",
-        margin: "0 0 8px 0",
-        textTransform: "uppercase",
-        letterSpacing: "0.5px",
+        backgroundColor: "#fff",
+        borderRadius: "16px",
+        padding: "20px",
+        border: "1px solid #f1f5f9",
       }}
     >
-      {etiqueta}
-    </p>
-    <p style={{ fontSize: "36px", fontWeight: "700", color: color, margin: "0 0 12px 0" }}>
-      {valor}
-    </p>
-    {meta && (
-      <div
+      <p
         style={{
-          height: "6px",
-          backgroundColor: "#e2e8f0",
-          borderRadius: "3px",
-          overflow: "hidden",
-          marginBottom: "6px",
+          fontSize: "12px",
+          color: "#64748b",
+          margin: "0 0 8px 0",
+          textTransform: "uppercase",
+          letterSpacing: "0.5px",
         }}
       >
-        <div
-          style={{ height: "100%", backgroundColor: color, borderRadius: "3px", width: "70%" }}
-        />
-      </div>
-    )}
-    {meta && (
-      <div style={{ fontSize: "11px", color: "#94a3b8", textAlign: "right" }}>meta: {meta}</div>
-    )}
-  </div>
-);
+        {etiqueta}
+      </p>
+      <p style={{ fontSize: "36px", fontWeight: "700", color: color, margin: "0 0 12px 0" }}>
+        {valor}
+      </p>
+      {meta && (
+        <>
+          <div
+            style={{
+              height: "6px",
+              backgroundColor: "#e2e8f0",
+              borderRadius: "3px",
+              overflow: "hidden",
+              marginBottom: "6px",
+            }}
+          >
+            <div
+              style={{
+                height: "100%",
+                backgroundColor: color,
+                borderRadius: "3px",
+                width: `${progreso}%`,
+              }}
+            />
+          </div>
+          <div style={{ fontSize: "11px", color: "#94a3b8", textAlign: "right" }}>meta: {meta}</div>
+        </>
+      )}
+    </div>
+  );
+};
 
 export default function DashboardMetricasPage() {
-  // Datos del dashboard desde el hook
+  // ✅ Extraemos TODOS los valores del hook
   const {
     cargando,
     error,
     indicadores,
-    evolucionMensual,
-    porEspecialidad,
-    topDonantes,
-    estadoJornadas,
+    seriePrincipal,
+    serieComparacion,
+    calcularVariacion,
+    rangosDisponibles,
+    rangoSeleccionado,
+    setRangoSeleccionado,
+    agrupamientosDisponibles,
+    agruparPor,
+    setAgruparPor,
+    comunidadId,
+    setComunidadId,
+    modoComparacion,
+    setModoComparacion,
+    comunidadCompararId,
+    setComunidadCompararId,
+    listaComunidades,
+    valoresEspeciales: { TODAS, NINGUNA },
   } = useDashboardMetricas();
 
-  // Filtros
-  const { filtros, alCambiarFiltros } = useFiltrosReportes();
-
-  // Listas para los desplegables
-  const [comunidades, setComunidades] = useState([]);
-  const [jornadas, setJornadas] = useState([]);
-  const [proyectos, setProyectos] = useState([]);
-
-  // ✅ Cargar comunidades desde la API al iniciar
-  useEffect(() => {
-    const cargarDatos = async () => {
-      try {
-        const datosBodegas = await listarBodegas();
-        const formateado = datosBodegas.map((b) => ({
-          id: b.id || b.codigo || b.bodega_id,
-          nombre: b.nombre || b.nombre_bodega || b.descripcion,
-        }));
-        setComunidades(formateado);
-      } catch (err) {
-        console.error("Error cargando comunidades:", err);
-      }
-    };
-    cargarDatos();
-  }, []);
+  // ✅ Función de exportación CSV — AHORA EN EL COMPONENTE
+  const exportarCSV = () => {
+    if (!seriePrincipal || seriePrincipal.length === 0) return;
+    const encabezados = [agruparPor, "Valor Principal", "Valor Comparado", "Variación %"];
+    const filas = seriePrincipal.map((fila, i) => {
+      const comp = serieComparacion?.[i];
+      const varPc = comp ? calcularVariacion(fila.valor, comp.valor) : null;
+      return [
+        fila.etiqueta,
+        fila.valor,
+        comp?.valor || "-",
+        varPc !== null ? `${varPc >= 0 ? "+" : ""}${varPc.toFixed(1)}%` : "-",
+      ];
+    });
+    const contenido = [encabezados, ...filas].map((f) => f.join(",")).join("\n");
+    const blob = new Blob([contenido], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `panel-impacto-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   if (cargando)
     return (
@@ -97,47 +110,198 @@ export default function DashboardMetricasPage() {
         Cargando métricas...
       </div>
     );
-  if (error)
-    return (
-      <div style={{ padding: "40px", color: "#dc2626" }}>Error al cargar: {error.message}</div>
-    );
 
-  // Meses para la gráfica
-  const meses = [
-    "Ene",
-    "Feb",
-    "Mar",
-    "Abr",
-    "May",
-    "Jun",
-    "Jul",
-    "Ago",
-    "Sep",
-    "Oct",
-    "Nov",
-    "Dic",
-  ];
+  if (error)
+    return <div style={{ padding: "40px", color: "#dc2626" }}>Error al cargar: {error}</div>;
+
+  // 📊 Datos de gráfica
+  const valorMaximo = Math.max(...seriePrincipal.map((i) => i.valor), 1);
 
   return (
     <div style={{ padding: "24px", backgroundColor: "#f8fafc", minHeight: "100vh" }}>
-      {/* Título */}
-      <div style={{ marginBottom: "24px" }}>
-        <h1 style={{ fontSize: "24px", fontWeight: "700", color: "#1e293b", margin: "0 0 4px 0" }}>
-          Reportes e Impacto
-        </h1>
-        <p style={{ fontSize: "14px", color: "#64748b", margin: 0 }}>
-          Métricas, estadísticas y volumen de atención 2024
-        </p>
+      {/* 📌 Título */}
+      <div
+        style={{
+          marginBottom: "24px",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+        }}
+      >
+        <div>
+          <h1
+            style={{ fontSize: "24px", fontWeight: "700", color: "#1e293b", margin: "0 0 4px 0" }}
+          >
+            Reportes e Impacto
+          </h1>
+          <p style={{ fontSize: "14px", color: "#64748b", margin: 0 }}>
+            Métricas, estadísticas y volumen de atención
+          </p>
+        </div>
+        <button
+          onClick={exportarCSV}
+          style={{
+            padding: "10px 16px",
+            backgroundColor: "#10b981",
+            color: "#fff",
+            border: "none",
+            borderRadius: "10px",
+            fontSize: "14px",
+            fontWeight: "600",
+            cursor: "pointer",
+          }}
+        >
+          Exportar CSV
+        </button>
       </div>
 
-      {/* 🔍 Barra de Filtros */}
-      <BarraFiltrosReporte
-        filtros={filtros}
-        alCambiarFiltros={alCambiarFiltros}
-        comunidades={comunidades}
-        jornadas={jornadas}
-        proyectos={proyectos}
-      />
+      {/* 🔍 FILTROS */}
+      <div
+        style={{
+          backgroundColor: "#fff",
+          borderRadius: "16px",
+          padding: "20px",
+          marginBottom: "24px",
+          border: "1px solid #f1f5f9",
+        }}
+      >
+        <div style={{ marginBottom: "16px" }}>
+          <p style={{ fontSize: "13px", fontWeight: "600", color: "#334155", margin: "0 0 8px 0" }}>
+            Rango de fechas
+          </p>
+          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+            {rangosDisponibles.map((r) => (
+              <button
+                key={r.valor}
+                onClick={() => setRangoSeleccionado(r.valor)}
+                style={{
+                  padding: "8px 16px",
+                  borderRadius: "10px",
+                  border: "none",
+                  backgroundColor: rangoSeleccionado === r.valor ? "#10b981" : "#f1f5f9",
+                  color: rangoSeleccionado === r.valor ? "#fff" : "#475569",
+                  fontSize: "13px",
+                  fontWeight: "600",
+                  cursor: "pointer",
+                }}
+              >
+                {r.etiqueta}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(3, 1fr)",
+            gap: "16px",
+            marginBottom: "16px",
+          }}
+        >
+          <div>
+            <label
+              style={{
+                fontSize: "12px",
+                fontWeight: "600",
+                color: "#64748b",
+                display: "block",
+                marginBottom: "6px",
+              }}
+            >
+              Agrupar por
+            </label>
+            <select
+              value={agruparPor}
+              onChange={(e) => setAgruparPor(e.target.value)}
+              style={{
+                width: "100%",
+                padding: "10px",
+                borderRadius: "10px",
+                border: "1px solid #e2e8f0",
+              }}
+            >
+              {agrupamientosDisponibles.map((a) => (
+                <option key={a.valor} value={a.valor}>
+                  {a.etiqueta}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* ✅ Select con valores REALES desde el hook */}
+          <div>
+            <label
+              style={{
+                fontSize: "12px",
+                fontWeight: "600",
+                color: "#64748b",
+                display: "block",
+                marginBottom: "6px",
+              }}
+            >
+              Comunidad
+            </label>
+            <select
+              value={comunidadId}
+              onChange={(e) => setComunidadId(e.target.value)}
+              style={{
+                width: "100%",
+                padding: "10px",
+                borderRadius: "10px",
+                border: "1px solid #e2e8f0",
+              }}
+            >
+              <option value={TODAS}>Todas las comunidades</option>
+              {listaComunidades.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.nombre}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* ✅ Select de comparación con valores REALES */}
+          <div>
+            <label
+              style={{
+                fontSize: "12px",
+                fontWeight: "600",
+                color: "#64748b",
+                display: "block",
+                marginBottom: "6px",
+              }}
+            >
+              Comparar
+            </label>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <input
+                type="checkbox"
+                checked={modoComparacion}
+                onChange={(e) => setModoComparacion(e.target.checked)}
+              />
+              <select
+                value={comunidadCompararId}
+                onChange={(e) => setComunidadCompararId(e.target.value)}
+                disabled={!modoComparacion}
+                style={{
+                  flex: 1,
+                  padding: "10px",
+                  borderRadius: "10px",
+                  border: "1px solid #e2e8f0",
+                }}
+              >
+                <option value={NINGUNA}>— Ninguna —</option>
+                {listaComunidades.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.nombre}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* 📊 Tarjetas de métricas */}
       <div
@@ -150,33 +314,38 @@ export default function DashboardMetricasPage() {
       >
         <TarjetaMetrica
           etiqueta="Pacientes Atendidos"
-          valor={indicadores?.pacientes || 0}
+          valor={indicadores?.pacientesAtendidos || 0}
           meta="3000"
-          color="#22c55e"
+          color="#10b981"
         />
         <TarjetaMetrica
-          etiqueta="Jornadas Realizadas"
-          valor={indicadores?.jornadas || 0}
-          meta="4"
+          etiqueta="Comunidades Beneficiadas"
+          valor={indicadores?.comunidadesBeneficiadas || 0}
+          meta="50"
           color="#3b82f6"
         />
         <TarjetaMetrica
-          etiqueta="Voluntarios Activos"
-          valor={indicadores?.voluntarios || 0}
-          meta="10"
+          etiqueta="Tratamientos Entregados"
+          valor={indicadores?.tratamientosEntregados || 0}
+          meta="1500"
           color="#f59e0b"
         />
         <TarjetaMetrica
-          etiqueta="Donaciones Recibidas"
-          valor={`Q ${indicadores?.donaciones || 0}`}
-          meta="Q 750,000"
+          etiqueta="Medicamentos Utilizados"
+          valor={indicadores?.medicamentosUtilizados || 0}
+          meta="5000"
           color="#ec4899"
         />
       </div>
 
-      {/* 📈 Gráficas */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "24px" }}>
-        {/* Gráfica por mes */}
+      {/* 📈 Gráfica de evolución */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: serieComparacion.length > 0 ? "1fr 1fr" : "1fr",
+          gap: "24px",
+        }}
+      >
         <div
           style={{
             backgroundColor: "#fff",
@@ -188,21 +357,20 @@ export default function DashboardMetricasPage() {
           <h3
             style={{ fontSize: "16px", fontWeight: "600", color: "#1e293b", margin: "0 0 20px 0" }}
           >
-            Pacientes atendidos por mes
+            Pacientes atendidos por {agruparPor}
           </h3>
           <div
             style={{
               display: "flex",
               alignItems: "flex-end",
               justifyContent: "space-between",
-              height: "140px",
+              height: "180px",
+              gap: "4px",
               padding: "0 4px",
             }}
           >
-            {meses.map((nombre, i) => {
-              const valor = evolucionMensual?.[i] || 0;
-              const alto = valor > 0 ? Math.max((valor / 300) * 100, 8) : 4;
-              const color = valor > 0 ? "#22c55e" : "#e2e8f0";
+            {seriePrincipal.map((item, i) => {
+              const alto = valorMaximo > 0 ? Math.max((item.valor / valorMaximo) * 100, 8) : 4;
               return (
                 <div
                   key={i}
@@ -210,74 +378,115 @@ export default function DashboardMetricasPage() {
                     display: "flex",
                     flexDirection: "column",
                     alignItems: "center",
-                    width: "7%",
+                    flex: 1,
                   }}
                 >
                   <div
+                    style={{ display: "flex", alignItems: "flex-end", height: "100%", gap: "3px" }}
+                  >
+                    <div
+                      style={{
+                        width: serieComparacion.length ? "45%" : "80%",
+                        backgroundColor: "#10b981",
+                        borderRadius: "4px 4px 0 0",
+                        height: `${alto}%`,
+                      }}
+                      title={`Valor: ${item.valor}`}
+                    />
+                    {serieComparacion[i] && (
+                      <div
+                        style={{
+                          width: "45%",
+                          backgroundColor: "#3b82f6",
+                          borderRadius: "4px 4px 0 0",
+                          height: `${Math.max((serieComparacion[i].valor / valorMaximo) * 100, 4)}%`,
+                        }}
+                        title={`Comparación: ${serieComparacion[i].valor}`}
+                      />
+                    )}
+                  </div>
+                  <span
                     style={{
-                      width: "100%",
-                      backgroundColor: color,
-                      borderRadius: "4px 4px 0 0",
-                      height: `${alto}%`,
+                      fontSize: "10px",
+                      color: "#64748b",
+                      marginTop: "6px",
+                      textAlign: "center",
                     }}
-                  />
-                  <span style={{ fontSize: "11px", color: "#64748b", marginTop: "6px" }}>
-                    {nombre}
+                  >
+                    {item.etiqueta}
                   </span>
                 </div>
               );
             })}
           </div>
+          {serieComparacion.length > 0 && (
+            <div
+              style={{ display: "flex", justifyContent: "center", gap: "20px", marginTop: "12px" }}
+            >
+              <span style={{ fontSize: "12px", color: "#10b981", fontWeight: "500" }}>
+                ■ Selección actual
+              </span>
+              <span style={{ fontSize: "12px", color: "#3b82f6", fontWeight: "500" }}>
+                ■ Comparación
+              </span>
+            </div>
+          )}
         </div>
 
-        {/* Gráfica por especialidad */}
-        <div
-          style={{
-            backgroundColor: "#fff",
-            borderRadius: "16px",
-            padding: "20px",
-            border: "1px solid #f1f5f9",
-          }}
-        >
-          <h3
-            style={{ fontSize: "16px", fontWeight: "600", color: "#1e293b", margin: "0 0 20px 0" }}
+        {/* 📋 Panel de variación porcentual */}
+        {serieComparacion.length > 0 && (
+          <div
+            style={{
+              backgroundColor: "#fff",
+              borderRadius: "16px",
+              padding: "20px",
+              border: "1px solid #f1f5f9",
+            }}
           >
-            Atenciones por especialidad
-          </h3>
-          <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-            {porEspecialidad?.map((esp, i) => (
-              <div key={i}>
-                <div
-                  style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}
-                >
-                  <span style={{ fontSize: "14px", fontWeight: "500", color: "#334155" }}>
-                    {esp.nombre}
-                  </span>
-                  <span style={{ fontSize: "14px", fontWeight: "600", color: esp.color }}>
-                    {esp.cantidad}
-                  </span>
-                </div>
-                <div
-                  style={{
-                    height: "8px",
-                    backgroundColor: "#f1f5f9",
-                    borderRadius: "4px",
-                    overflow: "hidden",
-                  }}
-                >
+            <h3
+              style={{
+                fontSize: "16px",
+                fontWeight: "600",
+                color: "#1e293b",
+                margin: "0 0 20px 0",
+              }}
+            >
+              Variación porcentual
+            </h3>
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+              {seriePrincipal.map((item, i) => {
+                const comp = serieComparacion[i];
+                if (!comp) return null;
+                const varPc = calcularVariacion(item.valor, comp.valor);
+                if (varPc === null) return null;
+                return (
                   <div
+                    key={i}
                     style={{
-                      width: `${Math.min((esp.cantidad / 1540) * 100, 100)}%`,
-                      height: "100%",
-                      backgroundColor: esp.color,
-                      borderRadius: "4px",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      padding: "10px 12px",
+                      backgroundColor: varPc >= 0 ? "#f0fdf4" : "#fef2f2",
+                      borderRadius: "10px",
                     }}
-                  />
-                </div>
-              </div>
-            ))}
+                  >
+                    <span style={{ fontSize: "14px", fontWeight: "500" }}>{item.etiqueta}</span>
+                    <span
+                      style={{
+                        fontSize: "15px",
+                        fontWeight: "700",
+                        color: varPc >= 0 ? "#059669" : "#dc2626",
+                      }}
+                    >
+                      {varPc >= 0 ? "↑" : "↓"} {Math.abs(varPc).toFixed(1)}%
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
