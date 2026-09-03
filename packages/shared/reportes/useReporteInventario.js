@@ -16,7 +16,7 @@ export function useReporteInventario() {
   const [listaBodegas, setListaBodegas] = useState([]);
   const [registros, setRegistros] = useState([]);
 
-  // ✅ CARGAR BODEGAS POR SEPARADO (desde tabla bodegas)
+  // ✅ Cargar bodegas directamente desde su tabla
   const cargarBodegas = async () => {
     const supabase = obtenerSupabase();
     try {
@@ -33,7 +33,7 @@ export function useReporteInventario() {
     }
   };
 
-  // ─── Cargar inventario ───
+  // ─── Cargar inventario desde EXISTENCIAS + LOTES ───
   const cargarInventario = async () => {
     const supabase = obtenerSupabase();
     setCargando(true);
@@ -43,22 +43,31 @@ export function useReporteInventario() {
       const hoy = new Date();
       const treintaDias = new Date();
       treintaDias.setDate(hoy.getDate() + 30);
+      const hoyStr = hoy.toISOString().slice(0, 10);
+      const treintaDiasStr = treintaDias.toISOString().slice(0, 10);
 
-      let consulta = supabase
-        .from("lotes_existencias")
-        .select(`
-          cantidad,
-          medicamento_id,
-          medicamentos (nombre, concentracion, presentacion, marca, activo),
-          numero_lote,
-          fecha_vencimiento,
+      // ✅ Estructura REAL: existencias → lotes → medicamentos
+      let consulta = supabase.from("existencias").select(`
+          id,
+          cantidad_disponible,
+          lote_id,
           bodega_id,
+          lotes (
+            id,
+            numero_lote,
+            fecha_vencimiento,
+            fecha_ingreso,
+            cantidad_ingresada,
+            origen,
+            medicamento_id,
+            medicamentos (nombre, concentracion, presentacion, marca, activo),
+            proveedor_id,
+            proveedores (nombre)
+          ),
           bodegas (nombre, es_movil)
         `);
 
-      if (soloActivos) {
-        consulta = consulta.eq("medicamentos.activo", true);
-      }
+      // Filtro por bodega
       if (bodegaId && bodegaId !== TODAS) {
         consulta = consulta.eq("bodega_id", bodegaId);
       }
@@ -66,29 +75,46 @@ export function useReporteInventario() {
       const { data, err } = await consulta;
       if (err) throw err;
 
-      // 🧮 Calcular estado de vencimiento
+      // 🧮 Calcular estado de vencimiento y desestructurar
       const procesados = (data || []).map((r) => {
-        const fechaVenc = r.fecha_vencimiento ? new Date(r.fecha_vencimiento) : null;
+        const lote = r.lotes || {};
+        const medicamento = lote.medicamentos || {};
+        const bodega = r.bodegas || {};
+        const fechaVenc = lote.fecha_vencimiento ? new Date(lote.fecha_vencimiento) : null;
+
         let estado = "sin_fecha";
+        let estaVencido = false;
         if (fechaVenc) {
-          if (fechaVenc < hoy) estado = "vencido";
-          else if (fechaVenc <= treintaDias) estado = "por_vencer";
-          else estado = "vigente";
+          estaVencido = fechaVenc < hoy;
+          estado = estaVencido ? "vencido" : fechaVenc <= treintaDias ? "por_vencer" : "vigente";
         }
+
         return {
-          ...r,
-          medicamento: r.medicamentos,
-          bodega: r.bodegas,
+          id: r.id,
+          cantidad_disponible: r.cantidad_disponible,
+          medicamento_id: lote.medicamento_id,
+          medicamento,
+          numero_lote: lote.numero_lote,
+          fecha_vencimiento: lote.fecha_vencimiento,
+          fecha_ingreso: lote.fecha_ingreso,
+          origen: lote.origen,
+          cantidad_ingresada: lote.cantidad_ingresada,
+          bodega_id: r.bodega_id,
+          bodega,
           estadoVencimiento: estado,
-          estaVencido: estado === "vencido",
+          estaVencido,
         };
       });
 
-      // 🔍 Aplicar filtro de vencimiento
+      // 🔍 Aplicar filtros combinados
       const filtrados = procesados.filter((r) => {
-        if (estadoVencimiento === "todos") return true;
+        // Filtro por medicamento activo
+        if (soloActivos && r.medicamento.activo === false) return false;
+        // Filtro por estado de vencimiento
         if (estadoVencimiento === "vigente") return !r.estaVencido;
-        return r.estadoVencimiento === estadoVencimiento;
+        if (estadoVencimiento === "vencido") return r.estaVencido;
+        if (estadoVencimiento === "por_vencer") return r.estadoVencimiento === "por_vencer";
+        return true; // "todos"
       });
 
       setRegistros(filtrados);
@@ -99,9 +125,9 @@ export function useReporteInventario() {
     }
   };
 
-  // ─── Cargar TODO al iniciar ───
+  // ─── Cargar datos ───
   useEffect(() => {
-    cargarBodegas(); // ✅ Siempre carga las bodegas primero
+    cargarBodegas();
   }, []);
 
   useEffect(() => {
@@ -115,8 +141,11 @@ export function useReporteInventario() {
     const medicamentosUnicos = new Set(disponibles.map((r) => r.medicamento_id));
 
     return {
-      unidadesDisponibles: disponibles.reduce((sum, r) => sum + Number(r.cantidad || 0), 0),
-      unidadesVencidas: vencidos.reduce((sum, r) => sum + Number(r.cantidad || 0), 0),
+      unidadesDisponibles: disponibles.reduce(
+        (sum, r) => sum + Number(r.cantidad_disponible || 0),
+        0,
+      ),
+      unidadesVencidas: vencidos.reduce((sum, r) => sum + Number(r.cantidad_disponible || 0), 0),
       medicamentosDistintos: medicamentosUnicos.size,
       lotesVencidos: vencidos.length,
     };
@@ -125,17 +154,27 @@ export function useReporteInventario() {
   // ─── Exportar CSV ───
   const obtenerCSV = () => {
     const encabezados = [
-      "Medicamento", "Concentración", "Lote", "Bodega",
-      "Cantidad", "Fecha Vencimiento", "Estado", "Medicamento Activo",
+      "Medicamento",
+      "Concentración",
+      "Lote",
+      "Bodega",
+      "Cantidad Disponible",
+      "Fecha Vencimiento",
+      "Estado",
+      "Medicamento Activo",
     ];
     const filas = registros.map((r) => [
       r.medicamento?.nombre || "Desconocido",
       r.medicamento?.concentracion || "-",
       r.numero_lote || "-",
       r.bodega?.nombre || "Sin bodega",
-      r.cantidad,
+      r.cantidad_disponible,
       r.fecha_vencimiento || "Sin fecha",
-      r.estaVencido ? " Vencido" : r.estadoVencimiento === "por_vencer" ? " Por vencer" : " Vigente",
+      r.estaVencido
+        ? "❌ Vencido"
+        : r.estadoVencimiento === "por_vencer"
+          ? "⚠️ Por vencer"
+          : "✅ Vigente",
       r.medicamento?.activo ? "Sí" : "No",
     ]);
     return { encabezados, filas };
@@ -143,9 +182,12 @@ export function useReporteInventario() {
 
   return {
     valoresEspeciales: { TODAS },
-    bodegaId, setBodegaId,
-    estadoVencimiento, setEstadoVencimiento,
-    soloActivos, setSoloActivos,
+    bodegaId,
+    setBodegaId,
+    estadoVencimiento,
+    setEstadoVencimiento,
+    soloActivos,
+    setSoloActivos,
     opcionesVencimiento: [
       { valor: "todos", etiqueta: "Todos los lotes" },
       { valor: "vigente", etiqueta: "Solo vigentes" },
