@@ -37,6 +37,7 @@ import NotFoundPage from "./pages/NotFoundPage";
 import DashboardMetricasPage from "./pages/DashboardMetricasPage";
 import ReporteJornada from "./pages/ReporteJornada";
 import ReportePacientesPage from "./pages/ReportePacientesPage";
+import ReporteInventarioPage from "./pages/ReporteInventarioPage";
 
 const rolesDe = (ruta) => MODULOS.find((m) => m.ruta === ruta)?.roles ?? [];
 
@@ -151,6 +152,7 @@ export default function App() {
                 <Route path="/reportes" element={<ReportesPage />} />
                 <Route path="/reportes/jornada/:id" element={<ReporteJornada />} />
                 <Route path="/reportes/pacientes-atendidos" element={<ReportePacientesPage />} />
+                <Route path="/reportes/inventario-actual" element={<ReporteInventarioPage />} />
               </Route>
               <Route path="/reportes/dashboard" element={<DashboardMetricasPage />} />
               <Route element={<RutaProtegida roles={rolesDe("/jornadas")} />}>
