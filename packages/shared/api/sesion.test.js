@@ -314,13 +314,23 @@ describe("es la unica implementacion de la autenticacion (issue #512)", () => {
     expect(Object.keys(usuarios)).not.toContain("cerrarSesion");
   });
 
-  it("el hook de la pantalla web consume esta implementacion, no otra", async () => {
-    // Si alguna vez vuelve a haber dos, el barril las recibiria por dos estrellas y ESM las
-    // dejaria en undefined (bug #365): esta comprobacion lo caza como un fallo de prueba en vez
-    // de como un TypeError en produccion.
-    const barril = await import("../index.js");
+  // Timeout propio, y no el de 5 s por defecto: esta es la unica prueba del paquete que importa
+  // el BARRIL ENTERO, asi que su costo crece con el grafo de modulos de todo packages/shared.
+  // Al conectar los cuatro hooks de reportes (issue #693) el barril paso a arrastrar tambien
+  // territorio, bodegas y los filtros de reportes, y la transformacion en frio se pasaba de los
+  // 5 s -- fallaba por tiempo, no por lo que afirma-. No se relaja lo que comprueba, solo se le
+  // da margen para cargar.
+  it(
+    "el hook de la pantalla web consume esta implementacion, no otra",
+    { timeout: 30000 },
+    async () => {
+      // Si alguna vez vuelve a haber dos, el barril las recibiria por dos estrellas y ESM las
+      // dejaria en undefined (bug #365): esta comprobacion lo caza como un fallo de prueba en vez
+      // de como un TypeError en produccion.
+      const barril = await import("../index.js");
 
-    expect(typeof barril.iniciarSesion).toBe("function");
-    expect(typeof barril.cerrarSesion).toBe("function");
-  });
+      expect(typeof barril.iniciarSesion).toBe("function");
+      expect(typeof barril.cerrarSesion).toBe("function");
+    },
+  );
 });

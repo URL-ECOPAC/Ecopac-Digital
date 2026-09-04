@@ -30,7 +30,6 @@ import {
   obtenerPaciente,
   registrarConsulta,
   registrarPaciente,
-  registrarSalida,
 } from "@ecopac/shared";
 
 import {
@@ -64,6 +63,7 @@ const flujo = {
   atencionId: null,
   consultaId: null,
   recetaId: null,
+  recetaFolio: null,
   movimientoId: null,
 };
 
@@ -172,7 +172,7 @@ describe("Flujo critico: atencion clinica completa", () => {
     expect(diagnosticos).toEqual([{ diagnostico_id: diagnosticoId, es_principal: true }]);
   });
 
-  it("6. el medico genera la receta con el medicamento del lote vigente", async () => {
+  it("6. el medico genera la receta, y con ella nace la salida de inventario", async () => {
     const { receta, error } = await generarReceta({
       consulta: flujo.consultaId,
       medico: CUENTAS.MEDICO.perfilId,
@@ -181,6 +181,9 @@ describe("Flujo critico: atencion clinica completa", () => {
         {
           medicamento: DEMO.medicamentoSano,
           loteId: DEMO.loteSano,
+          // La bodega es obligatoria desde la 00112: fn_generar_receta registra la salida en su
+          // misma transaccion y `existencias` esta particionada por (lote, bodega) (issue #711).
+          bodegaId: bodega,
           dosis: "1 tableta",
           frecuencia: "cada 8 horas",
           duracion: "5 dias",
@@ -193,35 +196,51 @@ describe("Flujo critico: atencion clinica completa", () => {
     expect(receta?.id).toBeTruthy();
 
     flujo.recetaId = receta.id;
+    flujo.recetaFolio = receta.folio;
   });
 
   it("7. emitir la receta todavia no toca las existencias", async () => {
-    // fn_generar_receta (00066) comprueba que el lote alcance, pero no descuenta: el descuento
-    // ocurre al despachar, y despachar es un movimiento de salida aprobado. Si esto cambiara sin
-    // querer, el stock se descontaria dos veces.
+    // Sigue siendo cierto, y por el mismo motivo de siempre: el movimiento que crea la receta
+    // nace 'pendiente' cuando lo registra un medico, y el stock solo se mueve al aprobar
+    // (00023/00028). Lo que cambio con la 00112 no es cuando baja el stock, sino que el
+    // movimiento exista desde el primer momento en vez de depender de una segunda llamada.
     const disponible = await existenciaDe(DEMO.loteSano, bodega);
 
     expect(disponible).toBe(existenciasIniciales[0].cantidad);
   });
 
-  it("8. el voluntario registra la salida y nace pendiente de validacion", async () => {
-    await entrarComo(CUENTAS.VOLUNTARIO);
+  it("8. la salida la creo la propia receta, pendiente y sin segunda llamada", async () => {
+    // Antes de la 00112 este paso registraba la salida a mano con registrarSalida(), despues de
+    // emitir. Ese era justamente el agujero de la issue #711: si esa segunda llamada fallaba, la
+    // receta quedaba emitida y el medicamento seguia contado como disponible. Ahora la salida es
+    // parte de la misma transaccion, asi que aqui ya no se registra nada: se comprueba que este.
+    // Se filtra por el motivo, que la 00112 arma como 'Entrega por receta medica ' + folio: el
+    // lote de demostracion ya trae movimientos de la semilla, asi que contar todos los del lote
+    // mediria otra cosa. De paso, que el folio viaje en el motivo es la trazabilidad que la
+    // migracion agrego: desde el kardex se puede llegar a la receta que lo origino.
+    const movimientos = await consultar(
+      `SELECT id, tipo, estado, cantidad, bodega_id, registrado_por
+         FROM movimientos_inventario
+        WHERE lote_id = $1 AND motivo = $2
+        ORDER BY created_at`,
+      [DEMO.loteSano, `Entrega por receta medica ${flujo.recetaFolio}`],
+    );
 
-    const { datos, error } = await registrarSalida({
-      bodega_id: bodega,
-      lote_id: DEMO.loteSano,
-      cantidad: CANTIDAD_RECETADA,
-      motivo: "Dispensacion de receta (prueba e2e)",
-      usuarioId: CUENTAS.VOLUNTARIO.perfilId,
-    });
+    // UNO, no dos: la receta no duplica el movimiento por renglon ni deja que el cliente agregue
+    // otro por su cuenta.
+    expect(movimientos).toHaveLength(1);
 
-    expect(error).toBeNull();
-    expect(datos?.id).toBeTruthy();
-    // El estado no lo manda el cliente: es el DEFAULT de la columna (00023). Un voluntario no
-    // dispara la autoaprobacion, que solo mira a es_administrador() (00028).
-    expect(datos.estado).toBe("pendiente");
+    const [movimiento] = movimientos;
+    expect(movimiento.tipo).toBe("salida");
+    expect(movimiento.cantidad).toBe(CANTIDAD_RECETADA);
+    expect(movimiento.bodega_id).toBe(bodega);
+    // El estado no lo manda el cliente: es el DEFAULT de la columna (00023). Un medico no dispara
+    // la autoaprobacion, que solo mira a es_administrador() (00028).
+    expect(movimiento.estado).toBe("pendiente");
+    // registrado_por sale de auth.uid() dentro de la funcion, no de un campo del cliente.
+    expect(movimiento.registrado_por).toBe(CUENTAS.MEDICO.perfilId);
 
-    flujo.movimientoId = datos.id;
+    flujo.movimientoId = movimiento.id;
   });
 
   it("9. la administradora aprueba y ahi si baja el stock", async () => {
