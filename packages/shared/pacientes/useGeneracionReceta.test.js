@@ -4,7 +4,6 @@ import {
   anotarDisponibilidad,
   describirExistencia,
   renglonIncompleto,
-  totalPorLote,
 } from "./useGeneracionReceta.js";
 
 const CATALOGO = [
@@ -77,28 +76,5 @@ describe("renglonIncompleto", () => {
   it("rechaza cantidad cero o negativa", () => {
     expect(renglonIncompleto({ ...completo, cantidadEntregada: 0 })).toContain("mayor que cero");
     expect(renglonIncompleto({ ...completo, cantidadEntregada: -3 })).toContain("mayor que cero");
-  });
-});
-
-describe("totalPorLote", () => {
-  it("suma las cantidades de un mismo lote en un solo movimiento", () => {
-    const total = totalPorLote([
-      { loteId: "l-1", bodegaId: "b-1", cantidadEntregada: 10 },
-      { loteId: "l-1", bodegaId: "b-1", cantidadEntregada: 5 },
-      { loteId: "l-2", bodegaId: "b-1", cantidadEntregada: 7 },
-    ]);
-
-    expect(total.get("l-1").cantidad).toBe(15);
-    expect(total.get("l-2").cantidad).toBe(7);
-    expect(total.size).toBe(2);
-  });
-
-  it("conserva la bodega de cada lote", () => {
-    const total = totalPorLote([{ loteId: "l-1", bodegaId: "b-9", cantidadEntregada: 2 }]);
-    expect(total.get("l-1").bodegaId).toBe("b-9");
-  });
-
-  it("ignora renglones sin lote", () => {
-    expect(totalPorLote([{ loteId: null, cantidadEntregada: 5 }]).size).toBe(0);
   });
 });

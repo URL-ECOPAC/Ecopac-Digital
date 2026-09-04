@@ -109,7 +109,7 @@ function armarTarjeta(jornada, pacientesPorJornada) {
  * useResumenCierreJornada.js) en vez de aplicarse aca -- por eso el nombre nuevo, mismo cuerpo.
  * Funcion pura, exportada aparte del hook para poder probarla sin montarlo (environment "node",
  * sin DOM, mismo motivo por el que useFormularioJornada.test.js prueba
- * valoresIniciales()/aDatosDeJornada() sueltas y no `enviar()` completo).
+ * valoresInicialesDeJornada()/aDatosDeJornada() sueltas y no `enviar()` completo).
  *
  * @param {string} estadoActual Estado real de la jornada (releido de `jornadas`, no el
  *   `origenId` que manda KanbanBoard).

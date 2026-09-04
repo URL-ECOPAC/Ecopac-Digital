@@ -143,6 +143,18 @@ Reflejo en el cliente: `pacientes/permisos.js` (issue #396), que tambien absorbi
 `puedeVerHistorial` y `puedeCorregirTriaje`/`puedeTomarTriaje`, sueltas hasta ahora fuera de un
 `permisos.js`. `pacientes/condiciones.permisos.js` cubre `padecimientos_cronicos` por separado.
 
+`fn_generar_receta()` (`00066`, ampliada en la `00112`) emite la receta, sus renglones **y la
+salida de inventario correspondiente** en una sola transaccion (issue #711). Es SECURITY INVOKER y
+no gana ningun privilegio: el INSERT en `movimientos_inventario` pasa por la politica de la `00034`
+con el usuario que llama, y por eso la funcion fija `registrado_por = auth.uid()`, que es lo que
+esa politica exige a medico y voluntario. **Consecuencia de acceso:** quien no pueda registrar un
+movimiento de inventario tampoco puede emitir una receta con lote, y se entera antes de entregar
+nada en vez de despues. El flujo de aprobacion no cambia: al administrador se lo autoaprueba la
+`00028` y el stock baja en el acto; a medico y voluntario el movimiento les nace `pendiente` y el
+stock espera a que administracion lo apruebe. Lo que la `00112` garantiza no es que el stock baje
+siempre en el momento, sino que **nunca exista una receta emitida sin su movimiento registrado**.
+No hace falta ningun `GRANT` nuevo: el que ya tenia (`authenticated`) sigue siendo el mismo.
+
 `fn_detectar_pacientes_duplicados()` (`00101`, issue #140) es SECURITY INVOKER: la ve quien ya
 puede leer `pacientes` (administrador, medico, voluntario general), porque el criterio de
 aceptacion no restringe la lectura de posibles duplicados, solo la fusion. `fn_fusionar_pacientes()`

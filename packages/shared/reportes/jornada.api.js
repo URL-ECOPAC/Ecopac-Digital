@@ -21,12 +21,13 @@
 
 import { obtenerSupabase } from "../api/cliente.js";
 import { normalizarError } from "../api/errores-de-supabase.js";
-import { esAdministrador, ROLES } from "../usuarios/roles.js";
 
-/** Puede ver el reporte: mismo criterio que la politica de SELECT de consultas/recetas (00033). */
-export function puedeVerReporteJornada(rol) {
-  return esAdministrador(rol) || rol === ROLES.MEDICO;
-}
+// La guarda se declara en permisos.js, como las de impacto y pacientes (issue #693). Aqui se
+// reexporta el mismo binding para no romper lo que ya la importa desde este archivo: reexportar
+// es seguro, declararla dos veces no -- el barril la recibiria por dos estrellas y ESM la
+// excluiria del namespace por ambigua, que es el bug #365.
+export { puedeVerReporteJornada } from "./permisos.js";
+import { puedeVerReporteJornada } from "./permisos.js";
 
 /** Cuenta ocurrencias de una clave no vacia y devuelve las entradas ordenadas de mayor a menor. */
 function contarFrecuencias(valores, nombreDeCampo) {

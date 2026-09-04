@@ -82,23 +82,43 @@ Detalles que conviene conocer antes de tocarlo:
   pide permisos: el workflow sigue con `contents: read`. Comentar obligaria a
   `pull-requests: write` y a ensuciar el hilo en cada push.
 
-### `apps/mobile` sin script `test` todavia (issue #515)
+### Que cubre la suite, y que no
 
-Hasta la issue #515, `npm test` en la raiz corria `npm run test --workspaces --if-present`, y
-**ni `apps/web` ni `apps/mobile` tenian script `test`**: el paso "Ejecutar las pruebas de todos
-los workspaces" del CI las saltaba en silencio, sin ninguna senal de que las 193 pruebas de
-`packages/shared` en verde no cubrian ni una linea de las dos apps. La 00515 le agrego a
-`apps/web` un script `test` real (Vitest + `@testing-library/react`, con al menos una prueba de
-`RutaProtegida`, el guard de acceso).
+`npm test` en la raiz corre `npm run test --workspaces --if-present`. El `--if-present` es la
+trampa: un workspace **sin** script `test` se salta en silencio y la corrida queda en verde igual.
+Por eso el CI tiene un paso, **"Avisar que workspaces no tienen script test"**, que lo dice en el
+resumen, y por eso `scripts/resumen-de-pruebas.mjs` lista los **tres** workspaces con codigo y no
+solo los que corren.
 
-`apps/mobile` sigue sin uno, a proposito y no por descuido: React Native + Expo necesita un stack
-de pruebas distinto al de `apps/web` y `packages/shared` (Jest con el preset `jest-expo`,
-`@testing-library/react-native`, y mocks de los modulos nativos que Expo trae -camara,
-almacenamiento seguro, notificaciones-), no una extension del mismo Vitest que ya usan los otros
-dos workspaces. Es un esfuerzo de otro tamano y de otro tipo -otro framework de pruebas entero,
-no una configuracion mas-, y no encajaba en el alcance de infraestructura de #515. Queda como
-trabajo pendiente, con esta nota para que la proxima vez que alguien revise `npm test` sepa por
-que la cobertura sigue siendo cero ahi y no tenga que volver a investigarlo desde cero.
+Los tres corren pruebas desde la issue #702:
+
+| Workspace         | Runner            | Que cubre                                                     |
+| ----------------- | ----------------- | ------------------------------------------------------------- |
+| `packages/shared` | vitest (`node`)   | Las validaciones enteras, con guarda de cobertura con umbral   |
+| `apps/web`        | vitest (`jsdom`)  | Enrutado, guard de rol y las pantallas que la #710 reconecto   |
+| `apps/mobile`     | `jest-expo`       | Guarda de rol y navegacion por rol                             |
+
+**Por que movil usa Jest y no vitest, como los otros dos.** React Native necesita el preset de
+Babel de RN, el resolver de plataformas (`.ios`/`.android`/`.native`) y mocks de los modulos
+nativos de Expo (`expo-secure-store`, `expo-crypto`). Montar eso sobre vitest significa mantener a
+mano el mapa de transforms y los mocks, y es donde se rompe en cada subida del SDK. `jest-expo` es
+el preset que publica Expo para su propia version del SDK y sube con el. El precio es un segundo
+runner en el monorepo; la decision esta escrita en `apps/mobile/jest.config.js`.
+
+**Lo que la cobertura del 97,7% NO significa.** Ese numero es de `packages/shared` y mide **solo
+las validaciones** (`**/validaciones.js`), no el paquete entero: es lo unico que se puede probar
+completo sin base de datos ni dobles, y `packages/shared/vitest.config.js` lo explica. No es la
+cobertura del sistema. Las API, los hooks, las pantallas y las politicas RLS se cubren por otras
+vias -- pruebas de API con dobles, las pruebas de enrutado de web, y las 28 suites pgTAP -- y hay
+partes que no cubre nadie. Leer ese porcentaje como cobertura global es el error que esta nota
+existe para evitar.
+
+**Primera prueba de movil, primer hallazgo.** Al cargar `@ecopac/shared` desde Jest, la suite fallo
+con `Cannot redefine property: valoresIniciales`: dos modulos (`jornadas` y `usuarios`) exportaban
+ese mismo nombre y el barril los recibia por sendas estrellas. Bajo ESM eso no revienta, solo
+excluye el nombre del namespace y lo entrega como `undefined` -- el bug #365 otra vez. Se
+renombraron con el sufijo del dominio. Vale la pena registrarlo: es exactamente el tipo de defecto
+que el CI no podia ver mientras un workspace entero no ejecutara nada.
 
 ### La guarda de cobertura de las validaciones
 

@@ -85,6 +85,7 @@ const FILAS = [
     proyecto_id: "p-1",
     proyecto: "Salud rural",
     pacientes_atendidos: 30,
+    consultas_realizadas: 34,
     tratamientos_entregados: 12,
     medicamentos_utilizados: 100,
   },
@@ -97,6 +98,7 @@ const FILAS = [
     proyecto_id: "p-1",
     proyecto: "Salud rural",
     pacientes_atendidos: 20,
+    consultas_realizadas: 22,
     tratamientos_entregados: 8,
     medicamentos_utilizados: 60,
   },
@@ -109,6 +111,7 @@ const FILAS = [
     proyecto_id: null,
     proyecto: null,
     pacientes_atendidos: 10,
+    consultas_realizadas: 11,
     tratamientos_entregados: 5,
     medicamentos_utilizados: 40,
   },
@@ -173,6 +176,9 @@ describe("obtenerIndicadoresImpacto", () => {
 
     expect(indicadores.totales).toEqual({
       pacientes_atendidos: 60,
+      // La vista ya calculaba consultas_realizadas y no la leia nadie: la issue #693 la sumo a
+      // COLUMNAS_DEL_REPORTE y a INDICADORES en vez de retirarla de la vista con una migracion.
+      consultas_realizadas: 67,
       tratamientos_entregados: 25,
       medicamentos_utilizados: 200,
       // Tres jornadas pero dos comunidades.

@@ -1,0 +1,78 @@
+/* Pantallas de reportes (issue #693).
+ *
+ * La version anterior de ReporteJornada.jsx escribia los colores a mano (#64748b, #f8fafc...).
+ * Aqui todo sale de las custom properties que publica apps/web/src/theme.js desde
+ * @ecopac/ui-tokens, que es la regla de docs/ARQUITECTURA-FRONTEND.md. */
+
+.reporte-seccion {
+  margin-bottom: var(--spacing-xl, 32px);
+}
+
+.reporte-titulo {
+  color: var(--color-text);
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin: 0 0 var(--spacing-md, 16px);
+}
+
+.reporte-cabecera-tabla {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm, 8px);
+  justify-content: space-between;
+  margin-bottom: var(--spacing-md, 16px);
+}
+
+.reporte-cabecera-tabla .reporte-titulo {
+  margin-bottom: 0;
+}
+
+.reporte-exportar {
+  background-color: transparent;
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radio-sm, 6px);
+  color: var(--color-primary);
+  cursor: pointer;
+  font-size: 0.875rem;
+  padding: var(--spacing-xs, 4px) var(--spacing-md, 16px);
+}
+
+.reporte-exportar:disabled {
+  border-color: var(--color-border);
+  color: var(--color-text-muted);
+  cursor: not-allowed;
+}
+
+/* Fila con el selector de agrupacion y el boton de limpiar filtros. */
+.reporte-barra-agrupacion {
+  align-items: flex-end;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-md, 16px);
+  margin-bottom: var(--spacing-lg, 24px);
+}
+
+/* Rejilla de cifras de cabecera. */
+.reporte-cifras {
+  display: grid;
+  gap: var(--spacing-md, 16px);
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+
+.reporte-cifra-etiqueta {
+  color: var(--color-text-muted);
+  display: block;
+  font-size: 0.875rem;
+  margin-bottom: var(--spacing-xs, 4px);
+}
+
+.reporte-cifra {
+  color: var(--color-text);
+  font-size: 1.75rem;
+  line-height: 1.2;
+}
+
+.reporte-cifra-estado {
+  display: inline-block;
+}

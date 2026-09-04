@@ -150,19 +150,37 @@ describe("generarReceta", () => {
     const cliente = crearCliente({ tabla: { data: FILA_RECETA, error: null } });
     dobles.cliente = cliente;
 
-    await generarReceta({ ...DATOS, detalle: [{ ...RENGLON, lote: LOTE_VIGENTE }] }, HOY);
+    await generarReceta(
+      { ...DATOS, detalle: [{ ...RENGLON, lote: LOTE_VIGENTE, bodegaId: "bod-1" }] },
+      HOY,
+    );
 
     const rpc = cliente.llamadas.find((l) => l.paso === "rpc");
     expect(rpc.parametros.p_detalle).toEqual([
       {
         medicamento_id: "med-1",
         lote_id: "lot-1",
+        // La bodega viaja desde la 00112: fn_generar_receta registra la salida de inventario en
+        // su misma transaccion y existencias esta particionada por (lote, bodega) (issue #711).
+        bodega_id: "bod-1",
         dosis: "1 capsula",
         frecuencia: "cada 8 horas",
         duracion: "7 dias",
         cantidad_entregada: 21,
       },
     ]);
+  });
+
+  it("manda bodega_id en null cuando el renglon no trae lote", async () => {
+    const cliente = crearCliente({ tabla: { data: FILA_RECETA, error: null } });
+    dobles.cliente = cliente;
+
+    // Recetar sin lote es valido (receta_detalle.lote_id es nullable, 00019) y no genera
+    // movimiento: la 00112 solo exige bodega cuando el renglon si trae lote.
+    await generarReceta({ ...DATOS, detalle: [RENGLON] }, HOY);
+
+    const rpc = cliente.llamadas.find((l) => l.paso === "rpc");
+    expect(rpc.parametros.p_detalle[0]).toMatchObject({ lote_id: null, bodega_id: null });
   });
 
   it("un lote vencido se rechaza antes de gastar la llamada", async () => {

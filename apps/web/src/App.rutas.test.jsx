@@ -122,3 +122,46 @@ describe("los hubs de modulo llevan a sus pantallas", () => {
     expect(headings.length).toBeGreaterThan(0);
   });
 });
+
+// Issue #710. Las dos pantallas que veia primero cualquier persona eran las dos que no estaban
+// conectadas. Estas pruebas fijan las dos decisiones que tomo esa issue para que no se deshagan
+// sin que nadie se entere.
+describe("inicio y proyectos ya no son marcadores (#710)", () => {
+  beforeEach(() => {
+    window.history.pushState({}, "", "/");
+  });
+
+  it("/ ya no dice que la pantalla esta pendiente de implementar", () => {
+    renderEnRuta("/");
+
+    expect(screen.queryByText(/pendiente de implementar/i)).not.toBeInTheDocument();
+  });
+
+  it("/ saluda a la persona y ofrece los modulos de su rol", () => {
+    renderEnRuta("/");
+
+    expect(screen.getByRole("heading", { name: /hola, ana/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /tus modulos/i })).toBeInTheDocument();
+
+    // Administrador: el acceso a Pacientes tiene que estar. Que la lista salga de
+    // modulosVisibles() y no de una lista escrita a mano se prueba en packages/shared.
+    expect(screen.getByRole("button", { name: /pacientes/i })).toBeInTheDocument();
+  });
+
+  it("/proyectos monta la pantalla que consulta la base, no la maqueta", () => {
+    renderEnRuta("/proyectos");
+
+    // El titulo de la pantalla conectada. La maqueta borrada decia solo "Proyectos".
+    expect(screen.getByRole("heading", { name: /proyectos sociales/i })).toBeInTheDocument();
+
+    // La maqueta traia estos tres proyectos escritos a mano en un useState.
+    expect(screen.queryByText(/salud comunitaria guatemala 2024/i)).not.toBeInTheDocument();
+  });
+
+  it("/proyectos/sociales redirige a /proyectos y no duplica la pantalla", () => {
+    renderEnRuta("/proyectos/sociales");
+
+    expect(window.location.pathname).toBe("/proyectos");
+    expect(screen.getAllByRole("heading", { name: /proyectos sociales/i })).toHaveLength(1);
+  });
+});

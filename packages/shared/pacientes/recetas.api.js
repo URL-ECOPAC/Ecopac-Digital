@@ -92,6 +92,11 @@ function aRenglonesDeLaBase(detalle) {
   return detalle.map((renglon) => ({
     medicamento_id: renglon.medicamento,
     lote_id: renglon.loteId ?? renglon.lote?.id ?? null,
+    // La bodega viaja desde la 00112: fn_generar_receta registra la salida de inventario dentro
+    // de su propia transaccion, y `existencias` esta particionada por (lote_id, bodega_id), asi
+    // que sin bodega no hay fila que descontar. Un renglon con lote y sin bodega lo rechaza la
+    // funcion (issue #711).
+    bodega_id: renglon.bodegaId ?? renglon.bodega?.id ?? null,
     dosis: renglon.dosis,
     frecuencia: renglon.frecuencia,
     duracion: renglon.duracion,
@@ -102,10 +107,10 @@ function aRenglonesDeLaBase(detalle) {
 /**
  * Genera la receta de una consulta con todo su detalle, en una sola operacion.
  *
- * Llama por RPC a fn_generar_receta (00066), que inserta la receta y sus renglones dentro de la
- * misma transaccion: si un renglon falla, la receta tampoco queda. Hacerlo con dos llamadas
- * desde aqui dejaria recetas vacias cuando el detalle fallara, que es justo lo que el criterio
- * de aceptacion prohibe.
+ * Llama por RPC a fn_generar_receta (00066, ampliada en la 00112), que inserta la receta, sus
+ * renglones Y la salida de inventario dentro de la misma transaccion: si un renglon o una salida
+ * falla, no queda ninguna de las tres cosas. Hacerlo con varias llamadas desde aqui dejaba
+ * recetas emitidas sin su descuento, que es la issue #711.
  *
  * Antes de llamar comprueba lo que la pantalla ya tiene en la mano, reusando
  * motivoSinDisponibilidad() de la #147: asi un lote vencido o sin existencia se explica sin

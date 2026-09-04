@@ -58,6 +58,16 @@ export default [
       globals: globals.node,
     },
   },
+  {
+    // Las pruebas de apps/mobile corren con jest-expo y no con vitest (issue #702, la decision
+    // esta razonada en apps/mobile/jest.config.js y en docs/CI-CD.md). vitest inyecta sus globals
+    // solo donde se importan; Jest los pone en el ambiente, asi que hay que declararlos aqui o
+    // `describe`, `it`, `expect` y `jest` salen como no-undef.
+    files: ["apps/mobile/**/*.test.{js,jsx}"],
+    languageOptions: {
+      globals: { ...globals.jest, ...globals.node },
+    },
+  },
   // ================================================================================
   // Guardas de la frontera de la arquitectura (issue #282)
   // ================================================================================

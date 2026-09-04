@@ -1,16 +1,16 @@
 // Pruebas de la logica pura del formulario de jornada (issue #179).
 //
 // El hook en si no se monta: packages/shared corre vitest con environment "node", sin DOM,
-// mismo motivo que useAltaUsuario.test.js/useEdicionUsuario.test.js. valoresIniciales() y
+// mismo motivo que useAltaUsuario.test.js/useEdicionUsuario.test.js. valoresInicialesDeJornada() y
 // aDatosDeJornada() se exportan aparte justamente para poder probarlas sin montar nada.
 
 import { describe, expect, it } from "vitest";
 
-import { aDatosDeJornada, valoresIniciales } from "./useFormularioJornada.js";
+import { aDatosDeJornada, valoresInicialesDeJornada } from "./useFormularioJornada.js";
 
-describe("valoresIniciales", () => {
+describe("valoresInicialesDeJornada", () => {
   it("sin jornada, arranca vacia (alta)", () => {
-    expect(valoresIniciales(null)).toEqual({
+    expect(valoresInicialesDeJornada(null)).toEqual({
       nombre: "",
       fecha: "",
       comunidad: "",
@@ -29,7 +29,7 @@ describe("valoresIniciales", () => {
       proyectoId: "proyecto-1",
     };
 
-    expect(valoresIniciales(jornada)).toEqual({
+    expect(valoresInicialesDeJornada(jornada)).toEqual({
       nombre: "Jornada en Solola",
       fecha: "2026-09-01",
       comunidad: "comunidad-1",
@@ -48,7 +48,7 @@ describe("valoresIniciales", () => {
       proyectoId: null,
     };
 
-    expect(valoresIniciales(jornada).proyecto).toBe("");
+    expect(valoresInicialesDeJornada(jornada).proyecto).toBe("");
   });
 });
 

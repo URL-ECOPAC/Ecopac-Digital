@@ -40,6 +40,7 @@ const COLUMNAS_DEL_REPORTE = [
   "proyecto_id",
   "proyecto",
   "pacientes_atendidos",
+  "consultas_realizadas",
   "tratamientos_entregados",
   "medicamentos_utilizados",
 ].join(", ");
@@ -52,7 +53,16 @@ export const AGRUPACIONES_DE_IMPACTO = {
   PROYECTO: "proyecto",
 };
 
-const INDICADORES = ["pacientes_atendidos", "tratamientos_entregados", "medicamentos_utilizados"];
+// `consultas_realizadas` la calculaba vista_reporte_impacto en cada consulta y no la leia nadie:
+// no estaba en COLUMNAS_DEL_REPORTE, asi que el trabajo se tiraba (issue #693). Se suma como un
+// indicador mas en vez de retirarla de la vista con una migracion: es un dato que el reporte de
+// jornada ya muestra por jornada, y aqui da el acumulado del periodo.
+const INDICADORES = [
+  "pacientes_atendidos",
+  "consultas_realizadas",
+  "tratamientos_entregados",
+  "medicamentos_utilizados",
+];
 
 /** '2026-08-14' -> '2026-08'. La vista no trae el mes: se deriva de la fecha. */
 function mesDe(fecha) {
@@ -91,11 +101,7 @@ function grupoDe(fila, agruparPor) {
  * daria el numero de jornadas, no el de comunidades distintas, que es lo que el indicador mide.
  */
 function agregar(filas) {
-  const totales = {
-    pacientes_atendidos: 0,
-    tratamientos_entregados: 0,
-    medicamentos_utilizados: 0,
-  };
+  const totales = Object.fromEntries(INDICADORES.map((indicador) => [indicador, 0]));
   const comunidades = new Set();
 
   for (const fila of filas) {

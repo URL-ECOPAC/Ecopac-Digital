@@ -4,7 +4,7 @@
 // catalogoComunidadesDesde(), agruparJornadasPorEstado() y
 // esFinalizacionDeJornada() son funciones exportadas y no codigo suelto dentro de
 // useJornadasKanban(), mismo criterio que armarFilas() en usuarios/useUsuariosListado.js y que
-// valoresIniciales()/aDatosDeJornada() en useFormularioJornada.test.js. La orquestacion asincrona
+// valoresInicialesDeJornada()/aDatosDeJornada() en useFormularioJornada.test.js. La orquestacion asincrona
 // del movimiento (moverJornada, aplicarMovimiento) vive dentro del hook y no se prueba aca, mismo
 // criterio que enviar() en useFormularioJornada.js.
 //

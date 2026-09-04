@@ -1,213 +1,178 @@
-// packages/shared/reportes/useDashboardMetricas.js
-import { useState, useEffect } from "react";
-import { obtenerSupabase } from "../api/cliente.js";
+// View model del panel de indicadores de impacto (issues #205 / #214, reconectado por #693).
+//
+// QUE PASO AQUI. Este hook consultaba `vista_reporte_impacto` por su cuenta con
+// obtenerSupabase() y agregaba las filas a mano, en paralelo a obtenerIndicadoresImpacto()
+// (api.js), que hace lo mismo, esta probada y no la llamaba nadie. Las dos versiones no
+// calculaban igual: la de api.js ignora los `comunidad_id` nulos al contar comunidades
+// beneficiadas y esta no, y api.js comprueba el rol antes de consultar y esta tampoco.
+//
+// Ahora el hook solo orquesta y adapta: la consulta, la agregacion, la comparacion entre
+// periodos y la guarda de rol viven en obtenerIndicadoresImpacto(). Es la regla de
+// docs/ARQUITECTURA-FRONTEND.md.
+//
+// SE CONSERVA EL CONTRATO DE SALIDA. DashboardMetricasPage lee `indicadores.pacientesAtendidos`
+// en camelCase y `seriePrincipal[].valor`, mientras que la API devuelve las claves de la vista en
+// snake_case (`totales.pacientes_atendidos`) y `agrupados[]`. La traduccion se hace aqui, en el
+// hook, y no cambiando la pantalla ni la API: cada lado conserva el vocabulario que le toca.
+//
+// LA COMPARACION SIGUE SIENDO ENTRE COMUNIDADES, no entre periodos. Es lo que ofrecia la
+// pantalla y lo que la #214 pedia; obtenerIndicadoresImpacto acepta `comunidad`, asi que la
+// segunda serie es una segunda llamada con esa comunidad fijada.
 
-// ─── Opciones de configuración ───
+import { useCallback, useEffect, useMemo, useState } from "react";
+
+import { listarComunidades } from "../territorio/api.js";
+import { AGRUPACIONES_DE_IMPACTO, obtenerIndicadoresImpacto } from "./api.js";
+import { OPCIONES_METRICA_IMPACTO } from "./campos.js";
+import { puedeVerIndicadoresDeImpacto } from "./permisos.js";
+
 const RANGOS = [
-  { valor: "semana", etiqueta: "Última semana" },
-  { valor: "mes", etiqueta: "Último mes" },
-  { valor: "3meses", etiqueta: "Últimos 3 meses" },
-  { valor: "año", etiqueta: "Último año" },
+  { valor: "semana", etiqueta: "Ultima semana" },
+  { valor: "mes", etiqueta: "Ultimo mes" },
+  { valor: "3meses", etiqueta: "Ultimos 3 meses" },
+  { valor: "anio", etiqueta: "Ultimo anio" },
   { valor: "personalizado", etiqueta: "Personalizado" },
 ];
 
 const AGRUPAMIENTOS = [
-  { valor: "mes", etiqueta: "Por Mes" },
-  { valor: "comunidad", etiqueta: "Por Comunidad" },
-  { valor: "jornada", etiqueta: "Por Jornada" },
+  { valor: AGRUPACIONES_DE_IMPACTO.MES, etiqueta: "Por mes" },
+  { valor: AGRUPACIONES_DE_IMPACTO.COMUNIDAD, etiqueta: "Por comunidad" },
+  { valor: AGRUPACIONES_DE_IMPACTO.JORNADA, etiqueta: "Por jornada" },
+  { valor: AGRUPACIONES_DE_IMPACTO.PROYECTO, etiqueta: "Por proyecto" },
 ];
 
-// Valores especiales (NO se envían a la BD)
+// Centinelas de la interfaz: significan "sin filtro" y nunca viajan a la base.
 const TODAS = "__todas__";
 const NINGUNA = "__ninguna__";
 
-// ─── Hook principal ───
-export function useDashboardMetricas() {
-  const [cargando, setCargando] = useState(true);
-  const [error, setError] = useState(null);
+/** "YYYY-MM-DD" a partir de los componentes locales, sin pasar por UTC (que desplaza un dia). */
+function aCadenaFecha(fecha) {
+  const mes = String(fecha.getMonth() + 1).padStart(2, "0");
+  const dia = String(fecha.getDate()).padStart(2, "0");
+  return `${fecha.getFullYear()}-${mes}-${dia}`;
+}
 
-  // 🔑 VALORES INICIALES CORREGIDOS — NUNCA "com1", "com2", etc.
+/** Traduce el rango elegido en la interfaz al `{ fechaInicio, fechaFin }` que espera la API. */
+export function resolverRangoDeDashboard(rango, { fechaInicio, fechaFin } = {}, hoy = new Date()) {
+  if (rango === "personalizado") {
+    return { fechaInicio: fechaInicio || undefined, fechaFin: fechaFin || undefined };
+  }
+
+  const desde = new Date(hoy);
+  if (rango === "semana") desde.setDate(hoy.getDate() - 7);
+  else if (rango === "mes") desde.setMonth(hoy.getMonth() - 1);
+  else if (rango === "3meses") desde.setMonth(hoy.getMonth() - 3);
+  else if (rango === "anio") desde.setFullYear(hoy.getFullYear() - 1);
+
+  return { fechaInicio: aCadenaFecha(desde), fechaFin: aCadenaFecha(hoy) };
+}
+
+/** Las claves de la vista van en snake_case; la pantalla las lee en camelCase. */
+function aIndicadoresDePantalla(totales) {
+  return {
+    pacientesAtendidos: totales?.pacientes_atendidos ?? 0,
+    consultasRealizadas: totales?.consultas_realizadas ?? 0,
+    tratamientosEntregados: totales?.tratamientos_entregados ?? 0,
+    medicamentosUtilizados: totales?.medicamentos_utilizados ?? 0,
+    comunidadesBeneficiadas: totales?.comunidades_beneficiadas ?? 0,
+  };
+}
+
+/** Una serie de barras `{ etiqueta, valor }` a partir de los grupos y la metrica elegida. */
+function aSerie(agrupados = [], metrica) {
+  return agrupados.map((grupo) => ({
+    etiqueta: grupo.etiqueta ?? grupo.clave,
+    valor: Number(grupo[metrica] ?? 0),
+  }));
+}
+
+export function calcularVariacion(actual, anterior) {
+  if (!anterior) return actual > 0 ? 100 : 0;
+  return Number((((actual - anterior) / anterior) * 100).toFixed(2));
+}
+
+export function useDashboardMetricas({ rol } = {}) {
+  const tieneAcceso = puedeVerIndicadoresDeImpacto(rol);
+
   const [rangoSeleccionado, setRangoSeleccionado] = useState("mes");
   const [fechaInicio, setFechaInicio] = useState("");
   const [fechaFin, setFechaFin] = useState("");
-  const [agruparPor, setAgruparPor] = useState("mes");
-  const [comunidadId, setComunidadId] = useState(TODAS); // ✅ Valor seguro
+  const [agruparPor, setAgruparPor] = useState(AGRUPACIONES_DE_IMPACTO.MES);
+  const [metrica, setMetrica] = useState(OPCIONES_METRICA_IMPACTO[0].value);
+  const [comunidadId, setComunidadId] = useState(TODAS);
 
-  // Comparación
   const [modoComparacion, setModoComparacion] = useState(false);
-  const [comunidadCompararId, setComunidadCompararId] = useState(NINGUNA); // ✅ Valor seguro
+  const [comunidadCompararId, setComunidadCompararId] = useState(NINGUNA);
 
-  // Datos
+  const [listaComunidades, setListaComunidades] = useState([]);
   const [datos, setDatos] = useState(null);
   const [datosComparacion, setDatosComparacion] = useState(null);
-  const [listaComunidades, setListaComunidades] = useState([]);
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState(null);
 
-  // ─── Consultar la vista en Supabase ───
-  const cargarDesdeVista = async (filtros = {}) => {
-    const supabase = obtenerSupabase();
+  const periodo = useMemo(
+    () => resolverRangoDeDashboard(rangoSeleccionado, { fechaInicio, fechaFin }),
+    [rangoSeleccionado, fechaInicio, fechaFin],
+  );
 
-    let consulta = supabase
-      .from("vista_reporte_impacto")
-      .select(
-        `
-        jornada_id,
-        jornada,
-        fecha,
-        comunidad_id,
-        comunidad,
-        pacientes_atendidos,
-        consultas_realizadas,
-        tratamientos_entregados,
-        medicamentos_utilizados
-      `,
-      )
-      .order("fecha", { ascending: true });
-
-    // Filtrar por rango de fechas
-    if (filtros.fechaInicio && filtros.fechaFin) {
-      consulta = consulta.gte("fecha", filtros.fechaInicio).lte("fecha", filtros.fechaFin);
+  const cargar = useCallback(async () => {
+    if (!tieneAcceso) {
+      setDatos(null);
+      setDatosComparacion(null);
+      setCargando(false);
+      return;
     }
 
-    // ✅ SOLO filtrar si es un UUID real — NUNCA enviar valores especiales
-    const idComunidad = filtros.comunidadId;
-    if (
-      idComunidad &&
-      idComunidad !== TODAS &&
-      idComunidad !== NINGUNA &&
-      idComunidad.length > 10
-    ) {
-      consulta = consulta.eq("comunidad_id", idComunidad);
-    }
+    setCargando(true);
 
-    const { data, error: errVista } = await consulta;
-    if (errVista) throw errVista;
-    if (!data || data.length === 0) return null;
+    const comunidad = comunidadId === TODAS ? undefined : comunidadId;
+    const comparar =
+      modoComparacion && comunidadCompararId !== NINGUNA ? comunidadCompararId : null;
 
-    // ✅ Extraer lista real de comunidades
-    const comunidadesUnicas = [];
-    const vistas = new Set();
-    data.forEach((fila) => {
-      if (fila.comunidad_id && fila.comunidad && !vistas.has(fila.comunidad_id)) {
-        vistas.add(fila.comunidad_id);
-        comunidadesUnicas.push({
-          id: fila.comunidad_id, // UUID real
-          nombre: fila.comunidad,
-        });
-      }
-    });
-    setListaComunidades(comunidadesUnicas);
+    const [principal, comparacion] = await Promise.all([
+      obtenerIndicadoresImpacto({ rol, periodo, agruparPor, comunidad }),
+      comparar
+        ? obtenerIndicadoresImpacto({ rol, periodo, agruparPor, comunidad: comparar })
+        : Promise.resolve({ indicadores: null, error: null }),
+    ]);
 
-    // 🧮 Calcular indicadores
-    const indicadores = {
-      pacientesAtendidos: data.reduce((sum, f) => sum + Number(f.pacientes_atendidos || 0), 0),
-      comunidadesBeneficiadas: new Set(data.map((f) => f.comunidad_id)).size,
-      tratamientosEntregados: data.reduce(
-        (sum, f) => sum + Number(f.tratamientos_entregados || 0),
-        0,
-      ),
-      medicamentosUtilizados: data.reduce(
-        (sum, f) => sum + Number(f.medicamentos_utilizados || 0),
-        0,
-      ),
-    };
-
-    // 📈 Agrupar datos
-    const agruparDatos = (data, tipo) => {
-      const agrupado = {};
-      data.forEach((fila) => {
-        let clave;
-        if (tipo === "mes") {
-          const fecha = new Date(fila.fecha);
-          clave = isNaN(fecha.getTime())
-            ? "Sin fecha"
-            : fecha.toLocaleDateString("es-GT", { month: "short" });
-        } else if (tipo === "comunidad") {
-          clave = fila.comunidad || "Sin comunidad";
-        } else if (tipo === "jornada") {
-          clave = fila.jornada || "Sin nombre";
-        } else {
-          clave = "Total";
-        }
-        if (!agrupado[clave]) agrupado[clave] = { etiqueta: clave, valor: 0 };
-        agrupado[clave].valor += Number(fila.pacientes_atendidos || 0);
-      });
-      return Object.values(agrupado);
-    };
-
-    const serie = agruparDatos(data, filtros.agruparPor || "mes");
-    return { indicadores, serie, filas: data };
-  };
-
-  // ─── Recargar automáticamente ───
-  useEffect(() => {
-    const cargar = async () => {
-      setCargando(true);
+    if (principal.error) {
+      setError(principal.error);
+      setDatos(null);
+      setDatosComparacion(null);
+    } else {
       setError(null);
+      setDatos(principal.indicadores);
+      setDatosComparacion(comparacion.error ? null : comparacion.indicadores);
+    }
 
-      try {
-        let fin = new Date();
-        let inicio = new Date();
-        if (rangoSeleccionado === "semana") inicio.setDate(fin.getDate() - 7);
-        else if (rangoSeleccionado === "mes") inicio.setMonth(fin.getMonth() - 1);
-        else if (rangoSeleccionado === "3meses") inicio.setMonth(fin.getMonth() - 3);
-        else if (rangoSeleccionado === "año") inicio.setFullYear(fin.getFullYear() - 1);
-        else {
-          inicio = fechaInicio ? new Date(fechaInicio) : inicio;
-          fin = fechaFin ? new Date(fechaFin) : fin;
-        }
+    setCargando(false);
+  }, [tieneAcceso, rol, periodo, agruparPor, comunidadId, modoComparacion, comunidadCompararId]);
 
-        const formatoFecha = (d) => d.toISOString().slice(0, 10);
-
-        // Datos principales
-        const principal = await cargarDesdeVista({
-          fechaInicio: formatoFecha(inicio),
-          fechaFin: formatoFecha(fin),
-          comunidadId,
-          agruparPor,
-        });
-        setDatos(principal);
-
-        // Datos de comparación
-        if (modoComparacion && comunidadCompararId !== NINGUNA) {
-          const comparada = await cargarDesdeVista({
-            fechaInicio: formatoFecha(inicio),
-            fechaFin: formatoFecha(fin),
-            comunidadId: comunidadCompararId,
-            agruparPor,
-          });
-          setDatosComparacion(comparada);
-        } else {
-          setDatosComparacion(null);
-        }
-      } catch (err) {
-        console.error("❌ Error:", err);
-        setError(`No se pudo cargar: ${err.message}`);
-      } finally {
-        setCargando(false);
-      }
-    };
-
+  useEffect(() => {
     cargar();
-  }, [
-    rangoSeleccionado,
-    fechaInicio,
-    fechaFin,
-    comunidadId,
-    agruparPor,
-    modoComparacion,
-    comunidadCompararId,
-  ]);
+  }, [cargar]);
 
-  // ─── Variación porcentual ───
-  const calcularVariacion = (valorActual, valorBase) => {
-    if (!valorBase || valorBase === 0) return null;
-    return ((valorActual - valorBase) / valorBase) * 100;
-  };
+  useEffect(() => {
+    if (!tieneAcceso) return;
+
+    let vigente = true;
+    listarComunidades().then(({ comunidades }) => {
+      if (vigente) setListaComunidades(comunidades ?? []);
+    });
+
+    return () => {
+      vigente = false;
+    };
+  }, [tieneAcceso]);
 
   return {
+    tieneAcceso,
+
     // Opciones
     rangosDisponibles: RANGOS,
     agrupamientosDisponibles: AGRUPAMIENTOS,
+    metricasDisponibles: OPCIONES_METRICA_IMPACTO,
     valoresEspeciales: { TODAS, NINGUNA },
 
     // Filtros
@@ -219,24 +184,26 @@ export function useDashboardMetricas() {
     setFechaFin,
     agruparPor,
     setAgruparPor,
+    metrica,
+    setMetrica,
     comunidadId,
     setComunidadId,
 
-    // Comparación
+    // Comparacion
     modoComparacion,
     setModoComparacion,
     comunidadCompararId,
     setComunidadCompararId,
 
-    // Lista real
     listaComunidades,
 
     // Resultados
     cargando,
     error,
-    indicadores: datos?.indicadores || {},
-    seriePrincipal: datos?.serie || [],
-    serieComparacion: datosComparacion?.serie || [],
+    indicadores: aIndicadoresDePantalla(datos?.totales),
+    seriePrincipal: aSerie(datos?.agrupados, metrica),
+    serieComparacion: aSerie(datosComparacion?.agrupados, metrica),
     calcularVariacion,
+    recargar: cargar,
   };
 }
