@@ -8,14 +8,25 @@ configuracion de GitHub (plantillas de issues, PR y los workflows de CI/CD) esta
 
 | Documento                            | Para que sirve                                                          |
 | ------------------------------------ | ----------------------------------------------------------------------- |
+| [ARQUITECTURA.md](./ARQUITECTURA.md) | **Empezar aqui**: que construye el sistema, en que piezas se divide y por que |
 | [QUICKSTART.md](./QUICKSTART.md)     | Guia de inicio rapido: instalar y correr el proyecto (con y sin Docker) |
 | [CONTRIBUTING.md](./CONTRIBUTING.md) | Como contribuir: ramas, commits, PRs, issues y el tablero               |
 | [DISENO.md](./DISENO.md)             | Referencia de diseno: pantallas, navegacion y trazabilidad con issues  |
-| [ARQUITECTURA-FRONTEND.md](./ARQUITECTURA-FRONTEND.md) | Como se comparte el frontend entre web y movil        |
 | [CI-CD.md](./CI-CD.md)               | Que valida y despliega cada workflow, y que hacer cuando falla         |
 | [SEGURIDAD.md](./SEGURIDAD.md)       | Politica de contrasenas, expiracion de sesion y almacenamiento de credenciales |
 | [PROTECCION-DE-DATOS.md](./PROTECCION-DE-DATOS.md) | Logs, almacenamiento movil, cifrado de columnas y secretos (OWASP A02) |
-| [PERMISOS.md](./PERMISOS.md)         | Quien puede hacer que en cada modulo, y donde esta escrito                     |
+
+## Referencia tecnica
+
+| Documento                                              | Para que sirve                                                        |
+| ------------------------------------------------------ | --------------------------------------------------------------------- |
+| [MODELO-DE-DATOS.md](./MODELO-DE-DATOS.md)             | Tablas, columnas, enums, funciones, vistas y politicas RLS            |
+| [MODULOS.md](./MODULOS.md)                             | Que pantalla existe, en que app, servida por que hook y en que estado |
+| [API-SHARED.md](./API-SHARED.md)                       | Que exporta cada modulo de `packages/shared`                          |
+| [ARQUITECTURA-FRONTEND.md](./ARQUITECTURA-FRONTEND.md) | Como se comparte el frontend entre web y movil                        |
+| [PERMISOS.md](./PERMISOS.md)                           | Quien puede hacer que en cada modulo, y donde esta escrito            |
+| [SUPABASE.md](./SUPABASE.md)                           | Supabase en la nube contra el stack local, y como se sincronizan      |
+| [DATOS-DEMO.md](./DATOS-DEMO.md)                       | Datos de prueba para desarrollo                                       |
 
 ## Dependencias y Herramientas
 
@@ -45,3 +56,6 @@ Done, con vistas Backlog, Team items, Roadmap y My items. El flujo esperado esta
 Todo lo que no es JSX/CSS vive en `packages/shared` (llamadas a Supabase, validaciones,
 reglas de negocio). Las apps `web` y `mobile` solo importan esa logica y la envuelven en
 componentes visuales. Asi se evita duplicar codigo entre plataformas.
+
+La vision completa esta en [ARQUITECTURA.md](./ARQUITECTURA.md); el detalle de la frontera, en
+[ARQUITECTURA-FRONTEND.md](./ARQUITECTURA-FRONTEND.md).
