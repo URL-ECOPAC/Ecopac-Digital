@@ -47,6 +47,30 @@ import { pathToFileURL } from "node:url";
 const RESUMEN_DE_COBERTURA = "packages/shared/coverage/coverage-summary.json";
 const CONFIG_DE_VITEST = "packages/shared/vitest.config.js";
 
+/**
+ * Los tres workspaces con codigo, y con que se prueba cada uno (issue #702).
+ *
+ * Se listan los TRES y no solo los que corren, que es justo el punto de la #702: `npm test` es
+ * `npm run test --workspaces --if-present`, asi que un workspace sin script `test` se saltaba en
+ * silencio y el resumen no lo mencionaba. apps/mobile estuvo asi con sus 7.363 lineas sin una
+ * sola prueba, y el CI seguia en verde.
+ */
+const WORKSPACES = [
+  ["packages/shared", "vitest (node)"],
+  ["apps/web", "vitest (jsdom)"],
+  ["apps/mobile", "jest-expo"],
+];
+
+/** Si el workspace declara script `test`. Lo que decide si `npm test` lo corre o lo salta. */
+function tieneScriptDePruebas(ruta) {
+  try {
+    const paquete = JSON.parse(readFileSync(resolve(ruta, "package.json"), "utf8"));
+    return Boolean(paquete.scripts?.test);
+  } catch {
+    return false;
+  }
+}
+
 /** Las cuatro metricas que declara la guarda de cobertura, con el nombre que se muestra. */
 const METRICAS = [
   ["statements", "Sentencias"],
@@ -75,7 +99,19 @@ function leerCobertura() {
 const cobertura = leerCobertura();
 const umbrales = await leerUmbrales();
 
-const lineas = ["## Cobertura de las validaciones", ""];
+const lineas = ["## Que workspaces corren pruebas", ""];
+
+lineas.push(
+  "| Workspace | Runner | Corre en `npm test` |",
+  "| --- | --- | --- |",
+  ...WORKSPACES.map(
+    ([ruta, runner]) =>
+      `| \`${ruta}\` | ${runner} | ${tieneScriptDePruebas(ruta) ? "si" : "**no: sin script `test`**"} |`,
+  ),
+  "",
+  "## Cobertura de las validaciones",
+  "",
+);
 
 if (cobertura && umbrales) {
   lineas.push(

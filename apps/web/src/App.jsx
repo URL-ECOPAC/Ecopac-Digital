@@ -1,5 +1,6 @@
 import {
   BrowserRouter,
+  Navigate,
   Routes,
   Route,
   useLocation,
@@ -25,7 +26,6 @@ import HistorialDonacionesPage from "./pages/HistorialDonacionesPage";
 import ConstanciaDonacionPage from "./pages/ConstanciaDonacionPage";
 import InventarioPage from "./pages/InventarioPage";
 import PresupuestosPage from "./pages/PresupuestosPage";
-import ProyectosPage from "./pages/ProyectosPage";
 import ProyectosSocialesPage from "./pages/ProyectosSocialesPage";
 import SeguimientoProyectoPage from "./pages/SeguimientoProyectoPage";
 import ReportesPage from "./pages/ReportesPage";
@@ -141,8 +141,14 @@ export default function App() {
                 <Route path="/presupuestos" element={<PresupuestosPage />} />
               </Route>
               <Route element={<RutaProtegida roles={rolesDe("/proyectos")} />}>
-                <Route path="/proyectos" element={<ProyectosPage />} />
-                <Route path="/proyectos/sociales" element={<ProyectosSocialesConSesion />} />
+                {/* Habia dos pantallas de proyectos y el sidebar enlazaba la de mentira: una
+                  maqueta de 368 lineas con datos escritos a mano y un vocabulario de estados
+                  que no existe en el enum estado_proyecto. Se elimino, y /proyectos monta
+                  ahora la que si consulta la base (issue #710). */}
+                <Route path="/proyectos" element={<ProyectosSocialesConSesion />} />
+                {/* La ruta vieja sigue viva como redireccion: era la unica forma de llegar a la
+                  pantalla buena, asi que puede estar guardada en marcadores. */}
+                <Route path="/proyectos/sociales" element={<Navigate replace to="/proyectos" />} />
                 <Route
                   path="/proyectos/:id/seguimiento"
                   element={<SeguimientoProyectoEnrutado />}

@@ -2,10 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { consultarExistencias, consultarLotesDisponibles } from "../inventario/existencias.api.js";
 import { listarMedicamentos } from "../inventario/medicamentos.api.js";
-import { registrarSalida } from "../inventario/movimientos.api.js";
 import { generarReceta } from "./recetas.api.js";
-
-export const MOTIVO_DE_SALIDA_POR_RECETA = "Entrega por receta medica";
 
 export function anotarDisponibilidad(medicamentos = [], existencias = []) {
   const porMedicamento = new Map(
@@ -40,16 +37,6 @@ export function describirExistencia(medicamento) {
     .join(" ");
 }
 
-export function totalPorLote(renglones = []) {
-  return renglones.reduce((total, renglon) => {
-    if (!renglon.loteId) return total;
-    const acumulado = total.get(renglon.loteId) ?? { cantidad: 0, bodegaId: renglon.bodegaId };
-    acumulado.cantidad += Number(renglon.cantidadEntregada) || 0;
-    total.set(renglon.loteId, acumulado);
-    return total;
-  }, new Map());
-}
-
 export function renglonIncompleto(renglon = {}) {
   if (!renglon.medicamentoId) return "Falta elegir el medicamento.";
   if (!renglon.loteId) return "Falta elegir el lote.";
@@ -72,7 +59,6 @@ export function useGeneracionReceta({ consultaId, perfilId } = {}) {
   const [error, setError] = useState(null);
   const [enviando, setEnviando] = useState(false);
   const [receta, setReceta] = useState(null);
-  const [avisoDeSalidas, setAvisoDeSalidas] = useState(null);
 
   useEffect(() => {
     let vigente = true;
@@ -169,8 +155,12 @@ export function useGeneracionReceta({ consultaId, perfilId } = {}) {
 
     setEnviando(true);
     setError(null);
-    setAvisoDeSalidas(null);
 
+    // Una sola llamada: fn_generar_receta (00112) emite la receta y registra la salida de
+    // inventario en la misma transaccion. Antes esto era generarReceta() y despues un bucle de
+    // registrarSalida() por lote, y si una de esas salidas fallaba la receta ya estaba emitida:
+    // el medicamento salia de la bodega y el sistema lo seguia contando (issue #711). Ahora un
+    // fallo en el descuento devuelve error y no deja receta.
     const resultado = await generarReceta({
       consulta: consultaId,
       medico: perfilId,
@@ -178,6 +168,9 @@ export function useGeneracionReceta({ consultaId, perfilId } = {}) {
       detalle: renglones.map((renglon) => ({
         medicamento: renglon.medicamentoId,
         loteId: renglon.loteId,
+        // La bodega la exige la funcion cuando el renglon trae lote: existencias esta
+        // particionada por (lote, bodega) desde la 00047.
+        bodegaId: renglon.bodegaId,
         dosis: renglon.dosis,
         frecuencia: renglon.frecuencia,
         duracion: renglon.duracion,
@@ -185,33 +178,14 @@ export function useGeneracionReceta({ consultaId, perfilId } = {}) {
       })),
     });
 
+    setEnviando(false);
+
     if (resultado.error) {
-      setEnviando(false);
       setError(resultado.error);
       return { ok: false };
     }
 
-    const fallidas = [];
-    for (const [loteId, { cantidad, bodegaId }] of totalPorLote(renglones)) {
-      const salida = await registrarSalida({
-        bodega_id: bodegaId,
-        lote_id: loteId,
-        cantidad,
-        motivo: MOTIVO_DE_SALIDA_POR_RECETA,
-        usuarioId: perfilId,
-      });
-      if (salida.error) fallidas.push(salida.error.mensaje);
-    }
-
-    setEnviando(false);
     setReceta(resultado.receta);
-
-    if (fallidas.length > 0) {
-      setAvisoDeSalidas(
-        `La receta quedo generada, pero ${fallidas.length} salida(s) de inventario no se registraron: ${fallidas.join(" ")} Avisa a la administradora para que ajuste el inventario.`,
-      );
-    }
-
     return { ok: true, receta: resultado.receta };
   }, [renglones, problemas, consultaId, perfilId, indicacionesGenerales]);
 
@@ -226,7 +200,6 @@ export function useGeneracionReceta({ consultaId, perfilId } = {}) {
     indicacionesGenerales,
     setIndicacionesGenerales,
     error,
-    avisoDeSalidas,
     enviando,
     receta,
     agregarMedicamento,

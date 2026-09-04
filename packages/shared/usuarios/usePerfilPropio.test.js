@@ -1,7 +1,7 @@
 // Pruebas de la logica pura de la pantalla de perfil propio (issue #102).
 //
 // No se monta el hook: packages/shared corre vitest con environment "node", sin DOM (mismo
-// motivo que useUsuariosListado.test.js). Por eso camposDePerfilPropio(), valoresIniciales() y
+// motivo que useUsuariosListado.test.js). Por eso camposDePerfilPropio(), valoresInicialesDePerfil() y
 // datosParaGuardarPerfil() son funciones exportadas y no codigo suelto dentro del hook.
 //
 // Ningun dato real: los nombres son inventados.
@@ -12,7 +12,7 @@ import { ROLES } from "./roles.js";
 import {
   camposDePerfilPropio,
   datosParaGuardarPerfil,
-  valoresIniciales,
+  valoresInicialesDePerfil,
 } from "./usePerfilPropio.js";
 
 describe("camposDePerfilPropio", () => {
@@ -54,9 +54,9 @@ describe("camposDePerfilPropio", () => {
   });
 });
 
-describe("valoresIniciales", () => {
+describe("valoresInicialesDePerfil", () => {
   it("copia los campos editables del perfil", () => {
-    const valores = valoresIniciales({
+    const valores = valoresInicialesDePerfil({
       nombres: "Ana",
       apellidos: "Perez",
       telefono: "5512-3456",
@@ -74,7 +74,7 @@ describe("valoresIniciales", () => {
   });
 
   it("sin perfil, todo queda en blanco sin reventar", () => {
-    expect(valoresIniciales(null)).toEqual({
+    expect(valoresInicialesDePerfil(null)).toEqual({
       nombres: "",
       apellidos: "",
       email: "",

@@ -26,6 +26,15 @@ export * from "./jornada.api.js";
 export * from "./permisos.js";
 export * from "./useFiltrosReportes.js";
 
+// Los cuatro hooks de pantalla (issue #693). No salian por el barril, asi que las paginas los
+// importaban con rutas relativas del tipo "../../../../packages/shared/reportes/useX.js": eso
+// los dejaba fuera de lo que compila `vite build` y fuera de lo que ve
+// `verificar:shared-esquema`, y es parte de por que sus defectos no los detecto nadie.
+export * from "./useDashboardMetricas.js";
+export * from "./useReporteInventario.js";
+export * from "./useReporteJornada.js";
+export * from "./useReportePacientes.js";
+
 // Exportacion de reportes a CSV (issue #207). Funcion pura: no depende de Supabase ni de
 // ninguna API web-only, por eso vive junto al resto de utilidades de este modulo.
 export * from "./csv.js";

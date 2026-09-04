@@ -27,7 +27,7 @@
 // no da.
 //
 // El hook en si no se prueba montado (packages/shared corre vitest con environment "node", sin
-// DOM, mismo motivo que useAltaUsuario.test.js/useEdicionUsuario.test.js): valoresIniciales() y
+// DOM, mismo motivo que useAltaUsuario.test.js/useEdicionUsuario.test.js): valoresInicialesDeJornada() y
 // aDatosDeJornada() se exportan aparte para poder probarlas sin montar nada.
 
 import { useCallback, useEffect, useState } from "react";
@@ -50,10 +50,17 @@ import { advertirJornadaDuplicada, validarJornada } from "./validaciones.js";
  * Los campos del formulario son los ids de CAMPOS_FORMULARIO_JORNADA (comunidad, responsable,
  * proyecto, sin el sufijo `Id`): esta funcion traduce entre las dos formas.
  *
+ * Se llamaba `valoresIniciales`, igual que la de usuarios/usePerfilPropio.js. El barril recibia
+ * las dos por sendas estrellas y ESM excluye del namespace un nombre ambiguo: `valoresIniciales`
+ * llegaba como undefined a quien lo importara de `@ecopac/shared`, sin ningun error. Es el mismo
+ * bug #365 que ya costo una vez, y lo destapo la primera prueba de apps/mobile (issue #702), que
+ * al cargar el barril con Babel falla de golpe -- "Cannot redefine property" -- en vez de en
+ * silencio. Las dos se renombraron con el sufijo del dominio, como `valoresInicialesDeGasto`.
+ *
  * @param {object|null} [jornada]
  * @returns {{ nombre: string, fecha: string, comunidad: string, responsable: string, proyecto: string }}
  */
-export function valoresIniciales(jornada) {
+export function valoresInicialesDeJornada(jornada) {
   return {
     nombre: jornada?.nombre ?? "",
     fecha: jornada?.fecha ?? "",
@@ -120,7 +127,9 @@ export function useFormularioJornada({ jornada, rol } = {}) {
   // En edicion arranca vacio: se rellena cuando obtenerJornada() resuelve, mas abajo. En alta no
   // hay nada que pedir, arranca vacio directo.
   const [jornadaBase, setJornadaBase] = useState(null);
-  const [valores, setValores] = useState(() => valoresIniciales(esEdicion ? null : jornada));
+  const [valores, setValores] = useState(() =>
+    valoresInicialesDeJornada(esEdicion ? null : jornada),
+  );
   const [errores, setErrores] = useState({});
   const [error, setError] = useState(null);
   const [enviando, setEnviando] = useState(false);
@@ -178,7 +187,7 @@ export function useFormularioJornada({ jornada, rol } = {}) {
       }
 
       setJornadaBase(completa);
-      setValores(valoresIniciales(completa));
+      setValores(valoresInicialesDeJornada(completa));
 
       if (completa.comunidadId) {
         const { comunidad } = await obtenerComunidad(completa.comunidadId);
@@ -280,7 +289,7 @@ export function useFormularioJornada({ jornada, rol } = {}) {
   }, []);
 
   const cancelar = useCallback(() => {
-    setValores(valoresIniciales(esEdicion ? jornadaBase : jornada));
+    setValores(valoresInicialesDeJornada(esEdicion ? jornadaBase : jornada));
     setErrores({});
     setError(null);
     setEnviando(false);
@@ -309,7 +318,7 @@ export function useFormularioJornada({ jornada, rol } = {}) {
       return { ok: false };
     }
 
-    if (!esEdicion) setValores(valoresIniciales(null));
+    if (!esEdicion) setValores(valoresInicialesDeJornada(null));
     return { ok: true, jornada: resultado.jornada };
   }, [valores, esEdicion, jornadaId, rol]);
 

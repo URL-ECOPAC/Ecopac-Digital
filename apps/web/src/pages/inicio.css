@@ -1,0 +1,81 @@
+/* Pantalla de inicio (issue #710).
+ *
+ * Ningun color, espaciado ni radio esta escrito a mano: todos salen de las custom properties
+ * que publica apps/web/src/theme.js desde @ecopac/ui-tokens. Es la regla de
+ * docs/ARQUITECTURA-FRONTEND.md. */
+
+.inicio-seccion {
+  margin-bottom: var(--spacing-xl, 32px);
+}
+
+.inicio-titulo {
+  color: var(--color-text);
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin-bottom: var(--spacing-md, 16px);
+}
+
+.inicio-vacio {
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+/* Tarjeta de jornada en curso: toda la fila es el area pulsable. */
+.inicio-jornada {
+  align-items: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  gap: var(--spacing-md, 16px);
+  justify-content: space-between;
+  padding: 0;
+  text-align: left;
+  width: 100%;
+}
+
+.inicio-jornada-datos {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs, 4px);
+}
+
+.inicio-jornada-nombre {
+  color: var(--color-text);
+}
+
+.inicio-jornada-detalle {
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+}
+
+/* Rejilla de accesos por rol. Se adapta sola al numero de modulos que ve cada rol: un
+ * voluntario ve tres y una administradora ocho, y ninguno de los dos casos necesita una
+ * media query propia. */
+.inicio-accesos {
+  display: grid;
+  gap: var(--spacing-md, 16px);
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+}
+
+.inicio-acceso {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radio-md, 8px);
+  border-top: 4px solid var(--color-primary);
+  box-shadow: var(--sombra-sm);
+  cursor: pointer;
+  padding: var(--spacing-lg, 24px) var(--spacing-md, 16px);
+  text-align: left;
+  transition: box-shadow 120ms ease-in-out;
+}
+
+.inicio-acceso:hover,
+.inicio-acceso:focus-visible {
+  box-shadow: var(--sombra-md);
+}
+
+.inicio-acceso-etiqueta {
+  color: var(--color-text);
+  font-weight: 600;
+}

@@ -1,4 +1,6 @@
-import { useDashboardMetricas } from "../../../../packages/shared/reportes/useDashboardMetricas.js";
+import { exportarFilasACSV, useDashboardMetricas } from "@ecopac/shared";
+
+import { useSesionCompartida } from "../contexto/SesionProvider";
 
 // 📊 Tarjeta de métrica alineada a Figma
 const TarjetaMetrica = ({ etiqueta, valor, meta, color }) => {
@@ -56,8 +58,9 @@ const TarjetaMetrica = ({ etiqueta, valor, meta, color }) => {
 };
 
 export default function DashboardMetricasPage() {
-  // ✅ Extraemos TODOS los valores del hook
+  const { rol } = useSesionCompartida();
   const {
+    tieneAcceso,
     cargando,
     error,
     indicadores,
@@ -78,24 +81,36 @@ export default function DashboardMetricasPage() {
     setComunidadCompararId,
     listaComunidades,
     valoresEspeciales: { TODAS, NINGUNA },
-  } = useDashboardMetricas();
+  } = useDashboardMetricas({ rol });
 
   // ✅ Función de exportación CSV — AHORA EN EL COMPONENTE
   const exportarCSV = () => {
     if (!seriePrincipal || seriePrincipal.length === 0) return;
-    const encabezados = [agruparPor, "Valor Principal", "Valor Comparado", "Variación %"];
+
+    // El CSV lo arma exportarFilasACSV (reportes/csv.js, issue #207) y no un join(",") a mano:
+    // aquel escapa comillas y separadores, pone BOM UTF-8 y usa CRLF. Armarlo aqui rompia con
+    // cualquier etiqueta que llevara una coma -- un nombre de comunidad, por ejemplo.
+    const columnas = [
+      { id: "etiqueta", label: agruparPor },
+      { id: "valor", label: "Valor principal" },
+      { id: "comparado", label: "Valor comparado" },
+      { id: "variacion", label: "Variacion %" },
+    ];
+
     const filas = seriePrincipal.map((fila, i) => {
       const comp = serieComparacion?.[i];
       const varPc = comp ? calcularVariacion(fila.valor, comp.valor) : null;
-      return [
-        fila.etiqueta,
-        fila.valor,
-        comp?.valor || "-",
-        varPc !== null ? `${varPc >= 0 ? "+" : ""}${varPc.toFixed(1)}%` : "-",
-      ];
+      return {
+        etiqueta: fila.etiqueta,
+        valor: fila.valor,
+        comparado: comp?.valor ?? "-",
+        variacion: varPc !== null ? `${varPc >= 0 ? "+" : ""}${varPc.toFixed(1)}%` : "-",
+      };
     });
-    const contenido = [encabezados, ...filas].map((f) => f.join(",")).join("\n");
-    const blob = new Blob([contenido], { type: "text/csv;charset=utf-8;" });
+
+    const blob = new Blob([exportarFilasACSV(filas, columnas)], {
+      type: "text/csv;charset=utf-8;",
+    });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -104,15 +119,29 @@ export default function DashboardMetricasPage() {
     URL.revokeObjectURL(url);
   };
 
+  // La guarda de rol la decide puedeVerIndicadoresDeImpacto(), en reportes/permisos.js: quien
+  // protege de verdad es el WHERE de vista_reporte_impacto (00054).
+  if (!tieneAcceso)
+    return (
+      <div style={{ padding: "40px", color: "var(--color-danger)" }}>
+        Solo administracion y los roles consultivos consultan los indicadores de impacto.
+      </div>
+    );
+
   if (cargando)
     return (
-      <div style={{ padding: "40px", textAlign: "center", color: "#64748b" }}>
+      <div style={{ padding: "40px", textAlign: "center", color: "var(--color-text-muted)" }}>
         Cargando métricas...
       </div>
     );
 
+  // `error` es el objeto normalizado del monorepo, no una cadena: se lee su campo `mensaje`.
   if (error)
-    return <div style={{ padding: "40px", color: "#dc2626" }}>Error al cargar: {error}</div>;
+    return (
+      <div style={{ padding: "40px", color: "var(--color-danger)" }}>
+        Error al cargar: {error.mensaje}
+      </div>
+    );
 
   // 📊 Datos de gráfica
   const valorMaximo = Math.max(...seriePrincipal.map((i) => i.valor), 1);

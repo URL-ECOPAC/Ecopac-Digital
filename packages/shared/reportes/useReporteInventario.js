@@ -1,204 +1,137 @@
-import { useState, useEffect, useMemo } from "react";
-import { obtenerSupabase } from "../api/cliente.js";
+// View model del reporte de inventario actual (issue #212, reconectado por #693).
+//
+// QUE PASO AQUI. Este hook consultaba `existencias` directamente con obtenerSupabase(), armaba
+// su propia nocion de "vencido" (una tercera, distinta de la de inventario/lotes.validaciones.js)
+// y desestructuraba `{ data, err }` de una respuesta de Supabase, que devuelve `error`: `err`
+// era siempre undefined, asi que un fallo de consulta se mostraba como inventario vacio en vez
+// de como error (issue #696). Mientras tanto obtenerReporteDeInventario() (inventario.api.js)
+// existia, probada, y no la llamaba nadie.
+//
+// Ahora el hook no consulta Supabase: llama a la API de su modulo, que es la regla de
+// docs/ARQUITECTURA-FRONTEND.md. Con eso desaparecen de golpe las tres cosas: la consulta
+// duplicada, la definicion propia de "vencido" y el bug del `err`.
+//
+// El catalogo de bodegas sale de inventario/bodegas.api.js -- listarBodegas() -- y no de un
+// select suelto a la tabla, por el mismo motivo.
 
-const TODAS = "__todas__";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
-export function useReporteInventario() {
+import { listarBodegas } from "../inventario/bodegas.api.js";
+import { ESTADOS_DE_VENCIMIENTO_REPORTE } from "./campos.js";
+import {
+  CAMPOS_FICHA_LOTE_INVENTARIO,
+  CAMPOS_TOTALES_INVENTARIO_REPORTE,
+  COLUMNAS_INVENTARIO_REPORTE,
+} from "./columnas.js";
+import { FILTROS_INVENTARIO_REPORTE_VACIOS } from "./filtros.js";
+import { ESTADOS_DE_VENCIMIENTO, obtenerReporteDeInventario } from "./inventario.api.js";
+import { puedeVerReporteDeInventario } from "./permisos.js";
+
+const TOTALES_VACIOS = {
+  unidadesDisponibles: 0,
+  unidadesVencidas: 0,
+  medicamentosDistintos: 0,
+  renglonesDeInventario: 0,
+};
+
+/**
+ * Estado actual del inventario, agrupado por medicamento y con el desglose por lote.
+ *
+ * @param {object} [opciones]
+ * @param {string} [opciones.rol] Rol de quien consulta.
+ */
+export function useReporteInventario({ rol } = {}) {
+  const tieneAcceso = puedeVerReporteDeInventario(rol);
+
+  const [filtros, setFiltros] = useState(FILTROS_INVENTARIO_REPORTE_VACIOS);
+  const [bodegas, setBodegas] = useState([]);
+  const [reporte, setReporte] = useState(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
 
-  // Filtros
-  const [bodegaId, setBodegaId] = useState(TODAS);
-  const [estadoVencimiento, setEstadoVencimiento] = useState("todos");
-  const [soloActivos, setSoloActivos] = useState(true);
-
-  // Datos
-  const [listaBodegas, setListaBodegas] = useState([]);
-  const [registros, setRegistros] = useState([]);
-
-  // ✅ Cargar bodegas directamente desde su tabla
-  const cargarBodegas = async () => {
-    const supabase = obtenerSupabase();
-    try {
-      const { data, err } = await supabase
-        .from("bodegas")
-        .select("id, nombre")
-        .order("nombre", { ascending: true });
-
-      if (err) throw err;
-      setListaBodegas(data || []);
-    } catch (err) {
-      console.warn("No se pudieron cargar las bodegas:", err.message);
-      setListaBodegas([]);
-    }
-  };
-
-  // ─── Cargar inventario desde EXISTENCIAS + LOTES ───
-  const cargarInventario = async () => {
-    const supabase = obtenerSupabase();
-    setCargando(true);
-    setError(null);
-
-    try {
-      const hoy = new Date();
-      const treintaDias = new Date();
-      treintaDias.setDate(hoy.getDate() + 30);
-      const hoyStr = hoy.toISOString().slice(0, 10);
-      const treintaDiasStr = treintaDias.toISOString().slice(0, 10);
-
-      // ✅ Estructura REAL: existencias → lotes → medicamentos
-      let consulta = supabase.from("existencias").select(`
-          id,
-          cantidad_disponible,
-          lote_id,
-          bodega_id,
-          lotes (
-            id,
-            numero_lote,
-            fecha_vencimiento,
-            fecha_ingreso,
-            cantidad_ingresada,
-            origen,
-            medicamento_id,
-            medicamentos (nombre, concentracion, presentacion, marca, activo),
-            proveedor_id,
-            proveedores (nombre)
-          ),
-          bodegas (nombre, es_movil)
-        `);
-
-      // Filtro por bodega
-      if (bodegaId && bodegaId !== TODAS) {
-        consulta = consulta.eq("bodega_id", bodegaId);
-      }
-
-      const { data, err } = await consulta;
-      if (err) throw err;
-
-      // 🧮 Calcular estado de vencimiento y desestructurar
-      const procesados = (data || []).map((r) => {
-        const lote = r.lotes || {};
-        const medicamento = lote.medicamentos || {};
-        const bodega = r.bodegas || {};
-        const fechaVenc = lote.fecha_vencimiento ? new Date(lote.fecha_vencimiento) : null;
-
-        let estado = "sin_fecha";
-        let estaVencido = false;
-        if (fechaVenc) {
-          estaVencido = fechaVenc < hoy;
-          estado = estaVencido ? "vencido" : fechaVenc <= treintaDias ? "por_vencer" : "vigente";
-        }
-
-        return {
-          id: r.id,
-          cantidad_disponible: r.cantidad_disponible,
-          medicamento_id: lote.medicamento_id,
-          medicamento,
-          numero_lote: lote.numero_lote,
-          fecha_vencimiento: lote.fecha_vencimiento,
-          fecha_ingreso: lote.fecha_ingreso,
-          origen: lote.origen,
-          cantidad_ingresada: lote.cantidad_ingresada,
-          bodega_id: r.bodega_id,
-          bodega,
-          estadoVencimiento: estado,
-          estaVencido,
-        };
-      });
-
-      // 🔍 Aplicar filtros combinados
-      const filtrados = procesados.filter((r) => {
-        // Filtro por medicamento activo
-        if (soloActivos && r.medicamento.activo === false) return false;
-        // Filtro por estado de vencimiento
-        if (estadoVencimiento === "vigente") return !r.estaVencido;
-        if (estadoVencimiento === "vencido") return r.estaVencido;
-        if (estadoVencimiento === "por_vencer") return r.estadoVencimiento === "por_vencer";
-        return true; // "todos"
-      });
-
-      setRegistros(filtrados);
-    } catch (err) {
-      setError(`No se pudo cargar inventario: ${err.message}`);
-    } finally {
+  const cargar = useCallback(async () => {
+    if (!tieneAcceso) {
+      setReporte(null);
       setCargando(false);
+      return;
     }
-  };
 
-  // ─── Cargar datos ───
+    setCargando(true);
+
+    // El descriptor llama al filtro `estadoVencimiento` y la API espera `estadoDeVencimiento`:
+    // la traduccion se hace aqui, que es donde se juntan los dos vocabularios.
+    const { reporte: datos, error: fallo } = await obtenerReporteDeInventario({
+      bodega: filtros.bodega || undefined,
+      estadoDeVencimiento: filtros.estadoVencimiento || ESTADOS_DE_VENCIMIENTO.TODOS,
+    });
+
+    if (fallo) {
+      setError(fallo);
+      setReporte(null);
+    } else {
+      setError(null);
+      setReporte(datos);
+    }
+
+    setCargando(false);
+  }, [tieneAcceso, filtros.bodega, filtros.estadoVencimiento]);
+
   useEffect(() => {
-    cargarBodegas();
+    cargar();
+  }, [cargar]);
+
+  // El catalogo de bodegas no depende de los filtros: se pide una vez.
+  useEffect(() => {
+    if (!tieneAcceso) return;
+
+    let vigente = true;
+    listarBodegas().then(({ bodegas: datos }) => {
+      if (vigente) setBodegas(datos ?? []);
+    });
+
+    return () => {
+      vigente = false;
+    };
+  }, [tieneAcceso]);
+
+  const setFiltro = useCallback((id, valor) => {
+    setFiltros((previos) => ({ ...previos, [id]: valor }));
   }, []);
 
-  useEffect(() => {
-    cargarInventario();
-  }, [bodegaId, estadoVencimiento, soloActivos]);
+  const limpiarFiltros = useCallback(() => setFiltros(FILTROS_INVENTARIO_REPORTE_VACIOS), []);
 
-  // ─── Totales calculados ───
-  const totales = useMemo(() => {
-    const disponibles = registros.filter((r) => !r.estaVencido);
-    const vencidos = registros.filter((r) => r.estaVencido);
-    const medicamentosUnicos = new Set(disponibles.map((r) => r.medicamento_id));
-
-    return {
-      unidadesDisponibles: disponibles.reduce(
-        (sum, r) => sum + Number(r.cantidad_disponible || 0),
-        0,
+  const hayFiltros = useMemo(
+    () =>
+      Object.entries(FILTROS_INVENTARIO_REPORTE_VACIOS).some(
+        ([id, vacio]) => filtros[id] !== vacio,
       ),
-      unidadesVencidas: vencidos.reduce((sum, r) => sum + Number(r.cantidad_disponible || 0), 0),
-      medicamentosDistintos: medicamentosUnicos.size,
-      lotesVencidos: vencidos.length,
-    };
-  }, [registros]);
+    [filtros],
+  );
 
-  // ─── Exportar CSV ───
-  const obtenerCSV = () => {
-    const encabezados = [
-      "Medicamento",
-      "Concentración",
-      "Lote",
-      "Bodega",
-      "Cantidad Disponible",
-      "Fecha Vencimiento",
-      "Estado",
-      "Medicamento Activo",
-    ];
-    const filas = registros.map((r) => [
-      r.medicamento?.nombre || "Desconocido",
-      r.medicamento?.concentracion || "-",
-      r.numero_lote || "-",
-      r.bodega?.nombre || "Sin bodega",
-      r.cantidad_disponible,
-      r.fecha_vencimiento || "Sin fecha",
-      r.estaVencido
-        ? "❌ Vencido"
-        : r.estadoVencimiento === "por_vencer"
-          ? "⚠️ Por vencer"
-          : "✅ Vigente",
-      r.medicamento?.activo ? "Sí" : "No",
-    ]);
-    return { encabezados, filas };
-  };
+  // Los catalogos que DataList y FilterBar necesitan para resolver `etiquetasDesde` y las
+  // opciones del selector de bodega.
+  const catalogos = useMemo(
+    () => ({
+      estadosDeVencimientoReporte: ESTADOS_DE_VENCIMIENTO_REPORTE,
+      bodegas: bodegas.map((bodega) => ({ value: bodega.id, label: bodega.nombre })),
+    }),
+    [bodegas],
+  );
 
   return {
-    valoresEspeciales: { TODAS },
-    bodegaId,
-    setBodegaId,
-    estadoVencimiento,
-    setEstadoVencimiento,
-    soloActivos,
-    setSoloActivos,
-    opcionesVencimiento: [
-      { valor: "todos", etiqueta: "Todos los lotes" },
-      { valor: "vigente", etiqueta: "Solo vigentes" },
-      { valor: "por_vencer", etiqueta: "Por vencer (30 días)" },
-      { valor: "vencido", etiqueta: "Solo vencidos" },
-    ],
-    listaBodegas,
+    tieneAcceso,
     cargando,
     error,
-    registros,
-    totales,
-    obtenerCSV,
+    medicamentos: reporte?.medicamentos ?? [],
+    totales: reporte?.totales ?? TOTALES_VACIOS,
+    columnas: COLUMNAS_INVENTARIO_REPORTE,
+    camposDeLote: CAMPOS_FICHA_LOTE_INVENTARIO,
+    camposDeTotales: CAMPOS_TOTALES_INVENTARIO_REPORTE,
+    filtros,
+    setFiltro,
+    limpiarFiltros,
+    hayFiltros,
+    catalogos,
+    recargar: cargar,
   };
 }

@@ -1,169 +1,133 @@
-import { useState, useEffect } from "react";
-import { obtenerSupabase } from "../api/cliente.js";
+// View model del reporte de pacientes atendidos (issues #202 / #211, reconectado por #693).
+//
+// QUE PASO AQUI. Este hook consultaba `vista_reporte_impacto` con obtenerSupabase(), que solo
+// tiene `pacientes_atendidos`. El requerimiento pide ademas el desglose demografico -- nuevos,
+// recurrentes, hombres, mujeres, menores, adultos y adultos mayores -- que lo calcula
+// fn_reporte_pacientes_atendidos (00067) y que la 00095 corrigio con detalle: el desglose por
+// sexo devolvia cero siempre, y un paciente recurrente contaba como nuevo en cada grupo.
+//
+// Nada de ese trabajo llegaba a la pantalla, porque la unica funcion que llama a esa RPC
+// -- obtenerReportePacientesAtendidos(), en pacientes.api.js -- no la usaba nadie. Ahora si.
+//
+// LOS FILTROS SON LOS COMUNES. useFiltrosReportes() (issue #208) ya resuelve la barra que las
+// cuatro pantallas comparten, con retardo, presets de rango y catalogos. Se usa en vez de tener
+// aqui cuatro useState sueltos. La traduccion de nombres -- periodo:{min,max} del descriptor a
+// desde/hasta que espera la RPC -- se hace aqui, que es donde se juntan los dos vocabularios,
+// tal como anticipa el comentario de FILTROS_REPORTES en filtros.js.
 
-// Valores especiales de filtro
-const TODAS = "__todas__";
-const NINGUNA = "__ninguna__";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
-export function useReportePacientes() {
+import { COLUMNAS_PACIENTES_ATENDIDOS } from "./columnas.js";
+import { FILTROS_REPORTES } from "./filtros.js";
+import { AGRUPACIONES_DE_PACIENTES, obtenerReportePacientesAtendidos } from "./pacientes.api.js";
+import { puedeVerReporteDePacientes } from "./permisos.js";
+import { useFiltrosReportes } from "./useFiltrosReportes.js";
+
+/**
+ * Aplana un grupo para que DataList pueda leerlo.
+ *
+ * obtenerReportePacientesAtendidos() devuelve el desglose anidado (`porSexo.hombres`,
+ * `porEdad.adultosMayores`) y COLUMNAS_PACIENTES_ATENDIDOS declara las columnas por su id plano,
+ * porque `desde` no sabe leer una ruta anidada. Aplanarlo es trabajo del hook de la pantalla,
+ * tal como dice el comentario de ese descriptor en columnas.js.
+ */
+function aplanarGrupo(grupo) {
+  return {
+    ...grupo,
+    hombres: grupo.porSexo?.hombres ?? 0,
+    mujeres: grupo.porSexo?.mujeres ?? 0,
+    menores: grupo.porEdad?.menores ?? 0,
+    adultos: grupo.porEdad?.adultos ?? 0,
+    adultosMayores: grupo.porEdad?.adultosMayores ?? 0,
+  };
+}
+
+/**
+ * Pacientes atendidos, agregados por jornada, comunidad o periodo.
+ *
+ * @param {object} [opciones]
+ * @param {string} [opciones.rol] Rol de quien consulta.
+ */
+export function useReportePacientes({ rol } = {}) {
+  const tieneAcceso = puedeVerReporteDePacientes(rol);
+
+  const {
+    valores,
+    filtrosAplicados,
+    presetActivo,
+    setFiltro,
+    setPreset,
+    limpiarFiltros,
+    aplicarFiltros,
+    catalogos,
+    cargandoCatalogos,
+  } = useFiltrosReportes();
+
+  const [agruparPor, setAgruparPor] = useState(AGRUPACIONES_DE_PACIENTES.JORNADA);
+  const [grupos, setGrupos] = useState([]);
+  const [totales, setTotales] = useState(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
 
-  // Filtros
-  const [fechaInicio, setFechaInicio] = useState("");
-  const [fechaFin, setFechaFin] = useState("");
-  const [comunidadId, setComunidadId] = useState(TODAS);
-  const [jornadaId, setJornadaId] = useState(TODAS);
-
-  // Datos
-  const [datos, setDatos] = useState(null);
-  const [listaComunidades, setListaComunidades] = useState([]);
-  const [listaJornadas, setListaJornadas] = useState([]);
-
-  // ─── Cargar reporte desde la VISTA que ya funciona ───
-  const cargarReporte = async (filtros = {}) => {
-    const supabase = obtenerSupabase();
-
-    // ✅ Usamos la vista existente con los campos que SÍ existen
-    let consulta = supabase.from("vista_reporte_impacto").select(`
-        fecha,
-        jornada_id,
-        jornada,
-        comunidad_id,
-        comunidad,
-        pacientes_atendidos
-      `);
-
-    // ✅ Filtro de fechas: usa el campo REAL "fecha", NO "fecha_atencion"
-    if (filtros.fechaInicio && filtros.fechaFin) {
-      consulta = consulta.gte("fecha", filtros.fechaInicio).lte("fecha", filtros.fechaFin);
+  const cargar = useCallback(async () => {
+    if (!tieneAcceso) {
+      setGrupos([]);
+      setTotales(null);
+      setCargando(false);
+      return;
     }
 
-    // ✅ Filtro por comunidad
-    if (filtros.comunidadId && filtros.comunidadId !== TODAS) {
-      consulta = consulta.eq("comunidad_id", filtros.comunidadId);
-    }
+    setCargando(true);
 
-    // ✅ Filtro por jornada
-    if (filtros.jornadaId && filtros.jornadaId !== TODAS) {
-      consulta = consulta.eq("jornada_id", filtros.jornadaId);
-    }
-
-    const { data: registros, error: err } = await consulta;
-    if (err) throw err;
-    if (!registros || registros.length === 0) return null;
-
-    // 📋 Cargar listas para filtros
-    const comunidadesSet = new Map();
-    const jornadasSet = new Map();
-    registros.forEach((r) => {
-      const comId = r.comunidad_id;
-      const comNom = r.comunidad || "Sin comunidad";
-      const jorId = r.jornada_id;
-      const jorNom = r.jornada || "Sin jornada";
-
-      if (comId && !comunidadesSet.has(comId)) {
-        comunidadesSet.set(comId, { id: comId, nombre: comNom });
-      }
-      if (jorId && !jornadasSet.has(jorId)) {
-        jornadasSet.set(jorId, { id: jorId, nombre: jorNom });
-      }
-    });
-    setListaComunidades(Array.from(comunidadesSet.values()));
-    setListaJornadas(Array.from(jornadasSet.values()));
-
-    // 🧮 Calcular totales y agrupaciones
-    const totalPacientes = registros.reduce(
-      (sum, r) => sum + Number(r.pacientes_atendidos || 0),
-      0,
-    );
-
-    const porComunidad = {};
-    const porJornada = {};
-
-    registros.forEach((r) => {
-      const comunidad = r.comunidad || "Sin comunidad";
-      const jornada = r.jornada || "Sin jornada";
-      const cantidad = Number(r.pacientes_atendidos || 0);
-
-      if (!porComunidad[comunidad]) porComunidad[comunidad] = { nombre: comunidad, cantidad: 0 };
-      if (!porJornada[jornada]) porJornada[jornada] = { nombre: jornada, cantidad: 0 };
-
-      porComunidad[comunidad].cantidad += cantidad;
-      porJornada[jornada].cantidad += cantidad;
+    const {
+      grupos: filas,
+      totales: sumas,
+      error: fallo,
+    } = await obtenerReportePacientesAtendidos({
+      rol,
+      agruparPor,
+      jornada: filtrosAplicados.jornada || undefined,
+      comunidad: filtrosAplicados.comunidad || undefined,
+      desde: filtrosAplicados.periodo?.min || undefined,
+      hasta: filtrosAplicados.periodo?.max || undefined,
     });
 
-    return {
-      totales: {
-        totalPacientes,
-        // ⚠️ Nota: La vista NO tiene datos por paciente individual (sexo, edad, nuevos/recurrentes)
-        // Esos campos se muestran como "no disponible" hasta que se cree la vista detallada
-        nuevos: "N/D",
-        recurrentes: "N/D",
-        porSexo: { masculino: "N/D", femenino: "N/D", otro: "N/D" },
-        porEdad: { "0-11": "N/D", "12-17": "N/D", "18-30": "N/D", "31-59": "N/D", "60+": "N/D" },
-      },
-      porComunidad: Object.values(porComunidad),
-      porJornada: Object.values(porJornada),
-      filas: registros.map((r) => ({
-        fecha: r.fecha,
-        jornada: r.jornada,
-        comunidad: r.comunidad,
-        pacientes_atendidos: r.pacientes_atendidos,
-      })),
-    };
-  };
-
-  // ─── Recargar al cambiar filtros ───
-  useEffect(() => {
-    const cargar = async () => {
-      setCargando(true);
+    if (fallo) {
+      setError(fallo);
+      setGrupos([]);
+      setTotales(null);
+    } else {
       setError(null);
-      try {
-        const resultado = await cargarReporte({
-          fechaInicio,
-          fechaFin,
-          comunidadId,
-          jornadaId,
-        });
-        setDatos(resultado);
-      } catch (err) {
-        setError(`No se pudo cargar: ${err.message}`);
-      } finally {
-        setCargando(false);
-      }
-    };
-    cargar();
-  }, [fechaInicio, fechaFin, comunidadId, jornadaId]);
+      setGrupos(filas);
+      setTotales(sumas);
+    }
 
-  // ─── Datos para CSV ───
-  const obtenerDatosCSV = () => {
-    if (!datos) return null;
-    const encabezados = ["Fecha", "Comunidad", "Jornada", "Pacientes Atendidos"];
-    const filas = datos.filas.map((f) => [f.fecha, f.comunidad, f.jornada, f.pacientes_atendidos]);
-    return { encabezados, filas };
-  };
+    setCargando(false);
+  }, [tieneAcceso, rol, agruparPor, filtrosAplicados]);
+
+  useEffect(() => {
+    cargar();
+  }, [cargar]);
+
+  const filas = useMemo(() => grupos.map(aplanarGrupo), [grupos]);
 
   return {
-    // Filtros
-    valoresEspeciales: { TODAS },
-    fechaInicio,
-    setFechaInicio,
-    fechaFin,
-    setFechaFin,
-    comunidadId,
-    setComunidadId,
-    jornadaId,
-    setJornadaId,
-    // Listas
-    listaComunidades,
-    listaJornadas,
-    // Resultados
-    cargando,
+    tieneAcceso,
+    cargando: cargando || cargandoCatalogos,
     error,
-    totales: datos?.totales || {},
-    porComunidad: datos?.porComunidad || [],
-    porJornada: datos?.porJornada || [],
-    obtenerDatosCSV,
+    grupos: filas,
+    totales,
+    columnas: COLUMNAS_PACIENTES_ATENDIDOS,
+    definicionDeFiltros: FILTROS_REPORTES,
+    valores,
+    presetActivo,
+    setFiltro,
+    setPreset,
+    limpiarFiltros,
+    aplicarFiltros,
+    catalogos,
+    agruparPor,
+    setAgruparPor,
+    recargar: cargar,
   };
 }

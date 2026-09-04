@@ -73,7 +73,7 @@ export function camposDePerfilPropio(esAdmin) {
  * @returns {{ nombres: string, apellidos: string, email: string, telefono: string,
  *   rol: string|null }}
  */
-export function valoresIniciales(perfil) {
+export function valoresInicialesDePerfil(perfil) {
   return {
     nombres: perfil?.nombres ?? "",
     apellidos: perfil?.apellidos ?? "",
@@ -130,7 +130,7 @@ export function usePerfilPropio({ usuario, perfil, refrescarPerfil }) {
   const esAdmin = esAdministrador(perfil?.rol);
   const campos = useMemo(() => camposDePerfilPropio(esAdmin), [esAdmin]);
 
-  const [valores, setValores] = useState(() => valoresIniciales(perfil));
+  const [valores, setValores] = useState(() => valoresInicialesDePerfil(perfil));
   const [erroresDeCampo, setErroresDeCampo] = useState({});
   const [guardando, setGuardando] = useState(false);
   const [errorGlobal, setErrorGlobal] = useState(null);
@@ -146,7 +146,7 @@ export function usePerfilPropio({ usuario, perfil, refrescarPerfil }) {
   // perfil.id es lo unico que de verdad tiene que reiniciar el formulario: identifica "es la
   // misma persona", y solo cambia al montar la pantalla.
   useEffect(() => {
-    setValores(valoresIniciales(perfil));
+    setValores(valoresInicialesDePerfil(perfil));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [perfil?.id]);
 

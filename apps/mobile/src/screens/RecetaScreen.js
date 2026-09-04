@@ -127,7 +127,6 @@ export default function RecetaScreen() {
     indicacionesGenerales,
     setIndicacionesGenerales,
     error,
-    avisoDeSalidas,
     enviando,
     receta,
     agregarMedicamento,
@@ -168,12 +167,6 @@ export default function RecetaScreen() {
           )}
           <Text style={styles.textoTenue}>Mostra esta pantalla en el puesto de entrega.</Text>
         </Card>
-
-        {avisoDeSalidas && (
-          <Card style={styles.tarjeta}>
-            <Text style={styles.motivo}>{avisoDeSalidas}</Text>
-          </Card>
-        )}
 
         <PrimaryButton
           title="Volver a la ficha"
