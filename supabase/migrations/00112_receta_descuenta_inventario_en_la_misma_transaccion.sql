@@ -44,6 +44,80 @@
 -- error explicito en vez de una salida que nadie registra. Los renglones SIN lote se siguen
 -- admitiendo sin tocar inventario: recetar sin especificar lote es valido (receta_detalle.lote_id
 -- es nullable, 00019) y ahi el control ocurre al despachar.
+--
+-- ADEMAS: DOS TRIGGERS DE INVENTARIO QUE DEPENDIAN DEL search_path DE QUIEN LLAMA
+--
+-- fn_generar_receta corre con `SET search_path = ''` (00066), como todas las funciones de este
+-- esquema. Al mover el INSERT en movimientos_inventario dentro de ella, sus triggers pasan a
+-- ejecutarse tambien con ese search_path vacio, y dos de ellos llamaban a otras funciones SIN
+-- calificar con el esquema:
+--
+--   fn_autoaprobar_movimiento_inventario (BEFORE INSERT, 00028/00094) -> es_administrador(),
+--                                                                        fn_aplicar_ajuste_existencias()
+--   fn_actualizar_existencias            (BEFORE UPDATE, 00023/00094) -> fn_aplicar_ajuste_existencias()
+--
+-- Hasta ahora funcionaban porque quien insertaba era PostgREST, con `public` en el search_path.
+-- Desde dentro de una funcion endurecida fallan con "function es_administrador() does not exist".
+-- Se recrean las dos con `SET search_path = ''` y las llamadas calificadas, que es lo que ya
+-- hacen fn_aplicar_ajuste_existencias (00107) y registrar_evento_auditoria (00026). No cambia su
+-- logica ni su modelo de seguridad: solo dejan de depender del search_path de quien las dispara.
+
+CREATE OR REPLACE FUNCTION fn_autoaprobar_movimiento_inventario()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = ''
+AS $$
+BEGIN
+  IF public.es_administrador() THEN
+    NEW.estado := 'aprobado';
+    NEW.aprobado_por := auth.uid();
+    NEW.aprobado_en := NOW();
+    NEW.aprobacion_automatica := TRUE;
+
+    PERFORM public.fn_aplicar_ajuste_existencias(
+      NEW.lote_id, NEW.bodega_id, NEW.tipo, NEW.cantidad
+    );
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+COMMENT ON FUNCTION fn_autoaprobar_movimiento_inventario() IS
+  'Si quien inserta es administrador (es_administrador(), leido del rol en perfiles via '
+  'auth.uid(), nunca de un campo del cliente), hace nacer el movimiento en estado aprobado, '
+  'con aprobado_por, aprobado_en y aprobacion_automatica fijados automaticamente, y '
+  'aplica el ajuste de existencias correspondiente. Cualquier otro rol conserva el DEFAULT '
+  '''pendiente'' de la columna estado (00023), sin cambios. Desde la 00112 lleva '
+  'SET search_path = '''' y llama calificado: antes dependia de que quien disparara el trigger '
+  'tuviera public en su search_path, y fallaba al insertarse desde una funcion endurecida.';
+
+CREATE OR REPLACE FUNCTION fn_actualizar_existencias()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = ''
+AS $$
+BEGIN
+  -- Solo actua cuando el estado cambia a 'aprobado'.
+  IF (OLD.estado IS DISTINCT FROM NEW.estado) AND NEW.estado = 'aprobado' THEN
+
+    IF NEW.aprobado_en IS NULL THEN
+      NEW.aprobado_en := NOW();
+    END IF;
+
+    PERFORM public.fn_aplicar_ajuste_existencias(
+      NEW.lote_id, NEW.bodega_id, NEW.tipo, NEW.cantidad
+    );
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+COMMENT ON FUNCTION fn_actualizar_existencias() IS
+  'Aplica el ajuste de existencias cuando un movimiento pasa a aprobado (00023, sobre '
+  'existencias desde la 00047). Desde la 00112 lleva SET search_path = '''' y llama calificado, '
+  'por el mismo motivo que fn_autoaprobar_movimiento_inventario.';
 
 CREATE OR REPLACE FUNCTION fn_generar_receta(
   p_consulta_id UUID,
