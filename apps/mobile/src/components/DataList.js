@@ -66,23 +66,15 @@ function Valor({ columna, fila, catalogos }) {
       );
 
     case "moneda":
-      // Mismo motivo que 'fecha': el importe se formatea en shared para que web y movil escriban
-      // el mismo numero.
       return <Text style={styles.texto}>{formatearMoneda(valor)}</Text>;
 
     case "fecha":
-      // Sale de shared y no de Intl: en React Native el resultado de Intl depende de los
-      // datos ICU del sistema, y la fecha tiene que verse igual que en la web.
       return <Text style={styles.texto}>{formatearFechaCorta(valor)}</Text>;
 
     case "chip":
-      // A diferencia de 'estado', aqui el valor guardado YA es el del enum (ver
-      // COLUMNAS_MOVIMIENTO y COLUMNAS_JORNADA), asi que indexa statusColors directamente.
       return <StatusChip status={valor} />;
 
     case "estado": {
-      // El valor puede ser un booleano en vez del valor del enum (COLUMNAS_USUARIO lee el
-      // campo activo). El catalogo trae la clave del enum en `clave` y el texto en `label`.
       const catalogo = catalogos[columna.etiquetasDesde] ?? [];
       const entrada = catalogo.find((opcion) => opcion.value === valor);
       return <StatusChip status={entrada?.clave ?? valor} label={entrada?.label} />;
@@ -107,8 +99,6 @@ function Valor({ columna, fila, catalogos }) {
     }
 
     default: {
-      // Una columna puede declarar que su texto se traduce por un catalogo, como el rol de
-      // COLUMNAS_USUARIO, que guarda el valor del enum pero muestra su etiqueta legible.
       if (columna.etiquetasDesde) {
         const catalogo = catalogos[columna.etiquetasDesde] ?? [];
         const opcion = catalogo.find((entrada) => entrada.value === valor);
@@ -121,8 +111,6 @@ function Valor({ columna, fila, catalogos }) {
 }
 
 function Fila({ columna, fila, catalogos }) {
-  // La columna principal es el titulo de la tarjeta y no lleva etiqueta: repetir "Nombre"
-  // encima del nombre no aporta nada en una tarjeta.
   if (columna.principal) {
     const valor = fila?.[columna.desde ?? columna.id];
     return <Text style={styles.principal}>{String(valor ?? "")}</Text>;
@@ -142,10 +130,6 @@ function Fila({ columna, fila, catalogos }) {
   );
 }
 
-/**
- * Ordena las columnas para la tarjeta: primero el avatar, luego la principal, y el resto
- * como venga declarado. No muta el descriptor que le pasan.
- */
 function ordenarParaTarjeta(columnas) {
   const avatar = columnas.filter((columna) => columna.tipo === "avatar");
   const principal = columnas.filter((columna) => columna.principal && columna.tipo !== "avatar");
@@ -178,18 +162,29 @@ export default function DataList({
       data={datos}
       keyExtractor={(fila, indice) => String(fila.id ?? indice)}
       ItemSeparatorComponent={() => <View style={styles.separador} />}
+      contentContainerStyle={styles.listaContenido}
       renderItem={({ item }) => (
-        <Card onPress={onRowPress ? () => onRowPress(item) : undefined}>
-          {enOrden.map((columna) => (
-            <Fila key={columna.id} columna={columna} fila={item} catalogos={catalogos} />
-          ))}
-        </Card>
+        <View style={styles.tarjetaWrapper}>
+          <Card onPress={onRowPress ? () => onRowPress(item) : undefined}>
+            {enOrden.map((columna) => (
+              <Fila key={columna.id} columna={columna} fila={item} catalogos={catalogos} />
+            ))}
+          </Card>
+        </View>
       )}
     />
   );
 }
 
 const styles = StyleSheet.create({
+  listaContenido: {
+    alignItems: "center", // Centra las tarjetas si la pantalla se vuelve muy ancha
+    width: "100%",
+  },
+  tarjetaWrapper: {
+    width: "100%",
+    maxWidth: 600, // Limita el ancho util en tablets (evita cientos de dp de separacion vacia)
+  },
   separador: { height: spacing.sm },
   principal: {
     fontFamily: typography.fontFamilyBase,
