@@ -1,4 +1,3 @@
-import React from "react";
 import {
   StyleSheet,
   Text,
@@ -12,12 +11,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 // Imports desde la capa shared del monorepo
-import {
-  useHistorialDonaciones,
-  COLUMNAS_DONACION,
-  CAMPOS_FICHA_DONACION,
-  OPCIONES_TIPO_DONACION,
-} from "@ecopac/shared/donaciones";
+import { useHistorialDonaciones, OPCIONES_TIPO_DONACION } from "@ecopac/shared/donaciones";
 
 export default function DonacionesScreen({ usuarioRol = "administrador" }) {
   const {
@@ -27,19 +21,19 @@ export default function DonacionesScreen({ usuarioRol = "administrador" }) {
     donaciones,
     totalesPorTipo,
     recargar,
-    filtros: {
-      filtroDonante,
-      setFiltroDonante,
-      filtroTipo,
-      setFiltroTipo,
-      fechaInicio,
-      setFechaInicio,
-      fechaFin,
-      setFechaFin,
-      limpiarFiltros,
-    },
-    modalDetalle: { donacionSeleccionada, modalDetalleAbierto, abrirDetalle, cerrarDetalle },
+    filtros,
+    modalDetalle,
   } = useHistorialDonaciones({ usuarioRol });
+
+  const filtroDonante = filtros?.filtroDonante || "";
+  const setFiltroDonante = filtros?.setFiltroDonante || (() => {});
+  const filtroTipo = filtros?.filtroTipo || "";
+  const setFiltroTipo = filtros?.setFiltroTipo || (() => {});
+
+  const donacionSeleccionada = modalDetalle?.donacionSeleccionada;
+  const modalDetalleAbierto = modalDetalle?.modalDetalleAbierto || false;
+  const abrirDetalle = modalDetalle?.abrirDetalle || (() => {});
+  const cerrarDetalle = modalDetalle?.cerrarDetalle || (() => {});
 
   // Si el rol no tiene permisos de lectura según permisos.js / es_consultivo()
   if (!tieneAccesoLectura) {
@@ -67,8 +61,15 @@ export default function DonacionesScreen({ usuarioRol = "administrador" }) {
     if (typeof val === "number") {
       return `Q ${val.toLocaleString("es-GT", { minimumFractionDigits: 2 })}`;
     }
-    return val.startsWith("Q") ? val : `Q ${val}`;
+    return String(val).startsWith("Q") ? val : `Q ${val}`;
   };
+
+  const opcionesTipos = OPCIONES_TIPO_DONACION || [
+    { value: "dinero", label: "Dinero" },
+    { value: "medicamentos", label: "Medicamentos" },
+    { value: "insumos", label: "Insumos" },
+    { value: "servicios", label: "Servicios" },
+  ];
 
   return (
     <SafeAreaView style={styles.container} edges={["left", "right", "bottom"]}>
@@ -103,14 +104,7 @@ export default function DonacionesScreen({ usuarioRol = "administrador" }) {
           >
             <Text style={[styles.chipText, filtroTipo === "" && styles.chipTextActive]}>Todos</Text>
           </TouchableOpacity>
-          {(
-            OPCIONES_TIPO_DONACION || [
-              { value: "dinero", label: "Dinero" },
-              { value: "medicamentos", label: "Medicamentos" },
-              { value: "insumos", label: "Insumos" },
-              { value: "servicios", label: "Servicios" },
-            ]
-          ).map((opt) => (
+          {opcionesTipos.map((opt) => (
             <TouchableOpacity
               key={opt.value}
               style={[styles.chipFilter, filtroTipo === opt.value && styles.chipFilterActive]}
@@ -166,7 +160,7 @@ export default function DonacionesScreen({ usuarioRol = "administrador" }) {
         {error ? (
           <View style={styles.errorCard}>
             <Text style={styles.errorTitle}>Ocurrió un error al cargar</Text>
-            <Text style={styles.errorSubtext}>{String(error.message || error)}</Text>
+            <Text style={styles.errorSubtext}>{String(error?.message || error)}</Text>
             <TouchableOpacity style={styles.btnRetry} onPress={recargar}>
               <Text style={styles.btnRetryText}>Reintentar</Text>
             </TouchableOpacity>
@@ -188,7 +182,7 @@ export default function DonacionesScreen({ usuarioRol = "administrador" }) {
                 </View>
 
                 {/* FILAS */}
-                {donaciones.length === 0 ? (
+                {!donaciones || donaciones.length === 0 ? (
                   <View style={{ paddingVertical: 20, alignItems: "center" }}>
                     <Text style={{ color: "#94A3B8", fontSize: 13 }}>
                       No se encontraron donaciones con los filtros aplicados.

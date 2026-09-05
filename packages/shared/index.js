@@ -48,6 +48,3 @@ export * from "./validations/index.js";
 // que ya no hay ambiguedad que resolver: los dos llegan por ./api/index.js, que es donde estan
 // declarados como puntos de entrada publicos. obtenerPerfil se reexportaba junto a ellos y
 // tampoco hace falta: solo se define una vez y llega por ./usuarios/index.js.
-
-export * from "./inventario/index.js";
-export * from "./donaciones/index.js";

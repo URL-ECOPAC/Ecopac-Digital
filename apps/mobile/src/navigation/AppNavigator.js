@@ -1,4 +1,3 @@
-import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
@@ -213,17 +212,20 @@ function TabsNavigator() {
   const { perfil } = useSesionCompartida();
   const modulosPermitidos = tabsMoviles(perfil?.rol) || [];
 
-  let tabsAAgregar =
+  let tabsList =
     modulosPermitidos.length > 0
       ? modulosPermitidos.map((m) => CONFIGURACION_TABS[m.tabMovil]).filter(Boolean)
       : Object.values(CONFIGURACION_TABS);
 
-  if (!tabsAAgregar.some((tab) => tab?.routeName === ROUTES.TAB_INICIO)) {
-    tabsAAgregar.unshift(CONFIGURACION_TABS.Inicio);
+  if (!tabsList.some((tab) => tab?.routeName === ROUTES.TAB_INICIO)) {
+    tabsList.unshift(CONFIGURACION_TABS.Inicio);
   }
-  if (!tabsAAgregar.some((tab) => tab?.routeName === ROUTES.TAB_AJUSTES)) {
-    tabsAAgregar.push(TAB_AJUSTES_CONFIG);
+  if (!tabsList.some((tab) => tab?.routeName === ROUTES.TAB_AJUSTES)) {
+    tabsList.push(TAB_AJUSTES_CONFIG);
   }
+
+  // Deduplicar rutas por routeName para prevenir keys duplicadas en React Navigation
+  const tabsAAgregar = Array.from(new Map(tabsList.map((item) => [item.routeName, item])).values());
 
   return (
     <Tabs.Navigator
