@@ -1,5 +1,4 @@
-// apps/mobile/src/components/KanbanBoard.js
-import React, { useState } from "react";
+import { useState } from "react";
 import { View, Text, ScrollView, TouchableOpacity, Modal, StyleSheet } from "react-native";
 
 export default function KanbanBoard({ proyectos, etapas, onCambiarEtapa }) {
@@ -97,7 +96,7 @@ export default function KanbanBoard({ proyectos, etapas, onCambiarEtapa }) {
 
 const styles = StyleSheet.create({
   kanbanContainer: {
-    minHeight: 450, // <-- CRUCIAL: evita que el tablero colapse verticalmente
+    minHeight: 450,
     paddingVertical: 8,
   },
   column: {
