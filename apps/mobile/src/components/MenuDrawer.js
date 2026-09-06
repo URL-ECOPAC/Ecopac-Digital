@@ -45,7 +45,7 @@ export default function MenuDrawer({ onClose, rutaActual, onNavegar }) {
       categoria: "JORNADAS",
       items: [
         { label: "Kanban Jornadas", ruta: ROUTES.SELECCION_JORNADA, id: "jornadas" },
-        { label: "Voluntarios", ruta: ROUTES.VOLUNTARIOS, id: "voluntarios" },
+        { label: "Colaboradores", ruta: ROUTES.COLABORADORES, id: "colaboradores" },
       ],
     },
   ];

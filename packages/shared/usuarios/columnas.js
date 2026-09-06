@@ -33,13 +33,13 @@ export const COLUMNAS_USUARIO_MOVIL = COLUMNAS_USUARIO.filter((columna) =>
   ["avatar", "nombreCompleto", "rol", "especialidades", "estado"].includes(columna.id),
 );
 
-export const CAMPOS_FICHA_VOLUNTARIO = [
+export const CAMPOS_FICHA_COLABORADOR = [
   { id: "nombreCompleto", label: "Nombre", tipo: TIPOS_DE_PRESENTACION.TEXTO },
   { id: "email", label: "Correo", tipo: TIPOS_DE_PRESENTACION.TEXTO },
   { id: "telefono", label: "Telefono", tipo: TIPOS_DE_CAMPO.TELEFONO },
   // direccion (migracion 00108): texto libre, sin formulario que lo escriba todavia (ver esa
   // migracion). Solo lectura por ahora, igual que 'notas', que no va en este arreglo porque su
-  // presentacion es un bloque aparte, no una celda mas de la grilla (VoluntariosPage.jsx).
+  // presentacion es un bloque aparte, no una celda mas de la grilla (ColaboradoresPage.jsx).
   { id: "direccion", label: "Direccion", tipo: TIPOS_DE_PRESENTACION.TEXTO },
   { id: "rol", label: "Rol", tipo: TIPOS_DE_PRESENTACION.TEXTO, etiquetasDesde: "roles" },
   { id: "especialidades", label: "Especialidades", tipo: TIPOS_DE_PRESENTACION.CHIPS },
@@ -61,7 +61,7 @@ export const CAMPOS_FICHA_VOLUNTARIO = [
  * tablas distintas que solo se parecen en el nombre. 'pacientesAtendidos' es lo que esa persona
  * atendio en esa jornada puntual, no el total de la jornada.
  */
-export const COLUMNAS_HISTORIAL_VOLUNTARIO = [
+export const COLUMNAS_HISTORIAL_COLABORADOR = [
   { id: "nombre", label: "Jornada", tipo: TIPOS_DE_PRESENTACION.TEXTO, principal: true },
   { id: "fecha", label: "Fecha", tipo: TIPOS_DE_PRESENTACION.FECHA },
   { id: "estado", label: "Estado", tipo: TIPOS_DE_PRESENTACION.CHIP },

@@ -24,7 +24,7 @@ describe("modulosVisibles", () => {
       "proyectos",
       "reportes",
       "jornadas",
-      "voluntarios",
+      "colaboradores",
     ]);
   });
 
@@ -39,7 +39,7 @@ describe("modulosVisibles", () => {
       expect(ids).not.toContain("presupuestos");
       expect(ids).not.toContain("proyectos");
       expect(ids).not.toContain("reportes");
-      expect(ids).not.toContain("voluntarios");
+      expect(ids).not.toContain("colaboradores");
     }
   });
 
@@ -60,7 +60,7 @@ describe("modulosVisibles", () => {
       expect(ids).toContain("proyectos");
       expect(ids).toContain("reportes");
 
-      expect(ids).not.toContain("voluntarios");
+      expect(ids).not.toContain("colaboradores");
     }
   });
 

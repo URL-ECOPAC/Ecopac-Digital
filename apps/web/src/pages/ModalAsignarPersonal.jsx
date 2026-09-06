@@ -23,7 +23,7 @@ import TextField from "../components/TextField";
 // rol opcional + DataList de resultados) y, al elegir una fila, completar el rol en la jornada y
 // el horario (CAMPOS_ASIGNACION_PERSONAL_SIN_PERFIL). DataList no tiene una accion por fila aparte
 // de onRowPress (ver ModalEdicionUsuario.jsx), asi que "elegir a alguien" es un click de fila que
-// cambia de paso, igual que "editar" abre otro modal desde VoluntariosPage.jsx.
+// cambia de paso, igual que "editar" abre otro modal desde ColaboradoresPage.jsx.
 //
 // Quien puede abrir este modal lo decide DetalleJornadaPage.jsx con permisos.puedeEditar antes de
 // montarlo (mismo criterio que el resto de la pestaña Equipo); este componente no vuelve a

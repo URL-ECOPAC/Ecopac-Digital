@@ -7,12 +7,12 @@
 // (pestaniasDeFicha(rol)): la pantalla entera ya es exclusiva de un solo rol (el guard de rutas
 // de la app la protege), asi que las dos pestañas se muestran siempre.
 //
-// No hay un valoresDeFichaVoluntario() aca: desde que el listado y la ficha se fusionaron en una
-// sola pantalla (VoluntariosPage.jsx), los valores de la pestaña Datos salen directo de la fila
+// No hay un valoresDeFichaColaborador() aca: desde que el listado y la ficha se fusionaron en una
+// sola pantalla (ColaboradoresPage.jsx), los valores de la pestaña Datos salen directo de la fila
 // que ya arma armarFilas() en useUsuariosListado.js -- esa fila YA trae nombreCompleto calculado,
 // asi que no hace falta una segunda funcion que repita lo mismo a partir de un perfil suelto.
 
-export const PESTANIAS_FICHA_VOLUNTARIO = Object.freeze([
+export const PESTANIAS_FICHA_COLABORADOR = Object.freeze([
   { id: "datos", label: "Datos" },
   { id: "historial", label: "Historial" },
 ]);
@@ -20,13 +20,13 @@ export const PESTANIAS_FICHA_VOLUNTARIO = Object.freeze([
 // Nombre especifico del modulo, no PESTANIA_FICHA_POR_DEFECTO: pacientes/ficha.js ya exporta un
 // nombre asi, y con export * encadenados hasta el barril raiz un nombre ambiguo desaparece del
 // namespace sin avisar en tiempo de build (bug #365, ver el comentario de usuarios/index.js).
-export const PESTANIA_FICHA_VOLUNTARIO_POR_DEFECTO = PESTANIAS_FICHA_VOLUNTARIO[0].id;
+export const PESTANIA_FICHA_COLABORADOR_POR_DEFECTO = PESTANIAS_FICHA_COLABORADOR[0].id;
 
 /** Texto para una celda sin dato, igual que el resto del repo (ej. DetalleJornadaPage.jsx). */
 const SIN_DATO = "—";
 
 /**
- * Filas para COLUMNAS_HISTORIAL_VOLUNTARIO, a partir del `historial` que devuelve
+ * Filas para COLUMNAS_HISTORIAL_COLABORADOR, a partir del `historial` que devuelve
  * useHistorialDePersona() (la forma que ya arma obtenerJornadasDePersona(), jornadas/api.js).
  *
  * `responsabilidad` puede llegar `null` (la columna es TEXT nullable): se reemplaza por el

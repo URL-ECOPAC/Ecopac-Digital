@@ -24,7 +24,7 @@ export const ETIQUETAS_ROL = Object.freeze({
   [ROLES.JUNTA_DIRECTIVA]: "Junta directiva",
   [ROLES.SOCIO_FUNDADOR]: "Socio fundador",
   [ROLES.MEDICO]: "Medico",
-  [ROLES.VOLUNTARIO]: "Voluntario",
+  [ROLES.VOLUNTARIO]: "Colaborador",
 });
 
 /** Roles con acceso administrativo completo. */

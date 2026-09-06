@@ -1,6 +1,6 @@
 // Hook de pantalla de la edicion de usuario (issue #107).
 //
-// El modal vive en /voluntarios (issue #105), abierto desde una fila del listado (Pregunta 1
+// El modal vive en /colaboradores (issue #105), abierto desde una fila del listado (Pregunta 1
 // del plan de #107, Opcion B: no hay ficha de #184 todavia). El estado, la validacion y la
 // llamada al servidor van aca, no en el componente: la pantalla solo dibuja lo que este hook
 // le entrega, mismo patron que useAltaUsuario.js (#106).

@@ -6,7 +6,7 @@ import Selector from "../components/Selector";
 import SecondaryButton from "../components/SecondaryButton";
 import TextField from "../components/TextField";
 
-// Modal de alta de usuario (issue #106), montado desde VoluntariosPage.jsx con estado local: no
+// Modal de alta de usuario (issue #106), montado desde ColaboradoresPage.jsx con estado local: no
 // tiene ruta propia. No va en components/: ese barril es el catalogo de #280, y este modal es
 // especifico de esta pantalla, no una pieza reutilizable por otras.
 //
@@ -43,7 +43,7 @@ export default function ModalAltaUsuario({ visible, onClose, onUsuarioCreado }) 
   };
 
   return (
-    <Modal visible={visible} onClose={cerrar} title="Nuevo voluntario">
+    <Modal visible={visible} onClose={cerrar} title="Nuevo colaborador">
       {error && (
         <div className="alert alert-danger" role="alert">
           {error.mensaje}

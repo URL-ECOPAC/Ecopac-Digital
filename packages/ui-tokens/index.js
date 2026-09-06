@@ -39,7 +39,7 @@ export const moduleAccents = {
   proyectos: colors.primary,
   reportes: colors.info,
   jornadas: colors.primary,
-  voluntarios: colors.info,
+  colaboradores: colors.info,
 };
 
 /**

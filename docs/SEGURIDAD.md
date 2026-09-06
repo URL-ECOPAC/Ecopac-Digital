@@ -155,7 +155,7 @@ La via normal es la Edge Function `invitar-usuario` (`supabase/functions/invitar
    sesion actual.
 3. La Edge Function comprueba que quien llama sea administrador **contra la base**, no contra lo
    que diga el cliente (el modal no tiene ningun chequeo de rol propio: el guard de rutas decide
-   quien entra a `/voluntarios`, no quien puede invitar). Si no lo es, responde 403.
+   quien entra a `/colaboradores`, no quien puede invitar). Si no lo es, responde 403.
 4. Reutiliza `fn_crear_usuario_administrativo()` con la llave de servicio -la unica forma de
    llamarla, esta `REVOKE ALL FROM PUBLIC`- para crear la cuenta, su fila en `auth.identities` y
    el perfil con el rol pedido. La funcion valida `rol` contra el enum `rol_usuario` de Postgres

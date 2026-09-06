@@ -5,13 +5,13 @@
 
 import { describe, expect, it } from "vitest";
 
-import { armarFichaVoluntario } from "./useFichaVoluntario.js";
+import { armarFichaColaborador } from "./useFichaColaborador.js";
 
-describe("armarFichaVoluntario", () => {
+describe("armarFichaColaborador", () => {
   it("agrega el nombre completo y conserva el resto del perfil", () => {
     const perfil = { id: "p1", nombres: "Ana", apellidos: "Lopez", rol: "medico", activo: true };
 
-    const ficha = armarFichaVoluntario(perfil, ["Pediatria"]);
+    const ficha = armarFichaColaborador(perfil, ["Pediatria"]);
 
     expect(ficha.nombreCompleto).toBe("Ana Lopez");
     expect(ficha.especialidades).toEqual(["Pediatria"]);
@@ -23,11 +23,11 @@ describe("armarFichaVoluntario", () => {
   it("sin especialidades queda en un arreglo vacio, no en undefined", () => {
     const perfil = { id: "p1", nombres: "Ana", apellidos: "Lopez" };
 
-    expect(armarFichaVoluntario(perfil).especialidades).toEqual([]);
+    expect(armarFichaColaborador(perfil).especialidades).toEqual([]);
   });
 
   it("un perfil ausente (no existe o RLS lo escondio) devuelve null", () => {
-    expect(armarFichaVoluntario(null, ["Pediatria"])).toBeNull();
-    expect(armarFichaVoluntario(undefined)).toBeNull();
+    expect(armarFichaColaborador(null, ["Pediatria"])).toBeNull();
+    expect(armarFichaColaborador(undefined)).toBeNull();
   });
 });
