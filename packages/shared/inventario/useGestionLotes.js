@@ -1,6 +1,71 @@
 import { useState, useMemo, useCallback } from "react";
 
 /**
+ * Traduce los campos snake_case del formulario de alta de lote a los argumentos camelCase que
+ * declara registrarLote() (lotes.api.js, traducidos a columnas via aColumnasDeTabla()). Se
+ * exporta aparte del hook para poder probar la traduccion sin montar un componente (issue #709).
+ *
+ * @param {object} datosLote
+ */
+export function datosLoteParaRegistrar(datosLote) {
+  return {
+    medicamento: datosLote.medicamento_id,
+    numeroLote: datosLote.numero_lote,
+    proveedor: datosLote.proveedor_id,
+    origen: datosLote.origen,
+    cantidadIngresada: datosLote.cantidad,
+    fechaIngreso: datosLote.fecha_ingreso,
+    fechaVencimiento: datosLote.fecha_vencimiento,
+  };
+}
+
+/**
+ * Valida los datos del formulario de alta de lote acorde al DDL:
+ * - fecha_vencimiento > fecha_ingreso (chk_lotes_vencimiento_posterior)
+ * - cantidad > 0 (chk_lotes_cantidad_positiva)
+ *
+ * Se exporta aparte del hook para poder probar la validacion sin montar un componente (issue
+ * #709): pedia "cantidad_ingresada" de datosLote, pero ModalAltaLote.jsx (el unico llamador)
+ * manda el campo como "cantidad" -datosLoteParaRegistrar() lo traduce a cantidadIngresada recien
+ * al armar los argumentos de registrarLote()-. cantidad_ingresada era siempre undefined y esta
+ * validacion rechazaba TODA alta de lote, con cualquier cantidad, con el mismo mensaje generico.
+ * Como handleGuardarLote() nunca llegaba a llamar registrarLote() (issue #709 la conecto por
+ * primera vez), el bug nunca se habia notado.
+ *
+ * @param {object} datosLote
+ * @returns {string|null} El mensaje de error, o null si los datos son validos.
+ */
+export function validarDatosDeLote(datosLote) {
+  const {
+    medicamento_id,
+    proveedor_id,
+    numero_lote,
+    fecha_ingreso,
+    fecha_vencimiento,
+    cantidad,
+    bodega_id,
+  } = datosLote;
+
+  if (!medicamento_id || !proveedor_id || !numero_lote || !bodega_id) {
+    return "Todos los campos marcados con (*) son obligatorios.";
+  }
+
+  if (!fecha_ingreso || !fecha_vencimiento) {
+    return "Las fechas de ingreso y vencimiento son obligatorias.";
+  }
+
+  if (new Date(fecha_vencimiento) <= new Date(fecha_ingreso)) {
+    return "La fecha de vencimiento debe ser estrictamente posterior a la fecha de ingreso (chk_lotes_vencimiento_posterior).";
+  }
+
+  if (!cantidad || Number(cantidad) <= 0) {
+    return "La cantidad ingresada debe ser mayor a 0 (chk_lotes_cantidad_positiva).";
+  }
+
+  return null;
+}
+
+/**
  * Hook para la gestión de lotes y alertas de caducidad (#155 / #144).
  * Cumple con la estructura DDL de lotes, existencias y alertas_caducidad.
  */
@@ -74,71 +139,11 @@ export function useGestionLotes({
     return lotesFiltrados.filter((item) => item.estadoAlerta !== "normal");
   }, [lotesFiltrados]);
 
-  // Validaciones del Formulario acorde al DDL:
-  // - fecha_vencimiento > fecha_ingreso (chk_lotes_vencimiento_posterior)
-  // - cantidad_ingresada > 0 (chk_lotes_cantidad_positiva)
   const validarNuevoLote = useCallback((datosLote) => {
-    const {
-      medicamento_id,
-      proveedor_id,
-      numero_lote,
-      fecha_ingreso,
-      fecha_vencimiento,
-      cantidad_ingresada,
-      bodega_id,
-    } = datosLote;
-
-    if (!medicamento_id || !proveedor_id || !numero_lote || !bodega_id) {
-      setErrorValidacion("Todos los campos marcados con (*) son obligatorios.");
-      return false;
-    }
-
-    if (!fecha_ingreso || !fecha_vencimiento) {
-      setErrorValidacion("Las fechas de ingreso y vencimiento son obligatorias.");
-      return false;
-    }
-
-    if (new Date(fecha_vencimiento) <= new Date(fecha_ingreso)) {
-      setErrorValidacion(
-        "La fecha de vencimiento debe ser estrictamente posterior a la fecha de ingreso (chk_lotes_vencimiento_posterior).",
-      );
-      return false;
-    }
-
-    if (!cantidad_ingresada || Number(cantidad_ingresada) <= 0) {
-      setErrorValidacion("La cantidad ingresada debe ser mayor a 0 (chk_lotes_cantidad_positiva).");
-      return false;
-    }
-
-    setErrorValidacion(null);
-    return true;
+    const mensajeError = validarDatosDeLote(datosLote);
+    setErrorValidacion(mensajeError);
+    return mensajeError === null;
   }, []);
-
-  // Validación para atención de alerta acorde a chk_alertas_caducidad_cierre_coherente
-  const atenderAlertaCaducidad = useCallback(
-    (alertaId, accionRealizada) => {
-      if (!["donado", "reubicado", "descartado"].includes(accionRealizada)) {
-        setErrorValidacion("Debe seleccionar una acción válida (donado, reubicado o descartado).");
-        return null;
-      }
-
-      if (!usuario?.id) {
-        setErrorValidacion("No se pudo identificar al usuario actual.");
-        return null;
-      }
-
-      const datosCierre = {
-        estado: "atendida",
-        accion: accionRealizada,
-        atendida_por: usuario.id,
-        atendida_en: new Date().toISOString(),
-      };
-
-      setErrorValidacion(null);
-      return datosCierre;
-    },
-    [usuario],
-  );
 
   return {
     busqueda,
@@ -155,7 +160,6 @@ export function useGestionLotes({
     proveedores,
     puedeRegistrarLotes,
     validarNuevoLote,
-    atenderAlertaCaducidad,
     errorValidacion,
     setErrorValidacion,
   };

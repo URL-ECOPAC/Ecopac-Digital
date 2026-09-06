@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import React from "react";
 import ModalMedicamento from "./ModalMedicamento.jsx";
 import { ModalAltaLote } from "./ModalAltaLote.jsx";
-import { ModalAtenderAlerta } from "./ModalAtenderAlerta.jsx";
 import ModalRegistroIngreso from "./ModalRegistroIngreso.jsx";
 import { ModalSalidaMedicamento } from "./ModalSalidaMedicamento";
 import BandejaValidacionPage from "./BandejaValidacionPage";
@@ -19,8 +18,8 @@ import {
   actualizarMedicamento,
 } from "../../../../packages/shared/inventario/medicamentos.api.js";
 import { listarBodegas } from "../../../../packages/shared/inventario/bodegas.api.js";
-import { generarIngresoDesdeDonacion } from "../../../../packages/shared/donaciones/ingreso.api.js";
 import { listarProveedores } from "../../../../packages/shared/inventario/proveedores.api.js";
+import { listarLotes, registrarLote } from "../../../../packages/shared/inventario/lotes.api.js";
 import {
   listarPrincipiosActivos,
   registrarPrincipioActivo,
@@ -28,7 +27,10 @@ import {
 
 import { usePendientesValidacion } from "../../../../packages/shared/inventario/usePendientesValidacion.js";
 import { useCatalogoMedicamentos } from "../../../../packages/shared/inventario/useCatalogoMedicamentos.js";
-import { useGestionLotes } from "../../../../packages/shared/inventario/useGestionLotes.js";
+import {
+  useGestionLotes,
+  datosLoteParaRegistrar,
+} from "../../../../packages/shared/inventario/useGestionLotes.js";
 
 const thStyle = {
   padding: "12px 16px",
@@ -59,10 +61,9 @@ export default function InventarioPage() {
   const [tabActiva, setTabActiva] = useState("catalogo");
   const [inventarioRaw, setInventarioRaw] = useState([]);
   const [principiosActivos, setPrincipiosActivos] = useState([]);
-  const [lotesRaw] = useState([]);
+  const [lotesRaw, setLotesRaw] = useState([]);
   const [bodegas, setBodegas] = useState([]);
   const [proveedores, setProveedores] = useState([]);
-  const [donaciones] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
 
@@ -80,17 +81,10 @@ export default function InventarioPage() {
     formaFarmaceutica: "",
   });
 
-  const {
-    cantidadPendientes: cantidadPendientesAlertas,
-    busqueda: busquedaAlertas,
-    setBusqueda: setBusquedaAlertas,
-    filtroBodega: filtroBodegaAlertas,
-    setFiltroBodega: setFiltroBodegaAlertas,
-    filtroCategoria: filtroCategoriaAlertas,
-    setFiltroCategoria: setFiltroCategoriaAlertas,
-    porVencer,
-    vencidas,
-  } = useAlertasVencimiento({
+  // Solo se usa el conteo, para el indicador de la pestaña: el resto de este hook -busqueda,
+  // filtros, porVencer/vencidas- lo vuelve a calcular PanelAlertasVencimiento.jsx con su propia
+  // llamada a useAlertasVencimiento(), que es la que de verdad se pinta en pantalla.
+  const { cantidadPendientes: cantidadPendientesAlertas } = useAlertasVencimiento({
     lotes: lotesRaw,
     bodegas: bodegas,
   });
@@ -98,7 +92,6 @@ export default function InventarioPage() {
   // Modales Lotes y Alertas
   const [modalAltaLoteAbierto, setModalAltaLoteAbierto] = useState(false);
   const [modalSalidaAbierto, setModalSalidaAbierto] = useState(false);
-  const [alertaSeleccionada, setAlertaSeleccionada] = useState(null);
   const [modalRegistroIngresoAbierto, setModalRegistroIngresoAbierto] = useState(false);
 
   const esAdmin = true;
@@ -125,7 +118,6 @@ export default function InventarioPage() {
   const {
     alertasCriticas,
     validarNuevoLote,
-    atenderAlertaCaducidad,
     errorValidacion: errorLotes,
     setErrorValidacion: setErrorLotes,
   } = useGestionLotes({
@@ -159,11 +151,12 @@ export default function InventarioPage() {
     try {
       setCargando(true);
       setError(null);
-      const [resMed, resPA, resBodegas, resProveedores] = await Promise.all([
+      const [resMed, resPA, resBodegas, resProveedores, resLotes] = await Promise.all([
         listarMedicamentos(),
         listarPrincipiosActivos(),
         listarBodegas(),
         listarProveedores(),
+        listarLotes(),
       ]);
 
       if (resMed.error) {
@@ -186,33 +179,16 @@ export default function InventarioPage() {
       } else {
         setProveedores(resProveedores.proveedores || []);
       }
+      if (resLotes.error) {
+        console.error("Error cargando lotes:", resLotes.error);
+      } else {
+        setLotesRaw(resLotes.lotes || []);
+      }
     } catch (err) {
       console.error("Error cargando inventario:", err);
       setError("No se pudo cargar el inventario.");
     } finally {
       setCargando(false);
-    }
-  };
-
-  const handleGuardarIngresoDonacion = async (formData) => {
-    try {
-      const { error } = await generarIngresoDesdeDonacion(formData.donacionDetalleId, {
-        medicamentoId: formData.medicamentoId,
-        bodegaId: formData.bodegaId,
-        numeroLote: formData.numeroLote,
-        fechaVencimiento: formData.fechaVencimiento,
-        proveedorId: formData.proveedorId,
-        usuarioId: formData.usuarioId,
-      });
-      if (error) {
-        console.error("Error al registrar ingreso desde donación:", error.mensaje);
-        alert(error.mensaje);
-        return;
-      }
-      setModalRegistroIngresoAbierto(false);
-      cargarDatos();
-    } catch (err) {
-      console.error("Excepción inesperada al guardar ingreso:", err);
     }
   };
 
@@ -335,19 +311,18 @@ export default function InventarioPage() {
     }
   };
 
-  const handleGuardarLote = (datosLote) => {
-    if (validarNuevoLote(datosLote)) {
-      setModalAltaLoteAbierto(false);
-      cargarDatos();
-    }
-  };
+  const handleGuardarLote = async (datosLote) => {
+    if (!validarNuevoLote(datosLote)) return;
 
-  const handleResolverAlerta = (alertaId, accion) => {
-    const datosCierre = atenderAlertaCaducidad(alertaId, accion);
-    if (datosCierre) {
-      setAlertaSeleccionada(null);
-      cargarDatos();
+    const { error: errorRegistro } = await registrarLote(datosLoteParaRegistrar(datosLote));
+
+    if (errorRegistro) {
+      setErrorLotes(errorRegistro.mensaje);
+      return;
     }
+
+    setModalAltaLoteAbierto(false);
+    cargarDatos();
   };
 
   const getBadgeEstado = (estado, stock) => {
@@ -1041,16 +1016,10 @@ export default function InventarioPage() {
       {/* Pestaña: Alertas completada mediante PanelAlertasVencimiento */}
       {tabActiva === "alertas" && (
         <PanelAlertasVencimiento
-          porVencer={porVencer}
-          vencidas={vencidas}
-          busqueda={busquedaAlertas}
-          setBusqueda={setBusquedaAlertas}
-          filtroBodega={filtroBodegaAlertas}
-          setFiltroBodega={setFiltroBodegaAlertas}
-          filtroCategoria={filtroCategoriaAlertas}
-          setFiltroCategoria={setFiltroCategoriaAlertas}
+          lotes={lotesRaw}
           bodegas={bodegas}
-          onAtenderAlerta={(alerta) => setAlertaSeleccionada(alerta)}
+          usuarioId={usuarioActual?.id}
+          rolUsuario={usuarioActual?.rol}
         />
       )}
 
@@ -1097,14 +1066,6 @@ export default function InventarioPage() {
         />
       )}
 
-      {alertaSeleccionada && (
-        <ModalAtenderAlerta
-          alerta={alertaSeleccionada}
-          onClose={() => setAlertaSeleccionada(null)}
-          onResolver={handleResolverAlerta}
-        />
-      )}
-
       {modalRegistroIngresoAbierto && (
         <ModalRegistroIngreso
           abierto={modalRegistroIngresoAbierto}
@@ -1112,10 +1073,10 @@ export default function InventarioPage() {
           catalogos={{
             medicamentos: inventarioRaw,
             bodegas: bodegas,
-            donaciones: donaciones,
+            proveedores: proveedores,
           }}
           onExito={cargarDatos}
-          onGuardar={handleGuardarIngresoDonacion}
+          usuarioId={usuarioActual?.id}
         />
       )}
     </div>

@@ -1,7 +1,13 @@
 import { useState } from "react";
 import { useAlertasVencimiento } from "../../../../packages/shared/inventario/useAlertasVencimiento.js";
+import { OPCIONES_ACCION_ALERTA } from "../../../../packages/shared/inventario/campos.js";
 
-export default function PanelAlertasVencimiento({ lotes = [], bodegas = [] }) {
+export default function PanelAlertasVencimiento({
+  lotes = [],
+  bodegas = [],
+  usuarioId,
+  rolUsuario,
+}) {
   const {
     porVencer,
     vencidas,
@@ -16,7 +22,7 @@ export default function PanelAlertasVencimiento({ lotes = [], bodegas = [] }) {
     categoriasDisponibles,
     marcarComoAtendida,
     ESTADO_ALERTA,
-  } = useAlertasVencimiento({ lotes, bodegas });
+  } = useAlertasVencimiento({ lotes, bodegas, usuarioId, rolUsuario });
 
   const [alertaAtendiendo, setAlertaAtendiendo] = useState(null);
   const [accionTomada, setAccionTomada] = useState("");
@@ -227,13 +233,22 @@ export default function PanelAlertasVencimiento({ lotes = [], bodegas = [] }) {
               <label className="block text-sm font-semibold mb-1">
                 Acción tomada <span className="text-red-500">*</span>
               </label>
-              <textarea
+              {/* atenderAlerta() (alertas.api.js) exige uno de los valores del enum
+                  accion_alerta (donado/reubicado/descartado): un texto libre no cumple el
+                  CHECK chk_alertas_caducidad_cierre_coherente y la alerta nunca quedaba
+                  atendida en la base, aunque el modal se cerrara como si hubiera funcionado. */}
+              <select
                 value={accionTomada}
                 onChange={(e) => setAccionTomada(e.target.value)}
-                placeholder="Ej: Despachado, devuelto, destruido, dado de baja..."
                 className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-200"
-                rows={3}
-              />
+              >
+                <option value="">-- Selecciona --</option>
+                {OPCIONES_ACCION_ALERTA.map((opcion) => (
+                  <option key={opcion.value} value={opcion.value}>
+                    {opcion.label}
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="flex gap-3 justify-end pt-2">
               <button

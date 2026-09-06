@@ -6,7 +6,20 @@ export const ESTADO_ALERTA = {
   VENCIDA: "VENCIDA",
 };
 
-export function useAlertasVencimiento({ lotes = [], bodegas = [] }) {
+/**
+ * Traduce la accion tomada mas la sesion actual a los argumentos que declara atenderAlerta()
+ * (alertas.api.js). Se exporta aparte del hook para poder probar la traduccion sin montar un
+ * componente (issue #709): el bug original mandaba { accionTomada } en vez de { accion,
+ * usuarioId, rolUsuario }, y atenderAlerta() siempre fallaba por falta de usuarioId.
+ *
+ * @param {string} accionTomada
+ * @param {{ usuarioId?: string, rolUsuario?: string }} sesion
+ */
+export function datosAtenderAlerta(accionTomada, { usuarioId, rolUsuario }) {
+  return { accion: accionTomada, usuarioId, rolUsuario };
+}
+
+export function useAlertasVencimiento({ lotes = [], bodegas = [], usuarioId, rolUsuario } = {}) {
   const [busqueda, setBusqueda] = useState("");
   const [filtroBodega, setFiltroBodega] = useState("todas");
   const [filtroCategoria, setFiltroCategoria] = useState("todas");
@@ -95,14 +108,33 @@ export function useAlertasVencimiento({ lotes = [], bodegas = [] }) {
   // 📈 Contador para indicador global
   const cantidadPendientes = alertas.length;
 
-  // ✅ Atender alerta: exige acción obligatoria
-  const marcarComoAtendida = useCallback(async (alertaId, accionTomada) => {
-    if (!accionTomada || accionTomada.trim() === "") {
-      throw new Error("Debe indicar la acción tomada");
-    }
-    await atenderAlerta(alertaId, { accionTomada });
-    setAlertasAtendidas((prev) => [...prev, alertaId]);
-  }, []);
+  // issue #709: mandaba { accionTomada } y la firma real es { accion, usuarioId, rolUsuario }
+  // (alertas.api.js); sin usuarioId, atenderAlerta() siempre devolvia error ("Solo
+  // administracion puede atender..."), y esta funcion nunca miraba ese resultado: hacia el
+  // await, lo descartaba, y marcaba la alerta como atendida en el estado local igual. La alerta
+  // desaparecia de la pantalla y seguia pendiente en la base. Ahora se comprueba el error antes
+  // de tocar el estado local, y se lanza (no se traga) para que confirmarAtender() en
+  // PanelAlertasVencimiento.jsx -que ya envuelve esta llamada en un try/catch- lo muestre.
+  const marcarComoAtendida = useCallback(
+    async (alertaId, accionTomada) => {
+      if (!accionTomada || accionTomada.trim() === "") {
+        throw new Error("Debe indicar la acción tomada");
+      }
+
+      const { error } = await atenderAlerta(
+        alertaId,
+        datosAtenderAlerta(accionTomada, { usuarioId, rolUsuario }),
+      );
+
+      if (error) {
+        throw new Error(error.mensaje);
+      }
+
+      setAlertasAtendidas((prev) => [...prev, alertaId]);
+    },
+    [usuarioId, rolUsuario],
+  );
+
   // 🔄 Limpiar filtros
   const limpiarFiltros = useCallback(() => {
     setBusqueda("");
