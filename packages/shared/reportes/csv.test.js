@@ -43,6 +43,36 @@ describe("escaparCampoCSV", () => {
     expect(escaparCampoCSV(1250)).toBe("1250");
     expect(escaparCampoCSV(true)).toBe("true");
   });
+
+  // Inyeccion de formulas (issue #698 / #239, OWASP A03): un valor que empiece por uno de estos
+  // caracteres se interpreta como formula al abrirlo en Excel o Google Sheets. Los reportes
+  // exportan campos escritos por usuarios (concepto de gasto, nombre de paciente, nombre de
+  // medicamento) donde un "=HYPERLINK(...)" se activaria en la maquina de quien abre el CSV.
+  it.each([
+    ["=", "=SUM(A1:A9)", "'=SUM(A1:A9)"],
+    ["+", "+1234567890", "'+1234567890"],
+    ["-", "-2+3", "'-2+3"],
+    ["@", "@SUM(A1:A9)", "'@SUM(A1:A9)"],
+    ["tabulador", "\tcomando", "'\tcomando"],
+  ])("antepone un apostrofo a un valor que empieza con %s", (_caso, valor, esperado) => {
+    expect(escaparCampoCSV(valor)).toBe(esperado);
+  });
+
+  it("un retorno de carro tambien se neutraliza, y ademas dispara el envoltorio de comillas de RFC 4180", () => {
+    expect(escaparCampoCSV("\rcomando")).toBe('"\'\rcomando"');
+  });
+
+  it("un numero negativo (String(-8) empieza con '-') tambien se neutraliza: es el mismo caracter que dispara una formula, sin poder distinguir la intencion", () => {
+    expect(escaparCampoCSV(-8)).toBe("'-8");
+  });
+
+  it("un signo de mas o menos en medio del texto no se toca: solo importa el primer caracter", () => {
+    expect(escaparCampoCSV("Total: -8")).toBe("Total: -8");
+  });
+
+  it("un valor que ya necesitaba comillas por otra razon tambien queda neutralizado", () => {
+    expect(escaparCampoCSV('=HYPERLINK("x")')).toBe(`"'=HYPERLINK(""x"")"`);
+  });
 });
 
 describe("exportarFilasACSV", () => {
