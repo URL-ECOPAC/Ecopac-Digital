@@ -32,7 +32,7 @@ import {
   construirError,
   normalizarError,
 } from "../api/errores-de-supabase.js";
-export { puedeCorregirTriaje, puedeTomarTriaje } from "./permisos.js";
+export { puedeTomarTriaje, puedeCorregirTriaje } from "./permisos.js";
 import { validarCambioDeTriaje, validarTriaje } from "./triaje.validaciones.js";
 
 /**
