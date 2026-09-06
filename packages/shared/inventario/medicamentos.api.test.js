@@ -28,8 +28,13 @@ vi.mock("../api/cliente.js", () => ({
 }));
 
 const { CODIGOS_DE_ERROR_DE_SUPABASE } = await import("../api/errores-de-supabase.js");
-const { actualizarMedicamento, desactivarMedicamento, listarMedicamentos, registrarMedicamento } =
-  await import("./medicamentos.api.js");
+const {
+  actualizarMedicamento,
+  desactivarMedicamento,
+  listarMedicamentos,
+  listarPrincipiosDeMedicamento,
+  registrarMedicamento,
+} = await import("./medicamentos.api.js");
 
 /**
  * Doble de un cliente de Supabase que resuelve por tabla y por funcion de rpc.
@@ -360,5 +365,48 @@ describe("desactivarMedicamento", () => {
       paso: "update",
       valores: { activo: false },
     });
+  });
+});
+
+describe("listarPrincipiosDeMedicamento", () => {
+  it("no toca el cliente cuando no hay id", async () => {
+    const { principiosActivos, error } = await listarPrincipiosDeMedicamento(undefined);
+
+    expect(principiosActivos).toEqual([]);
+    expect(error).toBeNull();
+  });
+
+  it("devuelve los principios activos asociados al medicamento", async () => {
+    const cliente = crearCliente({
+      tablas: {
+        medicamento_principio: {
+          data: [{ principioActivo: { id: "pa-1", nombre: "Paracetamol" } }],
+          error: null,
+        },
+      },
+    });
+    dobles.cliente = cliente;
+
+    const { principiosActivos, error } = await listarPrincipiosDeMedicamento("med-1");
+
+    expect(error).toBeNull();
+    expect(principiosActivos).toEqual([{ id: "pa-1", nombre: "Paracetamol" }]);
+    expect(cliente.llamadas).toContainEqual({
+      tabla: "medicamento_principio",
+      paso: "eq",
+      columna: "medicamento_id",
+      valor: "med-1",
+    });
+  });
+
+  it("nunca devuelve null: un medicamento sin principios se dibuja como lista vacia", async () => {
+    dobles.cliente = crearCliente({
+      tablas: { medicamento_principio: { data: [], error: null } },
+    });
+
+    const { principiosActivos, error } = await listarPrincipiosDeMedicamento("med-1");
+
+    expect(error).toBeNull();
+    expect(principiosActivos).toEqual([]);
   });
 });

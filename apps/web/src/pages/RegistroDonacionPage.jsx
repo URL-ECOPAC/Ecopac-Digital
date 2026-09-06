@@ -1,4 +1,10 @@
-import { ETIQUETAS_TIPO_DONACION, TIPOS_DE_DONACION, useRegistroDonacion } from "@ecopac/shared";
+import {
+  ETIQUETAS_TIPO_DONACION,
+  ETIQUETAS_TIPO_DONANTE,
+  TIPOS_DE_DONACION,
+  TIPOS_DE_DONANTE,
+  useRegistroDonacion,
+} from "@ecopac/shared";
 import { Container, Row, Col, Card, Form, Button, Alert, Modal } from "react-bootstrap";
 
 export default function RegistroDonacionPage({ usuarioRol }) {
@@ -16,15 +22,24 @@ export default function RegistroDonacionPage({ usuarioRol }) {
     agregarRenglon,
     quitarRenglon,
     actualizarRenglon,
+    donantesOptions,
+    proyectosOptions,
     modalNuevoDonante,
     setModalNuevoDonante,
+    nuevoDonanteNombre,
+    setNuevoDonanteNombre,
+    nuevoDonanteTipo,
+    setNuevoDonanteTipo,
+    guardandoNuevoDonante,
+    errorNuevoDonante,
+    crearDonanteRapido,
+    cerrarModalNuevoDonante,
     ofrecerIngresoInventario,
     setOfrecerIngresoInventario,
     resumenRegistro,
     guardando,
+    error,
     guardarDonacion,
-    donantesOptions = [],
-    proyectosOptions = [],
   } = useRegistroDonacion({ usuarioRol });
 
   if (!permisos?.tieneAccesoLectura) {
@@ -142,8 +157,8 @@ export default function RegistroDonacionPage({ usuarioRol }) {
                     <Form.Control
                       placeholder="Concepto / Observación"
                       disabled={!permisos?.puedeEscribir}
-                      value={item.concepto || ""}
-                      onChange={(e) => actualizarRenglon(item.id, "concepto", e.target.value)}
+                      value={item.descripcion || ""}
+                      onChange={(e) => actualizarRenglon(item.id, "descripcion", e.target.value)}
                     />
                   </Col>
                   <Col md={4}>
@@ -164,8 +179,8 @@ export default function RegistroDonacionPage({ usuarioRol }) {
                     <Form.Control
                       placeholder="Nombre de Medicamento / Lote"
                       disabled={!permisos?.puedeEscribir}
-                      value={item.concepto || ""}
-                      onChange={(e) => actualizarRenglon(item.id, "concepto", e.target.value)}
+                      value={item.descripcion || ""}
+                      onChange={(e) => actualizarRenglon(item.id, "descripcion", e.target.value)}
                     />
                   </Col>
                   <Col md={4}>
@@ -186,8 +201,8 @@ export default function RegistroDonacionPage({ usuarioRol }) {
                     <Form.Control
                       placeholder="Descripción del insumo"
                       disabled={!permisos?.puedeEscribir}
-                      value={item.concepto || ""}
-                      onChange={(e) => actualizarRenglon(item.id, "concepto", e.target.value)}
+                      value={item.descripcion || ""}
+                      onChange={(e) => actualizarRenglon(item.id, "descripcion", e.target.value)}
                     />
                   </Col>
                   <Col md={4}>
@@ -219,6 +234,19 @@ export default function RegistroDonacionPage({ usuarioRol }) {
           )}
         </Card.Body>
       </Card>
+
+      {error && (
+        <Alert variant="danger" className="mb-4">
+          {error.mensaje}
+          {error.campos && (
+            <ul className="mb-0 mt-2 ps-3">
+              {Object.values(error.campos).map((mensaje, indice) => (
+                <li key={indice}>{mensaje}</li>
+              ))}
+            </ul>
+          )}
+        </Alert>
+      )}
 
       {permisos?.puedeEscribir && (
         <div className="d-flex justify-content-end mb-4">
@@ -269,21 +297,54 @@ export default function RegistroDonacionPage({ usuarioRol }) {
         </Modal.Footer>
       </Modal>
 
-      <Modal show={modalNuevoDonante} onHide={() => setModalNuevoDonante(false)} centered>
+      <Modal show={modalNuevoDonante} onHide={cerrarModalNuevoDonante} centered>
         <Modal.Header closeButton>
           <Modal.Title as="h5">Registrar Nuevo Donante</Modal.Title>
         </Modal.Header>
         <Modal.Body>
           <p className="text-muted small mb-3">
-            Registro rápido de donante sin salir del formulario.
+            Registro rápido de donante sin salir del formulario. El resto de los datos de contacto
+            se completan después desde Donantes.
           </p>
-          <Form.Group controlId="formNuevoDonanteNombre">
-            <Form.Control placeholder="Nombre del Donante" className="mb-3" />
+
+          {errorNuevoDonante && (
+            <Alert variant="danger" className="py-2">
+              {errorNuevoDonante.mensaje}
+            </Alert>
+          )}
+
+          <Form.Group controlId="formNuevoDonanteNombre" className="mb-3">
+            <Form.Label>Nombre</Form.Label>
+            <Form.Control
+              placeholder="Nombre del Donante"
+              value={nuevoDonanteNombre}
+              onChange={(e) => setNuevoDonanteNombre(e.target.value)}
+              disabled={guardandoNuevoDonante}
+            />
+          </Form.Group>
+
+          <Form.Group controlId="formNuevoDonanteTipo">
+            <Form.Label>Tipo</Form.Label>
+            <Form.Select
+              value={nuevoDonanteTipo}
+              onChange={(e) => setNuevoDonanteTipo(e.target.value)}
+              disabled={guardandoNuevoDonante}
+            >
+              {Object.values(TIPOS_DE_DONANTE).map((tipo) => (
+                <option key={tipo} value={tipo}>
+                  {ETIQUETAS_TIPO_DONANTE[tipo]}
+                </option>
+              ))}
+            </Form.Select>
           </Form.Group>
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="primary" onClick={() => setModalNuevoDonante(false)}>
-            Guardar y Seleccionar
+          <Button
+            variant="primary"
+            onClick={crearDonanteRapido}
+            disabled={guardandoNuevoDonante || !nuevoDonanteNombre.trim()}
+          >
+            {guardandoNuevoDonante ? "Guardando..." : "Guardar y Seleccionar"}
           </Button>
         </Modal.Footer>
       </Modal>

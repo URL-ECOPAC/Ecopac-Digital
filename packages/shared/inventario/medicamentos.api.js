@@ -258,6 +258,36 @@ export async function registrarMedicamento(datos = {}) {
 }
 
 /**
+ * Principios activos asociados a un medicamento (medicamento_principio, 00016).
+ *
+ * listarMedicamentos() no los trae -- COLUMNAS_DEL_MEDICAMENTO son solo columnas propias de
+ * medicamentos, y la relacion es aparte -- asi que sin esto la pantalla de edicion no tenia
+ * forma de mostrar cual quedo asociado al registrar. registrarMedicamento() siempre manda un
+ * arreglo de un solo id (el formulario de alta es de seleccion unica), asi que en la practica
+ * cada medicamento tiene exactamente un principio activo, aunque el esquema permita varios.
+ *
+ * @param {string} medicamentoId UUID del medicamento.
+ * @returns {Promise<{ principiosActivos: object[], error: object|null }>}
+ */
+export async function listarPrincipiosDeMedicamento(medicamentoId) {
+  if (!medicamentoId) return { principiosActivos: [], error: null };
+
+  try {
+    const { data, error } = await obtenerSupabase()
+      .from("medicamento_principio")
+      .select("principioActivo:principios_activos(id, nombre)")
+      .eq("medicamento_id", medicamentoId);
+
+    if (error) return { principiosActivos: [], error: normalizarError(error) };
+
+    const principiosActivos = (data ?? []).map((fila) => fila.principioActivo).filter(Boolean);
+    return { principiosActivos, error: null };
+  } catch (error) {
+    return { principiosActivos: [], error: normalizarError(error) };
+  }
+}
+
+/**
  * Actualiza los datos de un medicamento. No toca sus principios activos: editar esa relacion no
  * esta en los criterios de aceptacion de esta issue.
  *

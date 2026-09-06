@@ -37,7 +37,7 @@ export default function ModalConfirmarDesactivacion({
   }, [perfil?.id]);
 
   const desactivando = perfil?.activo === true;
-  const titulo = desactivando ? "Desactivar voluntario" : "Reactivar voluntario";
+  const titulo = desactivando ? "Desactivar colaborador" : "Reactivar colaborador";
   const nombre = [perfil?.nombres, perfil?.apellidos].filter(Boolean).join(" ");
 
   const confirmarAccion = async () => {

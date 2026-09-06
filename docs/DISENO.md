@@ -52,7 +52,7 @@ Tras autenticarse, el usuario entra a un punto distinto segun su rol:
 
 Los cinco nombres son los valores del enum `rol_usuario` (`packages/shared/usuarios/roles.js`),
 no las etiquetas que se muestran en pantalla: el rol es `voluntario general`, aunque la interfaz
-lo muestre como "Voluntario" (`ETIQUETAS_ROL`).
+lo muestre como "Colaborador" (`ETIQUETAS_ROL`).
 
 Esconder una opcion del menu no es control de acceso: la restriccion real vive en las
 politicas RLS y en el guard de rutas.
@@ -65,7 +65,7 @@ politicas RLS y en el guard de rutas.
 | Atencion medica | Pacientes, Donaciones |
 | Operaciones | Inventario, Presupuestos |
 | Administracion | Proyectos, Reportes |
-| Jornadas | Kanban Jornadas, Voluntarios |
+| Jornadas | Kanban Jornadas, Colaboradores |
 
 La definicion vive una sola vez en `packages/shared/navegacion.js`, con la ruta, la seccion, el
 modulo de permisos y los roles de cada uno. El sidebar de la web y la tab bar del movil salen de

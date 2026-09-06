@@ -1,3 +1,5 @@
+import { ETIQUETAS_PRESENTACION, PRESENTACIONES_DE_MEDICAMENTO } from "@ecopac/shared";
+
 export default function ModalMedicamento({
   isOpen,
   onClose,
@@ -182,9 +184,10 @@ export default function ModalMedicamento({
               )}
             </div>
             <select
-              name="principioActivoId"
+              name="principio_activo_id"
               required={!modoEdicion}
-              value={String(formData.principioActivoId || "")}
+              disabled={modoEdicion}
+              value={String(formData.principio_activo_id || "")}
               onChange={handleChange}
               style={{
                 width: "100%",
@@ -192,7 +195,7 @@ export default function ModalMedicamento({
                 borderRadius: "12px",
                 border: "1px solid #cbd5e1",
                 fontSize: "13px",
-                backgroundColor: "#ffffff",
+                backgroundColor: modoEdicion ? "#f1f5f9" : "#ffffff",
                 outline: "none",
                 boxSizing: "border-box",
               }}
@@ -205,6 +208,11 @@ export default function ModalMedicamento({
                   </option>
                 ))}
             </select>
+            {modoEdicion && (
+              <p style={{ fontSize: "11px", color: "#94a3b8", margin: "4px 0 0 0" }}>
+                El principio activo no se puede cambiar desde aqui.
+              </p>
+            )}
           </div>
 
           {/* Concentración y Presentación */}
@@ -277,12 +285,11 @@ export default function ModalMedicamento({
                 }}
               >
                 <option value="">Selecciona...</option>
-                <option value="Cápsula">Cápsula</option>
-                <option value="Tableta">Tableta</option>
-                <option value="Jarabe">Jarabe</option>
-                <option value="Ampolla">Ampolla</option>
-                <option value="Crema">Crema</option>
-                <option value="Gotas">Gotas</option>
+                {Object.values(PRESENTACIONES_DE_MEDICAMENTO).map((presentacion) => (
+                  <option key={presentacion} value={presentacion}>
+                    {ETIQUETAS_PRESENTACION[presentacion]}
+                  </option>
+                ))}
               </select>
             </div>
           </div>

@@ -3,16 +3,16 @@ import { StyleSheet, Text, View } from "react-native";
 import { useRoute } from "@react-navigation/native";
 
 import {
-  CAMPOS_FICHA_VOLUNTARIO,
+  CAMPOS_FICHA_COLABORADOR,
   ESTADOS_USUARIO,
   filasDeHistorial,
   formatearFechaCorta,
   ORIGEN_PERMISO,
   OPCIONES_ROL,
-  PESTANIA_FICHA_VOLUNTARIO_POR_DEFECTO,
-  PESTANIAS_FICHA_VOLUNTARIO,
+  PESTANIA_FICHA_COLABORADOR_POR_DEFECTO,
+  PESTANIAS_FICHA_COLABORADOR,
   TIPOS_DE_PRESENTACION,
-  useFichaVoluntario,
+  useFichaColaborador,
   useGestionPermisos,
   useHistorialDePersona,
 } from "@ecopac/shared";
@@ -30,7 +30,7 @@ import {
 
 const CATALOGOS = { roles: OPCIONES_ROL, estadoUsuario: ESTADOS_USUARIO };
 
-/** Espejo de valorDeCampo() en VoluntariosPage.jsx (web), adaptado a RN. No es un componente
+/** Espejo de valorDeCampo() en ColaboradoresPage.jsx (web), adaptado a RN. No es un componente
  * del catalogo (#281): es presentacion propia de esta pantalla, igual que su par web es propio
  * de esa pagina y no un componente compartido. */
 function valorDeCampo(campo, valores) {
@@ -85,7 +85,7 @@ function Campo({ campo, valores }) {
 }
 
 /** Capitaliza la primera letra de un valor de enum para mostrarlo, sin una tabla de traduccion
- * aparte. Mismo criterio que capitalizar() en VoluntariosPage.jsx (web). */
+ * aparte. Mismo criterio que capitalizar() en ColaboradoresPage.jsx (web). */
 function capitalizar(texto) {
   const cadena = String(texto ?? "");
   return cadena.charAt(0).toUpperCase() + cadena.slice(1);
@@ -159,11 +159,11 @@ function SeccionHistorial({ perfilId }) {
   );
 }
 
-export default function FichaVoluntarioScreen() {
+export default function FichaColaboradorScreen() {
   const { params } = useRoute();
   const perfilId = params?.perfilId;
-  const { ficha, cargando, error, recargar } = useFichaVoluntario(perfilId);
-  const [pestaniaActiva, setPestaniaActiva] = useState(PESTANIA_FICHA_VOLUNTARIO_POR_DEFECTO);
+  const { ficha, cargando, error, recargar } = useFichaColaborador(perfilId);
+  const [pestaniaActiva, setPestaniaActiva] = useState(PESTANIA_FICHA_COLABORADOR_POR_DEFECTO);
 
   if (cargando && !ficha) {
     return (
@@ -193,10 +193,10 @@ export default function FichaVoluntarioScreen() {
     <ScreenContainer>
       <Text style={styles.nombre}>{ficha.nombreCompleto || "Sin nombre"}</Text>
 
-      <Tabs tabs={PESTANIAS_FICHA_VOLUNTARIO} activo={pestaniaActiva} onChange={setPestaniaActiva}>
+      <Tabs tabs={PESTANIAS_FICHA_COLABORADOR} activo={pestaniaActiva} onChange={setPestaniaActiva}>
         {pestaniaActiva === "datos" && (
           <>
-            {CAMPOS_FICHA_VOLUNTARIO.map((campo) => (
+            {CAMPOS_FICHA_COLABORADOR.map((campo) => (
               <Campo key={campo.id} campo={campo} valores={ficha} />
             ))}
 

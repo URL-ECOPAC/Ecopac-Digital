@@ -2,13 +2,13 @@ import { useEffect, useState } from "react";
 import { Badge } from "react-bootstrap";
 import { labels, typography } from "@ecopac/ui-tokens";
 import {
-  CAMPOS_FICHA_VOLUNTARIO,
+  CAMPOS_FICHA_COLABORADOR,
   filasDeHistorial,
   FILTROS_USUARIO,
   formatearFechaCorta,
   permisosDeUsuarios,
-  PESTANIA_FICHA_VOLUNTARIO_POR_DEFECTO,
-  PESTANIAS_FICHA_VOLUNTARIO,
+  PESTANIA_FICHA_COLABORADOR_POR_DEFECTO,
+  PESTANIAS_FICHA_COLABORADOR,
   TIPOS_DE_FILTRO,
   TIPOS_DE_PRESENTACION,
   useHistorialDePersona,
@@ -42,7 +42,7 @@ import ModalPermisosUsuario from "./ModalPermisosUsuario";
 // la #105): la logica de permisos sigue viniendo de permisosDeUsuarios(rol).
 //
 // Quien puede entrar lo decide el guard de rutas (#52) desde App.jsx, no este componente.
-export default function VoluntariosPage() {
+export default function ColaboradoresPage() {
   const { rol, perfil: perfilDeSesion } = useSesionCompartida();
   const [mostrarAlta, setMostrarAlta] = useState(false);
   const [seleccionadoId, setSeleccionadoId] = useState(null);
@@ -77,7 +77,7 @@ export default function VoluntariosPage() {
   if (error) {
     return (
       <ScreenContainer>
-        <PageHeader title="Voluntarios y medicos" />
+        <PageHeader title="Colaboradores" />
         <ErrorState message={error.mensaje} onRetry={recargar} />
       </ScreenContainer>
     );
@@ -86,19 +86,19 @@ export default function VoluntariosPage() {
   return (
     <ScreenContainer>
       <style>{`
-        .fila-voluntario {
+        .fila-colaborador {
           border-color: var(--color-border) !important;
           transition: border-color .15s ease, box-shadow .15s ease;
         }
-        .fila-voluntario.seleccionada,
-        .fila-voluntario:focus-visible {
+        .fila-colaborador.seleccionada,
+        .fila-colaborador:focus-visible {
           border-color: var(--color-primary) !important;
           box-shadow: 0 0 0 1px var(--color-primary);
         }
         .pildora-filtro {
           transition: background-color .15s ease, border-color .15s ease;
         }
-        .lista-voluntarios {
+        .lista-colaboradores {
           flex: 1 1 380px;
           max-width: 420px;
           min-width: 340px;
@@ -122,15 +122,15 @@ export default function VoluntariosPage() {
           .panel-detalle-contenido { animation: none; }
         }
         @media (max-width: 900px) {
-          .contenedor-voluntarios { flex-direction: column; }
-          .lista-voluntarios { flex: 1 1 auto; max-width: 100%; min-width: 0; }
+          .contenedor-colaboradores { flex-direction: column; }
+          .lista-colaboradores { flex: 1 1 auto; max-width: 100%; min-width: 0; }
           .panel-detalle { flex: 1 1 auto; max-width: 100%; position: static; }
         }
       `}</style>
 
       <PageHeader
-        title="Voluntarios y medicos"
-        actions={[{ label: "Nuevo voluntario", onClick: () => setMostrarAlta(true) }]}
+        title="Colaboradores"
+        actions={[{ label: "Nuevo colaborador", onClick: () => setMostrarAlta(true) }]}
       />
 
       <BarraDeFiltros
@@ -151,8 +151,8 @@ export default function VoluntariosPage() {
         {total === 1 ? "1 persona encontrada" : `${total} personas encontradas`}
       </div>
 
-      <div className="contenedor-voluntarios d-flex gap-3 align-items-start">
-        <div className="lista-voluntarios">
+      <div className="contenedor-colaboradores d-flex gap-3 align-items-start">
+        <div className="lista-colaboradores">
           {cargando ? (
             <LoadingState />
           ) : filas.length === 0 ? (
@@ -160,7 +160,7 @@ export default function VoluntariosPage() {
           ) : (
             <div className="d-flex flex-column gap-2">
               {filas.map((fila) => (
-                <FilaVoluntario
+                <FilaColaborador
                   key={fila.id}
                   fila={fila}
                   catalogos={catalogos}
@@ -211,11 +211,11 @@ export default function VoluntariosPage() {
                   maxWidth: "480px",
                 }}
               >
-                Selecciona un voluntario para ver su ficha completa e historial de jornadas.
+                Selecciona un colaborador para ver su ficha completa e historial de jornadas.
               </p>
             </div>
           ) : (
-            <PanelDetalleVoluntario
+            <PanelDetalleColaborador
               key={filaSeleccionada.id}
               fila={filaSeleccionada}
               catalogos={catalogos}
@@ -437,7 +437,7 @@ function etiquetaDe(catalogo, valor) {
   return opcion?.label ?? valor;
 }
 
-/** Dibuja el valor de un campo de CAMPOS_FICHA_VOLUNTARIO segun su tipo, contra los mismos
+/** Dibuja el valor de un campo de CAMPOS_FICHA_COLABORADOR segun su tipo, contra los mismos
  * catalogos que ya resuelve useUsuariosListado() (roles, estadoUsuario). */
 function valorDeCampo(campo, valores, catalogos) {
   const valor = valores[campo.desde ?? campo.id];
@@ -493,14 +493,14 @@ function capitalizar(texto) {
 /**
  * Fila de la lista (columna izquierda). Solo el resumen -avatar, nombre, especialidad, pastilla
  * de rol, pastilla "Inactivo" si aplica y conteo de jornadas-, sin detalle adentro: el detalle
- * completo vive en PanelDetalleVoluntario, aparte, a la derecha. El borde de acento marca la fila
+ * completo vive en PanelDetalleColaborador, aparte, a la derecha. El borde de acento marca la fila
  * seleccionada.
  *
  * Nombre/especialidad y las pastillas van en dos lineas, no una sola: con la lista angosta
  * (arreglo de diseno de 2026-08-30, tercera vuelta) un rol largo como "Junta directiva" + el
  * conteo de jornadas en la misma linea que el nombre lo obligaban a truncarse muy corto.
  */
-function FilaVoluntario({ fila, catalogos, seleccionada, onClick }) {
+function FilaColaborador({ fila, catalogos, seleccionada, onClick }) {
   const rolLabel = etiquetaDe(catalogos.roles, fila.rol);
   const especialidad =
     Array.isArray(fila.especialidades) && fila.especialidades.length > 0
@@ -512,7 +512,7 @@ function FilaVoluntario({ fila, catalogos, seleccionada, onClick }) {
       type="button"
       onClick={onClick}
       aria-pressed={seleccionada}
-      className={`fila-voluntario d-flex flex-column gap-2 w-100 p-3 border-0 bg-white rounded-3 border text-start${
+      className={`fila-colaborador d-flex flex-column gap-2 w-100 p-3 border-0 bg-white rounded-3 border text-start${
         seleccionada ? " seleccionada" : ""
       }`}
       style={{ cursor: "pointer" }}
@@ -552,8 +552,8 @@ function FilaVoluntario({ fila, catalogos, seleccionada, onClick }) {
  * persona seleccionada (se reemplaza por completo, con `key={fila.id}`, al cambiar de seleccion),
  * no hace falta un id condicional como en la version de acordeon.
  */
-function PanelDetalleVoluntario({ fila, catalogos, permisos, idSesionActual, onCambio }) {
-  const [pestaniaActiva, setPestaniaActiva] = useState(PESTANIA_FICHA_VOLUNTARIO_POR_DEFECTO);
+function PanelDetalleColaborador({ fila, catalogos, permisos, idSesionActual, onCambio }) {
+  const [pestaniaActiva, setPestaniaActiva] = useState(PESTANIA_FICHA_COLABORADOR_POR_DEFECTO);
   const [editando, setEditando] = useState(false);
   const [gestionandoPermisos, setGestionandoPermisos] = useState(false);
   const {
@@ -606,11 +606,11 @@ function PanelDetalleVoluntario({ fila, catalogos, permisos, idSesionActual, onC
         </div>
       )}
 
-      <Tabs tabs={PESTANIAS_FICHA_VOLUNTARIO} activo={pestaniaActiva} onChange={setPestaniaActiva}>
+      <Tabs tabs={PESTANIAS_FICHA_COLABORADOR} activo={pestaniaActiva} onChange={setPestaniaActiva}>
         {pestaniaActiva === "datos" && (
           <>
             <div className="row g-4 mb-4">
-              {CAMPOS_FICHA_VOLUNTARIO.map((campo) => (
+              {CAMPOS_FICHA_COLABORADOR.map((campo) => (
                 <div className="col-12 col-sm-6" key={campo.id}>
                   <EtiquetaDeCampo>{campo.label}</EtiquetaDeCampo>
                   <div className="fw-bold">{valorDeCampo(campo, fila, catalogos)}</div>
