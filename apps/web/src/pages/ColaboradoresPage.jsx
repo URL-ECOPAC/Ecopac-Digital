@@ -132,9 +132,7 @@ export default function ColaboradoresPage() {
       <PageHeader
         title="Colaboradores"
         actions={
-          puedeCrear
-            ? [{ label: "Nuevo colaborador", onClick: () => setMostrarAlta(true) }]
-            : []
+          puedeCrear ? [{ label: "Nuevo colaborador", onClick: () => setMostrarAlta(true) }] : []
         }
       />
 

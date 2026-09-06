@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { 
-  ESTADOS_JORNADA, 
-  OPCIONES_ESTADO_JORNADA, 
-  permisosDeJornadas, 
+import {
+  ESTADOS_JORNADA,
+  OPCIONES_ESTADO_JORNADA,
+  permisosDeJornadas,
   transicionesDeJornadaDesde,
   agruparJornadasPorEstado,
-  cambiarEstadoJornada, 
-  listarCatalogosJornada, 
-  listarJornadas 
+  cambiarEstadoJornada,
+  listarCatalogosJornada,
+  listarJornadas,
 } from "@ecopac/shared";
 
 /**
@@ -128,7 +128,7 @@ export function useJornadasKanban(rol) {
         setMoviendo(false);
       }
     },
-    [permisos, cargarDatos]
+    [permisos, cargarDatos],
   );
 
   // Agrupa las jornadas en sus respectivas columnas aplicando filtros locales si aplica
