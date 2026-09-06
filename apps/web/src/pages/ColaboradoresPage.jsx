@@ -72,6 +72,7 @@ export default function ColaboradoresPage() {
   }, [filtros, pagina]);
 
   const permisos = permisosDeUsuarios(rol);
+  const puedeCrear = permisos.puedeCrearUsuario ?? permisos.puedeCrear ?? false;
   const filaSeleccionada = filas.find((fila) => fila.id === seleccionadoId) ?? null;
 
   if (error) {
@@ -130,7 +131,11 @@ export default function ColaboradoresPage() {
 
       <PageHeader
         title="Colaboradores"
-        actions={[{ label: "Nuevo colaborador", onClick: () => setMostrarAlta(true) }]}
+        actions={
+          puedeCrear
+            ? [{ label: "Nuevo colaborador", onClick: () => setMostrarAlta(true) }]
+            : []
+        }
       />
 
       <BarraDeFiltros
