@@ -90,10 +90,14 @@ describe("Módulo de Donaciones - Catálogo de Donantes (#190)", () => {
   });
 
   it("calcula el total acumulado e histórico excluyendo donaciones anuladas", async () => {
+    // El importe vive por renglon en donacion_detalle.monto (00022), no en una columna de
+    // donaciones: `monto_total` nunca existio. Mockear la forma real (detalle embebido) es lo
+    // que hace que este test falle contra la implementacion vieja que sumaba `d.monto_total`
+    // (issue #636, criterio 4) y pase contra la que agrega sobre `donacion_detalle`.
     mockSupabase.order.mockResolvedValueOnce({
       data: [
-        { id: "DONAC-1", monto_total: 100 },
-        { id: "DONAC-2", monto_total: 250 },
+        { id: "DONAC-1", tipo: "dinero", detalle: [{ monto: 100 }] },
+        { id: "DONAC-2", tipo: "dinero", detalle: [{ monto: 150 }, { monto: 100 }] },
       ],
       error: null,
     });
@@ -102,6 +106,33 @@ describe("Módulo de Donaciones - Catálogo de Donantes (#190)", () => {
 
     expect(mockSupabase.neq).toHaveBeenCalledWith("estado", "anulada");
     expect(res.datos.totalAcumulado).toBe(350);
+    expect(res.datos.totalesPorTipo).toEqual({
+      dinero: 350,
+      medicamentos: 0,
+      insumos: 0,
+      servicios: 0,
+    });
     expect(res.datos.donaciones).toHaveLength(2);
+  });
+
+  it("agrega cantidades de medicamentos e insumos sobre donacion_detalle.cantidad", async () => {
+    mockSupabase.order.mockResolvedValueOnce({
+      data: [
+        { id: "DONAC-3", tipo: "medicamentos", detalle: [{ cantidad: 30 }] },
+        { id: "DONAC-4", tipo: "insumos", detalle: [{ cantidad: 5 }, { cantidad: 2 }] },
+      ],
+      error: null,
+    });
+
+    const res = await obtenerHistoricoDonante("DON-1", { rolUsuario: ROLES.ADMINISTRADOR });
+
+    expect(res.datos.totalesPorTipo).toEqual({
+      dinero: 0,
+      medicamentos: 30,
+      insumos: 7,
+      servicios: 0,
+    });
+    // El alias de compatibilidad sigue siendo el total en dinero, no una mezcla de tipos.
+    expect(res.datos.totalAcumulado).toBe(0);
   });
 });

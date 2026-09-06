@@ -1,7 +1,15 @@
 import { obtenerSupabase } from "../api/cliente.js";
 import { normalizarError } from "../api/errores-de-supabase.js";
 import { puedeRegistrarDonaciones, puedeVerDonaciones } from "./permisos.js";
-import { ESTADOS_DE_DONACION, TIPOS_DE_DONANTE } from "../enums.js";
+import { ESTADOS_DE_DONACION, TIPOS_DE_DONACION, TIPOS_DE_DONANTE } from "../enums.js";
+
+/** Totales en cero, mismo shape que historial.api.js -> calcularTotalesPorTipo(). */
+const TOTALES_POR_TIPO_VACIOS = Object.freeze({
+  dinero: 0,
+  medicamentos: 0,
+  insumos: 0,
+  servicios: 0,
+});
 
 // Este archivo tenia su propia lista, `["administrador", "junta_directiva", "socio_fundador"]`,
 // con guiones bajos. El enum rol_usuario de la 00001 los escribe con espacio -'junta directiva',
@@ -172,7 +180,40 @@ export async function darDeBajaDonante(idDonante, { rolUsuario }) {
 }
 
 /**
- * Consulta el total acumulado y el historial de donaciones realizadas por un donante.
+ * Agrega `donaciones` (con su `donacion_detalle` embebido) por tipo, mismo criterio que
+ * historial.api.js -> calcularTotalesPorTipo(): dinero suma `monto`, medicamentos/insumos suman
+ * `cantidad`, servicios cuenta donaciones (no tiene unidades propias).
+ */
+function totalesPorTipoDe(donaciones = []) {
+  const totales = { ...TOTALES_POR_TIPO_VACIOS };
+
+  for (const donacion of donaciones) {
+    const renglones = donacion.detalle ?? [];
+    if (donacion.tipo === TIPOS_DE_DONACION.DINERO) {
+      totales.dinero += renglones.reduce((suma, r) => suma + Number(r.monto ?? 0), 0);
+    } else if (donacion.tipo === TIPOS_DE_DONACION.SERVICIOS) {
+      totales.servicios += 1;
+    } else if (
+      donacion.tipo === TIPOS_DE_DONACION.MEDICAMENTOS ||
+      donacion.tipo === TIPOS_DE_DONACION.INSUMOS
+    ) {
+      totales[donacion.tipo] += renglones.reduce((suma, r) => suma + Number(r.cantidad ?? 0), 0);
+    }
+  }
+
+  return totales;
+}
+
+/**
+ * Consulta el total acumulado (por tipo) y el historial de donaciones realizadas por un
+ * donante.
+ *
+ * `donaciones` no tiene columna de importe ni de cantidad -el dato vive por renglon en
+ * `donacion_detalle.monto`/`.cantidad` (00022)-, asi que el total no se lee de una columna de
+ * `donaciones`: se agrega aqui sobre `donacion_detalle`, igual que
+ * historial.api.js -> calcularTotalesPorTipo(). Antes esta funcion sumaba `d.monto_total`, una
+ * columna que nunca existio en `donaciones`, asi que `totalAcumulado` daba siempre 0 (issue
+ * #636).
  */
 export async function obtenerHistoricoDonante(idDonante, { rolUsuario }) {
   const errorRol = validarRolLectura(rolUsuario);
@@ -183,21 +224,20 @@ export async function obtenerHistoricoDonante(idDonante, { rolUsuario }) {
 
     const { data: donaciones, error } = await supabase
       .from("donaciones")
-      .select("*")
+      .select("*, detalle:donacion_detalle(cantidad, monto)")
       .eq("donante_id", idDonante)
       .neq("estado", ESTADOS_DE_DONACION.ANULADA)
       .order("created_at", { ascending: false });
 
     if (error) throw error;
 
-    const totalAcumulado = (donaciones || []).reduce(
-      (acc, d) => acc + (Number(d.monto_total) || 0),
-      0,
-    );
+    const totalesPorTipo = totalesPorTipoDe(donaciones || []);
 
     return {
       datos: {
-        totalAcumulado,
+        // Alias de totalesPorTipo.dinero por compatibilidad con quien ya use totalAcumulado.
+        totalAcumulado: totalesPorTipo.dinero,
+        totalesPorTipo,
         donaciones: donaciones || [],
       },
       error: null,
