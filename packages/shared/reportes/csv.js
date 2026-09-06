@@ -33,9 +33,18 @@ const BOM_UTF8 = String.fromCharCode(0xfeff);
 const SEPARADOR_CAMPO = ",";
 const SEPARADOR_LINEA = "\r\n";
 
+// Inyeccion de formulas (issue #698, relacionada con #239 / OWASP A03): un valor que empiece
+// por uno de estos caracteres se interpreta como formula al abrirlo en Excel o Google Sheets, y
+// los reportes exportan campos escritos por usuarios (concepto de gasto, nombre de paciente,
+// nombre de medicamento) donde eso es explotable -un "=HYPERLINK(...)" en un nombre se activa en
+// la maquina de quien abre el CSV. La mitigacion estandar es anteponer un apostrofo: la celda
+// se sigue viendo igual, pero deja de evaluarse como formula.
+const PREFIJO_DE_FORMULA = /^[=+\-@\t\r]/;
+
 /**
  * Escapa un valor para una celda CSV segun RFC 4180: si contiene coma, comilla doble o un
- * salto de linea, lo envuelve en comillas dobles y duplica las comillas internas.
+ * salto de linea, lo envuelve en comillas dobles y duplica las comillas internas. Antes de eso,
+ * neutraliza un posible prefijo de formula (ver PREFIJO_DE_FORMULA).
  *
  * @param {*} valor
  * @returns {string}
@@ -43,7 +52,9 @@ const SEPARADOR_LINEA = "\r\n";
 export function escaparCampoCSV(valor) {
   if (valor === null || valor === undefined) return "";
 
-  const texto = String(valor);
+  let texto = String(valor);
+  if (PREFIJO_DE_FORMULA.test(texto)) texto = `'${texto}`;
+
   const necesitaComillas = /["\r\n,]/.test(texto);
   if (!necesitaComillas) return texto;
 

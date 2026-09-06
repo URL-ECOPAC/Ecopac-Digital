@@ -1,10 +1,39 @@
 import { useState, useMemo, useCallback } from "react";
 import { atenderAlerta } from "./alertas.api.js";
+import { aFechaLocal, diasHastaVencimiento } from "../formato/fechas.js";
 
 export const ESTADO_ALERTA = {
   POR_VENCER: "POR_VENCER",
   VENCIDA: "VENCIDA",
 };
+
+/**
+ * Dias restantes para que venza un lote (negativo si ya vencio, 0 si vence hoy). Se exporta
+ * aparte del hook para poder probarla sin montar un componente (issue #694).
+ *
+ * ✅ Regla #597: Un lote que vence HOY (días = 0) TODAVÍA es válido y entregable.
+ *
+ * Antes calculaba con new Date(fechaVencimiento) - new Date() en milisegundos, que interpreta
+ * una cadena AAAA-MM-DD como medianoche UTC. En Guatemala (UTC-6) eso adelanta un dia cualquier
+ * fecha, y ademas comparaba contra el instante actual (con hora), no contra el dia de
+ * calendario. diasHastaVencimiento() (formato/fechas.js) ya resuelve las dos cosas.
+ *
+ * @param {string} fechaVencimiento
+ * @param {string} [fechaIngreso]
+ * @returns {number|null}
+ */
+export function calcularDiasRestantes(fechaVencimiento, fechaIngreso) {
+  if (!fechaVencimiento) return null;
+
+  // Validación según restricción de base: fecha_vencimiento >= fecha_ingreso
+  if (fechaIngreso) {
+    const ingreso = aFechaLocal(fechaIngreso);
+    const vencimiento = aFechaLocal(fechaVencimiento);
+    if (ingreso && vencimiento && vencimiento < ingreso) return null; // Inválido según regla #597
+  }
+
+  return diasHastaVencimiento(fechaVencimiento);
+}
 
 /**
  * Traduce la accion tomada mas la sesion actual a los argumentos que declara atenderAlerta()
@@ -24,26 +53,6 @@ export function useAlertasVencimiento({ lotes = [], bodegas = [], usuarioId, rol
   const [filtroBodega, setFiltroBodega] = useState("todas");
   const [filtroCategoria, setFiltroCategoria] = useState("todas");
   const [alertasAtendidas, setAlertasAtendidas] = useState([]);
-
-  // ✅ Regla #597: Un lote que vence HOY (días = 0) TODAVÍA es válido y entregable
-  const calcularDiasRestantes = useCallback((fechaVencimiento, fechaIngreso) => {
-    if (!fechaVencimiento) return null;
-
-    const hoy = new Date();
-    hoy.setHours(0, 0, 0, 0);
-    const vencimiento = new Date(fechaVencimiento);
-    vencimiento.setHours(0, 0, 0, 0);
-
-    // ✅ Validación según restricción de base: fecha_vencimiento >= fecha_ingreso
-    if (fechaIngreso) {
-      const ingreso = new Date(fechaIngreso);
-      ingreso.setHours(0, 0, 0, 0);
-      if (vencimiento < ingreso) return null; // Inválido según regla #597
-    }
-
-    const diferenciaMs = vencimiento - hoy;
-    return Math.ceil(diferenciaMs / (1000 * 60 * 60 * 24));
-  }, []);
 
   // 📋 Generar alertas: vencimiento dentro de 30 días o menos
   const alertas = useMemo(() => {
@@ -93,7 +102,7 @@ export function useAlertasVencimiento({ lotes = [], bodegas = [], usuarioId, rol
         // ✅ Orden: los que vencen antes aparecen primero
         .sort((a, b) => a.diasRestantes - b.diasRestantes)
     );
-  }, [lotes, busqueda, filtroBodega, filtroCategoria, alertasAtendidas, calcularDiasRestantes]);
+  }, [lotes, busqueda, filtroBodega, filtroCategoria, alertasAtendidas]);
 
   // 📊 Secciones separadas
   const porVencer = useMemo(

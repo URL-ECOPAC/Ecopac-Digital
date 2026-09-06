@@ -15,7 +15,7 @@
 // (packages/shared/navegacion.js). Que cada rol vea lo que le corresponde no se comprueba aca:
 // eso es RutaProtegida.test.jsx, y quien protege de verdad es RLS.
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import App from "./App";
 
@@ -31,20 +31,32 @@ const PERFIL = {
   area: null,
 };
 
-vi.mock("./contexto/SesionProvider", () => ({
-  SesionProvider: ({ children }) => children,
-  useSesionCompartida: () => ({
+// Mutable a proposito: el rol es administrador para todas las pruebas de este archivo excepto
+// las de "el guard de rol de reportes" (issue #697), que lo cambian por su cuenta y lo
+// restauran despues.
+const { estadoSesion } = vi.hoisted(() => ({
+  estadoSesion: {
     estadoRestauracion: "listo",
     haySesion: true,
-    perfil: PERFIL,
-    rol: PERFIL.rol,
-  }),
+    perfil: null,
+    rol: null,
+  },
+}));
+
+vi.mock("./contexto/SesionProvider", () => ({
+  SesionProvider: ({ children }) => children,
+  useSesionCompartida: () => estadoSesion,
 }));
 
 function renderEnRuta(ruta) {
   window.history.pushState({}, "", ruta);
   return render(<App />);
 }
+
+beforeEach(() => {
+  estadoSesion.perfil = PERFIL;
+  estadoSesion.rol = PERFIL.rol;
+});
 
 describe("rutas de donaciones y proyectos", () => {
   beforeEach(() => {
@@ -163,5 +175,32 @@ describe("inicio y proyectos ya no son marcadores (#710)", () => {
 
     expect(window.location.pathname).toBe("/proyectos");
     expect(screen.getAllByRole("heading", { name: /proyectos sociales/i })).toHaveLength(1);
+  });
+});
+
+// Issue #697. /reportes/dashboard quedo como la unica ruta de reportes fuera del grupo
+// <RutaProtegida roles={rolesDe("/reportes")}/>: heredaba solo el guard exterior (hay sesion),
+// no el de rol, asi que un medico o voluntario general -roles sin el modulo reportes,
+// navegacion.js- podia entrar escribiendo la URL a mano.
+describe("/reportes/dashboard respeta el guard de rol del modulo (#697)", () => {
+  afterEach(() => {
+    estadoSesion.perfil = PERFIL;
+    estadoSesion.rol = PERFIL.rol;
+  });
+
+  it("un rol sin el modulo reportes ve Acceso Denegado, no el panel", () => {
+    estadoSesion.perfil = { ...PERFIL, rol: "medico" };
+    estadoSesion.rol = "medico";
+
+    renderEnRuta("/reportes/dashboard");
+
+    expect(screen.getByText(/tu usuario tiene el rol de/i)).toBeInTheDocument();
+  });
+
+  it("administrador, que si tiene el modulo reportes, entra sin bloqueo", () => {
+    renderEnRuta("/reportes/dashboard");
+
+    expect(screen.queryByText(/tu usuario tiene el rol de/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(TEXTO_NOT_FOUND)).not.toBeInTheDocument();
   });
 });
