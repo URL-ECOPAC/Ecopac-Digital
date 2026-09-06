@@ -1,7 +1,11 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { COLUMNAS_CATALOGO_DIAGNOSTICOS, FILTROS_CATALOGO_DIAGNOSTICOS, useCatalogoDiagnosticos } from "@ecopac/shared";
+import {
+  COLUMNAS_CATALOGO_DIAGNOSTICOS,
+  FILTROS_CATALOGO_DIAGNOSTICOS,
+  useCatalogoDiagnosticos,
+} from "@ecopac/shared";
 
 import DataList from "../components/DataList";
 import EmptyState from "../components/EmptyState";
@@ -74,7 +78,9 @@ export default function CatalogoDiagnosticosPage() {
     );
   }
 
-  const acciones = [{ label: "Volver", onClick: () => navigate("/pacientes"), variant: "secondary" }];
+  const acciones = [
+    { label: "Volver", onClick: () => navigate("/pacientes"), variant: "secondary" },
+  ];
   if (puedeAdministrar) {
     acciones.push({ label: "Nuevo diagnostico", onClick: () => setModal({ diagnostico: null }) });
   }
@@ -97,9 +103,7 @@ export default function CatalogoDiagnosticosPage() {
           />
         </div>
 
-        <p className="pac-rotulo mb-2">
-          {total === 1 ? "1 diagnostico" : `${total} diagnosticos`}
-        </p>
+        <p className="pac-rotulo mb-2">{total === 1 ? "1 diagnostico" : `${total} diagnosticos`}</p>
 
         <div className="pac-tabla">
           <DataList
