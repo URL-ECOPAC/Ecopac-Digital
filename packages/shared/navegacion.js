@@ -110,9 +110,9 @@ export const MODULOS = [
     tabMovil: "Jornadas",
   },
   {
-    id: "voluntarios",
-    etiqueta: "Voluntarios",
-    ruta: "/voluntarios",
+    id: "colaboradores",
+    etiqueta: "Colaboradores",
+    ruta: "/colaboradores",
     seccion: "jornadas",
     modulo: "usuarios",
     roles: ADMIN,

@@ -1,5 +1,7 @@
 import { useState, useMemo, useCallback } from "react";
 
+import { esAdministrador } from "../usuarios/roles.js";
+
 /**
  * Traduce los campos snake_case del formulario de alta de lote a los argumentos camelCase que
  * declara registrarLote() (lotes.api.js, traducidos a columnas via aColumnasDeTabla()). Se
@@ -74,7 +76,7 @@ export function useGestionLotes({
   alertasIniciales = [],
   bodegas = [],
   proveedores = [],
-  usuario = { id: "", rol: "Administrador" },
+  usuario = { id: "", rol: null },
 } = {}) {
   const [busqueda, setBusqueda] = useState("");
   const [bodegaSeleccionada, setBodegaSeleccionada] = useState("Todas");
@@ -82,8 +84,13 @@ export function useGestionLotes({
   const [alertas, setAlertas] = useState(alertasIniciales);
   const [errorValidacion, setErrorValidacion] = useState(null);
 
-  // Regla de Permisos: Solo el Administrador puede registrar lotes
-  const puedeRegistrarLotes = usuario?.rol === "Administrador";
+  // Regla de Permisos: Solo el Administrador puede registrar lotes.
+  //
+  // issue #689: comparaba usuario?.rol contra el literal "Administrador", con mayuscula. El
+  // enum rol_usuario (00001) y usuarios/roles.js lo declaran en minuscula
+  // ("administrador"), asi que esa comparacion nunca coincidia -- mismo defecto que la propia
+  // InventarioPage.jsx, que es quien llama a este hook.
+  const puedeRegistrarLotes = esAdministrador(usuario?.rol);
 
   // Ordenamiento FEFO (First Expire, First Out) + Filtrado
   const lotesFiltrados = useMemo(() => {

@@ -3,6 +3,20 @@ import { modulosVisibles } from "@ecopac/shared";
 import { useSesionCompartida } from "../contexto/SesionProvider";
 import { ROUTES } from "../navigation/rutas";
 
+// Hasta la issue #687, esta pantalla -la primera que ve cualquier persona al entrar a la app-
+// mostraba un panel de "METRICAS CLAVE" (235 pacientes, Q 553,800 en donaciones...) y un panel de
+// "ALERTAS DE CADUCIDAD" (Amoxicilina, Metformina...) que eran constantes locales, no datos de la
+// base: cualquier cuenta, en cualquier momento, veia los mismos numeros.
+//
+// Los dos paneles se retiran en vez de conectarse a una API real:
+// - Las metricas que mostraban (pacientes atendidos, donaciones, voluntarios, jornadas) son las
+//   de useDashboardMetricas() (reportes/), pero esa API solo la puede consultar administrador y
+//   los roles consultivos (puedeVerIndicadoresDeImpacto) -- y esta es la pantalla de inicio de
+//   los cinco roles. Mostrarla siempre resucitaria el mismo defecto para medico/voluntario
+//   (verian 0 en todo, sin que sea un dato real), y ocultarla solo para ellos es el alcance de
+//   una pantalla nueva, no de este bug.
+// - Las alertas de vencimiento para movil no tienen API todavia: la issue #268 es quien la
+//   construye.
 const MODULOS_FIGMA = [
   {
     id: "pacientes",
@@ -60,12 +74,12 @@ const MODULOS_FIGMA = [
     tabMovil: "Jornadas",
   },
   {
-    id: "voluntarios",
-    titulo: "Voluntarios",
+    id: "colaboradores",
+    titulo: "Colaboradores",
     subtitulo: "Personal registrado",
     valor: "10",
     color: "#0284C7",
-    ruta: ROUTES.VOLUNTARIOS,
+    ruta: ROUTES.COLABORADORES,
   },
 ];
 
@@ -102,55 +116,13 @@ export default function InicioScreen({ navigation }) {
         donaciones: ROUTES.DONACIONES,
         presupuestos: ROUTES.PRESUPUESTOS,
         proyectos: ROUTES.PROYECTOS,
-        voluntarios: ROUTES.VOLUNTARIOS,
+        colaboradores: ROUTES.COLABORADORES,
       };
       if (mapaRutas[modulo.id]) {
         navigation.navigate(mapaRutas[modulo.id]);
       }
     }
   };
-
-  const metricas = [
-    {
-      id: "1",
-      titulo: "PACIENTES ATENDIDOS",
-      valor: "235",
-      subtexto: "histórico total",
-      color: "#10B981",
-    },
-    {
-      id: "2",
-      titulo: "DONACIONES RECIBIDAS",
-      valor: "Q 553,800",
-      subtexto: "este año",
-      color: "#0EA5E9",
-    },
-    {
-      id: "3",
-      titulo: "VOLUNTARIOS ACTIVOS",
-      valor: "9",
-      subtexto: "personal registrado",
-      color: "#F97316",
-    },
-    { id: "4", titulo: "JORNADAS 2026", valor: "4", subtexto: "1 finalizadas", color: "#EC4899" },
-  ];
-
-  const alertasCaducidad = [
-    {
-      id: "1",
-      nombre: "Amoxicilina 500mg Cápsulas",
-      codigo: "FAR-0041",
-      lote: "L-2024-0091",
-      dias: "30d",
-    },
-    {
-      id: "2",
-      nombre: "Metformina 850mg Comprimidos",
-      codigo: "FAR-0099",
-      lote: "L-2024-0567",
-      dias: "12d",
-    },
-  ];
 
   return (
     <SafeAreaView style={styles.container}>
@@ -164,7 +136,7 @@ export default function InicioScreen({ navigation }) {
           <Text style={styles.heroTitle}>Salud que llega a cada comunidad.</Text>
           <Text style={styles.heroDescription}>
             Plataforma integral de gestión para jornadas médicas. Pacientes, inventario, jornadas,
-            voluntarios, proyectos y presupuestos en un solo lugar.
+            colaboradores, proyectos y presupuestos en un solo lugar.
           </Text>
           <View style={styles.heroButtonsContainer}>
             <TouchableOpacity
@@ -182,18 +154,6 @@ export default function InicioScreen({ navigation }) {
           </View>
         </View>
 
-        {/* MÉTRICAS CLAVE */}
-        <View style={styles.gridTwoColumns}>
-          {metricas.map((item) => (
-            <View key={item.id} style={styles.metricCard}>
-              <View style={[styles.cardDot, { backgroundColor: item.color }]} />
-              <Text style={styles.cardHeaderTitle}>{item.titulo}</Text>
-              <Text style={[styles.metricValue, { color: item.color }]}>{item.valor}</Text>
-              <Text style={styles.cardSubtext}>{item.subtexto}</Text>
-            </View>
-          ))}
-        </View>
-
         {/* MÓDULOS DEL SISTEMA */}
         <Text style={styles.sectionTitle}>MÓDULOS DEL SISTEMA</Text>
         <View style={styles.gridTwoColumns}>
@@ -208,31 +168,6 @@ export default function InicioScreen({ navigation }) {
               <Text style={styles.cardSubtext}>{modulo.subtitulo}</Text>
               <Text style={[styles.moduleValue, { color: modulo.color }]}>{modulo.valor}</Text>
             </TouchableOpacity>
-          ))}
-        </View>
-
-        {/* ALERTAS DE CADUCIDAD */}
-        <View style={styles.alertsPanel}>
-          <View style={styles.alertsHeader}>
-            <View style={{ flexDirection: "row", alignItems: "center" }}>
-              <View style={[styles.cardDot, { backgroundColor: "#F97316" }]} />
-              <Text style={styles.alertsTitle}>{alertasCaducidad.length} ALERTAS DE CADUCIDAD</Text>
-            </View>
-            <TouchableOpacity onPress={() => navigation.navigate("Inventario")}>
-              <Text style={styles.seeAllText}>Ver todas →</Text>
-            </TouchableOpacity>
-          </View>
-
-          {alertasCaducidad.map((item) => (
-            <View key={item.id} style={styles.alertCard}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.alertName}>{item.nombre}</Text>
-                <Text style={styles.alertDetails}>
-                  {item.codigo} • Lote {item.lote}
-                </Text>
-              </View>
-              <Text style={styles.alertDays}>{item.dias}</Text>
-            </View>
           ))}
         </View>
       </ScrollView>
@@ -323,16 +258,6 @@ const styles = StyleSheet.create({
     gap: 12,
     marginBottom: 20,
   },
-  metricCard: {
-    width: "48%",
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 14,
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
-    elevation: 2,
-  },
   moduleCard: {
     width: "48%",
     backgroundColor: "#FFFFFF",
@@ -348,17 +273,6 @@ const styles = StyleSheet.create({
     height: 8,
     borderRadius: 4,
     marginBottom: 8,
-  },
-  cardHeaderTitle: {
-    fontSize: 10,
-    fontWeight: "700",
-    color: "#64748B",
-    marginBottom: 4,
-  },
-  metricValue: {
-    fontSize: 20,
-    fontWeight: "bold",
-    marginBottom: 2,
   },
   cardSubtext: {
     fontSize: 11,
@@ -381,53 +295,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "bold",
     marginTop: 8,
-  },
-  alertsPanel: {
-    backgroundColor: "#FFF7ED",
-    borderColor: "#FFEDD5",
-    borderWidth: 1,
-    borderRadius: 16,
-    padding: 16,
-  },
-  alertsHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  alertsTitle: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: "#EA580C",
-    marginLeft: 6,
-  },
-  seeAllText: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#EA580C",
-  },
-  alertCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    padding: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  alertName: {
-    fontSize: 13,
-    fontWeight: "bold",
-    color: "#1E293B",
-  },
-  alertDetails: {
-    fontSize: 11,
-    color: "#64748B",
-    marginTop: 2,
-  },
-  alertDays: {
-    fontSize: 14,
-    fontWeight: "bold",
-    color: "#DC2626",
-    marginLeft: 8,
   },
 });

@@ -1,6 +1,6 @@
 // Hook de pantalla del alta de usuario (issue #106).
 //
-// El modal vive en /voluntarios (issue #105), pero el estado, la validacion y la llamada al
+// El modal vive en /colaboradores (issue #105), pero el estado, la validacion y la llamada al
 // servidor van aca, no en el componente: la pantalla solo dibuja lo que este hook le entrega.
 //
 // Alcance reducido a proposito (ver PLAN.md del issue #106): el modal del prototipo pedia

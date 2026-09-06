@@ -16,7 +16,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { listarJornadasDelProyecto, listarProyectos } from "./api.js";
+import { cambiarEstadoProyecto, listarJornadasDelProyecto, listarProyectos } from "./api.js";
 import { COLUMNAS_PROYECTO } from "./columnas.js";
 import { FILTROS_PROYECTO } from "./filtros.js";
 import { CAMPOS_PROYECTO } from "./campos.js";
@@ -104,6 +104,29 @@ export function useProyectosSociales({ usuarioRol } = {}) {
     return resultado.esValido;
   };
 
+  /**
+   * Mueve un proyecto a otro estado (tablero kanban de la app movil, issue #688). Delega en
+   * cambiarEstadoProyecto() (api.js), que ya valida la transicion y espeja al trigger
+   * tr_validar_transicion_estado_proyecto (00029); aqui solo se filtra por permiso antes de
+   * intentarlo y se recarga la lista despues, para que el resto de la pantalla (metricas,
+   * columnas del kanban) vea el estado nuevo sin esperar a un recargar() manual.
+   */
+  const cambiarEtapaProyecto = useCallback(
+    async (id, nuevoEstado) => {
+      if (!puedeEditar) {
+        return {
+          proyecto: null,
+          error: { mensaje: "No tienes permiso para cambiar el estado de un proyecto." },
+        };
+      }
+
+      const resultado = await cambiarEstadoProyecto(id, nuevoEstado);
+      if (!resultado.error) await cargarProyectos();
+      return resultado;
+    },
+    [puedeEditar, cargarProyectos],
+  );
+
   return {
     columnas: COLUMNAS_PROYECTO,
     filtros: FILTROS_PROYECTO,
@@ -115,6 +138,7 @@ export function useProyectosSociales({ usuarioRol } = {}) {
     proyectoDetalle,
     jornadasProyecto,
     puedeEditar,
+    cambiarEtapaProyecto,
     recargar: cargarProyectos,
     filtrosState,
     setFiltrosState,

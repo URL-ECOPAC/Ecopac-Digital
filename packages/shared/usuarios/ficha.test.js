@@ -2,14 +2,14 @@ import { describe, expect, it } from "vitest";
 
 import {
   filasDeHistorial,
-  PESTANIA_FICHA_VOLUNTARIO_POR_DEFECTO,
-  PESTANIAS_FICHA_VOLUNTARIO,
+  PESTANIA_FICHA_COLABORADOR_POR_DEFECTO,
+  PESTANIAS_FICHA_COLABORADOR,
 } from "./ficha.js";
 
-describe("PESTANIAS_FICHA_VOLUNTARIO", () => {
+describe("PESTANIAS_FICHA_COLABORADOR", () => {
   it("declara Datos e Historial, y Datos es la pestaña por defecto", () => {
-    expect(PESTANIAS_FICHA_VOLUNTARIO.map((p) => p.id)).toEqual(["datos", "historial"]);
-    expect(PESTANIA_FICHA_VOLUNTARIO_POR_DEFECTO).toBe("datos");
+    expect(PESTANIAS_FICHA_COLABORADOR.map((p) => p.id)).toEqual(["datos", "historial"]);
+    expect(PESTANIA_FICHA_COLABORADOR_POR_DEFECTO).toBe("datos");
   });
 });
 

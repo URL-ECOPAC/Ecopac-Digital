@@ -64,7 +64,7 @@ describe("armarFilaDeResultado", () => {
     expect(armarFilaDeResultado(usuario)).toEqual({
       id: "perfil-1",
       nombreCompleto: "Ana Lopez",
-      rolEtiqueta: "Voluntario",
+      rolEtiqueta: "Colaborador",
       rol: ROLES.VOLUNTARIO,
     });
   });
@@ -162,7 +162,7 @@ describe("contarPersonalPorRol", () => {
 
     expect(contarPersonalPorRol(personal)).toEqual([
       { rol: ROLES.MEDICO, etiqueta: "Medico", cantidad: 2 },
-      { rol: ROLES.VOLUNTARIO, etiqueta: "Voluntario", cantidad: 1 },
+      { rol: ROLES.VOLUNTARIO, etiqueta: "Colaborador", cantidad: 1 },
     ]);
   });
 

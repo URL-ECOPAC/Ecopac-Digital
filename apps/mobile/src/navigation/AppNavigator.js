@@ -3,7 +3,7 @@ import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { colors } from "@ecopac/ui-tokens";
-import { tabsMoviles } from "@ecopac/shared";
+import { etiquetaDeRol, tabsMoviles } from "@ecopac/shared";
 
 import { useSesionCompartida } from "../contexto/SesionProvider";
 import { ROUTES } from "./rutas";
@@ -26,8 +26,8 @@ import StockScreen from "../screens/StockScreen";
 import DonacionesScreen from "../screens/DonacionesScreen";
 import ProyectosScreen from "../screens/ProyectosScreen";
 import PresupuestosScreen from "../screens/PresupuestosScreen";
-import VoluntariosScreen from "../screens/VoluntariosScreen";
-import FichaVoluntarioScreen from "../screens/FichaVoluntarioScreen";
+import ColaboradoresScreen from "../screens/ColaboradoresScreen";
+import FichaColaboradorScreen from "../screens/FichaColaboradorScreen";
 
 export { ROUTES };
 
@@ -47,10 +47,10 @@ function CustomHeaderTitle({ title }) {
       <Text style={styles.headerTitleText}>{title}</Text>
       <View style={styles.userContainer}>
         <Text style={styles.nombreText} numberOfLines={1}>
-          {perfil?.nombre || "Administradora..."}
+          {perfil?.nombre || ""}
         </Text>
         <Text style={styles.rolText} numberOfLines={1}>
-          {perfil?.rol || "Administradora"}
+          {perfil?.rol ? etiquetaDeRol(perfil.rol) : ""}
         </Text>
       </View>
     </View>
@@ -90,13 +90,13 @@ function InicioNavigator() {
         options={opcionesStack("Presupuestos")}
       />
       <InicioStack.Screen
-        name={ROUTES.VOLUNTARIOS}
-        component={VoluntariosScreen}
-        options={opcionesStack("Voluntarios y médicos")}
+        name={ROUTES.COLABORADORES}
+        component={ColaboradoresScreen}
+        options={opcionesStack("Colaboradores")}
       />
       <InicioStack.Screen
-        name={ROUTES.FICHA_VOLUNTARIO}
-        component={FichaVoluntarioScreen}
+        name={ROUTES.FICHA_COLABORADOR}
+        component={FichaColaboradorScreen}
         options={opcionesStack("Ficha del personal")}
       />
     </InicioStack.Navigator>
