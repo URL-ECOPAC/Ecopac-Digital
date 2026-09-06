@@ -19,6 +19,7 @@ import HomePage from "./pages/HomePage";
 import PacientesPage from "./pages/PacientesPage";
 import FichaPacientePage from "./pages/FichaPacientePage";
 import PacientesCronicosPage from "./pages/PacientesCronicosPage";
+import CatalogoDiagnosticosPage from "./pages/CatalogoDiagnosticosPage";
 import DonacionesPage from "./pages/DonacionesPage";
 import DonantesPage from "./pages/DonantesPage";
 import RegistroDonacionPage from "./pages/RegistroDonacionPage";
@@ -125,6 +126,7 @@ export default function App() {
               <Route element={<RutaProtegida roles={rolesDe("/pacientes")} />}>
                 <Route path="/pacientes" element={<PacientesPage />} />
                 <Route path="/pacientes/cronicos" element={<PacientesCronicosPage />} />
+                <Route path="/pacientes/diagnosticos" element={<CatalogoDiagnosticosPage />} />
                 <Route path="/pacientes/:id" element={<FichaPacientePage />} />
               </Route>
               <Route element={<RutaProtegida roles={rolesDe("/donaciones")} />}>

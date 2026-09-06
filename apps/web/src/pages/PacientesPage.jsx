@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import {
   FILTROS_PACIENTE,
   puedeRegistrarPaciente,
+  puedeVerCatalogoDiagnosticos,
   puedeVerCondiciones,
   usePacientesListado,
 } from "@ecopac/shared";
@@ -61,6 +62,14 @@ export default function PacientesPage() {
     acciones.push({
       label: "Pacientes cronicos",
       onClick: () => navigate("/pacientes/cronicos"),
+      variant: "secondary",
+    });
+  }
+
+  if (puedeVerCatalogoDiagnosticos(rol)) {
+    acciones.push({
+      label: "Catalogo de diagnosticos",
+      onClick: () => navigate("/pacientes/diagnosticos"),
       variant: "secondary",
     });
   }

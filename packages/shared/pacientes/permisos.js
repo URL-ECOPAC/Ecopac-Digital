@@ -151,8 +151,20 @@ export function permisosDePacientes(rol) {
     puedeTomarTriaje: puedeTomarTriaje(rol),
     puedeCorregirTriaje: puedeCorregirTriaje(rol),
     puedeFusionarPacientes: puedeFusionarPacientes(rol),
+    puedeVerCatalogoDiagnosticos: puedeVerCatalogoDiagnosticos(rol),
     puedeAdministrarDiagnosticos: puedeAdministrarDiagnosticos(rol),
   };
+}
+
+/**
+ * Puede ver la pantalla del catalogo de diagnosticos (issue #639).
+ *
+ * Espejo de la politica de SELECT de diagnosticos (00033): administrador y medico. Voluntario
+ * general queda fuera a proposito, mismo criterio que la 00105 documenta sobre esa misma
+ * politica: es informacion clinica.
+ */
+export function puedeVerCatalogoDiagnosticos(rol) {
+  return esAdministrador(rol) || rol === ROLES.MEDICO;
 }
 
 /**

@@ -10,6 +10,7 @@ import { ROLES } from "../usuarios/roles.js";
 import {
   permisosDePacientes,
   puedeAdministrarDiagnosticos,
+  puedeVerCatalogoDiagnosticos,
   puedeAnularReceta,
   puedeCorregirTriaje,
   puedeCrearExpediente,
@@ -87,6 +88,7 @@ describe("permisos de pacientes y expedientes", () => {
       puedeTomarTriaje: false,
       puedeCorregirTriaje: false,
       puedeFusionarPacientes: false,
+      puedeVerCatalogoDiagnosticos: false,
       puedeAdministrarDiagnosticos: false,
     });
   });
@@ -108,6 +110,7 @@ describe("permisos de pacientes y expedientes", () => {
       puedeTomarTriaje: true,
       puedeCorregirTriaje: false,
       puedeFusionarPacientes: false,
+      puedeVerCatalogoDiagnosticos: false,
       puedeAdministrarDiagnosticos: false,
     });
 
@@ -119,6 +122,7 @@ describe("permisos de pacientes y expedientes", () => {
       puedeTomarTriaje: true,
       puedeCorregirTriaje: true,
       puedeFusionarPacientes: true,
+      puedeVerCatalogoDiagnosticos: true,
       puedeAdministrarDiagnosticos: true,
     });
   });
@@ -132,6 +136,16 @@ describe("permisos de pacientes y expedientes", () => {
     expect(puedeAdministrarDiagnosticos(ROLES.VOLUNTARIO)).toBe(false);
     expect(puedeAdministrarDiagnosticos(ROLES.JUNTA_DIRECTIVA)).toBe(false);
     expect(puedeAdministrarDiagnosticos(ROLES.SOCIO_FUNDADOR)).toBe(false);
+  });
+
+  it("ver el catalogo de diagnosticos es de administrador y medico (issue #639)", () => {
+    // Espejo de la politica de SELECT de diagnosticos (00033).
+    expect(puedeVerCatalogoDiagnosticos(ROLES.ADMINISTRADOR)).toBe(true);
+    expect(puedeVerCatalogoDiagnosticos(ROLES.MEDICO)).toBe(true);
+
+    expect(puedeVerCatalogoDiagnosticos(ROLES.VOLUNTARIO)).toBe(false);
+    expect(puedeVerCatalogoDiagnosticos(ROLES.JUNTA_DIRECTIVA)).toBe(false);
+    expect(puedeVerCatalogoDiagnosticos(ROLES.SOCIO_FUNDADOR)).toBe(false);
   });
 });
 

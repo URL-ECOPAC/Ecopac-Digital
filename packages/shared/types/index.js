@@ -415,6 +415,7 @@
  * @property {string|null} codigo
  * @property {string} nombre
  * @property {string|null} descripcion
+ * @property {boolean} activo FALSE lo retira del selector de consulta sin borrarlo (00113).
  * @property {string} createdAt
  * @property {string} updatedAt
  */
