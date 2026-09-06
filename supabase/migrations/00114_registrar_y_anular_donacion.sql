@@ -91,6 +91,11 @@ COMMENT ON FUNCTION fn_registrar_donacion(UUID, tipo_donacion, DATE, JSONB, UUID
 GRANT EXECUTE ON FUNCTION fn_registrar_donacion(UUID, tipo_donacion, DATE, JSONB, UUID, TEXT)
   TO authenticated;
 
+-- Sin este REVOKE la funcion nace ejecutable por PUBLIC, que es el comportamiento por defecto de
+-- Postgres (ver 00102, issue #511). La prueba privilegios_anon.sql lo comprueba.
+REVOKE EXECUTE ON FUNCTION fn_registrar_donacion(UUID, tipo_donacion, DATE, JSONB, UUID, TEXT)
+  FROM PUBLIC;
+
 CREATE OR REPLACE FUNCTION fn_anular_donacion(
   p_donacion_id UUID,
   p_motivo TEXT
@@ -130,3 +135,7 @@ COMMENT ON FUNCTION fn_anular_donacion(UUID, TEXT) IS
   'motivo_anulacion no vacio) sigue siendo la que decide quien puede llamarla.';
 
 GRANT EXECUTE ON FUNCTION fn_anular_donacion(UUID, TEXT) TO authenticated;
+
+-- Sin este REVOKE la funcion nace ejecutable por PUBLIC, que es el comportamiento por defecto de
+-- Postgres (ver 00102, issue #511). La prueba privilegios_anon.sql lo comprueba.
+REVOKE EXECUTE ON FUNCTION fn_anular_donacion(UUID, TEXT) FROM PUBLIC;
