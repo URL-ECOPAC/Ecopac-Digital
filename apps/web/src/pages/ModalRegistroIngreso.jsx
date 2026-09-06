@@ -5,16 +5,14 @@ export default function ModalRegistroIngreso({
   onClose,
   onCerrar, // Soporte para ambas convenciones de nombre
   onExito, // Callback para notificar al padre tras guardar
-  catalogos = { medicamentos: [], bodegas: [], donaciones: [] },
-  usuarioActual,
+  catalogos = { medicamentos: [], bodegas: [], proveedores: [] },
+  usuarioId,
 }) {
   const {
     origen,
     setOrigen,
-    donacionId,
-    setDonacionId,
-    proveedor,
-    setProveedor,
+    proveedorId,
+    setProveedorId,
     numeroComprobante,
     setNumeroComprobante,
     items,
@@ -26,9 +24,8 @@ export default function ModalRegistroIngreso({
     resumenGuardado,
     resetFormulario,
     error,
-  } = useRegistroIngreso({
-    donacionesDisponibles: catalogos?.donaciones || [],
-  });
+    guardando,
+  } = useRegistroIngreso({ usuarioId, onGuardarExitoso: onExito });
 
   if (!abierto) return null;
 
@@ -40,12 +37,15 @@ export default function ModalRegistroIngreso({
   };
 
   const handleGuardar = async () => {
-    const exito = await guardarMovimiento(usuarioActual);
-    // Si la operación fue exitosa y existe callback de éxito, notifica al padre
-    if (exito && onExito) {
-      onExito(exito);
-    }
+    await guardarMovimiento();
+    // Si guardarMovimiento() fallo, error ya queda en pantalla (ver bloque de abajo) y el modal
+    // sigue abierto; si salio bien, resumenGuardado deja de ser null y la vista cambia sola.
   };
+
+  const nombreDeMedicamento = (id) =>
+    (catalogos?.medicamentos || []).find((m) => m.id === id)?.nombre || id;
+
+  const nombreDeBodega = (id) => (catalogos?.bodegas || []).find((b) => b.id === id)?.nombre || id;
 
   return (
     <div
@@ -70,13 +70,12 @@ export default function ModalRegistroIngreso({
 
           {/* Cuerpo del Modal */}
           <div className="modal-body px-4 py-3">
-            {/* Banner crítico de estado PENDIENTE */}
+            {/* Banner crítico de estado provisional */}
             <div
               className="alert border-0 rounded-3 text-dark mb-3 p-3"
               style={{ backgroundColor: "#FFF3CD", fontSize: "12px", lineHeight: "1.5" }}
             >
-              <strong>⚠️ Advertencia:</strong> Este movimiento se registrará en estado{" "}
-              <strong>PENDIENTE</strong> y los lotes ingresados quedarán como{" "}
+              <strong>⚠️ Advertencia:</strong> Los lotes que crea este ingreso quedan como{" "}
               <strong>provisionales</strong>. <u>No afectarán el stock de inventario</u> hasta su
               confirmación.
             </div>
@@ -102,16 +101,10 @@ export default function ModalRegistroIngreso({
                   style={{ fontSize: "12px" }}
                 >
                   <p className="mb-1">
-                    <strong>Folio:</strong> {resumenGuardado.id}
-                  </p>
-                  <p className="mb-1">
                     <strong>Origen:</strong> {resumenGuardado.origen?.toUpperCase()}
                   </p>
-                  <p className="mb-1">
-                    <strong>Registrado por:</strong> {resumenGuardado.registrado_por}
-                  </p>
                   <p className="mb-0">
-                    <strong>Total de Ítems:</strong> {resumenGuardado.items?.length}
+                    <strong>Total de Ítems:</strong> {resumenGuardado.movimientos?.length}
                   </p>
                 </div>
                 <div className="d-flex justify-content-end pt-3">
@@ -175,46 +168,28 @@ export default function ModalRegistroIngreso({
                   </div>
                 </div>
 
-                {/* Campos dinámicos según Origen */}
+                {/* Proveedor / Donante y comprobante */}
                 <div className="row g-3">
-                  {origen === "compra" ? (
-                    <div className="col-md-6">
-                      <label
-                        className="form-label fw-semibold text-secondary"
-                        style={{ fontSize: "12px" }}
-                      >
-                        Proveedor *
-                      </label>
-                      <input
-                        type="text"
-                        className="form-control form-control-sm rounded-3"
-                        placeholder="Ej. Distribuidora Farmacéutica"
-                        value={proveedor}
-                        onChange={(e) => setProveedor(e.target.value)}
-                      />
-                    </div>
-                  ) : (
-                    <div className="col-md-6">
-                      <label
-                        className="form-label fw-semibold text-secondary"
-                        style={{ fontSize: "12px" }}
-                      >
-                        Vincular Donación Existente *
-                      </label>
-                      <select
-                        className="form-select form-select-sm rounded-3"
-                        value={donacionId}
-                        onChange={(e) => setDonacionId(e.target.value)}
-                      >
-                        <option value="">-- Seleccionar Donación --</option>
-                        {(catalogos?.donaciones || []).map((d) => (
-                          <option key={d.id} value={d.id}>
-                            {d.donante} ({d.fecha || "Sin fecha"})
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
+                  <div className="col-md-6">
+                    <label
+                      className="form-label fw-semibold text-secondary"
+                      style={{ fontSize: "12px" }}
+                    >
+                      {origen === "compra" ? "Proveedor *" : "Donante *"}
+                    </label>
+                    <select
+                      className="form-select form-select-sm rounded-3"
+                      value={proveedorId}
+                      onChange={(e) => setProveedorId(e.target.value)}
+                    >
+                      <option value="">-- Seleccionar --</option>
+                      {(catalogos?.proveedores || []).map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.nombre}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
                   <div className="col-md-6">
                     <label
@@ -352,7 +327,7 @@ export default function ModalRegistroIngreso({
                       style={{ fontSize: "11px" }}
                     >
                       <tr>
-                        <th className="py-2 px-3">Medicamento ID</th>
+                        <th className="py-2 px-3">Medicamento</th>
                         <th className="py-2 px-3">Lote</th>
                         <th className="py-2 px-3">Bodega</th>
                         <th className="py-2 px-3">Vencimiento</th>
@@ -370,9 +345,11 @@ export default function ModalRegistroIngreso({
                       ) : (
                         items.map((item) => (
                           <tr key={item.id}>
-                            <td className="px-3 fw-semibold text-dark">{item.medicamento_id}</td>
+                            <td className="px-3 fw-semibold text-dark">
+                              {nombreDeMedicamento(item.medicamento_id)}
+                            </td>
                             <td className="px-3">{item.numero_lote}</td>
-                            <td className="px-3">{item.bodega_id}</td>
+                            <td className="px-3">{nombreDeBodega(item.bodega_id)}</td>
                             <td className="px-3">{item.fecha_vencimiento || "N/A"}</td>
                             <td className="px-3 fw-bold">{item.cantidad}</td>
                             <td className="px-3 text-end">
@@ -407,10 +384,11 @@ export default function ModalRegistroIngreso({
               <button
                 type="button"
                 onClick={handleGuardar}
+                disabled={guardando}
                 className="btn btn-sm text-white rounded-3 px-4 fw-semibold"
                 style={{ backgroundColor: "#009963" }}
               >
-                Guardar Movimiento
+                {guardando ? "Guardando..." : "Guardar Movimiento"}
               </button>
             )}
           </div>
