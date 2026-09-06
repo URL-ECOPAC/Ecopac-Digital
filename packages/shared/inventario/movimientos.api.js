@@ -10,19 +10,36 @@ import { ESTADOS_MOVIMIENTO, ORIGENES_DE_LOTE, TIPOS_DE_MOVIMIENTO } from "../en
  * jornada (issue #491). El botiquin de una jornada es jornadas.botiquin_bodega_id (00036);
  * quien necesite "movimientos del botiquin de esta jornada" resuelve ese id primero y filtra
  * por bodega_id aqui.
+ *
+ * `registradoPor`/`aprobadoPor` salen de perfiles vía las dos FK de movimientos_inventario
+ * (00023), mismo patron que recetas.medico_id en pacientes/recetas.api.js. RLS sobre perfiles
+ * (00038) solo deja leer el propio perfil o, si quien consulta es administrador, cualquiera:
+ * un medico o voluntario que mire el kardex de un movimiento ajeno recibe null en ese embed, no
+ * un error -- es el mismo limite de visibilidad que ya rige el resto de la aplicacion, no algo
+ * que esta funcion deba evadir.
  */
-export async function listarMovimientos({ tipo, estado, bodega_id, fecha_inicio, fecha_fin } = {}) {
+export async function listarMovimientos({
+  tipo,
+  estado,
+  bodega_id,
+  lote_id,
+  fecha_inicio,
+  fecha_fin,
+} = {}) {
   try {
     const supabase = obtenerSupabase();
     let query = supabase.from("movimientos_inventario").select(`
       *,
       lote:lotes(*, medicamento:medicamentos(*)),
-      bodega:bodegas(*)
+      bodega:bodegas(*),
+      registradoPor:perfiles!movimientos_inventario_registrado_por_fkey(nombres, apellidos),
+      aprobadoPor:perfiles!movimientos_inventario_aprobado_por_fkey(nombres, apellidos)
     `);
 
     if (tipo) query = query.eq("tipo", tipo);
     if (estado) query = query.eq("estado", estado);
     if (bodega_id) query = query.eq("bodega_id", bodega_id);
+    if (lote_id) query = query.eq("lote_id", lote_id);
     if (fecha_inicio) query = query.gte("created_at", fecha_inicio);
     if (fecha_fin) query = query.lte("created_at", fecha_fin);
 

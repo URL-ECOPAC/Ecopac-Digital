@@ -1,3 +1,4 @@
+import { exportarFilasACSV, TIPOS_DE_PRESENTACION } from "@ecopac/shared";
 import {
   useKardexMovimientos,
   TIPO_MOVIMIENTO,
@@ -15,12 +16,37 @@ const colores = {
   bordeActivo: "#10b981",
 };
 
+const COLUMNAS_CSV_KARDEX = [
+  { id: "created_at", label: "Fecha registro", tipo: TIPOS_DE_PRESENTACION.FECHA },
+  { id: "tipo", label: "Tipo" },
+  { id: "cantidad", label: "Cantidad", tipo: TIPOS_DE_PRESENTACION.NUMERO },
+  { id: "motivo", label: "Motivo" },
+  { id: "registrado_por_nombre", label: "Registrado por" },
+  { id: "aprobado_por_nombre", label: "Aprobado por" },
+  { id: "aprobado_en", label: "Fecha aprobación", tipo: TIPOS_DE_PRESENTACION.FECHA },
+  { id: "estado", label: "Estado" },
+  { id: "saldoAcumulado", label: "Saldo", tipo: TIPOS_DE_PRESENTACION.NUMERO },
+];
+
+/** Descarga el CSV. Vive aca porque toca document, Blob y URL, que shared no puede tocar. */
+function descargarCSV(movimientos) {
+  const blob = new Blob([exportarFilasACSV(movimientos, COLUMNAS_CSV_KARDEX)], {
+    type: "text/csv;charset=utf-8;",
+  });
+  const url = URL.createObjectURL(blob);
+  const enlace = document.createElement("a");
+  enlace.href = url;
+  enlace.download = "kardex-movimientos.csv";
+  enlace.click();
+  URL.revokeObjectURL(url);
+}
+
 export default function KardexMovimientosPage({
   loteId = null,
   medicamentoId = null,
   titulo = "Historial de Movimientos",
 }) {
-  const { movimientos, cargando, filtros, setFiltros, exportar } = useKardexMovimientos({
+  const { movimientos, cargando, error, filtros, setFiltros } = useKardexMovimientos({
     loteId,
     medicamentoId,
   });
@@ -90,7 +116,8 @@ export default function KardexMovimientosPage({
           </p>
         </div>
         <button
-          onClick={exportar}
+          onClick={() => descargarCSV(movimientos)}
+          disabled={movimientos.length === 0}
           style={{
             padding: "10px 18px",
             background: colores.botonFondo,
@@ -203,6 +230,11 @@ export default function KardexMovimientosPage({
         <p style={{ textAlign: "center", padding: "40px", color: colores.textoSecundario }}>
           Cargando movimientos...
         </p>
+      ) : error ? (
+        <div style={{ textAlign: "center", padding: "40px 20px", color: "#dc2626" }}>
+          <p style={{ fontSize: "15px", margin: 0 }}>No se pudo cargar el historial</p>
+          <p style={{ fontSize: "13px", margin: "8px 0 0 0" }}>{error.mensaje}</p>
+        </div>
       ) : movimientos.length === 0 ? (
         <div style={{ textAlign: "center", padding: "40px 20px", color: colores.textoSecundario }}>
           <p style={{ fontSize: "15px", margin: 0 }}>No hay movimientos registrados</p>
@@ -350,7 +382,7 @@ export default function KardexMovimientosPage({
                     {mov.aprobado_por_nombre || "Pendiente"}
                   </td>
                   <td style={{ padding: "10px", fontSize: "12px", color: colores.textoSecundario }}>
-                    {formatoFecha(mov.fecha_aprobacion)}
+                    {formatoFecha(mov.aprobado_en)}
                   </td>
                   <td
                     style={{ padding: "10px" }}

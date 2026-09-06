@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { registrarIngreso, registrarSalida, editarMovimiento } from "./movimientos.api.js";
+import {
+  registrarIngreso,
+  registrarSalida,
+  editarMovimiento,
+  listarMovimientos,
+} from "./movimientos.api.js";
 import { obtenerSupabase } from "../api/cliente.js";
 
 vi.mock("../api/cliente.js", () => ({
@@ -207,6 +212,58 @@ describe("Módulo de Inventario - API Movimientos", () => {
 
       const res = await editarMovimiento("MOV-1", { cantidad: 20 }, "USR-2");
       expect(res.error.mensaje).toContain("registro");
+    });
+  });
+
+  describe("listarMovimientos", () => {
+    it("trae los movimientos con lote, bodega y los perfiles de registrado/aprobado por", async () => {
+      const fila = {
+        id: "MOV-1",
+        tipo: "ingreso",
+        cantidad: 100,
+        estado: "aprobado",
+        lote: { id: "LOTE-1", medicamento: { id: "MED-1", nombre: "Amoxicilina" } },
+        bodega: { id: "BOD-1", nombre: "Central" },
+        registradoPor: { nombres: "Ana", apellidos: "Lopez" },
+        aprobadoPor: { nombres: "Ana", apellidos: "Lopez" },
+      };
+      mockSupabase.order.mockResolvedValueOnce({ data: [fila], error: null });
+
+      const { datos, error } = await listarMovimientos({ lote_id: "LOTE-1" });
+
+      expect(error).toBeNull();
+      expect(datos).toEqual([fila]);
+      expect(mockSupabase.from).toHaveBeenCalledWith("movimientos_inventario");
+      expect(mockSupabase.eq).toHaveBeenCalledWith("lote_id", "LOTE-1");
+      // Las dos FK de movimientos_inventario a perfiles (00023) se embeben con el hint de
+      // constraint, no con "perfiles(...)" a secas: hay dos, y PostgREST no puede adivinar cual.
+      expect(mockSupabase.select).toHaveBeenCalledWith(
+        expect.stringContaining("perfiles!movimientos_inventario_registrado_por_fkey"),
+      );
+      expect(mockSupabase.select).toHaveBeenCalledWith(
+        expect.stringContaining("perfiles!movimientos_inventario_aprobado_por_fkey"),
+      );
+    });
+
+    it("nunca devuelve null: una lista vacia se dibuja sola", async () => {
+      mockSupabase.order.mockResolvedValueOnce({ data: null, error: null });
+
+      const { datos, error } = await listarMovimientos();
+
+      expect(error).toBeNull();
+      expect(datos).toEqual([]);
+    });
+
+    it("normaliza el error de la consulta en vez de dejarlo escapar", async () => {
+      mockSupabase.order.mockResolvedValueOnce({
+        data: null,
+        error: { message: "conexion caida" },
+      });
+
+      const { datos, error } = await listarMovimientos();
+
+      expect(datos).toEqual([]);
+      expect(error).not.toBeNull();
     });
   });
 });
