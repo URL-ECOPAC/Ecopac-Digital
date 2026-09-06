@@ -5,6 +5,7 @@ import {
   esTextoVacio,
 } from "../validations/index.js";
 import { CAMPOS_PACIENTE, CAMPOS_REGISTRO_PACIENTE } from "./campos.js";
+import { aFechaLocal } from "../formato/fechas.js";
 
 const REGEX_DPI = /^\d{13}$/;
 const EDAD_MAXIMA_ANOS = 120;
@@ -35,11 +36,15 @@ function erroresDeNegocioPaciente(datos) {
   const erroresNegocio = {};
 
   // Validar Fecha de Nacimiento
+  //
+  // issue #694: usaba new Date(datos.fechaNacimiento), que interpreta una cadena AAAA-MM-DD
+  // como medianoche UTC. En Guatemala (UTC-6) eso corre la fecha de nacimiento un dia.
+  // aFechaLocal() (formato/fechas.js) la lee como dia de calendario, sin ese desplazamiento.
   if (!esTextoVacio(datos.fechaNacimiento)) {
-    const fecha = new Date(datos.fechaNacimiento);
+    const fecha = aFechaLocal(datos.fechaNacimiento);
     const ahora = new Date();
 
-    if (isNaN(fecha.getTime())) {
+    if (!fecha) {
       erroresNegocio.fechaNacimiento = "Fecha de nacimiento no válida.";
     } else if (fecha > ahora) {
       erroresNegocio.fechaNacimiento = "La fecha de nacimiento no puede ser futura.";

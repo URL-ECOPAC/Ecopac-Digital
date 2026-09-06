@@ -1,4 +1,4 @@
-import { diasHastaVencimiento, formatearFechaCorta } from "../formato/fechas.js";
+import { diasHastaVencimiento, formatearFechaCorta, aFechaLocal } from "../formato/fechas.js";
 
 function fechaDeVencimientoDe(lote) {
   if (!lote) return null;
@@ -66,17 +66,17 @@ export function sugerirLote(lotes = [], cantidadSolicitada = 0, fechaReferencia 
     };
   }
 
-  const hoy = new Date(fechaReferencia);
-  hoy.setHours(0, 0, 0, 0);
-
-  // Filtrar no vencidos con stock disponible y ordenar por vencimiento ascendente (FEFO)
+  // Filtrar no vencidos con stock disponible y ordenar por vencimiento ascendente (FEFO).
+  // esLoteEntregable() ya decide "vencido" correctamente (issue #694): antes esta funcion
+  // reimplementaba el corte a mano con new Date(lote.fecha_vencimiento) >= hoy, que en
+  // Guatemala (UTC-6) adelanta un dia cualquier cadena AAAA-MM-DD y hacia vencido un lote que
+  // en realidad vencia hoy.
   const lotesValidos = lotes
-    .filter((lote) => {
-      if (!lote || !lote.fecha_vencimiento) return false;
-      const fechaVenc = new Date(lote.fecha_vencimiento);
-      return fechaVenc >= hoy && Number(lote.cantidad_disponible) > 0;
-    })
-    .sort((a, b) => new Date(a.fecha_vencimiento) - new Date(b.fecha_vencimiento));
+    .filter(
+      (lote) =>
+        lote && esLoteEntregable(lote, fechaReferencia) && Number(lote.cantidad_disponible) > 0,
+    )
+    .sort((a, b) => aFechaLocal(a.fecha_vencimiento) - aFechaLocal(b.fecha_vencimiento));
 
   let restante = cantidadSolicitada;
   const lotesSugeridos = [];

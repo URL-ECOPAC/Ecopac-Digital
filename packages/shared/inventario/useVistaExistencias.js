@@ -1,5 +1,7 @@
 import { useState, useMemo, useCallback } from "react";
 
+import { diasHastaVencimiento } from "../formato/fechas.js";
+
 // ─── Estados de vencimiento ───
 // REGLAS ALINEADAS CON MIGRACIÓN #597:
 // • Vence HOY → SÍ es entregable → DISPONIBLE
@@ -21,18 +23,11 @@ const DIAS_AVISO_VENCIMIENTO = 30; // días antes = "Próximo a vencer"
 //   = 0 → vence hoy → SIGUE SIENDO VÁLIDO
 //   < 0 → ya venció
 export function calcularDiasRestantes(fechaCaducidad) {
-  if (!fechaCaducidad) return null;
-
-  // Normalizar a medianoche para ignorar horas
-  const hoy = new Date();
-  hoy.setHours(0, 0, 0, 0);
-
-  const fechaVenc = new Date(fechaCaducidad);
-  fechaVenc.setHours(0, 0, 0, 0);
-
-  // Diferencia en días (redondeo hacia abajo)
-  const diasRestantes = Math.floor((fechaVenc - hoy) / (1000 * 60 * 60 * 24));
-  return diasRestantes;
+  // issue #694: calculaba con new Date(fechaCaducidad), que interpreta una cadena AAAA-MM-DD
+  // como medianoche UTC. En Guatemala (UTC-6) eso adelanta un dia cualquier fecha de
+  // vencimiento, y un lote que vence hoy salia VENCIDO. diasHastaVencimiento() (formato/fechas.js)
+  // ya resuelve esto comparando dia de calendario, no instante.
+  return diasHastaVencimiento(fechaCaducidad);
 }
 
 // ─── Estado según reglas del sistema (migración #597) ───
