@@ -23,7 +23,7 @@ const SUBTITULOS = {
   proyectos: "Proyectos sociales y su avance",
   reportes: "Indicadores de impacto",
   jornadas: "Tablero de jornadas medicas",
-  voluntarios: "Medicos y voluntarios",
+  colaboradores: "Personal registrado",
 };
 
 function moduloDeRuta(pathname) {

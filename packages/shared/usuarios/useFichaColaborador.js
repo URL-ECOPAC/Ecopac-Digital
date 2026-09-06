@@ -9,7 +9,7 @@
 //
 // El historial de jornadas y los permisos efectivos NO viven aca: la pantalla los pide aparte
 // con useHistorialDePersona(perfilId) y useGestionPermisos(perfilId), que ya existen y ya
-// resuelven eso, igual que hace VoluntariosPage.jsx (web) con el panel de detalle.
+// resuelven eso, igual que hace ColaboradoresPage.jsx (web) con el panel de detalle.
 
 import { useCallback, useEffect, useState } from "react";
 
@@ -18,7 +18,7 @@ import { nombreCompletoDe } from "./useUsuariosListado.js";
 
 /**
  * Combina un perfil suelto con sus especialidades en la forma que consumen los descriptores de
- * ficha (CAMPOS_FICHA_VOLUNTARIO), agregando nombreCompleto igual que armarFilas() lo hace para
+ * ficha (CAMPOS_FICHA_COLABORADOR), agregando nombreCompleto igual que armarFilas() lo hace para
  * el listado. Funcion pura y exportada aparte del hook: packages/shared corre vitest con
  * environment "node", mismo motivo que armarFilas() en useUsuariosListado.js.
  *
@@ -26,7 +26,7 @@ import { nombreCompletoDe } from "./useUsuariosListado.js";
  * @param {string[]} especialidades
  * @returns {object|null}
  */
-export function armarFichaVoluntario(perfil, especialidades = []) {
+export function armarFichaColaborador(perfil, especialidades = []) {
   if (!perfil) return null;
   return { ...perfil, nombreCompleto: nombreCompletoDe(perfil), especialidades };
 }
@@ -40,7 +40,7 @@ export function armarFichaVoluntario(perfil, especialidades = []) {
  *   recargar: () => Promise<void>,
  * }}
  */
-export function useFichaVoluntario(perfilId) {
+export function useFichaColaborador(perfilId) {
   const [ficha, setFicha] = useState(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
@@ -60,7 +60,7 @@ export function useFichaVoluntario(perfilId) {
       obtenerEspecialidadesDePerfil(perfilId),
     ]);
 
-    setFicha(armarFichaVoluntario(perfil, especialidades));
+    setFicha(armarFichaColaborador(perfil, especialidades));
     setError(errorDePerfil);
     setCargando(false);
   }, [perfilId]);

@@ -14,7 +14,7 @@ import SecondaryButton from "../components/SecondaryButton";
 import StatusChip from "../components/StatusChip";
 
 // Modal de permisos individuales de un usuario (issue #108), abierto DIRECTO desde la fila del
-// listado en VoluntariosPage.jsx -no desde adentro de ModalEdicionUsuario-: es una accion
+// listado en ColaboradoresPage.jsx -no desde adentro de ModalEdicionUsuario-: es una accion
 // hermana de "Editar", al mismo nivel, no anidada (PLAN.md, decision 2). El segundo boton por
 // fila que esto necesita lo da la prop accionSecundaria de DataList.jsx, agregada para este
 // issue con autorizacion explicita para tocar el catalogo.

@@ -39,6 +39,7 @@ export * from "./alertas.api.js";
 export * from "./permisos.js";
 export * from "./validacion.api.js";
 export * from "./useCatalogoMedicamentos.js";
+export * from "./useCatalogoPrincipiosActivos.js";
 export * from "./useInventario.js";
 export * from "./usePendientesValidacion.js";
 export * from "./useRegistroIngreso.js";

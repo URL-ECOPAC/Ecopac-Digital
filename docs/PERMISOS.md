@@ -28,7 +28,7 @@ con espacios**; escribirlos de otra forma es un error que no falla hasta tiempo 
 | `junta directiva`    | Junta directiva         | Gobernanza, solo lectura y solo de agregados              |
 | `socio fundador`     | Socio fundador          | **Identico a junta directiva**                            |
 | `medico`             | Medico                  | Operacion clinica en jornada                              |
-| `voluntario general` | Voluntario              | Apoyo en campo: pacientes y triaje, sin clinica           |
+| `voluntario general` | Colaborador              | Apoyo en campo: pacientes y triaje, sin clinica           |
 
 En el codigo se usan siempre desde `packages/shared/usuarios/roles.js`, que replica el enum y
 publica `ROLES`, `ROLES_CONSULTIVOS`, `esAdministrador()` y `esConsultivo()`. **Nunca se escribe un
