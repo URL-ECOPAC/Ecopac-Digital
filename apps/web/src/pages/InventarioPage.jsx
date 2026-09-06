@@ -1083,6 +1083,7 @@ export default function InventarioPage() {
         abierto={modalSalidaAbierto}
         onClose={() => setModalSalidaAbierto(false)}
         medicamentos={inventarioRaw}
+        usuarioId={usuarioActual?.id}
       />
 
       {modalAltaLoteAbierto && (

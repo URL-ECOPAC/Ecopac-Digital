@@ -1,6 +1,6 @@
 import { useRegistroSalida } from "../../../../packages/shared/inventario/useRegistroSalida";
 
-export function ModalSalidaMedicamento({ abierto, onClose, medicamentos = [] }) {
+export function ModalSalidaMedicamento({ abierto, onClose, medicamentos = [], usuarioId }) {
   const {
     motivo,
     setMotivo,
@@ -14,7 +14,7 @@ export function ModalSalidaMedicamento({ abierto, onClose, medicamentos = [] }) 
     error,
     cargando,
     guardarSalida,
-  } = useRegistroSalida({ onExito: onClose });
+  } = useRegistroSalida({ usuarioId, onExito: onClose });
 
   if (!abierto) return null;
 
@@ -175,9 +175,9 @@ export function ModalSalidaMedicamento({ abierto, onClose, medicamentos = [] }) 
                 Lote Sugerido (FEFO) *
               </label>
               <select
-                value={loteSeleccionado?.lote_id || ""}
+                value={loteSeleccionado?.loteId || ""}
                 onChange={(e) => {
-                  const loteEncontrado = lotesDisponibles.find((l) => l.lote_id === e.target.value);
+                  const loteEncontrado = lotesDisponibles.find((l) => l.loteId === e.target.value);
                   if (loteEncontrado) seleccionarLote(loteEncontrado);
                 }}
                 required
@@ -192,9 +192,9 @@ export function ModalSalidaMedicamento({ abierto, onClose, medicamentos = [] }) 
               >
                 <option value="">Lote sugerido por orden de vencimiento...</option>
                 {lotesDisponibles.map((lote) => (
-                  <option key={lote.lote_id} value={lote.lote_id}>
-                    Lote: {lote.numero_lote} - Vence: {lote.fecha_vencimiento} (Disp:{" "}
-                    {lote.cantidad_disponible})
+                  <option key={lote.loteId} value={lote.loteId}>
+                    Lote: {lote.numeroLote} - Bodega: {lote.bodega} - Vence: {lote.fechaVencimiento}{" "}
+                    (Disp: {lote.cantidadDisponible})
                   </option>
                 ))}
               </select>

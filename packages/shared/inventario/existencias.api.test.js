@@ -12,7 +12,45 @@ vi.mock("../api/cliente.js", () => ({
   },
 }));
 
-const { consultarExistencias, consultarExistenciasDeBodega } = await import("./existencias.api.js");
+const { consultarExistencias, consultarExistenciasDeBodega, consultarLotesDisponibles } =
+  await import("./existencias.api.js");
+
+/**
+ * Doble de query builder para consultarLotesDisponibles(), que encadena .from().select().eq()
+ * (y opcionalmente un segundo .eq() por bodega) .order(). Aparte de crearCliente() -que solo
+ * sirve para las funciones basadas en .rpc()- porque esta es la unica funcion del archivo que
+ * consulta una vista con el query builder normal.
+ */
+function crearClienteDeVista(respuesta) {
+  const llamadas = [];
+  const resolver = async () => (respuesta instanceof Error ? Promise.reject(respuesta) : respuesta);
+
+  const encadenable = {
+    select(columnas) {
+      llamadas.push({ paso: "select", columnas });
+      return encadenable;
+    },
+    eq(columna, valor) {
+      llamadas.push({ paso: "eq", columna, valor });
+      return encadenable;
+    },
+    order(columna, opciones) {
+      llamadas.push({ paso: "order", columna, opciones });
+      return encadenable;
+    },
+    then(resolve, reject) {
+      return resolver().then(resolve, reject);
+    },
+  };
+
+  return {
+    llamadas,
+    from(tabla) {
+      llamadas.push({ paso: "from", tabla });
+      return encadenable;
+    },
+  };
+}
 
 function crearCliente({ respuesta = { data: [], error: null } } = {}) {
   const llamadas = [];
@@ -187,5 +225,96 @@ describe("consultarExistenciasDeBodega", () => {
 
     expect(cliente.llamadas[0].parametros.p_bodega_id).toBe("bod-9");
     expect(cliente.llamadas[0].parametros.p_busqueda).toBe("ibu");
+  });
+});
+
+describe("consultarLotesDisponibles", () => {
+  it("sin medicamentoId no toca el cliente", async () => {
+    const { lotes, error } = await consultarLotesDisponibles(undefined);
+
+    expect(lotes).toEqual([]);
+    expect(error).toBeNull();
+  });
+
+  it("consulta vista_lotes_disponibles filtrando por medicamento, sin exigir bodega", async () => {
+    const cliente = crearClienteDeVista({ data: [], error: null });
+    dobles.cliente = cliente;
+
+    await consultarLotesDisponibles("med-1");
+
+    expect(cliente.llamadas[0]).toEqual({ paso: "from", tabla: "vista_lotes_disponibles" });
+    expect(cliente.llamadas).toContainEqual({
+      paso: "eq",
+      columna: "medicamento_id",
+      valor: "med-1",
+    });
+    expect(cliente.llamadas).not.toContainEqual(
+      expect.objectContaining({ paso: "eq", columna: "bodega_id" }),
+    );
+  });
+
+  it("con bodega agrega el segundo filtro", async () => {
+    const cliente = crearClienteDeVista({ data: [], error: null });
+    dobles.cliente = cliente;
+
+    await consultarLotesDisponibles("med-1", { bodega: "bod-1" });
+
+    expect(cliente.llamadas).toContainEqual({ paso: "eq", columna: "bodega_id", valor: "bod-1" });
+  });
+
+  it("nunca devuelve null: sin lotes se dibuja una lista vacia", async () => {
+    dobles.cliente = crearClienteDeVista({ data: null, error: null });
+
+    const { lotes, error } = await consultarLotesDisponibles("med-1");
+
+    expect(error).toBeNull();
+    expect(lotes).toEqual([]);
+  });
+
+  it("un lote con cantidad_disponible en cero no lo devuelve la vista, y aqui no se inventa", async () => {
+    // vista_lotes_disponibles (00047) ya excluye lo vencido y lo que esta en cero: esta prueba
+    // fija que la funcion no filtra nada por su cuenta y devuelve exactamente lo que la vista
+    // entrega, sin usar lotes.cantidad_ingresada como sustituto (issue #690).
+    // Los alias van en el propio .select() (PostgREST los resuelve del lado del servidor), asi
+    // que la fila que "contesta" el doble ya viene en camelCase, igual que la real.
+    const cliente = crearClienteDeVista({
+      data: [
+        {
+          loteId: "lote-1",
+          medicamentoId: "med-1",
+          numeroLote: "L-1",
+          fechaVencimiento: "2027-01-01",
+          cantidadDisponible: 30,
+          bodegaId: "bod-1",
+          bodega: "Central",
+        },
+      ],
+      error: null,
+    });
+    dobles.cliente = cliente;
+
+    const { lotes, error } = await consultarLotesDisponibles("med-1");
+
+    expect(error).toBeNull();
+    expect(lotes).toEqual([
+      {
+        loteId: "lote-1",
+        medicamentoId: "med-1",
+        numeroLote: "L-1",
+        fechaVencimiento: "2027-01-01",
+        cantidadDisponible: 30,
+        bodegaId: "bod-1",
+        bodega: "Central",
+      },
+    ]);
+  });
+
+  it("clasifica como fallo de red la excepcion del fetch", async () => {
+    dobles.cliente = crearClienteDeVista(new Error("network down"));
+
+    const { lotes, error } = await consultarLotesDisponibles("med-1");
+
+    expect(lotes).toEqual([]);
+    expect(error).not.toBeNull();
   });
 });
