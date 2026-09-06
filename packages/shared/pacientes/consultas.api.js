@@ -30,8 +30,11 @@ const COLUMNAS_CON_DETALLE = [
   "receta:recetas(id, folio, indicacionesGenerales:indicaciones_generales)",
 ].join(", ");
 
-/** Lo que se lee de una fila del catalogo de diagnosticos (00018, mantenible desde la 00105). */
-const COLUMNAS_DEL_DIAGNOSTICO = "id, codigo, nombre, descripcion";
+/**
+ * Lo que se lee de una fila del catalogo de diagnosticos (00018, mantenible desde la 00105).
+ * `activo` es la 00113: FALSE lo retira del selector de consulta sin borrarlo.
+ */
+const COLUMNAS_DEL_DIAGNOSTICO = "id, codigo, nombre, descripcion, activo";
 
 /**
  * Texto opcional para una columna nullable: vacio y solo espacios son NULL, no "".
@@ -420,21 +423,28 @@ export async function contarConsultasDeJornada(jornadaId, { rol } = {}) {
 
 /**
  * Catalogo de diagnosticos, que es lo que alimenta `opcionesDesde: 'diagnosticos'` de
- * CAMPOS_CONSULTA. Hasta la issue #137 ese descriptor declaraba un catalogo que nadie
- * publicaba.
+ * CAMPOS_CONSULTA y la pantalla de mantenimiento del catalogo (issue #639).
+ *
+ * Hasta la issue #137 ese descriptor declaraba un catalogo que nadie publicaba.
  *
  * Hasta la issue #625 la tabla estaba ademas VACIA -ninguna migracion ni seed la cargaba- y no
  * habia forma de llenarla: solo tenia GRANT SELECT y politica de SELECT. La 00105 siembra el
  * conjunto inicial de codigos CIE-10 y abre el mantenimiento a la administradora.
  *
+ * `soloActivos` sigue el mismo default que listarMedicamentos() (inventario/medicamentos.api.js):
+ * TRUE, porque el uso mas comun -el selector de la consulta- no debe ofrecer un diagnostico
+ * retirado (00113). La pantalla de catalogo pide `soloActivos: false` para poder ver y
+ * reactivar los que estan inactivos.
+ *
+ * @param {{ soloActivos?: boolean }} [opciones]
  * @returns {Promise<{ diagnosticos: object[], error: object|null }>}
  */
-export async function listarDiagnosticos() {
+export async function listarDiagnosticos({ soloActivos = true } = {}) {
   try {
-    const { data, error } = await obtenerSupabase()
-      .from("diagnosticos")
-      .select(COLUMNAS_DEL_DIAGNOSTICO)
-      .order("nombre", { ascending: true });
+    let consulta = obtenerSupabase().from("diagnosticos").select(COLUMNAS_DEL_DIAGNOSTICO);
+    if (soloActivos) consulta = consulta.eq("activo", true);
+
+    const { data, error } = await consulta.order("nombre", { ascending: true });
 
     if (error) return { diagnosticos: [], error: normalizarError(error) };
     return { diagnosticos: data ?? [], error: null };
@@ -544,6 +554,63 @@ export async function actualizarDiagnostico(id, datos = {}) {
 
     // Sin fila y sin error es RLS: la politica de la 00105 no dejo pasar el UPDATE. Se traduce,
     // porque un `null` silencioso es justo la forma en que este modulo ya fallaba antes.
+    if (!data) {
+      return {
+        diagnostico: null,
+        error: {
+          ...construirError(CODIGOS_DE_ERROR_DE_SUPABASE.PERMISO_DENEGADO),
+          mensaje: "Solo la administradora puede corregir el catalogo de diagnosticos.",
+        },
+      };
+    }
+
+    return { diagnostico: data, error: null };
+  } catch (error) {
+    return { diagnostico: null, error: normalizarError(error) };
+  }
+}
+
+/**
+ * Retira un diagnostico del selector de la consulta medica sin borrarlo (issue #639).
+ *
+ * A diferencia de desactivarMedicamento() (inventario/medicamentos.api.js), no hay ningun guard
+ * de "todavia en uso" que consultar primero: un diagnostico ya citado en una consulta es
+ * exactamente el caso que esta pensado para seguir funcionando, porque consulta_diagnostico lo
+ * referencia ON DELETE RESTRICT (00018) y las filas ya escritas no cambian.
+ *
+ * @param {string} id UUID del diagnostico.
+ * @returns {Promise<{ diagnostico: object|null, error: object|null }>}
+ */
+export async function desactivarDiagnostico(id) {
+  return cambiarActivoDelDiagnostico(id, false);
+}
+
+/** Reactiva un diagnostico retirado (issue #639): vuelve a ofrecerse en el selector. */
+export async function activarDiagnostico(id) {
+  return cambiarActivoDelDiagnostico(id, true);
+}
+
+async function cambiarActivoDelDiagnostico(id, activo) {
+  if (!id) {
+    return {
+      diagnostico: null,
+      error: {
+        ...construirError(CODIGOS_DE_ERROR_DE_SUPABASE.CAMPO_REQUERIDO),
+        mensaje: "Hace falta el diagnostico que se quiere actualizar.",
+      },
+    };
+  }
+
+  try {
+    const { data, error } = await obtenerSupabase()
+      .from("diagnosticos")
+      .update({ activo })
+      .eq("id", id)
+      .select(COLUMNAS_DEL_DIAGNOSTICO)
+      .maybeSingle();
+
+    if (error) return { diagnostico: null, error: normalizarError(error) };
+
     if (!data) {
       return {
         diagnostico: null,

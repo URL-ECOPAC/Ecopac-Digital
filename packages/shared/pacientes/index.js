@@ -57,3 +57,8 @@ export * from "./consultas.secciones.js";
 export * from "./useRegistroConsulta.js";
 export * from "./registro.pasos.js";
 export * from "./useGeneracionReceta.js";
+export * from "./catalogoDiagnosticos.campos.js";
+export * from "./catalogoDiagnosticos.columnas.js";
+export * from "./catalogoDiagnosticos.filtros.js";
+export * from "./useCatalogoDiagnosticos.js";
+export * from "./useFormularioDiagnostico.js";
