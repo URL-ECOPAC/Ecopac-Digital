@@ -1,6 +1,7 @@
 import { useState, useCallback, useMemo, useEffect } from "react";
 
-// ─── TIPOS ALINEADOS EXACTAMENTE CON LA MIGRACIÓN ───
+import { listarMovimientos } from "./movimientos.api.js";
+
 // tipo_movimiento ENUM: 'ingreso', 'salida'
 export const TIPO_MOVIMIENTO = {
   INGRESO: "ingreso",
@@ -14,16 +15,52 @@ export const ESTADO_MOVIMIENTO = {
   RECHAZADO: "rechazado",
 };
 
+/** Nombre completo de un perfil embebido, o null si RLS no dejo verlo (ver listarMovimientos()). */
+export function nombreDe(perfil) {
+  if (!perfil) return null;
+  return [perfil.nombres, perfil.apellidos].filter(Boolean).join(" ") || null;
+}
+
 /**
- * Hook Kardex de Movimientos — Issue #161
- * Estructura y lógica alineada con migración movimientos_inventario:
- * - Solo movimientos APROBADOS afectan el saldo
- * - Rechazados y Pendientes se muestran pero NO modifican existencias
- * - Campos reales: created_at, fecha_aprobacion, lote_id, bodega_id
+ * Filtra las filas de listarMovimientos() por medicamento y las deja listas para la pantalla.
+ *
+ * Pura y exportada aparte del hook para poder probarla sin montar React (packages/shared corre
+ * vitest en environment "node", sin DOM): es la unica forma de comprobar, sin datos inventados
+ * de por medio, que esta pantalla arma sus filas a partir de lo que listarMovimientos() devuelve
+ * de verdad.
+ *
+ * @param {object[]} datos Filas de listarMovimientos().
+ * @param {string|null} medicamentoId medicamento_id no es filtro de listarMovimientos() -vive en
+ *   lotes, no en movimientos_inventario-, asi que se aplica aqui sobre el lote embebido.
+ */
+export function filasDeKardex(datos, medicamentoId) {
+  const filas = medicamentoId
+    ? datos.filter((mov) => mov.lote?.medicamento_id === medicamentoId)
+    : datos;
+
+  return filas.map((mov) => ({
+    ...mov,
+    registrado_por_nombre: nombreDe(mov.registradoPor),
+    aprobado_por_nombre: nombreDe(mov.aprobadoPor),
+    bodega_nombre: mov.bodega?.nombre ?? null,
+  }));
+}
+
+/**
+ * Hook Kardex de Movimientos (issue #161, reconectado por la #687).
+ *
+ * Hasta la #687 este hook devolvia cuatro movimientos escritos a mano con un TODO que esperaba
+ * a la issue #159 -- ya resuelta hace tiempo, en movimientos.api.js. Ahora llama a
+ * listarMovimientos() de verdad.
+ *
+ * `medicamentoId` no es un filtro que listarMovimientos() entienda (medicamento_id vive en
+ * lotes, no en movimientos_inventario): se aplica aqui sobre el lote embebido de cada fila. Solo
+ * movimientos APROBADOS afectan el saldo; rechazados y pendientes se muestran pero no lo tocan.
  */
 export function useKardexMovimientos({ loteId = null, medicamentoId = null }) {
   const [movimientos, setMovimientos] = useState([]);
   const [cargando, setCargando] = useState(false);
+  const [error, setError] = useState(null);
 
   // Filtros según criterios de aceptación
   const [filtros, setFiltros] = useState({
@@ -32,8 +69,33 @@ export function useKardexMovimientos({ loteId = null, medicamentoId = null }) {
     tipoMovimiento: "todos",
   });
 
+  const cargarMovimientos = useCallback(async () => {
+    if (!loteId && !medicamentoId) {
+      setMovimientos([]);
+      setError(null);
+      return;
+    }
+
+    setCargando(true);
+    setError(null);
+
+    const { datos, error: errorDeConsulta } = await listarMovimientos({
+      lote_id: loteId || undefined,
+    });
+
+    if (errorDeConsulta) {
+      setMovimientos([]);
+      setError(errorDeConsulta);
+      setCargando(false);
+      return;
+    }
+
+    setMovimientos(filasDeKardex(datos, medicamentoId));
+    setCargando(false);
+  }, [loteId, medicamentoId]);
+
   // ─── CALCULAR SALDO ACUMULADO ───
-  // ✅ Solo movimientos APROBADOS modifican el saldo
+  // Solo movimientos APROBADOS modifican el saldo
   const movimientosConSaldo = useMemo(() => {
     let saldo = 0;
     return movimientos.map((mov) => {
@@ -50,7 +112,7 @@ export function useKardexMovimientos({ loteId = null, medicamentoId = null }) {
       return {
         ...mov,
         saldoAcumulado: saldo,
-        afectaSaldo: esAprobado, // ✅ Para marcar visualmente en tabla
+        afectaSaldo: esAprobado,
       };
     });
   }, [movimientos]);
@@ -59,7 +121,6 @@ export function useKardexMovimientos({ loteId = null, medicamentoId = null }) {
   const movimientosFiltrados = useMemo(() => {
     let resultado = [...movimientosConSaldo];
 
-    // 🔹 Filtro por rango de fechas (usa fecha de registro created_at)
     if (filtros.fechaDesde) {
       const desde = new Date(filtros.fechaDesde);
       resultado = resultado.filter((m) => new Date(m.created_at) >= desde);
@@ -70,7 +131,6 @@ export function useKardexMovimientos({ loteId = null, medicamentoId = null }) {
       resultado = resultado.filter((m) => new Date(m.created_at) <= hasta);
     }
 
-    // 🔹 Filtro por tipo de movimiento
     if (filtros.tipoMovimiento && filtros.tipoMovimiento !== "todos") {
       resultado = resultado.filter((m) => m.tipo === filtros.tipoMovimiento);
     }
@@ -78,98 +138,17 @@ export function useKardexMovimientos({ loteId = null, medicamentoId = null }) {
     return resultado;
   }, [movimientosConSaldo, filtros]);
 
-  // ─── CARGAR MOVIMIENTOS ───
-  const cargarMovimientos = useCallback(async () => {
-    if (!loteId && !medicamentoId) {
-      setMovimientos([]);
-      return;
-    }
-
-    setCargando(true);
-    try {
-      // ✅ TODO: Reemplazar por llamada real a API cuando #159 esté lista
-      // const respuesta = await listarMovimientos({ loteId, medicamentoId });
-      // setMovimientos(respuesta.movimientos ?? []);
-
-      // 📋 Estructura de prueba IDÉNTICA a la tabla real
-      // Campos: id, tipo, cantidad, motivo, estado, created_at, fecha_aprobacion,
-      //         registrado_por_nombre, aprobado_por_nombre, bodega_nombre
-      setMovimientos([
-        {
-          id: "m1",
-          tipo: TIPO_MOVIMIENTO.INGRESO,
-          cantidad: 100,
-          motivo: "Ingreso inicial de lote",
-          estado: ESTADO_MOVIMIENTO.APROBADO,
-          created_at: "2026-08-01T10:00:00Z",
-          fecha_aprobacion: "2026-08-01T10:15:00Z",
-          registrado_por_nombre: "Administradora Demo",
-          aprobado_por_nombre: "Administradora Demo",
-          bodega_nombre: "Central",
-        },
-        {
-          id: "m2",
-          tipo: TIPO_MOVIMIENTO.SALIDA,
-          cantidad: 20,
-          motivo: "Atención a paciente",
-          estado: ESTADO_MOVIMIENTO.APROBADO,
-          created_at: "2026-08-05T14:30:00Z",
-          fecha_aprobacion: "2026-08-05T15:00:00Z",
-          registrado_por_nombre: "Administradora Demo",
-          aprobado_por_nombre: "Supervisor",
-          bodega_nombre: "Central",
-        },
-        {
-          id: "m3",
-          tipo: TIPO_MOVIMIENTO.SALIDA,
-          cantidad: 15,
-          motivo: "Prueba rechazada — stock insuficiente",
-          estado: ESTADO_MOVIMIENTO.RECHAZADO,
-          created_at: "2026-08-10T09:15:00Z",
-          fecha_aprobacion: null,
-          registrado_por_nombre: "Administradora Demo",
-          aprobado_por_nombre: "Supervisor",
-          bodega_nombre: "Central",
-        },
-        {
-          id: "m4",
-          tipo: TIPO_MOVIMIENTO.INGRESO,
-          cantidad: 50,
-          motivo: "Entrega proveedor",
-          estado: ESTADO_MOVIMIENTO.PENDIENTE,
-          created_at: "2026-08-20T08:00:00Z",
-          fecha_aprobacion: null,
-          registrado_por_nombre: "Administradora Demo",
-          aprobado_por_nombre: null,
-          bodega_nombre: "Norte",
-        },
-      ]);
-    } catch (err) {
-      console.error("Error al cargar kardex:", err);
-      setMovimientos([]);
-    } finally {
-      setCargando(false);
-    }
-  }, [loteId, medicamentoId]);
-
-  // ─── RECARGAR CUANDO CAMBIA EL FILTRO ───
   useEffect(() => {
     cargarMovimientos();
   }, [loteId, medicamentoId, cargarMovimientos]);
 
-  // ─── EXPORTAR ───
-  const exportar = useCallback(() => {
-    // TODO: Generar CSV desde movimientosFiltrados
-    console.log("📋 Exportar kardex:", movimientosFiltrados);
-  }, [movimientosFiltrados]);
-
   return {
     movimientos: movimientosFiltrados,
     cargando,
+    error,
     filtros,
     setFiltros,
     recargar: cargarMovimientos,
-    exportar,
     TIPO_MOVIMIENTO,
     ESTADO_MOVIMIENTO,
   };
