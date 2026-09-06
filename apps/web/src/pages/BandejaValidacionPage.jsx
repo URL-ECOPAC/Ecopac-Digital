@@ -1,35 +1,54 @@
 import { useState } from "react";
 
-export default function BandejaValidacionPage() {
-  // 📋 Datos de ejemplo (vienen desde el hook en tu página principal)
-  const movimientosPendientes = [
-    {
-      id: "de000001-0000-0000-0000-000000000006",
-      tipo: "ingreso",
-      medicamento: "Metformina 850mg Comprimidos",
-      lote: "L-2024-0567",
-      cantidad: 25,
-      registradoPor: "Usuario Sistema",
-      fecha: "01/09/2026",
-    },
-  ];
+import { usePendientesValidacion } from "../../../../packages/shared/inventario/usePendientesValidacion.js";
+import { permisosDeMovimientos } from "../../../../packages/shared/inventario/permisos.js";
+
+// issue #689: esta pantalla tenia su propio movimientosPendientes escrito a mano (un solo
+// movimiento de mentira) y handleAprobar/handleRechazar solo hacian console.log. Nunca llamaba
+// a usePendientesValidacion(), que ya existia y estaba probada. Ahora la bandeja se autoabastece
+// -mismo patron que BandejaAprobacionGastos.jsx para presupuestos-: recibe usuarioId/rolUsuario
+// de InventarioPage.jsx y pide sus propios datos.
+//
+// Los botones de aprobar/rechazar se dibujan con permisosDeMovimientos(rolUsuario)
+// (puedeAprobar/puedeRechazar), no con la presencia del prop: alguien sin el rol puede llegar a
+// ver la bandeja (la pestana no se oculta) pero no debe ver botones que el servidor va a
+// rechazar de todas formas.
+export default function BandejaValidacionPage({ usuarioId, rolUsuario }) {
+  const { pendientes, cargando, error, aprobar, rechazar } = usePendientesValidacion({
+    usuarioId,
+    rolUsuario,
+  });
+  const { puedeAprobar, puedeRechazar } = permisosDeMovimientos(rolUsuario);
 
   const [procesandoId, setProcesandoId] = useState(null);
+  const [errorAccion, setErrorAccion] = useState(null);
+
+  const formatoFecha = (fechaIso) => {
+    if (!fechaIso) return "—";
+    return new Date(fechaIso).toLocaleDateString("es-GT");
+  };
 
   const handleAprobar = async (movimiento) => {
     setProcesandoId(movimiento.id);
-    // Aquí llamas tu función aprobar(movimiento.id) desde el hook
-    console.log("✅ Aprobado:", movimiento.id);
-    setTimeout(() => setProcesandoId(null), 800);
+    setErrorAccion(null);
+
+    const respuesta = await aprobar(movimiento.id);
+    if (respuesta.error) setErrorAccion(respuesta.error.mensaje);
+
+    setProcesandoId(null);
   };
 
   const handleRechazar = async (movimiento) => {
     const motivo = prompt("Motivo del rechazo:");
     if (!motivo) return;
+
     setProcesandoId(movimiento.id);
-    // Aquí llamas tu función rechazar(movimiento.id, motivo) desde el hook
-    console.log("❌ Rechazado:", movimiento.id, "Motivo:", motivo);
-    setTimeout(() => setProcesandoId(null), 800);
+    setErrorAccion(null);
+
+    const respuesta = await rechazar(movimiento.id, motivo);
+    if (respuesta.error) setErrorAccion(respuesta.error.mensaje);
+
+    setProcesandoId(null);
   };
 
   return (
@@ -55,9 +74,24 @@ export default function BandejaValidacionPage() {
           Bandeja de Validación de Movimientos
         </h2>
         <p style={{ fontSize: "13px", color: "#94a3b8", margin: 0 }}>
-          {movimientosPendientes.length} Pendientes por revisar y autorizar
+          {pendientes.length} Pendientes por revisar y autorizar
         </p>
       </div>
+
+      {errorAccion && (
+        <div
+          style={{
+            padding: "12px 16px",
+            borderRadius: "8px",
+            backgroundColor: "#fef2f2",
+            border: "1px solid #fecaca",
+            color: "#991b1b",
+            fontSize: "13px",
+          }}
+        >
+          {errorAccion}
+        </div>
+      )}
 
       {/* Tabla / Lista de movimientos */}
       <div
@@ -144,18 +178,33 @@ export default function BandejaValidacionPage() {
                     color: "#64748b",
                     letterSpacing: "0.5px",
                     textTransform: "uppercase",
-                    textAlign: "center",
+                    textAlign: "left",
                   }}
                 >
-                  Acciones
+                  Fecha
                 </th>
+                {(puedeAprobar || puedeRechazar) && (
+                  <th
+                    style={{
+                      padding: "14px 20px",
+                      fontSize: "11px",
+                      fontWeight: "700",
+                      color: "#64748b",
+                      letterSpacing: "0.5px",
+                      textTransform: "uppercase",
+                      textAlign: "center",
+                    }}
+                  >
+                    Acciones
+                  </th>
+                )}
               </tr>
             </thead>
             <tbody>
-              {movimientosPendientes.length === 0 ? (
+              {cargando ? (
                 <tr>
                   <td
-                    colSpan={5}
+                    colSpan={6}
                     style={{
                       padding: "40px 20px",
                       textAlign: "center",
@@ -163,11 +212,39 @@ export default function BandejaValidacionPage() {
                       fontSize: "14px",
                     }}
                   >
-                    ✅ No hay movimientos pendientes de validación
+                    Cargando movimientos pendientes...
+                  </td>
+                </tr>
+              ) : error ? (
+                <tr>
+                  <td
+                    colSpan={6}
+                    style={{
+                      padding: "40px 20px",
+                      textAlign: "center",
+                      color: "#dc2626",
+                      fontSize: "14px",
+                    }}
+                  >
+                    {error.mensaje}
+                  </td>
+                </tr>
+              ) : pendientes.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={6}
+                    style={{
+                      padding: "40px 20px",
+                      textAlign: "center",
+                      color: "#94a3b8",
+                      fontSize: "14px",
+                    }}
+                  >
+                    No hay movimientos pendientes de validación
                   </td>
                 </tr>
               ) : (
-                movimientosPendientes.map((mov) => (
+                pendientes.map((mov) => (
                   <tr
                     key={mov.id}
                     style={{
@@ -195,7 +272,9 @@ export default function BandejaValidacionPage() {
 
                     {/* Medicamento / Lote */}
                     <td style={{ padding: "16px 20px", textAlign: "left" }}>
-                      <div style={{ fontWeight: "600", color: "#1e293b" }}>{mov.medicamento}</div>
+                      <div style={{ fontWeight: "600", color: "#1e293b" }}>
+                        {mov.lote?.medicamento?.nombre || "—"}
+                      </div>
                       <div
                         style={{
                           fontSize: "12px",
@@ -203,7 +282,7 @@ export default function BandejaValidacionPage() {
                           marginTop: "2px",
                         }}
                       >
-                        Lote: {mov.lote}
+                        Lote: {mov.lote?.numero_lote || "—"}
                       </div>
                       <div
                         style={{
@@ -231,60 +310,80 @@ export default function BandejaValidacionPage() {
                     </td>
 
                     {/* Registrado por */}
-                    <td style={{ padding: "16px 20px", color: "#475569" }}>{mov.registradoPor}</td>
-
-                    {/* Acciones */}
                     <td
                       style={{
                         padding: "16px 20px",
-                        textAlign: "center",
+                        color: "#475569",
+                        fontFamily: "monospace",
+                        fontSize: "12px",
                       }}
                     >
-                      <div
+                      {mov.registrado_por}
+                    </td>
+
+                    {/* Fecha */}
+                    <td style={{ padding: "16px 20px", color: "#475569" }}>
+                      {formatoFecha(mov.created_at)}
+                    </td>
+
+                    {/* Acciones */}
+                    {(puedeAprobar || puedeRechazar) && (
+                      <td
                         style={{
-                          display: "flex",
-                          gap: "8px",
-                          justifyContent: "center",
+                          padding: "16px 20px",
+                          textAlign: "center",
                         }}
                       >
-                        <button
-                          onClick={() => handleAprobar(mov)}
-                          disabled={procesandoId === mov.id}
+                        <div
                           style={{
-                            padding: "8px 16px",
-                            borderRadius: "8px",
-                            border: "none",
-                            backgroundColor: "#059669",
-                            color: "#ffffff",
-                            fontSize: "12px",
-                            fontWeight: "700",
-                            cursor: procesandoId === mov.id ? "not-allowed" : "pointer",
-                            opacity: procesandoId === mov.id ? 0.6 : 1,
-                            transition: "all 0.15s ease",
+                            display: "flex",
+                            gap: "8px",
+                            justifyContent: "center",
                           }}
                         >
-                          ✅ Aprobar
-                        </button>
-                        <button
-                          onClick={() => handleRechazar(mov)}
-                          disabled={procesandoId === mov.id}
-                          style={{
-                            padding: "8px 16px",
-                            borderRadius: "8px",
-                            border: "1px solid #ef4444",
-                            backgroundColor: "#ffffff",
-                            color: "#dc2626",
-                            fontSize: "12px",
-                            fontWeight: "700",
-                            cursor: procesandoId === mov.id ? "not-allowed" : "pointer",
-                            opacity: procesandoId === mov.id ? 0.6 : 1,
-                            transition: "all 0.15s ease",
-                          }}
-                        >
-                          ❌ Rechazar
-                        </button>
-                      </div>
-                    </td>
+                          {puedeAprobar && (
+                            <button
+                              onClick={() => handleAprobar(mov)}
+                              disabled={procesandoId === mov.id}
+                              style={{
+                                padding: "8px 16px",
+                                borderRadius: "8px",
+                                border: "none",
+                                backgroundColor: "#059669",
+                                color: "#ffffff",
+                                fontSize: "12px",
+                                fontWeight: "700",
+                                cursor: procesandoId === mov.id ? "not-allowed" : "pointer",
+                                opacity: procesandoId === mov.id ? 0.6 : 1,
+                                transition: "all 0.15s ease",
+                              }}
+                            >
+                              Aprobar
+                            </button>
+                          )}
+                          {puedeRechazar && (
+                            <button
+                              onClick={() => handleRechazar(mov)}
+                              disabled={procesandoId === mov.id}
+                              style={{
+                                padding: "8px 16px",
+                                borderRadius: "8px",
+                                border: "1px solid #ef4444",
+                                backgroundColor: "#ffffff",
+                                color: "#dc2626",
+                                fontSize: "12px",
+                                fontWeight: "700",
+                                cursor: procesandoId === mov.id ? "not-allowed" : "pointer",
+                                opacity: procesandoId === mov.id ? 0.6 : 1,
+                                transition: "all 0.15s ease",
+                              }}
+                            >
+                              Rechazar
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 ))
               )}

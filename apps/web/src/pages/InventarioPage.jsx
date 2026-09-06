@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import React from "react";
+import { useSesionCompartida } from "../contexto/SesionProvider";
 import { useNavigate } from "react-router-dom";
 import ModalMedicamento from "./ModalMedicamento.jsx";
 import ModalPrincipioActivo from "./ModalPrincipioActivo.jsx";
@@ -32,6 +33,7 @@ import {
 import { usePendientesValidacion } from "../../../../packages/shared/inventario/usePendientesValidacion.js";
 import { useCatalogoMedicamentos } from "../../../../packages/shared/inventario/useCatalogoMedicamentos.js";
 import { useGestionLotes } from "../../../../packages/shared/inventario/useGestionLotes.js";
+import { esAdministrador } from "../../../../packages/shared/usuarios/roles.js";
 
 const thStyle = {
   padding: "12px 16px",
@@ -106,15 +108,19 @@ export default function InventarioPage() {
   const [alertaSeleccionada, setAlertaSeleccionada] = useState(null);
   const [modalRegistroIngresoAbierto, setModalRegistroIngresoAbierto] = useState(false);
 
-  const esAdmin = true;
-  const usuarioActual = {
-    id: "user-admin-uuid",
-    rol: esAdmin ? "Administrador" : "Usuario",
-  };
+  // issue #689: esAdmin/usuarioActual eran un usuario de prueba escrito a mano ("Administrador",
+  // con mayuscula, y un id que no era un UUID). rolUsuario viajaba tal cual a
+  // aprobarMovimiento()/rechazarMovimiento() (validacion.api.js), que comparan contra
+  // esAdministrador(rolUsuario) -- el enum rol_usuario (00001) y usuarios/roles.js lo declaran
+  // en minuscula ("administrador") -- asi que esa comparacion nunca coincidia y la bandeja de
+  // validacion no aprobaba ni rechazaba nada, ni para la administradora real.
+  const { perfil, rol } = useSesionCompartida();
+  const esAdmin = esAdministrador(rol);
+  const usuarioActual = { id: perfil?.id, rol };
 
   const { conteo } = usePendientesValidacion({
-    usuarioId: usuarioActual?.id,
-    rolUsuario: usuarioActual?.rol,
+    usuarioId: perfil?.id,
+    rolUsuario: rol,
   });
 
   const {
@@ -1076,7 +1082,9 @@ export default function InventarioPage() {
       {tabActiva === "administracion" && <AdministracionBodegasProveedoresPage />}
 
       {/* Pestaña: Validación */}
-      {tabActiva === "validacion" && <BandejaValidacionPage />}
+      {tabActiva === "validacion" && (
+        <BandejaValidacionPage usuarioId={perfil?.id} rolUsuario={rol} />
+      )}
 
       {/* Modales */}
       {modalAbierto && (
