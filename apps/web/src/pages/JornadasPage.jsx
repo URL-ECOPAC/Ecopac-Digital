@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ESTADOS_JORNADA,
   OPCIONES_ESTADO_JORNADA,
@@ -6,13 +6,12 @@ import {
   transicionesDeJornadaDesde,
   agruparJornadasPorEstado,
   cambiarEstadoJornada,
-  listarCatalogosJornada,
   listarJornadas,
 } from "@ecopac/shared";
 
 /**
  * Hook de negocio para gestionar la vista de Kanban de jornadas.
- * Maneja el estado de las columnas, la aplicación de filtros, la carga de catálogos,
+ * Maneja el estado de las columnas, la aplicación de filtros,
  * la validación de permisos de movimiento y el flujo de cierre guiado hacia /jornadas/:id.
  */
 export function useJornadasKanban(rol) {
@@ -31,26 +30,35 @@ export function useJornadasKanban(rol) {
   const [errorMovimiento, setErrorMovimiento] = useState(null);
   const [pedirCierreEnDetalle, setPedirCierreEnDetalle] = useState(null);
 
+  // Contador de peticiones para controlar Race Condition
+  const requestIdRef = useRef(0);
+
   // Determina permisos generales sobre el módulo según el rol del usuario de sesión
   const permisos = useMemo(() => permisosDeJornadas(rol), [rol]);
 
-  // Carga inicial de datos de jornadas y catálogos necesarios para los filtros
+  // Carga inicial de datos de jornadas aplicando control de peticiones concurrentes
   const cargarDatos = useCallback(async () => {
+    const currentRequestId = ++requestIdRef.current;
     setCargando(true);
     setError(null);
+
     try {
-      const [listadoRes, catalogosRes] = await Promise.all([
-        listarJornadas(filtros),
-        listarCatalogosJornada(),
-      ]);
+      const listadoRes = await listarJornadas(filtros);
+
+      // Si se disparó otra petición más reciente durante la espera, se descarta la respuesta actual
+      if (currentRequestId !== requestIdRef.current) return;
+
       setJornadas(listadoRes.datos ?? []);
-      setCatalogos(catalogosRes ?? { comunidades: [] });
     } catch (err) {
+      if (currentRequestId !== requestIdRef.current) return;
+
       setError({
         mensaje: err.message || "Error al cargar el tablero de jornadas.",
       });
     } finally {
-      setCargando(false);
+      if (currentRequestId === requestIdRef.current) {
+        setCargando(false);
+      }
     }
   }, [filtros]);
 
@@ -155,4 +163,8 @@ export function useJornadasKanban(rol) {
     pedirCierreEnDetalle,
     descartarPedidoCierre,
   };
+}
+
+export default function JornadasPage() {
+  return null;
 }
