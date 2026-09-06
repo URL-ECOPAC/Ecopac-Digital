@@ -12,8 +12,15 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 // Imports desde la capa shared del monorepo
 import { useHistorialDonaciones, OPCIONES_TIPO_DONACION } from "@ecopac/shared/donaciones";
+import { useSesionCompartida } from "../contexto/SesionProvider";
 
-export default function DonacionesScreen({ usuarioRol = "administrador" }) {
+// El prop `usuarioRol = "administrador"` (issue #688, mismo defecto que ProyectosScreen.js) no
+// lo pasaba nadie: React Navigation solo entrega {navigation, route} a un `component`, asi que
+// cualquier persona -medico, voluntario general, a quienes puedeVerDonaciones() no deja leer
+// este modulo- se evaluaba como administrador. El rol real sale de la sesion compartida, igual
+// que el resto de pantallas de esta app.
+export default function DonacionesScreen() {
+  const { rol: usuarioRol } = useSesionCompartida();
   const {
     tieneAccesoLectura,
     cargando,
