@@ -303,8 +303,8 @@ export default function RegistroDonacionPage({ usuarioRol }) {
         </Modal.Header>
         <Modal.Body>
           <p className="text-muted small mb-3">
-            Registro rápido de donante sin salir del formulario. El resto de los datos de
-            contacto se completan después desde Donantes.
+            Registro rápido de donante sin salir del formulario. El resto de los datos de contacto
+            se completan después desde Donantes.
           </p>
 
           {errorNuevoDonante && (
