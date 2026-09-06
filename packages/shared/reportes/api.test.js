@@ -198,6 +198,43 @@ describe("obtenerIndicadoresImpacto", () => {
     expect(indicadores.agrupados[1].pacientes_atendidos).toBe(30);
   });
 
+  // issue #695: la version anterior (retirada por #693) agrupaba por el nombre corto del mes
+  // ("ene", "feb"), asi que enero de dos anios distintos caian en la misma barra. mesDe() (mas
+  // arriba en api.js) deriva la clave con fecha.slice(0, 7) -"2025-01", "2026-01"- y nunca
+  // construye un Date, asi que un mismo mes en anios distintos no se mezcla.
+  it("no mezcla el mismo mes de anios distintos", async () => {
+    const filasDeDosAnios = [
+      { ...FILAS[0], jornada_id: "j-2025-01", fecha: "2025-01-05", pacientes_atendidos: 5 },
+      { ...FILAS[0], jornada_id: "j-2026-01", fecha: "2026-01-10", pacientes_atendidos: 30 },
+    ];
+    dobles.cliente = crearCliente([{ data: filasDeDosAnios, error: null }]);
+
+    const { indicadores } = await obtenerIndicadoresImpacto({
+      rol: ROLES.JUNTA_DIRECTIVA,
+      agruparPor: AGRUPACIONES_DE_IMPACTO.MES,
+    });
+
+    expect(indicadores.agrupados.map((g) => g.clave)).toEqual(["2025-01", "2026-01"]);
+    expect(indicadores.agrupados[0].pacientes_atendidos).toBe(5);
+    expect(indicadores.agrupados[1].pacientes_atendidos).toBe(30);
+  });
+
+  // issue #695: la version anterior parseaba fila.fecha con new Date(), que interpreta una
+  // cadena AAAA-MM-DD como medianoche UTC y en Guatemala (UTC-6) corre el dia 1 de un mes al
+  // ultimo dia del mes anterior. mesDe() no construye ningun Date -es un slice de string- asi
+  // que una jornada del dia 1 se agrupa en su propio mes, no en el anterior.
+  it("una jornada del dia 1 de un mes se agrupa en ese mes, no en el anterior", async () => {
+    const filaDelDiaUno = [{ ...FILAS[0], fecha: "2026-03-01" }];
+    dobles.cliente = crearCliente([{ data: filaDelDiaUno, error: null }]);
+
+    const { indicadores } = await obtenerIndicadoresImpacto({
+      rol: ROLES.JUNTA_DIRECTIVA,
+      agruparPor: AGRUPACIONES_DE_IMPACTO.MES,
+    });
+
+    expect(indicadores.agrupados.map((g) => g.clave)).toEqual(["2026-03"]);
+  });
+
   it("agrupa por proyecto y etiqueta las jornadas sin proyecto", async () => {
     dobles.cliente = crearCliente([{ data: FILAS, error: null }]);
 
