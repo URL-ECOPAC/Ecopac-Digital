@@ -21,7 +21,7 @@ import { ROUTES } from "../navigation/rutas";
 //
 // La paginacion es Anterior/Siguiente, no "cargar mas": useUsuariosListado() pagina por numero
 // de pagina (issue #105, criterio 4), no con el patron hayMas/cargarMas de usePacientesListado.
-export default function VoluntariosScreen() {
+export default function ColaboradoresScreen() {
   const navigation = useNavigation();
   const {
     filas,
@@ -61,7 +61,7 @@ export default function VoluntariosScreen() {
         datos={filas}
         cargando={cargando}
         catalogos={catalogos}
-        onRowPress={(fila) => navigation.navigate(ROUTES.FICHA_VOLUNTARIO, { perfilId: fila.id })}
+        onRowPress={(fila) => navigation.navigate(ROUTES.FICHA_COLABORADOR, { perfilId: fila.id })}
         vacio={<EmptyState message="No hay personal que coincida con los filtros." />}
       />
 

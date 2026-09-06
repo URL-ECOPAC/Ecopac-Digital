@@ -1,6 +1,6 @@
 // Historial de jornadas de una persona, cargado bajo demanda.
 //
-// Desde que el listado y la ficha se fusionaron en una sola pantalla (VoluntariosPage.jsx), el
+// Desde que el listado y la ficha se fusionaron en una sola pantalla (ColaboradoresPage.jsx), el
 // perfil, sus especialidades y el conteo de jornadas ya llegan con la fila del listado
 // (useUsuariosListado.js): lo unico que falta por persona es el detalle de CADA jornada, que
 // solo hace falta pedir cuando esa tarjeta se expande. Por eso este hook es mas chico que el

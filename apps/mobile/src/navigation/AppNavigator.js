@@ -27,8 +27,8 @@ import StockScreen from "../screens/StockScreen";
 import DonacionesScreen from "../screens/DonacionesScreen";
 import ProyectosScreen from "../screens/ProyectosScreen";
 import PresupuestosScreen from "../screens/PresupuestosScreen";
-import VoluntariosScreen from "../screens/VoluntariosScreen";
-import FichaVoluntarioScreen from "../screens/FichaVoluntarioScreen";
+import ColaboradoresScreen from "../screens/ColaboradoresScreen";
+import FichaColaboradorScreen from "../screens/FichaColaboradorScreen";
 
 export { ROUTES };
 
@@ -91,13 +91,13 @@ function InicioNavigator() {
         options={opcionesStack("Presupuestos")}
       />
       <InicioStack.Screen
-        name={ROUTES.VOLUNTARIOS}
-        component={VoluntariosScreen}
-        options={opcionesStack("Voluntarios y médicos")}
+        name={ROUTES.COLABORADORES}
+        component={ColaboradoresScreen}
+        options={opcionesStack("Colaboradores")}
       />
       <InicioStack.Screen
-        name={ROUTES.FICHA_VOLUNTARIO}
-        component={FichaVoluntarioScreen}
+        name={ROUTES.FICHA_COLABORADOR}
+        component={FichaColaboradorScreen}
         options={opcionesStack("Ficha del personal")}
       />
     </InicioStack.Navigator>

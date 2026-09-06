@@ -60,12 +60,12 @@ const MODULOS_FIGMA = [
     tabMovil: "Jornadas",
   },
   {
-    id: "voluntarios",
-    titulo: "Voluntarios",
+    id: "colaboradores",
+    titulo: "Colaboradores",
     subtitulo: "Personal registrado",
     valor: "10",
     color: "#0284C7",
-    ruta: ROUTES.VOLUNTARIOS,
+    ruta: ROUTES.COLABORADORES,
   },
 ];
 
@@ -102,7 +102,7 @@ export default function InicioScreen({ navigation }) {
         donaciones: ROUTES.DONACIONES,
         presupuestos: ROUTES.PRESUPUESTOS,
         proyectos: ROUTES.PROYECTOS,
-        voluntarios: ROUTES.VOLUNTARIOS,
+        colaboradores: ROUTES.COLABORADORES,
       };
       if (mapaRutas[modulo.id]) {
         navigation.navigate(mapaRutas[modulo.id]);
@@ -127,7 +127,7 @@ export default function InicioScreen({ navigation }) {
     },
     {
       id: "3",
-      titulo: "VOLUNTARIOS ACTIVOS",
+      titulo: "COLABORADORES ACTIVOS",
       valor: "9",
       subtexto: "personal registrado",
       color: "#F97316",
@@ -164,7 +164,7 @@ export default function InicioScreen({ navigation }) {
           <Text style={styles.heroTitle}>Salud que llega a cada comunidad.</Text>
           <Text style={styles.heroDescription}>
             Plataforma integral de gestión para jornadas médicas. Pacientes, inventario, jornadas,
-            voluntarios, proyectos y presupuestos en un solo lugar.
+            colaboradores, proyectos y presupuestos en un solo lugar.
           </Text>
           <View style={styles.heroButtonsContainer}>
             <TouchableOpacity

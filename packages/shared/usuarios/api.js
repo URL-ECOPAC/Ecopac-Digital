@@ -153,7 +153,7 @@ async function idsDePerfilPorEspecialidad(especialidad) {
  *
  * Cada perfil devuelto trae `especialidades` como arreglo de strings (issue #175, criterio 3),
  * nunca de objetos: es la forma que espera el render `chips` de DataList (ver
- * CAMPOS_FICHA_VOLUNTARIO.especialidades en columnas.js). Requiere la politica RLS de la
+ * CAMPOS_FICHA_COLABORADOR.especialidades en columnas.js). Requiere la politica RLS de la
  * migracion 00058: sin ella, el embed llega vacio para cualquiera, incluida la administradora.
  *
  * `limite` y `pagina` acotan el resultado con `.range()` y piden el total con `count: "exact"`

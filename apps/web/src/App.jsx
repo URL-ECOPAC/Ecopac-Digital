@@ -31,7 +31,7 @@ import SeguimientoProyectoPage from "./pages/SeguimientoProyectoPage";
 import ReportesPage from "./pages/ReportesPage";
 import JornadasPage from "./pages/JornadasPage";
 import DetalleJornadaPage from "./pages/DetalleJornadaPage";
-import VoluntariosPage from "./pages/VoluntariosPage";
+import ColaboradoresPage from "./pages/ColaboradoresPage";
 import PerfilPage from "./pages/PerfilPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import DashboardMetricasPage from "./pages/DashboardMetricasPage";
@@ -159,11 +159,11 @@ export default function App() {
                 <Route path="/jornadas" element={<JornadasPage />} />
                 <Route path="/jornadas/:id" element={<DetalleJornadaPage />} />
               </Route>
-              <Route element={<RutaProtegida roles={rolesDe("/voluntarios")} />}>
+              <Route element={<RutaProtegida roles={rolesDe("/colaboradores")} />}>
                 {/* Listado y ficha fusionados en una sola pantalla de tarjetas expandibles
-                  (arreglo de diseno de 2026-08-30): ya no hay una ruta /voluntarios/:id propia.
+                  (arreglo de diseno de 2026-08-30): ya no hay una ruta /colaboradores/:id propia.
                   Ver eme.md para el estado anterior (dos rutas separadas) si hay que revertir. */}
-                <Route path="/voluntarios" element={<VoluntariosPage />} />
+                <Route path="/colaboradores" element={<ColaboradoresPage />} />
               </Route>
 
               <Route path="/perfil" element={<PerfilPage />} />

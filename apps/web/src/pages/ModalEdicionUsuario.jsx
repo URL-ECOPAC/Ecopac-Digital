@@ -10,7 +10,7 @@ import TextField from "../components/TextField";
 import ModalConfirmarDesactivacion from "./ModalConfirmarDesactivacion";
 
 // Modal de edicion de usuario (issue #107), abierto al clickear una fila de
-// VoluntariosPage.jsx (issue #105): no tiene ruta propia, mismo patron que
+// ColaboradoresPage.jsx (issue #105): no tiene ruta propia, mismo patron que
 // ModalAltaUsuario.jsx (#106) -Modal generico + Selector/TextField elegidos a mano por
 // campo.tipo-. La Pregunta 1 del plan de #107 decidio abrir desde la fila del listado en vez
 // de una ficha de #184, que todavia no existe.
@@ -46,7 +46,7 @@ export default function ModalEdicionUsuario({ perfil, idSesionActual, onClose, o
 
   return (
     <>
-      <Modal visible={!mostrarConfirmacion} onClose={onClose} title="Editar voluntario">
+      <Modal visible={!mostrarConfirmacion} onClose={onClose} title="Editar colaborador">
         {error && (
           <div className="alert alert-danger" role="alert">
             {error.mensaje}
