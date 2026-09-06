@@ -27,8 +27,16 @@
 
 import { obtenerSupabase } from "../api/cliente.js";
 import { normalizarError } from "../api/errores-de-supabase.js";
-export { puedeVerIndicadoresDeImpacto } from "./permisos.js";
 import { puedeVerIndicadoresDeImpacto } from "./permisos.js";
+
+// Reexportar funciones de permisos para mantener la interfaz unificada
+export {
+  puedeVerIndicadoresDeImpacto,
+  puedeVerReporteDePacientes,
+  puedeVerReporteJornada,
+  puedeVerReporteDeInventario,
+  permisosDeReportes,
+} from "./permisos.js";
 
 /** Columnas de vista_reporte_impacto que necesita el reporte. */
 const COLUMNAS_DEL_REPORTE = [
@@ -209,9 +217,6 @@ export async function obtenerIndicadoresImpacto({
 
     return { indicadores: { totales, agrupados, comparacion }, error: null };
   } catch (error) {
-    // Misma forma que el resto de las API del monorepo: el error viaja en su campo, no en lugar
-    // del resultado. La version anterior devolvia normalizarError(error) suelto, asi que quien la
-    // llamaba recibia un objeto sin `indicadores` ni `error`.
     return { indicadores: null, error: normalizarError(error) };
   }
 }
