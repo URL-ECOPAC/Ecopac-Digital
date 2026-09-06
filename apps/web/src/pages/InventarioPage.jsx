@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import ModalMedicamento from "./ModalMedicamento.jsx";
+import ModalPrincipioActivo from "./ModalPrincipioActivo.jsx";
 import { ModalAltaLote } from "./ModalAltaLote.jsx";
 import { ModalAtenderAlerta } from "./ModalAtenderAlerta.jsx";
 import ModalRegistroIngreso from "./ModalRegistroIngreso.jsx";
@@ -17,6 +19,7 @@ import {
   listarMedicamentos,
   registrarMedicamento,
   actualizarMedicamento,
+  listarPrincipiosDeMedicamento,
 } from "../../../../packages/shared/inventario/medicamentos.api.js";
 import { listarBodegas } from "../../../../packages/shared/inventario/bodegas.api.js";
 import { generarIngresoDesdeDonacion } from "../../../../packages/shared/donaciones/ingreso.api.js";
@@ -56,6 +59,7 @@ const cardMetricStyle = {
 const datosTablaDemo = [];
 
 export default function InventarioPage() {
+  const navigate = useNavigate();
   const [tabActiva, setTabActiva] = useState("catalogo");
   const [inventarioRaw, setInventarioRaw] = useState([]);
   const [principiosActivos, setPrincipiosActivos] = useState([]);
@@ -70,6 +74,7 @@ export default function InventarioPage() {
   const [modalAbierto, setModalAbierto] = useState(false);
   const [modoEdicion, setModoEdicion] = useState(false);
   const [cargandoGuardar, setCargandoGuardar] = useState(false);
+  const [modalPrincipioActivoAbierto, setModalPrincipioActivoAbierto] = useState(false);
   const [advertenciaDuplicado, setAdvertenciaDuplicado] = useState(false);
   const [formData, setFormData] = useState({
     nombre: "",
@@ -234,12 +239,14 @@ export default function InventarioPage() {
     setModalAbierto(true);
   };
 
-  const abrirModalEditar = (item) => {
+  const abrirModalEditar = async (item) => {
     setModoEdicion(true);
     setFormData({
       id: item.id,
       nombre: item.nombre || "",
-      principio_activo_id: item.principio_activo_id || "",
+      // listarMedicamentos() no trae la relacion con principios_activos: se llena abajo, en
+      // cuanto listarPrincipiosDeMedicamento() resuelva.
+      principio_activo_id: "",
       concentracion: item.concentracion || "",
       presentacion: item.presentacion || "",
       marca: item.marca || "",
@@ -247,27 +254,20 @@ export default function InventarioPage() {
     });
     setAdvertenciaDuplicado(false);
     setModalAbierto(true);
+
+    const { principiosActivos: asociados } = await listarPrincipiosDeMedicamento(item.id);
+    if (asociados[0]) {
+      setFormData((prev) => ({ ...prev, principio_activo_id: asociados[0].id }));
+    }
   };
 
-  const handleCrearPrincipioActivo = async () => {
-    const nuevoNombre = prompt("Nombre del nuevo principio activo:");
-    if (!nuevoNombre || !nuevoNombre.trim()) return;
-    try {
-      const { principioActivo, error: errorPA } = await registrarPrincipioActivo({
-        nombre: nuevoNombre.trim(),
-      });
-      if (errorPA) {
-        alert(`No se pudo guardar: ${errorPA.mensaje || "Error al crear el principio activo"}`);
-        return;
-      }
-      if (principioActivo && principioActivo.id) {
-        setPrincipiosActivos((prev) => [...prev, principioActivo]);
-        setFormData((prev) => ({ ...prev, principio_activo_id: principioActivo.id }));
-      }
-    } catch (err) {
-      console.error("Error al crear principio activo:", err);
-      alert("Error al procesar la solicitud del principio activo.");
-    }
+  const handleGuardarPrincipioActivoNuevo = async (_id, datos) => {
+    const { principioActivo, error: errorPA } = await registrarPrincipioActivo(datos);
+    if (errorPA) return { ok: false, error: errorPA };
+
+    setPrincipiosActivos((prev) => [...prev, principioActivo]);
+    setFormData((prev) => ({ ...prev, principio_activo_id: principioActivo.id }));
+    return { ok: true, principioActivo };
   };
 
   const normalizarPresentacion = (valor) => {
@@ -614,6 +614,21 @@ export default function InventarioPage() {
           }}
         >
           Administración
+        </button>
+        <button
+          onClick={() => navigate("/inventario/principios-activos")}
+          style={{
+            padding: "8px 16px",
+            fontSize: "13px",
+            fontWeight: "700",
+            border: "none",
+            background: "none",
+            cursor: "pointer",
+            borderBottom: "2px solid transparent",
+            color: "#64748b",
+          }}
+        >
+          Principios Activos
         </button>
         <button
           onClick={() => setTabActiva("validacion")}
@@ -1075,7 +1090,17 @@ export default function InventarioPage() {
           advertenciaDuplicado={advertenciaDuplicado}
           onSubmit={handleGuardarMedicamento}
           onClose={() => setModalAbierto(false)}
-          onCrearPrincipioActivo={handleCrearPrincipioActivo}
+          onCrearPrincipioActivo={() => setModalPrincipioActivoAbierto(true)}
+        />
+      )}
+
+      {modalPrincipioActivoAbierto && (
+        <ModalPrincipioActivo
+          visible
+          principioActivo={null}
+          onClose={() => setModalPrincipioActivoAbierto(false)}
+          onGuardar={handleGuardarPrincipioActivoNuevo}
+          onEliminar={async () => ({ ok: false })}
         />
       )}
 

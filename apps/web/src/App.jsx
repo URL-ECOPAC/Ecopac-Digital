@@ -26,6 +26,7 @@ import RegistroDonacionPage from "./pages/RegistroDonacionPage";
 import HistorialDonacionesPage from "./pages/HistorialDonacionesPage";
 import ConstanciaDonacionPage from "./pages/ConstanciaDonacionPage";
 import InventarioPage from "./pages/InventarioPage";
+import CatalogoPrincipiosActivosPage from "./pages/CatalogoPrincipiosActivosPage";
 import PresupuestosPage from "./pages/PresupuestosPage";
 import ProyectosSocialesPage from "./pages/ProyectosSocialesPage";
 import SeguimientoProyectoPage from "./pages/SeguimientoProyectoPage";
@@ -138,6 +139,10 @@ export default function App() {
               </Route>
               <Route element={<RutaProtegida roles={rolesDe("/inventario")} />}>
                 <Route path="/inventario" element={<InventarioPage />} />
+                <Route
+                  path="/inventario/principios-activos"
+                  element={<CatalogoPrincipiosActivosPage />}
+                />
               </Route>
               <Route element={<RutaProtegida roles={rolesDe("/presupuestos")} />}>
                 <Route path="/presupuestos" element={<PresupuestosPage />} />

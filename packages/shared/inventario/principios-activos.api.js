@@ -143,6 +143,35 @@ export async function actualizarPrincipioActivo(id, datos) {
 }
 
 /**
+ * Medicamentos que usan un principio activo (medicamento_principio, 00016).
+ *
+ * Se consulta antes de intentar eliminarPrincipioActivo() para poder avisar CUALES
+ * medicamentos lo usan, en vez de dejar que el intento falle con el 23503 generico del
+ * RESTRICT (criterio de aceptacion de la issue #640: "no se borra sin avisar que
+ * medicamentos lo usan", no solo un aviso de "esta en uso").
+ *
+ * @param {string} principioId UUID del principio activo.
+ * @returns {Promise<{ medicamentos: object[], error: object|null }>}
+ */
+export async function listarMedicamentosDePrincipio(principioId) {
+  if (!principioId) return { medicamentos: [], error: null };
+
+  try {
+    const { data, error } = await obtenerSupabase()
+      .from("medicamento_principio")
+      .select("medicamento:medicamentos(id, nombre)")
+      .eq("principio_id", principioId);
+
+    if (error) return { medicamentos: [], error: normalizarError(error) };
+
+    const medicamentos = (data ?? []).map((fila) => fila.medicamento).filter(Boolean);
+    return { medicamentos, error: null };
+  } catch (error) {
+    return { medicamentos: [], error: normalizarError(error) };
+  }
+}
+
+/**
  * Elimina un principio activo del catalogo.
  *
  * No hace ninguna comprobacion propia de "esta en uso": el RESTRICT de

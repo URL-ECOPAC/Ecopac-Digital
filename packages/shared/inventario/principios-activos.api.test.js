@@ -25,6 +25,7 @@ const { CODIGOS_DE_ERROR_DE_SUPABASE } = await import("../api/errores-de-supabas
 const {
   actualizarPrincipioActivo,
   eliminarPrincipioActivo,
+  listarMedicamentosDePrincipio,
   listarPrincipiosActivos,
   registrarPrincipioActivo,
 } = await import("./principios-activos.api.js");
@@ -246,5 +247,56 @@ describe("eliminarPrincipioActivo", () => {
 
     expect(principioActivo).toBeNull();
     expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.LLAVE_FORANEA);
+  });
+});
+
+describe("listarMedicamentosDePrincipio", () => {
+  it("no toca el cliente cuando no hay id", async () => {
+    const { medicamentos, error } = await listarMedicamentosDePrincipio(undefined);
+
+    expect(medicamentos).toEqual([]);
+    expect(error).toBeNull();
+  });
+
+  it("devuelve los medicamentos que usan el principio activo", async () => {
+    const cliente = crearCliente({
+      data: [
+        { medicamento: { id: "med-1", nombre: "Paracetamol 500mg" } },
+        { medicamento: { id: "med-2", nombre: "Paracetamol jarabe" } },
+      ],
+      error: null,
+    });
+    dobles.cliente = cliente;
+
+    const { medicamentos, error } = await listarMedicamentosDePrincipio("principio-1");
+
+    expect(error).toBeNull();
+    expect(medicamentos).toEqual([
+      { id: "med-1", nombre: "Paracetamol 500mg" },
+      { id: "med-2", nombre: "Paracetamol jarabe" },
+    ]);
+    expect(cliente.llamadas).toContainEqual({
+      paso: "eq",
+      columna: "principio_id",
+      valor: "principio-1",
+    });
+  });
+
+  it("nunca devuelve null: un principio activo sin uso se dibuja como lista vacia", async () => {
+    dobles.cliente = crearCliente({ data: [], error: null });
+
+    const { medicamentos, error } = await listarMedicamentosDePrincipio("principio-1");
+
+    expect(error).toBeNull();
+    expect(medicamentos).toEqual([]);
+  });
+
+  it("clasifica como fallo de red la excepcion del fetch", async () => {
+    dobles.cliente = crearCliente(new Error("network down"));
+
+    const { medicamentos, error } = await listarMedicamentosDePrincipio("principio-1");
+
+    expect(medicamentos).toEqual([]);
+    expect(error).not.toBeNull();
   });
 });
