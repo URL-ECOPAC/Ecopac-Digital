@@ -80,6 +80,18 @@ describe("validarPaciente", () => {
     expect(errores.fechaNacimiento).toBeTruthy();
   });
 
+  // issue #694: usaba new Date(fechaNacimiento), que interpreta "AAAA-MM-DD" como medianoche
+  // UTC. En una zona horaria con offset negativo (Guatemala, UTC-6) la fecha parseada cae en la
+  // tarde del dia anterior; aFechaLocal() la lee como dia de calendario sin ese desplazamiento.
+  it("acepta una fecha de nacimiento de hoy mismo, sin importar la zona horaria", () => {
+    const ahora = new Date();
+    const hoyComoTexto = `${ahora.getFullYear()}-${String(ahora.getMonth() + 1).padStart(2, "0")}-${String(ahora.getDate()).padStart(2, "0")}`;
+
+    const errores = validarPaciente(pacienteValido({ fechaNacimiento: hoyComoTexto }));
+
+    expect(errores.fechaNacimiento).toBeUndefined();
+  });
+
   it("rechaza una edad mayor a 120 anios", () => {
     const errores = validarPaciente(pacienteValido({ fechaNacimiento: "1800-01-01" }));
 

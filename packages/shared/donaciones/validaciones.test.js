@@ -20,6 +20,15 @@ function enDias(dias) {
   return fecha.toISOString();
 }
 
+/** "AAAA-MM-DD" local de manana: lo que realmente manda un <input type="date"> (donaciones.fecha
+ * es DATE, 00022), a diferencia de enDias()/hoy() de arriba, que devuelven una marca de tiempo
+ * completa y no ejercitan el desfase de zona horaria que describe la issue #694. */
+function mananaComoFechaLocal() {
+  const fecha = new Date();
+  fecha.setDate(fecha.getDate() + 1);
+  return `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, "0")}-${String(fecha.getDate()).padStart(2, "0")}`;
+}
+
 describe("validarDonante", () => {
   it("exige nombre, tipo y algun dato de contacto", () => {
     const errores = validarDonante({});
@@ -66,6 +75,17 @@ describe("validarDonacion", () => {
       donanteId: "uuid-1",
       tipo: TIPOS_DE_DONACION.DINERO,
       fecha: enDias(5),
+      detalles: [{ descripcion: "Aporte mensual", monto: 100 }],
+    });
+
+    expect(errores.fecha).toBe("La fecha de la donacion no puede ser futura.");
+  });
+
+  it("rechaza una fecha de manana dada como AAAA-MM-DD (issue #694: antes pasaba por el desfase de zona horaria)", () => {
+    const errores = validarDonacion({
+      donanteId: "uuid-1",
+      tipo: TIPOS_DE_DONACION.DINERO,
+      fecha: mananaComoFechaLocal(),
       detalles: [{ descripcion: "Aporte mensual", monto: 100 }],
     });
 

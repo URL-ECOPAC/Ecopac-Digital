@@ -29,6 +29,7 @@
 
 import { TIPOS_DE_DONACION } from "../enums.js";
 import { TIPOS_DE_DONANTE } from "../enums.js";
+import { aFechaLocal } from "../formato/fechas.js";
 
 // Tipos que exigen al menos un renglon de detalle con cantidad: lo que se recibe se cuenta.
 // 'servicios' queda fuera a proposito: una jornada de voluntariado medico no tiene unidades.
@@ -38,8 +39,13 @@ function estaVacio(valor) {
   return valor === undefined || valor === null || String(valor).trim() === "";
 }
 
+// issue #694: usaba new Date(valor), que interpreta una cadena AAAA-MM-DD (lo que manda un
+// <input type="date">, y el tipo real de donaciones.fecha, 00022) como medianoche UTC. En
+// Guatemala (UTC-6) eso corre la fecha un dia hacia atras -y por eso una donacion fechada
+// manana pasaba el chequeo de "no puede ser futura" de mas abajo: la fecha corrida caia
+// todavia dentro de hoy.
 function esFechaValida(valor) {
-  return !Number.isNaN(new Date(valor).getTime());
+  return aFechaLocal(valor) !== null;
 }
 
 /** Fin del dia de hoy: una donacion registrada hoy no puede contar como futura por la hora. */
@@ -169,7 +175,7 @@ export function validarDonacion(donacion = {}) {
     errores.fecha = "La fecha de la donacion es obligatoria.";
   } else if (!esFechaValida(donacion.fecha)) {
     errores.fecha = "La fecha proporcionada no es valida.";
-  } else if (new Date(donacion.fecha) > finDeHoy()) {
+  } else if (aFechaLocal(donacion.fecha) > finDeHoy()) {
     errores.fecha = "La fecha de la donacion no puede ser futura.";
   }
 

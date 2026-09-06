@@ -124,4 +124,12 @@ describe("sugerirLote (Criterio FEFO)", () => {
     expect(resultado.suficiente).toBe(false);
     expect(resultado.cantidadFaltante).toBe(100);
   });
+
+  it("un lote que vence exactamente hoy si se sugiere (issue #694: antes se leia como vencido)", () => {
+    const lotes = [{ id: "LOTE-HOY", fecha_vencimiento: "2026-08-26", cantidad_disponible: 10 }];
+    const resultado = sugerirLote(lotes, 5, "2026-08-26");
+
+    expect(resultado.suficiente).toBe(true);
+    expect(resultado.lotesSugeridos[0]?.lote_id).toBe("LOTE-HOY");
+  });
 });
