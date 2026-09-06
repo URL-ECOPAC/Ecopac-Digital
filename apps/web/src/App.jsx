@@ -166,8 +166,8 @@ export default function App() {
                 <Route path="/reportes/jornada/:id" element={<ReporteJornada />} />
                 <Route path="/reportes/pacientes-atendidos" element={<ReportePacientesPage />} />
                 <Route path="/reportes/inventario-actual" element={<ReporteInventarioPage />} />
+                <Route path="/reportes/dashboard" element={<DashboardMetricasPage />} />
               </Route>
-              <Route path="/reportes/dashboard" element={<DashboardMetricasPage />} />
               <Route element={<RutaProtegida roles={rolesDe("/jornadas")} />}>
                 <Route path="/jornadas" element={<JornadasPage />} />
                 <Route path="/jornadas/:id" element={<DetalleJornadaPage />} />
@@ -179,6 +179,8 @@ export default function App() {
                 <Route path="/colaboradores" element={<ColaboradoresPage />} />
               </Route>
 
+              {/* Fuera de cualquier grupo de rolesDe() a proposito: el perfil propio no es un
+                  modulo con roles permitidos, cualquier rol autenticado tiene el suyo. */}
               <Route path="/perfil" element={<PerfilPage />} />
               <Route path="*" element={<NotFoundPage />} />
             </Route>
