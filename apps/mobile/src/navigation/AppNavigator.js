@@ -3,7 +3,7 @@ import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { colors } from "@ecopac/ui-tokens";
-import { tabsMoviles } from "@ecopac/shared";
+import { etiquetaDeRol, tabsMoviles } from "@ecopac/shared";
 
 import { useSesionCompartida } from "../contexto/SesionProvider";
 import { ROUTES } from "./rutas";
@@ -47,10 +47,10 @@ function CustomHeaderTitle({ title }) {
       <Text style={styles.headerTitleText}>{title}</Text>
       <View style={styles.userContainer}>
         <Text style={styles.nombreText} numberOfLines={1}>
-          {perfil?.nombre || "Administradora..."}
+          {perfil?.nombre || ""}
         </Text>
         <Text style={styles.rolText} numberOfLines={1}>
-          {perfil?.rol || "Administradora"}
+          {perfil?.rol ? etiquetaDeRol(perfil.rol) : ""}
         </Text>
       </View>
     </View>

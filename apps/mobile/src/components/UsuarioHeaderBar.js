@@ -1,11 +1,17 @@
 import { StyleSheet, Text, View } from "react-native";
+import { etiquetaDeRol } from "@ecopac/shared";
 import { useSesionCompartida } from "../contexto/SesionProvider";
 
 export default function UsuarioHeaderBar() {
   const { perfil } = useSesionCompartida();
 
-  const nombre = perfil?.nombre || "Administradora...";
-  const rol = perfil?.rol || "Administradora";
+  // issue #689: el placeholder "Administradora" para el rol, mientras el perfil todavia no
+  // carga, era el mismo literal con mayuscula que rompio la bandeja de validacion (comparado,
+  // ahi si, contra el enum real). Aqui no se compara nada -es solo texto- pero igual asumia un
+  // rol que no es el que tiene la sesion. Vacio mientras carga; etiquetaDeRol() traduce el rol
+  // real ya en minuscula ("administrador") a su etiqueta en pantalla.
+  const nombre = perfil?.nombre || "";
+  const rol = perfil?.rol ? etiquetaDeRol(perfil.rol) : "";
 
   return (
     <View style={styles.container}>

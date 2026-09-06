@@ -1,5 +1,7 @@
 import { useState, useMemo, useCallback } from "react";
 
+import { esAdministrador } from "../usuarios/roles.js";
+
 /**
  * Hook para la gestión de lotes y alertas de caducidad (#155 / #144).
  * Cumple con la estructura DDL de lotes, existencias y alertas_caducidad.
@@ -9,7 +11,7 @@ export function useGestionLotes({
   alertasIniciales = [],
   bodegas = [],
   proveedores = [],
-  usuario = { id: "", rol: "Administrador" },
+  usuario = { id: "", rol: null },
 } = {}) {
   const [busqueda, setBusqueda] = useState("");
   const [bodegaSeleccionada, setBodegaSeleccionada] = useState("Todas");
@@ -17,8 +19,13 @@ export function useGestionLotes({
   const [alertas, setAlertas] = useState(alertasIniciales);
   const [errorValidacion, setErrorValidacion] = useState(null);
 
-  // Regla de Permisos: Solo el Administrador puede registrar lotes
-  const puedeRegistrarLotes = usuario?.rol === "Administrador";
+  // Regla de Permisos: Solo el Administrador puede registrar lotes.
+  //
+  // issue #689: comparaba usuario?.rol contra el literal "Administrador", con mayuscula. El
+  // enum rol_usuario (00001) y usuarios/roles.js lo declaran en minuscula
+  // ("administrador"), asi que esa comparacion nunca coincidia -- mismo defecto que la propia
+  // InventarioPage.jsx, que es quien llama a este hook.
+  const puedeRegistrarLotes = esAdministrador(usuario?.rol);
 
   // Ordenamiento FEFO (First Expire, First Out) + Filtrado
   const lotesFiltrados = useMemo(() => {
