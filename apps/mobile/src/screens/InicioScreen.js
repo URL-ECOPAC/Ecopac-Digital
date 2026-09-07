@@ -85,26 +85,26 @@ const MODULOS_FIGMA = [
 
 export default function InicioScreen({ navigation }) {
   const { perfil } = useSesionCompartida();
-  const rol = perfil?.rol || "administrador";
+  const rol = perfil?.rol;
 
   const modulosCalculados =
     modulosVisibles(rol, { plataforma: "mobile" })?.filter((m) => m.id !== "inicio") || [];
 
-  const modulosDisponibles =
-    modulosCalculados.length > 0
-      ? modulosCalculados.map((m) => {
-          const base = MODULOS_FIGMA.find((f) => f.id === m.id) || {};
-          return {
-            id: m.id,
-            titulo: m.etiqueta || base.titulo || m.id,
-            subtitulo: base.subtitulo || "Módulo activo",
-            valor: base.valor || "—",
-            color: base.color || "#10B981",
-            tabMovil: m.tabMovil || base.tabMovil,
-            ruta: base.ruta,
-          };
-        })
-      : MODULOS_FIGMA;
+  const modulosDisponibles = modulosCalculados.map((m) => {
+    const base = MODULOS_FIGMA.find((f) => f.id === m.id) || {};
+    return {
+      id: m.id,
+      titulo: m.etiqueta || base.titulo || m.id,
+      subtitulo: base.subtitulo || "Módulo activo",
+      valor: base.valor || "—",
+      color: base.color || "#10B981",
+      tabMovil: m.tabMovil || base.tabMovil,
+      ruta: base.ruta,
+    };
+  });
+
+  const tieneInventario = modulosCalculados.some((m) => m.id === "inventario");
+  const tienePresupuestos = modulosCalculados.some((m) => m.id === "presupuestos");
 
   const navegarAModulo = (modulo) => {
     if (modulo.tabMovil) {
@@ -139,18 +139,22 @@ export default function InicioScreen({ navigation }) {
             colaboradores, proyectos y presupuestos en un solo lugar.
           </Text>
           <View style={styles.heroButtonsContainer}>
-            <TouchableOpacity
-              style={styles.btnPrimary}
-              onPress={() => navigation.navigate("Inventario")}
-            >
-              <Text style={styles.btnPrimaryText}>Ver inventario</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.btnSecondary}
-              onPress={() => navigation.navigate(ROUTES.PRESUPUESTOS)}
-            >
-              <Text style={styles.btnSecondaryText}>Ver presupuestos</Text>
-            </TouchableOpacity>
+            {tieneInventario && (
+              <TouchableOpacity
+                style={styles.btnPrimary}
+                onPress={() => navigation.navigate(ROUTES.TAB_INVENTARIO)}
+              >
+                <Text style={styles.btnPrimaryText}>Ver inventario</Text>
+              </TouchableOpacity>
+            )}
+            {tienePresupuestos && (
+              <TouchableOpacity
+                style={styles.btnSecondary}
+                onPress={() => navigation.navigate(ROUTES.PRESUPUESTOS)}
+              >
+                <Text style={styles.btnSecondaryText}>Ver presupuestos</Text>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
 
