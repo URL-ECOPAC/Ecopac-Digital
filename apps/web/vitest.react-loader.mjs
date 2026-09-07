@@ -11,6 +11,7 @@ export async function resolve(specifier, context, nextResolve) {
     const sufijo = specifier === "react" ? "index.js" : specifier.slice("react/".length);
     const targetPath = path.resolve(reactDir, sufijo);
     return {
+      format: "module",
       shortCircuit: true,
       url: pathToFileURL(targetPath).href,
     };
