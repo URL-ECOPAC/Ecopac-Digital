@@ -93,3 +93,19 @@ export const CAMPOS_REPORTE_VENCIMIENTO = [
     validacion: { requerido: true, min: 1, max: 365 },
   },
 ];
+
+// Umbrales de alerta en días
+export const UMBRALES_ALERTA = {
+  CRITICO: 7,
+  ALTO: 15,
+  MEDIO: 30,
+};
+
+// Opciones de horizonte de días
+export const HORIZONTES_DISPONIBLES = [
+  { valor: 7, etiqueta: "Próximos 7 días" },
+  { valor: 15, etiqueta: "Próximos 15 días" },
+  { valor: 30, etiqueta: "Próximos 30 días" },
+  { valor: 60, etiqueta: "Próximos 60 días" },
+  { valor: 90, etiqueta: "Próximos 90 días" },
+];

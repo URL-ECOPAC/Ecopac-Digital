@@ -71,7 +71,6 @@ export function resolverRangoDeDashboard(rango, { fechaInicio, fechaFin } = {}, 
 function aIndicadoresDePantalla(totales) {
   return {
     pacientesAtendidos: totales?.pacientes_atendidos ?? 0,
-    consultasRealizadas: totales?.consultas_realizadas ?? 0,
     tratamientosEntregados: totales?.tratamientos_entregados ?? 0,
     medicamentosUtilizados: totales?.medicamentos_utilizados ?? 0,
     comunidadesBeneficiadas: totales?.comunidades_beneficiadas ?? 0,
@@ -202,7 +201,7 @@ export function useDashboardMetricas({ rol } = {}) {
     error,
     indicadores: aIndicadoresDePantalla(datos?.totales),
     seriePrincipal: aSerie(datos?.agrupados, metrica),
-    serieComparacion: aSerie(datosComparacion?.agrupados, metrica),
+    serieComparacion: aSerie(datosComparacion?.agrupados, metrica) || [], // ✅ Asegura arreglo
     calcularVariacion,
     recargar: cargar,
   };
