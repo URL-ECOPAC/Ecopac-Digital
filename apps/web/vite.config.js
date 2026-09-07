@@ -16,6 +16,8 @@ export default defineConfig({
   },
   resolve: {
     alias: {
+      react: path.resolve(__dirname, "../../node_modules/react"),
+      "react-dom": path.resolve(__dirname, "../../node_modules/react-dom"),
       "@ecopac/shared": path.resolve(__dirname, "../../packages/shared/index.js"),
       "@ecopac/ui-tokens": path.resolve(__dirname, "../../packages/ui-tokens/index.js"),
     },
@@ -25,5 +27,10 @@ export default defineConfig({
     globals: true,
     environment: "jsdom",
     setupFiles: ["./src/setupTests.js"],
+    server: {
+      deps: {
+        inline: ["@testing-library/react"],
+      },
+    },
   },
 });
