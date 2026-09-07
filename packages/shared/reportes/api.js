@@ -321,17 +321,6 @@ function calcularDiasRestantes(fechaVencimiento) {
   return Math.ceil((vence - hoy) / msPorDia);
 }
 
-/** Calcula días restantes desde JS */
-function calcularDiasRestantes(fechaVencimiento) {
-  if (!fechaVencimiento) return 0;
-  const hoy = new Date();
-  hoy.setHours(0, 0, 0, 0);
-  const vence = new Date(fechaVencimiento);
-  vence.setHours(0, 0, 0, 0);
-  const msPorDia = 24 * 60 * 60 * 1000;
-  return Math.ceil((vence - hoy) / msPorDia);
-}
-
 /** Calcula días restantes desde JS como respaldo */
 function calcularDiasRestantes(fechaVencimiento) {
   if (!fechaVencimiento) return 0;
