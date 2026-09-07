@@ -25,10 +25,11 @@ export default defineConfig({
     globals: true,
     environment: "jsdom",
     setupFiles: ["./src/setupTests.js"],
-    server: {
-      deps: {
-        // Evita que Vitest intente buscar React dentro del subdirectorio del app
-        external: ["react", "react-dom"],
+    deps: {
+      optimizer: {
+        web: {
+          include: ["@testing-library/react", "react", "react-dom"],
+        },
       },
     },
   },
