@@ -309,36 +309,3 @@ function calcularDiasRestantes(fechaVencimiento) {
   const msPorDia = 24 * 60 * 60 * 1000;
   return Math.ceil((vence - hoy) / msPorDia);
 }
-// ──────────────────────────────────────────────────────────────────────────────
-// CATÁLOGOS: Comunidades y Bodegas
-// ──────────────────────────────────────────────────────────────────────────────
-
-/** Lista de comunidades (reutiliza la que ya existe en tu proyecto) */
-export async function listarComunidades() {
-  try {
-    const { data, error } = await obtenerSupabase()
-      .from("comunidades")
-      .select("id, nombre")
-      .order("nombre", { ascending: true });
-
-    if (error) throw error;
-    return { comunidades: data ?? [], error: null };
-  } catch (error) {
-    return { comunidades: [], error: normalizarError(error) };
-  }
-}
-
-/** Lista de bodegas */
-export async function listarBodegas() {
-  try {
-    const { data, error } = await obtenerSupabase()
-      .from("bodegas")
-      .select("id, nombre")
-      .order("nombre", { ascending: true });
-
-    if (error) throw error;
-    return { bodegas: data ?? [], error: null };
-  } catch (error) {
-    return { bodegas: [], error: normalizarError(error) };
-  }
-}
