@@ -4,15 +4,15 @@ import { pathToFileURL } from "node:url";
 
 const require = createRequire(import.meta.url);
 const reactPkgPath = require.resolve("react/package.json");
-const reactRealURL = pathToFileURL(path.dirname(reactPkgPath)).href;
+const reactDir = path.dirname(reactPkgPath);
 
 export async function resolve(specifier, context, nextResolve) {
   if (specifier === "react" || specifier.startsWith("react/")) {
-    const sufijo = specifier === "react" ? "" : specifier.slice("react".length);
-    const targetUrl = new URL("." + (sufijo || "/index.js"), reactRealURL + "/").href;
+    const sufijo = specifier === "react" ? "index.js" : specifier.slice("react/".length);
+    const targetPath = path.resolve(reactDir, sufijo);
     return {
       shortCircuit: true,
-      url: targetUrl,
+      url: pathToFileURL(targetPath).href,
     };
   }
   return nextResolve(specifier, context);
