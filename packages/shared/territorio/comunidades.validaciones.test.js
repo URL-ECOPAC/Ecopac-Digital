@@ -1,14 +1,11 @@
 import { describe, expect, it } from "vitest";
-import {
-  normalizarDatosComunidad,
-  validarComunidad,
-} from "./comunidades.validaciones.js";
+import { normalizarDatosComunidad, validarComunidad } from "./comunidades.validaciones.js";
 
 describe("normalizarDatosComunidad", () => {
   it("recorta espacios innecesarios en el nombre", () => {
-    expect(
-      normalizarDatosComunidad({ nombre: "  Aldea El Carmen  " }).nombre
-    ).toBe("Aldea El Carmen");
+    expect(normalizarDatosComunidad({ nombre: "  Aldea El Carmen  " }).nombre).toBe(
+      "Aldea El Carmen",
+    );
   });
 });
 
