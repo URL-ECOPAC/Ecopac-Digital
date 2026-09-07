@@ -1,4 +1,5 @@
 // Pruebas de la guarda de rol de la app movil (issues #427 y #702).
+// @vitest-environment jsdom
 //
 // Es la primera prueba de apps/mobile: hasta la #702 el workspace no tenia ninguna ni script
 // `test`, y `npm test --workspaces --if-present` lo saltaba en silencio, asi que el CI pasaba en

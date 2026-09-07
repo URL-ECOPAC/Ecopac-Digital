@@ -36,7 +36,10 @@ function respuestaDeError(status: number, code: string, message: string) {
   return respuestaJson(status, { code, message });
 }
 
-Deno.serve(async (req) => {
+export async function manejarSolicitud(
+  req: Request,
+  { crearCliente = createClient }: { crearCliente?: typeof createClient } = {},
+): Promise<Response> {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -69,7 +72,7 @@ Deno.serve(async (req) => {
       return respuestaDeError(401, "42501", "Falta la sesion.");
     }
 
-    const clienteDeQuienLlama = createClient(supabaseUrl, anonKey, {
+    const clienteDeQuienLlama = crearCliente(supabaseUrl, anonKey, {
       global: { headers: { Authorization: authHeader } },
       auth: { persistSession: false },
     });
@@ -83,14 +86,24 @@ Deno.serve(async (req) => {
       return respuestaDeError(401, "42501", "La sesion no es valida o expiro.");
     }
 
+    // "rol, activo": pedir solo "rol" reabria el agujero que cerro la 00079. La politica de
+    // SELECT de perfiles deja leer la propia fila aunque este desactivada (para que
+    // evaluarPerfilDeSesion() lo pueda explicar en pantalla), asi que un administrador dado de
+    // baja con un JWT todavia vigente seguia viendo su fila con rol: 'administrador'. El chequeo
+    // de activo no lo hace RLS aqui -esta funcion lee con el cliente del llamador, no con
+    // rol_actual()-, asi que tiene que hacerse a mano (issue #691).
     const { data: perfilDeQuienLlama, error: errorDePerfil } =
       await clienteDeQuienLlama
         .from("perfiles")
-        .select("rol")
+        .select("rol, activo")
         .eq("id", user.id)
         .maybeSingle();
 
-    if (errorDePerfil || perfilDeQuienLlama?.rol !== "administrador") {
+    if (
+      errorDePerfil ||
+      perfilDeQuienLlama?.rol !== "administrador" ||
+      !perfilDeQuienLlama?.activo
+    ) {
       return respuestaDeError(
         403,
         "42501",
@@ -136,7 +149,7 @@ Deno.serve(async (req) => {
     //    contra el enum rol_usuario solo: un valor invalido cae en el catch de abajo con
     //    invalid_text_representation (22P02), sin duplicar aqui la lista de roles.
     // ========================================================================
-    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
+    const supabaseAdmin = crearCliente(supabaseUrl, serviceRoleKey, {
       auth: { persistSession: false },
     });
 
@@ -185,7 +198,7 @@ Deno.serve(async (req) => {
     //    ganar el Site URL configurado en Supabase Auth, igual que hace ese hook cuando no se
     //    lo pasan. No bloquea el alta si el envio falla.
     // ========================================================================
-    const supabaseAnon = createClient(supabaseUrl, anonKey, {
+    const supabaseAnon = crearCliente(supabaseUrl, anonKey, {
       auth: { persistSession: false },
     });
 
@@ -200,7 +213,10 @@ Deno.serve(async (req) => {
 
     // ========================================================================
     // 5. Responder con el perfil completo, no solo el id, para que quien llama (crearUsuario())
-    //    tenga los mismos datos que trae cualquier otra lectura de perfiles.
+    //    tenga los mismos datos que trae cualquier otra lectura de perfiles. `correoEnviado`
+    //    refleja el resultado real del paso 4 en vez de tragarselo: la cuenta se crea igual si
+    //    el correo falla, pero quien la creo tiene que poder saber que la persona invitada no va
+    //    a recibir el enlace para fijar su contrasena (issue #691).
     // ========================================================================
     const { data: perfilCreado } = await supabaseAdmin
       .from("perfiles")
@@ -208,7 +224,10 @@ Deno.serve(async (req) => {
       .eq("id", idNuevoUsuario)
       .maybeSingle();
 
-    return respuestaJson(200, perfilCreado ?? { id: idNuevoUsuario });
+    return respuestaJson(200, {
+      ...(perfilCreado ?? { id: idNuevoUsuario }),
+      correoEnviado: !errorDeCorreo,
+    });
   } catch (error) {
     console.error("invitar-usuario: error inesperado.", error);
     return respuestaDeError(
@@ -217,4 +236,8 @@ Deno.serve(async (req) => {
       "Ocurrio un error inesperado dando de alta.",
     );
   }
-});
+}
+
+if (import.meta.main) {
+  Deno.serve((req) => manejarSolicitud(req));
+}

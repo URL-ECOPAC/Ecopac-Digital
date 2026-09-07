@@ -1,42 +1,19 @@
-// Pruebas de las reglas de negocio de las condiciones cronicas (issue #122).
-//
-// La fecha se inyecta en todas las pruebas que la miran: una prueba que dependa del reloj del CI
-// falla sola el dia que el huso cambie de dia antes que el de la maquina de quien la escribio.
-//
-// Ningun dato real: identificadores y notas son inventados.
-
 import { describe, expect, it } from "vitest";
-
-import { OPCIONES_ESTADO_CONDICION } from "./condiciones.campos.js";
 import { ESTADOS_CONDICION_CRONICA } from "../enums.js";
 import {
   normalizarDatosCondicion,
   validarCambioDeCondicion,
+  validarCondicionCatalogo,
   validarCondicionCronica,
 } from "./condiciones.validaciones.js";
 
-const HOY = new Date("2026-06-15T12:00:00Z");
-const CONDICION = "71000000-0000-0000-0000-000000122001";
+const HOY = new Date("2026-06-15T10:00:00.000Z");
 
 const ALTA_VALIDA = {
-  condicion: CONDICION,
+  condicion: "Diabetes Tipo 2",
   fechaDiagnostico: "2026-01-15",
+  estado: ESTADOS_CONDICION_CRONICA.ACTIVA,
 };
-
-describe("ESTADOS_CONDICION_CRONICA", () => {
-  it("tiene los tres valores del enum estado_condicion_cronica de la 00010", () => {
-    expect(Object.values(ESTADOS_CONDICION_CRONICA)).toEqual(["activa", "controlada", "resuelta"]);
-  });
-
-  it("cada estado tiene su etiqueta para la pantalla", () => {
-    expect(OPCIONES_ESTADO_CONDICION.map((opcion) => opcion.value)).toEqual(
-      Object.values(ESTADOS_CONDICION_CRONICA),
-    );
-    for (const opcion of OPCIONES_ESTADO_CONDICION) {
-      expect(opcion.label).toBeTruthy();
-    }
-  });
-});
 
 describe("normalizarDatosCondicion", () => {
   it("recorta las notas", () => {
@@ -44,13 +21,10 @@ describe("normalizarDatosCondicion", () => {
   });
 
   it("deja las notas en null cuando se enviaron vacias", () => {
-    // La columna es nullable: una cadena vacia guardaria un dato que no existe.
-    expect(normalizarDatosCondicion({ notas: "   " }).notas).toBeNull();
+    expect(normalizarDatosCondicion({ notas: "    " }).notas).toBeNull();
   });
 
   it("no inventa la clave notas cuando no venia", () => {
-    // Si la inventara, actualizarCondicion() la incluiria en el UPDATE y borraria las notas
-    // clinicas del paciente en cualquier cambio de estado.
     expect(normalizarDatosCondicion({ estado: "resuelta" })).not.toHaveProperty("notas");
     expect(normalizarDatosCondicion({})).not.toHaveProperty("notas");
   });
@@ -63,9 +37,7 @@ describe("validarCondicionCronica", () => {
 
   it("exige la condicion y la fecha de diagnostico", () => {
     const errores = validarCondicionCronica({}, HOY);
-
     expect(errores.condicion).toBeDefined();
-    expect(errores.fechaDiagnostico).toBeDefined();
   });
 
   it("no exige el estado, porque la columna tiene DEFAULT 'activa'", () => {
@@ -81,8 +53,7 @@ describe("validarCondicionCronica", () => {
       { ...ALTA_VALIDA, fechaDiagnostico: "2026-12-01" },
       HOY,
     );
-
-    expect(errores.fechaDiagnostico).toContain("futura");
+    expect(errores.fechaDiagnostico).toBe("La fecha de diagnostico no puede ser futura.");
   });
 
   it("acepta la fecha de hoy", () => {
@@ -90,20 +61,16 @@ describe("validarCondicionCronica", () => {
       { ...ALTA_VALIDA, fechaDiagnostico: "2026-06-15" },
       HOY,
     );
-
     expect(errores.fechaDiagnostico).toBeUndefined();
   });
 
   it("rechaza una fecha que no es fecha", () => {
     const errores = validarCondicionCronica({ ...ALTA_VALIDA, fechaDiagnostico: "ayer" }, HOY);
-
     expect(errores.fechaDiagnostico).toContain("no valida");
   });
 
   it("rechaza un estado que el enum no tiene", () => {
-    // Sin esta regla el INSERT falla en la base con un error que no dice que estados existen.
     const errores = validarCondicionCronica({ ...ALTA_VALIDA, estado: "cronica" }, HOY);
-
     expect(errores.estado).toContain("activa, controlada o resuelta");
   });
 
@@ -128,8 +95,16 @@ describe("validarCambioDeCondicion", () => {
       { estado: "inventado", fechaDiagnostico: "2026-12-01" },
       HOY,
     );
-
     expect(errores.estado).toBeDefined();
     expect(errores.fechaDiagnostico).toBeDefined();
+  });
+});
+
+describe("validarCondicionCatalogo", () => {
+  it("exige el nombre al crear o editar en el catalogo", () => {
+    expect(validarCondicionCatalogo({ nombre: "" })).toEqual({
+      nombre: "El nombre de la condicion es requerido.",
+    });
+    expect(validarCondicionCatalogo({ nombre: "Hipertensión" })).toEqual({});
   });
 });

@@ -1,90 +1,92 @@
-import { useRef, useState } from "react";
-import { Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { colors, radii, spacing, typography } from "@ecopac/ui-tokens";
-import { useInicioSesion } from "@ecopac/shared";
+import { useNuevaContrasena } from "@ecopac/shared";
 
-import LOGO from "../../assets/icon.png";
 import { Card, PrimaryButton, ScreenContainer, TextField } from "../components";
-import { ROUTES } from "../navigation/rutas";
 
-export default function LoginScreen({ navigation }) {
+/**
+ * Pantalla que muestra App.js mientras `estaEnRecuperacion` es verdadero (issue #644): llega
+ * aqui sin pasar por el AuthStack normal, porque tiene que aparecer sin importar si ya hay
+ * sesion o no. `alTerminar` la pasa App.js y la devuelve a Login cuando la sesion de
+ * recuperacion termina (exito o cierre por cuenta desactivada, ver useNuevaContrasena.js).
+ */
+export default function NuevaContrasenaScreen({ alTerminar }) {
   const {
-    correo,
-    setCorreo,
     contrasena,
     setContrasena,
-    erroresDeCampo,
-    error,
+    confirmarContrasena,
+    setConfirmarContrasena,
     enviando,
-    handleSubmit,
-  } = useInicioSesion();
+    errorGlobal,
+    erroresDeCampo,
+    exito,
+    actualizarContrasena,
+  } = useNuevaContrasena();
 
-  const campoContrasena = useRef(null);
+  const campoConfirmar = useRef(null);
   const [verContrasena, setVerContrasena] = useState(false);
+
+  useEffect(() => {
+    if (exito) {
+      alTerminar?.();
+    }
+  }, [exito, alTerminar]);
 
   return (
     <ScreenContainer contentContainerStyle={styles.contenido}>
       <Card style={styles.tarjeta}>
         <View style={styles.encabezado}>
-          <Image source={LOGO} style={styles.logo} resizeMode="contain" />
-          <Text style={styles.titulo}>Ecopac Digital</Text>
-          <Text style={styles.subtitulo}>Inicia sesión para continuar</Text>
+          <Text style={styles.titulo}>Nueva contraseña</Text>
+          <Text style={styles.subtitulo}>Elige una contraseña para tu cuenta</Text>
         </View>
 
-        {error ? (
+        {errorGlobal ? (
           <View style={styles.errorGeneral}>
-            <Text style={styles.errorGeneralTexto}>{error.mensaje}</Text>
+            <Text style={styles.errorGeneralTexto}>{errorGlobal}</Text>
           </View>
         ) : null}
 
-        <TextField
-          label="Correo electrónico"
-          value={correo}
-          onChangeText={setCorreo}
-          error={erroresDeCampo.email}
-          editable={!enviando}
-          keyboardType="email-address"
-          autoCapitalize="none"
-          autoCorrect={false}
-          textContentType="emailAddress"
-          autoComplete="email"
-          returnKeyType="next"
-          onSubmitEditing={() => campoContrasena.current?.focus()}
-          blurOnSubmit={false}
-        />
-
         <View style={styles.encabezadoContrasena}>
-          <Text style={styles.labelContrasena}>Contraseña</Text>
+          <Text style={styles.labelContrasena}>Nueva contraseña</Text>
           <Pressable onPress={() => setVerContrasena((valor) => !valor)} hitSlop={8}>
             <Text style={styles.toggleContrasena}>{verContrasena ? "Ocultar" : "Mostrar"}</Text>
           </Pressable>
         </View>
         <TextField
-          ref={campoContrasena}
           value={contrasena}
           onChangeText={setContrasena}
-          error={erroresDeCampo.contrasena}
+          error={erroresDeCampo?.contrasena}
           editable={!enviando}
           secureTextEntry={!verContrasena}
           autoCapitalize="none"
           autoCorrect={false}
-          textContentType="password"
-          autoComplete="password"
-          returnKeyType="done"
-          onSubmitEditing={handleSubmit}
+          textContentType="newPassword"
+          autoComplete="password-new"
+          returnKeyType="next"
+          onSubmitEditing={() => campoConfirmar.current?.focus()}
+          blurOnSubmit={false}
         />
 
-        <Pressable
-          onPress={() => navigation.navigate(ROUTES.RESTABLECER_CONTRASENA)}
-          hitSlop={8}
-          style={styles.olvideContrasena}
-        >
-          <Text style={styles.olvideContrasenaTexto}>¿Olvidaste tu contraseña?</Text>
-        </Pressable>
+        <TextField
+          ref={campoConfirmar}
+          label="Confirmar contraseña"
+          value={confirmarContrasena}
+          onChangeText={setConfirmarContrasena}
+          error={erroresDeCampo?.confirmarContrasena}
+          editable={!enviando}
+          secureTextEntry={!verContrasena}
+          autoCapitalize="none"
+          autoCorrect={false}
+          textContentType="newPassword"
+          autoComplete="password-new"
+          returnKeyType="done"
+          onSubmitEditing={actualizarContrasena}
+        />
 
         <PrimaryButton
-          title="Iniciar sesión"
-          onPress={handleSubmit}
+          title="Guardar nueva contraseña"
+          onPress={actualizarContrasena}
           loading={enviando}
           disabled={enviando}
           style={styles.boton}
@@ -105,22 +107,19 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xl,
     alignItems: "center",
   },
-  logo: {
-    width: 72,
-    height: 72,
-    marginBottom: spacing.sm,
-  },
   titulo: {
     fontFamily: typography.fontFamilyBase,
     fontSize: typography.sizes.xl,
     fontWeight: typography.weights.bold,
     color: colors.text,
+    textAlign: "center",
   },
   subtitulo: {
     marginTop: spacing.xs,
     fontFamily: typography.fontFamilyBase,
     fontSize: typography.sizes.md,
     color: colors.textMuted,
+    textAlign: "center",
   },
   errorGeneral: {
     marginBottom: spacing.md,
@@ -150,16 +149,6 @@ const styles = StyleSheet.create({
     color: colors.text,
   },
   toggleContrasena: {
-    fontFamily: typography.fontFamilyBase,
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.semibold,
-    color: colors.primary,
-  },
-  olvideContrasena: {
-    marginTop: spacing.sm,
-    alignSelf: "flex-end",
-  },
-  olvideContrasenaTexto: {
     fontFamily: typography.fontFamilyBase,
     fontSize: typography.sizes.sm,
     fontWeight: typography.weights.semibold,
