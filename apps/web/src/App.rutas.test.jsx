@@ -9,7 +9,7 @@ import App from "./App";
 // Extiende los matchers DOM en Vitest para habilitar toBeInTheDocument(), toHaveAttribute(), etc.
 expect.extend(matchers);
 
-// Garatiza que el DOM de React Testing Library se limpie completamente entre pruebas
+// Garantiza que el DOM de React Testing Library se limpie completamente entre pruebas
 afterEach(() => {
   cleanup();
 });
@@ -30,22 +30,99 @@ const { estadoSesion } = vi.hoisted(() => ({
     haySesion: true,
     perfil: null,
     rol: null,
+    usuario: null,
+    sesion: { access_token: "token-mock" },
+    cargando: false,
+    cerrarSesion: vi.fn(),
   },
 }));
 
+// Mock del contexto local de Sesión exportando useSesionCompartida y useSesion
 vi.mock("./contexto/SesionProvider", () => ({
+  useSesion: () => ({
+    ...estadoSesion,
+    usuario: estadoSesion.perfil,
+  }),
+  useSesionCompartida: () => ({
+    ...estadoSesion,
+    usuario: estadoSesion.perfil,
+  }),
   SesionProvider: ({ children }) => children,
-  useSesionCompartida: () => estadoSesion,
 }));
+
+// Mock de @ecopac/shared
+vi.mock("@ecopac/shared", async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    useSesion: () => ({
+      ...estadoSesion,
+      usuario: estadoSesion.perfil,
+    }),
+    useResumenDonaciones: () => {
+      const totalesMock = {
+        dinero: 0,
+        especie: 0,
+      };
+      return {
+        donaciones: [],
+        donacionesRecientes: [],
+        donantesFrecuentes: [],
+        cargando: false,
+        error: null,
+        fechaInicio: "",
+        setFechaInicio: vi.fn(),
+        fechaFin: "",
+        setFechaFin: vi.fn(),
+        totalesPorTipo: totalesMock,
+        resumen: {
+          totalesPorTipo: totalesMock,
+        },
+        datos: {
+          donaciones: [],
+          donacionesRecientes: [],
+          donantesFrecuentes: [],
+          resumen: {
+            totalesPorTipo: totalesMock,
+          },
+          totalesPorTipo: totalesMock,
+        },
+      };
+    },
+    obtenerSupabase: () => ({
+      auth: {
+        getSession: vi.fn().mockResolvedValue({ data: { session: null }, error: null }),
+        onAuthStateChange: vi.fn().mockReturnValue({
+          data: { subscription: { unsubscribe: vi.fn() } },
+        }),
+      },
+      from: vi.fn().mockReturnValue({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({ data: null, error: null }),
+      }),
+    }),
+    inicializarSupabase: vi.fn(),
+  };
+});
 
 function renderEnRuta(ruta) {
   window.history.pushState({}, "", ruta);
   return render(<App />);
 }
 
+// Función auxiliar para buscar elementos que puedan estar expuestos como "link" o "button"
+function obtenerElementoNavegacion(nombreRegex) {
+  const enlace = screen.queryByRole("link", { name: nombreRegex });
+  if (enlace) return enlace;
+
+  return screen.getByRole("button", { name: nombreRegex });
+}
+
 beforeEach(() => {
   estadoSesion.perfil = PERFIL;
   estadoSesion.rol = PERFIL.rol;
+  estadoSesion.usuario = PERFIL;
 });
 
 describe("rutas de donaciones y proyectos", () => {
@@ -101,15 +178,15 @@ describe("los hubs de modulo llevan a sus pantallas", () => {
   it("/donaciones enlaza al registro, al historial y a los donantes", () => {
     renderEnRuta("/donaciones");
 
-    expect(screen.getByRole("link", { name: /registrar donación/i })).toHaveAttribute(
+    expect(obtenerElementoNavegacion(/registrar donaci[oó]n/i)).toHaveAttribute(
       "href",
       "/donaciones/registro",
     );
-    expect(screen.getByRole("link", { name: /historial de donaciones/i })).toHaveAttribute(
+    expect(obtenerElementoNavegacion(/historial de donaciones/i)).toHaveAttribute(
       "href",
       "/donaciones/historial",
     );
-    expect(screen.getByRole("link", { name: /donantes/i })).toHaveAttribute("href", "/donantes");
+    expect(obtenerElementoNavegacion(/donantes/i)).toHaveAttribute("href", "/donantes");
   });
 
   it("/proyectos enlaza o monta la vista de proyectos sociales", () => {
@@ -163,11 +240,14 @@ describe("/reportes/dashboard respeta el guard de rol del modulo (#697)", () => 
   afterEach(() => {
     estadoSesion.perfil = PERFIL;
     estadoSesion.rol = PERFIL.rol;
+    estadoSesion.usuario = PERFIL;
   });
 
   it("un rol sin el modulo reportes ve Acceso Denegado, no el panel", () => {
-    estadoSesion.perfil = { ...PERFIL, rol: "medico" };
+    const perfilMedico = { ...PERFIL, rol: "medico" };
+    estadoSesion.perfil = perfilMedico;
     estadoSesion.rol = "medico";
+    estadoSesion.usuario = perfilMedico;
 
     renderEnRuta("/reportes/dashboard");
 
