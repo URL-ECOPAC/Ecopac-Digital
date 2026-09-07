@@ -9,6 +9,7 @@
 // protege nada, quien protege es RLS. Que la opcion no aparezca es lo unico que se afirma.
 
 import { modulosVisibles, ROLES, tabsMoviles } from "@ecopac/shared";
+import { describe, it, expect } from "vitest";
 
 import { ROUTES } from "./rutas";
 

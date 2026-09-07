@@ -1,19 +1,20 @@
 // Pruebas de RutaProtegida (issue #515): primera prueba real de un componente de apps/web.
-//
-// Se mockea useSesionCompartida en vez de envolver en <SesionProvider> real: lo que este
-// archivo prueba es la logica de las 5 ramas del guard (comprobando/sin sesion/sin
-// perfil/rol insuficiente/pasa), no el hook de sesion en si -eso ya lo prueba
-// packages/shared/hooks/useSesion.test.js por su cuenta.
-//
-// MemoryRouter + Routes anidadas: es el mismo patron que usa el router real de la app
-// (RutaProtegida como elemento padre, la ruta protegida como hijo via <Outlet/>), asi que la
-// prueba ejercita Navigate/Outlet de verdad en vez de solo el render aislado del componente.
+// @vitest-environment jsdom
 
-import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { describe, it, expect, vi, afterEach } from "vitest";
+import { render, screen, cleanup } from "@testing-library/react";
+import * as matchers from "@testing-library/jest-dom/matchers";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import RutaProtegida from "./RutaProtegida";
 import { useSesionCompartida } from "../contexto/SesionProvider";
+
+// Extiende los matchers de DOM en el expect de Vitest
+expect.extend(matchers);
+
+// Garatiza que el DOM se limpie entre pruebas
+afterEach(() => {
+  cleanup();
+});
 
 vi.mock("../contexto/SesionProvider", () => ({
   useSesionCompartida: vi.fn(),

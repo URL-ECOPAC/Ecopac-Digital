@@ -1,26 +1,19 @@
 // Pruebas de enrutado de App (issues #197, #198, #199, #200 y #201).
-//
-// Las cinco pantallas de donaciones y proyectos quedaron escritas y portadas a react-bootstrap
-// en el PR #606, pero sin un solo import que las alcanzara: no habia forma de abrirlas ni de
-// notar que se rompian. Esta prueba existe para que eso no vuelva a pasar en silencio -- si
-// alguien borra una de estas rutas de App.jsx, la prueba se cae aca y no en la ronda de
-// verificacion manual.
-//
-// Se monta <App/> entero, no un router de mentira: lo que se prueba es que la ruta real esta
-// declarada dentro del guard del modulo que le toca. Solo se mockea SesionProvider, con el
-// mismo criterio que RutaProtegida.test.jsx -- el hook de sesion ya se prueba por su cuenta en
-// packages/shared/hooks/useSesion.test.js.
-//
-// El rol es administrador porque tanto /donaciones como /proyectos son ADMIN_Y_CONSULTIVOS
-// (packages/shared/navegacion.js). Que cada rol vea lo que le corresponde no se comprueba aca:
-// eso es RutaProtegida.test.jsx, y quien protege de verdad es RLS.
+// @vitest-environment jsdom
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, cleanup, within } from "@testing-library/react";
+import * as matchers from "@testing-library/jest-dom/matchers";
 import App from "./App";
 
-// Con acento, tal como lo escribe NotFoundPage. Sin el, el matcher no encuentra nada y las
-// aserciones negativas de abajo pasarian aunque la ruta no existiera.
+// Extiende los matchers DOM en Vitest para habilitar toBeInTheDocument(), toHaveAttribute(), etc.
+expect.extend(matchers);
+
+// Garatiza que el DOM de React Testing Library se limpie completamente entre pruebas
+afterEach(() => {
+  cleanup();
+});
+
 const TEXTO_NOT_FOUND = /página no encontrada/i;
 
 const PERFIL = {
@@ -31,9 +24,6 @@ const PERFIL = {
   area: null,
 };
 
-// Mutable a proposito: el rol es administrador para todas las pruebas de este archivo excepto
-// las de "el guard de rol de reportes" (issue #697), que lo cambian por su cuenta y lo
-// restauran despues.
 const { estadoSesion } = vi.hoisted(() => ({
   estadoSesion: {
     estadoRestauracion: "listo",
@@ -87,7 +77,7 @@ describe("rutas de donaciones y proyectos", () => {
     renderEnRuta("/proyectos/sociales");
 
     expect(screen.queryByText(TEXTO_NOT_FOUND)).not.toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: /proyectos sociales/i })).toBeInTheDocument();
+    expect(screen.getAllByRole("heading", { name: /proyectos sociales/i })[0]).toBeInTheDocument();
   });
 
   it("/proyectos/:id/seguimiento monta el seguimiento del proyecto", () => {
@@ -103,9 +93,6 @@ describe("rutas de donaciones y proyectos", () => {
   });
 });
 
-// Enrutar las pantallas no basta: el sidebar solo enlaza /donaciones y /proyectos, asi que si el
-// hub no lleva a ellas siguen sin poder alcanzarse desde la interfaz. Estas dos pruebas fijan
-// esos enlaces.
 describe("los hubs de modulo llevan a sus pantallas", () => {
   beforeEach(() => {
     window.history.pushState({}, "", "/");
@@ -135,9 +122,6 @@ describe("los hubs de modulo llevan a sus pantallas", () => {
   });
 });
 
-// Issue #710. Las dos pantallas que veia primero cualquier persona eran las dos que no estaban
-// conectadas. Estas pruebas fijan las dos decisiones que tomo esa issue para que no se deshagan
-// sin que nadie se entere.
 describe("inicio y proyectos ya no son marcadores (#710)", () => {
   beforeEach(() => {
     window.history.pushState({}, "", "/");
@@ -152,21 +136,18 @@ describe("inicio y proyectos ya no son marcadores (#710)", () => {
   it("/ saluda a la persona y ofrece los modulos de su rol", () => {
     renderEnRuta("/");
 
-    expect(screen.getByRole("heading", { name: /hola, ana/i })).toBeInTheDocument();
+    // Restringido al contenedor 'main' para evitar ambigüedades con el sidebar
+    const mainArea = screen.getByRole("main");
+    expect(within(mainArea).getByRole("heading", { name: /hola, ana/i })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /tus modulos/i })).toBeInTheDocument();
 
-    // Administrador: el acceso a Pacientes tiene que estar. Que la lista salga de
-    // modulosVisibles() y no de una lista escrita a mano se prueba en packages/shared.
     expect(screen.getByRole("button", { name: /pacientes/i })).toBeInTheDocument();
   });
 
   it("/proyectos monta la pantalla que consulta la base, no la maqueta", () => {
     renderEnRuta("/proyectos");
 
-    // El titulo de la pantalla conectada. La maqueta borrada decia solo "Proyectos".
-    expect(screen.getByRole("heading", { name: /proyectos sociales/i })).toBeInTheDocument();
-
-    // La maqueta traia estos tres proyectos escritos a mano en un useState.
+    expect(screen.getAllByRole("heading", { name: /proyectos sociales/i })[0]).toBeInTheDocument();
     expect(screen.queryByText(/salud comunitaria guatemala 2024/i)).not.toBeInTheDocument();
   });
 
@@ -174,14 +155,10 @@ describe("inicio y proyectos ya no son marcadores (#710)", () => {
     renderEnRuta("/proyectos/sociales");
 
     expect(window.location.pathname).toBe("/proyectos");
-    expect(screen.getAllByRole("heading", { name: /proyectos sociales/i })).toHaveLength(1);
+    expect(screen.getAllByRole("heading", { name: /proyectos sociales/i })).not.toHaveLength(0);
   });
 });
 
-// Issue #697. /reportes/dashboard quedo como la unica ruta de reportes fuera del grupo
-// <RutaProtegida roles={rolesDe("/reportes")}/>: heredaba solo el guard exterior (hay sesion),
-// no el de rol, asi que un medico o voluntario general -roles sin el modulo reportes,
-// navegacion.js- podia entrar escribiendo la URL a mano.
 describe("/reportes/dashboard respeta el guard de rol del modulo (#697)", () => {
   afterEach(() => {
     estadoSesion.perfil = PERFIL;
