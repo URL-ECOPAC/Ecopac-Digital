@@ -68,11 +68,7 @@ export const MODULOS = [
     modulo: "presupuestos",
     tabMovil: false,
     icono: "DollarSign",
-    roles: [
-      ROLES.ADMINISTRADOR,
-      ROLES.JUNTA_DIRECTIVA,
-      ROLES.SOCIO_FUNDADOR,
-    ],
+    roles: [ROLES.ADMINISTRADOR, ROLES.JUNTA_DIRECTIVA, ROLES.SOCIO_FUNDADOR],
   },
   {
     nombre: "Proyectos",
@@ -80,12 +76,7 @@ export const MODULOS = [
     modulo: "proyectos",
     tabMovil: false,
     icono: "FolderKanban",
-    roles: [
-      ROLES.ADMINISTRADOR,
-      ROLES.MEDICO,
-      ROLES.JUNTA_DIRECTIVA,
-      ROLES.SOCIO_FUNDADOR,
-    ],
+    roles: [ROLES.ADMINISTRADOR, ROLES.MEDICO, ROLES.JUNTA_DIRECTIVA, ROLES.SOCIO_FUNDADOR],
   },
   {
     nombre: "Reportes",
