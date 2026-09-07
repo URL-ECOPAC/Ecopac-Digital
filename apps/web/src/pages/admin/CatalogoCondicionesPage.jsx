@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useCatalogoCondiciones } from "@ecopac/shared";
 import { useAuth } from "../../context/AuthContext";
-import CatalogoCondicionesModal from "../../components/pacientes/CatalogoCondicionesModal";
+import CatalogoCondicionesModal from "../src/components/pacientes/CatalogoCondicionesModal";
 import { Alert, Button, Spinner } from "react-bootstrap";
 
 export default function CatalogoCondicionesPage() {
