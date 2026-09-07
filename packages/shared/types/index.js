@@ -198,6 +198,7 @@
  * @property {string} id
  * @property {number} municipioId
  * @property {string} nombre
+ * @property {boolean} esVigente
  * @property {number|null} latitud
  * @property {number|null} longitud
  * @property {string|null} referenciaAcceso

@@ -27,7 +27,12 @@ const COLUMNAS_DEPARTAMENTO = ["id", "nombre"].join(", ");
 
 const COLUMNAS_MUNICIPIO = ["id", "nombre", "departamentoId:departamento_id"].join(", ");
 
-const COLUMNAS_COMUNIDAD = ["id", "nombre", "municipioId:municipio_id"].join(", ");
+const COLUMNAS_COMUNIDAD = [
+  "id",
+  "nombre",
+  "municipioId:municipio_id",
+  "esVigente:es_vigente",
+].join(", ");
 
 // Comunidad con su municipio embebido, solo para obtenerComunidad(): resuelve la cascada
 // completa al editar una jornada existente. La fila de jornadas trae comunidadId pero no
@@ -37,6 +42,7 @@ const COLUMNAS_COMUNIDAD_CON_TERRITORIO = [
   "id",
   "nombre",
   "municipioId:municipio_id",
+  "esVigente:es_vigente",
   "municipio:municipios(departamentoId:departamento_id)",
 ].join(", ");
 
@@ -119,7 +125,7 @@ export async function listarComunidades({ municipioId } = {}) {
  *
  * @param {string} id UUID de la comunidad.
  * @returns {Promise<{ comunidad: { id: string, nombre: string, municipioId: number,
- *   departamentoId: number|null }|null, error: object|null }>}
+ *   esVigente: boolean, departamentoId: number|null }|null, error: object|null }>}
  */
 export async function obtenerComunidad(id) {
   if (!id) return { comunidad: null, error: null };
@@ -139,10 +145,68 @@ export async function obtenerComunidad(id) {
         id: data.id,
         nombre: data.nombre,
         municipioId: data.municipioId,
+        esVigente: data.esVigente ?? true,
         departamentoId: data.municipio?.departamentoId ?? null,
       },
       error: null,
     };
+  } catch (error) {
+    return { comunidad: null, error: normalizarError(error) };
+  }
+}
+
+/**
+ * Crea una nueva comunidad en el catálogo territorial.
+ *
+ * @param {{ nombre: string, municipioId: number|string, esVigente?: boolean }} datos
+ * @returns {Promise<{ comunidad: object|null, error: object|null }>}
+ */
+export async function crearComunidad({ nombre, municipioId, esVigente = true } = {}) {
+  try {
+    const { data, error } = await obtenerSupabase()
+      .from("comunidades")
+      .insert([
+        {
+          nombre,
+          municipio_id: municipioId,
+          es_vigente: esVigente,
+        },
+      ])
+      .select(COLUMNAS_COMUNIDAD)
+      .single();
+
+    if (error) return { comunidad: null, error: normalizarError(error) };
+    return { comunidad: data ?? null, error: null };
+  } catch (error) {
+    return { comunidad: null, error: normalizarError(error) };
+  }
+}
+
+/**
+ * Actualiza una comunidad existente.
+ *
+ * @param {string} id UUID de la comunidad.
+ * @param {{ nombre?: string, municipioId?: number|string, esVigente?: boolean }} datos
+ * @returns {Promise<{ comunidad: object|null, error: object|null }>}
+ */
+export async function actualizarComunidad(id, datos = {}) {
+  if (!id) return { comunidad: null, error: null };
+
+  try {
+    const payload = {};
+    if (datos.nombre !== undefined) payload.nombre = datos.nombre;
+    if (datos.municipioId !== undefined) payload.municipio_id = datos.municipioId;
+    if (datos.esVigente !== undefined) payload.es_vigente = datos.esVigente;
+
+    const { data, error } = await obtenerSupabase()
+      .from("comunidades")
+      .update(payload)
+      .eq("id", id)
+      .select(COLUMNAS_COMUNIDAD)
+      .single();
+
+    if (error) return { comunidad: null, error: normalizarError(error) };
+    return { comunidad: data ?? null, error: null };
   } catch (error) {
     return { comunidad: null, error: normalizarError(error) };
   }

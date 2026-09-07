@@ -12,7 +12,12 @@ export * from "./cliente.js";
 export * from "./errores.js";
 export * from "./errores-de-supabase.js";
 
-// Solo los tres puntos de entrada publicos: evaluarPerfilDeSesion() y requiereCerrarSesion()
+// Solo los puntos de entrada publicos: evaluarPerfilDeSesion() y requiereCerrarSesion()
 // son detalle interno que useSesion() consume por import directo a ./sesion.js, no algo que
 // las apps deban ver a traves de @ecopac/shared.
-export { iniciarSesion, cerrarSesion, obtenerSesion } from "./sesion.js";
+export {
+  iniciarSesion,
+  cerrarSesion,
+  obtenerSesion,
+  intercambiarSesionDeRecuperacion,
+} from "./sesion.js";
