@@ -1,19 +1,5 @@
-// Pruebas de la pantalla de proyectos de la app movil (issue #688).
-//
-// Hasta esta issue, useProyectosSociales() se llamaba sin { usuarioRol }: puedeVerProyectos()
-// siempre devolvia false, la lista siempre llegaba vacia, y la pantalla caia a PROYECTOS_DEMO
-// (tres proyectos inventados) para cualquier rol, incluida la administradora. Ademas
-// ETAPAS_KANBAN usaba valores ("en_ejecucion", "completado"...) que no existen en el enum
-// estado_proyecto.
-//
-// Estas pruebas mockean useProyectosSociales() (no la red): lo que se fija es que la pantalla
-// pase el rol real, no invente datos cuando la lista viene vacia de verdad, y use las etapas del
-// enum real.
-
 import { render, screen } from "@testing-library/react-native";
-
 import { ESTADOS_PROYECTO } from "@ecopac/shared";
-
 import ProyectosScreen from "./ProyectosScreen";
 
 const sesion = { rol: "administrador" };
@@ -28,13 +14,15 @@ jest.mock("../contexto/SesionProvider", () => ({
   useSesionCompartida: () => sesion,
 }));
 
-jest.mock("@ecopac/shared/proyectos", () => {
-  const real = jest.requireActual("@ecopac/shared/proyectos");
-  return {
-    ...real,
-    useProyectosSociales: jest.fn(() => mockEstadoHook),
-  };
-});
+// Mockear la subruta exacta de donde ProyectosScreen.js consume el hook
+jest.mock("@ecopac/shared/proyectos", () => ({
+  useProyectosSociales: jest.fn(() => mockEstadoHook),
+}));
+
+// Si ProyectosScreen importa directamente desde la ruta profunda /useProyectosSociales
+jest.mock("@ecopac/shared/proyectos/useProyectosSociales", () => ({
+  useProyectosSociales: jest.fn(() => mockEstadoHook),
+}));
 
 jest.mock("@ecopac/shared/presupuestos", () => ({
   obtenerPresupuestoProyecto: jest.fn(async () => ({
@@ -43,7 +31,7 @@ jest.mock("@ecopac/shared/presupuestos", () => ({
   })),
 }));
 
-const { useProyectosSociales } = jest.requireMock("@ecopac/shared/proyectos");
+import { useProyectosSociales } from "@ecopac/shared/proyectos";
 
 describe("ProyectosScreen", () => {
   beforeEach(() => {
@@ -88,9 +76,6 @@ describe("ProyectosScreen", () => {
     ];
     render(<ProyectosScreen />);
 
-    // findByText espera a que el efecto que completa el presupuesto (obtenerPresupuestoProyecto,
-    // mockeado arriba) resuelva antes de afirmar, en vez de dejar la promesa pendiente fuera de
-    // act().
     expect(await screen.findByText("Agua potable Comunidad Norte")).toBeTruthy();
     expect(screen.queryByText("Jornada Odontológica Escolar")).toBeNull();
   });

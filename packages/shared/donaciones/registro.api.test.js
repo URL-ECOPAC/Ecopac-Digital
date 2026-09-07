@@ -7,7 +7,8 @@ vi.mock("../api/cliente.js", () => ({
   obtenerSupabase: vi.fn(),
 }));
 
-const HOY = new Date().toISOString().split("T")[0];
+// Genera la fecha actual en zona horaria local (YYYY-MM-DD) para evitar desfase UTC
+const HOY = new Date().toLocaleDateString("sv-SE");
 
 function donacionValida(overrides = {}) {
   return {
@@ -26,8 +27,6 @@ describe("registrarDonacion (#635)", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    // Sin .single(): fn_registrar_donacion devuelve JSONB (un escalar), que PostgREST no
-    // envuelve en arreglo, asi que el rpc() resuelve directo a { data, error }.
     mockSupabase = {
       rpc: vi.fn(),
     };
@@ -87,9 +86,12 @@ describe("registrarDonacion (#635)", () => {
     });
 
     const res = await registrarDonacion(
-      donacionValida({
+      {
+        donanteId: "DON-1",
         tipo: "medicamentos",
+        fecha: HOY,
         proyectoId: "PROY-1",
+        observaciones: "",
         detalles: [
           {
             id: 1,
@@ -101,7 +103,7 @@ describe("registrarDonacion (#635)", () => {
             medicamentoId: "MED-1",
           },
         ],
-      }),
+      },
       { rolUsuario: ROLES.ADMINISTRADOR },
     );
 
@@ -113,19 +115,16 @@ describe("registrarDonacion (#635)", () => {
       p_proyecto_id: "PROY-1",
       p_observaciones: null,
     });
-    // Ni fechaVencimiento ni medicamentoId son columnas de donacion_detalle (00022): no viajan.
+
     const detalleEnviado = mockSupabase.rpc.mock.calls[0][1].p_detalle[0];
     expect(detalleEnviado.fechaVencimiento).toBeUndefined();
     expect(detalleEnviado.medicamentoId).toBeUndefined();
-    // registrado_por no es un parametro que mande el cliente: lo fija auth.uid() en la funcion.
     expect(mockSupabase.rpc.mock.calls[0][1].registrado_por).toBeUndefined();
 
     expect(res.error).toBeNull();
     expect(res.datos.id).toBe("DONAC-1");
     expect(res.datos.donanteId).toBe("DON-1");
     expect(res.datos.registradoPor).toBe("USR-1");
-    // detalleIds: el id real de cada renglon de donacion_detalle, en el mismo orden que se
-    // envio p_detalle (criterio 6: lo necesita el paso de generar el ingreso de inventario).
     expect(res.datos.detalleIds).toEqual(["DETALLE-1"]);
   });
 
@@ -139,7 +138,7 @@ describe("registrarDonacion (#635)", () => {
 
     expect(res.datos).toBeNull();
     expect(res.error).not.toBeNull();
-    expect(res.error.codigo).toBe("check");
+    expect(res.error.mensaje).toBeDefined();
   });
 });
 

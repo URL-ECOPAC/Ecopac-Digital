@@ -63,3 +63,12 @@ export function puedeQuitarCondicion(rol) {
 export function puedeVerCatalogoDeCondiciones(rol) {
   return TODOS_LOS_ROLES.includes(rol);
 }
+
+/**
+ * Puede crear, editar o cambiar la vigencia del catalogo de condiciones cronicas (issue #641).
+ *
+ * Solo el administrador puede modificar el catalogo maestro de condiciones.
+ */
+export function puedeGestionarCatalogoCondiciones(rol) {
+  return esAdministrador(rol);
+}
