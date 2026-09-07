@@ -41,6 +41,7 @@ export * from "./hooks/index.js";
 // en el paquete (issue #493), esa excepcion ya no hace falta.
 export * from "./types/index.js";
 export * from "./validations/index.js";
+export * from "./donaciones/useResumenDonaciones.js";
 
 // Aqui habia un desempate explicito de iniciarSesion y cerrarSesion: los dos nombres nacian en
 // api/sesion.js y en usuarios/api.js, el barril los recibia por dos estrellas y ESM los excluia
