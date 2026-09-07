@@ -230,9 +230,8 @@ const COLUMNAS_LOTES_POR_VENCER = [
   "id",
   "numero_lote",
   "fecha_vencimiento",
-  "cantidad",           // ✅ en vez de cantidad_actual
-  // Relaciones con tablas reales
   "medicamento_id",
+  // Relación con medicamentos
   "medicamentos!inner(nombre, concentracion, presentacion)",
 ].join(", ");
 /**
@@ -269,13 +268,14 @@ export async function listarLotesPorVencer({ horizonteDias, comunidad, bodega } 
       .gte("fecha_vencimiento", hoyStr)
       .order("fecha_vencimiento", { ascending: true });
 
-    // ⚠️ bodega_id NO existe en lotes → filtro comentado por ahora
+    // ⚠️ Filtros comentados: columnas no confirmadas
     // if (bodega) consulta = consulta.eq("bodega_id", bodega);
+    // if (comunidad) consulta = consulta.eq("comunidad_id", comunidad);
 
     const { data, error } = await consulta;
     if (error) throw error;
 
-    // ✅ Mapeo normalizado para el reporte
+    // ✅ Mapeo normalizado
     const lotes = (data ?? []).map((fila) => {
       const diasRestantes = calcularDiasRestantes(fila.fecha_vencimiento);
       return {
@@ -288,8 +288,8 @@ export async function listarLotesPorVencer({ horizonteDias, comunidad, bodega } 
         fecha_vencimiento: fila.fecha_vencimiento,
         vencimiento: fila.fecha_vencimiento,
         dias_restantes: diasRestantes,
-        cantidad: fila.cantidad,           // ✅ columna real
-        bodega: "—",                       // ⚠️ se agrega cuando se sepa la relación real
+        cantidad: "—",     // ⚠️ columna por confirmar nombre
+        bodega: "—",       // ⚠️ columna por confirmar nombre
       };
     });
 
@@ -297,6 +297,17 @@ export async function listarLotesPorVencer({ horizonteDias, comunidad, bodega } 
   } catch (error) {
     return { lotes: [], error: normalizarError(error) };
   }
+}
+
+/** Calcula días restantes desde JS */
+function calcularDiasRestantes(fechaVencimiento) {
+  if (!fechaVencimiento) return 0;
+  const hoy = new Date();
+  hoy.setHours(0, 0, 0, 0);
+  const vence = new Date(fechaVencimiento);
+  vence.setHours(0, 0, 0, 0);
+  const msPorDia = 24 * 60 * 60 * 1000;
+  return Math.ceil((vence - hoy) / msPorDia);
 }
 
 /** Calcula días restantes desde JS */
