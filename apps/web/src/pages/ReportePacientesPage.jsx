@@ -14,13 +14,11 @@ import "./reportes.css";
 
 // Reporte de pacientes atendidos (issues #202 / #211, reconectado por #693).
 // Agregada exportación PDF (issue #216).
-
 const OPCIONES_DE_AGRUPACION = [
   { value: AGRUPACIONES_DE_PACIENTES.JORNADA, label: "Por jornada" },
   { value: AGRUPACIONES_DE_PACIENTES.COMUNIDAD, label: "Por comunidad" },
   { value: AGRUPACIONES_DE_PACIENTES.PERIODO, label: "Por periodo" },
 ];
-const [agruparPor, setAgruparPor] = useState("jornada");
 
 /** Descarga el CSV. Vive acá porque toca document, Blob y URL, que shared no puede tocar. */
 function descargarCSV(columnas, filas) {
@@ -50,6 +48,7 @@ export default function ReportePacientesPage() {
     limpiarFiltros,
     catalogos,
     agruparPor,
+    setAgruparPor, // ✅ VIENE DEL HOOK, NO LO DECLARES TÚ
     recargar,
   } = useReportePacientes({ rol });
 
@@ -84,14 +83,12 @@ export default function ReportePacientesPage() {
           { custom: <BotonExportarPDF onClick={exportar} generando={generando} /> },
         ]}
       />
-
       <FilterBar
         campos={definicionDeFiltros}
         valores={valores}
         onChange={setFiltro}
         catalogos={catalogos}
       />
-
       <div className="reporte-barra-agrupacion">
         <Selector
           label="Agrupar por"
@@ -103,10 +100,8 @@ export default function ReportePacientesPage() {
           Limpiar filtros
         </button>
       </div>
-
       {error && <ErrorState message={error.mensaje} onRetry={recargar} />}
       {!error && cargando && <LoadingState message="Calculando el reporte..." />}
-
       {!error && !cargando && (
         // ✅ TODO el contenido que va al PDF DENTRO de este div
         <div id="contenido-reporte-pdf">
@@ -132,7 +127,6 @@ export default function ReportePacientesPage() {
               </div>
             </section>
           )}
-
           <section className="reporte-seccion">
             <DataList
               columnas={columnas}
