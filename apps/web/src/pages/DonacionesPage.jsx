@@ -26,8 +26,8 @@ const ACCESOS_NAV = [
 ];
 
 export default function DonacionesPage() {
-  // Cambiar useAuth() por useSesion():
-  const { usuario } = useSesion();
+  // Cambiar useAuth() por useSesionCompartida():
+  const { usuario } = useSesionCompartida();
 
   const { fechaInicio, setFechaInicio, fechaFin, setFechaFin, cargando, error, datos } =
     useResumenDonaciones({ rolUsuario: usuario?.rol });
