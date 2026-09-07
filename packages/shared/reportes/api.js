@@ -230,12 +230,10 @@ const COLUMNAS_LOTES_POR_VENCER = [
   "id",
   "numero_lote",
   "fecha_vencimiento",
-  "cantidad_actual",
-  "medicamento_id",
-  "bodega_id",
+  "cantidad",           // ✅ en vez de cantidad_actual
   // Relaciones con tablas reales
+  "medicamento_id",
   "medicamentos!inner(nombre, concentracion, presentacion)",
-  "bodegas!inner(nombre)",
 ].join(", ");
 /**
  * Lista lotes próximos a vencer con filtros.
@@ -271,15 +269,13 @@ export async function listarLotesPorVencer({ horizonteDias, comunidad, bodega } 
       .gte("fecha_vencimiento", hoyStr)
       .order("fecha_vencimiento", { ascending: true });
 
-    if (bodega) consulta = consulta.eq("bodega_id", bodega);
-
-    // ⚠️ Si comunidad NO es columna directa en lotes, se filtra por medicamento o jornada
-    // if (comunidad) consulta = consulta.eq("comunidad_id", comunidad);
+    // ⚠️ bodega_id NO existe en lotes → filtro comentado por ahora
+    // if (bodega) consulta = consulta.eq("bodega_id", bodega);
 
     const { data, error } = await consulta;
     if (error) throw error;
 
-    // ✅ Mapeo y cálculo de días restantes
+    // ✅ Mapeo normalizado para el reporte
     const lotes = (data ?? []).map((fila) => {
       const diasRestantes = calcularDiasRestantes(fila.fecha_vencimiento);
       return {
@@ -292,10 +288,8 @@ export async function listarLotesPorVencer({ horizonteDias, comunidad, bodega } 
         fecha_vencimiento: fila.fecha_vencimiento,
         vencimiento: fila.fecha_vencimiento,
         dias_restantes: diasRestantes,
-        cantidad: fila.cantidad_actual,
-        cantidad_actual: fila.cantidad_actual,
-        bodega: fila.bodegas?.nombre || "—",
-        bodega_id: fila.bodega_id,
+        cantidad: fila.cantidad,           // ✅ columna real
+        bodega: "—",                       // ⚠️ se agrega cuando se sepa la relación real
       };
     });
 
@@ -303,6 +297,17 @@ export async function listarLotesPorVencer({ horizonteDias, comunidad, bodega } 
   } catch (error) {
     return { lotes: [], error: normalizarError(error) };
   }
+}
+
+/** Calcula días restantes desde JS */
+function calcularDiasRestantes(fechaVencimiento) {
+  if (!fechaVencimiento) return 0;
+  const hoy = new Date();
+  hoy.setHours(0, 0, 0, 0);
+  const vence = new Date(fechaVencimiento);
+  vence.setHours(0, 0, 0, 0);
+  const msPorDia = 24 * 60 * 60 * 1000;
+  return Math.ceil((vence - hoy) / msPorDia);
 }
 
 /** Calcula días restantes desde JS */
