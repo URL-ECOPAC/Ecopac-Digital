@@ -59,4 +59,31 @@ describe("InicioScreen", () => {
     expect(screen.queryByText("PACIENTES ATENDIDOS")).toBeNull();
     expect(screen.getByText("MÓDULOS DEL SISTEMA")).toBeTruthy();
   });
+
+  it("sin perfil no asume ningun rol y dibuja el grid de modulos vacio (issue #692)", () => {
+    sesion.perfil = null;
+    pantalla();
+
+    expect(screen.queryByText("Donaciones")).toBeNull();
+    expect(screen.queryByText("Colaboradores")).toBeNull();
+    expect(screen.queryByText("Ver inventario")).toBeNull();
+    expect(screen.queryByText("Ver presupuestos")).toBeNull();
+    // El banner sigue mostrandose: no es un estado de error, solo ausencia de modulos.
+    expect(screen.getByText("Salud que llega a cada comunidad.")).toBeTruthy();
+  });
+
+  it("un rol sin acceso a presupuestos no ve ese boton, pero si el de inventario", () => {
+    sesion.perfil = { rol: "medico" };
+    pantalla();
+
+    expect(screen.queryByText("Ver presupuestos")).toBeNull();
+    expect(screen.getByText("Ver inventario")).toBeTruthy();
+  });
+
+  it("administrador ve ambos botones del hero", () => {
+    pantalla();
+
+    expect(screen.getByText("Ver inventario")).toBeTruthy();
+    expect(screen.getByText("Ver presupuestos")).toBeTruthy();
+  });
 });

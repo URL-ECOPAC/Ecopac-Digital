@@ -75,6 +75,18 @@ no pasaban por ahi:
 - Las quince politicas de lectura que decian `USING (true)`, que dejaban leer catalogos e
   inventario a cualquier sesion.
 
+Las cuatro vias de arriba son SQL: la `00079` las alcanza porque las cuatro corren dentro de
+Postgres. Las Edge Functions no existian todavia cuando se escribio esa migracion, y son una capa
+mas que tiene que comprobar `activo` por su cuenta -no heredan el blindaje solo por invocar RPCs
+que si lo tienen-:
+
+- La Edge Function `invitar-usuario`, que resolvia la autorizacion leyendo solo `rol` de
+  `perfiles` sin comprobar `activo` (issue #691): una administradora desactivada con un JWT
+  todavia vigente podia seguir invitando personal nuevo. Esta funcion lee `perfiles` con el
+  cliente del llamador, no con `rol_actual()` ni con el service role, asi que pasa por la misma
+  politica de SELECT que describe el punto de abajo -la que a proposito deja leer la propia fila
+  desactivada- y el chequeo de `activo` tiene que hacerse a mano en el codigo de la funcion.
+
 **Lo unico que un perfil desactivado conserva es leer su propia fila de `perfiles`**, y es
 deliberado: es como `evaluarPerfilDeSesion()` averigua que la cuenta esta de baja para decirlo en
 pantalla en vez de responder un "permiso denegado" que no explica nada.

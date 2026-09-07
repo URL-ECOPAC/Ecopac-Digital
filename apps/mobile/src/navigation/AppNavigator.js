@@ -3,9 +3,10 @@ import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { colors } from "@ecopac/ui-tokens";
-import { etiquetaDeRol, tabsMoviles } from "@ecopac/shared";
+import { etiquetaDeRol, tabsMoviles, MODULOS } from "@ecopac/shared";
 
 import { useSesionCompartida } from "../contexto/SesionProvider";
+import RutaProtegida from "../components/RutaProtegida";
 import { ROUTES } from "./rutas";
 
 // IMPORTACIÓN DE PANTALLAS
@@ -30,7 +31,7 @@ import PresupuestosScreen from "../screens/PresupuestosScreen";
 import ColaboradoresScreen from "../screens/ColaboradoresScreen";
 import FichaColaboradorScreen from "../screens/FichaColaboradorScreen";
 
-export { ROUTES };
+export { ROUTES, InicioNavigator };
 
 const Root = createNativeStackNavigator();
 const Tabs = createBottomTabNavigator();
@@ -78,6 +79,22 @@ function AuthNavigator() {
       />
     </AuthStack.Navigator>
   );
+/** Roles permitidos para un modulo, segun la definicion unica de MODULOS (issue #692). */
+export function rolesDelModulo(moduloId) {
+  return MODULOS.find((m) => m.id === moduloId)?.roles ?? [];
+}
+
+// React Navigation solo entrega {navigation, route} a `component`, no children: se envuelve la
+// pantalla real en RutaProtegida en vez de usarla como route element (patron de apps/web).
+function conGuardaDeRol(Componente, moduloId) {
+  const rolesPermitidos = rolesDelModulo(moduloId);
+  return function PantallaConGuarda(props) {
+    return (
+      <RutaProtegida rolesPermitidos={rolesPermitidos}>
+        <Componente {...props} />
+      </RutaProtegida>
+    );
+  };
 }
 
 function InicioNavigator() {
@@ -90,27 +107,27 @@ function InicioNavigator() {
       />
       <InicioStack.Screen
         name={ROUTES.DONACIONES}
-        component={DonacionesScreen}
+        component={conGuardaDeRol(DonacionesScreen, "donaciones")}
         options={opcionesStack("Donaciones")}
       />
       <InicioStack.Screen
         name={ROUTES.PROYECTOS}
-        component={ProyectosScreen}
+        component={conGuardaDeRol(ProyectosScreen, "proyectos")}
         options={opcionesStack("Proyectos")}
       />
       <InicioStack.Screen
         name={ROUTES.PRESUPUESTOS}
-        component={PresupuestosScreen}
+        component={conGuardaDeRol(PresupuestosScreen, "presupuestos")}
         options={opcionesStack("Presupuestos")}
       />
       <InicioStack.Screen
         name={ROUTES.COLABORADORES}
-        component={ColaboradoresScreen}
+        component={conGuardaDeRol(ColaboradoresScreen, "colaboradores")}
         options={opcionesStack("Colaboradores")}
       />
       <InicioStack.Screen
         name={ROUTES.FICHA_COLABORADOR}
-        component={FichaColaboradorScreen}
+        component={conGuardaDeRol(FichaColaboradorScreen, "colaboradores")}
         options={opcionesStack("Ficha del personal")}
       />
     </InicioStack.Navigator>
