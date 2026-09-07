@@ -41,7 +41,6 @@ export const OPCIONES_METRICA_IMPACTO = [
   { value: "tratamientos_entregados", label: "Tratamientos entregados" },
   { value: "medicamentos_utilizados", label: "Medicamentos utilizados" },
   { value: "comunidades_beneficiadas", label: "Comunidades beneficiadas" },
-  { value: "consultas_realizadas", label: "Consultas realizadas" },
 ];
 
 /** Deriva de AGRUPACIONES_DE_IMPACTO (api.js) en vez de repetir los valores del enum. */
