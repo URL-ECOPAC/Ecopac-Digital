@@ -9,14 +9,14 @@ project_id = "ecopac-digital"
 
 [api]
 enabled = true
-port = 54321
+port = 54421
 schemas = ["public", "graphql_public"]
 extra_search_path = ["public", "extensions"]
 max_rows = 1000
 
 [db]
-port = 54322
-shadow_port = 54320
+port = 54422
+shadow_port = 54420
 major_version = 15
 
 [db.seed]
@@ -29,12 +29,12 @@ sql_paths = ["seed.sql", "seed-demo.sql"]
 
 [studio]
 enabled = true
-port = 54323
+port = 54423
 api_url = "http://127.0.0.1"
 
 [inbucket]
 enabled = true
-port = 54324
+port = 54424
 
 [storage]
 enabled = true
@@ -45,7 +45,7 @@ enabled = true
 # El puerto es el 5173, que es donde corre la web: lo fija apps/web/vite.config.js y es el que
 # publica docker-compose.yml. Decia 3000 -el default de la CLI- y ahi no hay nada escuchando, asi
 # que el enlace de "olvide mi contrasena" apuntaba a una pagina inexistente. En local se disimulaba
-# porque Inbucket (http://localhost:54324) muestra el correo y se puede copiar el token a mano.
+# porque Inbucket (http://localhost:54424) muestra el correo y se puede copiar el token a mano.
 #
 # site_url es el destino por defecto cuando quien pide el enlace no manda `redirectTo`, que es
 # justo el caso de invitar-usuario/index.ts: corre en Deno y no tiene un window.location.origin
@@ -112,4 +112,4 @@ policy = "oneshot"
 
 [analytics]
 enabled = true
-port = 54327
+port = 54427

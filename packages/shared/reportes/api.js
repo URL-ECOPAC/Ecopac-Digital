@@ -220,3 +220,108 @@ export async function obtenerIndicadoresImpacto({
     return { indicadores: null, error: normalizarError(error) };
   }
 }
+
+// ──────────────────────────────────────────────────────────────────────────────
+// REPORTE DE MEDICAMENTOS PRÓXIMOS A VENCER (issue #213)
+// ──────────────────────────────────────────────────────────────────────────────
+
+/** Columnas que necesita el reporte de lotes por vencer */
+const COLUMNAS_LOTES_POR_VENCER = [
+  "id",
+  "medicamento",
+  "numero_lote",
+  "fecha_vencimiento",
+  "cantidad_actual",
+  "bodega",
+  "comunidad_id",
+  "comunidad",
+  "dias_restantes",
+].join(", ");
+
+/**
+ * Lista lotes próximos a vencer con filtros.
+ * Se apoya en la vista o función que calcula `dias_restantes` en la BD.
+ *
+ * @param {object} opciones
+ * @param {number} opciones.horizonteDias - Lotes que vencen en X días hacia adelante.
+ * @param {string} [opciones.comunidad] - UUID de comunidad o undefined = todas.
+ * @param {string} [opciones.bodega] - UUID de bodega o undefined = todas.
+ * @returns {Promise<{ lotes: Array, error: object|null }>}
+ */
+export async function listarLotesPorVencer({ horizonteDias, comunidad, bodega } = {}) {
+  try {
+    const hoy = new Date();
+    const fechaLimite = new Date(hoy);
+    fechaLimite.setDate(hoy.getDate() + (horizonteDias ?? 30));
+
+    let consulta = obtenerSupabase()
+      .from("vista_lotes_existencias")
+      .select(COLUMNAS_LOTES_POR_VENCER)
+      .lte("fecha_vencimiento", fechaLimite.toISOString().slice(0, 10))
+      .gte("fecha_vencimiento", hoy.toISOString().slice(0, 10))
+      .order("fecha_vencimiento", { ascending: true });
+
+    if (comunidad) consulta = consulta.eq("comunidad_id", comunidad);
+    if (bodega) consulta = consulta.eq("bodega_id", bodega);
+
+    const { data, error } = await consulta;
+
+    if (error) throw error;
+
+    // Calcula días restantes si la vista no lo trae ya
+    const lotes = (data ?? []).map((fila) => {
+      const diasRestantes = fila.dias_restantes ?? calcularDiasRestantes(fila.fecha_vencimiento);
+      return {
+        ...fila,
+        dias_restantes: diasRestantes,
+      };
+    });
+
+    return { lotes, error: null };
+  } catch (error) {
+    return { lotes: [], error: normalizarError(error) };
+  }
+}
+
+/** Calcula días restantes desde JS como respaldo */
+function calcularDiasRestantes(fechaVencimiento) {
+  if (!fechaVencimiento) return 0;
+  const hoy = new Date();
+  const vence = new Date(fechaVencimiento);
+  const msPorDia = 24 * 60 * 60 * 1000;
+  return Math.ceil((vence - hoy) / msPorDia);
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// CATÁLOGOS: Comunidades y Bodegas
+// ──────────────────────────────────────────────────────────────────────────────
+
+/** Lista de comunidades (reutiliza la que ya existe en tu proyecto) */
+export async function listarComunidades() {
+  try {
+    const { data, error } = await obtenerSupabase()
+      .from("comunidades")
+      .select("id, nombre")
+      .order("nombre", { ascending: true });
+
+    if (error) throw error;
+    return { comunidades: data ?? [], error: null };
+  } catch (error) {
+    return { comunidades: [], error: normalizarError(error) };
+  }
+}
+
+/** Lista de bodegas */
+export async function listarBodegas() {
+  try {
+    const { data, error } = await obtenerSupabase()
+      .from("bodegas")
+      .select("id, nombre")
+      .order("nombre", { ascending: true });
+
+    if (error) throw error;
+    return { bodegas: data ?? [], error: null };
+  } catch (error) {
+    return { bodegas: [], error: normalizarError(error) };
+  }
+}

@@ -1,5 +1,4 @@
 import { exportarFilasACSV, useDashboardMetricas } from "@ecopac/shared";
-
 import { useSesionCompartida } from "../contexto/SesionProvider";
 
 // 📊 Tarjeta de métrica alineada a Figma
@@ -64,8 +63,8 @@ export default function DashboardMetricasPage() {
     cargando,
     error,
     indicadores,
-    seriePrincipal,
-    serieComparacion,
+    seriePrincipal = [], // ✅ Asegura arreglo
+    serieComparacion = [], // ✅ Asegura arreglo
     calcularVariacion,
     rangosDisponibles,
     rangoSeleccionado,
@@ -73,30 +72,27 @@ export default function DashboardMetricasPage() {
     agrupamientosDisponibles,
     agruparPor,
     setAgruparPor,
+    metrica,
+    setMetrica,
     comunidadId,
     setComunidadId,
     modoComparacion,
     setModoComparacion,
     comunidadCompararId,
     setComunidadCompararId,
-    listaComunidades,
+    listaComunidades = [],
     valoresEspeciales: { TODAS, NINGUNA },
   } = useDashboardMetricas({ rol });
 
-  // ✅ Función de exportación CSV — AHORA EN EL COMPONENTE
+  // ✅ Función de exportación CSV
   const exportarCSV = () => {
     if (!seriePrincipal || seriePrincipal.length === 0) return;
-
-    // El CSV lo arma exportarFilasACSV (reportes/csv.js, issue #207) y no un join(",") a mano:
-    // aquel escapa comillas y separadores, pone BOM UTF-8 y usa CRLF. Armarlo aqui rompia con
-    // cualquier etiqueta que llevara una coma -- un nombre de comunidad, por ejemplo.
     const columnas = [
       { id: "etiqueta", label: agruparPor },
       { id: "valor", label: "Valor principal" },
       { id: "comparado", label: "Valor comparado" },
       { id: "variacion", label: "Variacion %" },
     ];
-
     const filas = seriePrincipal.map((fila, i) => {
       const comp = serieComparacion?.[i];
       const varPc = comp ? calcularVariacion(fila.valor, comp.valor) : null;
@@ -107,7 +103,6 @@ export default function DashboardMetricasPage() {
         variacion: varPc !== null ? `${varPc >= 0 ? "+" : ""}${varPc.toFixed(1)}%` : "-",
       };
     });
-
     const blob = new Blob([exportarFilasACSV(filas, columnas)], {
       type: "text/csv;charset=utf-8;",
     });
@@ -119,8 +114,7 @@ export default function DashboardMetricasPage() {
     URL.revokeObjectURL(url);
   };
 
-  // La guarda de rol la decide puedeVerIndicadoresDeImpacto(), en reportes/permisos.js: quien
-  // protege de verdad es el WHERE de vista_reporte_impacto (00054).
+  // 🛑 Guardas de acceso
   if (!tieneAcceso)
     return (
       <div style={{ padding: "40px", color: "var(--color-danger)" }}>
@@ -135,7 +129,6 @@ export default function DashboardMetricasPage() {
       </div>
     );
 
-  // `error` es el objeto normalizado del monorepo, no una cadena: se lee su campo `mensaje`.
   if (error)
     return (
       <div style={{ padding: "40px", color: "var(--color-danger)" }}>
@@ -144,16 +137,19 @@ export default function DashboardMetricasPage() {
     );
 
   // 📊 Datos de gráfica
-  const valorMaximo = Math.max(...seriePrincipal.map((i) => i.valor), 1);
+  const tieneComparacion = serieComparacion.length > 0;
+  const valorMaximo = seriePrincipal.length > 0
+    ? Math.max(...seriePrincipal.map((i) => i.valor), 1)
+    : 1;
 
   return (
     <div style={{ padding: "24px", backgroundColor: "#f8fafc", minHeight: "100vh" }}>
-      {/* 📌 Título */}
+      {/* 📌 Título + Botón Exportar */}
       <div
         style={{
           marginBottom: "24px",
           display: "flex",
-          justifyContent: "space-between",
+          justifyContent: "flex-end",
           alignItems: "center",
         }}
       >
@@ -248,7 +244,6 @@ export default function DashboardMetricasPage() {
             </select>
           </div>
 
-          {/* ✅ Select con valores REALES desde el hook */}
           <div>
             <label
               style={{
@@ -280,7 +275,6 @@ export default function DashboardMetricasPage() {
             </select>
           </div>
 
-          {/* ✅ Select de comparación con valores REALES */}
           <div>
             <label
               style={{
@@ -361,7 +355,7 @@ export default function DashboardMetricasPage() {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: serieComparacion.length > 0 ? "1fr 1fr" : "1fr",
+          gridTemplateColumns: tieneComparacion ? "1fr 1fr" : "1fr",
           gap: "24px",
         }}
       >
@@ -390,6 +384,7 @@ export default function DashboardMetricasPage() {
           >
             {seriePrincipal.map((item, i) => {
               const alto = valorMaximo > 0 ? Math.max((item.valor / valorMaximo) * 100, 8) : 4;
+              const anchoBarra = tieneComparacion ? "45%" : "80%";
               return (
                 <div
                   key={i}
@@ -400,19 +395,17 @@ export default function DashboardMetricasPage() {
                     flex: 1,
                   }}
                 >
-                  <div
-                    style={{ display: "flex", alignItems: "flex-end", height: "100%", gap: "3px" }}
-                  >
+                  <div style={{ display: "flex", alignItems: "flex-end", height: "100%", gap: "3px" }}>
                     <div
                       style={{
-                        width: serieComparacion.length ? "45%" : "80%",
+                        width: anchoBarra,
                         backgroundColor: "#10b981",
                         borderRadius: "4px 4px 0 0",
                         height: `${alto}%`,
                       }}
                       title={`Valor: ${item.valor}`}
                     />
-                    {serieComparacion[i] && (
+                    {serieComparacion?.[i] && (
                       <div
                         style={{
                           width: "45%",
@@ -438,7 +431,8 @@ export default function DashboardMetricasPage() {
               );
             })}
           </div>
-          {serieComparacion.length > 0 && (
+
+          {tieneComparacion && (
             <div
               style={{ display: "flex", justifyContent: "center", gap: "20px", marginTop: "12px" }}
             >
@@ -453,7 +447,7 @@ export default function DashboardMetricasPage() {
         </div>
 
         {/* 📋 Panel de variación porcentual */}
-        {serieComparacion.length > 0 && (
+        {tieneComparacion && (
           <div
             style={{
               backgroundColor: "#fff",
@@ -474,7 +468,7 @@ export default function DashboardMetricasPage() {
             </h3>
             <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
               {seriePrincipal.map((item, i) => {
-                const comp = serieComparacion[i];
+                const comp = serieComparacion?.[i];
                 if (!comp) return null;
                 const varPc = calcularVariacion(item.valor, comp.valor);
                 if (varPc === null) return null;

@@ -41,6 +41,7 @@ export const OPCIONES_METRICA_IMPACTO = [
   { value: "tratamientos_entregados", label: "Tratamientos entregados" },
   { value: "medicamentos_utilizados", label: "Medicamentos utilizados" },
   { value: "comunidades_beneficiadas", label: "Comunidades beneficiadas" },
+  { value: "consultas_realizadas", label: "Consultas realizadas" },
 ];
 
 /** Deriva de AGRUPACIONES_DE_IMPACTO (api.js) en vez de repetir los valores del enum. */
@@ -92,4 +93,21 @@ export const CAMPOS_REPORTE_VENCIMIENTO = [
     tipo: TIPOS_DE_CAMPO.NUMERO,
     validacion: { requerido: true, min: 1, max: 365 },
   },
+];
+
+
+// Umbrales de alerta en días
+export const UMBRALES_ALERTA = {
+  CRITICO: 7,
+  ALTO: 15,
+  MEDIO: 30,
+};
+
+// Opciones de horizonte de días
+export const HORIZONTES_DISPONIBLES = [
+  { valor: 7, etiqueta: "Próximos 7 días" },
+  { valor: 15, etiqueta: "Próximos 15 días" },
+  { valor: 30, etiqueta: "Próximos 30 días" },
+  { valor: 60, etiqueta: "Próximos 60 días" },
+  { valor: 90, etiqueta: "Próximos 90 días" },
 ];

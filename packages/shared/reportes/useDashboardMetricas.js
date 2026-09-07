@@ -202,7 +202,7 @@ export function useDashboardMetricas({ rol } = {}) {
     error,
     indicadores: aIndicadoresDePantalla(datos?.totales),
     seriePrincipal: aSerie(datos?.agrupados, metrica),
-    serieComparacion: aSerie(datosComparacion?.agrupados, metrica),
+    serieComparacion: aSerie(datosComparacion?.agrupados, metrica) || [], // ✅ Asegura arreglo
     calcularVariacion,
     recargar: cargar,
   };
