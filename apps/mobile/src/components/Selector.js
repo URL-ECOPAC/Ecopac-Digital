@@ -19,6 +19,7 @@ export default function Selector({
   onSelect,
   placeholder = "Seleccionar",
   error,
+  disabled = false,
   style,
 }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -30,14 +31,16 @@ export default function Selector({
       {label ? <Text style={styles.label}>{label}</Text> : null}
 
       <Pressable
+        disabled={disabled}
         style={({ pressed }) => [
           styles.trigger,
           error && styles.triggerError,
           pressed && styles.triggerPressed,
+          disabled && styles.triggerDisabled,
         ]}
         onPress={() => setIsOpen(true)}
         accessibilityRole="button"
-        accessibilityState={{ expanded: isOpen }}
+        accessibilityState={{ expanded: isOpen, disabled }}
       >
         <Text style={selectedOption ? styles.valueText : styles.placeholderText}>
           {selectedOption ? selectedOption.label : placeholder}
@@ -107,6 +110,9 @@ const styles = StyleSheet.create({
   },
   triggerError: {
     borderColor: colors.danger,
+  },
+  triggerDisabled: {
+    opacity: 0.5,
   },
   valueText: {
     fontFamily: typography.fontFamilyBase,
