@@ -24,9 +24,7 @@ export default function BotonExportarPDF({ onClick, generando }) {
           Generando PDF...
         </>
       ) : (
-        <>
-           Exportar PDF
-        </>
+        <>Exportar PDF</>
       )}
     </button>
   );

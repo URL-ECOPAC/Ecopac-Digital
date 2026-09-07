@@ -135,7 +135,10 @@ export default function ReportesPage() {
       {/* 📑 Contenido: Medicamentos por Vencer */}
       {pestanaActiva === "vencimientos" && (
         // ✅ TODO el contenido que va al PDF DENTRO de este div
-        <div id="contenido-reporte-pdf" style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+        <div
+          id="contenido-reporte-pdf"
+          style={{ display: "flex", flexDirection: "column", gap: "20px" }}
+        >
           {/* Filtros — NO se incluyen en el PDF */}
           <div
             style={{

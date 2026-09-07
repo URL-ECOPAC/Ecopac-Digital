@@ -150,7 +150,11 @@ export default function ReporteJornada() {
                 className="reporte-exportar"
                 disabled={diagnosticos.length === 0}
                 onClick={() =>
-                  descargarCSV(`diagnosticos-jornada-${id}.csv`, columnasDeDiagnosticos, diagnosticos)
+                  descargarCSV(
+                    `diagnosticos-jornada-${id}.csv`,
+                    columnasDeDiagnosticos,
+                    diagnosticos,
+                  )
                 }
                 type="button"
               >
@@ -171,7 +175,11 @@ export default function ReporteJornada() {
                 className="reporte-exportar"
                 disabled={medicamentos.length === 0}
                 onClick={() =>
-                  descargarCSV(`medicamentos-jornada-${id}.csv`, columnasDeMedicamentos, medicamentos)
+                  descargarCSV(
+                    `medicamentos-jornada-${id}.csv`,
+                    columnasDeMedicamentos,
+                    medicamentos,
+                  )
                 }
                 type="button"
               >
