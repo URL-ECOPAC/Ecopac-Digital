@@ -262,6 +262,7 @@
  * @typedef {object} CondicionCronica
  * @property {string} id
  * @property {string} nombre
+ * @property {boolean} esVigente
  * @property {string} createdAt
  */
 
