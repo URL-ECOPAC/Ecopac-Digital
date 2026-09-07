@@ -48,9 +48,7 @@ export default function CatalogoCondicionesModal({
             disabled={enviando}
             autoFocus
           />
-          <Form.Control.Feedback type="invalid">
-            {errores?.nombre}
-          </Form.Control.Feedback>
+          <Form.Control.Feedback type="invalid">{errores?.nombre}</Form.Control.Feedback>
         </Form.Group>
 
         {errores?.general && (

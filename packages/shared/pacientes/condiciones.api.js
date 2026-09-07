@@ -74,9 +74,7 @@ function aPacienteCronico(fila) {
  */
 export async function obtenerCatalogoDeCondiciones({ soloVigentes = false, busqueda = "" } = {}) {
   try {
-    let consulta = obtenerSupabase()
-      .from("condiciones_cronicas")
-      .select(COLUMNAS_DEL_CATALOGO);
+    let consulta = obtenerSupabase().from("condiciones_cronicas").select(COLUMNAS_DEL_CATALOGO);
 
     if (soloVigentes) {
       consulta = consulta.eq("es_vigente", true);

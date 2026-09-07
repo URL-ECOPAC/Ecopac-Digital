@@ -57,7 +57,11 @@ export default function CatalogoCondicionesPage() {
           </p>
         </div>
         <div className="d-flex gap-2">
-          <Button variant="outline-secondary" className="px-3" onClick={() => window.history.back()}>
+          <Button
+            variant="outline-secondary"
+            className="px-3"
+            onClick={() => window.history.back()}
+          >
             Volver
           </Button>
           {puedeGestionar && (
@@ -71,7 +75,10 @@ export default function CatalogoCondicionesPage() {
       {/* Caja de Buscador */}
       <div className="card border-0 shadow-sm mb-4">
         <div className="card-body p-3">
-          <small className="text-uppercase fw-semibold text-muted d-block mb-1" style={{ fontSize: "0.75rem" }}>
+          <small
+            className="text-uppercase fw-semibold text-muted d-block mb-1"
+            style={{ fontSize: "0.75rem" }}
+          >
             Buscar condición
           </small>
           <input
@@ -92,7 +99,10 @@ export default function CatalogoCondicionesPage() {
         </div>
       ) : (
         <div>
-          <small className="text-uppercase fw-semibold text-muted d-block mb-2" style={{ fontSize: "0.75rem" }}>
+          <small
+            className="text-uppercase fw-semibold text-muted d-block mb-2"
+            style={{ fontSize: "0.75rem" }}
+          >
             {condiciones.length} CONDICIONES
           </small>
 
@@ -102,8 +112,14 @@ export default function CatalogoCondicionesPage() {
                 <thead className="table-light text-muted" style={{ fontSize: "0.8rem" }}>
                   <tr>
                     <th className="py-3 px-4">NOMBRE</th>
-                    <th className="py-3 px-4 text-center" style={{ width: "120px" }}>ESTADO</th>
-                    {puedeGestionar && <th className="py-3 px-4 text-end" style={{ width: "140px" }}>ACCIONES</th>}
+                    <th className="py-3 px-4 text-center" style={{ width: "120px" }}>
+                      ESTADO
+                    </th>
+                    {puedeGestionar && (
+                      <th className="py-3 px-4 text-end" style={{ width: "140px" }}>
+                        ACCIONES
+                      </th>
+                    )}
                   </tr>
                 </thead>
                 <tbody>
@@ -121,7 +137,9 @@ export default function CatalogoCondicionesPage() {
                           {item.esVigente ? (
                             <span className="badge bg-success px-3 py-2 rounded-pill">Activo</span>
                           ) : (
-                            <span className="badge bg-secondary px-3 py-2 rounded-pill">Inactivo</span>
+                            <span className="badge bg-secondary px-3 py-2 rounded-pill">
+                              Inactivo
+                            </span>
                           )}
                         </td>
                         {puedeGestionar && (
@@ -143,7 +161,9 @@ export default function CatalogoCondicionesPage() {
                                 onClick={() => alternarVigencia(item.id, item.esVigente)}
                                 disabled={enviando}
                               >
-                                <i className={`bi bi-${item.esVigente ? "eye-slash" : "check-lg"}`}></i>
+                                <i
+                                  className={`bi bi-${item.esVigente ? "eye-slash" : "check-lg"}`}
+                                ></i>
                               </Button>
                             </div>
                           </td>

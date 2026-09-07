@@ -85,7 +85,11 @@ export default function CatalogoCondicionesTabla({
                 <tr>
                   <th>Nombre</th>
                   <th style={{ width: "120px" }}>Estado</th>
-                  {puedeGestionar && <th style={{ width: "160px" }} className="text-end">Acciones</th>}
+                  {puedeGestionar && (
+                    <th style={{ width: "160px" }} className="text-end">
+                      Acciones
+                    </th>
+                  )}
                 </tr>
               </thead>
               <tbody>
@@ -94,11 +98,17 @@ export default function CatalogoCondicionesTabla({
                     <td className="fw-medium">{item.nombre}</td>
                     <td>
                       {item.esVigente ? (
-                        <Badge bg="success-subtle" className="text-success border border-success-subtle">
+                        <Badge
+                          bg="success-subtle"
+                          className="text-success border border-success-subtle"
+                        >
                           Vigente
                         </Badge>
                       ) : (
-                        <Badge bg="secondary-subtle" className="text-secondary border border-secondary-subtle">
+                        <Badge
+                          bg="secondary-subtle"
+                          className="text-secondary border border-secondary-subtle"
+                        >
                           No Vigente
                         </Badge>
                       )}
