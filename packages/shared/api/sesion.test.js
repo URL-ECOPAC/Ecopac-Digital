@@ -21,6 +21,7 @@ import {
   cerrarSesion,
   evaluarPerfilDeSesion,
   iniciarSesion,
+  intercambiarSesionDeRecuperacion,
   obtenerSesion,
   requiereCerrarSesion,
 } from "./sesion.js";
@@ -53,12 +54,13 @@ function errorDeCredenciales() {
   };
 }
 
-function clienteFalso({ signInWithPassword, signOut, getSession } = {}) {
+function clienteFalso({ signInWithPassword, signOut, getSession, exchangeCodeForSession } = {}) {
   return {
     auth: {
       signInWithPassword: signInWithPassword ?? vi.fn(),
       signOut: signOut ?? vi.fn().mockResolvedValue({ error: null }),
       getSession: getSession ?? vi.fn(),
+      exchangeCodeForSession: exchangeCodeForSession ?? vi.fn(),
       stopAutoRefresh: vi.fn(),
     },
   };
@@ -276,6 +278,35 @@ describe("obtenerSesion", () => {
     const resultado = await obtenerSesion();
 
     expect(resultado.error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.CUENTA_DESACTIVADA);
+  });
+});
+
+describe("intercambiarSesionDeRecuperacion (issue #644)", () => {
+  it("canjea el codigo del enlace y no reporta error si sale bien", async () => {
+    const cliente = clienteFalso({
+      exchangeCodeForSession: vi.fn().mockResolvedValue({ data: {}, error: null }),
+    });
+    obtenerSupabase.mockReturnValue(cliente);
+
+    const resultado = await intercambiarSesionDeRecuperacion("codigo-de-prueba");
+
+    expect(cliente.auth.exchangeCodeForSession).toHaveBeenCalledWith("codigo-de-prueba");
+    expect(resultado).toEqual({ error: null });
+  });
+
+  it("normaliza el error si el enlace ya caduco o es invalido", async () => {
+    const cliente = clienteFalso({
+      exchangeCodeForSession: vi.fn().mockResolvedValue({
+        data: null,
+        error: { __isAuthError: true, name: "AuthApiError", code: "otp_expired", status: 403 },
+      }),
+    });
+    obtenerSupabase.mockReturnValue(cliente);
+
+    const { error } = await intercambiarSesionDeRecuperacion("codigo-vencido");
+
+    expect(error).not.toBeNull();
+    expect(error.mensaje).toBeTruthy();
   });
 });
 

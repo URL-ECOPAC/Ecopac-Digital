@@ -123,6 +123,23 @@ export async function cerrarSesion() {
 }
 
 /**
+ * Canjea el codigo de un enlace de recuperacion de contrasena por una sesion real (flujo PKCE).
+ *
+ * Solo la necesita la app movil (issue #644): en el navegador, Supabase Auth resuelve la sesion
+ * de recuperacion solo, leyendo el fragmento de la URL (`detectSessionInUrl`, ver
+ * api/cliente.js). Ese mecanismo es exclusivo del navegador, asi que la app movil captura el
+ * deep link con `Linking` y le pasa a esta funcion el parametro `code` de esa URL -nunca la URL
+ * completa, `exchangeCodeForSession()` de supabase-js recibe solo el codigo-.
+ *
+ * @param {string} codigo El query param `code` del enlace de recuperacion.
+ * @returns {Promise<{ error: object|null }>}
+ */
+export async function intercambiarSesionDeRecuperacion(codigo) {
+  const { error } = await obtenerSupabase().auth.exchangeCodeForSession(codigo);
+  return { error: error ? normalizarError(error) : null };
+}
+
+/**
  * Sesion actual, si la hay, junto con perfil y rol.
  *
  * Siempre devuelve la misma forma (nunca null a secas), para que quien llama no tenga que

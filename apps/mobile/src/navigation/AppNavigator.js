@@ -10,6 +10,7 @@ import { ROUTES } from "./rutas";
 
 // IMPORTACIÓN DE PANTALLAS
 import LoginScreen from "../screens/LoginScreen";
+import RestablecerContrasenaScreen from "../screens/RestablecerContrasenaScreen";
 import InicioScreen from "../screens/InicioScreen";
 import AjustesScreen from "../screens/AjustesScreen";
 import SeleccionJornadaScreen from "../screens/SeleccionJornadaScreen";
@@ -33,6 +34,7 @@ export { ROUTES };
 
 const Root = createNativeStackNavigator();
 const Tabs = createBottomTabNavigator();
+const AuthStack = createNativeStackNavigator();
 const InicioStack = createNativeStackNavigator();
 const PacientesStack = createNativeStackNavigator();
 const JornadasStack = createNativeStackNavigator();
@@ -65,6 +67,18 @@ const opcionesStack = (title) => ({
     left: 0,
   },
 });
+
+function AuthNavigator() {
+  return (
+    <AuthStack.Navigator screenOptions={{ headerShown: false }}>
+      <AuthStack.Screen name={ROUTES.LOGIN} component={LoginScreen} />
+      <AuthStack.Screen
+        name={ROUTES.RESTABLECER_CONTRASENA}
+        component={RestablecerContrasenaScreen}
+      />
+    </AuthStack.Navigator>
+  );
+}
 
 function InicioNavigator() {
   return (
@@ -266,7 +280,7 @@ export default function AppNavigator({ haySesion }) {
         {haySesion ? (
           <Root.Screen name={ROUTES.TABS} component={TabsNavigator} />
         ) : (
-          <Root.Screen name={ROUTES.LOGIN} component={LoginScreen} />
+          <Root.Screen name={ROUTES.AUTH} component={AuthNavigator} />
         )}
       </Root.Navigator>
     </NavigationContainer>

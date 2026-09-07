@@ -14,7 +14,21 @@ import { useState } from "react";
 
 import { obtenerSupabase } from "../api/cliente.js";
 import { cerrarSesion } from "../api/sesion.js";
+import { CODIGOS_DE_ERROR_DE_SUPABASE, construirError } from "../api/errores-de-supabase.js";
 import { validarContrasena } from "./validaciones.js";
+
+/**
+ * Decide si hay que bloquear el paso 4 (fijar la contrasena) por cuenta desactivada.
+ *
+ * Funcion pura y exportada aparte para poder probarla sin renderizar el hook (packages/shared
+ * corre sus pruebas en un entorno sin DOM, ver useRegistroDonacion.test.js).
+ *
+ * @param {{ activo?: boolean }|null|undefined} perfil Fila de perfiles de quien tiene la sesion
+ *   de recuperacion, o null/undefined si no se pudo leer.
+ */
+export function debeBloquearPorInactivo(perfil) {
+  return perfil?.activo === false;
+}
 
 export function useNuevaContrasena() {
   const [contrasena, setContrasena] = useState("");
@@ -45,6 +59,29 @@ export function useNuevaContrasena() {
     setEnviando(true);
 
     try {
+      // Quien llega aqui ya demostro ser dueno del correo (siguio el enlace de recuperacion),
+      // asi que decirle que su cuenta esta desactivada no es enumeracion (issue #644): es la
+      // misma regla que evaluarPerfilDeSesion() ya aplica en cualquier login. Sin este chequeo,
+      // Supabase Auth fijaria la contrasena igual -no sabe nada de perfiles.activo- y el
+      // rechazo llegaria recien en el siguiente intento de inicio de sesion.
+      const {
+        data: { user },
+      } = await obtenerSupabase().auth.getUser();
+
+      if (user) {
+        const { data: perfil } = await obtenerSupabase()
+          .from("perfiles")
+          .select("activo")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        if (debeBloquearPorInactivo(perfil)) {
+          setErrorGlobal(construirError(CODIGOS_DE_ERROR_DE_SUPABASE.CUENTA_DESACTIVADA).mensaje);
+          await cerrarSesion();
+          return;
+        }
+      }
+
       const { error } = await obtenerSupabase().auth.updateUser({ password: contrasena });
 
       if (error) {

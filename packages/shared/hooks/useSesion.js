@@ -218,6 +218,18 @@ export function useSesion({ almacenamiento } = {}) {
         return;
       }
 
+      if (evento === "PASSWORD_RECOVERY") {
+        // supabase-js dispara este evento en vez de SIGNED_IN al canjear un enlace de
+        // recuperacion (issue #644): la sesion es de un solo proposito -fijar la contrasena
+        // nueva, la resuelve useNuevaContrasena() con su propio getUser()- y no "quien esta
+        // usando la app". Si cayera en aplicarSesion() como cualquier login, un perfil
+        // desactivado activaria aqui el mismo cierre automatico de la linea 154 antes de que
+        // useNuevaContrasena() alcance a leer su propio chequeo de `activo` y explicarlo: la
+        // pantalla veria "Auth session missing!" en vez del mensaje especifico. Se ignora a
+        // proposito: ni aplicarSesion() ni haySesion cambian por esta sesion.
+        return;
+      }
+
       if (evento === "TOKEN_REFRESHED") {
         // Renovar el token no cambia de usuario. Se refresca la identidad y se deja el perfil
         // como esta, para no consultar la base de datos cada vez que vence un access token.
