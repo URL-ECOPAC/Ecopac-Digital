@@ -3,7 +3,7 @@
 // ESTO DECIDE QUE MUESTRA LA INTERFAZ, NO QUE PROTEGE EL SERVIDOR.
 //
 // Quien de verdad impide escribir es Row Level Security (politicas de bodegas y proveedores en
-// 00062_agregar_rls_bodegas_y_proveedores.sql). Por la misma razon, ninguna funcion de
+// 00034_politicas_rls_inventario.sql, endurecidas por la 00079_desactivacion_perfiles_rls.sql). Por la misma razon, ninguna funcion de
 // bodegas.api.js ni de proveedores.api.js consulta este archivo antes de llamar: el cliente
 // pregunta para dibujar; el servidor decide.
 //
@@ -15,7 +15,7 @@ import { esAdministrador, ROLES } from "../usuarios/roles.js";
 /**
  * Puede crear o editar bodegas.
  *
- * La politica "Solo Administrador puede modificar bodegas" (00062) es FOR ALL y exige que el
+ * La politica "Solo Administrador puede modificar bodegas" (00034) es FOR ALL y exige que el
  * perfil de auth.uid() tenga rol 'administrador'.
  */
 export function puedeAdministrarBodegas(rol) {
@@ -25,14 +25,14 @@ export function puedeAdministrarBodegas(rol) {
 /**
  * Puede consultar bodegas.
  *
- * "Lectura de bodegas para usuarios autenticados" (00062) es USING (true) para el rol
- * authenticated: cualquier rol conocido ve el listado completo.
+ * "Lectura de bodegas para usuarios autenticados" (00034) exige que rol_actual() IS NOT NULL:
+ * cualquier rol conocido activo ve el listado completo.
  */
 export function puedeVerBodegas(rol) {
   return Object.values(ROLES).includes(rol);
 }
 
-/** Espejo de puedeAdministrarBodegas: la politica de proveedores de la 00062 es identica. */
+/** Espejo de puedeAdministrarBodegas: la politica de proveedores de la 00034 es identica. */
 export function puedeAdministrarProveedores(rol) {
   return esAdministrador(rol);
 }
