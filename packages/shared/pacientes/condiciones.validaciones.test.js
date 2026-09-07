@@ -51,7 +51,7 @@ describe("validarCondicionCronica", () => {
   it("rechaza una fecha de diagnostico futura", () => {
     const errores = validarCondicionCronica(
       { ...ALTA_VALIDA, fechaDiagnostico: "2026-12-01" },
-      HOY
+      HOY,
     );
     expect(errores.fechaDiagnostico).toBe("La fecha de diagnostico no puede ser futura.");
   });
@@ -59,7 +59,7 @@ describe("validarCondicionCronica", () => {
   it("acepta la fecha de hoy", () => {
     const errores = validarCondicionCronica(
       { ...ALTA_VALIDA, fechaDiagnostico: "2026-06-15" },
-      HOY
+      HOY,
     );
     expect(errores.fechaDiagnostico).toBeUndefined();
   });
@@ -93,7 +93,7 @@ describe("validarCambioDeCondicion", () => {
   it("sigue rechazando lo que si viene mal", () => {
     const errores = validarCambioDeCondicion(
       { estado: "inventado", fechaDiagnostico: "2026-12-01" },
-      HOY
+      HOY,
     );
     expect(errores.estado).toBeDefined();
     expect(errores.fechaDiagnostico).toBeDefined();
