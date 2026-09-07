@@ -64,7 +64,8 @@ export function useCondicionesPaciente(pacienteId, { rol } = {}) {
 
   useEffect(() => {
     let vigente = true;
-    obtenerCatalogoDeCondiciones().then((respuesta) => {
+    // Solo se cargan las condiciones vigentes para asignacion en la ficha (issue #641)
+    obtenerCatalogoDeCondiciones({ soloVigentes: true }).then((respuesta) => {
       if (!vigente) return;
       const filas = respuesta.condiciones ?? respuesta.catalogo ?? [];
       setCatalogo(filas.map((fila) => ({ value: fila.id, label: fila.nombre })));

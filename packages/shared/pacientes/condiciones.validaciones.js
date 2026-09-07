@@ -97,3 +97,21 @@ export function validarCambioDeCondicion(datosObjeto, hoy = new Date()) {
   const datos = normalizarDatosCondicion(datosObjeto);
   return erroresDeNegocioCondicion(datos, hoy);
 }
+
+/**
+ * Valida el nombre al crear o editar una condicion en el catalogo (issue #641).
+ *
+ * @param {object} datos
+ * @param {string} datos.nombre
+ * @returns {Record<string, string>}
+ */
+export function validarCondicionCatalogo(datos = {}) {
+  const errores = {};
+  const nombre = normalizarTexto(datos.nombre);
+
+  if (esTextoVacio(nombre)) {
+    errores.nombre = "El nombre de la condicion es requerido.";
+  }
+
+  return errores;
+}
