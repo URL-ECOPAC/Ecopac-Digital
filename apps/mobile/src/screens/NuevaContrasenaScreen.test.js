@@ -43,7 +43,8 @@ describe("NuevaContrasenaScreen", () => {
   });
 
   it("muestra el error global cuando lo hay (por ejemplo, cuenta desactivada)", () => {
-    mockEstadoHook.errorGlobal = "Tu usuario esta desactivado. Pide a la administradora que lo reactive.";
+    mockEstadoHook.errorGlobal =
+      "Tu usuario esta desactivado. Pide a la administradora que lo reactive.";
     pantalla();
 
     expect(

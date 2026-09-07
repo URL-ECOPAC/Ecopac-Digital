@@ -56,9 +56,7 @@ describe("RestablecerContrasenaScreen", () => {
     mockEstadoHook.mensajeExito = true;
     pantalla();
 
-    expect(
-      screen.getByText(/recibirás un enlace con las/i),
-    ).toBeTruthy();
+    expect(screen.getByText(/recibirás un enlace con las/i)).toBeTruthy();
     expect(screen.queryByText("Enviar enlace")).toBeNull();
   });
 
