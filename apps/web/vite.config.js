@@ -25,12 +25,5 @@ export default defineConfig({
     globals: true,
     environment: "jsdom",
     setupFiles: ["./src/setupTests.js"],
-    deps: {
-      optimizer: {
-        web: {
-          include: ["@testing-library/react", "react", "react-dom"],
-        },
-      },
-    },
   },
 });

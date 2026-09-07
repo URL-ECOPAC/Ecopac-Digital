@@ -2,11 +2,15 @@
 // resuelve del lado de CommonJS: react-router-dom importa "react" via ESM -no via require()-,
 // asi que Module._resolveFilename (que solo intercepta CJS) no lo alcanza. Este hook cubre la
 // otra mitad.
+import { createRequire } from "node:module";
 import path from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { pathToFileURL } from "node:url";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const reactRealURL = pathToFileURL(path.resolve(__dirname, "node_modules/react/") + "/").href;
+const require = createRequire(import.meta.url);
+
+// Resuelve la ubicación real del paquete react independientemente de la estructura del workspace
+const reactPkgPath = require.resolve("react/package.json");
+const reactRealURL = pathToFileURL(path.dirname(reactPkgPath) + "/").href;
 
 export async function resolve(specifier, context, nextResolve) {
   if (specifier === "react" || specifier.startsWith("react/")) {
