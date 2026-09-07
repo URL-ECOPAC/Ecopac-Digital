@@ -20,6 +20,7 @@ const OPCIONES_DE_AGRUPACION = [
   { value: AGRUPACIONES_DE_PACIENTES.COMUNIDAD, label: "Por comunidad" },
   { value: AGRUPACIONES_DE_PACIENTES.PERIODO, label: "Por periodo" },
 ];
+const [agruparPor, setAgruparPor] = useState("jornada");
 
 /** Descarga el CSV. Vive acá porque toca document, Blob y URL, que shared no puede tocar. */
 function descargarCSV(columnas, filas) {

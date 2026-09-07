@@ -5,7 +5,7 @@ export default function BotonExportarPDF({ onClick, generando }) {
       disabled={generando}
       style={{
         padding: "10px 20px",
-        borderRadius: "8px",
+        borderRadius: "6px", // Más alineado con tu diseño
         border: "none",
         backgroundColor: generando ? "#94a3b8" : "#059669",
         color: "#ffffff",
@@ -15,15 +15,17 @@ export default function BotonExportarPDF({ onClick, generando }) {
         display: "inline-flex",
         alignItems: "center",
         gap: "8px",
+        transition: "background-color 0.2s ease", // Suaviza el cambio
       }}
     >
       {generando ? (
         <>
-          <span></span> Generando PDF...
+          <span style={{ width: "16px", height: "16px" }} />
+          Generando PDF...
         </>
       ) : (
         <>
-          <span></span> Exportar PDF
+           Exportar PDF
         </>
       )}
     </button>
