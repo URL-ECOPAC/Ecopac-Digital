@@ -13,7 +13,7 @@ import {
   Table,
 } from "react-bootstrap";
 import { useResumenDonaciones } from "@ecopac/shared";
-import { useSesion } from "../contexto/SesionProvider"; // Ajustar según el AuthContext del proyecto
+import { useSesionCompartida } from "../contexto/SesionProvider"; // Ajustar según el AuthContext del proyecto
 
 const ACCESOS_NAV = [
   { ruta: "/donaciones/registro", etiqueta: "Registrar donación", variante: "primary" },
