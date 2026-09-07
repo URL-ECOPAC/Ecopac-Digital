@@ -57,10 +57,7 @@ export function useReporteMedicamentosPorVencer({ rol } = {}) {
   const [error, setError] = useState(null);
 
   // Total calculado
-  const totalUnidadesEnRiesgo = useMemo(
-    () => calcularTotalEnRiesgo(filas),
-    [filas]
-  );
+  const totalUnidadesEnRiesgo = useMemo(() => calcularTotalEnRiesgo(filas), [filas]);
 
   // Cargar datos del reporte
   const cargar = useCallback(async () => {
@@ -110,7 +107,9 @@ export function useReporteMedicamentosPorVencer({ rol } = {}) {
     };
 
     cargarCatalogos();
-    return () => { vigente = false; };
+    return () => {
+      vigente = false;
+    };
   }, [tieneAcceso]);
 
   return {
@@ -118,7 +117,7 @@ export function useReporteMedicamentosPorVencer({ rol } = {}) {
     // Opciones
     horizontesDisponibles: HORIZONTES_DISPONIBLES,
     umbralesAlerta: UMBRALES_ALERTA,
-    valoresEspeciales: { TODAS:TODAS },
+    valoresEspeciales: { TODAS: TODAS },
     // Filtros
     horizonteDias,
     setHorizonteDias,

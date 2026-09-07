@@ -138,9 +138,8 @@ export default function DashboardMetricasPage() {
 
   // 📊 Datos de gráfica
   const tieneComparacion = serieComparacion.length > 0;
-  const valorMaximo = seriePrincipal.length > 0
-    ? Math.max(...seriePrincipal.map((i) => i.valor), 1)
-    : 1;
+  const valorMaximo =
+    seriePrincipal.length > 0 ? Math.max(...seriePrincipal.map((i) => i.valor), 1) : 1;
 
   return (
     <div style={{ padding: "24px", backgroundColor: "#f8fafc", minHeight: "100vh" }}>
@@ -395,7 +394,9 @@ export default function DashboardMetricasPage() {
                     flex: 1,
                   }}
                 >
-                  <div style={{ display: "flex", alignItems: "flex-end", height: "100%", gap: "3px" }}>
+                  <div
+                    style={{ display: "flex", alignItems: "flex-end", height: "100%", gap: "3px" }}
+                  >
                     <div
                       style={{
                         width: anchoBarra,

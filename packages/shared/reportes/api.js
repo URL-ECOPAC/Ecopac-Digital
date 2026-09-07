@@ -288,8 +288,8 @@ export async function listarLotesPorVencer({ horizonteDias, comunidad, bodega } 
         fecha_vencimiento: fila.fecha_vencimiento,
         vencimiento: fila.fecha_vencimiento,
         dias_restantes: diasRestantes,
-        cantidad: "—",     // ⚠️ columna por confirmar nombre
-        bodega: "—",       // ⚠️ columna por confirmar nombre
+        cantidad: "—", // ⚠️ columna por confirmar nombre
+        bodega: "—", // ⚠️ columna por confirmar nombre
       };
     });
 

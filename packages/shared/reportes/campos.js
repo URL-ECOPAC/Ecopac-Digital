@@ -95,7 +95,6 @@ export const CAMPOS_REPORTE_VENCIMIENTO = [
   },
 ];
 
-
 // Umbrales de alerta en días
 export const UMBRALES_ALERTA = {
   CRITICO: 7,
