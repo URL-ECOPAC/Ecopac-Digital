@@ -1,7 +1,9 @@
 // Nombres de ruta del navegador, en su propio archivo para que una pantalla pueda
 // importarlos sin depender de AppNavigator, que a su vez importa las pantallas.
 export const ROUTES = {
+  AUTH: "Auth",
   LOGIN: "Login",
+  RESTABLECER_CONTRASENA: "RestablecerContrasena",
   TABS: "Tabs",
 
   // Tabs (los cinco destinos del diseno)
