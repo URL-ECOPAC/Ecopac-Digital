@@ -79,6 +79,8 @@ function AuthNavigator() {
       />
     </AuthStack.Navigator>
   );
+}
+
 /** Roles permitidos para un modulo, segun la definicion unica de MODULOS (issue #692). */
 export function rolesDelModulo(moduloId) {
   return MODULOS.find((m) => m.id === moduloId)?.roles ?? [];
