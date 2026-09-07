@@ -21,7 +21,6 @@ export default function PanelAlertasVencimiento({
     bodegasDisponibles,
     categoriasDisponibles,
     marcarComoAtendida,
-    ESTADO_ALERTA,
   } = useAlertasVencimiento({ lotes, bodegas, usuarioId, rolUsuario });
 
   const [alertaAtendiendo, setAlertaAtendiendo] = useState(null);
@@ -46,40 +45,52 @@ export default function PanelAlertasVencimiento({
   const formatoFecha = (fecha) => (fecha ? new Date(fecha).toLocaleDateString("es-GT") : "—");
 
   const estiloFila = (dias) => {
-    if (dias < 0) return { bg: "#fef2f2", borde: "#fecaca", texto: "#dc2626" };
-    if (dias === 0) return { bg: "#fffbeb", borde: "#fde68a", texto: "#d97706" };
-    return { bg: "#f0fdf4", borde: "#bbf7d0", texto: "#16a34a" };
+    if (dias < 0) return { fondo: "#fef2f2", borde: "#fecaca", texto: "#dc2626" };
+    if (dias <= 30) return { fondo: "#f0fdf4", borde: "#bbf7d0", texto: "#16a34a" };
+    return { fondo: "#fffbeb", borde: "#fde68a", texto: "#d97706" };
   };
 
   return (
-    <div className="bg-white shadow-md rounded-lg p-6 space-y-6">
-      {/* Cabecera con contador */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-xl font-bold text-slate-800">Alertas de Vencimiento</h2>
-          <p className="text-sm text-slate-500">
-            Medicamentos próximos a caducar (próximos 30 días)
-          </p>
-        </div>
-        <div className="px-4 py-2 bg-amber-50 border border-amber-200 rounded-full">
-          <span className="font-bold text-amber-600 text-lg">{cantidadPendientes}</span>
-          <span className="text-amber-600 text-sm ml-1">pendientes</span>
+    <div style={{ fontFamily: "system-ui, -apple-system, sans-serif" }}>
+      {/* 📌 Cabecera */}
+      <div style={{ marginBottom: "24px" }}>
+        <h2 style={{ fontSize: "28px", fontWeight: "700", margin: 0, color: "#0f172a" }}>
+          Alertas de Vencimiento
+        </h2>
+        <p style={{ fontSize: "14px", color: "#64748b", margin: "4px 0 0 0" }}>
+          Medicamentos próximos a caducar (próximos 30 días)
+        </p>
+        <div style={{ marginTop: "8px", fontSize: "15px", color: "#475569" }}>
+          {cantidadPendientes} pendientes
         </div>
       </div>
 
-      {/* Filtros */}
-      <div className="flex flex-wrap gap-3 items-center">
+      {/* 🔍 Filtros */}
+      <div style={{ display: "flex", gap: "12px", alignItems: "center", marginBottom: "28px", flexWrap: "wrap" }}>
         <input
           type="text"
           placeholder="Buscar medicamento o lote..."
           value={busqueda}
           onChange={(e) => setBusqueda(e.target.value)}
-          className="flex-1 min-w-64 px-4 py-2 rounded-full border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-200"
+          style={{
+            padding: "8px 14px",
+            border: "1px solid #e2e8f0",
+            borderRadius: "4px",
+            fontSize: "14px",
+            minWidth: "240px",
+            outline: "none",
+          }}
         />
         <select
           value={filtroBodega}
           onChange={(e) => setFiltroBodega(e.target.value)}
-          className="px-4 py-2 rounded-full border border-slate-200 text-sm"
+          style={{
+            padding: "8px 14px",
+            border: "1px solid #e2e8f0",
+            borderRadius: "4px",
+            fontSize: "14px",
+            backgroundColor: "#fff",
+          }}
         >
           {bodegasDisponibles.map((b) => (
             <option key={b} value={b}>
@@ -90,7 +101,13 @@ export default function PanelAlertasVencimiento({
         <select
           value={filtroCategoria}
           onChange={(e) => setFiltroCategoria(e.target.value)}
-          className="px-4 py-2 rounded-full border border-slate-200 text-sm"
+          style={{
+            padding: "8px 14px",
+            border: "1px solid #e2e8f0",
+            borderRadius: "4px",
+            fontSize: "14px",
+            backgroundColor: "#fff",
+          }}
         >
           {categoriasDisponibles.map((c) => (
             <option key={c} value={c}>
@@ -100,147 +117,186 @@ export default function PanelAlertasVencimiento({
         </select>
       </div>
 
-      {/* ⏳ Sección: Por Vencer */}
-      <div>
-        <h3 className="font-bold text-amber-600 mb-3 flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+      {/* ⏳ Próximos a vencer */}
+      <div style={{ marginBottom: "32px" }}>
+        <h3 style={{ fontSize: "20px", fontWeight: "600", margin: "0 0 12px 0", color: "#0f172a" }}>
           Próximos a vencer ({porVencer.length})
         </h3>
 
         {porVencer.length === 0 ? (
-          <p className="text-slate-400 text-sm py-4 text-center">
+          <div style={{ padding: "24px", color: "#64748b", fontSize: "14px" }}>
             No hay lotes por vencer en los próximos 30 días
-          </p>
-        ) : (
-          <div className="overflow-x-auto rounded-lg border border-slate-100">
-            <table className="w-full text-sm">
-              <thead className="bg-slate-50">
-                <tr>
-                  <th className="px-4 py-3 text-left font-semibold text-slate-500">Medicamento</th>
-                  <th className="px-4 py-3 text-left font-semibold text-slate-500">Lote</th>
-                  <th className="px-4 py-3 text-right font-semibold text-slate-500">Cantidad</th>
-                  <th className="px-4 py-3 text-left font-semibold text-slate-500">Vencimiento</th>
-                  <th className="px-4 py-3 text-center font-semibold text-slate-500">Días</th>
-                  <th className="px-4 py-3 text-center font-semibold text-slate-500">Bodega</th>
-                  <th className="px-4 py-3 text-center font-semibold text-slate-500">Acción</th>
-                </tr>
-              </thead>
-              <tbody>
-                {porVencer.map((alerta) => {
-                  const estilo = estiloFila(alerta.diasRestantes);
-                  return (
-                    <tr
-                      key={alerta.id}
-                      style={{
-                        backgroundColor: estilo.bg,
-                        borderBottom: `1px solid ${estilo.borde}`,
-                      }}
-                    >
-                      <td className="px-4 py-3 font-medium">{alerta.medicamento}</td>
-                      <td className="px-4 py-3 text-slate-600">{alerta.lote}</td>
-                      <td className="px-4 py-3 text-right font-bold">{alerta.cantidad}</td>
-                      <td className="px-4 py-3">{formatoFecha(alerta.fechaVencimiento)}</td>
-                      <td className="px-4 py-3 text-center">
-                        <span className="font-bold" style={{ color: estilo.texto }}>
-                          {alerta.diasRestantes === 0 ? "HOY" : `${alerta.diasRestantes}d`}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-center text-xs">{alerta.bodega}</td>
-                      <td className="px-4 py-3 text-center">
-                        <button
-                          onClick={() => handleAtender(alerta)}
-                          className="px-3 py-1 bg-emerald-600 text-white rounded-full text-xs font-bold hover:bg-emerald-700 transition"
-                        >
-                          Atender
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
           </div>
+        ) : (
+          <table style={{ width: "100%", borderCollapse: "collapse", border: "1px solid #e2e8f0" }}>
+            <thead>
+              <tr style={{ borderBottom: "2px solid #e2e8f0" }}>
+                <th style={{ padding: "12px 16px", textAlign: "left", fontSize: "14px", fontWeight: "600", color: "#0f172a" }}>Medicamento</th>
+                <th style={{ padding: "12px 16px", textAlign: "left", fontSize: "14px", fontWeight: "600", color: "#0f172a" }}>Lote</th>
+                <th style={{ padding: "12px 16px", textAlign: "right", fontSize: "14px", fontWeight: "600", color: "#0f172a" }}>Cantidad</th>
+                <th style={{ padding: "12px 16px", textAlign: "left", fontSize: "14px", fontWeight: "600", color: "#0f172a" }}>Vencimiento</th>
+                <th style={{ padding: "12px 16px", textAlign: "center", fontSize: "14px", fontWeight: "600", color: "#0f172a" }}>Días restantes</th>
+                <th style={{ padding: "12px 16px", textAlign: "center", fontSize: "14px", fontWeight: "600", color: "#0f172a" }}>Bodega</th>
+                <th style={{ padding: "12px 16px", textAlign: "center", fontSize: "14px", fontWeight: "600", color: "#0f172a" }}>Acción</th>
+              </tr>
+            </thead>
+            <tbody>
+              {porVencer.map((alerta) => {
+                const estilo = estiloFila(alerta.diasRestantes);
+                return (
+                  <tr key={alerta.id} style={{ backgroundColor: estilo.fondo, borderBottom: "1px solid #e2e8f0" }}>
+                    <td style={{ padding: "14px 16px", fontSize: "14px" }}>{alerta.medicamento}</td>
+                    <td style={{ padding: "14px 16px", fontSize: "14px", fontFamily: "monospace" }}>{alerta.lote}</td>
+                    <td style={{ padding: "14px 16px", fontSize: "14px", textAlign: "right", fontWeight: "500" }}>{alerta.cantidad}</td>
+                    <td style={{ padding: "14px 16px", fontSize: "14px" }}>{formatoFecha(alerta.fechaVencimiento)}</td>
+                    <td style={{ padding: "14px 16px", textAlign: "center" }}>
+                      <span style={{
+                        display: "inline-block",
+                        padding: "4px 10px",
+                        backgroundColor: estilo.borde,
+                        color: estilo.texto,
+                        borderRadius: "4px",
+                        fontWeight: "600",
+                        fontSize: "14px",
+                      }}>
+                        {alerta.diasRestantes === 0 ? "HOY" : `${alerta.diasRestantes}d`}
+                      </span>
+                    </td>
+                    <td style={{ padding: "14px 16px", textAlign: "center", fontSize: "14px", color: "#475569" }}>{alerta.bodega}</td>
+                    <td style={{ padding: "14px 16px", textAlign: "center" }}>
+                      <button
+                        onClick={() => handleAtender(alerta)}
+                        style={{
+                          padding: "6px 16px",
+                          backgroundColor: "#e2e8f0",
+                          border: "1px solid #cbd5e1",
+                          borderRadius: "4px",
+                          fontSize: "13px",
+                          fontWeight: "500",
+                          cursor: "pointer",
+                        }}
+                      >
+                        Atender
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         )}
       </div>
 
-      {/* ⚫ Sección: Vencidas */}
+      {/* ⚫ Vencidas */}
       <div>
-        <h3 className="font-bold text-red-600 mb-3 flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-red-500"></span>
+        <h3 style={{ fontSize: "20px", fontWeight: "600", margin: "0 0 12px 0", color: "#0f172a" }}>
           Vencidos — Para dar de baja ({vencidas.length})
         </h3>
 
         {vencidas.length === 0 ? (
-          <p className="text-slate-400 text-sm py-4 text-center">No hay lotes vencidos</p>
-        ) : (
-          <div className="overflow-x-auto rounded-lg border border-red-100">
-            <table className="w-full text-sm">
-              <thead className="bg-red-50">
-                <tr>
-                  <th className="px-4 py-3 text-left font-semibold text-red-600">Medicamento</th>
-                  <th className="px-4 py-3 text-left font-semibold text-red-600">Lote</th>
-                  <th className="px-4 py-3 text-right font-semibold text-red-600">Cantidad</th>
-                  <th className="px-4 py-3 text-left font-semibold text-red-600">Vencimiento</th>
-                  <th className="px-4 py-3 text-center font-semibold text-red-600">Días vencido</th>
-                  <th className="px-4 py-3 text-center font-semibold text-red-600">Bodega</th>
-                  <th className="px-4 py-3 text-center font-semibold text-red-600">Acción</th>
-                </tr>
-              </thead>
-              <tbody>
-                {vencidas.map((alerta) => (
-                  <tr key={alerta.id} className="bg-red-50/50 border-b border-red-100">
-                    <td className="px-4 py-3 font-medium text-red-700">{alerta.medicamento}</td>
-                    <td className="px-4 py-3 text-red-600">{alerta.lote}</td>
-                    <td className="px-4 py-3 text-right font-bold text-red-700">
-                      {alerta.cantidad}
-                    </td>
-                    <td className="px-4 py-3 text-red-600">
-                      {formatoFecha(alerta.fechaVencimiento)}
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <span className="font-bold text-red-600">
-                        {Math.abs(alerta.diasRestantes)}d
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-center text-xs text-red-500">{alerta.bodega}</td>
-                    <td className="px-4 py-3 text-center">
-                      <button
-                        onClick={() => handleAtender(alerta)}
-                        className="px-3 py-1 bg-red-600 text-white rounded-full text-xs font-bold hover:bg-red-700 transition"
-                      >
-                        Registrar Baja
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div style={{ padding: "24px", color: "#64748b", fontSize: "14px" }}>
+            No hay lotes vencidos
           </div>
+        ) : (
+          <table style={{ width: "100%", borderCollapse: "collapse", border: "1px solid #fecaca" }}>
+            <thead>
+              <tr style={{ borderBottom: "2px solid #fecaca" }}>
+                <th style={{ padding: "12px 16px", textAlign: "left", fontSize: "14px", fontWeight: "600", color: "#dc2626" }}>Medicamento</th>
+                <th style={{ padding: "12px 16px", textAlign: "left", fontSize: "14px", fontWeight: "600", color: "#dc2626" }}>Lote</th>
+                <th style={{ padding: "12px 16px", textAlign: "right", fontSize: "14px", fontWeight: "600", color: "#dc2626" }}>Cantidad</th>
+                <th style={{ padding: "12px 16px", textAlign: "left", fontSize: "14px", fontWeight: "600", color: "#dc2626" }}>Vencimiento</th>
+                <th style={{ padding: "12px 16px", textAlign: "center", fontSize: "14px", fontWeight: "600", color: "#dc2626" }}>Días vencido</th>
+                <th style={{ padding: "12px 16px", textAlign: "center", fontSize: "14px", fontWeight: "600", color: "#dc2626" }}>Bodega</th>
+                <th style={{ padding: "12px 16px", textAlign: "center", fontSize: "14px", fontWeight: "600", color: "#dc2626" }}>Acción</th>
+              </tr>
+            </thead>
+            <tbody>
+              {vencidas.map((alerta) => (
+                <tr key={alerta.id} style={{ backgroundColor: "#fef2f2", borderBottom: "1px solid #fecaca" }}>
+                  <td style={{ padding: "14px 16px", fontSize: "14px", color: "#991b1b" }}>{alerta.medicamento}</td>
+                  <td style={{ padding: "14px 16px", fontSize: "14px", fontFamily: "monospace", color: "#991b1b" }}>{alerta.lote}</td>
+                  <td style={{ padding: "14px 16px", fontSize: "14px", textAlign: "right", fontWeight: "500", color: "#991b1b" }}>{alerta.cantidad}</td>
+                  <td style={{ padding: "14px 16px", fontSize: "14px", color: "#991b1b" }}>{formatoFecha(alerta.fechaVencimiento)}</td>
+                  <td style={{ padding: "14px 16px", textAlign: "center" }}>
+                    <span style={{
+                      display: "inline-block",
+                      padding: "4px 10px",
+                      backgroundColor: "#fecaca",
+                      color: "#dc2626",
+                      borderRadius: "4px",
+                      fontWeight: "600",
+                      fontSize: "14px",
+                    }}>
+                      {Math.abs(alerta.diasRestantes)}d
+                    </span>
+                  </td>
+                  <td style={{ padding: "14px 16px", textAlign: "center", fontSize: "14px", color: "#b91c1c" }}>{alerta.bodega}</td>
+                  <td style={{ padding: "14px 16px", textAlign: "center" }}>
+                    <button
+                      onClick={() => handleAtender(alerta)}
+                      style={{
+                        padding: "6px 16px",
+                        backgroundColor: "#e2e8f0",
+                        border: "1px solid #cbd5e1",
+                        borderRadius: "4px",
+                        fontSize: "13px",
+                        fontWeight: "500",
+                        cursor: "pointer",
+                      }}
+                    >
+                      Registrar Baja
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         )}
       </div>
 
-      {/* Modal: Registrar acción */}
+      {/* 📋 Modal: Registrar acción */}
       {alertaAtendiendo && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md mx-4 space-y-4">
-            <h3 className="text-lg font-bold">Registrar Acción Tomada</h3>
-            <p className="text-sm text-slate-500">
-              <strong>{alertaAtendiendo.medicamento}</strong> — Lote {alertaAtendiendo.lote}
-              <br />
-              Vencimiento: {formatoFecha(alertaAtendiendo.fechaVencimiento)}
-            </p>
-            <div>
-              <label className="block text-sm font-semibold mb-1">
-                Acción tomada <span className="text-red-500">*</span>
+        <div style={{
+          position: "fixed",
+          inset: 0,
+          backgroundColor: "rgba(0,0,0,0.5)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 50,
+        }}>
+          <div style={{
+            backgroundColor: "#fff",
+            padding: "24px",
+            borderRadius: "8px",
+            width: "100%",
+            maxWidth: "420px",
+            margin: "16px",
+          }}>
+            <h3 style={{ fontSize: "18px", fontWeight: "600", margin: "0 0 16px 0" }}>
+              Registrar Acción Tomada
+            </h3>
+            <div style={{ marginBottom: "16px", fontSize: "14px", color: "#475569" }}>
+              <p style={{ margin: "0 0 4px 0" }}>
+                <strong>{alertaAtendiendo.medicamento}</strong>
+              </p>
+              <p style={{ margin: "0 0 4px 0" }}>Lote: {alertaAtendiendo.lote}</p>
+              <p style={{ margin: 0 }}>Vencimiento: {formatoFecha(alertaAtendiendo.fechaVencimiento)}</p>
+            </div>
+            <div style={{ marginBottom: "20px" }}>
+              <label style={{ display: "block", fontSize: "14px", fontWeight: "500", marginBottom: "6px" }}>
+                Acción tomada <span style={{ color: "#dc2626" }}>*</span>
               </label>
-              {/* atenderAlerta() (alertas.api.js) exige uno de los valores del enum
-                  accion_alerta (donado/reubicado/descartado): un texto libre no cumple el
-                  CHECK chk_alertas_caducidad_cierre_coherente y la alerta nunca quedaba
-                  atendida en la base, aunque el modal se cerrara como si hubiera funcionado. */}
               <select
                 value={accionTomada}
                 onChange={(e) => setAccionTomada(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-200"
+                style={{
+                  width: "100%",
+                  padding: "10px 12px",
+                  border: "1px solid #cbd5e1",
+                  borderRadius: "4px",
+                  fontSize: "14px",
+                }}
               >
                 <option value="">-- Selecciona --</option>
                 {OPCIONES_ACCION_ALERTA.map((opcion) => (
@@ -250,17 +306,33 @@ export default function PanelAlertasVencimiento({
                 ))}
               </select>
             </div>
-            <div className="flex gap-3 justify-end pt-2">
+            <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>
               <button
                 onClick={() => setAlertaAtendiendo(null)}
-                className="px-4 py-2 border border-slate-200 rounded-lg text-slate-600 font-medium hover:bg-slate-50"
+                style={{
+                  padding: "10px 16px",
+                  border: "1px solid #cbd5e1",
+                  backgroundColor: "#fff",
+                  borderRadius: "4px",
+                  fontSize: "14px",
+                  cursor: "pointer",
+                }}
               >
                 Cancelar
               </button>
               <button
                 onClick={confirmarAtender}
                 disabled={!accionTomada.trim()}
-                className="px-4 py-2 bg-emerald-600 text-white rounded-lg font-medium hover:bg-emerald-700 disabled:opacity-50"
+                style={{
+                  padding: "10px 20px",
+                  backgroundColor: "#059669",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: "4px",
+                  fontSize: "14px",
+                  cursor: "pointer",
+                  opacity: accionTomada.trim() ? 1 : 0.6,
+                }}
               >
                 Confirmar
               </button>

@@ -2,6 +2,8 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import DashboardMetricasPage from "./DashboardMetricasPage";
 import { useReporteMedicamentosPorVencer } from "../../../../packages/shared/reportes/useReporteMedicamentosPorVencer.js";
+import { useExportarPDF } from "../../../../packages/shared/reportes/useExportarPDF";
+import BotonExportarPDF from "../components/BotonExportarPDF";
 
 // Estilos compartidos de pestañas
 const estiloPestanaActiva = {
@@ -14,7 +16,6 @@ const estiloPestanaActiva = {
   borderBottom: "2px solid #10b981",
   color: "#10b981",
 };
-
 const estiloPestanaInactiva = {
   padding: "10px 18px",
   fontSize: "14px",
@@ -33,7 +34,6 @@ const coloresAlerta = {
   medio: { fondo: "#f0fdf4", borde: "#86efac", texto: "#15803d" },
   normal: { fondo: "#f8fafc", borde: "#e2e8f0", texto: "#475569" },
 };
-
 const etiquetasAlerta = {
   critico: "🔴 Crítico",
   alto: "🟡 Alto",
@@ -63,6 +63,13 @@ export default function ReportesPage() {
     recargar,
   } = useReporteMedicamentosPorVencer();
 
+  // 📄 Exportación PDF — issue #216
+  const periodo = `Próximos ${horizonteDias} días`;
+  const { exportar, generando } = useExportarPDF({
+    tituloReporte: "Reporte de Medicamentos Próximos a Vencer",
+    periodo,
+  });
+
   return (
     <div style={{ padding: "24px", backgroundColor: "#f8fafc", minHeight: "100vh" }}>
       {/* 📌 Cabecera */}
@@ -81,22 +88,28 @@ export default function ReportesPage() {
               Métricas, estadísticas y volumen de atención
             </p>
           </div>
-          <Link
-            to="/reportes/pacientes-atendidos"
-            style={{
-              padding: "10px 18px",
-              backgroundColor: "#10b981",
-              color: "#fff",
-              border: "none",
-              borderRadius: "10px",
-              fontSize: "14px",
-              fontWeight: "600",
-              textDecoration: "none",
-              whiteSpace: "nowrap",
-            }}
-          >
-            Ver Reporte Detallado de Pacientes
-          </Link>
+          <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+            <Link
+              to="/reportes/pacientes-atendidos"
+              style={{
+                padding: "10px 18px",
+                backgroundColor: "#10b981",
+                color: "#fff",
+                border: "none",
+                borderRadius: "10px",
+                fontSize: "14px",
+                fontWeight: "600",
+                textDecoration: "none",
+                whiteSpace: "nowrap",
+              }}
+            >
+              Ver Reporte Detallado de Pacientes
+            </Link>
+            {/* 📄 Botón PDF — SOLO visible en la pestaña de vencimientos */}
+            {pestanaActiva === "vencimientos" && (
+              <BotonExportarPDF onClick={exportar} generando={generando} />
+            )}
+          </div>
         </div>
 
         {/* 📑 Pestañas */}
@@ -121,8 +134,9 @@ export default function ReportesPage() {
 
       {/* 📑 Contenido: Medicamentos por Vencer */}
       {pestanaActiva === "vencimientos" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-          {/* Filtros */}
+        // ✅ TODO el contenido que va al PDF DENTRO de este div
+        <div id="contenido-reporte-pdf" style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+          {/* Filtros — NO se incluyen en el PDF */}
           <div
             style={{
               backgroundColor: "#fff",
@@ -159,7 +173,6 @@ export default function ReportesPage() {
                 ))}
               </select>
             </div>
-
             <div>
               <label
                 style={{
@@ -185,7 +198,6 @@ export default function ReportesPage() {
                 ))}
               </select>
             </div>
-
             <div>
               <label
                 style={{
@@ -211,7 +223,6 @@ export default function ReportesPage() {
                 ))}
               </select>
             </div>
-
             <button
               onClick={recargar}
               style={{
@@ -228,7 +239,7 @@ export default function ReportesPage() {
             </button>
           </div>
 
-          {/* Total en riesgo */}
+          {/* Total en riesgo — SÍ se incluye en el PDF */}
           <div
             style={{
               backgroundColor: "#fffbeb",
@@ -243,7 +254,7 @@ export default function ReportesPage() {
             </span>
           </div>
 
-          {/* Tabla de resultados */}
+          {/* Tabla de resultados — SÍ se incluye en el PDF */}
           {cargando ? (
             <div style={{ padding: "40px", textAlign: "center", color: "#64748b" }}>
               Cargando lotes próximos a vencer...
@@ -355,17 +366,6 @@ export default function ReportesPage() {
                     >
                       Bodega
                     </th>
-                    <th
-                      style={{
-                        padding: "12px 16px",
-                        textAlign: "center",
-                        fontSize: "13px",
-                        fontWeight: "600",
-                        color: "#475569",
-                      }}
-                    >
-                      Acción
-                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -426,19 +426,6 @@ export default function ReportesPage() {
                         <td style={{ padding: "10px 16px", fontSize: "13px", color: "#475569" }}>
                           {fila.bodega || "—"}
                         </td>
-                        <td style={{ padding: "10px 16px", textAlign: "center" }}>
-                          <Link
-                            to="/inventario/alertas"
-                            style={{
-                              fontSize: "13px",
-                              color: "#059669",
-                              textDecoration: "none",
-                              fontWeight: 500,
-                            }}
-                          >
-                            Registrar acción
-                          </Link>
-                        </td>
                       </tr>
                     );
                   })}
@@ -447,6 +434,7 @@ export default function ReportesPage() {
             </div>
           )}
         </div>
+        // ✅ Fin del contenido PDF
       )}
     </div>
   );

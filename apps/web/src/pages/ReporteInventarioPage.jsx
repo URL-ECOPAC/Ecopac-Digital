@@ -3,7 +3,6 @@ import {
   FILTROS_INVENTARIO_REPORTE,
   useReporteInventario,
 } from "@ecopac/shared";
-
 import Card from "../components/Card";
 import DataList from "../components/DataList";
 import ErrorState from "../components/ErrorState";
@@ -12,17 +11,12 @@ import LoadingState from "../components/LoadingState";
 import PageHeader from "../components/PageHeader";
 import ScreenContainer from "../components/ScreenContainer";
 import { useSesionCompartida } from "../contexto/SesionProvider";
+import { useExportarPDF } from "../../../../packages/shared/reportes/useExportarPDF";
+import BotonExportarPDF from "../components/BotonExportarPDF";
 import "./reportes.css";
 
 // Reporte de inventario actual (issue #212, reconectado por #693).
-//
-// La version anterior consultaba `existencias` desde el hook, con su propia definicion de
-// "vencido" y un `{ data, err }` que nunca traia el error (issue #696). Ahora los datos salen de
-// obtenerReporteDeInventario() via useReporteInventario, y las columnas y el desglose por lote
-// de los descriptores de packages/shared/reportes/columnas.js.
-//
-// Lo vencido no se suma nunca a lo disponible: son dos totales distintos, tanto por medicamento
-// como en la cabecera. Es el criterio de aceptacion de la #212.
+// Agregada exportación PDF (issue #216).
 
 /** Descarga el CSV. Vive aca porque toca document, Blob y URL, que shared no puede tocar. */
 function descargarCSV(columnas, filas) {
@@ -55,6 +49,13 @@ export default function ReporteInventarioPage() {
     recargar,
   } = useReporteInventario({ rol });
 
+  // 📄 Exportación PDF — issue #216
+  const periodo = new Date().toLocaleDateString("es-GT", { dateStyle: "long" });
+  const { exportar, generando } = useExportarPDF({
+    tituloReporte: "Reporte de Inventario Actual",
+    periodo: `Al ${periodo}`,
+  });
+
   if (!tieneAcceso) {
     return (
       <ScreenContainer>
@@ -75,6 +76,10 @@ export default function ReporteInventarioPage() {
             onClick: () => descargarCSV(columnas, medicamentos),
             variant: "secondary",
           },
+          // 📄 Nuevo botón de PDF
+          {
+            custom: <BotonExportarPDF onClick={exportar} generando={generando} />,
+          },
         ]}
       />
 
@@ -94,11 +99,11 @@ export default function ReporteInventarioPage() {
       )}
 
       {error && <ErrorState message={error.mensaje} onRetry={recargar} />}
-
       {!error && cargando && <LoadingState message="Consultando el inventario..." />}
 
       {!error && !cargando && (
-        <>
+        // ✅ TODO el contenido que va al PDF DENTRO de este div
+        <div id="contenido-reporte-pdf">
           <section className="reporte-seccion">
             <div className="reporte-cifras">
               <Card>
@@ -144,7 +149,8 @@ export default function ReporteInventarioPage() {
               />
             </section>
           ))}
-        </>
+        </div>
+        // ✅ Fin del contenido PDF
       )}
     </ScreenContainer>
   );
