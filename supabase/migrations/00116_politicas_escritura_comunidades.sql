@@ -1,4 +1,4 @@
--- Habilitar inserción de comunidades solo para administradores
+-- Politica de insercion para comunidades (solo administrador)
 CREATE POLICY "Administrador crea comunidades"
   ON comunidades
   FOR INSERT
@@ -11,7 +11,7 @@ CREATE POLICY "Administrador crea comunidades"
     )
   );
 
--- Habilitar actualización de comunidades solo para administradores
+-- Politica de actualizacion para comunidades (solo administrador)
 CREATE POLICY "Administrador actualiza comunidades"
   ON comunidades
   FOR UPDATE
