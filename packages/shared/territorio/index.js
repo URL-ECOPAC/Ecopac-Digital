@@ -8,3 +8,4 @@
 // cascada).
 
 export * from "./api.js";
+export * from "./comunidades.validaciones.js";

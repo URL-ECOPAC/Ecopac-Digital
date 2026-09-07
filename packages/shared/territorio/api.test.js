@@ -20,8 +20,14 @@ vi.mock("../api/cliente.js", () => ({
 }));
 
 const { CODIGOS_DE_ERROR_DE_SUPABASE } = await import("../api/errores-de-supabase.js");
-const { listarComunidades, listarDepartamentos, listarMunicipios, obtenerComunidad } =
-  await import("./api.js");
+const {
+  crearComunidad,
+  actualizarComunidad,
+  listarComunidades,
+  listarDepartamentos,
+  listarMunicipios,
+  obtenerComunidad,
+} = await import("./api.js");
 
 /** Doble minimo de un query builder de supabase-js, igual que jornadas/api.test.js. */
 function crearCliente(respuestasPorTabla) {
@@ -54,6 +60,14 @@ function crearCliente(respuestasPorTabla) {
           llamadas.push({ paso: "select", tabla, columnas });
           return encadenable;
         },
+        insert(datos) {
+          llamadas.push({ paso: "insert", tabla, datos });
+          return encadenable;
+        },
+        update(datos) {
+          llamadas.push({ paso: "update", tabla, datos });
+          return encadenable;
+        },
         eq(columna, valor) {
           llamadas.push({ paso: "eq", tabla, columna, valor });
           return encadenable;
@@ -63,6 +77,7 @@ function crearCliente(respuestasPorTabla) {
           return encadenable;
         },
         maybeSingle: resolver,
+        single: resolver,
         then(resolve, reject) {
           return resolver().then(resolve, reject);
         },
@@ -148,6 +163,7 @@ describe("obtenerComunidad", () => {
           nombre: "San Juan",
           municipioId: 701,
           municipio: { departamentoId: 7 },
+          esVigente: true,
         },
         error: null,
       },
@@ -161,6 +177,7 @@ describe("obtenerComunidad", () => {
       nombre: "San Juan",
       municipioId: 701,
       departamentoId: 7,
+      esVigente: true,
     });
   });
 
@@ -178,5 +195,78 @@ describe("obtenerComunidad", () => {
 
     expect(comunidad).toBeNull();
     expect(error).toBeNull();
+  });
+});
+
+describe("crearComunidad", () => {
+  it("inserta una nueva comunidad correctamente", async () => {
+    const mockCreada = {
+      id: "comunidad-2",
+      nombre: "Nueva Comunidad",
+      municipioId: 701,
+      esVigente: true,
+    };
+
+    const cliente = crearCliente({
+      comunidades: { data: mockCreada, error: null },
+    });
+    dobles.cliente = cliente;
+
+    const { comunidad, error } = await crearComunidad({
+      nombre: "Nueva Comunidad",
+      municipioId: 701,
+    });
+
+    expect(error).toBeNull();
+    expect(comunidad).toEqual(mockCreada);
+    expect(cliente.llamadas).toContainEqual({
+      paso: "insert",
+      tabla: "comunidades",
+      datos: [
+        {
+          nombre: "Nueva Comunidad",
+          municipio_id: 701,
+          es_vigente: true,
+        },
+      ],
+    });
+  });
+});
+
+describe("actualizarComunidad", () => {
+  it("actualiza el nombre y estado de vigencia de una comunidad", async () => {
+    const mockActualizada = {
+      id: "comunidad-1",
+      nombre: "San Juan Modificado",
+      municipio_id: 701,
+      es_vigente: false,
+    };
+
+    const cliente = crearCliente({
+      comunidades: { data: mockActualizada, error: null },
+    });
+    dobles.cliente = cliente;
+
+    const { comunidad, error } = await actualizarComunidad("comunidad-1", {
+      nombre: "San Juan Modificado",
+      esVigente: false,
+    });
+
+    expect(error).toBeNull();
+    expect(comunidad).toEqual(mockActualizada);
+    expect(cliente.llamadas).toContainEqual({
+      paso: "update",
+      tabla: "comunidades",
+      datos: {
+        nombre: "San Juan Modificado",
+        es_vigente: false,
+      },
+    });
+    expect(cliente.llamadas).toContainEqual({
+      paso: "eq",
+      tabla: "comunidades",
+      columna: "id",
+      valor: "comunidad-1",
+    });
   });
 });
