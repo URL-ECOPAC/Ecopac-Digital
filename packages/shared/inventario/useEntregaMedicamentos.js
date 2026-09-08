@@ -1,123 +1,114 @@
-import { useState, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { obtenerSupabase } from "../api/cliente.js";
-import { cerrarAtencion } from "../atenciones/atenciones.api.js";
 
-// ✅ Validaciones centralizadas (reglas de negocio)
-export function validarEntrega(medicamento, cantidadEntregada, existenciasDisponibles) {
-  const errores = [];
+const TODAS = "__todas__";
 
-  // RF-20: No se puede entregar medicamento vencido
-  if (medicamento.vencido) {
-    errores.push(" No se puede entregar: el medicamento está vencido");
-  }
-
-  // Cantidad mayor a existencia disponible
-  if (Number(cantidadEntregada) > Number(existenciasDisponibles)) {
-    errores.push(` Solo hay ${existenciasDisponibles} unidades disponibles`);
-  }
-
-  // Cantidad debe ser positiva
-  if (cantidadEntregada <= 0) {
-    errores.push("La cantidad debe ser mayor a cero");
-  }
-
-  return errores;
+/** Calcula si un lote está vencido */
+function estaVencido(fechaVencimiento) {
+  if (!fechaVencimiento) return false;
+  return new Date(fechaVencimiento) < new Date();
 }
 
-export function useEntregaMedicamentos({ atencionId, pacienteId, rolEntregador }) {
-  const [cargando, setCargando] = useState(false);
+/** Calcula días restantes o 0 si ya venció */
+function diasRestantes(fechaVencimiento) {
+  if (!fechaVencimiento) return 9999;
+  const hoy = new Date();
+  const venc = new Date(fechaVencimiento);
+  const diff = Math.ceil((venc - hoy) / (1000 * 60 * 60 * 24));
+  return diff > 0 ? diff : 0;
+}
+
+export function useEntregaMedicamentos(atencionId) {
+  const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
-  const [receta, setReceta] = useState([]);
-  const [entrega, setEntrega] = useState({}); // { detalleId: cantidadEntregada }
+  const [receta, setReceta] = useState(null);
+  const [detalles, setDetalles] = useState([]);
 
-  // Buscar receta del paciente
-  const cargarReceta = useCallback(async () => {
+  useEffect(() => {
     if (!atencionId) return;
-    try {
-      setCargando(true);
-      setError(null);
-      const supabase = obtenerSupabase();
 
-      const { data, err } = await supabase
-        .from("vista_receta_entrega")
-        .select("*")
-        .eq("atencion_id", atencionId);
+    async function cargarReceta() {
+      try {
+        setCargando(true);
+        setError(null);
+        const supabase = obtenerSupabase();
 
-      if (err) throw err;
-      setReceta(data || []);
-    } catch (err) {
-      setError(err.message || "No se pudo cargar la receta");
-    } finally {
-      setCargando(false);
+        // ✅ Consulta DIRECTAMENTE a las tablas existentes — SIN vista
+        const { data, err } = await supabase
+          .from("receta_detalle")
+          .select(`
+            id,
+            cantidad_recetada,
+            cantidad_entregada,
+            receta:receta_id (
+              id,
+              paciente_id,
+              paciente:paciente_id (
+                nombres,
+                apellidos,
+                numero_ficha
+              )
+            ),
+            medicamento:medicamento_id (
+              id,
+              nombre
+            ),
+            lote:lote_id (
+              id,
+              numero_lote,
+              vencimiento,
+              cantidad_actual
+            )
+          `)
+          .eq("receta.atencion_id", atencionId);
+
+        if (err) throw err;
+
+        if (!data || data.length === 0) {
+          setDetalles([]);
+          setReceta(null);
+          return;
+        }
+
+        // ✅ Extrae datos generales de la receta del primer detalle
+        const primerDetalle = data[0];
+        setReceta({
+          id: primerDetalle.receta?.id,
+          paciente_id: primerDetalle.receta?.paciente_id,
+          paciente_nombre: `${primerDetalle.receta?.paciente?.nombres || ""} ${primerDetalle.receta?.paciente?.apellidos || ""}`.trim(),
+          numero_ficha: primerDetalle.receta?.paciente?.numero_ficha,
+        });
+
+        // ✅ Transforma cada línea para la pantalla
+        setDetalles(data.map((d) => ({
+          id: d.id,
+          medicamento_id: d.medicamento?.id,
+          medicamento: d.medicamento?.nombre || "Medicamento desconocido",
+          lote_id: d.lote?.id,
+          numero_lote: d.lote?.numero_lote || "Sin lote",
+          cantidad_recetada: d.cantidad_recetada,
+          cantidad_entregada: d.cantidad_entregada || 0,
+          existencia_disponible: d.lote?.cantidad_actual || 0,
+          vencimiento: d.lote?.vencimiento,
+          dias_restantes: diasRestantes(d.lote?.vencimiento),
+          esta_vencido: estaVencido(d.lote?.vencimiento),
+        })));
+
+      } catch (e) {
+        console.error("Error cargando receta:", e);
+        setError(e.message || "Error al cargar los medicamentos");
+      } finally {
+        setCargando(false);
+      }
     }
+
+    cargarReceta();
   }, [atencionId]);
 
-  // Registrar cantidad entregada de un renglón
-  const registrarCantidad = useCallback((detalleId, cantidad) => {
-    setEntrega((prev) => ({
-      ...prev,
-      [detalleId]: cantidad,
-    }));
-  }, []);
-
-  // ✅ Generar movimientos de salida + cerrar atención al finalizar
-  const confirmarEntrega = useCallback(async () => {
-    setCargando(true);
-    setError(null);
-    try {
-      const supabase = obtenerSupabase();
-      const movimientosSalida = [];
-
-      // Crear movimiento de salida por cada renglón entregado
-      for (const detalle of receta) {
-        const cantidadEntregada = Number(entrega[detalle.id] || 0);
-        if (cantidadEntregada <= 0) continue;
-
-        // Determinar estado según rol: administrador → aprobado, otros → pendiente
-        const estadoMovimiento = rolEntregador === "administrador"
-          ? "aprobado"
-          : "pendiente_validacion";
-
-        movimientosSalida.push({
-          tipo: "salida",
-          medicamento_id: detalle.medicamento_id,
-          lote_id: detalle.lote_id,
-          cantidad: cantidadEntregada,
-          atencion_id: atencionId,
-          receta_detalle_id: detalle.id,
-          estado: estadoMovimiento,
-          motivo: "entrega a paciente",
-        });
-      }
-
-      // Insertar movimientos
-      if (movimientosSalida.length > 0) {
-        const { err: errMov } = await supabase
-          .from("movimientos_inventario")
-          .insert(movimientosSalida);
-        if (errMov) throw errMov;
-      }
-
-      // ✅ Cerrar atención → paciente sale de la cola
-      await cerrarAtencion(atencionId, "entrega completada");
-
-      return { exito: true };
-    } catch (err) {
-      setError(err.message || "No se pudo registrar la entrega");
-      return { exito: false };
-    } finally {
-      setCargando(false);
-    }
-  }, [receta, entrega, atencionId, rolEntregador]);
-
   return {
-    receta,
-    entrega,
     cargando,
     error,
-    cargarReceta,
-    registrarCantidad,
-    confirmarEntrega,
-    validarEntrega,
+    receta,
+    detalles,
   };
 }
