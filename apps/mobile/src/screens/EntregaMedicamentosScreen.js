@@ -1,12 +1,5 @@
 import { useState, useEffect } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TextInput,
-  Alert,
-} from "react-native";
+import { View, Text, StyleSheet, ScrollView, TextInput, Alert } from "react-native";
 import { useRoute, useNavigation } from "@react-navigation/native";
 import { useEntregaMedicamentos } from "../../../../packages/shared/inventario/useEntregaMedicamentos";
 import { colors, spacing } from "@ecopac/ui-tokens";
@@ -56,9 +49,7 @@ export default function EntregaMedicamentosScreen() {
   };
 
   const handleConfirmar = async () => {
-    const hayErrores = Object.values(erroresPorRenglon).some(
-      (lista) => lista && lista.length > 0
-    );
+    const hayErrores = Object.values(erroresPorRenglon).some((lista) => lista && lista.length > 0);
     if (hayErrores) {
       Alert.alert("Corrige los errores antes de continuar");
       return;
@@ -86,7 +77,7 @@ export default function EntregaMedicamentosScreen() {
             }
           },
         },
-      ]
+      ],
     );
   };
 
@@ -110,12 +101,8 @@ export default function EntregaMedicamentosScreen() {
     <ScreenContainer style={styles.contenedor}>
       <View style={styles.cabecera}>
         <Text style={styles.etiquetaPaciente}>Paciente</Text>
-        <Text style={styles.nombrePaciente}>
-          {paciente?.nombreCompleto || "—"}
-        </Text>
-        <Text style={styles.datosPaciente}>
-          Ficha: {paciente?.numeroFicha || "—"}
-        </Text>
+        <Text style={styles.nombrePaciente}>{paciente?.nombreCompleto || "—"}</Text>
+        <Text style={styles.datosPaciente}>Ficha: {paciente?.numeroFicha || "—"}</Text>
       </View>
 
       <ScrollView style={styles.lista} showsVerticalScrollIndicator={false}>
@@ -131,27 +118,19 @@ export default function EntregaMedicamentosScreen() {
             return (
               <View key={detalle.id} style={styles.renglon}>
                 <View style={styles.datosMedicamento}>
-                  <Text style={styles.nombreMedicamento}>
-                    {detalle.medicamento}
-                  </Text>
+                  <Text style={styles.nombreMedicamento}>{detalle.medicamento}</Text>
                   <Text style={styles.detalleMedicamento}>
-                    Recetado: {detalle.cantidad_recetada} · Disponible:{" "}
-                    {detalle.existencias}
+                    Recetado: {detalle.cantidad_recetada} · Disponible: {detalle.existencias}
                   </Text>
                   {detalle.vencido && (
-                    <Text style={styles.textoVencido}>
-                      ⚠️ VENCIDO — No se puede entregar
-                    </Text>
+                    <Text style={styles.textoVencido}>⚠️ VENCIDO — No se puede entregar</Text>
                   )}
                 </View>
 
                 <View style={styles.contenedorCantidad}>
                   <Text style={styles.etiquetaCantidad}>Entregado</Text>
                   <TextInput
-                    style={[
-                      styles.inputCantidad,
-                      errores.length > 0 && styles.inputConError,
-                    ]}
+                    style={[styles.inputCantidad, errores.length > 0 && styles.inputConError]}
                     keyboardType="number-pad"
                     value={String(cant)}
                     onChangeText={(txt) => cambiarCantidad(detalle, txt)}
@@ -235,4 +214,4 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.neutral[200],
   },
-}); 
+});

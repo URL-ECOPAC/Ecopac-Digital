@@ -36,7 +36,8 @@ export function useEntregaMedicamentos(atencionId) {
         // ✅ Trae TODO sin especificar columnas que no conocemos
         const { data, err } = await supabase
           .from("receta_detalle")
-          .select(`
+          .select(
+            `
             id,
             receta:receta_id (
               id,
@@ -57,7 +58,8 @@ export function useEntregaMedicamentos(atencionId) {
               vencimiento,
               cantidad_actual
             )
-          `)
+          `,
+          )
           .eq("receta.atencion_id", atencionId);
 
         if (err) throw err;
@@ -75,25 +77,27 @@ export function useEntregaMedicamentos(atencionId) {
         setReceta({
           id: primerDetalle.receta?.id,
           paciente_id: primerDetalle.receta?.paciente_id,
-          paciente_nombre: `${primerDetalle.receta?.paciente?.nombres || ""} ${primerDetalle.receta?.paciente?.apellidos || ""}`.trim(),
+          paciente_nombre:
+            `${primerDetalle.receta?.paciente?.nombres || ""} ${primerDetalle.receta?.paciente?.apellidos || ""}`.trim(),
           numero_ficha: primerDetalle.receta?.paciente?.numero_ficha,
         });
 
         // ✅ Usa el nombre que exista en la tabla
-        setDetalles(data.map((d) => ({
-          id: d.id,
-          medicamento_id: d.medicamento?.id,
-          medicamento: d.medicamento?.nombre || "Medicamento desconocido",
-          lote_id: d.lote?.id,
-          numero_lote: d.lote?.numero_lote || "Sin lote",
-          cantidad_recetada: d.cantidad_solicitada || d.cantidad || d.cantidad_recetada || 0,
-          cantidad_entregada: d.cantidad_entregada || 0,
-          existencia_disponible: d.lote?.cantidad_actual || 0,
-          vencimiento: d.lote?.vencimiento,
-          dias_restantes: diasRestantes(d.lote?.vencimiento),
-          esta_vencido: estaVencido(d.lote?.vencimiento),
-        })));
-
+        setDetalles(
+          data.map((d) => ({
+            id: d.id,
+            medicamento_id: d.medicamento?.id,
+            medicamento: d.medicamento?.nombre || "Medicamento desconocido",
+            lote_id: d.lote?.id,
+            numero_lote: d.lote?.numero_lote || "Sin lote",
+            cantidad_recetada: d.cantidad_solicitada || d.cantidad || d.cantidad_recetada || 0,
+            cantidad_entregada: d.cantidad_entregada || 0,
+            existencia_disponible: d.lote?.cantidad_actual || 0,
+            vencimiento: d.lote?.vencimiento,
+            dias_restantes: diasRestantes(d.lote?.vencimiento),
+            esta_vencido: estaVencido(d.lote?.vencimiento),
+          })),
+        );
       } catch (e) {
         console.error("Error cargando receta:", e);
         setError(e.message || "Error al cargar los medicamentos");
