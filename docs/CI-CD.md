@@ -259,6 +259,15 @@ un `::warning::` y una seccion propia diciendo que el PR no la causa y que no la
 sin fallar nunca**: depende de secrets y de la red, y convertirlo en guarda haria que un corte de
 conexion bloquee PRs ajenos. Quien corta es `Aplicar migraciones`, despues del merge.
 
+Eso incluye no poder conectarse. Hasta el PR #744 el paso que vincula el proyecto era el unico
+del job sin guarda, asi que la regla de arriba no se cumplia: el 8 de septiembre el secret
+`SUPABASE_ACCESS_TOKEN` dejo de valer y el check se puso en rojo en un PR que solo tocaba
+`apps/mobile` y `packages/shared`. Ahora, si `supabase link` falla, el job avisa con un
+`::warning::` y un resumen que nombra la causa -- token vencido si el CLI dijo `Unauthorized`,
+red o project ref en cualquier otro caso -- se salta la comparacion de historial y termina en
+verde. Lo que si conviene saber es que **el mismo secret lo usa `Aplicar migraciones`**: mientras
+la credencial no sirva, todo push a `develop` va a fallar ahi, traiga SQL o no.
+
 El aviso solo salta por **deriva de verdad**: una version aplicada en la base cuyo archivo no
 esta ni en el tip de la rama base. Que a la rama del PR le falten migraciones que entraron a
 `develop` despues de abrirla no es deriva -- es una rama desactualizada, que no le hace dano a

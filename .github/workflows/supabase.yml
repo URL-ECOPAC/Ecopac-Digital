@@ -437,9 +437,66 @@ jobs:
         with:
           version: 2.115.0
 
+      # El link tampoco corta, por la misma razon que el resto del job: avisa y sigue.
+      #
+      # Este paso era el unico del job sin guarda, asi que contradecia el diseno que documenta
+      # el comentario de abajo y `docs/CI-CD.md` ("sigue sin fallar nunca"). Un token vencido o
+      # un corte de red ponian el check en rojo en PRs que no tienen nada que ver: el 8 de
+      # septiembre `SUPABASE_ACCESS_TOKEN` dejo de valer y todas las corridas del PR #744 -que
+      # solo tocaba `apps/mobile` y `packages/shared`- murieron aqui con
+      # "Unexpected error retrieving remote project status: {"message":"Unauthorized"}".
+      #
+      # Un secret vacio ya se trataba asi en "Verificar secrets": avisa y sale en verde. Un
+      # secret presente pero rechazado es el mismo problema -no se puede consultar la base- y no
+      # habia motivo para que se reportara distinto.
+      #
+      # El diagnostico va en el aviso porque el mensaje del CLI no dice que hacer: `Unauthorized`
+      # es el access token, y cualquier otra cosa es red o el project ref.
       - name: Vincular con ecopac-dev
+        id: vinculo
         if: steps.check.outputs.listo == 'true'
-        run: supabase link --project-ref "$SUPABASE_PROJECT_REF_DEV" -p "$SUPABASE_DB_PASSWORD"
+        run: |
+          if salida="$(supabase link --project-ref "$SUPABASE_PROJECT_REF_DEV" -p "$SUPABASE_DB_PASSWORD" 2>&1)"; then
+            printf '%s\n' "$salida"
+            echo "vinculado=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          printf '%s\n' "$salida"
+          echo "vinculado=false" >> "$GITHUB_OUTPUT"
+
+          limpia="$(printf '%s' "$salida" | sed 's/\x1B\[[0-9;]*[a-zA-Z]//g')"
+
+          if printf '%s' "$limpia" | grep -qi 'unauthorized'; then
+            causa="El secret \`SUPABASE_ACCESS_TOKEN\` esta vencido o revocado: Supabase lo rechazo con \`Unauthorized\`."
+            arreglo="Generar un token nuevo en Supabase (Account > Access Tokens) y actualizarlo en Settings > Secrets and variables > Actions."
+            corto="SUPABASE_ACCESS_TOKEN vencido o revocado"
+          else
+            causa="No se pudo conectar con \`ecopac-dev\`. Suele ser un corte de red o un \`SUPABASE_PROJECT_REF_DEV\` que ya no apunta al proyecto."
+            arreglo="Reintentar la corrida; si vuelve a fallar, revisar el project ref y el estado del proyecto en Supabase."
+            corto="no se pudo conectar con ecopac-dev"
+          fi
+
+          echo "::warning::No se pudo consultar el estado de ecopac-dev ($corto). Este job avisa, no bloquea el PR."
+
+          {
+            echo "## Estado de la base remota no verificado"
+            echo
+            echo "$causa"
+            echo
+            echo "**Esto no lo causa este PR.** El job solo consulta \`ecopac-dev\` para avisar de"
+            echo "deriva de historial, asi que su unico efecto es que ese aviso no se pudo comprobar."
+            echo "Quien corta de verdad es **Aplicar migraciones**, despues del merge -- y ese si va a"
+            echo "fallar mientras la credencial no sirva, traiga el merge SQL o no."
+            echo
+            echo "**Que hacer:** $arreglo"
+            echo
+            echo "Salida del CLI:"
+            echo
+            echo '```'
+            printf '%s\n' "$limpia"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
       # La deriva se avisa aqui, en el PR, y no solo cuando ya revento el despliegue.
       #
@@ -452,7 +509,7 @@ jobs:
       # convertirlo en guarda haria que un corte de conexion bloquee PRs ajenos. Avisa fuerte,
       # no corta. Quien corta es "Aplicar migraciones", despues del merge.
       - name: Comparar historial local y remoto
-        if: steps.check.outputs.listo == 'true'
+        if: steps.vinculo.outputs.vinculado == 'true'
         run: |
           salida_push="$(supabase db push --dry-run 2>&1 || true)"
           limpia="$(printf '%s' "$salida_push" | sed 's/\x1B\[[0-9;]*[a-zA-Z]//g')"
