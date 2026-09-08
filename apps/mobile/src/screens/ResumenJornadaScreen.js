@@ -1,6 +1,7 @@
 import { View, Text, StyleSheet, RefreshControl, ScrollView } from "react-native";
 import { useReporteJornada } from "../../../../packages/shared/reportes/useReporteJornada";
-import { useJornadaActiva } from "../hooks/useJornadaActiva";
+// ✅ Ruta corregida — usa el hook desde shared que SÍ existe
+import { useJornadaActiva } from "../../../../packages/shared/jornadas/useJornadaActiva";
 import { useSesionCompartida } from "../contexto/SesionProvider";
 import { LoadingState, ErrorState } from "../components";
 
@@ -12,12 +13,18 @@ const ETIQUETAS_ESTADO = {
 };
 
 export default function ResumenJornadaScreen() {
+  // ✅ El hook ya se llama correctamente y trae jornadaActiva
   const { jornadaActiva } = useJornadaActiva();
   const { rol } = useSesionCompartida();
-  const { cargando, error, ficha, personal, medicamentos, recargar } = useReporteJornada(
-    jornadaActiva?.id,
-    { rol },
-  );
+
+  const {
+    cargando,
+    error,
+    ficha,
+    personal,
+    medicamentos,
+    recargar,
+  } = useReporteJornada(jornadaActiva?.id, { rol });
 
   if (!jornadaActiva) {
     return (
@@ -30,14 +37,15 @@ export default function ResumenJornadaScreen() {
   return (
     <ScrollView
       style={estilos.contenedor}
-      refreshControl={<RefreshControl refreshing={cargando} onRefresh={recargar} />}
+      refreshControl={
+        <RefreshControl refreshing={cargando} onRefresh={recargar} />
+      }
     >
       {/* 📋 Cabecera de la jornada */}
       <View style={estilos.tarjetaPrincipal}>
         <Text style={estilos.titulo}>{ficha?.nombre || jornadaActiva.nombre}</Text>
         <Text style={estilos.subtitulo}>
-          {ficha?.fecha || jornadaActiva.fecha} ·{" "}
-          {ficha?.comunidad || jornadaActiva.comunidad?.nombre}
+          {ficha?.fecha || jornadaActiva.fecha} · {ficha?.comunidad || jornadaActiva.comunidad?.nombre}
         </Text>
         <View style={estilos.filaEstado}>
           <Text style={estilos.etiquetaEstado}>Estado:</Text>
@@ -70,9 +78,7 @@ export default function ResumenJornadaScreen() {
           <View style={estilos.fila}>
             <TarjetaResumen
               etiqueta="Medicamentos Entregados"
-              valor={
-                medicamentos.length ? medicamentos.reduce((s, m) => s + (m.cantidad || 0), 0) : 0
-              }
+              valor={medicamentos.length ? medicamentos.reduce((s, m) => s + (m.cantidad || 0), 0) : 0}
             />
             <TarjetaResumen etiqueta="Personal Participante" valor={personal.length} />
           </View>
