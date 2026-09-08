@@ -8,11 +8,12 @@ describe("puedeCrearComunidad", () => {
     expect(puedeCrearComunidad(ROLES.ADMINISTRADOR)).toBe(true);
   });
 
-  it.each(
-    Object.values(ROLES).filter((rol) => rol !== ROLES.ADMINISTRADOR),
-  )("%s no puede crear comunidades", (rol) => {
-    expect(puedeCrearComunidad(rol)).toBe(false);
-  });
+  it.each(Object.values(ROLES).filter((rol) => rol !== ROLES.ADMINISTRADOR))(
+    "%s no puede crear comunidades",
+    (rol) => {
+      expect(puedeCrearComunidad(rol)).toBe(false);
+    },
+  );
 
   it("sin rol no puede", () => {
     expect(puedeCrearComunidad(undefined)).toBe(false);
