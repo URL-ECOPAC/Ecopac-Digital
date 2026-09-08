@@ -2,11 +2,14 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { calcularEdad } from "../formato/fechas.js";
 import {
+  crearComunidad,
   listarComunidades,
   listarDepartamentos,
   listarMunicipios,
   obtenerComunidad,
 } from "../territorio/api.js";
+import { validarComunidad } from "../territorio/comunidades.validaciones.js";
+import { puedeCrearComunidad } from "../territorio/permisos.js";
 import { listarIdiomas } from "./idiomas.api.js";
 import { buscarPacientes, registrarPaciente } from "./api.js";
 import { CAMPOS_REGISTRO_PACIENTE } from "./campos.js";
@@ -22,7 +25,7 @@ function aOpciones(filas = []) {
   return filas.map((fila) => ({ value: fila.id, label: fila.nombre }));
 }
 
-export function useRegistroPaciente({ comunidadInicial = null, nombresInicial = "" } = {}) {
+export function useRegistroPaciente({ comunidadInicial = null, nombresInicial = "", rol } = {}) {
   const [valores, setValores] = useState(() =>
     nombresInicial ? { ...VALORES_INICIALES, nombres: nombresInicial } : VALORES_INICIALES,
   );
@@ -33,6 +36,8 @@ export function useRegistroPaciente({ comunidadInicial = null, nombresInicial = 
 
   const [departamentoId, setDepartamentoId] = useState(null);
   const [municipioId, setMunicipioId] = useState(null);
+  const [erroresComunidad, setErroresComunidad] = useState({});
+  const [creandoComunidad, setCreandoComunidad] = useState(false);
   const [departamentos, setDepartamentos] = useState([]);
   const [municipios, setMunicipios] = useState([]);
   const [comunidades, setComunidades] = useState([]);
@@ -80,6 +85,36 @@ export function useRegistroPaciente({ comunidadInicial = null, nombresInicial = 
       vigente = false;
     };
   }, [municipioId]);
+
+  const registrarComunidad = useCallback(
+    async (nombre) => {
+      const datos = { nombre, municipioId };
+      const errores = validarComunidad(datos);
+
+      if (Object.keys(errores).length > 0) {
+        setErroresComunidad(errores);
+        return { comunidad: null, errores, error: null };
+      }
+
+      setCreandoComunidad(true);
+      setErroresComunidad({});
+
+      const { comunidad, error: errorDeCreacion } = await crearComunidad(datos);
+
+      if (errorDeCreacion) {
+        setCreandoComunidad(false);
+        return { comunidad: null, errores: {}, error: errorDeCreacion };
+      }
+
+      const { comunidades: filas } = await listarComunidades({ municipioId });
+      setComunidades(aOpciones(filas ?? []));
+      setCampo("comunidad", comunidad.id);
+      setCreandoComunidad(false);
+
+      return { comunidad, errores: {}, error: null };
+    },
+    [municipioId, setCampo],
+  );
 
   const { nombres, apellidos, fechaNacimiento } = valores;
 
@@ -187,6 +222,10 @@ export function useRegistroPaciente({ comunidadInicial = null, nombresInicial = 
     setMunicipio,
     registrar,
     reiniciar,
+    puedeCrearComunidad: puedeCrearComunidad(rol),
+    registrarComunidad,
+    erroresComunidad,
+    creandoComunidad,
     catalogos: { departamentos, municipios, comunidades, idiomas, sexo: OPCIONES_SEXO },
   };
 }

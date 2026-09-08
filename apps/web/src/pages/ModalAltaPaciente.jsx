@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 import { TIPOS_DE_CAMPO, useRegistroPaciente } from "@ecopac/shared";
 
 import DateField from "../components/DateField";
@@ -12,7 +14,7 @@ const TIPO_DE_INPUT = {
   [TIPOS_DE_CAMPO.TELEFONO]: "tel",
 };
 
-export default function ModalAltaPaciente({ onClose, onRegistrado }) {
+export default function ModalAltaPaciente({ onClose, onRegistrado, rol }) {
   const {
     campos,
     valores,
@@ -30,7 +32,24 @@ export default function ModalAltaPaciente({ onClose, onRegistrado }) {
     registrar,
     reiniciar,
     catalogos,
-  } = useRegistroPaciente();
+    puedeCrearComunidad,
+    registrarComunidad,
+    erroresComunidad,
+    creandoComunidad,
+  } = useRegistroPaciente({ rol });
+
+  const [creandoNueva, setCreandoNueva] = useState(false);
+  const [nombreNuevo, setNombreNuevo] = useState("");
+  const [errorNueva, setErrorNueva] = useState(null);
+
+  const guardarComunidad = async () => {
+    const { comunidad, error: fallo } = await registrarComunidad(nombreNuevo);
+    setErrorNueva(fallo?.mensaje ?? null);
+    if (comunidad) {
+      setNombreNuevo("");
+      setCreandoNueva(false);
+    }
+  };
 
   const cerrar = () => {
     if (registrado) onRegistrado?.(registrado);
@@ -101,6 +120,41 @@ export default function ModalAltaPaciente({ onClose, onRegistrado }) {
                 error={errores.comunidad}
                 disabled={enviando || !municipioId || catalogos.comunidades.length === 0}
               />
+              {puedeCrearComunidad && municipioId && !creandoNueva && (
+                <SecondaryButton
+                  title="Crear una comunidad"
+                  onClick={() => setCreandoNueva(true)}
+                  disabled={enviando}
+                />
+              )}
+              {puedeCrearComunidad && creandoNueva && (
+                <div className="mt-2">
+                  <TextField
+                    label="Nombre de la comunidad nueva"
+                    value={nombreNuevo}
+                    onChange={setNombreNuevo}
+                    error={erroresComunidad.nombre ?? errorNueva}
+                    disabled={creandoComunidad}
+                  />
+                  <div className="d-flex gap-2 mt-2">
+                    <PrimaryButton
+                      title="Guardar"
+                      onClick={guardarComunidad}
+                      loading={creandoComunidad}
+                      disabled={creandoComunidad}
+                    />
+                    <SecondaryButton
+                      title="Cancelar"
+                      onClick={() => {
+                        setCreandoNueva(false);
+                        setNombreNuevo("");
+                        setErrorNueva(null);
+                      }}
+                      disabled={creandoComunidad}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           );
         }

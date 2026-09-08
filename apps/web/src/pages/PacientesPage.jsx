@@ -157,7 +157,11 @@ export default function PacientesPage() {
         </div>
 
         {registrando && (
-          <ModalAltaPaciente onClose={() => setRegistrando(false)} onRegistrado={recargar} />
+          <ModalAltaPaciente
+            rol={rol}
+            onClose={() => setRegistrando(false)}
+            onRegistrado={recargar}
+          />
         )}
       </div>
     </ScreenContainer>
