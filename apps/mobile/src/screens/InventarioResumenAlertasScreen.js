@@ -25,9 +25,7 @@ export default function InventarioResumenAlertasScreen() {
   return (
     <ScrollView
       style={estilos.contenedor}
-      refreshControl={
-        <RefreshControl refreshing={cargando} onRefresh={recargar} />
-      }
+      refreshControl={<RefreshControl refreshing={cargando} onRefresh={recargar} />}
     >
       {/* 📊 Tarjetas de resumen */}
       <View style={estilos.tarjetasResumen}>
@@ -40,9 +38,7 @@ export default function InventarioResumenAlertasScreen() {
           <Text style={estilos.tarjetaEtiqueta}>Lotes activos</Text>
         </View>
         <View style={estilos.tarjeta}>
-          <Text style={[estilos.tarjetaValor, { color: "#dc2626" }]}>
-            {resumen?.criticos ?? 0}
-          </Text>
+          <Text style={[estilos.tarjetaValor, { color: "#dc2626" }]}>{resumen?.criticos ?? 0}</Text>
           <Text style={estilos.tarjetaEtiqueta}>En riesgo</Text>
         </View>
       </View>
