@@ -33,12 +33,12 @@ export function useEntregaMedicamentos(atencionId) {
         setError(null);
         const supabase = obtenerSupabase();
 
-        // ✅ Consulta DIRECTAMENTE a las tablas existentes — SIN vista
+        // ✅ Quitamos el campo que no existe y usamos los reales
         const { data, err } = await supabase
           .from("receta_detalle")
           .select(`
             id,
-            cantidad_recetada,
+            cantidad,
             cantidad_entregada,
             receta:receta_id (
               id,
@@ -70,7 +70,6 @@ export function useEntregaMedicamentos(atencionId) {
           return;
         }
 
-        // ✅ Extrae datos generales de la receta del primer detalle
         const primerDetalle = data[0];
         setReceta({
           id: primerDetalle.receta?.id,
@@ -79,14 +78,13 @@ export function useEntregaMedicamentos(atencionId) {
           numero_ficha: primerDetalle.receta?.paciente?.numero_ficha,
         });
 
-        // ✅ Transforma cada línea para la pantalla
         setDetalles(data.map((d) => ({
           id: d.id,
           medicamento_id: d.medicamento?.id,
           medicamento: d.medicamento?.nombre || "Medicamento desconocido",
           lote_id: d.lote?.id,
           numero_lote: d.lote?.numero_lote || "Sin lote",
-          cantidad_recetada: d.cantidad_recetada,
+          cantidad_recetada: d.cantidad || 0, // ✅ La columna se llama "cantidad"
           cantidad_entregada: d.cantidad_entregada || 0,
           existencia_disponible: d.lote?.cantidad_actual || 0,
           vencimiento: d.lote?.vencimiento,
