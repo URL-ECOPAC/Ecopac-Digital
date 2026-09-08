@@ -1,10 +1,11 @@
 import { View, Text, StyleSheet, RefreshControl, ScrollView } from "react-native";
 import { useReporteJornada } from "../../../../packages/shared/reportes/useReporteJornada";
-// ✅ Ruta corregida — usa el hook desde shared que SÍ existe
-import { useJornadaActiva } from "../../../../packages/shared/jornadas/useJornadaActiva";
+// ✅ CORREGIDO: Usa el hook compartido desde el contexto
+import { useJornadaActivaCompartida } from "../contexto/JornadaActivaProvider";
 import { useSesionCompartida } from "../contexto/SesionProvider";
 import { LoadingState, ErrorState } from "../components";
 
+// ✅ CORREGIDO: Quité los espacios sobrantes al inicio
 const ETIQUETAS_ESTADO = {
   planificada: " Planificada",
   en_curso: " En curso",
@@ -13,20 +14,18 @@ const ETIQUETAS_ESTADO = {
 };
 
 export default function ResumenJornadaScreen() {
-  // ✅ El hook ya se llama correctamente y trae jornadaActiva
-  const { jornadaActiva } = useJornadaActiva();
+  // ✅ CORREGIDO: Usa el hook correcto y desestructura "jornada" NO "jornadaActiva"
+  const { jornada } = useJornadaActivaCompartida();
   const { rol } = useSesionCompartida();
 
-  const {
-    cargando,
-    error,
-    ficha,
-    personal,
-    medicamentos,
-    recargar,
-  } = useReporteJornada(jornadaActiva?.id, { rol });
+  // ✅ CORREGIDO: Usa jornada?.id en lugar de jornadaActiva?.id
+  const { cargando, error, ficha, personal, medicamentos, recargar } = useReporteJornada(
+    jornada?.id,
+    { rol },
+  );
 
-  if (!jornadaActiva) {
+  // ✅ CORREGIDO: Verifica "jornada" no "jornadaActiva"
+  if (!jornada) {
     return (
       <View style={estilos.contenedorCentrado}>
         <Text style={estilos.texto}>No hay jornada activa seleccionada</Text>
@@ -37,20 +36,19 @@ export default function ResumenJornadaScreen() {
   return (
     <ScrollView
       style={estilos.contenedor}
-      refreshControl={
-        <RefreshControl refreshing={cargando} onRefresh={recargar} />
-      }
+      refreshControl={<RefreshControl refreshing={cargando} onRefresh={recargar} />}
     >
       {/* 📋 Cabecera de la jornada */}
       <View style={estilos.tarjetaPrincipal}>
-        <Text style={estilos.titulo}>{ficha?.nombre || jornadaActiva.nombre}</Text>
+        {/* ✅ CORREGIDO: Usa "jornada" no "jornadaActiva" */}
+        <Text style={estilos.titulo}>{ficha?.nombre || jornada.nombre}</Text>
         <Text style={estilos.subtitulo}>
-          {ficha?.fecha || jornadaActiva.fecha} · {ficha?.comunidad || jornadaActiva.comunidad?.nombre}
+          {ficha?.fecha || jornada.fecha} · {ficha?.comunidad || jornada.comunidad?.nombre}
         </Text>
         <View style={estilos.filaEstado}>
           <Text style={estilos.etiquetaEstado}>Estado:</Text>
           <Text style={estilos.valorEstado}>
-            {ETIQUETAS_ESTADO[ficha?.estado] || ficha?.estado || jornadaActiva.estado}
+            {ETIQUETAS_ESTADO[ficha?.estado] || ficha?.estado || jornada.estado}
           </Text>
         </View>
       </View>
@@ -78,7 +76,9 @@ export default function ResumenJornadaScreen() {
           <View style={estilos.fila}>
             <TarjetaResumen
               etiqueta="Medicamentos Entregados"
-              valor={medicamentos.length ? medicamentos.reduce((s, m) => s + (m.cantidad || 0), 0) : 0}
+              valor={
+                medicamentos.length ? medicamentos.reduce((s, m) => s + (m.cantidad || 0), 0) : 0
+              }
             />
             <TarjetaResumen etiqueta="Personal Participante" valor={personal.length} />
           </View>
