@@ -38,11 +38,7 @@ export const MODULOS = [
     tabMovil: false,
     soloWeb: false,
     icono: "HeartHandshake",
-    roles: [
-      ROLES.ADMINISTRADOR,
-      ROLES.JUNTA_DIRECTIVA,
-      ROLES.SOCIO_FUNDADOR,
-    ],
+    roles: [ROLES.ADMINISTRADOR, ROLES.JUNTA_DIRECTIVA, ROLES.SOCIO_FUNDADOR],
   },
   {
     id: "inventario",
@@ -90,11 +86,7 @@ export const MODULOS = [
     tabMovil: false,
     soloWeb: true,
     icono: "BarChart3",
-    roles: [
-      ROLES.ADMINISTRADOR,
-      ROLES.JUNTA_DIRECTIVA,
-      ROLES.SOCIO_FUNDADOR,
-    ],
+    roles: [ROLES.ADMINISTRADOR, ROLES.JUNTA_DIRECTIVA, ROLES.SOCIO_FUNDADOR],
   },
   {
     id: "jornadas",
@@ -137,7 +129,10 @@ export function modulosVisibles(rol, opciones = {}) {
 
   return MODULOS.filter((m) => {
     if (!m.roles.includes(rol)) return false;
-    if (plataforma === "mobile" && (m.soloWeb || m.ruta === "/colaboradores" || m.ruta === "/reportes")) {
+    if (
+      plataforma === "mobile" &&
+      (m.soloWeb || m.ruta === "/colaboradores" || m.ruta === "/reportes")
+    ) {
       return false;
     }
     return true;
@@ -167,9 +162,7 @@ export function moduloDeRuta(pathname) {
   if (!pathname) return null;
   if (pathname === "/") return MODULOS.find((m) => m.ruta === "/") || null;
 
-  return (
-    MODULOS.find((m) => m.ruta !== "/" && pathname.startsWith(m.ruta)) || null
-  );
+  return MODULOS.find((m) => m.ruta !== "/" && pathname.startsWith(m.ruta)) || null;
 }
 
 /** Destinos de la tab bar móvil según el rol */
