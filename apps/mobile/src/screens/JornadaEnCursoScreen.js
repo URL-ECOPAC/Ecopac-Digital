@@ -1,6 +1,7 @@
 import { useCallback } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
+import ResumenJornadaScreen from "../screens/ResumenJornadaScreen";
 
 import {
   ETAPAS_DE_COLA,
@@ -168,6 +169,7 @@ export default function JornadaEnCursoScreen() {
         <Contador etiqueta="Consultas" valor={consultasRealizadas} />
         <Contador etiqueta="Entregas" valor={tratamientosEntregados} />
       </View>
+      <ResumenJornadaScreen />
 
       <View style={styles.acciones}>
         <PrimaryButton
