@@ -84,6 +84,44 @@ export function consultarExistenciasDeBodega(bodegaId, opciones = {}) {
 }
 
 /**
+ * Todas las combinaciones (lote, bodega) con existencia disponible, sin filtrar por
+ * medicamento. Es lo que necesita un listado general de inventario (catalogo/stock); a
+ * diferencia de consultarLotesDisponibles(), que exige un medicamentoId porque arma las
+ * opciones de una receta puntual (issue #138), esta consulta es para recorrer "que hay en
+ * bodega ahora mismo".
+ *
+ * Mismos filtros de vista_lotes_disponibles que consultarLotesDisponibles(): solo lotes con
+ * cantidad_disponible > 0 y no vencidos (00047). Un lote agotado o vencido no aparece aqui,
+ * y un movimiento 'pendiente' tampoco: existencias solo se ajusta cuando el movimiento se
+ * aprueba (fn_aplicar_ajuste_existencias).
+ *
+ * @param {{ bodega?: string, busqueda?: string }} [filtros]
+ * @returns {Promise<{ existencias: object[], error: object|null }>}
+ */
+export async function listarExistenciasDisponibles({ bodega, busqueda } = {}) {
+  try {
+    let consulta = obtenerSupabase()
+      .from("vista_lotes_disponibles")
+      .select(
+        "loteId:lote_id, medicamentoId:medicamento_id, medicamentoNombre:medicamento_nombre, " +
+          "numeroLote:numero_lote, fechaVencimiento:fecha_vencimiento, " +
+          "cantidadDisponible:cantidad_disponible, bodegaId:bodega_id, bodega:bodega_nombre",
+      )
+      .order("fecha_vencimiento", { ascending: true });
+
+    if (bodega) consulta = consulta.eq("bodega_id", bodega);
+    if (busqueda) consulta = consulta.ilike("medicamento_nombre", `%${busqueda}%`);
+
+    const { data, error } = await consulta;
+
+    if (error) return { existencias: [], error: normalizarError(error) };
+    return { existencias: data ?? [], error: null };
+  } catch (error) {
+    return { existencias: [], error: normalizarError(error) };
+  }
+}
+
+/**
  * Lotes concretos con existencia de un medicamento, con su bodega.
  *
  * consultarExistencias() agrega por medicamento y devuelve `lotesDisponibles` como un CONTEO,

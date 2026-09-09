@@ -9,9 +9,12 @@ import {
 } from "react-native";
 // Agrega un "../" extra (4 niveles hacia arriba)
 import { useCatalogoMedicamentos } from "../../../../packages/shared/inventario/useCatalogoMedicamentos";
+import { ROUTES } from "../navigation/rutas";
+
 export function CatalogoMedicamentosScreen({
   inventarioInicial = [],
   bodegas = [],
+  medicamentosSinStock = 0,
   route,
   navigation,
 }) {
@@ -36,27 +39,43 @@ export function CatalogoMedicamentosScreen({
   const esModoSeleccion = route?.params?.esModoSeleccion || false;
   const onSeleccionarMedicamento = route?.params?.onSeleccionarMedicamento;
 
+  /**
+   * Tocar un medicamento del inventario (issue #165, criterio 1: "seleccionar un medicamento
+   * existente"). `esModoSeleccion` es el modo viejo (nadie navega hoy a esta pantalla con ese
+   * parametro, pero se conserva por si alguna otra pantalla lo usa en el futuro): si esta
+   * activo, sigue devolviendo el item al que llamo. Fuera de ese modo -que es como se llega
+   * aqui desde el tab Inventario- tocar un medicamento abre "Registrar ingreso" con ese
+   * medicamento ya elegido, en vez de no hacer nada.
+   */
   const handleSeleccionar = (item) => {
-    if (!esModoSeleccion) return;
-    const stock = item?.stock ?? item?.cantidad_disponible ?? 0;
-    const estaVencido = item?.estaVencido || item?.esta_vencido || false;
+    if (esModoSeleccion) {
+      const stock = item?.stock ?? item?.cantidad_disponible ?? 0;
+      const estaVencido = item?.estaVencido || item?.esta_vencido || false;
+      if (estaVencido || stock <= 0) return;
 
-    if (estaVencido || stock <= 0) return;
-
-    if (onSeleccionarMedicamento) {
-      onSeleccionarMedicamento(item);
-      navigation?.goBack();
+      if (onSeleccionarMedicamento) {
+        onSeleccionarMedicamento(item);
+        navigation?.goBack();
+      }
+      return;
     }
+
+    if (!item?.medicamentoId) return;
+    navigation?.navigate(ROUTES.REGISTRO_INGRESO, {
+      medicamentoId: item.medicamentoId,
+      medicamentoNombre: item.nombre,
+    });
   };
 
   const getBadgesAndStyles = (item) => {
     const stock = item?.stock ?? item?.cantidad_disponible ?? 0;
     const estaVencido = item?.estaVencido || item?.esta_vencido || false;
+    const proximoAVencer = item?.proximoAVencer || false;
 
     if (stock <= 0) {
       return { label: "AGOTADO", style: styles.badgeAgotado, textStyle: styles.textAgotado };
     }
-    if (estaVencido) {
+    if (estaVencido || proximoAVencer) {
       return { label: "CRÍTICO", style: styles.badgeCritico, textStyle: styles.textCritico };
     }
     return { label: "DISPONIBLE", style: styles.badgeDisponible, textStyle: styles.textDisponible };
@@ -121,6 +140,29 @@ export function CatalogoMedicamentosScreen({
   const listaCategorias = Array.isArray(categoriasPills) ? categoriasPills : [];
   const listaInventario = Array.isArray(inventarioFiltrado) ? inventarioFiltrado : [];
 
+  // "Por Vencer" se cuenta sobre lo que ya esta filtrado en pantalla: cada item trae
+  // proximoAVencer calculado en StockScreen.js (diasHastaVencimiento <= 30, mismo umbral que
+  // useVistaExistencias.js). "Sin Stock" no se puede derivar de este arreglo -
+  // inventarioInicial/inventarioFiltrado solo trae lo que SI tiene existencia disponible
+  // (vista_lotes_disponibles, 00047)-, asi que StockScreen.js lo calcula aparte contra el
+  // catalogo completo y lo pasa en `medicamentosSinStock`.
+  const totalPorVencer = listaInventario.filter((item) => item?.proximoAVencer).length;
+
+  // Bodegas reales para el filtro (issue #165): antes esta lista era un arreglo fijo
+  // ["Todas","Central","Norte","Sur"] que no correspondia a ninguna bodega real de la base, asi
+  // que elegir cualquiera que no fuera "Todas" no encontraba nada. `bodegas` ya llega como prop
+  // desde StockScreen.js (listarBodegas()), la misma fuente que usa el alta de un medicamento.
+  // { label, value } y no solo el nombre: el estado inicial de bodegaSeleccionada es "todas" en
+  // minuscula (useCatalogoMedicamentos.js), y comparar contra un "Todas" con mayuscula dejaba el
+  // pill "Todas" sin marcar como activo al abrir la pantalla aunque el filtro si funcionara.
+  const listaBodegas = Array.isArray(bodegas) ? bodegas : [];
+  const opcionesDeBodega = [
+    { label: "Todas", value: "todas" },
+    ...listaBodegas
+      .map((b) => ({ label: b?.nombre, value: b?.nombre }))
+      .filter((opcion) => opcion.label),
+  ];
+
   return (
     <View style={styles.container}>
       {/* 1. Header con métricas reducidas */}
@@ -132,12 +174,12 @@ export function CatalogoMedicamentosScreen({
         </View>
         <View style={styles.kpiCard}>
           <View style={[styles.dotIndicator, { backgroundColor: "#f59e0b" }]} />
-          <Text style={styles.kpiValue}>2</Text>
+          <Text style={styles.kpiValue}>{totalPorVencer}</Text>
           <Text style={styles.kpiLabel}>Por Vencer</Text>
         </View>
         <View style={styles.kpiCard}>
           <View style={[styles.dotIndicator, { backgroundColor: "#ec4899" }]} />
-          <Text style={styles.kpiValue}>1</Text>
+          <Text style={styles.kpiValue}>{medicamentosSinStock}</Text>
           <Text style={styles.kpiLabel}>Sin Stock</Text>
         </View>
       </ScrollView>
@@ -152,22 +194,30 @@ export function CatalogoMedicamentosScreen({
       />
 
       {/* 3. Selector de Bodegas */}
-      <View style={styles.bodegasContainer}>
-        {["Todas", "Central", "Norte", "Sur"].map((b) => {
-          const seleccionada = bodegaSeleccionada === b;
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.bodegasContainer}
+        contentContainerStyle={styles.bodegasContenido}
+      >
+        {opcionesDeBodega.map((opcion) => {
+          const seleccionada = bodegaSeleccionada === opcion.value;
           return (
             <TouchableOpacity
-              key={b}
-              onPress={() => setBodegaSeleccionada(b)}
+              key={opcion.value}
+              onPress={() => setBodegaSeleccionada(opcion.value)}
               style={[styles.bodegaBtn, seleccionada && styles.bodegaBtnActiva]}
             >
-              <Text style={[styles.bodegaBtnText, seleccionada && styles.bodegaBtnTextActiva]}>
-                {b}
+              <Text
+                style={[styles.bodegaBtnText, seleccionada && styles.bodegaBtnTextActiva]}
+                numberOfLines={1}
+              >
+                {opcion.label}
               </Text>
             </TouchableOpacity>
           );
         })}
-      </View>
+      </ScrollView>
 
       {/* 4. Categorías Horizontal */}
       <View style={{ maxHeight: 38, marginBottom: 12 }}>
@@ -230,10 +280,15 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     fontSize: 13,
   },
-  bodegasContainer: { flexDirection: "row", gap: 6, marginBottom: 10 },
+  // Antes flexDirection:"row" con bodegaBtn a flex:1: repartia el ancho fijo del telefono entre
+  // los 4 nombres cortos y fijos de antes. Los nombres reales de bodega (p. ej. "Bodega Movil
+  // Demo") no caben asi con una lista que ademas puede crecer, asi que ahora es scroll
+  // horizontal con botones de ancho propio.
+  bodegasContainer: { marginBottom: 10 },
+  bodegasContenido: { flexDirection: "row", gap: 6, paddingRight: 4 },
   bodegaBtn: {
-    flex: 1,
     paddingVertical: 6,
+    paddingHorizontal: 12,
     borderRadius: 8,
     backgroundColor: "#ffffff",
     alignItems: "center",
