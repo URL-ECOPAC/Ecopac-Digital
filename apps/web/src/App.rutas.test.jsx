@@ -135,9 +135,12 @@ describe("rutas de donaciones y proyectos", () => {
 
     expect(screen.queryByText(TEXTO_NOT_FOUND)).not.toBeInTheDocument();
 
-    // SOLUCIÓN ERROR 1: Se flexibiliza la expresión regular para capturar la tilde
-    // o variaciones en el encabezado de la vista (ej. "Registrar Donación" / "Donación")
-    expect(screen.getByRole("heading", { level: 1, name: /donaci[oó]n/i })).toBeInTheDocument();
+    // El header del layout (MainLayout) tambien pone un <h1> con el nombre del modulo
+    // ("Donaciones"), asi que el patron tiene que apuntar al encabezado propio de la
+    // pantalla de registro para no matchear los dos.
+    expect(
+      screen.getByRole("heading", { level: 1, name: /registro de donaci[oó]n/i }),
+    ).toBeInTheDocument();
   });
 
   it("/donaciones/historial monta el historial de donaciones", () => {

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 
 import {
   FILTROS_PACIENTE,
+  puedeFusionarPacientes,
   puedeRegistrarPaciente,
   puedeVerCatalogoDiagnosticos,
   puedeVerCondiciones,
@@ -70,6 +71,14 @@ export default function PacientesPage() {
     acciones.push({
       label: "Catalogo de diagnosticos",
       onClick: () => navigate("/pacientes/diagnosticos"),
+      variant: "secondary",
+    });
+  }
+
+  if (puedeFusionarPacientes(rol)) {
+    acciones.push({
+      label: "Posibles duplicados",
+      onClick: () => navigate("/pacientes/duplicados"),
       variant: "secondary",
     });
   }

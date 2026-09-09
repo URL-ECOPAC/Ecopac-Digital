@@ -68,6 +68,8 @@ sistema: 38 archivos en `packages/shared/pacientes/`.
 | [ModalEdicionPaciente.jsx](../apps/web/src/pages/ModalEdicionPaciente.jsx) | `useEdicionPaciente` | Conectada |
 | [ModalCondicionesPaciente.jsx](../apps/web/src/pages/ModalCondicionesPaciente.jsx) | `useCondicionesPaciente` | Conectada |
 | [RecetaImprimible.jsx](../apps/web/src/pages/RecetaImprimible.jsx) | `datosDeRecetaImprimible` | Conectada |
+| [PosiblesDuplicadosPage.jsx](../apps/web/src/pages/PosiblesDuplicadosPage.jsx) `/pacientes/duplicados` | `useDuplicadosPacientes` | Conectada |
+| [ModalFusionPacientes.jsx](../apps/web/src/pages/ModalFusionPacientes.jsx) | `useFusionPacientes` | Conectada |
 
 ### Movil
 
@@ -95,7 +97,11 @@ Funciones de base: `fn_registrar_paciente`, `fn_buscar_pacientes`, `fn_generar_r
 - El registro es **por pasos** (`registro.pasos.js`), con borrador local: en campo se interrumpe.
 - El triaje calcula el IMC para previsualizarlo, pero **el valor que se guarda lo calcula
   Postgres** (columna generada).
-- La deduplicacion de pacientes existe en base y en `duplicados.api.js`; **no tiene pantalla**.
+- La deduplicacion de pacientes tiene pantalla desde #637: `PosiblesDuplicadosPage.jsx` lista los
+  pares que sugiere `fn_detectar_pacientes_duplicados` (misma fecha de nacimiento + nombre
+  similar) y `ModalFusionPacientes.jsx` compara y fusiona. `fusionarPacientes()` en si acepta
+  cualquier par de ids, pero hoy no hay forma de elegir un par que el detector no proponga
+  (limitacion conocida, ver el comentario de cabecera de `PosiblesDuplicadosPage.jsx`).
 
 ---
 

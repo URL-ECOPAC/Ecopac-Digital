@@ -112,7 +112,7 @@ export default function MainLayout() {
                     `app-nav__item${isActive ? " app-nav__item--active" : ""}`
                   }
                 >
-                  {modulo.etiqueta}
+                  {modulo.nombre}
                 </NavLink>
               ))}
             </div>
@@ -141,7 +141,7 @@ export default function MainLayout() {
       <div className="app-main">
         <header className="app-header">
           <div>
-            <h1 className="app-header__title">{actual?.etiqueta ?? "Ecopac Digital"}</h1>
+            <h1 className="app-header__title">{actual?.nombre ?? "Ecopac Digital"}</h1>
             <p className="app-header__subtitle">
               {actual ? SUBTITULOS[actual.id] : "Ecopac Guatemala"} · {fecha}
             </p>

@@ -4,10 +4,12 @@ import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   cabeceraDePaciente,
   CAMPOS_FICHA_PACIENTE,
+  formatearFechaCorta,
   permisosDeFicha,
   pestaniasDeFicha,
   resolverPestaniaDeFicha,
   textoDeCampoDeFicha,
+  useFusionesDelPaciente,
   usePaciente,
   usePacientesListado,
   valoresDeFichaPaciente,
@@ -50,6 +52,9 @@ export default function FichaPacientePage() {
   const { rol } = useSesionCompartida();
   const { paciente, cargando, error, recargar } = usePaciente(id, { rol });
   const listado = usePacientesListado();
+  const { fusiones: fusionesRecibidas, permitido: puedeVerFusiones } = useFusionesDelPaciente(id, {
+    rol,
+  });
   const [editando, setEditando] = useState(false);
   const [gestionandoCondiciones, setGestionandoCondiciones] = useState(false);
 
@@ -200,6 +205,30 @@ export default function FichaPacientePage() {
                 </div>
               )}
             </Card>
+
+            {/* Criterio 6 de #637: una fusion hecha por error se tiene que poder consultar
+              despues -- que expediente absorbio, cuando y quien la hizo, no solo un conteo. Solo
+              se pide/pinta si el rol puede fusionar (mismo gate que la pantalla de posibles
+              duplicados), porque RLS igual la deja vacia para cualquier otro rol. */}
+            {puedeVerFusiones && fusionesRecibidas.length > 0 && (
+              <>
+                <div className="mt-3" />
+                <Card>
+                  <p className="pac-rotulo mb-2">Expedientes fusionados en este paciente</p>
+                  <ul className="list-unstyled mb-0">
+                    {fusionesRecibidas.map((fusion) => (
+                      <li key={fusion.id} className="mb-1">
+                        {fusion.absorbido?.nombreCompleto ?? "Expediente sin nombre"}
+                        {fusion.absorbido?.numeroFicha ? ` (ficha ${fusion.absorbido.numeroFicha})` : ""}
+                        {" — "}
+                        {formatearFechaCorta(fusion.realizadaEn)}
+                        {fusion.realizadaPor ? ` · ${fusion.realizadaPor}` : ""}
+                      </li>
+                    ))}
+                  </ul>
+                </Card>
+              </>
+            )}
 
             <div className="mt-3" />
 
