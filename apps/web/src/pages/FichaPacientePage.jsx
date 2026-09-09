@@ -219,7 +219,9 @@ export default function FichaPacientePage() {
                     {fusionesRecibidas.map((fusion) => (
                       <li key={fusion.id} className="mb-1">
                         {fusion.absorbido?.nombreCompleto ?? "Expediente sin nombre"}
-                        {fusion.absorbido?.numeroFicha ? ` (ficha ${fusion.absorbido.numeroFicha})` : ""}
+                        {fusion.absorbido?.numeroFicha
+                          ? ` (ficha ${fusion.absorbido.numeroFicha})`
+                          : ""}
                         {" — "}
                         {formatearFechaCorta(fusion.realizadaEn)}
                         {fusion.realizadaPor ? ` · ${fusion.realizadaPor}` : ""}

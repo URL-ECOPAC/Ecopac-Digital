@@ -23,7 +23,13 @@ import "./pacientes.css";
 // "Datos generales" de FichaPacientePage.jsx: side by side y en el mismo orden, las diferencias
 // entre los dos expedientes se ven directamente comparando ambas columnas, sin una regla de
 // comparacion nueva.
-export default function ModalFusionPacientes({ pacienteAId, pacienteBId, rol, onClose, onFusionado }) {
+export default function ModalFusionPacientes({
+  pacienteAId,
+  pacienteBId,
+  rol,
+  onClose,
+  onFusionado,
+}) {
   const {
     pacienteA,
     pacienteB,
@@ -66,8 +72,8 @@ export default function ModalFusionPacientes({ pacienteAId, pacienteBId, rol, on
       {listoParaComparar && (
         <>
           <div className="alert alert-warning" role="alert">
-            Fusionar es irreversible: el expediente que no elijas como sobreviviente quedara dado
-            de baja y ya no se podra deshacer la fusion. Su historial clinico, triajes, consultas y
+            Fusionar es irreversible: el expediente que no elijas como sobreviviente quedara dado de
+            baja y ya no se podra deshacer la fusion. Su historial clinico, triajes, consultas y
             recetas pasan al expediente sobreviviente.
           </div>
 
@@ -78,7 +84,9 @@ export default function ModalFusionPacientes({ pacienteAId, pacienteBId, rol, on
               { cabecera: cabeceraB, paciente: pacienteB },
             ].map(({ cabecera, paciente }) => (
               <div className="col-4 text-center" key={paciente.id}>
-                <p className="pac-nombre mb-1">{cabecera.nombreCompleto ?? "Paciente sin nombre"}</p>
+                <p className="pac-nombre mb-1">
+                  {cabecera.nombreCompleto ?? "Paciente sin nombre"}
+                </p>
                 {cabecera.condiciones.length > 0 && (
                   <div className="d-flex flex-wrap justify-content-center gap-1 mb-2">
                     {cabecera.condiciones.map((condicion) => (

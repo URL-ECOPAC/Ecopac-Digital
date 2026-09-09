@@ -5,12 +5,27 @@
 import { TIPOS_DE_PRESENTACION } from "../descriptores.js";
 
 export const COLUMNAS_DUPLICADOS_PACIENTE = [
-  { id: "nombreCompletoA", label: "Paciente A", tipo: TIPOS_DE_PRESENTACION.TEXTO, principal: true },
+  {
+    id: "nombreCompletoA",
+    label: "Paciente A",
+    tipo: TIPOS_DE_PRESENTACION.TEXTO,
+    principal: true,
+  },
   { id: "numeroFichaA", label: "Ficha A", tipo: TIPOS_DE_PRESENTACION.TEXTO },
-  { id: "nombreCompletoB", label: "Paciente B", tipo: TIPOS_DE_PRESENTACION.TEXTO, principal: true },
+  {
+    id: "nombreCompletoB",
+    label: "Paciente B",
+    tipo: TIPOS_DE_PRESENTACION.TEXTO,
+    principal: true,
+  },
   { id: "numeroFichaB", label: "Ficha B", tipo: TIPOS_DE_PRESENTACION.TEXTO },
   { id: "fechaNacimiento", label: "Fecha de nacimiento", tipo: TIPOS_DE_PRESENTACION.FECHA },
   // similitud de fn_detectar_pacientes_duplicados (00101) es 0..1; similitudPorcentaje ya viene
   // redondeada a entero desde useDuplicadosPacientes.js, no se formatea aqui.
-  { id: "similitudPorcentaje", label: "Similitud", tipo: TIPOS_DE_PRESENTACION.NUMERO, sufijo: "%" },
+  {
+    id: "similitudPorcentaje",
+    label: "Similitud",
+    tipo: TIPOS_DE_PRESENTACION.NUMERO,
+    sufijo: "%",
+  },
 ];

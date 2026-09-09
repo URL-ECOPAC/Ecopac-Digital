@@ -210,14 +210,18 @@ export default function RegistroIngresoScreen() {
   }
 
   if (resumenGuardado) {
-    const estadoResultado = resumenGuardado.movimientos?.[0]?.estado ?? ESTADOS_MOVIMIENTO.PENDIENTE;
+    const estadoResultado =
+      resumenGuardado.movimientos?.[0]?.estado ?? ESTADOS_MOVIMIENTO.PENDIENTE;
     const esPendiente = estadoResultado === ESTADOS_MOVIMIENTO.PENDIENTE;
 
     return (
       <ScreenContainer>
         <PageHeader title="Ingreso registrado" />
         <View style={styles.resumen}>
-          <StatusChip status={estadoResultado} label={ETIQUETAS_ESTADO_MOVIMIENTO[estadoResultado]} />
+          <StatusChip
+            status={estadoResultado}
+            label={ETIQUETAS_ESTADO_MOVIMIENTO[estadoResultado]}
+          />
           <Text style={styles.textoResumen}>
             {esPendiente
               ? "Este ingreso quedo pendiente: la administradora debe validarlo antes de que sume al inventario."
@@ -236,17 +240,9 @@ export default function RegistroIngresoScreen() {
 
   return (
     <ScreenContainer>
-      <PageHeader
-        title="Registrar ingreso"
-        subtitle="Ingreso rapido de medicamentos en campo"
-      />
+      <PageHeader title="Registrar ingreso" subtitle="Ingreso rapido de medicamentos en campo" />
 
-      <Selector
-        label="Origen"
-        value={origen}
-        options={OPCIONES_ORIGEN_LOTE}
-        onSelect={setOrigen}
-      />
+      <Selector label="Origen" value={origen} options={OPCIONES_ORIGEN_LOTE} onSelect={setOrigen} />
 
       <Selector
         label={origen === "donacion" ? "Donante" : "Proveedor"}
@@ -274,7 +270,11 @@ export default function RegistroIngresoScreen() {
           style={styles.selectorMedicamento}
         />
         {puedeCrearMedicamento ? (
-          <SecondaryButton title="Nuevo" onPress={abrirModalMedicamento} style={styles.botonNuevo} />
+          <SecondaryButton
+            title="Nuevo"
+            onPress={abrirModalMedicamento}
+            style={styles.botonNuevo}
+          />
         ) : null}
       </View>
 

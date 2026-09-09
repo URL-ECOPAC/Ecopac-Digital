@@ -18,9 +18,8 @@ vi.mock("../api/cliente.js", () => ({
   },
 }));
 
-const { listarPosiblesDuplicados, fusionarPacientes, listarFusionesRecibidas } = await import(
-  "./duplicados.api.js"
-);
+const { listarPosiblesDuplicados, fusionarPacientes, listarFusionesRecibidas } =
+  await import("./duplicados.api.js");
 
 /**
  * Doble minimo: soporta .rpc(nombre, argumentos) con .single() opcional (listarPosiblesDuplicados/
