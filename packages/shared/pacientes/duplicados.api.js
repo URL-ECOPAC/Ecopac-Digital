@@ -15,6 +15,23 @@ import { obtenerSupabase } from "../api/cliente.js";
 import { normalizarError } from "../api/errores-de-supabase.js";
 import { puedeFusionarPacientes, puedeVerPacientes } from "./permisos.js";
 
+/** Nombre completo a partir de nombres/apellidos sueltos, sin depender de un paciente ni de un
+ * perfil en particular: lo usan tanto el absorbido (pacientes) como quien fusiono (perfiles). */
+function nombreCompleto(persona) {
+  return [persona?.nombres, persona?.apellidos].filter(Boolean).join(" ").trim() || null;
+}
+
+// fusiones_pacientes tiene dos FK hacia pacientes (paciente_absorbido_id y
+// paciente_sobreviviente_id): sin calificar con el nombre de la restriccion, PostgREST no sabe
+// cual de las dos usar para el embebido y responde con un error de ambiguedad. Mismo patron que
+// recetas.api.js usa con perfiles!recetas_medico_id_fkey.
+const COLUMNAS_DE_FUSION_RECIBIDA = [
+  "id",
+  "realizadaEn:realizada_en",
+  "absorbido:pacientes!fusiones_pacientes_paciente_absorbido_id_fkey(id, nombres, apellidos, expediente:expedientes(numeroFicha:numero_ficha))",
+  "realizadaPorPerfil:perfiles!fusiones_pacientes_realizada_por_fkey(nombres, apellidos)",
+].join(", ");
+
 /**
  * Posibles pacientes duplicados: misma fecha de nacimiento y nombre similar, ordenados por
  * similitud descendente. La ve quien ya puede leer pacientes (administrador, medico,
@@ -103,5 +120,51 @@ export async function fusionarPacientes(sobrevivienteId, absorbidoId, { rolUsuar
     };
   } catch (error) {
     return { fusion: null, error: normalizarError(error) };
+  }
+}
+
+/**
+ * Fusiones donde `pacienteId` quedo como sobreviviente: que expediente absorbio, cuando y quien
+ * la hizo. Resuelve el criterio de aceptacion 6 (una fusion hecha por error se puede consultar
+ * despues, aunque no se pueda deshacer): sin esto, `fusiones_pacientes` (00101) tiene el dato
+ * pero ninguna pantalla lo muestra (docs/MODULOS.md antes de #637).
+ *
+ * Solo administrador tiene SELECT sobre fusiones_pacientes (00101, "Solo administrador lee
+ * fusiones_pacientes"): para cualquier otro rol la fila no aparece porque RLS filtra la fila, no
+ * porque el GRANT falte, asi que esta funcion no necesita guardar de rol propia -- la lista
+ * simplemente llega vacia sin error, igual que un select cualquiera bajo una politica que no deja
+ * ver filas.
+ *
+ * @param {string} pacienteId
+ * @returns {Promise<{ fusiones: object[], error: object|null }>}
+ */
+export async function listarFusionesRecibidas(pacienteId) {
+  if (!pacienteId) return { fusiones: [], error: null };
+
+  try {
+    const { data, error } = await obtenerSupabase()
+      .from("fusiones_pacientes")
+      .select(COLUMNAS_DE_FUSION_RECIBIDA)
+      .eq("paciente_sobreviviente_id", pacienteId)
+      .order("realizada_en", { ascending: false });
+
+    if (error) return { fusiones: [], error: normalizarError(error) };
+
+    const fusiones = (data ?? []).map((fila) => ({
+      id: fila.id,
+      realizadaEn: fila.realizadaEn,
+      absorbido: fila.absorbido
+        ? {
+            id: fila.absorbido.id,
+            nombreCompleto: nombreCompleto(fila.absorbido),
+            numeroFicha: fila.absorbido.expediente?.numeroFicha ?? null,
+          }
+        : null,
+      realizadaPor: fila.realizadaPorPerfil ? nombreCompleto(fila.realizadaPorPerfil) : null,
+    }));
+
+    return { fusiones, error: null };
+  } catch (error) {
+    return { fusiones: [], error: normalizarError(error) };
   }
 }

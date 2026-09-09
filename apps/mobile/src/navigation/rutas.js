@@ -31,4 +31,5 @@ export const ROUTES = {
   JORNADA_EN_CURSO: "JornadaEnCurso",
   JORNADAS_ASIGNADAS: "JornadasAsignadas",
   STOCK: "Stock",
+  REGISTRO_INGRESO: "RegistroIngreso",
 };

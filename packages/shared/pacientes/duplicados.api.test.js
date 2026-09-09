@@ -1,4 +1,5 @@
-// Pruebas de listarPosiblesDuplicados()/fusionarPacientes() (issue #140).
+// Pruebas de listarPosiblesDuplicados()/fusionarPacientes() (issue #140) y
+// listarFusionesRecibidas() (issue #637, criterio 6).
 //
 // Mismo patron de doble que pacientes/api.test.js: un doble de obtenerSupabase() que registra
 // cada paso de la cadena y resuelve con la respuesta que la prueba le entregue. Ninguna prueba
@@ -17,24 +18,47 @@ vi.mock("../api/cliente.js", () => ({
   },
 }));
 
-const { listarPosiblesDuplicados, fusionarPacientes } = await import("./duplicados.api.js");
+const { listarPosiblesDuplicados, fusionarPacientes, listarFusionesRecibidas } =
+  await import("./duplicados.api.js");
 
-/** Doble minimo: solo necesita soportar .rpc(nombre, argumentos) con .single() opcional. */
+/**
+ * Doble minimo: soporta .rpc(nombre, argumentos) con .single() opcional (listarPosiblesDuplicados/
+ * fusionarPacientes) y .from(tabla).select().eq().order() (listarFusionesRecibidas). Las dos
+ * cadenas terminan en el mismo `consulta` encadenable: ninguna prueba depende de que sean
+ * instancias distintas, y evita duplicar el resolver.
+ */
 function crearCliente(respuesta) {
   const llamadas = [];
   const resolver = async () => (respuesta instanceof Error ? Promise.reject(respuesta) : respuesta);
+
+  const consulta = {
+    select(columnas) {
+      llamadas.push({ paso: "select", columnas });
+      return consulta;
+    },
+    eq(columna, valor) {
+      llamadas.push({ paso: "eq", columna, valor });
+      return consulta;
+    },
+    order(columna, opciones) {
+      llamadas.push({ paso: "order", columna, opciones });
+      return consulta;
+    },
+    single: resolver,
+    then(resolve, reject) {
+      return resolver().then(resolve, reject);
+    },
+  };
 
   return {
     llamadas,
     rpc(nombre, argumentos) {
       llamadas.push({ paso: "rpc", nombre, argumentos });
-      const encadenable = {
-        single: resolver,
-        then(resolve, reject) {
-          return resolver().then(resolve, reject);
-        },
-      };
-      return encadenable;
+      return consulta;
+    },
+    from(tabla) {
+      llamadas.push({ paso: "from", tabla });
+      return consulta;
     },
   };
 }
@@ -206,6 +230,102 @@ describe("fusionarPacientes", () => {
     });
 
     expect(fusion).toBeNull();
+    expect(error).not.toBeNull();
+  });
+});
+
+describe("listarFusionesRecibidas", () => {
+  it("sin pacienteId devuelve vacio sin llamar a Supabase", async () => {
+    const { fusiones, error } = await listarFusionesRecibidas();
+
+    expect(fusiones).toEqual([]);
+    expect(error).toBeNull();
+  });
+
+  it("consulta fusiones_pacientes filtrando por sobreviviente y ordenando por fecha descendente", async () => {
+    const cliente = crearCliente({ data: [], error: null });
+    dobles.cliente = cliente;
+
+    await listarFusionesRecibidas("pac-1");
+
+    expect(cliente.llamadas[0]).toEqual({ paso: "from", tabla: "fusiones_pacientes" });
+    expect(cliente.llamadas.find((l) => l.paso === "eq")).toEqual({
+      paso: "eq",
+      columna: "paciente_sobreviviente_id",
+      valor: "pac-1",
+    });
+    expect(cliente.llamadas.find((l) => l.paso === "order")).toEqual({
+      paso: "order",
+      columna: "realizada_en",
+      opciones: { ascending: false },
+    });
+  });
+
+  it("aplana el absorbido y quien/cuando fusiono a partir de los embebidos", async () => {
+    dobles.cliente = crearCliente({
+      data: [
+        {
+          id: "fus-1",
+          realizadaEn: "2026-08-30T10:00:00Z",
+          absorbido: {
+            id: "pac-2",
+            nombres: "Maria",
+            apellidos: "Perez",
+            expediente: { numeroFicha: "F-002" },
+          },
+          realizadaPorPerfil: { nombres: "Ana", apellidos: "Gomez" },
+        },
+      ],
+      error: null,
+    });
+
+    const { fusiones, error } = await listarFusionesRecibidas("pac-1");
+
+    expect(error).toBeNull();
+    expect(fusiones).toEqual([
+      {
+        id: "fus-1",
+        realizadaEn: "2026-08-30T10:00:00Z",
+        absorbido: { id: "pac-2", nombreCompleto: "Maria Perez", numeroFicha: "F-002" },
+        realizadaPor: "Ana Gomez",
+      },
+    ]);
+  });
+
+  it("un absorbido sin expediente o una fusion sin perfil de quien la hizo no revientan", async () => {
+    dobles.cliente = crearCliente({
+      data: [
+        {
+          id: "fus-1",
+          realizadaEn: "2026-08-30T10:00:00Z",
+          absorbido: { id: "pac-2", nombres: "Maria", apellidos: "Perez", expediente: null },
+          realizadaPorPerfil: null,
+        },
+      ],
+      error: null,
+    });
+
+    const { fusiones } = await listarFusionesRecibidas("pac-1");
+
+    expect(fusiones[0].absorbido.numeroFicha).toBeNull();
+    expect(fusiones[0].realizadaPor).toBeNull();
+  });
+
+  it("sin fusiones devuelve una lista vacia sin reventar (rol sin acceso o paciente sin fusiones)", async () => {
+    dobles.cliente = crearCliente({ data: [], error: null });
+
+    const { fusiones, error } = await listarFusionesRecibidas("pac-1");
+
+    expect(error).toBeNull();
+    expect(fusiones).toEqual([]);
+  });
+
+  it("un rechazo del servidor se normaliza", async () => {
+    dobles.cliente = crearCliente({ data: null, error: { code: "42501", message: "denegado" } });
+
+    const { fusiones, error } = await listarFusionesRecibidas("pac-1");
+
+    expect(fusiones).toEqual([]);
     expect(error).not.toBeNull();
   });
 });

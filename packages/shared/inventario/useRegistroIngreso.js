@@ -1,6 +1,8 @@
 import { useState } from "react";
 
 import { registrarIngreso } from "./movimientos.api.js";
+import { registrarMedicamento } from "./medicamentos.api.js";
+import { puedeAdministrarMedicamentos } from "./medicamentos.permisos.js";
 
 const ITEM_VACIO = {
   medicamento_id: "",
@@ -58,9 +60,14 @@ export function datosIngresoParaRegistrar(
  * es una operacion distinta -generarIngresoDesdeDonacion(), donaciones/ingreso.api.js- que ya
  * tiene su propio flujo en otra parte del modulo y esta issue no toca.
  *
- * @param {{ usuarioId?: string, onGuardarExitoso?: (movimientos: object[]) => void }} [opciones]
+ * `rol` (issue #165, criterio 1) habilita `puedeCrearMedicamento` y `crearMedicamentoNuevo()`.
+ * Es opcional y no cambia nada de lo que ya usa #156: sin `rol`, `puedeCrearMedicamento` da
+ * `false` (mismo resultado que `puedeAdministrarMedicamentos(undefined)`) y las dos funciones
+ * nuevas simplemente quedan sin usar.
+ *
+ * @param {{ usuarioId?: string, rol?: string, onGuardarExitoso?: (movimientos: object[]) => void }} [opciones]
  */
-export function useRegistroIngreso({ usuarioId, onGuardarExitoso } = {}) {
+export function useRegistroIngreso({ usuarioId, rol, onGuardarExitoso } = {}) {
   const [origen, setOrigenState] = useState("compra"); // 'compra' | 'donacion'
   const [proveedorId, setProveedorId] = useState("");
   const [numeroComprobante, setNumeroComprobante] = useState("");
@@ -71,6 +78,9 @@ export function useRegistroIngreso({ usuarioId, onGuardarExitoso } = {}) {
   const [resumenGuardado, setResumenGuardado] = useState(null);
   const [error, setError] = useState(null);
   const [guardando, setGuardando] = useState(false);
+
+  const [creandoMedicamento, setCreandoMedicamento] = useState(false);
+  const [errorMedicamento, setErrorMedicamento] = useState(null);
 
   const setOrigen = (nuevoOrigen) => {
     setOrigenState(nuevoOrigen);
@@ -164,6 +174,47 @@ export function useRegistroIngreso({ usuarioId, onGuardarExitoso } = {}) {
     setError(null);
   };
 
+  /**
+   * Puede registrar un medicamento nuevo en el catalogo (issue #165, criterio 1).
+   *
+   * Espejo de `puedeAdministrarMedicamentos(rol)` (medicamentos.permisos.js): la politica de
+   * INSERT de `medicamentos` (00034) exige `es_administrador()`, y `fn_registrar_medicamento`
+   * (00050) NO es SECURITY DEFINER, asi que corre con esos mismos privilegios. Este valor solo
+   * decide que dibuja la pantalla -un medico o voluntario en campo elige entre los medicamentos
+   * existentes, o da de alta un lote nuevo de uno ya catalogado (00107)-, nunca reemplaza esa
+   * politica: un intento igual sin permiso vuelve como 42501 desde registrarMedicamento().
+   */
+  const puedeCrearMedicamento = puedeAdministrarMedicamentos(rol);
+
+  /**
+   * Registra un medicamento nuevo en el catalogo y lo deja elegido en `itemActual.medicamento_id`
+   * (issue #165, criterio 1). Delega en `registrarMedicamento()` (medicamentos.api.js), que ya
+   * valida `principiosActivosIds` y traduce cualquier error del servidor -incluido el 42501 de
+   * quien no es administrador- a un mensaje apto para pantalla.
+   *
+   * No toca `items` ni `guardarMovimiento()`: solo prepara el medicamento que el resto del
+   * formulario ya sabe usar.
+   *
+   * @param {object} datos Mismos campos que `registrarMedicamento()` (medicamentos.api.js).
+   * @returns {Promise<{ medicamento: object|null, error: object|null }>}
+   */
+  const crearMedicamentoNuevo = async (datos) => {
+    setCreandoMedicamento(true);
+    setErrorMedicamento(null);
+
+    const resultado = await registrarMedicamento(datos);
+
+    setCreandoMedicamento(false);
+
+    if (resultado.error) {
+      setErrorMedicamento(resultado.error.mensaje);
+      return resultado;
+    }
+
+    setItemActual((prev) => ({ ...prev, medicamento_id: resultado.medicamento.id }));
+    return resultado;
+  };
+
   return {
     origen,
     setOrigen,
@@ -181,5 +232,9 @@ export function useRegistroIngreso({ usuarioId, onGuardarExitoso } = {}) {
     resetFormulario,
     error,
     guardando,
+    puedeCrearMedicamento,
+    crearMedicamentoNuevo,
+    creandoMedicamento,
+    errorMedicamento,
   };
 }

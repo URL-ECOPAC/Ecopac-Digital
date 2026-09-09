@@ -1,9 +1,9 @@
-import { View, Text, StyleSheet } from "react-native";
+import { View, Text, StyleSheet, Pressable } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import { colors } from "@ecopac/ui-tokens";
-import { etiquetaDeRol, tabsMoviles, MODULOS } from "@ecopac/shared";
+import { colors, spacing, typography } from "@ecopac/ui-tokens";
+import { etiquetaDeRol, tabsMoviles, MODULOS, puedeRegistrarMovimiento } from "@ecopac/shared";
 
 import { useSesionCompartida } from "../contexto/SesionProvider";
 import RutaProtegida from "../components/RutaProtegida";
@@ -25,6 +25,7 @@ import TriajeScreen from "../screens/TriajeScreen";
 import ConsultaScreen from "../screens/ConsultaScreen";
 import RecetaScreen from "../screens/RecetaScreen";
 import StockScreen from "../screens/StockScreen";
+import RegistroIngresoScreen from "../screens/RegistroIngresoScreen";
 import DonacionesScreen from "../screens/DonacionesScreen";
 import ProyectosScreen from "../screens/ProyectosScreen";
 import PresupuestosScreen from "../screens/PresupuestosScreen";
@@ -201,12 +202,36 @@ function JornadasNavigator() {
 }
 
 function InventarioNavigator() {
+  const { rol } = useSesionCompartida();
+  const puedeRegistrarIngreso = puedeRegistrarMovimiento(rol);
+
   return (
     <InventarioStack.Navigator>
       <InventarioStack.Screen
         name={ROUTES.STOCK}
         component={StockScreen}
-        options={opcionesStack("Inventario")}
+        options={({ navigation }) => ({
+          ...opcionesStack("Inventario"),
+          // Punto de entrada al registro rapido de ingreso (issue #165). Se agrega aqui, en las
+          // opciones de la unica pantalla que hoy cuelga del tab Inventario, y no dentro de
+          // CatalogoMedicamentosScreen.js, para no tocar un archivo que #165 no necesita.
+          headerRight: puedeRegistrarIngreso
+            ? () => (
+                <Pressable
+                  onPress={() => navigation.navigate(ROUTES.REGISTRO_INGRESO)}
+                  style={styles.botonHeaderIngreso}
+                  accessibilityRole="button"
+                >
+                  <Text style={styles.textoBotonHeaderIngreso}>+ Ingreso</Text>
+                </Pressable>
+              )
+            : undefined,
+        })}
+      />
+      <InventarioStack.Screen
+        name={ROUTES.REGISTRO_INGRESO}
+        component={RegistroIngresoScreen}
+        options={opcionesStack("Registrar ingreso")}
       />
     </InventarioStack.Navigator>
   );
@@ -330,5 +355,16 @@ const styles = StyleSheet.create({
   rolText: {
     fontSize: 10,
     color: "#64748B",
+  },
+  botonHeaderIngreso: {
+    minHeight: 48,
+    justifyContent: "center",
+    paddingHorizontal: spacing.sm,
+  },
+  textoBotonHeaderIngreso: {
+    fontFamily: typography.fontFamilyBase,
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.semibold,
+    color: colors?.primary || "#16A34A",
   },
 });

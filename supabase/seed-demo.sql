@@ -42,7 +42,14 @@ ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO proveedores (id, nombre, contacto, tipo) VALUES
   ('de000003-0000-0000-0000-000000000001', 'Distribuidora Farmaceutica Demo, S.A.', 'ventas@distribuidorademo.test', 'comercial'),
-  ('de000003-0000-0000-0000-000000000002', 'Fundacion Manos Solidarias Demo', 'contacto@manossolidariasdemo.test', 'donante')
+  ('de000003-0000-0000-0000-000000000002', 'Fundacion Manos Solidarias Demo', 'contacto@manossolidariasdemo.test', 'donante'),
+  -- "Donante no identificado" (issue #165, criterio 4): registrarIngreso() exige proveedor_id
+  -- para crear un lote nuevo (lotes.proveedor_id es NOT NULL, 00020), y solo la administradora
+  -- puede dar de alta un proveedor/donante (00062, "Solo Administrador puede modificar
+  -- proveedores"). Sin esta fila, un medico o voluntario que reciba en el lugar una donacion de
+  -- alguien que todavia no esta en el catalogo no podria cerrar el ingreso sin llamar a la
+  -- administradora. Solo dato (INSERT), sin tocar esquema ni RLS.
+  ('de000003-0000-0000-0000-000000000003', 'Donante no identificado', NULL, 'donante')
 ON CONFLICT (id) DO NOTHING;
 
 -- ============================================================================

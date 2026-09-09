@@ -12,14 +12,19 @@ vi.mock("../api/cliente.js", () => ({
   },
 }));
 
-const { consultarExistencias, consultarExistenciasDeBodega, consultarLotesDisponibles } =
-  await import("./existencias.api.js");
+const {
+  consultarExistencias,
+  consultarExistenciasDeBodega,
+  consultarLotesDisponibles,
+  listarExistenciasDisponibles,
+} = await import("./existencias.api.js");
 
 /**
- * Doble de query builder para consultarLotesDisponibles(), que encadena .from().select().eq()
- * (y opcionalmente un segundo .eq() por bodega) .order(). Aparte de crearCliente() -que solo
- * sirve para las funciones basadas en .rpc()- porque esta es la unica funcion del archivo que
- * consulta una vista con el query builder normal.
+ * Doble de query builder para las funciones que consultan vista_lotes_disponibles con el query
+ * builder normal (no .rpc()): consultarLotesDisponibles() encadena .from().select().eq()(.eq())
+ * .order(); listarExistenciasDisponibles() encadena .from().select().order()(.eq())(.ilike()).
+ * El orden de .eq()/.ilike() no importa para las pruebas: se busca por .paso/.columna en
+ * `llamadas`, no por posicion.
  */
 function crearClienteDeVista(respuesta) {
   const llamadas = [];
@@ -32,6 +37,10 @@ function crearClienteDeVista(respuesta) {
     },
     eq(columna, valor) {
       llamadas.push({ paso: "eq", columna, valor });
+      return encadenable;
+    },
+    ilike(columna, valor) {
+      llamadas.push({ paso: "ilike", columna, valor });
       return encadenable;
     },
     order(columna, opciones) {
@@ -315,6 +324,65 @@ describe("consultarLotesDisponibles", () => {
     const { lotes, error } = await consultarLotesDisponibles("med-1");
 
     expect(lotes).toEqual([]);
+    expect(error).not.toBeNull();
+  });
+});
+
+describe("listarExistenciasDisponibles", () => {
+  it("consulta vista_lotes_disponibles sin exigir medicamento ni bodega", async () => {
+    const cliente = crearClienteDeVista({ data: [], error: null });
+    dobles.cliente = cliente;
+
+    await listarExistenciasDisponibles();
+
+    expect(cliente.llamadas[0]).toEqual({ paso: "from", tabla: "vista_lotes_disponibles" });
+    expect(cliente.llamadas).not.toContainEqual(
+      expect.objectContaining({ paso: "eq", columna: "bodega_id" }),
+    );
+    expect(cliente.llamadas).not.toContainEqual(expect.objectContaining({ paso: "ilike" }));
+  });
+
+  it("con bodega y busqueda agrega los dos filtros", async () => {
+    const cliente = crearClienteDeVista({ data: [], error: null });
+    dobles.cliente = cliente;
+
+    await listarExistenciasDisponibles({ bodega: "bod-1", busqueda: "amoxi" });
+
+    expect(cliente.llamadas).toContainEqual({ paso: "eq", columna: "bodega_id", valor: "bod-1" });
+    expect(cliente.llamadas).toContainEqual({
+      paso: "ilike",
+      columna: "medicamento_nombre",
+      valor: "%amoxi%",
+    });
+  });
+
+  it("nunca devuelve null: sin filas se dibuja una lista vacia", async () => {
+    dobles.cliente = crearClienteDeVista({ data: null, error: null });
+
+    const { existencias, error } = await listarExistenciasDisponibles();
+
+    expect(error).toBeNull();
+    expect(existencias).toEqual([]);
+  });
+
+  it("un error de la base se normaliza y devuelve lista vacia", async () => {
+    dobles.cliente = crearClienteDeVista({
+      data: null,
+      error: { code: "42501", message: "denegado" },
+    });
+
+    const { existencias, error } = await listarExistenciasDisponibles();
+
+    expect(existencias).toEqual([]);
+    expect(error).not.toBeNull();
+  });
+
+  it("clasifica como fallo de red la excepcion del fetch", async () => {
+    dobles.cliente = crearClienteDeVista(new Error("network down"));
+
+    const { existencias, error } = await listarExistenciasDisponibles();
+
+    expect(existencias).toEqual([]);
     expect(error).not.toBeNull();
   });
 });
