@@ -71,7 +71,7 @@ export default function EntregaMedicamentosScreen() {
           onPress: async () => {
             const resultado = await confirmarEntrega();
             if (resultado.exito) {
-              Alert.alert("✅ Entrega registrada", "Atención cerrada", [
+              Alert.alert("Entrega registrada", "Atención cerrada", [
                 { text: "OK", onPress: () => navigation.goBack() },
               ]);
             }
@@ -123,7 +123,7 @@ export default function EntregaMedicamentosScreen() {
                     Recetado: {detalle.cantidad_recetada} · Disponible: {detalle.existencias}
                   </Text>
                   {detalle.vencido && (
-                    <Text style={styles.textoVencido}>⚠️ VENCIDO — No se puede entregar</Text>
+                    <Text style={styles.textoVencido}>VENCIDO — No se puede entregar</Text>
                   )}
                 </View>
 

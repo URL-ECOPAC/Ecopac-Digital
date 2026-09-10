@@ -1,118 +1,94 @@
-import { useState, useEffect } from "react";
-import { obtenerSupabase } from "../api/cliente.js";
+import { useCallback, useState } from "react";
 
-const TODAS = "__todas__";
+import { cerrarAtencion } from "../atenciones/api.js";
+import { obtenerDetalleDeEntrega } from "./entrega.api.js";
+import { motivoSinDisponibilidad } from "./existencias.validaciones.js";
 
-/** Calcula si un lote está vencido */
-function estaVencido(fechaVencimiento) {
-  if (!fechaVencimiento) return false;
-  return new Date(fechaVencimiento) < new Date();
-}
-
-/** Calcula días restantes o 0 si ya venció */
-function diasRestantes(fechaVencimiento) {
-  if (!fechaVencimiento) return 9999;
-  const hoy = new Date();
-  const venc = new Date(fechaVencimiento);
-  const diff = Math.ceil((venc - hoy) / (1000 * 60 * 60 * 24));
-  return diff > 0 ? diff : 0;
-}
-
-export function useEntregaMedicamentos(atencionId) {
-  const [cargando, setCargando] = useState(true);
+/**
+ * Hook de la pantalla de entrega de medicamentos en campo (issue #164 / #759).
+ *
+ * La consulta y la traduccion de columnas viven en entrega.api.js, no aqui: este hook solo
+ * orquesta el estado de carga, la cantidad que cada renglon lleva escrita en pantalla y la
+ * confirmacion final. Ver la cabecera de obtenerDetalleDeEntrega() para el detalle de que
+ * estaba mal en la version anterior (columnas inexistentes, PGRST108, { data, err } en vez de
+ * { data, error }, y una interfaz que no coincidia con la que EntregaMedicamentosScreen.js
+ * espera).
+ *
+ * QUE SIGUE PENDIENTE, A PROPOSITO. La issue #164 (RF-20) pedia que la cantidad realmente
+ * entregada -que puede ser menor a la recetada- quedara registrada como su propio movimiento
+ * de salida. Eso ya no encaja con la arquitectura actual: fn_generar_receta (00112, issue
+ * #711) crea la salida de forma atomica en el momento de generar la receta, con la cantidad
+ * recetada, precisamente para que una receta emitida nunca quede sin su descuento de
+ * inventario. Hoy no existe ninguna funcion para revisar esa cantidad despues, y registrar
+ * una segunda salida aqui descontaria el inventario dos veces por el mismo renglon. Mientras
+ * esa decision de arquitectura no se tome, confirmarEntrega() cierra la atencion -una accion
+ * real, ya soportada- y no reescribe cantidad_entregada.
+ *
+ * @param {{ atencionId?: string }} [opciones]
+ */
+export function useEntregaMedicamentos({ atencionId } = {}) {
+  const [cargando, setCargando] = useState(false);
   const [error, setError] = useState(null);
-  const [receta, setReceta] = useState(null);
-  const [detalles, setDetalles] = useState([]);
+  const [receta, setReceta] = useState([]);
+  const [entrega, setEntrega] = useState({});
 
-  useEffect(() => {
+  const cargarReceta = useCallback(async () => {
     if (!atencionId) return;
 
-    async function cargarReceta() {
-      try {
-        setCargando(true);
-        setError(null);
-        const supabase = obtenerSupabase();
+    setCargando(true);
+    setError(null);
 
-        // ✅ Trae TODO sin especificar columnas que no conocemos
-        const { data, err } = await supabase
-          .from("receta_detalle")
-          .select(
-            `
-            id,
-            receta:receta_id (
-              id,
-              paciente_id,
-              paciente:paciente_id (
-                nombres,
-                apellidos,
-                numero_ficha
-              )
-            ),
-            medicamento:medicamento_id (
-              id,
-              nombre
-            ),
-            lote:lote_id (
-              id,
-              numero_lote,
-              vencimiento,
-              cantidad_actual
-            )
-          `,
-          )
-          .eq("receta.atencion_id", atencionId);
+    const { detalle, error: fallo } = await obtenerDetalleDeEntrega(atencionId);
 
-        if (err) throw err;
-
-        if (!data || data.length === 0) {
-          setDetalles([]);
-          setReceta(null);
-          return;
-        }
-
-        // 🔍 Muestra en consola qué columnas tiene realmente la tabla
-        console.log("📋 Columnas reales de receta_detalle:", Object.keys(data[0]));
-
-        const primerDetalle = data[0];
-        setReceta({
-          id: primerDetalle.receta?.id,
-          paciente_id: primerDetalle.receta?.paciente_id,
-          paciente_nombre:
-            `${primerDetalle.receta?.paciente?.nombres || ""} ${primerDetalle.receta?.paciente?.apellidos || ""}`.trim(),
-          numero_ficha: primerDetalle.receta?.paciente?.numero_ficha,
-        });
-
-        // ✅ Usa el nombre que exista en la tabla
-        setDetalles(
-          data.map((d) => ({
-            id: d.id,
-            medicamento_id: d.medicamento?.id,
-            medicamento: d.medicamento?.nombre || "Medicamento desconocido",
-            lote_id: d.lote?.id,
-            numero_lote: d.lote?.numero_lote || "Sin lote",
-            cantidad_recetada: d.cantidad_solicitada || d.cantidad || d.cantidad_recetada || 0,
-            cantidad_entregada: d.cantidad_entregada || 0,
-            existencia_disponible: d.lote?.cantidad_actual || 0,
-            vencimiento: d.lote?.vencimiento,
-            dias_restantes: diasRestantes(d.lote?.vencimiento),
-            esta_vencido: estaVencido(d.lote?.vencimiento),
-          })),
-        );
-      } catch (e) {
-        console.error("Error cargando receta:", e);
-        setError(e.message || "Error al cargar los medicamentos");
-      } finally {
-        setCargando(false);
-      }
+    if (fallo) {
+      setError(fallo.mensaje);
+      setReceta([]);
+    } else {
+      setReceta(detalle);
+      setEntrega(
+        Object.fromEntries(detalle.map((renglon) => [renglon.id, renglon.cantidad_recetada])),
+      );
     }
 
-    cargarReceta();
+    setCargando(false);
+  }, [atencionId]);
+
+  const registrarCantidad = useCallback((detalleId, cantidad) => {
+    setEntrega((previo) => ({ ...previo, [detalleId]: cantidad }));
+  }, []);
+
+  /** @returns {string[]} Los motivos por los que esta cantidad no se puede entregar, o []. */
+  const validarEntrega = useCallback((detalle, cantidad, existenciasDisponibles) => {
+    if (!detalle) return [];
+
+    const motivo = motivoSinDisponibilidad({
+      lote: { fechaVencimiento: detalle.fechaVencimiento },
+      cantidadDisponible: existenciasDisponibles ?? detalle.existencias,
+      cantidadSolicitada: cantidad,
+    });
+
+    return motivo ? [motivo] : [];
+  }, []);
+
+  const confirmarEntrega = useCallback(async () => {
+    const { error: fallo } = await cerrarAtencion(atencionId, "Entrega de medicamentos completada");
+
+    if (fallo) {
+      setError(fallo.mensaje);
+      return { exito: false };
+    }
+
+    return { exito: true };
   }, [atencionId]);
 
   return {
     cargando,
     error,
     receta,
-    detalles,
+    entrega,
+    cargarReceta,
+    registrarCantidad,
+    confirmarEntrega,
+    validarEntrega,
   };
 }

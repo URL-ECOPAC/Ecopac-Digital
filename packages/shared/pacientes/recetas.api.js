@@ -19,7 +19,7 @@ const COLUMNAS_DE_LA_RECETA = [
   "anuladaEn:anulada_en",
   "createdAt:created_at",
   "medico:perfiles!recetas_medico_id_fkey(nombres, apellidos)",
-  "consulta:consultas!inner(id, jornadaId:jornada_id, expedienteId:expediente_id, jornada:jornadas(nombre, fecha))",
+  "consulta:consultas!inner(id, jornadaId:jornada_id, expedienteId:expediente_id, jornada:jornadas(nombre, fecha), expediente:expedientes!inner(pacienteId:paciente_id))",
   "detalle:receta_detalle(id, medicamentoId:medicamento_id, loteId:lote_id, dosis, frecuencia, duracion, cantidadEntregada:cantidad_entregada, medicamento:medicamentos(nombre, concentracion, presentacion))",
 ].join(", ");
 
@@ -208,6 +208,15 @@ export async function obtenerReceta(id) {
  * filtro viaja al embebido con !inner. Incluye las anuladas, marcadas como tales, porque el
  * historial clinico no puede perder de vista que una receta existio.
  *
+ * issue #759: el filtro decia "consultas.expedientes.paciente_id", pero COLUMNAS_DE_LA_RECETA
+ * alias `consultas` a `consulta` (singular) y nunca embebia `expedientes` dentro de esa relacion
+ * -PostgREST filtra por el alias que aparece en el select, no por el nombre real de la tabla, y
+ * solo puede filtrar por una relacion que este efectivamente embebida-. La consulta siempre
+ * fallaba con PGRST108 ("'expedientes' is not an embedded resource in this request"), y la
+ * pestana de Recetas nunca llegaba a mostrar nada. Ahora `expediente:expedientes!inner(...)` se
+ * embebe dentro de `consulta` en COLUMNAS_DE_LA_RECETA, y el filtro usa la misma cadena de alias
+ * que el select declara.
+ *
  * @param {string} pacienteId UUID del paciente.
  * @param {{ soloEmitidas?: boolean }} [opciones]
  * @returns {Promise<{ recetas: object[], error: object|null }>}
@@ -219,7 +228,7 @@ export async function obtenerRecetas(pacienteId, { soloEmitidas = false } = {}) 
     let consulta = obtenerSupabase()
       .from("recetas")
       .select(COLUMNAS_DE_LA_RECETA)
-      .eq("consultas.expedientes.paciente_id", pacienteId)
+      .eq("consulta.expediente.paciente_id", pacienteId)
       .order("created_at", { ascending: false });
 
     if (soloEmitidas) consulta = consulta.eq("estado", ESTADOS_RECETA.EMITIDA);
