@@ -130,6 +130,39 @@ cero filas:
 SELECT * FROM privilegios_de_anon;
 ```
 
+### `EXECUTE` de funciones: el mismo agujero, pero solo visible en el proyecto real (issue #706)
+
+La tabla de arriba dice "nada" para `anon`, y sobre tablas y vistas es cierto: comprobado y hecho
+cumplir por el CI. Sobre **funciones invocables por RPC**, no lo fue hasta la migracion `00120`,
+y el motivo por el que tardo en notarse es la leccion principal de este hallazgo:
+**`anon` puede tener un privilegio en `Ecopac-Digital-Dev` que no tiene en el stack local, sin
+que ninguna migracion nueva se lo haya concedido.**
+
+Confirmado contra `ecopac-dev` el 9 de septiembre de 2026, sin ninguna sesion iniciada:
+
+```
+POST /rest/v1/rpc/fn_generar_alertas_caducidad  -> 1  (se ejecuto y escribio una fila real)
+```
+
+`fn_generar_alertas_caducidad()` (`00088`) es `SECURITY DEFINER` y ya traia su propio
+`REVOKE ALL ... FROM PUBLIC`. La `00102` (issue #511) ya habia hecho lo mismo, funcion por
+funcion, para las 25 funciones invocables del esquema. **Ninguno de los dos cerro nada en el
+proyecto real.** La razon: un `REVOKE ... FROM PUBLIC` retira el privilegio implicito que
+Postgres concede por defecto a cualquier funcion sin ACL propio -que es como nace una funcion en
+el stack local, CLI 2.115.0-, pero el bootstrap de un proyecto creado desde el Dashboard (el
+mismo que trae la CLI 2.116.0) le concede a `anon` una entrada **explicita** en el ACL de cada
+funcion nueva. Revocar de `PUBLIC` no toca una concesion explicita a `anon`; hacen falta las dos
+vias.
+
+La `00120` revoca `EXECUTE` de `anon` y de `PUBLIC` sobre `ALL FUNCTIONS IN SCHEMA public`, sin
+lista escrita a mano -el mismo criterio que la `00049` ya aplicaba a tablas con `ALL TABLES`-, y
+agrega el mismo blindaje de privilegios por defecto para que una funcion futura no vuelva a nacer
+abierta. **No hay guarda de CI para esto**, a diferencia de las tablas: `privilegios_anon.sql`
+corre contra el stack local, donde el sintoma no reproduce (ver "Lo que el CI no puede predecir"
+en [CI-CD.md](./CI-CD.md)). Verde en esa suite no dice nada sobre si una funcion nueva en
+`ecopac-dev` vuelve a nacer abierta a `anon`; hoy la unica forma de saberlo es repetir a mano las
+llamadas de la evidencia de arriba contra el proyecto real.
+
 ## Requisitos para trabajar con el stack local
 
 - Tener Docker corriendo (la Supabase CLI lo necesita para levantar Postgres, Auth, etc.).

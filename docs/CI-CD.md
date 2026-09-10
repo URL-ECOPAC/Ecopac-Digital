@@ -335,6 +335,26 @@ migracion toca privilegios, GUCs de extensiones, roles o propiedad de objetos. E
 corriendo el SQL como un rol `NOSUPERUSER` (basta un cluster desechable con `initdb`), no
 mirando el check.
 
+**El caso inverso, y mas peligroso: verde en el CI tampoco prueba que un agujero este cerrado**
+(issue #706). El stack local arranca con la CLI que fija el CI (2.115.0 al momento de escribir
+esto), cuyo script de arranque **no** concede a `anon` `EXECUTE` sobre las funciones de `public`.
+Un proyecto real, creado desde el Dashboard, arranca con el script de una CLI mas reciente
+(2.116.0 midio esto) que **si** se lo concede -25 funciones ejecutables por `anon` sin ninguna
+sesion, comprobado contra `ecopac-dev` el 9 de septiembre de 2026, y una de ellas,
+`fn_generar_alertas_caducidad`, escribio una fila real-. La 00102 y la propia
+`fn_generar_alertas_caducidad` (00088) ya tenian su `REVOKE ... FROM PUBLIC`, y **ninguno de los
+dos cerro nada en el proyecto real**: ahi la concesion a `anon` es explicita
+(`anon=X/postgres` en el ACL), no la via implicita de `PUBLIC` que revocar alcanza a cerrar en
+local. La 00120 revoca de las dos vias -- `anon` explicito y `PUBLIC` implicito -- por eso.
+
+La consecuencia practica para quien escriba pruebas de privilegios: la suite
+`privilegios_anon.sql` corre solo contra el stack local (ver su comentario final, "no hay una
+prueba 10"), y **eso no es una prueba de que el problema de la 00120 siga cerrado en
+`ecopac-dev`**. La suite pgTAP nunca se ha ejecutado contra un proyecto remoto -no hay ningun
+workflow ni instruccion para hacerlo-. Repetir a mano las cinco llamadas de la evidencia de la
+issue #706 contra `ecopac-dev` despues de cada migracion que toque `GRANT`/`REVOKE`/
+`ALTER DEFAULT PRIVILEGES` sigue siendo, por ahora, la unica forma real de confirmarlo.
+
 ### Las pruebas de flujos criticos (issue #222)
 
 `pruebas/e2e/` recorre de punta a punta los tres flujos que no pueden fallar el dia de una
