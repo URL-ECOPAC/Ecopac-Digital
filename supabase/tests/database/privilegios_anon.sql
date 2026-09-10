@@ -154,9 +154,12 @@ SELECT ok(
 );
 
 -- No hay una prueba 10 con una funcion nueva, a diferencia de la 4 con la tabla de prueba: se
--- intento (ALTER DEFAULT PRIVILEGES ... ON FUNCTIONS FROM PUBLIC, ver 00102) y no suprime el
--- EXECUTE a PUBLIC que Postgres concede por defecto a una funcion nueva en este entorno. Queda
--- como limitacion conocida, no como prueba que finja demostrar algo que no pasa.
+-- intento (primero en la 00102, ALTER DEFAULT PRIVILEGES ... ON FUNCTIONS FROM PUBLIC; despues
+-- en la 00120, FOR ROLE postgres ... FROM anon, issue #706) y ninguna de las dos suprime el
+-- EXECUTE que una funcion nueva concede a anon en este entorno. La 00120 la deja de todas formas,
+-- porque el sintoma que la motivo -anon ejecutando y escribiendo contra ecopac-dev, el proyecto
+-- real- no reproduce aqui: ver "Lo que el CI no puede predecir" en docs/CI-CD.md. Queda como
+-- limitacion conocida, no como prueba que finja demostrar algo que no pasa.
 
 SELECT * FROM finish();
 ROLLBACK;
