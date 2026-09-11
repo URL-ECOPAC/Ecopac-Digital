@@ -13,7 +13,7 @@ import { listarProyectos } from "../proyectos/api.js";
 import { listarJornadas } from "../jornadas/api.js";
 import { listarUsuarios } from "../usuarios/api.js";
 import { nombreCompletoDe } from "../usuarios/useUsuariosListado.js";
-import { obtenerPresupuestoProyecto, obtenerPresupuestoSistema, listarGastos } from "./api.js";
+import { obtenerPresupuestosDeProyectos, obtenerPresupuestoSistema, listarGastos } from "./api.js";
 import { permisosDeGastos } from "./permisos.js";
 
 const KPIS_VACIOS = { asignado: 0, gastado: 0, disponible: 0, pendiente: 0, porcentaje: 0 };
@@ -114,13 +114,12 @@ export function combinarJornadasConPresupuesto(jornadas = [], presupuestosPorJor
  *   1. obtenerPresupuestoSistema() -> los 4 KPIs (criterio 1). `pendiente` YA es "monto en
  *      aprobacion": la suma de gastos en estado 'pendiente'. Si falla, es el error "duro": los
  *      tres bloques de la pantalla quedan vacios, porque es el contenido principal.
- *   2. listarProyectos() + obtenerPresupuestoProyecto(id) en paralelo (Promise.all) por cada
- *      proyecto -> la lista de ejecucion por proyecto (criterio 2). Es N+1 porque
- *      presupuesto_de_proyecto (la RPC que ya existe, presupuestos/api.js) toma un solo id y no
- *      hay una version que liste todos de una vez; no se agrega una RPC nueva para esto -seria
- *      expandir el alcance de una issue de shared a un cambio de base de datos que nadie pidio-,
- *      y a la escala de proyectos de esta ONG el costo es aceptable. Un fallo aqui es blando: la
- *      lista de proyectos queda vacia y el resto de la pantalla se sigue mostrando.
+ *   2. listarProyectos() + obtenerPresupuestosDeProyectos(ids) -> la lista de ejecucion por
+ *      proyecto (criterio 2). Hasta la #759 esto era N+1 -una RPC obtenerPresupuestoProyecto()
+ *      por proyecto dentro de un Promise.all-, justificado en su momento (issue #301) como
+ *      aceptable a la escala de esta ONG. La #759 pidio sustituirlo por lote: una sola RPC
+ *      (presupuestos_de_proyectos(), 00123) que recibe todos los id de una vez. Un fallo aqui es
+ *      blando: la lista de proyectos queda vacia y el resto de la pantalla se sigue mostrando.
  *   3. listarGastos({ estado }) -> la lista de gastos filtrada (criterio 3). Tambien blando.
  *
  * Ademas de esas tres, en paralelo con la de proyectos, se cargan los catalogos que
@@ -167,14 +166,8 @@ export function useEjecucionPresupuestal(rol) {
     const [{ proyectos: filas }, { jornadas: filasDeJornada }, { usuarios: filasDePerfil }] =
       await Promise.all([listarProyectos(), listarJornadas(), listarUsuarios({ estado: true })]);
 
-    const presupuestosPorProyecto = {};
-    await Promise.all(
-      filas.map(async (proyecto) => {
-        const { presupuesto: presupuestoDelProyecto } = await obtenerPresupuestoProyecto(
-          proyecto.id,
-        );
-        if (presupuestoDelProyecto) presupuestosPorProyecto[proyecto.id] = presupuestoDelProyecto;
-      }),
+    const { presupuestos: presupuestosPorProyecto } = await obtenerPresupuestosDeProyectos(
+      filas.map((proyecto) => proyecto.id),
     );
     setProyectos(combinarProyectosConPresupuesto(filas, presupuestosPorProyecto));
 

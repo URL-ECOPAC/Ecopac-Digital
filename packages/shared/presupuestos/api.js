@@ -127,6 +127,77 @@ export async function obtenerPresupuestoSistema() {
   return consultar("presupuesto_del_sistema", {}, { ...PRESUPUESTO_VACIO });
 }
 
+/**
+ * Version en lote de obtenerPresupuestoProyecto(): una sola RPC para todos los id en vez de una
+ * por proyecto (issue #759). Devuelve un mapa id -> presupuesto; un proyecto sin jornadas
+ * visibles simplemente no aparece como llave (presupuestos_de_proyectos() no genera fila para
+ * el, ver 00123), asi que quien consume este mapa tiene que resolver esa ausencia igual que ya
+ * resolvia una llamada individual fallida: con el KPIS_VACIOS de combinarProyectosConPresupuesto
+ * (useEjecucionPresupuestal.js).
+ *
+ * @param {string[]} idsDeProyecto
+ * @returns {Promise<{ presupuestos: Record<string, object>, error: object|null }>}
+ */
+export async function obtenerPresupuestosDeProyectos(idsDeProyecto = []) {
+  const ids = (idsDeProyecto || []).filter(Boolean);
+  if (ids.length === 0) {
+    return { presupuestos: {}, error: null };
+  }
+
+  try {
+    const { data, error } = await obtenerSupabase().rpc("presupuestos_de_proyectos", {
+      p_proyecto_ids: ids,
+    });
+
+    if (error) {
+      return { presupuestos: {}, error: normalizarError(error) };
+    }
+
+    const presupuestos = {};
+    for (const fila of data || []) {
+      presupuestos[fila.proyecto_id] = aPresupuesto(fila);
+    }
+
+    return { presupuestos, error: null };
+  } catch (error) {
+    return { presupuestos: {}, error: normalizarError(error) };
+  }
+}
+
+/**
+ * Version en lote de obtenerPresupuestoJornada(), gemela de obtenerPresupuestosDeProyectos()
+ * (issue #759). Mismo contrato: mapa id -> presupuesto, y una jornada ausente en el mapa se trata
+ * como presupuesto en ceros, no como error.
+ *
+ * @param {string[]} idsDeJornada
+ * @returns {Promise<{ presupuestos: Record<string, object>, error: object|null }>}
+ */
+export async function obtenerPresupuestosDeJornadas(idsDeJornada = []) {
+  const ids = (idsDeJornada || []).filter(Boolean);
+  if (ids.length === 0) {
+    return { presupuestos: {}, error: null };
+  }
+
+  try {
+    const { data, error } = await obtenerSupabase().rpc("presupuestos_de_jornadas", {
+      p_jornada_ids: ids,
+    });
+
+    if (error) {
+      return { presupuestos: {}, error: normalizarError(error) };
+    }
+
+    const presupuestos = {};
+    for (const fila of data || []) {
+      presupuestos[fila.jornada_id] = aPresupuesto(fila);
+    }
+
+    return { presupuestos, error: null };
+  } catch (error) {
+    return { presupuestos: {}, error: normalizarError(error) };
+  }
+}
+
 // ============================================================================
 // Funciones API para la gestión de Gastos
 // ============================================================================
