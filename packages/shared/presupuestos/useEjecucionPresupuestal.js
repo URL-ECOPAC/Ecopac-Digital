@@ -115,9 +115,9 @@ export function combinarJornadasConPresupuesto(jornadas = [], presupuestosPorJor
  *      aprobacion": la suma de gastos en estado 'pendiente'. Si falla, es el error "duro": los
  *      tres bloques de la pantalla quedan vacios, porque es el contenido principal.
  *   2. listarProyectos() + obtenerPresupuestosDeProyectos(ids) -> la lista de ejecucion por
- *      proyecto (criterio 2). Hasta la #759 esto era N+1 -una RPC obtenerPresupuestoProyecto()
+ *      proyecto (criterio 2). Hasta la #771 esto era N+1 -una RPC obtenerPresupuestoProyecto()
  *      por proyecto dentro de un Promise.all-, justificado en su momento (issue #301) como
- *      aceptable a la escala de esta ONG. La #759 pidio sustituirlo por lote: una sola RPC
+ *      aceptable a la escala de esta ONG. La #771 pidio sustituirlo por lote: una sola RPC
  *      (presupuestos_de_proyectos(), 00123) que recibe todos los id de una vez. Un fallo aqui es
  *      blando: la lista de proyectos queda vacia y el resto de la pantalla se sigue mostrando.
  *   3. listarGastos({ estado }) -> la lista de gastos filtrada (criterio 3). Tambien blando.

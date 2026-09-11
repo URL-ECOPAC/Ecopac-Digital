@@ -3,7 +3,7 @@
 // una de sus jornadas").
 //
 // listarJornadasDelProyecto() (proyectos/api.js) no trae presupuesto, asi que se completa con
-// obtenerPresupuestosDeJornadas() (presupuestos/api.js), version en lote (issue #759, migracion
+// obtenerPresupuestosDeJornadas() (presupuestos/api.js), version en lote (issue #771, migracion
 // 00123) de la RPC de un solo id: una sola llamada con todos los id de las jornadas del
 // proyecto, no una por jornada.
 

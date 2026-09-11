@@ -1,4 +1,5 @@
 import { ETIQUETAS_PRESENTACION, PRESENTACIONES_DE_MEDICAMENTO } from "@ecopac/shared";
+import ErrorState from "../components/ErrorState";
 
 export default function ModalMedicamento({
   isOpen,
@@ -10,6 +11,9 @@ export default function ModalMedicamento({
   principiosActivos = [],
   onCrearPrincipioActivo,
   advertenciaDuplicado,
+  // Fallo al guardar. Llega ya como texto apto para pantalla: lo escribe normalizarError(), no
+  // el servidor. Se pinta aqui y no con alert(), que es lo que pide la issue #762.
+  error,
   cargando,
 }) {
   if (!isOpen) return null;
@@ -107,6 +111,8 @@ export default function ModalMedicamento({
             concentración, presentación y marca.
           </div>
         )}
+
+        {error && <ErrorState message={error} />}
 
         {/* Formulario */}
         <form

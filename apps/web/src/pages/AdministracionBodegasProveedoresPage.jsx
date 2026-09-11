@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import ErrorState from "../components/ErrorState";
 import {
   useAdministracionBodegasProveedores,
   TIPO_BODEGA,
@@ -10,14 +11,22 @@ export default function AdministracionBodegasProveedoresPage() {
   const [modalBodega, setModalBodega] = useState(null);
   const [modalProveedor, setModalProveedor] = useState(null);
 
+  // Un fallo al guardar se muestra dentro del modal, donde esta el formulario que hay que
+  // corregir. Antes era un alert() del navegador: bloqueaba la pantalla, no se podia copiar y
+  // desaparecia sin dejar rastro de que fue lo que fallo (issue #762).
+  const [errorGuardarBodega, setErrorGuardarBodega] = useState(null);
+  const [errorGuardarProveedor, setErrorGuardarProveedor] = useState(null);
+
   const {
     bodegas,
     cargandoBodegas,
+    errorBodegas,
     cargarBodegas,
     guardarBodega,
     existenciaPorBodega,
     proveedores,
     cargandoProveedores,
+    errorProveedores,
     cargarProveedores,
     guardarProveedor,
   } = useAdministracionBodegasProveedores();
@@ -39,6 +48,7 @@ export default function AdministracionBodegasProveedoresPage() {
 
   const abrirNuevaBodega = () => {
     setFormBodega({ nombre: "", ubicacion: "", es_movil: false });
+    setErrorGuardarBodega(null);
     setModalBodega({ modo: "crear" });
   };
 
@@ -49,16 +59,21 @@ export default function AdministracionBodegasProveedoresPage() {
       ubicacion: b.ubicacion || "",
       es_movil: Boolean(b.es_movil),
     });
+    setErrorGuardarBodega(null);
     setModalBodega({ modo: "editar" });
   };
 
+  // guardarBodega() lanza con un mensaje ya apto para pantalla: o es una validacion propia del
+  // hook, o es el `mensaje` que escribio normalizarError(). Nunca es el texto crudo del servidor,
+  // que es lo que prohibe la regla 1 de packages/shared/api/errores-de-supabase.js.
   const handleGuardarBodega = async (e) => {
     e.preventDefault();
+    setErrorGuardarBodega(null);
     try {
       await guardarBodega(formBodega);
       setModalBodega(null);
     } catch (err) {
-      alert(err.message);
+      setErrorGuardarBodega(err.message || "No se pudo guardar la bodega.");
     }
   };
 
@@ -73,6 +88,7 @@ export default function AdministracionBodegasProveedoresPage() {
 
   const abrirNuevoProveedor = () => {
     setFormProveedor({ nombre: "", contacto: "", tipo: TIPO_PROVEEDOR.COMERCIAL });
+    setErrorGuardarProveedor(null);
     setModalProveedor({ modo: "crear" });
   };
 
@@ -83,16 +99,18 @@ export default function AdministracionBodegasProveedoresPage() {
       contacto: p.contacto || "",
       tipo: p.tipo || TIPO_PROVEEDOR.COMERCIAL,
     });
+    setErrorGuardarProveedor(null);
     setModalProveedor({ modo: "editar" });
   };
 
   const handleGuardarProveedor = async (e) => {
     e.preventDefault();
+    setErrorGuardarProveedor(null);
     try {
       await guardarProveedor(formProveedor);
       setModalProveedor(null);
     } catch (err) {
-      alert(err.message);
+      setErrorGuardarProveedor(err.message || "No se pudo guardar el proveedor.");
     }
   };
 
@@ -141,7 +159,9 @@ export default function AdministracionBodegasProveedoresPage() {
         <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <p style={{ fontSize: "13px", color: "#64748b", margin: 0 }}>
-              {bodegas.length} bodegas registradas
+              {errorBodegas
+                ? "No se pudo cargar el listado"
+                : `${bodegas.length} bodegas registradas`}
             </p>
             <button
               onClick={abrirNuevaBodega}
@@ -164,6 +184,8 @@ export default function AdministracionBodegasProveedoresPage() {
             <p style={{ fontSize: "13px", color: "#94a3b8", textAlign: "center", padding: "20px" }}>
               Cargando bodegas...
             </p>
+          ) : errorBodegas ? (
+            <ErrorState message={errorBodegas} onRetry={cargarBodegas} />
           ) : bodegas.length === 0 ? (
             <p style={{ fontSize: "13px", color: "#94a3b8", textAlign: "center", padding: "20px" }}>
               No hay bodegas registradas
@@ -241,7 +263,9 @@ export default function AdministracionBodegasProveedoresPage() {
         <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <p style={{ fontSize: "13px", color: "#64748b", margin: 0 }}>
-              {proveedores.length} proveedores y donantes
+              {errorProveedores
+                ? "No se pudo cargar el listado"
+                : `${proveedores.length} proveedores y donantes`}
             </p>
             <button
               onClick={abrirNuevoProveedor}
@@ -264,6 +288,8 @@ export default function AdministracionBodegasProveedoresPage() {
             <p style={{ fontSize: "13px", color: "#94a3b8", textAlign: "center", padding: "20px" }}>
               Cargando proveedores...
             </p>
+          ) : errorProveedores ? (
+            <ErrorState message={errorProveedores} onRetry={cargarProveedores} />
           ) : proveedores.length === 0 ? (
             <p style={{ fontSize: "13px", color: "#94a3b8", textAlign: "center", padding: "20px" }}>
               No hay proveedores registrados
@@ -360,6 +386,8 @@ export default function AdministracionBodegasProveedoresPage() {
             <h4 style={{ margin: 0, fontSize: "15px", fontWeight: 600 }}>
               {modalBodega.modo === "crear" ? "Nueva Bodega" : "Editar Bodega"}
             </h4>
+
+            {errorGuardarBodega && <ErrorState message={errorGuardarBodega} />}
 
             <div>
               <label
@@ -482,6 +510,8 @@ export default function AdministracionBodegasProveedoresPage() {
             <h4 style={{ margin: 0, fontSize: "15px", fontWeight: 600 }}>
               {modalProveedor.modo === "crear" ? "Nuevo Proveedor" : "Editar Proveedor"}
             </h4>
+
+            {errorGuardarProveedor && <ErrorState message={errorGuardarProveedor} />}
 
             <div>
               <label

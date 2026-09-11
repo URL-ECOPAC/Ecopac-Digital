@@ -42,6 +42,21 @@ function contarFrecuencias(valores, nombreDeCampo) {
     .sort((a, b) => b.cantidad - a.cantidad);
 }
 
+/**
+ * Reporte de resultados de una jornada: cuanto se atendio, de que y con que.
+ *
+ * Comprueba el rol antes de consultar, para no gastar la llamada y para dar un mensaje claro en
+ * vez de una lista vacia. Esa guarda es comodidad de la interfaz, no seguridad: quien deniega de
+ * verdad son las politicas RLS de la base.
+ *
+ * Los tres rankings se agregan aqui y no en la base porque salen de las filas que la consulta ya
+ * trajo; no hay una vista agregada para esto.
+ *
+ * @param {{ jornadaId: string, rol: string }} params
+ * @returns {Promise<{ datos: object|null, error: object|null }>} `datos` trae `jornada`,
+ *   `resumen` (total de consultas y pacientes unicos), y los rankings de diagnosticos,
+ *   medicamentos y personal participante, cada uno ordenado de mayor a menor.
+ */
 export async function obtenerReporteJornada({ jornadaId, rol } = {}) {
   if (!jornadaId) {
     return {

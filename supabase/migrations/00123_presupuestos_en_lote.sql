@@ -1,9 +1,9 @@
--- Version en lote de presupuesto_de_proyecto()/presupuesto_de_jornada() (issue #759).
+-- Version en lote de presupuesto_de_proyecto()/presupuesto_de_jornada() (issue #771).
 --
 -- useEjecucionPresupuestal.js y useDetalleProyectoPresupuesto.js llamaban a la RPC de un solo id
 -- una vez por fila dentro de un Promise.all (documentado como aceptable en su momento en el
 -- comentario de cabecera de useEjecucionPresupuestal.js, issue #301): con 40 proyectos o
--- jornadas eso son 40 RPC concurrentes solo para abrir la pantalla. La #759 pide sustituir ese
+-- jornadas eso son 40 RPC concurrentes solo para abrir la pantalla. La #771 pide sustituir ese
 -- patron por una version que reciba todos los id de una vez.
 --
 -- presupuesto_de_jornada()/presupuesto_de_proyecto()/presupuesto_del_sistema() (00040) NO se
@@ -52,7 +52,7 @@ AS $$
 $$;
 
 COMMENT ON FUNCTION presupuestos_de_proyectos(UUID[]) IS
-  'Version en lote de presupuesto_de_proyecto(): un id por fila en vez de una RPC por proyecto (issue #759). Un proyecto sin jornadas visibles no genera fila -- a diferencia de presupuesto_de_proyecto(), que siempre devuelve una fila en ceros -- porque agrupa por proyecto_id y no hay nada que agrupar. Quien llama trata "id ausente en el resultado" igual que un presupuesto en ceros.';
+  'Version en lote de presupuesto_de_proyecto(): un id por fila en vez de una RPC por proyecto (issue #771). Un proyecto sin jornadas visibles no genera fila -- a diferencia de presupuesto_de_proyecto(), que siempre devuelve una fila en ceros -- porque agrupa por proyecto_id y no hay nada que agrupar. Quien llama trata "id ausente en el resultado" igual que un presupuesto en ceros.';
 
 CREATE OR REPLACE FUNCTION presupuestos_de_jornadas(p_jornada_ids UUID[])
 RETURNS TABLE (
@@ -85,7 +85,7 @@ AS $$
 $$;
 
 COMMENT ON FUNCTION presupuestos_de_jornadas(UUID[]) IS
-  'Version en lote de presupuesto_de_jornada(): un id por fila en vez de una RPC por jornada (issue #759). Una jornada que no existe o que RLS no deja ver no genera fila.';
+  'Version en lote de presupuesto_de_jornada(): un id por fila en vez de una RPC por jornada (issue #771). Una jornada que no existe o que RLS no deja ver no genera fila.';
 
 GRANT EXECUTE ON FUNCTION presupuestos_de_proyectos(UUID[]) TO authenticated;
 GRANT EXECUTE ON FUNCTION presupuestos_de_jornadas(UUID[]) TO authenticated;

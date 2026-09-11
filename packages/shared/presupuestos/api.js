@@ -71,6 +71,17 @@ async function consultar(nombreDeFuncion, argumentos, presupuestoSinFilas) {
   }
 }
 
+/**
+ * Fija el presupuesto asignado a una jornada.
+ *
+ * Escribe `jornadas.presupuesto_asignado`: no hay tabla de presupuestos, el asignado es una
+ * columna de la jornada y lo ejecutado se calcula sumando `gastos`.
+ *
+ * @param {string} idJornada UUID de la jornada.
+ * @param {number|string} monto Cantidad a asignar. Un valor ilegible y uno negativo se rechazan
+ *   igual, con el codigo de violacion de CHECK.
+ * @returns {Promise<{ jornada: object|null, error: object|null }>}
+ */
 export async function asignarPresupuestoJornada(idJornada, monto) {
   if (!idJornada) {
     return { jornada: null, error: null };
@@ -101,6 +112,17 @@ export async function asignarPresupuestoJornada(idJornada, monto) {
   }
 }
 
+/**
+ * Asignado, gastado, disponible y pendiente de una jornada.
+ *
+ * Devuelve `presupuesto: null` -y no ceros- cuando la jornada no tiene presupuesto asignado, a
+ * diferencia de las consultas de proyecto y de sistema. La distincion es deliberada: "esta
+ * jornada no lleva presupuesto" no es lo mismo que "lleva presupuesto y va en cero", y la
+ * pantalla tiene que poder decir cosas distintas.
+ *
+ * @param {string} idJornada UUID de la jornada.
+ * @returns {Promise<{ presupuesto: { asignado: number, gastado: number, disponible: number, pendiente: number }|null, error: object|null }>}
+ */
 export async function obtenerPresupuestoJornada(idJornada) {
   if (!idJornada) {
     return { presupuesto: null, error: null };
@@ -109,6 +131,15 @@ export async function obtenerPresupuestoJornada(idJornada) {
   return consultar("presupuesto_de_jornada", { p_jornada_id: idJornada }, null);
 }
 
+/**
+ * Presupuesto de un proyecto, sumando el de todas sus jornadas.
+ *
+ * Un proyecto sin jornadas devuelve ceros, no `null`: el proyecto existe y su ejecucion es cero,
+ * que es un dato, no una ausencia. Es la diferencia con `obtenerPresupuestoJornada()`.
+ *
+ * @param {string} idProyecto UUID del proyecto.
+ * @returns {Promise<{ presupuesto: { asignado: number, gastado: number, disponible: number, pendiente: number }|null, error: object|null }>}
+ */
 export async function obtenerPresupuestoProyecto(idProyecto) {
   if (!idProyecto) {
     return { presupuesto: null, error: null };
@@ -123,13 +154,22 @@ export async function obtenerPresupuestoProyecto(idProyecto) {
   );
 }
 
+/**
+ * Presupuesto agregado de toda la organizacion.
+ *
+ * Es el numero del panel de direccion. Sale de una funcion agregada en la base, no de leer
+ * `gastos` fila por fila: asi la junta directiva ve totales sin tener acceso de lectura al
+ * detalle (misma postura que los reportes agregados de `00054`).
+ *
+ * @returns {Promise<{ presupuesto: { asignado: number, gastado: number, disponible: number, pendiente: number }|null, error: object|null }>}
+ */
 export async function obtenerPresupuestoSistema() {
   return consultar("presupuesto_del_sistema", {}, { ...PRESUPUESTO_VACIO });
 }
 
 /**
  * Version en lote de obtenerPresupuestoProyecto(): una sola RPC para todos los id en vez de una
- * por proyecto (issue #759). Devuelve un mapa id -> presupuesto; un proyecto sin jornadas
+ * por proyecto (issue #771). Devuelve un mapa id -> presupuesto; un proyecto sin jornadas
  * visibles simplemente no aparece como llave (presupuestos_de_proyectos() no genera fila para
  * el, ver 00123), asi que quien consume este mapa tiene que resolver esa ausencia igual que ya
  * resolvia una llamada individual fallida: con el KPIS_VACIOS de combinarProyectosConPresupuesto
@@ -166,7 +206,7 @@ export async function obtenerPresupuestosDeProyectos(idsDeProyecto = []) {
 
 /**
  * Version en lote de obtenerPresupuestoJornada(), gemela de obtenerPresupuestosDeProyectos()
- * (issue #759). Mismo contrato: mapa id -> presupuesto, y una jornada ausente en el mapa se trata
+ * (issue #771). Mismo contrato: mapa id -> presupuesto, y una jornada ausente en el mapa se trata
  * como presupuesto en ceros, no como error.
  *
  * @param {string[]} idsDeJornada
@@ -256,6 +296,19 @@ export async function registrarGasto(datosGasto, { usuarioId } = {}) {
   }
 }
 
+/**
+ * Corrige un gasto que todavia no se aprobo.
+ *
+ * Lee el estado antes de escribir y rechaza el cambio si ya esta `aprobado`: un gasto aprobado es
+ * parte de la ejecucion presupuestaria y editarlo movaria un total que alguien ya reviso. La
+ * comprobacion se hace aqui por comodidad y para dar un mensaje claro; quien lo impide de verdad
+ * son las politicas de UPDATE de `gastos` (`00052`).
+ *
+ * @param {string} idGasto UUID del gasto.
+ * @param {object} datosGasto Campos a cambiar.
+ * @returns {Promise<{ gasto: object|null, error: object|null }>} El gasto devuelto trae anidados
+ *   su jornada y el proyecto de esa jornada.
+ */
 export async function editarGasto(idGasto, datosGasto) {
   if (!idGasto) {
     return { gasto: null, error: null };
@@ -355,6 +408,19 @@ const COLUMNAS_DE_GASTO = [
   "updated_at",
 ].join(", ");
 
+/**
+ * Gastos filtrados, del mas reciente al mas antiguo.
+ *
+ * El join con `jornadas` es `!inner`: un gasto sin jornada no sale. Hoy no los hay -la columna es
+ * obligatoria- pero conviene saberlo antes de cambiarla.
+ *
+ * Los filtros se acumulan; los que no vengan no restringen nada. `fecha_inicio` y `fecha_fin` son
+ * inclusivos.
+ *
+ * @param {{ estado?: string, categoria?: string, jornada_id?: string, proyecto_id?: string, fecha_inicio?: string, fecha_fin?: string }} [filtros]
+ * @returns {Promise<{ gastos: object[], error: object|null }>} Cada gasto trae `proyecto_id`
+ *   aplanado desde su jornada, para no obligar a quien lo pinta a bajar por la relacion.
+ */
 export async function listarGastos(filtros = {}) {
   try {
     const { estado, categoria, jornada_id, proyecto_id, fecha_inicio, fecha_fin } = filtros;

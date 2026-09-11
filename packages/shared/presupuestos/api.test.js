@@ -40,7 +40,7 @@ function clienteRpc(respuesta) {
 }
 
 // Mock de rpc() para las versiones en lote (presupuestos_de_proyectos/presupuestos_de_jornadas,
-// issue #759): a diferencia de clienteRpc(), aqui la promesa que devuelve rpc() se resuelve
+// issue #771): a diferencia de clienteRpc(), aqui la promesa que devuelve rpc() se resuelve
 // directo -sin .maybeSingle()-, porque estas funciones devuelven varias filas, no una.
 function clienteRpcLista(respuesta) {
   const llamadas = [];
@@ -240,7 +240,7 @@ describe("obtenerPresupuestoSistema", () => {
   });
 });
 
-describe("obtenerPresupuestosDeProyectos (issue #759)", () => {
+describe("obtenerPresupuestosDeProyectos (issue #771)", () => {
   it("llama a la RPC en lote una sola vez con todos los id", async () => {
     const cliente = clienteRpcLista({ data: [], error: null });
     dobles.cliente = cliente;
@@ -313,7 +313,7 @@ describe("obtenerPresupuestosDeProyectos (issue #759)", () => {
   });
 });
 
-describe("obtenerPresupuestosDeJornadas (issue #759)", () => {
+describe("obtenerPresupuestosDeJornadas (issue #771)", () => {
   it("llama a la RPC en lote con el nombre y el argumento esperados", async () => {
     const cliente = clienteRpcLista({ data: [], error: null });
     dobles.cliente = cliente;

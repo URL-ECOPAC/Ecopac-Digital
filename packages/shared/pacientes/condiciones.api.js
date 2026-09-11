@@ -231,6 +231,19 @@ export async function actualizarCondicionCatalogo(id, cambios = {}) {
   }
 }
 
+/**
+ * Los padecimientos cronicos de un paciente, del mas reciente al mas antiguo.
+ *
+ * `soloVigentes` excluye los que ya estan en `resuelta`. Es lo que quiere la ficha cuando pinta
+ * "condiciones a tener en cuenta al atender"; el historial completo se pide sin la bandera.
+ *
+ * Sin `pacienteId` devuelve vacio y `error: null`: no hay a quien consultarle, no es un fallo.
+ *
+ * @param {string} pacienteId UUID del paciente.
+ * @param {{ soloVigentes?: boolean }} [opciones]
+ * @returns {Promise<{ condiciones: object[], error: object|null }>} Cada condicion trae el
+ *   `nombre` del catalogo ya resuelto, no solo el `condicion_id`.
+ */
 export async function obtenerCondicionesDelPaciente(pacienteId, { soloVigentes = false } = {}) {
   if (!pacienteId) return { condiciones: [], error: null };
 
@@ -252,6 +265,17 @@ export async function obtenerCondicionesDelPaciente(pacienteId, { soloVigentes =
   }
 }
 
+/**
+ * Registra que un paciente padece una condicion del catalogo.
+ *
+ * Escribe en `padecimientos_cronicos`, no en el catalogo: lo que se crea es el vinculo entre este
+ * paciente y una condicion que ya existe.
+ *
+ * @param {{ pacienteId: string, condicion: string, fechaDiagnostico?: string, estado?: string, notas?: string }} datos
+ * @param {Date} [hoy] Fecha con la que se valida que el diagnostico no sea futuro. Es parametro
+ *   para que las pruebas puedan fijarla.
+ * @returns {Promise<{ condicion: object|null, errores: Record<string, string>, error: object|null }>}
+ */
 export async function asociarCondicion(datos = {}, hoy = new Date()) {
   const { pacienteId } = datos;
 
@@ -305,6 +329,18 @@ export async function asociarCondicion(datos = {}, hoy = new Date()) {
   }
 }
 
+/**
+ * Corrige un padecimiento ya registrado: su estado, la fecha de diagnostico o las notas.
+ *
+ * Una actualizacion que no encuentra la fila no se reporta como "no existe" sino como permiso
+ * denegado, porque es lo que suele ser: RLS deja pasar el UPDATE pero no devuelve ninguna fila
+ * cuando la politica no cubre ese registro, y las dos situaciones son indistinguibles desde aqui.
+ *
+ * @param {string} id UUID del padecimiento (no del catalogo).
+ * @param {{ estado?: string, fechaDiagnostico?: string, notas?: string }} cambios
+ * @param {Date} [hoy] Fecha con la que se valida. Es parametro para poder fijarla en pruebas.
+ * @returns {Promise<{ condicion: object|null, errores: Record<string, string>, error: object|null }>}
+ */
 export async function actualizarCondicion(id, cambios = {}, hoy = new Date()) {
   if (!id) {
     return {
@@ -359,10 +395,32 @@ export async function actualizarCondicion(id, cambios = {}, hoy = new Date()) {
   }
 }
 
+/**
+ * Da de alta al paciente de una condicion: la marca `resuelta`, no la borra.
+ *
+ * Es la operacion que hace cualquiera que atienda. Borrar de verdad es `quitarCondicion()`, y esa
+ * solo la puede la administradora: el historial clinico se conserva.
+ *
+ * @param {string} id UUID del padecimiento.
+ * @returns {Promise<{ condicion: object|null, errores: Record<string, string>, error: object|null }>}
+ */
 export async function desasociarCondicion(id) {
   return actualizarCondicion(id, { estado: ESTADOS_CONDICION_CRONICA.RESUELTA });
 }
 
+/**
+ * Borra el padecimiento de verdad, para deshacer un registro equivocado.
+ *
+ * No es la forma de dar de alta a un paciente -eso es `desasociarCondicion()`, que lo marca
+ * resuelto y conserva el historial-. Esto existe solo para corregir un error de captura.
+ *
+ * Solo la administradora tiene DELETE sobre `padecimientos_cronicos`. Para el resto la fila
+ * simplemente no vuelve, y eso se reporta como permiso denegado con un mensaje que dice cual es
+ * la alternativa.
+ *
+ * @param {string} id UUID del padecimiento.
+ * @returns {Promise<{ quitada: boolean, error: object|null }>}
+ */
 export async function quitarCondicion(id) {
   if (!id) {
     return {
@@ -401,6 +459,18 @@ export async function quitarCondicion(id) {
   }
 }
 
+/**
+ * Pacientes que padecen una condicion, para planificar una jornada por comunidad.
+ *
+ * Va al reves que `obtenerCondicionesDelPaciente()`: alli se parte del paciente, aqui de la
+ * condicion. Excluye siempre a los pacientes dados de baja (`fecha_baja`).
+ *
+ * `estado` manda sobre `incluirResueltas`: si se pide un estado concreto, se devuelve ese y ya.
+ * Sin `estado`, por omision se excluyen las resueltas, que es lo util para planificar.
+ *
+ * @param {{ comunidadId?: string, condicionId?: string, estado?: string, incluirResueltas?: boolean }} [filtros]
+ * @returns {Promise<{ pacientes: object[], error: object|null }>}
+ */
 export async function obtenerPacientesConCondicion({
   comunidadId,
   condicionId,

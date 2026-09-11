@@ -1,5 +1,5 @@
 -- Pruebas de las funciones en lote presupuestos_de_proyectos()/presupuestos_de_jornadas()
--- (issue #759, migracion 00123). Corre con: supabase test db
+-- (issue #771, migracion 00123). Corre con: supabase test db
 --
 -- No repite las pruebas de RLS de gastos ni de jornadas/proyectos (ya cubiertas en
 -- politicas_rls_gastos.sql y politicas_rls_jornadas_proyectos.sql): esta suite verifica que la
