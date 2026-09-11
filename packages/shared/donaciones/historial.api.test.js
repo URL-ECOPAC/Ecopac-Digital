@@ -105,7 +105,7 @@ describe("listarDonaciones (#193)", () => {
     expect(mockSupabase.neq).not.toHaveBeenCalledWith("estado", "anulada");
   });
 
-  it("sin limite no pagina: sin range y sin pedir count", async () => {
+  it("sin limite la lista no pagina ni pide count (el listado y los totales son consultas distintas)", async () => {
     resolverConsultas({
       listado: { data: [{ id: "d1" }], error: null },
       totales: { data: [], error: null },
@@ -113,7 +113,11 @@ describe("listarDonaciones (#193)", () => {
 
     const { datos } = await listarDonaciones({}, { rolUsuario: ROLES.ADMINISTRADOR });
 
-    expect(mockSupabase.range).not.toHaveBeenCalled();
+    // calcularTotalesPorTipo() SI llama a .range() ahora (obtenerTodasLasFilas(), issue #773):
+    // sin eso, sus totales tambien se cortarian en max_rows pasadas las 1000 donaciones. Es una
+    // consulta distinta a la del listado, que sigue sin paginar cuando no se pide `limite`.
+    expect(mockSupabase.range).toHaveBeenCalledTimes(1);
+    expect(mockSupabase.range).toHaveBeenCalledWith(0, 999);
     expect(mockSupabase.select.mock.calls[0][1]).toBeUndefined();
     expect(datos.porPagina).toBeNull();
     expect(datos.total).toBe(1);
