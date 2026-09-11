@@ -1,4 +1,5 @@
 import { useState } from "react";
+import ErrorState from "../components/ErrorState";
 import { useAlertasVencimiento } from "../../../../packages/shared/inventario/useAlertasVencimiento.js";
 import { OPCIONES_ACCION_ALERTA } from "../../../../packages/shared/inventario/campos.js";
 
@@ -25,20 +26,25 @@ export default function PanelAlertasVencimiento({
 
   const [alertaAtendiendo, setAlertaAtendiendo] = useState(null);
   const [accionTomada, setAccionTomada] = useState("");
+  // El fallo se muestra dentro del modal, junto al boton que lo provoco, en vez de en un alert()
+  // del navegador que tapa la pantalla y se lleva el contexto al cerrarse (issue #762).
+  const [errorAtender, setErrorAtender] = useState(null);
 
   const handleAtender = (alerta) => {
     setAlertaAtendiendo(alerta);
     setAccionTomada("");
+    setErrorAtender(null);
   };
 
   const confirmarAtender = async () => {
     if (!alertaAtendiendo) return;
+    setErrorAtender(null);
     try {
       await marcarComoAtendida(alertaAtendiendo.id, accionTomada);
       setAlertaAtendiendo(null);
       setAccionTomada("");
     } catch (error) {
-      alert(error.message || "No se pudo registrar la acción");
+      setErrorAtender(error.message || "No se pudo registrar la acción");
     }
   };
 
@@ -492,6 +498,8 @@ export default function PanelAlertasVencimiento({
             <h3 style={{ fontSize: "18px", fontWeight: "600", margin: "0 0 16px 0" }}>
               Registrar Acción Tomada
             </h3>
+
+            {errorAtender && <ErrorState message={errorAtender} />}
             <div style={{ marginBottom: "16px", fontSize: "14px", color: "#475569" }}>
               <p style={{ margin: "0 0 4px 0" }}>
                 <strong>{alertaAtendiendo.medicamento}</strong>
@@ -533,7 +541,10 @@ export default function PanelAlertasVencimiento({
             </div>
             <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>
               <button
-                onClick={() => setAlertaAtendiendo(null)}
+                onClick={() => {
+                  setAlertaAtendiendo(null);
+                  setErrorAtender(null);
+                }}
                 style={{
                   padding: "10px 16px",
                   border: "1px solid #cbd5e1",

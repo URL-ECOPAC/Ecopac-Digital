@@ -79,6 +79,9 @@ export default function InventarioPage() {
   const [cargandoGuardar, setCargandoGuardar] = useState(false);
   const [modalPrincipioActivoAbierto, setModalPrincipioActivoAbierto] = useState(false);
   const [advertenciaDuplicado, setAdvertenciaDuplicado] = useState(false);
+  // Un fallo al guardar se pinta dentro del modal, como ya hace ModalAltaLote con
+  // errorValidacion. Antes era un alert() del navegador (issue #762).
+  const [errorGuardarMedicamento, setErrorGuardarMedicamento] = useState(null);
   const [formData, setFormData] = useState({
     nombre: "",
     principio_activo_id: "",
@@ -170,30 +173,38 @@ export default function InventarioPage() {
         listarLotes(),
       ]);
 
-      if (resMed.error) {
-        setError(resMed.error.mensaje || "Error al cargar medicamentos");
-      } else {
-        setInventarioRaw(resMed.medicamentos || []);
-      }
-      if (resPA.error) {
-        console.error("Error cargando principios activos:", resPA.error);
-      } else {
-        setPrincipiosActivos(resPA.principiosActivos || []);
-      }
-      if (resBodegas.error) {
-        console.error("Error cargando bodegas:", resBodegas.error);
-      } else {
-        setBodegas(resBodegas.bodegas || []);
-      }
-      if (resProveedores.error) {
-        console.error("Error cargando proveedores:", resProveedores.error);
-      } else {
-        setProveedores(resProveedores.proveedores || []);
-      }
-      if (resLotes.error) {
-        console.error("Error cargando lotes:", resLotes.error);
-      } else {
-        setLotesRaw(resLotes.lotes || []);
+      // Los cinco fallos tienen que llegar a la pantalla. Antes solo lo hacia el de medicamentos:
+      // los otros cuatro se escribian en la consola y la pestana seguia como si nada, con el
+      // desplegable de bodegas vacio o el kardex sin lotes y sin decir por que. Es el fallo
+      // silencioso que describe la issue #762: algo no funciona y el sistema dice que si.
+      const fallos = [];
+
+      if (resMed.error) fallos.push(["medicamentos", resMed.error]);
+      else setInventarioRaw(resMed.medicamentos || []);
+
+      if (resPA.error) fallos.push(["principios activos", resPA.error]);
+      else setPrincipiosActivos(resPA.principiosActivos || []);
+
+      if (resBodegas.error) fallos.push(["bodegas", resBodegas.error]);
+      else setBodegas(resBodegas.bodegas || []);
+
+      if (resProveedores.error) fallos.push(["proveedores", resProveedores.error]);
+      else setProveedores(resProveedores.proveedores || []);
+
+      if (resLotes.error) fallos.push(["lotes", resLotes.error]);
+      else setLotesRaw(resLotes.lotes || []);
+
+      if (fallos.length > 0) {
+        // `detalle` y no el error entero: normalizarError() ya lo saneo para el log, y el objeto
+        // crudo puede traer datos de la fila que fallo (regla de confidencialidad de AGENTS.md).
+        for (const [recurso, fallo] of fallos) {
+          console.error(`Error cargando ${recurso}:`, fallo.detalle);
+        }
+
+        // Un solo mensaje para todos: en la practica los cinco fallan por la misma causa -red
+        // caida, sesion expirada- y `mensaje` ya es el texto que se le ensena a una persona.
+        const recursos = fallos.map(([recurso]) => recurso).join(", ");
+        setError(`No se pudo cargar: ${recursos}. ${fallos[0][1].mensaje ?? ""}`.trim());
       }
     } catch (err) {
       console.error("Error cargando inventario:", err);
@@ -218,6 +229,7 @@ export default function InventarioPage() {
       formaFarmaceutica: "",
     });
     setAdvertenciaDuplicado(false);
+    setErrorGuardarMedicamento(null);
     setModalAbierto(true);
   };
 
@@ -235,6 +247,7 @@ export default function InventarioPage() {
       formaFarmaceutica: item.formaFarmaceutica || item.forma_farmaceutica || "",
     });
     setAdvertenciaDuplicado(false);
+    setErrorGuardarMedicamento(null);
     setModalAbierto(true);
 
     const { principiosActivos: asociados } = await listarPrincipiosDeMedicamento(item.id);
@@ -261,6 +274,7 @@ export default function InventarioPage() {
   };
 
   const handleGuardarMedicamento = async () => {
+    setErrorGuardarMedicamento(null);
     const duplicado = inventarioRaw.some(
       (item) =>
         item.id !== formData.id &&
@@ -284,12 +298,14 @@ export default function InventarioPage() {
           formaFarmaceutica: formData.formaFarmaceutica ? formData.formaFarmaceutica.trim() : null,
         });
         if (errorUpdate) {
-          alert(`Error al actualizar: ${errorUpdate.mensaje || errorUpdate.message}`);
+          setErrorGuardarMedicamento(
+            errorUpdate.mensaje || "No se pudo actualizar el medicamento.",
+          );
           return;
         }
       } else {
         if (!formData.principio_activo_id) {
-          alert("Debes seleccionar un principio activo.");
+          setErrorGuardarMedicamento("Debes seleccionar un principio activo.");
           return;
         }
         const payload = {
@@ -303,7 +319,7 @@ export default function InventarioPage() {
         };
         const { error: errorReg } = await registrarMedicamento(payload);
         if (errorReg) {
-          alert(`Error al registrar: ${errorReg.mensaje || errorReg.message}`);
+          setErrorGuardarMedicamento(errorReg.mensaje || "No se pudo registrar el medicamento.");
           return;
         }
       }
@@ -311,7 +327,7 @@ export default function InventarioPage() {
       await cargarDatos();
     } catch (err) {
       console.error("Error inesperado:", err);
-      alert("Error de comunicación con el servidor.");
+      setErrorGuardarMedicamento("Error de comunicación con el servidor.");
     } finally {
       setCargandoGuardar(false);
     }
@@ -1065,6 +1081,7 @@ export default function InventarioPage() {
           setFormData={setFormData}
           principiosActivos={principiosActivos}
           advertenciaDuplicado={advertenciaDuplicado}
+          error={errorGuardarMedicamento}
           onSubmit={handleGuardarMedicamento}
           onClose={() => setModalAbierto(false)}
           onCrearPrincipioActivo={() => setModalPrincipioActivoAbierto(true)}
