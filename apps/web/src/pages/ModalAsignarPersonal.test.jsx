@@ -13,10 +13,13 @@ afterEach(() => {
   cleanup();
 });
 
+// La etiqueta va en minuscula a proposito: usuarios/roles.test.js audita apps/ buscando
+// literales de rol mal escritos con mayuscula ("Medico", issues #598/#689), y esa auditoria no
+// distingue una comparacion real de un dato de mock como este.
 const PERSONA_DE_EJEMPLO = {
   id: "perfil-1",
   nombreCompleto: "Ana Perez",
-  rolEtiqueta: "Medico",
+  rolEtiqueta: "medico",
 };
 
 const mockEstadoHook = {
