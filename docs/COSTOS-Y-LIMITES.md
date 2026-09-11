@@ -19,12 +19,14 @@ Lo que aprieta son **tres restricciones estructurales**, que no dependen de crec
 
 | # | Restriccion                                                              | Servicio | Efecto                                              |
 | - | ------------------------------------------------------------------------ | -------- | ---------------------------------------------------- |
-| 1 | Vercel Hobby **no conecta con repositorios de una organizacion de GitHub** | Vercel   | Bloquea el despliegue automatico tal como esta hoy el repo |
+| 1 | Vercel Hobby **puede quitar un despliegue sin aviso**, y no conecta con repositorios de una organizacion | Vercel | Lo segundo tiene salida tecnica; lo primero no |
 | 2 | El plan Free de Supabase **no incluye respaldos**                         | Supabase | Un borrado accidental no se puede deshacer          |
 | 3 | Free permite **2 proyectos activos por organizacion**                     | Supabase | `dev` + `prod` ocupan los dos; no cabe un tercero   |
 
-Las tres se resuelven con dinero o con un cambio de decision, no esperando. Estan desarrolladas en
-la seccion 6.
+Estan desarrolladas en la seccion 6. La 1 tiene dos capas que conviene no confundir: **que no se
+pueda conectar el repositorio se resuelve desplegando por CLI desde GitHub Actions, gratis**; lo
+que no se resuelve sin pagar es que los terminos del plan Hobby permiten a Vercel retirar el
+despliegue a su discrecion y sin aviso, que es lo que desaconseja dejar produccion ahi.
 
 ---
 
@@ -56,20 +58,21 @@ Dos notas que importan mas que los numeros:
 
 Sirve la aplicacion web. El plan gratuito se llama **Hobby**.
 
-| Recurso                    | Hobby                                     |
-| -------------------------- | ------------------------------------------ |
-| Builds                     | 100 por hora                               |
-| Despliegues                | 100 por dia                                |
-| Duracion de una funcion    | 10 segundos (60 en Pro)                    |
-| Retencion de logs          | 1 hora (1 dia en Pro)                      |
-| Subida por CLI             | 100 MB de fuentes                          |
-| Repositorios de organizacion | **No soportado**                         |
+| Recurso                      | Hobby                       |
+| ---------------------------- | --------------------------- |
+| Builds                       | 100 por hora                |
+| Despliegues                  | 100 por dia                 |
+| Proyectos                    | 200                         |
+| Retencion de logs            | 1 hora (1 dia en Pro)       |
+| Subida por CLI               | 100 MB de fuentes           |
+| Conexion a repos de organizacion | **No soportada**        |
 
 Los limites de volumen sobran: 100 despliegues al dia es mucho mas de lo que produce este equipo.
+La duracion maxima de una funcion no entra en la tabla porque **la web no usa ninguna**: es una
+SPA estatica, `vercel.json` solo declara el build y el rewrite a `index.html`, y no hay carpeta
+`api/`. El navegador habla directamente con Supabase.
 
-**El problema es la ultima fila.** La documentacion de Vercel dice que un proyecto en un equipo
-Hobby no se puede conectar a repositorios propiedad de organizaciones de Git, y este repositorio
-es `URL-ECOPAC/Ecopac-Digital`, propiedad de una organizacion. Esta desarrollado en la seccion 6.
+**El problema es la ultima fila**, y esta desarrollado en la seccion 6.1.
 
 ## 3. GitHub Actions
 
@@ -145,20 +148,71 @@ No es un limite de volumen. Son estas tres, en orden de urgencia.
 
 ### 6.1 Vercel Hobby no conecta con repositorios de una organizacion
 
-**Es lo primero que bloquea, y bloquea ya.** La documentacion de Vercel es explicita: un proyecto
-en un equipo Hobby no puede conectarse a un repositorio propiedad de una organizacion de Git.
-`URL-ECOPAC/Ecopac-Digital` lo es.
+La documentacion de Vercel es explicita: un proyecto en un equipo Hobby no puede conectarse a un
+repositorio **propiedad de** una organizacion de Git. `URL-ECOPAC/Ecopac-Digital` lo es.
 
-Tres salidas, y las tres tienen costo:
+**La restriccion es sobre quien es dueno del repositorio, no sobre quien hace el enlace.** Da igual
+desde que cuenta se intente conectar, y da igual que quien lo intente sea miembro de la
+organizacion: mientras el repositorio pertenezca a `URL-ECOPAC`, la integracion nativa de Git no
+esta disponible en Hobby. Vercel aclara ademas que aplica igual al importar un repositorio
+existente y al clonar una plantilla dentro de la organizacion.
 
-1. **Vercel Pro**, 20 USD por usuario al mes. Resuelve el problema y de paso sube el limite de
-   ejecucion de funciones de 10 a 60 segundos y la retencion de logs de 1 hora a 1 dia.
-2. **Solicitar el Vercel Open Source Program**, que da creditos a proyectos totalmente de codigo
+**Pero eso no obliga a mover el repositorio ni a pagar.** Hay cuatro salidas, en orden de menos a
+mas coste:
+
+1. **Desplegar por CLI desde GitHub Actions, sin conectar el repositorio a Vercel.** El proyecto de
+   Vercel se queda sin integracion Git y el workflow le empuja el build con `vercel pull`,
+   `vercel build` y `vercel deploy --prebuilt`, autenticando con tres secrets (`VERCEL_TOKEN`,
+   `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`). Como no hay conexion con Git, la restriccion no aplica y
+   el repositorio se queda donde esta. `--prebuilt` es lo que evita que se compile dos veces.
+   **El coste es que se pierden los preview deployments automaticos por PR**, que son
+   precisamente lo que da la integracion nativa; recrearlos es escribir mas workflow.
+2. **Vercel Pro**, 20 USD por usuario al mes. Habilita la integracion nativa con sus previews, sube
+   la retencion de logs de 1 hora a 1 dia, y de paso resuelve la cuestion de la licencia que viene
+   abajo.
+3. **Solicitar el Vercel Open Source Program**, que da creditos a proyectos totalmente de codigo
    abierto. Este repositorio es publico, asi que la solicitud es viable; no hay garantia de que la
    acepten ni plazo comprometido.
-3. **Desplegar la web en otro sitio.** Cloudflare Pages y Netlify no ponen esa restriccion en sus
-   planes gratuitos. Es la opcion sin costo en dinero, y cuesta rehacer el despliegue y reescribir
-   `docs/CI-CD.md`.
+4. **Desplegar la web en otro sitio.** Cloudflare Pages y Netlify no ponen esa restriccion en sus
+   planes gratuitos. Cuesta rehacer el despliegue y reescribir `docs/CI-CD.md`.
+
+Forkear el repositorio a una cuenta personal y conectar el fork tambien funciona, pero obliga a
+mantener el fork sincronizado y los previews seguirian al fork y no al repositorio real. La opcion
+1 hace lo mismo sin ese doble mantenimiento.
+
+#### La licencia del plan Hobby, que pesa mas que la parte tecnica
+
+El plan Hobby esta restringido a **uso personal no comercial**. La definicion de Vercel es amplia:
+cualquier despliegue usado para el beneficio economico de cualquiera que participe en cualquier
+parte de la produccion del proyecto, **incluido un empleado o consultor al que se le pague por
+escribir el codigo**.
+
+Dos lecturas de eso, para este proyecto en concreto:
+
+- **A favor.** Vercel aclara de forma expresa que **pedir donaciones NO es uso comercial**. Una ONG
+  que se financia con donaciones no queda fuera por ese motivo, que es la duda obvia.
+- **En contra.** "Recibir un pago por crear, actualizar u hospedar el sitio" SI es uso comercial.
+  Mientras el sistema lo construya gente sin cobrar por ello, encaja en Hobby; **el dia que Ecopac
+  le pague a alguien por mantenerlo, deja de encajar** y hace falta Pro.
+
+Y dos clausulas de los terminos de servicio que conviene conocer antes de montar produccion sobre
+el plan gratuito:
+
+> We reserve the right to disable or remove any Project or website deployment on the Hobby plan
+> **with or without notice at our sole discretion.**
+
+> If you are on a Hobby plan or trial Pro plan, you agree that we may use Your Content to **train
+> our artificial intelligence and machine learning models.**
+
+La segunda **no es un problema de confidencialidad clinica aqui**, y conviene decirlo con
+precision para no alarmar de mas: "Your Content" en Vercel es lo que se despliega -el codigo y los
+assets-, que en este repositorio ya es publico. **Los datos de pacientes nunca pasan por Vercel**:
+la web es una SPA estatica y el navegador consulta a Supabase directamente, sin intermediario.
+
+La primera si es un riesgo operativo real. Un sistema del que depende una jornada medica puede
+quedarse caido sin aviso previo y sin derecho a reclamacion. **Esa es la razon de fondo para no
+dejar produccion en Hobby**, mas que la restriccion de los repositorios de organizacion, que tiene
+solucion tecnica.
 
 Esto condiciona la issue #252 (salida a produccion) y conviene decidirlo antes de empezarla, no
 durante.
@@ -207,10 +261,20 @@ reactiva a mano desde el panel, y si eso pasa en mitad de una jornada, el sistem
 Supabase Pro mas Vercel Pro. EAS Starter no hace falta salvo que la cola de baja prioridad se
 vuelva un problema de calendario.
 
-Si eso no cabe en el presupuesto, la combinacion mas barata que cubre los dos riesgos reales es:
-**Supabase Pro (25 USD/mes) para tener respaldos**, y **mover la web a Cloudflare Pages o Netlify**
-para esquivar la restriccion de Vercel sin pagar. Los respaldos son lo que no tiene sustituto
-gratuito razonable; el hosting si lo tiene.
+Si eso no cabe en el presupuesto, **la prioridad es Supabase Pro (25 USD/mes)**: los respaldos son
+lo unico de esta lista sin sustituto gratuito razonable.
+
+Para la web hay dos formas de gastar cero, y se eligen segun cuanto pese el riesgo de que Vercel
+retire el despliegue sin aviso:
+
+- **Quedarse en Vercel Hobby y desplegar por CLI desde GitHub Actions** (seccion 6.1, opcion 1).
+  Es lo que menos trabajo cuesta y no mueve el repositorio, pero deja produccion sujeta a los
+  terminos del plan Hobby.
+- **Mover la web a Cloudflare Pages o Netlify**, cuyos planes gratuitos no traen ni la restriccion
+  de repositorios de organizacion ni esa clausula. Cuesta rehacer el despliegue una vez.
+
+La segunda es la que conviene si la web va a sostener jornadas reales; la primera, si todavia se
+esta validando el sistema.
 
 ---
 
@@ -260,7 +324,10 @@ documento.
 ## Fuentes
 
 - [Supabase Pricing](https://supabase.com/pricing)
-- [Vercel Limits](https://vercel.com/docs/limits)
+- [Vercel Limits](https://vercel.com/docs/limits) (restriccion de repos de organizacion)
+- [Vercel Fair Use Guidelines](https://vercel.com/docs/limits/fair-use-guidelines) (uso comercial y la excepcion de las donaciones)
+- [Vercel Terms of Service](https://vercel.com/legal/terms) (clausulas del plan Hobby)
+- [Vercel: usar GitHub Actions para desplegar](https://vercel.com/guides/how-can-i-use-github-actions-with-vercel)
 - [GitHub Actions: billing and usage](https://docs.github.com/en/actions/concepts/billing-and-usage)
 - [Expo: subscriptions, plans and add-ons](https://docs.expo.dev/billing/plans/)
 - [GitHub for Nonprofits](https://docs.github.com/en/nonprofit/nonprofit-teams-plan)
