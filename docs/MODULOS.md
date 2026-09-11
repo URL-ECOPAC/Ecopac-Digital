@@ -178,7 +178,8 @@ El modulo con mas superficie despues de pacientes: 30 archivos en `packages/shar
 `existencias`, `movimientos_inventario`, `alertas_caducidad`.
 
 Funciones de base: `fn_existencias_disponibles`, `fn_registrar_medicamento`,
-`fn_aplicar_ajuste_existencias`, `fn_generar_alertas_caducidad`, `fn_medicamento_tiene_existencias`.
+`fn_aplicar_ajuste_existencias`, `fn_generar_alertas_caducidad`, `fn_medicamento_tiene_existencias`,
+`fn_valor_de_inventario_disponible`.
 
 ### Notas
 
@@ -188,6 +189,13 @@ Funciones de base: `fn_existencias_disponibles`, `fn_registrar_medicamento`,
   (`confirmado = FALSE`, migracion `00107`).
 - El movil no tiene pantalla propia de existencias por bodega: `StockScreen` reexporta el catalogo.
   Es un hueco conocido, no un alias intencional del diseno.
+- **Valorizacion de stock (issue #752)**: `lotes` tiene `costo_unitario` (nullable: un lote
+  donado o de compra sin precio capturado no vale cero, vale "no se sabe") y `moneda` desde la
+  migracion `00121`. `fn_valor_de_inventario_disponible` (`00122`, `valorizacion.api.js`,
+  `obtenerValorDeInventario()`) esta lista para consumirse, pero **todavia sin pantalla ni en web
+  ni en movil**: capturar el costo al dar de alta un lote o al registrar un ingreso, y mostrar el
+  valor en el reporte de inventario y el panel de indicadores, quedan pendientes -tocan diseno de
+  interfaz, issue #752.
 
 ---
 

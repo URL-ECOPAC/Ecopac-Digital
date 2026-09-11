@@ -537,7 +537,8 @@
 
 /**
  * Fila de `lotes` (00019_recetas_medicas_detalle.sql; proveedor_id, origen, cantidad_ingresada y
- * fecha_ingreso los agrega la 00020, y registrado_por y confirmado la 00107).
+ * fecha_ingreso los agrega la 00020, registrado_por y confirmado la 00107, y costo_unitario y
+ * moneda la 00121).
  *
  * @typedef {object} Lote
  * @property {string} id
@@ -556,6 +557,11 @@
  * @property {boolean} confirmado False mientras sea la propuesta que acompania a un ingreso
  *   pendiente; true cuando la administradora aprueba ese ingreso. Un lote sin confirmar no tiene
  *   existencias, asi que no se puede dispensar ni recetar.
+ * @property {number|null} costoUnitario Costo por unidad al ingresar (issue #752). Null
+ *   significa "no se conoce el costo" -un lote donado, o uno de compra sin precio capturado-,
+ *   nunca "cero": un cero mentiria en los reportes financieros igual que un precio inventado.
+ * @property {string} moneda Un solo valor hoy (`GTQ`, `moneda_lote`): el sistema no opera en mas
+ *   de una moneda.
  */
 
 /**

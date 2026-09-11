@@ -439,7 +439,7 @@ con `fn_registrar_medicamento()`, que asocia los principios activos en la misma 
 - `proveedores`: `nombre` unico, `contacto`, `tipo` (`tipo_proveedor`: `comercial`/`donante`).
 - `bodegas`: `nombre` unico, `ubicacion`, `es_movil` (el botiquin que viaja a la jornada).
 
-### `lotes` [00019, ampliada en 00020 y 00107]
+### `lotes` [00019, ampliada en 00020, 00107 y 00121]
 
 | Columna              | Tipo                    | Notas                                                |
 | -------------------- | ----------------------- | ---------------------------------------------------- |
@@ -452,10 +452,20 @@ con `fn_registrar_medicamento()`, que asocia los principios activos en la misma 
 | `fecha_ingreso`      | DATE NOT NULL           | [+00020]                                             |
 | `registrado_por`     | UUID                    | [+00107]                                             |
 | `confirmado`         | BOOLEAN NOT NULL        | [+00107] FALSE = lote **provisional**                |
+| `costo_unitario`     | NUMERIC(12,2)           | [+00121] Costo por unidad al ingresar. **NULL = "no se conoce", nunca "cero"** -un lote donado, o uno de compra sin precio capturado-. Issue #752 |
+| `moneda`             | `moneda_lote` NOT NULL  | [+00121] Un solo valor hoy (`GTQ`): el sistema no opera en mas de una moneda |
 
 Los lotes provisionales (`00107`) resuelven un problema de campo: un medico o voluntario que recibe
 medicamento en la comunidad puede proponer el lote sin esperar al administrador; queda sin
 confirmar hasta que este lo valide.
+
+**Valorizacion de stock (issue #752).** `fn_valor_de_inventario_disponible` [00122] cruza
+`existencias.cantidad_disponible` (lo que hay ahora, no `cantidad_ingresada`) con
+`costo_unitario`, agregado por bodega, medicamento y origen. Declara aparte cuantas unidades y
+cuantos lotes quedan sin costo conocido (`unidades_sin_costo`, `lotes_sin_costo`) en vez de
+sumarlos como cero. `SECURITY DEFINER`: solo administrador y los roles consultivos reciben
+resultado (ver `docs/PERMISOS.md`, seccion Inventario, para por que la proteccion vive en la
+funcion y no en una politica de columna).
 
 Un lote **puede** vencer el mismo dia que ingresa (`00096` retiro la restriccion contraria: donaciones
 de ultimo momento existen).
