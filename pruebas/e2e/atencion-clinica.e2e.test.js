@@ -28,6 +28,8 @@ import {
   iniciarAtencion,
   listarDiagnosticos,
   obtenerPaciente,
+  obtenerRecetaPorAtencion,
+  obtenerRecetas,
   registrarConsulta,
   registrarPaciente,
 } from "@ecopac/shared";
@@ -256,5 +258,36 @@ describe("Flujo critico: atencion clinica completa", () => {
 
     const disponible = await existenciaDe(DEMO.loteSano, bodega);
     expect(disponible).toBe(existenciasIniciales[0].cantidad - CANTIDAD_RECETADA);
+  });
+
+  // issue #759: la pestana de Recetas de la web fallaba siempre con PGRST108, porque
+  // obtenerRecetas() filtraba por "consultas.expedientes.paciente_id" contra un select que
+  // aliasaba consultas a "consulta" y nunca embebia expedientes. recetas.api.test.js (doble de
+  // Supabase, sin base real) pasaba en verde: un doble no valida que la forma de la consulta
+  // sea aceptable para PostgREST, solo que el codigo cliente maneja lo que el doble le devuelve.
+  // Este paso es el que habria detectado el error real, contra la base real.
+  it("10. la pestana de Recetas del paciente encuentra la receta que se acaba de emitir", async () => {
+    const { recetas, error } = await obtenerRecetas(flujo.pacienteId);
+
+    expect(error).toBeNull();
+    expect(recetas.map((r) => r.id)).toContain(flujo.recetaId);
+  });
+
+  // issue #759 / #749: la pantalla de entrega de medicamentos en movil pedia recetas.paciente_id,
+  // recetas.atencion_id, lotes.vencimiento y lotes.cantidad_actual -ninguna existe en el
+  // esquema- y fallaba siempre con PGRST108. obtenerRecetaPorAtencion() (PR #765) ya lo corrige;
+  // este paso es el que habria detectado el error real, contra la base real.
+  it("11. el puesto de entrega en campo encuentra la receta recien emitida, con su existencia real", async () => {
+    const { receta, detalles, error } = await obtenerRecetaPorAtencion(flujo.atencionId);
+
+    expect(error).toBeNull();
+    expect(receta?.id).toBe(flujo.recetaId);
+
+    const renglon = detalles.find((d) => d.medicamentoId === DEMO.medicamentoSano);
+    expect(renglon).toBeDefined();
+    expect(renglon.cantidadEntregada).toBe(CANTIDAD_RECETADA);
+    // La aprobacion del paso 9 ya descarto CANTIDAD_RECETADA del lote: la existencia que ve el
+    // puesto de entrega tiene que reflejar ese descuento, no la cantidad original del lote.
+    expect(renglon.cantidadDisponible).toBe(existenciasIniciales[0].cantidad - CANTIDAD_RECETADA);
   });
 });

@@ -297,9 +297,15 @@ describe("obtenerRecetas", () => {
 
     await obtenerRecetas("pac-1");
 
+    // issue #759: filtraba por "consultas.expedientes.paciente_id", que no coincidia con
+    // ningun alias del select (COLUMNAS_DE_LA_RECETA aliasaba consultas a "consulta" y nunca
+    // embebia expedientes) y fallaba siempre con PGRST108 contra una base real. Un doble como
+    // este no lo detectaba: devolvia lo que se le programaba sin importar si PostgREST
+    // aceptaria la consulta. La prueba que si lo detecta, contra una base real, es el paso 10
+    // de pruebas/e2e/atencion-clinica.e2e.test.js.
     expect(cliente.llamadas).toContainEqual({
       paso: "eq",
-      columna: "consultas.expedientes.paciente_id",
+      columna: "consulta.expediente.paciente_id",
       valor: "pac-1",
     });
   });
