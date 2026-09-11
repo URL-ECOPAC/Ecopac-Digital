@@ -27,6 +27,7 @@ configuracion de GitHub (plantillas de issues, PR y los workflows de CI/CD) esta
 | [PERMISOS.md](./PERMISOS.md)                           | Quien puede hacer que en cada modulo, y donde esta escrito            |
 | [SUPABASE.md](./SUPABASE.md)                           | Supabase en la nube contra el stack local, y como se sincronizan      |
 | [DATOS-DEMO.md](./DATOS-DEMO.md)                       | Datos de prueba para desarrollo                                       |
+| [PLAN-DE-PRUEBAS.md](./PLAN-DE-PRUEBAS.md)             | Que se prueba en cada capa, donde vive cada evidencia, baseline de cobertura movil y resultados de la prueba de carga |
 
 ## Dependencias y Herramientas
 
