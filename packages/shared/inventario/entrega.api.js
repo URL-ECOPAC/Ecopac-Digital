@@ -1,75 +1,132 @@
 import { obtenerSupabase } from "../api/cliente.js";
 import { normalizarError } from "../api/errores-de-supabase.js";
-import { esLoteEntregable } from "./lotes.validaciones.js";
+import { ESTADOS_RECETA } from "../enums.js";
 
-const COLUMNAS_DEL_RENGLON = [
+// recetas no tiene paciente_id ni atencion_id (00019): el paciente se alcanza por
+// recetas -> consultas -> expedientes -> pacientes, y el punto de entrada por atencion es
+// consultas.atencion_id (00018). numero_ficha vive en expedientes, no en pacientes (00009).
+// "consultas" va sin alias en el select a proposito: el filtro de abajo (.eq("consultas.
+// atencion_id", ...)) tiene que nombrar la misma relacion que el select, y !inner es lo que
+// hace que ese filtro excluya filas de recetas (sin !inner solo filtraria el embed anidado).
+const COLUMNAS_DE_LA_ENTREGA = [
   "id",
-  "medicamentoId:medicamento_id",
-  "cantidadEntregada:cantidad_entregada",
-  "dosis",
-  "frecuencia",
-  "duracion",
-  "medicamento:medicamentos(nombre)",
-  "lote:lotes(numeroLote:numero_lote, fechaVencimiento:fecha_vencimiento, existencias(cantidadDisponible:cantidad_disponible))",
-  "receta:recetas!inner(id, folio, consulta:consultas!inner(atencionId:atencion_id))",
+  "folio",
+  "consultas!inner(atencionId:atencion_id, " +
+    "expediente:expedientes(numeroFicha:numero_ficha, paciente:pacientes(nombres, apellidos)))",
+  "detalle:receta_detalle(id, medicamentoId:medicamento_id, loteId:lote_id, dosis, " +
+    "frecuencia, duracion, cantidadEntregada:cantidad_entregada, " +
+    "medicamento:medicamentos(nombre), " +
+    "lote:lotes(numeroLote:numero_lote, fechaVencimiento:fecha_vencimiento))",
 ].join(", ");
 
-/**
- * Traduce una fila de receta_detalle (con sus embebidos) al renglon que la pantalla de entrega
- * necesita. Se exporta aparte de obtenerDetalleDeEntrega() para poder probar la traduccion sin
- * tocar la base (issue #759).
- *
- * @param {object} fila
- */
-export function aRenglonDeEntrega(fila) {
-  const lote = fila.lote ?? {};
-  const existenciaTotal = (lote.existencias ?? []).reduce(
-    (total, existencia) => total + Number(existencia.cantidadDisponible ?? 0),
-    0,
-  );
+function aRecetaParaEntrega(fila) {
+  const expediente = fila.consultas?.expediente ?? {};
+  const paciente = expediente.paciente ?? {};
 
   return {
     id: fila.id,
-    medicamentoId: fila.medicamentoId,
-    medicamento: fila.medicamento?.nombre ?? "Medicamento",
-    dosis: fila.dosis,
-    frecuencia: fila.frecuencia,
-    duracion: fila.duracion,
-    cantidad_recetada: fila.cantidadEntregada,
-    existencias: existenciaTotal,
-    fechaVencimiento: lote.fechaVencimiento ?? null,
-    vencido: !esLoteEntregable({ fechaVencimiento: lote.fechaVencimiento }),
+    folio: fila.folio,
+    pacienteNombre: [paciente.nombres, paciente.apellidos].filter(Boolean).join(" ") || null,
+    numeroFicha: expediente.numeroFicha ?? null,
+  };
+}
+
+function aDetalleParaEntrega(renglon, disponiblePorLote) {
+  return {
+    id: renglon.id,
+    medicamentoId: renglon.medicamentoId,
+    medicamento: renglon.medicamento?.nombre ?? "Medicamento desconocido",
+    loteId: renglon.loteId ?? null,
+    numeroLote: renglon.lote?.numeroLote ?? null,
+    fechaVencimiento: renglon.lote?.fechaVencimiento ?? null,
+    dosis: renglon.dosis,
+    frecuencia: renglon.frecuencia,
+    duracion: renglon.duracion,
+    cantidadEntregada: renglon.cantidadEntregada,
+    // Sin lote no hay fila de existencias que consultar: null (indeterminado), nunca 0, para
+    // no leerse como "agotado" cuando en realidad es "no se eligio lote a esta receta" (00019,
+    // receta_detalle.lote_id es nullable).
+    cantidadDisponible: renglon.loteId ? (disponiblePorLote.get(renglon.loteId) ?? 0) : null,
   };
 }
 
 /**
- * Renglones de la receta que corresponden a una atencion, para el puesto de entrega en campo
- * (issue #164 / #759).
+ * Existencia disponible de cada lote, sumada entre bodegas.
  *
- * QUE ESTABA MAL ANTES. La version anterior, escrita directamente en el hook de la pantalla,
- * pedia columnas que no existen en el esquema: recetas.paciente_id y recetas.atencion_id (el
- * paciente y la atencion se llegan via consultas y expedientes, no son columnas propias de
- * recetas), lotes.vencimiento (la columna real es fecha_vencimiento) y lotes.cantidad_actual
- * (el stock vive en existencias.cantidad_disponible, particionado por lote y bodega, no es una
- * columna de lotes). La consulta fallaba siempre con PGRST108. El filtro de aqui abajo usa el
- * mismo criterio que ya corrige obtenerRecetas() (recetas.api.js, mismo issue): filtrar por el
- * alias que declara el select (receta.consulta.atencion_id), no por el nombre de la tabla.
+ * Mismo criterio que fn_generar_receta calcula inline en el servidor (00112):
+ * SUM(cantidad_disponible) FROM existencias WHERE lote_id = ... — aqui hace falta para varios
+ * lotes a la vez, uno por renglon de la receta.
  *
- * @param {string} atencionId UUID de la atencion.
- * @returns {Promise<{ detalle: object[], error: object|null }>}
+ * @param {string[]} loteIds
+ * @returns {Promise<{ disponiblePorLote: Map<string, number>, error: object|null }>}
  */
-export async function obtenerDetalleDeEntrega(atencionId) {
-  if (!atencionId) return { detalle: [], error: null };
+async function obtenerDisponiblePorLote(loteIds) {
+  const idsUnicos = [...new Set(loteIds.filter(Boolean))];
+  if (idsUnicos.length === 0) return { disponiblePorLote: new Map(), error: null };
 
   try {
     const { data, error } = await obtenerSupabase()
-      .from("receta_detalle")
-      .select(COLUMNAS_DEL_RENGLON)
-      .eq("receta.consulta.atencion_id", atencionId);
+      .from("existencias")
+      .select("loteId:lote_id, cantidadDisponible:cantidad_disponible")
+      .in("lote_id", idsUnicos);
 
-    if (error) return { detalle: [], error: normalizarError(error) };
-    return { detalle: (data ?? []).map(aRenglonDeEntrega), error: null };
+    if (error) return { disponiblePorLote: new Map(), error: normalizarError(error) };
+
+    const disponiblePorLote = new Map();
+    for (const fila of data ?? []) {
+      const acumulado = disponiblePorLote.get(fila.loteId) ?? 0;
+      disponiblePorLote.set(fila.loteId, acumulado + Number(fila.cantidadDisponible ?? 0));
+    }
+    return { disponiblePorLote, error: null };
   } catch (error) {
-    return { detalle: [], error: normalizarError(error) };
+    return { disponiblePorLote: new Map(), error: normalizarError(error) };
+  }
+}
+
+/**
+ * Receta emitida de una atencion, con su detalle y la existencia disponible de cada lote, para
+ * la pantalla de entrega de medicamentos (issue #749).
+ *
+ * Llega al paciente por el camino real: recetas -> consultas (atencion_id) -> expedientes
+ * (numero_ficha) -> pacientes. La cantidad disponible sale de `existencias`, nunca de
+ * `lotes.cantidad_ingresada` (eso es lo que entro, no lo que queda).
+ *
+ * `error: null` con `receta: null` es un resultado valido (no hay receta emitida para esa
+ * atencion, o RLS no le da acceso a quien consulta — las politicas de SELECT de `consultas`/
+ * `recetas`/`receta_detalle`, 00033, solo alcanzan a medico y administrador). Es un estado
+ * vacio, no un error: quien consuma esto no debe mostrar ErrorState en ese caso.
+ *
+ * @param {string} atencionId
+ * @returns {Promise<{ receta: object|null, detalles: object[], error: object|null }>}
+ */
+export async function obtenerRecetaPorAtencion(atencionId) {
+  if (!atencionId) return { receta: null, detalles: [], error: null };
+
+  try {
+    const { data, error } = await obtenerSupabase()
+      .from("recetas")
+      .select(COLUMNAS_DE_LA_ENTREGA)
+      .eq("consultas.atencion_id", atencionId)
+      .eq("estado", ESTADOS_RECETA.EMITIDA)
+      .order("created_at", { ascending: false });
+
+    if (error) return { receta: null, detalles: [], error: normalizarError(error) };
+
+    const fila = (data ?? [])[0];
+    if (!fila) return { receta: null, detalles: [], error: null };
+
+    const renglones = fila.detalle ?? [];
+    const { disponiblePorLote, error: errorExistencias } = await obtenerDisponiblePorLote(
+      renglones.map((renglon) => renglon.loteId),
+    );
+    if (errorExistencias) return { receta: null, detalles: [], error: errorExistencias };
+
+    return {
+      receta: aRecetaParaEntrega(fila),
+      detalles: renglones.map((renglon) => aDetalleParaEntrega(renglon, disponiblePorLote)),
+      error: null,
+    };
+  } catch (error) {
+    return { receta: null, detalles: [], error: normalizarError(error) };
   }
 }

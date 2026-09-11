@@ -27,8 +27,8 @@ import {
   generarReceta,
   iniciarAtencion,
   listarDiagnosticos,
-  obtenerDetalleDeEntrega,
   obtenerPaciente,
+  obtenerRecetaPorAtencion,
   obtenerRecetas,
   registrarConsulta,
   registrarPaciente,
@@ -273,19 +273,21 @@ describe("Flujo critico: atencion clinica completa", () => {
     expect(recetas.map((r) => r.id)).toContain(flujo.recetaId);
   });
 
-  // issue #759: la pantalla de entrega de medicamentos en movil pedia recetas.paciente_id,
+  // issue #759 / #749: la pantalla de entrega de medicamentos en movil pedia recetas.paciente_id,
   // recetas.atencion_id, lotes.vencimiento y lotes.cantidad_actual -ninguna existe en el
-  // esquema- y fallaba siempre con PGRST108. Este paso es el que lo habria detectado.
-  it("11. el puesto de entrega en campo encuentra el renglon recien recetado, con su existencia real", async () => {
-    const { detalle, error } = await obtenerDetalleDeEntrega(flujo.atencionId);
+  // esquema- y fallaba siempre con PGRST108. obtenerRecetaPorAtencion() (PR #765) ya lo corrige;
+  // este paso es el que habria detectado el error real, contra la base real.
+  it("11. el puesto de entrega en campo encuentra la receta recien emitida, con su existencia real", async () => {
+    const { receta, detalles, error } = await obtenerRecetaPorAtencion(flujo.atencionId);
 
     expect(error).toBeNull();
-    const renglon = detalle.find((d) => d.medicamentoId === DEMO.medicamentoSano);
+    expect(receta?.id).toBe(flujo.recetaId);
+
+    const renglon = detalles.find((d) => d.medicamentoId === DEMO.medicamentoSano);
     expect(renglon).toBeDefined();
-    expect(renglon.cantidad_recetada).toBe(CANTIDAD_RECETADA);
-    expect(renglon.vencido).toBe(false);
+    expect(renglon.cantidadEntregada).toBe(CANTIDAD_RECETADA);
     // La aprobacion del paso 9 ya descarto CANTIDAD_RECETADA del lote: la existencia que ve el
     // puesto de entrega tiene que reflejar ese descuento, no la cantidad original del lote.
-    expect(renglon.existencias).toBe(existenciasIniciales[0].cantidad - CANTIDAD_RECETADA);
+    expect(renglon.cantidadDisponible).toBe(existenciasIniciales[0].cantidad - CANTIDAD_RECETADA);
   });
 });

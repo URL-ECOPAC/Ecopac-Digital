@@ -20,7 +20,7 @@
 // jornada, donde la pestaña "Cierre" (useResumenCierreJornada.js) es la unica que finaliza, con
 // el resumen completo del dia. Ver PLAN.md seccion 3.
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { cambiarEstadoJornada, contarPacientesAtendidosPorJornada, listarJornadas } from "./api.js";
 import { FILTROS_JORNADA_VACIOS, OPCIONES_ESTADO_JORNADA } from "./filtros.js";
@@ -190,12 +190,19 @@ export function useJornadasKanban(rol) {
   const [errorMovimiento, setErrorMovimiento] = useState(null);
   const [pedirCierreEnDetalle, setPedirCierreEnDetalle] = useState(null);
   const [moviendo, setMoviendo] = useState(false);
+  // Numera cada resolucion de cargar() (mismo mecanismo de turnos que useSesion.js) para que una
+  // llamada vieja, si resuelve despues de una mas nueva (filtro cambiado dos veces seguidas), no
+  // pise el estado que la llamada nueva ya escribio.
+  const peticionRef = useRef(0);
 
   const cargar = useCallback(async () => {
+    const idPeticion = ++peticionRef.current;
     setCargando(true);
     setError(null);
 
     const { jornadas: filas, error: errorDeLista } = await listarJornadas(aFiltrosDeApi(filtros));
+
+    if (idPeticion !== peticionRef.current) return;
 
     if (errorDeLista) {
       setJornadas([]);
@@ -218,6 +225,9 @@ export function useJornadasKanban(rol) {
     const { conteos } = await contarPacientesAtendidosPorJornada(
       filas.map((jornada) => jornada.id),
     );
+
+    if (idPeticion !== peticionRef.current) return;
+
     setPacientesPorJornada(conteos);
     setCargando(false);
   }, [filtros]);

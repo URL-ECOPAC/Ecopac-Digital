@@ -1,13 +1,11 @@
-// Pruebas de la entrega de medicamentos en campo (issue #164 / #759).
+// Pruebas de obtenerRecetaPorAtencion() (issue #749).
 //
-// La version anterior (escrita directamente en el hook de la pantalla) pedia columnas que no
-// existen en el esquema -recetas.paciente_id, recetas.atencion_id, lotes.vencimiento,
-// lotes.cantidad_actual- y fallaba siempre con PGRST108 contra una base real. Un doble de
-// Supabase como el de aqui abajo no puede detectar ese error de forma de consulta: solo
-// devuelve lo que se le programa, sea o no lo que PostgREST aceptaria. Por eso estas pruebas
-// verifican la FORMA de la consulta (que columnas y que filtro se piden) en vez de solo el
-// resultado; la prueba que de verdad habria detectado el PGRST108, contra una base real, es la
-// nueva del paso 10 de pruebas/e2e/atencion-clinica.e2e.test.js.
+// El hook useEntregaMedicamentos.js no se monta aqui: packages/shared corre vitest con
+// environment "node", sin DOM (ver vitest.config.js), y el patron del paquete es probar la
+// funcion de *.api.js que toca Supabase, no el hook (ver existencias.api.test.js,
+// recetas.api.test.js). El caso que importa para el criterio 7 es el camino de error: antes,
+// useEntregaMedicamentos.js comprobaba `err` en vez de `error` (el campo real de supabase-js),
+// asi que un fallo de la consulta nunca se propagaba.
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -22,156 +20,185 @@ vi.mock("../api/cliente.js", () => ({
   },
 }));
 
-const { aRenglonDeEntrega, obtenerDetalleDeEntrega } = await import("./entrega.api.js");
+const { obtenerRecetaPorAtencion } = await import("./entrega.api.js");
 
-function crearCliente(respuesta) {
+/**
+ * Doble del cliente: enruta por nombre de tabla, porque obtenerRecetaPorAtencion() consulta
+ * "recetas" y, si hay lotes en el detalle, tambien "existencias".
+ */
+function crearCliente({ recetas, existencias = { data: [], error: null } } = {}) {
   const llamadas = [];
-  const resolver = async () => (respuesta instanceof Error ? Promise.reject(respuesta) : respuesta);
 
-  const encadenable = {
-    select(columnas) {
-      llamadas.push({ paso: "select", columnas });
-      return encadenable;
-    },
-    eq(columna, valor) {
-      llamadas.push({ paso: "eq", columna, valor });
-      return encadenable;
-    },
-    then(resolve, reject) {
-      return resolver().then(resolve, reject);
-    },
-  };
+  function cadena(resultado) {
+    return {
+      select(columnas) {
+        llamadas.push({ paso: "select", columnas });
+        return this;
+      },
+      eq(columna, valor) {
+        llamadas.push({ paso: "eq", columna, valor });
+        return this;
+      },
+      in(columna, valores) {
+        llamadas.push({ paso: "in", columna, valores });
+        return this;
+      },
+      order(columna, opciones) {
+        llamadas.push({ paso: "order", columna, opciones });
+        return this;
+      },
+      then(resolve, reject) {
+        const promesa =
+          resultado instanceof Error ? Promise.reject(resultado) : Promise.resolve(resultado);
+        return promesa.then(resolve, reject);
+      },
+    };
+  }
 
   return {
     llamadas,
     from(tabla) {
       llamadas.push({ paso: "from", tabla });
-      return encadenable;
+      if (tabla === "recetas") return cadena(recetas);
+      if (tabla === "existencias") return cadena(existencias);
+      throw new Error(`Tabla no esperada en la prueba: ${tabla}`);
     },
   };
 }
+
+const RENGLON_CON_LOTE = {
+  id: "det-1",
+  medicamentoId: "med-1",
+  loteId: "lot-1",
+  dosis: "1 capsula",
+  frecuencia: "cada 8 horas",
+  duracion: "7 dias",
+  cantidadEntregada: 21,
+  medicamento: { nombre: "Amoxicilina" },
+  lote: { numeroLote: "L-100", fechaVencimiento: "2027-01-01" },
+};
+
+const RENGLON_SIN_LOTE = {
+  id: "det-2",
+  medicamentoId: "med-2",
+  loteId: null,
+  dosis: "10 ml",
+  frecuencia: "cada 12 horas",
+  duracion: "5 dias",
+  cantidadEntregada: 2,
+  medicamento: { nombre: "Paracetamol" },
+  lote: null,
+};
+
+const FILA_RECETA = {
+  id: "rec-1",
+  folio: "REC-ABC123",
+  consultas: {
+    atencionId: "aten-1",
+    expediente: {
+      numeroFicha: "000123",
+      paciente: { nombres: "Maria", apellidos: "Perez" },
+    },
+  },
+  detalle: [RENGLON_CON_LOTE, RENGLON_SIN_LOTE],
+};
 
 beforeEach(() => {
   dobles.cliente = null;
 });
 
-describe("aRenglonDeEntrega", () => {
-  it("suma la existencia disponible de todas las bodegas del lote", () => {
-    const renglon = aRenglonDeEntrega({
-      id: "d-1",
-      medicamentoId: "med-1",
-      cantidadEntregada: 5,
-      dosis: "1 tableta",
-      frecuencia: "cada 8 horas",
-      duracion: "5 dias",
-      medicamento: { nombre: "Loratadina" },
-      lote: {
-        fechaVencimiento: "2030-01-01",
-        existencias: [{ cantidadDisponible: 10 }, { cantidadDisponible: 20 }],
+describe("obtenerRecetaPorAtencion", () => {
+  it("sin atencionId no toca la red", async () => {
+    const resultado = await obtenerRecetaPorAtencion(undefined);
+
+    expect(resultado).toEqual({ receta: null, detalles: [], error: null });
+  });
+
+  it("camino feliz: arma receta y detalles, con la existencia sumada por lote", async () => {
+    dobles.cliente = crearCliente({
+      recetas: { data: [FILA_RECETA], error: null },
+      existencias: {
+        data: [
+          { loteId: "lot-1", cantidadDisponible: 30 },
+          { loteId: "lot-1", cantidadDisponible: 5 },
+        ],
+        error: null,
       },
     });
 
-    expect(renglon.existencias).toBe(30);
-    expect(renglon.medicamento).toBe("Loratadina");
-    expect(renglon.cantidad_recetada).toBe(5);
-    expect(renglon.vencido).toBe(false);
-  });
-
-  it("marca vencido un lote cuya fecha ya paso", () => {
-    const renglon = aRenglonDeEntrega({
-      id: "d-1",
-      lote: { fechaVencimiento: "2000-01-01", existencias: [] },
-    });
-
-    expect(renglon.vencido).toBe(true);
-    expect(renglon.existencias).toBe(0);
-  });
-
-  it("sin lote embebido no revienta: no hay existencia ni fecha, y cuenta como vencido", () => {
-    expect(() => aRenglonDeEntrega({ id: "d-1" })).not.toThrow();
-    expect(aRenglonDeEntrega({ id: "d-1" }).vencido).toBe(true);
-  });
-});
-
-describe("obtenerDetalleDeEntrega", () => {
-  it("sin atencionId no consulta nada", async () => {
-    const { detalle, error } = await obtenerDetalleDeEntrega();
-
-    expect(detalle).toEqual([]);
-    expect(error).toBeNull();
-    expect(dobles.cliente).toBeNull();
-  });
-
-  it("consulta receta_detalle y filtra por el alias que declara el select, no por el nombre de la tabla", async () => {
-    dobles.cliente = crearCliente({ data: [], error: null });
-
-    await obtenerDetalleDeEntrega("atencion-1");
-
-    expect(dobles.cliente.llamadas[0]).toEqual({ paso: "from", tabla: "receta_detalle" });
-
-    const columnas = dobles.cliente.llamadas.find((l) => l.paso === "select").columnas;
-    // La version anterior pedia recetas.paciente_id y recetas.atencion_id -columnas que no
-    // existen: el paciente y la atencion se llegan via consultas y expedientes, no son
-    // columnas propias de recetas-, ademas de lotes.vencimiento y lotes.cantidad_actual.
-    expect(columnas).toBe(
-      "id, medicamentoId:medicamento_id, cantidadEntregada:cantidad_entregada, dosis, " +
-        "frecuencia, duracion, medicamento:medicamentos(nombre), " +
-        "lote:lotes(numeroLote:numero_lote, fechaVencimiento:fecha_vencimiento, " +
-        "existencias(cantidadDisponible:cantidad_disponible)), " +
-        "receta:recetas!inner(id, folio, consulta:consultas!inner(atencionId:atencion_id))",
-    );
-
-    const filtro = dobles.cliente.llamadas.find((l) => l.paso === "eq");
-    expect(filtro).toEqual({
-      paso: "eq",
-      columna: "receta.consulta.atencion_id",
-      valor: "atencion-1",
-    });
-  });
-
-  it("traduce cada fila con aRenglonDeEntrega", async () => {
-    dobles.cliente = crearCliente({
-      data: [
-        {
-          id: "d-1",
-          medicamentoId: "med-1",
-          cantidadEntregada: 5,
-          medicamento: { nombre: "Loratadina" },
-          lote: { fechaVencimiento: "2030-01-01", existencias: [{ cantidadDisponible: 10 }] },
-        },
-      ],
-      error: null,
-    });
-
-    const { detalle, error } = await obtenerDetalleDeEntrega("atencion-1");
+    const { receta, detalles, error } = await obtenerRecetaPorAtencion("aten-1");
 
     expect(error).toBeNull();
-    expect(detalle).toEqual([
-      {
-        id: "d-1",
-        medicamentoId: "med-1",
-        medicamento: "Loratadina",
-        dosis: undefined,
-        frecuencia: undefined,
-        duracion: undefined,
-        cantidad_recetada: 5,
-        existencias: 10,
-        fechaVencimiento: "2030-01-01",
-        vencido: false,
-      },
-    ]);
+    expect(receta).toEqual({
+      id: "rec-1",
+      folio: "REC-ABC123",
+      pacienteNombre: "Maria Perez",
+      numeroFicha: "000123",
+    });
+    expect(detalles).toHaveLength(2);
+    expect(detalles[0]).toMatchObject({
+      id: "det-1",
+      medicamento: "Amoxicilina",
+      cantidadEntregada: 21,
+      cantidadDisponible: 35,
+    });
   });
 
-  it("un error de la consulta se normaliza y no se confunde con una receta vacia", async () => {
+  it("un renglon sin lote_id muestra cantidadDisponible null, nunca 0", async () => {
     dobles.cliente = crearCliente({
-      data: null,
-      error: { code: "PGRST108", message: "boom" },
+      recetas: { data: [FILA_RECETA], error: null },
+      existencias: { data: [{ loteId: "lot-1", cantidadDisponible: 10 }], error: null },
     });
 
-    const { detalle, error } = await obtenerDetalleDeEntrega("atencion-1");
+    const { detalles } = await obtenerRecetaPorAtencion("aten-1");
 
-    expect(detalle).toEqual([]);
+    const sinLote = detalles.find((detalle) => detalle.id === "det-2");
+    expect(sinLote.cantidadDisponible).toBeNull();
+  });
+
+  it("sin receta emitida para la atencion devuelve un estado vacio, no un error", async () => {
+    dobles.cliente = crearCliente({ recetas: { data: [], error: null } });
+
+    const resultado = await obtenerRecetaPorAtencion("aten-sin-receta");
+
+    expect(resultado).toEqual({ receta: null, detalles: [], error: null });
+  });
+
+  it("si la consulta de recetas falla, propaga el error y no una lista vacia (issue #749, criterio 7)", async () => {
+    dobles.cliente = crearCliente({
+      recetas: { data: null, error: { code: "PGRST301", message: "JWT expired" } },
+    });
+
+    const { receta, detalles, error } = await obtenerRecetaPorAtencion("aten-1");
+
+    expect(receta).toBeNull();
+    expect(detalles).toEqual([]);
     expect(error).not.toBeNull();
-    expect(error.mensaje).toBeTruthy();
+    expect(typeof error.mensaje).toBe("string");
+    expect(error.mensaje.length).toBeGreaterThan(0);
+  });
+
+  it("si la consulta de existencias falla, tambien propaga el error (no se ignora)", async () => {
+    dobles.cliente = crearCliente({
+      recetas: { data: [FILA_RECETA], error: null },
+      existencias: { data: null, error: { code: "42501", message: "permission denied" } },
+    });
+
+    const { receta, detalles, error } = await obtenerRecetaPorAtencion("aten-1");
+
+    expect(receta).toBeNull();
+    expect(detalles).toEqual([]);
+    expect(error).not.toBeNull();
+    expect(typeof error.mensaje).toBe("string");
+  });
+
+  it("una excepcion inesperada (por ejemplo, fallo de red) tambien se propaga como error, no se traga", async () => {
+    dobles.cliente = crearCliente({ recetas: new Error("Failed to fetch") });
+
+    const { receta, error } = await obtenerRecetaPorAtencion("aten-1");
+
+    expect(receta).toBeNull();
+    expect(error).not.toBeNull();
+    expect(typeof error.mensaje).toBe("string");
   });
 });
