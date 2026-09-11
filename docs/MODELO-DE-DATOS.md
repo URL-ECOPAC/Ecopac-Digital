@@ -58,6 +58,16 @@ Estado al 4 de septiembre de 2026, sobre `develop`.
 El prefijo `extensions.` no es decorativo: la migracion `00005` movio las extensiones fuera de
 `public` a proposito, y omitirlo rompe la migracion.
 
+**Divergencia abierta: la bandera de borrado logico en catalogos.** No hay un solo nombre. Los
+catalogos usan `activo` (`medicamentos` en `00050`, `diagnosticos` en `00113`, `donantes` en
+`00022`) o `es_vigente` (`condiciones_cronicas` en `00115`, `comunidades` en `00117`), y las dos
+significan exactamente lo mismo: FALSE lo retira del selector sin borrar la fila. Las dos ultimas
+se escribieron despues y no siguieron el nombre que ya existia. Queda anotado aqui porque una
+migracion aplicada no se edita (ver `AGENTS.md`): unificarlo pide una migracion nueva que
+renombre y actualice a quien las lee, no un cambio en los archivos de `00115` y `00117`.
+`pacientes.fecha_baja` es otra cosa y no entra en esta comparacion: no es una bandera, es la
+fecha en que se dio de baja.
+
 ---
 
 ## 2. Mapa general
@@ -210,10 +220,15 @@ porque el dato viene del INE y no cambia.
 | --------------- | --------- | --------------------------------------------------------------------------------- |
 | `departamentos` | 00006     | `id` INT PK, `nombre`                                                             |
 | `municipios`    | 00006     | `id` INT PK, `departamento_id`, `nombre`                                          |
-| `comunidades`   | 00008     | `id` UUID PK, `municipio_id`, `nombre`, `latitud`, `longitud`, `referencia_acceso` |
+| `comunidades`   | 00008     | `id` UUID PK, `municipio_id`, `nombre`, `latitud`, `longitud`, `referencia_acceso`, `es_vigente` [+00117] |
 
 `referencia_acceso` es texto libre para llegar: la comunidad rural no siempre tiene direccion.
 `latitud`/`longitud` son `NUMERIC(9,6)`.
+
+`es_vigente` (BOOLEAN NOT NULL DEFAULT TRUE) es borrado logico: una comunidad que deja de
+visitarse se retira de los selectores sin borrarla, porque `pacientes.comunidad_id` la
+referencia. Desde `00111` esa referencia es opcional, asi que un paciente puede no tener
+comunidad, pero las que ya la tienen no pueden quedarse colgadas.
 
 ---
 
@@ -263,9 +278,14 @@ una migracion de tipo.
 
 ### `condiciones_cronicas` [00010] y `padecimientos_cronicos` [00010]
 
-`condiciones_cronicas` es el catalogo (`nombre` unico). `padecimientos_cronicos` es lo que padece
-un paciente concreto: `paciente_id`, `condicion_id`, `fecha_diagnostico`, `estado`
+`condiciones_cronicas` es el catalogo (`nombre` unico, y `es_vigente` BOOLEAN NOT NULL
+DEFAULT TRUE desde `00115`, que la retira del selector sin borrarla). `padecimientos_cronicos` es
+lo que padece un paciente concreto: `paciente_id`, `condicion_id`, `fecha_diagnostico`, `estado`
 (`activa`/`controlada`/`resuelta`) y `notas`. Auditada desde `00070`.
+
+No confundir las dos banderas: `condiciones_cronicas.es_vigente` dice si la condicion sigue en el
+catalogo que se le ofrece a quien atiende; `padecimientos_cronicos.estado` dice como va ese
+padecimiento en ese paciente.
 
 ### `fusiones_pacientes` [00101]
 
@@ -372,9 +392,14 @@ que la edita, aparte del administrador.
 
 ### `diagnosticos` [00018] y `consulta_diagnostico` [00018]
 
-`diagnosticos` es catalogo (`codigo`, `nombre`, `descripcion`), administrado solo por el
+`diagnosticos` es catalogo (`codigo`, `nombre`, `descripcion`, `activo`), administrado solo por el
 administrador desde `00105`. `consulta_diagnostico` los asocia a la consulta con
 `es_principal` (BOOLEAN) para distinguir el diagnostico principal de los secundarios.
+
+`activo` (BOOLEAN NOT NULL DEFAULT TRUE, `00113`) en FALSE retira el diagnostico del selector de
+la consulta medica sin borrarlo: `consulta_diagnostico` lo referencia `ON DELETE RESTRICT`
+(`00018`) y las consultas que ya lo citan no cambian. Mismo patron que `medicamentos.activo`
+(`00050`).
 
 ### `recetas` [00019]
 
@@ -661,7 +686,10 @@ Del lado del cliente, estos valores nacen una sola vez en `packages/shared/enums
 | `fn_registrar_medicamento(...)`         | Alta de medicamento con sus principios activos                    |
 | `fn_generar_receta(...)`                | Emite la receta y descuenta inventario, atomicamente              |
 | `fn_existencias_disponibles(...)`       | Stock consultable, filtrado y paginado                            |
+| `fn_valor_de_inventario_disponible(...)` | [00122] Valoriza el stock por bodega, medicamento y origen; declara aparte lo que no tiene `costo_unitario` |
 | `fn_aplicar_ajuste_existencias(...)`    | Suma o resta stock por (lote, bodega); lanza error si no alcanza   |
+| `fn_registrar_donacion(...)`            | [00114] Crea la donacion y su detalle en una transaccion. Devuelve JSONB, no la fila: quien llama necesita el id real de cada renglon para poder generar despues el ingreso de inventario |
+| `fn_anular_donacion(donacion, motivo)`  | [00114] Anula y sella `anulada_por` / `anulada_en`                 |
 | `fn_generar_alertas_caducidad()`        | Genera alertas de lo que vence en 30 dias                         |
 | `fn_crear_usuario_administrativo(...)`  | Alta de cuenta; SECURITY DEFINER, sin GRANT a PUBLIC              |
 | `presupuesto_de_jornada / _de_proyecto / _del_sistema()` | Asignado, ejecutado y disponible             |

@@ -330,6 +330,21 @@ async function normalizarErrorDeFuncion(error) {
   return normalizarError(error);
 }
 
+/**
+ * Da de alta un usuario invitandolo por correo.
+ *
+ * No escribe en `perfiles` directamente: llama a la Edge Function de invitacion, que es quien
+ * crea la cuenta de Auth y su perfil. El cliente no puede hacerlo porque crear una cuenta exige
+ * la llave de servicio.
+ *
+ * Valida antes de salir a la red: si el formulario esta mal, devuelve `errores` por campo y no
+ * gasta una llamada.
+ *
+ * @param {{ nombres: string, apellidos: string, email: string, telefono?: string, rol: string }} datos
+ * @returns {Promise<{ usuario: object|null, errores: Record<string, string>, error: object|null }>}
+ *   `errores` mapea campo a mensaje cuando la validacion local fallo; `error` es el fallo del
+ *   servidor, ya normalizado.
+ */
 export async function crearUsuario(datos) {
   const errores = validarPerfil(datos ?? {});
   if (Object.keys(errores).length > 0) {
@@ -357,6 +372,21 @@ export async function crearUsuario(datos) {
   }
 }
 
+/**
+ * Actualiza los campos editables de un perfil.
+ *
+ * Solo viajan las columnas de `CAMPOS_EDITABLES`: lo que venga de mas en `datos` se ignora, para
+ * que la pantalla no pueda escribir un campo que no le toca. El correo no se edita aqui -vive en
+ * la cuenta de Auth, no en el perfil- y por eso se excluye de la validacion.
+ *
+ * Sin id, o sin ningun campo editable que cambiar, no hace nada y devuelve `error: null`: no es
+ * un fallo, es que no habia nada que guardar.
+ *
+ * @param {string} idUsuario UUID del perfil.
+ * @param {object} datos Campos a cambiar, en camelCase.
+ * @returns {Promise<{ perfil: object|null, errores: Record<string, string>, error: object|null }>}
+ *   `errores` solo trae los campos que de verdad se intentaron escribir.
+ */
 export async function actualizarUsuario(idUsuario, datos) {
   if (!idUsuario) return { perfil: null, errores: {}, error: null };
 
@@ -398,10 +428,28 @@ export async function actualizarUsuario(idUsuario, datos) {
   }
 }
 
+/**
+ * Desactiva un usuario: `perfiles.activo = FALSE`.
+ *
+ * Es borrado logico, no fisico. La cuenta de Auth sigue existiendo, pero `rol_actual()` (00004)
+ * devuelve NULL para un perfil inactivo, asi que todas las politicas RLS que dependen del rol
+ * dejan de concederle nada. El historial clinico que registro no se toca.
+ *
+ * @param {string} idUsuario UUID del perfil.
+ * @returns {Promise<{ perfil: object|null, error: object|null }>}
+ */
 export function desactivarUsuario(idUsuario) {
   return cambiarActivo(idUsuario, false);
 }
 
+/**
+ * Reactiva un usuario desactivado: `perfiles.activo = TRUE`.
+ *
+ * Le devuelve el rol que ya tenia, no uno nuevo: `activo` es lo unico que cambia.
+ *
+ * @param {string} idUsuario UUID del perfil.
+ * @returns {Promise<{ perfil: object|null, error: object|null }>}
+ */
 export function reactivarUsuario(idUsuario) {
   return cambiarActivo(idUsuario, true);
 }
