@@ -30,9 +30,10 @@ configuracion de GitHub (plantillas de issues, PR y los workflows de CI/CD) esta
 
 ## Dependencias y Herramientas
 
-| Documento                            | Para que sirve                                                    |
-| ------------------------------------ | ----------------------------------------------------------------- |
-| [DEPENDENCIES.md](./DEPENDENCIES.md) | Estrategia de versionado de paquetes, cuando actualizar y por que |
+| Documento                                    | Para que sirve                                                    |
+| -------------------------------------------- | ----------------------------------------------------------------- |
+| [DEPENDENCIES.md](./DEPENDENCIES.md)         | Estrategia de versionado de paquetes, cuando actualizar y por que |
+| [COSTOS-Y-LIMITES.md](./COSTOS-Y-LIMITES.md) | Limites de las capas gratuitas, que se agota primero y que cuesta el siguiente escalon |
 
 ## Contexto para asistentes de IA
 
