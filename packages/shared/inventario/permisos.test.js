@@ -13,6 +13,7 @@ import {
   puedeRechazarMovimiento,
   puedeRegistrarMovimiento,
   puedeVerMovimientos,
+  puedeVerValorizacion,
 } from "./permisos.js";
 
 describe("permisos de movimientos de inventario", () => {
@@ -66,5 +67,22 @@ describe("permisos de movimientos de inventario", () => {
       puedeAprobar: true,
       puedeRechazar: true,
     });
+  });
+});
+
+describe("puedeVerValorizacion (issue #752)", () => {
+  it("administrador y los roles consultivos ven el valor monetario del inventario", () => {
+    expect(puedeVerValorizacion(ROLES.ADMINISTRADOR)).toBe(true);
+    expect(puedeVerValorizacion(ROLES.JUNTA_DIRECTIVA)).toBe(true);
+    expect(puedeVerValorizacion(ROLES.SOCIO_FUNDADOR)).toBe(true);
+  });
+
+  it("medico y voluntario general no ven costo_unitario: es informacion financiera", () => {
+    expect(puedeVerValorizacion(ROLES.MEDICO)).toBe(false);
+    expect(puedeVerValorizacion(ROLES.VOLUNTARIO)).toBe(false);
+  });
+
+  it("un rol que no existe no ve nada", () => {
+    expect(puedeVerValorizacion("coordinador")).toBe(false);
   });
 });

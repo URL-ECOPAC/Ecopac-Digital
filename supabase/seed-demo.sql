@@ -252,19 +252,25 @@ ON CONFLICT DO NOTHING;
 -- 7. Lotes (fechas relativas a CURRENT_DATE: DO UPDATE las refresca en cada corrida)
 -- ============================================================================
 -- L1 vencido, L2 vence dentro del mes, L3/L4 vencimiento lejano (flujo sano).
-INSERT INTO lotes (id, medicamento_id, numero_lote, proveedor_id, origen, cantidad_ingresada, fecha_ingreso, fecha_vencimiento) VALUES
+--
+-- costo_unitario (issue #752): L1 y L3 se dejan sin costo a proposito -uno de compra sin precio
+-- capturado, uno de donacion, los dos casos reales que fn_valor_de_inventario_disponible tiene
+-- que declarar como "sin valorizar" en vez de contar como cero-. L2 y L4 si traen costo, para
+-- que la demo muestre tambien el caso normal.
+INSERT INTO lotes (id, medicamento_id, numero_lote, proveedor_id, origen, cantidad_ingresada, fecha_ingreso, fecha_vencimiento, costo_unitario) VALUES
   ('de000009-0000-0000-0000-000000000001', 'de000007-0000-0000-0000-000000000001',
-   'LOTE-DEMO-VENCIDO', 'de000003-0000-0000-0000-000000000001', 'compra', 200, CURRENT_DATE - 400, CURRENT_DATE - 10),
+   'LOTE-DEMO-VENCIDO', 'de000003-0000-0000-0000-000000000001', 'compra', 200, CURRENT_DATE - 400, CURRENT_DATE - 10, NULL),
   ('de000009-0000-0000-0000-000000000002', 'de000007-0000-0000-0000-000000000002',
-   'LOTE-DEMO-POR-VENCER', 'de000003-0000-0000-0000-000000000001', 'compra', 150, CURRENT_DATE - 60, CURRENT_DATE + 20),
+   'LOTE-DEMO-POR-VENCER', 'de000003-0000-0000-0000-000000000001', 'compra', 150, CURRENT_DATE - 60, CURRENT_DATE + 20, 1.00),
   ('de000009-0000-0000-0000-000000000003', 'de000007-0000-0000-0000-000000000003',
-   'LOTE-DEMO-DONACION', 'de000003-0000-0000-0000-000000000002', 'donacion', 80, CURRENT_DATE - 30, CURRENT_DATE + 400),
+   'LOTE-DEMO-DONACION', 'de000003-0000-0000-0000-000000000002', 'donacion', 80, CURRENT_DATE - 30, CURRENT_DATE + 400, NULL),
   ('de000009-0000-0000-0000-000000000004', 'de000007-0000-0000-0000-000000000004',
-   'LOTE-DEMO-SANO', 'de000003-0000-0000-0000-000000000001', 'compra', 300, CURRENT_DATE - 200, CURRENT_DATE + 500)
+   'LOTE-DEMO-SANO', 'de000003-0000-0000-0000-000000000001', 'compra', 300, CURRENT_DATE - 200, CURRENT_DATE + 500, 2.50)
 ON CONFLICT (id) DO UPDATE SET
   cantidad_ingresada = EXCLUDED.cantidad_ingresada,
   fecha_ingreso = EXCLUDED.fecha_ingreso,
   fecha_vencimiento = EXCLUDED.fecha_vencimiento,
+  costo_unitario = EXCLUDED.costo_unitario,
   updated_at = NOW();
 
 -- ============================================================================

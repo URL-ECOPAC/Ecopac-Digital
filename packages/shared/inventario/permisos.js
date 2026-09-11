@@ -19,7 +19,7 @@
 // permiso por rol, y cambiarla es una decision de producto que esta issue no pidio. Queda
 // anotado para quien la revise.
 
-import { esAdministrador, ROLES } from "../usuarios/roles.js";
+import { esAdministrador, esConsultivo, ROLES } from "../usuarios/roles.js";
 
 /** Puede consultar movimientos. Espejo de la politica de SELECT (00034): abierta a cualquiera. */
 export function puedeVerMovimientos(rol) {
@@ -66,4 +66,17 @@ export function permisosDeMovimientos(rol) {
     puedeAprobar: puedeAprobarMovimiento(rol),
     puedeRechazar: puedeRechazarMovimiento(rol),
   };
+}
+
+/**
+ * Puede consultar la valorizacion monetaria del inventario (issue #752).
+ *
+ * Espejo de la guarda interna de fn_valor_de_inventario_disponible() (00122): administrador y
+ * los roles consultivos (junta directiva, socio fundador), la misma regla que ya protege el
+ * resto de reportes financieros (presupuesto_de_jornada/proyecto/sistema, obtenerIndicadoresImpacto).
+ * costo_unitario es informacion financiera que ni medico ni voluntario general necesitan para
+ * hacer su trabajo, aunque los dos vean el resto de un lote.
+ */
+export function puedeVerValorizacion(rol) {
+  return esAdministrador(rol) || esConsultivo(rol);
 }

@@ -193,6 +193,22 @@ sin reasignar, bajo el absorbido. Reflejo en el cliente: `puedeFusionarPacientes
 | `alertas_caducidad`      | R U           | R                                | R      | R                  | `00034`. Sin INSERT para nadie: las genera una rutina con `service_role`                                    |
 | `movimientos_inventario` | R U **A**     | R                                | C R U\* | C R U\*            | `00034` + `00048` + `00086` (aprobar admite tambien `tiene_permiso('inventario.aprobar')`) + `00106`. \*Solo el **propio** movimiento y solo mientras siga `pendiente` |
 
+**`lotes.costo_unitario` y `lotes.moneda` (issue #752): divergencia declarada entre RLS y lo que
+de verdad protege el dato.** La fila de `lotes` de arriba dice `C R U` para medico y voluntario
+general igual que el resto de sus columnas -y es cierto para estas dos tambien: no hay ninguna
+politica ni `GRANT` que las trate distinto-. El costo es informacion financiera que ninguna
+pantalla les muestra hoy, pero **quien lo protege no es RLS de `lotes`, es
+`fn_valor_de_inventario_disponible` (`00122`)**, la unica funcion pensada para leer el valor
+monetario: es `SECURITY DEFINER` y comprueba ella misma que quien llama sea administrador o un
+rol consultivo, con la misma regla que ya protege `presupuesto_de_jornada`/`proyecto`/`sistema`
+(`00080`). Se probo restringir las dos columnas con `REVOKE SELECT (columna) ... FROM
+authenticated` y no funciona: Postgres no retira nada a nivel de columna mientras el rol
+conserve `SELECT` a nivel de tabla (que `authenticated` ya tiene sobre `lotes` desde la `00034`),
+comprobado contra el stack local con un JWT de medico. Reescribir el `GRANT` de las 13 columnas
+de `lotes` para excluir solo estas dos es la unica forma real de cerrarlo a nivel de fila, y es
+una migracion grande y fragil para dos columnas -queda anotado como limitacion conocida, no como
+decision cerrada-. Reflejo en el cliente: `inventario/permisos.js`, `puedeVerValorizacion(rol)`.
+
 **El circuito de aprobacion del inventario** es el patron central del modulo: medico y voluntario
 crean un movimiento y la politica de INSERT (`00034`) les exige `estado = 'pendiente'` y
 `registrado_por = auth.uid()`. El trigger `fn_autoaprobar_movimiento_inventario` (`00047`) hace
