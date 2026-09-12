@@ -5,6 +5,8 @@ import {
   obtenerPresupuestoJornada,
   obtenerPresupuestoProyecto,
   obtenerPresupuestoSistema,
+  obtenerPresupuestosDeJornadas,
+  obtenerPresupuestosDeProyectos,
   registrarGasto,
   editarGasto,
   listarGastos,
@@ -33,6 +35,20 @@ function clienteRpc(respuesta) {
         maybeSingle: async () =>
           respuesta instanceof Error ? Promise.reject(respuesta) : respuesta,
       };
+    },
+  };
+}
+
+// Mock de rpc() para las versiones en lote (presupuestos_de_proyectos/presupuestos_de_jornadas,
+// issue #771): a diferencia de clienteRpc(), aqui la promesa que devuelve rpc() se resuelve
+// directo -sin .maybeSingle()-, porque estas funciones devuelven varias filas, no una.
+function clienteRpcLista(respuesta) {
+  const llamadas = [];
+  return {
+    llamadas,
+    rpc(nombre, argumentos) {
+      llamadas.push({ nombre, argumentos });
+      return respuesta instanceof Error ? Promise.reject(respuesta) : Promise.resolve(respuesta);
     },
   };
 }
@@ -221,6 +237,120 @@ describe("obtenerPresupuestoSistema", () => {
 
     expect(cliente.llamadas).toEqual([{ nombre: "presupuesto_del_sistema", argumentos: {} }]);
     expect(presupuesto).toEqual({ asignado: 0, gastado: 0, disponible: 0, pendiente: 0 });
+  });
+});
+
+describe("obtenerPresupuestosDeProyectos (issue #771)", () => {
+  it("llama a la RPC en lote una sola vez con todos los id", async () => {
+    const cliente = clienteRpcLista({ data: [], error: null });
+    dobles.cliente = cliente;
+
+    await obtenerPresupuestosDeProyectos(["p1", "p2"]);
+
+    expect(cliente.llamadas).toEqual([
+      { nombre: "presupuestos_de_proyectos", argumentos: { p_proyecto_ids: ["p1", "p2"] } },
+    ]);
+  });
+
+  it("arma un mapa id -> presupuesto convertido a numero", async () => {
+    dobles.cliente = clienteRpcLista({
+      data: [
+        { proyecto_id: "p1", asignado: "1000", gastado: "400", disponible: "600", pendiente: "0" },
+      ],
+      error: null,
+    });
+
+    const { presupuestos, error } = await obtenerPresupuestosDeProyectos(["p1", "p2"]);
+
+    expect(error).toBeNull();
+    expect(presupuestos).toEqual({
+      p1: { asignado: 1000, gastado: 400, disponible: 600, pendiente: 0 },
+    });
+  });
+
+  it("un proyecto sin fila en la respuesta simplemente no aparece en el mapa", async () => {
+    dobles.cliente = clienteRpcLista({ data: [], error: null });
+
+    const { presupuestos } = await obtenerPresupuestosDeProyectos(["p-sin-jornadas"]);
+
+    expect(presupuestos).toEqual({});
+  });
+
+  it("no toca el cliente de Supabase si la lista de id llega vacia", async () => {
+    const { presupuestos, error } = await obtenerPresupuestosDeProyectos([]);
+
+    expect(presupuestos).toEqual({});
+    expect(error).toBeNull();
+  });
+
+  it("descarta id vacios/nulos antes de llamar a la RPC", async () => {
+    const cliente = clienteRpcLista({ data: [], error: null });
+    dobles.cliente = cliente;
+
+    await obtenerPresupuestosDeProyectos(["p1", null, undefined, ""]);
+
+    expect(cliente.llamadas).toEqual([
+      { nombre: "presupuestos_de_proyectos", argumentos: { p_proyecto_ids: ["p1"] } },
+    ]);
+  });
+
+  it("normaliza el error del servidor en lugar de reenviarlo", async () => {
+    dobles.cliente = clienteRpcLista({ data: null, error: { code: "42501" } });
+
+    const { presupuestos, error } = await obtenerPresupuestosDeProyectos(["p1"]);
+
+    expect(presupuestos).toEqual({});
+    expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.PERMISO_DENEGADO);
+  });
+
+  it("clasifica como fallo de red la excepcion del fetch", async () => {
+    dobles.cliente = clienteRpcLista(new Error("Network request failed"));
+
+    const { error } = await obtenerPresupuestosDeProyectos(["p1"]);
+
+    expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.FALLO_DE_RED);
+    expect(error.esReintentable).toBe(true);
+  });
+});
+
+describe("obtenerPresupuestosDeJornadas (issue #771)", () => {
+  it("llama a la RPC en lote con el nombre y el argumento esperados", async () => {
+    const cliente = clienteRpcLista({ data: [], error: null });
+    dobles.cliente = cliente;
+
+    await obtenerPresupuestosDeJornadas(["j1", "j2"]);
+
+    expect(cliente.llamadas).toEqual([
+      { nombre: "presupuestos_de_jornadas", argumentos: { p_jornada_ids: ["j1", "j2"] } },
+    ]);
+  });
+
+  it("arma un mapa id -> presupuesto convertido a numero", async () => {
+    dobles.cliente = clienteRpcLista({
+      data: [
+        {
+          jornada_id: "j1",
+          asignado: "2000",
+          gastado: "500",
+          disponible: "1500",
+          pendiente: "100",
+        },
+      ],
+      error: null,
+    });
+
+    const { presupuestos } = await obtenerPresupuestosDeJornadas(["j1"]);
+
+    expect(presupuestos).toEqual({
+      j1: { asignado: 2000, gastado: 500, disponible: 1500, pendiente: 100 },
+    });
+  });
+
+  it("no toca el cliente de Supabase si la lista de id llega vacia", async () => {
+    const { presupuestos, error } = await obtenerPresupuestosDeJornadas(undefined);
+
+    expect(presupuestos).toEqual({});
+    expect(error).toBeNull();
   });
 });
 

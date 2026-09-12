@@ -2,15 +2,15 @@
 // #301, criterio 3: "al abrir un proyecto se ve el presupuesto asignado y ejecutado de cada
 // una de sus jornadas").
 //
-// Mismo patron N+1 que useEjecucionPresupuestal.js documenta para la lista de proyectos:
 // listarJornadasDelProyecto() (proyectos/api.js) no trae presupuesto, asi que se completa con
-// obtenerPresupuestoJornada() (presupuestos/api.js) por cada jornada. A la escala de jornadas
-// por proyecto de esta ONG el costo es aceptable; no se agrega una RPC nueva.
+// obtenerPresupuestosDeJornadas() (presupuestos/api.js), version en lote (issue #771, migracion
+// 00123) de la RPC de un solo id: una sola llamada con todos los id de las jornadas del
+// proyecto, no una por jornada.
 
 import { useCallback, useEffect, useState } from "react";
 
 import { listarJornadasDelProyecto } from "../proyectos/api.js";
-import { obtenerPresupuestoJornada } from "./api.js";
+import { obtenerPresupuestosDeJornadas } from "./api.js";
 import { combinarJornadasConPresupuesto } from "./useEjecucionPresupuestal.js";
 
 /**
@@ -42,12 +42,8 @@ export function useDetalleProyectoPresupuesto(proyectoId) {
       return;
     }
 
-    const presupuestosPorJornada = {};
-    await Promise.all(
-      filas.map(async (jornada) => {
-        const { presupuesto } = await obtenerPresupuestoJornada(jornada.id);
-        if (presupuesto) presupuestosPorJornada[jornada.id] = presupuesto;
-      }),
+    const { presupuestos: presupuestosPorJornada } = await obtenerPresupuestosDeJornadas(
+      filas.map((jornada) => jornada.id),
     );
 
     setJornadas(combinarJornadasConPresupuesto(filas, presupuestosPorJornada));
