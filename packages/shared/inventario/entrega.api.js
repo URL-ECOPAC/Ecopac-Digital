@@ -13,8 +13,9 @@ const COLUMNAS_DE_LA_ENTREGA = [
   "folio",
   "consultas!inner(atencionId:atencion_id, " +
     "expediente:expedientes(numeroFicha:numero_ficha, paciente:pacientes(nombres, apellidos)))",
-  "detalle:receta_detalle(id, medicamentoId:medicamento_id, loteId:lote_id, dosis, " +
-    "frecuencia, duracion, cantidadEntregada:cantidad_entregada, " +
+  "detalle:receta_detalle(id, medicamentoId:medicamento_id, loteId:lote_id, " +
+    "bodegaId:bodega_id, dosis, frecuencia, duracion, " +
+    "cantidadEntregada:cantidad_entregada, cantidadAjustada:cantidad_ajustada, " +
     "medicamento:medicamentos(nombre), " +
     "lote:lotes(numeroLote:numero_lote, fechaVencimiento:fecha_vencimiento))",
 ].join(", ");
@@ -37,12 +38,16 @@ function aDetalleParaEntrega(renglon, disponiblePorLote) {
     medicamentoId: renglon.medicamentoId,
     medicamento: renglon.medicamento?.nombre ?? "Medicamento desconocido",
     loteId: renglon.loteId ?? null,
+    bodegaId: renglon.bodegaId ?? null,
     numeroLote: renglon.lote?.numeroLote ?? null,
     fechaVencimiento: renglon.lote?.fechaVencimiento ?? null,
     dosis: renglon.dosis,
     frecuencia: renglon.frecuencia,
     duracion: renglon.duracion,
     cantidadEntregada: renglon.cantidadEntregada,
+    // NULL mientras nadie la corrija (fn_ajustar_entrega_receta, 00125, issue #764): en ese
+    // caso cantidadEntregada sigue siendo la cifra vigente, ver cantidadRealEntregada() abajo.
+    cantidadAjustada: renglon.cantidadAjustada ?? null,
     // Sin lote no hay fila de existencias que consultar: null (indeterminado), nunca 0, para
     // no leerse como "agotado" cuando en realidad es "no se eligio lote a esta receta" (00019,
     // receta_detalle.lote_id es nullable).
@@ -128,5 +133,33 @@ export async function obtenerRecetaPorAtencion(atencionId) {
     };
   } catch (error) {
     return { receta: null, detalles: [], error: normalizarError(error) };
+  }
+}
+
+/**
+ * Corrige la cantidad realmente entregada de un renglon de receta (issue #764), sin volver a
+ * descontar el inventario por el total: fn_ajustar_entrega_receta (migracion 00125) calcula la
+ * diferencia contra el ultimo valor confirmado y registra un movimiento solo por esa diferencia.
+ *
+ * No reescribe cantidadEntregada en el cliente ni en la base: el renglon devuelto por
+ * obtenerRecetaPorAtencion() sigue trayendo cantidadAjustada aparte, que quien consuma esto
+ * tiene que preferir sobre cantidadEntregada cuando no sea null (ver cantidadRealEntregada() en
+ * useEntregaMedicamentos.js).
+ *
+ * @param {string} recetaDetalleId
+ * @param {number} cantidadReal
+ * @returns {Promise<{ error: object|null }>}
+ */
+export async function ajustarEntregaReceta(recetaDetalleId, cantidadReal) {
+  try {
+    const { error } = await obtenerSupabase().rpc("fn_ajustar_entrega_receta", {
+      p_receta_detalle_id: recetaDetalleId,
+      p_cantidad_real: cantidadReal,
+    });
+
+    if (error) return { error: normalizarError(error) };
+    return { error: null };
+  } catch (error) {
+    return { error: normalizarError(error) };
   }
 }

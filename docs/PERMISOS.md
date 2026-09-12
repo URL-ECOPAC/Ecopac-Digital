@@ -167,6 +167,19 @@ stock espera a que administracion lo apruebe. Lo que la `00112` garantiza no es 
 siempre en el momento, sino que **nunca exista una receta emitida sin su movimiento registrado**.
 No hace falta ningun `GRANT` nuevo: el que ya tenia (`authenticated`) sigue siendo el mismo.
 
+`fn_ajustar_entrega_receta()` (`00125`, issue #764) corrige la cantidad realmente entregada de un
+renglon sin reescribir `cantidad_entregada` ni descontar el inventario dos veces: calcula la
+diferencia contra el ultimo valor confirmado y registra un movimiento nuevo solo por esa
+diferencia. A diferencia de `fn_generar_receta()`, es **SECURITY DEFINER**: `cantidad_ajustada`,
+`ajustada_por` y `ajustada_en` no tienen policy ni `GRANT` de `UPDATE` para ningun rol -mismo
+candado que ya protegia `cantidad_entregada`-, asi que la funcion no podria escribirlas de otro
+modo. Como SECURITY DEFINER se salta RLS, la funcion valida el rol a mano (`es_administrador()` o
+`rol_actual() = 'medico'`, la misma combinacion que ya protege `receta_detalle` en la tabla de
+arriba) en vez de depender de una politica. El movimiento de inventario que genera sigue el mismo
+flujo de aprobacion que cualquier otro (administrador autoaprueba, medico y voluntario dejan
+pendiente). Tiene su propio `REVOKE EXECUTE ... FROM PUBLIC, anon` + `GRANT ... TO authenticated`
+en la misma migracion (issue #706: un `ALTER DEFAULT PRIVILEGES` no basta).
+
 `fn_detectar_pacientes_duplicados()` (`00101`, issue #140) es SECURITY INVOKER: la ve quien ya
 puede leer `pacientes` (administrador, medico, voluntario general), porque el criterio de
 aceptacion no restringe la lectura de posibles duplicados, solo la fusion. `fn_fusionar_pacientes()`

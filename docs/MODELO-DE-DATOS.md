@@ -418,11 +418,19 @@ Una receta no se emite con un INSERT: se emite con `fn_generar_receta()` (`00066
 detalle como JSONB y descuenta el inventario en la misma transaccion. Una receta no se borra, se
 anula.
 
-### `receta_detalle` [00019]
+### `receta_detalle` [00019, +00125]
 
-`receta_id`, `medicamento_id`, `lote_id` (de que lote salio), `dosis`, `frecuencia`, `duracion`,
-`cantidad_entregada`. El `lote_id` es lo que hace que un medicamento entregado sea rastreable
-hasta el lote y el proveedor.
+`receta_id`, `medicamento_id`, `lote_id` (de que lote salio), `bodega_id` (de que bodega salio,
+`+00125`), `dosis`, `frecuencia`, `duracion`, `cantidad_entregada`. El `lote_id` es lo que hace
+que un medicamento entregado sea rastreable hasta el lote y el proveedor.
+
+`cantidad_entregada` no se reescribe: es lo que la receta pidio originalmente, un hecho clinico
+que no se edita (issue #764). Si la cantidad realmente entregada difiere (por ejemplo, no
+alcanzaba el lote al momento de entregar), la correccion se apila aparte con
+`cantidad_ajustada`/`ajustada_por`/`ajustada_en` (`+00125`, todas NULL mientras nadie corrija el
+renglon), y `fn_ajustar_entrega_receta()` es la unica forma de escribirlas: calcula la diferencia
+contra el ultimo valor confirmado y registra un movimiento de inventario solo por esa diferencia,
+para no descontar dos veces lo que `fn_generar_receta()` ya descuenta al emitir la receta.
 
 ---
 
@@ -685,6 +693,7 @@ Del lado del cliente, estos valores nacen una sola vez en `packages/shared/enums
 | `fn_fusionar_pacientes(sobrevive, absorbido)` | Ejecuta la fusion y la registra                             |
 | `fn_registrar_medicamento(...)`         | Alta de medicamento con sus principios activos                    |
 | `fn_generar_receta(...)`                | Emite la receta y descuenta inventario, atomicamente              |
+| `fn_ajustar_entrega_receta(...)`        | Corrige la cantidad realmente entregada de un renglon, sin descontar el inventario dos veces |
 | `fn_existencias_disponibles(...)`       | Stock consultable, filtrado y paginado                            |
 | `fn_valor_de_inventario_disponible(...)` | [00122] Valoriza el stock por bodega, medicamento y origen; declara aparte lo que no tiene `costo_unitario` |
 | `fn_aplicar_ajuste_existencias(...)`    | Suma o resta stock por (lote, bodega); lanza error si no alcanza   |
