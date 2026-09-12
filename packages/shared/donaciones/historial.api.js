@@ -14,6 +14,7 @@
 
 import { obtenerSupabase } from "../api/cliente.js";
 import { normalizarError } from "../api/errores-de-supabase.js";
+import { obtenerTodasLasFilas } from "../api/paginacion.js";
 import { TIPOS_DE_DONACION } from "../enums.js";
 import { puedeVerDonaciones } from "./permisos.js";
 
@@ -111,11 +112,19 @@ function resumirDetalles(detalles) {
 async function calcularTotalesPorTipo(filtros) {
   const vacio = { dinero: 0, medicamentos: 0, insumos: 0, servicios: 0 };
 
-  const consulta = aplicarFiltros(
-    obtenerSupabase().from("donaciones").select("tipo, detalle:donacion_detalle(cantidad, monto)"),
-    filtros,
+  // obtenerTodasLasFilas() y no un `await consulta` directo (issue #773): esta funcion suma en
+  // JavaScript sobre TODAS las donaciones que cumplen el filtro, sin el limite de pagina que si
+  // tiene listarDonaciones() para la lista. Pasadas las 1000 donaciones (max_rows,
+  // supabase/config.toml) PostgREST cortaria la respuesta sin error y los totales de dinero,
+  // medicamentos e insumos empezarian a mentir en silencio.
+  const { filas: data, error } = await obtenerTodasLasFilas(() =>
+    aplicarFiltros(
+      obtenerSupabase()
+        .from("donaciones")
+        .select("tipo, detalle:donacion_detalle(cantidad, monto)"),
+      filtros,
+    ),
   );
-  const { data, error } = await consulta;
   if (error) return { totales: vacio, error: normalizarError(error) };
 
   const totales = { ...vacio };

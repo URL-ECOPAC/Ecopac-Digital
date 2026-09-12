@@ -55,6 +55,13 @@ function crearCliente(respuestas) {
         llamadas.push({ paso: "order", columna, opciones });
         return encadenable;
       },
+      // obtenerTodasLasFilas() (issue #773) siempre pide .range() antes de resolver, incluso
+      // cuando el resultado cabe en una sola pagina: es el paso que reemplazo el `await consulta`
+      // directo de antes.
+      range(desde, hasta) {
+        llamadas.push({ paso: "range", desde, hasta });
+        return encadenable;
+      },
       then(resolve, reject) {
         return resolver().then(resolve, reject);
       },

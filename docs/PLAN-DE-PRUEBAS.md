@@ -5,11 +5,6 @@ huecos de prueba: `apps/web` tenia 2 archivos de prueba para 64 paginas, `apps/m
 pantallas, y `packages/shared` no podia detectar una consulta mal formada porque su doble del
 cliente de Supabase acepta cualquier `select()`), dividida en sub-issues por bloque (#771-#779).
 
-> Nota de coordinacion: este documento tambien lo crea la issue #775 (baseline de cobertura de
-> `apps/mobile`), desarrollada en paralelo. Si al mergear este PR el archivo ya existe con la
-> seccion "Baseline de cobertura de `apps/mobile`", el conflicto se resuelve quedandose con las
-> dos secciones (esta agrega "Prueba de carga", no reemplaza nada de lo que ya haya).
-
 ## Las capas, de la mas rapida a la mas cara
 
 | Capa                                                     | Que prueba                                                            | Que NO puede probar                                                             |

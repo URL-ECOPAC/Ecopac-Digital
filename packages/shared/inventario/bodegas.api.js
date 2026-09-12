@@ -41,13 +41,6 @@ const COLUMNAS_DE_LA_BODEGA = [
   "updatedAt:updated_at",
 ].join(", ");
 
-// Igual que la anterior, mas el total almacenado. Se pide por la relacion real
-// (bodegas <- existencias) y se suma cantidad_disponible al mapear, para que el listado se dibuje
-// sin una segunda consulta.
-const COLUMNAS_CON_EXISTENCIAS = [COLUMNAS_DE_LA_BODEGA, "existencias(cantidad_disponible)"].join(
-  ", ",
-);
-
 /** Traduce del camelCase de las pantallas al snake_case de la tabla bodegas. */
 function aColumnasDeTabla(datos = {}) {
   const mapa = {
@@ -66,27 +59,51 @@ function aColumnasDeTabla(datos = {}) {
 /**
  * Traduce una fila de bodegas a una bodega.
  *
- * `existenciasTotales` se calcula aqui y no en la pantalla, por el mismo motivo que `vencido` en
- * lotes.api.js: es un dato derivado que si no se centraliza acaba recalculado distinto en web y en
- * movil. Vale null cuando la consulta no pidio las existencias, para distinguir "no se consulto"
- * de "no hay nada almacenado".
+ * `existenciasTotales` llega ya sumado (existencias_totales_por_bodega(), 00124) y no como un
+ * arreglo de existencias para sumar aqui: PostgREST tambien corta en max_rows el arreglo que
+ * embebe un recurso anidado, no solo las filas del nivel superior (issue #773, comprobado con
+ * 1100 existencias de una sola bodega devolviendo solo 1000 embebidas). Sumar del lado del
+ * cliente sobre ese arreglo mentiria en silencio en cuanto una bodega pasara las 1000
+ * combinaciones de lote. Vale `null` cuando la consulta no pidio las existencias, para distinguir
+ * "no se consulto" de "no hay nada almacenado" (que es 0, no null).
+ *
+ * @param {object} fila
+ * @param {number} [totalExistencias] Total ya agregado en la base; ausente si no se pidio.
  */
-function aBodega(fila) {
+function aBodega(fila, totalExistencias) {
   if (!fila) return null;
-
-  const existencias = fila.existencias;
 
   return {
     id: fila.id,
     nombre: fila.nombre,
     ubicacion: fila.ubicacion,
     esMovil: fila.esMovil,
-    existenciasTotales: Array.isArray(existencias)
-      ? existencias.reduce((total, fila) => total + (fila.cantidad_disponible ?? 0), 0)
-      : null,
+    existenciasTotales: totalExistencias === undefined ? null : totalExistencias,
     createdAt: fila.createdAt,
     updatedAt: fila.updatedAt,
   };
+}
+
+/**
+ * Totales de existencias de un conjunto de bodegas, agregados en la base
+ * (existencias_totales_por_bodega(), 00124). Una bodega sin existencias, o cuyas existencias RLS
+ * no deja ver, no aparece como llave del mapa: quien la consume trata esa ausencia como total 0.
+ *
+ * @param {string[]} idsDeBodega
+ * @returns {Promise<{ totales: Record<string, number>, error: object|null }>}
+ */
+async function totalesDeExistenciasPorBodega(idsDeBodega) {
+  const { data, error } = await obtenerSupabase().rpc("existencias_totales_por_bodega", {
+    p_bodega_ids: idsDeBodega,
+  });
+
+  if (error) return { totales: {}, error };
+
+  const totales = {};
+  for (const fila of data ?? []) {
+    totales[fila.bodega_id] = Number(fila.total_disponible ?? 0);
+  }
+  return { totales, error: null };
 }
 
 /**
@@ -170,7 +187,7 @@ export async function listarBodegas({ busqueda, esMovil, conExistencias = false 
   try {
     let consulta = obtenerSupabase()
       .from("bodegas")
-      .select(conExistencias ? COLUMNAS_CON_EXISTENCIAS : COLUMNAS_DE_LA_BODEGA)
+      .select(COLUMNAS_DE_LA_BODEGA)
       .order("nombre", { ascending: true });
 
     if (busqueda) consulta = consulta.ilike("nombre", `%${busqueda}%`);
@@ -180,8 +197,22 @@ export async function listarBodegas({ busqueda, esMovil, conExistencias = false 
     const { data, error } = await consulta;
 
     if (error) return { bodegas: [], error: normalizarError(error) };
-    // Siempre un arreglo: una lista vacia se dibuja sola, un null obliga a comprobarlo cada vez.
-    return { bodegas: (data ?? []).map(aBodega), error: null };
+
+    const filas = data ?? [];
+    if (!conExistencias || filas.length === 0) {
+      // Siempre un arreglo: una lista vacia se dibuja sola, un null obliga a comprobarlo cada vez.
+      return { bodegas: filas.map((fila) => aBodega(fila)), error: null };
+    }
+
+    const { totales, error: errorTotales } = await totalesDeExistenciasPorBodega(
+      filas.map((fila) => fila.id),
+    );
+    if (errorTotales) return { bodegas: [], error: normalizarError(errorTotales) };
+
+    return {
+      bodegas: filas.map((fila) => aBodega(fila, totales[fila.id] ?? 0)),
+      error: null,
+    };
   } catch (error) {
     return { bodegas: [], error: normalizarError(error) };
   }
@@ -201,12 +232,16 @@ export async function obtenerBodega(id) {
   try {
     const { data, error } = await obtenerSupabase()
       .from("bodegas")
-      .select(COLUMNAS_CON_EXISTENCIAS)
+      .select(COLUMNAS_DE_LA_BODEGA)
       .eq("id", id)
       .single();
 
     if (error) return { bodega: null, error: normalizarError(error) };
-    return { bodega: aBodega(data), error: null };
+
+    const { totales, error: errorTotales } = await totalesDeExistenciasPorBodega([id]);
+    if (errorTotales) return { bodega: null, error: normalizarError(errorTotales) };
+
+    return { bodega: aBodega(data, totales[id] ?? 0), error: null };
   } catch (error) {
     return { bodega: null, error: normalizarError(error) };
   }

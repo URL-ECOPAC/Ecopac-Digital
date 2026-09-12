@@ -28,7 +28,7 @@ const { actualizarBodega, listarBodegas, obtenerBodega, registrarBodega } =
   await import("./bodegas.api.js");
 const { listarProveedores, registrarProveedor } = await import("./proveedores.api.js");
 
-function crearCliente({ respuesta = { data: [], error: null } } = {}) {
+function crearCliente({ respuesta = { data: [], error: null }, respuestaRpc } = {}) {
   const llamadas = [];
 
   function crearEncadenable() {
@@ -75,6 +75,13 @@ function crearCliente({ respuesta = { data: [], error: null } } = {}) {
     from(tabla) {
       llamadas.push({ paso: "from", tabla });
       return crearEncadenable();
+    },
+    // existencias_totales_por_bodega() (00124, issue #773): el total ya viene sumado de la base,
+    // no de un arreglo embebido para sumar en el cliente.
+    rpc(nombre, argumentos) {
+      llamadas.push({ paso: "rpc", nombre, argumentos });
+      const resultado = respuestaRpc ?? { data: [], error: null };
+      return resultado instanceof Error ? Promise.reject(resultado) : Promise.resolve(resultado);
     },
   };
 }
@@ -150,36 +157,46 @@ describe("listarBodegas", () => {
     expect(columnasPedidas(dobles.cliente)).not.toContain("existencias");
   });
 
-  it("pide las existencias por la relacion real, no por lotes", async () => {
-    dobles.cliente = crearCliente({ respuesta: { data: [], error: null } });
+  it("con conExistencias, pide el total agregado por RPC y no un embebido para sumar", async () => {
+    dobles.cliente = crearCliente({
+      respuesta: { data: [{ id: "b-1", nombre: "Central", esMovil: false }], error: null },
+      respuestaRpc: { data: [{ bodega_id: "b-1", total_disponible: 100 }], error: null },
+    });
 
     await listarBodegas({ conExistencias: true });
 
-    const columnas = columnasPedidas(dobles.cliente);
-    // La version anterior pedia `existencias:lotes(cantidad_actual)`: lotes no tiene llave
-    // foranea a bodegas ni columna cantidad_actual (00020).
-    expect(columnas).toContain("existencias(cantidad_disponible)");
-    expect(columnas).not.toContain("lotes(");
+    // La version anterior pedia `existencias(cantidad_disponible)` embebido y sumaba en el
+    // cliente; PostgREST tambien corta ese embebido en max_rows (issue #773), asi que el total
+    // ahora sale de existencias_totales_por_bodega() (00124), no de una columna seleccionada.
+    expect(columnasPedidas(dobles.cliente)).not.toContain("existencias");
+    const rpc = dobles.cliente.llamadas.find((llamada) => llamada.paso === "rpc");
+    expect(rpc).toEqual({
+      paso: "rpc",
+      nombre: "existencias_totales_por_bodega",
+      argumentos: { p_bodega_ids: ["b-1"] },
+    });
   });
 
-  it("suma cantidad_disponible de cada existencia", async () => {
+  it("existenciasTotales sale de lo que ya sumo la base, no de sumar en el cliente", async () => {
     dobles.cliente = crearCliente({
-      respuesta: {
-        data: [
-          {
-            id: "b-1",
-            nombre: "Central",
-            esMovil: false,
-            existencias: [{ cantidad_disponible: 40 }, { cantidad_disponible: 60 }],
-          },
-        ],
-        error: null,
-      },
+      respuesta: { data: [{ id: "b-1", nombre: "Central", esMovil: false }], error: null },
+      respuestaRpc: { data: [{ bodega_id: "b-1", total_disponible: 100 }], error: null },
     });
 
     const { bodegas } = await listarBodegas({ conExistencias: true });
 
     expect(bodegas[0].existenciasTotales).toBe(100);
+  });
+
+  it("una bodega sin fila en la respuesta de la RPC entra en cero, no en null", async () => {
+    dobles.cliente = crearCliente({
+      respuesta: { data: [{ id: "b-1", nombre: "Sin existencias", esMovil: false }], error: null },
+      respuestaRpc: { data: [], error: null },
+    });
+
+    const { bodegas } = await listarBodegas({ conExistencias: true });
+
+    expect(bodegas[0].existenciasTotales).toBe(0);
   });
 
   it("deja existenciasTotales en null cuando la consulta no las pidio", async () => {
@@ -218,6 +235,20 @@ describe("obtenerBodega", () => {
     const { error } = await obtenerBodega();
 
     expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.CAMPO_REQUERIDO);
+  });
+
+  it("trae el total agregado por RPC con el id de la bodega", async () => {
+    dobles.cliente = crearCliente({
+      respuesta: { data: { id: "b-1", nombre: "Central", esMovil: false }, error: null },
+      respuestaRpc: { data: [{ bodega_id: "b-1", total_disponible: 250 }], error: null },
+    });
+
+    const { bodega, error } = await obtenerBodega("b-1");
+
+    expect(error).toBeNull();
+    expect(bodega.existenciasTotales).toBe(250);
+    const rpc = dobles.cliente.llamadas.find((llamada) => llamada.paso === "rpc");
+    expect(rpc.argumentos).toEqual({ p_bodega_ids: ["b-1"] });
   });
 });
 
