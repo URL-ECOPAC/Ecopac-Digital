@@ -1,106 +1,156 @@
-import { View, Text, StyleSheet, RefreshControl, ScrollView, Pressable } from "react-native";
-import { useNavigation } from "@react-navigation/native";
-import { useVistaExistencias } from "../../../../packages/shared/inventario/useVistaExistencias";
-import { useSesionCompartida } from "../contexto/SesionProvider";
-import { LoadingState, ErrorState } from "../components";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  diasHastaVencimiento,
+  formatearFechaCorta,
+  listarExistenciasDisponibles,
+  listarLotes,
+} from "@ecopac/shared";
+import { colors, labels, radii, spacing, typography } from "@ecopac/ui-tokens";
 
-// Indicadores de estado visibles (NO solo color)
-const ETIQUETAS_ESTADO = {
-  vigente: { texto: " Vigente", color: "#059669" },
-  proximo: { texto: " Próximo a vencer", color: "#d97706" },
-  critico: { texto: " Por vencer pronto", color: "#dc2626" },
-  vencido: { texto: " Vencido", color: "#4b5563" },
-  agotado: { texto: " Agotado", color: "#94a3b8" },
+import { Card, EmptyState, ErrorState, LoadingState, StatusChip } from "../components";
+
+const DIAS_CRITICO = 7;
+const DIAS_AVISO_VENCIMIENTO = 30;
+
+const ETIQUETAS_POR_ESTADO = {
+  disponible: labels.disponible,
+  "por vencer": labels.proximoAVencer,
+  critico: labels.critico,
+  vencido: labels.medicamentoVencido,
+  agotado: labels.sinStock,
 };
 
-export default function ExistenciasInventarioScreen() {
-  const navigation = useNavigation();
-  const { rol } = useSesionCompartida();
-  const { cargando, error, existencias, recargar } = useVistaExistencias({ rol });
+function calcularEstado(diasRestantes, cantidadDisponible) {
+  if (diasRestantes !== null && diasRestantes < 0) return "vencido";
+  if (cantidadDisponible <= 0) return "agotado";
+  if (diasRestantes !== null && diasRestantes <= DIAS_CRITICO) return "critico";
+  if (diasRestantes !== null && diasRestantes <= DIAS_AVISO_VENCIMIENTO) return "por vencer";
+  return "disponible";
+}
 
-  const irADetalleLote = (lote) => {
-    navigation.navigate("DetalleLote", { loteId: lote.lote_id, titulo: lote.medicamento });
-  };
+/**
+ * Existencias por lote, con el stock sumado entre bodegas (issue #270): a diferencia de la
+ * tabla multi-bodega de la web (#159) y de StockScreen.js, esta vista no desglosa por bodega.
+ *
+ * QUE ESTABA MAL (issue #785). Llamaba a useVistaExistencias({ rol }): ese hook toma
+ * { existencias, bodegas } por props (un filtro derivado puro, sin fetch propio) y nunca
+ * devuelve cargando/error/existencias/recargar. La pantalla quedaba siempre en su rama
+ * "sin datos", sin llamar nunca a una API, y ademas no estaba registrada en el navegador.
+ *
+ * QUE HACE AHORA. listarExistenciasDisponibles() (vista_lotes_disponibles, 00047) solo trae
+ * lotes con stock positivo y no vencidos: no alcanza para el criterio "un lote sin existencia
+ * se muestra marcado como agotado". Por eso la lista real es listarLotes() (todos los lotes,
+ * vencidos o en cero incluidos) con el stock de cada uno tomado de
+ * listarExistenciasDisponibles() y sumado entre bodegas; un lote que no aparece ahi (vencido o
+ * agotado en todas las bodegas) queda en 0.
+ */
+export default function ExistenciasInventarioScreen() {
+  const [lotes, setLotes] = useState([]);
+  const [existenciasDisponibles, setExistenciasDisponibles] = useState([]);
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState(null);
+
+  const cargar = useCallback(async () => {
+    setCargando(true);
+    setError(null);
+
+    const [respuestaLotes, respuestaExistencias] = await Promise.all([
+      listarLotes(),
+      listarExistenciasDisponibles(),
+    ]);
+
+    setLotes(respuestaLotes.lotes || []);
+    setExistenciasDisponibles(respuestaExistencias.existencias || []);
+    setError(respuestaLotes.error ?? respuestaExistencias.error ?? null);
+    setCargando(false);
+  }, []);
+
+  useEffect(() => {
+    cargar();
+  }, [cargar]);
+
+  const existencias = useMemo(() => {
+    const stockPorLote = new Map();
+    existenciasDisponibles.forEach((fila) => {
+      stockPorLote.set(
+        fila.loteId,
+        (stockPorLote.get(fila.loteId) ?? 0) + Number(fila.cantidadDisponible || 0),
+      );
+    });
+
+    return lotes.map((lote) => {
+      const cantidadDisponible = stockPorLote.get(lote.id) ?? 0;
+      const diasRestantes = diasHastaVencimiento(lote.fechaVencimiento);
+
+      return {
+        loteId: lote.id,
+        medicamento: lote.medicamento || "Desconocido",
+        codigo: lote.numeroLote,
+        numeroLote: lote.numeroLote,
+        fechaVencimiento: formatearFechaCorta(lote.fechaVencimiento),
+        cantidadDisponible,
+        diasRestantes,
+        estado: calcularEstado(diasRestantes, cantidadDisponible),
+      };
+    });
+  }, [lotes, existenciasDisponibles]);
+
+  if (cargando && lotes.length === 0) {
+    return <LoadingState message="Cargando existencias..." />;
+  }
 
   return (
     <ScrollView
       style={estilos.contenedor}
-      refreshControl={<RefreshControl refreshing={cargando} onRefresh={recargar} />}
+      contentContainerStyle={estilos.contenido}
+      refreshControl={<RefreshControl refreshing={cargando} onRefresh={cargar} />}
     >
-      <View style={estilos.cabecera}>
-        <Text style={estilos.titulo}>📋 Existencias de Inventario</Text>
-        <Text style={estilos.subtitulo}>{existencias?.length ?? 0} lotes con stock disponible</Text>
-      </View>
+      <Text style={estilos.titulo}>Existencias de inventario</Text>
+      <Text style={estilos.subtitulo}>{existencias.length} lotes registrados</Text>
 
-      {cargando && <LoadingState mensaje="Cargando existencias..." />}
-      {error && <ErrorState mensaje={error.mensaje} alReintentar={recargar} />}
+      {error ? <ErrorState message={error.mensaje} onRetry={cargar} /> : null}
 
-      {/* 📦 Tarjetas de existencias */}
-      {existencias?.length > 0 ? (
-        existencias.map((item) => {
-          const estado =
-            item.cantidad_disponible <= 0
-              ? ETIQUETAS_ESTADO.agotado
-              : ETIQUETAS_ESTADO[item.estado_caducidad] || ETIQUETAS_ESTADO.vigente;
-
-          return (
-            <Pressable
-              key={item.lote_id}
-              style={({ pressed }) => [
-                estilos.tarjeta,
-                item.cantidad_disponible <= 0 && estilos.tarjetaAgotada,
-                pressed && estilos.tarjetaPresionada,
-              ]}
-              onPress={() => irADetalleLote(item)}
-              disabled={item.cantidad_disponible <= 0}
-            >
-              {/* Medicamento y código */}
-              <View style={estilos.filaSuperior}>
-                <Text style={estilos.nombreMedicamento} numberOfLines={1}>
-                  {item.medicamento}
-                </Text>
-                <Text style={estilos.codigo}>{item.codigo || "S/C"}</Text>
-              </View>
-
-              {/* Lote y fecha de caducidad */}
-              <View style={estilos.filaDatos}>
-                <View>
-                  <Text style={estilos.etiquetaDato}>Lote</Text>
-                  <Text style={estilos.valorDato}>{item.numero_lote}</Text>
-                </View>
-                <View>
-                  <Text style={estilos.etiquetaDato}>Caducidad</Text>
-                  <Text style={estilos.valorDato}>{item.fecha_vencimiento}</Text>
-                </View>
-                <View style={estilos.stock}>
-                  <Text style={estilos.etiquetaDato}>Stock</Text>
-                  <Text
-                    style={[estilos.valorStock, item.cantidad_disponible <= 0 && estilos.agotado]}
-                  >
-                    {item.cantidad_disponible ?? 0}
-                  </Text>
-                </View>
-              </View>
-
-              {/* Estado con indicador VISIBLE (no solo color) */}
-              <View style={estilos.filaEstado}>
-                <Text style={[estilos.textoEstado, { color: estado.color }]}>{estado.texto}</Text>
-                {item.dias_restantes != null && item.cantidad_disponible > 0 && (
-                  <Text style={estilos.diasRestantes}>
-                    {item.dias_restantes <= 0
-                      ? `Vencido hace ${Math.abs(item.dias_restantes)} días`
-                      : `Vence en ${item.dias_restantes} días`}
-                  </Text>
-                )}
-              </View>
-            </Pressable>
-          );
-        })
-      ) : !cargando && !error ? (
-        <View style={estilos.vacio}>
-          <Text style={estilos.textoVacio}> Sin existencias registradas</Text>
-        </View>
+      {!error && existencias.length === 0 ? (
+        <EmptyState message="No hay lotes registrados." />
       ) : null}
+
+      {existencias.map((item) => (
+        <Card key={item.loteId} style={estilos.tarjeta}>
+          <View style={estilos.filaSuperior}>
+            <Text style={estilos.nombreMedicamento} numberOfLines={1}>
+              {item.medicamento}
+            </Text>
+            <Text style={estilos.codigo}>{item.codigo || "S/C"}</Text>
+          </View>
+
+          <View style={estilos.filaDatos}>
+            <View>
+              <Text style={estilos.etiquetaDato}>Lote</Text>
+              <Text style={estilos.valorDato}>{item.numeroLote}</Text>
+            </View>
+            <View>
+              <Text style={estilos.etiquetaDato}>Caducidad</Text>
+              <Text style={estilos.valorDato}>{item.fechaVencimiento}</Text>
+            </View>
+            <View style={estilos.stock}>
+              <Text style={estilos.etiquetaDato}>Stock</Text>
+              <Text style={estilos.valorStock}>{item.cantidadDisponible}</Text>
+            </View>
+          </View>
+
+          <View style={estilos.filaEstado}>
+            <StatusChip status={item.estado} label={ETIQUETAS_POR_ESTADO[item.estado]} />
+            {item.diasRestantes !== null ? (
+              <Text style={estilos.diasRestantes}>
+                {item.diasRestantes < 0
+                  ? `Vencido hace ${Math.abs(item.diasRestantes)} días`
+                  : `Vence en ${item.diasRestantes} días`}
+              </Text>
+            ) : null}
+          </View>
+        </Card>
+      ))}
     </ScrollView>
   );
 }
@@ -108,40 +158,27 @@ export default function ExistenciasInventarioScreen() {
 const estilos = StyleSheet.create({
   contenedor: {
     flex: 1,
-    padding: 16,
-    backgroundColor: "#f8fafc",
+    backgroundColor: colors.background,
   },
-  cabecera: {
-    marginBottom: 20,
+  contenido: {
+    padding: spacing.md,
   },
   titulo: {
-    fontSize: 20,
-    fontWeight: "800",
-    color: "#1e293b",
+    fontFamily: typography.fontFamilyBase,
+    fontSize: typography.sizes.xl,
+    fontWeight: typography.weights.bold,
+    color: colors.text,
   },
   subtitulo: {
-    fontSize: 13,
-    color: "#64748b",
-    marginTop: 2,
+    fontFamily: typography.fontFamilyBase,
+    fontSize: typography.sizes.sm,
+    color: colors.textMuted,
+    marginTop: spacing.xs,
+    marginBottom: spacing.md,
   },
   tarjeta: {
-    backgroundColor: "#ffffff",
-    borderRadius: 14,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
-    gap: 10,
-  },
-  tarjetaAgotada: {
-    backgroundColor: "#f8fafc",
-    borderStyle: "dashed",
-    borderColor: "#cbd5e1",
-    opacity: 0.8,
-  },
-  tarjetaPresionada: {
-    opacity: 0.9,
-    transform: [{ scale: 0.98 }],
+    marginBottom: spacing.sm,
+    gap: spacing.sm,
   },
   filaSuperior: {
     flexDirection: "row",
@@ -149,70 +186,59 @@ const estilos = StyleSheet.create({
     alignItems: "flex-start",
   },
   nombreMedicamento: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#1e293b",
+    fontFamily: typography.fontFamilyBase,
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.semibold,
+    color: colors.text,
     flexShrink: 1,
   },
   codigo: {
-    fontSize: 12,
-    color: "#64748b",
-    fontFamily: "monospace",
-    backgroundColor: "#f1f5f9",
-    paddingHorizontal: 6,
+    fontFamily: typography.fontFamilyBase,
+    fontSize: typography.sizes.xs,
+    color: colors.textMuted,
+    backgroundColor: colors.background,
+    paddingHorizontal: spacing.xs,
     paddingVertical: 2,
-    borderRadius: 4,
+    borderRadius: radii.sm,
   },
   filaDatos: {
     flexDirection: "row",
     justifyContent: "space-between",
   },
   etiquetaDato: {
-    fontSize: 10,
-    color: "#94a3b8",
+    fontFamily: typography.fontFamilyBase,
+    fontSize: typography.sizes.xs,
+    color: colors.textMuted,
     textTransform: "uppercase",
   },
   valorDato: {
-    fontSize: 13,
-    fontWeight: "500",
-    color: "#334155",
+    fontFamily: typography.fontFamilyBase,
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.medium,
+    color: colors.text,
     marginTop: 2,
   },
   stock: {
     alignItems: "center",
   },
   valorStock: {
-    fontSize: 18,
-    fontWeight: "800",
-    color: "#059669",
+    fontFamily: typography.fontFamilyBase,
+    fontSize: typography.sizes.lg,
+    fontWeight: typography.weights.bold,
+    color: colors.text,
     marginTop: 2,
-  },
-  agotado: {
-    color: "#94a3b8",
   },
   filaEstado: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginTop: 4,
-    paddingTop: 8,
+    paddingTop: spacing.xs,
     borderTopWidth: 1,
-    borderTopColor: "#f1f5f9",
-  },
-  textoEstado: {
-    fontSize: 13,
-    fontWeight: "600",
+    borderTopColor: colors.border,
   },
   diasRestantes: {
-    fontSize: 11,
-    color: "#64748b",
-  },
-  vacio: {
-    paddingVertical: 60,
-    alignItems: "center",
-  },
-  textoVacio: {
-    fontSize: 15,
-    color: "#64748b",
+    fontFamily: typography.fontFamilyBase,
+    fontSize: typography.sizes.xs,
+    color: colors.textMuted,
   },
 });

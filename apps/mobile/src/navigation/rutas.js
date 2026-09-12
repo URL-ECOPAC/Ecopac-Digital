@@ -32,4 +32,6 @@ export const ROUTES = {
   JORNADAS_ASIGNADAS: "JornadasAsignadas",
   STOCK: "Stock",
   REGISTRO_INGRESO: "RegistroIngreso",
+  EXISTENCIAS_INVENTARIO: "ExistenciasInventario",
+  RESUMEN_ALERTAS_INVENTARIO: "ResumenAlertasInventario",
 };

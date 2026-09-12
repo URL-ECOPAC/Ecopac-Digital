@@ -46,3 +46,20 @@ export * from "./useInventario.js";
 export * from "./usePendientesValidacion.js";
 export * from "./useRegistroIngreso.js";
 export * from "./useEntregaMedicamentos.js";
+
+// useVistaExistencias.js y useAlertasVencimiento.js declaran cada uno su propia
+// calcularDiasRestantes(): un "export *" de los dos volveria ese nombre ambiguo y ESM lo
+// excluiria del barril entero (el mismo problema que describen los comentarios de
+// descriptores.js/enums.js arriba, issues #365/#397). Se listan los nombres explicitamente
+// para evitar la colision; quien necesite esa funcion interna sigue importando el archivo
+// directo, como ya hacian las pantallas antes de esta issue (#785).
+export {
+  ESTADO_EXISTENCIA,
+  calcularEstadoVencimiento,
+  useVistaExistencias,
+} from "./useVistaExistencias.js";
+export {
+  ESTADO_ALERTA,
+  datosAtenderAlerta,
+  useAlertasVencimiento,
+} from "./useAlertasVencimiento.js";
