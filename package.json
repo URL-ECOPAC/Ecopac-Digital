@@ -20,7 +20,8 @@
     "docker:prod": "docker compose --env-file .env.production -f docker-compose.prod.yml up --build -d",
     "verificar:concurrencia-ficha": "node scripts/verificar-concurrencia-numero-ficha.mjs",
     "verificar:shared-esquema": "node scripts/verificar-shared-vs-esquema.mjs",
-    "verificar:rewrite-vercel": "node scripts/verificar-rewrite-vercel.mjs"
+    "verificar:rewrite-vercel": "node scripts/verificar-rewrite-vercel.mjs",
+    "prueba:carga-jornada": "vitest run --config scripts/vitest.carga.config.mjs --reporter=verbose"
   },
   "devDependencies": {
     "@eslint/js": "^9.0.0",
