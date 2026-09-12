@@ -75,7 +75,11 @@ export function useAlertasVencimiento({ lotes = [], bodegas = [], usuarioId, rol
           );
           return {
             id: lote.id,
-            medicamento: lote.medicamento?.nombre || "Desconocido",
+            // lote.medicamento ya es el nombre (string): lotes.api.js#aLote() lo aplana desde
+            // el embebido medicamentos(nombre), no lo deja como objeto. Leer `.nombre` aqui
+            // encima de un string siempre da undefined, asi que toda alerta caia en
+            // "Desconocido" sin importar el medicamento real (issue #785).
+            medicamento: lote.medicamento || "Desconocido",
             lote: lote.numeroLote || lote.lote,
             cantidad: lote.cantidad,
             fechaVencimiento: lote.fechaVencimiento,
