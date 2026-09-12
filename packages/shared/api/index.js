@@ -11,6 +11,7 @@ export * from "./almacenamiento.js";
 export * from "./cliente.js";
 export * from "./errores.js";
 export * from "./errores-de-supabase.js";
+export * from "./paginacion.js";
 
 // Solo los puntos de entrada publicos: evaluarPerfilDeSesion() y requiereCerrarSesion()
 // son detalle interno que useSesion() consume por import directo a ./sesion.js, no algo que

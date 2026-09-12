@@ -27,6 +27,7 @@
 
 import { obtenerSupabase } from "../api/cliente.js";
 import { normalizarError } from "../api/errores-de-supabase.js";
+import { obtenerTodasLasFilas } from "../api/paginacion.js";
 import { puedeVerIndicadoresDeImpacto } from "./permisos.js";
 
 // Reexportar funciones de permisos para mantener la interfaz unificada
@@ -160,21 +161,32 @@ export async function obtenerIndicadoresImpacto({
     };
   }
 
+  // obtenerTodasLasFilas() y no un simple `await consulta` (issue #773): agregar() suma estas
+  // filas en JavaScript, y vista_reporte_impacto no tiene techo de filas -- crece con cada
+  // jornada que pasa. Sin paginar, pasadas las 1000 filas (max_rows, supabase/config.toml)
+  // PostgREST cortaria la respuesta sin error y los totales de impacto empezarian a mentir en
+  // silencio, exactamente lo que describe la issue.
+  function fabricaDeConsulta(rango) {
+    return () => {
+      let consulta = obtenerSupabase()
+        .from("vista_reporte_impacto")
+        .select(COLUMNAS_DEL_REPORTE)
+        .order("fecha", { ascending: true });
+
+      if (rango?.fechaInicio) consulta = consulta.gte("fecha", rango.fechaInicio);
+      if (rango?.fechaFin) consulta = consulta.lte("fecha", rango.fechaFin);
+      if (comunidad) consulta = consulta.eq("comunidad_id", comunidad);
+      if (jornada) consulta = consulta.eq("jornada_id", jornada);
+      if (proyecto) consulta = consulta.eq("proyecto_id", proyecto);
+
+      return consulta;
+    };
+  }
+
   async function filasDe(rango) {
-    let consulta = obtenerSupabase()
-      .from("vista_reporte_impacto")
-      .select(COLUMNAS_DEL_REPORTE)
-      .order("fecha", { ascending: true });
-
-    if (rango?.fechaInicio) consulta = consulta.gte("fecha", rango.fechaInicio);
-    if (rango?.fechaFin) consulta = consulta.lte("fecha", rango.fechaFin);
-    if (comunidad) consulta = consulta.eq("comunidad_id", comunidad);
-    if (jornada) consulta = consulta.eq("jornada_id", jornada);
-    if (proyecto) consulta = consulta.eq("proyecto_id", proyecto);
-
-    const { data, error } = await consulta;
+    const { filas, error } = await obtenerTodasLasFilas(fabricaDeConsulta(rango));
     if (error) throw error;
-    return data ?? [];
+    return filas ?? [];
   }
 
   try {

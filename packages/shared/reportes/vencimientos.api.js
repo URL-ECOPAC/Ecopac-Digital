@@ -15,6 +15,7 @@
 
 import { obtenerSupabase } from "../api/cliente.js";
 import { normalizarError } from "../api/errores-de-supabase.js";
+import { obtenerTodasLasFilas } from "../api/paginacion.js";
 import { diasHastaVencimiento } from "../formato/fechas.js";
 import { ESTADOS_DE_VENCIMIENTO } from "./inventario.api.js";
 
@@ -90,14 +91,20 @@ export async function obtenerReporteDeVencimientos(
   hoy = new Date(),
 ) {
   try {
-    let consulta = obtenerSupabase().from("existencias").select(COLUMNAS_DEL_REPORTE);
+    // obtenerTodasLasFilas() y no un `await consulta` directo (issue #773): totalUnidadesEnRiesgo
+    // suma estas filas en JavaScript, y existencias crece con cada combinacion nueva de lote y
+    // bodega. Sin paginar, pasadas las 1000 filas (max_rows) PostgREST cortaria la respuesta sin
+    // error y el total de unidades en riesgo de vencer empezaria a mentir en silencio.
+    const { filas: data, error } = await obtenerTodasLasFilas(() => {
+      let consulta = obtenerSupabase().from("existencias").select(COLUMNAS_DEL_REPORTE);
 
-    if (bodega) consulta = consulta.eq("bodega_id", bodega);
-    // El filtro por medicamento viaja al embebido de lotes, que va con !inner justamente para
-    // que filtre la consulta en vez de solo vaciar el objeto anidado.
-    if (medicamento) consulta = consulta.eq("lotes.medicamento_id", medicamento);
+      if (bodega) consulta = consulta.eq("bodega_id", bodega);
+      // El filtro por medicamento viaja al embebido de lotes, que va con !inner justamente para
+      // que filtre la consulta en vez de solo vaciar el objeto anidado.
+      if (medicamento) consulta = consulta.eq("lotes.medicamento_id", medicamento);
 
-    const { data, error } = await consulta;
+      return consulta;
+    });
 
     if (error) return { reporte: null, error: normalizarError(error) };
 

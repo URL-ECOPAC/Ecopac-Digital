@@ -25,6 +25,11 @@ function crearCliente({ respuesta = { data: [], error: null } } = {}) {
       llamadas.push({ paso: "eq", columna, valor });
       return cadena;
     },
+    // obtenerTodasLasFilas() (issue #773) siempre pide .range() antes de resolver.
+    range(desde, hasta) {
+      llamadas.push({ paso: "range", desde, hasta });
+      return cadena;
+    },
     then(resolve, reject) {
       const resultado =
         respuesta instanceof Error ? Promise.reject(respuesta) : Promise.resolve(respuesta);
