@@ -33,6 +33,7 @@ const {
   desactivarMedicamento,
   listarMedicamentos,
   listarPrincipiosDeMedicamento,
+  reactivarMedicamento,
   registrarMedicamento,
 } = await import("./medicamentos.api.js");
 
@@ -365,6 +366,50 @@ describe("desactivarMedicamento", () => {
       paso: "update",
       valores: { activo: false },
     });
+  });
+});
+
+describe("reactivarMedicamento", () => {
+  it("no toca el cliente cuando no hay id", async () => {
+    const { medicamento, error } = await reactivarMedicamento(undefined);
+
+    expect(medicamento).toBeNull();
+    expect(error).toBeNull();
+  });
+
+  // Issue #756: desactivarMedicamento() no tenia contraparte, asi que un medicamento dado de
+  // baja no tenia forma de volver desde la aplicacion. Sin comprobacion de existencias: a
+  // diferencia de desactivar, reactivar nunca deja el inventario en un estado invalido.
+  it("reactiva sin comprobar existencias", async () => {
+    const cliente = crearCliente({
+      tablas: { medicamentos: { data: { id: "med-1", activo: true }, error: null } },
+    });
+    dobles.cliente = cliente;
+
+    const { medicamento, error } = await reactivarMedicamento("med-1");
+
+    expect(error).toBeNull();
+    expect(medicamento).toEqual({ id: "med-1", activo: true });
+    expect(cliente.llamadas).toContainEqual({
+      tabla: "medicamentos",
+      paso: "update",
+      valores: { activo: true },
+    });
+    expect(cliente.llamadas.some((l) => l.paso === "rpc")).toBe(false);
+  });
+
+  it("propaga el error si el UPDATE falla", async () => {
+    const cliente = crearCliente({
+      tablas: {
+        medicamentos: { data: null, error: { code: "42501", message: "permission denied" } },
+      },
+    });
+    dobles.cliente = cliente;
+
+    const { medicamento, error } = await reactivarMedicamento("med-1");
+
+    expect(medicamento).toBeNull();
+    expect(error).not.toBeNull();
   });
 });
 

@@ -19,6 +19,8 @@ import {
   listarMedicamentos,
   registrarMedicamento,
   actualizarMedicamento,
+  desactivarMedicamento,
+  reactivarMedicamento,
   listarPrincipiosDeMedicamento,
 } from "../../../../packages/shared/inventario/medicamentos.api.js";
 import { listarBodegas } from "../../../../packages/shared/inventario/bodegas.api.js";
@@ -166,7 +168,10 @@ export default function InventarioPage() {
       setCargando(true);
       setError(null);
       const [resMed, resPA, resBodegas, resProveedores, resLotes] = await Promise.all([
-        listarMedicamentos(),
+        // soloActivos:false (issue #756): antes el catalogo pedia listarMedicamentos() con su
+        // default (soloActivos:true), asi que un medicamento desactivado desaparecia sin
+        // ninguna forma de volver a verlo ni de reactivarlo desde la pantalla.
+        listarMedicamentos({ soloActivos: false }),
         listarPrincipiosActivos(),
         listarBodegas(),
         listarProveedores(),
@@ -245,6 +250,8 @@ export default function InventarioPage() {
       presentacion: item.presentacion || "",
       marca: item.marca || "",
       formaFarmaceutica: item.formaFarmaceutica || item.forma_farmaceutica || "",
+      esPediatrico: Boolean(item.esPediatrico),
+      activo: item.activo ?? true,
     });
     setAdvertenciaDuplicado(false);
     setErrorGuardarMedicamento(null);
@@ -296,6 +303,7 @@ export default function InventarioPage() {
           presentacion: normalizarPresentacion(formData.presentacion),
           marca: formData.marca.trim(),
           formaFarmaceutica: formData.formaFarmaceutica ? formData.formaFarmaceutica.trim() : null,
+          esPediatrico: Boolean(formData.esPediatrico),
         });
         if (errorUpdate) {
           setErrorGuardarMedicamento(
@@ -331,6 +339,26 @@ export default function InventarioPage() {
     } finally {
       setCargandoGuardar(false);
     }
+  };
+
+  // desactivarMedicamento()/reactivarMedicamento() existian y estaban probadas pero ningun
+  // boton las llamaba (issue #756): un medicamento no se podia dar de baja del catalogo desde
+  // ninguna pantalla.
+  const handleAlternarActivoMedicamento = async () => {
+    setErrorGuardarMedicamento(null);
+    setCargandoGuardar(true);
+    const { error: errorAlternar } = formData.activo
+      ? await desactivarMedicamento(formData.id)
+      : await reactivarMedicamento(formData.id);
+    setCargandoGuardar(false);
+
+    if (errorAlternar) {
+      setErrorGuardarMedicamento(errorAlternar.mensaje);
+      return;
+    }
+
+    setModalAbierto(false);
+    await cargarDatos();
   };
 
   const handleGuardarLote = async (datosLote) => {
@@ -1085,6 +1113,7 @@ export default function InventarioPage() {
           onSubmit={handleGuardarMedicamento}
           onClose={() => setModalAbierto(false)}
           onCrearPrincipioActivo={() => setModalPrincipioActivoAbierto(true)}
+          onAlternarActivo={handleAlternarActivoMedicamento}
         />
       )}
 

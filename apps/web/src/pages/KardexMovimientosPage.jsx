@@ -20,11 +20,13 @@ const COLUMNAS_CSV_KARDEX = [
   { id: "created_at", label: "Fecha registro", tipo: TIPOS_DE_PRESENTACION.FECHA },
   { id: "tipo", label: "Tipo" },
   { id: "cantidad", label: "Cantidad", tipo: TIPOS_DE_PRESENTACION.NUMERO },
+  { id: "bodega_nombre", label: "Bodega" },
   { id: "motivo", label: "Motivo" },
   { id: "registrado_por_nombre", label: "Registrado por" },
   { id: "aprobado_por_nombre", label: "Aprobado por" },
   { id: "aprobado_en", label: "Fecha aprobación", tipo: TIPOS_DE_PRESENTACION.FECHA },
   { id: "estado", label: "Estado" },
+  { id: "motivo_rechazo", label: "Motivo de rechazo" },
   { id: "saldoAcumulado", label: "Saldo", tipo: TIPOS_DE_PRESENTACION.NUMERO },
 ];
 
@@ -307,6 +309,17 @@ export default function KardexMovimientosPage({
                     color: colores.textoSecundario,
                   }}
                 >
+                  Bodega
+                </th>
+                <th
+                  style={{
+                    padding: "12px 10px",
+                    textAlign: "left",
+                    fontSize: "13px",
+                    fontWeight: 600,
+                    color: colores.textoSecundario,
+                  }}
+                >
                   Registrado por
                 </th>
                 <th
@@ -375,6 +388,9 @@ export default function KardexMovimientosPage({
                   <td style={{ padding: "10px", fontSize: "13px", color: colores.textoSecundario }}>
                     {mov.motivo}
                   </td>
+                  <td style={{ padding: "10px", fontSize: "13px", color: colores.textoSecundario }}>
+                    {mov.bodega_nombre || "—"}
+                  </td>
                   <td style={{ padding: "10px", fontSize: "13px" }}>
                     {mov.registrado_por_nombre || "—"}
                   </td>
@@ -384,10 +400,16 @@ export default function KardexMovimientosPage({
                   <td style={{ padding: "10px", fontSize: "12px", color: colores.textoSecundario }}>
                     {formatoFecha(mov.aprobado_en)}
                   </td>
-                  <td
-                    style={{ padding: "10px" }}
-                    dangerouslySetInnerHTML={{ __html: etiquetaEstado(mov.estado) }}
-                  />
+                  <td style={{ padding: "10px" }}>
+                    <span dangerouslySetInnerHTML={{ __html: etiquetaEstado(mov.estado) }} />
+                    {mov.estado === ESTADO_MOVIMIENTO.RECHAZADO && mov.motivo_rechazo && (
+                      <div
+                        style={{ fontSize: "11px", color: colores.textoSecundario, marginTop: 2 }}
+                      >
+                        Motivo: {mov.motivo_rechazo}
+                      </div>
+                    )}
+                  </td>
                   <td
                     style={{
                       padding: "10px",

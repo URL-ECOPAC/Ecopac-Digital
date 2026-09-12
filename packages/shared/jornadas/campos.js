@@ -46,12 +46,6 @@ export const CAMPOS_JORNADA = [
     validacion: { requerido: true, maxLongitud: 150 },
   },
   {
-    id: "codigo",
-    label: "Codigo",
-    tipo: TIPOS_DE_CAMPO.TEXTO,
-    validacion: { requerido: false, maxLongitud: 30 },
-  },
-  {
     id: "fecha",
     label: "Fecha",
     tipo: TIPOS_DE_CAMPO.FECHA,
@@ -179,8 +173,10 @@ export const CAMPOS_MARCAR_ASISTENCIA = [
  * Subconjunto de CAMPOS_JORNADA para el formulario de alta/edicion de jornada (issue #179).
  *
  * Los cinco campos que la revision del plan confirmo: nombre, fecha, comunidad, responsable y
- * proyecto (PLAN.md, seccion 7, decision 3). Quedan fuera codigo, cupoEstimado,
- * presupuestoAsignado y botiquinBodega: ninguno esta en el objetivo del issue.
+ * proyecto (PLAN.md, seccion 7, decision 3). Quedan fuera cupoEstimado, presupuestoAsignado y
+ * botiquinBodega: ninguno esta en el objetivo del issue. `codigo` ya no es un campo de
+ * CAMPOS_JORNADA (issue #756): lo genera el servidor por secuencia (migracion 00126), como
+ * numero_ficha o folio, y no se declara como capturable en ningun formulario.
  *
  * Hallazgo de esa misma revision: ninguna pantalla del repo escribe cupoEstimado. Al no estar en
  * este formulario tampoco, la columna cupo_estimado queda NULL en toda jornada nueva, y
