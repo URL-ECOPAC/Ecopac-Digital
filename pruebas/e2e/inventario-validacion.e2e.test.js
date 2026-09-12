@@ -22,6 +22,7 @@ import {
   obtenerSupabase,
   rechazarMovimiento,
   registrarIngreso,
+  registrarSalida,
 } from "@ecopac/shared";
 
 import {
@@ -39,6 +40,7 @@ const CANTIDAD_APROBADA = 30;
 const CANTIDAD_RECHAZADA = 12;
 const CANTIDAD_LOTE_NUEVO = 45;
 const CANTIDAD_LOTE_PROVISIONAL = 18;
+const CANTIDAD_SALIDA = 7;
 
 const creados = { movimientos: [], lotes: [] };
 
@@ -310,5 +312,55 @@ describe("Flujo critico: ingreso de inventario con aprobacion", () => {
     // La confirmacion y las existencias ocurren en la misma operacion, dentro de
     // fn_aplicar_ajuste_existencias: no son dos pasos que alguien pueda dejar a medias.
     expect(await existenciaDe(loteProvisional, bodega)).toBe(CANTIDAD_LOTE_PROVISIONAL);
+  });
+});
+
+// registrarSalida() solo tenia cobertura e2e del camino RECHAZADO (medicamento-vencido.e2e.test.js,
+// issue #222): nunca se habia ejercitado un retiro que si se acepta, aprueba y baja el stock -- el
+// camino que de verdad usa el modulo de bandeja para una salida que no viene de una receta (un
+// ajuste manual, una merma). Issue #772: cerrar ese hueco de cobertura del Modulo II.
+describe("Flujo critico: salida manual con aprobacion", () => {
+  // No se reusa existenciasIniciales[0].cantidad (la foto de ANTES de todo el archivo): el
+  // describe de ingreso que corre justo antes ya movio esta misma existencia (loteSano en
+  // bodega). Lo que a esta prueba le importa es el delta que produce SU PROPIA salida, asi que
+  // toma su propia foto justo al entrar.
+  let disponibleAntes = null;
+
+  it("1. el voluntario registra una salida de un lote vigente y queda pendiente", async () => {
+    disponibleAntes = await existenciaDe(DEMO.loteSano, bodega);
+
+    await entrarComo(CUENTAS.VOLUNTARIO);
+
+    const { datos, error } = await registrarSalida({
+      bodega_id: bodega,
+      lote_id: DEMO.loteSano,
+      cantidad: CANTIDAD_SALIDA,
+      motivo: "Merma por manipulacion (prueba e2e #772)",
+      usuarioId: CUENTAS.VOLUNTARIO.perfilId,
+    });
+
+    expect(error).toBeNull();
+    expect(datos.estado).toBe("pendiente");
+    expect(datos.tipo).toBe("salida");
+
+    creados.movimientos.push(datos.id);
+  });
+
+  it("2. pendiente todavia no baja el stock", async () => {
+    expect(await existenciaDe(DEMO.loteSano, bodega)).toBe(disponibleAntes);
+  });
+
+  it("3. la administradora aprueba y ahi si baja el stock", async () => {
+    await entrarComo(CUENTAS.ADMINISTRADORA);
+
+    const movimiento = creados.movimientos[creados.movimientos.length - 1];
+    const { datos, error } = await aprobarMovimiento(movimiento, {
+      usuarioId: CUENTAS.ADMINISTRADORA.perfilId,
+      rolUsuario: CUENTAS.ADMINISTRADORA.rol,
+    });
+
+    expect(error).toBeNull();
+    expect(datos.estado).toBe("aprobado");
+    expect(await existenciaDe(DEMO.loteSano, bodega)).toBe(disponibleAntes - CANTIDAD_SALIDA);
   });
 });
