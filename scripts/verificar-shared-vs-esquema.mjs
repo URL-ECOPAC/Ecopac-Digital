@@ -212,6 +212,27 @@ export function leerEsquema(sqlPorArchivo) {
 // ============================================================================
 
 /**
+ * Une las concatenaciones de cadenas literales: `"a:b(" + "c)"` -> `"a:b(c)"`.
+ *
+ * Trampa 5 (issue #751): una lista de columnas larga se parte en dos cadenas para caber en el
+ * ancho de linea, y eso bastaba para perder la constante entera -y con ella las columnas de esa
+ * consulta, sin aviso-. Le pasaba a COLUMNAS_DE_LA_ENTREGA, que es justamente la consulta del
+ * modulo donde vivio el defecto que esta guarda no vio.
+ *
+ * Solo une literales del mismo tipo de comilla y solo cuando el `+` esta entre dos cadenas:
+ * `"a" + variable` no se toca, y se queda sin resolver como corresponde.
+ */
+function unirConcatenaciones(texto) {
+  let previo;
+  let actual = texto;
+  do {
+    previo = actual;
+    actual = actual.replace(/"([^"\\]*)"\s*\+\s*"/g, '"$1').replace(/`([^`\\]*)`\s*\+\s*`/g, "`$1");
+  } while (actual !== previo);
+  return actual;
+}
+
+/**
  * Constantes de columnas declaradas en un archivo. El 60% de los .select() del repositorio no
  * usa un literal sino una constante, y sin resolverla se pierde esa cobertura entera.
  * Se admiten las dos formas que usa el codigo: string y array de strings.
@@ -231,8 +252,15 @@ function constantesDeColumnas(texto) {
     // Solo vale si TODOS los elementos son cadenas literales. Asi se descarta un array de
     // objetos -que no es una lista de columnas- sin descartar de paso los que traen una
     // relacion embebida dentro de la cadena, como "comunidad:comunidades(nombre)".
-    const partes = partirPorComasDeNivelCero(texto.slice(abre + 1, cierra))
-      .map((x) => x.replace(/\/\/[^\n]*/g, "").trim())
+    //
+    // Trampa 6 (issue #751): los comentarios se quitan ANTES de partir por comas, no despues.
+    // Un comentario con una coma -"...por su nombre, y sin este join..."- se partia en dos, y el
+    // segundo trozo ya no empezaba por "//": no era comentario ni cadena literal, asi que la
+    // constante entera se descartaba. Nueve de los doce .select() que la guarda daba por no
+    // resueltos eran esto, COLUMNAS_DEL_PROYECTO entre ellos.
+    const cuerpo = unirConcatenaciones(texto.slice(abre + 1, cierra).replace(/\/\/[^\n]*/g, ""));
+    const partes = partirPorComasDeNivelCero(cuerpo)
+      .map((x) => x.trim())
       .filter(Boolean);
     // Un elemento puede ser otra constante ya conocida: bodegas.api.js compone
     // COLUMNAS_CON_EXISTENCIAS a partir de COLUMNAS_DE_LA_BODEGA. Sin resolverlo, el modulo
@@ -247,12 +275,15 @@ function constantesDeColumnas(texto) {
 }
 
 /**
- * Columnas que pide una cadena de .select().
+ * Columnas que pide una cadena de .select(), sin entrar en las relaciones embebidas.
  *
  * Trampa 2: una relacion embebida -`jornada:jornadas(nombre, fecha)`, y anidada dentro de otra
  * en triaje.api.js- no es una columna de la tabla consultada. Se descarta el token entero,
  * nombre de la relacion incluido; borrar solo los parentesis deja el nombre suelto y lo
  * convierte en un falso positivo.
+ *
+ * Lo que hay DENTRO de ese token si se comprueba, contra la tabla de la relacion, y de eso se
+ * encarga arbolDeEmbebidos() (issue #751).
  */
 export function columnasDeSeleccion(seleccion) {
   const columnas = [];
@@ -266,6 +297,121 @@ export function columnasDeSeleccion(seleccion) {
     if (/^\w+$/.test(nombre) && nombre !== "count") columnas.push(nombre);
   }
   return columnas;
+}
+
+/**
+ * Las relaciones embebidas de una cadena de .select(), en arbol (issue #751).
+ *
+ * POR QUE HACIA FALTA
+ *
+ * columnasDeSeleccion() descarta el token con parentesis entero, y esa omision era la unica del
+ * script que NO se contaba ni se informaba: quien leia la salida concluia, razonablemente, que
+ * se habia revisado todo lo que no aparecia en la lista de omisiones. En este repositorio casi
+ * toda consulta que importa lleva embeds, asi que el area no revisada era grande.
+ *
+ * Las tres formas que usa el codigo, y de donde sale el nombre de la tabla en cada una:
+ *
+ *   comunidad:comunidades(nombre)                  alias + tabla
+ *   consultas!inner(atencion_id)                   tabla + hint, sin alias
+ *   medico:perfiles!recetas_medico_id_fkey(...)    alias + tabla + clave foranea explicita
+ *
+ * El nodo se indexa por su alias y tambien por el nombre de la relacion, porque PostgREST acepta
+ * las dos formas al filtrar: .eq("consulta.expediente.paciente_id") y .eq("consultas.jornada_id")
+ * conviven en el repositorio. Los nodos se devuelven ademas en una lista, para recorrerlos una
+ * sola vez aunque esten indexados dos veces.
+ *
+ * @param {string} seleccion
+ * La linea que se reporta es la del .select(), no la del embed: cuando la lista de columnas viene
+ * de una constante -el 60% de los casos- el desplazamiento dentro de la cadena no corresponde a
+ * ninguna posicion del archivo que se esta leyendo, asi que fingir precision ahi seria mentir.
+ *
+ * @returns {{ nodos: Array<{alias: string, relacion: string, seleccion: string, hijos: object}>,
+ *   porNombre: Map<string, object> }}
+ */
+export function arbolDeEmbebidos(seleccion) {
+  const nodos = [];
+  const porNombre = new Map();
+
+  for (const bruto of partirPorComasDeNivelCero(seleccion)) {
+    const token = bruto.trim();
+    const abre = token.indexOf("(");
+    if (abre === -1) continue;
+    const cierra = cierreDe(token, abre);
+    if (cierra === -1) continue;
+
+    const cabecera = token.slice(0, abre);
+    const dentro = token.slice(abre + 1, cierra);
+    const alias = cabecera.includes(":")
+      ? cabecera.slice(0, cabecera.indexOf(":")).trim()
+      : cabecera.replace(/!.*$/, "").trim();
+    const relacion = (
+      cabecera.includes(":") ? cabecera.slice(cabecera.lastIndexOf(":") + 1) : cabecera
+    )
+      .replace(/!.*$/, "")
+      .trim();
+
+    if (!/^\w+$/.test(relacion) || !/^\w+$/.test(alias)) continue;
+
+    const nodo = { alias, relacion, seleccion: dentro, hijos: arbolDeEmbebidos(dentro) };
+    nodos.push(nodo);
+    porNombre.set(alias, nodo);
+    if (!porNombre.has(relacion)) porNombre.set(relacion, nodo);
+  }
+
+  return { nodos, porNombre };
+}
+
+/**
+ * Recorre el arbol de embebidos y devuelve una peticion por columna, atribuida a la tabla de su
+ * relacion y no a la tabla del .from(). `ruta` es la cadena de alias tal como la escribe quien
+ * lee el codigo, para que el mensaje de error se pueda buscar en el archivo.
+ */
+function pedidasDeEmbebidos({ nodos }, indiceBase, ruta = []) {
+  const pedidas = [];
+  for (const nodo of nodos) {
+    const rutaAqui = [...ruta, nodo.alias];
+    pedidas.push({
+      operacion: "select",
+      relacion: nodo.relacion,
+      ruta: rutaAqui.join("."),
+      indice: indiceBase,
+      esRelacion: true,
+    });
+    for (const columna of columnasDeSeleccion(nodo.seleccion))
+      pedidas.push({
+        operacion: "select",
+        columna,
+        relacion: nodo.relacion,
+        ruta: rutaAqui.join("."),
+        indice: indiceBase,
+      });
+    pedidas.push(...pedidasDeEmbebidos(nodo.hijos, indiceBase, rutaAqui));
+  }
+  return pedidas;
+}
+
+/**
+ * Resuelve "consulta.expediente.paciente_id" contra el arbol de embebidos del mismo statement.
+ *
+ * Es la otra mitad del agujero de la #751, y donde vivio el bug #750: un filtro sobre una ruta
+ * que el select no embebe falla en tiempo de ejecucion con PGRST108 ("no es un recurso embebido
+ * en esta peticion") y la pantalla no muestra nada. El script lo descartaba con un
+ * `if (!ruta.includes("."))` tan silencioso como el de las embebidas.
+ *
+ * @returns {{ relacion: string, columna: string } | { aliasFaltante: string } | null}
+ */
+function resolverRutaAnidada(ruta, arbol) {
+  const trozos = ruta.split(".");
+  const columna = trozos.pop();
+  let actual = arbol;
+  let nodo = null;
+  for (const paso of trozos) {
+    nodo = actual.porNombre.get(paso);
+    if (!nodo) return { aliasFaltante: paso };
+    actual = nodo.hijos;
+  }
+  if (!nodo) return null;
+  return { relacion: nodo.relacion, columna };
 }
 
 /**
@@ -293,7 +439,12 @@ export function peticionesDelArchivo(texto, constantesImportadas = new Map()) {
   const peticiones = [];
   const rpc = [];
   const edge = [];
-  const omitido = { vistas: [], rpcDinamicos: 0, constantesSinResolver: [] };
+  const omitido = {
+    vistas: [],
+    rpcDinamicos: 0,
+    constantesSinResolver: [],
+    relacionesSinResolver: [],
+  };
 
   for (const m of texto.matchAll(/\.rpc\(\s*"(\w+)"/g)) rpc.push({ nombre: m[1], indice: m.index });
   omitido.rpcDinamicos = [...texto.matchAll(/\.rpc\(\s*[a-z_$]/gi)].length;
@@ -315,34 +466,74 @@ export function peticionesDelArchivo(texto, constantesImportadas = new Map()) {
     const ventana = texto.slice(desde, fin);
     const pedidas = [];
 
-    for (const s of ventana.matchAll(/\.select\(\s*(["`])/g)) {
+    // El arbol de embebidos del select se guarda aparte: los filtros sobre rutas anidadas de mas
+    // abajo lo necesitan para saber a que tabla apunta "consulta.expediente.paciente_id".
+    let arbol = { nodos: [], porNombre: new Map() };
+
+    const registrarSeleccion = (contenido, indice) => {
+      for (const columna of columnasDeSeleccion(contenido))
+        pedidas.push({ operacion: "select", columna, indice });
+      const suyo = arbolDeEmbebidos(contenido);
+      pedidas.push(...pedidasDeEmbebidos(suyo, indice));
+      // Se acumula, porque un statement puede componer el select en varias llamadas.
+      arbol = {
+        nodos: [...arbol.nodos, ...suyo.nodos],
+        porNombre: new Map([...arbol.porNombre, ...suyo.porNombre]),
+      };
+    };
+
+    // Trampa 5 (issue #751): `.select("a, " + "b")` parte el literal en dos, y sin unirlos antes
+    // el embebido que queda a medias no se reconoce y el filtro que lo nombra sale como falso
+    // positivo. Le pasa a jornadas/api.js, que parte el select por el ancho de linea.
+    const ventanaUnida = unirConcatenaciones(ventana);
+
+    for (const s of ventanaUnida.matchAll(/\.select\(\s*(["`])/g)) {
       const comilla = s[1];
       const inicio = s.index + s[0].length;
-      const cierra = ventana.indexOf(comilla, inicio);
+      const cierra = ventanaUnida.indexOf(comilla, inicio);
       if (cierra === -1) continue;
-      let contenido = ventana.slice(inicio, cierra);
+      let contenido = ventanaUnida.slice(inicio, cierra);
       // Interpolacion en plantilla: `${COLUMNAS_DEL_TRIAJE}, atencion:atenciones!inner(...)`.
       contenido = contenido.replace(/\$\{(\w+)\}/g, (todo, nombre) =>
         constantes.has(nombre) ? constantes.get(nombre) : "",
       );
-      for (const columna of columnasDeSeleccion(contenido))
-        pedidas.push({ operacion: "select", columna, indice: desde + inicio });
+      registrarSeleccion(contenido, desde + inicio);
     }
 
-    for (const s of ventana.matchAll(/\.select\(\s*([A-Z][A-Z0-9_]*)\s*[,)]/g)) {
+    for (const s of ventanaUnida.matchAll(/\.select\(\s*([A-Z][A-Z0-9_]*)\s*[,)]/g)) {
       if (constantes.has(s[1])) {
-        for (const columna of columnasDeSeleccion(constantes.get(s[1])))
-          pedidas.push({ operacion: "select", columna, indice: desde + s.index });
+        registrarSeleccion(constantes.get(s[1]), desde + s.index);
       } else {
         omitido.constantesSinResolver.push({ nombre: s[1], indice: desde + s.index });
       }
     }
 
     const filtros = new RegExp(`\\.(${FILTROS_CON_COLUMNA.join("|")})\\(\\s*"([\\w.]+)"`, "g");
-    for (const s of ventana.matchAll(filtros)) {
-      // "atenciones.paciente_id" filtra sobre la tabla embebida, no sobre esta.
-      if (!s[2].includes("."))
+    for (const s of ventanaUnida.matchAll(filtros)) {
+      if (!s[2].includes(".")) {
         pedidas.push({ operacion: s[1], columna: s[2], indice: desde + s.index });
+        continue;
+      }
+      // "consulta.expediente.paciente_id" filtra sobre la tabla embebida, no sobre esta.
+      const resuelta = resolverRutaAnidada(s[2], arbol);
+      if (!resuelta) continue;
+      if (resuelta.aliasFaltante) {
+        pedidas.push({
+          operacion: s[1],
+          aliasFaltante: resuelta.aliasFaltante,
+          ruta: s[2],
+          indice: desde + s.index,
+        });
+        continue;
+      }
+      pedidas.push({
+        operacion: s[1],
+        columna: resuelta.columna,
+        relacion: resuelta.relacion,
+        // Sin la columna final: la ruta nombra la relacion, y el mensaje ya dice la columna.
+        ruta: s[2].slice(0, s[2].lastIndexOf(".")),
+        indice: desde + s.index,
+      });
     }
 
     for (const s of ventana.matchAll(/\.(insert|update|upsert)\(\s*\{/g)) {
@@ -369,9 +560,11 @@ export function comparar(archivos, esquema, opciones = {}) {
   const resumen = {
     tablasRevisadas: 0,
     columnasRevisadas: 0,
+    relacionesRevisadas: 0,
     vistasOmitidas: new Map(),
     rpcDinamicos: 0,
     constantesSinResolver: [],
+    relacionesSinResolver: [],
   };
 
   for (const { ruta, texto, constantesImportadas } of archivos) {
@@ -399,19 +592,69 @@ export function comparar(archivos, esquema, opciones = {}) {
         continue;
       }
       resumen.tablasRevisadas += 1;
-      const columnas = esquema.tablas.get(tabla);
       const yaReportadas = new Set();
-      for (const { operacion, columna, indice: donde } of pedidas) {
+      for (const pedida of pedidas) {
+        const { operacion, columna, indice: donde } = pedida;
+
+        // Un filtro sobre una ruta que el select no embebe: es PGRST108 en tiempo de ejecucion
+        // -"no es un recurso embebido en esta peticion"- y la pantalla no muestra nada. Asi
+        // fallaba siempre la pestania de Recetas (issue #750).
+        if (pedida.aliasFaltante) {
+          const clave = `ruta:${pedida.ruta}`;
+          if (yaReportadas.has(clave)) continue;
+          yaReportadas.add(clave);
+          hallazgos.push({
+            ruta,
+            linea: lineaDe(texto, donde),
+            clase: "relacion",
+            detalle: `.${operacion}("${pedida.ruta}") filtra por "${pedida.aliasFaltante}", que el .select() no embebe (PGRST108)`,
+          });
+          continue;
+        }
+
+        // Cabecera de una relacion embebida: lo que se comprueba es que exista la relacion.
+        if (pedida.esRelacion) {
+          const nombre = pedida.relacion;
+          if (esquema.vistas.has(nombre)) {
+            resumen.vistasOmitidas.set(nombre, (resumen.vistasOmitidas.get(nombre) ?? 0) + 1);
+            continue;
+          }
+          if (!esquema.tablas.has(nombre)) {
+            // Una relacion se puede nombrar por la columna que la enlaza -lote:lote_id(...)-, y
+            // eso no se resuelve sin leer las claves foraneas del esquema. Hoy no hay ninguna
+            // asi en packages/shared, pero si aparece se cuenta y se informa, nunca se descarta
+            // en silencio: ese silencio es justo lo que arregla la issue #751.
+            resumen.relacionesSinResolver.push({
+              ruta,
+              nombre,
+              camino: pedida.ruta,
+              linea: lineaDe(texto, donde),
+            });
+            continue;
+          }
+          resumen.relacionesRevisadas += 1;
+          continue;
+        }
+
+        // Columna de una relacion embebida: se compara contra SU tabla, no contra la del .from().
+        const tablaDeLaPedida = pedida.relacion ?? tabla;
+        if (pedida.relacion) {
+          if (esquema.vistas.has(pedida.relacion) || !esquema.tablas.has(pedida.relacion)) continue;
+        }
+        const columnas = esquema.tablas.get(tablaDeLaPedida);
+        if (!columnas) continue;
+
         resumen.columnasRevisadas += 1;
         if (columnas.has(columna)) continue;
-        const clave = `${tabla}.${columna}`;
+        const clave = `${tablaDeLaPedida}.${columna}`;
         if (yaReportadas.has(clave)) continue;
         yaReportadas.add(clave);
+        const dentroDe = pedida.ruta ? ` dentro de "${pedida.ruta}"` : "";
         hallazgos.push({
           ruta,
           linea: lineaDe(texto, donde),
           clase: "columna",
-          detalle: `${tabla}.${columna} no existe (la pide .${operacion}())`,
+          detalle: `${tablaDeLaPedida}.${columna} no existe (la pide .${operacion}()${dentroDe})`,
         });
       }
     }
@@ -482,11 +725,95 @@ const CASOS = [
     esperado: [],
   },
   {
-    nombre: "relacion embebida anidada: no son columnas de la tabla consultada",
+    // Cambio con la #751: antes el embed se descartaba entero y el fixture no necesitaba definir
+    // `jornadas`. Ahora se entra en el, asi que la tabla tiene que existir; lo que sigue
+    // comprobando es lo de siempre -que `paciente_id` no se atribuya a `triajes`- mas lo nuevo:
+    // que `nombre` y `fecha` se comprueben contra `jornadas`.
+    nombre: "relacion embebida anidada: cada columna contra la tabla que le toca",
     sql: `CREATE TABLE triajes (id UUID PRIMARY KEY, tomado_en TIMESTAMPTZ);
-          CREATE TABLE atenciones (id UUID PRIMARY KEY, paciente_id UUID, jornada_id UUID);`,
+          CREATE TABLE atenciones (id UUID PRIMARY KEY, paciente_id UUID, jornada_id UUID);
+          CREATE TABLE jornadas (id UUID PRIMARY KEY, nombre TEXT, fecha DATE);`,
     js: 'supabase.from("triajes").select(`id, atencion:atenciones!inner(pacienteId:paciente_id, jornada:jornadas(nombre, fecha))`);',
     esperado: [],
+  },
+  {
+    nombre: "columna inexistente DENTRO de un embed con alias: se detecta (issue #751)",
+    sql: `CREATE TABLE recetas (id UUID PRIMARY KEY);
+          CREATE TABLE consultas (id UUID PRIMARY KEY, expediente_id UUID);`,
+    js: `supabase.from("recetas").select("id, consulta:consultas(id, no_existe)");`,
+    esperado: ["consultas.no_existe"],
+  },
+  {
+    nombre: "embed con clave foranea explicita: la tabla sale del nombre, no del constraint",
+    sql: `CREATE TABLE recetas (id UUID PRIMARY KEY, medico_id UUID);
+          CREATE TABLE perfiles (id UUID PRIMARY KEY, nombres TEXT, apellidos TEXT);`,
+    js: `supabase.from("recetas").select("medico:perfiles!recetas_medico_id_fkey(nombres, inventada)");`,
+    esperado: ["perfiles.inventada"],
+  },
+  {
+    nombre: "embed anidado a dos niveles: la columna mala se atribuye al nivel correcto",
+    sql: `CREATE TABLE recetas (id UUID PRIMARY KEY);
+          CREATE TABLE consultas (id UUID PRIMARY KEY, expediente_id UUID);
+          CREATE TABLE expedientes (id UUID PRIMARY KEY, paciente_id UUID);`,
+    js: `supabase.from("recetas").select("consulta:consultas(id, expediente:expedientes(no_existe))");`,
+    esperado: ["expedientes.no_existe"],
+  },
+  {
+    nombre: "filtro sobre ruta anidada: la columna se comprueba contra la tabla embebida",
+    sql: `CREATE TABLE recetas (id UUID PRIMARY KEY);
+          CREATE TABLE consultas (id UUID PRIMARY KEY);
+          CREATE TABLE expedientes (id UUID PRIMARY KEY, paciente_id UUID);`,
+    js: `supabase.from("recetas").select("consulta:consultas(expediente:expedientes(paciente_id))").eq("consulta.expediente.no_existe", x);`,
+    esperado: ["expedientes.no_existe"],
+  },
+  {
+    // Es el bug #750: la pestania de Recetas fallaba siempre con PGRST108 porque filtraba por una
+    // relacion que el select no embebia. En verde no se distingue de una consulta correcta.
+    nombre: "filtro por un alias que el select no embebe: PGRST108 (asi entro el #750)",
+    sql: `CREATE TABLE recetas (id UUID PRIMARY KEY, folio TEXT);`,
+    js: `supabase.from("recetas").select("id, folio").eq("consulta.expediente.paciente_id", x);`,
+    esperado: [
+      '.eq("consulta.expediente.paciente_id") filtra por "consulta", que el .select() no embebe (PGRST108)',
+    ],
+  },
+  {
+    // Un select correcto con embeds y filtro anidado no puede dar ni un hallazgo: un falso
+    // positivo aqui bloquea los PR de todo el equipo, porque la guarda corre en un check
+    // requerido.
+    nombre: "embeds y filtro anidado correctos: ni un falso positivo",
+    sql: `CREATE TABLE recetas (id UUID PRIMARY KEY);
+          CREATE TABLE consultas (id UUID PRIMARY KEY);
+          CREATE TABLE expedientes (id UUID PRIMARY KEY, paciente_id UUID);`,
+    js: `supabase.from("recetas").select("id, consulta:consultas!inner(expediente:expedientes!inner(pacienteId:paciente_id))").eq("consulta.expediente.paciente_id", x);`,
+    esperado: [],
+  },
+  {
+    // Hoy no hay ninguna asi en packages/shared, pero si aparece no puede desaparecer en
+    // silencio: se cuenta y se informa, que es la regla que esta guarda incumplia.
+    nombre: "relacion nombrada por su columna foranea: omision declarada, no silencio",
+    sql: `CREATE TABLE movimientos (id UUID PRIMARY KEY, lote_id UUID);`,
+    js: `supabase.from("movimientos").select("id, lote:lote_id(numero_lote)");`,
+    esperado: [],
+    relacionesSinResolver: 1,
+  },
+  {
+    nombre: "constante con un comentario que lleva coma: se resuelve igual (issue #751)",
+    sql: `CREATE TABLE proyectos (id UUID PRIMARY KEY, nombre TEXT);`,
+    js: `const COLUMNAS = [
+           "id",
+           // La pantalla lo muestra por nombre, y sin esto solo teniamos el UUID.
+           "no_existe",
+         ].join(", ");
+         supabase.from("proyectos").select(COLUMNAS);`,
+    esperado: ["proyectos.no_existe"],
+  },
+  {
+    nombre: "constante partida por concatenacion: se resuelve igual (issue #751)",
+    sql: `CREATE TABLE recetas (id UUID PRIMARY KEY);
+          CREATE TABLE consultas (id UUID PRIMARY KEY, atencion_id UUID);`,
+    js: `const COLUMNAS = ["id", "consultas!inner(atencionId:atencion_id, " + "no_existe)"].join(", ");
+         supabase.from("recetas").select(COLUMNAS);`,
+    esperado: ["consultas.no_existe"],
   },
   {
     nombre: "objeto anidado dentro de una llamada: no se lee",
@@ -533,10 +860,15 @@ const CASOS = [
     esperado: ["bodegas.clase"],
   },
   {
+    // Cambio con la #751: el fixture original filtraba por "atenciones.paciente_id" con un
+    // select que NO embebia atenciones, y esperaba cero hallazgos. Esa consulta revienta en
+    // ejecucion con PGRST108 -es el bug #750-, asi que lo que codificaba era el punto ciego, no
+    // el comportamiento correcto. El caso que se queria cubrir es este: con la relacion embebida,
+    // paciente_id se comprueba contra atenciones y no contra triajes.
     nombre: "filtro sobre tabla embebida: no es columna de esta tabla",
     sql: `CREATE TABLE triajes (id UUID PRIMARY KEY);
           CREATE TABLE atenciones (id UUID PRIMARY KEY, paciente_id UUID);`,
-    js: `supabase.from("triajes").select("id").eq("atenciones.paciente_id", p);`,
+    js: `supabase.from("triajes").select("id, atenciones!inner(id)").eq("atenciones.paciente_id", p);`,
     esperado: [],
   },
   {
@@ -579,12 +911,17 @@ function autoprueba() {
   let fallos = 0;
   for (const caso of CASOS) {
     const esquema = leerEsquema([caso.sql]);
-    const { hallazgos } = comparar([{ ruta: "fixture.js", texto: caso.js }], esquema);
+    const { hallazgos, resumen } = comparar([{ ruta: "fixture.js", texto: caso.js }], esquema);
     const obtenido = hallazgos.map((h) =>
       h.clase === "columna" ? h.detalle.split(" ")[0] : h.detalle,
     );
+    // Una omision declarada no es un hallazgo, pero tiene que contarse: que se cuente es lo que
+    // separa una omision de un silencio, y es lo que arregla esta issue.
+    const omisionesOk = (caso.relacionesSinResolver ?? 0) === resumen.relacionesSinResolver.length;
     const ok =
-      obtenido.length === caso.esperado.length && caso.esperado.every((e) => obtenido.includes(e));
+      omisionesOk &&
+      obtenido.length === caso.esperado.length &&
+      caso.esperado.every((e) => obtenido.includes(e));
     console.log(`  ${ok ? "ok  " : "FALLA"}  ${caso.nombre}`);
     if (!ok) {
       fallos += 1;
@@ -656,7 +993,8 @@ function principal() {
   );
   console.log(
     `Revisado: ${archivos.length} archivos de packages/shared, ` +
-      `${resumen.tablasRevisadas} consultas, ${resumen.columnasRevisadas} referencias a columnas.`,
+      `${resumen.tablasRevisadas} consultas, ${resumen.relacionesRevisadas} relaciones embebidas, ` +
+      `${resumen.columnasRevisadas} referencias a columnas.`,
   );
 
   // Lo omitido se dice, no se calla: quien lea la salida tiene que saber que no se comprobo.
@@ -674,6 +1012,14 @@ function principal() {
     );
     for (const c of resumen.constantesSinResolver)
       console.log(`  ${relative(RAIZ, c.ruta)}:${c.linea}  ${c.nombre}`);
+  }
+  if (resumen.relacionesSinResolver.length) {
+    console.log(
+      `Omitido: ${resumen.relacionesSinResolver.length} relaciones embebidas que no se pudieron ` +
+        `resolver por nombre (se nombran por la columna que las enlaza, no por la tabla).`,
+    );
+    for (const r of resumen.relacionesSinResolver)
+      console.log(`  ${relative(RAIZ, r.ruta)}:${r.linea}  ${r.camino}`);
   }
   if (!VERIFICAR_EDGE_FUNCTIONS)
     console.log("Omitido: las Edge Functions (ver VERIFICAR_EDGE_FUNCTIONS, issue #523).");
