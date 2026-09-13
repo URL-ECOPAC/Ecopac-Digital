@@ -1126,8 +1126,10 @@ un proyecto todavia), pero queda declarado como hueco, no omitido en silencio.
 
 **`gastos`**: `jornada_id`/`concepto`/`categoria`/`monto`/`fecha`/`responsable_id` completos
 (alta+edicion); `jornada_id` no se puede corregir despues de creado (bajo impacto). `estado` se
-corrige via la bandeja de aprobacion. `registrado_por`/`aprobado_por`/`aprobado_en`/
-`motivo_rechazo` no se muestran fuera del momento en que ocurre la accion -> **pendiente, esta misma issue #756**.
+corrige via la bandeja de aprobacion. `aprobado_por`/`aprobado_en`/`motivo_rechazo` ya se
+muestran en `ModalGasto.jsx` cuando el gasto ya se resolvio (resuelto en un commit anterior de
+esta misma issue #756). `registrado_por` sigue sin mostrarse en ningun lado -bajo impacto, mismo
+criterio que `donantes.direccion` o `atenciones.motivo_cierre`, sin issue propia-.
 
 ### Reportes, vistas agregadas y verificaciones puntuales del encargo
 
@@ -1184,7 +1186,7 @@ cada uno al resolverse):
 | Medicamentos y recetas | `desactivarMedicamento()`/`anularReceta()` sin boton; `es_pediatrico` roto | baja | Resuelto |
 | Comunidades | Columnas geo sin uso (decidir mapa o retiro); sin edicion | baja | Pendiente |
 | Proyectos sociales | Sin alta/edicion de proyecto, hitos ni presupuesto asignado | media | Pendiente |
-| Gastos | Aprobado por/cuando y motivo de rechazo invisibles | baja | Pendiente |
+| Gastos | Aprobado por/cuando y motivo de rechazo invisibles | baja | Resuelto (en un commit anterior de esta misma issue). `registrado_por` sigue sin mostrarse, bajo impacto |
 | Donaciones | Sin anular; constancia imprime mal el proyecto; ingreso a inventario no se dispara | media | Resuelto salvo el ingreso a inventario (ver nota de `donacion_detalle`, necesita formulario propio) |
 | Directorio de colaboradores | Junta directiva consulta la tabla equivocada | media | Resuelto |
 | Perfil de colaborador | fecha_ingreso/direccion/notas no capturables | baja | Resuelto |
