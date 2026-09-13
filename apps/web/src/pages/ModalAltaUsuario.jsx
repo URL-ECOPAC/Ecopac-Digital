@@ -37,7 +37,7 @@ export default function ModalAltaUsuario({ visible, onClose, onUsuarioCreado }) 
   const guardar = async () => {
     const resultado = await enviar();
     if (resultado.ok) {
-      onUsuarioCreado?.(resultado.usuario);
+      onUsuarioCreado?.(resultado.usuario, resultado.aviso);
       onClose?.();
     }
   };

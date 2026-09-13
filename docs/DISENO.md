@@ -41,6 +41,26 @@ Estan en `moduleAccents`.
 Los hex exactos salen de muestreo de pixel sobre capturas del prototipo. Los matices son
 fiables; conviene que el autor del diseno confirme los valores finales.
 
+## Tipografia
+
+El proyecto usa **una sola familia: la letra del sistema** de cada dispositivo (Segoe UI en
+Windows, San Francisco en macOS e iOS, Roboto en Android). No se descarga ninguna fuente web: la
+interfaz se usa en jornada, con datos moviles escasos, y la letra del sistema es la que mejor se
+lee en cada pantalla.
+
+| Token (`typography`) | Plataforma | Uso |
+| -------------------- | ---------- | --- |
+| `fontFamilyBase` | Movil | `"System"`, el nombre que entiende React Native |
+| `fontFamilyWeb` | Web | Pila del sistema, publicada como `--fuente-base` y colgada de `--bs-body-font-family` |
+| `fontFamilyMonoWeb` | Web | Monoespaciada, publicada como `--fuente-mono` |
+
+La monoespaciada es **solo para identificadores** que se leen caracter por caracter: numero de
+lote, DPI, correlativo de una constancia, id de un movimiento. Los rotulos (micro-etiquetas en
+mayuscula, cabeceras de tabla) van en la letra base.
+
+Ninguna pantalla declara `font-family`: la hereda de Bootstrap. Donde haga falta la monoespaciada
+se usa `var(--fuente-mono)` o la clase `.font-monospace`.
+
 ## Mapa de navegacion
 
 Tras autenticarse, el usuario entra a un punto distinto segun su rol:

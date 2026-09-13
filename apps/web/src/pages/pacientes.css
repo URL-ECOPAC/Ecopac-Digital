@@ -10,7 +10,7 @@
   --pac-sombra:
     0 1px 2px color-mix(in srgb, var(--color-text) 5%, transparent),
     0 4px 12px color-mix(in srgb, var(--color-text) 5%, transparent);
-  --pac-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  --pac-mono: var(--fuente-mono);
 }
 
 /* --- Cabecera de pantalla --- */
@@ -29,9 +29,10 @@
 
 /* --- Micro-etiqueta: el rotulo de dato del prototipo --- */
 
+/* Sin monoespaciada: el rotulo es texto, no un identificador. La mono queda para los datos
+   secundarios de abajo (DPI, fechas), que es lo que pide la issue #630. */
 .modulo-pacientes .pac-rotulo {
   color: var(--color-text-muted);
-  font-family: var(--pac-mono);
   font-size: 0.6875rem;
   font-weight: 500;
   letter-spacing: 0.08em;
@@ -153,12 +154,17 @@
 .modulo-pacientes .pac-filtros label,
 .modulo-pacientes .pac-filtros .form-label {
   color: var(--color-text-muted);
-  font-family: var(--pac-mono);
   font-size: 0.6875rem;
   font-weight: 500;
   letter-spacing: 0.08em;
   margin-bottom: 0.35rem;
   text-transform: uppercase;
+}
+
+/* El legend de un filtro de rango ("Rango de edad") trae .fs-6 desde FilterBar, que Bootstrap
+   declara con !important: sin esto se dibujaba al doble de tamano que el resto de rotulos. */
+.modulo-pacientes .pac-filtros legend.form-label {
+  font-size: 0.6875rem !important;
 }
 
 .modulo-pacientes .pac-filtros .form-control,
@@ -189,7 +195,6 @@
   background-color: var(--color-surface);
   border-bottom: var(--pac-borde);
   color: var(--color-text-muted);
-  font-family: var(--pac-mono);
   font-size: 0.6875rem;
   font-weight: 500;
   letter-spacing: 0.08em;
