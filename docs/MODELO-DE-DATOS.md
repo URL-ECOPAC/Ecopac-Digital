@@ -961,9 +961,15 @@ una eleccion explicita -> **pendiente, esta misma issue #756**.
 activar/desactivar y el filtro `soloActivos` que ya usa el selector de la consulta. Sin huecos.
 
 **`recetas`**: `folio` generado por el servidor (excluido arriba); `indicaciones_generales` se
-muestra y se captura. `estado`/`motivo_anulacion`/`anulada_en` se muestran solo cuando ya esta
-anulada, pero `anularReceta()` no tiene ningun boton en ninguna pantalla -> **pendiente, esta misma issue #756**.
-`anulada_por` ni siquiera se muestra cuando si hay una receta anulada (mismo issue).
+muestra y se captura. `estado`/`motivo_anulacion`/`anulada_en` se muestran, y ahora
+`PestaniaRecetasPaciente.jsx` (web) tiene un boton "Anular" que llama a `anularReceta()` -visible
+solo a quien puede anular segun `puedeAnularReceta()` (la administradora siempre; el medico solo
+en la receta que el mismo firmo y mientras siga emitida)-. `anulada_por` se resuelve a nombre
+(`anuladaPorPerfil`, columna nueva en la consulta) en vez de mostrarse crudo o no mostrarse.
+Resuelto en esta misma issue #756. Sin pantalla equivalente en `apps/mobile`: no existe hoy ninguna
+vista del historial de recetas de un paciente en movil (`useRecetasPaciente` no tiene consumidor
+ahi), por lo que no hay boton que agregarle; es la misma decision de alcance que separa reportes
+agregados (web) de consulta y registro de campo (movil).
 
 **`receta_detalle`**: `medicamento_id`/`lote_id`/`dosis`/`frecuencia`/`duracion`/`cantidad_entregada`
 completos (captura al recetar, sin correccion directa por diseno -ver `cantidad_ajustada` abajo).
@@ -1119,7 +1125,7 @@ cada uno al resolverse):
 | Historial clinico | Varios campos de consulta invisibles; consultas/condiciones/triaje sin correccion | media | Pendiente |
 | Alertas de vencimiento | El panel visible y `alertas_caducidad` estan desconectados | **alta** | Pendiente |
 | Movimientos de inventario | Bodega y motivo de rechazo no se ven; sin correccion de un pendiente | media | Pendiente |
-| Medicamentos y recetas | `desactivarMedicamento()`/`anularReceta()` sin boton; `es_pediatrico` roto | baja | Pendiente |
+| Medicamentos y recetas | `desactivarMedicamento()`/`anularReceta()` sin boton; `es_pediatrico` roto | baja | Resuelto |
 | Comunidades | Columnas geo sin uso (decidir mapa o retiro); sin edicion | baja | Pendiente |
 | Proyectos sociales | Sin alta/edicion de proyecto, hitos ni presupuesto asignado | media | Pendiente |
 | Gastos | Aprobado por/cuando y motivo de rechazo invisibles | baja | Pendiente |

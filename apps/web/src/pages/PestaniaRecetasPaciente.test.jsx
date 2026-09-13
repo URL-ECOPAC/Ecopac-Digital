@@ -19,6 +19,7 @@ const RECETA_DE_EJEMPLO = {
   id: "r-1",
   folio: "REC-0001",
   estado: "emitida",
+  medicoId: "per-medico",
   createdAt: "2026-01-10T09:00:00Z",
   jornada: "Jornada enero",
   medico: "Perez",
@@ -43,15 +44,24 @@ const mockEstadoHook = {
   recargar: vi.fn(),
 };
 
+const mockAnularReceta = vi.fn();
+
 vi.mock("@ecopac/shared", async (importarOriginal) => ({
   ...(await importarOriginal()),
   useRecetasPaciente: vi.fn(() => mockEstadoHook),
+  anularReceta: (...args) => mockAnularReceta(...args),
 }));
 
 const { useRecetasPaciente } = await import("@ecopac/shared");
 
-function pantalla() {
-  return render(<PestaniaRecetasPaciente paciente={{ id: "p-1", nombres: "Ana" }} rol="medico" />);
+function pantalla({ rol = "medico", perfilId = "per-medico" } = {}) {
+  return render(
+    <PestaniaRecetasPaciente
+      paciente={{ id: "p-1", nombres: "Ana" }}
+      rol={rol}
+      perfilId={perfilId}
+    />,
+  );
 }
 
 describe("PestaniaRecetasPaciente", () => {
@@ -62,6 +72,7 @@ describe("PestaniaRecetasPaciente", () => {
     mockEstadoHook.error = null;
     useRecetasPaciente.mockClear();
     mockEstadoHook.recargar.mockClear();
+    mockAnularReceta.mockReset();
   });
 
   it("mientras carga, muestra el estado de carga", () => {
@@ -121,5 +132,84 @@ describe("PestaniaRecetasPaciente", () => {
 
     fireEvent.click(screen.getByText("Reintentar"));
     expect(mockEstadoHook.recargar).toHaveBeenCalled();
+  });
+
+  // issue #756: anularReceta() existia en shared, probada y sin ningun boton que la llamara.
+  describe("anular receta", () => {
+    it("el medico que firmo su propia receta emitida ve el boton Anular", () => {
+      mockEstadoHook.recetas = [RECETA_DE_EJEMPLO];
+      mockEstadoHook.conteo = contarRecetas([RECETA_DE_EJEMPLO]);
+      pantalla({ rol: "medico", perfilId: "per-medico" });
+
+      expect(screen.getByText("Anular")).toBeInTheDocument();
+    });
+
+    it("un medico que no firmo la receta no ve el boton Anular", () => {
+      mockEstadoHook.recetas = [RECETA_DE_EJEMPLO];
+      mockEstadoHook.conteo = contarRecetas([RECETA_DE_EJEMPLO]);
+      pantalla({ rol: "medico", perfilId: "otro-medico" });
+
+      expect(screen.queryByText("Anular")).not.toBeInTheDocument();
+    });
+
+    it("pide el motivo, llama a anularReceta y recarga cuando confirma", async () => {
+      mockEstadoHook.recetas = [RECETA_DE_EJEMPLO];
+      mockEstadoHook.conteo = contarRecetas([RECETA_DE_EJEMPLO]);
+      mockAnularReceta.mockResolvedValue({ receta: { id: "r-1" }, error: null });
+      pantalla({ rol: "medico", perfilId: "per-medico" });
+
+      fireEvent.click(screen.getByText("Anular"));
+
+      const boton = screen.getByText("Confirmar anulacion");
+      expect(boton).toBeDisabled();
+
+      fireEvent.change(screen.getByLabelText("Motivo de la anulacion"), {
+        target: { value: "Error de dosis" },
+      });
+      fireEvent.click(screen.getByText("Confirmar anulacion"));
+
+      await screen.findByText("Anular");
+      expect(mockAnularReceta).toHaveBeenCalledWith("r-1", {
+        motivo: "Error de dosis",
+        anuladaPor: "per-medico",
+      });
+      expect(mockEstadoHook.recargar).toHaveBeenCalled();
+    });
+
+    it("si anularReceta falla, muestra el error y no recarga", async () => {
+      mockEstadoHook.recetas = [RECETA_DE_EJEMPLO];
+      mockEstadoHook.conteo = contarRecetas([RECETA_DE_EJEMPLO]);
+      mockAnularReceta.mockResolvedValue({
+        receta: null,
+        error: { mensaje: "No se pudo anular la receta." },
+      });
+      pantalla({ rol: "medico", perfilId: "per-medico" });
+
+      fireEvent.click(screen.getByText("Anular"));
+      fireEvent.change(screen.getByLabelText("Motivo de la anulacion"), {
+        target: { value: "Error de dosis" },
+      });
+      fireEvent.click(screen.getByText("Confirmar anulacion"));
+
+      expect(await screen.findByText("No se pudo anular la receta.")).toBeInTheDocument();
+      expect(mockEstadoHook.recargar).not.toHaveBeenCalled();
+    });
+
+    it("una receta anulada muestra quien la anulo", () => {
+      const anulada = {
+        ...RECETA_DE_EJEMPLO,
+        id: "r-2",
+        folio: "REC-0002",
+        anulada: true,
+        anuladaEn: "2026-01-12",
+        anuladaPorNombre: "Dra. Lopez",
+        motivoAnulacion: "Error de digitacion",
+      };
+      mockEstadoHook.recetas = [anulada];
+      mockEstadoHook.conteo = contarRecetas([anulada]);
+      pantalla();
+
+      expect(screen.getByText(/por Dra\. Lopez/)).toBeInTheDocument();
+    });
   });
 });

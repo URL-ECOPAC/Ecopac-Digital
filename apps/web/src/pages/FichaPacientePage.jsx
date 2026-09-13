@@ -49,7 +49,7 @@ export default function FichaPacientePage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [parametros, setParametros] = useSearchParams();
-  const { rol } = useSesionCompartida();
+  const { rol, perfil } = useSesionCompartida();
   const { paciente, cargando, error, recargar } = usePaciente(id, { rol });
   const listado = usePacientesListado();
   const { fusiones: fusionesRecibidas, permitido: puedeVerFusiones } = useFusionesDelPaciente(id, {
@@ -257,7 +257,7 @@ export default function FichaPacientePage() {
               )}
 
               {pestaniaActiva === "recetas" && (
-                <PestaniaRecetasPaciente paciente={paciente} rol={rol} />
+                <PestaniaRecetasPaciente paciente={paciente} rol={rol} perfilId={perfil?.id} />
               )}
             </Tabs>
 
