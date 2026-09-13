@@ -424,7 +424,6 @@ export default function InventarioPage() {
         flexDirection: "column",
         gap: "20px",
         padding: "24px",
-        fontFamily: "system-ui, -apple-system, sans-serif",
         backgroundColor: "#f8fafc",
         minHeight: "100vh",
       }}

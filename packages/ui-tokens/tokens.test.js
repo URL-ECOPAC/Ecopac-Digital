@@ -7,7 +7,22 @@
 
 import { describe, expect, it } from "vitest";
 
-import { radii, shadows } from "./index.js";
+import { radii, shadows, typography } from "./index.js";
+
+describe("typography", () => {
+  it("movil sigue usando el nombre que entiende React Native", () => {
+    expect(typography.fontFamilyBase).toBe("System");
+  });
+
+  it("la web usa la letra del sistema, sin fuentes descargadas", () => {
+    expect(typography.fontFamilyWeb.startsWith("system-ui")).toBe(true);
+    expect(typography.fontFamilyWeb.endsWith("sans-serif")).toBe(true);
+  });
+
+  it("la monoespaciada termina en la generica, por si no hay ninguna de la lista", () => {
+    expect(typography.fontFamilyMonoWeb.endsWith("monospace")).toBe(true);
+  });
+});
 import tokens from "./index.js";
 
 describe("radii", () => {

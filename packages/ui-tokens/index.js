@@ -152,7 +152,17 @@ export const shadows = {
 };
 
 export const typography = {
+  // La letra del sistema es la unica familia del proyecto: Segoe UI en Windows, San Francisco en
+  // macOS e iOS, Roboto en Android. No se descarga ninguna fuente, lo que importa en jornada con
+  // datos moviles escasos. "System" es el nombre que entiende React Native; la web no lo
+  // reconoce y usa la pila equivalente de fontFamilyWeb.
   fontFamilyBase: "System",
+  fontFamilyWeb:
+    'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+  // Monoespaciada solo para identificadores que se leen caracter por caracter: lote, DPI,
+  // correlativo, id de movimiento. Nunca para rotulos ni para texto corrido.
+  fontFamilyMonoWeb:
+    'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace',
   sizes: {
     xs: 12,
     sm: 14,

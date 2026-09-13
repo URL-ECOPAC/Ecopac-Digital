@@ -17,7 +17,6 @@ export default function AuthLayout({ title, subtitle, children }) {
         justifyContent: "center",
         padding: "20px 16px",
         boxSizing: "border-box",
-        fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
       }}
     >
       <div

@@ -57,7 +57,7 @@ export default function PanelAlertasVencimiento({
   };
 
   return (
-    <div style={{ fontFamily: "system-ui, -apple-system, sans-serif" }}>
+    <div>
       {/* 📌 Cabecera */}
       <div style={{ marginBottom: "24px" }}>
         <h2 style={{ fontSize: "28px", fontWeight: "700", margin: 0, color: "#0f172a" }}>
@@ -233,7 +233,13 @@ export default function PanelAlertasVencimiento({
                     style={{ backgroundColor: estilo.fondo, borderBottom: "1px solid #e2e8f0" }}
                   >
                     <td style={{ padding: "14px 16px", fontSize: "14px" }}>{alerta.medicamento}</td>
-                    <td style={{ padding: "14px 16px", fontSize: "14px", fontFamily: "monospace" }}>
+                    <td
+                      style={{
+                        padding: "14px 16px",
+                        fontSize: "14px",
+                        fontFamily: "var(--fuente-mono)",
+                      }}
+                    >
                       {alerta.lote}
                     </td>
                     <td
@@ -404,7 +410,7 @@ export default function PanelAlertasVencimiento({
                     style={{
                       padding: "14px 16px",
                       fontSize: "14px",
-                      fontFamily: "monospace",
+                      fontFamily: "var(--fuente-mono)",
                       color: "#991b1b",
                     }}
                   >

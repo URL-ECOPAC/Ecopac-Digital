@@ -58,7 +58,6 @@ export default function BandejaValidacionPage({ usuarioId, rolUsuario }) {
         flexDirection: "column",
         gap: "20px",
         padding: "24px 0",
-        fontFamily: "system-ui, -apple-system, sans-serif",
       }}
     >
       {/* Encabezado */}
@@ -289,7 +288,7 @@ export default function BandejaValidacionPage({ usuarioId, rolUsuario }) {
                           fontSize: "11px",
                           color: "#94a3b8",
                           marginTop: "4px",
-                          fontFamily: "monospace",
+                          fontFamily: "var(--fuente-mono)",
                         }}
                       >
                         {mov.id}
@@ -314,7 +313,7 @@ export default function BandejaValidacionPage({ usuarioId, rolUsuario }) {
                       style={{
                         padding: "16px 20px",
                         color: "#475569",
-                        fontFamily: "monospace",
+                        fontFamily: "var(--fuente-mono)",
                         fontSize: "12px",
                       }}
                     >

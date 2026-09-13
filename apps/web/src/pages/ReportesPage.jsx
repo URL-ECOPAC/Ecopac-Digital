@@ -398,7 +398,7 @@ export default function ReportesPage() {
                           style={{
                             padding: "10px 16px",
                             fontSize: "14px",
-                            fontFamily: "monospace",
+                            fontFamily: "var(--fuente-mono)",
                           }}
                         >
                           {fila.lote}
