@@ -45,6 +45,8 @@ import ModalPermisosUsuario from "./ModalPermisosUsuario";
 export default function ColaboradoresPage() {
   const { rol, perfil: perfilDeSesion } = useSesionCompartida();
   const [mostrarAlta, setMostrarAlta] = useState(false);
+  // El modal se cierra al crear la cuenta, asi que el aviso de correo no enviado vive aqui.
+  const [avisoAlta, setAvisoAlta] = useState(null);
   const [seleccionadoId, setSeleccionadoId] = useState(null);
   const {
     filas,
@@ -128,6 +130,18 @@ export default function ColaboradoresPage() {
           .panel-detalle { flex: 1 1 auto; max-width: 100%; position: static; }
         }
       `}</style>
+
+      {avisoAlta && (
+        <div className="alert alert-warning alert-dismissible" role="alert">
+          {avisoAlta}
+          <button
+            type="button"
+            className="btn-close"
+            aria-label="Cerrar"
+            onClick={() => setAvisoAlta(null)}
+          />
+        </div>
+      )}
 
       <PageHeader
         title="Colaboradores"
@@ -233,7 +247,10 @@ export default function ColaboradoresPage() {
       <ModalAltaUsuario
         visible={mostrarAlta}
         onClose={() => setMostrarAlta(false)}
-        onUsuarioCreado={recargar}
+        onUsuarioCreado={(_usuario, aviso) => {
+          setAvisoAlta(aviso ?? null);
+          recargar();
+        }}
       />
     </ScreenContainer>
   );

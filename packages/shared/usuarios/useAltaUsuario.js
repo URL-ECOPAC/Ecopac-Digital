@@ -28,6 +28,29 @@ export const CAMPOS_ALTA_USUARIO = CAMPOS_USUARIO.filter((campo) =>
   IDS_CAMPOS_ALTA.includes(campo.id),
 );
 
+/**
+ * Aviso para quien invito cuando la cuenta se creo pero el correo no salio.
+ *
+ * invitar-usuario crea la cuenta aunque falle el envio y lo informa en `correoEnviado` (issue
+ * #691). Sin este aviso el modal se cerraba como si todo hubiera ido bien y la persona invitada
+ * se quedaba esperando un enlace que nunca iba a llegar. Lo mas comun es que el proyecto use el
+ * correo integrado de Supabase, que solo entrega a miembros de la organizacion (ver "El correo:
+ * por que hace falta SMTP propio" en docs/QUICKSTART.md).
+ *
+ * @param {object|null} usuario Respuesta de crearUsuario().
+ * @returns {string|null} null si el correo salio o si la respuesta no dice nada al respecto.
+ */
+export function avisoDeCorreoNoEnviado(usuario) {
+  if (usuario?.correoEnviado !== false) return null;
+
+  const quien = usuario.email ?? "la persona invitada";
+  return (
+    `La cuenta de ${quien} quedo creada, pero no se pudo enviar el correo para establecer la ` +
+    "contrasena. Hay que revisar el envio de correos del proyecto (SMTP de Supabase); mientras " +
+    "tanto la contrasena se puede fijar desde el panel de Supabase."
+  );
+}
+
 function valoresIniciales() {
   return CAMPOS_ALTA_USUARIO.reduce((valores, campo) => {
     valores[campo.id] = campo.valorPorDefecto ?? "";
@@ -49,7 +72,7 @@ function valoresIniciales() {
  *   error: object|null,
  *   enviando: boolean,
  *   setCampo: (id: string, valor: unknown) => void,
- *   enviar: () => Promise<{ ok: boolean, usuario?: object|null }>,
+ *   enviar: () => Promise<{ ok: boolean, usuario?: object|null, aviso?: string|null }>,
  *   cancelar: () => void,
  * }}
  */
@@ -88,7 +111,11 @@ export function useAltaUsuario() {
     if (resultado.error) return { ok: false };
 
     cancelar();
-    return { ok: true, usuario: resultado.usuario };
+    return {
+      ok: true,
+      usuario: resultado.usuario,
+      aviso: avisoDeCorreoNoEnviado(resultado.usuario),
+    };
   }, [valores, cancelar]);
 
   return { valores, errores, error, enviando, setCampo, enviar, cancelar };
