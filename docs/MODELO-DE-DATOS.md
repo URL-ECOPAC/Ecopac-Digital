@@ -963,17 +963,32 @@ solo lectura por diseno (lo escribe un trigger).
 
 **`triajes`**: los siete signos vitales se capturan (solo desde movil, `TriajeScreen.js`; no existe
 registro de triaje en web) y se muestran en el historial del paciente (web). `imc` es columna
-generada (excluida arriba). La correccion existe y esta probada (`actualizarTriaje()`,
-`puedeCorregirTriaje`) pero no tiene pantalla -> **pendiente, esta misma issue #756**.
+generada (excluida arriba). **Resuelto en esta misma issue #756**: `actualizarTriaje()` y
+`puedeCorregirTriaje()` ya existian, probados, sin pantalla; se agrega el boton "Corregir" al
+evento de triaje en `PestaniaHistorialPaciente.jsx` (web), que abre `ModalCorreccionTriaje.jsx`
+con los mismos siete campos de `CAMPOS_TRIAJE`.
 
-**`consultas`**: `motivo_consulta`/`tratamiento`/`plan_seguimiento` se muestran y se capturan (solo
-movil, `ConsultaScreen.js`); `antecedentes`/`sintomas`/`exploracion`/`observaciones` se capturan
-pero **nunca se muestran** (el historial no los selecciona); ninguno de los siete se puede
-corregir despues de guardado -> **pendiente, esta misma issue #756**.
+**`consultas`**: los siete campos (`motivo_consulta`, `antecedentes`, `sintomas`, `exploracion`,
+`tratamiento`, `observaciones`, `plan_seguimiento`) se capturan desde antes (solo movil,
+`ConsultaScreen.js`). **Resuelto en esta misma issue #756** en dos partes:
 
-**`consulta_diagnostico`**: `diagnostico_id` se muestra y se captura; no existe ningun UPDATE/DELETE
-para corregir un diagnostico mal elegido; `es_principal` se infiere del orden de seleccion, no de
-una eleccion explicita -> **pendiente, esta misma issue #756**.
+- Mostrar: `antecedentes`/`sintomas`/`exploracion`/`observaciones` no llegaban al historial
+  porque `COLUMNAS_DEL_HISTORIAL` (`historial.api.js`) no los pedia. Se agregan al `select` y a
+  `aEventos()`, y `PestaniaHistorialPaciente.jsx`/`HistorialPacienteScreen.js` (movil) los
+  muestran junto a los tres que ya se veian.
+- Corregir: `actualizarConsulta()` ya existia, probada, sin pantalla. Se agrega
+  `puedeCorregirConsulta(rol, consulta, perfilId)` (permisos.js, espejo de la politica de UPDATE
+  de consultas, `00033`: el medico que la creo, o administrador) y el boton "Corregir" en el
+  mismo evento, que abre `ModalCorreccionConsulta.jsx` con `CAMPOS_CORRECCION_CONSULTA` -los
+  siete campos de texto, sin `diagnosticos`-.
+
+**`consulta_diagnostico`**: `diagnostico_id` se muestra y se captura; `es_principal` se infiere del
+orden de seleccion, no de una eleccion explicita. **Sigue pendiente**: a diferencia de
+`triajes`/`consultas`, aqui no hay ninguna funcion de escritura de correccion que ya exista -la
+politica RLS de `consulta_diagnostico` (`00033`) solo tiene SELECT e INSERT, sin UPDATE ni
+DELETE-, asi que corregir un diagnostico mal elegido necesita una migracion nueva (politica +
+funcion), no solo una pantalla. Queda declarado como hueco abierto, distinto en naturaleza del
+resto de esta issue.
 
 **`diagnosticos`** (catalogo): CRUD completo (`CatalogoDiagnosticosPage.jsx`), incluido
 activar/desactivar y el filtro `soloActivos` que ya usa el selector de la consulta. Sin huecos.
@@ -1147,7 +1162,7 @@ cada uno al resolverse):
 
 | Area | Que falta | Prioridad | Estado |
 | --- | --- | --- | --- |
-| Historial clinico | Varios campos de consulta invisibles; consultas/condiciones/triaje sin correccion | media | Pendiente |
+| Historial clinico | Varios campos de consulta invisibles; consultas/condiciones/triaje sin correccion | media | Resuelto salvo diagnostico (ver nota de `consulta_diagnostico`, necesita migracion) |
 | Alertas de vencimiento | El panel visible y `alertas_caducidad` estan desconectados | **alta** | Resuelto |
 | Movimientos de inventario | Bodega y motivo de rechazo no se ven; sin correccion de un pendiente | media | Pendiente |
 | Medicamentos y recetas | `desactivarMedicamento()`/`anularReceta()` sin boton; `es_pediatrico` roto | baja | Resuelto |

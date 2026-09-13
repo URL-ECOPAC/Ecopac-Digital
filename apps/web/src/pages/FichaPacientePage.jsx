@@ -249,7 +249,11 @@ export default function FichaPacientePage() {
               )}
 
               {pestaniaActiva === "historial" && (
-                <PestaniaHistorialPaciente pacienteId={paciente.id} rol={rol} />
+                <PestaniaHistorialPaciente
+                  pacienteId={paciente.id}
+                  rol={rol}
+                  perfilId={perfil?.id}
+                />
               )}
 
               {pestaniaActiva === "signos" && (

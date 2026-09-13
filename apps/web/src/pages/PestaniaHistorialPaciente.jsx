@@ -6,6 +6,8 @@ import {
   formatearFechaConHora,
   formatearFechaCorta,
   OPCIONES_TIPO_DE_EVENTO,
+  puedeCorregirConsulta,
+  puedeCorregirTriaje,
   TIPOS_DE_EVENTO,
   useHistorialPaciente,
 } from "@ecopac/shared";
@@ -18,6 +20,8 @@ import LoadingState from "../components/LoadingState";
 import SecondaryButton from "../components/SecondaryButton";
 import Selector from "../components/Selector";
 import StatusChip from "../components/StatusChip";
+import ModalCorreccionConsulta from "./ModalCorreccionConsulta";
+import ModalCorreccionTriaje from "./ModalCorreccionTriaje";
 
 function Signos({ signos }) {
   const renglones = [
@@ -47,9 +51,16 @@ function Signos({ signos }) {
 }
 
 function DetalleConsulta({ evento }) {
+  // antecedentes/sintomas/exploracion/observaciones se capturan (useRegistroConsulta.js,
+  // ConsultaScreen.js movil) desde antes, pero el historial nunca los pedia ni los mostraba
+  // (issue #756).
   const campos = [
     ["Motivo de consulta", evento.motivoConsulta],
+    ["Antecedentes", evento.antecedentes],
+    ["Sintomas", evento.sintomas],
+    ["Exploracion", evento.exploracion],
     ["Tratamiento", evento.tratamiento],
+    ["Observaciones", evento.observaciones],
     ["Plan de seguimiento", evento.planSeguimiento],
   ].filter(([, valor]) => valor);
 
@@ -100,9 +111,11 @@ function DetalleReceta({ evento }) {
   );
 }
 
-function Evento({ evento, expandido, onAlternar }) {
+function Evento({ evento, expandido, onAlternar, puedeCorregir, onCorregir }) {
   const expandible =
     evento.tipo === TIPOS_DE_EVENTO.CONSULTA || evento.tipo === TIPOS_DE_EVENTO.RECETA;
+  const corregible =
+    evento.tipo === TIPOS_DE_EVENTO.TRIAJE || evento.tipo === TIPOS_DE_EVENTO.CONSULTA;
 
   return (
     <li className="pac-entrada py-3">
@@ -114,16 +127,29 @@ function Evento({ evento, expandido, onAlternar }) {
           <span className="small text-body-secondary">· folio {evento.folio}</span>
         )}
         {evento.anulada && <StatusChip status="anulada" label="Anulada" />}
-        {expandible && (
-          <button
-            type="button"
-            className="btn btn-link btn-sm ms-auto p-0"
-            onClick={onAlternar}
-            aria-expanded={expandido}
-          >
-            {expandido ? "Ocultar detalle" : "Ver detalle"}
-          </button>
-        )}
+        {(corregible && puedeCorregir) || expandible ? (
+          <div className="d-flex gap-2 ms-auto">
+            {corregible && puedeCorregir && (
+              <button
+                type="button"
+                className="btn btn-link btn-sm p-0"
+                onClick={() => onCorregir(evento)}
+              >
+                Corregir
+              </button>
+            )}
+            {expandible && (
+              <button
+                type="button"
+                className="btn btn-link btn-sm p-0"
+                onClick={onAlternar}
+                aria-expanded={expandido}
+              >
+                {expandido ? "Ocultar detalle" : "Ver detalle"}
+              </button>
+            )}
+          </div>
+        ) : null}
       </div>
 
       {evento.tipo === TIPOS_DE_EVENTO.CONSULTA && evento.diagnosticoPrincipal && (
@@ -142,7 +168,7 @@ function Evento({ evento, expandido, onAlternar }) {
   );
 }
 
-export default function PestaniaHistorialPaciente({ pacienteId, rol }) {
+export default function PestaniaHistorialPaciente({ pacienteId, rol, perfilId }) {
   const {
     grupos,
     total,
@@ -155,6 +181,8 @@ export default function PestaniaHistorialPaciente({ pacienteId, rol }) {
     recargar,
   } = useHistorialPaciente(pacienteId, { rol });
   const [expandidos, setExpandidos] = useState(() => new Set());
+  const [triajeEnCorreccion, setTriajeEnCorreccion] = useState(null);
+  const [consultaEnCorreccion, setConsultaEnCorreccion] = useState(null);
 
   const alternar = (id) =>
     setExpandidos((anteriores) => {
@@ -223,11 +251,46 @@ export default function PestaniaHistorialPaciente({ pacienteId, rol }) {
                   evento={evento}
                   expandido={expandidos.has(`${evento.tipo}-${evento.id}`)}
                   onAlternar={() => alternar(`${evento.tipo}-${evento.id}`)}
+                  puedeCorregir={
+                    evento.tipo === TIPOS_DE_EVENTO.TRIAJE
+                      ? puedeCorregirTriaje(rol)
+                      : puedeCorregirConsulta(rol, evento, perfilId)
+                  }
+                  onCorregir={(eventoACorregir) =>
+                    eventoACorregir.tipo === TIPOS_DE_EVENTO.TRIAJE
+                      ? setTriajeEnCorreccion({
+                          id: eventoACorregir.id,
+                          ...eventoACorregir.signos,
+                        })
+                      : setConsultaEnCorreccion(eventoACorregir)
+                  }
                 />
               ))}
             </ul>
           </Card>
         ))}
+
+      {triajeEnCorreccion && (
+        <ModalCorreccionTriaje
+          triaje={triajeEnCorreccion}
+          onClose={() => setTriajeEnCorreccion(null)}
+          onGuardado={() => {
+            setTriajeEnCorreccion(null);
+            recargar();
+          }}
+        />
+      )}
+
+      {consultaEnCorreccion && (
+        <ModalCorreccionConsulta
+          consulta={consultaEnCorreccion}
+          onClose={() => setConsultaEnCorreccion(null)}
+          onGuardado={() => {
+            setConsultaEnCorreccion(null);
+            recargar();
+          }}
+        />
+      )}
     </div>
   );
 }

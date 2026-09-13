@@ -210,6 +210,29 @@ export const CAMPOS_CONSULTA = [
 ];
 
 /**
+ * Subconjunto de CAMPOS_CONSULTA para corregir una consulta ya guardada (issue #756, auditoria
+ * campo-a-vista): actualizarConsulta() ya existia y aceptaba estos siete campos, pero ninguna
+ * pantalla los pedia.
+ *
+ * Sin `diagnosticos`: esa columna no es de `consultas` sino de `consulta_diagnostico`
+ * (tabla de union), que no tiene ninguna politica RLS de UPDATE ni DELETE (00033) -- corregir un
+ * diagnostico mal elegido queda fuera de este cambio, declarado como hueco abierto.
+ */
+const IDS_CAMPOS_CORRECCION_CONSULTA = [
+  "motivoConsulta",
+  "antecedentes",
+  "sintomas",
+  "exploracion",
+  "tratamiento",
+  "observaciones",
+  "planSeguimiento",
+];
+
+export const CAMPOS_CORRECCION_CONSULTA = CAMPOS_CONSULTA.filter((campo) =>
+  IDS_CAMPOS_CORRECCION_CONSULTA.includes(campo.id),
+);
+
+/**
  * Formulario de receta (recetas + receta_detalle, 00019). medicamentos es una lista
  * repetible: cada fila que el usuario agrega se vuelve un receta_detalle.
  */

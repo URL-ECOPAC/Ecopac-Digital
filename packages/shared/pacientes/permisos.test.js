@@ -12,6 +12,7 @@ import {
   puedeAdministrarDiagnosticos,
   puedeVerCatalogoDiagnosticos,
   puedeAnularReceta,
+  puedeCorregirConsulta,
   puedeCorregirTriaje,
   puedeCrearExpediente,
   puedeEditarExpediente,
@@ -184,5 +185,38 @@ describe("puedeAnularReceta", () => {
   it("sin receta o sin perfil no concede nada a un medico", () => {
     expect(puedeAnularReceta(ROLES.MEDICO, null, "per-medico")).toBe(false);
     expect(puedeAnularReceta(ROLES.MEDICO, RECETA_PROPIA_EMITIDA, null)).toBe(false);
+  });
+});
+
+// Issue #756: actualizarConsulta() ya existia, probada, pero ninguna pantalla la llamaba.
+describe("puedeCorregirConsulta", () => {
+  const CONSULTA_PROPIA = { profesionalId: "per-medico" };
+
+  it("el medico corrige la consulta que el registro", () => {
+    expect(puedeCorregirConsulta(ROLES.MEDICO, CONSULTA_PROPIA, "per-medico")).toBe(true);
+  });
+
+  it("no corrige la consulta de otro medico: espejo de la politica de UPDATE (00033)", () => {
+    const ajena = { profesionalId: "per-otro" };
+
+    expect(puedeCorregirConsulta(ROLES.MEDICO, ajena, "per-medico")).toBe(false);
+  });
+
+  it("la administradora corrige cualquiera", () => {
+    const ajena = { profesionalId: "per-otro" };
+
+    expect(puedeCorregirConsulta(ROLES.ADMINISTRADOR, ajena, "per-admin")).toBe(true);
+    expect(puedeCorregirConsulta(ROLES.ADMINISTRADOR, null, null)).toBe(true);
+  });
+
+  it("los demas roles no corrigen ninguna consulta", () => {
+    for (const rol of [ROLES.VOLUNTARIO, ROLES.JUNTA_DIRECTIVA, ROLES.SOCIO_FUNDADOR]) {
+      expect(puedeCorregirConsulta(rol, CONSULTA_PROPIA, "per-medico")).toBe(false);
+    }
+  });
+
+  it("sin consulta o sin perfil no concede nada a un medico", () => {
+    expect(puedeCorregirConsulta(ROLES.MEDICO, null, "per-medico")).toBe(false);
+    expect(puedeCorregirConsulta(ROLES.MEDICO, CONSULTA_PROPIA, null)).toBe(false);
   });
 });

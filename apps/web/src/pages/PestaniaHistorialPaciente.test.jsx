@@ -32,8 +32,8 @@ vi.mock("@ecopac/shared", async (importarOriginal) => ({
 
 const { useHistorialPaciente } = await import("@ecopac/shared");
 
-function pantalla() {
-  return render(<PestaniaHistorialPaciente pacienteId="p-1" rol="medico" />);
+function pantalla({ rol = "medico", perfilId } = {}) {
+  return render(<PestaniaHistorialPaciente pacienteId="p-1" rol={rol} perfilId={perfilId} />);
 }
 
 const GRUPO_DE_EJEMPLO = {
@@ -47,9 +47,30 @@ const GRUPO_DE_EJEMPLO = {
       tipo: "consulta",
       fecha: "2026-01-10T09:00:00Z",
       profesional: "Dr. Perez",
+      profesionalId: "per-medico",
       diagnosticoPrincipal: { nombre: "Faringitis aguda" },
       diagnosticos: [{ codigo: "J02", nombre: "Faringitis aguda" }],
       motivoConsulta: "Dolor de garganta",
+      antecedentes: "Sin antecedentes relevantes",
+      sintomas: "Odinofagia, fiebre",
+      exploracion: "Faringe eritematosa",
+      observaciones: "Se indica reposo",
+    },
+  ],
+};
+
+const GRUPO_CON_TRIAJE = {
+  clave: "g-2",
+  jornada: "Jornada febrero",
+  comunidad: "Santa Cruz",
+  fecha: "2026-02-10",
+  eventos: [
+    {
+      id: "triaje-1",
+      tipo: "triaje",
+      fecha: "2026-02-10T09:00:00Z",
+      profesional: "Enf. Rosa",
+      signos: { presionSistolica: 120, presionDiastolica: 80 },
     },
   ],
 };
@@ -112,6 +133,80 @@ describe("PestaniaHistorialPaciente", () => {
 
     expect(screen.getByText("Dolor de garganta")).toBeInTheDocument();
     expect(screen.getByText("Ocultar detalle")).toBeInTheDocument();
+  });
+
+  // Issue #756: antecedentes/sintomas/exploracion/observaciones se capturaban pero el historial
+  // nunca los mostraba.
+  it("el detalle de la consulta tambien muestra antecedentes, sintomas, exploracion y observaciones", () => {
+    mockEstadoHook.grupos = [GRUPO_DE_EJEMPLO];
+    mockEstadoHook.total = 1;
+    pantalla();
+
+    fireEvent.click(screen.getByText("Ver detalle"));
+
+    expect(screen.getByText("Sin antecedentes relevantes")).toBeInTheDocument();
+    expect(screen.getByText("Odinofagia, fiebre")).toBeInTheDocument();
+    expect(screen.getByText("Faringe eritematosa")).toBeInTheDocument();
+    expect(screen.getByText("Se indica reposo")).toBeInTheDocument();
+  });
+
+  // Issue #756: actualizarTriaje()/puedeCorregirTriaje() ya existian, probados, sin pantalla.
+  describe("correccion de triaje", () => {
+    it("un medico ve el boton Corregir en un evento de triaje", () => {
+      mockEstadoHook.grupos = [GRUPO_CON_TRIAJE];
+      mockEstadoHook.total = 1;
+      pantalla({ rol: "medico" });
+
+      expect(screen.getByText("Corregir")).toBeInTheDocument();
+    });
+
+    it("un voluntario general no ve el boton Corregir", () => {
+      mockEstadoHook.grupos = [GRUPO_CON_TRIAJE];
+      mockEstadoHook.total = 1;
+      pantalla({ rol: "voluntario general" });
+
+      expect(screen.queryByText("Corregir")).not.toBeInTheDocument();
+    });
+
+    it("Corregir abre el modal de correccion del triaje", () => {
+      mockEstadoHook.grupos = [GRUPO_CON_TRIAJE];
+      mockEstadoHook.total = 1;
+      pantalla({ rol: "medico" });
+
+      fireEvent.click(screen.getByText("Corregir"));
+
+      expect(screen.getByText("Corregir triaje")).toBeInTheDocument();
+    });
+  });
+
+  // Issue #756: actualizarConsulta()/puedeCorregirConsulta() ya existian, probados, sin
+  // pantalla.
+  describe("correccion de consulta", () => {
+    it("el medico que registro la consulta ve el boton Corregir", () => {
+      mockEstadoHook.grupos = [GRUPO_DE_EJEMPLO];
+      mockEstadoHook.total = 1;
+      pantalla({ rol: "medico", perfilId: "per-medico" });
+
+      expect(screen.getByText("Corregir")).toBeInTheDocument();
+    });
+
+    it("un medico que no registro esa consulta no ve el boton Corregir", () => {
+      mockEstadoHook.grupos = [GRUPO_DE_EJEMPLO];
+      mockEstadoHook.total = 1;
+      pantalla({ rol: "medico", perfilId: "otro-medico" });
+
+      expect(screen.queryByText("Corregir")).not.toBeInTheDocument();
+    });
+
+    it("Corregir abre el modal de correccion de la consulta", () => {
+      mockEstadoHook.grupos = [GRUPO_DE_EJEMPLO];
+      mockEstadoHook.total = 1;
+      pantalla({ rol: "medico", perfilId: "per-medico" });
+
+      fireEvent.click(screen.getByText("Corregir"));
+
+      expect(screen.getByText("Corregir consulta")).toBeInTheDocument();
+    });
   });
 
   // Camino de error (issue #759/#776): si la consulta del historial falla, la pantalla tiene que
