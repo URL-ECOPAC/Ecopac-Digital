@@ -88,6 +88,17 @@ jobs:
       - name: Comprobar el detector de emojis contra sus propios casos
         run: npm run verificar:sin-emojis -- --autoprueba
 
+      # Red de la migracion de colores (issue #700): compara el color EFECTIVO de cada archivo
+      # -los hexadecimales a mano mas el valor de los tokens que menciona- contra una linea base.
+      # Cambiar "#2A9C36" por colors.primary no la mueve; cambiarlo por colors.info si, y ahi
+      # falla. Es lo unico que detecta una regresion visual en dos apps que no tienen ninguna
+      # prueba de ese tipo.
+      - name: Comprobar que ningun color efectivo cambio
+        run: npm run verificar:paleta
+
+      - name: Comprobar el comparador de paleta contra sus propios casos
+        run: npm run verificar:paleta -- --autoprueba
+
       - name: Ejecutar lint en todos los workspaces
         run: npm run lint
 
