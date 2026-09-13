@@ -94,12 +94,11 @@ export default function InventarioPage() {
   });
 
   // Solo se usa el conteo, para el indicador de la pestaña: el resto de este hook -busqueda,
-  // filtros, porVencer/vencidas- lo vuelve a calcular PanelAlertasVencimiento.jsx con su propia
-  // llamada a useAlertasVencimiento(), que es la que de verdad se pinta en pantalla.
-  const { cantidadPendientes: cantidadPendientesAlertas } = useAlertasVencimiento({
-    lotes: lotesRaw,
-    bodegas: bodegas,
-  });
+  // porVencer/vencidas- lo vuelve a calcular PanelAlertasVencimiento.jsx con su propia llamada a
+  // useAlertasVencimiento(), que es la que de verdad se pinta en pantalla. Las dos llamadas leen
+  // alertas_caducidad de forma independiente (mismo patron que usePendientesValidacion() en la
+  // bandeja de validacion), no derivan el conteo de lotesRaw.
+  const { cantidadPendientes: cantidadPendientesAlertas } = useAlertasVencimiento({});
 
   // Modales Lotes y Alertas
   const [modalAltaLoteAbierto, setModalAltaLoteAbierto] = useState(false);
@@ -1080,12 +1079,7 @@ export default function InventarioPage() {
 
       {/* Pestaña: Alertas completada mediante PanelAlertasVencimiento */}
       {tabActiva === "alertas" && (
-        <PanelAlertasVencimiento
-          lotes={lotesRaw}
-          bodegas={bodegas}
-          usuarioId={usuarioActual?.id}
-          rolUsuario={usuarioActual?.rol}
-        />
+        <PanelAlertasVencimiento usuarioId={usuarioActual?.id} rolUsuario={usuarioActual?.rol} />
       )}
 
       {/* Pestaña: Kardex Movimientos */}

@@ -1018,9 +1018,16 @@ captura (via `prompt()`) pero nunca se muestra despues; `editarMovimiento()` no 
 inconsistentemente (UUID crudo en la bandeja, nombre resuelto en el kardex) -bajo impacto, se
 corrige junto con lo demas de esta tabla si se toca esa pantalla.
 
-**`alertas_caducidad`**: la tabla real (poblada por rutina programada) y el panel que la persona
-ve estan desconectados -> **pendiente, esta misma issue #756** (severidad alta: la accion "Atender" que se ve en pantalla
-probablemente no persiste nada).
+**`alertas_caducidad`**: resuelto en esta misma issue #756 (severidad alta). El panel
+(`PanelAlertasVencimiento.jsx`) calculaba sus propias "alertas" derivando dias-hasta-vencimiento
+de la lista de lotes en memoria, en vez de leer esta tabla; al reusar `id: lote.id` para cada
+fila, el boton "Atender" llamaba a `atenderAlerta()` con el id de un LOTE, no de una alerta, asi
+que el UPDATE nunca encontraba la fila y la accion fallaba siempre. Ahora `useAlertasVencimiento()`
+consulta `listarAlertas()` directamente (mismo patron que `usePendientesValidacion()` con la
+bandeja de movimientos) y `atenderAlerta()` recibe el id real. De paso se quitaron las columnas
+"Bodega" y "Categoria" del panel: no tenian ningun dato real detras (`alertas_caducidad` no
+distingue bodega -un lote puede repartirse en varias- y `medicamentos` no tiene columna
+`categoria`); se muestra `cantidad_afectada`, que si es una columna real de la tabla.
 
 **`vista_lotes_disponibles`**: consumida integra por el selector de lote al recetar y por
 `StockScreen.js`. Sin huecos, de solo lectura por naturaleza.
@@ -1123,7 +1130,7 @@ cada uno al resolverse):
 | Area | Que falta | Prioridad | Estado |
 | --- | --- | --- | --- |
 | Historial clinico | Varios campos de consulta invisibles; consultas/condiciones/triaje sin correccion | media | Pendiente |
-| Alertas de vencimiento | El panel visible y `alertas_caducidad` estan desconectados | **alta** | Pendiente |
+| Alertas de vencimiento | El panel visible y `alertas_caducidad` estan desconectados | **alta** | Resuelto |
 | Movimientos de inventario | Bodega y motivo de rechazo no se ven; sin correccion de un pendiente | media | Pendiente |
 | Medicamentos y recetas | `desactivarMedicamento()`/`anularReceta()` sin boton; `es_pediatrico` roto | baja | Resuelto |
 | Comunidades | Columnas geo sin uso (decidir mapa o retiro); sin edicion | baja | Pendiente |
