@@ -59,9 +59,17 @@ describe("modulosVisibles", () => {
       expect(ids).toContain("presupuestos");
       expect(ids).toContain("proyectos");
       expect(ids).toContain("reportes");
-
-      expect(ids).not.toContain("colaboradores");
     }
+  });
+
+  // Issue #756: perfiles_directorio (00038/00080) da a junta directiva -y solo a junta
+  // directiva, no a socio fundador- una vista de solo lectura del personal, sin datos de
+  // contacto ajenos. La ruta tiene que reflejar exactamente esa misma linea, o la vista queda
+  // sin ninguna forma de llegar a ella.
+  it("colaboradores: solo administrador y junta directiva, no socio fundador", () => {
+    expect(idsDe(modulosVisibles(ROLES.ADMINISTRADOR))).toContain("colaboradores");
+    expect(idsDe(modulosVisibles(ROLES.JUNTA_DIRECTIVA))).toContain("colaboradores");
+    expect(idsDe(modulosVisibles(ROLES.SOCIO_FUNDADOR))).not.toContain("colaboradores");
   });
 
   it("un rol desconocido no ve ningun modulo salvo los que no restringen roles", () => {

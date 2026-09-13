@@ -63,13 +63,15 @@ export function calcularPaginas(total, porPagina) {
  * Cambiar un filtro devuelve a la pagina 1: mantenerse en la pagina 5 despues de filtrar deja
  * la lista vacia sin explicacion.
  *
- * Quien puede ver esta pantalla NO se decide aqui: lo hace el guard de rutas de la #52 y, en
- * ultima instancia, la politica RLS de perfiles (00038), que a quien no es administrador solo
- * le devuelve su propia fila.
+ * Quien puede ver esta pantalla NO se decide aqui: lo hace el guard de rutas de la #52. `rol` es
+ * el de quien mira, no un filtro: listarUsuarios() lo usa para decidir si lee `perfiles` (la
+ * administradora ve todo el personal) o `perfiles_directorio` (junta directiva ve al personal
+ * sin datos de contacto ajenos; issue #756, antes esta pantalla siempre leia la tabla base y
+ * junta directiva terminaba viendo solo su propia fila).
  *
- * @param {{ porPagina?: number }} [opciones]
+ * @param {{ porPagina?: number, rol?: string }} [opciones]
  */
-export function useUsuariosListado({ porPagina = USUARIOS_POR_PAGINA } = {}) {
+export function useUsuariosListado({ porPagina = USUARIOS_POR_PAGINA, rol } = {}) {
   const [filtros, setFiltros] = useState(FILTROS_USUARIO_VACIOS);
   const [pagina, setPagina] = useState(1);
   const [usuarios, setUsuarios] = useState([]);
@@ -91,6 +93,7 @@ export function useUsuariosListado({ porPagina = USUARIOS_POR_PAGINA } = {}) {
       ...filtros,
       limite: porPagina,
       pagina,
+      rolConsultor: rol,
     });
 
     if (errorDeLista) {
@@ -110,7 +113,7 @@ export function useUsuariosListado({ porPagina = USUARIOS_POR_PAGINA } = {}) {
     const { conteos } = await contarJornadasPorPerfil(filas.map((perfil) => perfil.id));
     setJornadasPorPerfil(conteos);
     setCargando(false);
-  }, [filtros, pagina, porPagina]);
+  }, [filtros, pagina, porPagina, rol]);
 
   useEffect(() => {
     cargar();

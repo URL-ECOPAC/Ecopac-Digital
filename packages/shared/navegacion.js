@@ -22,13 +22,12 @@ export const MODULOS = [
     tabMovil: "Pacientes",
     soloWeb: false,
     icono: "Users",
-    roles: [
-      ROLES.ADMINISTRADOR,
-      ROLES.MEDICO,
-      ROLES.FARMACEUTICO,
-      ROLES.ENFERMERO,
-      ROLES.VOLUNTARIO,
-    ],
+    // ROLES.ADMINISTRADOR/MEDICO/VOLUNTARIO, no los cinco: espejo de "Administrador, medico y
+    // voluntario leen pacientes" (00032). Antes tambien listaba ROLES.FARMACEUTICO y
+    // ROLES.ENFERMERO, dos claves que ROLES (usuarios/roles.js) no declara -el enum real solo
+    // tiene cinco valores-, asi que evaluaban a undefined; sin efecto en el resultado (un
+    // undefined no coincide con ningun rol real), pero se limpian por higiene.
+    roles: [ROLES.ADMINISTRADOR, ROLES.MEDICO, ROLES.VOLUNTARIO],
   },
   {
     id: "donaciones",
@@ -48,15 +47,9 @@ export const MODULOS = [
     tabMovil: "Inventario",
     soloWeb: false,
     icono: "Package",
-    roles: [
-      ROLES.ADMINISTRADOR,
-      ROLES.MEDICO,
-      ROLES.FARMACEUTICO,
-      ROLES.ENFERMERO,
-      ROLES.VOLUNTARIO,
-      ROLES.JUNTA_DIRECTIVA,
-      ROLES.SOCIO_FUNDADOR,
-    ],
+    // Los cinco roles reales (ver nota de ROLES.FARMACEUTICO/ENFERMERO en el modulo "pacientes"
+    // de arriba: dos claves inexistentes que aqui tambien se limpian, sin cambio de efecto).
+    roles: Object.values(ROLES),
   },
   {
     id: "presupuestos",
@@ -106,7 +99,10 @@ export const MODULOS = [
     tabMovil: false,
     soloWeb: true,
     icono: "UserCheck",
-    roles: [ROLES.ADMINISTRADOR],
+    // Issue #756: puedeVerListadoUsuarios() (usuarios/permisos.js) ya declaraba que junta
+    // directiva podia ver el listado -perfiles_directorio (00038/00080) existe exactamente para
+    // eso-, pero el guard de esta ruta la dejaba fuera, asi que nunca llegaba a la pantalla.
+    roles: [ROLES.ADMINISTRADOR, ROLES.JUNTA_DIRECTIVA],
   },
 ];
 

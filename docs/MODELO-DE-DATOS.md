@@ -1109,7 +1109,7 @@ existe una pantalla de reporte de pacientes en `apps/mobile`**: es una decision 
 documentada en otras issues (los reportes agregados son alcance web; movil cubre consulta y
 registro de campo), no un hueco nuevo que resolver aqui.
 
-**`perfiles_directorio`**: ver seccion de Identidad arriba (pendiente, esta misma issue #756).
+**`perfiles_directorio`**: ver seccion de Identidad arriba (resuelto en esta misma issue #756).
 
 ### Decision: `MODULOS[].icono` (HomePage vacia)
 
@@ -1137,7 +1137,7 @@ cada uno al resolverse):
 | Proyectos sociales | Sin alta/edicion de proyecto, hitos ni presupuesto asignado | media | Pendiente |
 | Gastos | Aprobado por/cuando y motivo de rechazo invisibles | baja | Pendiente |
 | Donaciones | Sin anular; constancia imprime mal el proyecto; ingreso a inventario no se dispara | media | Pendiente |
-| Directorio de colaboradores | Junta directiva consulta la tabla equivocada | media | Pendiente |
+| Directorio de colaboradores | Junta directiva consulta la tabla equivocada | media | Resuelto |
 | Perfil de colaborador | fecha_ingreso/direccion/notas no capturables | baja | Pendiente |
 | Permisos por usuario | Sin motivo ni quien concedio/revoco | baja | Pendiente |
 | Movil: edicion de paciente | No existe la pantalla | media | Pendiente |
@@ -1197,10 +1197,19 @@ pantalla y decidir si lo que se ve ahi responde la pregunta- y no es candidata a
 | direccion | Si | No | No | Pendiente (#756) |
 | notas | Si | No | No | Pendiente (#756) |
 
-**`perfiles_directorio`** (vista): mismas columnas que `perfiles` salvo `direccion`/`notas`. Vive
-para que junta directiva/socio fundador vean el directorio sin acceso de fila a `perfiles`
-completo, pero `listarUsuarios()` consulta `perfiles` directamente incluso para esos roles ->
-**pendiente, esta misma issue #756** (junta directiva ve una lista vacia hoy, no el directorio).
+**`perfiles_directorio`** (vista): mismas columnas que `perfiles` salvo `direccion`/`notas`, y con
+`telefono`/`email` en NULL salvo para administrador o la propia fila. Vive para que junta
+directiva vea el directorio sin acceso de fila a `perfiles` completo -socio fundador queda
+excluido a proposito de esta vista, es el otro rol consultivo pero no el que la 00038/00080
+autoriza aqui-. Resuelto en esta misma issue #756: `listarUsuarios()` (`usuarios/api.js`) ahora
+recibe `rolConsultor` y lee `perfiles_directorio` cuando quien mira no es administrador (antes
+consultaba siempre la tabla base, y junta directiva terminaba viendo solo su propia fila via
+RLS, no el directorio). El embed de especialidades se resuelve aparte en ese caso
+(`especialidadesPorPerfiles()`): PostgREST lo resuelve por la FK real hacia `perfiles`, que no
+esta garantizada sobre una vista. Ademas, el guard de la ruta `/colaboradores`
+(`packages/shared/navegacion.js`) solo dejaba pasar a administrador pese a que
+`puedeVerListadoUsuarios()` ya declaraba que junta directiva tambien podia entrar: se agrega ese
+rol a la ruta.
 
 **`permisos`** (catalogo, sembrado por `00003`): `clave`/`modulo`/`descripcion` se muestran en
 `ModalPermisosUsuario.jsx`; sin pantalla de mantenimiento (correcto, es catalogo de esquema).
