@@ -333,12 +333,30 @@ dejando el sistema sin administrador igual. Ver Divergencia 15.
 
 ### Territorio y catalogos
 
-| Tabla                  | Quien lee             | Como se implementa                                                     |
-| ---------------------- | --------------------- | ------------------------------------------------------------------------ |
-| `departamentos`        | cualquier autenticado | `00006` (politica) + `00073` (GRANT, issue #406 resuelto)                |
-| `municipios`           | cualquier autenticado | Igual que departamentos                                                  |
-| `comunidades`          | cualquier autenticado | `00008` (politica) + `00041` (GRANT). La politica de `00041` se retiro en `00104`: era redundante con la de `00008`, ver Divergencia 10 (resuelta) |
-| `condiciones_cronicas` | cualquier autenticado | `00010`                                                                  |
+| Tabla                  | Quien lee             | Quien escribe          | Como se implementa                                    |
+| ---------------------- | --------------------- | ---------------------- | ------------------------------------------------------- |
+| `departamentos`        | cualquier autenticado | **nadie**              | `00006` (politica) + `00073` (GRANT, issue #406 resuelto). El catalogo lo siembra la `00125`, no la aplicacion |
+| `municipios`           | cualquier autenticado | **nadie**              | Igual que departamentos                                 |
+| `comunidades`          | cualquier autenticado | administrador: C U     | Lectura: `00008` (politica) + `00041` (GRANT); la politica de `00041` se retiro en `00104` por redundante. Escritura: `00116` (politicas de INSERT y UPDATE) + `00118` (`GRANT INSERT, UPDATE`), y `00117` agrega `es_vigente` como retiro logico |
+| `condiciones_cronicas` | cualquier autenticado | **nadie**              | `00010`                                                 |
+
+**Ni `departamentos` ni `municipios` se escriben desde la aplicacion, y es deliberado**: son el
+catalogo oficial de Guatemala, con `id` entero fijo, y quien lo necesite corregir lo hace en una
+migracion. Hasta la `00125` ese catalogo solo existia en `supabase/seed.sql` y por tanto **no
+llegaba a ningun ambiente remoto**, porque `supabase db push` no ejecuta seeds (issue #704). Las
+comunidades si son operativas -crecen con cada jornada nueva- y por eso la administradora las crea
+y las edita desde la aplicacion, con `es_vigente` para retirar una sin borrarla.
+
+**Ojo con cual de las dos capas los protege.** Comprobado contra la base local con las 125
+migraciones aplicadas: `authenticated` conserva `GRANT INSERT, UPDATE` sobre `departamentos` y
+`municipios` -no lo dio ninguna migracion; viene de los privilegios por defecto que Supabase
+concede sobre el esquema `public`, los mismos que la `00120` tuvo que retirar para el `DELETE`-.
+Lo que hoy impide escribir es **solo RLS**: como ninguna politica de INSERT o UPDATE las cubre, un
+administrador autenticado recibe `new row violates row-level security policy` al insertar y un
+`UPDATE` que no afecta ninguna fila, que es la asimetria de la regla de #221. El resultado efectivo
+es el correcto, pero descansa en una sola capa en vez de dos: el dia que alguien agregue una
+politica permisiva a estas tablas, el `GRANT` ya esta puesto. Retirarlo es trabajo de una issue
+propia, no de la #704, que no toca privilegios.
 
 ### Reportes: las vistas
 
