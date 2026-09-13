@@ -574,7 +574,7 @@ export default function InventarioPage() {
             </span>
           )}
         </button>
-        {/* ✅ Pestaña Kardex agregada en la barra */}
+        {/* Pestaña Kardex agregada en la barra */}
         <button
           onClick={() => setTabActiva("kardex")}
           style={{

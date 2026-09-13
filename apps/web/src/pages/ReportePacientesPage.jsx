@@ -52,11 +52,11 @@ export default function ReportePacientesPage() {
     limpiarFiltros,
     catalogos,
     agruparPor,
-    setAgruparPor, // ✅ VIENE DEL HOOK, NO LO DECLARES TÚ
+    setAgruparPor, // VIENE DEL HOOK, NO LO DECLARES TÚ
     recargar,
   } = useReportePacientes({ rol });
 
-  // 📄 Exportación PDF — issue #216
+  // Exportación PDF — issue #216
   const periodo = `${valores?.fechaInicio || "—"} al ${valores?.fechaFin || "—"}`;
   const { exportar, generando } = useExportarPDF({
     tituloReporte: "Reporte de Pacientes Atendidos",
@@ -83,7 +83,7 @@ export default function ReportePacientesPage() {
             onClick: () => descargarCSV(columnas, grupos),
             variant: "secondary",
           },
-          // 📄 Botón de PDF
+          // Botón de PDF
           { custom: <BotonExportarPDF onClick={exportar} generando={generando} /> },
         ]}
       />
@@ -107,7 +107,7 @@ export default function ReportePacientesPage() {
       {error && <ErrorState message={error.mensaje} onRetry={recargar} />}
       {!error && cargando && <LoadingState message="Calculando el reporte..." />}
       {!error && !cargando && (
-        // ✅ TODO el contenido que va al PDF DENTRO de este div
+        // TODO el contenido que va al PDF DENTRO de este div
         <div id="contenido-reporte-pdf">
           {totales && (
             <section className="reporte-seccion">
@@ -139,7 +139,7 @@ export default function ReportePacientesPage() {
             />
           </section>
         </div>
-        // ✅ Fin del contenido PDF
+        // Fin del contenido PDF
       )}
     </ScreenContainer>
   );

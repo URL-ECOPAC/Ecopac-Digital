@@ -56,7 +56,7 @@ export default function PanelAlertasVencimiento({
 
   return (
     <div>
-      {/* 📌 Cabecera */}
+      {/* Cabecera */}
       <div style={{ marginBottom: "24px" }}>
         <h2 style={{ fontSize: "28px", fontWeight: "700", margin: 0, color: "#0f172a" }}>
           Alertas de Vencimiento
@@ -69,7 +69,7 @@ export default function PanelAlertasVencimiento({
         </div>
       </div>
 
-      {/* 🔍 Filtros */}
+      {/* Filtros */}
       <div
         style={{
           display: "flex",
@@ -129,7 +129,7 @@ export default function PanelAlertasVencimiento({
         </select>
       </div>
 
-      {/* ⏳ Próximos a vencer */}
+      {/* Próximos a vencer */}
       <div style={{ marginBottom: "32px" }}>
         <h3 style={{ fontSize: "20px", fontWeight: "600", margin: "0 0 12px 0", color: "#0f172a" }}>
           Próximos a vencer ({porVencer.length})
@@ -302,7 +302,7 @@ export default function PanelAlertasVencimiento({
         )}
       </div>
 
-      {/* ⚫ Vencidas */}
+      {/* Vencidas */}
       <div>
         <h3 style={{ fontSize: "20px", fontWeight: "600", margin: "0 0 12px 0", color: "#0f172a" }}>
           Vencidos — Para dar de baja ({vencidas.length})
@@ -476,7 +476,7 @@ export default function PanelAlertasVencimiento({
         )}
       </div>
 
-      {/* 📋 Modal: Registrar acción */}
+      {/* Modal: Registrar acción */}
       {alertaAtendiendo && (
         <div
           style={{

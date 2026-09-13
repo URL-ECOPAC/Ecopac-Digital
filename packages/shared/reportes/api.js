@@ -9,12 +9,12 @@
 // La vista tiene grano de UNA FILA POR JORNADA. Los cuatro indicadores del requerimiento salen de
 // agregar esas filas, no de columnas propias:
 //
-//   pacientes atendidos     SUM(pacientes_atendidos)
-//   comunidades beneficiadas COUNT(DISTINCT comunidad_id)   <- no es una columna, y no puede serlo:
-//                                                              a nivel de una jornada valdria uno
-//                                                              siempre (COMMENT de la 00027)
-//   tratamientos entregados SUM(tratamientos_entregados)
-//   medicamentos utilizados SUM(medicamentos_utilizados)
+// pacientes atendidos     SUM(pacientes_atendidos)
+// comunidades beneficiadas COUNT(DISTINCT comunidad_id)   <- no es una columna, y no puede serlo:
+// a nivel de una jornada valdria uno
+// siempre (COMMENT de la 00027)
+// tratamientos entregados SUM(tratamientos_entregados)
+// medicamentos utilizados SUM(medicamentos_utilizados)
 //
 // El mes tampoco es una columna: se deriva de `fecha` al agrupar.
 //
@@ -280,14 +280,14 @@ export async function listarLotesPorVencer({ horizonteDias, comunidad, bodega } 
       .gte("fecha_vencimiento", hoyStr)
       .order("fecha_vencimiento", { ascending: true });
 
-    // ⚠️ Filtros comentados: columnas no confirmadas
+    // Filtros comentados: columnas no confirmadas
     // if (bodega) consulta = consulta.eq("bodega_id", bodega);
     // if (comunidad) consulta = consulta.eq("comunidad_id", comunidad);
 
     const { data, error } = await consulta;
     if (error) throw error;
 
-    // ✅ Mapeo normalizado
+    // Mapeo normalizado
     const lotes = (data ?? []).map((fila) => {
       const diasRestantes = calcularDiasRestantes(fila.fecha_vencimiento);
       return {
@@ -300,8 +300,8 @@ export async function listarLotesPorVencer({ horizonteDias, comunidad, bodega } 
         fecha_vencimiento: fila.fecha_vencimiento,
         vencimiento: fila.fecha_vencimiento,
         dias_restantes: diasRestantes,
-        cantidad: "—", // ⚠️ columna por confirmar nombre
-        bodega: "—", // ⚠️ columna por confirmar nombre
+        cantidad: "—", // columna por confirmar nombre
+        bodega: "—", // columna por confirmar nombre
       };
     });
 

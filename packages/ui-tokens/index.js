@@ -83,6 +83,13 @@ export const statusColors = {
   activa: colors.warning,
   controlada: colors.success,
   resuelta: colors.secondary,
+  // Niveles de alerta del reporte de medicamentos por vencer (issue #700). No salen de un enum de
+  // la base: los calcula calcularAlerta() en shared a partir de los dias restantes. Antes el nivel
+  // viajaba como un circulo de color dentro de la etiqueta (" Critico"), que ademas de
+  // incumplir AGENTS.md dejaba el dato fuera del alcance de un lector de pantalla.
+  alto: colors.warning,
+  medio: colors.success,
+  normal: colors.secondary,
 };
 
 /**
@@ -189,6 +196,11 @@ export const labels = {
   rechazado: "Rechazado",
   disponible: "Disponible",
   critico: "Crítico",
+  // Niveles del reporte de medicamentos por vencer (issue #700). "Critico" ya existe arriba y no
+  // se duplica: es el mismo texto y el mismo concepto.
+  alertaAlto: "Alto",
+  alertaMedio: "Medio",
+  alertaNormal: "Normal",
   sinStock: "Sin stock",
   usuarioActivo: "Activo",
   usuarioInactivo: "Inactivo",
