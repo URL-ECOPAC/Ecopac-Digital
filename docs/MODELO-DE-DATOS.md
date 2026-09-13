@@ -1139,7 +1139,7 @@ cada uno al resolverse):
 | Donaciones | Sin anular; constancia imprime mal el proyecto; ingreso a inventario no se dispara | media | Pendiente |
 | Directorio de colaboradores | Junta directiva consulta la tabla equivocada | media | Resuelto |
 | Perfil de colaborador | fecha_ingreso/direccion/notas no capturables | baja | Pendiente |
-| Permisos por usuario | Sin motivo ni quien concedio/revoco | baja | Pendiente |
+| Permisos por usuario | Sin motivo ni quien concedio/revoco | baja | Resuelto |
 | Movil: edicion de paciente | No existe la pantalla | media | Pendiente |
 | Dashboard de Impacto | Consultas realizadas no llega a la tarjeta agregada | baja | Pendiente |
 | Jornadas | cupo_estimado/botiquin_bodega_id/asistio sin captura | media | Pendiente |
@@ -1224,8 +1224,8 @@ migracion.
 | --- | --- | --- | --- | --- |
 | perfil_id / permiso_id | Implicito (contexto del modal) | Si | n/a | — |
 | concedido | Si (chip + botones) | Si (Conceder/Revocar) | Si (Restablecer) | — |
-| otorgado_por | No | Automatico (sesion) | n/a | Pendiente (#756) |
-| motivo | No | No (el modal no ofrece el campo) | n/a | Pendiente (#756) |
+| otorgado_por | Si, resuelto a nombre | Automatico (sesion) | n/a | Resuelto (#756) |
+| motivo | Si | Si, campo opcional junto a Conceder/Revocar | n/a | Resuelto (#756) |
 
 **`perfil_especialidad`**: `nombre_especialidad` se muestra (chips en la ficha, filtro de
 especialidad); sin captura/correccion por ninguna politica RLS de escritura (issue #405, catalogo

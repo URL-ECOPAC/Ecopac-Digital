@@ -105,6 +105,12 @@ export async function listarCatalogoPermisos() {
  * permisos "por defecto" sobre nadie, que se podria confundir con los permisos reales de esa
  * persona. Mismo criterio que evaluarPerfilDeSesion() en api/sesion.js.
  *
+ * Cuando el origen es INDIVIDUAL, cada permiso trae ademas `motivo` y `otorgadoPorNombre`
+ * (issue #756: usuario_permiso ya guardaba ambos desde escribirExcepcion(), pero
+ * ModalPermisosUsuario.jsx nunca los pedia ni los mostraba). `otorgadoPorPerfil` se resuelve por
+ * la FK usuario_permiso_otorgado_por_fkey -no la de perfil_id, que apunta a QUIEN tiene el
+ * permiso, no a quien lo otorgo- mismo patron que anuladaPorPerfil en pacientes/recetas.api.js.
+ *
  * @param {string} idUsuario UUID de perfiles.id.
  * @returns {Promise<{ modulos: Array<{ modulo: string, permisos: object[] }>, error: object|null }>}
  */
@@ -132,16 +138,20 @@ export async function obtenerPermisosEfectivos(idUsuario) {
         .order("modulo", { ascending: true })
         .order("clave", { ascending: true }),
       cliente.from("rol_permiso").select("permiso_id").eq("rol", perfil.rol),
-      cliente.from("usuario_permiso").select("permiso_id, concedido").eq("perfil_id", idUsuario),
+      cliente
+        .from("usuario_permiso")
+        .select(
+          "permiso_id, concedido, motivo, otorgadoPor:otorgado_por, " +
+            "otorgadoPorPerfil:perfiles!usuario_permiso_otorgado_por_fkey(nombres, apellidos)",
+        )
+        .eq("perfil_id", idUsuario),
     ]);
 
     const error = errorDePermisos ?? errorDelRol ?? errorDelUsuario;
     if (error) return { modulos: [], error: normalizarError(error) };
 
     const idsDelRol = new Set((delRol ?? []).map((fila) => fila.permiso_id));
-    const excepciones = new Map(
-      (delUsuario ?? []).map((fila) => [fila.permiso_id, fila.concedido]),
-    );
+    const excepciones = new Map((delUsuario ?? []).map((fila) => [fila.permiso_id, fila]));
 
     const combinados = (permisos ?? []).map((permiso) => {
       const excepcion = excepciones.get(permiso.id);
@@ -149,8 +159,14 @@ export async function obtenerPermisosEfectivos(idUsuario) {
 
       return {
         ...permiso,
-        concedido: tieneExcepcion ? excepcion : idsDelRol.has(permiso.id),
+        concedido: tieneExcepcion ? excepcion.concedido : idsDelRol.has(permiso.id),
         origen: tieneExcepcion ? ORIGEN_PERMISO.INDIVIDUAL : ORIGEN_PERMISO.ROL,
+        motivo: tieneExcepcion ? (excepcion.motivo ?? null) : null,
+        otorgadoPorNombre: tieneExcepcion
+          ? [excepcion.otorgadoPorPerfil?.nombres, excepcion.otorgadoPorPerfil?.apellidos]
+              .filter(Boolean)
+              .join(" ") || null
+          : null,
       };
     });
 
@@ -212,7 +228,7 @@ async function escribirExcepcion(idUsuario, clave, concedido, { motivo } = {}) {
           permiso_id: permisoId,
           concedido,
           otorgado_por: otorgadoPor,
-          motivo: motivo ?? null,
+          motivo: typeof motivo === "string" && motivo.trim() !== "" ? motivo.trim() : null,
         },
         { onConflict: "perfil_id,permiso_id" },
       );
