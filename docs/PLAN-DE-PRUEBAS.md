@@ -58,5 +58,36 @@ una por modulo -- sino dejar de estar "sin cobertura medida": a partir de aqui, 
 
 ## Prueba de carga: jornada de 50 pacientes (issue #774)
 
-Pendiente. Se anota aqui la ubicacion del script y los resultados de la primera corrida cuando
-la #774 se resuelva.
+Script: `scripts/prueba-de-carga-jornada-50-pacientes.mjs` (`npm run prueba:carga-jornada`).
+Registra 50 pacientes reales contra el stack local, les toma triaje, y un medico les registra
+consulta y receta -- el mismo camino que usa la aplicacion (`packages/shared` hablando con
+PostgREST real, login por contrasena, RLS incluido), midiendo el tiempo de cada paso con
+`performance.now()`. Es una herramienta manual (no corre en CI, mismo criterio que
+`scripts/verificar-concurrencia-numero-ficha.mjs`) y queda repetible: se puede volver a correr
+despues de un cambio para comparar contra estos numeros.
+
+Corre con vitest y no con `node` a secas: `@ecopac/shared` resuelve un import sin extension
+(`packages/shared/entorno/index.js`, deliberado para que Metro y Vite resuelvan cada uno su
+version de `fuente.js`) que solo el motor de Vite/vitest sabe seguir. La configuracion vive
+aparte en `scripts/vitest.carga.config.mjs`, con su propio `include`, para que este archivo no
+quede alcanzable por accidente desde `npm run test:e2e`.
+
+**Primera medicion** (stack local en Docker, sin latencia de red real -- estos numeros son un
+piso, no lo que se veria en campo con la conexion de una comunidad rural; sirven para comparar
+contra si mismos despues de un cambio, no como el tiempo real que va a sentir el personal):
+
+| Paso     | n  | Total  | Promedio | Minimo | Maximo |
+| -------- | -- | ------ | -------- | ------ | ------ |
+| Registro | 50 | 0.29 s | 5.8 ms   | 4.2 ms | 40.4 ms |
+| Triaje   | 50 | 0.29 s | 5.8 ms   | 4.6 ms | 8.6 ms  |
+| Consulta | 50 | 1.10 s | 22.1 ms  | 18.3 ms | 29.8 ms |
+| Receta   | 50 | 0.81 s | 16.3 ms  | 13.7 ms | 24.1 ms |
+
+No aparecio ningun cuello de botella: los cuatro pasos escalan de forma lineal (nada crece con
+el indice del paciente dentro de la corrida, que es justo lo que indicarian valores maximos
+crecientes hacia el final de las 50 iteraciones). `consulta` es el paso mas caro porque es el
+unico que escribe en tres tablas dentro de la misma llamada (`consultas`,
+`consulta_diagnostico`, mas la lectura previa del catalogo).
+
+El script limpia lo que crea (pacientes, y los movimientos de inventario pendientes que deja
+cada receta) al terminar, incluso si una corrida falla a medio camino.
