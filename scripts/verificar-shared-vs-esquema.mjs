@@ -690,17 +690,54 @@ export function comparar(archivos, esquema, opciones = {}) {
 // ============================================================================
 
 // Fue el segundo motivo por el que #454 paso el CI: si el barril no lo exporta, vite build ni lo
-// compila, asi que el error solo aparece cuando alguien conecta la pantalla. Es aviso y no fallo:
-// un archivo recien creado y todavia sin conectar es legitimo.
+// compila, asi que el error solo aparece cuando alguien conecta la pantalla.
+//
+// DESDE LA #700 ES FALLO, NO AVISO
+//
+// El aviso llevaba meses imprimiendose sin que nadie lo mirara, que es la forma mas cara de tener
+// una comprobacion: cuesta lo mismo y no impide nada. Y el coste de ignorarlo esta medido -#454,
+// #571 y este mismo PR: seis de los archivos que nombraba son justo los que las apps importaban
+// por ruta relativa, porque el paquete no los resolvia de ninguna otra forma-.
+//
+// TRES FALSOS POSITIVOS QUE HABIA QUE ARREGLAR ANTES (issue #700)
+//
+// Convertir en fallo una comprobacion con falsos positivos deja el CI rojo por codigo correcto,
+// asi que primero:
+//
+//   1. Un archivo puede salir por el BARRIL RAIZ y no por el de su modulo. Le pasa a
+//      donaciones/useResumenDonaciones.js, que packages/shared/index.js exporta directo y
+//      DonacionesPage.jsx importa sin problema.
+//   2. Un barril puede referenciarlo SIN EXTENSION, que es como entorno/index.js importa
+//      "./fuente": Metro y Vite eligen ahi entre fuente.js y fuente.native.js segun la
+//      plataforma. Es la excepcion que la regla del bug #390 ya documenta.
+//   3. La variante .native.js de un archivo NUNCA va en un barril: es la otra mitad de esa misma
+//      resolucion por plataforma, y nombrarla explicitamente romperia la web.
 function archivosHuerfanos(dirShared) {
   const modulos = readdirSync(dirShared).filter((n) => existsSync(join(dirShared, n, "index.js")));
+  const barrilRaiz = existsSync(join(dirShared, "index.js"))
+    ? readFileSync(join(dirShared, "index.js"), "utf8")
+    : "";
   const huerfanos = [];
+
   for (const modulo of modulos) {
     const barril = readFileSync(join(dirShared, modulo, "index.js"), "utf8");
     for (const archivo of readdirSync(join(dirShared, modulo))) {
       if (!archivo.endsWith(".js")) continue;
       if (archivo === "index.js" || archivo.includes(".test.")) continue;
-      if (!barril.includes(`./${archivo}`)) huerfanos.push(`${modulo}/${archivo}`);
+
+      const sinExtension = archivo.slice(0, -3);
+      // Falso positivo 3: la variante nativa se elige por plataforma, no por barril. Se da por
+      // cubierta si lo esta su archivo base.
+      const base = sinExtension.endsWith(".native") ? sinExtension.slice(0, -7) : sinExtension;
+
+      const enSuBarril =
+        barril.includes(`./${archivo}`) || new RegExp(`\\./${base}["'\`]`).test(barril);
+      // Falso positivo 1: el barril raiz tambien cuenta.
+      const enElRaiz =
+        barrilRaiz.includes(`./${modulo}/${archivo}`) ||
+        new RegExp(`\\./${modulo}/${base}["'\`]`).test(barrilRaiz);
+
+      if (!enSuBarril && !enElRaiz) huerfanos.push(`${modulo}/${archivo}`);
     }
   }
   return huerfanos;
@@ -1024,17 +1061,50 @@ function principal() {
   if (!VERIFICAR_EDGE_FUNCTIONS)
     console.log("Omitido: las Edge Functions (ver VERIFICAR_EDGE_FUNCTIONS, issue #523).");
 
+  // Desde la #700 esto falla en vez de avisar: ver el comentario de archivosHuerfanos().
   const huerfanos = archivosHuerfanos(DIR_SHARED);
   if (huerfanos.length) {
-    console.log(`\nAviso: ${huerfanos.length} archivos que ningun barril reexporta.`);
-    for (const h of huerfanos) console.log(`  packages/shared/${h}`);
-    console.log("  vite build no los compila, asi que un error suyo no aparece hasta conectarlos.");
+    console.log(`\n${huerfanos.length} archivos de packages/shared que ningun barril reexporta:\n`);
+    for (const h of huerfanos) {
+      console.log(`  packages/shared/${h}`);
+      if (process.env.GITHUB_ACTIONS)
+        console.log(
+          `::error file=packages/shared/${h}::ningun barril reexporta este archivo, asi que vite build no lo compila`,
+        );
+    }
+    console.log(
+      "\n  vite build no los compila, asi que un error suyo no aparece hasta que alguien conecta",
+    );
+    console.log(
+      "  la pantalla. Agregalo al index.js de su modulo, o al de packages/shared si es transversal.",
+    );
+
+    if (process.env.GITHUB_STEP_SUMMARY) {
+      appendFileSync(
+        process.env.GITHUB_STEP_SUMMARY,
+        [
+          "## Archivos de `packages/shared` que ningun barril reexporta",
+          "",
+          "`vite build` no los compila, asi que un error suyo no aparece hasta que alguien conecta",
+          "la pantalla. Es como pasaron el CI la #454 y la #571.",
+          "",
+          ...huerfanos.map((h) => `- \`packages/shared/${h}\``),
+          "",
+          "**Que hacer:** exportarlo desde el `index.js` de su modulo. Si de verdad no debe salir",
+          "por ningun barril -como las variantes `.native.js`, que se eligen por plataforma-, esta",
+          "comprobacion ya lo contempla y no deberia estar en esta lista.",
+          "",
+        ].join("\n"),
+      );
+    }
   }
 
-  if (!hallazgos.length) {
+  if (!hallazgos.length && !huerfanos.length) {
     console.log("\nTodo lo que packages/shared nombra existe en supabase/migrations/.");
     return 0;
   }
+
+  if (!hallazgos.length) return 1;
 
   console.log(`\n${hallazgos.length} hallazgos:\n`);
   for (const h of hallazgos) {

@@ -3,6 +3,7 @@ import {
   ESTADOS_JORNADA_REPORTE,
   exportarFilasACSV,
   formatearFechaLarga,
+  useExportarPDF,
   useReporteJornada,
 } from "@ecopac/shared";
 import Card from "../components/Card";
@@ -13,7 +14,6 @@ import PageHeader from "../components/PageHeader";
 import ScreenContainer from "../components/ScreenContainer";
 import StatusChip from "../components/StatusChip";
 import { useSesionCompartida } from "../contexto/SesionProvider";
-import { useExportarPDF } from "../../../../packages/shared/reportes/useExportarPDF";
 import BotonExportarPDF from "../components/BotonExportarPDF";
 import "./reportes.css";
 

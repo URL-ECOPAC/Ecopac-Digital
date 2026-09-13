@@ -1,4 +1,9 @@
-import { AGRUPACIONES_DE_PACIENTES, exportarFilasACSV, useReportePacientes } from "@ecopac/shared";
+import {
+  AGRUPACIONES_DE_PACIENTES,
+  exportarFilasACSV,
+  useExportarPDF,
+  useReportePacientes,
+} from "@ecopac/shared";
 import Card from "../components/Card";
 import DataList from "../components/DataList";
 import ErrorState from "../components/ErrorState";
@@ -8,7 +13,6 @@ import PageHeader from "../components/PageHeader";
 import ScreenContainer from "../components/ScreenContainer";
 import Selector from "../components/Selector";
 import { useSesionCompartida } from "../contexto/SesionProvider";
-import { useExportarPDF } from "../../../../packages/shared/reportes/useExportarPDF";
 import BotonExportarPDF from "../components/BotonExportarPDF";
 import "./reportes.css";
 

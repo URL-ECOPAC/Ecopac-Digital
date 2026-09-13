@@ -1,4 +1,4 @@
-import { useRegistroIngreso } from "../../../../packages/shared/inventario/useRegistroIngreso.js";
+import { useRegistroIngreso } from "@ecopac/shared";
 
 export default function ModalRegistroIngreso({
   abierto,

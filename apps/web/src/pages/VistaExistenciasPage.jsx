@@ -1,7 +1,5 @@
-import { useVistaExistencias } from "../../../../packages/shared/inventario/useVistaExistencias";
+import { ESTADO_EXISTENCIA, useVistaExistencias } from "@ecopac/shared";
 import { FilterBar, DataList } from "@ecopac/ui/components";
-import { ESTADO_EXISTENCIA } from "../../../../packages/shared/inventario/useVistaExistencias";
-
 // ─── Datos de ejemplo (en producción vendrán desde el contenedor/padre) ───
 const DATOS_MOCK = [];
 const BODEGAS_MOCK = ["Todas", "Central", "Norte", "Sur"];

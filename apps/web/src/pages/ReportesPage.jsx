@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import DashboardMetricasPage from "./DashboardMetricasPage";
-import { useReporteMedicamentosPorVencer } from "../../../../packages/shared/reportes/useReporteMedicamentosPorVencer.js";
-import { useExportarPDF } from "../../../../packages/shared/reportes/useExportarPDF";
+import { useExportarPDF, useReporteMedicamentosPorVencer } from "@ecopac/shared";
 import BotonExportarPDF from "../components/BotonExportarPDF";
 
 // Estilos compartidos de pestañas
