@@ -1,8 +1,6 @@
 import { useState } from "react";
 
-import { usePendientesValidacion } from "../../../../packages/shared/inventario/usePendientesValidacion.js";
-import { permisosDeMovimientos } from "../../../../packages/shared/inventario/permisos.js";
-
+import { permisosDeMovimientos, usePendientesValidacion } from "@ecopac/shared";
 // issue #689: esta pantalla tenia su propio movimientosPendientes escrito a mano (un solo
 // movimiento de mentira) y handleAprobar/handleRechazar solo hacian console.log. Nunca llamaba
 // a usePendientesValidacion(), que ya existia y estaba probada. Ahora la bandeja se autoabastece

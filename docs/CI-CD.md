@@ -213,9 +213,43 @@ fallaba siempre (#750).
   constante `VERIFICAR_EDGE_FUNCTIONS`: hoy encontraria `invitar-usuario`, que es la issue #523 y
   tiene dueno. Se enciende poniendola en `true` en el mismo PR que escriba la funcion.
 
-Avisa aparte, sin fallar, de los archivos de `shared` que **ningun barril reexporta**: `vite build`
-no los compila, asi que un error suyo no aparece hasta que alguien conecta la pantalla. Fue el
-segundo motivo por el que #454 paso el CI.
+**Falla tambien si un archivo de `shared` no lo reexporta ningun barril** (issue #700). `vite build`
+no lo compila, asi que un error suyo no aparece hasta que alguien conecta la pantalla: fue el
+segundo motivo por el que #454 paso el CI, y la forma en que #571 llego a `develop`.
+
+Hasta la #700 esto era un aviso, y llevaba meses imprimiendose sin que nadie lo mirara -la forma
+mas cara de tener una comprobacion: cuesta lo mismo y no impide nada-. El coste de ignorarlo estaba
+medido: **seis de los archivos que nombraba eran justo los que las apps importaban por ruta
+relativa**, porque el paquete no los resolvia de ninguna otra forma.
+
+Antes de convertirlo en fallo hubo que quitarle **tres falsos positivos**, porque un check
+requerido que se equivoca deja el CI rojo por codigo correcto:
+
+| Caso | Por que no es huerfano |
+| --- | --- |
+| `donaciones/useResumenDonaciones.js` | Lo reexporta el **barril raiz**, no el de su modulo, y la comprobacion solo miraba el del modulo |
+| `entorno/fuente.js` | `entorno/index.js` lo importa como `./fuente`, **sin extension**: ahi eligen Metro y Vite segun la plataforma (es la excepcion que documenta la regla del bug #390) |
+| `entorno/fuente.native.js` | Es la otra mitad de esa resolucion por plataforma. **Nunca** va en un barril: nombrarla explicitamente romperia la web |
+
+### La frontera entre las apps y `packages/shared`
+
+ESLint (`eslint.config.mjs`) prohibe, por app:
+
+| Regla | Desde la issue |
+| --- | --- |
+| Importar `@supabase/supabase-js` desde una app | #282 |
+| Importar de `apps/web` en `apps/mobile`, y al reves | #282 |
+| **Importar `packages/shared` o `packages/ui-tokens` por ruta relativa** | **#700** |
+
+La tercera existe porque **nada la verificaba y por eso se incumplia**: 28 imports en 14 archivos, y
+las cinco pantallas moviles de los cinco PR mas recientes los traian todas. Una ruta relativa se
+salta el barril, y lo que ningun barril reexporta `vite build` no lo compila.
+
+**Cuidado al tocar estas reglas**: ESLint **no fusiona** las opciones de una misma regla entre
+bloques de configuracion -gana el ultimo que la declare-, asi que hay **un solo**
+`no-restricted-imports` por app y los patrones nuevos van **dentro** del `patterns` que ya existe.
+Es un error que no se ve leyendo: la unica forma de saber que una regla sigue viva es **verla
+fallar**.
 
 **Salida de emergencia:** la etiqueta **`esquema-verificado-a-mano`** en el PR salta la guarda,
 igual que `migracion-editada-a-proposito` con la de migraciones. Deja un aviso visible en el

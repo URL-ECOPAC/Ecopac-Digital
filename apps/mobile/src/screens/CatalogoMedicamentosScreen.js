@@ -7,8 +7,7 @@ import {
   ScrollView,
   StyleSheet,
 } from "react-native";
-// Agrega un "../" extra (4 niveles hacia arriba)
-import { useCatalogoMedicamentos } from "../../../../packages/shared/inventario/useCatalogoMedicamentos";
+import { useCatalogoMedicamentos } from "@ecopac/shared";
 import { ROUTES } from "../navigation/rutas";
 
 export function CatalogoMedicamentosScreen({

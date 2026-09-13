@@ -1,10 +1,10 @@
-import { exportarFilasACSV, TIPOS_DE_PRESENTACION } from "@ecopac/shared";
 import {
-  useKardexMovimientos,
-  TIPO_MOVIMIENTO,
   ESTADO_MOVIMIENTO,
-} from "../../../../packages/shared/inventario/useKardexMovimientos";
-
+  exportarFilasACSV,
+  TIPO_MOVIMIENTO,
+  TIPOS_DE_PRESENTACION,
+  useKardexMovimientos,
+} from "@ecopac/shared";
 const colores = {
   fondoTarjeta: "#ffffff",
   borde: "#e2e8f0",

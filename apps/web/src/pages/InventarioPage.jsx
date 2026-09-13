@@ -8,35 +8,30 @@ import { ModalAltaLote } from "./ModalAltaLote.jsx";
 import ModalRegistroIngreso from "./ModalRegistroIngreso.jsx";
 import { ModalSalidaMedicamento } from "./ModalSalidaMedicamento";
 import BandejaValidacionPage from "./BandejaValidacionPage";
-import { useVistaExistencias } from "../../../../packages/shared/inventario/useVistaExistencias.js";
+import {
+  actualizarMedicamento,
+  datosLoteParaRegistrar,
+  esAdministrador,
+  listarBodegas,
+  listarLotes,
+  listarMedicamentos,
+  listarPrincipiosActivos,
+  listarPrincipiosDeMedicamento,
+  listarProveedores,
+  registrarLote,
+  registrarMedicamento,
+  registrarPrincipioActivo,
+  useAlertasVencimiento,
+  useCatalogoMedicamentos,
+  useGestionLotes,
+  usePendientesValidacion,
+  useVistaExistencias,
+} from "@ecopac/shared";
 import PanelAlertasVencimiento from "./PanelAlertasVencimiento.jsx";
 import AdministracionBodegasProveedoresPage from "./AdministracionBodegasProveedoresPage.jsx";
-import { useAlertasVencimiento } from "../../../../packages/shared/inventario/useAlertasVencimiento.js";
 import KardexMovimientosPage from "./KardexMovimientosPage.jsx";
 
 // API Medicamentos y Principios Activos
-import {
-  listarMedicamentos,
-  registrarMedicamento,
-  actualizarMedicamento,
-  listarPrincipiosDeMedicamento,
-} from "../../../../packages/shared/inventario/medicamentos.api.js";
-import { listarBodegas } from "../../../../packages/shared/inventario/bodegas.api.js";
-import { listarProveedores } from "../../../../packages/shared/inventario/proveedores.api.js";
-import { listarLotes, registrarLote } from "../../../../packages/shared/inventario/lotes.api.js";
-import {
-  listarPrincipiosActivos,
-  registrarPrincipioActivo,
-} from "../../../../packages/shared/inventario/principios-activos.api.js";
-
-import { usePendientesValidacion } from "../../../../packages/shared/inventario/usePendientesValidacion.js";
-import { useCatalogoMedicamentos } from "../../../../packages/shared/inventario/useCatalogoMedicamentos.js";
-import {
-  useGestionLotes,
-  datosLoteParaRegistrar,
-} from "../../../../packages/shared/inventario/useGestionLotes.js";
-import { esAdministrador } from "../../../../packages/shared/usuarios/roles.js";
-
 const thStyle = {
   padding: "12px 16px",
   fontSize: "11px",

@@ -1,8 +1,6 @@
 import { useState } from "react";
 import ErrorState from "../components/ErrorState";
-import { useAlertasVencimiento } from "../../../../packages/shared/inventario/useAlertasVencimiento.js";
-import { OPCIONES_ACCION_ALERTA } from "../../../../packages/shared/inventario/campos.js";
-
+import { OPCIONES_ACCION_ALERTA, useAlertasVencimiento } from "@ecopac/shared";
 export default function PanelAlertasVencimiento({
   lotes = [],
   bodegas = [],

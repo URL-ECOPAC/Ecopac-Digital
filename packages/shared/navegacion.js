@@ -22,13 +22,7 @@ export const MODULOS = [
     tabMovil: "Pacientes",
     soloWeb: false,
     icono: "Users",
-    roles: [
-      ROLES.ADMINISTRADOR,
-      ROLES.MEDICO,
-      ROLES.FARMACEUTICO,
-      ROLES.ENFERMERO,
-      ROLES.VOLUNTARIO,
-    ],
+    roles: [ROLES.ADMINISTRADOR, ROLES.MEDICO, ROLES.VOLUNTARIO],
   },
   {
     id: "donaciones",
@@ -51,8 +45,6 @@ export const MODULOS = [
     roles: [
       ROLES.ADMINISTRADOR,
       ROLES.MEDICO,
-      ROLES.FARMACEUTICO,
-      ROLES.ENFERMERO,
       ROLES.VOLUNTARIO,
       ROLES.JUNTA_DIRECTIVA,
       ROLES.SOCIO_FUNDADOR,

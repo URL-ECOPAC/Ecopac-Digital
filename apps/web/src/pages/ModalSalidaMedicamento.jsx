@@ -1,4 +1,4 @@
-import { useRegistroSalida } from "../../../../packages/shared/inventario/useRegistroSalida";
+import { useRegistroSalida } from "@ecopac/shared";
 
 export function ModalSalidaMedicamento({ abierto, onClose, medicamentos = [], usuarioId }) {
   const {

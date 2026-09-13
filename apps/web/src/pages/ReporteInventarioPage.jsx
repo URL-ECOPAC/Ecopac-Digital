@@ -1,6 +1,7 @@
 import {
   exportarFilasACSV,
   FILTROS_INVENTARIO_REPORTE,
+  useExportarPDF,
   useReporteInventario,
 } from "@ecopac/shared";
 import Card from "../components/Card";
@@ -11,7 +12,6 @@ import LoadingState from "../components/LoadingState";
 import PageHeader from "../components/PageHeader";
 import ScreenContainer from "../components/ScreenContainer";
 import { useSesionCompartida } from "../contexto/SesionProvider";
-import { useExportarPDF } from "../../../../packages/shared/reportes/useExportarPDF";
 import BotonExportarPDF from "../components/BotonExportarPDF";
 import "./reportes.css";
 
