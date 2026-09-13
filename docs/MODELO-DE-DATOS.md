@@ -1045,11 +1045,21 @@ directa por diseno -es un ledger derivado, solo lo mueve `fn_aplicar_ajuste_exis
 aprobar un movimiento.
 
 **`movimientos_inventario`**: `tipo`/`lote_id`/`cantidad`/`estado` completos (kardex + bandeja de
-validacion). `bodega_id` se captura pero no se muestra en kardex ni bandeja; `motivo_rechazo` se
-captura (via `prompt()`) pero nunca se muestra despues; `editarMovimiento()` no tiene pantalla;
-`aprobacion_automatica` nunca se expone -> **pendiente, esta misma issue #756**. `registrado_por` se muestra
-inconsistentemente (UUID crudo en la bandeja, nombre resuelto en el kardex) -bajo impacto, se
-corrige junto con lo demas de esta tabla si se toca esa pantalla.
+validacion). `bodega_id` y `motivo_rechazo` ya se muestran en kardex y bandeja (resuelto en un
+commit anterior de esta misma issue). `registrado_por`/`aprobado_por` se resuelven a nombre en
+las dos pantallas -la nota anterior de "UUID crudo en la bandeja" ya no aplica al codigo actual-.
+`aprobacion_automatica` (00028) tambien era una columna real que nunca llegaba a pantalla:
+**resuelto en esta misma issue #756**, se muestra como "(automatico)" junto a "Aprobado por" en
+el kardex. De paso se corrigen dos `dangerouslySetInnerHTML` en `KardexMovimientosPage.jsx` que
+interpolaban `tipo`/`estado` como HTML sin escapar (bajo riesgo real -son enums de Postgres, no
+texto libre- pero mal patron): ahora son componentes de React normales.
+
+**Sigue pendiente**: `editarMovimiento()` (permite a quien registro un movimiento corregirlo
+mientras siga pendiente, issue #625) no tiene pantalla. A diferencia de los huecos anteriores,
+conectarlo no es solo agregar un boton a una pantalla existente: `BandejaValidacionPage.jsx` es
+donde se aprueban/rechazan movimientos (accion de administrador), no donde quien registro un
+movimiento ve los suyos para corregirlos, asi que hace falta decidir donde vive esa vista antes
+de construir el formulario. Declarado como hueco abierto.
 
 **`alertas_caducidad`**: resuelto en esta misma issue #756 (severidad alta). El panel
 (`PanelAlertasVencimiento.jsx`) calculaba sus propias "alertas" derivando dias-hasta-vencimiento
@@ -1170,7 +1180,7 @@ cada uno al resolverse):
 | --- | --- | --- | --- |
 | Historial clinico | Varios campos de consulta invisibles; consultas/condiciones/triaje sin correccion | media | Resuelto salvo diagnostico (ver nota de `consulta_diagnostico`, necesita migracion) |
 | Alertas de vencimiento | El panel visible y `alertas_caducidad` estan desconectados | **alta** | Resuelto |
-| Movimientos de inventario | Bodega y motivo de rechazo no se ven; sin correccion de un pendiente | media | Pendiente |
+| Movimientos de inventario | Bodega y motivo de rechazo no se ven; sin correccion de un pendiente | media | Resuelto salvo `editarMovimiento()` (necesita decidir donde vive esa pantalla) |
 | Medicamentos y recetas | `desactivarMedicamento()`/`anularReceta()` sin boton; `es_pediatrico` roto | baja | Resuelto |
 | Comunidades | Columnas geo sin uso (decidir mapa o retiro); sin edicion | baja | Pendiente |
 | Proyectos sociales | Sin alta/edicion de proyecto, hitos ni presupuesto asignado | media | Pendiente |
