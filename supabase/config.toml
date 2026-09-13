@@ -110,6 +110,26 @@ enable_confirmations = false
 enabled = true
 policy = "oneshot"
 
+# Mapa de imports de cada Edge Function.
+#
+# Las funciones importan "@supabase/supabase-js" por nombre, y ese nombre solo existe en
+# supabase/functions/deno.json. `supabase functions deploy` NO lee ese archivo por estar en la
+# raiz de functions/: busca un deno.json dentro de la carpeta de cada funcion o el import_map que
+# se declare aqui. Sin estas lineas el despliegue del 13 de septiembre (PR #808) fallo con
+# "Failed to bundle the function (reason: Relative import path "@supabase/supabase-js" not
+# prefixed with / or ./ or ../)", y como el paso lleva continue-on-error la corrida salio verde.
+#
+# El lint del CI no lo detectaba porque a deno lint/check se le pasa --config con ese mismo
+# archivo. Una funcion nueva tiene que agregar aqui su propia seccion.
+#
+# A diferencia del resto de este archivo, esto SI llega a los proyectos remotos: el despliegue
+# lee config.toml para empaquetar cada funcion.
+[functions.invitar-usuario]
+import_map = "./functions/deno.json"
+
+[functions.alertas-vencimiento]
+import_map = "./functions/deno.json"
+
 [analytics]
 enabled = true
 port = 54427

@@ -407,6 +407,14 @@ camino para dar de alta a una persona desde la aplicacion porque el registro pub
 (`00074`): sin la funcion desplegada, **la administradora no podia crear a nadie** y habia que
 hacerlo a mano desde el panel de Supabase. El cron de alertas habria dado 404 por la misma razon.
 
+**Cada funcion declara su mapa de imports en `supabase/config.toml`** (`[functions.<nombre>]` con
+`import_map = "./functions/deno.json"`). El codigo importa `@supabase/supabase-js` por nombre, y
+`supabase functions deploy` no lee el `deno.json` de la raiz de `supabase/functions/`. Sin esa
+seccion el empaquetado falla con `Relative import path "@supabase/supabase-js" not prefixed with /`.
+Asi paso con el primer despliegue real (PR #808): el paso tiene `continue-on-error`, la corrida salio
+verde y la funcion siguio respondiendo 404. El lint del CI no lo detecta porque recibe `--config`
+explicito. **Una funcion nueva agrega su seccion en el mismo PR.**
+
 Se despliegan **todas** las funciones en cada push, no solo las que cambiaron: el estado que
 importa es el del proyecto, no el del commit, y desplegar solo lo modificado deja fuera el caso
 que de verdad duele -una funcion que nunca se desplego, o un proyecto nuevo que arranca vacio-.
