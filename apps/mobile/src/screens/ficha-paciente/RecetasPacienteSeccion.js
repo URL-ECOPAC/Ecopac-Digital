@@ -55,15 +55,14 @@ export default function RecetasPacienteSeccion({ pacienteId }) {
               <Text style={styles.fechaTexto}>{item.fecha || item.creadoEn || "Fecha N/A"}</Text>
               <Text style={styles.medicoTexto}>{item.medicoNombre || item.medico || "Médico"}</Text>
             </View>
-            
+
             {Array.isArray(item.medicamentos) && item.medicamentos.length > 0 ? (
               item.medicamentos.map((med, idx) => (
                 <View key={med.id || idx} style={styles.filamedicamento}>
-                  <Text style={styles.nombreMedicamento}>
-                    • {med.nombre || med.medicamento}
-                  </Text>
+                  <Text style={styles.nombreMedicamento}>• {med.nombre || med.medicamento}</Text>
                   <Text style={styles.dosisTexto}>
-                    {med.dosis ? `${med.dosis} - ` : ""}{med.indicaciones || med.frecuencia || ""}
+                    {med.dosis ? `${med.dosis} - ` : ""}
+                    {med.indicaciones || med.frecuencia || ""}
                   </Text>
                 </View>
               ))

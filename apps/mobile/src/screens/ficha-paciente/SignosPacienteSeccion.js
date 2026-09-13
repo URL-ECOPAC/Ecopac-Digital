@@ -30,12 +30,7 @@ function MedidaIndividual({ serie }) {
             return (
               <View key={linea.id} style={styles.valorItem}>
                 <Text style={styles.lineaLabel}>{linea.label}: </Text>
-                <Text
-                  style={[
-                    styles.valorTexto,
-                    fueraRango && styles.valorAlerta,
-                  ]}
-                >
+                <Text style={[styles.valorTexto, fueraRango && styles.valorAlerta]}>
                   {ultimoPunto.valor} {serie.sufijo}
                 </Text>
               </View>
@@ -43,19 +38,16 @@ function MedidaIndividual({ serie }) {
           })}
       </View>
       {ultima?.fecha && (
-        <Text style={styles.fechaTexto}>
-          Registrado el {formatearFechaCorta(ultima.fecha)}
-        </Text>
+        <Text style={styles.fechaTexto}>Registrado el {formatearFechaCorta(ultima.fecha)}</Text>
       )}
     </View>
   );
 }
 
 export default function SignosPacienteSeccion({ pacienteId, rol }) {
-  const { series, hayMediciones, cargando, error, recargar } = useEvolucionSignos(
-    pacienteId,
-    { rol }
-  );
+  const { series, hayMediciones, cargando, error, recargar } = useEvolucionSignos(pacienteId, {
+    rol,
+  });
 
   if (cargando) {
     return <LoadingState />;
@@ -68,9 +60,7 @@ export default function SignosPacienteSeccion({ pacienteId, rol }) {
   return (
     <Card title="Signos vitales" style={styles.tarjeta}>
       {!hayMediciones ? (
-        <Text style={styles.vacio}>
-          Este paciente todavía no tiene signos vitales registrados.
-        </Text>
+        <Text style={styles.vacio}>Este paciente todavía no tiene signos vitales registrados.</Text>
       ) : (
         series.map((serie) => <MedidaIndividual key={serie.id} serie={serie} />)
       )}

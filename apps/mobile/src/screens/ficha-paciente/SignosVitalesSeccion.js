@@ -90,31 +90,11 @@ export default function SignosVitalesSeccion({ pacienteId }) {
                 }
                 unidad="mmHg"
               />
-              <MetricBox
-                label="F.C."
-                valor={item.frecuenciaCardiaca || "--"}
-                unidad="bpm"
-              />
-              <MetricBox
-                label="F.R."
-                valor={item.frecuenciaRespiratoria || "--"}
-                unidad="rpm"
-              />
-              <MetricBox
-                label="Temp."
-                valor={item.temperatura || "--"}
-                unidad="°C"
-              />
-              <MetricBox
-                label="Sat O₂"
-                valor={item.saturacionOxigeno || "--"}
-                unidad="%"
-              />
-              <MetricBox
-                label="Peso"
-                valor={item.peso || "--"}
-                unidad="kg"
-              />
+              <MetricBox label="F.C." valor={item.frecuenciaCardiaca || "--"} unidad="bpm" />
+              <MetricBox label="F.R." valor={item.frecuenciaRespiratoria || "--"} unidad="rpm" />
+              <MetricBox label="Temp." valor={item.temperatura || "--"} unidad="°C" />
+              <MetricBox label="Sat O₂" valor={item.saturacionOxigeno || "--"} unidad="%" />
+              <MetricBox label="Peso" valor={item.peso || "--"} unidad="kg" />
             </View>
           </View>
         )}

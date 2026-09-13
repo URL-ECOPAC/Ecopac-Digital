@@ -7,50 +7,46 @@ import {
 } from "@ecopac/shared";
 import { colors, spacing, typography } from "@ecopac/ui-tokens";
 
-import {
-  Card,
-  ErrorState,
-  LoadingState,
-  SecondaryButton,
-  StatusChip,
-} from "../../components";
+import { Card, ErrorState, LoadingState, SecondaryButton, StatusChip } from "../../components";
 
 export default function CondicionesPacienteSeccion({ pacienteId, rol, alActualizar }) {
   // Verificación de seguridad por si el hook no está exportado en @ecopac/shared
-  const obtenerCondiciones = typeof useCondicionesCronicas === "function" 
-    ? useCondicionesCronicas 
-    : () => ({ condiciones: [], cargando: false, error: null, recargar: () => {} });
+  const obtenerCondiciones =
+    typeof useCondicionesCronicas === "function"
+      ? useCondicionesCronicas
+      : () => ({ condiciones: [], cargando: false, error: null, recargar: () => {} });
 
-  const { condiciones = [], cargando = false, error = null, recargar = () => {} } = obtenerCondiciones(pacienteId);
+  const {
+    condiciones = [],
+    cargando = false,
+    error = null,
+    recargar = () => {},
+  } = obtenerCondiciones(pacienteId);
   const [guardando, setGuardando] = useState(false);
 
   const puedeEditar = rol === "medico" || rol === "administrador";
 
   const manejarResolver = (condicion) => {
-    Alert.alert(
-      "Resolver condición",
-      `¿Deseas marcar "${condicion.nombre}" como resuelta?`,
-      [
-        { text: "Cancelar", style: "cancel" },
-        {
-          text: "Resolver",
-          onPress: async () => {
-            setGuardando(true);
-            const { error: errorApi } = await actualizarCondicionCronica(condicion.id, {
-              estado: ESTADOS_CONDICION_CRONICA.RESUELTA,
-            });
-            setGuardando(false);
+    Alert.alert("Resolver condición", `¿Deseas marcar "${condicion.nombre}" como resuelta?`, [
+      { text: "Cancelar", style: "cancel" },
+      {
+        text: "Resolver",
+        onPress: async () => {
+          setGuardando(true);
+          const { error: errorApi } = await actualizarCondicionCronica(condicion.id, {
+            estado: ESTADOS_CONDICION_CRONICA.RESUELTA,
+          });
+          setGuardando(false);
 
-            if (errorApi) {
-              Alert.alert("Error", errorApi.mensaje);
-            } else {
-              recargar();
-              if (alActualizar) alActualizar();
-            }
-          },
+          if (errorApi) {
+            Alert.alert("Error", errorApi.mensaje);
+          } else {
+            recargar();
+            if (alActualizar) alActualizar();
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
   if (cargando || guardando) {

@@ -58,9 +58,7 @@ describe("CondicionesPacienteSeccion", () => {
 
     render(<CondicionesPacienteSeccion pacienteId="123" rol="medico" />);
 
-    expect(
-      screen.getByText("Sin condiciones crónicas registradas.")
-    ).toBeTruthy();
+    expect(screen.getByText("Sin condiciones crónicas registradas.")).toBeTruthy();
   });
 
   it("muestra el boton Resolver si el rol es medico/administrador y la condicion no esta resuelta", () => {
@@ -100,11 +98,7 @@ describe("CondicionesPacienteSeccion", () => {
     });
 
     render(
-      <CondicionesPacienteSeccion
-        pacienteId="123"
-        rol="medico"
-        alActualizar={mockAlActualizar}
-      />
+      <CondicionesPacienteSeccion pacienteId="123" rol="medico" alActualizar={mockAlActualizar} />,
     );
 
     const botonResolver = screen.getByText("Resolver");
@@ -114,7 +108,7 @@ describe("CondicionesPacienteSeccion", () => {
     expect(Alert.alert).toHaveBeenCalledWith(
       "Resolver condición",
       '¿Deseas marcar "Hipertensión Arterial" como resuelta?',
-      expect.any(Array)
+      expect.any(Array),
     );
 
     // Captura la acción del botón 'Resolver' dentro del Alert
@@ -163,10 +157,7 @@ describe("CondicionesPacienteSeccion", () => {
     });
 
     // Verifica que se llamó nuevamente a Alert.alert notificando el error de la API
-    expect(Alert.alert).toHaveBeenCalledWith(
-      "Error",
-      "No se pudo actualizar la condición."
-    );
+    expect(Alert.alert).toHaveBeenCalledWith("Error", "No se pudo actualizar la condición.");
     expect(mockRecargar).not.toHaveBeenCalled();
   });
 });

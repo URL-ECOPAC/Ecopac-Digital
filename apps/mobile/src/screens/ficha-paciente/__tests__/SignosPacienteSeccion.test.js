@@ -58,7 +58,7 @@ describe("SignosPacienteSeccion", () => {
     render(<SignosPacienteSeccion pacienteId="123" rol="medico" />);
 
     expect(
-      screen.getByText("Este paciente todavía no tiene signos vitales registrados.")
+      screen.getByText("Este paciente todavía no tiene signos vitales registrados."),
     ).toBeTruthy();
   });
 });

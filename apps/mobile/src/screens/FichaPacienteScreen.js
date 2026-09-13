@@ -1,12 +1,6 @@
 import React, { useState } from "react";
-import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  StyleSheet,
-} from "react-native";
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import CondicionesPacienteSeccion from "./ficha-paciente/CondicionesPacienteSeccion";
 import SignosVitalesSeccion from "./ficha-paciente/SignosVitalesSeccion";
 import RecetasPacienteSeccion from "./ficha-paciente/RecetasPacienteSeccion";
@@ -31,7 +25,8 @@ export default function FichaPacienteScreen({ route, navigation }) {
           {paciente.nombre} {paciente.apellido}
         </Text>
         <Text style={styles.detallesPaciente}>
-          CUI/DPI: {paciente.documento || paciente.cui || "N/A"} | Edad: {paciente.edad || "--"} años
+          CUI/DPI: {paciente.documento || paciente.cui || "N/A"} | Edad: {paciente.edad || "--"}{" "}
+          años
         </Text>
       </View>
 
@@ -71,13 +66,9 @@ export default function FichaPacienteScreen({ route, navigation }) {
           <CondicionesPacienteSeccion pacienteId={paciente.id} rol={rol} />
         )}
 
-        {pestanaActiva === "signos" && (
-          <SignosVitalesSeccion pacienteId={paciente.id} />
-        )}
+        {pestanaActiva === "signos" && <SignosVitalesSeccion pacienteId={paciente.id} />}
 
-        {pestanaActiva === "recetas" && (
-          <RecetasPacienteSeccion pacienteId={paciente.id} />
-        )}
+        {pestanaActiva === "recetas" && <RecetasPacienteSeccion pacienteId={paciente.id} />}
       </ScrollView>
 
       {/* Botones de Acción de Flujo Clinico */}

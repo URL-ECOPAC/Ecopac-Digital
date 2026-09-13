@@ -56,9 +56,7 @@ describe("SignosVitalesSeccion", () => {
     render(<SignosVitalesSeccion pacienteId="paciente-123" />);
 
     await waitFor(() => {
-      expect(
-        screen.getByText("Sin registros de signos vitales.")
-      ).toBeTruthy();
+      expect(screen.getByText("Sin registros de signos vitales.")).toBeTruthy();
     });
   });
 
@@ -70,9 +68,7 @@ describe("SignosVitalesSeccion", () => {
     render(<SignosVitalesSeccion pacienteId="paciente-123" />);
 
     await waitFor(() => {
-      expect(
-        screen.getByText("Error de conexión con el servidor.")
-      ).toBeTruthy();
+      expect(screen.getByText("Error de conexión con el servidor.")).toBeTruthy();
     });
 
     // Simula reintento exitoso

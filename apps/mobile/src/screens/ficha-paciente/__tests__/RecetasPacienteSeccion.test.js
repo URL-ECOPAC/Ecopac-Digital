@@ -70,9 +70,7 @@ describe("RecetasPacienteSeccion", () => {
 
     render(<RecetasPacienteSeccion pacienteId="123" />);
 
-    expect(
-      screen.getByText("Sin recetas emitidas para este paciente.")
-    ).toBeTruthy();
+    expect(screen.getByText("Sin recetas emitidas para este paciente.")).toBeTruthy();
   });
 
   it("muestra alerta de error y permite ejecutar recargar", () => {
