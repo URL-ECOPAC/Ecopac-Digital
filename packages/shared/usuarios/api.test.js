@@ -661,6 +661,25 @@ describe("actualizarUsuario", () => {
     expect(perfil).toBeNull();
     expect(error).toBeNull();
   });
+
+  // Issue #756: la migracion 00108 agrego direccion/notas sin ningun formulario que las
+  // escribiera "hasta que exista ese formulario". actualizarUsuario() ya las acepta.
+  it("acepta direccion, notas y fechaIngreso", async () => {
+    const { cliente, llamadas } = doble({ data: { id: "u1" }, error: null });
+    dobles.cliente = cliente;
+
+    await actualizarUsuario("u1", {
+      direccion: "Zona 10, Guatemala",
+      notas: "Disponible fines de semana",
+      fechaIngreso: "2026-01-15",
+    });
+
+    expect(pasos(llamadas, "update")[0].valores).toEqual({
+      direccion: "Zona 10, Guatemala",
+      notas: "Disponible fines de semana",
+      fecha_ingreso: "2026-01-15",
+    });
+  });
 });
 
 describe("desactivarUsuario y reactivarUsuario", () => {

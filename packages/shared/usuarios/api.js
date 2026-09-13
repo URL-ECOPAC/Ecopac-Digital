@@ -85,6 +85,8 @@ const CAMPOS_EDITABLES = {
   telefono: "telefono",
   rol: "rol",
   fechaIngreso: "fecha_ingreso",
+  direccion: "direccion",
+  notas: "notas",
 };
 
 function aFiltroDeActivo(estado) {

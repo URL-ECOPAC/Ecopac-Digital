@@ -1138,7 +1138,7 @@ cada uno al resolverse):
 | Gastos | Aprobado por/cuando y motivo de rechazo invisibles | baja | Pendiente |
 | Donaciones | Sin anular; constancia imprime mal el proyecto; ingreso a inventario no se dispara | media | Pendiente |
 | Directorio de colaboradores | Junta directiva consulta la tabla equivocada | media | Resuelto |
-| Perfil de colaborador | fecha_ingreso/direccion/notas no capturables | baja | Pendiente |
+| Perfil de colaborador | fecha_ingreso/direccion/notas no capturables | baja | Resuelto |
 | Permisos por usuario | Sin motivo ni quien concedio/revoco | baja | Resuelto |
 | Movil: edicion de paciente | No existe la pantalla | media | Pendiente |
 | Dashboard de Impacto | Consultas realizadas no llega a la tarjeta agregada | baja | Pendiente |
@@ -1193,9 +1193,9 @@ pantalla y decidir si lo que se ve ahi responde la pregunta- y no es candidata a
 | telefono | Si | Si (alta+edicion) | Si | — |
 | rol | Si | Si (alta+edicion) | Si | — |
 | activo | Si | Default `true` al alta | Si, boton "Desactivar/Reactivar" aparte del form | — |
-| fecha_ingreso | Si | No | No | Pendiente (#756) |
-| direccion | Si | No | No | Pendiente (#756) |
-| notas | Si | No | No | Pendiente (#756) |
+| fecha_ingreso | Si | Si, solo edicion | Si | Resuelto (#756). `actualizarUsuario()` ya la aceptaba; faltaba en el formulario |
+| direccion | Si | Si, solo edicion | Si | Resuelto (#756). Migracion `00108` la dejo a proposito sin formulario "hasta que exista ese formulario" |
+| notas | Si | Si, solo edicion | Si | Resuelto (#756), mismo caso que `direccion` |
 
 **`perfiles_directorio`** (vista): mismas columnas que `perfiles` salvo `direccion`/`notas`, y con
 `telefono`/`email` en NULL salvo para administrador o la propia fila. Vive para que junta
