@@ -13,7 +13,13 @@ afterEach(() => {
   cleanup();
 });
 
-const CATALOGOS_VACIOS = { departamentos: [], municipios: [], comunidades: [], proyectos: [] };
+const CATALOGOS_VACIOS = {
+  departamentos: [],
+  municipios: [],
+  comunidades: [],
+  proyectos: [],
+  bodegas: [],
+};
 
 const mockEstadoHook = {
   valores: {},
@@ -55,6 +61,7 @@ describe("ModalJornada", () => {
     mockEstadoHook.cargando = false;
     mockEstadoHook.esEdicion = false;
     mockEstadoHook.advertenciaDuplicado = null;
+    mockEstadoHook.catalogos = CATALOGOS_VACIOS;
     mockEstadoHook.enviar = vi.fn(async () => ({ ok: true, jornada: { id: "jor-nuevo" } }));
     useFormularioJornada.mockClear();
     mockEstadoHook.cancelar.mockClear();
@@ -104,6 +111,27 @@ describe("ModalJornada", () => {
       screen.getByText("Ya existe una jornada con ese nombre en esa fecha."),
     ).toBeInTheDocument();
     expect(screen.getByText("Crear")).toBeInTheDocument();
+  });
+
+  // Issue #756: cupoEstimado y botiquinBodega no tenian ningun campo en el formulario, pese a
+  // que actualizarJornada() ya los aceptaba.
+  it("cupo estimado se edita con un campo numerico", () => {
+    mockEstadoHook.valores = { cupoEstimado: 50 };
+    pantalla();
+
+    fireEvent.change(screen.getByLabelText("Cupo estimado"), { target: { value: "75" } });
+
+    expect(mockEstadoHook.setCampo).toHaveBeenCalledWith("cupoEstimado", 75);
+  });
+
+  it("bodega de botiquin se elige de las bodegas moviles del catalogo", () => {
+    mockEstadoHook.catalogos = {
+      ...CATALOGOS_VACIOS,
+      bodegas: [{ value: "b-1", label: "Botiquin movil 1" }],
+    };
+    pantalla();
+
+    expect(screen.getByText("Botiquin movil 1")).toBeInTheDocument();
   });
 
   // Camino de error (issue #759/#778): si enviar() falla, el modal se queda abierto con el

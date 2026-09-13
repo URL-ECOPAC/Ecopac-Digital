@@ -306,6 +306,9 @@ export default function DetalleJornadaPage() {
 
                 <dt className="col-sm-4">{ETIQUETAS.cupoEstimado}</dt>
                 <dd className="col-sm-8">{jornada.cupoEstimado ?? "—"}</dd>
+
+                <dt className="col-sm-4">{ETIQUETAS.botiquinBodega}</dt>
+                <dd className="col-sm-8">{jornada.botiquinBodega?.nombre ?? "—"}</dd>
               </dl>
 
               <hr />

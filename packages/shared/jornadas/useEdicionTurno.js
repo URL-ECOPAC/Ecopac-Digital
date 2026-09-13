@@ -1,8 +1,9 @@
 // Hook de pantalla de la edicion de horario y responsabilidad de una persona ya asignada a una
-// jornada (issue #185, criterio 2). Asignar (alta) sigue siendo el modal de #182
-// (useAsignacionPersonal.js, ModalAsignarPersonal.jsx): esto edita horaInicio, horaFin y
-// responsabilidad de una fila que YA existe en jornada.personal, nunca el perfil ni el rol en la
-// jornada (rolEnJornada), que el criterio de aceptacion no menciona.
+// jornada (issue #185, criterio 2), ampliado con asistio en la issue #756. Asignar (alta) sigue
+// siendo el modal de #182 (useAsignacionPersonal.js, ModalAsignarPersonal.jsx): esto edita
+// horaInicio, horaFin, responsabilidad y asistio de una fila que YA existe en jornada.personal,
+// nunca el perfil ni el rol en la jornada (rolEnJornada), que el criterio de aceptacion de #185
+// no menciona.
 //
 // Mismo patron que useEdicionUsuario.js (#107): precarga `valores` desde la fila que recibe, no
 // arranca vacio. Quien lo use monta un componente nuevo por cada fila que se edite (key={fila.id}
@@ -14,6 +15,7 @@
 
 import { useCallback, useState } from "react";
 
+import { TIPOS_DE_CAMPO } from "../descriptores.js";
 import { actualizarAsignacionPersonal } from "./api.js";
 import { CAMPOS_EDICION_TURNO } from "./campos.js";
 import {
@@ -22,9 +24,16 @@ import {
   validarEdicionTurno,
 } from "./validaciones.js";
 
+/**
+ * `''` es el vacio correcto para un campo de texto/hora, pero enviarlo tal cual para `asistio`
+ * (BOOLEANO) mandaria una cadena vacia a una columna boolean y el UPDATE fallaria en el servidor
+ * -- ni siquiera hace falta tocar ese campo para que viaje: guardar() manda `valores` completo.
+ * El vacio de un booleano sin marcar es `false`, no `''` (issue #756).
+ */
 function valoresDesdeFila(fila) {
   return CAMPOS_EDICION_TURNO.reduce((valores, campo) => {
-    valores[campo.id] = fila?.[campo.id] ?? "";
+    const vacio = campo.tipo === TIPOS_DE_CAMPO.BOOLEANO ? false : "";
+    valores[campo.id] = fila?.[campo.id] ?? vacio;
     return valores;
   }, {});
 }

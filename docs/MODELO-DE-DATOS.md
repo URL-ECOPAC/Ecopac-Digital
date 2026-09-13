@@ -906,9 +906,9 @@ editar nombre, activar/desactivar). Sin huecos.
 | --- | --- | --- | --- | --- |
 | nombre / fecha / comunidad_id / responsable_id / proyecto_id | Si | Si (alta+edicion) | Si | — |
 | estado | Si (chip/kanban) | Si, vía kanban y "Cerrar jornada" (no formulario) | Si | — |
-| presupuesto_asignado | No | No (`asignarPresupuestoJornada()` sin llamador) | No | Pendiente (#756) |
-| cupo_estimado | Si (barra de progreso, siempre vacía) | No | No | Pendiente (#756) |
-| botiquin_bodega_id | No | No | No | Pendiente (#756) |
+| presupuesto_asignado | No | No (`asignarPresupuestoJornada()` sin llamador) | No | Pendiente (#756). Ver nota abajo: sigue fuera a proposito |
+| cupo_estimado | Si | Si (alta+edicion) | Si | Resuelto (#756) |
+| botiquin_bodega_id | Si, resuelto a nombre | Si (alta+edicion), solo bodegas moviles | Si | Resuelto (#756) |
 | codigo | Si (`DetalleJornadaPage.jsx`, antes siempre "—") | **Generado por el servidor**, migracion `00126` | n/a | Resuelto en esta misma issue: ver nota tecnica abajo |
 | fecha_inicio_real / fecha_fin_real / orden_kanban | No | No | No | Se seleccionan pero ninguna pantalla los lee ni los escribe; el orden real del tablero es por `fecha`. Sin issue propia: bajo impacto, se resuelven si alguna vez se construye la accion que les da sentido ("iniciar jornada", reordenar tablero a mano) |
 
@@ -921,10 +921,28 @@ Postgres -mismo patron que `numero_ficha` (`00081`)-, con backfill de las jornad
 era, sin usarse); simplemente aparece con un valor real donde `DetalleJornadaPage.jsx` ya lo
 mostraba.
 
+**`cupo_estimado`/`botiquin_bodega_id` (issue #756)**: los dos ya los aceptaba `actualizarJornada()`
+(`aColumnasDeTabla()`, `jornadas/api.js`), pero `CAMPOS_FORMULARIO_JORNADA` los excluia a
+proposito desde el `#179` ("ninguno esta en el objetivo del issue"). Ahora se agregan al mismo
+formulario (`ModalJornada.jsx`): `cupoEstimado` con `NumberField`, `botiquinBodega` con el
+`Selector` generico que ya resuelve cualquier `opcionesDesde` -filtrado a bodegas moviles
+(`listarBodegas({ esMovil: true })`), porque la columna es "la bodega movil que viaja", no
+cualquier bodega del catalogo-. `DetalleJornadaPage.jsx` ya mostraba `cupoEstimado`; se agrega
+`botiquinBodega`, embebido por nombre en `obtenerJornada()` igual que `comunidad`/`responsable`.
+
+**`presupuesto_asignado` sigue sin resolver, a proposito**: tambien esta en `aColumnasDeTabla()`,
+pero ademas existe `asignarPresupuestoJornada()` (`presupuestos/api.js`), una via de escritura
+propia con su propia validacion (`aNumeroAEscribir()`) que tampoco tiene ningun llamador.
+Agregarlo al formulario de jornada habria duplicado el camino de escritura de una columna
+financiera con dos reglas de validacion distintas -exactamente el tipo de decision que no le
+toca a un cambio de "agregar el campo al formulario". Queda declarado como hueco abierto.
+
 **`jornada_personal`**: `perfil_id`/`hora_inicio`/`hora_fin`/`responsabilidad` completos (alta y
 edicion, issue #185); `rol_en_jornada` se captura al asignar pero no se corrige despues (a
 proposito: reasignar el rol de turno de alguien ya asignado no esta en el objetivo de esa issue).
-`asistio` no tiene ninguna forma de capturarse -> **pendiente, esta misma issue #756**.
+`asistio` se guardaba y se mostraba (`COLUMNAS_PERSONAL_JORNADA`) pero no tenia forma de
+capturarse -> **resuelto en esta misma issue #756**: se agrega como checkbox al mismo
+`ModalEdicionTurno.jsx` que ya edita horario y responsabilidad de una fila existente.
 
 **`jornada_estado_historial`**: tiene pantalla propia (pestana "Historial" de
 `DetalleJornadaPage.jsx`), con `cambiado_por` resuelto a nombre. Sin huecos: es un historial de
@@ -1142,7 +1160,7 @@ cada uno al resolverse):
 | Permisos por usuario | Sin motivo ni quien concedio/revoco | baja | Resuelto |
 | Movil: edicion de paciente | No existe la pantalla | media | Pendiente |
 | Dashboard de Impacto | Consultas realizadas no llega a la tarjeta agregada | baja | Pendiente |
-| Jornadas | cupo_estimado/botiquin_bodega_id/asistio sin captura | media | Pendiente |
+| Jornadas | cupo_estimado/botiquin_bodega_id/asistio sin captura | media | Resuelto (presupuesto_asignado queda fuera, ver nota en la tabla de `jornadas`) |
 | Icono de modulo en Inicio | Sin libreria de iconos instalada; necesita revision de Figma | baja | Pendiente (bloqueada por diseno) |
 
 Resuelto dentro de esta misma issue: `jornadas.codigo` ahora se genera por secuencia (migracion
