@@ -18,6 +18,8 @@ export default function RegistroDonacionPage({ usuarioRol }) {
     setProyectoId,
     fecha,
     setFecha,
+    observaciones,
+    setObservaciones,
     detalles,
     agregarRenglon,
     quitarRenglon,
@@ -142,6 +144,19 @@ export default function RegistroDonacionPage({ usuarioRol }) {
                 </Form.Select>
               </Form.Group>
             </Col>
+
+            <Col md={12}>
+              <Form.Group controlId="formObservaciones">
+                <Form.Label>Observaciones</Form.Label>
+                <Form.Control
+                  as="textarea"
+                  rows={2}
+                  disabled={!permisos?.puedeEscribir}
+                  value={observaciones}
+                  onChange={(e) => setObservaciones(e.target.value)}
+                />
+              </Form.Group>
+            </Col>
           </Row>
         </Card.Body>
       </Card>
@@ -175,7 +190,7 @@ export default function RegistroDonacionPage({ usuarioRol }) {
 
               {tipoDonacion === "medicamentos" && (
                 <>
-                  <Col md={7}>
+                  <Col md={5}>
                     <Form.Control
                       placeholder="Nombre de Medicamento / Lote"
                       disabled={!permisos?.puedeEscribir}
@@ -183,13 +198,21 @@ export default function RegistroDonacionPage({ usuarioRol }) {
                       onChange={(e) => actualizarRenglon(item.id, "descripcion", e.target.value)}
                     />
                   </Col>
-                  <Col md={4}>
+                  <Col md={3}>
                     <Form.Control
                       type="number"
                       placeholder="Cantidad"
                       disabled={!permisos?.puedeEscribir}
                       value={item.cantidad || ""}
                       onChange={(e) => actualizarRenglon(item.id, "cantidad", e.target.value)}
+                    />
+                  </Col>
+                  <Col md={3}>
+                    <Form.Control
+                      placeholder="Unidad"
+                      disabled={!permisos?.puedeEscribir}
+                      value={item.unidad || ""}
+                      onChange={(e) => actualizarRenglon(item.id, "unidad", e.target.value)}
                     />
                   </Col>
                 </>
@@ -197,7 +220,7 @@ export default function RegistroDonacionPage({ usuarioRol }) {
 
               {tipoDonacion === "insumos" && (
                 <>
-                  <Col md={7}>
+                  <Col md={5}>
                     <Form.Control
                       placeholder="Descripción del insumo"
                       disabled={!permisos?.puedeEscribir}
@@ -205,13 +228,21 @@ export default function RegistroDonacionPage({ usuarioRol }) {
                       onChange={(e) => actualizarRenglon(item.id, "descripcion", e.target.value)}
                     />
                   </Col>
-                  <Col md={4}>
+                  <Col md={3}>
                     <Form.Control
                       type="number"
                       placeholder="Cantidad"
                       disabled={!permisos?.puedeEscribir}
                       value={item.cantidad || ""}
                       onChange={(e) => actualizarRenglon(item.id, "cantidad", e.target.value)}
+                    />
+                  </Col>
+                  <Col md={3}>
+                    <Form.Control
+                      placeholder="Unidad"
+                      disabled={!permisos?.puedeEscribir}
+                      value={item.unidad || ""}
+                      onChange={(e) => actualizarRenglon(item.id, "unidad", e.target.value)}
                     />
                   </Col>
                 </>

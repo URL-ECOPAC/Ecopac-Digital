@@ -1077,14 +1077,20 @@ boton -bajo impacto, agrupado con el hueco de `donaciones.estado` si se retoma e
 | Columna | Muestra | Captura | Corrige | Nota |
 | --- | --- | --- | --- | --- |
 | donante_id / fecha / tipo | Si | Si, al registrar | No (no hay edicion de donacion) | Bajo impacto, sin issue propia |
-| observaciones | Solo en movil | No (el formulario web no tiene el input) | No | Pendiente (#756) |
-| estado / motivo_anulacion / anulada_por / anulada_en | Si, solo si ya anulada (anulada_por como UUID crudo) | No (`anularDonacion()` sin boton) | No | Pendiente (#756) |
+| observaciones | Si (web y movil) | Si, ahora tambien en web | No | Resuelto (#756) |
+| estado / motivo_anulacion / anulada_por / anulada_en | Si, con `anulada_por` resuelto a nombre | Si, boton "Anular donacion" | No | Resuelto (#756) |
 | registrado_por | No | Si, automatico | No | Bajo impacto |
-| proyecto_id | No correctamente: la constancia lee un campo que no existe (`proyecto_nombre`) | Si, al registrar | No | Pendiente (#756) |
+| proyecto_id | Si, `proyectoNombre` resuelto en la constancia | Si, al registrar | No | Resuelto (#756) |
 
-**`donacion_detalle`**: `descripcion`/`cantidad`/`monto` completos al registrar; `unidad` nunca se
-captura (el input no existe); `lote_id` -el enlace real a un lote de farmacia- nunca se genera
-porque el boton "Si, ingresar a Inventario" no llama a la funcion que lo crea -> **pendiente, esta misma issue #756**.
+**`donacion_detalle`**: `descripcion`/`cantidad`/`monto` completos al registrar; `unidad` se agrega
+como campo en el formulario web de medicamentos e insumos (issue #756, resuelto). `lote_id` -el
+enlace real a un lote de farmacia- **sigue sin generarse**: el boton "Si, ingresar a Inventario"
+solo cierra el modal, sin llamar a `generarIngresoDesdeDonacion()` (`donaciones/ingreso.api.js`,
+ya existe y esta probada). No se resuelve en este cambio porque esa funcion pide
+`medicamentoId`/`bodegaId`/`numeroLote`/`fechaVencimiento`/`proveedorId` -datos que un renglon de
+donacion (solo descripcion libre + cantidad) no tiene-, asi que el boton necesita abrir un
+formulario propio (mismo tipo que `ModalRegistroIngreso.jsx`) para pedirlos, no una llamada
+directa. Queda declarado como hueco abierto, de mayor alcance que el resto de esta issue.
 
 ### Proyectos y presupuesto
 
@@ -1169,7 +1175,7 @@ cada uno al resolverse):
 | Comunidades | Columnas geo sin uso (decidir mapa o retiro); sin edicion | baja | Pendiente |
 | Proyectos sociales | Sin alta/edicion de proyecto, hitos ni presupuesto asignado | media | Pendiente |
 | Gastos | Aprobado por/cuando y motivo de rechazo invisibles | baja | Pendiente |
-| Donaciones | Sin anular; constancia imprime mal el proyecto; ingreso a inventario no se dispara | media | Pendiente |
+| Donaciones | Sin anular; constancia imprime mal el proyecto; ingreso a inventario no se dispara | media | Resuelto salvo el ingreso a inventario (ver nota de `donacion_detalle`, necesita formulario propio) |
 | Directorio de colaboradores | Junta directiva consulta la tabla equivocada | media | Resuelto |
 | Perfil de colaborador | fecha_ingreso/direccion/notas no capturables | baja | Resuelto |
 | Permisos por usuario | Sin motivo ni quien concedio/revoco | baja | Resuelto |

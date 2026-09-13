@@ -83,6 +83,9 @@ export function useRegistroDonacion({ _client, usuarioRol, onGuardarExito }) {
   const [donanteId, setDonanteId] = useState("");
   const [proyectoId, setProyectoId] = useState("");
   const [fecha, setFecha] = useState(new Date().toISOString().split("T")[0]);
+  // registrarDonacion() ya aceptaba observaciones (p_observaciones en registro.api.js), pero el
+  // formulario web nunca la tenia en su estado: el input no existia (issue #756).
+  const [observaciones, setObservaciones] = useState("");
 
   const [detalles, setDetalles] = useState([renglonVacio()]);
 
@@ -200,6 +203,7 @@ export function useRegistroDonacion({ _client, usuarioRol, onGuardarExito }) {
       proyectoId: proyectoId || null,
       tipo: tipoDonacion,
       fecha,
+      observaciones: observaciones.trim() || null,
       detalles,
     };
 
@@ -235,6 +239,8 @@ export function useRegistroDonacion({ _client, usuarioRol, onGuardarExito }) {
     setProyectoId,
     fecha,
     setFecha,
+    observaciones,
+    setObservaciones,
     detalles,
     agregarRenglon,
     quitarRenglon,

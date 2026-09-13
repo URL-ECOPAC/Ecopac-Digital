@@ -88,7 +88,7 @@ export default function ConstanciaDonacionPage({ usuarioRol, donacion }) {
                 <span className="text-capitalize">{donacion.tipo}</span>
               </p>
               <p className="mb-0">
-                <strong>Proyecto Asignado:</strong> {donacion.proyecto_nombre || "Fondo General"}
+                <strong>Proyecto Asignado:</strong> {donacion.proyectoNombre || "Fondo General"}
               </p>
             </Card.Body>
           </Card>
