@@ -1,95 +1,146 @@
-import { View, Text, StyleSheet, RefreshControl, ScrollView, Pressable } from "react-native";
-import { useNavigation } from "@react-navigation/native";
-import { useAlertasVencimiento } from "../../../../packages/shared/inventario/useAlertasVencimiento";
+import { useCallback, useEffect, useState } from "react";
+import { RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  formatearFechaCorta,
+  listarBodegas,
+  listarLotes,
+  listarMedicamentos,
+  useAlertasVencimiento,
+} from "@ecopac/shared";
+import { colors, radii, spacing, typography } from "@ecopac/ui-tokens";
+
+import { Card, EmptyState, ErrorState, LoadingState } from "../components";
 import { useSesionCompartida } from "../contexto/SesionProvider";
-import { LoadingState, ErrorState } from "../components";
 
-// Mapeo de umbrales a colores visuales
-const COLORES_ALERTA = {
-  critico: { fondo: "#fef2f2", borde: "#fecaca", texto: "#dc2626", etiqueta: "⚠️ Crítico" },
-  alto: { fondo: "#fffbeb", borde: "#fde68a", texto: "#d97706", etiqueta: "🔴 Próximo" },
-  medio: { fondo: "#f0f9ff", borde: "#bae6fd", texto: "#0284c7", etiqueta: "🟡 Atención" },
-  normal: { fondo: "#f0fdf4", borde: "#bbf7d0", texto: "#059669", etiqueta: "✅ Vigente" },
-  vencido: { fondo: "#f3f4f6", borde: "#d1d5db", texto: "#4b5563", etiqueta: "⛔ Vencido" },
-};
-
+/**
+ * Resumen y alertario de inventario (issue #268): tarjetas de resumen en la cabecera y las
+ * alertas de vencimiento, ordenadas por urgencia, separadas en "por vencer" y "vencidas".
+ *
+ * QUE ESTABA MAL (issue #785). Llamaba a useAlertasVencimiento({ rol }): ese hook toma
+ * { lotes, bodegas, usuarioId, rolUsuario } por props (tampoco hace fetch propio) y nunca
+ * devuelve cargando/error/resumen/alertas -- devuelve { alertas, porVencer, vencidas,
+ * cantidadPendientes, ... }. Ademas leia campos snake_case (alerta.dias_restantes,
+ * alerta.nivel_alerta, resumen.total_medicamentos) que no existen en esa forma. La pantalla
+ * quedaba siempre en su rama "sin datos", y ademas no estaba registrada en el navegador.
+ *
+ * QUE HACE AHORA. Carga listarLotes(), listarBodegas() y listarMedicamentos() al montar (mismo
+ * patron que StockScreen.js), y se las pasa a useAlertasVencimiento() para obtener las alertas
+ * reales. El resumen de cabecera se arma con esos mismos datos: medicamentos del catalogo,
+ * lotes no vencidos, y el total de alertas pendientes (cantidadPendientes) como "en riesgo".
+ */
 export default function InventarioResumenAlertasScreen() {
-  const navigation = useNavigation();
-  const { rol } = useSesionCompartida();
-  const { cargando, error, resumen, alertas, recargar } = useAlertasVencimiento({ rol });
+  const { perfil, rol } = useSesionCompartida();
 
-  const irADetalleLote = (lote) => {
-    navigation.navigate("DetalleLote", { loteId: lote.id, titulo: lote.medicamento });
-  };
+  const [lotes, setLotes] = useState([]);
+  const [bodegas, setBodegas] = useState([]);
+  const [totalMedicamentos, setTotalMedicamentos] = useState(0);
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState(null);
+
+  const cargar = useCallback(async () => {
+    setCargando(true);
+    setError(null);
+
+    const [respuestaLotes, respuestaBodegas, respuestaMedicamentos] = await Promise.all([
+      listarLotes(),
+      listarBodegas(),
+      listarMedicamentos(),
+    ]);
+
+    setLotes(respuestaLotes.lotes || []);
+    setBodegas(respuestaBodegas.bodegas || []);
+    setTotalMedicamentos((respuestaMedicamentos.medicamentos || []).length);
+    setError(respuestaLotes.error ?? respuestaBodegas.error ?? respuestaMedicamentos.error ?? null);
+    setCargando(false);
+  }, []);
+
+  useEffect(() => {
+    cargar();
+  }, [cargar]);
+
+  const { porVencer, vencidas, cantidadPendientes } = useAlertasVencimiento({
+    lotes,
+    bodegas,
+    usuarioId: perfil?.id,
+    rolUsuario: rol,
+  });
+
+  const lotesActivos = lotes.filter((lote) => !lote.vencido).length;
+
+  if (cargando && lotes.length === 0) {
+    return <LoadingState message="Cargando inventario..." />;
+  }
 
   return (
     <ScrollView
       style={estilos.contenedor}
-      refreshControl={<RefreshControl refreshing={cargando} onRefresh={recargar} />}
+      contentContainerStyle={estilos.contenido}
+      refreshControl={<RefreshControl refreshing={cargando} onRefresh={cargar} />}
     >
-      {/* 📊 Tarjetas de resumen */}
+      <Text style={estilos.titulo}>Resumen de inventario</Text>
+
       <View style={estilos.tarjetasResumen}>
-        <View style={estilos.tarjeta}>
-          <Text style={estilos.tarjetaValor}>{resumen?.total_medicamentos ?? 0}</Text>
-          <Text style={estilos.tarjetaEtiqueta}>Medicamentos</Text>
+        <View style={estilos.tarjetaResumen}>
+          <Text style={estilos.valorResumen}>{totalMedicamentos}</Text>
+          <Text style={estilos.etiquetaResumen}>Medicamentos</Text>
         </View>
-        <View style={estilos.tarjeta}>
-          <Text style={estilos.tarjetaValor}>{resumen?.total_lotes ?? 0}</Text>
-          <Text style={estilos.tarjetaEtiqueta}>Lotes activos</Text>
+        <View style={estilos.tarjetaResumen}>
+          <Text style={estilos.valorResumen}>{lotesActivos}</Text>
+          <Text style={estilos.etiquetaResumen}>Lotes activos</Text>
         </View>
-        <View style={estilos.tarjeta}>
-          <Text style={[estilos.tarjetaValor, { color: "#dc2626" }]}>{resumen?.criticos ?? 0}</Text>
-          <Text style={estilos.tarjetaEtiqueta}>En riesgo</Text>
+        <View style={estilos.tarjetaResumen}>
+          <Text style={[estilos.valorResumen, estilos.valorEnRiesgo]}>{cantidadPendientes}</Text>
+          <Text style={estilos.etiquetaResumen}>En riesgo</Text>
         </View>
       </View>
 
-      {cargando && <LoadingState mensaje="Cargando inventario..." />}
-      {error && <ErrorState mensaje={error.mensaje} alReintentar={recargar} />}
+      {error ? <ErrorState message={error.mensaje} onRetry={cargar} /> : null}
 
-      {/* 🚨 Lista de alertas ordenada por urgencia */}
-      {alertas?.length > 0 && (
+      {!error ? (
         <>
-          <Text style={estilos.tituloSeccion}> Lotes por vencer</Text>
-          {alertas.map((alerta) => {
-            const esVencido = alerta.dias_restantes <= 0;
-            const nivel = esVencido ? "vencido" : alerta.nivel_alerta;
-            const color = COLORES_ALERTA[nivel] || COLORES_ALERTA.normal;
-
-            return (
-              <Pressable
-                key={alerta.lote_id}
-                style={({ pressed }) => [
-                  estilos.alerta,
-                  { backgroundColor: color.fondo, borderColor: color.borde },
-                  pressed && estilos.alertaPresionada,
-                ]}
-                onPress={() => irADetalleLote(alerta)}
-              >
+          <Text style={estilos.tituloSeccion}>Por vencer ({porVencer.length})</Text>
+          {porVencer.length === 0 ? (
+            <EmptyState message="Ningún lote vence en los próximos 30 días." />
+          ) : (
+            porVencer.map((alerta) => (
+              <Card key={alerta.id} style={estilos.alertaPorVencer}>
                 <View style={estilos.alertaCabecera}>
-                  <Text style={estilos.alertaMedicamento}>{alerta.medicamento}</Text>
-                  <Text style={[estilos.alertaEtiqueta, { color: color.texto }]}>
-                    {color.etiqueta}
+                  <Text style={estilos.alertaMedicamento} numberOfLines={1}>
+                    {alerta.medicamento}
+                  </Text>
+                  <Text style={estilos.alertaDias}>
+                    {alerta.diasRestantes === 0 ? "Vence hoy" : `${alerta.diasRestantes} días`}
                   </Text>
                 </View>
                 <Text style={estilos.alertaDetalle}>
-                  Lote: {alerta.numero_lote} · {alerta.bodega || "Sin bodega"}
+                  Lote {alerta.lote} · vence el {formatearFechaCorta(alerta.fechaVencimiento)}
                 </Text>
-                <Text style={[estilos.alertaDias, { color: color.texto }]}>
-                  {esVencido
-                    ? ` Vencido hace ${Math.abs(alerta.dias_restantes)} días`
-                    : ` Vence en ${alerta.dias_restantes} días`}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </>
-      )}
+              </Card>
+            ))
+          )}
 
-      {!cargando && !error && alertas?.length === 0 && (
-        <View style={estilos.vacio}>
-          <Text style={estilos.textoVacio}> Sin lotes próximos a vencer</Text>
-        </View>
-      )}
+          <Text style={estilos.tituloSeccion}>Vencidos ({vencidas.length})</Text>
+          {vencidas.length === 0 ? (
+            <EmptyState message="No hay lotes vencidos." />
+          ) : (
+            vencidas.map((alerta) => (
+              <Card key={alerta.id} style={estilos.alertaVencida}>
+                <View style={estilos.alertaCabecera}>
+                  <Text style={estilos.alertaMedicamento} numberOfLines={1}>
+                    {alerta.medicamento}
+                  </Text>
+                  <Text style={[estilos.alertaDias, estilos.alertaDiasVencida]}>
+                    Vencido hace {Math.abs(alerta.diasRestantes)} días
+                  </Text>
+                </View>
+                <Text style={estilos.alertaDetalle}>
+                  Lote {alerta.lote} · venció el {formatearFechaCorta(alerta.fechaVencimiento)}
+                </Text>
+              </Card>
+            ))
+          )}
+        </>
+      ) : null}
     </ScrollView>
   );
 }
@@ -97,81 +148,90 @@ export default function InventarioResumenAlertasScreen() {
 const estilos = StyleSheet.create({
   contenedor: {
     flex: 1,
-    padding: 16,
-    backgroundColor: "#f8fafc",
+    backgroundColor: colors.background,
+  },
+  contenido: {
+    padding: spacing.md,
+  },
+  titulo: {
+    fontFamily: typography.fontFamilyBase,
+    fontSize: typography.sizes.xl,
+    fontWeight: typography.weights.bold,
+    color: colors.text,
+    marginBottom: spacing.md,
   },
   tarjetasResumen: {
     flexDirection: "row",
-    gap: 10,
-    marginBottom: 24,
+    gap: spacing.sm,
+    marginBottom: spacing.lg,
   },
-  tarjeta: {
+  tarjetaResumen: {
     flex: 1,
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 14,
-    alignItems: "center",
+    backgroundColor: colors.surface,
+    borderRadius: radii.md,
     borderWidth: 1,
-    borderColor: "#f1f5f9",
+    borderColor: colors.border,
+    paddingVertical: spacing.sm,
+    alignItems: "center",
   },
-  tarjetaValor: {
-    fontSize: 20,
-    fontWeight: "800",
-    color: "#1e293b",
+  valorResumen: {
+    fontFamily: typography.fontFamilyBase,
+    fontSize: typography.sizes.lg,
+    fontWeight: typography.weights.bold,
+    color: colors.text,
   },
-  tarjetaEtiqueta: {
-    fontSize: 10,
-    color: "#64748b",
+  valorEnRiesgo: {
+    color: colors.danger,
+  },
+  etiquetaResumen: {
+    fontFamily: typography.fontFamilyBase,
+    fontSize: typography.sizes.xs,
+    color: colors.textMuted,
     marginTop: 2,
     textAlign: "center",
   },
   tituloSeccion: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#334155",
-    marginBottom: 12,
+    fontFamily: typography.fontFamilyBase,
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.semibold,
+    color: colors.text,
+    marginBottom: spacing.sm,
+    marginTop: spacing.sm,
   },
-  alerta: {
-    borderRadius: 12,
-    borderWidth: 1,
-    padding: 14,
-    marginBottom: 10,
+  alertaPorVencer: {
+    marginBottom: spacing.sm,
+    borderColor: colors.warning,
+    gap: spacing.xs,
   },
-  alertaPresionada: {
-    opacity: 0.8,
-    transform: [{ scale: 0.98 }],
+  alertaVencida: {
+    marginBottom: spacing.sm,
+    borderColor: colors.danger,
+    gap: spacing.xs,
   },
   alertaCabecera: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    marginBottom: 4,
   },
   alertaMedicamento: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#1e293b",
+    fontFamily: typography.fontFamilyBase,
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.semibold,
+    color: colors.text,
     flexShrink: 1,
   },
-  alertaEtiqueta: {
-    fontSize: 11,
-    fontWeight: "700",
+  alertaDias: {
+    fontFamily: typography.fontFamilyBase,
+    fontSize: typography.sizes.xs,
+    fontWeight: typography.weights.semibold,
+    color: colors.warning,
+  },
+  alertaDiasVencida: {
+    color: colors.danger,
   },
   alertaDetalle: {
-    fontSize: 12,
-    color: "#64748b",
-    marginBottom: 4,
-  },
-  alertaDias: {
-    fontSize: 13,
-    fontWeight: "600",
-  },
-  vacio: {
-    paddingVertical: 40,
-    alignItems: "center",
-  },
-  textoVacio: {
-    fontSize: 15,
-    color: "#64748b",
+    fontFamily: typography.fontFamilyBase,
+    fontSize: typography.sizes.xs,
+    color: colors.textMuted,
   },
 });
