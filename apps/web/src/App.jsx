@@ -20,6 +20,7 @@ import PacientesPage from "./pages/PacientesPage";
 import FichaPacientePage from "./pages/FichaPacientePage";
 import PacientesCronicosPage from "./pages/PacientesCronicosPage";
 import CatalogoDiagnosticosPage from "./pages/CatalogoDiagnosticosPage";
+import CatalogoComunidadesPage from "./pages/CatalogoComunidadesPage";
 import PosiblesDuplicadosPage from "./pages/PosiblesDuplicadosPage";
 import DonacionesPage from "./pages/DonacionesPage";
 import DonantesPage from "./pages/DonantesPage";
@@ -129,6 +130,7 @@ export default function App() {
                 <Route path="/pacientes" element={<PacientesPage />} />
                 <Route path="/pacientes/cronicos" element={<PacientesCronicosPage />} />
                 <Route path="/pacientes/diagnosticos" element={<CatalogoDiagnosticosPage />} />
+                <Route path="/pacientes/comunidades" element={<CatalogoComunidadesPage />} />
                 <Route path="/pacientes/duplicados" element={<PosiblesDuplicadosPage />} />
                 <Route path="/pacientes/:id" element={<FichaPacientePage />} />
               </Route>

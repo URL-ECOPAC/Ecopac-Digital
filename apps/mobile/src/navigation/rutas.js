@@ -20,6 +20,7 @@ export const ROUTES = {
   PRESUPUESTOS: "Presupuestos",
   COLABORADORES: "Colaboradores",
   FICHA_COLABORADOR: "FichaColaborador",
+  COMUNIDADES: "Comunidades",
   BUSQUEDA_PACIENTE: "BusquedaPaciente",
   FICHA_PACIENTE: "FichaPaciente",
   HISTORIAL_PACIENTE: "HistorialPaciente",

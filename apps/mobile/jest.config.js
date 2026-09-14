@@ -7,6 +7,9 @@ module.exports = {
     "^@ecopac/shared/(.*)$": path.resolve(__dirname, "../../packages/shared/$1"),
     "^@ecopac/shared$": path.resolve(__dirname, "../../packages/shared/index.js"),
     "^@ecopac/ui-tokens$": path.resolve(__dirname, "../../packages/ui-tokens/index.js"),
+    // react-native-webview envuelve un modulo nativo que no existe fuera de un binario real
+    // (issue #756): ver src/__mocks__/react-native-webview.js.
+    "^react-native-webview$": path.resolve(__dirname, "src/__mocks__/react-native-webview.js"),
   },
   transformIgnorePatterns: [
     "node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@sentry/react-native|native-base|react-native-svg)",

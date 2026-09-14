@@ -5,6 +5,7 @@ import {
   FILTROS_PACIENTE,
   puedeFusionarPacientes,
   puedeRegistrarPaciente,
+  puedeVerCatalogoComunidades,
   puedeVerCatalogoDiagnosticos,
   puedeVerCondiciones,
   usePacientesListado,
@@ -71,6 +72,14 @@ export default function PacientesPage() {
     acciones.push({
       label: "Catalogo de diagnosticos",
       onClick: () => navigate("/pacientes/diagnosticos"),
+      variant: "secondary",
+    });
+  }
+
+  if (puedeVerCatalogoComunidades(rol)) {
+    acciones.push({
+      label: "Catalogo de comunidades",
+      onClick: () => navigate("/pacientes/comunidades"),
       variant: "secondary",
     });
   }

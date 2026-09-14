@@ -866,14 +866,20 @@ repo: correcto, son division politica oficial, no algo que la ONG deba mantener.
 **`idiomas`**: `codigo`/`nombre` son la opcion del selector de idioma del paciente. Mismo catalogo
 de solo lectura.
 
-**`comunidades`**
+**`comunidades`**. Resuelto (#756): el catalogo territorial no tenia pantalla propia -solo el alta
+implicita desde `useRegistroPaciente.js`-, asi que ninguna de sus columnas se podia corregir una
+vez creada la fila, y `latitud`/`longitud`/`referencia_acceso` llevaban sin usarse desde la 00008.
+`CatalogoComunidadesPage.jsx` (web) y `ComunidadesScreen.js` (movil, solo administrador) agregan
+alta, edicion y un mapa de seleccion de ubicacion (Leaflet + OpenStreetMap en web, el mismo Leaflet
+dentro de un WebView en movil: sin llave de API ni cuenta de facturacion en ninguna de las dos). La
+ubicacion es opcional -no toda comunidad rural tiene coordenadas capturadas todavia.
 
 | Columna | Muestra | Captura | Corrige | Nota |
 | --- | --- | --- | --- | --- |
-| municipio_id | Implicito (cascada) | Si, al crear una comunidad nueva | No | Pendiente (#756) |
-| nombre | Si (opcion de selector) | Si, al crear | No | Pendiente (#756) |
-| latitud / longitud / referencia_acceso | No | No | No | #756 (columnas sin ningun uso desde `00008`) |
-| es_vigente | No | Si, default `true` | No | Pendiente (#756) |
+| municipio_id | Si (columna Municipio/Departamento) | Si, al crear | Si | Resuelto (#756) |
+| nombre | Si (columna principal) | Si, al crear | Si | Resuelto (#756) |
+| latitud / longitud / referencia_acceso | Si (mapa + columna "Ubicacion en mapa") | Si, con el mapa | Si | Resuelto (#756) |
+| es_vigente | Si (chip de estado) | Si, default `true` | Si (al editar) | Resuelto (#756) |
 
 ### Pacientes y expediente
 
@@ -1190,7 +1196,7 @@ cada uno al resolverse):
 | Alertas de vencimiento | El panel visible y `alertas_caducidad` estan desconectados | **alta** | Resuelto |
 | Movimientos de inventario | Bodega y motivo de rechazo no se ven; sin correccion de un pendiente | media | Resuelto salvo `editarMovimiento()` (necesita decidir donde vive esa pantalla) |
 | Medicamentos y recetas | `desactivarMedicamento()`/`anularReceta()` sin boton; `es_pediatrico` roto | baja | Resuelto |
-| Comunidades | Columnas geo sin uso (decidir mapa o retiro); sin edicion | baja | Pendiente |
+| Comunidades | Columnas geo sin uso (decidir mapa o retiro); sin edicion | baja | Resuelto (mapa con Leaflet/OpenStreetMap en web y movil) |
 | Proyectos sociales | Sin alta/edicion de proyecto, hitos ni presupuesto asignado | media | Pendiente |
 | Gastos | Aprobado por/cuando y motivo de rechazo invisibles | baja | Resuelto (en un commit anterior de esta misma issue). `registrado_por` sigue sin mostrarse, bajo impacto |
 | Donaciones | Sin anular; constancia imprime mal el proyecto; ingreso a inventario no se dispara | media | Resuelto salvo el ingreso a inventario (ver nota de `donacion_detalle`, necesita formulario propio) |

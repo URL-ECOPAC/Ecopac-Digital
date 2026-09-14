@@ -3,7 +3,7 @@ import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { colors, spacing, typography } from "@ecopac/ui-tokens";
-import { etiquetaDeRol, tabsMoviles, MODULOS, puedeRegistrarMovimiento } from "@ecopac/shared";
+import { etiquetaDeRol, tabsMoviles, MODULOS, puedeRegistrarMovimiento, ROLES } from "@ecopac/shared";
 
 import { useSesionCompartida } from "../contexto/SesionProvider";
 import RutaProtegida from "../components/RutaProtegida";
@@ -33,6 +33,7 @@ import ProyectosScreen from "../screens/ProyectosScreen";
 import PresupuestosScreen from "../screens/PresupuestosScreen";
 import ColaboradoresScreen from "../screens/ColaboradoresScreen";
 import FichaColaboradorScreen from "../screens/FichaColaboradorScreen";
+import ComunidadesScreen from "../screens/ComunidadesScreen";
 
 export { ROUTES, InicioNavigator };
 
@@ -102,6 +103,19 @@ function conGuardaDeRol(Componente, moduloId) {
   };
 }
 
+// Variante de conGuardaDeRol() para una pantalla que no tiene entrada propia en MODULOS -como
+// Comunidades (issue #756), que es de administracion y no uno de los nueve modulos del sistema-
+// y por eso recibe los roles permitidos directo, no un moduloId para resolver contra ella.
+function conGuardaDeRoles(Componente, rolesPermitidos) {
+  return function PantallaConGuarda(props) {
+    return (
+      <RutaProtegida rolesPermitidos={rolesPermitidos}>
+        <Componente {...props} />
+      </RutaProtegida>
+    );
+  };
+}
+
 function InicioNavigator() {
   return (
     <InicioStack.Navigator>
@@ -134,6 +148,11 @@ function InicioNavigator() {
         name={ROUTES.FICHA_COLABORADOR}
         component={conGuardaDeRol(FichaColaboradorScreen, "colaboradores")}
         options={opcionesStack("Ficha del personal")}
+      />
+      <InicioStack.Screen
+        name={ROUTES.COMUNIDADES}
+        component={conGuardaDeRoles(ComunidadesScreen, [ROLES.ADMINISTRADOR])}
+        options={opcionesStack("Comunidades")}
       />
     </InicioStack.Navigator>
   );
