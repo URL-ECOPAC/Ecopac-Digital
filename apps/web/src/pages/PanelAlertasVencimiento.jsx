@@ -1,8 +1,7 @@
 import { useState } from "react";
 import ErrorState from "../components/ErrorState";
 import LoadingState from "../components/LoadingState";
-import { useAlertasVencimiento } from "../../../../packages/shared/inventario/useAlertasVencimiento.js";
-import { OPCIONES_ACCION_ALERTA } from "../../../../packages/shared/inventario/campos.js";
+import { OPCIONES_ACCION_ALERTA, useAlertasVencimiento } from "@ecopac/shared";
 
 export default function PanelAlertasVencimiento({ usuarioId, rolUsuario }) {
   const {
@@ -184,7 +183,13 @@ export default function PanelAlertasVencimiento({ usuarioId, rolUsuario }) {
                     style={{ backgroundColor: estilo.fondo, borderBottom: "1px solid #e2e8f0" }}
                   >
                     <td style={{ padding: "14px 16px", fontSize: "14px" }}>{alerta.medicamento}</td>
-                    <td style={{ padding: "14px 16px", fontSize: "14px", fontFamily: "monospace" }}>
+                    <td
+                      style={{
+                        padding: "14px 16px",
+                        fontSize: "14px",
+                        fontFamily: "var(--fuente-mono)",
+                      }}
+                    >
                       {alerta.numeroLote}
                     </td>
                     <td
@@ -334,7 +339,7 @@ export default function PanelAlertasVencimiento({ usuarioId, rolUsuario }) {
                     style={{
                       padding: "14px 16px",
                       fontSize: "14px",
-                      fontFamily: "monospace",
+                      fontFamily: "var(--fuente-mono)",
                       color: "#991b1b",
                     }}
                   >

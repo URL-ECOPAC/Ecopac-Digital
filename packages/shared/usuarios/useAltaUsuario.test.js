@@ -7,7 +7,26 @@
 import { describe, expect, it } from "vitest";
 
 import { CAMPOS_USUARIO } from "./campos.js";
-import { CAMPOS_ALTA_USUARIO } from "./useAltaUsuario.js";
+import { avisoDeCorreoNoEnviado, CAMPOS_ALTA_USUARIO } from "./useAltaUsuario.js";
+
+describe("avisoDeCorreoNoEnviado", () => {
+  it("avisa cuando la funcion dice que el correo no salio", () => {
+    const aviso = avisoDeCorreoNoEnviado({ email: "persona@example.com", correoEnviado: false });
+    expect(aviso).toContain("persona@example.com");
+    expect(aviso).toContain("no se pudo enviar el correo");
+  });
+
+  it("no avisa si el correo salio", () => {
+    expect(
+      avisoDeCorreoNoEnviado({ email: "persona@example.com", correoEnviado: true }),
+    ).toBeNull();
+  });
+
+  it("no inventa un fallo si la respuesta no trae correoEnviado", () => {
+    expect(avisoDeCorreoNoEnviado({ id: "1" })).toBeNull();
+    expect(avisoDeCorreoNoEnviado(null)).toBeNull();
+  });
+});
 
 describe("CAMPOS_ALTA_USUARIO", () => {
   it("son exactamente los cinco campos que crearUsuario() envia al servidor", () => {

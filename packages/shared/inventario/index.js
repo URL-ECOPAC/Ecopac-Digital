@@ -46,3 +46,38 @@ export * from "./useInventario.js";
 export * from "./usePendientesValidacion.js";
 export * from "./useRegistroIngreso.js";
 export * from "./useEntregaMedicamentos.js";
+
+// useVistaExistencias.js y useAlertasVencimiento.js declaran cada uno su propia
+// calcularDiasRestantes(): un "export *" de los dos volveria ese nombre ambiguo y ESM lo
+// excluiria del barril entero (el mismo problema que describen los comentarios de
+// descriptores.js/enums.js arriba, issues #365/#397). Se listan los nombres explicitamente
+// para evitar la colision; quien necesite esa funcion interna sigue importando el archivo
+// directo, como ya hacian las pantallas antes de esta issue (#785).
+export {
+  ESTADO_EXISTENCIA,
+  calcularEstadoVencimiento,
+  useVistaExistencias,
+} from "./useVistaExistencias.js";
+export { datosAtenderAlerta, useAlertasVencimiento } from "./useAlertasVencimiento.js";
+
+// Los cuatro view model que ningun barril reexportaba (issue #700). No era un olvido inocuo: el
+// `exports` de packages/shared/package.json resuelve "./<modulo>" a su index.js y nada mas, asi
+// que sin estas lineas la unica forma de usarlos desde una app era importarlos por ruta relativa
+// -que es justo lo que AGENTS.md prohibe- y, de paso, quedaban fuera de `vite build`, donde un
+// error suyo habria aparecido antes de llegar a produccion.
+//
+// Por nombre y no con `export *`: es el criterio que ya seguia useAlertasVencimiento aqui arriba.
+// Los helpers internos de cada archivo -resultadoDeListado(), validarDatosDeLote(), nombreDe(),
+// filasDeKardex()- no son API del paquete y no salen.
+export {
+  TIPO_BODEGA,
+  TIPO_PROVEEDOR,
+  useAdministracionBodegasProveedores,
+} from "./useAdministracionBodegasProveedores.js";
+export { datosLoteParaRegistrar, useGestionLotes } from "./useGestionLotes.js";
+export {
+  ESTADO_MOVIMIENTO,
+  TIPO_MOVIMIENTO,
+  useKardexMovimientos,
+} from "./useKardexMovimientos.js";
+export { useRegistroSalida } from "./useRegistroSalida.js";

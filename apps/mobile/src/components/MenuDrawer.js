@@ -31,6 +31,12 @@ export default function MenuDrawer({ onClose, rutaActual, onNavegar }) {
       categoria: "OPERACIONES",
       items: [
         { label: "Inventario", ruta: ROUTES.STOCK, id: "inventario", badge: 2 },
+        { label: "Existencias", ruta: ROUTES.EXISTENCIAS_INVENTARIO, id: "inventario" },
+        {
+          label: "Alertas de vencimiento",
+          ruta: ROUTES.RESUMEN_ALERTAS_INVENTARIO,
+          id: "inventario",
+        },
         { label: "Presupuestos", ruta: ROUTES.PRESUPUESTOS, id: "presupuestos", badge: 2 },
       ],
     },

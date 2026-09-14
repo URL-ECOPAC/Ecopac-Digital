@@ -223,6 +223,12 @@ porque el dato viene del INE y no cambia.
 | `municipios`    | 00006     | `id` INT PK, `departamento_id`, `nombre`                                          |
 | `comunidades`   | 00008     | `id` UUID PK, `municipio_id`, `nombre`, `latitud`, `longitud`, `referencia_acceso`, `es_vigente` [+00117] |
 
+**Los departamentos y los municipios los siembra la migracion `00125`** (issue #704), de forma
+idempotente y con los mismos `id` de siempre. Hasta entonces solo estaban en `supabase/seed.sql`,
+que no llega a ningun ambiente remoto porque `supabase db push` no ejecuta seeds: un proyecto de
+Supabase nuevo nacia sin catalogo geografico y, sin municipios, tampoco podia tener comunidades ni
+jornadas.
+
 `referencia_acceso` es texto libre para llegar: la comunidad rural no siempre tiene direccion.
 `latitud`/`longitud` son `NUMERIC(9,6)`.
 

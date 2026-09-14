@@ -1,8 +1,6 @@
 import { useState } from "react";
 
-import { usePendientesValidacion } from "../../../../packages/shared/inventario/usePendientesValidacion.js";
-import { permisosDeMovimientos } from "../../../../packages/shared/inventario/permisos.js";
-
+import { permisosDeMovimientos, usePendientesValidacion } from "@ecopac/shared";
 // issue #689: esta pantalla tenia su propio movimientosPendientes escrito a mano (un solo
 // movimiento de mentira) y handleAprobar/handleRechazar solo hacian console.log. Nunca llamaba
 // a usePendientesValidacion(), que ya existia y estaba probada. Ahora la bandeja se autoabastece
@@ -58,7 +56,6 @@ export default function BandejaValidacionPage({ usuarioId, rolUsuario }) {
         flexDirection: "column",
         gap: "20px",
         padding: "24px 0",
-        fontFamily: "system-ui, -apple-system, sans-serif",
       }}
     >
       {/* Encabezado */}
@@ -302,7 +299,7 @@ export default function BandejaValidacionPage({ usuarioId, rolUsuario }) {
                           fontSize: "11px",
                           color: "#94a3b8",
                           marginTop: "4px",
-                          fontFamily: "monospace",
+                          fontFamily: "var(--fuente-mono)",
                         }}
                       >
                         {mov.id}

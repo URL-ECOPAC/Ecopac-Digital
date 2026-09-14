@@ -167,16 +167,31 @@ si mismo. Pasaria en verde aunque el esquema no existiera.
 
 Comprueba, para cada `.from("tabla")` y dentro del mismo statement:
 
-| Que                         | Donde                                                              |
-| --------------------------- | ------------------------------------------------------------------ |
-| que la tabla exista         | `.from()`                                                          |
-| las columnas pedidas        | `.select()`, literal o por constante                               |
-| las columnas de los filtros | `.eq .neq .gt .gte .lt .lte .in .is .like .ilike .contains .order` |
-| **las claves escritas**     | `.insert()`, `.update()`, `.upsert()`                              |
-| que la funcion exista       | `.rpc()`                                                           |
+| Que                                     | Donde                                                              |
+| --------------------------------------- | ------------------------------------------------------------------ |
+| que la tabla exista                     | `.from()`                                                          |
+| las columnas pedidas                    | `.select()`, literal o por constante                               |
+| **las columnas dentro de un embed**     | `consulta:consultas(...)`, recursivo, cada una contra SU tabla     |
+| **que la relacion embebida exista**     | el nombre de `alias:relacion!hint(...)`                            |
+| las columnas de los filtros             | `.eq .neq .gt .gte .lt .lte .in .is .like .ilike .contains .order` |
+| **los filtros sobre rutas anidadas**    | `.eq("consulta.expediente.paciente_id", ...)`                      |
+| **las claves escritas**                 | `.insert()`, `.update()`, `.upsert()`                              |
+| que la funcion exista                   | `.rpc()`                                                           |
 
 Las claves de escritura son la fila que importa: por ahi entraron #490, #491 y #509, y es lo que
 una revision por encima no mira.
+
+Las tres filas de relaciones embebidas son de la **issue #751**. Hasta entonces el script
+descartaba el token con parentesis entero -`if (token.includes("(")) continue;`- y **esa omision
+era la unica que no se contaba ni se informaba**: quien leia la salida concluia, con razon, que se
+habia revisado todo lo que no aparecia en la lista de omitidos. Como casi toda consulta que importa
+lleva embeds, el area no revisada era grande: al encenderla pasaron a comprobarse **114 relaciones
+embebidas** y las referencias a columnas subieron de 830 a 1154.
+
+Los filtros sobre rutas anidadas son la otra mitad. Un `.eq("consulta.expediente.paciente_id")`
+cuyo `select` no embeba esa cadena de alias **no devuelve datos: falla con PGRST108** ("no es un
+recurso embebido en esta peticion"), que es como la pestania de Recetas de la ficha del paciente
+fallaba siempre (#750).
 
 **Lo que no comprueba, a proposito**, y lo dice en cada corrida en vez de callarlo:
 
@@ -184,22 +199,68 @@ una revision por encima no mira.
   redefine en la 00027, la 00054 y la 00064. Los siete defectos conocidos eran sobre tablas.
 - **Los `.rpc()` con nombre dinamico**, que no se resuelven sin ejecutar el codigo.
 - **Los `.select()` cuya constante no se pueda resolver.** Hoy son dos, las dos de
-  `historial.api.js`, que compone la lista con arrays anidados.
+  `historial.api.js`, que compone la lista con arrays anidados. Llegaron a ser **doce** por dos
+  fallos del analizador que la #751 corrigio: un comentario `//` con una coma dentro del array
+  partia la lista y descartaba la constante entera -nueve `.select()`, `COLUMNAS_DEL_PROYECTO`
+  entre ellos-, y una lista partida por concatenacion (`"a" + "b"`) tampoco se resolvia, que era
+  el caso de `COLUMNAS_DE_LA_ENTREGA`, justo la consulta del modulo donde vivio el defecto que esta
+  guarda no vio.
+- **Las relaciones embebidas que se nombran por su columna foranea** en vez de por la tabla
+  (`lote:lote_id(...)`): resolverlas exige leer las claves foraneas del esquema. Hoy no hay ninguna
+  asi en `packages/shared` -los 25 embeds nombran una tabla real-, y si aparece una **se cuenta y
+  se informa**, no se descarta.
 - **Las Edge Functions.** La comprobacion **esta escrita y probada pero apagada** tras la
   constante `VERIFICAR_EDGE_FUNCTIONS`: hoy encontraria `invitar-usuario`, que es la issue #523 y
   tiene dueno. Se enciende poniendola en `true` en el mismo PR que escriba la funcion.
 
-Avisa aparte, sin fallar, de los archivos de `shared` que **ningun barril reexporta**: `vite build`
-no los compila, asi que un error suyo no aparece hasta que alguien conecta la pantalla. Fue el
-segundo motivo por el que #454 paso el CI.
+**Falla tambien si un archivo de `shared` no lo reexporta ningun barril** (issue #700). `vite build`
+no lo compila, asi que un error suyo no aparece hasta que alguien conecta la pantalla: fue el
+segundo motivo por el que #454 paso el CI, y la forma en que #571 llego a `develop`.
+
+Hasta la #700 esto era un aviso, y llevaba meses imprimiendose sin que nadie lo mirara -la forma
+mas cara de tener una comprobacion: cuesta lo mismo y no impide nada-. El coste de ignorarlo estaba
+medido: **seis de los archivos que nombraba eran justo los que las apps importaban por ruta
+relativa**, porque el paquete no los resolvia de ninguna otra forma.
+
+Antes de convertirlo en fallo hubo que quitarle **tres falsos positivos**, porque un check
+requerido que se equivoca deja el CI rojo por codigo correcto:
+
+| Caso | Por que no es huerfano |
+| --- | --- |
+| `donaciones/useResumenDonaciones.js` | Lo reexporta el **barril raiz**, no el de su modulo, y la comprobacion solo miraba el del modulo |
+| `entorno/fuente.js` | `entorno/index.js` lo importa como `./fuente`, **sin extension**: ahi eligen Metro y Vite segun la plataforma (es la excepcion que documenta la regla del bug #390) |
+| `entorno/fuente.native.js` | Es la otra mitad de esa resolucion por plataforma. **Nunca** va en un barril: nombrarla explicitamente romperia la web |
+
+### La frontera entre las apps y `packages/shared`
+
+ESLint (`eslint.config.mjs`) prohibe, por app:
+
+| Regla | Desde la issue |
+| --- | --- |
+| Importar `@supabase/supabase-js` desde una app | #282 |
+| Importar de `apps/web` en `apps/mobile`, y al reves | #282 |
+| **Importar `packages/shared` o `packages/ui-tokens` por ruta relativa** | **#700** |
+
+La tercera existe porque **nada la verificaba y por eso se incumplia**: 28 imports en 14 archivos, y
+las cinco pantallas moviles de los cinco PR mas recientes los traian todas. Una ruta relativa se
+salta el barril, y lo que ningun barril reexporta `vite build` no lo compila.
+
+**Cuidado al tocar estas reglas**: ESLint **no fusiona** las opciones de una misma regla entre
+bloques de configuracion -gana el ultimo que la declare-, asi que hay **un solo**
+`no-restricted-imports` por app y los patrones nuevos van **dentro** del `patterns` que ya existe.
+Es un error que no se ve leyendo: la unica forma de saber que una regla sigue viva es **verla
+fallar**.
 
 **Salida de emergencia:** la etiqueta **`esquema-verificado-a-mano`** en el PR salta la guarda,
 igual que `migracion-editada-a-proposito` con la de migraciones. Deja un aviso visible en el
 resumen de la corrida, y la descripcion del PR tiene que decir por que.
 
 El analizador tiene sus propias pruebas: `npm run verificar:shared-esquema -- --autoprueba` corre
-catorce casos que cubren las trampas reales del repositorio -`ALTER TABLE` multi-clausula,
-relaciones embebidas anidadas, objetos dentro de llamadas, propiedades shorthand, constantes-.
+veintitres casos que cubren las trampas reales del repositorio -`ALTER TABLE` multi-clausula,
+relaciones embebidas anidadas, objetos dentro de llamadas, propiedades shorthand, constantes-. Cada
+comprobacion de la #751 entro con su caso bueno y su caso malo, porque **una guarda que no se ha
+visto fallar no se sabe si comprueba algo**; el caso bueno esta por un motivo concreto: un falso
+positivo aqui bloquea los PR de todo el equipo, porque esto corre dentro de un check requerido.
 `scripts/` no es un workspace, asi que `npm test` no lo alcanza; por eso la autoprueba es un paso
 propio del CI.
 
@@ -406,6 +467,14 @@ Eso no era un detalle de infraestructura. `crearUsuario()` invoca `invitar-usuar
 camino para dar de alta a una persona desde la aplicacion porque el registro publico esta cerrado
 (`00074`): sin la funcion desplegada, **la administradora no podia crear a nadie** y habia que
 hacerlo a mano desde el panel de Supabase. El cron de alertas habria dado 404 por la misma razon.
+
+**Cada funcion declara su mapa de imports en `supabase/config.toml`** (`[functions.<nombre>]` con
+`import_map = "./functions/deno.json"`). El codigo importa `@supabase/supabase-js` por nombre, y
+`supabase functions deploy` no lee el `deno.json` de la raiz de `supabase/functions/`. Sin esa
+seccion el empaquetado falla con `Relative import path "@supabase/supabase-js" not prefixed with /`.
+Asi paso con el primer despliegue real (PR #808): el paso tiene `continue-on-error`, la corrida salio
+verde y la funcion siguio respondiendo 404. El lint del CI no lo detecta porque recibe `--config`
+explicito. **Una funcion nueva agrega su seccion en el mismo PR.**
 
 Se despliegan **todas** las funciones en cada push, no solo las que cambiaron: el estado que
 importa es el del proyecto, no el del commit, y desplegar solo lo modificado deja fuera el caso

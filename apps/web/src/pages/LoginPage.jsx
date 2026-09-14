@@ -40,7 +40,6 @@ export default function LoginPage() {
           justifyContent: "center",
           backgroundColor: "#F8FAFC",
           color: "#16A34A",
-          fontFamily: "sans-serif",
         }}
       >
         Cargando EcoPac...

@@ -18,6 +18,12 @@
   --bs-secondary-color: var(--color-text-muted);
   --bs-border-color: var(--color-border);
 
+  /* Tipografia: la letra del sistema, publicada por theme.js desde ui-tokens. Todo lo de
+     Bootstrap (cuerpo, botones, campos, .font-monospace) la hereda de aqui. */
+  --bs-font-sans-serif: var(--fuente-base);
+  --bs-body-font-family: var(--fuente-base);
+  --bs-font-monospace: var(--fuente-mono);
+
   /* Radios y elevaciones (issue #660). Se mapean a las variables globales de Bootstrap en
      vez de a cada componente: asi botones, tarjetas, campos, modales y desplegables quedan
      coherentes de una vez, y ninguna pantalla necesita escribir un radio a mano. */

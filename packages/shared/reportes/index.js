@@ -38,3 +38,14 @@ export * from "./useReportePacientes.js";
 // Exportacion de reportes a CSV (issue #207). Funcion pura: no depende de Supabase ni de
 // ninguna API web-only, por eso vive junto al resto de utilidades de este modulo.
 export * from "./csv.js";
+
+// Los tres que ningun barril reexportaba (issue #700), por el mismo motivo que los de inventario:
+// sin esto, las pantallas de reportes los importaban por ruta relativa y `vite build` no los
+// compilaba.
+//
+// dashboard.campos.js no lo usa todavia ninguna pantalla -DashboardMetricasPage arma sus rotulos
+// a mano-, y precisamente por eso se exporta: mientras nadie lo alcance desde el barril, un error
+// suyo no aparece hasta que alguien lo conecte, que es el defecto que esta guarda vigila.
+export * from "./dashboard.campos.js";
+export { useExportarPDF } from "./useExportarPDF.js";
+export { useReporteMedicamentosPorVencer } from "./useReporteMedicamentosPorVencer.js";

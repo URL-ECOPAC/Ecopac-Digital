@@ -1,5 +1,5 @@
 import { View, Text, StyleSheet, RefreshControl, ScrollView } from "react-native";
-import { useReporteJornada } from "../../../../packages/shared/reportes/useReporteJornada";
+import { useReporteJornada } from "@ecopac/shared";
 // ✅ CORREGIDO: Usa el hook compartido desde el contexto
 import { useJornadaActivaCompartida } from "../contexto/JornadaActivaProvider";
 import { useSesionCompartida } from "../contexto/SesionProvider";

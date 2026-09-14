@@ -26,6 +26,8 @@ import ConsultaScreen from "../screens/ConsultaScreen";
 import RecetaScreen from "../screens/RecetaScreen";
 import StockScreen from "../screens/StockScreen";
 import RegistroIngresoScreen from "../screens/RegistroIngresoScreen";
+import ExistenciasInventarioScreen from "../screens/ExistenciasInventarioScreen";
+import InventarioResumenAlertasScreen from "../screens/InventarioResumenAlertasScreen";
 import DonacionesScreen from "../screens/DonacionesScreen";
 import ProyectosScreen from "../screens/ProyectosScreen";
 import PresupuestosScreen from "../screens/PresupuestosScreen";
@@ -232,6 +234,16 @@ function InventarioNavigator() {
         name={ROUTES.REGISTRO_INGRESO}
         component={RegistroIngresoScreen}
         options={opcionesStack("Registrar ingreso")}
+      />
+      <InventarioStack.Screen
+        name={ROUTES.EXISTENCIAS_INVENTARIO}
+        component={ExistenciasInventarioScreen}
+        options={opcionesStack("Existencias")}
+      />
+      <InventarioStack.Screen
+        name={ROUTES.RESUMEN_ALERTAS_INVENTARIO}
+        component={InventarioResumenAlertasScreen}
+        options={opcionesStack("Resumen y alertas")}
       />
     </InventarioStack.Navigator>
   );
