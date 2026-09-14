@@ -6,9 +6,8 @@ import EmptyState from "./EmptyState";
 import LoadingState from "./LoadingState";
 import StatusChip from "./StatusChip";
 
-
-const MARGEN_PANTALLA = spacing.md; 
-const ANCHO_MAXIMO_TARJETA = 600; 
+const MARGEN_PANTALLA = spacing.md;
+const ANCHO_MAXIMO_TARJETA = 600;
 const ANCHO_TARJETA = Math.min(
   Dimensions.get("window").width - MARGEN_PANTALLA * 2,
   ANCHO_MAXIMO_TARJETA,

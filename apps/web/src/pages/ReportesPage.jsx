@@ -120,7 +120,10 @@ export default function ReportesPage() {
           {/* Issue #757, criterio 4: antes vivia como Link en la cabecera, separado de las
               otras dos pestañas. Navega en vez de alternar pestanaActiva porque es una
               pagina aparte (ReportePacientesPage.jsx), no un estado de esta pantalla. */}
-          <button onClick={() => navigate("/reportes/pacientes-atendidos")} style={estiloPestanaEnlace}>
+          <button
+            onClick={() => navigate("/reportes/pacientes-atendidos")}
+            style={estiloPestanaEnlace}
+          >
             Pacientes atendidos
           </button>
         </div>

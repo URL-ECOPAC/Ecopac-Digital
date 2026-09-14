@@ -29,7 +29,6 @@ function calcularEstado(diasRestantes, cantidadDisponible) {
   return "disponible";
 }
 
-
 export default function ExistenciasInventarioScreen() {
   const [lotes, setLotes] = useState([]);
   const [existenciasDisponibles, setExistenciasDisponibles] = useState([]);

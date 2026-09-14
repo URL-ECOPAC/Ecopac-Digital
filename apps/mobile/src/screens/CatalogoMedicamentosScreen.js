@@ -41,7 +41,6 @@ export function CatalogoMedicamentosScreen({
   const esModoSeleccion = route?.params?.esModoSeleccion || false;
   const onSeleccionarMedicamento = route?.params?.onSeleccionarMedicamento;
 
-
   const handleSeleccionar = (item) => {
     if (esModoSeleccion) {
       const stock = item?.stock ?? item?.cantidad_disponible ?? 0;
@@ -295,7 +294,6 @@ const styles = StyleSheet.create({
   },
 
   bodegaBtn: {
-
     minHeight: ALTURA_CONTROL_FILTRO,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,

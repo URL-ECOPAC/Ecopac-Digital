@@ -1,7 +1,6 @@
 import PrimaryButton from "./PrimaryButton";
 import SecondaryButton from "./SecondaryButton";
 
-
 export default function PageHeader({ title, subtitle, actions = [] }) {
   return (
     <div className="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
