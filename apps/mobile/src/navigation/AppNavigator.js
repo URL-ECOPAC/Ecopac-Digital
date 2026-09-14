@@ -7,6 +7,7 @@ import { etiquetaDeRol, tabsMoviles, MODULOS, puedeRegistrarMovimiento } from "@
 
 import { useSesionCompartida } from "../contexto/SesionProvider";
 import RutaProtegida from "../components/RutaProtegida";
+import IconoDeModulo from "../components/IconoDeModulo";
 import { ROUTES } from "./rutas";
 
 // IMPORTACIÓN DE PANTALLAS
@@ -250,24 +251,29 @@ function InventarioNavigator() {
 }
 
 const CONFIGURACION_TABS = {
-  Inicio: { routeName: ROUTES.TAB_INICIO, component: InicioNavigator, label: "Inicio", icon: "⌂" },
+  Inicio: {
+    routeName: ROUTES.TAB_INICIO,
+    component: InicioNavigator,
+    label: "Inicio",
+    icono: "Home",
+  },
   Pacientes: {
     routeName: ROUTES.TAB_PACIENTES,
     component: PacientesNavigator,
     label: "Pacientes",
-    icon: "𐀔",
+    icono: "Users",
   },
   Jornadas: {
     routeName: ROUTES.TAB_JORNADAS,
     component: JornadasNavigator,
     label: "Jornadas",
-    icon: "📅",
+    icono: "Calendar",
   },
   Inventario: {
     routeName: ROUTES.TAB_INVENTARIO,
     component: InventarioNavigator,
     label: "Inventario",
-    icon: "📦",
+    icono: "Package",
   },
 };
 
@@ -275,7 +281,7 @@ const TAB_AJUSTES_CONFIG = {
   routeName: ROUTES.TAB_AJUSTES,
   component: AjustesScreen,
   label: "Ajustes",
-  icon: "⚙",
+  icono: "Settings",
 };
 
 function TabsNavigator() {
@@ -311,8 +317,11 @@ function TabsNavigator() {
           tabBarInactiveTintColor: colors?.textMuted || "#94A3B8",
           tabBarStyle: { backgroundColor: colors?.surface || "#FFFFFF" },
           tabBarLabelStyle: { fontSize: 10 },
+          // El icono sale del vocabulario que declara packages/shared/navegacion.js, traducido
+          // por IconoDeModulo (issue #700). Antes eran cinco glifos escritos a mano, dos de ellos
+          // emoji y uno un ideograma Lineal B que Android no sabia dibujar.
           tabBarIcon: ({ color, size }) => (
-            <Text style={{ color, fontSize: size - 2, fontWeight: "bold" }}>{configTab.icon}</Text>
+            <IconoDeModulo nombre={configTab.icono} color={color} size={size} />
           ),
         };
       }}

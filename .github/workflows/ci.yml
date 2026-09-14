@@ -75,6 +75,30 @@ jobs:
       - name: Comprobar el rewrite de SPA de Vercel
         run: npm run verificar:rewrite-vercel
 
+      # AGENTS.md prohibe los emojis en el codigo y nada lo verificaba: al escribir la guarda
+      # habia 79 lineas con pictogramas en 30 archivos (issue #700). La mitad eran comentarios;
+      # la otra mitad, interfaz -y ahi el emoji llegaba a ser el unico portador del nivel de una
+      # alerta, que un lector de pantalla no lee-.
+      #
+      # No prohibe la tipografia monocroma (flechas, la equis de cerrar): la cabecera del script
+      # explica por que y que costaria cambiarlo.
+      - name: Comprobar que no haya emojis en el codigo
+        run: npm run verificar:sin-emojis
+
+      - name: Comprobar el detector de emojis contra sus propios casos
+        run: npm run verificar:sin-emojis -- --autoprueba
+
+      # Red de la migracion de colores (issue #700): compara el color EFECTIVO de cada archivo
+      # -los hexadecimales a mano mas el valor de los tokens que menciona- contra una linea base.
+      # Cambiar "#2A9C36" por colors.primary no la mueve; cambiarlo por colors.info si, y ahi
+      # falla. Es lo unico que detecta una regresion visual en dos apps que no tienen ninguna
+      # prueba de ese tipo.
+      - name: Comprobar que ningun color efectivo cambio
+        run: npm run verificar:paleta
+
+      - name: Comprobar el comparador de paleta contra sus propios casos
+        run: npm run verificar:paleta -- --autoprueba
+
       - name: Ejecutar lint en todos los workspaces
         run: npm run lint
 

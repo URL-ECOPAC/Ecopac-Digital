@@ -169,7 +169,7 @@ export function CatalogoMedicamentosScreen({
       {/* 2. Input de Búsqueda */}
       <TextInput
         style={styles.searchInput}
-        placeholder="🔍 Código, descripción o lote..."
+        placeholder="Código, descripción o lote..."
         value={busqueda}
         onChangeText={setBusqueda}
         placeholderTextColor={colors.textMuted}

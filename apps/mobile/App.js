@@ -24,7 +24,7 @@ function codigoDeRecuperacion(url) {
   }
 }
 
-// ✅ Inicializamos Supabase y guardamos si tuvo éxito
+// Inicializamos Supabase y guardamos si tuvo éxito
 let supabaseListo = false;
 try {
   inicializarSupabase({ almacenamiento: almacenamientoMovil });
@@ -69,7 +69,7 @@ function Raiz() {
   );
 }
 
-// ✅ Componente principal: NO renderiza nada hasta que Supabase esté listo
+// Componente principal: NO renderiza nada hasta que Supabase esté listo
 export default function App() {
   const [listo, setListo] = useState(supabaseListo);
 
@@ -84,7 +84,7 @@ export default function App() {
     }
   }, [listo]);
 
-  // ⏳ Mientras no esté listo → no monta los Providers
+  // Mientras no esté listo → no monta los Providers
   if (!listo) {
     return null;
   }
