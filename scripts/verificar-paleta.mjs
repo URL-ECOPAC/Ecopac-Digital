@@ -30,7 +30,7 @@
 //   npm run verificar:paleta -- --autoprueba
 
 import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
-import { join, relative, dirname, resolve } from "node:path";
+import { join, relative, dirname, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const RAIZ = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -100,9 +100,16 @@ async function inventario() {
   const mapa = {};
   for (const ruta of archivosDe(DIR_APPS)) {
     const colores = coloresEfectivos(readFileSync(ruta, "utf8"), tokens);
-    if (colores.length) mapa[relative(RAIZ, ruta)] = colores;
+    // La linea base se comparte entre plataformas (se captura en Windows, se compara en el CI de
+    // Linux): `relative()` usa el separador del sistema operativo, y sin normalizar aqui una
+    // captura en Windows escribiria claves con "\" que el CI, calculando con "/", nunca volveria
+    // a encontrar -toda la linea base se veria "borrada" en la siguiente comparacion.
+    if (colores.length) mapa[relative(RAIZ, ruta).split(sep).join("/")] = colores;
   }
-  return mapa;
+  // `readdirSync` no garantiza el mismo orden en todos los sistemas de archivos: capturar en
+  // Windows y despues en Linux reordena las claves del objeto aunque el contenido no cambie,
+  // y eso ensucia el diff del PR con ruido que no es parte del cambio real.
+  return Object.fromEntries(Object.entries(mapa).sort(([a], [b]) => a.localeCompare(b)));
 }
 
 const CASOS = [
