@@ -29,22 +29,7 @@ function calcularEstado(diasRestantes, cantidadDisponible) {
   return "disponible";
 }
 
-/**
- * Existencias por lote, con el stock sumado entre bodegas (issue #270): a diferencia de la
- * tabla multi-bodega de la web (#159) y de StockScreen.js, esta vista no desglosa por bodega.
- *
- * QUE ESTABA MAL (issue #785). Llamaba a useVistaExistencias({ rol }): ese hook toma
- * { existencias, bodegas } por props (un filtro derivado puro, sin fetch propio) y nunca
- * devuelve cargando/error/existencias/recargar. La pantalla quedaba siempre en su rama
- * "sin datos", sin llamar nunca a una API, y ademas no estaba registrada en el navegador.
- *
- * QUE HACE AHORA. listarExistenciasDisponibles() (vista_lotes_disponibles, 00047) solo trae
- * lotes con stock positivo y no vencidos: no alcanza para el criterio "un lote sin existencia
- * se muestra marcado como agotado". Por eso la lista real es listarLotes() (todos los lotes,
- * vencidos o en cero incluidos) con el stock de cada uno tomado de
- * listarExistenciasDisponibles() y sumado entre bodegas; un lote que no aparece ahi (vencido o
- * agotado en todas las bodegas) queda en 0.
- */
+
 export default function ExistenciasInventarioScreen() {
   const [lotes, setLotes] = useState([]);
   const [existenciasDisponibles, setExistenciasDisponibles] = useState([]);
@@ -161,7 +146,7 @@ const estilos = StyleSheet.create({
     backgroundColor: colors.background,
   },
   contenido: {
-    padding: spacing.md,
+    padding: spacing.lg,
   },
   titulo: {
     fontFamily: typography.fontFamilyBase,
@@ -177,8 +162,9 @@ const estilos = StyleSheet.create({
     marginBottom: spacing.md,
   },
   tarjeta: {
-    marginBottom: spacing.sm,
-    gap: spacing.sm,
+    padding: spacing.lg,
+    marginBottom: spacing.lg,
+    gap: spacing.md,
   },
   filaSuperior: {
     flexDirection: "row",
@@ -187,7 +173,7 @@ const estilos = StyleSheet.create({
   },
   nombreMedicamento: {
     fontFamily: typography.fontFamilyBase,
-    fontSize: typography.sizes.md,
+    fontSize: typography.sizes.lg,
     fontWeight: typography.weights.semibold,
     color: colors.text,
     flexShrink: 1,
@@ -213,26 +199,26 @@ const estilos = StyleSheet.create({
   },
   valorDato: {
     fontFamily: typography.fontFamilyBase,
-    fontSize: typography.sizes.sm,
+    fontSize: typography.sizes.md,
     fontWeight: typography.weights.medium,
     color: colors.text,
-    marginTop: 2,
+    marginTop: spacing.xs / 2,
   },
   stock: {
     alignItems: "center",
   },
   valorStock: {
     fontFamily: typography.fontFamilyBase,
-    fontSize: typography.sizes.lg,
+    fontSize: typography.sizes.xl,
     fontWeight: typography.weights.bold,
     color: colors.text,
-    marginTop: 2,
+    marginTop: spacing.xs / 2,
   },
   filaEstado: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingTop: spacing.xs,
+    paddingTop: spacing.sm,
     borderTopWidth: 1,
     borderTopColor: colors.border,
   },

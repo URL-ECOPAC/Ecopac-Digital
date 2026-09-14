@@ -11,7 +11,6 @@ export const MODULOS = [
     modulo: null,
     tabMovil: "Inicio",
     soloWeb: false,
-    icono: "Home",
     roles: Object.values(ROLES),
   },
   {
@@ -21,7 +20,6 @@ export const MODULOS = [
     modulo: "pacientes",
     tabMovil: "Pacientes",
     soloWeb: false,
-    icono: "Users",
     roles: [ROLES.ADMINISTRADOR, ROLES.MEDICO, ROLES.VOLUNTARIO],
   },
   {
@@ -31,7 +29,6 @@ export const MODULOS = [
     modulo: "donaciones",
     tabMovil: false,
     soloWeb: false,
-    icono: "HeartHandshake",
     roles: [ROLES.ADMINISTRADOR, ROLES.JUNTA_DIRECTIVA, ROLES.SOCIO_FUNDADOR],
   },
   {
@@ -41,7 +38,6 @@ export const MODULOS = [
     modulo: "inventario",
     tabMovil: "Inventario",
     soloWeb: false,
-    icono: "Package",
     roles: [
       ROLES.ADMINISTRADOR,
       ROLES.MEDICO,
@@ -57,7 +53,6 @@ export const MODULOS = [
     modulo: "presupuestos",
     tabMovil: false,
     soloWeb: false,
-    icono: "DollarSign",
     roles: [ROLES.ADMINISTRADOR, ROLES.JUNTA_DIRECTIVA, ROLES.SOCIO_FUNDADOR],
   },
   {
@@ -67,7 +62,6 @@ export const MODULOS = [
     modulo: "proyectos",
     tabMovil: false,
     soloWeb: false,
-    icono: "FolderKanban",
     roles: [ROLES.ADMINISTRADOR, ROLES.JUNTA_DIRECTIVA, ROLES.SOCIO_FUNDADOR],
   },
   {
@@ -77,7 +71,6 @@ export const MODULOS = [
     modulo: "reportes",
     tabMovil: false,
     soloWeb: true,
-    icono: "BarChart3",
     roles: [ROLES.ADMINISTRADOR, ROLES.JUNTA_DIRECTIVA, ROLES.SOCIO_FUNDADOR],
   },
   {
@@ -87,7 +80,6 @@ export const MODULOS = [
     modulo: "jornadas",
     tabMovil: "Jornadas",
     soloWeb: false,
-    icono: "Calendar",
     roles: Object.values(ROLES),
   },
   {
@@ -97,7 +89,6 @@ export const MODULOS = [
     modulo: "colaboradores",
     tabMovil: false,
     soloWeb: true,
-    icono: "UserCheck",
     roles: [ROLES.ADMINISTRADOR],
   },
 ];
