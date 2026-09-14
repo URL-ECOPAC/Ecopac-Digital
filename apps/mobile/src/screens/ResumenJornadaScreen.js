@@ -1,30 +1,32 @@
-import { View, Text, StyleSheet, RefreshControl, ScrollView } from "react-native";
-import { useReporteJornada } from "@ecopac/shared";
-// ✅ CORREGIDO: Usa el hook compartido desde el contexto
+import { RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import { colors, radii, spacing, typography } from "@ecopac/ui-tokens";
+import { ETIQUETAS_ESTADO_JORNADA, useReporteJornada } from "@ecopac/shared";
+
 import { useJornadaActivaCompartida } from "../contexto/JornadaActivaProvider";
 import { useSesionCompartida } from "../contexto/SesionProvider";
-import { LoadingState, ErrorState } from "../components";
+import { Card, ErrorState, LoadingState, StatusChip } from "../components";
 
-// ✅ CORREGIDO: Quité los espacios sobrantes al inicio
-const ETIQUETAS_ESTADO = {
-  planificada: " Planificada",
-  en_curso: " En curso",
-  finalizada: " Finalizada",
-  cancelada: " Cancelada",
-};
-
+/**
+ * Resumen de avance de la jornada activa (issue #178/#268).
+ *
+ * QUE ESTABA MAL (issue #792, encontrado al resolver la #785). ErrorState y LoadingState
+ * (catalogo de componentes) reciben `message`/`onRetry`; esta pantalla les pasaba
+ * `mensaje`/`alReintentar`, props que esos componentes no declaran. Cuando useReporteJornada()
+ * devolvia un error, ErrorState caia a su mensaje generico de conexion sin boton de reintentar,
+ * en vez del error real. Ademas la pantalla no usaba @ecopac/ui-tokens (colores en hexadecimal
+ * escritos a mano) ni el resto del catalogo (Card, StatusChip), mismo patron ya corregido en
+ * StockScreen.js (#165) y en ExistenciasInventarioScreen.js/InventarioResumenAlertasScreen.js
+ * (#785).
+ */
 export default function ResumenJornadaScreen() {
-  // ✅ CORREGIDO: Usa el hook correcto y desestructura "jornada" NO "jornadaActiva"
   const { jornada } = useJornadaActivaCompartida();
   const { rol } = useSesionCompartida();
 
-  // ✅ CORREGIDO: Usa jornada?.id en lugar de jornadaActiva?.id
   const { cargando, error, ficha, personal, medicamentos, recargar } = useReporteJornada(
     jornada?.id,
     { rol },
   );
 
-  // ✅ CORREGIDO: Verifica "jornada" no "jornadaActiva"
   if (!jornada) {
     return (
       <View style={estilos.contenedorCentrado}>
@@ -38,35 +40,33 @@ export default function ResumenJornadaScreen() {
       style={estilos.contenedor}
       refreshControl={<RefreshControl refreshing={cargando} onRefresh={recargar} />}
     >
-      {/* 📋 Cabecera de la jornada */}
-      <View style={estilos.tarjetaPrincipal}>
-        {/* ✅ CORREGIDO: Usa "jornada" no "jornadaActiva" */}
+      <Card style={estilos.tarjetaPrincipal}>
         <Text style={estilos.titulo}>{ficha?.nombre || jornada.nombre}</Text>
         <Text style={estilos.subtitulo}>
           {ficha?.fecha || jornada.fecha} · {ficha?.comunidad || jornada.comunidad?.nombre}
         </Text>
         <View style={estilos.filaEstado}>
           <Text style={estilos.etiquetaEstado}>Estado:</Text>
-          <Text style={estilos.valorEstado}>
-            {ETIQUETAS_ESTADO[ficha?.estado] || ficha?.estado || jornada.estado}
-          </Text>
+          <StatusChip
+            status={ficha?.estado || jornada.estado}
+            label={ETIQUETAS_ESTADO_JORNADA[ficha?.estado || jornada.estado]}
+          />
         </View>
-      </View>
+      </Card>
 
-      {cargando && <LoadingState mensaje="Cargando resumen..." />}
+      {cargando && <LoadingState message="Cargando resumen..." />}
 
       {error && error.codigo === "SIN_PERMISO" ? (
         <View style={estilos.contenedorCentrado}>
           <Text style={estilos.texto}>{error.mensaje}</Text>
         </View>
       ) : error ? (
-        <ErrorState mensaje={error.mensaje} alReintentar={recargar} />
+        <ErrorState message={error.mensaje} onRetry={recargar} />
       ) : null}
 
-      {/* 📊 Contadores principales */}
       {ficha && (
         <>
-          <Text style={estilos.seccionTitulo}> Avance del día</Text>
+          <Text style={estilos.seccionTitulo}>Avance del día</Text>
 
           <View style={estilos.fila}>
             <TarjetaResumen etiqueta="Pacientes Atendidos" valor={ficha.pacientes_atendidos} />
@@ -88,93 +88,86 @@ export default function ResumenJornadaScreen() {
   );
 }
 
-// Componente tarjeta
 const TarjetaResumen = ({ etiqueta, valor }) => (
-  <View style={estilos.tarjeta}>
+  <Card style={estilos.tarjeta}>
     <Text style={estilos.etiqueta}>{etiqueta}</Text>
     <Text style={estilos.valor}>{valor ?? 0}</Text>
-  </View>
+  </Card>
 );
 
 const estilos = StyleSheet.create({
   contenedor: {
     flex: 1,
-    padding: 16,
-    backgroundColor: "#f8fafc",
+    padding: spacing.md,
+    backgroundColor: colors.background,
   },
   contenedorCentrado: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    padding: 24,
-    backgroundColor: "#f8fafc",
+    padding: spacing.lg,
+    backgroundColor: colors.background,
   },
   tarjetaPrincipal: {
-    backgroundColor: "#ffffff",
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
+    marginBottom: spacing.lg,
   },
   titulo: {
-    fontSize: 20,
-    fontWeight: "800",
-    color: "#1e293b",
-    marginBottom: 4,
+    fontFamily: typography.fontFamilyBase,
+    fontSize: typography.sizes.lg,
+    fontWeight: typography.weights.bold,
+    color: colors.text,
+    marginBottom: spacing.xs,
   },
   subtitulo: {
-    fontSize: 14,
-    color: "#64748b",
-    marginBottom: 12,
+    fontFamily: typography.fontFamilyBase,
+    fontSize: typography.sizes.sm,
+    color: colors.textMuted,
+    marginBottom: spacing.sm,
   },
   filaEstado: {
     flexDirection: "row",
-    gap: 8,
-    marginTop: 4,
+    alignItems: "center",
+    gap: spacing.sm,
+    marginTop: spacing.xs,
   },
   etiquetaEstado: {
-    fontSize: 14,
-    color: "#64748b",
-    fontWeight: "500",
-  },
-  valorEstado: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#059669",
+    fontFamily: typography.fontFamilyBase,
+    fontSize: typography.sizes.sm,
+    color: colors.textMuted,
+    fontWeight: typography.weights.medium,
   },
   seccionTitulo: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#334155",
-    marginBottom: 12,
+    fontFamily: typography.fontFamilyBase,
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.semibold,
+    color: colors.text,
+    marginBottom: spacing.sm,
   },
   fila: {
     flexDirection: "row",
-    gap: 12,
-    marginBottom: 12,
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
   },
   tarjeta: {
     flex: 1,
-    backgroundColor: "#ffffff",
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: "#f1f5f9",
+    borderRadius: radii.md,
   },
   etiqueta: {
-    fontSize: 11,
-    color: "#64748b",
-    marginBottom: 6,
+    fontFamily: typography.fontFamilyBase,
+    fontSize: typography.sizes.xs,
+    color: colors.textMuted,
+    marginBottom: spacing.xs,
   },
   valor: {
-    fontSize: 22,
-    fontWeight: "700",
-    color: "#0f766e",
+    fontFamily: typography.fontFamilyBase,
+    fontSize: typography.sizes.xl,
+    fontWeight: typography.weights.bold,
+    color: colors.primary,
   },
   texto: {
     textAlign: "center",
-    color: "#64748b",
-    fontSize: 15,
+    fontFamily: typography.fontFamilyBase,
+    fontSize: typography.sizes.md,
+    color: colors.textMuted,
   },
 });
