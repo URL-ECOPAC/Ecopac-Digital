@@ -2,8 +2,13 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { typography } from "@ecopac/ui-tokens";
 import DashboardMetricasPage from "./DashboardMetricasPage";
-import { useExportarPDF, useReporteMedicamentosPorVencer } from "@ecopac/shared";
+import {
+  ETIQUETAS_NIVEL_ALERTA_VENCIMIENTO,
+  useExportarPDF,
+  useReporteMedicamentosPorVencer,
+} from "@ecopac/shared";
 import BotonExportarPDF from "../components/BotonExportarPDF";
+import StatusChip from "../components/StatusChip";
 
 // Estilos compartidos de pestañas
 const estiloPestanaActiva = {
@@ -42,20 +47,6 @@ const estiloPestanaEnlace = {
   textDecoration: "none",
 };
 
-// Colores de alerta (coinciden con ui-tokens)
-const coloresAlerta = {
-  critico: { fondo: "#fef2f2", borde: "#fca5a5", texto: "#dc2626" },
-  alto: { fondo: "#fffbeb", borde: "#fcd34d", texto: "#b45309" },
-  medio: { fondo: "#f0fdf4", borde: "#86efac", texto: "#15803d" },
-  normal: { fondo: "#f8fafc", borde: "#e2e8f0", texto: "#475569" },
-};
-const etiquetasAlerta = {
-  critico: "🔴 Crítico",
-  alto: "🟡 Alto",
-  medio: "🟢 Medio",
-  normal: "✅ Normal",
-};
-
 export default function ReportesPage() {
   const navigate = useNavigate();
   const [pestanaActiva, setPestanaActiva] = useState("dashboard");
@@ -79,7 +70,7 @@ export default function ReportesPage() {
     recargar,
   } = useReporteMedicamentosPorVencer();
 
-  // 📄 Exportación PDF — issue #216
+  // Exportación PDF — issue #216
   const periodo = `Próximos ${horizonteDias} días`;
   const { exportar, generando } = useExportarPDF({
     tituloReporte: "Reporte de Medicamentos Próximos a Vencer",
@@ -88,7 +79,7 @@ export default function ReportesPage() {
 
   return (
     <div style={{ padding: "24px", backgroundColor: "#f8fafc", minHeight: "100vh" }}>
-      {/* 📌 Cabecera */}
+      {/* Cabecera */}
       <div style={{ marginBottom: "24px" }}>
         <div
           style={{
@@ -112,7 +103,7 @@ export default function ReportesPage() {
           </div>
         </div>
 
-        {/* 📑 Pestañas */}
+        {/* Pestañas */}
         <div style={{ display: "flex", gap: "4px", borderBottom: "1px solid #e2e8f0" }}>
           <button
             onClick={() => setPestanaActiva("dashboard")}
@@ -135,12 +126,12 @@ export default function ReportesPage() {
         </div>
       </div>
 
-      {/* 📑 Contenido: Dashboard */}
+      {/* Contenido: Dashboard */}
       {pestanaActiva === "dashboard" && <DashboardMetricasPage />}
 
-      {/* 📑 Contenido: Medicamentos por Vencer */}
+      {/* Contenido: Medicamentos por Vencer */}
       {pestanaActiva === "vencimientos" && (
-        // ✅ TODO el contenido que va al PDF DENTRO de este div
+        // TODO el contenido que va al PDF DENTRO de este div
         <div
           id="contenido-reporte-pdf"
           style={{ display: "flex", flexDirection: "column", gap: "20px" }}
@@ -379,23 +370,18 @@ export default function ReportesPage() {
                 </thead>
                 <tbody>
                   {filas.map((fila) => {
-                    const estilo = coloresAlerta[fila.alerta] || coloresAlerta.normal;
                     return (
                       <tr key={fila.id} style={{ borderTop: "1px solid #f1f5f9" }}>
                         <td style={{ padding: "10px 16px" }}>
-                          <span
-                            style={{
-                              padding: "4px 10px",
-                              borderRadius: "20px",
-                              fontSize: "12px",
-                              fontWeight: "500",
-                              backgroundColor: estilo.fondo,
-                              color: estilo.texto,
-                              border: `1px solid ${estilo.borde}`,
-                            }}
-                          >
-                            {etiquetasAlerta[fila.alerta]}
-                          </span>
+                          {/* El nivel sale de enums.js y el color de statusColors, via StatusChip
+                              (issue #700). Antes la etiqueta llevaba un circulo de color dentro
+                              del propio texto, y ese circulo era el unico portador del nivel
+                              ademas de la palabra: un lector de pantalla no lo lee. El color
+                              estaba ademas escrito a mano en esta pagina. */}
+                          <StatusChip
+                            status={fila.alerta}
+                            label={ETIQUETAS_NIVEL_ALERTA_VENCIMIENTO[fila.alerta]}
+                          />
                         </td>
                         <td style={{ padding: "10px 16px", fontSize: "14px" }}>
                           {fila.medicamento}
@@ -443,7 +429,7 @@ export default function ReportesPage() {
             </div>
           )}
         </div>
-        // ✅ Fin del contenido PDF
+        // Fin del contenido PDF
       )}
     </div>
   );

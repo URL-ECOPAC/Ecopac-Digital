@@ -11,20 +11,32 @@
  * Los contrastes de text y textMuted sobre background superan WCAG AA (>= 4.5:1),
  * lo que importa porque las jornadas se atienden en exteriores con luz directa.
  */
+// LOS VALORES SALEN DEL PROTOTIPO, LEIDOS DEL PROTOTIPO (issue #700)
+//
+// docs/DISENO.md dice que para color manda el prototipo de Figma, y admitia que estos valores
+// venian de "muestreo de pixel sobre capturas" y convenia que el autor del diseno los confirmara.
+// Se confirmaron: **siete de los nueve no coincidian**. No por poco -primary era #2A9C36 y el
+// prototipo usa #3DB648- y el muestreo a ojo es exactamente el tipo de error que explica esa
+// deriva.
+//
+// Esta vez no se muestrearon pixeles: se abrio el prototipo publicado y se leyeron los colores
+// CALCULADOS de cada elemento, recorriendo sus ocho pantallas. Los cuatro colores de marca
+// resultaron ser los cuatro del logo de Ecopac -verde, azul, naranja y magenta-, que es tambien
+// el reparto de acentos por modulo que describe DISENO.md.
 export const colors = {
-  primary: "#2A9C36", // Marca, botones principales, elementos activos y estado Disponible
-  primaryDark: "#1E7E2A", // Extremo oscuro del degradado del banner; hover de botón primario
-  primaryLight: "#36AE42", // Extremo claro del degradado del banner
-  secondary: "#4B5563", // Botones secundarios, bordes e iconos de menor jerarquía
-  danger: "#B81F6F", // Crítico: medicamento vencido, sin stock y movimiento rechazado
-  warning: "#F1A239", // Próximo a vencer y advertencias que no bloquean
-  success: "#2A9C36", // Confirmaciones y estado aprobado; misma familia que primary
-  info: "#3C9CC0", // Estados pendientes y valores informativos
+  primary: "#3DB648", // Marca, botones principales, elementos activos y estado Disponible
+  primaryDark: "#1E7A28", // Extremo oscuro del degradado del banner; hover de botón primario
+  primaryLight: "#2D9E3A", // Paso intermedio del degradado del banner (3DB648 -> 2D9E3A -> 1E7A28)
+  secondary: "#4D4D4D", // Botones secundarios, bordes e iconos de menor jerarquía
+  danger: "#E91E8C", // Crítico: medicamento vencido, sin stock y movimiento rechazado
+  warning: "#F7941D", // Próximo a vencer y advertencias que no bloquean
+  success: "#3DB648", // Confirmaciones y estado aprobado; misma familia que primary
+  info: "#29ABE2", // Estados pendientes y valores informativos
   background: "#F7F8FA", // Fondo general de las pantallas
   surface: "#FFFFFF", // Tarjetas, sidebar y superficies elevadas
-  border: "#E9E9E9", // Bordes de tarjeta, separadores y pistas de barra de progreso
-  text: "#111827", // Texto principal, títulos y cuerpo de contenido
-  textMuted: "#4B5563", // Texto secundario, descripciones y placeholders
+  border: "#E2E4E9", // Bordes de tarjeta, separadores y pistas de barra de progreso
+  text: "#2D2D2D", // Texto principal, títulos y cuerpo de contenido
+  textMuted: "#7A7A8A", // Texto secundario, descripciones y placeholders
 };
 
 /**
@@ -83,6 +95,13 @@ export const statusColors = {
   activa: colors.warning,
   controlada: colors.success,
   resuelta: colors.secondary,
+  // Niveles de alerta del reporte de medicamentos por vencer (issue #700). No salen de un enum de
+  // la base: los calcula calcularAlerta() en shared a partir de los dias restantes. Antes el nivel
+  // viajaba como un circulo de color dentro de la etiqueta (" Critico"), que ademas de
+  // incumplir AGENTS.md dejaba el dato fuera del alcance de un lector de pantalla.
+  alto: colors.warning,
+  medio: colors.success,
+  normal: colors.secondary,
 };
 
 /**
@@ -189,6 +208,11 @@ export const labels = {
   rechazado: "Rechazado",
   disponible: "Disponible",
   critico: "Crítico",
+  // Niveles del reporte de medicamentos por vencer (issue #700). "Critico" ya existe arriba y no
+  // se duplica: es el mismo texto y el mismo concepto.
+  alertaAlto: "Alto",
+  alertaMedio: "Medio",
+  alertaNormal: "Normal",
   sinStock: "Sin stock",
   usuarioActivo: "Activo",
   usuarioInactivo: "Inactivo",

@@ -231,6 +231,39 @@ requerido que se equivoca deja el CI rojo por codigo correcto:
 | `entorno/fuente.js` | `entorno/index.js` lo importa como `./fuente`, **sin extension**: ahi eligen Metro y Vite segun la plataforma (es la excepcion que documenta la regla del bug #390) |
 | `entorno/fuente.native.js` | Es la otra mitad de esa resolucion por plataforma. **Nunca** va en un barril: nombrarla explicitamente romperia la web |
 
+### Ningun emoji en el codigo
+
+`scripts/verificar-sin-emojis.mjs` (`npm run verificar:sin-emojis`) **falla el PR** si aparece un
+emoji en `apps/` o `packages/`. `AGENTS.md` lo prohibia desde siempre y **nada lo verificaba**: al
+escribir la guarda habia **79 lineas con pictogramas en 30 archivos** (issue #700).
+
+La mitad eran comentarios. La otra mitad era interfaz, y ahi deja de ser un asunto de estilo: en
+`ReportesPage` el nivel de alerta se mostraba como la palabra precedida de un circulo de color, y
+ese circulo era **el unico portador del nivel** ademas del texto. Un lector de pantalla no lo lee.
+Ahora el nivel sale de `NIVELES_ALERTA_VENCIMIENTO` en `enums.js`, la etiqueta de `labels` y el
+color de `statusColors`, las dos en `@ecopac/ui-tokens`, dibujados por el `StatusChip` que ya
+existia.
+
+**Que cuenta como emoji, y que no.** La regla es la presentacion, no "todo caracter raro":
+
+| Cae | Pasa |
+| --- | --- |
+| Los caracteres con presentacion emoji por defecto (`\p{Emoji_Presentation}`) | La tipografia monocroma |
+| Cualquier simbolo seguido del selector `U+FE0F`, que es como se pide presentacion emoji para un caracter que por defecto es monocromo | El mismo simbolo sin ese selector |
+
+Es decir: cae el triangulo de advertencia con selector y no cae sin el.
+
+**Las flechas y la equis de cerrar quedan fuera a proposito.** `←  →  ↑  ↓` son texto de botones
+-"Avanzar →"- y hay pruebas que los buscan por ese texto, en `JornadasPage` y
+`DashboardMetricasPage`; `✕` cierra los modales. Prohibirlos obligaria a cambiar interfaz y pruebas,
+que es un cambio de producto disfrazado de limpieza. **Si algun dia se decide, es una linea de la
+expresion regular**, y queda anotado aqui para que se pueda revisar sin volver a investigarlo.
+
+El detector tiene sus propias pruebas: `npm run verificar:sin-emojis -- --autoprueba` corre ocho
+casos, cada comprobacion con su caso bueno y su caso malo. `scripts/` no es un workspace, asi que
+`npm test` no lo alcanza; por eso es un paso propio del CI, igual que la autoprueba de la guarda de
+esquema.
+
 ### La frontera entre las apps y `packages/shared`
 
 ESLint (`eslint.config.mjs`) prohibe, por app:

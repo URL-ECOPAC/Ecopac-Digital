@@ -28,12 +28,12 @@
 //
 // QUE NO ESTA AQUI, A PROPOSITO
 //
-//   - `rol_usuario`, que vive en usuarios/roles.js. Ya era fuente unica -es el patron que este
-//     archivo copia- y lleva helpers propios (esAdministrador, etiquetaDeRol, los grupos de
-//     roles). Moverlo seria churn sin ganancia.
-//   - `operacion_auditoria` (00026), que ningun archivo de packages/ nombra.
-//   - TIPOS_DE_EVENTO y ESTADOS_DE_VENCIMIENTO, que **no son enums de la base**: son vocabularios
-//     del cliente. Ponerlos aqui los haria pasar por respaldados por el esquema.
+// - `rol_usuario`, que vive en usuarios/roles.js. Ya era fuente unica -es el patron que este
+// archivo copia- y lleva helpers propios (esAdministrador, etiquetaDeRol, los grupos de
+// roles). Moverlo seria churn sin ganancia.
+// - `operacion_auditoria` (00026), que ningun archivo de packages/ nombra.
+// - TIPOS_DE_EVENTO y ESTADOS_DE_VENCIMIENTO, que **no son enums de la base**: son vocabularios
+// del cliente. Ponerlos aqui los haria pasar por respaldados por el esquema.
 
 import { labels } from "@ecopac/ui-tokens";
 
@@ -333,4 +333,33 @@ export const TIPOS_SANGUINEOS = Object.freeze({
   AB_NEGATIVO: "AB-",
   O_POSITIVO: "O+",
   O_NEGATIVO: "O-",
+});
+
+// --- Reportes -------------------------------------------------------------------------------
+
+/**
+ * Nivel de alerta del reporte de medicamentos por vencer (issue #700).
+ *
+ * NO sale de un enum de la base: lo calcula calcularAlerta() en reportes/useReporteMedicamentosPorVencer.js
+ * a partir de los dias restantes y de UMBRALES_ALERTA. Vive aqui igual, con el resto del
+ * vocabulario del dominio, porque hasta ahora estaba escrito como cadenas sueltas en el hook y otra
+ * vez, con distinto contenido, en la pantalla.
+ *
+ * En ReportesPage la etiqueta era " Critico", " Alto", " Medio" y " Normal": el circulo de
+ * color era el unico portador del nivel ademas de la palabra, y un lector de pantalla no lo lee.
+ * El color ahora sale de statusColors en @ecopac/ui-tokens, que es donde vive el color de un
+ * estado, y la etiqueta de labels.
+ */
+export const NIVELES_ALERTA_VENCIMIENTO = Object.freeze({
+  CRITICO: "critico",
+  ALTO: "alto",
+  MEDIO: "medio",
+  NORMAL: "normal",
+});
+
+export const ETIQUETAS_NIVEL_ALERTA_VENCIMIENTO = Object.freeze({
+  [NIVELES_ALERTA_VENCIMIENTO.CRITICO]: labels.critico,
+  [NIVELES_ALERTA_VENCIMIENTO.ALTO]: labels.alertaAlto,
+  [NIVELES_ALERTA_VENCIMIENTO.MEDIO]: labels.alertaMedio,
+  [NIVELES_ALERTA_VENCIMIENTO.NORMAL]: labels.alertaNormal,
 });

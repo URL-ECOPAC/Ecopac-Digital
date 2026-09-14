@@ -66,9 +66,7 @@ export default function VistaExistenciasPage() {
           borderTop: "1px solid var(--color-borde)",
         }}
       >
-        <strong style={{ fontSize: "13px", color: "var(--color-texto)" }}>
-          📋 Desglose por Lote
-        </strong>
+        <strong style={{ fontSize: "13px", color: "var(--color-texto)" }}>Desglose por Lote</strong>
         <table
           style={{ width: "100%", marginTop: "8px", fontSize: "13px", borderCollapse: "collapse" }}
         >
