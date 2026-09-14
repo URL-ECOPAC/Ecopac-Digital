@@ -7,7 +7,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import { radii, shadows, typography } from "./index.js";
+import { colors, radii, shadows, statusColors, typography } from "./index.js";
 
 describe("typography", () => {
   it("movil sigue usando el nombre que entiende React Native", () => {
@@ -83,5 +83,65 @@ describe("el export por defecto", () => {
   it("incluye los tokens nuevos, no solo los nombrados", () => {
     expect(tokens.radii).toBe(radii);
     expect(tokens.shadows).toBe(shadows);
+  });
+});
+
+// Contrato de la paleta (issue #700).
+//
+// POR QUE VALOR POR VALOR, Y NO "que existan las claves"
+//
+// La migracion de los colores escritos a mano toca 31 archivos de las dos apps, y las apps no
+// tienen ninguna prueba que detecte una regresion visual: un token mal escrito cambia el color de
+// una pantalla entera y nada lo dice. Esta prueba es el ancla de la red: fija el valor exacto de
+// cada token, de modo que el dia que alguien lo toque -por descuido o a proposito- la prueba
+// nombre el que se movio. No afirma que el color sea "bonito" ni que coincida con el prototipo:
+// afirma que no cambio sin que nadie lo decidiera.
+//
+// Si el cambio es deliberado -corregir un token contra el prototipo de Figma, que es quien manda
+// para color segun docs/DISENO.md- se actualiza aqui en el mismo PR, y el diff de esta prueba es
+// la lista de lo que cambio de aspecto.
+describe("contrato de la paleta", () => {
+  it("cada color de marca conserva su valor", () => {
+    expect(colors).toMatchObject({
+      primary: "#3DB648",
+      primaryDark: "#1E7A28",
+      primaryLight: "#2D9E3A",
+      secondary: "#4D4D4D",
+      danger: "#E91E8C",
+      warning: "#F7941D",
+      success: "#3DB648",
+      info: "#29ABE2",
+      background: "#F7F8FA",
+      surface: "#FFFFFF",
+      border: "#E2E4E9",
+      text: "#2D2D2D",
+      textMuted: "#7A7A8A",
+    });
+  });
+
+  it("ningun color queda fuera del contrato", () => {
+    // Si se agrega un token nuevo, esta prueba obliga a declararlo arriba con su valor.
+    expect(Object.keys(colors).sort()).toEqual([
+      "background",
+      "border",
+      "danger",
+      "info",
+      "primary",
+      "primaryDark",
+      "primaryLight",
+      "secondary",
+      "success",
+      "surface",
+      "text",
+      "textMuted",
+      "warning",
+    ]);
+  });
+
+  it("el color de cada estado sale de la paleta, no de un valor suelto", () => {
+    const deLaPaleta = new Set(Object.values(colors));
+    const fuera = Object.entries(statusColors).filter(([, v]) => !deLaPaleta.has(v));
+
+    expect(fuera).toEqual([]);
   });
 });

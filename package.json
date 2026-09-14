@@ -21,6 +21,7 @@
     "verificar:concurrencia-ficha": "node scripts/verificar-concurrencia-numero-ficha.mjs",
     "verificar:shared-esquema": "node scripts/verificar-shared-vs-esquema.mjs",
     "verificar:sin-emojis": "node scripts/verificar-sin-emojis.mjs",
+    "verificar:paleta": "node scripts/verificar-paleta.mjs",
     "verificar:rewrite-vercel": "node scripts/verificar-rewrite-vercel.mjs",
     "prueba:carga-jornada": "vitest run --config scripts/vitest.carga.config.mjs --reporter=verbose"
   },
