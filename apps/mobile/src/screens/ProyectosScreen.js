@@ -20,12 +20,12 @@ import { useSesionCompartida } from "../contexto/SesionProvider";
 // encadenados, el primero tapaba a los otros dos:
 //
 // 1. useProyectosSociales() se llamaba sin { usuarioRol }, asi que puedeVerProyectos(undefined)
-//    era false y el hook devolvia [] sin llegar a consultar.
+// era false y el hook devolvia [] sin llegar a consultar.
 // 2. Con la lista vacia, la pantalla caia a PROYECTOS_DEMO (tres proyectos inventados) en vez de
-//    pintar el estado vacio real.
+// pintar el estado vacio real.
 // 3. ETAPAS_KANBAN usaba "en_ejecucion"/"completado", que no existen en el enum estado_proyecto
-//    (00007): con datos reales la metrica "activos" salia siempre 0 y las columnas del kanban
-//    quedaban vacias aunque hubiera proyectos.
+// (00007): con datos reales la metrica "activos" salia siempre 0 y las columnas del kanban
+// quedaban vacias aunque hubiera proyectos.
 //
 // Los tres se corrigen juntos: se pasa el rol real, se retira el dato demo (EmptyState/
 // AccesoDenegadoScreen en su lugar), y las etapas salen de ESTADOS_PROYECTO/
@@ -136,9 +136,7 @@ export default function ProyectosScreen() {
             style={styles.toggleBtn}
             onPress={() => setModoVista(modoVista === "lista" ? "kanban" : "lista")}
           >
-            <Text style={styles.toggleBtnText}>
-              {modoVista === "lista" ? "📊 Kanban" : "📋 Lista"}
-            </Text>
+            <Text style={styles.toggleBtnText}>{modoVista === "lista" ? "Kanban" : "Lista"}</Text>
           </TouchableOpacity>
         </View>
 

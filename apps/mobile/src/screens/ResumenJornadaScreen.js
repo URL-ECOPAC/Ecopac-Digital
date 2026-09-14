@@ -1,11 +1,11 @@
 import { View, Text, StyleSheet, RefreshControl, ScrollView } from "react-native";
 import { useReporteJornada } from "@ecopac/shared";
-// ✅ CORREGIDO: Usa el hook compartido desde el contexto
+// CORREGIDO: Usa el hook compartido desde el contexto
 import { useJornadaActivaCompartida } from "../contexto/JornadaActivaProvider";
 import { useSesionCompartida } from "../contexto/SesionProvider";
 import { LoadingState, ErrorState } from "../components";
 
-// ✅ CORREGIDO: Quité los espacios sobrantes al inicio
+// CORREGIDO: Quité los espacios sobrantes al inicio
 const ETIQUETAS_ESTADO = {
   planificada: " Planificada",
   en_curso: " En curso",
@@ -14,17 +14,17 @@ const ETIQUETAS_ESTADO = {
 };
 
 export default function ResumenJornadaScreen() {
-  // ✅ CORREGIDO: Usa el hook correcto y desestructura "jornada" NO "jornadaActiva"
+  // CORREGIDO: Usa el hook correcto y desestructura "jornada" NO "jornadaActiva"
   const { jornada } = useJornadaActivaCompartida();
   const { rol } = useSesionCompartida();
 
-  // ✅ CORREGIDO: Usa jornada?.id en lugar de jornadaActiva?.id
+  // CORREGIDO: Usa jornada?.id en lugar de jornadaActiva?.id
   const { cargando, error, ficha, personal, medicamentos, recargar } = useReporteJornada(
     jornada?.id,
     { rol },
   );
 
-  // ✅ CORREGIDO: Verifica "jornada" no "jornadaActiva"
+  // CORREGIDO: Verifica "jornada" no "jornadaActiva"
   if (!jornada) {
     return (
       <View style={estilos.contenedorCentrado}>
@@ -38,9 +38,9 @@ export default function ResumenJornadaScreen() {
       style={estilos.contenedor}
       refreshControl={<RefreshControl refreshing={cargando} onRefresh={recargar} />}
     >
-      {/* 📋 Cabecera de la jornada */}
+      {/* Cabecera de la jornada */}
       <View style={estilos.tarjetaPrincipal}>
-        {/* ✅ CORREGIDO: Usa "jornada" no "jornadaActiva" */}
+        {/* CORREGIDO: Usa "jornada" no "jornadaActiva" */}
         <Text style={estilos.titulo}>{ficha?.nombre || jornada.nombre}</Text>
         <Text style={estilos.subtitulo}>
           {ficha?.fecha || jornada.fecha} · {ficha?.comunidad || jornada.comunidad?.nombre}
@@ -63,7 +63,7 @@ export default function ResumenJornadaScreen() {
         <ErrorState mensaje={error.mensaje} alReintentar={recargar} />
       ) : null}
 
-      {/* 📊 Contadores principales */}
+      {/* Contadores principales */}
       {ficha && (
         <>
           <Text style={estilos.seccionTitulo}> Avance del día</Text>

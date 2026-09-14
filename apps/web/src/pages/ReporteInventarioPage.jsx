@@ -49,7 +49,7 @@ export default function ReporteInventarioPage() {
     recargar,
   } = useReporteInventario({ rol });
 
-  // 📄 Exportación PDF — issue #216
+  // Exportación PDF — issue #216
   const periodo = new Date().toLocaleDateString("es-GT", { dateStyle: "long" });
   const { exportar, generando } = useExportarPDF({
     tituloReporte: "Reporte de Inventario Actual",
@@ -76,7 +76,7 @@ export default function ReporteInventarioPage() {
             onClick: () => descargarCSV(columnas, medicamentos),
             variant: "secondary",
           },
-          // 📄 Nuevo botón de PDF
+          // Nuevo botón de PDF
           {
             custom: <BotonExportarPDF onClick={exportar} generando={generando} />,
           },
@@ -102,7 +102,7 @@ export default function ReporteInventarioPage() {
       {!error && cargando && <LoadingState message="Consultando el inventario..." />}
 
       {!error && !cargando && (
-        // ✅ TODO el contenido que va al PDF DENTRO de este div
+        // TODO el contenido que va al PDF DENTRO de este div
         <div id="contenido-reporte-pdf">
           <section className="reporte-seccion">
             <div className="reporte-cifras">
@@ -150,7 +150,7 @@ export default function ReporteInventarioPage() {
             </section>
           ))}
         </div>
-        // ✅ Fin del contenido PDF
+        // Fin del contenido PDF
       )}
     </ScreenContainer>
   );

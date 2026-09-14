@@ -11,7 +11,7 @@ export const ESTADO_ALERTA = {
  * Dias restantes para que venza un lote (negativo si ya vencio, 0 si vence hoy). Se exporta
  * aparte del hook para poder probarla sin montar un componente (issue #694).
  *
- * ✅ Regla #597: Un lote que vence HOY (días = 0) TODAVÍA es válido y entregable.
+ * Regla #597: Un lote que vence HOY (días = 0) TODAVÍA es válido y entregable.
  *
  * Antes calculaba con new Date(fechaVencimiento) - new Date() en milisegundos, que interpreta
  * una cadena AAAA-MM-DD como medianoche UTC. En Guatemala (UTC-6) eso adelanta un dia cualquier
@@ -54,7 +54,7 @@ export function useAlertasVencimiento({ lotes = [], bodegas = [], usuarioId, rol
   const [filtroCategoria, setFiltroCategoria] = useState("todas");
   const [alertasAtendidas, setAlertasAtendidas] = useState([]);
 
-  // 📋 Generar alertas: vencimiento dentro de 30 días o menos
+  // Generar alertas: vencimiento dentro de 30 días o menos
   const alertas = useMemo(() => {
     const DIAS_ANTICIPACION = 30;
 
@@ -65,7 +65,7 @@ export function useAlertasVencimiento({ lotes = [], bodegas = [], usuarioId, rol
             lote.fechaVencimiento,
             lote.fechaIngreso || lote.fecha_ingreso,
           );
-          // ✅ Incluye: hoy (0 días) hasta 30 días → >30 días NO se muestra
+          // Incluye: hoy (0 días) hasta 30 días → >30 días NO se muestra
           return diasRestantes !== null && diasRestantes <= DIAS_ANTICIPACION;
         })
         .map((lote) => {
@@ -84,7 +84,7 @@ export function useAlertasVencimiento({ lotes = [], bodegas = [], usuarioId, rol
             cantidad: lote.cantidad,
             fechaVencimiento: lote.fechaVencimiento,
             diasRestantes,
-            // ✅ Hoy (0) = Por vencer | Mañana (-1) = Vencida
+            // Hoy (0) = Por vencer | Mañana (-1) = Vencida
             estado: diasRestantes >= 0 ? ESTADO_ALERTA.POR_VENCER : ESTADO_ALERTA.VENCIDA,
             bodega: lote.bodega || "Central",
             categoria: lote.medicamento?.categoria || "General",
@@ -103,12 +103,12 @@ export function useAlertasVencimiento({ lotes = [], bodegas = [], usuarioId, rol
 
           return coincideBusqueda && coincideBodega && coincideCategoria;
         })
-        // ✅ Orden: los que vencen antes aparecen primero
+        // Orden: los que vencen antes aparecen primero
         .sort((a, b) => a.diasRestantes - b.diasRestantes)
     );
   }, [lotes, busqueda, filtroBodega, filtroCategoria, alertasAtendidas]);
 
-  // 📊 Secciones separadas
+  // Secciones separadas
   const porVencer = useMemo(
     () => alertas.filter((a) => a.estado === ESTADO_ALERTA.POR_VENCER),
     [alertas],
@@ -118,7 +118,7 @@ export function useAlertasVencimiento({ lotes = [], bodegas = [], usuarioId, rol
     [alertas],
   );
 
-  // 📈 Contador para indicador global
+  // Contador para indicador global
   const cantidadPendientes = alertas.length;
 
   // issue #709: mandaba { accionTomada } y la firma real es { accion, usuarioId, rolUsuario }
@@ -148,7 +148,7 @@ export function useAlertasVencimiento({ lotes = [], bodegas = [], usuarioId, rol
     [usuarioId, rolUsuario],
   );
 
-  // 🔄 Limpiar filtros
+  // Limpiar filtros
   const limpiarFiltros = useCallback(() => {
     setBusqueda("");
     setFiltroBodega("todas");

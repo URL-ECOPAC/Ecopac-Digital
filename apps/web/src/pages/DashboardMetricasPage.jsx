@@ -1,7 +1,7 @@
 import { exportarFilasACSV, useDashboardMetricas } from "@ecopac/shared";
 import { useSesionCompartida } from "../contexto/SesionProvider";
 
-// 📊 Tarjeta de métrica alineada a Figma
+// Tarjeta de métrica alineada a Figma
 const TarjetaMetrica = ({ etiqueta, valor, meta, color }) => {
   const progreso = meta
     ? Math.min((Number(valor) / Number(meta.replace(/[^0-9]/g, ""))) * 100, 100)
@@ -63,8 +63,8 @@ export default function DashboardMetricasPage() {
     cargando,
     error,
     indicadores,
-    seriePrincipal = [], // ✅ Asegura arreglo
-    serieComparacion = [], // ✅ Asegura arreglo
+    seriePrincipal = [], // Asegura arreglo
+    serieComparacion = [], // Asegura arreglo
     calcularVariacion,
     rangosDisponibles,
     rangoSeleccionado,
@@ -84,7 +84,7 @@ export default function DashboardMetricasPage() {
     valoresEspeciales: { TODAS, NINGUNA },
   } = useDashboardMetricas({ rol });
 
-  // ✅ Función de exportación CSV
+  // Función de exportación CSV
   const exportarCSV = () => {
     if (!seriePrincipal || seriePrincipal.length === 0) return;
     const columnas = [
@@ -114,7 +114,7 @@ export default function DashboardMetricasPage() {
     URL.revokeObjectURL(url);
   };
 
-  // 🛑 Guardas de acceso
+  // Guardas de acceso
   if (!tieneAcceso)
     return (
       <div style={{ padding: "40px", color: "var(--color-danger)" }}>
@@ -136,14 +136,14 @@ export default function DashboardMetricasPage() {
       </div>
     );
 
-  // 📊 Datos de gráfica
+  // Datos de gráfica
   const tieneComparacion = serieComparacion.length > 0;
   const valorMaximo =
     seriePrincipal.length > 0 ? Math.max(...seriePrincipal.map((i) => i.valor), 1) : 1;
 
   return (
     <div style={{ padding: "24px", backgroundColor: "#f8fafc", minHeight: "100vh" }}>
-      {/* 📌 Título + Botón Exportar */}
+      {/* Título + Botón Exportar */}
       <div
         style={{
           marginBottom: "24px",
@@ -169,7 +169,7 @@ export default function DashboardMetricasPage() {
         </button>
       </div>
 
-      {/* 🔍 FILTROS */}
+      {/* FILTROS */}
       <div
         style={{
           backgroundColor: "#fff",
@@ -315,7 +315,7 @@ export default function DashboardMetricasPage() {
         </div>
       </div>
 
-      {/* 📊 Tarjetas de métricas */}
+      {/* Tarjetas de métricas */}
       <div
         style={{
           display: "grid",
@@ -350,7 +350,7 @@ export default function DashboardMetricasPage() {
         />
       </div>
 
-      {/* 📈 Gráfica de evolución */}
+      {/* Gráfica de evolución */}
       <div
         style={{
           display: "grid",
@@ -447,7 +447,7 @@ export default function DashboardMetricasPage() {
           )}
         </div>
 
-        {/* 📋 Panel de variación porcentual */}
+        {/* Panel de variación porcentual */}
         {tieneComparacion && (
           <div
             style={{

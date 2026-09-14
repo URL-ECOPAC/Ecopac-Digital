@@ -32,7 +32,7 @@ export function useExportarPDF({ tituloReporte, periodo }) {
     try {
       setGenerando(true);
       const datos = construirDatosPDF();
-      // ✅ Aquí NO hay document — se pasa al componente
+      // Aquí NO hay document — se pasa al componente
       await generarPDF(datos);
     } catch (err) {
       console.error("Error al generar PDF:", err);
