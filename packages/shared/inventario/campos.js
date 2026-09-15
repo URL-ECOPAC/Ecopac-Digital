@@ -261,6 +261,27 @@ export const CAMPOS_MOVIMIENTO = [
 ];
 
 /**
+ * Correccion de un movimiento propio y pendiente ("Mis movimientos", issue #756). Solo
+ * cantidad y motivo: tipo/lote/bodega definen que ES el movimiento, y cambiarlos despues de
+ * registrado es cancelar y volver a registrar, no corregir un dato mal escrito. Mismas reglas
+ * que sus entradas homonimas en CAMPOS_MOVIMIENTO, para no duplicar el criterio de validacion.
+ */
+export const CAMPOS_CORRECCION_MOVIMIENTO = [
+  {
+    id: "cantidad",
+    label: "Cantidad",
+    tipo: TIPOS_DE_CAMPO.NUMERO,
+    validacion: { requerido: true, min: 1 },
+  },
+  {
+    id: "motivo",
+    label: "Motivo",
+    tipo: TIPOS_DE_CAMPO.TEXTO_LARGO,
+    validacion: { requerido: true },
+  },
+];
+
+/**
  * Atender una alerta de caducidad (alertas_caducidad, 00021). El CHECK
  * chk_alertas_caducidad_cierre_coherente exige accion cuando el estado pasa a
  * 'atendida': por eso accion es requerido aqui, aunque la columna en si sea nullable.

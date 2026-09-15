@@ -1066,12 +1066,21 @@ el kardex. De paso se corrigen dos `dangerouslySetInnerHTML` en `KardexMovimient
 interpolaban `tipo`/`estado` como HTML sin escapar (bajo riesgo real -son enums de Postgres, no
 texto libre- pero mal patron): ahora son componentes de React normales.
 
-**Sigue pendiente**: `editarMovimiento()` (permite a quien registro un movimiento corregirlo
-mientras siga pendiente, issue #625) no tiene pantalla. A diferencia de los huecos anteriores,
-conectarlo no es solo agregar un boton a una pantalla existente: `BandejaValidacionPage.jsx` es
-donde se aprueban/rechazan movimientos (accion de administrador), no donde quien registro un
-movimiento ve los suyos para corregirlos, asi que hace falta decidir donde vive esa vista antes
-de construir el formulario. Declarado como hueco abierto.
+**Resuelto (#756)**: `editarMovimiento()` (permite a quien registro un movimiento corregirlo
+mientras siga pendiente, issue #625) no tenia pantalla, y conectarlo no era solo agregar un
+boton a una pantalla existente -`BandejaValidacionPage.jsx` es donde se aprueban/rechazan
+movimientos (accion de administrador), no donde quien registro un movimiento ve los suyos para
+corregirlos. Se decidio construir una pantalla nueva, "Mis movimientos" (web:
+`MisMovimientosPage.jsx`, pestania embebida en `InventarioPage.jsx` -mismo patron que
+`BandejaValidacionPage.jsx` para Validacion, no una ruta propia-; movil:
+`MisMovimientosScreen.js`, enlazada desde el menu). Lista los movimientos de la persona en
+cualquier estado (filtro "Estado"), y quien puede aprobar ademas elige "Ver: todos los
+movimientos" (filtro "alcance") para supervisar los de cualquiera -RLS deja leer cualquier
+movimiento igual (00034/00079), asi que es una decision de que muestra la interfaz, no un permiso
+nuevo. Editar (cantidad y motivo unicamente; tipo/lote/bodega definen que ES el movimiento y no
+se corrigen despues de registrado) solo esta disponible en una fila propia y pendiente
+(`puedeEditar`, calculado igual que exige editarMovimiento() en el servidor); cualquier otra fila
+se abre en solo lectura.
 
 **`alertas_caducidad`**: resuelto en esta misma issue #756 (severidad alta). El panel
 (`PanelAlertasVencimiento.jsx`) calculaba sus propias "alertas" derivando dias-hasta-vencimiento
@@ -1194,7 +1203,7 @@ cada uno al resolverse):
 | --- | --- | --- | --- |
 | Historial clinico | Varios campos de consulta invisibles; consultas/condiciones/triaje sin correccion | media | Resuelto salvo diagnostico (ver nota de `consulta_diagnostico`, necesita migracion) |
 | Alertas de vencimiento | El panel visible y `alertas_caducidad` estan desconectados | **alta** | Resuelto |
-| Movimientos de inventario | Bodega y motivo de rechazo no se ven; sin correccion de un pendiente | media | Resuelto salvo `editarMovimiento()` (necesita decidir donde vive esa pantalla) |
+| Movimientos de inventario | Bodega y motivo de rechazo no se ven; sin correccion de un pendiente | media | Resuelto (pantalla nueva "Mis movimientos") |
 | Medicamentos y recetas | `desactivarMedicamento()`/`anularReceta()` sin boton; `es_pediatrico` roto | baja | Resuelto |
 | Comunidades | Columnas geo sin uso (decidir mapa o retiro); sin edicion | baja | Resuelto (mapa con Leaflet/OpenStreetMap en web y movil) |
 | Proyectos sociales | Sin alta/edicion de proyecto, hitos ni presupuesto asignado | media | Pendiente |

@@ -37,6 +37,7 @@ export default function MenuDrawer({ onClose, rutaActual, onNavegar }) {
           ruta: ROUTES.RESUMEN_ALERTAS_INVENTARIO,
           id: "inventario",
         },
+        { label: "Mis movimientos", ruta: ROUTES.MIS_MOVIMIENTOS, id: "inventario" },
         { label: "Presupuestos", ruta: ROUTES.PRESUPUESTOS, id: "presupuestos", badge: 2 },
       ],
     },

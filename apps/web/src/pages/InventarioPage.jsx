@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import React from "react";
 import { useSesionCompartida } from "../contexto/SesionProvider";
-import { useNavigate } from "react-router-dom";
 import ModalMedicamento from "./ModalMedicamento.jsx";
 import ModalPrincipioActivo from "./ModalPrincipioActivo.jsx";
 import { ModalAltaLote } from "./ModalAltaLote.jsx";
@@ -19,6 +18,7 @@ import {
   listarPrincipiosActivos,
   listarPrincipiosDeMedicamento,
   listarProveedores,
+  puedeRegistrarMovimiento,
   reactivarMedicamento,
   registrarLote,
   registrarMedicamento,
@@ -32,6 +32,8 @@ import {
 import PanelAlertasVencimiento from "./PanelAlertasVencimiento.jsx";
 import AdministracionBodegasProveedoresPage from "./AdministracionBodegasProveedoresPage.jsx";
 import KardexMovimientosPage from "./KardexMovimientosPage.jsx";
+import CatalogoPrincipiosActivosPage from "./CatalogoPrincipiosActivosPage.jsx";
+import MisMovimientosPage from "./MisMovimientosPage.jsx";
 
 // API Medicamentos y Principios Activos
 const thStyle = {
@@ -60,7 +62,6 @@ const cardMetricStyle = {
 const datosTablaDemo = [];
 
 export default function InventarioPage() {
-  const navigate = useNavigate();
   const [tabActiva, setTabActiva] = useState("catalogo");
   const [inventarioRaw, setInventarioRaw] = useState([]);
   const [principiosActivos, setPrincipiosActivos] = useState([]);
@@ -634,7 +635,7 @@ export default function InventarioPage() {
           Administración
         </button>
         <button
-          onClick={() => navigate("/inventario/principios-activos")}
+          onClick={() => setTabActiva("principios-activos")}
           style={{
             padding: "8px 16px",
             fontSize: "13px",
@@ -642,12 +643,31 @@ export default function InventarioPage() {
             border: "none",
             background: "none",
             cursor: "pointer",
-            borderBottom: "2px solid transparent",
-            color: "#64748b",
+            borderBottom:
+              tabActiva === "principios-activos" ? "2px solid #0d9488" : "2px solid transparent",
+            color: tabActiva === "principios-activos" ? "#0d9488" : "#64748b",
           }}
         >
           Principios Activos
         </button>
+        {puedeRegistrarMovimiento(rol) && (
+          <button
+            onClick={() => setTabActiva("mis-movimientos")}
+            style={{
+              padding: "8px 16px",
+              fontSize: "13px",
+              fontWeight: "700",
+              border: "none",
+              background: "none",
+              cursor: "pointer",
+              borderBottom:
+                tabActiva === "mis-movimientos" ? "2px solid #7c3aed" : "2px solid transparent",
+              color: tabActiva === "mis-movimientos" ? "#7c3aed" : "#64748b",
+            }}
+          >
+            Mis Movimientos
+          </button>
+        )}
         <button
           onClick={() => setTabActiva("validacion")}
           style={{
@@ -1086,6 +1106,12 @@ export default function InventarioPage() {
       {tabActiva === "validacion" && (
         <BandejaValidacionPage usuarioId={perfil?.id} rolUsuario={rol} />
       )}
+
+      {/* Pestaña: Principios Activos */}
+      {tabActiva === "principios-activos" && <CatalogoPrincipiosActivosPage />}
+
+      {/* Pestaña: Mis Movimientos */}
+      {tabActiva === "mis-movimientos" && <MisMovimientosPage />}
 
       {/* Modales */}
       {modalAbierto && (

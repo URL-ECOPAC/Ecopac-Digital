@@ -81,3 +81,4 @@ export {
   useKardexMovimientos,
 } from "./useKardexMovimientos.js";
 export { useRegistroSalida } from "./useRegistroSalida.js";
+export { filaDeMisMovimientos, useMisMovimientos } from "./useMisMovimientos.js";

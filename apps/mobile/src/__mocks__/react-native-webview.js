@@ -4,11 +4,9 @@
 // Sin este doble, cualquier prueba que importe algo que use WebView -aunque sea de forma
 // indirecta, como AppNavigator.test.js importando ComunidadesScreen- revienta al cargar el
 // modulo real. jest.config.js mapea "react-native-webview" a este archivo.
-const React = require("react");
-const { View } = require("react-native");
+import { forwardRef, createElement } from "react";
+import { View } from "react-native";
 
-const WebView = React.forwardRef(function WebView(props, ref) {
-  return React.createElement(View, { ...props, ref, testID: props.testID ?? "webview-mock" });
+export const WebView = forwardRef(function WebView(props, ref) {
+  return createElement(View, { ...props, ref, testID: props.testID ?? "webview-mock" });
 });
-
-module.exports = { WebView };
