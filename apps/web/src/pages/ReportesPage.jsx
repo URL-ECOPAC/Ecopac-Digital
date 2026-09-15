@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import { typography } from "@ecopac/ui-tokens";
 import DashboardMetricasPage from "./DashboardMetricasPage";
 import {
   ETIQUETAS_NIVEL_ALERTA_VENCIMIENTO,
@@ -30,8 +31,24 @@ const estiloPestanaInactiva = {
   borderBottom: "2px solid transparent",
   color: "#64748b",
 };
+// Pestaña nueva (issue #757, criterio 4): a diferencia de las dos de arriba, que son estilos
+// preexistentes con hex a mano, esta usa @ecopac/ui-tokens. Por eso el color y el peso no son
+// identicos a sus hermanas -- son la evidencia de que las pestañas viejas deberian migrar a
+// tokens (issue #700), no una libertad visual de esta pestaña.
+const estiloPestanaEnlace = {
+  padding: "10px 18px",
+  fontSize: typography.sizes.sm,
+  fontWeight: typography.weights.medium,
+  border: "none",
+  background: "none",
+  cursor: "pointer",
+  borderBottom: "2px solid transparent",
+  color: "var(--color-text-muted)",
+  textDecoration: "none",
+};
 
 export default function ReportesPage() {
+  const navigate = useNavigate();
   const [pestanaActiva, setPestanaActiva] = useState("dashboard");
 
   // Hook del reporte de medicamentos por vencer
@@ -79,22 +96,6 @@ export default function ReportesPage() {
             </p>
           </div>
           <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-            <Link
-              to="/reportes/pacientes-atendidos"
-              style={{
-                padding: "10px 18px",
-                backgroundColor: "#10b981",
-                color: "#fff",
-                border: "none",
-                borderRadius: "10px",
-                fontSize: "14px",
-                fontWeight: "600",
-                textDecoration: "none",
-                whiteSpace: "nowrap",
-              }}
-            >
-              Ver Reporte Detallado de Pacientes
-            </Link>
             {/* Botón PDF — SOLO visible en la pestaña de vencimientos */}
             {pestanaActiva === "vencimientos" && (
               <BotonExportarPDF onClick={exportar} generando={generando} />
@@ -115,6 +116,15 @@ export default function ReportesPage() {
             style={pestanaActiva === "vencimientos" ? estiloPestanaActiva : estiloPestanaInactiva}
           >
             Medicamentos por Vencer
+          </button>
+          {/* Issue #757, criterio 4: antes vivia como Link en la cabecera, separado de las
+              otras dos pestañas. Navega en vez de alternar pestanaActiva porque es una
+              pagina aparte (ReportePacientesPage.jsx), no un estado de esta pantalla. */}
+          <button
+            onClick={() => navigate("/reportes/pacientes-atendidos")}
+            style={estiloPestanaEnlace}
+          >
+            Pacientes atendidos
           </button>
         </div>
       </div>
