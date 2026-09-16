@@ -264,17 +264,7 @@
     "#ffffff"
   ],
   "apps/mobile/src/screens/RestaurandoSesionScreen.js": ["#2d2d2d", "#3db648"],
-  "apps/mobile/src/screens/ResumenJornadaScreen.js": [
-    "#059669",
-    "#0f766e",
-    "#1e293b",
-    "#334155",
-    "#64748b",
-    "#e2e8f0",
-    "#f1f5f9",
-    "#f8fafc",
-    "#ffffff"
-  ],
+  "apps/mobile/src/screens/ResumenJornadaScreen.js": ["#2d2d2d", "#3db648", "#7a7a8a", "#f7f8fa"],
   "apps/mobile/src/screens/ScreenPlaceholder.js": ["#666"],
   "apps/mobile/src/screens/SeleccionJornadaScreen.js": ["#2d2d2d", "#7a7a8a"],
   "apps/mobile/src/screens/TriajeScreen.js": ["#2d2d2d", "#7a7a8a", "#e91e8c", "#f7941d"],
