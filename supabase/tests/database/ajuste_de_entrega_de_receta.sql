@@ -1,4 +1,4 @@
--- Pruebas de fn_ajustar_entrega_receta (issue #764, migracion 00125).
+-- Pruebas de fn_ajustar_entrega_receta (issue #764, migracion 00128).
 -- Corre con: supabase test db
 --
 -- El riesgo que estas pruebas cubren es el doble descuento: fn_generar_receta (00112) ya

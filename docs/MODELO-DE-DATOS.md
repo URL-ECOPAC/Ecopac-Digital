@@ -425,16 +425,16 @@ Una receta no se emite con un INSERT: se emite con `fn_generar_receta()` (`00066
 detalle como JSONB y descuenta el inventario en la misma transaccion. Una receta no se borra, se
 anula.
 
-### `receta_detalle` [00019, +00125]
+### `receta_detalle` [00019, +00128]
 
 `receta_id`, `medicamento_id`, `lote_id` (de que lote salio), `bodega_id` (de que bodega salio,
-`+00125`), `dosis`, `frecuencia`, `duracion`, `cantidad_entregada`. El `lote_id` es lo que hace
+`+00128`), `dosis`, `frecuencia`, `duracion`, `cantidad_entregada`. El `lote_id` es lo que hace
 que un medicamento entregado sea rastreable hasta el lote y el proveedor.
 
 `cantidad_entregada` no se reescribe: es lo que la receta pidio originalmente, un hecho clinico
 que no se edita (issue #764). Si la cantidad realmente entregada difiere (por ejemplo, no
 alcanzaba el lote al momento de entregar), la correccion se apila aparte con
-`cantidad_ajustada`/`ajustada_por`/`ajustada_en` (`+00125`, todas NULL mientras nadie corrija el
+`cantidad_ajustada`/`ajustada_por`/`ajustada_en` (`+00128`, todas NULL mientras nadie corrija el
 renglon), y `fn_ajustar_entrega_receta()` es la unica forma de escribirlas: calcula la diferencia
 contra el ultimo valor confirmado y registra un movimiento de inventario solo por esa diferencia,
 para no descontar dos veces lo que `fn_generar_receta()` ya descuenta al emitir la receta.
@@ -1052,7 +1052,7 @@ agregados (web) de consulta y registro de campo (movil).
 **`receta_detalle`**: `medicamento_id`/`lote_id`/`dosis`/`frecuencia`/`duracion`/`cantidad_entregada`
 completos (captura al recetar, sin correccion directa por diseno -ver `cantidad_ajustada` abajo).
 `bodega_id` llega al cliente pero no se muestra en ninguna pantalla (bajo impacto, es un dato
-tecnico de trazabilidad). `cantidad_ajustada`/`ajustada_por`/`ajustada_en` (migracion `00125`,
+tecnico de trazabilidad). `cantidad_ajustada`/`ajustada_por`/`ajustada_en` (migracion `00128`,
 issue #764): la capa de datos (`fn_ajustar_entrega_receta`, `ajustarEntregaReceta()`,
 `useEntregaMedicamentos.js`) ya existe y esta probada; `EntregaMedicamentosScreen.js` sigue de
 solo lectura a proposito, pendiente de revision de diseno -no es un hueco nuevo, es el estado

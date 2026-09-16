@@ -45,7 +45,7 @@ function aDetalleParaEntrega(renglon, disponiblePorLote) {
     frecuencia: renglon.frecuencia,
     duracion: renglon.duracion,
     cantidadEntregada: renglon.cantidadEntregada,
-    // NULL mientras nadie la corrija (fn_ajustar_entrega_receta, 00125, issue #764): en ese
+    // NULL mientras nadie la corrija (fn_ajustar_entrega_receta, 00128, issue #764): en ese
     // caso cantidadEntregada sigue siendo la cifra vigente, ver cantidadRealEntregada() abajo.
     cantidadAjustada: renglon.cantidadAjustada ?? null,
     // Sin lote no hay fila de existencias que consultar: null (indeterminado), nunca 0, para
@@ -138,7 +138,7 @@ export async function obtenerRecetaPorAtencion(atencionId) {
 
 /**
  * Corrige la cantidad realmente entregada de un renglon de receta (issue #764), sin volver a
- * descontar el inventario por el total: fn_ajustar_entrega_receta (migracion 00125) calcula la
+ * descontar el inventario por el total: fn_ajustar_entrega_receta (migracion 00128) calcula la
  * diferencia contra el ultimo valor confirmado y registra un movimiento solo por esa diferencia.
  *
  * No reescribe cantidadEntregada en el cliente ni en la base: el renglon devuelto por

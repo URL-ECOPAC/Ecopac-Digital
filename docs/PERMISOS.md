@@ -173,7 +173,7 @@ stock espera a que administracion lo apruebe. Lo que la `00112` garantiza no es 
 siempre en el momento, sino que **nunca exista una receta emitida sin su movimiento registrado**.
 No hace falta ningun `GRANT` nuevo: el que ya tenia (`authenticated`) sigue siendo el mismo.
 
-`fn_ajustar_entrega_receta()` (`00125`, issue #764) corrige la cantidad realmente entregada de un
+`fn_ajustar_entrega_receta()` (`00128`, issue #764) corrige la cantidad realmente entregada de un
 renglon sin reescribir `cantidad_entregada` ni descontar el inventario dos veces: calcula la
 diferencia contra el ultimo valor confirmado y registra un movimiento nuevo solo por esa
 diferencia. A diferencia de `fn_generar_receta()`, es **SECURITY DEFINER**: `cantidad_ajustada`,
