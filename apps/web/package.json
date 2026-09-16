@@ -16,6 +16,7 @@
     "@supabase/supabase-js": "^2.112.2",
     "bootstrap": "^5.3.8",
     "leaflet": "^1.9.4",
+    "lucide-react": "^1.46.0",
     "react": "^19.2.8",
     "react-bootstrap": "^2.10.10",
     "react-dom": "^19.2.8",

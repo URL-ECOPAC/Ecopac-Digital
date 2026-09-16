@@ -4,6 +4,7 @@ import { ETIQUETAS_ESTADO_JORNADA, formatearFechaLarga, usePanelDeInicio } from 
 
 import Card from "../components/Card";
 import ErrorState from "../components/ErrorState";
+import IconoModulo from "../components/IconoModulo";
 import LoadingState from "../components/LoadingState";
 import PageHeader from "../components/PageHeader";
 import ScreenContainer from "../components/ScreenContainer";
@@ -93,7 +94,8 @@ export default function HomePage() {
               style={{ borderTopColor: `var(--accent-${modulo.id}, var(--color-primary))` }}
               type="button"
             >
-              <span className="inicio-acceso-etiqueta">{modulo.etiqueta}</span>
+              <IconoModulo nombre={modulo.icono} className="inicio-acceso-icono" size={28} />
+              <span className="inicio-acceso-etiqueta">{modulo.nombre}</span>
             </button>
           ))}
         </div>
