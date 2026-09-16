@@ -184,7 +184,8 @@ modo. Como SECURITY DEFINER se salta RLS, la funcion valida el rol a mano (`es_a
 arriba) en vez de depender de una politica. El movimiento de inventario que genera sigue el mismo
 flujo de aprobacion que cualquier otro (administrador autoaprueba, medico y voluntario dejan
 pendiente). Tiene su propio `REVOKE EXECUTE ... FROM PUBLIC, anon` + `GRANT ... TO authenticated`
-en la misma migracion (issue #706: un `ALTER DEFAULT PRIVILEGES` no basta).
+en la misma migracion (issue #706: un `ALTER DEFAULT PRIVILEGES` no basta). Reflejo en el
+cliente: `inventario/permisos.js`, `puedeAjustarEntregaReceta(rol)`.
 
 `fn_detectar_pacientes_duplicados()` (`00101`, issue #140) es SECURITY INVOKER: la ve quien ya
 puede leer `pacientes` (administrador, medico, voluntario general), porque el criterio de

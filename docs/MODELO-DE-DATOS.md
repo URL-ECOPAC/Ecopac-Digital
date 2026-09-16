@@ -1053,10 +1053,11 @@ agregados (web) de consulta y registro de campo (movil).
 completos (captura al recetar, sin correccion directa por diseno -ver `cantidad_ajustada` abajo).
 `bodega_id` llega al cliente pero no se muestra en ninguna pantalla (bajo impacto, es un dato
 tecnico de trazabilidad). `cantidad_ajustada`/`ajustada_por`/`ajustada_en` (migracion `00128`,
-issue #764): la capa de datos (`fn_ajustar_entrega_receta`, `ajustarEntregaReceta()`,
-`useEntregaMedicamentos.js`) ya existe y esta probada; `EntregaMedicamentosScreen.js` sigue de
-solo lectura a proposito, pendiente de revision de diseno -no es un hueco nuevo, es el estado
-conocido y documentado de la issue #764.
+issue #764): `EntregaMedicamentosScreen.js` (movil) muestra `cantidadRealEntregada` (el valor
+vigente, ajustado o no) por renglon, con un boton "Ajustar" para quien puede corregirla -medico o
+administracion, `puedeAjustarEntregaReceta()`- que llama a `ajustarEntrega()`
+(`useEntregaMedicamentos.js`) y por debajo a `fn_ajustar_entrega_receta()`. Un renglon sin lote ni
+bodega no ofrece el boton: no genero movimiento de inventario que ajustar.
 
 ### Inventario
 
