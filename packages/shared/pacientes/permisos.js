@@ -96,6 +96,26 @@ export function puedeCorregirTriaje(rol) {
 }
 
 /**
+ * Puede corregir una consulta ya guardada.
+ *
+ * Espejo de la politica de UPDATE de consultas (00033): a diferencia de puedeCorregirTriaje(),
+ * que alcanza a cualquier medico, aqui la regla mira quien la escribio -- "el medico que creo la
+ * consulta la edita; administrador cualquiera" es literal en el DoD que respalda esa politica.
+ *
+ * @param {string} rol Rol de quien mira la pantalla.
+ * @param {{ profesionalId?: string }} consulta El evento de consulta, como lo arma aEventos()
+ *   (historial.api.js): trae medico_id en `profesionalId`.
+ * @param {string} perfilId UUID del perfil de la sesion.
+ * @returns {boolean}
+ */
+export function puedeCorregirConsulta(rol, consulta, perfilId) {
+  if (esAdministrador(rol)) return true;
+  if (!consulta || !perfilId) return false;
+
+  return rol === ROLES.MEDICO && consulta.profesionalId === perfilId;
+}
+
+/**
  * Puede anular una receta concreta.
  *
  * Espejo de la politica de UPDATE de recetas (00075, issue #510). Es la primera funcion de este

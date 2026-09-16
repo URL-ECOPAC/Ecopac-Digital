@@ -1,6 +1,8 @@
 import {
   exportarFilasACSV,
   FILTROS_INVENTARIO_REPORTE,
+  formatearMoneda,
+  useExportarPDF,
   useReporteInventario,
 } from "@ecopac/shared";
 import Card from "../components/Card";
@@ -11,7 +13,6 @@ import LoadingState from "../components/LoadingState";
 import PageHeader from "../components/PageHeader";
 import ScreenContainer from "../components/ScreenContainer";
 import { useSesionCompartida } from "../contexto/SesionProvider";
-import { useExportarPDF } from "../../../../packages/shared/reportes/useExportarPDF";
 import BotonExportarPDF from "../components/BotonExportarPDF";
 import "./reportes.css";
 
@@ -47,9 +48,16 @@ export default function ReporteInventarioPage() {
     hayFiltros,
     catalogos,
     recargar,
+    tieneAccesoValorizacion,
+    cargandoValorizacion,
+    errorValorizacion,
+    valorizacion,
+    valorizacionPorOrigen,
+    columnasValorizacionPorOrigen,
+    recargarValorizacion,
   } = useReporteInventario({ rol });
 
-  // 📄 Exportación PDF — issue #216
+  // Exportación PDF — issue #216
   const periodo = new Date().toLocaleDateString("es-GT", { dateStyle: "long" });
   const { exportar, generando } = useExportarPDF({
     tituloReporte: "Reporte de Inventario Actual",
@@ -76,7 +84,7 @@ export default function ReporteInventarioPage() {
             onClick: () => descargarCSV(columnas, medicamentos),
             variant: "secondary",
           },
-          // 📄 Nuevo botón de PDF
+          // Nuevo botón de PDF
           {
             custom: <BotonExportarPDF onClick={exportar} generando={generando} />,
           },
@@ -102,7 +110,7 @@ export default function ReporteInventarioPage() {
       {!error && cargando && <LoadingState message="Consultando el inventario..." />}
 
       {!error && !cargando && (
-        // ✅ TODO el contenido que va al PDF DENTRO de este div
+        // TODO el contenido que va al PDF DENTRO de este div
         <div id="contenido-reporte-pdf">
           <section className="reporte-seccion">
             <div className="reporte-cifras">
@@ -124,6 +132,44 @@ export default function ReporteInventarioPage() {
               </Card>
             </div>
           </section>
+
+          {tieneAccesoValorizacion && (
+            <section className="reporte-seccion">
+              <h2 className="reporte-titulo">Valor del inventario disponible</h2>
+              {errorValorizacion && (
+                <ErrorState message={errorValorizacion.mensaje} onRetry={recargarValorizacion} />
+              )}
+              {!errorValorizacion && cargandoValorizacion && (
+                <LoadingState message="Calculando el valor del inventario..." />
+              )}
+              {!errorValorizacion && !cargandoValorizacion && (
+                <>
+                  <div className="reporte-cifras">
+                    <Card>
+                      <span className="reporte-cifra-etiqueta">Valor total disponible</span>
+                      <strong className="reporte-cifra">
+                        {formatearMoneda(valorizacion.valorDisponible) ?? "Sin costo registrado"}
+                      </strong>
+                    </Card>
+                    <Card>
+                      <span className="reporte-cifra-etiqueta">Unidades sin costo conocido</span>
+                      <strong className="reporte-cifra">{valorizacion.unidadesSinCosto}</strong>
+                    </Card>
+                    <Card>
+                      <span className="reporte-cifra-etiqueta">Lotes sin costo conocido</span>
+                      <strong className="reporte-cifra">{valorizacion.lotesSinCosto}</strong>
+                    </Card>
+                  </div>
+                  <DataList
+                    columnas={columnasValorizacionPorOrigen}
+                    datos={valorizacionPorOrigen}
+                    catalogos={catalogos}
+                    vacio="Sin datos de valorizacion por origen."
+                  />
+                </>
+              )}
+            </section>
+          )}
 
           <section className="reporte-seccion">
             <DataList
@@ -150,7 +196,7 @@ export default function ReporteInventarioPage() {
             </section>
           ))}
         </div>
-        // ✅ Fin del contenido PDF
+        // Fin del contenido PDF
       )}
     </ScreenContainer>
   );

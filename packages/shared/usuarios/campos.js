@@ -61,6 +61,18 @@ export const CAMPOS_USUARIO = [
     validacion: { requerido: false },
   },
   {
+    id: "direccion",
+    label: "Direccion",
+    tipo: TIPOS_DE_CAMPO.TEXTO_LARGO,
+    validacion: { requerido: false },
+  },
+  {
+    id: "notas",
+    label: "Notas",
+    tipo: TIPOS_DE_CAMPO.TEXTO_LARGO,
+    validacion: { requerido: false },
+  },
+  {
     id: "activo",
     label: "Usuario activo",
     tipo: TIPOS_DE_CAMPO.BOOLEANO,

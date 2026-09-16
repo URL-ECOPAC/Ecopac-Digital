@@ -10,7 +10,30 @@ const ITEM_VACIO = {
   fecha_vencimiento: "",
   cantidad: "",
   bodega_id: "",
+  // Opcional (issue #752): un ingreso de donacion, o una compra cuyo precio todavia no se
+  // conoce, se registra igual sin costo.
+  costo_unitario: "",
 };
+
+/**
+ * Item de arranque para un renglon de donacion pendiente de convertirse en ingreso (issue #756):
+ * la cantidad viene ya capturada en donacion_detalle.cantidad, y medicamentoId si la persona ya
+ * lo habia escrito al registrar la donacion (no es obligatorio ahi). El resto -bodega, lote,
+ * vencimiento- lo completa quien genera el ingreso, igual que cualquier otro item de esta lista.
+ *
+ * `donacionDetalleId` viaja en el item solo para que quien use este hook pueda correlacionar
+ * cada movimiento creado con el renglon que lo origino (por ejemplo, para enlazar el lote de
+ * vuelta con donacion_detalle.lote_id, donaciones/ingreso.api.js): datosIngresoParaRegistrar()
+ * no lo lee, asi que nunca llega al servidor.
+ */
+export function itemDesdeRenglonDeDonacion(renglon) {
+  return {
+    ...ITEM_VACIO,
+    medicamento_id: renglon?.medicamentoId || "",
+    cantidad: renglon?.cantidad ?? "",
+    donacionDetalleId: renglon?.donacionDetalleId ?? null,
+  };
+}
 
 /**
  * Traduce un item de la lista del formulario mas los datos comunes del ingreso (origen,
@@ -35,6 +58,13 @@ export function datosIngresoParaRegistrar(
     cantidad: item.cantidad,
     motivo: numeroComprobante.trim() || undefined,
     usuarioId,
+    // costo_unitario es opcional (issue #752): sin el, o con el campo vacio del formulario, se
+    // traduce a undefined, no a NaN ni a 0 -- registrarIngreso() (movimientos.api.js) omite la
+    // columna del todo cuando no llega, en vez de forzar un costo que nadie capturo.
+    costo_unitario:
+      item.costo_unitario === "" || item.costo_unitario === undefined
+        ? undefined
+        : Number(item.costo_unitario),
   };
 }
 
@@ -56,24 +86,50 @@ export function datosIngresoParaRegistrar(
  * vez de seguir intentando a ciegas. `origen` (compra/donacion) y `proveedorId` viajan igual
  * para los dos: un donante registrado como proveedor de tipo 'donante' (proveedores.tipo,
  * 00017) es tan valido como uno comercial para registrarIngreso(), que exige proveedor_id sin
- * distinguir el origen. Vincular un ingreso a una donacion ya registrada con su propio detalle
- * es una operacion distinta -generarIngresoDesdeDonacion(), donaciones/ingreso.api.js- que ya
- * tiene su propio flujo en otra parte del modulo y esta issue no toca.
+ * distinguir el origen. `registrarIngreso()` no sabe nada de `donacion_detalle` -crea el
+ * movimiento y el lote, nada mas-; enlazar el lote de vuelta al renglon que lo origino
+ * (issue #756) es cosa de `detallesDonacion` mas abajo, no de este bloque.
  *
  * `rol` (issue #165, criterio 1) habilita `puedeCrearMedicamento` y `crearMedicamentoNuevo()`.
  * Es opcional y no cambia nada de lo que ya usa #156: sin `rol`, `puedeCrearMedicamento` da
  * `false` (mismo resultado que `puedeAdministrarMedicamentos(undefined)`) y las dos funciones
  * nuevas simplemente quedan sin usar.
  *
- * @param {{ usuarioId?: string, rol?: string, onGuardarExitoso?: (movimientos: object[]) => void }} [opciones]
+ * `detallesDonacion` (issue #756) precarga un renglon de donacion a la vez en `itemActual`
+ * -cantidad, y medicamento si ya se habia escrito- cada vez que `agregarItem()` guarda el
+ * anterior, en vez de dejarlo en blanco: la persona sigue completando bodega/lote/vencimiento y
+ * pulsando "+ Añadir" como con cualquier otro item, sin volver a escribir la cantidad. `origen`
+ * arranca en 'donacion' cuando hay renglones que precargar. Cada item guarda su
+ * `donacionDetalleId` para que quien llame a este hook pueda enlazar el lote creado de vuelta al
+ * renglon (`enlazarLoteConDonacion()`, donaciones/ingreso.api.js) usando los `movimientos` y los
+ * `items` que entrega `onGuardarExitoso` en el mismo orden -esa llamada vive fuera de este
+ * archivo a proposito: packages/shared/inventario/ no conoce donacion_detalle.
+ *
+ * `proveedorIdInicial` (issue #756) precarga el proveedor -tipico cuando ya se sabe cual es,
+ * como el sugerido por `sugerirProveedorId()` a partir del donante de la donacion- sin quitarle
+ * a la persona la posibilidad de cambiarlo antes de guardar.
+ *
+ * @param {{ usuarioId?: string, rol?: string,
+ *   onGuardarExitoso?: (movimientos: object[], items: object[]) => void,
+ *   detallesDonacion?: { donacionDetalleId: string, cantidad: number, medicamentoId?: string,
+ *     descripcion?: string }[], proveedorIdInicial?: string }} [opciones]
  */
-export function useRegistroIngreso({ usuarioId, rol, onGuardarExitoso } = {}) {
-  const [origen, setOrigenState] = useState("compra"); // 'compra' | 'donacion'
-  const [proveedorId, setProveedorId] = useState("");
+export function useRegistroIngreso({
+  usuarioId,
+  rol,
+  onGuardarExitoso,
+  detallesDonacion = [],
+  proveedorIdInicial = "",
+} = {}) {
+  const [origen, setOrigenState] = useState(detallesDonacion.length > 0 ? "donacion" : "compra");
+  const [proveedorId, setProveedorId] = useState(proveedorIdInicial);
   const [numeroComprobante, setNumeroComprobante] = useState("");
 
+  const [indiceRenglonDonacion, setIndiceRenglonDonacion] = useState(0);
   const [items, setItems] = useState([]);
-  const [itemActual, setItemActual] = useState(ITEM_VACIO);
+  const [itemActual, setItemActual] = useState(() =>
+    detallesDonacion.length > 0 ? itemDesdeRenglonDeDonacion(detallesDonacion[0]) : ITEM_VACIO,
+  );
 
   const [resumenGuardado, setResumenGuardado] = useState(null);
   const [error, setError] = useState(null);
@@ -114,7 +170,15 @@ export function useRegistroIngreso({ usuarioId, rol, onGuardarExitoso } = {}) {
       },
     ]);
 
-    setItemActual(ITEM_VACIO);
+    // Con renglones de donacion pendientes, el siguiente reemplaza al vacio de siempre: es lo
+    // que deja a la persona seguir sin volver a escribir la cantidad de cada renglon.
+    const siguienteIndice = indiceRenglonDonacion + 1;
+    setItemActual(
+      siguienteIndice < detallesDonacion.length
+        ? itemDesdeRenglonDeDonacion(detallesDonacion[siguienteIndice])
+        : ITEM_VACIO,
+    );
+    setIndiceRenglonDonacion(siguienteIndice);
     setError(null);
   };
 
@@ -160,16 +224,22 @@ export function useRegistroIngreso({ usuarioId, rol, onGuardarExitoso } = {}) {
     }
 
     setResumenGuardado({ origen, proveedorId, numeroComprobante, movimientos });
-    if (onGuardarExitoso) onGuardarExitoso(movimientos);
+    // `items` va en el mismo orden que `movimientos` -el for de arriba empuja uno por otro sin
+    // reordenar-, asi que quien reciba los dos puede correlacionar movimientos[i] con
+    // items[i].donacionDetalleId sin adivinar.
+    if (onGuardarExitoso) onGuardarExitoso(movimientos, items);
     return true;
   };
 
   const resetFormulario = () => {
-    setOrigenState("compra");
-    setProveedorId("");
+    setOrigenState(detallesDonacion.length > 0 ? "donacion" : "compra");
+    setProveedorId(proveedorIdInicial);
     setNumeroComprobante("");
     setItems([]);
-    setItemActual(ITEM_VACIO);
+    setIndiceRenglonDonacion(0);
+    setItemActual(
+      detallesDonacion.length > 0 ? itemDesdeRenglonDeDonacion(detallesDonacion[0]) : ITEM_VACIO,
+    );
     setResumenGuardado(null);
     setError(null);
   };

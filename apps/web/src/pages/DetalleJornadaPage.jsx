@@ -21,6 +21,7 @@ import {
   DataList,
   ErrorState,
   LoadingState,
+  NumberField,
   PageHeader,
   PrimaryButton,
   ScreenContainer,
@@ -91,7 +92,23 @@ export default function DetalleJornadaPage() {
     moviendo,
     errorMovimiento,
     descartarErrorMovimiento,
+    asignarPresupuesto,
+    errorPresupuesto,
+    guardandoPresupuesto,
   } = useDetalleJornada({ jornadaId: id, rol });
+
+  const [editandoPresupuesto, setEditandoPresupuesto] = useState(false);
+  const [montoPresupuesto, setMontoPresupuesto] = useState("");
+
+  const abrirEdicionPresupuesto = () => {
+    setMontoPresupuesto(jornada?.presupuestoAsignado ?? "");
+    setEditandoPresupuesto(true);
+  };
+
+  const guardarPresupuesto = async () => {
+    const ok = await asignarPresupuesto(montoPresupuesto);
+    if (ok) setEditandoPresupuesto(false);
+  };
 
   // Issue #185: advertencias de horario del cuadro de turnos (choque de dia completo de #182 +
   // traslape real de horas, las dos conviven). Se llama incondicionalmente, antes de los early
@@ -306,6 +323,46 @@ export default function DetalleJornadaPage() {
 
                 <dt className="col-sm-4">{ETIQUETAS.cupoEstimado}</dt>
                 <dd className="col-sm-8">{jornada.cupoEstimado ?? "—"}</dd>
+
+                <dt className="col-sm-4">{ETIQUETAS.botiquinBodega}</dt>
+                <dd className="col-sm-8">{jornada.botiquinBodega?.nombre ?? "—"}</dd>
+
+                <dt className="col-sm-4">Presupuesto asignado</dt>
+                <dd className="col-sm-8">
+                  {editandoPresupuesto ? (
+                    <div className="d-flex align-items-start gap-2">
+                      <NumberField
+                        value={montoPresupuesto}
+                        onChange={(valor) => setMontoPresupuesto(valor)}
+                        min={0}
+                        step="0.01"
+                        style={{ maxWidth: "160px" }}
+                      />
+                      <PrimaryButton
+                        title="Guardar"
+                        onClick={guardarPresupuesto}
+                        loading={guardandoPresupuesto}
+                      />
+                      <SecondaryButton
+                        title="Cancelar"
+                        onClick={() => setEditandoPresupuesto(false)}
+                        disabled={guardandoPresupuesto}
+                      />
+                    </div>
+                  ) : (
+                    <span className="d-inline-flex align-items-center gap-2">
+                      {jornada.presupuestoAsignado != null
+                        ? `Q${Number(jornada.presupuestoAsignado).toLocaleString()}`
+                        : "—"}
+                      {permisos.puedeEditar && (
+                        <SecondaryButton title="Editar" onClick={abrirEdicionPresupuesto} />
+                      )}
+                    </span>
+                  )}
+                  {errorPresupuesto && (
+                    <div className="text-danger small mt-1">{errorPresupuesto}</div>
+                  )}
+                </dd>
               </dl>
 
               <hr />

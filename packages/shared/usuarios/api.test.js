@@ -411,6 +411,93 @@ describe("listarUsuarios", () => {
       expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.PERMISO_DENEGADO);
     });
   });
+
+  // Issue #756: junta directiva podia ver el listado segun puedeVerListadoUsuarios()
+  // (permisos.js), pero esta funcion siempre leia la tabla base perfiles sin importar quien
+  // preguntara, y la politica de perfiles (00038) solo le devuelve su propia fila a quien no es
+  // administrador. rolConsultor decide de que relacion se lee.
+  describe("rolConsultor: de que relacion se lee segun quien mira", () => {
+    it("sin rolConsultor, sigue leyendo perfiles (compatibilidad con quien ya llamaba)", async () => {
+      const { cliente, llamadas } = doble({ data: [], error: null });
+      dobles.cliente = cliente;
+
+      await listarUsuarios();
+
+      expect(pasos(llamadas, "from")[0].tabla).toBe("perfiles");
+    });
+
+    it("rolConsultor administrador lee perfiles", async () => {
+      const { cliente, llamadas } = doble({ data: [], error: null });
+      dobles.cliente = cliente;
+
+      await listarUsuarios({ rolConsultor: ROLES.ADMINISTRADOR });
+
+      expect(pasos(llamadas, "from")[0].tabla).toBe("perfiles");
+    });
+
+    it("rolConsultor no administrador lee perfiles_directorio, sin direccion/notas ni el embed de especialidades", async () => {
+      const { cliente, llamadas } = dobleMultiTabla({
+        perfiles_directorio: { data: [{ id: "u1" }], error: null },
+        perfil_especialidad: { data: [], error: null },
+      });
+      dobles.cliente = cliente;
+
+      const { usuarios, error } = await listarUsuarios({ rolConsultor: ROLES.JUNTA_DIRECTIVA });
+
+      expect(error).toBeNull();
+      expect(usuarios).toEqual([{ id: "u1", especialidades: [] }]);
+      expect(pasos(llamadas, "from").map(({ tabla }) => tabla)).toEqual([
+        "perfiles_directorio",
+        "perfil_especialidad",
+      ]);
+
+      const columnasPedidas = llamadas.find(
+        (l) => l.paso === "select" && l.tabla === "perfiles_directorio",
+      ).columnas;
+      expect(columnasPedidas).not.toContain("direccion");
+      expect(columnasPedidas).not.toContain("notas");
+      expect(columnasPedidas).not.toContain("perfil_especialidad");
+    });
+
+    it("junta directiva: las especialidades se traen aparte y se agrupan por perfil", async () => {
+      const { cliente, llamadas } = dobleMultiTabla({
+        perfiles_directorio: { data: [{ id: "u1" }, { id: "u2" }], error: null },
+        perfil_especialidad: {
+          data: [
+            { perfil_id: "u1", nombre_especialidad: "Pediatria" },
+            { perfil_id: "u1", nombre_especialidad: "Odontologia" },
+          ],
+          error: null,
+        },
+      });
+      dobles.cliente = cliente;
+
+      const { usuarios } = await listarUsuarios({ rolConsultor: ROLES.JUNTA_DIRECTIVA });
+
+      expect(usuarios).toEqual([
+        { id: "u1", especialidades: ["Pediatria", "Odontologia"] },
+        { id: "u2", especialidades: [] },
+      ]);
+      expect(llamadas).toContainEqual({
+        paso: "in",
+        tabla: "perfil_especialidad",
+        columna: "perfil_id",
+        valores: ["u1", "u2"],
+      });
+    });
+
+    it("junta directiva sin resultados no consulta perfil_especialidad", async () => {
+      const { cliente, llamadas } = dobleMultiTabla({
+        perfiles_directorio: { data: [], error: null },
+      });
+      dobles.cliente = cliente;
+
+      const { usuarios } = await listarUsuarios({ rolConsultor: ROLES.JUNTA_DIRECTIVA });
+
+      expect(usuarios).toEqual([]);
+      expect(pasos(llamadas, "from").map(({ tabla }) => tabla)).toEqual(["perfiles_directorio"]);
+    });
+  });
 });
 
 describe("listarCatalogoEspecialidades", () => {
@@ -573,6 +660,25 @@ describe("actualizarUsuario", () => {
 
     expect(perfil).toBeNull();
     expect(error).toBeNull();
+  });
+
+  // Issue #756: la migracion 00108 agrego direccion/notas sin ningun formulario que las
+  // escribiera "hasta que exista ese formulario". actualizarUsuario() ya las acepta.
+  it("acepta direccion, notas y fechaIngreso", async () => {
+    const { cliente, llamadas } = doble({ data: { id: "u1" }, error: null });
+    dobles.cliente = cliente;
+
+    await actualizarUsuario("u1", {
+      direccion: "Zona 10, Guatemala",
+      notas: "Disponible fines de semana",
+      fechaIngreso: "2026-01-15",
+    });
+
+    expect(pasos(llamadas, "update")[0].valores).toEqual({
+      direccion: "Zona 10, Guatemala",
+      notas: "Disponible fines de semana",
+      fecha_ingreso: "2026-01-15",
+    });
   });
 });
 

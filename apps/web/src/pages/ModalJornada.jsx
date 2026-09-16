@@ -1,4 +1,5 @@
 import { CAMPOS_FORMULARIO_JORNADA, TIPOS_DE_CAMPO, useFormularioJornada } from "@ecopac/shared";
+import NumberField from "../components/NumberField";
 
 import DateField from "../components/DateField";
 import Modal from "../components/Modal";
@@ -15,7 +16,9 @@ import TextField from "../components/TextField";
 // van en useFormularioJornada(), no aca: este componente solo dibuja lo que el hook le entrega.
 //
 // Etiquetas, tipos y orden de los campos salen de CAMPOS_FORMULARIO_JORNADA (los cinco campos
-// que #179 confirmo: nombre, fecha, comunidad, responsable, proyecto), no de literales propios.
+// que #179 confirmo -nombre, fecha, comunidad, responsable, proyecto- mas cupoEstimado y
+// botiquinBodega, agregados por la auditoria campo-a-vista de la issue #756), no de literales
+// propios.
 //
 // El campo `comunidad` es especial: en vez de un solo Selector, son tres en cascada
 // (departamento -> municipio -> comunidad, criterio 2). Los dos primeros no son campos del
@@ -110,6 +113,20 @@ export default function ModalJornada({ visible = true, jornada, rol, onClose, on
                 error={errores.comunidad}
               />
             </div>
+          );
+        }
+
+        if (campo.tipo === TIPOS_DE_CAMPO.NUMERO) {
+          return (
+            <NumberField
+              key={campo.id}
+              label={campo.label}
+              value={valores[campo.id] ?? null}
+              min={campo.validacion?.min}
+              onChange={(valor) => setCampo(campo.id, valor)}
+              error={errores[campo.id]}
+              disabled={bloqueado}
+            />
           );
         }
 

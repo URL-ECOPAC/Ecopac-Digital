@@ -1015,6 +1015,31 @@ describe("actualizarAsignacionPersonal", () => {
     expect(asignacion).toBeNull();
     expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.PERMISO_DENEGADO);
   });
+
+  // Issue #756: asistio se guardaba y se mostraba, pero no habia forma de escribirlo.
+  it("acepta asistio junto con horario y responsabilidad", async () => {
+    const cliente = crearCliente({
+      jornada_personal: { data: { id: "asignacion-1" }, error: null },
+    });
+    dobles.cliente = cliente;
+
+    await actualizarAsignacionPersonal("jornada-1", "perfil-1", { asistio: true });
+
+    const actualizacion = cliente.llamadas.find((llamada) => llamada.paso === "update");
+    expect(actualizacion.valores).toEqual({ asistio: true });
+  });
+
+  it("acepta asistio: false, no lo confunde con un campo ausente", async () => {
+    const cliente = crearCliente({
+      jornada_personal: { data: { id: "asignacion-1" }, error: null },
+    });
+    dobles.cliente = cliente;
+
+    await actualizarAsignacionPersonal("jornada-1", "perfil-1", { asistio: false });
+
+    const actualizacion = cliente.llamadas.find((llamada) => llamada.paso === "update");
+    expect(actualizacion.valores).toEqual({ asistio: false });
+  });
 });
 
 describe("obtenerAsignacionesDelDia", () => {

@@ -19,6 +19,8 @@ const {
   actualizarConsulta,
   listarPacientesAtendidosDeJornada,
   contarConsultasDeJornada,
+  agregarDiagnosticoAConsulta,
+  quitarDiagnosticoDeConsulta,
 } = await import("./consultas.api.js");
 
 /**
@@ -52,6 +54,10 @@ function crearCliente(respuestas = {}) {
       },
       update(valores) {
         llamadas.push({ paso: "update", tabla, valores });
+        return cadena;
+      },
+      delete() {
+        llamadas.push({ paso: "delete", tabla });
         return cadena;
       },
       select(columnas) {
@@ -345,6 +351,83 @@ describe("actualizarConsulta", () => {
     expect(error).toBeNull();
     expect(consulta.id).toBe("con-1");
     expect(cliente.llamadas.some((l) => l.paso === "update")).toBe(false);
+  });
+});
+
+describe("agregarDiagnosticoAConsulta", () => {
+  it("sin consultaId o diagnosticoId no llama al cliente", async () => {
+    const sinConsulta = await agregarDiagnosticoAConsulta(undefined, "dx-1");
+    const sinDiagnostico = await agregarDiagnosticoAConsulta("con-1", undefined);
+
+    expect(sinConsulta.ok).toBe(false);
+    expect(sinConsulta.error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.CAMPO_REQUERIDO);
+    expect(sinDiagnostico.ok).toBe(false);
+  });
+
+  it("inserta el vinculo y devuelve su id", async () => {
+    const cliente = crearCliente({
+      consulta_diagnostico: { data: { id: "vinculo-nuevo" }, error: null },
+    });
+    dobles.cliente = cliente;
+
+    const { ok, vinculoId, error } = await agregarDiagnosticoAConsulta("con-1", "dx-1");
+
+    expect(error).toBeNull();
+    expect(ok).toBe(true);
+    expect(vinculoId).toBe("vinculo-nuevo");
+    expect(cliente.llamadas).toContainEqual({
+      paso: "insert",
+      tabla: "consulta_diagnostico",
+      valores: { consulta_id: "con-1", diagnostico_id: "dx-1" },
+    });
+  });
+
+  it("normaliza el error si el vinculo ya existe", async () => {
+    dobles.cliente = crearCliente({
+      consulta_diagnostico: { data: null, error: { code: "23505" } },
+    });
+
+    const { ok, error } = await agregarDiagnosticoAConsulta("con-1", "dx-1");
+
+    expect(ok).toBe(false);
+    expect(error).not.toBeNull();
+  });
+});
+
+describe("quitarDiagnosticoDeConsulta", () => {
+  it("sin vinculoId no llama al cliente", async () => {
+    const { ok, error } = await quitarDiagnosticoDeConsulta();
+
+    expect(ok).toBe(false);
+    expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.CAMPO_REQUERIDO);
+  });
+
+  it("borra por el id del vinculo, no del diagnostico ni de la consulta", async () => {
+    const cliente = crearCliente({ consulta_diagnostico: { data: null, error: null } });
+    dobles.cliente = cliente;
+
+    const { ok, error } = await quitarDiagnosticoDeConsulta("vinculo-1");
+
+    expect(error).toBeNull();
+    expect(ok).toBe(true);
+    expect(cliente.llamadas).toContainEqual({ paso: "delete", tabla: "consulta_diagnostico" });
+    expect(cliente.llamadas).toContainEqual({
+      paso: "eq",
+      tabla: "consulta_diagnostico",
+      columna: "id",
+      valor: "vinculo-1",
+    });
+  });
+
+  it("normaliza el error si RLS rechaza el borrado", async () => {
+    dobles.cliente = crearCliente({
+      consulta_diagnostico: { data: null, error: { code: "42501" } },
+    });
+
+    const { ok, error } = await quitarDiagnosticoDeConsulta("vinculo-1");
+
+    expect(ok).toBe(false);
+    expect(error).not.toBeNull();
   });
 });
 

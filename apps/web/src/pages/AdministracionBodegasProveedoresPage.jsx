@@ -1,10 +1,6 @@
 import { useState, useEffect } from "react";
 import ErrorState from "../components/ErrorState";
-import {
-  useAdministracionBodegasProveedores,
-  TIPO_BODEGA,
-  TIPO_PROVEEDOR,
-} from "../../../../packages/shared/inventario/useAdministracionBodegasProveedores.js";
+import { useAdministracionBodegasProveedores, TIPO_BODEGA, TIPO_PROVEEDOR } from "@ecopac/shared";
 
 export default function AdministracionBodegasProveedoresPage() {
   const [pestañaActiva, setPestañaActiva] = useState("bodegas");

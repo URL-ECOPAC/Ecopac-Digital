@@ -16,6 +16,10 @@ export const COLUMNAS_JORNADA = [
   { id: "estado", label: "Estado", tipo: TIPOS_DE_PRESENTACION.CHIP },
   { id: "responsable", label: "Responsable", tipo: TIPOS_DE_PRESENTACION.TEXTO },
   { id: "cupoEstimado", label: "Cupo estimado", tipo: TIPOS_DE_PRESENTACION.NUMERO },
+  // Issue #756: se agrega para que DetalleJornadaPage.jsx tenga una etiqueta que mostrar junto
+  // al valor; JornadasPage.jsx no la selecciona para el tablero/kanban (mismo criterio que
+  // "codigo", ver la nota de abajo).
+  { id: "botiquinBodega", label: "Bodega de botiquin", tipo: TIPOS_DE_PRESENTACION.TEXTO },
   // Issue #178, criterio 1. No sale de listarJornadas(): se mezcla en el hook de pantalla desde
   // contarPacientesAtendidosPorJornada() (api.js), que consulta vista_reporte_impacto en lote.
   // Esa vista no da SELECT a medico ni voluntario (00064): para esos roles la tarjeta no trae

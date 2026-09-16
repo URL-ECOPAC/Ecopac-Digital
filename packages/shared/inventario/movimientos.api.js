@@ -23,6 +23,7 @@ export async function listarMovimientos({
   estado,
   bodega_id,
   lote_id,
+  registrado_por,
   fecha_inicio,
   fecha_fin,
 } = {}) {
@@ -40,6 +41,7 @@ export async function listarMovimientos({
     if (estado) query = query.eq("estado", estado);
     if (bodega_id) query = query.eq("bodega_id", bodega_id);
     if (lote_id) query = query.eq("lote_id", lote_id);
+    if (registrado_por) query = query.eq("registrado_por", registrado_por);
     if (fecha_inicio) query = query.gte("created_at", fecha_inicio);
     if (fecha_fin) query = query.lte("created_at", fecha_fin);
 
@@ -88,6 +90,7 @@ export async function registrarIngreso({
   cantidad,
   motivo,
   usuarioId,
+  costo_unitario,
 }) {
   try {
     if (!Object.values(ORIGENES_DE_LOTE).includes(origen)) {
@@ -136,25 +139,34 @@ export async function registrarIngreso({
         };
       }
 
+      // costo_unitario es opcional (issue #752): un ingreso de donacion, o una compra cuyo
+      // precio todavia no se conoce, crea el lote igual. Se omite del INSERT en vez de mandar
+      // null explicito cuando no llega, para que la columna quede en su valor real de "no
+      // capturado" sin depender de que null y ausente se comporten igual en cada capa.
+      const columnasDelLote = {
+        medicamento_id,
+        numero_lote,
+        fecha_vencimiento,
+        proveedor_id,
+        origen,
+        // La cantidad con la que nace el lote es la del ingreso que lo crea. No se confunde
+        // con existencias.cantidad_disponible, que es lo que queda hoy y por bodega: esta
+        // columna es el historico de cuanto entro (00047, issue #369).
+        cantidad_ingresada: cantidad,
+        // Un medico o un voluntario si pueden dar de alta el lote de su ingreso, pero la
+        // politica de la 00107 les exige atribuirselo (registrado_por = auth.uid()) y que
+        // nazca provisional. `confirmado` no se envia: su DEFAULT es FALSE y mandarlo desde
+        // el cliente invitaria a mandarlo en TRUE. Lo pone en TRUE la aprobacion del ingreso,
+        // dentro de fn_aplicar_ajuste_existencias.
+        registrado_por: usuarioId,
+      };
+      if (costo_unitario !== undefined && costo_unitario !== null && costo_unitario !== "") {
+        columnasDelLote.costo_unitario = costo_unitario;
+      }
+
       const { data: nuevoLote, error: errorLote } = await supabase
         .from("lotes")
-        .insert({
-          medicamento_id,
-          numero_lote,
-          fecha_vencimiento,
-          proveedor_id,
-          origen,
-          // La cantidad con la que nace el lote es la del ingreso que lo crea. No se confunde
-          // con existencias.cantidad_disponible, que es lo que queda hoy y por bodega: esta
-          // columna es el historico de cuanto entro (00047, issue #369).
-          cantidad_ingresada: cantidad,
-          // Un medico o un voluntario si pueden dar de alta el lote de su ingreso, pero la
-          // politica de la 00107 les exige atribuirselo (registrado_por = auth.uid()) y que
-          // nazca provisional. `confirmado` no se envia: su DEFAULT es FALSE y mandarlo desde
-          // el cliente invitaria a mandarlo en TRUE. Lo pone en TRUE la aprobacion del ingreso,
-          // dentro de fn_aplicar_ajuste_existencias.
-          registrado_por: usuarioId,
-        })
+        .insert(columnasDelLote)
         .select()
         .single();
 

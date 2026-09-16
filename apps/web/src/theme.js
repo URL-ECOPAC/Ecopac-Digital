@@ -1,4 +1,12 @@
-import { colors, spacing, moduleAccents, radii, shadows, statusColors } from "@ecopac/ui-tokens";
+import {
+  colors,
+  spacing,
+  moduleAccents,
+  radii,
+  shadows,
+  statusColors,
+  typography,
+} from "@ecopac/ui-tokens";
 
 // Publica los tokens de diseno como custom properties de CSS.
 //
@@ -29,6 +37,11 @@ export function aplicarTokens(elemento = document.documentElement) {
   for (const [nombre, valor] of Object.entries(shadows)) {
     elemento.style.setProperty(`--sombra-${nombre}`, valor.web);
   }
+
+  // Una sola familia para toda la web. index.css la cuelga de las variables de Bootstrap, asi que
+  // ninguna pantalla necesita declarar font-family.
+  elemento.style.setProperty("--fuente-base", typography.fontFamilyWeb);
+  elemento.style.setProperty("--fuente-mono", typography.fontFamilyMonoWeb);
 
   // Las claves de estado vienen de los enum de la base de datos y llevan espacios.
   for (const [estado, valor] of Object.entries(statusColors)) {

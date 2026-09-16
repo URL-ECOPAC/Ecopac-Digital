@@ -32,6 +32,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 
+import { listarBodegas } from "../inventario/bodegas.api.js";
 import { listarProyectos } from "../proyectos/api.js";
 import {
   listarComunidades,
@@ -48,7 +49,7 @@ import { advertirJornadaDuplicada, validarJornada } from "./validaciones.js";
  * comunidadId/responsableId/proyectoId), o vacios para el alta.
  *
  * Los campos del formulario son los ids de CAMPOS_FORMULARIO_JORNADA (comunidad, responsable,
- * proyecto, sin el sufijo `Id`): esta funcion traduce entre las dos formas.
+ * proyecto y botiquinBodega sin el sufijo `Id`): esta funcion traduce entre las dos formas.
  *
  * Se llamaba `valoresIniciales`, igual que la de usuarios/usePerfilPropio.js. El barril recibia
  * las dos por sendas estrellas y ESM excluye del namespace un nombre ambiguo: `valoresIniciales`
@@ -57,8 +58,13 @@ import { advertirJornadaDuplicada, validarJornada } from "./validaciones.js";
  * al cargar el barril con Babel falla de golpe -- "Cannot redefine property" -- en vez de en
  * silencio. Las dos se renombraron con el sufijo del dominio, como `valoresInicialesDeGasto`.
  *
+ * cupoEstimado se precarga como numero o `null` (nunca cadena): lo captura NumberField
+ * (ModalJornada.jsx), que ya entrega el valor convertido -o `null` si se vacia el campo- por su
+ * propio contrato (ver NumberField.jsx), asi que aDatosDeJornada() no necesita convertirlo.
+ *
  * @param {object|null} [jornada]
- * @returns {{ nombre: string, fecha: string, comunidad: string, responsable: string, proyecto: string }}
+ * @returns {{ nombre: string, fecha: string, comunidad: string, responsable: string,
+ *   proyecto: string, cupoEstimado: number|null, botiquinBodega: string }}
  */
 export function valoresInicialesDeJornada(jornada) {
   return {
@@ -67,21 +73,28 @@ export function valoresInicialesDeJornada(jornada) {
     comunidad: jornada?.comunidadId ?? "",
     responsable: jornada?.responsableId ?? "",
     proyecto: jornada?.proyectoId ?? "",
+    cupoEstimado: jornada?.cupoEstimado ?? null,
+    botiquinBodega: jornada?.botiquinBodegaId ?? "",
   };
 }
 
 /**
  * Traduce `valores` del formulario a lo que registrarJornada()/actualizarJornada() esperan.
  *
- * Solo normaliza `proyecto`: es el unico campo opcional de los cinco, y un `''` del `<select>`
- * sin elegir no es un UUID valido para la columna `proyecto_id` (nullable). El resto de campos
- * viaja tal cual.
+ * Solo normaliza `proyecto` y `botiquinBodega` (issue #756): son los dos campos opcionales que
+ * resuelve un `<select>`, y un `''` sin elegir no es un UUID valido para una columna nullable.
+ * `cupoEstimado` no necesita normalizarse aca: NumberField ya entrega numero o `null`. El resto
+ * de campos viaja tal cual.
  *
  * @param {object} valores
  * @returns {object}
  */
 export function aDatosDeJornada(valores) {
-  return { ...valores, proyecto: valores?.proyecto || null };
+  return {
+    ...valores,
+    proyecto: valores?.proyecto || null,
+    botiquinBodega: valores?.botiquinBodega || null,
+  };
 }
 
 /** Mapea filas de un catalogo a la forma { label, value } que consumen Selector/FilterBar. */
@@ -109,7 +122,7 @@ function nombreDePerfil(perfil) {
  *   cargando: boolean,
  *   esEdicion: boolean,
  *   catalogos: { departamentos: object[], municipios: object[], comunidades: object[],
- *     perfiles: object[], proyectos: object[] },
+ *     perfiles: object[], proyectos: object[], bodegas: object[] },
  *   departamentoId: number|string|null,
  *   municipioId: number|string|null,
  *   setDepartamento: (id: number|string|null) => void,
@@ -143,6 +156,7 @@ export function useFormularioJornada({ jornada, rol } = {}) {
   const [comunidades, setComunidades] = useState([]);
   const [perfiles, setPerfiles] = useState([]);
   const [proyectos, setProyectos] = useState([]);
+  const [bodegas, setBodegas] = useState([]);
 
   const [advertenciaDuplicado, setAdvertenciaDuplicado] = useState(null);
 
@@ -160,6 +174,12 @@ export function useFormularioJornada({ jornada, rol } = {}) {
 
     listarProyectos().then(({ proyectos: filas }) => {
       if (vigente) setProyectos(aOpciones(filas, (fila) => fila.nombre));
+    });
+
+    // Solo bodegas moviles: botiquin_bodega_id (00036) es "la bodega movil que viaja" a la
+    // jornada, no cualquier bodega del catalogo (ver docs/MODELO-DE-DATOS.md).
+    listarBodegas({ esMovil: true }).then(({ bodegas: filas }) => {
+      if (vigente) setBodegas(aOpciones(filas, (fila) => fila.nombre));
     });
 
     return () => {
@@ -329,7 +349,7 @@ export function useFormularioJornada({ jornada, rol } = {}) {
     enviando,
     cargando,
     esEdicion,
-    catalogos: { departamentos, municipios, comunidades, perfiles, proyectos },
+    catalogos: { departamentos, municipios, comunidades, perfiles, proyectos, bodegas },
     departamentoId,
     municipioId,
     setDepartamento,

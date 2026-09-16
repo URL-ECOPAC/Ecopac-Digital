@@ -101,6 +101,32 @@ export const FILTROS_MOVIMIENTOS = [
   { id: "bodega", tipo: TIPOS_DE_FILTRO.SELECT, label: "Bodega", opcionesDesde: "bodegas" },
 ];
 
+// "Mis movimientos" (issue #756). `alcance` solo tiene sentido para quien puede ver movimientos
+// ajenos (puedeAprobarMovimiento) -MisMovimientosPage.jsx/MisMovimientosScreen.js lo quitan del
+// arreglo para todos los demas roles, que siempre ven solo lo propio sin poder elegir.
+export const FILTROS_MIS_MOVIMIENTOS = [
+  {
+    id: "estado",
+    tipo: TIPOS_DE_FILTRO.SELECT,
+    label: "Estado",
+    opciones: opcionesDe(ESTADOS_MOVIMIENTO, ETIQUETAS_ESTADO_MOVIMIENTO),
+  },
+  {
+    id: "alcance",
+    tipo: TIPOS_DE_FILTRO.SELECT,
+    label: "Ver",
+    opciones: [
+      { value: "mios", label: "Mis movimientos" },
+      { value: "todos", label: "Todos los movimientos" },
+    ],
+  },
+];
+
+export const FILTROS_MIS_MOVIMIENTOS_VACIOS = {
+  estado: "",
+  alcance: "mios",
+};
+
 export const FILTROS_EXISTENCIAS = [
   {
     id: "medicamento",

@@ -46,12 +46,6 @@ export const CAMPOS_JORNADA = [
     validacion: { requerido: true, maxLongitud: 150 },
   },
   {
-    id: "codigo",
-    label: "Codigo",
-    tipo: TIPOS_DE_CAMPO.TEXTO,
-    validacion: { requerido: false, maxLongitud: 30 },
-  },
-  {
     id: "fecha",
     label: "Fecha",
     tipo: TIPOS_DE_CAMPO.FECHA,
@@ -161,10 +155,6 @@ export const CAMPOS_ASIGNACION_PERSONAL_SIN_PERFIL = CAMPOS_ASIGNACION_PERSONAL.
  */
 const IDS_CAMPOS_EDICION_TURNO = ["horaInicio", "horaFin", "responsabilidad"];
 
-export const CAMPOS_EDICION_TURNO = CAMPOS_ASIGNACION_PERSONAL.filter((campo) =>
-  IDS_CAMPOS_EDICION_TURNO.includes(campo.id),
-);
-
 /** Marcar la asistencia de un perfil ya asignado (jornada_personal.asistio, 00036). */
 export const CAMPOS_MARCAR_ASISTENCIA = [
   {
@@ -176,16 +166,37 @@ export const CAMPOS_MARCAR_ASISTENCIA = [
 ];
 
 /**
- * Subconjunto de CAMPOS_JORNADA para el formulario de alta/edicion de jornada (issue #179).
+ * CAMPOS_EDICION_TURNO = los tres de #185 mas asistio (issue #756).
  *
- * Los cinco campos que la revision del plan confirmo: nombre, fecha, comunidad, responsable y
- * proyecto (PLAN.md, seccion 7, decision 3). Quedan fuera codigo, cupoEstimado,
- * presupuestoAsignado y botiquinBodega: ninguno esta en el objetivo del issue.
+ * `asistio` se guardaba (jornada_personal.asistio) y se mostraba (COLUMNAS_PERSONAL_JORNADA en
+ * columnas.js) pero ninguna pantalla lo escribia: el comentario original de CAMPOS_ASIGNACION_PERSONAL
+ * lo dejaba fuera a proposito porque "se marca despues", pero nunca se construyo un lugar aparte
+ * para hacerlo. En vez de una pantalla nueva, se agrega al mismo modal de editar turno
+ * (ModalEdicionTurno.jsx): marcar quien asistio es, igual que el horario, algo que se corrige
+ * sobre una fila que ya existe.
+ */
+export const CAMPOS_EDICION_TURNO = [
+  ...CAMPOS_ASIGNACION_PERSONAL.filter((campo) => IDS_CAMPOS_EDICION_TURNO.includes(campo.id)),
+  ...CAMPOS_MARCAR_ASISTENCIA,
+];
+
+/**
+ * Subconjunto de CAMPOS_JORNADA para el formulario de alta/edicion de jornada (issue #179,
+ * ampliado por la auditoria campo-a-vista de la issue #756).
  *
- * Hallazgo de esa misma revision: ninguna pantalla del repo escribe cupoEstimado. Al no estar en
- * este formulario tampoco, la columna cupo_estimado queda NULL en toda jornada nueva, y
- * cualquier futura barra de progreso de cupo (COLUMNAS_JORNADA ya reserva esa clave, ver
- * columnas.js) se dibujaria vacia hasta que otro issue la resuelva.
+ * Los cinco campos que la revision del plan de #179 confirmo -nombre, fecha, comunidad,
+ * responsable y proyecto (PLAN.md, seccion 7, decision 3)- mas cupoEstimado y botiquinBodega,
+ * que la issue #756 encontro sin ningun formulario que los escribiera pese a que
+ * actualizarJornada() ya los aceptaba (jornadas/api.js): cupo_estimado quedaba NULL en toda
+ * jornada nueva, y la barra de progreso de cupo (COLUMNAS_JORNADA, columnas.js) se dibujaba
+ * siempre vacia. `codigo` sigue sin estar: lo genera el servidor por secuencia (migracion
+ * 00126), como numero_ficha o folio, y no se declara como capturable en ningun formulario.
+ *
+ * `presupuestoAsignado` sigue deliberadamente fuera: tiene una via de escritura propia y mas
+ * estricta, `asignarPresupuestoJornada()` (presupuestos/api.js, valida el monto con
+ * aNumeroAEscribir()), que tampoco tiene llamador todavia -- meterlo aca duplicaria el camino de
+ * escritura de una columna financiera con dos reglas de validacion distintas. Queda declarado
+ * como hueco abierto, no resuelto en este cambio (ver docs/MODELO-DE-DATOS.md).
  *
  * "observaciones" no aparece: el objetivo original del issue #179 la nombra, pero la tabla
  * jornadas (00012 + 00036) no tiene esa columna. No se propone ninguna migracion para agregarla
@@ -194,7 +205,15 @@ export const CAMPOS_MARCAR_ASISTENCIA = [
  * No se repiten aca ni el label ni el tipo ni las opciones: se filtra el descriptor completo,
  * mismo patron que CAMPOS_ALTA_USUARIO en usuarios/useAltaUsuario.js.
  */
-const IDS_CAMPOS_FORMULARIO_JORNADA = ["nombre", "fecha", "comunidad", "responsable", "proyecto"];
+const IDS_CAMPOS_FORMULARIO_JORNADA = [
+  "nombre",
+  "fecha",
+  "comunidad",
+  "responsable",
+  "proyecto",
+  "cupoEstimado",
+  "botiquinBodega",
+];
 
 export const CAMPOS_FORMULARIO_JORNADA = CAMPOS_JORNADA.filter((campo) =>
   IDS_CAMPOS_FORMULARIO_JORNADA.includes(campo.id),

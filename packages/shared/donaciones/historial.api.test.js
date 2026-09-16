@@ -167,6 +167,50 @@ describe("listarDonaciones (#193)", () => {
     expect(datos.donaciones[0].donante).toBeUndefined();
   });
 
+  // Issue #756: ConstanciaDonacionPage.jsx leia donacion.proyecto_nombre, una clave que
+  // listarDonaciones() nunca devolvio -la constancia mostraba siempre "Fondo General".
+  it("aplana el proyecto embebido a proyectoNombre", async () => {
+    resolverConsultas({
+      listado: {
+        data: [{ id: "d1", proyecto: { nombre: "Jornadas Solola 2026" } }],
+        error: null,
+        count: 1,
+      },
+      totales: { data: [], error: null },
+    });
+
+    const { datos } = await listarDonaciones({}, { rolUsuario: ROLES.ADMINISTRADOR });
+
+    expect(datos.donaciones[0].proyectoNombre).toBe("Jornadas Solola 2026");
+  });
+
+  it("sin proyecto asociado, proyectoNombre es null", async () => {
+    resolverConsultas({
+      listado: { data: [{ id: "d1", proyecto: null }], error: null, count: 1 },
+      totales: { data: [], error: null },
+    });
+
+    const { datos } = await listarDonaciones({}, { rolUsuario: ROLES.ADMINISTRADOR });
+
+    expect(datos.donaciones[0].proyectoNombre).toBeNull();
+  });
+
+  // Issue #756: HistorialDonacionesPage.jsx mostraba anuladaPor como UUID crudo.
+  it("aplana quien anulo a anuladaPorNombre", async () => {
+    resolverConsultas({
+      listado: {
+        data: [{ id: "d1", anuladaPorPerfil: { nombres: "Ana", apellidos: "Lopez" } }],
+        error: null,
+        count: 1,
+      },
+      totales: { data: [], error: null },
+    });
+
+    const { datos } = await listarDonaciones({}, { rolUsuario: ROLES.ADMINISTRADOR });
+
+    expect(datos.donaciones[0].anuladaPorNombre).toBe("Ana Lopez");
+  });
+
   it("calcula los totales por tipo: dinero suma monto, medicamentos/insumos suman cantidad, servicios cuenta donaciones", async () => {
     resolverConsultas({
       listado: { data: [], error: null, count: 0 },

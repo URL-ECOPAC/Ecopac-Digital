@@ -122,10 +122,17 @@ function nombreDeRestriccion(mensaje) {
  *
  * El mensaje cambia segun la plataforma: el navegador dice "Failed to fetch" y React Native
  * "Network request failed". supabase-js ademas envuelve algunos en AuthRetryableFetchError.
+ *
+ * FunctionsFetchError es el mismo caso en functions.invoke(): el fetch a la Edge Function ni
+ * siquiera obtuvo respuesta. Su mensaje ("Failed to send a request to the Edge Function") no
+ * contiene ninguna de las cadenas de abajo, asi que sin esta linea caia en "error inesperado".
+ * El navegador no deja distinguir un corte de red de un preflight CORS rechazado -por ejemplo,
+ * una funcion que no esta desplegada y responde 404 al OPTIONS-: los dos llegan como este error.
  */
 export function esErrorDeRed(error) {
   if (!error) return false;
   if (error.name === "AuthRetryableFetchError") return true;
+  if (error.name === "FunctionsFetchError") return true;
 
   const mensaje = String(error.message ?? error).toLowerCase();
   return (

@@ -210,6 +210,49 @@ export const CAMPOS_CONSULTA = [
 ];
 
 /**
+ * Subconjunto de CAMPOS_CONSULTA para corregir una consulta ya guardada (issue #756, auditoria
+ * campo-a-vista): actualizarConsulta() ya existia y aceptaba estos siete campos, pero ninguna
+ * pantalla los pedia.
+ *
+ * Sin `diagnosticos`: esa columna no es de `consultas` sino de `consulta_diagnostico` (tabla de
+ * union), y no es un campo plano de este formulario -es una lista repetible con su propia accion
+ * de agregar/quitar, mismo tratamiento que CAMPOS_HITO o CAMPOS_CONDICION_CRONICA frente a sus
+ * pantallas de lista. La migracion 00127 le agrego DELETE (antes solo tenia SELECT e INSERT, sin
+ * ninguna forma de corregir un diagnostico mal elegido); ModalCorreccionConsulta.jsx la maneja
+ * aparte con CAMPOS_AGREGAR_DIAGNOSTICO, no metiendola aqui.
+ */
+const IDS_CAMPOS_CORRECCION_CONSULTA = [
+  "motivoConsulta",
+  "antecedentes",
+  "sintomas",
+  "exploracion",
+  "tratamiento",
+  "observaciones",
+  "planSeguimiento",
+];
+
+export const CAMPOS_CORRECCION_CONSULTA = CAMPOS_CONSULTA.filter((campo) =>
+  IDS_CAMPOS_CORRECCION_CONSULTA.includes(campo.id),
+);
+
+/**
+ * Formulario de una sola opcion para agregar un diagnostico a una consulta ya registrada (issue
+ * #756, migracion 00127): agregar el correcto despues de quitar uno mal elegido con
+ * quitarDiagnosticoDeConsulta() (consultas.api.js). Sin `esPrincipal`: cual diagnostico es el
+ * principal se sigue infiriendo del orden de seleccion, mismo criterio que CAMPOS_CONSULTA ya
+ * aplicaba al registrar la consulta por primera vez.
+ */
+export const CAMPOS_AGREGAR_DIAGNOSTICO = [
+  {
+    id: "diagnostico",
+    label: "Diagnostico",
+    tipo: TIPOS_DE_CAMPO.SELECT,
+    opcionesDesde: "diagnosticos",
+    validacion: { requerido: true },
+  },
+];
+
+/**
  * Formulario de receta (recetas + receta_detalle, 00019). medicamentos es una lista
  * repetible: cada fila que el usuario agrega se vuelve un receta_detalle.
  */

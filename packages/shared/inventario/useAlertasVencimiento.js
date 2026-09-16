@@ -1,17 +1,13 @@
-import { useState, useMemo, useCallback } from "react";
-import { atenderAlerta } from "./alertas.api.js";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { listarAlertas, atenderAlerta } from "./alertas.api.js";
 import { aFechaLocal, diasHastaVencimiento } from "../formato/fechas.js";
-
-export const ESTADO_ALERTA = {
-  POR_VENCER: "POR_VENCER",
-  VENCIDA: "VENCIDA",
-};
 
 /**
  * Dias restantes para que venza un lote (negativo si ya vencio, 0 si vence hoy). Se exporta
- * aparte del hook para poder probarla sin montar un componente (issue #694).
+ * aparte del hook -y lo siguen usando useVistaExistencias.js y reportes/api.js- para poder
+ * probarla sin montar un componente (issue #694).
  *
- * ✅ Regla #597: Un lote que vence HOY (días = 0) TODAVÍA es válido y entregable.
+ * Regla #597: un lote que vence HOY (dias = 0) todavia es valido y entregable.
  *
  * Antes calculaba con new Date(fechaVencimiento) - new Date() en milisegundos, que interpreta
  * una cadena AAAA-MM-DD como medianoche UTC. En Guatemala (UTC-6) eso adelanta un dia cualquier
@@ -25,11 +21,10 @@ export const ESTADO_ALERTA = {
 export function calcularDiasRestantes(fechaVencimiento, fechaIngreso) {
   if (!fechaVencimiento) return null;
 
-  // Validación según restricción de base: fecha_vencimiento >= fecha_ingreso
   if (fechaIngreso) {
     const ingreso = aFechaLocal(fechaIngreso);
     const vencimiento = aFechaLocal(fechaVencimiento);
-    if (ingreso && vencimiento && vencimiento < ingreso) return null; // Inválido según regla #597
+    if (ingreso && vencimiento && vencimiento < ingreso) return null;
   }
 
   return diasHastaVencimiento(fechaVencimiento);
@@ -48,140 +43,113 @@ export function datosAtenderAlerta(accionTomada, { usuarioId, rolUsuario }) {
   return { accion: accionTomada, usuarioId, rolUsuario };
 }
 
-export function useAlertasVencimiento({ lotes = [], bodegas = [], usuarioId, rolUsuario } = {}) {
+/**
+ * View model del panel de alertas de vencimiento (issue #268, RF-19), y de la correccion de la
+ * auditoria campo-a-vista (issue #756): el panel calculaba sus propias "alertas" a partir de la
+ * lista de lotes, en vez de leer `alertas_caducidad` (la tabla que de verdad llena
+ * fn_generar_alertas_caducidad() todos los dias). El sintoma no era solo estetico: al reconstruir
+ * la fila con `id: lote.id`, "Atender" llamaba a atenderAlerta() con el id de un LOTE, no de una
+ * alerta, y esa llamada nunca actualizaba ninguna fila real.
+ *
+ * Ahora el hook consulta listarAlertas() directamente, igual que usePendientesValidacion()
+ * consulta listarMovimientos(): sin props de lotes/bodegas, con su propio cargando/error, y
+ * recargando la lista despues de atender una alerta con exito. Sirve a las dos plataformas: el
+ * panel web (PanelAlertasVencimiento.jsx) y el resumen movil
+ * (InventarioResumenAlertasScreen.js, issue #785), que antes tenia su propia copia del calculo
+ * client-side sobre `lotes` -mismo bug de fondo, solo que sin boton de "Atender" que lo
+ * disparara todavia.
+ *
+ * @param {{ usuarioId: string, rolUsuario: string }} contexto Quien esta operando el panel; viaja
+ *   tal cual a atenderAlerta().
+ */
+export function useAlertasVencimiento({ usuarioId, rolUsuario } = {}) {
+  const [alertas, setAlertas] = useState([]);
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState(null);
   const [busqueda, setBusqueda] = useState("");
-  const [filtroBodega, setFiltroBodega] = useState("todas");
-  const [filtroCategoria, setFiltroCategoria] = useState("todas");
-  const [alertasAtendidas, setAlertasAtendidas] = useState([]);
 
-  // 📋 Generar alertas: vencimiento dentro de 30 días o menos
-  const alertas = useMemo(() => {
-    const DIAS_ANTICIPACION = 30;
+  // Mismo resguardo contra respuestas fuera de orden que usePendientesValidacion().
+  const peticionVigente = useRef(0);
 
-    return (
-      lotes
-        .filter((lote) => {
-          const diasRestantes = calcularDiasRestantes(
-            lote.fechaVencimiento,
-            lote.fechaIngreso || lote.fecha_ingreso,
-          );
-          // ✅ Incluye: hoy (0 días) hasta 30 días → >30 días NO se muestra
-          return diasRestantes !== null && diasRestantes <= DIAS_ANTICIPACION;
-        })
-        .map((lote) => {
-          const diasRestantes = calcularDiasRestantes(
-            lote.fechaVencimiento,
-            lote.fechaIngreso || lote.fecha_ingreso,
-          );
-          return {
-            id: lote.id,
-            medicamento: lote.medicamento?.nombre || "Desconocido",
-            lote: lote.numeroLote || lote.lote,
-            cantidad: lote.cantidad,
-            fechaVencimiento: lote.fechaVencimiento,
-            diasRestantes,
-            // ✅ Hoy (0) = Por vencer | Mañana (-1) = Vencida
-            estado: diasRestantes >= 0 ? ESTADO_ALERTA.POR_VENCER : ESTADO_ALERTA.VENCIDA,
-            bodega: lote.bodega || "Central",
-            categoria: lote.medicamento?.categoria || "General",
-          };
-        })
-        .filter((alerta) => !alertasAtendidas.includes(alerta.id))
-        .filter((alerta) => {
-          const coincideBusqueda =
-            busqueda === "" ||
-            alerta.medicamento.toLowerCase().includes(busqueda.toLowerCase()) ||
-            alerta.lote.toLowerCase().includes(busqueda.toLowerCase());
+  const consultar = useCallback(async () => {
+    peticionVigente.current += 1;
+    const idDeEstaPeticion = peticionVigente.current;
 
-          const coincideBodega = filtroBodega === "todas" || alerta.bodega === filtroBodega;
-          const coincideCategoria =
-            filtroCategoria === "todas" || alerta.categoria === filtroCategoria;
+    setCargando(true);
+    setError(null);
 
-          return coincideBusqueda && coincideBodega && coincideCategoria;
-        })
-        // ✅ Orden: los que vencen antes aparecen primero
-        .sort((a, b) => a.diasRestantes - b.diasRestantes)
+    const respuesta = await listarAlertas();
+
+    if (idDeEstaPeticion !== peticionVigente.current) return;
+
+    if (respuesta.error) {
+      setError(respuesta.error);
+      setCargando(false);
+      return;
+    }
+
+    setAlertas(respuesta.alertas);
+    setCargando(false);
+  }, []);
+
+  useEffect(() => {
+    consultar();
+  }, [consultar]);
+
+  const recargar = useCallback(() => consultar(), [consultar]);
+
+  const alertasFiltradas = useMemo(() => {
+    const termino = busqueda.trim().toLowerCase();
+    if (!termino) return alertas;
+
+    return alertas.filter((alerta) =>
+      [alerta.medicamento, alerta.numeroLote].some((campo) =>
+        (campo ?? "").toLowerCase().includes(termino),
+      ),
     );
-  }, [lotes, busqueda, filtroBodega, filtroCategoria, alertasAtendidas]);
+  }, [alertas, busqueda]);
 
-  // 📊 Secciones separadas
   const porVencer = useMemo(
-    () => alertas.filter((a) => a.estado === ESTADO_ALERTA.POR_VENCER),
-    [alertas],
+    () => alertasFiltradas.filter((alerta) => (alerta.diasRestantes ?? 0) >= 0),
+    [alertasFiltradas],
   );
   const vencidas = useMemo(
-    () => alertas.filter((a) => a.estado === ESTADO_ALERTA.VENCIDA),
-    [alertas],
+    () => alertasFiltradas.filter((alerta) => (alerta.diasRestantes ?? 0) < 0),
+    [alertasFiltradas],
   );
 
-  // 📈 Contador para indicador global
-  const cantidadPendientes = alertas.length;
-
-  // issue #709: mandaba { accionTomada } y la firma real es { accion, usuarioId, rolUsuario }
-  // (alertas.api.js); sin usuarioId, atenderAlerta() siempre devolvia error ("Solo
-  // administracion puede atender..."), y esta funcion nunca miraba ese resultado: hacia el
-  // await, lo descartaba, y marcaba la alerta como atendida en el estado local igual. La alerta
-  // desaparecia de la pantalla y seguia pendiente en la base. Ahora se comprueba el error antes
-  // de tocar el estado local, y se lanza (no se traga) para que confirmarAtender() en
-  // PanelAlertasVencimiento.jsx -que ya envuelve esta llamada en un try/catch- lo muestre.
   const marcarComoAtendida = useCallback(
-    async (alertaId, accionTomada) => {
+    async (idAlerta, accionTomada) => {
       if (!accionTomada || accionTomada.trim() === "") {
         throw new Error("Debe indicar la acción tomada");
       }
 
-      const { error } = await atenderAlerta(
-        alertaId,
+      const respuesta = await atenderAlerta(
+        idAlerta,
         datosAtenderAlerta(accionTomada, { usuarioId, rolUsuario }),
       );
 
-      if (error) {
-        throw new Error(error.mensaje);
+      if (respuesta.error) {
+        throw new Error(respuesta.error.mensaje);
       }
 
-      setAlertasAtendidas((prev) => [...prev, alertaId]);
+      await consultar();
+      return respuesta;
     },
-    [usuarioId, rolUsuario],
+    [usuarioId, rolUsuario, consultar],
   );
 
-  // 🔄 Limpiar filtros
-  const limpiarFiltros = useCallback(() => {
-    setBusqueda("");
-    setFiltroBodega("todas");
-    setFiltroCategoria("todas");
-  }, []);
-
-  const categoriasDisponibles = useMemo(() => {
-    if (!lotes || !Array.isArray(lotes)) return ["todas"];
-    const cats = new Set();
-    lotes.forEach((l) => {
-      const cat = l.medicamento?.categoria || l.categoria;
-      if (cat && typeof cat === "string" && cat.trim() !== "") {
-        cats.add(cat.trim());
-      }
-    });
-    return ["todas", ...Array.from(cats).sort()];
-  }, [lotes]);
-
   return {
-    alertas,
     porVencer,
     vencidas,
-    cantidadPendientes,
+    cantidadPendientes: alertas.length,
+    cargando,
+    error,
+    recargar,
 
     busqueda,
     setBusqueda,
-    filtroBodega,
-    setFiltroBodega,
-    filtroCategoria,
-    setFiltroCategoria,
-    limpiarFiltros,
-
-    bodegasDisponibles: ["todas", ...bodegas.map((b) => b.nombre || b)],
-    categoriasDisponibles,
 
     marcarComoAtendida,
-    calcularDiasRestantes,
-    ESTADO_ALERTA,
   };
 }

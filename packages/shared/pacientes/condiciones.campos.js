@@ -51,3 +51,15 @@ export const CAMPOS_CONDICION_CRONICA = [
     validacion: { requerido: false },
   },
 ];
+
+/**
+ * Correccion de un padecimiento ya asociado (issue #756): la ficha del paciente solo ofrecia
+ * marcar un padecimiento como resuelto, sin forma de corregir la fecha de diagnostico o las notas
+ * de un registro ya existente, pese a que actualizarCondicion() (condiciones.api.js) ya las
+ * acepta. Sin `condicion` a proposito: cambiar a que condicion se refiere un registro no es una
+ * correccion de datos, es otro hecho clinico distinto (se borra y se vuelve a asociar). Sin
+ * `estado` tampoco: pasar a resuelta sigue siendo la accion dedicada marcarResuelta().
+ */
+export const CAMPOS_CORRECCION_CONDICION = CAMPOS_CONDICION_CRONICA.filter((campo) =>
+  ["fechaDiagnostico", "notas"].includes(campo.id),
+);

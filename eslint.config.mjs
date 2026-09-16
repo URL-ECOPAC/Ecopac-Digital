@@ -213,6 +213,11 @@ export default [
               message:
                 "apps/web no importa de apps/mobile. Las dos implementan el mismo catalogo de componentes con las mismas props; lo que sea comun va en packages/shared o en packages/ui-tokens.",
             },
+            {
+              group: ["**/packages/shared/**", "**/packages/ui-tokens/**"],
+              message:
+                "Importa por @ecopac/shared y @ecopac/ui-tokens, no por ruta relativa (issue #700). Una ruta relativa se salta el barril, y lo que ningun barril reexporta vite build no lo compila: un error ahi no aparece hasta que alguien conecta la pantalla. Si lo que necesitas no sale del barril, agregalo al index.js de su modulo.",
+            },
           ],
         },
       ],
@@ -241,6 +246,11 @@ export default [
               group: ["**/apps/web/**", "**/web/src/**"],
               message:
                 "apps/mobile no importa de apps/web. Las dos implementan el mismo catalogo de componentes con las mismas props; lo que sea comun va en packages/shared o en packages/ui-tokens.",
+            },
+            {
+              group: ["**/packages/shared/**", "**/packages/ui-tokens/**"],
+              message:
+                "Importa por @ecopac/shared y @ecopac/ui-tokens, no por ruta relativa (issue #700). Una ruta relativa se salta el barril, y lo que ningun barril reexporta vite build no lo compila: un error ahi no aparece hasta que alguien conecta la pantalla. Si lo que necesitas no sale del barril, agregalo al index.js de su modulo.",
             },
           ],
         },

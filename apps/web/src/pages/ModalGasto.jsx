@@ -3,6 +3,7 @@ import {
   CAMPOS_GASTO,
   ESTADOS_DE_GASTO,
   TIPOS_DE_CAMPO,
+  formatearFechaCorta,
   puedeEditarGasto,
   useFormularioGasto,
 } from "@ecopac/shared";
@@ -61,6 +62,14 @@ export default function ModalGasto({ visible = true, gasto, usuarioId, rol, onCl
 
   const bloqueado = enviando || bloqueadoPorPermisos;
 
+  // Quien decidio y cuando (issue #756: aprobado_por/aprobado_en/motivo_rechazo se capturaban
+  // pero no se mostraban en ningun lado una vez que el gasto dejaba de estar pendiente).
+  // aprobarGasto()/rechazarGasto() reutilizan aprobado_por/aprobado_en para las dos decisiones
+  // (aprobacionGastosApi.js), asi que el mismo par sirve para las dos ramas.
+  const nombreDeQuienDecidio = catalogos.perfiles.find(
+    (perfil) => perfil.value === gasto?.aprobado_por,
+  )?.label;
+
   const pedirCierre = () => {
     if (sucio && !bloqueadoPorPermisos) {
       setPidiendoConfirmacionDeDescarte(true);
@@ -93,7 +102,17 @@ export default function ModalGasto({ visible = true, gasto, usuarioId, rol, onCl
       >
         {gastoResuelto && (
           <div className="alert alert-secondary" role="alert">
-            Este gasto ya esta {gasto.estado} y no se puede editar.
+            <div>Este gasto ya esta {gasto.estado} y no se puede editar.</div>
+            {nombreDeQuienDecidio && (
+              <div className="mt-1">
+                {gasto.estado === ESTADOS_DE_GASTO.APROBADO ? "Aprobado" : "Rechazado"} por{" "}
+                {nombreDeQuienDecidio}
+                {gasto.aprobado_en ? ` el ${formatearFechaCorta(gasto.aprobado_en)}` : ""}.
+              </div>
+            )}
+            {gasto.estado === ESTADOS_DE_GASTO.RECHAZADO && gasto.motivo_rechazo && (
+              <div className="mt-1">Motivo: {gasto.motivo_rechazo}</div>
+            )}
           </div>
         )}
 

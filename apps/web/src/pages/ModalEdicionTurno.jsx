@@ -1,6 +1,7 @@
 import { useState } from "react";
+import { Form } from "react-bootstrap";
 
-import { CAMPOS_EDICION_TURNO, useEdicionTurno } from "@ecopac/shared";
+import { CAMPOS_EDICION_TURNO, TIPOS_DE_CAMPO, useEdicionTurno } from "@ecopac/shared";
 
 import Modal from "../components/Modal";
 import PrimaryButton from "../components/PrimaryButton";
@@ -9,11 +10,12 @@ import SecondaryButton from "../components/SecondaryButton";
 import TextField from "../components/TextField";
 import ModalConfirmarDesasignacion from "./ModalConfirmarDesasignacion";
 
-// Modal de edicion de horario y responsabilidad de una persona ya asignada a una jornada (issue
-// #185), abierto al clickear una fila de la pestaña Equipo de DetalleJornadaPage.jsx (issue
-// #181). Mismo patron que ModalEdicionUsuario.jsx (#107): Modal generico + Selector/TextField
-// elegidos a mano por campo.tipo, con la accion destructiva (Desasignar) detras de un boton
-// propio que abre un segundo modal, en vez de competir con el click de la fila que abre este.
+// Modal de edicion de horario, responsabilidad y asistencia de una persona ya asignada a una
+// jornada (issue #185, asistio agregado en la #756), abierto al clickear una fila de la pestaña
+// Equipo de DetalleJornadaPage.jsx (issue #181). Mismo patron que ModalEdicionUsuario.jsx (#107):
+// Modal generico + Selector/TextField/checkbox elegidos a mano por campo.tipo, con la accion
+// destructiva (Desasignar) detras de un boton propio que abre un segundo modal, en vez de
+// competir con el click de la fila que abre este.
 //
 // A diferencia de #107, no se puede reactivar despues: desasignar borra la fila
 // (desasignarPersonal(), #174), no la desactiva. Por eso ModalConfirmarDesasignacion (#182, sin
@@ -78,18 +80,37 @@ export default function ModalEdicionTurno({
           </div>
         )}
 
-        {CAMPOS_EDICION_TURNO.map((campo) =>
-          campo.tipo === "select" ? (
-            <Selector
-              key={campo.id}
-              label={campo.label}
-              value={valores[campo.id]}
-              options={campo.opciones}
-              onSelect={(valor) => setCampo(campo.id, valor)}
-              error={errores[campo.id]}
-              disabled={enviando}
-            />
-          ) : (
+        {CAMPOS_EDICION_TURNO.map((campo) => {
+          if (campo.tipo === TIPOS_DE_CAMPO.BOOLEANO) {
+            return (
+              <Form.Check
+                key={campo.id}
+                type="checkbox"
+                id={`edicion-turno-${campo.id}`}
+                label={campo.label}
+                className="mb-3"
+                checked={Boolean(valores[campo.id])}
+                onChange={(evento) => setCampo(campo.id, evento.target.checked)}
+                disabled={enviando}
+              />
+            );
+          }
+
+          if (campo.tipo === TIPOS_DE_CAMPO.SELECT) {
+            return (
+              <Selector
+                key={campo.id}
+                label={campo.label}
+                value={valores[campo.id]}
+                options={campo.opciones}
+                onSelect={(valor) => setCampo(campo.id, valor)}
+                error={errores[campo.id]}
+                disabled={enviando}
+              />
+            );
+          }
+
+          return (
             <TextField
               key={campo.id}
               label={campo.label}
@@ -99,8 +120,8 @@ export default function ModalEdicionTurno({
               error={errores[campo.id]}
               disabled={enviando}
             />
-          ),
-        )}
+          );
+        })}
 
         <div className="d-flex justify-content-between align-items-center mt-3">
           <SecondaryButton

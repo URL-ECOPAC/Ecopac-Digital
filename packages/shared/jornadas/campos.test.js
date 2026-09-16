@@ -6,23 +6,27 @@ import { describe, expect, it } from "vitest";
 import {
   CAMPOS_ASIGNACION_PERSONAL,
   CAMPOS_ASIGNACION_PERSONAL_SIN_PERFIL,
+  CAMPOS_EDICION_TURNO,
   CAMPOS_FORMULARIO_JORNADA,
   CAMPOS_JORNADA,
+  CAMPOS_MARCAR_ASISTENCIA,
 } from "./campos.js";
 
 describe("CAMPOS_FORMULARIO_JORNADA", () => {
-  it("son exactamente los cinco campos confirmados en la revision del plan", () => {
+  it("son los cinco campos confirmados en la revision del plan mas cupoEstimado y botiquinBodega (issue #756)", () => {
     expect(CAMPOS_FORMULARIO_JORNADA.map((campo) => campo.id)).toEqual([
       "nombre",
       "fecha",
       "comunidad",
       "responsable",
       "proyecto",
+      "cupoEstimado",
+      "botiquinBodega",
     ]);
   });
 
-  it("no incluye codigo, cupoEstimado, presupuestoAsignado ni botiquinBodega", () => {
-    const idsExcluidos = ["codigo", "cupoEstimado", "presupuestoAsignado", "botiquinBodega"];
+  it("no incluye codigo ni presupuestoAsignado", () => {
+    const idsExcluidos = ["codigo", "presupuestoAsignado"];
     for (const id of idsExcluidos) {
       expect(CAMPOS_FORMULARIO_JORNADA.find((campo) => campo.id === id)).toBeUndefined();
     }
@@ -37,6 +41,29 @@ describe("CAMPOS_FORMULARIO_JORNADA", () => {
       const original = CAMPOS_JORNADA.find((c) => c.id === campo.id);
       expect(campo).toBe(original);
     }
+  });
+});
+
+// Issue #756: asistio se marcaba y se mostraba, pero ninguna pantalla lo escribia.
+// CAMPOS_EDICION_TURNO ahora lo agrega, en el mismo modal que horario y responsabilidad.
+describe("CAMPOS_EDICION_TURNO", () => {
+  it("son horaInicio, horaFin, responsabilidad y asistio, en ese orden", () => {
+    expect(CAMPOS_EDICION_TURNO.map((campo) => campo.id)).toEqual([
+      "horaInicio",
+      "horaFin",
+      "responsabilidad",
+      "asistio",
+    ]);
+  });
+
+  it("asistio es el mismo objeto de CAMPOS_MARCAR_ASISTENCIA, no una copia", () => {
+    const asistio = CAMPOS_EDICION_TURNO.find((campo) => campo.id === "asistio");
+    expect(asistio).toBe(CAMPOS_MARCAR_ASISTENCIA[0]);
+  });
+
+  it("no incluye perfil ni rolEnJornada", () => {
+    expect(CAMPOS_EDICION_TURNO.find((campo) => campo.id === "perfil")).toBeUndefined();
+    expect(CAMPOS_EDICION_TURNO.find((campo) => campo.id === "rolEnJornada")).toBeUndefined();
   });
 });
 

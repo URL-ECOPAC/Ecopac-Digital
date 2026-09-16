@@ -3,10 +3,17 @@ import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { colors, spacing, typography } from "@ecopac/ui-tokens";
-import { etiquetaDeRol, tabsMoviles, MODULOS, puedeRegistrarMovimiento } from "@ecopac/shared";
+import {
+  etiquetaDeRol,
+  tabsMoviles,
+  MODULOS,
+  puedeRegistrarMovimiento,
+  ROLES,
+} from "@ecopac/shared";
 
 import { useSesionCompartida } from "../contexto/SesionProvider";
 import RutaProtegida from "../components/RutaProtegida";
+import IconoDeModulo from "../components/IconoDeModulo";
 import { ROUTES } from "./rutas";
 
 // IMPORTACIÓN DE PANTALLAS
@@ -26,11 +33,15 @@ import ConsultaScreen from "../screens/ConsultaScreen";
 import RecetaScreen from "../screens/RecetaScreen";
 import StockScreen from "../screens/StockScreen";
 import RegistroIngresoScreen from "../screens/RegistroIngresoScreen";
+import ExistenciasInventarioScreen from "../screens/ExistenciasInventarioScreen";
+import InventarioResumenAlertasScreen from "../screens/InventarioResumenAlertasScreen";
+import MisMovimientosScreen from "../screens/MisMovimientosScreen";
 import DonacionesScreen from "../screens/DonacionesScreen";
 import ProyectosScreen from "../screens/ProyectosScreen";
 import PresupuestosScreen from "../screens/PresupuestosScreen";
 import ColaboradoresScreen from "../screens/ColaboradoresScreen";
 import FichaColaboradorScreen from "../screens/FichaColaboradorScreen";
+import ComunidadesScreen from "../screens/ComunidadesScreen";
 
 export { ROUTES, InicioNavigator };
 
@@ -100,6 +111,19 @@ function conGuardaDeRol(Componente, moduloId) {
   };
 }
 
+// Variante de conGuardaDeRol() para una pantalla que no tiene entrada propia en MODULOS -como
+// Comunidades (issue #756), que es de administracion y no uno de los nueve modulos del sistema-
+// y por eso recibe los roles permitidos directo, no un moduloId para resolver contra ella.
+function conGuardaDeRoles(Componente, rolesPermitidos) {
+  return function PantallaConGuarda(props) {
+    return (
+      <RutaProtegida rolesPermitidos={rolesPermitidos}>
+        <Componente {...props} />
+      </RutaProtegida>
+    );
+  };
+}
+
 function InicioNavigator() {
   return (
     <InicioStack.Navigator>
@@ -132,6 +156,11 @@ function InicioNavigator() {
         name={ROUTES.FICHA_COLABORADOR}
         component={conGuardaDeRol(FichaColaboradorScreen, "colaboradores")}
         options={opcionesStack("Ficha del personal")}
+      />
+      <InicioStack.Screen
+        name={ROUTES.COMUNIDADES}
+        component={conGuardaDeRoles(ComunidadesScreen, [ROLES.ADMINISTRADOR])}
+        options={opcionesStack("Comunidades")}
       />
     </InicioStack.Navigator>
   );
@@ -233,29 +262,49 @@ function InventarioNavigator() {
         component={RegistroIngresoScreen}
         options={opcionesStack("Registrar ingreso")}
       />
+      <InventarioStack.Screen
+        name={ROUTES.EXISTENCIAS_INVENTARIO}
+        component={ExistenciasInventarioScreen}
+        options={opcionesStack("Existencias")}
+      />
+      <InventarioStack.Screen
+        name={ROUTES.RESUMEN_ALERTAS_INVENTARIO}
+        component={InventarioResumenAlertasScreen}
+        options={opcionesStack("Resumen y alertas")}
+      />
+      <InventarioStack.Screen
+        name={ROUTES.MIS_MOVIMIENTOS}
+        component={MisMovimientosScreen}
+        options={opcionesStack("Mis movimientos")}
+      />
     </InventarioStack.Navigator>
   );
 }
 
 const CONFIGURACION_TABS = {
-  Inicio: { routeName: ROUTES.TAB_INICIO, component: InicioNavigator, label: "Inicio", icon: "⌂" },
+  Inicio: {
+    routeName: ROUTES.TAB_INICIO,
+    component: InicioNavigator,
+    label: "Inicio",
+    icono: "Home",
+  },
   Pacientes: {
     routeName: ROUTES.TAB_PACIENTES,
     component: PacientesNavigator,
     label: "Pacientes",
-    icon: "𐀔",
+    icono: "Users",
   },
   Jornadas: {
     routeName: ROUTES.TAB_JORNADAS,
     component: JornadasNavigator,
     label: "Jornadas",
-    icon: "📅",
+    icono: "Calendar",
   },
   Inventario: {
     routeName: ROUTES.TAB_INVENTARIO,
     component: InventarioNavigator,
     label: "Inventario",
-    icon: "📦",
+    icono: "Package",
   },
 };
 
@@ -263,7 +312,7 @@ const TAB_AJUSTES_CONFIG = {
   routeName: ROUTES.TAB_AJUSTES,
   component: AjustesScreen,
   label: "Ajustes",
-  icon: "⚙",
+  icono: "Settings",
 };
 
 function TabsNavigator() {
@@ -299,8 +348,11 @@ function TabsNavigator() {
           tabBarInactiveTintColor: colors?.textMuted || "#94A3B8",
           tabBarStyle: { backgroundColor: colors?.surface || "#FFFFFF" },
           tabBarLabelStyle: { fontSize: 10 },
+          // El icono sale del vocabulario que declara packages/shared/navegacion.js, traducido
+          // por IconoDeModulo (issue #700). Antes eran cinco glifos escritos a mano, dos de ellos
+          // emoji y uno un ideograma Lineal B que Android no sabia dibujar.
           tabBarIcon: ({ color, size }) => (
-            <Text style={{ color, fontSize: size - 2, fontWeight: "bold" }}>{configTab.icon}</Text>
+            <IconoDeModulo nombre={configTab.icono} color={color} size={size} />
           ),
         };
       }}

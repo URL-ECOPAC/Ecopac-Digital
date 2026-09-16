@@ -20,6 +20,7 @@ export const ROUTES = {
   PRESUPUESTOS: "Presupuestos",
   COLABORADORES: "Colaboradores",
   FICHA_COLABORADOR: "FichaColaborador",
+  COMUNIDADES: "Comunidades",
   BUSQUEDA_PACIENTE: "BusquedaPaciente",
   FICHA_PACIENTE: "FichaPaciente",
   HISTORIAL_PACIENTE: "HistorialPaciente",
@@ -32,4 +33,7 @@ export const ROUTES = {
   JORNADAS_ASIGNADAS: "JornadasAsignadas",
   STOCK: "Stock",
   REGISTRO_INGRESO: "RegistroIngreso",
+  EXISTENCIAS_INVENTARIO: "ExistenciasInventario",
+  RESUMEN_ALERTAS_INVENTARIO: "ResumenAlertasInventario",
+  MIS_MOVIMIENTOS: "MisMovimientos",
 };

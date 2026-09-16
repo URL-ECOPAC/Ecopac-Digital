@@ -21,10 +21,11 @@ major_version = 15
 
 [db.seed]
 enabled = true
-# seed.sql: catalogo geografico real (departamentos/municipios), util en cualquier ambiente.
-# seed-demo.sql: datos ficticios de demostracion (issue #94), solo para desarrollo. Ambos
-# corren con "supabase db reset" (local y el job "validar" del CI); "supabase db push"
-# (lo que llega a ecopac-dev/ecopac-prod) nunca ejecuta seeds. Ver docs/DATOS-DEMO.md.
+# seed.sql: sin sentencias desde la issue #704. El catalogo geografico que cargaba ahora lo
+# siembra la migracion 00125, justamente porque "supabase db push" -lo que llega a ecopac-dev y
+# ecopac-prod- nunca ejecuta seeds. Se mantiene en la lista porque documenta ese cambio.
+# seed-demo.sql: datos ficticios de demostracion (issue #94), solo para desarrollo. Los dos
+# corren con "supabase db reset" (local y el job "validar" del CI). Ver docs/DATOS-DEMO.md.
 sql_paths = ["seed.sql", "seed-demo.sql"]
 
 [studio]
@@ -109,6 +110,26 @@ enable_confirmations = false
 [edge_runtime]
 enabled = true
 policy = "oneshot"
+
+# Mapa de imports de cada Edge Function.
+#
+# Las funciones importan "@supabase/supabase-js" por nombre, y ese nombre solo existe en
+# supabase/functions/deno.json. `supabase functions deploy` NO lee ese archivo por estar en la
+# raiz de functions/: busca un deno.json dentro de la carpeta de cada funcion o el import_map que
+# se declare aqui. Sin estas lineas el despliegue del 13 de septiembre (PR #808) fallo con
+# "Failed to bundle the function (reason: Relative import path "@supabase/supabase-js" not
+# prefixed with / or ./ or ../)", y como el paso lleva continue-on-error la corrida salio verde.
+#
+# El lint del CI no lo detectaba porque a deno lint/check se le pasa --config con ese mismo
+# archivo. Una funcion nueva tiene que agregar aqui su propia seccion.
+#
+# A diferencia del resto de este archivo, esto SI llega a los proyectos remotos: el despliegue
+# lee config.toml para empaquetar cada funcion.
+[functions.invitar-usuario]
+import_map = "./functions/deno.json"
+
+[functions.alertas-vencimiento]
+import_map = "./functions/deno.json"
 
 [analytics]
 enabled = true

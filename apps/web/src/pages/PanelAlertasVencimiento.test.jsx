@@ -16,35 +16,30 @@ afterEach(() => {
 const ALERTA_POR_VENCER = {
   id: "a-1",
   medicamento: "Loratadina",
-  lote: "LOTE-1",
-  cantidad: 40,
+  numeroLote: "LOTE-1",
+  cantidadAfectada: 40,
   fechaVencimiento: "2026-02-01",
   diasRestantes: 15,
-  bodega: "Bodega Principal",
 };
 
 const ALERTA_VENCIDA = {
   id: "a-2",
   medicamento: "Acetaminofen",
-  lote: "LOTE-2",
-  cantidad: 20,
+  numeroLote: "LOTE-2",
+  cantidadAfectada: 20,
   fechaVencimiento: "2026-01-01",
   diasRestantes: -5,
-  bodega: "Bodega Principal",
 };
 
 const mockEstadoHook = {
   porVencer: [],
   vencidas: [],
   cantidadPendientes: 0,
+  cargando: false,
+  error: null,
+  recargar: vi.fn(),
   busqueda: "",
   setBusqueda: vi.fn(),
-  filtroBodega: "todas",
-  setFiltroBodega: vi.fn(),
-  filtroCategoria: "todas",
-  setFiltroCategoria: vi.fn(),
-  bodegasDisponibles: ["todas"],
-  categoriasDisponibles: ["todas"],
   marcarComoAtendida: vi.fn(async () => {}),
 };
 
@@ -56,7 +51,7 @@ const { useAlertasVencimiento } =
   await import("../../../../packages/shared/inventario/useAlertasVencimiento.js");
 
 function pantalla(props = {}) {
-  return render(<PanelAlertasVencimiento lotes={[]} bodegas={[]} usuarioId="u-1" {...props} />);
+  return render(<PanelAlertasVencimiento usuarioId="u-1" rolUsuario="administrador" {...props} />);
 }
 
 describe("PanelAlertasVencimiento", () => {
@@ -64,8 +59,30 @@ describe("PanelAlertasVencimiento", () => {
     mockEstadoHook.porVencer = [];
     mockEstadoHook.vencidas = [];
     mockEstadoHook.cantidadPendientes = 0;
+    mockEstadoHook.cargando = false;
+    mockEstadoHook.error = null;
     mockEstadoHook.marcarComoAtendida = vi.fn(async () => {});
+    mockEstadoHook.recargar.mockClear();
     useAlertasVencimiento.mockClear();
+  });
+
+  it("mientras carga, muestra el estado de carga", () => {
+    mockEstadoHook.cargando = true;
+    pantalla();
+
+    expect(screen.getByText("Cargando...")).toBeInTheDocument();
+  });
+
+  // Camino de error (issue #759): si listarAlertas() falla, la pantalla tiene que mostrar el
+  // error, no una tabla vacia que diria "no hay lotes por vencer" siendo falso.
+  it("camino de error: si la consulta falla, muestra el error y permite reintentar", () => {
+    mockEstadoHook.error = { mensaje: "No se pudieron cargar las alertas." };
+    pantalla();
+
+    expect(screen.getByText("No se pudieron cargar las alertas.")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText("Reintentar"));
+    expect(mockEstadoHook.recargar).toHaveBeenCalled();
   });
 
   it("sin alertas, muestra los dos mensajes de vacio", () => {

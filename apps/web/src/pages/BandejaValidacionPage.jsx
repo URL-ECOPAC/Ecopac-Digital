@@ -1,8 +1,6 @@
 import { useState } from "react";
 
-import { usePendientesValidacion } from "../../../../packages/shared/inventario/usePendientesValidacion.js";
-import { permisosDeMovimientos } from "../../../../packages/shared/inventario/permisos.js";
-
+import { permisosDeMovimientos, usePendientesValidacion } from "@ecopac/shared";
 // issue #689: esta pantalla tenia su propio movimientosPendientes escrito a mano (un solo
 // movimiento de mentira) y handleAprobar/handleRechazar solo hacian console.log. Nunca llamaba
 // a usePendientesValidacion(), que ya existia y estaba probada. Ahora la bandeja se autoabastece
@@ -58,7 +56,6 @@ export default function BandejaValidacionPage({ usuarioId, rolUsuario }) {
         flexDirection: "column",
         gap: "20px",
         padding: "24px 0",
-        fontFamily: "system-ui, -apple-system, sans-serif",
       }}
     >
       {/* Encabezado */}
@@ -181,6 +178,19 @@ export default function BandejaValidacionPage({ usuarioId, rolUsuario }) {
                     textAlign: "left",
                   }}
                 >
+                  Bodega
+                </th>
+                <th
+                  style={{
+                    padding: "14px 20px",
+                    fontSize: "11px",
+                    fontWeight: "700",
+                    color: "#64748b",
+                    letterSpacing: "0.5px",
+                    textTransform: "uppercase",
+                    textAlign: "left",
+                  }}
+                >
                   Fecha
                 </th>
                 {(puedeAprobar || puedeRechazar) && (
@@ -289,7 +299,7 @@ export default function BandejaValidacionPage({ usuarioId, rolUsuario }) {
                           fontSize: "11px",
                           color: "#94a3b8",
                           marginTop: "4px",
-                          fontFamily: "monospace",
+                          fontFamily: "var(--fuente-mono)",
                         }}
                       >
                         {mov.id}
@@ -314,11 +324,17 @@ export default function BandejaValidacionPage({ usuarioId, rolUsuario }) {
                       style={{
                         padding: "16px 20px",
                         color: "#475569",
-                        fontFamily: "monospace",
-                        fontSize: "12px",
+                        fontSize: "13px",
                       }}
                     >
-                      {mov.registrado_por}
+                      {[mov.registradoPor?.nombres, mov.registradoPor?.apellidos]
+                        .filter(Boolean)
+                        .join(" ") || "—"}
+                    </td>
+
+                    {/* Bodega */}
+                    <td style={{ padding: "16px 20px", color: "#475569", fontSize: "13px" }}>
+                      {mov.bodega?.nombre || "—"}
                     </td>
 
                     {/* Fecha */}

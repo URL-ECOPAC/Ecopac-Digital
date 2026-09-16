@@ -1,5 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { generarIngresoDesdeDonacion, obtenerDonacionDeLote } from "./ingreso.api.js";
+import {
+  enlazarLoteConDonacion,
+  generarIngresoDesdeDonacion,
+  obtenerDonacionDeLote,
+} from "./ingreso.api.js";
 import { obtenerSupabase } from "../api/cliente.js";
 import { registrarIngreso } from "../inventario/movimientos.api.js";
 
@@ -162,6 +166,35 @@ describe("Módulo de Donaciones - API Ingreso", () => {
       expect(res.datos).toBeNull();
       expect(res.error.mensaje).toContain("mayor a cero");
       expect(mockSupabase.update).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("enlazarLoteConDonacion", () => {
+    it("actualiza donacion_detalle.lote_id y devuelve la fila actualizada", async () => {
+      mockSupabase.single.mockResolvedValueOnce({
+        data: { id: "DET-1", lote_id: "LOTE-9" },
+        error: null,
+      });
+
+      const res = await enlazarLoteConDonacion("DET-1", "LOTE-9");
+
+      expect(mockSupabase.from).toHaveBeenCalledWith("donacion_detalle");
+      expect(mockSupabase.update).toHaveBeenCalledWith({ lote_id: "LOTE-9" });
+      expect(mockSupabase.eq).toHaveBeenCalledWith("id", "DET-1");
+      expect(res.error).toBeNull();
+      expect(res.detalle.lote_id).toBe("LOTE-9");
+    });
+
+    it("normaliza el error si la actualizacion falla", async () => {
+      mockSupabase.single.mockResolvedValueOnce({
+        data: null,
+        error: { message: "fila no encontrada" },
+      });
+
+      const res = await enlazarLoteConDonacion("DET-INEXISTENTE", "LOTE-9");
+
+      expect(res.detalle).toBeNull();
+      expect(res.error).not.toBeNull();
     });
   });
 

@@ -362,3 +362,30 @@ export async function desactivarMedicamento(id) {
     return { medicamento: null, error: normalizarError(error) };
   }
 }
+
+/**
+ * Reactiva un medicamento previamente desactivado (issue #756: no existia contraparte de
+ * desactivarMedicamento(), asi que un medicamento dado de baja no tenia forma de volver).
+ * Sin comprobacion de existencias: a diferencia de desactivar (que se niega si el medicamento
+ * todavia tiene existencias), reactivar nunca puede dejar el inventario en un estado invalido.
+ *
+ * @param {string} id UUID del medicamento.
+ * @returns {Promise<{ medicamento: object|null, error: object|null }>}
+ */
+export async function reactivarMedicamento(id) {
+  if (!id) return { medicamento: null, error: null };
+
+  try {
+    const { data, error } = await obtenerSupabase()
+      .from("medicamentos")
+      .update({ activo: true })
+      .eq("id", id)
+      .select(COLUMNAS_DEL_MEDICAMENTO)
+      .maybeSingle();
+
+    if (error) return { medicamento: null, error: normalizarError(error) };
+    return { medicamento: data ?? null, error: null };
+  } catch (error) {
+    return { medicamento: null, error: normalizarError(error) };
+  }
+}

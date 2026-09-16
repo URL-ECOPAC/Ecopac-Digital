@@ -10,7 +10,7 @@ import { esAdministrador } from "../usuarios/roles.js";
  * @param {object} datosLote
  */
 export function datosLoteParaRegistrar(datosLote) {
-  return {
+  const datos = {
     medicamento: datosLote.medicamento_id,
     numeroLote: datosLote.numero_lote,
     proveedor: datosLote.proveedor_id,
@@ -19,6 +19,14 @@ export function datosLoteParaRegistrar(datosLote) {
     fechaIngreso: datosLote.fecha_ingreso,
     fechaVencimiento: datosLote.fecha_vencimiento,
   };
+
+  // costoUnitario es opcional (issue #752): "" (el campo vacio del formulario) se traduce a
+  // ausente, no a NaN ni a 0 -- un costo desconocido no es lo mismo que un costo de cero.
+  if (datosLote.costo_unitario !== undefined && datosLote.costo_unitario !== "") {
+    datos.costoUnitario = Number(datosLote.costo_unitario);
+  }
+
+  return datos;
 }
 
 /**

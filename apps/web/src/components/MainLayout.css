@@ -73,12 +73,18 @@
 }
 
 .app-nav__item {
-  display: block;
+  align-items: center;
+  display: flex;
+  gap: var(--spacing-sm);
   padding: var(--spacing-sm) var(--spacing-sm);
   border-radius: var(--spacing-sm);
   color: var(--color-text);
   text-decoration: none;
   font-size: 0.92rem;
+}
+
+.app-nav__item svg {
+  flex-shrink: 0;
 }
 
 .app-nav__item:hover {

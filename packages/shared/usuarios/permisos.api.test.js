@@ -221,6 +221,67 @@ describe("obtenerPermisosEfectivos", () => {
     expect(modulos).toEqual([]);
     expect(error).toBeNull();
   });
+
+  // Issue #756: usuario_permiso.motivo/otorgado_por ya se guardaban desde escribirExcepcion(),
+  // pero esta funcion nunca los pedia -ModalPermisosUsuario.jsx no tenia nada que mostrar.
+  it("un permiso individual trae motivo y el nombre de quien lo otorgo", async () => {
+    const { cliente } = clienteConTablas({
+      perfiles: { data: { id: "u1", rol: ROLES.MEDICO }, error: null },
+      permisos: { data: [PERMISO_JORNADAS], error: null },
+      rol_permiso: { data: [], error: null },
+      usuario_permiso: {
+        data: [
+          {
+            permiso_id: PERMISO_JORNADAS.id,
+            concedido: true,
+            motivo: "Cobertura de fin de semana",
+            otorgadoPor: "admin-1",
+            otorgadoPorPerfil: { nombres: "Ana", apellidos: "Lopez" },
+          },
+        ],
+        error: null,
+      },
+    });
+    dobles.cliente = cliente;
+
+    const { modulos } = await obtenerPermisosEfectivos("u1");
+
+    expect(modulos[0].permisos[0]).toMatchObject({
+      motivo: "Cobertura de fin de semana",
+      otorgadoPorNombre: "Ana Lopez",
+    });
+  });
+
+  it("un permiso heredado del rol no trae motivo ni otorgadoPorNombre", async () => {
+    const { cliente } = clienteConTablas({
+      perfiles: { data: { id: "u1", rol: ROLES.MEDICO }, error: null },
+      permisos: { data: [PERMISO_PACIENTES], error: null },
+      rol_permiso: { data: [{ permiso_id: PERMISO_PACIENTES.id }], error: null },
+      usuario_permiso: { data: [], error: null },
+    });
+    dobles.cliente = cliente;
+
+    const { modulos } = await obtenerPermisosEfectivos("u1");
+
+    expect(modulos[0].permisos[0]).toMatchObject({ motivo: null, otorgadoPorNombre: null });
+  });
+
+  it("una excepcion sin motivo registrado (upsert previo sin ese campo) no revienta", async () => {
+    const { cliente } = clienteConTablas({
+      perfiles: { data: { id: "u1", rol: ROLES.MEDICO }, error: null },
+      permisos: { data: [PERMISO_JORNADAS], error: null },
+      rol_permiso: { data: [], error: null },
+      usuario_permiso: {
+        data: [{ permiso_id: PERMISO_JORNADAS.id, concedido: true }],
+        error: null,
+      },
+    });
+    dobles.cliente = cliente;
+
+    const { modulos } = await obtenerPermisosEfectivos("u1");
+
+    expect(modulos[0].permisos[0]).toMatchObject({ motivo: null, otorgadoPorNombre: null });
+  });
 });
 
 describe("concederPermiso y revocarPermiso", () => {
@@ -262,6 +323,36 @@ describe("concederPermiso y revocarPermiso", () => {
     expect(upsert.valores.concedido).toBe(false);
     expect(upsert.valores.otorgado_por).toBeNull();
     expect(upsert.valores.motivo).toBeNull();
+  });
+
+  // El campo de motivo del modal es opcional y arranca en "" (issue #756): un motivo en blanco
+  // no debe guardarse como cadena vacia, que se veria como un motivo "vacio" en vez de ausente.
+  it("un motivo en blanco o de solo espacios se guarda como null, no como cadena vacia", async () => {
+    for (const motivo of ["", "   "]) {
+      const { cliente, llamadas } = clienteConTablas({
+        permisos: { data: { id: PERMISO_JORNADAS.id }, error: null },
+        usuario_permiso: { data: null, error: null },
+      });
+      dobles.cliente = cliente;
+
+      await concederPermiso("u1", "jornadas.gestionar", { motivo });
+
+      const upsert = pasos(llamadas, { tabla: "usuario_permiso", paso: "upsert" })[0];
+      expect(upsert.valores.motivo).toBeNull();
+    }
+  });
+
+  it("un motivo con espacios alrededor se guarda recortado", async () => {
+    const { cliente, llamadas } = clienteConTablas({
+      permisos: { data: { id: PERMISO_JORNADAS.id }, error: null },
+      usuario_permiso: { data: null, error: null },
+    });
+    dobles.cliente = cliente;
+
+    await concederPermiso("u1", "jornadas.gestionar", { motivo: "  cobertura  " });
+
+    const upsert = pasos(llamadas, { tabla: "usuario_permiso", paso: "upsert" })[0];
+    expect(upsert.valores.motivo).toBe("cobertura");
   });
 
   it("una clave que no existe en el catalogo no llega a escribir nada", async () => {

@@ -213,7 +213,26 @@ export const CAMPOS_LOTE = [
     tipo: TIPOS_DE_CAMPO.FECHA,
     validacion: { requerido: true, minFechaDesdeCampo: "fechaIngreso" },
   },
+  {
+    id: "costoUnitario",
+    label: "Costo unitario (Q)",
+    tipo: TIPOS_DE_CAMPO.NUMERO,
+    // Opcional a proposito (issue #752): un lote donado, o uno de compra cuyo precio todavia no
+    // se conoce, se registra igual. NULL en la base significa "no se sabe cuanto cuesta", nunca
+    // "cero" -- forzar un valor aqui mentiria en los reportes financieros tanto como forzarlo
+    // en la migracion (00121).
+    validacion: { requerido: false, min: 0 },
+  },
 ];
+
+/**
+ * Correccion de un lote ya registrado (issue #752): "un precio mal escrito no puede quedar
+ * congelado, igual que el telefono de un paciente (#699)". Solo costoUnitario -medicamento,
+ * numeroLote, origen y las fechas son el lote tal como entro; cambiarlos despues no es una
+ * correccion, es otro lote distinto, mismo criterio que consulta_diagnostico.condicion_id o
+ * padecimientos_cronicos.condicion_id en la auditoria de la issue #756.
+ */
+export const CAMPOS_CORRECCION_LOTE = CAMPOS_LOTE.filter((campo) => campo.id === "costoUnitario");
 
 /**
  * Registro de un movimiento de inventario (movimientos_inventario, 00023+00028+00047).
@@ -246,6 +265,27 @@ export const CAMPOS_MOVIMIENTO = [
     opcionesDesde: "bodegas",
     validacion: { requerido: true },
   },
+  {
+    id: "cantidad",
+    label: "Cantidad",
+    tipo: TIPOS_DE_CAMPO.NUMERO,
+    validacion: { requerido: true, min: 1 },
+  },
+  {
+    id: "motivo",
+    label: "Motivo",
+    tipo: TIPOS_DE_CAMPO.TEXTO_LARGO,
+    validacion: { requerido: true },
+  },
+];
+
+/**
+ * Correccion de un movimiento propio y pendiente ("Mis movimientos", issue #756). Solo
+ * cantidad y motivo: tipo/lote/bodega definen que ES el movimiento, y cambiarlos despues de
+ * registrado es cancelar y volver a registrar, no corregir un dato mal escrito. Mismas reglas
+ * que sus entradas homonimas en CAMPOS_MOVIMIENTO, para no duplicar el criterio de validacion.
+ */
+export const CAMPOS_CORRECCION_MOVIMIENTO = [
   {
     id: "cantidad",
     label: "Cantidad",

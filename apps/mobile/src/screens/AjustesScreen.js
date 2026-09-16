@@ -4,6 +4,7 @@ import { colors, spacing, typography } from "@ecopac/ui-tokens";
 import {
   TIPOS_DE_CAMPO,
   etiquetaDeRol,
+  puedeVerCatalogoComunidades,
   usePerfilPropio,
   valoresInicialesDePerfil,
 } from "@ecopac/shared";
@@ -22,6 +23,7 @@ import {
 } from "../components";
 import { useRegistroSinGuardar } from "../contexto/RegistroSinGuardarProvider";
 import { useSesionCompartida } from "../contexto/SesionProvider";
+import { ROUTES } from "../navigation/rutas";
 
 // Id fijo: solo hay un formulario de perfil propio montado a la vez (issue #645).
 const ID_FORMULARIO = "perfil-propio";
@@ -32,7 +34,7 @@ const ID_FORMULARIO = "perfil-propio";
 // tipo y el orden de los campos de perfil salen de CAMPOS_USUARIO via camposDePerfilPropio():
 // esta pantalla no escribe ninguna de esas etiquetas a mano, solo las de los campos de
 // contrasena, que no tienen descriptor (mismo patron que apps/web/src/pages/PerfilPage.jsx).
-export default function AjustesScreen() {
+export default function AjustesScreen({ navigation }) {
   const { usuario, perfil, refrescarPerfil, logout } = useSesionCompartida();
   const { hayAlgoSinGuardar, registrar, desregistrar } = useRegistroSinGuardar();
   const [confirmando, setConfirmando] = useState(false);
@@ -93,6 +95,15 @@ export default function AjustesScreen() {
     <ScreenContainer contentContainerStyle={styles.contenido}>
       <Text style={styles.titulo}>Ajustes</Text>
       <UsuarioActivo compacto={false} />
+
+      {puedeVerCatalogoComunidades(perfil?.rol) && (
+        <Card title="Administracion">
+          <PrimaryButton
+            title="Catalogo de comunidades"
+            onPress={() => navigation.navigate(ROUTES.TAB_INICIO, { screen: ROUTES.COMUNIDADES })}
+          />
+        </Card>
+      )}
 
       <Card title="Mi perfil">
         {errorGlobal ? <ErrorState message={errorGlobal} /> : null}

@@ -13,7 +13,7 @@ import {
   Table,
 } from "react-bootstrap";
 import { useResumenDonaciones } from "@ecopac/shared";
-import { useSesionCompartida } from "../contexto/SesionProvider"; // Ajustar según el AuthContext del proyecto
+import { useSesionCompartida } from "../contexto/SesionProvider";
 
 const ACCESOS_NAV = [
   { ruta: "/donaciones/registro", etiqueta: "Registrar donación", variante: "primary" },
@@ -26,11 +26,13 @@ const ACCESOS_NAV = [
 ];
 
 export default function DonacionesPage() {
-  // Cambiar useAuth() por useSesionCompartida():
-  const { usuario } = useSesionCompartida();
+  // `rol` y no `usuario.rol`: `usuario` es la cuenta de Auth y no trae rol, que vive en perfiles.
+  // Con `usuario?.rol` llegaba undefined, puedeVerDonaciones() respondia false y la pantalla le
+  // decia "No tienes permisos de lectura" hasta a la administradora.
+  const { rol } = useSesionCompartida();
 
   const { fechaInicio, setFechaInicio, fechaFin, setFechaFin, cargando, error, datos } =
-    useResumenDonaciones({ rolUsuario: usuario?.rol });
+    useResumenDonaciones({ rolUsuario: rol });
 
   const { totalesPorTipo, donacionesRecientes, donantesFrecuentes } = datos;
 

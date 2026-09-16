@@ -3,6 +3,7 @@ import {
   ESTADOS_JORNADA_REPORTE,
   exportarFilasACSV,
   formatearFechaLarga,
+  useExportarPDF,
   useReporteJornada,
 } from "@ecopac/shared";
 import Card from "../components/Card";
@@ -13,7 +14,6 @@ import PageHeader from "../components/PageHeader";
 import ScreenContainer from "../components/ScreenContainer";
 import StatusChip from "../components/StatusChip";
 import { useSesionCompartida } from "../contexto/SesionProvider";
-import { useExportarPDF } from "../../../../packages/shared/reportes/useExportarPDF";
 import BotonExportarPDF from "../components/BotonExportarPDF";
 import "./reportes.css";
 
@@ -53,7 +53,7 @@ export default function ReporteJornada() {
     recargar,
   } = useReporteJornada(id, { rol });
 
-  // 📄 Exportación PDF — issue #216
+  // Exportación PDF — issue #216
   const periodo = ficha
     ? [ficha.comunidad, formatearFechaLarga(ficha.fecha)].filter(Boolean).join(" — ")
     : `Jornada: ${id}`;
@@ -106,13 +106,13 @@ export default function ReporteJornada() {
         }
         actions={[
           volver,
-          // 📄 Botón de PDF
+          // Botón de PDF
           { custom: <BotonExportarPDF onClick={exportar} generando={generando} /> },
         ]}
       />
 
       {ficha && (
-        // ✅ TODO el contenido que va al PDF DENTRO de este div
+        // TODO el contenido que va al PDF DENTRO de este div
         <div id="contenido-reporte-pdf">
           <section className="reporte-seccion">
             <div className="reporte-cifras">
@@ -202,7 +202,7 @@ export default function ReporteJornada() {
             />
           </section>
         </div>
-        // ✅ Fin del contenido PDF
+        // Fin del contenido PDF
       )}
     </ScreenContainer>
   );

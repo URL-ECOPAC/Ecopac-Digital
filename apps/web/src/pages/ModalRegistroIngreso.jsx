@@ -1,4 +1,4 @@
-import { useRegistroIngreso } from "../../../../packages/shared/inventario/useRegistroIngreso.js";
+import { formatearMoneda, useRegistroIngreso } from "@ecopac/shared";
 
 export default function ModalRegistroIngreso({
   abierto,
@@ -7,6 +7,14 @@ export default function ModalRegistroIngreso({
   onExito, // Callback para notificar al padre tras guardar
   catalogos = { medicamentos: [], bodegas: [], proveedores: [] },
   usuarioId,
+  // Renglones de una donacion en curso de convertirse en ingreso (issue #756): con esto, la
+  // cantidad -y el medicamento, si ya se habia escrito- de cada renglon se precarga sola al
+  // pasar al siguiente item, en vez de pedirla de nuevo. Ver la doc de detallesDonacion en
+  // useRegistroIngreso.js.
+  detallesDonacion,
+  // Proveedor sugerido a partir del donante ya elegido al registrar la donacion (issue #756,
+  // sugerirProveedorId() en useRegistroIngreso.js): sigue siendo editable, no una decision.
+  proveedorIdInicial,
 }) {
   const {
     origen,
@@ -25,7 +33,12 @@ export default function ModalRegistroIngreso({
     resetFormulario,
     error,
     guardando,
-  } = useRegistroIngreso({ usuarioId, onGuardarExitoso: onExito });
+  } = useRegistroIngreso({
+    usuarioId,
+    onGuardarExitoso: onExito,
+    detallesDonacion,
+    proveedorIdInicial,
+  });
 
   if (!abierto) return null;
 
@@ -75,7 +88,7 @@ export default function ModalRegistroIngreso({
               className="alert border-0 rounded-3 text-dark mb-3 p-3"
               style={{ backgroundColor: "#FFF3CD", fontSize: "12px", lineHeight: "1.5" }}
             >
-              <strong>⚠️ Advertencia:</strong> Los lotes que crea este ingreso quedan como{" "}
+              <strong>Advertencia:</strong> Los lotes que crea este ingreso quedan como{" "}
               <strong>provisionales</strong>. <u>No afectarán el stock de inventario</u> hasta su
               confirmación.
             </div>
@@ -93,7 +106,6 @@ export default function ModalRegistroIngreso({
               /* Pantalla de Resumen tras guardar */
               <div className="card border-success bg-success-subtle rounded-3 p-3">
                 <div className="d-flex align-items-center gap-2 text-success font-bold mb-2">
-                  <span>✅</span>
                   <span className="fw-bold">Ingreso registrado con éxito (Pendiente)</span>
                 </div>
                 <div
@@ -275,7 +287,7 @@ export default function ModalRegistroIngreso({
                         </select>
                       </div>
 
-                      <div className="col-md-4">
+                      <div className="col-md-3">
                         <label className="form-label text-muted mb-1" style={{ fontSize: "11px" }}>
                           Cantidad *
                         </label>
@@ -290,7 +302,24 @@ export default function ModalRegistroIngreso({
                         />
                       </div>
 
-                      <div className="col-md-8">
+                      <div className="col-md-3">
+                        <label className="form-label text-muted mb-1" style={{ fontSize: "11px" }}>
+                          Costo Unitario (Q)
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          placeholder="Opcional"
+                          className="form-control form-control-sm rounded-2"
+                          value={itemActual.costo_unitario}
+                          onChange={(e) =>
+                            setItemActual({ ...itemActual, costo_unitario: e.target.value })
+                          }
+                        />
+                      </div>
+
+                      <div className="col-md-6">
                         <label className="form-label text-muted mb-1" style={{ fontSize: "11px" }}>
                           Fecha Vencimiento
                         </label>
@@ -332,13 +361,14 @@ export default function ModalRegistroIngreso({
                         <th className="py-2 px-3">Bodega</th>
                         <th className="py-2 px-3">Vencimiento</th>
                         <th className="py-2 px-3">Cantidad</th>
+                        <th className="py-2 px-3">Costo Unitario</th>
                         <th className="py-2 px-3 text-end">Acción</th>
                       </tr>
                     </thead>
                     <tbody>
                       {items.length === 0 ? (
                         <tr>
-                          <td colSpan="6" className="py-4 text-center text-muted">
+                          <td colSpan="7" className="py-4 text-center text-muted">
                             No se han agregado medicamentos a la lista.
                           </td>
                         </tr>
@@ -352,6 +382,11 @@ export default function ModalRegistroIngreso({
                             <td className="px-3">{nombreDeBodega(item.bodega_id)}</td>
                             <td className="px-3">{item.fecha_vencimiento || "N/A"}</td>
                             <td className="px-3 fw-bold">{item.cantidad}</td>
+                            <td className="px-3">
+                              {item.costo_unitario === "" || item.costo_unitario === undefined
+                                ? "N/A"
+                                : formatearMoneda(item.costo_unitario)}
+                            </td>
                             <td className="px-3 text-end">
                               <button
                                 type="button"

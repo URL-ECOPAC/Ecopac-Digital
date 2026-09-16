@@ -45,11 +45,26 @@ real.**
 ### Local (automatico)
 
 `supabase db reset` (y por lo tanto `supabase start` la primera vez) ya aplica
-`supabase/seed-demo.sql` despues de las migraciones y de `supabase/seed.sql`, configurado en
-`supabase/config.toml` (`[db.seed].sql_paths`). No hace falta ningun paso extra: levantar el
-stack local ya deja la base con estos datos.
+`supabase/seed-demo.sql` despues de las migraciones, configurado en `supabase/config.toml`
+(`[db.seed].sql_paths`). No hace falta ningun paso extra: levantar el stack local ya deja la base
+con estos datos.
 
 El seed es idempotente: correr `supabase db reset` de nuevo no duplica filas ni falla.
+
+### El catalogo geografico ya no es un seed (issue #704)
+
+`supabase/seed.sql` cargaba los 22 departamentos y los 340 municipios de Guatemala. **Desde la
+migracion `00125` no carga nada**: el archivo quedo con comentarios que explican el cambio, y el
+catalogo se siembra como parte de las migraciones.
+
+El motivo es el que hace que este documento exista: `supabase db push` -lo unico que corre contra
+`ecopac-dev` y `ecopac-prod`- **nunca ejecuta seeds**. Los datos de demostracion pueden vivir en un
+seed porque son opcionales y solo de desarrollo; el catalogo geografico no, porque **sin municipios
+no hay comunidades y sin comunidades no se puede crear una jornada**. Un proyecto de Supabase nuevo
+nacia sin ese catalogo y sin forma de cargarlo desde la aplicacion.
+
+Las tres comunidades de `seed-demo.sql` siguen colgando de los municipios 106, 401 y 1601, que
+ahora llegan por migracion, asi que el seed de demostracion no cambio.
 
 ### `ecopac-dev` (manual, una sola vez, con criterio del equipo)
 

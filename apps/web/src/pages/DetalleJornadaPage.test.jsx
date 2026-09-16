@@ -142,6 +142,23 @@ describe("DetalleJornadaPage", () => {
     expect(screen.getByText("01/03/2026 · Vista Hermosa")).toBeInTheDocument();
   });
 
+  // Issue #756: botiquin_bodega_id no se mostraba en ninguna pantalla.
+  it("muestra la bodega de botiquin cuando la jornada la tiene", () => {
+    mockEstadoDetalle.jornada = {
+      ...JORNADA_EN_CURSO,
+      botiquinBodega: { nombre: "Botiquin movil 1" },
+    };
+    pantalla();
+
+    expect(screen.getByText("Botiquin movil 1")).toBeInTheDocument();
+  });
+
+  it("sin bodega de botiquin asignada, muestra un guion", () => {
+    pantalla();
+
+    expect(screen.getAllByText("—").length).toBeGreaterThan(0);
+  });
+
   it("la pestaña Cierre muestra los indicadores del resumen de cierre", () => {
     pantalla();
     irAPestaniaCierre();

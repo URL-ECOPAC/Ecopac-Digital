@@ -47,6 +47,30 @@ export function puedeVerLotes(rol) {
 }
 
 /**
+ * Puede corregir un lote ya registrado -hoy, solo su costoUnitario (issue #752, CAMPOS_CORRECCION_LOTE
+ * en campos.js).
+ *
+ * Espejo de la politica de UPDATE de la 00107, que a diferencia de puedeAdministrarLotes() no es
+ * solo por rol: administrador corrige cualquier lote, pero un rol de campo solo el que registro
+ * el mismo, y solo mientras siga provisional -- en cuanto la administradora confirma el ingreso
+ * que lo trajo, deja de ser suyo. Por eso, a diferencia del resto de este archivo, esta funcion
+ * necesita la fila del lote y no solo el rol (mismo criterio que puedeCorregirConsulta(),
+ * pacientes/permisos.js).
+ *
+ * @param {string} rol Rol de quien mira la pantalla.
+ * @param {{ registradoPor?: string|null, confirmado?: boolean|null }} lote Como lo devuelve
+ *   aLote() (lotes.api.js).
+ * @param {string} usuarioId UUID del perfil de la sesion.
+ * @returns {boolean}
+ */
+export function puedeCorregirLote(rol, lote, usuarioId) {
+  if (esAdministrador(rol)) return true;
+  if (!lote || !usuarioId) return false;
+
+  return lote.registradoPor === usuarioId && lote.confirmado === false;
+}
+
+/**
  * Permisos de un rol, en la forma que consume una pantalla.
  *
  * `puedeCrear` responde "se le puede ofrecer el formulario de alta"; `puedeAdministrar`, "lo que

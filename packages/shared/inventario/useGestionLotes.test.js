@@ -32,6 +32,36 @@ describe("datosLoteParaRegistrar", () => {
       fechaVencimiento: "2027-09-01",
     });
   });
+
+  it("sin costo_unitario, no incluye costoUnitario (issue #752)", () => {
+    const resultado = datosLoteParaRegistrar({
+      medicamento_id: "med-1",
+      numero_lote: "L-002",
+      proveedor_id: "prov-1",
+      origen: "compra",
+      cantidad: 50,
+      fecha_ingreso: "2026-09-01",
+      fecha_vencimiento: "2027-09-01",
+      costo_unitario: "",
+    });
+
+    expect(resultado).not.toHaveProperty("costoUnitario");
+  });
+
+  it("con costo_unitario, lo traduce a costoUnitario como numero (issue #752)", () => {
+    const resultado = datosLoteParaRegistrar({
+      medicamento_id: "med-1",
+      numero_lote: "L-002",
+      proveedor_id: "prov-1",
+      origen: "compra",
+      cantidad: 50,
+      fecha_ingreso: "2026-09-01",
+      fecha_vencimiento: "2027-09-01",
+      costo_unitario: "8.5",
+    });
+
+    expect(resultado.costoUnitario).toBe(8.5);
+  });
 });
 
 describe("validarDatosDeLote", () => {

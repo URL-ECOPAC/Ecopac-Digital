@@ -44,9 +44,15 @@ function Medicamentos({ evento }) {
 }
 
 function DetalleDeConsulta({ evento }) {
+  // antecedentes/sintomas/exploracion/observaciones se capturan desde antes (ConsultaScreen.js)
+  // pero el historial nunca los pedia ni los mostraba (issue #756).
   const campos = [
     ["Motivo", evento.motivoConsulta],
+    ["Antecedentes", evento.antecedentes],
+    ["Sintomas", evento.sintomas],
+    ["Exploracion", evento.exploracion],
     ["Tratamiento", evento.tratamiento],
+    ["Observaciones", evento.observaciones],
     ["Seguimiento", evento.planSeguimiento],
   ].filter(([, valor]) => valor);
 

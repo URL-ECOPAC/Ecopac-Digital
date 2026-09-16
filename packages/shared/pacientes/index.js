@@ -28,6 +28,8 @@ export * from "./historial.filtros.js";
 export * from "./useHistorialPaciente.js";
 export * from "./signos.js";
 export * from "./useEvolucionSignos.js";
+export * from "./useCorreccionTriaje.js";
+export * from "./useCorreccionConsulta.js";
 export * from "./useRecetasPaciente.js";
 export * from "./recetas.imprimible.js";
 export * from "./useCondicionesPaciente.js";

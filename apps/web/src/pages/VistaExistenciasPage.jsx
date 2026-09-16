@@ -1,7 +1,5 @@
-import { useVistaExistencias } from "../../../../packages/shared/inventario/useVistaExistencias";
+import { ESTADO_EXISTENCIA, useVistaExistencias } from "@ecopac/shared";
 import { FilterBar, DataList } from "@ecopac/ui/components";
-import { ESTADO_EXISTENCIA } from "../../../../packages/shared/inventario/useVistaExistencias";
-
 // ─── Datos de ejemplo (en producción vendrán desde el contenedor/padre) ───
 const DATOS_MOCK = [];
 const BODEGAS_MOCK = ["Todas", "Central", "Norte", "Sur"];
@@ -68,9 +66,7 @@ export default function VistaExistenciasPage() {
           borderTop: "1px solid var(--color-borde)",
         }}
       >
-        <strong style={{ fontSize: "13px", color: "var(--color-texto)" }}>
-          📋 Desglose por Lote
-        </strong>
+        <strong style={{ fontSize: "13px", color: "var(--color-texto)" }}>Desglose por Lote</strong>
         <table
           style={{ width: "100%", marginTop: "8px", fontSize: "13px", borderCollapse: "collapse" }}
         >

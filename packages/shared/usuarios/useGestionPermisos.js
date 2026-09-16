@@ -86,8 +86,8 @@ export function huboCambioEnPermiso(antes, despues) {
  *   error: object|null,
  *   claveEnProceso: string|null,
  *   avisoSinEfecto: { clave: string, mensaje: string }|null,
- *   conceder: (clave: string) => Promise<void>,
- *   revocar: (clave: string) => Promise<void>,
+ *   conceder: (clave: string, motivo?: string) => Promise<void>,
+ *   revocar: (clave: string, motivo?: string) => Promise<void>,
  *   restablecer: (clave: string) => Promise<void>,
  * }}
  */
@@ -135,11 +135,11 @@ export function useGestionPermisos(idUsuario) {
   );
 
   const conceder = useCallback(
-    (clave) => ejecutar(clave, () => concederPermiso(idUsuario, clave)),
+    (clave, motivo) => ejecutar(clave, () => concederPermiso(idUsuario, clave, { motivo })),
     [ejecutar, idUsuario],
   );
   const revocar = useCallback(
-    (clave) => ejecutar(clave, () => revocarPermiso(idUsuario, clave)),
+    (clave, motivo) => ejecutar(clave, () => revocarPermiso(idUsuario, clave, { motivo })),
     [ejecutar, idUsuario],
   );
   const restablecer = useCallback(

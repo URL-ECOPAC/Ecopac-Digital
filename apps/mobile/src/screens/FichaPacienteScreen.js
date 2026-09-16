@@ -1,193 +1,196 @@
-import { StyleSheet, Text, View } from "react-native";
-import { useNavigation, useRoute } from "@react-navigation/native";
+import { useState } from "react";
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-import {
-  CAMPOS_FICHA_PACIENTE,
-  cabeceraDePaciente,
-  formatearFechaCorta,
-  permisosDeFicha,
-  resumenDeUltimaAtencion,
-  textoDeCampoDeFicha,
-  usePaciente,
-  valoresDeFichaPaciente,
-} from "@ecopac/shared";
-import { colors, spacing, typography } from "@ecopac/ui-tokens";
+import { permisosDeFicha } from "@ecopac/shared";
 
-import {
-  Card,
-  ErrorState,
-  LoadingState,
-  PrimaryButton,
-  ScreenContainer,
-  SecondaryButton,
-  StatusChip,
-} from "../components";
-import { useSesionCompartida } from "../contexto/SesionProvider";
-import { ROUTES } from "../navigation/rutas";
+import CondicionesPacienteSeccion from "./ficha-paciente/CondicionesPacienteSeccion";
+import SignosVitalesSeccion from "./ficha-paciente/SignosVitalesSeccion";
+import RecetasPacienteSeccion from "./ficha-paciente/RecetasPacienteSeccion";
+import ModalEdicionPaciente from "./ModalEdicionPaciente";
 
-function Dato({ etiqueta, valor }) {
-  return (
-    <View style={styles.dato}>
-      <Text style={styles.etiqueta}>{etiqueta}</Text>
-      <Text style={styles.valor}>{valor ?? "—"}</Text>
-    </View>
-  );
-}
-
-export default function FichaPacienteScreen() {
-  const navigation = useNavigation();
-  const { params } = useRoute();
-  const { rol } = useSesionCompartida();
-  const pacienteId = params?.pacienteId;
-  const { paciente, cargando, error, recargar } = usePaciente(pacienteId, { rol });
-
-  if (cargando && !paciente) {
-    return (
-      <ScreenContainer scrollable={false}>
-        <LoadingState />
-      </ScreenContainer>
-    );
-  }
-
-  if (error && !paciente) {
-    return (
-      <ScreenContainer scrollable={false}>
-        <ErrorState message={error.mensaje} onRetry={recargar} />
-      </ScreenContainer>
-    );
-  }
+export default function FichaPacienteScreen({ route, navigation }) {
+  const { paciente, rol = "medico" } = route.params || {};
+  const [pestanaActiva, setPestanaActiva] = useState("historial");
+  const [editando, setEditando] = useState(false);
+  const permisos = permisosDeFicha(rol);
 
   if (!paciente) {
     return (
-      <ScreenContainer scrollable={false}>
-        <ErrorState message="No se encontro el paciente." />
-      </ScreenContainer>
+      <View style={styles.centroContainer}>
+        <Text style={styles.textoError}>No se proporcionó información del paciente.</Text>
+      </View>
     );
   }
 
-  const cabecera = cabeceraDePaciente(paciente);
-  const permisos = permisosDeFicha(rol);
-  const ultima = permisos.puedeVerDatosClinicos ? resumenDeUltimaAtencion(paciente) : null;
-  const valores = valoresDeFichaPaciente(paciente);
-
   return (
-    <ScreenContainer>
-      <Text style={styles.nombre}>{cabecera.nombreCompleto ?? "Paciente sin nombre"}</Text>
-      <Text style={styles.subtitulo}>
-        {[
-          cabecera.numeroFicha ? `Ficha ${cabecera.numeroFicha}` : null,
-          cabecera.edad,
-          cabecera.comunidad,
-        ]
-          .filter(Boolean)
-          .join(" · ")}
-      </Text>
+    <SafeAreaView style={styles.container}>
+      {/* Encabezado del Paciente */}
+      <View style={styles.encabezado}>
+        <Text style={styles.nombrePaciente}>
+          {paciente.nombre} {paciente.apellido}
+        </Text>
+        <Text style={styles.detallesPaciente}>
+          CUI/DPI: {paciente.documento || paciente.cui || "N/A"} | Edad: {paciente.edad || "--"}{" "}
+          años
+        </Text>
+      </View>
 
-      {cabecera.condiciones.length > 0 && (
-        <View style={styles.condiciones}>
-          {cabecera.condiciones.map((condicion) => (
-            <StatusChip
-              key={condicion.id}
-              status={condicion.estado}
-              label={`${condicion.nombre} · ${condicion.etiquetaEstado}`}
-            />
-          ))}
-        </View>
-      )}
+      {/* Navegación por pestañas */}
+      <View style={styles.tabBar}>
+        <TouchableOpacity
+          style={[styles.tabItem, pestanaActiva === "historial" && styles.tabItemActivo]}
+          onPress={() => setPestanaActiva("historial")}
+        >
+          <Text style={[styles.tabTexto, pestanaActiva === "historial" && styles.tabTextoActivo]}>
+            Condiciones
+          </Text>
+        </TouchableOpacity>
 
-      {permisos.puedeVerDatosClinicos && (
-        <Card title="Ultima atencion" style={styles.tarjeta}>
-          {ultima ? (
-            <>
-              <Dato
-                etiqueta="Fecha"
-                valor={ultima.fecha ? formatearFechaCorta(ultima.fecha) : null}
-              />
-              <Dato etiqueta="Diagnostico" valor={ultima.diagnostico} />
-              <Dato etiqueta="Jornada" valor={ultima.jornada} />
-            </>
-          ) : (
-            <Text style={styles.vacio}>Sin atenciones registradas.</Text>
-          )}
-        </Card>
-      )}
+        <TouchableOpacity
+          style={[styles.tabItem, pestanaActiva === "signos" && styles.tabItemActivo]}
+          onPress={() => setPestanaActiva("signos")}
+        >
+          <Text style={[styles.tabTexto, pestanaActiva === "signos" && styles.tabTextoActivo]}>
+            Signos Vitales
+          </Text>
+        </TouchableOpacity>
 
-      {/* Debajo de la cabecera y de la ultima atencion a proposito: el criterio 4 de la #135
-          pide que lo critico y los accesos quepan sin desplazarse en una pantalla de 5
-          pulgadas, y trece campos no caben ahi arriba. */}
-      <Card title="Datos generales" style={styles.tarjeta}>
-        {CAMPOS_FICHA_PACIENTE.map((campo) => (
-          <Dato key={campo.id} etiqueta={campo.label} valor={textoDeCampoDeFicha(campo, valores)} />
-        ))}
-      </Card>
+        <TouchableOpacity
+          style={[styles.tabItem, pestanaActiva === "recetas" && styles.tabItemActivo]}
+          onPress={() => setPestanaActiva("recetas")}
+        >
+          <Text style={[styles.tabTexto, pestanaActiva === "recetas" && styles.tabTextoActivo]}>
+            Recetas
+          </Text>
+        </TouchableOpacity>
+      </View>
 
-      <View style={styles.acciones}>
-        <PrimaryButton
-          title="Registrar triaje"
-          onPress={() => navigation.navigate(ROUTES.TRIAJE, { pacienteId })}
-        />
-        {permisos.puedeVerDatosClinicos && (
-          <>
-            <SecondaryButton
-              title="Registrar consulta"
-              onPress={() => navigation.navigate(ROUTES.CONSULTA, { pacienteId })}
-              style={styles.accion}
-            />
-            <SecondaryButton
-              title="Ver historial"
-              onPress={() => navigation.navigate(ROUTES.HISTORIAL_PACIENTE, { pacienteId })}
-              style={styles.accion}
-            />
-          </>
+      {/* Contenido de la Pestaña Activa */}
+      <ScrollView contentContainerStyle={styles.contenidoScroll}>
+        {pestanaActiva === "historial" && (
+          <CondicionesPacienteSeccion pacienteId={paciente.id} rol={rol} />
+        )}
+
+        {pestanaActiva === "signos" && <SignosVitalesSeccion pacienteId={paciente.id} />}
+
+        {pestanaActiva === "recetas" && <RecetasPacienteSeccion pacienteId={paciente.id} />}
+      </ScrollView>
+
+      {/* Botones de Acción de Flujo Clinico */}
+      <View style={styles.accionesBar}>
+        <TouchableOpacity
+          style={styles.botonAccion}
+          onPress={() => navigation.navigate("Triaje", { paciente })}
+        >
+          <Text style={styles.textoBotonAccion}>Nuevo Triaje</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.botonAccion, styles.botonConsulta]}
+          onPress={() => navigation.navigate("Consulta", { paciente })}
+        >
+          <Text style={styles.textoBotonAccion}>Nueva Consulta</Text>
+        </TouchableOpacity>
+
+        {permisos.puedeEditar && (
+          <TouchableOpacity style={styles.botonAccion} onPress={() => setEditando(true)}>
+            <Text style={styles.textoBotonAccion}>Editar datos</Text>
+          </TouchableOpacity>
         )}
       </View>
-    </ScreenContainer>
+
+      {editando && (
+        <ModalEdicionPaciente
+          visible={editando}
+          paciente={paciente}
+          onClose={() => setEditando(false)}
+          onGuardado={() => setEditando(false)}
+        />
+      )}
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  nombre: {
-    color: colors.text,
-    fontSize: typography.sizes.lg,
-    fontWeight: typography.weights.semibold,
+  container: {
+    flex: 1,
+    backgroundColor: "#ffffff",
   },
-  subtitulo: {
-    color: colors.textMuted,
-    fontSize: typography.sizes.sm,
-    marginBottom: spacing.sm,
+  centroContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
   },
-  condiciones: {
+  textoError: {
+    color: "#dc2626",
+    fontSize: 16,
+  },
+  encabezado: {
+    padding: 16,
+    backgroundColor: "#f8fafc",
+    borderBottomWidth: 1,
+    borderBottomColor: "#e2e8f0",
+  },
+  nombrePaciente: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#0f172a",
+  },
+  detallesPaciente: {
+    fontSize: 13,
+    color: "#64748b",
+    marginTop: 4,
+  },
+  tabBar: {
     flexDirection: "row",
-    flexWrap: "wrap",
-    gap: spacing.xs,
-    marginBottom: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: "#e2e8f0",
+    backgroundColor: "#ffffff",
   },
-  tarjeta: {
-    marginBottom: spacing.sm,
+  tabItem: {
+    flex: 1,
+    paddingVertical: 12,
+    alignItems: "center",
+    borderBottomWidth: 2,
+    borderBottomColor: "transparent",
   },
-  dato: {
+  tabItemActivo: {
+    borderBottomColor: "#0284c7",
+  },
+  tabTexto: {
+    fontSize: 13,
+    fontWeight: "500",
+    color: "#64748b",
+  },
+  tabTextoActivo: {
+    color: "#0284c7",
+    fontWeight: "700",
+  },
+  contenidoScroll: {
+    padding: 16,
+  },
+  accionesBar: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: spacing.xs,
+    padding: 12,
+    gap: 12,
+    borderTopWidth: 1,
+    borderTopColor: "#e2e8f0",
+    backgroundColor: "#ffffff",
   },
-  etiqueta: {
-    color: colors.textMuted,
-    fontSize: typography.sizes.sm,
+  botonAccion: {
+    flex: 1,
+    backgroundColor: "#0284c7",
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: "center",
   },
-  valor: {
-    color: colors.text,
-    fontSize: typography.sizes.sm,
-    flexShrink: 1,
-    textAlign: "right",
+  botonConsulta: {
+    backgroundColor: "#059669",
   },
-  vacio: {
-    color: colors.textMuted,
-    fontSize: typography.sizes.sm,
-  },
-  acciones: {
-    marginTop: spacing.xs,
-  },
-  accion: {
-    marginTop: spacing.sm,
+  textoBotonAccion: {
+    color: "#ffffff",
+    fontWeight: "600",
+    fontSize: 14,
   },
 });

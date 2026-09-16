@@ -14,18 +14,19 @@ import { obtenerPresupuestoProyecto } from "@ecopac/shared/presupuestos";
 import KanbanBoard from "../components/KanbanBoard";
 import EmptyState from "../components/EmptyState";
 import AccesoDenegadoScreen from "./AccesoDenegadoScreen";
+import ModalProyecto from "./ModalProyecto";
 import { useSesionCompartida } from "../contexto/SesionProvider";
 
 // issue #688: esta pantalla nunca mostraba un proyecto real, para ningun rol. Tres defectos
 // encadenados, el primero tapaba a los otros dos:
 //
 // 1. useProyectosSociales() se llamaba sin { usuarioRol }, asi que puedeVerProyectos(undefined)
-//    era false y el hook devolvia [] sin llegar a consultar.
+// era false y el hook devolvia [] sin llegar a consultar.
 // 2. Con la lista vacia, la pantalla caia a PROYECTOS_DEMO (tres proyectos inventados) en vez de
-//    pintar el estado vacio real.
+// pintar el estado vacio real.
 // 3. ETAPAS_KANBAN usaba "en_ejecucion"/"completado", que no existen en el enum estado_proyecto
-//    (00007): con datos reales la metrica "activos" salia siempre 0 y las columnas del kanban
-//    quedaban vacias aunque hubiera proyectos.
+// (00007): con datos reales la metrica "activos" salia siempre 0 y las columnas del kanban
+// quedaban vacias aunque hubiera proyectos.
 //
 // Los tres se corrigen juntos: se pasa el rol real, se retira el dato demo (EmptyState/
 // AccesoDenegadoScreen en su lugar), y las etapas salen de ESTADOS_PROYECTO/
@@ -51,14 +52,18 @@ export default function ProyectosScreen() {
   const { rol } = useSesionCompartida();
   const {
     proyectos: proyectosBD,
+    catalogos,
     cargando,
     tieneAccesoLectura,
+    puedeEditar,
     cambiarEtapaProyecto,
+    guardarProyecto,
   } = useProyectosSociales({ usuarioRol: rol });
 
   const [modoVista, setModoVista] = useState("kanban"); // "lista" | "kanban"
   const [filtroEstado, setFiltroEstado] = useState("todos");
   const [presupuestosPorProyecto, setPresupuestosPorProyecto] = useState({});
+  const [formularioAbierto, setFormularioAbierto] = useState(false);
 
   // presupuesto_de_proyecto (00040) toma un solo id: no hay version que liste todos de una vez,
   // asi que se completa uno por uno en paralelo. A la escala de proyectos de esta ONG el costo es
@@ -132,14 +137,19 @@ export default function ProyectosScreen() {
             <Text style={styles.titulo}>Gestión de Proyectos</Text>
             <Text style={styles.subtitulo}>Módulo administrador macro</Text>
           </View>
-          <TouchableOpacity
-            style={styles.toggleBtn}
-            onPress={() => setModoVista(modoVista === "lista" ? "kanban" : "lista")}
-          >
-            <Text style={styles.toggleBtnText}>
-              {modoVista === "lista" ? "📊 Kanban" : "📋 Lista"}
-            </Text>
-          </TouchableOpacity>
+          <View style={styles.headerAcciones}>
+            {puedeEditar && (
+              <TouchableOpacity style={styles.toggleBtn} onPress={() => setFormularioAbierto(true)}>
+                <Text style={styles.toggleBtnText}>+ Nuevo</Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity
+              style={styles.toggleBtn}
+              onPress={() => setModoVista(modoVista === "lista" ? "kanban" : "lista")}
+            >
+              <Text style={styles.toggleBtnText}>{modoVista === "lista" ? "Kanban" : "Lista"}</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Tarjetas de Métricas */}
@@ -220,6 +230,14 @@ export default function ProyectosScreen() {
           </View>
         )}
       </ScrollView>
+
+      <ModalProyecto
+        visible={formularioAbierto}
+        proyecto={null}
+        catalogos={catalogos}
+        onClose={() => setFormularioAbierto(false)}
+        onGuardar={guardarProyecto}
+      />
     </SafeAreaView>
   );
 }
@@ -246,6 +264,10 @@ const styles = StyleSheet.create({
   subtitulo: {
     fontSize: 13,
     color: "#64748B",
+  },
+  headerAcciones: {
+    flexDirection: "row",
+    gap: 8,
   },
   toggleBtn: {
     backgroundColor: "#E2E8F0",

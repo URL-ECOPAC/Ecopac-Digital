@@ -10,6 +10,7 @@ export default function ModalMedicamento({
   onSubmit,
   principiosActivos = [],
   onCrearPrincipioActivo,
+  onAlternarActivo,
   advertenciaDuplicado,
   // Fallo al guardar. Llega ya como texto apto para pantalla: lo escribe normalizarError(), no
   // el servidor. Se pinta aqui y no con alert(), que es lo que pide la issue #762.
@@ -107,7 +108,7 @@ export default function ModalMedicamento({
               marginBottom: "16px",
             }}
           >
-            ⚠️ <strong>Medicamento duplicado:</strong> Ya existe un registro con el mismo nombre,
+            <strong>Medicamento duplicado:</strong> Ya existe un registro con el mismo nombre,
             concentración, presentación y marca.
           </div>
         )}
@@ -370,51 +371,89 @@ export default function ModalMedicamento({
                 }}
               />
             </div>
+
+            <div>
+              <label
+                style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px" }}
+              >
+                <input
+                  type="checkbox"
+                  checked={Boolean(formData.esPediatrico)}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, esPediatrico: e.target.checked }))
+                  }
+                />
+                Es pediátrico
+              </label>
+            </div>
           </div>
 
           {/* Botones de Acción */}
           <div
             style={{
               display: "flex",
-              justifyContent: "flex-end",
+              justifyContent: modoEdicion && onAlternarActivo ? "space-between" : "flex-end",
+              alignItems: "center",
               gap: "12px",
               marginTop: "12px",
             }}
           >
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={cargando}
-              style={{
-                padding: "10px 24px",
-                borderRadius: "9999px",
-                border: "1px solid #cbd5e1",
-                backgroundColor: "#ffffff",
-                color: "#475569",
-                fontSize: "13px",
-                fontWeight: "600",
-                cursor: "pointer",
-              }}
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={cargando}
-              style={{
-                padding: "10px 28px",
-                borderRadius: "9999px",
-                border: "none",
-                backgroundColor: "#059669", // Mismo verde uniforme
-                color: "#ffffff",
-                fontSize: "13px",
-                fontWeight: "700",
-                cursor: cargando ? "not-allowed" : "pointer",
-                opacity: cargando ? 0.7 : 1,
-              }}
-            >
-              {cargando ? "Guardando..." : "Guardar"}
-            </button>
+            {modoEdicion && onAlternarActivo && (
+              <button
+                type="button"
+                onClick={onAlternarActivo}
+                disabled={cargando}
+                style={{
+                  padding: "10px 20px",
+                  borderRadius: "9999px",
+                  border: "1px solid",
+                  borderColor: formData.activo ? "#fecaca" : "#bbf7d0",
+                  backgroundColor: formData.activo ? "#fef2f2" : "#f0fdf4",
+                  color: formData.activo ? "#b91c1c" : "#15803d",
+                  fontSize: "13px",
+                  fontWeight: "600",
+                  cursor: cargando ? "not-allowed" : "pointer",
+                }}
+              >
+                {formData.activo ? "Desactivar" : "Reactivar"}
+              </button>
+            )}
+            <div style={{ display: "flex", gap: "12px" }}>
+              <button
+                type="button"
+                onClick={onClose}
+                disabled={cargando}
+                style={{
+                  padding: "10px 24px",
+                  borderRadius: "9999px",
+                  border: "1px solid #cbd5e1",
+                  backgroundColor: "#ffffff",
+                  color: "#475569",
+                  fontSize: "13px",
+                  fontWeight: "600",
+                  cursor: "pointer",
+                }}
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                disabled={cargando}
+                style={{
+                  padding: "10px 28px",
+                  borderRadius: "9999px",
+                  border: "none",
+                  backgroundColor: "#059669", // Mismo verde uniforme
+                  color: "#ffffff",
+                  fontSize: "13px",
+                  fontWeight: "700",
+                  cursor: cargando ? "not-allowed" : "pointer",
+                  opacity: cargando ? 0.7 : 1,
+                }}
+              >
+                {cargando ? "Guardando..." : "Guardar"}
+              </button>
+            </div>
           </div>
         </form>
       </div>

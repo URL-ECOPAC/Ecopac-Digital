@@ -124,19 +124,25 @@ la migracion esta aplicada y no se edita.
 | `triajes`                 | C R U         | —                                | C R U  | C R U              | `00033`. El voluntario crea y corrige el triaje; el `imc` es columna generada y no se envia                            |
 | `atenciones`              | C R U         | —                                | C R U  | C R                | `00033`; cola de la jornada en `00060`                                                                                 |
 | `consultas`               | C R U         | —                                | C R U  | —                  | `00033`. El INSERT exige `medico_id = auth.uid()` **y** `participa_en_jornada()`; el UPDATE, ser el medico que atendio |
-| `consulta_diagnostico`    | C R           | —                                | C R    | —                  | `00033`                                                                                                                |
+| `consulta_diagnostico`    | C R D         | —                                | C R D  | —                  | `00033` (INSERT sin exigir consulta propia) + `00082` (INSERT: medico solo en su propia consulta, `EXISTS` contra `consultas.medico_id`) + `00127` (issue #756: mismo actor de la `00082` para DELETE, para corregir un diagnostico mal elegido) |
 | `recetas`                 | C R U         | —                                | C R U  | —                  | `00033`; anulacion en `00066`. El UPDATE exige ser el medico que la firmo **y** que siga `emitida` (`00075`)           |
 | `receta_detalle`          | C R           | —                                | C R    | —                  | `00033`                                                                                                                |
 | `padecimientos_cronicos`  | C R U D       | —                                | C R U  | —                  | `00010`. Unica tabla clinica con DELETE, y solo para administrador. Auditada desde la `00070`                          |
 | `diagnosticos` (catalogo) | C R U         | —                                | R      | —                  | `00033` (lectura) + `00105` (mantenimiento). Hasta la `00105` era un catalogo VACIO y de solo lectura -nadie lo podia poblar por la API-, asi que el paso "diagnostico CIE-10" del flujo clinico no existia; esa migracion siembra el conjunto inicial y deja el mantenimiento a la administradora. **Sin DELETE:** `consulta_diagnostico` lo referencia `ON DELETE RESTRICT` (`00018`) y un diagnostico ya usado es historia clinica |
 | `fusiones_pacientes`      | R             | —                                | —      | —                  | `00101` (issue #140). Solo administrador lee; sin politicas de escritura, la unica que inserta es `fn_fusionar_pacientes()` (SECURITY DEFINER) |
 
-**Ninguna tabla clinica tiene politica de DELETE** (salvo `padecimientos_cronicos`). La baja es
-logica, no fisica. En `padecimientos_cronicos` esa excepcion existe para corregir un alta
-equivocada, no para dar de alta a un paciente de su condicion: para eso se pasa el estado a
-`resuelta`, que es lo que hace `desasociarCondicion()` en `packages/shared/pacientes`. Por ser el
-unico borrado real del esquema clinico, la `00070` le puso el trigger de auditoria que la `00026`
-le habia dejado fuera.
+**Casi ninguna tabla clinica tiene politica de DELETE**: las excepciones son
+`padecimientos_cronicos` y, desde la `00127` (issue #756), `consulta_diagnostico`. La baja de un
+registro clinico en si (una consulta, una receta, un padecimiento) es logica, no fisica. En
+`padecimientos_cronicos` esa excepcion existe para corregir un alta equivocada, no para dar de alta
+a un paciente de su condicion: para eso se pasa el estado a `resuelta`, que es lo que hace
+`desasociarCondicion()` en `packages/shared/pacientes`. Por ser el unico borrado real de una fila
+que documenta un hecho clinico, la `00070` le puso el trigger de auditoria que la `00026` le habia
+dejado fuera. `consulta_diagnostico` es distinta: no es el hecho clinico (la consulta sigue
+existiendo, intacta), es el VINCULO entre esa consulta y un diagnostico -- elegir el diagnostico
+equivocado y corregirlo despues no es un hecho que deba conservarse como la consulta misma se
+conserva, es un error de captura. Por eso no lleva el mismo trigger de auditoria que
+`padecimientos_cronicos`.
 
 > **Los roles consultivos no leen ninguna fila clinica, y es deliberado.** `00041` les habia dado
 > lectura sobre `atenciones`, `consultas`, `recetas` y `receta_detalle` para que cuadrara un
@@ -346,12 +352,30 @@ dejando el sistema sin administrador igual. Ver Divergencia 15.
 
 ### Territorio y catalogos
 
-| Tabla                  | Quien lee             | Como se implementa                                                     |
-| ---------------------- | --------------------- | ------------------------------------------------------------------------ |
-| `departamentos`        | cualquier autenticado | `00006` (politica) + `00073` (GRANT, issue #406 resuelto)                |
-| `municipios`           | cualquier autenticado | Igual que departamentos                                                  |
-| `comunidades`          | cualquier autenticado | `00008` (politica) + `00041` (GRANT). La politica de `00041` se retiro en `00104`: era redundante con la de `00008`, ver Divergencia 10 (resuelta) |
-| `condiciones_cronicas` | cualquier autenticado | `00010`                                                                  |
+| Tabla                  | Quien lee             | Quien escribe          | Como se implementa                                    |
+| ---------------------- | --------------------- | ---------------------- | ------------------------------------------------------- |
+| `departamentos`        | cualquier autenticado | **nadie**              | `00006` (politica) + `00073` (GRANT, issue #406 resuelto). El catalogo lo siembra la `00125`, no la aplicacion |
+| `municipios`           | cualquier autenticado | **nadie**              | Igual que departamentos                                 |
+| `comunidades`          | cualquier autenticado | administrador: C U     | Lectura: `00008` (politica) + `00041` (GRANT); la politica de `00041` se retiro en `00104` por redundante. Escritura: `00116` (politicas de INSERT y UPDATE) + `00118` (`GRANT INSERT, UPDATE`), y `00117` agrega `es_vigente` como retiro logico |
+| `condiciones_cronicas` | cualquier autenticado | **nadie**              | `00010`                                                 |
+
+**Ni `departamentos` ni `municipios` se escriben desde la aplicacion, y es deliberado**: son el
+catalogo oficial de Guatemala, con `id` entero fijo, y quien lo necesite corregir lo hace en una
+migracion. Hasta la `00125` ese catalogo solo existia en `supabase/seed.sql` y por tanto **no
+llegaba a ningun ambiente remoto**, porque `supabase db push` no ejecuta seeds (issue #704). Las
+comunidades si son operativas -crecen con cada jornada nueva- y por eso la administradora las crea
+y las edita desde la aplicacion, con `es_vigente` para retirar una sin borrarla.
+
+**Ojo con cual de las dos capas los protege.** Comprobado contra la base local con las 125
+migraciones aplicadas: `authenticated` conserva `GRANT INSERT, UPDATE` sobre `departamentos` y
+`municipios` -no lo dio ninguna migracion; viene de los privilegios por defecto que Supabase
+concede sobre el esquema `public`, los mismos que la `00120` tuvo que retirar para el `DELETE`-.
+Lo que hoy impide escribir es **solo RLS**: como ninguna politica de INSERT o UPDATE las cubre, un
+administrador autenticado recibe `new row violates row-level security policy` al insertar y un
+`UPDATE` que no afecta ninguna fila, que es la asimetria de la regla de #221. El resultado efectivo
+es el correcto, pero descansa en una sola capa en vez de dos: el dia que alguien agregue una
+politica permisiva a estas tablas, el `GRANT` ya esta puesto. Retirarlo es trabajo de una issue
+propia, no de la #704, que no toca privilegios.
 
 ### Reportes: las vistas
 
