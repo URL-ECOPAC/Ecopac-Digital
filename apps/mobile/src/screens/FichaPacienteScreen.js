@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 
@@ -24,6 +25,7 @@ import {
 } from "../components";
 import { useSesionCompartida } from "../contexto/SesionProvider";
 import { ROUTES } from "../navigation/rutas";
+import ModalEdicionPaciente from "./ModalEdicionPaciente";
 
 function Dato({ etiqueta, valor }) {
   return (
@@ -40,6 +42,7 @@ export default function FichaPacienteScreen() {
   const { rol } = useSesionCompartida();
   const pacienteId = params?.pacienteId;
   const { paciente, cargando, error, recargar } = usePaciente(pacienteId, { rol });
+  const [editando, setEditando] = useState(false);
 
   if (cargando && !paciente) {
     return (
@@ -140,7 +143,26 @@ export default function FichaPacienteScreen() {
             />
           </>
         )}
+        {permisos.puedeEditar && (
+          <SecondaryButton
+            title="Editar datos"
+            onPress={() => setEditando(true)}
+            style={styles.accion}
+          />
+        )}
       </View>
+
+      {editando && (
+        <ModalEdicionPaciente
+          visible={editando}
+          paciente={paciente}
+          onClose={() => setEditando(false)}
+          onGuardado={() => {
+            setEditando(false);
+            recargar();
+          }}
+        />
+      )}
     </ScreenContainer>
   );
 }
