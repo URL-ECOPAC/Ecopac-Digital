@@ -1,41 +1,62 @@
 /* Pantallas de reportes (issue #693).
  *
- * La version anterior de ReporteJornada.jsx escribia los colores a mano (#64748b, #f8fafc...).
- * Aqui todo sale de las custom properties que publica apps/web/src/theme.js desde
- * @ecopac/ui-tokens, que es la regla de docs/ARQUITECTURA-FRONTEND.md. */
+ * Todo sale de las custom properties que publica apps/web/src/theme.js desde @ecopac/ui-tokens,
+ * que es la regla de docs/ARQUITECTURA-FRONTEND.md.
+ *
+ * Los tamanos de letra eran la excepcion: 1.125rem, 0.875rem y 1.75rem escritos a mano, que es
+ * una tercera escala tipografica ademas de la de inventario (11px/28px) y la de pacientes
+ * (0.6875rem). Ahora usan --texto-*, que es el mismo token del que salen las dos. */
 
 .reporte-seccion {
-  margin-bottom: var(--spacing-xl, 32px);
+  margin-bottom: var(--spacing-xl);
 }
 
 .reporte-titulo {
   color: var(--color-text);
-  font-size: 1.125rem;
-  font-weight: 600;
-  margin: 0 0 var(--spacing-md, 16px);
+  font-size: var(--texto-md);
+  font-weight: var(--peso-semibold);
+  margin: 0 0 var(--spacing-md);
 }
 
 .reporte-cabecera-tabla {
   align-items: center;
   display: flex;
   flex-wrap: wrap;
-  gap: var(--spacing-sm, 8px);
+  gap: var(--spacing-sm);
   justify-content: space-between;
-  margin-bottom: var(--spacing-md, 16px);
+  margin-bottom: var(--spacing-md);
 }
 
 .reporte-cabecera-tabla .reporte-titulo {
   margin-bottom: 0;
 }
 
+/* Boton de exportar. Toma el aspecto de un boton secundario del sistema en vez de declarar el
+   suyo: era el unico "boton" de reportes y no se parecia a ninguno de los demas -sin peso, sin
+   transicion y con su propio radio-. Las reglas de .btn-outline-primary en ui.css hacen el
+   resto; aqui solo queda lo que no da esa clase. */
 .reporte-exportar {
-  background-color: transparent;
-  border: 1px solid var(--color-primary);
-  border-radius: var(--radio-sm, 6px);
+  background-color: var(--color-surface);
+  border: 1px solid color-mix(in srgb, var(--color-primary) 45%, var(--color-surface));
+  border-radius: var(--radio-md);
   color: var(--color-primary);
   cursor: pointer;
-  font-size: 0.875rem;
-  padding: var(--spacing-xs, 4px) var(--spacing-md, 16px);
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-semibold);
+  padding: 0.3rem var(--spacing-md);
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease;
+}
+
+.reporte-exportar:hover:not(:disabled) {
+  background-color: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface));
+  border-color: var(--color-primary);
+}
+
+.reporte-exportar:focus-visible {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 30%, transparent);
+  outline: none;
 }
 
 .reporte-exportar:disabled {
@@ -49,28 +70,35 @@
   align-items: flex-end;
   display: flex;
   flex-wrap: wrap;
-  gap: var(--spacing-md, 16px);
-  margin-bottom: var(--spacing-lg, 24px);
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
 }
 
-/* Rejilla de cifras de cabecera. */
+/* Rejilla de cifras de cabecera.
+   Alias de .ec-kpis / .ec-kpi de ui.css: las clases de reportes se conservan porque las usan
+   cuatro pantallas, pero ya no declaran su propia escala. */
 .reporte-cifras {
   display: grid;
-  gap: var(--spacing-md, 16px);
+  gap: var(--spacing-md);
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
 }
 
 .reporte-cifra-etiqueta {
   color: var(--color-text-muted);
   display: block;
-  font-size: 0.875rem;
-  margin-bottom: var(--spacing-xs, 4px);
+  font-size: var(--texto-xxs);
+  font-weight: var(--peso-medium);
+  letter-spacing: 0.08em;
+  margin-bottom: var(--spacing-xs);
+  text-transform: uppercase;
 }
 
 .reporte-cifra {
   color: var(--color-text);
-  font-size: 1.75rem;
-  line-height: 1.2;
+  font-size: var(--texto-xxl);
+  font-weight: var(--peso-bold);
+  letter-spacing: -0.02em;
+  line-height: 1.15;
 }
 
 .reporte-cifra-estado {

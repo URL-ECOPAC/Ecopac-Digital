@@ -76,10 +76,36 @@ export function puedeVerPermisosEfectivosDeOtro(rol) {
 }
 
 /**
+ * Puede registrar o quitar las especialidades de un perfil.
+ *
+ * Espejo de las politicas de INSERT y DELETE de perfil_especialidad (00085): "administrador o el
+ * propio perfil". Es la primera funcion de este archivo que necesita algo mas que el rol -si la
+ * fila que se edita es la de quien mira-, y por eso su firma lleva un segundo argumento.
+ *
+ * No existia porque hasta la 00085 la tabla no tenia ninguna politica de escritura y nadie podia
+ * registrar una especialidad, ni siquiera la administradora (issue #405). La migracion que lo
+ * corrigio se aplico y el cliente nunca llego a usarla: no habia funcion de API que escribiera,
+ * ni componente del catalogo que dibujara una lista de etiquetas editable. Por eso un medico se
+ * creaba sin poder decir de que es especialista.
+ *
+ * Los roles consultivos quedan fuera a proposito: la 00085 les amplio la LECTURA (es_consultivo()
+ * en la politica de SELECT) y no la escritura.
+ *
+ * @param {string} rol Rol de quien mira la pantalla.
+ * @param {{ esPropioPerfil?: boolean }} [contexto]
+ */
+export function puedeGestionarEspecialidades(rol, { esPropioPerfil = false } = {}) {
+  return esAdministrador(rol) || esPropioPerfil;
+}
+
+/**
  * Permisos de un rol, en la forma que consume una pantalla.
  *
  * Se devuelven juntos para que un hook no tenga que llamar a las funciones sueltas ni acordarse
  * de cuales existen.
+ *
+ * puedeGestionarEspecialidades no esta aqui a proposito, por el mismo motivo que puedeAnularReceta
+ * no esta en permisosDePacientes(): no depende solo del rol, sino de que perfil se este mirando.
  */
 export function permisosDeUsuarios(rol) {
   return {

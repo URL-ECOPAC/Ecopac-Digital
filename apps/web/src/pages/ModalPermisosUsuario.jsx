@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Info } from "lucide-react";
 
 import {
   MODULOS,
@@ -8,29 +9,165 @@ import {
   useGestionPermisos,
 } from "@ecopac/shared";
 
+import Card from "../components/Card";
 import ErrorState from "../components/ErrorState";
 import LoadingState from "../components/LoadingState";
 import Modal from "../components/Modal";
 import PrimaryButton from "../components/PrimaryButton";
 import SecondaryButton from "../components/SecondaryButton";
 import StatusChip from "../components/StatusChip";
+import TextField from "../components/TextField";
+import "./permisos.css";
 
 // Modal de permisos individuales de un usuario (issue #108), abierto DIRECTO desde la fila del
 // listado en ColaboradoresPage.jsx -no desde adentro de ModalEdicionUsuario-: es una accion
-// hermana de "Editar", al mismo nivel, no anidada (PLAN.md, decision 2). El segundo boton por
-// fila que esto necesita lo da la prop accionSecundaria de DataList.jsx, agregada para este
-// issue con autorizacion explicita para tocar el catalogo.
+// hermana de "Editar", al mismo nivel, no anidada (PLAN.md, decision 2).
 //
 // Solo dibuja lo que useGestionPermisos() ya resuelve: la combinacion rol/individual y el
 // origen de cada permiso salen de obtenerPermisosEfectivos() (permisos.api.js, issue #104), no
 // se recalculan aca.
 //
 // `MODULOS` (packages/shared/navegacion.js) presta la etiqueta legible de cada modulo -su
-// campo `modulo` coincide a proposito con la columna `modulo` de la tabla `permisos`, ver el
-// comentario de esa constante-, sin duplicar esa lista en este archivo.
+// campo `modulo` coincide a proposito con la columna `modulo` de la tabla `permisos`-, sin
+// duplicar esa lista en este archivo.
+//
+// QUE CAMBIA EN EL DIBUJO. El contenido es el mismo; lo que era ilegible era la forma:
+//
+//   1. Cada permiso ofrecia un campo de texto de 180px SIEMPRE visible, aunque nadie fuera a
+//      escribir un motivo. Con nueve permisos, la mitad del ancho del modal eran cajas vacias.
+//      Ahora el motivo se despliega al pedirlo, y solo en la fila que se esta cambiando.
+//   2. Conceder y Revocar eran los dos el mismo boton verde solido. Revocar QUITA un permiso:
+//      va como accion destructiva, en contorno rojo.
+//   3. El aviso de "sin efecto todavia" estaba dos veces -un bloque azul arriba explicando la
+//      situacion, y una linea repetida bajo cada permiso-. Queda una marca por fila, y la
+//      explicacion larga se lee al pasar por encima.
+//   4. Los modulos eran un h6 gris sobre una lista corrida. Ahora cada uno es una tarjeta, que
+//      es como se agrupa cualquier otra cosa en el sistema.
+// `item.nombre`, no `item.etiqueta`: MODULOS (navegacion.js) no tiene ningun campo `etiqueta`
+// -- es el mismo campo inexistente que la #757 ya habia encontrado leido desde la pantalla de
+// inicio, y que su prueba fija desde entonces. Aqui seguia: como el valor era undefined, cada
+// grupo caia al `?? modulo` de mas abajo y se titulaba con la CLAVE de la tabla `permisos`
+// ("pacientes", "presupuestos") en vez de con el nombre legible del modulo.
 const ETIQUETAS_MODULO = Object.fromEntries(
-  MODULOS.filter((item) => item.modulo).map((item) => [item.modulo, item.etiqueta]),
+  MODULOS.filter((item) => item.modulo).map((item) => [item.modulo, item.nombre]),
 );
+
+const ACENTOS_MODULO = Object.fromEntries(
+  MODULOS.filter((item) => item.modulo).map((item) => [
+    item.modulo,
+    `var(--accent-${item.id}, var(--color-primary))`,
+  ]),
+);
+
+const EXPLICACION_SIN_EFECTO =
+  "Queda guardado y auditado, pero hoy ninguna politica del servidor lo consulta: concederlo o " +
+  "revocarlo no cambia lo que esta persona puede hacer hasta que la issue #409 lo conecte.";
+
+function FilaDePermiso({
+  permiso,
+  enProceso,
+  avisoSinEfecto,
+  motivo,
+  onMotivo,
+  onConceder,
+  onRevocar,
+  onRestablecer,
+}) {
+  const [pidiendoMotivo, setPidiendoMotivo] = useState(false);
+  const esIndividual = permiso.origen === ORIGEN_PERMISO.INDIVIDUAL;
+  const { mostrarConceder, mostrarRevocar, mostrarRestablecer } = accionesDisponibles(permiso);
+  const sinEfecto = !permisoGobiernaAlgunaPolitica(permiso.clave);
+
+  return (
+    <div className="permiso-fila">
+      <div className="permiso-descripcion">
+        <div className="d-flex align-items-center gap-2 flex-wrap">
+          <span className="fw-semibold">{permiso.descripcion || permiso.clave}</span>
+          <StatusChip status={permiso.origen} label={esIndividual ? "Individual" : "Del rol"} />
+          {sinEfecto && (
+            <span className="permiso-sin-efecto" title={EXPLICACION_SIN_EFECTO}>
+              <Info size={12} aria-hidden="true" />
+              Sin efecto todavia
+            </span>
+          )}
+        </div>
+
+        {esIndividual && (permiso.otorgadoPorNombre || permiso.motivo) && (
+          <p className="permiso-procedencia">
+            {permiso.otorgadoPorNombre && `Por ${permiso.otorgadoPorNombre}`}
+            {permiso.motivo
+              ? `${permiso.otorgadoPorNombre ? ": " : ""}${permiso.motivo}`
+              : permiso.otorgadoPorNombre
+                ? ". Sin motivo registrado."
+                : ""}
+          </p>
+        )}
+
+        {avisoSinEfecto?.clave === permiso.clave && (
+          <p className="text-danger small mb-0 mt-1">{avisoSinEfecto.mensaje}</p>
+        )}
+
+        {/* El motivo es opcional (usuario_permiso.motivo no es NOT NULL), asi que se pide solo
+          cuando alguien quiere dejarlo escrito. */}
+        {pidiendoMotivo && (
+          <TextField
+            aria-label="Motivo del cambio"
+            placeholder="Por que se concede o revoca (opcional)"
+            value={motivo ?? ""}
+            onChange={(evento) => onMotivo(evento.target.value)}
+            disabled={enProceso}
+            style={{ marginTop: "var(--spacing-sm)", marginBottom: 0, maxWidth: "420px" }}
+          />
+        )}
+      </div>
+
+      <div className="permiso-acciones">
+        {(mostrarConceder || mostrarRevocar) && !pidiendoMotivo && (
+          <button
+            type="button"
+            className="btn btn-link btn-sm"
+            onClick={() => setPidiendoMotivo(true)}
+            disabled={enProceso}
+          >
+            Anotar motivo
+          </button>
+        )}
+        {mostrarConceder && (
+          <PrimaryButton
+            title="Conceder"
+            size="sm"
+            onClick={() => {
+              onConceder();
+              setPidiendoMotivo(false);
+            }}
+            loading={enProceso}
+          />
+        )}
+        {mostrarRevocar && (
+          <SecondaryButton
+            title="Revocar"
+            variant="peligro"
+            size="sm"
+            onClick={() => {
+              onRevocar();
+              setPidiendoMotivo(false);
+            }}
+            loading={enProceso}
+          />
+        )}
+        {mostrarRestablecer && (
+          <SecondaryButton
+            title="Restablecer"
+            variant="neutra"
+            size="sm"
+            onClick={onRestablecer}
+            disabled={enProceso}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
 
 export default function ModalPermisosUsuario({ perfil, onClose }) {
   const {
@@ -46,8 +183,6 @@ export default function ModalPermisosUsuario({ perfil, onClose }) {
 
   const nombre = [perfil?.nombres, perfil?.apellidos].filter(Boolean).join(" ");
 
-  // Motivo por permiso, opcional (usuario_permiso.motivo no es NOT NULL): se limpia despues de
-  // cada conceder/revocar, igual que el motivo de anulacion de una receta.
   const [motivoPorClave, setMotivoPorClave] = useState({});
   const establecerMotivo = (clave, valor) =>
     setMotivoPorClave((anteriores) => ({ ...anteriores, [clave]: valor }));
@@ -63,16 +198,11 @@ export default function ModalPermisosUsuario({ perfil, onClose }) {
 
   return (
     <Modal visible onClose={onClose} title={`Permisos de ${nombre}`} size="xl">
-      {/* Criterio de alcance de #108: los permisos individuales existen y quedan auditados,
-          pero de los nueve del catalogo solo tres cambian hoy lo que el servidor permite. La
-          marca por permiso (mas abajo, junto a cada fila que no gobierna ninguna politica)
-          sale de permisoGobiernaAlgunaPolitica() en shared, no de una lista escrita aca: cuando
-          la issue #409 conecte uno, alcanza con actualizar ese unico lugar. */}
-      <div className="alert alert-info" role="status">
-        Los permisos marcados como "sin efecto todavia" quedan guardados y auditados, pero hoy
-        ninguna politica del servidor los consulta: conceder o revocarlos no cambia lo que esta
-        persona puede hacer hasta que la issue #409 los conecte.
-      </div>
+      <p className="text-body-secondary small">
+        Un permiso <strong>del rol</strong> lo trae el rol de la persona. Uno{" "}
+        <strong>individual</strong> se concedio o se revoco aparte, y queda registrado con quien lo
+        hizo. &quot;Restablecer&quot; devuelve el permiso a lo que dicta el rol.
+      </p>
 
       {error && (
         <div className="alert alert-danger" role="alert">
@@ -88,95 +218,30 @@ export default function ModalPermisosUsuario({ perfil, onClose }) {
 
       {!cargando &&
         modulos.map(({ modulo, permisos }) => (
-          <div key={modulo} className="mb-4">
-            <h3 className="h6 text-uppercase text-muted mb-2">
-              {ETIQUETAS_MODULO[modulo] ?? modulo}
-            </h3>
-
-            {permisos.map((permiso) => {
-              const enProceso = claveEnProceso === permiso.clave;
-              const esIndividual = permiso.origen === ORIGEN_PERMISO.INDIVIDUAL;
-              const { mostrarConceder, mostrarRevocar, mostrarRestablecer } =
-                accionesDisponibles(permiso);
-
-              return (
-                <div
+          <div className="mb-3" key={modulo}>
+            <Card
+              title={ETIQUETAS_MODULO[modulo] ?? modulo}
+              accent={ACENTOS_MODULO[modulo] ?? "var(--color-primary)"}
+            >
+              {permisos.map((permiso) => (
+                <FilaDePermiso
                   key={permiso.clave}
-                  className="d-flex justify-content-between align-items-start gap-3 py-2 border-bottom"
-                >
-                  <div>
-                    <div className="d-flex align-items-center gap-2 flex-wrap">
-                      <span className="fw-semibold">{permiso.descripcion || permiso.clave}</span>
-                      <StatusChip
-                        status={permiso.origen}
-                        label={esIndividual ? "Individual" : "Del rol"}
-                      />
-                    </div>
-
-                    {!permisoGobiernaAlgunaPolitica(permiso.clave) && (
-                      <p className="text-muted small mb-0 mt-1">
-                        Sin efecto todavia: ninguna politica lo consulta (issue #409).
-                      </p>
-                    )}
-
-                    {esIndividual && (permiso.otorgadoPorNombre || permiso.motivo) && (
-                      <p className="text-muted small mb-0 mt-1">
-                        {permiso.otorgadoPorNombre && `Por ${permiso.otorgadoPorNombre}`}
-                        {permiso.motivo
-                          ? `${permiso.otorgadoPorNombre ? ": " : ""}${permiso.motivo}`
-                          : permiso.otorgadoPorNombre
-                            ? ". Sin motivo registrado."
-                            : ""}
-                      </p>
-                    )}
-
-                    {avisoSinEfecto?.clave === permiso.clave && (
-                      <p className="text-danger small mb-0 mt-1">{avisoSinEfecto.mensaje}</p>
-                    )}
-                  </div>
-
-                  <div className="d-flex align-items-start gap-2 flex-shrink-0">
-                    {(mostrarConceder || mostrarRevocar) && (
-                      <input
-                        type="text"
-                        className="form-control form-control-sm"
-                        style={{ width: "180px" }}
-                        placeholder="Motivo (opcional)"
-                        value={motivoPorClave[permiso.clave] ?? ""}
-                        onChange={(e) => establecerMotivo(permiso.clave, e.target.value)}
-                        disabled={enProceso}
-                      />
-                    )}
-                    {mostrarConceder && (
-                      <PrimaryButton
-                        title="Conceder"
-                        onClick={() => concederConMotivo(permiso.clave)}
-                        loading={enProceso}
-                      />
-                    )}
-                    {mostrarRevocar && (
-                      <PrimaryButton
-                        title="Revocar"
-                        onClick={() => revocarConMotivo(permiso.clave)}
-                        loading={enProceso}
-                      />
-                    )}
-                    {mostrarRestablecer && (
-                      <SecondaryButton
-                        title="Restablecer"
-                        onClick={() => restablecer(permiso.clave)}
-                        disabled={enProceso}
-                      />
-                    )}
-                  </div>
-                </div>
-              );
-            })}
+                  permiso={permiso}
+                  enProceso={claveEnProceso === permiso.clave}
+                  avisoSinEfecto={avisoSinEfecto}
+                  motivo={motivoPorClave[permiso.clave]}
+                  onMotivo={(valor) => establecerMotivo(permiso.clave, valor)}
+                  onConceder={() => concederConMotivo(permiso.clave)}
+                  onRevocar={() => revocarConMotivo(permiso.clave)}
+                  onRestablecer={() => restablecer(permiso.clave)}
+                />
+              ))}
+            </Card>
           </div>
         ))}
 
-      <div className="d-flex justify-content-end mt-3">
-        <SecondaryButton title="Cerrar" onClick={onClose} />
+      <div className="ec-acciones ec-acciones--fin mt-3">
+        <SecondaryButton title="Cerrar" variant="neutra" onClick={onClose} />
       </div>
     </Modal>
   );

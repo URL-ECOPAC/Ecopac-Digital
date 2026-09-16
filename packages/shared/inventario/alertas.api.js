@@ -38,6 +38,11 @@ const COLUMNAS_DE_LA_ALERTA = [
   "estado",
   "cantidadAfectada:cantidad_afectada",
   "accion",
+  // Se piden, se normalizan mas abajo y NINGUNA pantalla los dibuja todavia: useAlertasVencimiento()
+  // solo expone las alertas pendientes (porVencer/vencidas), y una alerta pendiente por definicion
+  // no tiene quien la atendio. Verlos exige listar tambien las ya atendidas, que es parte de "que
+  // las alertas se generen, se vean y se atiendan" de punta a punta (issue #755, abierta). Se
+  // dejan pedidos: el coste es una columna mas en la consulta y evitan tener que volver aqui.
   "atendidaPor:atendida_por",
   "atendidaEn:atendida_en",
   "createdAt:created_at",

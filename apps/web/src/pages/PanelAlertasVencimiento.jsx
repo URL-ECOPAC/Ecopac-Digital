@@ -42,26 +42,63 @@ export default function PanelAlertasVencimiento({ usuarioId, rolUsuario }) {
 
   const formatoFecha = (fecha) => (fecha ? new Date(fecha).toLocaleDateString("es-GT") : "—");
 
+  // Los tres niveles de urgencia, tenidos a partir del color de estado que les corresponde en
+  // vez de con seis hexadecimales sueltos: vencido es el color de peligro, dentro de 30 dias el
+  // de exito, y el resto la advertencia. color-mix da el fondo palido y el borde a partir del
+  // mismo color, asi que cambiar la paleta en @ecopac/ui-tokens los mueve a los tres.
   const estiloFila = (dias) => {
-    if (dias < 0) return { fondo: "#fef2f2", borde: "#fecaca", texto: "#dc2626" };
-    if (dias <= 30) return { fondo: "#f0fdf4", borde: "#bbf7d0", texto: "#16a34a" };
-    return { fondo: "#fffbeb", borde: "#fde68a", texto: "#d97706" };
+    const color =
+      dias < 0
+        ? "var(--color-danger)"
+        : dias <= 30
+          ? "var(--color-success)"
+          : "var(--color-warning)";
+
+    return {
+      fondo: `color-mix(in srgb, ${color} 8%, var(--color-surface))`,
+      borde: `color-mix(in srgb, ${color} 28%, var(--color-surface))`,
+      texto: color,
+    };
   };
 
   if (cargando) return <LoadingState />;
   if (error) return <ErrorState message={error.mensaje} onRetry={recargar} />;
 
   return (
-    <div style={{ fontFamily: "system-ui, -apple-system, sans-serif" }}>
+    // Sin fontFamily propia. Este <div> declaraba "system-ui, -apple-system, sans-serif" a mano:
+    // una pila parecida a la del sistema pero NO la misma -le faltan BlinkMacSystemFont, Segoe UI
+    // y Roboto, que son las que de hecho se usan en Windows y Android-, asi que el panel de
+    // alertas se dibujaba con una letra distinta de la del resto de la aplicacion. La familia la
+    // hereda del <body>, que la toma de --fuente-base (theme.js, desde @ecopac/ui-tokens).
+    <div>
       {/* Cabecera */}
-      <div style={{ marginBottom: "24px" }}>
-        <h2 style={{ fontSize: "28px", fontWeight: "700", margin: 0, color: "#0f172a" }}>
+      <div style={{ marginBottom: "var(--spacing-lg)" }}>
+        <h2
+          style={{
+            fontSize: "var(--texto-xxl)",
+            fontWeight: "var(--peso-bold)",
+            margin: 0,
+            color: "var(--color-text)",
+          }}
+        >
           Alertas de Vencimiento
         </h2>
-        <p style={{ fontSize: "14px", color: "#64748b", margin: "4px 0 0 0" }}>
+        <p
+          style={{
+            fontSize: "var(--texto-sm)",
+            color: "var(--color-text-muted)",
+            margin: "var(--spacing-xs) 0 0 0",
+          }}
+        >
           Medicamentos próximos a caducar (próximos 30 días)
         </p>
-        <div style={{ marginTop: "8px", fontSize: "15px", color: "#475569" }}>
+        <div
+          style={{
+            marginTop: "var(--spacing-sm)",
+            fontSize: "var(--texto-sm)",
+            color: "var(--color-text-muted)",
+          }}
+        >
           {cantidadPendientes} pendientes
         </div>
       </div>

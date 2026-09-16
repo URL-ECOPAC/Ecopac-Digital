@@ -35,6 +35,7 @@ import {
   useGestionLotes,
   usePendientesValidacion,
 } from "@ecopac/shared";
+import StatCard from "../components/StatCard";
 import PanelAlertasVencimiento from "./PanelAlertasVencimiento.jsx";
 import AdministracionBodegasProveedoresPage from "./AdministracionBodegasProveedoresPage.jsx";
 import KardexMovimientosPage from "./KardexMovimientosPage.jsx";
@@ -42,27 +43,23 @@ import CatalogoPrincipiosActivosPage from "./CatalogoPrincipiosActivosPage.jsx";
 import MisMovimientosPage from "./MisMovimientosPage.jsx";
 
 // API Medicamentos y Principios Activos
+// Encabezado de las tablas de esta pantalla. Mismos valores que la regla `.table > thead th`
+// de ui.css, pero como objeto de estilos porque estas tablas se dibujan a mano y no con
+// DataList. Antes traia "11px", "700" y "#64748b" escritos a mano: un gris azulado que no esta
+// en la paleta de Ecopac y una escala tipografica que no coincidia con la de ningun otro modulo.
 const thStyle = {
-  padding: "12px 16px",
-  fontSize: "11px",
-  fontWeight: "700",
-  color: "#64748b",
-  letterSpacing: "0.5px",
+  padding: "var(--spacing-sm) var(--spacing-md)",
+  fontSize: "var(--texto-xxs)",
+  fontWeight: "var(--peso-medium)",
+  color: "var(--color-text-muted)",
+  letterSpacing: "0.08em",
   textTransform: "uppercase",
 };
 
 const tdStyle = {
-  padding: "14px 16px",
+  padding: "0.7rem var(--spacing-md)",
   verticalAlign: "middle",
   textAlign: "center",
-};
-
-const cardMetricStyle = {
-  backgroundColor: "#ffffff",
-  borderRadius: "16px",
-  padding: "16px 20px",
-  border: "1px solid #f1f5f9",
-  boxShadow: "0 1px 3px rgba(0, 0, 0, 0.04)",
 };
 
 const datosTablaDemo = [];
@@ -443,29 +440,12 @@ export default function InventarioPage() {
     }
   };
 
-  const alertasParaMostrar =
-    alertasCriticas.length > 0
-      ? alertasCriticas
-      : [
-          {
-            id: "alt-1",
-            medicamento: { nombre: "Metformina 850mg Comprimidos" },
-            codigo: "FAR-0009",
-            numero_lote: "L-2024-0567",
-            bodega: "SUR",
-            diasRestantes: 12,
-            fechaCaducidad: "27 jul 2024",
-          },
-          {
-            id: "alt-2",
-            medicamento: { nombre: "Amoxicilina 500mg Cápsulas" },
-            codigo: "FAR-0041",
-            numero_lote: "L-2024-0091",
-            bodega: "CENTRAL",
-            diasRestantes: 30,
-            fechaCaducidad: "14 ago 2024",
-          },
-        ];
+  // Las alertas reales, sin relleno. Esto tenia detras un `alertasCriticas.length > 0 ? ... :`
+  // con dos alertas escritas a mano -Metformina L-2024-0567 y Amoxicilina L-2024-0091, con sus
+  // fechas de caducidad y su bodega-, asi que un inventario SIN alertas mostraba dos alertas de
+  // vencimiento que no existen. Es el peor caso posible para este panel: no falla, no avisa, y
+  // lo que dice es plausible. Cuando no hay ninguna, el panel de abajo dice que no hay ninguna.
+  const alertasParaMostrar = alertasCriticas;
 
   const fuenteInicial = inventarioRaw.length > 0 ? inventarioFiltradoHook : datosTablaDemo;
   const baseDatosFiltrada = fuenteInicial.filter((item) => {
@@ -777,99 +757,71 @@ export default function InventarioPage() {
       {/* Catálogo */}
       {tabActiva === "catalogo" && (
         <>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-              gap: "16px",
-            }}
-          >
-            <div style={cardMetricStyle}>
-              <span style={{ fontSize: "11px", fontWeight: "700", color: "#10b981" }}>
-                REFERENCIAS
-              </span>
-              <h2
-                style={{
-                  fontSize: "28px",
-                  fontWeight: "800",
-                  margin: "4px 0 0 0",
-                  color: "#059669",
-                }}
-              >
-                {inventarioRaw.length || 10}
-              </h2>
-              <span style={{ fontSize: "11px", color: "#94a3b8" }}>en catálogo</span>
-            </div>
-            <div style={cardMetricStyle}>
-              <span style={{ fontSize: "11px", fontWeight: "700", color: "#f59e0b" }}>
-                POR VENCER
-              </span>
-              <h2
-                style={{
-                  fontSize: "28px",
-                  fontWeight: "800",
-                  margin: "4px 0 0 0",
-                  color: "#d97706",
-                }}
-              >
-                {alertasCriticas.length || 2}
-              </h2>
-              <span style={{ fontSize: "11px", color: "#94a3b8" }}>≤ 60 días</span>
-            </div>
-            <div style={cardMetricStyle}>
-              <span style={{ fontSize: "11px", fontWeight: "700", color: "#ec4899" }}>
-                SIN STOCK
-              </span>
-              <h2
-                style={{
-                  fontSize: "28px",
-                  fontWeight: "800",
-                  margin: "4px 0 0 0",
-                  color: "#db2777",
-                }}
-              >
-                1
-              </h2>
-              <span style={{ fontSize: "11px", color: "#94a3b8" }}>agotados</span>
-            </div>
+          <div className="ec-kpis">
+            {/* StatCard, del catalogo de componentes: es esta misma tarjeta -rotulo en
+              versalitas del color del indicador, cifra grande, pie apagado- pero hecha con los
+              tokens en vez de con nueve hexadecimales escritos en linea (#10b981, #059669,
+              #94a3b8...), ninguno de los cuales era un color de la paleta de Ecopac. Es la
+              tarjeta que el resto de los modulos no tenia y que ahora comparten donaciones,
+              presupuestos y reportes.
+
+              DE PASO SE VAN TRES NUMEROS INVENTADOS. "REFERENCIAS" mostraba
+              `inventarioRaw.length || 10`, asi que un catalogo vacio -o uno que no cargo- se
+              leia como diez referencias; "POR VENCER" hacia lo mismo con `|| 2`; y "SIN STOCK"
+              era un `1` escrito a mano, sin ninguna consulta detras. La tarjeta de agotados se
+              reemplaza por una de lotes registrados, que la pantalla SI puede calcular:
+              lotesRaw es lo que devuelve listarLotes(), mientras que el stock disponible vive
+              en `existencias` y esta pantalla no lo consulta. */}
+            <StatCard
+              label="Referencias"
+              value={inventarioRaw.length}
+              caption="en catalogo"
+              accent="var(--color-primary)"
+            />
+            <StatCard
+              label="Por vencer"
+              value={alertasCriticas.length}
+              caption="&le; 60 dias"
+              accent="var(--color-warning)"
+            />
+            <StatCard
+              label="Lotes"
+              value={lotesRaw.length}
+              caption="registrados"
+              accent="var(--color-info)"
+            />
             {/* Solo administracion y los roles consultivos ven el valor monetario del stock
-              (issue #752): un medico o voluntario no reciben ni siquiera un placeholder, no solo
-              el numero oculto. */}
+              (issue #752): un medico o voluntario no reciben ni siquiera un placeholder, no
+              solo el numero oculto. */}
             {puedeVerValorizacion(rol) && (
-              <div style={cardMetricStyle}>
-                <span style={{ fontSize: "11px", fontWeight: "700", color: "#06b6d4" }}>
-                  VALOR INVENTARIO
-                </span>
-                <h2
-                  style={{
-                    fontSize: "28px",
-                    fontWeight: "800",
-                    margin: "4px 0 0 0",
-                    color: "#0891b2",
-                  }}
-                >
-                  {valorizacion
+              <StatCard
+                label="Valor inventario"
+                value={
+                  valorizacion
                     ? (formatearMoneda(valorizacion.valorDisponible) ?? "Sin costo registrado")
-                    : "..."}
-                </h2>
-                <span style={{ fontSize: "11px", color: "#94a3b8" }}>
-                  {valorizacion && valorizacion.lotesSinCosto > 0
+                    : "..."
+                }
+                caption={
+                  valorizacion && valorizacion.lotesSinCosto > 0
                     ? `${valorizacion.lotesSinCosto} lote(s) sin costo registrado`
-                    : "stock actual"}
-                </span>
-              </div>
+                    : "stock actual"
+                }
+                accent="var(--accent-inventario)"
+                esTexto
+              />
             )}
           </div>
 
           <div
             style={{
-              backgroundColor: "#fffbeb",
-              border: "1px solid #fde68a",
-              borderRadius: "16px",
-              padding: "16px",
+              backgroundColor: "color-mix(in srgb, var(--color-warning) 8%, var(--color-surface))",
+              border:
+                "1px solid color-mix(in srgb, var(--color-warning) 28%, var(--color-surface))",
+              borderRadius: "var(--radio-lg)",
+              padding: "var(--spacing-md)",
               display: "flex",
               flexDirection: "column",
-              gap: "12px",
+              gap: "var(--spacing-sm)",
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>

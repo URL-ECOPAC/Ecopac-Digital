@@ -1,0 +1,53 @@
+/* Modal de permisos individuales (issue #108).
+ *
+ * Ningun valor literal: todo sale de las variables que publica theme.js desde @ecopac/ui-tokens. */
+
+.permiso-fila {
+  align-items: flex-start;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-md);
+  justify-content: space-between;
+  padding: var(--spacing-sm) 0;
+}
+
+.permiso-fila + .permiso-fila {
+  border-top: 1px solid var(--color-border);
+}
+
+.permiso-descripcion {
+  flex: 1 1 320px;
+  min-width: 0;
+}
+
+.permiso-acciones {
+  align-items: center;
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+  justify-content: flex-end;
+}
+
+.permiso-procedencia {
+  color: var(--color-text-muted);
+  font-size: var(--texto-xs);
+  margin: var(--spacing-xs) 0 0;
+}
+
+/* Marca de "este permiso todavia no gobierna ninguna politica". En el color de advertencia y no
+   en el de peligro: no es un error, es una limitacion conocida y anotada (issue #409). La
+   explicacion larga va en el title del elemento, para no repetir el mismo parrafo nueve veces. */
+.permiso-sin-efecto {
+  align-items: center;
+  background-color: color-mix(in srgb, var(--color-warning) 14%, var(--color-surface));
+  border-radius: var(--radio-pill);
+  color: var(--color-warning);
+  cursor: help;
+  display: inline-flex;
+  font-size: var(--texto-xxs);
+  font-weight: var(--peso-semibold);
+  gap: 0.3rem;
+  letter-spacing: 0.02em;
+  padding: 0.25rem 0.6rem;
+}

@@ -14,8 +14,12 @@ import TextField from "../components/TextField";
 // de CAMPOS_ALTA_USUARIO (el subconjunto de CAMPOS_USUARIO que declara ese hook), no de
 // literales propios.
 //
-// El selector de especialidades del prototipo no esta aca: CAMPOS_ALTA_USUARIO no lo incluye,
-// a proposito (ver PLAN.md del issue #106, bloqueante c / issue #405).
+// El selector de especialidades del prototipo sigue sin estar aca, pero ya no por falta de
+// permisos ni de componente: el alta es una INVITACION, y la Edge Function invitar-usuario crea
+// la fila de `perfiles` del lado del servidor. Una especialidad referencia ese perfil por FK
+// (perfil_especialidad.perfil_id, 00002), asi que no hay a que colgarla hasta que el perfil
+// exista. Se registran despues, desde ModalEdicionUsuario.jsx, que es donde vive ahora el
+// selector real (MultiSelector + useEspecialidadesDePerfil).
 
 // Atributo `type` del input nativo por tipo de descriptor. Es una preferencia de teclado en
 // pantallas tactiles, no una validacion: la validacion real sigue siendo la de

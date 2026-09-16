@@ -26,6 +26,13 @@ export const COLUMNAS_JORNADA = [
   // esta clave, y la pantalla pinta un guion en vez de inventar un 0 que afirmaria una atencion
   // nula que no se puede confirmar.
   { id: "pacientesAtendidos", label: "Pacientes atendidos", tipo: TIPOS_DE_PRESENTACION.NUMERO },
+  // Cuando la jornada arranco y cerro DE VERDAD, que no tiene por que coincidir con `fecha`, la
+  // planificada. listarJornadas() las pide desde siempre (COLUMNAS_DE_JORNADA en api.js) y
+  // ninguna pantalla las dibujaba, asi que una jornada que empezo dos horas tarde o que se
+  // cerro al dia siguiente se veia igual que una que fue puntual. Son FECHA_HORA y no FECHA: la
+  // hora es justamente el dato.
+  { id: "fechaInicioReal", label: "Inicio real", tipo: TIPOS_DE_PRESENTACION.FECHA_HORA },
+  { id: "fechaFinReal", label: "Cierre real", tipo: TIPOS_DE_PRESENTACION.FECHA_HORA },
 ];
 
 // `codigo` queda arriba para quien mas lo necesite (por ejemplo el detalle de una jornada), pero

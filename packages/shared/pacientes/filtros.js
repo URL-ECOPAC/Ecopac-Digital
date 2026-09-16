@@ -36,6 +36,10 @@ export const FILTROS_PACIENTE = [
     label: "Rango de edad",
     min: 0,
     max: 120,
+    // La unidad va pegada al control, no repetida en cada extremo: el filtro se lee
+    // "0 — 120 anios" de un vistazo. Es el mismo dato que COLUMNAS_PACIENTE declara como
+    // `sufijo` en la columna de edad, y lo dibuja FilterBar; ninguna app lo escribe.
+    sufijo: "anios",
   },
   {
     // El wireframe (p. 62) no lo dibuja, pero el criterio 3 de la #124 lo pide. Se agrega

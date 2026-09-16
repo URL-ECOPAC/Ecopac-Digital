@@ -12,7 +12,8 @@ import {
   Spinner,
   Table,
 } from "react-bootstrap";
-import { useResumenDonaciones } from "@ecopac/shared";
+import { formatearMoneda, useResumenDonaciones } from "@ecopac/shared";
+import StatCard from "../components/StatCard";
 import { useSesionCompartida } from "../contexto/SesionProvider";
 
 const ACCESOS_NAV = [
@@ -112,58 +113,39 @@ export default function DonacionesPage() {
         </Alert>
       )}
 
-      {/* Tarjetas KPI Totales por Tipo */}
-      <Row className="g-3 mb-4">
-        <Col xs={12} sm={6} lg={3}>
-          <Card className="h-100 border-start border-4 border-primary shadow-sm">
-            <Card.Body>
-              <span className="text-uppercase small text-muted fw-bold">Dinero Recibido</span>
-              <h2 className="h3 mt-2 mb-0 text-primary">
-                Q{" "}
-                {Number(totalesPorTipo.dinero || 0).toLocaleString("es-GT", {
-                  minimumFractionDigits: 2,
-                })}
-              </h2>
-            </Card.Body>
-          </Card>
-        </Col>
-
-        <Col xs={12} sm={6} lg={3}>
-          <Card className="h-100 border-start border-4 border-info shadow-sm">
-            <Card.Body>
-              <span className="text-uppercase small text-muted fw-bold">Medicamentos</span>
-              <h2 className="h3 mt-2 mb-0 text-info">
-                {totalesPorTipo.medicamentos || 0}{" "}
-                <span className="fs-6 text-muted fw-normal">unidades</span>
-              </h2>
-            </Card.Body>
-          </Card>
-        </Col>
-
-        <Col xs={12} sm={6} lg={3}>
-          <Card className="h-100 border-start border-4 border-secondary shadow-sm">
-            <Card.Body>
-              <span className="text-uppercase small text-muted fw-bold">Insumos</span>
-              <h2 className="h3 mt-2 mb-0 text-secondary">
-                {totalesPorTipo.insumos || 0}{" "}
-                <span className="fs-6 text-muted fw-normal">unidades</span>
-              </h2>
-            </Card.Body>
-          </Card>
-        </Col>
-
-        <Col xs={12} sm={6} lg={3}>
-          <Card className="h-100 border-start border-4 border-dark shadow-sm">
-            <Card.Body>
-              <span className="text-uppercase small text-muted fw-bold">Servicios</span>
-              <h2 className="h3 mt-2 mb-0 text-dark">
-                {totalesPorTipo.servicios || 0}{" "}
-                <span className="fs-6 text-muted fw-normal">aportes</span>
-              </h2>
-            </Card.Body>
-          </Card>
-        </Col>
-      </Row>
+      {/* Tarjetas de indicador por tipo de aporte.
+        StatCard, la misma pieza que usa inventario, en vez de cuatro <Card> con el borde
+        izquierdo tenido y las utilidades de color de Bootstrap (border-primary, text-info,
+        text-dark). Aquellas tomaban su color de la paleta de Bootstrap y no de la de Ecopac
+        -"text-dark" es negro, no un color de la marca-, y ademas escribian la cifra con `h3`
+        y las unidades con `fs-6`, una escala propia que no coincidia con la de ningun otro
+        modulo. */}
+      <div className="ec-kpis">
+        <StatCard
+          label="Dinero recibido"
+          value={formatearMoneda(totalesPorTipo.dinero || 0)}
+          accent="var(--accent-donaciones)"
+          esTexto
+        />
+        <StatCard
+          label="Medicamentos"
+          value={totalesPorTipo.medicamentos || 0}
+          caption="unidades"
+          accent="var(--color-primary)"
+        />
+        <StatCard
+          label="Insumos"
+          value={totalesPorTipo.insumos || 0}
+          caption="unidades"
+          accent="var(--color-warning)"
+        />
+        <StatCard
+          label="Servicios"
+          value={totalesPorTipo.servicios || 0}
+          caption="aportes"
+          accent="var(--color-danger)"
+        />
+      </div>
 
       {/* Sección Principal: Tablas de Donaciones Recientes y Donantes Frecuentes */}
       <Row className="g-4">

@@ -47,7 +47,11 @@ export default function PresupuestosPage() {
 
   return (
     <ScreenContainer>
-      <PageHeader title="Presupuestos" />
+      <PageHeader
+        title="Presupuestos"
+        subtitle="Administracion financiera por jornada y proyecto"
+        accent="var(--accent-presupuestos)"
+      />
 
       <Tabs tabs={tabs} activo={tabActiva} onChange={setTabActiva}>
         {tabActiva === TAB_RESUMEN && (

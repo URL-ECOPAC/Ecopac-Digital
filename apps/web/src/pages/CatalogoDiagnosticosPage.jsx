@@ -105,7 +105,7 @@ export default function CatalogoDiagnosticosPage() {
 
         <p className="pac-rotulo mb-2">{total === 1 ? "1 diagnostico" : `${total} diagnosticos`}</p>
 
-        <div className="pac-tabla">
+        <div className="ec-tabla">
           <DataList
             columnas={COLUMNAS_CATALOGO_DIAGNOSTICOS}
             datos={filas}

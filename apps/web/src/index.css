@@ -1,4 +1,8 @@
 @import "bootstrap/dist/css/bootstrap.min.css";
+/* El lenguaje visual comun -botones, campos, tarjetas, pestanas, tablas- vive en ui.css. Aqui
+   solo queda el puente entre los tokens y las variables globales de Bootstrap. Las dos reglas
+   @import van juntas y arriba del todo porque CSS exige que ninguna otra regla las preceda. */
+@import "./ui.css";
 
 /* Las variables --color-*, --spacing-*, --accent-*, --estado-*, --radio-* y --sombra-*
    las publica src/theme.js a partir de packages/ui-tokens. Aqui no se escribe ningun
@@ -36,68 +40,8 @@
   --bs-box-shadow: var(--sombra-md);
 }
 
-/* Tarjetas: elevacion en lugar del borde plano por defecto. Una sola capa y muy baja, porque
-   la interfaz se usa en jornada y a plena luz; lo que tiene que leerse es el contenido, no el
-   borde. El borde se mantiene para quien navegue con alto contraste o con las sombras
-   desactivadas por el sistema. */
-.card {
-  --bs-card-border-color: var(--color-border);
-  box-shadow: var(--sombra-sm);
-}
-
-/* Los botones no heredan el radio global de Bootstrap: lo resuelven con su propia variable. */
-.btn {
-  --bs-btn-border-radius: var(--radio-md);
-}
-
-/* Quien prefiere menos movimiento tampoco quiere capas de profundidad de adorno. */
-@media (prefers-reduced-motion: reduce) {
-  .card {
-    box-shadow: none;
-  }
-}
-
-/* Botones */
-.btn-primary {
-  --bs-btn-bg: var(--color-primary);
-  --bs-btn-border-color: var(--color-primary);
-  --bs-btn-hover-bg: var(--color-primary-dark);
-  --bs-btn-hover-border-color: var(--color-primary-dark);
-  --bs-btn-active-bg: var(--color-primary-dark);
-  --bs-btn-active-border-color: var(--color-primary-dark);
-  /* Sin esto, un boton primario deshabilitado o en estado loading cae al azul por defecto
-     de Bootstrap, que no es un color de la marca. */
-  --bs-btn-disabled-bg: var(--color-secondary);
-  --bs-btn-disabled-border-color: var(--color-secondary);
-}
-
-.btn-secondary {
-  --bs-btn-bg: var(--color-secondary);
-  --bs-btn-border-color: var(--color-secondary);
-}
-
-.btn-danger {
-  --bs-btn-bg: var(--color-danger);
-  --bs-btn-border-color: var(--color-danger);
-}
-
-.btn-warning {
-  --bs-btn-bg: var(--color-warning);
-  --bs-btn-border-color: var(--color-warning);
-  --bs-btn-color: var(--color-surface);
-}
-
-.btn-success {
-  --bs-btn-bg: var(--color-success);
-  --bs-btn-border-color: var(--color-success);
-}
-
-.btn-outline-primary {
-  --bs-btn-color: var(--color-primary);
-  --bs-btn-border-color: var(--color-primary);
-  --bs-btn-hover-bg: var(--color-primary);
-  --bs-btn-hover-border-color: var(--color-primary);
-}
+/* Tarjetas, botones, campos, pestanas y tablas: ui.css. Lo que sigue son las piezas que no
+   forman parte de ese lenguaje comun -alertas y las dos hojas de impresion-. */
 
 /* Alertas: se tinen del color de estado con transparencia, en vez de fijar
    un segundo juego de hex que habria que mantener en paralelo. */

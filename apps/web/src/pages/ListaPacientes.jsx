@@ -42,12 +42,17 @@ export default function ListaPacientes({ filas, total, cargando, activoId, onSel
 
               <span className="pac-tarjeta-datos">
                 <span className="pac-tarjeta-nombre">{fila.nombreCompleto}</span>
-                <span className="pac-dato-mono">{resumen(fila)}</span>
+                {/* Sin monoespaciada: "21a · Femenino · Aldea Vista Hermosa" es texto, no un
+                  identificador que se lea caracter por caracter. La mono queda para el DPI y el
+                  numero de ficha, que es el criterio que el propio modulo tenia escrito y que
+                  esta linea incumplia -- y lo que hacia que la lista pareciera de otra
+                  aplicacion que el resto de la pantalla. */}
+                <span className="pac-tarjeta-resumen">{resumen(fila)}</span>
 
                 {fila.condiciones?.length > 0 && (
                   <span className="pac-tarjeta-chips">
                     {fila.condiciones.map((condicion) => (
-                      <span className="badge" key={`${fila.id}-${condicion}`}>
+                      <span className="ec-chip" key={`${fila.id}-${condicion}`}>
                         {condicion}
                       </span>
                     ))}

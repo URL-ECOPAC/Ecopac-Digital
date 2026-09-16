@@ -71,35 +71,37 @@ export default function FilterBar({ campos = [], valores = {}, onChange, catalog
           const rango = valor ?? {};
           const esFecha = campo.subtipo === SUBTIPOS_DE_RANGO.FECHA;
 
+          // Los dos extremos dentro de un solo marco, separados por un guion.
+          //
+          // Antes eran dos campos con su propia etiqueta ("Desde", "Hasta") debajo del legend
+          // del filtro: tres filas de alto contra las dos de cualquier otro filtro, lo que
+          // desalineaba la barra entera, y dos recuadros sueltos que no se leian como un solo
+          // control. Ahora el marco es del contenedor (.ec-rango en ui.css), los campos van sin
+          // borde por dentro y el "hasta" es el guion.
+          //
+          // Las etiquetas no se pierden: pasan a aria-label, que es lo que necesita un lector de
+          // pantalla, mientras que visualmente el patron "12 — 65" ya se entiende solo.
           if (esFecha) {
-            // Sin `label` en cada DateField a proposito: con label, cada campo agrega su propia
-            // fila ("Desde"/"Hasta") ademas de la del legend ("Fecha"), y el bloque completo
-            // termina una fila mas abajo que un filtro de un solo control (Estado, Comunidad).
-            // "Desde"/"Hasta" se pintan en linea, junto al control, para que este filtro quede en
-            // las mismas dos filas -etiqueta y control- que cualquier otro.
             return (
-              <fieldset key={campo.id} className="border-0 p-0 m-0" style={{ flex: "0 1 320px" }}>
-                <legend className="form-label fs-6">{campo.label}</legend>
-                <div className="d-flex align-items-center gap-2">
-                  <span className="small" style={{ color: "var(--color-text-muted)" }}>
-                    Desde
-                  </span>
+              <fieldset key={campo.id} className="border-0 p-0 m-0" style={{ flex: "0 1 300px" }}>
+                <legend className="form-label">{campo.label}</legend>
+                <div className="ec-rango">
                   <DateField
-                    aria-label="Desde"
+                    aria-label={`${campo.label}: desde`}
                     value={rango.min ?? null}
                     maxDate={rango.max ?? undefined}
                     onChange={(nuevo) => cambiar(campo.id, { ...rango, min: nuevo })}
-                    style={{ marginBottom: 0 }}
+                    style={{ marginBottom: 0, flex: "1 1 0" }}
                   />
-                  <span className="small" style={{ color: "var(--color-text-muted)" }}>
-                    Hasta
+                  <span className="ec-rango-separador" aria-hidden="true">
+                    —
                   </span>
                   <DateField
-                    aria-label="Hasta"
+                    aria-label={`${campo.label}: hasta`}
                     value={rango.max ?? null}
                     minDate={rango.min ?? undefined}
                     onChange={(nuevo) => cambiar(campo.id, { ...rango, max: nuevo })}
-                    style={{ marginBottom: 0 }}
+                    style={{ marginBottom: 0, flex: "1 1 0" }}
                   />
                 </div>
               </fieldset>
@@ -107,25 +109,31 @@ export default function FilterBar({ campos = [], valores = {}, onChange, catalog
           }
 
           return (
-            <fieldset key={campo.id} className="border-0 p-0 m-0" style={{ flex: "0 1 240px" }}>
-              <legend className="form-label fs-6">{campo.label}</legend>
-              <div className="d-flex align-items-start gap-2">
+            <fieldset key={campo.id} className="border-0 p-0 m-0" style={{ flex: "0 1 200px" }}>
+              <legend className="form-label">{campo.label}</legend>
+              <div className="ec-rango">
                 <NumberField
-                  label="Desde"
+                  aria-label={`${campo.label}: desde`}
+                  placeholder={campo.placeholderMin ?? "min"}
                   value={rango.min ?? null}
                   min={campo.min}
                   max={rango.max ?? campo.max}
                   onChange={(nuevo) => cambiar(campo.id, { ...rango, min: nuevo })}
-                  style={{ marginBottom: 0 }}
+                  style={{ marginBottom: 0, flex: "1 1 0" }}
                 />
+                <span className="ec-rango-separador" aria-hidden="true">
+                  —
+                </span>
                 <NumberField
-                  label="Hasta"
+                  aria-label={`${campo.label}: hasta`}
+                  placeholder={campo.placeholderMax ?? "max"}
                   value={rango.max ?? null}
                   min={rango.min ?? campo.min}
                   max={campo.max}
                   onChange={(nuevo) => cambiar(campo.id, { ...rango, max: nuevo })}
-                  style={{ marginBottom: 0 }}
+                  style={{ marginBottom: 0, flex: "1 1 0" }}
                 />
+                {campo.sufijo && <span className="ec-rango-sufijo">{campo.sufijo}</span>}
               </div>
             </fieldset>
           );
