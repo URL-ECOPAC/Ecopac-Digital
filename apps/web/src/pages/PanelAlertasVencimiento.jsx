@@ -92,7 +92,7 @@ export default function PanelAlertasVencimiento({ usuarioId, rolUsuario }) {
         />
       </div>
 
-      {/* Proximos a vencer */}
+      {/* Próximos a vencer */}
       <div style={{ marginBottom: "32px" }}>
         <h3 style={{ fontSize: "20px", fontWeight: "600", margin: "0 0 12px 0", color: "#0f172a" }}>
           Próximos a vencer ({porVencer.length})
@@ -397,7 +397,7 @@ export default function PanelAlertasVencimiento({ usuarioId, rolUsuario }) {
         )}
       </div>
 
-      {/* Modal: Registrar accion */}
+      {/* Modal: Registrar acción */}
       {alertaAtendiendo && (
         <div
           style={{

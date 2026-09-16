@@ -108,7 +108,7 @@ export default function ModalMedicamento({
               marginBottom: "16px",
             }}
           >
-            ⚠️ <strong>Medicamento duplicado:</strong> Ya existe un registro con el mismo nombre,
+            <strong>Medicamento duplicado:</strong> Ya existe un registro con el mismo nombre,
             concentración, presentación y marca.
           </div>
         )}

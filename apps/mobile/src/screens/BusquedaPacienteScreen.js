@@ -70,7 +70,7 @@ export default function BusquedaPacienteScreen() {
         datos={filas}
         cargando={cargando}
         catalogos={catalogos}
-        onRowPress={(fila) => navigation.navigate(ROUTES.FICHA_PACIENTE, { pacienteId: fila.id })}
+        onRowPress={(fila) => navigation.navigate(ROUTES.FICHA_PACIENTE, { paciente: fila })}
         vacio={
           hayFiltrosActivos ? (
             <EmptyState

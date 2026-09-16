@@ -53,7 +53,11 @@ export function datosAtenderAlerta(accionTomada, { usuarioId, rolUsuario }) {
  *
  * Ahora el hook consulta listarAlertas() directamente, igual que usePendientesValidacion()
  * consulta listarMovimientos(): sin props de lotes/bodegas, con su propio cargando/error, y
- * recargando la lista despues de atender una alerta con exito.
+ * recargando la lista despues de atender una alerta con exito. Sirve a las dos plataformas: el
+ * panel web (PanelAlertasVencimiento.jsx) y el resumen movil
+ * (InventarioResumenAlertasScreen.js, issue #785), que antes tenia su propia copia del calculo
+ * client-side sobre `lotes` -mismo bug de fondo, solo que sin boton de "Atender" que lo
+ * disparara todavia.
  *
  * @param {{ usuarioId: string, rolUsuario: string }} contexto Quien esta operando el panel; viaja
  *   tal cual a atenderAlerta().

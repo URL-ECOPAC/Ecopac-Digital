@@ -33,4 +33,4 @@ export { default as ErrorState } from "./ErrorState";
 
 export { default as UsuarioActivo } from "./UsuarioActivo";
 export { default as JornadaActivaBadge } from "./JornadaActivaBadge";
-export { default as IconoModulo } from "./IconoModulo";
+export { default as IconoDeModulo, nombreDeIcono, ICONOS } from "./IconoDeModulo";

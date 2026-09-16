@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View, ScrollView, TouchableOpacity, SafeAreaView } from "react-native";
 import { modulosVisibles } from "@ecopac/shared";
-import IconoModulo from "../components/IconoModulo";
+import IconoDeModulo from "../components/IconoDeModulo";
 import { useSesionCompartida } from "../contexto/SesionProvider";
 import { ROUTES } from "../navigation/rutas";
 
@@ -169,12 +169,9 @@ export default function InicioScreen({ navigation }) {
               style={styles.moduleCard}
               onPress={() => navegarAModulo(modulo)}
             >
-              <IconoModulo
-                nombre={modulo.icono}
-                size={22}
-                color={modulo.color}
-                style={styles.cardIcono}
-              />
+              <View style={styles.cardIcono}>
+                <IconoDeModulo nombre={modulo.icono} size={22} color={modulo.color} />
+              </View>
               <Text style={styles.moduleTitle}>{modulo.titulo}</Text>
               <Text style={styles.cardSubtext}>{modulo.subtitulo}</Text>
               <Text style={[styles.moduleValue, { color: modulo.color }]}>{modulo.valor}</Text>

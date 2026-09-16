@@ -88,7 +88,7 @@ export default function ModalRegistroIngreso({
               className="alert border-0 rounded-3 text-dark mb-3 p-3"
               style={{ backgroundColor: "#FFF3CD", fontSize: "12px", lineHeight: "1.5" }}
             >
-              <strong>⚠️ Advertencia:</strong> Los lotes que crea este ingreso quedan como{" "}
+              <strong>Advertencia:</strong> Los lotes que crea este ingreso quedan como{" "}
               <strong>provisionales</strong>. <u>No afectarán el stock de inventario</u> hasta su
               confirmación.
             </div>
@@ -106,7 +106,6 @@ export default function ModalRegistroIngreso({
               /* Pantalla de Resumen tras guardar */
               <div className="card border-success bg-success-subtle rounded-3 p-3">
                 <div className="d-flex align-items-center gap-2 text-success font-bold mb-2">
-                  <span>✅</span>
                   <span className="fw-bold">Ingreso registrado con éxito (Pendiente)</span>
                 </div>
                 <div
