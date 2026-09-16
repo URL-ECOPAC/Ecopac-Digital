@@ -10,6 +10,7 @@ import {
 
 import Modal from "../components/Modal";
 import NumberField from "../components/NumberField";
+import { X } from "lucide-react";
 import DateField from "../components/DateField";
 import PrimaryButton from "../components/PrimaryButton";
 import Selector from "../components/Selector";
@@ -202,7 +203,12 @@ export default function ModalGasto({ visible = true, gasto, usuarioId, rol, onCl
         })}
 
         <div className="d-flex justify-content-end gap-2 mt-3">
-          <SecondaryButton title="Cancelar" onClick={pedirCierre} disabled={enviando} />
+          <SecondaryButton
+            title="Cancelar"
+            onClick={pedirCierre}
+            disabled={enviando}
+            icon={<X size={16} aria-hidden="true" />}
+          />
           {!bloqueadoPorPermisos && (
             <PrimaryButton
               title={esEdicion ? "Guardar" : "Registrar"}

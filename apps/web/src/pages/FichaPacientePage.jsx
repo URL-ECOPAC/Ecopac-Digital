@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { Activity, FileText, Pill } from "lucide-react";
+import { Activity, FileText, HeartPulse, Pencil, Pill } from "lucide-react";
 
 import {
   cabeceraDePaciente,
@@ -23,6 +23,7 @@ import {
   PageHeader,
   PrimaryButton,
   ScreenContainer,
+  SecondaryButton,
   StatusChip,
   Tabs,
 } from "../components";
@@ -122,22 +123,25 @@ export default function FichaPacientePage() {
   const cabecera = cabeceraDePaciente(paciente);
   const valores = valoresDeFichaPaciente(paciente);
 
-  // Las acciones de la ficha suben a PageHeader, que las dibuja con los botones del catalogo.
-  // Antes eran cuatro `btn btn-link` sueltos alineados a la derecha dentro de la tarjeta de
-  // identidad: enlaces azules subrayados que no se leian como acciones y que no se parecian a
-  // ningun otro boton del sistema.
-  const acciones = [
-    { label: "Volver al listado", onClick: () => navigate("/pacientes"), variant: "neutra" },
-  ];
-
-  if (permisos.puedeEditar) {
-    acciones.push({
-      label: "Condiciones cronicas",
-      onClick: () => setGestionandoCondiciones(true),
-      variant: "secondary",
-    });
-    acciones.push({ label: "Editar datos", onClick: () => setEditando(true) });
-  }
+  // La cabecera de la pantalla se queda SOLO con "Volver". Lo demas -editar los datos, gestionar
+  // las condiciones cronicas- son acciones sobre el expediente que se esta mirando, no sobre la
+  // pantalla, asi que van dentro de la tarjeta de identidad, junto al paciente al que aplican.
+  // Ahi tambien se entiende sin leerlas: los botones de la cabecera quedan lejos del nombre y no
+  // dicen a quien se va a editar.
+  const accionesDeLaFicha = permisos.puedeEditar ? (
+    <>
+      <SecondaryButton
+        title="Condiciones crónicas"
+        icon={<HeartPulse size={16} aria-hidden="true" />}
+        onClick={() => setGestionandoCondiciones(true)}
+      />
+      <PrimaryButton
+        title="Editar datos"
+        icon={<Pencil size={16} aria-hidden="true" />}
+        onClick={() => setEditando(true)}
+      />
+    </>
+  ) : null;
 
   const alGuardar = async () => {
     setEditando(false);
@@ -153,7 +157,7 @@ export default function FichaPacientePage() {
             cabecera.numeroFicha ? `Expediente ${cabecera.numeroFicha}` : "Expediente sin numero"
           }
           accent="var(--accent-pacientes)"
-          actions={acciones}
+          actions={[{ label: "Volver", onClick: () => navigate("/pacientes"), variant: "neutra" }]}
         />
 
         {/* Los filtros y la lista los dibuja PanelPacientes, el mismo componente que usa
@@ -164,7 +168,7 @@ export default function FichaPacientePage() {
           activoId={id}
           onSeleccionar={(fila) => navigate(`/pacientes/${fila.id}`)}
         >
-          <Card>
+          <Card actions={accionesDeLaFicha}>
             <div className="pac-identidad">
               <span
                 className={`pac-avatar pac-avatar--grande${claseDeAvatar(valores.sexo)}`}

@@ -214,17 +214,23 @@ h6,
   --bs-btn-border-color: var(--color-success);
 }
 
+/* Los tamanos cambian el AIRE, no la letra.
+ *
+ * `.btn-sm` bajaba el texto a --texto-xs, asi que el mismo boton se leia mas pequeno dentro de
+ * una fila de tabla que en una cabecera: de ahi venia la sensacion de que cada boton usaba una
+ * letra distinta. Mismo tamano y mismo peso en las tres escalas; lo que se ajusta es el relleno
+ * y el radio, que es lo que de verdad hace que un boton ocupe menos. */
 .btn-sm {
   --bs-btn-padding-x: var(--spacing-sm);
-  --bs-btn-padding-y: 0.3rem;
-  --bs-btn-font-size: var(--texto-xs);
+  --bs-btn-padding-y: 0.25rem;
+  --bs-btn-font-size: var(--texto-sm);
   --bs-btn-border-radius: var(--radio-sm);
 }
 
 .btn-lg {
   --bs-btn-padding-x: var(--spacing-lg);
   --bs-btn-padding-y: 0.7rem;
-  --bs-btn-font-size: var(--texto-md);
+  --bs-btn-font-size: var(--texto-sm);
   --bs-btn-border-radius: var(--radio-lg);
 }
 
@@ -244,11 +250,15 @@ h6,
 /* Accion terciaria: la de "Ver detalle" o "Imprimir" dentro de una tarjeta. Era `btn btn-link`
    suelto, que Bootstrap dibuja como un enlace azul subrayado -ni del color de la marca ni
    reconocible como accion-. Aqui es una pastilla discreta que se rellena al pasar por encima. */
-.btn-link {
+.btn-link,
+.btn-link.btn-sm {
   --bs-btn-color: var(--color-primary);
   --bs-btn-hover-color: var(--color-primary-dark);
   --bs-btn-border-radius: var(--radio-pill);
+  /* Tambien en la escala del sistema, tambien semibold: una accion terciaria es mas discreta
+     por su fondo y su color, no por tener la letra mas pequena que la del boton de al lado. */
   --bs-btn-font-size: var(--texto-sm);
+  --bs-btn-font-weight: var(--peso-semibold);
   --bs-btn-padding-x: var(--spacing-sm);
   --bs-btn-padding-y: 0.25rem;
   text-decoration: none;
@@ -373,23 +383,53 @@ textarea.form-control {
   padding-block: 0.6rem;
 }
 
-/* Bloque de formulario: agrupa campos bajo un titulo, para que un modal largo -la consulta
-   medica tiene ocho campos- se lea por secciones y no como una lista de veinte controles. */
-.ec-form-seccion + .ec-form-seccion {
-  border-top: 1px solid var(--color-border);
-  margin-top: var(--spacing-lg);
-  padding-top: var(--spacing-lg);
+/* --------------------------------------------------------------------------
+   Secciones de formulario
+
+   Un formulario largo -once campos en la ficha del paciente, ocho en la consulta medica- era una
+   columna de controles a ancho completo uno debajo de otro: habia que desplazar el modal entero
+   para verlo y no decia nada sobre que datos van juntos. Agrupado en secciones de dos columnas
+   cabe de una vez, y los campos que se leen juntos -nombres y apellidos, departamento y
+   municipio- quedan uno al lado del otro.
+   -------------------------------------------------------------------------- */
+
+.ec-form-seccion {
+  background-color: color-mix(
+    in srgb,
+    var(--ec-acento, var(--color-primary)) 3%,
+    var(--color-surface)
+  );
+  border: 1px solid var(--color-border);
+  border-radius: var(--radio-lg);
+  margin-bottom: var(--spacing-md);
+  padding: var(--spacing-md) var(--spacing-lg) var(--spacing-sm);
+}
+
+/* La barra del titulo lleva el color del modulo. Es lo unico que tine la seccion: el fondo es un
+   3% del mismo color, apenas lo justo para separarla del blanco del modal sin bajarle el
+   contraste a ningun campo. */
+.ec-form-seccion-cabecera {
+  border-left: 3px solid var(--ec-acento, var(--color-primary));
+  margin-bottom: var(--spacing-md);
+  padding-left: var(--spacing-sm);
 }
 
 .ec-form-seccion-titulo {
   color: var(--color-text);
   font-size: var(--texto-sm);
   font-weight: var(--peso-semibold);
-  margin-bottom: var(--spacing-md);
+  letter-spacing: -0.005em;
+  margin: 0;
 }
 
-/* Rejilla de campos. `auto-fit` y no columnas fijas: el mismo formulario cabe en dos columnas en
-   un escritorio y en una sola en una laptop pequena, sin una media query por pantalla. */
+.ec-form-seccion-descripcion {
+  color: var(--color-text-muted);
+  font-size: var(--texto-xs);
+  margin: 0.15rem 0 0;
+}
+
+/* Rejilla de campos. `auto-fit` y no columnas fijas: el mismo formulario cae a una sola columna
+   en una laptop pequena o en un modal angosto, sin una media query por pantalla. */
 .ec-form-grid {
   display: grid;
   gap: 0 var(--spacing-md);
@@ -398,6 +438,35 @@ textarea.form-control {
 
 .ec-form-grid--ancho {
   grid-column: 1 / -1;
+}
+
+/* Nota bajo un campo: la edad calculada debajo de la fecha de nacimiento, por ejemplo. */
+.ec-campo-nota {
+  color: var(--color-text-muted);
+  font-size: var(--texto-xs);
+  margin: -0.65rem 0 var(--spacing-md);
+}
+
+/* Pie de un formulario o de un modal: las acciones, siempre a la derecha y siempre con la misma
+   separacion de lo de arriba. Sustituye a los `d-flex justify-content-end gap-2 mt-3` que cada
+   modal escribia a mano, casi iguales pero no del todo. */
+.ec-form-pie {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+  justify-content: flex-end;
+  margin-top: var(--spacing-lg);
+}
+
+/* Numero de ficha en la confirmacion de alta: es lo que se copia a mano a la ficha de papel, asi
+   que va grande y en monoespaciada, que es como se leen los identificadores en este sistema. */
+.ec-numero-ficha {
+  color: var(--color-primary);
+  font-family: var(--fuente-mono);
+  font-size: var(--texto-xxl);
+  font-weight: var(--peso-bold);
+  letter-spacing: 0.02em;
+  margin: 0 0 var(--spacing-md);
 }
 
 /* Filtro de rango ("Rango de edad", "Fecha"): los dos extremos con un guion entre ellos, en vez

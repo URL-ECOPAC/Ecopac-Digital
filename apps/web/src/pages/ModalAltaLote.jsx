@@ -41,7 +41,7 @@ export function ModalAltaLote({
     padding: "10px 14px",
     borderRadius: "10px",
     border: "1px solid #e2e8f0",
-    fontSize: "13px",
+    fontSize: "var(--texto-xs)",
     color: "#1e293b",
     outline: "none",
     boxSizing: "border-box",
@@ -51,8 +51,8 @@ export function ModalAltaLote({
 
   const estilosLabel = {
     display: "block",
-    fontSize: "12px",
-    fontWeight: "700",
+    fontSize: "var(--texto-xs)",
+    fontWeight: "var(--peso-bold)",
     color: "#475569",
     marginBottom: "6px",
   };
@@ -96,10 +96,17 @@ export function ModalAltaLote({
           }}
         >
           <div>
-            <h2 style={{ fontSize: "18px", fontWeight: "800", color: "#1e293b", margin: 0 }}>
+            <h2
+              style={{
+                fontSize: "var(--texto-md)",
+                fontWeight: "var(--peso-bold)",
+                color: "#1e293b",
+                margin: 0,
+              }}
+            >
               Registrar Lote de Medicamento
             </h2>
-            <p style={{ fontSize: "12px", color: "#94a3b8", margin: "2px 0 0 0" }}>
+            <p style={{ fontSize: "var(--texto-xs)", color: "#94a3b8", margin: "2px 0 0 0" }}>
               Ingresa los datos para la trazabilidad y control de vence
             </p>
           </div>
@@ -108,7 +115,7 @@ export function ModalAltaLote({
             style={{
               border: "none",
               background: "none",
-              fontSize: "20px",
+              fontSize: "var(--texto-lg)",
               color: "#94a3b8",
               cursor: "pointer",
               padding: "4px",
@@ -127,7 +134,7 @@ export function ModalAltaLote({
                 backgroundColor: "#fef2f2",
                 color: "#991b1b",
                 borderRadius: "10px",
-                fontSize: "12px",
+                fontSize: "var(--texto-xs)",
                 marginBottom: "16px",
               }}
             >
@@ -300,8 +307,8 @@ export function ModalAltaLote({
                 border: "1px solid #e2e8f0",
                 backgroundColor: "#ffffff",
                 color: "#64748b",
-                fontSize: "13px",
-                fontWeight: "700",
+                fontSize: "var(--texto-xs)",
+                fontWeight: "var(--peso-bold)",
                 cursor: "pointer",
               }}
             >
@@ -315,8 +322,8 @@ export function ModalAltaLote({
                 border: "none",
                 backgroundColor: "#2563eb",
                 color: "#ffffff",
-                fontSize: "13px",
-                fontWeight: "700",
+                fontSize: "var(--texto-xs)",
+                fontWeight: "var(--peso-bold)",
                 cursor: "pointer",
                 boxShadow: "0 4px 6px -1px rgba(37, 99, 235, 0.2)",
               }}

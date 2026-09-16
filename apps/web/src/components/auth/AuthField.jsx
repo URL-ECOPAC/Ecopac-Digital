@@ -17,8 +17,8 @@ export default function AuthField({
       <label
         style={{
           display: "block",
-          fontSize: "12px",
-          fontWeight: "600",
+          fontSize: "var(--texto-xs)",
+          fontWeight: "var(--peso-semibold)",
           color: "#334155",
           marginBottom: "6px",
         }}
@@ -37,7 +37,7 @@ export default function AuthField({
             width: "100%",
             display: "block",
             padding: rightAdornment ? "11px 65px 11px 14px" : "11px 14px",
-            fontSize: "14px",
+            fontSize: "var(--texto-sm)",
             backgroundColor: "#F8FAFC",
             border: error ? "1px solid #EF4444" : "1px solid #CBD5E1",
             borderRadius: "12px",
@@ -63,8 +63,8 @@ export default function AuthField({
       {error && (
         <span
           style={{
-            fontSize: "11px",
-            fontWeight: "500",
+            fontSize: "var(--texto-xxs)",
+            fontWeight: "var(--peso-medium)",
             color: "#EF4444",
             marginTop: "4px",
             display: "block",

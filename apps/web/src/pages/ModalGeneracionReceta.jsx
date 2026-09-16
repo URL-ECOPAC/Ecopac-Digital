@@ -10,6 +10,7 @@ import {
 
 import EmptyState from "../components/EmptyState";
 import LoadingState from "../components/LoadingState";
+import { X } from "lucide-react";
 import Modal from "../components/Modal";
 import NumberField from "../components/NumberField";
 import PrimaryButton from "../components/PrimaryButton";
@@ -127,8 +128,10 @@ export default function ModalGeneracionReceta({
             </div>
           )}
 
-          <section className="ec-form-seccion">
-            <h3 className="ec-form-seccion-titulo">Medicamentos</h3>
+          <section className="ec-form-seccion" style={{ "--ec-acento": "var(--accent-pacientes)" }}>
+            <div className="ec-form-seccion-cabecera">
+              <h3 className="ec-form-seccion-titulo">Medicamentos</h3>
+            </div>
 
             <TextField
               label="Buscar en el catalogo"
@@ -256,8 +259,10 @@ export default function ModalGeneracionReceta({
             })}
           </section>
 
-          <section className="ec-form-seccion">
-            <h3 className="ec-form-seccion-titulo">Indicaciones</h3>
+          <section className="ec-form-seccion" style={{ "--ec-acento": "var(--accent-pacientes)" }}>
+            <div className="ec-form-seccion-cabecera">
+              <h3 className="ec-form-seccion-titulo">Indicaciones</h3>
+            </div>
             <TextField
               label="Indicaciones generales"
               as="textarea"
@@ -273,6 +278,7 @@ export default function ModalGeneracionReceta({
               variant="neutra"
               onClick={onClose}
               disabled={enviando}
+              icon={<X size={16} aria-hidden="true" />}
             />
             <PrimaryButton
               title="Generar receta"

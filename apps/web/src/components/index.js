@@ -13,6 +13,8 @@ export { default as PageHeader } from "./PageHeader";
 export { default as TextField } from "./TextField";
 export { default as Selector } from "./Selector";
 export { default as MultiSelector } from "./MultiSelector";
+export { default as CampoDeFormulario } from "./CampoDeFormulario";
+export { default as SeccionDeFormulario } from "./SeccionDeFormulario";
 export { default as DateField } from "./DateField";
 export { default as NumberField } from "./NumberField";
 

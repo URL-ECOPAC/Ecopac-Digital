@@ -9,7 +9,7 @@ export default function BotonExportarPDF({ onClick, generando }) {
         border: "none",
         backgroundColor: generando ? "#94a3b8" : "#059669",
         color: "#ffffff",
-        fontSize: "14px",
+        fontSize: "var(--texto-sm)",
         fontWeight: 600,
         cursor: generando ? "not-allowed" : "pointer",
         display: "inline-flex",

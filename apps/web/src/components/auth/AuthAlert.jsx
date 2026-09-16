@@ -13,9 +13,9 @@ export default function AuthAlert({ children, variant = "error" }) {
         marginBottom: "16px",
         padding: "10px 14px",
         borderRadius: "12px",
-        fontSize: "12px",
+        fontSize: "var(--texto-xs)",
         textAlign: "center",
-        fontWeight: "500",
+        fontWeight: "var(--peso-medium)",
         ...VARIANTES[variant],
       }}
     >

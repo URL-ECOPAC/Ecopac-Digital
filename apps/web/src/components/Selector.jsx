@@ -24,6 +24,9 @@ export default function Selector({
   error,
   style,
   disabled = false,
+  // El resto viaja al <select>. Lo necesita un filtro cuyo rotulo es el <legend> de su fieldset
+  // y no un <label>: sin dejar pasar aria-label, ese control se queda sin nombre accesible.
+  ...rest
 }) {
   const id = useId();
   const opciones = Array.isArray(options) ? options : [];
@@ -49,6 +52,7 @@ export default function Selector({
         onChange={alCambiar}
         isInvalid={Boolean(error)}
         disabled={disabled}
+        {...rest}
       >
         <option value="">{placeholder}</option>
         {opciones.map((opcion) => (

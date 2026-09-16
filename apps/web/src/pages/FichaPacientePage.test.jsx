@@ -8,7 +8,7 @@
 // aqui es que la ficha la use para decidir que botones pinta.
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 
 import { ROLES } from "@ecopac/shared";
@@ -96,15 +96,40 @@ describe("FichaPacientePage", () => {
     expect(screen.getByLabelText("Buscar paciente")).toBeInTheDocument();
     expect(screen.getByLabelText("Lugar")).toBeInTheDocument();
     expect(screen.getByLabelText("Sexo")).toBeInTheDocument();
-    expect(screen.getByText("Rango de edad")).toBeInTheDocument();
+    expect(screen.getByLabelText("Edad")).toBeInTheDocument();
     expect(screen.getByLabelText("Condicion cronica")).toBeInTheDocument();
   });
 
-  it("el rango de edad va como un solo control, con sus dos extremos etiquetados", () => {
+  it("la edad se filtra por grupos, no escribiendo dos numeros", () => {
     pantalla();
 
-    expect(screen.getByLabelText("Rango de edad: desde")).toBeInTheDocument();
-    expect(screen.getByLabelText("Rango de edad: hasta")).toBeInTheDocument();
+    const edad = screen.getByLabelText("Edad");
+    const opciones = [...edad.options].map((opcion) => opcion.textContent);
+
+    expect(opciones).toContain("Primera infancia (0 a 5)");
+    expect(opciones).toContain("Niñez (6 a 12)");
+    expect(opciones).toContain("Adulto mayor (60 o mas)");
+
+    // Los dos campos numericos no estan hasta que se piden: son la salida para un rango exacto,
+    // no lo primero que se ve.
+    expect(screen.queryByLabelText("Edad: desde")).not.toBeInTheDocument();
+  });
+
+  it("elegir un grupo manda su rango, no el id del grupo", () => {
+    pantalla();
+
+    fireEvent.change(screen.getByLabelText("Edad"), { target: { value: "adolescencia" } });
+
+    expect(LISTADO.setFiltro).toHaveBeenCalledWith("rangoEdad", { min: 13, max: 17 });
+  });
+
+  it('"Personalizado" devuelve los dos extremos, para un rango exacto', () => {
+    pantalla();
+
+    fireEvent.change(screen.getByLabelText("Edad"), { target: { value: "personalizado" } });
+
+    expect(screen.getByLabelText("Edad: desde")).toBeInTheDocument();
+    expect(screen.getByLabelText("Edad: hasta")).toBeInTheDocument();
   });
 
   it("muestra las marcas de auditoria del modelo, que no llegaban a ninguna pantalla", () => {

@@ -8,7 +8,7 @@ export default function NotFoundPage() {
         404
       </h1>
       <h2 className="fs-4 fw-semibold mb-2 text-dark">Página no encontrada</h2>
-      <p className="text-muted mb-4" style={{ maxWidth: "420px", fontSize: "14px" }}>
+      <p className="text-muted mb-4" style={{ maxWidth: "420px", fontSize: "var(--texto-sm)" }}>
         La ruta a la que intentas acceder no existe, no está disponible o no tienes permisos para
         verla.
       </p>

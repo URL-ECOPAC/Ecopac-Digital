@@ -10,6 +10,7 @@ import {
 
 import LoadingState from "../components/LoadingState";
 import Modal from "../components/Modal";
+import { X } from "lucide-react";
 import PrimaryButton from "../components/PrimaryButton";
 import SecondaryButton from "../components/SecondaryButton";
 import StatusChip from "../components/StatusChip";
@@ -131,7 +132,12 @@ export default function ModalFusionPacientes({
       )}
 
       <div className="d-flex justify-content-end gap-2 mt-3">
-        <SecondaryButton title="Cancelar" onClick={onClose} disabled={enviando} />
+        <SecondaryButton
+          title="Cancelar"
+          onClick={onClose}
+          disabled={enviando}
+          icon={<X size={16} aria-hidden="true" />}
+        />
         {listoParaComparar && (
           <PrimaryButton
             title="Fusionar expedientes"

@@ -44,7 +44,7 @@ export default function VistaExistenciasPage() {
           display: "inline-block",
           padding: "2px 8px",
           borderRadius: "9999px",
-          fontSize: "12px",
+          fontSize: "var(--texto-xs)",
           fontWeight: 600,
           backgroundColor: `${colores[valor] || "transparent"}15`,
           color: colores[valor] || "inherit",
@@ -66,9 +66,16 @@ export default function VistaExistenciasPage() {
           borderTop: "1px solid var(--color-borde)",
         }}
       >
-        <strong style={{ fontSize: "13px", color: "var(--color-texto)" }}>Desglose por Lote</strong>
+        <strong style={{ fontSize: "var(--texto-xs)", color: "var(--color-texto)" }}>
+          Desglose por Lote
+        </strong>
         <table
-          style={{ width: "100%", marginTop: "8px", fontSize: "13px", borderCollapse: "collapse" }}
+          style={{
+            width: "100%",
+            marginTop: "8px",
+            fontSize: "var(--texto-xs)",
+            borderCollapse: "collapse",
+          }}
         >
           <thead>
             <tr style={{ color: "var(--color-texto-secundario)" }}>
@@ -101,11 +108,22 @@ export default function VistaExistenciasPage() {
     <div style={{ padding: "24px", maxWidth: "100%" }}>
       {/* ─── Encabezado ─── */}
       <div style={{ marginBottom: "24px" }}>
-        <h1 style={{ fontSize: "22px", fontWeight: 800, color: "var(--color-texto)", margin: 0 }}>
+        <h1
+          style={{
+            fontSize: "var(--texto-lg)",
+            fontWeight: 800,
+            color: "var(--color-texto)",
+            margin: 0,
+          }}
+        >
           Existencias en Tiempo Real
         </h1>
         <p
-          style={{ fontSize: "14px", color: "var(--color-texto-secundario)", margin: "4px 0 0 0" }}
+          style={{
+            fontSize: "var(--texto-sm)",
+            color: "var(--color-texto-secundario)",
+            margin: "4px 0 0 0",
+          }}
         >
           Consulta del inventario disponible · Vista de solo lectura
         </p>

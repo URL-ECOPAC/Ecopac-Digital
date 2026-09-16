@@ -5,6 +5,7 @@ import PrimaryButton from "../components/PrimaryButton";
 import Selector from "../components/Selector";
 import SecondaryButton from "../components/SecondaryButton";
 import TextField from "../components/TextField";
+import { UserPlus, X } from "lucide-react";
 
 // Modal de alta de usuario (issue #106), montado desde ColaboradoresPage.jsx con estado local: no
 // tiene ruta propia. No va en components/: ese barril es el catalogo de #280, y este modal es
@@ -79,8 +80,18 @@ export default function ModalAltaUsuario({ visible, onClose, onUsuarioCreado }) 
       )}
 
       <div className="d-flex justify-content-end gap-2 mt-3">
-        <SecondaryButton title="Cancelar" onClick={cerrar} disabled={enviando} />
-        <PrimaryButton title="Invitar" onClick={guardar} loading={enviando} />
+        <SecondaryButton
+          title="Cancelar"
+          onClick={cerrar}
+          disabled={enviando}
+          icon={<X size={16} aria-hidden="true" />}
+        />
+        <PrimaryButton
+          title="Invitar"
+          onClick={guardar}
+          loading={enviando}
+          icon={<UserPlus size={16} aria-hidden="true" />}
+        />
       </div>
     </Modal>
   );

@@ -1,3 +1,4 @@
+import { X } from "lucide-react";
 import { useState } from "react";
 import {
   formatearFechaCorta,
@@ -94,7 +95,12 @@ function ModalRechazo({ gasto, onClose, onConfirmar, enviando }) {
         disabled={enviando}
       />
       <div className="d-flex justify-content-end gap-2 mt-3">
-        <SecondaryButton title="Cancelar" onClick={onClose} disabled={enviando} />
+        <SecondaryButton
+          title="Cancelar"
+          onClick={onClose}
+          disabled={enviando}
+          icon={<X size={16} aria-hidden="true" />}
+        />
         <PrimaryButton title="Rechazar gasto" onClick={confirmar} loading={enviando} />
       </div>
     </Modal>

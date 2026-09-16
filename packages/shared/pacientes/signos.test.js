@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
+import { CAMPOS_TRIAJE } from "./campos.js";
 import {
+  agruparSeriesDeSignos,
   aSeriesDeSignos,
   estaFueraDeRango,
   hayAlgunaMedicion,
@@ -30,12 +32,29 @@ const TRIAJES = [
 ];
 
 describe("aSeriesDeSignos", () => {
-  it("arma las tres series que pide el criterio 1", () => {
+  // Las ocho series cubren los SIETE campos de CAMPOS_TRIAJE mas el IMC, que es la columna
+  // generada de la 00013. Declaraba tres, asi que la frecuencia cardiaca, la talla y la
+  // temperatura se capturaban, se guardaban y no se veian en ninguna pantalla.
+  it("arma una serie por cada signo que se captura, mas el IMC", () => {
     expect(aSeriesDeSignos(TRIAJES).map((serie) => serie.id)).toEqual([
       "presion",
+      "frecuenciaCardiaca",
+      "temperatura",
       "glucosa",
       "peso",
+      "talla",
+      "imc",
     ]);
+  });
+
+  it("no deja fuera ningun campo de CAMPOS_TRIAJE", () => {
+    const enSeries = new Set(
+      aSeriesDeSignos().flatMap((serie) => serie.lineas.map((linea) => linea.id)),
+    );
+
+    for (const campo of CAMPOS_TRIAJE) {
+      expect(enSeries, `"${campo.id}" se captura y no se grafica`).toContain(campo.id);
+    }
   });
 
   it("ordena los puntos del mas viejo al mas nuevo aunque lleguen al reves", () => {
@@ -83,7 +102,7 @@ describe("aSeriesDeSignos", () => {
   });
 
   it("no falla sin triajes", () => {
-    expect(aSeriesDeSignos()).toHaveLength(3);
+    expect(aSeriesDeSignos()).toHaveLength(7);
   });
 });
 
@@ -136,5 +155,29 @@ describe("SERIES_DE_SIGNOS", () => {
         expect(linea.normal.min).toBeLessThan(linea.normal.max);
       }
     }
+  });
+});
+
+describe("agruparSeriesDeSignos", () => {
+  it("separa las series por lo que miden", () => {
+    const grupos = agruparSeriesDeSignos(aSeriesDeSignos(TRIAJES));
+    expect(grupos.map((grupo) => grupo.id)).toEqual([
+      "cardiovascular",
+      "metabolico",
+      "antropometrico",
+    ]);
+  });
+
+  it("omite un grupo sin ninguna medicion, en vez de dejar un encabezado vacio", () => {
+    // Un triaje con solo peso: nada cardiovascular ni metabolico que mostrar.
+    const soloPeso = [{ tomadoEn: "2026-03-01", peso: 70 }];
+    const grupos = agruparSeriesDeSignos(aSeriesDeSignos(soloPeso));
+
+    expect(grupos.map((grupo) => grupo.id)).toEqual(["antropometrico"]);
+    expect(grupos[0].series.map((serie) => serie.id)).toEqual(["peso"]);
+  });
+
+  it("sin ninguna medicion no devuelve ningun grupo", () => {
+    expect(agruparSeriesDeSignos(aSeriesDeSignos([]))).toEqual([]);
   });
 });

@@ -88,8 +88,8 @@ export default function AuthLayout({ title, subtitle, children }) {
               <span
                 style={{
                   display: "block",
-                  fontSize: "22px",
-                  fontWeight: "800",
+                  fontSize: "var(--texto-lg)",
+                  fontWeight: "var(--peso-bold)",
                   color: "#1E293B",
                   lineHeight: "1",
                 }}
@@ -101,8 +101,8 @@ export default function AuthLayout({ title, subtitle, children }) {
 
           <h2
             style={{
-              fontSize: "20px",
-              fontWeight: "700",
+              fontSize: "var(--texto-lg)",
+              fontWeight: "var(--peso-bold)",
               color: "#0F172A",
               margin: "14px 0 4px 0",
             }}
@@ -110,7 +110,7 @@ export default function AuthLayout({ title, subtitle, children }) {
             {title}
           </h2>
           {subtitle && (
-            <p style={{ fontSize: "13px", color: "#64748B", margin: "0" }}>{subtitle}</p>
+            <p style={{ fontSize: "var(--texto-xs)", color: "#64748B", margin: "0" }}>{subtitle}</p>
           )}
         </div>
 

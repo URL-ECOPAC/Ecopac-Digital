@@ -5,6 +5,7 @@ import NumberField from "../components/NumberField";
 import PrimaryButton from "../components/PrimaryButton";
 import SecondaryButton from "../components/SecondaryButton";
 import SelectorDeJornada from "./SelectorDeJornada";
+import { Save, X } from "lucide-react";
 
 // Toma de signos vitales desde la ficha del paciente, en web.
 //
@@ -105,12 +106,19 @@ export default function ModalRegistroTriaje({ paciente, rol, perfilId, onClose, 
       )}
 
       <div className="ec-acciones ec-acciones--fin mt-4">
-        <SecondaryButton title="Cancelar" variant="neutra" onClick={onClose} disabled={enviando} />
+        <SecondaryButton
+          title="Cancelar"
+          variant="neutra"
+          onClick={onClose}
+          disabled={enviando}
+          icon={<X size={16} aria-hidden="true" />}
+        />
         <PrimaryButton
           title="Guardar signos"
           onClick={guardarTriaje}
           loading={enviando}
           disabled={!permitido || !captura.jornadaId || Boolean(guardado)}
+          icon={<Save size={16} aria-hidden="true" />}
         />
       </div>
     </Modal>

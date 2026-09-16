@@ -9,6 +9,7 @@ import Selector from "../components/Selector";
 import SecondaryButton from "../components/SecondaryButton";
 import TextField from "../components/TextField";
 import ModalConfirmarDesasignacion from "./ModalConfirmarDesasignacion";
+import { Save, X } from "lucide-react";
 
 // Modal de edicion de horario, responsabilidad y asistencia de una persona ya asignada a una
 // jornada (issue #185, asistio agregado en la #756), abierto al clickear una fila de la pestaña
@@ -130,8 +131,18 @@ export default function ModalEdicionTurno({
             disabled={enviando}
           />
           <div className="d-flex gap-2">
-            <SecondaryButton title="Cancelar" onClick={onClose} disabled={enviando} />
-            <PrimaryButton title="Guardar" onClick={guardarCambios} loading={enviando} />
+            <SecondaryButton
+              title="Cancelar"
+              onClick={onClose}
+              disabled={enviando}
+              icon={<X size={16} aria-hidden="true" />}
+            />
+            <PrimaryButton
+              title="Guardar"
+              onClick={guardarCambios}
+              loading={enviando}
+              icon={<Save size={16} aria-hidden="true" />}
+            />
           </div>
         </div>
       </Modal>

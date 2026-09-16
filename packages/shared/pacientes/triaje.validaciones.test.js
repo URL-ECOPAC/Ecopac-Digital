@@ -169,8 +169,8 @@ describe("validarCambioDeTriaje", () => {
 });
 
 describe("advertenciasDeTriaje", () => {
-  const pediatrico = { anios: 10, meses: 0, texto: "10 anos" };
-  const adulto = { anios: 30, meses: 0, texto: "30 anos" };
+  const pediatrico = { anios: 10, meses: 0, texto: "10 años" };
+  const adulto = { anios: 30, meses: 0, texto: "30 años" };
 
   it("no advierte nada sobre un triaje normal", () => {
     expect(advertenciasDeTriaje(triajeValido(), adulto)).toEqual({});

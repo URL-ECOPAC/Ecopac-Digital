@@ -1,22 +1,136 @@
 import { useState } from "react";
+import { Plus, Save, X } from "lucide-react";
 
-import { TIPOS_DE_CAMPO, useRegistroPaciente } from "@ecopac/shared";
+import { seccionesDePaciente, useRegistroPaciente } from "@ecopac/shared";
 
-import DateField from "../components/DateField";
+import CampoDeFormulario from "../components/CampoDeFormulario";
 import Modal from "../components/Modal";
 import PrimaryButton from "../components/PrimaryButton";
 import SecondaryButton from "../components/SecondaryButton";
 import Selector from "../components/Selector";
 import TextField from "../components/TextField";
 
-const TIPO_DE_INPUT = {
-  [TIPOS_DE_CAMPO.TEXTO]: "text",
-  [TIPOS_DE_CAMPO.TELEFONO]: "tel",
-};
+// Alta de un paciente.
+//
+// Mismo formulario y mismo agrupamiento que la edicion (seccionesDePaciente(), en
+// packages/shared/pacientes/campos.js): las dos pantallas capturan los mismos once campos, y que
+// se vieran distinto era solo consecuencia de que cada una los dibujaba por su cuenta.
+//
+// Lo unico propio de esta pantalla es la cascada de comunidad -departamento, municipio,
+// comunidad, con la opcion de crear una que no existe todavia-, que reemplaza al campo
+// "comunidad" dentro de su seccion. Es la razon por la que este archivo recorre las secciones a
+// mano en vez de usar SeccionDeFormulario como hace la edicion.
+
+/** La cascada territorial, en el lugar que ocuparia el campo "comunidad". */
+function CampoDeComunidad({
+  campo,
+  valores,
+  errores,
+  catalogos,
+  departamentoId,
+  municipioId,
+  setCampo,
+  setDepartamento,
+  setMunicipio,
+  enviando,
+  puedeCrearComunidad,
+  registrarComunidad,
+  erroresComunidad,
+  creandoComunidad,
+}) {
+  const [creandoNueva, setCreandoNueva] = useState(false);
+  const [nombreNuevo, setNombreNuevo] = useState("");
+  const [errorNueva, setErrorNueva] = useState(null);
+
+  const guardarComunidad = async () => {
+    const { comunidad, error: fallo } = await registrarComunidad(nombreNuevo);
+    setErrorNueva(fallo?.mensaje ?? null);
+    if (comunidad) {
+      setNombreNuevo("");
+      setCreandoNueva(false);
+    }
+  };
+
+  return (
+    <>
+      <Selector
+        label="Departamento"
+        value={departamentoId}
+        options={catalogos.departamentos}
+        onSelect={setDepartamento}
+        placeholder="Selecciona un departamento"
+        disabled={enviando || catalogos.departamentos.length === 0}
+      />
+      <Selector
+        label="Municipio"
+        value={municipioId}
+        options={catalogos.municipios}
+        onSelect={setMunicipio}
+        placeholder="Selecciona un municipio"
+        disabled={enviando || !departamentoId || catalogos.municipios.length === 0}
+      />
+      <Selector
+        label={campo.label}
+        value={valores.comunidad || null}
+        options={catalogos.comunidades}
+        onSelect={(valor) => setCampo("comunidad", valor)}
+        placeholder="Selecciona una comunidad"
+        error={errores.comunidad}
+        disabled={enviando || !municipioId || catalogos.comunidades.length === 0}
+      />
+
+      {puedeCrearComunidad && municipioId && !creandoNueva && (
+        <div style={{ gridColumn: "1 / -1" }}>
+          <SecondaryButton
+            title="Crear una comunidad"
+            size="sm"
+            icon={<Plus size={14} aria-hidden="true" />}
+            onClick={() => setCreandoNueva(true)}
+            disabled={enviando}
+          />
+        </div>
+      )}
+
+      {puedeCrearComunidad && creandoNueva && (
+        <div style={{ gridColumn: "1 / -1" }}>
+          <TextField
+            label="Nombre de la comunidad nueva"
+            value={nombreNuevo}
+            // El evento del DOM, no el evento entero: TextField entrega `onChange(evento)` y
+            // aqui se pasaba `setNombreNuevo` directo, asi que el estado guardaba el objeto del
+            // evento en vez del texto y la comunidad nueva se creaba con un nombre invalido.
+            onChange={(evento) => setNombreNuevo(evento.target.value)}
+            error={erroresComunidad.nombre ?? errorNueva}
+            disabled={creandoComunidad}
+          />
+          <div className="ec-acciones">
+            <PrimaryButton
+              title="Guardar comunidad"
+              size="sm"
+              icon={<Save size={14} aria-hidden="true" />}
+              onClick={guardarComunidad}
+              loading={creandoComunidad}
+            />
+            <SecondaryButton
+              title="Cancelar"
+              variant="neutra"
+              size="sm"
+              onClick={() => {
+                setCreandoNueva(false);
+                setNombreNuevo("");
+                setErrorNueva(null);
+              }}
+              disabled={creandoComunidad}
+            />
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
 
 export default function ModalAltaPaciente({ onClose, onRegistrado, rol }) {
   const {
-    campos,
     valores,
     errores,
     error,
@@ -38,19 +152,6 @@ export default function ModalAltaPaciente({ onClose, onRegistrado, rol }) {
     creandoComunidad,
   } = useRegistroPaciente({ rol });
 
-  const [creandoNueva, setCreandoNueva] = useState(false);
-  const [nombreNuevo, setNombreNuevo] = useState("");
-  const [errorNueva, setErrorNueva] = useState(null);
-
-  const guardarComunidad = async () => {
-    const { comunidad, error: fallo } = await registrarComunidad(nombreNuevo);
-    setErrorNueva(fallo?.mensaje ?? null);
-    if (comunidad) {
-      setNombreNuevo("");
-      setCreandoNueva(false);
-    }
-  };
-
   const cerrar = () => {
     if (registrado) onRegistrado?.(registrado);
     onClose?.();
@@ -64,13 +165,17 @@ export default function ModalAltaPaciente({ onClose, onRegistrado, rol }) {
   if (registrado) {
     return (
       <Modal visible onClose={cerrar} title="Paciente registrado">
-        <p className="mb-1">Anota este numero en la ficha de papel:</p>
-        <p className="fs-3 fw-bold mb-3">{registrado.expediente?.numeroFicha ?? "—"}</p>
+        <p className="mb-1">Anota este número en la ficha de papel:</p>
+        <p className="ec-numero-ficha">{registrado.expediente?.numeroFicha ?? "—"}</p>
         <p className="text-body-secondary">
           {[registrado.nombres, registrado.apellidos].filter(Boolean).join(" ")}
         </p>
-        <div className="d-flex justify-content-end gap-2 mt-3">
-          <SecondaryButton title="Registrar otro" onClick={registrarOtro} />
+        <div className="ec-form-pie">
+          <SecondaryButton
+            title="Registrar otro"
+            icon={<Plus size={16} aria-hidden="true" />}
+            onClick={registrarOtro}
+          />
           <PrimaryButton title="Listo" onClick={cerrar} />
         </div>
       </Modal>
@@ -78,7 +183,7 @@ export default function ModalAltaPaciente({ onClose, onRegistrado, rol }) {
   }
 
   return (
-    <Modal visible onClose={cerrar} title="Nuevo paciente">
+    <Modal visible onClose={cerrar} title="Nuevo paciente" size="lg">
       {error && (
         <div className="alert alert-danger" role="alert">
           {error.mensaje}
@@ -91,121 +196,79 @@ export default function ModalAltaPaciente({ onClose, onRegistrado, rol }) {
         </div>
       )}
 
-      {campos.map((campo) => {
-        if (campo.id === "comunidad") {
-          return (
-            <div key="comunidad-cascada">
-              <Selector
-                label="Departamento"
-                value={departamentoId}
-                options={catalogos.departamentos}
-                onSelect={setDepartamento}
-                placeholder="Selecciona un departamento"
-                disabled={enviando || catalogos.departamentos.length === 0}
-              />
-              <Selector
-                label="Municipio"
-                value={municipioId}
-                options={catalogos.municipios}
-                onSelect={setMunicipio}
-                placeholder="Selecciona un municipio"
-                disabled={enviando || !departamentoId || catalogos.municipios.length === 0}
-              />
-              <Selector
-                label={campo.label}
-                value={valores.comunidad || null}
-                options={catalogos.comunidades}
-                onSelect={(valor) => setCampo("comunidad", valor)}
-                placeholder="Selecciona una comunidad"
-                error={errores.comunidad}
-                disabled={enviando || !municipioId || catalogos.comunidades.length === 0}
-              />
-              {puedeCrearComunidad && municipioId && !creandoNueva && (
-                <SecondaryButton
-                  title="Crear una comunidad"
-                  onClick={() => setCreandoNueva(true)}
-                  disabled={enviando}
-                />
-              )}
-              {puedeCrearComunidad && creandoNueva && (
-                <div className="mt-2">
-                  <TextField
-                    label="Nombre de la comunidad nueva"
-                    value={nombreNuevo}
-                    onChange={setNombreNuevo}
-                    error={erroresComunidad.nombre ?? errorNueva}
-                    disabled={creandoComunidad}
+      {seccionesDePaciente().map((seccion) => (
+        <section
+          className="ec-form-seccion"
+          key={seccion.id}
+          style={{ "--ec-acento": "var(--accent-pacientes)" }}
+        >
+          <div className="ec-form-seccion-cabecera">
+            <h3 className="ec-form-seccion-titulo">{seccion.titulo}</h3>
+            {seccion.descripcion && (
+              <p className="ec-form-seccion-descripcion">{seccion.descripcion}</p>
+            )}
+          </div>
+
+          <div className="ec-form-grid">
+            {seccion.campos.map((campo) => {
+              if (campo.id === "comunidad") {
+                return (
+                  <CampoDeComunidad
+                    key={campo.id}
+                    campo={campo}
+                    valores={valores}
+                    errores={errores}
+                    catalogos={catalogos}
+                    departamentoId={departamentoId}
+                    municipioId={municipioId}
+                    setCampo={setCampo}
+                    setDepartamento={setDepartamento}
+                    setMunicipio={setMunicipio}
+                    enviando={enviando}
+                    puedeCrearComunidad={puedeCrearComunidad}
+                    registrarComunidad={registrarComunidad}
+                    erroresComunidad={erroresComunidad}
+                    creandoComunidad={creandoComunidad}
                   />
-                  <div className="d-flex gap-2 mt-2">
-                    <PrimaryButton
-                      title="Guardar"
-                      onClick={guardarComunidad}
-                      loading={creandoComunidad}
-                      disabled={creandoComunidad}
-                    />
-                    <SecondaryButton
-                      title="Cancelar"
-                      onClick={() => {
-                        setCreandoNueva(false);
-                        setNombreNuevo("");
-                        setErrorNueva(null);
-                      }}
-                      disabled={creandoComunidad}
-                    />
-                  </div>
+                );
+              }
+
+              return (
+                <div key={campo.id}>
+                  <CampoDeFormulario
+                    campo={campo}
+                    valor={valores[campo.id]}
+                    error={errores[campo.id]}
+                    catalogos={catalogos}
+                    disabled={enviando}
+                    onChange={(valor) => setCampo(campo.id, valor)}
+                  />
+                  {/* La edad calculada, debajo de la fecha de nacimiento: confirma de un
+                    vistazo que la fecha que se acaba de escribir es la correcta. */}
+                  {campo.id === "fechaNacimiento" && edad && (
+                    <p className="ec-campo-nota">Edad: {edad}</p>
+                  )}
                 </div>
-              )}
-            </div>
-          );
-        }
+              );
+            })}
+          </div>
+        </section>
+      ))}
 
-        if (campo.tipo === TIPOS_DE_CAMPO.SELECT) {
-          const opciones = campo.opciones ?? catalogos[campo.opcionesDesde] ?? [];
-          return (
-            <Selector
-              key={campo.id}
-              label={campo.label}
-              value={valores[campo.id] || null}
-              options={opciones}
-              onSelect={(valor) => setCampo(campo.id, valor)}
-              error={errores[campo.id]}
-              disabled={enviando || opciones.length === 0}
-            />
-          );
-        }
-
-        if (campo.tipo === TIPOS_DE_CAMPO.FECHA) {
-          return (
-            <div key={campo.id}>
-              <DateField
-                label={campo.label}
-                value={valores[campo.id] || null}
-                onChange={(valor) => setCampo(campo.id, valor)}
-                error={errores[campo.id]}
-                disabled={enviando}
-              />
-              {edad && <p className="text-body-secondary small mt-1 mb-0">Edad: {edad}</p>}
-            </div>
-          );
-        }
-
-        return (
-          <TextField
-            key={campo.id}
-            label={campo.label}
-            type={TIPO_DE_INPUT[campo.tipo] ?? "text"}
-            maxLength={campo.validacion?.maxLongitud}
-            value={valores[campo.id] ?? ""}
-            onChange={(evento) => setCampo(campo.id, evento.target.value)}
-            error={errores[campo.id]}
-            disabled={enviando}
-          />
-        );
-      })}
-
-      <div className="d-flex justify-content-end gap-2 mt-3">
-        <SecondaryButton title="Cancelar" onClick={cerrar} disabled={enviando} />
-        <PrimaryButton title="Registrar paciente" onClick={registrar} loading={enviando} />
+      <div className="ec-form-pie">
+        <SecondaryButton
+          title="Cancelar"
+          variant="neutra"
+          icon={<X size={16} aria-hidden="true" />}
+          onClick={cerrar}
+          disabled={enviando}
+        />
+        <PrimaryButton
+          title="Registrar paciente"
+          icon={<Plus size={16} aria-hidden="true" />}
+          onClick={registrar}
+          loading={enviando}
+        />
       </div>
     </Modal>
   );

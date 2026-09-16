@@ -34,7 +34,7 @@ function EtiquetaTipo({ tipo }) {
         color: s.texto,
         padding: "4px 10px",
         borderRadius: "6px",
-        fontSize: "12px",
+        fontSize: "var(--texto-xs)",
         fontWeight: 600,
       }}
     >
@@ -57,7 +57,7 @@ function EtiquetaEstado({ estado }) {
         color: s.texto,
         padding: "4px 10px",
         borderRadius: "6px",
-        fontSize: "12px",
+        fontSize: "var(--texto-xs)",
         fontWeight: 600,
       }}
     >
@@ -140,10 +140,23 @@ export default function KardexMovimientosPage({
         }}
       >
         <div>
-          <h2 style={{ fontSize: "20px", fontWeight: 700, color: colores.textoTitulo, margin: 0 }}>
+          <h2
+            style={{
+              fontSize: "var(--texto-lg)",
+              fontWeight: 700,
+              color: colores.textoTitulo,
+              margin: 0,
+            }}
+          >
             {titulo}
           </h2>
-          <p style={{ fontSize: "13px", color: colores.textoSecundario, margin: "4px 0 0 0" }}>
+          <p
+            style={{
+              fontSize: "var(--texto-xs)",
+              color: colores.textoSecundario,
+              margin: "4px 0 0 0",
+            }}
+          >
             Historial cronológico • Solo movimientos{" "}
             <strong style={{ color: colores.botonFondo }}>aprobados</strong> afectan el saldo
           </p>
@@ -157,7 +170,7 @@ export default function KardexMovimientosPage({
             color: colores.botonTexto,
             border: "none",
             borderRadius: "8px",
-            fontSize: "14px",
+            fontSize: "var(--texto-sm)",
             fontWeight: 600,
             cursor: "pointer",
           }}
@@ -182,7 +195,7 @@ export default function KardexMovimientosPage({
           <label
             style={{
               display: "block",
-              fontSize: "13px",
+              fontSize: "var(--texto-xs)",
               fontWeight: 600,
               color: colores.textoSecundario,
               marginBottom: "6px",
@@ -199,7 +212,7 @@ export default function KardexMovimientosPage({
               padding: "8px 10px",
               border: `1px solid ${colores.borde}`,
               borderRadius: "6px",
-              fontSize: "14px",
+              fontSize: "var(--texto-sm)",
             }}
           />
         </div>
@@ -207,7 +220,7 @@ export default function KardexMovimientosPage({
           <label
             style={{
               display: "block",
-              fontSize: "13px",
+              fontSize: "var(--texto-xs)",
               fontWeight: 600,
               color: colores.textoSecundario,
               marginBottom: "6px",
@@ -224,7 +237,7 @@ export default function KardexMovimientosPage({
               padding: "8px 10px",
               border: `1px solid ${colores.borde}`,
               borderRadius: "6px",
-              fontSize: "14px",
+              fontSize: "var(--texto-sm)",
             }}
           />
         </div>
@@ -232,7 +245,7 @@ export default function KardexMovimientosPage({
           <label
             style={{
               display: "block",
-              fontSize: "13px",
+              fontSize: "var(--texto-xs)",
               fontWeight: 600,
               color: colores.textoSecundario,
               marginBottom: "6px",
@@ -248,7 +261,7 @@ export default function KardexMovimientosPage({
               padding: "8px 10px",
               border: `1px solid ${colores.borde}`,
               borderRadius: "6px",
-              fontSize: "14px",
+              fontSize: "var(--texto-sm)",
             }}
           >
             <option value="todos">Todos los tipos</option>
@@ -265,13 +278,13 @@ export default function KardexMovimientosPage({
         </p>
       ) : error ? (
         <div style={{ textAlign: "center", padding: "40px 20px", color: "#dc2626" }}>
-          <p style={{ fontSize: "15px", margin: 0 }}>No se pudo cargar el historial</p>
-          <p style={{ fontSize: "13px", margin: "8px 0 0 0" }}>{error.mensaje}</p>
+          <p style={{ fontSize: "var(--texto-sm)", margin: 0 }}>No se pudo cargar el historial</p>
+          <p style={{ fontSize: "var(--texto-xs)", margin: "8px 0 0 0" }}>{error.mensaje}</p>
         </div>
       ) : movimientos.length === 0 ? (
         <div style={{ textAlign: "center", padding: "40px 20px", color: colores.textoSecundario }}>
-          <p style={{ fontSize: "15px", margin: 0 }}>No hay movimientos registrados</p>
-          <p style={{ fontSize: "13px", margin: "8px 0 0 0" }}>
+          <p style={{ fontSize: "var(--texto-sm)", margin: 0 }}>No hay movimientos registrados</p>
+          <p style={{ fontSize: "var(--texto-xs)", margin: "8px 0 0 0" }}>
             Seleccione un lote o medicamento para ver su historial
           </p>
         </div>
@@ -279,7 +292,7 @@ export default function KardexMovimientosPage({
         <div
           style={{ overflowX: "auto", border: `1px solid ${colores.borde}`, borderRadius: "8px" }}
         >
-          <table style={{ width: "100%", fontSize: "14px", borderCollapse: "collapse" }}>
+          <table style={{ width: "100%", fontSize: "var(--texto-sm)", borderCollapse: "collapse" }}>
             <thead>
               <tr
                 style={{
@@ -291,7 +304,7 @@ export default function KardexMovimientosPage({
                   style={{
                     padding: "12px 10px",
                     textAlign: "left",
-                    fontSize: "13px",
+                    fontSize: "var(--texto-xs)",
                     fontWeight: 600,
                     color: colores.textoSecundario,
                   }}
@@ -302,7 +315,7 @@ export default function KardexMovimientosPage({
                   style={{
                     padding: "12px 10px",
                     textAlign: "left",
-                    fontSize: "13px",
+                    fontSize: "var(--texto-xs)",
                     fontWeight: 600,
                     color: colores.textoSecundario,
                   }}
@@ -313,7 +326,7 @@ export default function KardexMovimientosPage({
                   style={{
                     padding: "12px 10px",
                     textAlign: "right",
-                    fontSize: "13px",
+                    fontSize: "var(--texto-xs)",
                     fontWeight: 600,
                     color: colores.textoSecundario,
                   }}
@@ -324,7 +337,7 @@ export default function KardexMovimientosPage({
                   style={{
                     padding: "12px 10px",
                     textAlign: "left",
-                    fontSize: "13px",
+                    fontSize: "var(--texto-xs)",
                     fontWeight: 600,
                     color: colores.textoSecundario,
                   }}
@@ -335,7 +348,7 @@ export default function KardexMovimientosPage({
                   style={{
                     padding: "12px 10px",
                     textAlign: "left",
-                    fontSize: "13px",
+                    fontSize: "var(--texto-xs)",
                     fontWeight: 600,
                     color: colores.textoSecundario,
                   }}
@@ -346,7 +359,7 @@ export default function KardexMovimientosPage({
                   style={{
                     padding: "12px 10px",
                     textAlign: "left",
-                    fontSize: "13px",
+                    fontSize: "var(--texto-xs)",
                     fontWeight: 600,
                     color: colores.textoSecundario,
                   }}
@@ -357,7 +370,7 @@ export default function KardexMovimientosPage({
                   style={{
                     padding: "12px 10px",
                     textAlign: "left",
-                    fontSize: "13px",
+                    fontSize: "var(--texto-xs)",
                     fontWeight: 600,
                     color: colores.textoSecundario,
                   }}
@@ -368,7 +381,7 @@ export default function KardexMovimientosPage({
                   style={{
                     padding: "12px 10px",
                     textAlign: "left",
-                    fontSize: "13px",
+                    fontSize: "var(--texto-xs)",
                     fontWeight: 600,
                     color: colores.textoSecundario,
                   }}
@@ -379,7 +392,7 @@ export default function KardexMovimientosPage({
                   style={{
                     padding: "12px 10px",
                     textAlign: "left",
-                    fontSize: "13px",
+                    fontSize: "var(--texto-xs)",
                     fontWeight: 600,
                     color: colores.textoSecundario,
                   }}
@@ -390,7 +403,7 @@ export default function KardexMovimientosPage({
                   style={{
                     padding: "12px 10px",
                     textAlign: "right",
-                    fontSize: "13px",
+                    fontSize: "var(--texto-xs)",
                     fontWeight: 600,
                     color: colores.textoSecundario,
                   }}
@@ -405,7 +418,13 @@ export default function KardexMovimientosPage({
                   key={mov.id}
                   style={{ ...filaEstilo(mov), borderBottom: `1px solid ${colores.borde}` }}
                 >
-                  <td style={{ padding: "10px", fontSize: "13px", color: colores.textoSecundario }}>
+                  <td
+                    style={{
+                      padding: "10px",
+                      fontSize: "var(--texto-xs)",
+                      color: colores.textoSecundario,
+                    }}
+                  >
                     {formatoFecha(mov.created_at)}
                   </td>
                   <td style={{ padding: "10px" }}>
@@ -415,35 +434,59 @@ export default function KardexMovimientosPage({
                     {mov.tipo === TIPO_MOVIMIENTO.INGRESO ? "+" : ""}
                     {mov.cantidad}
                   </td>
-                  <td style={{ padding: "10px", fontSize: "13px", color: colores.textoSecundario }}>
+                  <td
+                    style={{
+                      padding: "10px",
+                      fontSize: "var(--texto-xs)",
+                      color: colores.textoSecundario,
+                    }}
+                  >
                     {mov.motivo}
                   </td>
-                  <td style={{ padding: "10px", fontSize: "13px", color: colores.textoSecundario }}>
+                  <td
+                    style={{
+                      padding: "10px",
+                      fontSize: "var(--texto-xs)",
+                      color: colores.textoSecundario,
+                    }}
+                  >
                     {mov.bodega_nombre || "—"}
                   </td>
-                  <td style={{ padding: "10px", fontSize: "13px" }}>
+                  <td style={{ padding: "10px", fontSize: "var(--texto-xs)" }}>
                     {mov.registrado_por_nombre || "—"}
                   </td>
-                  <td style={{ padding: "10px", fontSize: "13px" }}>
+                  <td style={{ padding: "10px", fontSize: "var(--texto-xs)" }}>
                     {mov.aprobado_por_nombre || "Pendiente"}
                     {/* aprobacion_automatica (00028): TRUE cuando quien registro el movimiento
                         era administrador y el trigger lo aprobo solo, sin que nadie mas
                         interviniera -era una columna real que nunca llegaba a pantalla. */}
                     {mov.aprobacion_automatica && (
-                      <span style={{ fontSize: "11px", color: colores.textoSecundario }}>
+                      <span
+                        style={{ fontSize: "var(--texto-xxs)", color: colores.textoSecundario }}
+                      >
                         {" "}
                         (automático)
                       </span>
                     )}
                   </td>
-                  <td style={{ padding: "10px", fontSize: "12px", color: colores.textoSecundario }}>
+                  <td
+                    style={{
+                      padding: "10px",
+                      fontSize: "var(--texto-xs)",
+                      color: colores.textoSecundario,
+                    }}
+                  >
                     {formatoFecha(mov.aprobado_en)}
                   </td>
                   <td style={{ padding: "10px" }}>
                     <EtiquetaEstado estado={mov.estado} />
                     {mov.estado === ESTADO_MOVIMIENTO.RECHAZADO && mov.motivo_rechazo && (
                       <div
-                        style={{ fontSize: "11px", color: colores.textoSecundario, marginTop: 2 }}
+                        style={{
+                          fontSize: "var(--texto-xxs)",
+                          color: colores.textoSecundario,
+                          marginTop: 2,
+                        }}
                       >
                         Motivo: {mov.motivo_rechazo}
                       </div>
@@ -474,7 +517,7 @@ export default function KardexMovimientosPage({
           marginTop: "16px",
           paddingTop: "16px",
           borderTop: `1px solid ${colores.borde}`,
-          fontSize: "12px",
+          fontSize: "var(--texto-xs)",
           color: colores.textoSecundario,
         }}
       >

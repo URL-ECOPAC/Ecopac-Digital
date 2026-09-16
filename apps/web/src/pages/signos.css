@@ -1,0 +1,31 @@
+/* Pestania de signos vitales de la ficha del paciente.
+ *
+ * Ningun valor literal: todo sale de las variables que publica theme.js desde @ecopac/ui-tokens. */
+
+.signos-grupo + .signos-grupo {
+  margin-top: var(--spacing-xl);
+}
+
+/* Encabezado de grupo: cardiovascular, metabolico, medidas corporales. Es un rotulo de seccion,
+   no un titulo de tarjeta, asi que va en versalitas con una linea que lo separa de lo anterior
+   -- mismo tratamiento que cualquier otro rotulo del sistema. */
+.signos-grupo-titulo {
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  font-size: var(--texto-xxs);
+  font-weight: var(--peso-semibold);
+  letter-spacing: 0.08em;
+  margin: 0 0 var(--spacing-md);
+  padding-bottom: var(--spacing-sm);
+  text-transform: uppercase;
+}
+
+/* Dos tarjetas por fila donde quepan. Con ocho series, una sola columna obliga a desplazar la
+   pestania entera para llegar al IMC; `auto-fit` cae a una columna en pantallas estrechas sin
+   necesidad de una media query. El minimo de 340px es el ancho por debajo del cual la grafica
+   deja de leerse. */
+.signos-rejilla {
+  display: grid;
+  gap: var(--spacing-md);
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+}

@@ -12,7 +12,7 @@ export default function ErrorState({
     <Container className="py-4 px-0">
       <Alert variant="danger" className="d-flex flex-column align-items-center text-center m-0">
         <Alert.Heading className="fs-6 fw-bold mb-2">Ha ocurrido un problema</Alert.Heading>
-        <p className="mb-3" style={{ fontSize: "14px" }}>
+        <p className="mb-3" style={{ fontSize: "var(--texto-sm)" }}>
           {message}
         </p>
         {onRetry && (

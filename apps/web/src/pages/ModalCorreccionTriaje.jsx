@@ -4,6 +4,7 @@ import Modal from "../components/Modal";
 import NumberField from "../components/NumberField";
 import PrimaryButton from "../components/PrimaryButton";
 import SecondaryButton from "../components/SecondaryButton";
+import { Save, X } from "lucide-react";
 
 // Modal de correccion de un triaje ya registrado (issue #756, auditoria campo-a-vista).
 //
@@ -47,8 +48,18 @@ export default function ModalCorreccionTriaje({ triaje, onClose, onGuardado }) {
       ))}
 
       <div className="d-flex justify-content-end gap-2 mt-3">
-        <SecondaryButton title="Cancelar" onClick={onClose} disabled={enviando} />
-        <PrimaryButton title="Guardar" onClick={guardarCambios} loading={enviando} />
+        <SecondaryButton
+          title="Cancelar"
+          onClick={onClose}
+          disabled={enviando}
+          icon={<X size={16} aria-hidden="true" />}
+        />
+        <PrimaryButton
+          title="Guardar"
+          onClick={guardarCambios}
+          loading={enviando}
+          icon={<Save size={16} aria-hidden="true" />}
+        />
       </div>
     </Modal>
   );

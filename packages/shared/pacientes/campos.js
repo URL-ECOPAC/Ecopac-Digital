@@ -97,6 +97,62 @@ export const CAMPOS_REGISTRO_PACIENTE = [
 ];
 
 /**
+ * El formulario de paciente, agrupado.
+ *
+ * Once campos en una sola columna obligan a desplazar el modal entero para verlo, y no dicen
+ * nada sobre que datos van juntos. Agrupados se leen de una vez y en el mismo orden que la ficha
+ * de papel que se sigue usando en jornada: primero quien es, despues donde vive y como se le
+ * contacta, despues lo clinico, y al final el responsable -que solo se llena cuando el paciente
+ * es menor o no puede responder por si mismo-.
+ *
+ * Mismo patron que SECCIONES_CONSULTA en consultas.secciones.js: el agrupamiento es una decision
+ * de negocio, asi que vive aqui y lo comparten web y movil, no lo decide cada pantalla.
+ *
+ * Los ids se resuelven contra CAMPOS_REGISTRO_PACIENTE con seccionesConCampos(): repetir aqui la
+ * etiqueta o el tipo seria una segunda copia que se desincroniza.
+ */
+export const SECCIONES_PACIENTE = Object.freeze([
+  {
+    id: "identificacion",
+    titulo: "Identificación",
+    descripcion: "Quién es la persona.",
+    campos: ["nombres", "apellidos", "fechaNacimiento", "sexo", "dpi"],
+  },
+  {
+    id: "contacto",
+    titulo: "Ubicación y contacto",
+    descripcion: "Dónde vive y cómo se le localiza.",
+    campos: ["comunidad", "telefonoContacto", "idioma"],
+  },
+  {
+    id: "clinicos",
+    titulo: "Datos clínicos",
+    campos: ["tipoSangre"],
+  },
+  {
+    id: "responsable",
+    titulo: "Responsable",
+    descripcion: "Solo si la persona es menor de edad o no puede responder por sí misma.",
+    campos: ["nombreResponsable", "parentescoResponsable"],
+  },
+]);
+
+/**
+ * Las secciones con su descriptor de campo completo, listas para dibujar.
+ *
+ * Un id que no exista en CAMPOS_REGISTRO_PACIENTE se descarta en vez de dejar un hueco: es lo
+ * que pasaria si alguien renombrara un campo y olvidara esta lista.
+ */
+export function seccionesDePaciente() {
+  return SECCIONES_PACIENTE.map((seccion) => ({
+    ...seccion,
+    campos: seccion.campos
+      .map((id) => CAMPOS_REGISTRO_PACIENTE.find((campo) => campo.id === id))
+      .filter(Boolean),
+  }));
+}
+
+/**
  * Formulario de triaje (triajes, 00013). min/max reproducen los CHECK de la tabla:
  * cambiar un rango aqui sin cambiar la migracion desalinea la validacion del cliente
  * con la de la base de datos.

@@ -8,6 +8,7 @@ import SecondaryButton from "../components/SecondaryButton";
 import TextField from "../components/TextField";
 import { almacenamientoWeb } from "../almacenamiento";
 import SelectorDeJornada from "./SelectorDeJornada";
+import { Save, X } from "lucide-react";
 
 // Registro de una consulta medica desde la ficha del paciente, en web.
 //
@@ -97,8 +98,14 @@ export default function ModalRegistroConsulta({ paciente, perfilId, onClose, onG
       )}
 
       {secciones.map((seccion) => (
-        <section className="ec-form-seccion" key={seccion.id}>
-          <h3 className="ec-form-seccion-titulo">{seccion.titulo}</h3>
+        <section
+          className="ec-form-seccion"
+          key={seccion.id}
+          style={{ "--ec-acento": "var(--accent-pacientes)" }}
+        >
+          <div className="ec-form-seccion-cabecera">
+            <h3 className="ec-form-seccion-titulo">{seccion.titulo}</h3>
+          </div>
 
           {seccion.campos.map((campo) => {
             if (campo.tipo === TIPOS_DE_CAMPO.MULTI_SELECT) {
@@ -144,12 +151,14 @@ export default function ModalRegistroConsulta({ paciente, perfilId, onClose, onG
             variant="neutra"
             onClick={onClose}
             disabled={enviando}
+            icon={<X size={16} aria-hidden="true" />}
           />
           <PrimaryButton
             title="Guardar consulta"
             onClick={guardarConsulta}
             loading={enviando}
             disabled={!listoParaGuardar}
+            icon={<Save size={16} aria-hidden="true" />}
           />
         </div>
       </div>

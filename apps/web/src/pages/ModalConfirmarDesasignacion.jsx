@@ -5,6 +5,7 @@ import { useDesasignacionPersonal } from "@ecopac/shared";
 import Modal from "../components/Modal";
 import PrimaryButton from "../components/PrimaryButton";
 import SecondaryButton from "../components/SecondaryButton";
+import { Trash2, X } from "lucide-react";
 
 // Dialogo de confirmacion de desasignar a alguien de una jornada (issue #182, criterio 4). No es
 // un componente de catalogo: compone Modal + PrimaryButton + SecondaryButton, mismo patron que
@@ -53,8 +54,18 @@ export default function ModalConfirmarDesasignacion({
       </p>
 
       <div className="d-flex justify-content-end gap-2 mt-3">
-        <SecondaryButton title="Cancelar" onClick={onClose} disabled={enviando} />
-        <PrimaryButton title="Desasignar" onClick={confirmarAccion} loading={enviando} />
+        <SecondaryButton
+          title="Cancelar"
+          onClick={onClose}
+          disabled={enviando}
+          icon={<X size={16} aria-hidden="true" />}
+        />
+        <PrimaryButton
+          title="Desasignar"
+          onClick={confirmarAccion}
+          loading={enviando}
+          icon={<Trash2 size={16} aria-hidden="true" />}
+        />
       </div>
     </Modal>
   );

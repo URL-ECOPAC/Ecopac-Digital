@@ -86,7 +86,7 @@ export default function ModalRegistroIngreso({
             {/* Banner crítico de estado provisional */}
             <div
               className="alert border-0 rounded-3 text-dark mb-3 p-3"
-              style={{ backgroundColor: "#FFF3CD", fontSize: "12px", lineHeight: "1.5" }}
+              style={{ backgroundColor: "#FFF3CD", fontSize: "var(--texto-xs)", lineHeight: "1.5" }}
             >
               <strong>Advertencia:</strong> Los lotes que crea este ingreso quedan como{" "}
               <strong>provisionales</strong>. <u>No afectarán el stock de inventario</u> hasta su
@@ -96,7 +96,7 @@ export default function ModalRegistroIngreso({
             {error && (
               <div
                 className="alert alert-danger border-0 rounded-3 text-sm p-3 mb-3"
-                style={{ fontSize: "12px" }}
+                style={{ fontSize: "var(--texto-xs)" }}
               >
                 {error}
               </div>
@@ -110,7 +110,7 @@ export default function ModalRegistroIngreso({
                 </div>
                 <div
                   className="bg-white p-3 rounded border text-secondary"
-                  style={{ fontSize: "12px" }}
+                  style={{ fontSize: "var(--texto-xs)" }}
                 >
                   <p className="mb-1">
                     <strong>Origen:</strong> {resumenGuardado.origen?.toUpperCase()}
@@ -136,7 +136,7 @@ export default function ModalRegistroIngreso({
                 <div>
                   <label
                     className="form-label fw-bold text-secondary uppercase mb-2"
-                    style={{ fontSize: "11px" }}
+                    style={{ fontSize: "var(--texto-xxs)" }}
                   >
                     Origen del Ingreso *
                   </label>
@@ -153,7 +153,7 @@ export default function ModalRegistroIngreso({
                       />
                       <label
                         className="form-check-label text-dark"
-                        style={{ fontSize: "14px" }}
+                        style={{ fontSize: "var(--texto-sm)" }}
                         htmlFor="origenCompra"
                       >
                         Compra
@@ -171,7 +171,7 @@ export default function ModalRegistroIngreso({
                       />
                       <label
                         className="form-check-label text-dark"
-                        style={{ fontSize: "14px" }}
+                        style={{ fontSize: "var(--texto-sm)" }}
                         htmlFor="origenDonacion"
                       >
                         Donación
@@ -185,7 +185,7 @@ export default function ModalRegistroIngreso({
                   <div className="col-md-6">
                     <label
                       className="form-label fw-semibold text-secondary"
-                      style={{ fontSize: "12px" }}
+                      style={{ fontSize: "var(--texto-xs)" }}
                     >
                       {origen === "compra" ? "Proveedor *" : "Donante *"}
                     </label>
@@ -206,7 +206,7 @@ export default function ModalRegistroIngreso({
                   <div className="col-md-6">
                     <label
                       className="form-label fw-semibold text-secondary"
-                      style={{ fontSize: "12px" }}
+                      style={{ fontSize: "var(--texto-xs)" }}
                     >
                       No. Factura / Comprobante
                     </label>
@@ -226,14 +226,17 @@ export default function ModalRegistroIngreso({
                 <div>
                   <h6
                     className="fw-bold text-secondary uppercase mb-2"
-                    style={{ fontSize: "11px" }}
+                    style={{ fontSize: "var(--texto-xxs)" }}
                   >
                     Agregar Medicamentos
                   </h6>
                   <div className="card border-0 bg-light p-3 rounded-3 mb-3">
                     <div className="row g-2">
                       <div className="col-md-6">
-                        <label className="form-label text-muted mb-1" style={{ fontSize: "11px" }}>
+                        <label
+                          className="form-label text-muted mb-1"
+                          style={{ fontSize: "var(--texto-xxs)" }}
+                        >
                           Medicamento *
                         </label>
                         <select
@@ -253,7 +256,10 @@ export default function ModalRegistroIngreso({
                       </div>
 
                       <div className="col-md-3">
-                        <label className="form-label text-muted mb-1" style={{ fontSize: "11px" }}>
+                        <label
+                          className="form-label text-muted mb-1"
+                          style={{ fontSize: "var(--texto-xxs)" }}
+                        >
                           No. Lote *
                         </label>
                         <input
@@ -268,7 +274,10 @@ export default function ModalRegistroIngreso({
                       </div>
 
                       <div className="col-md-3">
-                        <label className="form-label text-muted mb-1" style={{ fontSize: "11px" }}>
+                        <label
+                          className="form-label text-muted mb-1"
+                          style={{ fontSize: "var(--texto-xxs)" }}
+                        >
                           Bodega *
                         </label>
                         <select
@@ -288,7 +297,10 @@ export default function ModalRegistroIngreso({
                       </div>
 
                       <div className="col-md-3">
-                        <label className="form-label text-muted mb-1" style={{ fontSize: "11px" }}>
+                        <label
+                          className="form-label text-muted mb-1"
+                          style={{ fontSize: "var(--texto-xxs)" }}
+                        >
                           Cantidad *
                         </label>
                         <input
@@ -303,7 +315,10 @@ export default function ModalRegistroIngreso({
                       </div>
 
                       <div className="col-md-3">
-                        <label className="form-label text-muted mb-1" style={{ fontSize: "11px" }}>
+                        <label
+                          className="form-label text-muted mb-1"
+                          style={{ fontSize: "var(--texto-xxs)" }}
+                        >
                           Costo Unitario (Q)
                         </label>
                         <input
@@ -320,7 +335,10 @@ export default function ModalRegistroIngreso({
                       </div>
 
                       <div className="col-md-6">
-                        <label className="form-label text-muted mb-1" style={{ fontSize: "11px" }}>
+                        <label
+                          className="form-label text-muted mb-1"
+                          style={{ fontSize: "var(--texto-xxs)" }}
+                        >
                           Fecha Vencimiento
                         </label>
                         <div className="d-flex gap-2">
@@ -349,11 +367,11 @@ export default function ModalRegistroIngreso({
                 <div className="table-responsive border rounded-3 overflow-hidden">
                   <table
                     className="table table-hover table-sm align-middle mb-0"
-                    style={{ fontSize: "12px" }}
+                    style={{ fontSize: "var(--texto-xs)" }}
                   >
                     <thead
                       className="table-light text-secondary text-uppercase"
-                      style={{ fontSize: "11px" }}
+                      style={{ fontSize: "var(--texto-xxs)" }}
                     >
                       <tr>
                         <th className="py-2 px-3">Medicamento</th>

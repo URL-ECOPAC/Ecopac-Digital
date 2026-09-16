@@ -6,6 +6,7 @@ import Modal from "../components/Modal";
 import PrimaryButton from "../components/PrimaryButton";
 import SecondaryButton from "../components/SecondaryButton";
 import TextField from "../components/TextField";
+import { Trash2, X } from "lucide-react";
 
 function valoresDe(principioActivo) {
   return { nombre: principioActivo?.nombre ?? "" };
@@ -113,11 +114,21 @@ export default function ModalPrincipioActivo({
         <div className="d-flex justify-content-between align-items-center mt-3">
           <div>
             {editando && (
-              <SecondaryButton title="Eliminar" onClick={eliminar} disabled={enviando} />
+              <SecondaryButton
+                title="Eliminar"
+                onClick={eliminar}
+                disabled={enviando}
+                icon={<Trash2 size={16} aria-hidden="true" />}
+              />
             )}
           </div>
           <div className="d-flex gap-2">
-            <SecondaryButton title="Cancelar" onClick={onClose} disabled={enviando} />
+            <SecondaryButton
+              title="Cancelar"
+              onClick={onClose}
+              disabled={enviando}
+              icon={<X size={16} aria-hidden="true" />}
+            />
             <PrimaryButton
               title={editando ? "Guardar cambios" : "Crear"}
               onClick={guardar}

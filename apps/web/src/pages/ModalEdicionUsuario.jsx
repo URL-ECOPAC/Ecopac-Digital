@@ -2,18 +2,17 @@ import { useState } from "react";
 
 import {
   CAMPOS_EDICION_USUARIO,
-  TIPOS_DE_CAMPO,
   useEdicionUsuario,
   useEspecialidadesDePerfil,
 } from "@ecopac/shared";
 
-import DateField from "../components/DateField";
+import { Save, UserCheck, UserX, X } from "lucide-react";
+
 import Modal from "../components/Modal";
 import MultiSelector from "../components/MultiSelector";
 import PrimaryButton from "../components/PrimaryButton";
-import Selector from "../components/Selector";
+import SeccionDeFormulario from "../components/SeccionDeFormulario";
 import SecondaryButton from "../components/SecondaryButton";
-import TextField from "../components/TextField";
 import ModalConfirmarDesactivacion from "./ModalConfirmarDesactivacion";
 
 // Modal de edicion de usuario (issue #107), abierto al clickear una fila de
@@ -41,11 +40,6 @@ import ModalConfirmarDesactivacion from "./ModalConfirmarDesactivacion";
 //
 // Desactivar/reactivar (criterio 2) se abre desde aca, con un boton propio que abre
 // ModalConfirmarDesactivacion.
-const TIPO_DE_INPUT = {
-  [TIPOS_DE_CAMPO.TEXTO]: "text",
-  [TIPOS_DE_CAMPO.TELEFONO]: "tel",
-};
-
 export default function ModalEdicionUsuario({ perfil, idSesionActual, rol, onClose, onGuardado }) {
   const { valores, errores, error, enviando, setCampo, guardar } = useEdicionUsuario(perfil);
   const especialidades = useEspecialidadesDePerfil(perfil?.id, { rol, idSesionActual });
@@ -67,62 +61,17 @@ export default function ModalEdicionUsuario({ perfil, idSesionActual, rol, onClo
           </div>
         )}
 
-        <section className="ec-form-seccion">
-          <h3 className="ec-form-seccion-titulo">Datos del colaborador</h3>
-
-          <div className="ec-form-grid">
-            {CAMPOS_EDICION_USUARIO.map((campo) => {
-              // Direccion y notas son texto largo: ocupan la fila entera en vez de media, para
-              // que no queden dos cajas de tres lineas una al lado de la otra.
-              const ancho = campo.tipo === TIPOS_DE_CAMPO.TEXTO_LARGO ? "ec-form-grid--ancho" : "";
-
-              if (campo.tipo === TIPOS_DE_CAMPO.SELECT) {
-                return (
-                  <Selector
-                    key={campo.id}
-                    label={campo.label}
-                    value={valores[campo.id]}
-                    options={campo.opciones}
-                    onSelect={(valor) => setCampo(campo.id, valor)}
-                    error={errores[campo.id]}
-                    disabled={enviando}
-                  />
-                );
-              }
-
-              if (campo.tipo === TIPOS_DE_CAMPO.FECHA) {
-                return (
-                  <DateField
-                    key={campo.id}
-                    label={campo.label}
-                    value={valores[campo.id] || null}
-                    onChange={(valor) => setCampo(campo.id, valor)}
-                    error={errores[campo.id]}
-                    disabled={enviando}
-                  />
-                );
-              }
-
-              return (
-                <TextField
-                  key={campo.id}
-                  label={campo.label}
-                  className={ancho}
-                  style={ancho ? { gridColumn: "1 / -1" } : undefined}
-                  as={campo.tipo === TIPOS_DE_CAMPO.TEXTO_LARGO ? "textarea" : undefined}
-                  rows={campo.tipo === TIPOS_DE_CAMPO.TEXTO_LARGO ? 3 : undefined}
-                  type={TIPO_DE_INPUT[campo.tipo] ?? "text"}
-                  maxLength={campo.validacion?.maxLongitud}
-                  value={valores[campo.id] ?? ""}
-                  onChange={(evento) => setCampo(campo.id, evento.target.value)}
-                  error={errores[campo.id]}
-                  disabled={enviando}
-                />
-              );
-            })}
-          </div>
-
-          <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-2">
+        <SeccionDeFormulario
+          titulo="Datos del colaborador"
+          descripcion="Los datos de contacto y el rol con el que entra al sistema."
+          acento="var(--accent-colaboradores)"
+          campos={CAMPOS_EDICION_USUARIO}
+          valores={valores}
+          errores={errores}
+          onChange={setCampo}
+          disabled={enviando}
+        >
+          <div className="d-flex flex-wrap justify-content-between align-items-center gap-2">
             <div>
               {esUnoMismo ? (
                 <span className="text-body-secondary small">
@@ -132,6 +81,13 @@ export default function ModalEdicionUsuario({ perfil, idSesionActual, rol, onClo
                 <SecondaryButton
                   title={perfil?.activo ? "Desactivar" : "Reactivar"}
                   variant={perfil?.activo ? "peligro" : "outline"}
+                  icon={
+                    perfil?.activo ? (
+                      <UserX size={16} aria-hidden="true" />
+                    ) : (
+                      <UserCheck size={16} aria-hidden="true" />
+                    )
+                  }
                   onClick={() => setMostrarConfirmacion(true)}
                   disabled={enviando}
                 />
@@ -143,14 +99,28 @@ export default function ModalEdicionUsuario({ perfil, idSesionActual, rol, onClo
                 variant="neutra"
                 onClick={onClose}
                 disabled={enviando}
+                icon={<X size={16} aria-hidden="true" />}
               />
-              <PrimaryButton title="Guardar datos" onClick={guardarCambios} loading={enviando} />
+              <PrimaryButton
+                title="Guardar datos"
+                onClick={guardarCambios}
+                loading={enviando}
+                icon={<Save size={16} aria-hidden="true" />}
+              />
             </div>
           </div>
-        </section>
+        </SeccionDeFormulario>
 
-        <section className="ec-form-seccion">
-          <h3 className="ec-form-seccion-titulo">Especialidades</h3>
+        <section
+          className="ec-form-seccion"
+          style={{ "--ec-acento": "var(--accent-colaboradores)" }}
+        >
+          <div className="ec-form-seccion-cabecera">
+            <h3 className="ec-form-seccion-titulo">Especialidades</h3>
+            <p className="ec-form-seccion-descripcion">
+              De qué es especialista. Es el dato por el que se busca a un médico en el listado.
+            </p>
+          </div>
 
           {especialidades.error && (
             <div className="alert alert-danger" role="alert">
@@ -186,6 +156,7 @@ export default function ModalEdicionUsuario({ perfil, idSesionActual, rol, onClo
                 onClick={especialidades.guardar}
                 loading={especialidades.enviando}
                 disabled={!especialidades.hayCambios}
+                icon={<Save size={16} aria-hidden="true" />}
               />
             </div>
           )}

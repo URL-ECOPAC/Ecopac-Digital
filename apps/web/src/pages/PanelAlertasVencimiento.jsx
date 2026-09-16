@@ -122,7 +122,7 @@ export default function PanelAlertasVencimiento({ usuarioId, rolUsuario }) {
             padding: "8px 14px",
             border: "1px solid #e2e8f0",
             borderRadius: "4px",
-            fontSize: "14px",
+            fontSize: "var(--texto-sm)",
             minWidth: "240px",
             outline: "none",
           }}
@@ -131,12 +131,19 @@ export default function PanelAlertasVencimiento({ usuarioId, rolUsuario }) {
 
       {/* Próximos a vencer */}
       <div style={{ marginBottom: "32px" }}>
-        <h3 style={{ fontSize: "20px", fontWeight: "600", margin: "0 0 12px 0", color: "#0f172a" }}>
+        <h3
+          style={{
+            fontSize: "var(--texto-lg)",
+            fontWeight: "var(--peso-semibold)",
+            margin: "0 0 12px 0",
+            color: "#0f172a",
+          }}
+        >
           Próximos a vencer ({porVencer.length})
         </h3>
 
         {porVencer.length === 0 ? (
-          <div style={{ padding: "24px", color: "#64748b", fontSize: "14px" }}>
+          <div style={{ padding: "24px", color: "#64748b", fontSize: "var(--texto-sm)" }}>
             No hay lotes por vencer en los próximos 30 días
           </div>
         ) : (
@@ -147,8 +154,8 @@ export default function PanelAlertasVencimiento({ usuarioId, rolUsuario }) {
                   style={{
                     padding: "12px 16px",
                     textAlign: "left",
-                    fontSize: "14px",
-                    fontWeight: "600",
+                    fontSize: "var(--texto-sm)",
+                    fontWeight: "var(--peso-semibold)",
                     color: "#0f172a",
                   }}
                 >
@@ -158,8 +165,8 @@ export default function PanelAlertasVencimiento({ usuarioId, rolUsuario }) {
                   style={{
                     padding: "12px 16px",
                     textAlign: "left",
-                    fontSize: "14px",
-                    fontWeight: "600",
+                    fontSize: "var(--texto-sm)",
+                    fontWeight: "var(--peso-semibold)",
                     color: "#0f172a",
                   }}
                 >
@@ -169,8 +176,8 @@ export default function PanelAlertasVencimiento({ usuarioId, rolUsuario }) {
                   style={{
                     padding: "12px 16px",
                     textAlign: "right",
-                    fontSize: "14px",
-                    fontWeight: "600",
+                    fontSize: "var(--texto-sm)",
+                    fontWeight: "var(--peso-semibold)",
                     color: "#0f172a",
                   }}
                 >
@@ -180,8 +187,8 @@ export default function PanelAlertasVencimiento({ usuarioId, rolUsuario }) {
                   style={{
                     padding: "12px 16px",
                     textAlign: "left",
-                    fontSize: "14px",
-                    fontWeight: "600",
+                    fontSize: "var(--texto-sm)",
+                    fontWeight: "var(--peso-semibold)",
                     color: "#0f172a",
                   }}
                 >
@@ -191,8 +198,8 @@ export default function PanelAlertasVencimiento({ usuarioId, rolUsuario }) {
                   style={{
                     padding: "12px 16px",
                     textAlign: "center",
-                    fontSize: "14px",
-                    fontWeight: "600",
+                    fontSize: "var(--texto-sm)",
+                    fontWeight: "var(--peso-semibold)",
                     color: "#0f172a",
                   }}
                 >
@@ -202,8 +209,8 @@ export default function PanelAlertasVencimiento({ usuarioId, rolUsuario }) {
                   style={{
                     padding: "12px 16px",
                     textAlign: "center",
-                    fontSize: "14px",
-                    fontWeight: "600",
+                    fontSize: "var(--texto-sm)",
+                    fontWeight: "var(--peso-semibold)",
                     color: "#0f172a",
                   }}
                 >
@@ -219,11 +226,13 @@ export default function PanelAlertasVencimiento({ usuarioId, rolUsuario }) {
                     key={alerta.id}
                     style={{ backgroundColor: estilo.fondo, borderBottom: "1px solid #e2e8f0" }}
                   >
-                    <td style={{ padding: "14px 16px", fontSize: "14px" }}>{alerta.medicamento}</td>
+                    <td style={{ padding: "14px 16px", fontSize: "var(--texto-sm)" }}>
+                      {alerta.medicamento}
+                    </td>
                     <td
                       style={{
                         padding: "14px 16px",
-                        fontSize: "14px",
+                        fontSize: "var(--texto-sm)",
                         fontFamily: "var(--fuente-mono)",
                       }}
                     >
@@ -232,14 +241,14 @@ export default function PanelAlertasVencimiento({ usuarioId, rolUsuario }) {
                     <td
                       style={{
                         padding: "14px 16px",
-                        fontSize: "14px",
+                        fontSize: "var(--texto-sm)",
                         textAlign: "right",
-                        fontWeight: "500",
+                        fontWeight: "var(--peso-medium)",
                       }}
                     >
                       {alerta.cantidadAfectada}
                     </td>
-                    <td style={{ padding: "14px 16px", fontSize: "14px" }}>
+                    <td style={{ padding: "14px 16px", fontSize: "var(--texto-sm)" }}>
                       {formatoFecha(alerta.fechaVencimiento)}
                     </td>
                     <td style={{ padding: "14px 16px", textAlign: "center" }}>
@@ -250,8 +259,8 @@ export default function PanelAlertasVencimiento({ usuarioId, rolUsuario }) {
                           backgroundColor: estilo.borde,
                           color: estilo.texto,
                           borderRadius: "4px",
-                          fontWeight: "600",
-                          fontSize: "14px",
+                          fontWeight: "var(--peso-semibold)",
+                          fontSize: "var(--texto-sm)",
                         }}
                       >
                         {alerta.diasRestantes === 0 ? "HOY" : `${alerta.diasRestantes}d`}
@@ -265,8 +274,8 @@ export default function PanelAlertasVencimiento({ usuarioId, rolUsuario }) {
                           backgroundColor: "#e2e8f0",
                           border: "1px solid #cbd5e1",
                           borderRadius: "4px",
-                          fontSize: "13px",
-                          fontWeight: "500",
+                          fontSize: "var(--texto-xs)",
+                          fontWeight: "var(--peso-medium)",
                           cursor: "pointer",
                         }}
                       >
@@ -283,12 +292,19 @@ export default function PanelAlertasVencimiento({ usuarioId, rolUsuario }) {
 
       {/* Vencidas */}
       <div>
-        <h3 style={{ fontSize: "20px", fontWeight: "600", margin: "0 0 12px 0", color: "#0f172a" }}>
+        <h3
+          style={{
+            fontSize: "var(--texto-lg)",
+            fontWeight: "var(--peso-semibold)",
+            margin: "0 0 12px 0",
+            color: "#0f172a",
+          }}
+        >
           Vencidos — Para dar de baja ({vencidas.length})
         </h3>
 
         {vencidas.length === 0 ? (
-          <div style={{ padding: "24px", color: "#64748b", fontSize: "14px" }}>
+          <div style={{ padding: "24px", color: "#64748b", fontSize: "var(--texto-sm)" }}>
             No hay lotes vencidos
           </div>
         ) : (
@@ -299,8 +315,8 @@ export default function PanelAlertasVencimiento({ usuarioId, rolUsuario }) {
                   style={{
                     padding: "12px 16px",
                     textAlign: "left",
-                    fontSize: "14px",
-                    fontWeight: "600",
+                    fontSize: "var(--texto-sm)",
+                    fontWeight: "var(--peso-semibold)",
                     color: "#dc2626",
                   }}
                 >
@@ -310,8 +326,8 @@ export default function PanelAlertasVencimiento({ usuarioId, rolUsuario }) {
                   style={{
                     padding: "12px 16px",
                     textAlign: "left",
-                    fontSize: "14px",
-                    fontWeight: "600",
+                    fontSize: "var(--texto-sm)",
+                    fontWeight: "var(--peso-semibold)",
                     color: "#dc2626",
                   }}
                 >
@@ -321,8 +337,8 @@ export default function PanelAlertasVencimiento({ usuarioId, rolUsuario }) {
                   style={{
                     padding: "12px 16px",
                     textAlign: "right",
-                    fontSize: "14px",
-                    fontWeight: "600",
+                    fontSize: "var(--texto-sm)",
+                    fontWeight: "var(--peso-semibold)",
                     color: "#dc2626",
                   }}
                 >
@@ -332,8 +348,8 @@ export default function PanelAlertasVencimiento({ usuarioId, rolUsuario }) {
                   style={{
                     padding: "12px 16px",
                     textAlign: "left",
-                    fontSize: "14px",
-                    fontWeight: "600",
+                    fontSize: "var(--texto-sm)",
+                    fontWeight: "var(--peso-semibold)",
                     color: "#dc2626",
                   }}
                 >
@@ -343,8 +359,8 @@ export default function PanelAlertasVencimiento({ usuarioId, rolUsuario }) {
                   style={{
                     padding: "12px 16px",
                     textAlign: "center",
-                    fontSize: "14px",
-                    fontWeight: "600",
+                    fontSize: "var(--texto-sm)",
+                    fontWeight: "var(--peso-semibold)",
                     color: "#dc2626",
                   }}
                 >
@@ -354,8 +370,8 @@ export default function PanelAlertasVencimiento({ usuarioId, rolUsuario }) {
                   style={{
                     padding: "12px 16px",
                     textAlign: "center",
-                    fontSize: "14px",
-                    fontWeight: "600",
+                    fontSize: "var(--texto-sm)",
+                    fontWeight: "var(--peso-semibold)",
                     color: "#dc2626",
                   }}
                 >
@@ -369,13 +385,15 @@ export default function PanelAlertasVencimiento({ usuarioId, rolUsuario }) {
                   key={alerta.id}
                   style={{ backgroundColor: "#fef2f2", borderBottom: "1px solid #fecaca" }}
                 >
-                  <td style={{ padding: "14px 16px", fontSize: "14px", color: "#991b1b" }}>
+                  <td
+                    style={{ padding: "14px 16px", fontSize: "var(--texto-sm)", color: "#991b1b" }}
+                  >
                     {alerta.medicamento}
                   </td>
                   <td
                     style={{
                       padding: "14px 16px",
-                      fontSize: "14px",
+                      fontSize: "var(--texto-sm)",
                       fontFamily: "var(--fuente-mono)",
                       color: "#991b1b",
                     }}
@@ -385,15 +403,17 @@ export default function PanelAlertasVencimiento({ usuarioId, rolUsuario }) {
                   <td
                     style={{
                       padding: "14px 16px",
-                      fontSize: "14px",
+                      fontSize: "var(--texto-sm)",
                       textAlign: "right",
-                      fontWeight: "500",
+                      fontWeight: "var(--peso-medium)",
                       color: "#991b1b",
                     }}
                   >
                     {alerta.cantidadAfectada}
                   </td>
-                  <td style={{ padding: "14px 16px", fontSize: "14px", color: "#991b1b" }}>
+                  <td
+                    style={{ padding: "14px 16px", fontSize: "var(--texto-sm)", color: "#991b1b" }}
+                  >
                     {formatoFecha(alerta.fechaVencimiento)}
                   </td>
                   <td style={{ padding: "14px 16px", textAlign: "center" }}>
@@ -404,8 +424,8 @@ export default function PanelAlertasVencimiento({ usuarioId, rolUsuario }) {
                         backgroundColor: "#fecaca",
                         color: "#dc2626",
                         borderRadius: "4px",
-                        fontWeight: "600",
-                        fontSize: "14px",
+                        fontWeight: "var(--peso-semibold)",
+                        fontSize: "var(--texto-sm)",
                       }}
                     >
                       {Math.abs(alerta.diasRestantes)}d
@@ -419,8 +439,8 @@ export default function PanelAlertasVencimiento({ usuarioId, rolUsuario }) {
                         backgroundColor: "#e2e8f0",
                         border: "1px solid #cbd5e1",
                         borderRadius: "4px",
-                        fontSize: "13px",
-                        fontWeight: "500",
+                        fontSize: "var(--texto-xs)",
+                        fontWeight: "var(--peso-medium)",
                         cursor: "pointer",
                       }}
                     >
@@ -457,12 +477,18 @@ export default function PanelAlertasVencimiento({ usuarioId, rolUsuario }) {
               margin: "16px",
             }}
           >
-            <h3 style={{ fontSize: "18px", fontWeight: "600", margin: "0 0 16px 0" }}>
+            <h3
+              style={{
+                fontSize: "var(--texto-md)",
+                fontWeight: "var(--peso-semibold)",
+                margin: "0 0 16px 0",
+              }}
+            >
               Registrar Acción Tomada
             </h3>
 
             {errorAtender && <ErrorState message={errorAtender} />}
-            <div style={{ marginBottom: "16px", fontSize: "14px", color: "#475569" }}>
+            <div style={{ marginBottom: "16px", fontSize: "var(--texto-sm)", color: "#475569" }}>
               <p style={{ margin: "0 0 4px 0" }}>
                 <strong>{alertaAtendiendo.medicamento}</strong>
               </p>
@@ -475,8 +501,8 @@ export default function PanelAlertasVencimiento({ usuarioId, rolUsuario }) {
               <label
                 style={{
                   display: "block",
-                  fontSize: "14px",
-                  fontWeight: "500",
+                  fontSize: "var(--texto-sm)",
+                  fontWeight: "var(--peso-medium)",
                   marginBottom: "6px",
                 }}
               >
@@ -490,7 +516,7 @@ export default function PanelAlertasVencimiento({ usuarioId, rolUsuario }) {
                   padding: "10px 12px",
                   border: "1px solid #cbd5e1",
                   borderRadius: "4px",
-                  fontSize: "14px",
+                  fontSize: "var(--texto-sm)",
                 }}
               >
                 <option value="">-- Selecciona --</option>
@@ -512,7 +538,7 @@ export default function PanelAlertasVencimiento({ usuarioId, rolUsuario }) {
                   border: "1px solid #cbd5e1",
                   backgroundColor: "#fff",
                   borderRadius: "4px",
-                  fontSize: "14px",
+                  fontSize: "var(--texto-sm)",
                   cursor: "pointer",
                 }}
               >
@@ -527,7 +553,7 @@ export default function PanelAlertasVencimiento({ usuarioId, rolUsuario }) {
                   color: "#fff",
                   border: "none",
                   borderRadius: "4px",
-                  fontSize: "14px",
+                  fontSize: "var(--texto-sm)",
                   cursor: "pointer",
                   opacity: accionTomada.trim() ? 1 : 0.6,
                 }}

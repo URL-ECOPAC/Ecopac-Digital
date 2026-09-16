@@ -491,10 +491,17 @@ export default function InventarioPage() {
       {/* 1. Header principal */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div>
-          <h1 style={{ fontSize: "24px", fontWeight: "800", color: "#1e293b", margin: 0 }}>
+          <h1
+            style={{
+              fontSize: "var(--texto-xl)",
+              fontWeight: "var(--peso-bold)",
+              color: "#1e293b",
+              margin: 0,
+            }}
+          >
             Control de Inventario
           </h1>
-          <p style={{ fontSize: "13px", color: "#94a3b8", margin: "4px 0 0 0" }}>
+          <p style={{ fontSize: "var(--texto-xs)", color: "#94a3b8", margin: "4px 0 0 0" }}>
             Trazabilidad multi-bodega • Lote y serie • Alertas de caducidad
           </p>
         </div>
@@ -512,8 +519,8 @@ export default function InventarioPage() {
                   border: "none",
                   backgroundColor: "#059669",
                   color: "#ffffff",
-                  fontSize: "13px",
-                  fontWeight: "700",
+                  fontSize: "var(--texto-xs)",
+                  fontWeight: "var(--peso-bold)",
                   cursor: "pointer",
                 }}
               >
@@ -527,8 +534,8 @@ export default function InventarioPage() {
                   border: "none",
                   backgroundColor: "#b45309",
                   color: "#ffffff",
-                  fontSize: "13px",
-                  fontWeight: "700",
+                  fontSize: "var(--texto-xs)",
+                  fontWeight: "var(--peso-bold)",
                   cursor: "pointer",
                 }}
               >
@@ -544,8 +551,8 @@ export default function InventarioPage() {
                     border: "none",
                     backgroundColor: "#059669",
                     color: "#ffffff",
-                    fontSize: "13px",
-                    fontWeight: "700",
+                    fontSize: "var(--texto-xs)",
+                    fontWeight: "var(--peso-bold)",
                     cursor: "pointer",
                   }}
                 >
@@ -563,8 +570,8 @@ export default function InventarioPage() {
                     border: "none",
                     backgroundColor: "#059669",
                     color: "#ffffff",
-                    fontSize: "13px",
-                    fontWeight: "700",
+                    fontSize: "var(--texto-xs)",
+                    fontWeight: "var(--peso-bold)",
                     cursor: "pointer",
                   }}
                 >
@@ -581,8 +588,8 @@ export default function InventarioPage() {
           onClick={() => setTabActiva("catalogo")}
           style={{
             padding: "8px 16px",
-            fontSize: "13px",
-            fontWeight: "700",
+            fontSize: "var(--texto-xs)",
+            fontWeight: "var(--peso-bold)",
             border: "none",
             background: "none",
             cursor: "pointer",
@@ -596,8 +603,8 @@ export default function InventarioPage() {
           onClick={() => setTabActiva("lotes")}
           style={{
             padding: "8px 16px",
-            fontSize: "13px",
-            fontWeight: "700",
+            fontSize: "var(--texto-xs)",
+            fontWeight: "var(--peso-bold)",
             border: "none",
             background: "none",
             cursor: "pointer",
@@ -611,8 +618,8 @@ export default function InventarioPage() {
           onClick={() => setTabActiva("alertas")}
           style={{
             padding: "8px 16px",
-            fontSize: "13px",
-            fontWeight: "700",
+            fontSize: "var(--texto-xs)",
+            fontWeight: "var(--peso-bold)",
             border: "none",
             background: "none",
             cursor: "pointer",
@@ -629,10 +636,10 @@ export default function InventarioPage() {
               style={{
                 backgroundColor: "#fef3c7",
                 color: "#92400e",
-                fontSize: "11px",
+                fontSize: "var(--texto-xxs)",
                 padding: "2px 8px",
                 borderRadius: "9999px",
-                fontWeight: "800",
+                fontWeight: "var(--peso-bold)",
               }}
             >
               {cantidadPendientesAlertas}
@@ -644,8 +651,8 @@ export default function InventarioPage() {
           onClick={() => setTabActiva("kardex")}
           style={{
             padding: "8px 16px",
-            fontSize: "13px",
-            fontWeight: "700",
+            fontSize: "var(--texto-xs)",
+            fontWeight: "var(--peso-bold)",
             border: "none",
             background: "none",
             cursor: "pointer",
@@ -659,8 +666,8 @@ export default function InventarioPage() {
           onClick={() => setTabActiva("administracion")}
           style={{
             padding: "8px 16px",
-            fontSize: "13px",
-            fontWeight: "700",
+            fontSize: "var(--texto-xs)",
+            fontWeight: "var(--peso-bold)",
             border: "none",
             background: "none",
             cursor: "pointer",
@@ -675,8 +682,8 @@ export default function InventarioPage() {
           onClick={() => setTabActiva("principios-activos")}
           style={{
             padding: "8px 16px",
-            fontSize: "13px",
-            fontWeight: "700",
+            fontSize: "var(--texto-xs)",
+            fontWeight: "var(--peso-bold)",
             border: "none",
             background: "none",
             cursor: "pointer",
@@ -692,8 +699,8 @@ export default function InventarioPage() {
             onClick={() => setTabActiva("mis-movimientos")}
             style={{
               padding: "8px 16px",
-              fontSize: "13px",
-              fontWeight: "700",
+              fontSize: "var(--texto-xs)",
+              fontWeight: "var(--peso-bold)",
               border: "none",
               background: "none",
               cursor: "pointer",
@@ -709,8 +716,8 @@ export default function InventarioPage() {
           onClick={() => setTabActiva("validacion")}
           style={{
             padding: "8px 16px",
-            fontSize: "13px",
-            fontWeight: "700",
+            fontSize: "var(--texto-xs)",
+            fontWeight: "var(--peso-bold)",
             border: "none",
             background: "none",
             cursor: "pointer",
@@ -728,10 +735,10 @@ export default function InventarioPage() {
               style={{
                 backgroundColor: "#fbbf24",
                 color: "#78350f",
-                fontSize: "11px",
+                fontSize: "var(--texto-xxs)",
                 padding: "2px 8px",
                 borderRadius: "9999px",
-                fontWeight: "800",
+                fontWeight: "var(--peso-bold)",
               }}
             >
               {conteo}
@@ -747,7 +754,7 @@ export default function InventarioPage() {
             backgroundColor: "#fef2f2",
             color: "#991b1b",
             borderRadius: "12px",
-            fontSize: "13px",
+            fontSize: "var(--texto-xs)",
           }}
         >
           {error}
@@ -833,7 +840,13 @@ export default function InventarioPage() {
                   backgroundColor: "#f59e0b",
                 }}
               />
-              <span style={{ fontSize: "11px", fontWeight: "800", color: "#d97706" }}>
+              <span
+                style={{
+                  fontSize: "var(--texto-xxs)",
+                  fontWeight: "var(--peso-bold)",
+                  color: "#d97706",
+                }}
+              >
                 ALERTAS DE CADUCIDAD
               </span>
             </div>
@@ -851,15 +864,29 @@ export default function InventarioPage() {
                   }}
                 >
                   <div>
-                    <div style={{ fontSize: "13px", fontWeight: "700", color: "#1e293b" }}>
+                    <div
+                      style={{
+                        fontSize: "var(--texto-xs)",
+                        fontWeight: "var(--peso-bold)",
+                        color: "#1e293b",
+                      }}
+                    >
                       {item.medicamento?.nombre}
                     </div>
-                    <div style={{ fontSize: "11px", color: "#94a3b8", marginTop: "2px" }}>
+                    <div
+                      style={{ fontSize: "var(--texto-xxs)", color: "#94a3b8", marginTop: "2px" }}
+                    >
                       {item.codigo || "FAR-0000"} • Lote {item.numero_lote || item.lote}
                     </div>
                   </div>
                   <div style={{ textAlign: "right" }}>
-                    <span style={{ fontSize: "14px", fontWeight: "800", color: "#d97706" }}>
+                    <span
+                      style={{
+                        fontSize: "var(--texto-sm)",
+                        fontWeight: "var(--peso-bold)",
+                        color: "#d97706",
+                      }}
+                    >
                       {item.diasRestantes}d
                     </span>
                   </div>
@@ -880,7 +907,7 @@ export default function InventarioPage() {
                 borderRadius: "9999px",
                 border: "1px solid #e2e8f0",
                 backgroundColor: "#ffffff",
-                fontSize: "13px",
+                fontSize: "var(--texto-xs)",
                 outline: "none",
               }}
             />
@@ -900,7 +927,7 @@ export default function InventarioPage() {
                     border: esActiva ? "1.5px solid #a7f3d0" : "1.5px solid #e2e8f0",
                     backgroundColor: esActiva ? "#ecfdf5" : "#ffffff",
                     color: esActiva ? "#059669" : "#64748b",
-                    fontSize: "13px",
+                    fontSize: "var(--texto-xs)",
                     fontWeight: esActiva ? "700" : "500",
                     cursor: "pointer",
                   }}
@@ -920,7 +947,9 @@ export default function InventarioPage() {
             }}
           >
             <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
+              <table
+                style={{ width: "100%", borderCollapse: "collapse", fontSize: "var(--texto-xs)" }}
+              >
                 <thead>
                   <tr style={{ borderBottom: "1px solid #f1f5f9", backgroundColor: "#fafafa" }}>
                     <th style={{ ...thStyle, textAlign: "left", paddingLeft: "24px" }}>CÓDIGO</th>
@@ -963,12 +992,12 @@ export default function InventarioPage() {
                       return (
                         <tr key={item.id || index} style={{ borderBottom: "1px solid #f8fafc" }}>
                           <td style={{ ...tdStyle, textAlign: "left", paddingLeft: "24px" }}>
-                            <span style={{ color: "#059669", fontWeight: "700" }}>
+                            <span style={{ color: "#059669", fontWeight: "var(--peso-bold)" }}>
                               {item.codigo || "FAR-0041"}
                             </span>
                           </td>
                           <td style={{ ...tdStyle, textAlign: "left" }}>
-                            <span style={{ color: "#1e293b", fontWeight: "700" }}>
+                            <span style={{ color: "#1e293b", fontWeight: "var(--peso-bold)" }}>
                               {item.nombre}
                             </span>
                           </td>
@@ -976,18 +1005,25 @@ export default function InventarioPage() {
                             {item.categoria || "Medicamentos"}
                           </td>
                           <td style={{ ...tdStyle, textAlign: "left" }}>
-                            <span style={{ color: "#0284c7", fontWeight: "600" }}>
+                            <span style={{ color: "#0284c7", fontWeight: "var(--peso-semibold)" }}>
                               {item.lote || item.numero_lote || "N/A"}
                             </span>
                           </td>
                           <td style={tdStyle}>
-                            <span style={{ fontWeight: "800", fontSize: "11px" }}>
+                            <span
+                              style={{
+                                fontWeight: "var(--peso-bold)",
+                                fontSize: "var(--texto-xxs)",
+                              }}
+                            >
                               {item.bodega || "CENTRAL"}
                             </span>
                           </td>
                           <td style={tdStyle}>{item.caducidad || "N/A"}</td>
                           <td style={tdStyle}>
-                            <span style={{ fontWeight: "800" }}>{item.stock ?? 0}</span>
+                            <span style={{ fontWeight: "var(--peso-bold)" }}>
+                              {item.stock ?? 0}
+                            </span>
                           </td>
                           <td style={{ ...tdStyle, textAlign: "right" }}>
                             Q {item.precio || "143"}
@@ -997,8 +1033,8 @@ export default function InventarioPage() {
                               style={{
                                 padding: "4px 14px",
                                 borderRadius: "9999px",
-                                fontSize: "10px",
-                                fontWeight: "800",
+                                fontSize: "var(--texto-xxs)",
+                                fontWeight: "var(--peso-bold)",
                                 backgroundColor: badgeEstado.bg,
                                 color: badgeEstado.color,
                                 border: `1px solid ${badgeEstado.border}`,
@@ -1048,7 +1084,7 @@ export default function InventarioPage() {
                 padding: "10px 16px",
                 borderRadius: "9999px",
                 border: "1px solid #e2e8f0",
-                fontSize: "13px",
+                fontSize: "var(--texto-xs)",
               }}
             />
             <select
@@ -1072,7 +1108,7 @@ export default function InventarioPage() {
                 backgroundColor: "#fef2f2",
                 color: "#991b1b",
                 borderRadius: "10px",
-                fontSize: "12px",
+                fontSize: "var(--texto-xs)",
               }}
             >
               {errorCorreccionCosto}
@@ -1087,7 +1123,9 @@ export default function InventarioPage() {
               overflow: "hidden",
             }}
           >
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
+            <table
+              style={{ width: "100%", borderCollapse: "collapse", fontSize: "var(--texto-xs)" }}
+            >
               <thead>
                 <tr style={{ borderBottom: "1px solid #f1f5f9", backgroundColor: "#fafafa" }}>
                   <th style={{ padding: "12px 16px", textAlign: "left" }}>Medicamento</th>
@@ -1139,7 +1177,7 @@ export default function InventarioPage() {
                                 padding: "6px 10px",
                                 borderRadius: "8px",
                                 border: "1px solid #cbd5e1",
-                                fontSize: "13px",
+                                fontSize: "var(--texto-xs)",
                                 textAlign: "right",
                               }}
                             />
@@ -1170,8 +1208,8 @@ export default function InventarioPage() {
                                   padding: "6px 12px",
                                   backgroundColor: "#009963",
                                   color: "#fff",
-                                  fontSize: "12px",
-                                  fontWeight: "700",
+                                  fontSize: "var(--texto-xs)",
+                                  fontWeight: "var(--peso-bold)",
                                   cursor: "pointer",
                                 }}
                               >
@@ -1187,8 +1225,8 @@ export default function InventarioPage() {
                                   padding: "6px 12px",
                                   backgroundColor: "#fff",
                                   color: "#64748b",
-                                  fontSize: "12px",
-                                  fontWeight: "700",
+                                  fontSize: "var(--texto-xs)",
+                                  fontWeight: "var(--peso-bold)",
                                   cursor: "pointer",
                                 }}
                               >
@@ -1206,8 +1244,8 @@ export default function InventarioPage() {
                                   padding: "6px 12px",
                                   backgroundColor: "#fff",
                                   color: "#2563eb",
-                                  fontSize: "12px",
-                                  fontWeight: "700",
+                                  fontSize: "var(--texto-xs)",
+                                  fontWeight: "var(--peso-bold)",
                                   cursor: "pointer",
                                 }}
                               >

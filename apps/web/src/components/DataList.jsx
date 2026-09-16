@@ -41,7 +41,7 @@ function Avatar({ texto }) {
         height: "40px",
         backgroundColor: "var(--color-primary)",
         color: "var(--color-surface)",
-        fontSize: "0.85rem",
+        fontSize: "var(--texto-sm)",
         fontWeight: 600,
       }}
       aria-hidden="true"

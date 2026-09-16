@@ -5,6 +5,7 @@ import NumberField from "../components/NumberField";
 import PrimaryButton from "../components/PrimaryButton";
 import SecondaryButton from "../components/SecondaryButton";
 import TextField from "../components/TextField";
+import { Save, X } from "lucide-react";
 
 function valoresDe(movimiento) {
   return {
@@ -100,8 +101,18 @@ export default function ModalCorreccionMovimiento({ visible, movimiento, onClose
         <div className="d-flex justify-content-end gap-2 mt-3">
           {puedeEditar ? (
             <>
-              <SecondaryButton title="Cancelar" onClick={onClose} disabled={enviando} />
-              <PrimaryButton title="Guardar correccion" onClick={guardar} loading={enviando} />
+              <SecondaryButton
+                title="Cancelar"
+                onClick={onClose}
+                disabled={enviando}
+                icon={<X size={16} aria-hidden="true" />}
+              />
+              <PrimaryButton
+                title="Guardar correccion"
+                onClick={guardar}
+                loading={enviando}
+                icon={<Save size={16} aria-hidden="true" />}
+              />
             </>
           ) : (
             <SecondaryButton title="Cerrar" onClick={onClose} />

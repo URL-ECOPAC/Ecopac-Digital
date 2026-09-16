@@ -1,3 +1,4 @@
+import { Save } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
@@ -356,6 +357,7 @@ export default function DetalleJornadaPage() {
                         title="Guardar"
                         onClick={guardarPresupuesto}
                         loading={guardandoPresupuesto}
+                        icon={<Save size={16} aria-hidden="true" />}
                       />
                       <SecondaryButton
                         title="Cancelar"
