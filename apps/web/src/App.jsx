@@ -90,10 +90,10 @@ function ConstanciaDonacionEnrutada() {
   return <ConstanciaDonacionPage usuarioRol={perfil?.rol} donacion={donacion} />;
 }
 
-// Mismo caso que la constancia: useSeguimientoProyecto recibe el proyecto, sus hitos y su
-// bitacora ya resueltos. Las lecturas existen en packages/shared/proyectos (obtenerProyecto,
-// listarHitos, listarSeguimiento, listarJornadasDelProyecto) pero ningun hook las llama
-// todavia, asi que aqui solo se resuelve el :id y la vuelta al listado.
+// useSeguimientoProyecto ahora resuelve el :id el mismo (issue #756): antes solo recibia lo que
+// location.state trajera del listado (el proyecto, sin hitos ni bitacora), asi que entrar por un
+// enlace directo o refrescar la pagina dejaba la ficha vacia. proyectoInicial se conserva como
+// adelanto: pinta el encabezado antes de que termine la primera consulta.
 function SeguimientoProyectoEnrutado() {
   const { perfil } = useSesionCompartida();
   const { id } = useParams();
@@ -102,6 +102,7 @@ function SeguimientoProyectoEnrutado() {
   const proyectoInicial = String(state?.proyecto?.id) === id ? state.proyecto : null;
   return (
     <SeguimientoProyectoPage
+      proyectoId={id}
       proyectoInicial={proyectoInicial}
       usuarioActual={nombreCompletoDe(perfil ?? {}) || "Usuario"}
       onVolver={() => navigate("/proyectos")}

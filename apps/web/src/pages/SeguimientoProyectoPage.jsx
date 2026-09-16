@@ -1,60 +1,54 @@
-import { useLocation } from "react-router-dom";
+import { useState } from "react";
 import { useSeguimientoProyecto } from "@ecopac/shared";
-import { Container, Row, Col, Card, Form, Button, Badge, Alert } from "react-bootstrap";
+import { Container, Row, Col, Card, Form, Button, Badge, Alert, Spinner } from "react-bootstrap";
+
+import ModalHito from "./ModalHito";
 
 export default function SeguimientoProyectoPage({
-  proyectoInicial: propProyectoInicial,
-  hitosIniciales: propHitos = [],
-  bitacoraInicial: propBitacora = [],
-  jornadasIniciales: propJornadas = [],
+  proyectoId,
+  proyectoInicial,
   usuarioActual = "Usuario Actual",
   onVolver,
 }) {
-  const location = useLocation();
-  const state = location.state || {};
-
-  // Resolución de propiedades (prioriza props directas, luego router location.state)
-  const proyectoInicial = propProyectoInicial || state.proyectoInicial || state.proyecto;
-  const hitosIniciales =
-    propHitos.length > 0
-      ? propHitos
-      : state.hitosIniciales || proyectoInicial?.hitosIniciales || [];
-  const bitacoraInicial =
-    propBitacora.length > 0
-      ? propBitacora
-      : state.bitacoraInicial || proyectoInicial?.bitacoraInicial || [];
-  const jornadasIniciales =
-    propJornadas.length > 0
-      ? propJornadas
-      : state.jornadasIniciales || proyectoInicial?.jornadasIniciales || [];
-
   const {
     proyecto,
     hitos,
     bitacora,
     indicadoresJornadas,
+    campos,
+    cargando,
+    errorCarga,
     nuevoPorcentaje,
     setNuevoPorcentaje,
     nuevaNota,
     setNuevaNota,
     errorAccion,
-    cargando,
+    erroresHito,
+    cargandoAccion,
     guardarSeguimiento,
     cambiarEstadoHito,
-  } = useSeguimientoProyecto({
-    proyectoInicial,
-    hitosIniciales,
-    bitacoraInicial,
-    jornadasIniciales,
-    usuarioActual,
-  });
+    guardarHito,
+  } = useSeguimientoProyecto({ proyectoId, proyectoInicial });
+
+  const [hitoEnEdicion, setHitoEnEdicion] = useState(null);
+  const [formularioHitoAbierto, setFormularioHitoAbierto] = useState(false);
 
   const proyectoDatos = proyecto || proyectoInicial;
+
+  if (cargando && !proyectoDatos) {
+    return (
+      <Container className="my-5 text-center">
+        <Spinner animation="border" />
+      </Container>
+    );
+  }
 
   if (!proyectoDatos) {
     return (
       <Container className="my-5 text-center">
-        <p className="text-muted">No se seleccionó ningún proyecto para el seguimiento.</p>
+        <p className="text-muted">
+          {errorCarga?.mensaje || "No se seleccionó ningún proyecto para el seguimiento."}
+        </p>
         {onVolver && (
           <Button variant="secondary" size="sm" onClick={onVolver} className="mt-2">
             Volver
@@ -64,34 +58,15 @@ export default function SeguimientoProyectoPage({
     );
   }
 
-  const parsearPresupuesto = (valor) => {
-    if (typeof valor === "number") return valor;
-    if (typeof valor === "string") {
-      const limpio = valor.replace(/[^0-9.]/g, "");
-      return parseFloat(limpio) || 0;
-    }
-    return 0;
+  const abrirAltaHito = () => {
+    setHitoEnEdicion(null);
+    setFormularioHitoAbierto(true);
   };
 
-  const totalJornadas =
-    indicadoresJornadas?.totalJornadas ||
-    proyectoDatos.totalJornadas ||
-    jornadasIniciales.length ||
-    0;
-
-  const jornadasCompletadas =
-    indicadoresJornadas?.completadas || proyectoDatos.jornadasCompletadas || 0;
-
-  const presupuestoTotal =
-    indicadoresJornadas?.presupuestoTotal && indicadoresJornadas.presupuestoTotal > 0
-      ? indicadoresJornadas.presupuestoTotal
-      : parsearPresupuesto(proyectoDatos.presupuestoTotal || proyectoDatos.presupuesto);
-
-  const beneficiariosTotales =
-    indicadoresJornadas?.beneficiariosTotales ||
-    proyectoDatos.beneficiariosAlcanzados ||
-    proyectoDatos.beneficiarios ||
-    0;
+  const abrirEdicionHito = (hito) => {
+    setHitoEnEdicion(hito);
+    setFormularioHitoAbierto(true);
+  };
 
   return (
     <Container fluid style={{ maxWidth: "1140px" }} className="py-4">
@@ -114,58 +89,47 @@ export default function SeguimientoProyectoPage({
         </div>
         <div>
           <Badge bg="primary" className="fs-6 px-3 py-2 fw-normal text-capitalize">
-            {proyectoDatos.estado || "planificada"}
+            {proyectoDatos.estado || "planificado"}
           </Badge>
         </div>
       </div>
 
       {/* Indicadores Agregados */}
       <Row className="g-3 mb-4">
-        <Col sm={6} lg={3}>
+        <Col sm={6} lg={4}>
           <Card className="border shadow-sm h-100">
             <Card.Body>
               <Card.Subtitle className="text-uppercase text-muted extra-small fw-bold mb-1">
                 Total Jornadas
               </Card.Subtitle>
-              <Card.Title className="fs-2 fw-bold text-dark mb-0">{totalJornadas}</Card.Title>
+              <Card.Title className="fs-2 fw-bold text-dark mb-0">
+                {indicadoresJornadas.totalJornadas}
+              </Card.Title>
             </Card.Body>
           </Card>
         </Col>
 
-        <Col sm={6} lg={3}>
+        <Col sm={6} lg={4}>
           <Card className="border shadow-sm h-100">
             <Card.Body>
               <Card.Subtitle className="text-uppercase text-muted extra-small fw-bold mb-1">
                 Jornadas Completadas
               </Card.Subtitle>
               <Card.Title className="fs-2 fw-bold text-success mb-0">
-                {jornadasCompletadas}
+                {indicadoresJornadas.completadas}
               </Card.Title>
             </Card.Body>
           </Card>
         </Col>
 
-        <Col sm={6} lg={3}>
+        <Col sm={6} lg={4}>
           <Card className="border shadow-sm h-100">
             <Card.Body>
               <Card.Subtitle className="text-uppercase text-muted extra-small fw-bold mb-1">
-                Presupuesto Total
+                Presupuesto Asignado
               </Card.Subtitle>
               <Card.Title className="fs-2 fw-bold text-dark mb-0">
-                Q{presupuestoTotal.toLocaleString()}
-              </Card.Title>
-            </Card.Body>
-          </Card>
-        </Col>
-
-        <Col sm={6} lg={3}>
-          <Card className="border shadow-sm h-100">
-            <Card.Body>
-              <Card.Subtitle className="text-uppercase text-muted extra-small fw-bold mb-1">
-                Beneficiarios Alcanzados
-              </Card.Subtitle>
-              <Card.Title className="fs-2 fw-bold text-primary mb-0">
-                {beneficiariosTotales}
+                Q{indicadoresJornadas.presupuestoTotal.toLocaleString()}
               </Card.Title>
             </Card.Body>
           </Card>
@@ -215,8 +179,8 @@ export default function SeguimientoProyectoPage({
                 </Form.Group>
 
                 <div className="d-flex justify-content-end">
-                  <Button variant="primary" onClick={guardarSeguimiento} disabled={cargando}>
-                    {cargando ? "Guardando..." : "Guardar Actualización"}
+                  <Button variant="primary" onClick={guardarSeguimiento} disabled={cargandoAccion}>
+                    {cargandoAccion ? "Guardando..." : "Guardar Actualización"}
                   </Button>
                 </div>
               </Form>
@@ -238,7 +202,17 @@ export default function SeguimientoProyectoPage({
                   {bitacora.map((item) => (
                     <Card key={item.id} className="bg-light border-0">
                       <Card.Body className="p-3">
-                        <p className="small mb-2 text-dark">{item.nota}</p>
+                        {item.nota ? (
+                          <p className="small mb-2 text-dark">{item.nota}</p>
+                        ) : (
+                          <p className="small mb-2 text-muted fst-italic">
+                            Avance actualizado a {item.porcentajeNuevo}%
+                            {item.porcentajeAnterior != null
+                              ? ` (antes ${item.porcentajeAnterior}%)`
+                              : ""}
+                            .
+                          </p>
+                        )}
                         <div className="d-flex justify-content-between text-muted extra-small pt-2 border-top">
                           <span>
                             Registrado por: <strong>{item.registradoPor || usuarioActual}</strong>
@@ -262,9 +236,14 @@ export default function SeguimientoProyectoPage({
         <Col lg={4}>
           <Card className="border shadow-sm">
             <Card.Body className="p-4">
-              <Card.Title as="h5" className="mb-3 text-dark fw-bold">
-                Hitos del Proyecto
-              </Card.Title>
+              <div className="d-flex justify-content-between align-items-center mb-3">
+                <Card.Title as="h5" className="mb-0 text-dark fw-bold">
+                  Hitos del Proyecto
+                </Card.Title>
+                <Button variant="outline-primary" size="sm" onClick={abrirAltaHito}>
+                  + Agregar hito
+                </Button>
+              </div>
 
               {hitos.length === 0 ? (
                 <p className="text-muted fst-italic text-center py-3 mb-0 small">
@@ -311,6 +290,14 @@ export default function SeguimientoProyectoPage({
                               </p>
                             )}
                           </div>
+                          <Button
+                            variant="link"
+                            size="sm"
+                            className="p-0 text-decoration-none"
+                            onClick={() => abrirEdicionHito(hito)}
+                          >
+                            Corregir
+                          </Button>
                         </div>
                       </div>
                     );
@@ -321,6 +308,15 @@ export default function SeguimientoProyectoPage({
           </Card>
         </Col>
       </Row>
+
+      <ModalHito
+        visible={formularioHitoAbierto}
+        hito={hitoEnEdicion}
+        campos={campos}
+        errores={erroresHito}
+        onClose={() => setFormularioHitoAbierto(false)}
+        onGuardar={guardarHito}
+      />
     </Container>
   );
 }

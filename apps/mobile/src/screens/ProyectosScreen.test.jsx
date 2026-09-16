@@ -14,8 +14,12 @@ jest.mock("../contexto/SesionProvider", () => ({
   useSesionCompartida: () => sesion,
 }));
 
-// Mockear la subruta exacta de donde ProyectosScreen.js consume el hook
+// Mockear la subruta exacta de donde ProyectosScreen.js consume el hook. Se conserva el resto
+// del modulo real (jest.requireActual) porque ModalProyecto.js -renderizado por esta misma
+// pantalla, issue #756- importa CAMPOS_PROYECTO de aqui: un mock que solo declarara
+// useProyectosSociales lo habria dejado undefined.
 jest.mock("@ecopac/shared/proyectos", () => ({
+  ...jest.requireActual("@ecopac/shared/proyectos"),
   useProyectosSociales: jest.fn(() => mockEstadoHook),
 }));
 

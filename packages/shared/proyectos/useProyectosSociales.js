@@ -16,18 +16,31 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { cambiarEstadoProyecto, listarJornadasDelProyecto, listarProyectos } from "./api.js";
+import { listarUsuarios } from "../usuarios/api.js";
+import {
+  actualizarProyecto,
+  cambiarEstadoProyecto,
+  crearProyecto,
+  listarJornadasDelProyecto,
+  listarProyectos,
+} from "./api.js";
 import { COLUMNAS_PROYECTO } from "./columnas.js";
 import { FILTROS_PROYECTO } from "./filtros.js";
 import { CAMPOS_PROYECTO } from "./campos.js";
 import { validarProyecto } from "./validaciones.js";
 import { puedeAdministrarProyectos, puedeVerProyectos } from "./permisos.js";
 
+/** Mismo criterio que jornadas/useFormularioJornada.js: nombre completo para un <select>. */
+function nombreDePerfil(perfil) {
+  return [perfil.nombres, perfil.apellidos].filter(Boolean).join(" ");
+}
+
 export function useProyectosSociales({ usuarioRol } = {}) {
   const tieneAccesoLectura = puedeVerProyectos(usuarioRol);
 
   const [proyectos, setProyectos] = useState([]);
   const [jornadasProyecto, setJornadasProyecto] = useState([]);
+  const [perfiles, setPerfiles] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
 
@@ -63,6 +76,25 @@ export function useProyectosSociales({ usuarioRol } = {}) {
   useEffect(() => {
     cargarProyectos();
   }, [cargarProyectos]);
+
+  // Catalogo del <select> de responsable en el formulario de alta/edicion; no depende de los
+  // filtros de la lista, se carga una sola vez.
+  useEffect(() => {
+    if (!tieneAccesoLectura) return;
+
+    let vigente = true;
+    listarUsuarios({ estado: true }).then(({ usuarios }) => {
+      if (vigente) {
+        setPerfiles(
+          (usuarios ?? []).map((usuario) => ({ value: usuario.id, label: nombreDePerfil(usuario) })),
+        );
+      }
+    });
+
+    return () => {
+      vigente = false;
+    };
+  }, [tieneAccesoLectura]);
 
   // Las jornadas se piden solo del proyecto abierto en el detalle: son el contenido de una
   // pestania, no de la tabla, y traerlas todas por adelantado no le sirve a nadie.
@@ -105,6 +137,26 @@ export function useProyectosSociales({ usuarioRol } = {}) {
   };
 
   /**
+   * Crea o edita un proyecto (issue #756: "+ Nuevo Proyecto" no tenia onClick pese a que
+   * crearProyecto()/actualizarProyecto() ya existian en api.js). Sin id crea; con id edita.
+   */
+  const guardarProyecto = useCallback(
+    async (id, datosFormulario) => {
+      if (!manejarValidacion(datosFormulario)) return { ok: false };
+
+      const resultado = id
+        ? await actualizarProyecto(id, datosFormulario)
+        : await crearProyecto(datosFormulario);
+
+      if (resultado.error) return { ok: false, error: resultado.error };
+
+      await cargarProyectos();
+      return { ok: true, proyecto: resultado.proyecto };
+    },
+    [cargarProyectos],
+  );
+
+  /**
    * Mueve un proyecto a otro estado (tablero kanban de la app movil, issue #688). Delega en
    * cambiarEstadoProyecto() (api.js), que ya valida la transicion y espeja al trigger
    * tr_validar_transicion_estado_proyecto (00029); aqui solo se filtra por permiso antes de
@@ -137,8 +189,10 @@ export function useProyectosSociales({ usuarioRol } = {}) {
     proyectos: proyectosFiltrados,
     proyectoDetalle,
     jornadasProyecto,
+    catalogos: { perfiles },
     puedeEditar,
     cambiarEtapaProyecto,
+    guardarProyecto,
     recargar: cargarProyectos,
     filtrosState,
     setFiltrosState,
