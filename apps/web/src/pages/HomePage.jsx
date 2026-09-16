@@ -93,7 +93,7 @@ export default function HomePage() {
               style={{ borderTopColor: `var(--accent-${modulo.id}, var(--color-primary))` }}
               type="button"
             >
-              <span className="inicio-acceso-etiqueta">{modulo.etiqueta}</span>
+              <span className="inicio-acceso-etiqueta">{modulo.nombre}</span>
             </button>
           ))}
         </div>

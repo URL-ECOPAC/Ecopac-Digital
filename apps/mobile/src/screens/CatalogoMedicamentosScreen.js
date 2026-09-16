@@ -8,7 +8,10 @@ import {
   StyleSheet,
 } from "react-native";
 import { useCatalogoMedicamentos } from "@ecopac/shared";
+import { colors, radii, spacing, typography } from "@ecopac/ui-tokens";
 import { ROUTES } from "../navigation/rutas";
+
+const ALTURA_CONTROL_FILTRO = spacing.xl + spacing.md;
 
 export function CatalogoMedicamentosScreen({
   inventarioInicial = [],
@@ -38,14 +41,6 @@ export function CatalogoMedicamentosScreen({
   const esModoSeleccion = route?.params?.esModoSeleccion || false;
   const onSeleccionarMedicamento = route?.params?.onSeleccionarMedicamento;
 
-  /**
-   * Tocar un medicamento del inventario (issue #165, criterio 1: "seleccionar un medicamento
-   * existente"). `esModoSeleccion` es el modo viejo (nadie navega hoy a esta pantalla con ese
-   * parametro, pero se conserva por si alguna otra pantalla lo usa en el futuro): si esta
-   * activo, sigue devolviendo el item al que llamo. Fuera de ese modo -que es como se llega
-   * aqui desde el tab Inventario- tocar un medicamento abre "Registrar ingreso" con ese
-   * medicamento ya elegido, en vez de no hacer nada.
-   */
   const handleSeleccionar = (item) => {
     if (esModoSeleccion) {
       const stock = item?.stock ?? item?.cantidad_disponible ?? 0;
@@ -112,20 +107,20 @@ export function CatalogoMedicamentosScreen({
         <Text style={styles.descripcionText}>{descripcion}</Text>
 
         <View style={styles.detallesGrid}>
-          <Text style={styles.detalleLabel}>
+          <Text style={styles.detalleLabel} numberOfLines={1}>
             Lote: <Text style={styles.detalleVal}>{lote}</Text>
           </Text>
-          <Text style={styles.detalleLabel}>
+          <Text style={styles.detalleLabel} numberOfLines={1}>
             Bodega: <Text style={styles.bodegaHighlight}>{String(bodega).toUpperCase()}</Text>
           </Text>
         </View>
 
         <View style={styles.cardFooter}>
-          <View>
+          <View style={styles.footerColumna}>
             <Text style={styles.caducidadLabel}>Caducidad</Text>
             <Text style={styles.caducidadValue}>{caducidad}</Text>
           </View>
-          <View style={{ alignItems: "flex-end" }}>
+          <View style={[styles.footerColumna, { alignItems: "flex-end" }]}>
             <Text style={styles.stockText}>
               {stock} <Text style={styles.unitText}>{presentacion}</Text>
             </Text>
@@ -139,21 +134,8 @@ export function CatalogoMedicamentosScreen({
   const listaCategorias = Array.isArray(categoriasPills) ? categoriasPills : [];
   const listaInventario = Array.isArray(inventarioFiltrado) ? inventarioFiltrado : [];
 
-  // "Por Vencer" se cuenta sobre lo que ya esta filtrado en pantalla: cada item trae
-  // proximoAVencer calculado en StockScreen.js (diasHastaVencimiento <= 30, mismo umbral que
-  // useVistaExistencias.js). "Sin Stock" no se puede derivar de este arreglo -
-  // inventarioInicial/inventarioFiltrado solo trae lo que SI tiene existencia disponible
-  // (vista_lotes_disponibles, 00047)-, asi que StockScreen.js lo calcula aparte contra el
-  // catalogo completo y lo pasa en `medicamentosSinStock`.
   const totalPorVencer = listaInventario.filter((item) => item?.proximoAVencer).length;
 
-  // Bodegas reales para el filtro (issue #165): antes esta lista era un arreglo fijo
-  // ["Todas","Central","Norte","Sur"] que no correspondia a ninguna bodega real de la base, asi
-  // que elegir cualquiera que no fuera "Todas" no encontraba nada. `bodegas` ya llega como prop
-  // desde StockScreen.js (listarBodegas()), la misma fuente que usa el alta de un medicamento.
-  // { label, value } y no solo el nombre: el estado inicial de bodegaSeleccionada es "todas" en
-  // minuscula (useCatalogoMedicamentos.js), y comparar contra un "Todas" con mayuscula dejaba el
-  // pill "Todas" sin marcar como activo al abrir la pantalla aunque el filtro si funcionara.
   const listaBodegas = Array.isArray(bodegas) ? bodegas : [];
   const opcionesDeBodega = [
     { label: "Todas", value: "todas" },
@@ -167,17 +149,17 @@ export function CatalogoMedicamentosScreen({
       {/* 1. Header con métricas reducidas */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.kpiContainer}>
         <View style={styles.kpiCard}>
-          <View style={[styles.dotIndicator, { backgroundColor: "#10b981" }]} />
+          <View style={[styles.dotIndicator, { backgroundColor: colors.primary }]} />
           <Text style={styles.kpiValue}>{listaInventario.length}</Text>
           <Text style={styles.kpiLabel}>Referencias</Text>
         </View>
         <View style={styles.kpiCard}>
-          <View style={[styles.dotIndicator, { backgroundColor: "#f59e0b" }]} />
+          <View style={[styles.dotIndicator, { backgroundColor: colors.warning }]} />
           <Text style={styles.kpiValue}>{totalPorVencer}</Text>
           <Text style={styles.kpiLabel}>Por Vencer</Text>
         </View>
         <View style={styles.kpiCard}>
-          <View style={[styles.dotIndicator, { backgroundColor: "#ec4899" }]} />
+          <View style={[styles.dotIndicator, { backgroundColor: colors.danger }]} />
           <Text style={styles.kpiValue}>{medicamentosSinStock}</Text>
           <Text style={styles.kpiLabel}>Sin Stock</Text>
         </View>
@@ -186,10 +168,12 @@ export function CatalogoMedicamentosScreen({
       {/* 2. Input de Búsqueda */}
       <TextInput
         style={styles.searchInput}
-        placeholder="🔍 Código, descripción o lote..."
+        placeholder="Código, descripción o lote..."
         value={busqueda}
         onChangeText={setBusqueda}
-        placeholderTextColor="#94a3b8"
+        placeholderTextColor={colors.textMuted}
+        textAlignVertical="center"
+        includeFontPadding={false}
       />
 
       {/* 3. Selector de Bodegas */}
@@ -197,7 +181,7 @@ export function CatalogoMedicamentosScreen({
         horizontal
         showsHorizontalScrollIndicator={false}
         style={styles.bodegasContainer}
-        contentContainerStyle={styles.bodegasContenido}
+        contentContainerStyle={styles.filaChipsContenido}
       >
         {opcionesDeBodega.map((opcion) => {
           const seleccionada = bodegaSeleccionada === opcion.value;
@@ -219,33 +203,37 @@ export function CatalogoMedicamentosScreen({
       </ScrollView>
 
       {/* 4. Categorías Horizontal */}
-      <View style={{ maxHeight: 38, marginBottom: 12 }}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          {listaCategorias.map((cat) => (
-            <TouchableOpacity
-              key={cat}
-              style={[styles.pill, categoriaSeleccionada === cat && styles.pillActive]}
-              onPress={() => setCategoriaSeleccionada(cat)}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.categoriasContainer}
+        contentContainerStyle={styles.filaChipsContenido}
+      >
+        {listaCategorias.map((cat) => (
+          <TouchableOpacity
+            key={cat}
+            style={[styles.pill, categoriaSeleccionada === cat && styles.pillActive]}
+            onPress={() => setCategoriaSeleccionada(cat)}
+          >
+            <Text
+              style={[styles.pillText, categoriaSeleccionada === cat && styles.pillTextActive]}
+              numberOfLines={1}
             >
-              <Text
-                style={[styles.pillText, categoriaSeleccionada === cat && styles.pillTextActive]}
-              >
-                {cat}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
+              {cat}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
 
       {/* 5. Lista en Móvil */}
       <FlatList
         data={listaInventario}
         keyExtractor={(item, index) => item?.id?.toString() || index.toString()}
         renderItem={renderItem}
-        contentContainerStyle={{ paddingBottom: 20 }}
+        contentContainerStyle={styles.listaContenido}
         ListEmptyComponent={
-          <View style={{ padding: 24, alignItems: "center" }}>
-            <Text style={{ color: "#94a3b8" }}>No se encontraron elementos.</Text>
+          <View style={styles.vacioContenedor}>
+            <Text style={styles.vacioTexto}>No se encontraron elementos.</Text>
           </View>
         }
       />
@@ -254,101 +242,214 @@ export function CatalogoMedicamentosScreen({
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 14, backgroundColor: "#f8fafc" },
-  kpiContainer: { maxHeight: 65, marginBottom: 10 },
+  container: { flex: 1, padding: spacing.lg, backgroundColor: colors.background },
+
+  kpiContainer: { maxHeight: 68, marginBottom: spacing.lg },
   kpiCard: {
-    backgroundColor: "#ffffff",
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 10,
-    marginRight: 10,
+    backgroundColor: colors.surface,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radii.md,
+    marginRight: spacing.sm,
     borderWidth: 1,
-    borderColor: "#e2e8f0",
-    minWidth: 110,
+    borderColor: colors.border,
+    minWidth: 112,
+    justifyContent: "center",
   },
-  dotIndicator: { width: 6, height: 6, borderRadius: 3, marginBottom: 2 },
-  kpiValue: { fontSize: 16, fontWeight: "bold", color: "#0f172a" },
-  kpiLabel: { fontSize: 10, color: "#64748b" },
+  dotIndicator: { width: 6, height: 6, borderRadius: 3, marginBottom: spacing.xs / 2 },
+  kpiValue: {
+    fontFamily: typography.fontFamilyBase,
+    fontSize: typography.sizes.lg,
+    fontWeight: typography.weights.bold,
+    color: colors.text,
+  },
+  kpiLabel: {
+    fontFamily: typography.fontFamilyBase,
+    fontSize: typography.sizes.xs,
+    color: colors.textMuted,
+  },
   searchInput: {
-    backgroundColor: "#ffffff",
+    height: ALTURA_CONTROL_FILTRO,
+
+    paddingVertical: 0,
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: "#e2e8f0",
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    marginBottom: 10,
-    fontSize: 13,
+    borderColor: colors.border,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.md,
+    marginBottom: spacing.lg,
+    fontFamily: typography.fontFamilyBase,
+    fontSize: typography.sizes.sm,
+    color: colors.text,
   },
-  // Antes flexDirection:"row" con bodegaBtn a flex:1: repartia el ancho fijo del telefono entre
-  // los 4 nombres cortos y fijos de antes. Los nombres reales de bodega (p. ej. "Bodega Movil
-  // Demo") no caben asi con una lista que ademas puede crecer, asi que ahora es scroll
-  // horizontal con botones de ancho propio.
-  bodegasContainer: { marginBottom: 10 },
-  bodegasContenido: { flexDirection: "row", gap: 6, paddingRight: 4 },
-  bodegaBtn: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    backgroundColor: "#ffffff",
+
+  bodegasContainer: { marginBottom: spacing.lg },
+  categoriasContainer: { marginBottom: spacing.lg },
+  filaChipsContenido: {
+    flexDirection: "row",
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
+    gap: spacing.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.sm,
   },
-  bodegaBtnActiva: { backgroundColor: "#dcfce7", borderColor: "#86efac" },
-  bodegaBtnText: { fontSize: 11, color: "#64748b" },
-  bodegaBtnTextActiva: { color: "#166534", fontWeight: "bold" },
+
+  bodegaBtn: {
+    minHeight: ALTURA_CONTROL_FILTRO,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: radii.pill,
+    backgroundColor: colors.surface,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: colors.secondary,
+    flexShrink: 0,
+  },
+  bodegaBtnActiva: { backgroundColor: colors.primaryDark, borderColor: colors.primaryDark },
+  bodegaBtnText: {
+    fontFamily: typography.fontFamilyBase,
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.medium,
+    color: colors.text,
+  },
+  bodegaBtnTextActiva: {
+    color: colors.surface,
+    fontWeight: typography.weights.bold,
+  },
   pill: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    backgroundColor: "#ffffff",
-    marginRight: 8,
+    minHeight: ALTURA_CONTROL_FILTRO,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: radii.pill,
+    backgroundColor: colors.surface,
+    alignItems: "center",
+    justifyContent: "center",
     borderWidth: 1,
-    borderColor: "#e2e8f0",
+    borderColor: colors.secondary,
+    flexShrink: 0,
   },
-  pillActive: { backgroundColor: "#dcfce7", borderColor: "#86efac" },
-  pillText: { color: "#64748b", fontSize: 11 },
-  pillTextActive: { color: "#166534", fontWeight: "bold" },
+  pillActive: { backgroundColor: colors.primaryDark, borderColor: colors.primaryDark },
+  pillText: {
+    fontFamily: typography.fontFamilyBase,
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.medium,
+    color: colors.text,
+  },
+  pillTextActive: { color: colors.surface, fontWeight: typography.weights.bold },
+  listaContenido: { paddingBottom: spacing.lg },
+  vacioContenedor: { padding: spacing.lg, alignItems: "center" },
+  vacioTexto: {
+    fontFamily: typography.fontFamilyBase,
+    fontSize: typography.sizes.sm,
+    color: colors.textMuted,
+  },
   itemCard: {
-    backgroundColor: "#ffffff",
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 10,
+    backgroundColor: colors.surface,
+    borderRadius: radii.lg,
+    padding: spacing.lg,
+    marginBottom: spacing.lg,
     borderWidth: 1,
-    borderColor: "#e2e8f0",
+    borderColor: colors.border,
   },
   cardNoDisponible: { opacity: 0.6 },
   cardHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 6,
+    marginBottom: spacing.md,
   },
-  codigoText: { color: "#059669", fontWeight: "bold", fontSize: 12 },
-  badgeBase: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 12 },
-  badgeDisponible: { backgroundColor: "#dcfce7" },
-  badgeCritico: { backgroundColor: "#fce7f3" },
-  badgeAgotado: { backgroundColor: "#f1f5f9" },
-  badgeText: { fontSize: 9, fontWeight: "bold" },
-  textDisponible: { color: "#166534" },
-  textCritico: { color: "#be185d" },
-  textAgotado: { color: "#64748b" },
-  descripcionText: { fontSize: 14, fontWeight: "bold", color: "#0f172a", marginBottom: 6 },
-  detallesGrid: { flexDirection: "row", justifyContent: "space-between", marginBottom: 8 },
-  detalleLabel: { fontSize: 11, color: "#64748b" },
-  detalleVal: { color: "#0f172a" },
-  bodegaHighlight: { color: "#059669", fontWeight: "bold" },
+  codigoText: {
+    fontFamily: typography.fontFamilyBase,
+    color: colors.primary,
+    fontWeight: typography.weights.bold,
+    fontSize: typography.sizes.sm,
+  },
+  badgeBase: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs / 2,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    backgroundColor: colors.surface,
+  },
+  badgeDisponible: { borderColor: colors.success },
+  badgeCritico: { borderColor: colors.danger },
+  badgeAgotado: { borderColor: colors.border },
+  badgeText: {
+    fontFamily: typography.fontFamilyBase,
+    fontSize: typography.sizes.xs,
+    fontWeight: typography.weights.bold,
+  },
+  textDisponible: { color: colors.success },
+  textCritico: { color: colors.danger },
+  textAgotado: { color: colors.textMuted },
+  descripcionText: {
+    fontFamily: typography.fontFamilyBase,
+    fontSize: typography.sizes.lg,
+    fontWeight: typography.weights.bold,
+    color: colors.text,
+    marginBottom: spacing.md,
+  },
+  detallesGrid: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: spacing.lg,
+  },
+  detalleLabel: {
+    fontFamily: typography.fontFamilyBase,
+    fontSize: typography.sizes.sm,
+    color: colors.textMuted,
+    flexShrink: 1,
+    maxWidth: "48%",
+  },
+  detalleVal: {
+    fontFamily: typography.fontFamilyBase,
+    fontSize: typography.sizes.sm,
+    color: colors.text,
+    fontWeight: typography.weights.medium,
+  },
+  bodegaHighlight: {
+    fontFamily: typography.fontFamilyBase,
+    fontSize: typography.sizes.sm,
+    color: colors.primary,
+    fontWeight: typography.weights.bold,
+  },
   cardFooter: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "flex-end",
+    alignItems: "flex-start",
     borderTopWidth: 1,
-    borderTopColor: "#f1f5f9",
-    paddingTop: 8,
+    borderTopColor: colors.border,
+    paddingTop: spacing.md,
   },
-  caducidadLabel: { fontSize: 10, color: "#94a3b8" },
-  caducidadValue: { fontSize: 11, color: "#334155", fontWeight: "500" },
-  stockText: { fontSize: 14, fontWeight: "bold", color: "#0f172a" },
-  unitText: { fontSize: 10, fontWeight: "normal", color: "#64748b" },
-  precioText: { fontSize: 11, color: "#64748b" },
+  footerColumna: {
+    flexShrink: 1,
+  },
+  caducidadLabel: {
+    fontFamily: typography.fontFamilyBase,
+    fontSize: typography.sizes.xs,
+    color: colors.textMuted,
+  },
+  caducidadValue: {
+    fontFamily: typography.fontFamilyBase,
+    fontSize: typography.sizes.md,
+    color: colors.text,
+    fontWeight: typography.weights.medium,
+  },
+  stockText: {
+    fontFamily: typography.fontFamilyBase,
+    fontSize: typography.sizes.xl,
+    fontWeight: typography.weights.bold,
+    color: colors.text,
+  },
+  unitText: {
+    fontFamily: typography.fontFamilyBase,
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.regular,
+    color: colors.textMuted,
+  },
+  precioText: {
+    fontFamily: typography.fontFamilyBase,
+    fontSize: typography.sizes.sm,
+    color: colors.textMuted,
+  },
 });
