@@ -58,10 +58,7 @@ export default function MisMovimientosScreen() {
 
   return (
     <ScreenContainer scrollable={false}>
-      <PageHeader
-        title="Mis movimientos"
-        subtitle="Movimientos de inventario que registraste"
-      />
+      <PageHeader title="Mis movimientos" subtitle="Movimientos de inventario que registraste" />
 
       <FilterBar campos={campos} valores={filtros} onChange={setFiltro} />
 

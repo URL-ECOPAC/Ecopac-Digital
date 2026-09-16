@@ -86,7 +86,10 @@ export function useProyectosSociales({ usuarioRol } = {}) {
     listarUsuarios({ estado: true }).then(({ usuarios }) => {
       if (vigente) {
         setPerfiles(
-          (usuarios ?? []).map((usuario) => ({ value: usuario.id, label: nombreDePerfil(usuario) })),
+          (usuarios ?? []).map((usuario) => ({
+            value: usuario.id,
+            label: nombreDePerfil(usuario),
+          })),
         );
       }
     });

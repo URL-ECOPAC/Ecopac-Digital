@@ -341,11 +341,7 @@ export default function HistorialDonacionesPage({ usuarioRol, proyectosOptions =
                       />
                     </Form.Group>
                   ) : (
-                    <Button
-                      variant="outline-danger"
-                      size="sm"
-                      onClick={() => setAnulando(true)}
-                    >
+                    <Button variant="outline-danger" size="sm" onClick={() => setAnulando(true)}>
                       Anular donación
                     </Button>
                   )}

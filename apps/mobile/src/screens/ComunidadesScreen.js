@@ -61,11 +61,14 @@ export default function ComunidadesScreen() {
         actions={acciones}
       />
 
-      <FilterBar campos={FILTROS_COMUNIDADES} valores={filtros} onChange={setFiltro} catalogos={catalogos} />
+      <FilterBar
+        campos={FILTROS_COMUNIDADES}
+        valores={filtros}
+        onChange={setFiltro}
+        catalogos={catalogos}
+      />
 
-      <Text style={styles.total}>
-        {total === 1 ? "1 comunidad" : `${total} comunidades`}
-      </Text>
+      <Text style={styles.total}>{total === 1 ? "1 comunidad" : `${total} comunidades`}</Text>
 
       <DataList
         columnas={COLUMNAS_COMUNIDAD}

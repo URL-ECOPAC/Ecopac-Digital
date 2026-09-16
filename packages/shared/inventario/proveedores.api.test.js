@@ -147,7 +147,10 @@ describe("obtenerOCrearProveedorPorNombre", () => {
       ],
     });
 
-    const { proveedorId, error } = await obtenerOCrearProveedorPorNombre("Alguien Nuevo", "donante");
+    const { proveedorId, error } = await obtenerOCrearProveedorPorNombre(
+      "Alguien Nuevo",
+      "donante",
+    );
 
     expect(proveedorId).toBeNull();
     expect(error).not.toBeNull();

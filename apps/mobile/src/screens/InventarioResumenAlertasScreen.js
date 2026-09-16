@@ -137,7 +137,8 @@ export default function InventarioResumenAlertasScreen() {
                   </Text>
                 </View>
                 <Text style={estilos.alertaDetalle}>
-                  Lote {alerta.numeroLote} · venció el {formatearFechaCorta(alerta.fechaVencimiento)}
+                  Lote {alerta.numeroLote} · venció el{" "}
+                  {formatearFechaCorta(alerta.fechaVencimiento)}
                 </Text>
               </Card>
             ))

@@ -3,7 +3,13 @@ import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { colors, spacing, typography } from "@ecopac/ui-tokens";
-import { etiquetaDeRol, tabsMoviles, MODULOS, puedeRegistrarMovimiento, ROLES } from "@ecopac/shared";
+import {
+  etiquetaDeRol,
+  tabsMoviles,
+  MODULOS,
+  puedeRegistrarMovimiento,
+  ROLES,
+} from "@ecopac/shared";
 
 import { useSesionCompartida } from "../contexto/SesionProvider";
 import RutaProtegida from "../components/RutaProtegida";

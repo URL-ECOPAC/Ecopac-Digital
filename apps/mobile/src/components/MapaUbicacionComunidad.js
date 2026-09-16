@@ -139,7 +139,9 @@ export default function MapaUbicacionComunidad({ latitud, longitud, onCambiarUbi
       </View>
       <View style={styles.pie}>
         <Text style={styles.textoAyuda}>
-          {hayPunto ? `${latitud}, ${longitud}` : "Toca el mapa para marcar la ubicacion (opcional)."}
+          {hayPunto
+            ? `${latitud}, ${longitud}`
+            : "Toca el mapa para marcar la ubicacion (opcional)."}
         </Text>
         {hayPunto && (
           <TouchableOpacity onPress={() => onCambiarUbicacion?.(null, null)}>

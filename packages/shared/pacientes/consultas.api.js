@@ -116,7 +116,11 @@ function filasDeDiagnostico(consultaId, diagnosticos = []) {
  */
 export async function agregarDiagnosticoAConsulta(consultaId, diagnosticoId) {
   if (!consultaId || !diagnosticoId) {
-    return { ok: false, vinculoId: null, error: construirError(CODIGOS_DE_ERROR_DE_SUPABASE.CAMPO_REQUERIDO) };
+    return {
+      ok: false,
+      vinculoId: null,
+      error: construirError(CODIGOS_DE_ERROR_DE_SUPABASE.CAMPO_REQUERIDO),
+    };
   }
 
   try {

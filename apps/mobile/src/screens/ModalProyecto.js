@@ -3,7 +3,14 @@ import { ScrollView, StyleSheet, Text } from "react-native";
 import { colors, spacing, typography } from "@ecopac/ui-tokens";
 import { CAMPOS_PROYECTO, TIPOS_DE_CAMPO } from "@ecopac/shared";
 
-import { DateField, Modal, PrimaryButton, SecondaryButton, Selector, TextField } from "../components";
+import {
+  DateField,
+  Modal,
+  PrimaryButton,
+  SecondaryButton,
+  Selector,
+  TextField,
+} from "../components";
 
 function valoresDe(proyecto) {
   return CAMPOS_PROYECTO.reduce((valores, campo) => {
@@ -51,7 +58,11 @@ export default function ModalProyecto({ visible, proyecto, catalogos, onClose, o
     campo.opciones ?? (campo.opcionesDesde ? (catalogos?.[campo.opcionesDesde] ?? []) : []);
 
   return (
-    <Modal visible={visible} onClose={onClose} title={editando ? "Editar proyecto" : "Nuevo proyecto"}>
+    <Modal
+      visible={visible}
+      onClose={onClose}
+      title={editando ? "Editar proyecto" : "Nuevo proyecto"}
+    >
       <ScrollView showsVerticalScrollIndicator={false}>
         {error ? <Text style={styles.error}>{error.mensaje}</Text> : null}
 
@@ -106,7 +117,12 @@ export default function ModalProyecto({ visible, proyecto, catalogos, onClose, o
           disabled={!valores.nombre}
           style={styles.boton}
         />
-        <SecondaryButton title="Cancelar" onPress={onClose} disabled={enviando} style={styles.boton} />
+        <SecondaryButton
+          title="Cancelar"
+          onPress={onClose}
+          disabled={enviando}
+          style={styles.boton}
+        />
       </ScrollView>
     </Modal>
   );

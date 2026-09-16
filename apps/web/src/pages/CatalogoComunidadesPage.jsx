@@ -96,9 +96,7 @@ export default function CatalogoComunidadesPage() {
           />
         </div>
 
-        <p className="pac-rotulo mb-2">
-          {total === 1 ? "1 comunidad" : `${total} comunidades`}
-        </p>
+        <p className="pac-rotulo mb-2">{total === 1 ? "1 comunidad" : `${total} comunidades`}</p>
 
         <div className="pac-tabla">
           <DataList

@@ -47,7 +47,12 @@ export const COLUMNAS_MOVIMIENTO = [
  * calcula `puedeEditar` en cada fila-, igual que exige editarMovimiento() en el servidor.
  */
 export const COLUMNAS_MIS_MOVIMIENTOS = [
-  { id: "tipo", label: "Tipo", tipo: TIPOS_DE_PRESENTACION.TEXTO, etiquetasDesde: "tiposMovimiento" },
+  {
+    id: "tipo",
+    label: "Tipo",
+    tipo: TIPOS_DE_PRESENTACION.TEXTO,
+    etiquetasDesde: "tiposMovimiento",
+  },
   {
     id: "medicamentoNombre",
     label: "Medicamento",

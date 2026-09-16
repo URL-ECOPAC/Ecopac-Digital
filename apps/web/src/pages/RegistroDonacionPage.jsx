@@ -399,7 +399,11 @@ export default function RegistroDonacionPage({ usuarioRol }) {
             >
               No, omitir
             </Button>
-            <Button variant="primary" onClick={abrirFormularioIngreso} disabled={resolviendoProveedor}>
+            <Button
+              variant="primary"
+              onClick={abrirFormularioIngreso}
+              disabled={resolviendoProveedor}
+            >
               {resolviendoProveedor ? "Preparando..." : "Sí, ingresar a Inventario"}
             </Button>
           </Modal.Footer>

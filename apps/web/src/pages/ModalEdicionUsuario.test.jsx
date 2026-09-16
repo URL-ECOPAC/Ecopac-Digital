@@ -45,9 +45,7 @@ vi.mock("@ecopac/shared", async (importarOriginal) => ({
 const { useEdicionUsuario } = await import("@ecopac/shared");
 
 function pantalla() {
-  return render(
-    <ModalEdicionUsuario perfil={PERFIL} idSesionActual="otro-id" onClose={vi.fn()} />,
-  );
+  return render(<ModalEdicionUsuario perfil={PERFIL} idSesionActual="otro-id" onClose={vi.fn()} />);
 }
 
 describe("ModalEdicionUsuario", () => {

@@ -430,9 +430,7 @@ export default function KardexMovimientosPage({
                         era administrador y el trigger lo aprobo solo, sin que nadie mas
                         interviniera -era una columna real que nunca llegaba a pantalla. */}
                     {mov.aprobacion_automatica && (
-                      <span
-                        style={{ fontSize: "11px", color: colores.textoSecundario }}
-                      >
+                      <span style={{ fontSize: "11px", color: colores.textoSecundario }}>
                         {" "}
                         (automático)
                       </span>

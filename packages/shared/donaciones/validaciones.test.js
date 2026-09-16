@@ -258,7 +258,6 @@ describe("validarDonacion", () => {
     });
     expect(cero.detalles_0_monto).toBeUndefined();
   });
-
 });
 
 describe("validarAnulacionDeDonacion", () => {

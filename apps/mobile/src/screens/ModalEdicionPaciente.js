@@ -3,7 +3,14 @@ import { ScrollView, StyleSheet, Text } from "react-native";
 import { colors, spacing, typography } from "@ecopac/ui-tokens";
 import { TIPOS_DE_CAMPO, useEdicionPaciente } from "@ecopac/shared";
 
-import { DateField, Modal, PrimaryButton, SecondaryButton, Selector, TextField } from "../components";
+import {
+  DateField,
+  Modal,
+  PrimaryButton,
+  SecondaryButton,
+  Selector,
+  TextField,
+} from "../components";
 
 const TECLADO_DE_CAMPO = {
   [TIPOS_DE_CAMPO.TELEFONO]: "phone-pad",

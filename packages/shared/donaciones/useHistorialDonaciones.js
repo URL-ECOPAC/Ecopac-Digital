@@ -109,7 +109,11 @@ export function useHistorialDonaciones({ usuarioRol } = {}) {
     async (idDonacion, motivo) => {
       setAnulando(true);
       setErrorAnular(null);
-      const { error: fallo } = await anularDonacion(idDonacion, { motivo }, { rolUsuario: usuarioRol });
+      const { error: fallo } = await anularDonacion(
+        idDonacion,
+        { motivo },
+        { rolUsuario: usuarioRol },
+      );
       setAnulando(false);
 
       if (fallo) {

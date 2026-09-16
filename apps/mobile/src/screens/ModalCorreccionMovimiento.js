@@ -46,7 +46,11 @@ export default function ModalCorreccionMovimiento({ visible, movimiento, onClose
   };
 
   return (
-    <Modal visible={visible} onClose={onClose} title={puedeEditar ? "Corregir movimiento" : "Detalle del movimiento"}>
+    <Modal
+      visible={visible}
+      onClose={onClose}
+      title={puedeEditar ? "Corregir movimiento" : "Detalle del movimiento"}
+    >
       {error ? <Text style={styles.error}>{error.mensaje}</Text> : null}
 
       <Text style={styles.contexto}>

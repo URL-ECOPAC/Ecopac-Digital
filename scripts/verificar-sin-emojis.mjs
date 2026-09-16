@@ -69,13 +69,21 @@ export function emojisDelTexto(texto) {
 
 const CASOS = [
   { nombre: "un pictograma en un comentario se detecta", texto: "// listo 🎉", esperado: 1 },
-  { nombre: "un pictograma en una etiqueta de interfaz se detecta", texto: 'const l = "🔴 Critico";', esperado: 1 },
+  {
+    nombre: "un pictograma en una etiqueta de interfaz se detecta",
+    texto: 'const l = "🔴 Critico";',
+    esperado: 1,
+  },
   { nombre: "el simbolo con selector de emoji se detecta", texto: "// ojo ⚠️", esperado: 1 },
   { nombre: "el mismo simbolo SIN selector pasa", texto: "// ojo ⚠", esperado: 0 },
   { nombre: "las flechas pasan: son texto de botones", texto: 'title="Avanzar →"', esperado: 0 },
   { nombre: "la equis de cerrar pasa", texto: "<span>✕</span>", esperado: 0 },
   { nombre: "los simbolos monocromos pasan", texto: "const i = '⌂'; const j = '⚙';", esperado: 0 },
-  { nombre: "el texto normal con acentos y guion largo pasa", texto: "// jornada — atencion", esperado: 0 },
+  {
+    nombre: "el texto normal con acentos y guion largo pasa",
+    texto: "// jornada — atencion",
+    esperado: 0,
+  },
 ];
 
 function autoprueba() {
@@ -125,7 +133,9 @@ function principal() {
   console.log(
     "  etiqueta de interfaz, el estado sale de enums.js y su color de @ecopac/ui-tokens.",
   );
-  console.log("  La tipografia monocroma -flechas, ✕, ⌂, ⚙- no cuenta: ver la cabecera de este archivo.");
+  console.log(
+    "  La tipografia monocroma -flechas, ✕, ⌂, ⚙- no cuenta: ver la cabecera de este archivo.",
+  );
   return 1;
 }
 

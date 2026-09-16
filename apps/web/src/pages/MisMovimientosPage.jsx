@@ -66,9 +66,7 @@ export default function MisMovimientosPage() {
         <FilterBar campos={campos} valores={filtros} onChange={setFiltro} />
       </div>
 
-      <p className="pac-rotulo mb-2">
-        {total === 1 ? "1 movimiento" : `${total} movimientos`}
-      </p>
+      <p className="pac-rotulo mb-2">{total === 1 ? "1 movimiento" : `${total} movimientos`}</p>
 
       <div className="pac-tabla">
         <DataList

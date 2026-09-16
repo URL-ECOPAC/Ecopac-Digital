@@ -25,9 +25,7 @@ const CONSULTA = {
   planSeguimiento: "Reevaluar",
 };
 
-const DIAGNOSTICOS = [
-  { id: "dx-1", vinculoId: "vinculo-1", nombre: "Cefalea", esPrincipal: true },
-];
+const DIAGNOSTICOS = [{ id: "dx-1", vinculoId: "vinculo-1", nombre: "Cefalea", esPrincipal: true }];
 
 const mockEstadoHook = {
   valores: { ...CONSULTA },

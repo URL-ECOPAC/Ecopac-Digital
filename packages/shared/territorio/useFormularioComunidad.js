@@ -45,7 +45,9 @@ export function useFormularioComunidad(comunidadId) {
       setMunicipios([]);
       return;
     }
-    listarMunicipios({ departamentoId }).then(({ municipios: filas }) => setMunicipios(filas ?? []));
+    listarMunicipios({ departamentoId }).then(({ municipios: filas }) =>
+      setMunicipios(filas ?? []),
+    );
   }, [departamentoId]);
 
   /** Elegir un departamento distinto invalida el municipio: puede no pertenecer al nuevo. */

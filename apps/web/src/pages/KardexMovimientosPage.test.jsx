@@ -52,14 +52,16 @@ const mockEstadoHook = {
   setFiltros: vi.fn(),
 };
 
-vi.mock("../../../../packages/shared/inventario/useKardexMovimientos", async (importarOriginal) => ({
-  ...(await importarOriginal()),
-  useKardexMovimientos: vi.fn(() => mockEstadoHook),
-}));
-
-const { useKardexMovimientos } = await import(
-  "../../../../packages/shared/inventario/useKardexMovimientos"
+vi.mock(
+  "../../../../packages/shared/inventario/useKardexMovimientos",
+  async (importarOriginal) => ({
+    ...(await importarOriginal()),
+    useKardexMovimientos: vi.fn(() => mockEstadoHook),
+  }),
 );
+
+const { useKardexMovimientos } =
+  await import("../../../../packages/shared/inventario/useKardexMovimientos");
 
 function pantalla() {
   return render(<KardexMovimientosPage loteId="lote-1" />);

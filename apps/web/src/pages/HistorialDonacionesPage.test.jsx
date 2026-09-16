@@ -179,9 +179,7 @@ describe("HistorialDonacionesPage", () => {
     });
     fireEvent.click(screen.getByText("Confirmar anulación"));
 
-    expect(
-      screen.getByText("Operación exclusiva para el rol Administrador."),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Operación exclusiva para el rol Administrador.")).toBeInTheDocument();
     expect(screen.getByText("Confirmar anulación")).toBeInTheDocument();
   });
 });

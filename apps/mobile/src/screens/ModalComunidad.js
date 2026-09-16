@@ -3,13 +3,7 @@ import { ScrollView, StyleSheet, Switch, Text, View } from "react-native";
 import { colors, spacing, typography } from "@ecopac/ui-tokens";
 import { useFormularioComunidad } from "@ecopac/shared";
 
-import {
-  Modal,
-  PrimaryButton,
-  SecondaryButton,
-  Selector,
-  TextField,
-} from "../components";
+import { Modal, PrimaryButton, SecondaryButton, Selector, TextField } from "../components";
 import MapaUbicacionComunidad from "../components/MapaUbicacionComunidad";
 
 function valoresDe(comunidad) {
@@ -73,7 +67,11 @@ export default function ModalComunidad({ visible, comunidad, onClose, onGuardar,
   };
 
   return (
-    <Modal visible={visible} onClose={onClose} title={editando ? "Editar comunidad" : "Nueva comunidad"}>
+    <Modal
+      visible={visible}
+      onClose={onClose}
+      title={editando ? "Editar comunidad" : "Nueva comunidad"}
+    >
       <ScrollView showsVerticalScrollIndicator={false}>
         {error ? <Text style={styles.error}>{error.mensaje}</Text> : null}
         {erroresForm?.ubicacion ? <Text style={styles.aviso}>{erroresForm.ubicacion}</Text> : null}
@@ -134,7 +132,12 @@ export default function ModalComunidad({ visible, comunidad, onClose, onGuardar,
         )}
 
         <View style={styles.acciones}>
-          <SecondaryButton title="Cancelar" onPress={onClose} disabled={enviando} style={styles.boton} />
+          <SecondaryButton
+            title="Cancelar"
+            onPress={onClose}
+            disabled={enviando}
+            style={styles.boton}
+          />
           <PrimaryButton
             title={editando ? "Guardar cambios" : "Crear comunidad"}
             onPress={guardar}

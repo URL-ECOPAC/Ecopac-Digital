@@ -87,7 +87,8 @@ describe("ModalCorreccionTriaje", () => {
   it("camino de error: si guardar falla, muestra el error y no cierra el modal", async () => {
     const onGuardado = vi.fn();
     mockEstadoHook.error = {
-      mensaje: "No se pudo corregir el triaje: puede que ya no exista o que tu rol no pueda editarlo.",
+      mensaje:
+        "No se pudo corregir el triaje: puede que ya no exista o que tu rol no pueda editarlo.",
     };
     mockEstadoHook.guardar = vi.fn(async () => ({ ok: false }));
     pantalla({ onGuardado });
@@ -96,9 +97,7 @@ describe("ModalCorreccionTriaje", () => {
 
     await vi.waitFor(() => expect(mockEstadoHook.guardar).toHaveBeenCalled());
     expect(onGuardado).not.toHaveBeenCalled();
-    expect(
-      screen.getByText(/No se pudo corregir el triaje/),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/No se pudo corregir el triaje/)).toBeInTheDocument();
   });
 
   it("Cancelar llama a onClose()", () => {
