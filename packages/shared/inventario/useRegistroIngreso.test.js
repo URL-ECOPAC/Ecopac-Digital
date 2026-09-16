@@ -63,6 +63,26 @@ describe("datosIngresoParaRegistrar", () => {
 
     expect(resultado.motivo).toBeUndefined();
   });
+
+  it("envia costo_unitario undefined (no NaN) cuando el item no trae costo (issue #752)", () => {
+    const resultado = datosIngresoParaRegistrar(item, {
+      origen: "compra",
+      proveedorId: "prov-1",
+      numeroComprobante: "F-100",
+      usuarioId: "user-1",
+    });
+
+    expect(resultado.costo_unitario).toBeUndefined();
+  });
+
+  it("con costo_unitario en el item, lo manda como numero (issue #752)", () => {
+    const resultado = datosIngresoParaRegistrar(
+      { ...item, costo_unitario: "7.25" },
+      { origen: "compra", proveedorId: "prov-1", numeroComprobante: "F-100", usuarioId: "user-1" },
+    );
+
+    expect(resultado.costo_unitario).toBe(7.25);
+  });
 });
 
 describe("itemDesdeRenglonDeDonacion", () => {
@@ -80,6 +100,7 @@ describe("itemDesdeRenglonDeDonacion", () => {
       fecha_vencimiento: "",
       cantidad: 50,
       bodega_id: "",
+      costo_unitario: "",
       donacionDetalleId: "det-1",
     });
   });

@@ -97,6 +97,45 @@ describe("Módulo de Inventario - API Movimientos", () => {
       expect(mockSupabase.insert.mock.calls[0][0]).not.toHaveProperty("cantidad_disponible");
     });
 
+    it("con costo_unitario, lo manda en el insert del lote nuevo (issue #752)", async () => {
+      mockSupabase.single
+        .mockResolvedValueOnce({ data: { id: "LOTE-NUEVO" }, error: null })
+        .mockResolvedValueOnce({ data: { id: "MOV-1", tipo: "ingreso" }, error: null });
+
+      await registrarIngreso({
+        origen: "compra",
+        bodega_id: "B-1",
+        medicamento_id: "M-1",
+        numero_lote: "LOT-100",
+        fecha_vencimiento: "2027-01-01",
+        proveedor_id: "P-1",
+        cantidad: 50,
+        usuarioId: "U-1",
+        costo_unitario: 12.5,
+      });
+
+      expect(mockSupabase.insert.mock.calls[0][0]).toMatchObject({ costo_unitario: 12.5 });
+    });
+
+    it("sin costo_unitario, no manda esa columna en el insert del lote nuevo (issue #752)", async () => {
+      mockSupabase.single
+        .mockResolvedValueOnce({ data: { id: "LOTE-NUEVO" }, error: null })
+        .mockResolvedValueOnce({ data: { id: "MOV-1", tipo: "ingreso" }, error: null });
+
+      await registrarIngreso({
+        origen: "donacion",
+        bodega_id: "B-1",
+        medicamento_id: "M-1",
+        numero_lote: "LOT-100",
+        fecha_vencimiento: "2027-01-01",
+        proveedor_id: "P-1",
+        cantidad: 50,
+        usuarioId: "U-1",
+      });
+
+      expect(mockSupabase.insert.mock.calls[0][0]).not.toHaveProperty("costo_unitario");
+    });
+
     it("no envia origen ni jornada_id al insertar el movimiento (columnas que no existen)", async () => {
       mockSupabase.single.mockResolvedValueOnce({ data: { id: "MOV-2" }, error: null });
 

@@ -11,7 +11,8 @@ vi.mock("../api/cliente.js", () => ({
   },
 }));
 
-const { obtenerValorDeInventario, totalizarValorizacion } = await import("./valorizacion.api.js");
+const { desglosarValorizacionPorOrigen, obtenerValorDeInventario, totalizarValorizacion } =
+  await import("./valorizacion.api.js");
 
 function crearCliente({ respuesta = { data: [], error: null } } = {}) {
   const llamadas = [];
@@ -166,5 +167,48 @@ describe("totalizarValorizacion", () => {
       lotesSinCosto: 0,
     });
     expect(() => totalizarValorizacion()).not.toThrow();
+  });
+});
+
+describe("desglosarValorizacionPorOrigen", () => {
+  it("agrupa por origen y totaliza cada grupo con la misma regla que totalizarValorizacion", () => {
+    const filas = [
+      { origen: "compra", valorDisponible: 750, unidadesSinCosto: 0, lotesSinCosto: 0 },
+      { origen: "compra", valorDisponible: 140, unidadesSinCosto: 0, lotesSinCosto: 0 },
+      { origen: "donacion", valorDisponible: null, unidadesSinCosto: 80, lotesSinCosto: 1 },
+    ];
+
+    expect(desglosarValorizacionPorOrigen(filas)).toEqual([
+      { origen: "compra", valorDisponible: 890, unidadesSinCosto: 0, lotesSinCosto: 0 },
+      { origen: "donacion", valorDisponible: null, unidadesSinCosto: 80, lotesSinCosto: 1 },
+    ]);
+  });
+
+  it("un origen sin ninguna fila con costo conocido queda en null, no en cero", () => {
+    const filas = [
+      { origen: "donacion", valorDisponible: null, unidadesSinCosto: 30, lotesSinCosto: 1 },
+      { origen: "donacion", valorDisponible: null, unidadesSinCosto: 10, lotesSinCosto: 1 },
+    ];
+
+    expect(desglosarValorizacionPorOrigen(filas)).toEqual([
+      { origen: "donacion", valorDisponible: null, unidadesSinCosto: 40, lotesSinCosto: 2 },
+    ]);
+  });
+
+  it("el orden es alfabetico por origen, no el orden en que llegaron las filas", () => {
+    const filas = [
+      { origen: "donacion", valorDisponible: null, unidadesSinCosto: 1, lotesSinCosto: 1 },
+      { origen: "compra", valorDisponible: 10, unidadesSinCosto: 0, lotesSinCosto: 0 },
+    ];
+
+    expect(desglosarValorizacionPorOrigen(filas).map((fila) => fila.origen)).toEqual([
+      "compra",
+      "donacion",
+    ]);
+  });
+
+  it("sin filas no revienta: devuelve una lista vacia", () => {
+    expect(desglosarValorizacionPorOrigen([])).toEqual([]);
+    expect(() => desglosarValorizacionPorOrigen()).not.toThrow();
   });
 });

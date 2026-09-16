@@ -21,7 +21,8 @@ vi.mock("../api/cliente.js", () => ({
 }));
 
 const { CODIGOS_DE_ERROR_DE_SUPABASE } = await import("../api/errores-de-supabase.js");
-const { listarLotes, listarLotesDeMedicamento, registrarLote } = await import("./lotes.api.js");
+const { actualizarLote, listarLotes, listarLotesDeMedicamento, registrarLote } =
+  await import("./lotes.api.js");
 
 /** Doble de un cliente de Supabase que resuelve con una unica respuesta configurada para "lotes". */
 function crearCliente({ respuesta = { data: [], error: null } } = {}) {
@@ -34,6 +35,10 @@ function crearCliente({ respuesta = { data: [], error: null } } = {}) {
     const encadenable = {
       insert(valores) {
         llamadas.push({ paso: "insert", valores });
+        return encadenable;
+      },
+      update(valores) {
+        llamadas.push({ paso: "update", valores });
         return encadenable;
       },
       select(columnas) {
@@ -178,6 +183,92 @@ describe("registrarLote", () => {
 
     expect(lote).toBeNull();
     expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.UNICIDAD);
+  });
+
+  it("costoUnitario es opcional: sin el, no viaja ninguna columna de costo (issue #752)", async () => {
+    const cliente = crearCliente({ respuesta: { data: { id: "lote-1" }, error: null } });
+    dobles.cliente = cliente;
+
+    await registrarLote(LOTE_VALIDO);
+
+    const insercion = cliente.llamadas.find((l) => l.paso === "insert");
+    expect(insercion.valores).not.toHaveProperty("costo_unitario");
+  });
+
+  it("con costoUnitario, lo manda como costo_unitario (issue #752)", async () => {
+    const cliente = crearCliente({ respuesta: { data: { id: "lote-1" }, error: null } });
+    dobles.cliente = cliente;
+
+    await registrarLote({ ...LOTE_VALIDO, costoUnitario: 12.5 });
+
+    expect(cliente.llamadas).toContainEqual(
+      expect.objectContaining({
+        paso: "insert",
+        valores: expect.objectContaining({ costo_unitario: 12.5 }),
+      }),
+    );
+  });
+
+  it("un lote sin costo conocido llega con costoUnitario null, no 0 (issue #752)", async () => {
+    dobles.cliente = crearCliente({
+      respuesta: { data: { id: "lote-1", costoUnitario: null }, error: null },
+    });
+
+    const { lote } = await registrarLote(LOTE_VALIDO);
+
+    expect(lote.costoUnitario).toBeNull();
+  });
+
+  it("un lote con costo conocido lo devuelve como numero (issue #752)", async () => {
+    dobles.cliente = crearCliente({
+      respuesta: { data: { id: "lote-1", costoUnitario: "12.50" }, error: null },
+    });
+
+    const { lote } = await registrarLote(LOTE_VALIDO);
+
+    expect(lote.costoUnitario).toBe(12.5);
+  });
+});
+
+describe("actualizarLote", () => {
+  it("sin id no llama al cliente", async () => {
+    const { lote, error } = await actualizarLote();
+
+    expect(lote).toBeNull();
+    expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.CAMPO_REQUERIDO);
+  });
+
+  it("sin ningun campo reconocido no llama al cliente y no reporta error", async () => {
+    const { lote, error } = await actualizarLote("lote-1", { algoQueNoExiste: 1 });
+
+    expect(lote).toBeNull();
+    expect(error).toBeNull();
+  });
+
+  it("corrige el costo unitario de un lote existente", async () => {
+    const cliente = crearCliente({
+      respuesta: { data: { id: "lote-1", costoUnitario: "9.99" }, error: null },
+    });
+    dobles.cliente = cliente;
+
+    const { lote, error } = await actualizarLote("lote-1", { costoUnitario: 9.99 });
+
+    expect(error).toBeNull();
+    expect(lote.costoUnitario).toBe(9.99);
+    expect(cliente.llamadas).toContainEqual({
+      paso: "update",
+      valores: { costo_unitario: 9.99 },
+    });
+    expect(cliente.llamadas).toContainEqual({ paso: "eq", columna: "id", valor: "lote-1" });
+  });
+
+  it("normaliza como permiso denegado el intento de quien no puede corregir el lote (00107)", async () => {
+    dobles.cliente = crearCliente({ respuesta: { data: null, error: { code: "42501" } } });
+
+    const { lote, error } = await actualizarLote("lote-1", { costoUnitario: 5 });
+
+    expect(lote).toBeNull();
+    expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.PERMISO_DENEGADO);
   });
 });
 

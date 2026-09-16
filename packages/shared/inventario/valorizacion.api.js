@@ -41,6 +41,35 @@ export function totalizarValorizacion(filas = []) {
 }
 
 /**
+ * Desglosa el valor del inventario por origen (compra vs donacion, issue #752): es lo que sirve
+ * para presentar a cooperantes cuanto del inventario disponible vino de una donacion. Cada fila
+ * de origen se totaliza con la misma regla que totalizarValorizacion() -- null y no cero cuando
+ * ese origen no tiene ninguna fila con costo conocido--, para no mentir por partes igual que no
+ * se miente en el total.
+ *
+ * Se exporta aparte de obtenerValorDeInventario() por el mismo motivo que totalizarValorizacion():
+ * para que el reporte de inventario pueda probarse sin tocar la base.
+ *
+ * @param {ReturnType<typeof aFilaDeValorizacion>[]} filas
+ * @returns {{ origen: string, valorDisponible: number|null, unidadesSinCosto: number,
+ *   lotesSinCosto: number }[]} Ordenado por origen, para que la pantalla no dependa del orden en
+ *   que la base devolvio las filas.
+ */
+export function desglosarValorizacionPorOrigen(filas = []) {
+  const porOrigen = new Map();
+
+  for (const fila of filas) {
+    const grupo = porOrigen.get(fila.origen) ?? [];
+    grupo.push(fila);
+    porOrigen.set(fila.origen, grupo);
+  }
+
+  return Array.from(porOrigen.entries())
+    .map(([origen, filasDelOrigen]) => ({ origen, ...totalizarValorizacion(filasDelOrigen) }))
+    .sort((a, b) => a.origen.localeCompare(b.origen));
+}
+
+/**
  * Valor monetario del inventario disponible, agregado por bodega, medicamento y origen (issue
  * #752). Llama a fn_valor_de_inventario_disponible (00122), que es SECURITY DEFINER y comprueba
  * el rol ella misma: solo administrador y los roles consultivos reciben filas, cualquier otro
