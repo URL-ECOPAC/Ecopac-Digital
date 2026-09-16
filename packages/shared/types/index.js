@@ -467,6 +467,13 @@
  * @property {string} frecuencia
  * @property {string} duracion
  * @property {number} cantidadEntregada
+ * @property {string|null} bodegaId Bodega de la que salio este renglon (issue #764). En null
+ *   cuando el renglon no tiene lote: sin lote no hay bodega de la que descontar.
+ * @property {number|null} cantidadAjustada Ultima cantidad confirmada como realmente entregada,
+ *   si difiere de cantidadEntregada (issue #764, fn_ajustar_entrega_receta). En null mientras
+ *   nadie la corrija: en ese caso cantidadEntregada sigue siendo la cifra vigente.
+ * @property {string|null} ajustadaPor Quien confirmo la ultima correccion de cantidadAjustada.
+ * @property {string|null} ajustadaEn Cuando se confirmo la ultima correccion de cantidadAjustada.
  * @property {string} createdAt
  */
 

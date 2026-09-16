@@ -20,7 +20,7 @@ vi.mock("../api/cliente.js", () => ({
   },
 }));
 
-const { obtenerRecetaPorAtencion } = await import("./entrega.api.js");
+const { ajustarEntregaReceta, obtenerRecetaPorAtencion } = await import("./entrega.api.js");
 
 /**
  * Doble del cliente: enruta por nombre de tabla, porque obtenerRecetaPorAtencion() consulta
@@ -198,6 +198,60 @@ describe("obtenerRecetaPorAtencion", () => {
     const { receta, error } = await obtenerRecetaPorAtencion("aten-1");
 
     expect(receta).toBeNull();
+    expect(error).not.toBeNull();
+    expect(typeof error.mensaje).toBe("string");
+  });
+});
+
+/** Doble minimo para .rpc(): ajustarEntregaReceta() no toca .from(), solo .rpc(). */
+function crearClienteDeRpc(respuesta) {
+  const llamadas = [];
+  return {
+    llamadas,
+    rpc(nombre, parametros) {
+      llamadas.push({ paso: "rpc", nombre, parametros });
+      return respuesta instanceof Error ? Promise.reject(respuesta) : Promise.resolve(respuesta);
+    },
+  };
+}
+
+describe("ajustarEntregaReceta", () => {
+  it("llama a fn_ajustar_entrega_receta con el renglon y la cantidad real", async () => {
+    dobles.cliente = crearClienteDeRpc({ data: null, error: null });
+
+    const { error } = await ajustarEntregaReceta("det-1", 8);
+
+    expect(error).toBeNull();
+    expect(dobles.cliente.llamadas).toEqual([
+      {
+        paso: "rpc",
+        nombre: "fn_ajustar_entrega_receta",
+        parametros: { p_receta_detalle_id: "det-1", p_cantidad_real: 8 },
+      },
+    ]);
+  });
+
+  // Camino de error (issue #764): si la funcion rechaza el ajuste (rol sin permiso, existencia
+  // insuficiente, receta anulada, ...), el mensaje real tiene que llegar a quien llama, no un
+  // resultado silenciosamente vacio.
+  it("propaga el error cuando la funcion rechaza el ajuste", async () => {
+    dobles.cliente = crearClienteDeRpc({
+      data: null,
+      error: { code: "P0001", message: "Existencia insuficiente para ajustar la entrega." },
+    });
+
+    const { error } = await ajustarEntregaReceta("det-1", 999);
+
+    expect(error).not.toBeNull();
+    expect(typeof error.mensaje).toBe("string");
+    expect(error.mensaje.length).toBeGreaterThan(0);
+  });
+
+  it("una excepcion inesperada tambien se propaga como error, no se traga", async () => {
+    dobles.cliente = crearClienteDeRpc(new Error("Failed to fetch"));
+
+    const { error } = await ajustarEntregaReceta("det-1", 5);
+
     expect(error).not.toBeNull();
     expect(typeof error.mensaje).toBe("string");
   });

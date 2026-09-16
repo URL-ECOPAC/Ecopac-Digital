@@ -21,6 +21,19 @@
 
 import { esAdministrador, esConsultivo, ROLES } from "../usuarios/roles.js";
 
+/**
+ * Puede corregir la cantidad realmente entregada de un renglon de receta (issue #764).
+ *
+ * Espejo exacto de la guarda interna de fn_ajustar_entrega_receta() (00128, SECURITY DEFINER):
+ * solo administrador o medico -un voluntario puede ver la receta y la pantalla de entrega, pero
+ * no ajustarla-. La funcion valida el rol a mano porque, al ser SECURITY DEFINER, RLS no se
+ * evalua; este reflejo evita que la pantalla ofrezca un campo editable que el servidor va a
+ * rechazar de todas formas.
+ */
+export function puedeAjustarEntregaReceta(rol) {
+  return esAdministrador(rol) || rol === ROLES.MEDICO;
+}
+
 /** Puede consultar movimientos. Espejo de la politica de SELECT (00034): abierta a cualquiera. */
 export function puedeVerMovimientos(rol) {
   return Object.values(ROLES).includes(rol);
