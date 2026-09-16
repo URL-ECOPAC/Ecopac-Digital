@@ -892,7 +892,11 @@ son ahora los mismos 11 de `CAMPOS_REGISTRO_PACIENTE`, resuelto por una issue po
 `fecha_baja` se muestra (issue #656) pero solo la fija `fn_fusionar_pacientes()`: no hay alta ni
 baja manual de paciente fuera del flujo de fusion de duplicados.
 
-**En `apps/mobile` no existe ninguna pantalla de edicion de paciente** -> **pendiente, esta misma issue #756**.
+**En `apps/mobile` no existia ninguna pantalla de edicion de paciente** -> **resuelto en esta misma
+issue #756**: `ModalEdicionPaciente.js` (movil), espejo exacto del `.jsx` de web -mismo hook
+compartido `useEdicionPaciente`, los mismos 11 campos, el mismo aviso de "hay cambios sin guardar"
+antes de cerrar-, con un boton "Editar datos" en `FichaPacienteScreen.js` gateado por
+`permisos.puedeEditar`, igual que en web.
 
 **`expedientes`**: `numero_ficha` se muestra, lo genera el servidor (secuencia, `00081`) y esta
 explicitamente bloqueado en la edicion (`pacientes/api.js`: "El numero de ficha no se puede
@@ -905,10 +909,19 @@ editar nombre, activar/desactivar). Sin huecos.
 
 | Columna | Muestra | Captura | Corrige | Nota |
 | --- | --- | --- | --- | --- |
-| condicion_id | Si | Si, al asociar | No | Pendiente (#756) |
-| fecha_diagnostico | Si | Si | No | Pendiente (#756) |
-| estado | Si (chip) | Si, default `activa` | Parcial: solo hay boton para pasar a `resuelta` | Pendiente (#756) |
-| notas | Si | Si | No | Pendiente (#756) |
+| condicion_id | Si | Si, al asociar | No | A proposito: cambiar a que condicion se refiere un registro no es una correccion de datos, es otro hecho clinico distinto (se borra y se vuelve a asociar) |
+| fecha_diagnostico | Si | Si | Si | Resuelto (#756) |
+| estado | Si (chip) | Si, default `activa` | Parcial: solo hay boton para pasar a `resuelta` | A proposito: reabrir un padecimiento resuelto no estaba en el objetivo de esta issue, mismo criterio de alcance que otros huecos de bajo impacto |
+| notas | Si | Si | Si | Resuelto (#756) |
+
+**Correccion de `fecha_diagnostico`/`notas` (issue #756)**: `actualizarCondicion()`
+(`condiciones.api.js`) ya aceptaba corregir estos dos campos -y `estado`, que sigue teniendo su
+propia accion dedicada, `marcarResuelta()`-, pero `ModalCondicionesPaciente.jsx` solo ofrecia
+"Marcar resuelta" y "Borrar" por fila, sin ningun formulario que llamara a esa correccion. Se agrega
+`corregir()` a `useCondicionesPaciente.js` y un boton "Corregir" por fila que abre un formulario en
+linea con `CAMPOS_CORRECCION_CONDICION` (nuevo, en `condiciones.campos.js`: los mismos descriptores
+de `CAMPOS_CONDICION_CRONICA` filtrados a `fechaDiagnostico`/`notas`). Solo web: no existe pantalla
+de condiciones cronicas en `apps/mobile`, alcance ya decidido en la issue #122.
 
 ### Jornadas
 
@@ -918,7 +931,7 @@ editar nombre, activar/desactivar). Sin huecos.
 | --- | --- | --- | --- | --- |
 | nombre / fecha / comunidad_id / responsable_id / proyecto_id | Si | Si (alta+edicion) | Si | — |
 | estado | Si (chip/kanban) | Si, vía kanban y "Cerrar jornada" (no formulario) | Si | — |
-| presupuesto_asignado | No | No (`asignarPresupuestoJornada()` sin llamador) | No | Pendiente (#756). Ver nota abajo: sigue fuera a proposito |
+| presupuesto_asignado | Si (`DetalleJornadaPage.jsx`) | Si (`asignarPresupuestoJornada()`) | Si | Resuelto (#756). Ver nota abajo |
 | cupo_estimado | Si | Si (alta+edicion) | Si | Resuelto (#756) |
 | botiquin_bodega_id | Si, resuelto a nombre | Si (alta+edicion), solo bodegas moviles | Si | Resuelto (#756) |
 | codigo | Si (`DetalleJornadaPage.jsx`, antes siempre "—") | **Generado por el servidor**, migracion `00126` | n/a | Resuelto en esta misma issue: ver nota tecnica abajo |
@@ -942,12 +955,15 @@ formulario (`ModalJornada.jsx`): `cupoEstimado` con `NumberField`, `botiquinBode
 cualquier bodega del catalogo-. `DetalleJornadaPage.jsx` ya mostraba `cupoEstimado`; se agrega
 `botiquinBodega`, embebido por nombre en `obtenerJornada()` igual que `comunidad`/`responsable`.
 
-**`presupuesto_asignado` sigue sin resolver, a proposito**: tambien esta en `aColumnasDeTabla()`,
-pero ademas existe `asignarPresupuestoJornada()` (`presupuestos/api.js`), una via de escritura
-propia con su propia validacion (`aNumeroAEscribir()`) que tampoco tiene ningun llamador.
-Agregarlo al formulario de jornada habria duplicado el camino de escritura de una columna
-financiera con dos reglas de validacion distintas -exactamente el tipo de decision que no le
-toca a un cambio de "agregar el campo al formulario". Queda declarado como hueco abierto.
+**`presupuesto_asignado` (resuelto, issue #756)**: sigue A PROPOSITO fuera de
+`CAMPOS_FORMULARIO_JORNADA`/`aColumnasDeTabla()` (jornadas/api.js): esa columna ya tenia una via de
+escritura propia y mas estricta, `asignarPresupuestoJornada()` (`presupuestos/api.js`, valida el
+monto con `aNumeroAEscribir()`), y meterla en el formulario generico habria duplicado el camino de
+escritura de una columna financiera con dos reglas de validacion distintas. En vez de eso,
+`useDetalleJornada.js` gana una accion dedicada (`asignarPresupuesto`) que llama directo a esa
+funcion -mismo criterio que "Cerrar jornada": una accion propia, no un campo mas del formulario
+generico-, y `DetalleJornadaPage.jsx` la expone como un control de edicion en linea junto al resto
+de la ficha, gateado por `permisos.puedeEditar`. `asignarPresupuestoJornada()` ya tiene llamador.
 
 **`jornada_personal`**: `perfil_id`/`hora_inicio`/`hora_fin`/`responsabilidad` completos (alta y
 edicion, issue #185); `rol_en_jornada` se captura al asignar pero no se corrige despues (a
@@ -995,12 +1011,20 @@ con los mismos siete campos de `CAMPOS_TRIAJE`.
   siete campos de texto, sin `diagnosticos`-.
 
 **`consulta_diagnostico`**: `diagnostico_id` se muestra y se captura; `es_principal` se infiere del
-orden de seleccion, no de una eleccion explicita. **Sigue pendiente**: a diferencia de
-`triajes`/`consultas`, aqui no hay ninguna funcion de escritura de correccion que ya exista -la
-politica RLS de `consulta_diagnostico` (`00033`) solo tiene SELECT e INSERT, sin UPDATE ni
-DELETE-, asi que corregir un diagnostico mal elegido necesita una migracion nueva (politica +
-funcion), no solo una pantalla. Queda declarado como hueco abierto, distinto en naturaleza del
-resto de esta issue.
+orden de seleccion, no de una eleccion explicita (se deja asi: no es el hueco que esta issue
+pedia cerrar). **Resuelto en esta misma issue #756**, con una migracion nueva y no solo una
+pantalla: a diferencia de `triajes`/`consultas`, esta tabla no tenia ninguna funcion de escritura
+de correccion, porque su politica RLS (`00033`) solo tenia SELECT e INSERT, sin UPDATE ni DELETE.
+La migracion `00127` le agrega DELETE, con el mismo actor que ya protege el INSERT desde la `00082`
+(issue #237: administrador cualquiera, medico solo en su propia consulta, `EXISTS` contra
+`consultas.medico_id`) -no el actor mas laxo de la `00033` original, que la `00082` ya habia
+cerrado como un agujero de IDOR. Igual que `padecimientos_cronicos.condicion_id`, corregir a que
+diagnostico se refiere un vinculo no es un UPDATE -es otro hecho clinico distinto-, asi que la
+correccion es DELETE (quitar el vinculo equivocado) + INSERT (agregar el correcto, via las nuevas
+`quitarDiagnosticoDeConsulta()`/`agregarDiagnosticoAConsulta()`, `consultas.api.js`).
+`ModalCorreccionConsulta.jsx` gana una seccion de diagnosticos (lista con "Quitar" por fila, mas
+un selector para agregar uno). Se actualiza `docs/PERMISOS.md` en el mismo cambio (regla de
+AGENTS.md: un PR que cambia una politica actualiza ese documento).
 
 **`diagnosticos`** (catalogo): CRUD completo (`CatalogoDiagnosticosPage.jsx`), incluido
 activar/desactivar y el filtro `soloActivos` que ya usa el selector de la consulta. Sin huecos.
@@ -1151,15 +1175,42 @@ consulta del historial), asi que no hay un lugar equivalente que conectar ahi.
 
 ### Proyectos y presupuesto
 
-**`proyectos`**: `nombre`/`descripcion`/`fecha_inicio`/`fecha_fin`/`responsable_id` se muestran,
-pero **no existe ningun formulario de alta ni edicion** -el boton "+ Nuevo Proyecto" no tiene
-`onClick`- pese a que toda la capa de datos ya existe. `estado` solo se puede mover desde el
-kanban movil (la web no tiene ese control). `porcentaje_avance` completo (slider + boton
-"Guardar", web). `orden_columna` sin uso -> **pendiente, esta misma issue #756**.
+**`proyectos`**: `nombre`/`descripcion`/`fecha_inicio`/`fecha_fin`/`responsable_id` se mostraban,
+pero **no existia ningun formulario de alta ni edicion** -el boton "+ Nuevo Proyecto" no tenia
+`onClick`- pese a que toda la capa de datos ya existia (`crearProyecto()`/`actualizarProyecto()`,
+`proyectos/api.js`). **Resuelto en esta misma issue #756**: `guardarProyecto()` (nuevo, en
+`useProyectosSociales.js`) valida con `validarProyecto()` y elige crear o editar segun venga o no
+un id, y `ModalProyecto.jsx`/`.js` (web y movil) es un formulario generico dirigido por
+`CAMPOS_PROYECTO`, mismo patron que `ModalEdicionPaciente`. El boton "+ Nuevo Proyecto" y un boton
+"Editar proyecto" en el detalle ya lo abren; movil suma el mismo formulario aunque su pantalla
+sigue siendo solo kanban/lista (issue #688), sin ficha de detalle a la que conectar hitos o
+seguimiento -ver nota de alcance movil, mas abajo. `estado` sigue moviendose solo desde el kanban
+movil (la web no tiene ese control; fuera de alcance de este cambio). `porcentaje_avance` completo
+(slider + boton "Guardar", web). `orden_columna` sigue sin uso: es el orden manual de las tarjetas
+dentro de una columna del kanban, y ninguna pantalla ofrece reordenarlas a mano todavia. Bajo
+impacto, sin issue propia (mismo criterio que `fecha_inicio_real`/`orden_kanban` de jornadas).
 
-**`proyecto_hitos`**: `nombre`/`descripcion`/`fecha_prevista` se muestran parcialmente pero no
-tienen formulario de alta; `fecha_real` se marca/desmarca con un checkbox ("cumplido"), sin poder
-escribir una fecha distinta a hoy/NULL -> **pendiente, esta misma issue #756**.
+**`proyecto_hitos`**: `nombre`/`descripcion`/`fecha_prevista` se mostraban parcialmente pero no
+tenian formulario de alta; `fecha_real` se marcaba/desmarcaba con un checkbox ("cumplido"), sin
+poder escribir una fecha distinta a hoy/NULL. **Resuelto en esta misma issue #756**:
+`guardarHito()` (nuevo, en `useSeguimientoProyecto.js`) llama a `registrarHito()`/`actualizarHito()`
+(`avance.api.js`, ya existian sin llamador) y valida lo que `CAMPOS_HITO` declara requerido
+(nombre, fecha prevista). `ModalHito.jsx` (solo web: la ficha de seguimiento de un proyecto no
+tiene equivalente movil, ver nota de alcance abajo) es el mismo patron generico dirigido por
+descriptores, con los cuatro campos de `CAMPOS_HITO` incluido `fechaReal` -ya se puede corregir a
+mano, no solo hoy/NULL via el checkbox de cumplido, que sigue existiendo para el caso comun.
+`SeguimientoProyectoPage.jsx` suma un boton "+ Agregar hito" y uno "Corregir" por fila.
+
+**Nota tecnica, no un hueco de datos**: `useSeguimientoProyecto.js` no consultaba nada -recibia
+`hitosIniciales`/`bitacoraInicial`/`jornadasIniciales` por prop, y `SeguimientoProyectoEnrutado`
+(App.jsx) solo tenia el proyecto que ya traia el listado en `location.state`- asi que entrar por un
+enlace directo o refrescar la pagina dejaba hitos, bitacora y jornadas siempre vacios pese a que
+`obtenerProyecto()`/`listarHitos()`/`listarSeguimiento()`/`listarJornadasDelProyecto()` ya existian.
+Se resuelve en el mismo cambio: el hook ahora recibe `proyectoId` y consulta el mismo, igual que
+`useProyectosSociales()` hace con `listarProyectos()`. De paso, el indicador "Presupuesto Total" de
+esta pantalla y de la del listado deja de sumar a mano `jornada.presupuesto`/`.beneficiarios` -dos
+campos que nunca fueron columnas reales- y pasa a usar `obtenerPresupuestoProyecto()`
+(`presupuestos/api.js`), que ya agrega `jornadas.presupuesto_asignado` en el servidor.
 
 **`proyecto_seguimiento`**: `nota` completa (bitacora append-only, por diseno). `porcentaje_anterior`/
 `porcentaje_nuevo` se capturan solos (trigger) pero la pantalla no los distingue de una nota de
@@ -1183,10 +1234,15 @@ criterio que `donantes.direccion` o `atenciones.motivo_cierre`, sin issue propia
 **`vista_reporte_impacto`**: sus doce columnas llegan a `packages/shared/reportes/api.js` y se
 usan para agrupar el Dashboard de Impacto por jornada/comunidad/proyecto. `consultas_realizadas`
 es el caso especifico que la issue #756 pedia verificar: **la premisa original ya no aplica** (la
-issue #693 la corrigio: si esta en `COLUMNAS_DEL_REPORTE`). Donde SI falta es un nivel mas
-arriba -> **pendiente, esta misma issue #756** (no llega a las tarjetas del Dashboard de Impacto, aunque a nivel de
-jornada individual el mismo dato ya se ve en dos pantallas distintas por dos caminos
-independientes, `DetalleJornadaPage.jsx` y `ReporteJornada.jsx`).
+issue #693 la corrigio: ya esta en `COLUMNAS_DEL_REPORTE`/`INDICADORES`, api.js). Donde SI faltaba
+era un nivel mas arriba: `useDashboardMetricas.js` traduce `totales` (snake_case, de la vista) a
+`indicadores` (camelCase, que lee la pantalla) a mano, campo por campo, y esa traduccion no incluia
+`consultasRealizadas` -el dato ya llegaba correctamente calculado y se perdia en el ultimo paso.
+**Resuelto en esta misma issue #756**: se agrega el campo que faltaba a `aIndicadoresDePantalla()`
+y una quinta tarjeta "Consultas Realizadas" en `DashboardMetricasPage.jsx`, junto a las otras
+cuatro. A nivel de jornada individual el mismo dato ya se veia en dos pantallas distintas por dos
+caminos independientes, `DetalleJornadaPage.jsx` y `ReporteJornada.jsx`; lo que faltaba era
+unicamente el agregado del dashboard.
 
 **`pacientes_reporte`**: vista muerta a nivel de aplicacion -ningun archivo de `apps/` la
 consulta; la reemplazo de facto `fn_reporte_pacientes_atendidos` (`00067`), que si expone sexo y
@@ -1211,13 +1267,35 @@ registro de campo), no un hueco nuevo que resolver aqui.
 
 ### Decision: `MODULOS[].icono` (HomePage vacia)
 
-`packages/shared/navegacion.js` declara un icono por modulo que ningun componente lee -causa
-directa de que las tarjetas de la pagina de inicio se vean con solo una palabra en un rectangulo.
+`packages/shared/navegacion.js` declaraba un icono por modulo que ningun componente leia -causa
+directa de que las tarjetas de la pagina de inicio se vieran con solo una palabra en un rectangulo
+(en web, ni siquiera eso: `HomePage.jsx` leia `modulo.etiqueta`, un campo que `MODULOS` nunca
+declaro -el campo real es `nombre`-, asi que la tarjeta se veia sin texto en absoluto).
 **Decision: implementar** (no retirar el campo: los nombres ya coinciden con los iconos reales de
-`lucide-react`, y la intencion de diseño es evidente). Como toca la pantalla mas visible de las
-dos apps y ninguna de las dos tiene hoy una libreria de iconos instalada, la implementacion queda
-en **pendiente, esta misma issue #756**, para revisar el diseño de Figma antes de tocar el JSX (regla del equipo para
-cambios de interfaz) en vez de improvisar un set de iconos sin esa referencia.
+`lucide-react`/`lucide-react-native`, y la intencion de diseño es evidente). **Resuelto en esta
+misma issue #756**, sin esperar Figma para este alcance puntual -el requisito quedo lo bastante
+acotado (nueve nombres de icono ya fijos en los datos, un componente que los traduce a JSX) para no
+necesitar una revision de diseño previa: se instalan `lucide-react` (web) y
+`lucide-react-native`/`react-native-svg` (movil, via `expo install` para las versiones compatibles
+con el SDK), y `IconoModulo.jsx`/`.js` (un componente nuevo por app, mismo patron de "una pantalla
+es un hook y un componente por app" aplicado a un componente compartido) mapea el nombre de
+`MODULOS[].icono` a su componente real. Se usa en el menu lateral y la pagina de inicio (web,
+`MainLayout.jsx`/`HomePage.jsx`, esta ultima tambien corrige el `etiqueta`/`nombre` de arriba) y en
+la pantalla de inicio movil (`InicioScreen.js`, reemplaza el punto de color que tenia cada tarjeta
+de modulo). El menu lateral movil (`MenuDrawer.js`) no se toca: sus items no son modulos 1:1 -varios
+subitems de un mismo modulo, como "Existencias"/"Alertas de vencimiento"/"Mis movimientos" bajo
+Inventario- y decidir un icono por subitem si es una decision de diseño que no estaba en el alcance
+de esta auditoria.
+
+**Nota tecnica**: `lucide-react-native` declara la condicion `"react-native"` de `package.json`
+`exports` apuntando a su build ESM (`.mjs`); `jest-expo` la respeta igual que lo haria Metro, pero
+Jest corre en CommonJS y no puede cargar ESM sin flags experimentales. `apps/mobile/jest.config.js`
+fuerza la resolucion a la build CJS del paquete (la misma que la condicion `"require"` ya declara
+para cualquier consumidor que no sea un bundler de RN). Ademas, `IconoModulo.js` importa cada icono
+de su propio archivo (`lucide-react-native/icons/<nombre-en-kebab>`) y no del paquete completo: ese
+barril re-exporta mas de 1500 iconos, y construirlo entero en cada archivo de prueba -Jest no
+comparte el registro de modulos entre test files- disparo la suite movil de unos segundos a mas de
+un minuto por archivo la primera vez que se probo.
 
 ### Huecos grandes: se resuelven dentro de esta misma issue
 
@@ -1227,21 +1305,21 @@ cada uno al resolverse):
 
 | Area | Que falta | Prioridad | Estado |
 | --- | --- | --- | --- |
-| Historial clinico | Varios campos de consulta invisibles; consultas/condiciones/triaje sin correccion | media | Resuelto salvo diagnostico (ver nota de `consulta_diagnostico`, necesita migracion) |
+| Historial clinico | Varios campos de consulta invisibles; consultas/condiciones/triaje/diagnostico sin correccion | media | Resuelto (diagnostico de consulta necesito una migracion nueva, `00127`: ver nota de `consulta_diagnostico`) |
 | Alertas de vencimiento | El panel visible y `alertas_caducidad` estan desconectados | **alta** | Resuelto |
 | Movimientos de inventario | Bodega y motivo de rechazo no se ven; sin correccion de un pendiente | media | Resuelto (pantalla nueva "Mis movimientos") |
 | Medicamentos y recetas | `desactivarMedicamento()`/`anularReceta()` sin boton; `es_pediatrico` roto | baja | Resuelto |
 | Comunidades | Columnas geo sin uso (decidir mapa o retiro); sin edicion | baja | Resuelto (mapa con Leaflet/OpenStreetMap en web y movil) |
-| Proyectos sociales | Sin alta/edicion de proyecto, hitos ni presupuesto asignado | media | Pendiente |
+| Proyectos sociales | Sin alta/edicion de proyecto, hitos ni presupuesto asignado | media | Resuelto (alta/edicion en web y movil; hitos e ingreso de presupuesto de jornada solo web -movil sigue siendo kanban/lista, issue #688, sin ficha de detalle a la que conectarlos) |
 | Gastos | Aprobado por/cuando y motivo de rechazo invisibles | baja | Resuelto (en un commit anterior de esta misma issue). `registrado_por` sigue sin mostrarse, bajo impacto |
 | Donaciones | Sin anular; constancia imprime mal el proyecto; ingreso a inventario no se dispara | media | Resuelto (reutiliza `ModalRegistroIngreso.jsx` de Inventario con precarga por donacion, solo web -no existe registro de donacion en movil) |
 | Directorio de colaboradores | Junta directiva consulta la tabla equivocada | media | Resuelto |
 | Perfil de colaborador | fecha_ingreso/direccion/notas no capturables | baja | Resuelto |
 | Permisos por usuario | Sin motivo ni quien concedio/revoco | baja | Resuelto |
-| Movil: edicion de paciente | No existe la pantalla | media | Pendiente |
-| Dashboard de Impacto | Consultas realizadas no llega a la tarjeta agregada | baja | Pendiente |
-| Jornadas | cupo_estimado/botiquin_bodega_id/asistio sin captura | media | Resuelto (presupuesto_asignado queda fuera, ver nota en la tabla de `jornadas`) |
-| Icono de modulo en Inicio | Sin libreria de iconos instalada; necesita revision de Figma | baja | Pendiente (bloqueada por diseno) |
+| Movil: edicion de paciente | No existia la pantalla | media | Resuelto (`ModalEdicionPaciente.js`, espejo del de web) |
+| Dashboard de Impacto | Consultas realizadas no llega a la tarjeta agregada | baja | Resuelto |
+| Jornadas | cupo_estimado/botiquin_bodega_id/asistio sin captura | media | Resuelto (presupuesto_asignado tambien resuelto, con su propia accion dedicada -ver nota en la tabla de `jornadas`) |
+| Icono de modulo en Inicio | Sin libreria de iconos instalada | baja | Resuelto (`lucide-react`/`lucide-react-native`) |
 
 Resuelto dentro de esta misma issue: `jornadas.codigo` ahora se genera por secuencia (migracion
 `00126`).
@@ -1331,6 +1409,7 @@ de solo lectura para la app). No es un hueco de esta auditoria, ya estaba decidi
 
 **`fusiones_pacientes`**: tiene pantalla propia -"Expedientes fusionados en este paciente" en
 `FichaPacientePage.jsx` (web)-, con `paciente_absorbido_id`/`realizada_por`/`realizada_en`
-resueltos a nombre y fecha. No existe en `apps/mobile`; dado que `FichaPacienteScreen.js` (movil)
-es de solo lectura y este es un dato secundario de la ficha, no se abre issue aparte -queda
-anotado por si acompana al hueco de edicion movil de paciente (pendiente, esta misma issue #756).
+resueltos a nombre y fecha. No existe en `apps/mobile`: `FichaPacienteScreen.js` (movil) ya gano
+edicion de los 11 campos del paciente en esta misma issue #756 (ver seccion de Pacientes, arriba),
+pero esta lista de fusiones es un dato secundario de la ficha que ese cambio no cubrio. Bajo
+impacto, sin issue propia -queda declarado como hueco, no omitido en silencio.
