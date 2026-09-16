@@ -25,12 +25,26 @@ const CONSULTA = {
   planSeguimiento: "Reevaluar",
 };
 
+const DIAGNOSTICOS = [
+  { id: "dx-1", vinculoId: "vinculo-1", nombre: "Cefalea", esPrincipal: true },
+];
+
 const mockEstadoHook = {
   valores: { ...CONSULTA },
   error: null,
   enviando: false,
   setCampo: vi.fn(),
   guardar: vi.fn(async () => ({ ok: true, consulta: CONSULTA })),
+  diagnosticos: DIAGNOSTICOS,
+  catalogoDiagnosticos: [
+    { value: "dx-2", label: "Resfriado" },
+    { value: "dx-3", label: "Migrana" },
+  ],
+  diagnosticoNuevo: "",
+  setDiagnosticoNuevo: vi.fn(),
+  errorDiagnostico: null,
+  quitarDiagnostico: vi.fn(async () => ({ ok: true })),
+  agregarDiagnostico: vi.fn(async () => ({ ok: true })),
 };
 
 vi.mock("@ecopac/shared", async (importarOriginal) => ({
@@ -49,6 +63,11 @@ describe("ModalCorreccionConsulta", () => {
     mockEstadoHook.valores = { ...CONSULTA };
     mockEstadoHook.error = null;
     mockEstadoHook.setCampo = vi.fn();
+    mockEstadoHook.diagnosticos = DIAGNOSTICOS;
+    mockEstadoHook.diagnosticoNuevo = "";
+    mockEstadoHook.errorDiagnostico = null;
+    mockEstadoHook.quitarDiagnostico = vi.fn(async () => ({ ok: true }));
+    mockEstadoHook.agregarDiagnostico = vi.fn(async () => ({ ok: true }));
     useCorreccionConsulta.mockClear();
   });
 
@@ -64,10 +83,40 @@ describe("ModalCorreccionConsulta", () => {
     expect(screen.getByLabelText("Plan de seguimiento")).toHaveValue("Reevaluar");
   });
 
-  it("no ofrece ningun campo de diagnosticos", () => {
+  it("muestra los diagnosticos actuales de la consulta, con el principal marcado", () => {
     pantalla();
 
-    expect(screen.queryByLabelText("Diagnosticos")).not.toBeInTheDocument();
+    expect(screen.getByText("Cefalea (principal)")).toBeInTheDocument();
+  });
+
+  it("Quitar llama a quitarDiagnostico() con el id del vinculo, no el del diagnostico", () => {
+    pantalla();
+
+    fireEvent.click(screen.getByText("Quitar"));
+
+    expect(mockEstadoHook.quitarDiagnostico).toHaveBeenCalledWith("vinculo-1");
+  });
+
+  it("sin diagnosticos registrados, lo dice en vez de una lista vacia", () => {
+    mockEstadoHook.diagnosticos = [];
+    pantalla();
+
+    expect(screen.getByText("Sin diagnosticos registrados.")).toBeInTheDocument();
+  });
+
+  it("Agregar esta deshabilitado sin un diagnostico elegido", () => {
+    pantalla();
+
+    expect(screen.getByText("Agregar")).toBeDisabled();
+  });
+
+  it("con un diagnostico elegido, Agregar llama a agregarDiagnostico()", () => {
+    mockEstadoHook.diagnosticoNuevo = "dx-2";
+    pantalla();
+
+    fireEvent.click(screen.getByText("Agregar"));
+
+    expect(mockEstadoHook.agregarDiagnostico).toHaveBeenCalled();
   });
 
   it("corregir un campo llama a setCampo con el texto escrito", () => {

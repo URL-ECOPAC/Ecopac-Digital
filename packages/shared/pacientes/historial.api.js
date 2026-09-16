@@ -36,7 +36,7 @@ const COLUMNAS_DEL_HISTORIAL = [
     "exploracion, tratamiento, observaciones, planSeguimiento:plan_seguimiento,",
     "medicoId:medico_id,",
     "profesional:perfiles(nombres, apellidos),",
-    "diagnosticos:consulta_diagnostico(esPrincipal:es_principal, diagnostico:diagnosticos(id, codigo, nombre)),",
+    "diagnosticos:consulta_diagnostico(id, esPrincipal:es_principal, diagnostico:diagnosticos(id, codigo, nombre)),",
     "recetas(id, folio, estado, createdAt:created_at,",
     "detalle:receta_detalle(cantidadEntregada:cantidad_entregada, dosis, frecuencia, duracion,",
     "medicamento:medicamentos(nombre, concentracion, presentacion)))",
@@ -101,6 +101,7 @@ export function aEventos(atencion) {
   for (const consulta of atencion.consultas ?? []) {
     const diagnosticos = (consulta.diagnosticos ?? []).map((union) => ({
       id: union.diagnostico?.id ?? null,
+      vinculoId: union.id ?? null,
       codigo: union.diagnostico?.codigo ?? null,
       nombre: union.diagnostico?.nombre ?? null,
       esPrincipal: union.esPrincipal === true,

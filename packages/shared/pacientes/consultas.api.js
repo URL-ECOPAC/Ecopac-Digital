@@ -106,6 +106,62 @@ function filasDeDiagnostico(consultaId, diagnosticos = []) {
 }
 
 /**
+ * Adjunta un diagnostico a una consulta ya registrada (correccion, issue #756): hasta ahora los
+ * diagnosticos solo se fijaban al crear la consulta, en registrarConsulta(); no habia forma de
+ * agregar el correcto despues de quitar uno mal elegido.
+ *
+ * @param {string} consultaId UUID de la consulta.
+ * @param {string} diagnosticoId UUID del diagnostico (catalogo).
+ * @returns {Promise<{ ok: boolean, error: object|null }>}
+ */
+export async function agregarDiagnosticoAConsulta(consultaId, diagnosticoId) {
+  if (!consultaId || !diagnosticoId) {
+    return { ok: false, vinculoId: null, error: construirError(CODIGOS_DE_ERROR_DE_SUPABASE.CAMPO_REQUERIDO) };
+  }
+
+  try {
+    const { data, error } = await obtenerSupabase()
+      .from("consulta_diagnostico")
+      .insert({ consulta_id: consultaId, diagnostico_id: diagnosticoId })
+      .select("id")
+      .single();
+
+    if (error) return { ok: false, vinculoId: null, error: normalizarError(error) };
+    return { ok: true, vinculoId: data?.id ?? null, error: null };
+  } catch (error) {
+    return { ok: false, vinculoId: null, error: normalizarError(error) };
+  }
+}
+
+/**
+ * Quita un diagnostico de una consulta (correccion, issue #756, migracion 00127): un diagnostico
+ * mal elegido se quita, no se edita -cambiar a que diagnostico se refiere un vinculo es otro hecho
+ * clinico distinto, mismo criterio que padecimientos_cronicos.condicion_id (ver
+ * docs/MODELO-DE-DATOS.md).
+ *
+ * @param {string} vinculoId UUID de la fila de consulta_diagnostico (no del diagnostico ni de la
+ *   consulta).
+ * @returns {Promise<{ ok: boolean, error: object|null }>}
+ */
+export async function quitarDiagnosticoDeConsulta(vinculoId) {
+  if (!vinculoId) {
+    return { ok: false, error: construirError(CODIGOS_DE_ERROR_DE_SUPABASE.CAMPO_REQUERIDO) };
+  }
+
+  try {
+    const { error } = await obtenerSupabase()
+      .from("consulta_diagnostico")
+      .delete()
+      .eq("id", vinculoId);
+
+    if (error) return { ok: false, error: normalizarError(error) };
+    return { ok: true, error: null };
+  } catch (error) {
+    return { ok: false, error: normalizarError(error) };
+  }
+}
+
+/**
  * Registra una consulta medica y, opcionalmente, sus diagnosticos.
  *
  * El motivo de consulta es el unico campo obligatorio: el resto queda opcional a proposito para

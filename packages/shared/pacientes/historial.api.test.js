@@ -187,6 +187,29 @@ describe("aEventos", () => {
     expect(receta.medicamentos[0].cantidadEntregada).toBe(21);
   });
 
+  it("cada diagnostico trae el id de su propio vinculo, no solo el del catalogo (issue #756)", () => {
+    const conVinculos = {
+      ...ATENCION,
+      consultas: [
+        {
+          ...ATENCION.consultas[0],
+          diagnosticos: [
+            {
+              id: "vinculo-1",
+              esPrincipal: true,
+              diagnostico: { id: "dx-1", codigo: "R51", nombre: "Cefalea" },
+            },
+          ],
+        },
+      ],
+    };
+
+    const consulta = aEventos(conVinculos).find((e) => e.tipo === TIPOS_DE_EVENTO.CONSULTA);
+
+    expect(consulta.diagnosticos[0].vinculoId).toBe("vinculo-1");
+    expect(consulta.diagnosticos[0].id).toBe("dx-1");
+  });
+
   it("una receta anulada se marca como tal, no desaparece del historial", () => {
     const anulada = {
       ...ATENCION,
