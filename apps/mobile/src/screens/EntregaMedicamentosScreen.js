@@ -1,25 +1,31 @@
+import { useState } from "react";
 import { View, Text, StyleSheet, ScrollView } from "react-native";
 import { useRoute, useNavigation } from "@react-navigation/native";
-import { useEntregaMedicamentos } from "@ecopac/shared";
+import { puedeAjustarEntregaReceta, useEntregaMedicamentos } from "@ecopac/shared";
 import { colors, spacing } from "@ecopac/ui-tokens";
-import {
-  LoadingState,
-  ErrorState,
-  ScreenContainer,
-  PrimaryButton,
-  SecondaryButton,
-} from "../components";
+import { LoadingState, ErrorState, ScreenContainer, SecondaryButton } from "../components";
+import { useSesionCompartida } from "../contexto/SesionProvider";
+import ModalAjusteEntrega from "./ModalAjusteEntrega";
 
-// Pantalla de solo lectura (issue #749): el descuento de inventario de una receta con lote ya
-// ocurre al generarla (fn_generar_receta, migracion 00112), no aqui. Todavia no existe un
-// mecanismo de "confirmar entrega" en la base de datos, asi que el boton de accion queda
-// deshabilitado hasta que exista esa issue.
+// La receta descuenta el inventario de forma atomica al emitirse (fn_generar_receta, migracion
+// 00112): esta pantalla no repite ese descuento. La cantidad realmente entregada es
+// detalle.cantidadRealEntregada (cantidadAjustada si alguien ya la corrigio, si no
+// cantidadEntregada), y "Ajustar" es la unica forma de cambiarla -llama a ajustarEntrega()
+// (useEntregaMedicamentos.js), que registra solo la diferencia contra el ultimo valor confirmado
+// (fn_ajustar_entrega_receta, migracion 00128, issue #764). Solo medico o administracion pueden
+// ajustar (puedeAjustarEntregaReceta, espejo de la guarda de esa funcion); un voluntario ve la
+// receta igual, de solo lectura.
 export default function EntregaMedicamentosScreen() {
   const route = useRoute();
   const navigation = useNavigation();
   const { atencionId } = route.params || {};
+  const { rol } = useSesionCompartida();
 
-  const { cargando, error, receta, detalles, recargar } = useEntregaMedicamentos(atencionId);
+  const { cargando, error, receta, detalles, recargar, ajustarEntrega } =
+    useEntregaMedicamentos(atencionId);
+  const [detalleEnAjuste, setDetalleEnAjuste] = useState(null);
+
+  const puedeAjustar = puedeAjustarEntregaReceta(rol);
 
   if (cargando && !error && detalles.length === 0) {
     return (
@@ -51,27 +57,47 @@ export default function EntregaMedicamentosScreen() {
         {detalles.length === 0 ? (
           <Text style={styles.vacio}>No hay medicamentos en la receta</Text>
         ) : (
-          detalles.map((detalle) => (
-            <View key={detalle.id} style={styles.renglon}>
-              <View style={styles.datosMedicamento}>
-                <Text style={styles.nombreMedicamento}>{detalle.medicamento}</Text>
-                <Text style={styles.detalleMedicamento}>
-                  Entregado: {detalle.cantidadEntregada} · Disponible:{" "}
-                  {detalle.cantidadDisponible ?? "—"}
-                </Text>
-                {detalle.vencido && (
-                  <Text style={styles.textoVencido}>VENCIDO — No se puede entregar</Text>
+          detalles.map((detalle) => {
+            // Sin lote y bodega no hay movimiento de inventario que ajustar (00128 rechaza este
+            // caso): no se ofrece el boton para no llevar a un error garantizado.
+            const puedeAjustarEsteRenglon = puedeAjustar && detalle.loteId && detalle.bodegaId;
+
+            return (
+              <View key={detalle.id} style={styles.renglon}>
+                <View style={styles.datosMedicamento}>
+                  <Text style={styles.nombreMedicamento}>{detalle.medicamento}</Text>
+                  <Text style={styles.detalleMedicamento}>
+                    Entregado: {detalle.cantidadRealEntregada} · Disponible:{" "}
+                    {detalle.cantidadDisponible ?? "—"}
+                    {detalle.cantidadAjustada !== null ? " · Ajustado" : ""}
+                  </Text>
+                  {detalle.vencido && (
+                    <Text style={styles.textoVencido}>VENCIDO — No se puede entregar</Text>
+                  )}
+                </View>
+                {puedeAjustarEsteRenglon && (
+                  <SecondaryButton
+                    title="Ajustar"
+                    onPress={() => setDetalleEnAjuste(detalle)}
+                    style={styles.botonAjustar}
+                  />
                 )}
               </View>
-            </View>
-          ))
+            );
+          })
         )}
       </ScrollView>
 
       <View style={styles.barraBotones}>
         <SecondaryButton title="Volver" onPress={() => navigation.goBack()} />
-        <PrimaryButton title="Entrega no disponible aun" disabled />
       </View>
+
+      <ModalAjusteEntrega
+        visible={Boolean(detalleEnAjuste)}
+        detalle={detalleEnAjuste}
+        onClose={() => setDetalleEnAjuste(null)}
+        onGuardar={ajustarEntrega}
+      />
     </ScreenContainer>
   );
 }
@@ -102,6 +128,7 @@ const styles = StyleSheet.create({
   nombreMedicamento: { fontSize: 15, fontWeight: "600", color: colors.text },
   detalleMedicamento: { fontSize: 13, color: colors.textMuted, marginTop: 2 },
   textoVencido: { color: colors.danger, fontWeight: "600", marginTop: 4 },
+  botonAjustar: { marginTop: spacing.sm, alignSelf: "flex-start" },
   barraBotones: {
     flexDirection: "row",
     gap: spacing.md,

@@ -227,6 +227,7 @@
   "apps/mobile/src/screens/JornadasAsignadasScreen.js": ["#2d2d2d", "#3db648", "#7a7a8a"],
   "apps/mobile/src/screens/LoginScreen.js": ["#2d2d2d", "#3db648", "#7a7a8a", "#e91e8c", "#ffffff"],
   "apps/mobile/src/screens/MisMovimientosScreen.js": ["#7a7a8a"],
+  "apps/mobile/src/screens/ModalAjusteEntrega.js": ["#2d2d2d", "#7a7a8a", "#e91e8c"],
   "apps/mobile/src/screens/ModalComunidad.js": ["#2d2d2d", "#3db648", "#e91e8c", "#f7941d"],
   "apps/mobile/src/screens/ModalCorreccionMovimiento.js": ["#7a7a8a", "#e91e8c", "#f7941d"],
   "apps/mobile/src/screens/ModalEdicionPaciente.js": ["#2d2d2d", "#e91e8c"],

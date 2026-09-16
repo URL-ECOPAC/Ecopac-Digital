@@ -1,4 +1,5 @@
-// Prueba de EntregaMedicamentosScreen (Modulo II: entrega/salida, issue #777).
+// Prueba de EntregaMedicamentosScreen (Modulo II: entrega/salida, issue #777, extendida por el
+// ajuste de cantidad entregada de la issue #764).
 
 import { fireEvent, render, screen } from "@testing-library/react-native";
 
@@ -10,12 +11,18 @@ jest.mock("@react-navigation/native", () => ({
   useRoute: () => ({ params: { atencionId: "at-1" } }),
 }));
 
+const mockSesion = { perfil: { id: "perfil-1" }, rol: "medico" };
+jest.mock("../contexto/SesionProvider", () => ({
+  useSesionCompartida: () => mockSesion,
+}));
+
 const mockEstadoEntrega = {
   cargando: false,
   error: null,
   receta: null,
   detalles: [],
   recargar: jest.fn(),
+  ajustarEntrega: jest.fn(),
 };
 
 jest.mock("@ecopac/shared", () => ({
@@ -32,7 +39,14 @@ function pantalla() {
 const DETALLE_DE_EJEMPLO = {
   id: "d-1",
   medicamento: "Loratadina",
+  loteId: "lote-1",
+  bodegaId: "bod-1",
+  dosis: "1 tableta",
+  frecuencia: "cada 8 horas",
+  duracion: "5 dias",
   cantidadEntregada: 5,
+  cantidadAjustada: null,
+  cantidadRealEntregada: 5,
   cantidadDisponible: 35,
   vencido: false,
 };
@@ -43,8 +57,11 @@ describe("EntregaMedicamentosScreen", () => {
     mockEstadoEntrega.error = null;
     mockEstadoEntrega.receta = null;
     mockEstadoEntrega.detalles = [];
+    mockSesion.rol = "medico";
     useEntregaMedicamentos.mockClear();
     mockEstadoEntrega.recargar.mockClear();
+    mockEstadoEntrega.ajustarEntrega.mockClear();
+    mockEstadoEntrega.ajustarEntrega.mockResolvedValue(undefined);
     mockGoBack.mockClear();
   });
 
@@ -79,11 +96,39 @@ describe("EntregaMedicamentosScreen", () => {
     expect(screen.getByText("VENCIDO — No se puede entregar")).toBeTruthy();
   });
 
-  it("el boton de accion esta siempre deshabilitado: la entrega no es un mecanismo disponible aun", () => {
+  it("un renglon ya ajustado muestra el indicador de ajuste (issue #764)", () => {
+    mockEstadoEntrega.detalles = [
+      { ...DETALLE_DE_EJEMPLO, cantidadAjustada: 7, cantidadRealEntregada: 7 },
+    ];
     pantalla();
 
-    const boton = screen.getByRole("button", { name: "Entrega no disponible aun" });
-    expect(boton.props.accessibilityState.disabled).toBe(true);
+    expect(screen.getByText("Entregado: 7 · Disponible: 35 · Ajustado")).toBeTruthy();
+  });
+
+  it("medico o administracion ven el boton Ajustar y pueden corregir la cantidad (issue #764)", async () => {
+    mockEstadoEntrega.detalles = [DETALLE_DE_EJEMPLO];
+    pantalla();
+
+    fireEvent.press(screen.getByText("Ajustar"));
+    fireEvent.changeText(screen.getByDisplayValue("5"), "7");
+    await fireEvent.press(screen.getByText("Guardar ajuste"));
+
+    expect(mockEstadoEntrega.ajustarEntrega).toHaveBeenCalledWith("d-1", 7);
+  });
+
+  it("voluntario ve la receta pero no el boton Ajustar: fn_ajustar_entrega_receta lo rechaza (00128)", () => {
+    mockSesion.rol = "voluntario general";
+    mockEstadoEntrega.detalles = [DETALLE_DE_EJEMPLO];
+    pantalla();
+
+    expect(screen.queryByText("Ajustar")).toBeNull();
+  });
+
+  it("un renglon sin lote ni bodega no ofrece Ajustar, aunque el rol pueda: no hay movimiento que corregir", () => {
+    mockEstadoEntrega.detalles = [{ ...DETALLE_DE_EJEMPLO, loteId: null, bodegaId: null }];
+    pantalla();
+
+    expect(screen.queryByText("Ajustar")).toBeNull();
   });
 
   it("Volver navega hacia atras", () => {
