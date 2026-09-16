@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useNavigation } from "@react-navigation/native";
 import {
   diasHastaVencimiento,
   formatearFechaCorta,
@@ -9,6 +10,7 @@ import {
 import { colors, labels, radii, spacing, typography } from "@ecopac/ui-tokens";
 
 import { Card, EmptyState, ErrorState, LoadingState, StatusChip } from "../components";
+import { ROUTES } from "../navigation/rutas";
 
 const DIAS_CRITICO = 7;
 const DIAS_AVISO_VENCIMIENTO = 30;
@@ -30,6 +32,7 @@ function calcularEstado(diasRestantes, cantidadDisponible) {
 }
 
 export default function ExistenciasInventarioScreen() {
+  const navigation = useNavigation();
   const [lotes, setLotes] = useState([]);
   const [existenciasDisponibles, setExistenciasDisponibles] = useState([]);
   const [cargando, setCargando] = useState(true);
@@ -100,7 +103,11 @@ export default function ExistenciasInventarioScreen() {
       ) : null}
 
       {existencias.map((item) => (
-        <Card key={item.loteId} style={estilos.tarjeta}>
+        <Card
+          key={item.loteId}
+          style={estilos.tarjeta}
+          onPress={() => navigation.navigate(ROUTES.DETALLE_LOTE, { loteId: item.loteId })}
+        >
           <View style={estilos.filaSuperior}>
             <Text style={estilos.nombreMedicamento} numberOfLines={1}>
               {item.medicamento}

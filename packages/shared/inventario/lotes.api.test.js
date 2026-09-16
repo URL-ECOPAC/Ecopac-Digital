@@ -21,7 +21,7 @@ vi.mock("../api/cliente.js", () => ({
 }));
 
 const { CODIGOS_DE_ERROR_DE_SUPABASE } = await import("../api/errores-de-supabase.js");
-const { actualizarLote, listarLotes, listarLotesDeMedicamento, registrarLote } =
+const { actualizarLote, listarLotes, listarLotesDeMedicamento, obtenerLote, registrarLote } =
   await import("./lotes.api.js");
 
 /** Doble de un cliente de Supabase que resuelve con una unica respuesta configurada para "lotes". */
@@ -269,6 +269,46 @@ describe("actualizarLote", () => {
 
     expect(lote).toBeNull();
     expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.PERMISO_DENEGADO);
+  });
+});
+
+describe("obtenerLote (issue #791)", () => {
+  it("sin id no llama al cliente", async () => {
+    const { lote, error } = await obtenerLote();
+
+    expect(lote).toBeNull();
+    expect(error).toBeNull();
+  });
+
+  it("consulta por id y traduce la fila a lote", async () => {
+    const cliente = crearCliente({
+      respuesta: { data: { id: "lote-1", numeroLote: "L-001" }, error: null },
+    });
+    dobles.cliente = cliente;
+
+    const { lote, error } = await obtenerLote("lote-1");
+
+    expect(error).toBeNull();
+    expect(lote.id).toBe("lote-1");
+    expect(cliente.llamadas).toContainEqual({ paso: "eq", columna: "id", valor: "lote-1" });
+  });
+
+  it("un id que no existe devuelve lote null sin error (maybeSingle)", async () => {
+    dobles.cliente = crearCliente({ respuesta: { data: null, error: null } });
+
+    const { lote, error } = await obtenerLote("no-existe");
+
+    expect(lote).toBeNull();
+    expect(error).toBeNull();
+  });
+
+  it("un error del cliente se normaliza", async () => {
+    dobles.cliente = crearCliente({ respuesta: { data: null, error: { code: "500" } } });
+
+    const { lote, error } = await obtenerLote("lote-1");
+
+    expect(lote).toBeNull();
+    expect(error).not.toBeNull();
   });
 });
 

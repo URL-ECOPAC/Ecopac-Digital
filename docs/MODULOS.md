@@ -171,6 +171,7 @@ El modulo con mas superficie despues de pacientes: 30 archivos en `packages/shar
 | ------------------------------------------------------------------------------------ | ------------------------ | --------- |
 | [CatalogoMedicamentosScreen.js](../apps/mobile/src/screens/CatalogoMedicamentosScreen.js) | `useCatalogoMedicamentos` | Conectada |
 | [StockScreen.js](../apps/mobile/src/screens/StockScreen.js)                           | -                        | Alias: reexporta `CatalogoMedicamentosScreen` |
+| [DetalleLoteScreen.js](../apps/mobile/src/screens/DetalleLoteScreen.js)                | `useDetalleLote`         | Conectada |
 
 ### Contra que trabaja
 
@@ -189,6 +190,13 @@ Funciones de base: `fn_existencias_disponibles`, `fn_registrar_medicamento`,
   (`confirmado = FALSE`, migracion `00107`).
 - El movil no tiene pantalla propia de existencias por bodega: `StockScreen` reexporta el catalogo.
   Es un hueco conocido, no un alias intencional del diseno.
+- **Detalle de lote (issue #791)**: Existencias (`ExistenciasInventarioScreen.js`) y el alertario
+  de vencimiento (`InventarioResumenAlertasScreen.js`) navegaban a `DetalleLote`, una ruta que
+  nunca se construyo -el toque en una tarjeta no llevaba a ningun lado, y la #785 quito hasta esa
+  interaccion-. `DetalleLoteScreen.js` (nueva) muestra el lote (medicamento, numero, proveedor,
+  origen, fechas) y su kardex de movimientos (`useKardexMovimientos({ loteId })`), sin el costo
+  unitario: eso sigue gateado por `puedeVerValorizacion()` (issue #752) y esta pantalla la ve
+  cualquier rol que pueda ver existencias.
 - **Valorizacion de stock (issue #752)**: `lotes` tiene `costo_unitario` (nullable: un lote
   donado o de compra sin precio capturado no vale cero, vale "no se sabe") y `moneda` desde la
   migracion `00121`. El costo se captura opcional al dar de alta un lote (`ModalAltaLote.jsx`) o

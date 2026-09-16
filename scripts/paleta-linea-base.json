@@ -105,6 +105,13 @@
   "apps/mobile/src/screens/ColaboradoresScreen.js": ["#7a7a8a"],
   "apps/mobile/src/screens/ComunidadesScreen.js": ["#7a7a8a"],
   "apps/mobile/src/screens/ConsultaScreen.js": ["#2d2d2d", "#7a7a8a", "#e91e8c"],
+  "apps/mobile/src/screens/DetalleLoteScreen.js": [
+    "#2d2d2d",
+    "#3db648",
+    "#7a7a8a",
+    "#e91e8c",
+    "#f7f8fa"
+  ],
   "apps/mobile/src/screens/DonacionesScreen.js": [
     "#000",
     "#0284c7",

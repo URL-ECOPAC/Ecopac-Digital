@@ -19,6 +19,11 @@ jest.mock("../contexto/SesionProvider", () => ({
   useSesionCompartida: () => ({ perfil: { id: "perfil-1" }, rol: "administrador" }),
 }));
 
+const mockNavigate = jest.fn();
+jest.mock("@react-navigation/native", () => ({
+  useNavigation: () => ({ navigate: mockNavigate }),
+}));
+
 const mockRespuestaLotes = {
   lotes: [
     { id: "lote-1", vencido: false },
@@ -35,6 +40,7 @@ const mockRespuestaMedicamentos = {
 
 const ALERTA_POR_VENCER = {
   id: "alerta-1",
+  loteId: "lote-100",
   medicamento: "Loratadina",
   numeroLote: "L-100",
   fechaVencimiento: "2026-02-05",
@@ -43,6 +49,7 @@ const ALERTA_POR_VENCER = {
 
 const ALERTA_VENCIDA = {
   id: "alerta-2",
+  loteId: "lote-200",
   medicamento: "Amoxicilina",
   numeroLote: "L-200",
   fechaVencimiento: "2026-01-28",
@@ -85,6 +92,7 @@ describe("InventarioResumenAlertasScreen", () => {
     mockEstadoAlertas.error = null;
     mockEstadoAlertas.recargar.mockClear();
     useAlertasVencimiento.mockClear();
+    mockNavigate.mockClear();
   });
 
   it("mientras carga el resumen, muestra el estado de carga", () => {
@@ -112,6 +120,19 @@ describe("InventarioResumenAlertasScreen", () => {
     expect(screen.getByText("Vencidos (1)")).toBeTruthy();
     expect(screen.getByText("Amoxicilina")).toBeTruthy();
     expect(screen.getByText("Vencido hace 3 días")).toBeTruthy();
+  });
+
+  it("tocar una alerta navega al detalle de su lote (issue #791)", async () => {
+    mockEstadoAlertas.porVencer = [ALERTA_POR_VENCER];
+    mockEstadoAlertas.vencidas = [ALERTA_VENCIDA];
+    pantalla();
+
+    await screen.findByText("Loratadina");
+    fireEvent.press(screen.getByText("Loratadina"));
+    expect(mockNavigate).toHaveBeenCalledWith("DetalleLote", { loteId: "lote-100" });
+
+    fireEvent.press(screen.getByText("Amoxicilina"));
+    expect(mockNavigate).toHaveBeenCalledWith("DetalleLote", { loteId: "lote-200" });
   });
 
   it("sin alertas pendientes, cada seccion muestra su propio mensaje de vacio", async () => {

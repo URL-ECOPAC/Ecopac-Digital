@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useNavigation } from "@react-navigation/native";
 import {
   formatearFechaCorta,
   listarLotes,
@@ -10,6 +11,7 @@ import { colors, radii, spacing, typography } from "@ecopac/ui-tokens";
 
 import { Card, EmptyState, ErrorState, LoadingState } from "../components";
 import { useSesionCompartida } from "../contexto/SesionProvider";
+import { ROUTES } from "../navigation/rutas";
 
 /**
  * Resumen y alertario de inventario (issue #268): tarjetas de resumen en la cabecera y las
@@ -27,6 +29,7 @@ import { useSesionCompartida } from "../contexto/SesionProvider";
  * pasan al hook de alertas.
  */
 export default function InventarioResumenAlertasScreen() {
+  const navigation = useNavigation();
   const { perfil, rol } = useSesionCompartida();
 
   const [lotes, setLotes] = useState([]);
@@ -106,7 +109,11 @@ export default function InventarioResumenAlertasScreen() {
             <EmptyState message="Ningún lote vence en los próximos 30 días." />
           ) : (
             porVencer.map((alerta) => (
-              <Card key={alerta.id} style={estilos.alertaPorVencer}>
+              <Card
+                key={alerta.id}
+                style={estilos.alertaPorVencer}
+                onPress={() => navigation.navigate(ROUTES.DETALLE_LOTE, { loteId: alerta.loteId })}
+              >
                 <View style={estilos.alertaCabecera}>
                   <Text style={estilos.alertaMedicamento} numberOfLines={1}>
                     {alerta.medicamento}
@@ -127,7 +134,11 @@ export default function InventarioResumenAlertasScreen() {
             <EmptyState message="No hay lotes vencidos." />
           ) : (
             vencidas.map((alerta) => (
-              <Card key={alerta.id} style={estilos.alertaVencida}>
+              <Card
+                key={alerta.id}
+                style={estilos.alertaVencida}
+                onPress={() => navigation.navigate(ROUTES.DETALLE_LOTE, { loteId: alerta.loteId })}
+              >
                 <View style={estilos.alertaCabecera}>
                   <Text style={estilos.alertaMedicamento} numberOfLines={1}>
                     {alerta.medicamento}

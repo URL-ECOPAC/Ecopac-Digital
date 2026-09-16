@@ -256,3 +256,30 @@ export function listarLotesDeMedicamento(medicamentoId) {
   if (!medicamentoId) return Promise.resolve({ lotes: [], error: null });
   return listarLotes({ medicamento: medicamentoId });
 }
+
+/**
+ * Un lote por id, con su medicamento y proveedor embebidos (issue #791: pantalla de detalle de
+ * lote en movil, que Existencias y el alertario de vencimiento no tenian a donde navegar).
+ *
+ * `lote: null` sin `error` es un id que no existe: el SELECT de lotes es abierto a cualquier
+ * autenticado (00034), asi que en la practica un id valido siempre trae fila.
+ *
+ * @param {string} id UUID del lote.
+ * @returns {Promise<{ lote: object|null, error: object|null }>}
+ */
+export async function obtenerLote(id) {
+  if (!id) return { lote: null, error: null };
+
+  try {
+    const { data, error } = await obtenerSupabase()
+      .from("lotes")
+      .select(COLUMNAS_DEL_LOTE)
+      .eq("id", id)
+      .maybeSingle();
+
+    if (error) return { lote: null, error: normalizarError(error) };
+    return { lote: aLote(data), error: null };
+  } catch (error) {
+    return { lote: null, error: normalizarError(error) };
+  }
+}

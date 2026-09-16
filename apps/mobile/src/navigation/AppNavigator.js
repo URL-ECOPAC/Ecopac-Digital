@@ -36,6 +36,7 @@ import RegistroIngresoScreen from "../screens/RegistroIngresoScreen";
 import ExistenciasInventarioScreen from "../screens/ExistenciasInventarioScreen";
 import InventarioResumenAlertasScreen from "../screens/InventarioResumenAlertasScreen";
 import MisMovimientosScreen from "../screens/MisMovimientosScreen";
+import DetalleLoteScreen from "../screens/DetalleLoteScreen";
 import DonacionesScreen from "../screens/DonacionesScreen";
 import ProyectosScreen from "../screens/ProyectosScreen";
 import PresupuestosScreen from "../screens/PresupuestosScreen";
@@ -276,6 +277,11 @@ function InventarioNavigator() {
         name={ROUTES.MIS_MOVIMIENTOS}
         component={MisMovimientosScreen}
         options={opcionesStack("Mis movimientos")}
+      />
+      <InventarioStack.Screen
+        name={ROUTES.DETALLE_LOTE}
+        component={DetalleLoteScreen}
+        options={opcionesStack("Detalle del lote")}
       />
     </InventarioStack.Navigator>
   );

@@ -46,6 +46,7 @@ export * from "./useInventario.js";
 export * from "./usePendientesValidacion.js";
 export * from "./useRegistroIngreso.js";
 export * from "./useEntregaMedicamentos.js";
+export * from "./useDetalleLote.js";
 
 // useVistaExistencias.js y useAlertasVencimiento.js declaran cada uno su propia
 // calcularDiasRestantes(): un "export *" de los dos volveria ese nombre ambiguo y ESM lo
