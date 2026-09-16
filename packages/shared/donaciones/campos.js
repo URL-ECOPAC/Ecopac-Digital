@@ -119,10 +119,16 @@ export const CAMPOS_DONACION = [
     label: "Detalle de la donacion",
     tipo: TIPOS_DE_CAMPO.LISTA_REPETIBLE,
     validacion: { requerido: true, minItems: 1 },
-    // cantidad y fechaVencimiento van requerido:false aqui a proposito: si son obligatorios
-    // depende del tipo de donacion del formulario padre (medicamentos/insumos exigen cantidad;
-    // solo medicamentos exige vencimiento), una regla condicional que el descriptor de un campo
-    // aislado no puede expresar. Esa regla ya vive en validarDetalle() (validaciones.js).
+    // cantidad va requerido:false aqui a proposito: si es obligatoria depende del tipo de
+    // donacion del formulario padre (medicamentos/insumos la exigen, el resto no), una regla
+    // condicional que el descriptor de un campo aislado no puede expresar. Esa regla vive en
+    // validarDetalle() (validaciones.js).
+    //
+    // No hay campo de fechaVencimiento aqui a proposito (issue #756): no es una columna de
+    // donacion_detalle (00022), y el vencimiento real -el que si importa, lotes.fecha_vencimiento
+    // NOT NULL- se captura al generar el ingreso de inventario (ModalRegistroIngreso.jsx via
+    // useRegistroIngreso.js), no al registrar la donacion. Pedirlo dos veces era confuso y el
+    // valor de aqui nunca se guardaba en ningun lado.
     campos: [
       {
         id: "descripcion",
@@ -148,12 +154,6 @@ export const CAMPOS_DONACION = [
         tipo: TIPOS_DE_CAMPO.NUMERO,
         sufijo: "Q",
         validacion: { requerido: false, min: 0 },
-      },
-      {
-        id: "fechaVencimiento",
-        label: "Fecha de vencimiento",
-        tipo: TIPOS_DE_CAMPO.FECHA,
-        validacion: { requerido: false },
       },
     ],
   },

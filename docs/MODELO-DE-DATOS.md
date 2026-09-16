@@ -1114,14 +1114,40 @@ boton -bajo impacto, agrupado con el hueco de `donaciones.estado` si se retoma e
 | proyecto_id | Si, `proyectoNombre` resuelto en la constancia | Si, al registrar | No | Resuelto (#756) |
 
 **`donacion_detalle`**: `descripcion`/`cantidad`/`monto` completos al registrar; `unidad` se agrega
-como campo en el formulario web de medicamentos e insumos (issue #756, resuelto). `lote_id` -el
-enlace real a un lote de farmacia- **sigue sin generarse**: el boton "Si, ingresar a Inventario"
-solo cierra el modal, sin llamar a `generarIngresoDesdeDonacion()` (`donaciones/ingreso.api.js`,
-ya existe y esta probada). No se resuelve en este cambio porque esa funcion pide
-`medicamentoId`/`bodegaId`/`numeroLote`/`fechaVencimiento`/`proveedorId` -datos que un renglon de
-donacion (solo descripcion libre + cantidad) no tiene-, asi que el boton necesita abrir un
-formulario propio (mismo tipo que `ModalRegistroIngreso.jsx`) para pedirlos, no una llamada
-directa. Queda declarado como hueco abierto, de mayor alcance que el resto de esta issue.
+como campo en el formulario web de medicamentos e insumos (issue #756, resuelto). No hay campo de
+`fechaVencimiento` en este formulario (se probo y se quito): no es una columna de la tabla y el
+vencimiento real se captura mas abajo, al generar el ingreso -pedirlo aqui tambien era una nota
+que nunca se guardaba en ningun lado. `lote_id` -el enlace real a un lote de farmacia-
+**resuelto (#756)**: el boton "Si, ingresar a Inventario" abria un dialogo que solo se cerraba a
+si mismo. La primera version conectaba un formulario nuevo, pero se descarto: un `<select>` en el
+no respondia a un clic real en al menos un navegador -una prueba con Testing Library lo pasaba
+igual, asi que no era un error de logica sino algo del render real que no se pudo aislar- mientras
+que `ModalRegistroIngreso.jsx` (el formulario que ya usa Inventario para cualquier ingreso) si
+funcionaba. La solucion final reutiliza ese mismo componente en vez de mantener uno paralelo:
+
+- `useRegistroIngreso.js` (inventario/) acepta un `detallesDonacion` opcional que precarga la
+  cantidad -y el medicamento, si ya se habia escrito- de cada renglon de la donacion en el
+  formulario, uno a la vez según se van agregando; cada item guarda su `donacionDetalleId` para
+  que `onGuardarExitoso(movimientos, items)` pueda enlazar el lote creado de vuelta al renglon
+  (`enlazarLoteConDonacion()`, extraida de `generarIngresoDesdeDonacion()` para no duplicar el
+  UPDATE).
+- El proveedor ya no se vuelve a pedir: `proveedores` no enlaza con `donantes` (son catalogos
+  distintos, `nombre` es la unica columna en comun), asi que `obtenerOCrearProveedorPorNombre()`
+  (inventario/proveedores.api.js) busca un proveedor con el mismo nombre del donante -sin
+  acentos ni mayusculas- y lo crea si no existe, en vez de dejar el campo vacio a la espera de
+  que alguien adivine la coincidencia.
+- La pregunta "Se ha registrado una donacion de medicamentos. Desea generar el ingreso?" se
+  resuelve ANTES de abrir el formulario completo, no dentro de el: abrir `ModalRegistroIngreso.jsx`
+  ya implica pedir el proveedor de forma asincrona (obtenerOCrearProveedorPorNombre hace una
+  consulta), y `useRegistroIngreso.js` solo lee ese valor inicial en el primer render del modal.
+- `guardarDonacion()` limpia el formulario de registro (donante, tipo, renglones, fecha,
+  observaciones) apenas termina de guardar -antes no lo hacia, y con los mismos campos llenos en
+  pantalla despues de guardar parecia que la donacion no se habia registrado. El nombre del
+  donante para el paso de ingreso queda congelado en `resumenRegistro.donanteNombre` antes de esa
+  limpieza, porque `donanteId` ya no sirve para leerlo despues.
+
+Solo web: no existe pantalla de registro de donacion en movil (`DonacionesScreen.js` es de solo
+consulta del historial), asi que no hay un lugar equivalente que conectar ahi.
 
 ### Proyectos y presupuesto
 
@@ -1208,7 +1234,7 @@ cada uno al resolverse):
 | Comunidades | Columnas geo sin uso (decidir mapa o retiro); sin edicion | baja | Resuelto (mapa con Leaflet/OpenStreetMap en web y movil) |
 | Proyectos sociales | Sin alta/edicion de proyecto, hitos ni presupuesto asignado | media | Pendiente |
 | Gastos | Aprobado por/cuando y motivo de rechazo invisibles | baja | Resuelto (en un commit anterior de esta misma issue). `registrado_por` sigue sin mostrarse, bajo impacto |
-| Donaciones | Sin anular; constancia imprime mal el proyecto; ingreso a inventario no se dispara | media | Resuelto salvo el ingreso a inventario (ver nota de `donacion_detalle`, necesita formulario propio) |
+| Donaciones | Sin anular; constancia imprime mal el proyecto; ingreso a inventario no se dispara | media | Resuelto (reutiliza `ModalRegistroIngreso.jsx` de Inventario con precarga por donacion, solo web -no existe registro de donacion en movil) |
 | Directorio de colaboradores | Junta directiva consulta la tabla equivocada | media | Resuelto |
 | Perfil de colaborador | fecha_ingreso/direccion/notas no capturables | baja | Resuelto |
 | Permisos por usuario | Sin motivo ni quien concedio/revoco | baja | Resuelto |

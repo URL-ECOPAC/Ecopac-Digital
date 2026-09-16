@@ -9,7 +9,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import { datosIngresoParaRegistrar } from "./useRegistroIngreso.js";
+import { datosIngresoParaRegistrar, itemDesdeRenglonDeDonacion } from "./useRegistroIngreso.js";
 
 describe("datosIngresoParaRegistrar", () => {
   const item = {
@@ -62,5 +62,30 @@ describe("datosIngresoParaRegistrar", () => {
     });
 
     expect(resultado.motivo).toBeUndefined();
+  });
+});
+
+describe("itemDesdeRenglonDeDonacion", () => {
+  it("precarga cantidad, medicamento y el id del renglon; deja bodega/lote/vencimiento vacios", () => {
+    const item = itemDesdeRenglonDeDonacion({
+      donacionDetalleId: "det-1",
+      cantidad: 50,
+      medicamentoId: "med-2",
+      descripcion: "Amoxicilina 500mg",
+    });
+
+    expect(item).toEqual({
+      medicamento_id: "med-2",
+      numero_lote: "",
+      fecha_vencimiento: "",
+      cantidad: 50,
+      bodega_id: "",
+      donacionDetalleId: "det-1",
+    });
+  });
+
+  it("sin medicamentoId en el renglon (no era obligatorio al registrar la donacion), lo deja vacio", () => {
+    const item = itemDesdeRenglonDeDonacion({ donacionDetalleId: "det-2", cantidad: 10 });
+    expect(item.medicamento_id).toBe("");
   });
 });

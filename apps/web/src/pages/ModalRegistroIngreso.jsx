@@ -7,6 +7,14 @@ export default function ModalRegistroIngreso({
   onExito, // Callback para notificar al padre tras guardar
   catalogos = { medicamentos: [], bodegas: [], proveedores: [] },
   usuarioId,
+  // Renglones de una donacion en curso de convertirse en ingreso (issue #756): con esto, la
+  // cantidad -y el medicamento, si ya se habia escrito- de cada renglon se precarga sola al
+  // pasar al siguiente item, en vez de pedirla de nuevo. Ver la doc de detallesDonacion en
+  // useRegistroIngreso.js.
+  detallesDonacion,
+  // Proveedor sugerido a partir del donante ya elegido al registrar la donacion (issue #756,
+  // sugerirProveedorId() en useRegistroIngreso.js): sigue siendo editable, no una decision.
+  proveedorIdInicial,
 }) {
   const {
     origen,
@@ -25,7 +33,12 @@ export default function ModalRegistroIngreso({
     resetFormulario,
     error,
     guardando,
-  } = useRegistroIngreso({ usuarioId, onGuardarExitoso: onExito });
+  } = useRegistroIngreso({
+    usuarioId,
+    onGuardarExitoso: onExito,
+    detallesDonacion,
+    proveedorIdInicial,
+  });
 
   if (!abierto) return null;
 
