@@ -125,14 +125,14 @@ export default function LoginPage() {
         <div
           style={{
             marginTop: "8px",
-            fontSize: "12px",
+            fontSize: "var(--texto-xs)",
             textAlign: "center",
             color: "#64748B",
           }}
         >
           <Link
             to="/restablecer-contrasena"
-            style={{ color: "#2563EB", textDecoration: "none", fontWeight: "500" }}
+            style={{ color: "#2563EB", textDecoration: "none", fontWeight: "var(--peso-medium)" }}
           >
             ¿Olvidaste tu contraseña?
           </Link>

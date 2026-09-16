@@ -2,11 +2,18 @@ import { ROLES } from "./usuarios/roles.js";
 
 /**
  * Los nueve módulos del sistema.
+ *
+ * `descripcion` es una linea de que se hace en cada modulo. La pantalla de inicio la pinta
+ * debajo del nombre en cada acceso: una rejilla de nueve palabras sueltas no le dice a nadie
+ * que encontrara al entrar, y menos a una voluntaria que usa el sistema por primera vez en
+ * jornada. Vive aqui y no en la pantalla por la misma razon que `nombre` e `icono`: un modulo
+ * nuevo aparece en el inicio, en el sidebar y en las pestanas de movil sin tocar ninguna app.
  */
 export const MODULOS = [
   {
     id: "inicio",
     nombre: "Inicio",
+    descripcion: "Resumen de tu dia y accesos a tus modulos.",
     ruta: "/",
     modulo: null,
     tabMovil: "Inicio",
@@ -17,6 +24,7 @@ export const MODULOS = [
   {
     id: "pacientes",
     nombre: "Pacientes",
+    descripcion: "Expedientes clinicos, triaje, consultas y recetas.",
     ruta: "/pacientes",
     modulo: "pacientes",
     tabMovil: "Pacientes",
@@ -32,6 +40,7 @@ export const MODULOS = [
   {
     id: "donaciones",
     nombre: "Donaciones",
+    descripcion: "Donantes, aportes recibidos y constancias.",
     ruta: "/donaciones",
     modulo: "donaciones",
     tabMovil: false,
@@ -42,6 +51,7 @@ export const MODULOS = [
   {
     id: "inventario",
     nombre: "Inventario",
+    descripcion: "Catalogo, lotes, existencias y alertas de vencimiento.",
     ruta: "/inventario",
     modulo: "inventario",
     tabMovil: "Inventario",
@@ -54,6 +64,7 @@ export const MODULOS = [
   {
     id: "presupuestos",
     nombre: "Presupuestos",
+    descripcion: "Presupuesto por jornada y proyecto, gastos y aprobaciones.",
     ruta: "/presupuestos",
     modulo: "presupuestos",
     tabMovil: false,
@@ -64,6 +75,7 @@ export const MODULOS = [
   {
     id: "proyectos",
     nombre: "Proyectos",
+    descripcion: "Proyectos sociales, hitos y seguimiento.",
     ruta: "/proyectos",
     modulo: "proyectos",
     tabMovil: false,
@@ -74,6 +86,7 @@ export const MODULOS = [
   {
     id: "reportes",
     nombre: "Reportes",
+    descripcion: "Indicadores de jornada, pacientes e inventario.",
     ruta: "/reportes",
     modulo: "reportes",
     tabMovil: false,
@@ -84,6 +97,7 @@ export const MODULOS = [
   {
     id: "jornadas",
     nombre: "Jornadas",
+    descripcion: "Planificacion, equipo, cuadro de turnos y cierre.",
     ruta: "/jornadas",
     modulo: "jornadas",
     tabMovil: "Jornadas",
@@ -94,6 +108,7 @@ export const MODULOS = [
   {
     id: "colaboradores",
     nombre: "Colaboradores",
+    descripcion: "Personal, roles, especialidades y permisos.",
     ruta: "/colaboradores",
     modulo: "colaboradores",
     tabMovil: false,

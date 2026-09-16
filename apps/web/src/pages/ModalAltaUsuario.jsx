@@ -5,6 +5,7 @@ import PrimaryButton from "../components/PrimaryButton";
 import Selector from "../components/Selector";
 import SecondaryButton from "../components/SecondaryButton";
 import TextField from "../components/TextField";
+import { UserPlus, X } from "lucide-react";
 
 // Modal de alta de usuario (issue #106), montado desde ColaboradoresPage.jsx con estado local: no
 // tiene ruta propia. No va en components/: ese barril es el catalogo de #280, y este modal es
@@ -14,8 +15,12 @@ import TextField from "../components/TextField";
 // de CAMPOS_ALTA_USUARIO (el subconjunto de CAMPOS_USUARIO que declara ese hook), no de
 // literales propios.
 //
-// El selector de especialidades del prototipo no esta aca: CAMPOS_ALTA_USUARIO no lo incluye,
-// a proposito (ver PLAN.md del issue #106, bloqueante c / issue #405).
+// El selector de especialidades del prototipo sigue sin estar aca, pero ya no por falta de
+// permisos ni de componente: el alta es una INVITACION, y la Edge Function invitar-usuario crea
+// la fila de `perfiles` del lado del servidor. Una especialidad referencia ese perfil por FK
+// (perfil_especialidad.perfil_id, 00002), asi que no hay a que colgarla hasta que el perfil
+// exista. Se registran despues, desde ModalEdicionUsuario.jsx, que es donde vive ahora el
+// selector real (MultiSelector + useEspecialidadesDePerfil).
 
 // Atributo `type` del input nativo por tipo de descriptor. Es una preferencia de teclado en
 // pantallas tactiles, no una validacion: la validacion real sigue siendo la de
@@ -75,8 +80,18 @@ export default function ModalAltaUsuario({ visible, onClose, onUsuarioCreado }) 
       )}
 
       <div className="d-flex justify-content-end gap-2 mt-3">
-        <SecondaryButton title="Cancelar" onClick={cerrar} disabled={enviando} />
-        <PrimaryButton title="Invitar" onClick={guardar} loading={enviando} />
+        <SecondaryButton
+          title="Cancelar"
+          onClick={cerrar}
+          disabled={enviando}
+          icon={<X size={16} aria-hidden="true" />}
+        />
+        <PrimaryButton
+          title="Invitar"
+          onClick={guardar}
+          loading={enviando}
+          icon={<UserPlus size={16} aria-hidden="true" />}
+        />
       </div>
     </Modal>
   );

@@ -71,7 +71,7 @@ export default function PacientesCronicosPage() {
           {total === 1 ? "1 condicion registrada" : `${total} condiciones registradas`}
         </p>
 
-        <div className="pac-tabla">
+        <div className="ec-tabla">
           <DataList
             columnas={COLUMNAS_PACIENTE_CRONICO}
             datos={filas}

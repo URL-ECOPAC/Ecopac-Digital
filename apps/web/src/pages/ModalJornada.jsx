@@ -7,6 +7,7 @@ import PrimaryButton from "../components/PrimaryButton";
 import Selector from "../components/Selector";
 import SecondaryButton from "../components/SecondaryButton";
 import TextField from "../components/TextField";
+import { X } from "lucide-react";
 
 // Modal de alta y edicion de jornada (issue #179), montado desde JornadasPage.jsx con estado
 // local: no tiene ruta propia, mismo patron que ModalAltaUsuario.jsx/ModalEdicionUsuario.jsx
@@ -174,7 +175,12 @@ export default function ModalJornada({ visible = true, jornada, rol, onClose, on
       })}
 
       <div className="d-flex justify-content-end gap-2 mt-3">
-        <SecondaryButton title="Cancelar" onClick={cerrar} disabled={enviando} />
+        <SecondaryButton
+          title="Cancelar"
+          onClick={cerrar}
+          disabled={enviando}
+          icon={<X size={16} aria-hidden="true" />}
+        />
         <PrimaryButton
           title={esEdicion ? "Guardar" : "Crear"}
           onClick={guardar}

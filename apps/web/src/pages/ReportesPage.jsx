@@ -13,8 +13,8 @@ import StatusChip from "../components/StatusChip";
 // Estilos compartidos de pestañas
 const estiloPestanaActiva = {
   padding: "10px 18px",
-  fontSize: "14px",
-  fontWeight: "600",
+  fontSize: "var(--texto-sm)",
+  fontWeight: "var(--peso-semibold)",
   border: "none",
   background: "none",
   cursor: "pointer",
@@ -23,8 +23,8 @@ const estiloPestanaActiva = {
 };
 const estiloPestanaInactiva = {
   padding: "10px 18px",
-  fontSize: "14px",
-  fontWeight: "500",
+  fontSize: "var(--texto-sm)",
+  fontWeight: "var(--peso-medium)",
   border: "none",
   background: "none",
   cursor: "pointer",
@@ -90,8 +90,10 @@ export default function ReportesPage() {
           }}
         >
           <div>
-            <h1 style={{ fontSize: "24px", fontWeight: "700", margin: 0 }}>Reportes e Impacto</h1>
-            <p style={{ fontSize: "14px", color: "#64748b", margin: "4px 0 0 0" }}>
+            <h1 style={{ fontSize: "var(--texto-xl)", fontWeight: "var(--peso-bold)", margin: 0 }}>
+              Reportes e Impacto
+            </h1>
+            <p style={{ fontSize: "var(--texto-sm)", color: "#64748b", margin: "4px 0 0 0" }}>
               Métricas, estadísticas y volumen de atención
             </p>
           </div>
@@ -155,8 +157,8 @@ export default function ReportesPage() {
             <div>
               <label
                 style={{
-                  fontSize: "13px",
-                  fontWeight: "500",
+                  fontSize: "var(--texto-xs)",
+                  fontWeight: "var(--peso-medium)",
                   color: "#475569",
                   display: "block",
                   marginBottom: "4px",
@@ -179,8 +181,8 @@ export default function ReportesPage() {
             <div>
               <label
                 style={{
-                  fontSize: "13px",
-                  fontWeight: "500",
+                  fontSize: "var(--texto-xs)",
+                  fontWeight: "var(--peso-medium)",
                   color: "#475569",
                   display: "block",
                   marginBottom: "4px",
@@ -204,8 +206,8 @@ export default function ReportesPage() {
             <div>
               <label
                 style={{
-                  fontSize: "13px",
-                  fontWeight: "500",
+                  fontSize: "var(--texto-xs)",
+                  fontWeight: "var(--peso-medium)",
                   color: "#475569",
                   display: "block",
                   marginBottom: "4px",
@@ -234,7 +236,7 @@ export default function ReportesPage() {
                 border: "none",
                 borderRadius: "8px",
                 cursor: "pointer",
-                fontSize: "13px",
+                fontSize: "var(--texto-xs)",
                 marginTop: "16px",
               }}
             >
@@ -251,7 +253,7 @@ export default function ReportesPage() {
               border: "1px solid #fcd34d",
             }}
           >
-            <span style={{ fontSize: "14px", color: "#b45309" }}>
+            <span style={{ fontSize: "var(--texto-sm)", color: "#b45309" }}>
               <strong>{totalUnidadesEnRiesgo.toLocaleString("es-GT")}</strong> unidades en riesgo de
               vencimiento
             </span>
@@ -296,8 +298,8 @@ export default function ReportesPage() {
                       style={{
                         padding: "12px 16px",
                         textAlign: "left",
-                        fontSize: "13px",
-                        fontWeight: "600",
+                        fontSize: "var(--texto-xs)",
+                        fontWeight: "var(--peso-semibold)",
                         color: "#475569",
                       }}
                     >
@@ -307,8 +309,8 @@ export default function ReportesPage() {
                       style={{
                         padding: "12px 16px",
                         textAlign: "left",
-                        fontSize: "13px",
-                        fontWeight: "600",
+                        fontSize: "var(--texto-xs)",
+                        fontWeight: "var(--peso-semibold)",
                         color: "#475569",
                       }}
                     >
@@ -318,8 +320,8 @@ export default function ReportesPage() {
                       style={{
                         padding: "12px 16px",
                         textAlign: "left",
-                        fontSize: "13px",
-                        fontWeight: "600",
+                        fontSize: "var(--texto-xs)",
+                        fontWeight: "var(--peso-semibold)",
                         color: "#475569",
                       }}
                     >
@@ -329,8 +331,8 @@ export default function ReportesPage() {
                       style={{
                         padding: "12px 16px",
                         textAlign: "left",
-                        fontSize: "13px",
-                        fontWeight: "600",
+                        fontSize: "var(--texto-xs)",
+                        fontWeight: "var(--peso-semibold)",
                         color: "#475569",
                       }}
                     >
@@ -340,8 +342,8 @@ export default function ReportesPage() {
                       style={{
                         padding: "12px 16px",
                         textAlign: "right",
-                        fontSize: "13px",
-                        fontWeight: "600",
+                        fontSize: "var(--texto-xs)",
+                        fontWeight: "var(--peso-semibold)",
                         color: "#475569",
                       }}
                     >
@@ -351,8 +353,8 @@ export default function ReportesPage() {
                       style={{
                         padding: "12px 16px",
                         textAlign: "right",
-                        fontSize: "13px",
-                        fontWeight: "600",
+                        fontSize: "var(--texto-xs)",
+                        fontWeight: "var(--peso-semibold)",
                         color: "#475569",
                       }}
                     >
@@ -362,8 +364,8 @@ export default function ReportesPage() {
                       style={{
                         padding: "12px 16px",
                         textAlign: "left",
-                        fontSize: "13px",
-                        fontWeight: "600",
+                        fontSize: "var(--texto-xs)",
+                        fontWeight: "var(--peso-semibold)",
                         color: "#475569",
                       }}
                     >
@@ -386,26 +388,26 @@ export default function ReportesPage() {
                             label={ETIQUETAS_NIVEL_ALERTA_VENCIMIENTO[fila.alerta]}
                           />
                         </td>
-                        <td style={{ padding: "10px 16px", fontSize: "14px" }}>
+                        <td style={{ padding: "10px 16px", fontSize: "var(--texto-sm)" }}>
                           {fila.medicamento}
                         </td>
                         <td
                           style={{
                             padding: "10px 16px",
-                            fontSize: "14px",
+                            fontSize: "var(--texto-sm)",
                             fontFamily: "var(--fuente-mono)",
                           }}
                         >
                           {fila.lote}
                         </td>
-                        <td style={{ padding: "10px 16px", fontSize: "14px" }}>
+                        <td style={{ padding: "10px 16px", fontSize: "var(--texto-sm)" }}>
                           {fila.fechaVencimiento}
                         </td>
                         <td
                           style={{
                             padding: "10px 16px",
                             textAlign: "right",
-                            fontSize: "14px",
+                            fontSize: "var(--texto-sm)",
                             fontWeight: 500,
                           }}
                         >
@@ -415,13 +417,19 @@ export default function ReportesPage() {
                           style={{
                             padding: "10px 16px",
                             textAlign: "right",
-                            fontSize: "14px",
+                            fontSize: "var(--texto-sm)",
                             fontWeight: 600,
                           }}
                         >
                           {fila.cantidad.toLocaleString("es-GT")}
                         </td>
-                        <td style={{ padding: "10px 16px", fontSize: "13px", color: "#475569" }}>
+                        <td
+                          style={{
+                            padding: "10px 16px",
+                            fontSize: "var(--texto-xs)",
+                            color: "#475569",
+                          }}
+                        >
                           {fila.bodega || "—"}
                         </td>
                       </tr>

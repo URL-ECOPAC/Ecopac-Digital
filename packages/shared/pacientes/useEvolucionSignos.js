@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { puedeVerHistorial } from "./permisos.js";
-import { aSeriesDeSignos, hayAlgunaMedicion } from "./signos.js";
+import { agruparSeriesDeSignos, aSeriesDeSignos, hayAlgunaMedicion } from "./signos.js";
 import { obtenerTriajes } from "./triaje.api.js";
 
 export function useEvolucionSignos(pacienteId, { rol } = {}) {
@@ -32,9 +32,14 @@ export function useEvolucionSignos(pacienteId, { rol } = {}) {
   }, [cargar]);
 
   const series = useMemo(() => aSeriesDeSignos(triajes), [triajes]);
+  // `grupos` separa las ocho series por lo que miden (cardiovascular, metabolico, medidas
+  // corporales). La pantalla puede seguir usando `series` si prefiere la lista corrida; las dos
+  // salen del mismo calculo.
+  const grupos = useMemo(() => agruparSeriesDeSignos(series), [series]);
 
   return {
     series,
+    grupos,
     hayMediciones: hayAlgunaMedicion(series),
     cargando,
     error,

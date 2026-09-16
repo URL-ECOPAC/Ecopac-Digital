@@ -117,10 +117,17 @@ export default function AdministracionBodegasProveedoresPage() {
     <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
       {/* Cabecera */}
       <div>
-        <h3 style={{ fontSize: "16px", fontWeight: "700", margin: 0, color: "#1e293b" }}>
+        <h3
+          style={{
+            fontSize: "var(--texto-md)",
+            fontWeight: "var(--peso-bold)",
+            margin: 0,
+            color: "#1e293b",
+          }}
+        >
           Administración: Bodegas y Proveedores
         </h3>
-        <p style={{ fontSize: "13px", color: "#94a3b8", margin: "4px 0 0 0" }}>
+        <p style={{ fontSize: "var(--texto-xs)", color: "#94a3b8", margin: "4px 0 0 0" }}>
           Configuración de ubicaciones y catálogo de origen de medicamentos
         </p>
       </div>
@@ -136,8 +143,8 @@ export default function AdministracionBodegasProveedoresPage() {
             onClick={() => setPestañaActiva(p.id)}
             style={{
               padding: "8px 16px",
-              fontSize: "13px",
-              fontWeight: "700",
+              fontSize: "var(--texto-xs)",
+              fontWeight: "var(--peso-bold)",
               border: "none",
               background: "none",
               cursor: "pointer",
@@ -154,7 +161,7 @@ export default function AdministracionBodegasProveedoresPage() {
       {pestañaActiva === "bodegas" && (
         <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <p style={{ fontSize: "13px", color: "#64748b", margin: 0 }}>
+            <p style={{ fontSize: "var(--texto-xs)", color: "#64748b", margin: 0 }}>
               {errorBodegas
                 ? "No se pudo cargar el listado"
                 : `${bodegas.length} bodegas registradas`}
@@ -167,8 +174,8 @@ export default function AdministracionBodegasProveedoresPage() {
                 color: "#fff",
                 border: "none",
                 borderRadius: "9999px",
-                fontSize: "13px",
-                fontWeight: "600",
+                fontSize: "var(--texto-xs)",
+                fontWeight: "var(--peso-semibold)",
                 cursor: "pointer",
               }}
             >
@@ -177,17 +184,33 @@ export default function AdministracionBodegasProveedoresPage() {
           </div>
 
           {cargandoBodegas ? (
-            <p style={{ fontSize: "13px", color: "#94a3b8", textAlign: "center", padding: "20px" }}>
+            <p
+              style={{
+                fontSize: "var(--texto-xs)",
+                color: "#94a3b8",
+                textAlign: "center",
+                padding: "20px",
+              }}
+            >
               Cargando bodegas...
             </p>
           ) : errorBodegas ? (
             <ErrorState message={errorBodegas} onRetry={cargarBodegas} />
           ) : bodegas.length === 0 ? (
-            <p style={{ fontSize: "13px", color: "#94a3b8", textAlign: "center", padding: "20px" }}>
+            <p
+              style={{
+                fontSize: "var(--texto-xs)",
+                color: "#94a3b8",
+                textAlign: "center",
+                padding: "20px",
+              }}
+            >
               No hay bodegas registradas
             </p>
           ) : (
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
+            <table
+              style={{ width: "100%", borderCollapse: "collapse", fontSize: "var(--texto-xs)" }}
+            >
               <thead>
                 <tr style={{ borderBottom: "1px solid #e2e8f0" }}>
                   <th style={{ textAlign: "left", padding: "10px 12px", color: "#64748b" }}>
@@ -216,7 +239,7 @@ export default function AdministracionBodegasProveedoresPage() {
                         style={{
                           padding: "2px 8px",
                           borderRadius: "9999px",
-                          fontSize: "11px",
+                          fontSize: "var(--texto-xxs)",
                           fontWeight: 600,
                           backgroundColor: b.es_movil ? "#dbeafe" : "#f0fdf4",
                           color: b.es_movil ? "#1d4ed8" : "#15803d",
@@ -236,7 +259,7 @@ export default function AdministracionBodegasProveedoresPage() {
                         onClick={() => abrirEditarBodega(b)}
                         style={{
                           padding: "4px 10px",
-                          fontSize: "12px",
+                          fontSize: "var(--texto-xs)",
                           border: "none",
                           backgroundColor: "#f1f5f9",
                           borderRadius: "6px",
@@ -258,7 +281,7 @@ export default function AdministracionBodegasProveedoresPage() {
       {pestañaActiva === "proveedores" && (
         <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <p style={{ fontSize: "13px", color: "#64748b", margin: 0 }}>
+            <p style={{ fontSize: "var(--texto-xs)", color: "#64748b", margin: 0 }}>
               {errorProveedores
                 ? "No se pudo cargar el listado"
                 : `${proveedores.length} proveedores y donantes`}
@@ -271,8 +294,8 @@ export default function AdministracionBodegasProveedoresPage() {
                 color: "#fff",
                 border: "none",
                 borderRadius: "9999px",
-                fontSize: "13px",
-                fontWeight: "600",
+                fontSize: "var(--texto-xs)",
+                fontWeight: "var(--peso-semibold)",
                 cursor: "pointer",
               }}
             >
@@ -281,17 +304,33 @@ export default function AdministracionBodegasProveedoresPage() {
           </div>
 
           {cargandoProveedores ? (
-            <p style={{ fontSize: "13px", color: "#94a3b8", textAlign: "center", padding: "20px" }}>
+            <p
+              style={{
+                fontSize: "var(--texto-xs)",
+                color: "#94a3b8",
+                textAlign: "center",
+                padding: "20px",
+              }}
+            >
               Cargando proveedores...
             </p>
           ) : errorProveedores ? (
             <ErrorState message={errorProveedores} onRetry={cargarProveedores} />
           ) : proveedores.length === 0 ? (
-            <p style={{ fontSize: "13px", color: "#94a3b8", textAlign: "center", padding: "20px" }}>
+            <p
+              style={{
+                fontSize: "var(--texto-xs)",
+                color: "#94a3b8",
+                textAlign: "center",
+                padding: "20px",
+              }}
+            >
               No hay proveedores registrados
             </p>
           ) : (
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
+            <table
+              style={{ width: "100%", borderCollapse: "collapse", fontSize: "var(--texto-xs)" }}
+            >
               <thead>
                 <tr style={{ borderBottom: "1px solid #e2e8f0" }}>
                   <th style={{ textAlign: "left", padding: "10px 12px", color: "#64748b" }}>
@@ -317,7 +356,7 @@ export default function AdministracionBodegasProveedoresPage() {
                         style={{
                           padding: "2px 8px",
                           borderRadius: "9999px",
-                          fontSize: "11px",
+                          fontSize: "var(--texto-xxs)",
                           fontWeight: 600,
                           backgroundColor: p.tipo === "donante" ? "#fef3c7" : "#dbeafe",
                           color: p.tipo === "donante" ? "#92400e" : "#1d4ed8",
@@ -334,7 +373,7 @@ export default function AdministracionBodegasProveedoresPage() {
                         onClick={() => abrirEditarProveedor(p)}
                         style={{
                           padding: "4px 10px",
-                          fontSize: "12px",
+                          fontSize: "var(--texto-xs)",
                           border: "none",
                           backgroundColor: "#f1f5f9",
                           borderRadius: "6px",
@@ -379,7 +418,7 @@ export default function AdministracionBodegasProveedoresPage() {
               gap: "16px",
             }}
           >
-            <h4 style={{ margin: 0, fontSize: "15px", fontWeight: 600 }}>
+            <h4 style={{ margin: 0, fontSize: "var(--texto-sm)", fontWeight: 600 }}>
               {modalBodega.modo === "crear" ? "Nueva Bodega" : "Editar Bodega"}
             </h4>
 
@@ -387,7 +426,12 @@ export default function AdministracionBodegasProveedoresPage() {
 
             <div>
               <label
-                style={{ display: "block", fontSize: "13px", fontWeight: 500, marginBottom: "4px" }}
+                style={{
+                  display: "block",
+                  fontSize: "var(--texto-xs)",
+                  fontWeight: 500,
+                  marginBottom: "4px",
+                }}
               >
                 Nombre <span style={{ color: "#ef4444" }}>*</span>
               </label>
@@ -403,14 +447,19 @@ export default function AdministracionBodegasProveedoresPage() {
                   padding: "10px 14px",
                   borderRadius: "8px",
                   border: "1px solid #e2e8f0",
-                  fontSize: "13px",
+                  fontSize: "var(--texto-xs)",
                 }}
               />
             </div>
 
             <div>
               <label
-                style={{ display: "block", fontSize: "13px", fontWeight: 500, marginBottom: "4px" }}
+                style={{
+                  display: "block",
+                  fontSize: "var(--texto-xs)",
+                  fontWeight: 500,
+                  marginBottom: "4px",
+                }}
               >
                 Ubicación
               </label>
@@ -425,12 +474,19 @@ export default function AdministracionBodegasProveedoresPage() {
                   padding: "10px 14px",
                   borderRadius: "8px",
                   border: "1px solid #e2e8f0",
-                  fontSize: "13px",
+                  fontSize: "var(--texto-xs)",
                 }}
               />
             </div>
 
-            <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px" }}>
+            <label
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                fontSize: "var(--texto-xs)",
+              }}
+            >
               <input
                 type="checkbox"
                 checked={formBodega.es_movil}
@@ -450,7 +506,7 @@ export default function AdministracionBodegasProveedoresPage() {
                   borderRadius: "8px",
                   border: "1px solid #e2e8f0",
                   backgroundColor: "#fff",
-                  fontSize: "13px",
+                  fontSize: "var(--texto-xs)",
                   cursor: "pointer",
                 }}
               >
@@ -464,7 +520,7 @@ export default function AdministracionBodegasProveedoresPage() {
                   border: "none",
                   backgroundColor: "#10b981",
                   color: "#fff",
-                  fontSize: "13px",
+                  fontSize: "var(--texto-xs)",
                   fontWeight: 500,
                   cursor: "pointer",
                 }}
@@ -503,7 +559,7 @@ export default function AdministracionBodegasProveedoresPage() {
               gap: "16px",
             }}
           >
-            <h4 style={{ margin: 0, fontSize: "15px", fontWeight: 600 }}>
+            <h4 style={{ margin: 0, fontSize: "var(--texto-sm)", fontWeight: 600 }}>
               {modalProveedor.modo === "crear" ? "Nuevo Proveedor" : "Editar Proveedor"}
             </h4>
 
@@ -511,7 +567,12 @@ export default function AdministracionBodegasProveedoresPage() {
 
             <div>
               <label
-                style={{ display: "block", fontSize: "13px", fontWeight: 500, marginBottom: "4px" }}
+                style={{
+                  display: "block",
+                  fontSize: "var(--texto-xs)",
+                  fontWeight: 500,
+                  marginBottom: "4px",
+                }}
               >
                 Nombre <span style={{ color: "#ef4444" }}>*</span>
               </label>
@@ -527,14 +588,19 @@ export default function AdministracionBodegasProveedoresPage() {
                   padding: "10px 14px",
                   borderRadius: "8px",
                   border: "1px solid #e2e8f0",
-                  fontSize: "13px",
+                  fontSize: "var(--texto-xs)",
                 }}
               />
             </div>
 
             <div>
               <label
-                style={{ display: "block", fontSize: "13px", fontWeight: 500, marginBottom: "4px" }}
+                style={{
+                  display: "block",
+                  fontSize: "var(--texto-xs)",
+                  fontWeight: 500,
+                  marginBottom: "4px",
+                }}
               >
                 Contacto
               </label>
@@ -549,14 +615,19 @@ export default function AdministracionBodegasProveedoresPage() {
                   padding: "10px 14px",
                   borderRadius: "8px",
                   border: "1px solid #e2e8f0",
-                  fontSize: "13px",
+                  fontSize: "var(--texto-xs)",
                 }}
               />
             </div>
 
             <div>
               <label
-                style={{ display: "block", fontSize: "13px", fontWeight: 500, marginBottom: "4px" }}
+                style={{
+                  display: "block",
+                  fontSize: "var(--texto-xs)",
+                  fontWeight: 500,
+                  marginBottom: "4px",
+                }}
               >
                 Tipo <span style={{ color: "#ef4444" }}>*</span>
               </label>
@@ -568,7 +639,7 @@ export default function AdministracionBodegasProveedoresPage() {
                   padding: "10px 14px",
                   borderRadius: "8px",
                   border: "1px solid #e2e8f0",
-                  fontSize: "13px",
+                  fontSize: "var(--texto-xs)",
                 }}
               >
                 <option value={TIPO_PROVEEDOR.COMERCIAL}> Comercial (Compra)</option>
@@ -587,7 +658,7 @@ export default function AdministracionBodegasProveedoresPage() {
                   borderRadius: "8px",
                   border: "1px solid #e2e8f0",
                   backgroundColor: "#fff",
-                  fontSize: "13px",
+                  fontSize: "var(--texto-xs)",
                   cursor: "pointer",
                 }}
               >
@@ -601,7 +672,7 @@ export default function AdministracionBodegasProveedoresPage() {
                   border: "none",
                   backgroundColor: "#10b981",
                   color: "#fff",
-                  fontSize: "13px",
+                  fontSize: "var(--texto-xs)",
                   fontWeight: 500,
                   cursor: "pointer",
                 }}

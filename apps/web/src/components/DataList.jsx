@@ -1,7 +1,8 @@
-import { Badge, Button, Table } from "react-bootstrap";
-import { formatearFechaCorta, formatearMoneda } from "@ecopac/shared";
+import { Table } from "react-bootstrap";
+import { formatearFechaConHora, formatearFechaCorta, formatearMoneda } from "@ecopac/shared";
 import EmptyState from "./EmptyState";
 import LoadingState from "./LoadingState";
+import SecondaryButton from "./SecondaryButton";
 import StatusChip from "./StatusChip";
 
 /**
@@ -40,7 +41,7 @@ function Avatar({ texto }) {
         height: "40px",
         backgroundColor: "var(--color-primary)",
         color: "var(--color-surface)",
-        fontSize: "0.85rem",
+        fontSize: "var(--texto-sm)",
         fontWeight: 600,
       }}
       aria-hidden="true"
@@ -73,6 +74,11 @@ function Celda({ columna, fila, catalogos }) {
       // y una cadena AAAA-MM-DD no se puede leer como instante o se corre un dia.
       return formatearFechaCorta(valor);
 
+    case "fecha_hora":
+      // Una marca de auditoria -cuando se registro, cuando se corrigio- es un instante, no un
+      // dia de calendario: sin la hora, dos correcciones del mismo dia se leen iguales.
+      return formatearFechaConHora(valor);
+
     case "chip":
       // A diferencia de 'estado', aqui el valor guardado YA es el del enum (ver
       // COLUMNAS_MOVIMIENTO y COLUMNAS_JORNADA), asi que indexa statusColors directamente.
@@ -94,12 +100,15 @@ function Celda({ columna, fila, catalogos }) {
     case "chips": {
       const elementos = Array.isArray(valor) ? valor : [];
       if (elementos.length === 0) return null;
+      // .ec-chip y no un <Badge bg="light">: el badge claro de Bootstrap es gris sobre gris y
+      // apenas se distingue del fondo de la celda. El chip del sistema sale de los tokens y es
+      // el mismo que se usa en la ficha del paciente y en la de colaborador.
       return (
         <span className="d-inline-flex flex-wrap gap-1">
           {elementos.map((elemento) => (
-            <Badge key={String(elemento)} bg="light" text="dark">
+            <span className="ec-chip" key={String(elemento)}>
               {elemento}
-            </Badge>
+            </span>
           ))}
         </span>
       );
@@ -144,8 +153,10 @@ export default function DataList({
     // Las tablas densas del diseno (bodega, gastos, reportes) tienen mas columnas de las que
     // caben en una laptop de 1366x768. El scroll vive en este contenedor y no en el body, para
     // que la pagina entera no se desplace en horizontal.
-    <div style={{ overflowX: "auto" }}>
-      <Table hover={interactiva} className="align-middle mb-0 bg-white">
+    // .ec-tabla da el marco -borde, radio y elevacion-, que no puede ir en la <table>: con
+    // border-collapse, una tabla no recorta sus propias esquinas.
+    <div className="ec-tabla" style={{ overflowX: "auto" }}>
+      <Table hover={interactiva} className="align-middle mb-0">
         <thead>
           <tr>
             {columnas.map((columna) => (
@@ -175,14 +186,15 @@ export default function DataList({
                   // onRowPress porque el <tr> escucha el evento en burbuja.
                   onClick={(evento) => evento.stopPropagation()}
                 >
-                  <Button
-                    variant="link"
+                  {/* Un boton de verdad y no un <Button variant="link">: ese lo dibuja
+                    Bootstrap como un enlace azul subrayado -"Editar" al final de la fila de
+                    donantes era el ejemplo-, que ni es del color de la marca ni se reconoce
+                    como accion. El tamano pequeno lo mantiene dentro del alto de la fila. */}
+                  <SecondaryButton
                     size="sm"
-                    className="p-0"
+                    title={accionSecundaria.label}
                     onClick={() => accionSecundaria.onClick(fila)}
-                  >
-                    {accionSecundaria.label}
-                  </Button>
+                  />
                 </td>
               )}
             </tr>

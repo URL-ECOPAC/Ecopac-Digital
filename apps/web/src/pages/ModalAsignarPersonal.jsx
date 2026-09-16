@@ -10,6 +10,7 @@ import {
 import DataList from "../components/DataList";
 import Modal from "../components/Modal";
 import PrimaryButton from "../components/PrimaryButton";
+import { X } from "lucide-react";
 import SecondaryButton from "../components/SecondaryButton";
 import Selector from "../components/Selector";
 import TextField from "../components/TextField";
@@ -208,7 +209,12 @@ export default function ModalAsignarPersonal({
           )}
 
           <div className="d-flex justify-content-end gap-2 mt-3">
-            <SecondaryButton title="Cancelar" onClick={cerrar} disabled={enviando} />
+            <SecondaryButton
+              title="Cancelar"
+              onClick={cerrar}
+              disabled={enviando}
+              icon={<X size={16} aria-hidden="true" />}
+            />
             <PrimaryButton title="Asignar" onClick={guardar} loading={enviando} />
           </div>
         </>

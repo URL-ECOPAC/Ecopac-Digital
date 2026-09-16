@@ -174,9 +174,16 @@ export function calcularEdad(fechaNacimiento, hoy = new Date()) {
   return { anios, meses, texto: textoDeEdad(anios, meses) };
 }
 
-/** Arma el texto de la edad, con meses solo cuando aportan (menores de dos anios). */
+/**
+ * Arma el texto de la edad, con meses solo cuando aportan (menores de dos anios).
+ *
+ * "año" y "años", con la ene con virgulilla: es TEXTO QUE SE MUESTRA. Decia "ano"/"anos", que
+ * ademas de no ser la palabra significa otra cosa. El resto del repositorio se escribe sin
+ * acentos (comentarios, nombres de variables, mensajes de commit) y eso se mantiene; la regla
+ * vale para lo que la persona lee en pantalla.
+ */
 function textoDeEdad(anios, meses) {
-  const enAnios = `${anios} ${anios === 1 ? "ano" : "anos"}`;
+  const enAnios = `${anios} ${anios === 1 ? "año" : "años"}`;
   const enMeses = `${meses} ${meses === 1 ? "mes" : "meses"}`;
 
   if (anios === 0) return enMeses;

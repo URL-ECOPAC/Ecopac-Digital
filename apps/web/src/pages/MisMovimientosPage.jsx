@@ -68,7 +68,7 @@ export default function MisMovimientosPage() {
 
       <p className="pac-rotulo mb-2">{total === 1 ? "1 movimiento" : `${total} movimientos`}</p>
 
-      <div className="pac-tabla">
+      <div className="ec-tabla">
         <DataList
           columnas={COLUMNAS_MIS_MOVIMIENTOS}
           datos={movimientos}

@@ -10,6 +10,7 @@ import {
 import DataList from "../components/DataList";
 import DateField from "../components/DateField";
 import Modal from "../components/Modal";
+import { Plus, Save } from "lucide-react";
 import PrimaryButton from "../components/PrimaryButton";
 import SecondaryButton from "../components/SecondaryButton";
 import Selector from "../components/Selector";
@@ -166,6 +167,7 @@ export default function ModalCondicionesPaciente({ pacienteId, rol, onClose, onC
                         title="Guardar correccion"
                         onClick={guardarCorreccion}
                         loading={enviando}
+                        icon={<Save size={16} aria-hidden="true" />}
                       />
                     </div>
                   </div>
@@ -224,7 +226,12 @@ export default function ModalCondicionesPaciente({ pacienteId, rol, onClose, onC
 
           <div className="d-flex justify-content-end gap-2 mt-3">
             <SecondaryButton title="Cerrar" onClick={onClose} disabled={enviando} />
-            <PrimaryButton title="Agregar condicion" onClick={guardar} loading={enviando} />
+            <PrimaryButton
+              title="Agregar condicion"
+              onClick={guardar}
+              loading={enviando}
+              icon={<Plus size={16} aria-hidden="true" />}
+            />
           </div>
         </>
       )}

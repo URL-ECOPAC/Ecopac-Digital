@@ -43,6 +43,23 @@ export function aplicarTokens(elemento = document.documentElement) {
   elemento.style.setProperty("--fuente-base", typography.fontFamilyWeb);
   elemento.style.setProperty("--fuente-mono", typography.fontFamilyMonoWeb);
 
+  // Tamanos y pesos, que hasta ahora no viajaban. Sin ellos una pantalla que necesitaba un
+  // rotulo pequeno no tenia mas remedio que escribir "11px" a mano, y eso es exactamente lo que
+  // hicieron InventarioPage (11px/28px en linea), reportes.css (0.875rem/1.75rem) y
+  // pacientes.css (0.6875rem): tres escalas tipograficas distintas para el mismo rol de texto.
+  //
+  // En rem y no en px: el tamano base del navegador es una preferencia de accesibilidad, y una
+  // interfaz que se lee en exteriores es justo donde alguien la sube. El token sigue siendo un
+  // numero de pixeles -React Native no entiende rem- y la conversion ocurre aqui, que es la
+  // frontera de la web.
+  for (const [nombre, valor] of Object.entries(typography.sizes)) {
+    elemento.style.setProperty(`--texto-${nombre}`, `${valor / 16}rem`);
+  }
+
+  for (const [nombre, valor] of Object.entries(typography.weights)) {
+    elemento.style.setProperty(`--peso-${nombre}`, valor);
+  }
+
   // Las claves de estado vienen de los enum de la base de datos y llevan espacios.
   for (const [estado, valor] of Object.entries(statusColors)) {
     elemento.style.setProperty(`--estado-${estado.replace(/ /g, "-")}`, valor);

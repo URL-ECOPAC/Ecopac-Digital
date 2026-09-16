@@ -1,12 +1,7 @@
 import { useMemo, useState } from "react";
-import {
-  COLUMNAS_GASTO,
-  ESTADOS_DE_GASTO,
-  ETIQUETAS_ESTADO_GASTO,
-  FILTROS_GASTO,
-} from "@ecopac/shared";
+import { COLUMNAS_GASTO, FILTROS_GASTO } from "@ecopac/shared";
 
-import { DataList, ErrorState, FilterBar, PrimaryButton, Tabs } from "../components";
+import { DataList, ErrorState, FilterBar, PrimaryButton, SecondaryButton } from "../components";
 import ModalGasto from "./ModalGasto";
 
 // Pestaña "Gastos" de PresupuestosPage.jsx (issue #302). Los datos, columnas y filtros salen de
@@ -17,16 +12,19 @@ import ModalGasto from "./ModalGasto";
 // FILTROS_GASTO menos el de estado -ese ya lo cubren los tabs- y menos el de busqueda -
 // listarGastos() no acepta texto libre, mismo criterio que JornadasPage.jsx aplica a
 // FILTROS_JORNADA-.
-const TABS_ESTADO = [
-  { id: "", label: "Todos" },
-  { id: ESTADOS_DE_GASTO.APROBADO, label: ETIQUETAS_ESTADO_GASTO[ESTADOS_DE_GASTO.APROBADO] },
-  { id: ESTADOS_DE_GASTO.PENDIENTE, label: ETIQUETAS_ESTADO_GASTO[ESTADOS_DE_GASTO.PENDIENTE] },
-  { id: ESTADOS_DE_GASTO.RECHAZADO, label: ETIQUETAS_ESTADO_GASTO[ESTADOS_DE_GASTO.RECHAZADO] },
-];
-
-const FILTROS_SIN_ESTADO_NI_BUSQUEDA = FILTROS_GASTO.filter(
-  (filtro) => filtro.id !== "estado" && filtro.id !== "busqueda",
-);
+// EL ESTADO ERA UNA SEGUNDA FILA DE PESTANIAS, DENTRO DE LA PESTANIA "GASTOS".
+//
+// PresupuestosPage ya usa <Tabs> para su nivel superior (Resumen / Gastos / Aprobaciones), y
+// esta pantalla montaba otro <Tabs> identico justo debajo para filtrar por estado. Dos filas de
+// pestanias iguales, una dentro de la otra, sin nada que dijera cual manda: era la razon
+// principal de que presupuestos no se pareciera a ningun otro modulo, donde un listado tiene
+// UNA barra de filtros y punto.
+//
+// El estado no es una seccion de la pantalla, es un filtro mas -y FILTROS_GASTO ya lo declara
+// como tal-, asi que vuelve a la barra de filtros con los otros cuatro. Lo unico que lo
+// distingue es que este si viaja al servidor: useEjecucionPresupuestal() lo pasa a
+// listarGastos(), mientras que los demas se aplican en el cliente sobre lo ya traido.
+const FILTROS_SIN_BUSQUEDA = FILTROS_GASTO.filter((filtro) => filtro.id !== "busqueda");
 
 export default function TablaGastos({
   gastos,
@@ -44,7 +42,14 @@ export default function TablaGastos({
   const [gastoEnEdicion, setGastoEnEdicion] = useState(null);
   const [mostrarAlta, setMostrarAlta] = useState(false);
 
+  // El estado es el unico filtro que viaja al servidor; el resto se aplica aqui abajo sobre lo
+  // que el hook ya trajo. Desde fuera se manejan igual, que es lo que importa para quien usa la
+  // pantalla.
   const cambiarFiltro = (id, valor) => {
+    if (id === "estado") {
+      cambiarFiltroEstado(valor ?? "");
+      return;
+    }
     setFiltrosAdicionales((anteriores) => ({ ...anteriores, [id]: valor }));
   };
 
@@ -72,25 +77,42 @@ export default function TablaGastos({
 
   if (error) return <ErrorState message={error.mensaje} onRetry={recargar} />;
 
+  const valoresDeFiltro = { ...filtrosAdicionales, estado: filtroEstado || null };
+
+  const hayFiltros =
+    Boolean(filtroEstado) ||
+    Object.values(filtrosAdicionales).some((valor) =>
+      valor && typeof valor === "object" ? Boolean(valor.min || valor.max) : Boolean(valor),
+    );
+
+  const limpiarFiltros = () => {
+    setFiltrosAdicionales({});
+    cambiarFiltroEstado("");
+  };
+
   return (
     <div className="d-flex flex-column gap-3">
-      <div className="d-flex justify-content-between align-items-start gap-3 flex-wrap">
-        <Tabs
-          tabs={TABS_ESTADO}
-          activo={filtroEstado || ""}
-          onChange={(id) => cambiarFiltroEstado(id)}
-        />
+      <div className="d-flex justify-content-end">
         {puedeCrear && (
           <PrimaryButton title="Registrar gasto" onClick={() => setMostrarAlta(true)} />
         )}
       </div>
 
-      <FilterBar
-        campos={FILTROS_SIN_ESTADO_NI_BUSQUEDA}
-        valores={filtrosAdicionales}
-        onChange={cambiarFiltro}
-        catalogos={catalogos}
-      />
+      {/* Misma tarjeta de filtros que el listado de pacientes, para que los dos listados del
+        sistema se manejen igual. */}
+      <div className="pac-filtros">
+        <FilterBar
+          campos={FILTROS_SIN_BUSQUEDA}
+          valores={valoresDeFiltro}
+          onChange={cambiarFiltro}
+          catalogos={catalogos}
+        />
+        {hayFiltros && (
+          <div className="pac-filtros-acciones">
+            <SecondaryButton title="Limpiar filtros" variant="neutra" onClick={limpiarFiltros} />
+          </div>
+        )}
+      </div>
 
       <DataList
         columnas={COLUMNAS_GASTO}

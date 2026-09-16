@@ -12,6 +12,7 @@ export { default as PageHeader } from "./PageHeader";
 
 export { default as TextField } from "./TextField";
 export { default as Selector } from "./Selector";
+export { default as MultiSelector } from "./MultiSelector";
 export { default as DateField } from "./DateField";
 export { default as NumberField } from "./NumberField";
 
@@ -22,6 +23,7 @@ export { default as FilterBar } from "./FilterBar";
 export { default as DataList } from "./DataList";
 export { default as StatusChip } from "./StatusChip";
 export { default as Card } from "./Card";
+export { default as StatCard } from "./StatCard";
 
 export { default as KanbanBoard } from "./KanbanBoard";
 export { default as Tabs } from "./Tabs";

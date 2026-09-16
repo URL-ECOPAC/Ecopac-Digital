@@ -17,7 +17,7 @@ const TarjetaMetrica = ({ etiqueta, valor, meta, color }) => {
     >
       <p
         style={{
-          fontSize: "12px",
+          fontSize: "var(--texto-xs)",
           color: "#64748b",
           margin: "0 0 8px 0",
           textTransform: "uppercase",
@@ -26,7 +26,14 @@ const TarjetaMetrica = ({ etiqueta, valor, meta, color }) => {
       >
         {etiqueta}
       </p>
-      <p style={{ fontSize: "36px", fontWeight: "700", color: color, margin: "0 0 12px 0" }}>
+      <p
+        style={{
+          fontSize: "var(--texto-xxl)",
+          fontWeight: "var(--peso-bold)",
+          color: color,
+          margin: "0 0 12px 0",
+        }}
+      >
         {valor}
       </p>
       {meta && (
@@ -49,7 +56,9 @@ const TarjetaMetrica = ({ etiqueta, valor, meta, color }) => {
               }}
             />
           </div>
-          <div style={{ fontSize: "11px", color: "#94a3b8", textAlign: "right" }}>meta: {meta}</div>
+          <div style={{ fontSize: "var(--texto-xxs)", color: "#94a3b8", textAlign: "right" }}>
+            meta: {meta}
+          </div>
         </>
       )}
     </div>
@@ -160,8 +169,8 @@ export default function DashboardMetricasPage() {
             color: "#fff",
             border: "none",
             borderRadius: "10px",
-            fontSize: "14px",
-            fontWeight: "600",
+            fontSize: "var(--texto-sm)",
+            fontWeight: "var(--peso-semibold)",
             cursor: "pointer",
           }}
         >
@@ -180,7 +189,14 @@ export default function DashboardMetricasPage() {
         }}
       >
         <div style={{ marginBottom: "16px" }}>
-          <p style={{ fontSize: "13px", fontWeight: "600", color: "#334155", margin: "0 0 8px 0" }}>
+          <p
+            style={{
+              fontSize: "var(--texto-xs)",
+              fontWeight: "var(--peso-semibold)",
+              color: "#334155",
+              margin: "0 0 8px 0",
+            }}
+          >
             Rango de fechas
           </p>
           <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
@@ -194,8 +210,8 @@ export default function DashboardMetricasPage() {
                   border: "none",
                   backgroundColor: rangoSeleccionado === r.valor ? "#10b981" : "#f1f5f9",
                   color: rangoSeleccionado === r.valor ? "#fff" : "#475569",
-                  fontSize: "13px",
-                  fontWeight: "600",
+                  fontSize: "var(--texto-xs)",
+                  fontWeight: "var(--peso-semibold)",
                   cursor: "pointer",
                 }}
               >
@@ -216,8 +232,8 @@ export default function DashboardMetricasPage() {
           <div>
             <label
               style={{
-                fontSize: "12px",
-                fontWeight: "600",
+                fontSize: "var(--texto-xs)",
+                fontWeight: "var(--peso-semibold)",
                 color: "#64748b",
                 display: "block",
                 marginBottom: "6px",
@@ -246,8 +262,8 @@ export default function DashboardMetricasPage() {
           <div>
             <label
               style={{
-                fontSize: "12px",
-                fontWeight: "600",
+                fontSize: "var(--texto-xs)",
+                fontWeight: "var(--peso-semibold)",
                 color: "#64748b",
                 display: "block",
                 marginBottom: "6px",
@@ -277,8 +293,8 @@ export default function DashboardMetricasPage() {
           <div>
             <label
               style={{
-                fontSize: "12px",
-                fontWeight: "600",
+                fontSize: "var(--texto-xs)",
+                fontWeight: "var(--peso-semibold)",
                 color: "#64748b",
                 display: "block",
                 marginBottom: "6px",
@@ -372,7 +388,12 @@ export default function DashboardMetricasPage() {
           }}
         >
           <h3
-            style={{ fontSize: "16px", fontWeight: "600", color: "#1e293b", margin: "0 0 20px 0" }}
+            style={{
+              fontSize: "var(--texto-md)",
+              fontWeight: "var(--peso-semibold)",
+              color: "#1e293b",
+              margin: "0 0 20px 0",
+            }}
           >
             Pacientes atendidos por {agruparPor}
           </h3>
@@ -425,7 +446,7 @@ export default function DashboardMetricasPage() {
                   </div>
                   <span
                     style={{
-                      fontSize: "10px",
+                      fontSize: "var(--texto-xxs)",
                       color: "#64748b",
                       marginTop: "6px",
                       textAlign: "center",
@@ -442,10 +463,22 @@ export default function DashboardMetricasPage() {
             <div
               style={{ display: "flex", justifyContent: "center", gap: "20px", marginTop: "12px" }}
             >
-              <span style={{ fontSize: "12px", color: "#10b981", fontWeight: "500" }}>
+              <span
+                style={{
+                  fontSize: "var(--texto-xs)",
+                  color: "#10b981",
+                  fontWeight: "var(--peso-medium)",
+                }}
+              >
                 ■ Selección actual
               </span>
-              <span style={{ fontSize: "12px", color: "#3b82f6", fontWeight: "500" }}>
+              <span
+                style={{
+                  fontSize: "var(--texto-xs)",
+                  color: "#3b82f6",
+                  fontWeight: "var(--peso-medium)",
+                }}
+              >
                 ■ Comparación
               </span>
             </div>
@@ -464,8 +497,8 @@ export default function DashboardMetricasPage() {
           >
             <h3
               style={{
-                fontSize: "16px",
-                fontWeight: "600",
+                fontSize: "var(--texto-md)",
+                fontWeight: "var(--peso-semibold)",
                 color: "#1e293b",
                 margin: "0 0 20px 0",
               }}
@@ -490,11 +523,13 @@ export default function DashboardMetricasPage() {
                       borderRadius: "10px",
                     }}
                   >
-                    <span style={{ fontSize: "14px", fontWeight: "500" }}>{item.etiqueta}</span>
+                    <span style={{ fontSize: "var(--texto-sm)", fontWeight: "var(--peso-medium)" }}>
+                      {item.etiqueta}
+                    </span>
                     <span
                       style={{
-                        fontSize: "15px",
-                        fontWeight: "700",
+                        fontSize: "var(--texto-sm)",
+                        fontWeight: "var(--peso-bold)",
                         color: varPc >= 0 ? "#059669" : "#dc2626",
                       }}
                     >

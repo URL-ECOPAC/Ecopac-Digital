@@ -101,7 +101,12 @@ describe("ModalPermisosUsuario", () => {
     mockEstadoHook.modulos = [{ modulo: "jornadas", permisos: [PERMISO_INDIVIDUAL] }];
     pantalla();
 
-    fireEvent.change(screen.getByPlaceholderText("Motivo (opcional)"), {
+    // El campo de motivo ya no esta siempre visible: se despliega al pedirlo. Con nueve
+    // permisos en pantalla, nueve cajas de texto vacias ocupaban media modal para un dato que
+    // es opcional (usuario_permiso.motivo no es NOT NULL).
+    fireEvent.click(screen.getByText("Anotar motivo"));
+
+    fireEvent.change(screen.getByPlaceholderText("Por que se concede o revoca (opcional)"), {
       target: { value: "Termino la cobertura" },
     });
     fireEvent.click(screen.getByText("Revocar"));

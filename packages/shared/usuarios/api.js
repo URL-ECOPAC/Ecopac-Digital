@@ -607,8 +607,9 @@ export async function reverificarContrasena(email, contrasenaActual) {
  * listarUsuarios() las trae embebidas pero para un listado paginado completo, no para un
  * perfil suelto. Hace falta esta funcion aparte para la pantalla de perfil propio (issue #102).
  *
- * Requiere la politica RLS de la migracion 00058 (administrador o el propio perfil); es de
- * solo lectura, no hay escritura de especialidades todavia (issue #405). Una lista vacia no es
+ * Requiere la politica RLS de la migracion 00058 (administrador o el propio perfil). La
+ * escritura la habilito la 00085 y la implementan sincronizarEspecialidadesDePerfil() y sus dos
+ * auxiliares, mas abajo en este archivo. Una lista vacia no es
  * un error: puede ser que el perfil no tenga ninguna, o que RLS haya filtrado la fila sin
  * avisar (RLS filtra filas, no las anuncia, mismo criterio que el resto del modulo) - las dos
  * cosas se ven igual desde aqui y a quien llama no le hace falta distinguirlas.
@@ -633,5 +634,123 @@ export async function obtenerEspecialidadesDePerfil(idUsuario) {
     };
   } catch (error) {
     return { especialidades: [], error: normalizarError(error) };
+  }
+}
+
+/**
+ * Longitud maxima de una especialidad: perfil_especialidad.nombre_especialidad es VARCHAR(100)
+ * (00002). Se comprueba aqui y no solo en la base para que el aviso llegue antes de gastar la
+ * llamada de red, mismo criterio que validarPerfil().
+ */
+const LARGO_MAXIMO_ESPECIALIDAD = 100;
+
+/**
+ * Normaliza una lista de especialidades escritas a mano.
+ *
+ * Recorta espacios, descarta vacios y quita duplicados SIN distinguir mayusculas -"Pediatria" y
+ * "PEDIATRIA" son la misma especialidad para una persona, y la PK de perfil_especialidad
+ * (perfil_id, nombre_especialidad) si las distingue, asi que sin esto el mismo medico podria
+ * acabar con las dos filas-. Se conserva la primera forma escrita, que es la que la persona vio.
+ */
+export function normalizarEspecialidades(especialidades = []) {
+  const vistas = new Set();
+  const limpias = [];
+
+  for (const cruda of especialidades) {
+    const nombre = String(cruda ?? "").trim();
+    if (!nombre) continue;
+
+    const clave = nombre.toLocaleLowerCase();
+    if (vistas.has(clave)) continue;
+
+    vistas.add(clave);
+    limpias.push(nombre);
+  }
+
+  return limpias;
+}
+
+/**
+ * Valida una lista de especialidades contra el CHECK implicito de la columna.
+ *
+ * @returns {Record<string, string>} Vacio si todas son validas.
+ */
+export function validarEspecialidades(especialidades = []) {
+  const larga = especialidades.find((nombre) => String(nombre).length > LARGO_MAXIMO_ESPECIALIDAD);
+
+  if (larga) {
+    return {
+      especialidades: `"${String(larga).slice(0, 20)}..." pasa de ${LARGO_MAXIMO_ESPECIALIDAD} caracteres.`,
+    };
+  }
+
+  return {};
+}
+
+/**
+ * Deja las especialidades de un perfil EXACTAMENTE como dice `especialidades`.
+ *
+ * POR QUE BORRAR E INSERTAR Y NO ACTUALIZAR. perfil_especialidad no tiene columna id: su clave
+ * primaria es la pareja (perfil_id, nombre_especialidad), asi que "cambiar" una especialidad es
+ * borrar la fila vieja e insertar la nueva. La migracion 00085 lo dice explicitamente y por eso
+ * no le dio politica de UPDATE a la tabla: solo INSERT y DELETE.
+ *
+ * Se calcula la diferencia en vez de borrar todo y reinsertar: reescribir filas que no
+ * cambiaron es trabajo de mas, y ademas un fallo a mitad de camino dejaria al perfil con MENOS
+ * especialidades de las que tenia. Asi, en el peor caso, queda un estado intermedio pero nunca
+ * uno vacio.
+ *
+ * Quien de verdad autoriza es la politica de la 00085 ("administrador o el propio perfil"); esta
+ * funcion no pregunta por rol, igual que el resto de api.js.
+ *
+ * @param {string} idUsuario UUID de perfiles.id.
+ * @param {string[]} especialidades Lista completa deseada, no un delta.
+ * @returns {Promise<{ especialidades: string[], errores: Record<string,string>, error: object|null }>}
+ */
+export async function sincronizarEspecialidadesDePerfil(idUsuario, especialidades = []) {
+  if (!idUsuario) {
+    return {
+      especialidades: [],
+      errores: {},
+      error: construirError(CODIGOS_DE_ERROR_DE_SUPABASE.DESCONOCIDO, "Falta el perfil."),
+    };
+  }
+
+  const deseadas = normalizarEspecialidades(especialidades);
+  const errores = validarEspecialidades(deseadas);
+  if (Object.keys(errores).length > 0) return { especialidades: [], errores, error: null };
+
+  const { especialidades: actuales, error: errorDeLectura } =
+    await obtenerEspecialidadesDePerfil(idUsuario);
+
+  if (errorDeLectura) return { especialidades: [], errores: {}, error: errorDeLectura };
+
+  const porQuitar = actuales.filter((nombre) => !deseadas.includes(nombre));
+  const porAgregar = deseadas.filter((nombre) => !actuales.includes(nombre));
+
+  try {
+    if (porQuitar.length > 0) {
+      const { error } = await obtenerSupabase()
+        .from("perfil_especialidad")
+        .delete()
+        .eq("perfil_id", idUsuario)
+        .in("nombre_especialidad", porQuitar);
+
+      if (error) return { especialidades: [], errores: {}, error: normalizarError(error) };
+    }
+
+    if (porAgregar.length > 0) {
+      const { error } = await obtenerSupabase()
+        .from("perfil_especialidad")
+        .insert(
+          porAgregar.map((nombre) => ({ perfil_id: idUsuario, nombre_especialidad: nombre })),
+        );
+
+      if (error) return { especialidades: [], errores: {}, error: normalizarError(error) };
+    }
+
+    return { especialidades: deseadas, errores: {}, error: null };
+  } catch (error) {
+    return { especialidades: [], errores: {}, error: normalizarError(error) };
   }
 }

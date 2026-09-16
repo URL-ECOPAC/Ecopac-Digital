@@ -1,13 +1,18 @@
 import { useState } from "react";
 
-import { CAMPOS_EDICION_USUARIO, TIPOS_DE_CAMPO, useEdicionUsuario } from "@ecopac/shared";
+import {
+  CAMPOS_EDICION_USUARIO,
+  useEdicionUsuario,
+  useEspecialidadesDePerfil,
+} from "@ecopac/shared";
 
-import DateField from "../components/DateField";
+import { Save, UserCheck, UserX, X } from "lucide-react";
+
 import Modal from "../components/Modal";
+import MultiSelector from "../components/MultiSelector";
 import PrimaryButton from "../components/PrimaryButton";
-import Selector from "../components/Selector";
+import SeccionDeFormulario from "../components/SeccionDeFormulario";
 import SecondaryButton from "../components/SecondaryButton";
-import TextField from "../components/TextField";
 import ModalConfirmarDesactivacion from "./ModalConfirmarDesactivacion";
 
 // Modal de edicion de usuario (issue #107), abierto al clickear una fila de
@@ -20,22 +25,24 @@ import ModalConfirmarDesactivacion from "./ModalConfirmarDesactivacion";
 // salen de CAMPOS_EDICION_USUARIO (el subconjunto de CAMPOS_USUARIO que declara ese hook), no
 // de literales propios.
 //
-// El selector de especialidades del prototipo no esta aca: CAMPOS_EDICION_USUARIO no lo
-// incluye, a proposito, mismo motivo que CAMPOS_ALTA_USUARIO en ModalAltaUsuario.jsx
-// (perfil_especialidad es de solo lectura hasta el issue #405, y ademas
-// TIPOS_DE_CAMPO.ETIQUETAS no tiene ningun componente del catalogo que lo dibuje editable).
+// LAS ESPECIALIDADES YA SE PUEDEN EDITAR. El comentario que estaba aqui decia que el selector
+// del prototipo no existia porque "perfil_especialidad es de solo lectura hasta el issue #405, y
+// ademas TIPOS_DE_CAMPO.ETIQUETAS no tiene ningun componente del catalogo que lo dibuje
+// editable". Las dos razones dejaron de ser ciertas: la migracion 00085 (esa misma issue #405)
+// habilito INSERT y DELETE sobre la tabla, y MultiSelector es ahora parte del catalogo. Sin
+// esto, dar de alta a un medico no permitia decir de que es especialista, que es justo el dato
+// por el que se busca a un medico en el listado de colaboradores.
+//
+// Van en su propio bloque, con su propio boton de guardar, y no dentro del formulario de
+// arriba: son OTRA TABLA, con sus propias politicas y su propia forma de escribirse (borrar e
+// insertar, porque la PK de perfil_especialidad es la pareja y no tiene UPDATE). Un solo boton
+// que escribiera las dos tendria que decidir que hacer cuando una falla y la otra no.
 //
 // Desactivar/reactivar (criterio 2) se abre desde aca, con un boton propio que abre
-// ModalConfirmarDesactivacion: DataList no tiene una accion por fila aparte de onRowPress, asi
-// que no hay otro lugar del que "abrirse desde la fila" sin construir un componente nuevo de
-// catalogo.
-const TIPO_DE_INPUT = {
-  [TIPOS_DE_CAMPO.TEXTO]: "text",
-  [TIPOS_DE_CAMPO.TELEFONO]: "tel",
-};
-
-export default function ModalEdicionUsuario({ perfil, idSesionActual, onClose, onGuardado }) {
+// ModalConfirmarDesactivacion.
+export default function ModalEdicionUsuario({ perfil, idSesionActual, rol, onClose, onGuardado }) {
   const { valores, errores, error, enviando, setCampo, guardar } = useEdicionUsuario(perfil);
+  const especialidades = useEspecialidadesDePerfil(perfil?.id, { rol, idSesionActual });
   const [mostrarConfirmacion, setMostrarConfirmacion] = useState(false);
 
   const esUnoMismo = perfil?.id === idSesionActual;
@@ -47,74 +54,113 @@ export default function ModalEdicionUsuario({ perfil, idSesionActual, onClose, o
 
   return (
     <>
-      <Modal visible={!mostrarConfirmacion} onClose={onClose} title="Editar colaborador">
+      <Modal visible={!mostrarConfirmacion} onClose={onClose} title="Editar colaborador" size="lg">
         {error && (
           <div className="alert alert-danger" role="alert">
             {error.mensaje}
           </div>
         )}
 
-        {CAMPOS_EDICION_USUARIO.map((campo) => {
-          if (campo.tipo === TIPOS_DE_CAMPO.SELECT) {
-            return (
-              <Selector
-                key={campo.id}
-                label={campo.label}
-                value={valores[campo.id]}
-                options={campo.opciones}
-                onSelect={(valor) => setCampo(campo.id, valor)}
-                error={errores[campo.id]}
-                disabled={enviando}
-              />
-            );
-          }
-
-          if (campo.tipo === TIPOS_DE_CAMPO.FECHA) {
-            return (
-              <DateField
-                key={campo.id}
-                label={campo.label}
-                value={valores[campo.id] || null}
-                onChange={(valor) => setCampo(campo.id, valor)}
-                error={errores[campo.id]}
-                disabled={enviando}
-              />
-            );
-          }
-
-          return (
-            <TextField
-              key={campo.id}
-              label={campo.label}
-              as={campo.tipo === TIPOS_DE_CAMPO.TEXTO_LARGO ? "textarea" : undefined}
-              rows={campo.tipo === TIPOS_DE_CAMPO.TEXTO_LARGO ? 3 : undefined}
-              type={TIPO_DE_INPUT[campo.tipo] ?? "text"}
-              maxLength={campo.validacion?.maxLongitud}
-              value={valores[campo.id] ?? ""}
-              onChange={(evento) => setCampo(campo.id, evento.target.value)}
-              error={errores[campo.id]}
-              disabled={enviando}
-            />
-          );
-        })}
-
-        <div className="d-flex justify-content-between align-items-center mt-3">
-          <div>
-            {esUnoMismo ? (
-              <span className="text-muted small">No puedes desactivar tu propia cuenta.</span>
-            ) : (
+        <SeccionDeFormulario
+          titulo="Datos del colaborador"
+          descripcion="Los datos de contacto y el rol con el que entra al sistema."
+          acento="var(--accent-colaboradores)"
+          campos={CAMPOS_EDICION_USUARIO}
+          valores={valores}
+          errores={errores}
+          onChange={setCampo}
+          disabled={enviando}
+        >
+          <div className="d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <div>
+              {esUnoMismo ? (
+                <span className="text-body-secondary small">
+                  No puedes desactivar tu propia cuenta.
+                </span>
+              ) : (
+                <SecondaryButton
+                  title={perfil?.activo ? "Desactivar" : "Reactivar"}
+                  variant={perfil?.activo ? "peligro" : "outline"}
+                  icon={
+                    perfil?.activo ? (
+                      <UserX size={16} aria-hidden="true" />
+                    ) : (
+                      <UserCheck size={16} aria-hidden="true" />
+                    )
+                  }
+                  onClick={() => setMostrarConfirmacion(true)}
+                  disabled={enviando}
+                />
+              )}
+            </div>
+            <div className="ec-acciones">
               <SecondaryButton
-                title={perfil?.activo ? "Desactivar" : "Reactivar"}
-                onClick={() => setMostrarConfirmacion(true)}
+                title="Cancelar"
+                variant="neutra"
+                onClick={onClose}
                 disabled={enviando}
+                icon={<X size={16} aria-hidden="true" />}
               />
-            )}
+              <PrimaryButton
+                title="Guardar datos"
+                onClick={guardarCambios}
+                loading={enviando}
+                icon={<Save size={16} aria-hidden="true" />}
+              />
+            </div>
           </div>
-          <div className="d-flex gap-2">
-            <SecondaryButton title="Cancelar" onClick={onClose} disabled={enviando} />
-            <PrimaryButton title="Guardar" onClick={guardarCambios} loading={enviando} />
+        </SeccionDeFormulario>
+
+        <section
+          className="ec-form-seccion"
+          style={{ "--ec-acento": "var(--accent-colaboradores)" }}
+        >
+          <div className="ec-form-seccion-cabecera">
+            <h3 className="ec-form-seccion-titulo">Especialidades</h3>
+            <p className="ec-form-seccion-descripcion">
+              De qué es especialista. Es el dato por el que se busca a un médico en el listado.
+            </p>
           </div>
-        </div>
+
+          {especialidades.error && (
+            <div className="alert alert-danger" role="alert">
+              {especialidades.error.mensaje}
+            </div>
+          )}
+
+          {!especialidades.editable && (
+            <p className="text-body-secondary small">
+              Solo la administracion, o cada persona sobre su propio perfil, puede cambiar las
+              especialidades.
+            </p>
+          )}
+
+          <MultiSelector
+            label="Especialidades del colaborador"
+            value={especialidades.especialidades}
+            options={especialidades.catalogo}
+            onChange={especialidades.setEspecialidades}
+            placeholder="Elegir una ya registrada"
+            placeholderLibre="O escribir una nueva"
+            permiteLibre
+            error={especialidades.errores.especialidades}
+            disabled={
+              !especialidades.editable || especialidades.cargando || especialidades.enviando
+            }
+          />
+
+          {especialidades.editable && (
+            <div className="ec-acciones ec-acciones--fin">
+              <PrimaryButton
+                title="Guardar especialidades"
+                onClick={especialidades.guardar}
+                loading={especialidades.enviando}
+                disabled={!especialidades.hayCambios}
+                icon={<Save size={16} aria-hidden="true" />}
+              />
+            </div>
+          )}
+        </section>
       </Modal>
 
       {mostrarConfirmacion && (

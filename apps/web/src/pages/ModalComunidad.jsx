@@ -9,6 +9,7 @@ import PrimaryButton from "../components/PrimaryButton";
 import SecondaryButton from "../components/SecondaryButton";
 import Selector from "../components/Selector";
 import TextField from "../components/TextField";
+import { X } from "lucide-react";
 
 function valoresDe(comunidad) {
   return {
@@ -154,7 +155,12 @@ export default function ModalComunidad({ visible, comunidad, onClose, onGuardar,
         )}
 
         <div className="d-flex justify-content-end gap-2 mt-3">
-          <SecondaryButton title="Cancelar" onClick={onClose} disabled={enviando} />
+          <SecondaryButton
+            title="Cancelar"
+            onClick={onClose}
+            disabled={enviando}
+            icon={<X size={16} aria-hidden="true" />}
+          />
           <PrimaryButton
             title={editando ? "Guardar cambios" : "Crear comunidad"}
             onClick={guardar}

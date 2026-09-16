@@ -73,7 +73,7 @@ export default function ModalMedicamento({
             border: "none",
             background: "transparent",
             cursor: "pointer",
-            fontSize: "20px",
+            fontSize: "var(--texto-lg)",
             color: "#94a3b8",
           }}
         >
@@ -83,15 +83,15 @@ export default function ModalMedicamento({
         {/* Título */}
         <h2
           style={{
-            fontSize: "20px",
-            fontWeight: "800",
+            fontSize: "var(--texto-lg)",
+            fontWeight: "var(--peso-bold)",
             color: "#0f172a",
             margin: "0 0 4px 0",
           }}
         >
           {modoEdicion ? "Editar Medicamento" : "Nuevo Medicamento"}
         </h2>
-        <p style={{ fontSize: "12px", color: "#64748b", margin: "0 0 20px 0" }}>
+        <p style={{ fontSize: "var(--texto-xs)", color: "#64748b", margin: "0 0 20px 0" }}>
           Define los datos generales y especificaciones técnicas
         </p>
 
@@ -104,7 +104,7 @@ export default function ModalMedicamento({
               border: "1px solid #fecaca",
               borderRadius: "12px",
               color: "#991b1b",
-              fontSize: "12px",
+              fontSize: "var(--texto-xs)",
               marginBottom: "16px",
             }}
           >
@@ -125,8 +125,8 @@ export default function ModalMedicamento({
             <label
               style={{
                 display: "block",
-                fontSize: "10px",
-                fontWeight: "800",
+                fontSize: "var(--texto-xxs)",
+                fontWeight: "var(--peso-bold)",
                 color: "#475569",
                 marginBottom: "6px",
                 textTransform: "uppercase",
@@ -146,7 +146,7 @@ export default function ModalMedicamento({
                 padding: "10px 14px",
                 borderRadius: "12px",
                 border: "1px solid #cbd5e1",
-                fontSize: "13px",
+                fontSize: "var(--texto-xs)",
                 outline: "none",
                 boxSizing: "border-box",
               }}
@@ -165,8 +165,8 @@ export default function ModalMedicamento({
             >
               <label
                 style={{
-                  fontSize: "10px",
-                  fontWeight: "800",
+                  fontSize: "var(--texto-xxs)",
+                  fontWeight: "var(--peso-bold)",
                   color: "#475569",
                   textTransform: "uppercase",
                 }}
@@ -181,8 +181,8 @@ export default function ModalMedicamento({
                     background: "none",
                     border: "none",
                     color: "#059669",
-                    fontSize: "11px",
-                    fontWeight: "700",
+                    fontSize: "var(--texto-xxs)",
+                    fontWeight: "var(--peso-bold)",
                     cursor: "pointer",
                   }}
                 >
@@ -201,7 +201,7 @@ export default function ModalMedicamento({
                 padding: "10px 14px",
                 borderRadius: "12px",
                 border: "1px solid #cbd5e1",
-                fontSize: "13px",
+                fontSize: "var(--texto-xs)",
                 backgroundColor: modoEdicion ? "#f1f5f9" : "#ffffff",
                 outline: "none",
                 boxSizing: "border-box",
@@ -216,7 +216,7 @@ export default function ModalMedicamento({
                 ))}
             </select>
             {modoEdicion && (
-              <p style={{ fontSize: "11px", color: "#94a3b8", margin: "4px 0 0 0" }}>
+              <p style={{ fontSize: "var(--texto-xxs)", color: "#94a3b8", margin: "4px 0 0 0" }}>
                 El principio activo no se puede cambiar desde aqui.
               </p>
             )}
@@ -234,8 +234,8 @@ export default function ModalMedicamento({
               <label
                 style={{
                   display: "block",
-                  fontSize: "10px",
-                  fontWeight: "800",
+                  fontSize: "var(--texto-xxs)",
+                  fontWeight: "var(--peso-bold)",
                   color: "#475569",
                   marginBottom: "6px",
                   textTransform: "uppercase",
@@ -255,7 +255,7 @@ export default function ModalMedicamento({
                   padding: "10px 14px",
                   borderRadius: "12px",
                   border: "1px solid #cbd5e1",
-                  fontSize: "13px",
+                  fontSize: "var(--texto-xs)",
                   outline: "none",
                   boxSizing: "border-box",
                 }}
@@ -266,8 +266,8 @@ export default function ModalMedicamento({
               <label
                 style={{
                   display: "block",
-                  fontSize: "10px",
-                  fontWeight: "800",
+                  fontSize: "var(--texto-xxs)",
+                  fontWeight: "var(--peso-bold)",
                   color: "#475569",
                   marginBottom: "6px",
                   textTransform: "uppercase",
@@ -285,7 +285,7 @@ export default function ModalMedicamento({
                   padding: "10px 14px",
                   borderRadius: "12px",
                   border: "1px solid #cbd5e1",
-                  fontSize: "13px",
+                  fontSize: "var(--texto-xs)",
                   backgroundColor: "#ffffff",
                   outline: "none",
                   boxSizing: "border-box",
@@ -313,8 +313,8 @@ export default function ModalMedicamento({
               <label
                 style={{
                   display: "block",
-                  fontSize: "10px",
-                  fontWeight: "800",
+                  fontSize: "var(--texto-xxs)",
+                  fontWeight: "var(--peso-bold)",
                   color: "#475569",
                   marginBottom: "6px",
                   textTransform: "uppercase",
@@ -334,7 +334,7 @@ export default function ModalMedicamento({
                   padding: "10px 14px",
                   borderRadius: "12px",
                   border: "1px solid #cbd5e1",
-                  fontSize: "13px",
+                  fontSize: "var(--texto-xs)",
                   outline: "none",
                   boxSizing: "border-box",
                 }}
@@ -345,8 +345,8 @@ export default function ModalMedicamento({
               <label
                 style={{
                   display: "block",
-                  fontSize: "10px",
-                  fontWeight: "800",
+                  fontSize: "var(--texto-xxs)",
+                  fontWeight: "var(--peso-bold)",
                   color: "#475569",
                   marginBottom: "6px",
                   textTransform: "uppercase",
@@ -365,7 +365,7 @@ export default function ModalMedicamento({
                   padding: "10px 14px",
                   borderRadius: "12px",
                   border: "1px solid #cbd5e1",
-                  fontSize: "13px",
+                  fontSize: "var(--texto-xs)",
                   outline: "none",
                   boxSizing: "border-box",
                 }}
@@ -374,7 +374,12 @@ export default function ModalMedicamento({
 
             <div>
               <label
-                style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px" }}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  fontSize: "var(--texto-xs)",
+                }}
               >
                 <input
                   type="checkbox"
@@ -410,8 +415,8 @@ export default function ModalMedicamento({
                   borderColor: formData.activo ? "#fecaca" : "#bbf7d0",
                   backgroundColor: formData.activo ? "#fef2f2" : "#f0fdf4",
                   color: formData.activo ? "#b91c1c" : "#15803d",
-                  fontSize: "13px",
-                  fontWeight: "600",
+                  fontSize: "var(--texto-xs)",
+                  fontWeight: "var(--peso-semibold)",
                   cursor: cargando ? "not-allowed" : "pointer",
                 }}
               >
@@ -429,8 +434,8 @@ export default function ModalMedicamento({
                   border: "1px solid #cbd5e1",
                   backgroundColor: "#ffffff",
                   color: "#475569",
-                  fontSize: "13px",
-                  fontWeight: "600",
+                  fontSize: "var(--texto-xs)",
+                  fontWeight: "var(--peso-semibold)",
                   cursor: "pointer",
                 }}
               >
@@ -445,8 +450,8 @@ export default function ModalMedicamento({
                   border: "none",
                   backgroundColor: "#059669", // Mismo verde uniforme
                   color: "#ffffff",
-                  fontSize: "13px",
-                  fontWeight: "700",
+                  fontSize: "var(--texto-xs)",
+                  fontWeight: "var(--peso-bold)",
                   cursor: cargando ? "not-allowed" : "pointer",
                   opacity: cargando ? 0.7 : 1,
                 }}

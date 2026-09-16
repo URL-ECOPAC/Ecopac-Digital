@@ -1,18 +1,109 @@
 /* Pantalla de inicio (issue #710).
  *
- * Ningun color, espaciado ni radio esta escrito a mano: todos salen de las custom properties
- * que publica apps/web/src/theme.js desde @ecopac/ui-tokens. Es la regla de
+ * Ningun color, espaciado, radio ni tamano de letra esta escrito a mano: todos salen de las
+ * custom properties que publica apps/web/src/theme.js desde @ecopac/ui-tokens. Es la regla de
  * docs/ARQUITECTURA-FRONTEND.md. */
 
+/* --------------------------------------------------------------------------
+   Banner de saludo
+
+   El degradado de tres pasos (3DB648 -> 2D9E3A -> 1E7A28) es el del banner del prototipo, y esta
+   descrito como tal en el comentario de primaryLight en @ecopac/ui-tokens. Es el unico lugar de
+   la web donde se usa, y es a proposito: identifica la pantalla a la que cae todo el mundo al
+   entrar.
+   -------------------------------------------------------------------------- */
+
+.inicio-banner {
+  background-image: linear-gradient(
+    120deg,
+    var(--color-primary) 0%,
+    var(--color-primary-light) 45%,
+    var(--color-primary-dark) 100%
+  );
+  border-radius: var(--radio-lg);
+  box-shadow: var(--sombra-md);
+  color: var(--color-surface);
+  margin-bottom: var(--spacing-xl);
+  overflow: hidden;
+  padding: var(--spacing-xl) var(--spacing-lg);
+  position: relative;
+}
+
+/* Dos circulos muy tenues en la esquina, para que el degradado no quede como un rectangulo
+   plano. Decorativos: no llevan contenido ni capturan el puntero. */
+.inicio-banner::after {
+  background:
+    radial-gradient(circle at 92% 12%, rgb(255 255 255 / 14%) 0%, transparent 42%),
+    radial-gradient(circle at 78% 96%, rgb(255 255 255 / 10%) 0%, transparent 38%);
+  content: "";
+  inset: 0;
+  pointer-events: none;
+  position: absolute;
+}
+
+.inicio-banner > * {
+  position: relative;
+  z-index: 1;
+}
+
+.inicio-saludo {
+  font-size: var(--texto-xl);
+  font-weight: var(--peso-bold);
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+.inicio-frase {
+  font-size: var(--texto-sm);
+  margin: var(--spacing-xs) 0 0;
+  opacity: 0.92;
+}
+
+/* Chip sobre el degradado: translucido en blanco, no de un color de la paleta, porque cualquier
+   color de marca sobre el propio verde de marca pierde el contraste. */
+.inicio-banner-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-md);
+}
+
+.inicio-banner-chip {
+  align-items: center;
+  background-color: rgb(255 255 255 / 18%);
+  border: 1px solid rgb(255 255 255 / 28%);
+  border-radius: var(--radio-pill);
+  display: inline-flex;
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-semibold);
+  gap: 0.35rem;
+  letter-spacing: 0.02em;
+  padding: 0.3rem 0.7rem;
+}
+
+/* --------------------------------------------------------------------------
+   Secciones
+   -------------------------------------------------------------------------- */
+
 .inicio-seccion {
-  margin-bottom: var(--spacing-xl, 32px);
+  margin-bottom: var(--spacing-xl);
 }
 
 .inicio-titulo {
+  align-items: baseline;
   color: var(--color-text);
-  font-size: 1.125rem;
-  font-weight: 600;
-  margin-bottom: var(--spacing-md, 16px);
+  display: flex;
+  flex-wrap: wrap;
+  font-size: var(--texto-md);
+  font-weight: var(--peso-semibold);
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-md);
+}
+
+.inicio-titulo-nota {
+  color: var(--color-text-muted);
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-regular);
 }
 
 .inicio-vacio {
@@ -20,69 +111,161 @@
   margin: 0;
 }
 
-/* Tarjeta de jornada en curso: toda la fila es el area pulsable. */
+/* --------------------------------------------------------------------------
+   Jornada en curso
+
+   Es lo primero que necesita ver un medico o una voluntaria que entra durante una jornada, asi
+   que va antes que los accesos y con mas peso visual que ellos: la fila entera es pulsable.
+   -------------------------------------------------------------------------- */
+
+.inicio-jornadas {
+  display: grid;
+  gap: var(--spacing-md);
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+}
+
 .inicio-jornada {
   align-items: center;
-  background: none;
-  border: none;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-left: 4px solid var(--accent-jornadas, var(--color-primary));
+  border-radius: var(--radio-lg);
+  box-shadow: var(--sombra-sm);
   cursor: pointer;
   display: flex;
-  gap: var(--spacing-md, 16px);
+  gap: var(--spacing-md);
   justify-content: space-between;
-  padding: 0;
+  padding: var(--spacing-md) var(--spacing-lg);
   text-align: left;
+  transition:
+    box-shadow 140ms ease,
+    transform 140ms ease;
   width: 100%;
+}
+
+.inicio-jornada:hover {
+  box-shadow: var(--sombra-md);
+  transform: translateY(-2px);
+}
+
+.inicio-jornada:focus-visible {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 30%, transparent);
+  outline: none;
 }
 
 .inicio-jornada-datos {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-xs, 4px);
+  gap: var(--spacing-xs);
+  min-width: 0;
 }
 
 .inicio-jornada-nombre {
   color: var(--color-text);
+  font-size: var(--texto-md);
+  font-weight: var(--peso-semibold);
 }
 
 .inicio-jornada-detalle {
+  align-items: center;
   color: var(--color-text-muted);
-  font-size: 0.875rem;
+  display: flex;
+  flex-wrap: wrap;
+  font-size: var(--texto-sm);
+  gap: 0.35rem;
 }
 
-/* Rejilla de accesos por rol. Se adapta sola al numero de modulos que ve cada rol: un
- * voluntario ve tres y una administradora ocho, y ninguno de los dos casos necesita una
- * media query propia. */
+/* --------------------------------------------------------------------------
+   Rejilla de accesos por rol
+
+   Se adapta sola al numero de modulos que ve cada rol: un voluntario ve tres y una
+   administradora ocho, y ninguno de los dos casos necesita una media query propia.
+   -------------------------------------------------------------------------- */
+
 .inicio-accesos {
   display: grid;
-  gap: var(--spacing-md, 16px);
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: var(--spacing-md);
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
 }
 
 .inicio-acceso {
   background-color: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: var(--radio-md, 8px);
-  border-top: 4px solid var(--color-primary);
+  border-radius: var(--radio-lg);
   box-shadow: var(--sombra-sm);
   cursor: pointer;
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-sm, 8px);
-  padding: var(--spacing-lg, 24px) var(--spacing-md, 16px);
+  gap: var(--spacing-sm);
+  overflow: hidden;
+  padding: var(--spacing-lg) var(--spacing-md);
+  position: relative;
   text-align: left;
-  transition: box-shadow 120ms ease-in-out;
+  transition:
+    border-color 140ms ease,
+    box-shadow 140ms ease,
+    transform 140ms ease;
+}
+
+/* La cinta de acento del modulo. Antes era un `border-top` de 4px que, con el radio de la
+   tarjeta, dejaba dos esquinas mordidas; como pseudo-elemento sigue la curva. */
+.inicio-acceso::before {
+  background-color: var(--ec-acento, var(--color-primary));
+  content: "";
+  height: 4px;
+  left: 0;
+  position: absolute;
+  right: 0;
+  top: 0;
 }
 
 .inicio-acceso:hover,
 .inicio-acceso:focus-visible {
+  border-color: color-mix(in srgb, var(--ec-acento, var(--color-primary)) 45%, var(--color-border));
   box-shadow: var(--sombra-md);
+  transform: translateY(-3px);
 }
 
+.inicio-acceso:focus-visible {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ec-acento, var(--color-primary)) 28%, transparent);
+  outline: none;
+}
+
+/* El icono en un disco tenido del color del modulo, en vez de suelto sobre el fondo blanco:
+   es lo que hace reconocible cada tarjeta de un vistazo, que es para lo que existe el acento
+   por modulo. */
 .inicio-acceso-icono {
-  color: var(--color-primary);
+  align-items: center;
+  background-color: color-mix(in srgb, var(--ec-acento, var(--color-primary)) 12%, transparent);
+  border-radius: var(--radio-md);
+  color: var(--ec-acento, var(--color-primary));
+  display: inline-flex;
+  flex: 0 0 auto;
+  height: 44px;
+  justify-content: center;
+  width: 44px;
 }
 
 .inicio-acceso-etiqueta {
   color: var(--color-text);
-  font-weight: 600;
+  font-size: var(--texto-md);
+  font-weight: var(--peso-semibold);
+}
+
+.inicio-acceso-descripcion {
+  color: var(--color-text-muted);
+  font-size: var(--texto-xs);
+  line-height: 1.45;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .inicio-jornada,
+  .inicio-acceso {
+    transition: none;
+  }
+
+  .inicio-jornada:hover,
+  .inicio-acceso:hover {
+    transform: none;
+  }
 }

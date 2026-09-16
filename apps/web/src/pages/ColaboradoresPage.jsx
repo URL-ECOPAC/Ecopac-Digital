@@ -237,6 +237,7 @@ export default function ColaboradoresPage() {
               fila={filaSeleccionada}
               catalogos={catalogos}
               permisos={permisos}
+              rol={rol}
               idSesionActual={perfilDeSesion?.id}
               onCambio={recargar}
             />
@@ -572,7 +573,7 @@ function FilaColaborador({ fila, catalogos, seleccionada, onClick }) {
  * persona seleccionada (se reemplaza por completo, con `key={fila.id}`, al cambiar de seleccion),
  * no hace falta un id condicional como en la version de acordeon.
  */
-function PanelDetalleColaborador({ fila, catalogos, permisos, idSesionActual, onCambio }) {
+function PanelDetalleColaborador({ fila, catalogos, permisos, rol, idSesionActual, onCambio }) {
   const [pestaniaActiva, setPestaniaActiva] = useState(PESTANIA_FICHA_COLABORADOR_POR_DEFECTO);
   const [editando, setEditando] = useState(false);
   const [gestionandoPermisos, setGestionandoPermisos] = useState(false);
@@ -716,6 +717,7 @@ function PanelDetalleColaborador({ fila, catalogos, permisos, idSesionActual, on
       {editando && (
         <ModalEdicionUsuario
           perfil={fila}
+          rol={rol}
           idSesionActual={idSesionActual}
           onClose={() => setEditando(false)}
           onGuardado={() => {

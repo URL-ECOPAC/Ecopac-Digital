@@ -6,6 +6,7 @@ import {
 } from "@ecopac/shared";
 
 import Card from "../components/Card";
+import "./signos.css";
 import EmptyState from "../components/EmptyState";
 import ErrorState from "../components/ErrorState";
 import LoadingState from "../components/LoadingState";
@@ -152,7 +153,7 @@ function Leyenda({ serie }) {
 function Serie({ serie }) {
   if (serie.mediciones === 0) {
     return (
-      <Card title={serie.label} style={{ marginBottom: "1rem" }}>
+      <Card title={serie.label}>
         <p className="text-body-secondary mb-0">Sin mediciones registradas.</p>
       </Card>
     );
@@ -162,7 +163,7 @@ function Serie({ serie }) {
     const unica = ultimaMedicion(serie);
 
     return (
-      <Card title={serie.label} style={{ marginBottom: "1rem" }}>
+      <Card title={serie.label}>
         <p className="mb-1">
           {serie.lineas
             .filter((linea) => linea.puntos.length > 0)
@@ -178,7 +179,7 @@ function Serie({ serie }) {
   }
 
   return (
-    <Card title={serie.label} style={{ marginBottom: "1rem" }}>
+    <Card title={serie.label}>
       <Grafica serie={serie} />
       <Leyenda serie={serie} />
     </Card>
@@ -186,7 +187,7 @@ function Serie({ serie }) {
 }
 
 export default function PestaniaSignosPaciente({ pacienteId, rol }) {
-  const { series, hayMediciones, cargando, error, recargar } = useEvolucionSignos(pacienteId, {
+  const { grupos, hayMediciones, cargando, error, recargar } = useEvolucionSignos(pacienteId, {
     rol,
   });
 
@@ -197,10 +198,21 @@ export default function PestaniaSignosPaciente({ pacienteId, rol }) {
     return <EmptyState message="Este paciente todavia no tiene signos vitales registrados." />;
   }
 
+  // Separadas por lo que miden -cardiovascular, metabolico, medidas corporales- y no como una
+  // lista corrida de ocho tarjetas iguales. El agrupamiento lo decide shared
+  // (agruparSeriesDeSignos), no esta pantalla; aqui solo se dibuja, y un grupo sin ninguna
+  // medicion ya viene descartado.
   return (
     <div>
-      {series.map((serie) => (
-        <Serie key={serie.id} serie={serie} />
+      {grupos.map((grupo) => (
+        <section className="signos-grupo" key={grupo.id}>
+          <h3 className="signos-grupo-titulo">{grupo.label}</h3>
+          <div className="signos-rejilla">
+            {grupo.series.map((serie) => (
+              <Serie key={serie.id} serie={serie} />
+            ))}
+          </div>
+        </section>
       ))}
     </div>
   );

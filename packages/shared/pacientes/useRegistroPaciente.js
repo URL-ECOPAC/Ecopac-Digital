@@ -86,6 +86,19 @@ export function useRegistroPaciente({ comunidadInicial = null, nombresInicial = 
     };
   }, [municipioId]);
 
+  // setCampo se declara ANTES de registrarComunidad, que lo captura en su cuerpo y lo lista en
+  // sus dependencias. Estaba declarado mas abajo, y como `const` no se iza, el useCallback de
+  // registrarComunidad leia la variable dentro de su zona muerta temporal: el modal de alta
+  // reventaba en el primer render con "Cannot access 'setCampo' before initialization" y la
+  // pantalla quedaba en blanco. El orden de las declaraciones es lo unico que cambia.
+  const setCampo = useCallback((id, valor) => {
+    setValores((anteriores) => ({ ...anteriores, [id]: valor }));
+    setErrores((anteriores) => {
+      if (!(id in anteriores)) return anteriores;
+      return Object.fromEntries(Object.entries(anteriores).filter(([clave]) => clave !== id));
+    });
+  }, []);
+
   const registrarComunidad = useCallback(
     async (nombre) => {
       const datos = { nombre, municipioId };
@@ -156,14 +169,6 @@ export function useRegistroPaciente({ comunidadInicial = null, nombresInicial = 
       vigente = false;
     };
   }, [comunidadInicial]);
-
-  const setCampo = useCallback((id, valor) => {
-    setValores((anteriores) => ({ ...anteriores, [id]: valor }));
-    setErrores((anteriores) => {
-      if (!(id in anteriores)) return anteriores;
-      return Object.fromEntries(Object.entries(anteriores).filter(([clave]) => clave !== id));
-    });
-  }, []);
 
   const setDepartamento = useCallback((id) => {
     setDepartamentoId(id);

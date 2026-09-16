@@ -19,7 +19,7 @@ export const COLUMNAS_PACIENTE = [
   },
   { id: "numeroFicha", label: "Ficha", tipo: TIPOS_DE_PRESENTACION.TEXTO },
   { id: "nombreCompleto", label: "Nombre", tipo: TIPOS_DE_PRESENTACION.TEXTO, principal: true },
-  { id: "edad", label: "Edad", tipo: TIPOS_DE_PRESENTACION.NUMERO, sufijo: "anios" },
+  { id: "edad", label: "Edad", tipo: TIPOS_DE_PRESENTACION.NUMERO, sufijo: "años" },
   { id: "sexo", label: "Sexo", tipo: TIPOS_DE_PRESENTACION.TEXTO },
   { id: "comunidad", label: "Comunidad", tipo: TIPOS_DE_PRESENTACION.TEXTO },
   { id: "condiciones", label: "Condiciones", tipo: TIPOS_DE_PRESENTACION.CHIPS },
@@ -45,4 +45,11 @@ export const CAMPOS_FICHA_PACIENTE = [
   { id: "nombreResponsable", label: "Responsable", tipo: TIPOS_DE_PRESENTACION.TEXTO },
   { id: "parentescoResponsable", label: "Parentesco", tipo: TIPOS_DE_PRESENTACION.TEXTO },
   { id: "fechaBaja", label: "Fecha de baja", tipo: TIPOS_DE_PRESENTACION.FECHA },
+  // Las dos ultimas columnas de `pacientes` (00009) que no llegaban a ninguna pantalla. La API
+  // ya las traia -COLUMNAS_DEL_PACIENTE pide created_at y updated_at desde siempre- y la ficha
+  // simplemente no las dibujaba, asi que no habia forma de saber cuando se registro un
+  // expediente ni si alguien lo habia corregido despues. Con FECHA_HORA y no FECHA: son
+  // TIMESTAMPTZ, y dos correcciones de la misma tarde se leerian identicas sin la hora.
+  { id: "registradoEn", label: "Registrado el", tipo: TIPOS_DE_PRESENTACION.FECHA_HORA },
+  { id: "actualizadoEn", label: "Ultima actualizacion", tipo: TIPOS_DE_PRESENTACION.FECHA_HORA },
 ];

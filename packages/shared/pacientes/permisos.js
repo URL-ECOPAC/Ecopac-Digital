@@ -96,6 +96,32 @@ export function puedeCorregirTriaje(rol) {
 }
 
 /**
+ * Puede registrar una consulta medica.
+ *
+ * Espejo de la politica de INSERT de consultas (00033), "Medico registra consultas en su jornada
+ * asignada; administrador en cualquiera". La parte de "en su jornada asignada" NO se replica
+ * aqui: depende de la jornada concreta, no del rol, y quien la comprueba de verdad es la
+ * politica. Esta funcion decide unicamente si se ofrece el boton.
+ *
+ * Faltaba, y por eso la web no tenia por donde registrar una consulta: existian el hook
+ * (useRegistroConsulta) y la API (registrarConsulta), montados solo en ConsultaScreen de movil.
+ */
+export function puedeCrearConsulta(rol) {
+  return esAdministrador(rol) || rol === ROLES.MEDICO;
+}
+
+/**
+ * Puede emitir una receta.
+ *
+ * Espejo de la politica de INSERT de recetas (00033), "Medico emite recetas como si mismo;
+ * administrador cualquiera". El `medico_id = auth.uid()` de la politica tampoco se replica:
+ * useGeneracionReceta ya firma con el perfil de la sesion.
+ */
+export function puedeEmitirReceta(rol) {
+  return esAdministrador(rol) || rol === ROLES.MEDICO;
+}
+
+/**
  * Puede corregir una consulta ya guardada.
  *
  * Espejo de la politica de UPDATE de consultas (00033): a diferencia de puedeCorregirTriaje(),
@@ -170,6 +196,8 @@ export function permisosDePacientes(rol) {
     puedeVerHistorial: puedeVerHistorial(rol),
     puedeTomarTriaje: puedeTomarTriaje(rol),
     puedeCorregirTriaje: puedeCorregirTriaje(rol),
+    puedeCrearConsulta: puedeCrearConsulta(rol),
+    puedeEmitirReceta: puedeEmitirReceta(rol),
     puedeFusionarPacientes: puedeFusionarPacientes(rol),
     puedeVerCatalogoDiagnosticos: puedeVerCatalogoDiagnosticos(rol),
     puedeAdministrarDiagnosticos: puedeAdministrarDiagnosticos(rol),

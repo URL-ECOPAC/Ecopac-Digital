@@ -62,15 +62,15 @@ export default function BandejaValidacionPage({ usuarioId, rolUsuario }) {
       <div>
         <h2
           style={{
-            fontSize: "24px",
-            fontWeight: "800",
+            fontSize: "var(--texto-xl)",
+            fontWeight: "var(--peso-bold)",
             color: "#1e293b",
             margin: "0 0 4px 0",
           }}
         >
           Bandeja de Validación de Movimientos
         </h2>
-        <p style={{ fontSize: "13px", color: "#94a3b8", margin: 0 }}>
+        <p style={{ fontSize: "var(--texto-xs)", color: "#94a3b8", margin: 0 }}>
           {pendientes.length} Pendientes por revisar y autorizar
         </p>
       </div>
@@ -83,7 +83,7 @@ export default function BandejaValidacionPage({ usuarioId, rolUsuario }) {
             backgroundColor: "#fef2f2",
             border: "1px solid #fecaca",
             color: "#991b1b",
-            fontSize: "13px",
+            fontSize: "var(--texto-xs)",
           }}
         >
           {errorAccion}
@@ -105,7 +105,7 @@ export default function BandejaValidacionPage({ usuarioId, rolUsuario }) {
             style={{
               width: "100%",
               borderCollapse: "collapse",
-              fontSize: "13px",
+              fontSize: "var(--texto-xs)",
             }}
           >
             <thead>
@@ -118,8 +118,8 @@ export default function BandejaValidacionPage({ usuarioId, rolUsuario }) {
                 <th
                   style={{
                     padding: "14px 20px",
-                    fontSize: "11px",
-                    fontWeight: "700",
+                    fontSize: "var(--texto-xxs)",
+                    fontWeight: "var(--peso-bold)",
                     color: "#64748b",
                     letterSpacing: "0.5px",
                     textTransform: "uppercase",
@@ -131,8 +131,8 @@ export default function BandejaValidacionPage({ usuarioId, rolUsuario }) {
                 <th
                   style={{
                     padding: "14px 20px",
-                    fontSize: "11px",
-                    fontWeight: "700",
+                    fontSize: "var(--texto-xxs)",
+                    fontWeight: "var(--peso-bold)",
                     color: "#64748b",
                     letterSpacing: "0.5px",
                     textTransform: "uppercase",
@@ -144,8 +144,8 @@ export default function BandejaValidacionPage({ usuarioId, rolUsuario }) {
                 <th
                   style={{
                     padding: "14px 20px",
-                    fontSize: "11px",
-                    fontWeight: "700",
+                    fontSize: "var(--texto-xxs)",
+                    fontWeight: "var(--peso-bold)",
                     color: "#64748b",
                     letterSpacing: "0.5px",
                     textTransform: "uppercase",
@@ -157,8 +157,8 @@ export default function BandejaValidacionPage({ usuarioId, rolUsuario }) {
                 <th
                   style={{
                     padding: "14px 20px",
-                    fontSize: "11px",
-                    fontWeight: "700",
+                    fontSize: "var(--texto-xxs)",
+                    fontWeight: "var(--peso-bold)",
                     color: "#64748b",
                     letterSpacing: "0.5px",
                     textTransform: "uppercase",
@@ -170,8 +170,8 @@ export default function BandejaValidacionPage({ usuarioId, rolUsuario }) {
                 <th
                   style={{
                     padding: "14px 20px",
-                    fontSize: "11px",
-                    fontWeight: "700",
+                    fontSize: "var(--texto-xxs)",
+                    fontWeight: "var(--peso-bold)",
                     color: "#64748b",
                     letterSpacing: "0.5px",
                     textTransform: "uppercase",
@@ -183,8 +183,8 @@ export default function BandejaValidacionPage({ usuarioId, rolUsuario }) {
                 <th
                   style={{
                     padding: "14px 20px",
-                    fontSize: "11px",
-                    fontWeight: "700",
+                    fontSize: "var(--texto-xxs)",
+                    fontWeight: "var(--peso-bold)",
                     color: "#64748b",
                     letterSpacing: "0.5px",
                     textTransform: "uppercase",
@@ -197,8 +197,8 @@ export default function BandejaValidacionPage({ usuarioId, rolUsuario }) {
                   <th
                     style={{
                       padding: "14px 20px",
-                      fontSize: "11px",
-                      fontWeight: "700",
+                      fontSize: "var(--texto-xxs)",
+                      fontWeight: "var(--peso-bold)",
                       color: "#64748b",
                       letterSpacing: "0.5px",
                       textTransform: "uppercase",
@@ -219,7 +219,7 @@ export default function BandejaValidacionPage({ usuarioId, rolUsuario }) {
                       padding: "40px 20px",
                       textAlign: "center",
                       color: "#94a3b8",
-                      fontSize: "14px",
+                      fontSize: "var(--texto-sm)",
                     }}
                   >
                     Cargando movimientos pendientes...
@@ -233,7 +233,7 @@ export default function BandejaValidacionPage({ usuarioId, rolUsuario }) {
                       padding: "40px 20px",
                       textAlign: "center",
                       color: "#dc2626",
-                      fontSize: "14px",
+                      fontSize: "var(--texto-sm)",
                     }}
                   >
                     {error.mensaje}
@@ -247,7 +247,7 @@ export default function BandejaValidacionPage({ usuarioId, rolUsuario }) {
                       padding: "40px 20px",
                       textAlign: "center",
                       color: "#94a3b8",
-                      fontSize: "14px",
+                      fontSize: "var(--texto-sm)",
                     }}
                   >
                     No hay movimientos pendientes de validación
@@ -268,8 +268,8 @@ export default function BandejaValidacionPage({ usuarioId, rolUsuario }) {
                           display: "inline-block",
                           padding: "4px 12px",
                           borderRadius: "9999px",
-                          fontSize: "11px",
-                          fontWeight: "700",
+                          fontSize: "var(--texto-xxs)",
+                          fontWeight: "var(--peso-bold)",
                           textTransform: "uppercase",
                           backgroundColor: mov.tipo === "ingreso" ? "#d1fae5" : "#fef3c7",
                           color: mov.tipo === "ingreso" ? "#065f46" : "#78350f",
@@ -282,12 +282,12 @@ export default function BandejaValidacionPage({ usuarioId, rolUsuario }) {
 
                     {/* Medicamento / Lote */}
                     <td style={{ padding: "16px 20px", textAlign: "left" }}>
-                      <div style={{ fontWeight: "600", color: "#1e293b" }}>
+                      <div style={{ fontWeight: "var(--peso-semibold)", color: "#1e293b" }}>
                         {mov.lote?.medicamento?.nombre || "—"}
                       </div>
                       <div
                         style={{
-                          fontSize: "12px",
+                          fontSize: "var(--texto-xs)",
                           color: "#0284c7",
                           marginTop: "2px",
                         }}
@@ -296,7 +296,7 @@ export default function BandejaValidacionPage({ usuarioId, rolUsuario }) {
                       </div>
                       <div
                         style={{
-                          fontSize: "11px",
+                          fontSize: "var(--texto-xxs)",
                           color: "#94a3b8",
                           marginTop: "4px",
                           fontFamily: "var(--fuente-mono)",
@@ -311,8 +311,8 @@ export default function BandejaValidacionPage({ usuarioId, rolUsuario }) {
                       style={{
                         padding: "16px 20px",
                         textAlign: "center",
-                        fontSize: "18px",
-                        fontWeight: "800",
+                        fontSize: "var(--texto-md)",
+                        fontWeight: "var(--peso-bold)",
                         color: "#0f172a",
                       }}
                     >
@@ -324,7 +324,7 @@ export default function BandejaValidacionPage({ usuarioId, rolUsuario }) {
                       style={{
                         padding: "16px 20px",
                         color: "#475569",
-                        fontSize: "13px",
+                        fontSize: "var(--texto-xs)",
                       }}
                     >
                       {[mov.registradoPor?.nombres, mov.registradoPor?.apellidos]
@@ -333,7 +333,13 @@ export default function BandejaValidacionPage({ usuarioId, rolUsuario }) {
                     </td>
 
                     {/* Bodega */}
-                    <td style={{ padding: "16px 20px", color: "#475569", fontSize: "13px" }}>
+                    <td
+                      style={{
+                        padding: "16px 20px",
+                        color: "#475569",
+                        fontSize: "var(--texto-xs)",
+                      }}
+                    >
                       {mov.bodega?.nombre || "—"}
                     </td>
 
@@ -367,8 +373,8 @@ export default function BandejaValidacionPage({ usuarioId, rolUsuario }) {
                                 border: "none",
                                 backgroundColor: "#059669",
                                 color: "#ffffff",
-                                fontSize: "12px",
-                                fontWeight: "700",
+                                fontSize: "var(--texto-xs)",
+                                fontWeight: "var(--peso-bold)",
                                 cursor: procesandoId === mov.id ? "not-allowed" : "pointer",
                                 opacity: procesandoId === mov.id ? 0.6 : 1,
                                 transition: "all 0.15s ease",
@@ -387,8 +393,8 @@ export default function BandejaValidacionPage({ usuarioId, rolUsuario }) {
                                 border: "1px solid #ef4444",
                                 backgroundColor: "#ffffff",
                                 color: "#dc2626",
-                                fontSize: "12px",
-                                fontWeight: "700",
+                                fontSize: "var(--texto-xs)",
+                                fontWeight: "var(--peso-bold)",
                                 cursor: procesandoId === mov.id ? "not-allowed" : "pointer",
                                 opacity: procesandoId === mov.id ? 0.6 : 1,
                                 transition: "all 0.15s ease",

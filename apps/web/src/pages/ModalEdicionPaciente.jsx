@@ -1,32 +1,29 @@
 import { useState } from "react";
+import { Save, X } from "lucide-react";
 
-import { TIPOS_DE_CAMPO, useEdicionPaciente } from "@ecopac/shared";
+import { seccionesDePaciente, useEdicionPaciente } from "@ecopac/shared";
 
-import DateField from "../components/DateField";
 import Modal from "../components/Modal";
 import PrimaryButton from "../components/PrimaryButton";
+import SeccionDeFormulario from "../components/SeccionDeFormulario";
 import SecondaryButton from "../components/SecondaryButton";
-import Selector from "../components/Selector";
-import TextField from "../components/TextField";
 
-const TIPO_DE_INPUT = {
-  [TIPOS_DE_CAMPO.TEXTO]: "text",
-  [TIPOS_DE_CAMPO.TELEFONO]: "tel",
-};
+// Edicion de los datos de un paciente.
+//
+// El formulario ya no es una columna de once controles a ancho completo, uno debajo de otro:
+// eran once filas que obligaban a desplazar el modal entero, sin decir nada sobre que datos van
+// juntos. Ahora va en secciones -identificacion, ubicacion y contacto, datos clinicos,
+// responsable- y cada seccion en dos columnas, asi que "Nombres" y "Apellidos" quedan uno al
+// lado del otro, como en la ficha de papel que se sigue usando en jornada.
+//
+// El agrupamiento sale de seccionesDePaciente() (packages/shared/pacientes/campos.js), no de
+// aqui: que datos van juntos es una decision de negocio y la comparten las dos plataformas. El
+// dibujo de cada campo lo resuelve SeccionDeFormulario a partir del descriptor, que es lo que
+// quita de este archivo el `switch (campo.tipo)` que estaba copiado en diez modales.
 
 export default function ModalEdicionPaciente({ paciente, onClose, onGuardado }) {
-  const {
-    campos,
-    valores,
-    errores,
-    error,
-    enviando,
-    hayCambios,
-    setCampo,
-    descartar,
-    guardar,
-    catalogos,
-  } = useEdicionPaciente(paciente);
+  const { valores, errores, error, enviando, hayCambios, setCampo, descartar, guardar, catalogos } =
+    useEdicionPaciente(paciente);
   const [confirmandoSalida, setConfirmandoSalida] = useState(false);
 
   const intentarCerrar = () => {
@@ -48,15 +45,13 @@ export default function ModalEdicionPaciente({ paciente, onClose, onGuardado }) 
     if (resultado.ok) onGuardado?.(resultado.paciente);
   };
 
-  const opcionesDe = (campo) =>
-    campo.opciones ?? (campo.opcionesDesde ? (catalogos[campo.opcionesDesde] ?? []) : []);
-
   return (
     <>
       <Modal
         visible={!confirmandoSalida}
         onClose={intentarCerrar}
         title="Editar datos del paciente"
+        size="lg"
       >
         {error && (
           <div className="alert alert-danger" role="alert">
@@ -64,53 +59,32 @@ export default function ModalEdicionPaciente({ paciente, onClose, onGuardado }) 
           </div>
         )}
 
-        {campos.map((campo) => {
-          if (campo.tipo === TIPOS_DE_CAMPO.SELECT) {
-            const opciones = opcionesDe(campo);
-            return (
-              <Selector
-                key={campo.id}
-                label={campo.label}
-                value={valores[campo.id]}
-                options={opciones}
-                onSelect={(valor) => setCampo(campo.id, valor)}
-                error={errores[campo.id]}
-                disabled={enviando || opciones.length === 0}
-              />
-            );
-          }
+        {seccionesDePaciente().map((seccion) => (
+          <SeccionDeFormulario
+            key={seccion.id}
+            titulo={seccion.titulo}
+            descripcion={seccion.descripcion}
+            acento="var(--accent-pacientes)"
+            campos={seccion.campos}
+            valores={valores}
+            errores={errores}
+            catalogos={catalogos}
+            onChange={setCampo}
+            disabled={enviando}
+          />
+        ))}
 
-          if (campo.tipo === TIPOS_DE_CAMPO.FECHA) {
-            return (
-              <DateField
-                key={campo.id}
-                label={campo.label}
-                value={valores[campo.id] || null}
-                onChange={(valor) => setCampo(campo.id, valor)}
-                error={errores[campo.id]}
-                disabled={enviando}
-              />
-            );
-          }
-
-          return (
-            <TextField
-              key={campo.id}
-              label={campo.label}
-              type={TIPO_DE_INPUT[campo.tipo] ?? "text"}
-              maxLength={campo.validacion?.maxLongitud}
-              value={valores[campo.id] ?? ""}
-              onChange={(evento) => setCampo(campo.id, evento.target.value)}
-              error={errores[campo.id]}
-              disabled={enviando}
-            />
-          );
-        })}
-
-        <div className="d-flex justify-content-end gap-2 mt-3">
-          <SecondaryButton title="Cancelar" onClick={intentarCerrar} disabled={enviando} />
+        <div className="ec-form-pie">
+          <SecondaryButton
+            title="Cancelar"
+            variant="neutra"
+            icon={<X size={16} aria-hidden="true" />}
+            onClick={intentarCerrar}
+            disabled={enviando}
+          />
           <PrimaryButton
             title="Guardar cambios"
+            icon={<Save size={16} aria-hidden="true" />}
             onClick={guardarCambios}
             loading={enviando}
             disabled={!hayCambios}
@@ -123,10 +97,14 @@ export default function ModalEdicionPaciente({ paciente, onClose, onGuardado }) 
         onClose={() => setConfirmandoSalida(false)}
         title="Hay cambios sin guardar"
       >
-        <p>Si salis ahora se pierden los cambios que hiciste en la ficha del paciente.</p>
-        <div className="d-flex justify-content-end gap-2 mt-3">
-          <SecondaryButton title="Seguir editando" onClick={() => setConfirmandoSalida(false)} />
-          <PrimaryButton title="Salir sin guardar" onClick={salirSinGuardar} />
+        <p>Si salís ahora se pierden los cambios que hiciste en la ficha del paciente.</p>
+        <div className="ec-form-pie">
+          <SecondaryButton
+            title="Seguir editando"
+            variant="neutra"
+            onClick={() => setConfirmandoSalida(false)}
+          />
+          <PrimaryButton title="Salir sin guardar" variant="danger" onClick={salirSinGuardar} />
         </div>
       </Modal>
     </>

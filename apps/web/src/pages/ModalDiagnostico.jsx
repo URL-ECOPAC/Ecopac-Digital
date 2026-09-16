@@ -4,6 +4,7 @@ import Modal from "../components/Modal";
 import PrimaryButton from "../components/PrimaryButton";
 import SecondaryButton from "../components/SecondaryButton";
 import TextField from "../components/TextField";
+import { X } from "lucide-react";
 
 // Modal de alta y edicion del catalogo de diagnosticos (issue #639), montado desde
 // CatalogoDiagnosticosPage.jsx con estado local: no tiene ruta propia, mismo patron que
@@ -72,7 +73,12 @@ export default function ModalDiagnostico({
           )}
         </div>
         <div className="d-flex gap-2">
-          <SecondaryButton title="Cancelar" onClick={onClose} disabled={enviando} />
+          <SecondaryButton
+            title="Cancelar"
+            onClick={onClose}
+            disabled={enviando}
+            icon={<X size={16} aria-hidden="true" />}
+          />
           <PrimaryButton
             title={editando ? "Guardar cambios" : "Crear"}
             onClick={guardar}

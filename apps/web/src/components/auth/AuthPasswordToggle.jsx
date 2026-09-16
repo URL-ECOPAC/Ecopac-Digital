@@ -7,8 +7,8 @@ export default function AuthPasswordToggle({ visible, onToggle }) {
       onClick={onToggle}
       tabIndex={-1}
       style={{
-        fontSize: "12px",
-        fontWeight: "600",
+        fontSize: "var(--texto-xs)",
+        fontWeight: "var(--peso-semibold)",
         color: "#16A34A",
         background: "none",
         border: "none",

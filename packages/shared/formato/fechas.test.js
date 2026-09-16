@@ -115,7 +115,7 @@ describe("calcularEdad", () => {
     expect(calcularEdad("1990-08-18", "2026-08-18")).toEqual({
       anios: 36,
       meses: 0,
-      texto: "36 anos",
+      texto: "36 años",
     });
   });
 
@@ -136,12 +136,12 @@ describe("calcularEdad", () => {
 
   it("usa el singular cuando corresponde", () => {
     expect(calcularEdad("2026-07-18", "2026-08-18").texto).toBe("1 mes");
-    expect(calcularEdad("2025-08-18", "2026-08-18").texto).toBe("1 ano");
+    expect(calcularEdad("2025-08-18", "2026-08-18").texto).toBe("1 año");
   });
 
   it("suma los meses solo mientras la edad es menor de dos anios", () => {
-    expect(calcularEdad("2025-03-18", "2026-08-18").texto).toBe("1 ano 5 meses");
-    expect(calcularEdad("2024-03-18", "2026-08-18").texto).toBe("2 anos");
+    expect(calcularEdad("2025-03-18", "2026-08-18").texto).toBe("1 año 5 meses");
+    expect(calcularEdad("2024-03-18", "2026-08-18").texto).toBe("2 años");
   });
 
   it("devuelve null ante una fecha de nacimiento futura, que es un dato mal capturado", () => {

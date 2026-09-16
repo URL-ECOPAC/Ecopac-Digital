@@ -78,7 +78,7 @@ export default function CatalogoPrincipiosActivosPage() {
         {total === 1 ? "1 principio activo" : `${total} principios activos`}
       </p>
 
-      <div className="pac-tabla">
+      <div className="ec-tabla">
         <DataList
           columnas={COLUMNAS_PRINCIPIO_ACTIVO}
           datos={filas}

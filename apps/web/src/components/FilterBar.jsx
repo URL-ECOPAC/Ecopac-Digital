@@ -1,8 +1,99 @@
-import { SUBTIPOS_DE_RANGO, TIPOS_DE_FILTRO } from "@ecopac/shared";
+import { useState } from "react";
+
+import { grupoDeEdadDe, SUBTIPOS_DE_RANGO, TIPOS_DE_FILTRO } from "@ecopac/shared";
 import DateField from "./DateField";
 import NumberField from "./NumberField";
 import Selector from "./Selector";
 import TextField from "./TextField";
+
+/** Valor del desplegable cuando se quiere escribir un rango exacto. */
+const PERSONALIZADO = "personalizado";
+
+/** Los dos extremos de un rango numerico, en un solo marco. */
+function RangoNumerico({ campo, rango, onChange }) {
+  return (
+    <div className="ec-rango">
+      <NumberField
+        aria-label={`${campo.label}: desde`}
+        placeholder="min"
+        value={rango.min ?? null}
+        min={campo.min}
+        max={rango.max ?? campo.max}
+        onChange={(nuevo) => onChange({ ...rango, min: nuevo })}
+        style={{ marginBottom: 0, flex: "1 1 0" }}
+      />
+      <span className="ec-rango-separador" aria-hidden="true">
+        —
+      </span>
+      <NumberField
+        aria-label={`${campo.label}: hasta`}
+        placeholder="max"
+        value={rango.max ?? null}
+        min={rango.min ?? campo.min}
+        max={campo.max}
+        onChange={(nuevo) => onChange({ ...rango, max: nuevo })}
+        style={{ marginBottom: 0, flex: "1 1 0" }}
+      />
+      {campo.sufijo && <span className="ec-rango-sufijo">{campo.sufijo}</span>}
+    </div>
+  );
+}
+
+/**
+ * Rango numerico elegido por grupos, con salida a un rango exacto.
+ *
+ * El grupo activo se deriva del rango (grupoDeEdadDe), no se guarda: asi "Limpiar filtros" -que
+ * pone el rango en null desde fuera- devuelve el desplegable a "Todas" sin que este componente
+ * tenga que enterarse. Lo unico que si es estado propio es haber PEDIDO el modo personalizado,
+ * porque en ese momento todavia no hay ningun rango del que derivarlo.
+ */
+function RangoPorGrupos({ campo, rango, onChange }) {
+  const [personalizando, setPersonalizando] = useState(false);
+
+  const hayRango = rango.min !== undefined && rango.min !== null;
+  const grupoActivo = grupoDeEdadDe(rango);
+  const enPersonalizado = personalizando || (hayRango && !grupoActivo);
+
+  const opciones = [
+    ...campo.presets.map((grupo) => ({ value: grupo.id, label: grupo.label })),
+    { value: PERSONALIZADO, label: "Personalizado..." },
+  ];
+
+  const elegir = (valor) => {
+    if (valor === PERSONALIZADO) {
+      setPersonalizando(true);
+      return;
+    }
+
+    setPersonalizando(false);
+
+    if (valor === null) {
+      onChange(null);
+      return;
+    }
+
+    const grupo = campo.presets.find((preset) => preset.id === valor);
+    if (grupo) onChange({ min: grupo.min, max: grupo.max });
+  };
+
+  return (
+    <fieldset
+      className="border-0 p-0 m-0"
+      style={{ flex: enPersonalizado ? "0 1 300px" : "0 1 220px" }}
+    >
+      <legend className="form-label">{campo.label}</legend>
+      <Selector
+        aria-label={campo.label}
+        value={enPersonalizado ? PERSONALIZADO : grupoActivo}
+        options={opciones}
+        onSelect={elegir}
+        placeholder="Todas las edades"
+        style={{ marginBottom: enPersonalizado ? "var(--spacing-sm)" : 0 }}
+      />
+      {enPersonalizado && <RangoNumerico campo={campo} rango={rango} onChange={onChange} />}
+    </fieldset>
+  );
+}
 
 /**
  * Barra de filtros. Es deliberadamente tonta: no conoce los filtros de ningun modulo, solo
@@ -71,62 +162,63 @@ export default function FilterBar({ campos = [], valores = {}, onChange, catalog
           const rango = valor ?? {};
           const esFecha = campo.subtipo === SUBTIPOS_DE_RANGO.FECHA;
 
+          // Los dos extremos dentro de un solo marco, separados por un guion.
+          //
+          // Antes eran dos campos con su propia etiqueta ("Desde", "Hasta") debajo del legend
+          // del filtro: tres filas de alto contra las dos de cualquier otro filtro, lo que
+          // desalineaba la barra entera, y dos recuadros sueltos que no se leian como un solo
+          // control. Ahora el marco es del contenedor (.ec-rango en ui.css), los campos van sin
+          // borde por dentro y el "hasta" es el guion.
+          //
+          // Las etiquetas no se pierden: pasan a aria-label, que es lo que necesita un lector de
+          // pantalla, mientras que visualmente el patron "12 — 65" ya se entiende solo.
           if (esFecha) {
-            // Sin `label` en cada DateField a proposito: con label, cada campo agrega su propia
-            // fila ("Desde"/"Hasta") ademas de la del legend ("Fecha"), y el bloque completo
-            // termina una fila mas abajo que un filtro de un solo control (Estado, Comunidad).
-            // "Desde"/"Hasta" se pintan en linea, junto al control, para que este filtro quede en
-            // las mismas dos filas -etiqueta y control- que cualquier otro.
             return (
-              <fieldset key={campo.id} className="border-0 p-0 m-0" style={{ flex: "0 1 320px" }}>
-                <legend className="form-label fs-6">{campo.label}</legend>
-                <div className="d-flex align-items-center gap-2">
-                  <span className="small" style={{ color: "var(--color-text-muted)" }}>
-                    Desde
-                  </span>
+              <fieldset key={campo.id} className="border-0 p-0 m-0" style={{ flex: "0 1 300px" }}>
+                <legend className="form-label">{campo.label}</legend>
+                <div className="ec-rango">
                   <DateField
-                    aria-label="Desde"
+                    aria-label={`${campo.label}: desde`}
                     value={rango.min ?? null}
                     maxDate={rango.max ?? undefined}
                     onChange={(nuevo) => cambiar(campo.id, { ...rango, min: nuevo })}
-                    style={{ marginBottom: 0 }}
+                    style={{ marginBottom: 0, flex: "1 1 0" }}
                   />
-                  <span className="small" style={{ color: "var(--color-text-muted)" }}>
-                    Hasta
+                  <span className="ec-rango-separador" aria-hidden="true">
+                    —
                   </span>
                   <DateField
-                    aria-label="Hasta"
+                    aria-label={`${campo.label}: hasta`}
                     value={rango.max ?? null}
                     minDate={rango.min ?? undefined}
                     onChange={(nuevo) => cambiar(campo.id, { ...rango, max: nuevo })}
-                    style={{ marginBottom: 0 }}
+                    style={{ marginBottom: 0, flex: "1 1 0" }}
                   />
                 </div>
               </fieldset>
             );
           }
 
+          // Un rango numerico que declara `presets` se elige por grupo, no escribiendo dos
+          // numeros. Ver GRUPOS_DE_EDAD en packages/shared/pacientes/filtros.js: en jornada
+          // nadie busca "de 13 a 17", busca "adolescentes", y donde esta el corte entre un
+          // grupo y el siguiente es una decision clinica, no de quien filtra. "Personalizado"
+          // devuelve los dos campos de siempre para el caso raro.
+          if (campo.presets) {
+            return (
+              <RangoPorGrupos
+                key={campo.id}
+                campo={campo}
+                rango={rango}
+                onChange={(nuevo) => cambiar(campo.id, nuevo)}
+              />
+            );
+          }
+
           return (
-            <fieldset key={campo.id} className="border-0 p-0 m-0" style={{ flex: "0 1 240px" }}>
-              <legend className="form-label fs-6">{campo.label}</legend>
-              <div className="d-flex align-items-start gap-2">
-                <NumberField
-                  label="Desde"
-                  value={rango.min ?? null}
-                  min={campo.min}
-                  max={rango.max ?? campo.max}
-                  onChange={(nuevo) => cambiar(campo.id, { ...rango, min: nuevo })}
-                  style={{ marginBottom: 0 }}
-                />
-                <NumberField
-                  label="Hasta"
-                  value={rango.max ?? null}
-                  min={rango.min ?? campo.min}
-                  max={campo.max}
-                  onChange={(nuevo) => cambiar(campo.id, { ...rango, max: nuevo })}
-                  style={{ marginBottom: 0 }}
-                />
-              </div>
+            <fieldset key={campo.id} className="border-0 p-0 m-0" style={{ flex: "0 1 200px" }}>
+              <legend className="form-label">{campo.label}</legend>
+              <RangoNumerico campo={campo} rango={rango} onChange={(n) => cambiar(campo.id, n)} />
             </fieldset>
           );
         }

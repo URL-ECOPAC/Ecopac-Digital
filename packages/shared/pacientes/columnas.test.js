@@ -44,6 +44,11 @@ const IDS_DERIVADOS = new Set([
   "departamento",
   "municipio",
   "fechaBaja",
+  // Marcas de auditoria de la fila (00009). Las escribe la base -DEFAULT NOW() y el trigger
+  // trg_pacientes_updated_at-, no quien registra, asi que tampoco tienen contraparte en el
+  // formulario.
+  "registradoEn",
+  "actualizadoEn",
 ]);
 
 const IDS_DE_CAMPOS_REGISTRO = new Set(CAMPOS_REGISTRO_PACIENTE.map((campo) => campo.id));

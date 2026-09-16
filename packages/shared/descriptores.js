@@ -80,6 +80,12 @@ export const TIPOS_DE_PRESENTACION = {
   MONEDA: "moneda",
   /** Fecha corta, con formatearFechaCorta(); nunca con Intl desde la app. */
   FECHA: "fecha",
+  /**
+   * Instante, con formatearFechaConHora(). Para marcas de auditoria -cuando se registro o se
+   * corrigio un dato-, donde el dia solo no alcanza: dos correcciones de la misma tarde se
+   * leerian identicas.
+   */
+  FECHA_HORA: "fecha_hora",
   /** Telefono. */
   TELEFONO: "telefono",
   /** Iniciales en un circulo; `desde` indica de que columna sale el texto. */

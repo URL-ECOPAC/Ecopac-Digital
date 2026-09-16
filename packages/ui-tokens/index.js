@@ -168,6 +168,20 @@ export const shadows = {
       elevation: 3,
     },
   },
+  // Tercera elevacion, para lo que de verdad flota sobre la pantalla: un modal, un desplegable
+  // abierto, una tarjeta levantada por el puntero. Sigue siendo una sola capa y sigue siendo
+  // baja, por el mismo motivo que las otras dos -la interfaz se usa a plena luz-, pero necesita
+  // separarse visiblemente de una tarjeta en reposo, que ya usa `md`.
+  lg: {
+    web: "0 8px 24px rgba(16, 24, 40, 0.10)",
+    movil: {
+      shadowColor: "#101828",
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.1,
+      shadowRadius: 24,
+      elevation: 8,
+    },
+  },
 };
 
 export const typography = {
@@ -183,11 +197,18 @@ export const typography = {
   fontFamilyMonoWeb:
     'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace',
   sizes: {
+    // `xxs` es el rotulo de dato en versalitas -"REFERENCIAS", "POR VENCER"-, el unico texto del
+    // sistema por debajo del minimo de lectura. Se admite porque no es texto que se lea: es una
+    // etiqueta de una cifra que si esta en `xxl` justo debajo. Nunca para contenido.
+    xxs: 11,
     xs: 12,
     sm: 14,
     md: 16, // Tamaño base mínimo de lectura para personal en campo
     lg: 20,
     xl: 24,
+    // Cifra de una tarjeta de indicador. Existe porque las pantallas la venian escribiendo a
+    // mano ("28px" en InventarioPage, "1.75rem" en reportes.css) y cada una eligio la suya.
+    xxl: 28,
   },
   weights: {
     regular: "400",

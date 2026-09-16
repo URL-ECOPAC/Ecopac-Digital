@@ -1,9 +1,15 @@
-import { calcularEdad, formatearFechaCorta } from "../formato/fechas.js";
+import { calcularEdad, formatearFechaConHora, formatearFechaCorta } from "../formato/fechas.js";
 import { TIPOS_DE_PRESENTACION } from "../descriptores.js";
 import { OPCIONES_TIPO_SANGRE } from "./campos.js";
 import { OPCIONES_ESTADO_CONDICION } from "./condiciones.campos.js";
 import { ESTADOS_CONDICION_CRONICA } from "../enums.js";
-import { puedeEditarPaciente, puedeVerHistorial } from "./permisos.js";
+import {
+  puedeEditarPaciente,
+  puedeEmitirReceta,
+  puedeCrearConsulta,
+  puedeTomarTriaje,
+  puedeVerHistorial,
+} from "./permisos.js";
 
 export const PESTANIAS_FICHA_PACIENTE = Object.freeze([
   { id: "generales", label: "Datos generales", requiereDatosClinicos: false },
@@ -84,6 +90,12 @@ export function valoresDeFichaPaciente(paciente) {
     // La API ya traia fecha_baja pero la ficha no la dibujaba, asi que un paciente dado de baja
     // se veia igual que uno activo (issue #656).
     fechaBaja: paciente.fechaBaja ?? null,
+    // Mismo caso que fechaBaja: COLUMNAS_DEL_PACIENTE (api.js) pide created_at y updated_at
+    // desde siempre y nadie los pintaba. Se renombran a `registradoEn`/`actualizadoEn` para la
+    // vista -- la convencion de nombres de AGENTS.md usa el sufijo `_en` para la marca de tiempo
+    // de una accion -- sin tocar el nombre que devuelve la API.
+    registradoEn: paciente.createdAt ?? null,
+    actualizadoEn: paciente.updatedAt ?? null,
   };
 }
 
@@ -105,6 +117,11 @@ export function permisosDeFicha(rol) {
   return {
     puedeEditar: puedeEditarPaciente(rol),
     puedeVerDatosClinicos: puedeVerHistorial(rol),
+    // Los tres permisos de captura clinica. La ficha de web no los preguntaba porque no tenia
+    // nada que ofrecer: registrar triaje, consulta y receta solo existia en movil.
+    puedeTomarTriaje: puedeTomarTriaje(rol),
+    puedeCrearConsulta: puedeCrearConsulta(rol),
+    puedeEmitirReceta: puedeEmitirReceta(rol),
   };
 }
 
@@ -127,5 +144,6 @@ export function textoDeCampoDeFicha(campo, valores = {}) {
   const valor = valores[campo?.id];
   if (valor === null || valor === undefined || valor === "") return "—";
   if (campo?.tipo === TIPOS_DE_PRESENTACION.FECHA) return formatearFechaCorta(valor);
+  if (campo?.tipo === TIPOS_DE_PRESENTACION.FECHA_HORA) return formatearFechaConHora(valor);
   return String(valor);
 }

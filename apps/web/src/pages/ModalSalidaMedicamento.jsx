@@ -53,10 +53,17 @@ export function ModalSalidaMedicamento({ abierto, onClose, medicamentos = [], us
           }}
         >
           <div>
-            <h2 style={{ fontSize: "18px", fontWeight: "800", color: "#1e293b", margin: 0 }}>
+            <h2
+              style={{
+                fontSize: "var(--texto-md)",
+                fontWeight: "var(--peso-bold)",
+                color: "#1e293b",
+                margin: 0,
+              }}
+            >
               Registro de Salida de Medicamentos
             </h2>
-            <p style={{ fontSize: "12px", color: "#94a3b8", margin: "2px 0 0 0" }}>
+            <p style={{ fontSize: "var(--texto-xs)", color: "#94a3b8", margin: "2px 0 0 0" }}>
               Control de entrega, traslados y bajas con sugerencia FEFO
             </p>
           </div>
@@ -65,7 +72,7 @@ export function ModalSalidaMedicamento({ abierto, onClose, medicamentos = [], us
             style={{
               border: "none",
               background: "none",
-              fontSize: "20px",
+              fontSize: "var(--texto-lg)",
               color: "#94a3b8",
               cursor: "pointer",
             }}
@@ -83,7 +90,7 @@ export function ModalSalidaMedicamento({ abierto, onClose, medicamentos = [], us
                 backgroundColor: "#fef2f2",
                 color: "#991b1b",
                 borderRadius: "10px",
-                fontSize: "12px",
+                fontSize: "var(--texto-xs)",
                 marginBottom: "16px",
               }}
             >
@@ -97,8 +104,8 @@ export function ModalSalidaMedicamento({ abierto, onClose, medicamentos = [], us
               <label
                 style={{
                   display: "block",
-                  fontSize: "12px",
-                  fontWeight: "700",
+                  fontSize: "var(--texto-xs)",
+                  fontWeight: "var(--peso-bold)",
                   color: "#475569",
                   marginBottom: "6px",
                 }}
@@ -114,7 +121,7 @@ export function ModalSalidaMedicamento({ abierto, onClose, medicamentos = [], us
                   padding: "10px 14px",
                   borderRadius: "10px",
                   border: "1px solid #e2e8f0",
-                  fontSize: "13px",
+                  fontSize: "var(--texto-xs)",
                   backgroundColor: "#f8fafc",
                 }}
               >
@@ -131,8 +138,8 @@ export function ModalSalidaMedicamento({ abierto, onClose, medicamentos = [], us
               <label
                 style={{
                   display: "block",
-                  fontSize: "12px",
-                  fontWeight: "700",
+                  fontSize: "var(--texto-xs)",
+                  fontWeight: "var(--peso-bold)",
                   color: "#475569",
                   marginBottom: "6px",
                 }}
@@ -148,7 +155,7 @@ export function ModalSalidaMedicamento({ abierto, onClose, medicamentos = [], us
                   padding: "10px 14px",
                   borderRadius: "10px",
                   border: "1px solid #e2e8f0",
-                  fontSize: "13px",
+                  fontSize: "var(--texto-xs)",
                   backgroundColor: "#f8fafc",
                 }}
               >
@@ -166,8 +173,8 @@ export function ModalSalidaMedicamento({ abierto, onClose, medicamentos = [], us
               <label
                 style={{
                   display: "block",
-                  fontSize: "12px",
-                  fontWeight: "700",
+                  fontSize: "var(--texto-xs)",
+                  fontWeight: "var(--peso-bold)",
                   color: "#475569",
                   marginBottom: "6px",
                 }}
@@ -186,7 +193,7 @@ export function ModalSalidaMedicamento({ abierto, onClose, medicamentos = [], us
                   padding: "10px 14px",
                   borderRadius: "10px",
                   border: "1px solid #e2e8f0",
-                  fontSize: "13px",
+                  fontSize: "var(--texto-xs)",
                   backgroundColor: "#f8fafc",
                 }}
               >
@@ -205,8 +212,8 @@ export function ModalSalidaMedicamento({ abierto, onClose, medicamentos = [], us
               <label
                 style={{
                   display: "block",
-                  fontSize: "12px",
-                  fontWeight: "700",
+                  fontSize: "var(--texto-xs)",
+                  fontWeight: "var(--peso-bold)",
                   color: "#475569",
                   marginBottom: "6px",
                 }}
@@ -225,7 +232,7 @@ export function ModalSalidaMedicamento({ abierto, onClose, medicamentos = [], us
                   padding: "10px 14px",
                   borderRadius: "10px",
                   border: "1px solid #e2e8f0",
-                  fontSize: "13px",
+                  fontSize: "var(--texto-xs)",
                   backgroundColor: "#f8fafc",
                   boxSizing: "border-box",
                 }}
@@ -253,8 +260,8 @@ export function ModalSalidaMedicamento({ abierto, onClose, medicamentos = [], us
                 border: "1px solid #e2e8f0",
                 backgroundColor: "#ffffff",
                 color: "#64748b",
-                fontSize: "13px",
-                fontWeight: "700",
+                fontSize: "var(--texto-xs)",
+                fontWeight: "var(--peso-bold)",
                 cursor: "pointer",
               }}
             >
@@ -269,8 +276,8 @@ export function ModalSalidaMedicamento({ abierto, onClose, medicamentos = [], us
                 border: "none",
                 backgroundColor: "#2563eb",
                 color: "#ffffff",
-                fontSize: "13px",
-                fontWeight: "700",
+                fontSize: "var(--texto-xs)",
+                fontWeight: "var(--peso-bold)",
                 cursor: "pointer",
               }}
             >

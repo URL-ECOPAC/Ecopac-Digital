@@ -1,12 +1,12 @@
 import { useState } from "react";
-import { Col, ProgressBar, Row } from "react-bootstrap";
+import { ProgressBar } from "react-bootstrap";
 import {
   formatearFechaCorta,
   formatearMoneda,
   useDetalleProyectoPresupuesto,
 } from "@ecopac/shared";
 
-import { Card, EmptyState, ErrorState, LoadingState, Modal } from "../components";
+import { Card, EmptyState, ErrorState, LoadingState, Modal, StatCard } from "../components";
 
 // Pestaña "Resumen" de PresupuestosPage.jsx (issue #301). Los datos, el calculo de porcentaje y
 // la combinacion proyecto+presupuesto salen de useEjecucionPresupuestal()/
@@ -25,26 +25,6 @@ function variantePorPorcentaje(porcentaje) {
   if (porcentaje > 100) return "danger";
   if (porcentaje >= 90) return "warning";
   return "primary";
-}
-
-function TarjetaKpi({ label, valor, subtitulo }) {
-  return (
-    <Col sm={6} lg={3}>
-      <Card style={{ height: "100%" }}>
-        <div className="small text-uppercase fw-bold" style={{ color: "var(--color-text-muted)" }}>
-          {label}
-        </div>
-        <div className="fs-3 fw-bold" style={{ color: "var(--color-text)" }}>
-          {formatearMoneda(valor)}
-        </div>
-        {subtitulo && (
-          <div className="small" style={{ color: "var(--color-text-muted)" }}>
-            {subtitulo}
-          </div>
-        )}
-      </Card>
-    </Col>
-  );
 }
 
 function BarraDePresupuesto({ porcentaje }) {
@@ -134,16 +114,38 @@ export default function PanelEjecucionPresupuestal({
 
   return (
     <div className="d-flex flex-column gap-4">
-      <Row className="g-3">
-        <TarjetaKpi label="Presupuesto total" valor={kpis.asignado} />
-        <TarjetaKpi
-          label="Gastado"
-          valor={kpis.gastado}
-          subtitulo={`${Math.round(kpis.porcentaje)}% ejecutado`}
+      {/* StatCard, la misma tarjeta de indicador que usa inventario. Antes esto era un
+        <Card> con un `fs-3 fw-bold` escrito a mano dentro: la misma idea, dibujada de otra
+        forma y con otra escala tipografica, que es justo lo que hacia que presupuestos se
+        viera de otra familia. Un importe no es un numero corto, asi que va como texto: al
+        tamano de una cifra, "Q 8,000.00" se desborda en una laptop pequena. */}
+      <div className="ec-kpis">
+        <StatCard
+          label="Presupuesto total"
+          value={formatearMoneda(kpis.asignado)}
+          accent="var(--accent-presupuestos)"
+          esTexto
         />
-        <TarjetaKpi label="Disponible" valor={kpis.disponible} />
-        <TarjetaKpi label="En aprobacion" valor={kpis.pendiente} />
-      </Row>
+        <StatCard
+          label="Gastado"
+          value={formatearMoneda(kpis.gastado)}
+          caption={`${Math.round(kpis.porcentaje)}% ejecutado`}
+          accent="var(--color-warning)"
+          esTexto
+        />
+        <StatCard
+          label="Disponible"
+          value={formatearMoneda(kpis.disponible)}
+          accent="var(--color-success)"
+          esTexto
+        />
+        <StatCard
+          label="En aprobacion"
+          value={formatearMoneda(kpis.pendiente)}
+          accent="var(--color-info)"
+          esTexto
+        />
+      </div>
 
       {proyectos.length === 0 ? (
         <EmptyState message="No hay proyectos registrados." />

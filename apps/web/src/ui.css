@@ -1,0 +1,873 @@
+/* Lenguaje visual de la web.
+ *
+ * POR QUE EXISTE ESTE ARCHIVO
+ *
+ * Cada modulo se fue vistiendo por su cuenta. El resultado, mirando las pantallas una al lado de
+ * la otra: cuatro formas distintas de dibujar un boton (el primario de react-bootstrap, un
+ * `btn btn-link` gris de una fila de tabla, un `<button>` con estilos en linea en inventario y
+ * un `.btn-link` de 13px en pacientes), tres escalas tipograficas para el mismo rotulo de dato
+ * (11px en inventario, 0.875rem en reportes, 0.6875rem en pacientes), dos familias de tarjeta
+ * (la de inventario con su cifra grande y su acento de color; la de donaciones, plana) y unas
+ * pestanas que en pacientes son pastillas y en presupuestos son las de Bootstrap.
+ *
+ * pacientes.css ya habia resuelto casi todo eso, pero colgado de `.modulo-pacientes` para no
+ * tocar al resto: la decision correcta en su momento, y la razon por la que hoy solo un modulo
+ * se ve bien. Este archivo toma esas mismas reglas, las sube al ambito global y las escribe
+ * contra los tokens; pacientes.css se queda unicamente con lo que de verdad es suyo.
+ *
+ * NINGUN VALOR LITERAL. Colores, radios, sombras, espaciado, tamanos de letra y pesos salen de
+ * las custom properties que publica src/theme.js desde @ecopac/ui-tokens. Si hace falta un valor
+ * que no existe, se agrega primero al paquete de tokens (AGENTS.md).
+ */
+
+/* ==========================================================================
+   1. Tipografia base
+   ========================================================================== */
+
+/* Bootstrap escala sus encabezados con su propia progresion; aqui se cuelgan de los tokens para
+   que h1..h6 y el cuerpo compartan una sola escala con las cifras y los rotulos de mas abajo. */
+body {
+  font-family: var(--fuente-base);
+  font-size: var(--texto-md);
+}
+
+h1,
+.h1 {
+  font-size: var(--texto-xl);
+  font-weight: var(--peso-bold);
+  letter-spacing: -0.015em;
+}
+
+h2,
+.h2 {
+  font-size: var(--texto-lg);
+  font-weight: var(--peso-semibold);
+  letter-spacing: -0.01em;
+}
+
+h3,
+.h3,
+h4,
+.h4,
+h5,
+.h5,
+h6,
+.h6 {
+  font-size: var(--texto-md);
+  font-weight: var(--peso-semibold);
+}
+
+/* Rotulo de dato en versalitas. Es el mismo elemento que pacientes.css llamaba `.pac-rotulo`,
+   que sigue existiendo como alias para no reescribir ese modulo entero de golpe. */
+.ec-rotulo {
+  color: var(--color-text-muted);
+  display: block;
+  font-size: var(--texto-xxs);
+  font-weight: var(--peso-medium);
+  letter-spacing: 0.08em;
+  line-height: 1.4;
+  text-transform: uppercase;
+}
+
+/* Identificador que se lee caracter por caracter: lote, DPI, folio, correlativo. Nunca un
+   rotulo ni texto corrido. */
+.ec-mono {
+  font-family: var(--fuente-mono);
+  font-size: var(--texto-xs);
+}
+
+/* ==========================================================================
+   2. Botones
+   ========================================================================== */
+
+/* Base comun a todas las variantes: es lo que hace que un boton se reconozca como boton en
+   cualquier pantalla, sin importar quien lo dibuje. */
+.btn {
+  --bs-btn-border-radius: var(--radio-md);
+  --bs-btn-font-weight: var(--peso-semibold);
+  --bs-btn-padding-x: var(--spacing-md);
+  --bs-btn-padding-y: 0.5rem;
+  --bs-btn-font-size: var(--texto-sm);
+  border-width: 1px;
+  letter-spacing: 0.01em;
+  line-height: 1.4;
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease,
+    box-shadow 140ms ease,
+    transform 140ms ease;
+}
+
+/* El puntero levanta el boton un pixel y le agrega elevacion. Es el unico movimiento de la
+   interfaz y se apaga entero mas abajo para quien pide menos animacion. */
+.btn:not(:disabled):hover {
+  box-shadow: var(--sombra-md);
+  transform: translateY(-1px);
+}
+
+.btn:not(:disabled):active {
+  box-shadow: none;
+  transform: translateY(0);
+}
+
+/* Un anillo y no el resplandor por defecto de Bootstrap, que en el primario queda azul: el
+   foco tiene que verse igual de claro con teclado que con raton, y a plena luz. */
+.btn:focus-visible {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 35%, transparent);
+  outline: none;
+}
+
+.btn:disabled,
+.btn.disabled {
+  box-shadow: none;
+  opacity: 0.55;
+  transform: none;
+}
+
+/* El primario lleva un degradado muy corto -dos pasos contiguos de la misma familia- en vez de
+   un plano. Es el mismo recurso que el banner del prototipo y lo que separa el boton de accion
+   de todo lo demas sin subir el contraste. */
+.btn-primary {
+  --bs-btn-bg: var(--color-primary);
+  --bs-btn-border-color: var(--color-primary);
+  --bs-btn-hover-bg: var(--color-primary-dark);
+  --bs-btn-hover-border-color: var(--color-primary-dark);
+  --bs-btn-active-bg: var(--color-primary-dark);
+  --bs-btn-active-border-color: var(--color-primary-dark);
+  --bs-btn-disabled-bg: var(--color-secondary);
+  --bs-btn-disabled-border-color: var(--color-secondary);
+  background-image: linear-gradient(
+    180deg,
+    var(--color-primary) 0%,
+    var(--color-primary-light) 100%
+  );
+}
+
+.btn-primary:not(:disabled):hover,
+.btn-primary:not(:disabled):active {
+  background-image: linear-gradient(
+    180deg,
+    var(--color-primary-light) 0%,
+    var(--color-primary-dark) 100%
+  );
+}
+
+.btn-primary:disabled,
+.btn-primary.disabled {
+  background-image: none;
+}
+
+/* Secundario: contorno, no relleno. La jerarquia la da el peso visual, no el tamano, asi que
+   ocupa exactamente lo mismo que el primario y puede ir a su lado sin desalinear la fila. */
+.btn-outline-primary {
+  --bs-btn-color: var(--color-primary);
+  --bs-btn-border-color: color-mix(in srgb, var(--color-primary) 45%, var(--color-surface));
+  --bs-btn-bg: var(--color-surface);
+  --bs-btn-hover-bg: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface));
+  --bs-btn-hover-color: var(--color-primary-dark);
+  --bs-btn-hover-border-color: var(--color-primary);
+  --bs-btn-active-bg: color-mix(in srgb, var(--color-primary) 16%, var(--color-surface));
+  --bs-btn-active-color: var(--color-primary-dark);
+  --bs-btn-active-border-color: var(--color-primary);
+}
+
+.btn-outline-secondary {
+  --bs-btn-color: var(--color-text);
+  --bs-btn-border-color: var(--color-border);
+  --bs-btn-bg: var(--color-surface);
+  --bs-btn-hover-bg: var(--color-background);
+  --bs-btn-hover-color: var(--color-text);
+  --bs-btn-hover-border-color: var(--color-text-muted);
+}
+
+.btn-outline-danger {
+  --bs-btn-color: var(--color-danger);
+  --bs-btn-border-color: color-mix(in srgb, var(--color-danger) 45%, var(--color-surface));
+  --bs-btn-bg: var(--color-surface);
+  --bs-btn-hover-bg: var(--color-danger);
+  --bs-btn-hover-border-color: var(--color-danger);
+}
+
+.btn-secondary {
+  --bs-btn-bg: var(--color-secondary);
+  --bs-btn-border-color: var(--color-secondary);
+}
+
+.btn-danger {
+  --bs-btn-bg: var(--color-danger);
+  --bs-btn-border-color: var(--color-danger);
+  --bs-btn-hover-bg: color-mix(in srgb, var(--color-danger) 85%, black);
+  --bs-btn-hover-border-color: color-mix(in srgb, var(--color-danger) 85%, black);
+}
+
+.btn-warning {
+  --bs-btn-bg: var(--color-warning);
+  --bs-btn-border-color: var(--color-warning);
+  --bs-btn-color: var(--color-surface);
+  --bs-btn-hover-color: var(--color-surface);
+  --bs-btn-hover-bg: color-mix(in srgb, var(--color-warning) 85%, black);
+  --bs-btn-hover-border-color: color-mix(in srgb, var(--color-warning) 85%, black);
+}
+
+.btn-success {
+  --bs-btn-bg: var(--color-success);
+  --bs-btn-border-color: var(--color-success);
+}
+
+/* Los tamanos cambian el AIRE, no la letra.
+ *
+ * `.btn-sm` bajaba el texto a --texto-xs, asi que el mismo boton se leia mas pequeno dentro de
+ * una fila de tabla que en una cabecera: de ahi venia la sensacion de que cada boton usaba una
+ * letra distinta. Mismo tamano y mismo peso en las tres escalas; lo que se ajusta es el relleno
+ * y el radio, que es lo que de verdad hace que un boton ocupe menos. */
+.btn-sm {
+  --bs-btn-padding-x: var(--spacing-sm);
+  --bs-btn-padding-y: 0.25rem;
+  --bs-btn-font-size: var(--texto-sm);
+  --bs-btn-border-radius: var(--radio-sm);
+}
+
+.btn-lg {
+  --bs-btn-padding-x: var(--spacing-lg);
+  --bs-btn-padding-y: 0.7rem;
+  --bs-btn-font-size: var(--texto-sm);
+  --bs-btn-border-radius: var(--radio-lg);
+}
+
+/* Un boton con icono: el icono se alinea con la linea base del texto y no la desplaza. */
+.btn > svg {
+  flex: 0 0 auto;
+  vertical-align: -0.15em;
+}
+
+.btn-icono {
+  align-items: center;
+  display: inline-flex;
+  gap: var(--spacing-xs);
+  justify-content: center;
+}
+
+/* Accion terciaria: la de "Ver detalle" o "Imprimir" dentro de una tarjeta. Era `btn btn-link`
+   suelto, que Bootstrap dibuja como un enlace azul subrayado -ni del color de la marca ni
+   reconocible como accion-. Aqui es una pastilla discreta que se rellena al pasar por encima. */
+.btn-link,
+.btn-link.btn-sm {
+  --bs-btn-color: var(--color-primary);
+  --bs-btn-hover-color: var(--color-primary-dark);
+  --bs-btn-border-radius: var(--radio-pill);
+  /* Tambien en la escala del sistema, tambien semibold: una accion terciaria es mas discreta
+     por su fondo y su color, no por tener la letra mas pequena que la del boton de al lado. */
+  --bs-btn-font-size: var(--texto-sm);
+  --bs-btn-font-weight: var(--peso-semibold);
+  --bs-btn-padding-x: var(--spacing-sm);
+  --bs-btn-padding-y: 0.25rem;
+  text-decoration: none;
+}
+
+.btn-link:not(:disabled):hover {
+  background-color: color-mix(in srgb, var(--color-primary) 10%, transparent);
+  box-shadow: none;
+  text-decoration: none;
+  transform: none;
+}
+
+.btn-link.text-danger {
+  --bs-btn-color: var(--color-danger);
+  --bs-btn-hover-color: var(--color-danger);
+}
+
+.btn-link.text-danger:not(:disabled):hover {
+  background-color: color-mix(in srgb, var(--color-danger) 10%, transparent);
+}
+
+/* Fila de acciones de una cabecera o de un pie de modal. */
+.ec-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+}
+
+.ec-acciones--fin {
+  justify-content: flex-end;
+}
+
+/* ==========================================================================
+   3. Formularios
+   ========================================================================== */
+
+/* La etiqueta de un campo es el mismo elemento que el rotulo de un dato: versalitas pequenas,
+   apagadas. Es lo que hace que un formulario y una ficha se lean como la misma interfaz. */
+.form-label,
+.col-form-label {
+  color: var(--color-text-muted);
+  font-size: var(--texto-xxs);
+  font-weight: var(--peso-medium);
+  letter-spacing: 0.08em;
+  margin-bottom: 0.35rem;
+  text-transform: uppercase;
+}
+
+/* `legend.form-label` viene con .fs-6 desde FilterBar, y Bootstrap declara esa utilidad con
+   !important: sin igualarlo, el rotulo de un filtro de rango se dibuja al doble que los demas. */
+legend.form-label {
+  font-size: var(--texto-xxs) !important;
+}
+
+.form-control,
+.form-select {
+  background-color: var(--color-surface);
+  border-color: var(--color-border);
+  border-radius: var(--radio-md);
+  color: var(--color-text);
+  font-size: var(--texto-sm);
+  padding: 0.5rem var(--spacing-md);
+  transition:
+    border-color 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.form-control::placeholder {
+  color: var(--color-text-muted);
+  opacity: 0.8;
+}
+
+.form-control:hover:not(:disabled):not(:focus),
+.form-select:hover:not(:disabled):not(:focus) {
+  border-color: color-mix(in srgb, var(--color-primary) 35%, var(--color-border));
+}
+
+/* Mismo anillo que el foco de un boton: una sola forma de decir "aqui esta el teclado". */
+.form-control:focus,
+.form-select:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 18%, transparent);
+}
+
+.form-control:disabled,
+.form-select:disabled {
+  background-color: var(--color-background);
+  color: var(--color-text-muted);
+}
+
+.form-control.is-invalid,
+.form-select.is-invalid {
+  border-color: var(--color-danger);
+}
+
+.form-control.is-invalid:focus,
+.form-select.is-invalid:focus {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-danger) 18%, transparent);
+}
+
+.invalid-feedback {
+  color: var(--color-danger);
+  font-size: var(--texto-xs);
+}
+
+.form-text {
+  color: var(--color-text-muted);
+  font-size: var(--texto-xs);
+}
+
+.input-group-text {
+  background-color: var(--color-background);
+  border-color: var(--color-border);
+  border-radius: var(--radio-md);
+  color: var(--color-text-muted);
+  font-size: var(--texto-xs);
+}
+
+textarea.form-control {
+  line-height: 1.5;
+  min-height: 5rem;
+  padding-block: 0.6rem;
+}
+
+/* --------------------------------------------------------------------------
+   Secciones de formulario
+
+   Un formulario largo -once campos en la ficha del paciente, ocho en la consulta medica- era una
+   columna de controles a ancho completo uno debajo de otro: habia que desplazar el modal entero
+   para verlo y no decia nada sobre que datos van juntos. Agrupado en secciones de dos columnas
+   cabe de una vez, y los campos que se leen juntos -nombres y apellidos, departamento y
+   municipio- quedan uno al lado del otro.
+   -------------------------------------------------------------------------- */
+
+.ec-form-seccion {
+  background-color: color-mix(
+    in srgb,
+    var(--ec-acento, var(--color-primary)) 3%,
+    var(--color-surface)
+  );
+  border: 1px solid var(--color-border);
+  border-radius: var(--radio-lg);
+  margin-bottom: var(--spacing-md);
+  padding: var(--spacing-md) var(--spacing-lg) var(--spacing-sm);
+}
+
+/* La barra del titulo lleva el color del modulo. Es lo unico que tine la seccion: el fondo es un
+   3% del mismo color, apenas lo justo para separarla del blanco del modal sin bajarle el
+   contraste a ningun campo. */
+.ec-form-seccion-cabecera {
+  border-left: 3px solid var(--ec-acento, var(--color-primary));
+  margin-bottom: var(--spacing-md);
+  padding-left: var(--spacing-sm);
+}
+
+.ec-form-seccion-titulo {
+  color: var(--color-text);
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-semibold);
+  letter-spacing: -0.005em;
+  margin: 0;
+}
+
+.ec-form-seccion-descripcion {
+  color: var(--color-text-muted);
+  font-size: var(--texto-xs);
+  margin: 0.15rem 0 0;
+}
+
+/* Rejilla de campos. `auto-fit` y no columnas fijas: el mismo formulario cae a una sola columna
+   en una laptop pequena o en un modal angosto, sin una media query por pantalla. */
+.ec-form-grid {
+  display: grid;
+  gap: 0 var(--spacing-md);
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.ec-form-grid--ancho {
+  grid-column: 1 / -1;
+}
+
+/* Nota bajo un campo: la edad calculada debajo de la fecha de nacimiento, por ejemplo. */
+.ec-campo-nota {
+  color: var(--color-text-muted);
+  font-size: var(--texto-xs);
+  margin: -0.65rem 0 var(--spacing-md);
+}
+
+/* Pie de un formulario o de un modal: las acciones, siempre a la derecha y siempre con la misma
+   separacion de lo de arriba. Sustituye a los `d-flex justify-content-end gap-2 mt-3` que cada
+   modal escribia a mano, casi iguales pero no del todo. */
+.ec-form-pie {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+  justify-content: flex-end;
+  margin-top: var(--spacing-lg);
+}
+
+/* Numero de ficha en la confirmacion de alta: es lo que se copia a mano a la ficha de papel, asi
+   que va grande y en monoespaciada, que es como se leen los identificadores en este sistema. */
+.ec-numero-ficha {
+  color: var(--color-primary);
+  font-family: var(--fuente-mono);
+  font-size: var(--texto-xxl);
+  font-weight: var(--peso-bold);
+  letter-spacing: 0.02em;
+  margin: 0 0 var(--spacing-md);
+}
+
+/* Filtro de rango ("Rango de edad", "Fecha"): los dos extremos con un guion entre ellos, en vez
+   de dos campos etiquetados uno debajo del otro que ocupaban el doble de alto que el resto de
+   los filtros y no se leian como un solo control. */
+.ec-rango {
+  align-items: center;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radio-md);
+  display: flex;
+  gap: var(--spacing-xs);
+  padding: 0.15rem var(--spacing-sm);
+  transition:
+    border-color 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.ec-rango:focus-within {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 18%, transparent);
+}
+
+/* Los dos campos de adentro pierden su marco: el marco es el del contenedor. */
+.ec-rango .form-control {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  min-width: 0;
+  padding: 0.35rem 0.25rem;
+  text-align: center;
+}
+
+.ec-rango .form-control:focus {
+  box-shadow: none;
+}
+
+/* Le quita las flechas al input numerico: dentro de este control estorban, y la edad o el peso
+   se escriben, no se recorren de uno en uno. */
+.ec-rango input[type="number"] {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+.ec-rango input[type="number"]::-webkit-outer-spin-button,
+.ec-rango input[type="number"]::-webkit-inner-spin-button {
+  appearance: none;
+  margin: 0;
+}
+
+.ec-rango-separador {
+  color: var(--color-text-muted);
+  flex: 0 0 auto;
+  font-size: var(--texto-sm);
+  user-select: none;
+}
+
+.ec-rango-sufijo {
+  color: var(--color-text-muted);
+  flex: 0 0 auto;
+  font-size: var(--texto-xs);
+  padding-right: 0.15rem;
+  white-space: nowrap;
+}
+
+/* ==========================================================================
+   4. Tarjetas
+   ========================================================================== */
+
+.card {
+  --bs-card-border-color: var(--color-border);
+  --bs-card-border-radius: var(--radio-lg);
+  --bs-card-inner-border-radius: var(--radio-lg);
+  --bs-card-bg: var(--color-surface);
+  --bs-card-spacer-x: var(--spacing-md);
+  --bs-card-spacer-y: var(--spacing-md);
+  box-shadow: var(--sombra-sm);
+}
+
+.card[role="button"] {
+  transition:
+    border-color 140ms ease,
+    box-shadow 140ms ease,
+    transform 140ms ease;
+}
+
+.card[role="button"]:hover,
+.card[role="button"]:focus-visible {
+  border-color: color-mix(in srgb, var(--color-primary) 40%, var(--color-border));
+  box-shadow: var(--sombra-md);
+  transform: translateY(-2px);
+}
+
+.card[role="button"]:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 30%, transparent);
+}
+
+.card-title {
+  color: var(--color-text);
+  font-size: var(--texto-md);
+  font-weight: var(--peso-semibold);
+}
+
+.ec-card-subtitulo {
+  color: var(--color-text-muted);
+  font-size: var(--texto-sm);
+  margin: 0;
+}
+
+/* Cinta de acento superior. El color lo pone quien la usa con --ec-acento, que sale de
+   --accent-<modulo> o de un color de estado; nunca se escribe aqui. */
+.ec-card--acento {
+  border-top: 3px solid var(--ec-acento, var(--color-primary));
+}
+
+/* --------------------------------------------------------------------------
+   Tarjeta de indicador (KPI)
+
+   Es la tarjeta del catalogo de inventario -rotulo en versalitas del color del indicador, cifra
+   grande debajo, pie apagado- que el resto de los modulos no tenia. Ahi estaba escrita con
+   hexadecimales en linea; aqui sale entera de los tokens y la usan inventario, donaciones,
+   presupuestos, reportes y el inicio.
+   -------------------------------------------------------------------------- */
+
+.ec-kpis {
+  display: grid;
+  gap: var(--spacing-md);
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  margin-bottom: var(--spacing-lg);
+}
+
+.ec-kpi {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radio-lg);
+  box-shadow: var(--sombra-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  overflow: hidden;
+  padding: var(--spacing-md) var(--spacing-lg);
+  position: relative;
+}
+
+/* Un velo del color del indicador, muy tenue, detras de la cifra. Da el matiz de la tarjeta sin
+   teñir el texto ni bajarle el contraste. */
+.ec-kpi::after {
+  background: radial-gradient(
+    circle at 100% 0%,
+    color-mix(in srgb, var(--ec-acento, var(--color-primary)) 14%, transparent) 0%,
+    transparent 70%
+  );
+  content: "";
+  inset: 0;
+  pointer-events: none;
+  position: absolute;
+}
+
+.ec-kpi > * {
+  position: relative;
+  z-index: 1;
+}
+
+.ec-kpi-etiqueta {
+  color: var(--ec-acento, var(--color-primary));
+  font-size: var(--texto-xxs);
+  font-weight: var(--peso-bold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.ec-kpi-valor {
+  color: var(--color-text);
+  font-size: var(--texto-xxl);
+  font-weight: var(--peso-bold);
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  margin: 0;
+}
+
+/* Un valor que no es un numero -"Sin costo registrado"- no puede ir al tamano de una cifra: se
+   parte en tres lineas y desalinea la fila entera de tarjetas. */
+.ec-kpi-valor--texto {
+  font-size: var(--texto-md);
+  font-weight: var(--peso-semibold);
+  line-height: 1.3;
+}
+
+.ec-kpi-pie {
+  color: var(--color-text-muted);
+  font-size: var(--texto-xs);
+}
+
+.ec-kpi[role="button"] {
+  cursor: pointer;
+  transition:
+    box-shadow 140ms ease,
+    transform 140ms ease;
+}
+
+.ec-kpi[role="button"]:hover {
+  box-shadow: var(--sombra-md);
+  transform: translateY(-2px);
+}
+
+/* ==========================================================================
+   5. Pestanas
+   ========================================================================== */
+
+/* Pastillas y no las pestanas de Bootstrap. Era el aspecto que solo tenia el modulo de
+   pacientes, y la razon de que presupuestos -mismo componente Tabs, mismo rol- se viera de otra
+   familia. Al estar en `.nav-tabs`, lo hereda cualquier pantalla que use <Tabs>. */
+.nav-tabs {
+  border-bottom: 1px solid var(--color-border);
+  gap: var(--spacing-xs);
+  margin-bottom: var(--spacing-md);
+  padding-bottom: var(--spacing-sm);
+}
+
+.nav-tabs .nav-link {
+  background-color: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radio-pill);
+  color: var(--color-text-muted);
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-medium);
+  padding: 0.4rem 0.95rem;
+  transition:
+    background-color 140ms ease,
+    color 140ms ease;
+}
+
+.nav-tabs .nav-link:hover {
+  background-color: color-mix(in srgb, var(--color-primary) 8%, transparent);
+  border-color: transparent;
+  color: var(--color-primary);
+  isolation: auto;
+}
+
+.nav-tabs .nav-link.active {
+  background-color: color-mix(in srgb, var(--color-primary) 12%, var(--color-surface));
+  border-color: color-mix(in srgb, var(--color-primary) 30%, var(--color-surface));
+  color: var(--color-primary-dark);
+  font-weight: var(--peso-semibold);
+}
+
+/* Contador dentro de una pestana ("Aprobaciones 3"). */
+.ec-tab-contador {
+  background-color: color-mix(in srgb, var(--color-info) 18%, var(--color-surface));
+  border-radius: var(--radio-pill);
+  color: var(--color-info);
+  font-size: var(--texto-xxs);
+  font-weight: var(--peso-bold);
+  margin-left: var(--spacing-xs);
+  padding: 0.1rem 0.45rem;
+}
+
+/* ==========================================================================
+   6. Tablas
+   ========================================================================== */
+
+.table {
+  --bs-table-bg: var(--color-surface);
+  --bs-table-color: var(--color-text);
+  border-collapse: separate;
+  border-spacing: 0;
+  margin-bottom: 0;
+}
+
+.table > thead th {
+  background-color: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  font-size: var(--texto-xxs);
+  font-weight: var(--peso-medium);
+  letter-spacing: 0.08em;
+  padding: var(--spacing-sm) var(--spacing-md);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.table > tbody td {
+  border-bottom: 1px solid var(--color-border);
+  font-size: var(--texto-sm);
+  padding: 0.7rem var(--spacing-md);
+  vertical-align: middle;
+}
+
+.table > tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.table-hover > tbody tr:hover > * {
+  --bs-table-bg-state: color-mix(in srgb, var(--color-primary) 5%, var(--color-surface));
+}
+
+/* Marco de una tabla: el borde y el radio van en el contenedor, no en la tabla, porque una
+   <table> con border-collapse no recorta sus propias esquinas. */
+.ec-tabla {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radio-lg);
+  box-shadow: var(--sombra-sm);
+  overflow: hidden;
+}
+
+/* ==========================================================================
+   7. Chips, alertas y superficies
+   ========================================================================== */
+
+.badge {
+  font-size: var(--texto-xxs);
+  font-weight: var(--peso-semibold);
+  letter-spacing: 0.02em;
+  padding: 0.35rem 0.65rem;
+}
+
+/* Chip palido: fondo tenido, texto del color pleno. Se usa donde el valor no es un estado de la
+   base -tipo de sangre, sexo, especialidad- y por lo tanto no pasa por StatusChip. */
+.ec-chip {
+  background-color: color-mix(
+    in srgb,
+    var(--ec-acento, var(--color-primary)) 12%,
+    var(--color-surface)
+  );
+  border-radius: var(--radio-pill);
+  color: var(--ec-acento, var(--color-primary));
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: var(--texto-xxs);
+  font-weight: var(--peso-semibold);
+  letter-spacing: 0.02em;
+  padding: 0.3rem 0.65rem;
+}
+
+.alert {
+  border-radius: var(--radio-md);
+  font-size: var(--texto-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
+}
+
+.modal-content {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radio-lg);
+  box-shadow: var(--sombra-lg);
+}
+
+.modal-header,
+.modal-footer {
+  border-color: var(--color-border);
+}
+
+.modal-title {
+  font-size: var(--texto-lg);
+  font-weight: var(--peso-semibold);
+}
+
+/* Panel vacio: el hueco que queda cuando todavia no hay nada seleccionado. */
+.ec-panel-vacio {
+  align-items: center;
+  background-color: var(--color-surface);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radio-lg);
+  color: var(--color-text-muted);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  justify-content: center;
+  min-height: 320px;
+  padding: var(--spacing-lg);
+  text-align: center;
+}
+
+/* ==========================================================================
+   8. Menos movimiento
+   ========================================================================== */
+
+/* Quien pide menos animacion tampoco quiere que las cosas se levanten al pasar el puntero, ni
+   capas de profundidad de adorno. Se apagan las transiciones y los desplazamientos, no los
+   cambios de color: esos son informacion. */
+@media (prefers-reduced-motion: reduce) {
+  .btn,
+  .card,
+  .card[role="button"],
+  .ec-kpi[role="button"],
+  .form-control,
+  .form-select,
+  .nav-tabs .nav-link {
+    transition: none;
+  }
+
+  .btn:not(:disabled):hover,
+  .card[role="button"]:hover,
+  .ec-kpi[role="button"]:hover {
+    transform: none;
+  }
+
+  .card,
+  .ec-kpi {
+    box-shadow: none;
+  }
+}

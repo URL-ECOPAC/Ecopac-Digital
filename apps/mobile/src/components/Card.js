@@ -11,24 +11,41 @@ import { colors, radii, shadows, spacing, typography } from "@ecopac/ui-tokens";
  * valido y aqui React Native lanza "Text strings must be rendered within a <Text>
  * component": envolverlo aqui es lo que permite escribir la misma linea en las dos
  * plataformas, que es el proposito del catalogo.
+ *
+ * `accent` pinta una cinta del color del modulo en el borde superior; `subtitle` y `actions`
+ * completan la cabecera. Se aceptan aqui aunque hoy solo las use la web: el contrato dice que
+ * los dos lados admiten las mismas props. `accent` llega como un color ya resuelto de
+ * @ecopac/ui-tokens, no como la cadena `var(--accent-*)` de la web, porque React Native no
+ * entiende custom properties.
  */
-export default function Card({ children, title, onPress, style }) {
+export default function Card({ children, title, subtitle, actions, accent, onPress, style }) {
   const esTextoSuelto = typeof children === "string" || typeof children === "number";
+  const hayCabecera = Boolean(title || subtitle || actions);
 
   const contenido = (
     <>
-      {title ? <Text style={styles.titulo}>{title}</Text> : null}
+      {hayCabecera ? (
+        <View style={styles.cabecera}>
+          <View style={styles.cabeceraTextos}>
+            {title ? <Text style={styles.titulo}>{title}</Text> : null}
+            {subtitle ? <Text style={styles.subtitulo}>{subtitle}</Text> : null}
+          </View>
+          {actions ? <View style={styles.acciones}>{actions}</View> : null}
+        </View>
+      ) : null}
       {esTextoSuelto ? <Text style={styles.texto}>{children}</Text> : children}
     </>
   );
 
+  const conAcento = accent ? { borderTopColor: accent, borderTopWidth: 3 } : null;
+
   if (typeof onPress !== "function") {
-    return <View style={[styles.card, style]}>{contenido}</View>;
+    return <View style={[styles.card, conAcento, style]}>{contenido}</View>;
   }
 
   return (
     <Pressable
-      style={({ pressed }) => [styles.card, pressed && styles.cardPressed, style]}
+      style={({ pressed }) => [styles.card, conAcento, pressed && styles.cardPressed, style]}
       onPress={onPress}
       accessibilityRole="button"
     >
@@ -64,6 +81,25 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.md,
     fontWeight: typography.weights.semibold,
     color: colors.text,
+  },
+  subtitulo: {
+    color: colors.textMuted,
+    fontFamily: typography.fontFamilyBase,
+    fontSize: typography.sizes.sm,
+    marginTop: 2,
+  },
+  cabecera: {
+    alignItems: "flex-start",
+    flexDirection: "row",
+    gap: spacing.sm,
+    justifyContent: "space-between",
     marginBottom: spacing.sm,
+  },
+  cabeceraTextos: {
+    flexShrink: 1,
+  },
+  acciones: {
+    flexDirection: "row",
+    gap: spacing.sm,
   },
 });

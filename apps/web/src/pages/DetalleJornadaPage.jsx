@@ -1,3 +1,4 @@
+import { Save } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
@@ -327,6 +328,20 @@ export default function DetalleJornadaPage() {
                 <dt className="col-sm-4">{ETIQUETAS.botiquinBodega}</dt>
                 <dd className="col-sm-8">{jornada.botiquinBodega?.nombre ?? "—"}</dd>
 
+                {/* Cuando la jornada arranco y cerro de verdad. listarJornadas() las traia
+                  desde siempre y ninguna pantalla las pintaba, asi que una jornada que empezo
+                  dos horas tarde se veia igual que una puntual. El guion es deliberado: una
+                  jornada planificada todavia no tiene inicio real, y tiene que notarse. */}
+                <dt className="col-sm-4">{ETIQUETAS.fechaInicioReal}</dt>
+                <dd className="col-sm-8">
+                  {jornada.fechaInicioReal ? formatearFechaConHora(jornada.fechaInicioReal) : "—"}
+                </dd>
+
+                <dt className="col-sm-4">{ETIQUETAS.fechaFinReal}</dt>
+                <dd className="col-sm-8">
+                  {jornada.fechaFinReal ? formatearFechaConHora(jornada.fechaFinReal) : "—"}
+                </dd>
+
                 <dt className="col-sm-4">Presupuesto asignado</dt>
                 <dd className="col-sm-8">
                   {editandoPresupuesto ? (
@@ -342,6 +357,7 @@ export default function DetalleJornadaPage() {
                         title="Guardar"
                         onClick={guardarPresupuesto}
                         loading={guardandoPresupuesto}
+                        icon={<Save size={16} aria-hidden="true" />}
                       />
                       <SecondaryButton
                         title="Cancelar"

@@ -77,7 +77,7 @@ export default function CatalogoCondicionesPage() {
         <div className="card-body p-3">
           <small
             className="text-uppercase fw-semibold text-muted d-block mb-1"
-            style={{ fontSize: "0.75rem" }}
+            style={{ fontSize: "var(--texto-xs)" }}
           >
             Buscar condición
           </small>
@@ -101,7 +101,7 @@ export default function CatalogoCondicionesPage() {
         <div>
           <small
             className="text-uppercase fw-semibold text-muted d-block mb-2"
-            style={{ fontSize: "0.75rem" }}
+            style={{ fontSize: "var(--texto-xs)" }}
           >
             {condiciones.length} CONDICIONES
           </small>
@@ -109,7 +109,7 @@ export default function CatalogoCondicionesPage() {
           <div className="card border-0 shadow-sm">
             <div className="table-responsive">
               <table className="table table-hover align-middle mb-0">
-                <thead className="table-light text-muted" style={{ fontSize: "0.8rem" }}>
+                <thead className="table-light text-muted" style={{ fontSize: "var(--texto-xs)" }}>
                   <tr>
                     <th className="py-3 px-4">NOMBRE</th>
                     <th className="py-3 px-4 text-center" style={{ width: "120px" }}>

@@ -1,41 +1,97 @@
-import { Pressable, StyleSheet, Text } from "react-native";
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 import { colors, radii, spacing, typography } from "@ecopac/ui-tokens";
 
 const MIN_TOUCH_HEIGHT = 48;
 
 /**
- * Boton de accion secundaria (ej. "Cancelar", "Volver").
- * Estilo tipo outline para diferenciarse visualmente de PrimaryButton.
+ * Boton de accion secundaria (ej. "Cancelar", "Volver", "Editar").
+ *
+ * Espejo de apps/web/src/components/SecondaryButton.jsx: mismo estilo outline y las mismas
+ * props, salvo el nombre del evento (`onPress` aqui, `onClick` en web).
+ *
+ * `variant` distingue las tres jerarquias de accion secundaria: "outline" (la alternativa
+ * principal, en verde), "neutra" (la que no tiene intencion propia -"Cancelar", "Cerrar"-, en
+ * gris) y "peligro" (borrar, anular, rechazar).
  */
-export default function SecondaryButton({ title, onPress, disabled = false, style }) {
+const COLOR_POR_VARIANTE = {
+  outline: colors.primary,
+  neutra: colors.secondary,
+  peligro: colors.danger,
+};
+
+const ALTO_POR_TAMANO = {
+  sm: 36,
+  md: MIN_TOUCH_HEIGHT,
+  lg: 56,
+};
+
+export default function SecondaryButton({
+  title,
+  onPress,
+  disabled = false,
+  loading = false,
+  variant = "outline",
+  size = "md",
+  icon = null,
+  block = false,
+  style,
+}) {
+  const inactivo = disabled || loading;
+  const acento = COLOR_POR_VARIANTE[variant] ?? colors.primary;
+
   return (
     <Pressable
       style={({ pressed }) => [
         styles.button,
-        disabled && styles.buttonDisabled,
-        pressed && !disabled && styles.buttonPressed,
+        { borderColor: acento, minHeight: ALTO_POR_TAMANO[size] ?? MIN_TOUCH_HEIGHT },
+        block && styles.block,
+        inactivo && styles.buttonDisabled,
+        pressed && !inactivo && styles.buttonPressed,
         style,
       ]}
       onPress={onPress}
-      disabled={disabled}
+      disabled={inactivo}
       accessibilityRole="button"
-      accessibilityState={{ disabled }}
+      accessibilityState={{ disabled: inactivo, busy: loading }}
     >
-      <Text style={[styles.text, disabled && styles.textDisabled]}>{title}</Text>
+      {loading ? (
+        <ActivityIndicator color={acento} />
+      ) : (
+        <View style={styles.contenido}>
+          {icon}
+          <Text
+            style={[
+              styles.text,
+              { color: acento },
+              size === "sm" && styles.textSm,
+              inactivo && styles.textDisabled,
+            ]}
+          >
+            {title}
+          </Text>
+        </View>
+      )}
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   button: {
-    minHeight: MIN_TOUCH_HEIGHT,
     borderRadius: radii.md,
     borderWidth: 1,
-    borderColor: colors.primary,
     backgroundColor: colors.background,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: spacing.lg,
+  },
+  block: {
+    alignSelf: "stretch",
+  },
+  contenido: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.xs,
+    justifyContent: "center",
   },
   buttonPressed: {
     opacity: 0.7,
@@ -47,7 +103,9 @@ const styles = StyleSheet.create({
     fontFamily: typography.fontFamilyBase,
     fontSize: typography.sizes.md,
     fontWeight: typography.weights.semibold,
-    color: colors.primary,
+  },
+  textSm: {
+    fontSize: typography.sizes.sm,
   },
   textDisabled: {
     color: colors.secondary,
