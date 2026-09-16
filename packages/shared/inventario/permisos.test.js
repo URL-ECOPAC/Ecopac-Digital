@@ -9,6 +9,7 @@ import { describe, expect, it } from "vitest";
 import { ROLES } from "../usuarios/roles.js";
 import {
   permisosDeMovimientos,
+  puedeAjustarEntregaReceta,
   puedeAprobarMovimiento,
   puedeRechazarMovimiento,
   puedeRegistrarMovimiento,
@@ -84,5 +85,22 @@ describe("puedeVerValorizacion (issue #752)", () => {
 
   it("un rol que no existe no ve nada", () => {
     expect(puedeVerValorizacion("coordinador")).toBe(false);
+  });
+});
+
+describe("puedeAjustarEntregaReceta (issue #764)", () => {
+  it("administrador y medico ajustan la entrega, espejo de fn_ajustar_entrega_receta (00128)", () => {
+    expect(puedeAjustarEntregaReceta(ROLES.ADMINISTRADOR)).toBe(true);
+    expect(puedeAjustarEntregaReceta(ROLES.MEDICO)).toBe(true);
+  });
+
+  it("voluntario y los roles consultivos no ajustan: solo ven la receta", () => {
+    expect(puedeAjustarEntregaReceta(ROLES.VOLUNTARIO)).toBe(false);
+    expect(puedeAjustarEntregaReceta(ROLES.JUNTA_DIRECTIVA)).toBe(false);
+    expect(puedeAjustarEntregaReceta(ROLES.SOCIO_FUNDADOR)).toBe(false);
+  });
+
+  it("un rol que no existe no ajusta nada", () => {
+    expect(puedeAjustarEntregaReceta("coordinador")).toBe(false);
   });
 });
