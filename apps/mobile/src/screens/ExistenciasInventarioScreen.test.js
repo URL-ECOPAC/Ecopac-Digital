@@ -10,6 +10,11 @@ import { render, screen, fireEvent } from "@testing-library/react-native";
 
 import ExistenciasInventarioScreen from "./ExistenciasInventarioScreen";
 
+const mockNavigate = jest.fn();
+jest.mock("@react-navigation/native", () => ({
+  useNavigation: () => ({ navigate: mockNavigate }),
+}));
+
 const RESPUESTA_LOTES = {
   lotes: [
     {
@@ -56,6 +61,7 @@ describe("ExistenciasInventarioScreen", () => {
     listarExistenciasDisponibles.mockClear();
     listarLotes.mockResolvedValue(RESPUESTA_LOTES);
     listarExistenciasDisponibles.mockResolvedValue(RESPUESTA_EXISTENCIAS);
+    mockNavigate.mockClear();
   });
 
   it("mientras carga, muestra el estado de carga", () => {
@@ -87,6 +93,15 @@ describe("ExistenciasInventarioScreen", () => {
     pantalla();
 
     expect(await screen.findByText("No hay lotes registrados.")).toBeTruthy();
+  });
+
+  it("tocar un lote navega a su detalle (issue #791)", async () => {
+    pantalla();
+
+    await screen.findByText("Loratadina");
+    fireEvent.press(screen.getByText("Loratadina"));
+
+    expect(mockNavigate).toHaveBeenCalledWith("DetalleLote", { loteId: "lote-1" });
   });
 
   // Camino de error (issue #785): si cualquiera de las dos consultas falla, se muestra el error

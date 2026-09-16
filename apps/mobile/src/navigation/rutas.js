@@ -36,4 +36,5 @@ export const ROUTES = {
   EXISTENCIAS_INVENTARIO: "ExistenciasInventario",
   RESUMEN_ALERTAS_INVENTARIO: "ResumenAlertasInventario",
   MIS_MOVIMIENTOS: "MisMovimientos",
+  DETALLE_LOTE: "DetalleLote",
 };
