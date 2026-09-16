@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import {
   ESTADOS_DE_DONACION,
@@ -20,8 +21,35 @@ import {
 } from "react-bootstrap";
 
 export default function HistorialDonacionesPage({ usuarioRol, proyectosOptions = [] }) {
-  const { tieneAccesoLectura, cargando, error, donaciones, totalesPorTipo, filtros, modalDetalle } =
-    useHistorialDonaciones({ usuarioRol });
+  const {
+    tieneAccesoLectura,
+    cargando,
+    error,
+    donaciones,
+    totalesPorTipo,
+    filtros,
+    modalDetalle,
+    anulacion,
+  } = useHistorialDonaciones({ usuarioRol });
+
+  // Issue #756: motivo de anulacion, local a la pantalla porque solo una donacion esta
+  // seleccionada a la vez (el modal de detalle ya es el contexto de "cual").
+  const [anulando, setAnulando] = useState(false);
+  const [motivoAnular, setMotivoAnular] = useState("");
+
+  const cerrarDetalleYAnulacion = () => {
+    setAnulando(false);
+    setMotivoAnular("");
+    modalDetalle.cerrarDetalle();
+  };
+
+  const confirmarAnulacion = async () => {
+    const resultado = await anulacion.anular(modalDetalle.donacionSeleccionada.id, motivoAnular);
+    if (resultado.ok) {
+      setAnulando(false);
+      setMotivoAnular("");
+    }
+  };
 
   if (!tieneAccesoLectura) {
     return (
@@ -229,7 +257,7 @@ export default function HistorialDonacionesPage({ usuarioRol, proyectosOptions =
 
       {/* Modal de Detalle Completo */}
       {modalDetalle.modalDetalleAbierto && modalDetalle.donacionSeleccionada && (
-        <Modal show={modalDetalle.modalDetalleAbierto} onHide={modalDetalle.cerrarDetalle} centered>
+        <Modal show={modalDetalle.modalDetalleAbierto} onHide={cerrarDetalleYAnulacion} centered>
           <Modal.Header closeButton>
             <Modal.Title as="h5">
               Detalle de Donación #{modalDetalle.donacionSeleccionada.id}
@@ -261,7 +289,7 @@ export default function HistorialDonacionesPage({ usuarioRol, proyectosOptions =
                 </p>
                 <p className="mb-1">
                   <strong>Anulada por:</strong>{" "}
-                  {modalDetalle.donacionSeleccionada.anuladaPor || "-"}
+                  {modalDetalle.donacionSeleccionada.anuladaPorNombre || "-"}
                 </p>
                 <p className="mb-0">
                   <strong>Fecha de Anulación:</strong>{" "}
@@ -289,11 +317,63 @@ export default function HistorialDonacionesPage({ usuarioRol, proyectosOptions =
                 ))
               )}
             </ul>
+
+            {/* Issue #756: anularDonacion() ya existia (issue #635), sin ningun boton que la
+                llamara. */}
+            {anulacion.puedeAnular &&
+              modalDetalle.donacionSeleccionada.estado !== ESTADOS_DE_DONACION.ANULADA && (
+                <>
+                  <hr />
+                  {anulacion.errorAnular && (
+                    <Alert variant="danger" className="py-2">
+                      {anulacion.errorAnular.mensaje}
+                    </Alert>
+                  )}
+                  {anulando ? (
+                    <Form.Group controlId="formMotivoAnulacion">
+                      <Form.Label>Motivo de la anulación</Form.Label>
+                      <Form.Control
+                        as="textarea"
+                        rows={2}
+                        value={motivoAnular}
+                        onChange={(e) => setMotivoAnular(e.target.value)}
+                        disabled={anulacion.anulando}
+                      />
+                    </Form.Group>
+                  ) : (
+                    <Button variant="outline-danger" size="sm" onClick={() => setAnulando(true)}>
+                      Anular donación
+                    </Button>
+                  )}
+                </>
+              )}
           </Modal.Body>
           <Modal.Footer>
-            <Button variant="secondary" onClick={modalDetalle.cerrarDetalle}>
-              Cerrar
-            </Button>
+            {anulando ? (
+              <>
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    setAnulando(false);
+                    setMotivoAnular("");
+                  }}
+                  disabled={anulacion.anulando}
+                >
+                  Cancelar anulación
+                </Button>
+                <Button
+                  variant="danger"
+                  onClick={confirmarAnulacion}
+                  disabled={anulacion.anulando || !motivoAnular.trim()}
+                >
+                  {anulacion.anulando ? "Anulando..." : "Confirmar anulación"}
+                </Button>
+              </>
+            ) : (
+              <Button variant="secondary" onClick={cerrarDetalleYAnulacion}>
+                Cerrar
+              </Button>
+            )}
           </Modal.Footer>
         </Modal>
       )}

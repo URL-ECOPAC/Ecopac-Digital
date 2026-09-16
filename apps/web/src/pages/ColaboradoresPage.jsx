@@ -64,7 +64,7 @@ export default function ColaboradoresPage() {
     irAPaginaAnterior,
     irAPaginaSiguiente,
     catalogos,
-  } = useUsuariosListado();
+  } = useUsuariosListado({ rol });
 
   // Cambiar de filtro o de pagina puede dejar seleccionada a una persona que ya no esta a la
   // vista: se limpia la seleccion en vez de mostrar un detalle que no corresponde a ninguna fila

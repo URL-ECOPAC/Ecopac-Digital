@@ -1,13 +1,19 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+
+import { permisosDeFicha } from "@ecopac/shared";
+
 import CondicionesPacienteSeccion from "./ficha-paciente/CondicionesPacienteSeccion";
 import SignosVitalesSeccion from "./ficha-paciente/SignosVitalesSeccion";
 import RecetasPacienteSeccion from "./ficha-paciente/RecetasPacienteSeccion";
+import ModalEdicionPaciente from "./ModalEdicionPaciente";
 
 export default function FichaPacienteScreen({ route, navigation }) {
   const { paciente, rol = "medico" } = route.params || {};
   const [pestanaActiva, setPestanaActiva] = useState("historial");
+  const [editando, setEditando] = useState(false);
+  const permisos = permisosDeFicha(rol);
 
   if (!paciente) {
     return (
@@ -86,7 +92,22 @@ export default function FichaPacienteScreen({ route, navigation }) {
         >
           <Text style={styles.textoBotonAccion}>Nueva Consulta</Text>
         </TouchableOpacity>
+
+        {permisos.puedeEditar && (
+          <TouchableOpacity style={styles.botonAccion} onPress={() => setEditando(true)}>
+            <Text style={styles.textoBotonAccion}>Editar datos</Text>
+          </TouchableOpacity>
+        )}
       </View>
+
+      {editando && (
+        <ModalEdicionPaciente
+          visible={editando}
+          paciente={paciente}
+          onClose={() => setEditando(false)}
+          onGuardado={() => setEditando(false)}
+        />
+      )}
     </SafeAreaView>
   );
 }

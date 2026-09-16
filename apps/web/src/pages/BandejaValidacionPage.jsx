@@ -178,6 +178,19 @@ export default function BandejaValidacionPage({ usuarioId, rolUsuario }) {
                     textAlign: "left",
                   }}
                 >
+                  Bodega
+                </th>
+                <th
+                  style={{
+                    padding: "14px 20px",
+                    fontSize: "11px",
+                    fontWeight: "700",
+                    color: "#64748b",
+                    letterSpacing: "0.5px",
+                    textTransform: "uppercase",
+                    textAlign: "left",
+                  }}
+                >
                   Fecha
                 </th>
                 {(puedeAprobar || puedeRechazar) && (
@@ -311,11 +324,17 @@ export default function BandejaValidacionPage({ usuarioId, rolUsuario }) {
                       style={{
                         padding: "16px 20px",
                         color: "#475569",
-                        fontFamily: "var(--fuente-mono)",
-                        fontSize: "12px",
+                        fontSize: "13px",
                       }}
                     >
-                      {mov.registrado_por}
+                      {[mov.registradoPor?.nombres, mov.registradoPor?.apellidos]
+                        .filter(Boolean)
+                        .join(" ") || "—"}
+                    </td>
+
+                    {/* Bodega */}
+                    <td style={{ padding: "16px 20px", color: "#475569", fontSize: "13px" }}>
+                      {mov.bodega?.nombre || "—"}
                     </td>
 
                     {/* Fecha */}

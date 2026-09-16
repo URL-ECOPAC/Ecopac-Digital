@@ -1,13 +1,18 @@
 import { useCallback, useEffect, useState } from "react";
 
 import {
+  actualizarCondicion,
   asociarCondicion,
   desasociarCondicion,
   obtenerCatalogoDeCondiciones,
   obtenerCondicionesDelPaciente,
   quitarCondicion,
 } from "./condiciones.api.js";
-import { CAMPOS_CONDICION_CRONICA, OPCIONES_ESTADO_CONDICION } from "./condiciones.campos.js";
+import {
+  CAMPOS_CONDICION_CRONICA,
+  CAMPOS_CORRECCION_CONDICION,
+  OPCIONES_ESTADO_CONDICION,
+} from "./condiciones.campos.js";
 import {
   puedeEditarCondicion,
   puedeQuitarCondicion,
@@ -131,9 +136,26 @@ export function useCondicionesPaciente(pacienteId, { rol } = {}) {
     [cargar],
   );
 
+  /** Corrige la fecha de diagnostico y/o las notas de un padecimiento ya asociado. */
+  const corregir = useCallback(
+    async (id, cambios) => {
+      setEnviando(true);
+      const resultado = await actualizarCondicion(id, cambios);
+      setEnviando(false);
+
+      if (resultado.error || Object.keys(resultado.errores ?? {}).length > 0) {
+        return { ok: false, errores: resultado.errores, error: resultado.error };
+      }
+      await cargar();
+      return { ok: true, condicion: resultado.condicion };
+    },
+    [cargar],
+  );
+
   return {
     condiciones,
     campos: CAMPOS_CONDICION_CRONICA,
+    camposCorreccion: CAMPOS_CORRECCION_CONDICION,
     valores,
     errores,
     error,
@@ -146,6 +168,7 @@ export function useCondicionesPaciente(pacienteId, { rol } = {}) {
     agregar,
     marcarResuelta,
     borrar,
+    corregir,
     recargar: cargar,
     catalogos: {
       condicionesCronicas: catalogo,

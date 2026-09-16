@@ -23,6 +23,7 @@ export async function listarMovimientos({
   estado,
   bodega_id,
   lote_id,
+  registrado_por,
   fecha_inicio,
   fecha_fin,
 } = {}) {
@@ -40,6 +41,7 @@ export async function listarMovimientos({
     if (estado) query = query.eq("estado", estado);
     if (bodega_id) query = query.eq("bodega_id", bodega_id);
     if (lote_id) query = query.eq("lote_id", lote_id);
+    if (registrado_por) query = query.eq("registrado_por", registrado_por);
     if (fecha_inicio) query = query.gte("created_at", fecha_inicio);
     if (fecha_fin) query = query.lte("created_at", fecha_fin);
 

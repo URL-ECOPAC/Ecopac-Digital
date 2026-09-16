@@ -1,26 +1,20 @@
 import { useState } from "react";
 import ErrorState from "../components/ErrorState";
+import LoadingState from "../components/LoadingState";
 import { OPCIONES_ACCION_ALERTA, useAlertasVencimiento } from "@ecopac/shared";
-export default function PanelAlertasVencimiento({
-  lotes = [],
-  bodegas = [],
-  usuarioId,
-  rolUsuario,
-}) {
+
+export default function PanelAlertasVencimiento({ usuarioId, rolUsuario }) {
   const {
     porVencer,
     vencidas,
     cantidadPendientes,
+    cargando,
+    error,
+    recargar,
     busqueda,
     setBusqueda,
-    filtroBodega,
-    setFiltroBodega,
-    filtroCategoria,
-    setFiltroCategoria,
-    bodegasDisponibles,
-    categoriasDisponibles,
     marcarComoAtendida,
-  } = useAlertasVencimiento({ lotes, bodegas, usuarioId, rolUsuario });
+  } = useAlertasVencimiento({ usuarioId, rolUsuario });
 
   const [alertaAtendiendo, setAlertaAtendiendo] = useState(null);
   const [accionTomada, setAccionTomada] = useState("");
@@ -54,8 +48,11 @@ export default function PanelAlertasVencimiento({
     return { fondo: "#fffbeb", borde: "#fde68a", texto: "#d97706" };
   };
 
+  if (cargando) return <LoadingState />;
+  if (error) return <ErrorState message={error.mensaje} onRetry={recargar} />;
+
   return (
-    <div>
+    <div style={{ fontFamily: "system-ui, -apple-system, sans-serif" }}>
       {/* Cabecera */}
       <div style={{ marginBottom: "24px" }}>
         <h2 style={{ fontSize: "28px", fontWeight: "700", margin: 0, color: "#0f172a" }}>
@@ -69,7 +66,7 @@ export default function PanelAlertasVencimiento({
         </div>
       </div>
 
-      {/* Filtros */}
+      {/* Filtro */}
       <div
         style={{
           display: "flex",
@@ -93,40 +90,6 @@ export default function PanelAlertasVencimiento({
             outline: "none",
           }}
         />
-        <select
-          value={filtroBodega}
-          onChange={(e) => setFiltroBodega(e.target.value)}
-          style={{
-            padding: "8px 14px",
-            border: "1px solid #e2e8f0",
-            borderRadius: "4px",
-            fontSize: "14px",
-            backgroundColor: "#fff",
-          }}
-        >
-          {bodegasDisponibles.map((b) => (
-            <option key={b} value={b}>
-              {b === "todas" ? "Todas las bodegas" : b}
-            </option>
-          ))}
-        </select>
-        <select
-          value={filtroCategoria}
-          onChange={(e) => setFiltroCategoria(e.target.value)}
-          style={{
-            padding: "8px 14px",
-            border: "1px solid #e2e8f0",
-            borderRadius: "4px",
-            fontSize: "14px",
-            backgroundColor: "#fff",
-          }}
-        >
-          {categoriasDisponibles.map((c) => (
-            <option key={c} value={c}>
-              {c === "todas" ? "Todas las categorías" : c}
-            </option>
-          ))}
-        </select>
       </div>
 
       {/* Próximos a vencer */}
@@ -174,7 +137,7 @@ export default function PanelAlertasVencimiento({
                     color: "#0f172a",
                   }}
                 >
-                  Cantidad
+                  Cantidad afectada
                 </th>
                 <th
                   style={{
@@ -207,17 +170,6 @@ export default function PanelAlertasVencimiento({
                     color: "#0f172a",
                   }}
                 >
-                  Bodega
-                </th>
-                <th
-                  style={{
-                    padding: "12px 16px",
-                    textAlign: "center",
-                    fontSize: "14px",
-                    fontWeight: "600",
-                    color: "#0f172a",
-                  }}
-                >
                   Acción
                 </th>
               </tr>
@@ -238,7 +190,7 @@ export default function PanelAlertasVencimiento({
                         fontFamily: "var(--fuente-mono)",
                       }}
                     >
-                      {alerta.lote}
+                      {alerta.numeroLote}
                     </td>
                     <td
                       style={{
@@ -248,7 +200,7 @@ export default function PanelAlertasVencimiento({
                         fontWeight: "500",
                       }}
                     >
-                      {alerta.cantidad}
+                      {alerta.cantidadAfectada}
                     </td>
                     <td style={{ padding: "14px 16px", fontSize: "14px" }}>
                       {formatoFecha(alerta.fechaVencimiento)}
@@ -267,16 +219,6 @@ export default function PanelAlertasVencimiento({
                       >
                         {alerta.diasRestantes === 0 ? "HOY" : `${alerta.diasRestantes}d`}
                       </span>
-                    </td>
-                    <td
-                      style={{
-                        padding: "14px 16px",
-                        textAlign: "center",
-                        fontSize: "14px",
-                        color: "#475569",
-                      }}
-                    >
-                      {alerta.bodega}
                     </td>
                     <td style={{ padding: "14px 16px", textAlign: "center" }}>
                       <button
@@ -347,7 +289,7 @@ export default function PanelAlertasVencimiento({
                     color: "#dc2626",
                   }}
                 >
-                  Cantidad
+                  Cantidad afectada
                 </th>
                 <th
                   style={{
@@ -380,17 +322,6 @@ export default function PanelAlertasVencimiento({
                     color: "#dc2626",
                   }}
                 >
-                  Bodega
-                </th>
-                <th
-                  style={{
-                    padding: "12px 16px",
-                    textAlign: "center",
-                    fontSize: "14px",
-                    fontWeight: "600",
-                    color: "#dc2626",
-                  }}
-                >
                   Acción
                 </th>
               </tr>
@@ -412,7 +343,7 @@ export default function PanelAlertasVencimiento({
                       color: "#991b1b",
                     }}
                   >
-                    {alerta.lote}
+                    {alerta.numeroLote}
                   </td>
                   <td
                     style={{
@@ -423,7 +354,7 @@ export default function PanelAlertasVencimiento({
                       color: "#991b1b",
                     }}
                   >
-                    {alerta.cantidad}
+                    {alerta.cantidadAfectada}
                   </td>
                   <td style={{ padding: "14px 16px", fontSize: "14px", color: "#991b1b" }}>
                     {formatoFecha(alerta.fechaVencimiento)}
@@ -442,16 +373,6 @@ export default function PanelAlertasVencimiento({
                     >
                       {Math.abs(alerta.diasRestantes)}d
                     </span>
-                  </td>
-                  <td
-                    style={{
-                      padding: "14px 16px",
-                      textAlign: "center",
-                      fontSize: "14px",
-                      color: "#b91c1c",
-                    }}
-                  >
-                    {alerta.bodega}
                   </td>
                   <td style={{ padding: "14px 16px", textAlign: "center" }}>
                     <button
@@ -508,7 +429,7 @@ export default function PanelAlertasVencimiento({
               <p style={{ margin: "0 0 4px 0" }}>
                 <strong>{alertaAtendiendo.medicamento}</strong>
               </p>
-              <p style={{ margin: "0 0 4px 0" }}>Lote: {alertaAtendiendo.lote}</p>
+              <p style={{ margin: "0 0 4px 0" }}>Lote: {alertaAtendiendo.numeroLote}</p>
               <p style={{ margin: 0 }}>
                 Vencimiento: {formatoFecha(alertaAtendiendo.fechaVencimiento)}
               </p>

@@ -19,6 +19,7 @@ const COLUMNAS_DE_LA_RECETA = [
   "anuladaEn:anulada_en",
   "createdAt:created_at",
   "medico:perfiles!recetas_medico_id_fkey(nombres, apellidos)",
+  "anuladaPorPerfil:perfiles!recetas_anulada_por_fkey(nombres, apellidos)",
   "consulta:consultas!inner(id, jornadaId:jornada_id, expedienteId:expediente_id, jornada:jornadas(nombre, fecha), expediente:expedientes!inner(pacienteId:paciente_id))",
   "detalle:receta_detalle(id, medicamentoId:medicamento_id, loteId:lote_id, dosis, frecuencia, duracion, cantidadEntregada:cantidad_entregada, medicamento:medicamentos(nombre, concentracion, presentacion))",
 ].join(", ");
@@ -44,6 +45,10 @@ function aReceta(fila) {
     indicacionesGenerales: fila.indicacionesGenerales ?? null,
     motivoAnulacion: fila.motivoAnulacion ?? null,
     anuladaPor: fila.anuladaPor ?? null,
+    anuladaPorNombre:
+      [fila.anuladaPorPerfil?.nombres, fila.anuladaPorPerfil?.apellidos]
+        .filter(Boolean)
+        .join(" ") || null,
     anuladaEn: fila.anuladaEn ?? null,
     detalle: (fila.detalle ?? []).map((renglon) => ({
       id: renglon.id,

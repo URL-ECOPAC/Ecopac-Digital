@@ -10,6 +10,7 @@ import {
   MINUTOS_INACTIVIDAD_POR_DEFECTO,
 } from "@ecopac/shared";
 import { useSesionCompartida } from "../contexto/SesionProvider";
+import IconoModulo from "./IconoModulo";
 import "./MainLayout.css";
 
 const EVENTOS_DE_ACTIVIDAD = ["mousemove", "keydown", "mousedown", "touchstart", "scroll"];
@@ -112,6 +113,7 @@ export default function MainLayout() {
                     `app-nav__item${isActive ? " app-nav__item--active" : ""}`
                   }
                 >
+                  <IconoModulo nombre={modulo.icono} size={18} />
                   {modulo.nombre}
                 </NavLink>
               ))}

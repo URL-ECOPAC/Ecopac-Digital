@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 import {
   COLUMNAS_CONDICION_DEL_PACIENTE,
   ESTADOS_CONDICION_CRONICA,
@@ -17,6 +19,7 @@ export default function ModalCondicionesPaciente({ pacienteId, rol, onClose, onC
   const {
     condiciones,
     campos,
+    camposCorreccion,
     valores,
     errores,
     error,
@@ -28,8 +31,13 @@ export default function ModalCondicionesPaciente({ pacienteId, rol, onClose, onC
     agregar,
     marcarResuelta,
     borrar,
+    corregir,
     catalogos,
   } = useCondicionesPaciente(pacienteId, { rol });
+
+  const [idEnCorreccion, setIdEnCorreccion] = useState(null);
+  const [valoresCorreccion, setValoresCorreccion] = useState({});
+  const [erroresCorreccion, setErroresCorreccion] = useState({});
 
   const guardar = async () => {
     const resultado = await agregar();
@@ -44,6 +52,25 @@ export default function ModalCondicionesPaciente({ pacienteId, rol, onClose, onC
   const eliminar = async (id) => {
     const resultado = await borrar(id);
     if (resultado.ok) onCambio?.();
+  };
+
+  const abrirCorreccion = (condicion) => {
+    setIdEnCorreccion(condicion.id);
+    setValoresCorreccion({
+      fechaDiagnostico: condicion.fechaDiagnostico ?? "",
+      notas: condicion.notas ?? "",
+    });
+    setErroresCorreccion({});
+  };
+
+  const guardarCorreccion = async () => {
+    const resultado = await corregir(idEnCorreccion, valoresCorreccion);
+    if (!resultado.ok) {
+      setErroresCorreccion(resultado.errores ?? {});
+      return;
+    }
+    setIdEnCorreccion(null);
+    onCambio?.();
   };
 
   return (
@@ -67,21 +94,81 @@ export default function ModalCondicionesPaciente({ pacienteId, rol, onClose, onC
           {condiciones
             .filter((condicion) => condicion.estado !== ESTADOS_CONDICION_CRONICA.RESUELTA)
             .map((condicion) => (
-              <div key={condicion.id} className="d-flex align-items-center gap-2">
-                <span className="small text-body-secondary">
-                  {condicion.condicion?.nombre ?? condicion.condicion}
-                </span>
-                <SecondaryButton
-                  title="Marcar resuelta"
-                  onClick={() => resolver(condicion.id)}
-                  disabled={enviando}
-                />
-                {permisos.puedeQuitar && (
+              <div key={condicion.id} className="d-flex flex-column gap-2">
+                <div className="d-flex align-items-center gap-2">
+                  <span className="small text-body-secondary">
+                    {condicion.condicion?.nombre ?? condicion.condicion}
+                  </span>
                   <SecondaryButton
-                    title="Borrar"
-                    onClick={() => eliminar(condicion.id)}
+                    title="Corregir"
+                    onClick={() => abrirCorreccion(condicion)}
                     disabled={enviando}
                   />
+                  <SecondaryButton
+                    title="Marcar resuelta"
+                    onClick={() => resolver(condicion.id)}
+                    disabled={enviando}
+                  />
+                  {permisos.puedeQuitar && (
+                    <SecondaryButton
+                      title="Borrar"
+                      onClick={() => eliminar(condicion.id)}
+                      disabled={enviando}
+                    />
+                  )}
+                </div>
+
+                {idEnCorreccion === condicion.id && (
+                  <div className="border rounded p-2 ms-3">
+                    {camposCorreccion.map((campo) => {
+                      if (campo.tipo === TIPOS_DE_CAMPO.FECHA) {
+                        return (
+                          <DateField
+                            key={campo.id}
+                            label={campo.label}
+                            value={valoresCorreccion[campo.id] || null}
+                            onChange={(valor) =>
+                              setValoresCorreccion((anteriores) => ({
+                                ...anteriores,
+                                [campo.id]: valor,
+                              }))
+                            }
+                            error={erroresCorreccion[campo.id]}
+                            disabled={enviando}
+                          />
+                        );
+                      }
+
+                      return (
+                        <TextField
+                          key={campo.id}
+                          label={campo.label}
+                          as={campo.tipo === TIPOS_DE_CAMPO.TEXTO_LARGO ? "textarea" : undefined}
+                          value={valoresCorreccion[campo.id] ?? ""}
+                          onChange={(evento) =>
+                            setValoresCorreccion((anteriores) => ({
+                              ...anteriores,
+                              [campo.id]: evento.target.value,
+                            }))
+                          }
+                          error={erroresCorreccion[campo.id]}
+                          disabled={enviando}
+                        />
+                      );
+                    })}
+                    <div className="d-flex justify-content-end gap-2">
+                      <SecondaryButton
+                        title="Cancelar"
+                        onClick={() => setIdEnCorreccion(null)}
+                        disabled={enviando}
+                      />
+                      <PrimaryButton
+                        title="Guardar correccion"
+                        onClick={guardarCorreccion}
+                        loading={enviando}
+                      />
+                    </div>
+                  </div>
                 )}
               </div>
             ))}

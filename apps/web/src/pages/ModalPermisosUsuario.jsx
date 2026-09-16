@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 import {
   MODULOS,
   ORIGEN_PERMISO,
@@ -43,6 +45,21 @@ export default function ModalPermisosUsuario({ perfil, onClose }) {
   } = useGestionPermisos(perfil?.id);
 
   const nombre = [perfil?.nombres, perfil?.apellidos].filter(Boolean).join(" ");
+
+  // Motivo por permiso, opcional (usuario_permiso.motivo no es NOT NULL): se limpia despues de
+  // cada conceder/revocar, igual que el motivo de anulacion de una receta.
+  const [motivoPorClave, setMotivoPorClave] = useState({});
+  const establecerMotivo = (clave, valor) =>
+    setMotivoPorClave((anteriores) => ({ ...anteriores, [clave]: valor }));
+
+  const concederConMotivo = async (clave) => {
+    await conceder(clave, motivoPorClave[clave]);
+    establecerMotivo(clave, "");
+  };
+  const revocarConMotivo = async (clave) => {
+    await revocar(clave, motivoPorClave[clave]);
+    establecerMotivo(clave, "");
+  };
 
   return (
     <Modal visible onClose={onClose} title={`Permisos de ${nombre}`} size="xl">
@@ -102,23 +119,45 @@ export default function ModalPermisosUsuario({ perfil, onClose }) {
                       </p>
                     )}
 
+                    {esIndividual && (permiso.otorgadoPorNombre || permiso.motivo) && (
+                      <p className="text-muted small mb-0 mt-1">
+                        {permiso.otorgadoPorNombre && `Por ${permiso.otorgadoPorNombre}`}
+                        {permiso.motivo
+                          ? `${permiso.otorgadoPorNombre ? ": " : ""}${permiso.motivo}`
+                          : permiso.otorgadoPorNombre
+                            ? ". Sin motivo registrado."
+                            : ""}
+                      </p>
+                    )}
+
                     {avisoSinEfecto?.clave === permiso.clave && (
                       <p className="text-danger small mb-0 mt-1">{avisoSinEfecto.mensaje}</p>
                     )}
                   </div>
 
-                  <div className="d-flex gap-2 flex-shrink-0">
+                  <div className="d-flex align-items-start gap-2 flex-shrink-0">
+                    {(mostrarConceder || mostrarRevocar) && (
+                      <input
+                        type="text"
+                        className="form-control form-control-sm"
+                        style={{ width: "180px" }}
+                        placeholder="Motivo (opcional)"
+                        value={motivoPorClave[permiso.clave] ?? ""}
+                        onChange={(e) => establecerMotivo(permiso.clave, e.target.value)}
+                        disabled={enProceso}
+                      />
+                    )}
                     {mostrarConceder && (
                       <PrimaryButton
                         title="Conceder"
-                        onClick={() => conceder(permiso.clave)}
+                        onClick={() => concederConMotivo(permiso.clave)}
                         loading={enProceso}
                       />
                     )}
                     {mostrarRevocar && (
                       <PrimaryButton
                         title="Revocar"
-                        onClick={() => revocar(permiso.clave)}
+                        onClick={() => revocarConMotivo(permiso.clave)}
                         loading={enProceso}
                       />
                     )}

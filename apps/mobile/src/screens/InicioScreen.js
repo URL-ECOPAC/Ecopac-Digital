@@ -1,5 +1,6 @@
 import { StyleSheet, Text, View, ScrollView, TouchableOpacity, SafeAreaView } from "react-native";
 import { modulosVisibles } from "@ecopac/shared";
+import IconoDeModulo from "../components/IconoDeModulo";
 import { useSesionCompartida } from "../contexto/SesionProvider";
 import { ROUTES } from "../navigation/rutas";
 
@@ -94,10 +95,11 @@ export default function InicioScreen({ navigation }) {
     const base = MODULOS_FIGMA.find((f) => f.id === m.id) || {};
     return {
       id: m.id,
-      titulo: m.etiqueta || base.titulo || m.id,
+      titulo: m.nombre || base.titulo || m.id,
       subtitulo: base.subtitulo || "Módulo activo",
       valor: base.valor || "—",
       color: base.color || "#10B981",
+      icono: m.icono,
       tabMovil: m.tabMovil || base.tabMovil,
       ruta: base.ruta,
     };
@@ -167,7 +169,9 @@ export default function InicioScreen({ navigation }) {
               style={styles.moduleCard}
               onPress={() => navegarAModulo(modulo)}
             >
-              <View style={[styles.cardDot, { backgroundColor: modulo.color }]} />
+              <View style={styles.cardIcono}>
+                <IconoDeModulo nombre={modulo.icono} size={22} color={modulo.color} />
+              </View>
               <Text style={styles.moduleTitle}>{modulo.titulo}</Text>
               <Text style={styles.cardSubtext}>{modulo.subtitulo}</Text>
               <Text style={[styles.moduleValue, { color: modulo.color }]}>{modulo.valor}</Text>
@@ -272,10 +276,7 @@ const styles = StyleSheet.create({
     shadowRadius: 5,
     elevation: 2,
   },
-  cardDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+  cardIcono: {
     marginBottom: 8,
   },
   cardSubtext: {

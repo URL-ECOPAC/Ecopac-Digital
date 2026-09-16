@@ -8,9 +8,16 @@
 // Alcance reducido a proposito, siguiendo el mismo precedente que useAltaUsuario.js: el
 // formulario del prototipo pedia tambien un selector de especialidades, pero
 // perfil_especialidad sigue sin ninguna politica RLS de escritura (issue #405) y
-// actualizarUsuario() no acepta ese campo (packages/shared/usuarios/api.js). Este hook solo
-// maneja los cuatro campos que pide el criterio 1 del issue y que actualizarUsuario() ya
-// acepta: nombres, apellidos, telefono, rol.
+// actualizarUsuario() no acepta ese campo (packages/shared/usuarios/api.js). Este hook maneja
+// los campos que actualizarUsuario() acepta salvo email (verdad de Supabase Auth, no de
+// perfiles) y especialidades: nombres, apellidos, telefono, rol, fechaIngreso, direccion,
+// notas.
+//
+// fechaIngreso/direccion/notas se agregan en la issue #756 (auditoria campo-a-vista):
+// actualizarUsuario() ya las aceptaba (CAMPOS_EDITABLES en api.js incluia fechaIngreso desde
+// antes; direccion/notas se agregan en el mismo cambio), pero ningun formulario las pedia. Las
+// dos ultimas quedaron deliberadamente sin formulario en la migracion 00108 ("por ahora no hay
+// formulario que las escriba... hasta que exista ese formulario"): este es ese formulario.
 
 import { useCallback, useState } from "react";
 
@@ -18,7 +25,15 @@ import { actualizarUsuario } from "./api.js";
 import { CAMPOS_USUARIO } from "./campos.js";
 
 /** Ids de CAMPOS_USUARIO que pide el formulario de edicion. En ese orden. */
-const IDS_CAMPOS_EDICION = ["nombres", "apellidos", "telefono", "rol"];
+const IDS_CAMPOS_EDICION = [
+  "nombres",
+  "apellidos",
+  "telefono",
+  "rol",
+  "fechaIngreso",
+  "direccion",
+  "notas",
+];
 
 /**
  * Subconjunto de CAMPOS_USUARIO para el formulario de edicion.

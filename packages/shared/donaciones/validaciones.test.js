@@ -125,7 +125,7 @@ describe("validarDonacion", () => {
     expect(errores.detalles).toBeDefined();
   });
 
-  it("exige cantidad y vencimiento en cada renglon de medicamentos", () => {
+  it("exige cantidad en cada renglon de medicamentos", () => {
     const errores = validarDonacion({
       donanteId: "uuid-1",
       tipo: TIPOS_DE_DONACION.MEDICAMENTOS,
@@ -134,10 +134,11 @@ describe("validarDonacion", () => {
     });
 
     expect(errores.detalles_0_cantidad).toBeDefined();
-    expect(errores.detalles_0_fechaVencimiento).toBeDefined();
   });
 
   it("acepta una donacion de medicamentos completa", () => {
+    // Sin fechaVencimiento: no es una columna de donacion_detalle (00022), y desde la issue
+    // #756 el vencimiento real se pide al generar el ingreso de inventario, no aqui.
     const errores = validarDonacion({
       donanteId: "uuid-1",
       tipo: TIPOS_DE_DONACION.MEDICAMENTOS,
@@ -147,7 +148,6 @@ describe("validarDonacion", () => {
           descripcion: "Amoxicilina 500mg",
           cantidad: 120,
           unidad: "tabletas",
-          fechaVencimiento: enDias(400),
         },
       ],
     });
@@ -257,17 +257,6 @@ describe("validarDonacion", () => {
       detalles: [{ descripcion: "Traslado", monto: 0 }],
     });
     expect(cero.detalles_0_monto).toBeUndefined();
-  });
-
-  it("en medicamentos, un vencimiento ilegible no es lo mismo que un vencimiento ausente", () => {
-    const ilegible = validarDonacion({
-      donanteId: "uuid-1",
-      tipo: TIPOS_DE_DONACION.MEDICAMENTOS,
-      fecha: hoy(),
-      detalles: [{ descripcion: "Amoxicilina 500mg", cantidad: 10, fechaVencimiento: "pronto" }],
-    });
-
-    expect(ilegible.detalles_0_fechaVencimiento).toContain("no es valida");
   });
 });
 

@@ -147,6 +147,44 @@ export async function listarProveedores({ busqueda, tipo } = {}) {
   }
 }
 
+function normalizarNombre(texto) {
+  return String(texto ?? "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "");
+}
+
+/**
+ * Resuelve el proveedor que corresponde a un nombre dado -tipicamente el de un donante ya
+ * elegido en otra pantalla-, creandolo si todavia no existe (issue #756: `proveedores` no
+ * enlaza con `donantes`, son dos catalogos distintos, asi que pedir el ingreso de una donacion
+ * significaba escribir el mismo nombre dos veces sin ninguna garantia de que coincidiera).
+ *
+ * Busca por coincidencia exacta -sin acentos ni mayusculas- contra CUALQUIER proveedor, no solo
+ * los de `tipo`: `proveedores.nombre` es UNIQUE (00017), asi que crear uno nuevo con un nombre
+ * que ya existe con otro tipo fallaria contra esa restriccion.
+ *
+ * @param {string} nombre
+ * @param {string} tipo Tipo con el que se crea el proveedor si no existe (tipo_proveedor).
+ * @returns {Promise<{ proveedorId: string|null, error: object|null }>}
+ */
+export async function obtenerOCrearProveedorPorNombre(nombre, tipo) {
+  if (!nombre?.trim()) return { proveedorId: null, error: null };
+
+  const { proveedores, error: errorBusqueda } = await listarProveedores({ busqueda: nombre });
+  if (errorBusqueda) return { proveedorId: null, error: errorBusqueda };
+
+  const buscado = normalizarNombre(nombre);
+  const existente = proveedores.find((proveedor) => normalizarNombre(proveedor.nombre) === buscado);
+  if (existente) return { proveedorId: existente.id, error: null };
+
+  const { proveedor, error: errorCreacion } = await registrarProveedor({ nombre, tipo });
+  if (errorCreacion) return { proveedorId: null, error: errorCreacion };
+
+  return { proveedorId: proveedor.id, error: null };
+}
+
 /**
  * Un proveedor por id.
  *

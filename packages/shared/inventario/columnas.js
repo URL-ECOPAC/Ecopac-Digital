@@ -37,6 +37,36 @@ export const COLUMNAS_MOVIMIENTO = [
   { id: "createdAt", label: "Fecha", tipo: TIPOS_DE_PRESENTACION.FECHA },
 ];
 
+/**
+ * Columnas de "Mis movimientos" (issue #756): con el filtro "alcance" en "mios" son solo los
+ * movimientos de la persona (cualquier estado); en "todos" -solo disponible para quien puede
+ * aprobar- son los de todo el mundo. `tipo` traduce el enum via el catalogo `tiposMovimiento`
+ * (OPCIONES_TIPO_MOVIMIENTO); `medicamentoNombre`/`numeroLote`/`bodegaNombre`/`registradoPorNombre`
+ * los resuelve useMisMovimientos.js desde los embeds de listarMovimientos(). Solo se puede tocar
+ * (para corregir cantidad/motivo) una fila con `estado: 'pendiente'` que ademas sea propia -lo
+ * calcula `puedeEditar` en cada fila-, igual que exige editarMovimiento() en el servidor.
+ */
+export const COLUMNAS_MIS_MOVIMIENTOS = [
+  {
+    id: "tipo",
+    label: "Tipo",
+    tipo: TIPOS_DE_PRESENTACION.TEXTO,
+    etiquetasDesde: "tiposMovimiento",
+  },
+  {
+    id: "medicamentoNombre",
+    label: "Medicamento",
+    tipo: TIPOS_DE_PRESENTACION.TEXTO,
+    principal: true,
+  },
+  { id: "numeroLote", label: "Lote", tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  { id: "bodegaNombre", label: "Bodega", tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  { id: "cantidad", label: "Cantidad", tipo: TIPOS_DE_PRESENTACION.NUMERO },
+  { id: "estado", label: "Estado", tipo: TIPOS_DE_PRESENTACION.CHIP },
+  { id: "registradoPorNombre", label: "Registrado por", tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  { id: "createdAt", label: "Fecha", tipo: TIPOS_DE_PRESENTACION.FECHA },
+];
+
 export const COLUMNAS_EXISTENCIA = [
   { id: "medicamento", label: "Medicamento", tipo: TIPOS_DE_PRESENTACION.TEXTO, principal: true },
   { id: "numeroLote", label: "Lote", tipo: TIPOS_DE_PRESENTACION.TEXTO },

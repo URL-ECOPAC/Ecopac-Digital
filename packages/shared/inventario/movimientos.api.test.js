@@ -245,6 +245,14 @@ describe("Módulo de Inventario - API Movimientos", () => {
       );
     });
 
+    it("con registrado_por filtra por quien lo registro", async () => {
+      mockSupabase.order.mockResolvedValueOnce({ data: [], error: null });
+
+      await listarMovimientos({ registrado_por: "perfil-1" });
+
+      expect(mockSupabase.eq).toHaveBeenCalledWith("registrado_por", "perfil-1");
+    });
+
     it("nunca devuelve null: una lista vacia se dibuja sola", async () => {
       mockSupabase.order.mockResolvedValueOnce({ data: null, error: null });
 

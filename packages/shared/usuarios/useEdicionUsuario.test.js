@@ -10,12 +10,15 @@ import { CAMPOS_USUARIO } from "./campos.js";
 import { CAMPOS_EDICION_USUARIO } from "./useEdicionUsuario.js";
 
 describe("CAMPOS_EDICION_USUARIO", () => {
-  it("son exactamente los cuatro campos que pide el criterio 1 del issue #107", () => {
+  it("son los cuatro campos del criterio 1 del issue #107 mas fechaIngreso/direccion/notas (issue #756)", () => {
     expect(CAMPOS_EDICION_USUARIO.map((campo) => campo.id)).toEqual([
       "nombres",
       "apellidos",
       "telefono",
       "rol",
+      "fechaIngreso",
+      "direccion",
+      "notas",
     ]);
   });
 

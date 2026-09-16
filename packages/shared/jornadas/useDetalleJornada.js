@@ -36,6 +36,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { listarPacientesAtendidosDeJornada } from "../pacientes/consultas.api.js";
 import { puedeVerHistorial as puedeVerDatosClinicos } from "../pacientes/permisos.js";
+import { asignarPresupuestoJornada } from "../presupuestos/api.js";
 import {
   cambiarEstadoJornada,
   obtenerHistorialDeJornada,
@@ -164,6 +165,48 @@ export function useDetalleJornada({ jornadaId, rol } = {}) {
 
   const descartarErrorMovimiento = useCallback(() => setErrorMovimiento(null), []);
 
+  const [errorPresupuesto, setErrorPresupuesto] = useState(null);
+  const [guardandoPresupuesto, setGuardandoPresupuesto] = useState(false);
+
+  /**
+   * Fija jornadas.presupuesto_asignado (issue #756). A proposito NO pasa por
+   * actualizarJornada(): esa columna financiera ya tiene su propia via de escritura, mas
+   * estricta, en asignarPresupuestoJornada() (presupuestos/api.js, valida con
+   * aNumeroAEscribir()). Meterla en CAMPOS_FORMULARIO_JORNADA habria duplicado el camino de
+   * escritura con dos reglas de validacion distintas (ver jornadas/campos.js); en vez de eso
+   * esta pantalla llama directo a la funcion dedicada, que hasta esta issue no tenia ningun
+   * llamador.
+   */
+  const asignarPresupuesto = useCallback(
+    async (monto) => {
+      if (!jornadaId) return false;
+
+      setErrorPresupuesto(null);
+      setGuardandoPresupuesto(true);
+      const { jornada: actualizada, error } = await asignarPresupuestoJornada(jornadaId, monto);
+      setGuardandoPresupuesto(false);
+
+      if (error) {
+        setErrorPresupuesto(error.mensaje);
+        return false;
+      }
+
+      setEstado((anterior) =>
+        anterior.jornada
+          ? {
+              ...anterior,
+              jornada: {
+                ...anterior.jornada,
+                presupuestoAsignado: actualizada?.presupuesto_asignado ?? Number(monto),
+              },
+            }
+          : anterior,
+      );
+      return true;
+    },
+    [jornadaId],
+  );
+
   const destinos = estado.jornada ? transicionesDeJornadaDesde(estado.jornada.estado) : [];
 
   return {
@@ -183,5 +226,8 @@ export function useDetalleJornada({ jornadaId, rol } = {}) {
     moviendo,
     errorMovimiento,
     descartarErrorMovimiento,
+    asignarPresupuesto,
+    errorPresupuesto,
+    guardandoPresupuesto,
   };
 }

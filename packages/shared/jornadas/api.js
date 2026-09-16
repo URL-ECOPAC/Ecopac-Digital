@@ -45,10 +45,10 @@ import {
 // Las columnas se enumeran en lugar de pedir "*" para que una columna nueva en jornadas no
 // empiece a viajar sola hasta el cliente.
 //
-// comunidad y responsable se piden embebidos (comunidades.nombre, perfiles.nombres y
-// apellidos) para que la pantalla pinte el nombre sin una segunda consulta. Si RLS no deja
-// ver el perfil o la comunidad, el objeto embebido llega en null y la pantalla cae a su
-// respaldo; el id propio (comunidadId, responsableId) siempre viaja.
+// comunidad, responsable y botiquinBodega se piden embebidos (comunidades.nombre, perfiles.nombres y
+// apellidos, bodegas.nombre) para que la pantalla pinte el nombre sin una segunda consulta. Si RLS
+// no deja ver el perfil, la comunidad o la bodega, el objeto embebido llega en null y la pantalla
+// cae a su respaldo; el id propio (comunidadId, responsableId, botiquinBodegaId) siempre viaja.
 const COLUMNAS_DE_JORNADA = [
   "id",
   "nombre",
@@ -68,6 +68,7 @@ const COLUMNAS_DE_JORNADA = [
   "updatedAt:updated_at",
   "comunidad:comunidades(nombre)",
   "responsable:perfiles(nombres, apellidos)",
+  "botiquinBodega:bodegas(nombre)",
 ].join(", ");
 
 // Personal asignado a una jornada, con el nombre del perfil embebido para el detalle.
@@ -542,17 +543,21 @@ export async function asignarPersonal(jornadaId, datos) {
 }
 
 /**
- * Traduce a snake_case unicamente los tres campos que useEdicionTurno.js edita, omitiendo lo no
- * enviado. A diferencia de aColumnasDePersonal(), que aColumnasDePersonal() de proposito general
- * para el alta, esta funcion NO reconoce `perfil` ni `jornada`: aunque alguien los mande por
- * error, no hay forma de que actualizarAsignacionPersonal() reasigne de perfil o de jornada la
- * fila que edita, que ya llega fijada por sus dos parametros, no por `datos`.
+ * Traduce a snake_case unicamente los cuatro campos que useEdicionTurno.js edita, omitiendo lo
+ * no enviado. A diferencia de aColumnasDePersonal(), que aColumnasDePersonal() de proposito
+ * general para el alta, esta funcion NO reconoce `perfil` ni `jornada`: aunque alguien los mande
+ * por error, no hay forma de que actualizarAsignacionPersonal() reasigne de perfil o de jornada
+ * la fila que edita, que ya llega fijada por sus dos parametros, no por `datos`.
+ *
+ * `asistio` se suma en la issue #756: CAMPOS_EDICION_TURNO ahora lo incluye (campos.js), y sin
+ * esta entrada el valor se descartaria en silencio antes de llegar al UPDATE.
  */
 function aColumnasDeEdicionDeTurno(datos = {}) {
   const mapa = {
     horaInicio: "hora_inicio",
     horaFin: "hora_fin",
     responsabilidad: "responsabilidad",
+    asistio: "asistio",
   };
 
   const fila = {};
@@ -578,8 +583,8 @@ function aColumnasDeEdicionDeTurno(datos = {}) {
  *
  * @param {string} jornadaId UUID de la jornada.
  * @param {string} perfilId UUID del perfil cuya fila se edita.
- * @param {object} datos Campos en camelCase a actualizar (horaInicio, horaFin, responsabilidad).
- *   Un campo ausente no se toca, mismo criterio que actualizarJornada().
+ * @param {object} datos Campos en camelCase a actualizar (horaInicio, horaFin, responsabilidad,
+ *   asistio). Un campo ausente no se toca, mismo criterio que actualizarJornada().
  * @returns {Promise<{ asignacion: object|null, error: object|null }>}
  */
 export async function actualizarAsignacionPersonal(jornadaId, perfilId, datos) {

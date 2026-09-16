@@ -1,13 +1,53 @@
+import { useEffect, useState } from "react";
 import {
+  enlazarLoteConDonacion,
   ETIQUETAS_TIPO_DONACION,
   ETIQUETAS_TIPO_DONANTE,
+  listarBodegas,
+  listarMedicamentos,
+  listarProveedores,
+  obtenerOCrearProveedorPorNombre,
+  TIPO_PROVEEDOR,
   TIPOS_DE_DONACION,
   TIPOS_DE_DONANTE,
   useRegistroDonacion,
 } from "@ecopac/shared";
 import { Container, Row, Col, Card, Form, Button, Alert, Modal } from "react-bootstrap";
 
+import { useSesionCompartida } from "../contexto/SesionProvider";
+import ModalRegistroIngreso from "./ModalRegistroIngreso.jsx";
+
 export default function RegistroDonacionPage({ usuarioRol }) {
+  const { perfil } = useSesionCompartida();
+  const [catalogosIngreso, setCatalogosIngreso] = useState({
+    medicamentos: [],
+    bodegas: [],
+    proveedores: [],
+  });
+  const [formularioIngresoAbierto, setFormularioIngresoAbierto] = useState(false);
+  const [proveedorIdIngreso, setProveedorIdIngreso] = useState(null);
+  const [resolviendoProveedor, setResolviendoProveedor] = useState(false);
+
+  // Catalogos para "Ingreso a Inventario" (issue #756): la misma forma que ya carga
+  // InventarioPage.jsx para ModalRegistroIngreso.jsx. `proveedores` se acota a tipo 'donante'
+  // -este flujo siempre nace de una donacion, nunca de una compra.
+  useEffect(() => {
+    let vigente = true;
+
+    listarMedicamentos({ soloActivos: true }).then(({ medicamentos }) => {
+      if (vigente) setCatalogosIngreso((anteriores) => ({ ...anteriores, medicamentos }));
+    });
+    listarBodegas().then(({ bodegas }) => {
+      if (vigente) setCatalogosIngreso((anteriores) => ({ ...anteriores, bodegas }));
+    });
+    listarProveedores({ tipo: TIPO_PROVEEDOR.DONANTE }).then(({ proveedores }) => {
+      if (vigente) setCatalogosIngreso((anteriores) => ({ ...anteriores, proveedores }));
+    });
+
+    return () => {
+      vigente = false;
+    };
+  }, []);
   const {
     permisos,
     tipoDonacion,
@@ -18,6 +58,8 @@ export default function RegistroDonacionPage({ usuarioRol }) {
     setProyectoId,
     fecha,
     setFecha,
+    observaciones,
+    setObservaciones,
     detalles,
     agregarRenglon,
     quitarRenglon,
@@ -41,6 +83,42 @@ export default function RegistroDonacionPage({ usuarioRol }) {
     error,
     guardarDonacion,
   } = useRegistroDonacion({ usuarioRol });
+
+  // Nombre del donante de ESTA donacion, tomado de resumenRegistro (issue #756) y no del
+  // donanteId en vivo: guardarDonacion() limpia el formulario -incluido donanteId- apenas
+  // termina de guardar, para que los campos no se vean llenos como si nada hubiera pasado. El
+  // nombre congelado en el resumen es lo unico que sigue disponible para resolver el proveedor
+  // del ingreso (obtenerOCrearProveedorPorNombre()).
+  const donanteNombre = resumenRegistro?.donanteNombre;
+
+  // Resuelve el proveedor ANTES de abrir el formulario (issue #756): useRegistroIngreso.js solo
+  // lee `proveedorIdInicial` en el primer render del modal, asi que tiene que llegar ya resuelto
+  // -no hay forma limpia de actualizar un useState inicial despues de montado.
+  const abrirFormularioIngreso = async () => {
+    setResolviendoProveedor(true);
+    const { proveedorId } = await obtenerOCrearProveedorPorNombre(
+      donanteNombre,
+      TIPO_PROVEEDOR.DONANTE,
+    );
+
+    // El select de "Proveedor / Donante" solo dibuja lo que trae catalogosIngreso.proveedores:
+    // si obtenerOCrearProveedorPorNombre() acaba de crear uno, todavia no esta ahi -se cargo una
+    // sola vez al montar la pagina-, y sin su <option> el select no tiene como mostrarlo.
+    if (proveedorId) {
+      setCatalogosIngreso((anteriores) => {
+        const yaEsta = anteriores.proveedores.some((proveedor) => proveedor.id === proveedorId);
+        if (yaEsta) return anteriores;
+        return {
+          ...anteriores,
+          proveedores: [...anteriores.proveedores, { id: proveedorId, nombre: donanteNombre }],
+        };
+      });
+    }
+
+    setProveedorIdIngreso(proveedorId);
+    setResolviendoProveedor(false);
+    setFormularioIngresoAbierto(true);
+  };
 
   if (!permisos?.tieneAccesoLectura) {
     return (
@@ -142,6 +220,19 @@ export default function RegistroDonacionPage({ usuarioRol }) {
                 </Form.Select>
               </Form.Group>
             </Col>
+
+            <Col md={12}>
+              <Form.Group controlId="formObservaciones">
+                <Form.Label>Observaciones</Form.Label>
+                <Form.Control
+                  as="textarea"
+                  rows={2}
+                  disabled={!permisos?.puedeEscribir}
+                  value={observaciones}
+                  onChange={(e) => setObservaciones(e.target.value)}
+                />
+              </Form.Group>
+            </Col>
           </Row>
         </Card.Body>
       </Card>
@@ -175,7 +266,7 @@ export default function RegistroDonacionPage({ usuarioRol }) {
 
               {tipoDonacion === "medicamentos" && (
                 <>
-                  <Col md={7}>
+                  <Col md={5}>
                     <Form.Control
                       placeholder="Nombre de Medicamento / Lote"
                       disabled={!permisos?.puedeEscribir}
@@ -183,13 +274,21 @@ export default function RegistroDonacionPage({ usuarioRol }) {
                       onChange={(e) => actualizarRenglon(item.id, "descripcion", e.target.value)}
                     />
                   </Col>
-                  <Col md={4}>
+                  <Col md={3}>
                     <Form.Control
                       type="number"
                       placeholder="Cantidad"
                       disabled={!permisos?.puedeEscribir}
                       value={item.cantidad || ""}
                       onChange={(e) => actualizarRenglon(item.id, "cantidad", e.target.value)}
+                    />
+                  </Col>
+                  <Col md={3}>
+                    <Form.Control
+                      placeholder="Unidad"
+                      disabled={!permisos?.puedeEscribir}
+                      value={item.unidad || ""}
+                      onChange={(e) => actualizarRenglon(item.id, "unidad", e.target.value)}
                     />
                   </Col>
                 </>
@@ -197,7 +296,7 @@ export default function RegistroDonacionPage({ usuarioRol }) {
 
               {tipoDonacion === "insumos" && (
                 <>
-                  <Col md={7}>
+                  <Col md={5}>
                     <Form.Control
                       placeholder="Descripción del insumo"
                       disabled={!permisos?.puedeEscribir}
@@ -205,13 +304,21 @@ export default function RegistroDonacionPage({ usuarioRol }) {
                       onChange={(e) => actualizarRenglon(item.id, "descripcion", e.target.value)}
                     />
                   </Col>
-                  <Col md={4}>
+                  <Col md={3}>
                     <Form.Control
                       type="number"
                       placeholder="Cantidad"
                       disabled={!permisos?.puedeEscribir}
                       value={item.cantidad || ""}
                       onChange={(e) => actualizarRenglon(item.id, "cantidad", e.target.value)}
+                    />
+                  </Col>
+                  <Col md={3}>
+                    <Form.Control
+                      placeholder="Unidad"
+                      disabled={!permisos?.puedeEscribir}
+                      value={item.unidad || ""}
+                      onChange={(e) => actualizarRenglon(item.id, "unidad", e.target.value)}
                     />
                   </Col>
                 </>
@@ -273,29 +380,60 @@ export default function RegistroDonacionPage({ usuarioRol }) {
         </Card>
       )}
 
-      <Modal
-        show={ofrecerIngresoInventario}
-        onHide={() => setOfrecerIngresoInventario(false)}
-        centered
-      >
-        <Modal.Header closeButton>
-          <Modal.Title as="h5">Ingreso a Inventario</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <p className="mb-0">
-            Se ha registrado una donación de medicamentos. ¿Desea generar automáticamente el
-            registro de ingreso en el módulo de Inventario?
-          </p>
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="secondary" onClick={() => setOfrecerIngresoInventario(false)}>
-            No, omitir
-          </Button>
-          <Button variant="primary" onClick={() => setOfrecerIngresoInventario(false)}>
-            Sí, ingresar a Inventario
-          </Button>
-        </Modal.Footer>
-      </Modal>
+      {ofrecerIngresoInventario && !formularioIngresoAbierto && (
+        <Modal show onHide={() => setOfrecerIngresoInventario(false)} centered>
+          <Modal.Header closeButton>
+            <Modal.Title as="h5">Ingreso a Inventario</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            <p className="mb-0">
+              Se ha registrado una donación de medicamentos. ¿Desea generar automáticamente el
+              registro de ingreso en el módulo de Inventario?
+            </p>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button
+              variant="secondary"
+              onClick={() => setOfrecerIngresoInventario(false)}
+              disabled={resolviendoProveedor}
+            >
+              No, omitir
+            </Button>
+            <Button
+              variant="primary"
+              onClick={abrirFormularioIngreso}
+              disabled={resolviendoProveedor}
+            >
+              {resolviendoProveedor ? "Preparando..." : "Sí, ingresar a Inventario"}
+            </Button>
+          </Modal.Footer>
+        </Modal>
+      )}
+
+      {formularioIngresoAbierto && (
+        <ModalRegistroIngreso
+          abierto={formularioIngresoAbierto}
+          onClose={() => {
+            setFormularioIngresoAbierto(false);
+            setOfrecerIngresoInventario(false);
+          }}
+          catalogos={catalogosIngreso}
+          usuarioId={perfil?.id}
+          detallesDonacion={resumenRegistro?.detalles}
+          proveedorIdInicial={proveedorIdIngreso}
+          onExito={(movimientos, items) => {
+            // Enlaza cada lote creado de vuelta a su renglon de donacion (issue #756): items y
+            // movimientos vienen en el mismo orden (useRegistroIngreso.js), y solo los items que
+            // partieron de un renglon de donacion traen donacionDetalleId.
+            movimientos.forEach((movimiento, indice) => {
+              const donacionDetalleId = items[indice]?.donacionDetalleId;
+              if (donacionDetalleId) {
+                enlazarLoteConDonacion(donacionDetalleId, movimiento.lote_id);
+              }
+            });
+          }}
+        />
+      )}
 
       <Modal show={modalNuevoDonante} onHide={cerrarModalNuevoDonante} centered>
         <Modal.Header closeButton>

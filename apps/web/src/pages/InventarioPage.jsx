@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import React from "react";
 import { useSesionCompartida } from "../contexto/SesionProvider";
-import { useNavigate } from "react-router-dom";
 import ModalMedicamento from "./ModalMedicamento.jsx";
 import ModalPrincipioActivo from "./ModalPrincipioActivo.jsx";
 import { ModalAltaLote } from "./ModalAltaLote.jsx";
@@ -11,6 +10,7 @@ import BandejaValidacionPage from "./BandejaValidacionPage";
 import {
   actualizarMedicamento,
   datosLoteParaRegistrar,
+  desactivarMedicamento,
   esAdministrador,
   listarBodegas,
   listarLotes,
@@ -18,6 +18,8 @@ import {
   listarPrincipiosActivos,
   listarPrincipiosDeMedicamento,
   listarProveedores,
+  puedeRegistrarMovimiento,
+  reactivarMedicamento,
   registrarLote,
   registrarMedicamento,
   registrarPrincipioActivo,
@@ -30,6 +32,8 @@ import {
 import PanelAlertasVencimiento from "./PanelAlertasVencimiento.jsx";
 import AdministracionBodegasProveedoresPage from "./AdministracionBodegasProveedoresPage.jsx";
 import KardexMovimientosPage from "./KardexMovimientosPage.jsx";
+import CatalogoPrincipiosActivosPage from "./CatalogoPrincipiosActivosPage.jsx";
+import MisMovimientosPage from "./MisMovimientosPage.jsx";
 
 // API Medicamentos y Principios Activos
 const thStyle = {
@@ -58,7 +62,6 @@ const cardMetricStyle = {
 const datosTablaDemo = [];
 
 export default function InventarioPage() {
-  const navigate = useNavigate();
   const [tabActiva, setTabActiva] = useState("catalogo");
   const [inventarioRaw, setInventarioRaw] = useState([]);
   const [principiosActivos, setPrincipiosActivos] = useState([]);
@@ -87,12 +90,11 @@ export default function InventarioPage() {
   });
 
   // Solo se usa el conteo, para el indicador de la pestaña: el resto de este hook -busqueda,
-  // filtros, porVencer/vencidas- lo vuelve a calcular PanelAlertasVencimiento.jsx con su propia
-  // llamada a useAlertasVencimiento(), que es la que de verdad se pinta en pantalla.
-  const { cantidadPendientes: cantidadPendientesAlertas } = useAlertasVencimiento({
-    lotes: lotesRaw,
-    bodegas: bodegas,
-  });
+  // porVencer/vencidas- lo vuelve a calcular PanelAlertasVencimiento.jsx con su propia llamada a
+  // useAlertasVencimiento(), que es la que de verdad se pinta en pantalla. Las dos llamadas leen
+  // alertas_caducidad de forma independiente (mismo patron que usePendientesValidacion() en la
+  // bandeja de validacion), no derivan el conteo de lotesRaw.
+  const { cantidadPendientes: cantidadPendientesAlertas } = useAlertasVencimiento({});
 
   // Modales Lotes y Alertas
   const [modalAltaLoteAbierto, setModalAltaLoteAbierto] = useState(false);
@@ -161,7 +163,10 @@ export default function InventarioPage() {
       setCargando(true);
       setError(null);
       const [resMed, resPA, resBodegas, resProveedores, resLotes] = await Promise.all([
-        listarMedicamentos(),
+        // soloActivos:false (issue #756): antes el catalogo pedia listarMedicamentos() con su
+        // default (soloActivos:true), asi que un medicamento desactivado desaparecia sin
+        // ninguna forma de volver a verlo ni de reactivarlo desde la pantalla.
+        listarMedicamentos({ soloActivos: false }),
         listarPrincipiosActivos(),
         listarBodegas(),
         listarProveedores(),
@@ -240,6 +245,8 @@ export default function InventarioPage() {
       presentacion: item.presentacion || "",
       marca: item.marca || "",
       formaFarmaceutica: item.formaFarmaceutica || item.forma_farmaceutica || "",
+      esPediatrico: Boolean(item.esPediatrico),
+      activo: item.activo ?? true,
     });
     setAdvertenciaDuplicado(false);
     setErrorGuardarMedicamento(null);
@@ -291,6 +298,7 @@ export default function InventarioPage() {
           presentacion: normalizarPresentacion(formData.presentacion),
           marca: formData.marca.trim(),
           formaFarmaceutica: formData.formaFarmaceutica ? formData.formaFarmaceutica.trim() : null,
+          esPediatrico: Boolean(formData.esPediatrico),
         });
         if (errorUpdate) {
           setErrorGuardarMedicamento(
@@ -326,6 +334,26 @@ export default function InventarioPage() {
     } finally {
       setCargandoGuardar(false);
     }
+  };
+
+  // desactivarMedicamento()/reactivarMedicamento() existian y estaban probadas pero ningun
+  // boton las llamaba (issue #756): un medicamento no se podia dar de baja del catalogo desde
+  // ninguna pantalla.
+  const handleAlternarActivoMedicamento = async () => {
+    setErrorGuardarMedicamento(null);
+    setCargandoGuardar(true);
+    const { error: errorAlternar } = formData.activo
+      ? await desactivarMedicamento(formData.id)
+      : await reactivarMedicamento(formData.id);
+    setCargandoGuardar(false);
+
+    if (errorAlternar) {
+      setErrorGuardarMedicamento(errorAlternar.mensaje);
+      return;
+    }
+
+    setModalAbierto(false);
+    await cargarDatos();
   };
 
   const handleGuardarLote = async (datosLote) => {
@@ -607,7 +635,7 @@ export default function InventarioPage() {
           Administración
         </button>
         <button
-          onClick={() => navigate("/inventario/principios-activos")}
+          onClick={() => setTabActiva("principios-activos")}
           style={{
             padding: "8px 16px",
             fontSize: "13px",
@@ -615,12 +643,31 @@ export default function InventarioPage() {
             border: "none",
             background: "none",
             cursor: "pointer",
-            borderBottom: "2px solid transparent",
-            color: "#64748b",
+            borderBottom:
+              tabActiva === "principios-activos" ? "2px solid #0d9488" : "2px solid transparent",
+            color: tabActiva === "principios-activos" ? "#0d9488" : "#64748b",
           }}
         >
           Principios Activos
         </button>
+        {puedeRegistrarMovimiento(rol) && (
+          <button
+            onClick={() => setTabActiva("mis-movimientos")}
+            style={{
+              padding: "8px 16px",
+              fontSize: "13px",
+              fontWeight: "700",
+              border: "none",
+              background: "none",
+              cursor: "pointer",
+              borderBottom:
+                tabActiva === "mis-movimientos" ? "2px solid #7c3aed" : "2px solid transparent",
+              color: tabActiva === "mis-movimientos" ? "#7c3aed" : "#64748b",
+            }}
+          >
+            Mis Movimientos
+          </button>
+        )}
         <button
           onClick={() => setTabActiva("validacion")}
           style={{
@@ -1046,12 +1093,7 @@ export default function InventarioPage() {
 
       {/* Pestaña: Alertas completada mediante PanelAlertasVencimiento */}
       {tabActiva === "alertas" && (
-        <PanelAlertasVencimiento
-          lotes={lotesRaw}
-          bodegas={bodegas}
-          usuarioId={usuarioActual?.id}
-          rolUsuario={usuarioActual?.rol}
-        />
+        <PanelAlertasVencimiento usuarioId={usuarioActual?.id} rolUsuario={usuarioActual?.rol} />
       )}
 
       {/* Pestaña: Kardex Movimientos */}
@@ -1064,6 +1106,12 @@ export default function InventarioPage() {
       {tabActiva === "validacion" && (
         <BandejaValidacionPage usuarioId={perfil?.id} rolUsuario={rol} />
       )}
+
+      {/* Pestaña: Principios Activos */}
+      {tabActiva === "principios-activos" && <CatalogoPrincipiosActivosPage />}
+
+      {/* Pestaña: Mis Movimientos */}
+      {tabActiva === "mis-movimientos" && <MisMovimientosPage />}
 
       {/* Modales */}
       {modalAbierto && (
@@ -1079,6 +1127,7 @@ export default function InventarioPage() {
           onSubmit={handleGuardarMedicamento}
           onClose={() => setModalAbierto(false)}
           onCrearPrincipioActivo={() => setModalPrincipioActivoAbierto(true)}
+          onAlternarActivo={handleAlternarActivoMedicamento}
         />
       )}
 

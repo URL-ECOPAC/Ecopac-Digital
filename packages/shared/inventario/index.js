@@ -58,11 +58,7 @@ export {
   calcularEstadoVencimiento,
   useVistaExistencias,
 } from "./useVistaExistencias.js";
-export {
-  ESTADO_ALERTA,
-  datosAtenderAlerta,
-  useAlertasVencimiento,
-} from "./useAlertasVencimiento.js";
+export { datosAtenderAlerta, useAlertasVencimiento } from "./useAlertasVencimiento.js";
 
 // Los cuatro view model que ningun barril reexportaba (issue #700). No era un olvido inocuo: el
 // `exports` de packages/shared/package.json resuelve "./<modulo>" a su index.js y nada mas, asi
@@ -85,3 +81,4 @@ export {
   useKardexMovimientos,
 } from "./useKardexMovimientos.js";
 export { useRegistroSalida } from "./useRegistroSalida.js";
+export { filaDeMisMovimientos, useMisMovimientos } from "./useMisMovimientos.js";

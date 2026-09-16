@@ -319,7 +319,7 @@ export default function DashboardMetricasPage() {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(4, 1fr)",
+          gridTemplateColumns: "repeat(5, 1fr)",
           gap: "16px",
           marginBottom: "24px",
         }}
@@ -329,6 +329,11 @@ export default function DashboardMetricasPage() {
           valor={indicadores?.pacientesAtendidos || 0}
           meta="3000"
           color="#10b981"
+        />
+        <TarjetaMetrica
+          etiqueta="Consultas Realizadas"
+          valor={indicadores?.consultasRealizadas || 0}
+          color="#8b5cf6"
         />
         <TarjetaMetrica
           etiqueta="Comunidades Beneficiadas"

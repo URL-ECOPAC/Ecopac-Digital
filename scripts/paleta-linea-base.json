@@ -38,6 +38,12 @@
     "#ffffff"
   ],
   "apps/mobile/src/components/LoadingState.js": ["#3db648", "#7a7a8a"],
+  "apps/mobile/src/components/MapaUbicacionComunidad.js": [
+    "#3db648",
+    "#7a7a8a",
+    "#e2e4e9",
+    "#ffffff"
+  ],
   "apps/mobile/src/components/MenuDrawer.js": [
     "#0f172a",
     "#16a34a",
@@ -97,6 +103,7 @@
     "#ffffff"
   ],
   "apps/mobile/src/screens/ColaboradoresScreen.js": ["#7a7a8a"],
+  "apps/mobile/src/screens/ComunidadesScreen.js": ["#7a7a8a"],
   "apps/mobile/src/screens/ConsultaScreen.js": ["#2d2d2d", "#7a7a8a", "#e91e8c"],
   "apps/mobile/src/screens/DonacionesScreen.js": [
     "#000",
@@ -219,6 +226,11 @@
   ],
   "apps/mobile/src/screens/JornadasAsignadasScreen.js": ["#2d2d2d", "#3db648", "#7a7a8a"],
   "apps/mobile/src/screens/LoginScreen.js": ["#2d2d2d", "#3db648", "#7a7a8a", "#e91e8c", "#ffffff"],
+  "apps/mobile/src/screens/MisMovimientosScreen.js": ["#7a7a8a"],
+  "apps/mobile/src/screens/ModalComunidad.js": ["#2d2d2d", "#3db648", "#e91e8c", "#f7941d"],
+  "apps/mobile/src/screens/ModalCorreccionMovimiento.js": ["#7a7a8a", "#e91e8c", "#f7941d"],
+  "apps/mobile/src/screens/ModalEdicionPaciente.js": ["#2d2d2d", "#e91e8c"],
+  "apps/mobile/src/screens/ModalProyecto.js": ["#e91e8c"],
   "apps/mobile/src/screens/NuevaContrasenaScreen.js": [
     "#2d2d2d",
     "#3db648",
@@ -311,6 +323,13 @@
     "#f7f8fa",
     "#ffffff"
   ],
+  "apps/web/src/components/MapaUbicacionComunidad.jsx": [
+    "#2a9c36",
+    "#3db648",
+    "#7a7a8a",
+    "#e2e4e9",
+    "#ffffff"
+  ],
   "apps/web/src/components/PageHeader.jsx": ["#2d2d2d", "#7a7a8a"],
   "apps/web/src/components/ScreenContainer.jsx": ["#f7f8fa"],
   "apps/web/src/components/StatusChip.jsx": ["#4d4d4d", "#ffffff"],
@@ -385,6 +404,7 @@
     "#475569",
     "#64748b",
     "#7a7a8a",
+    "#8b5cf6",
     "#94a3b8",
     "#dc2626",
     "#e2e8f0",
@@ -404,6 +424,7 @@
     "#059669",
     "#06b6d4",
     "#0891b2",
+    "#0d9488",
     "#10b981",
     "#16a34a",
     "#1e293b",
@@ -411,6 +432,7 @@
     "#6366f1",
     "#64748b",
     "#78350f",
+    "#7c3aed",
     "#92400e",
     "#94a3b8",
     "#991b1b",
@@ -478,11 +500,15 @@
   "apps/web/src/pages/ModalMedicamento.jsx": [
     "#059669",
     "#0f172a",
+    "#15803d",
     "#475569",
     "#64748b",
     "#94a3b8",
     "#991b1b",
+    "#b91c1c",
+    "#bbf7d0",
     "#cbd5e1",
+    "#f0fdf4",
     "#f1f5f9",
     "#fecaca",
     "#fef2f2",
@@ -519,7 +545,6 @@
     "#475569",
     "#64748b",
     "#991b1b",
-    "#b91c1c",
     "#bbf7d0",
     "#cbd5e1",
     "#d97706",

@@ -1,7 +1,8 @@
 import { useState } from "react";
 
-import { CAMPOS_EDICION_USUARIO, useEdicionUsuario } from "@ecopac/shared";
+import { CAMPOS_EDICION_USUARIO, TIPOS_DE_CAMPO, useEdicionUsuario } from "@ecopac/shared";
 
+import DateField from "../components/DateField";
 import Modal from "../components/Modal";
 import PrimaryButton from "../components/PrimaryButton";
 import Selector from "../components/Selector";
@@ -29,8 +30,8 @@ import ModalConfirmarDesactivacion from "./ModalConfirmarDesactivacion";
 // que no hay otro lugar del que "abrirse desde la fila" sin construir un componente nuevo de
 // catalogo.
 const TIPO_DE_INPUT = {
-  texto: "text",
-  telefono: "tel",
+  [TIPOS_DE_CAMPO.TEXTO]: "text",
+  [TIPOS_DE_CAMPO.TELEFONO]: "tel",
 };
 
 export default function ModalEdicionUsuario({ perfil, idSesionActual, onClose, onGuardado }) {
@@ -53,21 +54,40 @@ export default function ModalEdicionUsuario({ perfil, idSesionActual, onClose, o
           </div>
         )}
 
-        {CAMPOS_EDICION_USUARIO.map((campo) =>
-          campo.tipo === "select" ? (
-            <Selector
-              key={campo.id}
-              label={campo.label}
-              value={valores[campo.id]}
-              options={campo.opciones}
-              onSelect={(valor) => setCampo(campo.id, valor)}
-              error={errores[campo.id]}
-              disabled={enviando}
-            />
-          ) : (
+        {CAMPOS_EDICION_USUARIO.map((campo) => {
+          if (campo.tipo === TIPOS_DE_CAMPO.SELECT) {
+            return (
+              <Selector
+                key={campo.id}
+                label={campo.label}
+                value={valores[campo.id]}
+                options={campo.opciones}
+                onSelect={(valor) => setCampo(campo.id, valor)}
+                error={errores[campo.id]}
+                disabled={enviando}
+              />
+            );
+          }
+
+          if (campo.tipo === TIPOS_DE_CAMPO.FECHA) {
+            return (
+              <DateField
+                key={campo.id}
+                label={campo.label}
+                value={valores[campo.id] || null}
+                onChange={(valor) => setCampo(campo.id, valor)}
+                error={errores[campo.id]}
+                disabled={enviando}
+              />
+            );
+          }
+
+          return (
             <TextField
               key={campo.id}
               label={campo.label}
+              as={campo.tipo === TIPOS_DE_CAMPO.TEXTO_LARGO ? "textarea" : undefined}
+              rows={campo.tipo === TIPOS_DE_CAMPO.TEXTO_LARGO ? 3 : undefined}
               type={TIPO_DE_INPUT[campo.tipo] ?? "text"}
               maxLength={campo.validacion?.maxLongitud}
               value={valores[campo.id] ?? ""}
@@ -75,8 +95,8 @@ export default function ModalEdicionUsuario({ perfil, idSesionActual, onClose, o
               error={errores[campo.id]}
               disabled={enviando}
             />
-          ),
-        )}
+          );
+        })}
 
         <div className="d-flex justify-content-between align-items-center mt-3">
           <div>

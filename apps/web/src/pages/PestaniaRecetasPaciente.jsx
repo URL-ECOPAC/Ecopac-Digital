@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 
 import {
+  anularReceta,
   describirMedicamento,
   describirPosologia,
   formatearFechaCorta,
+  puedeAnularReceta,
   useRecetasPaciente,
 } from "@ecopac/shared";
 
@@ -40,7 +42,26 @@ function Detalle({ receta }) {
   );
 }
 
-function Receta({ receta, abierta, onAlternar, onImprimir }) {
+function Receta({ receta, abierta, onAlternar, onImprimir, puedeAnular, onAnular }) {
+  const [anulando, setAnulando] = useState(false);
+  const [motivo, setMotivo] = useState("");
+  const [enviando, setEnviando] = useState(false);
+  const [errorAnular, setErrorAnular] = useState(null);
+
+  const confirmarAnulacion = async () => {
+    setEnviando(true);
+    setErrorAnular(null);
+    const { error } = await onAnular(receta.id, motivo);
+    setEnviando(false);
+
+    if (error) {
+      setErrorAnular(error.mensaje);
+      return;
+    }
+    setAnulando(false);
+    setMotivo("");
+  };
+
   return (
     <Card style={{ marginBottom: "1rem", opacity: receta.anulada ? 0.75 : 1 }}>
       <div className="d-flex flex-wrap align-items-center gap-2">
@@ -58,6 +79,15 @@ function Receta({ receta, abierta, onAlternar, onImprimir }) {
         <button type="button" className="btn btn-link btn-sm p-0" onClick={onImprimir}>
           Imprimir o guardar PDF
         </button>
+        {puedeAnular && !receta.anulada && !anulando && (
+          <button
+            type="button"
+            className="btn btn-link btn-sm p-0 text-danger"
+            onClick={() => setAnulando(true)}
+          >
+            Anular
+          </button>
+        )}
       </div>
 
       <div className="pac-dato-mono mt-1">
@@ -69,8 +99,51 @@ function Receta({ receta, abierta, onAlternar, onImprimir }) {
       {receta.anulada && (
         <div className="alert alert-warning mt-2 mb-0 py-2">
           <strong>Receta anulada</strong>
+          {receta.anuladaPorNombre && ` por ${receta.anuladaPorNombre}`}
           {receta.anuladaEn && ` el ${formatearFechaCorta(receta.anuladaEn)}`}
           {receta.motivoAnulacion ? `: ${receta.motivoAnulacion}` : ". No se registro el motivo."}
+        </div>
+      )}
+
+      {anulando && (
+        <div className="mt-2 p-2 border rounded">
+          {errorAnular && (
+            <div className="alert alert-danger py-1 px-2 mb-2" role="alert">
+              {errorAnular}
+            </div>
+          )}
+          <label className="form-label small mb-1" htmlFor={`motivo-anulacion-${receta.id}`}>
+            Motivo de la anulacion
+          </label>
+          <textarea
+            id={`motivo-anulacion-${receta.id}`}
+            className="form-control form-control-sm mb-2"
+            rows={2}
+            value={motivo}
+            onChange={(e) => setMotivo(e.target.value)}
+            disabled={enviando}
+          />
+          <div className="d-flex gap-2 justify-content-end">
+            <button
+              type="button"
+              className="btn btn-outline-secondary btn-sm"
+              onClick={() => {
+                setAnulando(false);
+                setErrorAnular(null);
+              }}
+              disabled={enviando}
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              className="btn btn-danger btn-sm"
+              onClick={confirmarAnulacion}
+              disabled={enviando || !motivo.trim()}
+            >
+              {enviando ? "Anulando..." : "Confirmar anulacion"}
+            </button>
+          </div>
         </div>
       )}
 
@@ -79,10 +152,16 @@ function Receta({ receta, abierta, onAlternar, onImprimir }) {
   );
 }
 
-export default function PestaniaRecetasPaciente({ paciente, rol }) {
+export default function PestaniaRecetasPaciente({ paciente, rol, perfilId }) {
   const { recetas, conteo, cargando, error, recargar } = useRecetasPaciente(paciente?.id, { rol });
   const [abiertas, setAbiertas] = useState(() => new Set());
   const [aImprimir, setAImprimir] = useState(null);
+
+  const anular = async (recetaId, motivo) => {
+    const respuesta = await anularReceta(recetaId, { motivo, anuladaPor: perfilId });
+    if (!respuesta.error) await recargar();
+    return respuesta;
+  };
 
   useEffect(() => {
     if (!aImprimir) return undefined;
@@ -127,6 +206,8 @@ export default function PestaniaRecetasPaciente({ paciente, rol }) {
           abierta={abiertas.has(receta.id)}
           onAlternar={() => alternar(receta.id)}
           onImprimir={() => setAImprimir(receta)}
+          puedeAnular={puedeAnularReceta(rol, receta, perfilId)}
+          onAnular={anular}
         />
       ))}
 

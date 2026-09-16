@@ -20,6 +20,7 @@ import PacientesPage from "./pages/PacientesPage";
 import FichaPacientePage from "./pages/FichaPacientePage";
 import PacientesCronicosPage from "./pages/PacientesCronicosPage";
 import CatalogoDiagnosticosPage from "./pages/CatalogoDiagnosticosPage";
+import CatalogoComunidadesPage from "./pages/CatalogoComunidadesPage";
 import PosiblesDuplicadosPage from "./pages/PosiblesDuplicadosPage";
 import DonacionesPage from "./pages/DonacionesPage";
 import DonantesPage from "./pages/DonantesPage";
@@ -27,7 +28,6 @@ import RegistroDonacionPage from "./pages/RegistroDonacionPage";
 import HistorialDonacionesPage from "./pages/HistorialDonacionesPage";
 import ConstanciaDonacionPage from "./pages/ConstanciaDonacionPage";
 import InventarioPage from "./pages/InventarioPage";
-import CatalogoPrincipiosActivosPage from "./pages/CatalogoPrincipiosActivosPage";
 import PresupuestosPage from "./pages/PresupuestosPage";
 import ProyectosSocialesPage from "./pages/ProyectosSocialesPage";
 import SeguimientoProyectoPage from "./pages/SeguimientoProyectoPage";
@@ -90,10 +90,10 @@ function ConstanciaDonacionEnrutada() {
   return <ConstanciaDonacionPage usuarioRol={perfil?.rol} donacion={donacion} />;
 }
 
-// Mismo caso que la constancia: useSeguimientoProyecto recibe el proyecto, sus hitos y su
-// bitacora ya resueltos. Las lecturas existen en packages/shared/proyectos (obtenerProyecto,
-// listarHitos, listarSeguimiento, listarJornadasDelProyecto) pero ningun hook las llama
-// todavia, asi que aqui solo se resuelve el :id y la vuelta al listado.
+// useSeguimientoProyecto ahora resuelve el :id el mismo (issue #756): antes solo recibia lo que
+// location.state trajera del listado (el proyecto, sin hitos ni bitacora), asi que entrar por un
+// enlace directo o refrescar la pagina dejaba la ficha vacia. proyectoInicial se conserva como
+// adelanto: pinta el encabezado antes de que termine la primera consulta.
 function SeguimientoProyectoEnrutado() {
   const { perfil } = useSesionCompartida();
   const { id } = useParams();
@@ -102,6 +102,7 @@ function SeguimientoProyectoEnrutado() {
   const proyectoInicial = String(state?.proyecto?.id) === id ? state.proyecto : null;
   return (
     <SeguimientoProyectoPage
+      proyectoId={id}
       proyectoInicial={proyectoInicial}
       usuarioActual={nombreCompletoDe(perfil ?? {}) || "Usuario"}
       onVolver={() => navigate("/proyectos")}
@@ -129,6 +130,7 @@ export default function App() {
                 <Route path="/pacientes" element={<PacientesPage />} />
                 <Route path="/pacientes/cronicos" element={<PacientesCronicosPage />} />
                 <Route path="/pacientes/diagnosticos" element={<CatalogoDiagnosticosPage />} />
+                <Route path="/pacientes/comunidades" element={<CatalogoComunidadesPage />} />
                 <Route path="/pacientes/duplicados" element={<PosiblesDuplicadosPage />} />
                 <Route path="/pacientes/:id" element={<FichaPacientePage />} />
               </Route>
@@ -141,10 +143,6 @@ export default function App() {
               </Route>
               <Route element={<RutaProtegida roles={rolesDe("/inventario")} />}>
                 <Route path="/inventario" element={<InventarioPage />} />
-                <Route
-                  path="/inventario/principios-activos"
-                  element={<CatalogoPrincipiosActivosPage />}
-                />
               </Route>
               <Route element={<RutaProtegida roles={rolesDe("/presupuestos")} />}>
                 <Route path="/presupuestos" element={<PresupuestosPage />} />

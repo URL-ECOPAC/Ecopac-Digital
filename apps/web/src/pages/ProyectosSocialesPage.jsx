@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { ESTADOS_PROYECTO, ETIQUETAS_ESTADO_PROYECTO, useProyectosSociales } from "@ecopac/shared";
 import {
@@ -16,6 +17,8 @@ import {
   Spinner,
 } from "react-bootstrap";
 
+import ModalProyecto from "./ModalProyecto";
+
 export default function ProyectosSocialesPage({ usuarioRol }) {
   const {
     tieneAccesoLectura,
@@ -24,13 +27,18 @@ export default function ProyectosSocialesPage({ usuarioRol }) {
     proyectos,
     proyectoDetalle,
     jornadasProyecto,
+    catalogos,
     puedeEditar,
+    guardarProyecto,
     filtrosState,
     setFiltrosState,
     setProyectoSeleccionadoId,
     tabActivo,
     setTabActivo,
   } = useProyectosSociales({ usuarioRol });
+
+  const [proyectoEnEdicion, setProyectoEnEdicion] = useState(null);
+  const [formularioAbierto, setFormularioAbierto] = useState(false);
 
   if (!tieneAccesoLectura) {
     return (
@@ -52,7 +60,17 @@ export default function ProyectosSocialesPage({ usuarioRol }) {
             Gestión de proyectos, presupuestos y jornadas de campo
           </p>
         </div>
-        {puedeEditar && <Button variant="primary">+ Nuevo Proyecto</Button>}
+        {puedeEditar && (
+          <Button
+            variant="primary"
+            onClick={() => {
+              setProyectoEnEdicion(null);
+              setFormularioAbierto(true);
+            }}
+          >
+            + Nuevo Proyecto
+          </Button>
+        )}
       </div>
 
       {error && (
@@ -273,12 +291,31 @@ export default function ProyectosSocialesPage({ usuarioRol }) {
             )}
           </Modal.Body>
           <Modal.Footer>
+            {puedeEditar && (
+              <Button
+                variant="outline-primary"
+                onClick={() => {
+                  setProyectoEnEdicion(proyectoDetalle);
+                  setFormularioAbierto(true);
+                }}
+              >
+                Editar proyecto
+              </Button>
+            )}
             <Button variant="secondary" onClick={() => setProyectoSeleccionadoId(null)}>
               Cerrar
             </Button>
           </Modal.Footer>
         </Modal>
       )}
+
+      <ModalProyecto
+        visible={formularioAbierto}
+        proyecto={proyectoEnEdicion}
+        catalogos={catalogos}
+        onClose={() => setFormularioAbierto(false)}
+        onGuardar={guardarProyecto}
+      />
     </Container>
   );
 }

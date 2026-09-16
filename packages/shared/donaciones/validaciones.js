@@ -99,8 +99,7 @@ export function validarDonante(donante = {}) {
  * chk_donacion_detalle_monto_no_negativo, 00022): aqui se adelanta ese rechazo para dar un mensaje
  * junto al campo en vez de esperar al error de Postgres.
  *
- * @param {{ descripcion?: string, cantidad?: number, unidad?: string, monto?: number,
- *   fechaVencimiento?: string }} detalle
+ * @param {{ descripcion?: string, cantidad?: number, unidad?: string, monto?: number }} detalle
  * @param {number} indice Posicion del renglon, para nombrar el error.
  * @param {string} tipoDeDonacion Tipo de la donacion a la que pertenece el renglon.
  * @returns {Record<string, string>}
@@ -127,19 +126,6 @@ function validarDetalle(detalle = {}, indice, tipoDeDonacion) {
 
   if (!estaVacio(detalle.monto) && Number(detalle.monto) < 0) {
     errores[`${prefijo}_monto`] = `El monto del renglon ${renglon} no puede ser negativo.`;
-  }
-
-  // Solo para medicamentos: el renglon se convierte en un lote, y lotes.fecha_vencimiento es
-  // NOT NULL con CHECK de ser posterior al ingreso (00020). Un renglon sin vencimiento no se
-  // puede dar de alta.
-  if (tipoDeDonacion === TIPOS_DE_DONACION.MEDICAMENTOS) {
-    if (estaVacio(detalle.fechaVencimiento)) {
-      errores[`${prefijo}_fechaVencimiento`] =
-        `El renglon ${renglon} exige la fecha de vencimiento del medicamento.`;
-    } else if (!esFechaValida(detalle.fechaVencimiento)) {
-      errores[`${prefijo}_fechaVencimiento`] =
-        `La fecha de vencimiento del renglon ${renglon} no es valida.`;
-    }
   }
 
   return errores;

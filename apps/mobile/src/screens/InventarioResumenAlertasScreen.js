@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from "react";
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import {
   formatearFechaCorta,
-  listarBodegas,
   listarLotes,
   listarMedicamentos,
   useAlertasVencimiento,
@@ -16,54 +15,58 @@ import { useSesionCompartida } from "../contexto/SesionProvider";
  * Resumen y alertario de inventario (issue #268): tarjetas de resumen en la cabecera y las
  * alertas de vencimiento, ordenadas por urgencia, separadas en "por vencer" y "vencidas".
  *
- * QUE ESTABA MAL (issue #785). Llamaba a useAlertasVencimiento({ rol }): ese hook toma
- * { lotes, bodegas, usuarioId, rolUsuario } por props (tampoco hace fetch propio) y nunca
- * devuelve cargando/error/resumen/alertas -- devuelve { alertas, porVencer, vencidas,
- * cantidadPendientes, ... }. Ademas leia campos snake_case (alerta.dias_restantes,
- * alerta.nivel_alerta, resumen.total_medicamentos) que no existen en esa forma. La pantalla
- * quedaba siempre en su rama "sin datos", y ademas no estaba registrada en el navegador.
+ * QUE ESTABA MAL (issue #785, corregido). Llamaba a useAlertasVencimiento({ rol }): ese hook
+ * tomaba { lotes, bodegas, usuarioId, rolUsuario } por props (tampoco hacia fetch propio) y
+ * derivaba las alertas de la lista de lotes en memoria, en vez de leer alertas_caducidad.
  *
- * QUE HACE AHORA. Carga listarLotes(), listarBodegas() y listarMedicamentos() al montar (mismo
- * patron que StockScreen.js), y se las pasa a useAlertasVencimiento() para obtener las alertas
- * reales. El resumen de cabecera se arma con esos mismos datos: medicamentos del catalogo,
- * lotes no vencidos, y el total de alertas pendientes (cantidadPendientes) como "en riesgo".
+ * QUE HACE AHORA (issue #756, auditoria campo-a-vista). useAlertasVencimiento() ya no acepta
+ * lotes/bodegas: consulta listarAlertas() directamente (mismo cambio que
+ * PanelAlertasVencimiento.jsx en la web), con su propio cargando/error. `lotes` y
+ * `totalMedicamentos` siguen viniendo de listarLotes()/listarMedicamentos() -esta pantalla si
+ * los necesita para las tarjetas de resumen ("Lotes activos", "Medicamentos")-, pero ya no se le
+ * pasan al hook de alertas.
  */
 export default function InventarioResumenAlertasScreen() {
   const { perfil, rol } = useSesionCompartida();
 
   const [lotes, setLotes] = useState([]);
-  const [bodegas, setBodegas] = useState([]);
   const [totalMedicamentos, setTotalMedicamentos] = useState(0);
-  const [cargando, setCargando] = useState(true);
-  const [error, setError] = useState(null);
+  const [cargandoResumen, setCargandoResumen] = useState(true);
+  const [errorResumen, setErrorResumen] = useState(null);
 
-  const cargar = useCallback(async () => {
-    setCargando(true);
-    setError(null);
+  const cargarResumen = useCallback(async () => {
+    setCargandoResumen(true);
+    setErrorResumen(null);
 
-    const [respuestaLotes, respuestaBodegas, respuestaMedicamentos] = await Promise.all([
+    const [respuestaLotes, respuestaMedicamentos] = await Promise.all([
       listarLotes(),
-      listarBodegas(),
       listarMedicamentos(),
     ]);
 
     setLotes(respuestaLotes.lotes || []);
-    setBodegas(respuestaBodegas.bodegas || []);
     setTotalMedicamentos((respuestaMedicamentos.medicamentos || []).length);
-    setError(respuestaLotes.error ?? respuestaBodegas.error ?? respuestaMedicamentos.error ?? null);
-    setCargando(false);
+    setErrorResumen(respuestaLotes.error ?? respuestaMedicamentos.error ?? null);
+    setCargandoResumen(false);
   }, []);
 
   useEffect(() => {
-    cargar();
-  }, [cargar]);
+    cargarResumen();
+  }, [cargarResumen]);
 
-  const { porVencer, vencidas, cantidadPendientes } = useAlertasVencimiento({
-    lotes,
-    bodegas,
-    usuarioId: perfil?.id,
-    rolUsuario: rol,
-  });
+  const {
+    porVencer,
+    vencidas,
+    cantidadPendientes,
+    cargando: cargandoAlertas,
+    error: errorAlertas,
+    recargar: recargarAlertas,
+  } = useAlertasVencimiento({ usuarioId: perfil?.id, rolUsuario: rol });
+
+  const cargando = cargandoResumen || cargandoAlertas;
+  const error = errorResumen ?? errorAlertas;
+  const cargar = useCallback(async () => {
+    await Promise.all([cargarResumen(), recargarAlertas()]);
+  }, [cargarResumen, recargarAlertas]);
 
   const lotesActivos = lotes.filter((lote) => !lote.vencido).length;
 
@@ -113,7 +116,7 @@ export default function InventarioResumenAlertasScreen() {
                   </Text>
                 </View>
                 <Text style={estilos.alertaDetalle}>
-                  Lote {alerta.lote} · vence el {formatearFechaCorta(alerta.fechaVencimiento)}
+                  Lote {alerta.numeroLote} · vence el {formatearFechaCorta(alerta.fechaVencimiento)}
                 </Text>
               </Card>
             ))
@@ -134,7 +137,8 @@ export default function InventarioResumenAlertasScreen() {
                   </Text>
                 </View>
                 <Text style={estilos.alertaDetalle}>
-                  Lote {alerta.lote} · venció el {formatearFechaCorta(alerta.fechaVencimiento)}
+                  Lote {alerta.numeroLote} · venció el{" "}
+                  {formatearFechaCorta(alerta.fechaVencimiento)}
                 </Text>
               </Card>
             ))

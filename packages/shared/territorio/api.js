@@ -32,6 +32,9 @@ const COLUMNAS_COMUNIDAD = [
   "nombre",
   "municipioId:municipio_id",
   "esVigente:es_vigente",
+  "latitud",
+  "longitud",
+  "referenciaAcceso:referencia_acceso",
 ].join(", ");
 
 // Comunidad con su municipio embebido, solo para obtenerComunidad(): resuelve la cascada
@@ -44,6 +47,19 @@ const COLUMNAS_COMUNIDAD_CON_TERRITORIO = [
   "municipioId:municipio_id",
   "esVigente:es_vigente",
   "municipio:municipios(departamentoId:departamento_id)",
+].join(", ");
+
+// Comunidad con su municipio y departamento embebidos, para la pantalla de catalogo (issue
+// #756): la tabla necesita mostrar el nombre del municipio y el departamento, no solo su id.
+const COLUMNAS_COMUNIDAD_CATALOGO = [
+  "id",
+  "nombre",
+  "municipioId:municipio_id",
+  "esVigente:es_vigente",
+  "latitud",
+  "longitud",
+  "referenciaAcceso:referencia_acceso",
+  "municipio:municipios(nombre, departamento:departamentos(nombre))",
 ].join(", ");
 
 /**
@@ -158,10 +174,22 @@ export async function obtenerComunidad(id) {
 /**
  * Crea una nueva comunidad en el catálogo territorial.
  *
- * @param {{ nombre: string, municipioId: number|string, esVigente?: boolean }} datos
+ * `latitud`/`longitud`/`referenciaAcceso` son opcionales (issue #756: la comunidad rural no
+ * siempre tiene una ubicacion exacta que capturar en el momento del alta) y por defecto quedan
+ * en null, igual que las columnas en la 00008.
+ *
+ * @param {{ nombre: string, municipioId: number|string, esVigente?: boolean,
+ *   latitud?: number|null, longitud?: number|null, referenciaAcceso?: string|null }} datos
  * @returns {Promise<{ comunidad: object|null, error: object|null }>}
  */
-export async function crearComunidad({ nombre, municipioId, esVigente = true } = {}) {
+export async function crearComunidad({
+  nombre,
+  municipioId,
+  esVigente = true,
+  latitud = null,
+  longitud = null,
+  referenciaAcceso = null,
+} = {}) {
   try {
     const { data, error } = await obtenerSupabase()
       .from("comunidades")
@@ -170,6 +198,9 @@ export async function crearComunidad({ nombre, municipioId, esVigente = true } =
           nombre,
           municipio_id: municipioId,
           es_vigente: esVigente,
+          latitud,
+          longitud,
+          referencia_acceso: referenciaAcceso,
         },
       ])
       .select(COLUMNAS_COMUNIDAD)
@@ -186,7 +217,8 @@ export async function crearComunidad({ nombre, municipioId, esVigente = true } =
  * Actualiza una comunidad existente.
  *
  * @param {string} id UUID de la comunidad.
- * @param {{ nombre?: string, municipioId?: number|string, esVigente?: boolean }} datos
+ * @param {{ nombre?: string, municipioId?: number|string, esVigente?: boolean,
+ *   latitud?: number|null, longitud?: number|null, referenciaAcceso?: string|null }} datos
  * @returns {Promise<{ comunidad: object|null, error: object|null }>}
  */
 export async function actualizarComunidad(id, datos = {}) {
@@ -197,6 +229,9 @@ export async function actualizarComunidad(id, datos = {}) {
     if (datos.nombre !== undefined) payload.nombre = datos.nombre;
     if (datos.municipioId !== undefined) payload.municipio_id = datos.municipioId;
     if (datos.esVigente !== undefined) payload.es_vigente = datos.esVigente;
+    if (datos.latitud !== undefined) payload.latitud = datos.latitud;
+    if (datos.longitud !== undefined) payload.longitud = datos.longitud;
+    if (datos.referenciaAcceso !== undefined) payload.referencia_acceso = datos.referenciaAcceso;
 
     const { data, error } = await obtenerSupabase()
       .from("comunidades")
@@ -209,5 +244,49 @@ export async function actualizarComunidad(id, datos = {}) {
     return { comunidad: data ?? null, error: null };
   } catch (error) {
     return { comunidad: null, error: normalizarError(error) };
+  }
+}
+
+/**
+ * Lista comunidades con su municipio y departamento resueltos a nombre, para la pantalla de
+ * catalogo (issue #756). `listarComunidades()` sigue siendo la version liviana que ya consumen
+ * los selectores en cascada de pacientes/jornadas -no se toca para no pedir un embed de mas en
+ * pantallas que no lo necesitan.
+ *
+ * @param {{ busqueda?: string, municipioId?: number|string, esVigente?: boolean }} [filtros]
+ * @returns {Promise<{ comunidades: object[], error: object|null }>}
+ */
+export async function listarComunidadesCatalogo({ busqueda, municipioId, esVigente } = {}) {
+  try {
+    let consulta = obtenerSupabase()
+      .from("comunidades")
+      .select(COLUMNAS_COMUNIDAD_CATALOGO)
+      .order("nombre", { ascending: true });
+
+    if (busqueda) consulta = consulta.ilike("nombre", `%${busqueda}%`);
+    if (municipioId) consulta = consulta.eq("municipio_id", municipioId);
+    if (esVigente !== undefined && esVigente !== null) {
+      consulta = consulta.eq("es_vigente", esVigente);
+    }
+
+    const { data, error } = await consulta;
+
+    if (error) return { comunidades: [], error: normalizarError(error) };
+
+    const comunidades = (data ?? []).map((fila) => ({
+      id: fila.id,
+      nombre: fila.nombre,
+      municipioId: fila.municipioId,
+      esVigente: fila.esVigente,
+      latitud: fila.latitud,
+      longitud: fila.longitud,
+      referenciaAcceso: fila.referenciaAcceso,
+      municipioNombre: fila.municipio?.nombre ?? null,
+      departamentoNombre: fila.municipio?.departamento?.nombre ?? null,
+    }));
+
+    return { comunidades, error: null };
+  } catch (error) {
+    return { comunidades: [], error: normalizarError(error) };
   }
 }

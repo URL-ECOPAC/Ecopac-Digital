@@ -16,15 +16,67 @@ const colores = {
   bordeActivo: "#10b981",
 };
 
+// Antes armaban HTML a mano (interpolando el tipo/estado sin escapar) y lo pintaban con
+// dangerouslySetInnerHTML: para un valor que no fuera ninguno de los conocidos, el texto crudo
+// terminaba en el DOM sin el escapado que React hace por defecto. tipo_movimiento y
+// estado_movimiento son enums de Postgres, asi que hoy no hay forma de inyectar nada por ahi,
+// pero un <span> normal de React da el mismo resultado sin ese patron.
+function EtiquetaTipo({ tipo }) {
+  const estilos = {
+    [TIPO_MOVIMIENTO.INGRESO]: { fondo: "#dcfce7", texto: "#166534", etiqueta: "Ingreso" },
+    [TIPO_MOVIMIENTO.SALIDA]: { fondo: "#fef3c7", texto: "#92400e", etiqueta: "Salida" },
+  };
+  const s = estilos[tipo] || { fondo: "#e2e8f0", texto: "#475569", etiqueta: tipo };
+  return (
+    <span
+      style={{
+        background: s.fondo,
+        color: s.texto,
+        padding: "4px 10px",
+        borderRadius: "6px",
+        fontSize: "12px",
+        fontWeight: 600,
+      }}
+    >
+      {s.etiqueta}
+    </span>
+  );
+}
+
+function EtiquetaEstado({ estado }) {
+  const estilos = {
+    [ESTADO_MOVIMIENTO.APROBADO]: { fondo: "#e0f2fe", texto: "#0369a1", etiqueta: "Aprobado" },
+    [ESTADO_MOVIMIENTO.RECHAZADO]: { fondo: "#fee2e2", texto: "#dc2626", etiqueta: "Rechazado" },
+    [ESTADO_MOVIMIENTO.PENDIENTE]: { fondo: "#fef9c3", texto: "#a16207", etiqueta: "Pendiente" },
+  };
+  const s = estilos[estado] || { fondo: "#e2e8f0", texto: "#475569", etiqueta: estado };
+  return (
+    <span
+      style={{
+        background: s.fondo,
+        color: s.texto,
+        padding: "4px 10px",
+        borderRadius: "6px",
+        fontSize: "12px",
+        fontWeight: 600,
+      }}
+    >
+      {s.etiqueta}
+    </span>
+  );
+}
+
 const COLUMNAS_CSV_KARDEX = [
   { id: "created_at", label: "Fecha registro", tipo: TIPOS_DE_PRESENTACION.FECHA },
   { id: "tipo", label: "Tipo" },
   { id: "cantidad", label: "Cantidad", tipo: TIPOS_DE_PRESENTACION.NUMERO },
+  { id: "bodega_nombre", label: "Bodega" },
   { id: "motivo", label: "Motivo" },
   { id: "registrado_por_nombre", label: "Registrado por" },
   { id: "aprobado_por_nombre", label: "Aprobado por" },
   { id: "aprobado_en", label: "Fecha aprobación", tipo: TIPOS_DE_PRESENTACION.FECHA },
   { id: "estado", label: "Estado" },
+  { id: "motivo_rechazo", label: "Motivo de rechazo" },
   { id: "saldoAcumulado", label: "Saldo", tipo: TIPOS_DE_PRESENTACION.NUMERO },
 ];
 
@@ -67,25 +119,6 @@ export default function KardexMovimientosPage({
       return { backgroundColor: "#fffbeb" };
     }
     return {};
-  };
-
-  const etiquetaTipo = (tipo) => {
-    const estilos = {
-      [TIPO_MOVIMIENTO.INGRESO]: { fondo: "#dcfce7", texto: "#166534", etiqueta: "Ingreso" },
-      [TIPO_MOVIMIENTO.SALIDA]: { fondo: "#fef3c7", texto: "#92400e", etiqueta: "Salida" },
-    };
-    const s = estilos[tipo] || { fondo: "#e2e8f0", texto: "#475569", etiqueta: tipo };
-    return `<span style="background:${s.fondo};color:${s.texto};padding:4px 10px;border-radius:6px;font-size:12px;font-weight:600">${s.etiqueta}</span>`;
-  };
-
-  const etiquetaEstado = (estado) => {
-    const estilos = {
-      [ESTADO_MOVIMIENTO.APROBADO]: { fondo: "#e0f2fe", texto: "#0369a1", etiqueta: "Aprobado" },
-      [ESTADO_MOVIMIENTO.RECHAZADO]: { fondo: "#fee2e2", texto: "#dc2626", etiqueta: "Rechazado" },
-      [ESTADO_MOVIMIENTO.PENDIENTE]: { fondo: "#fef9c3", texto: "#a16207", etiqueta: "Pendiente" },
-    };
-    const s = estilos[estado] || { fondo: "#e2e8f0", texto: "#475569", etiqueta: estado };
-    return `<span style="background:${s.fondo};color:${s.texto};padding:4px 10px;border-radius:6px;font-size:12px;font-weight:600">${s.etiqueta}</span>`;
   };
 
   return (
@@ -307,6 +340,17 @@ export default function KardexMovimientosPage({
                     color: colores.textoSecundario,
                   }}
                 >
+                  Bodega
+                </th>
+                <th
+                  style={{
+                    padding: "12px 10px",
+                    textAlign: "left",
+                    fontSize: "13px",
+                    fontWeight: 600,
+                    color: colores.textoSecundario,
+                  }}
+                >
                   Registrado por
                 </th>
                 <th
@@ -364,10 +408,9 @@ export default function KardexMovimientosPage({
                   <td style={{ padding: "10px", fontSize: "13px", color: colores.textoSecundario }}>
                     {formatoFecha(mov.created_at)}
                   </td>
-                  <td
-                    style={{ padding: "10px" }}
-                    dangerouslySetInnerHTML={{ __html: etiquetaTipo(mov.tipo) }}
-                  />
+                  <td style={{ padding: "10px" }}>
+                    <EtiquetaTipo tipo={mov.tipo} />
+                  </td>
                   <td style={{ padding: "10px", textAlign: "right", fontWeight: 500 }}>
                     {mov.tipo === TIPO_MOVIMIENTO.INGRESO ? "+" : ""}
                     {mov.cantidad}
@@ -375,19 +418,37 @@ export default function KardexMovimientosPage({
                   <td style={{ padding: "10px", fontSize: "13px", color: colores.textoSecundario }}>
                     {mov.motivo}
                   </td>
+                  <td style={{ padding: "10px", fontSize: "13px", color: colores.textoSecundario }}>
+                    {mov.bodega_nombre || "—"}
+                  </td>
                   <td style={{ padding: "10px", fontSize: "13px" }}>
                     {mov.registrado_por_nombre || "—"}
                   </td>
                   <td style={{ padding: "10px", fontSize: "13px" }}>
                     {mov.aprobado_por_nombre || "Pendiente"}
+                    {/* aprobacion_automatica (00028): TRUE cuando quien registro el movimiento
+                        era administrador y el trigger lo aprobo solo, sin que nadie mas
+                        interviniera -era una columna real que nunca llegaba a pantalla. */}
+                    {mov.aprobacion_automatica && (
+                      <span style={{ fontSize: "11px", color: colores.textoSecundario }}>
+                        {" "}
+                        (automático)
+                      </span>
+                    )}
                   </td>
                   <td style={{ padding: "10px", fontSize: "12px", color: colores.textoSecundario }}>
                     {formatoFecha(mov.aprobado_en)}
                   </td>
-                  <td
-                    style={{ padding: "10px" }}
-                    dangerouslySetInnerHTML={{ __html: etiquetaEstado(mov.estado) }}
-                  />
+                  <td style={{ padding: "10px" }}>
+                    <EtiquetaEstado estado={mov.estado} />
+                    {mov.estado === ESTADO_MOVIMIENTO.RECHAZADO && mov.motivo_rechazo && (
+                      <div
+                        style={{ fontSize: "11px", color: colores.textoSecundario, marginTop: 2 }}
+                      >
+                        Motivo: {mov.motivo_rechazo}
+                      </div>
+                    )}
+                  </td>
                   <td
                     style={{
                       padding: "10px",

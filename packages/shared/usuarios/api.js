@@ -11,7 +11,7 @@ import {
   normalizarError,
 } from "../api/errores-de-supabase.js";
 import { ESTADOS_USUARIO } from "./campos.js";
-import { ROLES } from "./roles.js";
+import { esAdministrador, ROLES } from "./roles.js";
 import { validarPerfil } from "./validaciones.js";
 
 // Las columnas se enumeran en lugar de pedir "*" para que una columna nueva en perfiles no
@@ -26,6 +26,14 @@ import { validarPerfil } from "./validaciones.js";
 // nada. Es la misma convencion que sigue proyectos/api.js.
 const COLUMNAS_DEL_PERFIL =
   "id, nombres, apellidos, email, telefono, direccion, notas, rol, activo, fechaIngreso:fecha_ingreso";
+
+// perfiles_directorio (00038/00080) no tiene direccion ni notas -son datos de contacto propios
+// del perfil, no del directorio-, y enmascara telefono/email a NULL salvo para administrador o
+// la propia fila. Se enumera aparte de COLUMNAS_DEL_PERFIL, no como un subconjunto en tiempo de
+// ejecucion, para que pedir una columna que la vista no tiene falle en desarrollo (columna
+// inexistente) en vez de silenciarse.
+const COLUMNAS_DEL_DIRECTORIO =
+  "id, nombres, apellidos, email, telefono, rol, activo, fechaIngreso:fecha_ingreso";
 
 // Especialidades embebidas para listarUsuarios() (issue #175, criterio 3): perfil_especialidad
 // no tiene columna id, solo la pareja (perfil_id, nombre_especialidad), asi que no hay mas que
@@ -77,6 +85,8 @@ const CAMPOS_EDITABLES = {
   telefono: "telefono",
   rol: "rol",
   fechaIngreso: "fecha_ingreso",
+  direccion: "direccion",
+  notas: "notas",
 };
 
 function aFiltroDeActivo(estado) {
@@ -136,14 +146,51 @@ async function idsDePerfilPorEspecialidad(especialidad) {
 }
 
 /**
+ * Especialidades de una lista de perfiles, agrupadas por id.
+ *
+ * Aparte del embed de ESPECIALIDADES_DEL_PERFIL porque ese embed depende de la relacion FK que
+ * PostgREST resuelve sobre la tabla base `perfiles`; `perfiles_directorio` es una vista y no se
+ * puede asumir que el mismo embed funcione sobre ella. Mismo patron de "consulta aparte y unir
+ * en JS" que contarJornadasPorPerfil() (jornadas/api.js) e idsDePerfilPorEspecialidad() arriba.
+ *
+ * @param {string[]} perfilIds
+ * @returns {Promise<{ especialidades: Record<string, string[]>, error: object|null }>}
+ */
+async function especialidadesPorPerfiles(perfilIds = []) {
+  if (perfilIds.length === 0) return { especialidades: {}, error: null };
+
+  const { data, error } = await obtenerSupabase()
+    .from("perfil_especialidad")
+    .select("perfil_id, nombre_especialidad")
+    .in("perfil_id", perfilIds);
+
+  if (error) return { especialidades: {}, error };
+
+  const especialidades = {};
+  for (const fila of data ?? []) {
+    (especialidades[fila.perfil_id] ??= []).push(fila.nombre_especialidad);
+  }
+  return { especialidades, error: null };
+}
+
+/**
  * Lista el personal, opcionalmente filtrado.
  *
  * `rol` acepta cualquiera de los cinco valores de ROLES (roles.js): esta funcion no restringe
- * cuales, la columna `rol` de perfiles ya los admite todos (issue #175, criterio 5). Quien SI
- * restringe cuantas filas llegan es RLS: la politica de perfiles (00038) solo deja ver todo el
- * personal a la administradora; cualquier otro perfil autenticado solo se ve a si mismo, sin
- * error (RLS filtra filas, no avisa). No es un limite de esta funcion: es la politica de
- * perfiles funcionando como esta escrita.
+ * cuales, la columna `rol` de perfiles ya los admite todos (issue #175, criterio 5).
+ *
+ * `rolConsultor` es el rol de QUIEN MIRA la pantalla, no un filtro sobre los resultados: decide
+ * de que relacion se lee. La politica de SELECT de la tabla base `perfiles` (00038) solo deja
+ * ver todo el personal a la administradora; cualquier otro perfil autenticado solo se ve a si
+ * mismo. `perfiles_directorio` (00038/00080) existe exactamente para esto -- administrador y
+ * junta directiva ven a todo el personal por ahi, sin telefono/email de nadie mas que si mismos
+ * ni columnas de contacto propias (direccion, notas)-, pero hasta la issue #756 nada la
+ * consultaba: `puedeVerListadoUsuarios()` (permisos.js) ya declaraba que junta directiva podia
+ * ver el listado, y esta funcion seguia leyendo la tabla base sin importar quien preguntara, asi
+ * que junta directiva terminaba viendo unicamente su propia fila -un "directorio" de una sola
+ * persona- en vez del personal completo. Sin `rolConsultor` (valor por defecto) se sigue
+ * leyendo `perfiles`, para no cambiar el comportamiento de quien ya llamaba sin pasarlo
+ * (administrador, y las pantallas que todavia no distinguen quien mira).
  *
  * `especialidad` filtra por una sola especialidad a la vez (FILTROS_USUARIO la declara
  * `TIPOS_DE_FILTRO.SELECT`, no MULTI_SELECT): primero resuelve que perfiles la tienen
@@ -163,7 +210,7 @@ async function idsDePerfilPorEspecialidad(especialidad) {
  * es lo que necesita la pantalla para saber cuantas paginas hay.
  *
  * @param {{ busqueda?: string, rol?: string, estado?: string|boolean, especialidad?: string,
- *   limite?: number, pagina?: number }} [filtros]
+ *   limite?: number, pagina?: number, rolConsultor?: string }} [filtros]
  * @returns {Promise<{ usuarios: object[], total: number, error: object|null }>}
  */
 export async function listarUsuarios({
@@ -173,6 +220,7 @@ export async function listarUsuarios({
   especialidad,
   limite,
   pagina = 1,
+  rolConsultor,
 } = {}) {
   try {
     let idsFiltrados = null;
@@ -184,12 +232,18 @@ export async function listarUsuarios({
     const pagina_ = Math.max(1, Number(pagina) || 1);
     const porPagina = limite === undefined || limite === null ? null : Math.max(1, Number(limite));
 
+    const leerDirectorio = rolConsultor !== undefined && !esAdministrador(rolConsultor);
+    const tabla = leerDirectorio ? "perfiles_directorio" : "perfiles";
+    // El embed de especialidades solo se pide sobre la tabla base: PostgREST lo resuelve por la
+    // FK real de perfil_especialidad -> perfiles, y esa relacion no esta garantizada sobre una
+    // vista. Leyendo del directorio, especialidadesPorPerfiles() las trae aparte, mas abajo.
+    const columnas = leerDirectorio
+      ? COLUMNAS_DEL_DIRECTORIO
+      : `${COLUMNAS_DEL_PERFIL}, ${ESPECIALIDADES_DEL_PERFIL}`;
+
     let consulta = obtenerSupabase()
-      .from("perfiles")
-      .select(
-        `${COLUMNAS_DEL_PERFIL}, ${ESPECIALIDADES_DEL_PERFIL}`,
-        porPagina === null ? undefined : { count: "exact" },
-      )
+      .from(tabla)
+      .select(columnas, porPagina === null ? undefined : { count: "exact" })
       .order("apellidos", { ascending: true })
       .order("nombres", { ascending: true });
 
@@ -217,10 +271,19 @@ export async function listarUsuarios({
 
     if (error) return { usuarios: [], total: 0, error: normalizarError(error) };
 
-    const usuarios = (data ?? []).map((fila) => ({
-      ...fila,
-      especialidades: (fila.especialidades ?? []).map((item) => item.nombre_especialidad),
-    }));
+    let usuarios;
+    if (leerDirectorio) {
+      const { especialidades } = await especialidadesPorPerfiles((data ?? []).map((f) => f.id));
+      usuarios = (data ?? []).map((fila) => ({
+        ...fila,
+        especialidades: especialidades[fila.id] ?? [],
+      }));
+    } else {
+      usuarios = (data ?? []).map((fila) => ({
+        ...fila,
+        especialidades: (fila.especialidades ?? []).map((item) => item.nombre_especialidad),
+      }));
+    }
 
     return { usuarios, total: count ?? usuarios.length, error: null };
   } catch (error) {

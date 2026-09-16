@@ -48,6 +48,7 @@ const GRUPO_DE_EJEMPLO = {
       diagnosticoPrincipal: { nombre: "Faringitis aguda" },
       diagnosticos: [{ codigo: "J02", nombre: "Faringitis aguda" }],
       motivoConsulta: "Dolor de garganta",
+      antecedentes: "Sin antecedentes relevantes",
     },
   ],
 };
@@ -101,6 +102,18 @@ describe("HistorialPacienteScreen", () => {
     fireEvent.press(screen.getByText("Ver"));
 
     expect(screen.getByText("Motivo: Dolor de garganta")).toBeTruthy();
+  });
+
+  // Issue #756: antecedentes/sintomas/exploracion/observaciones se capturaban pero el historial
+  // nunca los mostraba.
+  it("el detalle de la consulta tambien muestra los antecedentes", () => {
+    mockEstadoHook.grupos = [GRUPO_DE_EJEMPLO];
+    mockEstadoHook.total = 1;
+    pantalla();
+
+    fireEvent.press(screen.getByText("Ver"));
+
+    expect(screen.getByText("Antecedentes: Sin antecedentes relevantes")).toBeTruthy();
   });
 
   it("Ver atenciones anteriores dispara verMas()", () => {

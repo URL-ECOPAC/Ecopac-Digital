@@ -24,6 +24,7 @@ const {
   crearComunidad,
   actualizarComunidad,
   listarComunidades,
+  listarComunidadesCatalogo,
   listarDepartamentos,
   listarMunicipios,
   obtenerComunidad,
@@ -70,6 +71,10 @@ function crearCliente(respuestasPorTabla) {
         },
         eq(columna, valor) {
           llamadas.push({ paso: "eq", tabla, columna, valor });
+          return encadenable;
+        },
+        ilike(columna, valor) {
+          llamadas.push({ paso: "ilike", tabla, columna, valor });
           return encadenable;
         },
         order(columna, opciones) {
@@ -227,6 +232,39 @@ describe("crearComunidad", () => {
           nombre: "Nueva Comunidad",
           municipio_id: 701,
           es_vigente: true,
+          latitud: null,
+          longitud: null,
+          referencia_acceso: null,
+        },
+      ],
+    });
+  });
+
+  it("acepta latitud, longitud y referencia de acceso", async () => {
+    const cliente = crearCliente({
+      comunidades: { data: { id: "comunidad-3" }, error: null },
+    });
+    dobles.cliente = cliente;
+
+    await crearComunidad({
+      nombre: "Aldea El Mirador",
+      municipioId: 701,
+      latitud: 14.6349,
+      longitud: -90.5069,
+      referenciaAcceso: "Desvio a mano derecha pasando el puente",
+    });
+
+    expect(cliente.llamadas).toContainEqual({
+      paso: "insert",
+      tabla: "comunidades",
+      datos: [
+        {
+          nombre: "Aldea El Mirador",
+          municipio_id: 701,
+          es_vigente: true,
+          latitud: 14.6349,
+          longitud: -90.5069,
+          referencia_acceso: "Desvio a mano derecha pasando el puente",
         },
       ],
     });
@@ -267,6 +305,95 @@ describe("actualizarComunidad", () => {
       tabla: "comunidades",
       columna: "id",
       valor: "comunidad-1",
+    });
+  });
+
+  it("actualiza latitud y longitud sin tocar los demas campos", async () => {
+    const cliente = crearCliente({
+      comunidades: { data: { id: "comunidad-1" }, error: null },
+    });
+    dobles.cliente = cliente;
+
+    await actualizarComunidad("comunidad-1", { latitud: 14.5, longitud: -90.3 });
+
+    expect(cliente.llamadas).toContainEqual({
+      paso: "update",
+      tabla: "comunidades",
+      datos: { latitud: 14.5, longitud: -90.3 },
+    });
+  });
+
+  it("sin id no consulta al servidor", async () => {
+    const { comunidad, error } = await actualizarComunidad(undefined, { nombre: "x" });
+
+    expect(comunidad).toBeNull();
+    expect(error).toBeNull();
+  });
+});
+
+describe("listarComunidadesCatalogo", () => {
+  it("resuelve el nombre del municipio y del departamento", async () => {
+    dobles.cliente = crearCliente({
+      comunidades: {
+        data: [
+          {
+            id: "comunidad-1",
+            nombre: "San Juan",
+            municipioId: 701,
+            esVigente: true,
+            latitud: 14.5,
+            longitud: -90.3,
+            referenciaAcceso: null,
+            municipio: { nombre: "Antigua Guatemala", departamento: { nombre: "Sacatepequez" } },
+          },
+        ],
+        error: null,
+      },
+    });
+
+    const { comunidades, error } = await listarComunidadesCatalogo();
+
+    expect(error).toBeNull();
+    expect(comunidades).toEqual([
+      {
+        id: "comunidad-1",
+        nombre: "San Juan",
+        municipioId: 701,
+        esVigente: true,
+        latitud: 14.5,
+        longitud: -90.3,
+        referenciaAcceso: null,
+        municipioNombre: "Antigua Guatemala",
+        departamentoNombre: "Sacatepequez",
+      },
+    ]);
+  });
+
+  it("con busqueda filtra por ilike sobre el nombre", async () => {
+    const cliente = crearCliente({ comunidades: { data: [], error: null } });
+    dobles.cliente = cliente;
+
+    await listarComunidadesCatalogo({ busqueda: "san" });
+
+    expect(cliente.llamadas).toContainEqual({
+      paso: "ilike",
+      tabla: "comunidades",
+      columna: "nombre",
+      valor: "%san%",
+    });
+  });
+
+  it("con esVigente false filtra por es_vigente", async () => {
+    const cliente = crearCliente({ comunidades: { data: [], error: null } });
+    dobles.cliente = cliente;
+
+    await listarComunidadesCatalogo({ esVigente: false });
+
+    expect(cliente.llamadas).toContainEqual({
+      paso: "eq",
+      tabla: "comunidades",
+      columna: "es_vigente",
+      valor: false,
     });
   });
 });

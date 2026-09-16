@@ -98,18 +98,43 @@ export async function generarIngresoDesdeDonacion(
     }
 
     // Criterio 3: el lote creado queda enlazado con el renglon que lo origino.
-    const { data: detalleEnlazado, error: errorEnlace } = await supabase
-      .from("donacion_detalle")
-      .update({ lote_id: movimiento.lote_id })
-      .eq("id", donacionDetalleId)
-      .select()
-      .single();
+    const { detalle: detalleEnlazado, error: errorEnlace } = await enlazarLoteConDonacion(
+      donacionDetalleId,
+      movimiento.lote_id,
+    );
 
     if (errorEnlace) throw errorEnlace;
 
     return { datos: { movimiento, detalle: detalleEnlazado }, error: null };
   } catch (error) {
     return { datos: null, error: normalizarError(error) };
+  }
+}
+
+/**
+ * Enlaza un lote ya creado de vuelta al renglon de donacion que lo origino
+ * (`donacion_detalle.lote_id`). Extraida de generarIngresoDesdeDonacion() (criterio 3) para que
+ * useRegistroIngreso.js (inventario/, issue #756) pueda ofrecer el mismo enlace desde el
+ * formulario de ingreso normal -que registra el movimiento con registrarIngreso() directo, no
+ * con generarIngresoDesdeDonacion()-, sin duplicar el UPDATE.
+ *
+ * @param {string} donacionDetalleId
+ * @param {string} loteId
+ * @returns {Promise<{ detalle: object|null, error: object|null }>}
+ */
+export async function enlazarLoteConDonacion(donacionDetalleId, loteId) {
+  try {
+    const { data, error } = await obtenerSupabase()
+      .from("donacion_detalle")
+      .update({ lote_id: loteId })
+      .eq("id", donacionDetalleId)
+      .select()
+      .single();
+
+    if (error) return { detalle: null, error: normalizarError(error) };
+    return { detalle: data ?? null, error: null };
+  } catch (error) {
+    return { detalle: null, error: normalizarError(error) };
   }
 }
 

@@ -6,7 +6,7 @@
 
 BEGIN;
 
-SELECT plan(28);
+SELECT plan(33);
 
 -- ============================================================================
 -- Setup: comunidad, perfiles (dos medicos: uno asignado a la jornada, otro no),
@@ -323,6 +323,66 @@ SELECT ok(
 SELECT lives_ok(
   $$ UPDATE consultas SET observaciones = 'Revisado por administracion' WHERE id = '60000000-0000-0000-0000-000000000001' $$,
   'administrador puede editar cualquier consulta, no solo las propias'
+);
+
+-- ============================================================================
+-- Corregir un diagnostico mal elegido (issue #756, migracion 00127)
+-- ============================================================================
+-- consulta_diagnostico solo tenia SELECT e INSERT: quitar un diagnostico mal elegido no era
+-- posible. El actor del DELETE es el mismo que ya protege el INSERT desde la 00082 (issue #237):
+-- administrador cualquiera, medico solo el de su propia consulta. La fila que se usa aqui es la
+-- misma que quedo de "el medico dueno de la consulta puede adjuntarle un diagnostico" mas arriba.
+
+-- medico89b no es dueno de la consulta ...0001 (es de medico89a). El DELETE bloqueado por RLS no
+-- lanza excepcion: la clausula USING excluye la fila (mismo caso que el UPDATE ajeno de arriba),
+-- asi que se verifica que la fila sigue ahi en vez de esperar un throw.
+SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000203';
+
+DELETE FROM consulta_diagnostico
+WHERE consulta_id = '60000000-0000-0000-0000-000000000001'
+  AND diagnostico_id = '90000000-0000-0000-0000-000000000001';
+
+SELECT is(
+  (SELECT count(*)::int FROM consulta_diagnostico
+   WHERE consulta_id = '60000000-0000-0000-0000-000000000001'
+     AND diagnostico_id = '90000000-0000-0000-0000-000000000001'),
+  1,
+  'un medico no puede quitar un diagnostico de la consulta de otro medico (issue #756)'
+);
+
+-- medico89a si es dueno de la consulta.
+SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000202';
+
+SELECT lives_ok(
+  $$ DELETE FROM consulta_diagnostico
+     WHERE consulta_id = '60000000-0000-0000-0000-000000000001'
+       AND diagnostico_id = '90000000-0000-0000-0000-000000000001' $$,
+  'el medico dueno de la consulta puede quitarle un diagnostico mal elegido (issue #756)'
+);
+
+SELECT is(
+  (SELECT count(*)::int FROM consulta_diagnostico
+   WHERE consulta_id = '60000000-0000-0000-0000-000000000001'
+     AND diagnostico_id = '90000000-0000-0000-0000-000000000001'),
+  0,
+  'el diagnostico ya no esta vinculado a la consulta despues del DELETE'
+);
+
+-- Se repone el vinculo para probar que administrador tambien puede quitarlo, sin depender de si
+-- el medico ya lo habia quitado.
+SELECT lives_ok(
+  $$ INSERT INTO consulta_diagnostico (consulta_id, diagnostico_id)
+     VALUES ('60000000-0000-0000-0000-000000000001', '90000000-0000-0000-0000-000000000001') $$,
+  'el medico dueno de la consulta puede volver a adjuntar el diagnostico (issue #756)'
+);
+
+SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000201';
+
+SELECT lives_ok(
+  $$ DELETE FROM consulta_diagnostico
+     WHERE consulta_id = '60000000-0000-0000-0000-000000000001'
+       AND diagnostico_id = '90000000-0000-0000-0000-000000000001' $$,
+  'administrador puede quitar cualquier diagnostico de una consulta, no solo las propias (issue #756)'
 );
 
 -- ============================================================================

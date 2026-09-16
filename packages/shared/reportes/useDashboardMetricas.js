@@ -71,6 +71,7 @@ export function resolverRangoDeDashboard(rango, { fechaInicio, fechaFin } = {}, 
 function aIndicadoresDePantalla(totales) {
   return {
     pacientesAtendidos: totales?.pacientes_atendidos ?? 0,
+    consultasRealizadas: totales?.consultas_realizadas ?? 0,
     tratamientosEntregados: totales?.tratamientos_entregados ?? 0,
     medicamentosUtilizados: totales?.medicamentos_utilizados ?? 0,
     comunidadesBeneficiadas: totales?.comunidades_beneficiadas ?? 0,

@@ -8,14 +8,15 @@ import { registrarDonacion } from "./registro.api.js";
 
 /**
  * Renglon de detalle vacio. Los nombres de campo son los de `donacion_detalle` (00022) y de
- * `CAMPOS_DONACION.detalles.campos` (campos.js): `descripcion`, `cantidad`, `unidad`, `monto`,
- * `fechaVencimiento`. Antes de la #635 el campo se llamaba `concepto` -que ni `validarDonacion()`
- * ni `donacion_detalle` reconocen- y no existian `unidad` ni `fechaVencimiento`, asi que
- * `validarDonacion()` habria rechazado cualquier renglon con "falta descripcion" sin importar lo
- * que la persona hubiera escrito. `medicamentoId` no es una columna de `donacion_detalle` -queda
- * fuera del payload que arma `guardarDonacion()`- pero se conserva en el estado del renglon
- * porque lo necesita el paso posterior de generar el ingreso de inventario
- * (`generarIngresoDesdeDonacion`, fuera del alcance de #635).
+ * `CAMPOS_DONACION.detalles.campos` (campos.js): `descripcion`, `cantidad`, `unidad`, `monto`.
+ * Antes de la #635 el campo se llamaba `concepto` -que ni `validarDonacion()` ni
+ * `donacion_detalle` reconocen- y no existia `unidad`, asi que `validarDonacion()` habria
+ * rechazado cualquier renglon con "falta descripcion" sin importar lo que la persona hubiera
+ * escrito. `medicamentoId` no es una columna de `donacion_detalle` -queda fuera del payload que
+ * arma `guardarDonacion()`- pero se conserva en el estado del renglon porque lo necesita el paso
+ * posterior de generar el ingreso de inventario (issue #756, `ModalRegistroIngreso.jsx` via
+ * `useRegistroIngreso.js`). Ese mismo paso pide su propia fecha de vencimiento -no hay un campo
+ * `fechaVencimiento` aqui: pedirla dos veces era confuso y esta nunca se guardaba en ningun lado.
  */
 function renglonVacio() {
   return {
@@ -24,7 +25,6 @@ function renglonVacio() {
     cantidad: 1,
     unidad: "",
     monto: 0,
-    fechaVencimiento: "",
     medicamentoId: "",
   };
 }
@@ -83,6 +83,9 @@ export function useRegistroDonacion({ _client, usuarioRol, onGuardarExito }) {
   const [donanteId, setDonanteId] = useState("");
   const [proyectoId, setProyectoId] = useState("");
   const [fecha, setFecha] = useState(new Date().toISOString().split("T")[0]);
+  // registrarDonacion() ya aceptaba observaciones (p_observaciones en registro.api.js), pero el
+  // formulario web nunca la tenia en su estado: el input no existia (issue #756).
+  const [observaciones, setObservaciones] = useState("");
 
   const [detalles, setDetalles] = useState([renglonVacio()]);
 
@@ -200,6 +203,7 @@ export function useRegistroDonacion({ _client, usuarioRol, onGuardarExito }) {
       proyectoId: proyectoId || null,
       tipo: tipoDonacion,
       fecha,
+      observaciones: observaciones.trim() || null,
       detalles,
     };
 
@@ -216,13 +220,33 @@ export function useRegistroDonacion({ _client, usuarioRol, onGuardarExito }) {
     // acaba de crear fn_registrar_donacion (datos.detalleIds, en el mismo orden que se envio):
     // sin el segundo, ese paso posterior recibiria el id local de renglonVacio() -un Date.now(),
     // no un UUID de la base- y fallaria buscando un donacion_detalle inexistente (criterio 6).
-    setResumenRegistro({ ...payload, detalles: conIdsReales(detalles, datos.detalleIds) });
+    //
+    // `donanteNombre` tambien queda congelado aqui (issue #756): el paso de generar el ingreso lo
+    // usa para resolver el proveedor del donante (obtenerOCrearProveedorPorNombre(),
+    // inventario/proveedores.api.js), y el formulario se limpia -incluido donanteId- apenas
+    // termina esta funcion, asi que ese paso ya no podria leerlo de ahi.
+    setResumenRegistro({
+      ...payload,
+      detalles: conIdsReales(detalles, datos.detalleIds),
+      donanteNombre: donantesOptions.find((opcion) => opcion.value === donanteId)?.label ?? null,
+    });
 
     if (debeOfrecerIngresoInventario(tipoDonacion, fallo)) {
       setOfrecerIngresoInventario(true);
     }
 
     if (onGuardarExito) onGuardarExito(datos);
+
+    // La donacion ya quedo guardada: limpiar el formulario aqui, no solo cuando la persona
+    // termina (o descarta) el paso de ingreso a inventario, evita que alguien mire los mismos
+    // campos llenos despues de guardar y piense que no paso nada (issue #756). resumenRegistro
+    // no se toca: es el recibo de lo que se acaba de guardar.
+    setTipoDonacion(TIPOS_DE_DONACION.DINERO);
+    setDonanteId("");
+    setProyectoId("");
+    setFecha(new Date().toISOString().split("T")[0]);
+    setObservaciones("");
+    setDetalles([renglonVacio()]);
   };
 
   return {
@@ -235,6 +259,8 @@ export function useRegistroDonacion({ _client, usuarioRol, onGuardarExito }) {
     setProyectoId,
     fecha,
     setFecha,
+    observaciones,
+    setObservaciones,
     detalles,
     agregarRenglon,
     quitarRenglon,
