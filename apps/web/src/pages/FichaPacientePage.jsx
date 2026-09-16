@@ -283,7 +283,7 @@ export default function FichaPacientePage() {
               La captura existia unicamente en movil. */}
             {pestaniaActiva === "historial" && (
               <>
-                {permisos.puedeRegistrarConsulta && (
+                {permisos.puedeCrearConsulta && (
                   <div className="ec-acciones ec-acciones--fin mb-3">
                     <PrimaryButton
                       title="Registrar consulta"

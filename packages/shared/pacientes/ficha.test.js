@@ -157,14 +157,14 @@ describe("permisosDeFicha", () => {
       puedeEditar: true,
       puedeVerDatosClinicos: true,
       puedeTomarTriaje: true,
-      puedeRegistrarConsulta: true,
+      puedeCrearConsulta: true,
       puedeEmitirReceta: true,
     });
     expect(permisosDeFicha(ROLES.ADMINISTRADOR)).toEqual({
       puedeEditar: true,
       puedeVerDatosClinicos: true,
       puedeTomarTriaje: true,
-      puedeRegistrarConsulta: true,
+      puedeCrearConsulta: true,
       puedeEmitirReceta: true,
     });
     expect(permisosDeFicha(ROLES.VOLUNTARIO)).toEqual({
@@ -174,7 +174,7 @@ describe("permisosDeFicha", () => {
       // unica de las tres capturas clinicas que alcanza a su rol, y la ficha tiene que
       // ofrecersela aunque no pueda ver el historial completo.
       puedeTomarTriaje: true,
-      puedeRegistrarConsulta: false,
+      puedeCrearConsulta: false,
       puedeEmitirReceta: false,
     });
   });

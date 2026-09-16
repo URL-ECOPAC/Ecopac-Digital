@@ -106,7 +106,7 @@ export function puedeCorregirTriaje(rol) {
  * Faltaba, y por eso la web no tenia por donde registrar una consulta: existian el hook
  * (useRegistroConsulta) y la API (registrarConsulta), montados solo en ConsultaScreen de movil.
  */
-export function puedeRegistrarConsulta(rol) {
+export function puedeCrearConsulta(rol) {
   return esAdministrador(rol) || rol === ROLES.MEDICO;
 }
 
@@ -196,7 +196,7 @@ export function permisosDePacientes(rol) {
     puedeVerHistorial: puedeVerHistorial(rol),
     puedeTomarTriaje: puedeTomarTriaje(rol),
     puedeCorregirTriaje: puedeCorregirTriaje(rol),
-    puedeRegistrarConsulta: puedeRegistrarConsulta(rol),
+    puedeCrearConsulta: puedeCrearConsulta(rol),
     puedeEmitirReceta: puedeEmitirReceta(rol),
     puedeFusionarPacientes: puedeFusionarPacientes(rol),
     puedeVerCatalogoDiagnosticos: puedeVerCatalogoDiagnosticos(rol),

@@ -6,7 +6,7 @@ import { ESTADOS_CONDICION_CRONICA } from "../enums.js";
 import {
   puedeEditarPaciente,
   puedeEmitirReceta,
-  puedeRegistrarConsulta,
+  puedeCrearConsulta,
   puedeTomarTriaje,
   puedeVerHistorial,
 } from "./permisos.js";
@@ -120,7 +120,7 @@ export function permisosDeFicha(rol) {
     // Los tres permisos de captura clinica. La ficha de web no los preguntaba porque no tenia
     // nada que ofrecer: registrar triaje, consulta y receta solo existia en movil.
     puedeTomarTriaje: puedeTomarTriaje(rol),
-    puedeRegistrarConsulta: puedeRegistrarConsulta(rol),
+    puedeCrearConsulta: puedeCrearConsulta(rol),
     puedeEmitirReceta: puedeEmitirReceta(rol),
   };
 }
