@@ -298,6 +298,13 @@ export default function RegistroIngresoScreen() {
         min={1}
       />
 
+      <NumberField
+        label="Costo unitario (Q, opcional)"
+        value={itemActual.costo_unitario === "" ? null : Number(itemActual.costo_unitario)}
+        onChange={(valor) => setItemActual({ ...itemActual, costo_unitario: valor ?? "" })}
+        min={0}
+      />
+
       <Selector
         label="Bodega"
         value={itemActual.bodega_id || null}

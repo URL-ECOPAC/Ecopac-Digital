@@ -10,6 +10,9 @@ const ITEM_VACIO = {
   fecha_vencimiento: "",
   cantidad: "",
   bodega_id: "",
+  // Opcional (issue #752): un ingreso de donacion, o una compra cuyo precio todavia no se
+  // conoce, se registra igual sin costo.
+  costo_unitario: "",
 };
 
 /**
@@ -55,6 +58,13 @@ export function datosIngresoParaRegistrar(
     cantidad: item.cantidad,
     motivo: numeroComprobante.trim() || undefined,
     usuarioId,
+    // costo_unitario es opcional (issue #752): sin el, o con el campo vacio del formulario, se
+    // traduce a undefined, no a NaN ni a 0 -- registrarIngreso() (movimientos.api.js) omite la
+    // columna del todo cuando no llega, en vez de forzar un costo que nadie capturo.
+    costo_unitario:
+      item.costo_unitario === "" || item.costo_unitario === undefined
+        ? undefined
+        : Number(item.costo_unitario),
   };
 }
 

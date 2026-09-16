@@ -420,6 +420,7 @@
   "apps/web/src/pages/HomePage.jsx": ["#3db648"],
   "apps/web/src/pages/inicio.css": ["#2d2d2d", "#3db648", "#7a7a8a", "#e2e4e9", "#ffffff"],
   "apps/web/src/pages/InventarioPage.jsx": [
+    "#009963",
     "#0284c7",
     "#059669",
     "#06b6d4",
@@ -428,6 +429,7 @@
     "#10b981",
     "#16a34a",
     "#1e293b",
+    "#2563eb",
     "#4f46e5",
     "#6366f1",
     "#64748b",

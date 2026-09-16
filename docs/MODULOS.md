@@ -191,11 +191,14 @@ Funciones de base: `fn_existencias_disponibles`, `fn_registrar_medicamento`,
   Es un hueco conocido, no un alias intencional del diseno.
 - **Valorizacion de stock (issue #752)**: `lotes` tiene `costo_unitario` (nullable: un lote
   donado o de compra sin precio capturado no vale cero, vale "no se sabe") y `moneda` desde la
-  migracion `00121`. `fn_valor_de_inventario_disponible` (`00122`, `valorizacion.api.js`,
-  `obtenerValorDeInventario()`) esta lista para consumirse, pero **todavia sin pantalla ni en web
-  ni en movil**: capturar el costo al dar de alta un lote o al registrar un ingreso, y mostrar el
-  valor en el reporte de inventario y el panel de indicadores, quedan pendientes -tocan diseno de
-  interfaz, issue #752.
+  migracion `00121`. El costo se captura opcional al dar de alta un lote (`ModalAltaLote.jsx`) o
+  al registrar un ingreso (`ModalRegistroIngreso.jsx` en web, `RegistroIngresoScreen.js` en
+  movil), y se corrige despues desde la pestaña Lotes del inventario (`actualizarLote()`,
+  gateado por `puedeCorregirLote()`, espejo de la politica RLS de UPDATE de `00107`). El valor
+  monetario del stock disponible se ve en la tarjeta "VALOR INVENTARIO" del panel de indicadores
+  y en una seccion propia del reporte de inventario (total, desglose por origen compra/donacion,
+  y cuantos lotes/unidades quedan sin costo conocido), las dos gateadas a administracion y a los
+  roles consultivos (`puedeVerValorizacion()`, `fn_valor_de_inventario_disponible`, `00122`).
 
 ---
 

@@ -39,6 +39,10 @@ const COLUMNAS_DEL_LOTE = [
   "cantidadIngresada:cantidad_ingresada",
   "fechaIngreso:fecha_ingreso",
   "fechaVencimiento:fecha_vencimiento",
+  "costoUnitario:costo_unitario",
+  "moneda",
+  "registradoPor:registrado_por",
+  "confirmado",
   "createdAt:created_at",
   "updatedAt:updated_at",
   "medicamento:medicamentos(nombre)",
@@ -76,6 +80,7 @@ function aColumnasDeTabla(datos = {}) {
     cantidadIngresada: "cantidad_ingresada",
     fechaIngreso: "fecha_ingreso",
     fechaVencimiento: "fecha_vencimiento",
+    costoUnitario: "costo_unitario",
   };
 
   const fila = {};
@@ -88,6 +93,10 @@ function aColumnasDeTabla(datos = {}) {
 /**
  * Traduce una fila de lotes (con medicamento/proveedor embebidos) a un lote, agregando
  * `vencido`: true cuando fechaVencimiento ya paso, calculado aqui y no en la pantalla (RF-14).
+ *
+ * `costoUnitario` (issue #752) llega `null` cuando no se conoce -un lote donado, o uno de compra
+ * sin precio capturado- y nunca se convierte a 0: forzar un cero mentiria en los reportes
+ * financieros igual que forzar un precio inventado (00121).
  */
 function aLote(fila) {
   if (!fila) return null;
@@ -103,6 +112,13 @@ function aLote(fila) {
     cantidadIngresada: fila.cantidadIngresada,
     fechaIngreso: fila.fechaIngreso,
     fechaVencimiento: fila.fechaVencimiento,
+    costoUnitario:
+      fila.costoUnitario === null || fila.costoUnitario === undefined
+        ? null
+        : Number(fila.costoUnitario),
+    moneda: fila.moneda ?? null,
+    registradoPor: fila.registradoPor ?? null,
+    confirmado: fila.confirmado ?? null,
     vencido: (diasHastaVencimiento(fila.fechaVencimiento) ?? 0) < 0,
     createdAt: fila.createdAt,
     updatedAt: fila.updatedAt,
@@ -139,6 +155,46 @@ export async function registrarLote(datos = {}) {
     return { lote: aLote(data), error: null };
   } catch (error) {
     // Un fallo de red no llega por el campo error sino como excepcion del fetch.
+    return { lote: null, error: normalizarError(error) };
+  }
+}
+
+/**
+ * Corrige un lote ya registrado (issue #752): un costo unitario mal escrito no puede quedar
+ * congelado, igual que el telefono de un paciente (#699). Hoy es la unica correccion real que
+ * pide una pantalla -CAMPOS_CORRECCION_LOTE (campos.js) solo declara costoUnitario-, pero la
+ * funcion queda genérica (mismo patron que actualizarConsulta()/actualizarProyecto()) por si
+ * algun dia hace falta corregir algo mas.
+ *
+ * Quien puede corregir lo decide la politica RLS de UPDATE (00107): la administradora siempre,
+ * o el autor del lote mientras siga `confirmado = false`. Un intento fuera de esas dos
+ * condiciones vuelve como 42501, que normalizarError() ya traduce.
+ *
+ * @param {string} id UUID del lote.
+ * @param {{ costoUnitario?: number|null }} datos Campos en camelCase, subconjunto de CAMPOS_LOTE.
+ * @returns {Promise<{ lote: object|null, error: object|null }>}
+ */
+export async function actualizarLote(id, datos = {}) {
+  if (!id) {
+    return { lote: null, error: construirError(CODIGOS_DE_ERROR_DE_SUPABASE.CAMPO_REQUERIDO) };
+  }
+
+  const fila = aColumnasDeTabla(datos);
+  if (Object.keys(fila).length === 0) {
+    return { lote: null, error: null };
+  }
+
+  try {
+    const { data, error } = await obtenerSupabase()
+      .from("lotes")
+      .update(fila)
+      .eq("id", id)
+      .select(COLUMNAS_DEL_LOTE)
+      .maybeSingle();
+
+    if (error) return { lote: null, error: normalizarError(error) };
+    return { lote: aLote(data), error: null };
+  } catch (error) {
     return { lote: null, error: normalizarError(error) };
   }
 }

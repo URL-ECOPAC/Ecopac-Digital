@@ -18,6 +18,7 @@ export function ModalAltaLote({
     fecha_vencimiento: "",
     cantidad: "",
     bodega_id: "",
+    costo_unitario: "",
   });
 
   if (!abierto) return null;
@@ -249,7 +250,7 @@ export function ModalAltaLote({
             </div>
 
             {/* Cantidad */}
-            <div style={{ gridColumn: "span 2" }}>
+            <div>
               <label style={estilosLabel}>Cantidad Unidades *</label>
               <input
                 type="number"
@@ -259,6 +260,21 @@ export function ModalAltaLote({
                 value={formData.cantidad}
                 onChange={handleChange}
                 required
+                style={estilosInput}
+              />
+            </div>
+
+            {/* Costo Unitario (issue #752): opcional, un lote donado puede no tener costo. */}
+            <div>
+              <label style={estilosLabel}>Costo Unitario (Q)</label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                name="costo_unitario"
+                placeholder="Opcional"
+                value={formData.costo_unitario}
+                onChange={handleChange}
                 style={estilosInput}
               />
             </div>

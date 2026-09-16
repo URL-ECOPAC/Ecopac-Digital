@@ -10,6 +10,7 @@ import { ROLES } from "../usuarios/roles.js";
 import {
   permisosDeLotes,
   puedeAdministrarLotes,
+  puedeCorregirLote,
   puedeProponerLote,
   puedeVerLotes,
 } from "./lotes.permisos.js";
@@ -72,5 +73,46 @@ describe("permisos de lotes", () => {
       puedeCrear: false,
       puedeAdministrar: false,
     });
+  });
+});
+
+describe("puedeCorregirLote (issue #752)", () => {
+  const LOTE_PROVISIONAL_PROPIO = { registradoPor: "user-1", confirmado: false };
+  const LOTE_PROVISIONAL_AJENO = { registradoPor: "user-2", confirmado: false };
+  const LOTE_CONFIRMADO_PROPIO = { registradoPor: "user-1", confirmado: true };
+
+  it("administrador corrige cualquier lote, confirmado o no, propio o ajeno", () => {
+    expect(puedeCorregirLote(ROLES.ADMINISTRADOR, LOTE_PROVISIONAL_AJENO, "user-1")).toBe(true);
+    expect(puedeCorregirLote(ROLES.ADMINISTRADOR, LOTE_CONFIRMADO_PROPIO, "user-1")).toBe(true);
+    expect(puedeCorregirLote(ROLES.ADMINISTRADOR, null, "user-1")).toBe(true);
+  });
+
+  it("el autor corrige su propio lote mientras siga provisional", () => {
+    expect(puedeCorregirLote(ROLES.MEDICO, LOTE_PROVISIONAL_PROPIO, "user-1")).toBe(true);
+    expect(puedeCorregirLote(ROLES.VOLUNTARIO, LOTE_PROVISIONAL_PROPIO, "user-1")).toBe(true);
+  });
+
+  it("nadie mas puede corregir el lote de otra persona", () => {
+    expect(puedeCorregirLote(ROLES.MEDICO, LOTE_PROVISIONAL_AJENO, "user-1")).toBe(false);
+    expect(puedeCorregirLote(ROLES.VOLUNTARIO, LOTE_PROVISIONAL_AJENO, "user-1")).toBe(false);
+  });
+
+  it("en cuanto el lote se confirma, deja de ser corregible por su autor", () => {
+    expect(puedeCorregirLote(ROLES.MEDICO, LOTE_CONFIRMADO_PROPIO, "user-1")).toBe(false);
+  });
+
+  it("sin lote o sin usuarioId, un rol de campo no puede nada", () => {
+    expect(puedeCorregirLote(ROLES.MEDICO, null, "user-1")).toBe(false);
+    expect(puedeCorregirLote(ROLES.MEDICO, LOTE_PROVISIONAL_PROPIO, undefined)).toBe(false);
+  });
+
+  it("la comprobacion es por autoria, no por rol: asi es la politica de la 00107 en la base", () => {
+    // La politica de UPDATE no filtra por rol en su rama "autor" (a diferencia de la de INSERT,
+    // que si exige medico/voluntario): USING (es_administrador() OR (registrado_por = auth.uid()
+    // AND confirmado = false)). En la practica un rol consultivo nunca llega a ser autor de un
+    // lote -no puede insertarlo (puedeProponerLote)-, pero si la fila lo dijera, la base lo
+    // dejaria pasar igual; este espejo se queda fiel a esa regla en vez de inventar una mas
+    // estricta que el servidor no aplica.
+    expect(puedeCorregirLote(ROLES.JUNTA_DIRECTIVA, LOTE_PROVISIONAL_PROPIO, "user-1")).toBe(true);
   });
 });

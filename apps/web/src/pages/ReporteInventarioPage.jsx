@@ -1,6 +1,7 @@
 import {
   exportarFilasACSV,
   FILTROS_INVENTARIO_REPORTE,
+  formatearMoneda,
   useExportarPDF,
   useReporteInventario,
 } from "@ecopac/shared";
@@ -47,6 +48,13 @@ export default function ReporteInventarioPage() {
     hayFiltros,
     catalogos,
     recargar,
+    tieneAccesoValorizacion,
+    cargandoValorizacion,
+    errorValorizacion,
+    valorizacion,
+    valorizacionPorOrigen,
+    columnasValorizacionPorOrigen,
+    recargarValorizacion,
   } = useReporteInventario({ rol });
 
   // Exportación PDF — issue #216
@@ -124,6 +132,44 @@ export default function ReporteInventarioPage() {
               </Card>
             </div>
           </section>
+
+          {tieneAccesoValorizacion && (
+            <section className="reporte-seccion">
+              <h2 className="reporte-titulo">Valor del inventario disponible</h2>
+              {errorValorizacion && (
+                <ErrorState message={errorValorizacion.mensaje} onRetry={recargarValorizacion} />
+              )}
+              {!errorValorizacion && cargandoValorizacion && (
+                <LoadingState message="Calculando el valor del inventario..." />
+              )}
+              {!errorValorizacion && !cargandoValorizacion && (
+                <>
+                  <div className="reporte-cifras">
+                    <Card>
+                      <span className="reporte-cifra-etiqueta">Valor total disponible</span>
+                      <strong className="reporte-cifra">
+                        {formatearMoneda(valorizacion.valorDisponible) ?? "Sin costo registrado"}
+                      </strong>
+                    </Card>
+                    <Card>
+                      <span className="reporte-cifra-etiqueta">Unidades sin costo conocido</span>
+                      <strong className="reporte-cifra">{valorizacion.unidadesSinCosto}</strong>
+                    </Card>
+                    <Card>
+                      <span className="reporte-cifra-etiqueta">Lotes sin costo conocido</span>
+                      <strong className="reporte-cifra">{valorizacion.lotesSinCosto}</strong>
+                    </Card>
+                  </div>
+                  <DataList
+                    columnas={columnasValorizacionPorOrigen}
+                    datos={valorizacionPorOrigen}
+                    catalogos={catalogos}
+                    vacio="Sin datos de valorizacion por origen."
+                  />
+                </>
+              )}
+            </section>
+          )}
 
           <section className="reporte-seccion">
             <DataList

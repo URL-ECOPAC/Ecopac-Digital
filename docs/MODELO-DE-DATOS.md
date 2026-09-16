@@ -1074,7 +1074,7 @@ No es un hueco.
 | medicamento_id / numero_lote / fecha_vencimiento / proveedor_id / origen / cantidad_ingresada / fecha_ingreso | Si | Si, al crear (`ModalAltaLote.jsx`) | No | No existe edicion de lote en ninguna pantalla; bajo impacto -un lote mal capturado se corrige dando de baja y creando uno nuevo, patron ya usado en otras partes del esquema. Sin issue propia |
 | registrado_por | No | Si, implicito | No | Bajo impacto, sin issue propia |
 | confirmado | No como badge visible | Automatico (aprobar el ingreso lo confirma) | No aplica | Uso puramente interno de `fn_aplicar_ajuste_existencias` (`00107`/`00121`), por diseno |
-| costo_unitario / moneda | No | No | No | Issue #752 (valorizacion de stock, backend ya en `develop`, UI pendiente de revision de Figma) |
+| costo_unitario / moneda | Si, en la pestaña Lotes del inventario y en el reporte de inventario (valor total y por origen, solo administracion/consultivos) | Si, opcional, al dar de alta un lote (`ModalAltaLote.jsx`) o al registrar un ingreso (`ModalRegistroIngreso.jsx`, `RegistroIngresoScreen.js` en movil) | Si, `actualizarLote()` (`lotes.api.js`); quien puede corregir lo decide `puedeCorregirLote()` -espejo de la politica RLS de UPDATE, `00107`- | Issue #752, cerrada |
 
 **`existencias`**: `cantidad_disponible` (por lote+bodega) se muestra; sin captura/correccion
 directa por diseno -es un ledger derivado, solo lo mueve `fn_aplicar_ajuste_existencias` al

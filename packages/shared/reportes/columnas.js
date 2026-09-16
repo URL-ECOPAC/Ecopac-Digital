@@ -93,6 +93,29 @@ export const CAMPOS_FICHA_LOTE_INVENTARIO = [
   },
 ];
 
+/**
+ * Desglose del valor del inventario disponible por origen (issue #752, valorizacion.api.js,
+ * desglosarValorizacionPorOrigen). `origen` usa el mismo patron de etiquetas que `vencido` en
+ * CAMPOS_FICHA_LOTE_INVENTARIO -tipo estado, catalogo aparte- en vez de traducir "compra"/
+ * "donacion" a mano en la pantalla.
+ */
+export const COLUMNAS_VALORIZACION_POR_ORIGEN = [
+  {
+    id: "origen",
+    label: "Origen",
+    tipo: TIPOS_DE_PRESENTACION.ESTADO,
+    etiquetasDesde: "origenesDeLote",
+    principal: true,
+  },
+  { id: "valorDisponible", label: "Valor disponible", tipo: TIPOS_DE_PRESENTACION.MONEDA },
+  {
+    id: "unidadesSinCosto",
+    label: "Unidades sin costo conocido",
+    tipo: TIPOS_DE_PRESENTACION.NUMERO,
+  },
+  { id: "lotesSinCosto", label: "Lotes sin costo conocido", tipo: TIPOS_DE_PRESENTACION.NUMERO },
+];
+
 /** Totales del reporte de inventario (reporte.totales). */
 export const CAMPOS_TOTALES_INVENTARIO_REPORTE = [
   { id: "unidadesDisponibles", label: "Unidades disponibles", tipo: TIPOS_DE_PRESENTACION.NUMERO },

@@ -8,26 +8,32 @@ import ModalRegistroIngreso from "./ModalRegistroIngreso.jsx";
 import { ModalSalidaMedicamento } from "./ModalSalidaMedicamento";
 import BandejaValidacionPage from "./BandejaValidacionPage";
 import {
+  actualizarLote,
   actualizarMedicamento,
   datosLoteParaRegistrar,
   desactivarMedicamento,
   esAdministrador,
+  ETIQUETAS_ORIGEN_LOTE,
+  formatearMoneda,
   listarBodegas,
   listarLotes,
   listarMedicamentos,
   listarPrincipiosActivos,
   listarPrincipiosDeMedicamento,
   listarProveedores,
+  obtenerValorDeInventario,
+  puedeCorregirLote,
   puedeRegistrarMovimiento,
+  puedeVerValorizacion,
   reactivarMedicamento,
   registrarLote,
   registrarMedicamento,
   registrarPrincipioActivo,
+  totalizarValorizacion,
   useAlertasVencimiento,
   useCatalogoMedicamentos,
   useGestionLotes,
   usePendientesValidacion,
-  useVistaExistencias,
 } from "@ecopac/shared";
 import PanelAlertasVencimiento from "./PanelAlertasVencimiento.jsx";
 import AdministracionBodegasProveedoresPage from "./AdministracionBodegasProveedoresPage.jsx";
@@ -70,6 +76,18 @@ export default function InventarioPage() {
   const [proveedores, setProveedores] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
+  // Valor monetario del inventario disponible (issue #752): solo administracion y los roles
+  // consultivos lo reciben (fn_valor_de_inventario_disponible, 00122). Se guarda ya totalizado
+  // -no la lista completa por bodega/medicamento/origen, que esta pantalla no necesita- porque el
+  // unico uso hoy es la tarjeta "VALOR INVENTARIO" del panel de indicadores.
+  const [valorizacion, setValorizacion] = useState(null);
+  // Corregir el costo de un lote (issue #752): id del lote cuya fila esta en modo edicion, y el
+  // texto que se esta escribiendo. Solo uno a la vez, igual que el resto de ediciones inline de
+  // esta pantalla.
+  const [loteEnCorreccion, setLoteEnCorreccion] = useState(null);
+  const [costoEnEdicion, setCostoEnEdicion] = useState("");
+  const [guardandoCosto, setGuardandoCosto] = useState(false);
+  const [errorCorreccionCosto, setErrorCorreccionCosto] = useState(null);
 
   // Modales Medicamentos
   const [modalAbierto, setModalAbierto] = useState(false);
@@ -138,25 +156,13 @@ export default function InventarioPage() {
     usuario: usuarioActual,
   });
 
-  const {
-    medicamentos,
-    columnas,
-    busqueda: busquedaLotes,
-    setBusqueda: setBusquedaLotes,
-    filtroBodega,
-    setFiltroBodega,
-    filtroEstado,
-    setFiltroEstado,
-    ocultarSinExistencia,
-    setOcultarSinExistencia,
-    limpiarFiltros,
-    filasExpandidas,
-    toggleExpandir,
-    ESTADO_EXISTENCIA,
-  } = useVistaExistencias({
-    existencias: Array.isArray(lotesRaw) ? lotesRaw : [],
-    bodegas: Array.isArray(bodegas) ? bodegas.map((b) => b.nombre || b) : [],
-  });
+  // Busqueda y filtro por origen de la pestaña "Lotes" (issue #752): la tabla se arma directo
+  // contra lotesRaw -la forma real de aLote() (lotes.api.js)-, ya no contra useVistaExistencias(),
+  // que agrupaba por medicamento y esperaba campos que un lote no tiene (bodega, entre otros: un
+  // lote no vive en una sola bodega, eso lo decide existencias). "todas" es el valor inicial del
+  // selector de origen, no una etiqueta de ETIQUETAS_ORIGEN_LOTE.
+  const [busquedaLotes, setBusquedaLotes] = useState("");
+  const [filtroBodega, setFiltroBodega] = useState("todas");
 
   const cargarDatos = async () => {
     try {
@@ -193,6 +199,23 @@ export default function InventarioPage() {
 
       if (resLotes.error) fallos.push(["lotes", resLotes.error]);
       else setLotesRaw(resLotes.lotes || []);
+
+      // Aparte del Promise.all: es una consulta distinta (RPC, no una tabla) y solo administracion
+      // y los roles consultivos la reciben. Un rol sin acceso no la dispara siquiera -la funcion
+      // la rechazaria igual, pero no tiene sentido pedir algo que ya se sabe que va a fallar-, y
+      // su fallo no bloquea el resto del catalogo: se ve la pantalla completa sin la tarjeta de
+      // valor.
+      if (puedeVerValorizacion(rol)) {
+        const { valorizacion: filas, error: errorValorizacion } = await obtenerValorDeInventario();
+        if (errorValorizacion) {
+          console.error(
+            "Error cargando la valorizacion del inventario:",
+            errorValorizacion.detalle,
+          );
+        } else {
+          setValorizacion(totalizarValorizacion(filas));
+        }
+      }
 
       if (fallos.length > 0) {
         // `detalle` y no el error entero: normalizarError() ya lo saneo para el log, y el objeto
@@ -368,6 +391,40 @@ export default function InventarioPage() {
 
     setModalAltaLoteAbierto(false);
     cargarDatos();
+  };
+
+  // Corregir el costo unitario de un lote ya registrado (issue #752). Quien puede corregir lo
+  // decide puedeCorregirLote() -espejo de la politica RLS de UPDATE, 00107-, no un rol fijo: la
+  // administradora siempre, o quien registro el lote mientras siga provisional.
+  const abrirCorreccionCosto = (lote) => {
+    setLoteEnCorreccion(lote.id);
+    setCostoEnEdicion(lote.costoUnitario === null ? "" : String(lote.costoUnitario));
+    setErrorCorreccionCosto(null);
+  };
+
+  const cancelarCorreccionCosto = () => {
+    setLoteEnCorreccion(null);
+    setCostoEnEdicion("");
+    setErrorCorreccionCosto(null);
+  };
+
+  const guardarCorreccionCosto = async (loteId) => {
+    setGuardandoCosto(true);
+    setErrorCorreccionCosto(null);
+
+    const { lote, error: errorCorreccion } = await actualizarLote(loteId, {
+      costoUnitario: costoEnEdicion === "" ? null : Number(costoEnEdicion),
+    });
+
+    setGuardandoCosto(false);
+
+    if (errorCorreccion) {
+      setErrorCorreccionCosto(errorCorreccion.mensaje);
+      return;
+    }
+
+    setLotesRaw((anteriores) => anteriores.map((l) => (l.id === loteId ? lote : l)));
+    cancelarCorreccionCosto();
   };
 
   const getBadgeEstado = (estado, stock) => {
@@ -775,22 +832,33 @@ export default function InventarioPage() {
               </h2>
               <span style={{ fontSize: "11px", color: "#94a3b8" }}>agotados</span>
             </div>
-            <div style={cardMetricStyle}>
-              <span style={{ fontSize: "11px", fontWeight: "700", color: "#06b6d4" }}>
-                VALOR INVENTARIO
-              </span>
-              <h2
-                style={{
-                  fontSize: "28px",
-                  fontWeight: "800",
-                  margin: "4px 0 0 0",
-                  color: "#0891b2",
-                }}
-              >
-                Q 215,039
-              </h2>
-              <span style={{ fontSize: "11px", color: "#94a3b8" }}>stock actual</span>
-            </div>
+            {/* Solo administracion y los roles consultivos ven el valor monetario del stock
+              (issue #752): un medico o voluntario no reciben ni siquiera un placeholder, no solo
+              el numero oculto. */}
+            {puedeVerValorizacion(rol) && (
+              <div style={cardMetricStyle}>
+                <span style={{ fontSize: "11px", fontWeight: "700", color: "#06b6d4" }}>
+                  VALOR INVENTARIO
+                </span>
+                <h2
+                  style={{
+                    fontSize: "28px",
+                    fontWeight: "800",
+                    margin: "4px 0 0 0",
+                    color: "#0891b2",
+                  }}
+                >
+                  {valorizacion
+                    ? (formatearMoneda(valorizacion.valorDisponible) ?? "Sin costo registrado")
+                    : "..."}
+                </h2>
+                <span style={{ fontSize: "11px", color: "#94a3b8" }}>
+                  {valorizacion && valorizacion.lotesSinCosto > 0
+                    ? `${valorizacion.lotesSinCosto} lote(s) sin costo registrado`
+                    : "stock actual"}
+                </span>
+              </div>
+            )}
           </div>
 
           <div
@@ -1020,7 +1088,7 @@ export default function InventarioPage() {
           <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
             <input
               type="text"
-              placeholder="Buscar medicamento, lote o código..."
+              placeholder="Buscar medicamento o número de lote..."
               value={busquedaLotes}
               onChange={(e) => setBusquedaLotes(e.target.value)}
               style={{
@@ -1036,14 +1104,28 @@ export default function InventarioPage() {
               onChange={(e) => setFiltroBodega(e.target.value)}
               style={{ padding: "10px 14px", borderRadius: "12px", border: "1px solid #e2e8f0" }}
             >
-              <option value="todas">Todas las bodegas</option>
-              {bodegas.map((b, i) => (
-                <option key={i} value={b.nombre || b}>
-                  {b.nombre || b}
+              <option value="todas">Todos los orígenes</option>
+              {Object.values(ETIQUETAS_ORIGEN_LOTE).map((etiqueta) => (
+                <option key={etiqueta} value={etiqueta}>
+                  {etiqueta}
                 </option>
               ))}
             </select>
           </div>
+
+          {errorCorreccionCosto && (
+            <div
+              style={{
+                padding: "10px 14px",
+                backgroundColor: "#fef2f2",
+                color: "#991b1b",
+                borderRadius: "10px",
+                fontSize: "12px",
+              }}
+            >
+              {errorCorreccionCosto}
+            </div>
+          )}
 
           <div
             style={{
@@ -1056,35 +1138,135 @@ export default function InventarioPage() {
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
               <thead>
                 <tr style={{ borderBottom: "1px solid #f1f5f9", backgroundColor: "#fafafa" }}>
-                  {columnas.map((col, i) => (
-                    <th
-                      key={i}
-                      style={{
-                        padding: "12px 16px",
-                        textAlign: col.alineacion === "derecha" ? "right" : "left",
-                      }}
-                    >
-                      {col.etiqueta}
-                    </th>
-                  ))}
+                  <th style={{ padding: "12px 16px", textAlign: "left" }}>Medicamento</th>
+                  <th style={{ padding: "12px 16px", textAlign: "left" }}>Lote</th>
+                  <th style={{ padding: "12px 16px", textAlign: "left" }}>Origen</th>
+                  <th style={{ padding: "12px 16px", textAlign: "right" }}>Cantidad</th>
+                  <th style={{ padding: "12px 16px", textAlign: "right" }}>Costo unitario</th>
+                  <th style={{ padding: "12px 16px", textAlign: "left" }}>Vencimiento</th>
+                  <th style={{ padding: "12px 16px", textAlign: "left" }}>Estado</th>
+                  <th style={{ padding: "12px 16px", textAlign: "right" }}>Acción</th>
                 </tr>
               </thead>
               <tbody>
-                {medicamentos.map((item, idx) => (
-                  <tr key={idx} style={{ borderBottom: "1px solid #f8fafc" }}>
-                    <td style={{ padding: "14px 16px" }}>{item.nombre}</td>
-                    <td style={{ padding: "14px 16px" }}>{item.concentracion}</td>
-                    <td style={{ padding: "14px 16px" }}>{item.presentacion}</td>
-                    <td style={{ padding: "14px 16px" }}>{item.marca}</td>
-                    <td style={{ padding: "14px 16px", textAlign: "right" }}>{item.stockTotal}</td>
-                    <td style={{ padding: "14px 16px" }}>
-                      {item.fechaVencimientoMasProxima
-                        ? new Date(item.fechaVencimientoMasProxima).toLocaleDateString("es-GT")
-                        : "Sin fecha"}
-                    </td>
-                    <td style={{ padding: "14px 16px" }}>{item.estado}</td>
-                  </tr>
-                ))}
+                {lotesRaw
+                  .filter((lote) => {
+                    const texto = busquedaLotes.trim().toLowerCase();
+                    const coincideTexto =
+                      texto === "" ||
+                      lote.medicamento?.toLowerCase().includes(texto) ||
+                      lote.numeroLote?.toLowerCase().includes(texto);
+                    const coincideOrigen =
+                      filtroBodega === "todas" ||
+                      ETIQUETAS_ORIGEN_LOTE[lote.origen] === filtroBodega;
+                    return coincideTexto && coincideOrigen;
+                  })
+                  .map((lote) => {
+                    const enCorreccion = loteEnCorreccion === lote.id;
+                    return (
+                      <tr key={lote.id} style={{ borderBottom: "1px solid #f8fafc" }}>
+                        <td style={{ padding: "14px 16px" }}>{lote.medicamento}</td>
+                        <td style={{ padding: "14px 16px" }}>{lote.numeroLote}</td>
+                        <td style={{ padding: "14px 16px" }}>
+                          {ETIQUETAS_ORIGEN_LOTE[lote.origen] ?? lote.origen}
+                        </td>
+                        <td style={{ padding: "14px 16px", textAlign: "right" }}>
+                          {lote.cantidadIngresada}
+                        </td>
+                        <td style={{ padding: "14px 16px", textAlign: "right" }}>
+                          {enCorreccion ? (
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              autoFocus
+                              value={costoEnEdicion}
+                              onChange={(e) => setCostoEnEdicion(e.target.value)}
+                              style={{
+                                width: "110px",
+                                padding: "6px 10px",
+                                borderRadius: "8px",
+                                border: "1px solid #cbd5e1",
+                                fontSize: "13px",
+                                textAlign: "right",
+                              }}
+                            />
+                          ) : (
+                            (formatearMoneda(lote.costoUnitario) ?? "Sin registrar")
+                          )}
+                        </td>
+                        <td style={{ padding: "14px 16px" }}>
+                          {lote.fechaVencimiento
+                            ? new Date(lote.fechaVencimiento).toLocaleDateString("es-GT")
+                            : "Sin fecha"}
+                        </td>
+                        <td style={{ padding: "14px 16px" }}>
+                          {lote.vencido ? "Vencido" : "Vigente"}
+                        </td>
+                        <td style={{ padding: "14px 16px", textAlign: "right" }}>
+                          {enCorreccion ? (
+                            <div
+                              style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}
+                            >
+                              <button
+                                type="button"
+                                onClick={() => guardarCorreccionCosto(lote.id)}
+                                disabled={guardandoCosto}
+                                style={{
+                                  border: "none",
+                                  borderRadius: "8px",
+                                  padding: "6px 12px",
+                                  backgroundColor: "#009963",
+                                  color: "#fff",
+                                  fontSize: "12px",
+                                  fontWeight: "700",
+                                  cursor: "pointer",
+                                }}
+                              >
+                                {guardandoCosto ? "Guardando..." : "Guardar"}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={cancelarCorreccionCosto}
+                                disabled={guardandoCosto}
+                                style={{
+                                  border: "1px solid #e2e8f0",
+                                  borderRadius: "8px",
+                                  padding: "6px 12px",
+                                  backgroundColor: "#fff",
+                                  color: "#64748b",
+                                  fontSize: "12px",
+                                  fontWeight: "700",
+                                  cursor: "pointer",
+                                }}
+                              >
+                                Cancelar
+                              </button>
+                            </div>
+                          ) : (
+                            puedeCorregirLote(rol, lote, perfil?.id) && (
+                              <button
+                                type="button"
+                                onClick={() => abrirCorreccionCosto(lote)}
+                                style={{
+                                  border: "1px solid #e2e8f0",
+                                  borderRadius: "8px",
+                                  padding: "6px 12px",
+                                  backgroundColor: "#fff",
+                                  color: "#2563eb",
+                                  fontSize: "12px",
+                                  fontWeight: "700",
+                                  cursor: "pointer",
+                                }}
+                              >
+                                Corregir costo
+                              </button>
+                            )
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
               </tbody>
             </table>
           </div>
