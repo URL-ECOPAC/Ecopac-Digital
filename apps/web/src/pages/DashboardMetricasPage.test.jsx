@@ -92,21 +92,26 @@ describe("DashboardMetricasPage", () => {
 
   // Con la base vacia (issue #759/#779): el periodo sin datos da indicadores en cero y una
   // serie vacia, y la pantalla tiene que dibujarse igual, no romperse ni inventar datos.
-  it("con la base vacia, pinta las cuatro tarjetas en cero y ninguna barra", () => {
+  it("con la base vacia, pinta las cinco tarjetas en cero y ninguna barra", () => {
     pantalla();
 
-    // Las cuatro tarjetas, todas en 0 -- consultar por "0" a secas seria ambiguo (aparece cuatro
-    // veces), asi que se confirma que las cuatro etiquetas de tarjeta esten presentes.
+    // Las cinco tarjetas, todas en 0 -- consultar por "0" a secas seria ambiguo (aparece cinco
+    // veces), asi que se confirma que las cinco etiquetas de tarjeta esten presentes.
+    // "Consultas Realizadas" se agrego en la issue #756: consultas_realizadas ya llegaba en
+    // COLUMNAS_DEL_REPORTE/INDICADORES (api.js, issue #693) pero useDashboardMetricas.js no lo
+    // traducia a camelCase, asi que nunca llegaba a esta tarjeta.
     expect(screen.getByText("Pacientes Atendidos")).toBeInTheDocument();
+    expect(screen.getByText("Consultas Realizadas")).toBeInTheDocument();
     expect(screen.getByText("Comunidades Beneficiadas")).toBeInTheDocument();
     expect(screen.getByText("Tratamientos Entregados")).toBeInTheDocument();
     expect(screen.getByText("Medicamentos Utilizados")).toBeInTheDocument();
-    expect(screen.getAllByText("0")).toHaveLength(4);
+    expect(screen.getAllByText("0")).toHaveLength(5);
   });
 
   it("con datos, pinta los indicadores reales en las tarjetas", () => {
     mockEstadoHook.indicadores = {
       pacientesAtendidos: 120,
+      consultasRealizadas: 210,
       comunidadesBeneficiadas: 8,
       tratamientosEntregados: 95,
       medicamentosUtilizados: 340,
@@ -115,6 +120,7 @@ describe("DashboardMetricasPage", () => {
     pantalla();
 
     expect(screen.getByText("120")).toBeInTheDocument();
+    expect(screen.getByText("210")).toBeInTheDocument();
     expect(screen.getByText("8")).toBeInTheDocument();
     expect(screen.getByText("95")).toBeInTheDocument();
     expect(screen.getByText("340")).toBeInTheDocument();
