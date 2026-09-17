@@ -1,236 +1,220 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import { FlatList, RefreshControl, StyleSheet, Text, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import {
-  diasHastaVencimiento,
+  ESTADOS_DE_LOTE,
+  FILTROS_EXISTENCIAS_POR_LOTE,
   formatearFechaCorta,
-  listarExistenciasDisponibles,
-  listarLotes,
+  useExistenciasPorLote,
 } from "@ecopac/shared";
-import { colors, labels, radii, spacing, typography } from "@ecopac/ui-tokens";
+import { colors, labels, moduleAccents, radii, spacing, typography } from "@ecopac/ui-tokens";
 
-import { Card, EmptyState, ErrorState, LoadingState, StatusChip } from "../components";
+import {
+  Card,
+  EmptyState,
+  ErrorState,
+  FilterBar,
+  LoadingState,
+  PageHeader,
+  ScreenContainer,
+  SecondaryButton,
+  StatusChip,
+} from "../components";
 import { ROUTES } from "../navigation/rutas";
 
-const DIAS_CRITICO = 7;
-const DIAS_AVISO_VENCIMIENTO = 30;
+// Existencias de inventario en movil.
+//
+// QUE CAMBIO (issue #834)
+//
+// 1. LA TARJETA. Era un bloque alto con tres columnas de datos, un numero de stock a tamano de
+//    titulo y un pie con el estado: en un telefono entraban dos por pantalla y la lista de una
+//    jornada no se podia recorrer. Ahora cada lote es una tarjeta de dos lineas -- medicamento y
+//    lote arriba, existencia y vencimiento abajo -- con el chip de estado a la derecha. Cabe el
+//    triple y se lee de un vistazo, que es lo que hace falta con la caja abierta enfrente.
+// 2. LOS FILTROS. No habia ninguno. Ahora se filtra por bodega y por estado del lote (disponible,
+//    proximo a vencer, critico, vencido, agotado), mas la busqueda por medicamento o numero de
+//    lote, con FilterBar y los descriptores compartidos.
+// 3. EL CALCULO SE FUE A shared. La pantalla sumaba existencias y decidia el estado de cada lote
+//    dentro del componente. Ahora lo hace useExistenciasPorLote(), que es donde la arquitectura
+//    dice que va y donde se puede probar sin montar la pantalla.
 
-const ETIQUETAS_POR_ESTADO = {
-  disponible: labels.disponible,
-  "por vencer": labels.proximoAVencer,
-  critico: labels.critico,
-  vencido: labels.medicamentoVencido,
-  agotado: labels.sinStock,
-};
+// Etiquetas de los estados de lote. Salen de @ecopac/ui-tokens, no de un texto escrito aqui, y
+// alimentan tanto al selector del filtro como al chip de cada tarjeta.
+const ESTADOS_CON_ETIQUETA = [
+  { value: ESTADOS_DE_LOTE.DISPONIBLE, clave: "disponible", label: labels.disponible },
+  { value: ESTADOS_DE_LOTE.POR_VENCER, clave: "por vencer", label: labels.proximoAVencer },
+  { value: ESTADOS_DE_LOTE.CRITICO, clave: "critico", label: labels.critico },
+  { value: ESTADOS_DE_LOTE.VENCIDO, clave: "vencido", label: labels.medicamentoVencido },
+  { value: ESTADOS_DE_LOTE.AGOTADO, clave: "agotado", label: labels.sinStock },
+];
 
-function calcularEstado(diasRestantes, cantidadDisponible) {
-  if (diasRestantes !== null && diasRestantes < 0) return "vencido";
-  if (cantidadDisponible <= 0) return "agotado";
-  if (diasRestantes !== null && diasRestantes <= DIAS_CRITICO) return "critico";
-  if (diasRestantes !== null && diasRestantes <= DIAS_AVISO_VENCIMIENTO) return "por vencer";
-  return "disponible";
+const ETIQUETA_POR_ESTADO = Object.fromEntries(
+  ESTADOS_CON_ETIQUETA.map((estado) => [estado.value, estado.label]),
+);
+
+/** El vencimiento en palabras. Un lote sin fecha no inventa una. */
+function textoDeVencimiento(fila) {
+  if (!fila.fechaVencimiento) return "Sin fecha de vencimiento";
+  const fecha = formatearFechaCorta(fila.fechaVencimiento);
+  if (fila.diasRestantes === null) return `Vence ${fecha}`;
+  if (fila.diasRestantes < 0) return `Venció hace ${Math.abs(fila.diasRestantes)} d · ${fecha}`;
+  if (fila.diasRestantes === 0) return `Vence hoy · ${fecha}`;
+  return `${fila.diasRestantes} d · ${fecha}`;
 }
 
 export default function ExistenciasInventarioScreen() {
   const navigation = useNavigation();
-  const [lotes, setLotes] = useState([]);
-  const [existenciasDisponibles, setExistenciasDisponibles] = useState([]);
-  const [cargando, setCargando] = useState(true);
-  const [error, setError] = useState(null);
+  const {
+    filas,
+    total,
+    totalSinFiltrar,
+    filtros,
+    setFiltro,
+    limpiarFiltros,
+    hayFiltros,
+    cargando,
+    error,
+    recargar,
+    catalogos,
+  } = useExistenciasPorLote({ estadosDeLote: ESTADOS_CON_ETIQUETA });
 
-  const cargar = useCallback(async () => {
-    setCargando(true);
-    setError(null);
-
-    const [respuestaLotes, respuestaExistencias] = await Promise.all([
-      listarLotes(),
-      listarExistenciasDisponibles(),
-    ]);
-
-    setLotes(respuestaLotes.lotes || []);
-    setExistenciasDisponibles(respuestaExistencias.existencias || []);
-    setError(respuestaLotes.error ?? respuestaExistencias.error ?? null);
-    setCargando(false);
-  }, []);
-
-  useEffect(() => {
-    cargar();
-  }, [cargar]);
-
-  const existencias = useMemo(() => {
-    const stockPorLote = new Map();
-    existenciasDisponibles.forEach((fila) => {
-      stockPorLote.set(
-        fila.loteId,
-        (stockPorLote.get(fila.loteId) ?? 0) + Number(fila.cantidadDisponible || 0),
-      );
-    });
-
-    return lotes.map((lote) => {
-      const cantidadDisponible = stockPorLote.get(lote.id) ?? 0;
-      const diasRestantes = diasHastaVencimiento(lote.fechaVencimiento);
-
-      return {
-        loteId: lote.id,
-        medicamento: lote.medicamento || "Desconocido",
-        codigo: lote.numeroLote,
-        numeroLote: lote.numeroLote,
-        fechaVencimiento: formatearFechaCorta(lote.fechaVencimiento),
-        cantidadDisponible,
-        diasRestantes,
-        estado: calcularEstado(diasRestantes, cantidadDisponible),
-      };
-    });
-  }, [lotes, existenciasDisponibles]);
-
-  if (cargando && lotes.length === 0) {
-    return <LoadingState message="Cargando existencias..." />;
+  if (cargando && totalSinFiltrar === 0) {
+    return (
+      <ScreenContainer scrollable={false}>
+        <LoadingState message="Cargando existencias..." />
+      </ScreenContainer>
+    );
   }
 
   return (
-    <ScrollView
-      style={estilos.contenedor}
-      contentContainerStyle={estilos.contenido}
-      refreshControl={<RefreshControl refreshing={cargando} onRefresh={cargar} />}
-    >
-      <Text style={estilos.titulo}>Existencias de inventario</Text>
-      <Text style={estilos.subtitulo}>{existencias.length} lotes registrados</Text>
+    <ScreenContainer scrollable={false}>
+      <PageHeader
+        title="Existencias"
+        subtitle={
+          hayFiltros
+            ? `${total} de ${totalSinFiltrar} lotes`
+            : `${totalSinFiltrar} ${totalSinFiltrar === 1 ? "lote" : "lotes"}`
+        }
+        accent={moduleAccents.inventario}
+      />
 
-      {error ? <ErrorState message={error.mensaje} onRetry={cargar} /> : null}
+      <FilterBar
+        campos={FILTROS_EXISTENCIAS_POR_LOTE}
+        valores={filtros}
+        onChange={setFiltro}
+        catalogos={catalogos}
+      />
 
-      {!error && existencias.length === 0 ? (
-        <EmptyState message="No hay lotes registrados." />
-      ) : null}
+      {error ? <ErrorState message={error.mensaje} onRetry={recargar} /> : null}
 
-      {existencias.map((item) => (
-        <Card
-          key={item.loteId}
-          style={estilos.tarjeta}
-          onPress={() => navigation.navigate(ROUTES.DETALLE_LOTE, { loteId: item.loteId })}
-        >
-          <View style={estilos.filaSuperior}>
-            <Text style={estilos.nombreMedicamento} numberOfLines={1}>
-              {item.medicamento}
-            </Text>
-            <Text style={estilos.codigo}>{item.codigo || "S/C"}</Text>
-          </View>
-
-          <View style={estilos.filaDatos}>
-            <View>
-              <Text style={estilos.etiquetaDato}>Lote</Text>
-              <Text style={estilos.valorDato}>{item.numeroLote}</Text>
-            </View>
-            <View>
-              <Text style={estilos.etiquetaDato}>Caducidad</Text>
-              <Text style={estilos.valorDato}>{item.fechaVencimiento}</Text>
-            </View>
-            <View style={estilos.stock}>
-              <Text style={estilos.etiquetaDato}>Stock</Text>
-              <Text style={estilos.valorStock}>{item.cantidadDisponible}</Text>
-            </View>
-          </View>
-
-          <View style={estilos.filaEstado}>
-            <StatusChip status={item.estado} label={ETIQUETAS_POR_ESTADO[item.estado]} />
-            {item.diasRestantes !== null ? (
-              <Text style={estilos.diasRestantes}>
-                {item.diasRestantes < 0
-                  ? `Vencido hace ${Math.abs(item.diasRestantes)} días`
-                  : `Vence en ${item.diasRestantes} días`}
+      <FlatList
+        data={filas}
+        keyExtractor={(fila) => fila.id}
+        refreshControl={<RefreshControl refreshing={cargando} onRefresh={recargar} />}
+        ItemSeparatorComponent={() => <View style={estilos.separador} />}
+        contentContainerStyle={estilos.lista}
+        ListEmptyComponent={
+          error ? null : hayFiltros ? (
+            <EmptyState
+              message="Ningún lote coincide con los filtros."
+              actionLabel="Limpiar filtros"
+              onAction={limpiarFiltros}
+            />
+          ) : (
+            <EmptyState message="Todavía no hay lotes registrados." />
+          )
+        }
+        renderItem={({ item }) => (
+          <Card
+            onPress={() => navigation.navigate(ROUTES.DETALLE_LOTE, { loteId: item.loteId })}
+            style={estilos.tarjeta}
+          >
+            <View style={estilos.superior}>
+              <Text style={estilos.medicamento} numberOfLines={1}>
+                {item.medicamento}
               </Text>
-            ) : null}
-          </View>
-        </Card>
-      ))}
-    </ScrollView>
+              <StatusChip status={item.estado} label={ETIQUETA_POR_ESTADO[item.estado]} />
+            </View>
+
+            <View style={estilos.inferior}>
+              <View style={estilos.loteCaja}>
+                <Text style={estilos.lote} numberOfLines={1}>
+                  {item.numeroLote || "Sin número"}
+                </Text>
+              </View>
+              <Text style={estilos.vencimiento} numberOfLines={1}>
+                {textoDeVencimiento(item)}
+              </Text>
+              <Text style={estilos.existencia}>{item.cantidadDisponible}</Text>
+            </View>
+          </Card>
+        )}
+      />
+
+      {hayFiltros && filas.length > 0 ? (
+        <SecondaryButton title="Limpiar filtros" onPress={limpiarFiltros} style={estilos.pie} />
+      ) : null}
+    </ScreenContainer>
   );
 }
 
 const estilos = StyleSheet.create({
-  contenedor: {
-    flex: 1,
-    backgroundColor: colors.background,
+  lista: {
+    paddingBottom: spacing.md,
+    paddingTop: spacing.sm,
   },
-  contenido: {
-    padding: spacing.lg,
-  },
-  titulo: {
-    fontFamily: typography.fontFamilyBase,
-    fontSize: typography.sizes.xl,
-    fontWeight: typography.weights.bold,
-    color: colors.text,
-  },
-  subtitulo: {
-    fontFamily: typography.fontFamilyBase,
-    fontSize: typography.sizes.sm,
-    color: colors.textMuted,
-    marginTop: spacing.xs,
-    marginBottom: spacing.md,
+  separador: {
+    height: spacing.sm,
   },
   tarjeta: {
-    padding: spacing.lg,
-    marginBottom: spacing.lg,
-    gap: spacing.md,
+    gap: spacing.sm,
+    padding: spacing.md,
   },
-  filaSuperior: {
+  superior: {
+    alignItems: "center",
     flexDirection: "row",
+    gap: spacing.sm,
     justifyContent: "space-between",
-    alignItems: "flex-start",
   },
-  nombreMedicamento: {
-    fontFamily: typography.fontFamilyBase,
-    fontSize: typography.sizes.lg,
-    fontWeight: typography.weights.semibold,
+  medicamento: {
     color: colors.text,
     flexShrink: 1,
-  },
-  codigo: {
-    fontFamily: typography.fontFamilyBase,
-    fontSize: typography.sizes.xs,
-    color: colors.textMuted,
-    backgroundColor: colors.background,
-    paddingHorizontal: spacing.xs,
-    paddingVertical: 2,
-    borderRadius: radii.sm,
-  },
-  filaDatos: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  etiquetaDato: {
-    fontFamily: typography.fontFamilyBase,
-    fontSize: typography.sizes.xs,
-    color: colors.textMuted,
-    textTransform: "uppercase",
-  },
-  valorDato: {
     fontFamily: typography.fontFamilyBase,
     fontSize: typography.sizes.md,
-    fontWeight: typography.weights.medium,
-    color: colors.text,
-    marginTop: spacing.xs / 2,
+    fontWeight: typography.weights.semibold,
   },
-  stock: {
+  inferior: {
     alignItems: "center",
-  },
-  valorStock: {
-    fontFamily: typography.fontFamilyBase,
-    fontSize: typography.sizes.xl,
-    fontWeight: typography.weights.bold,
-    color: colors.text,
-    marginTop: spacing.xs / 2,
-  },
-  filaEstado: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingTop: spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
+    gap: spacing.sm,
   },
-  diasRestantes: {
+  loteCaja: {
+    backgroundColor: colors.background,
+    borderColor: colors.border,
+    borderRadius: radii.sm,
+    borderWidth: 1,
+    paddingHorizontal: spacing.xs,
+    paddingVertical: 2,
+  },
+  lote: {
+    color: colors.textMuted,
     fontFamily: typography.fontFamilyBase,
     fontSize: typography.sizes.xs,
+  },
+  vencimiento: {
     color: colors.textMuted,
+    flex: 1,
+    fontFamily: typography.fontFamilyBase,
+    fontSize: typography.sizes.xs,
+  },
+  // La existencia es el dato que se busca con la caja enfrente: va al final de la fila, en
+  // negrita, sin ocupar una linea entera como antes.
+  existencia: {
+    color: colors.text,
+    fontFamily: typography.fontFamilyBase,
+    fontSize: typography.sizes.lg,
+    fontWeight: typography.weights.bold,
+  },
+  pie: {
+    marginTop: spacing.sm,
   },
 });
