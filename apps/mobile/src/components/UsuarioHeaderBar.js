@@ -1,6 +1,7 @@
 import { StyleSheet, Text, View } from "react-native";
 import { etiquetaDeRol } from "@ecopac/shared";
 import { useSesionCompartida } from "../contexto/SesionProvider";
+import { colors } from "@ecopac/ui-tokens";
 
 export default function UsuarioHeaderBar() {
   const { perfil } = useSesionCompartida();
@@ -34,9 +35,9 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
     paddingHorizontal: 16,
     paddingVertical: 8,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: "#F1F5F9",
+    borderBottomColor: colors.background,
   },
   textContainer: {
     alignItems: "flex-end",
@@ -44,11 +45,11 @@ const styles = StyleSheet.create({
   nombreText: {
     fontSize: 13,
     fontWeight: "bold",
-    color: "#1E293B",
+    color: colors.text,
   },
   rolText: {
     fontSize: 11,
-    color: "#64748B",
+    color: colors.textMuted,
     marginTop: 1,
   },
 });

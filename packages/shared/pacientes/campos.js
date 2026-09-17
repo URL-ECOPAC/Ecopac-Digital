@@ -58,7 +58,12 @@ export const CAMPOS_REGISTRO_PACIENTE = [
     id: "telefonoContacto",
     label: "Teléfono de contacto",
     tipo: TIPOS_DE_CAMPO.TELEFONO,
-    validacion: { requerido: true, maxLongitud: 20 },
+    // Opcional desde la #834, por el mismo motivo que la comunidad en la #657: en muchas
+    // comunidades no hay ningun numero al que llamar, y exigirlo llevaba a inventar uno -que
+    // ademas queda en la ficha clinica como si fuera real- o a no registrar al paciente. La
+    // columna admite NULL desde la 00130, y su COMMENT explica que ese telefono muchas veces ni
+    // siquiera es del paciente.
+    validacion: { requerido: false, maxLongitud: 20 },
   },
   {
     id: "idioma",

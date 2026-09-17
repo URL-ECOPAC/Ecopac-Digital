@@ -24,7 +24,7 @@ import { useSesionCompartida } from "../contexto/SesionProvider";
 import { ROUTES } from "../navigation/rutas";
 
 const PESTANAS = [
-  { id: "proximas", label: "Proximas" },
+  { id: "proximas", label: "Próximas" },
   { id: "pasadas", label: "Pasadas" },
 ];
 
@@ -40,12 +40,20 @@ function FilaDeJornada({ jornada, onPress }) {
   const muestraEstado = jornada.estado !== ESTADOS_JORNADA.PLANIFICADA;
 
   return (
-    <Card style={styles.tarjeta} onPress={esEnCurso ? () => onPress(jornada) : undefined}>
-      {muestraEstado && (
-        <View style={styles.chip}>
+    <Card
+      style={styles.tarjeta}
+      accent={esEnCurso ? colors.primary : colors.border}
+      onPress={esEnCurso ? () => onPress(jornada) : undefined}
+    >
+      <View style={styles.chips}>
+        {muestraEstado && (
           <StatusChip status={jornada.estado} label={ETIQUETAS_ESTADO_JORNADA[jornada.estado]} />
-        </View>
-      )}
+        )}
+        {/* ISSUE #834: ser la responsable de una jornada no se veia por ningun lado en movil --
+            de hecho la jornada ni siquiera aparecia, ver obtenerJornadasDePersona(). Ahora
+            aparece y dice por que: es tu jornada aunque no tengas turno en el cuadro. */}
+        {jornada.esResponsable && <StatusChip status="activo" label="Responsable" />}
+      </View>
       <Text style={styles.nombre}>{jornada.nombre}</Text>
       <Text style={styles.dato}>{formatearFechaCorta(jornada.fecha)}</Text>
       <Text style={styles.dato}>{jornada.comunidad?.nombre ?? "Comunidad sin definir"}</Text>
@@ -89,8 +97,8 @@ export default function JornadasAsignadasScreen() {
           <EmptyState
             message={
               pestana === "proximas"
-                ? "No tenes jornadas proximas asignadas."
-                : "No tenes jornadas pasadas."
+                ? "No tenés jornadas próximas asignadas."
+                : "No tenés jornadas pasadas."
             }
           />
         ) : (
@@ -109,7 +117,10 @@ const styles = StyleSheet.create({
   tarjeta: {
     marginBottom: spacing.sm,
   },
-  chip: {
+  chips: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.xs,
     marginBottom: spacing.xs,
   },
   nombre: {

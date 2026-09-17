@@ -1,4 +1,5 @@
 import { View, Text, StyleSheet } from "react-native";
+import { colors } from "@ecopac/ui-tokens";
 
 /**
  * Componente base para pantallas provisionales.
@@ -27,6 +28,6 @@ const styles = StyleSheet.create({
   subtitle: {
     marginTop: 8,
     fontSize: 14,
-    color: "#666",
+    color: colors.textMuted,
   },
 });

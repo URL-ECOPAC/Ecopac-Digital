@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { useRecetasPaciente } from "@ecopac/shared";
+import { colors } from "@ecopac/ui-tokens";
 
 export default function RecetasPacienteSeccion({ pacienteId }) {
   const { recetas, cargando, error, recargar } = useRecetasPaciente(pacienteId);
@@ -15,7 +16,7 @@ export default function RecetasPacienteSeccion({ pacienteId }) {
   if (cargando) {
     return (
       <View style={styles.centroContainer} testID="cargando-recetas">
-        <ActivityIndicator size="small" color="#0284c7" />
+        <ActivityIndicator size="small" color={colors.info} />
         <Text style={styles.textoCargando}>Cargando recetas...</Text>
       </View>
     );
@@ -85,7 +86,7 @@ const styles = StyleSheet.create({
   tituloSeccion: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#1e293b",
+    color: colors.text,
     marginBottom: 12,
   },
   centroContainer: {
@@ -96,29 +97,29 @@ const styles = StyleSheet.create({
   textoCargando: {
     marginTop: 8,
     fontSize: 14,
-    color: "#64748b",
+    color: colors.textMuted,
   },
   errorContainer: {
     padding: 16,
-    backgroundColor: "#fef2f2",
+    backgroundColor: colors.background,
     borderRadius: 8,
     alignItems: "center",
     marginVertical: 8,
   },
   textoError: {
-    color: "#dc2626",
+    color: colors.danger,
     fontSize: 14,
     marginBottom: 8,
     textAlign: "center",
   },
   botonReintentar: {
-    backgroundColor: "#dc2626",
+    backgroundColor: colors.danger,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 6,
   },
   textoBotonReintentar: {
-    color: "#ffffff",
+    color: colors.surface,
     fontSize: 12,
     fontWeight: "600",
   },
@@ -128,13 +129,13 @@ const styles = StyleSheet.create({
   },
   textoVacio: {
     fontSize: 14,
-    color: "#64748b",
+    color: colors.textMuted,
     fontStyle: "italic",
   },
   tarjetaReceta: {
-    backgroundColor: "#ffffff",
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: "#e2e8f0",
+    borderColor: colors.border,
     borderRadius: 8,
     padding: 12,
     marginBottom: 10,
@@ -143,18 +144,18 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     borderBottomWidth: 1,
-    borderBottomColor: "#f1f5f9",
+    borderBottomColor: colors.background,
     paddingBottom: 6,
     marginBottom: 8,
   },
   fechaTexto: {
     fontSize: 12,
     fontWeight: "600",
-    color: "#0f172a",
+    color: colors.text,
   },
   medicoTexto: {
     fontSize: 12,
-    color: "#64748b",
+    color: colors.textMuted,
   },
   filamedicamento: {
     marginBottom: 4,
@@ -162,16 +163,16 @@ const styles = StyleSheet.create({
   nombreMedicamento: {
     fontSize: 13,
     fontWeight: "600",
-    color: "#1e293b",
+    color: colors.text,
   },
   dosisTexto: {
     fontSize: 12,
-    color: "#475569",
+    color: colors.textMuted,
     marginLeft: 10,
   },
   indicacionesTexto: {
     fontSize: 12,
-    color: "#334155",
+    color: colors.text,
     fontStyle: "italic",
   },
 });

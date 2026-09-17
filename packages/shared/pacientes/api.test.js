@@ -162,22 +162,27 @@ describe("registrarPaciente", () => {
     expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.CHECK);
   });
 
-  it("sin sexo, telefono o idioma devuelve errores sin llamar al cliente", async () => {
-    // CAMPOS_PACIENTE (issue #112) no cubre estos tres campos NOT NULL de la tabla; esta
-    // prueba fija que registrarPaciente() valida contra CAMPOS_REGISTRO_PACIENTE, el
-    // descriptor completo del formulario, y no solo contra CAMPOS_PACIENTE.
+  it("sin sexo o sin idioma devuelve errores sin llamar al cliente", async () => {
+    // CAMPOS_PACIENTE (issue #112) no cubre estos campos NOT NULL de la tabla; esta prueba fija
+    // que registrarPaciente() valida contra CAMPOS_REGISTRO_PACIENTE, el descriptor completo del
+    // formulario, y no solo contra CAMPOS_PACIENTE. telefonoContacto ya no entra: es opcional
+    // desde la issue #834 (migracion 00130).
     const { paciente, errores, error } = await registrarPaciente({
       ...DATOS_VALIDOS,
       sexo: "",
-      telefonoContacto: "",
       idioma: "",
     });
 
     expect(paciente).toBeNull();
     expect(errores.sexo).toBeTruthy();
-    expect(errores.telefonoContacto).toBeTruthy();
     expect(errores.idioma).toBeTruthy();
     expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.CHECK);
+  });
+
+  it("sin telefono de contacto SI registra: es opcional desde la issue #834", async () => {
+    const { errores } = await registrarPaciente({ ...DATOS_VALIDOS, telefonoContacto: "" });
+
+    expect(errores.telefonoContacto).toBeUndefined();
   });
 
   it("con datos validos llama fn_registrar_paciente con los argumentos esperados", async () => {
@@ -386,16 +391,14 @@ describe("actualizarPaciente", () => {
     expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.CHECK);
   });
 
-  it("bloquea la edicion de telefonoContacto vacio, un campo fuera de CAMPOS_PACIENTE", async () => {
-    // telefonoContacto no esta en CAMPOS_PACIENTE (issue #112): esta prueba fija que
-    // actualizarPaciente() valida contra CAMPOS_REGISTRO_PACIENTE, no solo contra el
-    // subconjunto historico de 5 campos.
-    const { paciente, errores, error } = await actualizarPaciente("paciente-1", {
-      telefonoContacto: "",
-    });
+  it("bloquea la edicion de sexo vacio, un campo fuera de CAMPOS_PACIENTE", async () => {
+    // sexo no esta en CAMPOS_PACIENTE (issue #112): esta prueba fija que actualizarPaciente()
+    // valida contra CAMPOS_REGISTRO_PACIENTE, no solo contra el subconjunto historico de 5
+    // campos. Antes la sonda era telefonoContacto, que desde la #834 ya no es obligatorio.
+    const { paciente, errores, error } = await actualizarPaciente("paciente-1", { sexo: "" });
 
     expect(paciente).toBeNull();
-    expect(errores.telefonoContacto).toBeTruthy();
+    expect(errores.sexo).toBeTruthy();
     expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.CHECK);
   });
 

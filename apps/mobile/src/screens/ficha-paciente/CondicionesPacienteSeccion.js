@@ -1,123 +1,222 @@
-import React, { useState } from "react";
-import { Alert, StyleSheet, Text, View } from "react-native";
+import { useState } from "react";
+import { StyleSheet, Text, View } from "react-native";
 import {
-  actualizarCondicionCronica,
   ESTADOS_CONDICION_CRONICA,
-  useCondicionesCronicas,
+  ETIQUETAS_ESTADO_CONDICION,
+  formatearFechaCorta,
+  useCondicionesPaciente,
 } from "@ecopac/shared";
 import { colors, spacing, typography } from "@ecopac/ui-tokens";
 
-import { Card, ErrorState, LoadingState, SecondaryButton, StatusChip } from "../../components";
+import {
+  Card,
+  DateField,
+  ErrorState,
+  LoadingState,
+  PrimaryButton,
+  SecondaryButton,
+  Selector,
+  StatusChip,
+} from "../../components";
+
+// Condiciones cronicas del paciente, dentro de su ficha movil.
+//
+// ESTABA ROTA (issue #834). Esta seccion importaba `useCondicionesCronicas` y
+// `actualizarCondicionCronica` de @ecopac/shared. NINGUNA DE LAS DOS EXISTE: el hook se llama
+// useCondicionesPaciente y la funcion, actualizarCondicion. El import no reventaba porque el
+// propio componente traia una "verificacion de seguridad por si el hook no esta exportado" que
+// caia a una lista vacia, asi que la pestana decia siempre "Sin condiciones cronicas
+// registradas" -- daba igual cuantas tuviera el paciente -- y "Resolver" llamaba a undefined.
+//
+// Ademas leia `item.nombre` cuando obtenerCondicionesDelPaciente() devuelve el nombre en
+// `condicion` (ver aCondicionDelPaciente en condiciones.api.js), y decidia quien puede editar
+// comparando el rol con los literales "medico"/"administrador", que es justo lo que AGENTS.md
+// prohibe: quien decide es permisosDeCondiciones(), que el hook ya devuelve.
+//
+// Ahora, ademas de leer, deja AGREGAR una condicion del catalogo sin salir de la ficha, que es lo
+// que la web ya hacia desde la #122.
 
 export default function CondicionesPacienteSeccion({ pacienteId, rol, alActualizar }) {
-  // Verificación de seguridad por si el hook no está exportado en @ecopac/shared
-  const obtenerCondiciones =
-    typeof useCondicionesCronicas === "function"
-      ? useCondicionesCronicas
-      : () => ({ condiciones: [], cargando: false, error: null, recargar: () => {} });
-
   const {
-    condiciones = [],
-    cargando = false,
-    error = null,
-    recargar = () => {},
-  } = obtenerCondiciones(pacienteId);
-  const [guardando, setGuardando] = useState(false);
+    condiciones,
+    cargando,
+    error,
+    errorDeAlta,
+    errores,
+    enviando,
+    permisos,
+    valores,
+    setCampo,
+    agregar,
+    marcarResuelta,
+    recargar,
+    catalogos,
+  } = useCondicionesPaciente(pacienteId, { rol });
 
-  const puedeEditar = rol === "medico" || rol === "administrador";
+  const [agregando, setAgregando] = useState(false);
 
-  const manejarResolver = (condicion) => {
-    Alert.alert("Resolver condición", `¿Deseas marcar "${condicion.nombre}" como resuelta?`, [
-      { text: "Cancelar", style: "cancel" },
-      {
-        text: "Resolver",
-        onPress: async () => {
-          setGuardando(true);
-          const { error: errorApi } = await actualizarCondicionCronica(condicion.id, {
-            estado: ESTADOS_CONDICION_CRONICA.RESUELTA,
-          });
-          setGuardando(false);
-
-          if (errorApi) {
-            Alert.alert("Error", errorApi.mensaje);
-          } else {
-            recargar();
-            if (alActualizar) alActualizar();
-          }
-        },
-      },
-    ]);
+  const guardar = async () => {
+    const resultado = await agregar();
+    if (resultado.ok) {
+      setAgregando(false);
+      alActualizar?.();
+    }
   };
 
-  if (cargando || guardando) {
-    return <LoadingState />;
-  }
+  const resolver = async (condicion) => {
+    const resultado = await marcarResuelta(condicion.id);
+    if (resultado.ok) alActualizar?.();
+  };
 
-  if (error) {
-    return <ErrorState message={error.mensaje} onRetry={recargar} />;
-  }
+  if (cargando) return <LoadingState />;
+  if (error) return <ErrorState message={error.mensaje} onRetry={recargar} />;
 
   return (
-    <Card title="Condiciones crónicas" style={styles.tarjeta}>
-      {!condiciones || condiciones.length === 0 ? (
-        <Text style={styles.vacio}>Sin condiciones crónicas registradas.</Text>
+    <Card title="Condiciones crónicas" style={estilos.tarjeta}>
+      {errorDeAlta ? <Text style={estilos.error}>{errorDeAlta.mensaje}</Text> : null}
+
+      {condiciones.length === 0 ? (
+        <Text style={estilos.vacio}>Sin condiciones crónicas registradas.</Text>
       ) : (
-        <View style={styles.lista}>
+        <View style={estilos.lista}>
           {condiciones.map((item) => (
-            <View key={item.id} style={styles.filaCondicion}>
-              <View style={styles.infoCondicion}>
+            <View key={item.id} style={estilos.fila}>
+              <View style={estilos.info}>
                 <StatusChip
                   status={item.estado}
-                  label={`${item.nombre} · ${item.etiquetaEstado ?? item.estado}`}
+                  label={`${item.condicion ?? "Sin nombre"} · ${
+                    ETIQUETAS_ESTADO_CONDICION[item.estado] ?? item.estado
+                  }`}
                 />
-                {item.notas ? <Text style={styles.notas}>{item.notas}</Text> : null}
+                {item.fechaDiagnostico ? (
+                  <Text style={estilos.notas}>
+                    Diagnosticada el {formatearFechaCorta(item.fechaDiagnostico)}
+                  </Text>
+                ) : null}
+                {item.notas ? <Text style={estilos.notas}>{item.notas}</Text> : null}
               </View>
 
-              {puedeEditar && item.estado !== ESTADOS_CONDICION_CRONICA.RESUELTA && (
+              {permisos.puedeEditar && item.estado !== ESTADOS_CONDICION_CRONICA.RESUELTA ? (
                 <SecondaryButton
                   title="Resolver"
-                  onPress={() => manejarResolver(item)}
-                  style={styles.botonAccion}
+                  size="sm"
+                  onPress={() => resolver(item)}
+                  disabled={enviando}
                 />
-              )}
+              ) : null}
             </View>
           ))}
         </View>
       )}
+
+      {permisos.puedeRegistrar && !agregando ? (
+        <SecondaryButton
+          title="Agregar condición"
+          size="sm"
+          onPress={() => setAgregando(true)}
+          style={estilos.accion}
+        />
+      ) : null}
+
+      {permisos.puedeRegistrar && agregando ? (
+        <View style={estilos.alta}>
+          {/* Los ids y las etiquetas salen de CAMPOS_CONDICION_CRONICA (el hook los devuelve en
+              `campos`), no de literales de esta pantalla: `condicion` y `fechaDiagnostico` son
+              obligatorios (NOT NULL en padecimientos_cronicos, 00010) y `estado` no, porque la
+              columna tiene DEFAULT 'activa'. */}
+          <Selector
+            label="Condición"
+            value={valores.condicion || null}
+            options={catalogos.condicionesCronicas}
+            onSelect={(valor) => setCampo("condicion", valor)}
+            placeholder="Elegir del catálogo"
+            error={errores.condicion}
+            disabled={enviando}
+          />
+          <DateField
+            label="Fecha de diagnóstico"
+            value={valores.fechaDiagnostico || null}
+            onChange={(valor) => setCampo("fechaDiagnostico", valor)}
+            error={errores.fechaDiagnostico}
+            disabled={enviando}
+          />
+          <Selector
+            label="Estado"
+            value={valores.estado || null}
+            options={catalogos.estadosCondicionCronica}
+            onSelect={(valor) => setCampo("estado", valor)}
+            disabled={enviando}
+          />
+          <View style={estilos.botones}>
+            <PrimaryButton
+              title="Guardar"
+              size="sm"
+              onPress={guardar}
+              loading={enviando}
+              style={estilos.boton}
+            />
+            <SecondaryButton
+              title="Cancelar"
+              size="sm"
+              onPress={() => setAgregando(false)}
+              disabled={enviando}
+              style={estilos.boton}
+            />
+          </View>
+        </View>
+      ) : null}
     </Card>
   );
 }
 
-const styles = StyleSheet.create({
+const estilos = StyleSheet.create({
   tarjeta: {
     marginBottom: spacing.sm,
   },
   vacio: {
     color: colors.textMuted,
+    fontFamily: typography.fontFamilyBase,
     fontSize: typography.sizes.sm,
+  },
+  error: {
+    color: colors.danger,
+    fontFamily: typography.fontFamilyBase,
+    fontSize: typography.sizes.sm,
+    marginBottom: spacing.sm,
   },
   lista: {
     gap: spacing.xs,
   },
-  filaCondicion: {
-    flexDirection: "row",
+  fila: {
     alignItems: "center",
+    borderBottomColor: colors.border,
+    borderBottomWidth: 1,
+    flexDirection: "row",
     justifyContent: "space-between",
     paddingVertical: spacing.xs,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight ?? "#E5E7EB",
   },
-  infoCondicion: {
+  info: {
     flex: 1,
     marginRight: spacing.xs,
   },
   notas: {
     color: colors.textMuted,
-    fontSize: typography.sizes.xs ?? 12,
+    fontFamily: typography.fontFamilyBase,
+    fontSize: typography.sizes.xs,
     marginTop: 2,
   },
-  botonAccion: {
-    paddingVertical: 4,
-    paddingHorizontal: spacing.xs,
+  accion: {
+    alignSelf: "flex-start",
+    marginTop: spacing.sm,
+  },
+  alta: {
+    marginTop: spacing.sm,
+  },
+  botones: {
+    flexDirection: "row",
+    gap: spacing.sm,
+  },
+  boton: {
+    flex: 1,
   },
 });

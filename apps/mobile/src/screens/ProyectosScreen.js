@@ -16,6 +16,7 @@ import EmptyState from "../components/EmptyState";
 import AccesoDenegadoScreen from "./AccesoDenegadoScreen";
 import ModalProyecto from "./ModalProyecto";
 import { useSesionCompartida } from "../contexto/SesionProvider";
+import { colors } from "@ecopac/ui-tokens";
 
 // issue #688: esta pantalla nunca mostraba un proyecto real, para ningun rol. Tres defectos
 // encadenados, el primero tapaba a los otros dos:
@@ -156,19 +157,19 @@ export default function ProyectosScreen() {
         <View style={styles.metricsGrid}>
           <View style={styles.metricCard}>
             <Text style={styles.metricLabel}>PROYECTOS</Text>
-            <Text style={[styles.metricValue, { color: "#10B981" }]}>{metricas.total}</Text>
+            <Text style={[styles.metricValue, { color: colors.primary }]}>{metricas.total}</Text>
             <Text style={styles.metricSub}>registrados</Text>
           </View>
 
           <View style={styles.metricCard}>
             <Text style={styles.metricLabel}>EN CURSO</Text>
-            <Text style={[styles.metricValue, { color: "#0284C7" }]}>{metricas.activos}</Text>
+            <Text style={[styles.metricValue, { color: colors.info }]}>{metricas.activos}</Text>
             <Text style={styles.metricSub}>activos</Text>
           </View>
 
           <View style={styles.metricCard}>
             <Text style={styles.metricLabel}>PRESUPUESTO TOTAL</Text>
-            <Text style={[styles.metricValue, { color: "#EA580C" }]}>
+            <Text style={[styles.metricValue, { color: colors.warning }]}>
               Q {metricas.presupuestoTotal.toLocaleString()}
             </Text>
             <Text style={styles.metricSub}>todos los proyectos</Text>
@@ -176,7 +177,7 @@ export default function ProyectosScreen() {
         </View>
 
         {cargando ? (
-          <ActivityIndicator size="large" color="#10B981" style={{ marginTop: 24 }} />
+          <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 24 }} />
         ) : proyectos.length === 0 ? (
           <EmptyState message="Todavía no hay proyectos registrados." />
         ) : modoVista === "kanban" ? (
@@ -245,7 +246,7 @@ export default function ProyectosScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F8FAFC",
+    backgroundColor: colors.background,
   },
   scrollContent: {
     padding: 16,
@@ -259,18 +260,18 @@ const styles = StyleSheet.create({
   titulo: {
     fontSize: 22,
     fontWeight: "700",
-    color: "#0F172A",
+    color: colors.text,
   },
   subtitulo: {
     fontSize: 13,
-    color: "#64748B",
+    color: colors.textMuted,
   },
   headerAcciones: {
     flexDirection: "row",
     gap: 8,
   },
   toggleBtn: {
-    backgroundColor: "#E2E8F0",
+    backgroundColor: colors.border,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 8,
@@ -278,7 +279,7 @@ const styles = StyleSheet.create({
   toggleBtnText: {
     fontSize: 13,
     fontWeight: "600",
-    color: "#334155",
+    color: colors.text,
   },
   metricsGrid: {
     flexDirection: "row",
@@ -288,17 +289,17 @@ const styles = StyleSheet.create({
   },
   metricCard: {
     width: "48%",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: colors.surface,
     padding: 12,
     borderRadius: 12,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderColor: colors.border,
   },
   metricLabel: {
     fontSize: 10,
     fontWeight: "700",
-    color: "#64748B",
+    color: colors.textMuted,
     marginBottom: 4,
   },
   metricValue: {
@@ -307,7 +308,7 @@ const styles = StyleSheet.create({
   },
   metricSub: {
     fontSize: 11,
-    color: "#94A3B8",
+    color: colors.textMuted,
     marginTop: 2,
   },
   filterRow: {
@@ -320,42 +321,42 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
-    backgroundColor: "#E2E8F0",
+    backgroundColor: colors.border,
   },
   filterChipActive: {
-    backgroundColor: "#10B981",
+    backgroundColor: colors.primary,
   },
   filterChipText: {
     fontSize: 12,
     fontWeight: "600",
-    color: "#475569",
+    color: colors.textMuted,
   },
   filterChipTextActive: {
-    color: "#FFFFFF",
+    color: colors.surface,
   },
   sectionTitle: {
     fontSize: 11,
     fontWeight: "700",
-    color: "#64748B",
+    color: colors.textMuted,
     marginBottom: 12,
   },
   projectCard: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: colors.surface,
     padding: 16,
     borderRadius: 12,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderColor: colors.border,
   },
   projectTitle: {
     fontSize: 15,
     fontWeight: "700",
-    color: "#0F172A",
+    color: colors.text,
     marginBottom: 4,
   },
   projectDesc: {
     fontSize: 13,
-    color: "#64748B",
+    color: colors.textMuted,
     marginBottom: 12,
   },
   projectFooter: {
@@ -366,8 +367,8 @@ const styles = StyleSheet.create({
   badgeText: {
     fontSize: 11,
     fontWeight: "600",
-    color: "#0284C7",
-    backgroundColor: "#E0F2FE",
+    color: colors.info,
+    backgroundColor: colors.background,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
@@ -375,11 +376,11 @@ const styles = StyleSheet.create({
   budgetBadge: {
     fontSize: 13,
     fontWeight: "700",
-    color: "#15803D",
+    color: colors.primaryDark,
   },
   emptyText: {
     textAlign: "center",
-    color: "#94A3B8",
+    color: colors.textMuted,
     marginTop: 20,
   },
 });

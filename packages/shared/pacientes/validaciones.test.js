@@ -118,14 +118,13 @@ describe("validarRegistroPaciente", () => {
     expect(validarRegistroPaciente(registroValido())).toEqual({});
   });
 
-  it("exige sexo, telefonoContacto e idioma ademas de lo que ya exige validarPaciente", () => {
+  it("exige sexo e idioma ademas de lo que ya exige validarPaciente", () => {
     const errores = validarRegistroPaciente({});
 
     expect(errores.nombres).toBeTruthy();
     expect(errores.apellidos).toBeTruthy();
     expect(errores.fechaNacimiento).toBeTruthy();
     expect(errores.sexo).toBeTruthy();
-    expect(errores.telefonoContacto).toBeTruthy();
     expect(errores.idioma).toBeTruthy();
     expect(errores.numeroFicha).toBeUndefined();
   });
@@ -133,6 +132,15 @@ describe("validarRegistroPaciente", () => {
   it("tampoco exige comunidad al registrar (#657)", () => {
     expect(validarRegistroPaciente({}).comunidad).toBeUndefined();
     expect(validarRegistroPaciente(registroValido({ comunidad: "" })).comunidad).toBeUndefined();
+  });
+
+  // Issue #834: en muchas comunidades no hay ningun numero al que llamar, y exigirlo llevaba a
+  // inventar uno. La columna admite NULL desde la 00130.
+  it("tampoco exige telefono de contacto", () => {
+    expect(validarRegistroPaciente({}).telefonoContacto).toBeUndefined();
+    expect(
+      validarRegistroPaciente(registroValido({ telefonoContacto: "" })).telefonoContacto,
+    ).toBeUndefined();
   });
 
   it("comparte las mismas reglas de negocio de fecha de nacimiento y DPI que validarPaciente", () => {

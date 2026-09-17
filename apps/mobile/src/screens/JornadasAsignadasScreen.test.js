@@ -74,7 +74,7 @@ describe("JornadasAsignadasScreen", () => {
   it("sin jornadas proximas, muestra el vacio correspondiente", () => {
     pantalla();
 
-    expect(screen.getByText("No tenes jornadas proximas asignadas.")).toBeTruthy();
+    expect(screen.getByText("No tenés jornadas próximas asignadas.")).toBeTruthy();
   });
 
   it("con una jornada planificada, la pinta sin chip de estado (es lo esperado)", () => {
@@ -120,7 +120,7 @@ describe("JornadasAsignadasScreen", () => {
     pantalla();
 
     expect(screen.getByText("No se pudieron cargar tus jornadas.")).toBeTruthy();
-    expect(screen.queryByText("No tenes jornadas proximas asignadas.")).toBeNull();
+    expect(screen.queryByText("No tenés jornadas próximas asignadas.")).toBeNull();
 
     fireEvent.press(screen.getByText("Reintentar"));
     expect(mockEstadoHook.recargar).toHaveBeenCalled();

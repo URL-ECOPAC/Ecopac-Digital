@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { obtenerTriajes } from "@ecopac/shared";
+import { colors } from "@ecopac/ui-tokens";
 
 export default function SignosVitalesSeccion({ pacienteId }) {
   const [triajes, setTriajes] = useState([]);
@@ -43,7 +44,7 @@ export default function SignosVitalesSeccion({ pacienteId }) {
   if (cargando) {
     return (
       <View style={styles.centroContainer} testID="cargando-signos">
-        <ActivityIndicator size="small" color="#0284c7" />
+        <ActivityIndicator size="small" color={colors.info} />
         <Text style={styles.textoCargando}>Cargando signos vitales...</Text>
       </View>
     );
@@ -121,7 +122,7 @@ const styles = StyleSheet.create({
   tituloSeccion: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#1e293b",
+    color: colors.text,
     marginBottom: 12,
   },
   centroContainer: {
@@ -132,29 +133,29 @@ const styles = StyleSheet.create({
   textoCargando: {
     marginTop: 8,
     fontSize: 14,
-    color: "#64748b",
+    color: colors.textMuted,
   },
   errorContainer: {
     padding: 16,
-    backgroundColor: "#fef2f2",
+    backgroundColor: colors.background,
     borderRadius: 8,
     alignItems: "center",
     marginVertical: 8,
   },
   textoError: {
-    color: "#dc2626",
+    color: colors.danger,
     fontSize: 14,
     marginBottom: 8,
     textAlign: "center",
   },
   botonReintentar: {
-    backgroundColor: "#dc2626",
+    backgroundColor: colors.danger,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 6,
   },
   textoBotonReintentar: {
-    color: "#ffffff",
+    color: colors.surface,
     fontSize: 12,
     fontWeight: "600",
   },
@@ -164,13 +165,13 @@ const styles = StyleSheet.create({
   },
   textoVacio: {
     fontSize: 14,
-    color: "#64748b",
+    color: colors.textMuted,
     fontStyle: "italic",
   },
   tarjetaTriaje: {
-    backgroundColor: "#f8fafc",
+    backgroundColor: colors.background,
     borderWidth: 1,
-    borderColor: "#e2e8f0",
+    borderColor: colors.border,
     borderRadius: 10,
     padding: 12,
     marginBottom: 10,
@@ -178,7 +179,7 @@ const styles = StyleSheet.create({
   fechaTexto: {
     fontSize: 13,
     fontWeight: "600",
-    color: "#0f172a",
+    color: colors.text,
     marginBottom: 8,
   },
   gridMediciones: {
@@ -188,9 +189,9 @@ const styles = StyleSheet.create({
   },
   metricBox: {
     width: "30%",
-    backgroundColor: "#ffffff",
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: "#f1f5f9",
+    borderColor: colors.background,
     borderRadius: 6,
     padding: 6,
     marginBottom: 8,
@@ -198,18 +199,18 @@ const styles = StyleSheet.create({
   },
   metricLabel: {
     fontSize: 11,
-    color: "#64748b",
+    color: colors.textMuted,
     fontWeight: "500",
   },
   metricValor: {
     fontSize: 13,
     fontWeight: "700",
-    color: "#0f172a",
+    color: colors.text,
     marginTop: 2,
   },
   metricUnidad: {
     fontSize: 10,
     fontWeight: "400",
-    color: "#94a3b8",
+    color: colors.textMuted,
   },
 });
