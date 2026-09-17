@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { COLUMNAS_GASTO, FILTROS_GASTO } from "@ecopac/shared";
 
-import { DataList, ErrorState, FilterBar, PrimaryButton, SecondaryButton } from "../components";
+import { DataList, ErrorState, FilterBar, PrimaryButton } from "../components";
 import ModalGasto from "./ModalGasto";
 
 // Pestaña "Gastos" de PresupuestosPage.jsx (issue #302). Los datos, columnas y filtros salen de
@@ -100,19 +100,14 @@ export default function TablaGastos({
 
       {/* Misma tarjeta de filtros que el listado de pacientes, para que los dos listados del
         sistema se manejen igual. */}
-      <div className="pac-filtros">
-        <FilterBar
-          campos={FILTROS_SIN_BUSQUEDA}
-          valores={valoresDeFiltro}
-          onChange={cambiarFiltro}
-          catalogos={catalogos}
-        />
-        {hayFiltros && (
-          <div className="pac-filtros-acciones">
-            <SecondaryButton title="Limpiar filtros" variant="neutra" onClick={limpiarFiltros} />
-          </div>
-        )}
-      </div>
+      <FilterBar
+        campos={FILTROS_SIN_BUSQUEDA}
+        valores={valoresDeFiltro}
+        onChange={cambiarFiltro}
+        catalogos={catalogos}
+        onLimpiar={limpiarFiltros}
+        hayFiltros={hayFiltros}
+      />
 
       <DataList
         columnas={COLUMNAS_GASTO}

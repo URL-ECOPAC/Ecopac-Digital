@@ -5,7 +5,6 @@ import {
   useExportarPDF,
   useReporteInventario,
 } from "@ecopac/shared";
-import Card from "../components/Card";
 import DataList from "../components/DataList";
 import ErrorState from "../components/ErrorState";
 import FilterBar from "../components/FilterBar";
@@ -14,6 +13,7 @@ import CabeceraDeReporte, { ContenedorDeReporte } from "./CabeceraDeReporte";
 import { useSesionCompartida } from "../contexto/SesionProvider";
 import BotonExportarPDF from "../components/BotonExportarPDF";
 import "./reportes.css";
+import StatCard from "../components/StatCard";
 
 // Reporte de inventario actual (issue #212, reconectado por #693).
 // Agregada exportación PDF (issue #216).
@@ -96,15 +96,9 @@ export default function ReporteInventarioPage({ incrustado = false }) {
         valores={filtros}
         onChange={setFiltro}
         catalogos={catalogos}
+        onLimpiar={limpiarFiltros}
+        hayFiltros={hayFiltros}
       />
-
-      {hayFiltros && (
-        <div className="reporte-barra-agrupacion">
-          <button className="reporte-exportar" onClick={limpiarFiltros} type="button">
-            Limpiar filtros
-          </button>
-        </div>
-      )}
 
       {error && <ErrorState message={error.mensaje} onRetry={recargar} />}
       {!error && cargando && <LoadingState message="Consultando el inventario..." />}
@@ -113,29 +107,17 @@ export default function ReporteInventarioPage({ incrustado = false }) {
         // TODO el contenido que va al PDF DENTRO de este div
         <div id="contenido-reporte-pdf">
           <section className="reporte-seccion">
-            <div className="reporte-cifras">
-              <Card>
-                <span className="reporte-cifra-etiqueta">Unidades disponibles</span>
-                <strong className="reporte-cifra">{totales.unidadesDisponibles}</strong>
-              </Card>
-              <Card>
-                <span className="reporte-cifra-etiqueta">Unidades vencidas</span>
-                <strong className="reporte-cifra">{totales.unidadesVencidas}</strong>
-              </Card>
-              <Card>
-                <span className="reporte-cifra-etiqueta">Medicamentos distintos</span>
-                <strong className="reporte-cifra">{totales.medicamentosDistintos}</strong>
-              </Card>
-              <Card>
-                <span className="reporte-cifra-etiqueta">Renglones de inventario</span>
-                <strong className="reporte-cifra">{totales.renglonesDeInventario}</strong>
-              </Card>
+            <div className="ec-kpis">
+              <StatCard label="Unidades disponibles" value={totales.unidadesDisponibles} />
+              <StatCard label="Unidades vencidas" value={totales.unidadesVencidas} />
+              <StatCard label="Medicamentos distintos" value={totales.medicamentosDistintos} />
+              <StatCard label="Renglones de inventario" value={totales.renglonesDeInventario} />
             </div>
           </section>
 
           {tieneAccesoValorizacion && (
             <section className="reporte-seccion">
-              <h2 className="reporte-titulo">Valor del inventario disponible</h2>
+              <h2 className="ec-seccion-titulo">Valor del inventario disponible</h2>
               {errorValorizacion && (
                 <ErrorState message={errorValorizacion.mensaje} onRetry={recargarValorizacion} />
               )}
@@ -144,21 +126,19 @@ export default function ReporteInventarioPage({ incrustado = false }) {
               )}
               {!errorValorizacion && !cargandoValorizacion && (
                 <>
-                  <div className="reporte-cifras">
-                    <Card>
-                      <span className="reporte-cifra-etiqueta">Valor total disponible</span>
-                      <strong className="reporte-cifra">
-                        {formatearMoneda(valorizacion.valorDisponible) ?? "Sin costo registrado"}
-                      </strong>
-                    </Card>
-                    <Card>
-                      <span className="reporte-cifra-etiqueta">Unidades sin costo conocido</span>
-                      <strong className="reporte-cifra">{valorizacion.unidadesSinCosto}</strong>
-                    </Card>
-                    <Card>
-                      <span className="reporte-cifra-etiqueta">Lotes sin costo conocido</span>
-                      <strong className="reporte-cifra">{valorizacion.lotesSinCosto}</strong>
-                    </Card>
+                  <div className="ec-kpis">
+                    <StatCard
+                      label="Valor total disponible"
+                      value={
+                        formatearMoneda(valorizacion.valorDisponible) ?? "Sin costo registrado"
+                      }
+                      esTexto
+                    />
+                    <StatCard
+                      label="Unidades sin costo conocido"
+                      value={valorizacion.unidadesSinCosto}
+                    />
+                    <StatCard label="Lotes sin costo conocido" value={valorizacion.lotesSinCosto} />
                   </div>
                   <DataList
                     columnas={columnasValorizacionPorOrigen}
@@ -184,7 +164,7 @@ export default function ReporteInventarioPage({ incrustado = false }) {
               className="reporte-seccion"
               key={medicamento.medicamentoId ?? medicamento.medicamento}
             >
-              <h2 className="reporte-titulo">
+              <h2 className="ec-seccion-titulo">
                 {medicamento.medicamento} - lotes ({medicamento.lotes?.length ?? 0})
               </h2>
               <DataList

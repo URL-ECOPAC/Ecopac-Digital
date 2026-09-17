@@ -1,5 +1,4 @@
-import { useState, useEffect } from "react";
-import React from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSesionCompartida } from "../contexto/SesionProvider";
 import ModalMedicamento from "./ModalMedicamento.jsx";
 import ModalPrincipioActivo from "./ModalPrincipioActivo.jsx";
@@ -11,6 +10,13 @@ import {
   actualizarLote,
   actualizarMedicamento,
   datosLoteParaRegistrar,
+  ETIQUETAS_PRESENTACION,
+  filtrarCatalogoMedicamentos,
+  FILTROS_CATALOGO_MEDICAMENTOS,
+  FILTROS_CATALOGO_VACIOS,
+  formatearFechaCorta,
+  hayFiltrosDeCatalogo,
+  resumirLotesPorMedicamento,
   desactivarMedicamento,
   esAdministrador,
   ETIQUETAS_ORIGEN_LOTE,
@@ -31,11 +37,16 @@ import {
   registrarPrincipioActivo,
   totalizarValorizacion,
   useAlertasVencimiento,
-  useCatalogoMedicamentos,
   useGestionLotes,
   usePendientesValidacion,
 } from "@ecopac/shared";
-import { Nav } from "react-bootstrap";
+import { Form, Nav, Table } from "react-bootstrap";
+import PrimaryButton from "../components/PrimaryButton";
+import Selector from "../components/Selector";
+import TextField from "../components/TextField";
+import FilterBar from "../components/FilterBar";
+import SecondaryButton from "../components/SecondaryButton";
+import StatusChip from "../components/StatusChip";
 import PageHeader from "../components/PageHeader";
 import ScreenContainer from "../components/ScreenContainer";
 import StatCard from "../components/StatCard";
@@ -44,28 +55,6 @@ import AdministracionBodegasProveedoresPage from "./AdministracionBodegasProveed
 import KardexMovimientosPage from "./KardexMovimientosPage.jsx";
 import CatalogoPrincipiosActivosPage from "./CatalogoPrincipiosActivosPage.jsx";
 import MisMovimientosPage from "./MisMovimientosPage.jsx";
-
-// API Medicamentos y Principios Activos
-// Encabezado de las tablas de esta pantalla. Mismos valores que la regla `.table > thead th`
-// de ui.css, pero como objeto de estilos porque estas tablas se dibujan a mano y no con
-// DataList. Antes traia "11px", "700" y "#64748b" escritos a mano: un gris azulado que no esta
-// en la paleta de Ecopac y una escala tipografica que no coincidia con la de ningun otro modulo.
-const thStyle = {
-  padding: "var(--spacing-sm) var(--spacing-md)",
-  fontSize: "var(--texto-xxs)",
-  fontWeight: "var(--peso-medium)",
-  color: "var(--color-text-muted)",
-  letterSpacing: "0.08em",
-  textTransform: "uppercase",
-};
-
-const tdStyle = {
-  padding: "0.7rem var(--spacing-md)",
-  verticalAlign: "middle",
-  textAlign: "center",
-};
-
-const datosTablaDemo = [];
 
 export default function InventarioPage() {
   const [tabActiva, setTabActiva] = useState("catalogo");
@@ -134,15 +123,7 @@ export default function InventarioPage() {
     rolUsuario: rol,
   });
 
-  const {
-    busqueda,
-    setBusqueda,
-    categoriaSeleccionada,
-    setCategoriaSeleccionada,
-    bodegaSeleccionada,
-    setBodegaSeleccionada,
-    inventarioFiltrado: inventarioFiltradoHook,
-  } = useCatalogoMedicamentos({ inventarioInicial: inventarioRaw });
+  const [filtrosCatalogo, setFiltrosCatalogo] = useState(FILTROS_CATALOGO_VACIOS);
 
   const {
     alertasCriticas,
@@ -427,58 +408,23 @@ export default function InventarioPage() {
     cancelarCorreccionCosto();
   };
 
-  const getBadgeEstado = (estado, stock) => {
-    if (stock === 0) {
-      return { label: "AGOTADO", bg: "#f1f5f9", color: "#64748b", border: "#cbd5e1" };
-    }
-    switch (estado?.toLowerCase()) {
-      case "critico":
-      case "crítico":
-        return { label: "CRÍTICO", bg: "#fdf2f8", color: "#db2777", border: "#fbcfe8" };
-      case "por vencer":
-        return { label: "POR VENCER", bg: "#fffbeb", color: "#d97706", border: "#fef3c7" };
-      case "disponible":
-      default:
-        return { label: "DISPONIBLE", bg: "#f0fdf4", color: "#16a34a", border: "#bbf7d0" };
-    }
-  };
-
-  // Las alertas reales, sin relleno. Esto tenia detras un `alertasCriticas.length > 0 ? ... :`
-  // con dos alertas escritas a mano -Metformina L-2024-0567 y Amoxicilina L-2024-0091, con sus
-  // fechas de caducidad y su bodega-, asi que un inventario SIN alertas mostraba dos alertas de
-  // vencimiento que no existen. Es el peor caso posible para este panel: no falla, no avisa, y
-  // lo que dice es plausible. Cuando no hay ninguna, el panel de abajo dice que no hay ninguna.
-  const alertasParaMostrar = alertasCriticas;
-
-  const fuenteInicial = inventarioRaw.length > 0 ? inventarioFiltradoHook : datosTablaDemo;
-  const baseDatosFiltrada = fuenteInicial.filter((item) => {
-    if (!busqueda.trim()) return true;
-    const termino = busqueda.toLowerCase();
-    return (
-      item.codigo?.toLowerCase().includes(termino) ||
-      item.nombre?.toLowerCase().includes(termino) ||
-      item.lote?.toLowerCase().includes(termino) ||
-      item.numero_lote?.toLowerCase().includes(termino)
-    );
+  const lotesFiltrados = lotesRaw.filter((lote) => {
+    const texto = busquedaLotes.trim().toLowerCase();
+    const coincideTexto =
+      texto === "" ||
+      lote.medicamento?.toLowerCase().includes(texto) ||
+      lote.numeroLote?.toLowerCase().includes(texto);
+    const coincideOrigen =
+      filtroBodega === "todas" || ETIQUETAS_ORIGEN_LOTE[lote.origen] === filtroBodega;
+    return coincideTexto && coincideOrigen;
   });
 
-  const listaCategorias = [
-    "Todas",
-    "Medicamentos",
-    "Biológicos",
-    "Insumos",
-    "Dispositivos",
-    "Diagnóstico",
-    "EPP",
-  ];
-
-  const itemsTabla =
-    !categoriaSeleccionada || categoriaSeleccionada === "Todas"
-      ? baseDatosFiltrada
-      : baseDatosFiltrada.filter(
-          (item) =>
-            item.categoria?.toLowerCase().trim() === categoriaSeleccionada.toLowerCase().trim(),
-        );
+  // Catalogo: filtros sobre los campos reales del modelo y resumen de lotes por medicamento.
+  const resumenDeLotes = useMemo(() => resumirLotesPorMedicamento(lotesRaw), [lotesRaw]);
+  const medicamentosVisibles = useMemo(
+    () => filtrarCatalogoMedicamentos(inventarioRaw, filtrosCatalogo, resumenDeLotes),
+    [inventarioRaw, filtrosCatalogo, resumenDeLotes],
+  );
 
   // Acciones de la cabecera. Eran cuatro <button> con estilos en linea -dos verdes, uno ambar,
   // hexadecimales fuera de la paleta- y el "+" escrito dentro del texto. Ahora son las acciones de
@@ -516,12 +462,14 @@ export default function InventarioPage() {
   // Pestanas. Eran nueve <button> con un color de subrayado distinto cada una (#10b981, #f59e0b,
   // #0284c7, #6366f1, #0d9488, #7c3aed): las pastillas de `.nav-tabs` de ui.css son las mismas
   // que usan pacientes, presupuestos y reportes.
+  // Rotulos cortos: con los largos ("Catalogo de medicamentos", "Kardex de movimientos") las
+  // ocho pestanas no cabian en una fila y "Validacion" caia sola a una segunda linea.
   const pestanas = [
-    { id: "catalogo", label: "Catálogo de medicamentos" },
-    { id: "lotes", label: "Lotes y caducidades" },
-    { id: "alertas", label: "Alertas de vencimiento", contador: cantidadPendientesAlertas },
-    { id: "kardex", label: "Kardex de movimientos" },
-    { id: "administracion", label: "Administración" },
+    { id: "catalogo", label: "Catálogo" },
+    { id: "lotes", label: "Lotes" },
+    { id: "alertas", label: "Alertas", contador: cantidadPendientesAlertas },
+    { id: "kardex", label: "Kardex" },
+    { id: "administracion", label: "Bodegas y proveedores" },
     { id: "principios-activos", label: "Principios activos" },
     ...(puedeRegistrarMovimiento(rol) ? [{ id: "mis-movimientos", label: "Mis movimientos" }] : []),
     { id: "validacion", label: "Validación", contador: conteo },
@@ -552,15 +500,7 @@ export default function InventarioPage() {
         ))}
       </Nav>
       {error && (
-        <div
-          style={{
-            padding: "12px 16px",
-            backgroundColor: "#fef2f2",
-            color: "#991b1b",
-            borderRadius: "12px",
-            fontSize: "var(--texto-xs)",
-          }}
-        >
+        <div className="alert alert-danger mb-0" role="alert">
           {error}
         </div>
       )}
@@ -623,448 +563,286 @@ export default function InventarioPage() {
             )}
           </div>
 
-          <div
-            style={{
-              backgroundColor: "color-mix(in srgb, var(--color-warning) 8%, var(--color-surface))",
-              border:
-                "1px solid color-mix(in srgb, var(--color-warning) 28%, var(--color-surface))",
-              borderRadius: "var(--radio-lg)",
-              padding: "var(--spacing-md)",
-              display: "flex",
-              flexDirection: "column",
-              gap: "var(--spacing-sm)",
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-              <span
-                style={{
-                  width: "8px",
-                  height: "8px",
-                  borderRadius: "50%",
-                  backgroundColor: "#f59e0b",
-                }}
-              />
-              <span
-                style={{
-                  fontSize: "var(--texto-xxs)",
-                  fontWeight: "var(--peso-bold)",
-                  color: "#d97706",
-                }}
-              >
-                ALERTAS DE CADUCIDAD
-              </span>
+          {alertasCriticas.length > 0 && (
+            <div className="alert alert-warning mb-0" role="status">
+              <span className="ec-rotulo mb-1">Alertas de caducidad</span>
+              <ul className="mb-0 ps-3">
+                {alertasCriticas.map((item) => (
+                  <li key={item.id}>
+                    <strong>{item.medicamento?.nombre}</strong> · lote{" "}
+                    <span className="ec-mono">{item.numero_lote || item.lote}</span> · vence en{" "}
+                    {item.diasRestantes} dias
+                  </li>
+                ))}
+              </ul>
             </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-              {alertasParaMostrar.map((item) => (
-                <div
-                  key={item.id}
-                  style={{
-                    backgroundColor: "#ffffff",
-                    borderRadius: "10px",
-                    padding: "12px 16px",
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                  }}
-                >
-                  <div>
-                    <div
-                      style={{
-                        fontSize: "var(--texto-xs)",
-                        fontWeight: "var(--peso-bold)",
-                        color: "#1e293b",
-                      }}
-                    >
-                      {item.medicamento?.nombre}
-                    </div>
-                    <div
-                      style={{ fontSize: "var(--texto-xxs)", color: "#94a3b8", marginTop: "2px" }}
-                    >
-                      {item.codigo || "FAR-0000"} • Lote {item.numero_lote || item.lote}
-                    </div>
-                  </div>
-                  <div style={{ textAlign: "right" }}>
-                    <span
-                      style={{
-                        fontSize: "var(--texto-sm)",
-                        fontWeight: "var(--peso-bold)",
-                        color: "#d97706",
-                      }}
-                    >
-                      {item.diasRestantes}d
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+          )}
 
-          <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
-            <input
-              type="text"
-              placeholder="Código, descripción o lote..."
-              value={busqueda}
-              onChange={(e) => setBusqueda(e.target.value)}
-              style={{
-                flex: 1,
-                padding: "10px 18px",
-                borderRadius: "9999px",
-                border: "1px solid #e2e8f0",
-                backgroundColor: "#ffffff",
-                fontSize: "var(--texto-xs)",
-                outline: "none",
-              }}
-            />
-          </div>
+          {/* Filtros y tabla con los campos que `medicamentos` si tiene (00016, 00050). Ver
+              packages/shared/inventario/catalogoMedicamentos.js: la categoria, el codigo, la bodega
+              y el precio de antes no eran columnas y salian de valores escritos a mano. */}
+          <FilterBar
+            campos={FILTROS_CATALOGO_MEDICAMENTOS}
+            valores={filtrosCatalogo}
+            onChange={(id, valor) => setFiltrosCatalogo((previos) => ({ ...previos, [id]: valor }))}
+            onLimpiar={() => setFiltrosCatalogo(FILTROS_CATALOGO_VACIOS)}
+            hayFiltros={hayFiltrosDeCatalogo(filtrosCatalogo)}
+          />
 
-          <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
-            {listaCategorias.map((cat) => {
-              const esActiva =
-                categoriaSeleccionada === cat || (!categoriaSeleccionada && cat === "Todas");
-              return (
-                <button
-                  key={cat}
-                  onClick={() => setCategoriaSeleccionada(cat)}
-                  style={{
-                    padding: "8px 22px",
-                    borderRadius: "9999px",
-                    border: esActiva ? "1.5px solid #a7f3d0" : "1.5px solid #e2e8f0",
-                    backgroundColor: esActiva ? "#ecfdf5" : "#ffffff",
-                    color: esActiva ? "#059669" : "#64748b",
-                    fontSize: "var(--texto-xs)",
-                    fontWeight: esActiva ? "700" : "500",
-                    cursor: "pointer",
-                  }}
-                >
-                  {cat}
-                </button>
-              );
-            })}
-          </div>
+          <p className="ec-rotulo mb-0">
+            {medicamentosVisibles.length === 1
+              ? "1 medicamento"
+              : `${medicamentosVisibles.length} medicamentos`}
+          </p>
 
-          <div
-            style={{
-              backgroundColor: "#ffffff",
-              borderRadius: "20px",
-              border: "1px solid #f1f5f9",
-              overflow: "hidden",
-            }}
-          >
-            <div style={{ overflowX: "auto" }}>
-              <table
-                style={{ width: "100%", borderCollapse: "collapse", fontSize: "var(--texto-xs)" }}
-              >
-                <thead>
-                  <tr style={{ borderBottom: "1px solid #f1f5f9", backgroundColor: "#fafafa" }}>
-                    <th style={{ ...thStyle, textAlign: "left", paddingLeft: "24px" }}>CÓDIGO</th>
-                    <th style={{ ...thStyle, textAlign: "left" }}>DESCRIPCIÓN</th>
-                    <th style={{ ...thStyle, textAlign: "left" }}>CATEGORÍA</th>
-                    <th style={{ ...thStyle, textAlign: "left" }}>LOTE / SERIE</th>
-                    <th style={thStyle}>BODEGA</th>
-                    <th style={thStyle}>CADUCIDAD</th>
-                    <th style={thStyle}>STOCK</th>
-                    <th style={{ ...thStyle, textAlign: "right" }}>P. UNIT.</th>
-                    <th style={thStyle}>ESTADO</th>
-                    {esAdmin && <th style={thStyle}>ACCIONES</th>}
+          <div className="ec-tabla">
+            <Table responsive hover className="mb-0">
+              <thead>
+                <tr>
+                  <th>Medicamento</th>
+                  <th>Concentracion</th>
+                  <th>Presentacion</th>
+                  <th>Marca</th>
+                  <th>Uso</th>
+                  <th className="text-end">Lotes</th>
+                  <th>Proximo vencimiento</th>
+                  <th>Estado</th>
+                  {esAdmin && <th className="text-end">Acciones</th>}
+                </tr>
+              </thead>
+              <tbody>
+                {cargando ? (
+                  <tr>
+                    <td colSpan={esAdmin ? 9 : 8} className="text-center text-body-secondary py-4">
+                      Cargando el catalogo...
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {cargando ? (
-                    <tr>
-                      <td
-                        colSpan={esAdmin ? 10 : 9}
-                        style={{ padding: "32px", textAlign: "center", color: "#94a3b8" }}
-                      >
-                        Cargando inventario...
-                      </td>
-                    </tr>
-                  ) : itemsTabla.length === 0 ? (
-                    <tr>
-                      <td
-                        colSpan={esAdmin ? 10 : 9}
-                        style={{ padding: "32px", textAlign: "center", color: "#94a3b8" }}
-                      >
-                        No se encontraron productos coincidentes.
-                      </td>
-                    </tr>
-                  ) : (
-                    itemsTabla.map((item, index) => {
-                      const badgeEstado = getBadgeEstado(
-                        item.estado || item.estadoAlerta,
-                        item.stock,
-                      );
-                      return (
-                        <tr key={item.id || index} style={{ borderBottom: "1px solid #f8fafc" }}>
-                          <td style={{ ...tdStyle, textAlign: "left", paddingLeft: "24px" }}>
-                            <span style={{ color: "#059669", fontWeight: "var(--peso-bold)" }}>
-                              {item.codigo || "FAR-0041"}
+                ) : medicamentosVisibles.length === 0 ? (
+                  <tr>
+                    <td colSpan={esAdmin ? 9 : 8} className="text-center text-body-secondary py-4">
+                      {inventarioRaw.length === 0
+                        ? "Todavia no hay medicamentos en el catalogo."
+                        : "Ningun medicamento coincide con estos filtros."}
+                    </td>
+                  </tr>
+                ) : (
+                  medicamentosVisibles.map((item) => {
+                    const lotes = resumenDeLotes.get(item.id);
+                    return (
+                      <tr key={item.id}>
+                        <td>
+                          <strong>{item.nombre}</strong>
+                          {item.formaFarmaceutica && (
+                            <span className="d-block text-body-secondary small">
+                              {item.formaFarmaceutica}
                             </span>
-                          </td>
-                          <td style={{ ...tdStyle, textAlign: "left" }}>
-                            <span style={{ color: "#1e293b", fontWeight: "var(--peso-bold)" }}>
-                              {item.nombre}
-                            </span>
-                          </td>
-                          <td style={{ ...tdStyle, textAlign: "left", color: "#94a3b8" }}>
-                            {item.categoria || "Medicamentos"}
-                          </td>
-                          <td style={{ ...tdStyle, textAlign: "left" }}>
-                            <span style={{ color: "#0284c7", fontWeight: "var(--peso-semibold)" }}>
-                              {item.lote || item.numero_lote || "N/A"}
-                            </span>
-                          </td>
-                          <td style={tdStyle}>
-                            <span
-                              style={{
-                                fontWeight: "var(--peso-bold)",
-                                fontSize: "var(--texto-xxs)",
-                              }}
-                            >
-                              {item.bodega || "CENTRAL"}
-                            </span>
-                          </td>
-                          <td style={tdStyle}>{item.caducidad || "N/A"}</td>
-                          <td style={tdStyle}>
-                            <span style={{ fontWeight: "var(--peso-bold)" }}>
-                              {item.stock ?? 0}
-                            </span>
-                          </td>
-                          <td style={{ ...tdStyle, textAlign: "right" }}>
-                            Q {item.precio || "143"}
-                          </td>
-                          <td style={tdStyle}>
-                            <span
-                              style={{
-                                padding: "4px 14px",
-                                borderRadius: "9999px",
-                                fontSize: "var(--texto-xxs)",
-                                fontWeight: "var(--peso-bold)",
-                                backgroundColor: badgeEstado.bg,
-                                color: badgeEstado.color,
-                                border: `1px solid ${badgeEstado.border}`,
-                              }}
-                            >
-                              {badgeEstado.label}
-                            </span>
-                          </td>
-                          {esAdmin && (
-                            <td style={tdStyle}>
-                              <button
-                                onClick={() => abrirModalEditar(item)}
-                                style={{
-                                  padding: "6px 12px",
-                                  borderRadius: "6px",
-                                  border: "1px solid #cbd5e1",
-                                  backgroundColor: "#ffffff",
-                                  cursor: "pointer",
-                                }}
-                              >
-                                Editar
-                              </button>
-                            </td>
                           )}
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
-            </div>
+                        </td>
+                        <td>{item.concentracion}</td>
+                        <td>{ETIQUETAS_PRESENTACION[item.presentacion] ?? item.presentacion}</td>
+                        <td>{item.marca}</td>
+                        <td>
+                          <span
+                            className="ec-chip"
+                            style={{
+                              "--ec-acento": item.esPediatrico
+                                ? "var(--color-info)"
+                                : "var(--color-secondary)",
+                            }}
+                          >
+                            {item.esPediatrico ? "Pediatrico" : "General"}
+                          </span>
+                        </td>
+                        <td className="text-end">
+                          {lotes?.lotes ?? 0}
+                          {lotes?.vencidos > 0 && (
+                            <span className="d-block small text-danger">
+                              {lotes.vencidos} vencido{lotes.vencidos === 1 ? "" : "s"}
+                            </span>
+                          )}
+                        </td>
+                        <td>
+                          {lotes?.proximoVencimiento ? (
+                            <>
+                              {formatearFechaCorta(lotes.proximoVencimiento)}
+                              <span className="d-block small text-body-secondary">
+                                en {lotes.diasParaProximo} dias
+                              </span>
+                            </>
+                          ) : (
+                            <span className="text-body-secondary">Sin lotes vigentes</span>
+                          )}
+                        </td>
+                        <td>
+                          <StatusChip
+                            status={item.activo === false ? "inactivo" : "activo"}
+                            label={item.activo === false ? "Inactivo" : "Activo"}
+                          />
+                        </td>
+                        {esAdmin && (
+                          <td className="text-end">
+                            <SecondaryButton
+                              title="Editar"
+                              size="sm"
+                              onClick={() => abrirModalEditar(item)}
+                            />
+                          </td>
+                        )}
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </Table>
           </div>
         </>
       )}
 
-      {/* Pestaña: Lotes */}
+      {/* Pestaña: Lotes. Misma barra de filtros y misma tabla que el catalogo: antes eran un input
+          en pastilla, un <select> suelto y una tabla con hexadecimales en linea, y la fecha se
+          pintaba con new Date(...).toLocaleDateString(), que en Guatemala la adelanta un dia. */}
       {tabActiva === "lotes" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-          <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
-            <input
-              type="text"
-              placeholder="Buscar medicamento o número de lote..."
-              value={busquedaLotes}
-              onChange={(e) => setBusquedaLotes(e.target.value)}
-              style={{
-                flex: 1,
-                padding: "10px 16px",
-                borderRadius: "9999px",
-                border: "1px solid #e2e8f0",
-                fontSize: "var(--texto-xs)",
-              }}
-            />
-            <select
-              value={filtroBodega}
-              onChange={(e) => setFiltroBodega(e.target.value)}
-              style={{ padding: "10px 14px", borderRadius: "12px", border: "1px solid #e2e8f0" }}
-            >
-              <option value="todas">Todos los orígenes</option>
-              {Object.values(ETIQUETAS_ORIGEN_LOTE).map((etiqueta) => (
-                <option key={etiqueta} value={etiqueta}>
-                  {etiqueta}
-                </option>
-              ))}
-            </select>
+        <>
+          <div className="ec-filtros">
+            <div className="ec-filtro ec-filtro--busqueda">
+              <TextField
+                label="Buscar lote"
+                placeholder="Medicamento o numero de lote"
+                value={busquedaLotes}
+                onChange={(e) => setBusquedaLotes(e.target.value)}
+                style={{ marginBottom: 0 }}
+              />
+            </div>
+            <div className="ec-filtro">
+              <Selector
+                label="Origen"
+                value={filtroBodega === "todas" ? null : filtroBodega}
+                options={Object.values(ETIQUETAS_ORIGEN_LOTE).map((etiqueta) => ({
+                  value: etiqueta,
+                  label: etiqueta,
+                }))}
+                onSelect={(valor) => setFiltroBodega(valor ?? "todas")}
+                placeholder="Todos los origenes"
+                style={{ marginBottom: 0 }}
+              />
+            </div>
+            <div className="ec-filtros-limpiar">
+              <SecondaryButton
+                title="Limpiar filtros"
+                variant="neutra"
+                disabled={!busquedaLotes && filtroBodega === "todas"}
+                onClick={() => {
+                  setBusquedaLotes("");
+                  setFiltroBodega("todas");
+                }}
+              />
+            </div>
           </div>
 
           {errorCorreccionCosto && (
-            <div
-              style={{
-                padding: "10px 14px",
-                backgroundColor: "#fef2f2",
-                color: "#991b1b",
-                borderRadius: "10px",
-                fontSize: "var(--texto-xs)",
-              }}
-            >
+            <div className="alert alert-danger mb-0" role="alert">
               {errorCorreccionCosto}
             </div>
           )}
 
-          <div
-            style={{
-              backgroundColor: "#fff",
-              borderRadius: "16px",
-              border: "1px solid #f1f5f9",
-              overflow: "hidden",
-            }}
-          >
-            <table
-              style={{ width: "100%", borderCollapse: "collapse", fontSize: "var(--texto-xs)" }}
-            >
+          <div className="ec-tabla">
+            <Table responsive hover className="mb-0">
               <thead>
-                <tr style={{ borderBottom: "1px solid #f1f5f9", backgroundColor: "#fafafa" }}>
-                  <th style={{ padding: "12px 16px", textAlign: "left" }}>Medicamento</th>
-                  <th style={{ padding: "12px 16px", textAlign: "left" }}>Lote</th>
-                  <th style={{ padding: "12px 16px", textAlign: "left" }}>Origen</th>
-                  <th style={{ padding: "12px 16px", textAlign: "right" }}>Cantidad</th>
-                  <th style={{ padding: "12px 16px", textAlign: "right" }}>Costo unitario</th>
-                  <th style={{ padding: "12px 16px", textAlign: "left" }}>Vencimiento</th>
-                  <th style={{ padding: "12px 16px", textAlign: "left" }}>Estado</th>
-                  <th style={{ padding: "12px 16px", textAlign: "right" }}>Acción</th>
+                <tr>
+                  <th>Medicamento</th>
+                  <th>Lote</th>
+                  <th>Origen</th>
+                  <th className="text-end">Cantidad</th>
+                  <th className="text-end">Costo unitario</th>
+                  <th>Vencimiento</th>
+                  <th>Estado</th>
+                  <th className="text-end">Accion</th>
                 </tr>
               </thead>
               <tbody>
-                {lotesRaw
-                  .filter((lote) => {
-                    const texto = busquedaLotes.trim().toLowerCase();
-                    const coincideTexto =
-                      texto === "" ||
-                      lote.medicamento?.toLowerCase().includes(texto) ||
-                      lote.numeroLote?.toLowerCase().includes(texto);
-                    const coincideOrigen =
-                      filtroBodega === "todas" ||
-                      ETIQUETAS_ORIGEN_LOTE[lote.origen] === filtroBodega;
-                    return coincideTexto && coincideOrigen;
-                  })
-                  .map((lote) => {
+                {lotesFiltrados.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="text-center text-body-secondary py-4">
+                      {lotesRaw.length === 0
+                        ? "Todavia no hay lotes registrados."
+                        : "Ningun lote coincide con estos filtros."}
+                    </td>
+                  </tr>
+                ) : (
+                  lotesFiltrados.map((lote) => {
                     const enCorreccion = loteEnCorreccion === lote.id;
                     return (
-                      <tr key={lote.id} style={{ borderBottom: "1px solid #f8fafc" }}>
-                        <td style={{ padding: "14px 16px" }}>{lote.medicamento}</td>
-                        <td style={{ padding: "14px 16px" }}>{lote.numeroLote}</td>
-                        <td style={{ padding: "14px 16px" }}>
-                          {ETIQUETAS_ORIGEN_LOTE[lote.origen] ?? lote.origen}
+                      <tr key={lote.id}>
+                        <td>
+                          <strong>{lote.medicamento}</strong>
                         </td>
-                        <td style={{ padding: "14px 16px", textAlign: "right" }}>
-                          {lote.cantidadIngresada}
-                        </td>
-                        <td style={{ padding: "14px 16px", textAlign: "right" }}>
+                        <td className="ec-mono">{lote.numeroLote}</td>
+                        <td>{ETIQUETAS_ORIGEN_LOTE[lote.origen] ?? lote.origen}</td>
+                        <td className="text-end">{lote.cantidadIngresada}</td>
+                        <td className="text-end">
                           {enCorreccion ? (
-                            <input
+                            <Form.Control
                               type="number"
                               min="0"
                               step="0.01"
+                              size="sm"
                               autoFocus
+                              aria-label="Costo unitario"
                               value={costoEnEdicion}
                               onChange={(e) => setCostoEnEdicion(e.target.value)}
-                              style={{
-                                width: "110px",
-                                padding: "6px 10px",
-                                borderRadius: "8px",
-                                border: "1px solid #cbd5e1",
-                                fontSize: "var(--texto-xs)",
-                                textAlign: "right",
-                              }}
+                              className="text-end ms-auto"
+                              style={{ maxWidth: "8rem" }}
                             />
                           ) : (
                             (formatearMoneda(lote.costoUnitario) ?? "Sin registrar")
                           )}
                         </td>
-                        <td style={{ padding: "14px 16px" }}>
+                        <td>
                           {lote.fechaVencimiento
-                            ? new Date(lote.fechaVencimiento).toLocaleDateString("es-GT")
+                            ? formatearFechaCorta(lote.fechaVencimiento)
                             : "Sin fecha"}
                         </td>
-                        <td style={{ padding: "14px 16px" }}>
-                          {lote.vencido ? "Vencido" : "Vigente"}
+                        <td>
+                          <StatusChip
+                            status={lote.vencido ? "critico" : "disponible"}
+                            label={lote.vencido ? "Vencido" : "Vigente"}
+                          />
                         </td>
-                        <td style={{ padding: "14px 16px", textAlign: "right" }}>
+                        <td className="text-end">
                           {enCorreccion ? (
-                            <div
-                              style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}
-                            >
-                              <button
-                                type="button"
-                                onClick={() => guardarCorreccionCosto(lote.id)}
-                                disabled={guardandoCosto}
-                                style={{
-                                  border: "none",
-                                  borderRadius: "8px",
-                                  padding: "6px 12px",
-                                  backgroundColor: "#009963",
-                                  color: "#fff",
-                                  fontSize: "var(--texto-xs)",
-                                  fontWeight: "var(--peso-bold)",
-                                  cursor: "pointer",
-                                }}
-                              >
-                                {guardandoCosto ? "Guardando..." : "Guardar"}
-                              </button>
-                              <button
-                                type="button"
+                            <div className="ec-acciones ec-acciones--fin">
+                              <SecondaryButton
+                                title="Cancelar"
+                                size="sm"
+                                variant="neutra"
                                 onClick={cancelarCorreccionCosto}
                                 disabled={guardandoCosto}
-                                style={{
-                                  border: "1px solid #e2e8f0",
-                                  borderRadius: "8px",
-                                  padding: "6px 12px",
-                                  backgroundColor: "#fff",
-                                  color: "#64748b",
-                                  fontSize: "var(--texto-xs)",
-                                  fontWeight: "var(--peso-bold)",
-                                  cursor: "pointer",
-                                }}
-                              >
-                                Cancelar
-                              </button>
+                              />
+                              <PrimaryButton
+                                title="Guardar"
+                                size="sm"
+                                onClick={() => guardarCorreccionCosto(lote.id)}
+                                loading={guardandoCosto}
+                              />
                             </div>
                           ) : (
                             puedeCorregirLote(rol, lote, perfil?.id) && (
-                              <button
-                                type="button"
+                              <SecondaryButton
+                                title="Corregir costo"
+                                size="sm"
                                 onClick={() => abrirCorreccionCosto(lote)}
-                                style={{
-                                  border: "1px solid #e2e8f0",
-                                  borderRadius: "8px",
-                                  padding: "6px 12px",
-                                  backgroundColor: "#fff",
-                                  color: "#2563eb",
-                                  fontSize: "var(--texto-xs)",
-                                  fontWeight: "var(--peso-bold)",
-                                  cursor: "pointer",
-                                }}
-                              >
-                                Corregir costo
-                              </button>
+                              />
                             )
                           )}
                         </td>
                       </tr>
                     );
-                  })}
+                  })
+                )}
               </tbody>
-            </table>
+            </Table>
           </div>
-        </div>
+        </>
       )}
 
       {/* Pestaña: Alertas completada mediante PanelAlertasVencimiento */}

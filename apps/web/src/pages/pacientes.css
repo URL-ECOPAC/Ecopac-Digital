@@ -57,20 +57,7 @@
 
 /* --- Panel de filtros --- */
 
-.modulo-pacientes .pac-filtros {
-  background-color: var(--color-surface);
-  border: var(--pac-borde);
-  border-radius: var(--radio-lg);
-  box-shadow: var(--sombra-sm);
-  margin-bottom: var(--spacing-md);
-  padding: var(--spacing-md);
-}
-
-.modulo-pacientes .pac-filtros-acciones {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: var(--spacing-sm);
-}
+/* La tarjeta de filtros la dibuja FilterBar (.ec-filtros en ui.css): aqui ya no se envuelve. */
 
 /* --- Avatar circular con inicial --- */
 

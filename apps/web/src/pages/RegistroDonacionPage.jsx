@@ -16,6 +16,7 @@ import { Container, Row, Col, Card, Form, Button, Alert, Modal } from "react-boo
 
 import { useSesionCompartida } from "../contexto/SesionProvider";
 import PageHeader from "../components/PageHeader";
+import { ACCION_VOLVER_A_DONACIONES } from "./donacionesNavegacion";
 import ScreenContainer from "../components/ScreenContainer";
 import ModalRegistroIngreso from "./ModalRegistroIngreso.jsx";
 import { Plus, Trash2 } from "lucide-react";
@@ -139,6 +140,7 @@ export default function RegistroDonacionPage({ usuarioRol }) {
       <PageHeader
         title="Registro de donación"
         subtitle="Donante, tipo de aporte y, si trae medicamentos, su ingreso al inventario"
+        actions={[ACCION_VOLVER_A_DONACIONES]}
       />
 
       {!permisos?.puedeEscribir && (

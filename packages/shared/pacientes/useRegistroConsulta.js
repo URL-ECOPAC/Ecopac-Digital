@@ -4,7 +4,8 @@ import { CODIGOS_DE_ERROR_DE_SUPABASE } from "../api/errores-de-supabase.js";
 import { iniciarAtencion, obtenerCola } from "../atenciones/api.js";
 import { puedeRegistrarEnJornada } from "../jornadas/validaciones.js";
 import { CAMPOS_CONSULTA } from "./campos.js";
-import { listarDiagnosticos, registrarConsulta } from "./consultas.api.js";
+import { crearDiagnostico, listarDiagnosticos, registrarConsulta } from "./consultas.api.js";
+import { puedeAdministrarDiagnosticos } from "./permisos.js";
 import { seccionesConCampos } from "./consultas.secciones.js";
 import { obtenerTriajes } from "./triaje.api.js";
 
@@ -52,12 +53,14 @@ export function useRegistroConsulta({
   estadoDeJornada,
   perfilId,
   almacenamiento,
+  rol,
 } = {}) {
   const [valores, setValores] = useState(VALORES_INICIALES);
   const [error, setError] = useState(null);
   const [enviando, setEnviando] = useState(false);
   const [guardada, setGuardada] = useState(null);
   const [diagnosticos, setDiagnosticos] = useState([]);
+  const [errorDiagnostico, setErrorDiagnostico] = useState(null);
   const [signos, setSignos] = useState(null);
   const [atencionId, setAtencionId] = useState(null);
   const [preparando, setPreparando] = useState(true);
@@ -224,6 +227,30 @@ export function useRegistroConsulta({
     almacenamiento,
   ]);
 
+  // Alta de un diagnostico sin salir de la consulta. Antes habia que cerrarla, ir al catalogo,
+  // crearlo y volver a escribir la consulta. Solo para quien puede mantener el catalogo
+  // (puedeAdministrarDiagnosticos, espejo de la politica de INSERT de la 00105): a cualquier otro
+  // rol la base se lo rechazaria, asi que ni se ofrece. Devuelve el id para que el selector lo
+  // elija en el acto.
+  const crearDiagnosticoNuevo = useCallback(async (nombre) => {
+    setErrorDiagnostico(null);
+    const { diagnostico, error: fallo } = await crearDiagnostico({ nombre });
+    if (fallo || !diagnostico) {
+      setErrorDiagnostico(fallo ?? null);
+      return null;
+    }
+    setDiagnosticos((actuales) =>
+      [
+        ...actuales,
+        {
+          value: diagnostico.id,
+          label: [diagnostico.codigo, diagnostico.nombre].filter(Boolean).join(" "),
+        },
+      ].sort((uno, otro) => uno.label.localeCompare(otro.label, "es")),
+    );
+    return diagnostico.id;
+  }, []);
+
   return {
     secciones: seccionesConCampos(),
     valores,
@@ -238,5 +265,7 @@ export function useRegistroConsulta({
     descartarBorrador,
     guardar,
     catalogos: { diagnosticos },
+    crearDiagnosticoNuevo: puedeAdministrarDiagnosticos(rol) ? crearDiagnosticoNuevo : null,
+    errorDiagnostico,
   };
 }

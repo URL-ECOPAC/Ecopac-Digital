@@ -5,6 +5,7 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import * as matchers from "@testing-library/jest-dom/matchers";
 
 import HistorialDonacionesPage from "./HistorialDonacionesPage";
@@ -74,7 +75,12 @@ vi.mock("@ecopac/shared", async (importarOriginal) => ({
 const { useHistorialDonaciones } = await import("@ecopac/shared");
 
 function pantalla() {
-  return render(<HistorialDonacionesPage usuarioRol="administrador" />);
+  // Con router: la cabecera lleva el enlace "Volver a donaciones".
+  return render(
+    <MemoryRouter>
+      <HistorialDonacionesPage usuarioRol="administrador" />
+    </MemoryRouter>,
+  );
 }
 
 describe("HistorialDonacionesPage", () => {

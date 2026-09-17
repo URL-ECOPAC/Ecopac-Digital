@@ -40,12 +40,26 @@ import ModalConfirmarDesactivacion from "./ModalConfirmarDesactivacion";
 //
 // Desactivar/reactivar (criterio 2) se abre desde aca, con un boton propio que abre
 // ModalConfirmarDesactivacion.
-export default function ModalEdicionUsuario({ perfil, idSesionActual, rol, onClose, onGuardado }) {
+export default function ModalEdicionUsuario({
+  perfil,
+  idSesionActual,
+  rol,
+  onClose,
+  onGuardado,
+  onEspecialidadesGuardadas,
+}) {
   const { valores, errores, error, enviando, setCampo, guardar } = useEdicionUsuario(perfil);
   const especialidades = useEspecialidadesDePerfil(perfil?.id, { rol, idSesionActual });
   const [mostrarConfirmacion, setMostrarConfirmacion] = useState(false);
 
   const esUnoMismo = perfil?.id === idSesionActual;
+
+  // Guardar especialidades no cerraba nada ni avisaba a nadie: la lista de colaboradores seguia con
+  // las de antes hasta recargar la pagina, y parecia que el cambio "tardaba en cargar".
+  const guardarEspecialidades = async () => {
+    const resultado = await especialidades.guardar();
+    if (resultado.ok) onEspecialidadesGuardadas?.(resultado.especialidades);
+  };
 
   const guardarCambios = async () => {
     const resultado = await guardar();
@@ -153,7 +167,7 @@ export default function ModalEdicionUsuario({ perfil, idSesionActual, rol, onClo
             <div className="ec-acciones ec-acciones--fin">
               <PrimaryButton
                 title="Guardar especialidades"
-                onClick={especialidades.guardar}
+                onClick={guardarEspecialidades}
                 loading={especialidades.enviando}
                 disabled={!especialidades.hayCambios}
                 icon={<Save size={16} aria-hidden="true" />}

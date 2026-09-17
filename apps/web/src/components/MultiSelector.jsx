@@ -1,28 +1,34 @@
 import { useId, useState } from "react";
 import { Form } from "react-bootstrap";
 import { Check, X } from "lucide-react";
+import { buscarOpcionPorEtiqueta } from "@ecopac/shared";
+
+import SecondaryButton from "./SecondaryButton";
 
 /**
- * Seleccion multiple sobre un catalogo.
- *
- * POR QUE SE AGREGA AL CATALOGO
- *
- * TIPOS_DE_CAMPO.MULTI_SELECT existe en packages/shared/descriptores.js desde el principio y lo
- * declara CAMPOS_CONSULTA (los diagnosticos de una consulta), pero ninguna app tenia un
- * componente que supiera dibujarlo: cualquier formulario que lo usara se quedaba con un campo
- * invisible. Es literalmente la razon por la que los comentarios de ModalAltaUsuario y
- * ModalEdicionUsuario decian que las especialidades "no tienen ningun componente del catalogo
- * que las dibuje editable".
+ * Seleccion multiple sobre un catalogo, con alta de valores nuevos en el mismo lugar.
  *
  * Lo elegido se muestra como chips que se quitan con un click, y el desplegable de abajo agrega:
- * es el patron que ya usa la receta para los medicamentos, y evita el <select multiple> nativo,
- * que en la practica nadie sabe usar (hay que mantener Ctrl para elegir dos cosas).
+ * es el patron de la receta para los medicamentos, y evita el <select multiple> nativo.
  *
- * `onChange` entrega el ARREGLO COMPLETO de valores, no el que cambio: quien lo usa no tiene que
- * reconstruirlo. Se llama igual en las dos plataformas.
+ * `onChange` entrega el ARREGLO COMPLETO de valores, no el que cambio. Se llama igual en las dos
+ * plataformas.
  *
- * `permiteLibre` deja escribir un valor que no esta en el catalogo. Lo necesita
- * `perfil_especialidad`, que es un VARCHAR(100) libre y no una FK a un catalogo (00002).
+ * DOS FORMAS DE AGREGAR ALGO QUE NO ESTA EN LA LISTA
+ *
+ *   - `permiteLibre`: el texto escrito ES el valor. Lo necesita `perfil_especialidad`, que es un
+ *     VARCHAR(100) libre y no una FK (00002).
+ *   - `onCrear(texto)`: el texto se da de alta en su catalogo y se elige lo que devuelva (el id).
+ *     Lo usa la consulta para crear un diagnostico sin salir de ella. Debe devolver el valor de la
+ *     opcion nueva, o null si no se pudo crear (el error lo pinta quien la llama).
+ *
+ * EL FALLO QUE HABIA. Escribir el nombre de algo que YA estaba en el catalogo -"Cirujano"- no lo
+ * elegia: lo agregaba como texto nuevo, o no hacia nada si el desplegable estaba vacio. Y el
+ * desplegable decia "No quedan opciones por elegir" tanto cuando todas estaban elegidas como
+ * cuando el catalogo no tenia nada, asi que no se entendia por que no se podia escoger. Ahora, si
+ * lo escrito coincide con una opcion (sin importar mayusculas ni acentos), se elige esa opcion;
+ * al salir del campo con texto escrito tambien se agrega, para que "Guardar" no ignore lo que se
+ * acaba de escribir.
  *
  * Espejo de apps/mobile/src/components/MultiSelector.js.
  */
@@ -34,6 +40,7 @@ export default function MultiSelector({
   placeholder = "Agregar...",
   placeholderLibre = "Escribe y pulsa Agregar",
   permiteLibre = false,
+  onCrear,
   error,
   disabled = false,
   style,
@@ -41,14 +48,18 @@ export default function MultiSelector({
   const id = useId();
   const seleccionados = Array.isArray(value) ? value : [];
   const [textoLibre, setTextoLibre] = useState("");
+  const [creando, setCreando] = useState(false);
 
+  const admiteTexto = permiteLibre || typeof onCrear === "function";
   const disponibles = options.filter((opcion) => !seleccionados.includes(opcion.value));
 
   const etiquetaDe = (valor) =>
     options.find((opcion) => opcion.value === valor)?.label ?? String(valor);
 
   const agregar = (valor) => {
-    if (valor === null || valor === "" || seleccionados.includes(valor)) return;
+    if (valor === null || valor === undefined || valor === "" || seleccionados.includes(valor)) {
+      return;
+    }
     onChange?.([...seleccionados, valor]);
   };
 
@@ -56,12 +67,40 @@ export default function MultiSelector({
     onChange?.(seleccionados.filter((elegido) => elegido !== valor));
   };
 
-  const agregarLibre = () => {
+  const agregarTexto = async () => {
     const limpio = textoLibre.trim();
-    if (!limpio) return;
+    if (!limpio || creando) return;
+
+    const existente = buscarOpcionPorEtiqueta(options, limpio);
+    if (existente) {
+      agregar(existente.value);
+      setTextoLibre("");
+      return;
+    }
+
+    if (typeof onCrear === "function") {
+      setCreando(true);
+      const nuevo = await onCrear(limpio);
+      setCreando(false);
+      if (nuevo !== null && nuevo !== undefined) {
+        agregar(nuevo);
+        setTextoLibre("");
+      }
+      return;
+    }
+
     agregar(limpio);
     setTextoLibre("");
   };
+
+  const textoDelDesplegable =
+    options.length === 0
+      ? admiteTexto
+        ? "Todavia no hay ninguna: escribe una nueva abajo"
+        : "No hay opciones disponibles"
+      : disponibles.length === 0
+        ? "Ya elegiste todas las opciones"
+        : placeholder;
 
   return (
     <Form.Group className="mb-3" style={style}>
@@ -101,9 +140,7 @@ export default function MultiSelector({
         isInvalid={Boolean(error)}
         disabled={disabled || disponibles.length === 0}
       >
-        <option value="">
-          {disponibles.length === 0 ? "No quedan opciones por elegir" : placeholder}
-        </option>
+        <option value="">{textoDelDesplegable}</option>
         {disponibles.map((opcion) => (
           <option key={String(opcion.value)} value={String(opcion.value)}>
             {opcion.label}
@@ -111,28 +148,34 @@ export default function MultiSelector({
         ))}
       </Form.Select>
 
-      {permiteLibre && (
+      {admiteTexto && (
         <div className="d-flex gap-2 mt-2">
           <Form.Control
+            aria-label={placeholderLibre}
             value={textoLibre}
             placeholder={placeholderLibre}
-            disabled={disabled}
+            disabled={disabled || creando}
             onChange={(evento) => setTextoLibre(evento.target.value)}
+            onBlur={() => {
+              // Al salir con texto escrito se agrega igual que con el boton. Crear en el catalogo
+              // si pide el boton explicito: dar de alta un diagnostico no puede pasar por un roce.
+              if (typeof onCrear !== "function") agregarTexto();
+            }}
             onKeyDown={(evento) => {
               if (evento.key === "Enter") {
                 evento.preventDefault();
-                agregarLibre();
+                agregarTexto();
               }
             }}
           />
-          <button
-            type="button"
-            className="btn btn-outline-primary btn-sm flex-shrink-0"
-            onClick={agregarLibre}
+          <SecondaryButton
+            title={typeof onCrear === "function" ? "Crear" : "Agregar"}
+            size="sm"
+            className="flex-shrink-0"
+            onClick={agregarTexto}
+            loading={creando}
             disabled={disabled || textoLibre.trim() === ""}
-          >
-            Agregar
-          </button>
+          />
         </div>
       )}
 

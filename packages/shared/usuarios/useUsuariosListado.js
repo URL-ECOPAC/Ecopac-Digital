@@ -85,16 +85,19 @@ export function useUsuariosListado({ porPagina = USUARIOS_POR_PAGINA, rol } = {}
     setCargando(true);
     setError(null);
 
-    const {
-      usuarios: filas,
-      total: cuantos,
-      error: errorDeLista,
-    } = await listarUsuarios({
-      ...filtros,
-      limite: porPagina,
-      pagina,
-      rolConsultor: rol,
-    });
+    // El catalogo de especialidades se relee con la lista: una especialidad nueva, recien guardada
+    // en la ficha de alguien, tiene que aparecer ya en el filtro, no al recargar la pagina.
+    const [{ usuarios: filas, total: cuantos, error: errorDeLista }, { especialidades: catalogo }] =
+      await Promise.all([
+        listarUsuarios({
+          ...filtros,
+          limite: porPagina,
+          pagina,
+          rolConsultor: rol,
+        }),
+        listarCatalogoEspecialidades(),
+      ]);
+    setEspecialidades(catalogo ?? []);
 
     if (errorDeLista) {
       setUsuarios([]);
@@ -118,16 +121,6 @@ export function useUsuariosListado({ porPagina = USUARIOS_POR_PAGINA, rol } = {}
   useEffect(() => {
     cargar();
   }, [cargar]);
-
-  useEffect(() => {
-    let vigente = true;
-    listarCatalogoEspecialidades().then(({ especialidades: catalogo }) => {
-      if (vigente) setEspecialidades(catalogo ?? []);
-    });
-    return () => {
-      vigente = false;
-    };
-  }, []);
 
   const setFiltro = useCallback((id, valor) => {
     setPagina(1);

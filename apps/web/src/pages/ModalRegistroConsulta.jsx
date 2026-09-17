@@ -1,4 +1,5 @@
 import { TIPOS_DE_CAMPO, useCapturaClinica, useRegistroConsulta } from "@ecopac/shared";
+import { useSesionCompartida } from "../contexto/SesionProvider";
 
 import LoadingState from "../components/LoadingState";
 import Modal from "../components/Modal";
@@ -25,6 +26,7 @@ import { Save, X } from "lucide-react";
 
 export default function ModalRegistroConsulta({ paciente, perfilId, onClose, onGuardada }) {
   const captura = useCapturaClinica();
+  const { rol } = useSesionCompartida();
 
   const {
     secciones,
@@ -38,6 +40,8 @@ export default function ModalRegistroConsulta({ paciente, perfilId, onClose, onG
     descartarBorrador,
     guardar,
     catalogos,
+    crearDiagnosticoNuevo,
+    errorDiagnostico,
   } = useRegistroConsulta({
     pacienteId: paciente?.id,
     expedienteId: paciente?.expediente?.id,
@@ -45,6 +49,7 @@ export default function ModalRegistroConsulta({ paciente, perfilId, onClose, onG
     estadoDeJornada: captura.jornada?.estado,
     perfilId,
     almacenamiento: almacenamientoWeb,
+    rol,
   });
 
   const guardarConsulta = async () => {
@@ -110,13 +115,18 @@ export default function ModalRegistroConsulta({ paciente, perfilId, onClose, onG
           {seccion.campos.map((campo) => {
             if (campo.tipo === TIPOS_DE_CAMPO.MULTI_SELECT) {
               return (
+                // Con crearDiagnosticoNuevo (solo quien puede mantener el catalogo), un
+                // diagnostico que no esta se crea aqui mismo y queda elegido.
                 <MultiSelector
                   key={campo.id}
                   label={campo.label}
                   value={valores[campo.id] ?? []}
                   options={catalogos[campo.opcionesDesde] ?? []}
                   onChange={(elegidos) => setCampo(campo.id, elegidos)}
-                  placeholder="Agregar diagnostico"
+                  placeholder="Elegir un diagnostico del catalogo"
+                  placeholderLibre="O escribir uno que no este en el catalogo"
+                  onCrear={crearDiagnosticoNuevo ?? undefined}
+                  error={errorDiagnostico?.mensaje}
                   disabled={enviando}
                 />
               );

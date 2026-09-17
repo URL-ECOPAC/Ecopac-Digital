@@ -1,6 +1,7 @@
 import { formatearMoneda, useRegistroIngreso } from "@ecopac/shared";
 import PrimaryButton from "../components/PrimaryButton";
 import SecondaryButton from "../components/SecondaryButton";
+import { useCerrarAlTocarFuera } from "../hooks/useCerrarAlTocarFuera";
 
 export default function ModalRegistroIngreso({
   abierto,
@@ -42,6 +43,10 @@ export default function ModalRegistroIngreso({
     proveedorIdInicial,
   });
 
+  // El hook antes del return temprano; handleCerrarModal se declara despues, asi que se le pasa
+  // una funcion que la llama en el momento.
+  const fondo = useCerrarAlTocarFuera(() => handleCerrarModal(), { activo: abierto });
+
   if (!abierto) return null;
 
   // Garantiza que se llame la función de cierre correcta sin importar cuál prop envió el padre
@@ -64,6 +69,7 @@ export default function ModalRegistroIngreso({
 
   return (
     <div
+      {...fondo}
       className="modal fade show d-block"
       tabIndex="-1"
       style={{ backgroundColor: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}

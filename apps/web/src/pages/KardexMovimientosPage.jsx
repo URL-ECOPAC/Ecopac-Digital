@@ -1,68 +1,55 @@
+import { Table } from "react-bootstrap";
 import {
   ESTADO_MOVIMIENTO,
   exportarFilasACSV,
+  formatearFechaConHora,
   TIPO_MOVIMIENTO,
   TIPOS_DE_PRESENTACION,
   useKardexMovimientos,
 } from "@ecopac/shared";
+
+import DateField from "../components/DateField";
 import SectionHeader from "../components/SectionHeader";
-const colores = {
-  fondoTarjeta: "#ffffff",
-  borde: "#e2e8f0",
-  textoTitulo: "#1e293b",
-  textoSecundario: "#64748b",
-  fondoFiltros: "#f8fafc",
-  botonFondo: "#10b981",
-  botonTexto: "#ffffff",
-  bordeActivo: "#10b981",
+import SecondaryButton from "../components/SecondaryButton";
+import Selector from "../components/Selector";
+import StatusChip from "../components/StatusChip";
+
+// Kardex de movimientos de inventario.
+//
+// Tenia su propia paleta (un objeto `colores` con siete hexadecimales), su propia tarjeta, sus
+// propios <input>/<select> y una tabla con cada celda estilizada en linea. Ahora usa la barra de
+// filtros, la tabla y los chips de estado de todo el sistema. Lo que no cambia: la columna de
+// saldo, la marca de aprobacion automatica y el CSV.
+
+const ETIQUETAS_TIPO = {
+  [TIPO_MOVIMIENTO.INGRESO]: "Ingreso",
+  [TIPO_MOVIMIENTO.SALIDA]: "Salida",
 };
 
-// Antes armaban HTML a mano (interpolando el tipo/estado sin escapar) y lo pintaban con
-// dangerouslySetInnerHTML: para un valor que no fuera ninguno de los conocidos, el texto crudo
-// terminaba en el DOM sin el escapado que React hace por defecto. tipo_movimiento y
-// estado_movimiento son enums de Postgres, asi que hoy no hay forma de inyectar nada por ahi,
-// pero un <span> normal de React da el mismo resultado sin ese patron.
-function EtiquetaTipo({ tipo }) {
-  const estilos = {
-    [TIPO_MOVIMIENTO.INGRESO]: { fondo: "#dcfce7", texto: "#166534", etiqueta: "Ingreso" },
-    [TIPO_MOVIMIENTO.SALIDA]: { fondo: "#fef3c7", texto: "#92400e", etiqueta: "Salida" },
-  };
-  const s = estilos[tipo] || { fondo: "#e2e8f0", texto: "#475569", etiqueta: tipo };
-  return (
-    <span
-      style={{
-        background: s.fondo,
-        color: s.texto,
-        padding: "4px 10px",
-        borderRadius: "6px",
-        fontSize: "var(--texto-xs)",
-        fontWeight: 600,
-      }}
-    >
-      {s.etiqueta}
-    </span>
-  );
-}
+const ETIQUETAS_ESTADO = {
+  [ESTADO_MOVIMIENTO.APROBADO]: "Aprobado",
+  [ESTADO_MOVIMIENTO.RECHAZADO]: "Rechazado",
+  [ESTADO_MOVIMIENTO.PENDIENTE]: "Pendiente",
+};
 
-function EtiquetaEstado({ estado }) {
-  const estilos = {
-    [ESTADO_MOVIMIENTO.APROBADO]: { fondo: "#e0f2fe", texto: "#0369a1", etiqueta: "Aprobado" },
-    [ESTADO_MOVIMIENTO.RECHAZADO]: { fondo: "#fee2e2", texto: "#dc2626", etiqueta: "Rechazado" },
-    [ESTADO_MOVIMIENTO.PENDIENTE]: { fondo: "#fef9c3", texto: "#a16207", etiqueta: "Pendiente" },
-  };
-  const s = estilos[estado] || { fondo: "#e2e8f0", texto: "#475569", etiqueta: estado };
+const OPCIONES_TIPO = [
+  { value: TIPO_MOVIMIENTO.INGRESO, label: "Ingresos" },
+  { value: TIPO_MOVIMIENTO.SALIDA, label: "Salidas" },
+];
+
+// Tipo como chip palido del color de su sentido: entra en verde, sale en ambar. Un valor que no es
+// ninguno de los dos (un "ajuste" heredado) se muestra tal cual, en neutro. Sin
+// dangerouslySetInnerHTML: React escapa el texto.
+function EtiquetaTipo({ tipo }) {
+  const acento =
+    tipo === TIPO_MOVIMIENTO.INGRESO
+      ? "var(--color-success)"
+      : tipo === TIPO_MOVIMIENTO.SALIDA
+        ? "var(--color-warning)"
+        : "var(--color-secondary)";
   return (
-    <span
-      style={{
-        background: s.fondo,
-        color: s.texto,
-        padding: "4px 10px",
-        borderRadius: "6px",
-        fontSize: "var(--texto-xs)",
-        fontWeight: 600,
-      }}
-    >
-      {s.etiqueta}
+    <span className="ec-chip" style={{ "--ec-acento": acento }}>
+      {ETIQUETAS_TIPO[tipo] ?? tipo}
     </span>
   );
 }
@@ -104,34 +91,16 @@ export default function KardexMovimientosPage({
     medicamentoId,
   });
 
-  const formatoFecha = (fechaIso) => {
-    if (!fechaIso) return "—";
-    return new Date(fechaIso).toLocaleString("es-GT", {
-      dateStyle: "medium",
-      timeStyle: "short",
-    });
-  };
+  const formatoFecha = (fechaIso) => (fechaIso ? formatearFechaConHora(fechaIso) : "—");
 
-  const filaEstilo = (movimiento) => {
-    if (movimiento.estado === ESTADO_MOVIMIENTO.RECHAZADO) {
-      return { backgroundColor: "#fef2f2", opacity: 0.85 };
-    }
-    if (movimiento.estado === ESTADO_MOVIMIENTO.PENDIENTE) {
-      return { backgroundColor: "#fffbeb" };
-    }
-    return {};
-  };
+  const hayFiltros = Boolean(
+    filtros.fechaDesde ||
+    filtros.fechaHasta ||
+    (filtros.tipoMovimiento && filtros.tipoMovimiento !== "todos"),
+  );
 
   return (
-    <div
-      style={{
-        background: colores.fondoTarjeta,
-        boxShadow: "0 4px 6px -1px rgba(0,0,0,.08)",
-        borderRadius: "10px",
-        padding: "24px",
-      }}
-    >
-      {/* Cabecera */}
+    <div>
       <SectionHeader
         title={titulo}
         subtitle={
@@ -149,367 +118,125 @@ export default function KardexMovimientosPage({
         ]}
       />
 
-      {/* Filtros */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(3, 1fr)",
-          gap: "16px",
-          padding: "16px",
-          background: colores.fondoFiltros,
-          borderRadius: "8px",
-          marginBottom: "24px",
-        }}
-      >
-        <div>
-          <label
-            style={{
-              display: "block",
-              fontSize: "var(--texto-xs)",
-              fontWeight: 600,
-              color: colores.textoSecundario,
-              marginBottom: "6px",
-            }}
-          >
-            Fecha desde
-          </label>
-          <input
-            type="date"
-            value={filtros.fechaDesde}
-            onChange={(e) => setFiltros({ ...filtros, fechaDesde: e.target.value })}
-            style={{
-              width: "100%",
-              padding: "8px 10px",
-              border: `1px solid ${colores.borde}`,
-              borderRadius: "6px",
-              fontSize: "var(--texto-sm)",
-            }}
+      <div className="ec-filtros">
+        <fieldset className="ec-filtro ec-filtro--rango">
+          <legend className="form-label">Fecha</legend>
+          <div className="ec-rango-doble">
+            <DateField
+              aria-label="Fecha desde"
+              value={filtros.fechaDesde || null}
+              onChange={(valor) => setFiltros({ ...filtros, fechaDesde: valor ?? "" })}
+              style={{ marginBottom: 0 }}
+            />
+            <span className="ec-rango-separador" aria-hidden="true">
+              -
+            </span>
+            <DateField
+              aria-label="Fecha hasta"
+              value={filtros.fechaHasta || null}
+              onChange={(valor) => setFiltros({ ...filtros, fechaHasta: valor ?? "" })}
+              style={{ marginBottom: 0 }}
+            />
+          </div>
+        </fieldset>
+        <div className="ec-filtro">
+          <Selector
+            label="Tipo de movimiento"
+            value={filtros.tipoMovimiento === "todos" ? null : filtros.tipoMovimiento}
+            options={OPCIONES_TIPO}
+            onSelect={(valor) => setFiltros({ ...filtros, tipoMovimiento: valor ?? "todos" })}
+            placeholder="Todos los tipos"
+            style={{ marginBottom: 0 }}
           />
         </div>
-        <div>
-          <label
-            style={{
-              display: "block",
-              fontSize: "var(--texto-xs)",
-              fontWeight: 600,
-              color: colores.textoSecundario,
-              marginBottom: "6px",
-            }}
-          >
-            Fecha hasta
-          </label>
-          <input
-            type="date"
-            value={filtros.fechaHasta}
-            onChange={(e) => setFiltros({ ...filtros, fechaHasta: e.target.value })}
-            style={{
-              width: "100%",
-              padding: "8px 10px",
-              border: `1px solid ${colores.borde}`,
-              borderRadius: "6px",
-              fontSize: "var(--texto-sm)",
-            }}
+        <div className="ec-filtros-limpiar">
+          <SecondaryButton
+            title="Limpiar filtros"
+            variant="neutra"
+            disabled={!hayFiltros}
+            onClick={() =>
+              setFiltros({ ...filtros, fechaDesde: "", fechaHasta: "", tipoMovimiento: "todos" })
+            }
           />
-        </div>
-        <div>
-          <label
-            style={{
-              display: "block",
-              fontSize: "var(--texto-xs)",
-              fontWeight: 600,
-              color: colores.textoSecundario,
-              marginBottom: "6px",
-            }}
-          >
-            Tipo de movimiento
-          </label>
-          <select
-            value={filtros.tipoMovimiento}
-            onChange={(e) => setFiltros({ ...filtros, tipoMovimiento: e.target.value })}
-            style={{
-              width: "100%",
-              padding: "8px 10px",
-              border: `1px solid ${colores.borde}`,
-              borderRadius: "6px",
-              fontSize: "var(--texto-sm)",
-            }}
-          >
-            <option value="todos">Todos los tipos</option>
-            <option value={TIPO_MOVIMIENTO.INGRESO}>Ingresos</option>
-            <option value={TIPO_MOVIMIENTO.SALIDA}>Salidas</option>
-          </select>
         </div>
       </div>
 
-      {/* Tabla / Mensaje */}
       {cargando ? (
-        <p style={{ textAlign: "center", padding: "40px", color: colores.textoSecundario }}>
-          Cargando movimientos...
-        </p>
+        <p className="ec-subseccion-vacio text-center">Cargando movimientos...</p>
       ) : error ? (
-        <div style={{ textAlign: "center", padding: "40px 20px", color: "#dc2626" }}>
-          <p style={{ fontSize: "var(--texto-sm)", margin: 0 }}>No se pudo cargar el historial</p>
-          <p style={{ fontSize: "var(--texto-xs)", margin: "8px 0 0 0" }}>{error.mensaje}</p>
+        <div className="alert alert-danger" role="alert">
+          No se pudo cargar el historial. {error.mensaje}
         </div>
       ) : movimientos.length === 0 ? (
-        <div style={{ textAlign: "center", padding: "40px 20px", color: colores.textoSecundario }}>
-          <p style={{ fontSize: "var(--texto-sm)", margin: 0 }}>No hay movimientos registrados</p>
-          <p style={{ fontSize: "var(--texto-xs)", margin: "8px 0 0 0" }}>
-            Seleccione un lote o medicamento para ver su historial
-          </p>
-        </div>
+        <p className="ec-subseccion-vacio text-center">
+          No hay movimientos registrados. Seleccione un lote o medicamento para ver su historial.
+        </p>
       ) : (
-        <div
-          style={{ overflowX: "auto", border: `1px solid ${colores.borde}`, borderRadius: "8px" }}
-        >
-          <table style={{ width: "100%", fontSize: "var(--texto-sm)", borderCollapse: "collapse" }}>
+        <div className="ec-tabla">
+          <Table responsive hover className="mb-0">
             <thead>
-              <tr
-                style={{
-                  background: colores.fondoFiltros,
-                  borderBottom: `2px solid ${colores.borde}`,
-                }}
-              >
-                <th
-                  style={{
-                    padding: "12px 10px",
-                    textAlign: "left",
-                    fontSize: "var(--texto-xs)",
-                    fontWeight: 600,
-                    color: colores.textoSecundario,
-                  }}
-                >
-                  Fecha registro
-                </th>
-                <th
-                  style={{
-                    padding: "12px 10px",
-                    textAlign: "left",
-                    fontSize: "var(--texto-xs)",
-                    fontWeight: 600,
-                    color: colores.textoSecundario,
-                  }}
-                >
-                  Tipo
-                </th>
-                <th
-                  style={{
-                    padding: "12px 10px",
-                    textAlign: "right",
-                    fontSize: "var(--texto-xs)",
-                    fontWeight: 600,
-                    color: colores.textoSecundario,
-                  }}
-                >
-                  Cantidad
-                </th>
-                <th
-                  style={{
-                    padding: "12px 10px",
-                    textAlign: "left",
-                    fontSize: "var(--texto-xs)",
-                    fontWeight: 600,
-                    color: colores.textoSecundario,
-                  }}
-                >
-                  Motivo
-                </th>
-                <th
-                  style={{
-                    padding: "12px 10px",
-                    textAlign: "left",
-                    fontSize: "var(--texto-xs)",
-                    fontWeight: 600,
-                    color: colores.textoSecundario,
-                  }}
-                >
-                  Bodega
-                </th>
-                <th
-                  style={{
-                    padding: "12px 10px",
-                    textAlign: "left",
-                    fontSize: "var(--texto-xs)",
-                    fontWeight: 600,
-                    color: colores.textoSecundario,
-                  }}
-                >
-                  Registrado por
-                </th>
-                <th
-                  style={{
-                    padding: "12px 10px",
-                    textAlign: "left",
-                    fontSize: "var(--texto-xs)",
-                    fontWeight: 600,
-                    color: colores.textoSecundario,
-                  }}
-                >
-                  Aprobado por
-                </th>
-                <th
-                  style={{
-                    padding: "12px 10px",
-                    textAlign: "left",
-                    fontSize: "var(--texto-xs)",
-                    fontWeight: 600,
-                    color: colores.textoSecundario,
-                  }}
-                >
-                  Fecha aprobación
-                </th>
-                <th
-                  style={{
-                    padding: "12px 10px",
-                    textAlign: "left",
-                    fontSize: "var(--texto-xs)",
-                    fontWeight: 600,
-                    color: colores.textoSecundario,
-                  }}
-                >
-                  Estado
-                </th>
-                <th
-                  style={{
-                    padding: "12px 10px",
-                    textAlign: "right",
-                    fontSize: "var(--texto-xs)",
-                    fontWeight: 600,
-                    color: colores.textoSecundario,
-                  }}
-                >
-                  Saldo
-                </th>
+              <tr>
+                <th>Fecha registro</th>
+                <th>Tipo</th>
+                <th className="text-end">Cantidad</th>
+                <th>Motivo</th>
+                <th>Bodega</th>
+                <th>Registrado por</th>
+                <th>Aprobado por</th>
+                <th>Fecha aprobación</th>
+                <th>Estado</th>
+                <th className="text-end">Saldo</th>
               </tr>
             </thead>
             <tbody>
               {movimientos.map((mov) => (
-                <tr
-                  key={mov.id}
-                  style={{ ...filaEstilo(mov), borderBottom: `1px solid ${colores.borde}` }}
-                >
-                  <td
-                    style={{
-                      padding: "10px",
-                      fontSize: "var(--texto-xs)",
-                      color: colores.textoSecundario,
-                    }}
-                  >
-                    {formatoFecha(mov.created_at)}
-                  </td>
-                  <td style={{ padding: "10px" }}>
+                <tr key={mov.id}>
+                  <td className="text-body-secondary">{formatoFecha(mov.created_at)}</td>
+                  <td>
                     <EtiquetaTipo tipo={mov.tipo} />
                   </td>
-                  <td style={{ padding: "10px", textAlign: "right", fontWeight: 500 }}>
+                  <td className="text-end fw-semibold">
                     {mov.tipo === TIPO_MOVIMIENTO.INGRESO ? "+" : ""}
                     {mov.cantidad}
                   </td>
-                  <td
-                    style={{
-                      padding: "10px",
-                      fontSize: "var(--texto-xs)",
-                      color: colores.textoSecundario,
-                    }}
-                  >
-                    {mov.motivo}
-                  </td>
-                  <td
-                    style={{
-                      padding: "10px",
-                      fontSize: "var(--texto-xs)",
-                      color: colores.textoSecundario,
-                    }}
-                  >
-                    {mov.bodega_nombre || "—"}
-                  </td>
-                  <td style={{ padding: "10px", fontSize: "var(--texto-xs)" }}>
-                    {mov.registrado_por_nombre || "—"}
-                  </td>
-                  <td style={{ padding: "10px", fontSize: "var(--texto-xs)" }}>
+                  <td>{mov.motivo}</td>
+                  <td>{mov.bodega_nombre || "—"}</td>
+                  <td>{mov.registrado_por_nombre || "—"}</td>
+                  <td>
                     {mov.aprobado_por_nombre || "Pendiente"}
-                    {/* aprobacion_automatica (00028): TRUE cuando quien registro el movimiento
-                        era administrador y el trigger lo aprobo solo, sin que nadie mas
-                        interviniera -era una columna real que nunca llegaba a pantalla. */}
+                    {/* aprobacion_automatica (00028): TRUE cuando quien registro el movimiento era
+                        administrador y el trigger lo aprobo solo. */}
                     {mov.aprobacion_automatica && (
-                      <span
-                        style={{ fontSize: "var(--texto-xxs)", color: colores.textoSecundario }}
-                      >
-                        {" "}
-                        (automático)
+                      <span className="small text-body-secondary"> (automático)</span>
+                    )}
+                  </td>
+                  <td className="text-body-secondary">{formatoFecha(mov.aprobado_en)}</td>
+                  <td>
+                    <StatusChip
+                      status={mov.estado}
+                      label={ETIQUETAS_ESTADO[mov.estado] ?? mov.estado}
+                    />
+                    {mov.estado === ESTADO_MOVIMIENTO.RECHAZADO && mov.motivo_rechazo && (
+                      <span className="d-block small text-body-secondary mt-1">
+                        Motivo: {mov.motivo_rechazo}
                       </span>
                     )}
                   </td>
                   <td
-                    style={{
-                      padding: "10px",
-                      fontSize: "var(--texto-xs)",
-                      color: colores.textoSecundario,
-                    }}
-                  >
-                    {formatoFecha(mov.aprobado_en)}
-                  </td>
-                  <td style={{ padding: "10px" }}>
-                    <EtiquetaEstado estado={mov.estado} />
-                    {mov.estado === ESTADO_MOVIMIENTO.RECHAZADO && mov.motivo_rechazo && (
-                      <div
-                        style={{
-                          fontSize: "var(--texto-xxs)",
-                          color: colores.textoSecundario,
-                          marginTop: 2,
-                        }}
-                      >
-                        Motivo: {mov.motivo_rechazo}
-                      </div>
-                    )}
-                  </td>
-                  <td
-                    style={{
-                      padding: "10px",
-                      textAlign: "right",
-                      fontWeight: 700,
-                      color: mov.afectaSaldo ? colores.textoTitulo : "#94a3b8",
-                    }}
+                    className={`text-end fw-bold ${mov.afectaSaldo ? "" : "text-body-secondary"}`}
                   >
                     {mov.saldoAcumulado}
                   </td>
                 </tr>
               ))}
             </tbody>
-          </table>
+          </Table>
         </div>
       )}
 
-      {/* Leyenda */}
-      <div
-        style={{
-          display: "flex",
-          gap: "20px",
-          marginTop: "16px",
-          paddingTop: "16px",
-          borderTop: `1px solid ${colores.borde}`,
-          fontSize: "var(--texto-xs)",
-          color: colores.textoSecundario,
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-          <div
-            style={{ width: "12px", height: "12px", borderRadius: "4px", background: "#dcfce7" }}
-          ></div>
-          <span>Aprobado → modifica saldo</span>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-          <div
-            style={{ width: "12px", height: "12px", borderRadius: "4px", background: "#fee2e2" }}
-          ></div>
-          <span>Rechazado → NO modifica saldo</span>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-          <div
-            style={{ width: "12px", height: "12px", borderRadius: "4px", background: "#fef9c3" }}
-          ></div>
-          <span>Pendiente → NO modifica saldo</span>
-        </div>
-      </div>
+      <p className="small text-body-secondary mt-3 mb-0">
+        Solo los movimientos aprobados modifican el saldo; los pendientes y los rechazados no.
+      </p>
     </div>
   );
 }

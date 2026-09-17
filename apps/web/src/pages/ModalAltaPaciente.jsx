@@ -51,8 +51,11 @@ function CampoDeComunidad({
     }
   };
 
+  // Departamento y municipio en una fila; comunidad y "Crear una comunidad" en la siguiente, lado
+  // a lado. Antes los tres selectores iban en la misma fila y el boton debajo, solo, a todo el
+  // ancho: la accion quedaba lejos del campo al que se refiere.
   return (
-    <>
+    <div className="ec-form-grid--ancho ec-form-subgrid">
       <Selector
         label="Departamento"
         value={departamentoId}
@@ -80,7 +83,7 @@ function CampoDeComunidad({
       />
 
       {puedeCrearComunidad && municipioId && !creandoNueva && (
-        <div style={{ gridColumn: "1 / -1" }}>
+        <div className="ec-form-subgrid-accion">
           <SecondaryButton
             title="Crear una comunidad"
             size="sm"
@@ -92,7 +95,7 @@ function CampoDeComunidad({
       )}
 
       {puedeCrearComunidad && creandoNueva && (
-        <div style={{ gridColumn: "1 / -1" }}>
+        <div>
           <TextField
             label="Nombre de la comunidad nueva"
             value={nombreNuevo}
@@ -125,7 +128,7 @@ function CampoDeComunidad({
           </div>
         </div>
       )}
-    </>
+    </div>
   );
 }
 

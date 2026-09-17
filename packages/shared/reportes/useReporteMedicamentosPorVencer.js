@@ -24,7 +24,7 @@ function aFilasPantalla(lotes = []) {
       id: lote.id,
       medicamento: lote.medicamento,
       lote: lote.numero_lote ?? lote.lote,
-      cantidad: lote.cantidad_actual ?? lote.cantidad ?? 0,
+      cantidad: Number(lote.cantidad ?? 0),
       fechaVencimiento: lote.fecha_vencimiento,
       diasRestantes,
       alerta: calcularAlerta(diasRestantes),
@@ -67,14 +67,9 @@ export function useReporteMedicamentosPorVencer({ rol } = {}) {
       return;
     }
     setCargando(true);
-    const comunidad = comunidadId === TODAS ? undefined : comunidadId;
     const bodega = bodegaId === TODAS ? undefined : bodegaId;
 
-    const { lotes, error: err } = await listarLotesPorVencer({
-      horizonteDias,
-      comunidad,
-      bodega,
-    });
+    const { lotes, error: err } = await listarLotesPorVencer({ horizonteDias, bodega });
 
     if (err) {
       setError(err);
@@ -84,7 +79,7 @@ export function useReporteMedicamentosPorVencer({ rol } = {}) {
       setFilas(aFilasPantalla(lotes));
     }
     setCargando(false);
-  }, [tieneAcceso, horizonteDias, comunidadId, bodegaId]);
+  }, [tieneAcceso, horizonteDias, bodegaId]);
 
   useEffect(() => {
     cargar();

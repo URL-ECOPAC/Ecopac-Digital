@@ -151,12 +151,22 @@ para pacientes, inventario o donaciones porque toda la informacion especifica de
 | `valores` | objeto | Valor actual de cada filtro, indexado por `id` (ej. `{ busqueda: '', comunidad: null }`). |
 | `onChange` | fn(id, valor) | Se llama cuando el usuario cambia un filtro. `FilterBar` no guarda estado propio: quien lo usa decide que hacer con el valor nuevo. |
 | `catalogos` | objeto | Listas de opciones indexadas por el nombre que declara `opcionesDesde`, ej. `{ roles: [...], comunidades: [...] }`. Ver "Resolucion de catalogos" abajo. |
+| `onLimpiar` | fn() | Opcional. Con ella, "Limpiar filtros" va **siempre** al final de la barra. |
+| `hayFiltros` | bool | Deshabilita "Limpiar filtros" mientras no haya nada que limpiar. |
+| `children` | nodo | Controles de la pantalla que no son filtros del descriptor ("Agrupar por"), dentro de la misma barra y antes del boton. |
 
 Por cada entrada de `campos`, `FilterBar` dibuja el control segun `tipo` (los valores de
 `TIPOS_DE_FILTRO`): `busqueda` se vuelve un `TextField`, `select` un `Selector` (resolviendo sus
-opciones de `opcionesDesde`), `rango` un par de `NumberField` acotados por `min`/`max`.
+opciones de `opcionesDesde`), `rango` **dos campos del mismo aspecto que los demas, uno al lado del
+otro y separados por un guion** (`DateField` o `NumberField` segun `subtipo`). La edad dejo de
+elegirse por grupos con un "Personalizado" que abria el rango debajo y cambiaba la altura de la
+barra.
 
-- **Web**: una fila de controles (`Form.Select`/`Form.Control`) sobre el listado.
+- **Web**: la barra es su propia tarjeta (`.ec-filtros` en `ui.css`): los filtros se acomodan en
+  filas y crecen hasta llenarlas. Ninguna pantalla la envuelve en otra tarjeta ni dibuja su propio
+  "Limpiar filtros". Las pantallas que todavia arman su barra a mano (donantes, historial de
+  donaciones, lotes, kardex) usan las mismas clases (`.ec-filtro`, `.ec-filtro--busqueda`,
+  `.ec-filtro--rango`, `.ec-rango-doble`, `.ec-filtros-limpiar`).
 - **Movil**: panel colapsable con boton "Aplicar", para no ocupar toda la pantalla en un
   dispositivo angosto.
 
@@ -295,6 +305,26 @@ Mismas props que `PageHeader` salvo `accent` en web (hereda el del modulo). Para
 secciones de una pantalla que ya tiene su cabecera: las pestanas de inventario (kardex, validacion,
 alertas, administracion, principios activos, mis movimientos) lo usan, en vez de cuatro tamanos
 distintos de titulo, uno de ellos mas grande que el de la propia pantalla.
+
+**`MultiSelector`** — web y movil. Chips para lo elegido, desplegable para agregar del catalogo
+y un campo de texto para lo que no esta:
+
+- `permiteLibre`: el texto escrito es el valor (especialidades, que son texto libre).
+- `onCrear(texto)`: el texto se da de alta en su catalogo y se elige lo que devuelva (el id). Lo usa
+  la consulta medica para crear un diagnostico sin salir de ella.
+
+Escribir el nombre de una opcion que ya existe la **elige** (`buscarOpcionPorEtiqueta`, sin
+distinguir mayusculas ni acentos) en vez de duplicarla, y al salir del campo con texto escrito se
+agrega igual que con el boton.
+
+**Dialogos.** Todo dialogo se cierra al tocar fuera y con Escape. Los del catalogo (`Modal`) ya lo
+hacen; los que siguen dibujados a mano usan `useCerrarAlTocarFuera` (`apps/web/src/hooks/`), que
+solo cierra si el click empezo y termino sobre el fondo, para no perder lo escrito al arrastrar una
+seleccion de texto.
+
+**Subsecciones.** Dentro de una pestana con `SectionHeader`, sus bloques ("Proximos a vencer",
+"Vencidos") usan `.ec-subseccion-titulo` -rotulo en versalitas con un punto de color- y no otro
+titulo con filete, que se confundia con el de la pestana.
 
 **Iconos de accion.** `PrimaryButton` y `SecondaryButton` ponen solos el "+" en un alta y el
 basurero en un borrado, segun `tipoDeAccion(title)` de `packages/shared/formato/acciones.js`. Un

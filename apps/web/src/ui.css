@@ -133,6 +133,43 @@ h6,
   padding-left: calc(var(--spacing-sm) + 3px);
 }
 
+/* Subseccion dentro de una pestana ("Proximos a vencer", "Vencidos"): un escalon por debajo de
+   SectionHeader para que no se confunda con el titulo de la pestana. Rotulo en versalitas con un
+   punto del color de la subseccion, y el contenido en su propio bloque. */
+.ec-subseccion {
+  margin-bottom: var(--spacing-lg);
+}
+
+.ec-subseccion-titulo {
+  align-items: center;
+  color: var(--color-text-muted);
+  display: flex;
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-bold);
+  gap: var(--spacing-sm);
+  letter-spacing: 0.08em;
+  margin: 0 0 var(--spacing-sm);
+  text-transform: uppercase;
+}
+
+.ec-subseccion-titulo::before {
+  background-color: var(--ec-acento, var(--color-primary));
+  border-radius: 50%;
+  content: "";
+  flex: 0 0 auto;
+  height: 8px;
+  width: 8px;
+}
+
+.ec-subseccion-vacio {
+  background-color: var(--color-surface);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radio-lg);
+  color: var(--color-text-muted);
+  margin: 0;
+  padding: var(--spacing-md);
+}
+
 /* Rotulo de dato en versalitas. Es el mismo elemento que pacientes.css llamaba `.pac-rotulo`,
    que sigue existiendo como alias para no reescribir ese modulo entero de golpe. */
 .ec-rotulo {
@@ -516,6 +553,27 @@ textarea.form-control {
   grid-column: 1 / -1;
 }
 
+/* Dos columnas fijas dentro de una seccion, para pares que tienen que ir juntos aunque la rejilla
+   de la seccion tenga espacio para tres (departamento y municipio; comunidad y su boton de
+   crear). La celda de accion se alinea con el campo, no con su etiqueta. */
+.ec-form-subgrid {
+  align-items: end;
+  display: grid;
+  gap: 0 var(--spacing-md);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.ec-form-subgrid-accion {
+  align-self: end;
+  margin-bottom: var(--spacing-md);
+}
+
+@media (max-width: 576px) {
+  .ec-form-subgrid {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Nota bajo un campo: la edad calculada debajo de la fecha de nacimiento, por ejemplo. */
 .ec-campo-nota {
   color: var(--color-text-muted);
@@ -545,67 +603,80 @@ textarea.form-control {
   margin: 0 0 var(--spacing-md);
 }
 
-/* Filtro de rango ("Rango de edad", "Fecha"): los dos extremos con un guion entre ellos, en vez
-   de dos campos etiquetados uno debajo del otro que ocupaban el doble de alto que el resto de
-   los filtros y no se leian como un solo control. */
-.ec-rango {
-  align-items: center;
+/* --------------------------------------------------------------------------
+   Barra de filtros (FilterBar)
+
+   La barra es la tarjeta: fondo, borde y relleno propios, para que ninguna pantalla la envuelva
+   a su manera. Los filtros se acomodan en filas y crecen hasta llenarlas; "Limpiar filtros" va
+   siempre al final de la ultima fila, alineado con el borde inferior de los campos.
+   -------------------------------------------------------------------------- */
+
+.ec-filtros {
+  align-items: flex-end;
   background-color: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: var(--radio-md);
+  border-radius: var(--radio-lg);
+  box-shadow: var(--sombra-sm);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+  padding: var(--spacing-md);
+}
+
+.ec-filtro {
+  flex: 1 1 180px;
+  margin: 0;
+  min-width: 0;
+}
+
+.ec-filtro--busqueda {
+  flex: 2 1 280px;
+}
+
+.ec-filtro--rango {
+  border: 0;
+  flex: 1.4 1 250px;
+  padding: 0;
+}
+
+.ec-filtros-limpiar {
+  display: flex;
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+/* Un rango: dos campos normales, uno al lado del otro, con un guion entre ellos. */
+.ec-rango-doble {
+  align-items: center;
   display: flex;
   gap: var(--spacing-xs);
-  padding: 0.15rem var(--spacing-sm);
-  transition:
-    border-color 140ms ease,
-    box-shadow 140ms ease;
 }
 
-.ec-rango:focus-within {
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 18%, transparent);
-}
-
-/* Los dos campos de adentro pierden su marco: el marco es el del contenedor. */
-.ec-rango .form-control {
-  background: transparent;
-  border: 0;
-  box-shadow: none;
+.ec-rango-doble > .mb-3,
+.ec-rango-doble > div {
+  flex: 1 1 0;
+  margin-bottom: 0;
   min-width: 0;
-  padding: 0.35rem 0.25rem;
-  text-align: center;
-}
-
-.ec-rango .form-control:focus {
-  box-shadow: none;
-}
-
-/* Le quita las flechas al input numerico: dentro de este control estorban, y la edad o el peso
-   se escriben, no se recorren de uno en uno. */
-.ec-rango input[type="number"] {
-  appearance: textfield;
-  -moz-appearance: textfield;
-}
-
-.ec-rango input[type="number"]::-webkit-outer-spin-button,
-.ec-rango input[type="number"]::-webkit-inner-spin-button {
-  appearance: none;
-  margin: 0;
 }
 
 .ec-rango-separador {
   color: var(--color-text-muted);
   flex: 0 0 auto;
-  font-size: var(--texto-sm);
+  font-size: var(--texto-md);
   user-select: none;
 }
 
-.ec-rango-sufijo {
-  color: var(--color-text-muted);
-  flex: 0 0 auto;
-  font-size: var(--texto-xs);
-  padding-right: 0.15rem;
-  white-space: nowrap;
+/* Sin las flechas del input numerico: la edad se escribe, no se recorre de uno en uno. */
+.ec-rango-doble input[type="number"] {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+.ec-rango-doble input[type="number"]::-webkit-outer-spin-button,
+.ec-rango-doble input[type="number"]::-webkit-inner-spin-button {
+  appearance: none;
+  margin: 0;
 }
 
 /* ==========================================================================
@@ -756,11 +827,21 @@ textarea.form-control {
 /* Pastillas y no las pestanas de Bootstrap. Era el aspecto que solo tenia el modulo de
    pacientes, y la razon de que presupuestos -mismo componente Tabs, mismo rol- se viera de otra
    familia. Al estar en `.nav-tabs`, lo hereda cualquier pantalla que use <Tabs>. */
+/* Una sola fila: si no caben (pantalla estrecha), se desplazan de lado en vez de partir la fila y
+   dejar una pestana sola abajo, que se leia como un control distinto. */
 .nav-tabs {
   border-bottom: 1px solid var(--color-border);
+  flex-wrap: nowrap;
   gap: var(--spacing-xs);
   margin-bottom: var(--spacing-md);
+  overflow-x: auto;
+  overflow-y: hidden;
   padding-bottom: var(--spacing-sm);
+  scrollbar-width: thin;
+}
+
+.nav-tabs .nav-item {
+  flex: 0 0 auto;
 }
 
 .nav-tabs .nav-link {
@@ -771,6 +852,7 @@ textarea.form-control {
   font-size: var(--texto-sm);
   font-weight: var(--peso-medium);
   padding: 0.4rem 0.95rem;
+  white-space: nowrap;
   transition:
     background-color 140ms ease,
     color 140ms ease;
@@ -791,10 +873,12 @@ textarea.form-control {
 }
 
 /* Contador dentro de una pestana ("Aprobaciones 3"). */
+/* Solido y en el color de peligro: el celeste palido sobre la pastilla activa no se leia, y un
+   contador de pendientes es justo lo que tiene que verse. */
 .ec-tab-contador {
-  background-color: color-mix(in srgb, var(--color-info) 18%, var(--color-surface));
+  background-color: var(--color-danger);
   border-radius: var(--radio-pill);
-  color: var(--color-info);
+  color: var(--color-surface);
   font-size: var(--texto-xxs);
   font-weight: var(--peso-bold);
   margin-left: var(--spacing-xs);
@@ -946,4 +1030,13 @@ textarea.form-control {
   .ec-kpi {
     box-shadow: none;
   }
+}
+
+/* Datos de una ficha (donante, y cualquier otra de solo lectura): rotulo y valor en una rejilla
+   que cae a una columna sola en pantallas estrechas. */
+.ec-ficha-datos {
+  display: grid;
+  gap: var(--spacing-md);
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  margin: 0;
 }

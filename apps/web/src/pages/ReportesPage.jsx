@@ -17,6 +17,7 @@ import PageHeader, { AccionesDeCabecera } from "../components/PageHeader";
 import ScreenContainer from "../components/ScreenContainer";
 import StatusChip from "../components/StatusChip";
 import Tabs from "../components/Tabs";
+import { useSesionCompartida } from "../contexto/SesionProvider";
 import "./reportes.css";
 
 // Hub de reportes.
@@ -76,6 +77,7 @@ export default function ReportesPage() {
 }
 
 function PestanaMedicamentosPorVencer() {
+  const { rol } = useSesionCompartida();
   const {
     cargando,
     error,
@@ -83,16 +85,16 @@ function PestanaMedicamentosPorVencer() {
     totalUnidadesEnRiesgo,
     horizonteDias,
     setHorizonteDias,
-    comunidadId,
-    setComunidadId,
     bodegaId,
     setBodegaId,
     horizontesDisponibles,
-    listaComunidades,
     listaBodegas,
     valoresEspeciales,
     recargar,
-  } = useReporteMedicamentosPorVencer();
+    // El rol es lo que decide si el reporte consulta. Sin el, puedeVerIndicadoresDeImpacto(undefined)
+    // era falso, el hook no llamaba nunca a la base y la pestana decia "Ningun lote vence" aunque
+    // la de alertas mostrara lotes por vencer.
+  } = useReporteMedicamentosPorVencer({ rol });
 
   // Exportacion PDF (issue #216).
   const { exportar, generando } = useExportarPDF({
@@ -124,17 +126,6 @@ function PestanaMedicamentosPorVencer() {
               {horizontesDisponibles.map((opt) => (
                 <option key={opt.valor} value={opt.valor}>
                   {opt.etiqueta}
-                </option>
-              ))}
-            </Form.Select>
-          </Form.Group>
-          <Form.Group controlId="vencimientos-comunidad">
-            <Form.Label>Comunidad</Form.Label>
-            <Form.Select value={comunidadId} onChange={(e) => setComunidadId(e.target.value)}>
-              <option value={valoresEspeciales.TODAS}>Todas las comunidades</option>
-              {listaComunidades.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.nombre}
                 </option>
               ))}
             </Form.Select>

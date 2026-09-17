@@ -50,19 +50,14 @@ export default function PanelPacientes({
 
   return (
     <>
-      <div className="pac-filtros">
-        <FilterBar
-          campos={FILTROS_PACIENTE}
-          valores={filtros}
-          onChange={setFiltro}
-          catalogos={catalogos}
-        />
-        {hayFiltros ? (
-          <div className="pac-filtros-acciones">
-            <SecondaryButton title="Limpiar filtros" variant="neutra" onClick={limpiarFiltros} />
-          </div>
-        ) : null}
-      </div>
+      <FilterBar
+        campos={FILTROS_PACIENTE}
+        valores={filtros}
+        onChange={setFiltro}
+        catalogos={catalogos}
+        onLimpiar={limpiarFiltros}
+        hayFiltros={hayFiltros}
+      />
 
       <div className="pac-maestro-detalle">
         <div>

@@ -17,6 +17,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { listarProyectos } from "../proyectos/api.js";
 import { listarDonaciones } from "./historial.api.js";
 import { puedeRegistrarDonaciones, puedeVerDonaciones } from "./permisos.js";
 import { anularDonacion } from "./registro.api.js";
@@ -36,6 +37,25 @@ export function useHistorialDonaciones({ usuarioRol } = {}) {
   const [filtroProyecto, setFiltroProyecto] = useState("");
   const [fechaInicio, setFechaInicio] = useState("");
   const [fechaFin, setFechaFin] = useState("");
+  // El filtro "Todos los proyectos" existia en la pantalla pero sus opciones llegaban por una prop
+  // `proyectosOptions` que App.jsx nunca pasaba: el desplegable estaba siempre vacio. Se cargan
+  // aqui, con la misma funcion que usa el registro de donaciones.
+  const [proyectosOptions, setProyectosOptions] = useState([]);
+
+  useEffect(() => {
+    if (!tieneAccesoLectura) return undefined;
+    let vigente = true;
+    listarProyectos().then(({ proyectos }) => {
+      if (vigente) {
+        setProyectosOptions(
+          (proyectos ?? []).map((fila) => ({ value: fila.id, label: fila.nombre })),
+        );
+      }
+    });
+    return () => {
+      vigente = false;
+    };
+  }, [tieneAccesoLectura]);
 
   const [donacionSeleccionada, setDonacionSeleccionada] = useState(null);
   const [modalDetalleAbierto, setModalDetalleAbierto] = useState(false);
@@ -147,6 +167,7 @@ export function useHistorialDonaciones({ usuarioRol } = {}) {
       fechaFin,
       setFechaFin,
       limpiarFiltros,
+      proyectosOptions,
     },
     modalDetalle: {
       donacionSeleccionada,

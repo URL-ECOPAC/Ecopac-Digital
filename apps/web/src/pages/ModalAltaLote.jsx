@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useCerrarAlTocarFuera } from "../hooks/useCerrarAlTocarFuera";
 
 export function ModalAltaLote({
   abierto,
@@ -9,6 +10,7 @@ export function ModalAltaLote({
   bodegas = [],
   errorValidacion,
 }) {
+  const fondo = useCerrarAlTocarFuera(onClose);
   const [formData, setFormData] = useState({
     medicamento_id: "",
     numero_lote: "",
@@ -59,6 +61,7 @@ export function ModalAltaLote({
 
   return (
     <div
+      {...fondo}
       style={{
         position: "fixed",
         top: 0,
