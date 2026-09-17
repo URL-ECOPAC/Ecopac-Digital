@@ -58,6 +58,14 @@ Restricciones:
   `@ecopac/ui-tokens`. En la web se consumen como `var(--color-*)`, publicadas por
   `apps/web/src/theme.js`.
 - No importar componentes UI de `web` en `mobile` ni viceversa.
+- **Un import que falta o un contrato que cambia tiene que reventar, no degradar a vacio.** Las
+  funciones de `*.api.js` no comparten una forma unica de sobre -conviven `{ datos, error }`,
+  `{ triajes, error }`, `{ recetas, error }`-, asi que equivocarse de clave no lanza nada: devuelve
+  una lista vacia. Se lee el `api.js` del modulo y se usa la clave que devuelve; no se adivina con
+  `Array.isArray(x) ? x : x?.datos` ni se sustituye lo que quiza no existe por una implementacion
+  de mentira. Asi estuvo la ficha del paciente en movil rota de punta a punta con el lint, las
+  pruebas y las guardas en verde (issues #818, #821). Lo comprueban la regla `no-restricted-syntax`
+  de `eslint.config.mjs` y `npm run verificar:contratos`.
 - Los roles nunca se escriben como string suelto: se usan los de
   `packages/shared/usuarios/roles.js`, que replican el enum `rol_usuario` de la migracion 00001.
   Que puede hacer cada rol esta en `docs/PERMISOS.md`, y quien protege de verdad es RLS, no el
