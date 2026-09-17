@@ -60,7 +60,17 @@ function kebabAcamel(nombre) {
  * numeros de issue -`issue #135`, `issues="#209"`- que de otro modo entran como si lo fueran.
  */
 function sinComentarios(texto) {
-  return texto.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/(^|[^:])\/\/[^\n]*/g, "$1");
+  // Se sustituye cada comentario por ESPACIOS DE LA MISMA LONGITUD, no por uno solo: asi los
+  // indices siguen valiendo y un hallazgo puede decir en que linea esta (issue #819).
+  const enBlanco = (trozo) => trozo.replace(/[^\n]/g, " ");
+  return texto
+    .replace(/\/\*[\s\S]*?\*\//g, enBlanco)
+    .replace(/(^|[^:])(\/\/[^\n]*)/g, (todo, antes, comentario) => antes + enBlanco(comentario));
+}
+
+/** Numero de linea (1-based) del indice dado. */
+function lineaDe(texto, indice) {
+  return texto.slice(0, indice).split("\n").length;
 }
 
 export function coloresEfectivos(textoCrudo, tokens) {
@@ -84,6 +94,48 @@ export function coloresEfectivos(textoCrudo, tokens) {
   return [...encontrados].sort();
 }
 
+/**
+ * Referencias a tokens que @ecopac/ui-tokens NO exporta (issue #819).
+ *
+ * POR QUE HACIA FALTA
+ *
+ * coloresEfectivos() solo suma el valor de los tokens que SI resuelven, asi que para el un
+ * `colors.borderLight ?? "#E5E7EB"` y un `"#E5E7EB"` a secas son lo mismo: anota el hexadecimal y
+ * sigue. Pero no son lo mismo. Quien escribio eso creia estar usando un token; el token no existe,
+ * el `??` gana siempre y la pantalla pinta un gris de Tailwind que no es de la paleta.
+ *
+ * En la web es peor, porque una variable CSS que nadie define no pinta NADA: el color se hereda o
+ * se cae al valor por defecto, sin error ni aviso. Asi estaba VistaExistenciasPage, que usaba diez
+ * `var(--color-*)` con nombre en espaniol -`--color-exito`, `--color-borde`, `--color-texto`- que
+ * theme.js nunca publico.
+ *
+ * Es el unico error de esta familia que se detecta sin mirar la pantalla, y por eso falla el PR.
+ *
+ * `statusColors[algo]` con indice dinamico -que es como lo usan StatusChip y DataList- no se toca:
+ * solo se comprueban las claves escritas literalmente.
+ */
+export function tokensDesconocidos(textoCrudo, tokens) {
+  const { colors, statusColors } = tokens;
+  const texto = sinComentarios(textoCrudo);
+  const hallazgos = [];
+  const anota = (nombre, forma, indice) =>
+    hallazgos.push({ nombre, forma, linea: lineaDe(texto, indice) });
+
+  for (const m of texto.matchAll(TOKEN_JS)) {
+    if (!(m[1] in colors)) anota(m[1], `colors.${m[1]}`, m.index);
+  }
+  for (const m of texto.matchAll(TOKEN_CSS)) {
+    const clave = kebabAcamel(m[1]);
+    if (!(clave in colors)) anota(clave, `var(--color-${m[1]})`, m.index);
+  }
+  for (const m of texto.matchAll(/\bstatusColors(?:\.(\w+)|\[\s*["'`]([\w -]+)["'`]\s*\])/g)) {
+    const clave = m[1] ?? m[2];
+    if (!(clave in statusColors)) anota(clave, `statusColors.${clave}`, m.index);
+  }
+
+  return hallazgos;
+}
+
 function archivosDe(dir, acumulado = []) {
   for (const entrada of readdirSync(dir)) {
     if (IGNORADOS.has(entrada)) continue;
@@ -98,18 +150,23 @@ function archivosDe(dir, acumulado = []) {
 async function inventario() {
   const tokens = await import("../packages/ui-tokens/index.js");
   const mapa = {};
+  const desconocidos = [];
   for (const ruta of archivosDe(DIR_APPS)) {
-    const colores = coloresEfectivos(readFileSync(ruta, "utf8"), tokens);
+    const texto = readFileSync(ruta, "utf8");
+    const colores = coloresEfectivos(texto, tokens);
     // La linea base se comparte entre plataformas (se captura en Windows, se compara en el CI de
     // Linux): `relative()` usa el separador del sistema operativo, y sin normalizar aqui una
     // captura en Windows escribiria claves con "\" que el CI, calculando con "/", nunca volveria
     // a encontrar -toda la linea base se veria "borrada" en la siguiente comparacion.
     if (colores.length) mapa[relative(RAIZ, ruta).split(sep).join("/")] = colores;
+    for (const d of tokensDesconocidos(texto, tokens))
+      desconocidos.push({ ruta: relative(RAIZ, ruta).split(sep).join("/"), ...d });
   }
   // `readdirSync` no garantiza el mismo orden en todos los sistemas de archivos: capturar en
   // Windows y despues en Linux reordena las claves del objeto aunque el contenido no cambie,
   // y eso ensucia el diff del PR con ruido que no es parte del cambio real.
-  return Object.fromEntries(Object.entries(mapa).sort(([a], [b]) => a.localeCompare(b)));
+  const ordenado = Object.fromEntries(Object.entries(mapa).sort(([a], [b]) => a.localeCompare(b)));
+  return { mapa: ordenado, desconocidos };
 }
 
 const CASOS = [
@@ -149,6 +206,35 @@ const CASOS = [
     esperado: ["#000"],
   },
   {
+    // Los tres casos que la issue #819 encontro vivos.
+    nombre: "un token de color que no existe se detecta (issue #819)",
+    texto: 'const s = { borderBottomColor: colors.borderLight ?? "#E5E7EB" };',
+    esperado: ["#e5e7eb"],
+    desconocidos: ["colors.borderLight"],
+  },
+  {
+    nombre: "una variable CSS que nadie publica tambien",
+    texto: 'const s = { color: "var(--color-texto-secundario)" };',
+    esperado: [],
+    desconocidos: ["var(--color-texto-secundario)"],
+  },
+  {
+    nombre: "pero el nombre real no se marca",
+    texto: 'const s = { color: "var(--color-text-muted)" };',
+    esperado: ["#7a7a8a"],
+  },
+  {
+    nombre: "statusColors con indice dinamico no se toca: es como lo usa StatusChip",
+    texto: "const fondo = statusColors[status] ?? colors.secondary;",
+    esperado: ["#4d4d4d"],
+  },
+  {
+    nombre: "statusColors con una clave literal que no existe si",
+    texto: 'const fondo = statusColors["inventado"];',
+    esperado: [],
+    desconocidos: ["statusColors.inventado"],
+  },
+  {
     nombre: "el mismo color escrito de las dos formas cuenta una vez",
     texto: 'const a = "#3DB648"; const b = colors.primary;',
     esperado: ["#3db648"],
@@ -160,12 +246,21 @@ async function autoprueba() {
   let fallos = 0;
   for (const caso of CASOS) {
     const obtenido = coloresEfectivos(caso.texto, tokens);
-    const ok = JSON.stringify(obtenido) === JSON.stringify(caso.esperado);
+    const desconocidos = tokensDesconocidos(caso.texto, tokens).map((d) => d.forma);
+    const ok =
+      JSON.stringify(obtenido) === JSON.stringify(caso.esperado) &&
+      JSON.stringify(desconocidos) === JSON.stringify(caso.desconocidos ?? []);
     console.log(`  ${ok ? "ok  " : "FALLA"}  ${caso.nombre}`);
     if (!ok) {
       fallos += 1;
       console.log(`         esperado ${JSON.stringify(caso.esperado)}`);
       console.log(`         obtenido ${JSON.stringify(obtenido)}`);
+      if (JSON.stringify(desconocidos) !== JSON.stringify(caso.desconocidos ?? [])) {
+        console.log(
+          `         tokens desconocidos esperados ${JSON.stringify(caso.desconocidos ?? [])}`,
+        );
+        console.log(`         obtenidos                     ${JSON.stringify(desconocidos)}`);
+      }
     }
   }
   console.log(`\n${CASOS.length - fallos}/${CASOS.length} casos en verde.`);
@@ -175,7 +270,24 @@ async function autoprueba() {
 async function principal() {
   if (process.argv.includes("--autoprueba")) return (await autoprueba()) ? 0 : 1;
 
-  const actual = await inventario();
+  const { mapa: actual, desconocidos } = await inventario();
+
+  if (desconocidos.length) {
+    console.log(`\n${desconocidos.length} referencias a tokens que no existen:\n`);
+    for (const d of desconocidos) {
+      console.log(`  ${d.ruta}:${d.linea}  ${d.forma}`);
+      if (process.env.GITHUB_ACTIONS)
+        console.log(
+          `::error file=${d.ruta},line=${d.linea}::${d.forma} no existe en @ecopac/ui-tokens`,
+        );
+    }
+    console.log(
+      "\n  Un token que no existe no avisa: en movil gana el valor de respaldo del || o del ??, y",
+    );
+    console.log("  en la web una variable CSS que nadie define no pinta NADA. Mira que exporta");
+    console.log("  packages/ui-tokens/index.js y usa el nombre real.");
+    return 1;
+  }
 
   if (process.argv.includes("--capturar")) {
     writeFileSync(LINEA_BASE, JSON.stringify(actual, null, 2) + "\n");

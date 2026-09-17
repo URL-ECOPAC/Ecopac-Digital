@@ -33,10 +33,10 @@ export default function VistaExistenciasPage() {
   // ─── Renderizado del estado con color ───
   const renderEstado = (valor) => {
     const colores = {
-      [ESTADO_EXISTENCIA.DISPONIBLE]: "var(--color-exito)",
-      [ESTADO_EXISTENCIA.POR_VENCER]: "var(--color-aviso)",
-      [ESTADO_EXISTENCIA.VENCIDO]: "var(--color-error)",
-      [ESTADO_EXISTENCIA.SIN_STOCK]: "var(--color-neutro)",
+      [ESTADO_EXISTENCIA.DISPONIBLE]: "var(--color-success)",
+      [ESTADO_EXISTENCIA.POR_VENCER]: "var(--color-warning)",
+      [ESTADO_EXISTENCIA.VENCIDO]: "var(--color-danger)",
+      [ESTADO_EXISTENCIA.SIN_STOCK]: "var(--color-secondary)",
     };
     return (
       <span
@@ -62,11 +62,11 @@ export default function VistaExistenciasPage() {
       <div
         style={{
           padding: "12px 24px",
-          backgroundColor: "var(--color-fondo-secundario)",
-          borderTop: "1px solid var(--color-borde)",
+          backgroundColor: "var(--color-background)",
+          borderTop: "1px solid var(--color-border)",
         }}
       >
-        <strong style={{ fontSize: "var(--texto-xs)", color: "var(--color-texto)" }}>
+        <strong style={{ fontSize: "var(--texto-xs)", color: "var(--color-text)" }}>
           Desglose por Lote
         </strong>
         <table
@@ -78,7 +78,7 @@ export default function VistaExistenciasPage() {
           }}
         >
           <thead>
-            <tr style={{ color: "var(--color-texto-secundario)" }}>
+            <tr style={{ color: "var(--color-text-muted)" }}>
               <th style={{ textAlign: "left", padding: "4px 8px" }}>Lote</th>
               <th style={{ textAlign: "left", padding: "4px 8px" }}>F. Ingreso</th>
               <th style={{ textAlign: "left", padding: "4px 8px" }}>F. Vencimiento</th>
@@ -88,7 +88,7 @@ export default function VistaExistenciasPage() {
           </thead>
           <tbody>
             {item.lotes.map((lote, i) => (
-              <tr key={i} style={{ borderTop: "1px solid var(--color-borde-claro)" }}>
+              <tr key={i} style={{ borderTop: "1px solid var(--color-border)" }}>
                 <td style={{ padding: "6px 8px" }}>{lote.lote || "—"}</td>
                 <td style={{ padding: "6px 8px" }}>{lote.fechaIngreso || "—"}</td>
                 <td style={{ padding: "6px 8px" }}>{lote.fechaCaducidad || "Sin fecha"}</td>
@@ -112,7 +112,7 @@ export default function VistaExistenciasPage() {
           style={{
             fontSize: "var(--texto-lg)",
             fontWeight: 800,
-            color: "var(--color-texto)",
+            color: "var(--color-text)",
             margin: 0,
           }}
         >
@@ -121,7 +121,7 @@ export default function VistaExistenciasPage() {
         <p
           style={{
             fontSize: "var(--texto-sm)",
-            color: "var(--color-texto-secundario)",
+            color: "var(--color-text-muted)",
             margin: "4px 0 0 0",
           }}
         >
@@ -188,7 +188,7 @@ export default function VistaExistenciasPage() {
                   border: "none",
                   padding: 0,
                   fontSize: "inherit",
-                  color: "var(--color-enlace)",
+                  color: "var(--color-primary)",
                   cursor: "pointer",
                   textAlign: "left",
                 }}

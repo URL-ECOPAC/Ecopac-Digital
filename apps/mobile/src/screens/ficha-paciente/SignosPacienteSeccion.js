@@ -79,7 +79,7 @@ const styles = StyleSheet.create({
   medidaContenedor: {
     paddingVertical: spacing.xs,
     borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight ?? "#E5E7EB",
+    borderBottomColor: colors.border,
   },
   etiquetaSerie: {
     color: colors.text,

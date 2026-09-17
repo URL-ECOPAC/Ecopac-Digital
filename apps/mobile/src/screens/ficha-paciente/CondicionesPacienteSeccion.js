@@ -105,7 +105,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingVertical: spacing.xs,
     borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight ?? "#E5E7EB",
+    borderBottomColor: colors.border,
   },
   infoCondicion: {
     flex: 1,

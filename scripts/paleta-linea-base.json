@@ -105,7 +105,7 @@
     "#94a3b8",
     "#ffffff"
   ],
-  "apps/mobile/src/screens/AccesoDenegadoScreen.js": ["#7a7a8a", "#d32f2f", "#ffffff"],
+  "apps/mobile/src/screens/AccesoDenegadoScreen.js": ["#7a7a8a", "#e91e8c", "#ffffff"],
   "apps/mobile/src/screens/AjustesScreen.js": ["#2d2d2d", "#3db648", "#7a7a8a"],
   "apps/mobile/src/screens/CatalogoMedicamentosScreen.js": [
     "#1e7a28",
@@ -170,7 +170,7 @@
     "#e2e4e9",
     "#f7f8fa"
   ],
-  "apps/mobile/src/screens/ficha-paciente/CondicionesPacienteSeccion.js": ["#7a7a8a", "#e5e7eb"],
+  "apps/mobile/src/screens/ficha-paciente/CondicionesPacienteSeccion.js": ["#7a7a8a", "#e2e4e9"],
   "apps/mobile/src/screens/ficha-paciente/RecetasPacienteSeccion.js": [
     "#0284c7",
     "#0f172a",
@@ -188,7 +188,7 @@
     "#2d2d2d",
     "#7a7a8a",
     "#dc2626",
-    "#e5e7eb",
+    "#e2e4e9",
     "#e91e8c"
   ],
   "apps/mobile/src/screens/ficha-paciente/SignosVitalesSeccion.js": [
@@ -496,6 +496,16 @@
   ],
   "apps/web/src/pages/RestablecerContrasenaPage.jsx": ["#2563eb", "#64748b"],
   "apps/web/src/pages/signos.css": ["#7a7a8a", "#e2e4e9"],
+  "apps/web/src/pages/VistaExistenciasPage.jsx": [
+    "#2d2d2d",
+    "#3db648",
+    "#4d4d4d",
+    "#7a7a8a",
+    "#e2e4e9",
+    "#e91e8c",
+    "#f7941d",
+    "#f7f8fa"
+  ],
   "apps/web/src/ui.css": [
     "#1e7a28",
     "#2d2d2d",
