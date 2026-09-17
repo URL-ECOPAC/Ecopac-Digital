@@ -74,6 +74,58 @@ describe("Módulo de Inventario - API Validación y Aprobación", () => {
       expect(res.error.mensaje).toContain("Stock insuficiente");
     });
 
+    // "No hay fila" y "la consulta fallo" llegan los dos con `data` en null. Confundirlos hacia
+    // que una denegacion de RLS o un corte de red se leyeran como "Stock insuficiente" con el lote
+    // lleno, y desde el campo no habia forma de distinguirlo (issue #821).
+    it("distingue un fallo de la consulta de existencias de un stock que no alcanza", async () => {
+      mockSupabase.single.mockResolvedValueOnce({
+        data: {
+          id: "MOV-1",
+          tipo: "salida",
+          cantidad: 1,
+          estado: "pendiente",
+          lote_id: "L-1",
+          bodega_id: "B-1",
+        },
+        error: null,
+      });
+      mockSupabase.maybeSingle.mockResolvedValueOnce({
+        data: null,
+        error: { code: "42501", message: "permission denied for table existencias" },
+      });
+
+      const res = await aprobarMovimiento("MOV-1", {
+        usuarioId: "ADMIN-1",
+        rolUsuario: "administrador",
+      });
+
+      expect(res.error.mensaje).not.toContain("Stock insuficiente");
+      expect(res.error.codigo).toBeTruthy();
+    });
+
+    // Y sin fila sigue siendo stock 0, que es el criterio de fn_aplicar_ajuste_existencias (00047).
+    it("sin fila de existencias sigue siendo stock cero", async () => {
+      mockSupabase.single.mockResolvedValueOnce({
+        data: {
+          id: "MOV-1",
+          tipo: "salida",
+          cantidad: 1,
+          estado: "pendiente",
+          lote_id: "L-1",
+          bodega_id: "B-1",
+        },
+        error: null,
+      });
+      mockSupabase.maybeSingle.mockResolvedValueOnce({ data: null, error: null });
+
+      const res = await aprobarMovimiento("MOV-1", {
+        usuarioId: "ADMIN-1",
+        rolUsuario: "administrador",
+      });
+
+      expect(res.error.mensaje).toContain("Stock insuficiente");
+    });
+
     it("aprueba sin tocar lotes/existencias: el trigger de la base hace el ajuste", async () => {
       mockSupabase.single
         .mockResolvedValueOnce({

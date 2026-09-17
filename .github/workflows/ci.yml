@@ -99,6 +99,22 @@ jobs:
       - name: Comprobar el comparador de paleta contra sus propios casos
         run: npm run verificar:paleta -- --autoprueba
 
+      # La primera guarda que mira apps/ (issue #821). Las otras cuatro miran packages/shared, y
+      # por eso la ficha del paciente en movil pudo estar rota de punta a punta con el lint, las
+      # 2.145 pruebas y verificar:shared-esquema en verde (issue #818): la pantalla leia
+      # `respuesta.datos` de una funcion que devuelve `{ triajes, error }`, y equivocarse de clave
+      # no lanza nada, devuelve una lista vacia.
+      #
+      # Comprueba el sobre que devuelve cada funcion de *.api.js, la forma de cada elemento
+      # -siguiendola por el hook que la guarda en estado hasta el componente- y los descriptores
+      # de columnas. Lo que no puede resolver lo cuenta y lo informa; la cabecera del script dice
+      # que queda fuera y por que.
+      - name: Comprobar los contratos de API que consume apps/
+        run: npm run verificar:contratos
+
+      - name: Comprobar el verificador de contratos contra sus propios casos
+        run: npm run verificar:contratos -- --autoprueba
+
       - name: Ejecutar lint en todos los workspaces
         run: npm run lint
 
