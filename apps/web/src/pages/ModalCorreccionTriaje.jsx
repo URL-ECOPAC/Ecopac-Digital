@@ -26,7 +26,7 @@ export default function ModalCorreccionTriaje({ triaje, onClose, onGuardado }) {
   };
 
   return (
-    <Modal visible onClose={onClose} title="Corregir triaje">
+    <Modal visible onClose={onClose} title="Editar triaje">
       {error && (
         <div className="alert alert-danger" role="alert">
           {error.mensaje}

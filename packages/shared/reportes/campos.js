@@ -19,12 +19,17 @@ import { ESTADOS_DE_VENCIMIENTO } from "./inventario.api.js";
 /**
  * Catalogo de estado de vencimiento (inventario.api.js). VIGENTES/VENCIDOS son los unicos
  * valores con un estado propio -- TODOS es "sin filtrar", no un estado que una fila pueda
- * tener, y por eso no entra en este catalogo. Reutiliza las etiquetas de disponible/critico
- * que ya existen en ui-tokens: son las mismas dos ideas (una unidad se puede usar o no).
+ * tener, y por eso no entra en este catalogo.
+ *
+ * ISSUE #834: las etiquetas eran "Disponible" y "Crítico", prestadas del catalogo de existencias.
+ * En la columna del reporte eso no decia de que hablaba -- "Crítico" se lee como poco stock --, y
+ * la pregunta que llego fue literalmente "el estado en reportes de inventario, de que es". Ahora
+ * dicen "Vigente" y "Vencido", que es lo que la columna mide. El COLOR no cambia: la clave sigue
+ * siendo disponible/critico, o sea el verde y el rojo de statusColors.
  */
 export const ESTADOS_DE_VENCIMIENTO_REPORTE = [
-  { value: ESTADOS_DE_VENCIMIENTO.VIGENTES, clave: "disponible", label: labels.disponible },
-  { value: ESTADOS_DE_VENCIMIENTO.VENCIDOS, clave: "critico", label: labels.critico },
+  { value: ESTADOS_DE_VENCIMIENTO.VIGENTES, clave: "disponible", label: labels.loteVigente },
+  { value: ESTADOS_DE_VENCIMIENTO.VENCIDOS, clave: "critico", label: labels.loteVencido },
 ];
 
 /**

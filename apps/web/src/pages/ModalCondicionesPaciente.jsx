@@ -101,7 +101,7 @@ export default function ModalCondicionesPaciente({ pacienteId, rol, onClose, onC
                     {condicion.condicion?.nombre ?? condicion.condicion}
                   </span>
                   <SecondaryButton
-                    title="Corregir"
+                    title="Editar"
                     onClick={() => abrirCorreccion(condicion)}
                     disabled={enviando}
                   />
@@ -164,7 +164,7 @@ export default function ModalCondicionesPaciente({ pacienteId, rol, onClose, onC
                         disabled={enviando}
                       />
                       <PrimaryButton
-                        title="Guardar corrección"
+                        title="Guardar cambios"
                         onClick={guardarCorreccion}
                         loading={enviando}
                         icon={<Save size={16} aria-hidden="true" />}

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Ban, EyeOff, Printer } from "lucide-react";
 
 import {
   anularReceta,
@@ -14,6 +15,7 @@ import Card from "../components/Card";
 import EmptyState from "../components/EmptyState";
 import ErrorState from "../components/ErrorState";
 import LoadingState from "../components/LoadingState";
+import SecondaryButton from "../components/SecondaryButton";
 import StatusChip from "../components/StatusChip";
 import RecetaImprimible from "./RecetaImprimible";
 
@@ -69,26 +71,35 @@ function Receta({ receta, abierta, onAlternar, onImprimir, puedeAnular, onAnular
         <strong>{receta.folio ?? "Sin folio"}</strong>
         <StatusChip status={receta.estado} />
         <span className="pac-fecha">{formatearFechaCorta(receta.createdAt)}</span>
-        <button
-          type="button"
-          className="btn btn-link btn-sm ms-auto p-0"
-          onClick={onAlternar}
-          aria-expanded={abierta}
-        >
-          {abierta ? "Ocultar detalle" : "Ver detalle"}
-        </button>
-        <button type="button" className="btn btn-link btn-sm p-0" onClick={onImprimir}>
-          Imprimir o guardar PDF
-        </button>
-        {puedeAnular && !receta.anulada && !anulando && (
-          <button
-            type="button"
-            className="btn btn-link btn-sm p-0 text-danger"
-            onClick={() => setAnulando(true)}
-          >
-            Anular
-          </button>
-        )}
+        {/* Tres enlaces de texto seguidos en la misma fila que el folio y el chip de estado: no
+            se leian como acciones. Son los botones del catalogo, y el ojo, la impresora y el
+            contorno rojo de anular los ponen el rotulo y la variante. */}
+        <div className="d-flex flex-wrap gap-2 ms-auto">
+          <SecondaryButton
+            title={abierta ? "Ocultar detalle" : "Ver detalle"}
+            variant="neutra"
+            size="sm"
+            icon={abierta ? <EyeOff size={16} aria-hidden="true" /> : undefined}
+            onClick={onAlternar}
+            aria-expanded={abierta}
+          />
+          <SecondaryButton
+            title="Imprimir o guardar PDF"
+            variant="neutra"
+            size="sm"
+            icon={<Printer size={16} aria-hidden="true" />}
+            onClick={onImprimir}
+          />
+          {puedeAnular && !receta.anulada && !anulando && (
+            <SecondaryButton
+              title="Anular"
+              variant="peligro"
+              size="sm"
+              icon={<Ban size={16} aria-hidden="true" />}
+              onClick={() => setAnulando(true)}
+            />
+          )}
+        </div>
       </div>
 
       <div className="pac-dato-mono mt-1">

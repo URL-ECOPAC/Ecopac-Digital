@@ -39,7 +39,7 @@ export default function ModalCorreccionConsulta({ consulta, onClose, onGuardado 
   };
 
   return (
-    <Modal visible onClose={onClose} title="Corregir consulta">
+    <Modal visible onClose={onClose} title="Editar consulta">
       {error && (
         <div className="alert alert-danger" role="alert">
           {error.mensaje}

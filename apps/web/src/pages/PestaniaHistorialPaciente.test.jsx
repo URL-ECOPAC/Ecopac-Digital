@@ -152,60 +152,60 @@ describe("PestaniaHistorialPaciente", () => {
 
   // Issue #756: actualizarTriaje()/puedeCorregirTriaje() ya existian, probados, sin pantalla.
   describe("correccion de triaje", () => {
-    it("un medico ve el boton Corregir en un evento de triaje", () => {
+    it("un medico ve el boton Editar en un evento de triaje", () => {
       mockEstadoHook.grupos = [GRUPO_CON_TRIAJE];
       mockEstadoHook.total = 1;
       pantalla({ rol: "medico" });
 
-      expect(screen.getByText("Corregir")).toBeInTheDocument();
+      expect(screen.getByText("Editar")).toBeInTheDocument();
     });
 
-    it("un voluntario general no ve el boton Corregir", () => {
+    it("un voluntario general no ve el boton Editar", () => {
       mockEstadoHook.grupos = [GRUPO_CON_TRIAJE];
       mockEstadoHook.total = 1;
       pantalla({ rol: "voluntario general" });
 
-      expect(screen.queryByText("Corregir")).not.toBeInTheDocument();
+      expect(screen.queryByText("Editar")).not.toBeInTheDocument();
     });
 
-    it("Corregir abre el modal de correccion del triaje", () => {
+    it("Editar abre el modal de correccion del triaje", () => {
       mockEstadoHook.grupos = [GRUPO_CON_TRIAJE];
       mockEstadoHook.total = 1;
       pantalla({ rol: "medico" });
 
-      fireEvent.click(screen.getByText("Corregir"));
+      fireEvent.click(screen.getByText("Editar"));
 
-      expect(screen.getByText("Corregir triaje")).toBeInTheDocument();
+      expect(screen.getByText("Editar triaje")).toBeInTheDocument();
     });
   });
 
   // Issue #756: actualizarConsulta()/puedeCorregirConsulta() ya existian, probados, sin
   // pantalla.
   describe("correccion de consulta", () => {
-    it("el medico que registro la consulta ve el boton Corregir", () => {
+    it("el medico que registro la consulta ve el boton Editar", () => {
       mockEstadoHook.grupos = [GRUPO_DE_EJEMPLO];
       mockEstadoHook.total = 1;
       pantalla({ rol: "medico", perfilId: "per-medico" });
 
-      expect(screen.getByText("Corregir")).toBeInTheDocument();
+      expect(screen.getByText("Editar")).toBeInTheDocument();
     });
 
-    it("un medico que no registro esa consulta no ve el boton Corregir", () => {
+    it("un medico que no registro esa consulta no ve el boton Editar", () => {
       mockEstadoHook.grupos = [GRUPO_DE_EJEMPLO];
       mockEstadoHook.total = 1;
       pantalla({ rol: "medico", perfilId: "otro-medico" });
 
-      expect(screen.queryByText("Corregir")).not.toBeInTheDocument();
+      expect(screen.queryByText("Editar")).not.toBeInTheDocument();
     });
 
-    it("Corregir abre el modal de correccion de la consulta", () => {
+    it("Editar abre el modal de correccion de la consulta", () => {
       mockEstadoHook.grupos = [GRUPO_DE_EJEMPLO];
       mockEstadoHook.total = 1;
       pantalla({ rol: "medico", perfilId: "per-medico" });
 
-      fireEvent.click(screen.getByText("Corregir"));
+      fireEvent.click(screen.getByText("Editar"));
 
-      expect(screen.getByText("Corregir consulta")).toBeInTheDocument();
+      expect(screen.getByText("Editar consulta")).toBeInTheDocument();
     });
   });
 

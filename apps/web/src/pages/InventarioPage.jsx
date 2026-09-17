@@ -828,7 +828,7 @@ export default function InventarioPage() {
                           ) : (
                             puedeCorregirLote(rol, lote, perfil?.id) && (
                               <SecondaryButton
-                                title="Corregir costo"
+                                title="Editar costo"
                                 size="sm"
                                 onClick={() => abrirCorreccionCosto(lote)}
                               />

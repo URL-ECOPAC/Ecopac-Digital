@@ -87,6 +87,30 @@ function aAlerta(fila) {
  *
  * @returns {Promise<{ alertas: object[], error: object|null }>}
  */
+/**
+ * Pone al dia alertas_caducidad antes de listarla, sin esperar a la rutina programada.
+ *
+ * Existe por la issue #834: un lote ya vencido no tenia alerta -- fn_generar_alertas_caducidad()
+ * lo descartaba por vencido hasta la migracion 00129 -- asi que el bloque "Vencidos - Para dar de
+ * baja" salia vacio aunque el inventario mostrara el lote. Corregida la funcion, la fila igual
+ * tardaba hasta la corrida siguiente en aparecer; esto la adelanta.
+ *
+ * Solo la administradora puede: fn_sincronizar_alertas_caducidad() lo comprueba y devuelve 42501
+ * a cualquier otro rol. Quien llama trata ese error como "no habia nada que sincronizar", no como
+ * un fallo de la pantalla: el resto del panel se lee igual sin este paso.
+ *
+ * @returns {Promise<{ creadas: number, error: object|null }>}
+ */
+export async function sincronizarAlertas() {
+  try {
+    const { data, error } = await obtenerSupabase().rpc("fn_sincronizar_alertas_caducidad");
+    if (error) return { creadas: 0, error: normalizarError(error) };
+    return { creadas: Number(data) || 0, error: null };
+  } catch (error) {
+    return { creadas: 0, error: normalizarError(error) };
+  }
+}
+
 export async function listarAlertas() {
   try {
     const { data, error } = await obtenerSupabase()
