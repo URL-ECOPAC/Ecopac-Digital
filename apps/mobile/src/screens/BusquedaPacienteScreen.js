@@ -1,24 +1,33 @@
 import { StyleSheet, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 
-import { COLUMNAS_PACIENTE_MOVIL, FILTROS_PACIENTE, usePacientesListado } from "@ecopac/shared";
-import { spacing } from "@ecopac/ui-tokens";
+import {
+  COLUMNAS_PACIENTE_MOVIL,
+  FILTROS_PACIENTE,
+  puedeRegistrarPaciente,
+  usePacientesListado,
+} from "@ecopac/shared";
+import { moduleAccents, spacing } from "@ecopac/ui-tokens";
 
 import {
   DataList,
   EmptyState,
   ErrorState,
   FilterBar,
+  PageHeader,
   ScreenContainer,
   SecondaryButton,
   TextField,
 } from "../components";
+import { useSesionCompartida } from "../contexto/SesionProvider";
 import { ROUTES } from "../navigation/rutas";
 
 const FILTROS_SECUNDARIOS = FILTROS_PACIENTE.filter((filtro) => filtro.id !== "busqueda");
+const CAMPO_DE_BUSQUEDA = FILTROS_PACIENTE.find((filtro) => filtro.id === "busqueda");
 
 export default function BusquedaPacienteScreen() {
   const navigation = useNavigation();
+  const { perfil } = useSesionCompartida();
   const {
     filas,
     filtros,
@@ -48,9 +57,26 @@ export default function BusquedaPacienteScreen() {
 
   return (
     <ScreenContainer scrollable={false}>
+      {/* ISSUE #834: no habia por donde registrar un paciente desde movil. La unica puerta a
+          RegistroPacienteScreen era el estado vacio de la lista, o sea que habia que buscar a
+          alguien, no encontrarlo y solo entonces aparecia la opcion. Ahora es una accion de la
+          cabecera, como en la web. */}
+      <PageHeader
+        title="Pacientes"
+        subtitle="Busca un expediente o registra uno nuevo"
+        accent={moduleAccents.pacientes}
+        actions={
+          puedeRegistrarPaciente(perfil?.rol)
+            ? [{ label: "Nuevo paciente", onPress: irARegistro }]
+            : []
+        }
+      />
+
       <TextField
-        label="Buscar paciente"
-        placeholder="Nombre o número de ficha"
+        label={CAMPO_DE_BUSQUEDA?.label ?? "Buscar paciente"}
+        // El placeholder sale del descriptor compartido y no de un texto propio: decia "Nombre o
+        // número de ficha" cuando la busqueda tambien acepta DPI desde la #834.
+        placeholder={CAMPO_DE_BUSQUEDA?.placeholder}
         value={filtros.busqueda ?? ""}
         onChangeText={(valor) => setFiltro("busqueda", valor)}
         autoCorrect={false}
@@ -74,12 +100,12 @@ export default function BusquedaPacienteScreen() {
         vacio={
           hayFiltrosActivos ? (
             <EmptyState
-              message="Ningun paciente coincide. Podes registrarlo."
-              actionLabel="Registrar paciente"
-              onAction={irARegistro}
+              message="Ningún paciente coincide. Podés registrarlo."
+              actionLabel={puedeRegistrarPaciente(perfil?.rol) ? "Registrar paciente" : undefined}
+              onAction={puedeRegistrarPaciente(perfil?.rol) ? irARegistro : undefined}
             />
           ) : (
-            <EmptyState message="Busca un paciente por nombre o numero de ficha." />
+            <EmptyState message="Busca un paciente por nombre, número de ficha o DPI." />
           )
         }
       />

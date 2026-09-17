@@ -12,9 +12,11 @@ import {
   ScreenContainer,
   SecondaryButton,
   Selector,
+  SelectorConAlta,
   TextField,
 } from "../components";
 import { useJornadaActivaCompartida } from "../contexto/JornadaActivaProvider";
+import { useSesionCompartida } from "../contexto/SesionProvider";
 import { ROUTES } from "../navigation/rutas";
 
 const PASOS = pasosConCampos();
@@ -24,6 +26,7 @@ export default function RegistroPacienteScreen() {
   const { params } = useRoute();
 
   const { jornada } = useJornadaActivaCompartida();
+  const { perfil } = useSesionCompartida();
 
   const {
     valores,
@@ -41,9 +44,16 @@ export default function RegistroPacienteScreen() {
     registrar,
     reiniciar,
     catalogos,
+    puedeCrearComunidad,
+    registrarComunidad,
+    erroresComunidad,
+    creandoComunidad,
   } = useRegistroPaciente({
     comunidadInicial: jornada?.comunidadId ?? null,
     nombresInicial: params?.termino ?? "",
+    // Sin el rol, puedeCrearComunidad era siempre false y el alta de comunidad sin salir del
+    // formulario -- que la web tiene desde la #743 -- no existia en movil (issue #834).
+    rol: perfil?.rol,
   });
 
   const [indice, setIndice] = useState(0);
@@ -128,14 +138,23 @@ export default function RegistroPacienteScreen() {
                 placeholder="Municipio"
                 disabled={enviando || !departamentoId || catalogos.municipios.length === 0}
               />
-              <Selector
+              {/* La comunidad de quien se registra en jornada muchas veces todavia no esta en el
+                  catalogo: se crea aqui mismo, igual que en la web (issue #834). */}
+              <SelectorConAlta
                 label={campo.label}
                 value={valores.comunidad || null}
                 options={catalogos.comunidades}
                 onSelect={(valor) => setCampo("comunidad", valor)}
                 placeholder="Comunidad"
                 error={errores.comunidad}
-                disabled={enviando || !municipioId || catalogos.comunidades.length === 0}
+                disabled={enviando || !municipioId}
+                puedeCrear={puedeCrearComunidad}
+                habilitadoParaCrear={Boolean(municipioId)}
+                etiquetaAlta="Crear una comunidad"
+                labelNuevo="Nombre de la comunidad nueva"
+                onCrear={registrarComunidad}
+                erroresAlta={erroresComunidad}
+                creando={creandoComunidad}
               />
             </View>
           );
