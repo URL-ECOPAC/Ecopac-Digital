@@ -1,97 +1,143 @@
 import { useState } from "react";
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import {
+  cabeceraDePaciente,
+  pestaniasDeFicha,
+  permisosDeFicha,
+  resolverPestaniaDeFicha,
+  usePaciente,
+} from "@ecopac/shared";
+import { colors, spacing, typography } from "@ecopac/ui-tokens";
 
-import { permisosDeFicha } from "@ecopac/shared";
-
+import { ErrorState, LoadingState } from "../components";
+import { useSesionCompartida } from "../contexto/SesionProvider";
+import { ROUTES } from "../navigation/rutas";
 import CondicionesPacienteSeccion from "./ficha-paciente/CondicionesPacienteSeccion";
-import SignosVitalesSeccion from "./ficha-paciente/SignosVitalesSeccion";
+import SignosPacienteSeccion from "./ficha-paciente/SignosPacienteSeccion";
 import RecetasPacienteSeccion from "./ficha-paciente/RecetasPacienteSeccion";
 import ModalEdicionPaciente from "./ModalEdicionPaciente";
 
+/**
+ * Ficha del paciente en movil (issues #753 y #818).
+ *
+ * QUE CAMBIO EN LA #818, Y POR QUE
+ *
+ * La pantalla recibia el PACIENTE ENTERO por navegacion (`route.params.paciente`) y el rol tambien,
+ * con "medico" por defecto. De los cinco sitios que navegan hasta aqui, cuatro mandaban solo el id,
+ * asi que desde la consulta, desde la receta y justo despues de registrar un paciente la ficha
+ * mostraba "No se proporciono informacion del paciente".
+ *
+ * Ahora recibe `pacienteId` -la forma que ya usaban esos cuatro- y carga con usePaciente(), el
+ * mismo hook que usa FichaPacientePage en la web. El rol sale de la sesion, no de los parametros:
+ * un rol que viaja por navegacion es un rol que cualquiera puede escribir, y ademas nadie se lo
+ * estaba pasando.
+ *
+ * La cabecera usaba paciente.nombre, .apellido, .documento y .cui. El modelo tiene `nombres`,
+ * `apellidos` y `dpi` (migracion 00009), asi que renderizaba el nombre en blanco y "CUI/DPI: N/A"
+ * para todo el mundo. Ahora sale de cabeceraDePaciente(), que es el descriptor de shared que la web
+ * ya consume.
+ */
 export default function FichaPacienteScreen({ route, navigation }) {
-  const { paciente, rol = "medico" } = route.params || {};
-  const [pestanaActiva, setPestanaActiva] = useState("historial");
+  const { pacienteId } = route.params || {};
+  const { rol } = useSesionCompartida();
+  const { paciente, cargando, error, recargar } = usePaciente(pacienteId, { rol });
+  const [pestaniaPedida, setPestaniaPedida] = useState("historial");
   const [editando, setEditando] = useState(false);
-  const permisos = permisosDeFicha(rol);
 
-  if (!paciente) {
+  const permisos = permisosDeFicha(rol);
+  const pestanias = pestaniasDeFicha(rol).filter((pestania) => pestania.id !== "generales");
+  const pestaniaActiva = resolverPestaniaDeFicha(pestaniaPedida, rol);
+
+  if (!pacienteId) {
     return (
-      <View style={styles.centroContainer}>
-        <Text style={styles.textoError}>No se proporcionó información del paciente.</Text>
+      <View style={styles.centro}>
+        <ErrorState message="No se proporciono el paciente." />
       </View>
     );
   }
 
+  if (cargando) {
+    return (
+      <View style={styles.centro}>
+        <LoadingState />
+      </View>
+    );
+  }
+
+  // Antes no habia ningun camino de error: si la consulta fallaba, la pantalla se quedaba en
+  // blanco sin decir nada.
+  if (error || !paciente) {
+    return (
+      <View style={styles.centro}>
+        <ErrorState
+          message={error?.mensaje ?? "No se pudo cargar la ficha del paciente."}
+          onRetry={recargar}
+        />
+      </View>
+    );
+  }
+
+  const cabecera = cabeceraDePaciente(paciente);
+
   return (
     <SafeAreaView style={styles.container}>
-      {/* Encabezado del Paciente */}
       <View style={styles.encabezado}>
-        <Text style={styles.nombrePaciente}>
-          {paciente.nombre} {paciente.apellido}
-        </Text>
+        <Text style={styles.nombrePaciente}>{cabecera.nombreCompleto ?? "Sin nombre"}</Text>
         <Text style={styles.detallesPaciente}>
-          CUI/DPI: {paciente.documento || paciente.cui || "N/A"} | Edad: {paciente.edad || "--"}{" "}
-          años
+          CUI/DPI: {paciente.dpi || "N/A"} | Edad: {cabecera.edad ?? "--"}
         </Text>
       </View>
 
-      {/* Navegación por pestañas */}
       <View style={styles.tabBar}>
-        <TouchableOpacity
-          style={[styles.tabItem, pestanaActiva === "historial" && styles.tabItemActivo]}
-          onPress={() => setPestanaActiva("historial")}
-        >
-          <Text style={[styles.tabTexto, pestanaActiva === "historial" && styles.tabTextoActivo]}>
-            Condiciones
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.tabItem, pestanaActiva === "signos" && styles.tabItemActivo]}
-          onPress={() => setPestanaActiva("signos")}
-        >
-          <Text style={[styles.tabTexto, pestanaActiva === "signos" && styles.tabTextoActivo]}>
-            Signos Vitales
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.tabItem, pestanaActiva === "recetas" && styles.tabItemActivo]}
-          onPress={() => setPestanaActiva("recetas")}
-        >
-          <Text style={[styles.tabTexto, pestanaActiva === "recetas" && styles.tabTextoActivo]}>
-            Recetas
-          </Text>
-        </TouchableOpacity>
+        {pestanias.map((pestania) => (
+          <TouchableOpacity
+            key={pestania.id}
+            style={[styles.tabItem, pestaniaActiva === pestania.id && styles.tabItemActivo]}
+            onPress={() => setPestaniaPedida(pestania.id)}
+          >
+            <Text
+              style={[styles.tabTexto, pestaniaActiva === pestania.id && styles.tabTextoActivo]}
+            >
+              {pestania.label}
+            </Text>
+          </TouchableOpacity>
+        ))}
       </View>
 
-      {/* Contenido de la Pestaña Activa */}
       <ScrollView contentContainerStyle={styles.contenidoScroll}>
-        {pestanaActiva === "historial" && (
+        {pestaniaActiva === "historial" && (
           <CondicionesPacienteSeccion pacienteId={paciente.id} rol={rol} />
         )}
-
-        {pestanaActiva === "signos" && <SignosVitalesSeccion pacienteId={paciente.id} />}
-
-        {pestanaActiva === "recetas" && <RecetasPacienteSeccion pacienteId={paciente.id} />}
+        {pestaniaActiva === "signos" && (
+          <SignosPacienteSeccion pacienteId={paciente.id} rol={rol} />
+        )}
+        {pestaniaActiva === "recetas" && (
+          <RecetasPacienteSeccion pacienteId={paciente.id} rol={rol} />
+        )}
       </ScrollView>
 
-      {/* Botones de Acción de Flujo Clinico */}
       <View style={styles.accionesBar}>
-        <TouchableOpacity
-          style={styles.botonAccion}
-          onPress={() => navigation.navigate("Triaje", { paciente })}
-        >
-          <Text style={styles.textoBotonAccion}>Nuevo Triaje</Text>
-        </TouchableOpacity>
+        {/* Las dos pantallas de destino leen `params.pacienteId` (TriajeScreen:28,
+            ConsultaScreen:92). Navegar con el objeto entero, como se hacia antes, las dejaba sin
+            paciente: los dos botones llevaban a una pantalla vacia. */}
+        {permisos.puedeTomarTriaje && (
+          <TouchableOpacity
+            style={styles.botonAccion}
+            onPress={() => navigation.navigate(ROUTES.TRIAJE, { pacienteId: paciente.id })}
+          >
+            <Text style={styles.textoBotonAccion}>Nuevo Triaje</Text>
+          </TouchableOpacity>
+        )}
 
-        <TouchableOpacity
-          style={[styles.botonAccion, styles.botonConsulta]}
-          onPress={() => navigation.navigate("Consulta", { paciente })}
-        >
-          <Text style={styles.textoBotonAccion}>Nueva Consulta</Text>
-        </TouchableOpacity>
+        {permisos.puedeCrearConsulta && (
+          <TouchableOpacity
+            style={[styles.botonAccion, styles.botonConsulta]}
+            onPress={() => navigation.navigate(ROUTES.CONSULTA, { pacienteId: paciente.id })}
+          >
+            <Text style={styles.textoBotonAccion}>Nueva Consulta</Text>
+          </TouchableOpacity>
+        )}
 
         {permisos.puedeEditar && (
           <TouchableOpacity style={styles.botonAccion} onPress={() => setEditando(true)}>
@@ -105,7 +151,10 @@ export default function FichaPacienteScreen({ route, navigation }) {
           visible={editando}
           paciente={paciente}
           onClose={() => setEditando(false)}
-          onGuardado={() => setEditando(false)}
+          onGuardado={() => {
+            setEditando(false);
+            recargar();
+          }}
         />
       )}
     </SafeAreaView>
@@ -115,82 +164,82 @@ export default function FichaPacienteScreen({ route, navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#ffffff",
+    backgroundColor: colors.surface,
   },
-  centroContainer: {
+  centro: {
     flex: 1,
     justifyContent: "center",
-    alignItems: "center",
-  },
-  textoError: {
-    color: "#dc2626",
-    fontSize: 16,
+    padding: spacing.md,
   },
   encabezado: {
-    padding: 16,
-    backgroundColor: "#f8fafc",
+    padding: spacing.md,
+    backgroundColor: colors.background,
     borderBottomWidth: 1,
-    borderBottomColor: "#e2e8f0",
+    borderBottomColor: colors.border,
   },
   nombrePaciente: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#0f172a",
+    fontFamily: typography.fontFamilyBase,
+    fontSize: typography.sizes.xl,
+    fontWeight: typography.weights.bold,
+    color: colors.text,
   },
   detallesPaciente: {
-    fontSize: 13,
-    color: "#64748b",
-    marginTop: 4,
+    fontFamily: typography.fontFamilyBase,
+    fontSize: typography.sizes.sm,
+    color: colors.textMuted,
+    marginTop: spacing.xs,
   },
   tabBar: {
     flexDirection: "row",
     borderBottomWidth: 1,
-    borderBottomColor: "#e2e8f0",
-    backgroundColor: "#ffffff",
+    borderBottomColor: colors.border,
+    backgroundColor: colors.surface,
   },
   tabItem: {
     flex: 1,
-    paddingVertical: 12,
+    paddingVertical: spacing.sm,
     alignItems: "center",
     borderBottomWidth: 2,
     borderBottomColor: "transparent",
   },
   tabItemActivo: {
-    borderBottomColor: "#0284c7",
+    borderBottomColor: colors.primary,
   },
   tabTexto: {
-    fontSize: 13,
-    fontWeight: "500",
-    color: "#64748b",
+    fontFamily: typography.fontFamilyBase,
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.medium,
+    color: colors.textMuted,
   },
   tabTextoActivo: {
-    color: "#0284c7",
-    fontWeight: "700",
+    color: colors.primary,
+    fontWeight: typography.weights.bold,
   },
   contenidoScroll: {
-    padding: 16,
+    padding: spacing.md,
   },
   accionesBar: {
     flexDirection: "row",
-    padding: 12,
-    gap: 12,
+    padding: spacing.sm,
+    gap: spacing.sm,
     borderTopWidth: 1,
-    borderTopColor: "#e2e8f0",
-    backgroundColor: "#ffffff",
+    borderTopColor: colors.border,
+    backgroundColor: colors.surface,
   },
   botonAccion: {
     flex: 1,
-    backgroundColor: "#0284c7",
-    paddingVertical: 12,
+    backgroundColor: colors.primary,
+    paddingVertical: spacing.sm,
     borderRadius: 8,
     alignItems: "center",
   },
   botonConsulta: {
-    backgroundColor: "#059669",
+    backgroundColor: colors.info,
   },
   textoBotonAccion: {
-    color: "#ffffff",
-    fontWeight: "600",
-    fontSize: 14,
+    fontFamily: typography.fontFamilyBase,
+    color: colors.surface,
+    fontWeight: typography.weights.semibold,
+    fontSize: typography.sizes.md,
   },
 });

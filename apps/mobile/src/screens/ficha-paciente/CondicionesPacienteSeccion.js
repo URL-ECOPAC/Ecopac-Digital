@@ -1,55 +1,52 @@
-import React, { useState } from "react";
+import React from "react";
 import { Alert, StyleSheet, Text, View } from "react-native";
-import {
-  actualizarCondicionCronica,
-  ESTADOS_CONDICION_CRONICA,
-  useCondicionesCronicas,
-} from "@ecopac/shared";
+import { ESTADOS_CONDICION_CRONICA, useCondicionesPaciente } from "@ecopac/shared";
 import { colors, spacing, typography } from "@ecopac/ui-tokens";
 
 import { Card, ErrorState, LoadingState, SecondaryButton, StatusChip } from "../../components";
 
+/**
+ * Condiciones cronicas del paciente, en la ficha movil (issue #818).
+ *
+ * DOS IMPORTS QUE NO EXISTIAN
+ *
+ * Este componente importaba `useCondicionesCronicas` y `actualizarCondicionCronica`. **Ninguno de
+ * los dos existe en packages/shared**, y no es que se hubieran dejado de exportar: nunca se
+ * escribieron. El primero llegaba `undefined`, y un
+ * `typeof useCondicionesCronicas === "function" ? ... : () => ({ condiciones: [] })` lo convertia
+ * en una lista vacia PARA SIEMPRE -sin error, sin aviso, sin log-. El segundo habria reventado al
+ * pulsar "Resolver", que es la unica accion de la pantalla.
+ *
+ * El hook de verdad es `useCondicionesPaciente(pacienteId, { rol })`, que ya existia, ya trae los
+ * permisos resueltos por `condiciones.permisos.js` y ya expone `marcarResuelta`. La guarda con
+ * `typeof` se retira: un export que falta tiene que reventar el import, no hacer mentir a la
+ * pantalla. Ademas era una llamada condicional a un hook, que las reglas de hooks prohiben.
+ */
 export default function CondicionesPacienteSeccion({ pacienteId, rol, alActualizar }) {
-  // Verificación de seguridad por si el hook no está exportado en @ecopac/shared
-  const obtenerCondiciones =
-    typeof useCondicionesCronicas === "function"
-      ? useCondicionesCronicas
-      : () => ({ condiciones: [], cargando: false, error: null, recargar: () => {} });
-
-  const {
-    condiciones = [],
-    cargando = false,
-    error = null,
-    recargar = () => {},
-  } = obtenerCondiciones(pacienteId);
-  const [guardando, setGuardando] = useState(false);
-
-  const puedeEditar = rol === "medico" || rol === "administrador";
+  const { condiciones, cargando, error, enviando, permisos, marcarResuelta, recargar } =
+    useCondicionesPaciente(pacienteId, { rol });
 
   const manejarResolver = (condicion) => {
-    Alert.alert("Resolver condición", `¿Deseas marcar "${condicion.nombre}" como resuelta?`, [
+    const nombre = condicion.condicion ?? "esta condicion";
+    Alert.alert("Resolver condición", `¿Deseas marcar "${nombre}" como resuelta?`, [
       { text: "Cancelar", style: "cancel" },
       {
         text: "Resolver",
         onPress: async () => {
-          setGuardando(true);
-          const { error: errorApi } = await actualizarCondicionCronica(condicion.id, {
-            estado: ESTADOS_CONDICION_CRONICA.RESUELTA,
-          });
-          setGuardando(false);
+          const { ok } = await marcarResuelta(condicion.id);
 
-          if (errorApi) {
-            Alert.alert("Error", errorApi.mensaje);
-          } else {
-            recargar();
-            if (alActualizar) alActualizar();
+          if (!ok) {
+            Alert.alert("Error", "No se pudo resolver la condición. Intentalo de nuevo.");
+            return;
           }
+
+          alActualizar?.();
         },
       },
     ]);
   };
 
-  if (cargando || guardando) {
+  if (cargando || enviando) {
     return <LoadingState />;
   }
 
@@ -68,12 +65,12 @@ export default function CondicionesPacienteSeccion({ pacienteId, rol, alActualiz
               <View style={styles.infoCondicion}>
                 <StatusChip
                   status={item.estado}
-                  label={`${item.nombre} · ${item.etiquetaEstado ?? item.estado}`}
+                  label={`${item.condicion ?? "Sin nombre"} · ${item.estado}`}
                 />
                 {item.notas ? <Text style={styles.notas}>{item.notas}</Text> : null}
               </View>
 
-              {puedeEditar && item.estado !== ESTADOS_CONDICION_CRONICA.RESUELTA && (
+              {permisos.puedeQuitar && item.estado !== ESTADOS_CONDICION_CRONICA.RESUELTA && (
                 <SecondaryButton
                   title="Resolver"
                   onPress={() => manejarResolver(item)}
@@ -113,7 +110,7 @@ const styles = StyleSheet.create({
   },
   notas: {
     color: colors.textMuted,
-    fontSize: typography.sizes.xs ?? 12,
+    fontSize: typography.sizes.xs,
     marginTop: 2,
   },
   botonAccion: {
