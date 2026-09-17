@@ -724,6 +724,7 @@ function PanelDetalleColaborador({ fila, catalogos, permisos, rol, idSesionActua
             setEditando(false);
             onCambio();
           }}
+          onEspecialidadesGuardadas={onCambio}
         />
       )}
 

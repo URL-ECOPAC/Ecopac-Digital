@@ -4,7 +4,6 @@ import {
   useExportarPDF,
   useReportePacientes,
 } from "@ecopac/shared";
-import Card from "../components/Card";
 import DataList from "../components/DataList";
 import ErrorState from "../components/ErrorState";
 import FilterBar from "../components/FilterBar";
@@ -14,6 +13,7 @@ import Selector from "../components/Selector";
 import { useSesionCompartida } from "../contexto/SesionProvider";
 import BotonExportarPDF from "../components/BotonExportarPDF";
 import "./reportes.css";
+import StatCard from "../components/StatCard";
 
 // Reporte de pacientes atendidos (issues #202 / #211, reconectado por #693).
 // Agregada exportación PDF (issue #216).
@@ -87,23 +87,25 @@ export default function ReportePacientesPage({ incrustado = false }) {
           { custom: <BotonExportarPDF onClick={exportar} generando={generando} /> },
         ]}
       />
+      {/* "Agrupar por" y "Limpiar filtros" dentro de la misma barra: antes iban en una fila suelta
+          debajo, con el boton pegado al selector y otro aspecto. */}
       <FilterBar
         campos={definicionDeFiltros}
         valores={valores}
         onChange={setFiltro}
         catalogos={catalogos}
-      />
-      <div className="reporte-barra-agrupacion">
-        <Selector
-          label="Agrupar por"
-          value={agruparPor}
-          options={OPCIONES_DE_AGRUPACION}
-          onSelect={setAgruparPor}
-        />
-        <button className="reporte-exportar" onClick={limpiarFiltros} type="button">
-          Limpiar filtros
-        </button>
-      </div>
+        onLimpiar={limpiarFiltros}
+      >
+        <div className="ec-filtro">
+          <Selector
+            label="Agrupar por"
+            value={agruparPor}
+            options={OPCIONES_DE_AGRUPACION}
+            onSelect={setAgruparPor}
+            style={{ marginBottom: 0 }}
+          />
+        </div>
+      </FilterBar>
       {error && <ErrorState message={error.mensaje} onRetry={recargar} />}
       {!error && cargando && <LoadingState message="Calculando el reporte..." />}
       {!error && !cargando && (
@@ -111,23 +113,11 @@ export default function ReportePacientesPage({ incrustado = false }) {
         <div id="contenido-reporte-pdf">
           {totales && (
             <section className="reporte-seccion">
-              <div className="reporte-cifras">
-                <Card>
-                  <span className="reporte-cifra-etiqueta">Pacientes atendidos</span>
-                  <strong className="reporte-cifra">{totales.pacientes}</strong>
-                </Card>
-                <Card>
-                  <span className="reporte-cifra-etiqueta">Nuevos</span>
-                  <strong className="reporte-cifra">{totales.nuevos}</strong>
-                </Card>
-                <Card>
-                  <span className="reporte-cifra-etiqueta">Recurrentes</span>
-                  <strong className="reporte-cifra">{totales.recurrentes}</strong>
-                </Card>
-                <Card>
-                  <span className="reporte-cifra-etiqueta">Grupos</span>
-                  <strong className="reporte-cifra">{grupos.length}</strong>
-                </Card>
+              <div className="ec-kpis">
+                <StatCard label="Pacientes atendidos" value={totales.pacientes} />
+                <StatCard label="Nuevos" value={totales.nuevos} />
+                <StatCard label="Recurrentes" value={totales.recurrentes} />
+                <StatCard label="Grupos" value={grupos.length} />
               </div>
             </section>
           )}

@@ -95,6 +95,9 @@ app no levanta.
 
 Ninguna pantalla formatea una fecha por su cuenta.
 
+`textoComparable(texto)` y `buscarOpcionPorEtiqueta(opciones, texto)` (`formato/opciones.js`):
+comparan texto de interfaz sin mayusculas, acentos ni espacios de mas.
+
 `tipoDeAccion(rotulo)`, `rotuloSinSigno(rotulo)` y `TIPOS_DE_ACCION` (`formato/acciones.js`):
 deciden por el verbo inicial si un boton es un alta ("Nuevo", "Crear", "Agregar", "Registrar") o
 un borrado ("Eliminar", "Borrar", "Quitar"). Los botones del catalogo de las dos apps lo usan para
@@ -139,11 +142,20 @@ consulta y receta.
 
 **Consultas**
 
-`buscarPacientes`, `buscarPacientePorFicha`, `obtenerPaciente`, `obtenerUltimaAtencion`,
+`buscarPacientes`, `buscarPacientePorFicha`, `buscarPacientesPorIdentificador`,
+`identificadorDeBusqueda`, `obtenerPaciente`, `obtenerUltimaAtencion`,
 `obtenerHistorialMedico`, `obtenerTriajes`, `obtenerConsulta`, `obtenerReceta`, `obtenerRecetas`,
 `obtenerPacientesConCondicion`, `obtenerCondicionesDelPaciente`, `obtenerCatalogoDeCondiciones`,
 `listarDiagnosticos`, `listarIdiomas`, `listarPacientesAtendidosDeJornada`,
 `listarPosiblesDuplicados`, `contarRecetas`, `contarRecetasDeJornada`, `contarConsultasDeJornada`.
+
+`buscarPacientes` con un termino que es solo digitos (4 o mas, con espacios o guiones) lo trata
+como identificador: busca por el **inicio** del numero de ficha y del DPI
+(`buscarPacientesPorIdentificador`) y no pasa por `fn_buscar_pacientes`. Antes el DPI no se buscaba
+en ningun lado y la ficha solo coincidia escrita completa.
+
+`useRegistroConsulta({ rol })` devuelve `crearDiagnosticoNuevo(nombre)` para quien puede mantener el
+catalogo (`puedeAdministrarDiagnosticos`, politica de INSERT de la 00105) y `null` para el resto.
 
 **Escrituras**
 
@@ -243,6 +255,12 @@ La cola de la jornada. Modulo pequeno y con una sola responsabilidad.
 `listarMovimientos`, `listarBodegas`, `obtenerBodega`, `listarProveedores`, `obtenerProveedor`,
 `listarPrincipiosActivos`, `listarAlertas`, `historialAlertas`.
 
+**Catalogo de la pantalla** (`catalogoMedicamentos.js`): `FILTROS_CATALOGO_MEDICAMENTOS`,
+`FILTROS_CATALOGO_VACIOS`, `filtrarCatalogoMedicamentos`, `resumirLotesPorMedicamento`,
+`hayFiltrosDeCatalogo`. Filtran por los campos que `medicamentos` tiene de verdad (presentacion, uso
+pediatrico, activo) y resumen los lotes de cada medicamento; la "categoria", el codigo y el precio
+que mostraba la pantalla no eran columnas.
+
 **Escrituras**: `registrarMedicamento`, `actualizarMedicamento`, `desactivarMedicamento`,
 `registrarLote`, `registrarIngreso`, `registrarSalida`, `editarMovimiento`, `aprobarMovimiento`,
 `rechazarMovimiento`, `aprobarMovimientosEnLote`, `registrarBodega`, `actualizarBodega`,
@@ -329,6 +347,11 @@ total guardado se desincroniza.
 `serializarFiltrosReportes`, `resolverFiltrosReportesDesdeParametros`, `useFiltrosReportes`.
 
 Los filtros se serializan a la URL: un reporte filtrado se puede compartir por enlace.
+
+**Medicamentos por vencer**: `listarLotesPorVencer({ horizonteDias, bodega })` devuelve cada lote
+con las unidades que quedan (suma de `existencias`, 00020) y sus bodegas, con el rango y los dias
+calculados en el dia local. `useReporteMedicamentosPorVencer` **necesita `{ rol }`**: sin el, el
+permiso sale falso y no consulta. No hay filtro por comunidad: `bodegas` no tiene comunidad.
 
 **Exportacion**: `exportarFilasACSV`, `escaparCampoCSV`.
 

@@ -1,4 +1,5 @@
 import { useRegistroSalida } from "@ecopac/shared";
+import { useCerrarAlTocarFuera } from "../hooks/useCerrarAlTocarFuera";
 
 export function ModalSalidaMedicamento({ abierto, onClose, medicamentos = [], usuarioId }) {
   const {
@@ -16,10 +17,13 @@ export function ModalSalidaMedicamento({ abierto, onClose, medicamentos = [], us
     guardarSalida,
   } = useRegistroSalida({ usuarioId, onExito: onClose });
 
+  const fondo = useCerrarAlTocarFuera(onClose, { activo: abierto });
+
   if (!abierto) return null;
 
   return (
     <div
+      {...fondo}
       style={{
         position: "fixed",
         inset: 0,

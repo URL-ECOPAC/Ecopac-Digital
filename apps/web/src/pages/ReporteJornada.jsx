@@ -16,6 +16,7 @@ import StatusChip from "../components/StatusChip";
 import { useSesionCompartida } from "../contexto/SesionProvider";
 import BotonExportarPDF from "../components/BotonExportarPDF";
 import "./reportes.css";
+import StatCard from "../components/StatCard";
 
 // Reporte de resultados de una jornada (issues #206 / #215, reconectado por #693).
 // Agregada exportación PDF (issue #216).
@@ -115,19 +116,10 @@ export default function ReporteJornada() {
         // TODO el contenido que va al PDF DENTRO de este div
         <div id="contenido-reporte-pdf">
           <section className="reporte-seccion">
-            <div className="reporte-cifras">
-              <Card>
-                <span className="reporte-cifra-etiqueta">Pacientes atendidos</span>
-                <strong className="reporte-cifra">{ficha.pacientes_atendidos}</strong>
-              </Card>
-              <Card>
-                <span className="reporte-cifra-etiqueta">Consultas realizadas</span>
-                <strong className="reporte-cifra">{ficha.total_consultas}</strong>
-              </Card>
-              <Card>
-                <span className="reporte-cifra-etiqueta">Diagnósticos distintos</span>
-                <strong className="reporte-cifra">{diagnosticos.length}</strong>
-              </Card>
+            <div className="ec-kpis">
+              <StatCard label="Pacientes atendidos" value={ficha.pacientes_atendidos} />
+              <StatCard label="Consultas realizadas" value={ficha.total_consultas} />
+              <StatCard label="Diagnósticos distintos" value={diagnosticos.length} />
               <Card>
                 <span className="reporte-cifra-etiqueta">Estado</span>
                 <span className="reporte-cifra-estado">
@@ -145,7 +137,7 @@ export default function ReporteJornada() {
 
           <section className="reporte-seccion">
             <div className="reporte-cabecera-tabla">
-              <h2 className="reporte-titulo">Diagnósticos más frecuentes</h2>
+              <h2 className="ec-seccion-titulo">Diagnósticos más frecuentes</h2>
               <button
                 className="reporte-exportar"
                 disabled={diagnosticos.length === 0}
@@ -170,7 +162,7 @@ export default function ReporteJornada() {
 
           <section className="reporte-seccion">
             <div className="reporte-cabecera-tabla">
-              <h2 className="reporte-titulo">Medicamentos más entregados</h2>
+              <h2 className="ec-seccion-titulo">Medicamentos más entregados</h2>
               <button
                 className="reporte-exportar"
                 disabled={medicamentos.length === 0}
@@ -194,7 +186,7 @@ export default function ReporteJornada() {
           </section>
 
           <section className="reporte-seccion">
-            <h2 className="reporte-titulo">Personal participante</h2>
+            <h2 className="ec-seccion-titulo">Personal participante</h2>
             <DataList
               columnas={columnasDePersonal}
               datos={personal}

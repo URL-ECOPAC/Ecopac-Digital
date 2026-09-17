@@ -304,6 +304,13 @@ Funciones de base: `fn_existencias_disponibles`, `fn_registrar_medicamento`,
   (`generarIngresoDesdeDonacion`), y `donacion_detalle.lote_id` es UNIQUE para que dos donaciones
   no reclamen el mismo lote.
 - Una donacion no se borra: se anula, con motivo y responsable.
+- Registro, historial, donantes y constancia llevan "Volver" al resumen (o al historial, desde la
+  constancia): se abrian desde el resumen y ninguna tenia como regresar.
+- El filtro por tipo de donante usaba "individual" y "empresa", que no existen en `tipo_donante`
+  (`persona`, `organizacion`): filtrar no devolvia a nadie. La ficha del donante no mostraba su
+  historico -leia un campo que no existia- ni telefono, correo, direccion, estado y fechas.
+- El filtro de proyecto del historial nunca tuvo opciones: las esperaba por una prop que nadie
+  pasaba. Las carga ahora `useHistorialDonaciones`.
 
 ---
 
@@ -337,6 +344,9 @@ Exportacion a CSV con `exportarFilasACSV` (`reportes/csv.js`).
 - Todas quedan dentro del guard de roles del modulo (la #697 cerro la excepcion de
   `/reportes/dashboard`).
 - `ReportesPage.jsx` y `DashboardMetricasPage.jsx` ya no escriben colores ni espaciados a mano.
+- "Medicamentos por vencer" decia "Ningun lote vence" siempre: la pantalla llamaba al hook sin el
+  rol y el hook no consultaba. Ahora pasa el rol, las unidades salen de `existencias` y el filtro
+  de comunidad se retiro (una bodega no tiene comunidad en el modelo).
 
 ---
 

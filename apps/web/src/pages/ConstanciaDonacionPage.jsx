@@ -1,5 +1,7 @@
 import { TIPOS_DE_DONACION, useConstanciaDonacion } from "@ecopac/shared";
 import { Container, Row, Col, Button, Table, Card, Badge, Alert } from "react-bootstrap";
+import { AccionesDeCabecera } from "../components/PageHeader";
+import { ACCION_VOLVER_A_DONACIONES } from "./donacionesNavegacion";
 
 export default function ConstanciaDonacionPage({ usuarioRol, donacion }) {
   const { tieneAccesoLectura, esValidaParaConstancia, correlativo, manejarImpresion } =
@@ -44,7 +46,16 @@ export default function ConstanciaDonacionPage({ usuarioRol, donacion }) {
   return (
     <Container style={{ maxWidth: "800px" }} className="py-4">
       {/* Botones de acción (Ocultos al imprimir) */}
-      <div className="d-flex justify-content-end mb-4 d-print-none">
+      <div className="d-flex justify-content-between flex-wrap gap-2 mb-4 d-print-none">
+        <AccionesDeCabecera
+          actions={[
+            {
+              ...ACCION_VOLVER_A_DONACIONES,
+              label: "Volver al historial",
+              to: "/donaciones/historial",
+            },
+          ]}
+        />
         <Button variant="primary" onClick={manejarImpresion}>
           Imprimir / Descargar PDF
         </Button>

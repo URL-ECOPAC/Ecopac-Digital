@@ -66,11 +66,103 @@ export default function ModalJornada({ visible = true, jornada, rol, onClose, on
     }
   };
 
+  // Un campo del descriptor, con el control que le toca.
+  const dibujarCampo = (campo) => {
+    if (campo.id === "comunidad") {
+      return (
+        <div key="comunidad-cascada" className="ec-form-grid--ancho ec-form-grid">
+          <Selector
+            label="Departamento"
+            value={departamentoId}
+            options={catalogos.departamentos}
+            onSelect={setDepartamento}
+            placeholder="Selecciona un departamento"
+            disabled={bloqueado}
+          />
+          <Selector
+            label="Municipio"
+            value={municipioId}
+            options={catalogos.municipios}
+            onSelect={setMunicipio}
+            placeholder="Selecciona un municipio"
+            disabled={bloqueado || !departamentoId || catalogos.municipios.length === 0}
+          />
+          <Selector
+            label={campo.label}
+            value={valores.comunidad || null}
+            options={catalogos.comunidades}
+            onSelect={(valor) => setCampo("comunidad", valor)}
+            placeholder="Selecciona una comunidad"
+            disabled={bloqueado || !municipioId || catalogos.comunidades.length === 0}
+            error={errores.comunidad}
+          />
+        </div>
+      );
+    }
+
+    if (campo.tipo === TIPOS_DE_CAMPO.NUMERO) {
+      return (
+        <NumberField
+          key={campo.id}
+          label={campo.label}
+          value={valores[campo.id] ?? null}
+          min={campo.validacion?.min}
+          onChange={(valor) => setCampo(campo.id, valor)}
+          error={errores[campo.id]}
+          disabled={bloqueado}
+        />
+      );
+    }
+
+    if (campo.tipo === TIPOS_DE_CAMPO.FECHA) {
+      return (
+        <DateField
+          key={campo.id}
+          label={campo.label}
+          value={valores[campo.id] || null}
+          onChange={(valor) => setCampo(campo.id, valor)}
+          error={errores[campo.id]}
+          disabled={bloqueado}
+        />
+      );
+    }
+
+    if (campo.tipo === TIPOS_DE_CAMPO.SELECT) {
+      const opciones = catalogos[campo.opcionesDesde] ?? [];
+      return (
+        <Selector
+          key={campo.id}
+          label={campo.label}
+          value={valores[campo.id] || null}
+          options={opciones}
+          onSelect={(valor) => setCampo(campo.id, valor)}
+          placeholder={opciones.length === 0 ? "Cargando..." : "Seleccionar"}
+          disabled={bloqueado || opciones.length === 0}
+          error={errores[campo.id]}
+        />
+      );
+    }
+
+    return (
+      <TextField
+        key={campo.id}
+        label={campo.label}
+        type={TIPO_DE_INPUT[campo.tipo] ?? "text"}
+        maxLength={campo.validacion?.maxLongitud}
+        value={valores[campo.id] ?? ""}
+        onChange={(evento) => setCampo(campo.id, evento.target.value)}
+        error={errores[campo.id]}
+        disabled={bloqueado}
+      />
+    );
+  };
+
   return (
     <Modal
       visible={visible}
       onClose={cerrar}
       title={esEdicion ? "Editar jornada" : "Nueva jornada"}
+      size="lg"
     >
       {error && (
         <div className="alert alert-danger" role="alert">
@@ -84,99 +176,31 @@ export default function ModalJornada({ visible = true, jornada, rol, onClose, on
         </div>
       )}
 
-      {CAMPOS_FORMULARIO_JORNADA.map((campo) => {
-        if (campo.id === "comunidad") {
-          return (
-            <div key="comunidad-cascada">
-              <Selector
-                label="Departamento"
-                value={departamentoId}
-                options={catalogos.departamentos}
-                onSelect={setDepartamento}
-                placeholder="Selecciona un departamento"
-                disabled={bloqueado}
-              />
-              <Selector
-                label="Municipio"
-                value={municipioId}
-                options={catalogos.municipios}
-                onSelect={setMunicipio}
-                placeholder="Selecciona un municipio"
-                disabled={bloqueado || !departamentoId || catalogos.municipios.length === 0}
-              />
-              <Selector
-                label={campo.label}
-                value={valores.comunidad || null}
-                options={catalogos.comunidades}
-                onSelect={(valor) => setCampo("comunidad", valor)}
-                placeholder="Selecciona una comunidad"
-                disabled={bloqueado || !municipioId || catalogos.comunidades.length === 0}
-                error={errores.comunidad}
-              />
-            </div>
-          );
-        }
+      {/* Dos secciones en dos columnas, como el alta de paciente y la de colaborador: antes eran
+          nueve campos a ancho completo uno debajo de otro, en un modal angosto que habia que
+          desplazar entero. */}
+      <section className="ec-form-seccion" style={{ "--ec-acento": "var(--accent-jornadas)" }}>
+        <div className="ec-form-seccion-cabecera">
+          <h3 className="ec-form-seccion-titulo">Datos de la jornada</h3>
+          <p className="ec-form-seccion-descripcion">Que es, cuando y quien la organiza.</p>
+        </div>
+        <div className="ec-form-grid">
+          {CAMPOS_FORMULARIO_JORNADA.filter((campo) => campo.id !== "comunidad").map(dibujarCampo)}
+        </div>
+      </section>
 
-        if (campo.tipo === TIPOS_DE_CAMPO.NUMERO) {
-          return (
-            <NumberField
-              key={campo.id}
-              label={campo.label}
-              value={valores[campo.id] ?? null}
-              min={campo.validacion?.min}
-              onChange={(valor) => setCampo(campo.id, valor)}
-              error={errores[campo.id]}
-              disabled={bloqueado}
-            />
-          );
-        }
+      <section className="ec-form-seccion" style={{ "--ec-acento": "var(--accent-jornadas)" }}>
+        <div className="ec-form-seccion-cabecera">
+          <h3 className="ec-form-seccion-titulo">Lugar</h3>
+          <p className="ec-form-seccion-descripcion">La comunidad donde se atiende.</p>
+        </div>
+        {CAMPOS_FORMULARIO_JORNADA.filter((campo) => campo.id === "comunidad").map(dibujarCampo)}
+      </section>
 
-        if (campo.tipo === TIPOS_DE_CAMPO.FECHA) {
-          return (
-            <DateField
-              key={campo.id}
-              label={campo.label}
-              value={valores[campo.id] || null}
-              onChange={(valor) => setCampo(campo.id, valor)}
-              error={errores[campo.id]}
-              disabled={bloqueado}
-            />
-          );
-        }
-
-        if (campo.tipo === TIPOS_DE_CAMPO.SELECT) {
-          const opciones = catalogos[campo.opcionesDesde] ?? [];
-          return (
-            <Selector
-              key={campo.id}
-              label={campo.label}
-              value={valores[campo.id] || null}
-              options={opciones}
-              onSelect={(valor) => setCampo(campo.id, valor)}
-              placeholder={opciones.length === 0 ? "Cargando..." : "Seleccionar"}
-              disabled={bloqueado || opciones.length === 0}
-              error={errores[campo.id]}
-            />
-          );
-        }
-
-        return (
-          <TextField
-            key={campo.id}
-            label={campo.label}
-            type={TIPO_DE_INPUT[campo.tipo] ?? "text"}
-            maxLength={campo.validacion?.maxLongitud}
-            value={valores[campo.id] ?? ""}
-            onChange={(evento) => setCampo(campo.id, evento.target.value)}
-            error={errores[campo.id]}
-            disabled={bloqueado}
-          />
-        );
-      })}
-
-      <div className="d-flex justify-content-end gap-2 mt-3">
+      <div className="ec-form-pie">
         <SecondaryButton
           title="Cancelar"
+          variant="neutra"
           onClick={cerrar}
           disabled={enviando}
           icon={<X size={16} aria-hidden="true" />}

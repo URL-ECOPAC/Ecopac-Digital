@@ -4,6 +4,7 @@ import { useAdministracionBodegasProveedores, TIPO_BODEGA, TIPO_PROVEEDOR } from
 import { Nav } from "react-bootstrap";
 import PrimaryButton from "../components/PrimaryButton";
 import SectionHeader from "../components/SectionHeader";
+import { useCerrarAlTocarFuera } from "../hooks/useCerrarAlTocarFuera";
 
 export default function AdministracionBodegasProveedoresPage() {
   const [pestañaActiva, setPestañaActiva] = useState("bodegas");
@@ -112,6 +113,13 @@ export default function AdministracionBodegasProveedoresPage() {
       setErrorGuardarProveedor(err.message || "No se pudo guardar el proveedor.");
     }
   };
+
+  const fondoBodega = useCerrarAlTocarFuera(() => setModalBodega(null), {
+    activo: Boolean(modalBodega),
+  });
+  const fondoProveedor = useCerrarAlTocarFuera(() => setModalProveedor(null), {
+    activo: Boolean(modalProveedor),
+  });
 
   // ──────────────────────────────────────────────
   // RENDER
@@ -345,6 +353,7 @@ export default function AdministracionBodegasProveedoresPage() {
       {/* ═══════════ MODAL BODEGA ═══════════ */}
       {modalBodega && (
         <div
+          {...fondoBodega}
           style={{
             position: "fixed",
             inset: 0,
@@ -486,6 +495,7 @@ export default function AdministracionBodegasProveedoresPage() {
       {/* ═══════════ MODAL PROVEEDOR ═══════════ */}
       {modalProveedor && (
         <div
+          {...fondoProveedor}
           style={{
             position: "fixed",
             inset: 0,

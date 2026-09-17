@@ -92,7 +92,7 @@ describe("ReportePacientesPage", () => {
   it("con la base vacia, los totales quedan en cero y la lista muestra su mensaje vacio", () => {
     const { container } = pantalla();
 
-    expect(container.querySelector(".reporte-cifras")).toHaveTextContent("Pacientes atendidos");
+    expect(container.querySelector(".ec-kpis")).toHaveTextContent("Pacientes atendidos");
     expect(
       screen.getByText("No hay atenciones registradas con estos filtros."),
     ).toBeInTheDocument();
@@ -103,7 +103,7 @@ describe("ReportePacientesPage", () => {
     mockEstadoHook.totales = { pacientes: 40, nuevos: 10, recurrentes: 30 };
     const { container } = pantalla();
 
-    expect(container.querySelector(".reporte-cifras")).toHaveTextContent("40");
+    expect(container.querySelector(".ec-kpis")).toHaveTextContent("40");
     expect(screen.getByText("Jornada enero")).toBeInTheDocument();
   });
 
@@ -124,7 +124,7 @@ describe("ReportePacientesPage", () => {
     pantalla();
 
     expect(screen.getByText("No se pudo calcular el reporte de pacientes.")).toBeInTheDocument();
-    expect(document.querySelector(".reporte-cifras")).not.toBeInTheDocument();
+    expect(document.querySelector(".ec-kpis")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByText("Reintentar"));
     expect(mockEstadoHook.recargar).toHaveBeenCalled();

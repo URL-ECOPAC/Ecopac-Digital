@@ -1,6 +1,24 @@
 import { ETIQUETAS_PRESENTACION, PRESENTACIONES_DE_MEDICAMENTO } from "@ecopac/shared";
+import { Form } from "react-bootstrap";
+import { Plus, Save, X } from "lucide-react";
+
 import ErrorState from "../components/ErrorState";
-import { Plus } from "lucide-react";
+import Modal from "../components/Modal";
+import PrimaryButton from "../components/PrimaryButton";
+import SecondaryButton from "../components/SecondaryButton";
+import Selector from "../components/Selector";
+import TextField from "../components/TextField";
+
+// Alta y edicion de un medicamento del catalogo.
+//
+// Era un <div> de posicion fija dibujado a mano: etiquetas en negrita de otro gris, campos con
+// radio de 12px, botones en pastilla y un verde (#059669) que no es el de la marca, y no se cerraba
+// al tocar fuera. Ahora es el Modal del catalogo con los campos y botones de todos los demas
+// formularios; el contrato de props no cambia.
+const OPCIONES_PRESENTACION = Object.values(PRESENTACIONES_DE_MEDICAMENTO).map((valor) => ({
+  value: valor,
+  label: ETIQUETAS_PRESENTACION[valor],
+}));
 
 export default function ModalMedicamento({
   isOpen,
@@ -13,450 +31,164 @@ export default function ModalMedicamento({
   onCrearPrincipioActivo,
   onAlternarActivo,
   advertenciaDuplicado,
-  // Fallo al guardar. Llega ya como texto apto para pantalla: lo escribe normalizarError(), no
-  // el servidor. Se pinta aqui y no con alert(), que es lo que pide la issue #762.
+  // Fallo al guardar, ya como texto apto para pantalla (normalizarError()).
   error,
   cargando,
 }) {
-  if (!isOpen) return null;
+  const setCampo = (nombre, valor) => setFormData((prev) => ({ ...prev, [nombre]: valor }));
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
-
-  const handleFormSubmit = (e) => {
-    e.preventDefault();
+  const enviar = (evento) => {
+    evento.preventDefault();
     onSubmit();
   };
 
+  const opcionesPrincipio = (Array.isArray(principiosActivos) ? principiosActivos : []).map(
+    (principio) => ({ value: String(principio.id), label: principio.nombre }),
+  );
+
   return (
-    <div
-      style={{
-        position: "fixed",
-        top: 0,
-        left: 0,
-        width: "100vw",
-        height: "100vh",
-        backgroundColor: "rgba(15, 23, 42, 0.4)",
-        backdropFilter: "blur(4px)",
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        zIndex: 1000,
-      }}
+    <Modal
+      visible={Boolean(isOpen)}
+      onClose={onClose}
+      title={modoEdicion ? "Editar medicamento" : "Nuevo medicamento"}
+      size="lg"
     >
-      <div
-        style={{
-          backgroundColor: "#ffffff",
-          borderRadius: "24px",
-          width: "100%",
-          maxWidth: "540px",
-          padding: "32px",
-          boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
-          position: "relative",
-          margin: "16px",
-          boxSizing: "border-box",
-        }}
-      >
-        {/* Botón Cerrar */}
-        <button
-          onClick={onClose}
-          type="button"
-          disabled={cargando}
-          style={{
-            position: "absolute",
-            top: "24px",
-            right: "24px",
-            border: "none",
-            background: "transparent",
-            cursor: "pointer",
-            fontSize: "var(--texto-lg)",
-            color: "#94a3b8",
-          }}
-        >
-          ✕
-        </button>
+      {advertenciaDuplicado && (
+        <div className="alert alert-warning" role="alert">
+          <strong>Medicamento duplicado:</strong> ya existe un registro con el mismo nombre,
+          concentracion, presentacion y marca.
+        </div>
+      )}
 
-        {/* Título */}
-        <h2
-          style={{
-            fontSize: "var(--texto-lg)",
-            fontWeight: "var(--peso-bold)",
-            color: "#0f172a",
-            margin: "0 0 4px 0",
-          }}
-        >
-          {modoEdicion ? "Editar Medicamento" : "Nuevo Medicamento"}
-        </h2>
-        <p style={{ fontSize: "var(--texto-xs)", color: "#64748b", margin: "0 0 20px 0" }}>
-          Define los datos generales y especificaciones técnicas
-        </p>
+      {error && <ErrorState message={error} />}
 
-        {/* Advertencia Duplicado */}
-        {advertenciaDuplicado && (
-          <div
-            style={{
-              padding: "10px 14px",
-              backgroundColor: "#fef2f2",
-              border: "1px solid #fecaca",
-              borderRadius: "12px",
-              color: "#991b1b",
-              fontSize: "var(--texto-xs)",
-              marginBottom: "16px",
-            }}
-          >
-            <strong>Medicamento duplicado:</strong> Ya existe un registro con el mismo nombre,
-            concentración, presentación y marca.
+      <form onSubmit={enviar} noValidate>
+        <section className="ec-form-seccion" style={{ "--ec-acento": "var(--accent-inventario)" }}>
+          <div className="ec-form-seccion-cabecera">
+            <h3 className="ec-form-seccion-titulo">Datos generales</h3>
+            <p className="ec-form-seccion-descripcion">
+              Como se identifica el medicamento en el catalogo.
+            </p>
           </div>
-        )}
 
-        {error && <ErrorState message={error} />}
-
-        {/* Formulario */}
-        <form
-          onSubmit={handleFormSubmit}
-          style={{ display: "flex", flexDirection: "column", gap: "16px" }}
-        >
-          {/* Nombre Comercial */}
-          <div>
-            <label
-              style={{
-                display: "block",
-                fontSize: "var(--texto-xxs)",
-                fontWeight: "var(--peso-bold)",
-                color: "#475569",
-                marginBottom: "6px",
-                textTransform: "uppercase",
-              }}
-            >
-              NOMBRE COMERCIAL *
-            </label>
-            <input
-              type="text"
-              name="nombre"
-              required
+          <div className="ec-form-grid">
+            <TextField
+              label="Nombre comercial *"
               placeholder="Ej. Dolo Neurobion, Amoxicilina"
               value={formData.nombre || ""}
-              onChange={handleChange}
-              style={{
-                width: "100%",
-                padding: "10px 14px",
-                borderRadius: "12px",
-                border: "1px solid #cbd5e1",
-                fontSize: "var(--texto-xs)",
-                outline: "none",
-                boxSizing: "border-box",
-              }}
+              onChange={(e) => setCampo("nombre", e.target.value)}
+              disabled={cargando}
             />
-          </div>
 
-          {/* Principio Activo */}
-          <div>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                marginBottom: "6px",
-              }}
-            >
-              <label
-                style={{
-                  fontSize: "var(--texto-xxs)",
-                  fontWeight: "var(--peso-bold)",
-                  color: "#475569",
-                  textTransform: "uppercase",
-                }}
-              >
-                PRINCIPIO ACTIVO *
-              </label>
-              {!modoEdicion && (
-                <button
-                  type="button"
-                  onClick={onCrearPrincipioActivo}
-                  className="btn btn-link btn-sm btn-icono"
-                >
-                  <Plus size={14} aria-hidden="true" />
-                  Crear nuevo
-                </button>
+            <div>
+              <Selector
+                label="Principio activo *"
+                value={formData.principio_activo_id ? String(formData.principio_activo_id) : null}
+                options={opcionesPrincipio}
+                onSelect={(valor) => setCampo("principio_activo_id", valor ?? "")}
+                placeholder="Selecciona un principio activo"
+                disabled={modoEdicion || cargando}
+                style={{ marginBottom: "var(--spacing-xs)" }}
+              />
+              {modoEdicion ? (
+                <p className="form-text mt-0 mb-3">
+                  El principio activo no se puede cambiar desde aqui.
+                </p>
+              ) : (
+                onCrearPrincipioActivo && (
+                  <div className="mb-3">
+                    <SecondaryButton
+                      title="Crear un principio activo"
+                      size="sm"
+                      icon={<Plus size={14} aria-hidden="true" />}
+                      onClick={onCrearPrincipioActivo}
+                      disabled={cargando}
+                    />
+                  </div>
+                )
               )}
             </div>
-            <select
-              name="principio_activo_id"
-              required={!modoEdicion}
-              disabled={modoEdicion}
-              value={String(formData.principio_activo_id || "")}
-              onChange={handleChange}
-              style={{
-                width: "100%",
-                padding: "10px 14px",
-                borderRadius: "12px",
-                border: "1px solid #cbd5e1",
-                fontSize: "var(--texto-xs)",
-                backgroundColor: modoEdicion ? "#f1f5f9" : "#ffffff",
-                outline: "none",
-                boxSizing: "border-box",
-              }}
-            >
-              <option value="">Selecciona principio activo...</option>
-              {Array.isArray(principiosActivos) &&
-                principiosActivos.map((pa) => (
-                  <option key={pa.id} value={String(pa.id)}>
-                    {pa.nombre}
-                  </option>
-                ))}
-            </select>
-            {modoEdicion && (
-              <p style={{ fontSize: "var(--texto-xxs)", color: "#94a3b8", margin: "4px 0 0 0" }}>
-                El principio activo no se puede cambiar desde aqui.
-              </p>
-            )}
+          </div>
+        </section>
+
+        <section className="ec-form-seccion" style={{ "--ec-acento": "var(--accent-inventario)" }}>
+          <div className="ec-form-seccion-cabecera">
+            <h3 className="ec-form-seccion-titulo">Especificaciones</h3>
+            <p className="ec-form-seccion-descripcion">
+              Concentracion, presentacion y fabricante, que juntos no se pueden repetir.
+            </p>
           </div>
 
-          {/* Concentración y Presentación */}
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: "12px",
-            }}
-          >
-            <div>
-              <label
-                style={{
-                  display: "block",
-                  fontSize: "var(--texto-xxs)",
-                  fontWeight: "var(--peso-bold)",
-                  color: "#475569",
-                  marginBottom: "6px",
-                  textTransform: "uppercase",
-                }}
-              >
-                CONCENTRACIÓN *
-              </label>
-              <input
-                type="text"
-                name="concentracion"
-                required
-                placeholder="Ej. 500mg"
-                value={formData.concentracion || ""}
-                onChange={handleChange}
-                style={{
-                  width: "100%",
-                  padding: "10px 14px",
-                  borderRadius: "12px",
-                  border: "1px solid #cbd5e1",
-                  fontSize: "var(--texto-xs)",
-                  outline: "none",
-                  boxSizing: "border-box",
-                }}
-              />
-            </div>
-
-            <div>
-              <label
-                style={{
-                  display: "block",
-                  fontSize: "var(--texto-xxs)",
-                  fontWeight: "var(--peso-bold)",
-                  color: "#475569",
-                  marginBottom: "6px",
-                  textTransform: "uppercase",
-                }}
-              >
-                PRESENTACIÓN *
-              </label>
-              <select
-                name="presentacion"
-                required
-                value={formData.presentacion || ""}
-                onChange={handleChange}
-                style={{
-                  width: "100%",
-                  padding: "10px 14px",
-                  borderRadius: "12px",
-                  border: "1px solid #cbd5e1",
-                  fontSize: "var(--texto-xs)",
-                  backgroundColor: "#ffffff",
-                  outline: "none",
-                  boxSizing: "border-box",
-                }}
-              >
-                <option value="">Selecciona...</option>
-                {Object.values(PRESENTACIONES_DE_MEDICAMENTO).map((presentacion) => (
-                  <option key={presentacion} value={presentacion}>
-                    {ETIQUETAS_PRESENTACION[presentacion]}
-                  </option>
-                ))}
-              </select>
-            </div>
+          <div className="ec-form-grid">
+            <TextField
+              label="Concentracion *"
+              placeholder="Ej. 500 mg"
+              value={formData.concentracion || ""}
+              onChange={(e) => setCampo("concentracion", e.target.value)}
+              disabled={cargando}
+            />
+            <Selector
+              label="Presentacion *"
+              value={formData.presentacion || null}
+              options={OPCIONES_PRESENTACION}
+              onSelect={(valor) => setCampo("presentacion", valor ?? "")}
+              placeholder="Selecciona una presentacion"
+              disabled={cargando}
+            />
+            <TextField
+              label="Marca / laboratorio *"
+              placeholder="Ej. Bayer"
+              value={formData.marca || ""}
+              onChange={(e) => setCampo("marca", e.target.value)}
+              disabled={cargando}
+            />
+            <TextField
+              label="Forma farmaceutica"
+              placeholder="Ej. Solido oral"
+              value={formData.formaFarmaceutica || ""}
+              onChange={(e) => setCampo("formaFarmaceutica", e.target.value)}
+              disabled={cargando}
+            />
+            <Form.Check
+              className="ec-form-grid--ancho mb-3"
+              id="medicamento-es-pediatrico"
+              type="switch"
+              label="Es de uso pediatrico"
+              checked={Boolean(formData.esPediatrico)}
+              onChange={(e) => setCampo("esPediatrico", e.target.checked)}
+              disabled={cargando}
+            />
           </div>
+        </section>
 
-          {/* Marca y Forma Farmacéutica */}
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: "12px",
-            }}
-          >
-            <div>
-              <label
-                style={{
-                  display: "block",
-                  fontSize: "var(--texto-xxs)",
-                  fontWeight: "var(--peso-bold)",
-                  color: "#475569",
-                  marginBottom: "6px",
-                  textTransform: "uppercase",
-                }}
-              >
-                MARCA / LABORATORIO *
-              </label>
-              <input
-                type="text"
-                name="marca"
-                required
-                placeholder="Ej. Bayer"
-                value={formData.marca || ""}
-                onChange={handleChange}
-                style={{
-                  width: "100%",
-                  padding: "10px 14px",
-                  borderRadius: "12px",
-                  border: "1px solid #cbd5e1",
-                  fontSize: "var(--texto-xs)",
-                  outline: "none",
-                  boxSizing: "border-box",
-                }}
-              />
-            </div>
-
-            <div>
-              <label
-                style={{
-                  display: "block",
-                  fontSize: "var(--texto-xxs)",
-                  fontWeight: "var(--peso-bold)",
-                  color: "#475569",
-                  marginBottom: "6px",
-                  textTransform: "uppercase",
-                }}
-              >
-                FORMA FARMACÉUTICA
-              </label>
-              <input
-                type="text"
-                name="formaFarmaceutica"
-                placeholder="Ej. Sólido oral"
-                value={formData.formaFarmaceutica || ""}
-                onChange={handleChange}
-                style={{
-                  width: "100%",
-                  padding: "10px 14px",
-                  borderRadius: "12px",
-                  border: "1px solid #cbd5e1",
-                  fontSize: "var(--texto-xs)",
-                  outline: "none",
-                  boxSizing: "border-box",
-                }}
-              />
-            </div>
-
-            <div>
-              <label
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "8px",
-                  fontSize: "var(--texto-xs)",
-                }}
-              >
-                <input
-                  type="checkbox"
-                  checked={Boolean(formData.esPediatrico)}
-                  onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, esPediatrico: e.target.checked }))
-                  }
-                />
-                Es pediátrico
-              </label>
-            </div>
-          </div>
-
-          {/* Botones de Acción */}
-          <div
-            style={{
-              display: "flex",
-              justifyContent: modoEdicion && onAlternarActivo ? "space-between" : "flex-end",
-              alignItems: "center",
-              gap: "12px",
-              marginTop: "12px",
-            }}
-          >
+        <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-3">
+          <div>
             {modoEdicion && onAlternarActivo && (
-              <button
-                type="button"
+              <SecondaryButton
+                title={formData.activo ? "Desactivar" : "Reactivar"}
+                variant={formData.activo ? "peligro" : "outline"}
                 onClick={onAlternarActivo}
                 disabled={cargando}
-                style={{
-                  padding: "10px 20px",
-                  borderRadius: "9999px",
-                  border: "1px solid",
-                  borderColor: formData.activo ? "#fecaca" : "#bbf7d0",
-                  backgroundColor: formData.activo ? "#fef2f2" : "#f0fdf4",
-                  color: formData.activo ? "#b91c1c" : "#15803d",
-                  fontSize: "var(--texto-xs)",
-                  fontWeight: "var(--peso-semibold)",
-                  cursor: cargando ? "not-allowed" : "pointer",
-                }}
-              >
-                {formData.activo ? "Desactivar" : "Reactivar"}
-              </button>
+              />
             )}
-            <div style={{ display: "flex", gap: "12px" }}>
-              <button
-                type="button"
-                onClick={onClose}
-                disabled={cargando}
-                style={{
-                  padding: "10px 24px",
-                  borderRadius: "9999px",
-                  border: "1px solid #cbd5e1",
-                  backgroundColor: "#ffffff",
-                  color: "#475569",
-                  fontSize: "var(--texto-xs)",
-                  fontWeight: "var(--peso-semibold)",
-                  cursor: "pointer",
-                }}
-              >
-                Cancelar
-              </button>
-              <button
-                type="submit"
-                disabled={cargando}
-                style={{
-                  padding: "10px 28px",
-                  borderRadius: "9999px",
-                  border: "none",
-                  backgroundColor: "#059669", // Mismo verde uniforme
-                  color: "#ffffff",
-                  fontSize: "var(--texto-xs)",
-                  fontWeight: "var(--peso-bold)",
-                  cursor: cargando ? "not-allowed" : "pointer",
-                  opacity: cargando ? 0.7 : 1,
-                }}
-              >
-                {cargando ? "Guardando..." : "Guardar"}
-              </button>
-            </div>
           </div>
-        </form>
-      </div>
-    </div>
+          <div className="ec-acciones">
+            <SecondaryButton
+              title="Cancelar"
+              variant="neutra"
+              onClick={onClose}
+              disabled={cargando}
+              icon={<X size={16} aria-hidden="true" />}
+            />
+            <PrimaryButton
+              type="submit"
+              title="Guardar"
+              loading={cargando}
+              icon={<Save size={16} aria-hidden="true" />}
+            />
+          </div>
+        </div>
+      </form>
+    </Modal>
   );
 }

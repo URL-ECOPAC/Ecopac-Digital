@@ -3,13 +3,12 @@ import { Link } from "react-router-dom";
 import {
   ESTADOS_DE_DONACION,
   ETIQUETAS_TIPO_DONACION,
+  formatearMoneda,
   TIPOS_DE_DONACION,
   useHistorialDonaciones,
 } from "@ecopac/shared";
 import {
   Container,
-  Row,
-  Col,
   Card,
   Form,
   Button,
@@ -20,10 +19,16 @@ import {
   Spinner,
 } from "react-bootstrap";
 
+import DateField from "../components/DateField";
 import PageHeader from "../components/PageHeader";
+import SecondaryButton from "../components/SecondaryButton";
+import Selector from "../components/Selector";
+import StatCard from "../components/StatCard";
+import TextField from "../components/TextField";
+import { ACCION_VOLVER_A_DONACIONES } from "./donacionesNavegacion";
 import ScreenContainer from "../components/ScreenContainer";
 
-export default function HistorialDonacionesPage({ usuarioRol, proyectosOptions = [] }) {
+export default function HistorialDonacionesPage({ usuarioRol }) {
   const {
     tieneAccesoLectura,
     cargando,
@@ -69,6 +74,7 @@ export default function HistorialDonacionesPage({ usuarioRol, proyectosOptions =
       <PageHeader
         title="Historial de donaciones recibidas"
         subtitle="Consulta, detalle y anulación de las donaciones registradas"
+        actions={[ACCION_VOLVER_A_DONACIONES]}
       />
 
       {error && (
@@ -77,118 +83,99 @@ export default function HistorialDonacionesPage({ usuarioRol, proyectosOptions =
         </Alert>
       )}
 
-      {/* Totales por Tipo */}
-      <Row className="g-3 mb-4">
-        <Col md={4}>
-          <Card className="border-primary bg-light">
-            <Card.Body>
-              <Card.Subtitle className="mb-2 text-primary fw-semibold">
-                Total en dinero
-              </Card.Subtitle>
-              <Card.Title className="fs-3 fw-bold text-dark mb-0">
-                Q {Number(totalesPorTipo?.dinero || 0).toFixed(2)}
-              </Card.Title>
-            </Card.Body>
-          </Card>
-        </Col>
-        <Col md={4}>
-          <Card className="border-success bg-light">
-            <Card.Body>
-              <Card.Subtitle className="mb-2 text-success fw-semibold">
-                Total Medicamentos
-              </Card.Subtitle>
-              <Card.Title className="fs-3 fw-bold text-dark mb-0">
-                {totalesPorTipo?.medicamentos || 0} unidades
-              </Card.Title>
-            </Card.Body>
-          </Card>
-        </Col>
-        <Col md={4}>
-          <Card className="border-info bg-light">
-            <Card.Body>
-              <Card.Subtitle className="mb-2 text-info fw-semibold">
-                Total Insumos / Bienes
-              </Card.Subtitle>
-              <Card.Title className="fs-3 fw-bold text-dark mb-0">
-                {totalesPorTipo?.insumos || 0} ítems
-              </Card.Title>
-            </Card.Body>
-          </Card>
-        </Col>
-      </Row>
+      {/* Totales por tipo con StatCard, como el resumen de donaciones, inventario y presupuestos.
+          Eran tres <Card> de Bootstrap con borde azul, verde y celeste, fondo gris y el monto con
+          toFixed(2) en vez de formatearMoneda. */}
+      <div className="ec-kpis">
+        <StatCard
+          label="Total en dinero"
+          value={formatearMoneda(totalesPorTipo?.dinero || 0)}
+          accent="var(--accent-donaciones)"
+          esTexto
+        />
+        <StatCard
+          label="Medicamentos"
+          value={totalesPorTipo?.medicamentos || 0}
+          caption="unidades"
+          accent="var(--color-primary)"
+        />
+        <StatCard
+          label="Insumos y bienes"
+          value={totalesPorTipo?.insumos || 0}
+          caption="items"
+          accent="var(--color-warning)"
+        />
+      </div>
 
-      {/* Filtros */}
-      <Card className="mb-4">
-        <Card.Header as="h5">Filtros de Búsqueda</Card.Header>
-        <Card.Body>
-          <Row className="g-3">
-            <Col md={6} lg={3}>
-              <Form.Control
-                type="text"
-                placeholder="Buscar por donante..."
-                value={filtros.filtroDonante}
-                onChange={(e) => filtros.setFiltroDonante(e.target.value)}
-              />
-            </Col>
-
-            <Col md={6} lg={2}>
-              <Form.Select
-                value={filtros.filtroTipo}
-                onChange={(e) => filtros.setFiltroTipo(e.target.value)}
-              >
-                <option value="">Todos los tipos</option>
-                {Object.values(TIPOS_DE_DONACION).map((tipo) => (
-                  <option key={tipo} value={tipo}>
-                    {ETIQUETAS_TIPO_DONACION[tipo]}
-                  </option>
-                ))}
-              </Form.Select>
-            </Col>
-
-            <Col md={6} lg={3}>
-              <Form.Select
-                value={filtros.filtroProyecto}
-                onChange={(e) => filtros.setFiltroProyecto(e.target.value)}
-              >
-                <option value="">Todos los proyectos</option>
-                {proyectosOptions.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </Form.Select>
-            </Col>
-
-            <Col md={6} lg={2}>
-              <Form.Control
-                type="date"
-                placeholder="Desde"
-                value={filtros.fechaInicio}
-                onChange={(e) => filtros.setFechaInicio(e.target.value)}
-              />
-            </Col>
-
-            <Col md={6} lg={2}>
-              <Form.Control
-                type="date"
-                placeholder="Hasta"
-                value={filtros.fechaFin}
-                onChange={(e) => filtros.setFechaFin(e.target.value)}
-              />
-            </Col>
-          </Row>
-
-          <div className="d-flex justify-content-end mt-3">
-            <Button variant="outline-secondary" size="sm" onClick={filtros.limpiarFiltros}>
-              Limpiar Filtros
-            </Button>
+      {/* Filtros con la barra comun: mismas etiquetas, mismo "Limpiar filtros" al final. */}
+      <div className="ec-filtros">
+        <div className="ec-filtro ec-filtro--busqueda">
+          <TextField
+            label="Buscar donante"
+            placeholder="Nombre del donante"
+            value={filtros.filtroDonante}
+            onChange={(e) => filtros.setFiltroDonante(e.target.value)}
+            style={{ marginBottom: 0 }}
+          />
+        </div>
+        <div className="ec-filtro">
+          <Selector
+            label="Tipo"
+            value={filtros.filtroTipo || null}
+            options={Object.values(TIPOS_DE_DONACION).map((tipo) => ({
+              value: tipo,
+              label: ETIQUETAS_TIPO_DONACION[tipo],
+            }))}
+            onSelect={(valor) => filtros.setFiltroTipo(valor ?? "")}
+            placeholder="Todos los tipos"
+            style={{ marginBottom: 0 }}
+          />
+        </div>
+        <div className="ec-filtro">
+          <Selector
+            label="Proyecto"
+            value={filtros.filtroProyecto || null}
+            options={filtros.proyectosOptions ?? []}
+            onSelect={(valor) => filtros.setFiltroProyecto(valor ?? "")}
+            placeholder="Todos los proyectos"
+            disabled={(filtros.proyectosOptions ?? []).length === 0}
+            style={{ marginBottom: 0 }}
+          />
+        </div>
+        <fieldset className="ec-filtro ec-filtro--rango">
+          <legend className="form-label">Fecha</legend>
+          <div className="ec-rango-doble">
+            <DateField
+              aria-label="Fecha: desde"
+              value={filtros.fechaInicio || null}
+              onChange={(valor) => filtros.setFechaInicio(valor ?? "")}
+              style={{ marginBottom: 0 }}
+            />
+            <span className="ec-rango-separador" aria-hidden="true">
+              -
+            </span>
+            <DateField
+              aria-label="Fecha: hasta"
+              value={filtros.fechaFin || null}
+              onChange={(valor) => filtros.setFechaFin(valor ?? "")}
+              style={{ marginBottom: 0 }}
+            />
           </div>
-        </Card.Body>
-      </Card>
+        </fieldset>
+        <div className="ec-filtros-limpiar">
+          <SecondaryButton
+            title="Limpiar filtros"
+            variant="neutra"
+            onClick={filtros.limpiarFiltros}
+          />
+        </div>
+      </div>
 
       {/* Tabla de Historial */}
       <Card>
-        <Card.Header as="h5">Listado de Donaciones</Card.Header>
+        <Card.Header className="bg-transparent">
+          <h2 className="ec-seccion-titulo mb-0">Listado de donaciones</h2>
+        </Card.Header>
         <Card.Body className="p-0">
           <Table responsive hover striped className="mb-0 align-middle">
             <thead>

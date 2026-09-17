@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { buscarOpcionPorEtiqueta } from "@ecopac/shared";
 import { colors, radii, spacing, typography } from "@ecopac/ui-tokens";
 
 import Selector from "./Selector";
@@ -13,6 +14,9 @@ import Selector from "./Selector";
  *
  * TIPOS_DE_CAMPO.MULTI_SELECT existia en los descriptores desde el principio -lo declara
  * CAMPOS_CONSULTA para los diagnosticos- y ninguna de las dos apps tenia con que dibujarlo.
+ *
+ * `onCrear(texto)` da de alta lo escrito en su catalogo y elige lo que devuelva. Escribir el nombre
+ * de una opcion que ya existe la elige en vez de duplicarla (buscarOpcionPorEtiqueta).
  */
 export default function MultiSelector({
   label,
@@ -22,6 +26,7 @@ export default function MultiSelector({
   placeholder = "Agregar...",
   placeholderLibre = "Escribe y pulsa Agregar",
   permiteLibre = false,
+  onCrear,
   error,
   disabled = false,
   style,
@@ -41,9 +46,27 @@ export default function MultiSelector({
 
   const quitar = (valor) => onChange?.(seleccionados.filter((elegido) => elegido !== valor));
 
-  const agregarLibre = () => {
+  const admiteTexto = permiteLibre || typeof onCrear === "function";
+
+  const agregarLibre = async () => {
     const limpio = textoLibre.trim();
     if (!limpio) return;
+
+    const existente = buscarOpcionPorEtiqueta(options, limpio);
+    if (existente) {
+      agregar(existente.value);
+      setTextoLibre("");
+      return;
+    }
+
+    if (typeof onCrear === "function") {
+      const nuevo = await onCrear(limpio);
+      if (nuevo === null || nuevo === undefined) return;
+      agregar(nuevo);
+      setTextoLibre("");
+      return;
+    }
+
     agregar(limpio);
     setTextoLibre("");
   };
@@ -73,11 +96,17 @@ export default function MultiSelector({
         value={null}
         options={disponibles}
         onSelect={agregar}
-        placeholder={disponibles.length === 0 ? "No quedan opciones por elegir" : placeholder}
+        placeholder={
+          options.length === 0
+            ? "Todavia no hay ninguna"
+            : disponibles.length === 0
+              ? "Ya elegiste todas las opciones"
+              : placeholder
+        }
         disabled={disabled || disponibles.length === 0}
       />
 
-      {permiteLibre ? (
+      {admiteTexto ? (
         <View style={styles.filaLibre}>
           <TextInput
             style={styles.entrada}
@@ -94,7 +123,9 @@ export default function MultiSelector({
             disabled={disabled || textoLibre.trim() === ""}
             accessibilityRole="button"
           >
-            <Text style={styles.botonAgregarTexto}>Agregar</Text>
+            <Text style={styles.botonAgregarTexto}>
+              {typeof onCrear === "function" ? "Crear" : "Agregar"}
+            </Text>
           </Pressable>
         </View>
       ) : null}

@@ -465,6 +465,105 @@ export async function buscarPacientePorFicha(numeroFicha, { signal } = {}) {
   }
 }
 
+// Un termino que es solo digitos (con espacios o guiones de agrupacion) es un identificador: un
+// numero de ficha o un DPI. Pasarlo a la busqueda por nombre no sirve -los trigramas de "1234"
+// contra un nombre no coinciden con nada util- y la sonda de ficha exacta solo encontraba la
+// ficha escrita completa, asi que "000123" encontraba al paciente pero "00012" no, y un DPI no
+// se buscaba en ningun lado. Desde 4 digitos se busca por el INICIO de la ficha y del DPI.
+const LONGITUD_MINIMA_IDENTIFICADOR = 4;
+const PATRON_IDENTIFICADOR = /^[\d\s-]+$/;
+const LIMITE_POR_IDENTIFICADOR = 20;
+
+/**
+ * Si un termino de busqueda es un identificador (ficha o DPI), sus digitos sin separadores.
+ *
+ * @param {string} termino
+ * @returns {string|null} Los digitos, o null si no es un identificador buscable.
+ */
+export function identificadorDeBusqueda(termino) {
+  const texto = normalizarTexto(termino);
+  if (!PATRON_IDENTIFICADOR.test(texto)) return null;
+  const digitos = texto.replace(/[\s-]/g, "");
+  return digitos.length >= LONGITUD_MINIMA_IDENTIFICADOR ? digitos : null;
+}
+
+/**
+ * Pacientes cuyo numero de ficha o DPI EMPIEZA por los digitos dados. Dos lecturas en paralelo,
+ * las dos sobre columnas UNIQUE (00009), combinadas sin repetir. Excluye a quien este dado de
+ * baja, igual que el resto de la busqueda.
+ *
+ * @param {string} digitos
+ * @returns {Promise<{ pacientes: object[], error: object|null, cancelada?: boolean }>}
+ */
+export async function buscarPacientesPorIdentificador(digitos, { signal } = {}) {
+  if (!digitos) return { pacientes: [], error: null };
+
+  const conSenal = (consulta) => (signal ? consulta.abortSignal(signal) : consulta);
+
+  try {
+    const supabase = obtenerSupabase();
+    const [porFicha, porDpi] = await Promise.all([
+      conSenal(
+        supabase
+          .from("expedientes")
+          .select(`numeroFicha:numero_ficha, paciente:pacientes(${COLUMNAS_DE_BUSQUEDA_PACIENTE})`)
+          .ilike("numero_ficha", `${digitos}%`)
+          .limit(LIMITE_POR_IDENTIFICADOR),
+      ),
+      conSenal(
+        supabase
+          .from("pacientes")
+          .select(
+            `${COLUMNAS_DE_BUSQUEDA_PACIENTE}, expediente:expedientes(numeroFicha:numero_ficha)`,
+          )
+          .ilike("dpi", `${digitos}%`)
+          .limit(LIMITE_POR_IDENTIFICADOR),
+      ),
+    ]);
+
+    if (esErrorDeCancelacion(porFicha.error) || esErrorDeCancelacion(porDpi.error)) {
+      return { pacientes: [], error: null, cancelada: true };
+    }
+    if (porFicha.error) return { pacientes: [], error: normalizarError(porFicha.error) };
+    if (porDpi.error) return { pacientes: [], error: normalizarError(porDpi.error) };
+
+    const aResultado = (paciente, numeroFicha) => {
+      const resultado = {
+        ...paciente,
+        numeroFicha: numeroFicha ?? null,
+        condiciones: nombresDeCondicionesVigentes(paciente.condicionesCronicas),
+      };
+      delete resultado.fechaBaja;
+      delete resultado.condicionesCronicas;
+      delete resultado.expediente;
+      return resultado;
+    };
+
+    const vistos = new Set();
+    const pacientes = [];
+    for (const fila of porFicha.data ?? []) {
+      if (!fila?.paciente || fila.paciente.fechaBaja || vistos.has(fila.paciente.id)) continue;
+      vistos.add(fila.paciente.id);
+      pacientes.push(aResultado(fila.paciente, fila.numeroFicha));
+    }
+    for (const paciente of porDpi.data ?? []) {
+      if (!paciente || paciente.fechaBaja || vistos.has(paciente.id)) continue;
+      vistos.add(paciente.id);
+      // expedientes.paciente_id es UNIQUE, asi que PostgREST lo embebe como objeto; se acepta
+      // tambien un arreglo por si la relacion se lee como uno a muchos.
+      const expediente = Array.isArray(paciente.expediente)
+        ? paciente.expediente[0]
+        : paciente.expediente;
+      pacientes.push(aResultado(paciente, expediente?.numeroFicha));
+    }
+
+    return { pacientes, error: null };
+  } catch (error) {
+    if (esErrorDeCancelacion(error)) return { pacientes: [], error: null, cancelada: true };
+    return { pacientes: [], error: normalizarError(error) };
+  }
+}
+
 /**
  * Busca pacientes por nombre (tolerante a acentos y errores de tipeo), opcionalmente
  * filtrado por comunidad, y en paralelo prueba si el termino es un numero de ficha exacto.
@@ -548,6 +647,28 @@ export async function buscarPacientes({
   // esta funcion -no volcar la tabla entera a quien no pidio nada- es deliberado de la #115 y
   // sigue intacto. El volcado no es tal: fn_buscar_pacientes pagina de 20 en 20.
   if (!hayTermino && !hayAlgunFiltro && !listarTodos) return respuestaVacia();
+
+  // Un numero de ficha o un DPI (ver identificadorDeBusqueda) se busca por su inicio y NO pasa
+  // por fn_buscar_pacientes: con `listarTodos`, esa llamada sin termino por nombre devolvia el
+  // listado entero debajo de la coincidencia, y parecia que la busqueda no habia filtrado nada.
+  const digitos = identificadorDeBusqueda(terminoNormalizado);
+  if (digitos) {
+    const { pacientes, error, cancelada } = await buscarPacientesPorIdentificador(digitos, {
+      signal,
+    });
+    if (cancelada) return respuestaCancelada();
+    if (error) return respuestaVacia(error);
+    return {
+      pacientes,
+      total: pacientes.length,
+      pagina: 1,
+      porPagina,
+      coincidenciaExacta: pacientes.some((paciente) => paciente.numeroFicha === digitos),
+      terminoDemasiadoCorto: false,
+      error: null,
+      cancelada: false,
+    };
+  }
 
   // El corte de 3 caracteres se aplica solo al camino por nombre: un termino corto no
   // produce trigramas utiles (ver LONGITUD_MINIMA_BUSQUEDA_POR_NOMBRE). Si ademas hay

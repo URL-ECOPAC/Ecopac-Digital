@@ -29,6 +29,7 @@ const { CODIGOS_DE_ERROR_DE_SUPABASE } = await import("../api/errores-de-supabas
 const {
   actualizarPaciente,
   buscarPacientePorFicha,
+  identificadorDeBusqueda,
   buscarPacientes,
   obtenerPaciente,
   registrarPaciente,
@@ -86,6 +87,14 @@ function crearCliente(respuestasPorTabla) {
         },
         eq(columna, valor) {
           llamadas.push({ paso: "eq", tabla, columna, valor });
+          return encadenable;
+        },
+        ilike(columna, valor) {
+          llamadas.push({ paso: "ilike", tabla, columna, valor });
+          return encadenable;
+        },
+        limit(cantidad) {
+          llamadas.push({ paso: "limit", tabla, cantidad });
           return encadenable;
         },
         abortSignal(signal) {
@@ -475,6 +484,101 @@ describe("buscarPacientePorFicha", () => {
     const { paciente, error } = await buscarPacientePorFicha("F-001");
 
     expect(paciente).toBeNull();
+    expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.PERMISO_DENEGADO);
+  });
+});
+
+describe("buscarPacientes por numero de ficha o DPI", () => {
+  it("identificadorDeBusqueda reconoce digitos con espacios o guiones desde 4 digitos", () => {
+    expect(identificadorDeBusqueda("1234 56789 0101")).toBe("1234567890101");
+    expect(identificadorDeBusqueda("000-12")).toBe("00012");
+    expect(identificadorDeBusqueda("123")).toBeNull();
+    expect(identificadorDeBusqueda("Maria 1234")).toBeNull();
+  });
+
+  it("un DPI parcial busca por el inicio de la ficha y del DPI, sin fn_buscar_pacientes", async () => {
+    const cliente = crearCliente({
+      expedientes: { data: [], error: null },
+      pacientes: {
+        data: [
+          {
+            id: "paciente-7",
+            nombres: "Ana",
+            apellidos: "Inventada",
+            fechaBaja: null,
+            expediente: { numeroFicha: "000123" },
+            condicionesCronicas: [],
+          },
+        ],
+        error: null,
+      },
+    });
+    dobles.cliente = cliente;
+
+    const { pacientes, total, error } = await buscarPacientes({
+      termino: "1234 5678",
+      listarTodos: true,
+    });
+
+    expect(error).toBeNull();
+    expect(total).toBe(1);
+    expect(pacientes).toEqual([
+      {
+        id: "paciente-7",
+        nombres: "Ana",
+        apellidos: "Inventada",
+        numeroFicha: "000123",
+        condiciones: [],
+      },
+    ]);
+    expect(cliente.llamadas).toContainEqual({
+      paso: "ilike",
+      tabla: "pacientes",
+      columna: "dpi",
+      valor: "12345678%",
+    });
+    expect(cliente.llamadas).toContainEqual({
+      paso: "ilike",
+      tabla: "expedientes",
+      columna: "numero_ficha",
+      valor: "12345678%",
+    });
+    expect(cliente.llamadas.some((llamada) => llamada.paso === "rpc")).toBe(false);
+  });
+
+  it("una ficha escrita a medias encuentra al paciente sin repetirlo si coincide tambien el DPI", async () => {
+    const paciente = {
+      id: "paciente-1",
+      nombres: "Luis",
+      fechaBaja: null,
+      condicionesCronicas: [],
+    };
+    dobles.cliente = crearCliente({
+      expedientes: { data: [{ numeroFicha: "000123", paciente }], error: null },
+      pacientes: { data: [{ ...paciente, expediente: { numeroFicha: "000123" } }], error: null },
+    });
+
+    const { pacientes } = await buscarPacientes({ termino: "0001" });
+
+    expect(pacientes).toHaveLength(1);
+    expect(pacientes[0].numeroFicha).toBe("000123");
+  });
+
+  it("excluye a quien esta dado de baja y falla cerrado si una consulta falla", async () => {
+    dobles.cliente = crearCliente({
+      expedientes: {
+        data: [{ numeroFicha: "000999", paciente: { id: "p-9", fechaBaja: "2025-01-01" } }],
+        error: null,
+      },
+      pacientes: { data: [], error: null },
+    });
+    expect((await buscarPacientes({ termino: "0009" })).pacientes).toEqual([]);
+
+    dobles.cliente = crearCliente({
+      expedientes: { data: [], error: null },
+      pacientes: { data: null, error: { code: "42501" } },
+    });
+    const { error } = await buscarPacientes({ termino: "0009" });
     expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.PERMISO_DENEGADO);
   });
 });
