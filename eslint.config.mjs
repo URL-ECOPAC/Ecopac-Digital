@@ -176,9 +176,10 @@ export default [
   {
     // __DEV__ es un global que inyecta React Native/Metro en tiempo de ejecucion, no un import:
     // la restriccion de plataforma de mas arriba no lo alcanza. Solo lo necesitan los archivos
-    // .native.js, que ya son el punto de entrada deliberado de lo especifico de movil dentro de
-    // packages/shared (ver packages/shared/entorno/fuente.native.js).
-    files: ["**/*.native.js"],
+    // .native.js y .web.js, que son los dos puntos de entrada deliberados de lo especifico de
+    // movil dentro de packages/shared: `.web.js` es el que toma Metro cuando empaqueta la app
+    // MOVIL para el navegador, y ahi Metro tambien define __DEV__ (ver entorno/fuente.web.js).
+    files: ["**/*.native.js", "**/*.web.js"],
     languageOptions: {
       globals: {
         __DEV__: "readonly",

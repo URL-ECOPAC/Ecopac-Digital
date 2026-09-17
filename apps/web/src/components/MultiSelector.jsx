@@ -49,12 +49,30 @@ export default function MultiSelector({
   const seleccionados = Array.isArray(value) ? value : [];
   const [textoLibre, setTextoLibre] = useState("");
   const [creando, setCreando] = useState(false);
+  // ISSUE #834: una especialidad escrita a mano quedaba solo como chip. Si se quitaba, o si se
+  // abria el desplegable para ver que hay, no estaba: `options` es el catalogo que vino del
+  // servidor y no se entera de lo que se acaba de escribir. Quien acababa de crear "Nutricion"
+  // no la volvia a encontrar hasta recargar la pantalla. Se recuerdan aqui, en la sesion del
+  // control, y se mezclan con el catalogo.
+  const [agregadasEnSesion, setAgregadasEnSesion] = useState([]);
 
   const admiteTexto = permiteLibre || typeof onCrear === "function";
-  const disponibles = options.filter((opcion) => !seleccionados.includes(opcion.value));
+  const opciones = [
+    ...options,
+    ...agregadasEnSesion.filter((nueva) => !options.some((opcion) => opcion.value === nueva.value)),
+  ];
+  const disponibles = opciones.filter((opcion) => !seleccionados.includes(opcion.value));
 
   const etiquetaDe = (valor) =>
-    options.find((opcion) => opcion.value === valor)?.label ?? String(valor);
+    opciones.find((opcion) => opcion.value === valor)?.label ?? String(valor);
+
+  const recordar = (valor, etiqueta) => {
+    setAgregadasEnSesion((anteriores) =>
+      anteriores.some((opcion) => opcion.value === valor)
+        ? anteriores
+        : [...anteriores, { value: valor, label: etiqueta }],
+    );
+  };
 
   const agregar = (valor) => {
     if (valor === null || valor === undefined || valor === "" || seleccionados.includes(valor)) {
@@ -71,7 +89,7 @@ export default function MultiSelector({
     const limpio = textoLibre.trim();
     if (!limpio || creando) return;
 
-    const existente = buscarOpcionPorEtiqueta(options, limpio);
+    const existente = buscarOpcionPorEtiqueta(opciones, limpio);
     if (existente) {
       agregar(existente.value);
       setTextoLibre("");
@@ -83,18 +101,21 @@ export default function MultiSelector({
       const nuevo = await onCrear(limpio);
       setCreando(false);
       if (nuevo !== null && nuevo !== undefined) {
+        recordar(nuevo, limpio);
         agregar(nuevo);
         setTextoLibre("");
       }
       return;
     }
 
+    // En modo libre el texto ES el valor, asi que la opcion nueva se llama igual que su valor.
+    recordar(limpio, limpio);
     agregar(limpio);
     setTextoLibre("");
   };
 
   const textoDelDesplegable =
-    options.length === 0
+    opciones.length === 0
       ? admiteTexto
         ? "Todavia no hay ninguna: escribe una nueva abajo"
         : "No hay opciones disponibles"
@@ -134,7 +155,7 @@ export default function MultiSelector({
         onChange={(evento) => {
           const crudo = evento.target.value;
           if (crudo === "") return;
-          const elegida = options.find((opcion) => String(opcion.value) === crudo);
+          const elegida = opciones.find((opcion) => String(opcion.value) === crudo);
           agregar(elegida ? elegida.value : crudo);
         }}
         isInvalid={Boolean(error)}

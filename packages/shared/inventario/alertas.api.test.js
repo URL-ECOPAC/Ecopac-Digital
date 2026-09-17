@@ -20,9 +20,8 @@ vi.mock("../api/cliente.js", () => ({
 }));
 
 const { CODIGOS_DE_ERROR_DE_SUPABASE } = await import("../api/errores-de-supabase.js");
-const { listarAlertas, historialAlertas, atenderAlerta, sincronizarAlertas } = await import(
-  "./alertas.api.js"
-);
+const { listarAlertas, historialAlertas, atenderAlerta, sincronizarAlertas } =
+  await import("./alertas.api.js");
 const { ACCIONES_DE_ALERTA } = await import("../enums.js");
 
 /** Doble de un cliente de Supabase que resuelve con una unica respuesta configurada. */

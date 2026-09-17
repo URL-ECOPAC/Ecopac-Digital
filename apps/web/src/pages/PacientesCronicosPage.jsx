@@ -53,9 +53,7 @@ export default function PacientesCronicosPage() {
         <PageHeader
           title="Pacientes crónicos"
           subtitle="Seguimiento de condiciones crónicas"
-          actions={[
-            { label: "Volver", onClick: () => navigate("/pacientes"), variant: "neutra" },
-          ]}
+          actions={[{ label: "Volver", onClick: () => navigate("/pacientes"), variant: "neutra" }]}
         />
 
         <div className="pac-filtros">

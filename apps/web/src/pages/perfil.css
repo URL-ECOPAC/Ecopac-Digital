@@ -1,0 +1,64 @@
+/* Pantalla de perfil propio (issue #834).
+ *
+ * Solo la cabecera de identidad y la nota del pie: el resto de la pantalla reusa las clases
+ * comunes de ui.css (`ec-form-grid`, `ec-form-pie`, `ec-chip`), que es lo que hace que se vea
+ * igual que los demas formularios. Ningun color, espaciado ni tamano se escribe a mano: todo sale
+ * de las variables que publica theme.js desde @ecopac/ui-tokens. */
+
+.perfil-identidad {
+  align-items: center;
+  display: flex;
+  gap: var(--spacing-md);
+}
+
+.perfil-avatar {
+  align-items: center;
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+  border-radius: 50%;
+  color: var(--color-surface);
+  display: flex;
+  flex-shrink: 0;
+  font-size: var(--texto-xl);
+  font-weight: var(--peso-bold);
+  height: 56px;
+  justify-content: center;
+  width: 56px;
+}
+
+.perfil-identidad-textos {
+  min-width: 0;
+}
+
+.perfil-nombre {
+  color: var(--color-text);
+  font-size: var(--texto-lg);
+  font-weight: var(--peso-semibold);
+  margin: 0;
+}
+
+.perfil-correo {
+  align-items: center;
+  color: var(--color-text-muted);
+  display: flex;
+  font-size: var(--texto-sm);
+  gap: 0.35rem;
+  margin: 0.15rem 0 0;
+}
+
+.perfil-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-xs);
+  margin-top: var(--spacing-sm);
+}
+
+/* La nota de cierre por inactividad, bajo los campos de contrasena: es la unica pantalla donde
+   esa regla es relevante para quien la lee. */
+.perfil-nota {
+  align-items: center;
+  color: var(--color-text-muted);
+  display: flex;
+  font-size: var(--texto-xs);
+  gap: 0.35rem;
+  margin: 0;
+}

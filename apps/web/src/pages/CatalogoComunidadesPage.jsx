@@ -71,9 +71,7 @@ export default function CatalogoComunidadesPage() {
     );
   }
 
-  const acciones = [
-    { label: "Volver", onClick: () => navigate("/pacientes"), variant: "neutra" },
-  ];
+  const acciones = [{ label: "Volver", onClick: () => navigate("/pacientes"), variant: "neutra" }];
   if (permisos.puedeCrear) {
     acciones.push({ label: "Nueva comunidad", onClick: () => setModal({ comunidad: null }) });
   }

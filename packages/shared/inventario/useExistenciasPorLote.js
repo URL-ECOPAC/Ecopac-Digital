@@ -113,9 +113,7 @@ export function armarFilasDeExistencias(lotes = [], existencias = [], filtros = 
 
   // Con una bodega elegida, un lote que no tiene ninguna fila en esa bodega no esta ahi: no es
   // "cero existencias", es que no pertenece a esa lista.
-  const lotesDeLaBodega = filtros.bodega
-    ? lotes.filter((lote) => porLote.has(lote.id))
-    : lotes;
+  const lotesDeLaBodega = filtros.bodega ? lotes.filter((lote) => porLote.has(lote.id)) : lotes;
 
   return lotesDeLaBodega
     .map((lote) => {

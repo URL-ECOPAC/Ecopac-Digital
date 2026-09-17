@@ -50,7 +50,8 @@ export default function SelectorConAlta({
     setErrorNueva(resultado?.error?.mensaje ?? null);
     // El hook devuelve la entidad creada bajo su propio nombre (`comunidad`, `especialidad`...),
     // asi que el exito se lee por la ausencia de error, no por una clave concreta.
-    const hayErrores = Boolean(resultado?.error) || Object.keys(resultado?.errores ?? {}).length > 0;
+    const hayErrores =
+      Boolean(resultado?.error) || Object.keys(resultado?.errores ?? {}).length > 0;
     if (!hayErrores) cerrarAlta();
   };
 

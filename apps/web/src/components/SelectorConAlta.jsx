@@ -62,7 +62,8 @@ export default function SelectorConAlta({
     // El hook devuelve la entidad creada bajo su propio nombre (`comunidad`, `especialidad`...),
     // asi que el exito se lee por la ausencia de error y de errores de validacion, no por una
     // clave concreta: asi este componente sirve para cualquier catalogo.
-    const hayErrores = Boolean(resultado?.error) || Object.keys(resultado?.errores ?? {}).length > 0;
+    const hayErrores =
+      Boolean(resultado?.error) || Object.keys(resultado?.errores ?? {}).length > 0;
     if (!hayErrores) cerrarAlta();
   };
 

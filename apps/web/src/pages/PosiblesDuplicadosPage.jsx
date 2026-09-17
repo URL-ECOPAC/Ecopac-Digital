@@ -71,9 +71,7 @@ export default function PosiblesDuplicadosPage() {
         <PageHeader
           title="Posibles duplicados"
           subtitle={`${total} ${total === 1 ? "par sugerido" : "pares sugeridos"} por nombre similar y misma fecha de nacimiento`}
-          actions={[
-            { label: "Volver", onClick: () => navigate("/pacientes"), variant: "neutra" },
-          ]}
+          actions={[{ label: "Volver", onClick: () => navigate("/pacientes"), variant: "neutra" }]}
         />
 
         <DataList

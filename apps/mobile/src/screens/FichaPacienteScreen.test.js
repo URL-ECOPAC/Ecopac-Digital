@@ -71,7 +71,10 @@ describe("FichaPacienteScreen", () => {
 
   it("muestra los datos que la fila del listado no trae", () => {
     render(
-      <FichaPacienteScreen route={{ params: { pacienteId: "paciente-123" } }} navigation={navegacion} />,
+      <FichaPacienteScreen
+        route={{ params: { pacienteId: "paciente-123" } }}
+        navigation={navegacion}
+      />,
     );
 
     expect(screen.getByText("Juana Inventada")).toBeTruthy();
@@ -94,7 +97,10 @@ describe("FichaPacienteScreen", () => {
     estado.cargando = true;
 
     render(
-      <FichaPacienteScreen route={{ params: { pacienteId: "paciente-123" } }} navigation={navegacion} />,
+      <FichaPacienteScreen
+        route={{ params: { pacienteId: "paciente-123" } }}
+        navigation={navegacion}
+      />,
     );
 
     expect(screen.getByText("Cargando la ficha del paciente...")).toBeTruthy();

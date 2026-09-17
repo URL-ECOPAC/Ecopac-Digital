@@ -78,9 +78,7 @@ export default function CatalogoDiagnosticosPage() {
     );
   }
 
-  const acciones = [
-    { label: "Volver", onClick: () => navigate("/pacientes"), variant: "neutra" },
-  ];
+  const acciones = [{ label: "Volver", onClick: () => navigate("/pacientes"), variant: "neutra" }];
   if (puedeAdministrar) {
     acciones.push({ label: "Nuevo diagnóstico", onClick: () => setModal({ diagnostico: null }) });
   }

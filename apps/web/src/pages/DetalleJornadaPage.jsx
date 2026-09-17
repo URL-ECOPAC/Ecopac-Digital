@@ -182,9 +182,7 @@ export default function DetalleJornadaPage() {
       <ScreenContainer>
         <PageHeader
           title="Detalle de la jornada"
-          actions={[
-            { label: "Volver", onClick: () => navigate("/jornadas"), variant: "neutra" },
-          ]}
+          actions={[{ label: "Volver", onClick: () => navigate("/jornadas"), variant: "neutra" }]}
         />
         <ErrorState message={error.mensaje} onRetry={recargar} />
       </ScreenContainer>
@@ -326,9 +324,7 @@ export default function DetalleJornadaPage() {
                   )}
                   {puedeMover && !esReapertura && destino !== ESTADOS_JORNADA.FINALIZADA && (
                     <PrimaryButton
-                      title={
-                        destino === ESTADOS_JORNADA.EN_CURSO ? "Iniciar jornada" : "Avanzar →"
-                      }
+                      title={destino === ESTADOS_JORNADA.EN_CURSO ? "Iniciar jornada" : "Avanzar →"}
                       onClick={() => cambiarEstado(destino)}
                       loading={moviendo}
                     />
