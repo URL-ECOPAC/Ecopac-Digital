@@ -30,10 +30,20 @@
 //   npm run verificar:shared-esquema -- --autoprueba
 
 import { appendFileSync, existsSync, readFileSync, readdirSync, statSync } from "node:fs";
-import { join, relative, dirname, resolve } from "node:path";
+import { join, relative, sep, dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const RAIZ = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+
+/**
+ * Ruta relativa a la raiz, siempre con "/" (issue #819).
+ *
+ * `relative()` devuelve el separador del sistema, asi que en Windows imprimia `apps\\web\\...`
+ * y las anotaciones `::error file=` no enlazaban al archivo desde la interfaz de GitHub.
+ */
+function rutaRelativa(ruta) {
+  return relative(RAIZ, ruta).split(sep).join("/");
+}
 const DIR_MIGRACIONES = join(RAIZ, "supabase", "migrations");
 const DIR_SHARED = join(RAIZ, "packages", "shared");
 const DIR_EDGE_FUNCTIONS = join(RAIZ, "supabase", "functions");
@@ -1048,7 +1058,7 @@ function principal() {
       `Omitido: ${resumen.constantesSinResolver.length} .select() con una constante que no se pudo resolver.`,
     );
     for (const c of resumen.constantesSinResolver)
-      console.log(`  ${relative(RAIZ, c.ruta)}:${c.linea}  ${c.nombre}`);
+      console.log(`  ${rutaRelativa(c.ruta)}:${c.linea}  ${c.nombre}`);
   }
   if (resumen.relacionesSinResolver.length) {
     console.log(
@@ -1056,7 +1066,7 @@ function principal() {
         `resolver por nombre (se nombran por la columna que las enlaza, no por la tabla).`,
     );
     for (const r of resumen.relacionesSinResolver)
-      console.log(`  ${relative(RAIZ, r.ruta)}:${r.linea}  ${r.camino}`);
+      console.log(`  ${rutaRelativa(r.ruta)}:${r.linea}  ${r.camino}`);
   }
   if (!VERIFICAR_EDGE_FUNCTIONS)
     console.log("Omitido: las Edge Functions (ver VERIFICAR_EDGE_FUNCTIONS, issue #523).");
@@ -1108,10 +1118,10 @@ function principal() {
 
   console.log(`\n${hallazgos.length} hallazgos:\n`);
   for (const h of hallazgos) {
-    const donde = `${relative(RAIZ, h.ruta)}:${h.linea}`;
+    const donde = `${rutaRelativa(h.ruta)}:${h.linea}`;
     console.log(`  ${donde}  ${h.detalle}`);
     if (process.env.GITHUB_ACTIONS)
-      console.log(`::error file=${relative(RAIZ, h.ruta)},line=${h.linea}::${h.detalle}`);
+      console.log(`::error file=${rutaRelativa(h.ruta)},line=${h.linea}::${h.detalle}`);
   }
 
   if (process.env.GITHUB_STEP_SUMMARY) {
@@ -1124,7 +1134,7 @@ function principal() {
       "",
       "| Archivo | Que falta |",
       "| --- | --- |",
-      ...hallazgos.map((h) => `| \`${relative(RAIZ, h.ruta)}:${h.linea}\` | ${h.detalle} |`),
+      ...hallazgos.map((h) => `| \`${rutaRelativa(h.ruta)}:${h.linea}\` | ${h.detalle} |`),
       "",
       "**Que hacer:** corregir el nombre si es una errata, o agregar la columna con una migracion",
       "nueva (revisar que numero corresponde: tiene que ser mayor que el ultimo de `develop`).",

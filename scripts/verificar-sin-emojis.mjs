@@ -32,10 +32,20 @@
 //   npm run verificar:sin-emojis -- --autoprueba
 
 import { readFileSync, readdirSync, statSync } from "node:fs";
-import { join, relative, dirname, resolve } from "node:path";
+import { join, relative, sep, dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const RAIZ = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+
+/**
+ * Ruta relativa a la raiz, siempre con "/" (issue #819).
+ *
+ * `relative()` devuelve el separador del sistema, asi que en Windows imprimia `apps\\web\\...`
+ * y las anotaciones `::error file=` no enlazaban al archivo desde la interfaz de GitHub.
+ */
+function rutaRelativa(ruta) {
+  return relative(RAIZ, ruta).split(sep).join("/");
+}
 const DIRECTORIOS = ["apps", "packages"];
 const EXTENSIONES = [".js", ".jsx", ".ts", ".tsx", ".css", ".json", ".md"];
 const IGNORADOS = new Set(["node_modules", "dist", "build", ".expo", "coverage", "android", "ios"]);
@@ -108,7 +118,7 @@ function principal() {
   const hallazgos = [];
   for (const ruta of archivos) {
     for (const h of emojisDelTexto(readFileSync(ruta, "utf8")))
-      hallazgos.push({ ruta: relative(RAIZ, ruta), ...h });
+      hallazgos.push({ ruta: rutaRelativa(ruta), ...h });
   }
 
   console.log(`Revisado: ${archivos.length} archivos de ${DIRECTORIOS.join("/ y ")}/.`);

@@ -64,10 +64,31 @@ Solo `background` y `surface` estaban bien. Es la deriva que el muestreo a ojo p
 ahora el metodo queda escrito: si hay que volver a medir, se leen los colores calculados del
 prototipo publicado, no se estiman sobre una captura.
 
-**Una advertencia para quien lea el codigo de las pantallas**: `apps/` todavia tiene cientos de
-colores escritos a mano que no son ni esta paleta ni la anterior -son los de Tailwind, que se
-colaron pantalla por pantalla-. Migrarlos es la segunda mitad de la issue #700. Hasta que eso
-ocurra, **lo que se ve en pantalla no es del todo lo que dice esta tabla**.
+**Una advertencia para quien lea el codigo de las pantallas**: `apps/` todavia tiene colores
+escritos a mano que no son ni esta paleta ni la anterior -son los de Tailwind, que se colaron
+pantalla por pantalla-. Hasta que se migren, **lo que se ve en pantalla no es del todo lo que dice
+esta tabla**.
+
+### Como se migra esa deuda, y como se vigila
+
+Son **382 hexadecimales** a fecha de la issue #819 -178 en `apps/web/src` y 204 en
+`apps/mobile/src`-, bajando: eran 713 y las PR de lenguaje visual (#827, #830, #832) migraron unas
+330.
+
+`scripts/paleta-linea-base.json` **fotografia esa deuda; no es el objetivo**. Es la red con la que
+moverla por lotes sin romper nada: `npm run verificar:paleta` compara el color efectivo de cada
+archivo -los hexadecimales a mano mas el valor de los tokens que menciona- contra esa foto.
+Sustituir `#3DB648` por `colors.primary` no la mueve, porque el color efectivo es el mismo; poner
+otro token si, y ahi falla diciendo que color entro y cual salio. **Solo se recaptura con
+`--capturar` cuando el cambio de color es deliberado**, y el diff de la linea base es entonces el
+registro de lo que se ve distinto.
+
+Desde la issue #819 la comprobacion tambien **falla si alguien nombra un token que no existe**. No
+es un detalle de estilo: un token inexistente no avisa. En movil el `||` o el `??` hacen ganar
+siempre al valor de respaldo, y en la web **una variable CSS que nadie define no pinta nada**. Asi
+estaba `VistaExistenciasPage`, que usaba diez `var(--color-*)` con nombre en espaniol
+-`--color-exito`, `--color-borde`, `--color-texto`- que `theme.js` nunca publico: la pagina entera
+renderizaba esos colores como si no existieran, sin un solo error.
 
 ## Tipografia
 
