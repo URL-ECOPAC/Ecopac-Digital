@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
 import { ProgressBar } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
-
-import { typography } from "@ecopac/ui-tokens";
+import { ArrowLeft, ArrowRight, CalendarDays, MapPin } from "lucide-react";
 
 import {
   COLUMNAS_JORNADA,
@@ -303,20 +302,30 @@ function TarjetaJornada({
   const puedeMover = (esReapertura ? puedeReabrir : puedeEditar) && Boolean(destino);
 
   return (
-    <Card style={{ borderLeft: `4px solid ${colorDeEstado(jornada.estado)}` }}>
+    // ISSUE #834, segunda pasada de diseno de la tarjeta. Los datos eran cuatro lineas de texto
+    // apagado del mismo tamano -comunidad, fecha, responsable, atendidos- sin nada que dijera
+    // cual es cual: en una columna de seis tarjetas no se distinguia una jornada de otra. Ahora
+    // el lugar y la fecha llevan su icono (los mismos que el inicio), el responsable va con su
+    // rotulo en versalitas y los botones caben en una sola fila de tamano `sm`, que era lo que
+    // desbordaba la columna del kanban.
+    <Card className="ec-jornada" style={{ "--ec-acento": colorDeEstado(jornada.estado) }}>
       <div className="d-flex justify-content-between align-items-start gap-2 mb-2">
-        <span className="fw-bold">{jornada.nombre}</span>
+        <span className="ec-jornada-nombre">{jornada.nombre}</span>
         <StatusChip status={jornada.estado} />
       </div>
-      <div className="small" style={{ color: "var(--color-text-muted)" }}>
-        {jornada.comunidad || "—"} · {formatearFechaCorta(jornada.fecha)}
-      </div>
-      <div
-        className="mb-2"
-        style={{ color: "var(--color-text-muted)", fontSize: typography.sizes.xs }}
-      >
-        {ETIQUETAS.responsable}: {jornada.responsable || "—"}
-      </div>
+
+      <p className="ec-jornada-detalle">
+        <MapPin size={14} aria-hidden="true" />
+        <span>{jornada.comunidad || "Sin comunidad"}</span>
+        <span aria-hidden="true">·</span>
+        <CalendarDays size={14} aria-hidden="true" />
+        <span>{formatearFechaCorta(jornada.fecha)}</span>
+      </p>
+
+      <p className="ec-jornada-detalle">
+        <span className="ec-rotulo">{ETIQUETAS.responsable}</span>
+        <span>{jornada.responsable || "Sin asignar"}</span>
+      </p>
 
       <div className="mb-2">
         {tieneProgreso ? (
@@ -326,14 +335,15 @@ function TarjetaJornada({
               variant="primary"
               style={{ height: "6px", flex: "1 1 auto" }}
             />
-            <span className="small" style={{ color: "var(--color-text-muted)" }}>
+            <span className="ec-jornada-detalle mb-0">
               {jornada.pacientesAtendidos}/{jornada.cupoEstimado}
             </span>
           </div>
         ) : (
-          <div className="small" style={{ color: "var(--color-text-muted)" }}>
-            {ETIQUETAS.pacientesAtendidos}: {tienePacientes ? jornada.pacientesAtendidos : "—"}
-          </div>
+          <p className="ec-jornada-detalle mb-0">
+            <span className="ec-rotulo">{ETIQUETAS.pacientesAtendidos}</span>
+            <span>{tienePacientes ? jornada.pacientesAtendidos : "—"}</span>
+          </p>
         )}
       </div>
 
@@ -342,22 +352,35 @@ function TarjetaJornada({
           mismo que ya hace esta tarjeta con `puedeVer` en el guard de la ruta /jornadas. Va
           siempre a la izquierda, separado de "Editar"/"Atras"/"Avanzar" (issue #180, que no se
           tocan), para no confundir "ver" con las acciones que si cambian algo. */}
-      <div className="d-flex justify-content-between align-items-center gap-2 mt-2">
+      <div className="ec-jornada-acciones">
         <div className="d-flex gap-2">
-          <SecondaryButton title="Ver detalle" onClick={onVerDetalle} disabled={moviendo} />
+          <SecondaryButton
+            title="Ver detalle"
+            variant="neutra"
+            size="sm"
+            onClick={onVerDetalle}
+            disabled={moviendo}
+          />
           {puedeMover && esReapertura && (
             <SecondaryButton
-              title="← Atrás"
+              title="Atrás"
+              variant="neutra"
+              size="sm"
+              icon={<ArrowLeft size={16} aria-hidden="true" />}
               onClick={() => onMover(jornada.id, jornada.estado, destino)}
               disabled={moviendo}
             />
           )}
         </div>
         <div className="d-flex gap-2">
-          {onEditar && <SecondaryButton title="Editar" onClick={onEditar} disabled={moviendo} />}
+          {onEditar && (
+            <SecondaryButton title="Editar" size="sm" onClick={onEditar} disabled={moviendo} />
+          )}
           {puedeMover && !esReapertura && (
             <PrimaryButton
-              title="Avanzar →"
+              title={destino === ESTADOS_JORNADA.EN_CURSO ? "Iniciar" : "Avanzar"}
+              size="sm"
+              icon={<ArrowRight size={16} aria-hidden="true" />}
               onClick={() => onMover(jornada.id, jornada.estado, destino)}
               disabled={moviendo}
             />

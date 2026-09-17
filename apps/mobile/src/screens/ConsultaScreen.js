@@ -15,9 +15,9 @@ import {
   ErrorState,
   LoadingState,
   PrimaryButton,
+  MultiSelector,
   ScreenContainer,
   SecondaryButton,
-  Selector,
   TextField,
 } from "../components";
 import { almacenamientoMovil } from "../almacenamiento";
@@ -52,35 +52,35 @@ function CabeceraDeSignos({ signos }) {
   );
 }
 
-function Diagnosticos({ campo, valor, opciones, onChange, deshabilitado }) {
+/**
+ * Diagnosticos de la consulta.
+ *
+ * ISSUE #834: era un Selector mas una lista de filas con "Quitar" escrita a mano -- el
+ * MultiSelector del catalogo hecho de nuevo, peor, y sin la salida que la web tiene desde la
+ * #641: crear el diagnostico que falta sin salir de la consulta. Ahora es el componente del
+ * catalogo, que ademas ya sabe elegir una opcion existente cuando se escribe su nombre.
+ *
+ * El primero de la lista es el diagnostico PRINCIPAL (asi lo guarda registrarConsulta), y eso
+ * tiene que decirlo la pantalla: la nota de abajo es lo unico propio que queda aqui.
+ */
+function Diagnosticos({ campo, valor, opciones, onChange, onCrear, deshabilitado }) {
   const elegidos = valor ?? [];
-
-  const agregar = (id) => {
-    if (!id || elegidos.includes(id)) return;
-    onChange([...elegidos, id]);
-  };
-
-  const quitar = (id) => onChange(elegidos.filter((uno) => uno !== id));
 
   return (
     <View>
-      <Selector
+      <MultiSelector
         label={campo.label}
-        value={null}
-        options={opciones.filter((opcion) => !elegidos.includes(opcion.value))}
-        onSelect={agregar}
+        value={elegidos}
+        options={opciones}
+        onChange={onChange}
+        onCrear={onCrear ?? undefined}
         placeholder="Agregar diagnóstico"
-        disabled={deshabilitado || opciones.length === 0}
+        placeholderLibre="Escribe uno que no esté en el catálogo"
+        disabled={deshabilitado}
       />
-      {elegidos.map((id, indice) => (
-        <Pressable key={id} onPress={() => quitar(id)} style={styles.diagnostico}>
-          <Text style={styles.textoDiagnostico}>
-            {indice === 0 ? "Principal: " : ""}
-            {opciones.find((opcion) => opcion.value === id)?.label ?? id}
-          </Text>
-          <Text style={styles.quitar}>Quitar</Text>
-        </Pressable>
-      ))}
+      {elegidos.length > 0 ? (
+        <Text style={styles.textoTenue}>El primero de la lista es el diagnóstico principal.</Text>
+      ) : null}
     </View>
   );
 }
@@ -107,12 +107,17 @@ export default function ConsultaScreen() {
     descartarBorrador,
     guardar,
     catalogos,
+    // Solo llega con rol si puedeAdministrarDiagnosticos(rol); el hook lo deja en null para el
+    // resto, y MultiSelector entonces no ofrece crear nada.
+    crearDiagnosticoNuevo,
+    errorDiagnostico,
   } = useRegistroConsulta({
     pacienteId,
     expedienteId: paciente?.expediente?.id,
     jornadaId,
     estadoDeJornada: jornada?.estado,
     perfilId: perfil?.id,
+    rol,
     almacenamiento: almacenamientoMovil,
   });
 
@@ -178,6 +183,14 @@ export default function ConsultaScreen() {
         </Card>
       )}
 
+      {/* El fallo al crear un diagnostico nuevo va aparte del de guardar la consulta: no impide
+          seguir escribiendola, solo dice que ese diagnostico no entro al catalogo. */}
+      {errorDiagnostico && (
+        <Card style={styles.tarjeta}>
+          <Text style={styles.textoError}>{errorDiagnostico.mensaje}</Text>
+        </Card>
+      )}
+
       {secciones.map((seccion) => {
         const abierta = abiertas.has(seccion.id);
 
@@ -197,6 +210,7 @@ export default function ConsultaScreen() {
                     valor={valores[campo.id]}
                     opciones={catalogos[campo.opcionesDesde] ?? []}
                     onChange={(siguiente) => setCampo(campo.id, siguiente)}
+                    onCrear={crearDiagnosticoNuevo}
                     deshabilitado={enviando}
                   />
                 ) : (
@@ -259,21 +273,6 @@ const styles = StyleSheet.create({
   signos: {
     color: colors.text,
     fontSize: typography.sizes.md,
-  },
-  diagnostico: {
-    alignItems: "center",
-    flexDirection: "row",
-    justifyContent: "space-between",
-    minHeight: 48,
-  },
-  textoDiagnostico: {
-    color: colors.text,
-    flexShrink: 1,
-    fontSize: typography.sizes.sm,
-  },
-  quitar: {
-    color: colors.danger,
-    fontSize: typography.sizes.sm,
   },
   texto: {
     color: colors.text,

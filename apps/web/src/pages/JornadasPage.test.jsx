@@ -116,7 +116,10 @@ describe("JornadasPage", () => {
     pantalla();
 
     expect(screen.getByText("Jornada Vista Hermosa")).toBeInTheDocument();
-    expect(screen.getByText(/Vista Hermosa · 01\/03\/2026/)).toBeInTheDocument();
+    // Desde la #834 la comunidad y la fecha van en la misma linea pero en nodos distintos, cada
+    // uno con su icono, asi que se buscan por separado.
+    expect(screen.getByText("Vista Hermosa")).toBeInTheDocument();
+    expect(screen.getByText("01/03/2026")).toBeInTheDocument();
   });
 
   it("Ver detalle navega a /jornadas/:id, sin depender del permiso de editar", () => {
@@ -132,7 +135,7 @@ describe("JornadasPage", () => {
     mockEstadoHook.columnas = agruparJornadasPorEstado([JORNADA_EN_CURSO]);
     pantalla();
 
-    fireEvent.click(screen.getByText("Avanzar →"));
+    fireEvent.click(screen.getByText("Avanzar"));
 
     expect(mockEstadoHook.moverJornada).toHaveBeenCalledWith("jor-1", "en curso", "finalizada");
   });
