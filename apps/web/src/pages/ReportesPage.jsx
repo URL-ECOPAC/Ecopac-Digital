@@ -1,57 +1,81 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { typography } from "@ecopac/ui-tokens";
-import DashboardMetricasPage from "./DashboardMetricasPage";
+import { useLocation, useNavigate } from "react-router-dom";
+import { Form, Table } from "react-bootstrap";
 import {
   ETIQUETAS_NIVEL_ALERTA_VENCIMIENTO,
   useExportarPDF,
   useReporteMedicamentosPorVencer,
 } from "@ecopac/shared";
+import DashboardMetricasPage from "./DashboardMetricasPage";
+import ReporteInventarioPage from "./ReporteInventarioPage";
+import ReportePacientesPage from "./ReportePacientesPage";
 import BotonExportarPDF from "../components/BotonExportarPDF";
+import Card from "../components/Card";
+import EmptyState from "../components/EmptyState";
+import ErrorState from "../components/ErrorState";
+import LoadingState from "../components/LoadingState";
+import PageHeader, { AccionesDeCabecera } from "../components/PageHeader";
+import ScreenContainer from "../components/ScreenContainer";
 import StatusChip from "../components/StatusChip";
+import Tabs from "../components/Tabs";
+import "./reportes.css";
 
-// Estilos compartidos de pestañas
-const estiloPestanaActiva = {
-  padding: "10px 18px",
-  fontSize: "var(--texto-sm)",
-  fontWeight: "var(--peso-semibold)",
-  border: "none",
-  background: "none",
-  cursor: "pointer",
-  borderBottom: "2px solid #10b981",
-  color: "#10b981",
-};
-const estiloPestanaInactiva = {
-  padding: "10px 18px",
-  fontSize: "var(--texto-sm)",
-  fontWeight: "var(--peso-medium)",
-  border: "none",
-  background: "none",
-  cursor: "pointer",
-  borderBottom: "2px solid transparent",
-  color: "#64748b",
-};
-// Pestaña nueva (issue #757, criterio 4): a diferencia de las dos de arriba, que son estilos
-// preexistentes con hex a mano, esta usa @ecopac/ui-tokens. Por eso el color y el peso no son
-// identicos a sus hermanas -- son la evidencia de que las pestañas viejas deberian migrar a
-// tokens (issue #700), no una libertad visual de esta pestaña.
-const estiloPestanaEnlace = {
-  padding: "10px 18px",
-  fontSize: typography.sizes.sm,
-  fontWeight: typography.weights.medium,
-  border: "none",
-  background: "none",
-  cursor: "pointer",
-  borderBottom: "2px solid transparent",
-  color: "var(--color-text-muted)",
-  textDecoration: "none",
-};
+// Hub de reportes.
+//
+// CADA PESTANA ES UNA RUTA. "Pacientes atendidos" era un boton con aspecto de pestana que
+// navegaba a otra pagina -ReportePacientesPage, con su propia cabecera y SIN las pestanas-, asi
+// que desde ahi no habia forma de volver a las otras dos salvo el boton "atras" del navegador.
+// Ahora las cuatro pestanas viven aqui y cada una tiene su direccion: el boton "atras" sigue
+// funcionando, una pestana se puede enlazar, y la fila de pestanas no desaparece nunca.
+//
+// "Inventario actual" (/reportes/inventario-actual) era una ruta sin ningun enlace que llevara a
+// ella: el reporte existia y nadie podia abrirlo sin escribir la direccion a mano.
+const PESTANAS = [
+  { id: "dashboard", label: "Dashboard de impacto", ruta: "/reportes" },
+  {
+    id: "vencimientos",
+    label: "Medicamentos por vencer",
+    ruta: "/reportes/medicamentos-por-vencer",
+  },
+  { id: "pacientes", label: "Pacientes atendidos", ruta: "/reportes/pacientes-atendidos" },
+  { id: "inventario", label: "Inventario actual", ruta: "/reportes/inventario-actual" },
+];
+
+/** La pestana que corresponde a una ruta. `/reportes` y `/reportes/dashboard` son el panel. */
+function pestanaDeRuta(pathname = "") {
+  const encontrada = PESTANAS.find(
+    (pestana) => pestana.id !== "dashboard" && pathname.startsWith(pestana.ruta),
+  );
+  return encontrada?.id ?? "dashboard";
+}
 
 export default function ReportesPage() {
   const navigate = useNavigate();
-  const [pestanaActiva, setPestanaActiva] = useState("dashboard");
+  const { pathname } = useLocation();
+  const pestanaActiva = pestanaDeRuta(pathname);
 
-  // Hook del reporte de medicamentos por vencer
+  const cambiarPestana = (id) => {
+    const destino = PESTANAS.find((pestana) => pestana.id === id);
+    if (destino && destino.id !== pestanaActiva) navigate(destino.ruta);
+  };
+
+  return (
+    <ScreenContainer>
+      <PageHeader
+        title="Reportes e impacto"
+        subtitle="Métricas, estadísticas y volumen de atención"
+      />
+
+      <Tabs tabs={PESTANAS} activo={pestanaActiva} onChange={cambiarPestana}>
+        {pestanaActiva === "dashboard" && <DashboardMetricasPage />}
+        {pestanaActiva === "vencimientos" && <PestanaMedicamentosPorVencer />}
+        {pestanaActiva === "pacientes" && <ReportePacientesPage incrustado />}
+        {pestanaActiva === "inventario" && <ReporteInventarioPage incrustado />}
+      </Tabs>
+    </ScreenContainer>
+  );
+}
+
+function PestanaMedicamentosPorVencer() {
   const {
     cargando,
     error,
@@ -70,378 +94,129 @@ export default function ReportesPage() {
     recargar,
   } = useReporteMedicamentosPorVencer();
 
-  // Exportación PDF — issue #216
-  const periodo = `Próximos ${horizonteDias} días`;
+  // Exportacion PDF (issue #216).
   const { exportar, generando } = useExportarPDF({
     tituloReporte: "Reporte de Medicamentos Próximos a Vencer",
-    periodo,
+    periodo: `Próximos ${horizonteDias} días`,
   });
 
   return (
-    <div style={{ padding: "24px", backgroundColor: "#f8fafc", minHeight: "100vh" }}>
-      {/* Cabecera */}
-      <div style={{ marginBottom: "24px" }}>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-start",
-            marginBottom: "16px",
-          }}
-        >
-          <div>
-            <h1 style={{ fontSize: "var(--texto-xl)", fontWeight: "var(--peso-bold)", margin: 0 }}>
-              Reportes e Impacto
-            </h1>
-            <p style={{ fontSize: "var(--texto-sm)", color: "#64748b", margin: "4px 0 0 0" }}>
-              Métricas, estadísticas y volumen de atención
-            </p>
-          </div>
-          <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-            {/* Botón PDF — SOLO visible en la pestaña de vencimientos */}
-            {pestanaActiva === "vencimientos" && (
-              <BotonExportarPDF onClick={exportar} generando={generando} />
-            )}
-          </div>
-        </div>
-
-        {/* Pestañas */}
-        <div style={{ display: "flex", gap: "4px", borderBottom: "1px solid #e2e8f0" }}>
-          <button
-            onClick={() => setPestanaActiva("dashboard")}
-            style={pestanaActiva === "dashboard" ? estiloPestanaActiva : estiloPestanaInactiva}
-          >
-            Dashboard de Impacto
-          </button>
-          <button
-            onClick={() => setPestanaActiva("vencimientos")}
-            style={pestanaActiva === "vencimientos" ? estiloPestanaActiva : estiloPestanaInactiva}
-          >
-            Medicamentos por Vencer
-          </button>
-          {/* Issue #757, criterio 4: antes vivia como Link en la cabecera, separado de las
-              otras dos pestañas. Navega en vez de alternar pestanaActiva porque es una
-              pagina aparte (ReportePacientesPage.jsx), no un estado de esta pantalla. */}
-          <button
-            onClick={() => navigate("/reportes/pacientes-atendidos")}
-            style={estiloPestanaEnlace}
-          >
-            Pacientes atendidos
-          </button>
-        </div>
+    <>
+      <div className="reporte-barra">
+        <p className="ec-cabecera-subtitulo m-0">
+          Lotes que vencen dentro del horizonte elegido, del más urgente al menos urgente.
+        </p>
+        <AccionesDeCabecera
+          actions={[{ custom: <BotonExportarPDF onClick={exportar} generando={generando} /> }]}
+        />
       </div>
 
-      {/* Contenido: Dashboard */}
-      {pestanaActiva === "dashboard" && <DashboardMetricasPage />}
-
-      {/* Contenido: Medicamentos por Vencer */}
-      {pestanaActiva === "vencimientos" && (
-        // TODO el contenido que va al PDF DENTRO de este div
-        <div
-          id="contenido-reporte-pdf"
-          style={{ display: "flex", flexDirection: "column", gap: "20px" }}
-        >
-          {/* Filtros — NO se incluyen en el PDF */}
-          <div
-            style={{
-              backgroundColor: "#fff",
-              borderRadius: "12px",
-              padding: "16px",
-              border: "1px solid #e2e8f0",
-              display: "flex",
-              gap: "12px",
-              flexWrap: "wrap",
-              alignItems: "center",
-            }}
-          >
-            <div>
-              <label
-                style={{
-                  fontSize: "var(--texto-xs)",
-                  fontWeight: "var(--peso-medium)",
-                  color: "#475569",
-                  display: "block",
-                  marginBottom: "4px",
-                }}
-              >
-                Horizonte de días
-              </label>
-              <select
-                value={horizonteDias}
-                onChange={(e) => setHorizonteDias(Number(e.target.value))}
-                style={{ padding: "8px 12px", borderRadius: "8px", border: "1px solid #cbd5e1" }}
-              >
-                {horizontesDisponibles.map((opt) => (
-                  <option key={opt.valor} value={opt.valor}>
-                    {opt.etiqueta}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label
-                style={{
-                  fontSize: "var(--texto-xs)",
-                  fontWeight: "var(--peso-medium)",
-                  color: "#475569",
-                  display: "block",
-                  marginBottom: "4px",
-                }}
-              >
-                Comunidad
-              </label>
-              <select
-                value={comunidadId}
-                onChange={(e) => setComunidadId(e.target.value)}
-                style={{ padding: "8px 12px", borderRadius: "8px", border: "1px solid #cbd5e1" }}
-              >
-                <option value={valoresEspeciales.TODAS}>Todas las comunidades</option>
-                {listaComunidades.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.nombre}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label
-                style={{
-                  fontSize: "var(--texto-xs)",
-                  fontWeight: "var(--peso-medium)",
-                  color: "#475569",
-                  display: "block",
-                  marginBottom: "4px",
-                }}
-              >
-                Bodega
-              </label>
-              <select
-                value={bodegaId}
-                onChange={(e) => setBodegaId(e.target.value)}
-                style={{ padding: "8px 12px", borderRadius: "8px", border: "1px solid #cbd5e1" }}
-              >
-                <option value={valoresEspeciales.TODAS}>Todas las bodegas</option>
-                {listaBodegas.map((b) => (
-                  <option key={b.id} value={b.id}>
-                    {b.nombre}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <button
-              onClick={recargar}
-              style={{
-                padding: "8px 16px",
-                backgroundColor: "#f1f5f9",
-                border: "none",
-                borderRadius: "8px",
-                cursor: "pointer",
-                fontSize: "var(--texto-xs)",
-                marginTop: "16px",
-              }}
+      {/* Filtros: fuera del contenido del PDF. Eran tres <select> y un boton con estilos en
+          linea (#cbd5e1, #475569, #f1f5f9); ahora son los campos del sistema. */}
+      <Card className="mb-3">
+        <div className="reporte-filtros">
+          <Form.Group controlId="vencimientos-horizonte">
+            <Form.Label>Horizonte de días</Form.Label>
+            <Form.Select
+              value={horizonteDias}
+              onChange={(e) => setHorizonteDias(Number(e.target.value))}
             >
-              Actualizar
-            </button>
+              {horizontesDisponibles.map((opt) => (
+                <option key={opt.valor} value={opt.valor}>
+                  {opt.etiqueta}
+                </option>
+              ))}
+            </Form.Select>
+          </Form.Group>
+          <Form.Group controlId="vencimientos-comunidad">
+            <Form.Label>Comunidad</Form.Label>
+            <Form.Select value={comunidadId} onChange={(e) => setComunidadId(e.target.value)}>
+              <option value={valoresEspeciales.TODAS}>Todas las comunidades</option>
+              {listaComunidades.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.nombre}
+                </option>
+              ))}
+            </Form.Select>
+          </Form.Group>
+          <Form.Group controlId="vencimientos-bodega">
+            <Form.Label>Bodega</Form.Label>
+            <Form.Select value={bodegaId} onChange={(e) => setBodegaId(e.target.value)}>
+              <option value={valoresEspeciales.TODAS}>Todas las bodegas</option>
+              {listaBodegas.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.nombre}
+                </option>
+              ))}
+            </Form.Select>
+          </Form.Group>
+          <div className="reporte-filtros-accion">
+            <AccionesDeCabecera
+              actions={[{ label: "Actualizar", onClick: recargar, variant: "neutra" }]}
+            />
           </div>
-
-          {/* Total en riesgo — SÍ se incluye en el PDF */}
-          <div
-            style={{
-              backgroundColor: "#fffbeb",
-              borderRadius: "12px",
-              padding: "14px 20px",
-              border: "1px solid #fcd34d",
-            }}
-          >
-            <span style={{ fontSize: "var(--texto-sm)", color: "#b45309" }}>
-              <strong>{totalUnidadesEnRiesgo.toLocaleString("es-GT")}</strong> unidades en riesgo de
-              vencimiento
-            </span>
-          </div>
-
-          {/* Tabla de resultados — SÍ se incluye en el PDF */}
-          {cargando ? (
-            <div style={{ padding: "40px", textAlign: "center", color: "#64748b" }}>
-              Cargando lotes próximos a vencer...
-            </div>
-          ) : error ? (
-            <div
-              style={{
-                padding: "20px",
-                color: "#dc2626",
-                backgroundColor: "#fef2f2",
-                borderRadius: "8px",
-              }}
-            >
-              Error al cargar: {error.mensaje || "Desconocido"}
-            </div>
-          ) : filas.length === 0 ? (
-            <div style={{ padding: "40px", textAlign: "center", color: "#64748b" }}>
-              Ningún lote vence en los próximos {horizonteDias} días
-            </div>
-          ) : (
-            <div style={{ overflowX: "auto" }}>
-              <table
-                style={{
-                  width: "100%",
-                  borderCollapse: "separate",
-                  borderSpacing: 0,
-                  backgroundColor: "#fff",
-                  borderRadius: "12px",
-                  overflow: "hidden",
-                  border: "1px solid #e2e8f0",
-                }}
-              >
-                <thead>
-                  <tr style={{ backgroundColor: "#f8fafc" }}>
-                    <th
-                      style={{
-                        padding: "12px 16px",
-                        textAlign: "left",
-                        fontSize: "var(--texto-xs)",
-                        fontWeight: "var(--peso-semibold)",
-                        color: "#475569",
-                      }}
-                    >
-                      Estado
-                    </th>
-                    <th
-                      style={{
-                        padding: "12px 16px",
-                        textAlign: "left",
-                        fontSize: "var(--texto-xs)",
-                        fontWeight: "var(--peso-semibold)",
-                        color: "#475569",
-                      }}
-                    >
-                      Medicamento
-                    </th>
-                    <th
-                      style={{
-                        padding: "12px 16px",
-                        textAlign: "left",
-                        fontSize: "var(--texto-xs)",
-                        fontWeight: "var(--peso-semibold)",
-                        color: "#475569",
-                      }}
-                    >
-                      Lote
-                    </th>
-                    <th
-                      style={{
-                        padding: "12px 16px",
-                        textAlign: "left",
-                        fontSize: "var(--texto-xs)",
-                        fontWeight: "var(--peso-semibold)",
-                        color: "#475569",
-                      }}
-                    >
-                      Vencimiento
-                    </th>
-                    <th
-                      style={{
-                        padding: "12px 16px",
-                        textAlign: "right",
-                        fontSize: "var(--texto-xs)",
-                        fontWeight: "var(--peso-semibold)",
-                        color: "#475569",
-                      }}
-                    >
-                      Días restantes
-                    </th>
-                    <th
-                      style={{
-                        padding: "12px 16px",
-                        textAlign: "right",
-                        fontSize: "var(--texto-xs)",
-                        fontWeight: "var(--peso-semibold)",
-                        color: "#475569",
-                      }}
-                    >
-                      Cantidad
-                    </th>
-                    <th
-                      style={{
-                        padding: "12px 16px",
-                        textAlign: "left",
-                        fontSize: "var(--texto-xs)",
-                        fontWeight: "var(--peso-semibold)",
-                        color: "#475569",
-                      }}
-                    >
-                      Bodega
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filas.map((fila) => {
-                    return (
-                      <tr key={fila.id} style={{ borderTop: "1px solid #f1f5f9" }}>
-                        <td style={{ padding: "10px 16px" }}>
-                          {/* El nivel sale de enums.js y el color de statusColors, via StatusChip
-                              (issue #700). Antes la etiqueta llevaba un circulo de color dentro
-                              del propio texto, y ese circulo era el unico portador del nivel
-                              ademas de la palabra: un lector de pantalla no lo lee. El color
-                              estaba ademas escrito a mano en esta pagina. */}
-                          <StatusChip
-                            status={fila.alerta}
-                            label={ETIQUETAS_NIVEL_ALERTA_VENCIMIENTO[fila.alerta]}
-                          />
-                        </td>
-                        <td style={{ padding: "10px 16px", fontSize: "var(--texto-sm)" }}>
-                          {fila.medicamento}
-                        </td>
-                        <td
-                          style={{
-                            padding: "10px 16px",
-                            fontSize: "var(--texto-sm)",
-                            fontFamily: "var(--fuente-mono)",
-                          }}
-                        >
-                          {fila.lote}
-                        </td>
-                        <td style={{ padding: "10px 16px", fontSize: "var(--texto-sm)" }}>
-                          {fila.fechaVencimiento}
-                        </td>
-                        <td
-                          style={{
-                            padding: "10px 16px",
-                            textAlign: "right",
-                            fontSize: "var(--texto-sm)",
-                            fontWeight: 500,
-                          }}
-                        >
-                          <strong>{fila.diasRestantes}</strong>
-                        </td>
-                        <td
-                          style={{
-                            padding: "10px 16px",
-                            textAlign: "right",
-                            fontSize: "var(--texto-sm)",
-                            fontWeight: 600,
-                          }}
-                        >
-                          {fila.cantidad.toLocaleString("es-GT")}
-                        </td>
-                        <td
-                          style={{
-                            padding: "10px 16px",
-                            fontSize: "var(--texto-xs)",
-                            color: "#475569",
-                          }}
-                        >
-                          {fila.bodega || "—"}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
         </div>
-        // Fin del contenido PDF
-      )}
-    </div>
+      </Card>
+
+      <div id="contenido-reporte-pdf">
+        <div className="alert alert-warning mb-3">
+          <span>
+            <strong>{totalUnidadesEnRiesgo.toLocaleString("es-GT")}</strong> unidades en riesgo de
+            vencimiento
+          </span>
+        </div>
+
+        {cargando ? (
+          <LoadingState message="Cargando lotes próximos a vencer..." />
+        ) : error ? (
+          <ErrorState
+            message={`Error al cargar: ${error.mensaje || "Desconocido"}`}
+            onRetry={recargar}
+          />
+        ) : filas.length === 0 ? (
+          <EmptyState message={`Ningún lote vence en los próximos ${horizonteDias} días`} />
+        ) : (
+          <div className="ec-tabla">
+            <Table responsive hover className="mb-0">
+              <thead>
+                <tr>
+                  <th>Estado</th>
+                  <th>Medicamento</th>
+                  <th>Lote</th>
+                  <th>Vencimiento</th>
+                  <th className="text-end">Días restantes</th>
+                  <th className="text-end">Cantidad</th>
+                  <th>Bodega</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filas.map((fila) => (
+                  <tr key={fila.id}>
+                    <td>
+                      {/* El nivel sale de enums.js y el color de statusColors, via StatusChip
+                          (issue #700). */}
+                      <StatusChip
+                        status={fila.alerta}
+                        label={ETIQUETAS_NIVEL_ALERTA_VENCIMIENTO[fila.alerta]}
+                      />
+                    </td>
+                    <td>{fila.medicamento}</td>
+                    <td className="ec-mono">{fila.lote}</td>
+                    <td>{fila.fechaVencimiento}</td>
+                    <td className="text-end">
+                      <strong>{fila.diasRestantes}</strong>
+                    </td>
+                    <td className="text-end fw-semibold">
+                      {fila.cantidad.toLocaleString("es-GT")}
+                    </td>
+                    <td>{fila.bodega || "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </Table>
+          </div>
+        )}
+      </div>
+    </>
   );
 }

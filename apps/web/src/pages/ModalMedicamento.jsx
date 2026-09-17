@@ -1,5 +1,6 @@
 import { ETIQUETAS_PRESENTACION, PRESENTACIONES_DE_MEDICAMENTO } from "@ecopac/shared";
 import ErrorState from "../components/ErrorState";
+import { Plus } from "lucide-react";
 
 export default function ModalMedicamento({
   isOpen,
@@ -177,16 +178,10 @@ export default function ModalMedicamento({
                 <button
                   type="button"
                   onClick={onCrearPrincipioActivo}
-                  style={{
-                    background: "none",
-                    border: "none",
-                    color: "#059669",
-                    fontSize: "var(--texto-xxs)",
-                    fontWeight: "var(--peso-bold)",
-                    cursor: "pointer",
-                  }}
+                  className="btn btn-link btn-sm btn-icono"
                 >
-                  + Crear Nuevo
+                  <Plus size={14} aria-hidden="true" />
+                  Crear nuevo
                 </button>
               )}
             </div>

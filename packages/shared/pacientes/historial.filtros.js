@@ -5,6 +5,7 @@ export const OPCIONES_TIPO_DE_EVENTO = [
   { value: TIPOS_DE_EVENTO.TRIAJE, label: "Signos vitales" },
   { value: TIPOS_DE_EVENTO.CONSULTA, label: "Consulta" },
   { value: TIPOS_DE_EVENTO.RECETA, label: "Receta" },
+  { value: TIPOS_DE_EVENTO.CIERRE, label: "Atención cerrada" },
 ];
 
 export const ETIQUETAS_TIPO_DE_EVENTO = Object.fromEntries(

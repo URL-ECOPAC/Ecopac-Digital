@@ -9,8 +9,13 @@ import {
   useExpiracionPorInactividad,
   MINUTOS_INACTIVIDAD_POR_DEFECTO,
 } from "@ecopac/shared";
+import { almacenamientoWeb } from "../almacenamiento";
 import { useSesionCompartida } from "../contexto/SesionProvider";
+import { useEnLinea } from "../hooks/useEnLinea";
+import AvisoDeInactividad from "./AvisoDeInactividad";
+import AvisoSinConexion from "./AvisoSinConexion";
 import IconoModulo from "./IconoModulo";
+import LimiteDeError from "./LimiteDeError";
 import "./MainLayout.css";
 
 const EVENTOS_DE_ACTIVIDAD = ["mousemove", "keydown", "mousedown", "touchstart", "scroll"];
@@ -39,6 +44,7 @@ export default function MainLayout() {
   const [menuAbierto, setMenuAbierto] = useState(false);
 
   const { perfil, logout } = useSesionCompartida();
+  const enLinea = useEnLinea();
 
   const secciones = seccionesVisibles(perfil.rol);
   const actual = moduloDeRuta(location.pathname);
@@ -56,10 +62,19 @@ export default function MainLayout() {
     setMenuAbierto(false);
   }, [location.pathname]);
 
-  const { registrarActividad } = useExpiracionPorInactividad({
-    minutos: MINUTOS_INACTIVIDAD_POR_DEFECTO,
-    alVencer: handleLogout,
-  });
+  // Cierre por inactividad. Al vencer se sale con un motivo en el state de la navegacion para que
+  // la pantalla de inicio de sesion diga por que se cerro, en vez de aparecer sin explicacion.
+  const cerrarPorInactividad = useCallback(async () => {
+    await logout();
+    navigate("/login", { replace: true, state: { motivo: "inactividad" } });
+  }, [logout, navigate]);
+
+  const { registrarActividad, seguirConectado, avisoVisible, segundosRestantes } =
+    useExpiracionPorInactividad({
+      minutos: MINUTOS_INACTIVIDAD_POR_DEFECTO,
+      alVencer: cerrarPorInactividad,
+      almacenamiento: almacenamientoWeb,
+    });
 
   useEffect(() => {
     EVENTOS_DE_ACTIVIDAD.forEach((evento) => window.addEventListener(evento, registrarActividad));
@@ -149,9 +164,13 @@ export default function MainLayout() {
             </p>
           </div>
           <div className="app-header__actions">
-            <span className="app-status" title="Estado del sistema">
+            {/* Decia "Sistema activo" siempre, con o sin red (issue #762). */}
+            <span
+              className={`app-status${enLinea ? "" : " app-status--sin-conexion"}`}
+              title="Estado de la conexion"
+            >
               <span className="app-status__dot" aria-hidden="true" />
-              Sistema activo
+              {enLinea ? "En línea" : "Sin conexión"}
             </span>
             <Button variant="outline-secondary" size="sm" onClick={handleLogout}>
               Cerrar sesion
@@ -159,10 +178,38 @@ export default function MainLayout() {
           </div>
         </header>
 
-        <main className="app-content">
-          <Outlet />
+        <AvisoSinConexion enLinea={enLinea} />
+
+        {/* --ec-acento-modulo es el color con el que el inicio pinta la tarjeta de este modulo.
+            Se publica aqui, una vez, para que el filete de PageHeader y los titulos de seccion
+            de cualquier pantalla del modulo lo tomen sin repetirlo. */}
+        <main
+          className="app-content"
+          style={{
+            "--ec-acento-modulo": actual
+              ? `var(--accent-${actual.id}, var(--color-primary))`
+              : "var(--color-primary)",
+          }}
+        >
+          {/* Un fallo de render en una pantalla se queda en esa pantalla: el menu sigue, se
+              reporta, y al navegar a otra ruta el limite se reinicia (issue #762). */}
+          <LimiteDeError
+            claveDeReinicio={location.pathname}
+            ruta={location.pathname}
+            modulo={actual?.id}
+            onVolverAlInicio={() => navigate("/")}
+          >
+            <Outlet />
+          </LimiteDeError>
         </main>
       </div>
+
+      <AvisoDeInactividad
+        visible={avisoVisible}
+        segundosRestantes={segundosRestantes}
+        onSeguir={seguirConectado}
+        onSalir={handleLogout}
+      />
     </div>
   );
 }

@@ -1,6 +1,10 @@
 import { calcularEdad } from "../formato/fechas.js";
 import { nombreCompletoDePaciente } from "./ficha.js";
-import { describirMedicamento, describirPosologia } from "./useRecetasPaciente.js";
+import {
+  describirEntrega,
+  describirMedicamento,
+  describirPosologia,
+} from "./useRecetasPaciente.js";
 
 export const ENCABEZADO_DE_RECETA = Object.freeze({
   organizacion: "Ecopac Guatemala",
@@ -33,7 +37,9 @@ export function datosDeRecetaImprimible({ receta, paciente } = {}) {
       id: renglon.id,
       descripcion: describirMedicamento(renglon),
       posologia: describirPosologia(renglon),
-      cantidadEntregada: renglon.cantidadEntregada ?? null,
+      // La cifra vigente: la corregida si la hubo (00128). Una receta impresa despues de ajustar
+      // la entrega decia la cantidad original.
+      cantidadEntregada: describirEntrega(renglon).vigente,
     })),
   };
 }

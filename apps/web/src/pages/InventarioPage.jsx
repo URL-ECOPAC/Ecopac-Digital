@@ -35,6 +35,9 @@ import {
   useGestionLotes,
   usePendientesValidacion,
 } from "@ecopac/shared";
+import { Nav } from "react-bootstrap";
+import PageHeader from "../components/PageHeader";
+import ScreenContainer from "../components/ScreenContainer";
 import StatCard from "../components/StatCard";
 import PanelAlertasVencimiento from "./PanelAlertasVencimiento.jsx";
 import AdministracionBodegasProveedoresPage from "./AdministracionBodegasProveedoresPage.jsx";
@@ -477,276 +480,77 @@ export default function InventarioPage() {
             item.categoria?.toLowerCase().trim() === categoriaSeleccionada.toLowerCase().trim(),
         );
 
-  return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: "20px",
-        padding: "24px",
-        backgroundColor: "#f8fafc",
-        minHeight: "100vh",
-      }}
-    >
-      {/* 1. Header principal */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <div>
-          <h1
-            style={{
-              fontSize: "var(--texto-xl)",
-              fontWeight: "var(--peso-bold)",
-              color: "#1e293b",
-              margin: 0,
-            }}
-          >
-            Control de Inventario
-          </h1>
-          <p style={{ fontSize: "var(--texto-xs)", color: "#94a3b8", margin: "4px 0 0 0" }}>
-            Trazabilidad multi-bodega • Lote y serie • Alertas de caducidad
-          </p>
-        </div>
-
-        {esAdmin &&
-          tabActiva !== "validacion" &&
-          tabActiva !== "administracion" &&
-          tabActiva !== "kardex" && (
-            <div style={{ display: "flex", gap: "8px" }}>
-              <button
-                onClick={() => setModalRegistroIngresoAbierto(true)}
-                style={{
-                  padding: "10px 20px",
-                  borderRadius: "9999px",
-                  border: "none",
-                  backgroundColor: "#059669",
-                  color: "#ffffff",
-                  fontSize: "var(--texto-xs)",
-                  fontWeight: "var(--peso-bold)",
-                  cursor: "pointer",
-                }}
-              >
-                + Registrar Ingreso
-              </button>
-              <button
-                onClick={() => setModalSalidaAbierto(true)}
-                style={{
-                  padding: "10px 20px",
-                  borderRadius: "9999px",
-                  border: "none",
-                  backgroundColor: "#b45309",
-                  color: "#ffffff",
-                  fontSize: "var(--texto-xs)",
-                  fontWeight: "var(--peso-bold)",
-                  cursor: "pointer",
-                }}
-              >
-                + Registrar Salida
-              </button>
-              {tabActiva === "catalogo" ? (
-                <button
-                  type="button"
-                  onClick={abrirModalNuevo}
-                  style={{
-                    padding: "10px 20px",
-                    borderRadius: "9999px",
-                    border: "none",
-                    backgroundColor: "#059669",
-                    color: "#ffffff",
-                    fontSize: "var(--texto-xs)",
-                    fontWeight: "var(--peso-bold)",
-                    cursor: "pointer",
-                  }}
-                >
-                  + Nuevo Medicamento
-                </button>
-              ) : tabActiva === "lotes" ? (
-                <button
-                  onClick={() => {
+  // Acciones de la cabecera. Eran cuatro <button> con estilos en linea -dos verdes, uno ambar,
+  // hexadecimales fuera de la paleta- y el "+" escrito dentro del texto. Ahora son las acciones de
+  // PageHeader, que pone el "+" sola y dibuja los botones del catalogo.
+  const tabsSinAccionesDeCabecera = ["validacion", "administracion", "kardex"];
+  const accionesCabecera =
+    esAdmin && !tabsSinAccionesDeCabecera.includes(tabActiva)
+      ? [
+          {
+            label: "Registrar ingreso",
+            onClick: () => setModalRegistroIngresoAbierto(true),
+          },
+          {
+            label: "Registrar salida",
+            onClick: () => setModalSalidaAbierto(true),
+            variant: "secondary",
+          },
+          ...(tabActiva === "catalogo"
+            ? [{ label: "Nuevo medicamento", onClick: abrirModalNuevo }]
+            : []),
+          ...(tabActiva === "lotes"
+            ? [
+                {
+                  label: "Registrar lote",
+                  onClick: () => {
                     setErrorLotes(null);
                     setModalAltaLoteAbierto(true);
-                  }}
-                  style={{
-                    padding: "10px 20px",
-                    borderRadius: "9999px",
-                    border: "none",
-                    backgroundColor: "#059669",
-                    color: "#ffffff",
-                    fontSize: "var(--texto-xs)",
-                    fontWeight: "var(--peso-bold)",
-                    cursor: "pointer",
-                  }}
-                >
-                  + Registrar Lote
-                </button>
-              ) : null}
-            </div>
-          )}
-      </div>
+                  },
+                },
+              ]
+            : []),
+        ]
+      : [];
 
-      {/* 2. Pestañas de Navegación */}
-      <div style={{ display: "flex", borderBottom: "1px solid #e2e8f0", gap: "16px" }}>
-        <button
-          onClick={() => setTabActiva("catalogo")}
-          style={{
-            padding: "8px 16px",
-            fontSize: "var(--texto-xs)",
-            fontWeight: "var(--peso-bold)",
-            border: "none",
-            background: "none",
-            cursor: "pointer",
-            borderBottom: tabActiva === "catalogo" ? "2px solid #10b981" : "2px solid transparent",
-            color: tabActiva === "catalogo" ? "#10b981" : "#64748b",
-          }}
-        >
-          Catálogo Medicamentos
-        </button>
-        <button
-          onClick={() => setTabActiva("lotes")}
-          style={{
-            padding: "8px 16px",
-            fontSize: "var(--texto-xs)",
-            fontWeight: "var(--peso-bold)",
-            border: "none",
-            background: "none",
-            cursor: "pointer",
-            borderBottom: tabActiva === "lotes" ? "2px solid #10b981" : "2px solid transparent",
-            color: tabActiva === "lotes" ? "#10b981" : "#64748b",
-          }}
-        >
-          Lotes y Caducidades
-        </button>
-        <button
-          onClick={() => setTabActiva("alertas")}
-          style={{
-            padding: "8px 16px",
-            fontSize: "var(--texto-xs)",
-            fontWeight: "var(--peso-bold)",
-            border: "none",
-            background: "none",
-            cursor: "pointer",
-            borderBottom: tabActiva === "alertas" ? "2px solid #f59e0b" : "2px solid transparent",
-            color: tabActiva === "alertas" ? "#d97706" : "#64748b",
-            display: "flex",
-            alignItems: "center",
-            gap: "6px",
-          }}
-        >
-          <span>Alertas de Vencimiento</span>
-          {cantidadPendientesAlertas > 0 && (
-            <span
-              style={{
-                backgroundColor: "#fef3c7",
-                color: "#92400e",
-                fontSize: "var(--texto-xxs)",
-                padding: "2px 8px",
-                borderRadius: "9999px",
-                fontWeight: "var(--peso-bold)",
-              }}
-            >
-              {cantidadPendientesAlertas}
-            </span>
-          )}
-        </button>
-        {/* Pestaña Kardex agregada en la barra */}
-        <button
-          onClick={() => setTabActiva("kardex")}
-          style={{
-            padding: "8px 16px",
-            fontSize: "var(--texto-xs)",
-            fontWeight: "var(--peso-bold)",
-            border: "none",
-            background: "none",
-            cursor: "pointer",
-            borderBottom: tabActiva === "kardex" ? "2px solid #0284c7" : "2px solid transparent",
-            color: tabActiva === "kardex" ? "#0284c7" : "#64748b",
-          }}
-        >
-          Kardex Movimientos
-        </button>
-        <button
-          onClick={() => setTabActiva("administracion")}
-          style={{
-            padding: "8px 16px",
-            fontSize: "var(--texto-xs)",
-            fontWeight: "var(--peso-bold)",
-            border: "none",
-            background: "none",
-            cursor: "pointer",
-            borderBottom:
-              tabActiva === "administracion" ? "2px solid #6366f1" : "2px solid transparent",
-            color: tabActiva === "administracion" ? "#4f46e5" : "#64748b",
-          }}
-        >
-          Administración
-        </button>
-        <button
-          onClick={() => setTabActiva("principios-activos")}
-          style={{
-            padding: "8px 16px",
-            fontSize: "var(--texto-xs)",
-            fontWeight: "var(--peso-bold)",
-            border: "none",
-            background: "none",
-            cursor: "pointer",
-            borderBottom:
-              tabActiva === "principios-activos" ? "2px solid #0d9488" : "2px solid transparent",
-            color: tabActiva === "principios-activos" ? "#0d9488" : "#64748b",
-          }}
-        >
-          Principios Activos
-        </button>
-        {puedeRegistrarMovimiento(rol) && (
-          <button
-            onClick={() => setTabActiva("mis-movimientos")}
-            style={{
-              padding: "8px 16px",
-              fontSize: "var(--texto-xs)",
-              fontWeight: "var(--peso-bold)",
-              border: "none",
-              background: "none",
-              cursor: "pointer",
-              borderBottom:
-                tabActiva === "mis-movimientos" ? "2px solid #7c3aed" : "2px solid transparent",
-              color: tabActiva === "mis-movimientos" ? "#7c3aed" : "#64748b",
-            }}
-          >
-            Mis Movimientos
-          </button>
-        )}
-        <button
-          onClick={() => setTabActiva("validacion")}
-          style={{
-            padding: "8px 16px",
-            fontSize: "var(--texto-xs)",
-            fontWeight: "var(--peso-bold)",
-            border: "none",
-            background: "none",
-            cursor: "pointer",
-            borderBottom:
-              tabActiva === "validacion" ? "2px solid #10b981" : "2px solid transparent",
-            color: tabActiva === "validacion" ? "#10b981" : "#64748b",
-            display: "flex",
-            alignItems: "center",
-            gap: "6px",
-          }}
-        >
-          <span>Validación</span>
-          {conteo > 0 && (
-            <span
-              style={{
-                backgroundColor: "#fbbf24",
-                color: "#78350f",
-                fontSize: "var(--texto-xxs)",
-                padding: "2px 8px",
-                borderRadius: "9999px",
-                fontWeight: "var(--peso-bold)",
-              }}
-            >
-              {conteo}
-            </span>
-          )}
-        </button>
-      </div>
+  // Pestanas. Eran nueve <button> con un color de subrayado distinto cada una (#10b981, #f59e0b,
+  // #0284c7, #6366f1, #0d9488, #7c3aed): las pastillas de `.nav-tabs` de ui.css son las mismas
+  // que usan pacientes, presupuestos y reportes.
+  const pestanas = [
+    { id: "catalogo", label: "Catálogo de medicamentos" },
+    { id: "lotes", label: "Lotes y caducidades" },
+    { id: "alertas", label: "Alertas de vencimiento", contador: cantidadPendientesAlertas },
+    { id: "kardex", label: "Kardex de movimientos" },
+    { id: "administracion", label: "Administración" },
+    { id: "principios-activos", label: "Principios activos" },
+    ...(puedeRegistrarMovimiento(rol) ? [{ id: "mis-movimientos", label: "Mis movimientos" }] : []),
+    { id: "validacion", label: "Validación", contador: conteo },
+  ];
 
+  return (
+    <ScreenContainer
+      contentContainerStyle={{
+        display: "flex",
+        flexDirection: "column",
+        gap: "var(--spacing-md)",
+      }}
+    >
+      <PageHeader
+        title="Control de inventario"
+        subtitle="Trazabilidad multi-bodega • Lote y serie • Alertas de caducidad"
+        actions={accionesCabecera}
+      />
+
+      <Nav variant="tabs" activeKey={tabActiva} onSelect={(clave) => setTabActiva(clave)}>
+        {pestanas.map((pestana) => (
+          <Nav.Item key={pestana.id}>
+            <Nav.Link eventKey={pestana.id}>
+              {pestana.label}
+              {pestana.contador > 0 && <span className="ec-tab-contador">{pestana.contador}</span>}
+            </Nav.Link>
+          </Nav.Item>
+        ))}
+      </Nav>
       {error && (
         <div
           style={{
@@ -1345,6 +1149,6 @@ export default function InventarioPage() {
           usuarioId={usuarioActual?.id}
         />
       )}
-    </div>
+    </ScreenContainer>
   );
 }

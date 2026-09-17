@@ -5,6 +5,7 @@ import { useRoute } from "@react-navigation/native";
 import {
   ETIQUETAS_TIPO_DE_EVENTO,
   TIPOS_DE_EVENTO,
+  describirEntrega,
   describirMedicamento,
   describirPosologia,
   formatearFechaCorta,
@@ -36,7 +37,7 @@ function Medicamentos({ evento }) {
         <Text key={`${evento.id}-${indice}`} style={styles.texto}>
           {describirMedicamento(renglon)}
           {describirPosologia(renglon) ? ` — ${describirPosologia(renglon)}` : ""}
-          {renglon.cantidadEntregada ? ` (${renglon.cantidadEntregada})` : ""}
+          {describirEntrega(renglon).texto ? ` (${describirEntrega(renglon).texto})` : ""}
         </Text>
       ))}
     </View>
@@ -106,6 +107,9 @@ function Atencion({ grupo, abierta, onAlternar }) {
               </Text>
               {evento.tipo === TIPOS_DE_EVENTO.CONSULTA && <DetalleDeConsulta evento={evento} />}
               {evento.tipo === TIPOS_DE_EVENTO.RECETA && <Medicamentos evento={evento} />}
+              {evento.tipo === TIPOS_DE_EVENTO.CIERRE && (
+                <Text style={styles.texto}>{evento.motivoCierre ?? "Sin motivo registrado."}</Text>
+              )}
               {evento.tipo === TIPOS_DE_EVENTO.TRIAJE && (
                 <Text style={styles.texto}>
                   {[

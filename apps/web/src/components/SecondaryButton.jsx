@@ -1,4 +1,5 @@
 import { Button, Spinner } from "react-bootstrap";
+import { iconoDeAccion, rotuloSinSigno } from "./iconosDeAccion";
 
 /**
  * Boton de accion secundaria (ej. "Cancelar", "Volver", "Editar").
@@ -19,7 +20,8 @@ import { Button, Spinner } from "react-bootstrap";
  *
  * @param {"outline"|"neutra"|"peligro"} [props.variant]
  * @param {"sm"|"md"|"lg"} [props.size]
- * @param {import("react").ReactNode} [props.icon]
+ * @param {import("react").ReactNode} [props.icon] Sin pasarlo, una alta lleva el "+" y un borrado
+ *   el basurero (iconosDeAccion.jsx); `null` lo quita.
  */
 const VARIANTES = {
   outline: "outline-primary",
@@ -34,7 +36,7 @@ export default function SecondaryButton({
   loading = false,
   variant = "outline",
   size = "md",
-  icon = null,
+  icon,
   block = false,
   className = "",
   style,
@@ -60,8 +62,8 @@ export default function SecondaryButton({
         <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" />
       ) : (
         <>
-          {icon}
-          {title}
+          {iconoDeAccion(title, icon)}
+          {rotuloSinSigno(title)}
         </>
       )}
     </Button>

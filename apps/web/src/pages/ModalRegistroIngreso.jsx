@@ -1,4 +1,6 @@
 import { formatearMoneda, useRegistroIngreso } from "@ecopac/shared";
+import PrimaryButton from "../components/PrimaryButton";
+import SecondaryButton from "../components/SecondaryButton";
 
 export default function ModalRegistroIngreso({
   abierto,
@@ -120,13 +122,11 @@ export default function ModalRegistroIngreso({
                   </p>
                 </div>
                 <div className="d-flex justify-content-end pt-3">
-                  <button
+                  <PrimaryButton
+                    title="Registrar otro ingreso"
+                    size="sm"
                     onClick={resetFormulario}
-                    className="btn btn-sm text-white px-3"
-                    style={{ backgroundColor: "#009963" }}
-                  >
-                    + Registrar Otro Ingreso
-                  </button>
+                  />
                 </div>
               </div>
             ) : (
@@ -350,13 +350,13 @@ export default function ModalRegistroIngreso({
                               setItemActual({ ...itemActual, fecha_vencimiento: e.target.value })
                             }
                           />
-                          <button
+                          <SecondaryButton
                             type="button"
+                            title="Añadir"
+                            size="sm"
                             onClick={agregarItem}
-                            className="btn btn-dark btn-sm rounded-2 px-3 text-nowrap"
-                          >
-                            + Añadir
-                          </button>
+                            className="text-nowrap"
+                          />
                         </div>
                       </div>
                     </div>
@@ -406,13 +406,13 @@ export default function ModalRegistroIngreso({
                                 : formatearMoneda(item.costo_unitario)}
                             </td>
                             <td className="px-3 text-end">
-                              <button
+                              <SecondaryButton
                                 type="button"
+                                title="Eliminar"
+                                size="sm"
+                                variant="peligro"
                                 onClick={() => eliminarItem(item.id)}
-                                className="btn btn-link btn-sm text-danger text-decoration-none p-0 fw-bold"
-                              >
-                                Eliminar
-                              </button>
+                              />
                             </td>
                           </tr>
                         ))

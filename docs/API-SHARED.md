@@ -95,14 +95,34 @@ app no levanta.
 
 Ninguna pantalla formatea una fecha por su cuenta.
 
+`tipoDeAccion(rotulo)`, `rotuloSinSigno(rotulo)` y `TIPOS_DE_ACCION` (`formato/acciones.js`):
+deciden por el verbo inicial si un boton es un alta ("Nuevo", "Crear", "Agregar", "Registrar") o
+un borrado ("Eliminar", "Borrar", "Quitar"). Los botones del catalogo de las dos apps lo usan para
+poner solos el "+" y el basurero; ninguna pantalla los escribe a mano.
+
 ### `hooks/` - hooks transversales
 
 | Hook / helper                    | Que hace                                                          |
 | -------------------------------- | ----------------------------------------------------------------- |
 | `useSesion`                      | Sesion y perfil actual                                            |
 | `useBusquedaPacientes`           | Busqueda con retardo y paginacion, compartida entre pantallas     |
-| `useExpiracionPorInactividad`    | Cierra la sesion tras `MINUTOS_INACTIVIDAD_POR_DEFECTO`           |
+| `useExpiracionPorInactividad`    | Cierra la sesion tras `MINUTOS_INACTIVIDAD_POR_DEFECTO`, avisando `SEGUNDOS_DE_AVISO_POR_DEFECTO` antes; con `almacenamiento`, sobrevive a recargar y se comparte entre pestanas. Devuelve `registrarActividad`, `seguirConectado`, `avisoVisible`, `segundosRestantes` |
+| `haVencidoPorInactividad`, `segundosHastaElCierre`, `actividadMasReciente` | La logica pura del temporizador, probada sin reloj real |
+| `olvidarUltimaActividad`, `CLAVE_ULTIMA_ACTIVIDAD` | Borran / nombran la marca guardada; la pantalla de inicio de sesion la borra |
 | `esRespuestaVigente`, `debeDescartarseLaRespuesta`, `combinarResultados`, `hayMasResultados` | Descartan respuestas de una busqueda ya superada |
+
+### `observabilidad/` - reporte de errores (issue #762)
+
+| Export                        | Que hace                                                           |
+| ----------------------------- | ------------------------------------------------------------------ |
+| `reportarError(error, contexto)` | Punto unico por el que pasan los errores. Nunca lanza          |
+| `construirReporteDeError`     | Convierte cualquier cosa lanzada en un reporte plano y ya limpio   |
+| `limpiarDatosSensibles`       | Quita UUID, correos, DPI, telefonos, tokens y el valor del `detail` de Postgres, dejando legible el resto |
+| `configurarDestinoDeErrores`  | A donde van los reportes. Hoy, la consola; es lo unico que hay que tocar para conectar una herramienta de monitoreo |
+
+Complementa a `sanearDetalle` (`api/`), que se sigue usando para el `detail` de Postgres: esa
+borra todo lo entrecomillado y entre parentesis, que aplicado a una pila de JavaScript la dejaria
+ilegible.
 
 ### `territorio/`
 
@@ -170,6 +190,15 @@ web y la tarjeta estrecha del movil.
 `resumenDeUltimaAtencion`, `condicionesDestacadas`, `estaFueraDeRango`, `describirPosologia`,
 `describirMedicamento`, `datosDeRecetaImprimible`, `claveDeBorrador` y `hayBorradorConDatos` (el
 borrador local del registro por pasos, porque en campo se interrumpe).
+
+`describirEntrega(renglon)` devuelve la cantidad **vigente** de un renglon de receta: la corregida
+(`cantidad_ajustada`, 00128) si la hubo, con de cuanto y por quien. Las pantallas leian solo
+`cantidad_entregada`, asi que una entrega corregida seguia mostrando la cifra original en la ficha,
+en el historial y en la receta impresa.
+
+El historial (`obtenerHistorialMedico`, `aEventos`) incluye el evento `TIPOS_DE_EVENTO.CIERRE`
+cuando la atencion se cerro (`cerrada_en`, `motivo_cierre`, 00060): una atencion cerrada sin triaje
+ni consulta no dejaba ningun rastro en el historial del paciente.
 
 ### `jornadas/`
 

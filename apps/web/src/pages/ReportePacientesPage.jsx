@@ -9,8 +9,7 @@ import DataList from "../components/DataList";
 import ErrorState from "../components/ErrorState";
 import FilterBar from "../components/FilterBar";
 import LoadingState from "../components/LoadingState";
-import PageHeader from "../components/PageHeader";
-import ScreenContainer from "../components/ScreenContainer";
+import CabeceraDeReporte, { ContenedorDeReporte } from "./CabeceraDeReporte";
 import Selector from "../components/Selector";
 import { useSesionCompartida } from "../contexto/SesionProvider";
 import BotonExportarPDF from "../components/BotonExportarPDF";
@@ -37,7 +36,7 @@ function descargarCSV(columnas, filas) {
   URL.revokeObjectURL(url);
 }
 
-export default function ReportePacientesPage() {
+export default function ReportePacientesPage({ incrustado = false }) {
   const { rol } = useSesionCompartida();
   const {
     tieneAcceso,
@@ -65,16 +64,17 @@ export default function ReportePacientesPage() {
 
   if (!tieneAcceso) {
     return (
-      <ScreenContainer>
-        <PageHeader title="Pacientes atendidos" />
+      <ContenedorDeReporte incrustado={incrustado}>
+        <CabeceraDeReporte incrustado={incrustado} title="Pacientes atendidos" />
         <ErrorState message="Solo administración y junta directiva consultan el reporte de pacientes." />
-      </ScreenContainer>
+      </ContenedorDeReporte>
     );
   }
 
   return (
-    <ScreenContainer>
-      <PageHeader
+    <ContenedorDeReporte incrustado={incrustado}>
+      <CabeceraDeReporte
+        incrustado={incrustado}
         title="Pacientes atendidos"
         subtitle="Agregados por jornada, comunidad o periodo. Ninguna fila identifica a un paciente."
         actions={[
@@ -141,6 +141,6 @@ export default function ReportePacientesPage() {
         </div>
         // Fin del contenido PDF
       )}
-    </ScreenContainer>
+    </ContenedorDeReporte>
   );
 }

@@ -5,3 +5,4 @@
 
 export * from "./fechas.js";
 export * from "./moneda.js";
+export * from "./acciones.js";

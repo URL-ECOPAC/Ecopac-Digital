@@ -17,6 +17,8 @@ import {
   Spinner,
 } from "react-bootstrap";
 
+import PageHeader from "../components/PageHeader";
+import ScreenContainer from "../components/ScreenContainer";
 import ModalProyecto from "./ModalProyecto";
 
 export default function ProyectosSocialesPage({ usuarioRol }) {
@@ -51,27 +53,24 @@ export default function ProyectosSocialesPage({ usuarioRol }) {
   }
 
   return (
-    <Container fluid style={{ maxWidth: "1140px" }} className="py-4">
-      {/* Header */}
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <div>
-          <h1 className="h3 mb-1 text-dark">Proyectos Sociales</h1>
-          <p className="text-muted small mb-0">
-            Gestión de proyectos, presupuestos y jornadas de campo
-          </p>
-        </div>
-        {puedeEditar && (
-          <Button
-            variant="primary"
-            onClick={() => {
-              setProyectoEnEdicion(null);
-              setFormularioAbierto(true);
-            }}
-          >
-            + Nuevo Proyecto
-          </Button>
-        )}
-      </div>
+    <ScreenContainer>
+      <PageHeader
+        title="Proyectos sociales"
+        subtitle="Gestión de proyectos, presupuestos y jornadas de campo"
+        actions={
+          puedeEditar
+            ? [
+                {
+                  label: "Nuevo proyecto",
+                  onClick: () => {
+                    setProyectoEnEdicion(null);
+                    setFormularioAbierto(true);
+                  },
+                },
+              ]
+            : []
+        }
+      />
 
       {error && (
         <Alert variant="danger">
@@ -96,9 +95,15 @@ export default function ProyectosSocialesPage({ usuarioRol }) {
                   }
                 >
                   <option value="">Todos los estados</option>
-                  <option value="Planificación">Planificación</option>
-                  <option value="En Ejecución">En Ejecución</option>
-                  <option value="Finalizado">Finalizado</option>
+                  {/* Los valores eran "Planificación", "En Ejecución" y "Finalizado", escritos a
+                      mano: ninguno es un valor del enum estado_proyecto (00007), asi que elegir
+                      cualquiera mandaba a la base un filtro que rechaza con 22P02, y "Cancelado"
+                      no se podia filtrar. Salen de ESTADOS_PROYECTO, como el chip de la tabla. */}
+                  {Object.values(ESTADOS_PROYECTO).map((estado) => (
+                    <option key={estado} value={estado}>
+                      {ETIQUETAS_ESTADO_PROYECTO[estado]}
+                    </option>
+                  ))}
                 </Form.Select>
               </Form.Group>
             </Col>
@@ -316,6 +321,6 @@ export default function ProyectosSocialesPage({ usuarioRol }) {
         onClose={() => setFormularioAbierto(false)}
         onGuardar={guardarProyecto}
       />
-    </Container>
+    </ScreenContainer>
   );
 }

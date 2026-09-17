@@ -460,3 +460,68 @@ describe("obtenerUltimaAtencion", () => {
     expect(error).not.toBeNull();
   });
 });
+
+describe("aEventos: cierre de la atencion y entregas corregidas", () => {
+  it("una atencion cerrada sin triaje ni consulta deja un evento de cierre con su motivo", () => {
+    const eventos = aEventos({
+      id: "ate-9",
+      jornadaId: "jor-1",
+      createdAt: "2026-06-15T09:00:00Z",
+      cerradaEn: "2026-06-15T09:30:00Z",
+      motivoCierre: "Se retiro antes de pasar a consulta",
+      jornada: { nombre: "Jornada de prueba", fecha: "2026-06-15" },
+      triajes: null,
+      consultas: [],
+    });
+
+    expect(eventos).toHaveLength(1);
+    expect(eventos[0]).toMatchObject({
+      tipo: TIPOS_DE_EVENTO.CIERRE,
+      fecha: "2026-06-15T09:30:00Z",
+      motivoCierre: "Se retiro antes de pasar a consulta",
+    });
+  });
+
+  it("una atencion abierta no genera evento de cierre", () => {
+    const eventos = aEventos(ATENCION);
+    expect(eventos.some((evento) => evento.tipo === TIPOS_DE_EVENTO.CIERRE)).toBe(false);
+  });
+
+  it("la receta lleva la cantidad corregida y quien la corrigio", () => {
+    const eventos = aEventos({
+      ...ATENCION,
+      consultas: [
+        {
+          ...ATENCION.consultas[0],
+          recetas: [
+            {
+              id: "rec-9",
+              folio: "R-9",
+              estado: "emitida",
+              createdAt: "2026-06-15T10:30:00Z",
+              detalle: [
+                {
+                  cantidadEntregada: 10,
+                  cantidadAjustada: 8,
+                  ajustadaEn: "2026-06-15T11:00:00Z",
+                  ajustadaPorPerfil: { nombres: "Rosa", apellidos: "Gomez" },
+                  dosis: "1 tableta",
+                  frecuencia: "cada 8 horas",
+                  duracion: "5 dias",
+                  medicamento: { nombre: "Loratadina" },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+
+    const receta = eventos.find((evento) => evento.tipo === TIPOS_DE_EVENTO.RECETA);
+    expect(receta.medicamentos[0]).toMatchObject({
+      cantidadEntregada: 10,
+      cantidadAjustada: 8,
+      ajustadaPorNombre: "Rosa Gomez",
+    });
+  });
+});

@@ -37,10 +37,7 @@ import DetalleJornadaPage from "./pages/DetalleJornadaPage";
 import ColaboradoresPage from "./pages/ColaboradoresPage";
 import PerfilPage from "./pages/PerfilPage";
 import NotFoundPage from "./pages/NotFoundPage";
-import DashboardMetricasPage from "./pages/DashboardMetricasPage";
 import ReporteJornada from "./pages/ReporteJornada";
-import ReportePacientesPage from "./pages/ReportePacientesPage";
-import ReporteInventarioPage from "./pages/ReporteInventarioPage";
 
 const rolesDe = (ruta) => MODULOS.find((m) => m.ruta === ruta)?.roles ?? [];
 
@@ -162,11 +159,15 @@ export default function App() {
                 />
               </Route>
               <Route element={<RutaProtegida roles={rolesDe("/reportes")} />}>
+                {/* Las pestanas del hub son rutas: todas montan ReportesPage, que elige la
+                  pestana por la direccion. Antes "pacientes atendidos" montaba su reporte suelto,
+                  sin las pestanas, y desde ahi no habia forma de volver a las demas. */}
                 <Route path="/reportes" element={<ReportesPage />} />
+                <Route path="/reportes/dashboard" element={<ReportesPage />} />
+                <Route path="/reportes/medicamentos-por-vencer" element={<ReportesPage />} />
+                <Route path="/reportes/pacientes-atendidos" element={<ReportesPage />} />
+                <Route path="/reportes/inventario-actual" element={<ReportesPage />} />
                 <Route path="/reportes/jornada/:id" element={<ReporteJornada />} />
-                <Route path="/reportes/pacientes-atendidos" element={<ReportePacientesPage />} />
-                <Route path="/reportes/inventario-actual" element={<ReporteInventarioPage />} />
-                <Route path="/reportes/dashboard" element={<DashboardMetricasPage />} />
               </Route>
               <Route element={<RutaProtegida roles={rolesDe("/jornadas")} />}>
                 <Route path="/jornadas" element={<JornadasPage />} />

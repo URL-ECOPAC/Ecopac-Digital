@@ -1,6 +1,7 @@
 import { useState } from "react";
 
 import { permisosDeMovimientos, usePendientesValidacion } from "@ecopac/shared";
+import SectionHeader from "../components/SectionHeader";
 // issue #689: esta pantalla tenia su propio movimientosPendientes escrito a mano (un solo
 // movimiento de mentira) y handleAprobar/handleRechazar solo hacian console.log. Nunca llamaba
 // a usePendientesValidacion(), que ya existia y estaba probada. Ahora la bandeja se autoabastece
@@ -59,21 +60,10 @@ export default function BandejaValidacionPage({ usuarioId, rolUsuario }) {
       }}
     >
       {/* Encabezado */}
-      <div>
-        <h2
-          style={{
-            fontSize: "var(--texto-xl)",
-            fontWeight: "var(--peso-bold)",
-            color: "#1e293b",
-            margin: "0 0 4px 0",
-          }}
-        >
-          Bandeja de Validación de Movimientos
-        </h2>
-        <p style={{ fontSize: "var(--texto-xs)", color: "#94a3b8", margin: 0 }}>
-          {pendientes.length} Pendientes por revisar y autorizar
-        </p>
-      </div>
+      <SectionHeader
+        title="Bandeja de validación de movimientos"
+        subtitle={`${pendientes.length} pendientes por revisar y autorizar`}
+      />
 
       {errorAccion && (
         <div

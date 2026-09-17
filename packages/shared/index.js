@@ -35,6 +35,8 @@ export * from "./reportes/index.js";
 export * from "./territorio/index.js";
 export * from "./api/index.js";
 export * from "./hooks/index.js";
+// Reporte de errores sin datos de paciente (issue #762).
+export * from "./observabilidad/index.js";
 // Con extension explicita, como el resto del barril. Estuvo sin ella mientras el archivo fue
 // types/index.ts (PR #377), porque Vite resuelve el cambio de .js a .ts por su cuenta y Metro no
 // -el barril dejaba de resolver en el movil, que es el bug #390-. Al dejar de haber TypeScript

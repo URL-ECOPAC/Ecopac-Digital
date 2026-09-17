@@ -1,4 +1,5 @@
 import { Button, Spinner } from "react-bootstrap";
+import { iconoDeAccion, rotuloSinSigno } from "./iconosDeAccion";
 
 /**
  * Boton de accion principal.
@@ -17,7 +18,9 @@ import { Button, Spinner } from "react-bootstrap";
  * @param {() => void} [props.onClick]
  * @param {"primary"|"danger"|"warning"|"success"} [props.variant] Intencion de la accion.
  * @param {"sm"|"md"|"lg"} [props.size]
- * @param {import("react").ReactNode} [props.icon] Icono a la izquierda del texto.
+ * @param {import("react").ReactNode} [props.icon] Icono a la izquierda del texto. Sin pasarlo, una
+ *   alta ("Nuevo...", "Registrar...") lleva el "+" y un borrado el basurero (iconosDeAccion.jsx);
+ *   `null` lo quita.
  * @param {boolean} [props.block] Ocupa todo el ancho disponible.
  */
 export default function PrimaryButton({
@@ -27,7 +30,7 @@ export default function PrimaryButton({
   loading = false,
   variant = "primary",
   size = "md",
-  icon = null,
+  icon,
   block = false,
   className = "",
   style,
@@ -55,8 +58,8 @@ export default function PrimaryButton({
         <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" />
       ) : (
         <>
-          {icon}
-          {title}
+          {iconoDeAccion(title, icon)}
+          {rotuloSinSigno(title)}
         </>
       )}
     </Button>

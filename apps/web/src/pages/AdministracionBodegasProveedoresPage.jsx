@@ -1,6 +1,9 @@
 import { useState, useEffect } from "react";
 import ErrorState from "../components/ErrorState";
 import { useAdministracionBodegasProveedores, TIPO_BODEGA, TIPO_PROVEEDOR } from "@ecopac/shared";
+import { Nav } from "react-bootstrap";
+import PrimaryButton from "../components/PrimaryButton";
+import SectionHeader from "../components/SectionHeader";
 
 export default function AdministracionBodegasProveedoresPage() {
   const [pestañaActiva, setPestañaActiva] = useState("bodegas");
@@ -116,46 +119,22 @@ export default function AdministracionBodegasProveedoresPage() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
       {/* Cabecera */}
-      <div>
-        <h3
-          style={{
-            fontSize: "var(--texto-md)",
-            fontWeight: "var(--peso-bold)",
-            margin: 0,
-            color: "#1e293b",
-          }}
-        >
-          Administración: Bodegas y Proveedores
-        </h3>
-        <p style={{ fontSize: "var(--texto-xs)", color: "#94a3b8", margin: "4px 0 0 0" }}>
-          Configuración de ubicaciones y catálogo de origen de medicamentos
-        </p>
-      </div>
+      <SectionHeader
+        title="Administración: bodegas y proveedores"
+        subtitle="Configuración de ubicaciones y catálogo de origen de medicamentos"
+      />
 
-      {/* Pestañas */}
-      <div style={{ display: "flex", borderBottom: "1px solid #e2e8f0", gap: "16px" }}>
+      {/* Pestañas: las pastillas de .nav-tabs, como en el resto de la aplicacion. */}
+      <Nav variant="tabs" activeKey={pestañaActiva} onSelect={(clave) => setPestañaActiva(clave)}>
         {[
-          { id: "bodegas", etiqueta: " Bodegas" },
-          { id: "proveedores", etiqueta: " Proveedores y Donantes" },
+          { id: "bodegas", etiqueta: "Bodegas" },
+          { id: "proveedores", etiqueta: "Proveedores y donantes" },
         ].map((p) => (
-          <button
-            key={p.id}
-            onClick={() => setPestañaActiva(p.id)}
-            style={{
-              padding: "8px 16px",
-              fontSize: "var(--texto-xs)",
-              fontWeight: "var(--peso-bold)",
-              border: "none",
-              background: "none",
-              cursor: "pointer",
-              borderBottom: pestañaActiva === p.id ? "2px solid #10b981" : "2px solid transparent",
-              color: pestañaActiva === p.id ? "#10b981" : "#64748b",
-            }}
-          >
-            {p.etiqueta}
-          </button>
+          <Nav.Item key={p.id}>
+            <Nav.Link eventKey={p.id}>{p.etiqueta}</Nav.Link>
+          </Nav.Item>
         ))}
-      </div>
+      </Nav>
 
       {/* ═══════════ BODEGAS ═══════════ */}
       {pestañaActiva === "bodegas" && (
@@ -166,21 +145,7 @@ export default function AdministracionBodegasProveedoresPage() {
                 ? "No se pudo cargar el listado"
                 : `${bodegas.length} bodegas registradas`}
             </p>
-            <button
-              onClick={abrirNuevaBodega}
-              style={{
-                padding: "8px 16px",
-                backgroundColor: "#10b981",
-                color: "#fff",
-                border: "none",
-                borderRadius: "9999px",
-                fontSize: "var(--texto-xs)",
-                fontWeight: "var(--peso-semibold)",
-                cursor: "pointer",
-              }}
-            >
-              + Nueva Bodega
-            </button>
+            <PrimaryButton title="Nueva bodega" size="sm" onClick={abrirNuevaBodega} />
           </div>
 
           {cargandoBodegas ? (
@@ -286,21 +251,7 @@ export default function AdministracionBodegasProveedoresPage() {
                 ? "No se pudo cargar el listado"
                 : `${proveedores.length} proveedores y donantes`}
             </p>
-            <button
-              onClick={abrirNuevoProveedor}
-              style={{
-                padding: "8px 16px",
-                backgroundColor: "#10b981",
-                color: "#fff",
-                border: "none",
-                borderRadius: "9999px",
-                fontSize: "var(--texto-xs)",
-                fontWeight: "var(--peso-semibold)",
-                cursor: "pointer",
-              }}
-            >
-              + Nuevo Proveedor
-            </button>
+            <PrimaryButton title="Nuevo proveedor" size="sm" onClick={abrirNuevoProveedor} />
           </div>
 
           {cargandoProveedores ? (

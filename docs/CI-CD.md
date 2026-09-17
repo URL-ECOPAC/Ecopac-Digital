@@ -575,6 +575,68 @@ el resumen de la corrida y una anotacion de warning. La idea es no bloquear al e
 termina de configurar los ambientes, pero que una omision nunca se vea igual que un despliegue
 exitoso.
 
+## Respaldos y restauracion
+
+Issue #762, bloque 4. **Estado: procedimiento escrito, restauracion todavia no probada.** Un
+respaldo sin restauracion probada no es un respaldo, asi que esta seccion no da por cerrado nada
+hasta que alguien complete la prueba de abajo y anote la fecha en la tabla del final.
+
+### Que respalda Supabase por su cuenta
+
+Depende del plan contratado y **no se da por supuesto aqui**. Hay que confirmarlo en el Dashboard
+de cada proyecto (Database > Backups) y anotarlo en la tabla del final: si hay respaldos
+automaticos, con que frecuencia, cuantos dias se conservan y si se pueden restaurar desde el
+propio Dashboard. Si el plan no los ofrece, el respaldo propio de abajo es el unico que hay.
+
+Un proyecto **pausado por inactividad** no pierde los datos, pero mientras esta pausado no responde
+y no se puede respaldar. El keep-alive (`keep-alive-supabase.yml`) es lo que lo evita, y desde la
+#762 avisa en el resumen de la corrida cuando no hizo nada por falta de secrets.
+
+### Respaldo propio
+
+Con la CLI vinculada al proyecto (`supabase link --project-ref <ref>`). Son lecturas: no aplican
+migraciones, asi que no chocan con la regla de "Las migraciones se aplican mergeando, no a mano".
+
+```bash
+supabase db dump --linked --role-only -f roles.sql
+supabase db dump --linked -f esquema.sql
+supabase db dump --linked --data-only --use-copy -f datos.sql
+```
+
+**Un volcado de produccion contiene expedientes clinicos reales.** Lo genera solo la persona
+responsable de la base, se guarda cifrado fuera del repositorio y fuera de equipos personales, y
+se borra al terminar la prueba. Ninguno de los tres archivos se sube a GitHub, a un chat ni a un
+correo. La primera prueba se hace con `Ecopac-Digital-Dev`, que no tiene datos reales.
+
+### Prueba de restauracion
+
+Contra el stack local, que es desechable:
+
+```bash
+supabase start
+supabase db reset          # base local vacia con el esquema de supabase/migrations
+psql "postgresql://postgres:postgres@127.0.0.1:54422/postgres" -f datos.sql  # puerto de [db] en supabase/config.toml
+```
+
+Se restauran los **datos** sobre el esquema de las migraciones, y no el `esquema.sql` volcado,
+porque la fuente de verdad del esquema es `supabase/migrations/` (AGENTS.md): si el volcado y las
+migraciones no coinciden, eso ya es un hallazgo que hay que reportar.
+
+La prueba solo cuenta si, despues de restaurar:
+
+1. `select count(*)` de `pacientes`, `atenciones`, `recetas`, `lotes` y `movimientos_inventario`
+   coincide con el del proyecto de origen en el momento del volcado.
+2. Se puede iniciar sesion en la web local (`npm run dev:web` contra el stack local) y abrir la
+   ficha de un paciente con su historial.
+3. `supabase test db` sigue en verde.
+
+### Registro
+
+| Proyecto | Respaldos del plan (confirmado en Dashboard) | Ultima restauracion probada | Quien |
+| --- | --- | --- | --- |
+| Ecopac-Digital-Dev | pendiente de confirmar | nunca | - |
+| Ecopac-Digital-Prod | pendiente de confirmar | nunca | - |
+
 ## La regla mas importante: una migracion aplicada no se edita
 
 Cuando una migracion corre en una base, Supabase la registra en

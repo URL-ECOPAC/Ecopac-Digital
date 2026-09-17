@@ -1,29 +1,16 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import {
-  Alert,
-  Badge,
-  Button,
-  Card,
-  Col,
-  Container,
-  Form,
-  Row,
-  Spinner,
-  Table,
-} from "react-bootstrap";
+import { Alert, Badge, Button, Card, Col, Form, Row, Spinner, Table } from "react-bootstrap";
 import { formatearMoneda, useResumenDonaciones } from "@ecopac/shared";
+import PageHeader from "../components/PageHeader";
+import ScreenContainer from "../components/ScreenContainer";
 import StatCard from "../components/StatCard";
 import { useSesionCompartida } from "../contexto/SesionProvider";
 
 const ACCESOS_NAV = [
   { ruta: "/donaciones/registro", etiqueta: "Registrar donación", variante: "primary" },
-  {
-    ruta: "/donaciones/historial",
-    etiqueta: "Historial de donaciones",
-    variante: "outline-primary",
-  },
-  { ruta: "/donantes", etiqueta: "Catálogo de donantes", variante: "outline-primary" },
+  { ruta: "/donaciones/historial", etiqueta: "Historial de donaciones", variante: "secondary" },
+  { ruta: "/donantes", etiqueta: "Catálogo de donantes", variante: "secondary" },
 ];
 
 export default function DonacionesPage() {
@@ -38,23 +25,17 @@ export default function DonacionesPage() {
   const { totalesPorTipo, donacionesRecientes, donantesFrecuentes } = datos;
 
   return (
-    <Container fluid style={{ maxWidth: "1200px" }} className="py-4">
-      {/* Encabezado y Navegación rápida */}
-      <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
-        <div>
-          <h1 className="h3 mb-1">Resumen de Donaciones</h1>
-          <p className="text-body-secondary mb-0">
-            Indicadores principales, donaciones recientes y métricas del módulo.
-          </p>
-        </div>
-        <div className="d-flex flex-wrap gap-2">
-          {ACCESOS_NAV.map((item) => (
-            <Button key={item.ruta} as={Link} to={item.ruta} variant={item.variante} size="sm">
-              {item.etiqueta}
-            </Button>
-          ))}
-        </div>
-      </div>
+    <ScreenContainer>
+      <PageHeader
+        title="Resumen de donaciones"
+        subtitle="Indicadores principales, donaciones recientes y métricas del módulo."
+        actions={ACCESOS_NAV.map((item) => ({
+          key: item.ruta,
+          label: item.etiqueta,
+          to: item.ruta,
+          variant: item.variante,
+        }))}
+      />
 
       {/* Filtro de Rango de Fechas */}
       <Card className="mb-4 border-0 shadow-sm bg-body-tertiary">
@@ -152,7 +133,7 @@ export default function DonacionesPage() {
         <Col lg={8}>
           <Card className="shadow-sm h-100">
             <Card.Header className="bg-transparent py-3 d-flex justify-content-between align-items-center">
-              <h2 className="h6 mb-0 fw-bold">Donaciones Recientes</h2>
+              <h2 className="ec-seccion-titulo mb-0">Donaciones recientes</h2>
               <Button
                 as={Link}
                 to="/donaciones/historial"
@@ -224,7 +205,7 @@ export default function DonacionesPage() {
         <Col lg={4}>
           <Card className="shadow-sm h-100">
             <Card.Header className="bg-transparent py-3">
-              <h2 className="h6 mb-0 fw-bold">Donantes más frecuentes</h2>
+              <h2 className="ec-seccion-titulo mb-0">Donantes más frecuentes</h2>
             </Card.Header>
             <Card.Body>
               {cargando ? (
@@ -256,6 +237,6 @@ export default function DonacionesPage() {
           </Card>
         </Col>
       </Row>
-    </Container>
+    </ScreenContainer>
   );
 }

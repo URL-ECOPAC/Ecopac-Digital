@@ -10,8 +10,7 @@ import DataList from "../components/DataList";
 import ErrorState from "../components/ErrorState";
 import FilterBar from "../components/FilterBar";
 import LoadingState from "../components/LoadingState";
-import PageHeader from "../components/PageHeader";
-import ScreenContainer from "../components/ScreenContainer";
+import CabeceraDeReporte, { ContenedorDeReporte } from "./CabeceraDeReporte";
 import { useSesionCompartida } from "../contexto/SesionProvider";
 import BotonExportarPDF from "../components/BotonExportarPDF";
 import "./reportes.css";
@@ -32,7 +31,7 @@ function descargarCSV(columnas, filas) {
   URL.revokeObjectURL(url);
 }
 
-export default function ReporteInventarioPage() {
+export default function ReporteInventarioPage({ incrustado = false }) {
   const { rol } = useSesionCompartida();
   const {
     tieneAcceso,
@@ -66,16 +65,17 @@ export default function ReporteInventarioPage() {
 
   if (!tieneAcceso) {
     return (
-      <ScreenContainer>
-        <PageHeader title="Inventario actual" />
+      <ContenedorDeReporte incrustado={incrustado}>
+        <CabeceraDeReporte incrustado={incrustado} title="Inventario actual" />
         <ErrorState message="Se necesita una sesion activa para consultar el inventario." />
-      </ScreenContainer>
+      </ContenedorDeReporte>
     );
   }
 
   return (
-    <ScreenContainer>
-      <PageHeader
+    <ContenedorDeReporte incrustado={incrustado}>
+      <CabeceraDeReporte
+        incrustado={incrustado}
         title="Inventario actual"
         subtitle="Existencia por medicamento, con el desglose de cada lote y bodega"
         actions={[
@@ -198,6 +198,6 @@ export default function ReporteInventarioPage() {
         </div>
         // Fin del contenido PDF
       )}
-    </ScreenContainer>
+    </ContenedorDeReporte>
   );
 }

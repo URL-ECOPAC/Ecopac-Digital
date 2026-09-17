@@ -12,6 +12,10 @@ export const TIPOS_DE_EVENTO = {
   TRIAJE: "triaje",
   CONSULTA: "consulta",
   RECETA: "receta",
+  // El cierre de la atencion (00060) como evento propio: una atencion que se cerro sin triaje ni
+  // consulta -el paciente se fue antes de pasar- no generaba ningun evento y desaparecia del
+  // historial.
+  CIERRE: "cierre",
 };
 
 // Un solo select con toda la profundidad: atenciones es el eje del que cuelgan triajes y
@@ -21,6 +25,11 @@ const COLUMNAS_DEL_HISTORIAL = [
   "id",
   "jornadaId:jornada_id",
   "createdAt:created_at",
+  // El cierre de la atencion (00060). Se pedia en atenciones/api.js para la cola de la jornada,
+  // pero ninguna vista del paciente lo mostraba: una atencion que se cerro sin consulta -el
+  // paciente se fue, se derivo- no dejaba rastro en su historial.
+  "cerradaEn:cerrada_en",
+  "motivoCierre:motivo_cierre",
   "jornada:jornadas(nombre, fecha, comunidad:comunidades(nombre))",
   [
     "triajes(",
@@ -38,7 +47,8 @@ const COLUMNAS_DEL_HISTORIAL = [
     "profesional:perfiles(nombres, apellidos),",
     "diagnosticos:consulta_diagnostico(id, esPrincipal:es_principal, diagnostico:diagnosticos(id, codigo, nombre)),",
     "recetas(id, folio, estado, createdAt:created_at,",
-    "detalle:receta_detalle(cantidadEntregada:cantidad_entregada, dosis, frecuencia, duracion,",
+    "detalle:receta_detalle(cantidadEntregada:cantidad_entregada, cantidadAjustada:cantidad_ajustada,",
+    "ajustadaEn:ajustada_en, ajustadaPorPerfil:perfiles(nombres, apellidos), dosis, frecuencia, duracion,",
     "medicamento:medicamentos(nombre, concentracion, presentacion)))",
     ")",
   ].join(" "),
@@ -143,12 +153,27 @@ export function aEventos(atencion) {
           concentracion: renglon.medicamento?.concentracion ?? null,
           presentacion: renglon.medicamento?.presentacion ?? null,
           cantidadEntregada: renglon.cantidadEntregada,
+          cantidadAjustada: renglon.cantidadAjustada ?? null,
+          ajustadaEn: renglon.ajustadaEn ?? null,
+          ajustadaPorNombre: nombreDe(renglon.ajustadaPorPerfil),
           dosis: renglon.dosis,
           frecuencia: renglon.frecuencia,
           duracion: renglon.duracion,
         })),
       });
     }
+  }
+
+  if (atencion.cerradaEn) {
+    eventos.push({
+      ...comun,
+      tipo: TIPOS_DE_EVENTO.CIERRE,
+      id: `${atencion.id}-cierre`,
+      fecha: atencion.cerradaEn,
+      profesional: null,
+      profesionalId: null,
+      motivoCierre: atencion.motivoCierre ?? null,
+    });
   }
 
   return eventos;

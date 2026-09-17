@@ -1,6 +1,7 @@
 import { useState } from "react";
 
 import {
+  describirEntrega,
   ETIQUETAS_TIPO_DE_EVENTO,
   FILTROS_HISTORIAL,
   formatearFechaConHora,
@@ -104,7 +105,7 @@ function DetalleReceta({ evento }) {
           {renglon.dosis ? ` — ${renglon.dosis}` : ""}
           {renglon.frecuencia ? `, ${renglon.frecuencia}` : ""}
           {renglon.duracion ? `, ${renglon.duracion}` : ""}
-          {renglon.cantidadEntregada ? ` (${renglon.cantidadEntregada})` : ""}
+          {describirEntrega(renglon).texto && ` (${describirEntrega(renglon).texto})`}
         </li>
       ))}
     </ul>
@@ -151,6 +152,10 @@ function Evento({ evento, expandido, onAlternar, puedeCorregir, onCorregir }) {
           </div>
         ) : null}
       </div>
+
+      {evento.tipo === TIPOS_DE_EVENTO.CIERRE && (
+        <p className="mb-0 mt-1">{evento.motivoCierre ?? "Sin motivo registrado."}</p>
+      )}
 
       {evento.tipo === TIPOS_DE_EVENTO.CONSULTA && evento.diagnosticoPrincipal && (
         <p className="mb-0 mt-1">{evento.diagnosticoPrincipal.nombre}</p>
