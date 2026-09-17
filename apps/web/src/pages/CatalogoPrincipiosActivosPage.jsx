@@ -13,6 +13,7 @@ import FilterBar from "../components/FilterBar";
 import { useSesionCompartida } from "../contexto/SesionProvider";
 import ModalPrincipioActivo from "./ModalPrincipioActivo";
 import "./pacientes.css";
+import SectionHeader from "../components/SectionHeader";
 
 // Pantalla del catalogo de principios activos (issue #640). api.js y permisos.js del catalogo
 // ya existian (issue #141): esta issue solo pedia la pantalla.
@@ -52,23 +53,20 @@ export default function CatalogoPrincipiosActivosPage() {
 
   return (
     <div className="modulo-pacientes">
-      <div className="d-flex justify-content-between align-items-start mb-3">
-        <div>
-          <h4 className="fw-bold mb-1">Catalogo de principios activos</h4>
-          <p className="text-muted small mb-0">
-            Principios activos disponibles para el catalogo de medicamentos
-          </p>
-        </div>
-        {permisos.puedeCrear && (
-          <button
-            type="button"
-            className="btn btn-success"
-            onClick={() => setModal({ principioActivo: null })}
-          >
-            Nuevo principio activo
-          </button>
-        )}
-      </div>
+      <SectionHeader
+        title="Catálogo de principios activos"
+        subtitle="Principios activos disponibles para el catálogo de medicamentos"
+        actions={
+          permisos.puedeCrear
+            ? [
+                {
+                  label: "Nuevo principio activo",
+                  onClick: () => setModal({ principioActivo: null }),
+                },
+              ]
+            : []
+        }
+      />
 
       <div className="pac-filtros">
         <FilterBar campos={FILTROS_PRINCIPIOS_ACTIVOS} valores={filtros} onChange={setFiltro} />

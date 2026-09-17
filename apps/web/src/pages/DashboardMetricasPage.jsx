@@ -1,67 +1,32 @@
 import { exportarFilasACSV, useDashboardMetricas } from "@ecopac/shared";
+import { Form } from "react-bootstrap";
+import StatCard from "../components/StatCard";
+import { AccionesDeCabecera } from "../components/PageHeader";
 import { useSesionCompartida } from "../contexto/SesionProvider";
+import "./reportes.css";
 
-// Tarjeta de métrica alineada a Figma
-const TarjetaMetrica = ({ etiqueta, valor, meta, color }) => {
-  const progreso = meta
-    ? Math.min((Number(valor) / Number(meta.replace(/[^0-9]/g, ""))) * 100, 100)
-    : 0;
+// Tarjeta de indicador con meta. Es StatCard -la tarjeta de indicador de todo el sistema- con la
+// barra de avance hacia la meta como pie. Antes era su propia tarjeta con cinco hexadecimales en
+// linea, un radio de 16px y una escala de letra que no se parecia a la de inventario, donaciones
+// ni presupuestos.
+const TarjetaMetrica = ({ etiqueta, valor, meta, acento }) => {
+  const progreso = meta ? Math.min((Number(valor) / Number(meta)) * 100, 100) : 0;
   return (
-    <div
-      style={{
-        backgroundColor: "#fff",
-        borderRadius: "16px",
-        padding: "20px",
-        border: "1px solid #f1f5f9",
-      }}
-    >
-      <p
-        style={{
-          fontSize: "var(--texto-xs)",
-          color: "#64748b",
-          margin: "0 0 8px 0",
-          textTransform: "uppercase",
-          letterSpacing: "0.5px",
-        }}
-      >
-        {etiqueta}
-      </p>
-      <p
-        style={{
-          fontSize: "var(--texto-xxl)",
-          fontWeight: "var(--peso-bold)",
-          color: color,
-          margin: "0 0 12px 0",
-        }}
-      >
-        {valor}
-      </p>
-      {meta && (
-        <>
-          <div
-            style={{
-              height: "6px",
-              backgroundColor: "#e2e8f0",
-              borderRadius: "3px",
-              overflow: "hidden",
-              marginBottom: "6px",
-            }}
-          >
-            <div
-              style={{
-                height: "100%",
-                backgroundColor: color,
-                borderRadius: "3px",
-                width: `${progreso}%`,
-              }}
-            />
-          </div>
-          <div style={{ fontSize: "var(--texto-xxs)", color: "#94a3b8", textAlign: "right" }}>
-            meta: {meta}
-          </div>
-        </>
-      )}
-    </div>
+    <StatCard
+      label={etiqueta}
+      value={valor}
+      accent={acento}
+      caption={
+        meta ? (
+          <span className="reporte-meta">
+            <span className="reporte-meta-barra" aria-hidden="true">
+              <span style={{ width: `${progreso}%` }} />
+            </span>
+            meta: {Number(meta).toLocaleString("es-GT")}
+          </span>
+        ) : undefined
+      }
+    />
   );
 };
 
@@ -126,24 +91,15 @@ export default function DashboardMetricasPage() {
   // Guardas de acceso
   if (!tieneAcceso)
     return (
-      <div style={{ padding: "40px", color: "var(--color-danger)" }}>
+      <div className="alert alert-danger">
         Solo administracion y los roles consultivos consultan los indicadores de impacto.
       </div>
     );
 
   if (cargando)
-    return (
-      <div style={{ padding: "40px", textAlign: "center", color: "var(--color-text-muted)" }}>
-        Cargando métricas...
-      </div>
-    );
+    return <p className="text-center py-5 m-0 ec-cabecera-subtitulo">Cargando métricas...</p>;
 
-  if (error)
-    return (
-      <div style={{ padding: "40px", color: "var(--color-danger)" }}>
-        Error al cargar: {error.mensaje}
-      </div>
-    );
+  if (error) return <div className="alert alert-danger">Error al cargar: {error.mensaje}</div>;
 
   // Datos de gráfica
   const tieneComparacion = serieComparacion.length > 0;
@@ -151,393 +107,212 @@ export default function DashboardMetricasPage() {
     seriePrincipal.length > 0 ? Math.max(...seriePrincipal.map((i) => i.valor), 1) : 1;
 
   return (
-    <div style={{ padding: "24px", backgroundColor: "#f8fafc", minHeight: "100vh" }}>
-      {/* Título + Botón Exportar */}
-      <div
-        style={{
-          marginBottom: "24px",
-          display: "flex",
-          justifyContent: "flex-end",
-          alignItems: "center",
-        }}
-      >
-        <button
-          onClick={exportarCSV}
-          style={{
-            padding: "10px 16px",
-            backgroundColor: "#10b981",
-            color: "#fff",
-            border: "none",
-            borderRadius: "10px",
-            fontSize: "var(--texto-sm)",
-            fontWeight: "var(--peso-semibold)",
-            cursor: "pointer",
-          }}
-        >
-          Exportar CSV
-        </button>
+    <div>
+      {/* Descripcion del panel y "Exportar CSV" en una sola fila. El boton vivia solo en una fila
+          entera, dentro de un contenedor con 24px de relleno y 100vh de alto minimo, debajo de las
+          pestanas: de ahi el hueco tan grande entre las pestanas y los filtros. */}
+      <div className="reporte-barra">
+        <p className="ec-cabecera-subtitulo m-0">
+          Volumen de atención por periodo y comunidad, con comparación opcional.
+        </p>
+        <AccionesDeCabecera
+          actions={[
+            {
+              label: "Exportar CSV",
+              onClick: exportarCSV,
+              variant: "secondary",
+              disabled: seriePrincipal.length === 0,
+            },
+          ]}
+        />
       </div>
 
-      {/* FILTROS */}
-      <div
-        style={{
-          backgroundColor: "#fff",
-          borderRadius: "16px",
-          padding: "20px",
-          marginBottom: "24px",
-          border: "1px solid #f1f5f9",
-        }}
-      >
-        <div style={{ marginBottom: "16px" }}>
-          <p
-            style={{
-              fontSize: "var(--texto-xs)",
-              fontWeight: "var(--peso-semibold)",
-              color: "#334155",
-              margin: "0 0 8px 0",
-            }}
-          >
-            Rango de fechas
-          </p>
-          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+      {/* Filtros */}
+      <div className="card mb-3">
+        <div className="card-body">
+          <span className="form-label d-block">Rango de fechas</span>
+          <div className="ec-acciones mb-3">
             {rangosDisponibles.map((r) => (
               <button
                 key={r.valor}
+                type="button"
                 onClick={() => setRangoSeleccionado(r.valor)}
-                style={{
-                  padding: "8px 16px",
-                  borderRadius: "10px",
-                  border: "none",
-                  backgroundColor: rangoSeleccionado === r.valor ? "#10b981" : "#f1f5f9",
-                  color: rangoSeleccionado === r.valor ? "#fff" : "#475569",
-                  fontSize: "var(--texto-xs)",
-                  fontWeight: "var(--peso-semibold)",
-                  cursor: "pointer",
-                }}
+                aria-pressed={rangoSeleccionado === r.valor}
+                className={`btn btn-sm ${
+                  rangoSeleccionado === r.valor ? "btn-primary" : "btn-outline-secondary"
+                }`}
               >
                 {r.etiqueta}
               </button>
             ))}
           </div>
-        </div>
 
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(3, 1fr)",
-            gap: "16px",
-            marginBottom: "16px",
-          }}
-        >
-          <div>
-            <label
-              style={{
-                fontSize: "var(--texto-xs)",
-                fontWeight: "var(--peso-semibold)",
-                color: "#64748b",
-                display: "block",
-                marginBottom: "6px",
-              }}
-            >
-              Agrupar por
-            </label>
-            <select
-              value={agruparPor}
-              onChange={(e) => setAgruparPor(e.target.value)}
-              style={{
-                width: "100%",
-                padding: "10px",
-                borderRadius: "10px",
-                border: "1px solid #e2e8f0",
-              }}
-            >
-              {agrupamientosDisponibles.map((a) => (
-                <option key={a.valor} value={a.valor}>
-                  {a.etiqueta}
-                </option>
-              ))}
-            </select>
-          </div>
+          <div className="reporte-filtros">
+            <Form.Group controlId="impacto-agrupar">
+              <Form.Label>Agrupar por</Form.Label>
+              <Form.Select value={agruparPor} onChange={(e) => setAgruparPor(e.target.value)}>
+                {agrupamientosDisponibles.map((a) => (
+                  <option key={a.valor} value={a.valor}>
+                    {a.etiqueta}
+                  </option>
+                ))}
+              </Form.Select>
+            </Form.Group>
 
-          <div>
-            <label
-              style={{
-                fontSize: "var(--texto-xs)",
-                fontWeight: "var(--peso-semibold)",
-                color: "#64748b",
-                display: "block",
-                marginBottom: "6px",
-              }}
-            >
-              Comunidad
-            </label>
-            <select
-              value={comunidadId}
-              onChange={(e) => setComunidadId(e.target.value)}
-              style={{
-                width: "100%",
-                padding: "10px",
-                borderRadius: "10px",
-                border: "1px solid #e2e8f0",
-              }}
-            >
-              <option value={TODAS}>Todas las comunidades</option>
-              {listaComunidades.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.nombre}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label
-              style={{
-                fontSize: "var(--texto-xs)",
-                fontWeight: "var(--peso-semibold)",
-                color: "#64748b",
-                display: "block",
-                marginBottom: "6px",
-              }}
-            >
-              Comparar
-            </label>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <input
-                type="checkbox"
-                checked={modoComparacion}
-                onChange={(e) => setModoComparacion(e.target.checked)}
-              />
-              <select
-                value={comunidadCompararId}
-                onChange={(e) => setComunidadCompararId(e.target.value)}
-                disabled={!modoComparacion}
-                style={{
-                  flex: 1,
-                  padding: "10px",
-                  borderRadius: "10px",
-                  border: "1px solid #e2e8f0",
-                }}
-              >
-                <option value={NINGUNA}>— Ninguna —</option>
+            <Form.Group controlId="impacto-comunidad">
+              <Form.Label>Comunidad</Form.Label>
+              <Form.Select value={comunidadId} onChange={(e) => setComunidadId(e.target.value)}>
+                <option value={TODAS}>Todas las comunidades</option>
                 {listaComunidades.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.nombre}
                   </option>
                 ))}
-              </select>
-            </div>
+              </Form.Select>
+            </Form.Group>
+
+            <Form.Group controlId="impacto-comparar">
+              <Form.Label>Comparar con</Form.Label>
+              <div className="d-flex align-items-center gap-2">
+                <Form.Check
+                  type="checkbox"
+                  aria-label="Activar la comparación"
+                  checked={modoComparacion}
+                  onChange={(e) => setModoComparacion(e.target.checked)}
+                />
+                <Form.Select
+                  aria-label="Comunidad con la que comparar"
+                  value={comunidadCompararId}
+                  onChange={(e) => setComunidadCompararId(e.target.value)}
+                  disabled={!modoComparacion}
+                >
+                  <option value={NINGUNA}>— Ninguna —</option>
+                  {listaComunidades.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.nombre}
+                    </option>
+                  ))}
+                </Form.Select>
+              </div>
+            </Form.Group>
           </div>
         </div>
       </div>
 
-      {/* Tarjetas de métricas */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(5, 1fr)",
-          gap: "16px",
-          marginBottom: "24px",
-        }}
-      >
+      {/* Tarjetas de indicador */}
+      <div className="ec-kpis">
         <TarjetaMetrica
           etiqueta="Pacientes Atendidos"
           valor={indicadores?.pacientesAtendidos || 0}
           meta="3000"
-          color="#10b981"
+          acento="var(--color-primary)"
         />
         <TarjetaMetrica
           etiqueta="Consultas Realizadas"
           valor={indicadores?.consultasRealizadas || 0}
-          color="#8b5cf6"
+          acento="var(--accent-pacientes)"
         />
         <TarjetaMetrica
           etiqueta="Comunidades Beneficiadas"
           valor={indicadores?.comunidadesBeneficiadas || 0}
           meta="50"
-          color="#3b82f6"
+          acento="var(--color-info)"
         />
         <TarjetaMetrica
           etiqueta="Tratamientos Entregados"
           valor={indicadores?.tratamientosEntregados || 0}
           meta="1500"
-          color="#f59e0b"
+          acento="var(--color-warning)"
         />
         <TarjetaMetrica
           etiqueta="Medicamentos Utilizados"
           valor={indicadores?.medicamentosUtilizados || 0}
           meta="5000"
-          color="#ec4899"
+          acento="var(--color-danger)"
         />
       </div>
 
-      {/* Gráfica de evolución */}
+      {/* Grafica de evolucion */}
       <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: tieneComparacion ? "1fr 1fr" : "1fr",
-          gap: "24px",
-        }}
+        className={
+          tieneComparacion ? "reporte-graficas reporte-graficas--doble" : "reporte-graficas"
+        }
       >
-        <div
-          style={{
-            backgroundColor: "#fff",
-            borderRadius: "16px",
-            padding: "20px",
-            border: "1px solid #f1f5f9",
-          }}
-        >
-          <h3
-            style={{
-              fontSize: "var(--texto-md)",
-              fontWeight: "var(--peso-semibold)",
-              color: "#1e293b",
-              margin: "0 0 20px 0",
-            }}
-          >
-            Pacientes atendidos por {agruparPor}
-          </h3>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "flex-end",
-              justifyContent: "space-between",
-              height: "180px",
-              gap: "4px",
-              padding: "0 4px",
-            }}
-          >
-            {seriePrincipal.map((item, i) => {
-              const alto = valorMaximo > 0 ? Math.max((item.valor / valorMaximo) * 100, 8) : 4;
-              const anchoBarra = tieneComparacion ? "45%" : "80%";
-              return (
-                <div
-                  key={i}
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    flex: 1,
-                  }}
-                >
-                  <div
-                    style={{ display: "flex", alignItems: "flex-end", height: "100%", gap: "3px" }}
-                  >
-                    <div
-                      style={{
-                        width: anchoBarra,
-                        backgroundColor: "#10b981",
-                        borderRadius: "4px 4px 0 0",
-                        height: `${alto}%`,
-                      }}
-                      title={`Valor: ${item.valor}`}
-                    />
-                    {serieComparacion?.[i] && (
-                      <div
-                        style={{
-                          width: "45%",
-                          backgroundColor: "#3b82f6",
-                          borderRadius: "4px 4px 0 0",
-                          height: `${Math.max((serieComparacion[i].valor / valorMaximo) * 100, 4)}%`,
-                        }}
-                        title={`Comparación: ${serieComparacion[i].valor}`}
-                      />
-                    )}
-                  </div>
-                  <span
-                    style={{
-                      fontSize: "var(--texto-xxs)",
-                      color: "#64748b",
-                      marginTop: "6px",
-                      textAlign: "center",
-                    }}
-                  >
-                    {item.etiqueta}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-
-          {tieneComparacion && (
-            <div
-              style={{ display: "flex", justifyContent: "center", gap: "20px", marginTop: "12px" }}
-            >
-              <span
-                style={{
-                  fontSize: "var(--texto-xs)",
-                  color: "#10b981",
-                  fontWeight: "var(--peso-medium)",
-                }}
-              >
-                ■ Selección actual
-              </span>
-              <span
-                style={{
-                  fontSize: "var(--texto-xs)",
-                  color: "#3b82f6",
-                  fontWeight: "var(--peso-medium)",
-                }}
-              >
-                ■ Comparación
-              </span>
-            </div>
-          )}
-        </div>
-
-        {/* Panel de variación porcentual */}
-        {tieneComparacion && (
-          <div
-            style={{
-              backgroundColor: "#fff",
-              borderRadius: "16px",
-              padding: "20px",
-              border: "1px solid #f1f5f9",
-            }}
-          >
-            <h3
-              style={{
-                fontSize: "var(--texto-md)",
-                fontWeight: "var(--peso-semibold)",
-                color: "#1e293b",
-                margin: "0 0 20px 0",
-              }}
-            >
-              Variación porcentual
-            </h3>
-            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+        <div className="card">
+          <div className="card-body">
+            <h2 className="ec-seccion-titulo">Pacientes atendidos por {agruparPor}</h2>
+            <div className="reporte-barras">
               {seriePrincipal.map((item, i) => {
-                const comp = serieComparacion?.[i];
-                if (!comp) return null;
-                const varPc = calcularVariacion(item.valor, comp.valor);
-                if (varPc === null) return null;
+                const alto = valorMaximo > 0 ? Math.max((item.valor / valorMaximo) * 100, 8) : 4;
                 return (
-                  <div
-                    key={i}
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      padding: "10px 12px",
-                      backgroundColor: varPc >= 0 ? "#f0fdf4" : "#fef2f2",
-                      borderRadius: "10px",
-                    }}
-                  >
-                    <span style={{ fontSize: "var(--texto-sm)", fontWeight: "var(--peso-medium)" }}>
-                      {item.etiqueta}
-                    </span>
-                    <span
-                      style={{
-                        fontSize: "var(--texto-sm)",
-                        fontWeight: "var(--peso-bold)",
-                        color: varPc >= 0 ? "#059669" : "#dc2626",
-                      }}
-                    >
-                      {varPc >= 0 ? "↑" : "↓"} {Math.abs(varPc).toFixed(1)}%
-                    </span>
+                  <div key={i} className="reporte-barras-grupo">
+                    <div className="reporte-barras-par">
+                      <div
+                        className="reporte-barra-valor"
+                        style={{ height: `${alto}%`, width: tieneComparacion ? "45%" : "80%" }}
+                        title={`Valor: ${item.valor}`}
+                      />
+                      {serieComparacion?.[i] && (
+                        <div
+                          className="reporte-barra-valor reporte-barra-valor--comparacion"
+                          style={{
+                            height: `${Math.max((serieComparacion[i].valor / valorMaximo) * 100, 4)}%`,
+                            width: "45%",
+                          }}
+                          title={`Comparación: ${serieComparacion[i].valor}`}
+                        />
+                      )}
+                    </div>
+                    <span className="reporte-barras-etiqueta">{item.etiqueta}</span>
                   </div>
                 );
               })}
+            </div>
+
+            {tieneComparacion && (
+              <div className="reporte-leyenda">
+                <span className="reporte-leyenda-item">
+                  <span className="reporte-leyenda-muestra" aria-hidden="true" />
+                  Selección actual
+                </span>
+                <span className="reporte-leyenda-item">
+                  <span
+                    className="reporte-leyenda-muestra reporte-leyenda-muestra--comparacion"
+                    aria-hidden="true"
+                  />
+                  Comparación
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Panel de variacion porcentual */}
+        {tieneComparacion && (
+          <div className="card">
+            <div className="card-body">
+              <h2 className="ec-seccion-titulo">Variación porcentual</h2>
+              <div className="d-flex flex-column gap-2">
+                {seriePrincipal.map((item, i) => {
+                  const comp = serieComparacion?.[i];
+                  if (!comp) return null;
+                  const varPc = calcularVariacion(item.valor, comp.valor);
+                  if (varPc === null) return null;
+                  return (
+                    <div
+                      key={i}
+                      className={`reporte-variacion ${
+                        varPc >= 0 ? "reporte-variacion--sube" : "reporte-variacion--baja"
+                      }`}
+                    >
+                      <span>{item.etiqueta}</span>
+                      <strong>
+                        {varPc >= 0 ? "↑" : "↓"} {Math.abs(varPc).toFixed(1)}%
+                      </strong>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
         )}

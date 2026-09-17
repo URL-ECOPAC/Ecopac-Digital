@@ -1,5 +1,7 @@
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
+import { rotuloSinSigno } from "@ecopac/shared";
 import { colors, radii, spacing, typography } from "@ecopac/ui-tokens";
+import { iconoDeAccion } from "./iconoDeAccion";
 
 const MIN_TOUCH_HEIGHT = 48;
 
@@ -32,7 +34,7 @@ export default function SecondaryButton({
   loading = false,
   variant = "outline",
   size = "md",
-  icon = null,
+  icon,
   block = false,
   style,
 }) {
@@ -58,7 +60,7 @@ export default function SecondaryButton({
         <ActivityIndicator color={acento} />
       ) : (
         <View style={styles.contenido}>
-          {icon}
+          {iconoDeAccion(title, icon, acento)}
           <Text
             style={[
               styles.text,
@@ -67,7 +69,7 @@ export default function SecondaryButton({
               inactivo && styles.textDisabled,
             ]}
           >
-            {title}
+            {rotuloSinSigno(title)}
           </Text>
         </View>
       )}

@@ -15,7 +15,11 @@ import {
 import { Container, Row, Col, Card, Form, Button, Alert, Modal } from "react-bootstrap";
 
 import { useSesionCompartida } from "../contexto/SesionProvider";
+import PageHeader from "../components/PageHeader";
+import ScreenContainer from "../components/ScreenContainer";
 import ModalRegistroIngreso from "./ModalRegistroIngreso.jsx";
+import { Plus, Trash2 } from "lucide-react";
+import SecondaryButton from "../components/SecondaryButton";
 
 export default function RegistroDonacionPage({ usuarioRol }) {
   const { perfil } = useSesionCompartida();
@@ -131,8 +135,11 @@ export default function RegistroDonacionPage({ usuarioRol }) {
   }
 
   return (
-    <Container tabIndex="-1" style={{ maxWidth: "960px" }} className="py-4">
-      <h1 className="h3 mb-4">Registro de Donación</h1>
+    <ScreenContainer>
+      <PageHeader
+        title="Registro de donación"
+        subtitle="Donante, tipo de aporte y, si trae medicamentos, su ingreso al inventario"
+      />
 
       {!permisos?.puedeEscribir && (
         <Alert variant="warning" className="mb-4">
@@ -181,10 +188,11 @@ export default function RegistroDonacionPage({ usuarioRol }) {
                     <Button
                       variant="link"
                       size="sm"
-                      className="p-0 text-decoration-none"
+                      className="btn-icono"
                       onClick={() => setModalNuevoDonante(true)}
                     >
-                      + Nuevo Donante
+                      <Plus size={14} aria-hidden="true" />
+                      Nuevo donante
                     </Button>
                   )}
                 </div>
@@ -326,8 +334,14 @@ export default function RegistroDonacionPage({ usuarioRol }) {
 
               {permisos?.puedeEscribir && detalles.length > 1 && (
                 <Col md={1} className="text-end">
-                  <Button variant="outline-danger" size="sm" onClick={() => quitarRenglon(item.id)}>
-                    ✕
+                  <Button
+                    variant="outline-danger"
+                    size="sm"
+                    onClick={() => quitarRenglon(item.id)}
+                    aria-label="Quitar renglón"
+                    title="Quitar renglón"
+                  >
+                    <Trash2 size={16} aria-hidden="true" />
                   </Button>
                 </Col>
               )}
@@ -335,9 +349,12 @@ export default function RegistroDonacionPage({ usuarioRol }) {
           ))}
 
           {permisos?.puedeEscribir && (
-            <Button variant="outline-secondary" size="sm" onClick={agregarRenglon} className="mt-2">
-              + Agregar Renglón
-            </Button>
+            <SecondaryButton
+              title="Agregar renglón"
+              size="sm"
+              onClick={agregarRenglon}
+              className="mt-2"
+            />
           )}
         </Card.Body>
       </Card>
@@ -486,6 +503,6 @@ export default function RegistroDonacionPage({ usuarioRol }) {
           </Button>
         </Modal.Footer>
       </Modal>
-    </Container>
+    </ScreenContainer>
   );
 }

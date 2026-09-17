@@ -55,6 +55,9 @@ const mockEstadoDashboard = {
 vi.mock("@ecopac/shared", async (importarOriginal) => ({
   ...(await importarOriginal()),
   useDashboardMetricas: vi.fn(() => mockEstadoDashboard),
+  // Solo para que la pestana de pacientes atendidos se pueda montar: su contenido tiene su propia
+  // prueba (ReportePacientesPage.test.jsx). Aqui interesa que las pestanas sigan ahi.
+  useReportePacientes: vi.fn(() => ({ tieneAcceso: false })),
 }));
 
 const mockEstadoVencimientos = {
@@ -82,16 +85,16 @@ vi.mock("../../../../packages/shared/reportes/useReporteMedicamentosPorVencer.js
 const { useReporteMedicamentosPorVencer } =
   await import("../../../../packages/shared/reportes/useReporteMedicamentosPorVencer.js");
 
-function pantalla() {
+function pantalla(ruta = "/reportes") {
   return render(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={[ruta]}>
       <ReportesPage />
     </MemoryRouter>,
   );
 }
 
 function irAVencimientos() {
-  fireEvent.click(screen.getByText("Medicamentos por Vencer"));
+  fireEvent.click(screen.getByText("Medicamentos por vencer"));
 }
 
 describe("ReportesPage", () => {
@@ -107,7 +110,32 @@ describe("ReportesPage", () => {
   it("por defecto, muestra la pestaña de Dashboard de Impacto", () => {
     pantalla();
 
-    expect(screen.getByText("Reportes e Impacto")).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Reportes e impacto" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Dashboard de impacto").closest("a")).toHaveClass("active");
+  });
+
+  // "Pacientes atendidos" navegaba a una pagina suelta, sin las pestanas, y desde ahi no habia
+  // forma de volver a las demas. Ahora es una pestana mas: las otras siguen a la vista.
+  it("desde pacientes atendidos se puede volver al panel de impacto", () => {
+    pantalla("/reportes/pacientes-atendidos");
+
+    expect(screen.getByText("Pacientes atendidos").closest("a")).toHaveClass("active");
+    expect(
+      screen.getByText("Solo administración y junta directiva consultan el reporte de pacientes."),
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText("Dashboard de impacto"));
+
+    expect(screen.getByText("Dashboard de impacto").closest("a")).toHaveClass("active");
+    expect(screen.getByText("Pacientes Atendidos")).toBeInTheDocument();
+  });
+
+  it("el inventario actual tiene su pestana, que antes no enlazaba nadie", () => {
+    pantalla();
+
+    expect(screen.getByText("Inventario actual")).toBeInTheDocument();
   });
 
   it("mientras carga los vencimientos, muestra el estado de carga", () => {

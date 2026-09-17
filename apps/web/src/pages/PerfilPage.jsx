@@ -3,6 +3,7 @@ import { TIPOS_DE_CAMPO, etiquetaDeRol, usePerfilPropio } from "@ecopac/shared";
 import {
   Card,
   ErrorState,
+  PageHeader,
   PrimaryButton,
   ScreenContainer,
   Selector,
@@ -46,7 +47,8 @@ export default function PerfilPage() {
 
   return (
     <ScreenContainer>
-      <Card title="Mi perfil">
+      <PageHeader title="Mi perfil" subtitle="Tus datos de contacto y tu contraseña de acceso" />
+      <Card title="Datos personales">
         {errorGlobal && <ErrorState message={errorGlobal} />}
 
         <form onSubmit={guardarPerfil} noValidate>

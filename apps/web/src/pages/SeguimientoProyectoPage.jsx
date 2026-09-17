@@ -1,8 +1,12 @@
 import { useState } from "react";
-import { useSeguimientoProyecto } from "@ecopac/shared";
+import { ETIQUETAS_ESTADO_PROYECTO, useSeguimientoProyecto } from "@ecopac/shared";
 import { Container, Row, Col, Card, Form, Button, Badge, Alert, Spinner } from "react-bootstrap";
 
+import PageHeader from "../components/PageHeader";
+import ScreenContainer from "../components/ScreenContainer";
+import StatusChip from "../components/StatusChip";
 import ModalHito from "./ModalHito";
+import SecondaryButton from "../components/SecondaryButton";
 
 export default function SeguimientoProyectoPage({
   proyectoId,
@@ -69,30 +73,26 @@ export default function SeguimientoProyectoPage({
   };
 
   return (
-    <Container fluid style={{ maxWidth: "1140px" }} className="py-4">
-      {/* Encabezado */}
-      <div className="border-bottom pb-3 mb-4 d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-3">
-        <div>
-          {onVolver && (
-            <Button
-              variant="link"
-              onClick={onVolver}
-              className="p-0 text-decoration-none text-primary mb-2 small d-inline-flex align-items-center gap-1"
-            >
-              ← Volver al listado
-            </Button>
-          )}
-          <h1 className="h3 mb-1 text-dark">{proyectoDatos.nombre || "Proyecto sin título"}</h1>
-          <p className="text-muted small mb-0">
-            {proyectoDatos.descripcion || "Sin descripción disponible."}
-          </p>
-        </div>
-        <div>
-          <Badge bg="primary" className="fs-6 px-3 py-2 fw-normal text-capitalize">
-            {proyectoDatos.estado || "planificado"}
-          </Badge>
-        </div>
-      </div>
+    <ScreenContainer>
+      {/* Encabezado. "Volver al listado" era un enlace suelto encima del titulo y el estado un
+          Badge azul de Bootstrap con la clave cruda del enum: ahora es una accion neutra de la
+          cabecera y el mismo StatusChip, con su etiqueta, que usa el listado. */}
+      <PageHeader
+        title={proyectoDatos.nombre || "Proyecto sin título"}
+        subtitle={proyectoDatos.descripcion || "Sin descripción disponible."}
+        actions={
+          onVolver ? [{ label: "Volver al listado", onClick: onVolver, variant: "neutra" }] : []
+        }
+      >
+        {proyectoDatos.estado && (
+          <div className="mt-2">
+            <StatusChip
+              status={proyectoDatos.estado}
+              label={ETIQUETAS_ESTADO_PROYECTO[proyectoDatos.estado] ?? proyectoDatos.estado}
+            />
+          </div>
+        )}
+      </PageHeader>
 
       {/* Indicadores Agregados */}
       <Row className="g-3 mb-4">
@@ -237,12 +237,8 @@ export default function SeguimientoProyectoPage({
           <Card className="border shadow-sm">
             <Card.Body className="p-4">
               <div className="d-flex justify-content-between align-items-center mb-3">
-                <Card.Title as="h5" className="mb-0 text-dark fw-bold">
-                  Hitos del Proyecto
-                </Card.Title>
-                <Button variant="outline-primary" size="sm" onClick={abrirAltaHito}>
-                  + Agregar hito
-                </Button>
+                <h2 className="ec-seccion-titulo mb-0">Hitos del proyecto</h2>
+                <SecondaryButton title="Agregar hito" size="sm" onClick={abrirAltaHito} />
               </div>
 
               {hitos.length === 0 ? (
@@ -317,6 +313,6 @@ export default function SeguimientoProyectoPage({
         onClose={() => setFormularioHitoAbierto(false)}
         onGuardar={guardarHito}
       />
-    </Container>
+    </ScreenContainer>
   );
 }

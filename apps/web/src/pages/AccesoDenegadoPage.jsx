@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { etiquetaDeRol } from "@ecopac/shared";
-import { ErrorState, ScreenContainer } from "../components";
+import { ErrorState, PageHeader, ScreenContainer } from "../components";
 
 /**
  * Pantalla de acceso denegado.
@@ -23,6 +23,7 @@ export default function AccesoDenegadoPage({ rol }) {
 
   return (
     <ScreenContainer>
+      <PageHeader title="Acceso restringido" />
       <ErrorState message={mensaje} onRetry={() => navigate("/")} />
     </ScreenContainer>
   );

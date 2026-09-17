@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { contarRecetas, describirMedicamento, describirPosologia } from "./useRecetasPaciente.js";
+import {
+  contarRecetas,
+  describirEntrega,
+  describirMedicamento,
+  describirPosologia,
+} from "./useRecetasPaciente.js";
 
 const RENGLON = {
   medicamento: "Amoxicilina",
@@ -61,5 +66,40 @@ describe("contarRecetas", () => {
   it("cuenta cero sin recetas", () => {
     expect(contarRecetas([])).toEqual({ total: 0, emitidas: 0, anuladas: 0 });
     expect(contarRecetas()).toEqual({ total: 0, emitidas: 0, anuladas: 0 });
+  });
+});
+
+describe("describirEntrega", () => {
+  it("sin correccion, la cantidad entregada es la vigente", () => {
+    expect(describirEntrega({ cantidadEntregada: 10 })).toMatchObject({
+      vigente: 10,
+      corregida: false,
+      texto: "entregadas: 10",
+    });
+  });
+
+  // 00128: mientras cantidad_ajustada exista, ES la cifra vigente.
+  it("con correccion, manda la ajustada y se dice de cuanto y por quien", () => {
+    expect(
+      describirEntrega({
+        cantidadEntregada: 10,
+        cantidadAjustada: 8,
+        ajustadaPorNombre: "Rosa Gomez",
+      }),
+    ).toMatchObject({
+      vigente: 8,
+      original: 10,
+      corregida: true,
+      texto: "entregadas: 8 (corregido de 10 por Rosa Gomez)",
+    });
+  });
+
+  it("una ajustada igual a la original no se presenta como correccion", () => {
+    expect(describirEntrega({ cantidadEntregada: 5, cantidadAjustada: 5 }).corregida).toBe(false);
+  });
+
+  it("sin cantidad no hay texto", () => {
+    expect(describirEntrega({}).texto).toBe("");
+    expect(describirEntrega(undefined).texto).toBe("");
   });
 });

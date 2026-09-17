@@ -1,7 +1,9 @@
-import { TIPOS_DE_CAMPO, useDonantesPage } from "@ecopac/shared";
+import { formatearMoneda, TIPOS_DE_CAMPO, useDonantesPage } from "@ecopac/shared";
 import { Container, Row, Col, Button, Form, Card, Alert, Modal } from "react-bootstrap";
 
 import DataList from "../components/DataList";
+import PageHeader from "../components/PageHeader";
+import ScreenContainer from "../components/ScreenContainer";
 
 /** `type` de `<Form.Control>` segun el tipo de campo del descriptor (campos.js). Los tipos de
  * CAMPOS_DONANTE que no llevan un `type` de HTML propio (SELECT) no pasan por aqui. */
@@ -51,15 +53,12 @@ export default function DonantesPage({ usuarioRol }) {
   }
 
   return (
-    <Container fluid className="p-4">
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <h1 className="h3 mb-0">Administración de Donantes</h1>
-        {permisos?.puedeEscribir && (
-          <Button variant="primary" onClick={abrirAlta}>
-            + Nuevo Donante
-          </Button>
-        )}
-      </div>
+    <ScreenContainer>
+      <PageHeader
+        title="Administración de donantes"
+        subtitle="Personas, empresas y organizaciones que aportan a Ecopac"
+        actions={permisos?.puedeEscribir ? [{ label: "Nuevo donante", onClick: abrirAlta }] : []}
+      />
 
       <Row className="g-3 mb-4">
         <Col md={6}>
@@ -106,11 +105,12 @@ export default function DonantesPage({ usuarioRol }) {
             <Card.Text>
               <strong>Contacto:</strong> {donanteSeleccionado.contacto}
             </Card.Text>
-            <h6 className="mt-4 fw-bold">Histórico de Aportes</h6>
+            <h2 className="ec-seccion-titulo mt-4">Histórico de aportes</h2>
             <ul className="mb-0">
               {(donanteSeleccionado.donaciones || []).map((donacion) => (
                 <li key={donacion.id}>
-                  {donacion.fecha} - {donacion.monto ? `$${donacion.monto}` : donacion.descripcion}
+                  {donacion.fecha} -{" "}
+                  {donacion.monto ? formatearMoneda(donacion.monto) : donacion.descripcion}
                 </li>
               ))}
             </ul>
@@ -173,6 +173,6 @@ export default function DonantesPage({ usuarioRol }) {
           </Button>
         </Modal.Footer>
       </Modal>
-    </Container>
+    </ScreenContainer>
   );
 }

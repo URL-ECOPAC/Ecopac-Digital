@@ -57,6 +57,82 @@ h6,
   font-weight: var(--peso-semibold);
 }
 
+/* --------------------------------------------------------------------------
+   Cabecera de pantalla (PageHeader)
+
+   Cada modulo dibujaba su titulo a su manera: "Control de Inventario" a --texto-xl en negrita con
+   un subtitulo apagado, "Proyectos Sociales" como un h3 de Bootstrap, "Presupuestos" como un h4
+   con filete de color, "Reportes e Impacto" con estilos en linea. Leido de pantalla en pantalla,
+   parecian cuatro aplicaciones. Esta es la unica forma: titulo en --texto-xl y negrita, subtitulo
+   en --texto-sm apagado, y debajo el filete del color del modulo -el mismo que lleva su tarjeta en
+   el inicio-, que MainLayout publica como --ec-acento-modulo segun la ruta.
+   -------------------------------------------------------------------------- */
+
+.ec-cabecera {
+  align-items: flex-start;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-md);
+  justify-content: space-between;
+  margin-bottom: var(--spacing-lg);
+}
+
+.ec-cabecera-texto {
+  min-width: 0;
+}
+
+.ec-cabecera-titulo {
+  color: var(--color-text);
+  font-size: var(--texto-xl);
+  font-weight: var(--peso-bold);
+  letter-spacing: -0.015em;
+  line-height: 1.2;
+  margin: 0;
+}
+
+.ec-cabecera-subtitulo {
+  color: var(--color-text-muted);
+  font-size: var(--texto-sm);
+  margin: var(--spacing-xs) 0 0;
+}
+
+.ec-cabecera-acento {
+  background-color: var(--ec-acento, var(--ec-acento-modulo, var(--color-primary)));
+  border-radius: var(--radio-pill);
+  display: block;
+  height: 3px;
+  margin-top: var(--spacing-sm);
+  width: 48px;
+}
+
+/* Titulo de una seccion dentro de una pantalla ("Donaciones recientes", "Diagnosticos mas
+   frecuentes"): un escalon por debajo del de la cabecera, con la misma letra y el mismo filete
+   corto a la izquierda en vez de debajo, para que no compita con el de la pantalla. */
+.ec-seccion-titulo {
+  border-left: 3px solid var(--ec-acento, var(--ec-acento-modulo, var(--color-primary)));
+  color: var(--color-text);
+  font-size: var(--texto-md);
+  font-weight: var(--peso-semibold);
+  line-height: 1.3;
+  margin: 0 0 var(--spacing-md);
+  padding-left: var(--spacing-sm);
+}
+
+/* Encabezado de seccion con subtitulo y acciones (SectionHeader). El subtitulo se alinea con el
+   texto del titulo, no con el filete. */
+.ec-seccion-cabecera {
+  align-items: flex-start;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm) var(--spacing-md);
+  justify-content: space-between;
+  margin-bottom: var(--spacing-md);
+}
+
+.ec-seccion-cabecera .ec-cabecera-subtitulo {
+  padding-left: calc(var(--spacing-sm) + 3px);
+}
+
 /* Rotulo de dato en versalitas. Es el mismo elemento que pacientes.css llamaba `.pac-rotulo`,
    que sigue existiendo como alias para no reescribir ese modulo entero de golpe. */
 .ec-rotulo {

@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Navigate, useLocation, Link } from "react-router-dom";
-import { ESTADOS_DE_RESTAURACION, useInicioSesion } from "@ecopac/shared";
+import { ESTADOS_DE_RESTAURACION, olvidarUltimaActividad, useInicioSesion } from "@ecopac/shared";
+import { almacenamientoWeb } from "../almacenamiento";
 import { useSesionCompartida } from "../contexto/SesionProvider";
 import {
   AuthAlert,
@@ -29,6 +30,16 @@ export default function LoginPage() {
 
   const [verPassword, setVerPassword] = useState(false);
   const [erroresLocales, setErroresLocales] = useState({});
+
+  const cerradaPorInactividad = location.state?.motivo === "inactividad";
+  const mostrandoFormulario = estadoRestauracion !== ESTADOS_DE_RESTAURACION.CARGANDO && !haySesion;
+
+  // Con el formulario a la vista no hay sesion que proteger: se olvida la ultima actividad de la
+  // sesion anterior. Sin esto, quien vuelve a entrar despues de que su sesion vencio arrastraria la
+  // marca vieja y el temporizador de inactividad lo sacaria en cuanto terminara de entrar.
+  useEffect(() => {
+    if (mostrandoFormulario) olvidarUltimaActividad(almacenamientoWeb);
+  }, [mostrandoFormulario]);
 
   if (estadoRestauracion === ESTADOS_DE_RESTAURACION.CARGANDO) {
     return (
@@ -70,6 +81,12 @@ export default function LoginPage() {
 
   return (
     <AuthLayout title="Iniciar sesión" subtitle="Ingresa a la plataforma de gestión">
+      {cerradaPorInactividad && !errorDelHook && (
+        <AuthAlert variant="info">
+          Tu sesión se cerró por inactividad. Vuelve a iniciar sesión para continuar.
+        </AuthAlert>
+      )}
+
       {errorDelHook && (
         <AuthAlert variant="error">{errorDelHook.mensaje || errorDelHook}</AuthAlert>
       )}

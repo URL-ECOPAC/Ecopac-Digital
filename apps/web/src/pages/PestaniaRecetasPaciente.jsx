@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import {
   anularReceta,
   describirMedicamento,
+  describirEntrega,
   describirPosologia,
   formatearFechaCorta,
   puedeAnularReceta,
@@ -34,7 +35,7 @@ function Detalle({ receta }) {
           <li key={renglon.id}>
             <strong>{describirMedicamento(renglon)}</strong>
             {describirPosologia(renglon) && ` — ${describirPosologia(renglon)}`}
-            {renglon.cantidadEntregada ? ` (entregadas: ${renglon.cantidadEntregada})` : ""}
+            {describirEntrega(renglon).texto && ` (${describirEntrega(renglon).texto})`}
           </li>
         ))}
       </ul>

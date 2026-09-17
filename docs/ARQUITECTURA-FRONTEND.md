@@ -103,7 +103,8 @@ la misma interfaz, no dos disenos distintos.
 | Componente | Web | Movil |
 | ---------- | --- | ----- |
 | `ScreenContainer` | contenedor con padding | `SafeAreaView` + `ScrollView` |
-| `PageHeader` | titulo, subtitulo y acciones | igual, adaptado a ancho angosto |
+| `PageHeader` | titulo, subtitulo, filete de color y acciones | igual, adaptado a ancho angosto |
+| `SectionHeader` | titulo de seccion con filete a la izquierda y acciones | igual, acciones debajo |
 | `TextField`, `Selector`, `DateField`, `NumberField` | `react-bootstrap` `Form.*` | `TextInput` y `Pressable` con area tactil de 48 dp |
 | `PrimaryButton`, `SecondaryButton` | `Button` | `Pressable` |
 | `FilterBar` | fila de `Form.Select` | panel colapsable con boton Aplicar |
@@ -115,7 +116,7 @@ la misma interfaz, no dos disenos distintos.
 `FilterBar` y `DataList` son los que hacen el trabajo: consumen los descriptores de `shared` y
 deciden como dibujarlos.
 
-**La web tiene los 18 implementados** en `apps/web/src/components/`, planos y con un barril
+**La web tiene los 19 implementados** en `apps/web/src/components/`, planos y con un barril
 `index.js` (issue #280). La app movil tiene cinco: `ScreenContainer`, `TextField`, `Selector`,
 `PrimaryButton` y `SecondaryButton` (`apps/mobile/src/components/`); los trece que le faltan son
 la issue #281, y su referencia es la implementacion web, que ya siguio este contrato.
@@ -263,11 +264,43 @@ enfocados (`KeyboardAvoidingView`); en web el navegador ya lo resuelve solo.
 | ---- | ---- | ------- | ----------- |
 | `title` | string | — | Titulo de la pantalla. |
 | `subtitle` | string | — | Subtitulo opcional. |
-| `actions` | array de `{ label, onPress/onClick, variant }` | `[]` | Botones de accion asociados a la pantalla (ej. "Nuevo paciente"). |
+| `actions` | array de `{ label, onPress/onClick, to?, variant }` | `[]` | Botones de accion asociados a la pantalla (ej. "Nuevo paciente"). En web, `to` en vez de `onClick` hace de la accion un enlace. |
+| `accent` | color de tokens | color del modulo | Color del filete bajo el titulo. En web es una variable (`var(--accent-inventario)`); en movil, un valor de `moduleAccents`/`colors`. |
+| `children` | nodo | — | Contexto bajo el filete (un `StatusChip` de estado, por ejemplo). |
 
 - **Web**: titulo/subtitulo a la izquierda, acciones alineadas a la derecha en la misma fila.
 - **Movil**: titulo/subtitulo arriba, acciones en una fila debajo (para no romper en ancho
   angosto).
+
+**Es la unica forma de titular una pantalla.** Cada modulo titulaba a su manera -"Control de
+Inventario" a `--texto-xl` en negrita, "Proyectos Sociales" como un `h3` de Bootstrap,
+"Presupuestos" como un `h4` con filete, "Reportes e Impacto" con estilos en linea- y leido de
+pantalla en pantalla parecian aplicaciones distintas. Ahora todas comparten:
+
+| Pieza | Aspecto (web, `ui.css`) |
+| --- | --- |
+| Titulo | `.ec-cabecera-titulo`: `--texto-xl`, `--peso-bold`, `--color-text` |
+| Subtitulo | `.ec-cabecera-subtitulo`: `--texto-sm`, `--color-text-muted` |
+| Filete | `.ec-cabecera-acento`: 48 x 3 px, del color del modulo |
+| Titulo de seccion | `.ec-seccion-titulo` (`SectionHeader`): `--texto-md`, `--peso-semibold`, filete a la izquierda |
+
+El color del filete sale de `--ec-acento-modulo`, que `MainLayout` publica segun la ruta a partir
+de `--accent-<modulo>`: es el mismo color con el que el inicio pinta la tarjeta de ese modulo, y
+ninguna pantalla lo repite. La unica pantalla sin `PageHeader` es el inicio, que en su lugar tiene
+el banner de saludo.
+
+**`SectionHeader`** — implementado en web y movil
+
+Mismas props que `PageHeader` salvo `accent` en web (hereda el del modulo). Para las pestanas y
+secciones de una pantalla que ya tiene su cabecera: las pestanas de inventario (kardex, validacion,
+alertas, administracion, principios activos, mis movimientos) lo usan, en vez de cuatro tamanos
+distintos de titulo, uno de ellos mas grande que el de la propia pantalla.
+
+**Iconos de accion.** `PrimaryButton` y `SecondaryButton` ponen solos el "+" en un alta y el
+basurero en un borrado, segun `tipoDeAccion(title)` de `packages/shared/formato/acciones.js`. Un
+"+" escrito dentro del texto ("+ Nuevo Proyecto") se quita para no dibujarlo dos veces. `icon`
+explicito gana, e `icon={null}` quita el automatico. "Desactivar", "Anular" y "Rechazar" no llevan
+basurero a proposito: no borran nada.
 
 **`TextField`** — implementado en movil (`apps/mobile/src/components/TextField.js`)
 
@@ -546,6 +579,8 @@ Que puede hacer cada rol no se decide aqui ni se repite en cada modulo: esta en
 
 - La web los publica como custom properties de CSS en `apps/web/src/theme.js`, y `index.css`
   solo consume `var(--color-*)`. No hay hex escritos a mano en ningun CSS.
+- `MainLayout` publica ademas `--ec-acento-modulo` en el contenido, con el `--accent-*` del modulo
+  de la ruta actual: es lo que tine el filete de `PageHeader` y `SectionHeader`.
 - El movil los importa directo en sus `StyleSheet`.
 
 Las claves de `statusColors` coinciden exactamente con los valores de los enums de

@@ -62,9 +62,28 @@ Hay dos mecanismos, y son cosas distintas a proposito:
   la sesion sin importar que haga el cliente.
 - **Capa de interfaz (cliente):** un temporizador de inactividad,
   [`packages/shared/hooks/useExpiracionPorInactividad.js`](../packages/shared/hooks/useExpiracionPorInactividad.js),
-  montado en `apps/web/src/components/MainLayout.jsx`. Cierra la sesion localmente si nadie
-  interactua con la pagina (`mousemove`, `keydown`, `mousedown`, `touchstart`, `scroll`)
-  durante `MINUTOS_INACTIVIDAD_POR_DEFECTO` minutos.
+  montado en `apps/web/src/components/MainLayout.jsx`. Cierra la sesion si nadie interactua con
+  la pagina (`mousemove`, `keydown`, `mousedown`, `touchstart`, `scroll`) durante
+  `MINUTOS_INACTIVIDAD_POR_DEFECTO` minutos.
+
+### Como se comporta el cierre por inactividad (web)
+
+El temporizador existia desde la #230, pero en la practica parecia que no: vivia solo en memoria
+(cerrar la pestana o la laptop y volver al dia siguiente restauraba la sesion y la cuenta empezaba
+de cero), cerraba sin avisar y cada pestana llevaba su propia cuenta. Desde la revision de
+uniformidad y observabilidad:
+
+| Situacion | Que pasa |
+| --- | --- |
+| Faltan `SEGUNDOS_DE_AVISO_POR_DEFECTO` (60) segundos para el limite | Aparece `AvisoDeInactividad`: cuenta regresiva, "Seguir conectado" y "Cerrar sesion ahora". No se descarta con Escape ni tocando fuera, y mover el raton no lo apaga: pide una decision. |
+| Se cumple el limite | Se cierra la sesion y la pantalla de inicio de sesion dice "Tu sesion se cerro por inactividad". |
+| Se recarga la pagina o se reabre el navegador | La ultima actividad esta guardada (`CLAVE_ULTIMA_ACTIVIDAD`, en el almacenamiento de la plataforma): si ya paso el limite, la sesion se cierra al abrir, sin llegar a pintar la pantalla. |
+| Hay varias pestanas abiertas | La actividad en cualquiera cuenta para todas, y el aviso de una se apaga si se trabaja en otra. |
+| Se vuelve a entrar despues de un cierre | La pantalla de inicio de sesion borra la marca vieja (`olvidarUltimaActividad`), para que no saque a nadie en cuanto termine de entrar. |
+
+La marca guardada es solo una hora (un numero de milisegundos); no identifica a nadie ni guarda
+nada de la sesion. En movil el hook funciona como antes, en memoria: `AsyncStorage` no es
+sincrono y el contrato del almacenamiento que usa este hook si lo exige.
 
 **El temporizador de cliente NO es un control de seguridad.** Quien controla el navegador (o
 abre la consola de devtools) puede desactivarlo sin esfuerzo — solo mejora la experiencia de
@@ -98,6 +117,92 @@ Ya se cumple; no hubo que cambiar codigo.
   "correo enviado" de "esa cuenta no existe" permitiria enumerar usuarios (issue #101).
 - `apps/mobile/src/screens/LoginScreen.js` es un placeholder sin logica de login todavia, asi
   que no hay nada que revisar ahi por ahora.
+
+## Observabilidad: errores, fallos de red y respaldos (issue #762)
+
+La pregunta de la #762 es **cuando algo falle en una comunidad rural sin senal, como nos enteramos
+y como lo recuperamos**, y el patron que tiene que hacer imposible es "algo no funciona y el
+sistema dice que si". Este es el estado por bloque.
+
+### Reporte de errores
+
+Todo error pasa por un unico punto,
+[`packages/shared/observabilidad/errores.js`](../packages/shared/observabilidad/errores.js):
+
+- `reportarError(error, contexto)` acepta cualquier cosa que se haya lanzado (un `Error`, el
+  `{ mensaje, codigo }` de las APIs de shared, el `{ message, code }` de supabase-js) y nunca
+  lanza.
+- **Nada sale sin pasar por `limpiarDatosSensibles`**, que quita UUID (las rutas llevan el del
+  paciente), correos, DPI, telefonos, corridas de 8 o mas digitos, el valor que Postgres copia en
+  el `detail` de una violacion de unicidad (`Key (dpi)=(...)`) y tokens. Prefiere quitar de mas.
+- `configurarDestinoDeErrores(destino)` es el **unico** punto que hay que tocar para conectar una
+  herramienta de monitoreo. Hoy el destino es la consola del equipo: no sale de el.
+
+Lo que se captura en la web:
+
+| Fuente | Donde se engancha |
+| --- | --- |
+| Excepcion al pintar una pantalla | `LimiteDeError` alrededor del `<Outlet />` de `MainLayout` (el menu sigue vivo y se reinicia al navegar) y otro alrededor de `<App />` en `main.jsx` |
+| Excepcion en un manejador de eventos o un `setTimeout` | `window` `error`, en `main.jsx` |
+| Promesa rechazada que nadie espero | `window` `unhandledrejection`, en `main.jsx` |
+
+Antes de esto, una excepcion al pintar dejaba **la pagina en blanco** -sin menu, sin mensaje y sin
+registro-: es lo que pasaba con "Nuevo paciente" hasta la #827.
+
+**Pendiente:** elegir la herramienta (dentro de la capa gratuita, ver #234), conectarla con
+`configurarDestinoDeErrores` en las dos apps y en las Edge Functions, y enganchar los errores
+globales de movil (`ErrorUtils.setGlobalHandler`).
+
+### Errores tragados
+
+Revisados en `apps/` y `packages/shared`:
+
+- **`alert()` para errores de escritura:** no queda ninguno en la web. Los de `InventarioPage`,
+  `AdministracionBodegasProveedoresPage` y `PanelAlertasVencimiento` ya pintan el error en la
+  pantalla que lo provoco.
+- **`catch` vacios:** quedan cinco y los cinco son deliberados y comentados: `cerrarSesion()` (el
+  objetivo, no dejar sesion, ya se persigue en supabase-js), `useRestablecerContrasena` (distinguir
+  "correo enviado" de "no existe esa cuenta" permite enumerar usuarios), el cuerpo no JSON de una
+  Edge Function en `usuarios/api.js`, un mensaje mal formado del WebView del mapa en movil, y el
+  almacenamiento bloqueado del temporizador de inactividad.
+- **Alias equivocado (`{ data, err }`):** corregido en `useReporteInventario` (#696); no queda
+  ningun otro.
+- **Valor de retorno descartado:** `marcarComoAtendida` ya no marca como atendida una alerta que
+  la base rechazo (#709).
+- **El indicador de la cabecera** decia "Sistema activo" siempre, con o sin red. Ahora dice
+  "En linea" o "Sin conexion" segun el navegador.
+- **`keep-alive-supabase.yml`** ya falla con un error HTTP (`--fail-with-body`), y cuando faltan
+  los secrets deja una anotacion de warning y un bloque en el resumen en vez de un `echo` que solo
+  se veia abriendo el log.
+
+### Fallos de red
+
+- **Web:** `useEnLinea` (`apps/web/src/hooks/`) escucha `online`/`offline`. Sin red aparece
+  `AvisoSinConexion`, una franja fija bajo la cabecera que dice que lo que se guarde no llegara a
+  la base. `navigator.onLine` en `false` es fiable; en `true` solo dice que hay una interfaz de
+  red, por eso alimenta un aviso y no una decision: quien sabe si una escritura llego es la
+  respuesta de la API, que ya se pinta en pantalla.
+- **Pendiente en movil:** definir que se puede seguir haciendo sin red, que se bloquea y que se le
+  dice a quien atiende. Hoy movil no tiene el aviso.
+- **Receta emitida con stock sin descontar** (R-57 de la revision integral): resuelto por la #711.
+  La receta y sus salidas de inventario se escriben juntas en `fn_generar_receta` (00112): si una
+  salida falla por red o por stock, no queda ni la receta ni el descuento, en vez de una receta
+  emitida con el inventario inflado.
+
+### Eventos de seguridad y bitacora
+
+`eventos_auditoria` (00026, 00045, 00070) ya registra los borrados logicos y los cambios de
+permisos. Consultarla desde la aplicacion es la #643. **Pendiente de decidir:** que eventos de
+autenticacion se registran (intentos fallidos, desactivaciones, invitaciones), cuanto se
+conservan, y confirmar que ninguno guarda datos clinicos de mas. El cierre por inactividad
+**no** se registra en la base: ocurre en el cliente y quien lo necesita es la persona que vuelve a
+entrar, a quien ya se le dice.
+
+### Respaldos
+
+Procedimiento en [CI-CD.md, "Respaldos y restauracion"](./CI-CD.md#respaldos-y-restauracion).
+**La restauracion no esta probada todavia**: un respaldo sin restauracion probada no es un
+respaldo, y esa prueba es el criterio que sigue abierto de la #762.
 
 ## Alta de cuentas: quien entra al sistema y como (issue #508)
 

@@ -1,7 +1,8 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
-import { inicializarSupabase } from "@ecopac/shared";
+import { inicializarSupabase, reportarError } from "@ecopac/shared";
 import App from "./App";
+import LimiteDeError from "./components/LimiteDeError";
 import "./index.css";
 import { almacenamientoWeb } from "./almacenamiento";
 import { aplicarTokens } from "./theme";
@@ -26,8 +27,33 @@ try {
   );
 }
 
+// Errores que no pasan por ningun `catch` ni por el limite de error de React: una excepcion en un
+// manejador de eventos o en un setTimeout, y una promesa rechazada que nadie espero (issue #762).
+// Antes solo llegaban a la consola del navegador de quien estuviera usando la pantalla. Pasan por
+// reportarError(), que quita los datos de paciente antes de enviarlos a ningun sitio.
+window.addEventListener("error", (evento) => {
+  reportarError(evento.error ?? evento.message, {
+    origen: "error-global",
+    ruta: window.location.pathname,
+  });
+});
+
+window.addEventListener("unhandledrejection", (evento) => {
+  reportarError(evento.reason, {
+    origen: "promesa-sin-capturar",
+    ruta: window.location.pathname,
+  });
+});
+
+// El limite exterior cubre lo que queda fuera del de MainLayout: el propio layout, el login y el
+// enrutador. Sin rutas a mano, "Volver al inicio" recarga la raiz.
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    <App />
+    <LimiteDeError
+      ruta={window.location.pathname}
+      onVolverAlInicio={() => window.location.assign("/")}
+    >
+      <App />
+    </LimiteDeError>
   </React.StrictMode>,
 );

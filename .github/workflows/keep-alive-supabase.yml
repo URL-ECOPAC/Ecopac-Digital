@@ -41,9 +41,18 @@ jobs:
     steps:
       - name: Verificar secrets configurados
         if: env.SUPABASE_URL_DEV == '' || env.SUPABASE_SERVICE_ROLE_KEY_DEV == ''
+        # Anotacion de warning y bloque en el resumen, no un echo: un echo solo se ve abriendo el
+        # log, y una corrida que no protegio nada no puede verse igual que una que si (issue #762,
+        # "algo no funciona y el sistema dice que si"; misma politica que docs/CI-CD.md, Secrets).
         run: |
-          echo "Los secrets de Supabase no estan configurados; se omite el ping."
-          echo "Configuralos en: Settings > Secrets and variables > Actions"
+          echo "::warning title=Keep-alive sin efecto::Faltan VITE_SUPABASE_URL_DEV o SUPABASE_SERVICE_ROLE_KEY_DEV: no se hizo ningun ping y el proyecto puede pausarse."
+          {
+            echo "### Keep-alive sin efecto"
+            echo ""
+            echo "Faltan los secrets \`VITE_SUPABASE_URL_DEV\` o \`SUPABASE_SERVICE_ROLE_KEY_DEV\`."
+            echo "No se hizo ningun ping: el proyecto puede pausarse por inactividad."
+            echo "Configuralos en Settings > Secrets and variables > Actions."
+          } >> "$GITHUB_STEP_SUMMARY"
 
       # --fail-with-body: antes el curl no llevaba ningun --fail, asi que un 401/404 devolvia
       # codigo de salida 0 y el paso pasaba igual. Con --fail-with-body, un error HTTP hace

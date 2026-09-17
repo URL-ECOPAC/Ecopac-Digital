@@ -1,5 +1,5 @@
 import { StyleSheet, Text, View } from "react-native";
-import { colors, spacing, typography } from "@ecopac/ui-tokens";
+import { colors, radii, spacing, typography } from "@ecopac/ui-tokens";
 import PrimaryButton from "./PrimaryButton";
 import SecondaryButton from "./SecondaryButton";
 
@@ -11,12 +11,18 @@ import SecondaryButton from "./SecondaryButton";
  * partir el titulo.
  *
  * Cada accion es { label, onPress, variant }, con 'primary' por defecto.
+ *
+ * `accent` es el color del filete bajo el titulo, igual que en web: un valor de
+ * `moduleAccents` o de `colors` de @ecopac/ui-tokens, nunca uno escrito a mano. Sin el, el
+ * filete va en el color primario. `children` se dibuja bajo el filete.
  */
-export default function PageHeader({ title, subtitle, actions = [] }) {
+export default function PageHeader({ title, subtitle, actions = [], accent, children }) {
   return (
     <View style={styles.container}>
       <Text style={styles.titulo}>{title}</Text>
       {subtitle ? <Text style={styles.subtitulo}>{subtitle}</Text> : null}
+      <View style={[styles.acento, accent ? { backgroundColor: accent } : null]} />
+      {children}
 
       {actions.length > 0 ? (
         <View style={styles.acciones}>
@@ -52,6 +58,13 @@ const styles = StyleSheet.create({
     fontFamily: typography.fontFamilyBase,
     fontSize: typography.sizes.sm,
     color: colors.textMuted,
+  },
+  acento: {
+    backgroundColor: colors.primary,
+    borderRadius: radii.pill,
+    height: 3,
+    marginTop: spacing.sm,
+    width: 48,
   },
   acciones: {
     flexDirection: "row",

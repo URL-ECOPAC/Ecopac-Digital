@@ -20,6 +20,9 @@ import {
   Spinner,
 } from "react-bootstrap";
 
+import PageHeader from "../components/PageHeader";
+import ScreenContainer from "../components/ScreenContainer";
+
 export default function HistorialDonacionesPage({ usuarioRol, proyectosOptions = [] }) {
   const {
     tieneAccesoLectura,
@@ -62,8 +65,11 @@ export default function HistorialDonacionesPage({ usuarioRol, proyectosOptions =
   }
 
   return (
-    <Container fluid style={{ maxWidth: "1140px" }} className="py-4">
-      <h1 className="h3 mb-4">Historial de Donaciones Recibidas</h1>
+    <ScreenContainer>
+      <PageHeader
+        title="Historial de donaciones recibidas"
+        subtitle="Consulta, detalle y anulación de las donaciones registradas"
+      />
 
       {error && (
         <Alert variant="danger">
@@ -377,6 +383,6 @@ export default function HistorialDonacionesPage({ usuarioRol, proyectosOptions =
           </Modal.Footer>
         </Modal>
       )}
-    </Container>
+    </ScreenContainer>
   );
 }

@@ -15,6 +15,37 @@ export function describirPosologia(renglon) {
   return partes.join(", ");
 }
 
+/**
+ * La cantidad entregada de un renglon, con la correccion si la hubo.
+ *
+ * `cantidad_ajustada` (00128) es la ultima cifra confirmada como realmente entregada cuando difiere
+ * de la recetada, y la migracion es explicita: mientras exista, ES la cifra vigente. Las pantallas
+ * leian solo `cantidad_entregada`, asi que una entrega corregida de 10 a 8 seguia diciendo 10 en la
+ * ficha, en el historial y en la receta impresa, y ni la correccion ni quien la hizo llegaban a
+ * ninguna vista.
+ *
+ * @param {object} renglon
+ * @returns {{ vigente: number|null, original: number|null, corregida: boolean, texto: string }}
+ */
+export function describirEntrega(renglon) {
+  const original = renglon?.cantidadEntregada ?? null;
+  const ajustada = renglon?.cantidadAjustada ?? null;
+  const corregida = ajustada !== null && ajustada !== original;
+  const vigente = corregida ? ajustada : original;
+
+  if (vigente === null || vigente === "") {
+    return { vigente: null, original, corregida: false, texto: "" };
+  }
+
+  if (!corregida) {
+    return { vigente, original, corregida, texto: `entregadas: ${vigente}` };
+  }
+
+  const detalle = [`corregido de ${original}`];
+  if (renglon.ajustadaPorNombre) detalle.push(`por ${renglon.ajustadaPorNombre}`);
+  return { vigente, original, corregida, texto: `entregadas: ${vigente} (${detalle.join(" ")})` };
+}
+
 export function contarRecetas(recetas = []) {
   return {
     total: recetas.length,

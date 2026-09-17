@@ -313,10 +313,11 @@ Solo web (`soloWeb: true`).
 
 | Pantalla                                                                                 | Hook                   | Estado    |
 | ---------------------------------------------------------------------------------------- | ---------------------- | --------- |
-| [ReportesPage.jsx](../apps/web/src/pages/ReportesPage.jsx) `/reportes`                    | -                      | Indice del modulo |
-| [DashboardMetricasPage.jsx](../apps/web/src/pages/DashboardMetricasPage.jsx) `/reportes/dashboard` | `useDashboardMetricas` | Conectada |
-| [ReportePacientesPage.jsx](../apps/web/src/pages/ReportePacientesPage.jsx) `/reportes/pacientes-atendidos` | `useReportePacientes` | Conectada |
-| [ReporteInventarioPage.jsx](../apps/web/src/pages/ReporteInventarioPage.jsx) `/reportes/inventario-actual` | `useReporteInventario` | Conectada |
+| [ReportesPage.jsx](../apps/web/src/pages/ReportesPage.jsx) `/reportes`                    | `useReporteMedicamentosPorVencer` | Hub con cuatro pestanas, cada una con su ruta |
+| [DashboardMetricasPage.jsx](../apps/web/src/pages/DashboardMetricasPage.jsx) pestana `/reportes` y `/reportes/dashboard` | `useDashboardMetricas` | Conectada |
+| Medicamentos por vencer, pestana `/reportes/medicamentos-por-vencer` (dentro de `ReportesPage.jsx`) | `useReporteMedicamentosPorVencer` | Conectada |
+| [ReportePacientesPage.jsx](../apps/web/src/pages/ReportePacientesPage.jsx) pestana `/reportes/pacientes-atendidos` | `useReportePacientes` | Conectada |
+| [ReporteInventarioPage.jsx](../apps/web/src/pages/ReporteInventarioPage.jsx) pestana `/reportes/inventario-actual` | `useReporteInventario` | Conectada |
 | [ReporteJornada.jsx](../apps/web/src/pages/ReporteJornada.jsx) `/reportes/jornada/:id`    | `useReporteJornada`    | Conectada |
 | [BarraFiltrosReporte.jsx](../apps/web/src/pages/BarraFiltrosReporte.jsx)                  | `useFiltrosReportes`   | Conectada |
 
@@ -329,10 +330,13 @@ Exportacion a CSV con `exportarFilasACSV` (`reportes/csv.js`).
 
 - Los roles consultivos leen **agregados**, no filas clinicas: es la razon de que estos reportes
   salgan de vistas y funciones y no de `SELECT` sobre las tablas (`00054`).
-- `/reportes/dashboard` **queda fuera del guard de roles** en
-  [App.jsx](../apps/web/src/App.jsx#L157): esta declarada fuera del bloque `RutaProtegida` que
-  cubre al resto del modulo (issue #697).
-- `ReportesPage.jsx` escribe colores y espaciados a mano en vez de usar `@ecopac/ui-tokens`.
+- Las cuatro rutas de pestana montan `ReportesPage`, que elige la pestana por la direccion. Antes
+  "Pacientes atendidos" montaba su reporte suelto, sin las pestanas, y desde ahi no habia forma de
+  volver a las demas; "Inventario actual" tenia ruta pero ningun enlace que llevara a ella. Los
+  dos reportes aceptan `incrustado`: dentro del hub no repiten el titulo de pagina.
+- Todas quedan dentro del guard de roles del modulo (la #697 cerro la excepcion de
+  `/reportes/dashboard`).
+- `ReportesPage.jsx` y `DashboardMetricasPage.jsx` ya no escriben colores ni espaciados a mano.
 
 ---
 
@@ -381,19 +385,21 @@ Exportacion a CSV con `exportarFilasACSV` (`reportes/csv.js`).
 | [NuevaContrasenaPage.jsx](../apps/web/src/pages/NuevaContrasenaPage.jsx)           | `useNuevaContrasena`     | Conectada |
 | [AccesoDenegadoPage.jsx](../apps/web/src/pages/AccesoDenegadoPage.jsx)             | -                        | Conectada |
 | [NotFoundPage.jsx](../apps/web/src/pages/NotFoundPage.jsx)                         | -                        | Conectada |
-| [HomePage.jsx](../apps/web/src/pages/HomePage.jsx) `/`                             | -                        | **Pendiente** (issue #209) |
+| [HomePage.jsx](../apps/web/src/pages/HomePage.jsx) `/`                             | `usePanelDeInicio`       | Conectada (#710) |
 | [LoginScreen.js](../apps/mobile/src/screens/LoginScreen.js)                        | `useInicioSesion`        | Conectada |
 | [InicioScreen.js](../apps/mobile/src/screens/InicioScreen.js)                      | -                        | Conectada |
 | [AjustesScreen.js](../apps/mobile/src/screens/AjustesScreen.js)                    | -                        | Conectada |
 | [RestaurandoSesionScreen.js](../apps/mobile/src/screens/RestaurandoSesionScreen.js) | -                       | Conectada |
 | [AccesoDenegadoScreen.js](../apps/mobile/src/screens/AccesoDenegadoScreen.js)      | -                        | Conectada |
 
-La sesion se expira por inactividad (`useExpiracionPorInactividad`), y el almacenamiento de
-credenciales difiere por plataforma a proposito: ver [SEGURIDAD.md](./SEGURIDAD.md) y
-[PROTECCION-DE-DATOS.md](./PROTECCION-DE-DATOS.md).
+La sesion se expira por inactividad (`useExpiracionPorInactividad`): en web avisa un minuto
+antes, sobrevive a recargar la pagina y cuenta la actividad de todas las pestanas. El
+almacenamiento de credenciales difiere por plataforma a proposito: ver
+[SEGURIDAD.md](./SEGURIDAD.md) y [PROTECCION-DE-DATOS.md](./PROTECCION-DE-DATOS.md).
 
-**La pantalla de inicio de la web es un marcador de posicion.** Es la primera que ve cualquier
-usuario tras entrar.
+La web ademas captura los errores que antes dejaban la pagina en blanco (`LimiteDeError`), avisa
+cuando se queda sin red (`AvisoSinConexion`) y reporta todo por `reportarError`, sin datos de
+paciente: ver [SEGURIDAD.md, "Observabilidad"](./SEGURIDAD.md).
 
 ---
 
@@ -415,7 +421,8 @@ movil es cambiar el import, no reescribir la logica.
 | `Modal`           | Si   | Si    | Dialogo                                      |
 | `Tabs`            | Si   | Si    | Pestanas                                     |
 | `KanbanBoard`     | Si   | Si    | Tablero de jornadas y proyectos              |
-| `PageHeader`      | Si   | Si    | Encabezado de pantalla                       |
+| `PageHeader`      | Si   | Si    | Encabezado de pantalla: titulo, filete de color del modulo, acciones |
+| `SectionHeader`   | Si   | Si    | Encabezado de una seccion o pestana dentro de una pantalla |
 | `ScreenContainer` | Si   | Si    | Contenedor de pantalla                       |
 | `PrimaryButton`   | Si   | Si    | Accion principal                             |
 | `SecondaryButton` | Si   | Si    | Accion secundaria                            |
@@ -437,7 +444,7 @@ movil es cambiar el import, no reescribir la logica.
 
 | Estado        | Pantallas | Cuales                                                                   |
 | ------------- | --------- | ------------------------------------------------------------------------ |
-| **Pendiente** | 2         | `HomePage` (web, inicio), `PresupuestosScreen` (movil)                    |
+| **Pendiente** | 1         | `PresupuestosScreen` (movil)                                              |
 | **Local**     | 1         | `ProyectosPage` (duplica las transiciones de estado)                     |
 | **Parcial**   | 2         | `DonacionesScreen` (solo historial), `StockScreen` (alias del catalogo)  |
 | **Conectada** | El resto  |                                                                          |

@@ -1,5 +1,7 @@
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
+import { rotuloSinSigno } from "@ecopac/shared";
 import { colors, radii, spacing, typography } from "@ecopac/ui-tokens";
+import { iconoDeAccion } from "./iconoDeAccion";
 
 const MIN_TOUCH_HEIGHT = 48;
 
@@ -34,7 +36,7 @@ export default function PrimaryButton({
   loading = false,
   variant = "primary",
   size = "md",
-  icon = null,
+  icon,
   block = false,
   style,
 }) {
@@ -60,8 +62,8 @@ export default function PrimaryButton({
         <ActivityIndicator color={colors.background} />
       ) : (
         <View style={styles.contenido}>
-          {icon}
-          <Text style={[styles.text, size === "sm" && styles.textSm]}>{title}</Text>
+          {iconoDeAccion(title, icon, colors.background)}
+          <Text style={[styles.text, size === "sm" && styles.textSm]}>{rotuloSinSigno(title)}</Text>
         </View>
       )}
     </Pressable>

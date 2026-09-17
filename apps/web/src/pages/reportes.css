@@ -104,3 +104,163 @@
 .reporte-cifra-estado {
   display: inline-block;
 }
+
+/* Fila que abre cada pestana del hub de reportes: la descripcion del reporte a la izquierda y
+   sus acciones (exportar) a la derecha. Ocupa el lugar que antes tenia una segunda cabecera de
+   pagina, o -en el panel de impacto- una fila entera vacia con el boton de exportar solo. */
+.reporte-barra {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm) var(--spacing-md);
+  justify-content: space-between;
+  margin-bottom: var(--spacing-md);
+}
+
+/* Filtros de un reporte: la misma rejilla que cae a una columna sola en pantallas estrechas. */
+.reporte-filtros {
+  align-items: end;
+  display: grid;
+  gap: var(--spacing-md);
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+
+.reporte-filtros .form-group,
+.reporte-filtros .mb-3 {
+  margin-bottom: 0;
+}
+
+.reporte-filtros-accion {
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* --------------------------------------------------------------------------
+   Panel de impacto
+   -------------------------------------------------------------------------- */
+
+/* Pie de una tarjeta de indicador con meta: la barra de avance y la meta. */
+.reporte-meta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  margin-top: var(--spacing-xs);
+}
+
+.reporte-meta-barra {
+  background-color: var(--color-border);
+  border-radius: var(--radio-pill);
+  display: block;
+  height: 6px;
+  overflow: hidden;
+}
+
+.reporte-meta-barra > span {
+  background-color: var(--ec-acento, var(--color-primary));
+  border-radius: var(--radio-pill);
+  display: block;
+  height: 100%;
+}
+
+.reporte-graficas {
+  display: grid;
+  gap: var(--spacing-md);
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 992px) {
+  .reporte-graficas--doble {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.reporte-barras {
+  align-items: flex-end;
+  display: flex;
+  gap: var(--spacing-xs);
+  height: 180px;
+  justify-content: space-between;
+}
+
+.reporte-barras-grupo {
+  align-items: center;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  height: 100%;
+}
+
+.reporte-barras-par {
+  align-items: flex-end;
+  display: flex;
+  flex: 1;
+  gap: 3px;
+  justify-content: center;
+  width: 100%;
+}
+
+.reporte-barra-valor {
+  background-color: var(--color-primary);
+  border-radius: var(--radio-sm) var(--radio-sm) 0 0;
+}
+
+.reporte-barra-valor--comparacion {
+  background-color: var(--color-info);
+}
+
+.reporte-barras-etiqueta {
+  color: var(--color-text-muted);
+  font-size: var(--texto-xxs);
+  margin-top: var(--spacing-xs);
+  text-align: center;
+}
+
+.reporte-leyenda {
+  display: flex;
+  gap: var(--spacing-lg);
+  justify-content: center;
+  margin-top: var(--spacing-md);
+}
+
+.reporte-leyenda-item {
+  align-items: center;
+  color: var(--color-text-muted);
+  display: inline-flex;
+  font-size: var(--texto-xs);
+  gap: var(--spacing-xs);
+}
+
+.reporte-leyenda-muestra {
+  background-color: var(--color-primary);
+  border-radius: var(--radio-sm);
+  display: inline-block;
+  height: 10px;
+  width: 10px;
+}
+
+.reporte-leyenda-muestra--comparacion {
+  background-color: var(--color-info);
+}
+
+.reporte-variacion {
+  align-items: center;
+  border-radius: var(--radio-md);
+  display: flex;
+  font-size: var(--texto-sm);
+  justify-content: space-between;
+  padding: var(--spacing-sm) var(--spacing-md);
+}
+
+.reporte-variacion--sube {
+  background-color: color-mix(in srgb, var(--color-success) 8%, var(--color-surface));
+  color: var(--color-success);
+}
+
+.reporte-variacion--baja {
+  background-color: color-mix(in srgb, var(--color-danger) 8%, var(--color-surface));
+  color: var(--color-danger);
+}
+
+.reporte-variacion > span {
+  color: var(--color-text);
+}

@@ -94,7 +94,7 @@ describe("ModalRegistroIngreso", () => {
   it("Añadir dispara agregarItem()", () => {
     pantalla();
 
-    fireEvent.click(screen.getByText("+ Añadir"));
+    fireEvent.click(screen.getByText("Añadir"));
 
     expect(mockEstadoHook.agregarItem).toHaveBeenCalled();
   });

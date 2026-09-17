@@ -5,6 +5,7 @@ import {
   TIPOS_DE_PRESENTACION,
   useKardexMovimientos,
 } from "@ecopac/shared";
+import SectionHeader from "../components/SectionHeader";
 const colores = {
   fondoTarjeta: "#ffffff",
   borde: "#e2e8f0",
@@ -131,53 +132,22 @@ export default function KardexMovimientosPage({
       }}
     >
       {/* Cabecera */}
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: "24px",
-        }}
-      >
-        <div>
-          <h2
-            style={{
-              fontSize: "var(--texto-lg)",
-              fontWeight: 700,
-              color: colores.textoTitulo,
-              margin: 0,
-            }}
-          >
-            {titulo}
-          </h2>
-          <p
-            style={{
-              fontSize: "var(--texto-xs)",
-              color: colores.textoSecundario,
-              margin: "4px 0 0 0",
-            }}
-          >
-            Historial cronológico • Solo movimientos{" "}
-            <strong style={{ color: colores.botonFondo }}>aprobados</strong> afectan el saldo
-          </p>
-        </div>
-        <button
-          onClick={() => descargarCSV(movimientos)}
-          disabled={movimientos.length === 0}
-          style={{
-            padding: "10px 18px",
-            background: colores.botonFondo,
-            color: colores.botonTexto,
-            border: "none",
-            borderRadius: "8px",
-            fontSize: "var(--texto-sm)",
-            fontWeight: 600,
-            cursor: "pointer",
-          }}
-        >
-          Exportar historial
-        </button>
-      </div>
+      <SectionHeader
+        title={titulo}
+        subtitle={
+          <>
+            Historial cronológico • Solo movimientos <strong>aprobados</strong> afectan el saldo
+          </>
+        }
+        actions={[
+          {
+            label: "Exportar historial",
+            onClick: () => descargarCSV(movimientos),
+            disabled: movimientos.length === 0,
+            variant: "secondary",
+          },
+        ]}
+      />
 
       {/* Filtros */}
       <div

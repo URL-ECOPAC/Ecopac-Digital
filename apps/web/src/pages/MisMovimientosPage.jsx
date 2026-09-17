@@ -12,6 +12,7 @@ import ErrorState from "../components/ErrorState";
 import FilterBar from "../components/FilterBar";
 import { useSesionCompartida } from "../contexto/SesionProvider";
 import ModalCorreccionMovimiento from "./ModalCorreccionMovimiento";
+import SectionHeader from "../components/SectionHeader";
 
 // Pantalla "Mis movimientos" (issue #756): editarMovimiento() (movimientos.api.js) existia desde
 // la issue #625 sin ninguna pantalla que la llamara. Se monta embebida como una pestania mas de
@@ -54,13 +55,12 @@ export default function MisMovimientosPage() {
 
   return (
     <div className="modulo-pacientes">
-      <div className="mb-3">
-        <h4 className="fw-bold mb-1">Mis movimientos</h4>
-        <p className="text-muted small mb-0">
-          Movimientos de inventario que registraste
-          {puedeVerTodos && filtros.alcance === "todos" ? " (viendo los de todo el mundo)" : ""}
-        </p>
-      </div>
+      <SectionHeader
+        title="Mis movimientos"
+        subtitle={`Movimientos de inventario que registraste${
+          puedeVerTodos && filtros.alcance === "todos" ? " (viendo los de todo el mundo)" : ""
+        }`}
+      />
 
       <div className="pac-filtros">
         <FilterBar campos={campos} valores={filtros} onChange={setFiltro} />

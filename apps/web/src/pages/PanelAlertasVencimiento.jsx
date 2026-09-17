@@ -2,6 +2,7 @@ import { useState } from "react";
 import ErrorState from "../components/ErrorState";
 import LoadingState from "../components/LoadingState";
 import { OPCIONES_ACCION_ALERTA, useAlertasVencimiento } from "@ecopac/shared";
+import SectionHeader from "../components/SectionHeader";
 
 export default function PanelAlertasVencimiento({ usuarioId, rolUsuario }) {
   const {
@@ -71,37 +72,12 @@ export default function PanelAlertasVencimiento({ usuarioId, rolUsuario }) {
     // alertas se dibujaba con una letra distinta de la del resto de la aplicacion. La familia la
     // hereda del <body>, que la toma de --fuente-base (theme.js, desde @ecopac/ui-tokens).
     <div>
-      {/* Cabecera */}
-      <div style={{ marginBottom: "var(--spacing-lg)" }}>
-        <h2
-          style={{
-            fontSize: "var(--texto-xxl)",
-            fontWeight: "var(--peso-bold)",
-            margin: 0,
-            color: "var(--color-text)",
-          }}
-        >
-          Alertas de Vencimiento
-        </h2>
-        <p
-          style={{
-            fontSize: "var(--texto-sm)",
-            color: "var(--color-text-muted)",
-            margin: "var(--spacing-xs) 0 0 0",
-          }}
-        >
-          Medicamentos próximos a caducar (próximos 30 días)
-        </p>
-        <div
-          style={{
-            marginTop: "var(--spacing-sm)",
-            fontSize: "var(--texto-sm)",
-            color: "var(--color-text-muted)",
-          }}
-        >
-          {cantidadPendientes} pendientes
-        </div>
-      </div>
+      {/* Cabecera. El titulo iba a --texto-xxl, mas grande que el de la pantalla de inventario
+          que lo contiene. */}
+      <SectionHeader
+        title="Alertas de vencimiento"
+        subtitle={`Medicamentos próximos a caducar (próximos 30 días) • ${cantidadPendientes} pendientes`}
+      />
 
       {/* Filtro */}
       <div
@@ -131,16 +107,7 @@ export default function PanelAlertasVencimiento({ usuarioId, rolUsuario }) {
 
       {/* Próximos a vencer */}
       <div style={{ marginBottom: "32px" }}>
-        <h3
-          style={{
-            fontSize: "var(--texto-lg)",
-            fontWeight: "var(--peso-semibold)",
-            margin: "0 0 12px 0",
-            color: "#0f172a",
-          }}
-        >
-          Próximos a vencer ({porVencer.length})
-        </h3>
+        <h3 className="ec-seccion-titulo">Próximos a vencer ({porVencer.length})</h3>
 
         {porVencer.length === 0 ? (
           <div style={{ padding: "24px", color: "#64748b", fontSize: "var(--texto-sm)" }}>
@@ -292,16 +259,7 @@ export default function PanelAlertasVencimiento({ usuarioId, rolUsuario }) {
 
       {/* Vencidas */}
       <div>
-        <h3
-          style={{
-            fontSize: "var(--texto-lg)",
-            fontWeight: "var(--peso-semibold)",
-            margin: "0 0 12px 0",
-            color: "#0f172a",
-          }}
-        >
-          Vencidos — Para dar de baja ({vencidas.length})
-        </h3>
+        <h3 className="ec-seccion-titulo">Vencidos — Para dar de baja ({vencidas.length})</h3>
 
         {vencidas.length === 0 ? (
           <div style={{ padding: "24px", color: "#64748b", fontSize: "var(--texto-sm)" }}>
