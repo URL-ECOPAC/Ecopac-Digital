@@ -170,7 +170,7 @@
     "#e2e4e9",
     "#f7f8fa"
   ],
-  "apps/mobile/src/screens/ficha-paciente/CondicionesPacienteSeccion.js": ["#7a7a8a", "#e5e7eb"],
+  "apps/mobile/src/screens/ficha-paciente/CondicionesPacienteSeccion.js": ["#7a7a8a", "#e2e4e9"],
   "apps/mobile/src/screens/ficha-paciente/RecetasPacienteSeccion.js": [
     "#0284c7",
     "#0f172a",
@@ -191,28 +191,14 @@
     "#e5e7eb",
     "#e91e8c"
   ],
-  "apps/mobile/src/screens/ficha-paciente/SignosVitalesSeccion.js": [
-    "#0284c7",
-    "#0f172a",
-    "#1e293b",
-    "#64748b",
-    "#94a3b8",
-    "#dc2626",
-    "#e2e8f0",
-    "#f1f5f9",
-    "#f8fafc",
-    "#fef2f2",
-    "#ffffff"
-  ],
   "apps/mobile/src/screens/FichaColaboradorScreen.js": ["#2d2d2d", "#7a7a8a", "#e2e4e9", "#f7f8fa"],
   "apps/mobile/src/screens/FichaPacienteScreen.js": [
-    "#0284c7",
-    "#059669",
-    "#0f172a",
-    "#64748b",
-    "#dc2626",
-    "#e2e8f0",
-    "#f8fafc",
+    "#29abe2",
+    "#2d2d2d",
+    "#3db648",
+    "#7a7a8a",
+    "#e2e4e9",
+    "#f7f8fa",
     "#ffffff"
   ],
   "apps/mobile/src/screens/HistorialPacienteScreen.js": ["#2d2d2d", "#7a7a8a", "#e2e4e9"],
