@@ -30,7 +30,7 @@ export const GRUPOS_DE_EDAD = Object.freeze([
   { id: "ninez", label: "Niñez (6 a 12)", min: 6, max: 12 },
   { id: "adolescencia", label: "Adolescencia (13 a 17)", min: 13, max: 17 },
   { id: "adultez", label: "Adultez (18 a 59)", min: 18, max: 59 },
-  { id: "adulto-mayor", label: "Adulto mayor (60 o mas)", min: 60, max: null },
+  { id: "adulto-mayor", label: "Adulto mayor (60 o más)", min: 60, max: null },
 ]);
 
 /**
@@ -53,7 +53,7 @@ export const FILTROS_PACIENTE = [
     id: "busqueda",
     tipo: TIPOS_DE_FILTRO.BUSQUEDA,
     label: "Buscar paciente",
-    placeholder: "Nombre, numero de ficha o DPI",
+    placeholder: "Nombre, número de ficha o DPI",
   },
   {
     id: "comunidad",
@@ -88,7 +88,7 @@ export const FILTROS_PACIENTE = [
     // como quinto filtro en vez de reemplazar a los del diseno, para no perder ninguno.
     id: "condicionCronica",
     tipo: TIPOS_DE_FILTRO.SELECT,
-    label: "Condicion cronica",
+    label: "Condición crónica",
     opcionesDesde: "condicionesCronicas",
   },
 ];

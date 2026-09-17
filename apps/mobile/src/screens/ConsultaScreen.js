@@ -69,7 +69,7 @@ function Diagnosticos({ campo, valor, opciones, onChange, deshabilitado }) {
         value={null}
         options={opciones.filter((opcion) => !elegidos.includes(opcion.value))}
         onSelect={agregar}
-        placeholder="Agregar diagnostico"
+        placeholder="Agregar diagnóstico"
         disabled={deshabilitado || opciones.length === 0}
       />
       {elegidos.map((id, indice) => (

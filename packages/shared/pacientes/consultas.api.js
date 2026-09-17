@@ -199,7 +199,7 @@ export async function registrarConsulta(datos = {}, { estadoDeJornada } = {}) {
       consulta: null,
       error: {
         ...construirError(CODIGOS_DE_ERROR_DE_SUPABASE.CAMPO_REQUERIDO),
-        mensaje: "Hacen falta el expediente, la atencion, el medico y la jornada.",
+        mensaje: "Hacen falta el expediente, la atención, el médico y la jornada.",
       },
     };
   }
@@ -424,7 +424,7 @@ export async function listarPacientesAtendidosDeJornada(jornadaId, { rol } = {})
       error: {
         ...construirError(CODIGOS_DE_ERROR_DE_SUPABASE.PERMISO_DENEGADO),
         mensaje:
-          "Solo el personal medico y la administracion pueden ver los pacientes atendidos con su diagnostico.",
+          "Solo el personal médico y la administración pueden ver los pacientes atendidos con su diagnóstico.",
       },
     };
   }
@@ -532,7 +532,7 @@ export async function crearDiagnostico({ codigo, nombre, descripcion } = {}) {
       diagnostico: null,
       error: {
         ...construirError(CODIGOS_DE_ERROR_DE_SUPABASE.CAMPO_REQUERIDO),
-        mensaje: "El nombre del diagnostico es obligatorio.",
+        mensaje: "El nombre del diagnóstico es obligatorio.",
       },
     };
   }
@@ -572,7 +572,7 @@ export async function actualizarDiagnostico(id, datos = {}) {
       diagnostico: null,
       error: {
         ...construirError(CODIGOS_DE_ERROR_DE_SUPABASE.CAMPO_REQUERIDO),
-        mensaje: "Hace falta el diagnostico que se quiere corregir.",
+        mensaje: "Hace falta el diagnóstico que se quiere corregir.",
       },
     };
   }
@@ -587,7 +587,7 @@ export async function actualizarDiagnostico(id, datos = {}) {
       diagnostico: null,
       error: {
         ...construirError(CODIGOS_DE_ERROR_DE_SUPABASE.CAMPO_REQUERIDO),
-        mensaje: "El nombre del diagnostico es obligatorio.",
+        mensaje: "El nombre del diagnóstico es obligatorio.",
       },
     };
   }
@@ -619,7 +619,7 @@ export async function actualizarDiagnostico(id, datos = {}) {
         diagnostico: null,
         error: {
           ...construirError(CODIGOS_DE_ERROR_DE_SUPABASE.PERMISO_DENEGADO),
-          mensaje: "Solo la administradora puede corregir el catalogo de diagnosticos.",
+          mensaje: "Solo la administradora puede corregir el catalogo de diagnósticos.",
         },
       };
     }
@@ -656,7 +656,7 @@ async function cambiarActivoDelDiagnostico(id, activo) {
       diagnostico: null,
       error: {
         ...construirError(CODIGOS_DE_ERROR_DE_SUPABASE.CAMPO_REQUERIDO),
-        mensaje: "Hace falta el diagnostico que se quiere actualizar.",
+        mensaje: "Hace falta el diagnóstico que se quiere actualizar.",
       },
     };
   }
@@ -676,7 +676,7 @@ async function cambiarActivoDelDiagnostico(id, activo) {
         diagnostico: null,
         error: {
           ...construirError(CODIGOS_DE_ERROR_DE_SUPABASE.PERMISO_DENEGADO),
-          mensaje: "Solo la administradora puede corregir el catalogo de diagnosticos.",
+          mensaje: "Solo la administradora puede corregir el catalogo de diagnósticos.",
         },
       };
     }

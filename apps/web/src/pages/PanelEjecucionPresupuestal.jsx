@@ -140,7 +140,7 @@ export default function PanelEjecucionPresupuestal({
           esTexto
         />
         <StatCard
-          label="En aprobacion"
+          label="En aprobación"
           value={formatearMoneda(kpis.pendiente)}
           accent="var(--color-info)"
           esTexto

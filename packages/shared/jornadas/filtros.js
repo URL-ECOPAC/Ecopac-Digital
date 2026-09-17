@@ -13,7 +13,7 @@ export const FILTROS_JORNADA = [
     id: "busqueda",
     tipo: TIPOS_DE_FILTRO.BUSQUEDA,
     label: "Buscar jornada",
-    placeholder: "Nombre o codigo",
+    placeholder: "Nombre o código",
   },
   {
     id: "estado",

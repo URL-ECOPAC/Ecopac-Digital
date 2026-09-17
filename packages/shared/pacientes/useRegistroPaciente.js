@@ -2,14 +2,12 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { calcularEdad } from "../formato/fechas.js";
 import {
-  crearComunidad,
   listarComunidades,
   listarDepartamentos,
   listarMunicipios,
   obtenerComunidad,
 } from "../territorio/api.js";
-import { validarComunidad } from "../territorio/comunidades.validaciones.js";
-import { puedeCrearComunidad } from "../territorio/permisos.js";
+import { useAltaDeComunidadEnLinea } from "../territorio/useAltaDeComunidadEnLinea.js";
 import { listarIdiomas } from "./idiomas.api.js";
 import { buscarPacientes, registrarPaciente } from "./api.js";
 import { CAMPOS_REGISTRO_PACIENTE } from "./campos.js";
@@ -36,8 +34,6 @@ export function useRegistroPaciente({ comunidadInicial = null, nombresInicial = 
 
   const [departamentoId, setDepartamentoId] = useState(null);
   const [municipioId, setMunicipioId] = useState(null);
-  const [erroresComunidad, setErroresComunidad] = useState({});
-  const [creandoComunidad, setCreandoComunidad] = useState(false);
   const [departamentos, setDepartamentos] = useState([]);
   const [municipios, setMunicipios] = useState([]);
   const [comunidades, setComunidades] = useState([]);
@@ -99,35 +95,24 @@ export function useRegistroPaciente({ comunidadInicial = null, nombresInicial = 
     });
   }, []);
 
-  const registrarComunidad = useCallback(
-    async (nombre) => {
-      const datos = { nombre, municipioId };
-      const errores = validarComunidad(datos);
-
-      if (Object.keys(errores).length > 0) {
-        setErroresComunidad(errores);
-        return { comunidad: null, errores, error: null };
-      }
-
-      setCreandoComunidad(true);
-      setErroresComunidad({});
-
-      const { comunidad, error: errorDeCreacion } = await crearComunidad(datos);
-
-      if (errorDeCreacion) {
-        setCreandoComunidad(false);
-        return { comunidad: null, errores: {}, error: errorDeCreacion };
-      }
-
+  // El alta de comunidad sin salir del formulario vive en useAltaDeComunidadEnLinea desde la
+  // #834: la estrenó esta pantalla, pero el alta de jornada tiene el mismo problema y hacer dos
+  // copias del mismo flujo era lo que se venia haciendo en el resto de los catalogos.
+  const alCrearComunidad = useCallback(
+    async (comunidad) => {
       const { comunidades: filas } = await listarComunidades({ municipioId });
       setComunidades(aOpciones(filas ?? []));
       setCampo("comunidad", comunidad.id);
-      setCreandoComunidad(false);
-
-      return { comunidad, errores: {}, error: null };
     },
     [municipioId, setCampo],
   );
+
+  const {
+    puedeCrear: puedeCrearComunidad,
+    crear: registrarComunidad,
+    errores: erroresComunidad,
+    creando: creandoComunidad,
+  } = useAltaDeComunidadEnLinea({ municipioId, rol, alCrear: alCrearComunidad });
 
   const { nombres, apellidos, fechaNacimiento } = valores;
 
@@ -227,7 +212,7 @@ export function useRegistroPaciente({ comunidadInicial = null, nombresInicial = 
     setMunicipio,
     registrar,
     reiniciar,
-    puedeCrearComunidad: puedeCrearComunidad(rol),
+    puedeCrearComunidad,
     registrarComunidad,
     erroresComunidad,
     creandoComunidad,

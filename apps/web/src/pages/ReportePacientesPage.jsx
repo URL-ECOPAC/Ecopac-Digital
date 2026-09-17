@@ -20,7 +20,7 @@ import StatCard from "../components/StatCard";
 const OPCIONES_DE_AGRUPACION = [
   { value: AGRUPACIONES_DE_PACIENTES.JORNADA, label: "Por jornada" },
   { value: AGRUPACIONES_DE_PACIENTES.COMUNIDAD, label: "Por comunidad" },
-  { value: AGRUPACIONES_DE_PACIENTES.PERIODO, label: "Por periodo" },
+  { value: AGRUPACIONES_DE_PACIENTES.PERIODO, label: "Por período" },
 ];
 
 /** Descarga el CSV. Vive acá porque toca document, Blob y URL, que shared no puede tocar. */
@@ -76,7 +76,7 @@ export default function ReportePacientesPage({ incrustado = false }) {
       <CabeceraDeReporte
         incrustado={incrustado}
         title="Pacientes atendidos"
-        subtitle="Agregados por jornada, comunidad o periodo. Ninguna fila identifica a un paciente."
+        subtitle="Agregados por jornada, comunidad o período. Ninguna fila identifica a un paciente."
         actions={[
           {
             label: "Exportar CSV",

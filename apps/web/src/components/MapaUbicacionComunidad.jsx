@@ -128,7 +128,7 @@ export default function MapaUbicacionComunidad({
       <div
         ref={contenedorRef}
         role="application"
-        aria-label="Mapa para seleccionar la ubicacion de la comunidad"
+        aria-label="Mapa para seleccionar la ubicación de la comunidad"
         style={{
           height: "260px",
           borderRadius: "var(--radio-md)",

@@ -49,7 +49,7 @@ export default function PresupuestosPage() {
     <ScreenContainer>
       <PageHeader
         title="Presupuestos"
-        subtitle="Administracion financiera por jornada y proyecto"
+        subtitle="Administración financiera por jornada y proyecto"
         accent="var(--accent-presupuestos)"
       />
 

@@ -216,7 +216,7 @@ export default function FichaPacientePage() {
                 <dd className="mb-0">{cabecera.numeroFicha ?? "—"}</dd>
               </div>
               <div className="col-sm-3 mb-2">
-                <dt className="pac-rotulo">Telefono</dt>
+                <dt className="pac-rotulo">Teléfono</dt>
                 <dd className="mb-0">{valores.telefonoContacto ?? "—"}</dd>
               </div>
             </dl>

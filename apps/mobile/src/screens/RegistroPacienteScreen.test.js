@@ -71,18 +71,18 @@ describe("RegistroPacienteScreen", () => {
 
     fireEvent.press(screen.getByText("Siguiente"));
 
-    expect(screen.getByText(/Ubicacion y contacto · paso 2 de 4/)).toBeTruthy();
+    expect(screen.getByText(/Ubicación y contacto · paso 2 de 4/)).toBeTruthy();
     expect(mockEstadoHook.registrar).not.toHaveBeenCalled();
   });
 
   it("Atras no aparece en el primer paso, pero si a partir del segundo", () => {
     pantalla();
 
-    expect(screen.queryByText("Atras")).toBeNull();
+    expect(screen.queryByText("Atrás")).toBeNull();
 
     fireEvent.press(screen.getByText("Siguiente"));
 
-    expect(screen.getByText("Atras")).toBeTruthy();
+    expect(screen.getByText("Atrás")).toBeTruthy();
   });
 
   it("en el ultimo paso, el boton dice Registrar paciente y llama a registrar()", () => {
@@ -118,7 +118,7 @@ describe("RegistroPacienteScreen", () => {
     // comunidad esta en el paso "ubicacion" (paso 2): guardar() tiene que haber saltado ahi.
     // findByText espera a que se resuelva el registrar() async antes de mirar el paso: el cambio
     // de indice ocurre en el .then(), no en el mismo tick que el press().
-    expect(await screen.findByText(/Ubicacion y contacto · paso 2 de 4/)).toBeTruthy();
+    expect(await screen.findByText(/Ubicación y contacto · paso 2 de 4/)).toBeTruthy();
   });
 
   it("una advertencia de posible duplicado se muestra sin bloquear el formulario", () => {

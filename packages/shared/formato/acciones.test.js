@@ -20,8 +20,29 @@ describe("tipoDeAccion", () => {
     expect(tipoDeAccion(rotulo)).toBe(TIPOS_DE_ACCION.BORRADO);
   });
 
-  it.each(["Desactivar", "Anular donación", "Rechazar", "Editar", "Exportar CSV", "Volver"])(
-    "'%s' no es ni alta ni borrado",
+  it.each(["Volver", "Volver a donaciones", "Regresar", "Atrás"])(
+    "'%s' es un retorno",
+    (rotulo) => {
+      expect(tipoDeAccion(rotulo)).toBe(TIPOS_DE_ACCION.RETORNO);
+    },
+  );
+
+  it.each(["Editar", "Editar paciente", "Corregir triaje", "Modificar turno"])(
+    "'%s' es una edicion",
+    (rotulo) => {
+      expect(tipoDeAccion(rotulo)).toBe(TIPOS_DE_ACCION.EDICION);
+    },
+  );
+
+  it.each(["Ver detalle", "Ver ficha", "Detalle del lote", "Abrir jornada"])(
+    "'%s' es un detalle",
+    (rotulo) => {
+      expect(tipoDeAccion(rotulo)).toBe(TIPOS_DE_ACCION.DETALLE);
+    },
+  );
+
+  it.each(["Desactivar", "Anular donación", "Rechazar", "Exportar CSV", "Guardar"])(
+    "'%s' no tiene tipo",
     (rotulo) => {
       expect(tipoDeAccion(rotulo)).toBeNull();
     },
@@ -29,7 +50,8 @@ describe("tipoDeAccion", () => {
 
   it("mira el verbo inicial, no una palabra que lo contenga", () => {
     expect(tipoDeAccion("Registrarse")).toBeNull();
-    expect(tipoDeAccion("Ver nuevos")).toBeNull();
+    expect(tipoDeAccion("Verificar")).toBeNull();
+    expect(tipoDeAccion("Editorial")).toBeNull();
   });
 
   it("lo que no es texto no tiene tipo", () => {

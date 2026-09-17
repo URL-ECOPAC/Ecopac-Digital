@@ -21,7 +21,7 @@ export const COLUMNAS_DONANTE = [
     etiquetasDesde: "tiposDeDonante",
   },
   { id: "contacto", label: "Contacto", tipo: TIPOS_DE_PRESENTACION.TEXTO },
-  { id: "telefono", label: "Telefono", tipo: TIPOS_DE_PRESENTACION.TELEFONO },
+  { id: "telefono", label: "Teléfono", tipo: TIPOS_DE_PRESENTACION.TELEFONO },
   { id: "email", label: "Correo", tipo: TIPOS_DE_PRESENTACION.TEXTO },
   // donante.activo es booleano, no el string a mostrar: ESTADO + etiquetasDesde, mismo patron
   // que usuarios/columnas.js (estado -> desde:'activo', etiquetasDesde:'estadoUsuario').
@@ -43,9 +43,9 @@ export const CAMPOS_FICHA_DONANTE = [
     etiquetasDesde: "tiposDeDonante",
   },
   { id: "contacto", label: "Contacto", tipo: TIPOS_DE_PRESENTACION.TEXTO },
-  { id: "telefono", label: "Telefono", tipo: TIPOS_DE_PRESENTACION.TELEFONO },
+  { id: "telefono", label: "Teléfono", tipo: TIPOS_DE_PRESENTACION.TELEFONO },
   { id: "email", label: "Correo", tipo: TIPOS_DE_PRESENTACION.TEXTO },
-  { id: "direccion", label: "Direccion", tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  { id: "direccion", label: "Dirección", tipo: TIPOS_DE_PRESENTACION.TEXTO },
   {
     id: "estado",
     label: "Estado",
@@ -95,5 +95,5 @@ export const CAMPOS_FICHA_DONACION = [
   },
   { id: "estado", label: "Estado", tipo: TIPOS_DE_PRESENTACION.CHIP },
   { id: "observaciones", label: "Observaciones", tipo: TIPOS_DE_PRESENTACION.TEXTO },
-  { id: "motivoAnulacion", label: "Motivo de anulacion", tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  { id: "motivoAnulacion", label: "Motivo de anulación", tipo: TIPOS_DE_PRESENTACION.TEXTO },
 ];

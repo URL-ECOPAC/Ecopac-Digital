@@ -137,7 +137,7 @@ export async function atenderAlerta(idAlerta, { accion, usuarioId, rolUsuario } 
   if (!esAdministrador(rolUsuario)) {
     return {
       alerta: null,
-      error: { mensaje: "Solo administracion puede atender una alerta de vencimiento." },
+      error: { mensaje: "Solo administración puede atender una alerta de vencimiento." },
     };
   }
 

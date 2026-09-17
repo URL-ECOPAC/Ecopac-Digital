@@ -707,7 +707,7 @@ export default function InventarioPage() {
             <div className="ec-filtro ec-filtro--busqueda">
               <TextField
                 label="Buscar lote"
-                placeholder="Medicamento o numero de lote"
+                placeholder="Medicamento o número de lote"
                 value={busquedaLotes}
                 onChange={(e) => setBusquedaLotes(e.target.value)}
                 style={{ marginBottom: 0 }}
@@ -756,7 +756,7 @@ export default function InventarioPage() {
                   <th className="text-end">Costo unitario</th>
                   <th>Vencimiento</th>
                   <th>Estado</th>
-                  <th className="text-end">Accion</th>
+                  <th className="text-end">Acción</th>
                 </tr>
               </thead>
               <tbody>

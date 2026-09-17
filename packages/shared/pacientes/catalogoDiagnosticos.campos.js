@@ -12,7 +12,7 @@ import { TIPOS_DE_CAMPO } from "../descriptores.js";
 export const CAMPOS_DIAGNOSTICO = [
   {
     id: "codigo",
-    label: "Codigo CIE-10",
+    label: "Código CIE-10",
     tipo: TIPOS_DE_CAMPO.TEXTO,
     placeholder: "Ej: J00 (opcional)",
     validacion: { requerido: false, maxLongitud: 20 },
@@ -21,7 +21,7 @@ export const CAMPOS_DIAGNOSTICO = [
     id: "nombre",
     label: "Nombre",
     tipo: TIPOS_DE_CAMPO.TEXTO,
-    placeholder: "Descripcion clinica del diagnostico",
+    placeholder: "Descripción clínica del diagnóstico",
     validacion: { requerido: true, maxLongitud: 255 },
   },
   {

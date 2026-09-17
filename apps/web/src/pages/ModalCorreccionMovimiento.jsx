@@ -108,7 +108,7 @@ export default function ModalCorreccionMovimiento({ visible, movimiento, onClose
                 icon={<X size={16} aria-hidden="true" />}
               />
               <PrimaryButton
-                title="Guardar correccion"
+                title="Guardar corrección"
                 onClick={guardar}
                 loading={enviando}
                 icon={<Save size={16} aria-hidden="true" />}

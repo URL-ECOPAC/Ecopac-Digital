@@ -121,18 +121,18 @@ export default function ModalMedicamento({
 
           <div className="ec-form-grid">
             <TextField
-              label="Concentracion *"
+              label="Concentración *"
               placeholder="Ej. 500 mg"
               value={formData.concentracion || ""}
               onChange={(e) => setCampo("concentracion", e.target.value)}
               disabled={cargando}
             />
             <Selector
-              label="Presentacion *"
+              label="Presentación *"
               value={formData.presentacion || null}
               options={OPCIONES_PRESENTACION}
               onSelect={(valor) => setCampo("presentacion", valor ?? "")}
-              placeholder="Selecciona una presentacion"
+              placeholder="Selecciona una presentación"
               disabled={cargando}
             />
             <TextField
@@ -143,7 +143,7 @@ export default function ModalMedicamento({
               disabled={cargando}
             />
             <TextField
-              label="Forma farmaceutica"
+              label="Forma farmacéutica"
               placeholder="Ej. Solido oral"
               value={formData.formaFarmaceutica || ""}
               onChange={(e) => setCampo("formaFarmaceutica", e.target.value)}

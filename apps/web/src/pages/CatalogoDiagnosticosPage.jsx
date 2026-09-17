@@ -51,9 +51,9 @@ export default function CatalogoDiagnosticosPage() {
       <ScreenContainer>
         <div className="modulo-pacientes">
           <PageHeader
-            title="Catalogo de diagnosticos"
+            title="Catalogo de diagnósticos"
             actions={[
-              { label: "Volver", onClick: () => navigate("/pacientes"), variant: "secondary" },
+              { label: "Volver", onClick: () => navigate("/pacientes"), variant: "neutra" },
             ]}
           />
           <ErrorState message="No tienes acceso al catalogo de diagnosticos." />
@@ -67,9 +67,9 @@ export default function CatalogoDiagnosticosPage() {
       <ScreenContainer>
         <div className="modulo-pacientes">
           <PageHeader
-            title="Catalogo de diagnosticos"
+            title="Catalogo de diagnósticos"
             actions={[
-              { label: "Volver", onClick: () => navigate("/pacientes"), variant: "secondary" },
+              { label: "Volver", onClick: () => navigate("/pacientes"), variant: "neutra" },
             ]}
           />
           <ErrorState message={error.mensaje} onRetry={recargar} />
@@ -79,18 +79,18 @@ export default function CatalogoDiagnosticosPage() {
   }
 
   const acciones = [
-    { label: "Volver", onClick: () => navigate("/pacientes"), variant: "secondary" },
+    { label: "Volver", onClick: () => navigate("/pacientes"), variant: "neutra" },
   ];
   if (puedeAdministrar) {
-    acciones.push({ label: "Nuevo diagnostico", onClick: () => setModal({ diagnostico: null }) });
+    acciones.push({ label: "Nuevo diagnóstico", onClick: () => setModal({ diagnostico: null }) });
   }
 
   return (
     <ScreenContainer>
       <div className="modulo-pacientes">
         <PageHeader
-          title="Catalogo de diagnosticos"
-          subtitle="Diagnosticos disponibles para la consulta medica"
+          title="Catalogo de diagnósticos"
+          subtitle="Diagnósticos disponibles para la consulta medica"
           actions={acciones}
         />
 

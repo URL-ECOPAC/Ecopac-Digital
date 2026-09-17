@@ -75,7 +75,7 @@ export default function ModalCondicionesPaciente({ pacienteId, rol, onClose, onC
   };
 
   return (
-    <Modal visible onClose={onClose} title="Condiciones cronicas">
+    <Modal visible onClose={onClose} title="Condiciones crónicas">
       {(error || errorDeAlta) && (
         <div className="alert alert-danger" role="alert">
           {(errorDeAlta ?? error).mensaje}
@@ -164,7 +164,7 @@ export default function ModalCondicionesPaciente({ pacienteId, rol, onClose, onC
                         disabled={enviando}
                       />
                       <PrimaryButton
-                        title="Guardar correccion"
+                        title="Guardar corrección"
                         onClick={guardarCorreccion}
                         loading={enviando}
                         icon={<Save size={16} aria-hidden="true" />}
@@ -227,7 +227,7 @@ export default function ModalCondicionesPaciente({ pacienteId, rol, onClose, onC
           <div className="d-flex justify-content-end gap-2 mt-3">
             <SecondaryButton title="Cerrar" onClick={onClose} disabled={enviando} />
             <PrimaryButton
-              title="Agregar condicion"
+              title="Agregar condición"
               onClick={guardar}
               loading={enviando}
               icon={<Plus size={16} aria-hidden="true" />}

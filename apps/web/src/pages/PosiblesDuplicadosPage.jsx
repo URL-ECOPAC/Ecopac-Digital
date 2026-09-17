@@ -40,7 +40,7 @@ export default function PosiblesDuplicadosPage() {
           <PageHeader
             title="Posibles duplicados"
             actions={[
-              { label: "Volver", onClick: () => navigate("/pacientes"), variant: "secondary" },
+              { label: "Volver", onClick: () => navigate("/pacientes"), variant: "neutra" },
             ]}
           />
           <ErrorState message="No tienes acceso a la fusion de expedientes duplicados." />
@@ -56,7 +56,7 @@ export default function PosiblesDuplicadosPage() {
           <PageHeader
             title="Posibles duplicados"
             actions={[
-              { label: "Volver", onClick: () => navigate("/pacientes"), variant: "secondary" },
+              { label: "Volver", onClick: () => navigate("/pacientes"), variant: "neutra" },
             ]}
           />
           <ErrorState message={error.mensaje} onRetry={recargar} />
@@ -72,7 +72,7 @@ export default function PosiblesDuplicadosPage() {
           title="Posibles duplicados"
           subtitle={`${total} ${total === 1 ? "par sugerido" : "pares sugeridos"} por nombre similar y misma fecha de nacimiento`}
           actions={[
-            { label: "Volver", onClick: () => navigate("/pacientes"), variant: "secondary" },
+            { label: "Volver", onClick: () => navigate("/pacientes"), variant: "neutra" },
           ]}
         />
 

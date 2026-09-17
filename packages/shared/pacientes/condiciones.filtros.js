@@ -18,7 +18,7 @@ export const FILTROS_PACIENTE_CRONICO = [
   {
     id: "condicion",
     tipo: TIPOS_DE_FILTRO.SELECT,
-    label: "Condicion",
+    label: "Condición",
     opcionesDesde: "condicionesCronicas",
   },
   {

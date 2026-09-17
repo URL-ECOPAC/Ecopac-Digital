@@ -179,7 +179,7 @@ describe("atenderAlerta", () => {
     });
 
     expect(alerta).toBeNull();
-    expect(error.mensaje).toContain("administracion");
+    expect(error.mensaje).toContain("administración");
     expect(dobles.cliente).toBeNull();
   });
 

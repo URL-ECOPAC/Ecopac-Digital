@@ -105,7 +105,7 @@ export async function obtenerReportePacientesAtendidos({
       totales: null,
       error: {
         codigo: "SIN_PERMISO",
-        mensaje: "Solo administracion y junta directiva consultan el reporte de pacientes.",
+        mensaje: "Solo administración y junta directiva consultan el reporte de pacientes.",
       },
     };
   }

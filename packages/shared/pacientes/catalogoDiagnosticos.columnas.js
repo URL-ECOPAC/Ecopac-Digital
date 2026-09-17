@@ -14,7 +14,7 @@ export const ESTADOS_DIAGNOSTICO = [
 ];
 
 export const COLUMNAS_CATALOGO_DIAGNOSTICOS = [
-  { id: "codigo", label: "Codigo", tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  { id: "codigo", label: "Código", tipo: TIPOS_DE_PRESENTACION.TEXTO },
   { id: "nombre", label: "Nombre", tipo: TIPOS_DE_PRESENTACION.TEXTO, principal: true },
   { id: "descripcion", label: "Notas", tipo: TIPOS_DE_PRESENTACION.TEXTO },
   {

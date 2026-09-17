@@ -123,7 +123,7 @@ export default function ModalRegistroConsulta({ paciente, perfilId, onClose, onG
                   value={valores[campo.id] ?? []}
                   options={catalogos[campo.opcionesDesde] ?? []}
                   onChange={(elegidos) => setCampo(campo.id, elegidos)}
-                  placeholder="Elegir un diagnostico del catalogo"
+                  placeholder="Elegir un diagnóstico del catalogo"
                   placeholderLibre="O escribir uno que no este en el catalogo"
                   onCrear={crearDiagnosticoNuevo ?? undefined}
                   error={errorDiagnostico?.mensaje}

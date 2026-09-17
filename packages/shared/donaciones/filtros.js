@@ -37,14 +37,14 @@ export const FILTROS_DONACION = [
   {
     id: "busqueda",
     tipo: TIPOS_DE_FILTRO.BUSQUEDA,
-    label: "Buscar donacion",
+    label: "Buscar donación",
     placeholder: "Donante u observaciones",
   },
   { id: "donanteId", tipo: TIPOS_DE_FILTRO.SELECT, label: "Donante", opcionesDesde: "donantes" },
   {
     id: "tipo",
     tipo: TIPOS_DE_FILTRO.SELECT,
-    label: "Tipo de donacion",
+    label: "Tipo de donación",
     opciones: OPCIONES_TIPO_DONACION,
   },
   {

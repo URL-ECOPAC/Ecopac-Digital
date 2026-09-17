@@ -50,7 +50,7 @@ export default function BusquedaPacienteScreen() {
     <ScreenContainer scrollable={false}>
       <TextField
         label="Buscar paciente"
-        placeholder="Nombre o numero de ficha"
+        placeholder="Nombre o número de ficha"
         value={filtros.busqueda ?? ""}
         onChangeText={(valor) => setFiltro("busqueda", valor)}
         autoCorrect={false}

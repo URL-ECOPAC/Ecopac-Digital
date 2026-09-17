@@ -5,6 +5,7 @@ import DateField from "../components/DateField";
 import Modal from "../components/Modal";
 import PrimaryButton from "../components/PrimaryButton";
 import Selector from "../components/Selector";
+import SelectorConAlta from "../components/SelectorConAlta";
 import SecondaryButton from "../components/SecondaryButton";
 import TextField from "../components/TextField";
 import { X } from "lucide-react";
@@ -46,6 +47,10 @@ export default function ModalJornada({ visible = true, jornada, rol, onClose, on
     advertenciaDuplicado,
     enviar,
     cancelar,
+    puedeCrearComunidad,
+    registrarComunidad,
+    erroresComunidad,
+    creandoComunidad,
   } = useFormularioJornada({ jornada, rol });
 
   // Deshabilita el formulario mientras se envia Y mientras se carga la jornada completa para
@@ -87,14 +92,23 @@ export default function ModalJornada({ visible = true, jornada, rol, onClose, on
             placeholder="Selecciona un municipio"
             disabled={bloqueado || !departamentoId || catalogos.municipios.length === 0}
           />
-          <Selector
+          {/* La comunidad de una jornada nueva muchas veces todavia no existe en el catalogo
+              (issue #834): se crea aqui mismo, con el mismo control que el alta de paciente. */}
+          <SelectorConAlta
             label={campo.label}
             value={valores.comunidad || null}
             options={catalogos.comunidades}
             onSelect={(valor) => setCampo("comunidad", valor)}
             placeholder="Selecciona una comunidad"
-            disabled={bloqueado || !municipioId || catalogos.comunidades.length === 0}
+            disabled={bloqueado || !municipioId}
             error={errores.comunidad}
+            puedeCrear={puedeCrearComunidad}
+            habilitadoParaCrear={Boolean(municipioId)}
+            etiquetaAlta="Crear una comunidad"
+            labelNuevo="Nombre de la comunidad nueva"
+            onCrear={registrarComunidad}
+            erroresAlta={erroresComunidad}
+            creando={creandoComunidad}
           />
         </div>
       );

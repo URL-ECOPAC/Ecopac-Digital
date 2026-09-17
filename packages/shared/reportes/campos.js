@@ -73,7 +73,7 @@ export const CAMPOS_ANALISIS_IMPACTO = [
   },
   {
     id: "comparar",
-    label: "Comparar con otro periodo",
+    label: "Comparar con otro período",
     tipo: TIPOS_DE_CAMPO.BOOLEANO,
     validacion: { requerido: false },
   },
@@ -88,7 +88,7 @@ export const CAMPOS_ANALISIS_IMPACTO = [
 export const CAMPOS_REPORTE_VENCIMIENTO = [
   {
     id: "horizonteDias",
-    label: "Horizonte (dias)",
+    label: "Horizonte (días)",
     tipo: TIPOS_DE_CAMPO.NUMERO,
     validacion: { requerido: true, min: 1, max: 365 },
   },

@@ -97,7 +97,7 @@ export default function AjustesScreen({ navigation }) {
       <UsuarioActivo compacto={false} />
 
       {puedeVerCatalogoComunidades(perfil?.rol) && (
-        <Card title="Administracion">
+        <Card title="Administración">
           <PrimaryButton
             title="Catalogo de comunidades"
             onPress={() => navigation.navigate(ROUTES.TAB_INICIO, { screen: ROUTES.COMUNIDADES })}

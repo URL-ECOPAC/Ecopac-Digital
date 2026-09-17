@@ -157,7 +157,7 @@ export async function obtenerIndicadoresImpacto({
       indicadores: null,
       error: {
         codigo: "SIN_PERMISO",
-        mensaje: "Solo administracion y junta directiva consultan los indicadores de impacto.",
+        mensaje: "Solo administración y junta directiva consultan los indicadores de impacto.",
       },
     };
   }

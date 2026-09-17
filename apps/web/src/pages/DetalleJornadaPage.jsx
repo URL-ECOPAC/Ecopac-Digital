@@ -178,7 +178,7 @@ export default function DetalleJornadaPage() {
         <PageHeader
           title="Detalle de la jornada"
           actions={[
-            { label: "Volver", onClick: () => navigate("/jornadas"), variant: "secondary" },
+            { label: "Volver", onClick: () => navigate("/jornadas"), variant: "neutra" },
           ]}
         />
         <ErrorState message={error.mensaje} onRetry={recargar} />
@@ -254,7 +254,7 @@ export default function DetalleJornadaPage() {
       <PageHeader
         title={jornada.nombre}
         subtitle={`${formatearFechaCorta(jornada.fecha)} · ${jornada.comunidad?.nombre ?? "—"}`}
-        actions={[{ label: "Volver", onClick: () => navigate("/jornadas"), variant: "secondary" }]}
+        actions={[{ label: "Volver", onClick: () => navigate("/jornadas"), variant: "neutra" }]}
       />
 
       {errorMovimiento && (
@@ -298,7 +298,7 @@ export default function DetalleJornadaPage() {
                   (label/onClick/variant) no tiene forma de deshabilitar un boton. */}
                 {puedeMover && esReapertura && (
                   <SecondaryButton
-                    title="← Atras"
+                    title="← Atrás"
                     onClick={() => cambiarEstado(destino)}
                     disabled={moviendo}
                   />

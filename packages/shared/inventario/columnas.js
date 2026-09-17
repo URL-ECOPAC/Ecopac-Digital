@@ -10,8 +10,8 @@ export const COLUMNAS_PRINCIPIO_ACTIVO = [
 
 export const COLUMNAS_MEDICAMENTO = [
   { id: "nombre", label: "Nombre", tipo: TIPOS_DE_PRESENTACION.TEXTO, principal: true },
-  { id: "concentracion", label: "Concentracion", tipo: TIPOS_DE_PRESENTACION.TEXTO },
-  { id: "presentacion", label: "Presentacion", tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  { id: "concentracion", label: "Concentración", tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  { id: "presentacion", label: "Presentación", tipo: TIPOS_DE_PRESENTACION.TEXTO },
   { id: "marca", label: "Marca", tipo: TIPOS_DE_PRESENTACION.TEXTO },
   { id: "esPediatrico", label: "Pediatrico", tipo: TIPOS_DE_PRESENTACION.BOOLEANO },
   { id: "activo", label: "Activo", tipo: TIPOS_DE_PRESENTACION.CHIP },

@@ -88,7 +88,7 @@ export default function ModalCorreccionMovimiento({ visible, movimiento, onClose
       {puedeEditar ? (
         <>
           <PrimaryButton
-            title="Guardar correccion"
+            title="Guardar corrección"
             onPress={guardar}
             loading={enviando}
             style={styles.boton}

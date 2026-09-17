@@ -347,7 +347,7 @@ function TarjetaJornada({
           <SecondaryButton title="Ver detalle" onClick={onVerDetalle} disabled={moviendo} />
           {puedeMover && esReapertura && (
             <SecondaryButton
-              title="← Atras"
+              title="← Atrás"
               onClick={() => onMover(jornada.id, jornada.estado, destino)}
               disabled={moviendo}
             />

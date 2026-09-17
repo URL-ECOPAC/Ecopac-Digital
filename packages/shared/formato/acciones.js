@@ -9,18 +9,32 @@
 //
 //   - Alta (Nuevo, Nueva, Crear, Agregar, Anadir, Registrar, Alta de, o un "+" inicial).
 //   - Borrado (Eliminar, Borrar, Quitar).
+//   - Retorno (Volver, Regresar, Atras).
+//   - Edicion (Editar, Corregir, Modificar).
+//   - Detalle (Ver, Detalle, Abrir ficha).
 //
 // "Desactivar", "Anular" y "Rechazar" NO son borrado a proposito: no borran nada, cambian un
 // estado que se puede revertir o que queda en la bitacora, y dibujarlos con un basurero diria lo
 // contrario de lo que hacen.
+//
+// Retorno, edicion y detalle se agregan en la issue #834: "Volver" se dibujaba con flecha solo en
+// las pantallas de donaciones, que la escribian a mano, y los accesos a editar y a ver detalle
+// eran enlaces de texto distintos en cada tabla. Decidirlo aqui, por el rotulo, es lo que hace que
+// las dos apps los pinten igual sin que ninguna pantalla vuelva a elegir un icono.
 
 export const TIPOS_DE_ACCION = Object.freeze({
   ALTA: "alta",
   BORRADO: "borrado",
+  RETORNO: "retorno",
+  EDICION: "edicion",
+  DETALLE: "detalle",
 });
 
 const PATRON_ALTA = /^(nuev[oa]s?|crear|agregar|añadir|anadir|registrar|alta de)(\s|$)/i;
 const PATRON_BORRADO = /^(eliminar|borrar|quitar)(\s|$)/i;
+const PATRON_RETORNO = /^(volver|regresar|atrás|atras)(\s|$)/i;
+const PATRON_EDICION = /^(editar|corregir|modificar)(\s|$)/i;
+const PATRON_DETALLE = /^(ver|detalle|abrir)(\s|$)/i;
 
 // Un "+" escrito dentro del propio texto ("+ Nuevo Proyecto") se quita: el signo lo pone el icono,
 // y dejar los dos dibuja "+ + Nuevo Proyecto".
@@ -28,7 +42,7 @@ const SIGNO_MAS_INICIAL = /^\+\s*/;
 
 /**
  * @param {unknown} rotulo
- * @returns {"alta"|"borrado"|null}
+ * @returns {"alta"|"borrado"|"retorno"|"edicion"|"detalle"|null}
  */
 export function tipoDeAccion(rotulo) {
   if (typeof rotulo !== "string") return null;
@@ -36,6 +50,9 @@ export function tipoDeAccion(rotulo) {
   if (SIGNO_MAS_INICIAL.test(limpio)) return TIPOS_DE_ACCION.ALTA;
   if (PATRON_ALTA.test(limpio)) return TIPOS_DE_ACCION.ALTA;
   if (PATRON_BORRADO.test(limpio)) return TIPOS_DE_ACCION.BORRADO;
+  if (PATRON_RETORNO.test(limpio)) return TIPOS_DE_ACCION.RETORNO;
+  if (PATRON_EDICION.test(limpio)) return TIPOS_DE_ACCION.EDICION;
+  if (PATRON_DETALLE.test(limpio)) return TIPOS_DE_ACCION.DETALLE;
   return null;
 }
 

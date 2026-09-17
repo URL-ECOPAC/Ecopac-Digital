@@ -240,7 +240,7 @@ export default function RegistroIngresoScreen() {
 
   return (
     <ScreenContainer>
-      <PageHeader title="Registrar ingreso" subtitle="Ingreso rapido de medicamentos en campo" />
+      <PageHeader title="Registrar ingreso" subtitle="Ingreso rápido de medicamentos en campo" />
 
       <Selector label="Origen" value={origen} options={OPCIONES_ORIGEN_LOTE} onSelect={setOrigen} />
 
@@ -279,7 +279,7 @@ export default function RegistroIngresoScreen() {
       </View>
 
       <TextField
-        label="Numero de lote"
+        label="Número de lote"
         value={itemActual.numero_lote}
         onChangeText={(texto) => setItemActual({ ...itemActual, numero_lote: texto })}
       />
@@ -352,14 +352,14 @@ export default function RegistroIngresoScreen() {
             onChangeText={(texto) => setFormMedicamento({ ...formMedicamento, nombre: texto })}
           />
           <TextField
-            label="Concentracion"
+            label="Concentración"
             value={formMedicamento.concentracion}
             onChangeText={(texto) =>
               setFormMedicamento({ ...formMedicamento, concentracion: texto })
             }
           />
           <Selector
-            label="Presentacion"
+            label="Presentación"
             value={formMedicamento.presentacion || null}
             options={OPCIONES_PRESENTACION}
             onSelect={(valor) => setFormMedicamento({ ...formMedicamento, presentacion: valor })}

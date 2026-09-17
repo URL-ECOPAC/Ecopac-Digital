@@ -68,7 +68,7 @@ export default function RegistroPacienteScreen() {
           <Text style={styles.texto}>
             {[registrado.nombres, registrado.apellidos].filter(Boolean).join(" ")}
           </Text>
-          <Text style={styles.tenue}>Anota ese numero en la ficha de papel.</Text>
+          <Text style={styles.tenue}>Anota ese número en la ficha de papel.</Text>
         </Card>
 
         <PrimaryButton
@@ -188,7 +188,7 @@ export default function RegistroPacienteScreen() {
       <View style={styles.navegacion}>
         {indice > 0 && (
           <SecondaryButton
-            title="Atras"
+            title="Atrás"
             onPress={() => setIndice(indice - 1)}
             disabled={enviando}
             style={styles.mitad}

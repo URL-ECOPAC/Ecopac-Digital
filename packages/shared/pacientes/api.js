@@ -23,6 +23,7 @@ import {
   normalizarError,
 } from "../api/errores-de-supabase.js";
 import { normalizarTexto } from "../validations/index.js";
+import { calcularEdad } from "../formato/fechas.js";
 import { ESTADOS_CONDICION_CRONICA } from "../enums.js";
 import { validarRegistroPaciente } from "./validaciones.js";
 
@@ -292,7 +293,7 @@ export async function actualizarPaciente(id, datos = {}) {
       errores: {},
       error: {
         ...construirError(CODIGOS_DE_ERROR_DE_SUPABASE.CHECK),
-        mensaje: "El numero de ficha no se puede modificar desde la edicion del paciente.",
+        mensaje: "El número de ficha no se puede modificar desde la edición del paciente.",
       },
     };
   }
@@ -467,12 +468,29 @@ export async function buscarPacientePorFicha(numeroFicha, { signal } = {}) {
 
 // Un termino que es solo digitos (con espacios o guiones de agrupacion) es un identificador: un
 // numero de ficha o un DPI. Pasarlo a la busqueda por nombre no sirve -los trigramas de "1234"
-// contra un nombre no coinciden con nada util- y la sonda de ficha exacta solo encontraba la
-// ficha escrita completa, asi que "000123" encontraba al paciente pero "00012" no, y un DPI no
-// se buscaba en ningun lado. Desde 4 digitos se busca por el INICIO de la ficha y del DPI.
-const LONGITUD_MINIMA_IDENTIFICADOR = 4;
+// contra un nombre no coinciden con nada util-, asi que tiene su propio camino.
+//
+// ISSUE #834, lo que estaba mal. Se buscaba SOLO por el inicio de la columna, con los digitos tal
+// cual se escribieron, y desde 4 digitos. Eso dejaba fuera los dos casos que la gente usa de
+// verdad:
+//
+//   - El numero de ficha se guarda con ceros a la izquierda: LPAD(..., 6, '0') desde la migracion
+//     00081, o sea "000123". Nadie lo dice asi -- se dice "la ficha 123" --, y "123" no empieza
+//     ninguna ficha, asi que la busqueda por ficha no encontraba nada salvo que se escribieran
+//     los seis digitos completos. Ahora los digitos tambien se prueban rellenados a la izquierda.
+//   - El DPI se busca por cualquier tramo, no solo por el inicio: en la practica se lee de una
+//     hoja a medias o se recuerda el bloque del medio. Antes solo el DPI entero encontraba algo.
+//
+// El minimo baja de 4 a 2 digitos, que con el orden por calidad de coincidencia y el limite de
+// abajo ya no desborda la lista.
+const LONGITUD_MINIMA_IDENTIFICADOR = 2;
 const PATRON_IDENTIFICADOR = /^[\d\s-]+$/;
-const LIMITE_POR_IDENTIFICADOR = 20;
+const LIMITE_POR_IDENTIFICADOR = 25;
+
+// Ancho con el que la 00081 genera numero_ficha. Solo se usa para PROBAR tambien la forma
+// rellenada; la busqueda nunca asume que toda ficha tenga este formato, porque numero_ficha es un
+// VARCHAR(30) sin CHECK y las fichas anteriores a la 00081 las escribio una persona.
+const ANCHO_NUMERO_FICHA = 6;
 
 /**
  * Si un termino de busqueda es un identificador (ficha o DPI), sus digitos sin separadores.
@@ -488,36 +506,97 @@ export function identificadorDeBusqueda(termino) {
 }
 
 /**
- * Pacientes cuyo numero de ficha o DPI EMPIEZA por los digitos dados. Dos lecturas en paralelo,
- * las dos sobre columnas UNIQUE (00009), combinadas sin repetir. Excluye a quien este dado de
+ * Las formas de numero de ficha que hay que probar para unos digitos escritos.
+ *
+ * "123" tiene que encontrar tanto una ficha "123..." como la "000123" que genera la secuencia.
+ * Se devuelven los patrones de PostgREST ya armados, sin repetir: para unos digitos que ya vienen
+ * con seis posiciones o mas, rellenar no cambia nada y sobra el segundo patron.
+ *
+ * @param {string} digitos
+ * @returns {string[]}
+ */
+export function patronesDeNumeroFicha(digitos) {
+  const rellenado = digitos.padStart(ANCHO_NUMERO_FICHA, "0");
+  return rellenado === digitos ? [`${digitos}%`] : [`${digitos}%`, `${rellenado}%`];
+}
+
+/**
+ * Que tan buena es una coincidencia, para ordenar: 0 es exacta, 1 empieza por, 2 contiene.
+ *
+ * Sin esto, buscar "123" ponia arriba la primera fila que devolviera Postgres, que con un DPI
+ * buscado por tramo podia ser cualquiera. El orden lo decide el cliente porque las dos consultas
+ * -- ficha y DPI -- son independientes y hay que mezclarlas de todos modos.
+ *
+ * @param {string|null|undefined} valor
+ * @param {string} digitos
+ * @returns {number}
+ */
+export function calidadDeCoincidencia(valor, digitos) {
+  if (!valor) return 3;
+  const texto = String(valor);
+  if (texto === digitos || texto === digitos.padStart(ANCHO_NUMERO_FICHA, "0")) return 0;
+  if (texto.startsWith(digitos)) return 1;
+  if (texto.includes(digitos)) return 2;
+  return 3;
+}
+
+/**
+ * Pacientes cuyo numero de ficha empieza por los digitos dados -- tal cual o rellenados con ceros
+ * a la izquierda -- o cuyo DPI los contiene en cualquier posicion. Dos lecturas en paralelo,
+ * combinadas sin repetir y ordenadas por calidad de coincidencia. Excluye a quien este dado de
  * baja, igual que el resto de la busqueda.
  *
  * @param {string} digitos
  * @returns {Promise<{ pacientes: object[], error: object|null, cancelada?: boolean }>}
  */
-export async function buscarPacientesPorIdentificador(digitos, { signal } = {}) {
+export async function buscarPacientesPorIdentificador(
+  digitos,
+  { signal, comunidadId, sexo, edadMin, edadMax, condicionCronicaId } = {},
+) {
   if (!digitos) return { pacientes: [], error: null };
 
   const conSenal = (consulta) => (signal ? consulta.abortSignal(signal) : consulta);
+
+  // Los filtros de la barra se aplican tambien por este camino (issue #834). Antes escribir una
+  // ficha ignoraba la comunidad, el sexo, la edad y la condicion cronica que ya estuvieran
+  // puestos, asi que la lista contradecia a sus propios filtros. Comunidad y sexo son columnas de
+  // pacientes y se resuelven en el servidor; edad y condicion se resuelven sobre las filas que
+  // vuelven, que como mucho son LIMITE_POR_IDENTIFICADOR por consulta.
+  const acotar = (consulta, columna) => {
+    let acotada = consulta;
+    if (comunidadId) acotada = acotada.eq(`${columna}comunidad_id`, comunidadId);
+    if (sexo) acotada = acotada.eq(`${columna}sexo`, sexo);
+    return acotada;
+  };
 
   try {
     const supabase = obtenerSupabase();
     const [porFicha, porDpi] = await Promise.all([
       conSenal(
-        supabase
-          .from("expedientes")
-          .select(`numeroFicha:numero_ficha, paciente:pacientes(${COLUMNAS_DE_BUSQUEDA_PACIENTE})`)
-          .ilike("numero_ficha", `${digitos}%`)
-          .limit(LIMITE_POR_IDENTIFICADOR),
+        acotar(
+          supabase
+            .from("expedientes")
+            .select(
+              `numeroFicha:numero_ficha, paciente:pacientes!inner(${COLUMNAS_DE_BUSQUEDA_PACIENTE})`,
+            )
+            .or(
+              patronesDeNumeroFicha(digitos)
+                .map((patron) => `numero_ficha.ilike.${patron}`)
+                .join(","),
+            ),
+          "pacientes.",
+        ).limit(LIMITE_POR_IDENTIFICADOR),
       ),
       conSenal(
-        supabase
-          .from("pacientes")
-          .select(
-            `${COLUMNAS_DE_BUSQUEDA_PACIENTE}, expediente:expedientes(numeroFicha:numero_ficha)`,
-          )
-          .ilike("dpi", `${digitos}%`)
-          .limit(LIMITE_POR_IDENTIFICADOR),
+        acotar(
+          supabase
+            .from("pacientes")
+            .select(
+              `${COLUMNAS_DE_BUSQUEDA_PACIENTE}, dpi, expediente:expedientes(numeroFicha:numero_ficha)`,
+            )
+            .ilike("dpi", `%${digitos}%`),
+          "",
+        ).limit(LIMITE_POR_IDENTIFICADOR),
       ),
     ]);
 
@@ -536,28 +615,61 @@ export async function buscarPacientesPorIdentificador(digitos, { signal } = {}) 
       delete resultado.fechaBaja;
       delete resultado.condicionesCronicas;
       delete resultado.expediente;
+      // El DPI se pide solo para poder ordenar por calidad de coincidencia; no es una columna de
+      // la lista de resultados (COLUMNAS_PACIENTE) y no tiene por que seguir viaje.
+      delete resultado.dpi;
       return resultado;
+    };
+
+    // Los dos filtros que no son una columna de pacientes: la edad hay que calcularla de la fecha
+    // de nacimiento, y la condicion cronica esta en la tabla embebida.
+    const pasaLosFiltrosRestantes = (paciente) => {
+      if (edadMin != null || edadMax != null) {
+        const anios = calcularEdad(paciente.fechaNacimiento)?.anios;
+        if (anios == null) return false;
+        if (edadMin != null && anios < edadMin) return false;
+        if (edadMax != null && anios > edadMax) return false;
+      }
+      if (condicionCronicaId) {
+        const vigentes = (paciente.condicionesCronicas ?? []).filter(
+          (uno) => uno?.estado !== ESTADOS_CONDICION_CRONICA.RESUELTA,
+        );
+        if (!vigentes.some((uno) => uno?.condicionId === condicionCronicaId)) return false;
+      }
+      return true;
     };
 
     const vistos = new Set();
     const pacientes = [];
     for (const fila of porFicha.data ?? []) {
       if (!fila?.paciente || fila.paciente.fechaBaja || vistos.has(fila.paciente.id)) continue;
+      if (!pasaLosFiltrosRestantes(fila.paciente)) continue;
       vistos.add(fila.paciente.id);
-      pacientes.push(aResultado(fila.paciente, fila.numeroFicha));
+      pacientes.push({
+        ...aResultado(fila.paciente, fila.numeroFicha),
+        _calidad: calidadDeCoincidencia(fila.numeroFicha, digitos),
+      });
     }
     for (const paciente of porDpi.data ?? []) {
       if (!paciente || paciente.fechaBaja || vistos.has(paciente.id)) continue;
+      if (!pasaLosFiltrosRestantes(paciente)) continue;
       vistos.add(paciente.id);
       // expedientes.paciente_id es UNIQUE, asi que PostgREST lo embebe como objeto; se acepta
       // tambien un arreglo por si la relacion se lee como uno a muchos.
       const expediente = Array.isArray(paciente.expediente)
         ? paciente.expediente[0]
         : paciente.expediente;
-      pacientes.push(aResultado(paciente, expediente?.numeroFicha));
+      pacientes.push({
+        ...aResultado(paciente, expediente?.numeroFicha),
+        _calidad: calidadDeCoincidencia(paciente.dpi, digitos),
+      });
     }
 
-    return { pacientes, error: null };
+    // Coincidencia exacta primero, luego las que empiezan por lo escrito, y al final las que solo
+    // lo contienen. Sin este orden, buscar un tramo de DPI dejaba arriba una fila cualquiera.
+    pacientes.sort((uno, otro) => uno._calidad - otro._calidad);
+
+    return { pacientes: pacientes.map(({ _calidad, ...resto }) => resto), error: null };
   } catch (error) {
     if (esErrorDeCancelacion(error)) return { pacientes: [], error: null, cancelada: true };
     return { pacientes: [], error: normalizarError(error) };
@@ -655,6 +767,11 @@ export async function buscarPacientes({
   if (digitos) {
     const { pacientes, error, cancelada } = await buscarPacientesPorIdentificador(digitos, {
       signal,
+      comunidadId,
+      sexo,
+      edadMin,
+      edadMax,
+      condicionCronicaId,
     });
     if (cancelada) return respuestaCancelada();
     if (error) return respuestaVacia(error);
@@ -663,7 +780,11 @@ export async function buscarPacientes({
       total: pacientes.length,
       pagina: 1,
       porPagina,
-      coincidenciaExacta: pacientes.some((paciente) => paciente.numeroFicha === digitos),
+      // Exacta incluye la forma rellenada con ceros: quien escribe "42" y da con la ficha
+      // "000042" dio con la ficha que buscaba, no con una parecida.
+      coincidenciaExacta: pacientes.some(
+        (paciente) => calidadDeCoincidencia(paciente.numeroFicha, digitos) === 0,
+      ),
       terminoDemasiadoCorto: false,
       error: null,
       cancelada: false,

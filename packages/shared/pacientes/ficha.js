@@ -13,7 +13,7 @@ import {
 
 export const PESTANIAS_FICHA_PACIENTE = Object.freeze([
   { id: "generales", label: "Datos generales", requiereDatosClinicos: false },
-  { id: "historial", label: "Historial clinico", requiereDatosClinicos: true },
+  { id: "historial", label: "Historial clínico", requiereDatosClinicos: true },
   { id: "signos", label: "Signos vitales", requiereDatosClinicos: true },
   { id: "recetas", label: "Recetas", requiereDatosClinicos: true },
 ]);

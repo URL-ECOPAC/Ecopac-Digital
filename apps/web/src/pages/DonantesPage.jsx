@@ -66,9 +66,9 @@ function FichaDonante({ donante, historico, onCerrar, onEditar, puedeEscribir })
     >
       <dl className="ec-ficha-datos">
         <Dato etiqueta="Persona de contacto" valor={donante.contacto} />
-        <Dato etiqueta="Telefono" valor={donante.telefono} />
+        <Dato etiqueta="Teléfono" valor={donante.telefono} />
         <Dato etiqueta="Correo" valor={donante.email} />
-        <Dato etiqueta="Direccion" valor={donante.direccion} />
+        <Dato etiqueta="Dirección" valor={donante.direccion} />
         <div>
           <dt className="ec-rotulo">Estado</dt>
           <dd className="mb-0">
@@ -79,7 +79,7 @@ function FichaDonante({ donante, historico, onCerrar, onEditar, puedeEscribir })
           </dd>
         </div>
         <Dato etiqueta="Registrado el" valor={formatearFechaConHora(donante.created_at)} />
-        <Dato etiqueta="Ultima actualizacion" valor={formatearFechaConHora(donante.updated_at)} />
+        <Dato etiqueta="Última actualización" valor={formatearFechaConHora(donante.updated_at)} />
       </dl>
 
       <h2 className="ec-seccion-titulo mt-4">Historico de aportes</h2>

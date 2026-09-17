@@ -146,7 +146,7 @@ export async function generarReceta(datos = {}, hoy = new Date()) {
       receta: null,
       error: {
         ...construirError(CODIGOS_DE_ERROR_DE_SUPABASE.CAMPO_REQUERIDO),
-        mensaje: "Hacen falta la consulta y el medico que emite la receta.",
+        mensaje: "Hacen falta la consulta y el médico que emite la receta.",
       },
     };
   }

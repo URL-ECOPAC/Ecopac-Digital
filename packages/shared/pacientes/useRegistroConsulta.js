@@ -194,7 +194,7 @@ export function useRegistroConsulta({
     }
 
     if (!atencionId) {
-      setError({ mensaje: "No se pudo resolver la atencion del paciente en esta jornada." });
+      setError({ mensaje: "No se pudo resolver la atención del paciente en esta jornada." });
       return { ok: false };
     }
 

@@ -135,7 +135,7 @@ export default function ModalGeneracionReceta({
 
             <TextField
               label="Buscar en el catalogo"
-              placeholder="Nombre, concentracion o marca"
+              placeholder="Nombre, concentración o marca"
               value={busqueda}
               onChange={(evento) => setBusqueda(evento.target.value)}
             />
@@ -233,7 +233,7 @@ export default function ModalGeneracionReceta({
                       }
                     />
                     <TextField
-                      label="Duracion"
+                      label="Duración"
                       value={renglon.duracion}
                       onChange={(evento) =>
                         editarRenglon(renglon.clave, "duracion", evento.target.value)

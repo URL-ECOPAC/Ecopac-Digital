@@ -13,6 +13,7 @@ export { default as SectionHeader } from "./SectionHeader";
 
 export { default as TextField } from "./TextField";
 export { default as Selector } from "./Selector";
+export { default as SelectorConAlta } from "./SelectorConAlta";
 export { default as MultiSelector } from "./MultiSelector";
 export { default as CampoDeFormulario } from "./CampoDeFormulario";
 export { default as SeccionDeFormulario } from "./SeccionDeFormulario";

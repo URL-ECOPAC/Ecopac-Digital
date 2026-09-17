@@ -36,9 +36,9 @@ export default function PacientesCronicosPage() {
       <ScreenContainer>
         <div className="modulo-pacientes">
           <PageHeader
-            title="Pacientes cronicos"
+            title="Pacientes crónicos"
             actions={[
-              { label: "Volver", onClick: () => navigate("/pacientes"), variant: "secondary" },
+              { label: "Volver", onClick: () => navigate("/pacientes"), variant: "neutra" },
             ]}
           />
           <ErrorState message={error.mensaje} onRetry={recargar} />
@@ -51,10 +51,10 @@ export default function PacientesCronicosPage() {
     <ScreenContainer>
       <div className="modulo-pacientes">
         <PageHeader
-          title="Pacientes cronicos"
-          subtitle="Seguimiento de condiciones cronicas"
+          title="Pacientes crónicos"
+          subtitle="Seguimiento de condiciones crónicas"
           actions={[
-            { label: "Volver", onClick: () => navigate("/pacientes"), variant: "secondary" },
+            { label: "Volver", onClick: () => navigate("/pacientes"), variant: "neutra" },
           ]}
         />
 

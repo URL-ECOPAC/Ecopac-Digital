@@ -103,7 +103,7 @@ export default function ModalComunidad({ visible, comunidad, onClose, onGuardar,
           label="Referencia de acceso"
           value={valores.referenciaAcceso}
           onChangeText={(texto) => cambiar("referenciaAcceso", texto)}
-          placeholder="Como llegar cuando no hay direccion formal"
+          placeholder="Como llegar cuando no hay dirección formal"
           multiline
           numberOfLines={2}
         />

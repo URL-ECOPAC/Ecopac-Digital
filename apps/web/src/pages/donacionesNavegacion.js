@@ -1,6 +1,3 @@
-import { createElement } from "react";
-import { ArrowLeft } from "lucide-react";
-
 /**
  * Accion "Volver" de las pantallas internas de donaciones (registro, historial, donantes y
  * constancia), para PageHeader.
@@ -9,11 +6,13 @@ import { ArrowLeft } from "lucide-react";
  * sidebar lleva a /donaciones, pero no se lee como "atras" y en pantalla estrecha esta oculto. Es
  * un enlace (`to`), no un navigate(-1): quien entro por un enlace directo tambien tiene a donde
  * volver.
+ *
+ * La flecha ya no se pasa a mano: desde la #834 la pone iconoDeAccion() para cualquier rotulo que
+ * empiece por "Volver", que es lo que hace que el resto de pantallas se vean como esta.
  */
 export const ACCION_VOLVER_A_DONACIONES = Object.freeze({
   key: "volver-a-donaciones",
   label: "Volver a donaciones",
   to: "/donaciones",
   variant: "neutra",
-  icon: createElement(ArrowLeft, { size: 16, "aria-hidden": "true" }),
 });

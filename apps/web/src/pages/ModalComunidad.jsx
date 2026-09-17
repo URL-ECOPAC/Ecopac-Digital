@@ -126,7 +126,7 @@ export default function ModalComunidad({ visible, comunidad, onClose, onGuardar,
           label="Referencia de acceso"
           as="textarea"
           rows={2}
-          placeholder="Como llegar cuando no hay direccion formal (ej. desvio, punto de referencia)"
+          placeholder="Como llegar cuando no hay dirección formal (ej. desvio, punto de referencia)"
           value={valores.referenciaAcceso}
           onChange={(evento) => cambiar("referenciaAcceso", evento.target.value)}
         />

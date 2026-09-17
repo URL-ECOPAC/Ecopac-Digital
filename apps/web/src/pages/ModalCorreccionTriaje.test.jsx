@@ -57,8 +57,8 @@ describe("ModalCorreccionTriaje", () => {
   it("muestra los siete signos con sus valores actuales", () => {
     pantalla();
 
-    expect(screen.getByLabelText("Presion sistolica")).toHaveValue(120);
-    expect(screen.getByLabelText("Presion diastolica")).toHaveValue(80);
+    expect(screen.getByLabelText("Presión sistólica")).toHaveValue(120);
+    expect(screen.getByLabelText("Presión diastólica")).toHaveValue(80);
     expect(screen.getByLabelText("Frecuencia cardiaca")).toHaveValue(72);
     expect(screen.getByLabelText("Glucosa")).toHaveValue(95);
     expect(screen.getByLabelText("Peso")).toHaveValue(68);

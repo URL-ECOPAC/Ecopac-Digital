@@ -34,7 +34,7 @@ export const CAMPOS_COMUNIDAD = [
     id: "referenciaAcceso",
     label: "Referencia de acceso",
     tipo: TIPOS_DE_CAMPO.TEXTO_LARGO,
-    placeholder: "Como llegar cuando no hay direccion formal (ej. desvio, punto de referencia)",
+    placeholder: "Como llegar cuando no hay dirección formal (ej. desvio, punto de referencia)",
   },
   {
     id: "esVigente",

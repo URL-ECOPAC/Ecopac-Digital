@@ -90,7 +90,7 @@ function Renglon({ renglon, lotes, problema, onEditar, onQuitar, deshabilitado }
         editable={!deshabilitado}
       />
       <TextField
-        label="Duracion"
+        label="Duración"
         value={renglon.duracion}
         onChangeText={(texto) => onEditar(renglon.clave, "duracion", texto)}
         editable={!deshabilitado}

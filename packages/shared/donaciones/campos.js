@@ -70,14 +70,14 @@ export const CAMPOS_DONANTE = [
   },
   {
     id: "telefono",
-    label: "Telefono",
+    label: "Teléfono",
     tipo: TIPOS_DE_CAMPO.TELEFONO,
     validacion: { maxLongitud: 20 },
   },
   { id: "email", label: "Correo", tipo: TIPOS_DE_CAMPO.EMAIL },
   {
     id: "direccion",
-    label: "Direccion",
+    label: "Dirección",
     tipo: TIPOS_DE_CAMPO.TEXTO,
     validacion: { maxLongitud: 200 },
   },
@@ -102,7 +102,7 @@ export const CAMPOS_DONACION = [
   },
   {
     id: "tipo",
-    label: "Tipo de donacion",
+    label: "Tipo de donación",
     tipo: TIPOS_DE_CAMPO.SELECT,
     opciones: OPCIONES_TIPO_DONACION,
     validacion: { requerido: true },
@@ -116,7 +116,7 @@ export const CAMPOS_DONACION = [
   },
   {
     id: "detalles",
-    label: "Detalle de la donacion",
+    label: "Detalle de la donación",
     tipo: TIPOS_DE_CAMPO.LISTA_REPETIBLE,
     validacion: { requerido: true, minItems: 1 },
     // cantidad va requerido:false aqui a proposito: si es obligatoria depende del tipo de
@@ -132,7 +132,7 @@ export const CAMPOS_DONACION = [
     campos: [
       {
         id: "descripcion",
-        label: "Descripcion",
+        label: "Descripción",
         tipo: TIPOS_DE_CAMPO.TEXTO,
         validacion: { requerido: true, maxLongitud: 200 },
       },
@@ -163,7 +163,7 @@ export const CAMPOS_DONACION = [
 export const CAMPOS_ANULACION_DONACION = [
   {
     id: "motivo",
-    label: "Motivo de anulacion",
+    label: "Motivo de anulación",
     tipo: TIPOS_DE_CAMPO.TEXTO_LARGO,
     validacion: { requerido: true },
   },

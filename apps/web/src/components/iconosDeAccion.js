@@ -1,5 +1,5 @@
 import { createElement } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, Eye, Pencil, Plus, Trash2 } from "lucide-react";
 import { TIPOS_DE_ACCION, rotuloSinSigno, tipoDeAccion } from "@ecopac/shared";
 
 export { rotuloSinSigno };
@@ -24,6 +24,12 @@ export function iconoDeAccion(rotulo, icon) {
       return createElement(Plus, { size: 16, "aria-hidden": "true" });
     case TIPOS_DE_ACCION.BORRADO:
       return createElement(Trash2, { size: 16, "aria-hidden": "true" });
+    case TIPOS_DE_ACCION.RETORNO:
+      return createElement(ArrowLeft, { size: 16, "aria-hidden": "true" });
+    case TIPOS_DE_ACCION.EDICION:
+      return createElement(Pencil, { size: 16, "aria-hidden": "true" });
+    case TIPOS_DE_ACCION.DETALLE:
+      return createElement(Eye, { size: 16, "aria-hidden": "true" });
     default:
       return null;
   }

@@ -23,7 +23,7 @@ export const FILTROS_REPORTES = [
     id: "periodo",
     tipo: TIPOS_DE_FILTRO.RANGO,
     subtipo: SUBTIPOS_DE_RANGO.FECHA,
-    label: "Periodo",
+    label: "Período",
     // obtenerIndicadoresImpacto() y obtenerReportePacientesAtendidos() reciben el rango con
     // nombres distintos (periodo:{fechaInicio,fechaFin} vs. desde/hasta sueltos): homogeneizar
     // eso es trabajo del hook de #208 al llamar a cada API, no de este descriptor.

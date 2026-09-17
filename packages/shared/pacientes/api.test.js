@@ -29,7 +29,9 @@ const { CODIGOS_DE_ERROR_DE_SUPABASE } = await import("../api/errores-de-supabas
 const {
   actualizarPaciente,
   buscarPacientePorFicha,
+  calidadDeCoincidencia,
   identificadorDeBusqueda,
+  patronesDeNumeroFicha,
   buscarPacientes,
   obtenerPaciente,
   registrarPaciente,
@@ -91,6 +93,10 @@ function crearCliente(respuestasPorTabla) {
         },
         ilike(columna, valor) {
           llamadas.push({ paso: "ilike", tabla, columna, valor });
+          return encadenable;
+        },
+        or(condiciones) {
+          llamadas.push({ paso: "or", tabla, condiciones });
           return encadenable;
         },
         limit(cantidad) {
@@ -489,14 +495,32 @@ describe("buscarPacientePorFicha", () => {
 });
 
 describe("buscarPacientes por numero de ficha o DPI", () => {
-  it("identificadorDeBusqueda reconoce digitos con espacios o guiones desde 4 digitos", () => {
+  it("identificadorDeBusqueda reconoce digitos con espacios o guiones desde 2 digitos", () => {
     expect(identificadorDeBusqueda("1234 56789 0101")).toBe("1234567890101");
     expect(identificadorDeBusqueda("000-12")).toBe("00012");
-    expect(identificadorDeBusqueda("123")).toBeNull();
+    expect(identificadorDeBusqueda("123")).toBe("123");
+    expect(identificadorDeBusqueda("7")).toBeNull();
     expect(identificadorDeBusqueda("Maria 1234")).toBeNull();
   });
 
-  it("un DPI parcial busca por el inicio de la ficha y del DPI, sin fn_buscar_pacientes", async () => {
+  it("prueba el numero de ficha tal cual y rellenado con ceros a la izquierda", () => {
+    // La 00081 genera numero_ficha como LPAD(..., 6, '0'): quien dice "la ficha 123" escribe
+    // "123" y tiene que encontrar la "000123".
+    expect(patronesDeNumeroFicha("123")).toEqual(["123%", "000123%"]);
+    // Con seis digitos o mas, rellenar no cambia nada y sobra el segundo patron.
+    expect(patronesDeNumeroFicha("000123")).toEqual(["000123%"]);
+    expect(patronesDeNumeroFicha("1234567890101")).toEqual(["1234567890101%"]);
+  });
+
+  it("ordena exacta, luego por el inicio y al final la que solo contiene", () => {
+    expect(calidadDeCoincidencia("000123", "123")).toBe(0);
+    expect(calidadDeCoincidencia("123", "123")).toBe(0);
+    expect(calidadDeCoincidencia("1234567", "123")).toBe(1);
+    expect(calidadDeCoincidencia("9991239", "123")).toBe(2);
+    expect(calidadDeCoincidencia(null, "123")).toBe(3);
+  });
+
+  it("un DPI parcial busca por cualquier tramo del DPI, sin fn_buscar_pacientes", async () => {
     const cliente = crearCliente({
       expedientes: { data: [], error: null },
       pacientes: {
@@ -535,15 +559,47 @@ describe("buscarPacientes por numero de ficha o DPI", () => {
       paso: "ilike",
       tabla: "pacientes",
       columna: "dpi",
-      valor: "12345678%",
+      valor: "%12345678%",
     });
     expect(cliente.llamadas).toContainEqual({
-      paso: "ilike",
+      paso: "or",
       tabla: "expedientes",
-      columna: "numero_ficha",
-      valor: "12345678%",
+      condiciones: "numero_ficha.ilike.12345678%",
     });
     expect(cliente.llamadas.some((llamada) => llamada.paso === "rpc")).toBe(false);
+  });
+
+  it("una ficha dicha sin los ceros de la izquierda tambien encuentra al paciente", async () => {
+    const cliente = crearCliente({
+      expedientes: {
+        data: [
+          {
+            numeroFicha: "000123",
+            paciente: {
+              id: "paciente-8",
+              nombres: "Rosa",
+              apellidos: "Inventada",
+              fechaBaja: null,
+              condicionesCronicas: [],
+            },
+          },
+        ],
+        error: null,
+      },
+      pacientes: { data: [], error: null },
+    });
+    dobles.cliente = cliente;
+
+    const { pacientes, error } = await buscarPacientes({ termino: "123", listarTodos: true });
+
+    expect(error).toBeNull();
+    expect(pacientes).toHaveLength(1);
+    expect(pacientes[0].numeroFicha).toBe("000123");
+    expect(cliente.llamadas).toContainEqual({
+      paso: "or",
+      tabla: "expedientes",
+      condiciones: "numero_ficha.ilike.123%,numero_ficha.ilike.000123%",
+    });
   });
 
   it("una ficha escrita a medias encuentra al paciente sin repetirlo si coincide tambien el DPI", async () => {
@@ -608,15 +664,20 @@ describe("buscarPacientes", () => {
     expect(terminoDemasiadoCorto).toBe(true);
   });
 
-  it("un termino corto SI encuentra una ficha exacta que coincida", async () => {
+  it("un termino corto de digitos SI encuentra una ficha exacta que coincida", async () => {
+    // Dos digitos ya son un identificador (issue #834): "42" no pasa por la busqueda por nombre,
+    // va por el camino de ficha/DPI, y la ficha "000042" cuenta como coincidencia exacta.
     dobles.cliente = crearCliente({
       expedientes: {
-        data: {
-          numeroFicha: "42",
-          paciente: { id: "paciente-1", nombres: "Ana", fechaBaja: null },
-        },
+        data: [
+          {
+            numeroFicha: "000042",
+            paciente: { id: "paciente-1", nombres: "Ana", fechaBaja: null },
+          },
+        ],
         error: null,
       },
+      pacientes: { data: [], error: null },
     });
 
     const { pacientes, coincidenciaExacta, terminoDemasiadoCorto, error } = await buscarPacientes({
@@ -624,10 +685,10 @@ describe("buscarPacientes", () => {
     });
 
     expect(error).toBeNull();
-    expect(terminoDemasiadoCorto).toBe(true);
+    expect(terminoDemasiadoCorto).toBe(false);
     expect(coincidenciaExacta).toBe(true);
     expect(pacientes).toEqual([
-      { id: "paciente-1", nombres: "Ana", numeroFicha: "42", condiciones: [] },
+      { id: "paciente-1", nombres: "Ana", numeroFicha: "000042", condiciones: [] },
     ]);
   });
 

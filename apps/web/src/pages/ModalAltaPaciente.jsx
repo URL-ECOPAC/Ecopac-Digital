@@ -1,5 +1,4 @@
-import { useState } from "react";
-import { Plus, Save, X } from "lucide-react";
+import { Plus, X } from "lucide-react";
 
 import { seccionesDePaciente, useRegistroPaciente } from "@ecopac/shared";
 
@@ -8,7 +7,7 @@ import Modal from "../components/Modal";
 import PrimaryButton from "../components/PrimaryButton";
 import SecondaryButton from "../components/SecondaryButton";
 import Selector from "../components/Selector";
-import TextField from "../components/TextField";
+import SelectorConAlta from "../components/SelectorConAlta";
 
 // Alta de un paciente.
 //
@@ -38,22 +37,12 @@ function CampoDeComunidad({
   erroresComunidad,
   creandoComunidad,
 }) {
-  const [creandoNueva, setCreandoNueva] = useState(false);
-  const [nombreNuevo, setNombreNuevo] = useState("");
-  const [errorNueva, setErrorNueva] = useState(null);
-
-  const guardarComunidad = async () => {
-    const { comunidad, error: fallo } = await registrarComunidad(nombreNuevo);
-    setErrorNueva(fallo?.mensaje ?? null);
-    if (comunidad) {
-      setNombreNuevo("");
-      setCreandoNueva(false);
-    }
-  };
-
   // Departamento y municipio en una fila; comunidad y "Crear una comunidad" en la siguiente, lado
   // a lado. Antes los tres selectores iban en la misma fila y el boton debajo, solo, a todo el
   // ancho: la accion quedaba lejos del campo al que se refiere.
+  //
+  // El par "comunidad + crear una que falta" ya no se escribe aqui: es SelectorConAlta, el mismo
+  // control que ahora usan el alta de jornada y los catalogos clinicos (issue #834).
   return (
     <div className="ec-form-grid--ancho ec-form-subgrid">
       <Selector
@@ -72,62 +61,22 @@ function CampoDeComunidad({
         placeholder="Selecciona un municipio"
         disabled={enviando || !departamentoId || catalogos.municipios.length === 0}
       />
-      <Selector
+      <SelectorConAlta
         label={campo.label}
         value={valores.comunidad || null}
         options={catalogos.comunidades}
         onSelect={(valor) => setCampo("comunidad", valor)}
         placeholder="Selecciona una comunidad"
         error={errores.comunidad}
-        disabled={enviando || !municipioId || catalogos.comunidades.length === 0}
+        disabled={enviando || !municipioId}
+        puedeCrear={puedeCrearComunidad}
+        habilitadoParaCrear={Boolean(municipioId)}
+        etiquetaAlta="Crear una comunidad"
+        labelNuevo="Nombre de la comunidad nueva"
+        onCrear={registrarComunidad}
+        erroresAlta={erroresComunidad}
+        creando={creandoComunidad}
       />
-
-      {puedeCrearComunidad && municipioId && !creandoNueva && (
-        <div className="ec-form-subgrid-accion">
-          <SecondaryButton
-            title="Crear una comunidad"
-            size="sm"
-            icon={<Plus size={14} aria-hidden="true" />}
-            onClick={() => setCreandoNueva(true)}
-            disabled={enviando}
-          />
-        </div>
-      )}
-
-      {puedeCrearComunidad && creandoNueva && (
-        <div>
-          <TextField
-            label="Nombre de la comunidad nueva"
-            value={nombreNuevo}
-            // El evento del DOM, no el evento entero: TextField entrega `onChange(evento)` y
-            // aqui se pasaba `setNombreNuevo` directo, asi que el estado guardaba el objeto del
-            // evento en vez del texto y la comunidad nueva se creaba con un nombre invalido.
-            onChange={(evento) => setNombreNuevo(evento.target.value)}
-            error={erroresComunidad.nombre ?? errorNueva}
-            disabled={creandoComunidad}
-          />
-          <div className="ec-acciones">
-            <PrimaryButton
-              title="Guardar comunidad"
-              size="sm"
-              icon={<Save size={14} aria-hidden="true" />}
-              onClick={guardarComunidad}
-              loading={creandoComunidad}
-            />
-            <SecondaryButton
-              title="Cancelar"
-              variant="neutra"
-              size="sm"
-              onClick={() => {
-                setCreandoNueva(false);
-                setNombreNuevo("");
-                setErrorNueva(null);
-              }}
-              disabled={creandoComunidad}
-            />
-          </div>
-        </div>
-      )}
     </div>
   );
 }

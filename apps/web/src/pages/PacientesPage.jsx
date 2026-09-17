@@ -48,7 +48,7 @@ export default function PacientesPage() {
 
   if (puedeVerCondiciones(rol)) {
     acciones.push({
-      label: "Pacientes cronicos",
+      label: "Pacientes crónicos",
       onClick: () => navigate("/pacientes/cronicos"),
       variant: "secondary",
     });
@@ -56,7 +56,7 @@ export default function PacientesPage() {
 
   if (puedeVerCatalogoDiagnosticos(rol)) {
     acciones.push({
-      label: "Catalogo de diagnosticos",
+      label: "Catalogo de diagnósticos",
       onClick: () => navigate("/pacientes/diagnosticos"),
       variant: "secondary",
     });
@@ -86,7 +86,7 @@ export default function PacientesPage() {
     return (
       <ScreenContainer>
         <div className="modulo-pacientes">
-          <PageHeader title="Gestion de pacientes" accent="var(--accent-pacientes)" />
+          <PageHeader title="Gestión de pacientes" accent="var(--accent-pacientes)" />
           <ErrorState message={listado.error.mensaje} onRetry={listado.recargar} />
         </div>
       </ScreenContainer>
@@ -97,8 +97,8 @@ export default function PacientesPage() {
     <ScreenContainer>
       <div className="modulo-pacientes">
         <PageHeader
-          title="Gestion de pacientes"
-          subtitle="Expedientes clinicos electronicos"
+          title="Gestión de pacientes"
+          subtitle="Expedientes clinicos electrónicos"
           accent="var(--accent-pacientes)"
           actions={acciones}
         />

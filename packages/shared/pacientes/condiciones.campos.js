@@ -26,14 +26,14 @@ export const OPCIONES_ESTADO_CONDICION = opcionesDe(
 export const CAMPOS_CONDICION_CRONICA = [
   {
     id: "condicion",
-    label: "Condicion",
+    label: "Condición",
     tipo: TIPOS_DE_CAMPO.SELECT,
     opcionesDesde: "condicionesCronicas",
     validacion: { requerido: true },
   },
   {
     id: "fechaDiagnostico",
-    label: "Fecha de diagnostico",
+    label: "Fecha de diagnóstico",
     tipo: TIPOS_DE_CAMPO.FECHA,
     validacion: { requerido: true },
   },

@@ -115,7 +115,7 @@ export default function MainLayout() {
           </span>
         </div>
 
-        <nav className="app-nav" aria-label="Navegacion principal">
+        <nav className="app-nav" aria-label="Navegación principal">
           {secciones.map((seccion) => (
             <div key={seccion.id} className="app-nav__group">
               <p className="app-nav__title">{seccion.titulo}</p>
@@ -167,7 +167,7 @@ export default function MainLayout() {
             {/* Decia "Sistema activo" siempre, con o sin red (issue #762). */}
             <span
               className={`app-status${enLinea ? "" : " app-status--sin-conexion"}`}
-              title="Estado de la conexion"
+              title="Estado de la conexión"
             >
               <span className="app-status__dot" aria-hidden="true" />
               {enLinea ? "En línea" : "Sin conexión"}

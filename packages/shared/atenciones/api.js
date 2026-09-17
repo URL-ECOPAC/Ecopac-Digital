@@ -76,7 +76,7 @@ export async function iniciarAtencion(pacienteId, jornadaId, { estadoDeJornada }
       atencion: null,
       error: {
         ...construirError(CODIGOS_DE_ERROR_DE_SUPABASE.CAMPO_REQUERIDO),
-        mensaje: "Hace falta el paciente y la jornada para registrar la atencion.",
+        mensaje: "Hace falta el paciente y la jornada para registrar la atención.",
       },
     };
   }

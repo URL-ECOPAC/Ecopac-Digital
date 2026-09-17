@@ -74,8 +74,8 @@ describe("ModalCorreccionConsulta", () => {
 
     expect(screen.getByLabelText("Motivo de consulta")).toHaveValue("Dolor de cabeza");
     expect(screen.getByLabelText("Antecedentes")).toHaveValue("Migrana previa");
-    expect(screen.getByLabelText("Sintomas")).toHaveValue("Dolor pulsatil");
-    expect(screen.getByLabelText("Exploracion")).toHaveValue("Sin hallazgos");
+    expect(screen.getByLabelText("Síntomas")).toHaveValue("Dolor pulsatil");
+    expect(screen.getByLabelText("Exploración")).toHaveValue("Sin hallazgos");
     expect(screen.getByLabelText("Tratamiento")).toHaveValue("Analgesico");
     expect(screen.getByLabelText("Observaciones")).toHaveValue("Control en una semana");
     expect(screen.getByLabelText("Plan de seguimiento")).toHaveValue("Reevaluar");

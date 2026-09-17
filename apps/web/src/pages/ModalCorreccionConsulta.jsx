@@ -92,7 +92,7 @@ export default function ModalCorreccionConsulta({ consulta, onClose, onGuardado 
 
       <div className="d-flex align-items-end gap-2">
         <Selector
-          label="Agregar diagnostico"
+          label="Agregar diagnóstico"
           value={diagnosticoNuevo}
           options={catalogoDiagnosticos}
           onSelect={setDiagnosticoNuevo}

@@ -40,6 +40,7 @@ import {
   listarMunicipios,
   obtenerComunidad,
 } from "../territorio/api.js";
+import { useAltaDeComunidadEnLinea } from "../territorio/useAltaDeComunidadEnLinea.js";
 import { listarUsuarios } from "../usuarios/api.js";
 import { actualizarJornada, listarJornadas, obtenerJornada, registrarJornada } from "./api.js";
 import { advertirJornadaDuplicada, validarJornada } from "./validaciones.js";
@@ -131,6 +132,10 @@ function nombreDePerfil(perfil) {
  *   advertenciaDuplicado: string|null,
  *   enviar: () => Promise<{ ok: boolean, jornada?: object|null }>,
  *   cancelar: () => void,
+ *   puedeCrearComunidad: boolean,
+ *   registrarComunidad: (nombre: string) => Promise<object>,
+ *   erroresComunidad: Record<string, string>,
+ *   creandoComunidad: boolean,
  * }}
  */
 export function useFormularioJornada({ jornada, rol } = {}) {
@@ -308,6 +313,26 @@ export function useFormularioJornada({ jornada, rol } = {}) {
     });
   }, []);
 
+  // Alta de comunidad sin salir del modal (issue #834): la comunidad de una jornada nueva muchas
+  // veces todavia no esta en el catalogo, y hasta ahora la unica salida era cerrar el formulario,
+  // ir a /pacientes/comunidades y volver a empezar. Es el mismo hook -- y por lo tanto el mismo
+  // flujo y las mismas reglas -- que ya usaba el alta de paciente.
+  const alCrearComunidad = useCallback(
+    async (comunidad) => {
+      const { comunidades: filas } = await listarComunidades({ municipioId });
+      setComunidades(aOpciones(filas ?? [], (fila) => fila.nombre));
+      setValores((anteriores) => ({ ...anteriores, comunidad: comunidad.id }));
+    },
+    [municipioId],
+  );
+
+  const {
+    puedeCrear: puedeCrearComunidad,
+    crear: registrarComunidad,
+    errores: erroresComunidad,
+    creando: creandoComunidad,
+  } = useAltaDeComunidadEnLinea({ municipioId, rol, alCrear: alCrearComunidad });
+
   const cancelar = useCallback(() => {
     setValores(valoresInicialesDeJornada(esEdicion ? jornadaBase : jornada));
     setErrores({});
@@ -358,5 +383,9 @@ export function useFormularioJornada({ jornada, rol } = {}) {
     advertenciaDuplicado,
     enviar,
     cancelar,
+    puedeCrearComunidad,
+    registrarComunidad,
+    erroresComunidad,
+    creandoComunidad,
   };
 }
