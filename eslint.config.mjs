@@ -4,6 +4,46 @@ import react from "eslint-plugin-react";
 import reactHooks from "eslint-plugin-react-hooks";
 import reactRefresh from "eslint-plugin-react-refresh";
 
+/**
+ * Las dos formas que convierten un contrato roto en una pantalla que miente (issue #821).
+ *
+ * La ficha del paciente en movil estuvo rota de punta a punta con el CI entero en verde, y lo que
+ * lo hizo posible fue esto (issue #818):
+ *
+ *   const lista = Array.isArray(respuesta) ? respuesta : respuesta?.datos || [];
+ *
+ * `obtenerTriajes()` devuelve `{ triajes, error }`. Con el ternario, `lista` era `[]` siempre, sin
+ * excepcion y sin log. Y esta otra sustituia un hook que no existia por uno falso:
+ *
+ *   const useCondiciones = typeof useCondicionesCronicas === "function"
+ *     ? useCondicionesCronicas
+ *     : () => ({ condiciones: [] });
+ *
+ * Los dos selectores estan acotados a esa forma y no al idioma legitimo que se le parece.
+ * `Array.isArray(value) ? value : []` -poner un arreglo por defecto a una prop- es correcto y hay
+ * trece en apps/: lo que se prohibe es que la rama alternativa vuelva a hurgar en el mismo valor,
+ * porque eso ya es adivinar la forma en vez de conocerla. Igual con `typeof x === "function"`: la
+ * pregunta esta bien para una callback opcional, y mal cuando la alternativa es fabricar una
+ * implementacion de mentira.
+ */
+const REGLAS_CONTRA_CONTRATOS_ADIVINADOS = {
+  "no-restricted-syntax": [
+    "error",
+    {
+      selector:
+        "ConditionalExpression[test.callee.object.name='Array'][test.callee.property.name='isArray'][alternate.type=/^(MemberExpression|ChainExpression|LogicalExpression)$/]",
+      message:
+        "Esto no pone un valor por defecto: adivina la forma de la respuesta. Si no sabes si viene un arreglo o un sobre, leelo en el api.js del modulo y usa la clave que devuelve. Un contrato que cambia tiene que reventar, no degradar a vacio (issue #821).",
+    },
+    {
+      selector:
+        "ConditionalExpression[test.left.operator='typeof'][test.right.value='function'][alternate.type=/^(ArrowFunctionExpression|FunctionExpression)$/]",
+      message:
+        "Sustituir por una implementacion de mentira lo que quiza no existe deja la pantalla vacia para siempre y el CI en verde. Importa lo que existe; si falta, que el import reviente (issue #821).",
+    },
+  ],
+};
+
 export default [
   js.configs.recommended,
   {
@@ -193,6 +233,7 @@ export default [
   {
     files: ["apps/web/**/*.{js,jsx}"],
     rules: {
+      ...REGLAS_CONTRA_CONTRATOS_ADIVINADOS,
       "no-restricted-imports": [
         "error",
         {
@@ -227,6 +268,7 @@ export default [
   {
     files: ["apps/mobile/**/*.{js,jsx}"],
     rules: {
+      ...REGLAS_CONTRA_CONTRATOS_ADIVINADOS,
       "no-restricted-imports": [
         "error",
         {

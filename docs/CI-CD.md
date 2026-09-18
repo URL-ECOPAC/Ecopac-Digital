@@ -264,6 +264,58 @@ casos, cada comprobacion con su caso bueno y su caso malo. `scripts/` no es un w
 `npm test` no lo alcanza; por eso es un paso propio del CI, igual que la autoprueba de la guarda de
 esquema.
 
+### El contrato de API que consume `apps/`
+
+`scripts/verificar-contratos-de-api.mjs` (`npm run verificar:contratos`) **falla el PR** cuando algo
+de `apps/` o de `packages/shared` lee una clave o un campo que la API no devuelve.
+
+Es **la primera guarda que mira `apps/`**. Las otras cuatro miran `packages/shared`, y por eso la
+ficha del paciente en movil pudo estar rota de punta a punta -tres pestanias vacias, la cabecera sin
+nombre- con `npm run lint` en verde, 2.145 pruebas en verde y `verificar:shared-esquema` en verde
+(issues #818, #821). El defecto era este:
+
+```js
+const respuesta = await obtenerTriajes(pacienteId);
+const lista = Array.isArray(respuesta) ? respuesta : respuesta?.datos || [];
+```
+
+`obtenerTriajes()` devuelve `{ triajes, error }`. Ni un arreglo, ni `datos`. `lista` era `[]`
+siempre, sin excepcion, sin mensaje y sin log, porque **equivocarse de clave no lanza nada**: las
+161 funciones de `*.api.js` no comparten una forma unica de sobre.
+
+Comprueba tres cosas:
+
+| Que | Ejemplo de lo que falla |
+| --- | --- |
+| **El sobre**: quien llama lee claves que la funcion devuelve | `respuesta.datos` cuando devuelve `{ triajes, error }` |
+| **La forma del elemento**, siguiendola por el hook que la guarda en estado hasta el componente | `receta.fecha` cuando `aReceta()` arma `createdAt` |
+| **Los descriptores** de columnas contra el mapeador de su modulo | `COLUMNAS_LOTE` nombrando un campo que `aLote()` no arma |
+
+La segunda es la que llega a `apps/`: un componente nunca llama a la API, llama al hook, y la cadena
+`useState` -> `setRecetas(respuesta.recetas)` -> `return { recetas }` es mecanica y se sigue entera.
+
+**Lo que no comprueba, a proposito**, con su conteo en cada corrida: las llamadas dentro de
+`Promise.all`, las de `.then(...)` y los `return await`; los mapeadores de forma **abierta** -los que
+devuelven `{ ...fila, algo }`, donde las claves las pone la consulta y no el literal-; y los
+descriptores de un modulo que no tiene un mapeador del mismo nombre. Comprueba menos de lo que se
+podria a proposito: **un check requerido que se equivoca se termina ignorando**, que es justo lo que
+le paso al aviso de huerfanos de la guarda de esquema. Lo que ampliaria la cobertura de verdad es
+unificar el sobre de las funciones de API en una sola forma, o activar `checkJs` sobre `apps/`; las
+dos son decisiones de arquitectura que tocan el paquete entero y van en su propia issue, no aqui.
+
+Lo acompana una regla de ESLint contra las dos formas que convertian un contrato roto en una
+pantalla que miente, acotadas para no tocar el idioma legitimo que se les parece:
+
+| Se prohibe | Sigue permitido |
+| --- | --- |
+| `Array.isArray(x) ? x : x?.datos \|\| []` -la rama alternativa vuelve a hurgar en el mismo valor- | `Array.isArray(value) ? value : []`, poner un arreglo por defecto a una prop |
+| `typeof useAlgo === "function" ? useAlgo : () => ({ datos: [] })` | `typeof onCrear === "function" ? "Crear" : "Agregar"`, preguntar por una callback opcional |
+
+La guarda tiene sus propias pruebas: `npm run verificar:contratos -- --autoprueba` corre trece
+casos, cada comprobacion con su caso bueno y su caso malo, incluido el de la forma abierta, que es el
+unico falso positivo que aparecio al calibrarla. `scripts/` no es un workspace, asi que `npm test` no
+lo alcanza; por eso es un paso propio del CI.
+
 ### La frontera entre las apps y `packages/shared`
 
 ESLint (`eslint.config.mjs`) prohibe, por app:
@@ -993,6 +1045,13 @@ Lo que corre el job **Lint y build**:
 ```bash
 npm run verificar:shared-esquema
 npm run verificar:shared-esquema -- --autoprueba
+npm run verificar:rewrite-vercel
+npm run verificar:sin-emojis
+npm run verificar:sin-emojis -- --autoprueba
+npm run verificar:paleta
+npm run verificar:paleta -- --autoprueba
+npm run verificar:contratos
+npm run verificar:contratos -- --autoprueba
 npm run lint
 npm test
 npm run build

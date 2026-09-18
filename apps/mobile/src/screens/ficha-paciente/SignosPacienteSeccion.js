@@ -79,7 +79,7 @@ const styles = StyleSheet.create({
   medidaContenedor: {
     paddingVertical: spacing.xs,
     borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight ?? colors.border,
+    borderBottomColor: colors.border,
   },
   etiquetaSerie: {
     color: colors.text,
@@ -106,7 +106,7 @@ const styles = StyleSheet.create({
     fontWeight: typography.weights.medium,
   },
   valorAlerta: {
-    color: colors.danger ?? colors.danger,
+    color: colors.danger ?? "#DC2626",
     fontWeight: typography.weights.bold,
   },
   fechaTexto: {

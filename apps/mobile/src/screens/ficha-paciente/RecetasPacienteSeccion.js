@@ -7,16 +7,19 @@ import {
   FlatList,
   TouchableOpacity,
 } from "react-native";
-import { useRecetasPaciente } from "@ecopac/shared";
-import { colors } from "@ecopac/ui-tokens";
+import { formatearFechaCorta, useRecetasPaciente } from "@ecopac/shared";
 
-export default function RecetasPacienteSeccion({ pacienteId }) {
-  const { recetas, cargando, error, recargar } = useRecetasPaciente(pacienteId);
+export default function RecetasPacienteSeccion({ pacienteId, rol }) {
+  // Sin el `{ rol }` el hook evalua puedeVerHistorial(undefined), que es false: no consulta
+  // nunca, deja la lista vacia y NO pone error, asi que la pestania decia "Sin recetas emitidas"
+  // a todo el mundo, incluida la administradora (issue #818). Es el mismo defecto que la #688
+  // corrigio en ProyectosScreen y la #692 en DonacionesScreen.
+  const { recetas, cargando, error, recargar } = useRecetasPaciente(pacienteId, { rol });
 
   if (cargando) {
     return (
       <View style={styles.centroContainer} testID="cargando-recetas">
-        <ActivityIndicator size="small" color={colors.info} />
+        <ActivityIndicator size="small" color="#0284c7" />
         <Text style={styles.textoCargando}>Cargando recetas...</Text>
       </View>
     );
@@ -53,23 +56,33 @@ export default function RecetasPacienteSeccion({ pacienteId }) {
         renderItem={({ item }) => (
           <View style={styles.tarjetaReceta}>
             <View style={styles.encabezadoReceta}>
-              <Text style={styles.fechaTexto}>{item.fecha || item.creadoEn || "Fecha N/A"}</Text>
-              <Text style={styles.medicoTexto}>{item.medicoNombre || item.medico || "Médico"}</Text>
+              {/* La API devuelve `createdAt`, `medico` ya aplanado a texto y el detalle en
+                  `detalle` (aReceta(), recetas.api.js). Antes se leian `fecha`, `creadoEn`,
+                  `medicoNombre` y `medicamentos`, cuatro nombres que no existen: la tarjeta
+                  mostraba "Fecha N/A" y "Sin detalle de medicamentos" para toda receta. */}
+              <Text style={styles.fechaTexto}>
+                {item.createdAt ? formatearFechaCorta(item.createdAt) : "Sin fecha"}
+              </Text>
+              <Text style={styles.medicoTexto}>{item.medico || "Médico"}</Text>
             </View>
 
-            {Array.isArray(item.medicamentos) && item.medicamentos.length > 0 ? (
-              item.medicamentos.map((med, idx) => (
-                <View key={med.id || idx} style={styles.filamedicamento}>
-                  <Text style={styles.nombreMedicamento}>• {med.nombre || med.medicamento}</Text>
+            {item.detalle?.length > 0 ? (
+              item.detalle.map((renglon, idx) => (
+                <View key={renglon.id || idx} style={styles.filamedicamento}>
+                  <Text style={styles.nombreMedicamento}>
+                    • {renglon.medicamento ?? "Medicamento"}
+                    {renglon.concentracion ? ` ${renglon.concentracion}` : ""}
+                  </Text>
                   <Text style={styles.dosisTexto}>
-                    {med.dosis ? `${med.dosis} - ` : ""}
-                    {med.indicaciones || med.frecuencia || ""}
+                    {[renglon.dosis, renglon.frecuencia, renglon.duracion]
+                      .filter(Boolean)
+                      .join(" · ")}
                   </Text>
                 </View>
               ))
             ) : (
               <Text style={styles.indicacionesTexto}>
-                {item.indicaciones || item.diagnostico || "Sin detalle de medicamentos"}
+                {item.indicacionesGenerales || "Sin detalle de medicamentos"}
               </Text>
             )}
           </View>
@@ -86,7 +99,7 @@ const styles = StyleSheet.create({
   tituloSeccion: {
     fontSize: 16,
     fontWeight: "600",
-    color: colors.text,
+    color: "#1e293b",
     marginBottom: 12,
   },
   centroContainer: {
@@ -97,29 +110,29 @@ const styles = StyleSheet.create({
   textoCargando: {
     marginTop: 8,
     fontSize: 14,
-    color: colors.textMuted,
+    color: "#64748b",
   },
   errorContainer: {
     padding: 16,
-    backgroundColor: colors.background,
+    backgroundColor: "#fef2f2",
     borderRadius: 8,
     alignItems: "center",
     marginVertical: 8,
   },
   textoError: {
-    color: colors.danger,
+    color: "#dc2626",
     fontSize: 14,
     marginBottom: 8,
     textAlign: "center",
   },
   botonReintentar: {
-    backgroundColor: colors.danger,
+    backgroundColor: "#dc2626",
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 6,
   },
   textoBotonReintentar: {
-    color: colors.surface,
+    color: "#ffffff",
     fontSize: 12,
     fontWeight: "600",
   },
@@ -129,13 +142,13 @@ const styles = StyleSheet.create({
   },
   textoVacio: {
     fontSize: 14,
-    color: colors.textMuted,
+    color: "#64748b",
     fontStyle: "italic",
   },
   tarjetaReceta: {
-    backgroundColor: colors.surface,
+    backgroundColor: "#ffffff",
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: "#e2e8f0",
     borderRadius: 8,
     padding: 12,
     marginBottom: 10,
@@ -144,18 +157,18 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     borderBottomWidth: 1,
-    borderBottomColor: colors.background,
+    borderBottomColor: "#f1f5f9",
     paddingBottom: 6,
     marginBottom: 8,
   },
   fechaTexto: {
     fontSize: 12,
     fontWeight: "600",
-    color: colors.text,
+    color: "#0f172a",
   },
   medicoTexto: {
     fontSize: 12,
-    color: colors.textMuted,
+    color: "#64748b",
   },
   filamedicamento: {
     marginBottom: 4,
@@ -163,16 +176,16 @@ const styles = StyleSheet.create({
   nombreMedicamento: {
     fontSize: 13,
     fontWeight: "600",
-    color: colors.text,
+    color: "#1e293b",
   },
   dosisTexto: {
     fontSize: 12,
-    color: colors.textMuted,
+    color: "#475569",
     marginLeft: 10,
   },
   indicacionesTexto: {
     fontSize: 12,
-    color: colors.text,
+    color: "#334155",
     fontStyle: "italic",
   },
 });

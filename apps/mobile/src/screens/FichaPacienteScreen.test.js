@@ -1,108 +1,168 @@
-// Prueba de la ficha del paciente en movil (issue #838).
+// Pruebas de FichaPacienteScreen (issues #753, #818 y #838).
 //
-// Lo que fija: que la pantalla PIDE el paciente completo con usePaciente() en vez de conformarse
-// con la fila del listado de busqueda, y que pinta los datos que esa fila no trae -- DPI, idioma,
-// telefono, responsable --, que era justo lo que faltaba.
+// POR QUE ESTA PRUEBA SE REESCRIBIO ENTERA
+//
+// La anterior simulaba `useSignosVitales` y `useRecetas`, dos hooks que NO EXISTEN en
+// @ecopac/shared, y montaba la pantalla con `route.params.paciente = { nombre, edad, genero,
+// historial, consultas }`, un objeto que la API real nunca devuelve: el modelo tiene `nombres`,
+// `apellidos` y `dpi` (migracion 00009). Pasaba en verde mientras la pantalla mostraba el nombre
+// en blanco y "CUI/DPI: N/A" a todo el mundo.
+//
+// Ahora simula el contrato real -usePaciente() devolviendo `{ paciente, cargando, error,
+// recargar }`- de modo que romper la pantalla ponga esto en rojo.
 
-import { render, screen } from "@testing-library/react-native";
+import React from "react";
+import { fireEvent, render, screen } from "@testing-library/react-native";
+import { usePaciente } from "@ecopac/shared";
 
 import FichaPacienteScreen from "./FichaPacienteScreen";
 
-const estado = { paciente: null, cargando: false, error: null };
-const mockUsePaciente = jest.fn(() => ({ ...estado, recargar: jest.fn() }));
-
-jest.mock("@ecopac/shared", () => {
-  const real = jest.requireActual("@ecopac/shared");
-  return {
-    ...real,
-    usePaciente: (...argumentos) => mockUsePaciente(...argumentos),
-    useCondicionesPaciente: () => ({
-      condiciones: [],
-      cargando: false,
-      error: null,
-      recargar: jest.fn(),
-    }),
-    useEvolucionSignos: () => ({ signos: [], cargando: false, error: null, recargar: jest.fn() }),
-    useRecetasPaciente: () => ({ recetas: [], cargando: false, error: null, recargar: jest.fn() }),
-  };
-});
-
-jest.mock("../contexto/SesionProvider", () => ({
-  useSesionCompartida: () => ({ perfil: { rol: "medico" } }),
+jest.mock("@ecopac/shared", () => ({
+  ...jest.requireActual("@ecopac/shared"),
+  usePaciente: jest.fn(),
+  // Los hooks de las tres secciones: cada una tiene su propia prueba, aqui solo se las calla.
+  useCondicionesPaciente: jest.fn(() => ({
+    condiciones: [],
+    cargando: false,
+    error: null,
+    errorDeAlta: null,
+    errores: {},
+    enviando: false,
+    permisos: { puedeVer: true, puedeRegistrar: false, puedeEditar: false, puedeQuitar: false },
+    valores: {},
+    setCampo: jest.fn(),
+    agregar: jest.fn(),
+    marcarResuelta: jest.fn(),
+    recargar: jest.fn(),
+    catalogos: { condicionesCronicas: [], estadosCondicionCronica: [] },
+  })),
+  useEvolucionSignos: jest.fn(() => ({
+    series: [],
+    hayMediciones: false,
+    cargando: false,
+    error: null,
+    recargar: jest.fn(),
+  })),
+  useRecetasPaciente: jest.fn(() => ({
+    recetas: [],
+    cargando: false,
+    error: null,
+    recargar: jest.fn(),
+  })),
 }));
 
-const PACIENTE_COMPLETO = {
+jest.mock("../contexto/SesionProvider", () => ({
+  useSesionCompartida: () => ({ rol: "medico", perfil: { id: "perfil-1" } }),
+}));
+
+const PACIENTE = {
   id: "paciente-123",
-  nombres: "Juana",
-  apellidos: "Inventada",
-  fechaNacimiento: "1990-05-10",
-  sexo: "Femenino",
+  nombres: "Juan",
+  apellidos: "Perez Demo",
   dpi: "1234567890101",
-  tipoSangre: "O+",
+  fechaNacimiento: "1996-01-15",
+  // Los campos que la fila del listado de busqueda no trae y que la pestania "Datos generales"
+  // tiene que mostrar (issue #838).
   telefonoContacto: "55551234",
   nombreResponsable: "Persona Inventada",
   parentescoResponsable: "Madre",
   catalogoIdioma: { nombre: "Español" },
   comunidad: { nombre: "Comunidad Inventada", municipio: { nombre: "Municipio Inventado" } },
   expediente: { numeroFicha: "000123" },
-  condicionesCronicas: [],
 };
 
 const navegacion = { navigate: jest.fn(), goBack: jest.fn() };
+const ruta = { params: { pacienteId: PACIENTE.id } };
+
+function montar() {
+  return render(<FichaPacienteScreen route={ruta} navigation={navegacion} />);
+}
 
 beforeEach(() => {
   jest.clearAllMocks();
-  estado.paciente = PACIENTE_COMPLETO;
-  estado.cargando = false;
-  estado.error = null;
+  usePaciente.mockReturnValue({
+    paciente: PACIENTE,
+    cargando: false,
+    error: null,
+    recargar: jest.fn(),
+  });
 });
 
 describe("FichaPacienteScreen", () => {
-  it("pide el paciente completo por id, no se conforma con la fila del listado", () => {
-    render(
-      <FichaPacienteScreen
-        route={{ params: { paciente: { id: "paciente-123", nombres: "Juana" } } }}
-        navigation={navegacion}
-      />,
-    );
+  it("pide el paciente por su id, no por el objeto que le pasen", () => {
+    montar();
 
-    expect(mockUsePaciente).toHaveBeenCalledWith("paciente-123", { rol: "medico" });
+    expect(usePaciente).toHaveBeenCalledWith("paciente-123", { rol: "medico" });
   });
 
-  it("muestra los datos que la fila del listado no trae", () => {
-    render(
-      <FichaPacienteScreen
-        route={{ params: { pacienteId: "paciente-123" } }}
-        navigation={navegacion}
-      />,
-    );
+  it("la cabecera muestra el nombre y el DPI reales del modelo", () => {
+    montar();
 
-    expect(screen.getByText("Juana Inventada")).toBeTruthy();
-    expect(screen.getByText("Expediente 000123")).toBeTruthy();
-    expect(screen.getByText("DPI: 1234567890101")).toBeTruthy();
-    // La pestana de datos generales arranca abierta y lleva el resto del expediente.
+    expect(screen.getByText("Juan Perez Demo")).toBeTruthy();
+    expect(screen.getByText(/1234567890101/)).toBeTruthy();
+  });
+
+  it("mientras carga muestra el estado de carga y no la ficha", () => {
+    usePaciente.mockReturnValue({
+      paciente: null,
+      cargando: true,
+      error: null,
+      recargar: jest.fn(),
+    });
+    montar();
+
+    expect(screen.queryByText("Juan Perez Demo")).toBeNull();
+  });
+
+  it("si la consulta falla lo dice, en vez de quedarse en blanco", () => {
+    usePaciente.mockReturnValue({
+      paciente: null,
+      cargando: false,
+      error: { mensaje: "No hay conexion con el servidor" },
+      recargar: jest.fn(),
+    });
+    montar();
+
+    expect(screen.getByText("No hay conexion con el servidor")).toBeTruthy();
+  });
+
+  it("sin pacienteId lo dice, que es el caso de una navegacion mal armada", () => {
+    render(<FichaPacienteScreen route={{}} navigation={navegacion} />);
+
+    expect(screen.getByText(/No se proporcionó el paciente/)).toBeTruthy();
+  });
+
+  // Issue #838: la pestania de datos generales se quitaba de la lista, asi que en movil faltaba
+  // la mitad del expediente y solo se podia ver abriendo el formulario de edicion.
+  it("la pestania de datos generales muestra lo que la fila del listado no trae", () => {
+    montar();
+
+    fireEvent.press(screen.getByText("Datos generales"));
+
     expect(screen.getByText("Español")).toBeTruthy();
     expect(screen.getByText("Persona Inventada")).toBeTruthy();
     expect(screen.getByText("Madre")).toBeTruthy();
+    expect(screen.getByText("Municipio Inventado")).toBeTruthy();
+    expect(screen.getByText("000123")).toBeTruthy();
   });
 
-  it("sin id no inventa una ficha vacia", () => {
-    render(<FichaPacienteScreen route={{}} navigation={navegacion} />);
+  it("se puede cambiar de pestania", () => {
+    montar();
 
-    expect(screen.getByText("No se indicó de qué paciente es esta ficha.")).toBeTruthy();
+    fireEvent.press(screen.getByText("Recetas"));
+
+    expect(screen.getByText("Recetas")).toBeTruthy();
   });
 
-  it("mientras carga no pinta una ficha a medias", () => {
-    estado.paciente = null;
-    estado.cargando = true;
+  // Las dos pantallas de destino leen `params.pacienteId`: navegar con el objeto entero las
+  // dejaba sin paciente, que es el defecto que esta prueba impide que vuelva.
+  it("los botones de triaje y consulta navegan con el id del paciente", () => {
+    montar();
 
-    render(
-      <FichaPacienteScreen
-        route={{ params: { pacienteId: "paciente-123" } }}
-        navigation={navegacion}
-      />,
-    );
+    fireEvent.press(screen.getByText("Nuevo Triaje"));
+    expect(navegacion.navigate).toHaveBeenCalledWith("Triaje", { pacienteId: "paciente-123" });
 
-    expect(screen.getByText("Cargando la ficha del paciente...")).toBeTruthy();
+    fireEvent.press(screen.getByText("Nueva Consulta"));
+    expect(navegacion.navigate).toHaveBeenCalledWith("Consulta", { pacienteId: "paciente-123" });
   });
 });

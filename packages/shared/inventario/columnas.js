@@ -67,11 +67,22 @@ export const COLUMNAS_MIS_MOVIMIENTOS = [
   { id: "createdAt", label: "Fecha", tipo: TIPOS_DE_PRESENTACION.FECHA },
 ];
 
+/**
+ * Columnas de la existencia disponible, que es la fila que arma `aExistencia()` en
+ * existencias.api.js: una por medicamento, no una por lote.
+ *
+ * Nombraba `numeroLote` y `bodega`, y ninguna de las dos existe en esa fila: `consultarExistencias()`
+ * llama a fn_existencias_disponibles (00065), que **agrega**, asi que del lote solo quedan el conteo
+ * (`lotesDisponibles`) y el vencimiento mas proximo, y de la bodega no queda nada. Las dos columnas
+ * habrian salido vacias (issue #821); el detalle por lote y bodega esta en COLUMNAS_LOTE.
+ */
 export const COLUMNAS_EXISTENCIA = [
   { id: "medicamento", label: "Medicamento", tipo: TIPOS_DE_PRESENTACION.TEXTO, principal: true },
-  { id: "numeroLote", label: "Lote", tipo: TIPOS_DE_PRESENTACION.TEXTO },
-  { id: "bodega", label: "Bodega", tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  { id: "concentracion", label: "Concentracion", tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  { id: "presentacion", label: "Presentacion", tipo: TIPOS_DE_PRESENTACION.TEXTO },
   { id: "cantidadDisponible", label: "Disponible", tipo: TIPOS_DE_PRESENTACION.NUMERO },
+  { id: "lotesDisponibles", label: "Lotes", tipo: TIPOS_DE_PRESENTACION.NUMERO },
+  { id: "fechaVencimientoProxima", label: "Vence", tipo: TIPOS_DE_PRESENTACION.FECHA },
 ];
 
 export const COLUMNAS_ALERTA = [

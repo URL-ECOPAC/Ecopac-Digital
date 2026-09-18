@@ -1,126 +1,138 @@
-// Prueba de CondicionesPacienteSeccion (issue #838).
+// Pruebas de CondicionesPacienteSeccion (issue #818).
 //
-// La version anterior de esta prueba mockeaba `useCondicionesCronicas` y
-// `actualizarCondicionCronica`, dos nombres que @ecopac/shared NUNCA exporto: por eso pasaba en
-// verde mientras la pestana, en un telefono de verdad, no mostraba ni una sola condicion. El
-// mock es lo unico que sostenia la ilusion. Ahora se mockea el hook que existe,
-// useCondicionesPaciente, con la forma que de verdad devuelve.
+// POR QUE SE REESCRIBIO
+//
+// La version anterior simulaba `useCondicionesCronicas` y `actualizarCondicionCronica`, dos
+// nombres que **no existen en @ecopac/shared**. `jest.mock` acepta simular lo que sea, exista o
+// no, asi que la prueba pasaba en verde mientras la pantalla mostraba una lista vacia para
+// siempre y el boton "Resolver" habria reventado al pulsarlo.
+//
+// Ahora simula el hook real, `useCondicionesPaciente`, con la forma que devuelve de verdad: el
+// nombre de la condicion viaja en `condicion` -lo aplana aCondicionDelPaciente()-, y los permisos
+// y `marcarResuelta` los resuelve el propio hook.
 
-import { render, screen, fireEvent, waitFor } from "@testing-library/react-native";
+import React from "react";
+import { Alert } from "react-native";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react-native";
+import { useCondicionesPaciente } from "@ecopac/shared";
 
 import CondicionesPacienteSeccion from "../CondicionesPacienteSeccion";
 
-const mockUseCondicionesPaciente = jest.fn();
-
 jest.mock("@ecopac/shared", () => ({
   ...jest.requireActual("@ecopac/shared"),
-  useCondicionesPaciente: (...argumentos) => mockUseCondicionesPaciente(...argumentos),
+  useCondicionesPaciente: jest.fn(),
 }));
 
-const marcarResuelta = jest.fn(async () => ({ ok: true }));
-const agregar = jest.fn(async () => ({ ok: true }));
-const recargar = jest.fn();
-const setCampo = jest.fn();
-
-// obtenerCondicionesDelPaciente() devuelve el nombre en `condicion`, no en `nombre`.
 const CONDICION_ACTIVA = {
-  id: "padecimiento-101",
-  condicion: "Hipertensión arterial",
+  id: "condicion-101",
+  condicion: "Hipertensión Arterial",
   estado: "activa",
-  fechaDiagnostico: "2024-03-01",
-  notas: "Toma medicación diaria",
+  notas: "Toma Enalapril",
 };
 
-function estado(cambios = {}) {
+const PERMISOS_DE_MEDICO = {
+  puedeVer: true,
+  puedeRegistrar: true,
+  puedeEditar: true,
+  puedeQuitar: true,
+};
+
+function estado(extra = {}) {
   return {
     condiciones: [CONDICION_ACTIVA],
     cargando: false,
     error: null,
-    errorDeAlta: null,
-    errores: {},
     enviando: false,
-    permisos: { puedeVer: true, puedeRegistrar: true, puedeEditar: true, puedeQuitar: true },
-    valores: {},
-    setCampo,
-    agregar,
-    marcarResuelta,
-    recargar,
-    catalogos: { condicionesCronicas: [], estadosCondicionCronica: [] },
-    ...cambios,
+    permisos: PERMISOS_DE_MEDICO,
+    marcarResuelta: jest.fn(async () => ({ ok: true })),
+    recargar: jest.fn(),
+    ...extra,
   };
 }
 
 beforeEach(() => {
   jest.clearAllMocks();
-  mockUseCondicionesPaciente.mockReturnValue(estado());
+  jest.spyOn(Alert, "alert");
 });
 
 describe("CondicionesPacienteSeccion", () => {
-  it("consulta el hook que existe, con el paciente y el rol", () => {
-    render(<CondicionesPacienteSeccion pacienteId="paciente-1" rol="medico" />);
+  it("pide las condiciones con el rol de la sesion", () => {
+    useCondicionesPaciente.mockReturnValue(estado());
 
-    expect(mockUseCondicionesPaciente).toHaveBeenCalledWith("paciente-1", { rol: "medico" });
+    render(<CondicionesPacienteSeccion pacienteId="p-1" rol="medico" />);
+
+    expect(useCondicionesPaciente).toHaveBeenCalledWith("p-1", { rol: "medico" });
   });
 
-  it("muestra cada condicion con su nombre y su estado", () => {
-    render(<CondicionesPacienteSeccion pacienteId="paciente-1" rol="medico" />);
+  it("muestra el nombre de la condicion tal como lo devuelve la API", () => {
+    useCondicionesPaciente.mockReturnValue(estado());
 
-    expect(screen.getByText("Hipertensión arterial · Activa")).toBeTruthy();
-    expect(screen.getByText("Toma medicación diaria")).toBeTruthy();
+    render(<CondicionesPacienteSeccion pacienteId="p-1" rol="medico" />);
+
+    expect(screen.getByText(/Hipertensión Arterial/)).toBeTruthy();
+    expect(screen.getByText("Toma Enalapril")).toBeTruthy();
   });
 
-  it("sin condiciones lo dice, en vez de dejar la tarjeta vacia", () => {
-    mockUseCondicionesPaciente.mockReturnValue(estado({ condiciones: [] }));
-    render(<CondicionesPacienteSeccion pacienteId="paciente-1" rol="medico" />);
+  it("sin condiciones lo dice", () => {
+    useCondicionesPaciente.mockReturnValue(estado({ condiciones: [] }));
+
+    render(<CondicionesPacienteSeccion pacienteId="p-1" rol="medico" />);
 
     expect(screen.getByText("Sin condiciones crónicas registradas.")).toBeTruthy();
   });
 
-  it("Resolver llama a marcarResuelta con el id del padecimiento y avisa a la ficha", async () => {
-    const alActualizar = jest.fn();
-    render(
-      <CondicionesPacienteSeccion
-        pacienteId="paciente-1"
-        rol="medico"
-        alActualizar={alActualizar}
-      />,
+  it("si la consulta falla muestra el error, no una lista vacia", () => {
+    useCondicionesPaciente.mockReturnValue(
+      estado({ error: { mensaje: "No hay conexion" }, condiciones: [] }),
     );
 
+    render(<CondicionesPacienteSeccion pacienteId="p-1" rol="medico" />);
+
+    expect(screen.getByText("No hay conexion")).toBeTruthy();
+  });
+
+  it("quien no puede quitar no ve el boton de resolver", () => {
+    useCondicionesPaciente.mockReturnValue(
+      estado({ permisos: { ...PERMISOS_DE_MEDICO, puedeQuitar: false } }),
+    );
+
+    render(<CondicionesPacienteSeccion pacienteId="p-1" rol="voluntario general" />);
+
+    expect(screen.queryByText("Resolver")).toBeNull();
+  });
+
+  it("resolver una condicion llama al hook y avisa al padre", async () => {
+    const marcarResuelta = jest.fn(async () => ({ ok: true }));
+    const alActualizar = jest.fn();
+    useCondicionesPaciente.mockReturnValue(estado({ marcarResuelta }));
+
+    render(
+      <CondicionesPacienteSeccion pacienteId="p-1" rol="medico" alActualizar={alActualizar} />,
+    );
     fireEvent.press(screen.getByText("Resolver"));
 
-    await waitFor(() => expect(marcarResuelta).toHaveBeenCalledWith("padecimiento-101"));
+    // La confirmacion es un Alert nativo: se dispara el boton "Resolver" del propio Alert.
+    const [, , botones] = Alert.alert.mock.calls[0];
+    await botones.find((boton) => boton.text === "Resolver").onPress();
+
+    await waitFor(() => expect(marcarResuelta).toHaveBeenCalledWith("condicion-101"));
     expect(alActualizar).toHaveBeenCalled();
   });
 
-  it("un rol que no puede editar no ve Resolver ni el alta", () => {
-    mockUseCondicionesPaciente.mockReturnValue(
-      estado({
-        permisos: { puedeVer: true, puedeRegistrar: false, puedeEditar: false, puedeQuitar: false },
-      }),
+  it("si resolver falla lo dice y no avisa al padre", async () => {
+    const marcarResuelta = jest.fn(async () => ({ ok: false }));
+    const alActualizar = jest.fn();
+    useCondicionesPaciente.mockReturnValue(estado({ marcarResuelta }));
+
+    render(
+      <CondicionesPacienteSeccion pacienteId="p-1" rol="medico" alActualizar={alActualizar} />,
     );
-    render(<CondicionesPacienteSeccion pacienteId="paciente-1" rol="voluntario general" />);
+    fireEvent.press(screen.getByText("Resolver"));
 
-    expect(screen.queryByText("Resolver")).toBeNull();
-    expect(screen.queryByText("Agregar condición")).toBeNull();
-  });
+    const [, , botones] = Alert.alert.mock.calls[0];
+    await botones.find((boton) => boton.text === "Resolver").onPress();
 
-  it("deja agregar una condicion sin salir de la ficha (issue #838)", () => {
-    render(<CondicionesPacienteSeccion pacienteId="paciente-1" rol="medico" />);
-
-    fireEvent.press(screen.getByText("Agregar condición"));
-
-    expect(screen.getByText("Condición")).toBeTruthy();
-    expect(screen.getByText("Fecha de diagnóstico")).toBeTruthy();
-  });
-
-  it("propaga el error de carga con su boton de reintentar", () => {
-    mockUseCondicionesPaciente.mockReturnValue(
-      estado({ error: { mensaje: "No se pudieron cargar las condiciones." } }),
-    );
-    render(<CondicionesPacienteSeccion pacienteId="paciente-1" rol="medico" />);
-
-    expect(screen.getByText("No se pudieron cargar las condiciones.")).toBeTruthy();
-    fireEvent.press(screen.getByText("Reintentar"));
-    expect(recargar).toHaveBeenCalled();
+    await waitFor(() => expect(Alert.alert).toHaveBeenCalledTimes(2));
+    expect(alActualizar).not.toHaveBeenCalled();
   });
 });

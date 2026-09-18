@@ -11,7 +11,6 @@
  * que este archivo escribia a mano son ahora --radio-lg y --radio-pill. */
 
 .modulo-pacientes {
-  --pac-borde: 1px solid var(--color-border);
 }
 
 /* --- Cabecera de pantalla --- */
@@ -107,7 +106,7 @@
 }
 
 .modulo-pacientes .pac-datos {
-  border-top: var(--pac-borde);
+  border-top: 1px solid var(--color-border);
   margin-top: var(--spacing-md);
   padding-top: var(--spacing-md);
 }
@@ -127,7 +126,7 @@
 }
 
 .modulo-pacientes .pac-entrada + .pac-entrada {
-  border-top: var(--pac-borde);
+  border-top: 1px solid var(--color-border);
   margin-top: var(--spacing-md);
   padding-top: var(--spacing-md);
 }
@@ -156,7 +155,7 @@
 .modulo-pacientes .pac-tarjeta-paciente {
   align-items: flex-start;
   background-color: var(--color-surface);
-  border: var(--pac-borde);
+  border: 1px solid var(--color-border);
   border-radius: var(--radio-lg);
   box-shadow: var(--sombra-sm);
   display: flex;

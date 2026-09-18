@@ -237,12 +237,17 @@ export async function registrarSalida({ bodega_id, lote_id, cantidad, motivo, us
       };
     }
 
-    const { data: existencia } = await supabase
+    const { data: existencia, error: errorExistencia } = await supabase
       .from("existencias")
       .select("cantidad_disponible")
       .eq("lote_id", lote_id)
       .eq("bodega_id", bodega_id)
       .maybeSingle();
+
+    // "No hay fila" y "la consulta fallo" llegan los dos como `existencia` en null, y confundirlos
+    // hacia que una denegacion de RLS o un corte de red se leyeran como "Stock insuficiente" con el
+    // lote lleno: el mensaje mandaba a contar cajas en vez de a mirar la conexion (issue #821).
+    if (errorExistencia) return { datos: null, error: normalizarError(errorExistencia) };
 
     // Sin fila de existencias para esa combinacion (lote, bodega) es lo mismo que stock 0,
     // mismo criterio que fn_aplicar_ajuste_existencias (00047).

@@ -46,12 +46,18 @@ export async function aprobarMovimiento(idMovimiento, { usuarioId, rolUsuario })
     // experiencia de usuario: la garantia real la da fn_aplicar_ajuste_existencias (00047), que
     // vuelve a comprobarlo y rechaza la aprobacion si no alcanza.
     if (mov.tipo === TIPOS_DE_MOVIMIENTO.SALIDA) {
-      const { data: existencia } = await supabase
+      const { data: existencia, error: errorExistencia } = await supabase
         .from("existencias")
         .select("cantidad_disponible")
         .eq("lote_id", mov.lote_id)
         .eq("bodega_id", mov.bodega_id)
         .maybeSingle();
+
+      // Sin fila es stock 0, pero "no hay fila" y "la consulta fallo" no son lo mismo: una
+      // denegacion de RLS o un corte de red tambien dejan `existencia` en null, y entonces quien
+      // aprueba leia "Stock insuficiente" con el lote lleno, sin nada que diagnosticar desde el
+      // campo (issue #821). El error se distingue y se devuelve normalizado.
+      if (errorExistencia) return { datos: null, error: normalizarError(errorExistencia) };
 
       const disponible = existencia?.cantidad_disponible ?? 0;
       if (disponible < mov.cantidad) {

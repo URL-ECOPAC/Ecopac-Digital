@@ -208,6 +208,30 @@ describe("Módulo de Inventario - API Movimientos", () => {
       expect(res.error.mensaje).toContain("supera la existencia disponible");
     });
 
+    // La ausencia de fila y el fallo de la consulta llegan los dos con `data` en null: si no se
+    // distinguen, una denegacion de RLS o un corte de red mandan a quien despacha a contar cajas
+    // en vez de a mirar la conexion (issue #821).
+    it("distingue un fallo de la consulta de existencias de un stock que no alcanza", async () => {
+      mockSupabase.single.mockResolvedValueOnce({
+        data: { id: "LOTE-1", fecha_vencimiento: "2099-01-01" },
+        error: null,
+      });
+      mockSupabase.maybeSingle.mockResolvedValueOnce({
+        data: null,
+        error: { code: "42501", message: "permission denied for table existencias" },
+      });
+
+      const res = await registrarSalida({
+        bodega_id: "B-1",
+        lote_id: "LOTE-1",
+        cantidad: 1,
+        usuarioId: "U-1",
+      });
+
+      expect(res.error.mensaje).not.toContain("supera la existencia disponible");
+      expect(res.error.codigo).toBeTruthy();
+    });
+
     it("registra la salida cuando hay existencia suficiente", async () => {
       mockSupabase.single
         .mockResolvedValueOnce({

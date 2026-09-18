@@ -24,7 +24,7 @@ const styles = StyleSheet.create({
     fontFamily: typography.fontFamilyBase,
     fontSize: typography.sizes.xl,
     fontWeight: typography.weights.bold,
-    color: colors.error || colors.danger,
+    color: colors.danger,
     marginBottom: spacing.sm,
   },
   mensaje: {

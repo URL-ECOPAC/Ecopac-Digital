@@ -48,7 +48,7 @@ El sistema decide permisos en cuatro sitios. **Solo el ultimo protege.**
 | #   | Capa                         | Donde vive                                  | Que hace                                               | Protege?                                                 |
 | --- | ---------------------------- | ------------------------------------------- | ------------------------------------------------------ | -------------------------------------------------------- |
 | 1   | Navegacion                   | `packages/shared/navegacion.js`             | Decide que modulos aparecen en el menu                 | **No.** Ocultar una opcion no impide llegar a la ruta    |
-| 2   | Guard de rutas               | `apps/web/src/components/RutaProtegida.jsx` | Corta la navegacion a una ruta cuyo rol no alcanza     | **No.** Es del lado del cliente; se salta con la consola |
+| 2   | Guard de rutas               | `apps/web/src/components/RutaProtegida.jsx` y `apps/mobile/src/components/RutaProtegida.js` | Corta la navegacion a una ruta cuyo rol no alcanza     | **No.** Es del lado del cliente; se salta con la consola |
 | 3   | `permisos.js` de cada modulo | `packages/shared/<modulo>/permisos.js`      | Decide que botones se dibujan y cuales se deshabilitan | **No.** Es presentacion                                  |
 | 4   | **RLS + GRANT**              | `supabase/migrations/`                      | Decide que filas devuelve y acepta la base             | **Si. Es la unica.**                                     |
 
@@ -108,10 +108,18 @@ fila ya confirmada". **Ese razonamiento dejo de ser cierto con la `00079`**: aho
 administrador desactivado. No hay defecto -el `SECURITY DEFINER` es justo lo que lo salva-, pero
 la migracion esta aplicada y no se edita.
 
-> **La prueba de que la capa 4 basta:** la app movil **no aplica hoy ningun control de acceso por
-> rol** (issue #427) -su navegador registra las mismas pantallas para los cinco roles-, y aun asi
-> los datos siguen protegidos, porque la base sigue negando. Lo que falla ahi es la experiencia:
-> el usuario llega a una pantalla que se le va a vaciar.
+> **La prueba de que la capa 4 basta:** la app movil **estuvo sin ningun control de acceso por
+> rol** (issue #427) -su navegador registraba las mismas pantallas para los cinco roles-, y aun asi
+> los datos siguieron protegidos, porque la base seguia negando. Lo que fallaba ahi era la
+> experiencia: el usuario llegaba a una pantalla que se le iba a vaciar.
+>
+> Desde la **#820** la capa 2 ya existe entera en movil: las veintitres pantallas de los cuatro
+> stacks van envueltas en `RutaProtegida`, con los roles que `rolesDelModulo()` declara en
+> `packages/shared/navegacion.js`, y una lista de roles vacia **deniega** en vez de dejar pasar a
+> cualquier sesion autenticada. Que ninguna pantalla se registre sin guarda lo comprueba
+> `apps/mobile/src/navigation/guardaDeRol.test.js`, que recorre el arbol de navegacion. Sigue sin
+> proteger nada -es cliente-: lo que evita es que alguien llegue a una pantalla que no va a poder
+> usar.
 
 ## La matriz
 
