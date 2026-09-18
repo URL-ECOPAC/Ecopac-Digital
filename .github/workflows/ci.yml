@@ -25,16 +25,43 @@ jobs:
 
     steps:
       - name: Descargar el código
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
       - name: Configurar Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: "22"
           cache: "npm"
 
       - name: Instalar dependencias
         run: npm ci
+
+      # Bloquea solo lo critico: medido el 2026-09-17 hay 15 vulnerabilidades conocidas (14
+      # moderate, 1 high) en la cadena de @expo/config-plugins (tooling de mobile, no codigo
+      # publicado), sin arreglo disponible sin un downgrade que rompe Expo. Bloquear en "high"
+      # dejaria el PR en rojo por algo que no se puede resolver hoy; "critical" si es nuevo de
+      # verdad. dependabot.yml mantiene las dependencias al dia por separado (issue #760).
+      - name: Auditoria de dependencias (bloqueante en critical)
+        run: npm audit --audit-level=critical
+
+      - name: Auditoria de dependencias (aviso en high, no bloquea)
+        if: always()
+        run: |
+          if npm audit --audit-level=high > /tmp/npm-audit.txt 2>&1; then
+            echo "Sin vulnerabilidades high o superiores."
+            exit 0
+          fi
+
+          echo "::warning::npm audit encontro vulnerabilidades high o superiores. Revisar el resumen."
+          {
+            echo "## Vulnerabilidades de dependencias (high o superior)"
+            echo
+            echo '```'
+            cat /tmp/npm-audit.txt
+            echo '```'
+            echo
+            echo "Detalle de por que no bloquea el PR en docs/SEGURIDAD.md."
+          } >> "$GITHUB_STEP_SUMMARY"
 
       # Va primero de las comprobaciones porque es la mas barata: no usa la base de datos ni
       # credenciales, solo compara texto entre packages/shared y supabase/migrations/, y tarda
@@ -74,6 +101,15 @@ jobs:
       # aplicarse sin ningun error de build y las rutas empiezan a dar 404 al recargar.
       - name: Comprobar el rewrite de SPA de Vercel
         run: npm run verificar:rewrite-vercel
+
+      # Cabeceras de seguridad HTTP (issue #760): vercel.json (raiz), apps/web/vercel.json y
+      # apps/web/nginx.conf tienen que declarar las mismas seis cabeceras. Sin esto, alguien
+      # corrige un lugar y el otro queda desactualizado sin ningun error de build.
+      - name: Comprobar las cabeceras de seguridad HTTP
+        run: npm run verificar:cabeceras-http
+
+      - name: Comprobar el verificador de cabeceras contra sus propios casos
+        run: npm run verificar:cabeceras-http -- --autoprueba
 
       # AGENTS.md prohibe los emojis en el codigo y nada lo verificaba: al escribir la guarda
       # habia 79 lineas con pictogramas en 30 archivos (issue #700). La mitad eran comentarios;

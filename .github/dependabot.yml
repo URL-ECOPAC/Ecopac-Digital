@@ -1,0 +1,22 @@
+version: 2
+updates:
+  # npm workspaces: directory "/" cubre todo el arbol via package-lock.json (apps/web,
+  # apps/mobile, packages/shared, packages/ui-tokens), no hace falta una entrada por workspace.
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    target-branch: "develop"
+    open-pull-requests-limit: 5
+    groups:
+      dependencias-produccion:
+        dependency-type: "production"
+      dependencias-desarrollo:
+        dependency-type: "development"
+
+  # Mantiene al dia el SHA fijo de las acciones de terceros (issue #760).
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    target-branch: "develop"

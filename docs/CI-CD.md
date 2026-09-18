@@ -20,14 +20,17 @@ CI, asi que un CI en rojo no detiene un deploy de Vercel.
 
 Un solo job, **Lint y build**, que corre en este orden:
 
-1. **Guarda de esquema**: `packages/shared` contra `supabase/migrations/` (issue #492).
-2. `npm run lint` en todos los workspaces.
-3. `npm run format:check` con Prettier, alcance JS/JSX/TS/TSX/JSON (issue #515).
-4. `npm test` en todos los workspaces que tengan el script (issue #218), que desde la issue
+1. **Auditoria de dependencias** con `npm audit` (issue #760), bloqueante solo en `critical`.
+2. **Guarda de esquema**: `packages/shared` contra `supabase/migrations/` (issue #492).
+3. **Cabeceras de seguridad HTTP**: `vercel.json` (raiz y `apps/web`) y `apps/web/nginx.conf`
+   declaran las mismas seis cabeceras (issue #760).
+4. `npm run lint` en todos los workspaces.
+5. `npm run format:check` con Prettier, alcance JS/JSX/TS/TSX/JSON (issue #515).
+6. `npm test` en todos los workspaces que tengan el script (issue #218), que desde la issue
    **#219** comprueba ademas **cobertura de las validaciones**. El mismo paso avisa (issue
    #515) que workspaces se saltaron por no tener script `test`.
-5. **Resumen de las pruebas** en la pagina de la corrida (issue #223).
-6. Build de la web con los secrets del ambiente que corresponde a la rama.
+7. **Resumen de las pruebas** en la pagina de la corrida (issue #223).
+8. Build de la web con los secrets del ambiente que corresponde a la rama.
 
 Cada paso va antes del siguiente por lo que cuesta: la guarda de esquema es analisis de texto y
 tarda un segundo; una prueba rota se ve en segundos, sin esperar a que la web compile. Y todo va
@@ -348,6 +351,42 @@ visto fallar no se sabe si comprueba algo**; el caso bueno esta por un motivo co
 positivo aqui bloquea los PR de todo el equipo, porque esto corre dentro de un check requerido.
 `scripts/` no es un workspace, asi que `npm test` no lo alcanza; por eso la autoprueba es un paso
 propio del CI.
+
+### Auditoria de dependencias (issue #760)
+
+Dos pasos, con umbrales distintos a proposito:
+
+| Paso | Umbral | Bloquea el PR |
+| --- | --- | --- |
+| "Auditoria de dependencias (bloqueante en critical)" | `npm audit --audit-level=critical` | Si |
+| "Auditoria de dependencias (aviso en high, no bloquea)" | `npm audit --audit-level=high` | No: deja `::warning::` y un bloque en `$GITHUB_STEP_SUMMARY` |
+
+Medido el 2026-09-17: 15 vulnerabilidades conocidas (14 moderate, 1 high), la alta en la cadena
+de `@expo/config-plugins` (tooling de mobile, no codigo publicado al cliente), sin arreglo
+disponible sin un downgrade que rompe Expo. Bloquear en `high` dejaria el PR en rojo por algo
+que no se puede resolver hoy; `critical` si es nuevo de verdad. Revisar este umbral cuando la
+cadena de Expo se actualice o cuando aparezca una vulnerabilidad `critical` real.
+
+### Dependencias fijadas: Dependabot y acciones por SHA (issue #760)
+
+- **[`.github/dependabot.yml`](../.github/dependabot.yml)** abre PRs mensuales hacia `develop`
+  para el ecosistema `npm` (todo el arbol de workspaces via `package-lock.json`, agrupado por
+  `dependency-type`) y para `github-actions`.
+- **Las ~17 referencias a acciones de terceros en los cinco workflows estan fijadas por SHA**,
+  no por etiqueta movil (`actions/checkout`, `actions/setup-node`, `supabase/setup-cli`,
+  `denoland/setup-deno`, `actions/github-script`), con el tag como comentario al lado
+  (`uses: owner/accion@<sha> # v5`). Una etiqueta puede volver a apuntar a otro commit sin que
+  nadie lo note; un SHA no. Dependabot (ecosistema `github-actions`, arriba) abre el PR que
+  actualiza el SHA cuando sale una version nueva, asi que fijarlo no significa dejar de
+  actualizar, solo hacerlo de forma visible y revisada.
+- **Caso particular: `denoland/setup-deno@v2` no era una etiqueta, era una rama.** Confirmado
+  contra el repositorio de la accion: no existe un tag `v2`, solo `v2.0.0`...`v2.0.5` y una
+  rama `v2` que se mueve con cada patch. Fijarla por SHA importaba mas ahi que en las demas,
+  donde `v2`/`v3`/`v4`/`v5`/`v8` si son etiquetas (inmutables por convencion, aunque nada impide
+  reescribirlas).
+- **`.nvmrc`** (raiz, `22`) y **`engines.node: "22.x"`** en `package.json` (raiz) documentan la
+  version que los workflows ya fijaban (`node-version: "22"`), para quien instale localmente con
+  `nvm use` o reciba un aviso de npm si usa otra version.
 
 ## Que hace el workflow de Supabase
 

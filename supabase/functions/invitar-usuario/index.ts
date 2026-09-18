@@ -14,7 +14,7 @@
 
 import { createClient } from "@supabase/supabase-js";
 
-import { corsHeaders } from "../_shared/cors.ts";
+import { corsHeadersPara } from "../_shared/cors.ts";
 
 // Mismo shape que COLUMNAS_DEL_PERFIL en packages/shared/usuarios/api.js. Se duplica: esta
 // funcion corre en Deno, fuera del bundle de shared, y las Edge Functions de este proyecto
@@ -25,15 +25,15 @@ const COLUMNAS_DEL_PERFIL =
 
 const CAMPOS_OBLIGATORIOS = ["nombres", "apellidos", "email", "rol"];
 
-function respuestaJson(status: number, cuerpo: unknown) {
+function respuestaJson(req: Request, status: number, cuerpo: unknown) {
   return new Response(JSON.stringify(cuerpo), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { ...corsHeadersPara(req), "Content-Type": "application/json" },
   });
 }
 
-function respuestaDeError(status: number, code: string, message: string) {
-  return respuestaJson(status, { code, message });
+function respuestaDeError(req: Request, status: number, code: string, message: string) {
+  return respuestaJson(req, status, { code, message });
 }
 
 export async function manejarSolicitud(
@@ -41,11 +41,11 @@ export async function manejarSolicitud(
   { crearCliente = createClient }: { crearCliente?: typeof createClient } = {},
 ): Promise<Response> {
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: corsHeadersPara(req) });
   }
 
   if (req.method !== "POST") {
-    return respuestaDeError(405, "42601", "Metodo no soportado: use POST.");
+    return respuestaDeError(req, 405, "42601", "Metodo no soportado: use POST.");
   }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
@@ -55,6 +55,7 @@ export async function manejarSolicitud(
   if (!supabaseUrl || !anonKey || !serviceRoleKey) {
     console.error("invitar-usuario: faltan variables de entorno de Supabase.");
     return respuestaDeError(
+      req,
       500,
       "desconocido",
       "La funcion no esta configurada correctamente.",
@@ -69,7 +70,7 @@ export async function manejarSolicitud(
     // ========================================================================
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      return respuestaDeError(401, "42501", "Falta la sesion.");
+      return respuestaDeError(req, 401, "42501", "Falta la sesion.");
     }
 
     const clienteDeQuienLlama = crearCliente(supabaseUrl, anonKey, {
@@ -83,7 +84,7 @@ export async function manejarSolicitud(
     } = await clienteDeQuienLlama.auth.getUser();
 
     if (errorDeSesion || !user) {
-      return respuestaDeError(401, "42501", "La sesion no es valida o expiro.");
+      return respuestaDeError(req, 401, "42501", "La sesion no es valida o expiro.");
     }
 
     // "rol, activo": pedir solo "rol" reabria el agujero que cerro la 00079. La politica de
@@ -105,6 +106,7 @@ export async function manejarSolicitud(
       !perfilDeQuienLlama?.activo
     ) {
       return respuestaDeError(
+        req,
         403,
         "42501",
         "Solo un administrador puede invitar a una persona nueva.",
@@ -120,6 +122,7 @@ export async function manejarSolicitud(
       body = await req.json();
     } catch {
       return respuestaDeError(
+        req,
         400,
         "22P02",
         "El cuerpo de la peticion no es JSON valido.",
@@ -131,6 +134,7 @@ export async function manejarSolicitud(
     );
     if (camposFaltantes.length > 0) {
       return respuestaDeError(
+        req,
         400,
         "23502",
         `Faltan datos obligatorios: ${camposFaltantes.join(", ")}.`,
@@ -167,6 +171,7 @@ export async function manejarSolicitud(
     if (errorDeAlta) {
       const status = errorDeAlta.code === "23505" ? 409 : 400;
       return respuestaDeError(
+        req,
         status,
         errorDeAlta.code || "desconocido",
         errorDeAlta.message || "No se pudo dar de alta a la persona.",
@@ -224,13 +229,14 @@ export async function manejarSolicitud(
       .eq("id", idNuevoUsuario)
       .maybeSingle();
 
-    return respuestaJson(200, {
+    return respuestaJson(req, 200, {
       ...(perfilCreado ?? { id: idNuevoUsuario }),
       correoEnviado: !errorDeCorreo,
     });
   } catch (error) {
     console.error("invitar-usuario: error inesperado.", error);
     return respuestaDeError(
+      req,
       500,
       "desconocido",
       "Ocurrio un error inesperado dando de alta.",

@@ -51,7 +51,7 @@ jobs:
       PROYECTO: ${{ secrets[matrix.secret] }}
     steps:
       - name: Descargar el codigo
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           ref: ${{ matrix.rama }}
 
@@ -90,7 +90,7 @@ jobs:
       # La accion va en v3 (composite, instala desde npm) y no en v1, que corre sobre Node 20.
       - name: Instalar Supabase CLI
         if: steps.check.outputs.listo == 'true'
-        uses: supabase/setup-cli@v3
+        uses: supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520 # v3
         with:
           version: 2.115.0
 
@@ -166,7 +166,7 @@ jobs:
 
       - name: Abrir issue si la base quedo atras
         if: steps.check.outputs.listo == 'true' && steps.estado.outputs.al_dia == 'false'
-        uses: actions/github-script@v8
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         env:
           AMBIENTE: ${{ matrix.ambiente }}
           RAMA: ${{ matrix.rama }}
