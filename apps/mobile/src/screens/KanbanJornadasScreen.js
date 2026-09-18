@@ -4,6 +4,7 @@ import { useJornadasKanban } from "../../../../packages/shared/jornadas/useJorna
 import { useSesionCompartida } from "../contexto/SesionProvider";
 import { KanbanBoard } from "../components";
 import { LoadingState, ErrorState } from "../components";
+import { colors } from "../../../../packages/ui-tokens/index";
 
 export default function KanbanJornadasScreen() {
   const navigation = useNavigation();
@@ -22,7 +23,7 @@ export default function KanbanJornadasScreen() {
       }
     >
       <View style={estilos.cabecera}>
-        <Text style={estilos.titulo}> Tablero de Jornadas</Text>
+        <Text style={estilos.titulo}>Tablero de Jornadas</Text>
         <Text style={estilos.subtitulo}>Mueve las tarjetas para cambiar el estado</Text>
       </View>
 
@@ -45,7 +46,7 @@ const estilos = StyleSheet.create({
   contenedor: {
     flex: 1,
     padding: 16,
-    backgroundColor: "#f8fafc",
+    backgroundColor: colors.background, //  Existe: #F7F8FA
   },
   cabecera: {
     marginBottom: 16,
@@ -53,11 +54,11 @@ const estilos = StyleSheet.create({
   titulo: {
     fontSize: 20,
     fontWeight: "800",
-    color: "#1e293b",
+    color: colors.text, //  Existe: #2D2D2D
   },
   subtitulo: {
     fontSize: 13,
-    color: "#64748b",
+    color: colors.textMuted, //  Existe: #7A7A8A
     marginTop: 2,
   },
 });
