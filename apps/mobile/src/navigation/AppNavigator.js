@@ -105,7 +105,7 @@ function conGuardaDeRol(Componente, moduloId) {
   if (rolesPermitidos.length === 0) {
     throw new Error(
       `conGuardaDeRol: el modulo "${moduloId}" no existe en MODULOS. ` +
-        `Los ids validos son: ${MODULOS.map((m) => m.id).join(", ")}.`
+        `Los ids validos son: ${MODULOS.map((m) => m.id).join(", ")}.`,
     );
   }
   return marcarComoGuarda(Componente, rolesPermitidos, `conGuardaDeRol(${moduloId})`);
@@ -395,10 +395,7 @@ export default function AppNavigator({ haySesion }) {
     <NavigationContainer>
       <Root.Navigator screenOptions={{ headerShown: false }}>
         {/*  Ruta de Acceso Denegado — SIEMPRE disponible */}
-        <Root.Screen
-          name={ROUTES.ACCESO_DENEGADO}
-          component={AccesoDenegadoScreen}
-        />
+        <Root.Screen name={ROUTES.ACCESO_DENEGADO} component={AccesoDenegadoScreen} />
 
         {haySesion ? (
           <Root.Screen name={ROUTES.TABS} component={TabsNavigator} />
