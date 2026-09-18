@@ -45,6 +45,18 @@ function contenidoProtegido(rolesPermitidos) {
 describe("RutaProtegida", () => {
   beforeEach(() => {
     sesion.perfil = null;
+    sesion.cargando = false;
+  });
+
+  // Issue #840: justo despues de iniciar sesion hay usuario y el perfil se esta leyendo. Negar el
+  // acceso ahi era el error que se veia un instante en cada login.
+  it("mientras el perfil se esta leyendo no niega el acceso ni muestra el contenido", () => {
+    sesion.cargando = true;
+
+    contenidoProtegido([ROLES.MEDICO]);
+
+    expect(screen.queryByText("acceso denegado")).toBeNull();
+    expect(screen.queryByText("contenido protegido")).toBeNull();
   });
 
   it("sin sesion no deja pasar, aunque la lista de roles este vacia", () => {
