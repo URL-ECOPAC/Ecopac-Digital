@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { fechaLocalISO } from "@ecopac/shared";
 import { useCerrarAlTocarFuera } from "../hooks/useCerrarAlTocarFuera";
 
 export function ModalAltaLote({
@@ -16,7 +17,8 @@ export function ModalAltaLote({
     numero_lote: "",
     origen: "compra",
     proveedor_id: "",
-    fecha_ingreso: new Date().toISOString().split("T")[0],
+    // Dia local: toISOString() da el dia UTC, que en Guatemala es manana despues de las 18:00.
+    fecha_ingreso: fechaLocalISO(),
     fecha_vencimiento: "",
     cantidad: "",
     bodega_id: "",

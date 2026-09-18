@@ -90,6 +90,21 @@ export function aFechaLocal(valor) {
   return Number.isNaN(fecha.getTime()) ? null : fecha;
 }
 
+/**
+ * AAAA-MM-DD del dia LOCAL, el valor que espera una columna DATE y un campo de fecha.
+ *
+ * Es la operacion inversa de aFechaLocal() y la unica forma permitida de escribir "hoy" en un
+ * formulario. `new Date().toISOString().slice(0, 10)` da el dia UTC: en Guatemala (UTC-6), a
+ * partir de las 18:00 ya es manana, y asi se guardaban las donaciones registradas por la tarde
+ * con la fecha del dia siguiente (issue #840).
+ *
+ * @param {Date} [fecha] Por defecto, ahora.
+ * @returns {string} `"2026-08-18"`
+ */
+export function fechaLocalISO(fecha = new Date()) {
+  return `${fecha.getFullYear()}-${conDosDigitos(fecha.getMonth() + 1)}-${conDosDigitos(fecha.getDate())}`;
+}
+
 /** Indica si el valor se puede interpretar como fecha. */
 export function esFechaValida(valor) {
   return aFechaLocal(valor) !== null;

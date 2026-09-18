@@ -1,4 +1,4 @@
-import { exportarFilasACSV, useDashboardMetricas } from "@ecopac/shared";
+import { exportarFilasACSV, fechaLocalISO, useDashboardMetricas } from "@ecopac/shared";
 import { Form } from "react-bootstrap";
 import StatCard from "../components/StatCard";
 import { AccionesDeCabecera } from "../components/PageHeader";
@@ -83,7 +83,7 @@ export default function DashboardMetricasPage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `panel-impacto-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `panel-impacto-${fechaLocalISO()}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };

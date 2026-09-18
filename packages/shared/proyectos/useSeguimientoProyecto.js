@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { ESTADOS_JORNADA } from "../enums.js";
+import { fechaLocalISO } from "../formato/fechas.js";
 import { obtenerPresupuestoProyecto } from "../presupuestos/api.js";
 import { listarJornadasDelProyecto, obtenerProyecto } from "./api.js";
 import {
@@ -79,7 +80,8 @@ export function useSeguimientoProyecto({ proyectoId, proyectoInicial = null }) {
     cargar();
   }, [cargar]);
 
-  const fechaHoy = new Date().toISOString().slice(0, 10);
+  // Dia local, no UTC: despues de las 18:00 un hito se marcaba cumplido con fecha de manana.
+  const fechaHoy = fechaLocalISO();
 
   // Hitos procesados con estado de vencimiento
   const hitosProcesados = useMemo(() => {

@@ -12,6 +12,7 @@
 // donaciones.
 
 import { CATEGORIAS_DE_GASTO } from "../enums.js";
+import { aFechaLocal } from "../formato/fechas.js";
 
 const CATEGORIAS_VALIDAS = Object.values(CATEGORIAS_DE_GASTO);
 
@@ -65,9 +66,11 @@ export function validarGasto(gasto = {}, jornada = null) {
   if (estaVacio(gasto.fecha)) {
     errores.push("La fecha del gasto es obligatoria.");
   } else {
-    const fecha = new Date(gasto.fecha);
+    // aFechaLocal() y no new Date(): la columna es DATE, llega como "AAAA-MM-DD", y new Date()
+    // la lee como medianoche UTC -en Guatemala, las 18:00 del dia anterior- (issue #840).
+    const fecha = aFechaLocal(gasto.fecha);
 
-    if (Number.isNaN(fecha.getTime())) {
+    if (!fecha) {
       errores.push("La fecha proporcionada no es valida.");
     } else {
       // Fin del dia de hoy: un gasto registrado hoy no puede contar como futuro por la hora.
@@ -79,10 +82,10 @@ export function validarGasto(gasto = {}, jornada = null) {
       }
 
       if (jornada?.fecha_inicio) {
-        const inicioDeJornada = new Date(jornada.fecha_inicio);
-        inicioDeJornada.setHours(0, 0, 0, 0);
+        const inicioDeJornada = aFechaLocal(jornada.fecha_inicio);
+        inicioDeJornada?.setHours(0, 0, 0, 0);
 
-        if (fecha < inicioDeJornada) {
+        if (inicioDeJornada && fecha < inicioDeJornada) {
           errores.push("La fecha del gasto no puede ser anterior al inicio de su jornada.");
         }
       }

@@ -26,9 +26,22 @@ import reactRefresh from "eslint-plugin-react-refresh";
  * pregunta esta bien para una callback opcional, y mal cuando la alternativa es fabricar una
  * implementacion de mentira.
  */
+/**
+ * "Hoy" como dia UTC (issue #840). `new Date().toISOString().slice(0, 10)` parece la fecha de hoy
+ * y en Guatemala, a partir de las 18:00, es la de manana: asi se guardaban las donaciones de la
+ * tarde con un dia de mas. El CI corre en UTC, donde las dos coinciden, y ninguna prueba lo veia.
+ */
+const PROHIBIR_DIA_UTC = {
+  selector:
+    "CallExpression[callee.property.name=/^(slice|split|substring)$/][callee.object.callee.property.name='toISOString']",
+  message:
+    "toISOString() da el dia UTC: en Guatemala, despues de las 18:00, ya es manana. Usa fechaLocalISO() de @ecopac/shared (formato/fechas.js) (issue #840).",
+};
+
 const REGLAS_CONTRA_CONTRATOS_ADIVINADOS = {
   "no-restricted-syntax": [
     "error",
+    PROHIBIR_DIA_UTC,
     {
       selector:
         "ConditionalExpression[test.callee.object.name='Array'][test.callee.property.name='isArray'][alternate.type=/^(MemberExpression|ChainExpression|LogicalExpression)$/]",
@@ -211,6 +224,14 @@ export default [
             "navigator no significa lo mismo en web y en React Native. Lo que dependa del dispositivo entra por parametro desde la app.",
         },
       ],
+    },
+  },
+  {
+    // Las pruebas si pueden: construyen a proposito el dia UTC para demostrar que no es el local.
+    files: ["packages/shared/**/*.js"],
+    ignores: ["**/*.test.js"],
+    rules: {
+      "no-restricted-syntax": ["error", PROHIBIR_DIA_UTC],
     },
   },
   {

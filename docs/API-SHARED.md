@@ -91,9 +91,14 @@ app no levanta.
 
 `formatearFechaCorta`, `formatearFechaLarga`, `formatearFechaConHora`, `aFechaLocal`,
 `esFechaValida`, `calcularEdad`, `diasHastaVencimiento`, `formatearMoneda`, `MONEDA`, `MESES`,
-`DIAS_DE_LA_SEMANA`.
+`DIAS_DE_LA_SEMANA`, `fechaLocalISO`.
 
 Ninguna pantalla formatea una fecha por su cuenta.
+
+`fechaLocalISO(fecha?)` es la unica forma de escribir "hoy" como `AAAA-MM-DD`.
+`new Date().toISOString().slice(0, 10)` da el dia UTC, que en Guatemala es manana a partir de las
+18:00; el lint lo rechaza fuera de las pruebas, y las pruebas de shared corren con
+`TZ=America/Guatemala` para que el defecto no pueda pasar en el CI, que corre en UTC (issue #840).
 
 `textoComparable(texto)` y `buscarOpcionPorEtiqueta(opciones, texto)` (`formato/opciones.js`):
 comparan texto de interfaz sin mayusculas, acentos ni espacios de mas.

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { TIPOS_DE_DONACION, TIPOS_DE_DONANTE } from "../enums.js";
+import { fechaLocalISO } from "../formato/fechas.js";
 import { listarProyectos } from "../proyectos/api.js";
 import { listarDonantes, registrarDonante } from "./donantes.api.js";
 import { puedeRegistrarDonaciones, puedeVerDonaciones } from "./permisos.js";
@@ -82,7 +83,10 @@ export function useRegistroDonacion({ _client, usuarioRol, onGuardarExito }) {
   const [tipoDonacion, setTipoDonacion] = useState(TIPOS_DE_DONACION.DINERO);
   const [donanteId, setDonanteId] = useState("");
   const [proyectoId, setProyectoId] = useState("");
-  const [fecha, setFecha] = useState(new Date().toISOString().split("T")[0]);
+  // fechaLocalISO() y no toISOString(): esa da el dia UTC, y en Guatemala a partir de las 18:00
+  // ya es manana. Las donaciones registradas por la tarde se guardaban con la fecha del dia
+  // siguiente sin que nadie la tocara (issue #840).
+  const [fecha, setFecha] = useState(() => fechaLocalISO());
   // registrarDonacion() ya aceptaba observaciones (p_observaciones en registro.api.js), pero el
   // formulario web nunca la tenia en su estado: el input no existia (issue #756).
   const [observaciones, setObservaciones] = useState("");
@@ -244,7 +248,7 @@ export function useRegistroDonacion({ _client, usuarioRol, onGuardarExito }) {
     setTipoDonacion(TIPOS_DE_DONACION.DINERO);
     setDonanteId("");
     setProyectoId("");
-    setFecha(new Date().toISOString().split("T")[0]);
+    setFecha(fechaLocalISO());
     setObservaciones("");
     setDetalles([renglonVacio()]);
   };

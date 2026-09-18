@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback } from "react";
 
+import { aFechaLocal, diasHastaVencimiento } from "../formato/fechas.js";
 import { esAdministrador } from "../usuarios/roles.js";
 
 /**
@@ -64,7 +65,7 @@ export function validarDatosDeLote(datosLote) {
     return "Las fechas de ingreso y vencimiento son obligatorias.";
   }
 
-  if (new Date(fecha_vencimiento) <= new Date(fecha_ingreso)) {
+  if (aFechaLocal(fecha_vencimiento) <= aFechaLocal(fecha_ingreso)) {
     return "La fecha de vencimiento debe ser estrictamente posterior a la fecha de ingreso (chk_lotes_vencimiento_posterior).";
   }
 
@@ -102,13 +103,13 @@ export function useGestionLotes({
 
   // Ordenamiento FEFO (First Expire, First Out) + Filtrado
   const lotesFiltrados = useMemo(() => {
-    const ahora = new Date();
     const termino = busqueda.trim().toLowerCase();
 
     return lotesIniciales
       .map((lote) => {
-        const fechaVenc = new Date(lote.fecha_vencimiento);
-        const diasRestantes = Math.ceil((fechaVenc - ahora) / (1000 * 60 * 60 * 24));
+        // Por dia de calendario local (issue #840): restar new Date("AAAA-MM-DD") a la hora
+        // actual daba un dia de menos en Guatemala, y un lote que vence manana salia vencido.
+        const diasRestantes = diasHastaVencimiento(lote.fecha_vencimiento) ?? 0;
 
         let estadoAlerta = "normal";
         if (diasRestantes <= 0) {
@@ -146,7 +147,7 @@ export function useGestionLotes({
 
         return coincideBusqueda && coincideBodega && coincideCategoria;
       })
-      .sort((a, b) => new Date(a.fecha_vencimiento) - new Date(b.fecha_vencimiento));
+      .sort((a, b) => a.diasRestantes - b.diasRestantes);
   }, [lotesIniciales, busqueda, bodegaSeleccionada, categoriaSeleccionada]);
 
   // Alertas críticas (vencidos o por vencer en <= 30 días)

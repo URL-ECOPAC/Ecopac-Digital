@@ -16,11 +16,36 @@ import {
   diasHastaVencimiento,
   DIAS_DE_LA_SEMANA,
   esFechaValida,
+  fechaLocalISO,
   formatearFechaConHora,
   formatearFechaCorta,
   formatearFechaLarga,
   MESES,
 } from "./fechas.js";
+
+// La suite corre con TZ=America/Guatemala fijado en vitest.config.js (issue #840).
+describe("fechaLocalISO", () => {
+  it("la zona de las pruebas es de verdad UTC-6, o esta prueba no protege nada", () => {
+    expect(new Date(2026, 8, 18, 12).getTimezoneOffset()).toBe(360);
+  });
+
+  it("a las 20:00 en Guatemala sigue siendo hoy, aunque en UTC ya sea manana", () => {
+    // El defecto de la donacion: toISOString() da 2026-09-19 para esta hora.
+    const nochePorLaTarde = new Date(2026, 8, 18, 20, 0);
+
+    expect(nochePorLaTarde.toISOString().slice(0, 10)).toBe("2026-09-19");
+    expect(fechaLocalISO(nochePorLaTarde)).toBe("2026-09-18");
+  });
+
+  it("es la inversa de aFechaLocal: ida y vuelta conserva el dia", () => {
+    expect(fechaLocalISO(aFechaLocal("2026-01-05"))).toBe("2026-01-05");
+  });
+
+  it("sin argumento devuelve el dia local de hoy", () => {
+    const ahora = new Date();
+    expect(fechaLocalISO()).toBe(fechaLocalISO(ahora));
+  });
+});
 
 describe("aFechaLocal", () => {
   it("lee una cadena AAAA-MM-DD como dia de calendario, sin correrla de dia", () => {

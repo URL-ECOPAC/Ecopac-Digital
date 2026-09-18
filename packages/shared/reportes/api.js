@@ -29,7 +29,7 @@ import { obtenerSupabase } from "../api/cliente.js";
 import { normalizarError } from "../api/errores-de-supabase.js";
 import { obtenerTodasLasFilas } from "../api/paginacion.js";
 import { puedeVerIndicadoresDeImpacto } from "./permisos.js";
-import { diasHastaVencimiento } from "../formato/fechas.js";
+import { diasHastaVencimiento, fechaLocalISO } from "../formato/fechas.js";
 
 // Reexportar funciones de permisos para mantener la interfaz unificada
 export {
@@ -248,13 +248,6 @@ const COLUMNAS_LOTES_POR_VENCER = [
   "medicamentos!inner(nombre, concentracion, presentacion)",
   "existencias(cantidad_disponible, bodega_id, bodega:bodegas(nombre))",
 ].join(", ");
-
-/** AAAA-MM-DD del dia local. toISOString() es UTC: despues de las 18:00 en Guatemala ya es manana. */
-function fechaLocalISO(fecha) {
-  const mes = String(fecha.getMonth() + 1).padStart(2, "0");
-  const dia = String(fecha.getDate()).padStart(2, "0");
-  return `${fecha.getFullYear()}-${mes}-${dia}`;
-}
 
 /**
  * Lotes que vencen entre hoy y `horizonteDias`, con las unidades que quedan de cada uno.

@@ -1,5 +1,6 @@
 import { useState, useCallback, useMemo, useEffect } from "react";
 
+import { aFechaLocal } from "../formato/fechas.js";
 import { listarMovimientos } from "./movimientos.api.js";
 
 // tipo_movimiento ENUM: 'ingreso', 'salida'
@@ -121,13 +122,16 @@ export function useKardexMovimientos({ loteId = null, medicamentoId = null }) {
   const movimientosFiltrados = useMemo(() => {
     let resultado = [...movimientosConSaldo];
 
-    if (filtros.fechaDesde) {
-      const desde = new Date(filtros.fechaDesde);
+    // Los filtros son dias de calendario LOCALES ("AAAA-MM-DD") y created_at es un instante.
+    // Con new Date() el "desde" era medianoche UTC -las 18:00 del dia anterior en Guatemala- y
+    // el filtro colaba seis horas del dia previo (issue #840).
+    const desde = aFechaLocal(filtros.fechaDesde);
+    if (desde) {
       resultado = resultado.filter((m) => new Date(m.created_at) >= desde);
     }
-    if (filtros.fechaHasta) {
-      const hasta = new Date(filtros.fechaHasta);
-      hasta.setHours(23, 59, 59);
+    const hasta = aFechaLocal(filtros.fechaHasta);
+    if (hasta) {
+      hasta.setHours(23, 59, 59, 999);
       resultado = resultado.filter((m) => new Date(m.created_at) <= hasta);
     }
 
