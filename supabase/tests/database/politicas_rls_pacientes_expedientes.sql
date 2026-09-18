@@ -44,7 +44,7 @@ SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000101';
 
 SELECT lives_ok(
   $$ INSERT INTO pacientes (id, nombres, apellidos, fecha_nacimiento, sexo, comunidad_id, telefono_contacto, idioma)
-     VALUES ('20000000-0000-0000-0000-000000000001', 'Paciente', 'Admin', '1990-01-01', 'F',
+     VALUES ('20000000-0000-0000-0000-000000000001', 'Paciente', 'Admin', '1990-01-01', 'Femenino',
              '10000000-0000-0000-0000-000000000001', '5555-1001', 'espanol') $$,
   'administrador puede registrar un paciente'
 );
@@ -78,7 +78,7 @@ SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000104';
 
 SELECT lives_ok(
   $$ INSERT INTO pacientes (id, nombres, apellidos, fecha_nacimiento, sexo, comunidad_id, telefono_contacto, idioma)
-     VALUES ('20000000-0000-0000-0000-000000000002', 'Paciente', 'Medico', '1985-05-05', 'M',
+     VALUES ('20000000-0000-0000-0000-000000000002', 'Paciente', 'Medico', '1985-05-05', 'Masculino',
              '10000000-0000-0000-0000-000000000001', '5555-1002', 'espanol') $$,
   'medico puede registrar un paciente'
 );
@@ -147,7 +147,7 @@ SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000105';
 
 SELECT lives_ok(
   $$ INSERT INTO pacientes (id, nombres, apellidos, fecha_nacimiento, sexo, comunidad_id, telefono_contacto, idioma)
-     VALUES ('20000000-0000-0000-0000-000000000003', 'Paciente', 'Voluntario', '2000-03-03', 'F',
+     VALUES ('20000000-0000-0000-0000-000000000003', 'Paciente', 'Voluntario', '2000-03-03', 'Femenino',
              '10000000-0000-0000-0000-000000000001', '5555-1003', 'espanol') $$,
   'voluntario puede registrar un paciente'
 );

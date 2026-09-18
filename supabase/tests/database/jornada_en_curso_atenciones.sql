@@ -28,7 +28,7 @@ INSERT INTO auth.users (id, email) VALUES
 INSERT INTO pacientes (id, nombres, apellidos, fecha_nacimiento, sexo, comunidad_id, telefono_contacto, idioma)
 VALUES (
   '20000000-0000-0000-0000-000000000172',
-  'Paciente', 'Prueba172', '1990-01-01', 'F',
+  'Paciente', 'Prueba172', '1990-01-01', 'Femenino',
   '10000000-0000-0000-0000-000000000172', '5555-0172', 'espanol'
 );
 

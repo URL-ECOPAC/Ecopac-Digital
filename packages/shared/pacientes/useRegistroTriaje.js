@@ -6,7 +6,7 @@ import { calcularEdad } from "../formato/fechas.js";
 import { CAMPOS_TRIAJE } from "./campos.js";
 import { puedeTomarTriaje } from "./permisos.js";
 import { registrarTriaje } from "./triaje.api.js";
-import { advertenciasDeTriaje } from "./triaje.validaciones.js";
+import { advertenciasDeTriaje, calcularImc } from "./triaje.validaciones.js";
 
 export const VALORES_INICIALES = CAMPOS_TRIAJE.reduce((valores, campo) => {
   valores[campo.id] = "";
@@ -27,16 +27,9 @@ export function hayCambiosDeTriaje(valores, guardado) {
   return Object.keys(VALORES_INICIALES).some((id) => valores[id] !== VALORES_INICIALES[id]);
 }
 
-export function calcularImc(peso, talla) {
-  const kilos = Number(peso);
-  const centimetros = Number(talla);
-
-  if (!Number.isFinite(kilos) || !Number.isFinite(centimetros)) return null;
-  if (kilos <= 0 || centimetros <= 0) return null;
-
-  const metros = centimetros / 100;
-  return Math.round((kilos / (metros * metros)) * 10) / 10;
-}
+// calcularImc() se mudo a triaje.validaciones.js en la #699: ahi vive tambien la regla que acota el
+// IMC, y las dos tienen que usar la misma formula. Un nombre exportado por el barril nace en un solo
+// archivo (regla del bug #365), asi que aqui se importa, no se reexporta.
 
 export function soloSignosCapturados(valores = {}) {
   return Object.fromEntries(
@@ -75,6 +68,10 @@ export function useRegistroTriaje({
     setGuardado(null);
   }, []);
 
+  // PREVISUALIZACION, no el dato. El IMC que se guarda lo calcula la base (columna generada de la
+  // 00013) y triaje.api.js nunca lo envia; esto es para que quien captura vea el numero mientras
+  // escribe y note un error de unidades antes de guardar. Los dos usan la misma formula: la de
+  // calcularImc(), que espeja ROUND(peso / POWER(talla/100.0, 2), 1).
   const imc = useMemo(
     () => calcularImc(valores.peso, valores.talla),
     [valores.peso, valores.talla],

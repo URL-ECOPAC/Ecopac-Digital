@@ -55,7 +55,7 @@ VALUES (
 INSERT INTO pacientes (id, nombres, apellidos, fecha_nacimiento, sexo, comunidad_id, telefono_contacto, idioma)
 VALUES (
   '20000000-0000-0000-0000-000000000101',
-  'Paciente', 'Prueba89', '1995-01-01', 'F',
+  'Paciente', 'Prueba89', '1995-01-01', 'Femenino',
   '10000000-0000-0000-0000-000000000002', '5555-2001', 'espanol'
 );
 
@@ -79,7 +79,7 @@ VALUES (
 INSERT INTO pacientes (id, nombres, apellidos, fecha_nacimiento, sexo, comunidad_id, telefono_contacto, idioma)
 VALUES (
   '20000000-0000-0000-0000-000000000102',
-  'Paciente', 'Prueba89b', '1998-01-01', 'M',
+  'Paciente', 'Prueba89b', '1998-01-01', 'Masculino',
   '10000000-0000-0000-0000-000000000002', '5555-2002', 'espanol'
 );
 

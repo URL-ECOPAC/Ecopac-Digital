@@ -4,19 +4,14 @@ import { useBusquedaPacientes } from "../hooks/useBusquedaPacientes.js";
 import { calcularEdad } from "../formato/fechas.js";
 import { listarComunidades } from "../territorio/api.js";
 import { obtenerCatalogoDeCondiciones } from "./condiciones.api.js";
+import { OPCIONES_SEXO } from "./campos.js";
 import { FILTROS_PACIENTE_VACIOS } from "./filtros.js";
 
-/**
- * Opciones del filtro de sexo.
- *
- * El `value` es el mismo texto que el `label`, y no una inicial, porque pacientes.sexo es un varchar(20) sin CHECK
- * que guarda la palabra completa. Mandar "F" hacia fn_buscar_pacientes comparaba "F" con
- * "Femenino" y devolvia cero filas sin error: el filtro parecia funcionar y no filtraba nada.
- */
-export const OPCIONES_SEXO = [
-  { value: "Femenino", label: "Femenino" },
-  { value: "Masculino", label: "Masculino" },
-];
+// El filtro de sexo usa OPCIONES_SEXO, que desde la #699 nace en campos.js a partir del enum
+// sexo_paciente (00132). Vivia aqui, escrita a mano, y su comentario explicaba que el `value` tenia
+// que ser la palabra completa y no la inicial porque la columna era un VARCHAR sin CHECK: mandar "F"
+// comparaba "F" con "Femenino" y devolvia cero filas sin error. Eso ya no depende de que alguien lo
+// recuerde -- lo garantiza el enum.
 
 /**
  * Dice si hay algun filtro puesto, para que la pantalla decida si ofrece limpiarlos.

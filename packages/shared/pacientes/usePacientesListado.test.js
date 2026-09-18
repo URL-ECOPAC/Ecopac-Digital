@@ -14,11 +14,12 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  OPCIONES_SEXO,
   aFiltrosDeBusqueda,
   armarFilasDePacientes,
   hayFiltrosDePacientes,
 } from "./usePacientesListado.js";
+import { OPCIONES_SEXO } from "./campos.js";
+import { SEXOS } from "../enums.js";
 import { COLUMNAS_PACIENTE } from "./columnas.js";
 import { TIPOS_DE_PRESENTACION } from "../descriptores.js";
 
@@ -86,10 +87,13 @@ describe("armarFilasDePacientes", () => {
   });
 });
 
+// OPCIONES_SEXO se mudo a campos.js en la #699 y ahora sale del enum sexo_paciente (00132). Las
+// pruebas se quedan aqui, que es donde se descubrio el fallo que las motivo: el filtro de este
+// listado es quien manda ese valor a fn_buscar_pacientes.
 describe("OPCIONES_SEXO", () => {
   // El fallo de la #533: el valor viajaba como "F" hacia fn_buscar_pacientes, que lo compara
-  // contra pacientes.sexo -- un varchar(20) que guarda "Femenino". El filtro devolvia cero filas
-  // sin dar error, asi que parecia funcionar.
+  // contra pacientes.sexo, que guarda "Femenino". El filtro devolvia cero filas sin dar error, asi
+  // que parecia funcionar. Desde la 00132 la columna es un enum y "F" ni siquiera se puede guardar.
   it("el valor es la palabra completa, no la inicial", () => {
     expect(OPCIONES_SEXO.map((o) => o.value)).toEqual(["Femenino", "Masculino"]);
   });
@@ -97,6 +101,16 @@ describe("OPCIONES_SEXO", () => {
   it("ninguna opcion manda una sola letra al servidor", () => {
     for (const opcion of OPCIONES_SEXO) {
       expect(opcion.value.length).toBeGreaterThan(1);
+    }
+  });
+
+  it("los valores son exactamente los del enum del esquema, sin inventar ninguno", () => {
+    expect(OPCIONES_SEXO.map((o) => o.value).sort()).toEqual(Object.values(SEXOS).sort());
+  });
+
+  it("cada opcion trae su etiqueta para pintar", () => {
+    for (const opcion of OPCIONES_SEXO) {
+      expect(opcion.label).toBeTruthy();
     }
   });
 });

@@ -258,11 +258,11 @@ erDiagram
 | `id`                     | UUID PK                 |                                                             |
 | `nombres`, `apellidos`   | VARCHAR(100) NOT NULL   |                                                             |
 | `fecha_nacimiento`       | DATE NOT NULL           | La edad se calcula, no se guarda                            |
-| `sexo`                   | VARCHAR(20) NOT NULL    | Palabra completa, no inicial (ver `00095`)                  |
+| `sexo`                   | `sexo_paciente` NOT NULL | Enum desde [00132]: Femenino, Masculino. Era VARCHAR(20) sin CHECK |
 | `comunidad_id`           | UUID                    | **Opcional desde [00111]**                                  |
 | `telefono_contacto`      | VARCHAR(20) NOT NULL    | Telefono donde ubicar al paciente, no necesariamente suyo ([00093]) |
 | `idioma`                 | VARCHAR(30) NOT NULL    | FK a `idiomas(codigo)` desde [00110]; antes era enum        |
-| `dpi`                    | VARCHAR(20) UNIQUE      | Opcional: mucha poblacion rural no lo tiene                 |
+| `dpi`                    | VARCHAR(20) UNIQUE      | Opcional: mucha poblacion rural no lo tiene. 13 digitos exactos por CHECK desde [00132] |
 | `tipo_sangre`            | `tipo_sanguineo`        | [+00035]                                                    |
 | `nombre_responsable`     | VARCHAR(150)            | [+00035]                                                    |
 | `parentesco_responsable` | VARCHAR(50)             | [+00035]                                                    |
@@ -382,7 +382,7 @@ Una fila por atencion (`atencion_id` UNIQUE).
 | `glucosa`                                  | SMALLINT           | Opcional                                         |
 | `peso`, `talla`                            | NUMERIC(5,2)       | Opcionales                                       |
 | `temperatura`                              | NUMERIC(4,1)       | Opcional                                         |
-| `imc`                                      | NUMERIC(4,1)       | **Columna generada**: `ROUND(peso / (talla/100)^2, 1)` |
+| `imc`                                      | NUMERIC(6,1)       | **Columna generada**: `ROUND(peso / (talla/100)^2, 1)`. Ampliada y acotada por CHECK en [00133] |
 | `tomado_por`, `tomado_en`                  | UUID / TIMESTAMPTZ |                                                  |
 
 Es la tabla con mas restricciones del esquema (8 a nivel de tabla): rangos fisiologicos que
@@ -660,6 +660,7 @@ Los totales no se guardan: los calculan `presupuesto_de_jornada()`, `presupuesto
 | `categoria_gasto`          | Medicamentos, Logistica, Diagnostico, Honorarios, Educacion, Infraestructura   | 00025     |
 | `operacion_auditoria`      | insercion, actualizacion, baja, eliminacion                                    | 00026     |
 | `tipo_sanguineo`           | A+, A-, B+, B-, AB+, AB-, O+, O-                                               | 00035     |
+| `sexo_paciente`            | Femenino, Masculino                                                            | 00132     |
 | `estado_receta`            | emitida, anulada                                                               | 00066     |
 | `estado_gasto`             | pendiente, aprobado, rechazado                                                 | 00089     |
 
@@ -852,7 +853,9 @@ declaraciones de descriptor).
 - `principios_activos.nombre_normalizado`: columna generada para busqueda insensible a acentos,
   documentada como deliberadamente no expuesta (`packages/shared/inventario/principios-activos.api.js`).
 - `triajes.imc`: `GENERATED ALWAYS AS`, nunca se envia ni se corrige, se recalcula sola de
-  peso/talla.
+  peso/talla. El cliente **si** calcula el mismo numero para previsualizarlo mientras se captura
+  (`calcularImc()` en `packages/shared/pacientes/triaje.validaciones.js`); lo que se guarda sigue
+  saliendo de la base.
 - `expedientes.numero_ficha`, `recetas.folio`: generados por el servidor (secuencia/formato fijo),
   nunca capturados a mano ni corregibles, por diseno (mismo criterio que se adopto ahora para
   `jornadas.codigo`, ver abajo).

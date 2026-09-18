@@ -30,7 +30,7 @@ INSERT INTO comunidades (id, municipio_id, nombre) VALUES
   ('10000000-0000-0000-0000-000000122001', 101, 'Comunidad 122');
 
 INSERT INTO pacientes (id, nombres, apellidos, fecha_nacimiento, sexo, comunidad_id, telefono_contacto, idioma) VALUES
-  ('20000000-0000-0000-0000-000000122001', 'Uno', 'Inventado', '1990-01-01', 'F',
+  ('20000000-0000-0000-0000-000000122001', 'Uno', 'Inventado', '1990-01-01', 'Femenino',
    '10000000-0000-0000-0000-000000122001', '00000122', 'espanol');
 
 INSERT INTO condiciones_cronicas (id, nombre) VALUES

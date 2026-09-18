@@ -99,12 +99,47 @@ const MAPA_COLUMNAS_DEL_PACIENTE = {
   parentescoResponsable: "parentesco_responsable",
 };
 
+/**
+ * Los campos cuya columna admite NULL, y que por eso pueden llegar vacios del formulario.
+ *
+ * Un <select> o un <input> que nadie toco vale `""`, no `null` ni `undefined`. Eso importa porque
+ * `??` NO atrapa la cadena vacia: `"" ?? null` es `""`, y ese `""` viajaba tal cual.
+ *
+ * Con columnas de texto sin restriccion no se notaba -- se guardaba una cadena vacia y nadie
+ * miraba --, pero contra una columna tipada revienta la operacion entera:
+ *
+ *   - `tipo_sangre` es el enum tipo_sanguineo (00035): registrar un paciente sin elegir tipo de
+ *     sangre fallaba con un 400 y "Ocurrio un error inesperado" en pantalla. Estaba asi en develop,
+ *     y se descubrio probando a mano el formulario durante la #699.
+ *   - `dpi` gana su CHECK de 13 digitos en la 00132, y `""` no lo cumple: sin esto, guardar un
+ *     paciente sin DPI empezaria a fallar hoy.
+ *
+ * Los campos NOT NULL no entran aqui a proposito: un `""` en nombres o en sexo tiene que seguir
+ * siendo un error de validacion con su mensaje, no un NULL que la base rechaza mas tarde y peor.
+ */
+const CAMPOS_OPCIONALES_DEL_PACIENTE = [
+  "comunidad",
+  "telefonoContacto",
+  "dpi",
+  "tipoSangre",
+  "nombreResponsable",
+  "parentescoResponsable",
+];
+
+/** `""` -> `null` en los campos que admiten NULL. Devuelve el mismo valor en cualquier otro caso. */
+function nuloSiVacio(campo, valor) {
+  if (!CAMPOS_OPCIONALES_DEL_PACIENTE.includes(campo)) return valor;
+  return valor === "" || valor === undefined ? null : valor;
+}
+
 /** Traduce del camelCase de las pantallas al snake_case de la tabla, omitiendo lo no enviado. */
 function aColumnasDeTabla(datos = {}) {
   const fila = {};
   for (const [campo, columna] of Object.entries(MAPA_COLUMNAS_DEL_PACIENTE)) {
     // Solo se envia lo que venga en el objeto: un update parcial no debe borrar lo que no toca.
-    if (Object.prototype.hasOwnProperty.call(datos, campo)) fila[columna] = datos[campo];
+    if (Object.prototype.hasOwnProperty.call(datos, campo)) {
+      fila[columna] = nuloSiVacio(campo, datos[campo]);
+    }
   }
   return fila;
 }
@@ -183,13 +218,16 @@ export async function registrarPaciente(datos = {}) {
         // Sin comunidad viaja NULL y no undefined: PostgREST omite las claves indefinidas, y
         // el parametro no tiene DEFAULT, asi que la llamada fallaria por firma en vez de
         // registrar al paciente sin comunidad (#657).
-        p_comunidad_id: datos.comunidad || null,
-        p_telefono_contacto: datos.telefonoContacto,
+        p_comunidad_id: nuloSiVacio("comunidad", datos.comunidad),
+        p_telefono_contacto: nuloSiVacio("telefonoContacto", datos.telefonoContacto),
         p_idioma: datos.idioma,
-        p_dpi: datos.dpi ?? null,
-        p_tipo_sangre: datos.tipoSangre ?? null,
-        p_nombre_responsable: datos.nombreResponsable ?? null,
-        p_parentesco_responsable: datos.parentescoResponsable ?? null,
+        // nuloSiVacio() y no `?? null`: la cadena vacia que manda un campo sin tocar no la atrapa
+        // el operador de coalescencia nula, y contra tipo_sanguineo o contra el CHECK del DPI eso
+        // es un 400 en vez de un campo sin llenar. Ver el comentario de nuloSiVacio().
+        p_dpi: nuloSiVacio("dpi", datos.dpi),
+        p_tipo_sangre: nuloSiVacio("tipoSangre", datos.tipoSangre),
+        p_nombre_responsable: nuloSiVacio("nombreResponsable", datos.nombreResponsable),
+        p_parentesco_responsable: nuloSiVacio("parentescoResponsable", datos.parentescoResponsable),
       })
       .single();
 

@@ -38,7 +38,7 @@ ALTER TABLE perfiles ENABLE TRIGGER trg_perfiles_impedir_cambio_de_rol_propio;
 INSERT INTO pacientes (id, nombres, apellidos, fecha_nacimiento, sexo, comunidad_id, telefono_contacto, idioma)
 VALUES (
   '20000000-0000-0000-0000-000000000764',
-  'Paciente', 'Prueba764', '1990-01-01', 'F',
+  'Paciente', 'Prueba764', '1990-01-01', 'Femenino',
   '10000000-0000-0000-0000-000000000764', '5555-0764', 'espanol'
 );
 

@@ -43,7 +43,7 @@ ALTER TABLE perfiles ENABLE TRIGGER USER;
 -- Paciente y su expediente (00009: expedientes requiere paciente_id UNIQUE y
 -- numero_ficha UNIQUE).
 INSERT INTO pacientes (id, nombres, apellidos, fecha_nacimiento, sexo, comunidad_id, telefono_contacto, idioma)
-VALUES ('90000000-0000-0000-0000-000000001f01', 'Paciente', 'Prueba', '1990-01-01', 'F',
+VALUES ('90000000-0000-0000-0000-000000001f01', 'Paciente', 'Prueba', '1990-01-01', 'Femenino',
         '10000000-0000-0000-0000-000000000091', '5555-1000', 'espanol');
 
 INSERT INTO expedientes (id, paciente_id, numero_ficha) VALUES

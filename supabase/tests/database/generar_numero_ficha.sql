@@ -37,15 +37,15 @@ CREATE TEMP TABLE fichas_generadas AS
 SELECT numero_ficha, row_number() OVER () AS orden
 FROM (
   SELECT numero_ficha FROM fn_registrar_paciente(
-    'Paciente', 'Uno', '1990-01-01', 'F', '30000000-0000-0000-0000-000000000001', '5555-2001', 'espanol'
+    'Paciente', 'Uno', '1990-01-01', 'Femenino', '30000000-0000-0000-0000-000000000001', '5555-2001', 'espanol'
   )
   UNION ALL
   SELECT numero_ficha FROM fn_registrar_paciente(
-    'Paciente', 'Dos', '1991-02-02', 'M', '30000000-0000-0000-0000-000000000001', '5555-2002', 'espanol'
+    'Paciente', 'Dos', '1991-02-02', 'Masculino', '30000000-0000-0000-0000-000000000001', '5555-2002', 'espanol'
   )
   UNION ALL
   SELECT numero_ficha FROM fn_registrar_paciente(
-    'Paciente', 'Tres', '1992-03-03', 'F', '30000000-0000-0000-0000-000000000001', '5555-2003', 'espanol'
+    'Paciente', 'Tres', '1992-03-03', 'Femenino', '30000000-0000-0000-0000-000000000001', '5555-2003', 'espanol'
   )
 ) AS generadas;
 

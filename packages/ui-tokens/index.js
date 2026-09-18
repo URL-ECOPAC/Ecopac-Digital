@@ -242,6 +242,11 @@ export const labels = {
   sinStock: "Sin stock",
   usuarioActivo: "Activo",
   usuarioInactivo: "Inactivo",
+  // sexo_paciente (00131, issue #699). El valor guardado y la etiqueta coinciden hoy, pero se
+  // declaran aqui igual que los demas enums: el dia que la etiqueta cambie -"Mujer"/"Hombre", por
+  // decir- se cambia el texto sin tocar la base ni una migracion.
+  sexoFemenino: "Femenino",
+  sexoMasculino: "Masculino",
   jornadaPlanificada: "Planificada",
   jornadaEnCurso: "En curso",
   jornadaFinalizada: "Finalizada",
