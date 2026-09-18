@@ -46,6 +46,7 @@ export * from "./useCatalogoPrincipiosActivos.js";
 export * from "./useInventario.js";
 export * from "./usePendientesValidacion.js";
 export * from "./useRegistroIngreso.js";
+export * from "./useAltaDeMedicamentoEnLinea.js";
 export * from "./useEntregaMedicamentos.js";
 export * from "./useDetalleLote.js";
 

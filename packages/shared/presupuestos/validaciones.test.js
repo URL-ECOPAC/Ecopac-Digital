@@ -8,8 +8,55 @@
 
 import { describe, expect, it } from "vitest";
 
-import { CATEGORIAS_DE_GASTO } from "../enums.js";
-import { validarGasto } from "./validaciones.js";
+import { CATEGORIAS_DE_GASTO, ORIGENES_DE_PRESUPUESTO } from "../enums.js";
+import { validarGasto, validarOrigenDePresupuesto } from "./validaciones.js";
+
+// Issue #840, bloque D: el presupuesto de una jornada se forma con aportes de origen conocido.
+describe("validarOrigenDePresupuesto", () => {
+  it("acepta un aporte de fondos propios", () => {
+    expect(
+      validarOrigenDePresupuesto({ origen: ORIGENES_DE_PRESUPUESTO.FONDOS_PROPIOS, monto: "300" }),
+    ).toEqual({});
+  });
+
+  it("exige el origen, y no deja registrar uno sin clasificar a mano", () => {
+    expect(validarOrigenDePresupuesto({ monto: 10 }).origen).toBeTruthy();
+    expect(
+      validarOrigenDePresupuesto({ origen: ORIGENES_DE_PRESUPUESTO.SIN_CLASIFICAR, monto: 10 })
+        .origen,
+    ).toBeTruthy();
+  });
+
+  it.each([[""], [null], ["abc"], [0], [-1]])("rechaza el monto %s", (monto) => {
+    expect(
+      validarOrigenDePresupuesto({ origen: ORIGENES_DE_PRESUPUESTO.APORTE_EXTERNO, monto }).monto,
+    ).toBeTruthy();
+  });
+
+  it("un aporte de donacion exige elegir la donacion", () => {
+    expect(
+      validarOrigenDePresupuesto({ origen: ORIGENES_DE_PRESUPUESTO.DONACION, monto: 10 })
+        .donacionId,
+    ).toBeTruthy();
+  });
+
+  it("no deja asignar de una donacion mas de lo que le queda", () => {
+    const errores = validarOrigenDePresupuesto(
+      { origen: ORIGENES_DE_PRESUPUESTO.DONACION, donacionId: "d1", monto: 301 },
+      { disponibleDeDonacion: 300 },
+    );
+    expect(errores.monto).toMatch(/300/);
+  });
+
+  it("acepta exactamente lo que le queda a la donacion", () => {
+    expect(
+      validarOrigenDePresupuesto(
+        { origen: ORIGENES_DE_PRESUPUESTO.DONACION, donacionId: "d1", monto: 300 },
+        { disponibleDeDonacion: 300 },
+      ),
+    ).toEqual({});
+  });
+});
 
 function hoy() {
   return new Date().toISOString().split("T")[0];

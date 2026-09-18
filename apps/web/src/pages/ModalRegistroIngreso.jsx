@@ -251,6 +251,8 @@ export default function ModalRegistroIngreso({
                           onChange={(e) =>
                             setItemActual({ ...itemActual, medicamento_id: e.target.value })
                           }
+                          // Viene de la donacion: ya se eligio del catalogo al registrarla.
+                          disabled={itemActual.medicamentoFijo}
                         >
                           <option value="">Seleccionar...</option>
                           {(catalogos?.medicamentos || []).map((m) => (

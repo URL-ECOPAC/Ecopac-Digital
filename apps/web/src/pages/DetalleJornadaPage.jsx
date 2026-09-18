@@ -1,4 +1,3 @@
-import { Save } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
@@ -11,6 +10,8 @@ import {
   ESTADOS_JORNADA,
   formatearFechaConHora,
   formatearFechaCorta,
+  formatearMoneda,
+  permisosDeOrigenDePresupuesto,
   puedeVerRosterCompleto,
   useCuadroTurnos,
   useDetalleJornada,
@@ -22,7 +23,6 @@ import {
   DataList,
   ErrorState,
   LoadingState,
-  NumberField,
   PageHeader,
   PrimaryButton,
   ScreenContainer,
@@ -36,6 +36,7 @@ import ModalAsignarPersonal from "./ModalAsignarPersonal";
 import ModalEdicionTurno from "./ModalEdicionTurno";
 import ModalJornada from "./ModalJornada";
 import NotFoundPage from "./NotFoundPage";
+import OrigenesDePresupuesto from "./OrigenesDePresupuesto";
 
 // Detalle de una jornada (issue #181): sus datos, el personal asignado, los pacientes
 // atendidos con su diagnostico principal y el historial de cambios de estado. Todo lo que se
@@ -62,6 +63,8 @@ const PESTANIAS = [
   { id: "equipo", label: "Equipo" },
   { id: "pacientes", label: "Pacientes atendidos" },
   { id: "historial", label: "Historial" },
+  // Issue #840: de donde viene el presupuesto de la jornada.
+  { id: "presupuesto", label: "Presupuesto" },
   { id: "cierre", label: "Cierre" },
 ];
 
@@ -94,23 +97,9 @@ export default function DetalleJornadaPage() {
     moviendo,
     errorMovimiento,
     descartarErrorMovimiento,
-    asignarPresupuesto,
-    errorPresupuesto,
-    guardandoPresupuesto,
   } = useDetalleJornada({ jornadaId: id, rol });
 
-  const [editandoPresupuesto, setEditandoPresupuesto] = useState(false);
-  const [montoPresupuesto, setMontoPresupuesto] = useState("");
-
-  const abrirEdicionPresupuesto = () => {
-    setMontoPresupuesto(jornada?.presupuestoAsignado ?? "");
-    setEditandoPresupuesto(true);
-  };
-
-  const guardarPresupuesto = async () => {
-    const ok = await asignarPresupuesto(montoPresupuesto);
-    if (ok) setEditandoPresupuesto(false);
-  };
+  const permisosPresupuesto = permisosDeOrigenDePresupuesto(rol);
 
   // Issue #185: advertencias de horario del cuadro de turnos (choque de dia completo de #182 +
   // traslape real de horas, las dos conviven). Se llama incondicionalmente, antes de los early
@@ -210,6 +199,7 @@ export default function DetalleJornadaPage() {
     // ya no los trae para ese rol), asi que la pestaña tampoco se ofrece.
     if (pestania.id === "pacientes") return permisos.puedeVerDatosClinicos;
     if (pestania.id === "historial") return permisos.puedeVerHistorial;
+    if (pestania.id === "presupuesto") return permisosPresupuesto.puedeVer;
     return true;
   });
 
@@ -358,42 +348,21 @@ export default function DetalleJornadaPage() {
                   {jornada.fechaFinReal ? formatearFechaConHora(jornada.fechaFinReal) : "—"}
                 </dd>
 
+                {/* El total no se edita aqui desde la #840: es la suma de los aportes de la
+                    pestaña Presupuesto, y la base rechaza escribirlo a mano (00132). Se muestra
+                    de solo lectura, con el acceso a donde si se cambia. */}
                 <dt className="col-sm-4">Presupuesto asignado</dt>
                 <dd className="col-sm-8">
-                  {editandoPresupuesto ? (
-                    <div className="d-flex align-items-start gap-2">
-                      <NumberField
-                        value={montoPresupuesto}
-                        onChange={(valor) => setMontoPresupuesto(valor)}
-                        min={0}
-                        step="0.01"
-                        style={{ maxWidth: "160px" }}
-                      />
-                      <PrimaryButton
-                        title="Guardar"
-                        onClick={guardarPresupuesto}
-                        loading={guardandoPresupuesto}
-                        icon={<Save size={16} aria-hidden="true" />}
-                      />
+                  <span className="d-inline-flex align-items-center gap-2">
+                    {formatearMoneda(jornada.presupuestoAsignado) ?? "—"}
+                    {permisosPresupuesto.puedeVer && (
                       <SecondaryButton
-                        title="Cancelar"
-                        onClick={() => setEditandoPresupuesto(false)}
-                        disabled={guardandoPresupuesto}
+                        title="Ver de dónde viene"
+                        size="sm"
+                        onClick={() => setPestaniaActiva("presupuesto")}
                       />
-                    </div>
-                  ) : (
-                    <span className="d-inline-flex align-items-center gap-2">
-                      {jornada.presupuestoAsignado != null
-                        ? `Q${Number(jornada.presupuestoAsignado).toLocaleString()}`
-                        : "—"}
-                      {permisos.puedeEditar && (
-                        <SecondaryButton title="Editar" onClick={abrirEdicionPresupuesto} />
-                      )}
-                    </span>
-                  )}
-                  {errorPresupuesto && (
-                    <div className="text-danger small mt-1">{errorPresupuesto}</div>
-                  )}
+                    )}
+                  </span>
                 </dd>
               </dl>
 
@@ -525,6 +494,15 @@ export default function DetalleJornadaPage() {
               columnas={COLUMNAS_HISTORIAL_JORNADA}
               datos={filasHistorial}
               vacio="Esta jornada todavia no tiene cambios de estado registrados."
+            />
+          )}
+
+          {pestaniaActiva === "presupuesto" && (
+            <OrigenesDePresupuesto
+              jornadaId={jornada.id}
+              proyectoId={jornada.proyectoId}
+              rol={rol}
+              alCambiar={recargar}
             />
           )}
 

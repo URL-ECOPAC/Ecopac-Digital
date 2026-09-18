@@ -109,7 +109,14 @@ function validarDetalle(detalle = {}, indice, tipoDeDonacion) {
   const prefijo = `detalles_${indice}`;
   const renglon = indice + 1;
 
-  if (estaVacio(detalle.descripcion)) {
+  if (tipoDeDonacion === TIPOS_DE_DONACION.MEDICAMENTOS) {
+    // Desde la #840 el medicamento se elige del catalogo y la descripcion la arma
+    // fn_registrar_donacion con el (00132): pedir texto aqui volveria a la adivinanza.
+    if (estaVacio(detalle.medicamentoId)) {
+      errores[`${prefijo}_medicamentoId`] =
+        `El renglon ${renglon} tiene que elegir un medicamento del catalogo.`;
+    }
+  } else if (estaVacio(detalle.descripcion)) {
     errores[`${prefijo}_descripcion`] = `El renglon ${renglon} necesita una descripcion.`;
   }
 

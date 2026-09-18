@@ -315,7 +315,7 @@ Registro de deduplicacion. `paciente_absorbido_id` (UNIQUE: no se absorbe dos ve
 | `responsable_id`       | UUID NOT NULL               | Perfil a cargo                            |
 | `proyecto_id`          | UUID                        | Opcional                                  |
 | `estado`               | `estado_jornada` NOT NULL   | `planificada`/`en curso`/`finalizada`/`cancelada` |
-| `presupuesto_asignado` | NUMERIC(12,2) NOT NULL      |                                           |
+| `presupuesto_asignado` | NUMERIC(12,2) NOT NULL      | Suma de `jornada_presupuesto_origen` [00132]; no se escribe a mano |
 | `codigo`               | VARCHAR(30) UNIQUE          | [+00036]                                  |
 | `fecha_inicio_real`    | TIMESTAMPTZ                 | [+00036] Cuando de verdad empezo          |
 | `fecha_fin_real`       | TIMESTAMPTZ                 | [+00036]                                  |
@@ -573,11 +573,27 @@ no `pg_cron`.
 | `registrado_por`    | UUID                        | Antes `registrada_por` [renombrada 00091] |
 | `proyecto_id`       | UUID                        | [+00097] A que proyecto se destina       |
 
+### `jornada_presupuesto_origen` [00132]
+
+De donde viene cada parte del presupuesto de una jornada (issue #840): `origen`
+(`origen_de_presupuesto`: `donacion`, `fondos_propios`, `aporte_externo`, `sin_clasificar`),
+`donacion_id` (obligatoria si y solo si el origen es una donacion; tiene que ser de dinero y estar
+registrada), `monto` (> 0), `descripcion`, `registrado_por` (lo fija `auth.uid()`).
+`jornadas.presupuesto_asignado` es la suma de estas filas y la mantiene un trigger; un UPDATE
+directo de esa columna se rechaza. Lo asignado desde una donacion no puede pasar de su monto
+total en ninguna combinacion de jornadas. El presupuesto que existia antes de la 00132, y el de
+un INSERT de jornada que ya lo traia, entran como `sin_clasificar`.
+
 ### `donacion_detalle` [00022]
 
 `descripcion`, `cantidad`, `unidad`, `monto`, y `lote_id` **UNIQUE**: cuando la donacion es de
 medicamentos, la linea del detalle apunta al lote que se creo en inventario. La unicidad es lo que
 impide que dos donaciones reclamen el mismo lote.
+
+`medicamento_id` [+00132]: el medicamento del catalogo. `fn_registrar_donacion` lo exige en cada
+renglon de una donacion de medicamentos y arma `descripcion` y `unidad` (la presentacion) desde el
+catalogo; los otros tipos lo dejan en NULL y siguen en texto libre. Con el, el ingreso a
+inventario desde la donacion ya no vuelve a preguntar el medicamento.
 
 ---
 
@@ -943,7 +959,7 @@ de condiciones cronicas en `apps/mobile`, alcance ya decidido en la issue #122.
 | --- | --- | --- | --- | --- |
 | nombre / fecha / comunidad_id / responsable_id / proyecto_id | Si | Si (alta+edicion) | Si | — |
 | estado | Si (chip/kanban) | Si, vía kanban y "Cerrar jornada" (no formulario) | Si | — |
-| presupuesto_asignado | Si (`DetalleJornadaPage.jsx`) | Si (`asignarPresupuestoJornada()`) | Si | Resuelto (#756). Ver nota abajo |
+| presupuesto_asignado | Si (`DetalleJornadaPage.jsx`, solo lectura) | Derivado: suma de `jornada_presupuesto_origen` (00132, #840) | Si | Resuelto. Ver nota abajo |
 | cupo_estimado | Si | Si (alta+edicion) | Si | Resuelto (#756) |
 | botiquin_bodega_id | Si, resuelto a nombre | Si (alta+edicion), solo bodegas moviles | Si | Resuelto (#756) |
 | codigo | Si (`DetalleJornadaPage.jsx`, antes siempre "—") | **Generado por el servidor**, migracion `00126` | n/a | Resuelto en esta misma issue: ver nota tecnica abajo |
@@ -967,15 +983,12 @@ formulario (`ModalJornada.jsx`): `cupoEstimado` con `NumberField`, `botiquinBode
 cualquier bodega del catalogo-. `DetalleJornadaPage.jsx` ya mostraba `cupoEstimado`; se agrega
 `botiquinBodega`, embebido por nombre en `obtenerJornada()` igual que `comunidad`/`responsable`.
 
-**`presupuesto_asignado` (resuelto, issue #756)**: sigue A PROPOSITO fuera de
-`CAMPOS_FORMULARIO_JORNADA`/`aColumnasDeTabla()` (jornadas/api.js): esa columna ya tenia una via de
-escritura propia y mas estricta, `asignarPresupuestoJornada()` (`presupuestos/api.js`, valida el
-monto con `aNumeroAEscribir()`), y meterla en el formulario generico habria duplicado el camino de
-escritura de una columna financiera con dos reglas de validacion distintas. En vez de eso,
-`useDetalleJornada.js` gana una accion dedicada (`asignarPresupuesto`) que llama directo a esa
-funcion -mismo criterio que "Cerrar jornada": una accion propia, no un campo mas del formulario
-generico-, y `DetalleJornadaPage.jsx` la expone como un control de edicion en linea junto al resto
-de la ficha, gateado por `permisos.puedeEditar`. `asignarPresupuestoJornada()` ya tiene llamador.
+**`presupuesto_asignado` (issue #840)**: dejo de escribirse. Desde la 00132 es la suma de los
+aportes de `jornada_presupuesto_origen`, que se registran y se quitan en la pestaña Presupuesto de
+`DetalleJornadaPage.jsx` (`useOrigenesDePresupuesto`, `presupuestos/origenes.api.js`). El resumen
+lo muestra de solo lectura. `asignarPresupuestoJornada()` y la accion `asignarPresupuesto` de
+`useDetalleJornada.js` (issue #756) se retiraron: la base rechaza el UPDATE directo. La guarda
+contra montos ilegibles (`aNumeroAEscribir()`, issue #597) se mudo a `registrarOrigenDePresupuesto()`.
 
 **`jornada_personal`**: `perfil_id`/`hora_inicio`/`hora_fin`/`responsabilidad` completos (alta y
 edicion, issue #185); `rol_en_jornada` se captura al asignar pero no se corrige despues (a
@@ -1150,8 +1163,10 @@ boton -bajo impacto, agrupado con el hueco de `donaciones.estado` si se retoma e
 | registrado_por | No | Si, automatico | No | Bajo impacto |
 | proyecto_id | Si, `proyectoNombre` resuelto en la constancia | Si, al registrar | No | Resuelto (#756) |
 
-**`donacion_detalle`**: `descripcion`/`cantidad`/`monto` completos al registrar; `unidad` se agrega
-como campo en el formulario web de medicamentos e insumos (issue #756, resuelto). No hay campo de
+**`donacion_detalle`**: `descripcion`/`cantidad`/`monto` completos al registrar. Desde la #840 el
+renglon de una donacion de medicamentos elige `medicamento_id` del catalogo (con alta en linea si
+falta) y no pide descripcion ni unidad: las arma la base desde el catalogo. `unidad` queda como
+campo solo para insumos. Los campos de cada tipo salen de `camposDeRenglonDeDonacion()`. No hay campo de
 `fechaVencimiento` en este formulario (se probo y se quito): no es una columna de la tabla y el
 vencimiento real se captura mas abajo, al generar el ingreso -pedirlo aqui tambien era una nota
 que nunca se guardaba en ningun lado. `lote_id` -el enlace real a un lote de farmacia-

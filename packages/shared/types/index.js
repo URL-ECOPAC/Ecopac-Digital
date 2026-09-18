@@ -308,7 +308,8 @@
  * @property {string} responsableId
  * @property {string|null} proyectoId
  * @property {EstadoJornada} estado
- * @property {number} presupuestoAsignado
+ * @property {number} presupuestoAsignado Suma de sus filas de jornada_presupuesto_origen desde
+ *   la 00132: la mantiene un trigger y no se escribe a mano.
  * @property {string} createdAt
  * @property {string} updatedAt
  * @property {string|null} codigo
@@ -317,6 +318,28 @@
  * @property {number|null} ordenKanban
  * @property {number|null} cupoEstimado
  * @property {string|null} botiquinBodegaId
+ */
+
+/**
+ * Enum `origen_de_presupuesto` (00132).
+ *
+ * @typedef {'donacion'|'fondos_propios'|'aporte_externo'|'sin_clasificar'} OrigenDePresupuesto
+ */
+
+/**
+ * Fila de `jornada_presupuesto_origen` (00132, issue #840): de donde viene una parte del
+ * presupuesto de una jornada. `jornadas.presupuesto_asignado` es la suma de estas filas.
+ *
+ * @typedef {object} JornadaPresupuestoOrigen
+ * @property {string} id
+ * @property {string} jornadaId
+ * @property {OrigenDePresupuesto} origen
+ * @property {string|null} donacionId Obligatoria si y solo si origen es 'donacion'.
+ * @property {number} monto
+ * @property {string|null} descripcion
+ * @property {string|null} registradoPor
+ * @property {string} createdAt
+ * @property {string} updatedAt
  */
 
 /**
@@ -678,6 +701,9 @@
  * @property {string|null} loteId Con valor cuando la linea entro al inventario como lote.
  * @property {string} createdAt
  * @property {string} updatedAt
+ * @property {string|null} medicamentoId Medicamento del catalogo (00132, issue #840).
+ *   Obligatorio en las donaciones de medicamentos registradas desde entonces; NULL en los otros
+ *   tipos y en las anteriores, que se capturaban como texto libre.
  */
 
 // --- Proyectos ------------------------------------------------------------------------------

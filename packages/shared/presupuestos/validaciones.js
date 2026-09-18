@@ -11,13 +11,51 @@
 // que cada pantalla trajera su propia copia, que es el bug que esta misma rama corrige en
 // donaciones.
 
-import { CATEGORIAS_DE_GASTO } from "../enums.js";
+import { CATEGORIAS_DE_GASTO, ORIGENES_DE_PRESUPUESTO } from "../enums.js";
 import { aFechaLocal } from "../formato/fechas.js";
+import { formatearMoneda } from "../formato/moneda.js";
 
 const CATEGORIAS_VALIDAS = Object.values(CATEGORIAS_DE_GASTO);
 
 function estaVacio(valor) {
   return valor === undefined || valor === null || String(valor).trim() === "";
+}
+
+/**
+ * Valida un aporte al presupuesto de una jornada (issue #840, 00132).
+ *
+ * Adelanta en el formulario lo que la base rechazaria: monto positivo, donacion obligatoria si y
+ * solo si el origen es una donacion, y no asignar de una donacion mas de lo que le queda. Lo
+ * ultimo solo se puede comprobar aqui si quien llama pasa el saldo de la donacion elegida; la
+ * garantia real es fn_validar_origen_de_presupuesto, que ve lo que asignaron las demas jornadas.
+ *
+ * @param {{ origen?: string, donacionId?: string, monto?: number|string }} valores
+ * @param {{ disponibleDeDonacion?: number|null }} [contexto]
+ * @returns {Record<string, string>} Errores por campo; vacio si el aporte es valido.
+ */
+export function validarOrigenDePresupuesto(valores = {}, { disponibleDeDonacion = null } = {}) {
+  const errores = {};
+
+  if (estaVacio(valores.origen)) {
+    errores.origen = "Indica de dónde viene el dinero.";
+  } else if (valores.origen === ORIGENES_DE_PRESUPUESTO.SIN_CLASIFICAR) {
+    // Solo lo pone el sistema: registrarlo a mano seria volver a no saber de donde vino.
+    errores.origen = "Indica de dónde viene el dinero.";
+  }
+
+  const esDonacion = valores.origen === ORIGENES_DE_PRESUPUESTO.DONACION;
+  if (esDonacion && estaVacio(valores.donacionId)) {
+    errores.donacionId = "Elige la donación de la que sale el dinero.";
+  }
+
+  const monto = Number(valores.monto);
+  if (estaVacio(valores.monto) || !Number.isFinite(monto) || monto <= 0) {
+    errores.monto = "El monto tiene que ser mayor que cero.";
+  } else if (esDonacion && disponibleDeDonacion !== null && monto > disponibleDeDonacion) {
+    errores.monto = `A esa donación le quedan ${formatearMoneda(disponibleDeDonacion)} por asignar.`;
+  }
+
+  return errores;
 }
 
 /**

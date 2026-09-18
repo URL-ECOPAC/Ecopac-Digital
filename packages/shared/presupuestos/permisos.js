@@ -64,6 +64,24 @@ export function puedeEditarGasto(rol, estadoDelGasto) {
 }
 
 /**
+ * Que puede hacer un rol con el origen del presupuesto de una jornada (issue #840, 00132).
+ *
+ * Replica las politicas de jornada_presupuesto_origen: leen administrador y consultivos (y quien
+ * tenga jornadas.gestionar, que no se resuelve desde el rol), y registran o quitan aportes quienes
+ * pueden actualizar la jornada -administrador, o jornadas.gestionar-. El personal de campo ve el
+ * total en la jornada, no el desglose.
+ *
+ * @param {string} rol
+ * @returns {{ puedeVer: boolean, puedeGestionar: boolean }}
+ */
+export function permisosDeOrigenDePresupuesto(rol) {
+  return {
+    puedeVer: esAdministrador(rol) || ROLES_CONSULTIVOS.includes(rol),
+    puedeGestionar: esAdministrador(rol),
+  };
+}
+
+/**
  * Permisos de un rol, en la forma que consume una pantalla.
  *
  * Sin `puedeEliminar`: gastos no tiene politica de DELETE ni GRANT de DELETE (00052), asi que

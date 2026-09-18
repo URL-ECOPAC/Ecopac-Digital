@@ -18,6 +18,8 @@ import { useSesionCompartida } from "../contexto/SesionProvider";
 import PageHeader from "../components/PageHeader";
 import { ACCION_VOLVER_A_DONACIONES } from "./donacionesNavegacion";
 import ScreenContainer from "../components/ScreenContainer";
+import AltaDeMedicamentoEnLinea from "../components/AltaDeMedicamentoEnLinea";
+import CampoDeFormulario from "../components/CampoDeFormulario";
 import ModalRegistroIngreso from "./ModalRegistroIngreso.jsx";
 import { Plus, Trash2 } from "lucide-react";
 import SecondaryButton from "../components/SecondaryButton";
@@ -69,6 +71,10 @@ export default function RegistroDonacionPage({ usuarioRol }) {
     agregarRenglon,
     quitarRenglon,
     actualizarRenglon,
+    camposDeRenglon,
+    catalogosDeRenglon,
+    altaDeMedicamento,
+    resumenLegible,
     donantesOptions,
     proyectosOptions,
     modalNuevoDonante,
@@ -250,104 +256,64 @@ export default function RegistroDonacionPage({ usuarioRol }) {
       <Card className="mb-4">
         <Card.Header as="h5">Detalle de la Donación</Card.Header>
         <Card.Body>
-          {(detalles || []).map((item) => (
-            <Row key={item.id} className="g-2 align-items-center mb-3">
-              {tipoDonacion === TIPOS_DE_DONACION.DINERO && (
-                <>
-                  <Col md={7}>
-                    <Form.Control
-                      placeholder="Concepto / Observación"
+          {/* Los campos de cada renglon salen de camposDeRenglonDeDonacion(tipo) en shared (issue
+              #840). Antes eran tres bloques escritos a mano por tipo, "servicios" no tenia
+              ninguno, y el medicamento se escribia como texto libre que despues habia que
+              adivinar al darle ingreso en inventario. */}
+          {(detalles || []).map((item, indice) => (
+            <div key={item.id} className="ec-renglon">
+              <div className="ec-form-grid">
+                {camposDeRenglon.map((campo) => {
+                  const errorDeCampo = error?.campos?.[`detalles_${indice}_${campo.id}`];
+                  const control = (
+                    <CampoDeFormulario
+                      key={campo.id}
+                      campo={campo}
+                      valor={item[campo.id]}
+                      error={errorDeCampo}
+                      catalogos={catalogosDeRenglon}
                       disabled={!permisos?.puedeEscribir}
-                      value={item.descripcion || ""}
-                      onChange={(e) => actualizarRenglon(item.id, "descripcion", e.target.value)}
+                      onChange={(valor) => actualizarRenglon(item.id, campo.id, valor)}
                     />
-                  </Col>
-                  <Col md={4}>
-                    <Form.Control
-                      type="number"
-                      placeholder="Monto"
-                      disabled={!permisos?.puedeEscribir}
-                      value={item.monto || ""}
-                      onChange={(e) => actualizarRenglon(item.id, "monto", e.target.value)}
-                    />
-                  </Col>
-                </>
-              )}
-
-              {tipoDonacion === "medicamentos" && (
-                <>
-                  <Col md={5}>
-                    <Form.Control
-                      placeholder="Nombre de Medicamento / Lote"
-                      disabled={!permisos?.puedeEscribir}
-                      value={item.descripcion || ""}
-                      onChange={(e) => actualizarRenglon(item.id, "descripcion", e.target.value)}
-                    />
-                  </Col>
-                  <Col md={3}>
-                    <Form.Control
-                      type="number"
-                      placeholder="Cantidad"
-                      disabled={!permisos?.puedeEscribir}
-                      value={item.cantidad || ""}
-                      onChange={(e) => actualizarRenglon(item.id, "cantidad", e.target.value)}
-                    />
-                  </Col>
-                  <Col md={3}>
-                    <Form.Control
-                      placeholder="Unidad"
-                      disabled={!permisos?.puedeEscribir}
-                      value={item.unidad || ""}
-                      onChange={(e) => actualizarRenglon(item.id, "unidad", e.target.value)}
-                    />
-                  </Col>
-                </>
-              )}
-
-              {tipoDonacion === "insumos" && (
-                <>
-                  <Col md={5}>
-                    <Form.Control
-                      placeholder="Descripción del insumo"
-                      disabled={!permisos?.puedeEscribir}
-                      value={item.descripcion || ""}
-                      onChange={(e) => actualizarRenglon(item.id, "descripcion", e.target.value)}
-                    />
-                  </Col>
-                  <Col md={3}>
-                    <Form.Control
-                      type="number"
-                      placeholder="Cantidad"
-                      disabled={!permisos?.puedeEscribir}
-                      value={item.cantidad || ""}
-                      onChange={(e) => actualizarRenglon(item.id, "cantidad", e.target.value)}
-                    />
-                  </Col>
-                  <Col md={3}>
-                    <Form.Control
-                      placeholder="Unidad"
-                      disabled={!permisos?.puedeEscribir}
-                      value={item.unidad || ""}
-                      onChange={(e) => actualizarRenglon(item.id, "unidad", e.target.value)}
-                    />
-                  </Col>
-                </>
-              )}
+                  );
+                  if (campo.id !== "medicamentoId" || !altaDeMedicamento.puedeCrear) return control;
+                  // El medicamento donado muchas veces no esta en el catalogo: se crea aqui mismo.
+                  return (
+                    <div key={campo.id} className="ec-form-subgrid ec-form-grid--ancho">
+                      {control}
+                      {!altaDeMedicamento.abierto && (
+                        <div className="ec-form-subgrid-accion">
+                          <SecondaryButton
+                            title="Nuevo medicamento"
+                            size="sm"
+                            icon={<Plus size={14} aria-hidden="true" />}
+                            onClick={() => altaDeMedicamento.abrir(item.id)}
+                            disabled={!permisos?.puedeEscribir}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+                {altaDeMedicamento.renglonId === item.id && (
+                  <AltaDeMedicamentoEnLinea alta={altaDeMedicamento} />
+                )}
+              </div>
 
               {permisos?.puedeEscribir && detalles.length > 1 && (
-                <Col md={1} className="text-end">
+                <div className="ec-renglon-accion">
                   <Button
                     variant="outline-danger"
                     size="sm"
                     onClick={() => quitarRenglon(item.id)}
-                    aria-label="Quitar renglón"
+                    aria-label={`Quitar renglón ${indice + 1}`}
                     title="Quitar renglón"
                   >
                     <Trash2 size={16} aria-hidden="true" />
                   </Button>
-                </Col>
+                </div>
               )}
-            </Row>
+            </div>
           ))}
 
           {permisos?.puedeEscribir && (
@@ -382,19 +348,29 @@ export default function RegistroDonacionPage({ usuarioRol }) {
         </div>
       )}
 
-      {resumenRegistro && (
+      {/* El recibo de lo que se acaba de guardar (issue #840, A10). Antes eran tres lineas con
+          el valor crudo del enum ("dinero") y la fecha sin formato; resumenLegibleDeDonacion()
+          en shared lo traduce todo y resume lo que importa segun el tipo. */}
+      {resumenLegible && (
         <Card className="mb-4">
-          <Card.Header as="h5">Resumen del Registro</Card.Header>
+          <Card.Header as="h5">{resumenLegible.titulo}</Card.Header>
           <Card.Body>
-            <Card.Text>
-              <strong>Tipo:</strong> {resumenRegistro.tipo}
-            </Card.Text>
-            <Card.Text>
-              <strong>Fecha:</strong> {resumenRegistro.fecha}
-            </Card.Text>
-            <Card.Text>
-              <strong>Renglones registrados:</strong> {resumenRegistro.detalles?.length || 0}
-            </Card.Text>
+            <dl className="ec-recibo">
+              {resumenLegible.datos.map((dato) => (
+                <div key={dato.label}>
+                  <dt>{dato.label}</dt>
+                  <dd>{dato.valor}</dd>
+                </div>
+              ))}
+            </dl>
+            <ul className="ec-recibo-renglones">
+              {resumenLegible.renglones.map((renglon) => (
+                <li key={renglon.id}>
+                  <span>{renglon.texto}</span>
+                  {renglon.detalle && <strong>{renglon.detalle}</strong>}
+                </li>
+              ))}
+            </ul>
           </Card.Body>
         </Card>
       )}

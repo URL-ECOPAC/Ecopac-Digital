@@ -24,8 +24,72 @@ import {
   ESTADOS_DE_GASTO,
   ETIQUETAS_CATEGORIA_GASTO,
   ETIQUETAS_ESTADO_GASTO,
+  ETIQUETAS_ORIGEN_PRESUPUESTO,
+  ORIGENES_DE_PRESUPUESTO,
   opcionesDe,
 } from "../enums.js";
+
+/**
+ * Los origenes que se pueden ELEGIR al registrar un aporte (issue #840). "sin_clasificar" no esta:
+ * solo lo pone el sistema, para el presupuesto que existia antes de la 00132 o el que llego ya
+ * puesto al crear una jornada. Registrarlo a mano seria volver a no saber de donde vino el dinero.
+ */
+export const OPCIONES_ORIGEN_PRESUPUESTO = opcionesDe(
+  ORIGENES_DE_PRESUPUESTO,
+  ETIQUETAS_ORIGEN_PRESUPUESTO,
+).filter((opcion) => opcion.value !== ORIGENES_DE_PRESUPUESTO.SIN_CLASIFICAR);
+
+/**
+ * Registro de un aporte al presupuesto de una jornada (jornada_presupuesto_origen, 00132).
+ *
+ * `donacionId` solo aplica cuando el origen es una donacion: lo decide
+ * camposDeOrigenDePresupuesto(), no la pantalla. Su catalogo son las donaciones de dinero
+ * registradas que todavia tienen saldo sin asignar.
+ */
+export const CAMPOS_ORIGEN_PRESUPUESTO = [
+  {
+    id: "origen",
+    label: "De dónde viene",
+    tipo: TIPOS_DE_CAMPO.SELECT,
+    opciones: OPCIONES_ORIGEN_PRESUPUESTO,
+    validacion: { requerido: true },
+  },
+  {
+    id: "donacionId",
+    label: "Donación",
+    tipo: TIPOS_DE_CAMPO.SELECT,
+    opcionesDesde: "donacionesDisponibles",
+    validacion: { requerido: true },
+  },
+  {
+    id: "monto",
+    label: "Monto (Q)",
+    tipo: TIPOS_DE_CAMPO.NUMERO,
+    paso: 0.01,
+    // CHECK (monto > 0) en la 00132.
+    validacion: { requerido: true, min: 0.01 },
+  },
+  {
+    id: "descripcion",
+    label: "Detalle",
+    tipo: TIPOS_DE_CAMPO.TEXTO,
+    placeholder: "Ej. Aporte de la municipalidad",
+    validacion: { requerido: false, maxLongitud: 200 },
+  },
+];
+
+/**
+ * Los campos que aplican segun el origen elegido: la donacion solo se pide si el origen es una
+ * donacion (chk_presupuesto_origen_donacion_coherente, 00132).
+ *
+ * @param {string} origen
+ * @returns {object[]}
+ */
+export function camposDeOrigenDePresupuesto(origen) {
+  return CAMPOS_ORIGEN_PRESUPUESTO.filter(
+    (campo) => campo.id !== "donacionId" || origen === ORIGENES_DE_PRESUPUESTO.DONACION,
+  );
+}
 
 export const OPCIONES_CATEGORIA_GASTO = opcionesDe(CATEGORIAS_DE_GASTO, ETIQUETAS_CATEGORIA_GASTO);
 

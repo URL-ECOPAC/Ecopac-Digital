@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  asignarPresupuestoJornada,
   conProyectoId,
   obtenerPresupuestoJornada,
   obtenerPresupuestoProyecto,
@@ -65,33 +64,6 @@ function clienteInsert(respuesta) {
       return encadenable;
     },
     single: async () => (respuesta instanceof Error ? Promise.reject(respuesta) : respuesta),
-  };
-
-  return {
-    llamadas,
-    from(tabla) {
-      llamadas.push({ paso: "from", tabla });
-      return encadenable;
-    },
-  };
-}
-
-function clienteUpdate(respuesta) {
-  const llamadas = [];
-  const encadenable = {
-    update(valores) {
-      llamadas.push({ paso: "update", valores });
-      return encadenable;
-    },
-    eq(columna, valor) {
-      llamadas.push({ paso: "eq", columna, valor });
-      return encadenable;
-    },
-    select(columnas) {
-      llamadas.push({ paso: "select", columnas });
-      return encadenable;
-    },
-    maybeSingle: async () => (respuesta instanceof Error ? Promise.reject(respuesta) : respuesta),
   };
 
   return {
@@ -350,94 +322,6 @@ describe("obtenerPresupuestosDeJornadas (issue #771)", () => {
     const { presupuestos, error } = await obtenerPresupuestosDeJornadas(undefined);
 
     expect(presupuestos).toEqual({});
-    expect(error).toBeNull();
-  });
-});
-
-describe("asignarPresupuestoJornada", () => {
-  it("actualiza la columna de la jornada indicada", async () => {
-    const cliente = clienteUpdate({
-      data: { id: "jornada-1", presupuesto_asignado: "8000.00" },
-      error: null,
-    });
-    dobles.cliente = cliente;
-
-    const { jornada, error } = await asignarPresupuestoJornada("jornada-1", 8000);
-
-    expect(error).toBeNull();
-    expect(jornada).toEqual({ id: "jornada-1", presupuesto_asignado: "8000.00" });
-    expect(cliente.llamadas).toContainEqual({ paso: "from", tabla: "jornadas" });
-    expect(cliente.llamadas).toContainEqual({
-      paso: "update",
-      valores: { presupuesto_asignado: 8000 },
-    });
-    expect(cliente.llamadas).toContainEqual({ paso: "eq", columna: "id", valor: "jornada-1" });
-  });
-
-  it("rechaza un monto negativo sin llegar al servidor", async () => {
-    const { jornada, error } = await asignarPresupuestoJornada("jornada-1", -1);
-
-    expect(jornada).toBeNull();
-    expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.CHECK);
-  });
-
-  // Issue #597. Antes estos montos se convertian en 0 con aNumero(), pasaban la guarda de
-  // negativo y se escribian como el presupuesto de la jornada: quedaba en cero sin ninguna
-  // senal de que el dato venia mal. El caso realista no es alguien escribiendo letras, es un
-  // campo de formulario vacio o un valor que se perdio en el camino.
-  it.each([
-    ["una cadena que no es numero", "abc"],
-    ["undefined", undefined],
-    ["null", null],
-    ["la cadena vacia", ""],
-    ["una cadena de espacios", "   "],
-    ["NaN", Number.NaN],
-    ["Infinity", Number.POSITIVE_INFINITY],
-  ])("rechaza %s en vez de escribir cero", async (_descripcion, monto) => {
-    const { jornada, error } = await asignarPresupuestoJornada("jornada-1", monto);
-
-    expect(jornada).toBeNull();
-    expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.CHECK);
-  });
-
-  it("acepta un monto que llega como cadena numerica, que es lo que manda un formulario", async () => {
-    const cliente = clienteUpdate({
-      data: { id: "jornada-1", presupuesto_asignado: "8000.00" },
-      error: null,
-    });
-    dobles.cliente = cliente;
-
-    const { error } = await asignarPresupuestoJornada("jornada-1", "8000");
-
-    expect(error).toBeNull();
-    expect(cliente.llamadas).toContainEqual({
-      paso: "update",
-      valores: { presupuesto_asignado: 8000 },
-    });
-  });
-
-  it("acepta cero, que es el valor por defecto de la columna", async () => {
-    const cliente = clienteUpdate({
-      data: { id: "jornada-1", presupuesto_asignado: "0.00" },
-      error: null,
-    });
-    dobles.cliente = cliente;
-
-    const { error } = await asignarPresupuestoJornada("jornada-1", 0);
-
-    expect(error).toBeNull();
-    expect(cliente.llamadas).toContainEqual({
-      paso: "update",
-      valores: { presupuesto_asignado: 0 },
-    });
-  });
-
-  it("devuelve null cuando RLS impide la actualizacion sin reportar error", async () => {
-    dobles.cliente = clienteUpdate({ data: null, error: null });
-
-    const { jornada, error } = await asignarPresupuestoJornada("jornada-ajena", 100);
-
-    expect(jornada).toBeNull();
     expect(error).toBeNull();
   });
 });
