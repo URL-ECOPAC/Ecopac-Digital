@@ -22,7 +22,7 @@ export default function KanbanJornadasScreen() {
       }
     >
       <View style={estilos.cabecera}>
-        <Text style={estilos.titulo}>📋 Tablero de Jornadas</Text>
+        <Text style={estilos.titulo}> Tablero de Jornadas</Text>
         <Text style={estilos.subtitulo}>Mueve las tarjetas para cambiar el estado</Text>
       </View>
 

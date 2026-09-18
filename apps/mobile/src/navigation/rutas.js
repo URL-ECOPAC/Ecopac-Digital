@@ -33,7 +33,7 @@ export const ROUTES = {
   SELECCION_JORNADA: "SeleccionJornada",
   JORNADA_EN_CURSO: "JornadaEnCurso",
   JORNADAS_ASIGNADAS: "JornadasAsignadas",
-  KANBAN_JORNADAS: "KanbanJornadas", // ✅ NUEVA RUTA AGREGADA
+  KANBAN_JORNADAS: "KanbanJornadas", //  NUEVA RUTA AGREGADA
 
   STOCK: "Stock",
   REGISTRO_INGRESO: "RegistroIngreso",

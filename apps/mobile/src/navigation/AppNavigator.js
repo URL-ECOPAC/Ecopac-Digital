@@ -143,7 +143,7 @@ const PANTALLAS_INICIO = [
   { name: ROUTES.INICIO, componente: conGuardaDeRol(InicioScreen, "inicio"), titulo: "Inicio" },
   { name: ROUTES.DONACIONES, componente: conGuardaDeRol(DonacionesScreen, "donaciones"), titulo: "Donaciones" },
   { name: ROUTES.PROYECTOS, componente: conGuardaDeRol(ProyectosScreen, "proyectos"), titulo: "Proyectos" },
-  // ✅ PRESUPUESTOS RETIRADO — soloWeb: true
+  //  PRESUPUESTOS RETIRADO — soloWeb: true
   { name: ROUTES.COLABORADORES, componente: conGuardaDeRol(ColaboradoresScreen, "colaboradores"), titulo: "Colaboradores" },
   { name: ROUTES.FICHA_COLABORADOR, componente: conGuardaDeRol(FichaColaboradorScreen, "colaboradores"), titulo: "Ficha del personal" },
   { name: ROUTES.COMUNIDADES, componente: conGuardaDeRoles(ComunidadesScreen, [ROLES.ADMINISTRADOR]), titulo: "Comunidades" },
@@ -163,7 +163,7 @@ const PANTALLAS_JORNADAS = [
   { name: ROUTES.SELECCION_JORNADA, componente: conGuardaDeRol(SeleccionJornadaScreen, "jornadas"), titulo: "Jornadas" },
   { name: ROUTES.JORNADA_EN_CURSO, componente: conGuardaDeRol(JornadaEnCursoScreen, "jornadas"), titulo: "Jornada en curso" },
   { name: ROUTES.JORNADAS_ASIGNADAS, componente: conGuardaDeRol(JornadasAsignadasScreen, "jornadas"), titulo: "Mis jornadas" },
-  // ✅ KANBAN AGREGADO
+  //  KANBAN AGREGADO
   { name: ROUTES.KANBAN_JORNADAS, componente: conGuardaDeRol(KanbanJornadasScreen, "jornadas"), titulo: "Tablero de Jornadas" },
 ];
 
