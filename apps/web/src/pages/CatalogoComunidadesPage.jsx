@@ -46,7 +46,7 @@ export default function CatalogoComunidadesPage() {
           <PageHeader
             title="Catalogo de comunidades"
             actions={[
-              { label: "Volver", onClick: () => navigate("/pacientes"), variant: "secondary" },
+              { label: "Volver", onClick: () => navigate("/pacientes"), variant: "neutra" },
             ]}
           />
           <ErrorState message="No tienes acceso al catalogo de comunidades." />
@@ -62,7 +62,7 @@ export default function CatalogoComunidadesPage() {
           <PageHeader
             title="Catalogo de comunidades"
             actions={[
-              { label: "Volver", onClick: () => navigate("/pacientes"), variant: "secondary" },
+              { label: "Volver", onClick: () => navigate("/pacientes"), variant: "neutra" },
             ]}
           />
           <ErrorState message={error.mensaje} onRetry={recargar} />
@@ -71,9 +71,7 @@ export default function CatalogoComunidadesPage() {
     );
   }
 
-  const acciones = [
-    { label: "Volver", onClick: () => navigate("/pacientes"), variant: "secondary" },
-  ];
+  const acciones = [{ label: "Volver", onClick: () => navigate("/pacientes"), variant: "neutra" }];
   if (permisos.puedeCrear) {
     acciones.push({ label: "Nueva comunidad", onClick: () => setModal({ comunidad: null }) });
   }
@@ -83,7 +81,7 @@ export default function CatalogoComunidadesPage() {
       <div className="modulo-pacientes">
         <PageHeader
           title="Catalogo de comunidades"
-          subtitle="Comunidades del catalogo territorial, con su ubicacion en el mapa"
+          subtitle="Comunidades del catalogo territorial, con su ubicación en el mapa"
           actions={acciones}
         />
 

@@ -10,7 +10,7 @@ import { TIPOS_DE_PRESENTACION } from "../descriptores.js";
 
 export const COLUMNAS_JORNADA = [
   { id: "nombre", label: "Nombre", tipo: TIPOS_DE_PRESENTACION.TEXTO, principal: true },
-  { id: "codigo", label: "Codigo", tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  { id: "codigo", label: "Código", tipo: TIPOS_DE_PRESENTACION.TEXTO },
   { id: "comunidad", label: "Comunidad", tipo: TIPOS_DE_PRESENTACION.TEXTO },
   { id: "fecha", label: "Fecha", tipo: TIPOS_DE_PRESENTACION.FECHA },
   { id: "estado", label: "Estado", tipo: TIPOS_DE_PRESENTACION.CHIP },
@@ -19,7 +19,7 @@ export const COLUMNAS_JORNADA = [
   // Issue #756: se agrega para que DetalleJornadaPage.jsx tenga una etiqueta que mostrar junto
   // al valor; JornadasPage.jsx no la selecciona para el tablero/kanban (mismo criterio que
   // "codigo", ver la nota de abajo).
-  { id: "botiquinBodega", label: "Bodega de botiquin", tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  { id: "botiquinBodega", label: "Bodega de botiquín", tipo: TIPOS_DE_PRESENTACION.TEXTO },
   // Issue #178, criterio 1. No sale de listarJornadas(): se mezcla en el hook de pantalla desde
   // contarPacientesAtendidosPorJornada() (api.js), que consulta vista_reporte_impacto en lote.
   // Esa vista no da SELECT a medico ni voluntario (00064): para esos roles la tarjeta no trae
@@ -79,7 +79,7 @@ export const COLUMNAS_PACIENTES_ATENDIDOS_JORNADA = [
   { id: "paciente", label: "Paciente", tipo: TIPOS_DE_PRESENTACION.TEXTO, principal: true },
   {
     id: "diagnosticoPrincipal",
-    label: "Diagnostico principal",
+    label: "Diagnóstico principal",
     tipo: TIPOS_DE_PRESENTACION.TEXTO,
   },
 ];

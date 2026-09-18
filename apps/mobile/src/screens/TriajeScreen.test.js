@@ -89,7 +89,7 @@ describe("TriajeScreen", () => {
     expect(screen.getByText("Ana Perez")).toBeTruthy();
     // Con un asterisco si el campo es requerido (TriajeScreen.js), por eso el texto exacto no es
     // fijo: se busca por el prefijo de la etiqueta.
-    expect(screen.getByText(/^Presion sistolica/)).toBeTruthy();
+    expect(screen.getByText(/^Presión sistólica/)).toBeTruthy();
   });
 
   it("Guardar y pasar a la cola dispara guardar()", () => {

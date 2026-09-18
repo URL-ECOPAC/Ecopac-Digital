@@ -229,7 +229,7 @@ export async function obtenerHistorialMedico(pacienteId, { rol, desde, hasta, li
       atenciones: 0,
       error: {
         ...construirError(CODIGOS_DE_ERROR_DE_SUPABASE.PERMISO_DENEGADO),
-        mensaje: "Solo el personal medico y la administracion pueden ver un historial clinico.",
+        mensaje: "Solo el personal médico y la administración pueden ver un historial clínico.",
       },
     };
   }

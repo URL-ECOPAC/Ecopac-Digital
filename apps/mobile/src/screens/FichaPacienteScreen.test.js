@@ -1,4 +1,4 @@
-// Pruebas de FichaPacienteScreen (issues #753 y #818).
+// Pruebas de FichaPacienteScreen (issues #753, #818 y #838).
 //
 // POR QUE ESTA PRUEBA SE REESCRIBIO ENTERA
 //
@@ -21,11 +21,20 @@ jest.mock("@ecopac/shared", () => ({
   ...jest.requireActual("@ecopac/shared"),
   usePaciente: jest.fn(),
   // Los hooks de las tres secciones: cada una tiene su propia prueba, aqui solo se las calla.
-  useCondicionesCronicas: jest.fn(() => ({
+  useCondicionesPaciente: jest.fn(() => ({
     condiciones: [],
     cargando: false,
     error: null,
+    errorDeAlta: null,
+    errores: {},
+    enviando: false,
+    permisos: { puedeVer: true, puedeRegistrar: false, puedeEditar: false, puedeQuitar: false },
+    valores: {},
+    setCampo: jest.fn(),
+    agregar: jest.fn(),
+    marcarResuelta: jest.fn(),
     recargar: jest.fn(),
+    catalogos: { condicionesCronicas: [], estadosCondicionCronica: [] },
   })),
   useEvolucionSignos: jest.fn(() => ({
     series: [],
@@ -52,6 +61,14 @@ const PACIENTE = {
   apellidos: "Perez Demo",
   dpi: "1234567890101",
   fechaNacimiento: "1996-01-15",
+  // Los campos que la fila del listado de busqueda no trae y que la pestania "Datos generales"
+  // tiene que mostrar (issue #838).
+  telefonoContacto: "55551234",
+  nombreResponsable: "Persona Inventada",
+  parentescoResponsable: "Madre",
+  catalogoIdioma: { nombre: "Español" },
+  comunidad: { nombre: "Comunidad Inventada", municipio: { nombre: "Municipio Inventado" } },
+  expediente: { numeroFicha: "000123" },
 };
 
 const navegacion = { navigate: jest.fn(), goBack: jest.fn() };
@@ -112,7 +129,21 @@ describe("FichaPacienteScreen", () => {
   it("sin pacienteId lo dice, que es el caso de una navegacion mal armada", () => {
     render(<FichaPacienteScreen route={{}} navigation={navegacion} />);
 
-    expect(screen.getByText(/No se proporciono el paciente/)).toBeTruthy();
+    expect(screen.getByText(/No se proporcionó el paciente/)).toBeTruthy();
+  });
+
+  // Issue #838: la pestania de datos generales se quitaba de la lista, asi que en movil faltaba
+  // la mitad del expediente y solo se podia ver abriendo el formulario de edicion.
+  it("la pestania de datos generales muestra lo que la fila del listado no trae", () => {
+    montar();
+
+    fireEvent.press(screen.getByText("Datos generales"));
+
+    expect(screen.getByText("Español")).toBeTruthy();
+    expect(screen.getByText("Persona Inventada")).toBeTruthy();
+    expect(screen.getByText("Madre")).toBeTruthy();
+    expect(screen.getByText("Municipio Inventado")).toBeTruthy();
+    expect(screen.getByText("000123")).toBeTruthy();
   });
 
   it("se puede cambiar de pestania", () => {

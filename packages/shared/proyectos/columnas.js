@@ -22,7 +22,7 @@ export const COLUMNAS_PROYECTO = [
 
 export const CAMPOS_FICHA_PROYECTO = [
   { id: "nombre", label: "Nombre", tipo: TIPOS_DE_PRESENTACION.TEXTO },
-  { id: "descripcion", label: "Descripcion", tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  { id: "descripcion", label: "Descripción", tipo: TIPOS_DE_PRESENTACION.TEXTO },
   {
     id: "responsable",
     label: "Responsable",
@@ -50,5 +50,5 @@ export const COLUMNAS_SEGUIMIENTO = [
   { id: "createdAt", label: "Fecha", tipo: TIPOS_DE_PRESENTACION.FECHA },
   { id: "nota", label: "Nota", tipo: TIPOS_DE_PRESENTACION.TEXTO, principal: true },
   { id: "porcentajeAnterior", label: "Antes", tipo: TIPOS_DE_PRESENTACION.NUMERO, sufijo: "%" },
-  { id: "porcentajeNuevo", label: "Despues", tipo: TIPOS_DE_PRESENTACION.NUMERO, sufijo: "%" },
+  { id: "porcentajeNuevo", label: "Después", tipo: TIPOS_DE_PRESENTACION.NUMERO, sufijo: "%" },
 ];

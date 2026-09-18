@@ -32,7 +32,7 @@ export const FILTROS_GASTO = [
   {
     id: "categoria",
     tipo: TIPOS_DE_FILTRO.SELECT,
-    label: "Categoria",
+    label: "Categoría",
     opciones: OPCIONES_CATEGORIA_GASTO,
   },
   {

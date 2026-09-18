@@ -1,6 +1,9 @@
 import { useEffect, useRef } from "react";
 import L from "leaflet";
+import { MapPinOff } from "lucide-react";
 import "leaflet/dist/leaflet.css";
+
+import SecondaryButton from "./SecondaryButton";
 
 // Centro de Guatemala, para cuando la comunidad todavia no tiene coordenadas capturadas.
 const CENTRO_GUATEMALA = [15.7835, -90.2308];
@@ -78,7 +81,20 @@ export default function MapaUbicacionComunidad({
 
     mapaRef.current = mapa;
 
+    // ISSUE #838: el mapa salia en gris, sin llenarse de teselas. Leaflet mide el contenedor una
+    // sola vez, al crear el mapa, y aqui eso pasa mientras el modal todavia esta entrando (la
+    // transicion de react-bootstrap lo tiene escalado y, en el primer cuadro, practicamente sin
+    // alto). Con esa medida mal tomada, Leaflet pide las teselas de un area minuscula y el resto
+    // del recuadro se queda vacio para siempre, porque nada lo vuelve a medir.
+    //
+    // invalidateSize() es la forma que da Leaflet de decirle "vuelve a medirte". Se llama al
+    // terminar la transicion y, ademas, cada vez que el contenedor cambia de tamano -- que cubre
+    // tambien girar el telefono o abrir el modal en una ventana que luego se redimensiona.
+    const observador = new ResizeObserver(() => mapa.invalidateSize());
+    observador.observe(contenedorRef.current);
+
     return () => {
+      observador.disconnect();
       mapa.remove();
       mapaRef.current = null;
       marcadorRef.current = null;
@@ -128,7 +144,7 @@ export default function MapaUbicacionComunidad({
       <div
         ref={contenedorRef}
         role="application"
-        aria-label="Mapa para seleccionar la ubicacion de la comunidad"
+        aria-label="Mapa para seleccionar la ubicación de la comunidad"
         style={{
           height: "260px",
           borderRadius: "var(--radio-md)",
@@ -140,16 +156,16 @@ export default function MapaUbicacionComunidad({
         <small style={{ color: "var(--color-text-muted)" }}>
           {typeof latitud === "number" && typeof longitud === "number"
             ? `${latitud}, ${longitud}`
-            : "Toca el mapa para marcar la ubicacion (opcional)."}
+            : "Toca el mapa para marcar la ubicación (opcional)."}
         </small>
         {typeof latitud === "number" && !disabled && (
-          <button
-            type="button"
-            className="btn btn-link btn-sm p-0"
+          <SecondaryButton
+            title="Quitar punto"
+            variant="neutra"
+            size="sm"
+            icon={<MapPinOff size={16} aria-hidden="true" />}
             onClick={() => onCambiarUbicacion?.(null, null)}
-          >
-            Quitar punto
-          </button>
+          />
         )}
       </div>
     </div>

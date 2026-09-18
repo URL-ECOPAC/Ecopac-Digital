@@ -151,7 +151,7 @@ export default function DateField({
               onSelect={(m) => cambiar("mes", m)}
             />
             <Selector
-              label="Anio"
+              label="Año"
               value={borrador.anio}
               options={opcionesDeAnio(minDate, maxDate)}
               onSelect={(a) => cambiar("anio", a)}

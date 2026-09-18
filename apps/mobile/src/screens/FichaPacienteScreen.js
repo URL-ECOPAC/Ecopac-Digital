@@ -2,15 +2,18 @@ import { useState } from "react";
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
+  CAMPOS_FICHA_PACIENTE,
   cabeceraDePaciente,
   pestaniasDeFicha,
   permisosDeFicha,
   resolverPestaniaDeFicha,
+  textoDeCampoDeFicha,
   usePaciente,
+  valoresDeFichaPaciente,
 } from "@ecopac/shared";
 import { colors, spacing, typography } from "@ecopac/ui-tokens";
 
-import { ErrorState, LoadingState } from "../components";
+import { Card, ErrorState, LoadingState } from "../components";
 import { useSesionCompartida } from "../contexto/SesionProvider";
 import { ROUTES } from "../navigation/rutas";
 import CondicionesPacienteSeccion from "./ficha-paciente/CondicionesPacienteSeccion";
@@ -46,13 +49,18 @@ export default function FichaPacienteScreen({ route, navigation }) {
   const [editando, setEditando] = useState(false);
 
   const permisos = permisosDeFicha(rol);
-  const pestanias = pestaniasDeFicha(rol).filter((pestania) => pestania.id !== "generales");
+  // ISSUE #838: "generales" se quitaba de la lista, asi que en movil faltaba la mitad del
+  // expediente -- DPI, tipo de sangre, idioma, telefono, responsable, parentesco, departamento y
+  // municipio-- y la unica forma de verlo era abrir el formulario de edicion. Ahora se dibuja, con
+  // CAMPOS_FICHA_PACIENTE y textoDeCampoDeFicha(), los mismos descriptores que usa la web: la
+  // pantalla no decide ni el orden ni el formato de ningun campo.
+  const pestanias = pestaniasDeFicha(rol);
   const pestaniaActiva = resolverPestaniaDeFicha(pestaniaPedida, rol);
 
   if (!pacienteId) {
     return (
       <View style={styles.centro}>
-        <ErrorState message="No se proporciono el paciente." />
+        <ErrorState message="No se proporcionó el paciente." />
       </View>
     );
   }
@@ -79,6 +87,7 @@ export default function FichaPacienteScreen({ route, navigation }) {
   }
 
   const cabecera = cabeceraDePaciente(paciente);
+  const valores = valoresDeFichaPaciente(paciente);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -106,6 +115,17 @@ export default function FichaPacienteScreen({ route, navigation }) {
       </View>
 
       <ScrollView contentContainerStyle={styles.contenidoScroll}>
+        {pestaniaActiva === "generales" && (
+          <Card title="Datos generales">
+            {CAMPOS_FICHA_PACIENTE.map((campo) => (
+              <View key={campo.id} style={styles.filaDeDato}>
+                <Text style={styles.rotuloDeDato}>{campo.label}</Text>
+                <Text style={styles.valorDeDato}>{textoDeCampoDeFicha(campo, valores)}</Text>
+              </View>
+            ))}
+          </Card>
+        )}
+
         {pestaniaActiva === "historial" && (
           <CondicionesPacienteSeccion pacienteId={paciente.id} rol={rol} />
         )}
@@ -217,6 +237,27 @@ const styles = StyleSheet.create({
   },
   contenidoScroll: {
     padding: spacing.md,
+  },
+  // Un par rotulo/valor de la pestana de datos generales. El guion largo que pone
+  // textoDeCampoDeFicha() para un campo vacio tiene que verse como un hueco, para que se note que
+  // falta capturarlo.
+  filaDeDato: {
+    borderBottomColor: colors.border,
+    borderBottomWidth: 1,
+    paddingVertical: spacing.sm,
+  },
+  rotuloDeDato: {
+    color: colors.textMuted,
+    fontFamily: typography.fontFamilyBase,
+    fontSize: typography.sizes.xs,
+    fontWeight: typography.weights.semibold,
+    textTransform: "uppercase",
+  },
+  valorDeDato: {
+    color: colors.text,
+    fontFamily: typography.fontFamilyBase,
+    fontSize: typography.sizes.sm,
+    marginTop: 2,
   },
   accionesBar: {
     flexDirection: "row",

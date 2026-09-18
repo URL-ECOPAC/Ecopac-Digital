@@ -225,7 +225,7 @@ describe("asociarCondicion", () => {
 
     expect(condicion).toBeNull();
     expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.UNICIDAD);
-    expect(error.mensaje).toContain("ya tiene registrada esa condicion");
+    expect(error.mensaje).toContain("ya tiene registrada esa condición");
     // El texto del servidor no se reenvia nunca: lleva el nombre de la restriccion.
     expect(error.mensaje).not.toContain("constraint");
   });
@@ -246,7 +246,7 @@ describe("actualizarCondicion", () => {
     const { error } = await actualizarCondicion(PADECIMIENTO, {});
 
     expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.CAMPO_REQUERIDO);
-    expect(error.mensaje).toContain("ningun cambio");
+    expect(error.mensaje).toContain("ningún cambio");
   });
 
   it("envia solo los campos que cambian", async () => {

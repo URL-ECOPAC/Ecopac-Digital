@@ -290,7 +290,17 @@ async function principal() {
   }
 
   if (process.argv.includes("--capturar")) {
-    writeFileSync(LINEA_BASE, JSON.stringify(actual, null, 2) + "\n");
+    // Se escribe FORMATEADO CON PRETTIER, no con JSON.stringify a secas. `format:check` corre
+    // sobre `**/*.json` y los dos no coinciden: stringify pone un elemento por linea siempre,
+    // Prettier colapsa el arreglo que cabe en `printWidth`. Asi que cada `--capturar` dejaba el CI
+    // en rojo en un paso que no tiene nada que ver con la paleta, y habia que acordarse de correr
+    // Prettier a mano despues. Ahora no.
+    // `format()` NO lee .prettierrc por su cuenta: hay que resolverlo y pasarselo, o sale con el
+    // printWidth por defecto (80) en vez del 100 del proyecto, y format:check sigue en rojo.
+    const json = JSON.stringify(actual, null, 2) + "\n";
+    const { format, resolveConfig } = await import("prettier");
+    const opciones = (await resolveConfig(LINEA_BASE)) ?? {};
+    writeFileSync(LINEA_BASE, await format(json, { ...opciones, filepath: LINEA_BASE }));
     const archivos = Object.keys(actual).length;
     const colores = new Set(Object.values(actual).flat()).size;
     console.log(`Linea base escrita: ${archivos} archivos, ${colores} colores distintos.`);

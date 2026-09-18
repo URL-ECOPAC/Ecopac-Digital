@@ -51,7 +51,7 @@ export default function ModalHito({ visible, hito, campos, errores, onClose, onG
   };
 
   return (
-    <Modal visible={visible} onClose={onClose} title={editando ? "Corregir hito" : "Nuevo hito"}>
+    <Modal visible={visible} onClose={onClose} title={editando ? "Editar hito" : "Nuevo hito"}>
       {error && (
         <div className="alert alert-danger" role="alert">
           {error.mensaje}

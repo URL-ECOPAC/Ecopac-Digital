@@ -35,12 +35,12 @@ export const FILTROS_MEDICAMENTOS = [
     id: "busqueda",
     tipo: TIPOS_DE_FILTRO.BUSQUEDA,
     label: "Buscar medicamento",
-    placeholder: "Nombre, marca, concentracion o principio activo",
+    placeholder: "Nombre, marca, concentración o principio activo",
   },
   {
     id: "presentacion",
     tipo: TIPOS_DE_FILTRO.SELECT,
-    label: "Presentacion",
+    label: "Presentación",
     opciones: opcionesDe(PRESENTACIONES_DE_MEDICAMENTO, ETIQUETAS_PRESENTACION),
   },
   // Valores como texto ('true'/'false'), igual que el resto de filtros SELECT del modulo: el
@@ -48,7 +48,7 @@ export const FILTROS_MEDICAMENTOS = [
   {
     id: "esPediatrico",
     tipo: TIPOS_DE_FILTRO.SELECT,
-    label: "Poblacion",
+    label: "Población",
     opciones: [
       { value: "true", label: "Pediatrico" },
       { value: "false", label: "Adulto" },
@@ -61,7 +61,7 @@ export const FILTROS_LOTES = [
     id: "busqueda",
     tipo: TIPOS_DE_FILTRO.BUSQUEDA,
     label: "Buscar lote",
-    placeholder: "Numero de lote",
+    placeholder: "Número de lote",
   },
   {
     id: "medicamento",

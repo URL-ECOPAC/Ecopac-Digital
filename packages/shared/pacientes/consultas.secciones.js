@@ -2,10 +2,10 @@ import { CAMPOS_CONSULTA } from "./campos.js";
 
 export const SECCIONES_CONSULTA = Object.freeze([
   { id: "motivo", titulo: "Motivo y antecedentes", campos: ["motivoConsulta", "antecedentes"] },
-  { id: "exploracion", titulo: "Sintomas y exploracion", campos: ["sintomas", "exploracion"] },
+  { id: "exploracion", titulo: "Síntomas y exploración", campos: ["sintomas", "exploracion"] },
   {
     id: "diagnostico",
-    titulo: "Diagnostico y tratamiento",
+    titulo: "Diagnóstico y tratamiento",
     campos: ["diagnosticos", "tratamiento"],
   },
   {

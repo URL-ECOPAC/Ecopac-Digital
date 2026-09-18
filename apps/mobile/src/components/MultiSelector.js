@@ -33,11 +33,27 @@ export default function MultiSelector({
 }) {
   const seleccionados = Array.isArray(value) ? value : [];
   const [textoLibre, setTextoLibre] = useState("");
+  // ISSUE #838: lo escrito a mano quedaba solo como chip y nunca entraba al desplegable, asi que
+  // quitarlo lo hacia desaparecer y no habia forma de volver a elegirlo sin reescribirlo. Se
+  // recuerda aqui, en la sesion del control, y se mezcla con el catalogo del servidor.
+  const [agregadasEnSesion, setAgregadasEnSesion] = useState([]);
 
-  const disponibles = options.filter((opcion) => !seleccionados.includes(opcion.value));
+  const opciones = [
+    ...options,
+    ...agregadasEnSesion.filter((nueva) => !options.some((opcion) => opcion.value === nueva.value)),
+  ];
+  const disponibles = opciones.filter((opcion) => !seleccionados.includes(opcion.value));
 
   const etiquetaDe = (valor) =>
-    options.find((opcion) => opcion.value === valor)?.label ?? String(valor);
+    opciones.find((opcion) => opcion.value === valor)?.label ?? String(valor);
+
+  const recordar = (valor, etiqueta) => {
+    setAgregadasEnSesion((anteriores) =>
+      anteriores.some((opcion) => opcion.value === valor)
+        ? anteriores
+        : [...anteriores, { value: valor, label: etiqueta }],
+    );
+  };
 
   const agregar = (valor) => {
     if (valor === null || valor === "" || seleccionados.includes(valor)) return;
@@ -52,7 +68,7 @@ export default function MultiSelector({
     const limpio = textoLibre.trim();
     if (!limpio) return;
 
-    const existente = buscarOpcionPorEtiqueta(options, limpio);
+    const existente = buscarOpcionPorEtiqueta(opciones, limpio);
     if (existente) {
       agregar(existente.value);
       setTextoLibre("");
@@ -62,11 +78,14 @@ export default function MultiSelector({
     if (typeof onCrear === "function") {
       const nuevo = await onCrear(limpio);
       if (nuevo === null || nuevo === undefined) return;
+      recordar(nuevo, limpio);
       agregar(nuevo);
       setTextoLibre("");
       return;
     }
 
+    // En modo libre el texto ES el valor, asi que la opcion nueva se llama igual que su valor.
+    recordar(limpio, limpio);
     agregar(limpio);
     setTextoLibre("");
   };
@@ -97,8 +116,8 @@ export default function MultiSelector({
         options={disponibles}
         onSelect={agregar}
         placeholder={
-          options.length === 0
-            ? "Todavia no hay ninguna"
+          opciones.length === 0
+            ? "Todavía no hay ninguna"
             : disponibles.length === 0
               ? "Ya elegiste todas las opciones"
               : placeholder

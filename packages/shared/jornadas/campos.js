@@ -86,7 +86,7 @@ export const CAMPOS_JORNADA = [
   },
   {
     id: "botiquinBodega",
-    label: "Bodega de botiquin",
+    label: "Bodega de botiquín",
     tipo: TIPOS_DE_CAMPO.SELECT,
     opcionesDesde: "bodegas",
     validacion: { requerido: false },

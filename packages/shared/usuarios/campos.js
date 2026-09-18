@@ -27,14 +27,14 @@ export const CAMPOS_USUARIO = [
   },
   {
     id: "email",
-    label: "Correo electronico",
+    label: "Correo electrónico",
     tipo: TIPOS_DE_CAMPO.EMAIL,
     placeholder: "nombre@ejemplo.org",
     validacion: { requerido: true, unico: true },
   },
   {
     id: "telefono",
-    label: "Telefono",
+    label: "Teléfono",
     tipo: TIPOS_DE_CAMPO.TELEFONO,
     validacion: { requerido: false, maxLongitud: 20 },
   },
@@ -62,7 +62,7 @@ export const CAMPOS_USUARIO = [
   },
   {
     id: "direccion",
-    label: "Direccion",
+    label: "Dirección",
     tipo: TIPOS_DE_CAMPO.TEXTO_LARGO,
     validacion: { requerido: false },
   },

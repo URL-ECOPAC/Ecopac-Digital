@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { EyeOff } from "lucide-react";
 
 import {
   describirEntrega,
@@ -128,26 +129,23 @@ function Evento({ evento, expandido, onAlternar, puedeCorregir, onCorregir }) {
           <span className="small text-body-secondary">· folio {evento.folio}</span>
         )}
         {evento.anulada && <StatusChip status="anulada" label="Anulada" />}
+        {/* Eran dos enlaces de texto sueltos (`btn btn-link p-0`), que en una fila con chips y
+            fechas no se leian como algo que se pueda pulsar. Son botones del catalogo: el lapiz
+            de "Editar" y el ojo de "Ver detalle" los pone iconoDeAccion() por el rotulo. */}
         {(corregible && puedeCorregir) || expandible ? (
           <div className="d-flex gap-2 ms-auto">
             {corregible && puedeCorregir && (
-              <button
-                type="button"
-                className="btn btn-link btn-sm p-0"
-                onClick={() => onCorregir(evento)}
-              >
-                Corregir
-              </button>
+              <SecondaryButton title="Editar" size="sm" onClick={() => onCorregir(evento)} />
             )}
             {expandible && (
-              <button
-                type="button"
-                className="btn btn-link btn-sm p-0"
+              <SecondaryButton
+                title={expandido ? "Ocultar detalle" : "Ver detalle"}
+                variant="neutra"
+                size="sm"
+                icon={expandido ? <EyeOff size={16} aria-hidden="true" /> : undefined}
                 onClick={onAlternar}
                 aria-expanded={expandido}
-              >
-                {expandido ? "Ocultar detalle" : "Ver detalle"}
-              </button>
+              />
             )}
           </div>
         ) : null}

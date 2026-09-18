@@ -4,6 +4,7 @@ import { modulosVisibles } from "@ecopac/shared";
 import { ROUTES } from "../navigation/rutas";
 import { useSesionCompartida } from "../contexto/SesionProvider";
 import UsuarioActivo from "./UsuarioActivo";
+import { colors } from "@ecopac/ui-tokens";
 
 export default function MenuDrawer({ onClose, rutaActual, onNavegar }) {
   const navigation = useNavigation();
@@ -82,7 +83,7 @@ export default function MenuDrawer({ onClose, rutaActual, onNavegar }) {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.titleLogo}>
-          Ecopac <Text style={{ color: "#0F172A" }}>Digital</Text>
+          Ecopac <Text style={{ color: colors.text }}>Digital</Text>
         </Text>
         <Text style={styles.subtextLogo}>JORNADAS MÉDICAS</Text>
       </View>
@@ -124,24 +125,24 @@ export default function MenuDrawer({ onClose, rutaActual, onNavegar }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: colors.surface,
     paddingTop: 40,
   },
   header: {
     paddingHorizontal: 20,
     paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: "#F1F5F9",
+    borderBottomColor: colors.background,
   },
   titleLogo: {
     fontSize: 22,
     fontWeight: "bold",
-    color: "#16A34A",
+    color: colors.primary,
   },
   subtextLogo: {
     fontSize: 9,
     fontWeight: "700",
-    color: "#94A3B8",
+    color: colors.textMuted,
     letterSpacing: 1,
     marginTop: 2,
   },
@@ -155,7 +156,7 @@ const styles = StyleSheet.create({
   categoriaTitle: {
     fontSize: 10,
     fontWeight: "700",
-    color: "#94A3B8",
+    color: colors.textMuted,
     letterSpacing: 1,
     marginBottom: 6,
     paddingHorizontal: 8,
@@ -170,19 +171,19 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   itemActivo: {
-    backgroundColor: "#F0FDF4",
+    backgroundColor: colors.background,
   },
   itemTexto: {
     fontSize: 14,
     fontWeight: "500",
-    color: "#334155",
+    color: colors.text,
   },
   itemTextoActivo: {
-    color: "#16A34A",
+    color: colors.primary,
     fontWeight: "700",
   },
   badge: {
-    backgroundColor: "#F97316",
+    backgroundColor: colors.warning,
     width: 20,
     height: 20,
     borderRadius: 10,
@@ -190,14 +191,14 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   badgeText: {
-    color: "#FFFFFF",
+    color: colors.surface,
     fontSize: 11,
     fontWeight: "bold",
   },
   footerUsuario: {
     borderTopWidth: 1,
-    borderTopColor: "#F1F5F9",
+    borderTopColor: colors.background,
     padding: 16,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: colors.surface,
   },
 });

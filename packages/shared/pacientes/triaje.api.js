@@ -105,7 +105,7 @@ export async function registrarTriaje(atencionId, valores = {}, { tomadoPor } = 
       errores: {},
       error: {
         ...construirError(CODIGOS_DE_ERROR_DE_SUPABASE.CAMPO_REQUERIDO),
-        mensaje: "Hace falta la atencion y quien toma los signos para registrar el triaje.",
+        mensaje: "Hace falta la atención y quien toma los signos para registrar el triaje.",
       },
     };
   }
@@ -133,7 +133,7 @@ export async function registrarTriaje(atencionId, valores = {}, { tomadoPor } = 
           error: {
             ...normalizado,
             mensaje:
-              "Esta atencion ya tiene triaje registrado. Si hay que cambiar un valor, corregilo.",
+              "Esta atención ya tiene triaje registrado. Si hay que cambiar un valor, corregilo.",
           },
         };
       }

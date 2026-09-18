@@ -1,304 +1,323 @@
-import { StyleSheet, Text, View, ScrollView, TouchableOpacity, SafeAreaView } from "react-native";
-import { modulosVisibles } from "@ecopac/shared";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { colors, moduleAccents, radii, shadows, spacing, typography } from "@ecopac/ui-tokens";
+import {
+  ETIQUETAS_ESTADO_JORNADA,
+  etiquetaDeRol,
+  formatearFechaLarga,
+  usePanelDeInicio,
+} from "@ecopac/shared";
+
+import ErrorState from "../components/ErrorState";
 import IconoDeModulo from "../components/IconoDeModulo";
+import LoadingState from "../components/LoadingState";
+import ScreenContainer from "../components/ScreenContainer";
+import StatusChip from "../components/StatusChip";
 import { useSesionCompartida } from "../contexto/SesionProvider";
 import { ROUTES } from "../navigation/rutas";
 
-// Hasta la issue #687, esta pantalla -la primera que ve cualquier persona al entrar a la app-
-// mostraba un panel de "METRICAS CLAVE" (235 pacientes, Q 553,800 en donaciones...) y un panel de
-// "ALERTAS DE CADUCIDAD" (Amoxicilina, Metformina...) que eran constantes locales, no datos de la
-// base: cualquier cuenta, en cualquier momento, veia los mismos numeros.
+// Pantalla de inicio de la app movil. Espejo de apps/web/src/pages/HomePage.jsx: mismo hook
+// (usePanelDeInicio), mismas tres partes -- saludo, jornadas en curso, accesos a los modulos --
+// y las mismas descripciones, que salen de MODULOS (navegacion.js) y no de aqui.
 //
-// Los dos paneles se retiran en vez de conectarse a una API real:
-// - Las metricas que mostraban (pacientes atendidos, donaciones, voluntarios, jornadas) son las
-//   de useDashboardMetricas() (reportes/), pero esa API solo la puede consultar administrador y
-//   los roles consultivos (puedeVerIndicadoresDeImpacto) -- y esta es la pantalla de inicio de
-//   los cinco roles. Mostrarla siempre resucitaria el mismo defecto para medico/voluntario
-//   (verian 0 en todo, sin que sea un dato real), y ocultarla solo para ellos es el alcance de
-//   una pantalla nueva, no de este bug.
-// - Las alertas de vencimiento para movil no tienen API todavia: la issue #268 es quien la
-//   construye.
-const MODULOS_FIGMA = [
-  {
-    id: "pacientes",
-    titulo: "Pacientes",
-    subtitulo: "Expedientes clínicos",
-    valor: "9",
-    color: "#10B981",
-    tabMovil: "Pacientes",
-  },
-  {
-    id: "donaciones",
-    titulo: "Donaciones",
-    subtitulo: "Ingresos registrados",
-    valor: "Q 553,800",
-    color: "#0284C7",
-    ruta: ROUTES.DONACIONES,
-  },
-  {
-    id: "inventario",
-    titulo: "Inventario",
-    subtitulo: "Alertas activas",
-    valor: "2",
-    color: "#F59E0B",
-    tabMovil: "Inventario",
-  },
-  {
-    id: "presupuestos",
-    titulo: "Presupuestos",
-    subtitulo: "Ejecución global",
-    valor: "47%",
-    color: "#EC4899",
-    ruta: ROUTES.PRESUPUESTOS,
-  },
-  {
-    id: "proyectos",
-    titulo: "Proyectos",
-    subtitulo: "Iniciativas macro",
-    valor: "3",
-    color: "#8B5CF6",
-    ruta: ROUTES.PROYECTOS,
-  },
-  {
-    id: "reportes",
-    titulo: "Reportes",
-    subtitulo: "Métricas de impacto",
-    valor: "—",
-    color: "#6B7280",
-  },
-  {
-    id: "jornadas",
-    titulo: "Jornadas",
-    subtitulo: "Kanban en tiempo real",
-    valor: "1",
-    color: "#10B981",
-    tabMovil: "Jornadas",
-  },
-  {
-    id: "colaboradores",
-    titulo: "Colaboradores",
-    subtitulo: "Personal registrado",
-    valor: "10",
-    color: "#0284C7",
-    ruta: ROUTES.COLABORADORES,
-  },
-];
+// QUE HABIA ANTES Y POR QUE SE FUE (issue #838)
+//
+// 1. Un banner de producto: "Salud que llega a cada comunidad" mas un parrafo describiendo la
+//    plataforma. Es texto de folleto, para quien todavia no la usa. Quien abre la app ya inicio
+//    sesion; lo que necesita es saber que dia es, que rol tiene y donde esta su jornada. La web
+//    ya lo resolvia asi y la movil decia otra cosa.
+// 2. NUMEROS INVENTADOS. Cada tarjeta de modulo mostraba un valor fijo escrito en el archivo
+//    ("9" pacientes, "Q 553,800" en donaciones, "2" alertas, "47%" de ejecucion). No salian de
+//    ninguna consulta: eran los mismos para cualquier cuenta y cualquier dia. Es el mismo defecto
+//    que la issue #687 ya habia quitado de los paneles de metricas de esta pantalla, sobrevivido
+//    en las tarjetas. Un dato inventado en la pantalla de inicio de un sistema de salud no es un
+//    detalle estetico. Donde habia un numero falso va ahora la descripcion real del modulo.
+// 3. Una lista de modulos armada a mano (MODULOS_FIGMA) que se cruzaba con la de verdad: incluia
+//    entradas como "Reportes", que en movil no existe, y un color propio por modulo en vez de
+//    moduleAccents. Ahora la lista es la que devuelve el hook, y nada mas.
+
+/** El acceso que corresponde a un modulo dentro del navegador movil. */
+function destinoDelModulo(modulo) {
+  if (modulo.tabMovil) return { tipo: "tab", nombre: modulo.tabMovil };
+
+  const RUTAS_POR_MODULO = {
+    donaciones: ROUTES.DONACIONES,
+    presupuestos: ROUTES.PRESUPUESTOS,
+    proyectos: ROUTES.PROYECTOS,
+    colaboradores: ROUTES.COLABORADORES,
+  };
+
+  const ruta = RUTAS_POR_MODULO[modulo.id];
+  return ruta ? { tipo: "pantalla", nombre: ruta } : null;
+}
 
 export default function InicioScreen({ navigation }) {
   const { perfil } = useSesionCompartida();
   const rol = perfil?.rol;
 
-  const modulosCalculados =
-    modulosVisibles(rol, { plataforma: "mobile" })?.filter((m) => m.id !== "inicio") || [];
+  const { accesos, jornadasEnCurso, puedeVerJornadaEnCurso, cargando, error, recargar } =
+    usePanelDeInicio({ rol, plataforma: "mobile" });
 
-  const modulosDisponibles = modulosCalculados.map((m) => {
-    const base = MODULOS_FIGMA.find((f) => f.id === m.id) || {};
-    return {
-      id: m.id,
-      titulo: m.nombre || base.titulo || m.id,
-      subtitulo: base.subtitulo || "Módulo activo",
-      valor: base.valor || "—",
-      color: base.color || "#10B981",
-      icono: m.icono,
-      tabMovil: m.tabMovil || base.tabMovil,
-      ruta: base.ruta,
-    };
-  });
+  const saludo = perfil?.nombres ? `Hola, ${perfil.nombres}` : "Hola";
 
-  const tieneInventario = modulosCalculados.some((m) => m.id === "inventario");
-  const tienePresupuestos = modulosCalculados.some((m) => m.id === "presupuestos");
-
-  const navegarAModulo = (modulo) => {
-    if (modulo.tabMovil) {
-      navigation.navigate(modulo.tabMovil);
-    } else if (modulo.ruta) {
-      navigation.navigate(modulo.ruta);
-    } else {
-      const mapaRutas = {
-        donaciones: ROUTES.DONACIONES,
-        presupuestos: ROUTES.PRESUPUESTOS,
-        proyectos: ROUTES.PROYECTOS,
-        colaboradores: ROUTES.COLABORADORES,
-      };
-      if (mapaRutas[modulo.id]) {
-        navigation.navigate(mapaRutas[modulo.id]);
-      }
-    }
-  };
+  // Un modulo sin destino en el navegador movil no se dibuja: una tarjeta que no lleva a ningun
+  // lado es peor que una tarjeta de menos.
+  const accesosNavegables = accesos
+    .map((modulo) => ({ ...modulo, destino: destinoDelModulo(modulo) }))
+    .filter((modulo) => modulo.destino !== null);
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* HERO BANNER */}
-        <View style={styles.heroBanner}>
-          <View style={styles.heroBadge}>
-            <View style={styles.dot} />
-            <Text style={styles.heroBadgeText}>SISTEMA ACTIVO • 2026</Text>
-          </View>
-          <Text style={styles.heroTitle}>Salud que llega a cada comunidad.</Text>
-          <Text style={styles.heroDescription}>
-            Plataforma integral de gestión para jornadas médicas. Pacientes, inventario, jornadas,
-            colaboradores, proyectos y presupuestos en un solo lugar.
-          </Text>
-          <View style={styles.heroButtonsContainer}>
-            {tieneInventario && (
-              <TouchableOpacity
-                style={styles.btnPrimary}
-                onPress={() => navigation.navigate(ROUTES.TAB_INVENTARIO)}
-              >
-                <Text style={styles.btnPrimaryText}>Ver inventario</Text>
-              </TouchableOpacity>
-            )}
-            {tienePresupuestos && (
-              <TouchableOpacity
-                style={styles.btnSecondary}
-                onPress={() => navigation.navigate(ROUTES.PRESUPUESTOS)}
-              >
-                <Text style={styles.btnSecondaryText}>Ver presupuestos</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        </View>
+    <ScreenContainer>
+      <View style={estilos.banner}>
+        <Text style={estilos.saludo}>{saludo}</Text>
+        <Text style={estilos.frase}>Este es el resumen de tu día en Ecopac Digital</Text>
 
-        {/* MÓDULOS DEL SISTEMA */}
-        <Text style={styles.sectionTitle}>MÓDULOS DEL SISTEMA</Text>
-        <View style={styles.gridTwoColumns}>
-          {modulosDisponibles.map((modulo) => (
-            <TouchableOpacity
-              key={modulo.id}
-              style={styles.moduleCard}
-              onPress={() => navegarAModulo(modulo)}
-            >
-              <View style={styles.cardIcono}>
-                <IconoDeModulo nombre={modulo.icono} size={22} color={modulo.color} />
-              </View>
-              <Text style={styles.moduleTitle}>{modulo.titulo}</Text>
-              <Text style={styles.cardSubtext}>{modulo.subtitulo}</Text>
-              <Text style={[styles.moduleValue, { color: modulo.color }]}>{modulo.valor}</Text>
-            </TouchableOpacity>
-          ))}
+        <View style={estilos.chips}>
+          <View style={estilos.chip}>
+            <Ionicons name="calendar-outline" size={13} color={colors.surface} />
+            <Text style={estilos.chipTexto}>{formatearFechaLarga(new Date())}</Text>
+          </View>
+          {rol ? (
+            <View style={estilos.chip}>
+              <Ionicons name="shield-checkmark-outline" size={13} color={colors.surface} />
+              <Text style={estilos.chipTexto}>{etiquetaDeRol(rol)}</Text>
+            </View>
+          ) : null}
         </View>
-      </ScrollView>
-    </SafeAreaView>
+      </View>
+
+      {puedeVerJornadaEnCurso ? (
+        <View style={estilos.seccion}>
+          <Text style={estilos.tituloSeccion}>Jornadas en curso</Text>
+
+          {cargando ? <LoadingState message="Buscando jornadas en curso..." /> : null}
+
+          {!cargando && error ? <ErrorState message={error.mensaje} onRetry={recargar} /> : null}
+
+          {!cargando && !error && jornadasEnCurso.length === 0 ? (
+            <View style={estilos.vacio}>
+              <Text style={estilos.vacioTexto}>
+                No hay ninguna jornada en curso ahora mismo. Cuando empiece una, aparecerá aquí.
+              </Text>
+            </View>
+          ) : null}
+
+          {!cargando && !error
+            ? jornadasEnCurso.map((jornada) => (
+                <Pressable
+                  key={jornada.id}
+                  style={({ pressed }) => [estilos.jornada, pressed && estilos.pulsada]}
+                  accessibilityRole="button"
+                  onPress={() =>
+                    navigation.navigate(ROUTES.TAB_JORNADAS, {
+                      screen: ROUTES.JORNADAS_ASIGNADAS,
+                    })
+                  }
+                >
+                  <View style={estilos.jornadaTextos}>
+                    <Text style={estilos.jornadaNombre}>{jornada.nombre}</Text>
+                    <Text style={estilos.jornadaDetalle}>
+                      {[jornada.comunidad?.nombre, formatearFechaLarga(jornada.fecha)]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </Text>
+                  </View>
+                  <StatusChip
+                    status={jornada.estado}
+                    label={ETIQUETAS_ESTADO_JORNADA[jornada.estado] ?? jornada.estado}
+                  />
+                </Pressable>
+              ))
+            : null}
+        </View>
+      ) : null}
+
+      <View style={estilos.seccion}>
+        <Text style={estilos.tituloSeccion}>Tus módulos</Text>
+        <Text style={estilos.notaSeccion}>Lo que tu rol puede abrir</Text>
+
+        <View style={estilos.rejilla}>
+          {accesosNavegables.map((modulo) => {
+            const acento = moduleAccents[modulo.id] ?? colors.primary;
+            return (
+              <Pressable
+                key={modulo.id}
+                style={({ pressed }) => [estilos.acceso, pressed && estilos.pulsada]}
+                accessibilityRole="button"
+                onPress={() =>
+                  modulo.destino.tipo === "tab"
+                    ? navigation.navigate(modulo.destino.nombre)
+                    : navigation.navigate(modulo.destino.nombre)
+                }
+              >
+                <View style={[estilos.accesoIcono, { backgroundColor: `${acento}1F` }]}>
+                  <IconoDeModulo nombre={modulo.icono} size={20} color={acento} />
+                </View>
+                <Text style={estilos.accesoNombre}>{modulo.nombre}</Text>
+                {modulo.descripcion ? (
+                  <Text style={estilos.accesoDescripcion} numberOfLines={3}>
+                    {modulo.descripcion}
+                  </Text>
+                ) : null}
+                <View style={[estilos.accesoCinta, { backgroundColor: acento }]} />
+              </Pressable>
+            );
+          })}
+        </View>
+      </View>
+    </ScreenContainer>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#F8FAFC",
+const estilos = StyleSheet.create({
+  // El banner de la web es un degradado; aqui va el verde de marca plano, que es lo que se
+  // consigue sin agregar expo-linear-gradient como dependencia nueva por un solo fondo.
+  banner: {
+    backgroundColor: colors.primaryDark,
+    borderRadius: radii.lg,
+    marginBottom: spacing.lg,
+    padding: spacing.lg,
   },
-  scrollContent: {
-    padding: 16,
-    paddingBottom: 32,
+  saludo: {
+    color: colors.surface,
+    fontFamily: typography.fontFamilyBase,
+    fontSize: typography.sizes.xl,
+    fontWeight: typography.weights.bold,
   },
-  heroBanner: {
-    backgroundColor: "#16A34A",
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 16,
+  frase: {
+    color: colors.surface,
+    fontFamily: typography.fontFamilyBase,
+    fontSize: typography.sizes.sm,
+    marginTop: spacing.xs,
+    opacity: 0.85,
   },
-  heroBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.2)",
-    alignSelf: "flex-start",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-    marginBottom: 12,
-  },
-  dot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: "#FFFFFF",
-    marginRight: 6,
-  },
-  heroBadgeText: {
-    color: "#FFFFFF",
-    fontSize: 10,
-    fontWeight: "700",
-  },
-  heroTitle: {
-    color: "#FFFFFF",
-    fontSize: 24,
-    fontWeight: "bold",
-    marginBottom: 8,
-    lineHeight: 30,
-  },
-  heroDescription: {
-    color: "#E2E8F0",
-    fontSize: 13,
-    lineHeight: 18,
-    marginBottom: 16,
-  },
-  heroButtonsContainer: {
-    gap: 10,
-  },
-  btnPrimary: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    paddingVertical: 12,
-    alignItems: "center",
-  },
-  btnPrimaryText: {
-    color: "#16A34A",
-    fontWeight: "bold",
-    fontSize: 14,
-  },
-  btnSecondary: {
-    borderWidth: 1,
-    borderColor: "#FFFFFF",
-    borderRadius: 12,
-    paddingVertical: 12,
-    alignItems: "center",
-  },
-  btnSecondaryText: {
-    color: "#FFFFFF",
-    fontWeight: "bold",
-    fontSize: 14,
-  },
-  gridTwoColumns: {
+  chips: {
     flexDirection: "row",
     flexWrap: "wrap",
+    gap: spacing.sm,
+    marginTop: spacing.md,
+  },
+  chip: {
+    alignItems: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.18)",
+    borderRadius: radii.pill,
+    flexDirection: "row",
+    gap: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+  },
+  chipTexto: {
+    color: colors.surface,
+    fontFamily: typography.fontFamilyBase,
+    fontSize: typography.sizes.xs,
+    fontWeight: typography.weights.medium,
+  },
+  seccion: {
+    marginBottom: spacing.lg,
+  },
+  tituloSeccion: {
+    color: colors.text,
+    fontFamily: typography.fontFamilyBase,
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.semibold,
+  },
+  notaSeccion: {
+    color: colors.textMuted,
+    fontFamily: typography.fontFamilyBase,
+    fontSize: typography.sizes.xs,
+    marginTop: 2,
+  },
+  vacio: {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    marginTop: spacing.sm,
+    padding: spacing.md,
+  },
+  vacioTexto: {
+    color: colors.textMuted,
+    fontFamily: typography.fontFamilyBase,
+    fontSize: typography.sizes.sm,
+  },
+  jornada: {
+    alignItems: "center",
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderLeftColor: colors.primary,
+    borderLeftWidth: 3,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    flexDirection: "row",
+    gap: spacing.sm,
     justifyContent: "space-between",
-    gap: 12,
-    marginBottom: 20,
+    marginTop: spacing.sm,
+    padding: spacing.md,
+    ...shadows.sm.movil,
   },
-  moduleCard: {
-    width: "48%",
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 14,
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
-    elevation: 2,
+  jornadaTextos: {
+    flexShrink: 1,
   },
-  cardIcono: {
-    marginBottom: 8,
+  jornadaNombre: {
+    color: colors.text,
+    fontFamily: typography.fontFamilyBase,
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.semibold,
   },
-  cardSubtext: {
-    fontSize: 11,
-    color: "#94A3B8",
+  jornadaDetalle: {
+    color: colors.textMuted,
+    fontFamily: typography.fontFamilyBase,
+    fontSize: typography.sizes.xs,
+    marginTop: 2,
   },
-  sectionTitle: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: "#64748B",
-    marginBottom: 12,
-    letterSpacing: 0.5,
+  rejilla: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.sm,
+    marginTop: spacing.sm,
   },
-  moduleTitle: {
-    fontSize: 15,
-    fontWeight: "bold",
-    color: "#0F172A",
-    marginBottom: 2,
+  acceso: {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    flexGrow: 1,
+    // Dos columnas con el gap de por medio, sin depender de un ancho de pantalla concreto.
+    flexBasis: "47%",
+    overflow: "hidden",
+    padding: spacing.md,
+    paddingBottom: spacing.md + 4,
+    ...shadows.sm.movil,
   },
-  moduleValue: {
-    fontSize: 16,
-    fontWeight: "bold",
-    marginTop: 8,
+  pulsada: {
+    opacity: 0.85,
+  },
+  accesoIcono: {
+    alignItems: "center",
+    borderRadius: radii.pill,
+    height: 40,
+    justifyContent: "center",
+    marginBottom: spacing.sm,
+    width: 40,
+  },
+  accesoNombre: {
+    color: colors.text,
+    fontFamily: typography.fontFamilyBase,
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.semibold,
+  },
+  accesoDescripcion: {
+    color: colors.textMuted,
+    fontFamily: typography.fontFamilyBase,
+    fontSize: typography.sizes.xs,
+    marginTop: 2,
+  },
+  // La cinta del color del modulo, abajo: es el equivalente movil del filete de la web.
+  accesoCinta: {
+    bottom: 0,
+    height: 3,
+    left: 0,
+    position: "absolute",
+    right: 0,
   },
 });

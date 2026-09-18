@@ -27,10 +27,10 @@ import { OPCIONES_METRICA_IMPACTO } from "./campos.js";
 import { puedeVerIndicadoresDeImpacto } from "./permisos.js";
 
 const RANGOS = [
-  { valor: "semana", etiqueta: "Ultima semana" },
-  { valor: "mes", etiqueta: "Ultimo mes" },
-  { valor: "3meses", etiqueta: "Ultimos 3 meses" },
-  { valor: "anio", etiqueta: "Ultimo anio" },
+  { valor: "semana", etiqueta: "Última semana" },
+  { valor: "mes", etiqueta: "Último mes" },
+  { valor: "3meses", etiqueta: "Últimos 3 meses" },
+  { valor: "anio", etiqueta: "Último año" },
   { valor: "personalizado", etiqueta: "Personalizado" },
 ];
 

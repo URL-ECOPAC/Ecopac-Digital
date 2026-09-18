@@ -176,7 +176,7 @@ describe("exportarFilasACSV", () => {
       ],
       COLUMNAS_INVENTARIO_REPORTE,
     );
-    expect(csv).toContain("Medicamento,Concentracion,Presentacion,Disponible,Vencido");
+    expect(csv).toContain("Medicamento,Concentración,Presentación,Disponible,Vencido");
     expect(csv).toContain("Ibuprofeno,400mg,Tableta,120,0");
   });
 });

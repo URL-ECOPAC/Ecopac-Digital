@@ -1,13 +1,12 @@
-// Prueba de la pantalla de inicio de la app movil (issue #687).
+// Prueba de la pantalla de inicio de la app movil (issues #687 y #838).
 //
-// Hasta esta issue, "METRICAS CLAVE" y "ALERTAS DE CADUCIDAD" eran constantes locales -235
-// pacientes, Q 553,800 en donaciones, Amoxicilina y Metformina siempre con el mismo lote- que se
-// dibujaban como si vinieran de la base. Esta prueba fija que esos dos paneles ya no existen: si
-// alguien los reintroduce, un texto tan especifico como "PACIENTES ATENDIDOS" o "ALERTAS DE
-// CADUCIDAD" no deberia volver a aparecer en esta pantalla nunca mas sin que esta prueba lo note.
+// La #687 quito de aqui dos paneles con datos inventados ("METRICAS CLAVE" y "ALERTAS DE
+// CADUCIDAD"). La #838 quito lo que habia quedado del mismo defecto -- un valor fijo por tarjeta
+// de modulo, "9" pacientes y "Q 553,800" en donaciones, escrito en el archivo -- y alineo la
+// pantalla con la del navegador: saludo, jornadas en curso y accesos, todo desde usePanelDeInicio.
 //
-// "Q 553,800" no sirve de sonda para esto: MODULOS_FIGMA (fuera del alcance de esta issue, ver
-// el comentario de cabecera de InicioScreen.js) ya lo usa como valor del modulo Donaciones.
+// Por eso las sondas de abajo son los textos concretos que NO deben volver: son los que estaban
+// escritos a mano.
 
 import { render, screen } from "@testing-library/react-native";
 
@@ -18,6 +17,23 @@ const sesion = { perfil: { rol: "administrador" } };
 jest.mock("../contexto/SesionProvider", () => ({
   useSesionCompartida: () => sesion,
 }));
+
+// usePanelDeInicio consulta jornadas en curso contra Supabase. Aqui interesa lo que la pantalla
+// dibuja con lo que el hook devuelve, no la consulta: el resto de @ecopac/shared pasa tal cual.
+jest.mock("@ecopac/shared", () => {
+  const real = jest.requireActual("@ecopac/shared");
+  return {
+    ...real,
+    usePanelDeInicio: ({ rol, plataforma }) => ({
+      accesos: real.modulosVisibles(rol, { plataforma }).filter((modulo) => modulo.ruta !== "/"),
+      jornadasEnCurso: [],
+      puedeVerJornadaEnCurso: real.puedeVerJornadas(rol),
+      cargando: false,
+      error: null,
+      recargar: jest.fn(),
+    }),
+  };
+});
 
 function pantalla() {
   return render(<InicioScreen navigation={{ navigate: jest.fn() }} />);
@@ -31,8 +47,6 @@ describe("InicioScreen", () => {
   it("ya no dibuja el panel de metricas inventado", () => {
     pantalla();
 
-    // "Q 553,800" no sirve de sonda: sigue apareciendo, a proposito, como valor del modulo
-    // Donaciones en MODULOS_FIGMA (fuera del alcance de esta issue, ver comentario de cabecera).
     expect(screen.queryByText("PACIENTES ATENDIDOS")).toBeNull();
     expect(screen.queryByText("histórico total")).toBeNull();
     expect(screen.queryByText("235")).toBeNull();
@@ -45,45 +59,51 @@ describe("InicioScreen", () => {
     expect(screen.queryByText("Amoxicilina 500mg Cápsulas")).toBeNull();
   });
 
-  it("sigue mostrando el banner y los modulos del rol, que no son parte del bug", () => {
+  it("no queda ningun valor inventado en las tarjetas de modulo (issue #838)", () => {
     pantalla();
 
-    expect(screen.getByText("Salud que llega a cada comunidad.")).toBeTruthy();
-    expect(screen.getByText("MÓDULOS DEL SISTEMA")).toBeTruthy();
+    expect(screen.queryByText("Q 553,800")).toBeNull();
+    expect(screen.queryByText("47%")).toBeNull();
+    expect(screen.queryByText("Ingresos registrados")).toBeNull();
   });
 
-  it("un rol distinto de administrador tambien renderiza sin los paneles inventados", () => {
+  it("no queda el texto de folleto del banner: saluda a la persona, como la web", () => {
+    sesion.perfil = { rol: "administrador", nombres: "Ana" };
+    pantalla();
+
+    expect(screen.queryByText("Salud que llega a cada comunidad.")).toBeNull();
+    expect(screen.getByText("Hola, Ana")).toBeTruthy();
+  });
+
+  it("dibuja los modulos del rol con su descripcion real", () => {
+    pantalla();
+
+    expect(screen.getByText("Tus módulos")).toBeTruthy();
+    expect(screen.getByText("Pacientes")).toBeTruthy();
+    expect(screen.getByText("Expedientes clinicos, triaje, consultas y recetas.")).toBeTruthy();
+  });
+
+  it("no ofrece un modulo que la app movil no tiene", () => {
+    pantalla();
+
+    expect(screen.queryByText("Reportes")).toBeNull();
+    expect(screen.queryByText("Colaboradores")).toBeNull();
+  });
+
+  it("un rol sin acceso a presupuestos no ve esa tarjeta", () => {
     sesion.perfil = { rol: "medico" };
     pantalla();
 
-    expect(screen.queryByText("PACIENTES ATENDIDOS")).toBeNull();
-    expect(screen.getByText("MÓDULOS DEL SISTEMA")).toBeTruthy();
+    expect(screen.queryByText("Presupuestos")).toBeNull();
+    expect(screen.getByText("Inventario")).toBeTruthy();
   });
 
-  it("sin perfil no asume ningun rol y dibuja el grid de modulos vacio (issue #692)", () => {
+  it("sin perfil no asume ningun rol: saluda, pero no ofrece modulos (issue #692)", () => {
     sesion.perfil = null;
     pantalla();
 
     expect(screen.queryByText("Donaciones")).toBeNull();
-    expect(screen.queryByText("Colaboradores")).toBeNull();
-    expect(screen.queryByText("Ver inventario")).toBeNull();
-    expect(screen.queryByText("Ver presupuestos")).toBeNull();
-    // El banner sigue mostrandose: no es un estado de error, solo ausencia de modulos.
-    expect(screen.getByText("Salud que llega a cada comunidad.")).toBeTruthy();
-  });
-
-  it("un rol sin acceso a presupuestos no ve ese boton, pero si el de inventario", () => {
-    sesion.perfil = { rol: "medico" };
-    pantalla();
-
-    expect(screen.queryByText("Ver presupuestos")).toBeNull();
-    expect(screen.getByText("Ver inventario")).toBeTruthy();
-  });
-
-  it("administrador ve ambos botones del hero", () => {
-    pantalla();
-
-    expect(screen.getByText("Ver inventario")).toBeTruthy();
-    expect(screen.getByText("Ver presupuestos")).toBeTruthy();
+    expect(screen.queryByText("Inventario")).toBeNull();
+    expect(screen.getByText("Hola")).toBeTruthy();
   });
 });

@@ -20,7 +20,8 @@ vi.mock("../api/cliente.js", () => ({
 }));
 
 const { CODIGOS_DE_ERROR_DE_SUPABASE } = await import("../api/errores-de-supabase.js");
-const { listarAlertas, historialAlertas, atenderAlerta } = await import("./alertas.api.js");
+const { listarAlertas, historialAlertas, atenderAlerta, sincronizarAlertas } =
+  await import("./alertas.api.js");
 const { ACCIONES_DE_ALERTA } = await import("../enums.js");
 
 /** Doble de un cliente de Supabase que resuelve con una unica respuesta configurada. */
@@ -63,6 +64,10 @@ function crearCliente({ respuesta = { data: [], error: null } } = {}) {
     from(tabla) {
       llamadas.push({ paso: "from", tabla });
       return crearEncadenable();
+    },
+    async rpc(nombre, argumentos) {
+      llamadas.push({ paso: "rpc", nombre, argumentos });
+      return respuesta instanceof Error ? Promise.reject(respuesta) : respuesta;
     },
   };
 }
@@ -179,7 +184,7 @@ describe("atenderAlerta", () => {
     });
 
     expect(alerta).toBeNull();
-    expect(error.mensaje).toContain("administracion");
+    expect(error.mensaje).toContain("administración");
     expect(dobles.cliente).toBeNull();
   });
 
@@ -237,5 +242,34 @@ describe("atenderAlerta", () => {
 
   it("ACCIONES_DE_ALERTA expone los tres valores del enum accion_alerta (00021)", () => {
     expect(Object.values(ACCIONES_DE_ALERTA)).toEqual(["donado", "reubicado", "descartado"]);
+  });
+});
+
+describe("sincronizarAlertas", () => {
+  // Issue #838: un lote ya vencido no tenia alerta, asi que "Vencidos - Para dar de baja" salia
+  // vacio con el lote a la vista en el inventario. La 00129 lo arregla en la funcion que genera
+  // las alertas; esto es la puerta para no tener que esperar a la rutina de la noche.
+  it("llama a fn_sincronizar_alertas_caducidad y devuelve cuantas creo", async () => {
+    const cliente = crearCliente({ respuesta: { data: 3, error: null } });
+    dobles.cliente = cliente;
+
+    const { creadas, error } = await sincronizarAlertas();
+
+    expect(error).toBeNull();
+    expect(creadas).toBe(3);
+    expect(cliente.llamadas).toContainEqual({
+      paso: "rpc",
+      nombre: "fn_sincronizar_alertas_caducidad",
+      argumentos: undefined,
+    });
+  });
+
+  it("normaliza el 42501 que devuelve la funcion a quien no es administracion", async () => {
+    dobles.cliente = crearCliente({ respuesta: { data: null, error: { code: "42501" } } });
+
+    const { creadas, error } = await sincronizarAlertas();
+
+    expect(creadas).toBe(0);
+    expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.PERMISO_DENEGADO);
   });
 });

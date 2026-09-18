@@ -11,7 +11,7 @@ import { TIPOS_DE_PRESENTACION } from "../descriptores.js";
 
 /** Una condicion en la ficha del paciente. */
 export const COLUMNAS_CONDICION_DEL_PACIENTE = [
-  { id: "condicion", label: "Condicion", tipo: TIPOS_DE_PRESENTACION.TEXTO, principal: true },
+  { id: "condicion", label: "Condición", tipo: TIPOS_DE_PRESENTACION.TEXTO, principal: true },
   { id: "fechaDiagnostico", label: "Diagnosticada", tipo: TIPOS_DE_PRESENTACION.FECHA },
   {
     id: "estado",
@@ -39,7 +39,7 @@ export const COLUMNAS_PACIENTE_CRONICO = [
   },
   { id: "nombreCompleto", label: "Nombre", tipo: TIPOS_DE_PRESENTACION.TEXTO, principal: true },
   { id: "comunidad", label: "Comunidad", tipo: TIPOS_DE_PRESENTACION.TEXTO },
-  { id: "condicion", label: "Condicion", tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  { id: "condicion", label: "Condición", tipo: TIPOS_DE_PRESENTACION.TEXTO },
   { id: "fechaDiagnostico", label: "Diagnosticada", tipo: TIPOS_DE_PRESENTACION.FECHA },
   {
     id: "estado",

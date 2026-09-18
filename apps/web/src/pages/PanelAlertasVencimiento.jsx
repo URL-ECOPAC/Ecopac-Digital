@@ -71,7 +71,7 @@ export default function PanelAlertasVencimiento({ usuarioId, rolUsuario }) {
             <th className="text-end">Cantidad afectada</th>
             <th>Vencimiento</th>
             <th className="text-center">{sonVencidas ? "Dias vencido" : "Dias restantes"}</th>
-            <th className="text-end">Accion</th>
+            <th className="text-end">Acción</th>
           </tr>
         </thead>
         <tbody>

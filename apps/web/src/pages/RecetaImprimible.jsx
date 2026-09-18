@@ -41,7 +41,7 @@ export default function RecetaImprimible({ receta, paciente }) {
       </section>
 
       <section className="receta-imprimible__bloque">
-        <Dato etiqueta="Medico" valor={datos.medico} />
+        <Dato etiqueta="Médico" valor={datos.medico} />
         <Dato etiqueta="Jornada" valor={datos.jornada} />
         <Dato
           etiqueta="Fecha de jornada"

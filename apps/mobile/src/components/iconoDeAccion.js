@@ -17,6 +17,12 @@ export function iconoDeAccion(rotulo, icon, color) {
       return createElement(Ionicons, { name: "add", size: 18, color });
     case TIPOS_DE_ACCION.BORRADO:
       return createElement(Ionicons, { name: "trash-outline", size: 18, color });
+    case TIPOS_DE_ACCION.RETORNO:
+      return createElement(Ionicons, { name: "arrow-back", size: 18, color });
+    case TIPOS_DE_ACCION.EDICION:
+      return createElement(Ionicons, { name: "create-outline", size: 18, color });
+    case TIPOS_DE_ACCION.DETALLE:
+      return createElement(Ionicons, { name: "eye-outline", size: 18, color });
     default:
       return null;
   }

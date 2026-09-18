@@ -62,6 +62,19 @@ export {
 } from "./useVistaExistencias.js";
 export { datosAtenderAlerta, useAlertasVencimiento } from "./useAlertasVencimiento.js";
 
+// Mismo caso que los dos de arriba: useExistenciasPorLote.js es de existencias lote a lote (la
+// pantalla movil de inventario, issue #838) y no comparte nombres con useVistaExistencias.js, que
+// agrupa por medicamento para la tabla de la web. Se listan por nombre por el mismo criterio.
+export {
+  ESTADOS_DE_LOTE,
+  FILTROS_EXISTENCIAS_POR_LOTE,
+  FILTROS_EXISTENCIAS_POR_LOTE_VACIOS,
+  armarFilasDeExistencias,
+  estadoDeLote,
+  sumarExistenciasPorLote,
+  useExistenciasPorLote,
+} from "./useExistenciasPorLote.js";
+
 // Los cuatro view model que ningun barril reexportaba (issue #700). No era un olvido inocuo: el
 // `exports` de packages/shared/package.json resuelve "./<modulo>" a su index.js y nada mas, asi
 // que sin estas lineas la unica forma de usarlos desde una app era importarlos por ruta relativa

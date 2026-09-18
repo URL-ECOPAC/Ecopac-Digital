@@ -742,10 +742,18 @@ export async function obtenerAsignacionesDelDia(fecha, { excluirJornada } = {}) 
  * ninguna): useDetalleJornada.js (issue #181) no importa esta funcion, y el otro consumidor
  * (usuarios/useHistorialDePersona.js) hace un passthrough sin verificar el shape completo.
  *
+ * Ademas del personal asignado, incluye las jornadas donde la persona es la RESPONSABLE
+ * (jornadas.responsable_id), aunque no tenga fila en jornada_personal (issue #838): son dos
+ * formas distintas de participar y antes solo contaba la segunda, asi que quien organizaba una
+ * jornada sin asignarse un turno clinico no la veia en su telefono. Esas filas llegan con
+ * `rolEnJornada`, `responsabilidad`, `horaInicio` y `horaFin` en null -- son columnas de
+ * jornada_personal, y no hay fila -- y con `esResponsable` en true, que es lo que la pantalla
+ * usa para explicar por que aparece.
+ *
  * @param {string} perfilId UUID del perfil.
  * @returns {Promise<{ jornadas: object[], error: object|null }>} Cada jornada trae
- *   `rolEnJornada: string`, `responsabilidad: string|null`, `horaInicio: string|null`,
- *   `horaFin: string|null` y
+ *   `rolEnJornada: string|null`, `responsabilidad: string|null`, `horaInicio: string|null`,
+ *   `horaFin: string|null`, `esResponsable: boolean` y
  *   `atencionesPersona: { consultas: number, triajes: number, pacientes: number }`.
  */
 export async function obtenerJornadasDePersona(perfilId) {
@@ -753,7 +761,7 @@ export async function obtenerJornadasDePersona(perfilId) {
 
   try {
     const supabase = obtenerSupabase();
-    const [respuestaPersonal, respuestaAtenciones] = await Promise.all([
+    const [respuestaPersonal, respuestaResponsable, respuestaAtenciones] = await Promise.all([
       supabase
         .from("jornada_personal")
         .select(
@@ -761,11 +769,20 @@ export async function obtenerJornadasDePersona(perfilId) {
             `horaFin:hora_fin, jornada:jornadas(${COLUMNAS_DE_JORNADA})`,
         )
         .eq("perfil_id", perfilId),
+      // ISSUE #838: ser el responsable de una jornada no la hacia aparecer en la app movil.
+      // jornadas.responsable_id y jornada_personal son dos cosas distintas -- quien organiza la
+      // jornada y quien esta en el cuadro de turnos de ese dia -- y esta funcion solo miraba la
+      // segunda. Para una coordinadora que organiza la jornada pero no se asigna un turno
+      // clinico, su propia jornada no existia en el telefono.
+      supabase.from("jornadas").select(COLUMNAS_DE_JORNADA).eq("responsable_id", perfilId),
       supabase.rpc("fn_atenciones_de_persona_por_jornada", { p_perfil_id: perfilId }),
     ]);
 
     if (respuestaPersonal.error) {
       return { jornadas: [], error: normalizarError(respuestaPersonal.error) };
+    }
+    if (respuestaResponsable.error) {
+      return { jornadas: [], error: normalizarError(respuestaResponsable.error) };
     }
     if (respuestaAtenciones.error) {
       return { jornadas: [], error: normalizarError(respuestaAtenciones.error) };
@@ -777,6 +794,8 @@ export async function obtenerJornadasDePersona(perfilId) {
         { consultas: fila.consultas, triajes: fila.triajes, pacientes: fila.pacientes },
       ]),
     );
+
+    const sinAtenciones = { consultas: 0, triajes: 0, pacientes: 0 };
 
     const jornadas = (respuestaPersonal.data ?? [])
       .filter((fila) => fila.jornada)
@@ -790,12 +809,30 @@ export async function obtenerJornadasDePersona(perfilId) {
         // como TIME ("HH:MM:SS") y de aca para adentro solo existe "HH:MM".
         horaInicio: aHoraCorta(fila.horaInicio),
         horaFin: aHoraCorta(fila.horaFin),
-        atencionesPersona: atencionesPorJornada.get(fila.jornada.id) ?? {
-          consultas: 0,
-          triajes: 0,
-          pacientes: 0,
-        },
+        esResponsable: fila.jornada.responsableId === perfilId,
+        atencionesPersona: atencionesPorJornada.get(fila.jornada.id) ?? { ...sinAtenciones },
       }));
+
+    // Las jornadas que esta persona RESPONSABILIZA sin estar en el cuadro de turnos (issue #838)
+    // se agregan al final, sin repetir las que ya entraron por jornada_personal: quien esta en
+    // las dos tablas conserva su fila de personal -- que ademas trae su horario y su papel del
+    // dia -- y solo gana la marca `esResponsable`.
+    const yaListadas = new Set(jornadas.map((jornada) => jornada.id));
+    for (const jornada of respuestaResponsable.data ?? []) {
+      if (!jornada || yaListadas.has(jornada.id)) continue;
+      yaListadas.add(jornada.id);
+      jornadas.push({
+        ...jornada,
+        // Sin fila en jornada_personal no hay papel ni horario que mostrar: son columnas de esa
+        // tabla. `esResponsable` es lo que la pantalla usa para decir por que aparece.
+        rolEnJornada: null,
+        responsabilidad: null,
+        horaInicio: null,
+        horaFin: null,
+        esResponsable: true,
+        atencionesPersona: atencionesPorJornada.get(jornada.id) ?? { ...sinAtenciones },
+      });
+    }
 
     return { jornadas, error: null };
   } catch (error) {

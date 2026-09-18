@@ -10,7 +10,7 @@ export const COLUMNAS_COMUNIDAD = [
   { id: "nombre", label: "Nombre", tipo: TIPOS_DE_PRESENTACION.TEXTO, principal: true },
   { id: "municipioNombre", label: "Municipio", tipo: TIPOS_DE_PRESENTACION.TEXTO },
   { id: "departamentoNombre", label: "Departamento", tipo: TIPOS_DE_PRESENTACION.TEXTO },
-  { id: "ubicacion", label: "Ubicacion en mapa", tipo: TIPOS_DE_PRESENTACION.BOOLEANO },
+  { id: "ubicacion", label: "Ubicación en mapa", tipo: TIPOS_DE_PRESENTACION.BOOLEANO },
   {
     id: "esVigente",
     label: "Estado",

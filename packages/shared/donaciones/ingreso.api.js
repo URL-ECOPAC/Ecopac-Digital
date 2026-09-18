@@ -61,7 +61,7 @@ export async function generarIngresoDesdeDonacion(
       .single();
 
     if (errorDetalle || !detalle) {
-      return { datos: null, error: { mensaje: "El renglon de la donacion no existe." } };
+      return { datos: null, error: { mensaje: "El renglon de la donación no existe." } };
     }
 
     // Criterio 4: no se puede generar dos veces el ingreso del mismo renglon.

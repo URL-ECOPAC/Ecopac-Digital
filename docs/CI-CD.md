@@ -572,10 +572,23 @@ El resultado se reporta en el resumen de la corrida.
 
 ### La programacion de las alertas de vencimiento (issue #167)
 
-`fn_generar_alertas_caducidad` (migracion 00088) genera una alerta pendiente por cada lote con
-existencia positiva que vence en 30 dias o menos. Quien la invoca es la Edge Function
-`alertas-vencimiento`, y quien invoca a la funcion es el workflow del mismo nombre, todos los
-dias a las 06:00 UTC.
+`fn_generar_alertas_caducidad` (migracion 00088, redefinida por la 00129) genera una alerta
+pendiente por cada lote con existencia positiva que vence en 30 dias o menos **o que ya vencio**.
+Quien la invoca es la Edge Function `alertas-vencimiento`, y quien invoca a la funcion es el
+workflow del mismo nombre, todos los dias a las 06:00 UTC.
+
+**Por que tambien lo ya vencido (issue #838).** La 00088 solo tomaba lo que vence dentro de los
+proximos 30 dias, con un limite inferior en `CURRENT_DATE`. Eso dejaba permanentemente fuera a los
+lotes que ya habian vencido, y `alertas_caducidad` no es solo un aviso: tiene `accion`,
+`atendida_por` y `atendida_en`, o sea que es el registro de la baja, y el bloque "Vencidos - Para
+dar de baja" de la pestania de alertas se llena de ahi. Un lote vencido con existencia no tenia por
+donde darse de baja. Sigue sin generar alerta un lote **sin** existencia, vencido o no: no hay nada
+que dar de baja.
+
+Ademas de la rutina, la administradora puede adelantar la generacion desde la propia pantalla con
+`fn_sincronizar_alertas_caducidad` (00129), para no esperar a la corrida de la noche siguiente. Es
+un envoltorio `SECURITY DEFINER` que comprueba `es_administrador()` por dentro; el detalle esta en
+`docs/PERMISOS.md`.
 
 **No es pg_cron.** El plan gratuito de Supabase no lo incluye, asi que el cron vive en GitHub
 Actions. Eso arrastra dos consecuencias que hay que tener presentes:

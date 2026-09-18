@@ -13,6 +13,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 // Imports desde la capa shared del monorepo
 import { useHistorialDonaciones, OPCIONES_TIPO_DONACION } from "@ecopac/shared/donaciones";
 import { useSesionCompartida } from "../contexto/SesionProvider";
+import { colors } from "@ecopac/ui-tokens";
 
 // El prop `usuarioRol = "administrador"` (issue #688, mismo defecto que ProyectosScreen.js) no
 // lo pasaba nadie: React Navigation solo entrega {navigation, route} a un `component`, asi que
@@ -57,7 +58,7 @@ export default function DonacionesScreen() {
   if (cargando) {
     return (
       <SafeAreaView style={styles.containerCenter}>
-        <ActivityIndicator size="large" color="#16A34A" />
+        <ActivityIndicator size="large" color={colors.primary} />
       </SafeAreaView>
     );
   }
@@ -92,7 +93,7 @@ export default function DonacionesScreen() {
           <TextInput
             style={styles.searchInput}
             placeholder="Buscar por nombre del donante..."
-            placeholderTextColor="#94A3B8"
+            placeholderTextColor={colors.textMuted}
             value={filtroDonante}
             onChangeText={setFiltroDonante}
           />
@@ -127,36 +128,36 @@ export default function DonacionesScreen() {
         {/* MÉTRICAS PRINCIPALES (TOTALES POR TIPO DESDE SHARED) */}
         <View style={styles.gridTwoColumns}>
           <View style={styles.cardHalf}>
-            <View style={[styles.cardDot, { backgroundColor: "#16A34A" }]} />
+            <View style={[styles.cardDot, { backgroundColor: colors.primary }]} />
             <Text style={styles.cardLabel}>DINERO</Text>
-            <Text style={[styles.cardValue, { color: "#16A34A" }]}>
+            <Text style={[styles.cardValue, { color: colors.primary }]}>
               {formatearMonto(totalesPorTipo?.dinero || 0)}
             </Text>
             <Text style={styles.cardSubtext}>total del periodo</Text>
           </View>
 
           <View style={styles.cardHalf}>
-            <View style={[styles.cardDot, { backgroundColor: "#0284C7" }]} />
+            <View style={[styles.cardDot, { backgroundColor: colors.info }]} />
             <Text style={styles.cardLabel}>MEDICAMENTOS</Text>
-            <Text style={[styles.cardValue, { color: "#0284C7" }]}>
+            <Text style={[styles.cardValue, { color: colors.info }]}>
               {totalesPorTipo?.medicamentos || 0}
             </Text>
             <Text style={styles.cardSubtext}>unidades/lotes</Text>
           </View>
 
           <View style={styles.cardHalf}>
-            <View style={[styles.cardDot, { backgroundColor: "#DB2777" }]} />
+            <View style={[styles.cardDot, { backgroundColor: colors.danger }]} />
             <Text style={styles.cardLabel}>INSUMOS</Text>
-            <Text style={[styles.cardValue, { color: "#DB2777" }]}>
+            <Text style={[styles.cardValue, { color: colors.danger }]}>
               {totalesPorTipo?.insumos || 0}
             </Text>
             <Text style={styles.cardSubtext}>unidades/lotes</Text>
           </View>
 
           <View style={styles.cardHalf}>
-            <View style={[styles.cardDot, { backgroundColor: "#EA580C" }]} />
+            <View style={[styles.cardDot, { backgroundColor: colors.warning }]} />
             <Text style={styles.cardLabel}>SERVICIOS</Text>
-            <Text style={[styles.cardValue, { color: "#EA580C" }]}>
+            <Text style={[styles.cardValue, { color: colors.warning }]}>
               {totalesPorTipo?.servicios || 0}
             </Text>
             <Text style={styles.cardSubtext}>registrados</Text>
@@ -191,7 +192,7 @@ export default function DonacionesScreen() {
                 {/* FILAS */}
                 {!donaciones || donaciones.length === 0 ? (
                   <View style={{ paddingVertical: 20, alignItems: "center" }}>
-                    <Text style={{ color: "#94A3B8", fontSize: 13 }}>
+                    <Text style={{ color: colors.textMuted, fontSize: 13 }}>
                       No se encontraron donaciones con los filtros aplicados.
                     </Text>
                   </View>
@@ -236,15 +237,17 @@ export default function DonacionesScreen() {
                             style={[
                               styles.statusPill,
                               {
-                                backgroundColor: isRegistrada ? "#DCFCE7" : "#FFEDD5",
-                                borderColor: isRegistrada ? "#86EFAC" : "#FDBA74",
+                                backgroundColor: isRegistrada
+                                  ? colors.background
+                                  : colors.background,
+                                borderColor: isRegistrada ? colors.border : colors.warning,
                               },
                             ]}
                           >
                             <Text
                               style={[
                                 styles.statusText,
-                                { color: isRegistrada ? "#16A34A" : "#EA580C" },
+                                { color: isRegistrada ? colors.primary : colors.warning },
                               ]}
                             >
                               {(item.estado || "REGISTRADA").toUpperCase()}
@@ -308,13 +311,13 @@ export default function DonacionesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F8FAFC",
+    backgroundColor: colors.background,
   },
   containerCenter: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#F8FAFC",
+    backgroundColor: colors.background,
     padding: 20,
   },
   scrollContent: {
@@ -324,35 +327,35 @@ const styles = StyleSheet.create({
   pageTitle: {
     fontSize: 20,
     fontWeight: "bold",
-    color: "#0F172A",
+    color: colors.text,
     marginBottom: 4,
   },
   pageSubtitle: {
     fontSize: 12,
-    color: "#64748B",
+    color: colors.textMuted,
     marginBottom: 14,
   },
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: colors.surface,
     borderRadius: 12,
     paddingHorizontal: 12,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderColor: colors.border,
     marginBottom: 10,
   },
   searchInput: {
     flex: 1,
     height: 40,
     fontSize: 13,
-    color: "#0F172A",
+    color: colors.text,
   },
   clearSearchBtn: {
     padding: 6,
   },
   clearSearchText: {
-    color: "#94A3B8",
+    color: colors.textMuted,
     fontSize: 14,
     fontWeight: "bold",
   },
@@ -364,19 +367,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
-    backgroundColor: "#E2E8F0",
+    backgroundColor: colors.border,
     marginRight: 8,
   },
   chipFilterActive: {
-    backgroundColor: "#16A34A",
+    backgroundColor: colors.primary,
   },
   chipText: {
     fontSize: 12,
-    color: "#475569",
+    color: colors.textMuted,
     fontWeight: "600",
   },
   chipTextActive: {
-    color: "#FFFFFF",
+    color: colors.surface,
   },
   gridTwoColumns: {
     flexDirection: "row",
@@ -386,7 +389,7 @@ const styles = StyleSheet.create({
   },
   cardHalf: {
     width: "48%",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: colors.surface,
     borderRadius: 16,
     padding: 14,
     marginBottom: 12,
@@ -395,7 +398,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.04,
     shadowRadius: 6,
     borderWidth: 1,
-    borderColor: "#F1F5F9",
+    borderColor: colors.background,
   },
   cardDot: {
     width: 6,
@@ -406,7 +409,7 @@ const styles = StyleSheet.create({
   cardLabel: {
     fontSize: 10,
     fontWeight: "700",
-    color: "#94A3B8",
+    color: colors.textMuted,
     letterSpacing: 0.5,
   },
   cardValue: {
@@ -416,10 +419,10 @@ const styles = StyleSheet.create({
   },
   cardSubtext: {
     fontSize: 11,
-    color: "#94A3B8",
+    color: colors.textMuted,
   },
   tableCard: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: colors.surface,
     borderRadius: 16,
     padding: 14,
     marginTop: 8,
@@ -428,57 +431,57 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.04,
     shadowRadius: 6,
     borderWidth: 1,
-    borderColor: "#F1F5F9",
+    borderColor: colors.background,
   },
   tableHeaderRow: {
     flexDirection: "row",
     paddingBottom: 10,
     borderBottomWidth: 1,
-    borderBottomColor: "#F1F5F9",
+    borderBottomColor: colors.background,
   },
   thCell: {
     fontSize: 10,
     fontWeight: "700",
-    color: "#94A3B8",
+    color: colors.textMuted,
     paddingRight: 8,
   },
   tableBodyRow: {
     flexDirection: "row",
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: "#F8FAFC",
+    borderBottomColor: colors.background,
     alignItems: "center",
   },
   tdTextBold: {
     fontSize: 12,
     fontWeight: "700",
-    color: "#1E293B",
+    color: colors.text,
     paddingRight: 8,
   },
   tdTextSub: {
     fontSize: 11,
-    color: "#64748B",
+    color: colors.textMuted,
     paddingRight: 8,
   },
   tdLinkText: {
     fontSize: 11,
-    color: "#16A34A",
+    color: colors.primary,
     fontWeight: "600",
     paddingRight: 8,
   },
   badgePill: {
-    backgroundColor: "#E0F2FE",
+    backgroundColor: colors.background,
     borderRadius: 12,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderWidth: 1,
-    borderColor: "#BAE6FD",
+    borderColor: colors.border,
     alignSelf: "flex-start",
   },
   badgeText: {
     fontSize: 9,
     fontWeight: "700",
-    color: "#0284C7",
+    color: colors.info,
   },
   statusPill: {
     borderRadius: 12,
@@ -492,33 +495,33 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   errorCard: {
-    backgroundColor: "#FEF2F2",
+    backgroundColor: colors.background,
     borderRadius: 12,
     padding: 16,
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#FCA5A5",
+    borderColor: colors.danger,
   },
   errorTitle: {
     fontSize: 14,
     fontWeight: "bold",
-    color: "#991B1B",
+    color: colors.danger,
     marginBottom: 4,
   },
   errorSubtext: {
     fontSize: 12,
-    color: "#7F1D1D",
+    color: colors.danger,
     textAlign: "center",
     marginBottom: 10,
   },
   btnRetry: {
-    backgroundColor: "#DC2626",
+    backgroundColor: colors.danger,
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 8,
   },
   btnRetryText: {
-    color: "#FFFFFF",
+    color: colors.surface,
     fontWeight: "bold",
     fontSize: 12,
   },
@@ -531,7 +534,7 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     width: "100%",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: colors.surface,
     borderRadius: 16,
     padding: 20,
     elevation: 5,
@@ -539,7 +542,7 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 16,
     fontWeight: "bold",
-    color: "#0F172A",
+    color: colors.text,
     marginBottom: 14,
   },
   modalBody: {
@@ -548,21 +551,21 @@ const styles = StyleSheet.create({
   modalLabel: {
     fontSize: 11,
     fontWeight: "bold",
-    color: "#64748B",
+    color: colors.textMuted,
     marginTop: 6,
   },
   modalValue: {
     fontSize: 13,
-    color: "#1E293B",
+    color: colors.text,
   },
   btnCloseModal: {
-    backgroundColor: "#F1F5F9",
+    backgroundColor: colors.background,
     paddingVertical: 10,
     borderRadius: 8,
     alignItems: "center",
   },
   btnCloseModalText: {
     fontWeight: "bold",
-    color: "#334155",
+    color: colors.text,
   },
 });

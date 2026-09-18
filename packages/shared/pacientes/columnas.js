@@ -23,7 +23,7 @@ export const COLUMNAS_PACIENTE = [
   { id: "sexo", label: "Sexo", tipo: TIPOS_DE_PRESENTACION.TEXTO },
   { id: "comunidad", label: "Comunidad", tipo: TIPOS_DE_PRESENTACION.TEXTO },
   { id: "condiciones", label: "Condiciones", tipo: TIPOS_DE_PRESENTACION.CHIPS },
-  { id: "ultimaAtencion", label: "Ultima atencion", tipo: TIPOS_DE_PRESENTACION.FECHA },
+  { id: "ultimaAtencion", label: "Última atención", tipo: TIPOS_DE_PRESENTACION.FECHA },
 ];
 
 /** Datos de la ficha clinica, en el orden en que el diseno los presenta. */
@@ -32,7 +32,7 @@ export const COLUMNAS_PACIENTE_MOVIL = COLUMNAS_PACIENTE.filter((columna) =>
 );
 
 export const CAMPOS_FICHA_PACIENTE = [
-  { id: "numeroFicha", label: "Numero de ficha", tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  { id: "numeroFicha", label: "Número de ficha", tipo: TIPOS_DE_PRESENTACION.TEXTO },
   { id: "dpi", label: "DPI", tipo: TIPOS_DE_PRESENTACION.TEXTO },
   { id: "fechaNacimiento", label: "Fecha de nacimiento", tipo: TIPOS_DE_PRESENTACION.FECHA },
   { id: "sexo", label: "Sexo", tipo: TIPOS_DE_PRESENTACION.TEXTO },
@@ -41,7 +41,7 @@ export const CAMPOS_FICHA_PACIENTE = [
   { id: "departamento", label: "Departamento", tipo: TIPOS_DE_PRESENTACION.TEXTO },
   { id: "municipio", label: "Municipio", tipo: TIPOS_DE_PRESENTACION.TEXTO },
   { id: "comunidad", label: "Comunidad", tipo: TIPOS_DE_PRESENTACION.TEXTO },
-  { id: "telefonoContacto", label: "Telefono", tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  { id: "telefonoContacto", label: "Teléfono", tipo: TIPOS_DE_PRESENTACION.TEXTO },
   { id: "nombreResponsable", label: "Responsable", tipo: TIPOS_DE_PRESENTACION.TEXTO },
   { id: "parentescoResponsable", label: "Parentesco", tipo: TIPOS_DE_PRESENTACION.TEXTO },
   { id: "fechaBaja", label: "Fecha de baja", tipo: TIPOS_DE_PRESENTACION.FECHA },
@@ -51,5 +51,5 @@ export const CAMPOS_FICHA_PACIENTE = [
   // expediente ni si alguien lo habia corregido despues. Con FECHA_HORA y no FECHA: son
   // TIMESTAMPTZ, y dos correcciones de la misma tarde se leerian identicas sin la hora.
   { id: "registradoEn", label: "Registrado el", tipo: TIPOS_DE_PRESENTACION.FECHA_HORA },
-  { id: "actualizadoEn", label: "Ultima actualizacion", tipo: TIPOS_DE_PRESENTACION.FECHA_HORA },
+  { id: "actualizadoEn", label: "Última actualización", tipo: TIPOS_DE_PRESENTACION.FECHA_HORA },
 ];

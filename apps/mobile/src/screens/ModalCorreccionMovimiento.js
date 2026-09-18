@@ -49,7 +49,7 @@ export default function ModalCorreccionMovimiento({ visible, movimiento, onClose
     <Modal
       visible={visible}
       onClose={onClose}
-      title={puedeEditar ? "Corregir movimiento" : "Detalle del movimiento"}
+      title={puedeEditar ? "Editar movimiento" : "Detalle del movimiento"}
     >
       {error ? <Text style={styles.error}>{error.mensaje}</Text> : null}
 
@@ -88,7 +88,7 @@ export default function ModalCorreccionMovimiento({ visible, movimiento, onClose
       {puedeEditar ? (
         <>
           <PrimaryButton
-            title="Guardar correccion"
+            title="Guardar cambios"
             onPress={guardar}
             loading={enviando}
             style={styles.boton}

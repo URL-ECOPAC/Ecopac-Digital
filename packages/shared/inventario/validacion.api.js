@@ -22,7 +22,7 @@ export async function aprobarMovimiento(idMovimiento, { usuarioId, rolUsuario })
     if (!esAdministrador(rolUsuario)) {
       return {
         datos: null,
-        error: { mensaje: "Operacion exclusiva para el rol Administrador." },
+        error: { mensaje: "Operación exclusiva para el rol Administrador." },
       };
     }
 
@@ -99,7 +99,7 @@ export async function rechazarMovimiento(idMovimiento, { motivo, usuarioId, rolU
     if (!esAdministrador(rolUsuario)) {
       return {
         datos: null,
-        error: { mensaje: "Operacion exclusiva para el rol Administrador." },
+        error: { mensaje: "Operación exclusiva para el rol Administrador." },
       };
     }
 

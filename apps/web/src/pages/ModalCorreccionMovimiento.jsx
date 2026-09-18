@@ -55,7 +55,7 @@ export default function ModalCorreccionMovimiento({ visible, movimiento, onClose
     <Modal
       visible={visible}
       onClose={onClose}
-      title={puedeEditar ? "Corregir movimiento" : "Detalle del movimiento"}
+      title={puedeEditar ? "Editar movimiento" : "Detalle del movimiento"}
     >
       {error && (
         <div className="alert alert-danger" role="alert">
@@ -108,7 +108,7 @@ export default function ModalCorreccionMovimiento({ visible, movimiento, onClose
                 icon={<X size={16} aria-hidden="true" />}
               />
               <PrimaryButton
-                title="Guardar correccion"
+                title="Guardar cambios"
                 onClick={guardar}
                 loading={enviando}
                 icon={<Save size={16} aria-hidden="true" />}

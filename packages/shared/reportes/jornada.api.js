@@ -70,7 +70,7 @@ export async function obtenerReporteJornada({ jornadaId, rol } = {}) {
       datos: null,
       error: {
         codigo: "SIN_PERMISO",
-        mensaje: "Solo administracion y medico consultan el reporte de resultados de la jornada.",
+        mensaje: "Solo administración y médico consultan el reporte de resultados de la jornada.",
       },
     };
   }

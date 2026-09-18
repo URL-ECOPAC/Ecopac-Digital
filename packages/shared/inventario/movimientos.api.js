@@ -96,7 +96,7 @@ export async function registrarIngreso({
     if (!Object.values(ORIGENES_DE_LOTE).includes(origen)) {
       return {
         datos: null,
-        error: { mensaje: "El origen del ingreso debe ser 'compra' o 'donacion'." },
+        error: { mensaje: "El origen del ingreso debe ser 'compra' o 'donación'." },
       };
     }
 
@@ -125,7 +125,7 @@ export async function registrarIngreso({
         return {
           datos: null,
           error: {
-            mensaje: "Se requiere numero de lote y fecha de vencimiento para crear un nuevo lote.",
+            mensaje: "Se requiere número de lote y fecha de vencimiento para crear un nuevo lote.",
           },
         };
       }

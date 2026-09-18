@@ -1,6 +1,10 @@
 import React from "react";
 import { Alert, StyleSheet, Text, View } from "react-native";
-import { ESTADOS_CONDICION_CRONICA, useCondicionesPaciente } from "@ecopac/shared";
+import {
+  ESTADOS_CONDICION_CRONICA,
+  ETIQUETAS_ESTADO_CONDICION,
+  useCondicionesPaciente,
+} from "@ecopac/shared";
 import { colors, spacing, typography } from "@ecopac/ui-tokens";
 
 import { Card, ErrorState, LoadingState, SecondaryButton, StatusChip } from "../../components";
@@ -65,7 +69,12 @@ export default function CondicionesPacienteSeccion({ pacienteId, rol, alActualiz
               <View style={styles.infoCondicion}>
                 <StatusChip
                   status={item.estado}
-                  label={`${item.condicion ?? "Sin nombre"} · ${item.estado}`}
+                  // La etiqueta del estado, no la clave del enum: el chip decia "activa" y
+                  // "resuelta" en minusculas, que es como lo guarda la base, no como se lee
+                  // (issue #838). Sale de ETIQUETAS_ESTADO_CONDICION, igual que en la web.
+                  label={`${item.condicion ?? "Sin nombre"} · ${
+                    ETIQUETAS_ESTADO_CONDICION[item.estado] ?? item.estado
+                  }`}
                 />
                 {item.notas ? <Text style={styles.notas}>{item.notas}</Text> : null}
               </View>

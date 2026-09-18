@@ -78,13 +78,13 @@ export const CAMPOS_MEDICAMENTO = [
   },
   {
     id: "concentracion",
-    label: "Concentracion",
+    label: "Concentración",
     tipo: TIPOS_DE_CAMPO.TEXTO,
     validacion: { requerido: true, maxLongitud: 100 },
   },
   {
     id: "presentacion",
-    label: "Presentacion",
+    label: "Presentación",
     tipo: TIPOS_DE_CAMPO.SELECT,
     opciones: OPCIONES_PRESENTACION,
     validacion: { requerido: true },
@@ -104,7 +104,7 @@ export const CAMPOS_MEDICAMENTO = [
   },
   {
     id: "formaFarmaceutica",
-    label: "Forma farmaceutica",
+    label: "Forma farmacéutica",
     tipo: TIPOS_DE_CAMPO.TEXTO,
     validacion: { requerido: false, maxLongitud: 100 },
   },
@@ -149,13 +149,13 @@ export const CAMPOS_BODEGA = [
   },
   {
     id: "ubicacion",
-    label: "Ubicacion",
+    label: "Ubicación",
     tipo: TIPOS_DE_CAMPO.TEXTO,
     validacion: { requerido: false, maxLongitud: 200 },
   },
   {
     id: "esMovil",
-    label: "Es movil",
+    label: "Es móvil",
     tipo: TIPOS_DE_CAMPO.BOOLEANO,
     validacion: { requerido: false },
   },
@@ -177,7 +177,7 @@ export const CAMPOS_LOTE = [
   },
   {
     id: "numeroLote",
-    label: "Numero de lote",
+    label: "Número de lote",
     tipo: TIPOS_DE_CAMPO.TEXTO,
     validacion: { requerido: true, maxLongitud: 50 },
   },
@@ -308,7 +308,7 @@ export const CAMPOS_CORRECCION_MOVIMIENTO = [
 export const CAMPOS_ATENDER_ALERTA = [
   {
     id: "accion",
-    label: "Accion tomada",
+    label: "Acción tomada",
     tipo: TIPOS_DE_CAMPO.SELECT,
     opciones: OPCIONES_ACCION_ALERTA,
     validacion: { requerido: true },

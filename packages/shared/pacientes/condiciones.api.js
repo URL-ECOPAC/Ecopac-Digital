@@ -162,7 +162,7 @@ export async function actualizarCondicionCatalogo(id, cambios = {}) {
       errores: {},
       error: {
         ...construirError(CODIGOS_DE_ERROR_DE_SUPABASE.CAMPO_REQUERIDO),
-        mensaje: "Hace falta el id para actualizar la condicion del catalogo.",
+        mensaje: "Hace falta el id para actualizar la condición del catalogo.",
       },
     };
   }
@@ -216,7 +216,7 @@ export async function actualizarCondicionCatalogo(id, cambios = {}) {
         errores: {},
         error: {
           ...construirError(CODIGOS_DE_ERROR_DE_SUPABASE.PERMISO_DENEGADO),
-          mensaje: "No se pudo actualizar la condicion. Revisa los permisos de administrador.",
+          mensaje: "No se pudo actualizar la condición. Revisa los permisos de administrador.",
         },
       };
     }
@@ -285,7 +285,7 @@ export async function asociarCondicion(datos = {}, hoy = new Date()) {
       errores: {},
       error: {
         ...construirError(CODIGOS_DE_ERROR_DE_SUPABASE.CAMPO_REQUERIDO),
-        mensaje: "Hace falta el paciente para registrar la condicion.",
+        mensaje: "Hace falta el paciente para registrar la condición.",
       },
     };
   }
@@ -315,7 +315,7 @@ export async function asociarCondicion(datos = {}, hoy = new Date()) {
           error: {
             ...normalizado,
             mensaje:
-              "Este paciente ya tiene registrada esa condicion. Si cambio de estado, editala " +
+              "Este paciente ya tiene registrada esa condición. Si cambio de estado, editala " +
               "en vez de agregarla otra vez.",
           },
         };
@@ -348,7 +348,7 @@ export async function actualizarCondicion(id, cambios = {}, hoy = new Date()) {
       errores: {},
       error: {
         ...construirError(CODIGOS_DE_ERROR_DE_SUPABASE.CAMPO_REQUERIDO),
-        mensaje: "Hace falta saber que condicion se va a corregir.",
+        mensaje: "Hace falta saber que condición se va a corregir.",
       },
     };
   }
@@ -363,7 +363,7 @@ export async function actualizarCondicion(id, cambios = {}, hoy = new Date()) {
       errores: {},
       error: {
         ...construirError(CODIGOS_DE_ERROR_DE_SUPABASE.CAMPO_REQUERIDO),
-        mensaje: "No hay ningun cambio que guardar.",
+        mensaje: "No hay ningún cambio que guardar.",
       },
     };
   }
@@ -384,7 +384,7 @@ export async function actualizarCondicion(id, cambios = {}, hoy = new Date()) {
         errores: {},
         error: {
           ...construirError(CODIGOS_DE_ERROR_DE_SUPABASE.PERMISO_DENEGADO),
-          mensaje: "No se pudo guardar el cambio. Revisa que la condicion siga registrada.",
+          mensaje: "No se pudo guardar el cambio. Revisa que la condición siga registrada.",
         },
       };
     }
@@ -427,7 +427,7 @@ export async function quitarCondicion(id) {
       quitada: false,
       error: {
         ...construirError(CODIGOS_DE_ERROR_DE_SUPABASE.CAMPO_REQUERIDO),
-        mensaje: "Hace falta saber que condicion se va a quitar.",
+        mensaje: "Hace falta saber que condición se va a quitar.",
       },
     };
   }
@@ -447,7 +447,7 @@ export async function quitarCondicion(id) {
         error: {
           ...construirError(CODIGOS_DE_ERROR_DE_SUPABASE.PERMISO_DENEGADO),
           mensaje:
-            "No se pudo quitar la condicion. Solo la administradora puede borrar un registro; " +
+            "No se pudo quitar la condición. Solo la administradora puede borrar un registro; " +
             "para dar de alta al paciente, marcala como resuelta.",
         },
       };

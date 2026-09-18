@@ -60,14 +60,14 @@ describe("ModalEdicionUsuario", () => {
     pantalla();
 
     expect(screen.getByLabelText("Fecha de ingreso")).toHaveValue("2026-01-15");
-    expect(screen.getByLabelText("Direccion")).toHaveValue("Zona 10, Guatemala");
+    expect(screen.getByLabelText("Dirección")).toHaveValue("Zona 10, Guatemala");
     expect(screen.getByLabelText("Notas")).toHaveValue("Disponible fines de semana");
   });
 
   it("direccion y notas se editan como area de texto, no como input de una linea", () => {
     pantalla();
 
-    expect(screen.getByLabelText("Direccion").tagName).toBe("TEXTAREA");
+    expect(screen.getByLabelText("Dirección").tagName).toBe("TEXTAREA");
     expect(screen.getByLabelText("Notas").tagName).toBe("TEXTAREA");
   });
 

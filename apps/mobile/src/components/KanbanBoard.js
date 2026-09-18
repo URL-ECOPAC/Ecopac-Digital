@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { View, Text, ScrollView, TouchableOpacity, Modal, StyleSheet } from "react-native";
+import { colors } from "@ecopac/ui-tokens";
 
 export default function KanbanBoard({ proyectos, etapas, onCambiarEtapa }) {
   const [proyectoSeleccionado, setProyectoSeleccionado] = useState(null);
@@ -101,7 +102,7 @@ const styles = StyleSheet.create({
   },
   column: {
     width: 260,
-    backgroundColor: "#F1F5F9",
+    backgroundColor: colors.background,
     borderRadius: 12,
     padding: 12,
     marginRight: 12,
@@ -114,15 +115,15 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     paddingBottom: 8,
     borderBottomWidth: 1,
-    borderBottomColor: "#CBD5E1",
+    borderBottomColor: colors.border,
   },
   columnTitle: {
     fontSize: 14,
     fontWeight: "700",
-    color: "#334155",
+    color: colors.text,
   },
   badgeCount: {
-    backgroundColor: "#CBD5E1",
+    backgroundColor: colors.border,
     borderRadius: 12,
     paddingHorizontal: 8,
     paddingVertical: 2,
@@ -130,25 +131,25 @@ const styles = StyleSheet.create({
   badgeCountText: {
     fontSize: 12,
     fontWeight: "700",
-    color: "#475569",
+    color: colors.textMuted,
   },
   card: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: colors.surface,
     borderRadius: 8,
     padding: 12,
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderColor: colors.border,
   },
   cardTitle: {
     fontSize: 14,
     fontWeight: "700",
-    color: "#0F172A",
+    color: colors.text,
     marginBottom: 4,
   },
   cardDesc: {
     fontSize: 12,
-    color: "#64748B",
+    color: colors.textMuted,
     marginBottom: 8,
   },
   cardFooter: {
@@ -160,10 +161,10 @@ const styles = StyleSheet.create({
   cardBudget: {
     fontSize: 12,
     fontWeight: "700",
-    color: "#16A34A",
+    color: colors.primary,
   },
   moveBtn: {
-    backgroundColor: "#E0F2FE",
+    backgroundColor: colors.background,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 6,
@@ -171,7 +172,7 @@ const styles = StyleSheet.create({
   moveBtnText: {
     fontSize: 11,
     fontWeight: "600",
-    color: "#0284C7",
+    color: colors.info,
   },
   modalOverlay: {
     flex: 1,
@@ -182,39 +183,39 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     width: "100%",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: colors.surface,
     borderRadius: 16,
     padding: 20,
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: "700",
-    color: "#0F172A",
+    color: colors.text,
   },
   modalSubtitle: {
     fontSize: 13,
-    color: "#64748B",
+    color: colors.textMuted,
     marginBottom: 16,
   },
   optionBtn: {
     padding: 12,
     borderRadius: 8,
-    backgroundColor: "#F8FAFC",
+    backgroundColor: colors.background,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderColor: colors.border,
   },
   optionBtnSelected: {
-    backgroundColor: "#DCFCE7",
-    borderColor: "#16A34A",
+    backgroundColor: colors.background,
+    borderColor: colors.primary,
   },
   optionBtnText: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#334155",
+    color: colors.text,
   },
   optionBtnTextSelected: {
-    color: "#15803D",
+    color: colors.primaryDark,
   },
   closeBtn: {
     marginTop: 8,
@@ -222,7 +223,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   closeBtnText: {
-    color: "#64748B",
+    color: colors.textMuted,
     fontWeight: "600",
   },
 });

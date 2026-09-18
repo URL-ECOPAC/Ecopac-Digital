@@ -31,7 +31,7 @@ import { TIPOS_DE_PRESENTACION } from "../descriptores.js";
 
 export const COLUMNAS_GASTO = [
   { id: "concepto", label: "Concepto", tipo: TIPOS_DE_PRESENTACION.TEXTO, principal: true },
-  { id: "categoria", label: "Categoria", tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  { id: "categoria", label: "Categoría", tipo: TIPOS_DE_PRESENTACION.TEXTO },
   {
     id: "proyecto_id",
     label: "Proyecto",
@@ -58,7 +58,7 @@ export const COLUMNAS_GASTO = [
 /** Datos de la ficha de un gasto, en el orden en que el diseno los presenta. */
 export const CAMPOS_FICHA_GASTO = [
   { id: "concepto", label: "Concepto", tipo: TIPOS_DE_PRESENTACION.TEXTO, principal: true },
-  { id: "categoria", label: "Categoria", tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  { id: "categoria", label: "Categoría", tipo: TIPOS_DE_PRESENTACION.TEXTO },
   { id: "monto", label: "Monto", tipo: TIPOS_DE_PRESENTACION.MONEDA },
   { id: "fecha", label: "Fecha", tipo: TIPOS_DE_PRESENTACION.FECHA },
   { id: "estado", label: "Estado", tipo: TIPOS_DE_PRESENTACION.CHIP },

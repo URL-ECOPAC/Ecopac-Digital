@@ -56,9 +56,14 @@ export const CAMPOS_REGISTRO_PACIENTE = [
   },
   {
     id: "telefonoContacto",
-    label: "Telefono de contacto",
+    label: "Teléfono de contacto",
     tipo: TIPOS_DE_CAMPO.TELEFONO,
-    validacion: { requerido: true, maxLongitud: 20 },
+    // Opcional desde la #838, por el mismo motivo que la comunidad en la #657: en muchas
+    // comunidades no hay ningun numero al que llamar, y exigirlo llevaba a inventar uno -que
+    // ademas queda en la ficha clinica como si fuera real- o a no registrar al paciente. La
+    // columna admite NULL desde la 00130, y su COMMENT explica que ese telefono muchas veces ni
+    // siquiera es del paciente.
+    validacion: { requerido: false, maxLongitud: 20 },
   },
   {
     id: "idioma",
@@ -160,14 +165,14 @@ export function seccionesDePaciente() {
 export const CAMPOS_TRIAJE = [
   {
     id: "presionSistolica",
-    label: "Presion sistolica",
+    label: "Presión sistólica",
     tipo: TIPOS_DE_CAMPO.NUMERO,
     sufijo: "mmHg",
     validacion: { requerido: true, min: 40, max: 300 },
   },
   {
     id: "presionDiastolica",
-    label: "Presion diastolica",
+    label: "Presión diastólica",
     tipo: TIPOS_DE_CAMPO.NUMERO,
     sufijo: "mmHg",
     validacion: { requerido: true, min: 20, max: 200 },
@@ -228,19 +233,19 @@ export const CAMPOS_CONSULTA = [
   },
   {
     id: "sintomas",
-    label: "Sintomas",
+    label: "Síntomas",
     tipo: TIPOS_DE_CAMPO.TEXTO_LARGO,
     validacion: { requerido: false },
   },
   {
     id: "exploracion",
-    label: "Exploracion",
+    label: "Exploración",
     tipo: TIPOS_DE_CAMPO.TEXTO_LARGO,
     validacion: { requerido: false },
   },
   {
     id: "diagnosticos",
-    label: "Diagnosticos",
+    label: "Diagnósticos",
     tipo: TIPOS_DE_CAMPO.MULTI_SELECT,
     opcionesDesde: "diagnosticos",
     validacion: { requerido: false },
@@ -301,7 +306,7 @@ export const CAMPOS_CORRECCION_CONSULTA = CAMPOS_CONSULTA.filter((campo) =>
 export const CAMPOS_AGREGAR_DIAGNOSTICO = [
   {
     id: "diagnostico",
-    label: "Diagnostico",
+    label: "Diagnóstico",
     tipo: TIPOS_DE_CAMPO.SELECT,
     opcionesDesde: "diagnosticos",
     validacion: { requerido: true },
@@ -353,7 +358,7 @@ export const CAMPOS_RECETA = [
       },
       {
         id: "duracion",
-        label: "Duracion",
+        label: "Duración",
         tipo: TIPOS_DE_CAMPO.TEXTO,
         validacion: { requerido: true, maxLongitud: 100 },
       },

@@ -87,7 +87,7 @@ function CustomHeaderTitle({ title }) {
 }
 
 const opcionesStack = (title) => ({
-  headerStyle: { backgroundColor: colors?.surface || "#FFFFFF" },
+  headerStyle: { backgroundColor: colors?.surface || colors.surface },
   headerTitle: () => <CustomHeaderTitle title={title} />,
   headerTitleContainerStyle: {
     width: "100%",
@@ -436,9 +436,9 @@ function TabsNavigator() {
 
         return {
           headerShown: false,
-          tabBarActiveTintColor: colors?.primary || "#16A34A",
-          tabBarInactiveTintColor: colors?.textMuted || "#94A3B8",
-          tabBarStyle: { backgroundColor: colors?.surface || "#FFFFFF" },
+          tabBarActiveTintColor: colors?.primary || colors.primary,
+          tabBarInactiveTintColor: colors?.textMuted || colors.textMuted,
+          tabBarStyle: { backgroundColor: colors?.surface || colors.surface },
           tabBarLabelStyle: { fontSize: 10 },
           // El icono sale del vocabulario que declara packages/shared/navegacion.js, traducido
           // por IconoDeModulo (issue #700). Antes eran cinco glifos escritos a mano, dos de ellos
@@ -486,7 +486,7 @@ const styles = StyleSheet.create({
   headerTitleText: {
     fontSize: 18,
     fontWeight: "bold",
-    color: "#0F172A",
+    color: colors.text,
   },
   userContainer: {
     alignItems: "flex-end",
@@ -494,11 +494,11 @@ const styles = StyleSheet.create({
   nombreText: {
     fontSize: 12,
     fontWeight: "bold",
-    color: "#1E293B",
+    color: colors.text,
   },
   rolText: {
     fontSize: 10,
-    color: "#64748B",
+    color: colors.textMuted,
   },
   botonHeaderIngreso: {
     minHeight: 48,
@@ -509,6 +509,6 @@ const styles = StyleSheet.create({
     fontFamily: typography.fontFamilyBase,
     fontSize: typography.sizes.sm,
     fontWeight: typography.weights.semibold,
-    color: colors?.primary || "#16A34A",
+    color: colors?.primary || colors.primary,
   },
 });

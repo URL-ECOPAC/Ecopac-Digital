@@ -240,7 +240,7 @@ export async function obtenerDonacion(id, { rolUsuario } = {}) {
   const errorRol = validarRolLectura(rolUsuario);
   if (errorRol) return errorRol;
 
-  if (!id) return { datos: null, error: { mensaje: "Falta el identificador de la donacion." } };
+  if (!id) return { datos: null, error: { mensaje: "Falta el identificador de la donación." } };
 
   try {
     const { data, error } = await obtenerSupabase()
@@ -250,7 +250,7 @@ export async function obtenerDonacion(id, { rolUsuario } = {}) {
       .maybeSingle();
 
     if (error) return { datos: null, error: normalizarError(error) };
-    if (!data) return { datos: null, error: { mensaje: "La donacion no existe." } };
+    if (!data) return { datos: null, error: { mensaje: "La donación no existe." } };
 
     return { datos: aDonacion(data), error: null };
   } catch (error) {

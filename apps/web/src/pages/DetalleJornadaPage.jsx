@@ -34,6 +34,7 @@ import { useSesionCompartida } from "../contexto/SesionProvider";
 import CuadroTurnosImprimible from "./CuadroTurnosImprimible";
 import ModalAsignarPersonal from "./ModalAsignarPersonal";
 import ModalEdicionTurno from "./ModalEdicionTurno";
+import ModalJornada from "./ModalJornada";
 import NotFoundPage from "./NotFoundPage";
 
 // Detalle de una jornada (issue #181): sus datos, el personal asignado, los pacientes
@@ -146,6 +147,10 @@ export default function DetalleJornadaPage() {
   // PestaniaRecetasPaciente.jsx (#131): requestAnimationFrame para esperar al primer pintado del
   // portal antes de llamar a window.print(), y "afterprint" para desmontarlo despues.
   const [aImprimir, setAImprimir] = useState(false);
+  // Issue #838: editar la jornada desde su propia pantalla. Hasta ahora el unico acceso al
+  // formulario era el boton "Editar" de la tarjeta del tablero, asi que desde el detalle habia
+  // que volver a /jornadas y buscarla otra vez.
+  const [editandoJornada, setEditandoJornada] = useState(false);
 
   useEffect(() => {
     if (!aImprimir) return undefined;
@@ -177,9 +182,7 @@ export default function DetalleJornadaPage() {
       <ScreenContainer>
         <PageHeader
           title="Detalle de la jornada"
-          actions={[
-            { label: "Volver", onClick: () => navigate("/jornadas"), variant: "secondary" },
-          ]}
+          actions={[{ label: "Volver", onClick: () => navigate("/jornadas"), variant: "neutra" }]}
         />
         <ErrorState message={error.mensaje} onRetry={recargar} />
       </ScreenContainer>
@@ -254,7 +257,7 @@ export default function DetalleJornadaPage() {
       <PageHeader
         title={jornada.nombre}
         subtitle={`${formatearFechaCorta(jornada.fecha)} · ${jornada.comunidad?.nombre ?? "—"}`}
-        actions={[{ label: "Volver", onClick: () => navigate("/jornadas"), variant: "secondary" }]}
+        actions={[{ label: "Volver", onClick: () => navigate("/jornadas"), variant: "neutra" }]}
       />
 
       {errorMovimiento && (
@@ -298,22 +301,35 @@ export default function DetalleJornadaPage() {
                   (label/onClick/variant) no tiene forma de deshabilitar un boton. */}
                 {puedeMover && esReapertura && (
                   <SecondaryButton
-                    title="← Atras"
+                    title="← Atrás"
                     onClick={() => cambiarEstado(destino)}
                     disabled={moviendo}
                   />
                 )}
-                {puedeMover && !esReapertura && (
-                  <PrimaryButton
-                    title="Avanzar →"
-                    onClick={() =>
-                      destino === ESTADOS_JORNADA.FINALIZADA
-                        ? setPestaniaActiva("cierre")
-                        : cambiarEstado(destino)
-                    }
-                    loading={moviendo}
-                  />
-                )}
+                {/* ISSUE #838: "Avanzar →" hacia 'finalizada' no avanzaba nada, solo cambiaba
+                    a la pestaña "Cierre" -- una pestaña que ya esta en la barra de arriba, a un
+                    click de distancia. Un boton primario que promete avanzar y lo unico que hace
+                    es moverte de pestaña, encima a la que cierra la jornada, asusta mas de lo que
+                    ayuda. Se quita. Las transiciones que SI cambian el estado se conservan, con
+                    el nombre de lo que hacen ("Iniciar jornada") en vez de un "Avanzar" generico.
+                    En su lugar va "Editar jornada", que es lo que de verdad hace falta desde el
+                    resumen y hasta ahora solo existia en la tarjeta del tablero. */}
+                <div className="d-flex gap-2">
+                  {permisos.puedeEditar && (
+                    <SecondaryButton
+                      title="Editar jornada"
+                      onClick={() => setEditandoJornada(true)}
+                      disabled={moviendo}
+                    />
+                  )}
+                  {puedeMover && !esReapertura && destino !== ESTADOS_JORNADA.FINALIZADA && (
+                    <PrimaryButton
+                      title={destino === ESTADOS_JORNADA.EN_CURSO ? "Iniciar jornada" : "Avanzar →"}
+                      onClick={() => cambiarEstado(destino)}
+                      loading={moviendo}
+                    />
+                  )}
+                </div>
               </div>
               <dl className="row mb-0">
                 <dt className="col-sm-4">{ETIQUETAS.codigo}</dt>
@@ -645,6 +661,21 @@ export default function DetalleJornadaPage() {
           onDesasignado={() => {
             setFilaEnEdicion(null);
             recargarPersonal();
+          }}
+        />
+      )}
+
+      {/* Issue #838: el mismo formulario del tablero, montado aqui. onGuardado recarga la
+          jornada entera -- no solo el personal -- porque lo que cambia son sus datos. */}
+      {editandoJornada && (
+        <ModalJornada
+          visible
+          jornada={jornada}
+          rol={rol}
+          onClose={() => setEditandoJornada(false)}
+          onGuardado={() => {
+            setEditandoJornada(false);
+            recargar();
           }}
         />
       )}

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { listarAlertas, atenderAlerta } from "./alertas.api.js";
+import { listarAlertas, atenderAlerta, sincronizarAlertas } from "./alertas.api.js";
+import { esAdministrador } from "../usuarios/roles.js";
 import { aFechaLocal, diasHastaVencimiento } from "../formato/fechas.js";
 
 /**
@@ -78,6 +79,14 @@ export function useAlertasVencimiento({ usuarioId, rolUsuario } = {}) {
     setCargando(true);
     setError(null);
 
+    // Antes de listar, se pone al dia la tabla (issue #838). Un lote que ya vencio no tenia
+    // alerta ninguna -- fn_generar_alertas_caducidad() lo descartaba por vencido hasta la 00129 --
+    // asi que el bloque "Vencidos - Para dar de baja" salia vacio con el lote a la vista en el
+    // inventario. Solo lo intenta la administradora, que es quien puede atenderlas, y su fallo se
+    // ignora a proposito: el panel se lee igual sin este paso, y taparlo con un error seria peor
+    // que mostrar la lista que ya habia.
+    if (esAdministrador(rolUsuario)) await sincronizarAlertas();
+
     const respuesta = await listarAlertas();
 
     if (idDeEstaPeticion !== peticionVigente.current) return;
@@ -90,7 +99,7 @@ export function useAlertasVencimiento({ usuarioId, rolUsuario } = {}) {
 
     setAlertas(respuesta.alertas);
     setCargando(false);
-  }, []);
+  }, [rolUsuario]);
 
   useEffect(() => {
     consultar();

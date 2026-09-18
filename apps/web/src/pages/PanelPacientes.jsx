@@ -92,7 +92,7 @@ export default function PanelPacientes({
           {hayMas && (
             <div className="d-flex justify-content-center mt-3">
               <SecondaryButton
-                title="Cargar mas pacientes"
+                title="Cargar más pacientes"
                 onClick={cargarMas}
                 loading={cargando}
                 block

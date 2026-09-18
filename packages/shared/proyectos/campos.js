@@ -34,7 +34,7 @@ export const CAMPOS_PROYECTO = [
   },
   {
     id: "descripcion",
-    label: "Descripcion",
+    label: "Descripción",
     tipo: TIPOS_DE_CAMPO.TEXTO_LARGO,
     validacion: { requerido: false },
   },
@@ -72,7 +72,7 @@ export const CAMPOS_HITO = [
   },
   {
     id: "descripcion",
-    label: "Descripcion",
+    label: "Descripción",
     tipo: TIPOS_DE_CAMPO.TEXTO_LARGO,
     validacion: { requerido: false },
   },

@@ -1169,6 +1169,7 @@ describe("obtenerJornadasDePersona", () => {
         ],
         error: null,
       },
+      jornadas: { data: [], error: null },
       "rpc:fn_atenciones_de_persona_por_jornada": { data: [], error: null },
     });
     dobles.cliente = cliente;
@@ -1182,6 +1183,7 @@ describe("obtenerJornadasDePersona", () => {
         nombre: "Jornada en Solola",
         rolEnJornada: ROLES.MEDICO,
         responsabilidad: "Consulta general",
+        esResponsable: false,
         atencionesPersona: { consultas: 0, triajes: 0, pacientes: 0 },
       },
       {
@@ -1189,6 +1191,7 @@ describe("obtenerJornadasDePersona", () => {
         nombre: "Jornada en Peten",
         rolEnJornada: ROLES.VOLUNTARIO,
         responsabilidad: null,
+        esResponsable: false,
         atencionesPersona: { consultas: 0, triajes: 0, pacientes: 0 },
       },
     ]);
@@ -1219,6 +1222,7 @@ describe("obtenerJornadasDePersona", () => {
         ],
         error: null,
       },
+      jornadas: { data: [], error: null },
       "rpc:fn_atenciones_de_persona_por_jornada": { data: [], error: null },
     });
 
@@ -1232,6 +1236,7 @@ describe("obtenerJornadasDePersona", () => {
   it("ignora filas sin jornada embebida (la jornada no existe o RLS no la deja ver)", async () => {
     dobles.cliente = crearCliente({
       jornada_personal: { data: [{ jornada: null }], error: null },
+      jornadas: { data: [], error: null },
       "rpc:fn_atenciones_de_persona_por_jornada": { data: [], error: null },
     });
 
@@ -1244,6 +1249,7 @@ describe("obtenerJornadasDePersona", () => {
   it("normaliza el error del servidor cuando falla jornada_personal", async () => {
     dobles.cliente = crearCliente({
       jornada_personal: { data: null, error: { code: "42501" } },
+      jornadas: { data: [], error: null },
       "rpc:fn_atenciones_de_persona_por_jornada": { data: [], error: null },
     });
 
@@ -1262,6 +1268,7 @@ describe("obtenerJornadasDePersona", () => {
         ],
         error: null,
       },
+      jornadas: { data: [], error: null },
       "rpc:fn_atenciones_de_persona_por_jornada": {
         data: [
           { jornada_id: "jornada-2", consultas: 1, triajes: 0, pacientes: 1 },
@@ -1279,14 +1286,80 @@ describe("obtenerJornadasDePersona", () => {
       {
         id: "jornada-1",
         nombre: "Jornada en Solola",
+        esResponsable: false,
         atencionesPersona: { consultas: 2, triajes: 1, pacientes: 2 },
       },
       {
         id: "jornada-2",
         nombre: "Jornada en Peten",
+        esResponsable: false,
         atencionesPersona: { consultas: 1, triajes: 0, pacientes: 1 },
       },
     ]);
+  });
+
+  // Issue #838: ser responsable de una jornada no la hacia aparecer en la app movil, porque
+  // esta funcion solo miraba jornada_personal.
+  it("incluye las jornadas donde la persona es la responsable aunque no tenga turno asignado", async () => {
+    const cliente = crearCliente({
+      jornada_personal: { data: [], error: null },
+      jornadas: {
+        data: [{ id: "jornada-9", nombre: "Jornada en Chimaltenango", responsableId: "perfil-1" }],
+        error: null,
+      },
+      "rpc:fn_atenciones_de_persona_por_jornada": { data: [], error: null },
+    });
+    dobles.cliente = cliente;
+
+    const { jornadas, error } = await obtenerJornadasDePersona("perfil-1");
+
+    expect(error).toBeNull();
+    expect(jornadas).toEqual([
+      {
+        id: "jornada-9",
+        nombre: "Jornada en Chimaltenango",
+        responsableId: "perfil-1",
+        rolEnJornada: null,
+        responsabilidad: null,
+        horaInicio: null,
+        horaFin: null,
+        esResponsable: true,
+        atencionesPersona: { consultas: 0, triajes: 0, pacientes: 0 },
+      },
+    ]);
+    expect(cliente.llamadas).toContainEqual({
+      paso: "eq",
+      tabla: "jornadas",
+      columna: "responsable_id",
+      valor: "perfil-1",
+    });
+  });
+
+  it("no repite una jornada donde la persona es responsable Y esta asignada; la marca", async () => {
+    dobles.cliente = crearCliente({
+      jornada_personal: {
+        data: [
+          {
+            jornada: { id: "jornada-1", nombre: "Jornada en Solola", responsableId: "perfil-1" },
+            rolEnJornada: ROLES.MEDICO,
+            responsabilidad: "Consulta general",
+          },
+        ],
+        error: null,
+      },
+      jornadas: {
+        data: [{ id: "jornada-1", nombre: "Jornada en Solola", responsableId: "perfil-1" }],
+        error: null,
+      },
+      "rpc:fn_atenciones_de_persona_por_jornada": { data: [], error: null },
+    });
+
+    const { jornadas } = await obtenerJornadasDePersona("perfil-1");
+
+    expect(jornadas).toHaveLength(1);
+    expect(jornadas[0].esResponsable).toBe(true);
+    // Conserva la fila de personal: su papel del dia no se pierde por ser ademas responsable.
+    expect(jornadas[0].rolEnJornada).toBe(ROLES.MEDICO);
   });
 
   it("si la RPC de atenciones falla, falla cerrado: ninguna jornada, ni con contadores en cero", async () => {
@@ -1295,6 +1368,7 @@ describe("obtenerJornadasDePersona", () => {
         data: [{ jornada: { id: "jornada-1", nombre: "Jornada en Solola" } }],
         error: null,
       },
+      jornadas: { data: [], error: null },
       "rpc:fn_atenciones_de_persona_por_jornada": { data: null, error: { code: "42501" } },
     });
     dobles.cliente = cliente;

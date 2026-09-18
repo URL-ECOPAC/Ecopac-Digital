@@ -57,7 +57,7 @@ export default function ComunidadesScreen() {
     <ScreenContainer scrollable={false}>
       <PageHeader
         title="Catalogo de comunidades"
-        subtitle="Comunidades del catalogo territorial, con su ubicacion en el mapa"
+        subtitle="Comunidades del catalogo territorial, con su ubicación en el mapa"
         actions={acciones}
       />
 

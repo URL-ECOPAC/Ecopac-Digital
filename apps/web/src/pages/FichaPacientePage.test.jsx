@@ -97,7 +97,7 @@ describe("FichaPacientePage", () => {
     expect(screen.getByLabelText("Lugar")).toBeInTheDocument();
     expect(screen.getByLabelText("Sexo")).toBeInTheDocument();
     expect(screen.getByLabelText("Edad: desde")).toBeInTheDocument();
-    expect(screen.getByLabelText("Condicion cronica")).toBeInTheDocument();
+    expect(screen.getByLabelText("Condición crónica")).toBeInTheDocument();
   });
 
   // La edad son dos cuadros, uno al lado del otro, con un guion entre ellos: el desplegable de
@@ -121,7 +121,7 @@ describe("FichaPacientePage", () => {
     pantalla("generales");
 
     expect(screen.getByText("Registrado el")).toBeInTheDocument();
-    expect(screen.getByText("Ultima actualizacion")).toBeInTheDocument();
+    expect(screen.getByText("Última actualización")).toBeInTheDocument();
   });
 
   it("ofrece registrar una consulta desde el historial clinico", () => {

@@ -1040,3 +1040,52 @@ textarea.form-control {
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   margin: 0;
 }
+
+/* --------------------------------------------------------------------------
+   Tarjeta de jornada del tablero kanban (issue #838)
+
+   Eran cuatro lineas de texto apagado del mismo tamano -comunidad, fecha, responsable,
+   atendidos- una debajo de otra, sin rotulos: en una columna con seis tarjetas no habia forma de
+   distinguir una jornada de otra sin leerlas enteras. El filete del color del estado se pasa a
+   `--ec-acento` para que sea el mismo mecanismo que el resto de tarjetas del sistema, en vez de
+   un `borderLeft` escrito en linea.
+   -------------------------------------------------------------------------- */
+
+.ec-jornada {
+  border-left: 4px solid var(--ec-acento, var(--color-primary));
+}
+
+.ec-jornada-nombre {
+  color: var(--color-text);
+  font-size: var(--texto-md);
+  font-weight: var(--peso-semibold);
+  line-height: 1.3;
+}
+
+/* Los datos de contexto, cada uno con su icono o su rotulo. `align-items: center` y no `baseline`
+   para que el icono quede a la altura del texto y no colgando. */
+.ec-jornada-detalle {
+  align-items: center;
+  color: var(--color-text-muted);
+  display: flex;
+  flex-wrap: wrap;
+  font-size: var(--texto-xs);
+  gap: 0.3rem;
+  margin: 0 0 var(--spacing-xs);
+}
+
+/* Un rotulo dentro de una linea de detalle no ocupa su propia linea, al contrario que .ec-rotulo
+   suelto. */
+.ec-jornada-detalle .ec-rotulo {
+  display: inline;
+}
+
+/* Las acciones caben en una fila y se parten solas cuando la columna del kanban se estrecha. Sin
+   esto, tres botones de tamano normal desbordaban la tarjeta. */
+.ec-jornada-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+  justify-content: space-between;
+  margin-top: var(--spacing-sm);
+}

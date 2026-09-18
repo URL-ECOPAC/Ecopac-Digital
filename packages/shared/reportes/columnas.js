@@ -21,7 +21,7 @@ import { TIPOS_DE_PRESENTACION } from "../descriptores.js";
  * cuando hay agrupamiento.
  */
 export const COLUMNAS_INDICADORES_IMPACTO = [
-  { id: "etiqueta", label: "Periodo / grupo", tipo: TIPOS_DE_PRESENTACION.TEXTO, principal: true },
+  { id: "etiqueta", label: "Período / grupo", tipo: TIPOS_DE_PRESENTACION.TEXTO, principal: true },
   { id: "pacientes_atendidos", label: "Pacientes atendidos", tipo: TIPOS_DE_PRESENTACION.NUMERO },
   {
     id: "tratamientos_entregados",
@@ -73,8 +73,8 @@ export const COLUMNAS_PACIENTES_ATENDIDOS = [
  */
 export const COLUMNAS_INVENTARIO_REPORTE = [
   { id: "medicamento", label: "Medicamento", tipo: TIPOS_DE_PRESENTACION.TEXTO, principal: true },
-  { id: "concentracion", label: "Concentracion", tipo: TIPOS_DE_PRESENTACION.TEXTO },
-  { id: "presentacion", label: "Presentacion", tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  { id: "concentracion", label: "Concentración", tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  { id: "presentacion", label: "Presentación", tipo: TIPOS_DE_PRESENTACION.TEXTO },
   { id: "disponible", label: "Disponible", tipo: TIPOS_DE_PRESENTACION.NUMERO },
   { id: "vencido", label: "Vencido", tipo: TIPOS_DE_PRESENTACION.NUMERO },
 ];
@@ -86,8 +86,11 @@ export const CAMPOS_FICHA_LOTE_INVENTARIO = [
   { id: "cantidad", label: "Cantidad", tipo: TIPOS_DE_PRESENTACION.NUMERO },
   { id: "fechaVencimiento", label: "Fecha de vencimiento", tipo: TIPOS_DE_PRESENTACION.FECHA },
   {
+    // "Estado", a secas, no decia de que estado hablaba (issue #838). Es el del vencimiento del
+    // lote, y asi se titula; sus dos valores son "Vigente" y "Vencido"
+    // (ESTADOS_DE_VENCIMIENTO_REPORTE, campos.js).
     id: "vencido",
-    label: "Estado",
+    label: "Vencimiento",
     tipo: TIPOS_DE_PRESENTACION.ESTADO,
     etiquetasDesde: "estadosDeVencimientoReporte",
   },
@@ -155,7 +158,7 @@ export const CAMPOS_FICHA_RESULTADOS_JORNADA = [
 ];
 
 export const COLUMNAS_DIAGNOSTICOS_MAS_FRECUENTES = [
-  { id: "diagnostico", label: "Diagnostico", tipo: TIPOS_DE_PRESENTACION.TEXTO, principal: true },
+  { id: "diagnostico", label: "Diagnóstico", tipo: TIPOS_DE_PRESENTACION.TEXTO, principal: true },
   { id: "cantidad", label: "Casos", tipo: TIPOS_DE_PRESENTACION.NUMERO },
 ];
 

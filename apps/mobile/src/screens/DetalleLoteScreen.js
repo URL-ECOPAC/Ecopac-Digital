@@ -67,7 +67,7 @@ export default function DetalleLoteScreen() {
 
         <View style={estilos.filaDatos}>
           <View style={estilos.dato}>
-            <Text style={estilos.etiquetaDato}>Numero de lote</Text>
+            <Text style={estilos.etiquetaDato}>Número de lote</Text>
             <Text style={estilos.valorDato}>{lote.numeroLote}</Text>
           </View>
           <View style={estilos.dato}>

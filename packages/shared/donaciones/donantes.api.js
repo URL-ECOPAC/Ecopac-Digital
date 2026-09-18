@@ -79,7 +79,7 @@ export async function registrarDonante(datosDonante, { rolUsuario }) {
     if (!Object.values(TIPOS_DE_DONANTE).includes(tipo)) {
       return {
         datos: null,
-        error: { mensaje: "El tipo de donante debe ser 'persona' o 'organizacion'." },
+        error: { mensaje: "El tipo de donante debe ser 'persona' o 'organización'." },
       };
     }
 
@@ -154,7 +154,7 @@ export async function actualizarDonante(idDonante, datosNuevos, { rolUsuario }) 
     if (datosNuevos.tipo && !Object.values(TIPOS_DE_DONANTE).includes(datosNuevos.tipo)) {
       return {
         datos: null,
-        error: { mensaje: "El tipo de donante debe ser 'persona' o 'organizacion'." },
+        error: { mensaje: "El tipo de donante debe ser 'persona' o 'organización'." },
       };
     }
 

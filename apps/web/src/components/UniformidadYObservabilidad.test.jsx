@@ -63,9 +63,22 @@ describe("iconos automaticos de los botones", () => {
     expect(container.querySelector("svg.lucide-trash2, svg.lucide-trash-2")).toBeInTheDocument();
   });
 
-  it("una accion que no es ni alta ni borrado no lleva icono, e icon={null} lo quita", () => {
+  it("volver lleva la flecha, editar el lapiz y ver detalle el ojo", () => {
+    const { container: volver } = render(<SecondaryButton title="Volver a donaciones" />);
+    expect(volver.querySelector("svg.lucide-arrow-left")).toBeInTheDocument();
+
+    cleanup();
     const { container: editar } = render(<SecondaryButton title="Editar" />);
-    expect(editar.querySelector("svg")).not.toBeInTheDocument();
+    expect(editar.querySelector("svg.lucide-pencil")).toBeInTheDocument();
+
+    cleanup();
+    const { container: detalle } = render(<SecondaryButton title="Ver detalle" />);
+    expect(detalle.querySelector("svg.lucide-eye")).toBeInTheDocument();
+  });
+
+  it("una accion sin tipo no lleva icono, e icon={null} lo quita", () => {
+    const { container: exportar } = render(<SecondaryButton title="Exportar CSV" />);
+    expect(exportar.querySelector("svg")).not.toBeInTheDocument();
 
     cleanup();
     const { container: sinIcono } = render(<PrimaryButton title="Registrar" icon={null} />);

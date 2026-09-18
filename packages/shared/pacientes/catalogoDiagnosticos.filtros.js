@@ -10,8 +10,8 @@ export const FILTROS_CATALOGO_DIAGNOSTICOS = [
   {
     id: "busqueda",
     tipo: TIPOS_DE_FILTRO.BUSQUEDA,
-    label: "Buscar diagnostico",
-    placeholder: "Nombre o codigo CIE-10",
+    label: "Buscar diagnóstico",
+    placeholder: "Nombre o código CIE-10",
   },
 ];
 
