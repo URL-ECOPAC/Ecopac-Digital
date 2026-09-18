@@ -572,6 +572,53 @@ describe("buscarPacientes por numero de ficha o DPI", () => {
     expect(cliente.llamadas.some((llamada) => llamada.paso === "rpc")).toBe(false);
   });
 
+  // Issue #838: el camino por identificador ignoraba los otros filtros de la barra, asi que
+  // escribir una ficha con la comunidad puesta devolvia una lista que contradecia a sus propios
+  // filtros. Y al conectarlos, el filtro de la tabla referenciada tiene que usar el ALIAS del
+  // embebido (`paciente`), no el nombre de la tabla: con `pacientes.comunidad_id` PostgREST no
+  // reconoce la relacion, la peticion falla entera y -- como esta funcion falla cerrado -- la
+  // busqueda por ficha se rompe para quien tenga ese filtro puesto. Esta prueba fija la ruta.
+  it("acota por comunidad y sexo usando el alias del embebido, no el nombre de la tabla", async () => {
+    const cliente = crearCliente({
+      expedientes: { data: [], error: null },
+      pacientes: { data: [], error: null },
+    });
+    dobles.cliente = cliente;
+
+    await buscarPacientes({
+      termino: "123",
+      comunidadId: "comunidad-1",
+      sexo: "Femenino",
+      listarTodos: true,
+    });
+
+    // En la consulta de expedientes, el paciente viaja embebido con el alias `paciente`.
+    expect(cliente.llamadas).toContainEqual({
+      paso: "eq",
+      tabla: "expedientes",
+      columna: "paciente.comunidad_id",
+      valor: "comunidad-1",
+    });
+    expect(cliente.llamadas).toContainEqual({
+      paso: "eq",
+      tabla: "expedientes",
+      columna: "paciente.sexo",
+      valor: "Femenino",
+    });
+    // En la de pacientes la columna es propia, asi que va sin prefijo.
+    expect(cliente.llamadas).toContainEqual({
+      paso: "eq",
+      tabla: "pacientes",
+      columna: "comunidad_id",
+      valor: "comunidad-1",
+    });
+    // El alias del filtro y el del select tienen que ser el mismo.
+    const select = cliente.llamadas.find(
+      (llamada) => llamada.paso === "select" && llamada.tabla === "expedientes",
+    );
+    expect(select.columnas).toContain("paciente:pacientes!inner(");
+  });
+
   it("una ficha dicha sin los ceros de la izquierda tambien encuentra al paciente", async () => {
     const cliente = crearCliente({
       expedientes: {

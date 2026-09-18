@@ -492,6 +492,12 @@ const LIMITE_POR_IDENTIFICADOR = 25;
 // VARCHAR(30) sin CHECK y las fichas anteriores a la 00081 las escribio una persona.
 const ANCHO_NUMERO_FICHA = 6;
 
+// Alias con el que la consulta de expedientes embebe al paciente. Se declara aqui, y no escrito
+// dos veces, porque el `select` y los filtros de tabla referenciada TIENEN que usar el mismo
+// nombre: PostgREST no reconoce la relacion si el filtro la llama `pacientes` y el select la
+// alias� `paciente` (ver acotar(), mas abajo).
+const ALIAS_DEL_PACIENTE = "paciente";
+
 /**
  * Si un termino de busqueda es un identificador (ficha o DPI), sus digitos sin separadores.
  *
@@ -562,10 +568,18 @@ export async function buscarPacientesPorIdentificador(
   // puestos, asi que la lista contradecia a sus propios filtros. Comunidad y sexo son columnas de
   // pacientes y se resuelven en el servidor; edad y condicion se resuelven sobre las filas que
   // vuelven, que como mucho son LIMITE_POR_IDENTIFICADOR por consulta.
-  const acotar = (consulta, columna) => {
+  //
+  // `prefijo` ES EL ALIAS DEL EMBEBIDO, NO EL NOMBRE DE LA TABLA. La consulta de expedientes pide
+  // `paciente:pacientes!inner(...)`, y PostgREST espera que el filtro de una tabla referenciada use
+  // el alias cuando hay uno: con `pacientes.comunidad_id` no reconoce la relacion y la peticion
+  // falla entera. Como esta funcion falla cerrado, eso habria roto la busqueda por ficha de quien
+  // tuviera puesto el filtro de comunidad o de sexo -- peor que el bug que esto viene a arreglar.
+  // Por eso ALIAS_DEL_PACIENTE se declara una sola vez y lo usan el select y el filtro: si alguien
+  // renombra el alias, los dos cambian juntos.
+  const acotar = (consulta, prefijo) => {
     let acotada = consulta;
-    if (comunidadId) acotada = acotada.eq(`${columna}comunidad_id`, comunidadId);
-    if (sexo) acotada = acotada.eq(`${columna}sexo`, sexo);
+    if (comunidadId) acotada = acotada.eq(`${prefijo}comunidad_id`, comunidadId);
+    if (sexo) acotada = acotada.eq(`${prefijo}sexo`, sexo);
     return acotada;
   };
 
@@ -577,14 +591,14 @@ export async function buscarPacientesPorIdentificador(
           supabase
             .from("expedientes")
             .select(
-              `numeroFicha:numero_ficha, paciente:pacientes!inner(${COLUMNAS_DE_BUSQUEDA_PACIENTE})`,
+              `numeroFicha:numero_ficha, ${ALIAS_DEL_PACIENTE}:pacientes!inner(${COLUMNAS_DE_BUSQUEDA_PACIENTE})`,
             )
             .or(
               patronesDeNumeroFicha(digitos)
                 .map((patron) => `numero_ficha.ilike.${patron}`)
                 .join(","),
             ),
-          "pacientes.",
+          `${ALIAS_DEL_PACIENTE}.`,
         ).limit(LIMITE_POR_IDENTIFICADOR),
       ),
       conSenal(
