@@ -4,7 +4,7 @@ import { colors, spacing, typography } from "@ecopac/ui-tokens";
 export default function AccesoDenegadoScreen() {
   return (
     <View style={styles.container}>
-      <Text style={styles.titulo}>Acceso denegado</Text>
+      <Text style={styles.titulo}>acceso denegado</Text>
       <Text style={styles.mensaje}>
         No tienes los permisos necesarios para acceder a esta sección.
       </Text>

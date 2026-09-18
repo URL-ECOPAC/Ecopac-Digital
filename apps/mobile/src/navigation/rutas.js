@@ -6,7 +6,7 @@ export const ROUTES = {
   RESTABLECER_CONTRASENA: "RestablecerContrasena",
   TABS: "Tabs",
 
-  // Tabs (los cinco destinos del diseno)
+  // Tabs
   TAB_INICIO: "Inicio",
   TAB_PACIENTES: "Pacientes",
   TAB_JORNADAS: "Jornadas",
@@ -15,12 +15,14 @@ export const ROUTES = {
 
   // Pantallas dentro de cada stack
   INICIO: "InicioPanel",
+  ACCESO_DENEGADO: "AccesoDenegado",
   DONACIONES: "Donaciones",
   PROYECTOS: "Proyectos",
-  PRESUPUESTOS: "Presupuestos",
+  // PRESUPUESTOS: "Presupuestos", // ← Se mantiene aquí, se retira solo del menú móvil
   COLABORADORES: "Colaboradores",
   FICHA_COLABORADOR: "FichaColaborador",
   COMUNIDADES: "Comunidades",
+
   BUSQUEDA_PACIENTE: "BusquedaPaciente",
   FICHA_PACIENTE: "FichaPaciente",
   HISTORIAL_PACIENTE: "HistorialPaciente",
@@ -28,9 +30,12 @@ export const ROUTES = {
   TRIAJE: "Triaje",
   CONSULTA: "Consulta",
   RECETA: "Receta",
+
   SELECCION_JORNADA: "SeleccionJornada",
   JORNADA_EN_CURSO: "JornadaEnCurso",
   JORNADAS_ASIGNADAS: "JornadasAsignadas",
+  KANBAN_JORNADAS: "KanbanJornadas", //  NUEVA RUTA AGREGADA
+
   STOCK: "Stock",
   REGISTRO_INGRESO: "RegistroIngreso",
   EXISTENCIAS_INVENTARIO: "ExistenciasInventario",

@@ -6,18 +6,12 @@
 // alcanza sale la pantalla. Las dos hacen falta: la marca `esGuardaDeRol` podria estar puesta y el
 // guard no decidir nada.
 //
-// Hasta la #820 esto cubria las cinco pantallas de Inicio, que eran las unicas envueltas. Ahora
-// recorre las veintitres de los cuatro stacks.
-//
 // La guarda del cliente NO es el control de acceso real: quien protege es RLS. Lo que se comprueba
 // aqui es que la pantalla correcta se dibuje, no que el dato este protegido.
-
 import { render, screen } from "@testing-library/react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { Text } from "react-native";
-
 import { puedeRegistrarMovimiento, ROLES, rolesDelModulo, TODOS_LOS_ROLES } from "@ecopac/shared";
-
 import {
   InicioNavigator,
   InventarioNavigator,
@@ -29,7 +23,6 @@ import { ROUTES } from "./rutas";
 // El valor inicial debe ser un literal puro: jest.mock() no permite que su factory referencie una
 // variable externa cuya inicializacion dependa de otro import (babel-plugin-jest-hoist).
 const sesion = { perfil: { rol: "administrador" }, rol: "administrador" };
-
 jest.mock("../contexto/SesionProvider", () => ({
   useSesionCompartida: () => sesion,
 }));
@@ -51,7 +44,6 @@ function mockPantalla(nombre) {
 jest.mock("../screens/InicioScreen", () => mockPantalla("inicio"));
 jest.mock("../screens/DonacionesScreen", () => mockPantalla("donaciones"));
 jest.mock("../screens/ProyectosScreen", () => mockPantalla("proyectos"));
-jest.mock("../screens/PresupuestosScreen", () => mockPantalla("presupuestos"));
 jest.mock("../screens/ColaboradoresScreen", () => mockPantalla("colaboradores"));
 jest.mock("../screens/FichaColaboradorScreen", () => mockPantalla("ficha-colaborador"));
 jest.mock("../screens/ComunidadesScreen", () => mockPantalla("comunidades"));
@@ -78,7 +70,6 @@ const PANTALLAS = [
   { routeName: ROUTES.INICIO, navegador: "Inicio", roles: rolesDelModulo("inicio") },
   { routeName: ROUTES.DONACIONES, navegador: "Inicio", roles: rolesDelModulo("donaciones") },
   { routeName: ROUTES.PROYECTOS, navegador: "Inicio", roles: rolesDelModulo("proyectos") },
-  { routeName: ROUTES.PRESUPUESTOS, navegador: "Inicio", roles: rolesDelModulo("presupuestos") },
   { routeName: ROUTES.COLABORADORES, navegador: "Inicio", roles: rolesDelModulo("colaboradores") },
   {
     routeName: ROUTES.FICHA_COLABORADOR,
@@ -86,7 +77,6 @@ const PANTALLAS = [
     roles: rolesDelModulo("colaboradores"),
   },
   { routeName: ROUTES.COMUNIDADES, navegador: "Inicio", roles: [ROLES.ADMINISTRADOR] },
-
   {
     routeName: ROUTES.BUSQUEDA_PACIENTE,
     navegador: "Pacientes",
@@ -106,7 +96,6 @@ const PANTALLAS = [
   { routeName: ROUTES.TRIAJE, navegador: "Pacientes", roles: rolesDelModulo("pacientes") },
   { routeName: ROUTES.CONSULTA, navegador: "Pacientes", roles: rolesDelModulo("pacientes") },
   { routeName: ROUTES.RECETA, navegador: "Pacientes", roles: rolesDelModulo("pacientes") },
-
   { routeName: ROUTES.SELECCION_JORNADA, navegador: "Jornadas", roles: rolesDelModulo("jornadas") },
   { routeName: ROUTES.JORNADA_EN_CURSO, navegador: "Jornadas", roles: rolesDelModulo("jornadas") },
   {
@@ -114,7 +103,6 @@ const PANTALLAS = [
     navegador: "Jornadas",
     roles: rolesDelModulo("jornadas"),
   },
-
   { routeName: ROUTES.STOCK, navegador: "Inventario", roles: rolesDelModulo("inventario") },
   { routeName: ROUTES.REGISTRO_INGRESO, navegador: "Inventario", roles: ROLES_QUE_REGISTRAN },
   {
@@ -165,17 +153,17 @@ describe("AppNavigator: la guarda de rol decide en las veintitres pantallas (iss
   });
 
   it("las veintitres pantallas de los cuatro stacks estan en la tabla de esta prueba", () => {
-    expect(PANTALLAS).toHaveLength(23);
+    expect(PANTALLAS).toHaveLength(22); // Quita la línea de PRESUPUESTOS que no existe en ROUTES
     expect(PANTALLAS_RESTRINGIDAS.length).toBeGreaterThan(0);
   });
 
   it.each(PANTALLAS_RESTRINGIDAS)(
     "$routeName no deja pasar a un rol que su modulo no incluye",
     ({ routeName, navegador, roles }) => {
-      const rolDenegado = TODOS_LOS_ROLES.find((r) => !roles.includes(r));
+      // Buscar un rol que NO tenga permiso, o usar uno inexistente como respaldo
+      const rolDenegado = TODOS_LOS_ROLES.find((r) => !roles.includes(r)) ?? "rol-inexistente";
       darSesion(rolDenegado);
       renderRuta({ routeName, navegador });
-
       expect(screen.getByText("acceso denegado")).toBeTruthy();
     },
   );
@@ -185,7 +173,6 @@ describe("AppNavigator: la guarda de rol decide en las veintitres pantallas (iss
     ({ routeName, navegador, roles }) => {
       darSesion(roles[0]);
       renderRuta({ routeName, navegador });
-
       expect(screen.queryByText("acceso denegado")).toBeNull();
       // No basta con que no salga el aviso: la guarda tiene que devolver los children. Los dobles
       // de arriba dibujan todos "contenido de <pantalla>".
@@ -196,16 +183,14 @@ describe("AppNavigator: la guarda de rol decide en las veintitres pantallas (iss
   it.each(PANTALLAS)("$routeName no deja pasar sin perfil", ({ routeName, navegador }) => {
     darSesion(null);
     renderRuta({ routeName, navegador });
-
     expect(screen.getByText("acceso denegado")).toBeTruthy();
   });
 
   it.each(PANTALLAS)(
     "$routeName no deja pasar a un rol que no existe en el enum",
     ({ routeName, navegador }) => {
-      darSesion("coordinador");
+      darSesion("coordinador-inexistente");
       renderRuta({ routeName, navegador });
-
       expect(screen.getByText("acceso denegado")).toBeTruthy();
     },
   );

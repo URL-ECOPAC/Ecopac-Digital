@@ -12,20 +12,21 @@ import {
   ROLES,
   TODOS_LOS_ROLES,
 } from "@ecopac/shared";
-
 import { useSesionCompartida } from "../contexto/SesionProvider";
 import RutaProtegida from "../components/RutaProtegida";
 import IconoDeModulo from "../components/IconoDeModulo";
 import { ROUTES } from "./rutas";
 
-// IMPORTACIÓN DE PANTALLAS
+// IMPORTACIÓN DE PANTALLAS —  Ya está bien
 import LoginScreen from "../screens/LoginScreen";
 import RestablecerContrasenaScreen from "../screens/RestablecerContrasenaScreen";
 import InicioScreen from "../screens/InicioScreen";
+import AccesoDenegadoScreen from "../screens/AccesoDenegadoScreen"; //  Bien importado
 import AjustesScreen from "../screens/AjustesScreen";
 import SeleccionJornadaScreen from "../screens/SeleccionJornadaScreen";
 import JornadaEnCursoScreen from "../screens/JornadaEnCursoScreen";
 import JornadasAsignadasScreen from "../screens/JornadasAsignadasScreen";
+import KanbanJornadasScreen from "../screens/KanbanJornadasScreen";
 import BusquedaPacienteScreen from "../screens/BusquedaPacienteScreen";
 import FichaPacienteScreen from "../screens/FichaPacienteScreen";
 import HistorialPacienteScreen from "../screens/HistorialPacienteScreen";
@@ -41,13 +42,10 @@ import MisMovimientosScreen from "../screens/MisMovimientosScreen";
 import DetalleLoteScreen from "../screens/DetalleLoteScreen";
 import DonacionesScreen from "../screens/DonacionesScreen";
 import ProyectosScreen from "../screens/ProyectosScreen";
-import PresupuestosScreen from "../screens/PresupuestosScreen";
 import ColaboradoresScreen from "../screens/ColaboradoresScreen";
 import FichaColaboradorScreen from "../screens/FichaColaboradorScreen";
 import ComunidadesScreen from "../screens/ComunidadesScreen";
 
-// Los cinco navegadores y los dos envoltorios se exportan para que guardaDeRol.test.js pueda
-// recorrer el arbol de navegacion tal como se declara aqui, y ver fallar las dos guardas.
 export {
   ROUTES,
   InicioNavigator,
@@ -67,10 +65,8 @@ const PacientesStack = createNativeStackNavigator();
 const JornadasStack = createNativeStackNavigator();
 const InventarioStack = createNativeStackNavigator();
 
-// Componente para la barra del header personalizado
 function CustomHeaderTitle({ title }) {
   const { perfil } = useSesionCompartida();
-
   return (
     <View style={styles.headerContainer}>
       <Text style={styles.headerTitleText}>{title}</Text>
@@ -89,14 +85,9 @@ function CustomHeaderTitle({ title }) {
 const opcionesStack = (title) => ({
   headerStyle: { backgroundColor: colors?.surface || colors.surface },
   headerTitle: () => <CustomHeaderTitle title={title} />,
-  headerTitleContainerStyle: {
-    width: "100%",
-    left: 0,
-  },
+  headerTitleContainerStyle: { width: "100%", left: 0 },
 });
 
-// El unico stack sin guarda de rol, y a proposito: todavia no hay sesion de la que sacar un rol.
-// Lo monta AppNavigator solo cuando haySesion es false.
 function AuthNavigator() {
   return (
     <AuthStack.Navigator screenOptions={{ headerShown: false }}>
@@ -109,49 +100,24 @@ function AuthNavigator() {
   );
 }
 
-// React Navigation solo entrega {navigation, route} a `component`, no children: se envuelve la
-// pantalla real en RutaProtegida en vez de usarla como route element (patron de apps/web).
-//
-// Los roles salen de rolesDelModulo() de @ecopac/shared (issue #820). Hasta ahora este archivo
-// tenia su propia copia de esa funcion, que buscaba solo por `m.id` mientras la de shared acepta
-// tambien `m.modulo`: la misma decision de permisos escrita dos veces dentro de una app, que es lo
-// que prohibe AGENTS.md, y con una regla de busqueda distinta en cada sitio.
 function conGuardaDeRol(Componente, moduloId) {
   const rolesPermitidos = rolesDelModulo(moduloId);
-
-  // Un id que no esta en MODULOS revienta aqui, al cargar el archivo: conGuardaDeRol() se evalua
-  // al construir las tablas de pantallas, asi que un error de escritura no llega a produccion ni
-  // espera a que alguien navegue. Antes degradaba a una lista vacia y -con el guard anterior, que
-  // fallaba abierto- abria la pantalla a los cinco roles sin decir nada.
   if (rolesPermitidos.length === 0) {
     throw new Error(
-      `conGuardaDeRol: el modulo "${moduloId}" no existe en MODULOS (packages/shared/navegacion.js). ` +
+      `conGuardaDeRol: el modulo "${moduloId}" no existe en MODULOS. ` +
         `Los ids validos son: ${MODULOS.map((m) => m.id).join(", ")}.`,
     );
   }
-
   return marcarComoGuarda(Componente, rolesPermitidos, `conGuardaDeRol(${moduloId})`);
 }
 
-// Variante de conGuardaDeRol() para una pantalla que no tiene entrada propia en MODULOS -como
-// Comunidades (issue #756), que es de administracion y no uno de los nueve modulos del sistema, o
-// las dos de movimientos, cuyo permiso es mas estrecho que el del modulo inventario- y por eso
-// recibe los roles permitidos directo, no un moduloId para resolver contra ella.
 function conGuardaDeRoles(Componente, rolesPermitidos) {
   if (!Array.isArray(rolesPermitidos) || rolesPermitidos.length === 0) {
-    throw new Error(
-      "conGuardaDeRoles: la lista de roles no puede ir vacia. Una lista vacia deniega a todo el " +
-        "mundo (RutaProtegida.js), asi que la pantalla quedaria inalcanzable en silencio.",
-    );
+    throw new Error("conGuardaDeRoles: la lista de roles no puede ir vacia.");
   }
-
   return marcarComoGuarda(Componente, rolesPermitidos, `conGuardaDeRoles(${Componente.name})`);
 }
 
-// Envuelve la pantalla y deja a la vista con que roles quedo envuelta. Las dos marcas son lo que
-// lee guardaDeRol.test.js para recorrer el arbol de navegacion y afirmar que NINGUNA pantalla se
-// registro a secas: sin ellas, la prueba tendria que confiar en una tabla paralela, que es
-// exactamente lo que se deja de lado desde la #820.
 function marcarComoGuarda(Componente, rolesPermitidos, nombre) {
   function PantallaConGuarda(props) {
     return (
@@ -160,30 +126,17 @@ function marcarComoGuarda(Componente, rolesPermitidos, nombre) {
       </RutaProtegida>
     );
   }
-
   PantallaConGuarda.displayName = nombre;
   PantallaConGuarda.esGuardaDeRol = true;
   PantallaConGuarda.rolesPermitidos = rolesPermitidos;
-
   return PantallaConGuarda;
 }
 
-// Registrar y corregir movimientos es mas estrecho que ver el modulo: inventario lo ven los cinco
-// roles, pero puedeRegistrarMovimiento() -espejo de la politica de INSERT de la 00034- deja fuera a
-// junta directiva y socio fundador. Sin esto, los dos roles consultivos llegaban a "Registrar
-// ingreso" y a "Mis movimientos" para encontrarse la pantalla vaciada por dentro (el propio
-// useMisMovimientos devuelve puedeVer: false). Los roles se derivan de la funcion de permisos, no
-// se escriben a mano.
 const ROLES_QUE_REGISTRAN_MOVIMIENTOS = TODOS_LOS_ROLES.filter(puedeRegistrarMovimiento);
 
-// Las pantallas de cada stack, declaradas UNA VEZ a nivel de modulo (issue #820).
-//
-// No es solo orden: conGuardaDeRol() devuelve un componente nuevo en cada llamada, y hasta ahora se
-// llamaba dentro del cuerpo del navegador. Cada re-render producia una identidad distinta y React
-// Navigation remontaba la pantalla -InventarioNavigator re-renderiza cada vez que cambia la sesion-.
-// Aqui se construyen una sola vez, al cargar el archivo.
-//
-// `opciones(contexto)` es para lo que no es opcionesStack(titulo) a secas; hoy solo Stock.
+// ==================================================
+// PANTALLAS
+// ==================================================
 const PANTALLAS_INICIO = [
   { name: ROUTES.INICIO, componente: conGuardaDeRol(InicioScreen, "inicio"), titulo: "Inicio" },
   {
@@ -195,11 +148,6 @@ const PANTALLAS_INICIO = [
     name: ROUTES.PROYECTOS,
     componente: conGuardaDeRol(ProyectosScreen, "proyectos"),
     titulo: "Proyectos",
-  },
-  {
-    name: ROUTES.PRESUPUESTOS,
-    componente: conGuardaDeRol(PresupuestosScreen, "presupuestos"),
-    titulo: "Presupuestos",
   },
   {
     name: ROUTES.COLABORADORES,
@@ -264,14 +212,13 @@ const PANTALLAS_JORNADAS = [
     componente: conGuardaDeRol(JornadasAsignadasScreen, "jornadas"),
     titulo: "Mis jornadas",
   },
+  {
+    name: ROUTES.KANBAN_JORNADAS,
+    componente: conGuardaDeRol(KanbanJornadasScreen, "jornadas"),
+    titulo: "Tablero de Jornadas",
+  },
 ];
 
-// Punto de entrada al registro rapido de ingreso (issue #165). Se agrega aqui, en las opciones de
-// la pantalla que cuelga del tab Inventario, y no dentro de CatalogoMedicamentosScreen.js.
-//
-// El boton se sigue dibujando solo para quien puede registrar, y eso NO es la guarda: la barrera es
-// conGuardaDeRoles() sobre la pantalla de destino. Esto es la afordancia -ofrecer un boton que
-// aterriza en "Acceso denegado" seria peor que no ofrecerlo-.
 const opcionesDeStock =
   ({ puedeRegistrarIngreso }) =>
   ({ navigation }) => ({
@@ -323,7 +270,6 @@ const PANTALLAS_INVENTARIO = [
   },
 ];
 
-/** Dibuja las Screen de un stack a partir de su tabla. */
 function pantallasDe(Stack, pantallas, contexto = {}) {
   return pantallas.map(({ name, componente, titulo, opciones }) => (
     <Stack.Screen
@@ -359,7 +305,6 @@ function JornadasNavigator() {
 
 function InventarioNavigator() {
   const { rol } = useSesionCompartida();
-
   return (
     <InventarioStack.Navigator>
       {pantallasDe(InventarioStack, PANTALLAS_INVENTARIO, {
@@ -396,9 +341,6 @@ const CONFIGURACION_TABS = {
   },
 };
 
-// Ajustes es la unica pantalla hoja que cuelga directamente de una tab: las otras cuatro tabs son
-// navegadores, y quien guarda ahi es cada Screen de su stack. La ve cualquier sesion con un rol del
-// enum -es donde se cierra sesion-, y eso se escribe con TODOS_LOS_ROLES en vez de dejarla suelta.
 const TAB_AJUSTES_CONFIG = {
   routeName: ROUTES.TAB_AJUSTES,
   component: conGuardaDeRoles(AjustesScreen, TODOS_LOS_ROLES),
@@ -409,21 +351,11 @@ const TAB_AJUSTES_CONFIG = {
 function TabsNavigator() {
   const { perfil } = useSesionCompartida();
   const modulosPermitidos = tabsMoviles(perfil?.rol) || [];
-
-  // Sin fallback a Object.values(CONFIGURACION_TABS) (issue #820): cuando tabsMoviles() devolvia
-  // vacio -un perfil sin rol, o un rol que no esta en el enum- se dibujaban las cinco pestanias,
-  // que es el mismo fallo abierto que tenia el guard, en la barra de navegacion. Sin el, quedan
-  // las dos que anaden los `if` de abajo: Inicio y Ajustes.
   const tabsList = modulosPermitidos.map((m) => CONFIGURACION_TABS[m.tabMovil]).filter(Boolean);
-
-  if (!tabsList.some((tab) => tab?.routeName === ROUTES.TAB_INICIO)) {
+  if (!tabsList.some((tab) => tab?.routeName === ROUTES.TAB_INICIO))
     tabsList.unshift(CONFIGURACION_TABS.Inicio);
-  }
-  if (!tabsList.some((tab) => tab?.routeName === ROUTES.TAB_AJUSTES)) {
+  if (!tabsList.some((tab) => tab?.routeName === ROUTES.TAB_AJUSTES))
     tabsList.push(TAB_AJUSTES_CONFIG);
-  }
-
-  // Deduplicar rutas por routeName para prevenir keys duplicadas en React Navigation
   const tabsAAgregar = Array.from(new Map(tabsList.map((item) => [item.routeName, item])).values());
 
   return (
@@ -433,16 +365,12 @@ function TabsNavigator() {
         const configTab =
           Object.values(CONFIGURACION_TABS).find((c) => c.routeName === route.name) ||
           TAB_AJUSTES_CONFIG;
-
         return {
           headerShown: false,
           tabBarActiveTintColor: colors?.primary || colors.primary,
           tabBarInactiveTintColor: colors?.textMuted || colors.textMuted,
           tabBarStyle: { backgroundColor: colors?.surface || colors.surface },
           tabBarLabelStyle: { fontSize: 10 },
-          // El icono sale del vocabulario que declara packages/shared/navegacion.js, traducido
-          // por IconoDeModulo (issue #700). Antes eran cinco glifos escritos a mano, dos de ellos
-          // emoji y uno un ideograma Lineal B que Android no sabia dibujar.
           tabBarIcon: ({ color, size }) => (
             <IconoDeModulo nombre={configTab.icono} color={color} size={size} />
           ),
@@ -461,10 +389,14 @@ function TabsNavigator() {
   );
 }
 
+//  AQUÍ ESTABA EL FALTO — se agregó la pantalla
 export default function AppNavigator({ haySesion }) {
   return (
     <NavigationContainer>
       <Root.Navigator screenOptions={{ headerShown: false }}>
+        {/*  Ruta de Acceso Denegado — SIEMPRE disponible */}
+        <Root.Screen name={ROUTES.ACCESO_DENEGADO} component={AccesoDenegadoScreen} />
+
         {haySesion ? (
           <Root.Screen name={ROUTES.TABS} component={TabsNavigator} />
         ) : (

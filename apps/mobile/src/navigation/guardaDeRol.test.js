@@ -46,13 +46,13 @@ const ROLES_ESPERADOS = {
   [ROUTES.INICIO]: rolesDelModulo("inicio"),
   [ROUTES.DONACIONES]: rolesDelModulo("donaciones"),
   [ROUTES.PROYECTOS]: rolesDelModulo("proyectos"),
-  [ROUTES.PRESUPUESTOS]: rolesDelModulo("presupuestos"),
   [ROUTES.COLABORADORES]: rolesDelModulo("colaboradores"),
   [ROUTES.FICHA_COLABORADOR]: rolesDelModulo("colaboradores"),
   [ROUTES.COMUNIDADES]: [ROLES.ADMINISTRADOR],
 
   [ROUTES.BUSQUEDA_PACIENTE]: rolesDelModulo("pacientes"),
   [ROUTES.FICHA_PACIENTE]: rolesDelModulo("pacientes"),
+  [ROUTES.KANBAN_JORNADAS]: rolesDelModulo("jornadas"),
   [ROUTES.REGISTRO_PACIENTE]: rolesDelModulo("pacientes"),
   [ROUTES.HISTORIAL_PACIENTE]: rolesDelModulo("pacientes"),
   [ROUTES.TRIAJE]: rolesDelModulo("pacientes"),
@@ -141,6 +141,7 @@ describe("guarda de rol en el arbol de navegacion (issue #820)", () => {
       ROUTES.TAB_INVENTARIO,
       ROUTES.TAB_AJUSTES,
       ...RUTAS_SIN_GUARDA,
+      ROUTES.ACCESO_DENEGADO,
     ];
     const pantallas = Object.values(ROUTES).filter((ruta) => !contenedores.includes(ruta));
     const registradas = pantallasDeLosStacks().map(({ name }) => name);
