@@ -141,6 +141,7 @@ describe("guarda de rol en el arbol de navegacion (issue #820)", () => {
       ROUTES.TAB_INVENTARIO,
       ROUTES.TAB_AJUSTES,
       ...RUTAS_SIN_GUARDA,
+      ROUTES.ACCESO_DENEGADO,
     ];
     const pantallas = Object.values(ROUTES).filter((ruta) => !contenedores.includes(ruta));
     const registradas = pantallasDeLosStacks().map(({ name }) => name);

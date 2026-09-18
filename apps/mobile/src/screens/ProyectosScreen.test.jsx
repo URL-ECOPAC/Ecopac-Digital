@@ -57,7 +57,7 @@ describe("ProyectosScreen", () => {
     mockEstadoHook.tieneAccesoLectura = false;
     render(<ProyectosScreen />);
 
-    expect(screen.getByText("Acceso denegado")).toBeTruthy();
+    expect(screen.getByText("acceso denegado")).toBeTruthy();
   });
 
   it("con la lista vacia de verdad no cae a datos inventados", () => {
