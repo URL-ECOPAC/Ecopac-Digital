@@ -345,6 +345,7 @@ export default function FichaPacientePage() {
         {editando && (
           <ModalEdicionPaciente
             paciente={paciente}
+            rol={rol}
             onClose={() => setEditando(false)}
             onGuardado={alGuardar}
           />

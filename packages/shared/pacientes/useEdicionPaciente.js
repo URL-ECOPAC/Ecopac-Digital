@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { listarComunidades } from "../territorio/api.js";
+import { useAltaDeComunidadEnLinea } from "../territorio/useAltaDeComunidadEnLinea.js";
+import { useCascadaTerritorial } from "../territorio/useCascadaTerritorial.js";
 import { actualizarPaciente } from "./api.js";
 import { listarIdiomas } from "./idiomas.api.js";
 import { CAMPOS_REGISTRO_PACIENTE, OPCIONES_SEXO } from "./campos.js";
@@ -19,13 +20,24 @@ export function hayCambiosPendientes(valores, iniciales) {
   return CAMPOS_EDICION_PACIENTE.some((campo) => valores[campo.id] !== iniciales[campo.id]);
 }
 
-export function useEdicionPaciente(paciente) {
+/**
+ * Edicion de los datos de un paciente.
+ *
+ * Devuelve la misma forma que useRegistroPaciente() en todo lo que toca al formulario -- campos,
+ * catalogos, cascada territorial y alta de comunidad en linea --, para que las dos pantallas
+ * dibujen el mismo control. Hasta la #840 esta edicion ofrecia una lista plana con todas las
+ * comunidades del pais en lugar de departamento -> municipio -> comunidad, y tampoco cargaba el
+ * catalogo de idiomas, asi que el selector de idioma salia siempre vacio.
+ *
+ * @param {object|null} paciente
+ * @param {{ rol?: string }} [opciones] El rol decide si se ofrece crear una comunidad que falta.
+ */
+export function useEdicionPaciente(paciente, { rol } = {}) {
   const iniciales = useMemo(() => valoresDesdePaciente(paciente), [paciente]);
   const [valores, setValores] = useState(iniciales);
   const [errores, setErrores] = useState({});
   const [error, setError] = useState(null);
   const [enviando, setEnviando] = useState(false);
-  const [comunidades, setComunidades] = useState([]);
   const [idiomas, setIdiomas] = useState([]);
 
   useEffect(() => {
@@ -36,15 +48,6 @@ export function useEdicionPaciente(paciente) {
 
   useEffect(() => {
     let vigente = true;
-    listarComunidades().then((respuesta) => {
-      if (!vigente) return;
-      setComunidades(
-        (respuesta.comunidades ?? []).map((comunidad) => ({
-          value: comunidad.id,
-          label: comunidad.nombre,
-        })),
-      );
-    });
     // El catalogo de idiomas faltaba (issue #699). El formulario de edicion ofrece los once campos
     // desde la #818, pero el selector de idioma se dibujaba sin una sola opcion: el valor guardado
     // no aparecia seleccionado y no habia forma de cambiarlo. listarIdiomas() ya devuelve
@@ -65,11 +68,47 @@ export function useEdicionPaciente(paciente) {
     });
   }, []);
 
+  const elegirComunidad = useCallback(
+    (comunidadId) => setCampo("comunidad", comunidadId),
+    [setCampo],
+  );
+
+  const {
+    departamentoId,
+    municipioId,
+    setDepartamento,
+    setMunicipio,
+    posicionarEn,
+    recargarComunidades,
+    catalogos: catalogosDeTerritorio,
+  } = useCascadaTerritorial({
+    comunidadInicial: paciente?.comunidadId ?? null,
+    alElegirComunidad: elegirComunidad,
+  });
+
+  const alCrearComunidad = useCallback(
+    async (comunidad) => {
+      await recargarComunidades();
+      setCampo("comunidad", comunidad.id);
+    },
+    [recargarComunidades, setCampo],
+  );
+
+  const {
+    puedeCrear: puedeCrearComunidad,
+    crear: registrarComunidad,
+    errores: erroresComunidad,
+    creando: creandoComunidad,
+  } = useAltaDeComunidadEnLinea({ municipioId, rol, alCrear: alCrearComunidad });
+
   const descartar = useCallback(() => {
     setValores(iniciales);
     setErrores({});
     setError(null);
-  }, [iniciales]);
+    // La cascada tambien vuelve a la comunidad original: si no, quedaria mostrando el municipio
+    // que se estaba probando con la comunidad de antes, que no pertenece a el.
+    posicionarEn(iniciales.comunidad || null);
+  }, [iniciales, posicionarEn]);
 
   const guardar = useCallback(async () => {
     if (!paciente?.id) return { ok: false };
@@ -91,9 +130,17 @@ export function useEdicionPaciente(paciente) {
     error,
     enviando,
     hayCambios: hayCambiosPendientes(valores, iniciales),
+    departamentoId,
+    municipioId,
     setCampo,
+    setDepartamento,
+    setMunicipio,
     descartar,
     guardar,
-    catalogos: { comunidades, idiomas, sexo: OPCIONES_SEXO },
+    puedeCrearComunidad,
+    registrarComunidad,
+    erroresComunidad,
+    creandoComunidad,
+    catalogos: { ...catalogosDeTerritorio, idiomas, sexo: OPCIONES_SEXO },
   };
 }

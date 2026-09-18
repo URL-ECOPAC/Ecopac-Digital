@@ -1,13 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { calcularEdad } from "../formato/fechas.js";
-import {
-  listarComunidades,
-  listarDepartamentos,
-  listarMunicipios,
-  obtenerComunidad,
-} from "../territorio/api.js";
 import { useAltaDeComunidadEnLinea } from "../territorio/useAltaDeComunidadEnLinea.js";
+import { useCascadaTerritorial } from "../territorio/useCascadaTerritorial.js";
 import { listarIdiomas } from "./idiomas.api.js";
 import { buscarPacientes, registrarPaciente } from "./api.js";
 import { CAMPOS_REGISTRO_PACIENTE, OPCIONES_SEXO } from "./campos.js";
@@ -18,10 +13,6 @@ const VALORES_INICIALES = CAMPOS_REGISTRO_PACIENTE.reduce((valores, campo) => {
   return valores;
 }, {});
 
-function aOpciones(filas = []) {
-  return filas.map((fila) => ({ value: fila.id, label: fila.nombre }));
-}
-
 export function useRegistroPaciente({ comunidadInicial = null, nombresInicial = "", rol } = {}) {
   const [valores, setValores] = useState(() =>
     nombresInicial ? { ...VALORES_INICIALES, nombres: nombresInicial } : VALORES_INICIALES,
@@ -31,20 +22,12 @@ export function useRegistroPaciente({ comunidadInicial = null, nombresInicial = 
   const [enviando, setEnviando] = useState(false);
   const [registrado, setRegistrado] = useState(null);
 
-  const [departamentoId, setDepartamentoId] = useState(null);
-  const [municipioId, setMunicipioId] = useState(null);
-  const [departamentos, setDepartamentos] = useState([]);
-  const [municipios, setMunicipios] = useState([]);
-  const [comunidades, setComunidades] = useState([]);
   const [idiomas, setIdiomas] = useState([]);
   const [advertenciaDuplicado, setAdvertenciaDuplicado] = useState(null);
 
   useEffect(() => {
     let vigente = true;
-    listarDepartamentos().then(({ departamentos: filas }) => {
-      if (vigente) setDepartamentos(aOpciones(filas));
-    });
-    // listarIdiomas() ya devuelve las opciones con value/label, asi que no pasa por aOpciones.
+    // listarIdiomas() ya devuelve las opciones con value/label.
     listarIdiomas().then(({ idiomas: opciones }) => {
       if (vigente) setIdiomas(opciones);
     });
@@ -52,34 +35,6 @@ export function useRegistroPaciente({ comunidadInicial = null, nombresInicial = 
       vigente = false;
     };
   }, []);
-
-  useEffect(() => {
-    if (!departamentoId) {
-      setMunicipios([]);
-      return undefined;
-    }
-    let vigente = true;
-    listarMunicipios({ departamentoId }).then(({ municipios: filas }) => {
-      if (vigente) setMunicipios(aOpciones(filas));
-    });
-    return () => {
-      vigente = false;
-    };
-  }, [departamentoId]);
-
-  useEffect(() => {
-    if (!municipioId) {
-      setComunidades([]);
-      return undefined;
-    }
-    let vigente = true;
-    listarComunidades({ municipioId }).then(({ comunidades: filas }) => {
-      if (vigente) setComunidades(aOpciones(filas));
-    });
-    return () => {
-      vigente = false;
-    };
-  }, [municipioId]);
 
   // setCampo se declara ANTES de registrarComunidad, que lo captura en su cuerpo y lo lista en
   // sus dependencias. Estaba declarado mas abajo, y como `const` no se iza, el useCallback de
@@ -94,16 +49,36 @@ export function useRegistroPaciente({ comunidadInicial = null, nombresInicial = 
     });
   }, []);
 
+  const elegirComunidad = useCallback(
+    (comunidadId) => setCampo("comunidad", comunidadId),
+    [setCampo],
+  );
+
+  // La cascada departamento -> municipio -> comunidad vive en territorio desde la #840: el
+  // formulario de edicion tenia en su lugar una lista plana de todas las comunidades del pais, y
+  // hacer una segunda copia aqui era lo que llevo a que los dos formularios se separaran.
+  const {
+    departamentoId,
+    municipioId,
+    setDepartamento,
+    setMunicipio,
+    recargarComunidades,
+    reiniciar: reiniciarTerritorio,
+    catalogos: catalogosDeTerritorio,
+  } = useCascadaTerritorial({
+    comunidadInicial,
+    alElegirComunidad: elegirComunidad,
+  });
+
   // El alta de comunidad sin salir del formulario vive en useAltaDeComunidadEnLinea desde la
   // #838: la estrenó esta pantalla, pero el alta de jornada tiene el mismo problema y hacer dos
   // copias del mismo flujo era lo que se venia haciendo en el resto de los catalogos.
   const alCrearComunidad = useCallback(
     async (comunidad) => {
-      const { comunidades: filas } = await listarComunidades({ municipioId });
-      setComunidades(aOpciones(filas ?? []));
+      await recargarComunidades();
       setCampo("comunidad", comunidad.id);
     },
-    [municipioId, setCampo],
+    [recargarComunidades, setCampo],
   );
 
   const {
@@ -138,44 +113,14 @@ export function useRegistroPaciente({ comunidadInicial = null, nombresInicial = 
     };
   }, [nombres, apellidos, fechaNacimiento]);
 
-  useEffect(() => {
-    if (!comunidadInicial) return undefined;
-
-    let vigente = true;
-    obtenerComunidad(comunidadInicial).then(({ comunidad }) => {
-      if (!vigente || !comunidad) return;
-      setDepartamentoId(comunidad.departamentoId ?? null);
-      setMunicipioId(comunidad.municipioId ?? null);
-      setValores((anteriores) => ({ ...anteriores, comunidad: comunidad.id }));
-    });
-
-    return () => {
-      vigente = false;
-    };
-  }, [comunidadInicial]);
-
-  const setDepartamento = useCallback((id) => {
-    setDepartamentoId(id);
-    setMunicipioId(null);
-    setComunidades([]);
-    setValores((anteriores) => ({ ...anteriores, comunidad: "" }));
-  }, []);
-
-  const setMunicipio = useCallback((id) => {
-    setMunicipioId(id);
-    setValores((anteriores) => ({ ...anteriores, comunidad: "" }));
-  }, []);
-
   const reiniciar = useCallback(() => {
     setValores(VALORES_INICIALES);
     setErrores({});
     setError(null);
     setRegistrado(null);
-    setDepartamentoId(null);
-    setMunicipioId(null);
-    setComunidades([]);
+    reiniciarTerritorio();
     setAdvertenciaDuplicado(null);
-  }, []);
+  }, [reiniciarTerritorio]);
 
   const registrar = useCallback(async () => {
     setEnviando(true);
@@ -215,6 +160,6 @@ export function useRegistroPaciente({ comunidadInicial = null, nombresInicial = 
     registrarComunidad,
     erroresComunidad,
     creandoComunidad,
-    catalogos: { departamentos, municipios, comunidades, idiomas, sexo: OPCIONES_SEXO },
+    catalogos: { ...catalogosDeTerritorio, idiomas, sexo: OPCIONES_SEXO },
   };
 }

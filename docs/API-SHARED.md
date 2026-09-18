@@ -131,6 +131,10 @@ ilegible.
 
 `listarDepartamentos`, `listarMunicipios`, `listarComunidades`, `obtenerComunidad`.
 
+`useCascadaTerritorial({ comunidadInicial, alElegirComunidad })`: departamento -> municipio ->
+comunidad encadenados, posicionados solos en la comunidad inicial. La usan el alta y la edicion de
+paciente (issue #840); departamento y municipio son filtros, no campos que se guarden.
+
 ---
 
 ## Modulos de dominio
