@@ -24,7 +24,11 @@
     "verificar:paleta": "node scripts/verificar-paleta.mjs",
     "verificar:contratos": "node scripts/verificar-contratos-de-api.mjs",
     "verificar:rewrite-vercel": "node scripts/verificar-rewrite-vercel.mjs",
+    "verificar:cabeceras-http": "node scripts/verificar-cabeceras-http.mjs",
     "prueba:carga-jornada": "vitest run --config scripts/vitest.carga.config.mjs --reporter=verbose"
+  },
+  "engines": {
+    "node": "22.x"
   },
   "devDependencies": {
     "@eslint/js": "^9.0.0",

@@ -50,7 +50,7 @@ jobs:
       supabase: ${{ steps.detectar.outputs.supabase }}
     steps:
       - name: Descargar el codigo
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           fetch-depth: 0
 
@@ -85,7 +85,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Descargar el codigo
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           fetch-depth: 0
 
@@ -276,7 +276,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Descargar el codigo
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
       - name: Sin cambios en supabase/
         if: needs.cambios.outputs.supabase != 'true'
@@ -302,7 +302,7 @@ jobs:
       # se esquiva fijando la version.
       - name: Instalar Supabase CLI
         if: needs.cambios.outputs.supabase == 'true'
-        uses: supabase/setup-cli@v3
+        uses: supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520 # v3
         with:
           version: 2.115.0
 
@@ -356,7 +356,7 @@ jobs:
       # pasa el doble de Supabase de `npm test` y ni siquiera lo ejecuta el pgTAP.
       - name: Configurar Node.js
         if: needs.cambios.outputs.supabase == 'true'
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: "22"
           cache: "npm"
@@ -378,9 +378,12 @@ jobs:
       # "else" porque no habia ninguna funcion-, asi que el comando roto quedo en verde en
       # silencio hasta la issue #523, la primera en agregar una. Se reemplaza por lo que el CLI
       # llamaba por debajo: `deno lint`/`deno check` directo sobre supabase/functions.
+      # "v2" en denoland/setup-deno es una rama, no una etiqueta -confirmado contra el repo de la
+      # accion-, asi que fijarla por SHA es mas importante aqui que en las demas: una rama se
+      # puede mover en cualquier momento, a diferencia de una etiqueta (issue #760).
       - name: Instalar Deno
         if: needs.cambios.outputs.supabase == 'true'
-        uses: denoland/setup-deno@v2
+        uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2
         with:
           deno-version: "2.9.6"
 
@@ -410,7 +413,7 @@ jobs:
       SUPABASE_PROJECT_REF_DEV: ${{ secrets.SUPABASE_PROJECT_REF_DEV }}
     steps:
       - name: Descargar el codigo
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
       - name: Verificar secrets
         id: check
@@ -433,7 +436,7 @@ jobs:
       # Version fija: ver el comentario del job "Validar migraciones y funciones" (issue #422).
       - name: Instalar Supabase CLI
         if: steps.check.outputs.listo == 'true'
-        uses: supabase/setup-cli@v3
+        uses: supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520 # v3
         with:
           version: 2.115.0
 
@@ -598,12 +601,12 @@ jobs:
       SUPABASE_PROJECT_REF_PROD: ${{ secrets.SUPABASE_PROJECT_REF_PROD }}
     steps:
       - name: Descargar el codigo
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
       # Version fija: ver el comentario del job "Validar migraciones y funciones" (issue #422).
       # Este es el paso donde el rate limit tumbo el despliegue del 25 de agosto.
       - name: Instalar Supabase CLI
-        uses: supabase/setup-cli@v3
+        uses: supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520 # v3
         with:
           version: 2.115.0
 
@@ -919,7 +922,7 @@ jobs:
       # El fallo de un despliegue paso desapercibido cuatro corridas seguidas. Una issue
       # abierta es mas dificil de ignorar que un check rojo en la lista de commits.
       - name: Abrir issue si no hay una ya
-        uses: actions/github-script@v8
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         with:
           script: |
             const rama = context.ref.replace('refs/heads/', '');

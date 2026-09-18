@@ -313,6 +313,117 @@ son el default de la CLI, dejados explicitos para que quede documentado que exis
 sea facil ajustarlos. Son limites **por IP** en una ventana de 5 minutos: no bloquean una cuenta
 especifica ni dejan un registro de intentos por cuenta (ver la seccion siguiente).
 
+## Endurecimiento de la plataforma (issue #760)
+
+Cinco frentes de OWASP (A03, A05, A06, A08 y cabeceras/cifrado) que nadie habia revisado antes de
+produccion. Dos de los seis puntos que se investigaron ya estaban resueltos por trabajo anterior
+a esta revision (inyeccion de CSV, auditoria de SQL dinamico); el resto se corrigio aqui.
+
+### Cabeceras de seguridad HTTP
+
+Ninguno de los tres lugares que sirven la SPA declaraba cabeceras de seguridad. Las mismas seis
+cabeceras viven ahora en tres archivos -[`vercel.json`](../vercel.json) (raiz),
+[`apps/web/vercel.json`](../apps/web/vercel.json) y [`apps/web/nginx.conf`](../apps/web/nginx.conf)-,
+verificadas cruzadamente por `npm run verificar:cabeceras-http`
+([`scripts/verificar-cabeceras-http.mjs`](../scripts/verificar-cabeceras-http.mjs)) en cada PR,
+mismo patron que `verificar:rewrite-vercel` (issue #59).
+
+| Cabecera | Valor | Por que |
+| --- | --- | --- |
+| `Strict-Transport-Security` | `max-age=63072000; includeSubDomains; preload` | Fuerza HTTPS en el navegador durante dos anos, incluidos subdominios |
+| `X-Content-Type-Options` | `nosniff` | El navegador no reinterpreta el tipo de un archivo servido |
+| `X-Frame-Options` | `DENY` | Retrocompatibilidad de `frame-ancestors 'none'` para navegadores viejos |
+| `Referrer-Policy` | `strict-origin-when-cross-origin` | Las rutas llevan el UUID del paciente (`/pacientes/:id`); con esta politica un origen externo solo recibe el origen en `Referer`, nunca el path con el UUID |
+| `Permissions-Policy` | `geolocation=(), microphone=(), camera=(), payment=()` | Deniega APIs del navegador que la app no usa |
+| `Content-Security-Policy` | ver el archivo | `style-src` necesita `'unsafe-inline'` porque `apps/web` usa `style={{}}` de React en varias paginas; `connect-src` permite `*.supabase.co` (REST) y `wss://*.supabase.co` (Realtime) con wildcard de segundo nivel porque `VITE_SUPABASE_URL` se inyecta en build time y cambia por ambiente; no hay Google Fonts ni scripts de terceros, asi que el resto de directivas queda en `'self'` |
+
+Hay que mantener sincronizados los tres archivos a mano: Vercel usa JSON y nginx usa
+`add_header`, sintaxis irreconciliables sin un paso de build adicional que seria sobre-ingenieria
+para seis lineas. La guarda de CI es lo que impide que diverjan en silencio.
+
+### `search_path` fijo en funciones de Postgres
+
+Supabase Advisor marca `function_search_path_mutable` en toda funcion de `public` sin
+`search_path` fijo -y **`supabase db lint` no lo detecta**, porque revisa sintaxis/`plpgsql_check`,
+no las heuristicas del Advisor-. El patron del repo (`rol_actual()`, 00004) es
+`SET search_path = ''` (vacio, no `public, pg_temp`) combinado con toda referencia a tabla o
+funcion calificada (`public.tabla`, `esquema.funcion`): con `search_path` vacio solo se busca
+`pg_catalog` de forma implicita.
+
+Quedaban 11 funciones sin la clausula (la investigacion inicial conto 14 por texto; 4 ya se habian
+corregido en `00106`/`00107`/`00112` antes de escribir la migracion `00131`). Ninguna cambia de
+firma, asi que `CREATE OR REPLACE FUNCTION` bastaba: conserva los `GRANT`/`REVOKE` y los
+`COMMENT ON` existentes.
+
+**El detalle no obvio:** dos de las once (`fn_registrar_paciente`, `fn_registrar_medicamento`)
+ademas de tener `INSERT INTO` sin calificar, declaran variables PL/pgSQL con el tipo fila de una
+tabla (`DECLARE v_x nombre_tabla;`). Ese `DECLARE` tambien se resuelve con el `search_path` de la
+funcion en tiempo de ejecucion: sin calificarlo (`public.pacientes`, `public.medicamentos`), la
+funcion compila pero revienta en su primera llamada real, no en el `CREATE`. Facil de pasar por
+alto porque no es una consulta.
+
+**Un quinto candidato que no era: `fn_gastos_updated_at()` (00025) ya no existe.** La lista
+inicial la incluyo porque un analisis por texto sobre los `.sql` la encuentra ahi -pero la `00089`
+(issue #412) la elimino: duplicaba, literalmente igual, a `actualizar_timestamp_updated_at()`, y
+paso el trigger de `gastos` a la funcion compartida. Un `CREATE OR REPLACE FUNCTION` sobre un
+nombre borrado no falla, **la resucita**: la primera version de la migracion `00131` la incluia y
+`supabase test db` lo cazo, porque `desacoplar_gastos_de_inventario.sql` (pgTAP) ya afirmaba
+`to_regprocedure('fn_gastos_updated_at()') IS NULL`. Es el ejemplo real de por que la guarda de
+este punto lee `pg_proc` despues de aplicar todo en vez de una lista armada leyendo los `.sql`: a
+esa lista se le escapo precisamente este caso.
+
+La guarda que impide que esto se repita es
+[`supabase/tests/database/funciones_search_path_fijo.sql`](../supabase/tests/database/funciones_search_path_fijo.sql)
+(pgTAP), que corre dentro del job requerido "Validar migraciones y funciones" de
+`supabase.yml`. Lee `pg_proc.proconfig` del esquema `public` despues de aplicar todas las
+migraciones: detecta sola cualquier funcion nueva sin la clausula, sin mantener una lista, y no
+le puede pasar por alto una funcion corregida en una migracion posterior a la que la creo -que es
+justo lo que le paso al conteo de la issue original-. No se agrego un script Node estatico
+adicional: seria redundante con esto.
+
+### CORS de las Edge Functions
+
+`invitar-usuario` respondia con `Access-Control-Allow-Origin: "*"` (issue #691: la autenticacion
+va por header `Authorization`, no por cookie, asi que un origen abierto no habilitaba CSRF, pero
+no habia razon para no acotarlo). Ahora
+[`supabase/functions/_shared/cors.ts`](../supabase/functions/_shared/cors.ts) expone
+`corsHeadersPara(req)`, que refleja el `Origin` de la peticion solo si esta en `ALLOWED_ORIGINS`
+(secret de la Edge Function, lista separada por comas -no vive en `supabase/config.toml`, que
+solo aplica al stack local-).
+
+**La aplicacion todavia no esta desplegada**, asi que no hay dominio real que fijar hoy: mientras
+`ALLOWED_ORIGINS` no se configure en un ambiente, ningun origen se refleja y las llamadas desde el
+navegador quedan bloqueadas por CORS -fail-closed, no fail-open-. Antes de o al desplegar por
+primera vez a cada ambiente:
+
+```
+supabase secrets set ALLOWED_ORIGINS=https://dominio-real-de-ese-ambiente --project-ref <ref>
+```
+
+Pruebas en
+[`supabase/functions/_shared/cors_test.ts`](../supabase/functions/_shared/cors_test.ts), mismo
+criterio que `index_test.ts` (issue #691): no corren en CI todavia, es responsabilidad de quien
+toque `cors.ts` o `invitar-usuario` correrlas a mano con
+`deno test --config supabase/functions/deno.json --allow-env supabase/functions`.
+
+### SQL dinamico — auditoria confirmada segura
+
+De 62 migraciones que contienen la palabra `EXECUTE`, casi todas son `EXECUTE FUNCTION` (sintaxis
+de trigger) o `GRANT EXECUTE ON FUNCTION`, no SQL dinamico. Solo dos ejecutan SQL dinamico real,
+y ambas usan `format(...)` con `%I` (identificador seguro) sobre nombres leidos del catalogo
+(`pg_extension`, `pg_tables`), nunca de input de usuario:
+
+- [`00005_corregir_schema_de_extensiones.sql`](../supabase/migrations/00005_corregir_schema_de_extensiones.sql):44
+- [`00030_rls_denegacion_por_defecto.sql`](../supabase/migrations/00030_rls_denegacion_por_defecto.sql):20
+
+No hay superficie de inyeccion SQL en las migraciones.
+
+### Inyeccion de formulas en CSV — ya resuelta
+
+`packages/shared/reportes/csv.js` ya neutraliza `=`, `+`, `-`, `@`, tabulador y `\r` con un
+apostrofo antepuesto desde la issue #698 (cerrada), y `csv.test.js` cubre los cinco caracteres.
+Sin trabajo nuevo aqui.
+
 ## Bloqueo por intentos fallidos (fuera de alcance de #230)
 
 El criterio "tras varios intentos fallidos la cuenta se bloquea temporalmente y el intento
