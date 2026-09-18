@@ -1,10 +1,10 @@
 import { View, Text, StyleSheet, RefreshControl, ScrollView } from "react-native";
 import { useNavigation } from "@react-navigation/native";
-import { useJornadasKanban } from "../../../../packages/shared/jornadas/useJornadasKanban";
+import { useJornadasKanban } from "@ecopac/shared";
 import { useSesionCompartida } from "../contexto/SesionProvider";
 import { KanbanBoard } from "../components";
 import { LoadingState, ErrorState } from "../components";
-import { colors } from "../../../../packages/ui-tokens/index";
+import { colors } from "@ecopac/ui-tokens";
 
 export default function KanbanJornadasScreen() {
   const navigation = useNavigation();
@@ -46,7 +46,7 @@ const estilos = StyleSheet.create({
   contenedor: {
     flex: 1,
     padding: 16,
-    backgroundColor: colors.background, //  Existe: #F7F8FA
+    backgroundColor: colors.background,
   },
   cabecera: {
     marginBottom: 16,
@@ -54,11 +54,11 @@ const estilos = StyleSheet.create({
   titulo: {
     fontSize: 20,
     fontWeight: "800",
-    color: colors.text, //  Existe: #2D2D2D
+    color: colors.text,
   },
   subtitulo: {
     fontSize: 13,
-    color: colors.textMuted, //  Existe: #7A7A8A
+    color: colors.textMuted,
     marginTop: 2,
   },
 });
