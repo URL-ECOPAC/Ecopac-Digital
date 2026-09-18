@@ -42,6 +42,12 @@ vi.mock("@ecopac/shared", async (importarOriginal) => ({
   useEdicionUsuario: vi.fn(() => mockEstadoHook),
 }));
 
+const mockRefrescarPerfil = vi.fn(async () => {});
+
+vi.mock("../contexto/SesionProvider", () => ({
+  useSesionCompartida: () => ({ refrescarPerfil: mockRefrescarPerfil }),
+}));
+
 const { useEdicionUsuario } = await import("@ecopac/shared");
 
 function pantalla() {
@@ -89,5 +95,15 @@ describe("ModalEdicionUsuario", () => {
     });
 
     expect(mockEstadoHook.setCampo).toHaveBeenCalledWith("notas", "Nueva nota");
+  });
+
+  // Issue #840: editarse a uno mismo desde Colaboradores no llegaba a Mi perfil ni a la cabecera.
+  it("le pasa al hook quien tiene la sesion y como refrescar su perfil", () => {
+    pantalla();
+
+    expect(useEdicionUsuario).toHaveBeenCalledWith(PERFIL, {
+      idSesionActual: "otro-id",
+      refrescarPerfilPropio: mockRefrescarPerfil,
+    });
   });
 });

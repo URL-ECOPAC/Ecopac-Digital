@@ -45,6 +45,18 @@ export const CAMPOS_EDICION_USUARIO = CAMPOS_USUARIO.filter((campo) =>
   IDS_CAMPOS_EDICION.includes(campo.id),
 );
 
+/**
+ * Si guardar este perfil tiene que refrescar el de la sesion. Pura y exportada para probarla sin
+ * montar el hook.
+ *
+ * @param {string|undefined} perfilId
+ * @param {string|undefined} idSesionActual
+ * @returns {boolean}
+ */
+export function debeRefrescarSesion(perfilId, idSesionActual) {
+  return Boolean(perfilId) && perfilId === idSesionActual;
+}
+
 function valoresDesdePerfil(perfil) {
   return CAMPOS_EDICION_USUARIO.reduce((valores, campo) => {
     valores[campo.id] = perfil?.[campo.id] ?? campo.valorPorDefecto ?? "";
@@ -64,7 +76,14 @@ function valoresDesdePerfil(perfil) {
  * validacion corre en el cliente antes de gastar la llamada de red, mismo criterio que
  * useAltaUsuario.js.
  *
+ * Si el perfil que se edita es el de la sesion, al guardar se llama a `refrescarPerfilPropio()`
+ * (el refrescarPerfil de useSesion). Sin eso, quien se editaba a si mismo desde Colaboradores
+ * seguia viendo sus datos viejos en la cabecera y en Mi perfil, que leen el perfil de la sesion,
+ * hasta recargar la pagina (issue #840). Es lo mismo que ya hacia usePerfilPropio en el otro
+ * sentido: las dos pantallas escriben la misma fila de `perfiles`.
+ *
  * @param {object} perfil Perfil existente (forma de listarUsuarios()/obtenerPerfil()).
+ * @param {{ idSesionActual?: string, refrescarPerfilPropio?: () => Promise<void> }} [sesion]
  * @returns {{
  *   valores: object,
  *   errores: Record<string, string>,
@@ -74,7 +93,7 @@ function valoresDesdePerfil(perfil) {
  *   guardar: () => Promise<{ ok: boolean, perfil?: object|null }>,
  * }}
  */
-export function useEdicionUsuario(perfil) {
+export function useEdicionUsuario(perfil, { idSesionActual, refrescarPerfilPropio } = {}) {
   const [valores, setValores] = useState(() => valoresDesdePerfil(perfil));
   const [errores, setErrores] = useState({});
   const [error, setError] = useState(null);
@@ -100,8 +119,9 @@ export function useEdicionUsuario(perfil) {
     setError(resultado.error);
 
     if (resultado.error) return { ok: false };
+    if (debeRefrescarSesion(perfil.id, idSesionActual)) await refrescarPerfilPropio?.();
     return { ok: true, perfil: resultado.perfil };
-  }, [perfil, valores]);
+  }, [perfil, valores, idSesionActual, refrescarPerfilPropio]);
 
   return { valores, errores, error, enviando, setCampo, guardar };
 }

@@ -13,6 +13,7 @@ import MultiSelector from "../components/MultiSelector";
 import PrimaryButton from "../components/PrimaryButton";
 import SeccionDeFormulario from "../components/SeccionDeFormulario";
 import SecondaryButton from "../components/SecondaryButton";
+import { useSesionCompartida } from "../contexto/SesionProvider";
 import ModalConfirmarDesactivacion from "./ModalConfirmarDesactivacion";
 
 // Modal de edicion de usuario (issue #107), abierto al clickear una fila de
@@ -48,7 +49,11 @@ export default function ModalEdicionUsuario({
   onGuardado,
   onEspecialidadesGuardadas,
 }) {
-  const { valores, errores, error, enviando, setCampo, guardar } = useEdicionUsuario(perfil);
+  const { refrescarPerfil } = useSesionCompartida();
+  const { valores, errores, error, enviando, setCampo, guardar } = useEdicionUsuario(perfil, {
+    idSesionActual,
+    refrescarPerfilPropio: refrescarPerfil,
+  });
   const especialidades = useEspecialidadesDePerfil(perfil?.id, { rol, idSesionActual });
   const [mostrarConfirmacion, setMostrarConfirmacion] = useState(false);
 
