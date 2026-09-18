@@ -51,7 +51,6 @@ function mockPantalla(nombre) {
 jest.mock("../screens/InicioScreen", () => mockPantalla("inicio"));
 jest.mock("../screens/DonacionesScreen", () => mockPantalla("donaciones"));
 jest.mock("../screens/ProyectosScreen", () => mockPantalla("proyectos"));
-jest.mock("../screens/PresupuestosScreen", () => mockPantalla("presupuestos"));
 jest.mock("../screens/ColaboradoresScreen", () => mockPantalla("colaboradores"));
 jest.mock("../screens/FichaColaboradorScreen", () => mockPantalla("ficha-colaborador"));
 jest.mock("../screens/ComunidadesScreen", () => mockPantalla("comunidades"));
