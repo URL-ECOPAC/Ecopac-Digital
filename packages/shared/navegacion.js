@@ -68,7 +68,7 @@ export const MODULOS = [
     ruta: "/presupuestos",
     modulo: "presupuestos",
     tabMovil: false,
-    soloWeb: false,
+    soloWeb: true,
     icono: "DollarSign",
     roles: [ROLES.ADMINISTRADOR, ROLES.JUNTA_DIRECTIVA, ROLES.SOCIO_FUNDADOR],
   },
