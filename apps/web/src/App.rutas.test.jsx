@@ -2,8 +2,9 @@
 // @vitest-environment jsdom
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, cleanup, within } from "@testing-library/react";
+import { render, screen, cleanup, waitFor, within } from "@testing-library/react";
 import * as matchers from "@testing-library/jest-dom/matchers";
+import { labels } from "@ecopac/ui-tokens";
 import App from "./App";
 
 // Extiende los matchers DOM en Vitest para habilitar toBeInTheDocument(), toHaveAttribute(), etc.
@@ -106,9 +107,16 @@ vi.mock("@ecopac/shared", async (importOriginal) => {
   };
 });
 
-function renderEnRuta(ruta) {
+// Desde la #708 las paginas se descargan por ruta con React.lazy(), asi que el primer render de
+// cualquier ruta es el respaldo de <Suspense> y no la pantalla. Esperar aqui, una sola vez, es lo que
+// deja intactos los cuerpos de las pruebas: siguen afirmando en seco sobre la pantalla ya montada.
+async function renderEnRuta(ruta) {
   window.history.pushState({}, "", ruta);
-  return render(<App />);
+  const resultado = render(<App />);
+
+  await waitFor(() => expect(screen.queryByText(labels.cargandoPantalla)).not.toBeInTheDocument());
+
+  return resultado;
 }
 
 // Función auxiliar para buscar elementos que puedan estar expuestos como "link" o "button"
@@ -125,13 +133,32 @@ beforeEach(() => {
   estadoSesion.usuario = PERFIL;
 });
 
+// Sin esto, la espera de renderEnRuta() se cumpliria igual aunque el <Suspense> no existiera -un
+// texto que nunca aparece tampoco esta al comprobarlo-, y la prueba pasaria afirmando nada. Aqui se
+// ve el respaldo puesto: primero esta, despues se va.
+describe("el respaldo de <Suspense> se dibuja de verdad (issue #708)", () => {
+  it("la pantalla empieza con el respaldo y termina con el contenido", async () => {
+    window.history.pushState({}, "", "/");
+    render(<App />);
+
+    expect(screen.getByText(labels.cargandoPantalla)).toBeInTheDocument();
+
+    await waitFor(() =>
+      expect(screen.queryByText(labels.cargandoPantalla)).not.toBeInTheDocument(),
+    );
+
+    const mainArea = screen.getByRole("main");
+    expect(within(mainArea).getByRole("heading", { name: /hola, ana/i })).toBeInTheDocument();
+  });
+});
+
 describe("rutas de donaciones y proyectos", () => {
   beforeEach(() => {
     window.history.pushState({}, "", "/");
   });
 
-  it("/donaciones/registro monta el formulario de registro de donacion", () => {
-    renderEnRuta("/donaciones/registro");
+  it("/donaciones/registro monta el formulario de registro de donacion", async () => {
+    await renderEnRuta("/donaciones/registro");
 
     expect(screen.queryByText(TEXTO_NOT_FOUND)).not.toBeInTheDocument();
 
@@ -143,34 +170,40 @@ describe("rutas de donaciones y proyectos", () => {
     ).toBeInTheDocument();
   });
 
-  it("/donaciones/historial monta el historial de donaciones", () => {
-    renderEnRuta("/donaciones/historial");
+  it("/donaciones/historial monta el historial de donaciones", async () => {
+    await renderEnRuta("/donaciones/historial");
 
     expect(screen.queryByText(TEXTO_NOT_FOUND)).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /historial/i })).toBeInTheDocument();
   });
 
-  it("/donaciones/:id/constancia monta la constancia", () => {
-    renderEnRuta("/donaciones/42/constancia");
+  it("/donaciones/:id/constancia monta la constancia", async () => {
+    await renderEnRuta("/donaciones/42/constancia");
 
     expect(screen.queryByText(TEXTO_NOT_FOUND)).not.toBeInTheDocument();
   });
 
-  it("/proyectos/sociales monta el listado de proyectos sociales", () => {
-    renderEnRuta("/proyectos/sociales");
+  // Esta ruta y la de mas abajo son <Navigate replace to="/proyectos" />, asi que hay DOS pasos: el
+  // primer render resuelve la redireccion y solo entonces empieza a descargarse la pantalla de
+  // destino. La espera de renderEnRuta() se cumple antes de que ese segundo paso arranque -todavia
+  // no hay respaldo que esperar-, asi que aqui la espera va en la propia afirmacion.
+  it("/proyectos/sociales monta el listado de proyectos sociales", async () => {
+    await renderEnRuta("/proyectos/sociales");
 
+    expect(
+      (await screen.findAllByRole("heading", { name: /proyectos sociales/i }))[0],
+    ).toBeInTheDocument();
     expect(screen.queryByText(TEXTO_NOT_FOUND)).not.toBeInTheDocument();
-    expect(screen.getAllByRole("heading", { name: /proyectos sociales/i })[0]).toBeInTheDocument();
   });
 
-  it("/proyectos/:id/seguimiento monta el seguimiento del proyecto", () => {
-    renderEnRuta("/proyectos/7/seguimiento");
+  it("/proyectos/:id/seguimiento monta el seguimiento del proyecto", async () => {
+    await renderEnRuta("/proyectos/7/seguimiento");
 
     expect(screen.queryByText(TEXTO_NOT_FOUND)).not.toBeInTheDocument();
   });
 
-  it("una ruta inventada del modulo sigue cayendo en NotFound", () => {
-    renderEnRuta("/donaciones/registro/inventada");
+  it("una ruta inventada del modulo sigue cayendo en NotFound", async () => {
+    await renderEnRuta("/donaciones/registro/inventada");
 
     expect(screen.getByText(TEXTO_NOT_FOUND)).toBeInTheDocument();
   });
@@ -181,8 +214,8 @@ describe("los hubs de modulo llevan a sus pantallas", () => {
     window.history.pushState({}, "", "/");
   });
 
-  it("/donaciones enlaza al registro, al historial y a los donantes", () => {
-    renderEnRuta("/donaciones");
+  it("/donaciones enlaza al registro, al historial y a los donantes", async () => {
+    await renderEnRuta("/donaciones");
 
     expect(obtenerElementoNavegacion(/registrar donaci[oó]n/i)).toHaveAttribute(
       "href",
@@ -195,8 +228,8 @@ describe("los hubs de modulo llevan a sus pantallas", () => {
     expect(obtenerElementoNavegacion(/donantes/i)).toHaveAttribute("href", "/donantes");
   });
 
-  it("/proyectos enlaza o monta la vista de proyectos sociales", () => {
-    renderEnRuta("/proyectos");
+  it("/proyectos enlaza o monta la vista de proyectos sociales", async () => {
+    await renderEnRuta("/proyectos");
 
     expect(screen.queryByText(TEXTO_NOT_FOUND)).not.toBeInTheDocument();
 
@@ -210,14 +243,14 @@ describe("inicio y proyectos ya no son marcadores (#710)", () => {
     window.history.pushState({}, "", "/");
   });
 
-  it("/ ya no dice que la pantalla esta pendiente de implementar", () => {
-    renderEnRuta("/");
+  it("/ ya no dice que la pantalla esta pendiente de implementar", async () => {
+    await renderEnRuta("/");
 
     expect(screen.queryByText(/pendiente de implementar/i)).not.toBeInTheDocument();
   });
 
-  it("/ saluda a la persona y ofrece los modulos de su rol", () => {
-    renderEnRuta("/");
+  it("/ saluda a la persona y ofrece los modulos de su rol", async () => {
+    await renderEnRuta("/");
 
     // Restringido al contenedor 'main' para evitar ambigüedades con el sidebar
     const mainArea = screen.getByRole("main");
@@ -231,18 +264,21 @@ describe("inicio y proyectos ya no son marcadores (#710)", () => {
     expect(enlacePacientes).toBeInTheDocument();
   });
 
-  it("/proyectos monta la pantalla que consulta la base, no la maqueta", () => {
-    renderEnRuta("/proyectos");
+  it("/proyectos monta la pantalla que consulta la base, no la maqueta", async () => {
+    await renderEnRuta("/proyectos");
 
     expect(screen.getAllByRole("heading", { name: /proyectos sociales/i })[0]).toBeInTheDocument();
     expect(screen.queryByText(/salud comunitaria guatemala 2024/i)).not.toBeInTheDocument();
   });
 
-  it("/proyectos/sociales redirige a /proyectos y no duplica la pantalla", () => {
-    renderEnRuta("/proyectos/sociales");
+  it("/proyectos/sociales redirige a /proyectos y no duplica la pantalla", async () => {
+    await renderEnRuta("/proyectos/sociales");
 
     expect(window.location.pathname).toBe("/proyectos");
-    expect(screen.getAllByRole("heading", { name: /proyectos sociales/i })).not.toHaveLength(0);
+    // Mismo motivo que arriba: la pantalla de destino se descarga despues de la redireccion.
+    expect(await screen.findAllByRole("heading", { name: /proyectos sociales/i })).not.toHaveLength(
+      0,
+    );
   });
 });
 
@@ -253,20 +289,20 @@ describe("/reportes/dashboard respeta el guard de rol del modulo (#697)", () => 
     estadoSesion.usuario = PERFIL;
   });
 
-  it("un rol sin el modulo reportes ve Acceso Denegado, no el panel", () => {
+  it("un rol sin el modulo reportes ve Acceso Denegado, no el panel", async () => {
     const perfilMedico = { ...PERFIL, rol: "medico" };
     estadoSesion.perfil = perfilMedico;
     estadoSesion.rol = "medico";
     estadoSesion.usuario = perfilMedico;
 
-    renderEnRuta("/reportes/dashboard");
+    await renderEnRuta("/reportes/dashboard");
 
     // SOLUCIÓN ERROR 3: Ajustado al mensaje real emitido por el guard de la ruta de indicadores de impacto
     expect(screen.getByText(/no alcanza esta seccion/i)).toBeInTheDocument();
   });
 
-  it("administrador, que si tiene el modulo reportes, entra sin bloqueo", () => {
-    renderEnRuta("/reportes/dashboard");
+  it("administrador, que si tiene el modulo reportes, entra sin bloqueo", async () => {
+    await renderEnRuta("/reportes/dashboard");
 
     expect(
       screen.queryByText(
