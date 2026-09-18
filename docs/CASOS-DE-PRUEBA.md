@@ -44,7 +44,7 @@ el numero del backlog. Este documento usa siempre la numeracion de la matriz.
 | CP-RF01-06 | Cambiar los permisos de un usuario deja rastro | Cada alta y baja en `usuario_permiso` queda auditada | `auditoria_usuario_permiso.sql` (8) |
 | CP-RF01-07 | Un medico ve la bandeja de validacion pero no puede aprobar | La aprobacion la rechaza la base | `pruebas/e2e/inventario-validacion.e2e.test.js`, caso 4 |
 | CP-RF01-08 | Una ruta protegida no se abre sin el rol que la exige | Sin sesion va a `/login`; con un rol no permitido muestra acceso denegado | `apps/web/src/components/RutaProtegida.test.jsx`, `App.rutas.test.jsx` |
-| CP-RF01-09 | El menu movil solo ofrece lo que el rol puede abrir | Las pantallas se filtran por rol | `apps/mobile/src/navigation/navegacionPorRol.test.js`, `components/RutaProtegida.test.jsx` |
+| CP-RF01-09 | El menu movil solo ofrece lo que el rol puede abrir, y ninguna pantalla se alcanza sin el | Las pestanias se filtran por rol; toda pantalla registrada pasa por la guarda y una lista de roles vacia deniega | `apps/mobile/src/navigation/navegacionPorRol.test.js`, `navigation/guardaDeRol.test.js`, `navigation/AppNavigator.test.js`, `components/RutaProtegida.test.jsx` |
 | CP-RF01-10 | La administradora asigna y edita permisos | El formulario refleja y guarda los permisos | `apps/web/src/pages/ModalPermisosUsuario.test.jsx`, `ModalEdicionUsuario.test.jsx` |
 
 ### RF-02: expediente clinico unico, signos vitales y consultas

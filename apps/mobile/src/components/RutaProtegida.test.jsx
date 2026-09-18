@@ -1,4 +1,4 @@
-// Pruebas de la guarda de rol de la app movil (issues #427 y #702).
+// Pruebas de la guarda de rol de la app movil (issues #427, #702 y #820).
 // @vitest-environment jsdom
 //
 // Es la primera prueba de apps/mobile: hasta la #702 el workspace no tenia ninguna ni script
@@ -71,12 +71,29 @@ describe("RutaProtegida", () => {
     expect(screen.queryByText("contenido protegido")).toBeNull();
   });
 
-  it("con la lista vacia deja pasar a cualquier rol conocido", () => {
+  // Esta prueba afirmaba lo contrario hasta la #820 ("con la lista vacia deja pasar a cualquier rol
+  // conocido"), y afirmaba bien: describia el comportamiento que tenia el guard. Lo que estaba mal
+  // era el comportamiento. Una lista vacia es lo que devuelve rolesDelModulo() cuando el modulo no
+  // existe, asi que "vacio deja pasar" convertia un id mal escrito en una pantalla abierta a todos.
+  it("con la lista vacia no deja pasar a nadie, ni a un rol del enum", () => {
     sesion.perfil = { rol: ROLES.VOLUNTARIO };
 
     contenidoProtegido([]);
 
-    expect(screen.getByText("contenido protegido")).toBeTruthy();
+    expect(screen.getByText("acceso denegado")).toBeTruthy();
+    expect(screen.queryByText("contenido protegido")).toBeNull();
+  });
+
+  it("sin rolesPermitidos tampoco deja pasar: el valor por defecto es la lista vacia", () => {
+    sesion.perfil = { rol: ROLES.ADMINISTRADOR };
+
+    render(
+      <RutaProtegida>
+        <Text>contenido protegido</Text>
+      </RutaProtegida>,
+    );
+
+    expect(screen.getByText("acceso denegado")).toBeTruthy();
   });
 
   it("un rol que no existe en el enum no pasa", () => {
