@@ -15,6 +15,7 @@ export const ROUTES = {
 
   // Pantallas dentro de cada stack
   INICIO: "InicioPanel",
+  ACCESO_DENEGADO: "AccesoDenegado",
   DONACIONES: "Donaciones",
   PROYECTOS: "Proyectos",
   // PRESUPUESTOS: "Presupuestos", // ← Se mantiene aquí, se retira solo del menú móvil

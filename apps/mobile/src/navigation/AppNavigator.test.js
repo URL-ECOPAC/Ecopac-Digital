@@ -175,7 +175,7 @@ describe("AppNavigator: la guarda de rol decide en las veintitres pantallas (iss
       darSesion(rolDenegado);
       renderRuta({ routeName, navegador });
 
-      expect(screen.getByText("acceso denegado")).toBeTruthy();
+      expect(screen.getByText("Acceso Denegado")).toBeTruthy();
     },
   );
 

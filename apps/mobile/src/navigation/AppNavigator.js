@@ -17,10 +17,11 @@ import RutaProtegida from "../components/RutaProtegida";
 import IconoDeModulo from "../components/IconoDeModulo";
 import { ROUTES } from "./rutas";
 
-// IMPORTACIÓN DE PANTALLAS
+// IMPORTACIÓN DE PANTALLAS — ✅ Ya está bien
 import LoginScreen from "../screens/LoginScreen";
 import RestablecerContrasenaScreen from "../screens/RestablecerContrasenaScreen";
 import InicioScreen from "../screens/InicioScreen";
+import AccesoDenegadoScreen from "../screens/AccesoDenegadoScreen"; // ✅ Bien importado
 import AjustesScreen from "../screens/AjustesScreen";
 import SeleccionJornadaScreen from "../screens/SeleccionJornadaScreen";
 import JornadaEnCursoScreen from "../screens/JornadaEnCursoScreen";
@@ -104,7 +105,7 @@ function conGuardaDeRol(Componente, moduloId) {
   if (rolesPermitidos.length === 0) {
     throw new Error(
       `conGuardaDeRol: el modulo "${moduloId}" no existe en MODULOS. ` +
-        `Los ids validos son: ${MODULOS.map((m) => m.id).join(", ")}.`,
+        `Los ids validos son: ${MODULOS.map((m) => m.id).join(", ")}.`
     );
   }
   return marcarComoGuarda(Componente, rolesPermitidos, `conGuardaDeRol(${moduloId})`);
@@ -134,9 +135,8 @@ function marcarComoGuarda(Componente, rolesPermitidos, nombre) {
 const ROLES_QUE_REGISTRAN_MOVIMIENTOS = TODOS_LOS_ROLES.filter(puedeRegistrarMovimiento);
 
 // ==================================================
-// PANTALLAS — PRESUPUESTOS RETIRADO, KANBAN AGREGADO
+// PANTALLAS
 // ==================================================
-
 const PANTALLAS_INICIO = [
   { name: ROUTES.INICIO, componente: conGuardaDeRol(InicioScreen, "inicio"), titulo: "Inicio" },
   {
@@ -149,7 +149,6 @@ const PANTALLAS_INICIO = [
     componente: conGuardaDeRol(ProyectosScreen, "proyectos"),
     titulo: "Proyectos",
   },
-  //  PRESUPUESTOS RETIRADO — soloWeb: true
   {
     name: ROUTES.COLABORADORES,
     componente: conGuardaDeRol(ColaboradoresScreen, "colaboradores"),
@@ -213,7 +212,6 @@ const PANTALLAS_JORNADAS = [
     componente: conGuardaDeRol(JornadasAsignadasScreen, "jornadas"),
     titulo: "Mis jornadas",
   },
-  //  KANBAN AGREGADO
   {
     name: ROUTES.KANBAN_JORNADAS,
     componente: conGuardaDeRol(KanbanJornadasScreen, "jornadas"),
@@ -354,12 +352,10 @@ function TabsNavigator() {
   const { perfil } = useSesionCompartida();
   const modulosPermitidos = tabsMoviles(perfil?.rol) || [];
   const tabsList = modulosPermitidos.map((m) => CONFIGURACION_TABS[m.tabMovil]).filter(Boolean);
-
   if (!tabsList.some((tab) => tab?.routeName === ROUTES.TAB_INICIO))
     tabsList.unshift(CONFIGURACION_TABS.Inicio);
   if (!tabsList.some((tab) => tab?.routeName === ROUTES.TAB_AJUSTES))
     tabsList.push(TAB_AJUSTES_CONFIG);
-
   const tabsAAgregar = Array.from(new Map(tabsList.map((item) => [item.routeName, item])).values());
 
   return (
@@ -393,10 +389,17 @@ function TabsNavigator() {
   );
 }
 
+// ✅ AQUÍ ESTABA EL FALTO — se agregó la pantalla
 export default function AppNavigator({ haySesion }) {
   return (
     <NavigationContainer>
       <Root.Navigator screenOptions={{ headerShown: false }}>
+        {/* ✅ Ruta de Acceso Denegado — SIEMPRE disponible */}
+        <Root.Screen
+          name={ROUTES.ACCESO_DENEGADO}
+          component={AccesoDenegadoScreen}
+        />
+
         {haySesion ? (
           <Root.Screen name={ROUTES.TABS} component={TabsNavigator} />
         ) : (
