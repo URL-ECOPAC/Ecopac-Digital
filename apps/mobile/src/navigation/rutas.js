@@ -17,7 +17,7 @@ export const ROUTES = {
   INICIO: "InicioPanel",
   DONACIONES: "Donaciones",
   PROYECTOS: "Proyectos",
- // PRESUPUESTOS: "Presupuestos", // ← Se mantiene aquí, se retira solo del menú móvil
+  // PRESUPUESTOS: "Presupuestos", // ← Se mantiene aquí, se retira solo del menú móvil
   COLABORADORES: "Colaboradores",
   FICHA_COLABORADOR: "FichaColaborador",
   COMUNIDADES: "Comunidades",
