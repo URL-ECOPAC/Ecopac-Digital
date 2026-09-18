@@ -1,33 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  calcularImc,
   hayCambiosDeTriaje,
   soloSignosCapturados,
   VALORES_INICIALES,
 } from "./useRegistroTriaje.js";
 
-describe("calcularImc", () => {
-  it("usa la misma formula y el mismo redondeo que la columna generada de la 00013", () => {
-    expect(calcularImc(70, 170)).toBe(24.2);
-    expect(calcularImc(62, 155)).toBe(25.8);
-  });
-
-  it("es null mientras falte peso o talla", () => {
-    expect(calcularImc(70, null)).toBeNull();
-    expect(calcularImc(null, 170)).toBeNull();
-    expect(calcularImc("", "")).toBeNull();
-  });
-
-  it("no devuelve infinito con talla cero ni con valores negativos", () => {
-    expect(calcularImc(70, 0)).toBeNull();
-    expect(calcularImc(-5, 170)).toBeNull();
-  });
-
-  it("acepta los valores como texto, que es como llegan del formulario", () => {
-    expect(calcularImc("70", "170")).toBe(24.2);
-  });
-});
+// Las pruebas de calcularImc() se fueron con la funcion a triaje.validaciones.test.js (#699).
 
 describe("soloSignosCapturados", () => {
   it("deja fuera los campos que el equipo no pudo medir", () => {

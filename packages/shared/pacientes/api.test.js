@@ -140,7 +140,7 @@ const DATOS_VALIDOS = {
   nombres: "Maria",
   apellidos: "Xoc",
   fechaNacimiento: "1990-05-10",
-  sexo: "femenino",
+  sexo: "Femenino",
   comunidad: "comunidad-1",
   telefonoContacto: "50212345678",
   idioma: "espanol",
@@ -163,9 +163,9 @@ describe("registrarPaciente", () => {
   });
 
   it("sin sexo o sin idioma devuelve errores sin llamar al cliente", async () => {
-    // CAMPOS_PACIENTE (issue #112) no cubre estos campos NOT NULL de la tabla; esta prueba fija
+    // El descriptor historico de cinco campos no cubria estos NOT NULL de la tabla; esta prueba fija
     // que registrarPaciente() valida contra CAMPOS_REGISTRO_PACIENTE, el descriptor completo del
-    // formulario, y no solo contra CAMPOS_PACIENTE. telefonoContacto ya no entra: es opcional
+    // formulario, y no solo contra un subconjunto. telefonoContacto ya no entra: es opcional
     // desde la issue #838 (migracion 00130).
     const { paciente, errores, error } = await registrarPaciente({
       ...DATOS_VALIDOS,
@@ -193,7 +193,7 @@ describe("registrarPaciente", () => {
           nombres: "Maria",
           apellidos: "Xoc",
           fecha_nacimiento: "1990-05-10",
-          sexo: "femenino",
+          sexo: "Femenino",
           comunidad_id: "comunidad-1",
           telefono_contacto: "50212345678",
           idioma: "espanol",
@@ -220,7 +220,7 @@ describe("registrarPaciente", () => {
       nombres: "Maria",
       apellidos: "Xoc",
       fechaNacimiento: "1990-05-10",
-      sexo: "femenino",
+      sexo: "Femenino",
       comunidadId: "comunidad-1",
       telefonoContacto: "50212345678",
       idioma: "espanol",
@@ -240,7 +240,7 @@ describe("registrarPaciente", () => {
         p_nombres: "Maria",
         p_apellidos: "Xoc",
         p_fecha_nacimiento: "1990-05-10",
-        p_sexo: "femenino",
+        p_sexo: "Femenino",
         p_comunidad_id: "comunidad-1",
         p_telefono_contacto: "50212345678",
         p_idioma: "espanol",
@@ -391,15 +391,65 @@ describe("actualizarPaciente", () => {
     expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.CHECK);
   });
 
-  it("bloquea la edicion de sexo vacio, un campo fuera de CAMPOS_PACIENTE", async () => {
-    // sexo no esta en CAMPOS_PACIENTE (issue #112): esta prueba fija que actualizarPaciente()
-    // valida contra CAMPOS_REGISTRO_PACIENTE, no solo contra el subconjunto historico de 5
-    // campos. Antes la sonda era telefonoContacto, que desde la #838 ya no es obligatorio.
+  it("bloquea la edicion de sexo vacio", async () => {
+    // Esta prueba fija que actualizarPaciente() valida contra CAMPOS_REGISTRO_PACIENTE, los once
+    // campos. Antes la sonda era telefonoContacto, que desde la #838 ya no es obligatorio; y el
+    // descriptor de cinco campos contra el que se comparaba (CAMPOS_PACIENTE) se borro en la #699.
     const { paciente, errores, error } = await actualizarPaciente("paciente-1", { sexo: "" });
 
     expect(paciente).toBeNull();
     expect(errores.sexo).toBeTruthy();
     expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.CHECK);
+  });
+
+  // Issue #699: sexo es el enum sexo_paciente desde la 00132, y la base rechaza cualquier otra
+  // cosa con un 22P02 que no nombra el campo. Esto lo para antes, y sobre el campo.
+  // Issue #699, encontrado probando el formulario a mano: un <select> que nadie toco vale "", y
+  // `??` no atrapa la cadena vacia. Contra tipo_sanguineo eso era un 400 y un "Ocurrio un error
+  // inesperado" al registrar sin tipo de sangre; contra el CHECK del DPI (00132) lo seria al
+  // guardar sin DPI.
+  it("convierte a null los opcionales que llegan vacios, en vez de mandar la cadena vacia", async () => {
+    const cliente = crearCliente({
+      "rpc:fn_registrar_paciente": {
+        data: { id: "paciente-1", numero_ficha: "000001" },
+        error: null,
+      },
+    });
+    dobles.cliente = cliente;
+
+    await registrarPaciente({
+      ...DATOS_VALIDOS,
+      dpi: "",
+      tipoSangre: "",
+      nombreResponsable: "",
+      parentescoResponsable: "",
+    });
+
+    const llamada = cliente.llamadas.find((l) => l.paso === "rpc");
+    expect(llamada.argumentos.p_dpi).toBeNull();
+    expect(llamada.argumentos.p_tipo_sangre).toBeNull();
+    expect(llamada.argumentos.p_nombre_responsable).toBeNull();
+    expect(llamada.argumentos.p_parentesco_responsable).toBeNull();
+  });
+
+  it("al editar, un opcional vaciado viaja como null y no como cadena vacia", async () => {
+    // Vaciar el DPI desde la ficha tiene que dejar la columna en NULL. Mandar "" fallaria contra
+    // chk_pacientes_dpi_13_digitos (00132), y vaciar el tipo de sangre, contra el enum.
+    const cliente = crearCliente({ pacientes: { data: { id: "paciente-1" }, error: null } });
+    dobles.cliente = cliente;
+
+    await actualizarPaciente("paciente-1", { dpi: "", tipoSangre: "" });
+
+    const update = cliente.llamadas.find((l) => l.paso === "update");
+    expect(update.valores.dpi).toBeNull();
+    expect(update.valores.tipo_sangre).toBeNull();
+  });
+
+  it("bloquea la edicion de un sexo que no esta en el enum", async () => {
+    const { paciente, errores } = await actualizarPaciente("paciente-1", { sexo: "F" });
+
+    expect(paciente).toBeNull();
+    expect(errores.sexo).toBeTruthy();
   });
 
   it("normaliza como permiso denegado cuando RLS rechaza la edicion", async () => {
@@ -751,7 +801,7 @@ describe("buscarPacientes", () => {
             nombres: "Ana",
             apellidos: "Lopez",
             fecha_nacimiento: "2000-01-01",
-            sexo: "femenino",
+            sexo: "Femenino",
             comunidad_id: "comunidad-1",
             comunidad_nombre: "Solola",
             numero_ficha: "F-010",
@@ -800,7 +850,7 @@ describe("buscarPacientes", () => {
             nombres: "Ana",
             apellidos: "Lopez",
             fecha_nacimiento: "2000-01-01",
-            sexo: "femenino",
+            sexo: "Femenino",
             comunidad_id: "comunidad-1",
             comunidad_nombre: "Solola",
             numero_ficha: "F-010",
@@ -828,7 +878,7 @@ describe("buscarPacientes", () => {
       nombres: "Ana",
       apellidos: "Lopez",
       fechaNacimiento: "2000-01-01",
-      sexo: "femenino",
+      sexo: "Femenino",
       comunidadId: "comunidad-1",
       comunidad: { nombre: "Solola" },
       numeroFicha: "F-010",
@@ -923,7 +973,7 @@ describe("buscarPacientes", () => {
             nombres: "Marta",
             apellidos: "Xiloj",
             fecha_nacimiento: "1958-03-12",
-            sexo: "femenino",
+            sexo: "Femenino",
             comunidad_id: "comunidad-1",
             comunidad_nombre: "Solola",
             numero_ficha: "F-003",

@@ -3,6 +3,37 @@ import { combinarErrores, esTextoVacio, validarConDescriptores } from "../valida
 
 const EDAD_CORTE_PEDIATRICO_ANIOS = 18;
 
+/**
+ * Rango del IMC que admite la base (chk_triajes_imc_rango, 00133, issue #699).
+ *
+ * Los dos numeros son los de ese CHECK y tienen que seguir siendolo: esto es el espejo en el
+ * cliente, no una segunda regla.
+ */
+const IMC_MINIMO = 5;
+const IMC_MAXIMO = 200;
+
+/**
+ * El IMC tal como lo calcula la base.
+ *
+ * Espeja la columna generada de la 00013 -- ROUND(peso / POWER(talla / 100.0, 2), 1) -- y la talla
+ * va en CENTIMETROS, que es de donde sale el error de captura mas comun: teclear 1.62 en vez de 162.
+ *
+ * Vivia en useRegistroTriaje.js, que es un hook; se mudo aqui en la #699 porque la regla que acota
+ * el IMC necesita exactamente la misma formula, y dos copias de una formula se separan.
+ *
+ * @returns {number|null} null si falta algun valor o no es un numero positivo.
+ */
+export function calcularImc(peso, talla) {
+  const kilos = Number(peso);
+  const centimetros = Number(talla);
+
+  if (!Number.isFinite(kilos) || !Number.isFinite(centimetros)) return null;
+  if (kilos <= 0 || centimetros <= 0) return null;
+
+  const metros = centimetros / 100;
+  return Math.round((kilos / (metros * metros)) * 10) / 10;
+}
+
 const TRAMOS_DE_EDAD = Object.freeze({
   PEDIATRICO: "pediatrico",
   ADULTO: "adulto",
@@ -57,6 +88,35 @@ function erroresDeRangoTriaje(valores = {}) {
     }
   }
 
+  // Peso y talla por separado pueden ser los dos posibles y su combinacion no serlo: 70 kg con una
+  // talla de 30 cm pasa los dos rangos de CAMPOS_TRIAJE y da un IMC de 777,8.
+  //
+  // Hasta la #699 eso lo paraba la base de la peor forma posible: la columna generada era
+  // NUMERIC(4,1), el valor no cabia y el INSERT moria con un `numeric field overflow` (22003) --
+  // un error crudo de Postgres, sin decir que campo revisar, delante de quien esta atendiendo. La
+  // 00133 amplia la columna y agrega chk_triajes_imc_rango; esto es su espejo, para decirlo antes
+  // de viajar a la base y sobre los dos campos que la persona puede corregir.
+  //
+  // Solo se evalua si los dos llegan juntos y ninguno fallo ya: en una correccion parcial que solo
+  // trae uno, el otro esta en la fila y esta funcion no lee la base. Ahi sigue protegiendo el CHECK.
+  const peso = valores?.peso;
+  const talla = valores?.talla;
+  if (
+    !esTextoVacio(peso) &&
+    !esTextoVacio(talla) &&
+    errores.peso === undefined &&
+    errores.talla === undefined
+  ) {
+    const imc = calcularImc(peso, talla);
+    if (imc !== null && (imc < IMC_MINIMO || imc > IMC_MAXIMO)) {
+      const mensaje =
+        `Con ${peso} kg y ${talla} cm el indice de masa corporal sale ${imc}, que no es posible. ` +
+        "Revisa el peso y la talla: la talla va en centimetros.";
+      errores.peso = mensaje;
+      errores.talla = mensaje;
+    }
+  }
+
   const sistolica = valores?.presionSistolica;
   const diastolica = valores?.presionDiastolica;
   if (
@@ -87,7 +147,8 @@ function erroresDeRangoTriaje(valores = {}) {
  *
  * Esta capa es UX, no integridad: la anon key es publica, asi que cualquiera puede llamar a
  * Supabase directo saltandose esta validacion. Los valores imposibles siguen protegidos
- * unicamente por los CHECK de la 00013.
+ * unicamente por los CHECK de la 00013, y la combinacion imposible de peso y talla por
+ * chk_triajes_imc_rango (00133).
  *
  * @param {object} valores Valores indexados por el id de CAMPOS_TRIAJE.
  * @returns {Record<string, string>} Errores por campo. Vacio si todo esta bien.

@@ -11,6 +11,7 @@ import { CAMPOS_TRIAJE } from "./campos.js";
 import {
   SIGNOS_OPCIONALES,
   advertenciasDeTriaje,
+  calcularImc,
   validarCambioDeTriaje,
   validarTriaje,
 } from "./triaje.validaciones.js";
@@ -24,6 +25,78 @@ function triajeValido(cambios = {}) {
     ...cambios,
   };
 }
+
+// Vivian en useRegistroTriaje.test.js hasta la #699; se mudan con la funcion, que ahora comparte
+// archivo con la regla que acota el IMC.
+describe("calcularImc", () => {
+  it("usa la misma formula y el mismo redondeo que la columna generada de la 00013", () => {
+    expect(calcularImc(70, 170)).toBe(24.2);
+    expect(calcularImc(62, 155)).toBe(25.8);
+  });
+
+  it("es null mientras falte peso o talla", () => {
+    expect(calcularImc(70, null)).toBeNull();
+    expect(calcularImc(null, 170)).toBeNull();
+    expect(calcularImc("", "")).toBeNull();
+  });
+
+  it("no devuelve infinito con talla cero ni con valores negativos", () => {
+    expect(calcularImc(70, 0)).toBeNull();
+    expect(calcularImc(-5, 170)).toBeNull();
+  });
+
+  it("acepta los valores como texto, que es como llegan del formulario", () => {
+    expect(calcularImc("70", "170")).toBe(24.2);
+  });
+});
+
+// La combinacion imposible de peso y talla (issue #699). Los dos valores pasan sus propios rangos
+// de CAMPOS_TRIAJE y aun asi el IMC que generaria la base es absurdo; hasta la 00132 eso mataba el
+// INSERT con un 22003 crudo delante de quien atiende.
+describe("peso y talla coherentes entre si", () => {
+  it("acepta la combinacion de un adulto normal", () => {
+    expect(validarTriaje(triajeValido({ peso: 70, talla: 170 }))).toEqual({});
+  });
+
+  it("acepta la de un lactante, que es la que mas se parece a un error", () => {
+    // 4 kg y 52 cm dan un IMC de 14,8: bajo, pero posible y real en jornada.
+    expect(validarTriaje(triajeValido({ peso: 4, talla: 52 }))).toEqual({});
+  });
+
+  it("rechaza la talla tecleada en metros, que es el error de captura tipico", () => {
+    // 70 kg con "1.62" (metros en vez de centimetros) da un IMC de 266.700,2.
+    const errores = validarTriaje(triajeValido({ peso: 70, talla: 1.62 }));
+
+    // talla ya cae por su propio rango minimo (30 cm), que es un mensaje mas util todavia.
+    expect(errores.talla).toBeTruthy();
+  });
+
+  it("rechaza una combinacion que pasa los dos rangos por separado pero no junta", () => {
+    // 70 kg y 30 cm: los dos valores son admisibles para CAMPOS_TRIAJE y para los CHECK de la
+    // 00013, y su IMC es 777,8. Es el caso que desbordaba la columna.
+    const errores = validarTriaje(triajeValido({ peso: 70, talla: 30 }));
+
+    expect(errores.peso).toMatch(/masa corporal/i);
+    expect(errores.talla).toMatch(/centimetros/i);
+  });
+
+  it("lo dice sobre los dos campos, que son los dos que se pueden corregir", () => {
+    const errores = validarTriaje(triajeValido({ peso: 400, talla: 60 }));
+
+    expect(errores.peso).toBe(errores.talla);
+  });
+
+  it("no opina cuando solo llega uno de los dos, que es lo que pasa en una correccion parcial", () => {
+    expect(validarCambioDeTriaje({ talla: 30 })).toEqual({});
+    expect(validarCambioDeTriaje({ peso: 70 })).toEqual({});
+  });
+
+  it("en una correccion que trae los dos, si opina", () => {
+    const errores = validarCambioDeTriaje({ peso: 70, talla: 30 });
+
+    expect(errores.peso).toMatch(/masa corporal/i);
+  });
+});
 
 describe("validarTriaje", () => {
   it("acepta un triaje con solo los tres signos obligatorios", () => {

@@ -8,11 +8,20 @@
 // (ver AGENTS.md, "Fuente de verdad").
 
 import { TIPOS_DE_CAMPO } from "../descriptores.js";
-import { TIPOS_SANGUINEOS, opcionesDe } from "../enums.js";
+import { ETIQUETAS_SEXO, SEXOS, TIPOS_SANGUINEOS, opcionesDe } from "../enums.js";
 
 /** Valores de idioma_preferido (supabase/migrations/00001_initial_schema.sql). */
 /** Valores de tipo_sanguineo (supabase/migrations/00035_pacientes_tipo_sangre_responsable.sql). */
 export const OPCIONES_TIPO_SANGRE = opcionesDe(TIPOS_SANGUINEOS, {});
+
+/**
+ * Valores de sexo_paciente (supabase/migrations/00132_sexo_de_paciente_como_enum.sql, issue #699).
+ *
+ * Vivia escrita a mano dentro de usePacientesListado.js -- un hook, que es el ultimo sitio donde
+ * buscarla-, y era el unico vocabulario que tenia la columna: la base no lo hacia cumplir. Ahora sale
+ * del enum, como OPCIONES_TIPO_SANGRE de arriba, y nace en un solo archivo (regla del bug #365).
+ */
+export const OPCIONES_SEXO = opcionesDe(SEXOS, ETIQUETAS_SEXO);
 
 /**
  * Formulario de registro de un paciente nuevo. Cubre pacientes (00009, 00035). El numero de
@@ -78,7 +87,10 @@ export const CAMPOS_REGISTRO_PACIENTE = [
     id: "dpi",
     label: "DPI",
     tipo: TIPOS_DE_CAMPO.TEXTO,
-    validacion: { requerido: false, maxLongitud: 20 },
+    // 13, no 20 (issue #699). Habia tres longitudes a la vez: la columna VARCHAR(20) sin CHECK,
+    // este descriptor con 20 y REGEX_DPI con 13. La correcta es 13 -es lo que tiene un DPI
+    // guatemalteco- y desde la 00132 la base tambien lo exige (chk_pacientes_dpi_13_digitos).
+    validacion: { requerido: false, maxLongitud: 13 },
   },
   {
     id: "tipoSangre",
@@ -372,46 +384,8 @@ export const CAMPOS_RECETA = [
   },
 ];
 
-export const CAMPOS_PACIENTE = Object.freeze([
-  {
-    id: "nombres",
-    label: "Nombres",
-    validacion: {
-      requerido: true,
-      maxLongitud: 100,
-    },
-  },
-  {
-    id: "apellidos",
-    label: "Apellidos",
-    validacion: {
-      requerido: true,
-      maxLongitud: 100,
-    },
-  },
-  {
-    id: "fechaNacimiento",
-    label: "Fecha de nacimiento",
-    validacion: {
-      requerido: true,
-    },
-  },
-  {
-    id: "dpi",
-    label: "DPI",
-    validacion: {
-      requerido: false,
-      maxLongitud: 13,
-    },
-  },
-  {
-    id: "comunidad",
-    label: "Comunidad",
-    validacion: {
-      // Tambien opcional al editar (#657): si se pudo registrar sin comunidad, obligar a ponerla
-      // para corregir cualquier otro dato dejaria la ficha bloqueada.
-      requerido: false,
-      maxLongitud: 100,
-    },
-  },
-]);
+// CAMPOS_PACIENTE se borro en la #699. Era un segundo descriptor de la misma entidad, con cinco
+// campos de los once, y ya no lo montaba ninguna pantalla: la edicion usa CAMPOS_REGISTRO_PACIENTE
+// desde useEdicionPaciente.js y actualizarPaciente() valida con validarRegistroPaciente(). Lo unico
+// que seguia vivo eran sus propias pruebas. Con el se van sus dos incoherencias: un maxLongitud de
+// 100 sobre lo que es un UUID (comunidad) y un DPI de 13 frente al de 20 del otro descriptor.

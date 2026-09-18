@@ -4,10 +4,13 @@ import {
   normalizarTexto,
   esTextoVacio,
 } from "../validations/index.js";
-import { CAMPOS_PACIENTE, CAMPOS_REGISTRO_PACIENTE } from "./campos.js";
+import { SEXOS } from "../enums.js";
+import { CAMPOS_REGISTRO_PACIENTE } from "./campos.js";
 import { aFechaLocal } from "../formato/fechas.js";
 
 const REGEX_DPI = /^\d{13}$/;
+/** Los valores del enum sexo_paciente (00132). Espejo, no segunda fuente. */
+const VALORES_DE_SEXO = Object.values(SEXOS);
 const EDAD_MAXIMA_ANOS = 120;
 
 /**
@@ -25,9 +28,9 @@ export function normalizarDatosPaciente(datos = {}) {
 
 /**
  * Reglas de negocio sobre fecha de nacimiento y DPI, comunes a cualquier formulario de paciente.
- * Son independientes del descriptor de campos que decide que es "requerido": validarPaciente()
- * (CAMPOS_PACIENTE) y validarRegistroPaciente() (CAMPOS_REGISTRO_PACIENTE) las comparten sin
- * repetirlas.
+ * Son independientes del descriptor de campos que decide que es "requerido". Hasta la #699 las
+ * compartian dos validadores; ahora solo queda validarRegistroPaciente(), y se mantienen aparte
+ * porque no son reglas del descriptor sino del dominio.
  *
  * @param {object} datos Ya normalizados (normalizarDatosPaciente()).
  * @returns {Record<string, string>}
@@ -63,29 +66,28 @@ function erroresDeNegocioPaciente(datos) {
     erroresNegocio.dpi = "El DPI debe contener exactamente 13 dígitos numéricos.";
   }
 
+  // El sexo, contra el enum (issue #699). Antes no se comprobaba en ningun sitio: la columna era un
+  // VARCHAR sin CHECK, asi que un valor fuera del vocabulario -de una pantalla vieja, de un import,
+  // de una prueba- se guardaba tal cual y despues no aparecia en ningun desglose. Desde la 00132 la
+  // base lo rechaza con un 22P02, que no dice nada util; esto lo dice antes y sobre el campo.
+  if (!esTextoVacio(datos.sexo) && !VALORES_DE_SEXO.includes(datos.sexo)) {
+    erroresNegocio.sexo = `Sexo no valido. Los valores son: ${VALORES_DE_SEXO.join(", ")}.`;
+  }
+
   return erroresNegocio;
 }
 
-/**
- * Aplica las reglas de negocio y descriptores para validar un paciente contra CAMPOS_PACIENTE
- * (issue #112): nombres, apellidos, fecha de nacimiento, DPI y comunidad.
- * @param {object} datosObjeto
- * @returns {Record<string, string>} Errores agrupados por campo.
- */
-export function validarPaciente(datosObjeto) {
-  const datos = normalizarDatosPaciente(datosObjeto);
-  const erroresDescriptores = validarConDescriptores(CAMPOS_PACIENTE, datos);
-  const erroresNegocio = erroresDeNegocioPaciente(datos);
-  return combinarErrores(erroresDescriptores, erroresNegocio);
-}
+// validarPaciente() se borro en la #699. Validaba contra CAMPOS_PACIENTE -cinco campos de los
+// once- y no lo llamaba ninguna pantalla: el registro y la edicion usan el validador de abajo, y
+// actualizarPaciente() tambien. Lo unico que lo mantenia vivo eran sus propias pruebas, que ahora
+// cubren el que si se usa.
 
 /**
- * Valida el formulario completo de registro de un paciente nuevo (CAMPOS_REGISTRO_PACIENTE,
- * campos.js): ademas de lo que ya cubre validarPaciente(), exige sexo, telefonoContacto e
- * idioma (NOT NULL en pacientes, 00009). numeroFicha no esta en este formulario: lo genera
- * fn_registrar_paciente del lado del servidor (migraciones 00057, 00081), no lo escribe quien
- * registra. Mismas reglas de negocio que validarPaciente(): la fecha de nacimiento y el DPI no
- * cambian segun el formulario.
+ * Valida el formulario de paciente (CAMPOS_REGISTRO_PACIENTE, campos.js): los once campos del
+ * registro, y los mismos que ofrece la edicion desde la #818. Exige sexo e idioma (NOT NULL en
+ * pacientes, 00009); telefonoContacto es opcional desde la 00130. numeroFicha no esta en este
+ * formulario: lo genera fn_registrar_paciente del lado del servidor (migraciones 00057, 00081,
+ * 00110), no lo escribe quien registra.
  * @param {object} datosObjeto
  * @returns {Record<string, string>} Errores agrupados por campo.
  */

@@ -6,16 +6,25 @@
 //
 // EL IMC NO SE ENVIA NUNCA, Y ESO NO ES UN OLVIDO
 //
-// La 00013 lo declara como columna generada:
+// La 00013 lo declara como columna generada, y la 00133 lo amplio a NUMERIC(6,1):
 //
-//   imc NUMERIC(4, 1) GENERATED ALWAYS AS (ROUND(peso / POWER(talla / 100.0, 2), 1)) STORED
+//   imc NUMERIC(6, 1) GENERATED ALWAYS AS (ROUND(peso / POWER(talla / 100.0, 2), 1)) STORED
 //
 // Postgres rechaza cualquier INSERT o UPDATE que intente escribirla, asi que MAPA_COLUMNAS no la
-// incluye. Es el criterio de aceptacion 4 -- "el IMC se lee de la base y no se recalcula en el
-// cliente" -- resuelto por el esquema: aqui solo hay que pedirla de vuelta en el select.
+// incluye: aqui solo hay que pedirla de vuelta en el select.
 //
-// Ese POWER(talla / 100.0, 2) fija ademas la unidad del criterio 5: talla va en CENTIMETROS. Si
-// una pantalla enviara metros, el IMC saldria absurdo sin que nada fallara.
+// PRECISION SOBRE EL CRITERIO 4 (issue #699). Este comentario decia que "el IMC se lee de la base y
+// no se recalcula en el cliente", y la segunda mitad dejo de ser cierta: calcularImc()
+// (triaje.validaciones.js) existe y la pantalla de triaje la pinta mientras se escribe. Las dos
+// cosas conviven y no se contradicen:
+//
+//   - lo que se GUARDA lo calcula la base, siempre, y nadie puede escribirlo;
+//   - lo que se MUESTRA antes de guardar es una previsualizacion con la misma formula, para que un
+//     error de unidades se vea en el momento y no despues.
+//
+// Ese POWER(talla / 100.0, 2) fija ademas la unidad del criterio 5: talla va en CENTIMETROS. Si una
+// pantalla enviara metros, el IMC saldria absurdo; hasta la #699 eso ademas reventaba el INSERT con
+// un 22003, y ahora lo paran validarTriaje() antes de salir y chk_triajes_imc_rango en la base.
 //
 // REGISTRAR Y CORREGIR SON DOS FUNCIONES, NO UNA
 //

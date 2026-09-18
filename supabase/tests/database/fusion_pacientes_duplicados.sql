@@ -56,9 +56,9 @@ ALTER TABLE perfiles ENABLE TRIGGER USER;
 -- una condicion cronica distinta y una consulta con receta.
 -- ============================================================================
 INSERT INTO pacientes (id, nombres, apellidos, fecha_nacimiento, sexo, comunidad_id, telefono_contacto, idioma) VALUES
-  ('20000000-0000-0000-0000-000000000637', 'Sobreviviente', 'Grupo1', '1990-01-01', 'F',
+  ('20000000-0000-0000-0000-000000000637', 'Sobreviviente', 'Grupo1', '1990-01-01', 'Femenino',
    '10000000-0000-0000-0000-000000000637', '5555-0001', 'espanol'),
-  ('20000000-0000-0000-0000-000000000638', 'Absorbido', 'Grupo1', '1990-01-01', 'F',
+  ('20000000-0000-0000-0000-000000000638', 'Absorbido', 'Grupo1', '1990-01-01', 'Femenino',
    '10000000-0000-0000-0000-000000000637', '5555-0002', 'espanol');
 
 INSERT INTO expedientes (id, paciente_id, numero_ficha) VALUES
@@ -105,9 +105,9 @@ INSERT INTO recetas (id, consulta_id, medico_id) VALUES
 -- intenta despues de que la jornada ya termino).
 -- ============================================================================
 INSERT INTO pacientes (id, nombres, apellidos, fecha_nacimiento, sexo, comunidad_id, telefono_contacto, idioma) VALUES
-  ('20000000-0000-0000-0000-000000000639', 'Sobreviviente', 'Grupo2', '1985-02-02', 'M',
+  ('20000000-0000-0000-0000-000000000639', 'Sobreviviente', 'Grupo2', '1985-02-02', 'Masculino',
    '10000000-0000-0000-0000-000000000637', '5555-0003', 'espanol'),
-  ('20000000-0000-0000-0000-000000000640', 'Absorbido', 'Grupo2', '1985-02-02', 'M',
+  ('20000000-0000-0000-0000-000000000640', 'Absorbido', 'Grupo2', '1985-02-02', 'Masculino',
    '10000000-0000-0000-0000-000000000637', '5555-0004', 'espanol');
 
 INSERT INTO expedientes (id, paciente_id, numero_ficha) VALUES
@@ -131,9 +131,9 @@ UPDATE jornadas SET estado = 'finalizada' WHERE id = '30000000-0000-0000-0000-00
 -- para probar el ELSE que agrega la 00119.
 -- ============================================================================
 INSERT INTO pacientes (id, nombres, apellidos, fecha_nacimiento, sexo, comunidad_id, telefono_contacto, idioma) VALUES
-  ('20000000-0000-0000-0000-000000000641', 'Sobreviviente', 'Grupo3', '1975-03-03', 'F',
+  ('20000000-0000-0000-0000-000000000641', 'Sobreviviente', 'Grupo3', '1975-03-03', 'Femenino',
    '10000000-0000-0000-0000-000000000637', '5555-0005', 'espanol'),
-  ('20000000-0000-0000-0000-000000000642', 'Absorbido', 'Grupo3', '1975-03-03', 'F',
+  ('20000000-0000-0000-0000-000000000642', 'Absorbido', 'Grupo3', '1975-03-03', 'Femenino',
    '10000000-0000-0000-0000-000000000637', '5555-0006', 'espanol');
 
 INSERT INTO expedientes (id, paciente_id, numero_ficha) VALUES

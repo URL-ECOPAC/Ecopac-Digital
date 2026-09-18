@@ -319,6 +319,27 @@ export const ETIQUETAS_ESTADO_CONDICION = Object.freeze({
 // lee listarIdiomas() en pacientes/idiomas.api.js, que es la unica fuente de verdad.
 
 /**
+ * `sexo_paciente` (00132_sexo_de_paciente_como_enum.sql, issue #699).
+ *
+ * Hasta la 00132 esto no era un enum ni aqui ni en la base: la columna era un VARCHAR(20) sin CHECK
+ * y el vocabulario vivia en OPCIONES_SEXO, dentro de un hook. Se pago caro -- la 00095 cuenta como
+ * el reporte de pacientes atendidos daba cero hombres y cero mujeres para cualquier consulta,
+ * porque comparaba contra la inicial y la columna guardaba la palabra completa.
+ *
+ * Agregar un valor aqui no basta: el enum de la base manda, y un valor que no este en el tipo falla
+ * al escribir. Se agrega con ALTER TYPE ... ADD VALUE en una migracion nueva, y en el mismo PR.
+ */
+export const SEXOS = Object.freeze({
+  FEMENINO: "Femenino",
+  MASCULINO: "Masculino",
+});
+
+export const ETIQUETAS_SEXO = Object.freeze({
+  [SEXOS.FEMENINO]: labels.sexoFemenino,
+  [SEXOS.MASCULINO]: labels.sexoMasculino,
+});
+
+/**
  * `tipo_sanguineo` (00035_datos_clinicos_paciente.sql).
  *
  * El valor y la etiqueta coinciden: opcionesDe() cae en su propio valor cuando no hay etiqueta,

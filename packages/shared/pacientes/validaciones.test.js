@@ -1,23 +1,21 @@
 // Pruebas de las reglas de validacion de pacientes.
 //
-// validarPaciente() (CAMPOS_PACIENTE, issue #112) y validarRegistroPaciente()
-// (CAMPOS_REGISTRO_PACIENTE, issue #113) comparten las mismas reglas de negocio (fecha de
-// nacimiento, formato del DPI) pero exigen un conjunto distinto de campos obligatorios: la
-// segunda cubre el formulario completo de registro, incluido lo que la primera no valida
-// (sexo, telefonoContacto, idioma). numeroFicha no es un campo de ningun formulario: lo
-// genera el servidor (issue #114).
+// Hasta la #699 habia dos validadores para la misma entidad: validarPaciente() (CAMPOS_PACIENTE,
+// cinco campos, issue #112) y validarRegistroPaciente() (CAMPOS_REGISTRO_PACIENTE, los once, issue
+// #113). El primero ya no lo llamaba ninguna pantalla -- el registro, la edicion y
+// actualizarPaciente() usan el segundo -- y se borro; sus casos de reglas de negocio se conservan
+// aqui, ejecutados contra el que si se usa.
+//
+// numeroFicha no es un campo de ningun formulario: lo genera el servidor (issue #114).
 //
 // Ningun dato real: nombres y DPI son inventados.
 
 import { describe, expect, it } from "vitest";
 
-import {
-  normalizarDatosPaciente,
-  validarPaciente,
-  validarRegistroPaciente,
-} from "./validaciones.js";
+import { SEXOS } from "../enums.js";
+import { normalizarDatosPaciente, validarRegistroPaciente } from "./validaciones.js";
 
-/** Paciente valido minimo para validarPaciente(): solo los 5 campos de CAMPOS_PACIENTE. */
+/** Los campos que no dependen del formulario: los mismos que validaba validarPaciente(). */
 function pacienteValido(cambios = {}) {
   return {
     nombres: "Maria",
@@ -28,24 +26,24 @@ function pacienteValido(cambios = {}) {
   };
 }
 
-/** Formulario de registro valido minimo para validarRegistroPaciente(): los 11 campos de CAMPOS_REGISTRO_PACIENTE. */
+/** Formulario valido minimo: los campos obligatorios de CAMPOS_REGISTRO_PACIENTE. */
 function registroValido(cambios = {}) {
   return {
     ...pacienteValido(),
-    sexo: "femenino",
+    sexo: SEXOS.FEMENINO,
     telefonoContacto: "50212345678",
     idioma: "espanol",
     ...cambios,
   };
 }
 
-describe("validarPaciente", () => {
-  it("no reporta errores con los 5 campos de CAMPOS_PACIENTE completos", () => {
-    expect(validarPaciente(pacienteValido())).toEqual({});
+describe("reglas de negocio comunes a cualquier formulario de paciente", () => {
+  it("no reporta errores con el formulario completo", () => {
+    expect(validarRegistroPaciente(registroValido())).toEqual({});
   });
 
   it("exige nombres, apellidos y fecha de nacimiento", () => {
-    const errores = validarPaciente({});
+    const errores = validarRegistroPaciente({});
 
     expect(errores.nombres).toBeTruthy();
     expect(errores.apellidos).toBeTruthy();
@@ -56,25 +54,36 @@ describe("validarPaciente", () => {
   // la persona, y exigirla llevaba a inventar una comunidad o a no registrarla. La columna admite
   // NULL desde la 00111 y fn_buscar_pacientes la une con LEFT JOIN para que siga apareciendo.
   it("no exige comunidad: es opcional desde la #657", () => {
-    expect(validarPaciente({}).comunidad).toBeUndefined();
-    expect(validarPaciente(pacienteValido({ comunidad: "" })).comunidad).toBeUndefined();
+    expect(validarRegistroPaciente({}).comunidad).toBeUndefined();
+    expect(validarRegistroPaciente(registroValido({ comunidad: "" })).comunidad).toBeUndefined();
   });
 
-  it("no exige sexo, telefonoContacto, idioma ni numeroFicha: no estan en CAMPOS_PACIENTE", () => {
-    const errores = validarPaciente(pacienteValido());
+  it("no inventa un error sobre numeroFicha, que no es un campo del formulario", () => {
+    expect(validarRegistroPaciente(registroValido()).numeroFicha).toBeUndefined();
+  });
 
-    expect(errores.sexo).toBeUndefined();
-    expect(errores.telefonoContacto).toBeUndefined();
-    expect(errores.idioma).toBeUndefined();
-    expect(errores.numeroFicha).toBeUndefined();
+  // Issue #699: hasta la 00132 la columna era un VARCHAR sin CHECK y cualquier cadena se guardaba.
+  // Ahora es el enum sexo_paciente, y esto es su espejo en el cliente: lo dice antes de que la base
+  // conteste 22P02, que no nombra el campo.
+  it("rechaza un sexo que no esta en el enum", () => {
+    const errores = validarRegistroPaciente(registroValido({ sexo: "femenino" }));
+
+    expect(errores.sexo).toMatch(/Femenino/);
+  });
+
+  it("acepta los dos valores del enum, y solo esos", () => {
+    for (const valor of Object.values(SEXOS)) {
+      expect(validarRegistroPaciente(registroValido({ sexo: valor })).sexo).toBeUndefined();
+    }
+    expect(validarRegistroPaciente(registroValido({ sexo: "F" })).sexo).toBeTruthy();
   });
 
   it("rechaza una fecha de nacimiento futura", () => {
     const manana = new Date();
     manana.setDate(manana.getDate() + 1);
 
-    const errores = validarPaciente(
-      pacienteValido({ fechaNacimiento: manana.toISOString().slice(0, 10) }),
+    const errores = validarRegistroPaciente(
+      registroValido({ fechaNacimiento: manana.toISOString().slice(0, 10) }),
     );
 
     expect(errores.fechaNacimiento).toBeTruthy();
@@ -87,29 +96,29 @@ describe("validarPaciente", () => {
     const ahora = new Date();
     const hoyComoTexto = `${ahora.getFullYear()}-${String(ahora.getMonth() + 1).padStart(2, "0")}-${String(ahora.getDate()).padStart(2, "0")}`;
 
-    const errores = validarPaciente(pacienteValido({ fechaNacimiento: hoyComoTexto }));
+    const errores = validarRegistroPaciente(registroValido({ fechaNacimiento: hoyComoTexto }));
 
     expect(errores.fechaNacimiento).toBeUndefined();
   });
 
   it("rechaza una edad mayor a 120 anios", () => {
-    const errores = validarPaciente(pacienteValido({ fechaNacimiento: "1800-01-01" }));
+    const errores = validarRegistroPaciente(registroValido({ fechaNacimiento: "1800-01-01" }));
 
     expect(errores.fechaNacimiento).toBeTruthy();
   });
 
   it("el DPI es opcional", () => {
-    expect(validarPaciente(pacienteValido({ dpi: undefined }))).toEqual({});
+    expect(validarRegistroPaciente(registroValido({ dpi: undefined }))).toEqual({});
   });
 
   it("rechaza un DPI que no tiene exactamente 13 digitos", () => {
-    const errores = validarPaciente(pacienteValido({ dpi: "123" }));
+    const errores = validarRegistroPaciente(registroValido({ dpi: "123" }));
 
     expect(errores.dpi).toBeTruthy();
   });
 
   it("acepta un DPI de 13 digitos", () => {
-    expect(validarPaciente(pacienteValido({ dpi: "2547891230101" }))).toEqual({});
+    expect(validarRegistroPaciente(registroValido({ dpi: "2547891230101" }))).toEqual({});
   });
 });
 
@@ -118,7 +127,7 @@ describe("validarRegistroPaciente", () => {
     expect(validarRegistroPaciente(registroValido())).toEqual({});
   });
 
-  it("exige sexo e idioma ademas de lo que ya exige validarPaciente", () => {
+  it("exige sexo e idioma, que la tabla declara NOT NULL", () => {
     const errores = validarRegistroPaciente({});
 
     expect(errores.nombres).toBeTruthy();
@@ -143,10 +152,10 @@ describe("validarRegistroPaciente", () => {
     ).toBeUndefined();
   });
 
-  it("comparte las mismas reglas de negocio de fecha de nacimiento y DPI que validarPaciente", () => {
-    const errores = validarRegistroPaciente(registroValido({ dpi: "123" }));
-
-    expect(errores.dpi).toBe(validarPaciente(pacienteValido({ dpi: "123" })).dpi);
+  it("el DPI se valida con la misma regla que exige la base (chk_pacientes_dpi_13_digitos)", () => {
+    expect(validarRegistroPaciente(registroValido({ dpi: "123" })).dpi).toBeTruthy();
+    expect(validarRegistroPaciente(registroValido({ dpi: "12345678901234" })).dpi).toBeTruthy();
+    expect(validarRegistroPaciente(registroValido({ dpi: "2547891230101" })).dpi).toBeUndefined();
   });
 });
 

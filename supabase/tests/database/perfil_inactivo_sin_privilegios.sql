@@ -47,7 +47,7 @@ INSERT INTO comunidades (id, municipio_id, nombre) VALUES
   ('10000000-0000-0000-0000-000000529001', 101, 'Comunidad 529');
 
 INSERT INTO pacientes (id, nombres, apellidos, fecha_nacimiento, sexo, comunidad_id, telefono_contacto, idioma) VALUES
-  ('20000000-0000-0000-0000-000000529001', 'Uno', 'Inventado', '1990-01-01', 'F',
+  ('20000000-0000-0000-0000-000000529001', 'Uno', 'Inventado', '1990-01-01', 'Femenino',
    '10000000-0000-0000-0000-000000529001', '00000529', 'espanol');
 
 INSERT INTO jornadas (id, nombre, fecha, comunidad_id, responsable_id, estado) VALUES
@@ -127,7 +127,7 @@ SELECT is(
 
 SELECT throws_ok(
   $$ INSERT INTO pacientes (nombres, apellidos, fecha_nacimiento, sexo, comunidad_id, telefono_contacto, idioma)
-     VALUES ('Dos', 'Inventado', '1990-01-01', 'M', '10000000-0000-0000-0000-000000529001', '00000529', 'espanol') $$,
+     VALUES ('Dos', 'Inventado', '1990-01-01', 'Masculino', '10000000-0000-0000-0000-000000529001', '00000529', 'espanol') $$,
   '42501',
   NULL,
   'y no escribe: el INSERT choca contra el WITH CHECK'

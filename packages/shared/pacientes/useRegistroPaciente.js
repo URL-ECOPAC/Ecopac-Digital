@@ -10,8 +10,7 @@ import {
 import { useAltaDeComunidadEnLinea } from "../territorio/useAltaDeComunidadEnLinea.js";
 import { listarIdiomas } from "./idiomas.api.js";
 import { buscarPacientes, registrarPaciente } from "./api.js";
-import { CAMPOS_REGISTRO_PACIENTE } from "./campos.js";
-import { OPCIONES_SEXO } from "./usePacientesListado.js";
+import { CAMPOS_REGISTRO_PACIENTE, OPCIONES_SEXO } from "./campos.js";
 import { advertirPacienteDuplicado } from "./validaciones.js";
 
 const VALORES_INICIALES = CAMPOS_REGISTRO_PACIENTE.reduce((valores, campo) => {

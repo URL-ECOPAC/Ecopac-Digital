@@ -48,9 +48,9 @@ INSERT INTO jornadas (id, nombre, fecha, comunidad_id, responsable_id, estado) V
    '10000000-0000-0000-0000-000000000175', '00000000-0000-0000-0000-000000000175', 'en curso');
 
 INSERT INTO pacientes (id, nombres, apellidos, fecha_nacimiento, sexo, comunidad_id, telefono_contacto, idioma) VALUES
-  ('20000000-0000-0000-0000-000000000175', 'Paciente', 'UnoP175', '1990-01-01', 'F',
+  ('20000000-0000-0000-0000-000000000175', 'Paciente', 'UnoP175', '1990-01-01', 'Femenino',
    '10000000-0000-0000-0000-000000000175', '5555-0175', 'espanol'),
-  ('20000000-0000-0000-0000-000000000176', 'Paciente', 'DosP175', '1985-05-05', 'M',
+  ('20000000-0000-0000-0000-000000000176', 'Paciente', 'DosP175', '1985-05-05', 'Masculino',
    '10000000-0000-0000-0000-000000000175', '5555-0176', 'espanol');
 
 INSERT INTO expedientes (id, paciente_id, numero_ficha) VALUES

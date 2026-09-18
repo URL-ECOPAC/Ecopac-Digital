@@ -2,8 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { listarComunidades } from "../territorio/api.js";
 import { actualizarPaciente } from "./api.js";
-import { CAMPOS_REGISTRO_PACIENTE } from "./campos.js";
-import { OPCIONES_SEXO } from "./usePacientesListado.js";
+import { listarIdiomas } from "./idiomas.api.js";
+import { CAMPOS_REGISTRO_PACIENTE, OPCIONES_SEXO } from "./campos.js";
 
 export const CAMPOS_EDICION_PACIENTE = CAMPOS_REGISTRO_PACIENTE;
 
@@ -26,6 +26,7 @@ export function useEdicionPaciente(paciente) {
   const [error, setError] = useState(null);
   const [enviando, setEnviando] = useState(false);
   const [comunidades, setComunidades] = useState([]);
+  const [idiomas, setIdiomas] = useState([]);
 
   useEffect(() => {
     setValores(iniciales);
@@ -43,6 +44,13 @@ export function useEdicionPaciente(paciente) {
           label: comunidad.nombre,
         })),
       );
+    });
+    // El catalogo de idiomas faltaba (issue #699). El formulario de edicion ofrece los once campos
+    // desde la #818, pero el selector de idioma se dibujaba sin una sola opcion: el valor guardado
+    // no aparecia seleccionado y no habia forma de cambiarlo. listarIdiomas() ya devuelve
+    // value/label, igual que en useRegistroPaciente.
+    listarIdiomas().then(({ idiomas: opciones }) => {
+      if (vigente) setIdiomas(opciones);
     });
     return () => {
       vigente = false;
@@ -86,6 +94,6 @@ export function useEdicionPaciente(paciente) {
     setCampo,
     descartar,
     guardar,
-    catalogos: { comunidades, sexo: OPCIONES_SEXO },
+    catalogos: { comunidades, idiomas, sexo: OPCIONES_SEXO },
   };
 }
