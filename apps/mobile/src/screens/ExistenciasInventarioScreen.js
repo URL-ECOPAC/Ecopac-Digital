@@ -23,7 +23,7 @@ import { ROUTES } from "../navigation/rutas";
 
 // Existencias de inventario en movil.
 //
-// QUE CAMBIO (issue #834)
+// QUE CAMBIO (issue #838)
 //
 // 1. LA TARJETA. Era un bloque alto con tres columnas de datos, un numero de stock a tamano de
 //    titulo y un pie con el estado: en un telefono entraban dos por pantalla y la lista de una

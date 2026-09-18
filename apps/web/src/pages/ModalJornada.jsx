@@ -93,7 +93,7 @@ export default function ModalJornada({ visible = true, jornada, rol, onClose, on
             disabled={bloqueado || !departamentoId || catalogos.municipios.length === 0}
           />
           {/* La comunidad de una jornada nueva muchas veces todavia no existe en el catalogo
-              (issue #834): se crea aqui mismo, con el mismo control que el alta de paciente. */}
+              (issue #838): se crea aqui mismo, con el mismo control que el alta de paciente. */}
           <SelectorConAlta
             label={campo.label}
             value={valores.comunidad || null}

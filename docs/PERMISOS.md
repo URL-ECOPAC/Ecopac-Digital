@@ -213,7 +213,7 @@ sin reasignar, bajo el absorbido. Reflejo en el cliente: `puedeFusionarPacientes
 | `alertas_caducidad`      | R U           | R                                | R      | R                  | `00034`. Sin INSERT DIRECTO para nadie: las genera `fn_generar_alertas_caducidad` (`00088`, redefinida por la `00129`), que es `SECURITY DEFINER`. La invocan la rutina programada con `service_role` y, desde la `00129`, tambien la administradora a traves de `fn_sincronizar_alertas_caducidad` (ver abajo) |
 | `movimientos_inventario` | R U **A**     | R                                | C R U\* | C R U\*            | `00034` + `00048` + `00086` (aprobar admite tambien `tiene_permiso('inventario.aprobar')`) + `00106`. \*Solo el **propio** movimiento y solo mientras siga `pendiente` |
 
-**`fn_sincronizar_alertas_caducidad` (issue #834): la unica funcion de inventario con `GRANT
+**`fn_sincronizar_alertas_caducidad` (issue #838): la unica funcion de inventario con `GRANT
 EXECUTE` a `authenticated` que escribe `alertas_caducidad`.** Existe porque un lote ya vencido no
 tenia alerta -- `fn_generar_alertas_caducidad` (`00088`) descartaba por vencido a sus candidatos,
 asi que el bloque "Vencidos - Para dar de baja" salia vacio con el lote a la vista en el

@@ -52,7 +52,7 @@ export default function RegistroPacienteScreen() {
     comunidadInicial: jornada?.comunidadId ?? null,
     nombresInicial: params?.termino ?? "",
     // Sin el rol, puedeCrearComunidad era siempre false y el alta de comunidad sin salir del
-    // formulario -- que la web tiene desde la #743 -- no existia en movil (issue #834).
+    // formulario -- que la web tiene desde la #743 -- no existia en movil (issue #838).
     rol: perfil?.rol,
   });
 
@@ -139,7 +139,7 @@ export default function RegistroPacienteScreen() {
                 disabled={enviando || !departamentoId || catalogos.municipios.length === 0}
               />
               {/* La comunidad de quien se registra en jornada muchas veces todavia no esta en el
-                  catalogo: se crea aqui mismo, igual que en la web (issue #834). */}
+                  catalogo: se crea aqui mismo, igual que en la web (issue #838). */}
               <SelectorConAlta
                 label={campo.label}
                 value={valores.comunidad || null}

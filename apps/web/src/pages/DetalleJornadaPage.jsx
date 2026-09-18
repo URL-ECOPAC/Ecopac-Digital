@@ -147,7 +147,7 @@ export default function DetalleJornadaPage() {
   // PestaniaRecetasPaciente.jsx (#131): requestAnimationFrame para esperar al primer pintado del
   // portal antes de llamar a window.print(), y "afterprint" para desmontarlo despues.
   const [aImprimir, setAImprimir] = useState(false);
-  // Issue #834: editar la jornada desde su propia pantalla. Hasta ahora el unico acceso al
+  // Issue #838: editar la jornada desde su propia pantalla. Hasta ahora el unico acceso al
   // formulario era el boton "Editar" de la tarjeta del tablero, asi que desde el detalle habia
   // que volver a /jornadas y buscarla otra vez.
   const [editandoJornada, setEditandoJornada] = useState(false);
@@ -306,7 +306,7 @@ export default function DetalleJornadaPage() {
                     disabled={moviendo}
                   />
                 )}
-                {/* ISSUE #834: "Avanzar →" hacia 'finalizada' no avanzaba nada, solo cambiaba
+                {/* ISSUE #838: "Avanzar →" hacia 'finalizada' no avanzaba nada, solo cambiaba
                     a la pestaña "Cierre" -- una pestaña que ya esta en la barra de arriba, a un
                     click de distancia. Un boton primario que promete avanzar y lo unico que hace
                     es moverte de pestaña, encima a la que cierra la jornada, asusta mas de lo que
@@ -665,7 +665,7 @@ export default function DetalleJornadaPage() {
         />
       )}
 
-      {/* Issue #834: el mismo formulario del tablero, montado aqui. onGuardado recarga la
+      {/* Issue #838: el mismo formulario del tablero, montado aqui. onGuardado recarga la
           jornada entera -- no solo el personal -- porque lo que cambia son sus datos. */}
       {editandoJornada && (
         <ModalJornada

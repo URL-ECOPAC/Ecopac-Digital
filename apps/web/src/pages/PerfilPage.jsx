@@ -29,7 +29,7 @@ import "./perfil.css";
 // escribe ninguna de esas etiquetas a mano, solo las de los campos de contrasena, que no tienen
 // descriptor (mismo patron que NuevaContrasenaPage.jsx).
 //
-// LA SEGUNDA PASADA DE DISENO (issue #834). Eran dos tarjetas con una columna de inputs a ancho
+// LA SEGUNDA PASADA DE DISENO (issue #838). Eran dos tarjetas con una columna de inputs a ancho
 // completo, sin nada que dijera de quien es el perfil que se esta mirando. Tres cambios:
 //
 //   1. Una cabecera de identidad: la inicial, el nombre, el correo y el chip del rol. Es lo mismo

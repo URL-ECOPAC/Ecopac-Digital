@@ -79,7 +79,7 @@ export function useAlertasVencimiento({ usuarioId, rolUsuario } = {}) {
     setCargando(true);
     setError(null);
 
-    // Antes de listar, se pone al dia la tabla (issue #834). Un lote que ya vencio no tenia
+    // Antes de listar, se pone al dia la tabla (issue #838). Un lote que ya vencio no tenia
     // alerta ninguna -- fn_generar_alertas_caducidad() lo descartaba por vencido hasta la 00129 --
     // asi que el bloque "Vencidos - Para dar de baja" salia vacio con el lote a la vista en el
     // inventario. Solo lo intenta la administradora, que es quien puede atenderlas, y su fallo se

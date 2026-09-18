@@ -15,7 +15,7 @@ jest.mock("../contexto/JornadaActivaProvider", () => ({
   useJornadaActivaCompartida: () => ({ jornada: { comunidadId: "com-1" } }),
 }));
 
-// El rol de la sesion viaja a useRegistroPaciente desde la #834, para que el alta de comunidad
+// El rol de la sesion viaja a useRegistroPaciente desde la #838, para que el alta de comunidad
 // sin salir del formulario sepa si esta persona puede crearla.
 jest.mock("../contexto/SesionProvider", () => ({
   useSesionCompartida: () => ({ perfil: { rol: "administrador" } }),

@@ -1,4 +1,4 @@
--- Ecopac Digital - El telefono de contacto del paciente deja de ser obligatorio (issue #834)
+-- Ecopac Digital - El telefono de contacto del paciente deja de ser obligatorio (issue #838)
 --
 -- pacientes.telefono_contacto es NOT NULL desde la 00009. La 00093 ya habia documentado lo que
 -- ese campo es de verdad:
@@ -35,5 +35,5 @@ COMMENT ON COLUMN pacientes.telefono_contacto IS
   '(comun en comunidades rurales con pacientes menores o adultos mayores sin telefono propio). '
   'Se llama distinto a perfiles.telefono/donantes.telefono a proposito -esas si son siempre el '
   'telefono de la persona duena del registro- y se documenta en vez de unificarse (issue #412). '
-  'OPCIONAL desde la issue #834: en muchas comunidades no hay ningun numero al que llamar, y '
+  'OPCIONAL desde la issue #838: en muchas comunidades no hay ningun numero al que llamar, y '
   'exigirlo llevaba a inventar uno o a no registrar al paciente.';

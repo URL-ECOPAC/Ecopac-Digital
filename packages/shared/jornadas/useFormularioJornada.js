@@ -313,7 +313,7 @@ export function useFormularioJornada({ jornada, rol } = {}) {
     });
   }, []);
 
-  // Alta de comunidad sin salir del modal (issue #834): la comunidad de una jornada nueva muchas
+  // Alta de comunidad sin salir del modal (issue #838): la comunidad de una jornada nueva muchas
   // veces todavia no esta en el catalogo, y hasta ahora la unica salida era cerrar el formulario,
   // ir a /pacientes/comunidades y volver a empezar. Es el mismo hook -- y por lo tanto el mismo
   // flujo y las mismas reglas -- que ya usaba el alta de paciente.

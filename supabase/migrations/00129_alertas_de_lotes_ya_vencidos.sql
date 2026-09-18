@@ -1,4 +1,4 @@
--- Ecopac Digital - un lote que YA vencio tambien necesita su alerta (issue #834)
+-- Ecopac Digital - un lote que YA vencio tambien necesita su alerta (issue #838)
 --
 -- EL SINTOMA. En el inventario aparece un lote vencido, pero la pestana de alertas, en su bloque
 -- "Vencidos - Para dar de baja", esta vacia. La lista de ese bloque sale de alertas_caducidad
@@ -62,7 +62,7 @@ $$;
 
 COMMENT ON FUNCTION fn_generar_alertas_caducidad() IS
   'Genera una alerta pendiente por cada lote con existencia total mayor que cero que vence en '
-  '30 dias o menos, INCLUIDOS los que ya vencieron (issue #834: un lote ya vencido nunca entraba '
+  '30 dias o menos, INCLUIDOS los que ya vencieron (issue #838: un lote ya vencido nunca entraba '
   'como candidato, asi que el bloque "Vencidos - Para dar de baja" quedaba vacio y no habia por '
   'donde darlo de baja). No duplica: descarta los lotes que ya tienen una alerta pendiente. '
   'SECURITY DEFINER; la invocan la Edge Function programada y fn_sincronizar_alertas_caducidad().';
@@ -104,7 +104,7 @@ $$;
 
 COMMENT ON FUNCTION fn_sincronizar_alertas_caducidad() IS
   'Ejecuta fn_generar_alertas_caducidad() a peticion de la administradora, para que la pestana '
-  'de alertas no dependa de cuando corrio por ultima vez la rutina programada (issue #834). '
+  'de alertas no dependa de cuando corrio por ultima vez la rutina programada (issue #838). '
   'Devuelve cuantas alertas nuevas creo. Comprueba es_administrador(); sin ese rol lanza 42501.';
 
 REVOKE ALL ON FUNCTION fn_sincronizar_alertas_caducidad() FROM PUBLIC;

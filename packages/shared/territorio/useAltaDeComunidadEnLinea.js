@@ -2,7 +2,7 @@
 //
 // Nacio dentro de useRegistroPaciente (issue #743): en jornada, la comunidad de la persona que se
 // esta registrando muchas veces todavia no existe en el catalogo, y mandar a quien registra a otra
-// pantalla a crearla pierde lo que ya llevaba escrito. La #834 lo saca a este hook porque el alta
+// pantalla a crearla pierde lo que ya llevaba escrito. La #838 lo saca a este hook porque el alta
 // de jornada tiene exactamente el mismo problema -- y el mismo selector en cascada -- y hasta
 // ahora no ofrecia la salida.
 //

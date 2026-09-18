@@ -1,7 +1,7 @@
-// Prueba de la pantalla de inicio de la app movil (issues #687 y #834).
+// Prueba de la pantalla de inicio de la app movil (issues #687 y #838).
 //
 // La #687 quito de aqui dos paneles con datos inventados ("METRICAS CLAVE" y "ALERTAS DE
-// CADUCIDAD"). La #834 quito lo que habia quedado del mismo defecto -- un valor fijo por tarjeta
+// CADUCIDAD"). La #838 quito lo que habia quedado del mismo defecto -- un valor fijo por tarjeta
 // de modulo, "9" pacientes y "Q 553,800" en donaciones, escrito en el archivo -- y alineo la
 // pantalla con la del navegador: saludo, jornadas en curso y accesos, todo desde usePanelDeInicio.
 //
@@ -59,7 +59,7 @@ describe("InicioScreen", () => {
     expect(screen.queryByText("Amoxicilina 500mg Cápsulas")).toBeNull();
   });
 
-  it("no queda ningun valor inventado en las tarjetas de modulo (issue #834)", () => {
+  it("no queda ningun valor inventado en las tarjetas de modulo (issue #838)", () => {
     pantalla();
 
     expect(screen.queryByText("Q 553,800")).toBeNull();

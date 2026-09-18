@@ -1,4 +1,4 @@
-/* Pantalla de perfil propio (issue #834).
+/* Pantalla de perfil propio (issue #838).
  *
  * Solo la cabecera de identidad y la nota del pie: el resto de la pantalla reusa las clases
  * comunes de ui.css (`ec-form-grid`, `ec-form-pie`, `ec-chip`), que es lo que hace que se vea

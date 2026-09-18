@@ -116,7 +116,7 @@ describe("JornadasPage", () => {
     pantalla();
 
     expect(screen.getByText("Jornada Vista Hermosa")).toBeInTheDocument();
-    // Desde la #834 la comunidad y la fecha van en la misma linea pero en nodos distintos, cada
+    // Desde la #838 la comunidad y la fecha van en la misma linea pero en nodos distintos, cada
     // uno con su icono, asi que se buscan por separado.
     expect(screen.getByText("Vista Hermosa")).toBeInTheDocument();
     expect(screen.getByText("01/03/2026")).toBeInTheDocument();

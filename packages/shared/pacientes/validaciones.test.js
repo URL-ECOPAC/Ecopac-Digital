@@ -134,7 +134,7 @@ describe("validarRegistroPaciente", () => {
     expect(validarRegistroPaciente(registroValido({ comunidad: "" })).comunidad).toBeUndefined();
   });
 
-  // Issue #834: en muchas comunidades no hay ningun numero al que llamar, y exigirlo llevaba a
+  // Issue #838: en muchas comunidades no hay ningun numero al que llamar, y exigirlo llevaba a
   // inventar uno. La columna admite NULL desde la 00130.
   it("tampoco exige telefono de contacto", () => {
     expect(validarRegistroPaciente({}).telefonoContacto).toBeUndefined();

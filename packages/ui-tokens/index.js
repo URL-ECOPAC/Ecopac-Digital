@@ -231,7 +231,7 @@ export const labels = {
   critico: "Crítico",
   // Vencimiento de un lote. "Disponible"/"Crítico" servian para una existencia, pero en la
   // columna de vencimiento del reporte de inventario no decian de que hablaban: un lote
-  // "Crítico" podia entenderse como poco stock (issue #834). Estas dos nombran el concepto.
+  // "Crítico" podia entenderse como poco stock (issue #838). Estas dos nombran el concepto.
   loteVigente: "Vigente",
   loteVencido: "Vencido",
   // Niveles del reporte de medicamentos por vencer (issue #700). "Critico" ya existe arriba y no

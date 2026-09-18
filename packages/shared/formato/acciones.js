@@ -17,7 +17,7 @@
 // estado que se puede revertir o que queda en la bitacora, y dibujarlos con un basurero diria lo
 // contrario de lo que hacen.
 //
-// Retorno, edicion y detalle se agregan en la issue #834: "Volver" se dibujaba con flecha solo en
+// Retorno, edicion y detalle se agregan en la issue #838: "Volver" se dibujaba con flecha solo en
 // las pantallas de donaciones, que la escribian a mano, y los accesos a editar y a ver detalle
 // eran enlaces de texto distintos en cada tabla. Decidirlo aqui, por el rotulo, es lo que hace que
 // las dos apps los pinten igual sin que ninguna pantalla vuelva a elegir un icono.

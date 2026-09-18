@@ -49,7 +49,7 @@ export default function MultiSelector({
   const seleccionados = Array.isArray(value) ? value : [];
   const [textoLibre, setTextoLibre] = useState("");
   const [creando, setCreando] = useState(false);
-  // ISSUE #834: una especialidad escrita a mano quedaba solo como chip. Si se quitaba, o si se
+  // ISSUE #838: una especialidad escrita a mano quedaba solo como chip. Si se quitaba, o si se
   // abria el desplegable para ver que hay, no estaba: `options` es el catalogo que vino del
   // servidor y no se entera de lo que se acaba de escribir. Quien acababa de crear "Nutricion"
   // no la volvia a encontrar hasta recargar la pantalla. Se recuerdan aqui, en la sesion del

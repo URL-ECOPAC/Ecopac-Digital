@@ -35,7 +35,7 @@ import ModalEdicionPaciente from "./ModalEdicionPaciente";
 // (usePaciente), mismos descriptores (CAMPOS_FICHA_PACIENTE, valoresDeFichaPaciente,
 // pestaniasDeFicha) y las mismas cuatro pestanas.
 //
-// QUE ESTABA MAL (issue #834)
+// QUE ESTABA MAL (issue #838)
 //
 // 1. NO LEIA AL PACIENTE. La pantalla se conformaba con `route.params.paciente`, que es la FILA
 //    DEL LISTADO de busqueda: id, nombres, apellidos, edad, comunidad, ficha y condiciones, y

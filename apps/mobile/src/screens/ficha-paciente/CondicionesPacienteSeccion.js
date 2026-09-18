@@ -21,7 +21,7 @@ import {
 
 // Condiciones cronicas del paciente, dentro de su ficha movil.
 //
-// ESTABA ROTA (issue #834). Esta seccion importaba `useCondicionesCronicas` y
+// ESTABA ROTA (issue #838). Esta seccion importaba `useCondicionesCronicas` y
 // `actualizarCondicionCronica` de @ecopac/shared. NINGUNA DE LAS DOS EXISTE: el hook se llama
 // useCondicionesPaciente y la funcion, actualizarCondicion. El import no reventaba porque el
 // propio componente traia una "verificacion de seguridad por si el hook no esta exportado" que

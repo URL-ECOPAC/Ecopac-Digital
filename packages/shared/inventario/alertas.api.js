@@ -90,7 +90,7 @@ function aAlerta(fila) {
 /**
  * Pone al dia alertas_caducidad antes de listarla, sin esperar a la rutina programada.
  *
- * Existe por la issue #834: un lote ya vencido no tenia alerta -- fn_generar_alertas_caducidad()
+ * Existe por la issue #838: un lote ya vencido no tenia alerta -- fn_generar_alertas_caducidad()
  * lo descartaba por vencido hasta la migracion 00129 -- asi que el bloque "Vencidos - Para dar de
  * baja" salia vacio aunque el inventario mostrara el lote. Corregida la funcion, la fila igual
  * tardaba hasta la corrida siguiente en aparecer; esto la adelanta.

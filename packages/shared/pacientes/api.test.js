@@ -166,7 +166,7 @@ describe("registrarPaciente", () => {
     // CAMPOS_PACIENTE (issue #112) no cubre estos campos NOT NULL de la tabla; esta prueba fija
     // que registrarPaciente() valida contra CAMPOS_REGISTRO_PACIENTE, el descriptor completo del
     // formulario, y no solo contra CAMPOS_PACIENTE. telefonoContacto ya no entra: es opcional
-    // desde la issue #834 (migracion 00130).
+    // desde la issue #838 (migracion 00130).
     const { paciente, errores, error } = await registrarPaciente({
       ...DATOS_VALIDOS,
       sexo: "",
@@ -179,7 +179,7 @@ describe("registrarPaciente", () => {
     expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.CHECK);
   });
 
-  it("sin telefono de contacto SI registra: es opcional desde la issue #834", async () => {
+  it("sin telefono de contacto SI registra: es opcional desde la issue #838", async () => {
     const { errores } = await registrarPaciente({ ...DATOS_VALIDOS, telefonoContacto: "" });
 
     expect(errores.telefonoContacto).toBeUndefined();
@@ -394,7 +394,7 @@ describe("actualizarPaciente", () => {
   it("bloquea la edicion de sexo vacio, un campo fuera de CAMPOS_PACIENTE", async () => {
     // sexo no esta en CAMPOS_PACIENTE (issue #112): esta prueba fija que actualizarPaciente()
     // valida contra CAMPOS_REGISTRO_PACIENTE, no solo contra el subconjunto historico de 5
-    // campos. Antes la sonda era telefonoContacto, que desde la #834 ya no es obligatorio.
+    // campos. Antes la sonda era telefonoContacto, que desde la #838 ya no es obligatorio.
     const { paciente, errores, error } = await actualizarPaciente("paciente-1", { sexo: "" });
 
     expect(paciente).toBeNull();
@@ -668,7 +668,7 @@ describe("buscarPacientes", () => {
   });
 
   it("un termino corto de digitos SI encuentra una ficha exacta que coincida", async () => {
-    // Dos digitos ya son un identificador (issue #834): "42" no pasa por la busqueda por nombre,
+    // Dos digitos ya son un identificador (issue #838): "42" no pasa por la busqueda por nombre,
     // va por el camino de ficha/DPI, y la ficha "000042" cuenta como coincidencia exacta.
     dobles.cliente = crearCliente({
       expedientes: {

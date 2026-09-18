@@ -9,7 +9,7 @@ import TextField from "./TextField";
 /**
  * Selector con la salida de crear la opcion que falta, sin salir del formulario.
  *
- * Es el patron que el alta de paciente estreno para las comunidades (issue #743) y que la #834
+ * Es el patron que el alta de paciente estreno para las comunidades (issue #743) y que la #838
  * generaliza: el alta de jornada, las especialidades del colaborador y los catalogos clinicos
  * tenian el mismo problema -- la opcion que hace falta todavia no existe -- y la unica salida era
  * cerrar el formulario, irse a otra pantalla y volver a empezar.

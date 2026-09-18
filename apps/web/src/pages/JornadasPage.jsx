@@ -302,7 +302,7 @@ function TarjetaJornada({
   const puedeMover = (esReapertura ? puedeReabrir : puedeEditar) && Boolean(destino);
 
   return (
-    // ISSUE #834, segunda pasada de diseno de la tarjeta. Los datos eran cuatro lineas de texto
+    // ISSUE #838, segunda pasada de diseno de la tarjeta. Los datos eran cuatro lineas de texto
     // apagado del mismo tamano -comunidad, fecha, responsable, atendidos- sin nada que dijera
     // cual es cual: en una columna de seis tarjetas no se distinguia una jornada de otra. Ahora
     // el lugar y la fecha llevan su icono (los mismos que el inicio), el responsable va con su

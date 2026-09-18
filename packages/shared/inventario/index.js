@@ -63,7 +63,7 @@ export {
 export { datosAtenderAlerta, useAlertasVencimiento } from "./useAlertasVencimiento.js";
 
 // Mismo caso que los dos de arriba: useExistenciasPorLote.js es de existencias lote a lote (la
-// pantalla movil de inventario, issue #834) y no comparte nombres con useVistaExistencias.js, que
+// pantalla movil de inventario, issue #838) y no comparte nombres con useVistaExistencias.js, que
 // agrupa por medicamento para la tabla de la web. Se listan por nombre por el mismo criterio.
 export {
   ESTADOS_DE_LOTE,

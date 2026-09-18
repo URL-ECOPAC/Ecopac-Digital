@@ -15,7 +15,7 @@ import TextField from "./TextField";
  *
  * En jornada, la comunidad de la persona que se esta registrando muchas veces todavia no existe
  * en el catalogo, y mandar a quien registra a otra pantalla pierde lo que ya llevaba escrito
- * (issue #743 en web, #834 en movil). Solo dibuja: quien lo monta pasa `onCrear`, que es quien
+ * (issue #743 en web, #838 en movil). Solo dibuja: quien lo monta pasa `onCrear`, que es quien
  * llama al servidor, recarga el catalogo y deja la opcion nueva seleccionada.
  */
 export default function SelectorConAlta({

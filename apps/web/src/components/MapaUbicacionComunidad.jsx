@@ -81,7 +81,7 @@ export default function MapaUbicacionComunidad({
 
     mapaRef.current = mapa;
 
-    // ISSUE #834: el mapa salia en gris, sin llenarse de teselas. Leaflet mide el contenedor una
+    // ISSUE #838: el mapa salia en gris, sin llenarse de teselas. Leaflet mide el contenedor una
     // sola vez, al crear el mapa, y aqui eso pasa mientras el modal todavia esta entrando (la
     // transicion de react-bootstrap lo tiene escalado y, en el primer cuadro, practicamente sin
     // alto). Con esa medida mal tomada, Leaflet pide las teselas de un area minuscula y el resto

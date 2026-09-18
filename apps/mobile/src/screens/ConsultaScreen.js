@@ -55,7 +55,7 @@ function CabeceraDeSignos({ signos }) {
 /**
  * Diagnosticos de la consulta.
  *
- * ISSUE #834: era un Selector mas una lista de filas con "Quitar" escrita a mano -- el
+ * ISSUE #838: era un Selector mas una lista de filas con "Quitar" escrita a mano -- el
  * MultiSelector del catalogo hecho de nuevo, peor, y sin la salida que la web tiene desde la
  * #641: crear el diagnostico que falta sin salir de la consulta. Ahora es el componente del
  * catalogo, que ademas ya sabe elegir una opcion existente cuando se escribe su nombre.

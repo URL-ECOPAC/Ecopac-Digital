@@ -96,7 +96,7 @@ export function useRegistroPaciente({ comunidadInicial = null, nombresInicial = 
   }, []);
 
   // El alta de comunidad sin salir del formulario vive en useAltaDeComunidadEnLinea desde la
-  // #834: la estrenó esta pantalla, pero el alta de jornada tiene el mismo problema y hacer dos
+  // #838: la estrenó esta pantalla, pero el alta de jornada tiene el mismo problema y hacer dos
   // copias del mismo flujo era lo que se venia haciendo en el resto de los catalogos.
   const alCrearComunidad = useCallback(
     async (comunidad) => {

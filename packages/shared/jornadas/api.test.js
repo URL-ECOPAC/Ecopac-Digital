@@ -1298,7 +1298,7 @@ describe("obtenerJornadasDePersona", () => {
     ]);
   });
 
-  // Issue #834: ser responsable de una jornada no la hacia aparecer en la app movil, porque
+  // Issue #838: ser responsable de una jornada no la hacia aparecer en la app movil, porque
   // esta funcion solo miraba jornada_personal.
   it("incluye las jornadas donde la persona es la responsable aunque no tenga turno asignado", async () => {
     const cliente = crearCliente({

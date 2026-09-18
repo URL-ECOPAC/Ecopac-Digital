@@ -1,4 +1,4 @@
-// Prueba de CondicionesPacienteSeccion (issue #834).
+// Prueba de CondicionesPacienteSeccion (issue #838).
 //
 // La version anterior de esta prueba mockeaba `useCondicionesCronicas` y
 // `actualizarCondicionCronica`, dos nombres que @ecopac/shared NUNCA exporto: por eso pasaba en
@@ -104,7 +104,7 @@ describe("CondicionesPacienteSeccion", () => {
     expect(screen.queryByText("Agregar condición")).toBeNull();
   });
 
-  it("deja agregar una condicion sin salir de la ficha (issue #834)", () => {
+  it("deja agregar una condicion sin salir de la ficha (issue #838)", () => {
     render(<CondicionesPacienteSeccion pacienteId="paciente-1" rol="medico" />);
 
     fireEvent.press(screen.getByText("Agregar condición"));

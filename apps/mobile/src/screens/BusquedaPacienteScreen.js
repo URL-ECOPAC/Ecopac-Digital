@@ -57,7 +57,7 @@ export default function BusquedaPacienteScreen() {
 
   return (
     <ScreenContainer scrollable={false}>
-      {/* ISSUE #834: no habia por donde registrar un paciente desde movil. La unica puerta a
+      {/* ISSUE #838: no habia por donde registrar un paciente desde movil. La unica puerta a
           RegistroPacienteScreen era el estado vacio de la lista, o sea que habia que buscar a
           alguien, no encontrarlo y solo entonces aparecia la opcion. Ahora es una accion de la
           cabecera, como en la web. */}
@@ -75,7 +75,7 @@ export default function BusquedaPacienteScreen() {
       <TextField
         label={CAMPO_DE_BUSQUEDA?.label ?? "Buscar paciente"}
         // El placeholder sale del descriptor compartido y no de un texto propio: decia "Nombre o
-        // número de ficha" cuando la busqueda tambien acepta DPI desde la #834.
+        // número de ficha" cuando la busqueda tambien acepta DPI desde la #838.
         placeholder={CAMPO_DE_BUSQUEDA?.placeholder}
         value={filtros.busqueda ?? ""}
         onChangeText={(valor) => setFiltro("busqueda", valor)}

@@ -33,7 +33,7 @@ export default function MultiSelector({
 }) {
   const seleccionados = Array.isArray(value) ? value : [];
   const [textoLibre, setTextoLibre] = useState("");
-  // ISSUE #834: lo escrito a mano quedaba solo como chip y nunca entraba al desplegable, asi que
+  // ISSUE #838: lo escrito a mano quedaba solo como chip y nunca entraba al desplegable, asi que
   // quitarlo lo hacia desaparecer y no habia forma de volver a elegirlo sin reescribirlo. Se
   // recuerda aqui, en la sesion del control, y se mezcla con el catalogo del servidor.
   const [agregadasEnSesion, setAgregadasEnSesion] = useState([]);

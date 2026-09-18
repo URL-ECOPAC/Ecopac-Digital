@@ -743,7 +743,7 @@ export async function obtenerAsignacionesDelDia(fecha, { excluirJornada } = {}) 
  * (usuarios/useHistorialDePersona.js) hace un passthrough sin verificar el shape completo.
  *
  * Ademas del personal asignado, incluye las jornadas donde la persona es la RESPONSABLE
- * (jornadas.responsable_id), aunque no tenga fila en jornada_personal (issue #834): son dos
+ * (jornadas.responsable_id), aunque no tenga fila en jornada_personal (issue #838): son dos
  * formas distintas de participar y antes solo contaba la segunda, asi que quien organizaba una
  * jornada sin asignarse un turno clinico no la veia en su telefono. Esas filas llegan con
  * `rolEnJornada`, `responsabilidad`, `horaInicio` y `horaFin` en null -- son columnas de
@@ -769,7 +769,7 @@ export async function obtenerJornadasDePersona(perfilId) {
             `horaFin:hora_fin, jornada:jornadas(${COLUMNAS_DE_JORNADA})`,
         )
         .eq("perfil_id", perfilId),
-      // ISSUE #834: ser el responsable de una jornada no la hacia aparecer en la app movil.
+      // ISSUE #838: ser el responsable de una jornada no la hacia aparecer en la app movil.
       // jornadas.responsable_id y jornada_personal son dos cosas distintas -- quien organiza la
       // jornada y quien esta en el cuadro de turnos de ese dia -- y esta funcion solo miraba la
       // segunda. Para una coordinadora que organiza la jornada pero no se asigna un turno
@@ -813,7 +813,7 @@ export async function obtenerJornadasDePersona(perfilId) {
         atencionesPersona: atencionesPorJornada.get(fila.jornada.id) ?? { ...sinAtenciones },
       }));
 
-    // Las jornadas que esta persona RESPONSABILIZA sin estar en el cuadro de turnos (issue #834)
+    // Las jornadas que esta persona RESPONSABILIZA sin estar en el cuadro de turnos (issue #838)
     // se agregan al final, sin repetir las que ya entraron por jornada_personal: quien esta en
     // las dos tablas conserva su fila de personal -- que ademas trae su horario y su papel del
     // dia -- y solo gana la marca `esResponsable`.

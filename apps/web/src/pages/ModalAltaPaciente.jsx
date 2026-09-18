@@ -42,7 +42,7 @@ function CampoDeComunidad({
   // ancho: la accion quedaba lejos del campo al que se refiere.
   //
   // El par "comunidad + crear una que falta" ya no se escribe aqui: es SelectorConAlta, el mismo
-  // control que ahora usan el alta de jornada y los catalogos clinicos (issue #834).
+  // control que ahora usan el alta de jornada y los catalogos clinicos (issue #838).
   return (
     <div className="ec-form-grid--ancho ec-form-subgrid">
       <Selector

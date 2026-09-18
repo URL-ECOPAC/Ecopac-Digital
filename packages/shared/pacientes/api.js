@@ -470,7 +470,7 @@ export async function buscarPacientePorFicha(numeroFicha, { signal } = {}) {
 // numero de ficha o un DPI. Pasarlo a la busqueda por nombre no sirve -los trigramas de "1234"
 // contra un nombre no coinciden con nada util-, asi que tiene su propio camino.
 //
-// ISSUE #834, lo que estaba mal. Se buscaba SOLO por el inicio de la columna, con los digitos tal
+// ISSUE #838, lo que estaba mal. Se buscaba SOLO por el inicio de la columna, con los digitos tal
 // cual se escribieron, y desde 4 digitos. Eso dejaba fuera los dos casos que la gente usa de
 // verdad:
 //
@@ -557,7 +557,7 @@ export async function buscarPacientesPorIdentificador(
 
   const conSenal = (consulta) => (signal ? consulta.abortSignal(signal) : consulta);
 
-  // Los filtros de la barra se aplican tambien por este camino (issue #834). Antes escribir una
+  // Los filtros de la barra se aplican tambien por este camino (issue #838). Antes escribir una
   // ficha ignoraba la comunidad, el sexo, la edad y la condicion cronica que ya estuvieran
   // puestos, asi que la lista contradecia a sus propios filtros. Comunidad y sexo son columnas de
   // pacientes y se resuelven en el servidor; edad y condicion se resuelven sobre las filas que

@@ -21,7 +21,7 @@ import { ESTADOS_DE_VENCIMIENTO } from "./inventario.api.js";
  * valores con un estado propio -- TODOS es "sin filtrar", no un estado que una fila pueda
  * tener, y por eso no entra en este catalogo.
  *
- * ISSUE #834: las etiquetas eran "Disponible" y "Crítico", prestadas del catalogo de existencias.
+ * ISSUE #838: las etiquetas eran "Disponible" y "Crítico", prestadas del catalogo de existencias.
  * En la columna del reporte eso no decia de que hablaba -- "Crítico" se lee como poco stock --, y
  * la pregunta que llego fue literalmente "el estado en reportes de inventario, de que es". Ahora
  * dicen "Vigente" y "Vencido", que es lo que la columna mide. El COLOR no cambia: la clave sigue

@@ -49,7 +49,7 @@ function FilaDeJornada({ jornada, onPress }) {
         {muestraEstado && (
           <StatusChip status={jornada.estado} label={ETIQUETAS_ESTADO_JORNADA[jornada.estado]} />
         )}
-        {/* ISSUE #834: ser la responsable de una jornada no se veia por ningun lado en movil --
+        {/* ISSUE #838: ser la responsable de una jornada no se veia por ningun lado en movil --
             de hecho la jornada ni siquiera aparecia, ver obtenerJornadasDePersona(). Ahora
             aparece y dice por que: es tu jornada aunque no tengas turno en el cuadro. */}
         {jornada.esResponsable && <StatusChip status="activo" label="Responsable" />}

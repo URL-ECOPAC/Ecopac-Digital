@@ -1,4 +1,4 @@
-// Prueba de la ficha del paciente en movil (issue #834).
+// Prueba de la ficha del paciente en movil (issue #838).
 //
 // Lo que fija: que la pantalla PIDE el paciente completo con usePaciente() en vez de conformarse
 // con la fila del listado de busqueda, y que pinta los datos que esa fila no trae -- DPI, idioma,

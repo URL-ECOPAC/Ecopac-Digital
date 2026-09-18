@@ -1,6 +1,6 @@
-// Prueba de ExistenciasInventarioScreen (Modulo II: existencias por lote, issues #785 y #834).
+// Prueba de ExistenciasInventarioScreen (Modulo II: existencias por lote, issues #785 y #838).
 //
-// Desde la #834 la pantalla no consulta ni calcula: lo hace useExistenciasPorLote()
+// Desde la #838 la pantalla no consulta ni calcula: lo hace useExistenciasPorLote()
 // (packages/shared/inventario/), que tiene su propia prueba para la suma de existencias y el
 // estado de cada lote. Aqui se prueba lo que es de la pantalla: que dibuja la tarjeta compacta,
 // que ofrece los filtros, que el vacio distingue "no hay nada" de "nada coincide" y que tocar un
@@ -99,7 +99,7 @@ describe("ExistenciasInventarioScreen", () => {
     expect(screen.getByText("Sin stock")).toBeTruthy();
   });
 
-  it("ofrece los filtros de bodega y de estado (issue #834)", () => {
+  it("ofrece los filtros de bodega y de estado (issue #838)", () => {
     Object.assign(mockEstado, { filas: [FILA_DISPONIBLE], total: 1, totalSinFiltrar: 1 });
     pantalla();
 

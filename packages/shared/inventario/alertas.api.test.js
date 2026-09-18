@@ -246,7 +246,7 @@ describe("atenderAlerta", () => {
 });
 
 describe("sincronizarAlertas", () => {
-  // Issue #834: un lote ya vencido no tenia alerta, asi que "Vencidos - Para dar de baja" salia
+  // Issue #838: un lote ya vencido no tenia alerta, asi que "Vencidos - Para dar de baja" salia
   // vacio con el lote a la vista en el inventario. La 00129 lo arregla en la funcion que genera
   // las alertas; esto es la puerta para no tener que esperar a la rutina de la noche.
   it("llama a fn_sincronizar_alertas_caducidad y devuelve cuantas creo", async () => {

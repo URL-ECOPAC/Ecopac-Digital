@@ -86,7 +86,7 @@ export const CAMPOS_FICHA_LOTE_INVENTARIO = [
   { id: "cantidad", label: "Cantidad", tipo: TIPOS_DE_PRESENTACION.NUMERO },
   { id: "fechaVencimiento", label: "Fecha de vencimiento", tipo: TIPOS_DE_PRESENTACION.FECHA },
   {
-    // "Estado", a secas, no decia de que estado hablaba (issue #834). Es el del vencimiento del
+    // "Estado", a secas, no decia de que estado hablaba (issue #838). Es el del vencimiento del
     // lote, y asi se titula; sus dos valores son "Vigente" y "Vencido"
     // (ESTADOS_DE_VENCIMIENTO_REPORTE, campos.js).
     id: "vencido",

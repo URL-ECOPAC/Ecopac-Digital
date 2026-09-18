@@ -20,7 +20,7 @@ import { ROUTES } from "../navigation/rutas";
 // (usePanelDeInicio), mismas tres partes -- saludo, jornadas en curso, accesos a los modulos --
 // y las mismas descripciones, que salen de MODULOS (navegacion.js) y no de aqui.
 //
-// QUE HABIA ANTES Y POR QUE SE FUE (issue #834)
+// QUE HABIA ANTES Y POR QUE SE FUE (issue #838)
 //
 // 1. Un banner de producto: "Salud que llega a cada comunidad" mas un parrafo describiendo la
 //    plataforma. Es texto de folleto, para quien todavia no la usa. Quien abre la app ya inicio

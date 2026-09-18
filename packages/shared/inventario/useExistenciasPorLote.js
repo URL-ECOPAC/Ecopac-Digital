@@ -1,6 +1,6 @@
 // View model del listado de existencias lote a lote (pantalla movil de inventario).
 //
-// POR QUE EXISTE (issue #834). ExistenciasInventarioScreen.js hacia todo esto dentro del
+// POR QUE EXISTE (issue #838). ExistenciasInventarioScreen.js hacia todo esto dentro del
 // componente: las dos consultas, la suma de existencias por lote, el calculo del estado de
 // vencimiento y las etiquetas. Es exactamente lo que docs/ARQUITECTURA-FRONTEND.md prohibe -- una
 // app no calcula ni decide -- y ademas dejaba la pantalla sin filtros: no habia forma de ver solo

@@ -1,4 +1,4 @@
-// Pruebas de las funciones puras de useExistenciasPorLote (issue #834).
+// Pruebas de las funciones puras de useExistenciasPorLote (issue #838).
 //
 // El hook en si no se monta: packages/shared corre vitest con environment "node", sin DOM, mismo
 // criterio que el resto del monorepo. Lo que importa -- que estado le toca a cada lote, como se

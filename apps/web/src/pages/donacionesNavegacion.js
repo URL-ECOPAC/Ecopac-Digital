@@ -7,7 +7,7 @@
  * un enlace (`to`), no un navigate(-1): quien entro por un enlace directo tambien tiene a donde
  * volver.
  *
- * La flecha ya no se pasa a mano: desde la #834 la pone iconoDeAccion() para cualquier rotulo que
+ * La flecha ya no se pasa a mano: desde la #838 la pone iconoDeAccion() para cualquier rotulo que
  * empiece por "Volver", que es lo que hace que el resto de pantallas se vean como esta.
  */
 export const ACCION_VOLVER_A_DONACIONES = Object.freeze({
