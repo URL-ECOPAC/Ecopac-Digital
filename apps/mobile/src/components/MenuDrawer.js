@@ -9,8 +9,13 @@ export default function MenuDrawer({ onClose, rutaActual, onNavegar }) {
   const navigation = useNavigation();
   const { perfil } = useSesionCompartida();
 
-  const rol = perfil?.rol || "voluntario";
-  const modulosPermitidos = modulosVisibles(rol, { plataforma: "mobile" });
+  // Sin perfil no se pinta el menu (issue #820). Antes el valor por defecto era "voluntario",
+  // una cadena que NO esta en el enum rol_usuario -ROLES.VOLUNTARIO vale "voluntario general"-,
+  // asi que mientras cargaba el perfil el menu se calculaba con un rol inexistente y parpadeaba
+  // con un juego de modulos que despues cambiaba. Es el mismo patron que la #692 corrigio en
+  // InicioScreen. Lo razonable mientras no hay perfil es no dibujar, no inventar un rol.
+  const rol = perfil?.rol;
+  const modulosPermitidos = rol ? modulosVisibles(rol, { plataforma: "mobile" }) : [];
 
   const tienePermiso = (idModulo) => modulosPermitidos.some((m) => m.id === idModulo);
 
@@ -69,6 +74,9 @@ export default function MenuDrawer({ onClose, rutaActual, onNavegar }) {
     onNavegar(ruta);
     navigation.navigate(ruta);
   };
+
+  // Ni siquiera "Inicio", que va con siempreVisible: sin rol no hay menu que dibujar.
+  if (!rol) return null;
 
   return (
     <View style={styles.container}>
