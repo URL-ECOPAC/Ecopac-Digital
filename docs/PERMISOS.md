@@ -210,8 +210,19 @@ sin reasignar, bajo el absorbido. Reflejo en el cliente: `puedeFusionarPacientes
 | `existencias`            | C R U         | R                                | R      | R                  | `00034`; disponibilidad por `fn_existencias_disponibles` (`00065`)                                          |
 | `bodegas`                | C R U         | R                                | R      | R                  | `00034`, con la lectura endurecida por la `00079` a `rol_actual() IS NOT NULL`. Las politicas duplicadas de la `00061`/`00062` las retiro esa misma migracion (era la Divergencia 12). **Sin DELETE para nadie**, y no solo por politica: la `00034` nunca otorgo `GRANT DELETE`, asi que el borrado muere en `42501` antes de llegar a RLS. Cubierto rol por rol en `politicas_rls_inventario.sql` (issue #513)                                                          |
 | `proveedores`            | C R U         | R                                | R      | R                  | `00034`, con la lectura endurecida por la `00079` a `rol_actual() IS NOT NULL`. Las politicas duplicadas de la `00061`/`00062` las retiro esa misma migracion (era la Divergencia 12). **Sin DELETE para nadie**, y no solo por politica: la `00034` nunca otorgo `GRANT DELETE`, asi que el borrado muere en `42501` antes de llegar a RLS. Cubierto rol por rol en `politicas_rls_inventario.sql` (issue #513)                                                                             |
-| `alertas_caducidad`      | R U           | R                                | R      | R                  | `00034`. Sin INSERT para nadie: las genera una rutina con `service_role`                                    |
+| `alertas_caducidad`      | R U           | R                                | R      | R                  | `00034`. Sin INSERT DIRECTO para nadie: las genera `fn_generar_alertas_caducidad` (`00088`, redefinida por la `00129`), que es `SECURITY DEFINER`. La invocan la rutina programada con `service_role` y, desde la `00129`, tambien la administradora a traves de `fn_sincronizar_alertas_caducidad` (ver abajo) |
 | `movimientos_inventario` | R U **A**     | R                                | C R U\* | C R U\*            | `00034` + `00048` + `00086` (aprobar admite tambien `tiene_permiso('inventario.aprobar')`) + `00106`. \*Solo el **propio** movimiento y solo mientras siga `pendiente` |
+
+**`fn_sincronizar_alertas_caducidad` (issue #834): la unica funcion de inventario con `GRANT
+EXECUTE` a `authenticated` que escribe `alertas_caducidad`.** Existe porque un lote ya vencido no
+tenia alerta -- `fn_generar_alertas_caducidad` (`00088`) descartaba por vencido a sus candidatos,
+asi que el bloque "Vencidos - Para dar de baja" salia vacio con el lote a la vista en el
+inventario -- y, corregida esa funcion en la `00129`, la fila igual tardaba hasta la corrida
+siguiente de la rutina nocturna en aparecer. Es un envoltorio `SECURITY DEFINER` que **comprueba
+`es_administrador()` por dentro y lanza `42501` a cualquier otro rol**, y lo unico que puede hacer
+es crear alertas pendientes que la rutina habria creado igual. No abre ninguna puerta nueva: es la
+misma regla que la politica "Solo administrador atiende alertas_caducidad" (`00034`) ya exige para
+cerrarlas.
 
 **`lotes.costo_unitario` y `lotes.moneda` (issue #752): divergencia declarada entre RLS y lo que
 de verdad protege el dato.** La fila de `lotes` de arriba dice `C R U` para medico y voluntario

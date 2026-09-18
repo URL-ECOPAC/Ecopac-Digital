@@ -710,8 +710,10 @@ export function comparar(archivos, esquema, opciones = {}) {
 //   2. Un barril puede referenciarlo SIN EXTENSION, que es como entorno/index.js importa
 //      "./fuente": Metro y Vite eligen ahi entre fuente.js y fuente.native.js segun la
 //      plataforma. Es la excepcion que la regla del bug #390 ya documenta.
-//   3. La variante .native.js de un archivo NUNCA va en un barril: es la otra mitad de esa misma
-//      resolucion por plataforma, y nombrarla explicitamente romperia la web.
+//   3. Las variantes .native.js y .web.js de un archivo NUNCA van en un barril: son las otras
+//      mitades de esa misma resolucion por plataforma, y nombrarlas explicitamente romperia a
+//      quien no le toca. `.web.js` es la que elige METRO cuando empaqueta la app movil para el
+//      navegador (Expo web): Vite no la ve, porque no incluye esa extension en su resolucion.
 function archivosHuerfanos(dirShared) {
   const modulos = readdirSync(dirShared).filter((n) => existsSync(join(dirShared, n, "index.js")));
   const barrilRaiz = existsSync(join(dirShared, "index.js"))
@@ -726,9 +728,11 @@ function archivosHuerfanos(dirShared) {
       if (archivo === "index.js" || archivo.includes(".test.")) continue;
 
       const sinExtension = archivo.slice(0, -3);
-      // Falso positivo 3: la variante nativa se elige por plataforma, no por barril. Se da por
-      // cubierta si lo esta su archivo base.
-      const base = sinExtension.endsWith(".native") ? sinExtension.slice(0, -7) : sinExtension;
+      // Falso positivo 3: las variantes por plataforma (.native.js y .web.js) las elige el
+      // bundler, no el barril. Se dan por cubiertas si lo esta su archivo base.
+      const SUFIJOS_DE_PLATAFORMA = [".native", ".web"];
+      const sufijo = SUFIJOS_DE_PLATAFORMA.find((uno) => sinExtension.endsWith(uno));
+      const base = sufijo ? sinExtension.slice(0, -sufijo.length) : sinExtension;
 
       const enSuBarril =
         barril.includes(`./${archivo}`) || new RegExp(`\\./${base}["'\`]`).test(barril);
