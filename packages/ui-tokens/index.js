@@ -242,6 +242,10 @@ export const labels = {
   jornadaFinalizada: "Finalizada",
   jornadaCancelada: "Cancelada",
   cargando: "Cargando...",
+  // Respaldo de <Suspense> mientras se descarga el chunk de una pantalla (issue #708). Es un texto
+  // distinto de `cargando` a proposito: lo que espera no es un dato, es el codigo de la pantalla, y
+  // las pruebas de enrutado necesitan poder distinguir ese respaldo del estado de carga de dentro.
+  cargandoPantalla: "Cargando la pantalla...",
   sinResultados: "No se encontraron resultados",
   errorDeConexion: "Error de conexión con el servidor",
   donacionRegistrada: "Registrada", // estado_donacion (00022_donantes_donaciones.sql)

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import { Outlet, NavLink, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "react-bootstrap";
 import {
@@ -9,6 +9,7 @@ import {
   useExpiracionPorInactividad,
   MINUTOS_INACTIVIDAD_POR_DEFECTO,
 } from "@ecopac/shared";
+import { labels } from "@ecopac/ui-tokens";
 import { almacenamientoWeb } from "../almacenamiento";
 import { useSesionCompartida } from "../contexto/SesionProvider";
 import { useEnLinea } from "../hooks/useEnLinea";
@@ -16,6 +17,7 @@ import AvisoDeInactividad from "./AvisoDeInactividad";
 import AvisoSinConexion from "./AvisoSinConexion";
 import IconoModulo from "./IconoModulo";
 import LimiteDeError from "./LimiteDeError";
+import LoadingState from "./LoadingState";
 import "./MainLayout.css";
 
 const EVENTOS_DE_ACTIVIDAD = ["mousemove", "keydown", "mousedown", "touchstart", "scroll"];
@@ -199,7 +201,16 @@ export default function MainLayout() {
             modulo={actual?.id}
             onVolverAlInicio={() => navigate("/")}
           >
-            <Outlet />
+            {/* Las pantallas se descargan por ruta desde la #708, asi que al entrar a un modulo
+                por primera vez hay un momento sin componente. El respaldo va AQUI DENTRO, alrededor
+                del <Outlet /> y no en App.jsx: asi lo unico que cambia es el area de contenido -el
+                sidebar, la cabecera y el aviso de inactividad no se desmontan- y la navegacion no
+                parpadea. Y va dentro de LimiteDeError a proposito: un chunk que no se puede
+                descargar -red caida a mitad de jornada- lanza al renderizar, y ahi lo recoge el
+                limite de error en vez de dejar la pantalla en blanco. */}
+            <Suspense fallback={<LoadingState message={labels.cargandoPantalla} />}>
+              <Outlet />
+            </Suspense>
           </LimiteDeError>
         </main>
       </div>
