@@ -17,11 +17,11 @@ import RutaProtegida from "../components/RutaProtegida";
 import IconoDeModulo from "../components/IconoDeModulo";
 import { ROUTES } from "./rutas";
 
-// IMPORTACIÓN DE PANTALLAS — ✅ Ya está bien
+// IMPORTACIÓN DE PANTALLAS —  Ya está bien
 import LoginScreen from "../screens/LoginScreen";
 import RestablecerContrasenaScreen from "../screens/RestablecerContrasenaScreen";
 import InicioScreen from "../screens/InicioScreen";
-import AccesoDenegadoScreen from "../screens/AccesoDenegadoScreen"; // ✅ Bien importado
+import AccesoDenegadoScreen from "../screens/AccesoDenegadoScreen"; //  Bien importado
 import AjustesScreen from "../screens/AjustesScreen";
 import SeleccionJornadaScreen from "../screens/SeleccionJornadaScreen";
 import JornadaEnCursoScreen from "../screens/JornadaEnCursoScreen";
@@ -389,12 +389,12 @@ function TabsNavigator() {
   );
 }
 
-// ✅ AQUÍ ESTABA EL FALTO — se agregó la pantalla
+//  AQUÍ ESTABA EL FALTO — se agregó la pantalla
 export default function AppNavigator({ haySesion }) {
   return (
     <NavigationContainer>
       <Root.Navigator screenOptions={{ headerShown: false }}>
-        {/* ✅ Ruta de Acceso Denegado — SIEMPRE disponible */}
+        {/*  Ruta de Acceso Denegado — SIEMPRE disponible */}
         <Root.Screen
           name={ROUTES.ACCESO_DENEGADO}
           component={AccesoDenegadoScreen}
