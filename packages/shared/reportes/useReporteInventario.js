@@ -24,7 +24,7 @@ import {
   obtenerValorDeInventario,
   totalizarValorizacion,
 } from "../inventario/valorizacion.api.js";
-import { ESTADOS_DE_VENCIMIENTO_REPORTE } from "./campos.js";
+import { ESTADOS_DE_VENCIMIENTO_REPORTE, VENCIMIENTO_DE_LOTE } from "./campos.js";
 import {
   CAMPOS_FICHA_LOTE_INVENTARIO,
   CAMPOS_TOTALES_INVENTARIO_REPORTE,
@@ -159,7 +159,11 @@ export function useReporteInventario({ rol } = {}) {
   // opciones del selector de bodega.
   const catalogos = useMemo(
     () => ({
+      // Dos catalogos del mismo estado, y no es una duplicacion: el filtro elige entre las
+      // cadenas "vigentes"/"vencidos" y la fila de un lote guarda un booleano. Ver
+      // VENCIMIENTO_DE_LOTE en campos.js.
       estadosDeVencimientoReporte: ESTADOS_DE_VENCIMIENTO_REPORTE,
+      vencimientoDeLote: VENCIMIENTO_DE_LOTE,
       bodegas: bodegas.map((bodega) => ({ value: bodega.id, label: bodega.nombre })),
       origenesDeLote: OPCIONES_ORIGEN_LOTE,
     }),

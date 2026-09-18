@@ -441,6 +441,7 @@
     "#7a7a8a",
     "#e2e4e9",
     "#e91e8c",
+    "#f7f8fa",
     "#ffffff"
   ],
   "apps/web/src/pages/RestablecerContrasenaPage.jsx": ["#2563eb", "#64748b"],

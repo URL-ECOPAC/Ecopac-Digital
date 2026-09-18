@@ -264,3 +264,51 @@
 .reporte-variacion > span {
   color: var(--color-text);
 }
+
+/* Constancia de donacion en pantalla (issue #840).
+ *
+ * El mismo contenido que se imprime, pero con el lenguaje visual de la aplicacion. En papel lo
+ * dibuja .doc-imprimible (index.css); aqui solo se le da forma a la version de pantalla, sin
+ * clases de utilidad de Bootstrap, para que el marcado sea uno solo. */
+
+.constancia-datos {
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radio-md);
+  margin-bottom: var(--spacing-lg);
+  padding: var(--spacing-md);
+}
+
+.constancia-datos p {
+  margin: 0 0 var(--spacing-xs);
+}
+
+.constancia-datos p:last-child {
+  margin-bottom: 0;
+}
+
+.constancia-subtitulo {
+  color: var(--color-text);
+  font-size: var(--texto-md);
+  font-weight: var(--peso-semibold);
+  margin: 0 0 var(--spacing-sm);
+}
+
+.constancia-tabla {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.constancia-tabla th,
+.constancia-tabla td {
+  border: 1px solid var(--color-border);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  text-align: left;
+}
+
+.constancia-tabla th {
+  color: var(--color-text-muted);
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-semibold);
+  text-transform: uppercase;
+}

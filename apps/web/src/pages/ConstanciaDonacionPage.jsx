@@ -1,7 +1,83 @@
-import { TIPOS_DE_DONACION, useConstanciaDonacion } from "@ecopac/shared";
-import { Container, Row, Col, Button, Table, Card, Badge, Alert } from "react-bootstrap";
+import {
+  ETIQUETAS_TIPO_DONACION,
+  TIPOS_DE_DONACION,
+  formatearFechaCorta,
+  formatearMoneda,
+  useConstanciaDonacion,
+} from "@ecopac/shared";
+import { organizacion } from "@ecopac/ui-tokens";
+import { Container, Row, Col, Button, Card, Badge, Alert } from "react-bootstrap";
 import { AccionesDeCabecera } from "../components/PageHeader";
+import DocumentoImprimible, { LineaDeFirma } from "./DocumentoImprimible";
 import { ACCION_VOLVER_A_DONACIONES } from "./donacionesNavegacion";
+import "./reportes.css";
+
+/**
+ * El contenido de la constancia: quien dono, que, y el desglose.
+ *
+ * Una sola vez, en marcado simple, para las dos salidas: la tarjeta de pantalla y el papel. Antes
+ * solo existia la version de pantalla -- con `Table` de react-bootstrap y clases de utilidad --,
+ * asi que el documento impreso no podia reutilizarla sin arrastrar el estilo de la aplicacion
+ * entera al papel.
+ *
+ * El tipo de aporte se lee del catalogo de etiquetas y no con `text-capitalize` sobre el valor
+ * crudo del enum: "Medicamentos" es una etiqueta, "medicamentos" es una clave de base de datos.
+ */
+function DatosDeLaDonacion({ donacion }) {
+  const detalles = donacion.detalles ?? [];
+  const esDinero = donacion.tipo === TIPOS_DE_DONACION.DINERO;
+
+  return (
+    <>
+      <div className="constancia-datos">
+        <p>
+          <strong>Donante:</strong> {donacion.donante_nombre}
+        </p>
+        <p>
+          <strong>Identificación / Teléfono:</strong> {donacion.donante_contacto || "No registrado"}
+        </p>
+        <p>
+          <strong>Tipo de aporte:</strong> {ETIQUETAS_TIPO_DONACION[donacion.tipo] ?? donacion.tipo}
+        </p>
+        <p>
+          <strong>Proyecto asignado:</strong> {donacion.proyectoNombre || "Fondo general"}
+        </p>
+      </div>
+
+      <h3 className="constancia-subtitulo">Detalle del aporte</h3>
+      <table className="constancia-tabla">
+        <thead>
+          <tr>
+            <th style={{ width: "40px" }}>#</th>
+            <th>Concepto / Descripción</th>
+            <th style={{ width: "170px", textAlign: "right" }}>
+              {esDinero ? "Monto" : "Cantidad"}
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {detalles.length === 0 ? (
+            <tr>
+              <td colSpan="3">Sin detalle registrado.</td>
+            </tr>
+          ) : (
+            detalles.map((item, index) => (
+              <tr key={item.id ?? index}>
+                <td>{index + 1}</td>
+                <td>{item.descripcion}</td>
+                <td style={{ textAlign: "right" }}>
+                  {esDinero
+                    ? formatearMoneda(Number(item.monto || 0))
+                    : `${item.cantidad ?? "-"} ${item.unidad || ""}`.trim()}
+                </td>
+              </tr>
+            ))
+          )}
+        </tbody>
+      </table>
+    </>
+  );
+}
 
 export default function ConstanciaDonacionPage({ usuarioRol, donacion }) {
   const { tieneAccesoLectura, esValidaParaConstancia, correlativo, manejarImpresion } =
@@ -61,23 +137,51 @@ export default function ConstanciaDonacionPage({ usuarioRol, donacion }) {
         </Button>
       </div>
 
-      {/* Documento Imprimible */}
-      <Card className="shadow-sm border border-secondary-subtle p-4 p-md-5 d-print-block">
+      {/* Lo que se imprime. Se monta en un portal fuera del shell (DocumentoImprimible.jsx): la
+          regla `.app-shell { display: none }` de @media print escondia esta pagina entera junto
+          con la navegacion, y por eso la constancia salia en blanco (issue #840). */}
+      <DocumentoImprimible
+        documento="Constancia de donación recibida"
+        folio={correlativo}
+        fecha={donacion.fecha}
+        pie={
+          <>
+            <LineaDeFirma rotulo="Firma de conformidad del donante" />
+            <LineaDeFirma rotulo={`Por ${organizacion.nombre} (Administración)`} />
+          </>
+        }
+      >
+        <DatosDeLaDonacion donacion={donacion} />
+      </DocumentoImprimible>
+
+      {/* La misma constancia en pantalla. */}
+      <Card className="shadow-sm border border-secondary-subtle p-4 p-md-5">
         <Card.Body className="p-0">
-          {/* Encabezado de la Organización */}
-          <div className="border-bottom pb-3 mb-4 d-flex justify-content-between align-items-center">
-            <div>
-              <h1 className="h4 fw-bold text-uppercase mb-1 tracking-wide">Ecopac Digital</h1>
-              <p className="small text-muted mb-0">Comité Agrícola de Desarrollo Integral</p>
-              <p className="extra-small text-muted mb-0">
-                Guatemala · Registro de Aportes y Donaciones
-              </p>
+          {/* Encabezado de la Organización. El nombre y el logo salen de @ecopac/ui-tokens: antes
+              esta cabecera declaraba a mano "Comité Agrícola de Desarrollo Integral", un nombre
+              que no venia de ninguna tabla ni catalogo. */}
+          <div className="border-bottom pb-3 mb-4 d-flex justify-content-between align-items-center gap-3">
+            <div className="d-flex align-items-center gap-3">
+              <img
+                src={organizacion.logo}
+                alt=""
+                aria-hidden="true"
+                style={{ height: "48px", width: "auto" }}
+              />
+              <div>
+                <h1 className="h4 fw-bold text-uppercase mb-1">{organizacion.nombre}</h1>
+                <p className="small text-muted mb-0">
+                  {organizacion.pais} · Registro de Aportes y Donaciones
+                </p>
+              </div>
             </div>
             <div className="text-end">
               <Badge bg="secondary" className="font-monospace fs-6 px-3 py-2">
                 {correlativo}
               </Badge>
-              <p className="small text-muted mt-2 mb-0">Fecha: {donacion.fecha}</p>
+              <p className="small text-muted mt-2 mb-0">
+                Fecha: {formatearFechaCorta(donacion.fecha)}
+              </p>
             </div>
           </div>
 
@@ -85,63 +189,7 @@ export default function ConstanciaDonacionPage({ usuarioRol, donacion }) {
             CONSTANCIA DE DONACIÓN RECIBIDA
           </h2>
 
-          {/* Datos del Donante */}
-          <Card className="bg-light border mb-4">
-            <Card.Body className="p-3 fs-6">
-              <p className="mb-1">
-                <strong>Donante:</strong> {donacion.donante_nombre}
-              </p>
-              <p className="mb-1">
-                <strong>Identificación / Teléfono:</strong> {donacion.donante_contacto || "N/A"}
-              </p>
-              <p className="mb-1">
-                <strong>Tipo de Aporte:</strong>{" "}
-                <span className="text-capitalize">{donacion.tipo}</span>
-              </p>
-              <p className="mb-0">
-                <strong>Proyecto Asignado:</strong> {donacion.proyectoNombre || "Fondo General"}
-              </p>
-            </Card.Body>
-          </Card>
-
-          {/* Detalle de lo donado */}
-          <div className="mb-5">
-            <h6 className="fw-bold mb-3">Detalle del Aporte</h6>
-            <Table bordered responsive size="sm" className="align-middle">
-              <thead className="table-light">
-                <tr>
-                  <th className="text-center" style={{ width: "50px" }}>
-                    #
-                  </th>
-                  <th>Concepto / Descripción</th>
-                  <th className="text-end" style={{ width: "180px" }}>
-                    Cantidad / Monto
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {(donacion.detalles || []).length === 0 ? (
-                  <tr>
-                    <td colSpan="3" className="text-center text-muted py-3">
-                      Sin detalles especificantes
-                    </td>
-                  </tr>
-                ) : (
-                  donacion.detalles.map((item, index) => (
-                    <tr key={item.id ?? index}>
-                      <td className="text-center">{index + 1}</td>
-                      <td>{item.descripcion}</td>
-                      <td className="text-end fw-medium">
-                        {donacion.tipo === TIPOS_DE_DONACION.DINERO
-                          ? `Q ${Number(item.monto || 0).toFixed(2)}`
-                          : `${item.cantidad ?? "-"} ${item.unidad || ""}`.trim()}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </Table>
-          </div>
+          <DatosDeLaDonacion donacion={donacion} />
 
           {/* Firmas de Respaldo */}
           <Row className="pt-5 mt-5 border-top text-center text-muted fs-7">
@@ -150,14 +198,14 @@ export default function ConstanciaDonacionPage({ usuarioRol, donacion }) {
                 className="border-bottom border-dark mx-auto mb-2"
                 style={{ width: "75%" }}
               ></div>
-              <p className="fw-semibold mb-0">Firma de Conformidad Donante</p>
+              <p className="fw-semibold mb-0">Firma de conformidad del donante</p>
             </Col>
             <Col xs={6}>
               <div
                 className="border-bottom border-dark mx-auto mb-2"
                 style={{ width: "75%" }}
               ></div>
-              <p className="fw-semibold mb-0">Por Ecopac Digital (Administración)</p>
+              <p className="fw-semibold mb-0">Por {organizacion.nombre} (Administración)</p>
             </Col>
           </Row>
         </Card.Body>

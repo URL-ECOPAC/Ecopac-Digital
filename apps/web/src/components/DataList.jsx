@@ -94,7 +94,13 @@ function Celda({ columna, fila, catalogos }) {
       // es lo que statusColors sabe indexar y lo que la persona tiene que leer.
       const catalogo = catalogos[columna.etiquetasDesde] ?? [];
       const entrada = catalogo.find((opcion) => opcion.value === valor);
-      return <StatusChip status={entrada?.clave ?? valor} label={entrada?.label} />;
+      return (
+        <StatusChip
+          status={entrada?.clave ?? valor}
+          label={entrada?.label}
+          icono={entrada?.icono}
+        />
+      );
     }
 
     case "chips": {

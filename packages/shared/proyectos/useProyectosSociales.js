@@ -16,6 +16,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { hayErrores } from "../validations/index.js";
 import { listarUsuarios } from "../usuarios/api.js";
 import {
   actualizarProyecto,
@@ -33,6 +34,31 @@ import { puedeAdministrarProyectos, puedeVerProyectos } from "./permisos.js";
 /** Mismo criterio que jornadas/useFormularioJornada.js: nombre completo para un <select>. */
 function nombreDePerfil(perfil) {
   return [perfil.nombres, perfil.apellidos].filter(Boolean).join(" ");
+}
+
+/**
+ * Decide si el formulario de un proyecto se puede guardar, y con que errores.
+ *
+ * SE EXPORTA APARTE PARA PODER PROBARLA. packages/shared corre vitest en entorno "node" y sus
+ * hooks no se montan (ver la cabecera de useRegistroDonacion.test.js), asi que una decision que
+ * vive solo dentro del cuerpo del hook es una decision sin prueba. Esta lo era, y por eso el
+ * defecto de abajo sobrevivio a lint, build y a las pruebas del modulo.
+ *
+ * QUE ESTABA MAL. El hook leia `resultado.esValido` y `resultado.errores` de validarProyecto(),
+ * que no devuelve ninguna de las dos cosas: devuelve el objeto plano `{ campo: mensaje }` que es
+ * la forma unica de los validadores del monorepo (packages/shared/validations/index.js lo
+ * documenta en su cabecera, y validations/contrato.test.js ahora lo comprueba). Las dos lecturas
+ * daban `undefined`, asi que `esValido` era siempre falsy: guardarProyecto() cortaba antes de
+ * llamar a crearProyecto() y "Crear proyecto" no creaba nada. Y como los errores tambien salian
+ * vacios, el formulario tampoco decia por que (issue #840). Leer una propiedad que no existe no
+ * lanza -- devuelve undefined --, que es justo lo que AGENTS.md pide que deje de pasar.
+ *
+ * @param {object} valores Valores del formulario, indexados por el id de CAMPOS_PROYECTO.
+ * @returns {{ ok: boolean, errores: Record<string, string> }}
+ */
+export function validacionDeProyecto(valores) {
+  const errores = validarProyecto(valores);
+  return { ok: !hayErrores(errores), errores };
 }
 
 export function useProyectosSociales({ usuarioRol } = {}) {
@@ -134,9 +160,9 @@ export function useProyectosSociales({ usuarioRol } = {}) {
   }, [proyectos, proyectoSeleccionadoId]);
 
   const manejarValidacion = (datosFormulario) => {
-    const resultado = validarProyecto(datosFormulario);
-    setErroresFormulario(resultado.errores || {});
-    return resultado.esValido;
+    const resultado = validacionDeProyecto(datosFormulario);
+    setErroresFormulario(resultado.errores);
+    return resultado;
   };
 
   /**
@@ -145,7 +171,8 @@ export function useProyectosSociales({ usuarioRol } = {}) {
    */
   const guardarProyecto = useCallback(
     async (id, datosFormulario) => {
-      if (!manejarValidacion(datosFormulario)) return { ok: false };
+      const validacion = manejarValidacion(datosFormulario);
+      if (!validacion.ok) return { ok: false, errores: validacion.errores };
 
       const resultado = id
         ? await actualizarProyecto(id, datosFormulario)
