@@ -391,8 +391,13 @@ function TabsNavigator() {
 
 //  AQUÍ ESTABA EL FALTO — se agregó la pantalla
 export default function AppNavigator({ haySesion }) {
+  const { registrarActividad } = useSesionCompartida();
+
   return (
-    <NavigationContainer>
+    // `onStateChange` es la senal de actividad: cada vez que alguien navega, la cuenta de
+    // inactividad vuelve a cero (issue #840). No se escuchan toques sueltos a proposito -- en un
+    // telefono, dejar la pantalla encendida sin navegar a ningun lado ES estar inactivo.
+    <NavigationContainer onStateChange={registrarActividad}>
       <Root.Navigator screenOptions={{ headerShown: false }}>
         {/*  Ruta de Acceso Denegado — SIEMPRE disponible */}
         <Root.Screen name={ROUTES.ACCESO_DENEGADO} component={AccesoDenegadoScreen} />

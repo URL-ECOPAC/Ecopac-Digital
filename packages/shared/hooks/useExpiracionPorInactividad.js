@@ -2,6 +2,23 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 export const MINUTOS_INACTIVIDAD_POR_DEFECTO = 30;
 
+/**
+ * Limite de inactividad de la app movil (issue #840).
+ *
+ * POR QUE NO SON LOS MISMOS 30 MINUTOS DE LA WEB. Son dos contextos distintos y la decision la
+ * tomo la organizacion:
+ *
+ * - La web se usa en una laptop de oficina o de jornada, que se deja abierta y desatendida. Ahi
+ *   media hora es el riesgo que se quiso cubrir.
+ * - El telefono se usa EN la jornada, de pie, entre paciente y paciente, y no se deja solo. Un
+ *   cierre a media captura de un paciente es peor que el hueco: obliga a volver a escribir todo
+ *   con la persona enfrente. Una hora cubre el caso real -- el telefono que se queda guardado en
+ *   una mochila o se pierde -- sin interrumpir el trabajo.
+ *
+ * Hasta esta issue movil no cerraba la sesion NUNCA, que era el verdadero problema.
+ */
+export const MINUTOS_INACTIVIDAD_MOVIL = 60;
+
 /** Cuanto antes del cierre se avisa, con una cuenta regresiva y la opcion de seguir conectado. */
 export const SEGUNDOS_DE_AVISO_POR_DEFECTO = 60;
 

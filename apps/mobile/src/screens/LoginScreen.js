@@ -5,6 +5,7 @@ import { useInicioSesion } from "@ecopac/shared";
 
 import LOGO from "../../assets/icon.png";
 import { Card, PrimaryButton, ScreenContainer, TextField } from "../components";
+import { useSesionCompartida } from "../contexto/SesionProvider";
 import { ROUTES } from "../navigation/rutas";
 
 export default function LoginScreen({ navigation }) {
@@ -19,6 +20,7 @@ export default function LoginScreen({ navigation }) {
     handleSubmit,
   } = useInicioSesion();
 
+  const { cerradaPorInactividad } = useSesionCompartida();
   const campoContrasena = useRef(null);
   const [verContrasena, setVerContrasena] = useState(false);
 
@@ -30,6 +32,18 @@ export default function LoginScreen({ navigation }) {
           <Text style={styles.titulo}>Ecopac Digital</Text>
           <Text style={styles.subtitulo}>Inicia sesión para continuar</Text>
         </View>
+
+        {/* Por que el cierre fue automatico. Sin esto, la sesion se cerraba sola y la pantalla
+            de inicio aparecia sin explicar nada, que es el defecto que la web ya habia corregido
+            (issue #840). Cede el lugar a un error de credenciales: ese es mas urgente. */}
+        {cerradaPorInactividad && !error ? (
+          <View style={styles.avisoInactividad}>
+            <Text style={styles.avisoInactividadTexto}>
+              Cerramos tu sesión porque la app estuvo una hora sin usarse. Volvé a entrar para
+              continuar.
+            </Text>
+          </View>
+        ) : null}
 
         {error ? (
           <View style={styles.errorGeneral}>
@@ -121,6 +135,22 @@ const styles = StyleSheet.create({
     fontFamily: typography.fontFamilyBase,
     fontSize: typography.sizes.md,
     color: colors.textMuted,
+  },
+  // En informativo y no en rojo: la sesion se cerro como estaba previsto, no fallo nada.
+  avisoInactividad: {
+    marginBottom: spacing.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: colors.info,
+    backgroundColor: colors.surface,
+  },
+  avisoInactividadTexto: {
+    fontFamily: typography.fontFamilyBase,
+    fontSize: typography.sizes.sm,
+    color: colors.info,
+    textAlign: "center",
   },
   errorGeneral: {
     marginBottom: spacing.md,

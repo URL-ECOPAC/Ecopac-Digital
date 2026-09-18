@@ -110,6 +110,7 @@ poner solos el "+" y el basurero; ninguna pantalla los escribe a mano.
 | `useSesion`                      | Sesion y perfil actual                                            |
 | `useBusquedaPacientes`           | Busqueda con retardo y paginacion, compartida entre pantallas     |
 | `useExpiracionPorInactividad`    | Cierra la sesion tras `MINUTOS_INACTIVIDAD_POR_DEFECTO`, avisando `SEGUNDOS_DE_AVISO_POR_DEFECTO` antes; con `almacenamiento`, sobrevive a recargar y se comparte entre pestanas. Devuelve `registrarActividad`, `seguirConectado`, `avisoVisible`, `segundosRestantes` |
+| `MINUTOS_INACTIVIDAD_MOVIL`      | 60 minutos para la app movil, frente a los 30 de la web; la razon esta documentada junto a la constante (issue #840). Movil no usa el hook: lo hace `apps/mobile/src/contexto/useInactividadMovil.js` con `AppState`, porque en un telefono los temporizadores no corren en segundo plano |
 | `haVencidoPorInactividad`, `segundosHastaElCierre`, `actividadMasReciente` | La logica pura del temporizador, probada sin reloj real |
 | `olvidarUltimaActividad`, `CLAVE_ULTIMA_ACTIVIDAD` | Borran / nombran la marca guardada; la pantalla de inicio de sesion la borra |
 | `esRespuestaVigente`, `debeDescartarseLaRespuesta`, `combinarResultados`, `hayMasResultados` | Descartan respuestas de una busqueda ya superada |
