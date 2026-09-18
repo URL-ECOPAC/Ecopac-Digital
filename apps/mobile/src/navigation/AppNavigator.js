@@ -104,7 +104,7 @@ function conGuardaDeRol(Componente, moduloId) {
   if (rolesPermitidos.length === 0) {
     throw new Error(
       `conGuardaDeRol: el modulo "${moduloId}" no existe en MODULOS. ` +
-        `Los ids validos son: ${MODULOS.map((m) => m.id).join(", ")}.`
+        `Los ids validos son: ${MODULOS.map((m) => m.id).join(", ")}.`,
     );
   }
   return marcarComoGuarda(Componente, rolesPermitidos, `conGuardaDeRol(${moduloId})`);
@@ -112,9 +112,7 @@ function conGuardaDeRol(Componente, moduloId) {
 
 function conGuardaDeRoles(Componente, rolesPermitidos) {
   if (!Array.isArray(rolesPermitidos) || rolesPermitidos.length === 0) {
-    throw new Error(
-      "conGuardaDeRoles: la lista de roles no puede ir vacia."
-    );
+    throw new Error("conGuardaDeRoles: la lista de roles no puede ir vacia.");
   }
   return marcarComoGuarda(Componente, rolesPermitidos, `conGuardaDeRoles(${Componente.name})`);
 }
@@ -141,30 +139,86 @@ const ROLES_QUE_REGISTRAN_MOVIMIENTOS = TODOS_LOS_ROLES.filter(puedeRegistrarMov
 
 const PANTALLAS_INICIO = [
   { name: ROUTES.INICIO, componente: conGuardaDeRol(InicioScreen, "inicio"), titulo: "Inicio" },
-  { name: ROUTES.DONACIONES, componente: conGuardaDeRol(DonacionesScreen, "donaciones"), titulo: "Donaciones" },
-  { name: ROUTES.PROYECTOS, componente: conGuardaDeRol(ProyectosScreen, "proyectos"), titulo: "Proyectos" },
+  {
+    name: ROUTES.DONACIONES,
+    componente: conGuardaDeRol(DonacionesScreen, "donaciones"),
+    titulo: "Donaciones",
+  },
+  {
+    name: ROUTES.PROYECTOS,
+    componente: conGuardaDeRol(ProyectosScreen, "proyectos"),
+    titulo: "Proyectos",
+  },
   //  PRESUPUESTOS RETIRADO — soloWeb: true
-  { name: ROUTES.COLABORADORES, componente: conGuardaDeRol(ColaboradoresScreen, "colaboradores"), titulo: "Colaboradores" },
-  { name: ROUTES.FICHA_COLABORADOR, componente: conGuardaDeRol(FichaColaboradorScreen, "colaboradores"), titulo: "Ficha del personal" },
-  { name: ROUTES.COMUNIDADES, componente: conGuardaDeRoles(ComunidadesScreen, [ROLES.ADMINISTRADOR]), titulo: "Comunidades" },
+  {
+    name: ROUTES.COLABORADORES,
+    componente: conGuardaDeRol(ColaboradoresScreen, "colaboradores"),
+    titulo: "Colaboradores",
+  },
+  {
+    name: ROUTES.FICHA_COLABORADOR,
+    componente: conGuardaDeRol(FichaColaboradorScreen, "colaboradores"),
+    titulo: "Ficha del personal",
+  },
+  {
+    name: ROUTES.COMUNIDADES,
+    componente: conGuardaDeRoles(ComunidadesScreen, [ROLES.ADMINISTRADOR]),
+    titulo: "Comunidades",
+  },
 ];
 
 const PANTALLAS_PACIENTES = [
-  { name: ROUTES.BUSQUEDA_PACIENTE, componente: conGuardaDeRol(BusquedaPacienteScreen, "pacientes"), titulo: "Pacientes" },
-  { name: ROUTES.FICHA_PACIENTE, componente: conGuardaDeRol(FichaPacienteScreen, "pacientes"), titulo: "Ficha del paciente" },
-  { name: ROUTES.REGISTRO_PACIENTE, componente: conGuardaDeRol(RegistroPacienteScreen, "pacientes"), titulo: "Registro de paciente" },
-  { name: ROUTES.HISTORIAL_PACIENTE, componente: conGuardaDeRol(HistorialPacienteScreen, "pacientes"), titulo: "Historial" },
+  {
+    name: ROUTES.BUSQUEDA_PACIENTE,
+    componente: conGuardaDeRol(BusquedaPacienteScreen, "pacientes"),
+    titulo: "Pacientes",
+  },
+  {
+    name: ROUTES.FICHA_PACIENTE,
+    componente: conGuardaDeRol(FichaPacienteScreen, "pacientes"),
+    titulo: "Ficha del paciente",
+  },
+  {
+    name: ROUTES.REGISTRO_PACIENTE,
+    componente: conGuardaDeRol(RegistroPacienteScreen, "pacientes"),
+    titulo: "Registro de paciente",
+  },
+  {
+    name: ROUTES.HISTORIAL_PACIENTE,
+    componente: conGuardaDeRol(HistorialPacienteScreen, "pacientes"),
+    titulo: "Historial",
+  },
   { name: ROUTES.TRIAJE, componente: conGuardaDeRol(TriajeScreen, "pacientes"), titulo: "Triaje" },
-  { name: ROUTES.CONSULTA, componente: conGuardaDeRol(ConsultaScreen, "pacientes"), titulo: "Consulta" },
+  {
+    name: ROUTES.CONSULTA,
+    componente: conGuardaDeRol(ConsultaScreen, "pacientes"),
+    titulo: "Consulta",
+  },
   { name: ROUTES.RECETA, componente: conGuardaDeRol(RecetaScreen, "pacientes"), titulo: "Receta" },
 ];
 
 const PANTALLAS_JORNADAS = [
-  { name: ROUTES.SELECCION_JORNADA, componente: conGuardaDeRol(SeleccionJornadaScreen, "jornadas"), titulo: "Jornadas" },
-  { name: ROUTES.JORNADA_EN_CURSO, componente: conGuardaDeRol(JornadaEnCursoScreen, "jornadas"), titulo: "Jornada en curso" },
-  { name: ROUTES.JORNADAS_ASIGNADAS, componente: conGuardaDeRol(JornadasAsignadasScreen, "jornadas"), titulo: "Mis jornadas" },
+  {
+    name: ROUTES.SELECCION_JORNADA,
+    componente: conGuardaDeRol(SeleccionJornadaScreen, "jornadas"),
+    titulo: "Jornadas",
+  },
+  {
+    name: ROUTES.JORNADA_EN_CURSO,
+    componente: conGuardaDeRol(JornadaEnCursoScreen, "jornadas"),
+    titulo: "Jornada en curso",
+  },
+  {
+    name: ROUTES.JORNADAS_ASIGNADAS,
+    componente: conGuardaDeRol(JornadasAsignadasScreen, "jornadas"),
+    titulo: "Mis jornadas",
+  },
   //  KANBAN AGREGADO
-  { name: ROUTES.KANBAN_JORNADAS, componente: conGuardaDeRol(KanbanJornadasScreen, "jornadas"), titulo: "Tablero de Jornadas" },
+  {
+    name: ROUTES.KANBAN_JORNADAS,
+    componente: conGuardaDeRol(KanbanJornadasScreen, "jornadas"),
+    titulo: "Tablero de Jornadas",
+  },
 ];
 
 const opcionesDeStock =
@@ -185,12 +239,37 @@ const opcionesDeStock =
   });
 
 const PANTALLAS_INVENTARIO = [
-  { name: ROUTES.STOCK, componente: conGuardaDeRol(StockScreen, "inventario"), titulo: "Inventario", opciones: opcionesDeStock },
-  { name: ROUTES.REGISTRO_INGRESO, componente: conGuardaDeRoles(RegistroIngresoScreen, ROLES_QUE_REGISTRAN_MOVIMIENTOS), titulo: "Registrar ingreso" },
-  { name: ROUTES.EXISTENCIAS_INVENTARIO, componente: conGuardaDeRol(ExistenciasInventarioScreen, "inventario"), titulo: "Existencias" },
-  { name: ROUTES.RESUMEN_ALERTAS_INVENTARIO, componente: conGuardaDeRol(InventarioResumenAlertasScreen, "inventario"), titulo: "Resumen y alertas" },
-  { name: ROUTES.MIS_MOVIMIENTOS, componente: conGuardaDeRoles(MisMovimientosScreen, ROLES_QUE_REGISTRAN_MOVIMIENTOS), titulo: "Mis movimientos" },
-  { name: ROUTES.DETALLE_LOTE, componente: conGuardaDeRol(DetalleLoteScreen, "inventario"), titulo: "Detalle del lote" },
+  {
+    name: ROUTES.STOCK,
+    componente: conGuardaDeRol(StockScreen, "inventario"),
+    titulo: "Inventario",
+    opciones: opcionesDeStock,
+  },
+  {
+    name: ROUTES.REGISTRO_INGRESO,
+    componente: conGuardaDeRoles(RegistroIngresoScreen, ROLES_QUE_REGISTRAN_MOVIMIENTOS),
+    titulo: "Registrar ingreso",
+  },
+  {
+    name: ROUTES.EXISTENCIAS_INVENTARIO,
+    componente: conGuardaDeRol(ExistenciasInventarioScreen, "inventario"),
+    titulo: "Existencias",
+  },
+  {
+    name: ROUTES.RESUMEN_ALERTAS_INVENTARIO,
+    componente: conGuardaDeRol(InventarioResumenAlertasScreen, "inventario"),
+    titulo: "Resumen y alertas",
+  },
+  {
+    name: ROUTES.MIS_MOVIMIENTOS,
+    componente: conGuardaDeRoles(MisMovimientosScreen, ROLES_QUE_REGISTRAN_MOVIMIENTOS),
+    titulo: "Mis movimientos",
+  },
+  {
+    name: ROUTES.DETALLE_LOTE,
+    componente: conGuardaDeRol(DetalleLoteScreen, "inventario"),
+    titulo: "Detalle del lote",
+  },
 ];
 
 function pantallasDe(Stack, pantallas, contexto = {}) {
@@ -205,15 +284,25 @@ function pantallasDe(Stack, pantallas, contexto = {}) {
 }
 
 function InicioNavigator() {
-  return <InicioStack.Navigator>{pantallasDe(InicioStack, PANTALLAS_INICIO)}</InicioStack.Navigator>;
+  return (
+    <InicioStack.Navigator>{pantallasDe(InicioStack, PANTALLAS_INICIO)}</InicioStack.Navigator>
+  );
 }
 
 function PacientesNavigator() {
-  return <PacientesStack.Navigator>{pantallasDe(PacientesStack, PANTALLAS_PACIENTES)}</PacientesStack.Navigator>;
+  return (
+    <PacientesStack.Navigator>
+      {pantallasDe(PacientesStack, PANTALLAS_PACIENTES)}
+    </PacientesStack.Navigator>
+  );
 }
 
 function JornadasNavigator() {
-  return <JornadasStack.Navigator>{pantallasDe(JornadasStack, PANTALLAS_JORNADAS)}</JornadasStack.Navigator>;
+  return (
+    <JornadasStack.Navigator>
+      {pantallasDe(JornadasStack, PANTALLAS_JORNADAS)}
+    </JornadasStack.Navigator>
+  );
 }
 
 function InventarioNavigator() {
@@ -228,10 +317,30 @@ function InventarioNavigator() {
 }
 
 const CONFIGURACION_TABS = {
-  Inicio: { routeName: ROUTES.TAB_INICIO, component: InicioNavigator, label: "Inicio", icono: "Home" },
-  Pacientes: { routeName: ROUTES.TAB_PACIENTES, component: PacientesNavigator, label: "Pacientes", icono: "Users" },
-  Jornadas: { routeName: ROUTES.TAB_JORNADAS, component: JornadasNavigator, label: "Jornadas", icono: "Calendar" },
-  Inventario: { routeName: ROUTES.TAB_INVENTARIO, component: InventarioNavigator, label: "Inventario", icono: "Package" },
+  Inicio: {
+    routeName: ROUTES.TAB_INICIO,
+    component: InicioNavigator,
+    label: "Inicio",
+    icono: "Home",
+  },
+  Pacientes: {
+    routeName: ROUTES.TAB_PACIENTES,
+    component: PacientesNavigator,
+    label: "Pacientes",
+    icono: "Users",
+  },
+  Jornadas: {
+    routeName: ROUTES.TAB_JORNADAS,
+    component: JornadasNavigator,
+    label: "Jornadas",
+    icono: "Calendar",
+  },
+  Inventario: {
+    routeName: ROUTES.TAB_INVENTARIO,
+    component: InventarioNavigator,
+    label: "Inventario",
+    icono: "Package",
+  },
 };
 
 const TAB_AJUSTES_CONFIG = {
@@ -245,10 +354,12 @@ function TabsNavigator() {
   const { perfil } = useSesionCompartida();
   const modulosPermitidos = tabsMoviles(perfil?.rol) || [];
   const tabsList = modulosPermitidos.map((m) => CONFIGURACION_TABS[m.tabMovil]).filter(Boolean);
-  
-  if (!tabsList.some((tab) => tab?.routeName === ROUTES.TAB_INICIO)) tabsList.unshift(CONFIGURACION_TABS.Inicio);
-  if (!tabsList.some((tab) => tab?.routeName === ROUTES.TAB_AJUSTES)) tabsList.push(TAB_AJUSTES_CONFIG);
-  
+
+  if (!tabsList.some((tab) => tab?.routeName === ROUTES.TAB_INICIO))
+    tabsList.unshift(CONFIGURACION_TABS.Inicio);
+  if (!tabsList.some((tab) => tab?.routeName === ROUTES.TAB_AJUSTES))
+    tabsList.push(TAB_AJUSTES_CONFIG);
+
   const tabsAAgregar = Array.from(new Map(tabsList.map((item) => [item.routeName, item])).values());
 
   return (
@@ -256,14 +367,17 @@ function TabsNavigator() {
       initialRouteName={ROUTES.TAB_INICIO}
       screenOptions={({ route }) => {
         const configTab =
-          Object.values(CONFIGURACION_TABS).find((c) => c.routeName === route.name) || TAB_AJUSTES_CONFIG;
+          Object.values(CONFIGURACION_TABS).find((c) => c.routeName === route.name) ||
+          TAB_AJUSTES_CONFIG;
         return {
           headerShown: false,
           tabBarActiveTintColor: colors?.primary || colors.primary,
           tabBarInactiveTintColor: colors?.textMuted || colors.textMuted,
           tabBarStyle: { backgroundColor: colors?.surface || colors.surface },
           tabBarLabelStyle: { fontSize: 10 },
-          tabBarIcon: ({ color, size }) => <IconoDeModulo nombre={configTab.icono} color={color} size={size} />,
+          tabBarIcon: ({ color, size }) => (
+            <IconoDeModulo nombre={configTab.icono} color={color} size={size} />
+          ),
         };
       }}
     >

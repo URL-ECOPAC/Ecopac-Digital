@@ -18,9 +18,7 @@ export default function KanbanJornadasScreen() {
   return (
     <ScrollView
       style={estilos.contenedor}
-      refreshControl={
-        <RefreshControl refreshing={cargando} onRefresh={recargar} />
-      }
+      refreshControl={<RefreshControl refreshing={cargando} onRefresh={recargar} />}
     >
       <View style={estilos.cabecera}>
         <Text style={estilos.titulo}>Tablero de Jornadas</Text>
