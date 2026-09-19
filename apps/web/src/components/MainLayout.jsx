@@ -15,6 +15,7 @@ import { useSesionCompartida } from "../contexto/SesionProvider";
 import { useEnLinea } from "../hooks/useEnLinea";
 import AvisoDeInactividad from "./AvisoDeInactividad";
 import AvisoSinConexion from "./AvisoSinConexion";
+import CampanaNotificaciones from "./CampanaNotificaciones";
 import IconoModulo from "./IconoModulo";
 import LimiteDeError from "./LimiteDeError";
 import LoadingState from "./LoadingState";
@@ -34,6 +35,13 @@ const SUBTITULOS = {
   colaboradores: "Personal registrado",
 };
 
+// Pantallas de cada perfil que no son un modulo de navegacion.js, con su propio titulo en la
+// cabecera en vez del generico (issue #755).
+const PANTALLAS_DEL_PERFIL = {
+  "/perfil": { nombre: "Mi perfil", subtitulo: "Tus datos y tu contraseña" },
+  "/notificaciones": { nombre: "Notificaciones", subtitulo: "Lo que espera tu atención" },
+};
+
 function moduloDeRuta(pathname) {
   return [...MODULOS]
     .sort((a, b) => b.ruta.length - a.ruta.length)
@@ -50,6 +58,7 @@ export default function MainLayout() {
 
   const secciones = seccionesVisibles(perfil.rol);
   const actual = moduloDeRuta(location.pathname);
+  const delPerfil = PANTALLAS_DEL_PERFIL[location.pathname];
 
   const iniciales = `${perfil.nombres[0] ?? ""}${perfil.apellidos[0] ?? ""}`.toUpperCase();
 
@@ -160,12 +169,18 @@ export default function MainLayout() {
       <div className="app-main">
         <header className="app-header">
           <div>
-            <h1 className="app-header__title">{actual?.nombre ?? "Ecopac Digital"}</h1>
+            <h1 className="app-header__title">
+              {actual?.nombre ?? delPerfil?.nombre ?? "Ecopac Digital"}
+            </h1>
             <p className="app-header__subtitle">
-              {actual ? SUBTITULOS[actual.id] : "Ecopac Guatemala"} · {fecha}
+              {actual ? SUBTITULOS[actual.id] : (delPerfil?.subtitulo ?? "Ecopac Guatemala")} ·{" "}
+              {fecha}
             </p>
           </div>
           <div className="app-header__actions">
+            {/* Notificaciones (issue #755): la campana abre una ventana emergente con las
+                recientes sin salir de esta pantalla; sin ninguna sin leer, queda sin numero. */}
+            <CampanaNotificaciones perfilId={perfil.id} />
             {/* Decia "Sistema activo" siempre, con o sin red (issue #762). */}
             <span
               className={`app-status${enLinea ? "" : " app-status--sin-conexion"}`}

@@ -35,6 +35,10 @@ const mockEstadoHook = {
   porVencer: [],
   vencidas: [],
   cantidadPendientes: 0,
+  atendidas: [],
+  errorAtendidas: null,
+  bodegas: [{ id: "b-1", nombre: "Bodega Central" }],
+  errorBodegas: null,
   cargando: false,
   error: null,
   recargar: vi.fn(),
@@ -59,6 +63,8 @@ describe("PanelAlertasVencimiento", () => {
     mockEstadoHook.porVencer = [];
     mockEstadoHook.vencidas = [];
     mockEstadoHook.cantidadPendientes = 0;
+    mockEstadoHook.atendidas = [];
+    mockEstadoHook.errorAtendidas = null;
     mockEstadoHook.cargando = false;
     mockEstadoHook.error = null;
     mockEstadoHook.marcarComoAtendida = vi.fn(async () => {});
@@ -137,7 +143,7 @@ describe("PanelAlertasVencimiento", () => {
     });
     fireEvent.click(screen.getByText("Confirmar"));
 
-    expect(mockEstadoHook.marcarComoAtendida).toHaveBeenCalledWith("a-1", "descartado");
+    expect(mockEstadoHook.marcarComoAtendida).toHaveBeenCalledWith("a-1", "descartado", undefined);
     // El hook decide si la alerta desaparece de porVencer; esta pantalla solo cierra su modal.
     await waitFor(() =>
       expect(screen.queryByText("Registrar Acción Tomada")).not.toBeInTheDocument(),
@@ -159,5 +165,72 @@ describe("PanelAlertasVencimiento", () => {
 
     expect(await screen.findByText("No se pudo registrar la accion.")).toBeInTheDocument();
     expect(screen.getByText("Registrar Acción Tomada")).toBeInTheDocument();
+  });
+
+  // Issue #755: lo atendido queda a la vista, con la accion, quien y cuando.
+  it("muestra las alertas atendidas con la accion tomada y quien la atendio", () => {
+    mockEstadoHook.atendidas = [
+      {
+        id: "a-3",
+        medicamento: "Ibuprofeno",
+        numeroLote: "LOTE-3",
+        accion: "donado",
+        atendidaPorNombre: "Ana Prueba",
+        atendidaEn: "2026-09-10T15:00:00Z",
+      },
+    ];
+    pantalla();
+
+    expect(screen.getByText("Atendidas recientemente (1)")).toBeInTheDocument();
+    expect(screen.getByText("Donado")).toBeInTheDocument();
+    expect(screen.getByText("Ana Prueba")).toBeInTheDocument();
+  });
+
+  it("si el historial falla lo dice en su bloque, sin tapar las pendientes", () => {
+    mockEstadoHook.porVencer = [ALERTA_POR_VENCER];
+    mockEstadoHook.errorAtendidas = { mensaje: "No se pudo cargar el historial." };
+    pantalla();
+
+    expect(screen.getByText("No se pudo cargar el historial.")).toBeInTheDocument();
+    expect(screen.getByText("Loratadina")).toBeInTheDocument();
+  });
+
+  // Issue #755: atender mueve o da de baja el stock, y se dice antes de confirmar.
+  it("al elegir descartado, avisa que se dan de baja las unidades del lote", () => {
+    mockEstadoHook.porVencer = [ALERTA_POR_VENCER];
+    pantalla();
+
+    fireEvent.click(screen.getByText("Atender"));
+    fireEvent.change(screen.getAllByRole("combobox").at(-1), { target: { value: "descartado" } });
+
+    expect(screen.getByText(/Se dan de baja las 40 unidades del lote/)).toBeInTheDocument();
+  });
+
+  it("reubicar exige elegir la bodega destino y la manda al hook", async () => {
+    mockEstadoHook.porVencer = [ALERTA_POR_VENCER];
+    pantalla();
+
+    fireEvent.click(screen.getByText("Atender"));
+    fireEvent.change(screen.getAllByRole("combobox").at(-1), { target: { value: "reubicado" } });
+
+    expect(screen.getByText("Confirmar")).toBeDisabled();
+
+    fireEvent.change(screen.getAllByRole("combobox").at(-1), { target: { value: "b-1" } });
+    fireEvent.click(screen.getByText("Confirmar"));
+
+    expect(mockEstadoHook.marcarComoAtendida).toHaveBeenCalledWith("a-1", "reubicado", "b-1");
+  });
+
+  it("un lote vencido no ofrece reubicar", () => {
+    mockEstadoHook.vencidas = [ALERTA_VENCIDA];
+    pantalla();
+
+    fireEvent.click(screen.getByText("Registrar baja"));
+
+    const opciones = [...screen.getAllByRole("combobox").at(-1).querySelectorAll("option")].map(
+      (o) => o.value,
+    );
+    expect(opciones).not.toContain("reubicado");
+    expect(opciones).toContain("descartado");
   });
 });
