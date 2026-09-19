@@ -147,16 +147,41 @@ export async function manejarSolicitud(
     const rol = String(body.rol).trim();
     const telefono = body.telefono ? String(body.telefono).trim() : null;
 
+    // supabaseAdmin se adelanta aqui (antes se creaba justo antes del paso 3) porque el paso
+    // 2.5 de abajo tambien lo necesita, con la llave de servicio: no hay JWT de quien invita
+    // disponible dentro de Postgres por este camino.
+    const supabaseAdmin = crearCliente(supabaseUrl, serviceRoleKey, {
+      auth: { persistSession: false },
+    });
+
+    // ========================================================================
+    // 2.5. Limite de invitaciones (issue #761): antes de tocar auth.users, para no dejar a
+    //      medias un alta que ya empezo a escribir filas si el limite se paso. Va despues de
+    //      validar el body -una peticion mal formada no consume la cuota de un administrador
+    //      honesto-, pero cualquier intento bien formado cuenta, incluido uno que despues falle
+    //      por correo duplicado.
+    // ========================================================================
+    const { error: errorDeLimite } = await supabaseAdmin.rpc(
+      "fn_verificar_limite_invitaciones",
+      { p_administrador_id: user.id },
+    );
+
+    if (errorDeLimite) {
+      const status = errorDeLimite.code === "53400" ? 429 : 400;
+      return respuestaDeError(
+        req,
+        status,
+        errorDeLimite.code || "desconocido",
+        errorDeLimite.message || "No se pudo verificar el limite de invitaciones.",
+      );
+    }
+
     // ========================================================================
     // 3. El alta de verdad: fn_crear_usuario_administrativo() con la llave de servicio, la
     //    unica que puede llamarla (REVOKE ALL FROM PUBLIC en la 00074). Postgres valida `rol`
     //    contra el enum rol_usuario solo: un valor invalido cae en el catch de abajo con
     //    invalid_text_representation (22P02), sin duplicar aqui la lista de roles.
     // ========================================================================
-    const supabaseAdmin = crearCliente(supabaseUrl, serviceRoleKey, {
-      auth: { persistSession: false },
-    });
-
     const { data: idNuevoUsuario, error: errorDeAlta } = await supabaseAdmin
       .rpc(
         "fn_crear_usuario_administrativo",

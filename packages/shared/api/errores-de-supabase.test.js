@@ -27,3 +27,16 @@ describe("esErrorDeRed", () => {
     expect(esErrorDeRed(null)).toBe(false);
   });
 });
+
+describe("normalizarError", () => {
+  it("clasifica el SQLSTATE 53400 (limite de peticiones, issue #761) y no lo marca reintentable", () => {
+    const error = {
+      code: "53400",
+      message: "Se alcanzo el limite de 20 peticiones cada 01:00:00.",
+    };
+    const resultado = normalizarError(error);
+
+    expect(resultado.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.LIMITE_EXCEDIDO);
+    expect(resultado.esReintentable).toBe(false);
+  });
+});

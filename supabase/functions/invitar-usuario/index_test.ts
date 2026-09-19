@@ -1,5 +1,6 @@
-// Pruebas de invitar-usuario (issue #691): un administrador desactivado, con un JWT todavia
-// vigente, no puede seguir invitando personal nuevo.
+// Pruebas de invitar-usuario: un administrador desactivado, con un JWT todavia vigente, no
+// puede seguir invitando personal nuevo (issue #691); y el limite de invitaciones por hora se
+// consulta antes de crear la cuenta, sin dejarla a medias si se supera (issue #761).
 //
 // Corre con: deno test --config supabase/functions/deno.json --allow-env supabase/functions
 //
@@ -46,9 +47,19 @@ function solicitud() {
  * `crearCliente(...)` (clienteDeQuienLlama, supabaseAdmin, supabaseAnon). Ninguna prueba
  * necesita distinguir cual de los tres se esta construyendo, asi que la misma fabrica sirve
  * para las tres llamadas.
+ *
+ * `opciones.errorDeLimite` (issue #761) simula que `fn_verificar_limite_invitaciones` fallo -el
+ * unico llamado real de `.rpc()` que necesita poder fallar aparte de
+ * `fn_crear_usuario_administrativo`-. `llamadasRpc`, expuesto en la fabrica devuelta, deja
+ * comprobar que `fn_crear_usuario_administrativo` no se invoco cuando el limite rechaza antes.
  */
-function clienteFalso(perfilDeQuienLlama: { rol: string; activo: boolean } | null) {
-  return function crearClienteFalso() {
+function clienteFalso(
+  perfilDeQuienLlama: { rol: string; activo: boolean } | null,
+  opciones: { errorDeLimite?: { code: string; message: string } } = {},
+) {
+  const llamadasRpc: string[] = [];
+
+  function crearClienteFalso() {
     return {
       auth: {
         getUser: () =>
@@ -68,11 +79,20 @@ function clienteFalso(perfilDeQuienLlama: { rol: string; activo: boolean } | nul
           eq: () => Promise.resolve({ error: null }),
         }),
       }),
-      rpc: () =>
-        Promise.resolve({ data: "10000000-0000-0000-0000-000000000002", error: null }),
+      rpc: (nombre: string) => {
+        llamadasRpc.push(nombre);
+        if (nombre === "fn_verificar_limite_invitaciones" && opciones.errorDeLimite) {
+          return Promise.resolve({ data: null, error: opciones.errorDeLimite });
+        }
+        return Promise.resolve({ data: "10000000-0000-0000-0000-000000000002", error: null });
+      },
       // deno-lint-ignore no-explicit-any
     } as any;
-  };
+  }
+
+  // deno-lint-ignore no-explicit-any
+  (crearClienteFalso as any).llamadasRpc = llamadasRpc;
+  return crearClienteFalso;
 }
 
 Deno.test(
@@ -104,4 +124,41 @@ Deno.test("un administrador activo si puede invitar", async () => {
   assertEquals(res.status, 200);
   const cuerpo = await res.json();
   assertEquals(cuerpo.correoEnviado, true);
+});
+
+Deno.test(
+  "el limite de invitaciones se consulta antes de crear la cuenta (issue #761)",
+  async () => {
+    const fabrica = clienteFalso(
+      { rol: "administrador", activo: true },
+      {
+        errorDeLimite: {
+          code: "53400",
+          message: "Se alcanzo el limite de 20 peticiones cada 01:00:00.",
+        },
+      },
+    );
+
+    const res = await manejarSolicitud(solicitud(), { crearCliente: fabrica });
+
+    assertEquals(res.status, 429);
+    const cuerpo = await res.json();
+    assertEquals(cuerpo.code, "53400");
+
+    // deno-lint-ignore no-explicit-any
+    const llamadas = (fabrica as any).llamadasRpc as string[];
+    assertEquals(llamadas.includes("fn_crear_usuario_administrativo"), false);
+  },
+);
+
+Deno.test("una peticion normal sigue funcionando cuando el limite no se supero", async () => {
+  const fabrica = clienteFalso({ rol: "administrador", activo: true });
+
+  const res = await manejarSolicitud(solicitud(), { crearCliente: fabrica });
+
+  assertEquals(res.status, 200);
+  // deno-lint-ignore no-explicit-any
+  const llamadas = (fabrica as any).llamadasRpc as string[];
+  assertEquals(llamadas.includes("fn_verificar_limite_invitaciones"), true);
+  assertEquals(llamadas.includes("fn_crear_usuario_administrativo"), true);
 });
