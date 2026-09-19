@@ -794,6 +794,23 @@
  * @property {object|null} valoresNuevos
  */
 
+// --- Limitacion de peticiones -----------------------------------------------------------------
+
+/**
+ * Fila de `limites_de_uso` (00134_limitar_invitaciones_y_busqueda_de_pacientes.sql).
+ *
+ * Contador de rate limiting por recurso y actor, con clave primaria compuesta
+ * (recurso, actor_id): sin `id` propio. No la lee ningun archivo de `apps/` ni de `packages/
+ * shared` -solo la tocan las funciones SECURITY DEFINER de la migracion, nunca PostgREST-, pero
+ * igual necesita su typedef para que esta guarda no la deje fuera del inventario.
+ *
+ * @typedef {object} LimiteDeUso
+ * @property {string} recurso
+ * @property {string} actorId
+ * @property {number} contador
+ * @property {string} ventanaInicio
+ */
+
 // Este archivo no exporta valores -son todos comentarios-, pero tiene que ser un modulo de todos
 // modos: TypeScript solo considera exportados los `@typedef` de un archivo que ya sea modulo, y
 // un .js sin un solo import ni export es un script global. Sin esta linea, `export * from
