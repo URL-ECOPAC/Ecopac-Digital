@@ -14,7 +14,7 @@ function idsDe(modulos) {
 }
 
 describe("modulosVisibles", () => {
-  it("administrador ve los nueve modulos", () => {
+  it("administrador ve los diez modulos", () => {
     expect(idsDe(modulosVisibles(ROLES.ADMINISTRADOR))).toEqual([
       "inicio",
       "pacientes",
@@ -25,6 +25,7 @@ describe("modulosVisibles", () => {
       "reportes",
       "jornadas",
       "colaboradores",
+      "bitacora-auditoria",
     ]);
   });
 
@@ -40,6 +41,7 @@ describe("modulosVisibles", () => {
       expect(ids).not.toContain("proyectos");
       expect(ids).not.toContain("reportes");
       expect(ids).not.toContain("colaboradores");
+      expect(ids).not.toContain("bitacora-auditoria");
     }
   });
 
@@ -59,6 +61,7 @@ describe("modulosVisibles", () => {
       expect(ids).toContain("presupuestos");
       expect(ids).toContain("proyectos");
       expect(ids).toContain("reportes");
+      expect(ids).not.toContain("bitacora-auditoria");
     }
   });
 
@@ -70,6 +73,21 @@ describe("modulosVisibles", () => {
     expect(idsDe(modulosVisibles(ROLES.ADMINISTRADOR))).toContain("colaboradores");
     expect(idsDe(modulosVisibles(ROLES.JUNTA_DIRECTIVA))).toContain("colaboradores");
     expect(idsDe(modulosVisibles(ROLES.SOCIO_FUNDADOR))).not.toContain("colaboradores");
+  });
+
+  // Issue #643: la bitacora de auditoria expone valoresAnteriores/valoresNuevos de tablas con
+  // datos de pacientes -- solo administrador puede verla, ningun otro rol, ni siquiera los que
+  // ya ven informacion administrativa como junta directiva.
+  it("bitacora de auditoria: solo administrador", () => {
+    expect(idsDe(modulosVisibles(ROLES.ADMINISTRADOR))).toContain("bitacora-auditoria");
+    for (const rol of [
+      ROLES.JUNTA_DIRECTIVA,
+      ROLES.SOCIO_FUNDADOR,
+      ROLES.MEDICO,
+      ROLES.VOLUNTARIO,
+    ]) {
+      expect(idsDe(modulosVisibles(rol))).not.toContain("bitacora-auditoria");
+    }
   });
 
   it("un rol desconocido no ve ningun modulo salvo los que no restringen roles", () => {

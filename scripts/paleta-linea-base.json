@@ -385,6 +385,7 @@
     "#fef3c7",
     "#ffffff"
   ],
+  "apps/web/src/pages/BitacoraAuditoriaPage.jsx": ["#7a7a8a"],
   "apps/web/src/pages/ColaboradoresPage.jsx": [
     "#2d2d2d",
     "#3db648",

@@ -29,6 +29,9 @@ const ICONOS = {
   BarChart3: "bar-chart-outline",
   Calendar: "calendar-outline",
   UserCheck: "person-circle-outline",
+  // Bitacora de auditoria (issue #643): soloWeb, nunca aparece en la tab bar movil, pero esta
+  // prueba exige traduccion para todo MODULOS[].icono sin excepcion (ver su propio comentario).
+  History: "time-outline",
   // Ajustes no es un modulo de navegacion.js -no aparece en MODULOS- pero si es una tab.
   Settings: "settings-outline",
   // Tampoco es un modulo: la campana de notificaciones de la cabecera (issue #755).

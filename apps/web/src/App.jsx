@@ -54,6 +54,7 @@ const ReportesPage = lazy(() => import("./pages/ReportesPage"));
 const JornadasPage = lazy(() => import("./pages/JornadasPage"));
 const DetalleJornadaPage = lazy(() => import("./pages/DetalleJornadaPage"));
 const ColaboradoresPage = lazy(() => import("./pages/ColaboradoresPage"));
+const BitacoraAuditoriaPage = lazy(() => import("./pages/BitacoraAuditoriaPage"));
 const PerfilPage = lazy(() => import("./pages/PerfilPage"));
 const NotificacionesPage = lazy(() => import("./pages/NotificacionesPage"));
 const NotFoundPage = lazy(() => import("./pages/NotFoundPage"));
@@ -218,6 +219,9 @@ export default function App() {
                   (arreglo de diseno de 2026-08-30): ya no hay una ruta /colaboradores/:id propia.
                   Ver eme.md para el estado anterior (dos rutas separadas) si hay que revertir. */}
                   <Route path="/colaboradores" element={<ColaboradoresPage />} />
+                </Route>
+                <Route element={<RutaProtegida roles={rolesDelModulo("bitacora-auditoria")} />}>
+                  <Route path="/bitacora-auditoria" element={<BitacoraAuditoriaPage />} />
                 </Route>
 
                 {/* Fuera de cualquier grupo de rolesDelModulo() a proposito: el perfil propio no es un
