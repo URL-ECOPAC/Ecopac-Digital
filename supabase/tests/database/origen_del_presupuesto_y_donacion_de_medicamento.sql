@@ -3,6 +3,7 @@
 --
 -- C. fn_registrar_donacion exige un medicamento del catalogo en cada renglon de una donacion de
 --    medicamentos, y toma de ahi la descripcion y la unidad.
+-- C. El renglon se enlaza una vez, con un lote de su mismo medicamento.
 -- D. jornadas.presupuesto_asignado es la suma de jornada_presupuesto_origen, nadie lo escribe a
 --    mano, y un origen de donacion no puede gastar mas de lo que se dono.
 --
@@ -10,7 +11,7 @@
 
 BEGIN;
 
-SELECT plan(22);
+SELECT plan(27);
 
 -- ============================================================================
 -- Setup (como dueno, exento de RLS)
@@ -237,6 +238,69 @@ SELECT lives_ok(
        'd0000000-0000-0000-0000-000000084001', 'insumos', CURRENT_DATE,
        '[{"descripcion": "Guantes 840", "cantidad": 5, "unidad": "cajas"}]'::JSONB) $$,
   'una donacion de insumos sigue aceptando texto libre'
+);
+
+-- ============================================================================
+-- C. El lote que produjo un renglon se enlaza una vez, y es de su medicamento
+-- ============================================================================
+-- Antes de la correccion en esta migracion donacion_detalle no tenia GRANT ni politica de UPDATE:
+-- enlazarLoteConDonacion() fallaba con permission denied y la donacion nunca quedaba ligada.
+RESET ROLE;
+
+INSERT INTO medicamentos (id, nombre, concentracion, presentacion, marca) VALUES
+  ('90000000-0000-0000-0000-000000000841', 'Otro medicamento 840', '5 mg', 'tableta', 'Generico');
+
+INSERT INTO proveedores (id, nombre, tipo) VALUES
+  ('b0000000-0000-0000-0000-000000084001', 'Proveedor de prueba 840', 'donante');
+
+INSERT INTO lotes (id, medicamento_id, numero_lote, fecha_vencimiento, proveedor_id, origen,
+                   cantidad_ingresada) VALUES
+  ('a0000000-0000-0000-0000-000000084001', '90000000-0000-0000-0000-000000000840', 'L-840-A',
+   CURRENT_DATE + 365, 'b0000000-0000-0000-0000-000000084001', 'donacion', 25),
+  ('a0000000-0000-0000-0000-000000084002', '90000000-0000-0000-0000-000000000841', 'L-840-B',
+   CURRENT_DATE + 365, 'b0000000-0000-0000-0000-000000084001', 'donacion', 25);
+
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000084001';
+
+SELECT throws_ok(
+  $$ UPDATE donacion_detalle SET lote_id = 'a0000000-0000-0000-0000-000000084002'
+     WHERE medicamento_id = '90000000-0000-0000-0000-000000000840' $$,
+  '23514',
+  NULL,
+  'un renglon no se enlaza a un lote de otro medicamento'
+);
+
+SELECT lives_ok(
+  $$ UPDATE donacion_detalle SET lote_id = 'a0000000-0000-0000-0000-000000084001'
+     WHERE medicamento_id = '90000000-0000-0000-0000-000000000840' $$,
+  'quien registra donaciones enlaza el renglon con el lote de su medicamento'
+);
+
+SELECT is(
+  (SELECT lote_id FROM donacion_detalle
+   WHERE medicamento_id = '90000000-0000-0000-0000-000000000840'),
+  'a0000000-0000-0000-0000-000000084001'::UUID,
+  'el enlace queda guardado'
+);
+
+-- Ya enlazado, la politica no lo alcanza: el UPDATE no toca ninguna fila.
+UPDATE donacion_detalle SET lote_id = NULL
+WHERE medicamento_id = '90000000-0000-0000-0000-000000000840';
+
+SELECT is(
+  (SELECT lote_id FROM donacion_detalle
+   WHERE medicamento_id = '90000000-0000-0000-0000-000000000840'),
+  'a0000000-0000-0000-0000-000000084001'::UUID,
+  'un renglon ya enlazado no se reenlaza ni se desenlaza'
+);
+
+SELECT throws_ok(
+  $$ UPDATE donacion_detalle SET cantidad = 1
+     WHERE medicamento_id = '90000000-0000-0000-0000-000000000840' $$,
+  '42501',
+  NULL,
+  'el resto del renglon sigue sin poder corregirse'
 );
 
 SELECT * FROM finish();

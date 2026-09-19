@@ -1443,3 +1443,42 @@ resueltos a nombre y fecha. No existe en `apps/mobile`: `FichaPacienteScreen.js`
 edicion de los 11 campos del paciente en esta misma issue #756 (ver seccion de Pacientes, arriba),
 pero esta lista de fusiones es un dato secundario de la ficha que ese cambio no cubrio. Bajo
 impacto, sin issue propia -queda declarado como hueco, no omitido en silencio.
+
+## 17. Auditoria de esquema (issue #840, bloque E)
+
+Pedido: "revisa que todas las tablas/modelos/migraciones esten y que todos los campos tambien".
+La seccion 16 fue la auditoria campo-a-vista; esta pasa las migraciones contra `packages/shared`
+y las dos apps buscando lo que `npm run verificar:shared-esquema` no alcanza a ver.
+
+### Como se hizo
+
+Contra la base local recien reconstruida (`supabase db reset`, las 135 migraciones):
+
+1. **Cada columna contra el codigo.** Las 355 columnas de las 43 tablas de `public`, en
+   snake_case y en camelCase, contra todo lo que nombran `packages/shared`, `apps/web/src` y
+   `apps/mobile/src` fuera de las pruebas. Ninguna tabla ni columna quedo sin mencion.
+2. **Cada escritura contra los permisos reales.** Cada `.from(tabla).insert/update/delete/upsert`
+   de `packages/shared` contra los GRANT de `authenticated` y las politicas de esa tabla. Es la
+   comprobacion que encontro las dos primeras divergencias de abajo: la guarda automatica solo
+   mira que el nombre exista, no que se pueda escribir.
+3. **La convencion de nombres de la #412** sobre las 41 columnas de actor (`_por`) y de marca de
+   tiempo (`_en`, `fecha_`).
+4. **Obligatorio en el formulario contra `NOT NULL`** en las tablas clinicas (regla B2).
+
+### Divergencias y decision
+
+| # | Divergencia | Decision |
+| --- | --- | --- |
+| 1 | `donacion_detalle` no tenia GRANT ni politica de UPDATE, y `enlazarLoteConDonacion()` actualiza `lote_id`: el ingreso desde una donacion creaba el lote y despues fallaba con `permission denied`, y la donacion nunca quedaba ligada a su lote. | **Se arregla aqui** (`00134`): GRANT de la columna `lote_id`, politica que enlaza una sola vez, y trigger que exige un lote del mismo medicamento. Pruebas en `origen_del_presupuesto_y_donacion_de_medicamento.sql`. `PERMISOS.md` actualizado. |
+| 2 | `condiciones_cronicas`: `crearCondicionCatalogo()`, `actualizarCondicionCatalogo()` y `useCatalogoCondiciones` (issue #641) escriben el catalogo, pero la tabla no tiene GRANT ni politica de escritura (`PERMISOS.md` dice "nadie") y ninguna pantalla usa el hook. | **Issue aparte, #845**: hay que decidir quien mantiene el catalogo. Si alguien, es una migracion con GRANT y politica mas su pantalla; si nadie, se retiran el hook y las dos funciones. |
+| 3 | Alta de lote en web (`ModalAltaLote.jsx`): pedia una bodega obligatoria que `registrarLote()` nunca guardaba, exigia la fecha de ingreso aunque la columna tiene `DEFAULT CURRENT_DATE`, y rechazaba un lote que vence el dia que ingresa, que el CHECK acepta desde la `00096`. | **Se arregla aqui**: el modal dibuja `CAMPOS_LOTE` y valida con `validarDatosDeLote()` contra esas reglas. |
+| 4 | Un lote registrado desde "Registrar lote" en web no tiene existencias en ninguna bodega: el stock solo nace de un ingreso (`registrarIngreso()`). Con el punto 3 ya no lo parece, pero sigue siendo asi. | **Issue aparte, #846**: decidir si "Registrar lote" tiene que existir al lado de "Registrar ingreso" o si se retira. Cambia el flujo de inventario, no solo un formulario. |
+| 5 | El comentario de la `00096` dice que el cliente valida la fecha de vencimiento contra la de ingreso con `minFechaDesdeCampo`. `validarConDescriptores()` no lee esa regla. | **Se corrige el comentario del descriptor** (`inventario/campos.js`); la migracion aplicada no se edita. La regla la aplica `validarDatosDeLote()`. |
+| 6 | `triajes.presion_sistolica`, `presion_diastolica` y `frecuencia_cardiaca` eran `NOT NULL`, contra la regla de que ningun signo vital es obligatorio. | **Se arregla aqui** (`00135`). |
+| 7 | `pacientes.dpi`: el CHECK de 13 digitos de la `00132` entro `NOT VALID` porque `ecopac-dev` tiene filas con DPI de otra longitud. Las filas nuevas cumplen; las viejas no se revisaron. | **Issue aparte, #847**: corregir o vaciar esos DPI y despues `VALIDATE CONSTRAINT`, en una migracion propia. |
+| 8 | `gastos.fecha_aprobacion`, el hallazgo que la issue traia anotado. | **Ya estaba resuelto**: la `00094` renombro `fecha_aprobacion` a `aprobado_en` en `gastos` y en `movimientos_inventario`. No queda ninguna referencia al nombre viejo fuera de las migraciones anteriores. |
+| 9 | Columnas con actor y sin marca propia, o con marca y sin actor: `jornada_estado_historial.cambiado_por` y `usuario_permiso.otorgado_por` usan `created_at`; `atenciones.cerrada_en` y `pacientes.fecha_baja` no tienen actor; `jornadas.fecha_inicio_real` y `fecha_fin_real` son fechas del ciclo de vida de la jornada. | **Se dejan**: la convencion de la #412 ordena el nombre de un par actor/marca. Ninguna de estas es un par a medias que haya que completar, y renombrarlas sin un motivo funcional es una migracion y una API rotas a cambio de nada. |
+| 10 | `vista_cola_jornada` sigue existiendo aunque las colas por etapa salieron de la interfaz. | **Decidido en el bloque F**: se retira de la interfaz, no de la base. La `00135` la corrige para los signos opcionales y la lista de la jornada en curso la sigue leyendo. |
+
+Obligatorio contra `NOT NULL` (punto 4 del metodo): los descriptores de paciente, consulta,
+receta y condicion cronica coinciden con la base. No hay otra divergencia.

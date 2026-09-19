@@ -17,7 +17,7 @@
 -- - medicamento_id es nullable: las donaciones de insumos, dinero y servicios no tienen catalogo
 --   contra el que validar, y las de medicamentos ya registradas tampoco tienen de donde sacarlo.
 --   Que sea obligatorio para las de medicamentos NUEVAS lo exige fn_registrar_donacion, que es
---   el unico camino de escritura (no hay GRANT de UPDATE sobre donacion_detalle salvo lote_id).
+--   el unico camino de escritura del renglon (el unico UPDATE posible es el de lote_id, abajo).
 -- - La unidad no se pide: es la presentacion del medicamento (tableta, jarabe, ...), que ya esta
 --   en el catalogo. La funcion la copia a donacion_detalle.unidad, que sigue existiendo para las
 --   donaciones de insumos.
@@ -128,6 +128,59 @@ COMMENT ON FUNCTION fn_registrar_donacion(UUID, tipo_donacion, DATE, JSONB, UUID
   '{ donacion, detalleIds }, con los ids en el mismo orden que p_detalle. Desde la 00134 '
   '(issue #840) cada renglon de una donacion de medicamentos exige medicamentoId, y su '
   'descripcion y su unidad salen del catalogo, no del texto que mande el cliente.';
+
+-- --------------------------------------------------------------------------------------------
+-- Enlazar el lote que produjo un renglon (donacion_detalle.lote_id)
+-- --------------------------------------------------------------------------------------------
+--
+-- lote_id existe desde la 00083 y enlazarLoteConDonacion() (donaciones/ingreso.api.js) lo
+-- escribe al dar el ingreso a inventario, pero la tabla nunca tuvo GRANT ni politica de UPDATE:
+-- el UPDATE fallaba con permission denied. generarIngresoDesdeDonacion() creaba el lote y el
+-- movimiento y despues reventaba al enlazar, asi que la donacion nunca quedaba ligada a su lote
+-- (criterio de la #756 y del bloque C de la #840) y el renglon seguia apareciendo pendiente.
+--
+-- - GRANT de columna: lote_id y nada mas. El resto del renglon sigue sin corregirse; lo que esta
+--   mal se anula con la donacion completa, como dice PERMISOS.md.
+-- - Se enlaza una vez: la politica solo alcanza renglones con lote_id NULL. Reenlazar a otro lote
+--   no es una correccion, es decir que la donacion produjo otra cosa.
+-- - Quien puede es quien registra donaciones, el mismo actor del INSERT (00086).
+-- - Un renglon con medicamento del catalogo solo se enlaza a un lote de ESE medicamento: es lo
+--   que hace que la donacion quede ligada al medicamento, no solo a un lote cualquiera.
+
+GRANT UPDATE (lote_id) ON donacion_detalle TO authenticated;
+
+CREATE POLICY "Quien registra donaciones enlaza el lote de un renglon"
+  ON donacion_detalle FOR UPDATE TO authenticated
+  USING ((public.es_administrador() OR public.tiene_permiso('donaciones.registrar')) AND lote_id IS NULL)
+  WITH CHECK (public.es_administrador() OR public.tiene_permiso('donaciones.registrar'));
+
+CREATE OR REPLACE FUNCTION fn_validar_lote_de_renglon_de_donacion()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY INVOKER
+SET search_path = ''
+AS $$
+DECLARE
+  v_medicamento_del_lote UUID;
+BEGIN
+  IF NEW.lote_id IS NULL OR NEW.medicamento_id IS NULL THEN
+    RETURN NEW;
+  END IF;
+
+  SELECT medicamento_id INTO v_medicamento_del_lote FROM public.lotes WHERE id = NEW.lote_id;
+
+  IF v_medicamento_del_lote IS DISTINCT FROM NEW.medicamento_id THEN
+    RAISE EXCEPTION 'El lote no es del medicamento que se dono en este renglon.'
+      USING ERRCODE = 'check_violation';
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER trg_donacion_detalle_validar_lote
+  BEFORE INSERT OR UPDATE OF lote_id ON donacion_detalle
+  FOR EACH ROW EXECUTE FUNCTION fn_validar_lote_de_renglon_de_donacion();
 
 -- ============================================================================================
 -- PARTE D. Origen del presupuesto de una jornada
