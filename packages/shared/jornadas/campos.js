@@ -10,6 +10,7 @@
 // finalizar jornada, no una edicion manual.
 
 import { TIPOS_DE_CAMPO } from "../descriptores.js";
+import { camposDeEdicion } from "../formularios.js";
 import { TODOS_LOS_ROLES, etiquetaDeRol } from "../usuarios/roles.js";
 
 /**
@@ -174,11 +175,15 @@ export const CAMPOS_MARCAR_ASISTENCIA = [
  * para hacerlo. En vez de una pantalla nueva, se agrega al mismo modal de editar turno
  * (ModalEdicionTurno.jsx): marcar quien asistio es, igual que el horario, algo que se corrige
  * sobre una fila que ya existe.
+ *
+ * Desde la #840 (regla B1) es el mismo juego de campos que la asignacion: `perfil` y
+ * `rolEnJornada` se ven de solo lectura en vez de faltar. `asistio` es el unico que el alta no
+ * tiene, y a proposito: al asignar a alguien todavia no se sabe si va a asistir.
  */
-export const CAMPOS_EDICION_TURNO = [
-  ...CAMPOS_ASIGNACION_PERSONAL.filter((campo) => IDS_CAMPOS_EDICION_TURNO.includes(campo.id)),
-  ...CAMPOS_MARCAR_ASISTENCIA,
-];
+export const CAMPOS_EDICION_TURNO = camposDeEdicion(
+  [...CAMPOS_ASIGNACION_PERSONAL, ...CAMPOS_MARCAR_ASISTENCIA],
+  [...IDS_CAMPOS_EDICION_TURNO, "asistio"],
+);
 
 /**
  * Subconjunto de CAMPOS_JORNADA para el formulario de alta/edicion de jornada (issue #179,

@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 
+import { idsEditables } from "../formularios.js";
+
 import {
   actualizarCondicion,
   asociarCondicion,
@@ -139,8 +141,16 @@ export function useCondicionesPaciente(pacienteId, { rol } = {}) {
   /** Corrige la fecha de diagnostico y/o las notas de un padecimiento ya asociado. */
   const corregir = useCallback(
     async (id, cambios) => {
+      // Solo viaja lo que la correccion deja cambiar: el formulario tambien lleva, de solo
+      // lectura, la condicion y el estado (issue #840, B1).
+      const editables = Object.fromEntries(
+        idsEditables(CAMPOS_CORRECCION_CONDICION)
+          .filter((campo) => cambios?.[campo] !== undefined)
+          .map((campo) => [campo, cambios[campo]]),
+      );
+
       setEnviando(true);
-      const resultado = await actualizarCondicion(id, cambios);
+      const resultado = await actualizarCondicion(id, editables);
       setEnviando(false);
 
       if (resultado.error || Object.keys(resultado.errores ?? {}).length > 0) {

@@ -1,79 +1,80 @@
 import { useState, useMemo, useCallback } from "react";
 
-import { aFechaLocal, diasHastaVencimiento } from "../formato/fechas.js";
+import { ORIGENES_DE_LOTE } from "../enums.js";
+import { aFechaLocal, diasHastaVencimiento, fechaLocalISO } from "../formato/fechas.js";
 import { esAdministrador } from "../usuarios/roles.js";
+import { combinarErrores, esTextoVacio, validarConDescriptores } from "../validations/index.js";
+import { CAMPOS_LOTE } from "./campos.js";
 
 /**
- * Traduce los campos snake_case del formulario de alta de lote a los argumentos camelCase que
- * declara registrarLote() (lotes.api.js, traducidos a columnas via aColumnasDeTabla()). Se
+ * Los valores con que arranca el alta de lote: la fecha de ingreso es hoy, en el dia local.
+ *
+ * @returns {Record<string, unknown>} Indexado por los ids de CAMPOS_LOTE.
+ */
+export function valoresInicialesDeLote() {
+  return {
+    ...Object.fromEntries(CAMPOS_LOTE.map((campo) => [campo.id, ""])),
+    origen: ORIGENES_DE_LOTE.COMPRA,
+    fechaIngreso: fechaLocalISO(),
+  };
+}
+
+/**
+ * Traduce el formulario de alta de lote a los argumentos que declara registrarLote()
+ * (lotes.api.js). El formulario ya usa los ids de CAMPOS_LOTE (issue #840, B1), que son los
+ * mismos argumentos: aqui solo se convierten los numeros y se omite lo que quedo vacio. Se
  * exporta aparte del hook para poder probar la traduccion sin montar un componente (issue #709).
  *
- * @param {object} datosLote
+ * @param {Record<string, unknown>} valores Indexados por los ids de CAMPOS_LOTE.
  */
-export function datosLoteParaRegistrar(datosLote) {
+export function datosLoteParaRegistrar(valores) {
   const datos = {
-    medicamento: datosLote.medicamento_id,
-    numeroLote: datosLote.numero_lote,
-    proveedor: datosLote.proveedor_id,
-    origen: datosLote.origen,
-    cantidadIngresada: datosLote.cantidad,
-    fechaIngreso: datosLote.fecha_ingreso,
-    fechaVencimiento: datosLote.fecha_vencimiento,
+    medicamento: valores.medicamento,
+    numeroLote: valores.numeroLote,
+    proveedor: valores.proveedor,
+    origen: valores.origen,
+    cantidadIngresada: Number(valores.cantidadIngresada),
+    fechaVencimiento: valores.fechaVencimiento,
   };
+
+  // Sin fecha de ingreso la pone la base (DEFAULT CURRENT_DATE, 00020).
+  if (!esTextoVacio(valores.fechaIngreso)) datos.fechaIngreso = valores.fechaIngreso;
 
   // costoUnitario es opcional (issue #752): "" (el campo vacio del formulario) se traduce a
   // ausente, no a NaN ni a 0 -- un costo desconocido no es lo mismo que un costo de cero.
-  if (datosLote.costo_unitario !== undefined && datosLote.costo_unitario !== "") {
-    datos.costoUnitario = Number(datosLote.costo_unitario);
-  }
+  if (!esTextoVacio(valores.costoUnitario)) datos.costoUnitario = Number(valores.costoUnitario);
 
   return datos;
 }
 
 /**
- * Valida los datos del formulario de alta de lote acorde al DDL:
- * - fecha_vencimiento > fecha_ingreso (chk_lotes_vencimiento_posterior)
- * - cantidad > 0 (chk_lotes_cantidad_positiva)
+ * Valida el alta de lote contra CAMPOS_LOTE y los CHECK de la tabla:
+ * - fecha_vencimiento >= fecha_ingreso (chk_lotes_vencimiento_posterior, relajado a >= en la 00096:
+ *   un lote puede vencer el mismo dia que ingresa)
+ * - cantidad_ingresada > 0 (chk_lotes_cantidad_positiva)
  *
- * Se exporta aparte del hook para poder probar la validacion sin montar un componente (issue
- * #709): pedia "cantidad_ingresada" de datosLote, pero ModalAltaLote.jsx (el unico llamador)
- * manda el campo como "cantidad" -datosLoteParaRegistrar() lo traduce a cantidadIngresada recien
- * al armar los argumentos de registrarLote()-. cantidad_ingresada era siempre undefined y esta
- * validacion rechazaba TODA alta de lote, con cualquier cantidad, con el mismo mensaje generico.
- * Como handleGuardarLote() nunca llegaba a llamar registrarLote() (issue #709 la conecto por
- * primera vez), el bug nunca se habia notado.
+ * Hasta la #840 validaba un formulario escrito a mano, con otros nombres de campo, que exigia una
+ * bodega que registrarLote() nunca guardaba y seguia con la regla estricta anterior a la 00096.
  *
- * @param {object} datosLote
- * @returns {string|null} El mensaje de error, o null si los datos son validos.
+ * @param {Record<string, unknown>} valores Indexados por los ids de CAMPOS_LOTE.
+ * @returns {Record<string, string>} Errores por campo. Vacio si todo esta bien.
  */
-export function validarDatosDeLote(datosLote) {
-  const {
-    medicamento_id,
-    proveedor_id,
-    numero_lote,
-    fecha_ingreso,
-    fecha_vencimiento,
-    cantidad,
-    bodega_id,
-  } = datosLote;
+export function validarDatosDeLote(valores = {}) {
+  const propias = {};
 
-  if (!medicamento_id || !proveedor_id || !numero_lote || !bodega_id) {
-    return "Todos los campos marcados con (*) son obligatorios.";
+  if (!esTextoVacio(valores.cantidadIngresada) && !(Number(valores.cantidadIngresada) > 0)) {
+    propias.cantidadIngresada = "La cantidad ingresada debe ser mayor a 0.";
   }
 
-  if (!fecha_ingreso || !fecha_vencimiento) {
-    return "Las fechas de ingreso y vencimiento son obligatorias.";
+  const ingreso = aFechaLocal(
+    esTextoVacio(valores.fechaIngreso) ? fechaLocalISO() : valores.fechaIngreso,
+  );
+  const vencimiento = aFechaLocal(valores.fechaVencimiento);
+  if (ingreso && vencimiento && vencimiento < ingreso) {
+    propias.fechaVencimiento = "La fecha de vencimiento no puede ser anterior a la de ingreso.";
   }
 
-  if (aFechaLocal(fecha_vencimiento) <= aFechaLocal(fecha_ingreso)) {
-    return "La fecha de vencimiento debe ser estrictamente posterior a la fecha de ingreso (chk_lotes_vencimiento_posterior).";
-  }
-
-  if (!cantidad || Number(cantidad) <= 0) {
-    return "La cantidad ingresada debe ser mayor a 0 (chk_lotes_cantidad_positiva).";
-  }
-
-  return null;
+  return combinarErrores(validarConDescriptores(CAMPOS_LOTE, valores), propias);
 }
 
 /**
@@ -92,6 +93,7 @@ export function useGestionLotes({
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState("Todos");
   const [alertas, setAlertas] = useState(alertasIniciales);
   const [errorValidacion, setErrorValidacion] = useState(null);
+  const [erroresDeLote, setErroresDeLote] = useState({});
 
   // Regla de Permisos: Solo el Administrador puede registrar lotes.
   //
@@ -155,10 +157,12 @@ export function useGestionLotes({
     return lotesFiltrados.filter((item) => item.estadoAlerta !== "normal");
   }, [lotesFiltrados]);
 
-  const validarNuevoLote = useCallback((datosLote) => {
-    const mensajeError = validarDatosDeLote(datosLote);
-    setErrorValidacion(mensajeError);
-    return mensajeError === null;
+  const validarNuevoLote = useCallback((valores) => {
+    const errores = validarDatosDeLote(valores);
+    const hayErrores = Object.keys(errores).length > 0;
+    setErroresDeLote(errores);
+    setErrorValidacion(hayErrores ? "Revisa los campos marcados." : null);
+    return !hayErrores;
   }, []);
 
   return {
@@ -178,5 +182,6 @@ export function useGestionLotes({
     validarNuevoLote,
     errorValidacion,
     setErrorValidacion,
+    erroresDeLote,
   };
 }

@@ -6,8 +6,8 @@
 
 import { describe, expect, it } from "vitest";
 
-import { CAMPOS_USUARIO } from "./campos.js";
-import { CAMPOS_EDICION_USUARIO, debeRefrescarSesion } from "./useEdicionUsuario.js";
+import { CAMPOS_ALTA_USUARIO, CAMPOS_EDICION_USUARIO, CAMPOS_USUARIO } from "./campos.js";
+import { debeRefrescarSesion } from "./useEdicionUsuario.js";
 
 // Issue #840: editarse a uno mismo desde Colaboradores no llegaba a la sesion.
 describe("debeRefrescarSesion", () => {
@@ -22,32 +22,31 @@ describe("debeRefrescarSesion", () => {
 });
 
 describe("CAMPOS_EDICION_USUARIO", () => {
-  it("son los cuatro campos del criterio 1 del issue #107 mas fechaIngreso/direccion/notas (issue #756)", () => {
-    expect(CAMPOS_EDICION_USUARIO.map((campo) => campo.id)).toEqual([
-      "nombres",
-      "apellidos",
-      "telefono",
-      "rol",
-      "fechaIngreso",
-      "direccion",
-      "notas",
-    ]);
+  // Issue #840 (B1): el mismo juego de campos que el alta.
+  it("son los mismos campos que el alta, en el mismo orden", () => {
+    expect(CAMPOS_EDICION_USUARIO.map((campo) => campo.id)).toEqual(
+      CAMPOS_ALTA_USUARIO.map((campo) => campo.id),
+    );
   });
 
   it("no incluye especialidades: RLS es de solo lectura y no hay componente que las edite (issue #405)", () => {
     expect(CAMPOS_EDICION_USUARIO.find((campo) => campo.id === "especialidades")).toBeUndefined();
   });
 
-  it("no incluye email: no es editable (actualizarUsuario() lo descarta)", () => {
-    expect(CAMPOS_EDICION_USUARIO.find((campo) => campo.id === "email")).toBeUndefined();
+  it("el correo se ve pero es de solo lectura: actualizarUsuario() lo descarta", () => {
+    const email = CAMPOS_EDICION_USUARIO.find((campo) => campo.id === "email");
+    expect(email.soloLectura).toBe(true);
+    expect(
+      CAMPOS_EDICION_USUARIO.filter((campo) => campo.soloLectura).map((campo) => campo.id),
+    ).toEqual(["email"]);
   });
 
   it("no incluye activo: eso lo maneja la confirmacion de desactivar/reactivar, no este formulario", () => {
     expect(CAMPOS_EDICION_USUARIO.find((campo) => campo.id === "activo")).toBeUndefined();
   });
 
-  it("cada campo es el mismo objeto de CAMPOS_USUARIO, no una copia con datos propios", () => {
-    for (const campo of CAMPOS_EDICION_USUARIO) {
+  it("cada campo editable es el mismo objeto de CAMPOS_USUARIO, no una copia con datos propios", () => {
+    for (const campo of CAMPOS_EDICION_USUARIO.filter((c) => !c.soloLectura)) {
       const original = CAMPOS_USUARIO.find((c) => c.id === campo.id);
       expect(campo).toBe(original);
     }

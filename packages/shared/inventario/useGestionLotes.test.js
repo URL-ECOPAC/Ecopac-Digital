@@ -10,19 +10,22 @@ import { describe, expect, it } from "vitest";
 
 import { datosLoteParaRegistrar, validarDatosDeLote } from "./useGestionLotes.js";
 
-describe("datosLoteParaRegistrar", () => {
-  it("traduce los campos snake_case del formulario a los argumentos camelCase de registrarLote", () => {
-    const resultado = datosLoteParaRegistrar({
-      medicamento_id: "med-1",
-      numero_lote: "L-002",
-      proveedor_id: "prov-1",
-      origen: "compra",
-      cantidad: 50,
-      fecha_ingreso: "2026-09-01",
-      fecha_vencimiento: "2027-09-01",
-    });
+// Issue #840 (B1): el formulario usa los ids de CAMPOS_LOTE, que son los argumentos de
+// registrarLote(). Antes eran snake_case propios del modal y habia que traducirlos.
+const VALORES = {
+  medicamento: "med-1",
+  numeroLote: "L-002",
+  proveedor: "prov-1",
+  origen: "compra",
+  cantidadIngresada: "50",
+  fechaIngreso: "2026-09-01",
+  fechaVencimiento: "2027-09-01",
+  costoUnitario: "",
+};
 
-    expect(resultado).toEqual({
+describe("datosLoteParaRegistrar", () => {
+  it("entrega los argumentos de registrarLote, con la cantidad como numero", () => {
+    expect(datosLoteParaRegistrar(VALORES)).toEqual({
       medicamento: "med-1",
       numeroLote: "L-002",
       proveedor: "prov-1",
@@ -33,72 +36,62 @@ describe("datosLoteParaRegistrar", () => {
     });
   });
 
-  it("sin costo_unitario, no incluye costoUnitario (issue #752)", () => {
-    const resultado = datosLoteParaRegistrar({
-      medicamento_id: "med-1",
-      numero_lote: "L-002",
-      proveedor_id: "prov-1",
-      origen: "compra",
-      cantidad: 50,
-      fecha_ingreso: "2026-09-01",
-      fecha_vencimiento: "2027-09-01",
-      costo_unitario: "",
-    });
-
-    expect(resultado).not.toHaveProperty("costoUnitario");
+  it("sin costo unitario, no incluye costoUnitario (issue #752)", () => {
+    expect(datosLoteParaRegistrar(VALORES)).not.toHaveProperty("costoUnitario");
   });
 
-  it("con costo_unitario, lo traduce a costoUnitario como numero (issue #752)", () => {
-    const resultado = datosLoteParaRegistrar({
-      medicamento_id: "med-1",
-      numero_lote: "L-002",
-      proveedor_id: "prov-1",
-      origen: "compra",
-      cantidad: 50,
-      fecha_ingreso: "2026-09-01",
-      fecha_vencimiento: "2027-09-01",
-      costo_unitario: "8.5",
-    });
+  it("con costo unitario, lo entrega como numero (issue #752)", () => {
+    expect(datosLoteParaRegistrar({ ...VALORES, costoUnitario: "8.5" }).costoUnitario).toBe(8.5);
+  });
 
-    expect(resultado.costoUnitario).toBe(8.5);
+  it("sin fecha de ingreso no la manda: la pone la base (DEFAULT CURRENT_DATE)", () => {
+    expect(datosLoteParaRegistrar({ ...VALORES, fechaIngreso: "" })).not.toHaveProperty(
+      "fechaIngreso",
+    );
   });
 });
 
 describe("validarDatosDeLote", () => {
-  const datosValidos = {
-    medicamento_id: "med-1",
-    numero_lote: "L-002",
-    proveedor_id: "prov-1",
-    origen: "compra",
-    cantidad: 50,
-    fecha_ingreso: "2026-09-01",
-    fecha_vencimiento: "2027-09-01",
-    bodega_id: "bod-1",
-  };
-
   it("acepta datos completos y validos", () => {
-    expect(validarDatosDeLote(datosValidos)).toBeNull();
+    expect(validarDatosDeLote(VALORES)).toEqual({});
   });
 
-  it("rechaza una cantidad en 'cantidad' igual a 0 -el campo real que manda ModalAltaLote.jsx, no 'cantidad_ingresada'", () => {
-    expect(validarDatosDeLote({ ...datosValidos, cantidad: 0 })).toMatch(/cantidad ingresada/i);
+  it("rechaza una cantidad de 0, en el campo de la cantidad", () => {
+    expect(validarDatosDeLote({ ...VALORES, cantidadIngresada: "0" })).toHaveProperty(
+      "cantidadIngresada",
+    );
   });
 
-  it("acepta una cantidad positiva sin marcarla como invalida por error", () => {
-    expect(validarDatosDeLote({ ...datosValidos, cantidad: 40 })).toBeNull();
+  it("marca el campo obligatorio que falta, no un mensaje general", () => {
+    expect(Object.keys(validarDatosDeLote({ ...VALORES, proveedor: "" }))).toEqual(["proveedor"]);
   });
 
-  it("rechaza si falta un campo obligatorio", () => {
-    expect(validarDatosDeLote({ ...datosValidos, proveedor_id: "" })).toMatch(/obligatorios/i);
+  it("ya no pide bodega: registrarLote() nunca la guardaba", () => {
+    expect(validarDatosDeLote(VALORES)).not.toHaveProperty("bodega");
   });
 
-  it("rechaza una fecha de vencimiento anterior o igual a la de ingreso", () => {
+  it("la fecha de ingreso es opcional", () => {
+    expect(validarDatosDeLote({ ...VALORES, fechaIngreso: "" })).toEqual({});
+  });
+
+  // 00096: el CHECK es >=. El cliente seguia con la regla estricta y rechazaba lo que la base acepta.
+  it("acepta un lote que vence el mismo dia que ingresa", () => {
     expect(
       validarDatosDeLote({
-        ...datosValidos,
-        fecha_ingreso: "2027-09-01",
-        fecha_vencimiento: "2027-09-01",
+        ...VALORES,
+        fechaIngreso: "2027-09-01",
+        fechaVencimiento: "2027-09-01",
       }),
-    ).toMatch(/vencimiento_posterior/i);
+    ).toEqual({});
+  });
+
+  it("rechaza una fecha de vencimiento anterior a la de ingreso", () => {
+    expect(
+      validarDatosDeLote({
+        ...VALORES,
+        fechaIngreso: "2027-09-02",
+        fechaVencimiento: "2027-09-01",
+      }),
+    ).toHaveProperty("fechaVencimiento");
   });
 });

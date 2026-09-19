@@ -31,6 +31,31 @@ export function filaDeMisMovimientos(mov, usuarioId) {
 }
 
 /**
+ * Los valores del formulario de correccion de un movimiento, con los de solo lectura ya legibles
+ * (issue #840, B1): el lote y la bodega se muestran por su nombre, no por su id, porque la
+ * correccion no carga esos catalogos.
+ *
+ * @param {object|null} movimiento Una fila de filaDeMisMovimientos().
+ * @returns {Record<string, unknown>} Indexado por los ids de CAMPOS_CORRECCION_MOVIMIENTO.
+ */
+export function valoresDeCorreccionDeMovimiento(movimiento) {
+  const lote = [
+    movimiento?.medicamentoNombre,
+    movimiento?.numeroLote && `Lote ${movimiento.numeroLote}`,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
+  return {
+    tipo: movimiento?.tipo ?? "",
+    lote,
+    bodega: movimiento?.bodegaNombre ?? "",
+    cantidad: movimiento?.cantidad ?? "",
+    motivo: movimiento?.motivo ?? "",
+  };
+}
+
+/**
  * Hook de la pantalla "Mis movimientos" (issue #756): los movimientos de inventario que la
  * persona misma registro -o, si puede aprobar, los de todo el mundo, con el filtro "alcance"-,
  * con la unica correccion que editarMovimiento() (00106) permite mientras un movimiento propio

@@ -47,8 +47,11 @@ describe("CAMPOS_FORMULARIO_JORNADA", () => {
 // Issue #756: asistio se marcaba y se mostraba, pero ninguna pantalla lo escribia.
 // CAMPOS_EDICION_TURNO ahora lo agrega, en el mismo modal que horario y responsabilidad.
 describe("CAMPOS_EDICION_TURNO", () => {
-  it("son horaInicio, horaFin, responsabilidad y asistio, en ese orden", () => {
+  // Issue #840 (B1): los campos de la asignacion, mas asistio.
+  it("son los de la asignacion, en su orden, mas asistio", () => {
     expect(CAMPOS_EDICION_TURNO.map((campo) => campo.id)).toEqual([
+      "perfil",
+      "rolEnJornada",
       "horaInicio",
       "horaFin",
       "responsabilidad",
@@ -61,9 +64,10 @@ describe("CAMPOS_EDICION_TURNO", () => {
     expect(asistio).toBe(CAMPOS_MARCAR_ASISTENCIA[0]);
   });
 
-  it("no incluye perfil ni rolEnJornada", () => {
-    expect(CAMPOS_EDICION_TURNO.find((campo) => campo.id === "perfil")).toBeUndefined();
-    expect(CAMPOS_EDICION_TURNO.find((campo) => campo.id === "rolEnJornada")).toBeUndefined();
+  it("perfil y rolEnJornada se ven, pero de solo lectura", () => {
+    expect(
+      CAMPOS_EDICION_TURNO.filter((campo) => campo.soloLectura).map((campo) => campo.id),
+    ).toEqual(["perfil", "rolEnJornada"]);
   });
 });
 

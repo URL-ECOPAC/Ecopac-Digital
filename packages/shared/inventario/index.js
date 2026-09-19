@@ -90,11 +90,19 @@ export {
   TIPO_PROVEEDOR,
   useAdministracionBodegasProveedores,
 } from "./useAdministracionBodegasProveedores.js";
-export { datosLoteParaRegistrar, useGestionLotes } from "./useGestionLotes.js";
+export {
+  datosLoteParaRegistrar,
+  useGestionLotes,
+  valoresInicialesDeLote,
+} from "./useGestionLotes.js";
 export {
   ESTADO_MOVIMIENTO,
   TIPO_MOVIMIENTO,
   useKardexMovimientos,
 } from "./useKardexMovimientos.js";
 export { useRegistroSalida } from "./useRegistroSalida.js";
-export { filaDeMisMovimientos, useMisMovimientos } from "./useMisMovimientos.js";
+export {
+  filaDeMisMovimientos,
+  useMisMovimientos,
+  valoresDeCorreccionDeMovimiento,
+} from "./useMisMovimientos.js";

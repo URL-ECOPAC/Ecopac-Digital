@@ -6,27 +6,17 @@
 // Alcance reducido a proposito (ver PLAN.md del issue #106): el modal del prototipo pedia
 // tambien un selector de especialidades, pero perfil_especialidad no tiene ninguna politica RLS
 // de escritura todavia (issue #405) y crearUsuario() ni siquiera envia ese campo al servidor
-// (packages/shared/usuarios/api.js). Este hook solo maneja los cinco campos que crearUsuario()
-// ya acepta: nombres, apellidos, email, telefono, rol.
+// (packages/shared/usuarios/api.js).
+//
+// Desde la #840 (regla B1) el alta pide los mismos campos que la edicion (CAMPOS_ALTA_USUARIO,
+// campos.js). La invitacion solo lleva cinco; fecha de ingreso, direccion y notas se escriben
+// despues sobre el perfil recien creado, igual que invitar-usuario hace ya con el telefono.
 
 import { useCallback, useState } from "react";
 
-import { crearUsuario } from "./api.js";
-import { CAMPOS_USUARIO } from "./campos.js";
-
-/** Ids de CAMPOS_USUARIO que pide el modal de alta. En ese orden. */
-const IDS_CAMPOS_ALTA = ["nombres", "apellidos", "email", "telefono", "rol"];
-
-/**
- * Subconjunto de CAMPOS_USUARIO para el modal de alta.
- *
- * No se repiten aca ni el label ni el tipo ni las opciones: se filtra el descriptor completo,
- * asi que un cambio en CAMPOS_USUARIO (una etiqueta, una opcion de rol) llega solo hasta este
- * formulario sin tocarlo.
- */
-export const CAMPOS_ALTA_USUARIO = CAMPOS_USUARIO.filter((campo) =>
-  IDS_CAMPOS_ALTA.includes(campo.id),
-);
+import { esTextoVacio } from "../validations/index.js";
+import { actualizarUsuario, crearUsuario } from "./api.js";
+import { CAMPOS_ALTA_USUARIO, IDS_COMPLEMENTO_DE_ALTA } from "./campos.js";
 
 /**
  * Aviso para quien invito cuando la cuenta se creo pero el correo no salio.
@@ -56,6 +46,22 @@ function valoresIniciales() {
     valores[campo.id] = campo.valorPorDefecto ?? "";
     return valores;
   }, {});
+}
+
+/**
+ * Lo que el alta escribe despues de la invitacion: los campos de IDS_COMPLEMENTO_DE_ALTA que la
+ * persona llego a llenar. Pura y exportada para probarla sin montar el hook.
+ *
+ * @param {object} valores
+ * @returns {Record<string, unknown>} Vacio si no hay nada que completar.
+ */
+export function complementoDeAlta(valores) {
+  return Object.fromEntries(
+    IDS_COMPLEMENTO_DE_ALTA.filter((id) => !esTextoVacio(valores?.[id])).map((id) => [
+      id,
+      valores[id],
+    ]),
+  );
 }
 
 /**
@@ -110,11 +116,29 @@ export function useAltaUsuario() {
 
     if (resultado.error) return { ok: false };
 
+    // La cuenta ya existe: si completar el perfil falla no se deshace el alta, se avisa. Es el
+    // mismo criterio que invitar-usuario aplica al telefono y al correo.
+    const complemento = complementoDeAlta(valores);
+    let avisoDeComplemento = null;
+    if (resultado.usuario?.id && Object.keys(complemento).length > 0) {
+      const { error: errorDeComplemento } = await actualizarUsuario(
+        resultado.usuario.id,
+        complemento,
+      );
+      if (errorDeComplemento) {
+        avisoDeComplemento =
+          "La cuenta quedo creada, pero no se guardaron la fecha de ingreso, la direccion ni " +
+          "las notas. Se pueden completar editando al colaborador.";
+      }
+    }
+
     cancelar();
     return {
       ok: true,
       usuario: resultado.usuario,
-      aviso: avisoDeCorreoNoEnviado(resultado.usuario),
+      aviso:
+        [avisoDeCorreoNoEnviado(resultado.usuario), avisoDeComplemento].filter(Boolean).join(" ") ||
+        null,
     };
   }, [valores, cancelar]);
 

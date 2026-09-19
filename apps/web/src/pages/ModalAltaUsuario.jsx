@@ -2,9 +2,8 @@ import { CAMPOS_ALTA_USUARIO, useAltaUsuario } from "@ecopac/shared";
 
 import Modal from "../components/Modal";
 import PrimaryButton from "../components/PrimaryButton";
-import Selector from "../components/Selector";
+import SeccionDeFormulario from "../components/SeccionDeFormulario";
 import SecondaryButton from "../components/SecondaryButton";
-import TextField from "../components/TextField";
 import { UserPlus, X } from "lucide-react";
 
 // Modal de alta de usuario (issue #106), montado desde ColaboradoresPage.jsx con estado local: no
@@ -12,8 +11,8 @@ import { UserPlus, X } from "lucide-react";
 // especifico de esta pantalla, no una pieza reutilizable por otras.
 //
 // Solo dibuja lo que useAltaUsuario() le entrega. Etiquetas, tipos y orden de los campos salen
-// de CAMPOS_ALTA_USUARIO (el subconjunto de CAMPOS_USUARIO que declara ese hook), no de
-// literales propios.
+// de CAMPOS_ALTA_USUARIO, el mismo juego que dibuja ModalEdicionUsuario.jsx (issue #840, B1), y
+// con la misma seccion: crear y editar a un colaborador se ven igual.
 //
 // El selector de especialidades del prototipo sigue sin estar aca, pero ya no por falta de
 // permisos ni de componente: el alta es una INVITACION, y la Edge Function invitar-usuario crea
@@ -21,15 +20,6 @@ import { UserPlus, X } from "lucide-react";
 // (perfil_especialidad.perfil_id, 00002), asi que no hay a que colgarla hasta que el perfil
 // exista. Se registran despues, desde ModalEdicionUsuario.jsx, que es donde vive ahora el
 // selector real (MultiSelector + useEspecialidadesDePerfil).
-
-// Atributo `type` del input nativo por tipo de descriptor. Es una preferencia de teclado en
-// pantallas tactiles, no una validacion: la validacion real sigue siendo la de
-// packages/shared/usuarios/validaciones.js.
-const TIPO_DE_INPUT = {
-  texto: "text",
-  email: "email",
-  telefono: "tel",
-};
 
 export default function ModalAltaUsuario({ visible, onClose, onUsuarioCreado }) {
   const { valores, errores, error, enviando, setCampo, enviar, cancelar } = useAltaUsuario();
@@ -48,51 +38,39 @@ export default function ModalAltaUsuario({ visible, onClose, onUsuarioCreado }) 
   };
 
   return (
-    <Modal visible={visible} onClose={cerrar} title="Nuevo colaborador">
+    <Modal visible={visible} onClose={cerrar} title="Nuevo colaborador" size="lg">
       {error && (
         <div className="alert alert-danger" role="alert">
           {error.mensaje}
         </div>
       )}
 
-      {CAMPOS_ALTA_USUARIO.map((campo) =>
-        campo.tipo === "select" ? (
-          <Selector
-            key={campo.id}
-            label={campo.label}
-            value={valores[campo.id]}
-            options={campo.opciones}
-            onSelect={(valor) => setCampo(campo.id, valor)}
-            error={errores[campo.id]}
+      <SeccionDeFormulario
+        titulo="Datos del colaborador"
+        descripcion="Los datos de contacto y el rol con el que entra al sistema."
+        acento="var(--accent-colaboradores)"
+        campos={CAMPOS_ALTA_USUARIO}
+        valores={valores}
+        errores={errores}
+        onChange={setCampo}
+        disabled={enviando}
+      >
+        <div className="ec-acciones ec-acciones--fin">
+          <SecondaryButton
+            title="Cancelar"
+            variant="neutra"
+            onClick={cerrar}
+            disabled={enviando}
+            icon={<X size={16} aria-hidden="true" />}
           />
-        ) : (
-          <TextField
-            key={campo.id}
-            label={campo.label}
-            type={TIPO_DE_INPUT[campo.tipo] ?? "text"}
-            placeholder={campo.placeholder}
-            maxLength={campo.validacion?.maxLongitud}
-            value={valores[campo.id] ?? ""}
-            onChange={(evento) => setCampo(campo.id, evento.target.value)}
-            error={errores[campo.id]}
+          <PrimaryButton
+            title="Invitar"
+            onClick={guardar}
+            loading={enviando}
+            icon={<UserPlus size={16} aria-hidden="true" />}
           />
-        ),
-      )}
-
-      <div className="d-flex justify-content-end gap-2 mt-3">
-        <SecondaryButton
-          title="Cancelar"
-          onClick={cerrar}
-          disabled={enviando}
-          icon={<X size={16} aria-hidden="true" />}
-        />
-        <PrimaryButton
-          title="Invitar"
-          onClick={guardar}
-          loading={enviando}
-          icon={<UserPlus size={16} aria-hidden="true" />}
-        />
-      </div>
+        </div>
+      </SeccionDeFormulario>
     </Modal>
   );
 }

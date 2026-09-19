@@ -130,6 +130,7 @@ export default function InventarioPage() {
     validarNuevoLote,
     errorValidacion: errorLotes,
     setErrorValidacion: setErrorLotes,
+    erroresDeLote,
   } = useGestionLotes({
     lotesIniciales: lotesRaw,
     bodegas,
@@ -360,10 +361,10 @@ export default function InventarioPage() {
     await cargarDatos();
   };
 
-  const handleGuardarLote = async (datosLote) => {
-    if (!validarNuevoLote(datosLote)) return;
+  const handleGuardarLote = async (valores) => {
+    if (!validarNuevoLote(valores)) return;
 
-    const { error: errorRegistro } = await registrarLote(datosLoteParaRegistrar(datosLote));
+    const { error: errorRegistro } = await registrarLote(datosLoteParaRegistrar(valores));
 
     if (errorRegistro) {
       setErrorLotes(errorRegistro.mensaje);
@@ -908,8 +909,8 @@ export default function InventarioPage() {
           onClose={() => setModalAltaLoteAbierto(false)}
           onGuardar={handleGuardarLote}
           errorValidacion={errorLotes}
+          errores={erroresDeLote}
           medicamentos={inventarioRaw}
-          bodegas={bodegas}
           proveedores={proveedores}
         />
       )}

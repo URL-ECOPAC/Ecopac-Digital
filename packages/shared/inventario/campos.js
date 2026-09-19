@@ -22,6 +22,7 @@
 // ajustar.
 
 import { TIPOS_DE_CAMPO } from "../descriptores.js";
+import { camposDeEdicion } from "../formularios.js";
 import {
   ACCIONES_DE_ALERTA,
   ETIQUETAS_ACCION_ALERTA,
@@ -163,9 +164,9 @@ export const CAMPOS_BODEGA = [
 
 /**
  * Registro de un lote nuevo (lotes, 00019+00020). El CHECK
- * chk_lotes_vencimiento_posterior exige fecha_vencimiento > fecha_ingreso: se declara
- * en minFechaDesdeCampo para que el formulario lo valide contra el otro campo, no
- * solo contra hoy.
+ * chk_lotes_vencimiento_posterior exige fecha_vencimiento >= fecha_ingreso (>= desde la 00096):
+ * se declara en minFechaDesdeCampo como documentacion, pero validarConDescriptores() no lee esa
+ * regla; quien la aplica es validarDatosDeLote() (useGestionLotes.js).
  */
 export const CAMPOS_LOTE = [
   {
@@ -231,8 +232,12 @@ export const CAMPOS_LOTE = [
  * numeroLote, origen y las fechas son el lote tal como entro; cambiarlos despues no es una
  * correccion, es otro lote distinto, mismo criterio que consulta_diagnostico.condicion_id o
  * padecimientos_cronicos.condicion_id en la auditoria de la issue #756.
+ *
+ * Hoy se corrige en linea, en la fila del desglose de InventarioPage.jsx, donde el resto del lote
+ * ya se ve. Se declara igual que las demas correcciones (issue #840, B1): el mismo juego de campos
+ * que el alta, con lo que no se corrige de solo lectura.
  */
-export const CAMPOS_CORRECCION_LOTE = CAMPOS_LOTE.filter((campo) => campo.id === "costoUnitario");
+export const CAMPOS_CORRECCION_LOTE = camposDeEdicion(CAMPOS_LOTE, ["costoUnitario"]);
 
 /**
  * Registro de un movimiento de inventario (movimientos_inventario, 00023+00028+00047).
@@ -280,25 +285,18 @@ export const CAMPOS_MOVIMIENTO = [
 ];
 
 /**
- * Correccion de un movimiento propio y pendiente ("Mis movimientos", issue #756). Solo
- * cantidad y motivo: tipo/lote/bodega definen que ES el movimiento, y cambiarlos despues de
- * registrado es cancelar y volver a registrar, no corregir un dato mal escrito. Mismas reglas
- * que sus entradas homonimas en CAMPOS_MOVIMIENTO, para no duplicar el criterio de validacion.
+ * Correccion de un movimiento propio y pendiente ("Mis movimientos", issue #756). Solo se
+ * cambian cantidad y motivo: tipo/lote/bodega definen que ES el movimiento, y cambiarlos despues
+ * de registrado es cancelar y volver a registrar, no corregir un dato mal escrito.
+ *
+ * Es el mismo juego de campos que el alta, con esos tres de solo lectura (issue #840, B1): hasta
+ * entonces la correccion solo tenia cantidad y motivo, y quien corregia no veia en el formulario
+ * que movimiento estaba corrigiendo.
  */
-export const CAMPOS_CORRECCION_MOVIMIENTO = [
-  {
-    id: "cantidad",
-    label: "Cantidad",
-    tipo: TIPOS_DE_CAMPO.NUMERO,
-    validacion: { requerido: true, min: 1 },
-  },
-  {
-    id: "motivo",
-    label: "Motivo",
-    tipo: TIPOS_DE_CAMPO.TEXTO_LARGO,
-    validacion: { requerido: true },
-  },
-];
+export const CAMPOS_CORRECCION_MOVIMIENTO = camposDeEdicion(CAMPOS_MOVIMIENTO, [
+  "cantidad",
+  "motivo",
+]);
 
 /**
  * Atender una alerta de caducidad (alertas_caducidad, 00021). El CHECK

@@ -3,18 +3,16 @@ import { useState } from "react";
 import {
   COLUMNAS_CONDICION_DEL_PACIENTE,
   ESTADOS_CONDICION_CRONICA,
-  TIPOS_DE_CAMPO,
   useCondicionesPaciente,
+  valoresDeCorreccionDeCondicion,
 } from "@ecopac/shared";
 
+import CampoDeFormulario from "../components/CampoDeFormulario";
 import DataList from "../components/DataList";
-import DateField from "../components/DateField";
 import Modal from "../components/Modal";
 import { Plus, Save } from "lucide-react";
 import PrimaryButton from "../components/PrimaryButton";
 import SecondaryButton from "../components/SecondaryButton";
-import Selector from "../components/Selector";
-import TextField from "../components/TextField";
 
 export default function ModalCondicionesPaciente({ pacienteId, rol, onClose, onCambio }) {
   const {
@@ -57,10 +55,7 @@ export default function ModalCondicionesPaciente({ pacienteId, rol, onClose, onC
 
   const abrirCorreccion = (condicion) => {
     setIdEnCorreccion(condicion.id);
-    setValoresCorreccion({
-      fechaDiagnostico: condicion.fechaDiagnostico ?? "",
-      notas: condicion.notas ?? "",
-    });
+    setValoresCorreccion(valoresDeCorreccionDeCondicion(condicion));
     setErroresCorreccion({});
   };
 
@@ -121,42 +116,24 @@ export default function ModalCondicionesPaciente({ pacienteId, rol, onClose, onC
 
                 {idEnCorreccion === condicion.id && (
                   <div className="border rounded p-2 ms-3">
-                    {camposCorreccion.map((campo) => {
-                      if (campo.tipo === TIPOS_DE_CAMPO.FECHA) {
-                        return (
-                          <DateField
-                            key={campo.id}
-                            label={campo.label}
-                            value={valoresCorreccion[campo.id] || null}
-                            onChange={(valor) =>
-                              setValoresCorreccion((anteriores) => ({
-                                ...anteriores,
-                                [campo.id]: valor,
-                              }))
-                            }
-                            error={erroresCorreccion[campo.id]}
-                            disabled={enviando}
-                          />
-                        );
-                      }
-
-                      return (
-                        <TextField
-                          key={campo.id}
-                          label={campo.label}
-                          as={campo.tipo === TIPOS_DE_CAMPO.TEXTO_LARGO ? "textarea" : undefined}
-                          value={valoresCorreccion[campo.id] ?? ""}
-                          onChange={(evento) =>
-                            setValoresCorreccion((anteriores) => ({
-                              ...anteriores,
-                              [campo.id]: evento.target.value,
-                            }))
-                          }
-                          error={erroresCorreccion[campo.id]}
-                          disabled={enviando}
-                        />
-                      );
-                    })}
+                    {/* Los campos del alta, con la condicion y el estado de solo lectura
+                        (issue #840, B1). */}
+                    {camposCorreccion.map((campo) => (
+                      <CampoDeFormulario
+                        key={campo.id}
+                        campo={campo}
+                        valor={valoresCorreccion[campo.id]}
+                        onChange={(valor) =>
+                          setValoresCorreccion((anteriores) => ({
+                            ...anteriores,
+                            [campo.id]: valor,
+                          }))
+                        }
+                        error={erroresCorreccion[campo.id]}
+                        catalogos={catalogos}
+                        disabled={enviando}
+                      />
+                    ))}
                     <div className="d-flex justify-content-end gap-2">
                       <SecondaryButton
                         title="Cancelar"
@@ -182,47 +159,17 @@ export default function ModalCondicionesPaciente({ pacienteId, rol, onClose, onC
           <hr />
           <h3 className="h6">Agregar una condicion</h3>
 
-          {campos.map((campo) => {
-            if (campo.tipo === TIPOS_DE_CAMPO.SELECT) {
-              const opciones = campo.opciones ?? catalogos[campo.opcionesDesde] ?? [];
-              return (
-                <Selector
-                  key={campo.id}
-                  label={campo.label}
-                  value={valores[campo.id] || null}
-                  options={opciones}
-                  onSelect={(valor) => setCampo(campo.id, valor)}
-                  error={errores[campo.id]}
-                  disabled={enviando || opciones.length === 0}
-                />
-              );
-            }
-
-            if (campo.tipo === TIPOS_DE_CAMPO.FECHA) {
-              return (
-                <DateField
-                  key={campo.id}
-                  label={campo.label}
-                  value={valores[campo.id] || null}
-                  onChange={(valor) => setCampo(campo.id, valor)}
-                  error={errores[campo.id]}
-                  disabled={enviando}
-                />
-              );
-            }
-
-            return (
-              <TextField
-                key={campo.id}
-                label={campo.label}
-                as={campo.tipo === TIPOS_DE_CAMPO.TEXTO_LARGO ? "textarea" : undefined}
-                value={valores[campo.id] ?? ""}
-                onChange={(evento) => setCampo(campo.id, evento.target.value)}
-                error={errores[campo.id]}
-                disabled={enviando}
-              />
-            );
-          })}
+          {campos.map((campo) => (
+            <CampoDeFormulario
+              key={campo.id}
+              campo={campo}
+              valor={valores[campo.id]}
+              onChange={(valor) => setCampo(campo.id, valor)}
+              error={errores[campo.id]}
+              catalogos={catalogos}
+              disabled={enviando}
+            />
+          ))}
 
           <div className="d-flex justify-content-end gap-2 mt-3">
             <SecondaryButton title="Cerrar" onClick={onClose} disabled={enviando} />
