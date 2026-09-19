@@ -24,6 +24,7 @@ import {
 import { useRegistroSinGuardar } from "../contexto/RegistroSinGuardarProvider";
 import { useSesionCompartida } from "../contexto/SesionProvider";
 import { ROUTES } from "../navigation/rutas";
+import { useCantidadDeNotificaciones } from "../contexto/NotificacionesProvider";
 
 // Id fijo: solo hay un formulario de perfil propio montado a la vez (issue #645).
 const ID_FORMULARIO = "perfil-propio";
@@ -37,6 +38,7 @@ const ID_FORMULARIO = "perfil-propio";
 export default function AjustesScreen({ navigation }) {
   const { usuario, perfil, refrescarPerfil, logout } = useSesionCompartida();
   const { hayAlgoSinGuardar, registrar, desregistrar } = useRegistroSinGuardar();
+  const notificacionesSinLeer = useCantidadDeNotificaciones();
   const [confirmando, setConfirmando] = useState(false);
   const [verContrasena, setVerContrasena] = useState(false);
 
@@ -95,6 +97,18 @@ export default function AjustesScreen({ navigation }) {
     <ScreenContainer contentContainerStyle={styles.contenido}>
       <Text style={styles.titulo}>Ajustes</Text>
       <UsuarioActivo compacto={false} />
+
+      {/* Notificaciones (issue #755): solo el resumen y el acceso a su propia pantalla, donde se
+          filtran. El buzon entero aqui empujaba el perfil hacia abajo y crecia sin limite. */}
+      <Card
+        title="Notificaciones"
+        subtitle={notificacionesSinLeer > 0 ? `${notificacionesSinLeer} sin leer` : "Todo al día"}
+      >
+        <SecondaryButton
+          title="Ver notificaciones"
+          onPress={() => navigation.navigate(ROUTES.NOTIFICACIONES)}
+        />
+      </Card>
 
       {puedeVerCatalogoComunidades(perfil?.rol) && (
         <Card title="Administración">

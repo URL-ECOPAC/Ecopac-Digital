@@ -1,6 +1,15 @@
 import { useState } from "react";
 import { Table } from "react-bootstrap";
-import { formatearFechaCorta, OPCIONES_ACCION_ALERTA, useAlertasVencimiento } from "@ecopac/shared";
+import {
+  accionesPermitidasParaAlerta,
+  efectoDeAccionSobreElStock,
+  ETIQUETAS_ACCION_ALERTA,
+  formatearFechaConHora,
+  formatearFechaCorta,
+  OPCIONES_ACCION_ALERTA,
+  requiereBodegaDestino,
+  useAlertasVencimiento,
+} from "@ecopac/shared";
 import ErrorState from "../components/ErrorState";
 import LoadingState from "../components/LoadingState";
 import Modal from "../components/Modal";
@@ -16,6 +25,10 @@ export default function PanelAlertasVencimiento({ usuarioId, rolUsuario }) {
     porVencer,
     vencidas,
     cantidadPendientes,
+    atendidas,
+    errorAtendidas,
+    bodegas,
+    errorBodegas,
     cargando,
     error,
     recargar,
@@ -26,6 +39,7 @@ export default function PanelAlertasVencimiento({ usuarioId, rolUsuario }) {
 
   const [alertaAtendiendo, setAlertaAtendiendo] = useState(null);
   const [accionTomada, setAccionTomada] = useState("");
+  const [bodegaDestino, setBodegaDestino] = useState("");
   // El fallo se muestra dentro del modal, junto al boton que lo provoco, en vez de en un alert()
   // del navegador que tapa la pantalla y se lleva el contexto al cerrarse (issue #762).
   const [errorAtender, setErrorAtender] = useState(null);
@@ -33,6 +47,7 @@ export default function PanelAlertasVencimiento({ usuarioId, rolUsuario }) {
   const handleAtender = (alerta) => {
     setAlertaAtendiendo(alerta);
     setAccionTomada("");
+    setBodegaDestino("");
     setErrorAtender(null);
   };
 
@@ -40,7 +55,7 @@ export default function PanelAlertasVencimiento({ usuarioId, rolUsuario }) {
     if (!alertaAtendiendo) return;
     setErrorAtender(null);
     try {
-      await marcarComoAtendida(alertaAtendiendo.id, accionTomada);
+      await marcarComoAtendida(alertaAtendiendo.id, accionTomada, bodegaDestino || undefined);
       setAlertaAtendiendo(null);
       setAccionTomada("");
     } catch (error) {
@@ -117,7 +132,7 @@ export default function PanelAlertasVencimiento({ usuarioId, rolUsuario }) {
           "Alertas de vencimiento" se confundia con "Proximos a vencer" y "Vencidos". */}
       <SectionHeader
         title="Alertas de vencimiento"
-        subtitle={`Medicamentos próximos a caducar (próximos 30 días) • ${cantidadPendientes} pendientes`}
+        subtitle={`Lotes que vencen en los próximos 30 días o que ya vencieron • ${cantidadPendientes} pendientes`}
       />
 
       <div className="ec-filtros">
@@ -150,6 +165,50 @@ export default function PanelAlertasVencimiento({ usuarioId, rolUsuario }) {
         )}
       </section>
 
+      {/* Lo ya atendido (issue #755): la alerta atendida desaparece de las dos listas de arriba, y
+          sin este bloque no quedaba en ninguna pantalla que se hizo con ella, quien ni cuando.
+          Su fallo se dice aqui y no tapa las pendientes, que son las que piden accion. */}
+      <section className="ec-subseccion" style={{ "--ec-acento": "var(--color-success)" }}>
+        <h3 className="ec-subseccion-titulo">Atendidas recientemente ({atendidas.length})</h3>
+        {errorAtendidas ? (
+          <ErrorState message={errorAtendidas.mensaje} onRetry={recargar} />
+        ) : atendidas.length === 0 ? (
+          <p className="ec-subseccion-vacio">Todavía no se ha atendido ninguna alerta</p>
+        ) : (
+          <div className="ec-tabla">
+            <Table responsive hover className="mb-0">
+              <thead>
+                <tr>
+                  <th>Medicamento</th>
+                  <th>Lote</th>
+                  <th>Acción tomada</th>
+                  <th>Atendida por</th>
+                  <th>Fecha</th>
+                </tr>
+              </thead>
+              <tbody>
+                {atendidas.map((alerta) => (
+                  <tr key={alerta.id}>
+                    <td>
+                      <strong>{alerta.medicamento}</strong>
+                    </td>
+                    <td className="ec-mono">{alerta.numeroLote}</td>
+                    <td>
+                      <StatusChip
+                        status="atendida"
+                        label={ETIQUETAS_ACCION_ALERTA[alerta.accion] ?? alerta.accion}
+                      />
+                    </td>
+                    <td>{alerta.atendidaPorNombre ?? "—"}</td>
+                    <td>{alerta.atendidaEn ? formatearFechaConHora(alerta.atendidaEn) : "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </Table>
+          </div>
+        )}
+      </section>
+
       {/* El Modal del catalogo: se cierra al tocar fuera o con Escape, como todos. Se monta solo
           mientras hay una alerta elegida, para que al confirmar desaparezca en el acto. */}
       {alertaAtendiendo && (
@@ -178,13 +237,39 @@ export default function PanelAlertasVencimiento({ usuarioId, rolUsuario }) {
             </div>
           </dl>
 
+          {/* Un lote vencido no se reubica: accionesPermitidasParaAlerta() lo deja fuera, la
+              misma regla que aplica fn_atender_alerta_caducidad (00138) en la base. */}
           <Selector
             label="Acción tomada *"
             value={accionTomada || null}
-            options={OPCIONES_ACCION_ALERTA}
-            onSelect={(valor) => setAccionTomada(valor ?? "")}
+            options={accionesPermitidasParaAlerta(alertaAtendiendo, OPCIONES_ACCION_ALERTA)}
+            onSelect={(valor) => {
+              setAccionTomada(valor ?? "");
+              setBodegaDestino("");
+            }}
             placeholder="Selecciona una acción"
           />
+
+          {requiereBodegaDestino(accionTomada) && (
+            <>
+              {errorBodegas && <ErrorState message={errorBodegas.mensaje} />}
+              <Selector
+                label="Bodega destino *"
+                value={bodegaDestino || null}
+                options={bodegas.map((bodega) => ({ value: bodega.id, label: bodega.nombre }))}
+                onSelect={(valor) => setBodegaDestino(valor ?? "")}
+                placeholder="Selecciona la bodega destino"
+              />
+            </>
+          )}
+
+          {/* Atender ya no es solo cerrar la alerta: mueve o da de baja el stock (issue #755).
+              Se dice antes de confirmar, no despues. */}
+          {accionTomada && (
+            <p className="ec-subseccion-vacio mb-3">
+              {efectoDeAccionSobreElStock(accionTomada, alertaAtendiendo.cantidadAfectada)}
+            </p>
+          )}
 
           <div className="ec-form-pie">
             <SecondaryButton
@@ -198,7 +283,9 @@ export default function PanelAlertasVencimiento({ usuarioId, rolUsuario }) {
             <PrimaryButton
               title="Confirmar"
               onClick={confirmarAtender}
-              disabled={!accionTomada.trim()}
+              disabled={
+                !accionTomada.trim() || (requiereBodegaDestino(accionTomada) && !bodegaDestino)
+              }
             />
           </div>
         </Modal>

@@ -218,8 +218,9 @@ sin reasignar, bajo el absorbido. Reflejo en el cliente: `puedeFusionarPacientes
 | `existencias`            | C R U         | R                                | R      | R                  | `00034`; disponibilidad por `fn_existencias_disponibles` (`00065`)                                          |
 | `bodegas`                | C R U         | R                                | R      | R                  | `00034`, con la lectura endurecida por la `00079` a `rol_actual() IS NOT NULL`. Las politicas duplicadas de la `00061`/`00062` las retiro esa misma migracion (era la Divergencia 12). **Sin DELETE para nadie**, y no solo por politica: la `00034` nunca otorgo `GRANT DELETE`, asi que el borrado muere en `42501` antes de llegar a RLS. Cubierto rol por rol en `politicas_rls_inventario.sql` (issue #513)                                                          |
 | `proveedores`            | C R U         | R                                | R      | R                  | `00034`, con la lectura endurecida por la `00079` a `rol_actual() IS NOT NULL`. Las politicas duplicadas de la `00061`/`00062` las retiro esa misma migracion (era la Divergencia 12). **Sin DELETE para nadie**, y no solo por politica: la `00034` nunca otorgo `GRANT DELETE`, asi que el borrado muere en `42501` antes de llegar a RLS. Cubierto rol por rol en `politicas_rls_inventario.sql` (issue #513)                                                                             |
-| `alertas_caducidad`      | R U           | R                                | R      | R                  | `00034`. Sin INSERT DIRECTO para nadie: las genera `fn_generar_alertas_caducidad` (`00088`, redefinida por la `00129`), que es `SECURITY DEFINER`. La invocan la rutina programada con `service_role` y, desde la `00129`, tambien la administradora a traves de `fn_sincronizar_alertas_caducidad` (ver abajo) |
+| `alertas_caducidad`      | R **A**       | R                                | R      | R                  | `00034` + `00138`. Sin INSERT DIRECTO para nadie: las genera `fn_generar_alertas_caducidad` (`00088`, redefinida por la `00129` y la `00138`), que es `SECURITY DEFINER`. La invocan la rutina programada con `service_role` y, desde la `00129`, tambien la administradora a traves de `fn_sincronizar_alertas_caducidad` (ver abajo). **Sin UPDATE directo para nadie desde la `00138`**: se atiende solo con `fn_atender_alerta_caducidad`, que ademas descuenta el stock (ver abajo) |
 | `movimientos_inventario` | R U **A**     | R                                | C R U\* | C R U\*            | `00034` + `00048` + `00086` (aprobar admite tambien `tiene_permiso('inventario.aprobar')`) + `00106`. \*Solo el **propio** movimiento y solo mientras siga `pendiente` |
+| `notificaciones`         | R U\*\*       | R U\*\*                          | R U\*\* | R U\*\*             | `00138` (issue #755). \*\*Cada perfil activo solo **sus propias** filas (`perfil_id = auth.uid() AND rol_actual() IS NOT NULL`), y el UPDATE solo alcanza a `leida_en` (`GRANT UPDATE (leida_en)`, por columna). Sin INSERT ni DELETE para nadie: las escriben triggers `SECURITY DEFINER` (ver abajo). Hoy solo la administracion recibe filas |
 
 **`fn_sincronizar_alertas_caducidad` (issue #838): la unica funcion de inventario con `GRANT
 EXECUTE` a `authenticated` que escribe `alertas_caducidad`.** Existe porque un lote ya vencido no
@@ -231,6 +232,32 @@ siguiente de la rutina nocturna en aparecer. Es un envoltorio `SECURITY DEFINER`
 es crear alertas pendientes que la rutina habria creado igual. No abre ninguna puerta nueva: es la
 misma regla que la politica "Solo administrador atiende alertas_caducidad" (`00034`) ya exige para
 cerrarlas.
+
+**`fn_atender_alerta_caducidad` (issue #755, `00138`): atender una alerta descuenta el stock.**
+Atender era un `UPDATE` de la alerta y nada mas: las unidades seguian en existencias y el
+generador creaba otra alerta del mismo lote -con su notificacion y su correo- en cuanto el panel
+recargaba. Ahora la unica forma de cerrar una alerta es esta funcion `SECURITY DEFINER`, que
+**comprueba `es_administrador()` y lanza `42501` a cualquier otro rol**, y en la misma transaccion:
+con `descartado` o `donado` da de baja todo el stock del lote (una salida aprobada por bodega, en
+el Kardex); con `reubicado` lo traslada a la bodega destino, y solo si el lote no vencio.
+`atendida_por` es `auth.uid()`, no un parametro. Por eso la `00138` retira el `GRANT UPDATE` sobre
+`alertas_caducidad` que daba la `00034`: con el abierto, cerrar una alerta sin descontar nada
+seguia a una peticion de distancia. Dar de baja un vencido pasa por `fn_aplicar_ajuste_existencias`
+con una bandera de transaccion (`ecopac.baja_por_caducidad`) que solo fija esta funcion; fuera de
+ella, la salida de un vencido sigue rechazada como antes (CP-RF03-04).
+
+**Notificaciones al administrador (issue #755, `00138`): quien las escribe.** Nadie las inserta
+desde la aplicacion. Las crean cuatro triggers `SECURITY DEFINER` -`AFTER INSERT` en
+`alertas_caducidad`, en `movimientos_inventario` con `estado = 'pendiente'` y en `gastos` con
+`estado = 'pendiente'`, y `AFTER UPDATE` de sentencia en `existencias` cuando el total de un
+medicamento pasa de mayor que cero a cero- a traves de `fn_notificar_administradores`, que inserta
+una fila por **administrador activo** (un perfil desactivado no recibe nada, mismo criterio que la
+`00079`). Lo que registra la propia administracion nace autoaprobado y no notifica. Ninguna de estas
+funciones tiene `EXECUTE` para `anon` ni `authenticated`. `fn_reclamar_correos_de_notificaciones`
+solo la ejecuta `service_role`: la usan las Edge Functions `enviar-notificaciones` y
+`alertas-vencimiento` para mandar el correo, y lee `perfiles.email` del destinatario. El trigger que
+dispara el correo lee de **Supabase Vault** la URL de la funcion y la llave de servicio
+(`notificaciones_url`, `notificaciones_llave`); si no estan configuradas no hace nada.
 
 **`lotes.costo_unitario` y `lotes.moneda` (issue #752): divergencia declarada entre RLS y lo que
 de verdad protege el dato.** La fila de `lotes` de arriba dice `C R U` para medico y voluntario

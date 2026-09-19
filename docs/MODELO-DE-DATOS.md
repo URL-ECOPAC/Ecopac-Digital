@@ -545,9 +545,24 @@ registro no puede decidir sobre el suyo (`fn_proteger_decision_de_movimiento`, `
 `lote_id`, `estado` (`pendiente`/`atendida`), `cantidad_afectada`, `accion`
 (`donado`/`reubicado`/`descartado`), `atendida_por`, `atendida_en`.
 
-Las genera `fn_generar_alertas_caducidad()` (`00088`) para lotes con existencia positiva que vencen
-en 30 dias, sin duplicar las que ya existen. La dispara diariamente un workflow de GitHub Actions,
-no `pg_cron`.
+Las genera `fn_generar_alertas_caducidad()` (`00088`, redefinida por la `00129`) para lotes con
+existencia positiva que vencen en 30 dias o menos, o que ya vencieron, sin duplicar las que ya
+existen ni volver a alertar un lote ya atendido en la misma etapa -por vencer o vencido- (`00138`).
+La dispara diariamente un workflow de GitHub Actions, no `pg_cron`. Cada alerta nueva notifica a la
+administracion (`notificaciones`, `00138`). Se atiende con `fn_atender_alerta_caducidad` (`00138`),
+que descuenta o traslada el stock del lote; nadie la cierra con un `UPDATE` directo.
+
+### `notificaciones` [00138]
+
+`perfil_id`, `categoria` (`caducidad`/`stock`/`validacion`/`presupuestos`), `titulo`, `cuerpo`,
+`enlace` (ruta de la web), `origen_tabla` + `origen_id` (la incidencia, sin FK porque apunta a
+tablas distintas), `leida_en`, `correo_enviado_en`, `correo_intentado_en`, `correo_error`.
+
+El buzon interno de cada perfil y, a la vez, la bandeja de salida del correo (issue #755). Una fila
+por incidencia y por administrador activo, escrita por triggers: alerta de caducidad nueva,
+movimiento de inventario por validar, gasto por aprobar y medicamento que se queda sin existencia
+(la transicion a cero, no el estado). `uq_notificaciones_incidencia` impide repetir la misma
+incidencia salvo "sin stock", que puede volver a ocurrir despues de reponer.
 
 ---
 
@@ -723,7 +738,10 @@ Del lado del cliente, estos valores nacen una sola vez en `packages/shared/enums
 | `fn_aplicar_ajuste_existencias(...)`    | Suma o resta stock por (lote, bodega); lanza error si no alcanza   |
 | `fn_registrar_donacion(...)`            | [00114] Crea la donacion y su detalle en una transaccion. Devuelve JSONB, no la fila: quien llama necesita el id real de cada renglon para poder generar despues el ingreso de inventario |
 | `fn_anular_donacion(donacion, motivo)`  | [00114] Anula y sella `anulada_por` / `anulada_en`                 |
-| `fn_generar_alertas_caducidad()`        | Genera alertas de lo que vence en 30 dias                         |
+| `fn_generar_alertas_caducidad()`        | Genera alertas de lo que vence en 30 dias o ya vencio (00129)     |
+| `fn_atender_alerta_caducidad(alerta, accion, bodega_destino)` | [00138] Cierra la alerta y da de baja (descartado/donado) o traslada (reubicado) el stock del lote, en una transaccion |
+| `fn_notificar_administradores(...)`     | [00138] Una notificacion por administrador activo; la usan los triggers |
+| `fn_reclamar_correos_de_notificaciones(limite)` | [00138] Reparte lo pendiente de correo sin que dos corridas lo repitan; solo `service_role` |
 | `fn_crear_usuario_administrativo(...)`  | Alta de cuenta; SECURITY DEFINER, sin GRANT a PUBLIC              |
 | `presupuesto_de_jornada / _de_proyecto / _del_sistema()` | Asignado, ejecutado y disponible             |
 | `fn_reporte_pacientes_atendidos(...)`   | Reporte agregado con agrupacion configurable                      |

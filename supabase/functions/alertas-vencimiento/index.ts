@@ -1,9 +1,16 @@
 // Ecopac Digital - Edge Function programada de alertas de vencimiento (issue #166, RF-19).
 //
-// Revisa diariamente los lotes con existencia positiva que vencen dentro de 30 dias y genera
-// una alerta pendiente por cada uno que todavia no la tenga. La logica de que lote necesita
-// alerta -y la garantia de no duplicar- vive en fn_generar_alertas_caducidad() (migracion
-// 00088, SQL): esta funcion es un envoltorio delgado que solo la invoca y reporta el resultado.
+// Revisa diariamente los lotes con existencia positiva que vencen dentro de 30 dias -o que ya
+// vencieron, desde la 00129 (issue #838)- y genera una alerta pendiente por cada uno que todavia no
+// la tenga. La logica de que lote necesita alerta -y la garantia de no duplicar- vive en
+// fn_generar_alertas_caducidad() (migraciones 00088 y 00129, SQL): esta funcion es un envoltorio
+// delgado que solo la invoca y reporta el resultado.
+//
+// Cada alerta nueva notifica a la administracion (trigger de la 00138, issue #755). Despues de
+// generar, esta funcion barre ademas los correos de notificaciones que hayan quedado sin salir
+// -de hoy o de cualquier incidencia anterior cuyo webhook fallo-: es el reintento diario del
+// correo. Que el correo falle no hace fallar la corrida: las alertas ya quedaron creadas y en el
+// buzon, y el resultado del correo va en la respuesta para que el workflow lo muestre.
 //
 // DISPARO: cron externo (.github/workflows/alertas-vencimiento.yml), no pg_cron -- el proyecto
 // esta en el plan gratuito de Supabase, que no lo incluye.
@@ -29,6 +36,7 @@
 //    ejemplo la llave anonima, que si pasa la capa 1- no alcanza para disparar la rutina.
 
 import { createClient } from "@supabase/supabase-js";
+import { enviarCorreosPendientes, leerConfiguracionSmtp } from "../_shared/correo.ts";
 
 Deno.serve(async (req: Request) => {
   const llaveDeServicio = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -67,7 +75,16 @@ Deno.serve(async (req: Request) => {
 
   console.log(`alertas-vencimiento: ${data} alerta(s) nueva(s) generada(s).`);
 
-  return new Response(JSON.stringify({ alertasGeneradas: data }), {
+  let envio;
+  try {
+    envio = await enviarCorreosPendientes(supabase, leerConfiguracionSmtp());
+  } catch (errorDeCorreo) {
+    const mensaje = errorDeCorreo instanceof Error ? errorDeCorreo.message : String(errorDeCorreo);
+    console.error("alertas-vencimiento: el barrido de correos fallo.", mensaje);
+    envio = { correo: "error", correosEnviados: 0, correosFallidos: 0, errorDeCorreo: mensaje };
+  }
+
+  return new Response(JSON.stringify({ alertasGeneradas: data, ...envio }), {
     status: 200,
     headers: { "Content-Type": "application/json" },
   });

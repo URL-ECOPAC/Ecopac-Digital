@@ -56,6 +56,7 @@ const DetalleJornadaPage = lazy(() => import("./pages/DetalleJornadaPage"));
 const ColaboradoresPage = lazy(() => import("./pages/ColaboradoresPage"));
 const BitacoraAuditoriaPage = lazy(() => import("./pages/BitacoraAuditoriaPage"));
 const PerfilPage = lazy(() => import("./pages/PerfilPage"));
+const NotificacionesPage = lazy(() => import("./pages/NotificacionesPage"));
 const NotFoundPage = lazy(() => import("./pages/NotFoundPage"));
 const ReporteJornada = lazy(() => import("./pages/ReporteJornada"));
 
@@ -226,6 +227,9 @@ export default function App() {
                 {/* Fuera de cualquier grupo de rolesDelModulo() a proposito: el perfil propio no es un
                   modulo con roles permitidos, cualquier rol autenticado tiene el suyo. */}
                 <Route path="/perfil" element={<PerfilPage />} />
+                {/* Igual que /perfil: las notificaciones son de cada perfil, no de un modulo
+                  (issue #755). A quien le llega que lo decide la base. */}
+                <Route path="/notificaciones" element={<NotificacionesPage />} />
                 <Route path="*" element={<NotFoundPage />} />
               </Route>
             </Route>

@@ -41,4 +41,8 @@ export const ROUTES = {
   RESUMEN_ALERTAS_INVENTARIO: "ResumenAlertasInventario",
   MIS_MOVIMIENTOS: "MisMovimientos",
   DETALLE_LOTE: "DetalleLote",
+
+  // Pantalla del Root, encima de las pestanas: se abre desde la campana de cualquier cabecera y
+  // desde Ajustes (issue #755).
+  NOTIFICACIONES: "Notificaciones",
 };

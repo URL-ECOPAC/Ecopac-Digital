@@ -1,5 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { listarAlertas, atenderAlerta, sincronizarAlertas } from "./alertas.api.js";
+import {
+  listarAlertas,
+  atenderAlerta,
+  historialAlertas,
+  sincronizarAlertas,
+} from "./alertas.api.js";
+import { listarBodegas } from "./bodegas.api.js";
 import { esAdministrador } from "../usuarios/roles.js";
 import { aFechaLocal, diasHastaVencimiento } from "../formato/fechas.js";
 
@@ -34,15 +40,27 @@ export function calcularDiasRestantes(fechaVencimiento, fechaIngreso) {
 /**
  * Traduce la accion tomada mas la sesion actual a los argumentos que declara atenderAlerta()
  * (alertas.api.js). Se exporta aparte del hook para poder probar la traduccion sin montar un
- * componente (issue #709): el bug original mandaba { accionTomada } en vez de { accion,
- * usuarioId, rolUsuario }, y atenderAlerta() siempre fallaba por falta de usuarioId.
+ * componente (issue #709): el bug original mandaba { accionTomada } en vez de { accion, ... }.
+ *
+ * Desde la issue #755 ya no viaja usuarioId: quien atiende lo fija la base con auth.uid()
+ * (fn_atender_alerta_caducidad, 00138). Viaja, en cambio, la bodega destino de una reubicacion.
  *
  * @param {string} accionTomada
- * @param {{ usuarioId?: string, rolUsuario?: string }} sesion
+ * @param {{ rolUsuario?: string }} sesion
+ * @param {string} [bodegaDestinoId]
  */
-export function datosAtenderAlerta(accionTomada, { usuarioId, rolUsuario }) {
-  return { accion: accionTomada, usuarioId, rolUsuario };
+export function datosAtenderAlerta(accionTomada, { rolUsuario }, bodegaDestinoId) {
+  return { accion: accionTomada, rolUsuario, bodegaDestinoId };
 }
+
+// Cuantas alertas atendidas muestra el bloque "Atendidas recientemente" del panel web.
+export const LIMITE_DE_ATENDIDAS = 10;
+
+// Cada instancia montada del hook, para avisarles cuando una atiende una alerta (issue #755). La
+// web monta dos a la vez -la del panel y la que cuenta pendientes para la pestana "Alertas" de
+// InventarioPage- y sin este aviso el contador de la pestana seguia en el numero de antes hasta
+// recargar la pagina. En memoria y sin window, para que valga igual en el movil.
+const instanciasMontadas = new Set();
 
 /**
  * View model del panel de alertas de vencimiento (issue #268, RF-19), y de la correccion de la
@@ -60,14 +78,22 @@ export function datosAtenderAlerta(accionTomada, { usuarioId, rolUsuario }) {
  * client-side sobre `lotes` -mismo bug de fondo, solo que sin boton de "Atender" que lo
  * disparara todavia.
  *
- * @param {{ usuarioId: string, rolUsuario: string }} contexto Quien esta operando el panel; viaja
- *   tal cual a atenderAlerta().
+ * @param {{ rolUsuario: string }} contexto Quien esta operando el panel. El rol decide si se
+ *   sincroniza al abrir y viaja a atenderAlerta(); quien atiende lo fija la base (issue #755).
  */
-export function useAlertasVencimiento({ usuarioId, rolUsuario } = {}) {
+export function useAlertasVencimiento({ rolUsuario } = {}) {
   const [alertas, setAlertas] = useState([]);
+  // Las ya atendidas (issue #755): quien, cuando y que accion. Su fallo va aparte de `error`: el
+  // historial es informativo, y no puede tapar la lista de pendientes, que es la que pide accion.
+  const [atendidas, setAtendidas] = useState([]);
+  const [errorAtendidas, setErrorAtendidas] = useState(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
   const [busqueda, setBusqueda] = useState("");
+  // Destinos posibles de una reubicacion (issue #755). Se piden una vez: el catalogo de bodegas
+  // no cambia mientras el panel esta abierto, y solo hace falta al elegir "Reubicado".
+  const [bodegas, setBodegas] = useState([]);
+  const [errorBodegas, setErrorBodegas] = useState(null);
 
   // Mismo resguardo contra respuestas fuera de orden que usePendientesValidacion().
   const peticionVigente = useRef(0);
@@ -98,6 +124,12 @@ export function useAlertasVencimiento({ usuarioId, rolUsuario } = {}) {
     }
 
     setAlertas(respuesta.alertas);
+
+    const historial = await historialAlertas({ limite: LIMITE_DE_ATENDIDAS });
+    if (idDeEstaPeticion !== peticionVigente.current) return;
+    setAtendidas(historial.alertas);
+    setErrorAtendidas(historial.error);
+
     setCargando(false);
   }, [rolUsuario]);
 
@@ -105,7 +137,24 @@ export function useAlertasVencimiento({ usuarioId, rolUsuario } = {}) {
     consultar();
   }, [consultar]);
 
+  useEffect(() => {
+    instanciasMontadas.add(consultar);
+    return () => instanciasMontadas.delete(consultar);
+  }, [consultar]);
+
   const recargar = useCallback(() => consultar(), [consultar]);
+
+  useEffect(() => {
+    let vigente = true;
+    listarBodegas().then((respuesta) => {
+      if (!vigente) return;
+      setBodegas(respuesta.bodegas);
+      setErrorBodegas(respuesta.error);
+    });
+    return () => {
+      vigente = false;
+    };
+  }, []);
 
   const alertasFiltradas = useMemo(() => {
     const termino = busqueda.trim().toLowerCase();
@@ -128,30 +177,34 @@ export function useAlertasVencimiento({ usuarioId, rolUsuario } = {}) {
   );
 
   const marcarComoAtendida = useCallback(
-    async (idAlerta, accionTomada) => {
+    async (idAlerta, accionTomada, bodegaDestinoId) => {
       if (!accionTomada || accionTomada.trim() === "") {
         throw new Error("Debe indicar la acción tomada");
       }
 
       const respuesta = await atenderAlerta(
         idAlerta,
-        datosAtenderAlerta(accionTomada, { usuarioId, rolUsuario }),
+        datosAtenderAlerta(accionTomada, { rolUsuario }, bodegaDestinoId),
       );
 
       if (respuesta.error) {
         throw new Error(respuesta.error.mensaje);
       }
 
-      await consultar();
+      await Promise.all([...instanciasMontadas].map((recargarInstancia) => recargarInstancia()));
       return respuesta;
     },
-    [usuarioId, rolUsuario, consultar],
+    [rolUsuario, consultar],
   );
 
   return {
     porVencer,
     vencidas,
     cantidadPendientes: alertas.length,
+    atendidas,
+    errorAtendidas,
+    bodegas,
+    errorBodegas,
     cargando,
     error,
     recargar,

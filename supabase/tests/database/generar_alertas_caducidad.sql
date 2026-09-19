@@ -1,4 +1,4 @@
--- Pruebas de fn_generar_alertas_caducidad() (issues #166 y #838).
+-- Pruebas de fn_generar_alertas_caducidad() (issues #166, #838 y #755).
 --
 -- QUE CAMBIO EN LA #838, Y POR QUE ESTA PRUEBA CAMBIA CON ELLA
 --
@@ -27,10 +27,10 @@
 
 BEGIN;
 
-SELECT plan(10);
+SELECT plan(13);
 
 -- ============================================================================
--- Setup: dos bodegas, un medicamento, un proveedor, y seis lotes que cubren cada caso del DoD.
+-- Setup: dos bodegas, un medicamento, un proveedor, y los lotes que cubren cada caso del DoD.
 -- ============================================================================
 INSERT INTO bodegas (id, nombre, es_movil) VALUES
   ('a1000000-0000-0000-0000-000000000001', 'Bodega A 166', FALSE),
@@ -61,7 +61,16 @@ INSERT INTO lotes (id, medicamento_id, proveedor_id, numero_lote, origen, cantid
   ('a4000000-0000-0000-0000-000000000007', 'a2000000-0000-0000-0000-000000000001', 'a3000000-0000-0000-0000-000000000001', 'L-166-7', 'compra', 100, CURRENT_DATE - 100, CURRENT_DATE - 40),
   -- 6. Multi-bodega: vence en 15 dias, stock repartido en las dos bodegas. Una sola alerta con
   --    la suma de las dos.
-  ('a4000000-0000-0000-0000-000000000006', 'a2000000-0000-0000-0000-000000000001', 'a3000000-0000-0000-0000-000000000001', 'L-166-6', 'compra', 100, CURRENT_DATE - 100, CURRENT_DATE + 15);
+  ('a4000000-0000-0000-0000-000000000006', 'a2000000-0000-0000-0000-000000000001', 'a3000000-0000-0000-0000-000000000001', 'L-166-6', 'compra', 100, CURRENT_DATE - 100, CURRENT_DATE + 15),
+  -- Los tres bordes de la ventana (issue #755). La condicion es `fecha_vencimiento <=
+  -- CURRENT_DATE + 30`: el dia 30 entra y el 31 no. Hoy entra por partida doble: no ha vencido
+  -- (regla #597, un lote que vence hoy aun se entrega) y esta dentro de los 30 dias.
+  -- 8. Vence HOY, con stock. SI genera alerta.
+  ('a4000000-0000-0000-0000-000000000008', 'a2000000-0000-0000-0000-000000000001', 'a3000000-0000-0000-0000-000000000001', 'L-166-8', 'compra', 100, CURRENT_DATE - 100, CURRENT_DATE),
+  -- 9. Vence en exactamente 30 dias, con stock. SI genera alerta: es el ultimo dia de la ventana.
+  ('a4000000-0000-0000-0000-000000000009', 'a2000000-0000-0000-0000-000000000001', 'a3000000-0000-0000-0000-000000000001', 'L-166-9', 'compra', 100, CURRENT_DATE - 100, CURRENT_DATE + 30),
+  -- 10. Vence en 31 dias, con stock. NO genera alerta: el primer dia fuera de la ventana.
+  ('a4000000-0000-0000-0000-000000000010', 'a2000000-0000-0000-0000-000000000001', 'a3000000-0000-0000-0000-000000000001', 'L-166-10', 'compra', 100, CURRENT_DATE - 100, CURRENT_DATE + 31);
 
 INSERT INTO existencias (lote_id, bodega_id, cantidad_disponible) VALUES
   ('a4000000-0000-0000-0000-000000000001', 'a1000000-0000-0000-0000-000000000001', 5),
@@ -71,7 +80,10 @@ INSERT INTO existencias (lote_id, bodega_id, cantidad_disponible) VALUES
   ('a4000000-0000-0000-0000-000000000005', 'a1000000-0000-0000-0000-000000000001', 5),
   ('a4000000-0000-0000-0000-000000000006', 'a1000000-0000-0000-0000-000000000001', 4),
   ('a4000000-0000-0000-0000-000000000006', 'a1000000-0000-0000-0000-000000000002', 6),
-  ('a4000000-0000-0000-0000-000000000007', 'a1000000-0000-0000-0000-000000000001', 0);
+  ('a4000000-0000-0000-0000-000000000007', 'a1000000-0000-0000-0000-000000000001', 0),
+  ('a4000000-0000-0000-0000-000000000008', 'a1000000-0000-0000-0000-000000000001', 5),
+  ('a4000000-0000-0000-0000-000000000009', 'a1000000-0000-0000-0000-000000000001', 5),
+  ('a4000000-0000-0000-0000-000000000010', 'a1000000-0000-0000-0000-000000000001', 5);
 
 -- El lote 4 ya tiene una alerta pendiente, registrada antes de correr la funcion.
 INSERT INTO alertas_caducidad (id, lote_id, estado, cantidad_afectada) VALUES
@@ -96,9 +108,9 @@ SELECT id, 1 FROM lotes WHERE numero_lote IN ('LOTE-DEMO-POR-VENCER', 'LOTE-DEMO
 -- ============================================================================
 SELECT is(
   (SELECT fn_generar_alertas_caducidad()),
-  3,
-  'genera exactamente 3 alertas nuevas: el lote urgente, el multi-bodega y el ya vencido con '
-  'existencia (issue #838)'
+  5,
+  'genera exactamente 5 alertas nuevas: el lote urgente, el multi-bodega, el ya vencido con '
+  'existencia (issue #838) y los dos bordes que entran, hoy y dentro de 30 dias (issue #755)'
 );
 
 SELECT ok(
@@ -147,6 +159,25 @@ SELECT is(
   'el lote ya vencido SIN existencia no genera alerta: no hay nada que dar de baja'
 );
 
+-- Los tres bordes de la ventana (issue #755)
+SELECT is(
+  (SELECT count(*)::int FROM alertas_caducidad WHERE lote_id = 'a4000000-0000-0000-0000-000000000008'),
+  1,
+  'el lote que vence hoy genera alerta'
+);
+
+SELECT is(
+  (SELECT count(*)::int FROM alertas_caducidad WHERE lote_id = 'a4000000-0000-0000-0000-000000000009'),
+  1,
+  'el lote que vence en exactamente 30 dias genera alerta: es el ultimo dia de la ventana'
+);
+
+SELECT is(
+  (SELECT count(*)::int FROM alertas_caducidad WHERE lote_id = 'a4000000-0000-0000-0000-000000000010'),
+  0,
+  'el lote que vence en 31 dias no genera alerta: es el primer dia fuera de la ventana'
+);
+
 -- ============================================================================
 -- Segunda corrida, mismo dia: idempotencia (criterio 3 del DoD)
 -- ============================================================================
@@ -158,8 +189,8 @@ SELECT is(
 
 SELECT is(
   (SELECT count(*)::int FROM alertas_caducidad),
-  6,
-  'el total de alertas no cambio: las 3 nuevas de la primera corrida mas las 3 que ya existian '
+  8,
+  'el total de alertas no cambio: las 5 nuevas de la primera corrida mas las 3 que ya existian '
   '(el lote 4 y los dos lotes de seed-demo, neutralizados arriba)'
 );
 
