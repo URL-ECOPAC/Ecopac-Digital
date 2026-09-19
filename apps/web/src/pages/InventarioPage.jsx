@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useSesionCompartida } from "../contexto/SesionProvider";
 import ModalMedicamento from "./ModalMedicamento.jsx";
 import ModalPrincipioActivo from "./ModalPrincipioActivo.jsx";
@@ -53,8 +54,32 @@ import KardexMovimientosPage from "./KardexMovimientosPage.jsx";
 import CatalogoPrincipiosActivosPage from "./CatalogoPrincipiosActivosPage.jsx";
 import MisMovimientosPage from "./MisMovimientosPage.jsx";
 
+// Pestanas que se pueden abrir con ?tab=. Es el enlace de las notificaciones del buzon (issue
+// #755): /inventario?tab=alertas, ?tab=validacion o ?tab=catalogo. "mis-movimientos" no esta
+// porque depende del rol; una pestana que no esta en la lista cae al catalogo, la de siempre.
+const PESTANAS_ENLAZABLES = [
+  "catalogo",
+  "lotes",
+  "alertas",
+  "kardex",
+  "administracion",
+  "principios-activos",
+  "validacion",
+];
+
+function pestanaDeEnlace(pedida) {
+  return PESTANAS_ENLAZABLES.includes(pedida) ? pedida : "catalogo";
+}
+
 export default function InventarioPage() {
-  const [tabActiva, setTabActiva] = useState("catalogo");
+  const [parametros] = useSearchParams();
+  const pestanaPedida = parametros.get("tab");
+  const [tabActiva, setTabActiva] = useState(() => pestanaDeEnlace(pestanaPedida));
+
+  // Si ?tab= cambia con la pagina ya montada (se abre otra notificacion), la pestana lo sigue.
+  useEffect(() => {
+    if (pestanaPedida) setTabActiva(pestanaDeEnlace(pestanaPedida));
+  }, [pestanaPedida]);
   const [inventarioRaw, setInventarioRaw] = useState([]);
   const [principiosActivos, setPrincipiosActivos] = useState([]);
   const [lotesRaw, setLotesRaw] = useState([]);

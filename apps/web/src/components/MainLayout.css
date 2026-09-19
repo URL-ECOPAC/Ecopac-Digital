@@ -186,6 +186,42 @@
   gap: var(--spacing-md);
 }
 
+/* Campana del buzon (issue #755). El contador va en warning: una notificacion pide atencion pero
+   no bloquea nada, que es justo lo que ese token significa en docs/DISENO.md. */
+.app-buzon {
+  align-items: center;
+  background: none;
+  border: 0;
+  border-radius: var(--radio-pill);
+  color: var(--color-secondary);
+  display: inline-flex;
+  height: 34px;
+  justify-content: center;
+  position: relative;
+  width: 34px;
+}
+
+.app-buzon:hover,
+.app-buzon:focus-visible {
+  background: color-mix(in srgb, var(--color-primary) 8%, transparent);
+  color: var(--color-primary);
+}
+
+.app-buzon__contador {
+  background: var(--color-warning);
+  border-radius: var(--radio-pill);
+  color: var(--color-surface);
+  font-size: var(--texto-xxs);
+  font-weight: var(--peso-bold);
+  line-height: 1;
+  min-width: 18px;
+  padding: 3px 5px;
+  position: absolute;
+  right: -2px;
+  text-align: center;
+  top: -2px;
+}
+
 .app-status {
   display: inline-flex;
   align-items: center;

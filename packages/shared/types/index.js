@@ -68,6 +68,7 @@
 /** @typedef {(typeof import("../enums.js").ACCIONES_DE_ALERTA)[keyof typeof import("../enums.js").ACCIONES_DE_ALERTA]} AccionAlerta */
 /** @typedef {(typeof import("../enums.js").CATEGORIAS_DE_GASTO)[keyof typeof import("../enums.js").CATEGORIAS_DE_GASTO]} CategoriaGasto */
 /** @typedef {(typeof import("../enums.js").ESTADOS_ALERTA)[keyof typeof import("../enums.js").ESTADOS_ALERTA]} EstadoAlerta */
+/** @typedef {(typeof import("../enums.js").CATEGORIAS_NOTIFICACION)[keyof typeof import("../enums.js").CATEGORIAS_NOTIFICACION]} CategoriaNotificacion */
 /** @typedef {(typeof import("../enums.js").ESTADOS_CONDICION_CRONICA)[keyof typeof import("../enums.js").ESTADOS_CONDICION_CRONICA]} EstadoCondicionCronica */
 /** @typedef {(typeof import("../enums.js").ESTADOS_DE_DONACION)[keyof typeof import("../enums.js").ESTADOS_DE_DONACION]} EstadoDonacion */
 /** @typedef {(typeof import("../enums.js").ESTADOS_DE_GASTO)[keyof typeof import("../enums.js").ESTADOS_DE_GASTO]} EstadoGasto */
@@ -645,6 +646,28 @@
  * @property {string|null} atendidaEn
  * @property {string} createdAt
  * @property {string} updatedAt
+ */
+
+/**
+ * Fila de `notificaciones` (00138_notificaciones_al_administrador.sql, issue #755): una
+ * notificacion del buzon de un perfil, y a la vez la bandeja de salida de su correo.
+ *
+ * La escriben los triggers de la 00138, no el cliente; el cliente solo puede cambiar leidaEn.
+ *
+ * @typedef {object} Notificacion
+ * @property {string} id
+ * @property {string} perfilId
+ * @property {CategoriaNotificacion} categoria
+ * @property {string} titulo
+ * @property {string} cuerpo
+ * @property {string} enlace
+ * @property {string} origenTabla
+ * @property {string} origenId
+ * @property {string|null} leidaEn
+ * @property {string|null} correoEnviadoEn
+ * @property {string|null} correoIntentadoEn
+ * @property {string|null} correoError
+ * @property {string} createdAt
  */
 
 // --- Donaciones -----------------------------------------------------------------------------

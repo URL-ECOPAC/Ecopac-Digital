@@ -31,6 +31,8 @@ const ICONOS = {
   UserCheck: "person-circle-outline",
   // Ajustes no es un modulo de navegacion.js -no aparece en MODULOS- pero si es una tab.
   Settings: "settings-outline",
+  // Tampoco es un modulo: la campana de notificaciones de la cabecera (issue #755).
+  Bell: "notifications-outline",
 };
 
 /** El que se usa si llega un nombre sin traduccion, para no dejar la tab sin icono. */

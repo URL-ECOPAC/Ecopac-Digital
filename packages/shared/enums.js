@@ -138,6 +138,24 @@ export const ETIQUETAS_TIPO_MOVIMIENTO = Object.freeze({
   [TIPOS_DE_MOVIMIENTO.SALIDA]: "Salida",
 });
 
+/**
+ * `categoria_notificacion` (00138_notificaciones_al_administrador.sql, issue #755): de que trata
+ * una notificacion del buzon, y el criterio por el que el buzon las agrupa.
+ */
+export const CATEGORIAS_NOTIFICACION = Object.freeze({
+  CADUCIDAD: "caducidad",
+  STOCK: "stock",
+  VALIDACION: "validacion",
+  PRESUPUESTOS: "presupuestos",
+});
+
+export const ETIQUETAS_CATEGORIA_NOTIFICACION = Object.freeze({
+  [CATEGORIAS_NOTIFICACION.CADUCIDAD]: "Caducidad",
+  [CATEGORIAS_NOTIFICACION.STOCK]: "Stock",
+  [CATEGORIAS_NOTIFICACION.VALIDACION]: "Validación",
+  [CATEGORIAS_NOTIFICACION.PRESUPUESTOS]: "Presupuestos",
+});
+
 /** `estado_alerta` (00021_alertas_caducidad.sql). */
 export const ESTADOS_ALERTA = Object.freeze({
   PENDIENTE: "pendiente",

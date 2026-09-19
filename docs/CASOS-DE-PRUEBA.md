@@ -118,6 +118,13 @@ el numero del backlog. Este documento usa siempre la numeracion de la matriz.
 | CP-RF05-04 | Lote ya alertado | No duplica la alerta | `generar_alertas_caducidad.sql` |
 | CP-RF05-05 | Panel de alertas en web y resumen en movil | Muestra las alertas pendientes | `apps/web/src/pages/PanelAlertasVencimiento.test.jsx`; `apps/mobile/src/screens/InventarioResumenAlertasScreen.test.js` |
 | CP-RF05-06 | Reporte de medicamentos por vencer | Clasifica los lotes por horizonte | `reportes.e2e.test.js`, casos de `obtenerReporteDeVencimientos` |
+| CP-RF05-07 | Bordes de la ventana: vence hoy, en 30 y en 31 dias | Los dos primeros generan alerta, el tercero no | `generar_alertas_caducidad.sql` (13) |
+| CP-RF05-08 | Una alerta, movimiento por validar, gasto por aprobar o medicamento sin stock nuevo | Notifica una vez a cada administrador activo; nada a un inactivo ni a otros roles; lo autoaprobado no notifica; repetir no repite | `notificaciones.sql` (26) |
+| CP-RF05-09 | El correo de cada notificacion | Uno por notificacion, en orden; solo se marca enviado lo que el SMTP acepto; sin SMTP no se reclama nada | `supabase/functions/_shared/correo_test.ts` |
+| CP-RF05-10 | Notificaciones en web y en movil | La campana abre las recientes sin salir de la pantalla y lleva a la ventana dedicada; ahi se filtra por texto, por una categoria y por estado, y se ve por llegada o agrupado; abrir marca como leida y lleva a donde se resuelve; si falla no navega y lo dice | `apps/web/src/components/CampanaNotificaciones.test.jsx`; `apps/web/src/pages/NotificacionesPage.test.jsx`; `apps/mobile/src/screens/NotificacionesScreen.test.js`; `packages/shared/notificaciones/*.test.js` |
+| CP-RF05-13 | Aviso del sistema del telefono | Cuando llega una notificacion nueva con la app abierta, sale como notificacion del sistema; lo que ya estaba al abrir no se avisa; tocarla abre la ventana de notificaciones. No disponible en Expo Go sobre Android (ver COSTOS-Y-LIMITES) | `apps/mobile/src/components/AvisosDelSistema.test.js`; `packages/shared/notificaciones/avisos.test.js` |
+| CP-RF05-11 | Alertas ya atendidas | El panel muestra la accion, quien y cuando | `apps/web/src/pages/PanelAlertasVencimiento.test.jsx` |
+| CP-RF05-12 | Atender una alerta | Descartado/donado dan de baja todo el lote (salidas en el Kardex); reubicado traslada a la bodega destino y no se ofrece para un vencido; la alerta no se vuelve a generar ni a notificar; nadie la cierra con un UPDATE directo | `atender_alerta_caducidad.sql` (17); `packages/shared/inventario/alertas.api.test.js`; `PanelAlertasVencimiento.test.jsx` |
 
 ### RF-06: busqueda de pacientes e historial medico completo
 

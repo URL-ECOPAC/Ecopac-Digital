@@ -26,6 +26,7 @@ import {
   InventarioNavigator,
   JornadasNavigator,
   PacientesNavigator,
+  PANTALLAS_DEL_ROOT,
   TabsNavigator,
 } from "./AppNavigator";
 import { ROUTES } from "./rutas";
@@ -143,9 +144,23 @@ describe("guarda de rol en el arbol de navegacion (issue #820)", () => {
       ROUTES.ACCESO_DENEGADO,
     ];
     const pantallas = Object.values(ROUTES).filter((ruta) => !contenedores.includes(ruta));
-    const registradas = pantallasDeLosStacks().map(({ name }) => name);
+    const registradas = [
+      ...pantallasDeLosStacks().map(({ name }) => name),
+      ...PANTALLAS_DEL_ROOT.map(({ name }) => name),
+    ];
 
     expect(registradas.sort()).toEqual(pantallas.sort());
+  });
+
+  // Issue #755: la ventana de notificaciones vive en el Root, encima de las pestanas, y se abre
+  // desde la campana de cualquier cabecera. Lleva guarda igual que las de los stacks; la abre
+  // cualquier rol, porque a quien le llega que lo decide la base.
+  it("las pantallas del Root tambien van con guarda", () => {
+    expect(PANTALLAS_DEL_ROOT.map(({ name }) => name)).toEqual([ROUTES.NOTIFICACIONES]);
+    for (const { componente } of PANTALLAS_DEL_ROOT) {
+      expect(componente.esGuardaDeRol).toBe(true);
+      expect([...componente.rolesPermitidos].sort()).toEqual([...TODOS_LOS_ROLES].sort());
+    }
   });
 
   it("Ajustes, la unica hoja que cuelga de una tab, tambien va con guarda", () => {

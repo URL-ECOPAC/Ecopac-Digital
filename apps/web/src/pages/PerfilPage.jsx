@@ -1,9 +1,11 @@
-import { KeyRound, Mail, Save, ShieldCheck } from "lucide-react";
+import { Bell, KeyRound, Mail, Save, ShieldCheck } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 import {
   TIPOS_DE_CAMPO,
   etiquetaDeRol,
   nombreCompletoDe,
+  useContadorNotificaciones,
   useEspecialidadesDePerfil,
   usePerfilPropio,
 } from "@ecopac/shared";
@@ -14,6 +16,7 @@ import {
   MultiSelector,
   PageHeader,
   PrimaryButton,
+  SecondaryButton,
   ScreenContainer,
   Selector,
   StatusChip,
@@ -41,8 +44,15 @@ import "./perfil.css";
 //      ya permitia a cualquiera editar las de su propio perfil (permisos.js) y esta pantalla era
 //      la unica que no lo ofrecia, asi que un medico tenia que pedirle a la administradora que le
 //      corrigiera las suyas.
+//
+// LAS NOTIFICACIONES (issue #755). Aqui solo va el resumen -cuantas hay sin leer- y el acceso a la
+// ventana dedicada (/notificaciones), donde se filtran. El buzon entero en el perfil empujaba los
+// formularios hacia abajo y crecia con cada incidencia. Se muestra a todos los roles: hoy solo la
+// administracion recibe notificaciones (00138), pero quien decide quien recibe que es la base.
 export default function PerfilPage() {
   const { usuario, perfil, refrescarPerfil } = useSesionCompartida();
+  const navigate = useNavigate();
+  const { cantidad: notificacionesSinLeer } = useContadorNotificaciones({ perfilId: perfil?.id });
 
   const {
     campos,
@@ -86,7 +96,10 @@ export default function PerfilPage() {
 
   return (
     <ScreenContainer>
-      <PageHeader title="Mi perfil" subtitle="Tus datos de contacto y tu contraseña de acceso" />
+      <PageHeader
+        title="Mi perfil"
+        subtitle="Tus notificaciones, tus datos de contacto y tu contraseña de acceso"
+      />
 
       <Card style={{ marginBottom: "1rem" }}>
         <div className="perfil-identidad">
@@ -112,6 +125,21 @@ export default function PerfilPage() {
           </div>
         </div>
       </Card>
+
+      <div className="mb-4">
+        <Card
+          title="Notificaciones"
+          subtitle={notificacionesSinLeer > 0 ? `${notificacionesSinLeer} sin leer` : "Todo al día"}
+          actions={
+            <SecondaryButton
+              title="Ver notificaciones"
+              size="sm"
+              icon={<Bell size={16} aria-hidden="true" />}
+              onClick={() => navigate("/notificaciones")}
+            />
+          }
+        />
+      </div>
 
       <Card title="Datos personales">
         {errorGlobal && <ErrorState message={errorGlobal} />}
