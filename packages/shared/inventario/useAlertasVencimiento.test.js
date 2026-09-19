@@ -9,8 +9,7 @@
 // de calendario. Un lote que vence exactamente hoy salia con dias negativos, es decir VENCIDO.
 //
 // datosAtenderAlerta() (issue #709): marcarComoAtendida() llamaba a atenderAlerta() con
-// { accionTomada } -una clave que atenderAlerta() (alertas.api.js) no lee, cuya firma real es
-// { accion, usuarioId, rolUsuario }-, y ademas descartaba el { error } de la respuesta, marcando
+// { accionTomada } -una clave que atenderAlerta() (alertas.api.js) no lee-, y ademas descartaba el { error } de la respuesta, marcando
 // la alerta como atendida en el estado local aunque el llamado real hubiera fallado por falta de
 // usuarioId. Esta prueba cubre la traduccion que marcarComoAtendida() ahora usa para llamar a
 // atenderAlerta(), con exactamente los argumentos que esa funcion declara.
@@ -47,23 +46,28 @@ describe("calcularDiasRestantes", () => {
 });
 
 describe("datosAtenderAlerta", () => {
-  it("arma los argumentos de atenderAlerta con accion, usuarioId y rolUsuario de la sesion actual", () => {
-    const resultado = datosAtenderAlerta("Despachado a bodega central", {
-      usuarioId: "user-1",
-      rolUsuario: "administrador",
-    });
+  it("arma los argumentos de atenderAlerta con la accion, el rol y la bodega destino", () => {
+    const resultado = datosAtenderAlerta("reubicado", { rolUsuario: "administrador" }, "bodega-1");
 
     expect(resultado).toEqual({
-      accion: "Despachado a bodega central",
-      usuarioId: "user-1",
+      accion: "reubicado",
       rolUsuario: "administrador",
+      bodegaDestinoId: "bodega-1",
     });
   });
 
-  it("no inventa un usuarioId ni un rolUsuario si la sesion no los trae", () => {
-    const resultado = datosAtenderAlerta("Descartado", {});
+  // Issue #755: quien atiende lo fija la base con auth.uid(); un usuarioId del cliente ya no viaja.
+  it("no manda usuarioId aunque la sesion lo traiga", () => {
+    const resultado = datosAtenderAlerta("descartado", {
+      usuarioId: "user-1",
+      rolUsuario: "administrador",
+    });
 
-    expect(resultado.usuarioId).toBeUndefined();
-    expect(resultado.rolUsuario).toBeUndefined();
+    expect(resultado).not.toHaveProperty("usuarioId");
+    expect(resultado.bodegaDestinoId).toBeUndefined();
+  });
+
+  it("no inventa un rolUsuario si la sesion no lo trae", () => {
+    expect(datosAtenderAlerta("descartado", {}).rolUsuario).toBeUndefined();
   });
 });

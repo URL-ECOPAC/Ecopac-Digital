@@ -326,9 +326,14 @@ SELECT ok(
   'POSITIVA alertas_caducidad SELECT: un voluntario ve las alertas de vencimiento'
 );
 
-SELECT is_empty(
+-- Desde la 00138 (issue #755) nadie hace UPDATE directo sobre alertas_caducidad: se atiende con
+-- fn_atender_alerta_caducidad, que ademas descuenta el stock. Por eso el voluntario ya no choca
+-- con la politica (fila invisible, resultado vacio) sino con el GRANT (42501).
+SELECT throws_ok(
   $$ UPDATE alertas_caducidad SET estado = 'atendida', accion = 'descartado'
      WHERE id = '77000000-0000-0000-0000-000000221001' RETURNING id $$,
+  '42501',
+  NULL,
   'NEGATIVA alertas_caducidad UPDATE: el voluntario no puede atender una alerta'
 );
 

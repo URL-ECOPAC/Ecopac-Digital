@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { puedeAprobarGasto, puedeRegistrarGasto, useEjecucionPresupuestal } from "@ecopac/shared";
 
 import { PageHeader, ScreenContainer, Tabs } from "../components";
@@ -20,6 +21,12 @@ const TAB_RESUMEN = "resumen";
 const TAB_GASTOS = "gastos";
 const TAB_APROBACIONES = "aprobaciones";
 
+function pestanaDeEnlace(pedida, puedeAprobar) {
+  if (pedida === TAB_GASTOS) return TAB_GASTOS;
+  if (pedida === TAB_APROBACIONES && puedeAprobar) return TAB_APROBACIONES;
+  return TAB_RESUMEN;
+}
+
 export default function PresupuestosPage() {
   const { perfil, rol } = useSesionCompartida();
   const {
@@ -34,9 +41,18 @@ export default function PresupuestosPage() {
     recargar,
   } = useEjecucionPresupuestal(rol);
 
-  const [tabActiva, setTabActiva] = useState(TAB_RESUMEN);
-
   const puedeAprobar = puedeAprobarGasto(rol);
+
+  // ?tab=aprobaciones es el enlace de la notificacion de un gasto por aprobar (issue #755). Solo
+  // se respeta si la pestana existe para este rol; si no, se abre el resumen.
+  const [parametros] = useSearchParams();
+  const pestanaPedida = parametros.get("tab");
+  const [tabActiva, setTabActiva] = useState(() => pestanaDeEnlace(pestanaPedida, puedeAprobar));
+
+  useEffect(() => {
+    if (pestanaPedida) setTabActiva(pestanaDeEnlace(pestanaPedida, puedeAprobar));
+  }, [pestanaPedida, puedeAprobar]);
+
   const puedeCrear = puedeRegistrarGasto(rol);
 
   const tabs = [

@@ -50,9 +50,21 @@ Dos notas que importan mas que los numeros:
 - **El proyecto no usa Supabase Storage.** No hay ni una llamada a `.storage` en todo el
   repositorio, asi que el limite de 1 GB de archivos hoy no aplica. Cambiaria el dia que se
   suban fotografias de recetas o documentos escaneados, que es una idea que suele aparecer.
-- **Hay dos Edge Functions** (`invitar-usuario` y `alertas-vencimiento`). Las 500,000
-  invocaciones mensuales del plan Free no son un limite realista para dos funciones que se
-  llaman al dar de alta a alguien y una vez al dia.
+- **Hay tres Edge Functions** (`invitar-usuario`, `alertas-vencimiento` y, desde la issue #755,
+  `enviar-notificaciones`). La tercera se llama una vez por incidencia que notifica a la
+  administracion (un movimiento por validar, un gasto por aprobar, una alerta nueva, un
+  medicamento sin stock): decenas al dia en una semana de jornada, lejos de las 500,000
+  invocaciones mensuales del plan Free.
+- **`pg_net`** (lo que el Dashboard llama Database Webhooks) esta incluido en el plan Free. Es lo
+  que dispara `enviar-notificaciones` en el momento de la incidencia.
+- **Avisos del sistema del telefono**: la app movil muestra una notificacion del sistema cuando
+  llega una nueva con la app abierta o recien en segundo plano (expo-notifications, locales, sin
+  costo). En **Expo Go sobre Android no funcionan**: el SDK 57 tumba la app al cargar el modulo,
+  asi que ahi se omiten. El aviso con la app cerrada (push remoto) necesita un development build,
+  credenciales de Firebase y el envio desde la Edge Function; queda para otra issue.
+- **El correo no lo manda Supabase**: el SMTP de Supabase Auth solo sirve para los correos de
+  autenticacion. Las notificaciones salen por un proveedor SMTP propio, que tiene su propio plan y
+  sus propios limites de envio diarios; ver `docs/CI-CD.md`.
 
 ## 2. Vercel
 

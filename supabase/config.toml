@@ -131,6 +131,11 @@ import_map = "./functions/deno.json"
 [functions.alertas-vencimiento]
 import_map = "./functions/deno.json"
 
+# Issue #755: manda por correo las notificaciones al administrador. La llama el webhook de pg_net
+# (00138) con la llave de servicio; verify_jwt queda en su valor por defecto, igual que las otras.
+[functions.enviar-notificaciones]
+import_map = "./functions/deno.json"
+
 [analytics]
 enabled = true
 port = 54427
