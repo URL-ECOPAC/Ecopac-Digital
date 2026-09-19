@@ -37,6 +37,7 @@ const MODULOS = [
   "presupuestos",
   "reportes",
   "territorio",
+  "auditoria",
   "api",
   "hooks",
 ];

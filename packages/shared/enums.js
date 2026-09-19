@@ -31,7 +31,6 @@
 // - `rol_usuario`, que vive en usuarios/roles.js. Ya era fuente unica -es el patron que este
 // archivo copia- y lleva helpers propios (esAdministrador, etiquetaDeRol, los grupos de
 // roles). Moverlo seria churn sin ganancia.
-// - `operacion_auditoria` (00026), que ningun archivo de packages/ nombra.
 // - TIPOS_DE_EVENTO y ESTADOS_DE_VENCIMIENTO, que **no son enums de la base**: son vocabularios
 // del cliente. Ponerlos aqui los haria pasar por respaldados por el esquema.
 
@@ -416,4 +415,27 @@ export const ETIQUETAS_NIVEL_ALERTA_VENCIMIENTO = Object.freeze({
   [NIVELES_ALERTA_VENCIMIENTO.ALTO]: labels.alertaAlto,
   [NIVELES_ALERTA_VENCIMIENTO.MEDIO]: labels.alertaMedio,
   [NIVELES_ALERTA_VENCIMIENTO.NORMAL]: labels.alertaNormal,
+});
+
+// --- Auditoria --------------------------------------------------------------------------------
+
+/**
+ * `operacion_auditoria` (00026_auditoria_borrado_logico.sql).
+ *
+ * Hasta la issue #643 ningun archivo de packages/ lo nombraba, y por eso quedaba fuera de este
+ * archivo a proposito. La bitacora de auditoria (auditoria/columnas.js) es el primero en
+ * necesitarlo, para el chip de operacion.
+ */
+export const OPERACIONES_DE_AUDITORIA = Object.freeze({
+  INSERCION: "insercion",
+  ACTUALIZACION: "actualizacion",
+  BAJA: "baja",
+  ELIMINACION: "eliminacion",
+});
+
+export const ETIQUETAS_OPERACION_AUDITORIA = Object.freeze({
+  [OPERACIONES_DE_AUDITORIA.INSERCION]: "Creación",
+  [OPERACIONES_DE_AUDITORIA.ACTUALIZACION]: "Actualización",
+  [OPERACIONES_DE_AUDITORIA.BAJA]: "Baja",
+  [OPERACIONES_DE_AUDITORIA.ELIMINACION]: "Eliminación",
 });

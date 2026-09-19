@@ -53,6 +53,7 @@ export const moduleAccents = {
   jornadas: colors.primary,
   colaboradores: colors.info,
   "matriz-permisos": colors.secondary,
+  "bitacora-auditoria": colors.secondary,
 };
 
 /**
@@ -103,6 +104,11 @@ export const statusColors = {
   alto: colors.warning,
   medio: colors.success,
   normal: colors.secondary,
+  // operacion_auditoria (eventos_auditoria.operacion, supabase/migrations/00026_auditoria_borrado_logico.sql)
+  insercion: colors.success,
+  actualizacion: colors.info,
+  baja: colors.warning,
+  eliminacion: colors.danger,
 };
 
 /**

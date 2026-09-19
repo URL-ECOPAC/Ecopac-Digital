@@ -4,6 +4,7 @@ import {
   DollarSign,
   FolderKanban,
   HeartHandshake,
+  History,
   Home,
   Package,
   ShieldCheck,
@@ -25,6 +26,7 @@ const ICONOS = {
   Calendar,
   UserCheck,
   ShieldCheck,
+  History,
 };
 
 /**

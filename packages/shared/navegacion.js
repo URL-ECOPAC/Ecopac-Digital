@@ -128,6 +128,16 @@ export const MODULOS = [
     tabMovil: false,
     soloWeb: true,
     icono: "ShieldCheck",
+    },
+    {
+    id: "bitacora-auditoria",
+    nombre: "Bitácora de auditoría",
+    descripcion: "Quién cambió qué y cuándo en los datos sensibles del sistema.",
+    ruta: "/bitacora-auditoria",
+    modulo: "bitacora-auditoria",
+    tabMovil: false,
+    soloWeb: true,
+    icono: "History",
     roles: [ROLES.ADMINISTRADOR],
   },
 ];

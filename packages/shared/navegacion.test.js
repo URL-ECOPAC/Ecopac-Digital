@@ -26,6 +26,7 @@ describe("modulosVisibles", () => {
       "jornadas",
       "colaboradores",
       "matriz-permisos",
+      "bitacora-auditoria",
     ]);
   });
 
@@ -42,6 +43,7 @@ describe("modulosVisibles", () => {
       expect(ids).not.toContain("reportes");
       expect(ids).not.toContain("colaboradores");
       expect(ids).not.toContain("matriz-permisos");
+      expect(ids).not.toContain("bitacora-auditoria");
     }
   });
 
@@ -62,6 +64,7 @@ describe("modulosVisibles", () => {
       expect(ids).toContain("proyectos");
       expect(ids).toContain("reportes");
       expect(ids).not.toContain("matriz-permisos");
+      expect(ids).not.toContain("bitacora-auditoria");
     }
   });
 
@@ -78,6 +81,9 @@ describe("modulosVisibles", () => {
   // Issue #638: la matriz de permisos por rol cambia el default de acceso de TODO un rol -mas
   // grave que la excepcion individual de usuario_permiso-, asi que solo administrador entra,
   // ningun otro rol, ni siquiera los que ya ven pantallas administrativas como colaboradores.
+  // Issue #638: la matriz de permisos por rol cambia el default de acceso de TODO un rol -mas
+  // grave que la excepcion individual de usuario_permiso-, asi que solo administrador entra,
+  // ningun otro rol, ni siquiera los que ya ven pantallas administrativas como colaboradores.
   it("matriz de permisos por rol: solo administrador", () => {
     expect(idsDe(modulosVisibles(ROLES.ADMINISTRADOR))).toContain("matriz-permisos");
     for (const rol of [
@@ -87,6 +93,21 @@ describe("modulosVisibles", () => {
       ROLES.VOLUNTARIO,
     ]) {
       expect(idsDe(modulosVisibles(rol))).not.toContain("matriz-permisos");
+    }
+  });
+
+  // Issue #643: la bitacora de auditoria expone valoresAnteriores/valoresNuevos de tablas con
+  // datos de pacientes -- solo administrador puede verla, ningun otro rol, ni siquiera los que
+  // ya ven informacion administrativa como junta directiva.
+  it("bitacora de auditoria: solo administrador", () => {
+    expect(idsDe(modulosVisibles(ROLES.ADMINISTRADOR))).toContain("bitacora-auditoria");
+    for (const rol of [
+      ROLES.JUNTA_DIRECTIVA,
+      ROLES.SOCIO_FUNDADOR,
+      ROLES.MEDICO,
+      ROLES.VOLUNTARIO,
+    ]) {
+      expect(idsDe(modulosVisibles(rol))).not.toContain("bitacora-auditoria");
     }
   });
 

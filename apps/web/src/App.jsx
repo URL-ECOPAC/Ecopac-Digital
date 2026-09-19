@@ -55,6 +55,7 @@ const JornadasPage = lazy(() => import("./pages/JornadasPage"));
 const DetalleJornadaPage = lazy(() => import("./pages/DetalleJornadaPage"));
 const ColaboradoresPage = lazy(() => import("./pages/ColaboradoresPage"));
 const MatrizPermisosPorRolPage = lazy(() => import("./pages/MatrizPermisosPorRolPage"));
+const BitacoraAuditoriaPage = lazy(() => import("./pages/BitacoraAuditoriaPage"));
 const PerfilPage = lazy(() => import("./pages/PerfilPage"));
 const NotificacionesPage = lazy(() => import("./pages/NotificacionesPage"));
 const NotFoundPage = lazy(() => import("./pages/NotFoundPage"));
@@ -222,6 +223,9 @@ export default function App() {
                 </Route>
                 <Route element={<RutaProtegida roles={rolesDelModulo("matriz-permisos")} />}>
                   <Route path="/matriz-permisos" element={<MatrizPermisosPorRolPage />} />
+                </Route>
+                <Route element={<RutaProtegida roles={rolesDelModulo("bitacora-auditoria")} />}>
+                  <Route path="/bitacora-auditoria" element={<BitacoraAuditoriaPage />} />
                 </Route>
 
                 {/* Fuera de cualquier grupo de rolesDelModulo() a proposito: el perfil propio no es un
