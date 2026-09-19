@@ -1,7 +1,7 @@
 import { ROLES } from "./usuarios/roles.js";
 
 /**
- * Los nueve módulos del sistema.
+ * Los diez módulos del sistema.
  *
  * `descripcion` es una linea de que se hace en cada modulo. La pantalla de inicio la pinta
  * debajo del nombre en cada acceso: una rejilla de nueve palabras sueltas no le dice a nadie
@@ -118,6 +118,17 @@ export const MODULOS = [
     // directiva podia ver el listado -perfiles_directorio (00038/00080) existe exactamente para
     // eso-, pero el guard de esta ruta la dejaba fuera, asi que nunca llegaba a la pantalla.
     roles: [ROLES.ADMINISTRADOR, ROLES.JUNTA_DIRECTIVA],
+  },
+  {
+    id: "matriz-permisos",
+    nombre: "Matriz de permisos",
+    descripcion: "Que permiso tiene cada rol por defecto, y quien lo cambio.",
+    ruta: "/matriz-permisos",
+    modulo: "matriz-permisos",
+    tabMovil: false,
+    soloWeb: true,
+    icono: "ShieldCheck",
+    roles: [ROLES.ADMINISTRADOR],
   },
 ];
 

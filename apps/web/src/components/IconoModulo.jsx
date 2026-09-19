@@ -6,11 +6,12 @@ import {
   HeartHandshake,
   Home,
   Package,
+  ShieldCheck,
   UserCheck,
   Users,
 } from "lucide-react";
 
-// Los nueve nombres de MODULOS[].icono (navegacion.js) mapeados a su componente real. Se listan
+// Los diez nombres de MODULOS[].icono (navegacion.js) mapeados a su componente real. Se listan
 // a mano -en vez de un `import * as Icons` sobre todo el paquete- porque son un conjunto fijo, y
 // evita que el bundle arrastre iconos que el sistema no usa.
 const ICONOS = {
@@ -23,6 +24,7 @@ const ICONOS = {
   BarChart3,
   Calendar,
   UserCheck,
+  ShieldCheck,
 };
 
 /**

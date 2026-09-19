@@ -412,6 +412,7 @@
   "apps/web/src/pages/JornadasPage.jsx": ["#4d4d4d"],
   "apps/web/src/pages/KardexMovimientosPage.jsx": ["#3db648", "#4d4d4d", "#f7941d"],
   "apps/web/src/pages/LoginPage.jsx": ["#16a34a", "#2563eb", "#64748b", "#f8fafc"],
+  "apps/web/src/pages/MatrizPermisosPorRolPage.jsx": ["#3db648"],
   "apps/web/src/pages/ModalPermisosUsuario.jsx": ["#3db648"],
   "apps/web/src/pages/ModalRegistroIngreso.jsx": ["#009963", "#fff3cd"],
   "apps/web/src/pages/ModalSalidaMedicamento.jsx": [

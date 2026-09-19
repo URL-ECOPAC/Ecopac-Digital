@@ -292,3 +292,127 @@ export async function restablecerPermiso(idUsuario, clave) {
     return { error: normalizarError(error) };
   }
 }
+
+/**
+ * Matriz de permisos por rol (issue #638): el catalogo completo, agrupado por modulo, con cada
+ * permiso llevando ademas `rolesConcedidos` -un Set de rol_usuario que lo tienen hoy por
+ * defecto, segun rol_permiso-.
+ *
+ * Lectura abierta a cualquier sesion activa (politica "Sesion activa lee rol_permiso", 00079,
+ * y "Autenticados leen permisos", 00038): esta funcion no filtra por el rol de quien llama,
+ * mismo criterio que listarCatalogoPermisos(). Quien decide quien ENTRA a la pantalla que
+ * consume esto es el guard de rutas (rolesDelModulo) mas las politicas de escritura de rol_permiso
+ * (00139): solo administrador.
+ *
+ * rol_permiso es chica -9 permisos x 5 roles como maximo hoy- asi que se trae completa, sin
+ * paginar, en vez de filtrar por un rol a la vez.
+ *
+ * @returns {Promise<{ modulos: Array<{ modulo: string, permisos: object[] }>, error: object|null }>}
+ */
+export async function obtenerMatrizDePermisosPorRol() {
+  try {
+    const cliente = obtenerSupabase();
+    const [{ data: permisos, error: errorDePermisos }, { data: filas, error: errorDeFilas }] =
+      await Promise.all([
+        cliente
+          .from("permisos")
+          .select(COLUMNAS_DEL_PERMISO)
+          .order("modulo", { ascending: true })
+          .order("clave", { ascending: true }),
+        cliente.from("rol_permiso").select("rol, permiso_id"),
+      ]);
+
+    const error = errorDePermisos ?? errorDeFilas;
+    if (error) return { modulos: [], error: normalizarError(error) };
+
+    const rolesPorPermiso = new Map();
+    for (const fila of filas ?? []) {
+      if (!rolesPorPermiso.has(fila.permiso_id)) rolesPorPermiso.set(fila.permiso_id, new Set());
+      rolesPorPermiso.get(fila.permiso_id).add(fila.rol);
+    }
+
+    const combinados = (permisos ?? []).map((permiso) => ({
+      ...permiso,
+      rolesConcedidos: rolesPorPermiso.get(permiso.id) ?? new Set(),
+    }));
+
+    return { modulos: agruparPorModulo(combinados), error: null };
+  } catch (error) {
+    return { modulos: [], error: normalizarError(error) };
+  }
+}
+
+/**
+ * Si `rol` tiene `permiso` concedido por defecto, segun la matriz que ya devolvio
+ * obtenerMatrizDePermisosPorRol(). Funcion pura y aparte para poder probarla sin mockear
+ * Supabase.
+ *
+ * @param {{ rolesConcedidos?: Set<string> }} permiso
+ * @param {string} rol
+ * @returns {boolean}
+ */
+export function celdaConcedida(permiso, rol) {
+  return permiso?.rolesConcedidos?.has(rol) ?? false;
+}
+
+/**
+ * Concede un permiso por defecto a un rol entero (matriz de permisos por rol, issue #638):
+ * INSERT en rol_permiso. No es upsert como escribirExcepcion() de usuario_permiso, porque
+ * rol_permiso no tiene ninguna columna que actualizar aparte de su propia llave primaria
+ * compuesta (rol, permiso_id) -la fila existe o no existe, no hay un `concedido` que alternar.
+ *
+ * Conceder algo que el rol ya tiene choca contra esa llave primaria (23505, unique_violation):
+ * se trata como exito silencioso y no como error, porque la UI solo llama esto cuando la celda
+ * esta en falso -si de todos modos choca, es una condicion de carrera entre dos administradores
+ * editando la matriz a la vez, no un dato invalido que el usuario deba corregir.
+ *
+ * @param {string} rol Enum rol_usuario (packages/shared/usuarios/roles.js).
+ * @param {string} clave Clave del permiso (permisos.clave).
+ * @returns {Promise<{ error: object|null }>}
+ */
+export async function concederPermisoARol(rol, clave) {
+  if (!rol || !clave) return { error: null };
+
+  const { id: permisoId, error: errorDePermiso } = await obtenerIdDePermiso(clave);
+  if (errorDePermiso) return { error: errorDePermiso };
+
+  try {
+    const { error } = await obtenerSupabase()
+      .from("rol_permiso")
+      .insert({ rol, permiso_id: permisoId });
+
+    if (error && error.code !== "23505") return { error: normalizarError(error) };
+    return { error: null };
+  } catch (error) {
+    return { error: normalizarError(error) };
+  }
+}
+
+/**
+ * Retira el permiso por defecto de un rol entero (matriz de permisos por rol, issue #638):
+ * DELETE en rol_permiso. Borrar una fila que ya no estaba no es un error, mismo criterio que
+ * restablecerPermiso().
+ *
+ * @param {string} rol
+ * @param {string} clave
+ * @returns {Promise<{ error: object|null }>}
+ */
+export async function revocarPermisoARol(rol, clave) {
+  if (!rol || !clave) return { error: null };
+
+  const { id: permisoId, error: errorDePermiso } = await obtenerIdDePermiso(clave);
+  if (errorDePermiso) return { error: errorDePermiso };
+
+  try {
+    const { error } = await obtenerSupabase()
+      .from("rol_permiso")
+      .delete()
+      .eq("rol", rol)
+      .eq("permiso_id", permisoId);
+
+    if (error) return { error: normalizarError(error) };
+    return { error: null };
+  } catch (error) {
+    return { error: normalizarError(error) };
+  }
+}

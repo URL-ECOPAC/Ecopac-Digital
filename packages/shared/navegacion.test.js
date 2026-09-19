@@ -14,7 +14,7 @@ function idsDe(modulos) {
 }
 
 describe("modulosVisibles", () => {
-  it("administrador ve los nueve modulos", () => {
+  it("administrador ve los diez modulos", () => {
     expect(idsDe(modulosVisibles(ROLES.ADMINISTRADOR))).toEqual([
       "inicio",
       "pacientes",
@@ -25,6 +25,7 @@ describe("modulosVisibles", () => {
       "reportes",
       "jornadas",
       "colaboradores",
+      "matriz-permisos",
     ]);
   });
 
@@ -40,6 +41,7 @@ describe("modulosVisibles", () => {
       expect(ids).not.toContain("proyectos");
       expect(ids).not.toContain("reportes");
       expect(ids).not.toContain("colaboradores");
+      expect(ids).not.toContain("matriz-permisos");
     }
   });
 
@@ -59,6 +61,7 @@ describe("modulosVisibles", () => {
       expect(ids).toContain("presupuestos");
       expect(ids).toContain("proyectos");
       expect(ids).toContain("reportes");
+      expect(ids).not.toContain("matriz-permisos");
     }
   });
 
@@ -70,6 +73,21 @@ describe("modulosVisibles", () => {
     expect(idsDe(modulosVisibles(ROLES.ADMINISTRADOR))).toContain("colaboradores");
     expect(idsDe(modulosVisibles(ROLES.JUNTA_DIRECTIVA))).toContain("colaboradores");
     expect(idsDe(modulosVisibles(ROLES.SOCIO_FUNDADOR))).not.toContain("colaboradores");
+  });
+
+  // Issue #638: la matriz de permisos por rol cambia el default de acceso de TODO un rol -mas
+  // grave que la excepcion individual de usuario_permiso-, asi que solo administrador entra,
+  // ningun otro rol, ni siquiera los que ya ven pantallas administrativas como colaboradores.
+  it("matriz de permisos por rol: solo administrador", () => {
+    expect(idsDe(modulosVisibles(ROLES.ADMINISTRADOR))).toContain("matriz-permisos");
+    for (const rol of [
+      ROLES.JUNTA_DIRECTIVA,
+      ROLES.SOCIO_FUNDADOR,
+      ROLES.MEDICO,
+      ROLES.VOLUNTARIO,
+    ]) {
+      expect(idsDe(modulosVisibles(rol))).not.toContain("matriz-permisos");
+    }
   });
 
   it("un rol desconocido no ve ningun modulo salvo los que no restringen roles", () => {

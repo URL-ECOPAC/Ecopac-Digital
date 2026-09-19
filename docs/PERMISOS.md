@@ -369,7 +369,7 @@ administrador**, por dos motivos independientes que detalla la Divergencia 1 (re
 | `perfiles`            | C R U         | R el propio                      | R el propio | R el propio        | `00038`. Cada quien lee y edita solo su perfil. La fila la crea el trigger de la `00002`, que desde la `00074` rechaza el alta si viene del registro publico |
 | `perfil_especialidad` | C R D         | R                                 | C R D la propia | C R D la propia | `00058`, `00085`. `es_administrador()` lee/escribe cualquiera; `es_consultivo()` solo lee cualquiera; cada perfil crea y borra las suyas. Sin UPDATE: la PK incluye el nombre, cambiar una especialidad es borrar e insertar |
 | `permisos`            | R             | R                                | R           | R                  | `00038`. Catalogo de solo lectura              |
-| `rol_permiso`         | R             | R                                | R           | R                  | `00038`. Solo lectura                          |
+| `rol_permiso`         | C R D         | R                                | R           | R                  | `00038` lee; `00139` (issue #638) abre C/D solo a administrador, sin U (no hay columna que actualizar); auditoria propia con `permiso_id` como `fila_id` |
 | `usuario_permiso`     | C R U D       | R el propio                      | R el propio | R el propio        | `00038`, con auditoria en `00045`; escribir Y LEER LA FILA AJENA QUE SE ACABA DE ESCRIBIR admiten `tiene_permiso('usuarios.gestionar_permisos')` desde `00086` |
 | `eventos_auditoria`   | R             | —                                | —           | —                  | `00026`. Lo escriben triggers DEFINER          |
 
@@ -485,13 +485,31 @@ su rol no tiene, sin cambiarle el rol.**
 `usuario_permiso` cambia lo que el servidor permite. Resuelto por la issue #409 (migracion
 `00086`).
 
-Consecuencia practica: `permisos` y `rol_permiso` son de **solo lectura** para todos: no hay
-forma de anadir un permiso ni de cambiar el default de un rol desde la aplicacion, solo por
-migracion. `usuario_permiso` si tiene CRUD completo y auditoria propia, asi que la excepcion por
-persona si es manejable.
+**Las ocho politicas conectadas por la `00086` son siempre `es_administrador() OR
+tiene_permiso(clave)`, nunca solo `tiene_permiso(clave)`.** Consecuencia directa: para el rol
+`administrador`, lo que diga `rol_permiso` sobre estos nueve permisos no cambia nada en la
+practica -ese rol ya tiene acceso completo por diseno, con o sin la fila-. La matriz de permisos
+por rol (issue #638) deshabilita la columna `administrador` por este motivo, con un aviso en
+pantalla en vez de dejarla editable sin efecto.
 
-Guardia asociado: ningun permiso fino de escritura puede concederse a un perfil `junta
-directiva` o `socio fundador` (son consultivos por definicion). Ver la regla dedicada mas abajo.
+Consecuencia practica: `permisos` sigue siendo de **solo lectura** para todos -el catalogo de
+permisos que existen se define por migracion, no por la aplicacion-, pero `rol_permiso` ya no lo
+es: la matriz de permisos por rol (issue #638, migracion `00139`) le da a administrador **C R D**
+sobre el default de cada rol (sin U: no hay columna que actualizar, conceder es insertar la fila y
+retirar es borrarla), con auditoria propia. `usuario_permiso` sigue siendo la excepcion por
+persona, con su propio CRUD y auditoria desde antes (`00045`).
+
+Guardia asociado: ningun permiso fino de escritura puede concederse **por excepcion individual**
+a un perfil `junta directiva` o `socio fundador` (son consultivos por definicion) — trigger
+`impedir_permiso_escritura_a_consultivo` sobre `usuario_permiso` (`00086`). Ver la regla dedicada
+mas abajo.
+
+**Asimetria conocida, dejada asi a proposito (issue #638):** `rol_permiso` no tiene ese mismo
+guardia. Un administrador puede, desde la matriz de permisos por rol, marcar un permiso de
+escritura como parte del **default de todo un rol consultivo** -mas grave que la excepcion
+individual, porque afecta a todas las personas con ese rol, presentes y futuras-, y ninguna
+politica ni trigger lo impide todavia. Queda para una issue futura si se decide cerrar esta
+brecha.
 
 ## Las reglas que explican el diseno
 

@@ -18,6 +18,7 @@
 // jornadas/permisos.js -- el cliente solo conoce el rol, y aqui la politica real exige
 // es_administrador() a secas.
 
+import { rolesDelModulo } from "../navegacion.js";
 import { esAdministrador, ROLES } from "./roles.js";
 
 /** Puede crear un perfil nuevo. Espejo de la politica de INSERT de perfiles (00038). */
@@ -96,6 +97,43 @@ export function puedeVerPermisosEfectivosDeOtro(rol) {
  */
 export function puedeGestionarEspecialidades(rol, { esPropioPerfil = false } = {}) {
   return esAdministrador(rol) || esPropioPerfil;
+}
+
+/**
+ * Puede conceder o retirar un permiso del valor por defecto de un rol entero (matriz de
+ * permisos por rol, issue #638).
+ *
+ * Espejo de las politicas de INSERT/DELETE de rol_permiso (00139): solo administrador, sin el
+ * "OR tiene_permiso(...)" que si tienen las politicas de usuario_permiso -la issue exige que
+ * unicamente el administrador entre a esta pantalla, no un permiso fino delegable.
+ */
+export function puedeGestionarMatrizDePermisosPorRol(rol) {
+  return esAdministrador(rol);
+}
+
+/**
+ * Si `rol` puede llegar, navegando la app, al modulo dueno de un permiso -y por lo tanto si
+ * concederselo en la matriz de permisos por rol (issue #638) puede tener algun efecto practico.
+ *
+ * Hallado probando en vivo: conceder `donaciones.registrar` a medico no cambiaba nada, porque
+ * medico no esta en `rolesDelModulo("donaciones")` -nunca ve el modulo Donaciones en el menu, y
+ * la ruta le cae en acceso denegado-. El permiso queda guardado y gobierna una politica real,
+ * pero nadie con ese rol llega nunca a la pantalla donde importaria.
+ *
+ * `permisos.modulo` no siempre coincide con una entrada real de MODULOS: `usuarios` es el caso
+ * conocido (la pantalla que de verdad usa `usuarios.gestionar_permisos` vive dentro de la ruta
+ * `colaboradores`, ModalPermisosUsuario.jsx). Cuando `rolesDelModulo()` no encuentra ninguna
+ * entrada (arreglo vacio) se asume que SI puede navegarlo -mejor no advertir de mas sobre un
+ * permiso que si importa que advertir en falso.
+ *
+ * @param {string} rol
+ * @param {string} modulo `permisos.modulo` (columna de la migracion 00003).
+ * @returns {boolean}
+ */
+export function puedeNavegarModuloDelPermiso(rol, modulo) {
+  const roles = rolesDelModulo(modulo);
+  if (roles.length === 0) return true;
+  return roles.includes(rol);
 }
 
 /**
