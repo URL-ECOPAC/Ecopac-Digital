@@ -1,5 +1,5 @@
 import { View, Text, StyleSheet, Pressable } from "react-native";
-import { NavigationContainer } from "@react-navigation/native";
+import { DefaultTheme, NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { colors, spacing, typography } from "@ecopac/ui-tokens";
@@ -11,8 +11,13 @@ import {
   rolesDelModulo,
   ROLES,
   TODOS_LOS_ROLES,
+  useContadorNotificaciones,
 } from "@ecopac/shared";
+import { useCallback } from "react";
 import { useSesionCompartida } from "../contexto/SesionProvider";
+import { ContadorDeNotificacionesProvider } from "../contexto/NotificacionesProvider";
+import AvisosDelSistema from "../components/AvisosDelSistema";
+import CampanaNotificaciones from "../components/CampanaNotificaciones";
 import RutaProtegida from "../components/RutaProtegida";
 import IconoDeModulo from "../components/IconoDeModulo";
 import { ROUTES } from "./rutas";
@@ -44,6 +49,7 @@ import ProyectosScreen from "../screens/ProyectosScreen";
 import ColaboradoresScreen from "../screens/ColaboradoresScreen";
 import FichaColaboradorScreen from "../screens/FichaColaboradorScreen";
 import ComunidadesScreen from "../screens/ComunidadesScreen";
+import NotificacionesScreen from "../screens/NotificacionesScreen";
 
 export {
   ROUTES,
@@ -52,6 +58,7 @@ export {
   JornadasNavigator,
   InventarioNavigator,
   TabsNavigator,
+  PANTALLAS_DEL_ROOT,
   conGuardaDeRol,
   conGuardaDeRoles,
 };
@@ -69,13 +76,17 @@ function CustomHeaderTitle({ title }) {
   return (
     <View style={styles.headerContainer}>
       <Text style={styles.headerTitleText}>{title}</Text>
-      <View style={styles.userContainer}>
-        <Text style={styles.nombreText} numberOfLines={1}>
-          {perfil?.nombre || ""}
-        </Text>
-        <Text style={styles.rolText} numberOfLines={1}>
-          {perfil?.rol ? etiquetaDeRol(perfil.rol) : ""}
-        </Text>
+      <View style={styles.cabeceraDerecha}>
+        <View style={styles.userContainer}>
+          <Text style={styles.nombreText} numberOfLines={1}>
+            {perfil?.nombre || ""}
+          </Text>
+          <Text style={styles.rolText} numberOfLines={1}>
+            {perfil?.rol ? etiquetaDeRol(perfil.rol) : ""}
+          </Text>
+        </View>
+        {/* Notificaciones (issue #755): a la par del nombre y el rol, en todas las pestanas. */}
+        <CampanaNotificaciones />
       </View>
     </View>
   );
@@ -387,7 +398,61 @@ function TabsNavigator() {
   );
 }
 
+// Las pestanas con lo que comparten todas sus cabeceras (issue #755): el contador de no leidas,
+// contado una sola vez aqui y repartido por contexto a cada CampanaNotificaciones, y los avisos
+// del sistema del telefono cuando ese numero sube. Va aparte de TabsNavigator porque
+// guardaDeRol.test.js recorre el arbol llamando a TabsNavigator() como funcion, y un hook aqui
+// dentro reventaria fuera de un render.
+function TabsConContador({ navigation }) {
+  const { perfil } = useSesionCompartida();
+  const { cantidad, recargar } = useContadorNotificaciones({ perfilId: perfil?.id });
+  const abrirNotificaciones = useCallback(
+    () => navigation.navigate(ROUTES.NOTIFICACIONES),
+    [navigation],
+  );
+
+  return (
+    <ContadorDeNotificacionesProvider value={{ cantidad }}>
+      <AvisosDelSistema
+        perfilId={perfil?.id}
+        cantidad={cantidad}
+        onAbrir={abrirNotificaciones}
+        onVolverAlFrente={recargar}
+      />
+      <TabsNavigator />
+    </ContadorDeNotificacionesProvider>
+  );
+}
+
+// Pantallas del Root que se abren encima de las pestanas, desde cualquiera de ellas. Llevan la
+// misma guarda que las de los stacks (guardaDeRol.test.js lo comprueba).
+const PANTALLAS_DEL_ROOT = [
+  {
+    name: ROUTES.NOTIFICACIONES,
+    componente: conGuardaDeRoles(NotificacionesScreen, TODOS_LOS_ROLES),
+    titulo: "Notificaciones",
+  },
+];
+
 //  AQUÍ ESTABA EL FALTO — se agregó la pantalla
+//
+// Hallazgo de la issue #755: AccesoDenegado estaba declarada PRIMERA, y React Navigation toma la
+// primera pantalla como punto de entrada en dos momentos: al montar, y cuando la pantalla actual
+// deja de existir -al iniciar sesion desaparece Auth y aparece Tabs-. La app abria siempre en
+// "acceso denegado", y volvia a el justo despues de iniciar sesion. Ahora va ULTIMA: sigue
+// registrada -la guarda de rol navega a ella desde cualquier pantalla- pero nunca es la entrada.
+// initialRouteName lo deja ademas escrito.
+export function rutaInicialDelRoot(haySesion) {
+  return haySesion ? ROUTES.TABS : ROUTES.AUTH;
+}
+
+// El fondo de la navegacion es el de todas las pantallas (issue #755): mientras un stack monta la
+// pantalla siguiente se ve este color, y el de React Navigation por defecto no es el de la paleta.
+const TEMA_DE_NAVEGACION = {
+  ...DefaultTheme,
+  colors: { ...DefaultTheme.colors, background: colors.background },
+};
+
 export default function AppNavigator({ haySesion }) {
   const { registrarActividad } = useSesionCompartida();
 
@@ -395,16 +460,34 @@ export default function AppNavigator({ haySesion }) {
     // `onStateChange` es la senal de actividad: cada vez que alguien navega, la cuenta de
     // inactividad vuelve a cero (issue #840). No se escuchan toques sueltos a proposito -- en un
     // telefono, dejar la pantalla encendida sin navegar a ningun lado ES estar inactivo.
-    <NavigationContainer onStateChange={registrarActividad}>
-      <Root.Navigator screenOptions={{ headerShown: false }}>
-        {/*  Ruta de Acceso Denegado — SIEMPRE disponible */}
-        <Root.Screen name={ROUTES.ACCESO_DENEGADO} component={AccesoDenegadoScreen} />
-
+    <NavigationContainer theme={TEMA_DE_NAVEGACION} onStateChange={registrarActividad}>
+      <Root.Navigator
+        initialRouteName={rutaInicialDelRoot(haySesion)}
+        screenOptions={{ headerShown: false }}
+      >
         {haySesion ? (
-          <Root.Screen name={ROUTES.TABS} component={TabsNavigator} />
+          <>
+            <Root.Screen name={ROUTES.TABS} component={TabsConContador} />
+            {PANTALLAS_DEL_ROOT.map(({ name, componente, titulo }) => (
+              <Root.Screen
+                key={name}
+                name={name}
+                component={componente}
+                options={{
+                  headerShown: true,
+                  title: titulo,
+                  headerStyle: { backgroundColor: colors.surface },
+                  headerTintColor: colors.text,
+                }}
+              />
+            ))}
+          </>
         ) : (
           <Root.Screen name={ROUTES.AUTH} component={AuthNavigator} />
         )}
+
+        {/*  Ruta de Acceso Denegado — SIEMPRE disponible, y siempre la ultima (ver arriba) */}
+        <Root.Screen name={ROUTES.ACCESO_DENEGADO} component={AccesoDenegadoScreen} />
       </Root.Navigator>
     </NavigationContainer>
   );
@@ -422,6 +505,11 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "bold",
     color: colors.text,
+  },
+  cabeceraDerecha: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.xs,
   },
   userContainer: {
     alignItems: "flex-end",

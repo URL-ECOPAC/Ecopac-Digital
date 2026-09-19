@@ -12,7 +12,7 @@ import { render, screen } from "@testing-library/react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { Text } from "react-native";
 import { puedeRegistrarMovimiento, ROLES, rolesDelModulo, TODOS_LOS_ROLES } from "@ecopac/shared";
-import {
+import AppNavigator, {
   InicioNavigator,
   InventarioNavigator,
   JornadasNavigator,
@@ -42,6 +42,8 @@ function mockPantalla(nombre) {
   };
 }
 jest.mock("../screens/InicioScreen", () => mockPantalla("inicio"));
+jest.mock("../screens/LoginScreen", () => mockPantalla("login"));
+jest.mock("../screens/AjustesScreen", () => mockPantalla("ajustes"));
 jest.mock("../screens/DonacionesScreen", () => mockPantalla("donaciones"));
 jest.mock("../screens/ProyectosScreen", () => mockPantalla("proyectos"));
 jest.mock("../screens/ColaboradoresScreen", () => mockPantalla("colaboradores"));
@@ -194,4 +196,43 @@ describe("AppNavigator: la guarda de rol decide en cada pantalla (issue #820)", 
       expect(screen.getByText("acceso denegado")).toBeTruthy();
     },
   );
+});
+
+// Hallazgo de la issue #755: el Root no declaraba initialRouteName y React Navigation arrancaba en
+// la primera pantalla registrada, AccesoDenegado. La app movil abria siempre en "acceso denegado".
+describe("AppNavigator: el punto de entrada", () => {
+  it("sin sesion abre el login, no el acceso denegado", () => {
+    darSesion(null);
+    render(<AppNavigator haySesion={false} />);
+    expect(screen.getByText("contenido de login")).toBeTruthy();
+    expect(screen.queryByText("acceso denegado")).toBeNull();
+  });
+
+  it("al iniciar sesion pasa del login a Inicio, no al acceso denegado", () => {
+    darSesion(null);
+    const { rerender } = render(<AppNavigator haySesion={false} />);
+    darSesion(ROLES.ADMINISTRADOR);
+    rerender(<AppNavigator haySesion />);
+    expect(screen.getByText("contenido de inicio")).toBeTruthy();
+    expect(screen.queryByText("acceso denegado")).toBeNull();
+  });
+
+  // Lo que de verdad pasa al iniciar sesion: la sesion llega antes que el perfil. En ese instante
+  // no hay rol, y la guarda tiene que esperar (cargando) en vez de pintar "acceso denegado".
+  it("al iniciar sesion, mientras el perfil carga, no pinta acceso denegado", () => {
+    darSesion(null);
+    const { rerender } = render(<AppNavigator haySesion={false} />);
+
+    sesion.cargando = true;
+    rerender(<AppNavigator haySesion />);
+    expect(screen.queryByText("acceso denegado")).toBeNull();
+    sesion.cargando = false;
+  });
+
+  it("con sesion abre las pestanas en Inicio, no el acceso denegado", () => {
+    darSesion(ROLES.ADMINISTRADOR);
+    render(<AppNavigator haySesion />);
+    expect(screen.getByText("contenido de inicio")).toBeTruthy();
+    expect(screen.queryByText("acceso denegado")).toBeNull();
+  });
 });
