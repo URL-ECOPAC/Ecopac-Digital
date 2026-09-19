@@ -3,13 +3,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import ResumenJornadaScreen from "../screens/ResumenJornadaScreen";
 
-import {
-  ETAPAS_DE_COLA,
-  NOMBRES_DE_ETAPA,
-  ORDEN_DE_ETAPAS,
-  minutosEsperando,
-  usePanelJornada,
-} from "@ecopac/shared";
+import { pacientesDeLaJornada, usePanelJornada } from "@ecopac/shared";
 import { colors, radii, spacing, typography } from "@ecopac/ui-tokens";
 
 import {
@@ -25,10 +19,17 @@ import { useJornadaActivaCompartida } from "../contexto/JornadaActivaProvider";
 import { useSesionCompartida } from "../contexto/SesionProvider";
 import { ROUTES } from "../navigation/rutas";
 
-const ETAPAS_CON_CIERRE = new Set([
-  ETAPAS_DE_COLA.ESPERA_ENTREGA,
-  ETAPAS_DE_COLA.LISTA_PARA_CERRAR,
-]);
+// LAS COLAS SE RETIRAN (issue #840, bloque F).
+//
+// Esta pantalla mostraba a los pacientes agrupados en colas -espera triaje, espera consulta,
+// espera entrega, lista para cerrar- para moverlos de una etapa a otra. Con la consulta como
+// unidad ya no hay etapas que recorrer: se abre la ficha y se pulsa "Nueva consulta", y dentro van
+// los signos, la consulta y la receta. El usuario las senalo aparte como sobrantes.
+//
+// Se retiran de la INTERFAZ, no de la base: vista_cola_jornada sigue existiendo (corregida en la
+// 00135 para los signos opcionales) por si una jornada grande necesita volver a saber quien espera.
+// Lo que queda es la lista de los pacientes de la jornada, que es lo que hace falta para volver a
+// abrir a alguien.
 
 function Contador({ etiqueta, valor }) {
   return (
@@ -39,30 +40,22 @@ function Contador({ etiqueta, valor }) {
   );
 }
 
-function FilaDeCola({ fila, accionable, onPress }) {
+function FilaDePaciente({ fila, onPress }) {
   const nombre = [fila.nombres, fila.apellidos].filter(Boolean).join(" ") || "Paciente";
-  const minutos = minutosEsperando(fila.esperandoDesde);
-
-  const contenido = (
-    <View style={styles.filaContenido}>
-      <Text style={styles.filaNombre}>{nombre}</Text>
-      <Text style={styles.filaEspera}>
-        {minutos === null ? "Esperando" : `Esperando ${minutos} min`}
-      </Text>
-    </View>
-  );
-
-  if (!accionable) {
-    return <View style={styles.fila}>{contenido}</View>;
-  }
 
   return (
     <Pressable
       onPress={onPress}
       style={({ pressed }) => [styles.fila, pressed && styles.filaPresionada]}
       accessibilityRole="button"
+      accessibilityHint="Abre la ficha del paciente"
     >
-      {contenido}
+      <View style={styles.filaContenido}>
+        <Text style={styles.filaNombre} numberOfLines={1}>
+          {nombre}
+        </Text>
+        <Text style={styles.filaEspera}>Ver ficha</Text>
+      </View>
     </Pressable>
   );
 }
@@ -87,10 +80,8 @@ export default function JornadaEnCursoScreen() {
     pacientesRegistrados,
     consultasRealizadas,
     tratamientosEntregados,
-    puedeCerrar,
     error: errorDePanel,
     recargar: recargarPanel,
-    cerrar,
   } = usePanelJornada({ jornadaId, rol });
 
   const recargarTodo = useCallback(() => {
@@ -110,25 +101,16 @@ export default function JornadaEnCursoScreen() {
   const irARegistroDePaciente = () =>
     navigation.navigate(ROUTES.TAB_PACIENTES, { screen: ROUTES.REGISTRO_PACIENTE });
 
-  const irATriaje = (pacienteId) =>
-    navigation.navigate(ROUTES.TAB_PACIENTES, { screen: ROUTES.TRIAJE, params: { pacienteId } });
+  const irABusqueda = () =>
+    navigation.navigate(ROUTES.TAB_PACIENTES, { screen: ROUTES.BUSQUEDA_PACIENTE });
 
-  const irAConsulta = (pacienteId) =>
-    navigation.navigate(ROUTES.TAB_PACIENTES, { screen: ROUTES.CONSULTA, params: { pacienteId } });
+  const irAFicha = (pacienteId) =>
+    navigation.navigate(ROUTES.TAB_PACIENTES, {
+      screen: ROUTES.FICHA_PACIENTE,
+      params: { pacienteId },
+    });
 
-  const cerrarFila = async (atencionId) => {
-    await cerrar(atencionId, "Entrega completada");
-    recargarTodo();
-  };
-
-  const accionDeEtapa = (etapa) => {
-    if (etapa === ETAPAS_DE_COLA.ESPERA_TRIAJE) return (fila) => irATriaje(fila.pacienteId);
-    if (etapa === ETAPAS_DE_COLA.ESPERA_CONSULTA) return (fila) => irAConsulta(fila.pacienteId);
-    if (ETAPAS_CON_CIERRE.has(etapa) && puedeCerrar) {
-      return (fila) => cerrarFila(fila.atencionId);
-    }
-    return null;
-  };
+  const pacientes = pacientesDeLaJornada(cola);
 
   if (cargando) {
     return (
@@ -171,49 +153,39 @@ export default function JornadaEnCursoScreen() {
       </View>
       <ResumenJornadaScreen />
 
+      {/* Llega un paciente: se busca, y si no esta, se registra. La consulta se abre desde su
+          ficha (issue #840). */}
       <View style={styles.acciones}>
-        <PrimaryButton
+        <PrimaryButton title="Buscar paciente" onPress={irABusqueda} style={styles.accion} />
+        <SecondaryButton
           title="Registrar paciente"
           onPress={irARegistroDePaciente}
           disabled={!puedeRegistrar}
           style={styles.accion}
         />
-        <SecondaryButton
-          title={cargandoCola ? "Actualizando..." : "Actualizar"}
-          onPress={recargarTodo}
-          disabled={cargandoCola}
-          style={styles.accion}
-        />
       </View>
 
-      {totalEnCola === 0 && !cargandoCola ? (
-        <EmptyState message="No hay pacientes en la cola de esta jornada." />
-      ) : (
-        ORDEN_DE_ETAPAS.map((etapa) => {
-          const filas = cola[etapa] ?? [];
-          const accion = accionDeEtapa(etapa);
-
-          return (
-            <View key={etapa} style={styles.grupo}>
-              <Text style={styles.grupoTitulo}>
-                {NOMBRES_DE_ETAPA[etapa]} ({filas.length})
-              </Text>
-              {filas.length === 0 ? (
-                <Text style={styles.grupoVacio}>Nadie en esta etapa.</Text>
-              ) : (
-                filas.map((fila) => (
-                  <FilaDeCola
-                    key={fila.atencionId}
-                    fila={fila}
-                    accionable={Boolean(accion)}
-                    onPress={accion ? () => accion(fila) : undefined}
-                  />
-                ))
-              )}
-            </View>
-          );
-        })
-      )}
+      <View style={styles.grupo}>
+        <View style={styles.grupoCabecera}>
+          <Text style={styles.grupoTitulo}>Pacientes de esta jornada ({totalEnCola})</Text>
+          <SecondaryButton
+            title={cargandoCola ? "Actualizando..." : "Actualizar"}
+            onPress={recargarTodo}
+            disabled={cargandoCola}
+          />
+        </View>
+        {totalEnCola === 0 && !cargandoCola ? (
+          <EmptyState message="Todavía no hay pacientes atendidos en esta jornada." />
+        ) : (
+          pacientes.map((fila) => (
+            <FilaDePaciente
+              key={fila.atencionId}
+              fila={fila}
+              onPress={() => irAFicha(fila.pacienteId)}
+            />
+          ))
+        )}
+      </View>
     </ScreenContainer>
   );
 }
@@ -265,6 +237,13 @@ const styles = StyleSheet.create({
   },
   grupo: {
     marginBottom: spacing.md,
+  },
+  grupoCabecera: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.sm,
+    justifyContent: "space-between",
+    marginBottom: spacing.xs,
   },
   grupoTitulo: {
     fontFamily: typography.fontFamilyBase,

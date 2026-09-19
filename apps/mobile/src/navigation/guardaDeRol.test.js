@@ -55,7 +55,6 @@ const ROLES_ESPERADOS = {
   [ROUTES.KANBAN_JORNADAS]: rolesDelModulo("jornadas"),
   [ROUTES.REGISTRO_PACIENTE]: rolesDelModulo("pacientes"),
   [ROUTES.HISTORIAL_PACIENTE]: rolesDelModulo("pacientes"),
-  [ROUTES.TRIAJE]: rolesDelModulo("pacientes"),
   [ROUTES.CONSULTA]: rolesDelModulo("pacientes"),
   [ROUTES.RECETA]: rolesDelModulo("pacientes"),
 

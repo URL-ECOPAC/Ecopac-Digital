@@ -1,13 +1,20 @@
-// Prueba de ConsultaScreen (Modulo I: consulta, issue #776).
+// Prueba de ConsultaScreen: la consulta como unidad (issue #840, bloque F). Espejo de
+// apps/web/src/pages/ModalConsulta.test.jsx.
+//
+// Dentro de la consulta van los signos (opcionales), la consulta y la receta (opcional). No hay
+// una pantalla de triaje aparte: TriajeScreen se retiro con esta issue.
 
 import { fireEvent, render, screen } from "@testing-library/react-native";
+
+import { CAMPOS_TRIAJE, NIVELES_DE_AVISO, seccionesConCampos } from "@ecopac/shared";
 
 import ConsultaScreen from "./ConsultaScreen";
 
 const mockNavigate = jest.fn();
+let mockParams = { pacienteId: "p-1" };
 jest.mock("@react-navigation/native", () => ({
   useNavigation: () => ({ navigate: mockNavigate }),
-  useRoute: () => ({ params: { pacienteId: "p-1" } }),
+  useRoute: () => ({ params: mockParams }),
 }));
 
 jest.mock("../contexto/SesionProvider", () => ({
@@ -21,37 +28,53 @@ jest.mock("../contexto/JornadaActivaProvider", () => ({
   }),
 }));
 
-const SECCION_DE_EJEMPLO = {
-  id: "motivo",
-  titulo: "Motivo y antecedentes",
-  campos: [{ id: "motivoConsulta", label: "Motivo de consulta", tipo: "texto" }],
-};
+jest.mock("../contexto/RegistroSinGuardarProvider", () => ({
+  useRegistroSinGuardar: () => ({ registrar: jest.fn(), desregistrar: jest.fn() }),
+}));
 
-const mockEstadoConsulta = {
-  secciones: [SECCION_DE_EJEMPLO],
-  valores: {},
-  error: null,
-  enviando: false,
-  preparando: false,
-  guardada: null,
-  signos: null,
-  bloqueo: { puede: true, motivo: null },
-  setCampo: jest.fn(),
-  descartarBorrador: jest.fn(),
-  guardar: jest.fn(),
-  catalogos: { diagnosticos: [] },
-};
+function estado(cambios = {}) {
+  return {
+    visita: null,
+    esNueva: true,
+    jornadaId: "jor-1",
+    bloqueo: { puede: true, motivo: null },
+    permisos: { signos: true, consulta: true, receta: true },
+    camposDeSignos: CAMPOS_TRIAJE,
+    signos: Object.fromEntries(CAMPOS_TRIAJE.map((campo) => [campo.id, ""])),
+    setSigno: jest.fn(),
+    avisos: {},
+    imc: null,
+    signosTomadosPor: null,
+    seccionesDeConsulta: seccionesConCampos(),
+    consulta: { motivoConsulta: "", diagnosticos: [] },
+    setCampoDeConsulta: jest.fn(),
+    catalogos: { diagnosticos: [] },
+    crearDiagnosticoNuevo: null,
+    errorDiagnostico: null,
+    errores: { signos: {}, consulta: {} },
+    error: null,
+    enviando: false,
+    guardadaAlMenosUnaVez: false,
+    guardar: jest.fn(),
+    descartarBorrador: jest.fn(),
+    hayCambios: true,
+    receta: { existentes: [], consultaId: null, puedeAgregar: false },
+    ...cambios,
+  };
+}
+
+let mockEstado = estado();
 
 jest.mock("@ecopac/shared", () => ({
   ...jest.requireActual("@ecopac/shared"),
   usePaciente: jest.fn(() => ({
-    paciente: { nombres: "Ana", apellidos: "Perez", expediente: { id: "exp-1" } },
+    paciente: { id: "p-1", nombres: "Ana", apellidos: "Perez", expediente: { id: "exp-1" } },
     cargando: false,
   })),
-  useRegistroConsulta: jest.fn(() => mockEstadoConsulta),
+  useConsulta: jest.fn(() => mockEstado),
 }));
 
-const { useRegistroConsulta } = jest.requireMock("@ecopac/shared");
+const { useConsulta } = jest.requireMock("@ecopac/shared");
 
 function pantalla() {
   return render(<ConsultaScreen />);
@@ -59,69 +82,73 @@ function pantalla() {
 
 describe("ConsultaScreen", () => {
   beforeEach(() => {
-    mockEstadoConsulta.valores = {};
-    mockEstadoConsulta.error = null;
-    mockEstadoConsulta.preparando = false;
-    mockEstadoConsulta.guardada = null;
-    mockEstadoConsulta.bloqueo = { puede: true, motivo: null };
-    useRegistroConsulta.mockClear();
-    mockEstadoConsulta.guardar.mockClear();
-    mockEstadoConsulta.descartarBorrador.mockClear();
+    mockEstado = estado();
+    mockParams = { pacienteId: "p-1" };
+    useConsulta.mockClear();
     mockNavigate.mockClear();
   });
 
-  it("bloqueada (por ejemplo, sin atencion abierta) muestra el motivo, no el formulario", () => {
-    mockEstadoConsulta.bloqueo = { puede: false, motivo: "Este paciente no esta en la cola." };
-    pantalla();
-
-    expect(screen.getByText("Este paciente no esta en la cola.")).toBeTruthy();
-    expect(screen.queryByText("Guardar consulta")).toBeNull();
-  });
-
-  it("pinta el nombre del paciente y la seccion de motivo", () => {
+  it("dentro de la consulta van los signos, la consulta y la receta", () => {
     pantalla();
 
     expect(screen.getByText("Ana Perez")).toBeTruthy();
-    expect(screen.getByText("Motivo y antecedentes")).toBeTruthy();
+    expect(screen.getByText("Signos vitales")).toBeTruthy();
+    expect(screen.getByText("Consulta")).toBeTruthy();
+    expect(screen.getByText("Receta")).toBeTruthy();
+  });
+
+  it("una consulta nueva va en la jornada activa; abrir una del historial, en la suya", () => {
+    pantalla();
+    expect(useConsulta).toHaveBeenLastCalledWith(expect.objectContaining({ jornadaId: "jor-1" }));
+
+    mockParams = { pacienteId: "p-1", jornadaId: "jor-vieja" };
+    pantalla();
+    expect(useConsulta).toHaveBeenLastCalledWith(
+      expect.objectContaining({ jornadaId: "jor-vieja", estadoDeJornada: undefined }),
+    );
+  });
+
+  // G2: una sola capa por campo.
+  it("un signo imposible se muestra como error y una alarma como aviso, nunca los dos", () => {
+    mockEstado = estado({
+      avisos: {
+        presionSistolica: { nivel: NIVELES_DE_AVISO.IMPOSIBLE, mensaje: "Fuera de lo posible." },
+        frecuenciaCardiaca: { nivel: NIVELES_DE_AVISO.ALARMA, mensaje: "Valor de alarma." },
+      },
+    });
+    pantalla();
+
+    expect(screen.getAllByText("Fuera de lo posible.")).toHaveLength(1);
+    expect(screen.getByText("Valor de alarma.")).toBeTruthy();
   });
 
   it("Guardar consulta dispara guardar()", () => {
     pantalla();
-
     fireEvent.press(screen.getByText("Guardar consulta"));
-
-    expect(mockEstadoConsulta.guardar).toHaveBeenCalled();
+    expect(mockEstado.guardar).toHaveBeenCalled();
   });
 
-  it("Descartar borrador dispara descartarBorrador()", () => {
+  it("Descartar borrador existe solo para una consulta nueva", () => {
     pantalla();
-
     fireEvent.press(screen.getByText("Descartar borrador"));
-
-    expect(mockEstadoConsulta.descartarBorrador).toHaveBeenCalled();
+    expect(mockEstado.descartarBorrador).toHaveBeenCalled();
   });
 
-  it("tras guardar, ofrece generar receta o volver a la ficha", () => {
-    mockEstadoConsulta.guardada = { id: "consulta-1" };
+  it("con la consulta guardada, la receta abre su flujo sobre esa consulta", () => {
+    mockEstado = estado({
+      hayCambios: false,
+      receta: { existentes: [], consultaId: "con-1", puedeAgregar: true },
+    });
     pantalla();
 
-    expect(screen.getByText("Consulta registrada")).toBeTruthy();
-
-    fireEvent.press(screen.getByText("Generar receta"));
-
-    expect(mockNavigate).toHaveBeenCalledWith("Receta", {
-      pacienteId: "p-1",
-      consultaId: "consulta-1",
-    });
+    fireEvent.press(screen.getByText("Agregar receta"));
+    expect(mockNavigate).toHaveBeenCalledWith("Receta", { pacienteId: "p-1", consultaId: "con-1" });
   });
 
-  // Camino de error (issue #759/#776): si guardar() falla, el formulario se queda visible con el
-  // error, no pasa a la pantalla de "Consulta registrada" como si hubiera funcionado.
-  it("camino de error: si la consulta falla, muestra el error y no la confirmacion", () => {
-    mockEstadoConsulta.error = { mensaje: "No se pudo guardar la consulta." };
+  it("camino de error: muestra el error de guardar", () => {
+    mockEstado = estado({ error: { mensaje: "No se pudo guardar la consulta." } });
     pantalla();
 
     expect(screen.getByText("No se pudo guardar la consulta.")).toBeTruthy();
-    expect(screen.queryByText("Consulta registrada")).toBeNull();
   });
 });

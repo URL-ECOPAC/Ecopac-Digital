@@ -164,7 +164,7 @@ como identificador: busca por el **inicio** del numero de ficha y del DPI
 (`buscarPacientesPorIdentificador`) y no pasa por `fn_buscar_pacientes`. Antes el DPI no se buscaba
 en ningun lado y la ficha solo coincidia escrita completa.
 
-`useRegistroConsulta({ rol })` devuelve `crearDiagnosticoNuevo(nombre)` para quien puede mantener el
+`useConsulta({ rol, ... })` devuelve `crearDiagnosticoNuevo(nombre)` para quien puede mantener el
 catalogo (`puedeAdministrarDiagnosticos`, politica de INSERT de la 00105) y `null` para el resto.
 
 **Escrituras**
@@ -177,8 +177,14 @@ catalogo (`puedeAdministrarDiagnosticos`, politica de INSERT de la 00105) y `nul
 **Validaciones**
 
 `validarPaciente`, `validarRegistroPaciente`, `validarTriaje`, `validarCambioDeTriaje`,
-`validarCondicionCronica`, `validarCambioDeCondicion`, mas `advertenciasDeTriaje` (rangos que no
-bloquean pero avisan) y `advertirPacienteDuplicado`.
+`validarCondicionCronica`, `validarCambioDeCondicion`, mas `avisosDeSignos(valores, edad)` y
+`advertirPacienteDuplicado`.
+
+`avisosDeSignos` devuelve un aviso por campo con `nivel` de `NIVELES_DE_AVISO`: `imposible` (fuera
+de lo fisiologicamente posible; bloquea) o `alarma` (posible pero de riesgo; avisa y deja guardar).
+Un campo nunca tiene las dos capas a la vez (issue #840, G2). Los umbrales de alarma, con su fuente
+clinica, estan en `signos.referencias.js` (`umbralesDeAlarma(edad)`). Todos los signos son
+opcionales, pero la presion va completa o no va (`haySignosCapturados`, 00135).
 
 **Descriptores**
 
@@ -204,14 +210,21 @@ web y la tarjeta estrecha del movil.
 
 `usePacientesListado`, `usePaciente`, `useRegistroPaciente`, `useEdicionPaciente`,
 `useHistorialPaciente`, `useEvolucionSignos`, `useCondicionesPaciente`, `usePacientesCronicos`,
-`useRegistroTriaje`, `useRegistroConsulta`, `useGeneracionReceta`, `useRecetasPaciente`.
+`useConsulta`, `useVisitasPaciente`, `useGeneracionReceta`, `useRecetasPaciente`.
+
+`useConsulta({ pacienteId, jornadaId, rol, perfilId, ... })` es la consulta como unidad (issue
+#840, F): signos vitales opcionales, consulta y receta en un solo flujo, y el mismo hook para crear
+y para editar (los mismos campos con las mismas etiquetas, B1). Reemplaza a `useRegistroTriaje`,
+`useRegistroConsulta`, `useCorreccionTriaje` y `useCorreccionConsulta`. `useVisitasPaciente`
+agrupa el historial por visita (una atencion: sus signos, su consulta y sus recetas), que es lo que
+muestran las dos apps en la pestana de historial.
 
 **Utilidades reutilizables**
 
 `calcularImc` (previsualizacion; el valor guardado lo calcula Postgres), `nombreCompletoDePaciente`,
 `resumenDeUltimaAtencion`, `condicionesDestacadas`, `estaFueraDeRango`, `describirPosologia`,
 `describirMedicamento`, `datosDeRecetaImprimible`, `claveDeBorrador` y `hayBorradorConDatos` (el
-borrador local del registro por pasos, porque en campo se interrumpe).
+borrador local de la consulta, porque en campo se interrumpe).
 
 `describirEntrega(renglon)` devuelve la cantidad **vigente** de un renglon de receta: la corregida
 (`cantidad_ajustada`, 00128) si la hubo, con de cuanto y por quien. Las pantallas leian solo
@@ -319,7 +332,12 @@ medicamentos crea el lote correspondiente.
 `obtenerPresupuestoProyecto`, `obtenerPresupuestoSistema`.
 
 **Escrituras**: `registrarGasto`, `editarGasto`, `aprobarGasto`, `rechazarGasto`,
-`asignarPresupuestoJornada`.
+`registrarOrigenDePresupuesto`, `quitarOrigenDePresupuesto`.
+
+El presupuesto de una jornada ya no se escribe a mano: es la suma de sus origenes
+(`jornada_presupuesto_origen`, 00134), cada uno de una donacion en efectivo con saldo o de fondos
+propios. `useOrigenesDePresupuesto` los lista y los agrega; `listarDonacionesConSaldo` ofrece las
+donaciones de donde puede salir.
 
 **Calculo**: `calcularPorcentajeEjecutado`, `combinarJornadasConPresupuesto`,
 `combinarProyectosConPresupuesto`, `totalizar`.

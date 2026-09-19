@@ -28,15 +28,16 @@ export * from "./historial.filtros.js";
 export * from "./useHistorialPaciente.js";
 export * from "./signos.js";
 export * from "./useEvolucionSignos.js";
-export * from "./useCorreccionTriaje.js";
-export * from "./useCorreccionConsulta.js";
 export * from "./useRecetasPaciente.js";
 export * from "./recetas.imprimible.js";
 export * from "./useCondicionesPaciente.js";
 export * from "./usePacientesCronicos.js";
-export * from "./useRegistroTriaje.js";
 export * from "./consultas.secciones.js";
-export * from "./useRegistroConsulta.js";
+// La consulta como unidad del historial (issue #840): reemplaza a useRegistroTriaje,
+// useRegistroConsulta, useCorreccionTriaje y useCorreccionConsulta.
+export * from "./useConsulta.js";
+export * from "./useVisitasPaciente.js";
+export * from "./signos.referencias.js";
 export * from "./registro.pasos.js";
 export * from "./useGeneracionReceta.js";
 export * from "./useCapturaClinica.js";

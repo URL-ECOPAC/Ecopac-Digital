@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { Activity, FileText, HeartPulse, Pencil, Pill } from "lucide-react";
+import { HeartPulse, Pencil, Stethoscope } from "lucide-react";
 
 import {
   cabeceraDePaciente,
@@ -29,16 +29,12 @@ import {
 } from "../components";
 import { useSesionCompartida } from "../contexto/SesionProvider";
 import ModalCondicionesPaciente from "./ModalCondicionesPaciente";
+import ModalConsulta from "./ModalConsulta";
 import ModalEdicionPaciente from "./ModalEdicionPaciente";
-import ModalGeneracionReceta from "./ModalGeneracionReceta";
-import ModalRegistroConsulta from "./ModalRegistroConsulta";
-import ModalRegistroTriaje from "./ModalRegistroTriaje";
 import NotFoundPage from "./NotFoundPage";
 import "./pacientes.css";
 import PanelPacientes from "./PanelPacientes";
 import PestaniaHistorialPaciente from "./PestaniaHistorialPaciente";
-import PestaniaRecetasPaciente from "./PestaniaRecetasPaciente";
-import PestaniaSignosPaciente from "./PestaniaSignosPaciente";
 
 const PARAMETRO_PESTANIA = "pestania";
 
@@ -63,12 +59,11 @@ export default function FichaPacientePage() {
   });
   const [editando, setEditando] = useState(false);
   const [gestionandoCondiciones, setGestionandoCondiciones] = useState(false);
-  // Los tres modales de captura clinica (triaje, consulta, receta). Se abren desde la pestania a
-  // la que pertenece cada dato, no desde la cabecera: quien va a tomar signos ya esta mirando
-  // "Signos vitales", y quien va a recetar ya esta en "Recetas".
-  const [tomandoTriaje, setTomandoTriaje] = useState(false);
-  const [registrandoConsulta, setRegistrandoConsulta] = useState(false);
-  const [generandoReceta, setGenerandoReceta] = useState(false);
+  // La consulta como unidad (issue #840): un solo modal para una consulta nueva y para abrir una
+  // visita existente. `consultaAbierta` es { visita } -null en visita para una nueva- o null.
+  // Reemplaza a los tres modales de captura -tomar signos, registrar consulta, generar receta-,
+  // que se abrian cada uno desde su pestana.
+  const [consultaAbierta, setConsultaAbierta] = useState(null);
   // Se incrementa despues de guardar algo, y va como `key` de la pestania abierta para forzarla
   // a montarse de nuevo: cada pestania tiene su propio hook y no se entera de lo que acaba de
   // guardar un modal hermano.
@@ -128,20 +123,34 @@ export default function FichaPacientePage() {
   // pantalla, asi que van dentro de la tarjeta de identidad, junto al paciente al que aplican.
   // Ahi tambien se entiende sin leerlas: los botones de la cabecera quedan lejos del nombre y no
   // dicen a quien se va a editar.
-  const accionesDeLaFicha = permisos.puedeEditar ? (
-    <>
-      <SecondaryButton
-        title="Condiciones crónicas"
-        icon={<HeartPulse size={16} aria-hidden="true" />}
-        onClick={() => setGestionandoCondiciones(true)}
-      />
-      <PrimaryButton
-        title="Editar datos"
-        icon={<Pencil size={16} aria-hidden="true" />}
-        onClick={() => setEditando(true)}
-      />
-    </>
-  ) : null;
+  // "Nueva consulta" es LA accion de la ficha (issue #840): llega el paciente, se busca y se le
+  // atiende. Por eso es la primaria; editar sus datos pasa a secundaria.
+  const accionesDeLaFicha =
+    permisos.puedeEditar || permisos.puedeNuevaConsulta ? (
+      <>
+        {permisos.puedeEditar && (
+          <SecondaryButton
+            title="Condiciones crónicas"
+            icon={<HeartPulse size={16} aria-hidden="true" />}
+            onClick={() => setGestionandoCondiciones(true)}
+          />
+        )}
+        {permisos.puedeEditar && (
+          <SecondaryButton
+            title="Editar datos"
+            icon={<Pencil size={16} aria-hidden="true" />}
+            onClick={() => setEditando(true)}
+          />
+        )}
+        {permisos.puedeNuevaConsulta && (
+          <PrimaryButton
+            title="Nueva consulta"
+            icon={<Stethoscope size={16} aria-hidden="true" />}
+            onClick={() => setConsultaAbierta({ visita: null })}
+          />
+        )}
+      </>
+    ) : null;
 
   const alGuardar = async () => {
     setEditando(false);
@@ -278,66 +287,16 @@ export default function FichaPacientePage() {
               </Card>
             )}
 
-            {/* Las tres pestanias clinicas eran de solo lectura: mostraban el historial, la
-              evolucion de signos y las recetas, y no habia por donde crear ninguno de los tres.
-              La captura existia unicamente en movil. */}
+            {/* El historial es una lista de visitas; cada una trae dentro sus signos, su consulta
+              y su receta (issue #840). "Editar" abre el mismo formulario que "Nueva consulta". */}
             {pestaniaActiva === "historial" && (
-              <>
-                {permisos.puedeCrearConsulta && (
-                  <div className="ec-acciones ec-acciones--fin mb-3">
-                    <PrimaryButton
-                      title="Registrar consulta"
-                      icon={<FileText size={16} aria-hidden="true" />}
-                      onClick={() => setRegistrandoConsulta(true)}
-                    />
-                  </div>
-                )}
-                <PestaniaHistorialPaciente
-                  key={`historial-${version}`}
-                  pacienteId={paciente.id}
-                  rol={rol}
-                  perfilId={perfil?.id}
-                />
-              </>
-            )}
-
-            {pestaniaActiva === "signos" && (
-              <>
-                {permisos.puedeTomarTriaje && (
-                  <div className="ec-acciones ec-acciones--fin mb-3">
-                    <PrimaryButton
-                      title="Tomar signos vitales"
-                      icon={<Activity size={16} aria-hidden="true" />}
-                      onClick={() => setTomandoTriaje(true)}
-                    />
-                  </div>
-                )}
-                <PestaniaSignosPaciente
-                  key={`signos-${version}`}
-                  pacienteId={paciente.id}
-                  rol={rol}
-                />
-              </>
-            )}
-
-            {pestaniaActiva === "recetas" && (
-              <>
-                {permisos.puedeEmitirReceta && (
-                  <div className="ec-acciones ec-acciones--fin mb-3">
-                    <PrimaryButton
-                      title="Generar receta"
-                      icon={<Pill size={16} aria-hidden="true" />}
-                      onClick={() => setGenerandoReceta(true)}
-                    />
-                  </div>
-                )}
-                <PestaniaRecetasPaciente
-                  key={`recetas-${version}`}
-                  paciente={paciente}
-                  rol={rol}
-                  perfilId={perfil?.id}
-                />
-              </>
+              <PestaniaHistorialPaciente
+                key={`historial-${version}`}
+                paciente={paciente}
+                rol={rol}
+                perfilId={perfil?.id}
+                onEditarVisita={(visita) => setConsultaAbierta({ visita })}
+              />
             )}
           </Tabs>
         </PanelPacientes>
@@ -360,32 +319,14 @@ export default function FichaPacientePage() {
           />
         )}
 
-        {tomandoTriaje && (
-          <ModalRegistroTriaje
+        {consultaAbierta && (
+          <ModalConsulta
             paciente={paciente}
+            visita={consultaAbierta.visita}
             rol={rol}
             perfilId={perfil?.id}
-            onClose={() => setTomandoTriaje(false)}
-            onGuardado={refrescar}
-          />
-        )}
-
-        {registrandoConsulta && (
-          <ModalRegistroConsulta
-            paciente={paciente}
-            perfilId={perfil?.id}
-            onClose={() => setRegistrandoConsulta(false)}
+            onClose={() => setConsultaAbierta(null)}
             onGuardada={refrescar}
-          />
-        )}
-
-        {generandoReceta && (
-          <ModalGeneracionReceta
-            paciente={paciente}
-            rol={rol}
-            perfilId={perfil?.id}
-            onClose={() => setGenerandoReceta(false)}
-            onGenerada={refrescar}
           />
         )}
       </div>

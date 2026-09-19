@@ -9,7 +9,7 @@ import { useSesionCompartida } from "./SesionProvider";
  *
  * Mismo motivo que SesionProvider.js: useJornadaActiva() de shared es un hook con su propio
  * estado, y varias pantallas ya lo llaman cada una por su cuenta (RegistroPacienteScreen,
- * TriajeScreen, ConsultaScreen). Eso les alcanza porque React Navigation las monta de nuevo en
+ * ConsultaScreen, RecetaScreen). Eso les alcanza porque React Navigation las monta de nuevo en
  * cada navegacion y releen la seleccion persistida. Pero el badge de jornada activa (criterio 4,
  * visible desde cualquier pantalla) vive en el header de AppNavigator, que NO se remonta al
  * navegar, y la pantalla de seleccion (criterio 5, cambiar de jornada) necesita que ese cambio

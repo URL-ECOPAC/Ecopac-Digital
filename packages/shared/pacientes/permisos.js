@@ -104,7 +104,7 @@ export function puedeCorregirTriaje(rol) {
  * politica. Esta funcion decide unicamente si se ofrece el boton.
  *
  * Faltaba, y por eso la web no tenia por donde registrar una consulta: existian el hook
- * (useRegistroConsulta) y la API (registrarConsulta), montados solo en ConsultaScreen de movil.
+ * (hoy useConsulta) y la API (registrarConsulta), montados solo en ConsultaScreen de movil.
  */
 export function puedeCrearConsulta(rol) {
   return esAdministrador(rol) || rol === ROLES.MEDICO;

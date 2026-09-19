@@ -1,7 +1,20 @@
 import { CAMPOS_TRIAJE } from "./campos.js";
+import { umbralesDeAlarma } from "./signos.referencias.js";
 import { combinarErrores, esTextoVacio, validarConDescriptores } from "../validations/index.js";
 
-const EDAD_CORTE_PEDIATRICO_ANIOS = 18;
+/**
+ * Nivel de un aviso sobre un signo. Un campo tiene a lo sumo UNO (issue #840, G2): o el valor es
+ * imposible y se rechaza, o es alarmante y se avisa. Antes la pantalla podia mostrar las dos cosas
+ * sobre el mismo campo -primero "valor alarmante", despues "tiene que ser mayor que 40"-, que es
+ * contradictorio: un valor imposible no es alarmante, es un error de digitacion.
+ */
+export const NIVELES_DE_AVISO = Object.freeze({
+  IMPOSIBLE: "imposible",
+  ALARMA: "alarma",
+});
+
+/** Los ids de los signos, en el orden del formulario. */
+const IDS_DE_SIGNOS = CAMPOS_TRIAJE.map((campo) => campo.id);
 
 /**
  * Rango del IMC que admite la base (chk_triajes_imc_rango, 00133, issue #699).
@@ -18,8 +31,8 @@ const IMC_MAXIMO = 200;
  * Espeja la columna generada de la 00013 -- ROUND(peso / POWER(talla / 100.0, 2), 1) -- y la talla
  * va en CENTIMETROS, que es de donde sale el error de captura mas comun: teclear 1.62 en vez de 162.
  *
- * Vivia en useRegistroTriaje.js, que es un hook; se mudo aqui en la #699 porque la regla que acota
- * el IMC necesita exactamente la misma formula, y dos copias de una formula se separan.
+ * Vive aqui desde la #699 porque la regla que acota el IMC necesita exactamente la misma formula, y
+ * dos copias de una formula se separan. useConsulta() la usa para la previsualizacion.
  *
  * @returns {number|null} null si falta algun valor o no es un numero positivo.
  */
@@ -34,43 +47,26 @@ export function calcularImc(peso, talla) {
   return Math.round((kilos / (metros * metros)) * 10) / 10;
 }
 
-const TRAMOS_DE_EDAD = Object.freeze({
-  PEDIATRICO: "pediatrico",
-  ADULTO: "adulto",
-});
+function mensajeDeImposible(campo) {
+  const { min, max } = campo.validacion;
+  return (
+    `${campo.label} tiene que estar entre ${min} y ${max} ${campo.sufijo}: ` +
+    "revisa si hay un error de digitacion."
+  );
+}
 
-const UMBRALES_DE_ALARMA_PENDIENTES_DE_REVISION = Object.freeze({
-  [TRAMOS_DE_EDAD.PEDIATRICO]: {
-    presionSistolica: { min: 70, max: 140 },
-    presionDiastolica: { min: 40, max: 90 },
-    frecuenciaCardiaca: { min: 60, max: 160 },
-    glucosa: { min: 60, max: 250 },
-    temperatura: { min: 35.5, max: 39 },
-  },
-  [TRAMOS_DE_EDAD.ADULTO]: {
-    presionSistolica: { min: 90, max: 180 },
-    presionDiastolica: { min: 50, max: 120 },
-    frecuenciaCardiaca: { min: 50, max: 120 },
-    glucosa: { min: 70, max: 250 },
-    temperatura: { min: 35, max: 38.5 },
-  },
-});
+function fueraDeLoPosible(campo, valor) {
+  const numero = Number(valor);
+  const { min, max } = campo.validacion;
+  return Number.isNaN(numero) || numero < min || numero > max;
+}
 
 /**
- * Rangos fisiologicamente imposibles, leidos de CAMPOS_TRIAJE (criterio 1 y 5).
+ * Rangos fisiologicamente imposibles, leidos de CAMPOS_TRIAJE (que espeja los CHECK de la 00013).
+ * Un campo vacio no reporta nada: todos los signos son opcionales (00135).
  *
- * No redeclara min/max: los toma del descriptor, que es el mismo que ya espeja los CHECK de la
- * 00013 (ver campos.js). Un campo ausente -opcional sin valor- no reporta nada: no hay rango que
- * violar sobre algo que no se envio. Un campo que ya fallo por obligatoriedad tampoco compite
- * aqui -- combinarErrores() se queda con el primer mensaje, y un valor vacio nunca llega a esta
- * funcion como "fuera de rango".
- *
- * La coherencia sistolica > diastolica (criterio 4) solo se evalua cuando las dos llegan juntas
- * en `valores`: en una correccion parcial que solo trae una, la otra ya esta en la fila y esta
- * funcion no la lee (no toca la base). La sigue protegiendo el CHECK de la 00013 en ese caso.
- *
- * @param {object} valores Valores indexados por el id de CAMPOS_TRIAJE.
- * @returns {Record<string, string>} Errores por campo. Vacio si todo esta dentro de rango.
+ * @param {object} valores
+ * @returns {Record<string, string>}
  */
 function erroresDeRangoTriaje(valores = {}) {
   const errores = {};
@@ -78,27 +74,16 @@ function erroresDeRangoTriaje(valores = {}) {
   for (const campo of CAMPOS_TRIAJE) {
     const valor = valores?.[campo.id];
     if (esTextoVacio(valor)) continue;
-
-    const numero = Number(valor);
-    const { min, max } = campo.validacion;
-    if (Number.isNaN(numero) || numero < min || numero > max) {
-      errores[campo.id] =
-        `${campo.label} debe estar entre ${min} y ${max} ${campo.sufijo}. ` +
-        "Es un valor fisiologicamente imposible: revisa si hay un error de digitacion.";
-    }
+    if (fueraDeLoPosible(campo, valor)) errores[campo.id] = mensajeDeImposible(campo);
   }
 
   // Peso y talla por separado pueden ser los dos posibles y su combinacion no serlo: 70 kg con una
-  // talla de 30 cm pasa los dos rangos de CAMPOS_TRIAJE y da un IMC de 777,8.
-  //
-  // Hasta la #699 eso lo paraba la base de la peor forma posible: la columna generada era
-  // NUMERIC(4,1), el valor no cabia y el INSERT moria con un `numeric field overflow` (22003) --
-  // un error crudo de Postgres, sin decir que campo revisar, delante de quien esta atendiendo. La
-  // 00133 amplia la columna y agrega chk_triajes_imc_rango; esto es su espejo, para decirlo antes
-  // de viajar a la base y sobre los dos campos que la persona puede corregir.
+  // talla de 30 cm pasa los dos rangos de CAMPOS_TRIAJE y da un IMC de 777,8. Hasta la #699 eso lo
+  // paraba la base con un `numeric field overflow` crudo; la 00133 agrega chk_triajes_imc_rango y
+  // esto es su espejo, dicho sobre los dos campos que la persona puede corregir.
   //
   // Solo se evalua si los dos llegan juntos y ninguno fallo ya: en una correccion parcial que solo
-  // trae uno, el otro esta en la fila y esta funcion no lee la base. Ahi sigue protegiendo el CHECK.
+  // trae uno, el otro esta en la fila y esta funcion no lee la base.
   const peso = valores?.peso;
   const talla = valores?.talla;
   if (
@@ -117,59 +102,77 @@ function erroresDeRangoTriaje(valores = {}) {
     }
   }
 
-  const sistolica = valores?.presionSistolica;
-  const diastolica = valores?.presionDiastolica;
-  if (
-    !esTextoVacio(sistolica) &&
-    !esTextoVacio(diastolica) &&
-    errores.presionDiastolica === undefined &&
-    Number(sistolica) <= Number(diastolica)
-  ) {
-    errores.presionDiastolica = "La presion diastolica debe ser menor que la presion sistolica.";
-  }
-
   return errores;
 }
 
 /**
- * Valida los signos vitales antes de mandarlos al servidor.
+ * La presion va completa (chk_triajes_presion_completa, 00135) y la sistolica es mayor que la
+ * diastolica (chk_triajes_presion_coherente, 00013). Solo se evalua cuando la presion viaja en
+ * `valores`: en una correccion que no la toca, lo que ya esta en la fila lo sigue protegiendo el
+ * CHECK.
  *
- * Combina dos capas independientes con combinarErrores() (mismo patron que
- * pacientes/validaciones.js): la obligatoriedad de los tres signos que la tabla exige
- * (validarConDescriptores(), issue #117) y los rangos fisiologicamente imposibles
- * (erroresDeRangoTriaje(), issue #118). Gana el primer mensaje que reporte cada campo: si un
- * signo obligatorio vino vacio, ese error tapa cualquier otro sobre el mismo campo.
+ * @param {object} valores
+ * @returns {Record<string, string>}
+ */
+function erroresDePresion(valores = {}) {
+  const tieneSistolica = !esTextoVacio(valores?.presionSistolica);
+  const tieneDiastolica = !esTextoVacio(valores?.presionDiastolica);
+
+  if (tieneSistolica && !tieneDiastolica) {
+    return { presionDiastolica: "Falta la presion diastolica: la presion se anota completa." };
+  }
+  if (tieneDiastolica && !tieneSistolica) {
+    return { presionSistolica: "Falta la presion sistolica: la presion se anota completa." };
+  }
+  if (
+    tieneSistolica &&
+    tieneDiastolica &&
+    Number(valores.presionSistolica) <= Number(valores.presionDiastolica)
+  ) {
+    return { presionDiastolica: "La presion diastolica debe ser menor que la presion sistolica." };
+  }
+  return {};
+}
+
+/**
+ * Si hay al menos un signo capturado. Un triaje sin ninguno no registra nada
+ * (chk_triajes_al_menos_un_signo, 00135): no se crea.
  *
- * Los signos parciales son un requisito de campo, no una concesion: en algunas comunidades no hay
- * glucometro ni bascula. `CAMPOS_TRIAJE` ya reparte que es obligatorio -- presion sistolica,
- * diastolica y frecuencia cardiaca -- y que es opcional -- glucosa, peso, talla y temperatura --,
- * y ese reparto es el mismo que impone la tabla triajes (00013) con sus NOT NULL.
+ * @param {object} valores
+ * @returns {boolean}
+ */
+export function haySignosCapturados(valores = {}) {
+  return IDS_DE_SIGNOS.some((id) => !esTextoVacio(valores?.[id]));
+}
+
+/**
+ * Valida los signos vitales antes de registrarlos.
  *
- * Esta capa es UX, no integridad: la anon key es publica, asi que cualquiera puede llamar a
- * Supabase directo saltandose esta validacion. Los valores imposibles siguen protegidos
- * unicamente por los CHECK de la 00013, y la combinacion imposible de peso y talla por
- * chk_triajes_imc_rango (00133).
+ * Ninguno es obligatorio (00135, issue #840), pero un triaje tiene que registrar al menos uno, y
+ * la presion va completa. Gana el primer mensaje por campo (combinarErrores): el rango imposible
+ * antes que la coherencia de la presion.
+ *
+ * Esta capa es UX, no integridad: los CHECK de la 00013, la 00133 (IMC) y la 00135 son lo que protege el dato.
  *
  * @param {object} valores Valores indexados por el id de CAMPOS_TRIAJE.
  * @returns {Record<string, string>} Errores por campo. Vacio si todo esta bien.
  */
 export function validarTriaje(valores) {
+  if (!haySignosCapturados(valores)) {
+    return { signos: "Registra al menos un signo vital." };
+  }
   return combinarErrores(
     validarConDescriptores(CAMPOS_TRIAJE, valores),
     erroresDeRangoTriaje(valores),
+    erroresDePresion(valores),
   );
 }
 
 /**
  * Valida una correccion parcial: solo los campos que vienen en el objeto.
  *
- * En un UPDATE, los signos obligatorios que no se estan cambiando ya estan en la fila y no
- * viajan. Aplicar validarTriaje() tal cual pediria una presion que nadie quiso tocar.
- *
- * Lo que si se conserva es la obligatoriedad de lo que SI viene: mandar `presionSistolica: ""`
- * es un intento de vaciar una columna NOT NULL, y eso se rechaza aqui en vez de dejar que la
- * base devuelva un 23502. Tambien se conserva el rango imposible (issue #118): corregir la
- * glucosa a un valor imposible se rechaza igual que en el registro inicial.
+ * En un UPDATE, los signos que no se estan cambiando ya estan en la fila y no viajan. Se conserva
+ * el rango imposible: corregir la glucosa a un valor imposible se rechaza igual que al registrar.
  *
  * @param {object} valores Solo los campos a cambiar, indexados por el id de CAMPOS_TRIAJE.
  * @returns {Record<string, string>} Errores por campo.
@@ -179,94 +182,63 @@ export function validarCambioDeTriaje(valores = {}) {
     Object.prototype.hasOwnProperty.call(valores, campo.id),
   );
 
-  return combinarErrores(validarConDescriptores(enviados, valores), erroresDeRangoTriaje(valores));
+  const presion =
+    Object.prototype.hasOwnProperty.call(valores, "presionSistolica") &&
+    Object.prototype.hasOwnProperty.call(valores, "presionDiastolica")
+      ? erroresDePresion(valores)
+      : {};
+
+  return combinarErrores(
+    validarConDescriptores(enviados, valores),
+    erroresDeRangoTriaje(valores),
+    presion,
+  );
 }
 
 /**
- * Los signos que la tabla admite vacios.
+ * Lo que la pantalla muestra debajo de cada signo MIENTRAS se escribe: un solo aviso por campo.
  *
- * Se deriva de CAMPOS_TRIAJE en vez de escribirse a mano: si alguien cambia la obligatoriedad de
- * un campo en el descriptor y aqui hubiera una lista suelta, las dos se separarian sin aviso.
- */
-export const SIGNOS_OPCIONALES = Object.freeze(
-  CAMPOS_TRIAJE.filter((campo) => !campo.validacion?.requerido).map((campo) => campo.id),
-);
-
-/**
- * Tramo de edad a efectos de alarma (criterio 3).
- *
- * `edad === null` (lo que devuelve calcularEdad() con una fecha de nacimiento invalida o futura)
- * cae al tramo adulto: es el tramo mas ancho, asi que un dato de edad corrupto no dispara
- * advertencias pediatricas de mas sobre lo que probablemente es un adulto. Es una caida
- * documentada para un caso de dato malo, no un valor por defecto silencioso -- ver la
- * distincion con "parametro no provisto" en el JSDoc de advertenciasDeTriaje().
- */
-function elegirTramoDeEdad(edad) {
-  if (edad === null) return TRAMOS_DE_EDAD.ADULTO;
-  return edad.anios < EDAD_CORTE_PEDIATRICO_ANIOS
-    ? TRAMOS_DE_EDAD.PEDIATRICO
-    : TRAMOS_DE_EDAD.ADULTO;
-}
-
-/**
- * Advierte -sin bloquear- si un signo vital es alarmante pero fisiologicamente posible
- * (criterio 2), ajustado por edad (criterio 3).
- *
- * NINGUN api.js llama a esta funcion, a proposito: triaje.api.js no la conoce, asi que
- * registrarTriaje()/actualizarTriaje() nunca bloquean un guardado por una advertencia. Quien
- * escriba la pantalla de #136 tiene que llamarla APARTE de validarTriaje() -- tipicamente en
- * cada cambio del formulario, para mostrar la advertencia junto al campo antes de guardar --,
- * el mismo patron que jornadas/api.js deja publico en obtenerAsignacionesDelDia() para
- * "recalcular la advertencia sin guardar todavia".
- *
- * Un valor que ya es fisiologicamente imposible (fuera de min/max de CAMPOS_TRIAJE) no genera
- * ademas una advertencia para ese campo: gana el rechazo, que ya cubre erroresDeRangoTriaje().
- *
- * Los umbrales viven en UMBRALES_DE_ALARMA_PENDIENTES_DE_REVISION: una PROPUESTA sin firma
- * clinica todavia. Esta funcion es correcta en su mecanica aunque esos numeros cambien manana --
- * lo unico que hay que tocar despues de la revision medica es esa constante.
- *
- * Esta capa es UX, no integridad: no reemplaza los CHECK de la 00013, que son lo unico que
- * protege el dato si alguien llama a Supabase directo sin pasar por esta validacion.
+ * - Fuera de lo posible (CAMPOS_TRIAJE): nivel "imposible", con el mismo texto que dara
+ *   validarTriaje() al guardar. Se muestra desde que se escribe, no solo al guardar: asi no hay
+ *   un "valor alarmante" primero y un rechazo despues.
+ * - Posible pero fuera del rango de alarma para la edad (signos.referencias.js): nivel "alarma".
+ *   No bloquea: puede ser justamente el motivo de la consulta.
  *
  * @param {object} valores Valores indexados por el id de CAMPOS_TRIAJE.
- * @param {{anios: number, meses: number, texto: string}|null} edad Resultado de calcularEdad()
- *   (formato/fechas.js) para el paciente de este triaje. Parametro OBLIGATORIO -- sin default --
- *   para que un caller que se olvido de calcularlo falle ruidosamente en vez de que esta funcion
- *   le aplique en silencio el tramo adulto a, por ejemplo, un lactante. Pasar explicitamente
- *   `null` (lo que calcularEdad() devuelve con una fecha de nacimiento invalida o futura) SI cae
- *   al tramo adulto: es el unico caso donde ese tramo por defecto es una decision documentada, no
- *   un olvido de quien llama.
- * @returns {Record<string, string>} Advertencias por campo. Vacio si nada es alarmante.
+ * @param {{anios: number, meses: number}|null} edad Resultado de calcularEdad(). OBLIGATORIO:
+ *   `undefined` revienta para que un caller que se olvido de calcularla no le aplique en silencio
+ *   los umbrales de adulto a un lactante. `null` (fecha invalida) si usa los de adulto.
+ * @returns {Record<string, {nivel: string, mensaje: string}>}
  */
-export function advertenciasDeTriaje(valores, edad) {
+export function avisosDeSignos(valores, edad) {
   if (edad === undefined) {
     throw new Error(
-      "advertenciasDeTriaje requiere el parametro 'edad' (el resultado de calcularEdad(), o " +
-        "null si la fecha de nacimiento no es valida). Quien llama tiene que calcularla -- " +
-        "esta funcion no va a buscarla por su cuenta.",
+      "avisosDeSignos requiere el parametro 'edad' (el resultado de calcularEdad(), o null si " +
+        "la fecha de nacimiento no es valida).",
     );
   }
 
-  const umbrales = UMBRALES_DE_ALARMA_PENDIENTES_DE_REVISION[elegirTramoDeEdad(edad)];
-  const advertencias = {};
+  const umbrales = umbralesDeAlarma(edad);
+  const avisos = {};
 
   for (const campo of CAMPOS_TRIAJE) {
     const valor = valores?.[campo.id];
     if (esTextoVacio(valor)) continue;
 
-    const numero = Number(valor);
-    const { min, max } = campo.validacion;
-    if (Number.isNaN(numero) || numero < min || numero > max) continue;
+    if (fueraDeLoPosible(campo, valor)) {
+      avisos[campo.id] = { nivel: NIVELES_DE_AVISO.IMPOSIBLE, mensaje: mensajeDeImposible(campo) };
+      continue;
+    }
 
     const umbral = umbrales[campo.id];
-    if (!umbral) continue;
-
-    if (numero < umbral.min || numero > umbral.max) {
-      advertencias[campo.id] =
-        `${campo.label} de ${numero} ${campo.sufijo} es un valor alarmante. Confirmalo antes de continuar.`;
+    const numero = Number(valor);
+    if (umbral && (numero < umbral.min || numero > umbral.max)) {
+      avisos[campo.id] = {
+        nivel: NIVELES_DE_AVISO.ALARMA,
+        mensaje: `${campo.label} de ${numero} ${campo.sufijo} es un valor de alarma para la edad. Confirmalo.`,
+      };
     }
   }
 
-  return advertencias;
+  return avisos;
 }

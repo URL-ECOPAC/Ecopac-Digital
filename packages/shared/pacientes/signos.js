@@ -13,7 +13,7 @@
  *
  * Los rangos normales de referencia son de adulto. Lo son tambien los de la version anterior; no
  * se ajustan por edad aqui a proposito, porque esa regla ya existe y vive en
- * triaje.validaciones.js (advertenciasDeTriaje, con su corte pediatrico). Aqui la banda verde es
+ * triaje.validaciones.js (avisosDeSignos, con su corte pediatrico). Aqui la banda verde es
  * orientacion visual, no un diagnostico.
  */
 export const GRUPOS_DE_SIGNOS = Object.freeze([

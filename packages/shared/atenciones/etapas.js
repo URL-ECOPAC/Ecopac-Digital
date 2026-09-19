@@ -45,6 +45,20 @@ export const NOMBRES_DE_ETAPA = Object.freeze({
 });
 
 /**
+ * Los pacientes con visita abierta en la jornada, en una sola lista y sin etapas: el que llego mas
+ * recientemente primero (issue #840). Es lo que muestra la app movil desde que se retiraron las
+ * colas de la interfaz: la lista para volver a abrir a alguien, no un flujo de etapas.
+ *
+ * @param {Record<string, object[]>} cola Lo que devuelve obtenerCola().
+ * @returns {object[]}
+ */
+export function pacientesDeLaJornada(cola = {}) {
+  return ORDEN_DE_ETAPAS.flatMap((etapa) => cola[etapa] ?? []).sort((uno, otro) =>
+    String(otro.iniciadaEn ?? "").localeCompare(String(uno.iniciadaEn ?? "")),
+  );
+}
+
+/**
  * Cuanto lleva esperando el paciente en su etapa actual, en minutos.
  *
  * El "ahora" entra por parametro y no se lee del reloj aqui, por el mismo motivo que en

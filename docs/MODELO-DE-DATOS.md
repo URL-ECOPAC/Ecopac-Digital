@@ -1001,8 +1001,11 @@ capturarse -> **resuelto en esta misma issue #756**: se agrega como checkbox al 
 `DetalleJornadaPage.jsx`), con `cambiado_por` resuelto a nombre. Sin huecos: es un historial de
 solo lectura por diseno (lo escribe un trigger).
 
-**`vista_cola_jornada`** (vista): consumida integra por la cola de atencion en curso
-(`JornadaEnCursoScreen.js`, movil). Sin huecos; es de solo lectura por naturaleza.
+**`vista_cola_jornada`** (vista): la cola por etapas se retiro de la interfaz con la issue #840
+(la consulta es la unidad y no hay etapas que recorrer). `JornadaEnCursoScreen.js` (movil) la sigue
+leyendo, pero solo para listar a los pacientes de la jornada sin agruparlos
+(`pacientesDeLaJornada`). La 00135 reordena su CASE para que los signos opcionales no dejen a un
+paciente atendido "esperando triaje".
 
 ### Atencion clinica
 
@@ -1014,16 +1017,16 @@ solo lectura por diseno (lo escribe un trigger).
 | cerrada_en | No | Si, automatico (`cerrarAtencion()`, solo movil) | n/a | Bajo impacto (timestamp de cierre, ya existe la accion que lo genera); sin issue propia |
 | motivo_cierre | No | Si, pero un literal fijo ("Entrega completada"), no texto libre | No | Mismo caso, bajo impacto |
 
-**`triajes`**: los siete signos vitales se capturan (solo desde movil, `TriajeScreen.js`; no existe
-registro de triaje en web) y se muestran en el historial del paciente (web). `imc` es columna
-generada (excluida arriba). **Resuelto en esta misma issue #756**: `actualizarTriaje()` y
-`puedeCorregirTriaje()` ya existian, probados, sin pantalla; se agrega el boton "Corregir" al
-evento de triaje en `PestaniaHistorialPaciente.jsx` (web), que abre `ModalCorreccionTriaje.jsx`
-con los mismos siete campos de `CAMPOS_TRIAJE`.
+**`triajes`**: desde la issue #840 los signos vitales son el primer paso de la consulta
+(`useConsulta`; `ModalConsulta.jsx` en web y `ConsultaScreen.js` en movil) y se capturan y se
+corrigen en el mismo formulario, con los mismos campos de `CAMPOS_TRIAJE`. Todos son opcionales
+(la 00135 quita el NOT NULL de la presion y la frecuencia cardiaca), con dos reglas en la base: la
+presion va completa o no va (`chk_triajes_presion_completa`) y una fila de triaje tiene al menos un
+signo (`chk_triajes_al_menos_un_signo`). `imc` es columna generada (excluida arriba).
 
 **`consultas`**: los siete campos (`motivo_consulta`, `antecedentes`, `sintomas`, `exploracion`,
 `tratamiento`, `observaciones`, `plan_seguimiento`) se capturan desde antes (solo movil,
-`ConsultaScreen.js`). **Resuelto en esta misma issue #756** en dos partes:
+`ConsultaScreen.js`; desde la #840 tambien desde web, `ModalConsulta.jsx`). **Resuelto en la issue #756** en dos partes:
 
 - Mostrar: `antecedentes`/`sintomas`/`exploracion`/`observaciones` no llegaban al historial
   porque `COLUMNAS_DEL_HISTORIAL` (`historial.api.js`) no los pedia. Se agregan al `select` y a
@@ -1032,8 +1035,9 @@ con los mismos siete campos de `CAMPOS_TRIAJE`.
 - Corregir: `actualizarConsulta()` ya existia, probada, sin pantalla. Se agrega
   `puedeCorregirConsulta(rol, consulta, perfilId)` (permisos.js, espejo de la politica de UPDATE
   de consultas, `00033`: el medico que la creo, o administrador) y el boton "Corregir" en el
-  mismo evento, que abre `ModalCorreccionConsulta.jsx` con `CAMPOS_CORRECCION_CONSULTA` -los
-  siete campos de texto, sin `diagnosticos`-.
+  mismo evento. Desde la #840 no hay un formulario de correccion aparte: se corrige en la misma
+  consulta (`ModalConsulta.jsx`/`ConsultaScreen.js`), con los mismos campos que al crearla,
+  diagnosticos incluidos.
 
 **`consulta_diagnostico`**: `diagnostico_id` se muestra y se captura; `es_principal` se infiere del
 orden de seleccion, no de una eleccion explicita (se deja asi: no es el hueco que esta issue
@@ -1047,8 +1051,8 @@ cerrado como un agujero de IDOR. Igual que `padecimientos_cronicos.condicion_id`
 diagnostico se refiere un vinculo no es un UPDATE -es otro hecho clinico distinto-, asi que la
 correccion es DELETE (quitar el vinculo equivocado) + INSERT (agregar el correcto, via las nuevas
 `quitarDiagnosticoDeConsulta()`/`agregarDiagnosticoAConsulta()`, `consultas.api.js`).
-`ModalCorreccionConsulta.jsx` gana una seccion de diagnosticos (lista con "Quitar" por fila, mas
-un selector para agregar uno). Se actualiza `docs/PERMISOS.md` en el mismo cambio (regla de
+La consulta calcula que quitar y que agregar comparando lo elegido con lo guardado
+(`cambiosDeDiagnosticos`, `useConsulta.js`). Se actualiza `docs/PERMISOS.md` en el mismo cambio (regla de
 AGENTS.md: un PR que cambia una politica actualiza ese documento).
 
 **`diagnosticos`** (catalogo): CRUD completo (`CatalogoDiagnosticosPage.jsx`), incluido
@@ -1056,14 +1060,12 @@ activar/desactivar y el filtro `soloActivos` que ya usa el selector de la consul
 
 **`recetas`**: `folio` generado por el servidor (excluido arriba); `indicaciones_generales` se
 muestra y se captura. `estado`/`motivo_anulacion`/`anulada_en` se muestran, y ahora
-`PestaniaRecetasPaciente.jsx` (web) tiene un boton "Anular" que llama a `anularReceta()` -visible
+`TarjetaReceta.jsx` (web, dentro de cada visita del historial desde la #840) tiene un boton "Anular" que llama a `anularReceta()` -visible
 solo a quien puede anular segun `puedeAnularReceta()` (la administradora siempre; el medico solo
 en la receta que el mismo firmo y mientras siga emitida)-. `anulada_por` se resuelve a nombre
 (`anuladaPorPerfil`, columna nueva en la consulta) en vez de mostrarse crudo o no mostrarse.
-Resuelto en esta misma issue #756. Sin pantalla equivalente en `apps/mobile`: no existe hoy ninguna
-vista del historial de recetas de un paciente en movil (`useRecetasPaciente` no tiene consumidor
-ahi), por lo que no hay boton que agregarle; es la misma decision de alcance que separa reportes
-agregados (web) de consulta y registro de campo (movil).
+Resuelto en esta misma issue #756. En movil, desde la #840, las recetas se ven dentro de cada visita
+del historial (`VisitasPacienteSeccion.js`), de solo lectura: anular sigue siendo solo de web.
 
 **`receta_detalle`**: `medicamento_id`/`lote_id`/`dosis`/`frecuencia`/`duracion`/`cantidad_entregada`
 completos (captura al recetar, sin correccion directa por diseno -ver `cantidad_ajustada` abajo).

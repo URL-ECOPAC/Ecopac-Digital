@@ -5,7 +5,7 @@
 // Un triaje, una consulta y una receta no cuelgan del paciente: cuelgan de una ATENCION, y una
 // atencion cuelga de una jornada (00013, 00018, 00019). En movil eso no hace falta preguntarlo
 // -la persona elige su jornada activa al entrar (useSeleccionJornada, issue #186) y desde ahi
-// todas las pantallas clinicas la heredan-, asi que useRegistroTriaje, useRegistroConsulta y
+// todas las pantallas clinicas la heredan-, asi que useConsulta (signos y consulta juntos, #840) y
 // useGeneracionReceta reciben `jornadaId` ya resuelto.
 //
 // En web no existe esa seleccion: se entra por el modulo de pacientes, se busca a alguien y se

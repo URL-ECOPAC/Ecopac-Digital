@@ -58,11 +58,11 @@ el numero del backlog. Este documento usa siempre la numeracion de la matriz.
 | CP-RF02-01 | Registrar un paciente le asigna numero de ficha | La base genera el numero, sin colisiones | `atencion-clinica.e2e.test.js`, caso 1; `generar_numero_ficha.sql` (5) |
 | CP-RF02-02 | Poner al paciente en la cola de la jornada en curso | Queda en la cola, una sola vez | `atencion-clinica.e2e.test.js`, casos 2 y 3; `cola_de_jornada.sql` (13) |
 | CP-RF02-03 | Registrar la consulta con un diagnostico del catalogo | La consulta queda en el expediente | `atencion-clinica.e2e.test.js`, casos 4 y 5 |
-| CP-RF02-04 | Registrar signos vitales | El IMC se calcula en la base, y una combinacion de peso y talla imposible se rechaza con un error con nombre en vez de un desborde | `triaje_imc_generado.sql` (12); `packages/shared/pacientes/triaje.validaciones.test.js`; `apps/mobile/src/screens/TriajeScreen.test.js` |
+| CP-RF02-04 | Registrar signos vitales | El IMC se calcula en la base, y una combinacion de peso y talla imposible se rechaza con un error con nombre en vez de un desborde | `triaje_imc_generado.sql` (12); `packages/shared/pacientes/triaje.validaciones.test.js`; `signos_vitales_opcionales.sql` (7); `apps/mobile/src/screens/ConsultaScreen.test.js`; `apps/web/src/pages/ModalConsulta.test.jsx` |
 | CP-RF02-05 | Fusionar dos expedientes duplicados | Atenciones, consultas y condiciones del absorbido pasan al sobreviviente, sin perderse ni duplicarse | `fusion_pacientes_duplicados.sql` (11) |
 | CP-RF02-06 | Alta de paciente en web | Valida los campos y registra | `apps/web/src/pages/ModalAltaPaciente.test.jsx`, `ModalAltaPaciente.regresion.test.jsx` |
 | CP-RF02-07 | Alta de paciente y consulta en movil | Valida y registra desde el telefono | `apps/mobile/src/screens/RegistroPacienteScreen.test.js`, `ConsultaScreen.test.js` |
-| CP-RF02-08 | Corregir una consulta o un triaje ya registrado | La correccion se guarda | `apps/web/src/pages/ModalCorreccionConsulta.test.jsx`, `ModalCorreccionTriaje.test.jsx` |
+| CP-RF02-08 | Corregir una consulta ya registrada, signos incluidos | La correccion se guarda, en el mismo formulario y con los mismos campos que al crearla | `apps/web/src/pages/ModalConsulta.test.jsx`; `packages/shared/pacientes/useConsulta.test.js` |
 | CP-RF02-09 | El formulario incluye todos los campos de la ficha clinica fisica | Nombre, edad, razon de consulta, antecedentes, sintomas, diagnostico, tratamiento y seguimiento | **Manual**: ver CP-RNF03-01 |
 | CP-RF02-10 | El modelo del paciente no admite basura | `sexo` solo acepta los dos valores del enum y el DPI exige 13 digitos exactos; el cliente lo dice antes que la base | `modelo_de_paciente_699.sql` (13); `packages/shared/pacientes/validaciones.test.js` |
 
@@ -130,8 +130,8 @@ el numero del backlog. Este documento usa siempre la numeracion de la matriz.
 | CP-RF06-01 | Buscar por nombre con y sin acentos o errores de tipeo, por comunidad y por ficha | Devuelve al paciente, paginado | `busqueda_pacientes.sql` (15) |
 | CP-RF06-02 | La pestana de Recetas encuentra la receta recien emitida | Lista la receta sin error | `atencion-clinica.e2e.test.js`, caso 10 |
 | CP-RF06-03 | Una lista de mas de 1000 filas no se corta en silencio | Se trae completa paginando | `paginacion-max-rows.e2e.test.js` |
-| CP-RF06-04 | Linea de tiempo del historial en web | Consultas, diagnosticos y medicamentos previos | `apps/web/src/pages/PestaniaHistorialPaciente.test.jsx`, `PestaniaRecetasPaciente.test.jsx`, `FichaPacientePage.test.jsx` |
-| CP-RF06-05 | Historial y ficha en movil | Mismo historial desde el telefono | `apps/mobile/src/screens/HistorialPacienteScreen.test.js`, `FichaPacienteScreen.test.js`, `ficha-paciente/__tests__/*` |
+| CP-RF06-04 | Linea de tiempo del historial en web | Consultas, diagnosticos y medicamentos previos | `apps/web/src/pages/PestaniaHistorialPaciente.test.jsx`, `TarjetaReceta.test.jsx`, `FichaPacientePage.test.jsx` |
+| CP-RF06-05 | Historial y ficha en movil | Mismo historial desde el telefono | `apps/mobile/src/screens/FichaPacienteScreen.test.js`, `ficha-paciente/__tests__/*` |
 
 ### RF-07: reportes e indicadores de impacto
 

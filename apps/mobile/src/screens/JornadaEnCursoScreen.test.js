@@ -108,40 +108,40 @@ describe("JornadaEnCursoScreen", () => {
     ).toBeTruthy();
   });
 
-  it("con la cola vacia, muestra el mensaje de que no hay pacientes", () => {
+  it("sin pacientes todavia, lo dice", () => {
     pantalla();
 
-    expect(screen.getByText("No hay pacientes en la cola de esta jornada.")).toBeTruthy();
+    expect(screen.getByText("Todavía no hay pacientes atendidos en esta jornada.")).toBeTruthy();
   });
 
-  it("un paciente en espera de triaje aparece en su grupo, y tocarlo navega a Triaje", () => {
-    mockEstadoJornadaActiva.totalEnCola = 1;
+  // Issue #840: las colas por etapa se retiran de la interfaz. Queda una lista sin etapas, y
+  // tocar a alguien abre su ficha, desde donde se abre la consulta.
+  it("los pacientes aparecen en una sola lista, sin colas, y tocarlo abre su ficha", () => {
+    mockEstadoJornadaActiva.totalEnCola = 2;
     mockEstadoJornadaActiva.cola = {
       ...mockEstadoJornadaActiva.cola,
       "espera triaje": [PACIENTE_EN_TRIAJE],
+      "lista para cerrar": [
+        { ...PACIENTE_EN_TRIAJE, atencionId: "at-2", pacienteId: "p-2", nombres: "Luis" },
+      ],
     };
     pantalla();
 
-    expect(screen.getByText("Espera triaje (1)")).toBeTruthy();
+    expect(screen.queryByText(/Espera triaje/)).toBeNull();
+    expect(screen.getByText("Pacientes de esta jornada (2)")).toBeTruthy();
     fireEvent.press(screen.getByText("Ana Perez"));
 
     expect(mockNavigate).toHaveBeenCalledWith("Pacientes", {
-      screen: "Triaje",
+      screen: "FichaPaciente",
       params: { pacienteId: "p-1" },
     });
   });
 
-  it("una fila lista para cerrar, con permiso, dispara cerrar()", () => {
-    mockEstadoJornadaActiva.totalEnCola = 1;
-    mockEstadoJornadaActiva.cola = {
-      ...mockEstadoJornadaActiva.cola,
-      "lista para cerrar": [PACIENTE_EN_TRIAJE],
-    };
+  it("la accion principal es buscar al paciente que llega", () => {
     pantalla();
 
-    fireEvent.press(screen.getByText("Ana Perez"));
-
-    expect(mockCerrar).toHaveBeenCalledWith("at-1", "Entrega completada");
+    fireEvent.press(screen.getByText("Buscar paciente"));
+    expect(mockNavigate).toHaveBeenCalledWith("Pacientes", { screen: "BusquedaPaciente" });
   });
 
   it("sin permiso de registrar (motivoBloqueo), el boton de registrar paciente esta deshabilitado y el aviso se muestra", () => {

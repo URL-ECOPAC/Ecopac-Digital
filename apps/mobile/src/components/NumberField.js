@@ -1,4 +1,4 @@
-import { forwardRef } from "react";
+import { forwardRef, useEffect, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { colors, spacing, typography } from "@ecopac/ui-tokens";
 import TextField from "./TextField";
@@ -10,28 +10,47 @@ import TextField from "./TextField";
  * igual en las dos plataformas: quien lo usa no deberia tener que acordarse de que el input
  * siempre devuelve texto.
  *
- * Se apoya en TextField con keyboardType numerico, que es el mismo componente base del
- * contrato, asi que hereda el area tactil de 48 dp y el tratamiento del error.
+ * Se apoya en TextField con teclado numerico, que es el mismo componente base del contrato, asi
+ * que hereda el area tactil de 48 dp y el tratamiento del error.
+ *
+ * LOS DECIMALES (issue #840). El campo pintaba `String(value)`: al teclear "36." el numero era 36,
+ * se volvia a pintar "36" y el punto desaparecia. En movil no se podia escribir 36.5 grados ni
+ * 12.5 kg. Ahora se conserva el texto tal como se escribe y solo se sincroniza cuando el valor
+ * cambia desde fuera. `step` decide el teclado: con un paso fraccionario se abre el decimal, que
+ * en iOS es el unico que trae el punto (el "numeric" de iOS no lo tiene).
  *
  * `min` y `max` se aplican al SALIR del campo, no al teclear: recortar mientras la persona
- * escribe impide llegar a "12" cuando el minimo es 5, porque el "1" se corregiria solo.
- *
- * `step` se acepta por paridad con la web, donde controla las flechas de
- * <input type="number">. Un TextInput no tiene flechas, asi que aqui no hace nada; se
- * desestructura para que no llegue al TextInput, que no sabe que hacer con ella.
+ * escribe impide llegar a "12" cuando el minimo es 5, porque el "1" se corregiria solo. Quien no
+ * quiera que se recorte -un signo vital, donde recortar 35 a 40 guardaria un valor que nadie
+ * midio- simplemente no los pasa.
  */
+function aTexto(valor) {
+  return valor === null || valor === undefined ? "" : String(valor);
+}
+
+function aNumero(texto) {
+  const limpio = texto.replace(",", ".").trim();
+  if (limpio === "") return null;
+  const numero = Number(limpio);
+  return Number.isNaN(numero) ? null : numero;
+}
+
 const NumberField = forwardRef(function NumberField(
-  { label, value = null, onChange, min, max, step: _step, suffix, error, style, ...inputProps },
+  { label, value = null, onChange, min, max, step = 1, suffix, error, style, ...inputProps },
   ref,
 ) {
-  const alCambiar = (texto) => {
-    const limpio = texto.replace(",", ".");
-    if (limpio.trim() === "") {
-      onChange?.(null);
-      return;
-    }
-    const numero = Number(limpio);
-    onChange?.(Number.isNaN(numero) ? null : numero);
+  const [texto, setTexto] = useState(() => aTexto(value));
+
+  // El valor cambio desde fuera (se reinicio el formulario, se cargo una visita): se pinta ese.
+  // Si es el mismo numero que ya representa el texto -"36." y 36-, se respeta lo escrito.
+  useEffect(() => {
+    if (aNumero(texto) !== (value ?? null)) setTexto(aTexto(value));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]);
+
+  const alCambiar = (nuevo) => {
+    setTexto(nuevo);
+    onChange?.(aNumero(nuevo));
   };
 
   // El recorte va aqui y no en cada pulsacion, para no pelearse con quien todavia escribe.
@@ -43,6 +62,8 @@ const NumberField = forwardRef(function NumberField(
     inputProps.onBlur?.(evento);
   };
 
+  const conDecimales = typeof step === "number" && !Number.isInteger(step);
+
   return (
     <View style={style}>
       <View style={styles.fila}>
@@ -50,9 +71,9 @@ const NumberField = forwardRef(function NumberField(
           ref={ref}
           label={label}
           error={error}
-          value={value === null || value === undefined ? "" : String(value)}
+          value={texto}
           onChangeText={alCambiar}
-          keyboardType="numeric"
+          keyboardType={conDecimales ? "decimal-pad" : "numeric"}
           style={styles.campo}
           {...inputProps}
           onBlur={alSalir}

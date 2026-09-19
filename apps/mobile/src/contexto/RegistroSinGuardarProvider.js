@@ -14,7 +14,7 @@ import { createContext, useCallback, useContext, useRef } from "react";
  * CONTRATO IMPLICITO. Una pantalla de formulario que nunca llama a registrar()/desregistrar()
  * queda automaticamente fuera de la confirmacion: nada falla ni avisa, simplemente su estado
  * sin guardar no cuenta para hayAlgoSinGuardar(). Cada pantalla nueva con un formulario que
- * quiera participar tiene que registrarse explicitamente (ver TriajeScreen.js para el patron).
+ * quiera participar tiene que registrarse explicitamente (ver ConsultaScreen.js para el patron).
  *
  * No usa useState para el conjunto de pantallas sucias a proposito: registrar/desregistrar
  * pasa en cada tecla que se escribe en un formulario, y si eso disparara un render de todo lo

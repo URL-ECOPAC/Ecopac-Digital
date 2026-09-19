@@ -31,7 +31,6 @@ import BusquedaPacienteScreen from "../screens/BusquedaPacienteScreen";
 import FichaPacienteScreen from "../screens/FichaPacienteScreen";
 import HistorialPacienteScreen from "../screens/HistorialPacienteScreen";
 import RegistroPacienteScreen from "../screens/RegistroPacienteScreen";
-import TriajeScreen from "../screens/TriajeScreen";
 import ConsultaScreen from "../screens/ConsultaScreen";
 import RecetaScreen from "../screens/RecetaScreen";
 import StockScreen from "../screens/StockScreen";
@@ -187,7 +186,6 @@ const PANTALLAS_PACIENTES = [
     componente: conGuardaDeRol(HistorialPacienteScreen, "pacientes"),
     titulo: "Historial",
   },
-  { name: ROUTES.TRIAJE, componente: conGuardaDeRol(TriajeScreen, "pacientes"), titulo: "Triaje" },
   {
     name: ROUTES.CONSULTA,
     componente: conGuardaDeRol(ConsultaScreen, "pacientes"),

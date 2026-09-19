@@ -195,16 +195,18 @@ SELECT lives_ok(
 );
 
 -- ============================================================================
--- 7. Los tres signos obligatorios siguen siendolo
+-- 7. Ningun signo es obligatorio (00135, issue #840)
 -- ============================================================================
--- Fija el reparto que CAMPOS_TRIAJE replica: presion y frecuencia cardiaca no son opcionales.
+-- Hasta la 00135 presion y frecuencia cardiaca eran NOT NULL; en jornada muchas veces no hay
+-- tensiometro. Lo que la base exige ahora es al menos un signo y la presion completa, y eso lo
+-- prueban chk_triajes_al_menos_un_signo y chk_triajes_presion_completa.
 SELECT is(
   (SELECT count(*)::int FROM information_schema.columns
    WHERE table_name = 'triajes'
      AND column_name IN ('presion_sistolica', 'presion_diastolica', 'frecuencia_cardiaca')
-     AND is_nullable = 'NO'),
+     AND is_nullable = 'YES'),
   3,
-  'presion sistolica, diastolica y frecuencia cardiaca son NOT NULL'
+  'presion sistolica, diastolica y frecuencia cardiaca son opcionales desde la 00135'
 );
 
 SELECT is(

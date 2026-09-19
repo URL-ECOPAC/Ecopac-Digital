@@ -1,6 +1,27 @@
 import { describe, expect, it } from "vitest";
 
-import { buscarOpcionPorEtiqueta, textoComparable } from "./opciones.js";
+import { buscarOpcionPorEtiqueta, filtrarOpcionesPorTexto, textoComparable } from "./opciones.js";
+
+// Issue #840, G4: en diagnosticos hay que poder buscar, no solo mirar.
+describe("filtrarOpcionesPorTexto", () => {
+  const DIAGNOSTICOS = [
+    { value: "1", label: "Faringitis aguda" },
+    { value: "2", label: "Gastritis crónica" },
+    { value: "3", label: "Diarrea" },
+  ];
+
+  it("encuentra por un pedazo, sin importar acentos ni mayusculas", () => {
+    expect(filtrarOpcionesPorTexto(DIAGNOSTICOS, "CRONICA").map((o) => o.value)).toEqual(["2"]);
+  });
+
+  it("cada palabra tiene que aparecer, en cualquier orden", () => {
+    expect(filtrarOpcionesPorTexto(DIAGNOSTICOS, "aguda farin").map((o) => o.value)).toEqual(["1"]);
+  });
+
+  it("sin texto devuelve todas", () => {
+    expect(filtrarOpcionesPorTexto(DIAGNOSTICOS, "  ")).toHaveLength(3);
+  });
+});
 
 const OPCIONES = [
   { value: "d-1", label: "Pediatría" },

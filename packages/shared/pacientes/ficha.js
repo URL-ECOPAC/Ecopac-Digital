@@ -11,11 +11,18 @@ import {
   puedeVerHistorial,
 } from "./permisos.js";
 
+/**
+ * Las pestanas de la ficha (issue #840, bloque F y G3).
+ *
+ * Eran cuatro: datos generales, historial, signos vitales y recetas. Signos y recetas como
+ * pestanas hermanas del historial partian cada visita en tres lugares, y en el ancho de un
+ * telefono las cuatro no cabian. Ahora el historial es una lista de visitas y cada una trae dentro
+ * sus signos, su consulta y su receta; la evolucion de los signos en el tiempo vive dentro del
+ * historial, como una vista mas de lo mismo.
+ */
 export const PESTANIAS_FICHA_PACIENTE = Object.freeze([
   { id: "generales", label: "Datos generales", requiereDatosClinicos: false },
   { id: "historial", label: "Historial clínico", requiereDatosClinicos: true },
-  { id: "signos", label: "Signos vitales", requiereDatosClinicos: true },
-  { id: "recetas", label: "Recetas", requiereDatosClinicos: true },
 ]);
 
 export const PESTANIA_FICHA_POR_DEFECTO = PESTANIAS_FICHA_PACIENTE[0].id;
@@ -122,6 +129,9 @@ export function permisosDeFicha(rol) {
     puedeTomarTriaje: puedeTomarTriaje(rol),
     puedeCrearConsulta: puedeCrearConsulta(rol),
     puedeEmitirReceta: puedeEmitirReceta(rol),
+    // "Nueva consulta" es la unica accion de captura clinica desde la #840: no hay "Nuevo
+    // triaje". La ve quien puede registrar al menos una de sus partes -un voluntario, los signos.
+    puedeNuevaConsulta: puedeTomarTriaje(rol) || puedeCrearConsulta(rol),
   };
 }
 

@@ -642,6 +642,15 @@ textarea.form-control {
   padding: var(--spacing-sm) 0;
 }
 
+/* Aviso de alarma bajo un signo vital (issue #840, G2): posible pero fuera del rango de alarma.
+   En ambar y no en rojo, porque no bloquea; el rojo queda para lo imposible. */
+.ec-aviso-alarma {
+  color: var(--color-warning);
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-medium);
+  margin: -0.65rem 0 var(--spacing-md);
+}
+
 /* Nota bajo un campo: la edad calculada debajo de la fecha de nacimiento, por ejemplo. */
 .ec-campo-nota {
   color: var(--color-text-muted);

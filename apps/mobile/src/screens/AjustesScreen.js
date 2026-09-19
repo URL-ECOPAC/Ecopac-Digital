@@ -67,7 +67,7 @@ export default function AjustesScreen({ navigation }) {
   const hayCambios = !sinCambiosDePerfil || !sinCambiosDeContrasena;
 
   // El formulario de perfil tambien cuenta para el aviso de cambios sin guardar de la #110,
-  // mismo patron que ya usa TriajeScreen.js: se registra mientras haya algo sin guardar y se
+  // mismo patron que ya usa ConsultaScreen.js: se registra mientras haya algo sin guardar y se
   // desregistra solo, sin depender de que la persona toque un boton de guardar antes de irse.
   useEffect(() => {
     if (!hayCambios) return;

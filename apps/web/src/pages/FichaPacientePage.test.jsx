@@ -61,11 +61,10 @@ vi.mock("@ecopac/shared", async (importarOriginal) => {
   };
 });
 
-// Las tres pestanias traen sus propios hooks contra la base; aqui solo importa que la ficha las
-// monte, no lo que dibujan.
+// El historial y el modal de consulta traen sus propios hooks contra la base; aqui solo importa
+// que la ficha los monte, no lo que dibujan.
 vi.mock("./PestaniaHistorialPaciente", () => ({ default: () => <div>historial</div> }));
-vi.mock("./PestaniaSignosPaciente", () => ({ default: () => <div>signos</div> }));
-vi.mock("./PestaniaRecetasPaciente", () => ({ default: () => <div>recetas</div> }));
+vi.mock("./ModalConsulta", () => ({ default: () => <div>formulario de consulta</div> }));
 
 function pantalla(pestania) {
   const ruta = pestania ? `/pacientes/pac-1?pestania=${pestania}` : "/pacientes/pac-1";
@@ -124,31 +123,34 @@ describe("FichaPacientePage", () => {
     expect(screen.getByText("Última actualización")).toBeInTheDocument();
   });
 
-  it("ofrece registrar una consulta desde el historial clinico", () => {
-    pantalla("historial");
-    expect(screen.getByText("Registrar consulta")).toBeInTheDocument();
+  // Issue #840, bloque F: "Nueva consulta" es la unica accion de captura. No hay "Tomar signos"
+  // ni "Generar receta" sueltos: los dos son pasos dentro de la consulta.
+  it("ofrece una sola accion de captura, Nueva consulta, y abre el formulario", () => {
+    pantalla();
+
+    expect(screen.queryByText("Tomar signos vitales")).not.toBeInTheDocument();
+    expect(screen.queryByText("Generar receta")).not.toBeInTheDocument();
+    expect(screen.queryByText("Registrar consulta")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByText("Nueva consulta"));
+    expect(screen.getByText("formulario de consulta")).toBeInTheDocument();
   });
 
-  it("ofrece tomar signos vitales", () => {
-    pantalla("signos");
-    expect(screen.getByText("Tomar signos vitales")).toBeInTheDocument();
+  it("las pestanas son datos generales e historial: signos y recetas viven en cada visita", () => {
+    pantalla();
+
+    expect(screen.getByText("Historial clínico")).toBeInTheDocument();
+    expect(screen.queryByText("Signos vitales")).not.toBeInTheDocument();
+    expect(screen.queryByText("Recetas")).not.toBeInTheDocument();
   });
 
-  it("ofrece generar una receta", () => {
-    pantalla("recetas");
-    expect(screen.getByText("Generar receta")).toBeInTheDocument();
-  });
-
-  it("un voluntario general no ve las pestanias clinicas ni sus acciones", () => {
+  it("un voluntario general ve Nueva consulta -toma los signos- pero no el historial", () => {
     sesion.rol = ROLES.VOLUNTARIO;
     sesion.perfil = { id: "perf-2", rol: ROLES.VOLUNTARIO };
 
-    // resolverPestaniaDeFicha() cae a "generales" para un rol sin datos clinicos, asi que pedir
-    // la pestania de recetas no la abre. Lo que se comprueba es que no aparezca la accion.
-    pantalla("recetas");
+    pantalla("historial");
 
-    expect(screen.queryByText("Generar receta")).not.toBeInTheDocument();
-    expect(screen.queryByText("Registrar consulta")).not.toBeInTheDocument();
-    expect(screen.queryByText("Historial clinico")).not.toBeInTheDocument();
+    expect(screen.getByText("Nueva consulta")).toBeInTheDocument();
+    expect(screen.queryByText("Historial clínico")).not.toBeInTheDocument();
   });
 });

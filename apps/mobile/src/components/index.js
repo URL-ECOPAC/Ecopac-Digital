@@ -16,6 +16,7 @@ export { default as Selector } from "./Selector";
 export { default as SelectorConAlta } from "./SelectorConAlta";
 export { default as CascadaDeComunidad } from "./CascadaDeComunidad";
 export { default as AvisoDeInactividad } from "./AvisoDeInactividad";
+export { default as FormularioSignosVitales } from "./FormularioSignosVitales";
 export { default as MultiSelector } from "./MultiSelector";
 export { default as DateField } from "./DateField";
 export { default as NumberField } from "./NumberField";

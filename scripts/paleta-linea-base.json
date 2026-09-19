@@ -21,6 +21,14 @@
   "apps/mobile/src/components/EmptyState.js": ["#7a7a8a", "#e2e4e9", "#ffffff"],
   "apps/mobile/src/components/ErrorState.js": ["#2d2d2d", "#e91e8c", "#ffffff"],
   "apps/mobile/src/components/FilterBar.js": ["#2d2d2d", "#e2e4e9", "#ffffff"],
+  "apps/mobile/src/components/FormularioSignosVitales.js": [
+    "#2d2d2d",
+    "#7a7a8a",
+    "#e2e4e9",
+    "#e91e8c",
+    "#f7941d",
+    "#ffffff"
+  ],
   "apps/mobile/src/components/JornadaActivaBadge.js": ["#3db648"],
   "apps/mobile/src/components/KanbanBoard.js": [
     "#1e7a28",
@@ -74,8 +82,10 @@
     "#3db648",
     "#4d4d4d",
     "#7a7a8a",
+    "#e2e4e9",
     "#e91e8c",
-    "#f7f8fa"
+    "#f7f8fa",
+    "#ffffff"
   ],
   "apps/mobile/src/components/StatCard.js": ["#2d2d2d", "#3db648", "#7a7a8a", "#e2e4e9", "#ffffff"],
   "apps/mobile/src/components/StatusChip.js": ["#4d4d4d", "#ffffff"],
@@ -107,7 +117,14 @@
   ],
   "apps/mobile/src/screens/ColaboradoresScreen.js": ["#7a7a8a"],
   "apps/mobile/src/screens/ComunidadesScreen.js": ["#7a7a8a"],
-  "apps/mobile/src/screens/ConsultaScreen.js": ["#2d2d2d", "#7a7a8a", "#e91e8c"],
+  "apps/mobile/src/screens/ConsultaScreen.js": [
+    "#2d2d2d",
+    "#3db648",
+    "#7a7a8a",
+    "#e91e8c",
+    "#f7941d",
+    "#ffffff"
+  ],
   "apps/mobile/src/screens/DetalleLoteScreen.js": [
     "#2d2d2d",
     "#3db648",
@@ -141,29 +158,14 @@
     "#f7f8fa"
   ],
   "apps/mobile/src/screens/ficha-paciente/CondicionesPacienteSeccion.js": ["#7a7a8a", "#e2e4e9"],
-  "apps/mobile/src/screens/ficha-paciente/RecetasPacienteSeccion.js": [
-    "#0284c7",
-    "#0f172a",
-    "#1e293b",
-    "#334155",
-    "#475569",
-    "#64748b",
-    "#dc2626",
-    "#e2e8f0",
-    "#f1f5f9",
-    "#fef2f2",
-    "#ffffff"
-  ],
-  "apps/mobile/src/screens/ficha-paciente/SignosPacienteSeccion.js": [
+  "apps/mobile/src/screens/ficha-paciente/VisitasPacienteSeccion.js": [
     "#2d2d2d",
+    "#3db648",
     "#7a7a8a",
-    "#dc2626",
-    "#e2e4e9",
-    "#e91e8c"
+    "#e2e4e9"
   ],
   "apps/mobile/src/screens/FichaColaboradorScreen.js": ["#2d2d2d", "#7a7a8a", "#e2e4e9", "#f7f8fa"],
   "apps/mobile/src/screens/FichaPacienteScreen.js": [
-    "#29abe2",
     "#2d2d2d",
     "#3db648",
     "#7a7a8a",
@@ -171,7 +173,6 @@
     "#f7f8fa",
     "#ffffff"
   ],
-  "apps/mobile/src/screens/HistorialPacienteScreen.js": ["#2d2d2d", "#7a7a8a", "#e2e4e9"],
   "apps/mobile/src/screens/InicioScreen.js": [
     "#1e7a28",
     "#2d2d2d",
@@ -260,7 +261,6 @@
   "apps/mobile/src/screens/RestaurandoSesionScreen.js": ["#2d2d2d", "#3db648"],
   "apps/mobile/src/screens/ResumenJornadaScreen.js": ["#2d2d2d", "#3db648", "#7a7a8a", "#f7f8fa"],
   "apps/mobile/src/screens/SeleccionJornadaScreen.js": ["#2d2d2d", "#7a7a8a"],
-  "apps/mobile/src/screens/TriajeScreen.js": ["#2d2d2d", "#7a7a8a", "#e91e8c", "#f7941d"],
   "apps/web/src/components/auth/AuthAlert.jsx": [
     "#16a34a",
     "#29abe2",
@@ -425,6 +425,7 @@
   ],
   "apps/web/src/pages/pacientes.css": [
     "#29abe2",
+    "#2d2d2d",
     "#3db648",
     "#7a7a8a",
     "#e2e4e9",
