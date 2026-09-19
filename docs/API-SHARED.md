@@ -184,7 +184,7 @@ catalogo (`puedeAdministrarDiagnosticos`, politica de INSERT de la 00105) y `nul
 de lo fisiologicamente posible; bloquea) o `alarma` (posible pero de riesgo; avisa y deja guardar).
 Un campo nunca tiene las dos capas a la vez (issue #840, G2). Los umbrales de alarma, con su fuente
 clinica, estan en `signos.referencias.js` (`umbralesDeAlarma(edad)`). Todos los signos son
-opcionales, pero la presion va completa o no va (`haySignosCapturados`, 00135).
+opcionales, pero la presion va completa o no va (`haySignosCapturados`, 00136).
 
 **Descriptores**
 
@@ -335,7 +335,7 @@ medicamentos crea el lote correspondiente.
 `registrarOrigenDePresupuesto`, `quitarOrigenDePresupuesto`.
 
 El presupuesto de una jornada ya no se escribe a mano: es la suma de sus origenes
-(`jornada_presupuesto_origen`, 00134), cada uno de una donacion en efectivo con saldo o de fondos
+(`jornada_presupuesto_origen`, 00135), cada uno de una donacion en efectivo con saldo o de fondos
 propios. `useOrigenesDePresupuesto` los lista y los agrega; `listarDonacionesConSaldo` ofrece las
 donaciones de donde puede salir.
 

@@ -309,7 +309,7 @@
  * @property {string|null} proyectoId
  * @property {EstadoJornada} estado
  * @property {number} presupuestoAsignado Suma de sus filas de jornada_presupuesto_origen desde
- *   la 00134: la mantiene un trigger y no se escribe a mano.
+ *   la 00135: la mantiene un trigger y no se escribe a mano.
  * @property {string} createdAt
  * @property {string} updatedAt
  * @property {string|null} codigo
@@ -321,13 +321,13 @@
  */
 
 /**
- * Enum `origen_de_presupuesto` (00134).
+ * Enum `origen_de_presupuesto` (00135).
  *
  * @typedef {'donacion'|'fondos_propios'|'aporte_externo'|'sin_clasificar'} OrigenDePresupuesto
  */
 
 /**
- * Fila de `jornada_presupuesto_origen` (00134, issue #840): de donde viene una parte del
+ * Fila de `jornada_presupuesto_origen` (00135, issue #840): de donde viene una parte del
  * presupuesto de una jornada. `jornadas.presupuesto_asignado` es la suma de estas filas.
  *
  * @typedef {object} JornadaPresupuestoOrigen
@@ -701,7 +701,7 @@
  * @property {string|null} loteId Con valor cuando la linea entro al inventario como lote.
  * @property {string} createdAt
  * @property {string} updatedAt
- * @property {string|null} medicamentoId Medicamento del catalogo (00134, issue #840).
+ * @property {string|null} medicamentoId Medicamento del catalogo (00135, issue #840).
  *   Obligatorio en las donaciones de medicamentos registradas desde entonces; NULL en los otros
  *   tipos y en las anteriores, que se capturaban como texto libre.
  */
@@ -818,6 +818,23 @@
  * @property {string} realizadoEn
  * @property {object|null} valoresAnteriores
  * @property {object|null} valoresNuevos
+ */
+
+// --- Limitacion de peticiones -----------------------------------------------------------------
+
+/**
+ * Fila de `limites_de_uso` (00134_limitar_invitaciones_y_busqueda_de_pacientes.sql).
+ *
+ * Contador de rate limiting por recurso y actor, con clave primaria compuesta
+ * (recurso, actor_id): sin `id` propio. No la lee ningun archivo de `apps/` ni de `packages/
+ * shared` -solo la tocan las funciones SECURITY DEFINER de la migracion, nunca PostgREST-, pero
+ * igual necesita su typedef para que esta guarda no la deje fuera del inventario.
+ *
+ * @typedef {object} LimiteDeUso
+ * @property {string} recurso
+ * @property {string} actorId
+ * @property {number} contador
+ * @property {string} ventanaInicio
  */
 
 // Este archivo no exporta valores -son todos comentarios-, pero tiene que ser un modulo de todos

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ESTADOS_CONDICION_CRONICA } from "../enums.js";
+import { conZonaHorariaDeGuatemala } from "../pruebas/zonaHoraria.js";
 import {
   normalizarDatosCondicion,
   validarCambioDeCondicion,
@@ -78,6 +79,32 @@ describe("validarCondicionCronica", () => {
     for (const estado of Object.values(ESTADOS_CONDICION_CRONICA)) {
       expect(validarCondicionCronica({ ...ALTA_VALIDA, estado }, HOY).estado).toBeUndefined();
     }
+  });
+
+  describe("el borde de las 18:00 en Guatemala (issue #725)", () => {
+    conZonaHorariaDeGuatemala();
+
+    // 15 de junio de 2026, 20:00 en Guatemala (UTC-6) = 16 de junio, 02:00 UTC.
+    const HOY_DE_NOCHE = new Date("2026-06-16T02:00:00Z");
+
+    it("rechaza manana como futura, aunque su medianoche UTC ya haya pasado", () => {
+      // El bug que corrigio esta issue leia fechaDiagnostico con new Date(cadena): la
+      // medianoche UTC del 16 de junio (00:00Z) es anterior a las 02:00Z de HOY_DE_NOCHE, asi
+      // que "manana" pasaba el chequeo de "no puede ser futura".
+      const errores = validarCondicionCronica(
+        { ...ALTA_VALIDA, fechaDiagnostico: "2026-06-16" },
+        HOY_DE_NOCHE,
+      );
+      expect(errores.fechaDiagnostico).toBe("La fecha de diagnostico no puede ser futura.");
+    });
+
+    it("acepta hoy, aunque ya sean las 20:00 en Guatemala", () => {
+      const errores = validarCondicionCronica(
+        { ...ALTA_VALIDA, fechaDiagnostico: "2026-06-15" },
+        HOY_DE_NOCHE,
+      );
+      expect(errores.fechaDiagnostico).toBeUndefined();
+    });
   });
 });
 

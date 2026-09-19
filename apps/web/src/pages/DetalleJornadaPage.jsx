@@ -370,7 +370,7 @@ export default function DetalleJornadaPage() {
                   valor={jornada.fechaFinReal && formatearFechaConHora(jornada.fechaFinReal)}
                 />
                 {/* El total no se edita aqui desde la #840: es la suma de los aportes de la
-                    pestaña Presupuesto, y la base rechaza escribirlo a mano (00134). */}
+                    pestaña Presupuesto, y la base rechaza escribirlo a mano (00135). */}
                 <div>
                   <dt className="ec-rotulo">Presupuesto asignado</dt>
                   <dd className="mb-0 d-flex flex-wrap align-items-center gap-2">

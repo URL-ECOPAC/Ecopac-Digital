@@ -1,4 +1,4 @@
--- Pruebas de la migracion 00135 (issue #840, reglas B2 y G2, bloque F).
+-- Pruebas de la migracion 00136 (issue #840, reglas B2 y G2, bloque F).
 -- Corre con: supabase test db
 --
 -- Ningun signo vital es obligatorio, pero un triaje registra al menos uno y la presion va

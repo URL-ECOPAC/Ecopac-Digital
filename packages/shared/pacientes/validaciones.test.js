@@ -13,7 +13,7 @@
 import { describe, expect, it } from "vitest";
 
 import { SEXOS } from "../enums.js";
-import { fechaLocalISO } from "../formato/fechas.js";
+import { aCadenaFechaLocal } from "../formato/fechas.js";
 import { normalizarDatosPaciente, validarRegistroPaciente } from "./validaciones.js";
 
 /** Los campos que no dependen del formulario: los mismos que validaba validarPaciente(). */
@@ -84,7 +84,7 @@ describe("reglas de negocio comunes a cualquier formulario de paciente", () => {
     manana.setDate(manana.getDate() + 1);
 
     const errores = validarRegistroPaciente(
-      registroValido({ fechaNacimiento: fechaLocalISO(manana) }),
+      registroValido({ fechaNacimiento: aCadenaFechaLocal(manana) }),
     );
 
     expect(errores.fechaNacimiento).toBeTruthy();

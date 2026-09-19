@@ -11,7 +11,7 @@ import { Card, DataList, ErrorState, PrimaryButton } from "../components";
 
 // De donde viene el presupuesto de una jornada (issue #840, bloque D).
 //
-// Hasta la 00134 el presupuesto era un numero suelto que se editaba en el resumen de la jornada,
+// Hasta la 00135 el presupuesto era un numero suelto que se editaba en el resumen de la jornada,
 // sin forma de saber de donde habia salido. Ahora es la suma de estos aportes -la calcula la
 // base-, y cada uno dice si viene de una donacion, de fondos propios o de un aporte externo. Lo
 // que existia antes aparece como "Sin clasificar": es el dato historico, no se le inventa origen.

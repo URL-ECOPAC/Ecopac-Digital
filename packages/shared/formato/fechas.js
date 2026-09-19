@@ -90,24 +90,30 @@ export function aFechaLocal(valor) {
   return Number.isNaN(fecha.getTime()) ? null : fecha;
 }
 
-/**
- * AAAA-MM-DD del dia LOCAL, el valor que espera una columna DATE y un campo de fecha.
- *
- * Es la operacion inversa de aFechaLocal() y la unica forma permitida de escribir "hoy" en un
- * formulario. `new Date().toISOString().slice(0, 10)` da el dia UTC: en Guatemala (UTC-6), a
- * partir de las 18:00 ya es manana, y asi se guardaban las donaciones registradas por la tarde
- * con la fecha del dia siguiente (issue #840).
- *
- * @param {Date} [fecha] Por defecto, ahora.
- * @returns {string} `"2026-08-18"`
- */
-export function fechaLocalISO(fecha = new Date()) {
-  return `${fecha.getFullYear()}-${conDosDigitos(fecha.getMonth() + 1)}-${conDosDigitos(fecha.getDate())}`;
-}
-
 /** Indica si el valor se puede interpretar como fecha. */
 export function esFechaValida(valor) {
   return aFechaLocal(valor) !== null;
+}
+
+/**
+ * "AAAA-MM-DD" a partir de los componentes locales, sin pasar por UTC.
+ *
+ * `new Date().toISOString().slice(0, 10)` da la fecha en UTC: entre las 18:00 y la medianoche en
+ * Guatemala (UTC-6) esto adelanta un dia (issue #725). Es el reemplazo para escribir "hoy" en una
+ * columna DATE o en un <input type="date">, y la operacion inversa de aFechaLocal().
+ *
+ * Es el unico nombre para esto. La #840 llego a agregar un fechaLocalISO() identico al encontrar
+ * el mismo bug en las donaciones de la tarde -se guardaban con la fecha del dia siguiente-; el
+ * arreglo era correcto y el nombre nuevo sobraba, asi que se retiro al integrar la #849.
+ *
+ * @param {Date|string|number} [valor] Por omision, ahora mismo.
+ * @returns {string} `"2026-08-18"`, o cadena vacia si el valor no es una fecha.
+ */
+export function aCadenaFechaLocal(valor = new Date()) {
+  const fecha = aFechaLocal(valor);
+  if (!fecha) return "";
+
+  return `${fecha.getFullYear()}-${conDosDigitos(fecha.getMonth() + 1)}-${conDosDigitos(fecha.getDate())}`;
 }
 
 /**

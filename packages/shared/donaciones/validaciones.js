@@ -111,7 +111,7 @@ function validarDetalle(detalle = {}, indice, tipoDeDonacion) {
 
   if (tipoDeDonacion === TIPOS_DE_DONACION.MEDICAMENTOS) {
     // Desde la #840 el medicamento se elige del catalogo y la descripcion la arma
-    // fn_registrar_donacion con el (00134): pedir texto aqui volveria a la adivinanza.
+    // fn_registrar_donacion con el (00135): pedir texto aqui volveria a la adivinanza.
     if (estaVacio(detalle.medicamentoId)) {
       errores[`${prefijo}_medicamentoId`] =
         `El renglon ${renglon} tiene que elegir un medicamento del catalogo.`;

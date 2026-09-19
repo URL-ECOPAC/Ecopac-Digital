@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback } from "react";
 
 import { ORIGENES_DE_LOTE } from "../enums.js";
-import { aFechaLocal, diasHastaVencimiento, fechaLocalISO } from "../formato/fechas.js";
+import { aCadenaFechaLocal, aFechaLocal, diasHastaVencimiento } from "../formato/fechas.js";
 import { esAdministrador } from "../usuarios/roles.js";
 import { combinarErrores, esTextoVacio, validarConDescriptores } from "../validations/index.js";
 import { CAMPOS_LOTE } from "./campos.js";
@@ -15,7 +15,7 @@ export function valoresInicialesDeLote() {
   return {
     ...Object.fromEntries(CAMPOS_LOTE.map((campo) => [campo.id, ""])),
     origen: ORIGENES_DE_LOTE.COMPRA,
-    fechaIngreso: fechaLocalISO(),
+    fechaIngreso: aCadenaFechaLocal(),
   };
 }
 
@@ -67,7 +67,7 @@ export function validarDatosDeLote(valores = {}) {
   }
 
   const ingreso = aFechaLocal(
-    esTextoVacio(valores.fechaIngreso) ? fechaLocalISO() : valores.fechaIngreso,
+    esTextoVacio(valores.fechaIngreso) ? aCadenaFechaLocal() : valores.fechaIngreso,
   );
   const vencimiento = aFechaLocal(valores.fechaVencimiento);
   if (ingreso && vencimiento && vencimiento < ingreso) {
@@ -75,6 +75,90 @@ export function validarDatosDeLote(valores = {}) {
   }
 
   return combinarErrores(validarConDescriptores(CAMPOS_LOTE, valores), propias);
+}
+
+/**
+ * Dias restantes y estado de alerta de un lote ("normal"/"warning"/"danger" para <= 30/0 dias).
+ * Pura y exportada aparte del hook por la misma razon que validarDatosDeLote() y
+ * datosLoteParaRegistrar(): usa diasHastaVencimiento() (formato/fechas.js) en vez de restar
+ * `new Date(fecha_vencimiento) - new Date()` a mano, que interpretaba la columna DATE como
+ * medianoche UTC y corria el corte un dia en Guatemala (issue #725).
+ *
+ * @param {string} fechaVencimiento
+ * @param {Date} [hoy]
+ * @returns {{ diasRestantes: number|null, estadoAlerta: "normal"|"warning"|"danger" }}
+ */
+export function calcularAlertaDeLote(fechaVencimiento, hoy = new Date()) {
+  const diasRestantes = diasHastaVencimiento(fechaVencimiento, hoy);
+
+  let estadoAlerta = "normal";
+  if (diasRestantes !== null) {
+    if (diasRestantes <= 0) {
+      estadoAlerta = "danger";
+    } else if (diasRestantes <= 30) {
+      estadoAlerta = "warning";
+    }
+  }
+
+  return { diasRestantes, estadoAlerta };
+}
+
+/**
+ * Ordenamiento FEFO (First Expire, First Out), filtrado de busqueda/bodega/categoria y alerta de
+ * vencimiento sobre los lotes que devuelve listarLotes() (aLote(), lotes.api.js). Pura y
+ * exportada aparte del hook -mismo criterio que validarDatosDeLote()/datosLoteParaRegistrar()-
+ * para poder probarla con datos con la forma real de aLote(): fechaVencimiento y numeroLote en
+ * camelCase, medicamento como el NOMBRE (una cadena, `fila.medicamento?.nombre` en aLote()), no
+ * un objeto. Esta cuenta leia fecha_vencimiento/numero_lote/medicamento.nombre en snake_case o
+ * como objeto anidado: contra los datos reales, diasRestantes/estadoAlerta salian siempre
+ * null/"normal" y la busqueda de texto nunca encontraba nada -sin ningun error, el mismo patron
+ * de contrato adivinado de las issues #818/#821, encontrado auditando el fix de #725 en el
+ * navegador-. lote.existencias, en cambio, no es parte de ese bug: listarLotes()/aLote() de
+ * verdad no traen existencias por bodega todavia, asi que el filtro por bodega y stockTotal se
+ * quedan en 0/sin efecto hasta que se agregue esa consulta; no se inventa aqui.
+ *
+ * @param {object[]} lotesIniciales
+ * @param {{ busqueda?: string, bodegaSeleccionada?: string, categoriaSeleccionada?: string }} filtros
+ * @param {Date} [hoy]
+ */
+export function procesarLotes(
+  lotesIniciales,
+  { busqueda = "", bodegaSeleccionada = "Todas", categoriaSeleccionada = "Todos" } = {},
+  hoy = new Date(),
+) {
+  const termino = busqueda.trim().toLowerCase();
+
+  return lotesIniciales
+    .map((lote) => {
+      const { diasRestantes, estadoAlerta } = calcularAlertaDeLote(lote.fechaVencimiento, hoy);
+
+      const existenciasRelacionadas = lote.existencias || [];
+      const existenciaFiltrada = existenciasRelacionadas.filter(
+        (e) => bodegaSeleccionada === "Todas" || e.bodega_id === bodegaSeleccionada,
+      );
+      const stockTotal = existenciaFiltrada.reduce(
+        (acc, curr) => acc + (curr.cantidad_disponible || 0),
+        0,
+      );
+
+      return { ...lote, diasRestantes, estadoAlerta, stockTotal };
+    })
+    .filter((lote) => {
+      const coincideBusqueda =
+        !termino ||
+        lote.medicamento?.toLowerCase().includes(termino) ||
+        lote.numeroLote?.toLowerCase().includes(termino);
+
+      const coincideBodega =
+        bodegaSeleccionada === "Todas" ||
+        lote.existencias?.some((e) => e.bodega_id === bodegaSeleccionada);
+
+      const coincideCategoria =
+        categoriaSeleccionada === "Todos" || lote.medicamento?.categoria === categoriaSeleccionada;
+
+      return coincideBusqueda && coincideBodega && coincideCategoria;
+    })
+    .sort((a, b) => aFechaLocal(a.fechaVencimiento) - aFechaLocal(b.fechaVencimiento));
 }
 
 /**
@@ -103,54 +187,13 @@ export function useGestionLotes({
   // InventarioPage.jsx, que es quien llama a este hook.
   const puedeRegistrarLotes = esAdministrador(usuario?.rol);
 
-  // Ordenamiento FEFO (First Expire, First Out) + Filtrado
-  const lotesFiltrados = useMemo(() => {
-    const termino = busqueda.trim().toLowerCase();
-
-    return lotesIniciales
-      .map((lote) => {
-        // Por dia de calendario local (issue #840): restar new Date("AAAA-MM-DD") a la hora
-        // actual daba un dia de menos en Guatemala, y un lote que vence manana salia vencido.
-        const diasRestantes = diasHastaVencimiento(lote.fecha_vencimiento) ?? 0;
-
-        let estadoAlerta = "normal";
-        if (diasRestantes <= 0) {
-          estadoAlerta = "danger";
-        } else if (diasRestantes <= 30) {
-          estadoAlerta = "warning";
-        }
-
-        // Calcular existencias por bodega seleccionada o total
-        const existenciasRelacionadas = lote.existencias || [];
-        const existenciaFiltrada = existenciasRelacionadas.filter(
-          (e) => bodegaSeleccionada === "Todas" || e.bodega_id === bodegaSeleccionada,
-        );
-        const stockTotal = existenciaFiltrada.reduce(
-          (acc, curr) => acc + (curr.cantidad_disponible || 0),
-          0,
-        );
-
-        return { ...lote, diasRestantes, estadoAlerta, stockTotal };
-      })
-      .filter((lote) => {
-        const coincideBusqueda =
-          !termino ||
-          lote.medicamento?.nombre?.toLowerCase().includes(termino) ||
-          lote.medicamento?.codigo?.toLowerCase().includes(termino) ||
-          lote.numero_lote?.toLowerCase().includes(termino);
-
-        const coincideBodega =
-          bodegaSeleccionada === "Todas" ||
-          lote.existencias?.some((e) => e.bodega_id === bodegaSeleccionada);
-
-        const coincideCategoria =
-          categoriaSeleccionada === "Todos" ||
-          lote.medicamento?.categoria === categoriaSeleccionada;
-
-        return coincideBusqueda && coincideBodega && coincideCategoria;
-      })
-      .sort((a, b) => a.diasRestantes - b.diasRestantes);
-  }, [lotesIniciales, busqueda, bodegaSeleccionada, categoriaSeleccionada]);
+  // procesarLotes() es la version pura y probada del FEFO y los filtros (#849). La #840 habia
+  // corregido aqui dentro el corte por dia de calendario; esa correccion vive ahora dentro de
+  // calcularAlertaDeLote(), que es a quien procesarLotes() se lo pregunta.
+  const lotesFiltrados = useMemo(
+    () => procesarLotes(lotesIniciales, { busqueda, bodegaSeleccionada, categoriaSeleccionada }),
+    [lotesIniciales, busqueda, bodegaSeleccionada, categoriaSeleccionada],
+  );
 
   // Alertas críticas (vencidos o por vencer en <= 30 días)
   const alertasCriticas = useMemo(() => {

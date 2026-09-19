@@ -197,7 +197,7 @@ export const CAMPOS_EDICION_TURNO = camposDeEdicion(
  * siempre vacia. `codigo` sigue sin estar: lo genera el servidor por secuencia (migracion
  * 00126), como numero_ficha o folio, y no se declara como capturable en ningun formulario.
  *
- * `presupuestoAsignado` no es un campo de ningun formulario: desde la 00134 (issue #840) es la
+ * `presupuestoAsignado` no es un campo de ningun formulario: desde la 00135 (issue #840) es la
  * suma de los aportes de jornada_presupuesto_origen, la mantiene un trigger, y la base rechaza
  * escribirlo a mano. Los aportes se registran en el detalle de la jornada, pestaña Presupuesto
  * (useOrigenesDePresupuesto, presupuestos/).

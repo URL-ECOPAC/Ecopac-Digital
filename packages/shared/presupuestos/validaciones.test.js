@@ -9,7 +9,8 @@
 import { describe, expect, it } from "vitest";
 
 import { CATEGORIAS_DE_GASTO, ORIGENES_DE_PRESUPUESTO } from "../enums.js";
-import { fechaLocalISO } from "../formato/fechas.js";
+import { aCadenaFechaLocal } from "../formato/fechas.js";
+import { conZonaHorariaDeGuatemala } from "../pruebas/zonaHoraria.js";
 import { validarGasto, validarOrigenDePresupuesto } from "./validaciones.js";
 
 // Issue #840, bloque D: el presupuesto de una jornada se forma con aportes de origen conocido.
@@ -59,17 +60,18 @@ describe("validarOrigenDePresupuesto", () => {
   });
 });
 
-// Dia LOCAL (issue #840). Con toISOString() esta prueba fallaba cada tarde en Guatemala: despues
-// de las 18:00 el dia UTC ya es manana, y el gasto "de hoy" salia en el futuro. Pasaba en el CI solo
-// porque el CI corre en UTC; con TZ fijado (vitest.config.js) se vio.
+// Fijo, y no el reloj real: `hoy` entra por parametro en validarGasto() (issue #725) para que
+// estas pruebas no dependan de cuando ni en que zona horaria se corran. Antes de la #725 el dia
+// se tomaba con toISOString(), y en Guatemala, despues de las 18:00, el gasto "de hoy" salia en
+// el futuro; el CI no lo veia porque corre en UTC.
+const HOY = new Date(2026, 5, 15, 10, 0);
+
 function hoy() {
-  return fechaLocalISO();
+  return aCadenaFechaLocal(HOY);
 }
 
 function enDias(dias) {
-  const fecha = new Date();
-  fecha.setDate(fecha.getDate() + dias);
-  return fechaLocalISO(fecha);
+  return aCadenaFechaLocal(new Date(HOY.getFullYear(), HOY.getMonth(), HOY.getDate() + dias));
 }
 
 const jornadaConPresupuesto = {
@@ -88,6 +90,7 @@ describe("validarGasto", () => {
         fecha: hoy(),
       },
       jornadaConPresupuesto,
+      HOY,
     );
 
     expect(resultado.valido).toBe(true);
@@ -96,43 +99,55 @@ describe("validarGasto", () => {
   });
 
   it("rechaza montos menores o iguales a cero", () => {
-    const resultado = validarGasto({
-      concepto: "Prueba",
-      categoria: CATEGORIAS_DE_GASTO.LOGISTICA,
-      monto: 0,
-      fecha: hoy(),
-    });
+    const resultado = validarGasto(
+      {
+        concepto: "Prueba",
+        categoria: CATEGORIAS_DE_GASTO.LOGISTICA,
+        monto: 0,
+        fecha: hoy(),
+      },
+      null,
+      HOY,
+    );
 
     expect(resultado.valido).toBe(false);
     expect(resultado.errores).toContain("El monto del gasto debe ser mayor que cero.");
   });
 
   it("exige concepto y categoria", () => {
-    const resultado = validarGasto({ monto: 10, fecha: hoy() });
+    const resultado = validarGasto({ monto: 10, fecha: hoy() }, null, HOY);
 
     expect(resultado.errores).toContain("El concepto del gasto es obligatorio.");
     expect(resultado.errores).toContain("La categoria de gasto es obligatoria.");
   });
 
   it("rechaza una categoria que no esta en el enum categoria_gasto", () => {
-    const resultado = validarGasto({
-      concepto: "Alquiler de vehiculo",
-      // Valor que usaba la version anterior de estas pruebas y que Postgres rechaza.
-      categoria: "transporte",
-      monto: 100,
-      fecha: hoy(),
-    });
+    const resultado = validarGasto(
+      {
+        concepto: "Alquiler de vehiculo",
+        // Valor que usaba la version anterior de estas pruebas y que Postgres rechaza.
+        categoria: "transporte",
+        monto: 100,
+        fecha: hoy(),
+      },
+      null,
+      HOY,
+    );
 
     expect(resultado.errores).toContain("La categoria seleccionada no es valida.");
   });
 
   it("rechaza una fecha posterior a hoy", () => {
-    const resultado = validarGasto({
-      concepto: "Compra adelantada",
-      categoria: CATEGORIAS_DE_GASTO.LOGISTICA,
-      monto: 100,
-      fecha: enDias(3),
-    });
+    const resultado = validarGasto(
+      {
+        concepto: "Compra adelantada",
+        categoria: CATEGORIAS_DE_GASTO.LOGISTICA,
+        monto: 100,
+        fecha: enDias(3),
+      },
+      null,
+      HOY,
+    );
 
     expect(resultado.errores).toContain("La fecha de un gasto no puede ser posterior a hoy.");
   });
@@ -146,6 +161,7 @@ describe("validarGasto", () => {
         fecha: "2025-12-15",
       },
       jornadaConPresupuesto,
+      HOY,
     );
 
     expect(resultado.errores).toContain(
@@ -162,6 +178,7 @@ describe("validarGasto", () => {
         fecha: hoy(),
       },
       { ...jornadaConPresupuesto, gasto_acumulado: 800.0 },
+      HOY,
     );
 
     // Sigue siendo valido: una jornada en campo no se detiene porque el presupuesto se quede
@@ -180,10 +197,48 @@ describe("validarGasto", () => {
         fecha: hoy(),
       },
       { fecha_inicio: "2026-01-01" },
+      HOY,
     );
 
     expect(resultado.valido).toBe(true);
     expect(resultado.esExcedente).toBe(false);
     expect(resultado.mensajeExcedente).toBeNull();
+  });
+
+  describe("el borde de las 18:00 en Guatemala (issue #725)", () => {
+    conZonaHorariaDeGuatemala();
+
+    // 15 de junio de 2026, 20:00 en Guatemala (UTC-6) = 16 de junio, 02:00 UTC.
+    const HOY_DE_NOCHE = new Date("2026-06-16T02:00:00Z");
+
+    it("rechaza un gasto fechado manana, aunque su medianoche UTC ya haya pasado", () => {
+      const resultado = validarGasto(
+        {
+          concepto: "Compra adelantada",
+          categoria: CATEGORIAS_DE_GASTO.LOGISTICA,
+          monto: 100,
+          fecha: "2026-06-16",
+        },
+        null,
+        HOY_DE_NOCHE,
+      );
+
+      expect(resultado.errores).toContain("La fecha de un gasto no puede ser posterior a hoy.");
+    });
+
+    it("acepta un gasto fechado hoy, aunque ya sean las 20:00 en Guatemala", () => {
+      const resultado = validarGasto(
+        {
+          concepto: "Compra de la tarde",
+          categoria: CATEGORIAS_DE_GASTO.LOGISTICA,
+          monto: 100,
+          fecha: "2026-06-15",
+        },
+        null,
+        HOY_DE_NOCHE,
+      );
+
+      expect(resultado.errores).not.toContain("La fecha de un gasto no puede ser posterior a hoy.");
+    });
   });
 });

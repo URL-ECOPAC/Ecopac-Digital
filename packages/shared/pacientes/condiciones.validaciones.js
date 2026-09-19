@@ -33,7 +33,7 @@ function erroresDeNegocioCondicion(datos, hoy) {
     // aFechaLocal(): la columna es DATE, y new Date("AAAA-MM-DD") la lee en UTC (issue #840).
     const fecha = aFechaLocal(datos.fechaDiagnostico);
 
-    if (!fecha) {
+    if (fecha === null) {
       errores.fechaDiagnostico = "Fecha de diagnostico no valida.";
     } else if (fecha > hoy) {
       errores.fechaDiagnostico = "La fecha de diagnostico no puede ser futura.";

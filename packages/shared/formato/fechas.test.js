@@ -10,42 +10,19 @@
 
 import { describe, expect, it } from "vitest";
 
+import { conZonaHorariaDeGuatemala } from "../pruebas/zonaHoraria.js";
 import {
+  aCadenaFechaLocal,
   aFechaLocal,
   calcularEdad,
   diasHastaVencimiento,
   DIAS_DE_LA_SEMANA,
   esFechaValida,
-  fechaLocalISO,
   formatearFechaConHora,
   formatearFechaCorta,
   formatearFechaLarga,
   MESES,
 } from "./fechas.js";
-
-// La suite corre con TZ=America/Guatemala fijado en vitest.config.js (issue #840).
-describe("fechaLocalISO", () => {
-  it("la zona de las pruebas es de verdad UTC-6, o esta prueba no protege nada", () => {
-    expect(new Date(2026, 8, 18, 12).getTimezoneOffset()).toBe(360);
-  });
-
-  it("a las 20:00 en Guatemala sigue siendo hoy, aunque en UTC ya sea manana", () => {
-    // El defecto de la donacion: toISOString() da 2026-09-19 para esta hora.
-    const nochePorLaTarde = new Date(2026, 8, 18, 20, 0);
-
-    expect(nochePorLaTarde.toISOString().slice(0, 10)).toBe("2026-09-19");
-    expect(fechaLocalISO(nochePorLaTarde)).toBe("2026-09-18");
-  });
-
-  it("es la inversa de aFechaLocal: ida y vuelta conserva el dia", () => {
-    expect(fechaLocalISO(aFechaLocal("2026-01-05"))).toBe("2026-01-05");
-  });
-
-  it("sin argumento devuelve el dia local de hoy", () => {
-    const ahora = new Date();
-    expect(fechaLocalISO()).toBe(fechaLocalISO(ahora));
-  });
-});
 
 describe("aFechaLocal", () => {
   it("lee una cadena AAAA-MM-DD como dia de calendario, sin correrla de dia", () => {
@@ -196,6 +173,53 @@ describe("diasHastaVencimiento", () => {
   it("devuelve null si la fecha no sirve", () => {
     expect(diasHastaVencimiento(null, "2026-08-18")).toBeNull();
     expect(diasHastaVencimiento("2026-08-18", "")).toBeNull();
+  });
+});
+
+describe("aCadenaFechaLocal", () => {
+  it("da AAAA-MM-DD por componentes locales, con ceros a la izquierda", () => {
+    expect(aCadenaFechaLocal(new Date(2026, 0, 5))).toBe("2026-01-05");
+    expect(aCadenaFechaLocal(new Date(2026, 7, 18))).toBe("2026-08-18");
+  });
+
+  it("da cadena vacia si el valor no es una fecha", () => {
+    expect(aCadenaFechaLocal(null)).toBe("");
+    expect(aCadenaFechaLocal("no es una fecha")).toBe("");
+  });
+
+  it("es la inversa de aFechaLocal: ida y vuelta conserva el dia", () => {
+    expect(aCadenaFechaLocal(aFechaLocal("2026-01-05"))).toBe("2026-01-05");
+  });
+
+  it("sin argumento devuelve el dia local de hoy", () => {
+    const ahora = new Date();
+    expect(aCadenaFechaLocal()).toBe(aCadenaFechaLocal(ahora));
+  });
+
+  describe("el borde de las 18:00 en Guatemala (issues #725 y #840)", () => {
+    conZonaHorariaDeGuatemala();
+
+    it("la zona de este bloque es de verdad UTC-6, o estas pruebas no protegen nada", () => {
+      expect(new Date(2026, 8, 18, 12).getTimezoneOffset()).toBe(360);
+    });
+
+    it("a las 20:00 en Guatemala sigue siendo hoy, aunque en UTC ya sea manana", () => {
+      // El defecto de la donacion (issue #840): toISOString() da 2026-09-19 para esta hora.
+      const nochePorLaTarde = new Date(2026, 8, 18, 20, 0);
+
+      expect(nochePorLaTarde.toISOString().slice(0, 10)).toBe("2026-09-19");
+      expect(aCadenaFechaLocal(nochePorLaTarde)).toBe("2026-09-18");
+    });
+
+    it("no adelanta un dia por la noche, al contrario que toISOString().slice(0, 10)", () => {
+      // 15 de junio de 2026, 20:00 en Guatemala (UTC-6) = 16 de junio, 02:00 UTC. El bug que
+      // corrigio esta issue devolvia "2026-06-16": new Date().toISOString() siempre da la
+      // fecha en UTC.
+      const instante = new Date("2026-06-16T02:00:00Z");
+
+      expect(aCadenaFechaLocal(instante)).toBe("2026-06-15");
+      expect(instante.toISOString().slice(0, 10)).toBe("2026-06-16");
+    });
   });
 });
 

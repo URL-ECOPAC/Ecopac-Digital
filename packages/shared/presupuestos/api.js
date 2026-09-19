@@ -50,7 +50,7 @@ async function consultar(nombreDeFuncion, argumentos, presupuestoSinFilas) {
 }
 
 // asignarPresupuestoJornada() escribia jornadas.presupuesto_asignado directo. Se retiro con la
-// 00134 (issue #840): el asignado es ahora la suma de jornada_presupuesto_origen y la base rechaza
+// 00135 (issue #840): el asignado es ahora la suma de jornada_presupuesto_origen y la base rechaza
 // escribirlo a mano. Se registra un aporte con registrarOrigenDePresupuesto() (origenes.api.js).
 
 /**

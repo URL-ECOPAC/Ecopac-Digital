@@ -64,7 +64,7 @@ describe("registrarDonacion (#635)", () => {
     expect(obtenerSupabase).not.toHaveBeenCalled();
   });
 
-  // Desde la #840 medicamentoId SI viaja: es donacion_detalle.medicamento_id (00134), y con el la
+  // Desde la #840 medicamentoId SI viaja: es donacion_detalle.medicamento_id (00135), y con el la
   // funcion arma la descripcion y la unidad desde el catalogo.
   it("llama a fn_registrar_donacion con los argumentos correctos, con medicamentoId y sin fechaVencimiento", async () => {
     mockSupabase.rpc.mockResolvedValueOnce({

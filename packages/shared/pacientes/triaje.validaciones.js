@@ -63,7 +63,7 @@ function fueraDeLoPosible(campo, valor) {
 
 /**
  * Rangos fisiologicamente imposibles, leidos de CAMPOS_TRIAJE (que espeja los CHECK de la 00013).
- * Un campo vacio no reporta nada: todos los signos son opcionales (00135).
+ * Un campo vacio no reporta nada: todos los signos son opcionales (00136).
  *
  * @param {object} valores
  * @returns {Record<string, string>}
@@ -106,7 +106,7 @@ function erroresDeRangoTriaje(valores = {}) {
 }
 
 /**
- * La presion va completa (chk_triajes_presion_completa, 00135) y la sistolica es mayor que la
+ * La presion va completa (chk_triajes_presion_completa, 00136) y la sistolica es mayor que la
  * diastolica (chk_triajes_presion_coherente, 00013). Solo se evalua cuando la presion viaja en
  * `valores`: en una correccion que no la toca, lo que ya esta en la fila lo sigue protegiendo el
  * CHECK.
@@ -136,7 +136,7 @@ function erroresDePresion(valores = {}) {
 
 /**
  * Si hay al menos un signo capturado. Un triaje sin ninguno no registra nada
- * (chk_triajes_al_menos_un_signo, 00135): no se crea.
+ * (chk_triajes_al_menos_un_signo, 00136): no se crea.
  *
  * @param {object} valores
  * @returns {boolean}
@@ -148,11 +148,11 @@ export function haySignosCapturados(valores = {}) {
 /**
  * Valida los signos vitales antes de registrarlos.
  *
- * Ninguno es obligatorio (00135, issue #840), pero un triaje tiene que registrar al menos uno, y
+ * Ninguno es obligatorio (00136, issue #840), pero un triaje tiene que registrar al menos uno, y
  * la presion va completa. Gana el primer mensaje por campo (combinarErrores): el rango imposible
  * antes que la coherencia de la presion.
  *
- * Esta capa es UX, no integridad: los CHECK de la 00013, la 00133 (IMC) y la 00135 son lo que protege el dato.
+ * Esta capa es UX, no integridad: los CHECK de la 00013, la 00133 (IMC) y la 00136 son lo que protege el dato.
  *
  * @param {object} valores Valores indexados por el id de CAMPOS_TRIAJE.
  * @returns {Record<string, string>} Errores por campo. Vacio si todo esta bien.

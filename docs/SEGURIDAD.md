@@ -424,6 +424,79 @@ No hay superficie de inyeccion SQL en las migraciones.
 apostrofo antepuesto desde la issue #698 (cerrada), y `csv.test.js` cubre los cinco caracteres.
 Sin trabajo nuevo aqui.
 
+## Limitacion de peticiones y SSRF (issue #761)
+
+### Limitacion de peticiones a Edge Functions y RPCs propias
+
+`[auth.rate_limit]` de `config.toml` (seccion 4 de este documento) solo cubre los endpoints
+nativos de GoTrue -login, registro, refresh- y ademas solo aplica al stack local/CI: el
+despliegue nunca corre `supabase config push`. Ni `invitar-usuario` (Edge Function propia) ni
+`fn_buscar_pacientes` (RPC llamada directo por PostgREST) pasan por ahi. Tampoco hay ninguna
+configuracion de Kong versionada en este repo -Supabase lo gestiona internamente, no expuesto-,
+ni Redis ni un KV store accesible desde las Edge Functions (`policy = "oneshot"` en
+`[edge_runtime]`: sin estado en memoria garantizado entre invocaciones). **Postgres es el unico
+lugar que ven las dos rutas y que persiste entre llamadas**, asi que el contador vive ahi.
+
+**Diseno** (migracion `00134`): una tabla generica `limites_de_uso (recurso, actor_id, contador,
+ventana_inicio)` en vez de una tabla por recurso -un tercer limite futuro solo necesita una
+funcion companera nueva, no otra migracion de esquema-, mas una funcion nucleo
+`fn_verificar_y_contar_limite()` que hace el incremento atomico (`INSERT ... ON CONFLICT DO
+UPDATE`, no `SELECT`-then-`UPDATE`: la fila queda bloqueada durante el `UPDATE`, asi que dos
+llamadas concurrentes del mismo actor se serializan) y falla con SQLSTATE `53400`
+(`configuration_limit_exceeded`, una condicion estandar de Postgres, no inventada) si se supera
+el umbral dentro de la ventana. Dos funciones companeras fijan el recurso, el actor y el umbral:
+
+| Recurso | Umbral | Quien es el actor | Por que |
+| --- | --- | --- | --- |
+| `invitar_usuario` | 20 cada hora | El administrador que invita (`user.id`, pasado explicito: la Edge Function llama con la llave de servicio, sin JWT de quien invita dentro de Postgres) | El onboarding real ocurre en rafagas chicas; incluso dar de alta a un equipo nuevo de golpe cabe holgado |
+| `buscar_pacientes` | 60 cada minuto | `auth.uid()` (la funcion es `SECURITY INVOKER`, con el JWT real de quien busca) | El buscador ya tiene debounce de 300 ms (`RETARDO_DE_BUSQUEDA_MS`, [`packages/shared/hooks/useBusquedaPacientes.js`](../packages/shared/hooks/useBusquedaPacientes.js)); un uso intenso real ronda 20-30 llamadas/minuto, esto deja el doble de margen |
+
+`fn_buscar_pacientes()` (00077) conecta el limite con una CTE `_limite` referenciada con
+`CROSS JOIN` dentro de `coincidencias`. El `CROSS JOIN` no es cosmetico: una CTE sin referenciar
+en el `FROM` se elimina del plan (dead CTE elimination, PG12+) y el limite dejaria de
+comprobarse **en silencio** -el peor tipo de bug posible para un control de seguridad-. Como
+`_limite` no esta correlacionada con `pacientes`, el `CROSS JOIN` la evalua una sola vez por
+ejecucion, no una vez por fila. La funcion deja de ser `STABLE` (pasa al default, `VOLATILE`):
+ahora escribe en `limites_de_uso`. Verificado que esto no rompe nada: el unico caller
+(`packages/shared/pacientes/api.js`, `supabase.rpc("fn_buscar_pacientes", ...)`) ya invoca por
+POST, que es como PostgREST expone siempre una funcion `VOLATILE`.
+
+La guarda de que esto sigue funcionando es
+[`supabase/tests/database/limites_de_uso.sql`](../supabase/tests/database/limites_de_uso.sql)
+(pgTAP): el caso mas importante de la suite llama a `fn_buscar_pacientes()` con el contador
+sembrado en el umbral y confirma que la llamada siguiente falla -es la prueba que demuestra que
+el `CROSS JOIN` de verdad fuerza la evaluacion, no solo que el nucleo aislado funcione-.
+
+**Por que no se suma limite por IP todavia**: `fn_buscar_pacientes` via PostgREST no ve la IP
+del cliente sin configuracion adicional fuera de alcance de una migracion. `invitar-usuario` si
+podria leer `x-forwarded-for` de la peticion, pero el actor ya es un administrador autenticado e
+identificable -limitar por usuario cubre el vector relevante-. Sumar IP ahi solo protegeria
+contra un administrador comprometido operando desde varias IPs a la vez, un escenario de umbral
+bajo prioridad. Queda anotado aqui como mejora futura, no implementado ahora.
+
+**En el cliente**: `packages/shared/api/errores-de-supabase.js` clasifica el SQLSTATE `53400`
+como `LIMITE_EXCEDIDO`, con el mensaje "Se hicieron demasiadas peticiones en poco tiempo. Espera
+un momento e intenta de nuevo." No se marca reintentable: reintentar de inmediato solo vuelve a
+fallar hasta que expire la ventana.
+
+### Peticiones del lado del servidor (SSRF)
+
+Revisado, sin superficie de SSRF hoy y sin cambios de codigo:
+
+- [`supabase/functions/alertas-vencimiento/index.ts`](../supabase/functions/alertas-vencimiento/index.ts)
+  -el que mas importaba revisar, por la notificacion de alertas-: sin `fetch()`, solo llama a
+  `fn_generar_alertas_caducidad()` via PostgREST. El envio de correo, si lo hay, lo hace GoTrue
+  internamente, no codigo propio de esta funcion.
+- [`supabase/functions/invitar-usuario/index.ts`](../supabase/functions/invitar-usuario/index.ts)
+  y [`_shared/cors.ts`](../supabase/functions/_shared/cors.ts): sin I/O de red propia, solo
+  llamadas a `supabase-js`.
+- Todas las migraciones de `supabase/migrations/`: sin `pg_net` ni la extension `http`.
+
+**Vigilancia futura**: si alguna vez una Edge Function necesita hacer una peticion saliente (por
+ejemplo, a un proveedor de correo transaccional propio en vez de dejar el envio a GoTrue), validar
+el destino contra una lista explicita de dominios permitidos antes de invocar `fetch()`, nunca
+construir la URL a partir de un campo que edite un usuario.
+
 ## Bloqueo por intentos fallidos (fuera de alcance de #230)
 
 El criterio "tras varios intentos fallidos la cuenta se bloquea temporalmente y el intento

@@ -64,7 +64,7 @@ export function puedeEditarGasto(rol, estadoDelGasto) {
 }
 
 /**
- * Que puede hacer un rol con el origen del presupuesto de una jornada (issue #840, 00134).
+ * Que puede hacer un rol con el origen del presupuesto de una jornada (issue #840, 00135).
  *
  * Replica las politicas de jornada_presupuesto_origen: leen administrador y consultivos (y quien
  * tenga jornadas.gestionar, que no se resuelve desde el rol), y registran o quitan aportes quienes

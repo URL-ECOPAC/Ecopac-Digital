@@ -7,7 +7,8 @@
 
 import { describe, expect, it } from "vitest";
 
-import { filasDeKardex, nombreDe } from "./useKardexMovimientos.js";
+import { conZonaHorariaDeGuatemala } from "../pruebas/zonaHoraria.js";
+import { filasDeKardex, filtrarPorRangoDeFecha, nombreDe } from "./useKardexMovimientos.js";
 
 describe("nombreDe", () => {
   it("junta nombres y apellidos del perfil embebido", () => {
@@ -62,5 +63,44 @@ describe("filasDeKardex", () => {
 
   it("una lista vacia se dibuja vacia, no con movimientos de mentira", () => {
     expect(filasDeKardex([], null)).toEqual([]);
+  });
+});
+
+describe("filtrarPorRangoDeFecha", () => {
+  function movimiento(id, createdAt) {
+    return { id, created_at: createdAt };
+  }
+
+  it("sin filtros devuelve todo", () => {
+    const movimientos = [movimiento("m1", "2026-06-15T12:00:00Z")];
+    expect(filtrarPorRangoDeFecha(movimientos, "", "")).toEqual(movimientos);
+  });
+
+  it("excluye lo anterior a fechaDesde y lo posterior a fechaHasta", () => {
+    const movimientos = [
+      movimiento("antes", "2026-06-09T12:00:00Z"),
+      movimiento("dentro", "2026-06-15T12:00:00Z"),
+      movimiento("despues", "2026-06-21T12:00:00Z"),
+    ];
+
+    const filtrados = filtrarPorRangoDeFecha(movimientos, "2026-06-10", "2026-06-20");
+
+    expect(filtrados.map((m) => m.id)).toEqual(["dentro"]);
+  });
+
+  describe("el borde de las 18:00 en Guatemala (issue #725)", () => {
+    conZonaHorariaDeGuatemala();
+
+    it("un movimiento registrado ya entrada la noche local sigue cayendo en fechaHasta de ese dia", () => {
+      // 15 de junio de 2026, 20:00 en Guatemala (UTC-6) = 16 de junio, 02:00 UTC. El bug que
+      // corrigio esta issue leia fechaHasta con new Date(cadena) -medianoche UTC- y comparaba
+      // contra new Date(m.created_at) sin pasar por aFechaLocal(): un movimiento de esta noche
+      // quedaba fuera de "hasta el 15 de junio".
+      const movimientos = [movimiento("de-noche", "2026-06-16T02:00:00Z")];
+
+      const filtrados = filtrarPorRangoDeFecha(movimientos, "", "2026-06-15");
+
+      expect(filtrados.map((m) => m.id)).toEqual(["de-noche"]);
+    });
   });
 });

@@ -9,7 +9,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import { fechaLocalISO } from "../formato/fechas.js";
+import { aCadenaFechaLocal } from "../formato/fechas.js";
 import {
   ESTADOS_DE_LOTE,
   armarFilasDeExistencias,
@@ -24,7 +24,7 @@ import {
 function enDias(dias) {
   const fecha = new Date();
   fecha.setDate(fecha.getDate() + dias);
-  return fechaLocalISO(fecha);
+  return aCadenaFechaLocal(fecha);
 }
 
 describe("estadoDeLote", () => {

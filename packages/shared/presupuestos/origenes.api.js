@@ -1,10 +1,10 @@
-// De donde viene el presupuesto de una jornada (issue #840, bloque D; migracion 00134).
+// De donde viene el presupuesto de una jornada (issue #840, bloque D; migracion 00135).
 //
 // jornadas.presupuesto_asignado dejo de escribirse a mano: es la suma de las filas de
 // jornada_presupuesto_origen y la mantiene un trigger. Este archivo es la unica via de escritura
 // de presupuesto que queda: se registra o se quita un aporte, nunca el total.
 //
-// asignarPresupuestoJornada() (api.js) escribia el total directo y se retiro con la 00134: la
+// asignarPresupuestoJornada() (api.js) escribia el total directo y se retiro con la 00135: la
 // base ahora lo rechaza. Su guarda contra montos ilegibles (issue #597) se muda aqui, que es
 // donde se sigue escribiendo dinero.
 

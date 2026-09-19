@@ -31,7 +31,7 @@ import {
 
 /**
  * Los origenes que se pueden ELEGIR al registrar un aporte (issue #840). "sin_clasificar" no esta:
- * solo lo pone el sistema, para el presupuesto que existia antes de la 00134 o el que llego ya
+ * solo lo pone el sistema, para el presupuesto que existia antes de la 00135 o el que llego ya
  * puesto al crear una jornada. Registrarlo a mano seria volver a no saber de donde vino el dinero.
  */
 export const OPCIONES_ORIGEN_PRESUPUESTO = opcionesDe(
@@ -40,7 +40,7 @@ export const OPCIONES_ORIGEN_PRESUPUESTO = opcionesDe(
 ).filter((opcion) => opcion.value !== ORIGENES_DE_PRESUPUESTO.SIN_CLASIFICAR);
 
 /**
- * Registro de un aporte al presupuesto de una jornada (jornada_presupuesto_origen, 00134).
+ * Registro de un aporte al presupuesto de una jornada (jornada_presupuesto_origen, 00135).
  *
  * `donacionId` solo aplica cuando el origen es una donacion: lo decide
  * camposDeOrigenDePresupuesto(), no la pantalla. Su catalogo son las donaciones de dinero
@@ -66,7 +66,7 @@ export const CAMPOS_ORIGEN_PRESUPUESTO = [
     label: "Monto (Q)",
     tipo: TIPOS_DE_CAMPO.NUMERO,
     paso: 0.01,
-    // CHECK (monto > 0) en la 00134.
+    // CHECK (monto > 0) en la 00135.
     validacion: { requerido: true, min: 0.01 },
   },
   {
@@ -80,7 +80,7 @@ export const CAMPOS_ORIGEN_PRESUPUESTO = [
 
 /**
  * Los campos que aplican segun el origen elegido: la donacion solo se pide si el origen es una
- * donacion (chk_presupuesto_origen_donacion_coherente, 00134).
+ * donacion (chk_presupuesto_origen_donacion_coherente, 00135).
  *
  * @param {string} origen
  * @returns {object[]}

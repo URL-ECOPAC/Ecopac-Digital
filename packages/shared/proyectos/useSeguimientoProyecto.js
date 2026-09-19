@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { ESTADOS_JORNADA } from "../enums.js";
-import { fechaLocalISO } from "../formato/fechas.js";
+import { aCadenaFechaLocal } from "../formato/fechas.js";
 import { obtenerPresupuestoProyecto } from "../presupuestos/api.js";
 import { listarJornadasDelProyecto, obtenerProyecto } from "./api.js";
 import {
@@ -18,6 +18,20 @@ import {
 import { CAMPOS_HITO } from "./campos.js";
 
 /**
+ * Anota esCumplido/esVencido en un hito. Pura y exportada aparte del hook -packages/shared corre
+ * vitest en environment "node", sin DOM, asi que la unica forma de probar esta cuenta sin montar
+ * React es tenerla aparte- para poder fijar fechaHoy en la prueba en vez de depender del reloj.
+ *
+ * @param {{ fechaReal?: string, fechaPrevista?: string }} hito
+ * @param {string} fechaHoy "AAAA-MM-DD", normalmente aCadenaFechaLocal(hoy).
+ */
+export function procesarHito(hito, fechaHoy) {
+  const esCumplido = Boolean(hito.fechaReal);
+  const esVencido = !esCumplido && Boolean(hito.fechaPrevista) && hito.fechaPrevista < fechaHoy;
+  return { ...hito, esCumplido, esVencido };
+}
+
+/**
  * View model de la ficha de seguimiento de un proyecto (pantalla de las issues #303/#304,
  * hitos y presupuesto ampliados por la auditoria #756).
  *
@@ -30,7 +44,7 @@ import { CAMPOS_HITO } from "./campos.js";
  * hook las llama el mismo con `proyectoId`, igual que useProyectosSociales hace con
  * listarProyectos().
  */
-export function useSeguimientoProyecto({ proyectoId, proyectoInicial = null }) {
+export function useSeguimientoProyecto({ proyectoId, proyectoInicial = null, hoy = new Date() }) {
   const [proyecto, setProyecto] = useState(proyectoInicial);
   const [hitos, setHitos] = useState([]);
   const [bitacora, setBitacora] = useState([]);
@@ -81,19 +95,11 @@ export function useSeguimientoProyecto({ proyectoId, proyectoInicial = null }) {
   }, [cargar]);
 
   // Dia local, no UTC: despues de las 18:00 un hito se marcaba cumplido con fecha de manana.
-  const fechaHoy = fechaLocalISO();
+  const fechaHoy = aCadenaFechaLocal(hoy);
 
   // Hitos procesados con estado de vencimiento
   const hitosProcesados = useMemo(() => {
-    return hitos.map((hito) => {
-      const esCumplido = Boolean(hito.fechaReal);
-      const esVencido = !esCumplido && hito.fechaPrevista && hito.fechaPrevista < fechaHoy;
-      return {
-        ...hito,
-        esCumplido,
-        esVencido,
-      };
-    });
+    return hitos.map((hito) => procesarHito(hito, fechaHoy));
   }, [hitos, fechaHoy]);
 
   // Indicadores agregados de las jornadas vinculadas. El presupuesto sale de

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { ETIQUETAS_TIPO_DONACION, TIPOS_DE_DONACION, TIPOS_DE_DONANTE } from "../enums.js";
-import { fechaLocalISO, formatearFechaLarga } from "../formato/fechas.js";
+import { aCadenaFechaLocal, formatearFechaLarga } from "../formato/fechas.js";
 import { formatearMoneda } from "../formato/moneda.js";
 import { opcionDeMedicamento } from "../inventario/catalogoMedicamentos.js";
 import { listarMedicamentos } from "../inventario/medicamentos.api.js";
@@ -18,7 +18,7 @@ import { registrarDonacion } from "./registro.api.js";
  * Antes de la #635 el campo se llamaba `concepto` -que ni `validarDonacion()` ni
  * `donacion_detalle` reconocen- y no existia `unidad`, asi que `validarDonacion()` habria
  * rechazado cualquier renglon con "falta descripcion" sin importar lo que la persona hubiera
- * escrito. `medicamentoId` es `donacion_detalle.medicamento_id` desde la 00134 (issue #840): en
+ * escrito. `medicamentoId` es `donacion_detalle.medicamento_id` desde la 00135 (issue #840): en
  * una donacion de medicamentos se elige del catalogo, se guarda con el renglon, y el paso de
  * generar el ingreso de inventario lo recibe ya elegido. Ese paso pide su propia fecha de
  * vencimiento -no hay un campo `fechaVencimiento` aqui: pedirla dos veces era confuso y esta
@@ -151,10 +151,10 @@ export function useRegistroDonacion({ _client, usuarioRol, onGuardarExito }) {
   const [tipoDonacion, setTipoDonacion] = useState(TIPOS_DE_DONACION.DINERO);
   const [donanteId, setDonanteId] = useState("");
   const [proyectoId, setProyectoId] = useState("");
-  // fechaLocalISO() y no toISOString(): esa da el dia UTC, y en Guatemala a partir de las 18:00
-  // ya es manana. Las donaciones registradas por la tarde se guardaban con la fecha del dia
-  // siguiente sin que nadie la tocara (issue #840).
-  const [fecha, setFecha] = useState(() => fechaLocalISO());
+  // aCadenaFechaLocal() y no toISOString(): esa da el dia UTC, y en Guatemala a partir de las
+  // 18:00 ya es manana. Las donaciones registradas por la tarde se guardaban con la fecha del
+  // dia siguiente sin que nadie la tocara (issue #840).
+  const [fecha, setFecha] = useState(() => aCadenaFechaLocal());
   // registrarDonacion() ya aceptaba observaciones (p_observaciones en registro.api.js), pero el
   // formulario web nunca la tenia en su estado: el input no existia (issue #756).
   const [observaciones, setObservaciones] = useState("");
@@ -361,7 +361,7 @@ export function useRegistroDonacion({ _client, usuarioRol, onGuardarExito }) {
     setTipoDonacion(TIPOS_DE_DONACION.DINERO);
     setDonanteId("");
     setProyectoId("");
-    setFecha(fechaLocalISO());
+    setFecha(aCadenaFechaLocal());
     setObservaciones("");
     setDetalles([renglonVacio()]);
   };

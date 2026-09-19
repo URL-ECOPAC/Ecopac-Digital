@@ -21,6 +21,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { aCadenaFechaLocal } from "../formato/fechas.js";
 import { listarComunidades } from "../territorio/api.js";
 import { AGRUPACIONES_DE_IMPACTO, obtenerIndicadoresImpacto } from "./api.js";
 import { OPCIONES_METRICA_IMPACTO } from "./campos.js";
@@ -45,26 +46,23 @@ const AGRUPAMIENTOS = [
 const TODAS = "__todas__";
 const NINGUNA = "__ninguna__";
 
-/** "YYYY-MM-DD" a partir de los componentes locales, sin pasar por UTC (que desplaza un dia). */
-function aCadenaFecha(fecha) {
-  const mes = String(fecha.getMonth() + 1).padStart(2, "0");
-  const dia = String(fecha.getDate()).padStart(2, "0");
-  return `${fecha.getFullYear()}-${mes}-${dia}`;
-}
-
 /** Traduce el rango elegido en la interfaz al `{ fechaInicio, fechaFin }` que espera la API. */
 export function resolverRangoDeDashboard(rango, { fechaInicio, fechaFin } = {}, hoy = new Date()) {
   if (rango === "personalizado") {
     return { fechaInicio: fechaInicio || undefined, fechaFin: fechaFin || undefined };
   }
 
+  // Clona hoy en vez de aFechaLocal(hoy) -que devolveria la MISMA referencia para un Date de
+  // entrada- porque a continuacion se muta con setDate/setMonth/setFullYear: mutar hoy
+  // directamente correria la fecha de quien llama.
+  // eslint-disable-next-line no-restricted-syntax -- clona para mutar sin afectar el parametro
   const desde = new Date(hoy);
   if (rango === "semana") desde.setDate(hoy.getDate() - 7);
   else if (rango === "mes") desde.setMonth(hoy.getMonth() - 1);
   else if (rango === "3meses") desde.setMonth(hoy.getMonth() - 3);
   else if (rango === "anio") desde.setFullYear(hoy.getFullYear() - 1);
 
-  return { fechaInicio: aCadenaFecha(desde), fechaFin: aCadenaFecha(hoy) };
+  return { fechaInicio: aCadenaFechaLocal(desde), fechaFin: aCadenaFechaLocal(hoy) };
 }
 
 /** Las claves de la vista van en snake_case; la pantalla las lee en camelCase. */

@@ -93,12 +93,12 @@ describe("validarTriaje", () => {
     expect(CAMPOS_TRIAJE.every((campo) => campo.validacion.requerido === false)).toBe(true);
   });
 
-  it("un triaje sin ningun signo no se registra (chk_triajes_al_menos_un_signo, 00135)", () => {
+  it("un triaje sin ningun signo no se registra (chk_triajes_al_menos_un_signo, 00136)", () => {
     expect(validarTriaje({})).toEqual({ signos: expect.any(String) });
     expect(haySignosCapturados({ glucosa: "" })).toBe(false);
   });
 
-  it("la presion va completa (chk_triajes_presion_completa, 00135)", () => {
+  it("la presion va completa (chk_triajes_presion_completa, 00136)", () => {
     expect(validarTriaje({ presionSistolica: 120 })).toHaveProperty("presionDiastolica");
     expect(validarTriaje({ presionDiastolica: 80 })).toHaveProperty("presionSistolica");
   });
@@ -188,7 +188,7 @@ describe("validarCambioDeTriaje", () => {
     expect(validarCambioDeTriaje({ glucosa: 110 })).toEqual({});
   });
 
-  it("vaciar un signo ya no es un error: todos son opcionales desde la 00135", () => {
+  it("vaciar un signo ya no es un error: todos son opcionales desde la 00136", () => {
     expect(validarCambioDeTriaje({ temperatura: "" })).toEqual({});
   });
 

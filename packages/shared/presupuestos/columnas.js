@@ -30,7 +30,7 @@
 import { TIPOS_DE_PRESENTACION } from "../descriptores.js";
 
 /**
- * Los aportes que forman el presupuesto de una jornada (issue #840, 00134). `etiqueta` y
+ * Los aportes que forman el presupuesto de una jornada (issue #840, 00135). `etiqueta` y
  * `detalle` los resuelve listarOrigenesDePresupuesto(): la lista no traduce nada.
  */
 export const COLUMNAS_ORIGEN_PRESUPUESTO = [

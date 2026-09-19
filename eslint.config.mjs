@@ -57,6 +57,39 @@ const REGLAS_CONTRA_CONTRATOS_ADIVINADOS = {
   ],
 };
 
+/**
+ * El patron que la issue #694 corrigio (leer una columna DATE con `new Date(cadena)`, escribir
+ * "hoy" con `toISOString().slice(0, 10)`) se siguio reintroduciendo pantalla tras pantalla: siete
+ * implementaciones paralelas para cuando se escribio la issue #725, la ultima en el PR mas
+ * reciente que se habia mergeado. `new Date("2026-08-18")` se interpreta como medianoche UTC, asi
+ * que en Guatemala (UTC-6) la fecha se corre un dia; `toISOString()` tiene el mismo problema al
+ * escribir. Mientras nada lo impida, la siguiente pantalla nueva vuelve a escribirlo.
+ *
+ * El reemplazo es aFechaLocal()/aCadenaFechaLocal() de packages/shared/formato/fechas.js, el
+ * unico archivo que tiene permiso de interpretar una cadena de fecha a mano -por eso queda
+ * excluido de esta regla mas abajo, junto con los *.test.js, que fijan un instante completo como
+ * `new Date("2026-06-15T10:30:00")` para tener un reloj fijo en la prueba: un literal de
+ * timestamp completo, no una columna DATE, y ese patron es correcto.
+ */
+const REGLA_CONTRA_FECHAS_SIN_ZONA = {
+  "no-restricted-syntax": [
+    "error",
+    {
+      selector: "NewExpression[callee.name='Date'][arguments.length=1]",
+      message:
+        "new Date(x) con un argumento interpreta 'AAAA-MM-DD' como medianoche UTC y corre la fecha un dia en Guatemala (UTC-6, issue #694/#725). Usa aFechaLocal(x) de packages/shared/formato/fechas.js.",
+    },
+    {
+      // `substring` lo agrego la #840: es la tercera forma de cortar los diez primeros
+      // caracteres y se colaba por debajo de la regla.
+      selector:
+        "CallExpression[callee.property.name=/^(slice|split|substring)$/][callee.object.callee.property.name='toISOString']",
+      message:
+        "toISOString() da la fecha en UTC: entre las 18:00 y la medianoche en Guatemala esto adelanta un dia (issue #725). Usa aCadenaFechaLocal() de packages/shared/formato/fechas.js.",
+    },
+  ],
+};
+
 export default [
   js.configs.recommended,
   {
@@ -227,12 +260,13 @@ export default [
     },
   },
   {
-    // Las pruebas si pueden: construyen a proposito el dia UTC para demostrar que no es el local.
-    files: ["packages/shared/**/*.js"],
-    ignores: ["**/*.test.js"],
-    rules: {
-      "no-restricted-syntax": ["error", PROHIBIR_DIA_UTC],
-    },
+    // REGLA_CONTRA_FECHAS_SIN_ZONA cubre lo que la #840 prohibia por su cuenta (el dia UTC de
+    // toISOString()) y ademas new Date(cadena), asi que aqui manda la regla ancha y no las dos.
+    // fechas.js es el unico que puede interpretar una cadena a mano; las pruebas construyen el
+    // dia UTC a proposito, para demostrar que no es el local.
+    files: ["packages/shared/**/*.{js,jsx}"],
+    ignores: ["packages/shared/formato/fechas.js", "packages/shared/**/*.test.js"],
+    rules: REGLA_CONTRA_FECHAS_SIN_ZONA,
   },
   {
     // __DEV__ es un global que inyecta React Native/Metro en tiempo de ejecucion, no un import:

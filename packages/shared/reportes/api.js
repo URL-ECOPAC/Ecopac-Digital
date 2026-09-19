@@ -29,7 +29,7 @@ import { obtenerSupabase } from "../api/cliente.js";
 import { normalizarError } from "../api/errores-de-supabase.js";
 import { obtenerTodasLasFilas } from "../api/paginacion.js";
 import { puedeVerIndicadoresDeImpacto } from "./permisos.js";
-import { diasHastaVencimiento, fechaLocalISO } from "../formato/fechas.js";
+import { aCadenaFechaLocal, diasHastaVencimiento } from "../formato/fechas.js";
 
 // Reexportar funciones de permisos para mantener la interfaz unificada
 export {
@@ -276,14 +276,18 @@ const COLUMNAS_LOTES_POR_VENCER = [
 export async function listarLotesPorVencer({ horizonteDias, bodega, hoy = new Date() } = {}) {
   try {
     const inicio = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
+    // Clona inicio en vez de aFechaLocal(inicio) -que devolveria la MISMA referencia- porque a
+    // continuacion se muta con setDate: mutar inicio directamente correria tambien el limite de
+    // busqueda inferior.
+    // eslint-disable-next-line no-restricted-syntax -- clona para mutar sin afectar el parametro
     const limite = new Date(inicio);
     limite.setDate(inicio.getDate() + (horizonteDias ?? 30));
 
     const { data, error } = await obtenerSupabase()
       .from("lotes")
       .select(COLUMNAS_LOTES_POR_VENCER)
-      .gte("fecha_vencimiento", fechaLocalISO(inicio))
-      .lte("fecha_vencimiento", fechaLocalISO(limite))
+      .gte("fecha_vencimiento", aCadenaFechaLocal(inicio))
+      .lte("fecha_vencimiento", aCadenaFechaLocal(limite))
       .order("fecha_vencimiento", { ascending: true });
 
     if (error) throw error;

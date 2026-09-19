@@ -72,6 +72,44 @@ la sesion (mas probable en iOS que en Android), hay que retomar el patron hibrid
 probando `expo-crypto` en un dispositivo real o con un dev client propio antes de darlo por
 bueno -no alcanza con verificarlo contra los tipos del paquete.
 
+### 2.1 Capturas de pantalla y vista en segundo plano (issue #761)
+
+El criterio MASVS pide decidir si la app debe bloquear capturas de pantalla y ocultar el
+contenido clinico cuando pasa a segundo plano -evitar que el selector de apps de iOS/Android
+muestre una captura con datos de un paciente-. La libreria que resolveria esto,
+`expo-screen-capture`, usa codigo nativo.
+
+**Decision: no implementar ahora, y no es un descuido.** `apps/mobile` corre en **Expo Go
+managed** (SDK 57.0.18, confirmado en `README.md`: "Instala Expo Go... Version SDK 57"): no hay
+`eas.json` en el repo, no hay `expo-dev-client` en los `plugins` de `app.config.js`, y el
+`bundleIdentifier`/`package` siguen marcados "Provisional" en ese mismo archivo (issue #252,
+abierta). Ningun modulo nativo que no venga incluido en el runtime generico de Expo Go funciona
+hasta migrar a un dev client o a un build de EAS -es el mismo motivo, verificado contra el
+codigo, por el que la seccion 2 de arriba descarto el patron hibrido con `expo-crypto`: "Expo Go
+... no la sirve de forma confiable"-. Forzar `expo-screen-capture` hoy fallaria para cualquiera
+del equipo que pruebe en Expo Go, que es como se prueba hoy.
+
+**Que lo destraba:** resolver la issue #252 (`bundleIdentifier` definitivo, no se puede cambiar
+despues de publicar) y decidir el canal de distribucion (tienda vs. APK interno). Es la misma
+dependencia que bloquea configurar EAS Build en general.
+
+### 2.2 Certificate pinning (issue #761)
+
+Mismo bloqueo tecnico que 2.1: toda libreria de certificate pinning conocida
+(`react-native-ssl-pinning`, TrustKit y equivalentes) requiere codigo nativo, no disponible en
+Expo Go.
+
+**Nota sobre el certificado de `*.supabase.co`:** no hay nada documentado en este repo sobre la
+CA que usa Supabase para su dominio. Es razonable asumir una CA publica estandar (el tipo de
+infraestructura que suele estar delante de un proveedor como Supabase, con rotacion automatica de
+certificado) -y eso es en si mismo un argumento en contra de pinnear el certificado exacto aunque
+se pudiera: un pin fijo al certificado hoja se rompe solo, sin aviso, en cada rotacion, y la app
+quedaria inaccesible hasta un release nuevo. Si esto se revisita alguna vez, pinnear la CA raiz
+(no el certificado hoja) es la opcion menos fragil.
+
+**Decision: no implementar ahora**, mismo motivo y mismo destrabe que 2.1 (issue #252 + decision
+de distribucion).
+
 ## 3. Cifrado adicional a nivel de columna (criterio 3 del DoD)
 
 **Columnas evaluadas** (PII fuerte en `pacientes`, `supabase/migrations/00009` y `00035`):

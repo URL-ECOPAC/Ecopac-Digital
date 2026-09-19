@@ -33,7 +33,7 @@ export function itemDesdeRenglonDeDonacion(renglon) {
     cantidad: renglon?.cantidad ?? "",
     donacionDetalleId: renglon?.donacionDetalleId ?? null,
     // Desde la #840 el renglon de la donacion guarda el medicamento del catalogo
-    // (donacion_detalle.medicamento_id, 00134). Cambiarlo aqui dejaria el lote con un
+    // (donacion_detalle.medicamento_id, 00135). Cambiarlo aqui dejaria el lote con un
     // medicamento distinto al que se registro como donado: el selector se muestra, pero fijo.
     medicamentoFijo: Boolean(renglon?.medicamentoId),
   };

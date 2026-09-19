@@ -23,6 +23,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { aCadenaFechaLocal } from "../formato/fechas.js";
 import { listarJornadas } from "../jornadas/api.js";
 import { listarProyectos } from "../proyectos/api.js";
 import { listarComunidades } from "../territorio/api.js";
@@ -37,15 +38,6 @@ export const PRESETS_DE_RANGO = {
   ESTE_ANIO: "este_anio",
   PERSONALIZADO: "personalizado",
 };
-
-function conDosDigitos(numero) {
-  return String(numero).padStart(2, "0");
-}
-
-/** Convierte un Date a "YYYY-MM-DD" leyendo sus componentes locales, sin pasar por UTC. */
-function aCadenaFecha(fecha) {
-  return `${fecha.getFullYear()}-${conDosDigitos(fecha.getMonth() + 1)}-${conDosDigitos(fecha.getDate())}`;
-}
 
 /**
  * Resuelve un preset de rango a fechas concretas.
@@ -63,18 +55,18 @@ function aCadenaFecha(fecha) {
  * @returns {{ min: string|null, max: string|null }}
  */
 export function resolverRangoDePreset(preset, hoy = new Date()) {
-  const max = aCadenaFecha(hoy);
+  const max = aCadenaFechaLocal(hoy);
 
   switch (preset) {
     case PRESETS_DE_RANGO.ESTE_MES:
-      return { min: aCadenaFecha(new Date(hoy.getFullYear(), hoy.getMonth(), 1)), max };
+      return { min: aCadenaFechaLocal(new Date(hoy.getFullYear(), hoy.getMonth(), 1)), max };
     case PRESETS_DE_RANGO.ULTIMO_TRIMESTRE:
       return {
-        min: aCadenaFecha(new Date(hoy.getFullYear(), hoy.getMonth() - 3, hoy.getDate())),
+        min: aCadenaFechaLocal(new Date(hoy.getFullYear(), hoy.getMonth() - 3, hoy.getDate())),
         max,
       };
     case PRESETS_DE_RANGO.ESTE_ANIO:
-      return { min: aCadenaFecha(new Date(hoy.getFullYear(), 0, 1)), max };
+      return { min: aCadenaFechaLocal(new Date(hoy.getFullYear(), 0, 1)), max };
     default:
       return { min: null, max: null };
   }

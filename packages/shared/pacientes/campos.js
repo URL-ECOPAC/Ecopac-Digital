@@ -175,7 +175,7 @@ export function seccionesDePaciente() {
  * con la de la base de datos. Son el limite de lo POSIBLE, no de lo normal: lo alarmante vive
  * en signos.referencias.js.
  *
- * Ninguno es obligatorio desde la 00135 (issue #840): en jornada muchas veces no hay tensiometro,
+ * Ninguno es obligatorio desde la 00136 (issue #840): en jornada muchas veces no hay tensiometro,
  * ni glucometro, ni bascula. Lo que si se exige -al menos un signo, y la presion completa- lo
  * valida validarTriaje(), porque es una regla entre campos que un descriptor no expresa.
  *

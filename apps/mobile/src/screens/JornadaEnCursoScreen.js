@@ -27,7 +27,7 @@ import { ROUTES } from "../navigation/rutas";
 // los signos, la consulta y la receta. El usuario las senalo aparte como sobrantes.
 //
 // Se retiran de la INTERFAZ, no de la base: vista_cola_jornada sigue existiendo (corregida en la
-// 00135 para los signos opcionales) por si una jornada grande necesita volver a saber quien espera.
+// 00136 para los signos opcionales) por si una jornada grande necesita volver a saber quien espera.
 // Lo que queda es la lista de los pacientes de la jornada, que es lo que hace falta para volver a
 // abrir a alguien.
 

@@ -36,9 +36,9 @@ ALTER TABLE triajes
     );
 
 COMMENT ON COLUMN triajes.presion_sistolica IS
-  'mmHg. Opcional desde la 00135 (issue #840): va junto con la diastolica o no va ninguna.';
+  'mmHg. Opcional desde la 00136 (issue #840): va junto con la diastolica o no va ninguna.';
 COMMENT ON COLUMN triajes.frecuencia_cardiaca IS
-  'Latidos por minuto. Opcional desde la 00135 (issue #840).';
+  'Latidos por minuto. Opcional desde la 00136 (issue #840).';
 
 -- ============================================================================
 -- La cola de la jornada, con signos opcionales
@@ -85,7 +85,7 @@ WHERE a.cerrada_en IS NULL
 
 COMMENT ON VIEW vista_cola_jornada IS
   'Cola de pacientes de una jornada, por etapa del flujo (issue #173, RF-24). Solo atenciones
-   abiertas (cerrada_en IS NULL). Desde la 00135 (issue #840) la etapa se decide de lo mas
+   abiertas (cerrada_en IS NULL). Desde la 00136 (issue #840) la etapa se decide de lo mas
    avanzado a lo menos, porque los signos vitales son opcionales: una consulta sin triaje ya no
    deja al paciente en "espera triaje".
    SECURITY DEFINER a proposito: un voluntario general no puede leer consultas ni recetas

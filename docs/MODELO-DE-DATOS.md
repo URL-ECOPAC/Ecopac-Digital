@@ -315,7 +315,7 @@ Registro de deduplicacion. `paciente_absorbido_id` (UNIQUE: no se absorbe dos ve
 | `responsable_id`       | UUID NOT NULL               | Perfil a cargo                            |
 | `proyecto_id`          | UUID                        | Opcional                                  |
 | `estado`               | `estado_jornada` NOT NULL   | `planificada`/`en curso`/`finalizada`/`cancelada` |
-| `presupuesto_asignado` | NUMERIC(12,2) NOT NULL      | Suma de `jornada_presupuesto_origen` [00134]; no se escribe a mano |
+| `presupuesto_asignado` | NUMERIC(12,2) NOT NULL      | Suma de `jornada_presupuesto_origen` [00135]; no se escribe a mano |
 | `codigo`               | VARCHAR(30) UNIQUE          | [+00036]                                  |
 | `fecha_inicio_real`    | TIMESTAMPTZ                 | [+00036] Cuando de verdad empezo          |
 | `fecha_fin_real`       | TIMESTAMPTZ                 | [+00036]                                  |
@@ -573,7 +573,7 @@ no `pg_cron`.
 | `registrado_por`    | UUID                        | Antes `registrada_por` [renombrada 00091] |
 | `proyecto_id`       | UUID                        | [+00097] A que proyecto se destina       |
 
-### `jornada_presupuesto_origen` [00134]
+### `jornada_presupuesto_origen` [00135]
 
 De donde viene cada parte del presupuesto de una jornada (issue #840): `origen`
 (`origen_de_presupuesto`: `donacion`, `fondos_propios`, `aporte_externo`, `sin_clasificar`),
@@ -581,7 +581,7 @@ De donde viene cada parte del presupuesto de una jornada (issue #840): `origen`
 registrada), `monto` (> 0), `descripcion`, `registrado_por` (lo fija `auth.uid()`).
 `jornadas.presupuesto_asignado` es la suma de estas filas y la mantiene un trigger; un UPDATE
 directo de esa columna se rechaza. Lo asignado desde una donacion no puede pasar de su monto
-total en ninguna combinacion de jornadas. El presupuesto que existia antes de la 00134, y el de
+total en ninguna combinacion de jornadas. El presupuesto que existia antes de la 00135, y el de
 un INSERT de jornada que ya lo traia, entran como `sin_clasificar`.
 
 ### `donacion_detalle` [00022]
@@ -590,7 +590,7 @@ un INSERT de jornada que ya lo traia, entran como `sin_clasificar`.
 medicamentos, la linea del detalle apunta al lote que se creo en inventario. La unicidad es lo que
 impide que dos donaciones reclamen el mismo lote.
 
-`medicamento_id` [+00134]: el medicamento del catalogo. `fn_registrar_donacion` lo exige en cada
+`medicamento_id` [+00135]: el medicamento del catalogo. `fn_registrar_donacion` lo exige en cada
 renglon de una donacion de medicamentos y arma `descripcion` y `unidad` (la presentacion) desde el
 catalogo; los otros tipos lo dejan en NULL y siguen en texto libre. Con el, el ingreso a
 inventario desde la donacion ya no vuelve a preguntar el medicamento.
@@ -959,7 +959,7 @@ de condiciones cronicas en `apps/mobile`, alcance ya decidido en la issue #122.
 | --- | --- | --- | --- | --- |
 | nombre / fecha / comunidad_id / responsable_id / proyecto_id | Si | Si (alta+edicion) | Si | — |
 | estado | Si (chip/kanban) | Si, vía kanban y "Cerrar jornada" (no formulario) | Si | — |
-| presupuesto_asignado | Si (`DetalleJornadaPage.jsx`, solo lectura) | Derivado: suma de `jornada_presupuesto_origen` (00134, #840) | Si | Resuelto. Ver nota abajo |
+| presupuesto_asignado | Si (`DetalleJornadaPage.jsx`, solo lectura) | Derivado: suma de `jornada_presupuesto_origen` (00135, #840) | Si | Resuelto. Ver nota abajo |
 | cupo_estimado | Si | Si (alta+edicion) | Si | Resuelto (#756) |
 | botiquin_bodega_id | Si, resuelto a nombre | Si (alta+edicion), solo bodegas moviles | Si | Resuelto (#756) |
 | codigo | Si (`DetalleJornadaPage.jsx`, antes siempre "—") | **Generado por el servidor**, migracion `00126` | n/a | Resuelto en esta misma issue: ver nota tecnica abajo |
@@ -983,7 +983,7 @@ formulario (`ModalJornada.jsx`): `cupoEstimado` con `NumberField`, `botiquinBode
 cualquier bodega del catalogo-. `DetalleJornadaPage.jsx` ya mostraba `cupoEstimado`; se agrega
 `botiquinBodega`, embebido por nombre en `obtenerJornada()` igual que `comunidad`/`responsable`.
 
-**`presupuesto_asignado` (issue #840)**: dejo de escribirse. Desde la 00134 es la suma de los
+**`presupuesto_asignado` (issue #840)**: dejo de escribirse. Desde la 00135 es la suma de los
 aportes de `jornada_presupuesto_origen`, que se registran y se quitan en la pestaña Presupuesto de
 `DetalleJornadaPage.jsx` (`useOrigenesDePresupuesto`, `presupuestos/origenes.api.js`). El resumen
 lo muestra de solo lectura. `asignarPresupuestoJornada()` y la accion `asignarPresupuesto` de
@@ -1004,7 +1004,7 @@ solo lectura por diseno (lo escribe un trigger).
 **`vista_cola_jornada`** (vista): la cola por etapas se retiro de la interfaz con la issue #840
 (la consulta es la unidad y no hay etapas que recorrer). `JornadaEnCursoScreen.js` (movil) la sigue
 leyendo, pero solo para listar a los pacientes de la jornada sin agruparlos
-(`pacientesDeLaJornada`). La 00135 reordena su CASE para que los signos opcionales no dejen a un
+(`pacientesDeLaJornada`). La 00136 reordena su CASE para que los signos opcionales no dejen a un
 paciente atendido "esperando triaje".
 
 ### Atencion clinica
@@ -1020,7 +1020,7 @@ paciente atendido "esperando triaje".
 **`triajes`**: desde la issue #840 los signos vitales son el primer paso de la consulta
 (`useConsulta`; `ModalConsulta.jsx` en web y `ConsultaScreen.js` en movil) y se capturan y se
 corrigen en el mismo formulario, con los mismos campos de `CAMPOS_TRIAJE`. Todos son opcionales
-(la 00135 quita el NOT NULL de la presion y la frecuencia cardiaca), con dos reglas en la base: la
+(la 00136 quita el NOT NULL de la presion y la frecuencia cardiaca), con dos reglas en la base: la
 presion va completa o no va (`chk_triajes_presion_completa`) y una fila de triaje tiene al menos un
 signo (`chk_triajes_al_menos_un_signo`). `imc` es columna generada (excluida arriba).
 
@@ -1469,16 +1469,16 @@ Contra la base local recien reconstruida (`supabase db reset`, las 135 migracion
 
 | # | Divergencia | Decision |
 | --- | --- | --- |
-| 1 | `donacion_detalle` no tenia GRANT ni politica de UPDATE, y `enlazarLoteConDonacion()` actualiza `lote_id`: el ingreso desde una donacion creaba el lote y despues fallaba con `permission denied`, y la donacion nunca quedaba ligada a su lote. | **Se arregla aqui** (`00134`): GRANT de la columna `lote_id`, politica que enlaza una sola vez, y trigger que exige un lote del mismo medicamento. Pruebas en `origen_del_presupuesto_y_donacion_de_medicamento.sql`. `PERMISOS.md` actualizado. |
+| 1 | `donacion_detalle` no tenia GRANT ni politica de UPDATE, y `enlazarLoteConDonacion()` actualiza `lote_id`: el ingreso desde una donacion creaba el lote y despues fallaba con `permission denied`, y la donacion nunca quedaba ligada a su lote. | **Se arregla aqui** (`00135`): GRANT de la columna `lote_id`, politica que enlaza una sola vez, y trigger que exige un lote del mismo medicamento. Pruebas en `origen_del_presupuesto_y_donacion_de_medicamento.sql`. `PERMISOS.md` actualizado. |
 | 2 | `condiciones_cronicas`: `crearCondicionCatalogo()`, `actualizarCondicionCatalogo()` y `useCatalogoCondiciones` (issue #641) escriben el catalogo, pero la tabla no tiene GRANT ni politica de escritura (`PERMISOS.md` dice "nadie") y ninguna pantalla usa el hook. | **Issue aparte, #845**: hay que decidir quien mantiene el catalogo. Si alguien, es una migracion con GRANT y politica mas su pantalla; si nadie, se retiran el hook y las dos funciones. |
 | 3 | Alta de lote en web (`ModalAltaLote.jsx`): pedia una bodega obligatoria que `registrarLote()` nunca guardaba, exigia la fecha de ingreso aunque la columna tiene `DEFAULT CURRENT_DATE`, y rechazaba un lote que vence el dia que ingresa, que el CHECK acepta desde la `00096`. | **Se arregla aqui**: el modal dibuja `CAMPOS_LOTE` y valida con `validarDatosDeLote()` contra esas reglas. |
 | 4 | Un lote registrado desde "Registrar lote" en web no tiene existencias en ninguna bodega: el stock solo nace de un ingreso (`registrarIngreso()`). Con el punto 3 ya no lo parece, pero sigue siendo asi. | **Issue aparte, #846**: decidir si "Registrar lote" tiene que existir al lado de "Registrar ingreso" o si se retira. Cambia el flujo de inventario, no solo un formulario. |
 | 5 | El comentario de la `00096` dice que el cliente valida la fecha de vencimiento contra la de ingreso con `minFechaDesdeCampo`. `validarConDescriptores()` no lee esa regla. | **Se corrige el comentario del descriptor** (`inventario/campos.js`); la migracion aplicada no se edita. La regla la aplica `validarDatosDeLote()`. |
-| 6 | `triajes.presion_sistolica`, `presion_diastolica` y `frecuencia_cardiaca` eran `NOT NULL`, contra la regla de que ningun signo vital es obligatorio. | **Se arregla aqui** (`00135`). |
+| 6 | `triajes.presion_sistolica`, `presion_diastolica` y `frecuencia_cardiaca` eran `NOT NULL`, contra la regla de que ningun signo vital es obligatorio. | **Se arregla aqui** (`00136`). |
 | 7 | `pacientes.dpi`: el CHECK de 13 digitos de la `00132` entro `NOT VALID` porque `ecopac-dev` tiene filas con DPI de otra longitud. Las filas nuevas cumplen; las viejas no se revisaron. | **Issue aparte, #847**: corregir o vaciar esos DPI y despues `VALIDATE CONSTRAINT`, en una migracion propia. |
 | 8 | `gastos.fecha_aprobacion`, el hallazgo que la issue traia anotado. | **Ya estaba resuelto**: la `00094` renombro `fecha_aprobacion` a `aprobado_en` en `gastos` y en `movimientos_inventario`. No queda ninguna referencia al nombre viejo fuera de las migraciones anteriores. |
 | 9 | Columnas con actor y sin marca propia, o con marca y sin actor: `jornada_estado_historial.cambiado_por` y `usuario_permiso.otorgado_por` usan `created_at`; `atenciones.cerrada_en` y `pacientes.fecha_baja` no tienen actor; `jornadas.fecha_inicio_real` y `fecha_fin_real` son fechas del ciclo de vida de la jornada. | **Se dejan**: la convencion de la #412 ordena el nombre de un par actor/marca. Ninguna de estas es un par a medias que haya que completar, y renombrarlas sin un motivo funcional es una migracion y una API rotas a cambio de nada. |
-| 10 | `vista_cola_jornada` sigue existiendo aunque las colas por etapa salieron de la interfaz. | **Decidido en el bloque F**: se retira de la interfaz, no de la base. La `00135` la corrige para los signos opcionales y la lista de la jornada en curso la sigue leyendo. |
+| 10 | `vista_cola_jornada` sigue existiendo aunque las colas por etapa salieron de la interfaz. | **Decidido en el bloque F**: se retira de la interfaz, no de la base. La `00136` la corrige para los signos opcionales y la lista de la jornada en curso la sigue leyendo. |
 
 Obligatorio contra `NOT NULL` (punto 4 del metodo): los descriptores de paciente, consulta,
 receta y condicion cronica coinciden con la base. No hay otra divergencia.

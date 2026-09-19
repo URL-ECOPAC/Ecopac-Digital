@@ -30,6 +30,7 @@ export const CODIGOS_DE_ERROR_DE_SUPABASE = {
   CUENTA_DESACTIVADA: "cuenta_desactivada",
   SIN_RESULTADOS: "sin_resultados",
   FALLO_DE_RED: "fallo_de_red",
+  LIMITE_EXCEDIDO: "limite_excedido",
   DESCONOCIDO: "desconocido",
 };
 
@@ -43,6 +44,7 @@ const SQLSTATE = {
   UNIQUE_VIOLATION: "23505",
   CHECK_VIOLATION: "23514",
   INSUFFICIENT_PRIVILEGE: "42501",
+  CONFIGURATION_LIMIT_EXCEEDED: "53400",
 };
 
 /** Codigos propios de PostgREST. */
@@ -80,6 +82,8 @@ const MENSAJES = {
   [CODIGOS_DE_ERROR_DE_SUPABASE.FALLO_DE_RED]:
     `${labels.errorDeConexion}. Revisa tu conexion e intenta de nuevo; ` +
     "los datos que escribiste no se perdieron.",
+  [CODIGOS_DE_ERROR_DE_SUPABASE.LIMITE_EXCEDIDO]:
+    "Se hicieron demasiadas peticiones en poco tiempo. Espera un momento e intenta de nuevo.",
   [CODIGOS_DE_ERROR_DE_SUPABASE.DESCONOCIDO]:
     "Ocurrio un error inesperado. Intenta de nuevo; si sigue pasando, avisa a la administradora.",
 };
@@ -203,6 +207,8 @@ function clasificarPostgrest(error) {
       return CODIGOS_DE_ERROR_DE_SUPABASE.CAMPO_REQUERIDO;
     case SQLSTATE.INSUFFICIENT_PRIVILEGE:
       return CODIGOS_DE_ERROR_DE_SUPABASE.PERMISO_DENEGADO;
+    case SQLSTATE.CONFIGURATION_LIMIT_EXCEEDED:
+      return CODIGOS_DE_ERROR_DE_SUPABASE.LIMITE_EXCEDIDO;
     case POSTGREST.JWT_INVALIDO:
       return CODIGOS_DE_ERROR_DE_SUPABASE.SESION_EXPIRADA;
     case POSTGREST.SIN_FILAS:

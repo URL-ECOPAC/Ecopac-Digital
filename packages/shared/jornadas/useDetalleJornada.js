@@ -164,7 +164,7 @@ export function useDetalleJornada({ jornadaId, rol } = {}) {
 
   const descartarErrorMovimiento = useCallback(() => setErrorMovimiento(null), []);
 
-  // El presupuesto ya no se fija desde aqui: desde la 00134 (issue #840) es la suma de sus
+  // El presupuesto ya no se fija desde aqui: desde la 00135 (issue #840) es la suma de sus
   // origenes, y se gestiona con useOrigenesDePresupuesto() (presupuestos/). Esta pantalla solo
   // relee la jornada cuando ese hook avisa que el total cambio.
 

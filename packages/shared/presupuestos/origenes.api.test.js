@@ -1,4 +1,4 @@
-// Pruebas del origen del presupuesto (issue #840, bloque D; migracion 00134).
+// Pruebas del origen del presupuesto (issue #840, bloque D; migracion 00135).
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
