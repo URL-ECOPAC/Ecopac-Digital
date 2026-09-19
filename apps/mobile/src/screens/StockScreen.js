@@ -1,45 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
-import {
-  diasHastaVencimiento,
-  formatearFechaCorta,
-  listarBodegas,
-  listarExistenciasDisponibles,
-  listarMedicamentos,
-} from "@ecopac/shared";
+import { listarBodegas, listarExistenciasDisponibles, listarMedicamentos } from "@ecopac/shared";
 
 import { ErrorState, LoadingState, ScreenContainer } from "../components";
 import { CatalogoMedicamentosScreen } from "./CatalogoMedicamentosScreen";
 
-// Mismo umbral que useVistaExistencias.js (DIAS_AVISO_VENCIMIENTO): no se importa de ahi porque
-// esa constante no esta exportada y esta pantalla no comparte el resto de ese hook (trabaja
-// sobre inventarioInicial/inventarioFiltrado de useCatalogoMedicamentos.js, no sobre
-// medicamentosAgrupados).
-const DIAS_AVISO_VENCIMIENTO = 30;
-
-/**
- * Traduce una fila de vista_lotes_disponibles (existencias.api.js) a lo que ya sabe pintar
- * CatalogoMedicamentosScreen.js: descripcion/nombre, lote, bodega, caducidad/fechaVencimiento,
- * stock/cantidad_disponible. `codigo` usa el numero de lote (antes era el UUID del lote, que se
- * veia como un identificador ilegible en la tarjeta); `medicamentoId` es lo que necesita
- * navigation.navigate(ROUTES.REGISTRO_INGRESO, ...) al tocar la tarjeta (issue #165, criterio 1).
- */
-function aItemDeCatalogo(fila) {
-  const dias = diasHastaVencimiento(fila.fechaVencimiento);
-
-  return {
-    id: fila.loteId,
-    codigo: fila.numeroLote,
-    medicamentoId: fila.medicamentoId,
-    nombre: fila.medicamentoNombre,
-    lote: fila.numeroLote,
-    bodega: fila.bodega,
-    fechaVencimiento: formatearFechaCorta(fila.fechaVencimiento),
-    cantidad_disponible: fila.cantidadDisponible,
-    // vista_lotes_disponibles (00047) ya excluye lo vencido, asi que estaVencido nunca aplica
-    // aqui; lo que si se puede marcar es que este por vencer pronto.
-    proximoAVencer: dias !== null && dias >= 0 && dias <= DIAS_AVISO_VENCIMIENTO,
-  };
-}
+// La traduccion de cada fila a lo que pinta la tarjeta vive en shared desde la #840
+// (filaDeStock, useCatalogoMedicamentos.js): aqui solo se cargan los datos.
 
 /**
  * Trae el inventario real y se lo pasa a CatalogoMedicamentosScreen.js.
@@ -83,7 +49,7 @@ export default function StockScreen(props) {
     const medicamentosConStock = new Set(existencias.map((fila) => fila.medicamentoId));
     const totalDelCatalogo = (respuestaMedicamentos.medicamentos || []).length;
 
-    setInventario(existencias.map(aItemDeCatalogo));
+    setInventario(existencias);
     setBodegas(respuestaBodegas.bodegas || []);
     setMedicamentosSinStock(Math.max(0, totalDelCatalogo - medicamentosConStock.size));
     setError(

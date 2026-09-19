@@ -1,143 +1,114 @@
-import { useState, useMemo, useCallback } from "react";
+// Stock de la app movil: los lotes con existencia disponible, por bodega (issue #840, G5).
+//
+// QUE CAMBIO
+//
+// Los filtros eran dos filas de chips con desplazamiento horizontal, bodega y categoria, que se
+// cortaban en el borde del telefono. La de categorias era una lista escrita aqui -Medicamentos,
+// Biologicos, Insumos, EPP...- que no existe en el esquema: ningun lote ni medicamento tiene
+// categoria, asi que todo contaba como "Medicamentos" y elegir cualquier otra dejaba la lista
+// vacia. La de bodegas comparaba nombres por subcadena ("Sur" coincidia con "Bodega Surena").
+//
+// Ahora son los filtros de la web: un descriptor (FILTROS_STOCK) que FilterBar dibuja en su panel
+// colapsable, busqueda por medicamento o lote y bodega por id. Sin categorias hasta que el
+// esquema tenga una.
 
-export const CATEGORIAS_PILLS = [
-  "Todas",
-  "Medicamentos",
-  "Biológicos",
-  "Insumos",
-  "Dispositivos",
-  "Diagnóstico",
-  "EPP",
-];
+import { useCallback, useMemo, useState } from "react";
 
-export const BODEGAS_PILLS = ["todas", "central", "norte", "sur"];
+import { TIPOS_DE_FILTRO } from "../descriptores.js";
+import { diasHastaVencimiento } from "../formato/fechas.js";
+import { filtrarOpcionesPorTexto } from "../formato/opciones.js";
 
-// Auxiliar para limpiar tildes, minúsculas y espacios
-const normalizar = (texto) => {
-  if (texto === null || texto === undefined) return "";
-  return texto
-    .toString()
-    .trim()
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
-};
+/** Con cuantos dias de anticipacion un lote cuenta como "por vencer" en esta pantalla. */
+export const DIAS_AVISO_VENCIMIENTO_STOCK = 30;
 
-export function useCatalogoMedicamentos({ inventarioInicial = [], bodegas = [] } = {}) {
-  const [busqueda, setBusqueda] = useState("");
-  const [categoriaSeleccionada, setCategoriaSeleccionada] = useState("Todas");
-  const [bodegaSeleccionada, setBodegaSeleccionada] = useState("todas");
+export const FILTROS_STOCK = Object.freeze([
+  {
+    id: "busqueda",
+    label: "Buscar",
+    tipo: TIPOS_DE_FILTRO.BUSQUEDA,
+    placeholder: "Medicamento o número de lote",
+  },
+  { id: "bodega", label: "Bodega", tipo: TIPOS_DE_FILTRO.SELECT, opcionesDesde: "bodegas" },
+]);
 
-  const inventarioFiltrado = useMemo(() => {
-    const q = normalizar(busqueda);
-    const catFiltro = normalizar(categoriaSeleccionada);
-    const bodegaFiltro = normalizar(bodegaSeleccionada);
+export const FILTROS_STOCK_VACIOS = Object.freeze({ busqueda: "", bodega: "" });
 
-    return (inventarioInicial || []).filter((item) => {
-      if (!item) return false;
-
-      // ----------------------------------------------------------------------
-      // EXTRACCIÓN CONFORME AL ESQUEMA ECOPAC DIGITAL
-      // ----------------------------------------------------------------------
-
-      // Nombre y especificaciones de la migración (nombre, concentracion, presentacion, marca)
-      const nombre = normalizar(item.nombre || item.descripcion || item.nombre_producto);
-      const concentracion = normalizar(item.concentracion);
-      const marca = normalizar(item.marca);
-      const codigo = normalizar(item.codigo || item.code || item.id);
-
-      // Principios activos (Maneja arrays u objetos concatenados)
-      let principioActivo = "";
-      if (Array.isArray(item.principios_activos)) {
-        principioActivo = item.principios_activos
-          .map((p) => (typeof p === "object" ? p.nombre : p))
-          .join(" ");
-      } else {
-        principioActivo =
-          item.principioActivo || item.principio_activo || item.principios_activos || "";
-      }
-      principioActivo = normalizar(principioActivo);
-
-      // Lotes
-      const lote = normalizar(
-        item.lote || item.lote_serie || item.codigo_lote || item.lotes?.codigo,
-      );
-
-      // Categoría (Si no viene definida en el registro, asume 'Medicamentos' por la migración SQL)
-      const catItem = normalizar(
-        typeof item.categoria === "object"
-          ? item.categoria?.nombre
-          : item.categoria || item.category || item.tipo || "Medicamentos",
-      );
-
-      // Bodega (Puede venir del JOIN entre existencias -> lotes -> bodega)
-      const bodegaItem = normalizar(
-        typeof item.bodega === "object"
-          ? item.bodega?.nombre || item.bodega?.slug
-          : item.bodega || item.bodegaNombre || item.bodega_nombre || item.bodega_id,
-      );
-
-      // ----------------------------------------------------------------------
-      // EVALUACIÓN DE FILTROS
-      // ----------------------------------------------------------------------
-
-      // 1. Buscador global (Código, Descripción/Nombre, Principio Activo, Lote, Marca)
-      const coincideBusqueda =
-        !q ||
-        nombre.includes(q) ||
-        concentracion.includes(q) ||
-        marca.includes(q) ||
-        principioActivo.includes(q) ||
-        codigo.includes(q) ||
-        lote.includes(q);
-
-      // 2. Categoría
-      const esCatTodas = !catFiltro || catFiltro === "todas" || catFiltro === "todos";
-      const coincideCategoria =
-        esCatTodas ||
-        catItem === catFiltro ||
-        catItem.includes(catFiltro) ||
-        catFiltro.includes(catItem);
-
-      // 3. Bodega (Central, Norte, Sur, etc.)
-      const esBodegaTodas = !bodegaFiltro || bodegaFiltro === "todas" || bodegaFiltro === "todos";
-      const coincideBodega =
-        esBodegaTodas ||
-        !bodegaItem || // Si el catálogo general aún no está asignado a lote, se mantiene visible
-        bodegaItem === bodegaFiltro ||
-        bodegaItem.includes(bodegaFiltro) ||
-        bodegaFiltro.includes(bodegaItem);
-
-      return coincideBusqueda && coincideCategoria && coincideBodega;
-    });
-  }, [inventarioInicial, busqueda, categoriaSeleccionada, bodegaSeleccionada]);
-
-  const hayFiltrosActivos =
-    busqueda.trim() !== "" ||
-    (normalizar(categoriaSeleccionada) !== "todas" &&
-      normalizar(categoriaSeleccionada) !== "todos") ||
-    (normalizar(bodegaSeleccionada) !== "todas" && normalizar(bodegaSeleccionada) !== "todos");
-
-  const limpiarFiltros = useCallback(() => {
-    setBusqueda("");
-    setCategoriaSeleccionada("Todas");
-    setBodegaSeleccionada("todas");
-  }, []);
+/**
+ * Una fila de listarExistenciasDisponibles() (vista_lotes_disponibles) lista para la tarjeta. La
+ * vista ya excluye lo vencido y lo agotado (00047): lo que se puede marcar es lo que vence pronto.
+ *
+ * @param {object} fila
+ * @param {Date} [hoy]
+ */
+export function filaDeStock(fila, hoy = new Date()) {
+  const diasRestantes = diasHastaVencimiento(fila.fechaVencimiento, hoy);
 
   return {
-    busqueda,
-    setBusqueda,
-    categoriaSeleccionada,
-    setCategoriaSeleccionada,
-    bodegaSeleccionada,
-    setBodegaSeleccionada,
-    categoriasPills: CATEGORIAS_PILLS,
-    bodegasPills: BODEGAS_PILLS,
-    bodegas,
-    inventarioFiltrado,
-    hayFiltrosActivos,
-    limpiarFiltros,
+    id: `${fila.loteId}:${fila.bodegaId}`,
+    loteId: fila.loteId,
+    medicamentoId: fila.medicamentoId,
+    nombre: fila.medicamentoNombre,
+    numeroLote: fila.numeroLote,
+    bodegaId: fila.bodegaId,
+    bodega: fila.bodega,
+    fechaVencimiento: fila.fechaVencimiento,
+    diasRestantes,
+    cantidadDisponible: fila.cantidadDisponible,
+    porVencer:
+      diasRestantes !== null && diasRestantes >= 0 && diasRestantes <= DIAS_AVISO_VENCIMIENTO_STOCK,
   };
 }
 
-export default useCatalogoMedicamentos;
+/**
+ * Las filas que pasan los filtros. La busqueda ignora mayusculas y acentos, y cada palabra tiene
+ * que aparecer en el medicamento o en el numero de lote.
+ *
+ * @param {ReturnType<typeof filaDeStock>[]} filas
+ * @param {typeof FILTROS_STOCK_VACIOS} filtros
+ */
+export function filtrarStock(filas = [], filtros = FILTROS_STOCK_VACIOS) {
+  const deLaBodega = filtros.bodega
+    ? filas.filter((fila) => fila.bodegaId === filtros.bodega)
+    : filas;
+
+  return filtrarOpcionesPorTexto(
+    deLaBodega.map((fila) => ({ value: fila, label: `${fila.nombre} ${fila.numeroLote ?? ""}` })),
+    filtros.busqueda ?? "",
+  ).map((opcion) => opcion.value);
+}
+
+/**
+ * @param {{ inventarioInicial?: object[], bodegas?: { id: string, nombre: string }[] }} [opciones]
+ *   `inventarioInicial`: filas de listarExistenciasDisponibles().
+ */
+export function useCatalogoMedicamentos({ inventarioInicial = [], bodegas = [] } = {}) {
+  const [filtros, setFiltros] = useState(FILTROS_STOCK_VACIOS);
+
+  const filas = useMemo(
+    () => inventarioInicial.map((fila) => filaDeStock(fila)),
+    [inventarioInicial],
+  );
+  const inventarioFiltrado = useMemo(() => filtrarStock(filas, filtros), [filas, filtros]);
+
+  const setFiltro = useCallback((id, valor) => {
+    setFiltros((anteriores) => ({ ...anteriores, [id]: valor ?? "" }));
+  }, []);
+
+  const limpiarFiltros = useCallback(() => setFiltros(FILTROS_STOCK_VACIOS), []);
+
+  const catalogos = useMemo(
+    () => ({ bodegas: bodegas.map((bodega) => ({ value: bodega.id, label: bodega.nombre })) }),
+    [bodegas],
+  );
+
+  return {
+    filtros,
+    setFiltro,
+    limpiarFiltros,
+    hayFiltros: Object.values(filtros).some((valor) => valor !== ""),
+    catalogos,
+    inventarioFiltrado,
+    total: filas.length,
+    totalPorVencer: inventarioFiltrado.filter((fila) => fila.porVencer).length,
+  };
+}

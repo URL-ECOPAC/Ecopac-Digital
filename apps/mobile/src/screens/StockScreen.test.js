@@ -2,7 +2,7 @@
 //
 // StockScreen.js es un envoltorio que trae datos reales (listarExistenciasDisponibles,
 // listarBodegas, listarMedicamentos) y se los pasa a CatalogoMedicamentosScreen.js. Esta prueba
-// cubre lo que StockScreen.js aporta -la carga, el manejo de error, la traduccion de filas y el
+// cubre lo que StockScreen.js aporta -la carga, el manejo de error y el
 // calculo de "sin stock"-, no el catalogo en si (con su propia prueba, si la tuviera): se
 // reemplaza CatalogoMedicamentosScreen.js por un doble que expone las props que recibio.
 
@@ -73,16 +73,17 @@ describe("StockScreen", () => {
     expect(screen.getByText("Cargando inventario...")).toBeTruthy();
   });
 
-  it("con datos, le pasa al catalogo el inventario traducido, las bodegas y el conteo sin stock", async () => {
+  it("con datos, le pasa al catalogo las filas de la vista, las bodegas y el conteo sin stock", async () => {
     pantalla();
 
     const props = JSON.parse((await screen.findByTestId("props-catalogo")).children[0]);
 
     expect(props.inventarioInicial).toHaveLength(1);
+    // La traduccion para la tarjeta la hace shared (filaDeStock, issue #840).
     expect(props.inventarioInicial[0]).toMatchObject({
-      id: "lote-1",
-      nombre: "Loratadina",
-      cantidad_disponible: 40,
+      loteId: "lote-1",
+      medicamentoNombre: "Loratadina",
+      cantidadDisponible: 40,
     });
     expect(props.bodegas).toEqual([{ id: "bod-1", nombre: "Bodega Principal" }]);
     // 2 medicamentos en el catalogo, 1 con existencia (med-1): 1 sin stock.

@@ -104,16 +104,10 @@
   "apps/mobile/src/screens/AccesoDenegadoScreen.js": ["#7a7a8a", "#e91e8c", "#ffffff"],
   "apps/mobile/src/screens/AjustesScreen.js": ["#2d2d2d", "#3db648", "#7a7a8a"],
   "apps/mobile/src/screens/CatalogoMedicamentosScreen.js": [
-    "#1e7a28",
     "#2d2d2d",
-    "#3db648",
-    "#4d4d4d",
     "#7a7a8a",
-    "#e2e4e9",
     "#e91e8c",
-    "#f7941d",
-    "#f7f8fa",
-    "#ffffff"
+    "#f7941d"
   ],
   "apps/mobile/src/screens/ColaboradoresScreen.js": ["#7a7a8a"],
   "apps/mobile/src/screens/ComunidadesScreen.js": ["#7a7a8a"],

@@ -4,6 +4,9 @@ Este documento es la fuente unica de verdad sobre como se ven las pantallas del 
 issue de frontend (`platform:web` o `platform:mobile`) apunta aqui desde su seccion
 `Referencia de diseno`.
 
+El criterio para la app movil -areas tactiles, filtros, texto, estados- esta en
+[DISENO-MOVIL.md](./DISENO-MOVIL.md) (issue #840).
+
 ## Fuente del diseno
 
 | Recurso              | Donde                                                                        |
