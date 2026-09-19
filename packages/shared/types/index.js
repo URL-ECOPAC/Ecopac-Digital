@@ -807,13 +807,17 @@
  * se lo asigna la migracion que los carga- y unica con marca de tiempo propia (`realizado_en`) en
  * vez de created_at.
  *
+ * La vista de la bitacora de auditoria (issue #643) agrega un campo `realizadoPorNombre`, que NO
+ * es una columna: lo arma auditoria/useBitacoraAuditoria.js resolviendo `realizadoPor` contra el
+ * catalogo de perfiles ("Sistema" si es `null`, "Usuario eliminado" si el id ya no existe). No
+ * se declara aqui a proposito -este typedef es la fila real de la tabla, y solo eso.
+ *
  * @typedef {object} EventoAuditoria
  * @property {number} id
  * @property {string} tablaAfectada
  * @property {string} filaId
- * @property {string} operacion Enum `operacion_auditoria`. Es el unico enum del esquema sin
- *   constante en enums.js, que lo deja fuera a proposito porque ningun archivo de packages/ lo
- *   nombra.
+ * @property {string} operacion Enum `operacion_auditoria` (ver `OPERACIONES_DE_AUDITORIA` en
+ *   enums.js).
  * @property {string|null} realizadoPor
  * @property {string} realizadoEn
  * @property {object|null} valoresAnteriores

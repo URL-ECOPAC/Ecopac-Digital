@@ -35,6 +35,7 @@ export * from "./proyectos/index.js";
 export * from "./presupuestos/index.js";
 export * from "./reportes/index.js";
 export * from "./territorio/index.js";
+export * from "./auditoria/index.js";
 export * from "./api/index.js";
 export * from "./hooks/index.js";
 // Reporte de errores sin datos de paciente (issue #762).

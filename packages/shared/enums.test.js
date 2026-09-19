@@ -44,6 +44,7 @@ import {
   ESTADOS_RECETA,
   ORIGENES_DE_LOTE,
   ORIGENES_DE_PRESUPUESTO,
+  OPERACIONES_DE_AUDITORIA,
   PRESENTACIONES_DE_MEDICAMENTO,
   TIPOS_DE_DONACION,
   TIPOS_DE_DONANTE,
@@ -53,6 +54,7 @@ import {
   opcionesConClave,
   opcionesDe,
 } from "./enums.js";
+import { OPCIONES_OPERACION_AUDITORIA } from "./auditoria/columnas.js";
 import {
   OPCIONES_ESTADO_DONACION,
   OPCIONES_TIPO_DONACION,
@@ -88,6 +90,10 @@ const ENUMS = {
   ESTADOS_PROYECTO: [ESTADOS_PROYECTO, ["planificado", "en curso", "finalizado", "cancelado"]],
   ESTADOS_RECETA: [ESTADOS_RECETA, ["emitida", "anulada"]],
   ORIGENES_DE_LOTE: [ORIGENES_DE_LOTE, ["compra", "donacion"]],
+  OPERACIONES_DE_AUDITORIA: [
+    OPERACIONES_DE_AUDITORIA,
+    ["insercion", "actualizacion", "baja", "eliminacion"],
+  ],
   PRESENTACIONES_DE_MEDICAMENTO: [
     PRESENTACIONES_DE_MEDICAMENTO,
     ["tableta", "jarabe", "capsula", "inyectable", "pomada", "gotas ophthalmic", "gotas otic"],
@@ -120,6 +126,7 @@ const CATALOGOS = {
   OPCIONES_TIPO_MOVIMIENTO: [OPCIONES_TIPO_MOVIMIENTO, TIPOS_DE_MOVIMIENTO],
   OPCIONES_TIPO_PROVEEDOR: [OPCIONES_TIPO_PROVEEDOR, TIPOS_DE_PROVEEDOR],
   OPCIONES_TIPO_SANGRE: [OPCIONES_TIPO_SANGRE, TIPOS_SANGUINEOS],
+  OPCIONES_OPERACION_AUDITORIA: [OPCIONES_OPERACION_AUDITORIA, OPERACIONES_DE_AUDITORIA],
 };
 
 describe("los enums del dominio", () => {
