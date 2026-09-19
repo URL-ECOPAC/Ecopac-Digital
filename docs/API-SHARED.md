@@ -285,10 +285,15 @@ pediatrico, activo) y resumen los lotes de cada medicamento; la "categoria", el 
 que mostraba la pantalla no eran columnas.
 
 **Escrituras**: `registrarMedicamento`, `actualizarMedicamento`, `desactivarMedicamento`,
-`registrarLote`, `registrarIngreso`, `registrarSalida`, `editarMovimiento`, `aprobarMovimiento`,
+`registrarIngreso`, `registrarSalida`, `editarMovimiento`, `aprobarMovimiento`,
 `rechazarMovimiento`, `aprobarMovimientosEnLote`, `registrarBodega`, `actualizarBodega`,
 `registrarProveedor`, `actualizarProveedor`, `registrarPrincipioActivo`,
 `actualizarPrincipioActivo`, `eliminarPrincipioActivo`, `atenderAlerta`.
+
+Un lote no se da de alta por su cuenta: nace dentro de `registrarIngreso`, que crea el lote y su
+movimiento en la misma operacion. Hubo un `registrarLote` que insertaba en `lotes` y nada mas, y
+dejaba el lote con cero existencias en todas las bodegas; se retiro con la issue #846. De un lote
+ya registrado se corrige el costo con `actualizarLote` (`CAMPOS_CORRECCION_LOTE`).
 
 **Reglas de vencimiento y disponibilidad**: `calcularEstadoVencimiento`, `calcularDiasRestantes`,
 `esLoteEntregable`, `motivoLoteNoEntregable`, `hayDisponibilidad`, `motivoSinDisponibilidad`,

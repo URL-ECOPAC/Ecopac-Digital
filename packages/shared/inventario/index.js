@@ -83,18 +83,14 @@ export {
 // error suyo habria aparecido antes de llegar a produccion.
 //
 // Por nombre y no con `export *`: es el criterio que ya seguia useAlertasVencimiento aqui arriba.
-// Los helpers internos de cada archivo -resultadoDeListado(), validarDatosDeLote(), nombreDe(),
-// filasDeKardex()- no son API del paquete y no salen.
+// Los helpers internos de cada archivo -resultadoDeListado(), nombreDe(), filasDeKardex()- no
+// son API del paquete y no salen.
 export {
   TIPO_BODEGA,
   TIPO_PROVEEDOR,
   useAdministracionBodegasProveedores,
 } from "./useAdministracionBodegasProveedores.js";
-export {
-  datosLoteParaRegistrar,
-  useGestionLotes,
-  valoresInicialesDeLote,
-} from "./useGestionLotes.js";
+export { useGestionLotes } from "./useGestionLotes.js";
 export {
   ESTADO_MOVIMIENTO,
   TIPO_MOVIMIENTO,

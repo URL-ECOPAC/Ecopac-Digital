@@ -49,26 +49,8 @@ const COLUMNAS_DEL_LOTE = [
   "proveedor:proveedores(nombre)",
 ].join(", ");
 
-// Campos que registrarLote() exige por si mismos (criterio de aceptacion de la issue), ademas de
-// lo que ya impone la base de datos. fechaIngreso es el caso que la base no puede cachear sola:
-// la columna tiene DEFAULT CURRENT_DATE (00020), asi que omitirla no dispara NOT NULL, solo cae
-// en la fecha de hoy en silencio. Los demas (medicamento, numeroLote, cantidadIngresada,
-// fechaVencimiento) tambien se listan aqui para dar el mismo error CAMPO_REQUERIDO limpio antes
-// de tocar la red, en vez de esperar a que Postgres los rechace uno a la vez.
-const CAMPOS_REQUERIDOS_DE_LOTE = [
-  "medicamento",
-  "numeroLote",
-  "cantidadIngresada",
-  "fechaIngreso",
-  "fechaVencimiento",
-];
-
-function faltaAlgunCampoRequerido(datos) {
-  return CAMPOS_REQUERIDOS_DE_LOTE.some((campo) => {
-    const valor = datos[campo];
-    return valor === undefined || valor === null || valor === "";
-  });
-}
+// Aqui vivian CAMPOS_REQUERIDOS_DE_LOTE y faltaAlgunCampoRequerido(), que solo servian a
+// registrarLote(). Salieron con el: ver la nota de la issue #846 mas abajo.
 
 /** Traduce del camelCase de las pantallas al snake_case de la tabla lotes. */
 function aColumnasDeTabla(datos = {}) {
@@ -125,39 +107,19 @@ function aLote(fila) {
   };
 }
 
-/**
- * Registra un lote nuevo.
- *
- * Exige medicamento, numeroLote, cantidadIngresada, fechaIngreso y fechaVencimiento (criterio de
- * aceptacion de la issue): si falta alguno, devuelve CAMPO_REQUERIDO sin llamar a la red. El
- * resto de reglas -proveedor y origen obligatorios, cantidad positiva, y sobre todo
- * fecha_vencimiento posterior a fecha_ingreso- las hace cumplir la base de datos
- * (chk_lotes_vencimiento_posterior y chk_lotes_cantidad_positiva, 00020): un intento invalido
- * vuelve como error CHECK, que normalizarError() ya traduce a un mensaje legible. No se duplica
- * esa comprobacion aqui: la migracion es la fuente de verdad de esa regla (AGENTS.md).
- *
- * @param {object} datos Campos en camelCase, los ids de CAMPOS_LOTE.
- * @returns {Promise<{ lote: object|null, error: object|null }>}
- */
-export async function registrarLote(datos = {}) {
-  if (faltaAlgunCampoRequerido(datos)) {
-    return { lote: null, error: construirError(CODIGOS_DE_ERROR_DE_SUPABASE.CAMPO_REQUERIDO) };
-  }
-
-  try {
-    const { data, error } = await obtenerSupabase()
-      .from("lotes")
-      .insert(aColumnasDeTabla(datos))
-      .select(COLUMNAS_DEL_LOTE)
-      .single();
-
-    if (error) return { lote: null, error: normalizarError(error) };
-    return { lote: aLote(data), error: null };
-  } catch (error) {
-    // Un fallo de red no llega por el campo error sino como excepcion del fetch.
-    return { lote: null, error: normalizarError(error) };
-  }
-}
+// AQUI ESTABA registrarLote(), y ya no hay ninguna forma de crear un lote suelto (issue #846).
+//
+// Insertaba en `lotes` y nada mas. El stock por bodega vive en `existencias` y solo nace de un
+// movimiento de ingreso, asi que el lote quedaba creado y con cero existencias en todas partes:
+// aparecia en la tabla de lotes como si tuviera medicamento, cantidad ingresada y vencimiento,
+// pero no se podia despachar de ninguna bodega. Hasta la #840 el modal pedia ademas una "Bodega
+// destino" obligatoria que la funcion descartaba, lo que lo hacia parecer un ingreso completo.
+//
+// El unico camino para dar de alta un lote es registrarIngreso() (movimientos.api.js), que crea
+// el lote y su movimiento en la misma operacion. Un lote sin existencias no es un estado que
+// nadie pidiera representar; que se pudiera crear era un efecto de tener dos caminos.
+//
+// Lo que queda de `lotes` se lee (listarLotes, obtenerLote) y se corrige (actualizarLote).
 
 /**
  * Corrige un lote ya registrado (issue #752): un costo unitario mal escrito no puede quedar

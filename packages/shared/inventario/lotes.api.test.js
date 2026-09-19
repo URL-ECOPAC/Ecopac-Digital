@@ -21,7 +21,7 @@ vi.mock("../api/cliente.js", () => ({
 }));
 
 const { CODIGOS_DE_ERROR_DE_SUPABASE } = await import("../api/errores-de-supabase.js");
-const { actualizarLote, listarLotes, listarLotesDeMedicamento, obtenerLote, registrarLote } =
+const { actualizarLote, listarLotes, listarLotesDeMedicamento, obtenerLote } =
   await import("./lotes.api.js");
 
 /** Doble de un cliente de Supabase que resuelve con una unica respuesta configurada para "lotes". */
@@ -84,150 +84,8 @@ function crearCliente({ respuesta = { data: [], error: null } } = {}) {
   };
 }
 
-const LOTE_VALIDO = {
-  medicamento: "med-1",
-  numeroLote: "L-001",
-  proveedor: "prov-1",
-  origen: "compra",
-  cantidadIngresada: 100,
-  fechaIngreso: "2026-01-01",
-  fechaVencimiento: "2026-12-31",
-};
-
 beforeEach(() => {
   dobles.cliente = null;
-});
-
-describe("registrarLote", () => {
-  it.each([
-    ["medicamento", { ...LOTE_VALIDO, medicamento: undefined }],
-    ["numeroLote", { ...LOTE_VALIDO, numeroLote: "" }],
-    ["cantidadIngresada", { ...LOTE_VALIDO, cantidadIngresada: null }],
-    ["fechaIngreso", { ...LOTE_VALIDO, fechaIngreso: undefined }],
-    ["fechaVencimiento", { ...LOTE_VALIDO, fechaVencimiento: "" }],
-  ])("sin %s devuelve CAMPO_REQUERIDO sin llamar al cliente", async (_campo, datos) => {
-    const { lote, error } = await registrarLote(datos);
-
-    expect(lote).toBeNull();
-    expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.CAMPO_REQUERIDO);
-  });
-
-  it("fechaIngreso es obligatoria aunque la columna tenga DEFAULT en la base", async () => {
-    const { error } = await registrarLote({ ...LOTE_VALIDO, fechaIngreso: undefined });
-
-    expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.CAMPO_REQUERIDO);
-  });
-
-  it("con datos validos inserta las columnas mapeadas a snake_case", async () => {
-    const cliente = crearCliente({
-      respuesta: {
-        data: {
-          id: "lote-1",
-          medicamentoId: "med-1",
-          numeroLote: "L-001",
-          proveedorId: "prov-1",
-          origen: "compra",
-          cantidadIngresada: 100,
-          fechaIngreso: "2026-01-01",
-          fechaVencimiento: "2026-12-31",
-          createdAt: "2026-01-01T00:00:00Z",
-          updatedAt: "2026-01-01T00:00:00Z",
-          medicamento: { nombre: "Amoxicilina" },
-          proveedor: { nombre: "Farmacéutica ACME" },
-        },
-        error: null,
-      },
-    });
-    dobles.cliente = cliente;
-
-    const { lote, error } = await registrarLote(LOTE_VALIDO);
-
-    expect(error).toBeNull();
-    expect(cliente.llamadas).toContainEqual({
-      paso: "insert",
-      valores: {
-        medicamento_id: "med-1",
-        numero_lote: "L-001",
-        proveedor_id: "prov-1",
-        origen: "compra",
-        cantidad_ingresada: 100,
-        fecha_ingreso: "2026-01-01",
-        fecha_vencimiento: "2026-12-31",
-      },
-    });
-    expect(lote).toMatchObject({
-      id: "lote-1",
-      medicamento: "Amoxicilina",
-      proveedor: "Farmacéutica ACME",
-      numeroLote: "L-001",
-    });
-  });
-
-  it("normaliza como error CHECK cuando la fecha de vencimiento no es posterior a la de ingreso", async () => {
-    dobles.cliente = crearCliente({ respuesta: { data: null, error: { code: "23514" } } });
-
-    const { lote, error } = await registrarLote({
-      ...LOTE_VALIDO,
-      fechaIngreso: "2026-12-31",
-      fechaVencimiento: "2026-01-01",
-    });
-
-    expect(lote).toBeNull();
-    expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.CHECK);
-  });
-
-  it("normaliza como unicidad la repeticion de numero de lote para el mismo medicamento y proveedor", async () => {
-    dobles.cliente = crearCliente({ respuesta: { data: null, error: { code: "23505" } } });
-
-    const { lote, error } = await registrarLote(LOTE_VALIDO);
-
-    expect(lote).toBeNull();
-    expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.UNICIDAD);
-  });
-
-  it("costoUnitario es opcional: sin el, no viaja ninguna columna de costo (issue #752)", async () => {
-    const cliente = crearCliente({ respuesta: { data: { id: "lote-1" }, error: null } });
-    dobles.cliente = cliente;
-
-    await registrarLote(LOTE_VALIDO);
-
-    const insercion = cliente.llamadas.find((l) => l.paso === "insert");
-    expect(insercion.valores).not.toHaveProperty("costo_unitario");
-  });
-
-  it("con costoUnitario, lo manda como costo_unitario (issue #752)", async () => {
-    const cliente = crearCliente({ respuesta: { data: { id: "lote-1" }, error: null } });
-    dobles.cliente = cliente;
-
-    await registrarLote({ ...LOTE_VALIDO, costoUnitario: 12.5 });
-
-    expect(cliente.llamadas).toContainEqual(
-      expect.objectContaining({
-        paso: "insert",
-        valores: expect.objectContaining({ costo_unitario: 12.5 }),
-      }),
-    );
-  });
-
-  it("un lote sin costo conocido llega con costoUnitario null, no 0 (issue #752)", async () => {
-    dobles.cliente = crearCliente({
-      respuesta: { data: { id: "lote-1", costoUnitario: null }, error: null },
-    });
-
-    const { lote } = await registrarLote(LOTE_VALIDO);
-
-    expect(lote.costoUnitario).toBeNull();
-  });
-
-  it("un lote con costo conocido lo devuelve como numero (issue #752)", async () => {
-    dobles.cliente = crearCliente({
-      respuesta: { data: { id: "lote-1", costoUnitario: "12.50" }, error: null },
-    });
-
-    const { lote } = await registrarLote(LOTE_VALIDO);
-
-    expect(lote.costoUnitario).toBe(12.5);
-  });
 });
 
 describe("actualizarLote", () => {
@@ -309,6 +167,29 @@ describe("obtenerLote (issue #791)", () => {
 
     expect(lote).toBeNull();
     expect(error).not.toBeNull();
+  });
+
+  // Las dos que siguen cubrian aLote() a traves de registrarLote(), que se retiro con la issue
+  // #846. La traduccion de la fila sigue importando por los caminos de lectura, asi que se
+  // conservan aqui: un costo desconocido no es un costo de cero (issue #752).
+  it("un lote sin costo conocido llega con costoUnitario null, no 0 (issue #752)", async () => {
+    dobles.cliente = crearCliente({
+      respuesta: { data: { id: "lote-1", costoUnitario: null }, error: null },
+    });
+
+    const { lote } = await obtenerLote("lote-1");
+
+    expect(lote.costoUnitario).toBeNull();
+  });
+
+  it("un lote con costo conocido lo devuelve como numero (issue #752)", async () => {
+    dobles.cliente = crearCliente({
+      respuesta: { data: { id: "lote-1", costoUnitario: "12.50" }, error: null },
+    });
+
+    const { lote } = await obtenerLote("lote-1");
+
+    expect(lote.costoUnitario).toBe(12.5);
   });
 });
 
