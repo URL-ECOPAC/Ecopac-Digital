@@ -648,6 +648,51 @@ alertar que cuando la rutina no corrio.
 Volver a dispararlo a mano es seguro: `fn_generar_alertas_caducidad` es idempotente y no duplica
 alertas de un lote que ya tiene una pendiente.
 
+### Las notificaciones al administrador y su correo (issue #755)
+
+Cada incidencia que espera a la administracion -una alerta de caducidad nueva, un movimiento por
+validar, un gasto por aprobar, un medicamento que se queda sin existencia- crea una notificacion
+por administrador activo (`notificaciones`, migracion `00138`). Se ve en el buzon del perfil (web y
+movil) y sale por correo, **uno por notificacion, en el orden en que llegaron**.
+
+El correo sale en el momento: un trigger de la `00138` llama con **`pg_net`** a la Edge Function
+`enviar-notificaciones`, que barre todo lo pendiente. La rutina diaria (`alertas-vencimiento`) hace
+el mismo barrido como reintento, y su resumen muestra `correo`, `correosEnviados` y
+`correosFallidos`. Un correo solo se marca enviado cuando el servidor SMTP lo acepto, asi que un
+fallo se reintenta y un exito no se repite.
+
+**Lo que hay que configurar por ambiente, una sola vez.** Ninguno de estos valores es un secret de
+GitHub y ninguno se sube al repositorio.
+
+1. Los secrets de las Edge Functions, con `supabase secrets set --project-ref <ref>` o desde el
+   Dashboard (Edge Functions > Secrets):
+
+   | Secret      | Que es                                                                                |
+   | ----------- | ------------------------------------------------------------------------------------- |
+   | `SMTP_HOST` | Servidor SMTP del proveedor de correo                                                 |
+   | `SMTP_PORT` | **465** (SMTPS). Las Edge Functions de Supabase bloquean la salida por 25 y por 587    |
+   | `SMTP_USER` | Usuario del SMTP                                                                      |
+   | `SMTP_PASS` | Contrasena o llave del SMTP                                                           |
+   | `SMTP_FROM` | Remitente, p. ej. `Ecopac Digital <no-responder@dominio>`                             |
+   | `WEB_URL`   | Raiz de la web del ambiente, para armar el enlace del correo. Sin valor por defecto a proposito: un `localhost` de respaldo mandaria enlaces que no abren nada |
+
+   Sin `SMTP_HOST`, `SMTP_FROM` o `WEB_URL` la funcion responde `correo: "sin configurar"`, no
+   reclama nada y las notificaciones quedan pendientes de correo hasta que se configure. El buzon
+   funciona igual.
+
+2. Las dos entradas de **Supabase Vault** que lee el trigger, desde el SQL Editor del proyecto:
+
+   ```sql
+   SELECT vault.create_secret('https://<ref>.supabase.co/functions/v1/enviar-notificaciones', 'notificaciones_url');
+   SELECT vault.create_secret('<service_role key del proyecto>', 'notificaciones_llave');
+   ```
+
+   Sin ellas el trigger no hace nada: el correo no sale en el momento sino en la siguiente corrida
+   diaria.
+
+En el stack local, el correo se ve en Mailpit (`http://localhost:54424`), con `SMTP_HOST` apuntando
+al contenedor de Mailpit y `SMTP_PORT=1025`; ver `.env.example`.
+
 ## Ambientes
 
 | Rama      | Proyecto Supabase   | Secret del project-ref      | Despliegue web    |
@@ -671,6 +716,9 @@ Se configuran en Settings > Secrets and variables > Actions.
 | `SUPABASE_PROJECT_REF_DEV`                              | Aplicar migraciones en develop |
 | `SUPABASE_PROJECT_REF_PROD`                             | Aplicar migraciones en main    |
 | `SUPABASE_SERVICE_ROLE_KEY_DEV`                         | Disparar alertas-vencimiento y keep-alive |
+
+Los valores SMTP y las entradas de Vault del correo de notificaciones **no** van aqui: son secrets de
+las Edge Functions y de la base, ver "Las notificaciones al administrador y su correo".
 | `VITE_SUPABASE_URL_DEV`, `VITE_SUPABASE_ANON_KEY_DEV`   | Build de la web en develop y keep-alive |
 | `VITE_SUPABASE_URL_PROD`, `VITE_SUPABASE_ANON_KEY_PROD` | Build de la web en main        |
 

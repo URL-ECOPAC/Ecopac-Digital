@@ -288,7 +288,13 @@ que mostraba la pantalla no eran columnas.
 `registrarIngreso`, `registrarSalida`, `editarMovimiento`, `aprobarMovimiento`,
 `rechazarMovimiento`, `aprobarMovimientosEnLote`, `registrarBodega`, `actualizarBodega`,
 `registrarProveedor`, `actualizarProveedor`, `registrarPrincipioActivo`,
-`actualizarPrincipioActivo`, `eliminarPrincipioActivo`, `atenderAlerta`.
+`actualizarPrincipioActivo`, `eliminarPrincipioActivo`, `atenderAlerta` (desde la issue #755 llama
+a `fn_atender_alerta_caducidad`, que descuenta o traslada el stock; reubicar exige
+`bodegaDestinoId`).
+
+**Alertas** (issue #755): `accionesPermitidasParaAlerta` (un vencido no se reubica),
+`requiereBodegaDestino`, `efectoDeAccionSobreElStock`. `useAlertasVencimiento` expone ademas
+`atendidas`, `errorAtendidas`, `bodegas` y `errorBodegas`.
 
 Un lote no se da de alta por su cuenta: nace dentro de `registrarIngreso`, que crea el lote y su
 movimiento en la misma operacion. Hubo un `registrarLote` que insertaba en `lotes` y nada mas, y
@@ -314,6 +320,31 @@ administrador confirma despues (migracion `00107`).
 **Hooks**: `useInventario`, `useVistaExistencias`, `useCatalogoMedicamentos`, `useGestionLotes`,
 `useKardexMovimientos`, `useRegistroIngreso`, `useRegistroSalida`, `usePendientesValidacion`,
 `useAlertasVencimiento`, `useAdministracionBodegasProveedores`.
+
+### `notificaciones/`
+
+El buzon interno del perfil (issue #755). Las filas las escriben triggers de la migracion `00138`;
+desde aqui solo se leen y se marcan como leidas.
+
+**Consultas y escrituras** (`api.js`): `listarNotificaciones(perfilId)` -> `{ notificaciones, error }`,
+`contarNoLeidas(perfilId)` -> `{ cantidad, error }`, `marcarLeida(id)` -> `{ notificacion, error }`,
+`marcarTodasLeidas(perfilId)` -> `{ actualizadas, error }`.
+
+**Descriptores** (`categorias.js`): `DESCRIPTORES_CATEGORIA_NOTIFICACION` (etiqueta, `tono` -una
+clave de `colors` de ui-tokens- y `destinoMovil`), `descriptorDeCategoria` (lanza con una categoria
+desconocida), `agruparPorCategoria`, `DESTINOS_MOVILES_NOTIFICACION`. El enum
+`CATEGORIAS_NOTIFICACION` vive en `enums.js`.
+
+**Filtros** (`filtros.js`): `FILTROS_NOTIFICACIONES` (texto, una categoria, estado de lectura),
+`FILTROS_NOTIFICACIONES_VACIOS`, `filtrarNotificaciones`, `hayFiltrosDeNotificaciones`.
+
+**Avisos del sistema** (`avisos.js`, logica pura): `marcaMasReciente`,
+`notificacionesNuevasDesde`, `avisosDelSistema`. La app movil los usa con expo-notifications.
+
+**Hooks**: `useBuzonNotificaciones` (lista ya filtrada, `filtros`/`setFiltro`, `agrupar`, `abrir`,
+`marcarTodas`) para la ventana dedicada y la emergente de la campana web, y
+`useContadorNotificaciones` (no leidas, para la campana de la web y la del movil). Se avisan entre
+si con `suscribirCambiosDelBuzon` / `avisarCambioDelBuzon` (`eventos.js`).
 
 ### `donaciones/`
 
