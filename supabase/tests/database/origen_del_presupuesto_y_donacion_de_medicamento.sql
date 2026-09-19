@@ -1,4 +1,4 @@
--- Pruebas de la migracion 00132 (issue #840, bloques C y D).
+-- Pruebas de la migracion 00134 (issue #840, bloques C y D).
 -- Corre con: supabase test db
 --
 -- C. fn_registrar_donacion exige un medicamento del catalogo en cada renglon de una donacion de

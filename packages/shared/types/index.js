@@ -309,7 +309,7 @@
  * @property {string|null} proyectoId
  * @property {EstadoJornada} estado
  * @property {number} presupuestoAsignado Suma de sus filas de jornada_presupuesto_origen desde
- *   la 00132: la mantiene un trigger y no se escribe a mano.
+ *   la 00134: la mantiene un trigger y no se escribe a mano.
  * @property {string} createdAt
  * @property {string} updatedAt
  * @property {string|null} codigo
@@ -321,13 +321,13 @@
  */
 
 /**
- * Enum `origen_de_presupuesto` (00132).
+ * Enum `origen_de_presupuesto` (00134).
  *
  * @typedef {'donacion'|'fondos_propios'|'aporte_externo'|'sin_clasificar'} OrigenDePresupuesto
  */
 
 /**
- * Fila de `jornada_presupuesto_origen` (00132, issue #840): de donde viene una parte del
+ * Fila de `jornada_presupuesto_origen` (00134, issue #840): de donde viene una parte del
  * presupuesto de una jornada. `jornadas.presupuesto_asignado` es la suma de estas filas.
  *
  * @typedef {object} JornadaPresupuestoOrigen
@@ -701,7 +701,7 @@
  * @property {string|null} loteId Con valor cuando la linea entro al inventario como lote.
  * @property {string} createdAt
  * @property {string} updatedAt
- * @property {string|null} medicamentoId Medicamento del catalogo (00132, issue #840).
+ * @property {string|null} medicamentoId Medicamento del catalogo (00134, issue #840).
  *   Obligatorio en las donaciones de medicamentos registradas desde entonces; NULL en los otros
  *   tipos y en las anteriores, que se capturaban como texto libre.
  */

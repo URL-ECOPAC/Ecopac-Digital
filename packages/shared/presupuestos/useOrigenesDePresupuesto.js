@@ -1,7 +1,7 @@
 // View model del origen del presupuesto de una jornada (issue #840, bloque D).
 //
 // La jornada ya no tiene un campo "presupuesto" que se edita: tiene una lista de aportes, cada
-// uno con su origen, y el total es la suma (la mantiene la base, 00132). Esta pantalla lista los
+// uno con su origen, y el total es la suma (la mantiene la base, 00134). Esta pantalla lista los
 // aportes, registra uno nuevo y quita uno que se registro por error.
 //
 // Una donacion de dinero se convierte en aporte sin volver a teclear el monto: al elegirla, el

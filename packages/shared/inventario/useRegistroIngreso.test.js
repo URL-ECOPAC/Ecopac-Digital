@@ -107,7 +107,7 @@ describe("itemDesdeRenglonDeDonacion", () => {
     });
   });
 
-  it("sin medicamentoId en el renglon (donaciones anteriores a la 00132), lo deja vacio y elegible", () => {
+  it("sin medicamentoId en el renglon (donaciones anteriores a la 00134), lo deja vacio y elegible", () => {
     const item = itemDesdeRenglonDeDonacion({ donacionDetalleId: "det-2", cantidad: 10 });
     expect(item.medicamento_id).toBe("");
     expect(item.medicamentoFijo).toBe(false);

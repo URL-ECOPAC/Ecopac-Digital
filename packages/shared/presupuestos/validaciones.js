@@ -22,7 +22,7 @@ function estaVacio(valor) {
 }
 
 /**
- * Valida un aporte al presupuesto de una jornada (issue #840, 00132).
+ * Valida un aporte al presupuesto de una jornada (issue #840, 00134).
  *
  * Adelanta en el formulario lo que la base rechazaria: monto positivo, donacion obligatoria si y
  * solo si el origen es una donacion, y no asignar de una donacion mas de lo que le queda. Lo

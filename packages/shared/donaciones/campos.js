@@ -182,7 +182,7 @@ function campoDeRenglon(id, cambios = {}) {
  *
  * - medicamentos: se ELIGE un medicamento del catalogo (con alta en linea si falta) y se dice
  *   cuantas unidades. No hay descripcion ni unidad: las pone fn_registrar_donacion desde el
- *   catalogo (00132) -la unidad es la presentacion-, que es lo que la persona pidio: "ya se sabe
+ *   catalogo (00134) -la unidad es la presentacion-, que es lo que la persona pidio: "ya se sabe
  *   que son, se pone la cantidad".
  * - insumos: texto libre, cantidad y unidad. No hay catalogo de insumos contra el que validar.
  * - dinero: concepto y monto.

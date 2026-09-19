@@ -349,7 +349,7 @@ export default function DetalleJornadaPage() {
                 </dd>
 
                 {/* El total no se edita aqui desde la #840: es la suma de los aportes de la
-                    pestaña Presupuesto, y la base rechaza escribirlo a mano (00132). Se muestra
+                    pestaña Presupuesto, y la base rechaza escribirlo a mano (00134). Se muestra
                     de solo lectura, con el acceso a donde si se cambia. */}
                 <dt className="col-sm-4">Presupuesto asignado</dt>
                 <dd className="col-sm-8">

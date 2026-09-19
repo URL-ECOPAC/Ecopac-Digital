@@ -234,7 +234,7 @@ export const ETIQUETAS_TIPO_DONACION = Object.freeze({
   [TIPOS_DE_DONACION.SERVICIOS]: "Servicios",
 });
 
-/** `origen_de_presupuesto` (00132, issue #840): de donde sale una parte del presupuesto. */
+/** `origen_de_presupuesto` (00134, issue #840): de donde sale una parte del presupuesto. */
 export const ORIGENES_DE_PRESUPUESTO = Object.freeze({
   DONACION: "donacion",
   FONDOS_PROPIOS: "fondos_propios",

@@ -48,7 +48,7 @@ function numeroONulo(valor) {
  * `fechaVencimiento` no viaja: esa columna no existe en `donacion_detalle` (vive en `lotes`, y se
  * captura al generar el ingreso de inventario).
  *
- * `medicamentoId` SI viaja desde la #840: es `donacion_detalle.medicamento_id` (00132), y con el
+ * `medicamentoId` SI viaja desde la #840: es `donacion_detalle.medicamento_id` (00134), y con el
  * la funcion arma la descripcion y la unidad desde el catalogo. Hasta entonces se quedaba en el
  * estado del formulario y el paso de ingreso a inventario tenia que adivinar el medicamento.
  */

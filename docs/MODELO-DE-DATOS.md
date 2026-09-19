@@ -262,7 +262,7 @@ erDiagram
 | `comunidad_id`           | UUID                    | **Opcional desde [00111]**                                  |
 | `telefono_contacto`      | VARCHAR(20) NOT NULL    | Telefono donde ubicar al paciente, no necesariamente suyo ([00093]) |
 | `idioma`                 | VARCHAR(30) NOT NULL    | FK a `idiomas(codigo)` desde [00110]; antes era enum        |
-| `dpi`                    | VARCHAR(20) UNIQUE      | Opcional: mucha poblacion rural no lo tiene. 13 digitos exactos por CHECK desde [00132] |
+| `dpi`                    | VARCHAR(20) UNIQUE      | Opcional: mucha poblacion rural no lo tiene. 13 digitos exactos por CHECK desde [00132], NOT VALID: obliga a lo nuevo y a lo editado, no a los DPI anteriores |
 | `tipo_sangre`            | `tipo_sanguineo`        | [+00035]                                                    |
 | `nombre_responsable`     | VARCHAR(150)            | [+00035]                                                    |
 | `parentesco_responsable` | VARCHAR(50)             | [+00035]                                                    |
@@ -315,7 +315,7 @@ Registro de deduplicacion. `paciente_absorbido_id` (UNIQUE: no se absorbe dos ve
 | `responsable_id`       | UUID NOT NULL               | Perfil a cargo                            |
 | `proyecto_id`          | UUID                        | Opcional                                  |
 | `estado`               | `estado_jornada` NOT NULL   | `planificada`/`en curso`/`finalizada`/`cancelada` |
-| `presupuesto_asignado` | NUMERIC(12,2) NOT NULL      | Suma de `jornada_presupuesto_origen` [00132]; no se escribe a mano |
+| `presupuesto_asignado` | NUMERIC(12,2) NOT NULL      | Suma de `jornada_presupuesto_origen` [00134]; no se escribe a mano |
 | `codigo`               | VARCHAR(30) UNIQUE          | [+00036]                                  |
 | `fecha_inicio_real`    | TIMESTAMPTZ                 | [+00036] Cuando de verdad empezo          |
 | `fecha_fin_real`       | TIMESTAMPTZ                 | [+00036]                                  |
@@ -573,7 +573,7 @@ no `pg_cron`.
 | `registrado_por`    | UUID                        | Antes `registrada_por` [renombrada 00091] |
 | `proyecto_id`       | UUID                        | [+00097] A que proyecto se destina       |
 
-### `jornada_presupuesto_origen` [00132]
+### `jornada_presupuesto_origen` [00134]
 
 De donde viene cada parte del presupuesto de una jornada (issue #840): `origen`
 (`origen_de_presupuesto`: `donacion`, `fondos_propios`, `aporte_externo`, `sin_clasificar`),
@@ -581,7 +581,7 @@ De donde viene cada parte del presupuesto de una jornada (issue #840): `origen`
 registrada), `monto` (> 0), `descripcion`, `registrado_por` (lo fija `auth.uid()`).
 `jornadas.presupuesto_asignado` es la suma de estas filas y la mantiene un trigger; un UPDATE
 directo de esa columna se rechaza. Lo asignado desde una donacion no puede pasar de su monto
-total en ninguna combinacion de jornadas. El presupuesto que existia antes de la 00132, y el de
+total en ninguna combinacion de jornadas. El presupuesto que existia antes de la 00134, y el de
 un INSERT de jornada que ya lo traia, entran como `sin_clasificar`.
 
 ### `donacion_detalle` [00022]
@@ -590,7 +590,7 @@ un INSERT de jornada que ya lo traia, entran como `sin_clasificar`.
 medicamentos, la linea del detalle apunta al lote que se creo en inventario. La unicidad es lo que
 impide que dos donaciones reclamen el mismo lote.
 
-`medicamento_id` [+00132]: el medicamento del catalogo. `fn_registrar_donacion` lo exige en cada
+`medicamento_id` [+00134]: el medicamento del catalogo. `fn_registrar_donacion` lo exige en cada
 renglon de una donacion de medicamentos y arma `descripcion` y `unidad` (la presentacion) desde el
 catalogo; los otros tipos lo dejan en NULL y siguen en texto libre. Con el, el ingreso a
 inventario desde la donacion ya no vuelve a preguntar el medicamento.
@@ -959,7 +959,7 @@ de condiciones cronicas en `apps/mobile`, alcance ya decidido en la issue #122.
 | --- | --- | --- | --- | --- |
 | nombre / fecha / comunidad_id / responsable_id / proyecto_id | Si | Si (alta+edicion) | Si | — |
 | estado | Si (chip/kanban) | Si, vía kanban y "Cerrar jornada" (no formulario) | Si | — |
-| presupuesto_asignado | Si (`DetalleJornadaPage.jsx`, solo lectura) | Derivado: suma de `jornada_presupuesto_origen` (00132, #840) | Si | Resuelto. Ver nota abajo |
+| presupuesto_asignado | Si (`DetalleJornadaPage.jsx`, solo lectura) | Derivado: suma de `jornada_presupuesto_origen` (00134, #840) | Si | Resuelto. Ver nota abajo |
 | cupo_estimado | Si | Si (alta+edicion) | Si | Resuelto (#756) |
 | botiquin_bodega_id | Si, resuelto a nombre | Si (alta+edicion), solo bodegas moviles | Si | Resuelto (#756) |
 | codigo | Si (`DetalleJornadaPage.jsx`, antes siempre "—") | **Generado por el servidor**, migracion `00126` | n/a | Resuelto en esta misma issue: ver nota tecnica abajo |
@@ -983,7 +983,7 @@ formulario (`ModalJornada.jsx`): `cupoEstimado` con `NumberField`, `botiquinBode
 cualquier bodega del catalogo-. `DetalleJornadaPage.jsx` ya mostraba `cupoEstimado`; se agrega
 `botiquinBodega`, embebido por nombre en `obtenerJornada()` igual que `comunidad`/`responsable`.
 
-**`presupuesto_asignado` (issue #840)**: dejo de escribirse. Desde la 00132 es la suma de los
+**`presupuesto_asignado` (issue #840)**: dejo de escribirse. Desde la 00134 es la suma de los
 aportes de `jornada_presupuesto_origen`, que se registran y se quitan en la pestaña Presupuesto de
 `DetalleJornadaPage.jsx` (`useOrigenesDePresupuesto`, `presupuestos/origenes.api.js`). El resumen
 lo muestra de solo lectura. `asignarPresupuestoJornada()` y la accion `asignarPresupuesto` de

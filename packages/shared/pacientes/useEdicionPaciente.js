@@ -141,6 +141,14 @@ export function useEdicionPaciente(paciente, { rol } = {}) {
     registrarComunidad,
     erroresComunidad,
     creandoComunidad,
-    catalogos: { ...catalogosDeTerritorio, idiomas, sexo: OPCIONES_SEXO },
+    // Claves explicitas y no `...catalogosDeTerritorio`: useEdicionPaciente.catalogos.test.js lee
+    // esta linea para comprobar que cada selector tiene su catalogo (issue #699).
+    catalogos: {
+      departamentos: catalogosDeTerritorio.departamentos,
+      municipios: catalogosDeTerritorio.municipios,
+      comunidades: catalogosDeTerritorio.comunidades,
+      idiomas,
+      sexo: OPCIONES_SEXO,
+    },
   };
 }

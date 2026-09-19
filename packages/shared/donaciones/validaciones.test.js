@@ -144,7 +144,7 @@ describe("validarDonacion", () => {
       tipo: TIPOS_DE_DONACION.MEDICAMENTOS,
       fecha: hoy(),
       // Desde la #840 el renglon elige un medicamento del catalogo: sin descripcion ni unidad,
-      // que las pone fn_registrar_donacion desde el catalogo (00132).
+      // que las pone fn_registrar_donacion desde el catalogo (00134).
       detalles: [{ medicamentoId: "med-1", cantidad: 120 }],
     });
 

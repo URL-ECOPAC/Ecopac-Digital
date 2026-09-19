@@ -18,7 +18,7 @@ import { registrarDonacion } from "./registro.api.js";
  * Antes de la #635 el campo se llamaba `concepto` -que ni `validarDonacion()` ni
  * `donacion_detalle` reconocen- y no existia `unidad`, asi que `validarDonacion()` habria
  * rechazado cualquier renglon con "falta descripcion" sin importar lo que la persona hubiera
- * escrito. `medicamentoId` es `donacion_detalle.medicamento_id` desde la 00132 (issue #840): en
+ * escrito. `medicamentoId` es `donacion_detalle.medicamento_id` desde la 00134 (issue #840): en
  * una donacion de medicamentos se elige del catalogo, se guarda con el renglon, y el paso de
  * generar el ingreso de inventario lo recibe ya elegido. Ese paso pide su propia fecha de
  * vencimiento -no hay un campo `fechaVencimiento` aqui: pedirla dos veces era confuso y esta

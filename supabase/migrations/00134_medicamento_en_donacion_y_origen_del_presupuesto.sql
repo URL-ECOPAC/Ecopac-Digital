@@ -33,7 +33,7 @@ CREATE INDEX idx_donacion_detalle_medicamento_id ON donacion_detalle (medicament
 
 COMMENT ON COLUMN donacion_detalle.medicamento_id IS
   'Medicamento del catalogo que se dono (issue #840). Obligatorio para las donaciones de '
-  'medicamentos registradas desde la 00132 -lo exige fn_registrar_donacion-, NULL para los otros '
+  'medicamentos registradas desde la 00134 -lo exige fn_registrar_donacion-, NULL para los otros '
   'tipos y para las donaciones de medicamentos anteriores, que se capturaban como texto libre. '
   'Con el, el ingreso a inventario desde la donacion ya no pide volver a elegir el medicamento.';
 
@@ -125,7 +125,7 @@ COMMENT ON FUNCTION fn_registrar_donacion(UUID, tipo_donacion, DATE, JSONB, UUID
   'Inserta una donacion y todos sus renglones de donacion_detalle en una sola transaccion '
   '(issue #635). registrado_por sale de auth.uid(). No es SECURITY DEFINER: la politica de '
   'INSERT de donaciones y donacion_detalle sigue decidiendo quien puede llamarla. Devuelve '
-  '{ donacion, detalleIds }, con los ids en el mismo orden que p_detalle. Desde la 00132 '
+  '{ donacion, detalleIds }, con los ids en el mismo orden que p_detalle. Desde la 00134 '
   '(issue #840) cada renglon de una donacion de medicamentos exige medicamentoId, y su '
   'descripcion y su unidad salen del catalogo, no del texto que mande el cliente.';
 
@@ -186,7 +186,7 @@ COMMENT ON TABLE jornada_presupuesto_origen IS
 COMMENT ON COLUMN jornada_presupuesto_origen.origen IS
   'donacion: sale de una donacion de dinero (donacion_id). fondos_propios: dinero de la '
   'organizacion. aporte_externo: otra fuente que no pasa por el registro de donaciones. '
-  'sin_clasificar: el presupuesto que existia antes de la 00132, o el de un INSERT de jornada '
+  'sin_clasificar: el presupuesto que existia antes de la 00134, o el de un INSERT de jornada '
   'que traia el monto ya puesto.';
 COMMENT ON COLUMN jornada_presupuesto_origen.donacion_id IS
   'La donacion de dinero de la que sale el monto. Obligatoria si y solo si origen = donacion.';

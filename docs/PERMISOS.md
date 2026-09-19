@@ -305,7 +305,7 @@ reabrir una jornada finalizada **solo al administrador**. Reflejo en el cliente:
 | `proyecto_seguimiento`      | C R           | R (solo junta directiva)         | —                | —                  | `00053`                                                           |
 | `proyecto_estado_historial` | R             | —                                | —                | —                  | `00039`                                                           |
 | `gastos`                    | C R **A**     | R                                | C R si participa | C R si participa   | `00052`. Unica tabla donde `socio fundador` aparece por su nombre |
-| `jornada_presupuesto_origen` | C R U D      | R                                | —                | —                  | `00132`. Escribir admite tambien `tiene_permiso('jornadas.gestionar')`, igual que actualizar la jornada; su lectura tambien, por el `INSERT ... RETURNING` |
+| `jornada_presupuesto_origen` | C R U D      | R                                | —                | —                  | `00134`. Escribir admite tambien `tiene_permiso('jornadas.gestionar')`, igual que actualizar la jornada; su lectura tambien, por el `INSERT ... RETURNING` |
 
 `jornada_presupuesto_origen` (issue #840) dice de donde viene cada parte del presupuesto de una
 jornada: una donacion de dinero, fondos propios o un aporte externo. `jornadas.presupuesto_asignado`
@@ -330,7 +330,7 @@ inserta el propio administrador, sin ajuste de existencias: un gasto no mueve in
 | ------------------ | ------------- | -------------------------------- | ------ | ------------------ | --------------------------------------------------------- |
 | `donantes`         | C R U         | R                                | —      | —                  | `00083` + `00086` (registrar Y SU LECTURA admiten `tiene_permiso('donaciones.registrar')`, mismo motivo que `proyectos`: `registrarDonante()` hace `.insert().select()`). `es_administrador()` escribe, `es_consultivo()` o el permiso fino leen |
 | `donaciones`       | C R U         | R                                | —      | —                  | `00083` + `00086`, mismo cambio. La anulacion (UPDATE) exige `estado = 'anulada'` y `motivo_anulacion` |
-| `donacion_detalle` | C R           | R                                | —      | —                  | `00083` + `00086`, mismo cambio. Sin UPDATE para nadie: el detalle no se corrige, se anula la donacion completa. Desde la `00132` el renglon de una donacion de medicamentos lleva `medicamento_id`, que exige `fn_registrar_donacion` (INVOKER: no cambia quien puede escribir) |
+| `donacion_detalle` | C R           | R                                | —      | —                  | `00083` + `00086`, mismo cambio. Sin UPDATE para nadie: el detalle no se corrige, se anula la donacion completa. Desde la `00134` el renglon de una donacion de medicamentos lleva `medicamento_id`, que exige `fn_registrar_donacion` (INVOKER: no cambia quien puede escribir) |
 
 Hasta la `00083`, las tres tablas estaban **denegadas a los cinco roles, incluido el
 administrador**, por dos motivos independientes que detalla la Divergencia 1 (resuelta).
@@ -444,7 +444,7 @@ su rol no tiene, sin cambiarle el rol.**
 
 | Permiso                       | Por defecto lo tienen                          | Gobierna alguna politica?                                                             |
 | ----------------------------- | ----------------------------------------------- | -------------------------------------------------------------------------------------- |
-| `jornadas.gestionar`          | administrador                                  | **Si** — INSERT y UPDATE de `jornadas` (`00039`); escritura y lectura de `jornada_presupuesto_origen` (`00132`) |
+| `jornadas.gestionar`          | administrador                                  | **Si** — INSERT y UPDATE de `jornadas` (`00039`); escritura y lectura de `jornada_presupuesto_origen` (`00134`) |
 | `presupuestos.registrar`      | administrador                                  | **Si** — INSERT de `gastos` (`00052`)                                                |
 | `presupuestos.aprobar`        | administrador                                  | **Si** — UPDATE de `gastos` (`00052`)                                                |
 | `pacientes.editar`            | administrador, medico                          | **Si** — UPDATE de `pacientes` y `expedientes` (`00086`)                             |

@@ -9,6 +9,7 @@
 import { describe, expect, it } from "vitest";
 
 import { CATEGORIAS_DE_GASTO, ORIGENES_DE_PRESUPUESTO } from "../enums.js";
+import { fechaLocalISO } from "../formato/fechas.js";
 import { validarGasto, validarOrigenDePresupuesto } from "./validaciones.js";
 
 // Issue #840, bloque D: el presupuesto de una jornada se forma con aportes de origen conocido.
@@ -58,14 +59,17 @@ describe("validarOrigenDePresupuesto", () => {
   });
 });
 
+// Dia LOCAL (issue #840). Con toISOString() esta prueba fallaba cada tarde en Guatemala: despues
+// de las 18:00 el dia UTC ya es manana, y el gasto "de hoy" salia en el futuro. Pasaba en el CI solo
+// porque el CI corre en UTC; con TZ fijado (vitest.config.js) se vio.
 function hoy() {
-  return new Date().toISOString().split("T")[0];
+  return fechaLocalISO();
 }
 
 function enDias(dias) {
   const fecha = new Date();
   fecha.setDate(fecha.getDate() + dias);
-  return fecha.toISOString().split("T")[0];
+  return fechaLocalISO(fecha);
 }
 
 const jornadaConPresupuesto = {

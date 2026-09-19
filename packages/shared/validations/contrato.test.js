@@ -34,8 +34,9 @@ import {
   validarCondicionCronica,
 } from "../pacientes/condiciones.validaciones.js";
 import { validarCambioDeTriaje, validarTriaje } from "../pacientes/triaje.validaciones.js";
-import { validarPaciente, validarRegistroPaciente } from "../pacientes/validaciones.js";
-import { validarGasto } from "../presupuestos/validaciones.js";
+// validarPaciente se retiro en la #699: el unico formulario de paciente es el de registro.
+import { validarRegistroPaciente } from "../pacientes/validaciones.js";
+import { validarGasto, validarOrigenDePresupuesto } from "../presupuestos/validaciones.js";
 import { validarProyecto } from "../proyectos/validaciones.js";
 import { validarComunidad } from "../territorio/comunidades.validaciones.js";
 import {
@@ -65,8 +66,9 @@ const VALIDADORES = [
   ["validarCondicionCatalogo", validarCondicionCatalogo],
   ["validarTriaje", validarTriaje],
   ["validarCambioDeTriaje", validarCambioDeTriaje],
-  ["validarPaciente", validarPaciente],
   ["validarRegistroPaciente", validarRegistroPaciente],
+  // Issue #840: el aporte al presupuesto de una jornada.
+  ["validarOrigenDePresupuesto", validarOrigenDePresupuesto],
   ["validarProyecto", validarProyecto],
   ["validarComunidad", validarComunidad],
   ["validarPerfil", validarPerfil],
