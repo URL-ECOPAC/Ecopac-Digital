@@ -1,9 +1,18 @@
 name: Alertas de vencimiento
 
 # Dispara diariamente la Edge Function alertas-vencimiento (issue #166, RF-19), que genera una
-# alerta pendiente por cada lote con existencia positiva que vence en 30 dias o menos. El
-# proyecto esta en el plan gratuito de Supabase, que no incluye pg_cron: este workflow es el
-# cron externo que reemplaza esa pieza.
+# alerta pendiente por cada lote con existencia positiva que vence en 30 dias o menos, o que ya
+# vencio (00129, issue #838). El proyecto esta en el plan gratuito de Supabase, que no incluye
+# pg_cron: este workflow es el cron externo que reemplaza esa pieza.
+#
+# CORREO (issue #755)
+#
+# Cada alerta nueva notifica a la administracion en su buzon y por correo. El correo sale en el
+# momento por el webhook de pg_net (00138); esta corrida ademas reintenta el que haya quedado
+# pendiente, y la respuesta trae `correo`, `correosEnviados` y `correosFallidos`, que el resumen
+# de abajo muestra. `correo: "sin configurar"` no es un fallo de este workflow: significa que la
+# Edge Function no tiene SMTP_HOST, SMTP_FROM o WEB_URL. Esos valores NO son secrets de GitHub:
+# son secrets de la funcion en Supabase (`supabase secrets set`), ver docs/CI-CD.md.
 #
 # DONDE CORRE ESTE CRON, QUE NO ES DONDE VIVE EL ARCHIVO (issue #167)
 #
@@ -55,7 +64,8 @@ jobs:
       # El resultado se guarda en vez de dejarlo solo en el log del paso: el criterio de la issue
       # #167 es que cada ejecucion deje registro de COMO le fue, y "cuantas alertas genero" es el
       # dato que dice si la rutina esta trabajando o devolviendo cero todos los dias por un
-      # problema de datos. La funcion responde {"alertasGeneradas": n}.
+      # problema de datos. La funcion responde {"alertasGeneradas": n, "correo": "...",
+      # "correosEnviados": n, "correosFallidos": n} (issue #755).
       #
       # --fail-with-body imprime el cuerpo antes de salir con codigo != 0, asi que un 500 de la
       # funcion deja su mensaje en el resumen en lugar de un "exit 22" pelado.
