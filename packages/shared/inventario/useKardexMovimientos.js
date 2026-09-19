@@ -1,5 +1,6 @@
 import { useState, useCallback, useMemo, useEffect } from "react";
 
+import { aFechaLocal } from "../formato/fechas.js";
 import { listarMovimientos } from "./movimientos.api.js";
 
 // tipo_movimiento ENUM: 'ingreso', 'salida'
@@ -44,6 +45,42 @@ export function filasDeKardex(datos, medicamentoId) {
     aprobado_por_nombre: nombreDe(mov.aprobadoPor),
     bodega_nombre: mov.bodega?.nombre ?? null,
   }));
+}
+
+/**
+ * Filtra movimientos cuyo created_at cae en [fechaDesde, fechaHasta] (ambos "AAAA-MM-DD",
+ * inclusive, en hora local). Pura y exportada aparte del hook por la misma razon que
+ * filasDeKardex(): sin esto, fechaDesde/fechaHasta -lo que manda un <input type="date">- se leian
+ * con `new Date(cadena)`, que interpreta "AAAA-MM-DD" como medianoche UTC y corre el rango un dia
+ * en Guatemala (UTC-6, issue #725).
+ *
+ * @param {object[]} movimientos
+ * @param {string} [fechaDesde]
+ * @param {string} [fechaHasta]
+ */
+export function filtrarPorRangoDeFecha(movimientos, fechaDesde, fechaHasta) {
+  let resultado = movimientos;
+
+  if (fechaDesde) {
+    const desde = aFechaLocal(fechaDesde);
+    resultado = resultado.filter((m) => aFechaLocal(m.created_at) >= desde);
+  }
+
+  if (fechaHasta) {
+    const hasta = aFechaLocal(fechaHasta);
+    const finDelDia = new Date(
+      hasta.getFullYear(),
+      hasta.getMonth(),
+      hasta.getDate(),
+      23,
+      59,
+      59,
+      999,
+    );
+    resultado = resultado.filter((m) => aFechaLocal(m.created_at) <= finDelDia);
+  }
+
+  return resultado;
 }
 
 /**
@@ -119,17 +156,11 @@ export function useKardexMovimientos({ loteId = null, medicamentoId = null }) {
 
   // ─── APLICAR FILTROS ───
   const movimientosFiltrados = useMemo(() => {
-    let resultado = [...movimientosConSaldo];
-
-    if (filtros.fechaDesde) {
-      const desde = new Date(filtros.fechaDesde);
-      resultado = resultado.filter((m) => new Date(m.created_at) >= desde);
-    }
-    if (filtros.fechaHasta) {
-      const hasta = new Date(filtros.fechaHasta);
-      hasta.setHours(23, 59, 59);
-      resultado = resultado.filter((m) => new Date(m.created_at) <= hasta);
-    }
+    let resultado = filtrarPorRangoDeFecha(
+      movimientosConSaldo,
+      filtros.fechaDesde,
+      filtros.fechaHasta,
+    );
 
     if (filtros.tipoMovimiento && filtros.tipoMovimiento !== "todos") {
       resultado = resultado.filter((m) => m.tipo === filtros.tipoMovimiento);

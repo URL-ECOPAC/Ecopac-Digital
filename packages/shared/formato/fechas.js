@@ -96,6 +96,23 @@ export function esFechaValida(valor) {
 }
 
 /**
+ * "AAAA-MM-DD" a partir de los componentes locales, sin pasar por UTC.
+ *
+ * `new Date().toISOString().slice(0, 10)` da la fecha en UTC: entre las 18:00 y la medianoche en
+ * Guatemala (UTC-6) esto adelanta un dia (issue #725). Es el reemplazo para escribir "hoy" en una
+ * columna DATE o en un <input type="date">.
+ *
+ * @param {Date|string|number} [valor] Por omision, ahora mismo.
+ * @returns {string} `"2026-08-18"`, o cadena vacia si el valor no es una fecha.
+ */
+export function aCadenaFechaLocal(valor = new Date()) {
+  const fecha = aFechaLocal(valor);
+  if (!fecha) return "";
+
+  return `${fecha.getFullYear()}-${conDosDigitos(fecha.getMonth() + 1)}-${conDosDigitos(fecha.getDate())}`;
+}
+
+/**
  * Dia de calendario de una fecha, como milisegundos UTC de su medianoche.
  *
  * Se compara por dia y no por milisegundos reales para que un cambio de horario de verano -que

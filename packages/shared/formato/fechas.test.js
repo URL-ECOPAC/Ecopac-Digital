@@ -10,7 +10,9 @@
 
 import { describe, expect, it } from "vitest";
 
+import { conZonaHorariaDeGuatemala } from "../pruebas/zonaHoraria.js";
 import {
+  aCadenaFechaLocal,
   aFechaLocal,
   calcularEdad,
   diasHastaVencimiento,
@@ -171,6 +173,32 @@ describe("diasHastaVencimiento", () => {
   it("devuelve null si la fecha no sirve", () => {
     expect(diasHastaVencimiento(null, "2026-08-18")).toBeNull();
     expect(diasHastaVencimiento("2026-08-18", "")).toBeNull();
+  });
+});
+
+describe("aCadenaFechaLocal", () => {
+  it("da AAAA-MM-DD por componentes locales, con ceros a la izquierda", () => {
+    expect(aCadenaFechaLocal(new Date(2026, 0, 5))).toBe("2026-01-05");
+    expect(aCadenaFechaLocal(new Date(2026, 7, 18))).toBe("2026-08-18");
+  });
+
+  it("da cadena vacia si el valor no es una fecha", () => {
+    expect(aCadenaFechaLocal(null)).toBe("");
+    expect(aCadenaFechaLocal("no es una fecha")).toBe("");
+  });
+
+  describe("el borde de las 18:00 en Guatemala (issue #725)", () => {
+    conZonaHorariaDeGuatemala();
+
+    it("no adelanta un dia por la noche, al contrario que toISOString().slice(0, 10)", () => {
+      // 15 de junio de 2026, 20:00 en Guatemala (UTC-6) = 16 de junio, 02:00 UTC. El bug que
+      // corrigio esta issue devolvia "2026-06-16": new Date().toISOString() siempre da la
+      // fecha en UTC.
+      const instante = new Date("2026-06-16T02:00:00Z");
+
+      expect(aCadenaFechaLocal(instante)).toBe("2026-06-15");
+      expect(instante.toISOString().slice(0, 10)).toBe("2026-06-16");
+    });
   });
 });
 
