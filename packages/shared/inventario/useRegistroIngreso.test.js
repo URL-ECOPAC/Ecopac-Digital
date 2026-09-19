@@ -102,11 +102,14 @@ describe("itemDesdeRenglonDeDonacion", () => {
       bodega_id: "",
       costo_unitario: "",
       donacionDetalleId: "det-1",
+      // Issue #840: el medicamento ya se eligio del catalogo al registrar la donacion.
+      medicamentoFijo: true,
     });
   });
 
-  it("sin medicamentoId en el renglon (no era obligatorio al registrar la donacion), lo deja vacio", () => {
+  it("sin medicamentoId en el renglon (donaciones anteriores a la 00135), lo deja vacio y elegible", () => {
     const item = itemDesdeRenglonDeDonacion({ donacionDetalleId: "det-2", cantidad: 10 });
     expect(item.medicamento_id).toBe("");
+    expect(item.medicamentoFijo).toBe(false);
   });
 });

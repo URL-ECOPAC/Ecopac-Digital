@@ -30,6 +30,7 @@ function erroresDeNegocioCondicion(datos, hoy) {
   const errores = {};
 
   if (!esTextoVacio(datos.fechaDiagnostico)) {
+    // aFechaLocal(): la columna es DATE, y new Date("AAAA-MM-DD") la lee en UTC (issue #840).
     const fecha = aFechaLocal(datos.fechaDiagnostico);
 
     if (fecha === null) {

@@ -258,6 +258,95 @@ export async function obtenerHistorialMedico(pacienteId, { rol, desde, hasta, li
 }
 
 /**
+ * Una atencion como UNA VISITA del historial clinico (issue #840, bloque F).
+ *
+ * aEventos() aplana la atencion en eventos sueltos -triaje, consulta, receta- que las pantallas
+ * pintaban como tres cosas hermanas. La vision del bloque F es la contraria: cada visita es una
+ * unidad, y trae DENTRO sus signos, su consulta y su receta. Esta funcion la arma con los mismos
+ * datos, sin otra consulta a la base.
+ *
+ * Cada parte es opcional: una visita puede tener solo signos (los tomo un voluntario y el
+ * paciente se fue), o consulta sin signos (no habia tensiometro), o consulta sin receta.
+ *
+ * @param {object} atencion Fila de atenciones con triajes y consultas embebidos.
+ * @returns {object|null}
+ */
+export function aVisita(atencion) {
+  if (!atencion) return null;
+
+  const eventos = aEventos(atencion);
+  const signos = eventos.find((evento) => evento.tipo === TIPOS_DE_EVENTO.TRIAJE) ?? null;
+  const recetas = eventos.filter((evento) => evento.tipo === TIPOS_DE_EVENTO.RECETA);
+  const consultas = eventos
+    .filter((evento) => evento.tipo === TIPOS_DE_EVENTO.CONSULTA)
+    .map((consulta) => ({
+      ...consulta,
+      recetas: recetas.filter((receta) => receta.consultaId === consulta.id),
+    }));
+  const [consulta = null] = consultas;
+  const cierre = eventos.find((evento) => evento.tipo === TIPOS_DE_EVENTO.CIERRE) ?? null;
+
+  return {
+    atencionId: atencion.id,
+    jornadaId: atencion.jornadaId ?? null,
+    jornada: atencion.jornada?.nombre ?? null,
+    comunidad: atencion.jornada?.comunidad?.nombre ?? null,
+    fecha: atencion.jornada?.fecha ?? atencion.createdAt ?? null,
+    iniciadaEn: atencion.createdAt ?? null,
+    // Los signos con el id del triaje: la correccion los actualiza por ese id.
+    signos: signos ? { id: signos.id, ...signos.signos } : null,
+    signosTomadosPor: signos?.profesional ?? null,
+    // Casi siempre hay una sola consulta por atencion. `consulta` es la primera, que es la que se
+    // edita desde la visita; `consultas` las conserva todas para no esconder ninguna.
+    consulta,
+    consultas,
+    recetas,
+    profesional: consulta?.profesional ?? signos?.profesional ?? null,
+    diagnosticoPrincipal: consulta?.diagnosticoPrincipal ?? null,
+    cerradaEn: atencion.cerradaEn ?? null,
+    motivoCierre: cierre?.motivoCierre ?? null,
+  };
+}
+
+/**
+ * Las visitas de un paciente, de la mas reciente a la mas antigua. Mismas columnas, mismo filtro
+ * de periodo y mismo chequeo de rol que obtenerHistorialMedico(): es el mismo historial, contado
+ * por visita en vez de por evento.
+ *
+ * @param {string} pacienteId
+ * @param {{ rol?: string, desde?: string, hasta?: string, jornadaId?: string }} [opciones]
+ *   `jornadaId` acota a la visita de esa jornada: atenciones es UNIQUE (paciente, jornada), asi
+ *   que hay a lo sumo una.
+ * @returns {Promise<{ visitas: object[], error: object|null }>}
+ */
+export async function obtenerVisitasDePaciente(pacienteId, { rol, desde, hasta, jornadaId } = {}) {
+  if (!pacienteId) return { visitas: [], error: null };
+
+  if (rol !== undefined && !puedeVerHistorial(rol)) {
+    return { visitas: [], error: null };
+  }
+
+  try {
+    let consulta = obtenerSupabase()
+      .from("atenciones")
+      .select(COLUMNAS_DEL_HISTORIAL)
+      .eq("paciente_id", pacienteId)
+      .order("created_at", { ascending: false });
+
+    if (jornadaId) consulta = consulta.eq("jornada_id", jornadaId);
+    if (desde) consulta = consulta.gte("created_at", desde);
+    if (hasta) consulta = consulta.lte("created_at", hasta);
+
+    const { data, error } = await consulta;
+    if (error) return { visitas: [], error: normalizarError(error) };
+
+    return { visitas: (data ?? []).map(aVisita), error: null };
+  } catch (error) {
+    return { visitas: [], error: normalizarError(error) };
+  }
+}
+
+/**
  * La atencion mas reciente de un paciente (issue #123), para mostrarla en el resumen de su
  * ficha sin traer el historial completo.
  *

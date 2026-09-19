@@ -156,6 +156,9 @@ export function useKardexMovimientos({ loteId = null, medicamentoId = null }) {
 
   // ─── APLICAR FILTROS ───
   const movimientosFiltrados = useMemo(() => {
+    // Los filtros son dias de calendario LOCALES ("AAAA-MM-DD") y created_at es un instante.
+    // filtrarPorRangoDeFecha() es la version pura y probada de lo que la #840 habia arreglado
+    // aqui dentro: misma correccion, un solo sitio donde vive (#849).
     let resultado = filtrarPorRangoDeFecha(
       movimientosConSaldo,
       filtros.fechaDesde,

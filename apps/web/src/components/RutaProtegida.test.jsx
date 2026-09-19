@@ -60,12 +60,31 @@ describe("RutaProtegida", () => {
     expect(screen.getByText(/pantalla de login/i)).toBeInTheDocument();
   });
 
-  it("muestra acceso denegado sin rol si hay sesion pero el perfil todavia no cargo", () => {
+  // Issue #840: esta prueba afirmaba lo contrario, y era el error que se veia un instante en cada
+  // inicio de sesion. Justo despues de SIGNED_IN hay usuario y todavia no hay perfil: se esta
+  // leyendo, no fallo.
+  it("mientras el perfil se esta leyendo espera, no niega el acceso", () => {
     useSesionCompartida.mockReturnValue({
       estadoRestauracion: "listo",
       haySesion: true,
       perfil: null,
       rol: null,
+      cargando: true,
+    });
+
+    renderConRuta({ roles: ["administrador"] });
+
+    expect(screen.getByText(/comprobando tu sesion/i)).toBeInTheDocument();
+    expect(screen.queryByText(/no se pudo confirmar tu rol/i)).not.toBeInTheDocument();
+  });
+
+  it("muestra acceso denegado sin rol si hay sesion y el perfil no se pudo leer", () => {
+    useSesionCompartida.mockReturnValue({
+      estadoRestauracion: "listo",
+      haySesion: true,
+      perfil: null,
+      rol: null,
+      cargando: false,
     });
 
     renderConRuta({ roles: ["administrador"] });

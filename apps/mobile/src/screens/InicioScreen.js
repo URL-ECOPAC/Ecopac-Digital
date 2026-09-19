@@ -42,7 +42,6 @@ function destinoDelModulo(modulo) {
 
   const RUTAS_POR_MODULO = {
     donaciones: ROUTES.DONACIONES,
-    presupuestos: ROUTES.PRESUPUESTOS,
     proyectos: ROUTES.PROYECTOS,
     colaboradores: ROUTES.COLABORADORES,
   };

@@ -143,16 +143,34 @@ describe("validarDonacion", () => {
       donanteId: "uuid-1",
       tipo: TIPOS_DE_DONACION.MEDICAMENTOS,
       fecha: hoy(),
-      detalles: [
-        {
-          descripcion: "Amoxicilina 500mg",
-          cantidad: 120,
-          unidad: "tabletas",
-        },
-      ],
+      // Desde la #840 el renglon elige un medicamento del catalogo: sin descripcion ni unidad,
+      // que las pone fn_registrar_donacion desde el catalogo (00135).
+      detalles: [{ medicamentoId: "med-1", cantidad: 120 }],
     });
 
     expect(errores).toEqual({});
+  });
+
+  it("un renglon de insumos sigue necesitando descripcion", () => {
+    const errores = validarDonacion({
+      donanteId: "uuid-1",
+      tipo: TIPOS_DE_DONACION.INSUMOS,
+      fecha: hoy(),
+      detalles: [{ cantidad: 5 }],
+    });
+
+    expect(errores.detalles_0_descripcion).toBeTruthy();
+  });
+
+  it("rechaza un renglon de medicamentos escrito como texto libre", () => {
+    const errores = validarDonacion({
+      donanteId: "uuid-1",
+      tipo: TIPOS_DE_DONACION.MEDICAMENTOS,
+      fecha: hoy(),
+      detalles: [{ descripcion: "Amoxicilina 500mg", cantidad: 120, unidad: "tabletas" }],
+    });
+
+    expect(errores.detalles_0_medicamentoId).toBeTruthy();
   });
 
   it("acepta insumos, que la version anterior no contemplaba", () => {

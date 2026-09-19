@@ -6,6 +6,7 @@
 // migracion (AGENTS.md, "Fuente de verdad").
 
 import { TIPOS_DE_CAMPO } from "../descriptores.js";
+import { camposDeEdicion } from "../formularios.js";
 import { ESTADOS_CONDICION_CRONICA, ETIQUETAS_ESTADO_CONDICION, opcionesDe } from "../enums.js";
 
 export const OPCIONES_ESTADO_CONDICION = opcionesDe(
@@ -56,10 +57,29 @@ export const CAMPOS_CONDICION_CRONICA = [
  * Correccion de un padecimiento ya asociado (issue #756): la ficha del paciente solo ofrecia
  * marcar un padecimiento como resuelto, sin forma de corregir la fecha de diagnostico o las notas
  * de un registro ya existente, pese a que actualizarCondicion() (condiciones.api.js) ya las
- * acepta. Sin `condicion` a proposito: cambiar a que condicion se refiere un registro no es una
- * correccion de datos, es otro hecho clinico distinto (se borra y se vuelve a asociar). Sin
- * `estado` tampoco: pasar a resuelta sigue siendo la accion dedicada marcarResuelta().
+ * acepta. `condicion` no se edita: cambiar a que condicion se refiere un registro no es una
+ * correccion de datos, es otro hecho clinico distinto (se borra y se vuelve a asociar). `estado`
+ * tampoco: pasar a resuelta sigue siendo la accion dedicada marcarResuelta().
+ *
+ * Los dos se ven, de solo lectura (issue #840, B1): es el mismo juego de campos que el alta.
  */
-export const CAMPOS_CORRECCION_CONDICION = CAMPOS_CONDICION_CRONICA.filter((campo) =>
-  ["fechaDiagnostico", "notas"].includes(campo.id),
-);
+export const CAMPOS_CORRECCION_CONDICION = camposDeEdicion(CAMPOS_CONDICION_CRONICA, [
+  "fechaDiagnostico",
+  "notas",
+]);
+
+/**
+ * Los valores con que se abre la correccion de un padecimiento.
+ *
+ * @param {object|null} condicion Una fila de obtenerCondicionesDelPaciente(): `condicion` ya es
+ *   el nombre, no el id.
+ * @returns {Record<string, unknown>} Indexado por los ids de CAMPOS_CORRECCION_CONDICION.
+ */
+export function valoresDeCorreccionDeCondicion(condicion) {
+  return {
+    condicion: condicion?.condicion ?? "",
+    fechaDiagnostico: condicion?.fechaDiagnostico ?? "",
+    estado: condicion?.estado ?? "",
+    notas: condicion?.notas ?? "",
+  };
+}

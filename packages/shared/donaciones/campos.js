@@ -131,6 +131,13 @@ export const CAMPOS_DONACION = [
     // valor de aqui nunca se guardaba en ningun lado.
     campos: [
       {
+        id: "medicamentoId",
+        label: "Medicamento",
+        tipo: TIPOS_DE_CAMPO.SELECT,
+        opcionesDesde: "medicamentos",
+        validacion: { requerido: false },
+      },
+      {
         id: "descripcion",
         label: "Descripción",
         tipo: TIPOS_DE_CAMPO.TEXTO,
@@ -158,6 +165,60 @@ export const CAMPOS_DONACION = [
     ],
   },
 ];
+
+function campoDeRenglon(id, cambios = {}) {
+  const base = CAMPOS_DONACION.find((campo) => campo.id === "detalles").campos.find(
+    (campo) => campo.id === id,
+  );
+  return { ...base, ...cambios, validacion: { ...base.validacion, ...cambios.validacion } };
+}
+
+/**
+ * Los campos de un renglon segun el tipo de donacion (issue #840).
+ *
+ * Hasta esta issue la pantalla decidia que dibujar con un `if` por tipo escrito en el JSX, y
+ * "servicios" no tenia ninguno: un renglon de servicios no se podia llenar. Ahora cada tipo
+ * declara sus campos aqui, y las dos apps los recorren igual.
+ *
+ * - medicamentos: se ELIGE un medicamento del catalogo (con alta en linea si falta) y se dice
+ *   cuantas unidades. No hay descripcion ni unidad: las pone fn_registrar_donacion desde el
+ *   catalogo (00135) -la unidad es la presentacion-, que es lo que la persona pidio: "ya se sabe
+ *   que son, se pone la cantidad".
+ * - insumos: texto libre, cantidad y unidad. No hay catalogo de insumos contra el que validar.
+ * - dinero: concepto y monto.
+ * - servicios: que se presto y, si se conoce, cuanto vale.
+ */
+export const CAMPOS_RENGLON_POR_TIPO_DE_DONACION = {
+  [TIPOS_DE_DONACION.MEDICAMENTOS]: [
+    campoDeRenglon("medicamentoId", { validacion: { requerido: true } }),
+    campoDeRenglon("cantidad", { label: "Cantidad (unidades)", validacion: { requerido: true } }),
+  ],
+  [TIPOS_DE_DONACION.INSUMOS]: [
+    campoDeRenglon("descripcion", { label: "Insumo" }),
+    campoDeRenglon("cantidad", { validacion: { requerido: true } }),
+    campoDeRenglon("unidad"),
+  ],
+  [TIPOS_DE_DONACION.DINERO]: [
+    campoDeRenglon("descripcion", { label: "Concepto" }),
+    campoDeRenglon("monto", { validacion: { requerido: true } }),
+  ],
+  [TIPOS_DE_DONACION.SERVICIOS]: [
+    campoDeRenglon("descripcion", { label: "Servicio prestado" }),
+    campoDeRenglon("monto", { label: "Valor estimado" }),
+  ],
+};
+
+/**
+ * @param {string} tipo Uno de TIPOS_DE_DONACION.
+ * @returns {object[]} Los descriptores del renglon para ese tipo.
+ */
+export function camposDeRenglonDeDonacion(tipo) {
+  const campos = CAMPOS_RENGLON_POR_TIPO_DE_DONACION[tipo];
+  // Un tipo que no esta en la tabla es un tipo nuevo del enum que nadie declaro aqui: tiene que
+  // reventar, no dibujar un renglon vacio como pasaba con "servicios".
+  if (!campos) throw new Error(`Tipo de donacion sin campos de renglon: ${tipo}`);
+  return campos;
+}
 
 /** Formulario de anulacion de una donacion (validarAnulacionDeDonacion, validaciones.js). */
 export const CAMPOS_ANULACION_DONACION = [

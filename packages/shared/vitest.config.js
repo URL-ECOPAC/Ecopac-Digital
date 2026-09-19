@@ -18,6 +18,12 @@ export default defineConfig({
     include: ["**/*.test.js"],
     exclude: ["**/node_modules/**"],
 
+    // La zona horaria de quien usa el sistema, fijada (issue #840). El CI corre en UTC, y en UTC
+    // `new Date().toISOString().slice(0, 10)` y el dia local coinciden: el defecto que guardaba
+    // las donaciones de la tarde con la fecha de manana no podia fallar en ninguna prueba. En
+    // UTC-6 si falla, y es la zona en la que de verdad se registra todo.
+    env: { TZ: "America/Guatemala" },
+
     // Guarda de cobertura de las validaciones (issue #219).
     //
     // POR QUE SOLO LAS VALIDACIONES

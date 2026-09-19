@@ -234,6 +234,21 @@ export const ETIQUETAS_TIPO_DONACION = Object.freeze({
   [TIPOS_DE_DONACION.SERVICIOS]: "Servicios",
 });
 
+/** `origen_de_presupuesto` (00135, issue #840): de donde sale una parte del presupuesto. */
+export const ORIGENES_DE_PRESUPUESTO = Object.freeze({
+  DONACION: "donacion",
+  FONDOS_PROPIOS: "fondos_propios",
+  APORTE_EXTERNO: "aporte_externo",
+  SIN_CLASIFICAR: "sin_clasificar",
+});
+
+export const ETIQUETAS_ORIGEN_PRESUPUESTO = Object.freeze({
+  [ORIGENES_DE_PRESUPUESTO.DONACION]: "Donación en dinero",
+  [ORIGENES_DE_PRESUPUESTO.FONDOS_PROPIOS]: "Fondos propios",
+  [ORIGENES_DE_PRESUPUESTO.APORTE_EXTERNO]: "Aporte externo",
+  [ORIGENES_DE_PRESUPUESTO.SIN_CLASIFICAR]: "Sin clasificar",
+});
+
 /** `estado_donacion` (00022_donantes_donaciones.sql). */
 export const ESTADOS_DE_DONACION = Object.freeze({
   REGISTRADA: "registrada",

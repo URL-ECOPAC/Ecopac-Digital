@@ -9,6 +9,8 @@
 // nombre que el barril reciba por varias estrellas queda ambiguo y ESM lo excluye
 // del namespace, que es lo que rompio la issue #365.
 export * from "./descriptores.js";
+// Un solo juego de campos para el alta y la edicion (issue #840, B1).
+export * from "./formularios.js";
 
 // Los enums del dominio, por el mismo motivo y con la misma regla (issue #397): cada valor de
 // enum nace aqui una sola vez, y no en el modulo que lo consume.

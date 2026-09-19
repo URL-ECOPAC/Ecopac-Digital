@@ -9,14 +9,15 @@ import { describe, expect, it } from "vitest";
 
 import { CAMPOS_TRIAJE } from "./campos.js";
 import {
-  SIGNOS_OPCIONALES,
-  advertenciasDeTriaje,
+  NIVELES_DE_AVISO,
+  avisosDeSignos,
   calcularImc,
+  haySignosCapturados,
   validarCambioDeTriaje,
   validarTriaje,
 } from "./triaje.validaciones.js";
 
-/** Triaje minimo valido: los tres signos que la tabla exige. */
+/** Un triaje con presion y frecuencia, que es lo que se toma casi siempre. */
 function triajeValido(cambios = {}) {
   return {
     presionSistolica: 120,
@@ -26,21 +27,17 @@ function triajeValido(cambios = {}) {
   };
 }
 
-// Vivian en useRegistroTriaje.test.js hasta la #699; se mudan con la funcion, que ahora comparte
-// archivo con la regla que acota el IMC.
+// calcularImc vive en este archivo desde la #699, junto a la regla que acota el IMC.
 describe("calcularImc", () => {
   it("usa la misma formula y el mismo redondeo que la columna generada de la 00013", () => {
     expect(calcularImc(70, 170)).toBe(24.2);
     expect(calcularImc(62, 155)).toBe(25.8);
   });
 
-  it("es null mientras falte peso o talla", () => {
+  it("es null mientras falte peso o talla, y nunca infinito", () => {
     expect(calcularImc(70, null)).toBeNull();
     expect(calcularImc(null, 170)).toBeNull();
     expect(calcularImc("", "")).toBeNull();
-  });
-
-  it("no devuelve infinito con talla cero ni con valores negativos", () => {
     expect(calcularImc(70, 0)).toBeNull();
     expect(calcularImc(-5, 170)).toBeNull();
   });
@@ -50,56 +47,32 @@ describe("calcularImc", () => {
   });
 });
 
-// La combinacion imposible de peso y talla (issue #699). Los dos valores pasan sus propios rangos
-// de CAMPOS_TRIAJE y aun asi el IMC que generaria la base es absurdo; hasta la 00132 eso mataba el
-// INSERT con un 22003 crudo delante de quien atiende.
-describe("peso y talla coherentes entre si", () => {
-  it("acepta la combinacion de un adulto normal", () => {
+describe("peso y talla coherentes entre si (issue #699)", () => {
+  it("acepta la combinacion de un adulto y la de un lactante", () => {
     expect(validarTriaje(triajeValido({ peso: 70, talla: 170 }))).toEqual({});
-  });
-
-  it("acepta la de un lactante, que es la que mas se parece a un error", () => {
     // 4 kg y 52 cm dan un IMC de 14,8: bajo, pero posible y real en jornada.
     expect(validarTriaje(triajeValido({ peso: 4, talla: 52 }))).toEqual({});
   });
 
-  it("rechaza la talla tecleada en metros, que es el error de captura tipico", () => {
-    // 70 kg con "1.62" (metros en vez de centimetros) da un IMC de 266.700,2.
-    const errores = validarTriaje(triajeValido({ peso: 70, talla: 1.62 }));
-
-    // talla ya cae por su propio rango minimo (30 cm), que es un mensaje mas util todavia.
-    expect(errores.talla).toBeTruthy();
+  it("la talla tecleada en metros cae por su propio rango minimo", () => {
+    expect(validarTriaje(triajeValido({ peso: 70, talla: 1.62 })).talla).toBeTruthy();
   });
 
-  it("rechaza una combinacion que pasa los dos rangos por separado pero no junta", () => {
-    // 70 kg y 30 cm: los dos valores son admisibles para CAMPOS_TRIAJE y para los CHECK de la
-    // 00013, y su IMC es 777,8. Es el caso que desbordaba la columna.
+  it("rechaza, sobre los dos campos, una combinacion que pasa los dos rangos por separado", () => {
     const errores = validarTriaje(triajeValido({ peso: 70, talla: 30 }));
 
     expect(errores.peso).toMatch(/masa corporal/i);
-    expect(errores.talla).toMatch(/centimetros/i);
+    expect(errores.talla).toBe(errores.peso);
   });
 
-  it("lo dice sobre los dos campos, que son los dos que se pueden corregir", () => {
-    const errores = validarTriaje(triajeValido({ peso: 400, talla: 60 }));
-
-    expect(errores.peso).toBe(errores.talla);
-  });
-
-  it("no opina cuando solo llega uno de los dos, que es lo que pasa en una correccion parcial", () => {
+  it("en una correccion solo opina si trae los dos", () => {
     expect(validarCambioDeTriaje({ talla: 30 })).toEqual({});
-    expect(validarCambioDeTriaje({ peso: 70 })).toEqual({});
-  });
-
-  it("en una correccion que trae los dos, si opina", () => {
-    const errores = validarCambioDeTriaje({ peso: 70, talla: 30 });
-
-    expect(errores.peso).toMatch(/masa corporal/i);
+    expect(validarCambioDeTriaje({ peso: 70, talla: 30 }).peso).toMatch(/masa corporal/i);
   });
 });
 
 describe("validarTriaje", () => {
-  it("acepta un triaje con solo los tres signos obligatorios", () => {
+  it("acepta presion y frecuencia sin nada mas", () => {
     // Es el caso de campo: sin glucometro, sin bascula y sin termometro.
     expect(validarTriaje(triajeValido())).toEqual({});
   });
@@ -110,28 +83,24 @@ describe("validarTriaje", () => {
     ).toEqual({});
   });
 
-  it("exige presion sistolica, diastolica y frecuencia cardiaca", () => {
-    // No es una decision de este archivo: son las tres columnas NOT NULL de la 00013.
-    const errores = validarTriaje({});
-
-    expect(Object.keys(errores).sort()).toEqual([
-      "frecuenciaCardiaca",
-      "presionDiastolica",
-      "presionSistolica",
-    ]);
+  // Issue #840 (B2, G2): ningun signo es obligatorio. En jornada muchas veces no hay tensiometro.
+  it("acepta un triaje con un solo signo, sin presion", () => {
+    expect(validarTriaje({ temperatura: 37.2 })).toEqual({});
+    expect(validarTriaje({ peso: 12.5, talla: 88 })).toEqual({});
   });
 
-  it("no exige ninguno de los cuatro opcionales", () => {
-    // Criterio de aceptacion 2: los signos parciales son un requisito de campo.
-    const errores = validarTriaje(triajeValido());
-
-    for (const opcional of SIGNOS_OPCIONALES) {
-      expect(errores[opcional]).toBeUndefined();
-    }
+  it("ningun campo del descriptor es obligatorio", () => {
+    expect(CAMPOS_TRIAJE.every((campo) => campo.validacion.requerido === false)).toBe(true);
   });
 
-  it("SIGNOS_OPCIONALES sale del descriptor y son exactamente cuatro", () => {
-    expect([...SIGNOS_OPCIONALES].sort()).toEqual(["glucosa", "peso", "talla", "temperatura"]);
+  it("un triaje sin ningun signo no se registra (chk_triajes_al_menos_un_signo, 00136)", () => {
+    expect(validarTriaje({})).toEqual({ signos: expect.any(String) });
+    expect(haySignosCapturados({ glucosa: "" })).toBe(false);
+  });
+
+  it("la presion va completa (chk_triajes_presion_completa, 00136)", () => {
+    expect(validarTriaje({ presionSistolica: 120 })).toHaveProperty("presionDiastolica");
+    expect(validarTriaje({ presionDiastolica: 80 })).toHaveProperty("presionSistolica");
   });
 
   it("rechaza un valor fisiologicamente imposible indicando el rango aceptado (criterio 1)", () => {
@@ -143,7 +112,7 @@ describe("validarTriaje", () => {
   });
 
   it("tolera que no le pasen nada", () => {
-    expect(validarTriaje(undefined)).toHaveProperty("presionSistolica");
+    expect(validarTriaje(undefined)).toHaveProperty("signos");
   });
 
   it("rechaza cada signo fuera de su rango, tomando el limite de CAMPOS_TRIAJE", () => {
@@ -205,24 +174,28 @@ describe("validarTriaje", () => {
     });
   });
 
-  it("precedencia: un valor ya rechazado por imposible no compite con la advertencia (criterio 2 vs 1)", () => {
-    // La glucosa de 3000 del issue: es un rechazo, no una advertencia con umbral de alarma.
+  it("el mensaje de lo imposible al guardar es el mismo que el aviso mientras se escribe", () => {
+    // G2: un solo mensaje por campo. Si fueran textos distintos, la persona veria dos avisos.
     const valores = triajeValido({ glucosa: 3000 });
+    const edad = { anios: 30, meses: 0 };
 
-    expect(validarTriaje(valores)).toHaveProperty("glucosa");
-    expect(advertenciasDeTriaje(valores, { anios: 30, meses: 0 })).toEqual({});
+    expect(validarTriaje(valores).glucosa).toBe(avisosDeSignos(valores, edad).glucosa.mensaje);
   });
 });
 
 describe("validarCambioDeTriaje", () => {
   it("una correccion de la glucosa no exige la presion que no viene", () => {
-    // En un UPDATE los obligatorios ya estan en la fila y no viajan.
     expect(validarCambioDeTriaje({ glucosa: 110 })).toEqual({});
   });
 
-  it("pero si viene un obligatorio vacio, lo rechaza", () => {
-    // Es un intento de vaciar una columna NOT NULL: mejor decirlo aqui que recibir un 23502.
-    expect(validarCambioDeTriaje({ presionSistolica: "" })).toHaveProperty("presionSistolica");
+  it("vaciar un signo ya no es un error: todos son opcionales desde la 00136", () => {
+    expect(validarCambioDeTriaje({ temperatura: "" })).toEqual({});
+  });
+
+  it("si la correccion trae las dos presiones, exige que vayan completas", () => {
+    expect(validarCambioDeTriaje({ presionSistolica: 120, presionDiastolica: "" })).toHaveProperty(
+      "presionDiastolica",
+    );
   });
 
   it("sin campos no reporta nada", () => {
@@ -233,43 +206,68 @@ describe("validarCambioDeTriaje", () => {
     expect(validarCambioDeTriaje({ glucosa: 3000 })).toHaveProperty("glucosa");
   });
 
-  it("no evalua coherencia de presion si la correccion trae solo una de las dos", () => {
-    // La otra presion ya esta en la fila y esta funcion no la lee (no toca la base). El valor de
-    // abajo (200) es el maximo valido de diastolica en solitario: sin la sistolica no hay con que
-    // compararlo.
+  it("no evalua la presion si la correccion trae solo una de las dos", () => {
+    // La otra presion ya esta en la fila y esta funcion no la lee (no toca la base).
     expect(validarCambioDeTriaje({ presionDiastolica: 200 })).toEqual({});
   });
 });
 
-describe("advertenciasDeTriaje", () => {
-  const pediatrico = { anios: 10, meses: 0, texto: "10 años" };
+describe("avisosDeSignos (issue #840, G2)", () => {
+  const lactante = { anios: 0, meses: 6, texto: "6 meses" };
+  const escolar = { anios: 8, meses: 0, texto: "8 años" };
   const adulto = { anios: 30, meses: 0, texto: "30 años" };
 
-  it("no advierte nada sobre un triaje normal", () => {
-    expect(advertenciasDeTriaje(triajeValido(), adulto)).toEqual({});
+  it("no avisa nada sobre un triaje normal", () => {
+    expect(avisosDeSignos(triajeValido(), adulto)).toEqual({});
   });
 
-  it("el mismo valor puede advertir en un tramo de edad y no en otro (criterio 3)", () => {
-    // 150 lpm: dentro del umbral pediatrico propuesto (60-160), fuera del umbral adulto (50-120).
-    const valores = triajeValido({ frecuenciaCardiaca: 150 });
+  // El caso de la issue: una sistolica de 35 decia primero "alarmante" y despues "mayor que 40".
+  it("una sistolica de 35 es imposible y solo imposible: un solo aviso, sin alarma", () => {
+    const avisos = avisosDeSignos(triajeValido({ presionSistolica: 35 }), adulto);
 
-    expect(advertenciasDeTriaje(valores, pediatrico)).toEqual({});
-    expect(advertenciasDeTriaje(valores, adulto)).toHaveProperty("frecuenciaCardiaca");
+    expect(avisos.presionSistolica.nivel).toBe(NIVELES_DE_AVISO.IMPOSIBLE);
+    expect(avisos.presionSistolica.mensaje).toContain("40");
   });
 
-  it("edad null (fecha de nacimiento invalida) cae al tramo adulto", () => {
+  it("un valor posible pero de alarma se avisa como alarma", () => {
+    // [AHA] crisis hipertensiva: sistolica > 180.
+    const avisos = avisosDeSignos(triajeValido({ presionSistolica: 190 }), adulto);
+    expect(avisos.presionSistolica.nivel).toBe(NIVELES_DE_AVISO.ALARMA);
+  });
+
+  it("el mismo valor avisa en un adulto y no en un lactante (PALS)", () => {
+    // 150 lpm: normal despierto en un lactante (100-180), alarma en un adulto (NEWS2 >= 111).
     const valores = triajeValido({ frecuenciaCardiaca: 150 });
-    expect(advertenciasDeTriaje(valores, null)).toHaveProperty("frecuenciaCardiaca");
+
+    expect(avisosDeSignos(valores, lactante)).toEqual({});
+    expect(avisosDeSignos(valores, adulto).frecuenciaCardiaca.nivel).toBe(NIVELES_DE_AVISO.ALARMA);
+  });
+
+  it("la sistolica minima pediatrica sigue la regla 70 + 2 x edad de PALS", () => {
+    // A los 8 anios el minimo es 86: 85 avisa, 86 no.
+    expect(avisosDeSignos({ presionSistolica: 85, presionDiastolica: 50 }, escolar)).toHaveProperty(
+      "presionSistolica",
+    );
+    expect(avisosDeSignos({ presionSistolica: 86, presionDiastolica: 50 }, escolar)).toEqual({});
+  });
+
+  it("38 grados es alarma en menores de 3 meses y no a los 6 meses (NICE NG143)", () => {
+    const recienNacido = { anios: 0, meses: 1 };
+    expect(avisosDeSignos({ temperatura: 38 }, recienNacido)).toHaveProperty("temperatura");
+    expect(avisosDeSignos({ temperatura: 38 }, lactante)).toEqual({});
+  });
+
+  it("edad null (fecha de nacimiento invalida) usa los umbrales de adulto", () => {
+    const valores = triajeValido({ frecuenciaCardiaca: 150 });
+    expect(avisosDeSignos(valores, null)).toHaveProperty("frecuenciaCardiaca");
   });
 
   it("exige el parametro de edad: no lo resuelve en silencio si no se lo pasan", () => {
-    // A diferencia de `null` (edad desconocida, documentado), omitir el parametro es un error de
-    // quien llama: no puede resolverse aplicando en silencio el tramo adulto a un lactante.
-    expect(() => advertenciasDeTriaje(triajeValido())).toThrow();
+    expect(() => avisosDeSignos(triajeValido())).toThrow();
   });
 
-  it("no reporta nada sobre un signo opcional ausente", () => {
-    expect(advertenciasDeTriaje(triajeValido(), adulto)).toEqual({});
+  it("no reporta nada sobre un signo ausente", () => {
+    expect(avisosDeSignos({}, adulto)).toEqual({});
   });
 });
 

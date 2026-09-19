@@ -1,87 +1,68 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 
 import {
   TIPOS_DE_CAMPO,
+  formatearFechaCorta,
   nombreCompletoDePaciente,
+  useConsulta,
   usePaciente,
-  useRegistroConsulta,
 } from "@ecopac/shared";
 import { colors, spacing, typography } from "@ecopac/ui-tokens";
 
 import {
   Card,
   ErrorState,
+  FormularioSignosVitales,
   LoadingState,
-  PrimaryButton,
   MultiSelector,
+  PrimaryButton,
   ScreenContainer,
   SecondaryButton,
   TextField,
 } from "../components";
 import { almacenamientoMovil } from "../almacenamiento";
 import { useJornadaActivaCompartida } from "../contexto/JornadaActivaProvider";
+import { useRegistroSinGuardar } from "../contexto/RegistroSinGuardarProvider";
 import { useSesionCompartida } from "../contexto/SesionProvider";
 import { ROUTES } from "../navigation/rutas";
 
-function CabeceraDeSignos({ signos }) {
-  if (!signos) {
-    return (
-      <Card title="Signos vitales" style={styles.tarjeta}>
-        <Text style={styles.textoTenue}>Este paciente no tiene triaje en esta jornada.</Text>
-      </Card>
-    );
-  }
-
-  const renglones = [
-    signos.presionSistolica && signos.presionDiastolica
-      ? `PA ${signos.presionSistolica}/${signos.presionDiastolica}`
-      : null,
-    signos.frecuenciaCardiaca ? `FC ${signos.frecuenciaCardiaca}` : null,
-    signos.temperatura ? `T ${signos.temperatura}` : null,
-    signos.glucosa ? `Glu ${signos.glucosa}` : null,
-    signos.peso ? `${signos.peso} kg` : null,
-    signos.imc ? `IMC ${signos.imc}` : null,
-  ].filter(Boolean);
-
-  return (
-    <Card title="Signos vitales" style={styles.tarjeta}>
-      <Text style={styles.signos}>{renglones.join("  ·  ")}</Text>
-    </Card>
-  );
-}
+// Id fijo: solo hay una consulta abierta a la vez.
+const ID_FORMULARIO = "consulta";
 
 /**
- * Diagnosticos de la consulta.
+ * La consulta como unidad del historial (issue #840, bloque F). Espejo de ModalConsulta.jsx.
  *
- * ISSUE #838: era un Selector mas una lista de filas con "Quitar" escrita a mano -- el
- * MultiSelector del catalogo hecho de nuevo, peor, y sin la salida que la web tiene desde la
- * #641: crear el diagnostico que falta sin salir de la consulta. Ahora es el componente del
- * catalogo, que ademas ya sabe elegir una opcion existente cuando se escribe su nombre.
+ * "Nueva consulta" y abrir una visita existente son la misma pantalla: dentro se registran, o no,
+ * los signos vitales; se registra la consulta; y se registra, o no, la receta. Reemplaza a
+ * TriajeScreen -no hay "Nuevo triaje": es lo mismo- y a la ConsultaScreen anterior, que tomaba
+ * los signos de otra pantalla y solo los mostraba.
  *
- * El primero de la lista es el diagnostico PRINCIPAL (asi lo guarda registrarConsulta), y eso
- * tiene que decirlo la pantalla: la nota de abajo es lo unico propio que queda aqui.
+ * Params: `pacienteId`, y `jornadaId` para abrir la visita de una jornada que no es la activa
+ * (desde el historial). Sin `jornadaId` es la jornada activa: si el paciente ya tiene visita en
+ * ella, se abre esa para completarla.
  */
-function Diagnosticos({ campo, valor, opciones, onChange, onCrear, deshabilitado }) {
-  const elegidos = valor ?? [];
-
+function Paso({ numero, titulo, descripcion, abierto, onAlternar, children }) {
   return (
-    <View>
-      <MultiSelector
-        label={campo.label}
-        value={elegidos}
-        options={opciones}
-        onChange={onChange}
-        onCrear={onCrear ?? undefined}
-        placeholder="Agregar diagnóstico"
-        placeholderLibre="Escribe uno que no esté en el catálogo"
-        disabled={deshabilitado}
-      />
-      {elegidos.length > 0 ? (
-        <Text style={styles.textoTenue}>El primero de la lista es el diagnóstico principal.</Text>
-      ) : null}
-    </View>
+    <Card style={styles.tarjeta}>
+      <Pressable
+        onPress={onAlternar}
+        style={styles.cabeceraPaso}
+        accessibilityRole="button"
+        accessibilityState={{ expanded: abierto }}
+      >
+        <View style={styles.numeroPaso}>
+          <Text style={styles.numeroPasoTexto}>{numero}</Text>
+        </View>
+        <View style={styles.tituloPasoCaja}>
+          <Text style={styles.tituloPaso}>{titulo}</Text>
+          {descripcion ? <Text style={styles.textoTenue}>{descripcion}</Text> : null}
+        </View>
+        <Text style={styles.textoTenue}>{abierto ? "Ocultar" : "Mostrar"}</Text>
+      </Pressable>
+      {abierto ? <View style={styles.cuerpoPaso}>{children}</View> : null}
+    </Card>
   );
 }
 
@@ -92,54 +73,45 @@ export default function ConsultaScreen() {
   const pacienteId = params?.pacienteId;
 
   const { paciente, cargando: cargandoPaciente } = usePaciente(pacienteId, { rol });
-  const { jornadaId, jornada } = useJornadaActivaCompartida();
+  const { jornadaId: jornadaActivaId, jornada } = useJornadaActivaCompartida();
+  const jornadaId = params?.jornadaId ?? jornadaActivaId;
+  const esLaActiva = jornadaId === jornadaActivaId;
 
-  const {
-    secciones,
-    valores,
-    error,
-    enviando,
-    preparando,
-    guardada,
-    signos,
-    bloqueo,
-    setCampo,
-    descartarBorrador,
-    guardar,
-    catalogos,
-    // Solo llega con rol si puedeAdministrarDiagnosticos(rol); el hook lo deja en null para el
-    // resto, y MultiSelector entonces no ofrece crear nada.
-    crearDiagnosticoNuevo,
-    errorDiagnostico,
-  } = useRegistroConsulta({
-    pacienteId,
-    expedienteId: paciente?.expediente?.id,
+  const c = useConsulta({
+    paciente,
     jornadaId,
-    estadoDeJornada: jornada?.estado,
+    estadoDeJornada: esLaActiva ? jornada?.estado : undefined,
     perfilId: perfil?.id,
     rol,
     almacenamiento: almacenamientoMovil,
   });
 
-  const [abiertas, setAbiertas] = useState(() => new Set([secciones[0]?.id]));
-
+  const [abiertos, setAbiertos] = useState(() => new Set(["signos", "consulta"]));
   const alternar = (id) =>
-    setAbiertas((anteriores) => {
+    setAbiertos((anteriores) => {
       const siguiente = new Set(anteriores);
       if (siguiente.has(id)) siguiente.delete(id);
       else siguiente.add(id);
       return siguiente;
     });
 
-  if (!bloqueo.puede) {
+  // Aviso de "hay cambios sin guardar" al cerrar sesion o salir (issue #110).
+  const { registrar, desregistrar } = useRegistroSinGuardar();
+  useEffect(() => {
+    if (!c.hayCambios) return undefined;
+    registrar(ID_FORMULARIO);
+    return () => desregistrar(ID_FORMULARIO);
+  }, [c.hayCambios, registrar, desregistrar]);
+
+  if (!jornadaId) {
     return (
       <ScreenContainer scrollable={false}>
-        <ErrorState message={bloqueo.motivo} />
+        <ErrorState message="No hay una jornada en curso asignada. La consulta se registra dentro de una jornada." />
       </ScreenContainer>
     );
   }
 
-  if ((cargandoPaciente && !paciente) || preparando) {
+  if (cargandoPaciente && !paciente) {
     return (
       <ScreenContainer scrollable={false}>
         <LoadingState />
@@ -147,98 +119,165 @@ export default function ConsultaScreen() {
     );
   }
 
-  if (guardada) {
-    return (
-      <ScreenContainer>
-        <Card title="Consulta registrada">
-          <Text style={styles.texto}>
-            Queda guardada para {nombreCompletoDePaciente(paciente) ?? "el paciente"}.
-          </Text>
-        </Card>
-        <PrimaryButton
-          title="Generar receta"
-          onPress={() =>
-            navigation.navigate(ROUTES.RECETA, { pacienteId, consultaId: guardada.id })
-          }
-        />
-        <SecondaryButton
-          title="Volver a la ficha"
-          onPress={() => navigation.navigate(ROUTES.FICHA_PACIENTE, { pacienteId })}
-          style={styles.accion}
-        />
-      </ScreenContainer>
-    );
-  }
+  const nombre = nombreCompletoDePaciente(paciente) ?? "Paciente";
+  const subtitulo = c.esNueva
+    ? (jornada?.nombre ?? "Nueva consulta")
+    : [formatearFechaCorta(c.visita?.fecha), c.visita?.jornada].filter(Boolean).join(" · ");
 
   return (
     <ScreenContainer>
-      <Text style={styles.paciente}>{nombreCompletoDePaciente(paciente) ?? "Paciente"}</Text>
-      {jornada?.nombre && <Text style={styles.jornada}>{jornada.nombre}</Text>}
+      <Text style={styles.paciente}>{nombre}</Text>
+      <Text style={styles.jornada}>{subtitulo}</Text>
 
-      <CabeceraDeSignos signos={signos} />
-
-      {error && (
+      {c.esNueva && !c.bloqueo.puede ? (
         <Card style={styles.tarjeta}>
-          <Text style={styles.textoError}>{error.mensaje}</Text>
+          <Text style={styles.textoAviso}>{c.bloqueo.motivo}</Text>
         </Card>
-      )}
+      ) : null}
 
-      {/* El fallo al crear un diagnostico nuevo va aparte del de guardar la consulta: no impide
-          seguir escribiendola, solo dice que ese diagnostico no entro al catalogo. */}
-      {errorDiagnostico && (
+      {c.error ? (
         <Card style={styles.tarjeta}>
-          <Text style={styles.textoError}>{errorDiagnostico.mensaje}</Text>
+          <Text style={styles.textoError}>{c.error.mensaje}</Text>
         </Card>
-      )}
+      ) : null}
 
-      {secciones.map((seccion) => {
-        const abierta = abiertas.has(seccion.id);
+      {c.guardadaAlMenosUnaVez && !c.error ? (
+        <Card style={styles.tarjeta}>
+          <Text style={styles.textoExito}>Consulta guardada.</Text>
+        </Card>
+      ) : null}
 
-        return (
-          <Card key={seccion.id} style={styles.tarjeta}>
-            <Pressable onPress={() => alternar(seccion.id)} style={styles.cabeceraSeccion}>
-              <Text style={styles.tituloSeccion}>{seccion.titulo}</Text>
-              <Text style={styles.textoTenue}>{abierta ? "Ocultar" : "Mostrar"}</Text>
-            </Pressable>
+      <Paso
+        numero="1"
+        titulo="Signos vitales"
+        descripcion="Opcionales: lo que se pudo medir."
+        abierto={abiertos.has("signos")}
+        onAlternar={() => alternar("signos")}
+      >
+        {!c.permisos.signos ? (
+          <Text style={styles.textoTenue}>
+            Tu rol no puede {c.visita?.signos ? "corregir" : "tomar"} los signos.
+          </Text>
+        ) : null}
+        <FormularioSignosVitales
+          campos={c.camposDeSignos}
+          valores={c.signos}
+          onChange={c.setSigno}
+          errores={c.errores.signos}
+          avisos={c.avisos}
+          imc={c.imc}
+          disabled={c.enviando || !c.permisos.signos}
+        />
+      </Paso>
 
-            {abierta &&
-              seccion.campos.map((campo) =>
-                campo.tipo === TIPOS_DE_CAMPO.MULTI_SELECT ? (
-                  <Diagnosticos
-                    key={campo.id}
-                    campo={campo}
-                    valor={valores[campo.id]}
-                    opciones={catalogos[campo.opcionesDesde] ?? []}
-                    onChange={(siguiente) => setCampo(campo.id, siguiente)}
-                    onCrear={crearDiagnosticoNuevo}
-                    deshabilitado={enviando}
+      <Paso
+        numero="2"
+        titulo="Consulta"
+        abierto={abiertos.has("consulta")}
+        onAlternar={() => alternar("consulta")}
+      >
+        {!c.permisos.consulta ? (
+          <Text style={styles.textoTenue}>
+            {c.visita?.consulta
+              ? "Solo quien registró la consulta, o la administración, puede cambiarla."
+              : "La consulta la registra el personal médico."}
+          </Text>
+        ) : null}
+        {c.errorDiagnostico ? (
+          <Text style={styles.textoError}>{c.errorDiagnostico.mensaje}</Text>
+        ) : null}
+        {c.seccionesDeConsulta.map((seccion) => (
+          <View key={seccion.id} style={styles.subseccion}>
+            <Text style={styles.tituloSubseccion}>{seccion.titulo}</Text>
+            {seccion.campos.map((campo) =>
+              campo.tipo === TIPOS_DE_CAMPO.MULTI_SELECT ? (
+                <View key={campo.id}>
+                  {/* Con un catalogo largo, el selector abre con busqueda (G4). */}
+                  <MultiSelector
+                    label={campo.label}
+                    value={c.consulta[campo.id] ?? []}
+                    options={c.catalogos[campo.opcionesDesde] ?? []}
+                    onChange={(elegidos) => c.setCampoDeConsulta(campo.id, elegidos)}
+                    onCrear={c.crearDiagnosticoNuevo ?? undefined}
+                    placeholder="Buscar un diagnóstico"
+                    placeholderLibre="Escribe uno que no esté en el catálogo"
+                    disabled={c.enviando || !c.permisos.consulta}
                   />
-                ) : (
-                  <TextField
-                    key={campo.id}
-                    label={campo.validacion?.requerido ? `${campo.label} *` : campo.label}
-                    value={valores[campo.id] ?? ""}
-                    onChangeText={(texto) => setCampo(campo.id, texto)}
-                    multiline
-                    numberOfLines={3}
-                    editable={!enviando}
-                  />
-                ),
-              )}
-          </Card>
-        );
-      })}
+                  {(c.consulta[campo.id] ?? []).length > 0 ? (
+                    <Text style={styles.textoTenue}>
+                      El primero de la lista es el diagnóstico principal.
+                    </Text>
+                  ) : null}
+                </View>
+              ) : (
+                <TextField
+                  key={campo.id}
+                  label={campo.validacion?.requerido ? `${campo.label} *` : campo.label}
+                  value={c.consulta[campo.id] ?? ""}
+                  onChangeText={(texto) => c.setCampoDeConsulta(campo.id, texto)}
+                  error={c.errores.consulta[campo.id]}
+                  multiline
+                  numberOfLines={3}
+                  editable={!c.enviando && c.permisos.consulta}
+                />
+              ),
+            )}
+          </View>
+        ))}
+      </Paso>
+
+      <Paso
+        numero="3"
+        titulo="Receta"
+        descripcion="Opcional. Se emite sobre la consulta guardada."
+        abierto
+        onAlternar={() => {}}
+      >
+        {c.receta.existentes.length > 0 ? (
+          c.receta.existentes.map((receta) => (
+            <Text key={receta.id} style={styles.texto}>
+              Receta {receta.folio ?? ""}
+              {receta.anulada ? " (anulada)" : ""}: {receta.medicamentos.length}{" "}
+              {receta.medicamentos.length === 1 ? "medicamento" : "medicamentos"}
+            </Text>
+          ))
+        ) : c.receta.puedeAgregar && !c.hayCambios ? (
+          <SecondaryButton
+            title="Agregar receta"
+            onPress={() =>
+              navigation.navigate(ROUTES.RECETA, { pacienteId, consultaId: c.receta.consultaId })
+            }
+          />
+        ) : (
+          <Text style={styles.textoTenue}>
+            {!c.permisos.receta
+              ? "La receta la emite el personal médico."
+              : c.receta.puedeAgregar
+                ? "Guarda los cambios antes de emitir la receta."
+                : "Primero guarda la consulta: la receta se emite sobre ella."}
+          </Text>
+        )}
+      </Paso>
 
       <PrimaryButton
         title="Guardar consulta"
-        onPress={guardar}
-        loading={enviando}
+        onPress={c.guardar}
+        loading={c.enviando}
+        disabled={!c.hayCambios}
         style={styles.accion}
       />
+      {c.esNueva ? (
+        <SecondaryButton
+          title="Descartar borrador"
+          onPress={c.descartarBorrador}
+          disabled={c.enviando}
+          style={styles.accion}
+        />
+      ) : null}
       <SecondaryButton
-        title="Descartar borrador"
-        onPress={descartarBorrador}
-        disabled={enviando}
+        title="Volver a la ficha"
+        onPress={() => navigation.navigate(ROUTES.FICHA_PACIENTE, { pacienteId })}
+        disabled={c.enviando}
         style={styles.accion}
       />
     </ScreenContainer>
@@ -248,43 +287,87 @@ export default function ConsultaScreen() {
 const styles = StyleSheet.create({
   paciente: {
     color: colors.text,
+    fontFamily: typography.fontFamilyBase,
     fontSize: typography.sizes.lg,
     fontWeight: typography.weights.semibold,
   },
   jornada: {
     color: colors.textMuted,
+    fontFamily: typography.fontFamilyBase,
     fontSize: typography.sizes.sm,
     marginBottom: spacing.sm,
   },
   tarjeta: {
     marginBottom: spacing.sm,
   },
-  cabeceraSeccion: {
+  cabeceraPaso: {
     alignItems: "center",
     flexDirection: "row",
-    justifyContent: "space-between",
+    gap: spacing.sm,
     minHeight: 48,
   },
-  tituloSeccion: {
+  numeroPaso: {
+    alignItems: "center",
+    backgroundColor: colors.primary,
+    borderRadius: spacing.md,
+    height: spacing.lg + spacing.xs,
+    justifyContent: "center",
+    width: spacing.lg + spacing.xs,
+  },
+  numeroPasoTexto: {
+    color: colors.surface,
+    fontFamily: typography.fontFamilyBase,
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.bold,
+  },
+  tituloPasoCaja: {
+    flex: 1,
+  },
+  tituloPaso: {
     color: colors.text,
+    fontFamily: typography.fontFamilyBase,
     fontSize: typography.sizes.md,
     fontWeight: typography.weights.semibold,
   },
-  signos: {
-    color: colors.text,
-    fontSize: typography.sizes.md,
+  cuerpoPaso: {
+    marginTop: spacing.md,
+  },
+  subseccion: {
+    marginBottom: spacing.sm,
+  },
+  tituloSubseccion: {
+    color: colors.textMuted,
+    fontFamily: typography.fontFamilyBase,
+    fontSize: typography.sizes.xs,
+    fontWeight: typography.weights.semibold,
+    marginBottom: spacing.xs,
+    textTransform: "uppercase",
   },
   texto: {
     color: colors.text,
+    fontFamily: typography.fontFamilyBase,
     fontSize: typography.sizes.sm,
   },
   textoTenue: {
     color: colors.textMuted,
+    fontFamily: typography.fontFamilyBase,
     fontSize: typography.sizes.sm,
   },
   textoError: {
     color: colors.danger,
+    fontFamily: typography.fontFamilyBase,
     fontSize: typography.sizes.sm,
+  },
+  textoAviso: {
+    color: colors.warning,
+    fontFamily: typography.fontFamilyBase,
+    fontSize: typography.sizes.sm,
+  },
+  textoExito: {
+    color: colors.success,
+    fontFamily: typography.fontFamilyBase,
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.semibold,
   },
   accion: {
     marginTop: spacing.sm,

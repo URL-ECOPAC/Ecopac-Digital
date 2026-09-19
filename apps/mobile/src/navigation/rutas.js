@@ -27,7 +27,6 @@ export const ROUTES = {
   FICHA_PACIENTE: "FichaPaciente",
   HISTORIAL_PACIENTE: "HistorialPaciente",
   REGISTRO_PACIENTE: "RegistroPaciente",
-  TRIAJE: "Triaje",
   CONSULTA: "Consulta",
   RECETA: "Receta",
 

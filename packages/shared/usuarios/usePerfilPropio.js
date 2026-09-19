@@ -6,7 +6,7 @@
 // lecturas de perfil que se resuelven a distinto ritmo (ver
 // apps/web/src/contexto/SesionProvider.jsx y docs/ARQUITECTURA-FRONTEND.md).
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { obtenerSupabase } from "../api/cliente.js";
 import { CODIGOS_DE_ERROR_DE_SUPABASE, normalizarError } from "../api/errores-de-supabase.js";
@@ -100,6 +100,19 @@ export function datosParaGuardarPerfil(valores, esAdmin) {
   return esAdmin ? { nombres, apellidos, telefono, rol } : { nombres, apellidos, telefono };
 }
 
+/**
+ * Si el formulario puede adoptar el perfil recien leido de la sesion: solo si lo que muestra es
+ * todavia lo que se cargo la ultima vez, es decir, si nadie escribio nada sin guardar. Pura y
+ * exportada para probarla sin montar el hook.
+ *
+ * @param {object} actuales Lo que muestra el formulario.
+ * @param {object} cargadosAntes Los valores del perfil que se cargo la vez anterior.
+ * @returns {boolean}
+ */
+export function debeSincronizarPerfil(actuales, cargadosAntes) {
+  return Object.keys(cargadosAntes).every((clave) => actuales[clave] === cargadosAntes[clave]);
+}
+
 const VALORES_CONTRASENA_VACIOS = { actual: "", nueva: "", confirmarNueva: "" };
 
 /**
@@ -136,19 +149,24 @@ export function usePerfilPropio({ usuario, perfil, refrescarPerfil }) {
   const [errorGlobal, setErrorGlobal] = useState(null);
   const [guardadoExitoso, setGuardadoExitoso] = useState(false);
 
-  // Deliberadamente [perfil?.id] y no [perfil]: esta misma pantalla tiene, debajo, un segundo
-  // formulario (cambiar contrasena) que comparte esta sesion. Cambiar la contrasena dispara
-  // USER_UPDATED (auth.updateUser()), y useSesion() reacciona a ese evento releyendo el perfil
-  // con aplicarSesion() - un objeto NUEVO, mismo id, misma data (ver useSesion.js). Si este
-  // efecto dependiera de "perfil" a secas, esa relectura reiniciaria nombres/apellidos/telefono
-  // a lo ultimo guardado en la base justo mientras la persona podria estar a mitad de escribir
-  // un cambio en el otro formulario, borrandoselo sin que haya guardado nada todavia.
-  // perfil.id es lo unico que de verdad tiene que reiniciar el formulario: identifica "es la
-  // misma persona", y solo cambia al montar la pantalla.
+  // Cuando el perfil de la sesion cambia, el formulario lo sigue SOLO si no tiene cambios sin
+  // guardar (issue #840).
+  //
+  // Antes el efecto dependia solo de perfil.id, por una buena razon que se conserva: cambiar la
+  // contrasena, en el formulario de abajo, dispara USER_UPDATED y useSesion() relee el perfil -un
+  // objeto nuevo con la misma data-; reiniciar el formulario ahi borraba lo que la persona
+  // estaba escribiendo. Pero con eso, un cambio REAL -la misma persona editada desde
+  // Colaboradores, que ahora si refresca la sesion- tampoco llegaba nunca a esta pantalla.
+  // La regla que cubre los dos casos es la de debeSincronizarPerfil().
+  const ultimosIniciales = useRef(valoresInicialesDePerfil(perfil));
+  const valoresRef = useRef(valores);
+  valoresRef.current = valores;
+
   useEffect(() => {
-    setValores(valoresInicialesDePerfil(perfil));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [perfil?.id]);
+    const nuevos = valoresInicialesDePerfil(perfil);
+    if (debeSincronizarPerfil(valoresRef.current, ultimosIniciales.current)) setValores(nuevos);
+    ultimosIniciales.current = nuevos;
+  }, [perfil]);
 
   const [especialidades, setEspecialidades] = useState([]);
   const [cargandoEspecialidades, setCargandoEspecialidades] = useState(true);

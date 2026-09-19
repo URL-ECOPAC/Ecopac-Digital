@@ -262,7 +262,7 @@ erDiagram
 | `comunidad_id`           | UUID                    | **Opcional desde [00111]**                                  |
 | `telefono_contacto`      | VARCHAR(20) NOT NULL    | Telefono donde ubicar al paciente, no necesariamente suyo ([00093]) |
 | `idioma`                 | VARCHAR(30) NOT NULL    | FK a `idiomas(codigo)` desde [00110]; antes era enum        |
-| `dpi`                    | VARCHAR(20) UNIQUE      | Opcional: mucha poblacion rural no lo tiene. 13 digitos exactos por CHECK desde [00132] |
+| `dpi`                    | VARCHAR(20) UNIQUE      | Opcional: mucha poblacion rural no lo tiene. 13 digitos exactos por CHECK desde [00132]; validado tambien sobre las filas anteriores en [00137] |
 | `tipo_sangre`            | `tipo_sanguineo`        | [+00035]                                                    |
 | `nombre_responsable`     | VARCHAR(150)            | [+00035]                                                    |
 | `parentesco_responsable` | VARCHAR(50)             | [+00035]                                                    |
@@ -315,7 +315,7 @@ Registro de deduplicacion. `paciente_absorbido_id` (UNIQUE: no se absorbe dos ve
 | `responsable_id`       | UUID NOT NULL               | Perfil a cargo                            |
 | `proyecto_id`          | UUID                        | Opcional                                  |
 | `estado`               | `estado_jornada` NOT NULL   | `planificada`/`en curso`/`finalizada`/`cancelada` |
-| `presupuesto_asignado` | NUMERIC(12,2) NOT NULL      |                                           |
+| `presupuesto_asignado` | NUMERIC(12,2) NOT NULL      | Suma de `jornada_presupuesto_origen` [00135]; no se escribe a mano |
 | `codigo`               | VARCHAR(30) UNIQUE          | [+00036]                                  |
 | `fecha_inicio_real`    | TIMESTAMPTZ                 | [+00036] Cuando de verdad empezo          |
 | `fecha_fin_real`       | TIMESTAMPTZ                 | [+00036]                                  |
@@ -573,11 +573,27 @@ no `pg_cron`.
 | `registrado_por`    | UUID                        | Antes `registrada_por` [renombrada 00091] |
 | `proyecto_id`       | UUID                        | [+00097] A que proyecto se destina       |
 
+### `jornada_presupuesto_origen` [00135]
+
+De donde viene cada parte del presupuesto de una jornada (issue #840): `origen`
+(`origen_de_presupuesto`: `donacion`, `fondos_propios`, `aporte_externo`, `sin_clasificar`),
+`donacion_id` (obligatoria si y solo si el origen es una donacion; tiene que ser de dinero y estar
+registrada), `monto` (> 0), `descripcion`, `registrado_por` (lo fija `auth.uid()`).
+`jornadas.presupuesto_asignado` es la suma de estas filas y la mantiene un trigger; un UPDATE
+directo de esa columna se rechaza. Lo asignado desde una donacion no puede pasar de su monto
+total en ninguna combinacion de jornadas. El presupuesto que existia antes de la 00135, y el de
+un INSERT de jornada que ya lo traia, entran como `sin_clasificar`.
+
 ### `donacion_detalle` [00022]
 
 `descripcion`, `cantidad`, `unidad`, `monto`, y `lote_id` **UNIQUE**: cuando la donacion es de
 medicamentos, la linea del detalle apunta al lote que se creo en inventario. La unicidad es lo que
 impide que dos donaciones reclamen el mismo lote.
+
+`medicamento_id` [+00135]: el medicamento del catalogo. `fn_registrar_donacion` lo exige en cada
+renglon de una donacion de medicamentos y arma `descripcion` y `unidad` (la presentacion) desde el
+catalogo; los otros tipos lo dejan en NULL y siguen en texto libre. Con el, el ingreso a
+inventario desde la donacion ya no vuelve a preguntar el medicamento.
 
 ---
 
@@ -943,7 +959,7 @@ de condiciones cronicas en `apps/mobile`, alcance ya decidido en la issue #122.
 | --- | --- | --- | --- | --- |
 | nombre / fecha / comunidad_id / responsable_id / proyecto_id | Si | Si (alta+edicion) | Si | — |
 | estado | Si (chip/kanban) | Si, vía kanban y "Cerrar jornada" (no formulario) | Si | — |
-| presupuesto_asignado | Si (`DetalleJornadaPage.jsx`) | Si (`asignarPresupuestoJornada()`) | Si | Resuelto (#756). Ver nota abajo |
+| presupuesto_asignado | Si (`DetalleJornadaPage.jsx`, solo lectura) | Derivado: suma de `jornada_presupuesto_origen` (00135, #840) | Si | Resuelto. Ver nota abajo |
 | cupo_estimado | Si | Si (alta+edicion) | Si | Resuelto (#756) |
 | botiquin_bodega_id | Si, resuelto a nombre | Si (alta+edicion), solo bodegas moviles | Si | Resuelto (#756) |
 | codigo | Si (`DetalleJornadaPage.jsx`, antes siempre "—") | **Generado por el servidor**, migracion `00126` | n/a | Resuelto en esta misma issue: ver nota tecnica abajo |
@@ -967,15 +983,12 @@ formulario (`ModalJornada.jsx`): `cupoEstimado` con `NumberField`, `botiquinBode
 cualquier bodega del catalogo-. `DetalleJornadaPage.jsx` ya mostraba `cupoEstimado`; se agrega
 `botiquinBodega`, embebido por nombre en `obtenerJornada()` igual que `comunidad`/`responsable`.
 
-**`presupuesto_asignado` (resuelto, issue #756)**: sigue A PROPOSITO fuera de
-`CAMPOS_FORMULARIO_JORNADA`/`aColumnasDeTabla()` (jornadas/api.js): esa columna ya tenia una via de
-escritura propia y mas estricta, `asignarPresupuestoJornada()` (`presupuestos/api.js`, valida el
-monto con `aNumeroAEscribir()`), y meterla en el formulario generico habria duplicado el camino de
-escritura de una columna financiera con dos reglas de validacion distintas. En vez de eso,
-`useDetalleJornada.js` gana una accion dedicada (`asignarPresupuesto`) que llama directo a esa
-funcion -mismo criterio que "Cerrar jornada": una accion propia, no un campo mas del formulario
-generico-, y `DetalleJornadaPage.jsx` la expone como un control de edicion en linea junto al resto
-de la ficha, gateado por `permisos.puedeEditar`. `asignarPresupuestoJornada()` ya tiene llamador.
+**`presupuesto_asignado` (issue #840)**: dejo de escribirse. Desde la 00135 es la suma de los
+aportes de `jornada_presupuesto_origen`, que se registran y se quitan en la pestaña Presupuesto de
+`DetalleJornadaPage.jsx` (`useOrigenesDePresupuesto`, `presupuestos/origenes.api.js`). El resumen
+lo muestra de solo lectura. `asignarPresupuestoJornada()` y la accion `asignarPresupuesto` de
+`useDetalleJornada.js` (issue #756) se retiraron: la base rechaza el UPDATE directo. La guarda
+contra montos ilegibles (`aNumeroAEscribir()`, issue #597) se mudo a `registrarOrigenDePresupuesto()`.
 
 **`jornada_personal`**: `perfil_id`/`hora_inicio`/`hora_fin`/`responsabilidad` completos (alta y
 edicion, issue #185); `rol_en_jornada` se captura al asignar pero no se corrige despues (a
@@ -988,8 +1001,11 @@ capturarse -> **resuelto en esta misma issue #756**: se agrega como checkbox al 
 `DetalleJornadaPage.jsx`), con `cambiado_por` resuelto a nombre. Sin huecos: es un historial de
 solo lectura por diseno (lo escribe un trigger).
 
-**`vista_cola_jornada`** (vista): consumida integra por la cola de atencion en curso
-(`JornadaEnCursoScreen.js`, movil). Sin huecos; es de solo lectura por naturaleza.
+**`vista_cola_jornada`** (vista): la cola por etapas se retiro de la interfaz con la issue #840
+(la consulta es la unidad y no hay etapas que recorrer). `JornadaEnCursoScreen.js` (movil) la sigue
+leyendo, pero solo para listar a los pacientes de la jornada sin agruparlos
+(`pacientesDeLaJornada`). La 00136 reordena su CASE para que los signos opcionales no dejen a un
+paciente atendido "esperando triaje".
 
 ### Atencion clinica
 
@@ -1001,16 +1017,16 @@ solo lectura por diseno (lo escribe un trigger).
 | cerrada_en | No | Si, automatico (`cerrarAtencion()`, solo movil) | n/a | Bajo impacto (timestamp de cierre, ya existe la accion que lo genera); sin issue propia |
 | motivo_cierre | No | Si, pero un literal fijo ("Entrega completada"), no texto libre | No | Mismo caso, bajo impacto |
 
-**`triajes`**: los siete signos vitales se capturan (solo desde movil, `TriajeScreen.js`; no existe
-registro de triaje en web) y se muestran en el historial del paciente (web). `imc` es columna
-generada (excluida arriba). **Resuelto en esta misma issue #756**: `actualizarTriaje()` y
-`puedeCorregirTriaje()` ya existian, probados, sin pantalla; se agrega el boton "Corregir" al
-evento de triaje en `PestaniaHistorialPaciente.jsx` (web), que abre `ModalCorreccionTriaje.jsx`
-con los mismos siete campos de `CAMPOS_TRIAJE`.
+**`triajes`**: desde la issue #840 los signos vitales son el primer paso de la consulta
+(`useConsulta`; `ModalConsulta.jsx` en web y `ConsultaScreen.js` en movil) y se capturan y se
+corrigen en el mismo formulario, con los mismos campos de `CAMPOS_TRIAJE`. Todos son opcionales
+(la 00136 quita el NOT NULL de la presion y la frecuencia cardiaca), con dos reglas en la base: la
+presion va completa o no va (`chk_triajes_presion_completa`) y una fila de triaje tiene al menos un
+signo (`chk_triajes_al_menos_un_signo`). `imc` es columna generada (excluida arriba).
 
 **`consultas`**: los siete campos (`motivo_consulta`, `antecedentes`, `sintomas`, `exploracion`,
 `tratamiento`, `observaciones`, `plan_seguimiento`) se capturan desde antes (solo movil,
-`ConsultaScreen.js`). **Resuelto en esta misma issue #756** en dos partes:
+`ConsultaScreen.js`; desde la #840 tambien desde web, `ModalConsulta.jsx`). **Resuelto en la issue #756** en dos partes:
 
 - Mostrar: `antecedentes`/`sintomas`/`exploracion`/`observaciones` no llegaban al historial
   porque `COLUMNAS_DEL_HISTORIAL` (`historial.api.js`) no los pedia. Se agregan al `select` y a
@@ -1019,8 +1035,9 @@ con los mismos siete campos de `CAMPOS_TRIAJE`.
 - Corregir: `actualizarConsulta()` ya existia, probada, sin pantalla. Se agrega
   `puedeCorregirConsulta(rol, consulta, perfilId)` (permisos.js, espejo de la politica de UPDATE
   de consultas, `00033`: el medico que la creo, o administrador) y el boton "Corregir" en el
-  mismo evento, que abre `ModalCorreccionConsulta.jsx` con `CAMPOS_CORRECCION_CONSULTA` -los
-  siete campos de texto, sin `diagnosticos`-.
+  mismo evento. Desde la #840 no hay un formulario de correccion aparte: se corrige en la misma
+  consulta (`ModalConsulta.jsx`/`ConsultaScreen.js`), con los mismos campos que al crearla,
+  diagnosticos incluidos.
 
 **`consulta_diagnostico`**: `diagnostico_id` se muestra y se captura; `es_principal` se infiere del
 orden de seleccion, no de una eleccion explicita (se deja asi: no es el hueco que esta issue
@@ -1034,8 +1051,8 @@ cerrado como un agujero de IDOR. Igual que `padecimientos_cronicos.condicion_id`
 diagnostico se refiere un vinculo no es un UPDATE -es otro hecho clinico distinto-, asi que la
 correccion es DELETE (quitar el vinculo equivocado) + INSERT (agregar el correcto, via las nuevas
 `quitarDiagnosticoDeConsulta()`/`agregarDiagnosticoAConsulta()`, `consultas.api.js`).
-`ModalCorreccionConsulta.jsx` gana una seccion de diagnosticos (lista con "Quitar" por fila, mas
-un selector para agregar uno). Se actualiza `docs/PERMISOS.md` en el mismo cambio (regla de
+La consulta calcula que quitar y que agregar comparando lo elegido con lo guardado
+(`cambiosDeDiagnosticos`, `useConsulta.js`). Se actualiza `docs/PERMISOS.md` en el mismo cambio (regla de
 AGENTS.md: un PR que cambia una politica actualiza ese documento).
 
 **`diagnosticos`** (catalogo): CRUD completo (`CatalogoDiagnosticosPage.jsx`), incluido
@@ -1043,14 +1060,12 @@ activar/desactivar y el filtro `soloActivos` que ya usa el selector de la consul
 
 **`recetas`**: `folio` generado por el servidor (excluido arriba); `indicaciones_generales` se
 muestra y se captura. `estado`/`motivo_anulacion`/`anulada_en` se muestran, y ahora
-`PestaniaRecetasPaciente.jsx` (web) tiene un boton "Anular" que llama a `anularReceta()` -visible
+`TarjetaReceta.jsx` (web, dentro de cada visita del historial desde la #840) tiene un boton "Anular" que llama a `anularReceta()` -visible
 solo a quien puede anular segun `puedeAnularReceta()` (la administradora siempre; el medico solo
 en la receta que el mismo firmo y mientras siga emitida)-. `anulada_por` se resuelve a nombre
 (`anuladaPorPerfil`, columna nueva en la consulta) en vez de mostrarse crudo o no mostrarse.
-Resuelto en esta misma issue #756. Sin pantalla equivalente en `apps/mobile`: no existe hoy ninguna
-vista del historial de recetas de un paciente en movil (`useRecetasPaciente` no tiene consumidor
-ahi), por lo que no hay boton que agregarle; es la misma decision de alcance que separa reportes
-agregados (web) de consulta y registro de campo (movil).
+Resuelto en esta misma issue #756. En movil, desde la #840, las recetas se ven dentro de cada visita
+del historial (`VisitasPacienteSeccion.js`), de solo lectura: anular sigue siendo solo de web.
 
 **`receta_detalle`**: `medicamento_id`/`lote_id`/`dosis`/`frecuencia`/`duracion`/`cantidad_entregada`
 completos (captura al recetar, sin correccion directa por diseno -ver `cantidad_ajustada` abajo).
@@ -1150,8 +1165,10 @@ boton -bajo impacto, agrupado con el hueco de `donaciones.estado` si se retoma e
 | registrado_por | No | Si, automatico | No | Bajo impacto |
 | proyecto_id | Si, `proyectoNombre` resuelto en la constancia | Si, al registrar | No | Resuelto (#756) |
 
-**`donacion_detalle`**: `descripcion`/`cantidad`/`monto` completos al registrar; `unidad` se agrega
-como campo en el formulario web de medicamentos e insumos (issue #756, resuelto). No hay campo de
+**`donacion_detalle`**: `descripcion`/`cantidad`/`monto` completos al registrar. Desde la #840 el
+renglon de una donacion de medicamentos elige `medicamento_id` del catalogo (con alta en linea si
+falta) y no pide descripcion ni unidad: las arma la base desde el catalogo. `unidad` queda como
+campo solo para insumos. Los campos de cada tipo salen de `camposDeRenglonDeDonacion()`. No hay campo de
 `fechaVencimiento` en este formulario (se probo y se quito): no es una columna de la tabla y el
 vencimiento real se captura mas abajo, al generar el ingreso -pedirlo aqui tambien era una nota
 que nunca se guardaba en ningun lado. `lote_id` -el enlace real a un lote de farmacia-
@@ -1426,3 +1443,42 @@ resueltos a nombre y fecha. No existe en `apps/mobile`: `FichaPacienteScreen.js`
 edicion de los 11 campos del paciente en esta misma issue #756 (ver seccion de Pacientes, arriba),
 pero esta lista de fusiones es un dato secundario de la ficha que ese cambio no cubrio. Bajo
 impacto, sin issue propia -queda declarado como hueco, no omitido en silencio.
+
+## 17. Auditoria de esquema (issue #840, bloque E)
+
+Pedido: "revisa que todas las tablas/modelos/migraciones esten y que todos los campos tambien".
+La seccion 16 fue la auditoria campo-a-vista; esta pasa las migraciones contra `packages/shared`
+y las dos apps buscando lo que `npm run verificar:shared-esquema` no alcanza a ver.
+
+### Como se hizo
+
+Contra la base local recien reconstruida (`supabase db reset`, las 135 migraciones):
+
+1. **Cada columna contra el codigo.** Las 355 columnas de las 43 tablas de `public`, en
+   snake_case y en camelCase, contra todo lo que nombran `packages/shared`, `apps/web/src` y
+   `apps/mobile/src` fuera de las pruebas. Ninguna tabla ni columna quedo sin mencion.
+2. **Cada escritura contra los permisos reales.** Cada `.from(tabla).insert/update/delete/upsert`
+   de `packages/shared` contra los GRANT de `authenticated` y las politicas de esa tabla. Es la
+   comprobacion que encontro las dos primeras divergencias de abajo: la guarda automatica solo
+   mira que el nombre exista, no que se pueda escribir.
+3. **La convencion de nombres de la #412** sobre las 41 columnas de actor (`_por`) y de marca de
+   tiempo (`_en`, `fecha_`).
+4. **Obligatorio en el formulario contra `NOT NULL`** en las tablas clinicas (regla B2).
+
+### Divergencias y decision
+
+| # | Divergencia | Decision |
+| --- | --- | --- |
+| 1 | `donacion_detalle` no tenia GRANT ni politica de UPDATE, y `enlazarLoteConDonacion()` actualiza `lote_id`: el ingreso desde una donacion creaba el lote y despues fallaba con `permission denied`, y la donacion nunca quedaba ligada a su lote. | **Se arregla aqui** (`00135`): GRANT de la columna `lote_id`, politica que enlaza una sola vez, y trigger que exige un lote del mismo medicamento. Pruebas en `origen_del_presupuesto_y_donacion_de_medicamento.sql`. `PERMISOS.md` actualizado. |
+| 2 | `condiciones_cronicas`: `crearCondicionCatalogo()`, `actualizarCondicionCatalogo()` y `useCatalogoCondiciones` (issue #641) escriben el catalogo, pero la tabla no tiene GRANT ni politica de escritura (`PERMISOS.md` dice "nadie") y ninguna pantalla usa el hook. | **Issue aparte, #845**: hay que decidir quien mantiene el catalogo. Si alguien, es una migracion con GRANT y politica mas su pantalla; si nadie, se retiran el hook y las dos funciones. |
+| 3 | Alta de lote en web (`ModalAltaLote.jsx`): pedia una bodega obligatoria que `registrarLote()` nunca guardaba, exigia la fecha de ingreso aunque la columna tiene `DEFAULT CURRENT_DATE`, y rechazaba un lote que vence el dia que ingresa, que el CHECK acepta desde la `00096`. | **Resuelto por el punto 4**: el formulario se corrigio primero y despues se retiro entero, con el alta de lote. |
+| 4 | Un lote registrado desde "Registrar lote" en web no tiene existencias en ninguna bodega: el stock solo nace de un ingreso (`registrarIngreso()`). Con el punto 3 ya no lo parece, pero sigue siendo asi. | **Se arregla aqui** (issue #846): se retira "Registrar lote". Sale el boton, sale `ModalAltaLote.jsx` y sale `registrarLote()`; el unico camino es "Registrar ingreso", que crea el lote y el movimiento en la misma operacion. No hace falta migracion: la tabla `lotes` no cambia, y sus politicas de INSERT siguen sirviendo al ingreso. |
+| 5 | El comentario de la `00096` dice que el cliente valida la fecha de vencimiento contra la de ingreso con `minFechaDesdeCampo`. `validarConDescriptores()` no lee esa regla. | **Se corrige el comentario del descriptor** (`inventario/campos.js`); la migracion aplicada no se edita. La regla la aplica `validarDatosDeLote()`. |
+| 6 | `triajes.presion_sistolica`, `presion_diastolica` y `frecuencia_cardiaca` eran `NOT NULL`, contra la regla de que ningun signo vital es obligatorio. | **Se arregla aqui** (`00136`). |
+| 7 | `pacientes.dpi`: el CHECK de 13 digitos de la `00132` entro `NOT VALID` porque `ecopac-dev` tiene filas con DPI de otra longitud. Las filas nuevas cumplen; las viejas no se revisaron. | **Se arregla aqui** (issue #847, `00137`): se decide por el formato, sin mirar paciente por paciente. Si al quitar lo que no es digito quedan 13, ese es el DPI; cualquier otro caso pasa a NULL, que la columna admite. Despues, `VALIDATE CONSTRAINT`. El DPI anterior de cada fila tocada queda en `eventos_auditoria` (`00026`). Pruebas en `dpi_de_trece_digitos.sql`. |
+| 8 | `gastos.fecha_aprobacion`, el hallazgo que la issue traia anotado. | **Ya estaba resuelto**: la `00094` renombro `fecha_aprobacion` a `aprobado_en` en `gastos` y en `movimientos_inventario`. No queda ninguna referencia al nombre viejo fuera de las migraciones anteriores. |
+| 9 | Columnas con actor y sin marca propia, o con marca y sin actor: `jornada_estado_historial.cambiado_por` y `usuario_permiso.otorgado_por` usan `created_at`; `atenciones.cerrada_en` y `pacientes.fecha_baja` no tienen actor; `jornadas.fecha_inicio_real` y `fecha_fin_real` son fechas del ciclo de vida de la jornada. | **Se dejan**: la convencion de la #412 ordena el nombre de un par actor/marca. Ninguna de estas es un par a medias que haya que completar, y renombrarlas sin un motivo funcional es una migracion y una API rotas a cambio de nada. |
+| 10 | `vista_cola_jornada` sigue existiendo aunque las colas por etapa salieron de la interfaz. | **Decidido en el bloque F**: se retira de la interfaz, no de la base. La `00136` la corrige para los signos opcionales y la lista de la jornada en curso la sigue leyendo. |
+
+Obligatorio contra `NOT NULL` (punto 4 del metodo): los descriptores de paciente, consulta,
+receta y condicion cronica coinciden con la base. No hay otra divergencia.

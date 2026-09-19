@@ -2,7 +2,7 @@
 //
 // No vuelve a llamar useJornadaActiva(): la pantalla ya la recibe de un contexto compartido
 // (apps/mobile/src/contexto/JornadaActivaProvider.js), mismo motivo por el que
-// RegistroPacienteScreen/TriajeScreen/ConsultaScreen reciben jornadaId/jornada por parametro en
+// RegistroPacienteScreen/ConsultaScreen/RecetaScreen reciben jornadaId/jornada por parametro en
 // vez de resolverlo cada una. Este archivo solo agrega lo que useJornadaActiva() no calcula:
 // el mensaje del criterio 3 (por que no se puede registrar, cuando no hay ninguna jornada en
 // curso).

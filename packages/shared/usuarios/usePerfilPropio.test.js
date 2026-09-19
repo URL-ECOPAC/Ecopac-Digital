@@ -12,8 +12,24 @@ import { ROLES } from "./roles.js";
 import {
   camposDePerfilPropio,
   datosParaGuardarPerfil,
+  debeSincronizarPerfil,
   valoresInicialesDePerfil,
 } from "./usePerfilPropio.js";
+
+// Issue #840: lo que se editaba en Colaboradores no llegaba a Mi perfil.
+describe("debeSincronizarPerfil", () => {
+  const cargados = valoresInicialesDePerfil({ nombres: "Ana", apellidos: "Lopez", rol: null });
+
+  it("adopta el perfil nuevo si el formulario sigue como se cargo", () => {
+    expect(debeSincronizarPerfil({ ...cargados }, cargados)).toBe(true);
+  });
+
+  // La razon por la que antes solo se miraba perfil.id (#102): cambiar la contrasena relee el
+  // perfil y no puede borrar lo que la persona esta escribiendo.
+  it("no pisa lo que la persona esta escribiendo", () => {
+    expect(debeSincronizarPerfil({ ...cargados, telefono: "5555-0000" }, cargados)).toBe(false);
+  });
+});
 
 describe("camposDePerfilPropio", () => {
   it("para un rol no administrador: mismo orden que CAMPOS_USUARIO, rol no editable", () => {

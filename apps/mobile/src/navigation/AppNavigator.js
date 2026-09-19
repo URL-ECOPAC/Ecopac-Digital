@@ -31,7 +31,6 @@ import BusquedaPacienteScreen from "../screens/BusquedaPacienteScreen";
 import FichaPacienteScreen from "../screens/FichaPacienteScreen";
 import HistorialPacienteScreen from "../screens/HistorialPacienteScreen";
 import RegistroPacienteScreen from "../screens/RegistroPacienteScreen";
-import TriajeScreen from "../screens/TriajeScreen";
 import ConsultaScreen from "../screens/ConsultaScreen";
 import RecetaScreen from "../screens/RecetaScreen";
 import StockScreen from "../screens/StockScreen";
@@ -187,7 +186,6 @@ const PANTALLAS_PACIENTES = [
     componente: conGuardaDeRol(HistorialPacienteScreen, "pacientes"),
     titulo: "Historial",
   },
-  { name: ROUTES.TRIAJE, componente: conGuardaDeRol(TriajeScreen, "pacientes"), titulo: "Triaje" },
   {
     name: ROUTES.CONSULTA,
     componente: conGuardaDeRol(ConsultaScreen, "pacientes"),
@@ -391,8 +389,13 @@ function TabsNavigator() {
 
 //  AQUÍ ESTABA EL FALTO — se agregó la pantalla
 export default function AppNavigator({ haySesion }) {
+  const { registrarActividad } = useSesionCompartida();
+
   return (
-    <NavigationContainer>
+    // `onStateChange` es la senal de actividad: cada vez que alguien navega, la cuenta de
+    // inactividad vuelve a cero (issue #840). No se escuchan toques sueltos a proposito -- en un
+    // telefono, dejar la pantalla encendida sin navegar a ningun lado ES estar inactivo.
+    <NavigationContainer onStateChange={registrarActividad}>
       <Root.Navigator screenOptions={{ headerShown: false }}>
         {/*  Ruta de Acceso Denegado — SIEMPRE disponible */}
         <Root.Screen name={ROUTES.ACCESO_DENEGADO} component={AccesoDenegadoScreen} />

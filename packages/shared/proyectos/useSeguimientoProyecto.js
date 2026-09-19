@@ -94,6 +94,7 @@ export function useSeguimientoProyecto({ proyectoId, proyectoInicial = null, hoy
     cargar();
   }, [cargar]);
 
+  // Dia local, no UTC: despues de las 18:00 un hito se marcaba cumplido con fecha de manana.
   const fechaHoy = aCadenaFechaLocal(hoy);
 
   // Hitos procesados con estado de vencimiento

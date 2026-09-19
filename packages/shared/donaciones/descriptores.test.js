@@ -45,8 +45,10 @@ const TODAS_LAS_LISTAS_DE_FILTROS = { FILTROS_DONANTE, FILTROS_DONACION };
 
 // Catalogos que un hook de pantalla (fuera de esta issue) tiene que pasar por `catalogos`.
 // "proyectos": issue #193 (RF-28), filtro de donaciones por donaciones.proyecto_id (00097).
+// "medicamentos": issue #840, el renglon de una donacion de medicamentos elige del catalogo.
 const CATALOGOS_CONOCIDOS = new Set([
   "donantes",
+  "medicamentos",
   "estadoDonante",
   "tiposDeDonante",
   "tiposDeDonacion",

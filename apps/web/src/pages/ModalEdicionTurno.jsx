@@ -3,18 +3,17 @@ import { Form } from "react-bootstrap";
 
 import { CAMPOS_EDICION_TURNO, TIPOS_DE_CAMPO, useEdicionTurno } from "@ecopac/shared";
 
+import CampoDeFormulario from "../components/CampoDeFormulario";
 import Modal from "../components/Modal";
 import PrimaryButton from "../components/PrimaryButton";
-import Selector from "../components/Selector";
 import SecondaryButton from "../components/SecondaryButton";
-import TextField from "../components/TextField";
 import ModalConfirmarDesasignacion from "./ModalConfirmarDesasignacion";
 import { Save, X } from "lucide-react";
 
 // Modal de edicion de horario, responsabilidad y asistencia de una persona ya asignada a una
 // jornada (issue #185, asistio agregado en la #756), abierto al clickear una fila de la pestaña
 // Equipo de DetalleJornadaPage.jsx (issue #181). Mismo patron que ModalEdicionUsuario.jsx (#107):
-// Modal generico + Selector/TextField/checkbox elegidos a mano por campo.tipo, con la accion
+// Modal generico + CampoDeFormulario (y un checkbox para asistio), con la accion
 // destructiva (Desasignar) detras de un boton propio que abre un segundo modal, en vez de
 // competir con el click de la fila que abre este.
 //
@@ -26,10 +25,6 @@ import { Save, X } from "lucide-react";
 // Solo dibuja lo que useEdicionTurno() le entrega: la asignacion (alta), la busqueda y el rol en
 // la jornada siguen siendo del modal de #182 (ModalAsignarPersonal.jsx), que esta pantalla no
 // toca ni duplica.
-const TIPO_DE_INPUT = {
-  hora: "time",
-};
-
 export default function ModalEdicionTurno({
   jornadaId,
   fila,
@@ -97,27 +92,14 @@ export default function ModalEdicionTurno({
             );
           }
 
-          if (campo.tipo === TIPOS_DE_CAMPO.SELECT) {
-            return (
-              <Selector
-                key={campo.id}
-                label={campo.label}
-                value={valores[campo.id]}
-                options={campo.opciones}
-                onSelect={(valor) => setCampo(campo.id, valor)}
-                error={errores[campo.id]}
-                disabled={enviando}
-              />
-            );
-          }
-
+          // Perfil y rol en la jornada salen de solo lectura: es el mismo juego de campos que la
+          // asignacion (issue #840, B1).
           return (
-            <TextField
+            <CampoDeFormulario
               key={campo.id}
-              label={campo.label}
-              type={TIPO_DE_INPUT[campo.tipo] ?? "text"}
-              value={valores[campo.id] ?? ""}
-              onChange={(evento) => setCampo(campo.id, evento.target.value)}
+              campo={campo}
+              valor={valores[campo.id]}
+              onChange={(valor) => setCampo(campo.id, valor)}
               error={errores[campo.id]}
               disabled={enviando}
             />

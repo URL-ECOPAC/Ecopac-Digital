@@ -17,6 +17,7 @@ import { useCallback, useState } from "react";
 
 import { TIPOS_DE_CAMPO } from "../descriptores.js";
 import { actualizarAsignacionPersonal } from "./api.js";
+import { idsEditables } from "../formularios.js";
 import { CAMPOS_EDICION_TURNO } from "./campos.js";
 import {
   advertirChoqueDeHorario,
@@ -83,10 +84,15 @@ export function useEdicionTurno({ jornadaId, fila, asignacionesDelDia } = {}) {
 
     setEnviando(true);
     setError(null);
+    // Viaja solo lo editable: perfil y rol en la jornada estan en el formulario, de solo lectura
+    // (issue #840, B1).
+    const editables = Object.fromEntries(
+      idsEditables(CAMPOS_EDICION_TURNO).map((campo) => [campo, valores[campo]]),
+    );
     const { asignacion, error: errorDeGuardado } = await actualizarAsignacionPersonal(
       jornadaId,
       fila.perfilId,
-      valores,
+      editables,
     );
     setEnviando(false);
 

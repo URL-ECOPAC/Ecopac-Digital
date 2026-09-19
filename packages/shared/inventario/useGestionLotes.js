@@ -1,80 +1,11 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo } from "react";
 
 import { aFechaLocal, diasHastaVencimiento } from "../formato/fechas.js";
-import { esAdministrador } from "../usuarios/roles.js";
 
-/**
- * Traduce los campos snake_case del formulario de alta de lote a los argumentos camelCase que
- * declara registrarLote() (lotes.api.js, traducidos a columnas via aColumnasDeTabla()). Se
- * exporta aparte del hook para poder probar la traduccion sin montar un componente (issue #709).
- *
- * @param {object} datosLote
- */
-export function datosLoteParaRegistrar(datosLote) {
-  const datos = {
-    medicamento: datosLote.medicamento_id,
-    numeroLote: datosLote.numero_lote,
-    proveedor: datosLote.proveedor_id,
-    origen: datosLote.origen,
-    cantidadIngresada: datosLote.cantidad,
-    fechaIngreso: datosLote.fecha_ingreso,
-    fechaVencimiento: datosLote.fecha_vencimiento,
-  };
-
-  // costoUnitario es opcional (issue #752): "" (el campo vacio del formulario) se traduce a
-  // ausente, no a NaN ni a 0 -- un costo desconocido no es lo mismo que un costo de cero.
-  if (datosLote.costo_unitario !== undefined && datosLote.costo_unitario !== "") {
-    datos.costoUnitario = Number(datosLote.costo_unitario);
-  }
-
-  return datos;
-}
-
-/**
- * Valida los datos del formulario de alta de lote acorde al DDL:
- * - fecha_vencimiento > fecha_ingreso (chk_lotes_vencimiento_posterior)
- * - cantidad > 0 (chk_lotes_cantidad_positiva)
- *
- * Se exporta aparte del hook para poder probar la validacion sin montar un componente (issue
- * #709): pedia "cantidad_ingresada" de datosLote, pero ModalAltaLote.jsx (el unico llamador)
- * manda el campo como "cantidad" -datosLoteParaRegistrar() lo traduce a cantidadIngresada recien
- * al armar los argumentos de registrarLote()-. cantidad_ingresada era siempre undefined y esta
- * validacion rechazaba TODA alta de lote, con cualquier cantidad, con el mismo mensaje generico.
- * Como handleGuardarLote() nunca llegaba a llamar registrarLote() (issue #709 la conecto por
- * primera vez), el bug nunca se habia notado.
- *
- * @param {object} datosLote
- * @returns {string|null} El mensaje de error, o null si los datos son validos.
- */
-export function validarDatosDeLote(datosLote) {
-  const {
-    medicamento_id,
-    proveedor_id,
-    numero_lote,
-    fecha_ingreso,
-    fecha_vencimiento,
-    cantidad,
-    bodega_id,
-  } = datosLote;
-
-  if (!medicamento_id || !proveedor_id || !numero_lote || !bodega_id) {
-    return "Todos los campos marcados con (*) son obligatorios.";
-  }
-
-  if (!fecha_ingreso || !fecha_vencimiento) {
-    return "Las fechas de ingreso y vencimiento son obligatorias.";
-  }
-
-  if (aFechaLocal(fecha_vencimiento) <= aFechaLocal(fecha_ingreso)) {
-    return "La fecha de vencimiento debe ser estrictamente posterior a la fecha de ingreso (chk_lotes_vencimiento_posterior).";
-  }
-
-  if (!cantidad || Number(cantidad) <= 0) {
-    return "La cantidad ingresada debe ser mayor a 0 (chk_lotes_cantidad_positiva).";
-  }
-
-  return null;
-}
+// Aqui vivian valoresInicialesDeLote(), datosLoteParaRegistrar() y validarDatosDeLote(): las tres
+// eran el formulario de "Registrar lote", que se retiro con la issue #846 porque creaba lotes sin
+// existencias en ninguna bodega. Lo que describe un lote sigue en CAMPOS_LOTE (campos.js), de
+// donde sale CAMPOS_CORRECCION_LOTE, que es el unico formulario de lote que queda.
 
 /**
  * Dias restantes y estado de alerta de un lote ("normal"/"warning"/"danger" para <= 30/0 dias).
@@ -164,27 +95,15 @@ export function procesarLotes(
  * Hook para la gestión de lotes y alertas de caducidad (#155 / #144).
  * Cumple con la estructura DDL de lotes, existencias y alertas_caducidad.
  */
-export function useGestionLotes({
-  lotesIniciales = [],
-  alertasIniciales = [],
-  bodegas = [],
-  proveedores = [],
-  usuario = { id: "", rol: null },
-} = {}) {
+export function useGestionLotes({ lotesIniciales = [], alertasIniciales = [] } = {}) {
   const [busqueda, setBusqueda] = useState("");
   const [bodegaSeleccionada, setBodegaSeleccionada] = useState("Todas");
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState("Todos");
   const [alertas, setAlertas] = useState(alertasIniciales);
-  const [errorValidacion, setErrorValidacion] = useState(null);
 
-  // Regla de Permisos: Solo el Administrador puede registrar lotes.
-  //
-  // issue #689: comparaba usuario?.rol contra el literal "Administrador", con mayuscula. El
-  // enum rol_usuario (00001) y usuarios/roles.js lo declaran en minuscula
-  // ("administrador"), asi que esa comparacion nunca coincidia -- mismo defecto que la propia
-  // InventarioPage.jsx, que es quien llama a este hook.
-  const puedeRegistrarLotes = esAdministrador(usuario?.rol);
-
+  // procesarLotes() es la version pura y probada del FEFO y los filtros (#849). La #840 habia
+  // corregido aqui dentro el corte por dia de calendario; esa correccion vive ahora dentro de
+  // calcularAlertaDeLote(), que es a quien procesarLotes() se lo pregunta.
   const lotesFiltrados = useMemo(
     () => procesarLotes(lotesIniciales, { busqueda, bodegaSeleccionada, categoriaSeleccionada }),
     [lotesIniciales, busqueda, bodegaSeleccionada, categoriaSeleccionada],
@@ -195,12 +114,10 @@ export function useGestionLotes({
     return lotesFiltrados.filter((item) => item.estadoAlerta !== "normal");
   }, [lotesFiltrados]);
 
-  const validarNuevoLote = useCallback((datosLote) => {
-    const mensajeError = validarDatosDeLote(datosLote);
-    setErrorValidacion(mensajeError);
-    return mensajeError === null;
-  }, []);
-
+  // Aqui estaba validarNuevoLote(), con erroresDeLote/errorValidacion y puedeRegistrarLotes, y el
+  // hook devolvia tambien las bodegas y los proveedores que le habian pasado. Todo eso era el
+  // modal de "Registrar lote", que se retiro (issue #846). Queda lo que de verdad hace: buscar,
+  // filtrar y avisar de lo que esta por vencer.
   return {
     busqueda,
     setBusqueda,
@@ -212,11 +129,5 @@ export function useGestionLotes({
     alertasCriticas,
     alertas,
     setAlertas,
-    bodegas,
-    proveedores,
-    puedeRegistrarLotes,
-    validarNuevoLote,
-    errorValidacion,
-    setErrorValidacion,
   };
 }

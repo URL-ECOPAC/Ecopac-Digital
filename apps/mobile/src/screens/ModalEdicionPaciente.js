@@ -4,6 +4,7 @@ import { colors, spacing, typography } from "@ecopac/ui-tokens";
 import { TIPOS_DE_CAMPO, useEdicionPaciente } from "@ecopac/shared";
 
 import {
+  CascadaDeComunidad,
   DateField,
   Modal,
   PrimaryButton,
@@ -11,6 +12,7 @@ import {
   Selector,
   TextField,
 } from "../components";
+import { useSesionCompartida } from "../contexto/SesionProvider";
 
 const TECLADO_DE_CAMPO = {
   [TIPOS_DE_CAMPO.TELEFONO]: "phone-pad",
@@ -22,6 +24,7 @@ const TECLADO_DE_CAMPO = {
  * mismos campos y el mismo aviso de "hay cambios sin guardar" antes de cerrar.
  */
 export default function ModalEdicionPaciente({ visible, paciente, onClose, onGuardado }) {
+  const { rol } = useSesionCompartida();
   const {
     campos,
     valores,
@@ -29,11 +32,19 @@ export default function ModalEdicionPaciente({ visible, paciente, onClose, onGua
     error,
     enviando,
     hayCambios,
+    departamentoId,
+    municipioId,
     setCampo,
+    setDepartamento,
+    setMunicipio,
     descartar,
     guardar,
     catalogos,
-  } = useEdicionPaciente(paciente);
+    puedeCrearComunidad,
+    registrarComunidad,
+    erroresComunidad,
+    creandoComunidad,
+  } = useEdicionPaciente(paciente, { rol });
   const [confirmandoSalida, setConfirmandoSalida] = useState(false);
 
   const intentarCerrar = () => {
@@ -69,6 +80,30 @@ export default function ModalEdicionPaciente({ visible, paciente, onClose, onGua
           {error ? <Text style={styles.error}>{error.mensaje}</Text> : null}
 
           {campos.map((campo) => {
+            // La misma cascada que el registro (issue #840): antes aqui habia un selector plano
+            // con todas las comunidades del pais.
+            if (campo.id === "comunidad") {
+              return (
+                <CascadaDeComunidad
+                  key="comunidad"
+                  label={campo.label}
+                  comunidadId={valores.comunidad}
+                  error={errores.comunidad}
+                  catalogos={catalogos}
+                  departamentoId={departamentoId}
+                  municipioId={municipioId}
+                  onDepartamento={setDepartamento}
+                  onMunicipio={setMunicipio}
+                  onComunidad={(valor) => setCampo("comunidad", valor)}
+                  disabled={enviando}
+                  puedeCrear={puedeCrearComunidad}
+                  onCrear={registrarComunidad}
+                  erroresAlta={erroresComunidad}
+                  creando={creandoComunidad}
+                />
+              );
+            }
+
             if (campo.tipo === TIPOS_DE_CAMPO.SELECT) {
               const opciones = opcionesDe(campo);
               return (

@@ -61,8 +61,9 @@ sistema: 38 archivos en `packages/shared/pacientes/`.
 | [PacientesPage.jsx](../apps/web/src/pages/PacientesPage.jsx) `/pacientes` | `usePacientesListado`  | Conectada |
 | [FichaPacientePage.jsx](../apps/web/src/pages/FichaPacientePage.jsx) `/pacientes/:id` | `usePaciente` | Conectada |
 | [PacientesCronicosPage.jsx](../apps/web/src/pages/PacientesCronicosPage.jsx) `/pacientes/cronicos` | `usePacientesCronicos` | Conectada |
-| [PestaniaHistorialPaciente.jsx](../apps/web/src/pages/PestaniaHistorialPaciente.jsx) | `useHistorialPaciente` | Conectada |
-| [PestaniaRecetasPaciente.jsx](../apps/web/src/pages/PestaniaRecetasPaciente.jsx) | `useRecetasPaciente` | Conectada |
+| [PestaniaHistorialPaciente.jsx](../apps/web/src/pages/PestaniaHistorialPaciente.jsx) | `useVisitasPaciente` | Conectada |
+| [ModalConsulta.jsx](../apps/web/src/pages/ModalConsulta.jsx) | `useConsulta` | Conectada |
+| [TarjetaReceta.jsx](../apps/web/src/pages/TarjetaReceta.jsx) | `datosDeRecetaImprimible` | Conectada |
 | [PestaniaSignosPaciente.jsx](../apps/web/src/pages/PestaniaSignosPaciente.jsx) | `useEvolucionSignos` | Conectada |
 | [ModalAltaPaciente.jsx](../apps/web/src/pages/ModalAltaPaciente.jsx) | `useRegistroPaciente` | Conectada |
 | [ModalEdicionPaciente.jsx](../apps/web/src/pages/ModalEdicionPaciente.jsx) | `useEdicionPaciente` | Conectada |
@@ -77,10 +78,9 @@ sistema: 38 archivos en `packages/shared/pacientes/`.
 | ------------------------------------------------------------------------------ | --------------------- | --------- |
 | [BusquedaPacienteScreen.js](../apps/mobile/src/screens/BusquedaPacienteScreen.js) | `usePacientesListado` | Conectada |
 | [FichaPacienteScreen.js](../apps/mobile/src/screens/FichaPacienteScreen.js)     | `usePaciente`         | Conectada |
-| [HistorialPacienteScreen.js](../apps/mobile/src/screens/HistorialPacienteScreen.js) | `useHistorialPaciente` | Conectada |
+| [HistorialPacienteScreen.js](../apps/mobile/src/screens/HistorialPacienteScreen.js) | `useVisitasPaciente` | Conectada |
 | [RegistroPacienteScreen.js](../apps/mobile/src/screens/RegistroPacienteScreen.js) | `useRegistroPaciente` | Conectada |
-| [TriajeScreen.js](../apps/mobile/src/screens/TriajeScreen.js)                   | `useRegistroTriaje`   | Conectada |
-| [ConsultaScreen.js](../apps/mobile/src/screens/ConsultaScreen.js)               | `useRegistroConsulta` | Conectada |
+| [ConsultaScreen.js](../apps/mobile/src/screens/ConsultaScreen.js)               | `useConsulta`         | Conectada |
 | [RecetaScreen.js](../apps/mobile/src/screens/RecetaScreen.js)                   | `useGeneracionReceta` | Conectada |
 
 ### Contra que trabaja

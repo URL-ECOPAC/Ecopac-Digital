@@ -165,20 +165,21 @@ return <Formulario campos={CAMPOS_REGISTRO_PACIENTE} valores={valores} errores={
 
 ## 5. Recorrido de una peticion
 
-Un ejemplo real de punta a punta: **un voluntario toma el triaje de un paciente en la jornada**.
+Un ejemplo real de punta a punta: **un voluntario toma los signos vitales de un paciente en la jornada**. Desde la issue #840 los
+signos no tienen pantalla propia: son el primer paso de la consulta.
 
 ```mermaid
 sequenceDiagram
     participant V as Voluntario
-    participant S as TriajeScreen<br/>(apps/mobile)
-    participant H as useRegistroTriaje<br/>(shared/pacientes)
+    participant S as ConsultaScreen<br/>(apps/mobile)
+    participant H as useConsulta<br/>(shared/pacientes)
     participant A as triaje.api.js
     participant C as obtenerSupabase<br/>(shared/api)
     participant DB as PostgreSQL
 
     V->>S: Captura presion, peso, talla
     S->>H: onChange
-    H->>H: validarTriaje() + advertenciasDeTriaje()
+    H->>H: validarTriaje() + avisosDeSignos()
     Note over H: Si hay error, nunca sale de aqui
     V->>S: Guardar
     S->>H: guardar()

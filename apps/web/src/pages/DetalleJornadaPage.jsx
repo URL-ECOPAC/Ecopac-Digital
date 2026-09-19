@@ -1,4 +1,3 @@
-import { Save } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
@@ -11,6 +10,8 @@ import {
   ESTADOS_JORNADA,
   formatearFechaConHora,
   formatearFechaCorta,
+  formatearMoneda,
+  permisosDeOrigenDePresupuesto,
   puedeVerRosterCompleto,
   useCuadroTurnos,
   useDetalleJornada,
@@ -22,11 +23,11 @@ import {
   DataList,
   ErrorState,
   LoadingState,
-  NumberField,
   PageHeader,
   PrimaryButton,
   ScreenContainer,
   SecondaryButton,
+  StatCard,
   StatusChip,
   Tabs,
 } from "../components";
@@ -36,6 +37,7 @@ import ModalAsignarPersonal from "./ModalAsignarPersonal";
 import ModalEdicionTurno from "./ModalEdicionTurno";
 import ModalJornada from "./ModalJornada";
 import NotFoundPage from "./NotFoundPage";
+import OrigenesDePresupuesto from "./OrigenesDePresupuesto";
 
 // Detalle de una jornada (issue #181): sus datos, el personal asignado, los pacientes
 // atendidos con su diagnostico principal y el historial de cambios de estado. Todo lo que se
@@ -62,6 +64,8 @@ const PESTANIAS = [
   { id: "equipo", label: "Equipo" },
   { id: "pacientes", label: "Pacientes atendidos" },
   { id: "historial", label: "Historial" },
+  // Issue #840: de donde viene el presupuesto de la jornada.
+  { id: "presupuesto", label: "Presupuesto" },
   { id: "cierre", label: "Cierre" },
 ];
 
@@ -74,6 +78,32 @@ const ETIQUETAS = Object.fromEntries(
 function nombreDePerfil(perfil) {
   const nombre = [perfil?.nombres, perfil?.apellidos].filter(Boolean).join(" ").trim();
   return nombre || null;
+}
+
+/** Los indicadores del dia de la jornada, en el orden en que se muestran. */
+const INDICADORES_DEL_DIA = [
+  { clave: "pacientesAtendidos", etiqueta: "Pacientes atendidos" },
+  { clave: "consultasRealizadas", etiqueta: "Consultas realizadas" },
+  { clave: "tratamientosEntregados", etiqueta: "Tratamientos entregados" },
+  { clave: "medicamentosUtilizados", etiqueta: "Medicamentos utilizados" },
+];
+
+/** Los que resume la pestaña de cierre (resumenCierre.js), con sus propias etiquetas. */
+const INDICADORES_DEL_CIERRE = [
+  { clave: "pacientesAtendidos", etiqueta: "Pacientes atendidos" },
+  { clave: "consultasRealizadas", etiqueta: "Consultas registradas" },
+  { clave: "tratamientosEntregados", etiqueta: "Medicamentos entregados" },
+];
+
+/** Un dato de la ficha: rotulo sobre valor, con guion cuando falta. */
+function Dato({ etiqueta, valor, mono = false }) {
+  const vacio = valor === null || valor === undefined || valor === "";
+  return (
+    <div>
+      <dt className="ec-rotulo">{etiqueta}</dt>
+      <dd className={mono && !vacio ? "mb-0 ec-mono" : "mb-0"}>{vacio ? "—" : valor}</dd>
+    </div>
+  );
 }
 
 export default function DetalleJornadaPage() {
@@ -94,23 +124,9 @@ export default function DetalleJornadaPage() {
     moviendo,
     errorMovimiento,
     descartarErrorMovimiento,
-    asignarPresupuesto,
-    errorPresupuesto,
-    guardandoPresupuesto,
   } = useDetalleJornada({ jornadaId: id, rol });
 
-  const [editandoPresupuesto, setEditandoPresupuesto] = useState(false);
-  const [montoPresupuesto, setMontoPresupuesto] = useState("");
-
-  const abrirEdicionPresupuesto = () => {
-    setMontoPresupuesto(jornada?.presupuestoAsignado ?? "");
-    setEditandoPresupuesto(true);
-  };
-
-  const guardarPresupuesto = async () => {
-    const ok = await asignarPresupuesto(montoPresupuesto);
-    if (ok) setEditandoPresupuesto(false);
-  };
+  const permisosPresupuesto = permisosDeOrigenDePresupuesto(rol);
 
   // Issue #185: advertencias de horario del cuadro de turnos (choque de dia completo de #182 +
   // traslape real de horas, las dos conviven). Se llama incondicionalmente, antes de los early
@@ -210,6 +226,7 @@ export default function DetalleJornadaPage() {
     // ya no los trae para ese rol), asi que la pestaña tampoco se ofrece.
     if (pestania.id === "pacientes") return permisos.puedeVerDatosClinicos;
     if (pestania.id === "historial") return permisos.puedeVerHistorial;
+    if (pestania.id === "presupuesto") return permisosPresupuesto.puedeVer;
     return true;
   });
 
@@ -331,98 +348,63 @@ export default function DetalleJornadaPage() {
                   )}
                 </div>
               </div>
-              <dl className="row mb-0">
-                <dt className="col-sm-4">{ETIQUETAS.codigo}</dt>
-                <dd className="col-sm-8">{jornada.codigo || "—"}</dd>
-
-                <dt className="col-sm-4">{ETIQUETAS.responsable}</dt>
-                <dd className="col-sm-8">{nombreDePerfil(jornada.responsable) ?? "—"}</dd>
-
-                <dt className="col-sm-4">{ETIQUETAS.cupoEstimado}</dt>
-                <dd className="col-sm-8">{jornada.cupoEstimado ?? "—"}</dd>
-
-                <dt className="col-sm-4">{ETIQUETAS.botiquinBodega}</dt>
-                <dd className="col-sm-8">{jornada.botiquinBodega?.nombre ?? "—"}</dd>
-
-                {/* Cuando la jornada arranco y cerro de verdad. listarJornadas() las traia
-                  desde siempre y ninguna pantalla las pintaba, asi que una jornada que empezo
-                  dos horas tarde se veia igual que una puntual. El guion es deliberado: una
-                  jornada planificada todavia no tiene inicio real, y tiene que notarse. */}
-                <dt className="col-sm-4">{ETIQUETAS.fechaInicioReal}</dt>
-                <dd className="col-sm-8">
-                  {jornada.fechaInicioReal ? formatearFechaConHora(jornada.fechaInicioReal) : "—"}
-                </dd>
-
-                <dt className="col-sm-4">{ETIQUETAS.fechaFinReal}</dt>
-                <dd className="col-sm-8">
-                  {jornada.fechaFinReal ? formatearFechaConHora(jornada.fechaFinReal) : "—"}
-                </dd>
-
-                <dt className="col-sm-4">Presupuesto asignado</dt>
-                <dd className="col-sm-8">
-                  {editandoPresupuesto ? (
-                    <div className="d-flex align-items-start gap-2">
-                      <NumberField
-                        value={montoPresupuesto}
-                        onChange={(valor) => setMontoPresupuesto(valor)}
-                        min={0}
-                        step="0.01"
-                        style={{ maxWidth: "160px" }}
-                      />
-                      <PrimaryButton
-                        title="Guardar"
-                        onClick={guardarPresupuesto}
-                        loading={guardandoPresupuesto}
-                        icon={<Save size={16} aria-hidden="true" />}
-                      />
+              {/* Issue #840 (H1): el mismo lenguaje que el resto de las fichas -rotulo en
+                  versalitas sobre el valor, en una rejilla que cae a una columna en pantallas
+                  estrechas- en vez de una lista de definicion de Bootstrap a dos columnas fijas. */}
+              <dl className="ec-ficha-datos">
+                <Dato etiqueta={ETIQUETAS.codigo} valor={jornada.codigo} mono />
+                <Dato
+                  etiqueta={ETIQUETAS.responsable}
+                  valor={nombreDePerfil(jornada.responsable)}
+                />
+                <Dato etiqueta={ETIQUETAS.cupoEstimado} valor={jornada.cupoEstimado} />
+                <Dato etiqueta={ETIQUETAS.botiquinBodega} valor={jornada.botiquinBodega?.nombre} />
+                {/* Cuando la jornada arranco y cerro de verdad. El guion es deliberado: una
+                    jornada planificada todavia no tiene inicio real, y tiene que notarse. */}
+                <Dato
+                  etiqueta={ETIQUETAS.fechaInicioReal}
+                  valor={jornada.fechaInicioReal && formatearFechaConHora(jornada.fechaInicioReal)}
+                />
+                <Dato
+                  etiqueta={ETIQUETAS.fechaFinReal}
+                  valor={jornada.fechaFinReal && formatearFechaConHora(jornada.fechaFinReal)}
+                />
+                {/* El total no se edita aqui desde la #840: es la suma de los aportes de la
+                    pestaña Presupuesto, y la base rechaza escribirlo a mano (00135). */}
+                <div>
+                  <dt className="ec-rotulo">Presupuesto asignado</dt>
+                  <dd className="mb-0 d-flex flex-wrap align-items-center gap-2">
+                    {formatearMoneda(jornada.presupuestoAsignado) ?? "—"}
+                    {permisosPresupuesto.puedeVer && (
                       <SecondaryButton
-                        title="Cancelar"
-                        onClick={() => setEditandoPresupuesto(false)}
-                        disabled={guardandoPresupuesto}
+                        title="Ver de dónde viene"
+                        size="sm"
+                        onClick={() => setPestaniaActiva("presupuesto")}
                       />
-                    </div>
-                  ) : (
-                    <span className="d-inline-flex align-items-center gap-2">
-                      {jornada.presupuestoAsignado != null
-                        ? `Q${Number(jornada.presupuestoAsignado).toLocaleString()}`
-                        : "—"}
-                      {permisos.puedeEditar && (
-                        <SecondaryButton title="Editar" onClick={abrirEdicionPresupuesto} />
-                      )}
-                    </span>
-                  )}
-                  {errorPresupuesto && (
-                    <div className="text-danger small mt-1">{errorPresupuesto}</div>
-                  )}
-                </dd>
+                    )}
+                  </dd>
+                </div>
               </dl>
-
-              <hr />
-
-              {/* Indicadores del dia (criterio 1): vienen de vista_reporte_impacto (00027), via
-                obtenerJornada(). `contadores` llega null cuando RLS no le da SELECT sobre esa
-                vista a este rol (medico y voluntario, 00064) -- ver useDetalleJornada.js. Un
-                guion en vez de 0 evita afirmar una atencion nula que no se puede confirmar,
-                mismo criterio que pacientesAtendidos en la tarjeta del kanban (#178). */}
-              <div className="row text-center">
-                <div className="col-6 col-md-3 mb-3">
-                  <div className="h4 mb-0">{jornada.contadores?.pacientesAtendidos ?? "—"}</div>
-                  <div className="small text-muted">Pacientes atendidos</div>
-                </div>
-                <div className="col-6 col-md-3 mb-3">
-                  <div className="h4 mb-0">{jornada.contadores?.consultasRealizadas ?? "—"}</div>
-                  <div className="small text-muted">Consultas realizadas</div>
-                </div>
-                <div className="col-6 col-md-3 mb-3">
-                  <div className="h4 mb-0">{jornada.contadores?.tratamientosEntregados ?? "—"}</div>
-                  <div className="small text-muted">Tratamientos entregados</div>
-                </div>
-                <div className="col-6 col-md-3 mb-3">
-                  <div className="h4 mb-0">{jornada.contadores?.medicamentosUtilizados ?? "—"}</div>
-                  <div className="small text-muted">Medicamentos utilizados</div>
-                </div>
-              </div>
             </Card>
+          )}
+
+          {/* Indicadores del dia (criterio 1): vienen de vista_reporte_impacto (00027), via
+              obtenerJornada(). `contadores` llega null cuando RLS no le da SELECT sobre esa vista
+              a este rol (medico y voluntario, 00064) -- ver useDetalleJornada.js. Un guion en vez
+              de 0 evita afirmar una atencion nula que no se puede confirmar. Desde la #840 son
+              StatCard, como los indicadores de donaciones y presupuesto, y no numeros sueltos
+              dentro de la tarjeta de datos. */}
+          {pestaniaActiva === "resumen" && (
+            <div className="ec-kpis mt-3">
+              {INDICADORES_DEL_DIA.map(({ clave, etiqueta }) => (
+                <StatCard
+                  key={clave}
+                  label={etiqueta}
+                  value={jornada.contadores?.[clave] ?? "—"}
+                  accent="var(--accent-jornadas)"
+                />
+              ))}
+            </div>
           )}
 
           {pestaniaActiva === "equipo" && (
@@ -528,6 +510,15 @@ export default function DetalleJornadaPage() {
             />
           )}
 
+          {pestaniaActiva === "presupuesto" && (
+            <OrigenesDePresupuesto
+              jornadaId={jornada.id}
+              proyectoId={jornada.proyectoId}
+              rol={rol}
+              alCambiar={recargar}
+            />
+          )}
+
           {/* Pestaña "Cierre" (issue #183). Misma pestaña antes y despues de finalizar
               (criterio 5): lo unico que cambia es si mas abajo se ofrece "Confirmar cierre"
               (jornada en curso + permiso), no el contenido -- ver el comentario de PESTANIAS mas
@@ -551,25 +542,15 @@ export default function DetalleJornadaPage() {
                 <LoadingState />
               ) : (
                 <>
-                  <div className="row text-center mb-3">
-                    <div className="col-6 col-md-4 mb-3">
-                      <div className="h4 mb-0">
-                        {resumenCierre.indicadores.pacientesAtendidos ?? "—"}
-                      </div>
-                      <div className="small text-muted">Pacientes atendidos</div>
-                    </div>
-                    <div className="col-6 col-md-4 mb-3">
-                      <div className="h4 mb-0">
-                        {resumenCierre.indicadores.consultasRealizadas ?? "—"}
-                      </div>
-                      <div className="small text-muted">Consultas registradas</div>
-                    </div>
-                    <div className="col-6 col-md-4 mb-3">
-                      <div className="h4 mb-0">
-                        {resumenCierre.indicadores.tratamientosEntregados ?? "—"}
-                      </div>
-                      <div className="small text-muted">Medicamentos entregados</div>
-                    </div>
+                  <div className="ec-kpis mb-3">
+                    {INDICADORES_DEL_CIERRE.map(({ clave, etiqueta }) => (
+                      <StatCard
+                        key={clave}
+                        label={etiqueta}
+                        value={resumenCierre.indicadores[clave] ?? "—"}
+                        accent="var(--accent-jornadas)"
+                      />
+                    ))}
                   </div>
 
                   {/* Advertencias (criterio 2): informan, nunca deshabilitan "Confirmar cierre"

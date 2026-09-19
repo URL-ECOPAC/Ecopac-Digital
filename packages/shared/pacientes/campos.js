@@ -170,9 +170,16 @@ export function seccionesDePaciente() {
 }
 
 /**
- * Formulario de triaje (triajes, 00013). min/max reproducen los CHECK de la tabla:
+ * Formulario de signos vitales (triajes, 00013). min/max reproducen los CHECK de la tabla:
  * cambiar un rango aqui sin cambiar la migracion desalinea la validacion del cliente
- * con la de la base de datos.
+ * con la de la base de datos. Son el limite de lo POSIBLE, no de lo normal: lo alarmante vive
+ * en signos.referencias.js.
+ *
+ * Ninguno es obligatorio desde la 00136 (issue #840): en jornada muchas veces no hay tensiometro,
+ * ni glucometro, ni bascula. Lo que si se exige -al menos un signo, y la presion completa- lo
+ * valida validarTriaje(), porque es una regla entre campos que un descriptor no expresa.
+ *
+ * `paso` es el incremento del control numerico: sin el, 36.5 grados no se podia escribir.
  */
 export const CAMPOS_TRIAJE = [
   {
@@ -180,21 +187,21 @@ export const CAMPOS_TRIAJE = [
     label: "Presión sistólica",
     tipo: TIPOS_DE_CAMPO.NUMERO,
     sufijo: "mmHg",
-    validacion: { requerido: true, min: 40, max: 300 },
+    validacion: { requerido: false, min: 40, max: 300 },
   },
   {
     id: "presionDiastolica",
     label: "Presión diastólica",
     tipo: TIPOS_DE_CAMPO.NUMERO,
     sufijo: "mmHg",
-    validacion: { requerido: true, min: 20, max: 200 },
+    validacion: { requerido: false, min: 20, max: 200 },
   },
   {
     id: "frecuenciaCardiaca",
     label: "Frecuencia cardiaca",
     tipo: TIPOS_DE_CAMPO.NUMERO,
     sufijo: "lpm",
-    validacion: { requerido: true, min: 20, max: 250 },
+    validacion: { requerido: false, min: 20, max: 250 },
   },
   {
     id: "glucosa",
@@ -208,6 +215,7 @@ export const CAMPOS_TRIAJE = [
     label: "Peso",
     tipo: TIPOS_DE_CAMPO.NUMERO,
     sufijo: "kg",
+    paso: 0.1,
     validacion: { requerido: false, min: 1, max: 400 },
   },
   {
@@ -215,6 +223,7 @@ export const CAMPOS_TRIAJE = [
     label: "Talla",
     tipo: TIPOS_DE_CAMPO.NUMERO,
     sufijo: "cm",
+    paso: 0.1,
     validacion: { requerido: false, min: 30, max: 250 },
   },
   {
@@ -222,6 +231,7 @@ export const CAMPOS_TRIAJE = [
     label: "Temperatura",
     tipo: TIPOS_DE_CAMPO.NUMERO,
     sufijo: "°C",
+    paso: 0.1,
     validacion: { requerido: false, min: 25, max: 45 },
   },
 ];
@@ -282,48 +292,10 @@ export const CAMPOS_CONSULTA = [
   },
 ];
 
-/**
- * Subconjunto de CAMPOS_CONSULTA para corregir una consulta ya guardada (issue #756, auditoria
- * campo-a-vista): actualizarConsulta() ya existia y aceptaba estos siete campos, pero ninguna
- * pantalla los pedia.
- *
- * Sin `diagnosticos`: esa columna no es de `consultas` sino de `consulta_diagnostico` (tabla de
- * union), y no es un campo plano de este formulario -es una lista repetible con su propia accion
- * de agregar/quitar, mismo tratamiento que CAMPOS_HITO o CAMPOS_CONDICION_CRONICA frente a sus
- * pantallas de lista. La migracion 00127 le agrego DELETE (antes solo tenia SELECT e INSERT, sin
- * ninguna forma de corregir un diagnostico mal elegido); ModalCorreccionConsulta.jsx la maneja
- * aparte con CAMPOS_AGREGAR_DIAGNOSTICO, no metiendola aqui.
- */
-const IDS_CAMPOS_CORRECCION_CONSULTA = [
-  "motivoConsulta",
-  "antecedentes",
-  "sintomas",
-  "exploracion",
-  "tratamiento",
-  "observaciones",
-  "planSeguimiento",
-];
-
-export const CAMPOS_CORRECCION_CONSULTA = CAMPOS_CONSULTA.filter((campo) =>
-  IDS_CAMPOS_CORRECCION_CONSULTA.includes(campo.id),
-);
-
-/**
- * Formulario de una sola opcion para agregar un diagnostico a una consulta ya registrada (issue
- * #756, migracion 00127): agregar el correcto despues de quitar uno mal elegido con
- * quitarDiagnosticoDeConsulta() (consultas.api.js). Sin `esPrincipal`: cual diagnostico es el
- * principal se sigue infiriendo del orden de seleccion, mismo criterio que CAMPOS_CONSULTA ya
- * aplicaba al registrar la consulta por primera vez.
- */
-export const CAMPOS_AGREGAR_DIAGNOSTICO = [
-  {
-    id: "diagnostico",
-    label: "Diagnóstico",
-    tipo: TIPOS_DE_CAMPO.SELECT,
-    opcionesDesde: "diagnosticos",
-    validacion: { requerido: true },
-  },
-];
+// CAMPOS_CORRECCION_CONSULTA y CAMPOS_AGREGAR_DIAGNOSTICO se retiraron con la #840 (regla B1):
+// corregir una consulta usa ahora el mismo formulario que registrarla, CAMPOS_CONSULTA completo,
+// y los diagnosticos se agregan o se quitan en la misma lista (useConsulta.js calcula la
+// diferencia con cambiosDeDiagnosticos()).
 
 /**
  * Formulario de receta (recetas + receta_detalle, 00019). medicamentos es una lista

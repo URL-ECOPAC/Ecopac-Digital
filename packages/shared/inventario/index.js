@@ -46,6 +46,7 @@ export * from "./useCatalogoPrincipiosActivos.js";
 export * from "./useInventario.js";
 export * from "./usePendientesValidacion.js";
 export * from "./useRegistroIngreso.js";
+export * from "./useAltaDeMedicamentoEnLinea.js";
 export * from "./useEntregaMedicamentos.js";
 export * from "./useDetalleLote.js";
 
@@ -82,18 +83,22 @@ export {
 // error suyo habria aparecido antes de llegar a produccion.
 //
 // Por nombre y no con `export *`: es el criterio que ya seguia useAlertasVencimiento aqui arriba.
-// Los helpers internos de cada archivo -resultadoDeListado(), validarDatosDeLote(), nombreDe(),
-// filasDeKardex()- no son API del paquete y no salen.
+// Los helpers internos de cada archivo -resultadoDeListado(), nombreDe(), filasDeKardex()- no
+// son API del paquete y no salen.
 export {
   TIPO_BODEGA,
   TIPO_PROVEEDOR,
   useAdministracionBodegasProveedores,
 } from "./useAdministracionBodegasProveedores.js";
-export { datosLoteParaRegistrar, useGestionLotes } from "./useGestionLotes.js";
+export { useGestionLotes } from "./useGestionLotes.js";
 export {
   ESTADO_MOVIMIENTO,
   TIPO_MOVIMIENTO,
   useKardexMovimientos,
 } from "./useKardexMovimientos.js";
 export { useRegistroSalida } from "./useRegistroSalida.js";
-export { filaDeMisMovimientos, useMisMovimientos } from "./useMisMovimientos.js";
+export {
+  filaDeMisMovimientos,
+  useMisMovimientos,
+  valoresDeCorreccionDeMovimiento,
+} from "./useMisMovimientos.js";

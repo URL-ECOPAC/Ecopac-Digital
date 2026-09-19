@@ -164,17 +164,15 @@ describe("registrarTriaje", () => {
     expect(cliente.llamadas.find((l) => l.paso === "insert").valores.glucosa).toBeNull();
   });
 
-  it("no llama al servidor si faltan los signos obligatorios", async () => {
+  // Desde la 00136 (issue #840) ningun signo es obligatorio, pero un triaje sin ninguno no se
+  // registra: no mide nada.
+  it("no llama al servidor si no viene ningun signo", async () => {
     dobles.cliente = null; // el mock revienta si alguien llega a obtenerSupabase()
 
     const { errores, error } = await registrarTriaje(ATENCION, {}, { tomadoPor: TOMADO_POR });
 
     expect(error).toBeNull();
-    expect(Object.keys(errores).sort()).toEqual([
-      "frecuenciaCardiaca",
-      "presionDiastolica",
-      "presionSistolica",
-    ]);
+    expect(Object.keys(errores)).toEqual(["signos"]);
   });
 
   it("traduce el UNIQUE de atencion_id a un mensaje que dice que hacer", async () => {
@@ -224,12 +222,16 @@ describe("actualizarTriaje", () => {
     expect(error).toBeNull();
   });
 
-  it("pero rechaza vaciar un obligatorio", async () => {
-    dobles.cliente = null;
+  it("vaciar un signo lo manda como null: todos son opcionales desde la 00136", async () => {
+    const cliente = crearCliente({ triajes: { data: { id: "triaje-1" }, error: null } });
+    dobles.cliente = cliente;
 
-    const { errores } = await actualizarTriaje("triaje-1", { presionSistolica: "" });
+    const { errores } = await actualizarTriaje("triaje-1", { temperatura: "" });
 
-    expect(errores).toHaveProperty("presionSistolica");
+    expect(errores).toEqual({});
+    expect(cliente.llamadas.find((l) => l.paso === "update").valores).toEqual({
+      temperatura: null,
+    });
   });
 
   it("tampoco envia el imc", async () => {

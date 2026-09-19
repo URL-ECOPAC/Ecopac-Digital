@@ -92,7 +92,13 @@ function Valor({ columna, fila, catalogos }) {
     case "estado": {
       const catalogo = catalogos[columna.etiquetasDesde] ?? [];
       const entrada = catalogo.find((opcion) => opcion.value === valor);
-      return <StatusChip status={entrada?.clave ?? valor} label={entrada?.label} />;
+      return (
+        <StatusChip
+          status={entrada?.clave ?? valor}
+          label={entrada?.label}
+          icono={entrada?.icono}
+        />
+      );
     }
 
     case "booleano":

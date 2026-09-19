@@ -15,5 +15,6 @@ export * from "./comunidades.validaciones.js";
 export * from "./filtros.js";
 export * from "./permisos.js";
 export * from "./useAltaDeComunidadEnLinea.js";
+export * from "./useCascadaTerritorial.js";
 export * from "./useCatalogoComunidades.js";
 export * from "./useFormularioComunidad.js";

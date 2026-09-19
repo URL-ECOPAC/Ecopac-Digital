@@ -3,6 +3,7 @@ import { Save, X } from "lucide-react";
 
 import { seccionesDePaciente, useEdicionPaciente } from "@ecopac/shared";
 
+import CascadaDeComunidad from "../components/CascadaDeComunidad";
 import Modal from "../components/Modal";
 import PrimaryButton from "../components/PrimaryButton";
 import SeccionDeFormulario from "../components/SeccionDeFormulario";
@@ -21,9 +22,26 @@ import SecondaryButton from "../components/SecondaryButton";
 // dibujo de cada campo lo resuelve SeccionDeFormulario a partir del descriptor, que es lo que
 // quita de este archivo el `switch (campo.tipo)` que estaba copiado en diez modales.
 
-export default function ModalEdicionPaciente({ paciente, onClose, onGuardado }) {
-  const { valores, errores, error, enviando, hayCambios, setCampo, descartar, guardar, catalogos } =
-    useEdicionPaciente(paciente);
+export default function ModalEdicionPaciente({ paciente, rol, onClose, onGuardado }) {
+  const {
+    valores,
+    errores,
+    error,
+    enviando,
+    hayCambios,
+    departamentoId,
+    municipioId,
+    setCampo,
+    setDepartamento,
+    setMunicipio,
+    descartar,
+    guardar,
+    catalogos,
+    puedeCrearComunidad,
+    registrarComunidad,
+    erroresComunidad,
+    creandoComunidad,
+  } = useEdicionPaciente(paciente, { rol });
   const [confirmandoSalida, setConfirmandoSalida] = useState(false);
 
   const intentarCerrar = () => {
@@ -71,6 +89,28 @@ export default function ModalEdicionPaciente({ paciente, onClose, onGuardado }) 
             catalogos={catalogos}
             onChange={setCampo}
             disabled={enviando}
+            // La misma cascada que el alta (issue #840). Antes aqui habia un selector plano con
+            // todas las comunidades del pais y no se veian ni departamento ni municipio.
+            dibujarCampo={(campo) =>
+              campo.id === "comunidad" ? (
+                <CascadaDeComunidad
+                  label={campo.label}
+                  comunidadId={valores.comunidad}
+                  error={errores.comunidad}
+                  catalogos={catalogos}
+                  departamentoId={departamentoId}
+                  municipioId={municipioId}
+                  onDepartamento={setDepartamento}
+                  onMunicipio={setMunicipio}
+                  onComunidad={(valor) => setCampo("comunidad", valor)}
+                  disabled={enviando}
+                  puedeCrear={puedeCrearComunidad}
+                  onCrear={registrarComunidad}
+                  erroresAlta={erroresComunidad}
+                  creando={creandoComunidad}
+                />
+              ) : undefined
+            }
           />
         ))}
 

@@ -2,22 +2,20 @@ import { useEffect, useState } from "react";
 import { Ban, EyeOff, Printer } from "lucide-react";
 
 import {
-  anularReceta,
   describirMedicamento,
   describirEntrega,
   describirPosologia,
   formatearFechaCorta,
-  puedeAnularReceta,
-  useRecetasPaciente,
 } from "@ecopac/shared";
 
-import Card from "../components/Card";
-import EmptyState from "../components/EmptyState";
-import ErrorState from "../components/ErrorState";
-import LoadingState from "../components/LoadingState";
 import SecondaryButton from "../components/SecondaryButton";
 import StatusChip from "../components/StatusChip";
-import RecetaImprimible from "./RecetaImprimible";
+
+// Una receta con su detalle, su impresion y su anulacion.
+//
+// Vivia dentro de PestaniaRecetasPaciente.jsx, la pestana hermana del historial que la #840
+// retira: ahora cada receta se ve dentro de la visita a la que pertenece. Se extrae sin cambiar
+// lo que hace para que imprimir y anular sigan exactamente igual.
 
 function Detalle({ receta }) {
   if (receta.detalle.length === 0) {
@@ -45,7 +43,8 @@ function Detalle({ receta }) {
   );
 }
 
-function Receta({ receta, abierta, onAlternar, onImprimir, puedeAnular, onAnular }) {
+export default function TarjetaReceta({ receta, onImprimir, puedeAnular, onAnular }) {
+  const [abierta, setAbierta] = useState(false);
   const [anulando, setAnulando] = useState(false);
   const [motivo, setMotivo] = useState("");
   const [enviando, setEnviando] = useState(false);
@@ -66,21 +65,18 @@ function Receta({ receta, abierta, onAlternar, onImprimir, puedeAnular, onAnular
   };
 
   return (
-    <Card style={{ marginBottom: "1rem", opacity: receta.anulada ? 0.75 : 1 }}>
+    <div className="pac-receta" style={{ opacity: receta.anulada ? 0.75 : 1 }}>
       <div className="d-flex flex-wrap align-items-center gap-2">
         <strong>{receta.folio ?? "Sin folio"}</strong>
         <StatusChip status={receta.estado} />
         <span className="pac-fecha">{formatearFechaCorta(receta.createdAt)}</span>
-        {/* Tres enlaces de texto seguidos en la misma fila que el folio y el chip de estado: no
-            se leian como acciones. Son los botones del catalogo, y el ojo, la impresora y el
-            contorno rojo de anular los ponen el rotulo y la variante. */}
         <div className="d-flex flex-wrap gap-2 ms-auto">
           <SecondaryButton
             title={abierta ? "Ocultar detalle" : "Ver detalle"}
             variant="neutra"
             size="sm"
             icon={abierta ? <EyeOff size={16} aria-hidden="true" /> : undefined}
-            onClick={onAlternar}
+            onClick={() => setAbierta((valor) => !valor)}
             aria-expanded={abierta}
           />
           <SecondaryButton
@@ -88,7 +84,7 @@ function Receta({ receta, abierta, onAlternar, onImprimir, puedeAnular, onAnular
             variant="neutra"
             size="sm"
             icon={<Printer size={16} aria-hidden="true" />}
-            onClick={onImprimir}
+            onClick={() => onImprimir(receta)}
           />
           {puedeAnular && !receta.anulada && !anulando && (
             <SecondaryButton
@@ -100,12 +96,6 @@ function Receta({ receta, abierta, onAlternar, onImprimir, puedeAnular, onAnular
             />
           )}
         </div>
-      </div>
-
-      <div className="pac-dato-mono mt-1">
-        {[receta.jornada, receta.medico ? `Dr. ${receta.medico}` : null]
-          .filter(Boolean)
-          .join(" · ") || "Sin jornada ni medico registrados"}
       </div>
 
       {receta.anulada && (
@@ -136,44 +126,40 @@ function Receta({ receta, abierta, onAlternar, onImprimir, puedeAnular, onAnular
             disabled={enviando}
           />
           <div className="d-flex gap-2 justify-content-end">
-            <button
-              type="button"
-              className="btn btn-outline-secondary btn-sm"
+            <SecondaryButton
+              title="Cancelar"
+              variant="neutra"
+              size="sm"
               onClick={() => {
                 setAnulando(false);
                 setErrorAnular(null);
               }}
               disabled={enviando}
-            >
-              Cancelar
-            </button>
-            <button
-              type="button"
-              className="btn btn-danger btn-sm"
+            />
+            <SecondaryButton
+              title={enviando ? "Anulando..." : "Confirmar anulacion"}
+              variant="peligro"
+              size="sm"
               onClick={confirmarAnulacion}
               disabled={enviando || !motivo.trim()}
-            >
-              {enviando ? "Anulando..." : "Confirmar anulacion"}
-            </button>
+            />
           </div>
         </div>
       )}
 
       {abierta && <Detalle receta={receta} />}
-    </Card>
+    </div>
   );
 }
 
-export default function PestaniaRecetasPaciente({ paciente, rol, perfilId }) {
-  const { recetas, conteo, cargando, error, recargar } = useRecetasPaciente(paciente?.id, { rol });
-  const [abiertas, setAbiertas] = useState(() => new Set());
+/**
+ * Imprime una receta: la monta en su portal imprimible y abre el dialogo del navegador. Vivia en
+ * PestaniaRecetasPaciente.jsx; se extrae con la tarjeta.
+ *
+ * @returns {{ aImprimir: object|null, imprimir: (receta: object) => void }}
+ */
+export function useImpresionDeReceta() {
   const [aImprimir, setAImprimir] = useState(null);
-
-  const anular = async (recetaId, motivo) => {
-    const respuesta = await anularReceta(recetaId, { motivo, anuladaPor: perfilId });
-    if (!respuesta.error) await recargar();
-    return respuesta;
-  };
 
   useEffect(() => {
     if (!aImprimir) return undefined;
@@ -188,42 +174,5 @@ export default function PestaniaRecetasPaciente({ paciente, rol, perfilId }) {
     };
   }, [aImprimir]);
 
-  const alternar = (id) =>
-    setAbiertas((anteriores) => {
-      const siguiente = new Set(anteriores);
-      if (siguiente.has(id)) siguiente.delete(id);
-      else siguiente.add(id);
-      return siguiente;
-    });
-
-  if (cargando) return <LoadingState />;
-  if (error) return <ErrorState message={error.mensaje} onRetry={recargar} />;
-
-  if (conteo.total === 0) {
-    return <EmptyState message="Este paciente todavia no tiene recetas emitidas." />;
-  }
-
-  return (
-    <div>
-      <p className="text-body-secondary small">
-        {conteo.total === 1 ? "1 receta" : `${conteo.total} recetas`}
-        {conteo.anuladas > 0 &&
-          ` · ${conteo.anuladas === 1 ? "1 anulada" : `${conteo.anuladas} anuladas`}`}
-      </p>
-
-      {recetas.map((receta) => (
-        <Receta
-          key={receta.id}
-          receta={receta}
-          abierta={abiertas.has(receta.id)}
-          onAlternar={() => alternar(receta.id)}
-          onImprimir={() => setAImprimir(receta)}
-          puedeAnular={puedeAnularReceta(rol, receta, perfilId)}
-          onAnular={anular}
-        />
-      ))}
-
-      {aImprimir && <RecetaImprimible receta={aImprimir} paciente={paciente} />}
-    </div>
-  );
+  return { aImprimir, imprimir: setAImprimir };
 }

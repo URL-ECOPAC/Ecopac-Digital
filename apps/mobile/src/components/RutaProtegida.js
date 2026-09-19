@@ -1,5 +1,6 @@
 import { useSesionCompartida } from "../contexto/SesionProvider";
 import AccesoDenegadoScreen from "../screens/AccesoDenegadoScreen";
+import LoadingState from "./LoadingState";
 
 /**
  * Guard de rol de la navegacion movil (issues #427, #692 y #820).
@@ -22,8 +23,15 @@ import AccesoDenegadoScreen from "../screens/AccesoDenegadoScreen";
  * que significa "solo comprobar que haya sesion" es `null`, y no se usa dentro del layout.
  */
 export default function RutaProtegida({ rolesPermitidos = [], children }) {
-  const { perfil } = useSesionCompartida();
+  const { perfil, cargando } = useSesionCompartida();
   const rol = perfil?.rol;
+
+  // Justo despues de iniciar sesion hay usuario y el perfil todavia se esta leyendo. Negar el
+  // acceso ahi pintaba "acceso denegado" un instante en cada login, antes de entrar igual (issue
+  // #840). Se espera; si la lectura termina sin perfil, la regla de abajo lo niega.
+  if (!perfil && cargando) {
+    return <LoadingState />;
+  }
 
   if (!rol || !rolesPermitidos.includes(rol)) {
     return <AccesoDenegadoScreen />;

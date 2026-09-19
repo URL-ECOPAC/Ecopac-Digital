@@ -1,13 +1,13 @@
 // Prueba de la parte pura del hook de alta de usuario.
 //
 // El hook en si no se monta: mismo motivo que useUsuariosListado.test.js, packages/shared corre
-// vitest con environment "node". Lo unico verificable sin DOM es CAMPOS_ALTA_USUARIO, el
-// subconjunto de CAMPOS_USUARIO que arma el modal.
+// vitest con environment "node". Lo verificable sin DOM es CAMPOS_ALTA_USUARIO, el subconjunto
+// de CAMPOS_USUARIO que arma el modal, y complementoDeAlta().
 
 import { describe, expect, it } from "vitest";
 
-import { CAMPOS_USUARIO } from "./campos.js";
-import { avisoDeCorreoNoEnviado, CAMPOS_ALTA_USUARIO } from "./useAltaUsuario.js";
+import { CAMPOS_ALTA_USUARIO, CAMPOS_USUARIO } from "./campos.js";
+import { avisoDeCorreoNoEnviado, complementoDeAlta } from "./useAltaUsuario.js";
 
 describe("avisoDeCorreoNoEnviado", () => {
   it("avisa cuando la funcion dice que el correo no salio", () => {
@@ -29,13 +29,17 @@ describe("avisoDeCorreoNoEnviado", () => {
 });
 
 describe("CAMPOS_ALTA_USUARIO", () => {
-  it("son exactamente los cinco campos que crearUsuario() envia al servidor", () => {
+  // Issue #840 (B1): el alta pide lo mismo que la edicion, no cinco campos de ocho.
+  it("son los mismos ocho campos que la edicion, en el mismo orden", () => {
     expect(CAMPOS_ALTA_USUARIO.map((campo) => campo.id)).toEqual([
       "nombres",
       "apellidos",
       "email",
       "telefono",
       "rol",
+      "fechaIngreso",
+      "direccion",
+      "notas",
     ]);
   });
 
@@ -48,5 +52,25 @@ describe("CAMPOS_ALTA_USUARIO", () => {
       const original = CAMPOS_USUARIO.find((c) => c.id === campo.id);
       expect(campo).toBe(original);
     }
+  });
+});
+
+// Lo que la invitacion no lleva se escribe despues sobre el perfil creado (issue #840, B1).
+describe("complementoDeAlta", () => {
+  it("toma solo fecha de ingreso, direccion y notas, y solo si se llenaron", () => {
+    expect(
+      complementoDeAlta({
+        nombres: "Persona",
+        email: "persona@example.com",
+        fechaIngreso: "2026-01-10",
+        direccion: "  ",
+        notas: "Turno de tarde",
+      }),
+    ).toEqual({ fechaIngreso: "2026-01-10", notas: "Turno de tarde" });
+  });
+
+  it("sin nada que completar devuelve un objeto vacio", () => {
+    expect(complementoDeAlta({ nombres: "Persona" })).toEqual({});
+    expect(complementoDeAlta(undefined)).toEqual({});
   });
 });

@@ -91,9 +91,14 @@ app no levanta.
 
 `formatearFechaCorta`, `formatearFechaLarga`, `formatearFechaConHora`, `aFechaLocal`,
 `esFechaValida`, `calcularEdad`, `diasHastaVencimiento`, `formatearMoneda`, `MONEDA`, `MESES`,
-`DIAS_DE_LA_SEMANA`.
+`DIAS_DE_LA_SEMANA`, `fechaLocalISO`.
 
 Ninguna pantalla formatea una fecha por su cuenta.
+
+`fechaLocalISO(fecha?)` es la unica forma de escribir "hoy" como `AAAA-MM-DD`.
+`new Date().toISOString().slice(0, 10)` da el dia UTC, que en Guatemala es manana a partir de las
+18:00; el lint lo rechaza fuera de las pruebas, y las pruebas de shared corren con
+`TZ=America/Guatemala` para que el defecto no pueda pasar en el CI, que corre en UTC (issue #840).
 
 `textoComparable(texto)` y `buscarOpcionPorEtiqueta(opciones, texto)` (`formato/opciones.js`):
 comparan texto de interfaz sin mayusculas, acentos ni espacios de mas.
@@ -110,6 +115,7 @@ poner solos el "+" y el basurero; ninguna pantalla los escribe a mano.
 | `useSesion`                      | Sesion y perfil actual                                            |
 | `useBusquedaPacientes`           | Busqueda con retardo y paginacion, compartida entre pantallas     |
 | `useExpiracionPorInactividad`    | Cierra la sesion tras `MINUTOS_INACTIVIDAD_POR_DEFECTO`, avisando `SEGUNDOS_DE_AVISO_POR_DEFECTO` antes; con `almacenamiento`, sobrevive a recargar y se comparte entre pestanas. Devuelve `registrarActividad`, `seguirConectado`, `avisoVisible`, `segundosRestantes` |
+| `MINUTOS_INACTIVIDAD_MOVIL`      | 60 minutos para la app movil, frente a los 30 de la web; la razon esta documentada junto a la constante (issue #840). Movil no usa el hook: lo hace `apps/mobile/src/contexto/useInactividadMovil.js` con `AppState`, porque en un telefono los temporizadores no corren en segundo plano |
 | `haVencidoPorInactividad`, `segundosHastaElCierre`, `actividadMasReciente` | La logica pura del temporizador, probada sin reloj real |
 | `olvidarUltimaActividad`, `CLAVE_ULTIMA_ACTIVIDAD` | Borran / nombran la marca guardada; la pantalla de inicio de sesion la borra |
 | `esRespuestaVigente`, `debeDescartarseLaRespuesta`, `combinarResultados`, `hayMasResultados` | Descartan respuestas de una busqueda ya superada |
@@ -130,6 +136,10 @@ ilegible.
 ### `territorio/`
 
 `listarDepartamentos`, `listarMunicipios`, `listarComunidades`, `obtenerComunidad`.
+
+`useCascadaTerritorial({ comunidadInicial, alElegirComunidad })`: departamento -> municipio ->
+comunidad encadenados, posicionados solos en la comunidad inicial. La usan el alta y la edicion de
+paciente (issue #840); departamento y municipio son filtros, no campos que se guarden.
 
 ---
 
@@ -154,7 +164,7 @@ como identificador: busca por el **inicio** del numero de ficha y del DPI
 (`buscarPacientesPorIdentificador`) y no pasa por `fn_buscar_pacientes`. Antes el DPI no se buscaba
 en ningun lado y la ficha solo coincidia escrita completa.
 
-`useRegistroConsulta({ rol })` devuelve `crearDiagnosticoNuevo(nombre)` para quien puede mantener el
+`useConsulta({ rol, ... })` devuelve `crearDiagnosticoNuevo(nombre)` para quien puede mantener el
 catalogo (`puedeAdministrarDiagnosticos`, politica de INSERT de la 00105) y `null` para el resto.
 
 **Escrituras**
@@ -167,8 +177,14 @@ catalogo (`puedeAdministrarDiagnosticos`, politica de INSERT de la 00105) y `nul
 **Validaciones**
 
 `validarPaciente`, `validarRegistroPaciente`, `validarTriaje`, `validarCambioDeTriaje`,
-`validarCondicionCronica`, `validarCambioDeCondicion`, mas `advertenciasDeTriaje` (rangos que no
-bloquean pero avisan) y `advertirPacienteDuplicado`.
+`validarCondicionCronica`, `validarCambioDeCondicion`, mas `avisosDeSignos(valores, edad)` y
+`advertirPacienteDuplicado`.
+
+`avisosDeSignos` devuelve un aviso por campo con `nivel` de `NIVELES_DE_AVISO`: `imposible` (fuera
+de lo fisiologicamente posible; bloquea) o `alarma` (posible pero de riesgo; avisa y deja guardar).
+Un campo nunca tiene las dos capas a la vez (issue #840, G2). Los umbrales de alarma, con su fuente
+clinica, estan en `signos.referencias.js` (`umbralesDeAlarma(edad)`). Todos los signos son
+opcionales, pero la presion va completa o no va (`haySignosCapturados`, 00136).
 
 **Descriptores**
 
@@ -194,14 +210,21 @@ web y la tarjeta estrecha del movil.
 
 `usePacientesListado`, `usePaciente`, `useRegistroPaciente`, `useEdicionPaciente`,
 `useHistorialPaciente`, `useEvolucionSignos`, `useCondicionesPaciente`, `usePacientesCronicos`,
-`useRegistroTriaje`, `useRegistroConsulta`, `useGeneracionReceta`, `useRecetasPaciente`.
+`useConsulta`, `useVisitasPaciente`, `useGeneracionReceta`, `useRecetasPaciente`.
+
+`useConsulta({ pacienteId, jornadaId, rol, perfilId, ... })` es la consulta como unidad (issue
+#840, F): signos vitales opcionales, consulta y receta en un solo flujo, y el mismo hook para crear
+y para editar (los mismos campos con las mismas etiquetas, B1). Reemplaza a `useRegistroTriaje`,
+`useRegistroConsulta`, `useCorreccionTriaje` y `useCorreccionConsulta`. `useVisitasPaciente`
+agrupa el historial por visita (una atencion: sus signos, su consulta y sus recetas), que es lo que
+muestran las dos apps en la pestana de historial.
 
 **Utilidades reutilizables**
 
 `calcularImc` (previsualizacion; el valor guardado lo calcula Postgres), `nombreCompletoDePaciente`,
 `resumenDeUltimaAtencion`, `condicionesDestacadas`, `estaFueraDeRango`, `describirPosologia`,
 `describirMedicamento`, `datosDeRecetaImprimible`, `claveDeBorrador` y `hayBorradorConDatos` (el
-borrador local del registro por pasos, porque en campo se interrumpe).
+borrador local de la consulta, porque en campo se interrumpe).
 
 `describirEntrega(renglon)` devuelve la cantidad **vigente** de un renglon de receta: la corregida
 (`cantidad_ajustada`, 00128) si la hubo, con de cuanto y por quien. Las pantallas leian solo
@@ -262,10 +285,15 @@ pediatrico, activo) y resumen los lotes de cada medicamento; la "categoria", el 
 que mostraba la pantalla no eran columnas.
 
 **Escrituras**: `registrarMedicamento`, `actualizarMedicamento`, `desactivarMedicamento`,
-`registrarLote`, `registrarIngreso`, `registrarSalida`, `editarMovimiento`, `aprobarMovimiento`,
+`registrarIngreso`, `registrarSalida`, `editarMovimiento`, `aprobarMovimiento`,
 `rechazarMovimiento`, `aprobarMovimientosEnLote`, `registrarBodega`, `actualizarBodega`,
 `registrarProveedor`, `actualizarProveedor`, `registrarPrincipioActivo`,
 `actualizarPrincipioActivo`, `eliminarPrincipioActivo`, `atenderAlerta`.
+
+Un lote no se da de alta por su cuenta: nace dentro de `registrarIngreso`, que crea el lote y su
+movimiento en la misma operacion. Hubo un `registrarLote` que insertaba en `lotes` y nada mas, y
+dejaba el lote con cero existencias en todas las bodegas; se retiro con la issue #846. De un lote
+ya registrado se corrige el costo con `actualizarLote` (`CAMPOS_CORRECCION_LOTE`).
 
 **Reglas de vencimiento y disponibilidad**: `calcularEstadoVencimiento`, `calcularDiasRestantes`,
 `esLoteEntregable`, `motivoLoteNoEntregable`, `hayDisponibilidad`, `motivoSinDisponibilidad`,
@@ -309,7 +337,12 @@ medicamentos crea el lote correspondiente.
 `obtenerPresupuestoProyecto`, `obtenerPresupuestoSistema`.
 
 **Escrituras**: `registrarGasto`, `editarGasto`, `aprobarGasto`, `rechazarGasto`,
-`asignarPresupuestoJornada`.
+`registrarOrigenDePresupuesto`, `quitarOrigenDePresupuesto`.
+
+El presupuesto de una jornada ya no se escribe a mano: es la suma de sus origenes
+(`jornada_presupuesto_origen`, 00135), cada uno de una donacion en efectivo con saldo o de fondos
+propios. `useOrigenesDePresupuesto` los lista y los agrega; `listarDonacionesConSaldo` ofrece las
+donaciones de donde puede salir.
 
 **Calculo**: `calcularPorcentajeEjecutado`, `combinarJornadasConPresupuesto`,
 `combinarProyectosConPresupuesto`, `totalizar`.

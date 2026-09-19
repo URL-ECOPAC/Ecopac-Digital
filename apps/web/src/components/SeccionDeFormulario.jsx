@@ -1,3 +1,5 @@
+import { Fragment } from "react";
+
 import CampoDeFormulario from "./CampoDeFormulario";
 
 /**
@@ -16,6 +18,12 @@ import CampoDeFormulario from "./CampoDeFormulario";
  *
  * `acento` tine la barra del titulo con el color del modulo. Llega como variable de tokens
  * (`var(--accent-pacientes)`), nunca como un color escrito a mano.
+ *
+ * `dibujarCampo(campo)` sustituye el dibujo de un campo concreto -la cascada territorial en lugar
+ * del selector plano de comunidad- y devuelve `undefined` para dejar el resto como esta. Existe
+ * para que el alta y la edicion de una misma entidad recorran las mismas secciones con el mismo
+ * componente (issue #840): antes el alta las recorria a mano solo para poder cambiar un campo, y
+ * por eso los dos formularios se habian separado.
  */
 export default function SeccionDeFormulario({
   titulo,
@@ -27,6 +35,7 @@ export default function SeccionDeFormulario({
   catalogos = {},
   onChange,
   disabled = false,
+  dibujarCampo,
   children,
 }) {
   return (
@@ -39,17 +48,21 @@ export default function SeccionDeFormulario({
       )}
 
       <div className="ec-form-grid">
-        {campos.map((campo) => (
-          <CampoDeFormulario
-            key={campo.id}
-            campo={campo}
-            valor={valores[campo.id]}
-            error={errores[campo.id]}
-            catalogos={catalogos}
-            disabled={disabled}
-            onChange={(valor) => onChange?.(campo.id, valor)}
-          />
-        ))}
+        {campos.map((campo) => {
+          const propio = dibujarCampo?.(campo);
+          if (propio !== undefined) return <Fragment key={campo.id}>{propio}</Fragment>;
+          return (
+            <CampoDeFormulario
+              key={campo.id}
+              campo={campo}
+              valor={valores[campo.id]}
+              error={errores[campo.id]}
+              catalogos={catalogos}
+              disabled={disabled}
+              onChange={(valor) => onChange?.(campo.id, valor)}
+            />
+          );
+        })}
       </div>
 
       {children}

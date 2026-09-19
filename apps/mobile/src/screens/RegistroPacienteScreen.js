@@ -7,12 +7,12 @@ import { colors, spacing, typography } from "@ecopac/ui-tokens";
 
 import {
   Card,
+  CascadaDeComunidad,
   DateField,
   PrimaryButton,
   ScreenContainer,
   SecondaryButton,
   Selector,
-  SelectorConAlta,
   TextField,
 } from "../components";
 import { useJornadaActivaCompartida } from "../contexto/JornadaActivaProvider";
@@ -121,42 +121,23 @@ export default function RegistroPacienteScreen() {
       {paso.campos.map((campo) => {
         if (campo.id === "comunidad") {
           return (
-            <View key="comunidad">
-              <Selector
-                label="Departamento"
-                value={departamentoId}
-                options={catalogos.departamentos}
-                onSelect={setDepartamento}
-                placeholder="Departamento"
-                disabled={enviando || catalogos.departamentos.length === 0}
-              />
-              <Selector
-                label="Municipio"
-                value={municipioId}
-                options={catalogos.municipios}
-                onSelect={setMunicipio}
-                placeholder="Municipio"
-                disabled={enviando || !departamentoId || catalogos.municipios.length === 0}
-              />
-              {/* La comunidad de quien se registra en jornada muchas veces todavia no esta en el
-                  catalogo: se crea aqui mismo, igual que en la web (issue #838). */}
-              <SelectorConAlta
-                label={campo.label}
-                value={valores.comunidad || null}
-                options={catalogos.comunidades}
-                onSelect={(valor) => setCampo("comunidad", valor)}
-                placeholder="Comunidad"
-                error={errores.comunidad}
-                disabled={enviando || !municipioId}
-                puedeCrear={puedeCrearComunidad}
-                habilitadoParaCrear={Boolean(municipioId)}
-                etiquetaAlta="Crear una comunidad"
-                labelNuevo="Nombre de la comunidad nueva"
-                onCrear={registrarComunidad}
-                erroresAlta={erroresComunidad}
-                creando={creandoComunidad}
-              />
-            </View>
+            <CascadaDeComunidad
+              key="comunidad"
+              label={campo.label}
+              comunidadId={valores.comunidad}
+              error={errores.comunidad}
+              catalogos={catalogos}
+              departamentoId={departamentoId}
+              municipioId={municipioId}
+              onDepartamento={setDepartamento}
+              onMunicipio={setMunicipio}
+              onComunidad={(valor) => setCampo("comunidad", valor)}
+              disabled={enviando}
+              puedeCrear={puedeCrearComunidad}
+              onCrear={registrarComunidad}
+              erroresAlta={erroresComunidad}
+              creando={creandoComunidad}
+            />
           );
         }
 

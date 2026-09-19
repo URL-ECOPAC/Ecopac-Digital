@@ -16,6 +16,27 @@ import { TIPOS_DE_FILTRO } from "../descriptores.js";
 import { diasHastaVencimiento } from "../formato/fechas.js";
 import { textoComparable } from "../formato/opciones.js";
 
+/**
+ * Un medicamento del catalogo como opcion de selector: "Paracetamol 500 mg · Tableta (Generico)".
+ *
+ * El nombre solo no alcanza para elegir: el catalogo distingue un medicamento de otro por la
+ * combinacion de nombre, concentracion, presentacion y marca (UNIQUE de la 00016), y dos
+ * "Paracetamol" en una lista son indistinguibles.
+ *
+ * @param {{ id: string, nombre: string, concentracion?: string, presentacion?: string,
+ *   marca?: string }} medicamento
+ * @returns {{ value: string, label: string }}
+ */
+export function opcionDeMedicamento(medicamento) {
+  const principal = [medicamento.nombre, medicamento.concentracion].filter(Boolean).join(" ");
+  const presentacion = ETIQUETAS_PRESENTACION[medicamento.presentacion] ?? medicamento.presentacion;
+  const conPresentacion = [principal, presentacion].filter(Boolean).join(" · ");
+  return {
+    value: medicamento.id,
+    label: medicamento.marca ? `${conPresentacion} (${medicamento.marca})` : conPresentacion,
+  };
+}
+
 export const FILTROS_CATALOGO_MEDICAMENTOS = [
   {
     id: "busqueda",

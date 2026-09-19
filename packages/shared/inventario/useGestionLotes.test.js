@@ -1,113 +1,17 @@
 // Prueba de la logica pura del hook de gestion de lotes.
 //
 // No se monta el hook: packages/shared corre vitest con environment "node", sin DOM (ver
-// vitest.config.js). Antes de la issue #709, InventarioPage.jsx nunca llamaba a registrarLote()
-// (lotes.api.js): el boton de alta de lote no guardaba nada. Esta prueba cubre la traduccion que
-// handleGuardarLote() ahora usa para llamar a registrarLote(), con exactamente los argumentos
-// camelCase que esa funcion declara (aColumnasDeTabla() los traduce a columnas snake_case).
+// vitest.config.js).
+//
+// Aqui se probaban tambien datosLoteParaRegistrar() y validarDatosDeLote(), el formulario de
+// "Registrar lote". Salieron con el (issue #846): ese alta creaba un lote sin existencias en
+// ninguna bodega, y el unico camino para dar de alta un lote es ahora registrarIngreso(), que
+// crea el lote y su movimiento a la vez.
 
 import { describe, expect, it } from "vitest";
 
 import { conZonaHorariaDeGuatemala } from "../pruebas/zonaHoraria.js";
-import {
-  calcularAlertaDeLote,
-  datosLoteParaRegistrar,
-  procesarLotes,
-  validarDatosDeLote,
-} from "./useGestionLotes.js";
-
-describe("datosLoteParaRegistrar", () => {
-  it("traduce los campos snake_case del formulario a los argumentos camelCase de registrarLote", () => {
-    const resultado = datosLoteParaRegistrar({
-      medicamento_id: "med-1",
-      numero_lote: "L-002",
-      proveedor_id: "prov-1",
-      origen: "compra",
-      cantidad: 50,
-      fecha_ingreso: "2026-09-01",
-      fecha_vencimiento: "2027-09-01",
-    });
-
-    expect(resultado).toEqual({
-      medicamento: "med-1",
-      numeroLote: "L-002",
-      proveedor: "prov-1",
-      origen: "compra",
-      cantidadIngresada: 50,
-      fechaIngreso: "2026-09-01",
-      fechaVencimiento: "2027-09-01",
-    });
-  });
-
-  it("sin costo_unitario, no incluye costoUnitario (issue #752)", () => {
-    const resultado = datosLoteParaRegistrar({
-      medicamento_id: "med-1",
-      numero_lote: "L-002",
-      proveedor_id: "prov-1",
-      origen: "compra",
-      cantidad: 50,
-      fecha_ingreso: "2026-09-01",
-      fecha_vencimiento: "2027-09-01",
-      costo_unitario: "",
-    });
-
-    expect(resultado).not.toHaveProperty("costoUnitario");
-  });
-
-  it("con costo_unitario, lo traduce a costoUnitario como numero (issue #752)", () => {
-    const resultado = datosLoteParaRegistrar({
-      medicamento_id: "med-1",
-      numero_lote: "L-002",
-      proveedor_id: "prov-1",
-      origen: "compra",
-      cantidad: 50,
-      fecha_ingreso: "2026-09-01",
-      fecha_vencimiento: "2027-09-01",
-      costo_unitario: "8.5",
-    });
-
-    expect(resultado.costoUnitario).toBe(8.5);
-  });
-});
-
-describe("validarDatosDeLote", () => {
-  const datosValidos = {
-    medicamento_id: "med-1",
-    numero_lote: "L-002",
-    proveedor_id: "prov-1",
-    origen: "compra",
-    cantidad: 50,
-    fecha_ingreso: "2026-09-01",
-    fecha_vencimiento: "2027-09-01",
-    bodega_id: "bod-1",
-  };
-
-  it("acepta datos completos y validos", () => {
-    expect(validarDatosDeLote(datosValidos)).toBeNull();
-  });
-
-  it("rechaza una cantidad en 'cantidad' igual a 0 -el campo real que manda ModalAltaLote.jsx, no 'cantidad_ingresada'", () => {
-    expect(validarDatosDeLote({ ...datosValidos, cantidad: 0 })).toMatch(/cantidad ingresada/i);
-  });
-
-  it("acepta una cantidad positiva sin marcarla como invalida por error", () => {
-    expect(validarDatosDeLote({ ...datosValidos, cantidad: 40 })).toBeNull();
-  });
-
-  it("rechaza si falta un campo obligatorio", () => {
-    expect(validarDatosDeLote({ ...datosValidos, proveedor_id: "" })).toMatch(/obligatorios/i);
-  });
-
-  it("rechaza una fecha de vencimiento anterior o igual a la de ingreso", () => {
-    expect(
-      validarDatosDeLote({
-        ...datosValidos,
-        fecha_ingreso: "2027-09-01",
-        fecha_vencimiento: "2027-09-01",
-      }),
-    ).toMatch(/vencimiento_posterior/i);
-  });
-});
+import { calcularAlertaDeLote, procesarLotes } from "./useGestionLotes.js";
 
 describe("calcularAlertaDeLote", () => {
   const HOY = new Date("2026-06-15T10:30:00");

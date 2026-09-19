@@ -29,6 +29,16 @@
 
 import { TIPOS_DE_PRESENTACION } from "../descriptores.js";
 
+/**
+ * Los aportes que forman el presupuesto de una jornada (issue #840, 00135). `etiqueta` y
+ * `detalle` los resuelve listarOrigenesDePresupuesto(): la lista no traduce nada.
+ */
+export const COLUMNAS_ORIGEN_PRESUPUESTO = [
+  { id: "etiqueta", label: "Origen", tipo: TIPOS_DE_PRESENTACION.TEXTO, principal: true },
+  { id: "detalle", label: "Detalle", tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  { id: "monto", label: "Monto", tipo: TIPOS_DE_PRESENTACION.MONEDA },
+];
+
 export const COLUMNAS_GASTO = [
   { id: "concepto", label: "Concepto", tipo: TIPOS_DE_PRESENTACION.TEXTO, principal: true },
   { id: "categoria", label: "Categoría", tipo: TIPOS_DE_PRESENTACION.TEXTO },

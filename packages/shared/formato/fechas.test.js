@@ -187,8 +187,29 @@ describe("aCadenaFechaLocal", () => {
     expect(aCadenaFechaLocal("no es una fecha")).toBe("");
   });
 
-  describe("el borde de las 18:00 en Guatemala (issue #725)", () => {
+  it("es la inversa de aFechaLocal: ida y vuelta conserva el dia", () => {
+    expect(aCadenaFechaLocal(aFechaLocal("2026-01-05"))).toBe("2026-01-05");
+  });
+
+  it("sin argumento devuelve el dia local de hoy", () => {
+    const ahora = new Date();
+    expect(aCadenaFechaLocal()).toBe(aCadenaFechaLocal(ahora));
+  });
+
+  describe("el borde de las 18:00 en Guatemala (issues #725 y #840)", () => {
     conZonaHorariaDeGuatemala();
+
+    it("la zona de este bloque es de verdad UTC-6, o estas pruebas no protegen nada", () => {
+      expect(new Date(2026, 8, 18, 12).getTimezoneOffset()).toBe(360);
+    });
+
+    it("a las 20:00 en Guatemala sigue siendo hoy, aunque en UTC ya sea manana", () => {
+      // El defecto de la donacion (issue #840): toISOString() da 2026-09-19 para esta hora.
+      const nochePorLaTarde = new Date(2026, 8, 18, 20, 0);
+
+      expect(nochePorLaTarde.toISOString().slice(0, 10)).toBe("2026-09-19");
+      expect(aCadenaFechaLocal(nochePorLaTarde)).toBe("2026-09-18");
+    });
 
     it("no adelanta un dia por la noche, al contrario que toISOString().slice(0, 10)", () => {
       // 15 de junio de 2026, 20:00 en Guatemala (UTC-6) = 16 de junio, 02:00 UTC. El bug que

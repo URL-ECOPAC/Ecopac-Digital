@@ -22,7 +22,7 @@ import LoadingState from "./LoadingState";
  * El orden de las comprobaciones importa y es el que sigue.
  */
 export default function RutaProtegida({ roles = null }) {
-  const { estadoRestauracion, haySesion, perfil, rol } = useSesionCompartida();
+  const { estadoRestauracion, haySesion, perfil, rol, cargando } = useSesionCompartida();
   const location = useLocation();
 
   // 1. Todavia no se sabe si hay sesion. Va primero: pintar el login antes de saberlo es el
@@ -38,14 +38,23 @@ export default function RutaProtegida({ roles = null }) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // 3. Hay token pero no se pudo leer el perfil. useSesion conserva la sesion a proposito para
+  // 3. Hay token y el perfil se esta leyendo todavia. Pasa en CADA inicio de sesion: SIGNED_IN
+  //    fija el usuario -y con el, haySesion- antes de que llegue el perfil, y la restauracion ya
+  //    estaba en LISTO desde que se abrio la pagina sin sesion. Sin esta comprobacion, la regla
+  //    de abajo pintaba "no se pudo confirmar tu rol" un instante y despues la sesion entraba
+  //    igual: el error que se veia en cada login (issue #840).
+  if (!perfil && cargando) {
+    return <LoadingState message="Comprobando tu sesion..." />;
+  }
+
+  // 4. Hay token pero no se pudo leer el perfil. useSesion conserva la sesion a proposito para
   //    poder reintentar, asi que NO se manda al login a alguien que si esta autenticado: sin
   //    perfil no hay rol, y sin rol no se autoriza nada.
   if (!perfil) {
     return <AccesoDenegadoPage rol={null} />;
   }
 
-  // 4. El rol no alcanza este modulo. Se dibuja en el sitio, sin cambiar la URL.
+  // 5. El rol no alcanza este modulo. Se dibuja en el sitio, sin cambiar la URL.
   if (roles !== null && !roles.includes(rol)) {
     return <AccesoDenegadoPage rol={rol} />;
   }

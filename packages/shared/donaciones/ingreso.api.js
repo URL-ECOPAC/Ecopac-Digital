@@ -2,12 +2,11 @@
 // RF-15/RF-27). Sin esto, la donacion se captura dos veces -una vez en donacion_detalle, otra a
 // mano en movimientos_inventario- y los numeros dejan de cuadrar.
 //
-// donacion_detalle no guarda medicamento_id: el renglon nace de una descripcion libre
-// ("Paracetamol 500mg x100 tabletas"), no de una fila del catalogo de medicamentos, porque quien
-// recibe la donacion no siempre puede identificar el medicamento exacto en el momento. Elegir a
-// que medicamento corresponde, en que bodega entra y los datos del lote fisico (numero,
-// vencimiento) es una decision de quien genera el ingreso, no algo que se pueda derivar solo del
-// renglon -por eso viajan como parametros aparte y no se leen de la donacion.
+// Desde la 00135 (issue #840) donacion_detalle guarda medicamento_id: el renglon de una donacion
+// de medicamentos se elige del catalogo, y el ingreso lo toma de ahi. Antes nacia de una
+// descripcion libre y el medicamento se adivinaba aqui; el parametro `medicamentoId` queda solo
+// para esos renglones anteriores. En que bodega entra y los datos del lote fisico (numero,
+// vencimiento) siguen siendo decision de quien genera el ingreso, y viajan como parametros.
 //
 // La cantidad SI viene de donacion_detalle.cantidad: es el dato que ya se capturo al registrar la
 // donacion, y repetirlo a mano es justo la duplicacion que esta issue evita.
@@ -84,7 +83,10 @@ export async function generarIngresoDesdeDonacion(
     const { datos: movimiento, error: errorMovimiento } = await registrarIngreso({
       origen: ORIGENES_DE_LOTE.DONACION,
       bodega_id: bodegaId,
-      medicamento_id: medicamentoId,
+      // Desde la 00135 el renglon ya trae el medicamento del catalogo (issue #840): el ingreso
+      // no vuelve a preguntarlo. El parametro queda para los renglones anteriores, que se
+      // capturaron como texto libre y no tienen de donde sacarlo.
+      medicamento_id: detalle.medicamento_id ?? medicamentoId,
       numero_lote: numeroLote,
       fecha_vencimiento: fechaVencimiento,
       proveedor_id: proveedorId,

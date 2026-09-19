@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { FlatList, Modal, Pressable, StyleSheet, Text, View } from "react-native";
+import { FlatList, Modal, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { OPCIONES_PARA_OFRECER_BUSQUEDA, filtrarOpcionesPorTexto } from "@ecopac/shared";
 import { colors, radii, spacing, typography } from "@ecopac/ui-tokens";
 
 const MIN_TOUCH_HEIGHT = 48;
@@ -11,6 +12,11 @@ const MIN_TOUCH_HEIGHT = 48;
  * options: [{ label: string, value: string | number }], que es la forma que publica shared
  * desde la issue #399. Antes convivian dos formas y este componente normalizaba por dentro;
  * hoy no hay nada que normalizar y un catalogo ausente se resuelve con una lista vacia.
+ *
+ * Con una lista larga -el catalogo de diagnosticos, el de comunidades- la hoja abre con un campo
+ * de busqueda arriba (issue #840, G4): recorrer cientos de opciones a ojo en un telefono no es
+ * practico. La regla de cuando ofrecerlo y como comparar vive en shared
+ * (OPCIONES_PARA_OFRECER_BUSQUEDA, filtrarOpcionesPorTexto).
  */
 export default function Selector({
   label,
@@ -23,8 +29,16 @@ export default function Selector({
   style,
 }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [busqueda, setBusqueda] = useState("");
   const opciones = Array.isArray(options) ? options : [];
   const selectedOption = opciones.find((option) => option.value === value);
+  const buscable = opciones.length > OPCIONES_PARA_OFRECER_BUSQUEDA;
+  const visibles = buscable ? filtrarOpcionesPorTexto(opciones, busqueda) : opciones;
+
+  const cerrar = () => {
+    setIsOpen(false);
+    setBusqueda("");
+  };
 
   return (
     <View style={[styles.container, style]}>
@@ -49,29 +63,39 @@ export default function Selector({
 
       {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
-      <Modal
-        visible={isOpen}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setIsOpen(false)}
-      >
+      <Modal visible={isOpen} transparent animationType="fade" onRequestClose={cerrar}>
         <View style={styles.modalRoot}>
           {/* Capa de fondo separada del contenido: asi el opacity solo afecta
               el fondo y no oscurece la hoja de opciones ni su texto. */}
-          <Pressable style={StyleSheet.absoluteFill} onPress={() => setIsOpen(false)}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={cerrar}>
             <View style={styles.backdrop} />
           </Pressable>
 
           <View style={styles.sheet}>
+            {buscable ? (
+              <TextInput
+                style={styles.busqueda}
+                value={busqueda}
+                onChangeText={setBusqueda}
+                placeholder="Buscar..."
+                placeholderTextColor={colors.textMuted}
+                autoCorrect={false}
+                accessibilityLabel={label ? `Buscar ${label}` : "Buscar"}
+              />
+            ) : null}
             <FlatList
-              data={opciones}
+              data={visibles}
               keyExtractor={(item) => String(item.value)}
+              keyboardShouldPersistTaps="handled"
+              ListEmptyComponent={
+                <Text style={styles.sinResultados}>Ninguna opción coincide con la búsqueda.</Text>
+              }
               renderItem={({ item }) => (
                 <Pressable
                   style={({ pressed }) => [styles.option, pressed && styles.optionPressed]}
                   onPress={() => {
                     onSelect(item.value);
-                    setIsOpen(false);
+                    cerrar();
                   }}
                 >
                   <Text style={styles.optionText}>{item.label}</Text>
@@ -145,6 +169,26 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: spacing.md,
     borderTopRightRadius: spacing.md,
     paddingVertical: spacing.sm,
+  },
+  busqueda: {
+    minHeight: MIN_TOUCH_HEIGHT,
+    marginHorizontal: spacing.md,
+    marginBottom: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radii.md,
+    fontFamily: typography.fontFamilyBase,
+    fontSize: typography.sizes.md,
+    color: colors.text,
+    backgroundColor: colors.surface,
+  },
+  sinResultados: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    fontFamily: typography.fontFamilyBase,
+    fontSize: typography.sizes.sm,
+    color: colors.textMuted,
   },
   option: {
     minHeight: MIN_TOUCH_HEIGHT,

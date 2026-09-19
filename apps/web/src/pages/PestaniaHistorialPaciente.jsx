@@ -1,17 +1,13 @@
 import { useState } from "react";
-import { EyeOff } from "lucide-react";
+import { ChevronDown, ChevronUp, LineChart } from "lucide-react";
 
 import {
-  describirEntrega,
-  ETIQUETAS_TIPO_DE_EVENTO,
-  FILTROS_HISTORIAL,
-  formatearFechaConHora,
+  anularReceta,
   formatearFechaCorta,
-  OPCIONES_TIPO_DE_EVENTO,
-  puedeCorregirConsulta,
-  puedeCorregirTriaje,
-  TIPOS_DE_EVENTO,
-  useHistorialPaciente,
+  partesDeVisita,
+  puedeAnularReceta,
+  useRecetasPaciente,
+  useVisitasPaciente,
 } from "@ecopac/shared";
 
 import Card from "../components/Card";
@@ -20,25 +16,39 @@ import EmptyState from "../components/EmptyState";
 import ErrorState from "../components/ErrorState";
 import LoadingState from "../components/LoadingState";
 import SecondaryButton from "../components/SecondaryButton";
-import Selector from "../components/Selector";
-import StatusChip from "../components/StatusChip";
-import ModalCorreccionConsulta from "./ModalCorreccionConsulta";
-import ModalCorreccionTriaje from "./ModalCorreccionTriaje";
+import PestaniaSignosPaciente from "./PestaniaSignosPaciente";
+import RecetaImprimible from "./RecetaImprimible";
+import TarjetaReceta, { useImpresionDeReceta } from "./TarjetaReceta";
+
+// El historial clinico como lista de visitas (issue #840, bloque F).
+//
+// Antes eran eventos sueltos -triaje, consulta, receta- agrupados por jornada, con los signos y
+// las recetas ademas en pestanas hermanas. Ahora cada visita es una unidad: se abre y trae dentro
+// sus signos, su consulta y su receta. Editarla abre el mismo formulario con el que se registro
+// (ModalConsulta), no uno distinto por pieza.
+
+const ETIQUETAS_DE_SIGNOS = [
+  ["presion", "Presión"],
+  ["frecuenciaCardiaca", "Frecuencia cardiaca", "lpm"],
+  ["temperatura", "Temperatura", "°C"],
+  ["glucosa", "Glucosa", "mg/dL"],
+  ["peso", "Peso", "kg"],
+  ["talla", "Talla", "cm"],
+  ["imc", "IMC"],
+];
 
 function Signos({ signos }) {
-  const renglones = [
-    signos.presionSistolica && signos.presionDiastolica
-      ? ["Presion", `${signos.presionSistolica}/${signos.presionDiastolica} mmHg`]
-      : null,
-    signos.frecuenciaCardiaca ? ["Frecuencia cardiaca", `${signos.frecuenciaCardiaca} lpm`] : null,
-    signos.glucosa ? ["Glucosa", `${signos.glucosa} mg/dL`] : null,
-    signos.peso ? ["Peso", `${signos.peso} kg`] : null,
-    signos.talla ? ["Talla", `${signos.talla} cm`] : null,
-    signos.temperatura ? ["Temperatura", `${signos.temperatura} °C`] : null,
-    signos.imc ? ["IMC", signos.imc] : null,
-  ].filter(Boolean);
-
-  if (renglones.length === 0) return <p className="text-body-secondary mb-0">Sin mediciones.</p>;
+  const renglones = ETIQUETAS_DE_SIGNOS.map(([id, etiqueta, unidad]) => {
+    if (id === "presion") {
+      return signos.presionSistolica && signos.presionDiastolica
+        ? [etiqueta, `${signos.presionSistolica}/${signos.presionDiastolica} mmHg`]
+        : null;
+    }
+    const valor = signos[id];
+    return valor === null || valor === undefined
+      ? null
+      : [etiqueta, unidad ? `${valor} ${unidad}` : valor];
+  }).filter(Boolean);
 
   return (
     <dl className="row mb-0">
@@ -52,26 +62,23 @@ function Signos({ signos }) {
   );
 }
 
-function DetalleConsulta({ evento }) {
-  // antecedentes/sintomas/exploracion/observaciones se capturan (useRegistroConsulta.js,
-  // ConsultaScreen.js movil) desde antes, pero el historial nunca los pedia ni los mostraba
-  // (issue #756).
+function Consulta({ consulta }) {
   const campos = [
-    ["Motivo de consulta", evento.motivoConsulta],
-    ["Antecedentes", evento.antecedentes],
-    ["Sintomas", evento.sintomas],
-    ["Exploracion", evento.exploracion],
-    ["Tratamiento", evento.tratamiento],
-    ["Observaciones", evento.observaciones],
-    ["Plan de seguimiento", evento.planSeguimiento],
+    ["Motivo de consulta", consulta.motivoConsulta],
+    ["Antecedentes", consulta.antecedentes],
+    ["Síntomas", consulta.sintomas],
+    ["Exploración", consulta.exploracion],
+    ["Tratamiento", consulta.tratamiento],
+    ["Observaciones", consulta.observaciones],
+    ["Plan de seguimiento", consulta.planSeguimiento],
   ].filter(([, valor]) => valor);
 
   return (
-    <div className="mt-2">
-      {evento.diagnosticos?.length > 0 && (
+    <>
+      {consulta.diagnosticos?.length > 0 && (
         <p className="mb-2">
-          <span className="pac-rotulo">Diagnosticos </span>
-          {evento.diagnosticos
+          <span className="pac-rotulo">Diagnósticos </span>
+          {consulta.diagnosticos
             .map((diagnostico) =>
               [diagnostico.codigo, diagnostico.nombre].filter(Boolean).join(" "),
             )
@@ -84,216 +91,217 @@ function DetalleConsulta({ evento }) {
           {valor}
         </p>
       ))}
-      {campos.length === 0 && evento.diagnosticos?.length === 0 && (
-        <p className="text-body-secondary mb-0">La consulta no registro detalle.</p>
-      )}
+      {consulta.profesional && <p className="pac-dato-mono mb-0">Atendió {consulta.profesional}</p>}
+    </>
+  );
+}
+
+function ParteDeVisita({ titulo, children }) {
+  return (
+    <div className="pac-visita-parte">
+      <p className="pac-visita-parte-titulo">{titulo}</p>
+      {children}
     </div>
   );
 }
 
-function DetalleReceta({ evento }) {
-  if (!evento.medicamentos?.length) {
-    return <p className="text-body-secondary mb-0 mt-2">La receta no tiene medicamentos.</p>;
-  }
+function Visita({ visita, abierta, onAlternar, onEditar, recetasPorId, receta }) {
+  const partes = partesDeVisita(visita);
 
   return (
-    <ul className="mb-0 mt-2">
-      {evento.medicamentos.map((renglon, indice) => (
-        <li key={`${evento.id}-${indice}`}>
-          {[renglon.medicamento, renglon.concentracion, renglon.presentacion]
-            .filter(Boolean)
-            .join(" ")}
-          {renglon.dosis ? ` — ${renglon.dosis}` : ""}
-          {renglon.frecuencia ? `, ${renglon.frecuencia}` : ""}
-          {renglon.duracion ? `, ${renglon.duracion}` : ""}
-          {describirEntrega(renglon).texto && ` (${describirEntrega(renglon).texto})`}
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-function Evento({ evento, expandido, onAlternar, puedeCorregir, onCorregir }) {
-  const expandible =
-    evento.tipo === TIPOS_DE_EVENTO.CONSULTA || evento.tipo === TIPOS_DE_EVENTO.RECETA;
-  const corregible =
-    evento.tipo === TIPOS_DE_EVENTO.TRIAJE || evento.tipo === TIPOS_DE_EVENTO.CONSULTA;
-
-  return (
-    <li className="pac-entrada py-3">
-      <div className="d-flex flex-wrap align-items-center gap-2">
-        <strong>{ETIQUETAS_TIPO_DE_EVENTO[evento.tipo] ?? evento.tipo}</strong>
-        <span className="pac-dato-mono">{formatearFechaConHora(evento.fecha)}</span>
-        {evento.profesional && <span className="small">· {evento.profesional}</span>}
-        {evento.tipo === TIPOS_DE_EVENTO.RECETA && evento.folio && (
-          <span className="small text-body-secondary">· folio {evento.folio}</span>
-        )}
-        {evento.anulada && <StatusChip status="anulada" label="Anulada" />}
-        {/* Eran dos enlaces de texto sueltos (`btn btn-link p-0`), que en una fila con chips y
-            fechas no se leian como algo que se pueda pulsar. Son botones del catalogo: el lapiz
-            de "Editar" y el ojo de "Ver detalle" los pone iconoDeAccion() por el rotulo. */}
-        {(corregible && puedeCorregir) || expandible ? (
-          <div className="d-flex gap-2 ms-auto">
-            {corregible && puedeCorregir && (
-              <SecondaryButton title="Editar" size="sm" onClick={() => onCorregir(evento)} />
-            )}
-            {expandible && (
-              <SecondaryButton
-                title={expandido ? "Ocultar detalle" : "Ver detalle"}
-                variant="neutra"
-                size="sm"
-                icon={expandido ? <EyeOff size={16} aria-hidden="true" /> : undefined}
-                onClick={onAlternar}
-                aria-expanded={expandido}
-              />
-            )}
+    <Card style={{ marginBottom: "1rem" }}>
+      <div className="d-flex flex-wrap align-items-start gap-2">
+        <div>
+          <strong>{visita.jornada ?? "Visita sin jornada"}</strong>
+          {visita.comunidad && <span className="text-body-secondary"> · {visita.comunidad}</span>}
+          <div className="pac-fecha">{formatearFechaCorta(visita.fecha)}</div>
+          {visita.diagnosticoPrincipal && (
+            <div className="mt-1">{visita.diagnosticoPrincipal.nombre}</div>
+          )}
+          <div className="d-flex flex-wrap gap-1 mt-2" aria-label="Partes de la visita">
+            <span
+              className={`ec-chip ${partes.signos ? "pac-chip--presente" : "pac-chip--ausente"}`}
+            >
+              Signos
+            </span>
+            <span
+              className={`ec-chip ${partes.consulta ? "pac-chip--presente" : "pac-chip--ausente"}`}
+            >
+              Consulta
+            </span>
+            <span
+              className={`ec-chip ${partes.receta ? "pac-chip--presente" : "pac-chip--ausente"}`}
+            >
+              Receta
+            </span>
           </div>
-        ) : null}
+        </div>
+        <div className="d-flex gap-2 ms-auto">
+          {onEditar && (
+            <SecondaryButton title="Editar" size="sm" onClick={() => onEditar(visita)} />
+          )}
+          <SecondaryButton
+            title={abierta ? "Cerrar" : "Abrir"}
+            variant="neutra"
+            size="sm"
+            icon={
+              abierta ? (
+                <ChevronUp size={16} aria-hidden="true" />
+              ) : (
+                <ChevronDown size={16} aria-hidden="true" />
+              )
+            }
+            onClick={onAlternar}
+            aria-expanded={abierta}
+          />
+        </div>
       </div>
 
-      {evento.tipo === TIPOS_DE_EVENTO.CIERRE && (
-        <p className="mb-0 mt-1">{evento.motivoCierre ?? "Sin motivo registrado."}</p>
-      )}
+      {abierta && (
+        <div className="mt-3">
+          <ParteDeVisita titulo="Signos vitales">
+            {visita.signos ? (
+              <Signos signos={visita.signos} />
+            ) : (
+              <p className="text-body-secondary mb-0">No se tomaron signos en esta visita.</p>
+            )}
+          </ParteDeVisita>
 
-      {evento.tipo === TIPOS_DE_EVENTO.CONSULTA && evento.diagnosticoPrincipal && (
-        <p className="mb-0 mt-1">{evento.diagnosticoPrincipal.nombre}</p>
-      )}
+          <ParteDeVisita titulo="Consulta">
+            {visita.consulta ? (
+              <Consulta consulta={visita.consulta} />
+            ) : (
+              <p className="text-body-secondary mb-0">Sin consulta registrada.</p>
+            )}
+          </ParteDeVisita>
 
-      {evento.tipo === TIPOS_DE_EVENTO.TRIAJE && (
-        <div className="mt-2">
-          <Signos signos={evento.signos ?? {}} />
+          <ParteDeVisita titulo="Receta">
+            {visita.recetas.length === 0 && <p className="text-body-secondary mb-0">Sin receta.</p>}
+            {visita.recetas.map((resumen) => {
+              const completa = recetasPorId.get(resumen.id);
+              return completa ? (
+                <TarjetaReceta
+                  key={resumen.id}
+                  receta={completa}
+                  onImprimir={receta.imprimir}
+                  puedeAnular={receta.puedeAnular(completa)}
+                  onAnular={receta.anular}
+                />
+              ) : (
+                <p key={resumen.id} className="mb-0">
+                  Receta {resumen.folio}
+                </p>
+              );
+            })}
+          </ParteDeVisita>
+
+          {visita.cerradaEn && (
+            <p className="pac-dato-mono mb-0 mt-2">
+              Visita cerrada el {formatearFechaCorta(visita.cerradaEn)}
+              {visita.motivoCierre ? `: ${visita.motivoCierre}` : ""}
+            </p>
+          )}
         </div>
       )}
-
-      {expandido && evento.tipo === TIPOS_DE_EVENTO.CONSULTA && <DetalleConsulta evento={evento} />}
-      {expandido && evento.tipo === TIPOS_DE_EVENTO.RECETA && <DetalleReceta evento={evento} />}
-    </li>
+    </Card>
   );
 }
 
-export default function PestaniaHistorialPaciente({ pacienteId, rol, perfilId }) {
-  const {
-    grupos,
-    total,
-    filtros,
-    setFiltro,
-    limpiarFiltros,
-    hayFiltros,
-    cargando,
-    error,
-    recargar,
-  } = useHistorialPaciente(pacienteId, { rol });
-  const [expandidos, setExpandidos] = useState(() => new Set());
-  const [triajeEnCorreccion, setTriajeEnCorreccion] = useState(null);
-  const [consultaEnCorreccion, setConsultaEnCorreccion] = useState(null);
+export default function PestaniaHistorialPaciente({ paciente, rol, perfilId, onEditarVisita }) {
+  const { visitas, filtros, setFiltro, limpiarFiltros, hayFiltros, cargando, error, recargar } =
+    useVisitasPaciente(paciente?.id, { rol });
+  const recetas = useRecetasPaciente(paciente?.id, { rol });
+  const { aImprimir, imprimir } = useImpresionDeReceta();
+  // La visita mas reciente se abre sola: es la que casi siempre se viene a ver.
+  const [abiertas, setAbiertas] = useState(() => new Set());
+  const [primeraAbierta, setPrimeraAbierta] = useState(false);
+  const [viendoEvolucion, setViendoEvolucion] = useState(false);
+
+  if (!primeraAbierta && visitas.length > 0) {
+    setPrimeraAbierta(true);
+    setAbiertas(new Set([visitas[0].atencionId]));
+  }
 
   const alternar = (id) =>
-    setExpandidos((anteriores) => {
+    setAbiertas((anteriores) => {
       const siguiente = new Set(anteriores);
       if (siguiente.has(id)) siguiente.delete(id);
       else siguiente.add(id);
       return siguiente;
     });
 
-  const [desde, hasta, tipo] = FILTROS_HISTORIAL;
+  const recetasPorId = new Map(recetas.recetas.map((receta) => [receta.id, receta]));
+  const accionesDeReceta = {
+    imprimir,
+    puedeAnular: (receta) => puedeAnularReceta(rol, receta, perfilId),
+    anular: async (recetaId, motivo) => {
+      const respuesta = await anularReceta(recetaId, { motivo, anuladaPor: perfilId });
+      if (!respuesta.error) await Promise.all([recargar(), recetas.recargar()]);
+      return respuesta;
+    },
+  };
 
   return (
     <div>
       <div className="d-flex flex-wrap align-items-end gap-3 mb-3">
         <DateField
-          label={desde.label}
+          label="Desde"
           value={filtros.desde || null}
           onChange={(valor) => setFiltro("desde", valor)}
           maxDate={filtros.hasta || undefined}
         />
         <DateField
-          label={hasta.label}
+          label="Hasta"
           value={filtros.hasta || null}
           onChange={(valor) => setFiltro("hasta", valor)}
           minDate={filtros.desde || undefined}
         />
-        <Selector
-          label={tipo.label}
-          value={filtros.tipo || null}
-          options={OPCIONES_TIPO_DE_EVENTO}
-          onSelect={(valor) => setFiltro("tipo", valor)}
-          placeholder="Todos"
-        />
         {hayFiltros && <SecondaryButton title="Limpiar" onClick={limpiarFiltros} />}
+        <div className="ms-auto">
+          <SecondaryButton
+            title={viendoEvolucion ? "Ver las visitas" : "Ver la evolución de los signos"}
+            variant="neutra"
+            icon={<LineChart size={16} aria-hidden="true" />}
+            onClick={() => setViendoEvolucion((valor) => !valor)}
+            aria-pressed={viendoEvolucion}
+          />
+        </div>
       </div>
 
-      {cargando && <LoadingState />}
-      {!cargando && error && <ErrorState message={error.mensaje} onRetry={recargar} />}
-
-      {!cargando && !error && total === 0 && (
-        <EmptyState
-          message={
-            hayFiltros
-              ? "Ningun evento del historial coincide con los filtros."
-              : "Este paciente todavia no tiene atenciones registradas."
-          }
-          actionLabel={hayFiltros ? "Limpiar filtros" : undefined}
-          onAction={hayFiltros ? limpiarFiltros : undefined}
-        />
+      {viendoEvolucion ? (
+        <PestaniaSignosPaciente pacienteId={paciente?.id} rol={rol} />
+      ) : (
+        <>
+          {cargando && <LoadingState />}
+          {!cargando && error && <ErrorState message={error.mensaje} onRetry={recargar} />}
+          {!cargando && !error && visitas.length === 0 && (
+            <EmptyState
+              message={
+                hayFiltros
+                  ? "Ninguna visita coincide con las fechas elegidas."
+                  : "Este paciente todavía no tiene visitas registradas."
+              }
+              actionLabel={hayFiltros ? "Limpiar filtros" : undefined}
+              onAction={hayFiltros ? limpiarFiltros : undefined}
+            />
+          )}
+          {!cargando &&
+            !error &&
+            visitas.map((visita) => (
+              <Visita
+                key={visita.atencionId}
+                visita={visita}
+                abierta={abiertas.has(visita.atencionId)}
+                onAlternar={() => alternar(visita.atencionId)}
+                onEditar={onEditarVisita}
+                recetasPorId={recetasPorId}
+                receta={accionesDeReceta}
+              />
+            ))}
+        </>
       )}
 
-      {!cargando &&
-        !error &&
-        grupos.map((grupo) => (
-          <Card key={grupo.clave} style={{ marginBottom: "1rem" }}>
-            <div className="mb-1">
-              <strong>{grupo.jornada ?? "Atencion sin jornada"}</strong>
-              {grupo.comunidad && <span className="text-body-secondary"> · {grupo.comunidad}</span>}
-            </div>
-            <div className="pac-fecha">{formatearFechaCorta(grupo.fecha)}</div>
-
-            <ul className="list-unstyled mb-0 mt-2">
-              {grupo.eventos.map((evento) => (
-                <Evento
-                  key={`${evento.tipo}-${evento.id}`}
-                  evento={evento}
-                  expandido={expandidos.has(`${evento.tipo}-${evento.id}`)}
-                  onAlternar={() => alternar(`${evento.tipo}-${evento.id}`)}
-                  puedeCorregir={
-                    evento.tipo === TIPOS_DE_EVENTO.TRIAJE
-                      ? puedeCorregirTriaje(rol)
-                      : puedeCorregirConsulta(rol, evento, perfilId)
-                  }
-                  onCorregir={(eventoACorregir) =>
-                    eventoACorregir.tipo === TIPOS_DE_EVENTO.TRIAJE
-                      ? setTriajeEnCorreccion({
-                          id: eventoACorregir.id,
-                          ...eventoACorregir.signos,
-                        })
-                      : setConsultaEnCorreccion(eventoACorregir)
-                  }
-                />
-              ))}
-            </ul>
-          </Card>
-        ))}
-
-      {triajeEnCorreccion && (
-        <ModalCorreccionTriaje
-          triaje={triajeEnCorreccion}
-          onClose={() => setTriajeEnCorreccion(null)}
-          onGuardado={() => {
-            setTriajeEnCorreccion(null);
-            recargar();
-          }}
-        />
-      )}
-
-      {consultaEnCorreccion && (
-        <ModalCorreccionConsulta
-          consulta={consultaEnCorreccion}
-          onClose={() => setConsultaEnCorreccion(null)}
-          onGuardado={() => {
-            setConsultaEnCorreccion(null);
-            recargar();
-          }}
-        />
-      )}
+      {aImprimir && <RecetaImprimible receta={aImprimir} paciente={paciente} />}
     </div>
   );
 }

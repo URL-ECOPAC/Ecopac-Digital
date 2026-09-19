@@ -131,6 +131,38 @@
   padding-top: var(--spacing-md);
 }
 
+/* --- Una visita del historial (issue #840): signos, consulta y receta dentro --- */
+
+.modulo-pacientes .pac-visita-parte + .pac-visita-parte {
+  border-top: 1px solid var(--color-border);
+  margin-top: var(--spacing-md);
+  padding-top: var(--spacing-md);
+}
+
+.modulo-pacientes .pac-visita-parte-titulo {
+  color: var(--color-text);
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-semibold);
+  margin-bottom: var(--spacing-sm);
+}
+
+/* Que partes tiene la visita, de un vistazo. La ausente se atenua pero sigue legible: que una
+   visita no tenga receta es un dato, no un error. */
+.modulo-pacientes .pac-chip--presente {
+  --ec-acento: var(--color-primary);
+}
+
+.modulo-pacientes .pac-chip--ausente {
+  --ec-acento: var(--color-text-muted);
+  opacity: 0.6;
+}
+
+.modulo-pacientes .pac-receta + .pac-receta {
+  border-top: 1px dashed var(--color-border);
+  margin-top: var(--spacing-sm);
+  padding-top: var(--spacing-sm);
+}
+
 /* --- Maestro-detalle: lista a la izquierda, ficha a la derecha --- */
 
 .modulo-pacientes .pac-maestro-detalle {

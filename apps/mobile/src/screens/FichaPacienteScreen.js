@@ -13,12 +13,11 @@ import {
 } from "@ecopac/shared";
 import { colors, spacing, typography } from "@ecopac/ui-tokens";
 
-import { Card, ErrorState, LoadingState } from "../components";
+import { Card, ErrorState, LoadingState, PrimaryButton, SecondaryButton } from "../components";
 import { useSesionCompartida } from "../contexto/SesionProvider";
 import { ROUTES } from "../navigation/rutas";
 import CondicionesPacienteSeccion from "./ficha-paciente/CondicionesPacienteSeccion";
-import SignosPacienteSeccion from "./ficha-paciente/SignosPacienteSeccion";
-import RecetasPacienteSeccion from "./ficha-paciente/RecetasPacienteSeccion";
+import VisitasPacienteSeccion from "./ficha-paciente/VisitasPacienteSeccion";
 import ModalEdicionPaciente from "./ModalEdicionPaciente";
 
 /**
@@ -116,53 +115,56 @@ export default function FichaPacienteScreen({ route, navigation }) {
 
       <ScrollView contentContainerStyle={styles.contenidoScroll}>
         {pestaniaActiva === "generales" && (
-          <Card title="Datos generales">
-            {CAMPOS_FICHA_PACIENTE.map((campo) => (
-              <View key={campo.id} style={styles.filaDeDato}>
-                <Text style={styles.rotuloDeDato}>{campo.label}</Text>
-                <Text style={styles.valorDeDato}>{textoDeCampoDeFicha(campo, valores)}</Text>
-              </View>
-            ))}
-          </Card>
+          <>
+            <Card title="Datos generales">
+              {CAMPOS_FICHA_PACIENTE.map((campo) => (
+                <View key={campo.id} style={styles.filaDeDato}>
+                  <Text style={styles.rotuloDeDato}>{campo.label}</Text>
+                  <Text style={styles.valorDeDato}>{textoDeCampoDeFicha(campo, valores)}</Text>
+                </View>
+              ))}
+            </Card>
+            {/* Las condiciones cronicas son datos del paciente, no de una visita: estaban en la
+                pestana de historial, y ahi el historial es la lista de visitas (issue #840). */}
+            {permisos.puedeVerDatosClinicos ? (
+              <CondicionesPacienteSeccion pacienteId={paciente.id} rol={rol} />
+            ) : null}
+          </>
         )}
 
+        {/* Issue #840, bloque F: cada visita trae dentro sus signos, su consulta y su receta. Las
+            pestanas hermanas de signos y recetas se retiran, y con ellas el apretujon de cuatro
+            pestanas en el ancho de un telefono (G3). */}
         {pestaniaActiva === "historial" && (
-          <CondicionesPacienteSeccion pacienteId={paciente.id} rol={rol} />
-        )}
-        {pestaniaActiva === "signos" && (
-          <SignosPacienteSeccion pacienteId={paciente.id} rol={rol} />
-        )}
-        {pestaniaActiva === "recetas" && (
-          <RecetasPacienteSeccion pacienteId={paciente.id} rol={rol} />
+          <VisitasPacienteSeccion
+            pacienteId={paciente.id}
+            rol={rol}
+            onAbrirConsulta={(visita) =>
+              navigation.navigate(ROUTES.CONSULTA, {
+                pacienteId: paciente.id,
+                jornadaId: visita.jornadaId,
+              })
+            }
+          />
         )}
       </ScrollView>
 
       <View style={styles.accionesBar}>
-        {/* Las dos pantallas de destino leen `params.pacienteId` (TriajeScreen:28,
-            ConsultaScreen:92). Navegar con el objeto entero, como se hacia antes, las dejaba sin
-            paciente: los dos botones llevaban a una pantalla vacia. */}
-        {permisos.puedeTomarTriaje && (
-          <TouchableOpacity
-            style={styles.botonAccion}
-            onPress={() => navigation.navigate(ROUTES.TRIAJE, { pacienteId: paciente.id })}
-          >
-            <Text style={styles.textoBotonAccion}>Nuevo Triaje</Text>
-          </TouchableOpacity>
-        )}
-
-        {permisos.puedeCrearConsulta && (
-          <TouchableOpacity
-            style={[styles.botonAccion, styles.botonConsulta]}
-            onPress={() => navigation.navigate(ROUTES.CONSULTA, { pacienteId: paciente.id })}
-          >
-            <Text style={styles.textoBotonAccion}>Nueva Consulta</Text>
-          </TouchableOpacity>
-        )}
-
+        {/* "Nueva consulta" es la unica accion de captura (issue #840): no hay "Nuevo triaje", los
+            signos son un paso dentro de la consulta. Un voluntario la ve y registra los signos. */}
         {permisos.puedeEditar && (
-          <TouchableOpacity style={styles.botonAccion} onPress={() => setEditando(true)}>
-            <Text style={styles.textoBotonAccion}>Editar datos</Text>
-          </TouchableOpacity>
+          <SecondaryButton
+            title="Editar datos"
+            onPress={() => setEditando(true)}
+            style={styles.botonAccion}
+          />
+        )}
+        {permisos.puedeNuevaConsulta && (
+          <PrimaryButton
+            title="Nueva consulta"
+            onPress={() => navigation.navigate(ROUTES.CONSULTA, { pacienteId: paciente.id })}
+            style={styles.botonAccion}
+          />
         )}
       </View>
 
@@ -269,18 +271,5 @@ const styles = StyleSheet.create({
   },
   botonAccion: {
     flex: 1,
-    backgroundColor: colors.primary,
-    paddingVertical: spacing.sm,
-    borderRadius: 8,
-    alignItems: "center",
-  },
-  botonConsulta: {
-    backgroundColor: colors.info,
-  },
-  textoBotonAccion: {
-    fontFamily: typography.fontFamilyBase,
-    color: colors.surface,
-    fontWeight: typography.weights.semibold,
-    fontSize: typography.sizes.md,
   },
 });

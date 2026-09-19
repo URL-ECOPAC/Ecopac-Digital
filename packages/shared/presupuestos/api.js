@@ -22,28 +22,6 @@ function aNumero(valor) {
   return Number.isFinite(numero) ? numero : 0;
 }
 
-/**
- * Convierte a numero para ESCRIBIR, o devuelve null si el valor no es un numero utilizable.
- *
- * Rechaza null, undefined, la cadena vacia, la cadena de espacios y cualquier cosa que no sea
- * un numero finito. `Number("")` y `Number(null)` son 0, y `Number("  ")` tambien, asi que
- * comprobar solo con Number.isFinite() no basta: hay que descartar antes el vacio.
- *
- * Existe por la issue #597. asignarPresupuestoJornada() validaba con aNumero(), que devuelve 0
- * para todo lo ilegible: un monto que llegara como "abc", undefined o un campo de formulario
- * vacio no fallaba la guarda de negativo, pasaba como 0 y se escribia como el presupuesto de la
- * jornada. La jornada quedaba en cero sin ninguna senal de que algo salio mal, y desde ahi
- * presupuesto_de_jornada() reportaba disponible cero y la pantalla parecia estar diciendo la
- * verdad.
- */
-function aNumeroAEscribir(valor) {
-  if (valor === null || valor === undefined) return null;
-  if (typeof valor === "string" && valor.trim() === "") return null;
-
-  const numero = Number(valor);
-  return Number.isFinite(numero) ? numero : null;
-}
-
 function aPresupuesto(fila) {
   if (!fila) {
     return null;
@@ -71,46 +49,9 @@ async function consultar(nombreDeFuncion, argumentos, presupuestoSinFilas) {
   }
 }
 
-/**
- * Fija el presupuesto asignado a una jornada.
- *
- * Escribe `jornadas.presupuesto_asignado`: no hay tabla de presupuestos, el asignado es una
- * columna de la jornada y lo ejecutado se calcula sumando `gastos`.
- *
- * @param {string} idJornada UUID de la jornada.
- * @param {number|string} monto Cantidad a asignar. Un valor ilegible y uno negativo se rechazan
- *   igual, con el codigo de violacion de CHECK.
- * @returns {Promise<{ jornada: object|null, error: object|null }>}
- */
-export async function asignarPresupuestoJornada(idJornada, monto) {
-  if (!idJornada) {
-    return { jornada: null, error: null };
-  }
-
-  // Un monto ilegible y uno negativo se rechazan igual y con el mismo codigo: los dos son
-  // datos que la jornada no puede aceptar, y quien llama solo necesita saber que no se guardo.
-  const cantidad = aNumeroAEscribir(monto);
-  if (cantidad === null || cantidad < 0) {
-    return { jornada: null, error: normalizarError({ code: "23514" }) };
-  }
-
-  try {
-    const { data, error } = await obtenerSupabase()
-      .from("jornadas")
-      .update({ presupuesto_asignado: cantidad })
-      .eq("id", idJornada)
-      .select("id, presupuesto_asignado")
-      .maybeSingle();
-
-    if (error) {
-      return { jornada: null, error: normalizarError(error) };
-    }
-
-    return { jornada: data ?? null, error: null };
-  } catch (error) {
-    return { jornada: null, error: normalizarError(error) };
-  }
-}
+// asignarPresupuestoJornada() escribia jornadas.presupuesto_asignado directo. Se retiro con la
+// 00135 (issue #840): el asignado es ahora la suma de jornada_presupuesto_origen y la base rechaza
+// escribirlo a mano. Se registra un aporte con registrarOrigenDePresupuesto() (origenes.api.js).
 
 /**
  * Asignado, gastado, disponible y pendiente de una jornada.

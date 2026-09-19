@@ -268,6 +268,26 @@ export const labels = {
   inactivo: "Inactivo",
 };
 
+/**
+ * Identidad de la organizacion, para los documentos que se imprimen (issue #840).
+ *
+ * POR QUE VIVE AQUI. Estaba escrita a mano y distinta en cada documento: la constancia de
+ * donacion decia "Ecopac Digital" mas "Comite Agricola de Desarrollo Integral" -- un nombre que
+ * no sale de ninguna tabla ni de ningun catalogo, solo de esa linea de JSX --, y la receta decia
+ * "Ecopac Guatemala". Tres identidades para la misma organizacion en papeles que se entregan a
+ * un donante o a un paciente.
+ *
+ * Aqui hay solo lo que se pudo confirmar. Si manana hace falta el NIT, la direccion o el
+ * telefono en los documentos, se agregan aqui con su respaldo, no dentro de una pagina.
+ *
+ * `logo` es la ruta publica de apps/web; movil no imprime todavia y no la usa.
+ */
+export const organizacion = {
+  nombre: "Ecopac Digital",
+  pais: "Guatemala",
+  logo: "/logo-ecopac.png",
+};
+
 export default {
   colors,
   moduleAccents,
@@ -277,4 +297,5 @@ export default {
   shadows,
   typography,
   labels,
+  organizacion,
 };

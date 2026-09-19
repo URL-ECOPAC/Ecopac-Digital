@@ -44,18 +44,21 @@ function numeroONulo(valor) {
 }
 
 /**
- * Detalle listo para `fn_registrar_donacion`: solo las columnas reales de `donacion_detalle`
- * (00022). `fechaVencimiento` no viaja: esa columna no existe en `donacion_detalle` (vive en
- * `lotes`, y solo se usa al generar el ingreso de inventario desde la pantalla, fuera de #635).
- * `medicamentoId`, si el renglon lo trae, tampoco: es estado del formulario para ese mismo paso
- * posterior, no una columna de la donacion.
+ * Detalle listo para `fn_registrar_donacion`: solo las columnas reales de `donacion_detalle`.
+ * `fechaVencimiento` no viaja: esa columna no existe en `donacion_detalle` (vive en `lotes`, y se
+ * captura al generar el ingreso de inventario).
+ *
+ * `medicamentoId` SI viaja desde la #840: es `donacion_detalle.medicamento_id` (00135), y con el
+ * la funcion arma la descripcion y la unidad desde el catalogo. Hasta entonces se quedaba en el
+ * estado del formulario y el paso de ingreso a inventario tenia que adivinar el medicamento.
  */
-function aDetalleParaGuardar(detalles = []) {
-  return detalles.map(({ descripcion, cantidad, unidad, monto }) => ({
-    descripcion,
+export function aDetalleParaGuardar(detalles = []) {
+  return detalles.map(({ descripcion, cantidad, unidad, monto, medicamentoId }) => ({
+    descripcion: descripcion || null,
     cantidad: numeroONulo(cantidad),
     unidad: unidad || null,
     monto: numeroONulo(monto),
+    medicamentoId: medicamentoId || null,
   }));
 }
 

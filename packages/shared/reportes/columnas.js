@@ -87,12 +87,16 @@ export const CAMPOS_FICHA_LOTE_INVENTARIO = [
   { id: "fechaVencimiento", label: "Fecha de vencimiento", tipo: TIPOS_DE_PRESENTACION.FECHA },
   {
     // "Estado", a secas, no decia de que estado hablaba (issue #838). Es el del vencimiento del
-    // lote, y asi se titula; sus dos valores son "Vigente" y "Vencido"
-    // (ESTADOS_DE_VENCIMIENTO_REPORTE, campos.js).
+    // lote, y asi se titula.
+    //
+    // ISSUE #840: apuntaba a "estadosDeVencimientoReporte", que es el catalogo del FILTRO e
+    // indexa por las cadenas "vigentes"/"vencidos". Esta celda guarda un booleano, asi que la
+    // busqueda fallaba y la columna mostraba las palabras `true` y `false`. Ahora usa
+    // VENCIMIENTO_DE_LOTE, indexado por el booleano de verdad.
     id: "vencido",
     label: "Vencimiento",
     tipo: TIPOS_DE_PRESENTACION.ESTADO,
-    etiquetasDesde: "estadosDeVencimientoReporte",
+    etiquetasDesde: "vencimientoDeLote",
   },
 ];
 

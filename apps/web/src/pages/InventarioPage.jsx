@@ -2,14 +2,12 @@ import { useEffect, useMemo, useState } from "react";
 import { useSesionCompartida } from "../contexto/SesionProvider";
 import ModalMedicamento from "./ModalMedicamento.jsx";
 import ModalPrincipioActivo from "./ModalPrincipioActivo.jsx";
-import { ModalAltaLote } from "./ModalAltaLote.jsx";
 import ModalRegistroIngreso from "./ModalRegistroIngreso.jsx";
 import { ModalSalidaMedicamento } from "./ModalSalidaMedicamento";
 import BandejaValidacionPage from "./BandejaValidacionPage";
 import {
   actualizarLote,
   actualizarMedicamento,
-  datosLoteParaRegistrar,
   ETIQUETAS_PRESENTACION,
   filtrarCatalogoMedicamentos,
   FILTROS_CATALOGO_MEDICAMENTOS,
@@ -32,7 +30,6 @@ import {
   puedeRegistrarMovimiento,
   puedeVerValorizacion,
   reactivarMedicamento,
-  registrarLote,
   registrarMedicamento,
   registrarPrincipioActivo,
   totalizarValorizacion,
@@ -84,8 +81,7 @@ export default function InventarioPage() {
   const [cargandoGuardar, setCargandoGuardar] = useState(false);
   const [modalPrincipioActivoAbierto, setModalPrincipioActivoAbierto] = useState(false);
   const [advertenciaDuplicado, setAdvertenciaDuplicado] = useState(false);
-  // Un fallo al guardar se pinta dentro del modal, como ya hace ModalAltaLote con
-  // errorValidacion. Antes era un alert() del navegador (issue #762).
+  // Un fallo al guardar se pinta dentro del modal, no en un alert() del navegador (issue #762).
   const [errorGuardarMedicamento, setErrorGuardarMedicamento] = useState(null);
   const [formData, setFormData] = useState({
     nombre: "",
@@ -103,8 +99,8 @@ export default function InventarioPage() {
   // bandeja de validacion), no derivan el conteo de lotesRaw.
   const { cantidadPendientes: cantidadPendientesAlertas } = useAlertasVencimiento({});
 
-  // Modales Lotes y Alertas
-  const [modalAltaLoteAbierto, setModalAltaLoteAbierto] = useState(false);
+  // Modales Lotes y Alertas. Aqui habia un modalAltaLoteAbierto para "Registrar lote": se
+  // retiro con la issue #846 (ver el comentario de la barra de acciones).
   const [modalSalidaAbierto, setModalSalidaAbierto] = useState(false);
   const [modalRegistroIngresoAbierto, setModalRegistroIngresoAbierto] = useState(false);
 
@@ -125,17 +121,7 @@ export default function InventarioPage() {
 
   const [filtrosCatalogo, setFiltrosCatalogo] = useState(FILTROS_CATALOGO_VACIOS);
 
-  const {
-    alertasCriticas,
-    validarNuevoLote,
-    errorValidacion: errorLotes,
-    setErrorValidacion: setErrorLotes,
-  } = useGestionLotes({
-    lotesIniciales: lotesRaw,
-    bodegas,
-    proveedores,
-    usuario: usuarioActual,
-  });
+  const { alertasCriticas } = useGestionLotes({ lotesIniciales: lotesRaw });
 
   // Busqueda y filtro por origen de la pestaña "Lotes" (issue #752): la tabla se arma directo
   // contra lotesRaw -la forma real de aLote() (lotes.api.js)-, ya no contra useVistaExistencias(),
@@ -360,20 +346,6 @@ export default function InventarioPage() {
     await cargarDatos();
   };
 
-  const handleGuardarLote = async (datosLote) => {
-    if (!validarNuevoLote(datosLote)) return;
-
-    const { error: errorRegistro } = await registrarLote(datosLoteParaRegistrar(datosLote));
-
-    if (errorRegistro) {
-      setErrorLotes(errorRegistro.mensaje);
-      return;
-    }
-
-    setModalAltaLoteAbierto(false);
-    cargarDatos();
-  };
-
   // Corregir el costo unitario de un lote ya registrado (issue #752). Quien puede corregir lo
   // decide puedeCorregirLote() -espejo de la politica RLS de UPDATE, 00107-, no un rol fijo: la
   // administradora siempre, o quien registro el lote mientras siga provisional.
@@ -445,17 +417,11 @@ export default function InventarioPage() {
           ...(tabActiva === "catalogo"
             ? [{ label: "Nuevo medicamento", onClick: abrirModalNuevo }]
             : []),
-          ...(tabActiva === "lotes"
-            ? [
-                {
-                  label: "Registrar lote",
-                  onClick: () => {
-                    setErrorLotes(null);
-                    setModalAltaLoteAbierto(true);
-                  },
-                },
-              ]
-            : []),
+          // Aqui estaba "Registrar lote". Se retira con la issue #846: registrarLote() insertaba
+          // en `lotes` y nada mas, asi que el lote nacia sin existencias en ninguna bodega y sin
+          // movimiento que lo respaldara. El stock solo nace de un ingreso, y "Registrar ingreso"
+          // -que crea el lote y el movimiento a la vez- ya esta arriba en esta misma barra. Un
+          // boton que parece dar de alta existencias y no las da es peor que no tenerlo.
         ]
       : [];
 
@@ -904,18 +870,6 @@ export default function InventarioPage() {
         medicamentos={inventarioRaw}
         usuarioId={usuarioActual?.id}
       />
-
-      {modalAltaLoteAbierto && (
-        <ModalAltaLote
-          abierto={modalAltaLoteAbierto}
-          onClose={() => setModalAltaLoteAbierto(false)}
-          onGuardar={handleGuardarLote}
-          errorValidacion={errorLotes}
-          medicamentos={inventarioRaw}
-          bodegas={bodegas}
-          proveedores={proveedores}
-        />
-      )}
 
       {modalRegistroIngresoAbierto && (
         <ModalRegistroIngreso

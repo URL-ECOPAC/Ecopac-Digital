@@ -59,7 +59,9 @@ export function validarConDescriptores(campos, valores) {
 
   for (const campo of campos ?? []) {
     const reglas = campo?.validacion;
-    if (!reglas) continue;
+    // Un campo de solo lectura no viaja al servidor: validarlo solo podria bloquear una
+    // correccion por un dato que la persona no puede tocar (issue #840, B1).
+    if (!reglas || campo.soloLectura) continue;
 
     const valor = valores?.[campo.id];
     const etiqueta = campo.label ?? campo.id;

@@ -64,7 +64,9 @@ describe("registrarDonacion (#635)", () => {
     expect(obtenerSupabase).not.toHaveBeenCalled();
   });
 
-  it("llama a fn_registrar_donacion con los argumentos correctos, sin fechaVencimiento ni medicamentoId en el detalle", async () => {
+  // Desde la #840 medicamentoId SI viaja: es donacion_detalle.medicamento_id (00135), y con el la
+  // funcion arma la descripcion y la unidad desde el catalogo.
+  it("llama a fn_registrar_donacion con los argumentos correctos, con medicamentoId y sin fechaVencimiento", async () => {
     mockSupabase.rpc.mockResolvedValueOnce({
       data: {
         donacion: {
@@ -111,14 +113,21 @@ describe("registrarDonacion (#635)", () => {
       p_donante_id: "DON-1",
       p_tipo: "medicamentos",
       p_fecha: HOY,
-      p_detalle: [{ descripcion: "Amoxicilina", cantidad: 10, unidad: "cajas", monto: null }],
+      p_detalle: [
+        {
+          descripcion: "Amoxicilina",
+          cantidad: 10,
+          unidad: "cajas",
+          monto: null,
+          medicamentoId: "MED-1",
+        },
+      ],
       p_proyecto_id: "PROY-1",
       p_observaciones: null,
     });
 
     const detalleEnviado = mockSupabase.rpc.mock.calls[0][1].p_detalle[0];
     expect(detalleEnviado.fechaVencimiento).toBeUndefined();
-    expect(detalleEnviado.medicamentoId).toBeUndefined();
     expect(mockSupabase.rpc.mock.calls[0][1].registrado_por).toBeUndefined();
 
     expect(res.error).toBeNull();

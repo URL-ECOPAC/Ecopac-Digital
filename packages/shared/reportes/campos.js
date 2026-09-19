@@ -33,6 +33,30 @@ export const ESTADOS_DE_VENCIMIENTO_REPORTE = [
 ];
 
 /**
+ * El mismo estado, pero indexado por el BOOLEANO que guarda la fila de un lote.
+ *
+ * POR QUE HACEN FALTA DOS CATALOGOS. El de arriba indexa por el valor del FILTRO, que son las
+ * cadenas "vigentes" y "vencidos" de ESTADOS_DE_VENCIMIENTO. La fila de un lote no guarda esas
+ * cadenas: guarda un booleano, `vencido`, que calcula obtenerReporteDeInventario()
+ * (inventario.api.js) con `!esLoteEntregable(...)`. Apuntar la columna al catalogo del filtro
+ * hacia que la busqueda no encontrara nada y que la celda cayera a pintar el valor crudo: la
+ * columna "Vencimiento" mostraba las palabras `true` y `false` (issue #840).
+ *
+ * Es el mismo patron que ESTADOS_DIAGNOSTICO y ESTADOS_DONANTE, que ya resolvieron esto para
+ * otras columnas booleanas: `value` es el booleano real, `clave` indexa el color de statusColors
+ * y `label` sale de ui-tokens.
+ *
+ * `icono` es lo que la columna muestra. El usuario pidio un simbolo y no una palabra; el nombre
+ * es generico -- cada app lo traduce a su libreria de iconos, igual que hace
+ * formato/acciones.js --, y `label` se queda como el texto accesible, porque un simbolo a secas
+ * no se puede leer en voz alta ni distinguir solo por color.
+ */
+export const VENCIMIENTO_DE_LOTE = [
+  { value: false, clave: "disponible", label: labels.loteVigente, icono: "si" },
+  { value: true, clave: "critico", label: labels.loteVencido, icono: "no" },
+];
+
+/**
  * Catalogo de estado_jornada (00001, redefinido por las migraciones de jornadas) para la
  * columna de estado del reporte de resultados de jornada (#215). Los cuatro valores y sus
  * etiquetas ya existen en ui-tokens; este catalogo solo los agrupa en la forma que

@@ -42,14 +42,10 @@ const PACIENTE = {
 };
 
 describe("pestaniasDeFicha", () => {
-  it("da las cuatro pestanias a medico y administrador", () => {
+  // Issue #840: signos y recetas dejan de ser pestanas hermanas; viven dentro de cada visita.
+  it("da datos generales e historial a medico y administrador", () => {
     for (const rol of [ROLES.MEDICO, ROLES.ADMINISTRADOR]) {
-      expect(pestaniasDeFicha(rol).map((p) => p.id)).toEqual([
-        "generales",
-        "historial",
-        "signos",
-        "recetas",
-      ]);
+      expect(pestaniasDeFicha(rol).map((p) => p.id)).toEqual(["generales", "historial"]);
     }
   });
 
@@ -62,7 +58,12 @@ describe("pestaniasDeFicha", () => {
 
 describe("resolverPestaniaDeFicha", () => {
   it("respeta una pestania visible para el rol", () => {
-    expect(resolverPestaniaDeFicha("recetas", ROLES.MEDICO)).toBe("recetas");
+    expect(resolverPestaniaDeFicha("historial", ROLES.MEDICO)).toBe("historial");
+  });
+
+  // Un enlace guardado a la antigua pestana de recetas no puede dejar la ficha en blanco.
+  it("una pestana retirada cae a la de por defecto", () => {
+    expect(resolverPestaniaDeFicha("recetas", ROLES.MEDICO)).toBe(PESTANIA_FICHA_POR_DEFECTO);
   });
 
   it("cae a la de por defecto si la pestania no existe", () => {
@@ -159,6 +160,7 @@ describe("permisosDeFicha", () => {
       puedeTomarTriaje: true,
       puedeCrearConsulta: true,
       puedeEmitirReceta: true,
+      puedeNuevaConsulta: true,
     });
     expect(permisosDeFicha(ROLES.ADMINISTRADOR)).toEqual({
       puedeEditar: true,
@@ -166,6 +168,7 @@ describe("permisosDeFicha", () => {
       puedeTomarTriaje: true,
       puedeCrearConsulta: true,
       puedeEmitirReceta: true,
+      puedeNuevaConsulta: true,
     });
     expect(permisosDeFicha(ROLES.VOLUNTARIO)).toEqual({
       puedeEditar: false,
@@ -176,6 +179,8 @@ describe("permisosDeFicha", () => {
       puedeTomarTriaje: true,
       puedeCrearConsulta: false,
       puedeEmitirReceta: false,
+      // Issue #840: "Nueva consulta" la ve quien registra al menos una parte; el voluntario, los signos.
+      puedeNuevaConsulta: true,
     });
   });
 });

@@ -12,8 +12,12 @@ export { default as PageHeader } from "./PageHeader";
 export { default as SectionHeader } from "./SectionHeader";
 
 export { default as TextField } from "./TextField";
+export { default as CampoDeFormulario } from "./CampoDeFormulario";
 export { default as Selector } from "./Selector";
 export { default as SelectorConAlta } from "./SelectorConAlta";
+export { default as CascadaDeComunidad } from "./CascadaDeComunidad";
+export { default as AvisoDeInactividad } from "./AvisoDeInactividad";
+export { default as FormularioSignosVitales } from "./FormularioSignosVitales";
 export { default as MultiSelector } from "./MultiSelector";
 export { default as DateField } from "./DateField";
 export { default as NumberField } from "./NumberField";

@@ -10,6 +10,7 @@
 // finalizar jornada, no una edicion manual.
 
 import { TIPOS_DE_CAMPO } from "../descriptores.js";
+import { camposDeEdicion } from "../formularios.js";
 import { TODOS_LOS_ROLES, etiquetaDeRol } from "../usuarios/roles.js";
 
 /**
@@ -174,11 +175,15 @@ export const CAMPOS_MARCAR_ASISTENCIA = [
  * para hacerlo. En vez de una pantalla nueva, se agrega al mismo modal de editar turno
  * (ModalEdicionTurno.jsx): marcar quien asistio es, igual que el horario, algo que se corrige
  * sobre una fila que ya existe.
+ *
+ * Desde la #840 (regla B1) es el mismo juego de campos que la asignacion: `perfil` y
+ * `rolEnJornada` se ven de solo lectura en vez de faltar. `asistio` es el unico que el alta no
+ * tiene, y a proposito: al asignar a alguien todavia no se sabe si va a asistir.
  */
-export const CAMPOS_EDICION_TURNO = [
-  ...CAMPOS_ASIGNACION_PERSONAL.filter((campo) => IDS_CAMPOS_EDICION_TURNO.includes(campo.id)),
-  ...CAMPOS_MARCAR_ASISTENCIA,
-];
+export const CAMPOS_EDICION_TURNO = camposDeEdicion(
+  [...CAMPOS_ASIGNACION_PERSONAL, ...CAMPOS_MARCAR_ASISTENCIA],
+  [...IDS_CAMPOS_EDICION_TURNO, "asistio"],
+);
 
 /**
  * Subconjunto de CAMPOS_JORNADA para el formulario de alta/edicion de jornada (issue #179,
@@ -192,11 +197,10 @@ export const CAMPOS_EDICION_TURNO = [
  * siempre vacia. `codigo` sigue sin estar: lo genera el servidor por secuencia (migracion
  * 00126), como numero_ficha o folio, y no se declara como capturable en ningun formulario.
  *
- * `presupuestoAsignado` sigue deliberadamente fuera: tiene una via de escritura propia y mas
- * estricta, `asignarPresupuestoJornada()` (presupuestos/api.js, valida el monto con
- * aNumeroAEscribir()), que tampoco tiene llamador todavia -- meterlo aca duplicaria el camino de
- * escritura de una columna financiera con dos reglas de validacion distintas. Queda declarado
- * como hueco abierto, no resuelto en este cambio (ver docs/MODELO-DE-DATOS.md).
+ * `presupuestoAsignado` no es un campo de ningun formulario: desde la 00135 (issue #840) es la
+ * suma de los aportes de jornada_presupuesto_origen, la mantiene un trigger, y la base rechaza
+ * escribirlo a mano. Los aportes se registran en el detalle de la jornada, pestaña Presupuesto
+ * (useOrigenesDePresupuesto, presupuestos/).
  *
  * "observaciones" no aparece: el objetivo original del issue #179 la nombra, pero la tabla
  * jornadas (00012 + 00036) no tiene esa columna. No se propone ninguna migracion para agregarla

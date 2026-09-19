@@ -26,9 +26,22 @@ import reactRefresh from "eslint-plugin-react-refresh";
  * pregunta esta bien para una callback opcional, y mal cuando la alternativa es fabricar una
  * implementacion de mentira.
  */
+/**
+ * "Hoy" como dia UTC (issue #840). `new Date().toISOString().slice(0, 10)` parece la fecha de hoy
+ * y en Guatemala, a partir de las 18:00, es la de manana: asi se guardaban las donaciones de la
+ * tarde con un dia de mas. El CI corre en UTC, donde las dos coinciden, y ninguna prueba lo veia.
+ */
+const PROHIBIR_DIA_UTC = {
+  selector:
+    "CallExpression[callee.property.name=/^(slice|split|substring)$/][callee.object.callee.property.name='toISOString']",
+  message:
+    "toISOString() da el dia UTC: en Guatemala, despues de las 18:00, ya es manana. Usa fechaLocalISO() de @ecopac/shared (formato/fechas.js) (issue #840).",
+};
+
 const REGLAS_CONTRA_CONTRATOS_ADIVINADOS = {
   "no-restricted-syntax": [
     "error",
+    PROHIBIR_DIA_UTC,
     {
       selector:
         "ConditionalExpression[test.callee.object.name='Array'][test.callee.property.name='isArray'][alternate.type=/^(MemberExpression|ChainExpression|LogicalExpression)$/]",
@@ -67,8 +80,10 @@ const REGLA_CONTRA_FECHAS_SIN_ZONA = {
         "new Date(x) con un argumento interpreta 'AAAA-MM-DD' como medianoche UTC y corre la fecha un dia en Guatemala (UTC-6, issue #694/#725). Usa aFechaLocal(x) de packages/shared/formato/fechas.js.",
     },
     {
+      // `substring` lo agrego la #840: es la tercera forma de cortar los diez primeros
+      // caracteres y se colaba por debajo de la regla.
       selector:
-        "CallExpression[callee.property.name=/^(slice|split)$/][callee.object.callee.property.name='toISOString']",
+        "CallExpression[callee.property.name=/^(slice|split|substring)$/][callee.object.callee.property.name='toISOString']",
       message:
         "toISOString() da la fecha en UTC: entre las 18:00 y la medianoche en Guatemala esto adelanta un dia (issue #725). Usa aCadenaFechaLocal() de packages/shared/formato/fechas.js.",
     },
@@ -245,6 +260,10 @@ export default [
     },
   },
   {
+    // REGLA_CONTRA_FECHAS_SIN_ZONA cubre lo que la #840 prohibia por su cuenta (el dia UTC de
+    // toISOString()) y ademas new Date(cadena), asi que aqui manda la regla ancha y no las dos.
+    // fechas.js es el unico que puede interpretar una cadena a mano; las pruebas construyen el
+    // dia UTC a proposito, para demostrar que no es el local.
     files: ["packages/shared/**/*.{js,jsx}"],
     ignores: ["packages/shared/formato/fechas.js", "packages/shared/**/*.test.js"],
     rules: REGLA_CONTRA_FECHAS_SIN_ZONA,

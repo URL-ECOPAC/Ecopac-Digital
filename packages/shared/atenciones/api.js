@@ -184,6 +184,42 @@ export async function obtenerCola(jornadaId) {
 }
 
 /**
+ * La atencion de un paciente en una jornada: la que ya existe, o una nueva (issue #840).
+ *
+ * Una visita es UNA atencion (UNIQUE paciente_id, jornada_id, 00013), y la consulta, los signos y
+ * la receta cuelgan de ella. Esta logica estaba copiada en useRegistroTriaje y
+ * useRegistroConsulta, y las dos buscaban la existente en la COLA de la jornada, que solo muestra
+ * atenciones abiertas: si alguien ya la habia cerrado, no la encontraban y fallaban. Aqui se busca
+ * en `atenciones` directo, que el personal de campo puede leer (00033).
+ *
+ * @param {string} pacienteId
+ * @param {string} jornadaId
+ * @param {{ estadoDeJornada?: string }} [opciones]
+ * @returns {Promise<{ atencionId: string|null, error: object|null }>}
+ */
+export async function resolverAtencion(pacienteId, jornadaId, { estadoDeJornada } = {}) {
+  const inicio = await iniciarAtencion(pacienteId, jornadaId, { estadoDeJornada });
+  if (inicio.atencion) return { atencionId: inicio.atencion.id, error: null };
+  if (inicio.error?.codigo !== CODIGOS_DE_ERROR_DE_SUPABASE.UNICIDAD) {
+    return { atencionId: null, error: inicio.error };
+  }
+
+  try {
+    const { data, error } = await obtenerSupabase()
+      .from("atenciones")
+      .select("id")
+      .eq("paciente_id", pacienteId)
+      .eq("jornada_id", jornadaId)
+      .maybeSingle();
+
+    if (error) return { atencionId: null, error: normalizarError(error) };
+    return { atencionId: data?.id ?? null, error: data ? null : inicio.error };
+  } catch (error) {
+    return { atencionId: null, error: normalizarError(error) };
+  }
+}
+
+/**
  * Cuenta los pacientes con atencion registrada en una jornada (issue #187, criterio 5).
  *
  * Cuenta filas de `atenciones` (abiertas y cerradas), no de `vista_cola_jornada` (solo abiertas)

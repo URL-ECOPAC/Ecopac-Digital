@@ -11,26 +11,41 @@
  * por el valor de respaldo del propio var(), sin reventar ni quedar invisible.
  */
 
+import { Check, X } from "lucide-react";
+
 /** Misma transformacion que usa theme.js: las claves del enum llevan espacios. */
 function variableDeEstado(status) {
   return `--estado-${String(status).replace(/ /g, "-")}`;
 }
 
-export default function StatusChip({ status, label }) {
+/**
+ * Simbolo opcional del chip (issue #840).
+ *
+ * El catalogo del descriptor trae un nombre generico -- "si" o "no" --, no un componente:
+ * packages/shared no puede importar lucide-react, y movil tiene su propia libreria de iconos.
+ * Es el mismo reparto que formato/acciones.js con iconosDeAccion.js.
+ */
+const ICONOS = { si: Check, no: X };
+
+export default function StatusChip({ status, label, icono }) {
   if (status === null || status === undefined || status === "") return null;
 
   // React no pinta booleanos: sin esto, un estado que llega como true (la columna 'estado' de
   // COLUMNAS_USUARIO lee el campo 'activo') dejaria la celda en blanco sin avisar de nada.
   const texto = label ?? String(status);
+  const Icono = ICONOS[icono];
 
   return (
     <span
-      className="badge rounded-pill"
+      className="badge rounded-pill d-inline-flex align-items-center gap-1"
       style={{
         backgroundColor: `var(${variableDeEstado(status)}, var(--color-secondary))`,
         color: "var(--color-surface)",
       }}
     >
+      {/* El simbolo va acompañado del texto y no lo sustituye: una X a secas no se distingue de
+          una marca de verificacion en una impresion monocromatica ni se lee en voz alta. */}
+      {Icono && <Icono size={14} aria-hidden="true" />}
       {texto}
     </span>
   );

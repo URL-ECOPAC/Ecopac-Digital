@@ -1,18 +1,12 @@
 import { useEffect, useState } from "react";
 
+import { CAMPOS_CORRECCION_MOVIMIENTO, valoresDeCorreccionDeMovimiento } from "@ecopac/shared";
+
+import CampoDeFormulario from "../components/CampoDeFormulario";
 import Modal from "../components/Modal";
-import NumberField from "../components/NumberField";
 import PrimaryButton from "../components/PrimaryButton";
 import SecondaryButton from "../components/SecondaryButton";
-import TextField from "../components/TextField";
 import { Save, X } from "lucide-react";
-
-function valoresDe(movimiento) {
-  return {
-    cantidad: movimiento?.cantidad ?? null,
-    motivo: movimiento?.motivo ?? "",
-  };
-}
 
 /**
  * Detalle de un movimiento de "Mis movimientos" (issue #756). Con `movimiento.puedeEditar`
@@ -21,16 +15,19 @@ function valoresDe(movimiento) {
  * `puedeEditar` -un movimiento ajeno visto con el filtro "Ver: todos", o uno que ya no esta
  * pendiente- es solo lectura: la pantalla sigue sirviendo para ver el detalle, pero el servidor
  * rechazaria el UPDATE de todas formas (00106), asi que no se ofrece el boton.
+ *
+ * Los campos son los del alta (CAMPOS_CORRECCION_MOVIMIENTO): tipo, lote y bodega salen como
+ * solo lectura, no ausentes (issue #840, B1).
  */
 export default function ModalCorreccionMovimiento({ visible, movimiento, onClose, onGuardar }) {
   const puedeEditar = Boolean(movimiento?.puedeEditar);
-  const [valores, setValores] = useState(() => valoresDe(movimiento));
+  const [valores, setValores] = useState(() => valoresDeCorreccionDeMovimiento(movimiento));
   const [error, setError] = useState(null);
   const [erroresForm, setErroresForm] = useState({});
   const [enviando, setEnviando] = useState(false);
 
   useEffect(() => {
-    setValores(valoresDe(movimiento));
+    setValores(valoresDeCorreccionDeMovimiento(movimiento));
     setError(null);
     setErroresForm({});
   }, [movimiento]);
@@ -64,8 +61,6 @@ export default function ModalCorreccionMovimiento({ visible, movimiento, onClose
       )}
 
       <p className="text-muted small mb-3">
-        {movimiento?.medicamentoNombre} · Lote {movimiento?.numeroLote} · {movimiento?.bodegaNombre}
-        <br />
         {movimiento?.estado} · Registrado por {movimiento?.registradoPorNombre ?? "—"}
       </p>
 
@@ -78,25 +73,16 @@ export default function ModalCorreccionMovimiento({ visible, movimiento, onClose
       )}
 
       <form onSubmit={guardar}>
-        <NumberField
-          label="Cantidad"
-          value={valores.cantidad}
-          onChange={(valor) => setValores((anteriores) => ({ ...anteriores, cantidad: valor }))}
-          min={1}
-          error={erroresForm.cantidad}
-          disabled={!puedeEditar}
-        />
-        <TextField
-          label="Motivo"
-          as="textarea"
-          rows={2}
-          value={valores.motivo}
-          onChange={(evento) =>
-            setValores((anteriores) => ({ ...anteriores, motivo: evento.target.value }))
-          }
-          error={erroresForm.motivo}
-          disabled={!puedeEditar}
-        />
+        {CAMPOS_CORRECCION_MOVIMIENTO.map((campo) => (
+          <CampoDeFormulario
+            key={campo.id}
+            campo={campo}
+            valor={valores[campo.id]}
+            onChange={(valor) => setValores((anteriores) => ({ ...anteriores, [campo.id]: valor }))}
+            error={erroresForm[campo.id]}
+            disabled={!puedeEditar}
+          />
+        ))}
 
         <div className="d-flex justify-content-end gap-2 mt-3">
           {puedeEditar ? (

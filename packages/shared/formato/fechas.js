@@ -100,7 +100,11 @@ export function esFechaValida(valor) {
  *
  * `new Date().toISOString().slice(0, 10)` da la fecha en UTC: entre las 18:00 y la medianoche en
  * Guatemala (UTC-6) esto adelanta un dia (issue #725). Es el reemplazo para escribir "hoy" en una
- * columna DATE o en un <input type="date">.
+ * columna DATE o en un <input type="date">, y la operacion inversa de aFechaLocal().
+ *
+ * Es el unico nombre para esto. La #840 llego a agregar un fechaLocalISO() identico al encontrar
+ * el mismo bug en las donaciones de la tarde -se guardaban con la fecha del dia siguiente-; el
+ * arreglo era correcto y el nombre nuevo sobraba, asi que se retiro al integrar la #849.
  *
  * @param {Date|string|number} [valor] Por omision, ahora mismo.
  * @returns {string} `"2026-08-18"`, o cadena vacia si el valor no es una fecha.

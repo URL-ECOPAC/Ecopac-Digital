@@ -1,4 +1,4 @@
-import { TIPOS_DE_CAMPO } from "@ecopac/shared";
+import { TIPOS_DE_CAMPO, textoDeCampoSoloLectura } from "@ecopac/shared";
 
 import DateField from "./DateField";
 import MultiSelector from "./MultiSelector";
@@ -54,6 +54,24 @@ export default function CampoDeFormulario({
   disabled = false,
 }) {
   const estilo = ocupaFilaCompleta(campo) ? { gridColumn: "1 / -1" } : undefined;
+
+  // Lo que la edicion muestra pero no deja cambiar (issue #840, B1): el mismo campo que en el
+  // alta, como texto no editable. No un select deshabilitado: sin su catalogo cargado saldria
+  // vacio, y la correccion de un movimiento no carga todos los lotes para mostrar el suyo.
+  if (campo.soloLectura) {
+    const esLargo = campo.tipo === TIPOS_DE_CAMPO.TEXTO_LARGO;
+    return (
+      <TextField
+        label={campo.label}
+        as={esLargo ? "textarea" : undefined}
+        rows={esLargo ? (campo.filas ?? 3) : undefined}
+        value={textoDeCampoSoloLectura(campo, valor, catalogos)}
+        readOnly
+        disabled
+        style={estilo}
+      />
+    );
+  }
 
   // Un descriptor trae sus opciones escritas (las de un enum cerrado) o dice de que catalogo
   // salen (las que vienen de la base). Mismo contrato que FilterBar.

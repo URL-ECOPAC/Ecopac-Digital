@@ -9,6 +9,7 @@
 
 import { describe, expect, it } from "vitest";
 
+import { aCadenaFechaLocal } from "../formato/fechas.js";
 import {
   ESTADOS_DE_LOTE,
   armarFilasDeExistencias,
@@ -16,11 +17,14 @@ import {
   sumarExistenciasPorLote,
 } from "./useExistenciasPorLote.js";
 
-/** Una fecha a N dias de hoy, en el formato AAAA-MM-DD que guarda lotes.fecha_vencimiento. */
+/**
+ * Una fecha a N dias de hoy, en el formato AAAA-MM-DD que guarda lotes.fecha_vencimiento. Dia
+ * LOCAL: con toISOString() el "hoy" de la tarde en Guatemala ya era manana (issue #840).
+ */
 function enDias(dias) {
   const fecha = new Date();
   fecha.setDate(fecha.getDate() + dias);
-  return fecha.toISOString().slice(0, 10);
+  return aCadenaFechaLocal(fecha);
 }
 
 describe("estadoDeLote", () => {

@@ -67,17 +67,29 @@ COMMENT ON COLUMN pacientes.sexo IS
 -- maxLongitud 20, el de edicion con 13 y REGEX_DPI con 13. La correcta es 13: es lo que tiene un DPI
 -- guatemalteco. El descriptor baja a 13 en este mismo PR (packages/shared/pacientes/campos.js).
 --
--- Entra VALID de una vez, sin NOT VALID: los datos ya cumplen -13 digitos o NULL-, y un CHECK que
--- nace sin validar es un CHECK que nadie valida despues. Sigue siendo opcional: mucha poblacion
--- rural no tiene DPI, y esa decision no cambia aqui.
+-- Entra NOT VALID (corregido en la #840). La primera version entraba VALID suponiendo que los datos
+-- ya cumplian, y en ecopac-dev no: habia DPI escritos con otra longitud, del tiempo en que la columna
+-- no tenia CHECK. La migracion fallo al aplicarse (SQLSTATE 23514), se revirtio entera y dejo a
+-- ecopac-dev sin poder recibir ninguna migracion posterior. Como no quedo aplicada en ningun
+-- ambiente, se corrige aqui mismo y no con una migracion nueva.
+--
+-- NOT VALID exige los 13 digitos a todo DPI que se inserte o se edite desde ahora, y no toca los
+-- que ya estan: borrarlos o inventarles una correccion seria perder un dato de identidad que alguien
+-- capturo. Quien edite a un paciente con un DPI viejo invalido tendra que corregirlo en ese momento,
+-- que es cuando hay alguien para verificarlo. Cuando no quede ninguno, un VALIDATE CONSTRAINT en
+-- una migracion posterior lo cierra del todo.
+--
+-- Sigue siendo opcional: mucha poblacion rural no tiene DPI, y esa decision no cambia aqui.
 
 ALTER TABLE pacientes
   ADD CONSTRAINT chk_pacientes_dpi_13_digitos
-  CHECK (dpi IS NULL OR dpi ~ '^[0-9]{13}$');
+  CHECK (dpi IS NULL OR dpi ~ '^[0-9]{13}$') NOT VALID;
 
 COMMENT ON CONSTRAINT chk_pacientes_dpi_13_digitos ON pacientes IS
   'El DPI guatemalteco tiene exactamente 13 digitos (issue #699). Espejo de REGEX_DPI en '
-  'packages/shared/pacientes/validaciones.js. NULL sigue permitido: el DPI es opcional.';
+  'packages/shared/pacientes/validaciones.js. NULL sigue permitido: el DPI es opcional. NOT VALID '
+  '(issue #840): obliga a lo nuevo y a lo editado; los DPI anteriores invalidos se corrigen al '
+  'editar al paciente.';
 
 -- ============================================================================
 -- 3. Las tres funciones que tocan la columna

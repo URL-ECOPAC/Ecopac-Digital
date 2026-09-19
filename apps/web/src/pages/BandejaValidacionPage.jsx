@@ -1,6 +1,10 @@
 import { useState } from "react";
 
-import { permisosDeMovimientos, usePendientesValidacion } from "@ecopac/shared";
+import {
+  formatearFechaCorta,
+  permisosDeMovimientos,
+  usePendientesValidacion,
+} from "@ecopac/shared";
 import SectionHeader from "../components/SectionHeader";
 // issue #689: esta pantalla tenia su propio movimientosPendientes escrito a mano (un solo
 // movimiento de mentira) y handleAprobar/handleRechazar solo hacian console.log. Nunca llamaba
@@ -22,10 +26,8 @@ export default function BandejaValidacionPage({ usuarioId, rolUsuario }) {
   const [procesandoId, setProcesandoId] = useState(null);
   const [errorAccion, setErrorAccion] = useState(null);
 
-  const formatoFecha = (fechaIso) => {
-    if (!fechaIso) return "—";
-    return new Date(fechaIso).toLocaleDateString("es-GT");
-  };
+  // El formato sale de shared, como en el resto de la app: toLocaleDateString depende del motor.
+  const formatoFecha = (fechaIso) => formatearFechaCorta(fechaIso) || "—";
 
   const handleAprobar = async (movimiento) => {
     setProcesandoId(movimiento.id);

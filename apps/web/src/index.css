@@ -76,23 +76,43 @@
 }
 
 /* Cuadro de turnos imprimible (issue #185). Mismo patron que .receta-imprimible de arriba: oculto
-   en pantalla, solo existe para la impresion. Reusa el @page de abajo (media carta) en vez de
-   declarar uno propio: dos reglas @page en la misma hoja de estilos no se combinan por clase,
-   compiten por el documento entero, asi que declarar una segunda aca le cambiaria el tamano de
-   pagina tambien a las recetas. */
+   en pantalla, solo existe para la impresion. Comparte con la receta la pagina con nombre
+   `media-carta`; desde la #840 eso es una eleccion y no una herencia obligada (ver el bloque de
+   @page mas abajo). */
 .turnos-imprimible {
   display: none;
 }
 
+/* Documento imprimible generico (issue #840). Igual que los dos de arriba: no se ve en pantalla,
+   solo existe para la impresion. Lo monta DocumentoImprimible.jsx en un portal sobre el body. */
+.doc-imprimible {
+  display: none;
+}
+
 @media print {
-  /* Media carta. El criterio 2 pide que quepa ahi y se lea en impresora monocromatica, asi que
-     el diseno no depende de ningun color: solo tamano, peso y lineas. */
-  @page {
+  /* PAGINAS CON NOMBRE, UNA POR TAMANO DE PAPEL.
+     Antes habia una sola regla @page anonima en media carta, la de la receta, y por ser anonima
+     se la aplicaba al documento entero: cualquier otro papel salia tambien en media carta. El
+     comentario de arriba daba eso por inevitable ("dos reglas @page... compiten por el documento
+     entero"), y lo es entre reglas anonimas. Con nombre no: cada documento elige la suya con la
+     propiedad `page`, que es lo que hace .doc-imprimible--carta y --media-carta mas abajo. */
+  @page carta {
+    size: letter;
+    margin: 0.6in;
+  }
+
+  /* Media carta, para la receta y el cuadro de turnos. El criterio 2 de la #131 pide que quepa
+     ahi y se lea en impresora monocromatica, asi que el diseno no depende de ningun color: solo
+     tamano, peso y lineas. */
+  @page media-carta {
     size: 5.5in 8.5in;
     margin: 0.4in;
   }
 
-  /* Criterio 4: fuera la navegacion, la cabecera y el resto de la aplicacion. */
+  /* Criterio 4: fuera la navegacion, la cabecera y el resto de la aplicacion.
+     Esta regla es la que dejaba la constancia en blanco: la constancia se dibujaba DENTRO del
+     shell, asi que esconder el shell la escondia a ella. Ahora todo documento imprimible se monta
+     en un portal, fuera del shell, y esta regla solo se lleva lo que tiene que llevarse. */
   .app-shell {
     display: none !important;
   }
@@ -102,10 +122,120 @@
     color: var(--color-text);
   }
 
+  /* --- Documento imprimible generico (issue #840) --- */
+
+  .doc-imprimible {
+    display: block;
+    font-size: 10pt;
+    line-height: 1.4;
+  }
+
+  .doc-imprimible--carta {
+    page: carta;
+  }
+
+  .doc-imprimible--media-carta {
+    page: media-carta;
+  }
+
+  .doc-imprimible__encabezado {
+    align-items: center;
+    border-bottom: 1pt solid var(--color-text);
+    display: flex;
+    gap: 10pt;
+    margin-bottom: 10pt;
+    padding-bottom: 6pt;
+  }
+
+  .doc-imprimible__logo {
+    height: 38pt;
+    width: auto;
+  }
+
+  /* Empuja la referencia (folio y fecha) al borde derecho. */
+  .doc-imprimible__identidad {
+    flex: 1;
+  }
+
+  .doc-imprimible__organizacion {
+    font-size: 13pt;
+    font-weight: 700;
+    margin: 0;
+  }
+
+  .doc-imprimible__pais,
+  .doc-imprimible__folio,
+  .doc-imprimible__fecha {
+    font-size: 9pt;
+    margin: 0;
+  }
+
+  .doc-imprimible__referencia {
+    text-align: right;
+  }
+
+  /* El folio se lee y se transcribe a mano: monoespaciada para no confundir un 0 con una O. */
+  .doc-imprimible__folio {
+    font-family: var(--fuente-mono);
+    font-weight: 600;
+  }
+
+  .doc-imprimible__titulo {
+    font-size: 12pt;
+    font-weight: 700;
+    margin: 0 0 10pt;
+    text-align: center;
+    text-transform: uppercase;
+  }
+
+  .doc-imprimible__cuerpo p {
+    margin: 0 0 3pt;
+  }
+
+  /* Ninguna tabla de un documento depende del color: solo lineas, como la receta. */
+  .doc-imprimible__cuerpo table {
+    border-collapse: collapse;
+    width: 100%;
+  }
+
+  .doc-imprimible__cuerpo th,
+  .doc-imprimible__cuerpo td {
+    border: 0.5pt solid var(--color-text);
+    padding: 3pt 5pt;
+    text-align: left;
+  }
+
+  .doc-imprimible__pie {
+    display: flex;
+    gap: 24pt;
+    justify-content: space-around;
+    margin-top: 36pt;
+  }
+
+  .doc-imprimible__firma {
+    flex: 1;
+    text-align: center;
+  }
+
+  .doc-imprimible__linea-firma {
+    border-top: 0.5pt solid var(--color-text);
+    display: block;
+    margin: 0 auto 2pt;
+    width: 80%;
+  }
+
+  .doc-imprimible__rotulo-firma {
+    font-size: 9pt;
+    margin: 0;
+  }
+
+  /* --- Receta (issue #131) --- */
+
   .receta-imprimible {
     display: block;
     font-size: 10pt;
     line-height: 1.35;
+    page: media-carta;
   }
 
   .receta-imprimible__encabezado {
@@ -181,6 +311,7 @@
     display: block;
     font-size: 10pt;
     line-height: 1.35;
+    page: media-carta;
   }
 
   .turnos-imprimible__encabezado {

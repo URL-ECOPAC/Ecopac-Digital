@@ -14,6 +14,8 @@
 // referencia de filtros.js y columnas.js).
 
 export * from "./api.js";
+export * from "./origenes.api.js";
+export * from "./useOrigenesDePresupuesto.js";
 export * from "./campos.js";
 export * from "./columnas.js";
 export * from "./filtros.js";

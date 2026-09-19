@@ -17,6 +17,7 @@ import {
   ESTADOS_JORNADA_REPORTE,
   OPCIONES_AGRUPACION_IMPACTO,
   OPCIONES_METRICA_IMPACTO,
+  VENCIMIENTO_DE_LOTE,
 } from "./campos.js";
 import {
   CAMPOS_FICHA_LOTE_INVENTARIO,
@@ -63,7 +64,10 @@ const CATALOGOS_CONOCIDOS = new Set([
   "jornadas",
   "proyectos",
   "bodegas",
+  // El del filtro de vencimiento, indexado por las cadenas "vigentes"/"vencidos".
   "estadosDeVencimientoReporte",
+  // El de la columna de vencimiento de un lote, indexado por el booleano de la fila (#840).
+  "vencimientoDeLote",
   "estadosJornadaReporte",
 ]);
 
@@ -180,6 +184,44 @@ describe("los catalogos de estado reflejan los enum reales", () => {
     for (const estado of ESTADOS_DE_VENCIMIENTO_REPORTE) {
       expect(estado.label).toBeTruthy();
     }
+  });
+
+  // ISSUE #840: la columna "Vencimiento" del desglose por lote mostraba las palabras `true` y
+  // `false`. La celda guarda el booleano `vencido` que calcula obtenerReporteDeInventario(), pero
+  // el descriptor apuntaba al catalogo del FILTRO, indexado por las cadenas "vigentes"/"vencidos".
+  // La busqueda no encontraba nada y DataList caia a pintar el valor crudo. Estas pruebas fijan
+  // que el tipo del valor de la fila y el de las claves del catalogo sean el mismo.
+  describe("VENCIMIENTO_DE_LOTE, el catalogo de la columna (no el del filtro)", () => {
+    it("se indexa por el booleano que guarda la fila, no por la cadena del filtro", () => {
+      const valores = VENCIMIENTO_DE_LOTE.map((e) => e.value);
+
+      expect(valores).toEqual([false, true]);
+      for (const valor of valores) {
+        expect(typeof valor).toBe("boolean");
+      }
+    });
+
+    it("cada entrada trae etiqueta, color y simbolo", () => {
+      for (const estado of VENCIMIENTO_DE_LOTE) {
+        expect(estado.label).toBeTruthy();
+        expect(estado.clave).toBeTruthy();
+        expect(["si", "no"]).toContain(estado.icono);
+      }
+    });
+
+    it("la columna de vencimiento del lote apunta a este catalogo y no al del filtro", () => {
+      const columna = CAMPOS_FICHA_LOTE_INVENTARIO.find((campo) => campo.id === "vencido");
+
+      expect(columna.etiquetasDesde).toBe("vencimientoDeLote");
+      expect(columna.etiquetasDesde).not.toBe("estadosDeVencimientoReporte");
+    });
+
+    // El defecto en una linea: buscar el booleano en el catalogo del filtro no encuentra nada, y
+    // eso es lo que dejaba la celda en `true`.
+    it("el catalogo del filtro no sabe resolver el booleano de la fila", () => {
+      expect(ESTADOS_DE_VENCIMIENTO_REPORTE.find((o) => o.value === true)).toBeUndefined();
+      expect(VENCIMIENTO_DE_LOTE.find((o) => o.value === true)?.label).toBeTruthy();
+    });
   });
 
   it("ESTADOS_JORNADA_REPORTE tiene los cuatro valores de estado_jornada, con etiqueta", () => {

@@ -51,7 +51,6 @@ jest.mock("../screens/BusquedaPacienteScreen", () => mockPantalla("busqueda-paci
 jest.mock("../screens/FichaPacienteScreen", () => mockPantalla("ficha-paciente"));
 jest.mock("../screens/RegistroPacienteScreen", () => mockPantalla("registro-paciente"));
 jest.mock("../screens/HistorialPacienteScreen", () => mockPantalla("historial-paciente"));
-jest.mock("../screens/TriajeScreen", () => mockPantalla("triaje"));
 jest.mock("../screens/ConsultaScreen", () => mockPantalla("consulta"));
 jest.mock("../screens/RecetaScreen", () => mockPantalla("receta"));
 jest.mock("../screens/SeleccionJornadaScreen", () => mockPantalla("seleccion-jornada"));
@@ -93,7 +92,6 @@ const PANTALLAS = [
     navegador: "Pacientes",
     roles: rolesDelModulo("pacientes"),
   },
-  { routeName: ROUTES.TRIAJE, navegador: "Pacientes", roles: rolesDelModulo("pacientes") },
   { routeName: ROUTES.CONSULTA, navegador: "Pacientes", roles: rolesDelModulo("pacientes") },
   { routeName: ROUTES.RECETA, navegador: "Pacientes", roles: rolesDelModulo("pacientes") },
   { routeName: ROUTES.SELECCION_JORNADA, navegador: "Jornadas", roles: rolesDelModulo("jornadas") },
@@ -147,13 +145,15 @@ function renderRuta({ routeName, navegador }) {
   );
 }
 
-describe("AppNavigator: la guarda de rol decide en las veintitres pantallas (issue #820)", () => {
+describe("AppNavigator: la guarda de rol decide en cada pantalla (issue #820)", () => {
   beforeEach(() => {
     darSesion(ROLES.ADMINISTRADOR);
   });
 
-  it("las veintitres pantallas de los cuatro stacks estan en la tabla de esta prueba", () => {
-    expect(PANTALLAS).toHaveLength(22); // Quita la línea de PRESUPUESTOS que no existe en ROUTES
+  // 21: Presupuestos se retiro en la #754 y Triaje en la #840 (los signos son un paso de la
+  // consulta, no una pantalla aparte).
+  it("todas las pantallas de los cuatro stacks estan en la tabla de esta prueba", () => {
+    expect(PANTALLAS).toHaveLength(21);
     expect(PANTALLAS_RESTRINGIDAS.length).toBeGreaterThan(0);
   });
 

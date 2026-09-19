@@ -43,6 +43,7 @@ import {
   ESTADOS_PROYECTO,
   ESTADOS_RECETA,
   ORIGENES_DE_LOTE,
+  ORIGENES_DE_PRESUPUESTO,
   PRESENTACIONES_DE_MEDICAMENTO,
   TIPOS_DE_DONACION,
   TIPOS_DE_DONANTE,
@@ -92,6 +93,10 @@ const ENUMS = {
     ["tableta", "jarabe", "capsula", "inyectable", "pomada", "gotas ophthalmic", "gotas otic"],
   ],
   TIPOS_DE_DONACION: [TIPOS_DE_DONACION, ["medicamentos", "insumos", "dinero", "servicios"]],
+  ORIGENES_DE_PRESUPUESTO: [
+    ORIGENES_DE_PRESUPUESTO,
+    ["donacion", "fondos_propios", "aporte_externo", "sin_clasificar"],
+  ],
   TIPOS_DE_DONANTE: [TIPOS_DE_DONANTE, ["persona", "organizacion"]],
   TIPOS_DE_MOVIMIENTO: [TIPOS_DE_MOVIMIENTO, ["ingreso", "salida"]],
   TIPOS_DE_PROVEEDOR: [TIPOS_DE_PROVEEDOR, ["comercial", "donante"]],

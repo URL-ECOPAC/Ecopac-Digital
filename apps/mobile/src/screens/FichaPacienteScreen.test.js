@@ -36,15 +36,19 @@ jest.mock("@ecopac/shared", () => ({
     recargar: jest.fn(),
     catalogos: { condicionesCronicas: [], estadosCondicionCronica: [] },
   })),
-  useEvolucionSignos: jest.fn(() => ({
-    series: [],
-    hayMediciones: false,
-    cargando: false,
-    error: null,
-    recargar: jest.fn(),
-  })),
-  useRecetasPaciente: jest.fn(() => ({
-    recetas: [],
+  useVisitasPaciente: jest.fn(() => ({
+    visitas: [
+      {
+        atencionId: "at-1",
+        jornadaId: "jor-1",
+        jornada: "Jornada Inventada",
+        fecha: "2026-09-01",
+        signos: { id: "t-1", temperatura: 37 },
+        consulta: { id: "c-1", motivoConsulta: "Tos", diagnosticos: [] },
+        recetas: [],
+        diagnosticoPrincipal: null,
+      },
+    ],
     cargando: false,
     error: null,
     recargar: jest.fn(),
@@ -146,23 +150,40 @@ describe("FichaPacienteScreen", () => {
     expect(screen.getByText("000123")).toBeTruthy();
   });
 
-  it("se puede cambiar de pestania", () => {
+  // Issue #840 (F, G3): dos pestanas, no cuatro. Signos y recetas viven dentro de cada visita.
+  it("tiene dos pestanas, y el historial es la lista de visitas con sus partes dentro", () => {
     montar();
 
-    fireEvent.press(screen.getByText("Recetas"));
+    // "Signos vitales" y "Receta" siguen apareciendo, pero como partes de la visita abierta; lo
+    // que ya no hay es la pestana "Recetas".
+    expect(screen.queryByText("Recetas")).toBeNull();
 
-    expect(screen.getByText("Recetas")).toBeTruthy();
+    fireEvent.press(screen.getByText("Historial clínico"));
+    expect(screen.getByText("Signos vitales")).toBeTruthy();
+    // Sin diagnostico, la jornada es el titulo de la visita y tambien su linea de lugar.
+    expect(screen.getAllByText("Jornada Inventada").length).toBeGreaterThan(0);
+    expect(screen.getByText("Motivo: Tos")).toBeTruthy();
+    expect(screen.getByText("Sin receta.")).toBeTruthy();
   });
 
-  // Las dos pantallas de destino leen `params.pacienteId`: navegar con el objeto entero las
-  // dejaba sin paciente, que es el defecto que esta prueba impide que vuelva.
-  it("los botones de triaje y consulta navegan con el id del paciente", () => {
+  // No hay "Nuevo triaje": los signos son un paso de la consulta. La pantalla de destino lee
+  // `params.pacienteId`: navegar con el objeto entero la dejaba sin paciente.
+  it("la unica accion de captura es Nueva consulta, y navega con el id del paciente", () => {
     montar();
 
-    fireEvent.press(screen.getByText("Nuevo Triaje"));
-    expect(navegacion.navigate).toHaveBeenCalledWith("Triaje", { pacienteId: "paciente-123" });
-
-    fireEvent.press(screen.getByText("Nueva Consulta"));
+    expect(screen.queryByText(/Nuevo Triaje/i)).toBeNull();
+    fireEvent.press(screen.getByText("Nueva consulta"));
     expect(navegacion.navigate).toHaveBeenCalledWith("Consulta", { pacienteId: "paciente-123" });
+  });
+
+  it("abrir una visita del historial lleva a su consulta, en su jornada", () => {
+    montar();
+
+    fireEvent.press(screen.getByText("Historial clínico"));
+    fireEvent.press(screen.getByText("Abrir la consulta"));
+    expect(navegacion.navigate).toHaveBeenCalledWith("Consulta", {
+      pacienteId: "paciente-123",
+      jornadaId: "jor-1",
+    });
   });
 });
