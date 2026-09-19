@@ -569,8 +569,11 @@ export default function InventarioPage() {
               <ul className="mb-0 ps-3">
                 {alertasCriticas.map((item) => (
                   <li key={item.id}>
-                    <strong>{item.medicamento?.nombre}</strong> · lote{" "}
-                    <span className="ec-mono">{item.numero_lote || item.lote}</span> · vence en{" "}
+                    {/* item viene de aLote() (lotes.api.js) via useGestionLotes: medicamento ya
+                        es el nombre (una cadena), y el numero de lote es numeroLote, no
+                        numero_lote/lote. */}
+                    <strong>{item.medicamento}</strong> · lote{" "}
+                    <span className="ec-mono">{item.numeroLote}</span> · vence en{" "}
                     {item.diasRestantes} dias
                   </li>
                 ))}

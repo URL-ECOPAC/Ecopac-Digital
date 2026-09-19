@@ -1,4 +1,6 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import { conZonaHorariaDeGuatemala } from "../pruebas/zonaHoraria.js";
 
 const { dobles } = vi.hoisted(() => ({ dobles: { cliente: null } }));
 
@@ -182,6 +184,29 @@ describe("marcarHitoCumplido y reabrirHito", () => {
 
     const { fecha_real: fechaReal } = pasos(llamadas, "update")[0].valores;
     expect(fechaReal).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+
+  describe("el borde de las 18:00 en Guatemala (issue #725)", () => {
+    conZonaHorariaDeGuatemala();
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("sin fecha, guarda el dia local aunque ya sea manana en UTC", async () => {
+      // 15 de junio de 2026, 20:00 en Guatemala (UTC-6) = 16 de junio, 02:00 UTC. El bug que
+      // corrigio esta issue armaba "hoy" con new Date().toISOString().slice(0, 10), que da
+      // siempre la fecha en UTC: a esta hora habria guardado "2026-06-16", un dia adelantado.
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2026-06-16T02:00:00Z"));
+
+      const { cliente, llamadas } = doble({ data: { id: "hito-1" }, error: null });
+      dobles.cliente = cliente;
+
+      await marcarHitoCumplido("hito-1");
+
+      expect(pasos(llamadas, "update")[0].valores).toEqual({ fecha_real: "2026-06-15" });
+    });
   });
 
   it("reabrir deja la fecha real en nulo", async () => {

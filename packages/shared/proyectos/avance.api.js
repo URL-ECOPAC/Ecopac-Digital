@@ -4,6 +4,7 @@ import {
   construirError,
   normalizarError,
 } from "../api/errores-de-supabase.js";
+import { aCadenaFechaLocal } from "../formato/fechas.js";
 
 export const PORCENTAJE_AVANCE_MINIMO = 0;
 export const PORCENTAJE_AVANCE_MAXIMO = 100;
@@ -139,7 +140,7 @@ export async function actualizarHito(id, datos) {
  * @returns {Promise<{ hito: object|null, error: object|null }>}
  */
 export function marcarHitoCumplido(id, fechaReal) {
-  return actualizarHito(id, { fechaReal: fechaReal ?? new Date().toISOString().slice(0, 10) });
+  return actualizarHito(id, { fechaReal: fechaReal ?? aCadenaFechaLocal() });
 }
 
 /**

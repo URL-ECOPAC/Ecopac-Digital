@@ -12,6 +12,7 @@
 // donaciones.
 
 import { CATEGORIAS_DE_GASTO } from "../enums.js";
+import { aFechaLocal } from "../formato/fechas.js";
 
 const CATEGORIAS_VALIDAS = Object.values(CATEGORIAS_DE_GASTO);
 
@@ -33,10 +34,11 @@ function estaVacio(valor) {
  *   jornada_id?: string }} gasto Datos del gasto, con las claves de las columnas de `gastos`.
  * @param {{ presupuesto_asignado?: number, fecha_inicio?: string, gasto_acumulado?: number }|null}
  *   [jornada] Datos de la jornada a la que se carga el gasto.
+ * @param {Date} [hoy] Entra por parametro para poder probarlo sin depender del reloj.
  * @returns {{ valido: boolean, errores: string[], esExcedente: boolean,
  *   mensajeExcedente: string|null }}
  */
-export function validarGasto(gasto = {}, jornada = null) {
+export function validarGasto(gasto = {}, jornada = null, hoy = new Date()) {
   const errores = [];
   let esExcedente = false;
   let mensajeExcedente = null;
@@ -65,24 +67,33 @@ export function validarGasto(gasto = {}, jornada = null) {
   if (estaVacio(gasto.fecha)) {
     errores.push("La fecha del gasto es obligatoria.");
   } else {
-    const fecha = new Date(gasto.fecha);
+    const fecha = aFechaLocal(gasto.fecha);
 
-    if (Number.isNaN(fecha.getTime())) {
+    if (fecha === null) {
       errores.push("La fecha proporcionada no es valida.");
     } else {
-      // Fin del dia de hoy: un gasto registrado hoy no puede contar como futuro por la hora.
-      const hoy = new Date();
-      hoy.setHours(23, 59, 59, 999);
+      // Fin del dia de hoy: un gasto registrado hoy no puede contar como futuro por la hora. No
+      // se muta `hoy` directo -aFechaLocal() devuelve la misma referencia si ya es un Date- para
+      // no alterar el parametro de quien llama.
+      const referencia = aFechaLocal(hoy);
+      const finDeHoy = new Date(
+        referencia.getFullYear(),
+        referencia.getMonth(),
+        referencia.getDate(),
+        23,
+        59,
+        59,
+        999,
+      );
 
-      if (fecha > hoy) {
+      if (fecha > finDeHoy) {
         errores.push("La fecha de un gasto no puede ser posterior a hoy.");
       }
 
       if (jornada?.fecha_inicio) {
-        const inicioDeJornada = new Date(jornada.fecha_inicio);
-        inicioDeJornada.setHours(0, 0, 0, 0);
+        const inicioDeJornada = aFechaLocal(jornada.fecha_inicio);
 
-        if (fecha < inicioDeJornada) {
+        if (inicioDeJornada && fecha < inicioDeJornada) {
           errores.push("La fecha del gasto no puede ser anterior al inicio de su jornada.");
         }
       }

@@ -6,6 +6,7 @@ import {
 } from "../validations/index.js";
 import { CAMPOS_CONDICION_CRONICA } from "./condiciones.campos.js";
 import { ESTADOS_CONDICION_CRONICA } from "../enums.js";
+import { aFechaLocal } from "../formato/fechas.js";
 
 const ESTADOS_VALIDOS = Object.values(ESTADOS_CONDICION_CRONICA);
 
@@ -29,9 +30,9 @@ function erroresDeNegocioCondicion(datos, hoy) {
   const errores = {};
 
   if (!esTextoVacio(datos.fechaDiagnostico)) {
-    const fecha = new Date(datos.fechaDiagnostico);
+    const fecha = aFechaLocal(datos.fechaDiagnostico);
 
-    if (Number.isNaN(fecha.getTime())) {
+    if (fecha === null) {
       errores.fechaDiagnostico = "Fecha de diagnostico no valida.";
     } else if (fecha > hoy) {
       errores.fechaDiagnostico = "La fecha de diagnostico no puede ser futura.";
