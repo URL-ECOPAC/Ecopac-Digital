@@ -20,8 +20,14 @@ vi.mock("../api/cliente.js", () => ({
 }));
 
 const { CODIGOS_DE_ERROR_DE_SUPABASE } = await import("../api/errores-de-supabase.js");
-const { listarAlertas, historialAlertas, atenderAlerta, sincronizarAlertas } =
-  await import("./alertas.api.js");
+const {
+  listarAlertas,
+  historialAlertas,
+  atenderAlerta,
+  sincronizarAlertas,
+  accionesPermitidasParaAlerta,
+  efectoDeAccionSobreElStock,
+} = await import("./alertas.api.js");
 const { ACCIONES_DE_ALERTA } = await import("../enums.js");
 
 /** Doble de un cliente de Supabase que resuelve con una unica respuesta configurada. */
@@ -47,6 +53,10 @@ function crearCliente({ respuesta = { data: [], error: null } } = {}) {
       },
       order(columna, opciones) {
         llamadas.push({ paso: "order", columna, opciones });
+        return encadenable;
+      },
+      limit(cantidad) {
+        llamadas.push({ paso: "limit", cantidad });
         return encadenable;
       },
       single: resolver,
@@ -173,13 +183,36 @@ describe("historialAlertas", () => {
       opciones: { ascending: false },
     });
   });
+
+  it("acota a las recientes y trae quien la atendio por nombre (issue #755)", async () => {
+    const cliente = crearCliente({
+      respuesta: {
+        data: [
+          filaDeAlerta({
+            estado: "atendida",
+            accion: "descartado",
+            atendidaPor: "perfil-1",
+            atendidaEn: "2026-02-01",
+            atendidaPorPerfil: { nombres: "Ana", apellidos: "Prueba" },
+          }),
+          filaDeAlerta({ id: "sin-perfil", estado: "atendida", atendidaPorPerfil: null }),
+        ],
+        error: null,
+      },
+    });
+    dobles.cliente = cliente;
+
+    const { alertas } = await historialAlertas({ limite: 5 });
+
+    expect(alertas.map((a) => a.atendidaPorNombre)).toEqual(["Ana Prueba", null]);
+    expect(cliente.llamadas).toContainEqual({ paso: "limit", cantidad: 5 });
+  });
 });
 
 describe("atenderAlerta", () => {
   it("solo administracion puede atender, sin llegar a la red", async () => {
     const { alerta, error } = await atenderAlerta("alerta-1", {
       accion: "donado",
-      usuarioId: "u-1",
       rolUsuario: "medico",
     });
 
@@ -191,57 +224,109 @@ describe("atenderAlerta", () => {
   it("exige una accion valida (una de ACCIONES_DE_ALERTA)", async () => {
     const { error } = await atenderAlerta("alerta-1", {
       accion: "tirado a la basura",
-      usuarioId: "u-1",
       rolUsuario: "administrador",
     });
 
     expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.CAMPO_REQUERIDO);
   });
 
-  it("exige el usuario que atiende", async () => {
+  it("reubicar exige la bodega destino, sin llegar a la red", async () => {
     const { error } = await atenderAlerta("alerta-1", {
-      accion: "donado",
+      accion: "reubicado",
       rolUsuario: "administrador",
     });
 
     expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.CAMPO_REQUERIDO);
+    expect(dobles.cliente).toBeNull();
   });
 
-  it("cierra la alerta con la accion, quien la atendio y cuando (queda auditada)", async () => {
+  // Issue #755: atender era un UPDATE de la alerta y nada mas; el stock quedaba igual y el
+  // generador la volvia a crear. Ahora pasa por fn_atender_alerta_caducidad, que da de baja o
+  // traslada el stock en la misma transaccion.
+  it("atiende por fn_atender_alerta_caducidad y devuelve la alerta cerrada", async () => {
     const cliente = crearCliente({
       respuesta: {
-        data: filaDeAlerta({
-          estado: "atendida",
-          accion: "reubicado",
-          atendidaPor: "u-1",
-          atendidaEn: "2026-02-01T00:00:00Z",
-        }),
+        data: filaDeAlerta({ estado: "atendida", accion: "descartado", atendidaPor: "u-1" }),
         error: null,
       },
     });
     dobles.cliente = cliente;
 
     const { alerta, error } = await atenderAlerta("alerta-1", {
-      accion: "reubicado",
-      usuarioId: "u-1",
+      accion: "descartado",
       rolUsuario: "administrador",
+      bodegaDestinoId: "no-se-usa",
     });
 
     expect(error).toBeNull();
     expect(alerta.estado).toBe("atendida");
-    expect(alerta.accion).toBe("reubicado");
-
-    const paso = cliente.llamadas.find((l) => l.paso === "update");
-    expect(paso.valores).toMatchObject({
-      estado: "atendida",
-      accion: "reubicado",
-      atendida_por: "u-1",
+    expect(cliente.llamadas).toContainEqual({
+      paso: "rpc",
+      nombre: "fn_atender_alerta_caducidad",
+      argumentos: { p_alerta_id: "alerta-1", p_accion: "descartado", p_bodega_destino_id: null },
     });
-    expect(paso.valores.atendida_en).toBeTruthy();
+    expect(cliente.llamadas.some((l) => l.paso === "update")).toBe(false);
+  });
+
+  it("reubicar manda la bodega destino a la funcion", async () => {
+    const cliente = crearCliente({
+      respuesta: { data: filaDeAlerta({ estado: "atendida", accion: "reubicado" }), error: null },
+    });
+    dobles.cliente = cliente;
+
+    await atenderAlerta("alerta-1", {
+      accion: "reubicado",
+      rolUsuario: "administrador",
+      bodegaDestinoId: "bodega-9",
+    });
+
+    const rpc = cliente.llamadas.find((l) => l.paso === "rpc");
+    expect(rpc.argumentos.p_bodega_destino_id).toBe("bodega-9");
+  });
+
+  it("si la base lo rechaza, devuelve el error", async () => {
+    dobles.cliente = crearCliente({
+      respuesta: { data: null, error: { code: "23514", message: "Un lote vencido no se reubica" } },
+    });
+
+    const { alerta, error } = await atenderAlerta("alerta-1", {
+      accion: "reubicado",
+      rolUsuario: "administrador",
+      bodegaDestinoId: "bodega-9",
+    });
+
+    expect(alerta).toBeNull();
+    expect(error).not.toBeNull();
   });
 
   it("ACCIONES_DE_ALERTA expone los tres valores del enum accion_alerta (00021)", () => {
     expect(Object.values(ACCIONES_DE_ALERTA)).toEqual(["donado", "reubicado", "descartado"]);
+  });
+});
+
+describe("accionesPermitidasParaAlerta", () => {
+  const opciones = [
+    { value: "donado", label: "Donado" },
+    { value: "reubicado", label: "Reubicado" },
+    { value: "descartado", label: "Descartado" },
+  ];
+
+  it("un lote por vencer admite las tres acciones", () => {
+    expect(accionesPermitidasParaAlerta({ diasRestantes: 5 }, opciones)).toHaveLength(3);
+  });
+
+  it("un lote vencido no se reubica", () => {
+    expect(
+      accionesPermitidasParaAlerta({ diasRestantes: -1 }, opciones).map((o) => o.value),
+    ).toEqual(["donado", "descartado"]);
+  });
+});
+
+describe("efectoDeAccionSobreElStock", () => {
+  it("dice cuantas unidades se dan de baja o se trasladan", () => {
+    expect(efectoDeAccionSobreElStock("descartado", 12)).toContain("dan de baja las 12 unidades");
+    expect(efectoDeAccionSobreElStock("reubicado", 12)).toContain("trasladan");
+    expect(efectoDeAccionSobreElStock("", 12)).toBeNull();
   });
 });
 

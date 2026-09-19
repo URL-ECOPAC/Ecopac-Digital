@@ -34,6 +34,7 @@ import * as barril from "./index.js";
 import {
   ACCIONES_DE_ALERTA,
   CATEGORIAS_DE_GASTO,
+  CATEGORIAS_NOTIFICACION,
   ESTADOS_ALERTA,
   ESTADOS_CONDICION_CRONICA,
   ESTADOS_DE_DONACION,
@@ -78,6 +79,10 @@ const ENUMS = {
   CATEGORIAS_DE_GASTO: [
     CATEGORIAS_DE_GASTO,
     ["Medicamentos", "Logistica", "Diagnostico", "Honorarios", "Educacion", "Infraestructura"],
+  ],
+  CATEGORIAS_NOTIFICACION: [
+    CATEGORIAS_NOTIFICACION,
+    ["caducidad", "stock", "validacion", "presupuestos"],
   ],
   ESTADOS_ALERTA: [ESTADOS_ALERTA, ["pendiente", "atendida"]],
   ESTADOS_CONDICION_CRONICA: [ESTADOS_CONDICION_CRONICA, ["activa", "controlada", "resuelta"]],
