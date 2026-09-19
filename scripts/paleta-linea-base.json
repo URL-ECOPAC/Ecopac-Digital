@@ -31,10 +31,8 @@
   ],
   "apps/mobile/src/components/JornadaActivaBadge.js": ["#3db648"],
   "apps/mobile/src/components/KanbanBoard.js": [
-    "#1e7a28",
-    "#29abe2",
     "#2d2d2d",
-    "#3db648",
+    "#4d4d4d",
     "#7a7a8a",
     "#e2e4e9",
     "#f7f8fa",

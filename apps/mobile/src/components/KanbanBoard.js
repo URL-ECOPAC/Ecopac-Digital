@@ -1,93 +1,156 @@
 import { useState } from "react";
-import { View, Text, ScrollView, TouchableOpacity, Modal, StyleSheet } from "react-native";
-import { colors } from "@ecopac/ui-tokens";
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { colors, radii, spacing, statusColors, typography } from "@ecopac/ui-tokens";
 
-export default function KanbanBoard({ proyectos, etapas, onCambiarEtapa }) {
-  const [proyectoSeleccionado, setProyectoSeleccionado] = useState(null);
+import SecondaryButton from "./SecondaryButton";
+
+const MIN_TOUCH_HEIGHT = 48;
+const ANCHO_DE_COLUMNA = 280;
+
+/**
+ * Tablero kanban. Espejo de apps/web/src/components/KanbanBoard.jsx, con las mismas props:
+ * `columnas` ({ id, titulo, tarjetas }), `renderTarjeta`, `onMover(id, origenId, destinoId)`,
+ * `mensajeVacio`, `columnaAtenuada` y `destinosDe(tarjeta, columnaId)`.
+ *
+ * POR QUE SE REESCRIBIO (issue #840, H2)
+ *
+ * Recibia otras props (`proyectos`, `etapas`, `onCambiarEtapa`) y pintaba adentro los datos de un
+ * proyecto, asi que no servia para nada mas: el tablero de jornadas de la #843 le pasaba
+ * `columnas` y la pantalla reventaba al abrirse. Ahora no sabe que muestra, igual que el de web.
+ *
+ * COMO SE MUEVE UNA TARJETA
+ *
+ * Cada tarjeta llevaba un boton "Mover". En la web se arrastra; en un telefono, arrastrar una
+ * tarjeta dentro de columnas que ya se desplazan en horizontal choca con el propio
+ * desplazamiento y no se puede hacer con una mano. El gesto es MANTENER PRESIONADA la tarjeta,
+ * que abre la lista de etapas a las que puede ir (docs/DISENO-MOVIL.md). Sin boton que ocupe
+ * espacio en cada tarjeta, y con el pulgar.
+ *
+ * Quien usa lector de pantalla no depende del gesto: cada tarjeta declara una accion de
+ * accesibilidad por destino ("Mover a En curso"), que VoiceOver y TalkBack ofrecen en su menu de
+ * acciones.
+ *
+ * `destinosDe` dice a que columnas puede ir una tarjeta (por ejemplo, las transiciones validas de
+ * su estado). Sin el, cualquier otra columna.
+ */
+export default function KanbanBoard({
+  columnas = [],
+  renderTarjeta,
+  onMover,
+  mensajeVacio = "Sin tarjetas",
+  columnaAtenuada,
+  destinosDe,
+}) {
+  const [enMovimiento, setEnMovimiento] = useState(null);
+
+  const destinosPosibles = (tarjeta, columnaId) => {
+    const ids = destinosDe
+      ? destinosDe(tarjeta, columnaId)
+      : columnas.map((columna) => columna.id).filter((id) => id !== columnaId);
+    return columnas.filter((columna) => ids.includes(columna.id));
+  };
+
+  const mover = (tarjeta, origenId, destinoId) => {
+    setEnMovimiento(null);
+    if (!destinoId || destinoId === origenId) return;
+    onMover?.(tarjeta.id, origenId, destinoId);
+  };
+
+  const destinosDelModal = enMovimiento
+    ? destinosPosibles(enMovimiento.tarjeta, enMovimiento.columnaId)
+    : [];
 
   return (
-    <View style={styles.kanbanContainer}>
+    <View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        {etapas.map((etapa) => {
-          const proyectosEtapa = proyectos.filter((p) => (p.etapa || p.estado) === etapa.id);
+        {columnas.map((columna) => {
+          const tarjetas = columna.tarjetas ?? [];
+          const color = statusColors[columna.id] ?? colors.secondary;
 
           return (
-            <View key={etapa.id} style={styles.column}>
-              <View style={styles.columnHeader}>
-                <Text style={styles.columnTitle}>{etapa.titulo}</Text>
-                <View style={styles.badgeCount}>
-                  <Text style={styles.badgeCountText}>{proyectosEtapa.length}</Text>
-                </View>
+            <View
+              key={columna.id}
+              style={[styles.columna, columnaAtenuada?.(columna.id) && styles.columnaAtenuada]}
+            >
+              <View style={styles.cabecera}>
+                <View style={[styles.punto, { backgroundColor: color }]} />
+                <Text style={styles.titulo}>{columna.titulo}</Text>
+                <Text style={styles.cuenta}>{tarjetas.length}</Text>
               </View>
 
-              <ScrollView nestedScrollEnabled showsVerticalScrollIndicator={false}>
-                {proyectosEtapa.map((p) => (
-                  <View key={p.id} style={styles.card}>
-                    <Text style={styles.cardTitle}>{p.nombre}</Text>
-                    {p.descripcion && (
-                      <Text style={styles.cardDesc} numberOfLines={2}>
-                        {p.descripcion}
-                      </Text>
-                    )}
-                    <View style={styles.cardFooter}>
-                      <Text style={styles.cardBudget}>
-                        Q {Number(p.presupuesto || 0).toLocaleString()}
-                      </Text>
-                      <TouchableOpacity
-                        style={styles.moveBtn}
-                        onPress={() => setProyectoSeleccionado(p)}
-                      >
-                        <Text style={styles.moveBtnText}>Mover</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                ))}
-              </ScrollView>
+              {tarjetas.length === 0 ? (
+                <Text style={styles.vacio}>{mensajeVacio}</Text>
+              ) : (
+                tarjetas.map((tarjeta) => {
+                  const destinos = onMover ? destinosPosibles(tarjeta, columna.id) : [];
+                  return (
+                    <Pressable
+                      key={tarjeta.id}
+                      onLongPress={
+                        destinos.length > 0
+                          ? () => setEnMovimiento({ tarjeta, columnaId: columna.id })
+                          : undefined
+                      }
+                      accessibilityHint={
+                        destinos.length > 0
+                          ? "Mantén presionada la tarjeta para moverla de etapa"
+                          : undefined
+                      }
+                      accessibilityActions={destinos.map((destino) => ({
+                        name: destino.id,
+                        label: `Mover a ${destino.titulo}`,
+                      }))}
+                      onAccessibilityAction={(evento) =>
+                        mover(tarjeta, columna.id, evento.nativeEvent.actionName)
+                      }
+                      style={({ pressed }) => [styles.tarjeta, pressed && styles.presionada]}
+                    >
+                      {renderTarjeta?.(tarjeta)}
+                    </Pressable>
+                  );
+                })
+              )}
             </View>
           );
         })}
       </ScrollView>
 
-      {/* Modal para cambiar etapa */}
       <Modal
-        visible={!!proyectoSeleccionado}
+        visible={Boolean(enMovimiento)}
         transparent
         animationType="fade"
-        onRequestClose={() => setProyectoSeleccionado(null)}
+        onRequestClose={() => setEnMovimiento(null)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Mover Proyecto</Text>
-            <Text style={styles.modalSubtitle}>{proyectoSeleccionado?.nombre}</Text>
-
-            {etapas.map((e) => (
-              <TouchableOpacity
-                key={e.id}
-                style={[
-                  styles.optionBtn,
-                  (proyectoSeleccionado?.etapa || proyectoSeleccionado?.estado) === e.id &&
-                    styles.optionBtnSelected,
-                ]}
-                onPress={() => {
-                  onCambiarEtapa(proyectoSeleccionado.id, e.id);
-                  setProyectoSeleccionado(null);
-                }}
+        <View style={styles.fondo}>
+          {/* El mismo velo que Modal.js: tocar fuera de la hoja la cierra. */}
+          <Pressable
+            style={styles.velo}
+            onPress={() => setEnMovimiento(null)}
+            accessibilityLabel="Cerrar"
+          />
+          <View style={styles.hoja}>
+            <Text style={styles.hojaTitulo}>Mover a</Text>
+            {destinosDelModal.map((destino) => (
+              <Pressable
+                key={destino.id}
+                accessibilityRole="button"
+                onPress={() => mover(enMovimiento.tarjeta, enMovimiento.columnaId, destino.id)}
+                style={({ pressed }) => [styles.opcion, pressed && styles.presionada]}
               >
-                <Text
+                <View
                   style={[
-                    styles.optionBtnText,
-                    (proyectoSeleccionado?.etapa || proyectoSeleccionado?.estado) === e.id &&
-                      styles.optionBtnTextSelected,
+                    styles.punto,
+                    { backgroundColor: statusColors[destino.id] ?? colors.secondary },
                   ]}
-                >
-                  {e.titulo}
-                </Text>
-              </TouchableOpacity>
+                />
+                <Text style={styles.opcionTexto}>{destino.titulo}</Text>
+              </Pressable>
             ))}
-
-            <TouchableOpacity style={styles.closeBtn} onPress={() => setProyectoSeleccionado(null)}>
-              <Text style={styles.closeBtnText}>Cancelar</Text>
-            </TouchableOpacity>
+            <SecondaryButton
+              title="Cancelar"
+              onPress={() => setEnMovimiento(null)}
+              style={styles.cancelar}
+            />
           </View>
         </View>
       </Modal>
@@ -96,134 +159,99 @@ export default function KanbanBoard({ proyectos, etapas, onCambiarEtapa }) {
 }
 
 const styles = StyleSheet.create({
-  kanbanContainer: {
-    minHeight: 450,
-    paddingVertical: 8,
-  },
-  column: {
-    width: 260,
+  columna: {
     backgroundColor: colors.background,
-    borderRadius: 12,
-    padding: 12,
-    marginRight: 12,
-    maxHeight: 500,
-  },
-  columnHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 12,
-    paddingBottom: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  columnTitle: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: colors.text,
-  },
-  badgeCount: {
-    backgroundColor: colors.border,
-    borderRadius: 12,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-  },
-  badgeCountText: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: colors.textMuted,
-  },
-  card: {
-    backgroundColor: colors.surface,
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 10,
-    borderWidth: 1,
     borderColor: colors.border,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    gap: spacing.sm,
+    marginRight: spacing.sm,
+    padding: spacing.sm,
+    width: ANCHO_DE_COLUMNA,
   },
-  cardTitle: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: colors.text,
-    marginBottom: 4,
+  columnaAtenuada: {
+    opacity: 0.85,
   },
-  cardDesc: {
-    fontSize: 12,
-    color: colors.textMuted,
-    marginBottom: 8,
-  },
-  cardFooter: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+  cabecera: {
     alignItems: "center",
-    marginTop: 4,
+    flexDirection: "row",
+    gap: spacing.sm,
+    paddingVertical: spacing.xs,
   },
-  cardBudget: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: colors.primary,
+  punto: {
+    borderRadius: radii.pill,
+    height: spacing.sm,
+    width: spacing.sm,
   },
-  moveBtn: {
-    backgroundColor: colors.background,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  moveBtnText: {
-    fontSize: 11,
-    fontWeight: "600",
-    color: colors.info,
-  },
-  modalOverlay: {
+  titulo: {
+    color: colors.text,
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
+    fontFamily: typography.fontFamilyBase,
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.semibold,
   },
-  modalContent: {
-    width: "100%",
-    backgroundColor: colors.surface,
-    borderRadius: 16,
-    padding: 20,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: colors.text,
-  },
-  modalSubtitle: {
-    fontSize: 13,
+  cuenta: {
     color: colors.textMuted,
-    marginBottom: 16,
+    fontFamily: typography.fontFamilyBase,
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.semibold,
   },
-  optionBtn: {
-    padding: 12,
-    borderRadius: 8,
-    backgroundColor: colors.background,
-    marginBottom: 8,
-    borderWidth: 1,
+  vacio: {
     borderColor: colors.border,
-  },
-  optionBtnSelected: {
-    backgroundColor: colors.background,
-    borderColor: colors.primary,
-  },
-  optionBtnText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: colors.text,
-  },
-  optionBtnTextSelected: {
-    color: colors.primaryDark,
-  },
-  closeBtn: {
-    marginTop: 8,
-    padding: 12,
-    alignItems: "center",
-  },
-  closeBtnText: {
+    borderRadius: radii.sm,
+    borderStyle: "dashed",
+    borderWidth: 1,
     color: colors.textMuted,
-    fontWeight: "600",
+    fontFamily: typography.fontFamilyBase,
+    fontSize: typography.sizes.sm,
+    padding: spacing.lg,
+    textAlign: "center",
+  },
+  tarjeta: {
+    borderRadius: radii.md,
+  },
+  presionada: {
+    opacity: 0.7,
+  },
+  fondo: {
+    flex: 1,
+    justifyContent: "flex-end",
+  },
+  velo: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: colors.text,
+    opacity: 0.5,
+  },
+  hoja: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: radii.lg,
+    borderTopRightRadius: radii.lg,
+    gap: spacing.xs,
+    padding: spacing.lg,
+  },
+  hojaTitulo: {
+    color: colors.text,
+    fontFamily: typography.fontFamilyBase,
+    fontSize: typography.sizes.lg,
+    fontWeight: typography.weights.bold,
+    marginBottom: spacing.sm,
+  },
+  opcion: {
+    alignItems: "center",
+    borderColor: colors.border,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    flexDirection: "row",
+    gap: spacing.sm,
+    minHeight: MIN_TOUCH_HEIGHT,
+    paddingHorizontal: spacing.md,
+  },
+  opcionTexto: {
+    color: colors.text,
+    fontFamily: typography.fontFamilyBase,
+    fontSize: typography.sizes.md,
+  },
+  cancelar: {
+    marginTop: spacing.sm,
   },
 });

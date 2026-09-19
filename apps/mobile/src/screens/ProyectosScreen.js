@@ -8,15 +8,21 @@ import {
   StyleSheet,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { ESTADOS_PROYECTO, ETIQUETAS_ESTADO_PROYECTO } from "@ecopac/shared";
+import {
+  ESTADOS_PROYECTO,
+  ETIQUETAS_ESTADO_PROYECTO,
+  formatearMoneda,
+  transicionesDeProyectoDesde,
+} from "@ecopac/shared";
 import { useProyectosSociales } from "@ecopac/shared/proyectos";
 import { obtenerPresupuestoProyecto } from "@ecopac/shared/presupuestos";
+import Card from "../components/Card";
 import KanbanBoard from "../components/KanbanBoard";
 import EmptyState from "../components/EmptyState";
 import AccesoDenegadoScreen from "./AccesoDenegadoScreen";
 import ModalProyecto from "./ModalProyecto";
 import { useSesionCompartida } from "../contexto/SesionProvider";
-import { colors } from "@ecopac/ui-tokens";
+import { colors, spacing, typography } from "@ecopac/ui-tokens";
 
 // issue #688: esta pantalla nunca mostraba un proyecto real, para ningun rol. Tres defectos
 // encadenados, el primero tapaba a los otros dos:
@@ -181,10 +187,28 @@ export default function ProyectosScreen() {
         ) : proyectos.length === 0 ? (
           <EmptyState message="Todavía no hay proyectos registrados." />
         ) : modoVista === "kanban" ? (
+          // El tablero tiene el contrato del de web desde la #840 (columnas, renderTarjeta,
+          // onMover): la tarjeta la dibuja esta pantalla, y el tablero solo ofrece mover a las
+          // etapas que TRANSICIONES_PROYECTO permite.
           <KanbanBoard
-            proyectos={proyectos}
-            etapas={ETAPAS_KANBAN}
-            onCambiarEtapa={handleCambiarEtapa}
+            columnas={ETAPAS_KANBAN.map((etapa) => ({
+              ...etapa,
+              tarjetas: proyectos.filter((p) => p.estado === etapa.id),
+            }))}
+            destinosDe={(proyecto) => transicionesDeProyectoDesde(proyecto.estado)}
+            onMover={puedeEditar ? (id, _origen, destino) => handleCambiarEtapa(id, destino) : null}
+            mensajeVacio="Sin proyectos"
+            renderTarjeta={(p) => (
+              <Card>
+                <Text style={styles.kanbanNombre}>{p.nombre}</Text>
+                {p.descripcion ? (
+                  <Text style={styles.kanbanDetalle} numberOfLines={2}>
+                    {p.descripcion}
+                  </Text>
+                ) : null}
+                <Text style={styles.kanbanDetalle}>{formatearMoneda(p.presupuesto) ?? "—"}</Text>
+              </Card>
+            )}
           />
         ) : (
           <View>
@@ -244,6 +268,18 @@ export default function ProyectosScreen() {
 }
 
 const styles = StyleSheet.create({
+  kanbanNombre: {
+    color: colors.text,
+    fontFamily: typography.fontFamilyBase,
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.semibold,
+  },
+  kanbanDetalle: {
+    color: colors.textMuted,
+    fontFamily: typography.fontFamilyBase,
+    fontSize: typography.sizes.sm,
+    marginTop: spacing.xs,
+  },
   container: {
     flex: 1,
     backgroundColor: colors.background,
