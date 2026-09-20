@@ -29,6 +29,10 @@ const ICONOS = {
   BarChart3: "bar-chart-outline",
   Calendar: "calendar-outline",
   UserCheck: "person-circle-outline",
+  // Matriz de permisos por rol (issue #638): soloWeb, nunca aparece en la tab bar movil, pero
+  // esta prueba exige traduccion para todo MODULOS[].icono sin excepcion (ver su propio
+  // comentario mas abajo).
+  ShieldCheck: "shield-checkmark-outline",
   // Bitacora de auditoria (issue #643): soloWeb, nunca aparece en la tab bar movil, pero esta
   // prueba exige traduccion para todo MODULOS[].icono sin excepcion (ver su propio comentario).
   History: "time-outline",

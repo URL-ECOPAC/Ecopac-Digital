@@ -15,12 +15,16 @@ const { CODIGOS_DE_ERROR_DE_SUPABASE } = await import("../api/errores-de-supabas
 const { ROLES } = await import("./roles.js");
 const {
   ORIGEN_PERMISO,
+  celdaConcedida,
   concederPermiso,
+  concederPermisoARol,
   listarCatalogoPermisos,
+  obtenerMatrizDePermisosPorRol,
   obtenerPermisosEfectivos,
   permisoGobiernaAlgunaPolitica,
   restablecerPermiso,
   revocarPermiso,
+  revocarPermisoARol,
 } = await import("./permisos.api.js");
 
 const PERMISO_JORNADAS = {
@@ -68,6 +72,10 @@ function clienteConTablas(respuestasPorTabla, { sesion = null } = {}) {
       },
       upsert(valores, opciones) {
         llamadas.push({ tabla, paso: "upsert", valores, opciones });
+        return cadena;
+      },
+      insert(valores) {
+        llamadas.push({ tabla, paso: "insert", valores });
         return cadena;
       },
       delete() {
@@ -398,6 +406,129 @@ describe("permisoGobiernaAlgunaPolitica", () => {
 
   it("una clave que no existe en el catalogo es inerte", () => {
     expect(permisoGobiernaAlgunaPolitica("modulo.inexistente")).toBe(false);
+  });
+});
+
+describe("obtenerMatrizDePermisosPorRol", () => {
+  it("agrupa por modulo y anota rolesConcedidos por permiso", async () => {
+    const { cliente } = clienteConTablas({
+      permisos: { data: [PERMISO_JORNADAS, PERMISO_PACIENTES], error: null },
+      rol_permiso: {
+        data: [
+          { rol: ROLES.ADMINISTRADOR, permiso_id: PERMISO_JORNADAS.id },
+          { rol: ROLES.MEDICO, permiso_id: PERMISO_PACIENTES.id },
+          { rol: ROLES.ADMINISTRADOR, permiso_id: PERMISO_PACIENTES.id },
+        ],
+        error: null,
+      },
+    });
+    dobles.cliente = cliente;
+
+    const { modulos, error } = await obtenerMatrizDePermisosPorRol();
+
+    expect(error).toBeNull();
+    const plano = modulos.flatMap((m) => m.permisos);
+    const jornadas = plano.find((p) => p.clave === "jornadas.gestionar");
+    const pacientes = plano.find((p) => p.clave === "pacientes.editar");
+
+    expect(celdaConcedida(jornadas, ROLES.ADMINISTRADOR)).toBe(true);
+    expect(celdaConcedida(jornadas, ROLES.MEDICO)).toBe(false);
+    expect(celdaConcedida(pacientes, ROLES.ADMINISTRADOR)).toBe(true);
+    expect(celdaConcedida(pacientes, ROLES.MEDICO)).toBe(true);
+  });
+
+  it("un permiso sin ninguna fila en rol_permiso no concede a ningun rol", async () => {
+    const { cliente } = clienteConTablas({
+      permisos: { data: [PERMISO_JORNADAS], error: null },
+      rol_permiso: { data: [], error: null },
+    });
+    dobles.cliente = cliente;
+
+    const { modulos } = await obtenerMatrizDePermisosPorRol();
+
+    expect(celdaConcedida(modulos[0].permisos[0], ROLES.ADMINISTRADOR)).toBe(false);
+  });
+
+  it("ante un error de servidor devuelve la lista vacia y el error normalizado", async () => {
+    const { cliente } = clienteConTablas({
+      permisos: { data: null, error: { code: "42501" } },
+      rol_permiso: { data: [], error: null },
+    });
+    dobles.cliente = cliente;
+
+    const { modulos, error } = await obtenerMatrizDePermisosPorRol();
+
+    expect(modulos).toEqual([]);
+    expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.PERMISO_DENEGADO);
+  });
+});
+
+describe("celdaConcedida", () => {
+  it("sin rolesConcedidos no revienta", () => {
+    expect(celdaConcedida({}, ROLES.ADMINISTRADOR)).toBe(false);
+    expect(celdaConcedida(null, ROLES.ADMINISTRADOR)).toBe(false);
+  });
+});
+
+describe("concederPermisoARol y revocarPermisoARol", () => {
+  it("concederPermisoARol resuelve la clave e inserta (rol, permiso_id) en rol_permiso", async () => {
+    const { cliente, llamadas } = clienteConTablas({
+      permisos: { data: { id: PERMISO_JORNADAS.id }, error: null },
+      rol_permiso: { data: null, error: null },
+    });
+    dobles.cliente = cliente;
+
+    const { error } = await concederPermisoARol(ROLES.MEDICO, "jornadas.gestionar");
+
+    expect(error).toBeNull();
+    const insert = pasos(llamadas, { tabla: "rol_permiso", paso: "insert" })[0];
+    expect(insert.valores).toEqual({ rol: ROLES.MEDICO, permiso_id: PERMISO_JORNADAS.id });
+  });
+
+  it("conceder algo que el rol ya tiene (23505) se trata como exito, no como error", async () => {
+    const { cliente } = clienteConTablas({
+      permisos: { data: { id: PERMISO_JORNADAS.id }, error: null },
+      rol_permiso: { data: null, error: { code: "23505" } },
+    });
+    dobles.cliente = cliente;
+
+    const { error } = await concederPermisoARol(ROLES.MEDICO, "jornadas.gestionar");
+
+    expect(error).toBeNull();
+  });
+
+  it("un no-administrador recibe el 42501 traducido al conceder", async () => {
+    const { cliente } = clienteConTablas({
+      permisos: { data: { id: PERMISO_JORNADAS.id }, error: null },
+      rol_permiso: { data: null, error: { code: "42501" } },
+    });
+    dobles.cliente = cliente;
+
+    const { error } = await concederPermisoARol(ROLES.MEDICO, "jornadas.gestionar");
+
+    expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.PERMISO_DENEGADO);
+  });
+
+  it("revocarPermisoARol borra la fila de rol_permiso por rol y permiso_id", async () => {
+    const { cliente, llamadas } = clienteConTablas({
+      permisos: { data: { id: PERMISO_JORNADAS.id }, error: null },
+      rol_permiso: { data: null, error: null },
+    });
+    dobles.cliente = cliente;
+
+    const { error } = await revocarPermisoARol(ROLES.MEDICO, "jornadas.gestionar");
+
+    expect(error).toBeNull();
+    expect(pasos(llamadas, { tabla: "rol_permiso", paso: "delete" })).toHaveLength(1);
+    expect(pasos(llamadas, { tabla: "rol_permiso", paso: "eq" })).toEqual([
+      { tabla: "rol_permiso", paso: "eq", columna: "rol", valor: ROLES.MEDICO },
+      { tabla: "rol_permiso", paso: "eq", columna: "permiso_id", valor: PERMISO_JORNADAS.id },
+    ]);
+  });
+
+  it("sin rol o sin clave no hace ninguna llamada", async () => {
+    expect(await concederPermisoARol(null, "jornadas.gestionar")).toEqual({ error: null });
+    expect(await revocarPermisoARol(ROLES.MEDICO, undefined)).toEqual({ error: null });
   });
 });
 

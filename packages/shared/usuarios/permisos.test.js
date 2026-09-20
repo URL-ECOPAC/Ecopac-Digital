@@ -12,7 +12,9 @@ import {
   puedeCrearUsuario,
   puedeDesactivarUsuario,
   puedeEditarOtroPerfil,
+  puedeGestionarMatrizDePermisosPorRol,
   puedeGestionarPermisosFinos,
+  puedeNavegarModuloDelPermiso,
   puedeReactivarUsuario,
   puedeVerListadoUsuarios,
   puedeVerPermisosEfectivosDeOtro,
@@ -52,6 +54,39 @@ describe("permisos de usuarios", () => {
       expect(puedeGestionarPermisosFinos(rol)).toBe(false);
       expect(puedeVerPermisosEfectivosDeOtro(rol)).toBe(false);
     }
+  });
+
+  it("solo administrador gestiona la matriz de permisos por rol (rol_permiso, issue #638)", () => {
+    expect(puedeGestionarMatrizDePermisosPorRol(ROLES.ADMINISTRADOR)).toBe(true);
+
+    for (const rol of NO_ADMIN) {
+      expect(puedeGestionarMatrizDePermisosPorRol(rol)).toBe(false);
+    }
+  });
+
+  it("puedeNavegarModuloDelPermiso: un rol fuera de la lista del modulo no llega a la pantalla (issue #638)", () => {
+    // donaciones esta en navegacion.js con roles [administrador, junta directiva, socio
+    // fundador]: medico y voluntario nunca ven ese modulo, sin importar rol_permiso.
+    expect(puedeNavegarModuloDelPermiso(ROLES.ADMINISTRADOR, "donaciones")).toBe(true);
+    expect(puedeNavegarModuloDelPermiso(ROLES.JUNTA_DIRECTIVA, "donaciones")).toBe(true);
+    expect(puedeNavegarModuloDelPermiso(ROLES.MEDICO, "donaciones")).toBe(false);
+    expect(puedeNavegarModuloDelPermiso(ROLES.VOLUNTARIO, "donaciones")).toBe(false);
+  });
+
+  it("puedeNavegarModuloDelPermiso: pacientes esta abierto a los cinco roles", () => {
+    for (const rol of [ROLES.ADMINISTRADOR, ...NO_ADMIN]) {
+      expect(puedeNavegarModuloDelPermiso(rol, "pacientes")).toBe(
+        rol !== ROLES.JUNTA_DIRECTIVA && rol !== ROLES.SOCIO_FUNDADOR,
+      );
+    }
+  });
+
+  it("puedeNavegarModuloDelPermiso: un modulo sin entrada en MODULOS no advierte en falso", () => {
+    // "usuarios" es el caso real: usuarios.gestionar_permisos no tiene una entrada propia en
+    // MODULOS (la pantalla real vive dentro de "colaboradores"), asi que rolesDelModulo()
+    // devuelve un arreglo vacio. Se asume navegable antes que advertir de mas.
+    expect(puedeNavegarModuloDelPermiso(ROLES.MEDICO, "usuarios")).toBe(true);
+    expect(puedeNavegarModuloDelPermiso("modulo-inventado", "usuarios")).toBe(true);
   });
 
   it("un rol que no existe no puede nada", () => {

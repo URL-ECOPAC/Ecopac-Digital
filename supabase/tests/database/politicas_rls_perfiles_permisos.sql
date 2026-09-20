@@ -8,7 +8,7 @@
 
 BEGIN;
 
-SELECT plan(25);
+SELECT plan(29);
 
 -- ============================================================================
 -- Setup: seis perfiles de prueba, uno por rol (mas un segundo voluntario para
@@ -91,6 +91,21 @@ SELECT lives_ok(
      SELECT '00000000-0000-0000-0000-000000000006', id, true, '00000000-0000-0000-0000-000000000001'
      FROM permisos WHERE clave = 'jornadas.gestionar' $$,
   'administrador puede otorgar un permiso puntual en usuario_permiso'
+);
+
+-- Matriz de permisos por rol (issue #638, migracion 00139): conceder y retirar el default de un
+-- rol entero en rol_permiso, antes de solo lectura.
+SELECT lives_ok(
+  $$ INSERT INTO rol_permiso (rol, permiso_id)
+     SELECT 'voluntario general', id FROM permisos WHERE clave = 'donaciones.registrar' $$,
+  'administrador concede un permiso por defecto a un rol en rol_permiso (issue #638)'
+);
+
+SELECT lives_ok(
+  $$ DELETE FROM rol_permiso
+     WHERE rol = 'voluntario general'
+       AND permiso_id = (SELECT id FROM permisos WHERE clave = 'donaciones.registrar') $$,
+  'administrador retira el permiso por defecto que acaba de conceder (issue #638)'
 );
 
 -- ============================================================================
@@ -180,6 +195,14 @@ SELECT throws_ok(
   'un voluntario no puede otorgarse permisos a si mismo en usuario_permiso'
 );
 
+SELECT throws_ok(
+  $$ INSERT INTO rol_permiso (rol, permiso_id)
+     SELECT 'voluntario general', id FROM permisos WHERE clave = 'donaciones.registrar' $$,
+  '42501',
+  NULL,
+  'un voluntario no puede escribir la matriz de permisos por rol (issue #638)'
+);
+
 -- ============================================================================
 -- usuarios.gestionar_permisos concedido puntualmente a medico (issue #409): puede escribir
 -- usuario_permiso de un tercero, operacion antes exclusiva de administrador.
@@ -244,6 +267,14 @@ SELECT throws_ok(
   '42501',
   NULL,
   'sin sesion (anon) ni siquiera se puede consultar perfiles'
+);
+
+SELECT throws_ok(
+  $$ INSERT INTO rol_permiso (rol, permiso_id)
+     SELECT 'voluntario general', id FROM permisos WHERE clave = 'donaciones.registrar' $$,
+  '42501',
+  NULL,
+  'sin sesion (anon) no puede escribir rol_permiso: la 00139 solo lo concede a authenticated (issue #638)'
 );
 
 SELECT * FROM finish();

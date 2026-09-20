@@ -52,6 +52,7 @@ export const moduleAccents = {
   reportes: colors.info,
   jornadas: colors.primary,
   colaboradores: colors.info,
+  "matriz-permisos": colors.secondary,
   "bitacora-auditoria": colors.secondary,
 };
 

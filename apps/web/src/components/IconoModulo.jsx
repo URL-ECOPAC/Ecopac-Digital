@@ -7,6 +7,7 @@ import {
   History,
   Home,
   Package,
+  ShieldCheck,
   UserCheck,
   Users,
 } from "lucide-react";
@@ -24,6 +25,7 @@ const ICONOS = {
   BarChart3,
   Calendar,
   UserCheck,
+  ShieldCheck,
   History,
 };
 
