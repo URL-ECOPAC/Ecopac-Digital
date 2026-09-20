@@ -1,7 +1,7 @@
 import { ROLES } from "./usuarios/roles.js";
 
 /**
- * Los diez módulos del sistema.
+ * Los once módulos del sistema.
  *
  * `descripcion` es una linea de que se hace en cada modulo. La pantalla de inicio la pinta
  * debajo del nombre en cada acceso: una rejilla de nueve palabras sueltas no le dice a nadie
@@ -128,8 +128,9 @@ export const MODULOS = [
     tabMovil: false,
     soloWeb: true,
     icono: "ShieldCheck",
-    },
-    {
+    roles: [ROLES.ADMINISTRADOR],
+  },
+  {
     id: "bitacora-auditoria",
     nombre: "Bitácora de auditoría",
     descripcion: "Quién cambió qué y cuándo en los datos sensibles del sistema.",
