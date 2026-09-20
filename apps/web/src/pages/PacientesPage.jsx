@@ -5,6 +5,7 @@ import {
   puedeFusionarPacientes,
   puedeRegistrarPaciente,
   puedeVerCatalogoComunidades,
+  puedeVerCatalogoDeCondiciones,
   puedeVerCatalogoDiagnosticos,
   puedeVerCondiciones,
   usePacientesListado,
@@ -58,6 +59,14 @@ export default function PacientesPage() {
     acciones.push({
       label: "Catalogo de diagnósticos",
       onClick: () => navigate("/pacientes/diagnosticos"),
+      variant: "secondary",
+    });
+  }
+
+  if (puedeVerCatalogoDeCondiciones(rol)) {
+    acciones.push({
+      label: "Catalogo de condiciones",
+      onClick: () => navigate("/pacientes/condiciones"),
       variant: "secondary",
     });
   }
