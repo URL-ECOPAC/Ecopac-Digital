@@ -46,6 +46,7 @@ el numero del backlog. Este documento usa siempre la numeracion de la matriz.
 | CP-RF01-08 | Una ruta protegida no se abre sin el rol que la exige | Sin sesion va a `/login`; con un rol no permitido muestra acceso denegado | `apps/web/src/components/RutaProtegida.test.jsx`, `App.rutas.test.jsx` |
 | CP-RF01-09 | El menu movil solo ofrece lo que el rol puede abrir, y ninguna pantalla se alcanza sin el | Las pestanias se filtran por rol; toda pantalla registrada pasa por la guarda y una lista de roles vacia deniega | `apps/mobile/src/navigation/navegacionPorRol.test.js`, `navigation/guardaDeRol.test.js`, `navigation/AppNavigator.test.js`, `components/RutaProtegida.test.jsx` |
 | CP-RF01-10 | La administradora asigna y edita permisos | El formulario refleja y guarda los permisos | `apps/web/src/pages/ModalPermisosUsuario.test.jsx`, `ModalEdicionUsuario.test.jsx` |
+| CP-RF01-11 | Quien atiende mantiene el catalogo de condiciones cronicas hasta donde le toca | Administrador, medico y voluntario general dan de alta; los dos roles consultivos no; solo el administrador renombra y retira; nadie borra | `escritura_catalogo_condiciones.sql` (16); `pruebas/e2e/catalogo-condiciones.e2e.test.js`; `apps/web/src/pages/CatalogoCondicionesPage.test.jsx` |
 
 ### RF-02: expediente clinico unico, signos vitales y consultas
 
@@ -171,7 +172,7 @@ el numero del backlog. Este documento usa siempre la numeracion de la matriz.
 | CP-RNF09-01 | RNF-9: historiales solo para medicos y administrador | Un rol sin permiso intenta leer consultas, recetas e historial | La base lo niega | `politicas_rls_atenciones_consultas_recetas.sql` (33), `politicas_rls_pacientes_expedientes.sql` (25) |
 | CP-RNF10-01 | RNF-10: autenticacion segura | Reglas de contrasena y restablecimiento | Rechaza contrasenas que no cumplen la politica | `packages/shared/usuarios/validaciones.test.js`, `useNuevaContrasena.test.js`. Solo del lado del cliente: `supabase/config.toml` no fija una longitud minima en el servidor |
 | CP-RNF10-02 | RNF-10: las cuentas pueden iniciar sesion | Ninguna cuenta queda con columnas de token nulas que GoTrue no sabe leer | Las siete cuentas de demostracion inician sesion | `tokens_auth_users.sql` (3) |
-| CP-RNF11-01 | RNF-11: confiabilidad en jornada | Los flujos criticos de una jornada funcionan de punta a punta | 41 de 41 pruebas e2e en verde en cada PR que toca la base | `pruebas/e2e/` en el CI |
+| CP-RNF11-01 | RNF-11: confiabilidad en jornada | Los flujos criticos de una jornada funcionan de punta a punta | 49 de 49 pruebas e2e en verde en cada PR que toca la base | `pruebas/e2e/` en el CI |
 | CP-RNF12-01 | RNF-12: respaldos | Restaurar la base desde un respaldo | La informacion vuelve integra | **No ejecutable hoy**: el plan Free no tiene respaldos |
 | CP-RNF13-01 | RNF-13: codigo mantenible | Lint, formato y guarda de esquema | Cero errores | `npm run lint`, `npm run format:check`, `scripts/verificar-shared-vs-esquema.mjs` |
 | CP-RNF14-01 | RNF-14: herramientas abiertas y capas gratuitas | Revisar el costo de cada servicio | Todo en capa gratuita o con justificacion | Verificacion documental en `docs/COSTOS-Y-LIMITES.md` |
