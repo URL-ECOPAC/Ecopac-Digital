@@ -6,10 +6,14 @@
 -- proyecto_seguimiento.
 --
 -- Se suman aqui, ademas, dos pruebas de departamentos y municipios (issue #406, migracion
--- 00073): una positiva y una negativa por tabla, en el mismo estilo GRANT-primero que ya usan
--- las negativas de condiciones_cronicas y principios_activos mas abajo -- no hace falta simular
--- RLS filtrando filas, porque antes de 00073 la operacion moria por falta de GRANT sin llegar a
--- evaluar ninguna politica, y la negativa de anon sigue probando exactamente eso.
+-- 00073): una positiva y una negativa por tabla, en el mismo estilo GRANT-primero que usa la
+-- negativa de principios_activos mas abajo -- no hace falta simular RLS filtrando filas, porque
+-- antes de 00073 la operacion moria por falta de GRANT sin llegar a evaluar ninguna politica, y
+-- la negativa de anon sigue probando exactamente eso.
+--
+-- condiciones_cronicas era el tercer ejemplo de ese estilo hasta la 00140 (issue #850), que le
+-- dio GRANT de INSERT y UPDATE. Su cobertura propia vive en escritura_catalogo_condiciones.sql;
+-- aqui queda la lectura y la negativa de los roles consultivos.
 --
 -- QUE NO ESTA AQUI, Y POR QUE
 --
@@ -131,27 +135,38 @@ SELECT ok(
   'POSITIVA condiciones_cronicas: un voluntario lee el catalogo'
 );
 
--- La negativa de un catalogo de lectura abierta es que NADIE lo escriba desde la aplicacion.
+-- Hasta la 00140 la negativa de esta tabla era que NADIE la escribiera: no tenia GRANT de
+-- INSERT, asi que el intento del voluntario moria con 42501 antes de que RLS se evaluara. La
+-- 00140 (issue #850) abrio el alta a los tres roles que atienden -- administrador, medico y
+-- voluntario general --, de modo que ese intento ahora funciona y la negativa se mudo a los dos
+-- roles consultivos, que desde la 00054 no tocan ninguna fila clinica.
 --
--- Ojo con la forma de comprobarlo, porque aqui se ven las DOS capas: condiciones_cronicas no
--- tiene GRANT de INSERT para authenticated, asi que la operacion muere con 42501 ANTES de que
--- RLS llegue a evaluarse. No devuelve cero filas: revienta. Cuando la tabla si tiene el GRANT y
--- lo que falta es la politica, el resultado es el contrario -- la sentencia corre y no afecta
--- ninguna fila --, y esas negativas se comprueban con is_empty() mas abajo.
+-- Sigue siendo un throws_ok y no un is_empty porque un INSERT que no pasa el WITH CHECK lanza
+-- 42501 igual que la falta de GRANT. La otra forma -- la sentencia corre y no afecta ninguna
+-- fila -- es la de un UPDATE filtrado por USING, y esas se comprueban con is_empty() mas abajo.
+--
+-- El reparto completo de la 00140, con sus positivas y el indice de nombre normalizado, esta en
+-- escritura_catalogo_condiciones.sql.
+SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000221002';
+
 SELECT throws_ok(
   $$ INSERT INTO condiciones_cronicas (nombre) VALUES ('Intento 221') $$,
   '42501',
   NULL,
-  'NEGATIVA condiciones_cronicas: sin GRANT de INSERT, ni el voluntario ni nadie escribe'
+  'NEGATIVA condiciones_cronicas: un rol consultivo no escribe el catalogo clinico (00140)'
 );
 
 -- ============================================================================
 -- departamentos y municipios: catalogo de lectura abierta (issue #406, 2 politicas)
 -- ============================================================================
--- Mismo patron que condiciones_cronicas arriba: RLS ya tenia la politica publica desde 00006,
--- lo que faltaba era el GRANT que la migracion 00073 completo. La negativa de anon prueba esa
--- capa exacta: sin GRANT, la sentencia muere con 42501 antes de que la politica USING (true)
--- llegue a evaluarse.
+-- RLS ya tenia la politica publica desde 00006, lo que faltaba era el GRANT que la migracion
+-- 00073 completo. La negativa de anon prueba esa capa exacta: sin GRANT, la sentencia muere con
+-- 42501 antes de que la politica USING (true) llegue a evaluarse.
+--
+-- Vuelve la sesion del voluntario, que es de quien hablan las dos positivas de aqui abajo: el
+-- bloque anterior la habia cambiado a junta directiva para su negativa.
+SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000221004';
+
 SELECT ok(
   (SELECT count(*) FROM departamentos WHERE id = 900221) > 0,
   'POSITIVA departamentos SELECT: un voluntario lee el catalogo de departamentos'
@@ -162,9 +177,10 @@ SELECT ok(
   'POSITIVA municipios SELECT: un voluntario lee el catalogo de municipios'
 );
 
--- La negativa de un catalogo de lectura abierta es que NADIE lo escriba desde la aplicacion
--- (mismo patron y mismo motivo que condiciones_cronicas arriba: sin GRANT de INSERT para
--- authenticated, la sentencia muere con 42501 antes de que RLS llegue a evaluarse).
+-- La negativa de estos dos es que NADIE los escriba desde la aplicacion, y siguen siendo el
+-- caso puro de "falta el GRANT": sin INSERT concedido a authenticated, la sentencia muere con
+-- 42501 antes de que RLS llegue a evaluarse. condiciones_cronicas ya no sirve de ejemplo de
+-- esto: la 00140 le concedio el GRANT, y su negativa es ahora la de un WITH CHECK que falla.
 SELECT throws_ok(
   $$ INSERT INTO departamentos (id, nombre) VALUES (900222, 'Intento 221') $$,
   '42501',
