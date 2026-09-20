@@ -46,6 +46,7 @@ export * from "./catalogoDiagnosticos.columnas.js";
 export * from "./catalogoDiagnosticos.filtros.js";
 export * from "./useCatalogoDiagnosticos.js";
 export * from "./useFormularioDiagnostico.js";
+export * from "./useAltaDeCondicionEnLinea.js";
 export * from "./useCatalogoCondiciones.js";
 export * from "./duplicados.columnas.js";
 export * from "./useDuplicadosPacientes.js";

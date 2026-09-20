@@ -21,6 +21,10 @@ import {
   puedeRegistrarCondicion,
   puedeVerCondiciones,
 } from "./condiciones.permisos.js";
+import { useAltaDeCondicionEnLinea } from "./useAltaDeCondicionEnLinea.js";
+
+/** El id del campo del formulario que elige una condicion del catalogo. */
+const CAMPO_CONDICION = "condicion";
 
 const VALORES_INICIALES = CAMPOS_CONDICION_CRONICA.reduce((valores, campo) => {
   valores[campo.id] = "";
@@ -69,13 +73,24 @@ export function useCondicionesPaciente(pacienteId, { rol } = {}) {
     cargar();
   }, [cargar]);
 
+  // Solo las condiciones vigentes: una retirada del catalogo (es_vigente = FALSE, 00115) deja de
+  // ofrecerse al asignar, aunque siga visible en las fichas que ya la citan.
+  //
+  // Se lee `respuesta.condiciones` y nada mas. Antes habia un `?? respuesta.catalogo ?? []`
+  // detras: `catalogo` no es una clave que obtenerCatalogoDeCondiciones devuelva -- nunca lo fue
+  // --, asi que lo unico que podia hacer era tapar en silencio un cambio de contrato con una
+  // lista vacia. Es justo lo que AGENTS.md prohibe y lo que vigila npm run verificar:contratos.
+  const cargarCatalogo = useCallback(async () => {
+    const respuesta = await obtenerCatalogoDeCondiciones({ soloVigentes: true });
+    setCatalogo(respuesta.condiciones.map((fila) => ({ value: fila.id, label: fila.nombre })));
+    return respuesta.condiciones;
+  }, []);
+
   useEffect(() => {
     let vigente = true;
-    // Solo se cargan las condiciones vigentes para asignacion en la ficha (issue #641)
     obtenerCatalogoDeCondiciones({ soloVigentes: true }).then((respuesta) => {
       if (!vigente) return;
-      const filas = respuesta.condiciones ?? respuesta.catalogo ?? [];
-      setCatalogo(filas.map((fila) => ({ value: fila.id, label: fila.nombre })));
+      setCatalogo(respuesta.condiciones.map((fila) => ({ value: fila.id, label: fila.nombre })));
     });
     return () => {
       vigente = false;
@@ -95,6 +110,23 @@ export function useCondicionesPaciente(pacienteId, { rol } = {}) {
     setErrores({});
     setErrorDeAlta(null);
   }, []);
+
+  const elegirCondicion = useCallback(
+    (condicionId) => setCampo(CAMPO_CONDICION, condicionId),
+    [setCampo],
+  );
+
+  // Alta de una condicion que el catalogo no trae, sin salir de la ficha (issue #850). Recarga el
+  // catalogo y deja elegida la recien creada, que es lo unico especifico de esta pantalla.
+  const altaEnLinea = useAltaDeCondicionEnLinea({
+    rol,
+    opciones: catalogo,
+    alCrear: async (condicion) => {
+      await cargarCatalogo();
+      elegirCondicion(condicion?.id);
+    },
+    alElegirExistente: elegirCondicion,
+  });
 
   const agregar = useCallback(async () => {
     setEnviando(true);
@@ -180,6 +212,14 @@ export function useCondicionesPaciente(pacienteId, { rol } = {}) {
     borrar,
     corregir,
     recargar: cargar,
+    recargarCatalogo: cargarCatalogo,
+    // Alta en linea del catalogo (issue #850). Se reexporta con nombres que dicen de que catalogo
+    // hablan, igual que useRegistroPaciente.js hace con la comunidad: en una pantalla con dos
+    // altas encima, "puedeCrear" a secas no dice cual.
+    puedeCrearCondicion: altaEnLinea.puedeCrear,
+    registrarCondicion: altaEnLinea.crear,
+    erroresCondicionNueva: altaEnLinea.errores,
+    creandoCondicion: altaEnLinea.creando,
     catalogos: {
       condicionesCronicas: catalogo,
       estadosCondicionCronica: OPCIONES_ESTADO_CONDICION,
