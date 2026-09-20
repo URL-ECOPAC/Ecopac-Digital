@@ -10,11 +10,19 @@
 // Ahora simula el hook real, `useCondicionesPaciente`, con la forma que devuelve de verdad: el
 // nombre de la condicion viaja en `condicion` -lo aplana aCondicionDelPaciente()-, y los permisos
 // y `marcarResuelta` los resuelve el propio hook.
+//
+// El doble se amplio con la issue #850, que agrega el alta a esta seccion: `campos`, `valores`,
+// `catalogos` y el bloque de alta en linea del catalogo. Los descriptores no se inventan, se
+// importan de @ecopac/shared, para que un cambio en CAMPOS_CONDICION_CRONICA se note aqui.
 
 import React from "react";
 import { Alert } from "react-native";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react-native";
-import { useCondicionesPaciente } from "@ecopac/shared";
+import {
+  CAMPOS_CONDICION_CRONICA,
+  OPCIONES_ESTADO_CONDICION,
+  useCondicionesPaciente,
+} from "@ecopac/shared";
 
 import CondicionesPacienteSeccion from "../CondicionesPacienteSeccion";
 
@@ -37,15 +45,38 @@ const PERMISOS_DE_MEDICO = {
   puedeQuitar: true,
 };
 
+const CATALOGO = [
+  { value: "cc-1", label: "Hipertensión" },
+  { value: "cc-2", label: "Diabetes" },
+];
+
 function estado(extra = {}) {
   return {
     condiciones: [CONDICION_ACTIVA],
+    campos: CAMPOS_CONDICION_CRONICA,
+    valores: { condicion: "", fechaDiagnostico: "", estado: "", notas: "" },
+    errores: {},
+    errorDeAlta: null,
     cargando: false,
     error: null,
     enviando: false,
     permisos: PERMISOS_DE_MEDICO,
+    setCampo: jest.fn(),
+    agregar: jest.fn(async () => ({ ok: true })),
     marcarResuelta: jest.fn(async () => ({ ok: true })),
     recargar: jest.fn(),
+    catalogos: {
+      condicionesCronicas: CATALOGO,
+      estadosCondicionCronica: OPCIONES_ESTADO_CONDICION,
+    },
+    puedeCrearCondicion: true,
+    registrarCondicion: jest.fn(async () => ({
+      condicion: { id: "cc-3" },
+      errores: {},
+      error: null,
+    })),
+    erroresCondicionNueva: {},
+    creandoCondicion: false,
     ...extra,
   };
 }
@@ -134,5 +165,107 @@ describe("CondicionesPacienteSeccion", () => {
 
     await waitFor(() => expect(Alert.alert).toHaveBeenCalledTimes(2));
     expect(alActualizar).not.toHaveBeenCalled();
+  });
+});
+
+// El alta que la #840 dejo fuera de alcance y que la #850 trae, junto con la de una condicion que
+// el catalogo no tiene todavia (migracion 00140).
+describe("CondicionesPacienteSeccion: agregar una condicion", () => {
+  it("quien puede registrar ve el formulario de alta", () => {
+    useCondicionesPaciente.mockReturnValue(estado());
+
+    render(<CondicionesPacienteSeccion pacienteId="p-1" rol="medico" />);
+
+    expect(screen.getByText("Agregar una condición")).toBeTruthy();
+    expect(screen.getByText("Agregar condición")).toBeTruthy();
+  });
+
+  it("quien no puede registrar no lo ve", () => {
+    useCondicionesPaciente.mockReturnValue(
+      estado({ permisos: { ...PERMISOS_DE_MEDICO, puedeRegistrar: false } }),
+    );
+
+    render(<CondicionesPacienteSeccion pacienteId="p-1" rol="voluntario general" />);
+
+    expect(screen.queryByText("Agregar una condición")).toBeNull();
+  });
+
+  it("agregar llama al hook y avisa al padre", async () => {
+    const agregar = jest.fn(async () => ({ ok: true }));
+    const alActualizar = jest.fn();
+    useCondicionesPaciente.mockReturnValue(estado({ agregar }));
+
+    render(
+      <CondicionesPacienteSeccion pacienteId="p-1" rol="medico" alActualizar={alActualizar} />,
+    );
+    fireEvent.press(screen.getByText("Agregar condición"));
+
+    await waitFor(() => expect(agregar).toHaveBeenCalled());
+    expect(alActualizar).toHaveBeenCalled();
+  });
+
+  it("si el alta falla no avisa al padre", async () => {
+    const agregar = jest.fn(async () => ({ ok: false }));
+    const alActualizar = jest.fn();
+    useCondicionesPaciente.mockReturnValue(estado({ agregar }));
+
+    render(
+      <CondicionesPacienteSeccion pacienteId="p-1" rol="medico" alActualizar={alActualizar} />,
+    );
+    fireEvent.press(screen.getByText("Agregar condición"));
+
+    await waitFor(() => expect(agregar).toHaveBeenCalled());
+    expect(alActualizar).not.toHaveBeenCalled();
+  });
+
+  it("el error del alta se muestra, en vez de quedarse callado", () => {
+    useCondicionesPaciente.mockReturnValue(
+      estado({ errorDeAlta: { mensaje: "Esa condicion ya esta en la ficha" } }),
+    );
+
+    render(<CondicionesPacienteSeccion pacienteId="p-1" rol="medico" />);
+
+    expect(screen.getByText("Esa condicion ya esta en la ficha")).toBeTruthy();
+  });
+
+  it("ofrece crear una condicion que el catalogo no trae, sin salir de la ficha", () => {
+    useCondicionesPaciente.mockReturnValue(estado());
+
+    render(<CondicionesPacienteSeccion pacienteId="p-1" rol="medico" />);
+
+    expect(screen.getByText("Crear una condición")).toBeTruthy();
+  });
+
+  it("a quien no puede escribir el catalogo no se lo ofrece", () => {
+    // La politica de INSERT de la 00140 deja fuera a los roles consultivos; ofrecer el boton
+    // seria prometer algo que el servidor rechaza con 42501.
+    useCondicionesPaciente.mockReturnValue(estado({ puedeCrearCondicion: false }));
+
+    render(<CondicionesPacienteSeccion pacienteId="p-1" rol="medico" />);
+
+    expect(screen.queryByText("Crear una condición")).toBeNull();
+  });
+
+  it("crear una condicion pasa por registrarCondicion, no por otra ruta", async () => {
+    const registrarCondicion = jest.fn(async () => ({
+      condicion: { id: "cc-3" },
+      errores: {},
+      error: null,
+    }));
+    // `notas` va con texto para que el unico campo vacio de la pantalla sea el del alta: es el
+    // otro TextField del formulario, y con los dos vacios getByDisplayValue("") no sabe cual es.
+    useCondicionesPaciente.mockReturnValue(
+      estado({
+        registrarCondicion,
+        valores: { condicion: "", fechaDiagnostico: "", estado: "", notas: "Sin novedad" },
+      }),
+    );
+
+    render(<CondicionesPacienteSeccion pacienteId="p-1" rol="medico" />);
+    fireEvent.press(screen.getByText("Crear una condición"));
+    fireEvent.changeText(screen.getByDisplayValue(""), "Artritis reumatoide");
+    fireEvent.press(screen.getByText("Guardar"));
+
+    await waitFor(() => expect(registrarCondicion).toHaveBeenCalledWith("Artritis reumatoide"));
   });
 });
