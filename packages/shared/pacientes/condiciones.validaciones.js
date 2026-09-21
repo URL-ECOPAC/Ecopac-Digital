@@ -12,12 +12,29 @@ const ESTADOS_VALIDOS = Object.values(ESTADOS_CONDICION_CRONICA);
 
 /**
  * Recorta los textos sobrantes antes de validar y de enviar.
+ *
+ * `notas` vacio viaja como NULL: la columna es nullable y borrar la nota es una accion legitima.
+ *
+ * `estado` vacio NO viaja. El formulario arranca con todos sus campos en cadena vacia
+ * (`useCondicionesPaciente`), y `estado` es opcional justamente porque la columna tiene
+ * `DEFAULT 'activa'` (00010) -- lo dice el comentario de CAMPOS_CONDICION_CRONICA--. Pero una
+ * cadena vacia no es "no lo mando": es un valor, y PostgREST intenta convertirla al enum
+ * `estado_condicion_cronica` y devuelve 400. Resultado: agregar una condicion sin tocar el
+ * desplegable de estado fallaba siempre, con "Ocurrio un error inesperado" y sin decir que campo
+ * era. Quitando la clave, la columna aplica su DEFAULT, que es lo que el descriptor ya prometia.
+ *
+ * Es deliberado que no se sustituya por 'activa' aqui: el valor por defecto vive en la migracion,
+ * y repetirlo en el cliente es la clase de duplicado que se desincroniza sin que nadie lo note.
  */
 export function normalizarDatosCondicion(datos = {}) {
   const normalizados = { ...datos };
 
   if (Object.prototype.hasOwnProperty.call(datos, "notas")) {
     normalizados.notas = esTextoVacio(datos.notas) ? null : normalizarTexto(datos.notas);
+  }
+
+  if (Object.prototype.hasOwnProperty.call(datos, "estado") && esTextoVacio(datos.estado)) {
+    delete normalizados.estado;
   }
 
   return normalizados;

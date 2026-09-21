@@ -415,7 +415,7 @@ dejando el sistema sin administrador igual. Ver Divergencia 15.
 | `departamentos`        | cualquier autenticado | **nadie**              | `00006` (politica) + `00073` (GRANT, issue #406 resuelto). El catalogo lo siembra la `00125`, no la aplicacion |
 | `municipios`           | cualquier autenticado | **nadie**              | Igual que departamentos                                 |
 | `comunidades`          | cualquier autenticado | administrador: C U     | Lectura: `00008` (politica) + `00041` (GRANT); la politica de `00041` se retiro en `00104` por redundante. Escritura: `00116` (politicas de INSERT y UPDATE) + `00118` (`GRANT INSERT, UPDATE`), y `00117` agrega `es_vigente` como retiro logico |
-| `condiciones_cronicas` | cualquier autenticado | **nadie**              | `00010`                                                 |
+| `condiciones_cronicas` | cualquier autenticado | administrador: C U; medico y voluntario general: C | Lectura: `00010` (politica), reescrita en `00079`; GRANT en `00032`. Escritura: `00140` (issue #850), que agrega `GRANT INSERT, UPDATE`, una politica de INSERT para los tres roles que atienden y una de UPDATE solo para administrador. `00115` habia agregado `es_vigente` como retiro logico |
 
 **Ni `departamentos` ni `municipios` se escriben desde la aplicacion, y es deliberado**: son el
 catalogo oficial de Guatemala, con `id` entero fijo, y quien lo necesite corregir lo hace en una
@@ -423,6 +423,34 @@ migracion. Hasta la `00125` ese catalogo solo existia en `supabase/seed.sql` y p
 llegaba a ningun ambiente remoto**, porque `supabase db push` no ejecuta seeds (issue #704). Las
 comunidades si son operativas -crecen con cada jornada nueva- y por eso la administradora las crea
 y las edita desde la aplicacion, con `es_vigente` para retirar una sin borrarla.
+
+**El catalogo de condiciones cronicas lo mantiene quien atiende, no solo la administracion.**
+Issue #850, migracion `00140`. Es la unica tabla del esquema donde el alta alcanza a los tres roles
+de campo -administrador, medico y **voluntario general**- y el mantenimiento no. La razon es
+operativa: una condicion cronica que falta en el catalogo se descubre en jornada, con el paciente
+delante, y quien la ve es quien atiende. Si escribirla exige esperar a que la administracion la de
+de alta, el dato se pierde o se escribe mal en otro campo. Junta directiva y socio fundador quedan
+fuera por la regla de la `00054`: los roles consultivos no tocan filas clinicas, y un catalogo de
+diagnosticos cronicos lo es.
+
+El `UPDATE` no se reparte igual, y tampoco es un descuido: retirar una condicion (`es_vigente =
+FALSE`) la quita del selector de **todas** las fichas, y renombrarla reescribe lo que ya citan
+expedientes ajenos. Eso es curaduria del catalogo, no captura en jornada, y queda en la
+administracion. Sin `DELETE` para nadie, como el resto de los catalogos: `padecimientos_cronicos`
+lo referencia `ON DELETE RESTRICT` (`00010`) y la `00120` ya revoco ese privilegio por defecto.
+
+> **Una asimetria que conviene tener a la vista.** El voluntario general puede dar de alta en este
+> catalogo pero **no vera el resultado en la ficha de ningun paciente**: `padecimientos_cronicos`
+> (`00010`) no tiene ninguna politica para su rol, ni de SELECT, asi que para el la unica pantalla
+> que usa el catalogo es la de mantenimiento. Es el alcance de la `00010`, no de la `00140`;
+> ampliarlo es una decision clinica que necesita su propia issue.
+
+Ademas, la `00140` agrega un indice unico sobre `lower(f_unaccent(btrim(nombre)))`. El `UNIQUE` de
+la columna cruda (`00010`) es sensible a mayusculas y acentos, asi que "Hipertension",
+"hipertension" e "Hipertension" con tilde entraban como tres filas distintas. Con un solo rol
+escribiendo eso era teorico; con tres y una pantalla en cada plataforma, deja de serlo. El cliente
+ademas elige la existente en vez de duplicarla (`buscarOpcionPorEtiqueta`), pero eso es comodidad
+de la pantalla: la garantia es el indice.
 
 **Ojo con cual de las dos capas los protege.** Comprobado contra la base local con las 125
 migraciones aplicadas: `authenticated` conserva `GRANT INSERT, UPDATE` sobre `departamentos` y

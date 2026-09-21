@@ -7,7 +7,19 @@ import {
 } from "@ecopac/shared";
 import { colors, spacing, typography } from "@ecopac/ui-tokens";
 
-import { Card, ErrorState, LoadingState, SecondaryButton, StatusChip } from "../../components";
+import {
+  Card,
+  CampoDeFormulario,
+  ErrorState,
+  LoadingState,
+  PrimaryButton,
+  SecondaryButton,
+  SelectorConAlta,
+  StatusChip,
+} from "../../components";
+
+/** El campo que elige del catalogo, y el unico que se dibuja distinto (issue #850). */
+const CAMPO_CONDICION = "condicion";
 
 /**
  * Condiciones cronicas del paciente, en la ficha movil (issue #818).
@@ -25,10 +37,42 @@ import { Card, ErrorState, LoadingState, SecondaryButton, StatusChip } from "../
  * permisos resueltos por `condiciones.permisos.js` y ya expone `marcarResuelta`. La guarda con
  * `typeof` se retira: un export que falta tiene que reventar el import, no hacer mentir a la
  * pantalla. Ademas era una llamada condicional a un hook, que las reglas de hooks prohiben.
+ *
+ * EL ALTA, QUE HASTA LA #850 NO ESTABA (issue #840, "Fuera de alcance")
+ *
+ * La seccion era de solo lectura mas "Resolver": en movil no habia por donde agregarle una
+ * condicion a un paciente, aunque la politica de INSERT de padecimientos_cronicos (00010) admite
+ * al medico desde el primer dia. Ahora dibuja el mismo formulario que la web, con el campo de la
+ * condicion en `SelectorConAlta` para poder dar de alta en el catalogo una que falte sin salir de
+ * la ficha, que es lo que abre la 00140.
  */
 export default function CondicionesPacienteSeccion({ pacienteId, rol, alActualizar }) {
-  const { condiciones, cargando, error, enviando, permisos, marcarResuelta, recargar } =
-    useCondicionesPaciente(pacienteId, { rol });
+  const {
+    condiciones,
+    campos,
+    valores,
+    errores,
+    errorDeAlta,
+    cargando,
+    error,
+    enviando,
+    permisos,
+    setCampo,
+    agregar,
+    marcarResuelta,
+    recargar,
+    catalogos,
+    puedeCrearCondicion,
+    registrarCondicion,
+    erroresCondicionNueva,
+    creandoCondicion,
+  } = useCondicionesPaciente(pacienteId, { rol });
+
+  const manejarAgregar = async () => {
+    const { ok } = await agregar();
+    if (!ok) return;
+    alActualizar?.();
+  };
 
   const manejarResolver = (condicion) => {
     const nombre = condicion.condicion ?? "esta condicion";
@@ -90,6 +134,55 @@ export default function CondicionesPacienteSeccion({ pacienteId, rol, alActualiz
           ))}
         </View>
       )}
+
+      {permisos.puedeRegistrar && (
+        <View style={styles.alta}>
+          <Text style={styles.tituloAlta}>Agregar una condición</Text>
+
+          {errorDeAlta ? <Text style={styles.errorAlta}>{errorDeAlta.mensaje}</Text> : null}
+
+          {campos.map((campo) =>
+            /* La condicion se dibuja con SelectorConAlta, no con CampoDeFormulario: en jornada
+               aparece una que el catalogo no trae, y salir a otra pantalla pierde lo escrito
+               (issue #850). Mismo trato que CascadaDeComunidad en el registro de paciente. */
+            campo.id === CAMPO_CONDICION ? (
+              <SelectorConAlta
+                key={campo.id}
+                label={campo.label}
+                value={valores[campo.id]}
+                options={catalogos.condicionesCronicas}
+                onSelect={(valor) => setCampo(campo.id, valor)}
+                error={errores[campo.id]}
+                disabled={enviando}
+                puedeCrear={puedeCrearCondicion}
+                etiquetaAlta="Crear una condición"
+                labelNuevo="Nombre de la condición"
+                onCrear={registrarCondicion}
+                erroresAlta={erroresCondicionNueva}
+                creando={creandoCondicion}
+                style={styles.campo}
+              />
+            ) : (
+              <CampoDeFormulario
+                key={campo.id}
+                campo={campo}
+                valor={valores[campo.id]}
+                onChange={(valor) => setCampo(campo.id, valor)}
+                error={errores[campo.id]}
+                catalogos={catalogos}
+                disabled={enviando}
+              />
+            ),
+          )}
+
+          <PrimaryButton
+            title="Agregar condición"
+            onPress={manejarAgregar}
+            loading={enviando}
+            style={styles.botonAgregar}
+          />
+        </View>
+      )}
     </Card>
   );
 }
@@ -125,5 +218,28 @@ const styles = StyleSheet.create({
   botonAccion: {
     paddingVertical: 4,
     paddingHorizontal: spacing.xs,
+  },
+  alta: {
+    marginTop: spacing.sm,
+    paddingTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  tituloAlta: {
+    color: colors.text,
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.semibold,
+    marginBottom: spacing.xs,
+  },
+  errorAlta: {
+    color: colors.danger,
+    fontSize: typography.sizes.xs,
+    marginBottom: spacing.xs,
+  },
+  campo: {
+    marginBottom: spacing.xs,
+  },
+  botonAgregar: {
+    marginTop: spacing.xs,
   },
 });

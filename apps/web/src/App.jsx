@@ -39,6 +39,7 @@ const PacientesPage = lazy(() => import("./pages/PacientesPage"));
 const FichaPacientePage = lazy(() => import("./pages/FichaPacientePage"));
 const PacientesCronicosPage = lazy(() => import("./pages/PacientesCronicosPage"));
 const CatalogoDiagnosticosPage = lazy(() => import("./pages/CatalogoDiagnosticosPage"));
+const CatalogoCondicionesPage = lazy(() => import("./pages/CatalogoCondicionesPage"));
 const CatalogoComunidadesPage = lazy(() => import("./pages/CatalogoComunidadesPage"));
 const PosiblesDuplicadosPage = lazy(() => import("./pages/PosiblesDuplicadosPage"));
 const DonacionesPage = lazy(() => import("./pages/DonacionesPage"));
@@ -163,6 +164,7 @@ export default function App() {
                   <Route path="/pacientes" element={<PacientesPage />} />
                   <Route path="/pacientes/cronicos" element={<PacientesCronicosPage />} />
                   <Route path="/pacientes/diagnosticos" element={<CatalogoDiagnosticosPage />} />
+                  <Route path="/pacientes/condiciones" element={<CatalogoCondicionesPage />} />
                   <Route path="/pacientes/comunidades" element={<CatalogoComunidadesPage />} />
                   <Route path="/pacientes/duplicados" element={<PosiblesDuplicadosPage />} />
                   <Route path="/pacientes/:id" element={<FichaPacientePage />} />

@@ -36,6 +36,8 @@ export const DEMO = Object.freeze({
   jornadaEnCurso: "de00000a-0000-0000-0000-000000000002",
   /** Comunidad de esa jornada. */
   comunidad: "de000004-0000-0000-0000-000000000002",
+  /** Paciente del seed, para las pruebas que necesitan uno y no lo estan registrando. */
+  paciente: "de000005-0000-0000-0000-000000000002",
   /** Bodega movil que viaja con la jornada en curso. */
   bodegaMovil: "de000002-0000-0000-0000-000000000001",
   /** Proveedor comercial, para los ingresos que registran las pruebas. */
@@ -161,12 +163,19 @@ async function restaurarExistencias(instantanea) {
  * Los triggers de usuario se desactivan porque impedir_borrado_fisico_paciente (00026) bloquea el
  * DELETE sobre pacientes para cualquier rol, y tr_bloquear_movimiento_finalizado (00023) protege
  * los movimientos que ya quedaron aprobados o rechazados.
+ *
+ * `padecimientos` son ids de padecimientos_cronicos sobre pacientes del seed, que no se borran;
+ * van antes que el catalogo porque lo referencian ON DELETE RESTRICT (00010).
+ *
+ * `condicionesDelCatalogo` son nombres, no ids, y se borran al final: ver la nota de ahi abajo.
  */
 export async function limpiar({
   pacientes = [],
   movimientos = [],
   lotes = [],
   existencias = [],
+  padecimientos = [],
+  condicionesDelCatalogo = [],
 } = {}) {
   if (movimientos.length > 0) {
     await consultar("ALTER TABLE movimientos_inventario DISABLE TRIGGER USER");
@@ -204,5 +213,21 @@ export async function limpiar({
 
   if (existencias.length > 0) {
     await restaurarExistencias(existencias);
+  }
+
+  // El catalogo de condiciones cronicas no se puede limpiar desde la aplicacion: la 00140 concede
+  // INSERT y UPDATE, nunca DELETE, y padecimientos_cronicos lo referencia ON DELETE RESTRICT
+  // (00010). Se borra por aqui, despues de los pacientes, y por nombre: las pruebas no fijan su
+  // id porque quien las crea es crearCondicionCatalogo(), que no lo recibe.
+  if (padecimientos.length > 0) {
+    await consultar("DELETE FROM padecimientos_cronicos WHERE id = ANY($1::uuid[])", [
+      padecimientos,
+    ]);
+  }
+
+  if (condicionesDelCatalogo.length > 0) {
+    await consultar("DELETE FROM condiciones_cronicas WHERE nombre = ANY($1::text[])", [
+      condicionesDelCatalogo,
+    ]);
   }
 }

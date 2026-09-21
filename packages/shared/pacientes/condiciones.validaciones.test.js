@@ -29,6 +29,25 @@ describe("normalizarDatosCondicion", () => {
     expect(normalizarDatosCondicion({ estado: "resuelta" })).not.toHaveProperty("notas");
     expect(normalizarDatosCondicion({})).not.toHaveProperty("notas");
   });
+
+  // El formulario arranca con todos sus campos en cadena vacia. Si `estado` viaja asi, PostgREST
+  // intenta convertirlo al enum estado_condicion_cronica y devuelve 400: agregar una condicion
+  // sin tocar el desplegable fallaba siempre con "Ocurrio un error inesperado". Quitando la clave,
+  // la columna aplica su DEFAULT 'activa' (00010), que es lo que el descriptor ya prometia.
+  it("no manda el estado cuando se dejo sin elegir, para que la columna aplique su DEFAULT", () => {
+    expect(normalizarDatosCondicion({ estado: "" })).not.toHaveProperty("estado");
+    expect(normalizarDatosCondicion({ estado: "   " })).not.toHaveProperty("estado");
+  });
+
+  it("pero respeta el estado cuando si se eligio", () => {
+    expect(normalizarDatosCondicion({ estado: ESTADOS_CONDICION_CRONICA.CONTROLADA }).estado).toBe(
+      ESTADOS_CONDICION_CRONICA.CONTROLADA,
+    );
+  });
+
+  it("y no inventa la clave estado cuando no venia", () => {
+    expect(normalizarDatosCondicion({ notas: "x" })).not.toHaveProperty("estado");
+  });
 });
 
 describe("validarCondicionCronica", () => {

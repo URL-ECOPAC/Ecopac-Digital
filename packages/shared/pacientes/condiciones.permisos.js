@@ -4,8 +4,9 @@
 //
 // Mismo criterio que atenciones/permisos.js: un boton escondido no es seguridad. Quien de verdad
 // impide leer o escribir son las cuatro politicas RLS de padecimientos_cronicos (migracion
-// 00010). Aqui se replica el rol que esas politicas piden, para no ofrecer una accion que el
-// servidor va a rechazar con un 42501.
+// 00010) y, para el catalogo, las de condiciones_cronicas (00079 para leer, 00140 para escribir).
+// Aqui se replica el rol que esas politicas piden, para no ofrecer una accion que el servidor va
+// a rechazar con un 42501.
 
 import { esAdministrador, ROLES, TODOS_LOS_ROLES } from "../usuarios/roles.js";
 
@@ -57,18 +58,41 @@ export function puedeQuitarCondicion(rol) {
 /**
  * Puede leer el catalogo de condiciones.
  *
- * Cualquier rol conocido: la politica de condiciones_cronicas es `FOR SELECT USING (true)` y el
- * GRANT alcanza a authenticated. El catalogo no dice nada de ningun paciente.
+ * Cualquier rol conocido: la politica de SELECT de condiciones_cronicas es
+ * `USING (rol_actual() IS NOT NULL)` desde la 00079 -la `USING (true)` de la 00010 se retiro alli-
+ * y el GRANT alcanza a authenticated. El catalogo no dice nada de ningun paciente.
  */
 export function puedeVerCatalogoDeCondiciones(rol) {
   return TODOS_LOS_ROLES.includes(rol);
 }
 
 /**
- * Puede crear, editar o cambiar la vigencia del catalogo de condiciones cronicas (issue #641).
+ * Puede dar de alta una condicion en el catalogo (issue #850).
  *
- * Solo el administrador puede modificar el catalogo maestro de condiciones.
+ * Espejo de la politica de INSERT de la 00140: administrador, medico y voluntario general. Los
+ * tres roles que atienden, porque una condicion que falta se descubre en jornada, con el paciente
+ * delante, y esperar a que la administracion la de de alta pierde el dato.
+ *
+ * Los dos roles consultivos -junta directiva y socio fundador- quedan fuera: desde la 00054 no
+ * tocan ninguna fila clinica, y este catalogo lo es.
+ *
+ * OJO con el voluntario general: puede dar de alta en el catalogo, pero no vera el resultado en
+ * la ficha de ningun paciente, porque padecimientos_cronicos (00010) no tiene ninguna politica
+ * para su rol, ni de SELECT. Para el, el unico camino es la pantalla de catalogo. Esta asimetria
+ * esta documentada en docs/PERMISOS.md; no es un olvido de esta funcion.
  */
-export function puedeGestionarCatalogoCondiciones(rol) {
+export function puedeCrearCondicionDelCatalogo(rol) {
+  return esAdministrador(rol) || rol === ROLES.MEDICO || rol === ROLES.VOLUNTARIO;
+}
+
+/**
+ * Puede renombrar una condicion del catalogo o retirarla con `es_vigente` (issue #850).
+ *
+ * Espejo de la politica de UPDATE de la 00140, mas estrecha que la de INSERT a proposito: solo
+ * administrador. Dar de alta y retirar no son la misma accion. Retirar quita la condicion del
+ * selector de TODAS las fichas, y renombrarla reescribe lo que ya citan expedientes ajenos: eso
+ * es curaduria del catalogo, no captura en jornada.
+ */
+export function puedeMantenerCatalogoCondiciones(rol) {
   return esAdministrador(rol);
 }

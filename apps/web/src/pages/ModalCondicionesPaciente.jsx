@@ -13,6 +13,10 @@ import Modal from "../components/Modal";
 import { Plus, Save } from "lucide-react";
 import PrimaryButton from "../components/PrimaryButton";
 import SecondaryButton from "../components/SecondaryButton";
+import SelectorConAlta from "../components/SelectorConAlta";
+
+/** El campo que elige del catalogo, y el unico que se dibuja distinto (issue #850). */
+const CAMPO_CONDICION = "condicion";
 
 export default function ModalCondicionesPaciente({ pacienteId, rol, onClose, onCambio }) {
   const {
@@ -32,6 +36,10 @@ export default function ModalCondicionesPaciente({ pacienteId, rol, onClose, onC
     borrar,
     corregir,
     catalogos,
+    puedeCrearCondicion,
+    registrarCondicion,
+    erroresCondicionNueva,
+    creandoCondicion,
   } = useCondicionesPaciente(pacienteId, { rol });
 
   const [idEnCorreccion, setIdEnCorreccion] = useState(null);
@@ -159,17 +167,39 @@ export default function ModalCondicionesPaciente({ pacienteId, rol, onClose, onC
           <hr />
           <h3 className="h6">Agregar una condicion</h3>
 
-          {campos.map((campo) => (
-            <CampoDeFormulario
-              key={campo.id}
-              campo={campo}
-              valor={valores[campo.id]}
-              onChange={(valor) => setCampo(campo.id, valor)}
-              error={errores[campo.id]}
-              catalogos={catalogos}
-              disabled={enviando}
-            />
-          ))}
+          {campos.map((campo) =>
+            /* La condicion se dibuja con SelectorConAlta, no con CampoDeFormulario: en jornada
+               aparece una condicion que el catalogo no trae, y salir a la pantalla de catalogo
+               pierde lo que ya se llevaba escrito (issue #850). Mismo trato especial que
+               ModalAltaPaciente.jsx le da a la comunidad con CascadaDeComunidad. */
+            campo.id === CAMPO_CONDICION ? (
+              <SelectorConAlta
+                key={campo.id}
+                label={campo.label}
+                value={valores[campo.id]}
+                options={catalogos.condicionesCronicas}
+                onSelect={(valor) => setCampo(campo.id, valor)}
+                error={errores[campo.id]}
+                disabled={enviando}
+                puedeCrear={puedeCrearCondicion}
+                etiquetaAlta="Crear una condición"
+                labelNuevo="Nombre de la condición"
+                onCrear={registrarCondicion}
+                erroresAlta={erroresCondicionNueva}
+                creando={creandoCondicion}
+              />
+            ) : (
+              <CampoDeFormulario
+                key={campo.id}
+                campo={campo}
+                valor={valores[campo.id]}
+                onChange={(valor) => setCampo(campo.id, valor)}
+                error={errores[campo.id]}
+                catalogos={catalogos}
+                disabled={enviando}
+              />
+            ),
+          )}
 
           <div className="d-flex justify-content-end gap-2 mt-3">
             <SecondaryButton title="Cerrar" onClick={onClose} disabled={enviando} />
