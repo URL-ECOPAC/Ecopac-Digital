@@ -348,8 +348,7 @@
     "#e2e4e9",
     "#e91e8c",
     "#f7941d",
-    "#f7f8fa",
-    "#ffffff"
+    "#f7f8fa"
   ],
   "apps/web/src/pages/AdministracionBodegasProveedoresPage.jsx": [
     "#10b981",
