@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { listarEventosAuditoria, listarPerfilesParaFiltro } from "./api.js";
 import { OPCIONES_OPERACION_AUDITORIA } from "./columnas.js";
-import { FILTROS_BITACORA_AUDITORIA_VACIOS } from "./filtros.js";
+import { FILTROS_BITACORA_AUDITORIA_VACIOS, TABLAS_AUDITADAS } from "./filtros.js";
 
 export const EVENTOS_POR_PAGINA = 20;
 
@@ -141,6 +141,10 @@ export function useBitacoraAuditoria({ porPagina = EVENTOS_POR_PAGINA } = {}) {
     catalogos: {
       perfiles,
       operaciones: OPCIONES_OPERACION_AUDITORIA,
+      // ISSUE #864: la columna Tabla mostraba el nombre crudo de la tabla de Postgres
+      // ("movimientos_inventario"). TABLAS_AUDITADAS ya traia la etiqueta legible de las ocho,
+      // pero solo se usaba para el desplegable del filtro.
+      tablas: TABLAS_AUDITADAS,
     },
   };
 }

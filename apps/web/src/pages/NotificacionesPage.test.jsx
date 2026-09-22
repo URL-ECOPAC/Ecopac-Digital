@@ -97,6 +97,28 @@ afterEach(() => {
   cleanup();
 });
 
+describe("NotificacionesPage - boton Volver (issue #864)", () => {
+  it("lleva de vuelta a Mi perfil", async () => {
+    pantalla();
+
+    fireEvent.click(screen.getByRole("button", { name: "Volver" }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("ubicacion")).toHaveTextContent("/perfil");
+    });
+  });
+
+  it("el boton esta aunque no haya nada sin leer", () => {
+    mockEstadoHook.noLeidas = 0;
+    pantalla();
+
+    expect(screen.getByRole("button", { name: "Volver" })).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Marcar todas como leídas" }),
+    ).not.toBeInTheDocument();
+  });
+});
+
 describe("NotificacionesPage", () => {
   it("lista en orden de llegada y dice cuantas faltan por leer", () => {
     pantalla();

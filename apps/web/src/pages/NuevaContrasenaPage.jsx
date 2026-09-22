@@ -22,7 +22,11 @@ export default function NuevaContrasenaPage() {
     actualizarContrasena,
   } = useNuevaContrasena();
 
-  const [verPassword, setVerPassword] = useState(false);
+  // Un estado por campo (issue #864): antes el segundo campo compartia el del primero, asi que
+  // no se podia ver solo la confirmacion para comprobar donde estaba la diferencia, que es
+  // justo lo que se necesita cuando el formulario dice que las dos no coinciden.
+  const [verContrasena, setVerContrasena] = useState(false);
+  const [verConfirmacion, setVerConfirmacion] = useState(false);
 
   // La navegacion vive aqui y no en el hook: packages/shared no puede depender de
   // react-router-dom (docs/ARQUITECTURA-FRONTEND.md). El hook solo avisa de que la contrasena
@@ -48,7 +52,7 @@ export default function NuevaContrasenaPage() {
       >
         <AuthField
           label="Nueva contraseña"
-          type={verPassword ? "text" : "password"}
+          type={verContrasena ? "text" : "password"}
           autoComplete="new-password"
           placeholder="••••••••"
           value={contrasena}
@@ -57,21 +61,27 @@ export default function NuevaContrasenaPage() {
           disabled={enviando}
           rightAdornment={
             <AuthPasswordToggle
-              visible={verPassword}
-              onToggle={() => setVerPassword(!verPassword)}
+              visible={verContrasena}
+              onToggle={() => setVerContrasena(!verContrasena)}
             />
           }
         />
 
         <AuthField
           label="Confirmar contraseña"
-          type={verPassword ? "text" : "password"}
+          type={verConfirmacion ? "text" : "password"}
           autoComplete="new-password"
           placeholder="••••••••"
           value={confirmarContrasena}
           onChange={(e) => setConfirmarContrasena(e.target.value)}
           error={erroresDeCampo?.confirmarContrasena}
           disabled={enviando}
+          rightAdornment={
+            <AuthPasswordToggle
+              visible={verConfirmacion}
+              onToggle={() => setVerConfirmacion(!verConfirmacion)}
+            />
+          }
         />
 
         <div style={{ marginTop: "6px" }}>

@@ -3,6 +3,7 @@ import { Badge } from "react-bootstrap";
 import { labels, typography } from "@ecopac/ui-tokens";
 import {
   CAMPOS_FICHA_COLABORADOR,
+  ETIQUETAS_ESTADO_JORNADA,
   filasDeHistorial,
   FILTROS_USUARIO,
   formatearFechaCorta,
@@ -53,6 +54,7 @@ export default function ColaboradoresPage() {
     filtros,
     setFiltro,
     limpiarFiltros,
+    hayFiltros,
     cargando,
     error,
     recargar,
@@ -155,6 +157,8 @@ export default function ColaboradoresPage() {
         valores={filtros}
         onChange={setFiltro}
         catalogos={catalogos}
+        onLimpiar={limpiarFiltros}
+        hayFiltros={hayFiltros}
       />
 
       <div
@@ -173,7 +177,11 @@ export default function ColaboradoresPage() {
           {cargando ? (
             <LoadingState />
           ) : filas.length === 0 ? (
-            <EmptyState message="No hay personal que coincida con los filtros." />
+            <EmptyState
+              message="No hay personal que coincida con los filtros."
+              actionLabel={hayFiltros ? "Limpiar filtros" : undefined}
+              onAction={hayFiltros ? limpiarFiltros : undefined}
+            />
           ) : (
             <div className="d-flex flex-column gap-2">
               {filas.map((fila) => (
@@ -204,12 +212,6 @@ export default function ColaboradoresPage() {
                 onClick={irAPaginaSiguiente}
                 disabled={!hayPaginaSiguiente}
               />
-            </div>
-          )}
-
-          {total === 0 && !cargando && (
-            <div className="mt-3">
-              <SecondaryButton title="Limpiar filtros" onClick={limpiarFiltros} />
             </div>
           )}
         </div>
@@ -327,8 +329,21 @@ function PildoraFiltro({ label, active, onClick }) {
  * seleccionables, en vez del <Selector> tipo dropdown que usan el resto de los modulos. No
  * cambia que filtros existen ni como se llaman: siguen siendo los de FILTROS_USUARIO
  * (filtros.js) y siguen llamando a setFiltro(id, valor) tal cual la firma que ya tenia.
+ *
+ * ISSUE #864: recibe tambien `onLimpiar`/`hayFiltros` y dibuja "Limpiar filtros" con el mismo
+ * contrato que FilterBar.jsx documenta para el resto del sistema -- al final de la ultima fila,
+ * `variant="neutra"`, y SIEMPRE visible, deshabilitado mientras no haya nada que limpiar. Antes
+ * el boton vivia debajo de la lista y solo aparecia cuando el resultado era cero, que es justo
+ * cuando ya no se ve a quien se estaba buscando.
  */
-function BarraDeFiltros({ campos = [], valores = {}, onChange, catalogos = {} }) {
+function BarraDeFiltros({
+  campos = [],
+  valores = {},
+  onChange,
+  catalogos = {},
+  onLimpiar,
+  hayFiltros = true,
+}) {
   const campoBusqueda = campos.find((campo) => campo.tipo === TIPOS_DE_FILTRO.BUSQUEDA);
   const camposDeSeleccion = campos.filter((campo) => campo.tipo === TIPOS_DE_FILTRO.SELECT);
 
@@ -354,7 +369,7 @@ function BarraDeFiltros({ campos = [], valores = {}, onChange, catalogos = {} })
         </div>
       )}
 
-      <div className="d-flex flex-wrap gap-4">
+      <div className="d-flex flex-wrap align-items-end gap-4">
         {camposDeSeleccion.map((campo) => {
           const opciones = campo.opciones ?? catalogos[campo.opcionesDesde] ?? [];
           const valor = valores[campo.id];
@@ -381,6 +396,17 @@ function BarraDeFiltros({ campos = [], valores = {}, onChange, catalogos = {} })
             </div>
           );
         })}
+
+        {onLimpiar && (
+          <div className="ec-filtros-limpiar">
+            <SecondaryButton
+              title="Limpiar filtros"
+              variant="neutra"
+              onClick={onLimpiar}
+              disabled={!hayFiltros}
+            />
+          </div>
+        )}
       </div>
     </div>
   );
@@ -502,13 +528,6 @@ function valorDeCampo(campo, valores, catalogos) {
  * historial. Identico criterio que colorDeEstado() en JornadasPage.jsx. */
 function colorDeEstado(estado) {
   return `var(--estado-${String(estado).replace(/ /g, "-")}, var(--color-secondary))`;
-}
-
-/** Capitaliza la primera letra de un valor de enum para mostrarlo ("finalizada" ->
- * "Finalizada"), sin mantener una segunda tabla de traduccion por estado. */
-function capitalizar(texto) {
-  const cadena = String(texto ?? "");
-  return cadena.charAt(0).toUpperCase() + cadena.slice(1);
 }
 
 /**
@@ -705,7 +724,11 @@ function PanelDetalleColaborador({ fila, catalogos, permisos, rol, idSesionActua
                           {jornada.responsabilidad !== "—" ? ` · ${jornada.responsabilidad}` : ""}
                         </div>
                       </div>
-                      <StatusChip status={jornada.estado} label={capitalizar(jornada.estado)} />
+                      <StatusChip
+                        status={jornada.estado}
+                        label={ETIQUETAS_ESTADO_JORNADA[jornada.estado] ?? jornada.estado}
+                        uppercase
+                      />
                     </div>
                   ))}
                 </div>

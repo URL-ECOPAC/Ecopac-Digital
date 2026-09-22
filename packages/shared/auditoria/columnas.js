@@ -27,8 +27,26 @@ export const COLUMNAS_BITACORA_AUDITORIA = [
     // con TIPOS_DE_PRESENTACION.FECHA.
     tipo: TIPOS_DE_PRESENTACION.FECHA_HORA,
   },
-  { id: "realizadoPorNombre", label: "Usuario", tipo: TIPOS_DE_PRESENTACION.TEXTO },
-  { id: "tablaAfectada", label: "Tabla", tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  // `uppercase` en las tres columnas de valor, no en la fecha (issue #864): una bitacora se lee
+  // barriendo la columna en vertical para encontrar el evento, y la caja alta iguala la altura
+  // de todos los renglones. La fecha y la hora se quedan como estan: ya son cifras.
+  {
+    id: "realizadoPorNombre",
+    label: "Usuario",
+    tipo: TIPOS_DE_PRESENTACION.TEXTO,
+    uppercase: true,
+  },
+  {
+    id: "tablaAfectada",
+    label: "Tabla",
+    // TEXTO con `etiquetasDesde` y no ESTADO: el valor es el nombre de la tabla de Postgres
+    // ("movimientos_inventario"), que hay que traducir a la etiqueta de TABLAS_AUDITADAS
+    // ("Movimientos de inventario"), pero no es un estado y no tiene color propio en
+    // statusColors, asi que no corresponde un chip.
+    tipo: TIPOS_DE_PRESENTACION.TEXTO,
+    etiquetasDesde: "tablas",
+    uppercase: true,
+  },
   {
     id: "operacion",
     label: "Operación",
@@ -37,5 +55,6 @@ export const COLUMNAS_BITACORA_AUDITORIA = [
     // El catalogo "operaciones" lo arma el hook con opcionesConClave().
     tipo: TIPOS_DE_PRESENTACION.ESTADO,
     etiquetasDesde: "operaciones",
+    uppercase: true,
   },
 ];

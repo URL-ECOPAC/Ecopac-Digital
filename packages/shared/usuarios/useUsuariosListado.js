@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { contarJornadasPorPerfil, listarCatalogoEspecialidades, listarUsuarios } from "./api.js";
 import { ESTADOS_USUARIO, OPCIONES_ROL } from "./campos.js";
-import { FILTROS_USUARIO_VACIOS } from "./filtros.js";
+import { FILTROS_USUARIO_VACIOS, hayFiltrosDeUsuario } from "./filtros.js";
 
 export const USUARIOS_POR_PAGINA = 20;
 
@@ -144,6 +144,9 @@ export function useUsuariosListado({ porPagina = USUARIOS_POR_PAGINA, rol } = {}
     filtros,
     setFiltro,
     limpiarFiltros,
+    // Lo decide el hook y no la pantalla (issue #864): "Inactivo" es `estado: false`, y cada
+    // pantalla que lo dedujera por su cuenta con un `Boolean(...)` se equivocaria en ese caso.
+    hayFiltros: hayFiltrosDeUsuario(filtros),
     cargando,
     error,
     recargar: cargar,

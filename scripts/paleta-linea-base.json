@@ -306,7 +306,7 @@
     "#f59e0b",
     "#ffffff"
   ],
-  "apps/web/src/components/auth/AuthPasswordToggle.jsx": ["#16a34a"],
+  "apps/web/src/components/auth/AuthPasswordToggle.jsx": ["#3db648", "#7a7a8a"],
   "apps/web/src/components/DataList.jsx": ["#3db648", "#ffffff"],
   "apps/web/src/components/KanbanBoard.jsx": ["#4d4d4d", "#7a7a8a", "#e2e4e9", "#f7f8fa"],
   "apps/web/src/components/MainLayout.css": [
