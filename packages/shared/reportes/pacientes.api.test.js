@@ -68,9 +68,12 @@ describe("puedeVerReporteDePacientes", () => {
   it.each([
     [ROLES.ADMINISTRADOR, true],
     [ROLES.JUNTA_DIRECTIVA, true],
+    // ISSUE #864: socio fundador pasa a true. No cambia la base: la guarda de
+    // fn_reporte_pacientes_atendidos ya decia es_consultivo() desde la 00086, y era el cliente
+    // el que se habia quedado con el texto de la 00067.
+    [ROLES.SOCIO_FUNDADOR, true],
     [ROLES.MEDICO, false],
     [ROLES.VOLUNTARIO, false],
-    [ROLES.SOCIO_FUNDADOR, false],
   ])("%s -> %s", (rol, esperado) => {
     expect(puedeVerReporteDePacientes(rol)).toBe(esperado);
   });
@@ -122,7 +125,7 @@ describe("totalizar", () => {
 });
 
 describe("obtenerReportePacientesAtendidos", () => {
-  it.each([ROLES.MEDICO, ROLES.VOLUNTARIO, ROLES.SOCIO_FUNDADOR])(
+  it.each([ROLES.MEDICO, ROLES.VOLUNTARIO])(
     "%s no puede consultarlo y ni siquiera gasta la llamada",
     async (rol) => {
       const cliente = crearCliente();

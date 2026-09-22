@@ -23,6 +23,17 @@ const PERMISO_DE_EJEMPLO = {
   rolesConcedidos: new Set(["administrador"]),
 };
 
+// Un segundo modulo que SI alcanzan roles no administradores (rolesDelModulo("inventario") son
+// administrador, medico y voluntario general desde la #864), para poder comprobar tambien el
+// caso en el que no hay que avisar de nada.
+const PERMISO_DE_INVENTARIO = {
+  id: "p-inventario",
+  clave: "inventario.aprobar",
+  modulo: "inventario",
+  descripcion: "Aprobar movimientos de inventario en estado pendiente.",
+  rolesConcedidos: new Set(["administrador"]),
+};
+
 const mockEstadoHook = {
   modulos: [{ modulo: "donaciones", permisos: [PERMISO_DE_EJEMPLO] }],
   cargando: false,
@@ -142,8 +153,8 @@ describe("MatrizPermisosPorRolPage", () => {
   it("avisa cuando el rol de la columna no puede navegar al modulo del permiso", () => {
     pantalla();
 
-    // medico y voluntario general no estan en rolesDelModulo("donaciones"); administrador,
-    // junta directiva y socio fundador si.
+    // Desde la #864, rolesDelModulo("donaciones") es solo [administrador]: los otros cuatro
+    // roles no ven ese modulo, asi que concederles donaciones.registrar no tendria efecto.
     //
     // ISSUE #864: en escritorio el aviso vive en la CABECERA de la columna, una sola vez, y no
     // en cada celda: es una propiedad del par (rol, modulo) y repetirlo por fila hacia ruido.
@@ -153,7 +164,7 @@ describe("MatrizPermisosPorRolPage", () => {
     const enCabecera = screen
       .getAllByText("Sin acceso")
       .filter((aviso) => aviso.closest("thead") !== null);
-    expect(enCabecera).toHaveLength(2);
+    expect(enCabecera).toHaveLength(4);
     for (const aviso of enCabecera) {
       expect(aviso.closest("th")).toHaveAttribute("scope", "col");
     }
@@ -161,21 +172,26 @@ describe("MatrizPermisosPorRolPage", () => {
     const enCelda = screen
       .getAllByText("Sin acceso")
       .filter((aviso) => aviso.closest("tbody") !== null);
-    expect(enCelda).toHaveLength(2);
+    expect(enCelda).toHaveLength(4);
     for (const aviso of enCelda) {
       expect(aviso).toHaveClass("matriz-sin-acceso-celda");
     }
   });
 
   it("no avisa para un rol que si puede navegar al modulo del permiso", () => {
+    mockEstadoHook.modulos = [{ modulo: "inventario", permisos: [PERMISO_DE_INVENTARIO] }];
     pantalla();
 
     const casillas = screen.getAllByRole("checkbox");
-    const deJuntaDirectiva = casillas.find((c) =>
-      c.getAttribute("aria-label")?.includes("Junta directiva"),
-    );
+    const deMedico = casillas.find((c) => c.getAttribute("aria-label")?.includes("Medico"));
 
-    expect(deJuntaDirectiva.closest("td")).not.toHaveTextContent("Sin acceso");
+    expect(deMedico.closest("td")).not.toHaveTextContent("Sin acceso");
+
+    // Y en inventario, quienes no llegan son los dos roles consultivos (issue #864).
+    const enCabecera = screen
+      .getAllByText("Sin acceso")
+      .filter((aviso) => aviso.closest("thead") !== null);
+    expect(enCabecera).toHaveLength(2);
   });
 
   it("muestra el aviso de sin efecto bajo la celda correcta", () => {

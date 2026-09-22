@@ -50,15 +50,20 @@ describe("Módulo de Donaciones - Catálogo de Donantes (#190)", () => {
     expect(resExito.datos.id).toBe("DON-1");
   });
 
-  it("permite lecturas a Administrador, Junta Directiva y Socio Fundador", async () => {
+  // ISSUE #864: leia administrador y los dos roles consultivos. Ahora solo la administradora:
+  // junta directiva y socio fundador se quedan con Reportes como unica pantalla, y la 00141 les
+  // retira la politica de SELECT de la 00083.
+  it("permite lecturas solo a Administrador", async () => {
     mockSupabase.order.mockResolvedValue({ data: [], error: null });
 
+    const resAdmin = await listarDonantes({}, { rolUsuario: ROLES.ADMINISTRADOR });
     const resJunta = await listarDonantes({}, { rolUsuario: ROLES.JUNTA_DIRECTIVA });
     const resSocio = await listarDonantes({}, { rolUsuario: ROLES.SOCIO_FUNDADOR });
     const resOtro = await listarDonantes({}, { rolUsuario: ROLES.MEDICO });
 
-    expect(resJunta.error).toBeNull();
-    expect(resSocio.error).toBeNull();
+    expect(resAdmin.error).toBeNull();
+    expect(resJunta.error.mensaje).toContain("permisos de lectura");
+    expect(resSocio.error.mensaje).toContain("permisos de lectura");
     expect(resOtro.error.mensaje).toContain("permisos de lectura");
   });
 
@@ -102,7 +107,7 @@ describe("Módulo de Donaciones - Catálogo de Donantes (#190)", () => {
       error: null,
     });
 
-    const res = await obtenerHistoricoDonante("DON-1", { rolUsuario: ROLES.SOCIO_FUNDADOR });
+    const res = await obtenerHistoricoDonante("DON-1", { rolUsuario: ROLES.ADMINISTRADOR });
 
     expect(mockSupabase.neq).toHaveBeenCalledWith("estado", "anulada");
     expect(res.datos.totalAcumulado).toBe(350);

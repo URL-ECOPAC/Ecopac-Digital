@@ -31,7 +31,7 @@
 
 BEGIN;
 
-SELECT plan(32);
+SELECT plan(33);
 
 -- ============================================================================
 -- Setup: un perfil por cada rol que estas politicas distinguen, y las filas
@@ -369,9 +369,17 @@ SELECT is(
 
 SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000221002';
 
-SELECT ok(
-  (SELECT count(*) FROM proyecto_hitos) > 0 AND (SELECT count(*) FROM proyecto_seguimiento) > 0,
-  'POSITIVA SELECT: junta directiva lee hitos y bitacora'
+-- ISSUE #864: junta directiva leia los hitos y la bitacora de avance de un proyecto (00053,
+-- ampliada por la 00080). La 00141 deja las dos politicas en es_administrador(): los dos roles
+-- consultivos se quedan con Reportes como unica pantalla y ya no entran a proyectos.
+SELECT is(
+  (SELECT count(*) FROM proyecto_hitos)::int, 0,
+  'NEGATIVA SELECT: junta directiva ya no lee los hitos (issue #864)'
+);
+
+SELECT is(
+  (SELECT count(*) FROM proyecto_seguimiento)::int, 0,
+  'NEGATIVA SELECT: junta directiva ya no lee la bitacora de avance (issue #864)'
 );
 
 SELECT throws_ok(

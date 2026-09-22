@@ -1,6 +1,11 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { ESTADOS_PROYECTO, ETIQUETAS_ESTADO_PROYECTO, useProyectosSociales } from "@ecopac/shared";
+import {
+  ESTADOS_PROYECTO,
+  ETIQUETAS_ESTADO_PROYECTO,
+  puedeVerInsumosYGastosDeProyecto,
+  useProyectosSociales,
+} from "@ecopac/shared";
 import {
   Container,
   Row,
@@ -41,6 +46,14 @@ export default function ProyectosSocialesPage({ usuarioRol }) {
 
   const [proyectoEnEdicion, setProyectoEnEdicion] = useState(null);
   const [formularioAbierto, setFormularioAbierto] = useState(false);
+
+  const verDinero = puedeVerInsumosYGastosDeProyecto(usuarioRol);
+  const pestanasDelProyecto = verDinero
+    ? ["resumen", "equipo", "jornadas", "insumos", "gastos"]
+    : ["resumen", "equipo", "jornadas"];
+  // Si el rol no tiene la pestana abierta, el contenido tampoco se dibuja: `tabActivo` arranca
+  // en "resumen", pero nada impide que un dia se guarde en la URL o en el estado de sesion.
+  const pestanaDelProyectoVisible = pestanasDelProyecto.includes(tabActivo) ? tabActivo : "resumen";
 
   if (!tieneAccesoLectura) {
     return (
@@ -237,11 +250,16 @@ export default function ProyectosSocialesPage({ usuarioRol }) {
             {/* Tabs de Detalle */}
             <Nav
               variant="tabs"
-              activeKey={tabActivo}
+              activeKey={pestanaDelProyectoVisible}
               onSelect={(selectedKey) => setTabActivo(selectedKey)}
               className="mb-3"
             >
-              {["resumen", "equipo", "jornadas", "insumos", "gastos"].map((tab) => (
+              {/* ISSUE #864: "En proyectos: sin ver insumos ni gastos, y sin poder crear nada".
+                  Insumos y gastos son las dos pestanas de dinero del proyecto, y quien las ve lo
+                  decide puedeVerInsumosYGastosDeProyecto(rol) en packages/shared. El medico ve el
+                  proyecto de su jornada -- que es, en que estado esta, que jornadas cuelgan de
+                  el --, no lo que costo. */}
+              {pestanasDelProyecto.map((tab) => (
                 <Nav.Item key={tab}>
                   <Nav.Link eventKey={tab} className="text-capitalize">
                     {tab}
@@ -251,7 +269,7 @@ export default function ProyectosSocialesPage({ usuarioRol }) {
             </Nav>
 
             {/* Contenido según Tab Activo */}
-            {tabActivo === "resumen" && (
+            {pestanaDelProyectoVisible === "resumen" && (
               <div className="fs-6 space-y-2">
                 <p className="mb-2">
                   <strong>Responsable:</strong> {proyectoDetalle.responsableNombre || "-"}
@@ -265,7 +283,7 @@ export default function ProyectosSocialesPage({ usuarioRol }) {
               </div>
             )}
 
-            {tabActivo === "jornadas" && (
+            {pestanaDelProyectoVisible === "jornadas" && (
               <div>
                 <h6 className="fw-bold mb-3">Jornadas Asociadas</h6>
                 {jornadasProyecto.length > 0 ? (
@@ -288,7 +306,7 @@ export default function ProyectosSocialesPage({ usuarioRol }) {
               </div>
             )}
 
-            {tabActivo === "gastos" && (
+            {pestanaDelProyectoVisible === "gastos" && (
               <Alert variant="warning" className="mb-0 py-2 px-3 small">
                 El tab Gastos depende del módulo de Presupuestos (#274), actualmente pendiente de
                 asignación.

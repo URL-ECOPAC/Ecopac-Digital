@@ -25,11 +25,14 @@ describe("permisos de reportes", () => {
     expect(puedeVerIndicadoresDeImpacto(ROLES.VOLUNTARIO)).toBe(false);
   });
 
-  it("administrador y junta directiva ven el reporte de pacientes; socio fundador NO (00067, excepcion deliberada)", () => {
+  // ISSUE #864: socio fundador estaba fuera citando la guarda de la 00067, que la 00086 ya
+  // habia reescrito a es_consultivo(). El cliente era mas estricto que el servidor y le escondia
+  // un reporte que la base si le entrega. Se corrige el cliente; la base no se toca.
+  it("administrador y los dos roles consultivos ven el reporte de pacientes (issue #864)", () => {
     expect(puedeVerReporteDePacientes(ROLES.ADMINISTRADOR)).toBe(true);
     expect(puedeVerReporteDePacientes(ROLES.JUNTA_DIRECTIVA)).toBe(true);
+    expect(puedeVerReporteDePacientes(ROLES.SOCIO_FUNDADOR)).toBe(true);
 
-    expect(puedeVerReporteDePacientes(ROLES.SOCIO_FUNDADOR)).toBe(false);
     expect(puedeVerReporteDePacientes(ROLES.MEDICO)).toBe(false);
     expect(puedeVerReporteDePacientes(ROLES.VOLUNTARIO)).toBe(false);
   });
@@ -44,13 +47,16 @@ describe("permisos de reportes", () => {
   });
 
   it("agrupa los permisos para que un hook no llame a las funciones sueltas", () => {
-    expect(permisosDeReportes(ROLES.SOCIO_FUNDADOR)).toEqual({
-      puedeVerIndicadoresDeImpacto: true,
-      puedeVerReporteDePacientes: false,
-      // La 00054 le retiro el acceso a las tablas clinicas que agrega el reporte de jornada.
-      puedeVerReporteJornada: false,
-      puedeVerReporteDeInventario: true,
-    });
+    // Los dos roles consultivos, identicos: tres de los cuatro reportes. El de jornada no,
+    // porque la 00054 les retiro el acceso a las tablas clinicas que agrega.
+    for (const rol of [ROLES.JUNTA_DIRECTIVA, ROLES.SOCIO_FUNDADOR]) {
+      expect(permisosDeReportes(rol)).toEqual({
+        puedeVerIndicadoresDeImpacto: true,
+        puedeVerReporteDePacientes: true,
+        puedeVerReporteJornada: false,
+        puedeVerReporteDeInventario: true,
+      });
+    }
 
     expect(permisosDeReportes(ROLES.ADMINISTRADOR)).toEqual({
       puedeVerIndicadoresDeImpacto: true,
