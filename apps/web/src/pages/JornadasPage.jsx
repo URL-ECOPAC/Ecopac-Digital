@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { ProgressBar } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, ArrowRight, CalendarDays, MapPin } from "lucide-react";
+import { Button } from "react-bootstrap";
 
 import {
   COLUMNAS_JORNADA,
@@ -95,6 +96,7 @@ export default function JornadasPage() {
     columnas,
     filtros,
     setFiltro,
+    limpiarFiltros,
     cargando,
     error,
     recargar,
@@ -113,12 +115,16 @@ export default function JornadasPage() {
   const [mostrarAlta, setMostrarAlta] = useState(false);
   const [jornadaEnEdicion, setJornadaEnEdicion] = useState(null);
 
-  // El criterio 2 solo pide filtrar por estado, comunidad y rango de fechas. FILTROS_JORNADA
-  // (filtros.js) tambien declara 'busqueda', pero listarJornadas() (#170, ya cerrada) no acepta
-  // ningun parametro de busqueda de texto: se omite aqui en vez de pasarlo a un filtro que no
-  // hace nada. El descriptor no se toca (lo seguiria necesitando cualquier listado futuro que si
-  // busque por texto).
-  const filtrosDelTablero = FILTROS_JORNADA.filter((campo) => campo.id !== "busqueda");
+  // Issue #863: Quitar el filtro de estado en jornadas y mantener comunidad y fecha.
+  // Se excluyen 'busqueda' y 'estado'.
+  const filtrosDelTablero = FILTROS_JORNADA.filter(
+    (campo) => campo.id !== "busqueda" && campo.id !== "estado"
+  );
+
+  // Comprobar si hay filtros activos para habilitar/deshabilitar el botón de limpiar
+  const hayFiltrosActivos = Object.values(filtros || {}).some(
+    (val) => val !== "" && val !== null && val !== undefined
+  );
 
   // Issue #183, trampa 1: el kanban ya no finaliza una jornada directamente (ni con el boton
   // "Avanzar" ni con el arrastre, que comparten el mismo moverJornada() -- ver
@@ -151,12 +157,31 @@ export default function JornadasPage() {
         }
       />
 
-      <FilterBar
-        campos={filtrosDelTablero}
-        valores={filtros}
-        onChange={setFiltro}
-        catalogos={catalogos}
-      />
+      <div className="mb-4">
+        <FilterBar
+          campos={filtrosDelTablero}
+          valores={filtros}
+          onChange={setFiltro}
+          catalogos={catalogos}
+          accionExtra={
+            <Button
+              variant="outline-secondary"
+              size="sm"
+              className="w-100 text-nowrap"
+              disabled={!hayFiltrosActivos}
+              onClick={() => {
+                if (typeof limpiarFiltros === "function") {
+                  limpiarFiltros();
+                } else {
+                  Object.keys(filtros).forEach((key) => setFiltro(key, ""));
+                }
+              }}
+            >
+              Limpiar filtros
+            </Button>
+          }
+        />
+      </div>
 
       {errorMovimiento && (
         <div
@@ -311,7 +336,8 @@ function TarjetaJornada({
     <Card className="ec-jornada" style={{ "--ec-acento": colorDeEstado(jornada.estado) }}>
       <div className="d-flex justify-content-between align-items-start gap-2 mb-2">
         <span className="ec-jornada-nombre">{jornada.nombre}</span>
-        <StatusChip status={jornada.estado} />
+        {/* Issue #863: El estado de la tarjeta en el kanban se muestra en mayúscula */}
+        <StatusChip status={String(jornada.estado || "").toUpperCase()} />
       </div>
 
       <p className="ec-jornada-detalle">

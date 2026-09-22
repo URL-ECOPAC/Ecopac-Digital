@@ -1,16 +1,18 @@
 import { createPortal } from "react-dom";
-
 import { datosDeCuadroTurnosImprimible, formatearFechaCorta } from "@ecopac/shared";
 
-// Version imprimible del cuadro de turnos (issue #185, criterio 4), para pegar en el lugar de la
-// jornada. Mismo patron que RecetaImprimible.jsx (#131): datosDeCuadroTurnosImprimible() arma los
-// datos en shared, este componente solo los dibuja dentro de un portal a document.body (fuera del
-// arbol de la app, para que .app-shell{display:none} de index.css no se lo lleve por delante) y
-// quien lo monta (DetalleJornadaPage.jsx) es quien llama a window.print().
-//
-// Contenido minimo aprobado: nombre, rol en la jornada, hora de inicio, hora de fin y
-// responsabilidad. Nada de contacto (jornada.personal ni siquiera trae telefono o correo) ni de
-// datos clinicos de la jornada.
+/**
+ * Convierte un texto a formato título (primera letra de cada palabra en mayúscula).
+ */
+function formatearRolTitulo(rol) {
+  if (!rol) return "—";
+  return rol
+    .toLowerCase()
+    .split(" ")
+    .map((palabra) => palabra.charAt(0).toUpperCase() + palabra.slice(1))
+    .join(" ");
+}
+
 export default function CuadroTurnosImprimible({ jornada }) {
   const datos = datosDeCuadroTurnosImprimible({ jornada });
   if (!datos) return null;
@@ -18,6 +20,15 @@ export default function CuadroTurnosImprimible({ jornada }) {
   return createPortal(
     <article className="turnos-imprimible">
       <header className="turnos-imprimible__encabezado">
+        {/* Issue #863: Logotipo incluido en el diseño del reporte impreso */}
+        <div className="turnos-imprimible__logo-contenedor mb-2">
+          <img 
+            src="/logo-ecopac.png" 
+            alt="Logo Ecopac Digital" 
+            className="turnos-imprimible__logo" 
+            style={{ maxHeight: "40px", objectFit: "contain" }}
+          />
+        </div>
         <h1 className="turnos-imprimible__organizacion">{datos.organizacion}</h1>
         <p className="turnos-imprimible__documento">{datos.documento}</p>
         <p className="turnos-imprimible__jornada">
@@ -27,7 +38,7 @@ export default function CuadroTurnosImprimible({ jornada }) {
       </header>
 
       {datos.filas.length === 0 ? (
-        <p>Todavia no hay personal asignado a esta jornada.</p>
+        <p>Todavía no hay personal asignado a esta jornada.</p>
       ) : (
         <table className="turnos-imprimible__tabla">
           <thead>
@@ -43,7 +54,8 @@ export default function CuadroTurnosImprimible({ jornada }) {
             {datos.filas.map((fila) => (
               <tr key={fila.id}>
                 <td>{fila.nombre ?? "—"}</td>
-                <td>{fila.rol}</td>
+                {/* Issue #863: El rol se muestra con formato título */}
+                <td>{formatearRolTitulo(fila.rol)}</td>
                 <td>{fila.horaInicio ?? "—"}</td>
                 <td>{fila.horaFin ?? "—"}</td>
                 <td>{fila.responsabilidad ?? "—"}</td>
