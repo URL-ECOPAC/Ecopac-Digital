@@ -5,6 +5,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import * as matchers from "@testing-library/jest-dom/matchers";
 
+import { ETIQUETAS_ROL, TODOS_LOS_ROLES } from "@ecopac/shared";
+
 import MatrizPermisosPorRolPage from "./MatrizPermisosPorRolPage";
 
 expect.extend(matchers);
@@ -77,18 +79,45 @@ describe("MatrizPermisosPorRolPage", () => {
     pantalla();
 
     expect(screen.getByText("Registrar donaciones y donantes.")).toBeInTheDocument();
-    expect(screen.getAllByRole("checkbox")).toHaveLength(5);
+    // Cuatro interruptores y no cinco: la administradora no lleva casilla (ver la prueba de
+    // abajo). Las cinco columnas siguen estando, una por rol.
+    expect(screen.getAllByRole("checkbox")).toHaveLength(4);
+    // Las etiquetas salen de ETIQUETAS_ROL y no escritas a mano: un literal de rol en apps/ lo
+    // caza roles.test.js (issues #598, #689).
+    for (const rol of TODOS_LOS_ROLES) {
+      expect(
+        screen.getByRole("columnheader", { name: new RegExp(ETIQUETAS_ROL[rol]) }),
+      ).toBeInTheDocument();
+    }
   });
 
-  it("la columna administrador esta deshabilitada", () => {
+  // ISSUE #864: era un interruptor marcado y deshabilitado, que se lee como "esto se podria
+  // cambiar y alguien lo bloqueo". Es un hecho del sistema, no una casilla apagada.
+  it("la columna de la administradora no es una casilla, es un hecho", () => {
     pantalla();
 
     const casillas = screen.getAllByRole("checkbox");
-    const administrador = casillas.find((c) =>
-      c.getAttribute("aria-label")?.includes("Administradora"),
+    expect(casillas.some((c) => c.getAttribute("aria-label")?.includes("Administradora"))).toBe(
+      false,
     );
 
-    expect(administrador).toBeDisabled();
+    const siempre = screen.getByText("Siempre");
+    expect(siempre).toBeInTheDocument();
+    expect(siempre.getAttribute("title")).toMatch(/siempre tiene acceso completo/);
+  });
+
+  // ISSUE #864: la pregunta con la que se entra a esta pantalla es cuanto puede hacer cada rol,
+  // y antes habia que contar interruptores en nueve tablas.
+  it("resume cuantos permisos tiene cada rol", () => {
+    pantalla();
+
+    expect(screen.getAllByText("de 1 permisos")).toHaveLength(5);
+  });
+
+  it("la clave del permiso se muestra, porque es lo que aparece en la bitacora", () => {
+    pantalla();
+
+    expect(screen.getByText("donaciones.registrar")).toBeInTheDocument();
   });
 
   it("marcar la casilla de un rol no-administrador llama a alternar con los argumentos correctos", () => {
@@ -113,10 +142,29 @@ describe("MatrizPermisosPorRolPage", () => {
   it("avisa cuando el rol de la columna no puede navegar al modulo del permiso", () => {
     pantalla();
 
-    const avisos = screen.getAllByText("Sin acceso al módulo");
     // medico y voluntario general no estan en rolesDelModulo("donaciones"); administrador,
     // junta directiva y socio fundador si.
-    expect(avisos).toHaveLength(2);
+    //
+    // ISSUE #864: en escritorio el aviso vive en la CABECERA de la columna, una sola vez, y no
+    // en cada celda: es una propiedad del par (rol, modulo) y repetirlo por fila hacia ruido.
+    // La copia que si esta en la celda la esconde el CSS y solo aparece por debajo de 900px,
+    // donde la cabecera de la tabla no se dibuja; en jsdom no hay media queries, asi que aqui
+    // se cuentan las dos.
+    const enCabecera = screen
+      .getAllByText("Sin acceso")
+      .filter((aviso) => aviso.closest("thead") !== null);
+    expect(enCabecera).toHaveLength(2);
+    for (const aviso of enCabecera) {
+      expect(aviso.closest("th")).toHaveAttribute("scope", "col");
+    }
+
+    const enCelda = screen
+      .getAllByText("Sin acceso")
+      .filter((aviso) => aviso.closest("tbody") !== null);
+    expect(enCelda).toHaveLength(2);
+    for (const aviso of enCelda) {
+      expect(aviso).toHaveClass("matriz-sin-acceso-celda");
+    }
   });
 
   it("no avisa para un rol que si puede navegar al modulo del permiso", () => {
@@ -127,7 +175,7 @@ describe("MatrizPermisosPorRolPage", () => {
       c.getAttribute("aria-label")?.includes("Junta directiva"),
     );
 
-    expect(deJuntaDirectiva.closest("td")).not.toHaveTextContent("Sin acceso al módulo");
+    expect(deJuntaDirectiva.closest("td")).not.toHaveTextContent("Sin acceso");
   });
 
   it("muestra el aviso de sin efecto bajo la celda correcta", () => {
