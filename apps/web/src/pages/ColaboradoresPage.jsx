@@ -46,7 +46,8 @@ import ModalPermisosUsuario from "./ModalPermisosUsuario";
 export default function ColaboradoresPage() {
   const { rol, perfil: perfilDeSesion } = useSesionCompartida();
   const [mostrarAlta, setMostrarAlta] = useState(false);
-  // El modal se cierra al crear la cuenta, asi que el aviso de correo no enviado vive aqui.
+  // El modal se cierra al crear la cuenta, asi que el aviso vive aqui. Desde la #864 no solo
+  // cuando algo falla: tambien para confirmar que la invitacion salio y a que direccion.
   const [avisoAlta, setAvisoAlta] = useState(null);
   const [seleccionadoId, setSeleccionadoId] = useState(null);
   const {
@@ -134,8 +135,13 @@ export default function ColaboradoresPage() {
       `}</style>
 
       {avisoAlta && (
-        <div className="alert alert-warning alert-dismissible" role="alert">
-          {avisoAlta}
+        <div
+          className={`alert alert-dismissible ${
+            avisoAlta.tono === "exito" ? "alert-success" : "alert-warning"
+          }`}
+          role="alert"
+        >
+          {avisoAlta.mensaje}
           <button
             type="button"
             className="btn-close"

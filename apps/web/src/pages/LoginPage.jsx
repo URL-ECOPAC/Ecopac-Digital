@@ -32,6 +32,11 @@ export default function LoginPage() {
   const [erroresLocales, setErroresLocales] = useState({});
 
   const cerradaPorInactividad = location.state?.motivo === "inactividad";
+  // ISSUE #864: NuevaContrasenaPage navega aqui con un mensaje ("tu contrasena quedo guardada")
+  // y esta pantalla nunca lo pintaba. Peor desde que se muestra el error de la sesion: como
+  // cambiar la contrasena cierra la sesion de recuperacion, lo que se veia era un
+  // "Tu sesion expiro" en rojo justo despues de una operacion que salio bien.
+  const mensajeDeLaNavegacion = location.state?.mensaje ?? null;
   const mostrandoFormulario = estadoRestauracion !== ESTADOS_DE_RESTAURACION.CARGANDO && !haySesion;
 
   // ISSUE #864, punto 4. Intentar entrar con una cuenta desactivada no decia NADA: el formulario
@@ -56,7 +61,11 @@ export default function LoginPage() {
   //   valida, no hay nada que enumerar y el mensaje si puede decir la razon.
   //
   // El del formulario gana: es el del intento que la persona acaba de hacer.
-  const errorAMostrar = errorDelHook ?? (mostrandoFormulario ? errorDeSesion : null);
+  // Precedencia: primero el intento que la persona acaba de hacer, y si no, lo que traiga la
+  // navegacion. El error de la sesion es el ultimo recurso, para el caso de a quien desactivan
+  // con la sesion abierta -- pero nunca por encima de un mensaje que ya explica que paso.
+  const errorAMostrar =
+    errorDelHook ?? (mostrandoFormulario && !mensajeDeLaNavegacion ? errorDeSesion : null);
 
   // Con el formulario a la vista no hay sesion que proteger: se olvida la ultima actividad de la
   // sesion anterior. Sin esto, quien vuelve a entrar despues de que su sesion vencio arrastraria la
@@ -110,7 +119,11 @@ export default function LoginPage() {
 
   return (
     <AuthLayout title="Iniciar sesión" subtitle="Ingresa a la plataforma de gestión">
-      {cerradaPorInactividad && !errorAMostrar && (
+      {mensajeDeLaNavegacion && !errorAMostrar && (
+        <AuthAlert variant="success">{mensajeDeLaNavegacion}</AuthAlert>
+      )}
+
+      {cerradaPorInactividad && !errorAMostrar && !mensajeDeLaNavegacion && (
         <AuthAlert variant="info">
           Tu sesión se cerró por inactividad. Vuelve a iniciar sesión para continuar.
         </AuthAlert>

@@ -180,6 +180,10 @@ Deno.test("una peticion normal sigue funcionando cuando el limite no se supero",
 // la pantalla de inicio, con sesion y sin contrasena, sin nada que la llevara a ponerse una.
 Deno.test("el correo de invitacion lleva a /nueva-contrasena cuando WEB_URL esta puesta", async () => {
   Deno.env.set("WEB_URL", "http://localhost:5173");
+  // Sin SMTP: se usa el camino de respaldo (resetPasswordForEmail), que es el que registra
+  // `destinosDeCorreo`. El camino con SMTP -- correo propio via generateLink -- se prueba en
+  // _shared/correo_test.ts, que es donde vive el texto.
+  Deno.env.delete("SMTP_HOST");
   const crearCliente = clienteFalso({ rol: "administrador", activo: true });
 
   const res = await manejarSolicitud(solicitud(), { crearCliente });
@@ -188,7 +192,7 @@ Deno.test("el correo de invitacion lleva a /nueva-contrasena cuando WEB_URL esta
   // deno-lint-ignore no-explicit-any
   const destinos = (crearCliente as any).destinosDeCorreo as (string | undefined)[];
   assertEquals(destinos.length, 1);
-  assertEquals(destinos[0], "http://localhost:5173/nueva-contrasena");
+  assertEquals(destinos[0], "http://localhost:5173/nueva-contrasena?origen=invitacion");
 });
 
 // Una barra de mas al final de WEB_URL no tiene que producir "//nueva-contrasena": ese destino
@@ -196,13 +200,14 @@ Deno.test("el correo de invitacion lleva a /nueva-contrasena cuando WEB_URL esta
 // silencio al Site URL -- es decir, al defecto de arriba otra vez.
 Deno.test("WEB_URL con barra final no duplica la barra del destino", async () => {
   Deno.env.set("WEB_URL", "http://localhost:5173/");
+  Deno.env.delete("SMTP_HOST");
   const crearCliente = clienteFalso({ rol: "administrador", activo: true });
 
   await manejarSolicitud(solicitud(), { crearCliente });
 
   // deno-lint-ignore no-explicit-any
   const destinos = (crearCliente as any).destinosDeCorreo as (string | undefined)[];
-  assertEquals(destinos[0], "http://localhost:5173/nueva-contrasena");
+  assertEquals(destinos[0], "http://localhost:5173/nueva-contrasena?origen=invitacion");
 });
 
 // Sin WEB_URL se vuelve al comportamiento anterior en vez de romper el alta: el correo sale

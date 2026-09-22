@@ -140,6 +140,42 @@ export async function intercambiarSesionDeRecuperacion(codigo) {
 }
 
 /**
+ * Toma la sesion que viene DENTRO de un enlace de recuperacion, pisando la que hubiera.
+ *
+ * ISSUE #864, y es un defecto serio. El comentario de intercambiarSesionDeRecuperacion() dice
+ * que "en el navegador, Supabase Auth resuelve la sesion de recuperacion solo, leyendo el
+ * fragmento de la URL". Es cierto **solo si no hay ya una sesion abierta**: si la hay,
+ * supabase-js conserva la guardada y el fragmento se queda sin procesar.
+ *
+ * La consecuencia se comprobo de punta a punta en local: la administradora invita a alguien y,
+ * sin cerrar su sesion, abre el enlace de la invitacion en el mismo navegador. La pantalla de
+ * "elige tu contrasena" se dibuja igual, pero `updateUser({ password })` se aplica **a la sesion
+ * abierta**. Resultado: la contrasena que cambio fue la de la administradora, la persona
+ * invitada se quedo sin ninguna, y ninguna de las dos pantallas dijo nada raro.
+ *
+ * Por eso no alcanza con "dejar que Supabase lo resuelva": hay que fijar explicitamente la
+ * sesion del enlace antes de tocar nada. Los dos tokens salen del fragmento de la URL, que es un
+ * detalle del navegador y por eso los lee la pantalla (apps/web/src/pages/NuevaContrasenaPage),
+ * no esta funcion.
+ *
+ * @param {string} accessToken
+ * @param {string} refreshToken
+ * @returns {Promise<{ error: object|null }>}
+ */
+export async function establecerSesionDeRecuperacion(accessToken, refreshToken) {
+  if (!accessToken || !refreshToken) {
+    return { error: construirError(CODIGOS_DE_ERROR_DE_SUPABASE.SESION_EXPIRADA) };
+  }
+
+  const { error } = await obtenerSupabase().auth.setSession({
+    access_token: accessToken,
+    refresh_token: refreshToken,
+  });
+
+  return { error: error ? normalizarError(error) : null };
+}
+
+/**
  * Sesion actual, si la hay, junto con perfil y rol.
  *
  * Siempre devuelve la misma forma (nunca null a secas), para que quien llama no tenga que

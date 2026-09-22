@@ -41,10 +41,10 @@ vi.mock("@ecopac/shared", async (importarOriginal) => ({
   useInicioSesion: vi.fn(() => mockInicioSesion),
 }));
 
-function pantalla(estado = {}) {
+function pantalla(estado = {}, entrada = "/login") {
   Object.assign(mockSesion, { estadoRestauracion: "listo", haySesion: false, error: null }, estado);
   return render(
-    <MemoryRouter initialEntries={["/login"]}>
+    <MemoryRouter initialEntries={[entrada]}>
       <LoginPage />
     </MemoryRouter>,
   );
@@ -76,6 +76,29 @@ describe("LoginPage - por que no se pudo entrar (issue #864)", () => {
 
     expect(screen.getByText("El correo o la contrasena no son correctos.")).toBeInTheDocument();
     expect(screen.queryByText("Tu sesion expiro.")).not.toBeInTheDocument();
+  });
+
+  // ISSUE #864: cambiar la contrasena cierra la sesion de recuperacion, asi que la sesion queda
+  // con un "expiro" que NO es lo que paso. El mensaje que trae la navegacion manda.
+  it("el mensaje de la navegacion gana al error de la sesion, y se ve como exito", () => {
+    Object.assign(mockSesion, {
+      estadoRestauracion: "listo",
+      haySesion: false,
+      error: { mensaje: "Tu sesion expiro. Inicia sesion de nuevo para continuar." },
+    });
+
+    render(
+      <MemoryRouter
+        initialEntries={[
+          { pathname: "/login", state: { mensaje: "Tu contraseña quedó guardada." } },
+        ]}
+      >
+        <LoginPage />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText("Tu contraseña quedó guardada.")).toBeInTheDocument();
+    expect(screen.queryByText(/sesion expiro/i)).not.toBeInTheDocument();
   });
 
   it("sin ningun error no se pinta ninguna alerta", () => {
