@@ -62,7 +62,8 @@ export default function ModalRegistroIngreso({
   const nombreDeBodega = (id) => (catalogos?.bodegas || []).find((b) => b.id === id)?.nombre || id;
 
   const proveedorSeleccionado = (catalogos?.proveedores || []).find((p) => p.id === proveedorId);
-  const esPersonaNatural = proveedorSeleccionado?.tipo === "persona" || proveedorSeleccionado?.tipoPersona === "persona";
+  const esPersonaNatural =
+    proveedorSeleccionado?.tipo === "persona" || proveedorSeleccionado?.tipoPersona === "persona";
 
   return (
     <div
@@ -225,8 +226,12 @@ export default function ModalRegistroIngreso({
 
                   {!esPersonaNatural && proveedorSeleccionado?.personaContacto && (
                     <div className="col-md-12">
-                      <small className="text-muted d-block" style={{ fontSize: "var(--texto-xxs)" }}>
-                        <strong>Persona de contacto:</strong> {proveedorSeleccionado.personaContacto}
+                      <small
+                        className="text-muted d-block"
+                        style={{ fontSize: "var(--texto-xxs)" }}
+                      >
+                        <strong>Persona de contacto:</strong>{" "}
+                        {proveedorSeleccionado.personaContacto}
                       </small>
                     </div>
                   )}

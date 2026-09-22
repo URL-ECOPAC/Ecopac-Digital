@@ -286,7 +286,7 @@ export default function RegistroDonacionPage({ usuarioRol }) {
                             <option key={opt.id || opt.value} value={opt.id || opt.value}>
                               {opt.nombre || opt.label}
                             </option>
-                          )
+                          ),
                         )}
                       </Form.Select>
                     </Form.Group>
@@ -423,8 +423,8 @@ export default function RegistroDonacionPage({ usuarioRol }) {
           </Modal.Header>
           <Modal.Body>
             <p className="mb-0">
-              Se ha registrado una donación. ¿Desea generar automáticamente el
-              registro de ingreso en el módulo de Inventario?
+              Se ha registrado una donación. ¿Desea generar automáticamente el registro de ingreso
+              en el módulo de Inventario?
             </p>
           </Modal.Body>
           <Modal.Footer>
