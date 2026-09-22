@@ -13,7 +13,7 @@ afterEach(() => {
   cleanup();
 });
 
-// IMPORTANTE: Asegúrate de que esta ruta relativa coincida exactamente con la 
+// IMPORTANTE: Asegúrate de que esta ruta relativa coincida exactamente con la
 // que usa ModalRegistroIngreso.jsx para importar el proveedor (ej. "../contexto/SesionProvider")
 vi.mock("../contexto/SesionProvider", () => ({
   SesionProvider: ({ children }) => children,
@@ -71,7 +71,7 @@ function pantalla(props = {}) {
       catalogos={CATALOGOS}
       usuarioId="u-1"
       {...props}
-    />
+    />,
   );
 }
 
