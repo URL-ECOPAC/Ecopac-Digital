@@ -55,12 +55,14 @@ export default function ModalRegistroIngreso({
     await guardarMovimiento();
   };
 
-  // Soporte unificado para catálogos tanto de medicamentos como de insumos (Punto 6)
   const listaProductos = [...(catalogos?.medicamentos || []), ...(catalogos?.insumos || [])];
 
   const nombreDeProducto = (id) => listaProductos.find((p) => p.id === id)?.nombre || id;
 
   const nombreDeBodega = (id) => (catalogos?.bodegas || []).find((b) => b.id === id)?.nombre || id;
+
+  const proveedorSeleccionado = (catalogos?.proveedores || []).find((p) => p.id === proveedorId);
+  const esPersonaNatural = proveedorSeleccionado?.tipo === "persona" || proveedorSeleccionado?.tipoPersona === "persona";
 
   return (
     <div
@@ -84,7 +86,6 @@ export default function ModalRegistroIngreso({
           </div>
 
           <div className="modal-body px-4 py-3">
-            {/* Banner de advertencia provisional oculto para administradores (Punto 8) */}
             {!esAdministrador && (
               <div
                 className="alert border-0 rounded-3 text-dark mb-3 p-3"
@@ -221,6 +222,14 @@ export default function ModalRegistroIngreso({
                       onChange={(e) => setNumeroComprobante(e.target.value)}
                     />
                   </div>
+
+                  {!esPersonaNatural && proveedorSeleccionado?.personaContacto && (
+                    <div className="col-md-12">
+                      <small className="text-muted d-block" style={{ fontSize: "var(--texto-xxs)" }}>
+                        <strong>Persona de contacto:</strong> {proveedorSeleccionado.personaContacto}
+                      </small>
+                    </div>
+                  )}
                 </div>
 
                 <hr className="my-2 text-muted opacity-25" />

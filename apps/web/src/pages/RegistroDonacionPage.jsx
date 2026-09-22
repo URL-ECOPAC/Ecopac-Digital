@@ -28,6 +28,7 @@ export default function RegistroDonacionPage({ usuarioRol }) {
   const { perfil } = useSesionCompartida();
   const [catalogosIngreso, setCatalogosIngreso] = useState({
     medicamentos: [],
+    insumos: [],
     bodegas: [],
     proveedores: [],
   });
@@ -35,9 +36,6 @@ export default function RegistroDonacionPage({ usuarioRol }) {
   const [proveedorIdIngreso, setProveedorIdIngreso] = useState(null);
   const [resolviendoProveedor, setResolviendoProveedor] = useState(false);
 
-  // Catalogos para "Ingreso a Inventario" (issue #756): la misma forma que ya carga
-  // InventarioPage.jsx para ModalRegistroIngreso.jsx. `proveedores` se acota a tipo 'donante'
-  // -este flujo siempre nace de una donacion, nunca de una compra.
   useEffect(() => {
     let vigente = true;
 
@@ -55,6 +53,7 @@ export default function RegistroDonacionPage({ usuarioRol }) {
       vigente = false;
     };
   }, []);
+
   const {
     permisos,
     tipoDonacion,
@@ -95,16 +94,8 @@ export default function RegistroDonacionPage({ usuarioRol }) {
     guardarDonacion,
   } = useRegistroDonacion({ usuarioRol });
 
-  // Nombre del donante de ESTA donacion, tomado de resumenRegistro (issue #756) y no del
-  // donanteId en vivo: guardarDonacion() limpia el formulario -incluido donanteId- apenas
-  // termina de guardar, para que los campos no se vean llenos como si nada hubiera pasado. El
-  // nombre congelado en el resumen es lo unico que sigue disponible para resolver el proveedor
-  // del ingreso (obtenerOCrearProveedorPorNombre()).
   const donanteNombre = resumenRegistro?.donanteNombre;
 
-  // Resuelve el proveedor ANTES de abrir el formulario (issue #756): useRegistroIngreso.js solo
-  // lee `proveedorIdInicial` en el primer render del modal, asi que tiene que llegar ya resuelto
-  // -no hay forma limpia de actualizar un useState inicial despues de montado.
   const abrirFormularioIngreso = async () => {
     setResolviendoProveedor(true);
     const { proveedorId } = await obtenerOCrearProveedorPorNombre(
@@ -112,9 +103,6 @@ export default function RegistroDonacionPage({ usuarioRol }) {
       TIPO_PROVEEDOR.DONANTE,
     );
 
-    // El select de "Proveedor / Donante" solo dibuja lo que trae catalogosIngreso.proveedores:
-    // si obtenerOCrearProveedorPorNombre() acaba de crear uno, todavia no esta ahi -se cargo una
-    // sola vez al montar la pagina-, y sin su <option> el select no tiene como mostrarlo.
     if (proveedorId) {
       setCatalogosIngreso((anteriores) => {
         const yaEsta = anteriores.proveedores.some((proveedor) => proveedor.id === proveedorId);
@@ -145,7 +133,7 @@ export default function RegistroDonacionPage({ usuarioRol }) {
     <ScreenContainer>
       <PageHeader
         title="Registro de donación"
-        subtitle="Donante, tipo de aporte y, si trae medicamentos, su ingreso al inventario"
+        subtitle="Donante, tipo de aporte y, si trae medicamentos o insumos, su ingreso al inventario"
         actions={[ACCION_VOLVER_A_DONACIONES]}
       />
 
@@ -256,45 +244,101 @@ export default function RegistroDonacionPage({ usuarioRol }) {
       <Card className="mb-4">
         <Card.Header as="h5">Detalle de la Donación</Card.Header>
         <Card.Body>
-          {/* Los campos de cada renglon salen de camposDeRenglonDeDonacion(tipo) en shared (issue
-              #840). Antes eran tres bloques escritos a mano por tipo, "servicios" no tenia
-              ninguno, y el medicamento se escribia como texto libre que despues habia que
-              adivinar al darle ingreso en inventario. */}
           {(detalles || []).map((item, indice) => (
             <div key={item.id} className="ec-renglon">
               <div className="ec-form-grid">
-                {camposDeRenglon.map((campo) => {
-                  const errorDeCampo = error?.campos?.[`detalles_${indice}_${campo.id}`];
-                  const control = (
-                    <CampoDeFormulario
-                      key={campo.id}
-                      campo={campo}
-                      valor={item[campo.id]}
-                      error={errorDeCampo}
-                      catalogos={catalogosDeRenglon}
-                      disabled={!permisos?.puedeEscribir}
-                      onChange={(valor) => actualizarRenglon(item.id, campo.id, valor)}
-                    />
-                  );
-                  if (campo.id !== "medicamentoId" || !altaDeMedicamento.puedeCrear) return control;
-                  // El medicamento donado muchas veces no esta en el catalogo: se crea aqui mismo.
-                  return (
-                    <div key={campo.id} className="ec-form-subgrid ec-form-grid--ancho">
-                      {control}
-                      {!altaDeMedicamento.abierto && (
-                        <div className="ec-form-subgrid-accion">
-                          <SecondaryButton
-                            title="Nuevo medicamento"
-                            size="sm"
-                            icon={<Plus size={14} aria-hidden="true" />}
-                            onClick={() => altaDeMedicamento.abrir(item.id)}
-                            disabled={!permisos?.puedeEscribir}
-                          />
+                {camposDeRenglon
+                  .filter((campo) => campo.id === "cantidad")
+                  .map((campo) => {
+                    const errorDeCampo = error?.campos?.[`detalles_${indice}_${campo.id}`];
+                    return (
+                      <CampoDeFormulario
+                        key={campo.id}
+                        campo={campo}
+                        valor={item[campo.id]}
+                        error={errorDeCampo}
+                        catalogos={catalogosDeRenglon}
+                        disabled={!permisos?.puedeEscribir}
+                        onChange={(valor) => actualizarRenglon(item.id, campo.id, valor)}
+                      />
+                    );
+                  })}
+
+                {tipoDonacion === TIPOS_DE_DONACION.INSUMOS && (
+                  <div className="ec-form-subgrid ec-form-grid--ancho">
+                    <Form.Group controlId={`insumoSelect_${item.id}`}>
+                      <Form.Label className="small text-body-secondary fw-semibold mb-1">
+                        Insumo
+                      </Form.Label>
+                      <Form.Select
+                        size="sm"
+                        disabled={!permisos?.puedeEscribir}
+                        value={item.insumoId || ""}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          actualizarRenglon(item.id, "insumoId", val);
+                          actualizarRenglon(item.id, "descripcion", val);
+                        }}
+                      >
+                        <option value="">Seleccionar...</option>
+                        {(catalogosDeRenglon.insumos || catalogosDeRenglon.medicamentos || []).map(
+                          (opt) => (
+                            <option key={opt.id || opt.value} value={opt.id || opt.value}>
+                              {opt.nombre || opt.label}
+                            </option>
+                          )
+                        )}
+                      </Form.Select>
+                    </Form.Group>
+                    {!altaDeMedicamento.abierto && (
+                      <div className="ec-form-subgrid-accion">
+                        <SecondaryButton
+                          title="Nuevo insumo"
+                          size="sm"
+                          icon={<Plus size={14} aria-hidden="true" />}
+                          onClick={() => altaDeMedicamento.abrir(item.id)}
+                          disabled={!permisos?.puedeEscribir}
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {tipoDonacion === TIPOS_DE_DONACION.MEDICAMENTOS &&
+                  camposDeRenglon
+                    .filter((campo) => campo.id === "medicamentoId")
+                    .map((campo) => {
+                      const errorDeCampo = error?.campos?.[`detalles_${indice}_${campo.id}`];
+                      const control = (
+                        <CampoDeFormulario
+                          key={campo.id}
+                          campo={campo}
+                          valor={item[campo.id]}
+                          error={errorDeCampo}
+                          catalogos={catalogosDeRenglon}
+                          disabled={!permisos?.puedeEscribir}
+                          onChange={(valor) => actualizarRenglon(item.id, campo.id, valor)}
+                        />
+                      );
+                      if (!altaDeMedicamento.puedeCrear) return control;
+                      return (
+                        <div key={campo.id} className="ec-form-subgrid ec-form-grid--ancho">
+                          {control}
+                          {!altaDeMedicamento.abierto && (
+                            <div className="ec-form-subgrid-accion">
+                              <SecondaryButton
+                                title="Nuevo medicamento"
+                                size="sm"
+                                icon={<Plus size={14} aria-hidden="true" />}
+                                onClick={() => altaDeMedicamento.abrir(item.id)}
+                                disabled={!permisos?.puedeEscribir}
+                              />
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
-                  );
-                })}
+                      );
+                    })}
+
                 {altaDeMedicamento.renglonId === item.id && (
                   <AltaDeMedicamentoEnLinea alta={altaDeMedicamento} />
                 )}
@@ -348,9 +392,6 @@ export default function RegistroDonacionPage({ usuarioRol }) {
         </div>
       )}
 
-      {/* El recibo de lo que se acaba de guardar (issue #840, A10). Antes eran tres lineas con
-          el valor crudo del enum ("dinero") y la fecha sin formato; resumenLegibleDeDonacion()
-          en shared lo traduce todo y resume lo que importa segun el tipo. */}
       {resumenLegible && (
         <Card className="mb-4">
           <Card.Header as="h5">{resumenLegible.titulo}</Card.Header>
@@ -382,7 +423,7 @@ export default function RegistroDonacionPage({ usuarioRol }) {
           </Modal.Header>
           <Modal.Body>
             <p className="mb-0">
-              Se ha registrado una donación de medicamentos. ¿Desea generar automáticamente el
+              Se ha registrado una donación. ¿Desea generar automáticamente el
               registro de ingreso en el módulo de Inventario?
             </p>
           </Modal.Body>
@@ -417,9 +458,6 @@ export default function RegistroDonacionPage({ usuarioRol }) {
           detallesDonacion={resumenRegistro?.detalles}
           proveedorIdInicial={proveedorIdIngreso}
           onExito={(movimientos, items) => {
-            // Enlaza cada lote creado de vuelta a su renglon de donacion (issue #756): items y
-            // movimientos vienen en el mismo orden (useRegistroIngreso.js), y solo los items que
-            // partieron de un renglon de donacion traen donacionDetalleId.
             movimientos.forEach((movimiento, indice) => {
               const donacionDetalleId = items[indice]?.donacionDetalleId;
               if (donacionDetalleId) {
@@ -436,8 +474,7 @@ export default function RegistroDonacionPage({ usuarioRol }) {
         </Modal.Header>
         <Modal.Body>
           <p className="text-muted small mb-3">
-            Registro rápido de donante sin salir del formulario. El resto de los datos de contacto
-            se completan después desde Donantes.
+            Registro rápido de donante sin salir del formulario.
           </p>
 
           {errorNuevoDonante && (

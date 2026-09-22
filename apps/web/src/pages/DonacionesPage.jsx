@@ -34,7 +34,7 @@ export default function DonacionesPage() {
         <Card.Body className="py-3">
           <Form>
             <Row className="g-3 align-items-end">
-              <Col xs={12} sm={5} md={4}>
+              <Col xs={12} sm={4} md={4}>
                 <Form.Group controlId="fechaInicio">
                   <Form.Label className="small text-body-secondary fw-semibold mb-1">
                     Fecha inicio
@@ -47,7 +47,7 @@ export default function DonacionesPage() {
                   />
                 </Form.Group>
               </Col>
-              <Col xs={12} sm={5} md={4}>
+              <Col xs={12} sm={4} md={4}>
                 <Form.Group controlId="fechaFin">
                   <Form.Label className="small text-body-secondary fw-semibold mb-1">
                     Fecha fin
@@ -60,20 +60,19 @@ export default function DonacionesPage() {
                   />
                 </Form.Group>
               </Col>
-              <Col xs={12} sm={2} md={4}>
-                {(fechaInicio || fechaFin) && (
-                  <Button
-                    variant="outline-secondary"
-                    size="sm"
-                    className="py-1 px-3 text-nowrap"
-                    onClick={() => {
-                      setFechaInicio("");
-                      setFechaFin("");
-                    }}
-                  >
-                    Limpiar fechas
-                  </Button>
-                )}
+              <Col xs={12} sm={4} md={4}>
+                <Button
+                  variant="outline-secondary"
+                  size="sm"
+                  className="w-100 text-nowrap"
+                  disabled={!fechaInicio && !fechaFin}
+                  onClick={() => {
+                    setFechaInicio("");
+                    setFechaFin("");
+                  }}
+                >
+                  Limpiar filtros
+                </Button>
               </Col>
             </Row>
           </Form>
