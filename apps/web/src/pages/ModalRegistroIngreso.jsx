@@ -2,23 +2,21 @@ import { formatearMoneda, useRegistroIngreso } from "@ecopac/shared";
 import PrimaryButton from "../components/PrimaryButton";
 import SecondaryButton from "../components/SecondaryButton";
 import { useCerrarAlTocarFuera } from "../hooks/useCerrarAlTocarFuera";
+import { useSesionCompartida } from "../contexto/SesionProvider";
 
 export default function ModalRegistroIngreso({
   abierto,
   onClose,
-  onCerrar, // Soporte para ambas convenciones de nombre
-  onExito, // Callback para notificar al padre tras guardar
-  catalogos = { medicamentos: [], bodegas: [], proveedores: [] },
+  onCerrar,
+  onExito,
+  catalogos = { medicamentos: [], insumos: [], bodegas: [], proveedores: [] },
   usuarioId,
-  // Renglones de una donacion en curso de convertirse en ingreso (issue #756): con esto, la
-  // cantidad -y el medicamento, si ya se habia escrito- de cada renglon se precarga sola al
-  // pasar al siguiente item, en vez de pedirla de nuevo. Ver la doc de detallesDonacion en
-  // useRegistroIngreso.js.
   detallesDonacion,
-  // Proveedor sugerido a partir del donante ya elegido al registrar la donacion (issue #756,
-  // sugerirProveedorId() en useRegistroIngreso.js): sigue siendo editable, no una decision.
   proveedorIdInicial,
 }) {
+  const { rol } = useSesionCompartida();
+  const esAdministrador = rol === "administrador" || rol === "admin";
+
   const {
     origen,
     setOrigen,
@@ -43,13 +41,10 @@ export default function ModalRegistroIngreso({
     proveedorIdInicial,
   });
 
-  // El hook antes del return temprano; handleCerrarModal se declara despues, asi que se le pasa
-  // una funcion que la llama en el momento.
   const fondo = useCerrarAlTocarFuera(() => handleCerrarModal(), { activo: abierto });
 
   if (!abierto) return null;
 
-  // Garantiza que se llame la función de cierre correcta sin importar cuál prop envió el padre
   const handleCerrarModal = () => {
     resetFormulario();
     if (onCerrar) onCerrar();
@@ -58,12 +53,13 @@ export default function ModalRegistroIngreso({
 
   const handleGuardar = async () => {
     await guardarMovimiento();
-    // Si guardarMovimiento() fallo, error ya queda en pantalla (ver bloque de abajo) y el modal
-    // sigue abierto; si salio bien, resumenGuardado deja de ser null y la vista cambia sola.
   };
 
-  const nombreDeMedicamento = (id) =>
-    (catalogos?.medicamentos || []).find((m) => m.id === id)?.nombre || id;
+  // Soporte unificado para catálogos tanto de medicamentos como de insumos (Punto 6)
+  const listaProductos = [...(catalogos?.medicamentos || []), ...(catalogos?.insumos || [])];
+
+  const nombreDeProducto = (id) =>
+    listaProductos.find((p) => p.id === id)?.nombre || id;
 
   const nombreDeBodega = (id) => (catalogos?.bodegas || []).find((b) => b.id === id)?.nombre || id;
 
@@ -76,10 +72,9 @@ export default function ModalRegistroIngreso({
     >
       <div className="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
         <div className="modal-content rounded-4 border-0 shadow-lg">
-          {/* Cabecera del Modal */}
           <div className="modal-header bg-light border-bottom-0 px-4 pt-4 pb-2">
             <div>
-              <h5 className="modal-title fw-bold text-dark">Registrar Ingreso de Medicamentos</h5>
+              <h5 className="modal-title fw-bold text-dark">Registrar Ingreso al Inventario</h5>
             </div>
             <button
               type="button"
@@ -89,17 +84,18 @@ export default function ModalRegistroIngreso({
             ></button>
           </div>
 
-          {/* Cuerpo del Modal */}
           <div className="modal-body px-4 py-3">
-            {/* Banner crítico de estado provisional */}
-            <div
-              className="alert border-0 rounded-3 text-dark mb-3 p-3"
-              style={{ backgroundColor: "#FFF3CD", fontSize: "var(--texto-xs)", lineHeight: "1.5" }}
-            >
-              <strong>Advertencia:</strong> Los lotes que crea este ingreso quedan como{" "}
-              <strong>provisionales</strong>. <u>No afectarán el stock de inventario</u> hasta su
-              confirmación.
-            </div>
+            {/* Banner de advertencia provisional oculto para administradores (Punto 8) */}
+            {!esAdministrador && (
+              <div
+                className="alert border-0 rounded-3 text-dark mb-3 p-3"
+                style={{ backgroundColor: "#FFF3CD", fontSize: "var(--texto-xs)", lineHeight: "1.5" }}
+              >
+                <strong>Advertencia:</strong> Los lotes que crea este ingreso quedan como{" "}
+                <strong>provisionales</strong>. <u>No afectarán el stock de inventario</u> hasta su
+                confirmación.
+              </div>
+            )}
 
             {error && (
               <div
@@ -111,10 +107,9 @@ export default function ModalRegistroIngreso({
             )}
 
             {resumenGuardado ? (
-              /* Pantalla de Resumen tras guardar */
               <div className="card border-success bg-success-subtle rounded-3 p-3">
                 <div className="d-flex align-items-center gap-2 text-success font-bold mb-2">
-                  <span className="fw-bold">Ingreso registrado con éxito (Pendiente)</span>
+                  <span className="fw-bold">Ingreso registrado con éxito {esAdministrador ? "" : "(Pendiente)"}</span>
                 </div>
                 <div
                   className="bg-white p-3 rounded border text-secondary"
@@ -136,9 +131,7 @@ export default function ModalRegistroIngreso({
                 </div>
               </div>
             ) : (
-              /* Formulario Principal */
               <div className="d-flex flex-column gap-3">
-                {/* Selección de Origen */}
                 <div>
                   <label
                     className="form-label fw-bold text-secondary uppercase mb-2"
@@ -186,7 +179,6 @@ export default function ModalRegistroIngreso({
                   </div>
                 </div>
 
-                {/* Proveedor / Donante y comprobante */}
                 <div className="row g-3">
                   <div className="col-md-6">
                     <label
@@ -228,13 +220,12 @@ export default function ModalRegistroIngreso({
 
                 <hr className="my-2 text-muted opacity-25" />
 
-                {/* Agregar Medicamentos */}
                 <div>
                   <h6
                     className="fw-bold text-secondary uppercase mb-2"
                     style={{ fontSize: "var(--texto-xxs)" }}
                   >
-                    Agregar Medicamentos
+                    Agregar Ítems (Medicamentos e Insumos)
                   </h6>
                   <div className="card border-0 bg-light p-3 rounded-3 mb-3">
                     <div className="row g-2">
@@ -243,7 +234,7 @@ export default function ModalRegistroIngreso({
                           className="form-label text-muted mb-1"
                           style={{ fontSize: "var(--texto-xxs)" }}
                         >
-                          Medicamento *
+                          Producto / Insumo *
                         </label>
                         <select
                           className="form-select form-select-sm rounded-2"
@@ -251,13 +242,12 @@ export default function ModalRegistroIngreso({
                           onChange={(e) =>
                             setItemActual({ ...itemActual, medicamento_id: e.target.value })
                           }
-                          // Viene de la donacion: ya se eligio del catalogo al registrarla.
                           disabled={itemActual.medicamentoFijo}
                         >
                           <option value="">Seleccionar...</option>
-                          {(catalogos?.medicamentos || []).map((m) => (
-                            <option key={m.id} value={m.id}>
-                              {m.nombre} ({m.concentracion})
+                          {listaProductos.map((p) => (
+                            <option key={p.id} value={p.id}>
+                              {p.nombre} {p.concentracion ? `(${p.concentracion})` : ""}
                             </option>
                           ))}
                         </select>
@@ -371,7 +361,6 @@ export default function ModalRegistroIngreso({
                   </div>
                 </div>
 
-                {/* Tabla de Medicamentos Agregados */}
                 <div className="table-responsive border rounded-3 overflow-hidden">
                   <table
                     className="table table-hover table-sm align-middle mb-0"
@@ -382,7 +371,7 @@ export default function ModalRegistroIngreso({
                       style={{ fontSize: "var(--texto-xxs)" }}
                     >
                       <tr>
-                        <th className="py-2 px-3">Medicamento</th>
+                        <th className="py-2 px-3">Producto</th>
                         <th className="py-2 px-3">Lote</th>
                         <th className="py-2 px-3">Bodega</th>
                         <th className="py-2 px-3">Vencimiento</th>
@@ -395,14 +384,14 @@ export default function ModalRegistroIngreso({
                       {items.length === 0 ? (
                         <tr>
                           <td colSpan="7" className="py-4 text-center text-muted">
-                            No se han agregado medicamentos a la lista.
+                            No se han agregado ítems a la lista.
                           </td>
                         </tr>
                       ) : (
                         items.map((item) => (
                           <tr key={item.id}>
                             <td className="px-3 fw-semibold text-dark">
-                              {nombreDeMedicamento(item.medicamento_id)}
+                              {nombreDeProducto(item.medicamento_id)}
                             </td>
                             <td className="px-3">{item.numero_lote}</td>
                             <td className="px-3">{nombreDeBodega(item.bodega_id)}</td>
@@ -432,7 +421,6 @@ export default function ModalRegistroIngreso({
             )}
           </div>
 
-          {/* Pie del Modal */}
           <div className="modal-footer bg-light border-top-0 px-4 py-3">
             <button
               type="button"

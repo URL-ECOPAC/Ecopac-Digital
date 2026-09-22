@@ -1,11 +1,4 @@
-/* Pantallas de reportes (issue #693).
- *
- * Todo sale de las custom properties que publica apps/web/src/theme.js desde @ecopac/ui-tokens,
- * que es la regla de docs/ARQUITECTURA-FRONTEND.md.
- *
- * Los tamanos de letra eran la excepcion: 1.125rem, 0.875rem y 1.75rem escritos a mano, que es
- * una tercera escala tipografica ademas de la de inventario (11px/28px) y la de pacientes
- * (0.6875rem). Ahora usan --texto-*, que es el mismo token del que salen las dos. */
+/* Pantallas de reportes (issue #693). */
 
 .reporte-seccion {
   margin-bottom: var(--spacing-xl);
@@ -31,10 +24,6 @@
   margin-bottom: 0;
 }
 
-/* Boton de exportar. Toma el aspecto de un boton secundario del sistema en vez de declarar el
-   suyo: era el unico "boton" de reportes y no se parecia a ninguno de los demas -sin peso, sin
-   transicion y con su propio radio-. Las reglas de .btn-outline-primary en ui.css hacen el
-   resto; aqui solo queda lo que no da esa clase. */
 .reporte-exportar {
   background-color: var(--color-surface);
   border: 1px solid color-mix(in srgb, var(--color-primary) 45%, var(--color-surface));
@@ -65,7 +54,6 @@
   cursor: not-allowed;
 }
 
-/* Fila con el selector de agrupacion y el boton de limpiar filtros. */
 .reporte-barra-agrupacion {
   align-items: flex-end;
   display: flex;
@@ -74,9 +62,6 @@
   margin-bottom: var(--spacing-lg);
 }
 
-/* Rejilla de cifras de cabecera.
-   Alias de .ec-kpis / .ec-kpi de ui.css: las clases de reportes se conservan porque las usan
-   cuatro pantallas, pero ya no declaran su propia escala. */
 .reporte-cifras {
   display: grid;
   gap: var(--spacing-md);
@@ -105,9 +90,6 @@
   display: inline-block;
 }
 
-/* Fila que abre cada pestana del hub de reportes: la descripcion del reporte a la izquierda y
-   sus acciones (exportar) a la derecha. Ocupa el lugar que antes tenia una segunda cabecera de
-   pagina, o -en el panel de impacto- una fila entera vacia con el boton de exportar solo. */
 .reporte-barra {
   align-items: center;
   display: flex;
@@ -117,7 +99,6 @@
   margin-bottom: var(--spacing-md);
 }
 
-/* Filtros de un reporte: la misma rejilla que cae a una columna sola en pantallas estrechas. */
 .reporte-filtros {
   align-items: end;
   display: grid;
@@ -135,11 +116,6 @@
   justify-content: flex-end;
 }
 
-/* --------------------------------------------------------------------------
-   Panel de impacto
-   -------------------------------------------------------------------------- */
-
-/* Pie de una tarjeta de indicador con meta: la barra de avance y la meta. */
 .reporte-meta {
   display: flex;
   flex-direction: column;
@@ -265,12 +241,6 @@
   color: var(--color-text);
 }
 
-/* Constancia de donacion en pantalla (issue #840).
- *
- * El mismo contenido que se imprime, pero con el lenguaje visual de la aplicacion. En papel lo
- * dibuja .doc-imprimible (index.css); aqui solo se le da forma a la version de pantalla, sin
- * clases de utilidad de Bootstrap, para que el marcado sea uno solo. */
-
 .constancia-datos {
   background: var(--color-background);
   border: 1px solid var(--color-border);
@@ -311,4 +281,20 @@
   font-size: var(--texto-sm);
   font-weight: var(--peso-semibold);
   text-transform: uppercase;
+}
+
+/* Control de impresión para evitar página en blanco extra */
+@media print {
+  @page {
+    size: auto;
+    margin: 15mm;
+  }
+  body, html {
+    height: auto !important;
+    overflow: visible !important;
+  }
+  .doc-imprimible {
+    page-break-after: avoid;
+    break-after: avoid;
+  }
 }

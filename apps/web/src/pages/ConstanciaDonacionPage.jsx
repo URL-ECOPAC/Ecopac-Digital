@@ -12,29 +12,19 @@ import DocumentoImprimible, { LineaDeFirma } from "./DocumentoImprimible";
 import { ACCION_VOLVER_A_DONACIONES } from "./donacionesNavegacion";
 import "./reportes.css";
 
-/**
- * El contenido de la constancia: quien dono, que, y el desglose.
- *
- * Una sola vez, en marcado simple, para las dos salidas: la tarjeta de pantalla y el papel. Antes
- * solo existia la version de pantalla -- con `Table` de react-bootstrap y clases de utilidad --,
- * asi que el documento impreso no podia reutilizarla sin arrastrar el estilo de la aplicacion
- * entera al papel.
- *
- * El tipo de aporte se lee del catalogo de etiquetas y no con `text-capitalize` sobre el valor
- * crudo del enum: "Medicamentos" es una etiqueta, "medicamentos" es una clave de base de datos.
- */
 function DatosDeLaDonacion({ donacion }) {
   const detalles = donacion.detalles ?? [];
   const esDinero = donacion.tipo === TIPOS_DE_DONACION.DINERO;
+  const nombreDonante = donacion.donante_nombre || donacion.donanteNombre || donacion.donante?.nombre || "Anónimo";
 
   return (
     <>
       <div className="constancia-datos">
         <p>
-          <strong>Donante:</strong> {donacion.donante_nombre}
+          <strong>Donante:</strong> {nombreDonante}
         </p>
         <p>
-          <strong>Identificación / Teléfono:</strong> {donacion.donante_contacto || "No registrado"}
+          <strong>Identificación / Teléfono:</strong> {donacion.donante_contacto || donacion.donante?.contacto || "No registrado"}
         </p>
         <p>
           <strong>Tipo de aporte:</strong> {ETIQUETAS_TIPO_DONACION[donacion.tipo] ?? donacion.tipo}
@@ -121,7 +111,6 @@ export default function ConstanciaDonacionPage({ usuarioRol, donacion }) {
 
   return (
     <Container style={{ maxWidth: "800px" }} className="py-4">
-      {/* Botones de acción (Ocultos al imprimir) */}
       <div className="d-flex justify-content-between flex-wrap gap-2 mb-4 d-print-none">
         <AccionesDeCabecera
           actions={[
@@ -137,9 +126,6 @@ export default function ConstanciaDonacionPage({ usuarioRol, donacion }) {
         </Button>
       </div>
 
-      {/* Lo que se imprime. Se monta en un portal fuera del shell (DocumentoImprimible.jsx): la
-          regla `.app-shell { display: none }` de @media print escondia esta pagina entera junto
-          con la navegacion, y por eso la constancia salia en blanco (issue #840). */}
       <DocumentoImprimible
         documento="Constancia de donación recibida"
         folio={correlativo}
@@ -154,12 +140,8 @@ export default function ConstanciaDonacionPage({ usuarioRol, donacion }) {
         <DatosDeLaDonacion donacion={donacion} />
       </DocumentoImprimible>
 
-      {/* La misma constancia en pantalla. */}
       <Card className="shadow-sm border border-secondary-subtle p-4 p-md-5">
         <Card.Body className="p-0">
-          {/* Encabezado de la Organización. El nombre y el logo salen de @ecopac/ui-tokens: antes
-              esta cabecera declaraba a mano "Comité Agrícola de Desarrollo Integral", un nombre
-              que no venia de ninguna tabla ni catalogo. */}
           <div className="border-bottom pb-3 mb-4 d-flex justify-content-between align-items-center gap-3">
             <div className="d-flex align-items-center gap-3">
               <img
@@ -191,7 +173,6 @@ export default function ConstanciaDonacionPage({ usuarioRol, donacion }) {
 
           <DatosDeLaDonacion donacion={donacion} />
 
-          {/* Firmas de Respaldo */}
           <Row className="pt-5 mt-5 border-top text-center text-muted fs-7">
             <Col xs={6}>
               <div

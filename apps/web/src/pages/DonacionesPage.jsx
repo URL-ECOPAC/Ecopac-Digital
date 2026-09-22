@@ -8,15 +8,12 @@ import StatCard from "../components/StatCard";
 import { useSesionCompartida } from "../contexto/SesionProvider";
 
 const ACCESOS_NAV = [
-  { ruta: "/donaciones/registro", etiqueta: "Registrar donación", variante: "primary" },
-  { ruta: "/donaciones/historial", etiqueta: "Historial de donaciones", variante: "secondary" },
-  { ruta: "/donantes", etiqueta: "Catálogo de donantes", variante: "secondary" },
+  { label: "Registrar donación", to: "/donaciones/registro", variant: "primary" },
+  { label: "Historial de donaciones", to: "/donaciones/historial", variant: "secondary" },
+  { label: "Catálogo de donantes", to: "/donantes", variant: "secondary" },
 ];
 
 export default function DonacionesPage() {
-  // `rol` y no `usuario.rol`: `usuario` es la cuenta de Auth y no trae rol, que vive en perfiles.
-  // Con `usuario?.rol` llegaba undefined, puedeVerDonaciones() respondia false y la pantalla le
-  // decia "No tienes permisos de lectura" hasta a la administradora.
   const { rol } = useSesionCompartida();
 
   const { fechaInicio, setFechaInicio, fechaFin, setFechaFin, cargando, error, datos } =
@@ -29,12 +26,7 @@ export default function DonacionesPage() {
       <PageHeader
         title="Resumen de donaciones"
         subtitle="Indicadores principales, donaciones recientes y métricas del módulo."
-        actions={ACCESOS_NAV.map((item) => ({
-          key: item.ruta,
-          label: item.etiqueta,
-          to: item.ruta,
-          variant: item.variante,
-        }))}
+        actions={ACCESOS_NAV}
       />
 
       {/* Filtro de Rango de Fechas */}
@@ -71,9 +63,9 @@ export default function DonacionesPage() {
               <Col xs={12} sm={2} md={4}>
                 {(fechaInicio || fechaFin) && (
                   <Button
-                    variant="link"
+                    variant="outline-secondary"
                     size="sm"
-                    className="text-decoration-none p-0 text-muted"
+                    className="py-1 px-3 text-nowrap"
                     onClick={() => {
                       setFechaInicio("");
                       setFechaFin("");
@@ -94,13 +86,6 @@ export default function DonacionesPage() {
         </Alert>
       )}
 
-      {/* Tarjetas de indicador por tipo de aporte.
-        StatCard, la misma pieza que usa inventario, en vez de cuatro <Card> con el borde
-        izquierdo tenido y las utilidades de color de Bootstrap (border-primary, text-info,
-        text-dark). Aquellas tomaban su color de la paleta de Bootstrap y no de la de Ecopac
-        -"text-dark" es negro, no un color de la marca-, y ademas escribian la cifra con `h3`
-        y las unidades con `fs-6`, una escala propia que no coincidia con la de ningun otro
-        modulo. */}
       <div className="ec-kpis">
         <StatCard
           label="Dinero recibido"
@@ -128,7 +113,6 @@ export default function DonacionesPage() {
         />
       </div>
 
-      {/* Sección Principal: Tablas de Donaciones Recientes y Donantes Frecuentes */}
       <Row className="g-4">
         <Col lg={8}>
           <Card className="shadow-sm h-100">
@@ -172,7 +156,7 @@ export default function DonacionesPage() {
                         <td className="fw-semibold">{d.donanteNombre || "Anónimo"}</td>
                         <td>
                           <Badge bg="light" text="dark" className="border">
-                            {d.tipo}
+                            {d.tipo ? d.tipo.toUpperCase() : ""}
                           </Badge>
                         </td>
                         <td
