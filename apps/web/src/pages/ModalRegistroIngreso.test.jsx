@@ -13,6 +13,15 @@ afterEach(() => {
   cleanup();
 });
 
+// IMPORTANTE: Asegúrate de que esta ruta relativa coincida exactamente con la 
+// que usa ModalRegistroIngreso.jsx para importar el proveedor (ej. "../contexto/SesionProvider")
+vi.mock("../contexto/SesionProvider", () => ({
+  SesionProvider: ({ children }) => children,
+  useSesionCompartida: () => ({
+    usuario: { id: "u-1", nombre: "Usuario Test", rol: "admin" },
+  }),
+}));
+
 const CATALOGOS = {
   medicamentos: [{ id: "med-1", nombre: "Loratadina", concentracion: "10mg" }],
   bodegas: [{ id: "bod-1", nombre: "Bodega Principal" }],
@@ -62,7 +71,7 @@ function pantalla(props = {}) {
       catalogos={CATALOGOS}
       usuarioId="u-1"
       {...props}
-    />,
+    />
   );
 }
 
@@ -88,7 +97,7 @@ describe("ModalRegistroIngreso", () => {
   it("sin items agregados, la tabla muestra el mensaje de lista vacia", () => {
     pantalla();
 
-    expect(screen.getByText("No se han agregado medicamentos a la lista.")).toBeInTheDocument();
+    expect(screen.getByText("No se han agregado ítems a la lista.")).toBeInTheDocument();
   });
 
   it("Añadir dispara agregarItem()", () => {
