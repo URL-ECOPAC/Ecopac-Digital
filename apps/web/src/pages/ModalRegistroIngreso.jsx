@@ -58,8 +58,7 @@ export default function ModalRegistroIngreso({
   // Soporte unificado para catálogos tanto de medicamentos como de insumos (Punto 6)
   const listaProductos = [...(catalogos?.medicamentos || []), ...(catalogos?.insumos || [])];
 
-  const nombreDeProducto = (id) =>
-    listaProductos.find((p) => p.id === id)?.nombre || id;
+  const nombreDeProducto = (id) => listaProductos.find((p) => p.id === id)?.nombre || id;
 
   const nombreDeBodega = (id) => (catalogos?.bodegas || []).find((b) => b.id === id)?.nombre || id;
 
@@ -89,7 +88,11 @@ export default function ModalRegistroIngreso({
             {!esAdministrador && (
               <div
                 className="alert border-0 rounded-3 text-dark mb-3 p-3"
-                style={{ backgroundColor: "#FFF3CD", fontSize: "var(--texto-xs)", lineHeight: "1.5" }}
+                style={{
+                  backgroundColor: "#FFF3CD",
+                  fontSize: "var(--texto-xs)",
+                  lineHeight: "1.5",
+                }}
               >
                 <strong>Advertencia:</strong> Los lotes que crea este ingreso quedan como{" "}
                 <strong>provisionales</strong>. <u>No afectarán el stock de inventario</u> hasta su
@@ -109,7 +112,9 @@ export default function ModalRegistroIngreso({
             {resumenGuardado ? (
               <div className="card border-success bg-success-subtle rounded-3 p-3">
                 <div className="d-flex align-items-center gap-2 text-success font-bold mb-2">
-                  <span className="fw-bold">Ingreso registrado con éxito {esAdministrador ? "" : "(Pendiente)"}</span>
+                  <span className="fw-bold">
+                    Ingreso registrado con éxito {esAdministrador ? "" : "(Pendiente)"}
+                  </span>
                 </div>
                 <div
                   className="bg-white p-3 rounded border text-secondary"

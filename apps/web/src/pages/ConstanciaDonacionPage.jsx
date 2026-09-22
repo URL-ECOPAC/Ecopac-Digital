@@ -15,7 +15,8 @@ import "./reportes.css";
 function DatosDeLaDonacion({ donacion }) {
   const detalles = donacion.detalles ?? [];
   const esDinero = donacion.tipo === TIPOS_DE_DONACION.DINERO;
-  const nombreDonante = donacion.donante_nombre || donacion.donanteNombre || donacion.donante?.nombre || "Anónimo";
+  const nombreDonante =
+    donacion.donante_nombre || donacion.donanteNombre || donacion.donante?.nombre || "Anónimo";
 
   return (
     <>
@@ -24,7 +25,8 @@ function DatosDeLaDonacion({ donacion }) {
           <strong>Donante:</strong> {nombreDonante}
         </p>
         <p>
-          <strong>Identificación / Teléfono:</strong> {donacion.donante_contacto || donacion.donante?.contacto || "No registrado"}
+          <strong>Identificación / Teléfono:</strong>{" "}
+          {donacion.donante_contacto || donacion.donante?.contacto || "No registrado"}
         </p>
         <p>
           <strong>Tipo de aporte:</strong> {ETIQUETAS_TIPO_DONACION[donacion.tipo] ?? donacion.tipo}

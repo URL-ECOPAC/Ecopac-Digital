@@ -197,21 +197,22 @@ export default function DonantesPage({ usuarioRol }) {
 
   // Comprobar si el tipo seleccionado en el formulario es una persona
   const esTipoPersona =
-    valoresFormulario?.tipo === TIPOS_DE_DONANTE.PERSONA ||
-    valoresFormulario?.tipo === "persona";
+    valoresFormulario?.tipo === TIPOS_DE_DONANTE.PERSONA || valoresFormulario?.tipo === "persona";
 
   // Filtrar el campo de contacto/persona de contacto si es tipo persona
-  const camposFormularioFiltrados = (camposSpec || []).map((campo) => {
-    if (campo.id === "direccion") {
-      return { ...campo, tipo: TIPOS_DE_CAMPO.TEXTO_LARGO };
-    }
-    return campo;
-  }).filter((campo) => {
-    if (esTipoPersona && (campo.id === "contacto" || campo.id === "persona_contacto")) {
-      return false;
-    }
-    return true;
-  });
+  const camposFormularioFiltrados = (camposSpec || [])
+    .map((campo) => {
+      if (campo.id === "direccion") {
+        return { ...campo, tipo: TIPOS_DE_CAMPO.TEXTO_LARGO };
+      }
+      return campo;
+    })
+    .filter((campo) => {
+      if (esTipoPersona && (campo.id === "contacto" || campo.id === "persona_contacto")) {
+        return false;
+      }
+      return true;
+    });
 
   return (
     <ScreenContainer>
