@@ -32,21 +32,27 @@ import { modulosVisibles } from "../navegacion.js";
  * destino de entrada cambia solo. La version anterior tenia esa tabla escrita a mano y apuntaba
  * a /dashboard y /jornadas-activas, dos rutas que App.jsx no declara.
  */
-function rutaInicialDe(rol) {
+export function rutaInicialDe(rol) {
   return modulosVisibles(rol)[0]?.ruta ?? "/";
 }
 
 /**
- * @param {{ rutaPrevia?: string }} [opciones] Ruta protegida que la persona intentaba abrir antes
- *   de que el guard la mandara al login. Si viene, gana sobre el destino por rol.
+ * ISSUE #864. Iniciar sesion lleva SIEMPRE al inicio del rol, nunca a la ultima pantalla que
+ * estuviera abierta.
+ *
+ * Antes ganaba `rutaPrevia` -la ruta protegida que el guard habia interrumpido-, que es el patron
+ * habitual de "te devuelvo a donde ibas". Aqui no sirve, porque en el mismo navegador entra gente
+ * distinta: se probo en ecopac-dev cerrando la sesion de un rol consultivo en /reportes y
+ * entrando como medico, y lo primero que vio fue "Acceso restringido" -- la ruta era de la sesion
+ * anterior, no suya-. El destino de entrada tiene que depender de quien entra, no de quien salio.
  */
-export function useInicioSesion({ rutaPrevia } = {}) {
+export function useInicioSesion() {
   const [correo, setCorreo] = useState("");
   const [contrasena, setContrasena] = useState("");
   const [erroresDeCampo, setErroresDeCampo] = useState({});
   const [error, setError] = useState(null);
   const [enviando, setEnviando] = useState(false);
-  const [destinoPorDefecto, setDestinoPorDefecto] = useState(rutaPrevia ?? null);
+  const [destinoPorDefecto, setDestinoPorDefecto] = useState(null);
 
   async function handleSubmit(evento) {
     evento?.preventDefault?.();
@@ -68,7 +74,7 @@ export function useInicioSesion({ rutaPrevia } = {}) {
         return;
       }
 
-      setDestinoPorDefecto(rutaPrevia ?? rutaInicialDe(resultado.rol));
+      setDestinoPorDefecto(rutaInicialDe(resultado.rol));
     } finally {
       setEnviando(false);
     }
