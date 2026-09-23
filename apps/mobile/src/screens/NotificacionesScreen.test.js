@@ -81,7 +81,7 @@ describe("NotificacionesScreen", () => {
           screen: ROUTES.TAB_INVENTARIO,
           params: { screen: ROUTES.RESUMEN_ALERTAS_INVENTARIO },
         }),
-      { timeout: 10000 } // ⏱ Espera hasta 10s en lugar de 5s
+      { timeout: 10000 }, // ⏱ Espera hasta 10s en lugar de 5s
     );
     expect(mockEstado.abrir).toHaveBeenCalledWith(CADUCIDAD);
   }, 30000); // ⏱ Tiempo total del test: 30s
