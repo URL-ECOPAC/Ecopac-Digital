@@ -60,7 +60,7 @@ export default function DetalleLoteScreen() {
   if (!lote) {
     return (
       <ScreenContainer>
-        <EmptyState message="No se encontro el lote." />
+        <EmptyState message="No se encontró el lote." />
       </ScreenContainer>
     );
   }

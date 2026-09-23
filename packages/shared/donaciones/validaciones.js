@@ -85,7 +85,7 @@ export function validarDonante(donante = {}) {
 
   if (sinContacto) {
     errores.contacto =
-      "Debe proporcionar al menos un dato de contacto (persona, telefono o correo).";
+      "Debe proporcionar al menos un dato de contacto (persona, teléfono o correo).";
   }
 
   return errores;

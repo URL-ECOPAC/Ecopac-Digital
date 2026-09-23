@@ -43,7 +43,7 @@ export function useNuevaContrasena() {
     const todos = { ...errores };
 
     if (contrasena !== confirmarContrasena) {
-      todos.confirmarContrasena = "Las contrasenas no coinciden.";
+      todos.confirmarContrasena = "Las contraseñas no coinciden.";
     }
 
     setErroresDeCampo(todos);

@@ -67,7 +67,7 @@ export default function ReporteInventarioPage({ incrustado = false }) {
     return (
       <ContenedorDeReporte incrustado={incrustado}>
         <CabeceraDeReporte incrustado={incrustado} title="Inventario actual" />
-        <ErrorState message="Se necesita una sesion activa para consultar el inventario." />
+        <ErrorState message="Se necesita una sesión activa para consultar el inventario." />
       </ContenedorDeReporte>
     );
   }
