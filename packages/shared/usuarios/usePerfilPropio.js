@@ -269,10 +269,10 @@ export function usePerfilPropio({ usuario, perfil, refrescarPerfil }) {
         // bajo el campo en vez de error.mensaje. Cualquier otro codigo (red, desconocido) si usa
         // el mensaje normalizado tal cual, igual que el resto del proyecto.
         if (esActualIncorrecta) {
-          setErroresDeContrasena({ actual: "La contrasena actual no es correcta." });
+          setErroresDeContrasena({ actual: "La contraseña actual no es correcta." });
         } else {
           setErrorGlobalDeContrasena(
-            errorDeReverificacion?.mensaje ?? "No se pudo confirmar tu contrasena actual.",
+            errorDeReverificacion?.mensaje ?? "No se pudo confirmar tu contraseña actual.",
           );
         }
         setCambiandoContrasena(false);

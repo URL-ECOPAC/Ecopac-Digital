@@ -118,7 +118,7 @@ describe("validarGasto", () => {
     const resultado = validarGasto({ monto: 10, fecha: hoy() }, null, HOY);
 
     expect(resultado.errores).toContain("El concepto del gasto es obligatorio.");
-    expect(resultado.errores).toContain("La categoria de gasto es obligatoria.");
+    expect(resultado.errores).toContain("La categoría de gasto es obligatoria.");
   });
 
   it("rechaza una categoria que no esta en el enum categoria_gasto", () => {
@@ -134,7 +134,7 @@ describe("validarGasto", () => {
       HOY,
     );
 
-    expect(resultado.errores).toContain("La categoria seleccionada no es valida.");
+    expect(resultado.errores).toContain("La categoría seleccionada no es válida.");
   });
 
   it("rechaza una fecha posterior a hoy", () => {

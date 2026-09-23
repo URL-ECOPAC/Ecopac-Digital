@@ -90,7 +90,7 @@ describe("avisoDeAlta", () => {
     const aviso = avisoDeAlta({ email: "nueva@ecopac.test" });
 
     expect(aviso.tono).toBe("exito");
-    expect(aviso.mensaje).toContain("no puede iniciar sesion");
+    expect(aviso.mensaje).toContain("no puede iniciar sesión");
   });
 
   it("si el correo no salio, gana la advertencia", () => {

@@ -36,8 +36,8 @@ export function avisoDeCorreoNoEnviado(usuario) {
   const quien = usuario.email ?? "la persona invitada";
   return (
     `La cuenta de ${quien} quedo creada, pero no se pudo enviar el correo para establecer la ` +
-    "contrasena. Hay que revisar el envio de correos del proyecto (SMTP de Supabase); mientras " +
-    "tanto la contrasena se puede fijar desde el panel de Supabase."
+    "contraseña. Hay que revisar el envío de correos del proyecto (SMTP de Supabase); mientras " +
+    "tanto la contraseña se puede fijar desde el panel de Supabase."
   );
 }
 
@@ -57,7 +57,7 @@ export function avisoDeInvitacionEnviada(usuario) {
   const quien = usuario?.email ?? "la persona invitada";
   return (
     `Invitacion enviada a ${quien}. Le llego un correo para elegir su contrasena; hasta que lo ` +
-    "haga, la cuenta aparece creada pero no puede iniciar sesion."
+    "haga, la cuenta aparece creada pero no puede iniciar sesión."
   );
 }
 
@@ -167,7 +167,7 @@ export function useAltaUsuario() {
       );
       if (errorDeComplemento) {
         avisoDeComplemento =
-          "La cuenta quedo creada, pero no se guardaron la fecha de ingreso, la direccion ni " +
+          "La cuenta quedó creada, pero no se guardaron la fecha de ingreso, la dirección ni " +
           "las notas. Se pueden completar editando al colaborador.";
       }
     }

@@ -351,7 +351,7 @@ export async function anularReceta(id, { motivo, anuladaPor } = {}) {
           ...construirError(CODIGOS_DE_ERROR_DE_SUPABASE.PERMISO_DENEGADO),
           mensaje:
             "No se pudo anular la receta. Solo puede anularla quien la emitio, y solo mientras " +
-            "siga vigente; si ya estaba anulada o la firmo otra persona, pideselo a la " +
+            "siga vigente; si ya estaba anulada o la firmó otra persona, pídeselo a la " +
             "administradora.",
         },
       };

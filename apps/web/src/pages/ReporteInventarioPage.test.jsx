@@ -83,7 +83,7 @@ describe("ReporteInventarioPage", () => {
     pantalla();
 
     expect(
-      screen.getByText("Se necesita una sesion activa para consultar el inventario."),
+      screen.getByText("Se necesita una sesión activa para consultar el inventario."),
     ).toBeInTheDocument();
   });
 

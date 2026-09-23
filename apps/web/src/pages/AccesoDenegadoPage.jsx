@@ -17,9 +17,9 @@ export default function AccesoDenegadoPage({ rol }) {
 
   const mensaje = rol
     ? `Tu usuario tiene el rol de ${etiquetaDeRol(rol)} y ese rol no alcanza esta seccion. ` +
-      "Si necesitas entrar, pideselo a la administradora."
-    : "No se pudo confirmar tu rol, asi que no es posible abrir esta seccion. " +
-      "Vuelve a iniciar sesion y, si sigue pasando, avisa a la administradora.";
+      "Si necesitas entrar, pídeselo a la administradora."
+    : "No se pudo confirmar tu rol, así que no es posible abrir esta sección. " +
+      "Vuelve a iniciar sesión y, si sigue pasando, avisa a la administradora.";
 
   return (
     <ScreenContainer>
