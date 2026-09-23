@@ -28,6 +28,7 @@
 import { obtenerSupabase } from "../api/cliente.js";
 import { normalizarError } from "../api/errores-de-supabase.js";
 import { obtenerTodasLasFilas } from "../api/paginacion.js";
+import { aCadenaFechaLocal, diasHastaVencimiento } from "../formato/fechas.js";
 import { puedeVerIndicadoresDeImpacto } from "./permisos.js";
 
 // Reexportar funciones de permisos para mantener la interfaz unificada
