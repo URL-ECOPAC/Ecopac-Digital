@@ -22,15 +22,15 @@ export default function RecetaImprimible({ receta, paciente }) {
           src="/logo-ecopac.png"
           alt="Logo Ecopac"
           className="receta-imprimible__logo"
-          onError={(e) => { e.target.style.display = "none"; }}
+          onError={(e) => {
+            e.target.style.display = "none";
+          }}
         />
         <div className="receta-imprimible__encabezado-texto">
           <h1 className="receta-imprimible__organizacion">{datos.organizacion}</h1>
           <p className="receta-imprimible__documento">{datos.documento}</p>
           {/* Folio eliminado — solo fecha */}
-          <p className="receta-imprimible__fecha">
-            {formatearFechaCorta(datos.fecha)}
-          </p>
+          <p className="receta-imprimible__fecha">{formatearFechaCorta(datos.fecha)}</p>
         </div>
       </header>
 
@@ -90,6 +90,6 @@ export default function RecetaImprimible({ receta, paciente }) {
         <p>{datos.medico ?? "Firma del médico"}</p>
       </footer>
     </article>,
-    document.body
+    document.body,
   );
 }
