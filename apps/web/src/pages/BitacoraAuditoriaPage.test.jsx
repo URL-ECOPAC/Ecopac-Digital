@@ -40,7 +40,11 @@ const mockEstadoHook = {
   hayPaginaSiguiente: false,
   irAPaginaAnterior: vi.fn(),
   irAPaginaSiguiente: vi.fn(),
-  catalogos: { perfiles: [{ value: "u1", label: "Ana López" }], operaciones: [] },
+  catalogos: {
+    perfiles: [{ value: "u1", label: "Ana López" }],
+    operaciones: [{ value: "actualizacion", clave: "actualizacion", label: "Actualización" }],
+    tablas: [{ value: "pacientes", label: "Pacientes" }],
+  },
 };
 
 vi.mock("../../../../packages/shared/auditoria/useBitacoraAuditoria.js", () => ({
@@ -99,7 +103,23 @@ describe("BitacoraAuditoriaPage", () => {
     pantalla();
 
     expect(screen.getByRole("cell", { name: "Ana López" })).toBeInTheDocument();
-    expect(screen.getByRole("cell", { name: "pacientes" })).toBeInTheDocument();
+    // ISSUE #864: la columna Tabla muestra la etiqueta de TABLAS_AUDITADAS, no el nombre de la
+    // tabla de Postgres.
+    expect(screen.getByRole("cell", { name: "Pacientes" })).toBeInTheDocument();
+  });
+
+  // ISSUE #864. La caja alta la pone `text-uppercase` sobre la celda, no `.toUpperCase()` sobre
+  // el dato: el texto del DOM -- lo que lee un lector de pantalla y lo que sale en una
+  // exportacion -- sigue siendo el original.
+  it("usuario, tabla y operacion se ven en mayusculas; la fecha no", () => {
+    pantalla();
+
+    expect(screen.getByRole("cell", { name: "Ana López" })).toHaveClass("text-uppercase");
+    expect(screen.getByRole("cell", { name: "Pacientes" })).toHaveClass("text-uppercase");
+    expect(screen.getByText("Actualización").closest("td")).toHaveClass("text-uppercase");
+
+    const celdaDeFecha = screen.getAllByRole("cell")[0];
+    expect(celdaDeFecha).not.toHaveClass("text-uppercase");
   });
 
   it("un evento sin eventos muestra el vacio, no un error", () => {

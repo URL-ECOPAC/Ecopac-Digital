@@ -2,6 +2,7 @@ import {
   ETIQUETAS_ESTADO_DONACION,
   ETIQUETAS_TIPO_DONACION,
   ETIQUETAS_TIPO_DONANTE,
+  TIPOS_DE_DONANTE,
   formatearFechaConHora,
   formatearFechaCorta,
   formatearMoneda,
@@ -25,7 +26,6 @@ import StatusChip from "../components/StatusChip";
 import TextField from "../components/TextField";
 import { ACCION_VOLVER_A_DONACIONES } from "./donacionesNavegacion";
 
-/** Un dato de la ficha: rotulo en versalitas y valor, o un guion si esta vacio. */
 function Dato({ etiqueta, valor }) {
   return (
     <div>
@@ -35,19 +35,12 @@ function Dato({ etiqueta, valor }) {
   );
 }
 
-/**
- * Ficha de un donante.
- *
- * Mostraba "Tipo" con la clave cruda del enum ("persona"), "Contacto" vacio aunque el donante
- * tuviera telefono y correo, y un "Historico de aportes" que leia `donante.donaciones`, un campo
- * que nunca existio: el historico lo trae el hook en `historicoDelDonante` y la pantalla no lo
- * usaba, asi que salia siempre vacio. Ahora estan todas las columnas de `donantes` (00022) que
- * tienen sentido para una persona, los totales por tipo y cada donacion con su fecha, tipo,
- * estado y monto.
- */
 function FichaDonante({ donante, historico, onCerrar, onEditar, puedeEscribir }) {
   const donaciones = historico?.donaciones ?? [];
   const totales = historico?.totalesPorTipo ?? {};
+
+  // Ocultar fila de persona de contacto si el donante es de tipo persona
+  const esPersona = donante.tipo === TIPOS_DE_DONANTE.PERSONA || donante.tipo === "persona";
 
   return (
     <Card
@@ -65,7 +58,7 @@ function FichaDonante({ donante, historico, onCerrar, onEditar, puedeEscribir })
       }
     >
       <dl className="ec-ficha-datos">
-        <Dato etiqueta="Persona de contacto" valor={donante.contacto} />
+        {!esPersona && <Dato etiqueta="Persona de contacto" valor={donante.contacto} />}
         <Dato etiqueta="Teléfono" valor={donante.telefono} />
         <Dato etiqueta="Correo" valor={donante.email} />
         <Dato etiqueta="Dirección" valor={donante.direccion} />
@@ -197,13 +190,29 @@ export default function DonantesPage({ usuarioRol }) {
     );
   }
 
-  // Los tipos salen del enum tipo_donante (00022) via catalogos.tiposDeDonante. Estaban escritos a
-  // mano como "individual", "empresa" y "organizacion": los dos primeros no existen en el enum,
-  // asi que filtrar por "Individual" no mostraba a nadie y las personas no se podian filtrar.
   const opcionesDeTipo = [
     { value: "todos", label: "Todos los tipos" },
     ...(catalogos?.tiposDeDonante ?? []),
   ];
+
+  // Comprobar si el tipo seleccionado en el formulario es una persona
+  const esTipoPersona =
+    valoresFormulario?.tipo === TIPOS_DE_DONANTE.PERSONA || valoresFormulario?.tipo === "persona";
+
+  // Filtrar el campo de contacto/persona de contacto si es tipo persona
+  const camposFormularioFiltrados = (camposSpec || [])
+    .map((campo) => {
+      if (campo.id === "direccion") {
+        return { ...campo, tipo: TIPOS_DE_CAMPO.TEXTO_LARGO };
+      }
+      return campo;
+    })
+    .filter((campo) => {
+      if (esTipoPersona && (campo.id === "contacto" || campo.id === "persona_contacto")) {
+        return false;
+      }
+      return true;
+    });
 
   return (
     <ScreenContainer>
@@ -274,9 +283,6 @@ export default function DonantesPage({ usuarioRol }) {
         />
       )}
 
-      {/* El formulario usa el Modal y la SeccionDeFormulario del catalogo, como el resto de las
-          altas: antes era un Modal de Bootstrap con los campos a ancho completo uno debajo de otro,
-          y "Cancelar" era el boton gris oscuro de Bootstrap, distinto de cualquier otro. */}
       <Modal
         visible={modalAbierto}
         onClose={cerrarModal}
@@ -300,9 +306,7 @@ export default function DonantesPage({ usuarioRol }) {
           titulo="Datos del donante"
           descripcion="Quien aporta y como localizarlo."
           acento="var(--accent-donaciones)"
-          campos={(camposSpec || []).map((campo) =>
-            campo.id === "direccion" ? { ...campo, tipo: TIPOS_DE_CAMPO.TEXTO_LARGO } : campo,
-          )}
+          campos={camposFormularioFiltrados}
           valores={valoresFormulario}
           errores={errorFormulario?.campos ?? {}}
           onChange={setCampoFormulario}

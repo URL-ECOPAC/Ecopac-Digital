@@ -41,7 +41,9 @@ describe("listarDonaciones (#193)", () => {
     mockSupabase.then = (resolve) => resolve(modo === "totales" ? totales : listado);
   }
 
-  it("permite leer a administrador, junta directiva y socio fundador; deniega a los demas", async () => {
+  // ISSUE #864: leian tambien los dos roles consultivos. Se quedan con Reportes como unica
+  // pantalla y la 00141 les retira la politica de SELECT de donaciones (00083).
+  it("permite leer solo a administrador; deniega a los demas", async () => {
     resolverConsultas({
       listado: { data: [], error: null, count: 0 },
       totales: { data: [], error: null },
@@ -53,8 +55,8 @@ describe("listarDonaciones (#193)", () => {
     const otro = await listarDonaciones({}, { rolUsuario: ROLES.MEDICO });
 
     expect(admin.error).toBeNull();
-    expect(junta.error).toBeNull();
-    expect(socio.error).toBeNull();
+    expect(junta.error.mensaje).toContain("permisos de lectura");
+    expect(socio.error.mensaje).toContain("permisos de lectura");
     expect(otro.error.mensaje).toContain("permisos de lectura");
   });
 

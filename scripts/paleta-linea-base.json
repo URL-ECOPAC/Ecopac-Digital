@@ -1,7 +1,9 @@
 {
   "apps/mobile/app.config.js": ["#3db648", "#f7f8fa"],
+  "apps/mobile/src/components/AccesosDeSeccion.js": ["#3db648", "#e2e4e9", "#ffffff"],
   "apps/mobile/src/components/AvisoDeInactividad.js": ["#2d2d2d"],
   "apps/mobile/src/components/AvisosDelSistema.js": ["#3db648"],
+  "apps/mobile/src/components/BotonCerrarSesion.js": ["#2d2d2d", "#4d4d4d"],
   "apps/mobile/src/components/CampanaNotificaciones.js": ["#4d4d4d", "#f7941d", "#ffffff"],
   "apps/mobile/src/components/Card.js": ["#2d2d2d", "#7a7a8a", "#e2e4e9", "#ffffff"],
   "apps/mobile/src/components/DataList.js": [
@@ -47,14 +49,6 @@
     "#e2e4e9",
     "#ffffff"
   ],
-  "apps/mobile/src/components/MenuDrawer.js": [
-    "#2d2d2d",
-    "#3db648",
-    "#7a7a8a",
-    "#f7941d",
-    "#f7f8fa",
-    "#ffffff"
-  ],
   "apps/mobile/src/components/Modal.js": ["#2d2d2d", "#7a7a8a", "#f7f8fa"],
   "apps/mobile/src/components/MultiSelector.js": [
     "#2d2d2d",
@@ -67,6 +61,14 @@
   ],
   "apps/mobile/src/components/NumberField.js": ["#7a7a8a"],
   "apps/mobile/src/components/PageHeader.js": ["#2d2d2d", "#3db648", "#7a7a8a"],
+  "apps/mobile/src/components/PasswordField.js": [
+    "#2d2d2d",
+    "#3db648",
+    "#4d4d4d",
+    "#7a7a8a",
+    "#e91e8c",
+    "#f7f8fa"
+  ],
   "apps/mobile/src/components/PrimaryButton.js": [
     "#3db648",
     "#4d4d4d",
@@ -109,13 +111,20 @@
   ],
   "apps/mobile/src/screens/AccesoDenegadoScreen.js": ["#7a7a8a", "#e91e8c", "#ffffff"],
   "apps/mobile/src/screens/AjustesScreen.js": ["#2d2d2d", "#3db648", "#7a7a8a"],
+  "apps/mobile/src/screens/AppSoloParaCampoScreen.js": [
+    "#2d2d2d",
+    "#3db648",
+    "#7a7a8a",
+    "#e2e4e9",
+    "#ffffff"
+  ],
+  "apps/mobile/src/screens/CatalogoCondicionesScreen.js": ["#e91e8c"],
   "apps/mobile/src/screens/CatalogoMedicamentosScreen.js": [
     "#2d2d2d",
     "#7a7a8a",
     "#e91e8c",
     "#f7941d"
   ],
-  "apps/mobile/src/screens/ColaboradoresScreen.js": ["#7a7a8a"],
   "apps/mobile/src/screens/ComunidadesScreen.js": ["#7a7a8a"],
   "apps/mobile/src/screens/ConsultaScreen.js": [
     "#2d2d2d",
@@ -131,18 +140,6 @@
     "#7a7a8a",
     "#e91e8c",
     "#f7f8fa"
-  ],
-  "apps/mobile/src/screens/DonacionesScreen.js": [
-    "#000",
-    "#29abe2",
-    "#2d2d2d",
-    "#3db648",
-    "#7a7a8a",
-    "#e2e4e9",
-    "#e91e8c",
-    "#f7941d",
-    "#f7f8fa",
-    "#ffffff"
   ],
   "apps/mobile/src/screens/EntregaMedicamentosScreen.js": [
     "#2d2d2d",
@@ -169,7 +166,6 @@
     "#7a7a8a",
     "#e2e4e9"
   ],
-  "apps/mobile/src/screens/FichaColaboradorScreen.js": ["#2d2d2d", "#7a7a8a", "#e2e4e9", "#f7f8fa"],
   "apps/mobile/src/screens/FichaPacienteScreen.js": [
     "#2d2d2d",
     "#3db648",
@@ -220,9 +216,11 @@
   "apps/mobile/src/screens/MisMovimientosScreen.js": ["#7a7a8a"],
   "apps/mobile/src/screens/ModalAjusteEntrega.js": ["#2d2d2d", "#7a7a8a", "#e91e8c"],
   "apps/mobile/src/screens/ModalComunidad.js": ["#2d2d2d", "#3db648", "#e91e8c", "#f7941d"],
+  "apps/mobile/src/screens/ModalCorreccionLote.js": ["#7a7a8a", "#e91e8c"],
   "apps/mobile/src/screens/ModalCorreccionMovimiento.js": ["#7a7a8a", "#e91e8c", "#f7941d"],
+  "apps/mobile/src/screens/ModalDiagnostico.js": ["#e91e8c"],
   "apps/mobile/src/screens/ModalEdicionPaciente.js": ["#2d2d2d", "#e91e8c"],
-  "apps/mobile/src/screens/ModalProyecto.js": ["#e91e8c"],
+  "apps/mobile/src/screens/ModalPrincipioActivo.js": ["#2d2d2d", "#e91e8c", "#f7941d"],
   "apps/mobile/src/screens/NotificacionesScreen.js": [
     "#29abe2",
     "#2d2d2d",
@@ -231,24 +229,7 @@
     "#f7f8fa",
     "#ffffff"
   ],
-  "apps/mobile/src/screens/NuevaContrasenaScreen.js": [
-    "#2d2d2d",
-    "#3db648",
-    "#7a7a8a",
-    "#e91e8c",
-    "#ffffff"
-  ],
-  "apps/mobile/src/screens/ProyectosScreen.js": [
-    "#1e7a28",
-    "#29abe2",
-    "#2d2d2d",
-    "#3db648",
-    "#7a7a8a",
-    "#e2e4e9",
-    "#f7941d",
-    "#f7f8fa",
-    "#ffffff"
-  ],
+  "apps/mobile/src/screens/NuevaContrasenaScreen.js": ["#2d2d2d", "#7a7a8a", "#e91e8c", "#ffffff"],
   "apps/mobile/src/screens/RecetaScreen.js": [
     "#2d2d2d",
     "#3db648",
@@ -265,6 +246,7 @@
     "#e91e8c",
     "#f7941d"
   ],
+  "apps/mobile/src/screens/RegistroSalidaScreen.js": ["#7a7a8a", "#e91e8c"],
   "apps/mobile/src/screens/RestablecerContrasenaScreen.js": [
     "#2d2d2d",
     "#3db648",
@@ -274,6 +256,7 @@
   "apps/mobile/src/screens/RestaurandoSesionScreen.js": ["#2d2d2d", "#3db648"],
   "apps/mobile/src/screens/ResumenJornadaScreen.js": ["#2d2d2d", "#3db648", "#7a7a8a", "#f7f8fa"],
   "apps/mobile/src/screens/SeleccionJornadaScreen.js": ["#2d2d2d", "#7a7a8a"],
+  "apps/mobile/src/screens/ValidacionMovimientosScreen.js": ["#2d2d2d", "#7a7a8a"],
   "apps/web/src/components/auth/AuthAlert.jsx": [
     "#16a34a",
     "#29abe2",
@@ -306,7 +289,7 @@
     "#f59e0b",
     "#ffffff"
   ],
-  "apps/web/src/components/auth/AuthPasswordToggle.jsx": ["#16a34a"],
+  "apps/web/src/components/auth/AuthPasswordToggle.jsx": ["#3db648", "#7a7a8a"],
   "apps/web/src/components/DataList.jsx": ["#3db648", "#ffffff"],
   "apps/web/src/components/KanbanBoard.jsx": ["#4d4d4d", "#7a7a8a", "#e2e4e9", "#f7f8fa"],
   "apps/web/src/components/MainLayout.css": [
@@ -348,8 +331,7 @@
     "#e2e4e9",
     "#e91e8c",
     "#f7941d",
-    "#f7f8fa",
-    "#ffffff"
+    "#f7f8fa"
   ],
   "apps/web/src/pages/AdministracionBodegasProveedoresPage.jsx": [
     "#10b981",
@@ -418,7 +400,7 @@
   "apps/web/src/pages/JornadasPage.jsx": ["#4d4d4d"],
   "apps/web/src/pages/KardexMovimientosPage.jsx": ["#3db648", "#4d4d4d", "#f7941d"],
   "apps/web/src/pages/LoginPage.jsx": ["#16a34a", "#2563eb", "#64748b", "#f8fafc"],
-  "apps/web/src/pages/MatrizPermisosPorRolPage.jsx": ["#3db648"],
+  "apps/web/src/pages/MatrizPermisosPorRolPage.jsx": ["#29abe2", "#3db648", "#f7941d"],
   "apps/web/src/pages/ModalPermisosUsuario.jsx": ["#3db648"],
   "apps/web/src/pages/ModalRegistroIngreso.jsx": ["#009963", "#fff3cd"],
   "apps/web/src/pages/ModalSalidaMedicamento.jsx": [
@@ -446,7 +428,7 @@
   "apps/web/src/pages/PanelAlertasVencimiento.jsx": ["#3db648", "#e91e8c", "#f7941d"],
   "apps/web/src/pages/PanelEjecucionPresupuestal.jsx": ["#29abe2", "#3db648", "#7a7a8a", "#f7941d"],
   "apps/web/src/pages/perfil.css": ["#1e7a28", "#2d2d2d", "#3db648", "#7a7a8a", "#ffffff"],
-  "apps/web/src/pages/permisos.css": ["#7a7a8a", "#e2e4e9", "#f7941d", "#ffffff"],
+  "apps/web/src/pages/permisos.css": ["#3db648", "#7a7a8a", "#e2e4e9", "#f7941d", "#ffffff"],
   "apps/web/src/pages/PestaniaSignosPaciente.jsx": [
     "#29abe2",
     "#3db648",

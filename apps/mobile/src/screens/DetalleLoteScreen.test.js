@@ -9,6 +9,12 @@ jest.mock("@react-navigation/native", () => ({
   useRoute: () => ({ params: { loteId: "lote-1" } }),
 }));
 
+const mockSesion = { perfil: { id: "u-1", rol: "medico" } };
+
+jest.mock("../contexto/SesionProvider", () => ({
+  useSesionCompartida: () => mockSesion,
+}));
+
 const mockEstadoDetalle = {
   lote: null,
   movimientos: [],
@@ -38,6 +44,9 @@ const LOTE_DE_EJEMPLO = {
   fechaIngreso: "2026-01-01",
   fechaVencimiento: "2027-01-01",
   vencido: false,
+  costoUnitario: 12.5,
+  registradoPor: "u-1",
+  confirmado: false,
 };
 
 const MOVIMIENTO_DE_EJEMPLO = {
@@ -125,5 +134,47 @@ describe("DetalleLoteScreen", () => {
     pantalla();
 
     expect(screen.getByText("No se encontro el lote.")).toBeTruthy();
+  });
+
+  // Issue #866: "al presionar una tarjeta se deben ver sus datos y un boton de editar". Quien
+  // puede editar lo decide puedeCorregirLote() -espejo del UPDATE de la 00107-, no un rol fijo:
+  // la administradora siempre, o quien registro el lote mientras siga provisional.
+  it("el autor de un lote provisional ve el boton de editar", () => {
+    mockEstadoDetalle.lote = LOTE_DE_EJEMPLO;
+    pantalla();
+
+    expect(screen.getByText("Editar")).toBeTruthy();
+  });
+
+  it("alguien ajeno al lote no ve el boton de editar", () => {
+    mockSesion.perfil = { id: "otro-usuario", rol: "medico" };
+    mockEstadoDetalle.lote = LOTE_DE_EJEMPLO;
+    pantalla();
+
+    expect(screen.queryByText("Editar")).toBeNull();
+
+    mockSesion.perfil = { id: "u-1", rol: "medico" };
+  });
+
+  it("un lote ya confirmado no lo corrige su autor, solo administracion", () => {
+    mockEstadoDetalle.lote = { ...LOTE_DE_EJEMPLO, confirmado: true };
+    pantalla();
+
+    expect(screen.queryByText("Editar")).toBeNull();
+  });
+
+  // El costo es informacion financiera (issue #752): un medico no lo ve aunque vea el lote.
+  it("el costo unitario solo se muestra a quien puede ver la valorizacion", () => {
+    mockEstadoDetalle.lote = LOTE_DE_EJEMPLO;
+    pantalla();
+
+    expect(screen.queryByText("Costo unitario")).toBeNull();
+
+    mockSesion.perfil = { id: "u-9", rol: "administrador" };
+    pantalla();
+
+    expect(screen.getByText("Costo unitario")).toBeTruthy();
+
+    mockSesion.perfil = { id: "u-1", rol: "medico" };
   });
 });

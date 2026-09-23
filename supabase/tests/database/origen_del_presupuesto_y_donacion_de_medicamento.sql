@@ -173,9 +173,12 @@ SELECT is(
 -- ============================================================================
 SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000084003';
 
-SELECT ok(
-  (SELECT count(*) FROM jornada_presupuesto_origen) > 0,
-  'junta directiva lee los origenes de presupuesto'
+-- ISSUE #864: la 00135 daba la lectura a los dos roles consultivos; la 00141 la deja en
+-- es_administrador() mas tiene_permiso('jornadas.gestionar'). El desglose del presupuesto de una
+-- jornada no es uno de los cuatro reportes que les quedan.
+SELECT is(
+  (SELECT count(*) FROM jornada_presupuesto_origen)::int, 0,
+  'junta directiva ya no lee los origenes de presupuesto (issue #864)'
 );
 
 SELECT throws_ok(

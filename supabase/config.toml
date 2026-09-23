@@ -107,6 +107,17 @@ enable_signup = true
 double_confirm_changes = true
 enable_confirmations = false
 
+# Plantillas de correo de Auth (issue #864). Hoy solo la de recuperacion: la invitacion dejo de
+# usar el correo de GoTrue y manda el suyo desde la Edge Function invitar-usuario, precisamente
+# para poder distinguirse de esta.
+#
+# COMO EN TODO ESTE ARCHIVO: gobierna el stack local y el CI, no ecopac-dev ni ecopac-prod. El
+# despliegue solo corre `supabase db push`, nunca `supabase config push`, asi que en los proyectos
+# remotos hay que pegar el mismo contenido en Authentication > Emails > Reset Password.
+[auth.email.template.recovery]
+subject = "Restablece tu contrasena de Ecopac Digital"
+content_path = "./supabase/templates/recovery.html"
+
 [edge_runtime]
 enabled = true
 policy = "oneshot"

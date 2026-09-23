@@ -21,7 +21,7 @@ export default function StatCard({
 }) {
   const contenido = (
     <>
-      <Text style={[styles.etiqueta, { color: accent }]}>{String(label).toUpperCase()}</Text>
+      <Text style={[styles.etiqueta, { color: accent }]}>{label}</Text>
       <Text style={[styles.valor, esTexto && styles.valorTexto]}>{value}</Text>
       {caption ? <Text style={styles.pie}>{caption}</Text> : null}
     </>
@@ -58,9 +58,8 @@ const styles = StyleSheet.create({
   },
   etiqueta: {
     fontFamily: typography.fontFamilyBase,
-    fontSize: typography.sizes.xxs,
-    fontWeight: typography.weights.bold,
-    letterSpacing: 0.8,
+    fontSize: typography.sizes.xs,
+    fontWeight: typography.weights.semibold,
   },
   valor: {
     color: colors.text,

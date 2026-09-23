@@ -6,7 +6,12 @@ import {
   construirError,
   normalizarError,
 } from "../api/errores-de-supabase.js";
-import { cerrarSesion, evaluarPerfilDeSesion, requiereCerrarSesion } from "../api/sesion.js";
+import {
+  cerrarSesion,
+  consumirCierreDeliberado,
+  evaluarPerfilDeSesion,
+  requiereCerrarSesion,
+} from "../api/sesion.js";
 import { claveDeAlmacenamiento } from "../jornadas/useJornadaActiva.js";
 
 const ESTADOS_DE_RESTAURACION = {
@@ -87,6 +92,18 @@ export function useSesion({ almacenamiento } = {}) {
   // logout() y una sesion expirada llegan las dos como SIGNED_OUT. Sin esta marca, cerrar
   // sesion a proposito mostraria el aviso de sesion expirada.
   const cierreIntencional = useRef(false);
+
+  // ISSUE #864. Verdadero desde que se publica "sin sesion" hasta que vuelve a haber una.
+  //
+  // Un intento de login con cuenta desactivada cierra la sesion DOS veces: aplicarSesion() al ver
+  // el perfil, e iniciarSesion() al volver de su propia lectura. El segundo SIGNED_OUT llegaba sin
+  // marca y sin cierreIntencional -- los habia consumido el primero --, asi que se leia como "la
+  // sesion expiro" y PISABA el mensaje correcto que el primero acababa de publicar. En el telefono
+  // eso es lo unico que la persona ve, porque el login ya se desmonto.
+  //
+  // La regla que lo resuelve vale para cualquier doble cierre: un SIGNED_OUT sobre una sesion que
+  // ya esta cerrada no describe nada nuevo y no tiene nada que anunciar.
+  const sinSesionPublicada = useRef(true);
   const activo = useRef(true);
 
   useEffect(() => {
@@ -96,6 +113,7 @@ export function useSesion({ almacenamiento } = {}) {
     /** Deja el estado en "sin sesion", con el aviso que corresponda o sin ninguno. */
     function limpiarSesion(error) {
       resolucion.current += 1;
+      sinSesionPublicada.current = true;
       cliente.auth.stopAutoRefresh();
       if (!activo.current) return;
       setSesion({ ...SIN_SESION, error: error ?? null });
@@ -151,11 +169,22 @@ export function useSesion({ almacenamiento } = {}) {
 
         // Perfil ausente o cuenta desactivada (RNF-10): dar de baja a alguien tiene que
         // surtir efecto aunque su token siga vigente.
+        //
+        // ISSUE #864. Si esto viene de un INTENTO DE LOGIN, el mensaje no es el especifico sino
+        // el generico que dejo marcado iniciarSesion(): la cuenta desactivada y la contrasena
+        // incorrecta responden lo mismo (criterio 2, OWASP A07). Sin marca -- a quien desactivan
+        // con la sesion ya abierta -- se publica el especifico, que es el que corresponde ahi.
+        //
+        // Se consume aqui ademas de en el SIGNED_OUT porque las dos lecturas del perfil corren en
+        // paralelo y cual termina antes no esta determinado: consuma quien consuma, el mensaje
+        // que llega a la pantalla es el mismo.
+        const deliberado = consumirCierreDeliberado();
         await cerrarSesionInterna(usuario.id);
-        limpiarSesion(error);
+        limpiarSesion(deliberado.marcado ? deliberado.error : error);
         return;
       }
 
+      sinSesionPublicada.current = false;
       setSesion({ usuario, perfil, cargando: false, error: null });
     }
 
@@ -208,12 +237,27 @@ export function useSesion({ almacenamiento } = {}) {
       if (evento === "INITIAL_SESSION") return;
 
       if (evento === "SIGNED_OUT" || !sesionDeSupabase) {
+        // Ya no habia sesion que perder: este cierre es el eco de otro (ver sinSesionPublicada).
+        if (sinSesionPublicada.current) {
+          cierreIntencional.current = false;
+          return;
+        }
+
         // Un SIGNED_OUT que nadie pidio es la sesion que expiro y no se pudo refrescar. Hay
         // que decirlo: la pantalla que el usuario tiene enfrente dejo de servir.
-        const fueIntencional = cierreIntencional.current;
+        //
+        // "Nadie" son dos: este hook (cierreIntencional) y api/sesion.js, que cierra por su
+        // cuenta cuando iniciarSesion() encuentra un perfil que no sirve (issue #864). Ese
+        // segundo caso no lo puede marcar el hook, porque no es el quien dispara el signOut.
+        const deliberado = consumirCierreDeliberado();
+        const fueIntencional = cierreIntencional.current || deliberado.marcado;
         cierreIntencional.current = false;
         limpiarSesion(
-          fueIntencional ? null : construirError(CODIGOS_DE_ERROR_DE_SUPABASE.SESION_EXPIRADA),
+          fueIntencional
+            ? // Un cierre de este hook no publica nada (era logout o un perfil que el hook ya
+              // resolvio). El de api/sesion.js si trae lo que hay que decir.
+              deliberado.error
+            : construirError(CODIGOS_DE_ERROR_DE_SUPABASE.SESION_EXPIRADA),
         );
         return;
       }

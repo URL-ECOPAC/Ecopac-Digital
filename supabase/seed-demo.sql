@@ -3,8 +3,9 @@
 -- TODO INVENTADO. Ningun nombre, telefono, DPI, comunidad o credencial de este archivo
 -- corresponde a una persona o lugar real (regla de confidencialidad de AGENTS.md). Sirve
 -- para desarrollar y demostrar el sistema sin arrancar con la base vacia: un usuario por
--- rol, comunidades, pacientes, una jornada finalizada y una en curso, medicamentos, lotes
--- con distintas fechas de vencimiento y movimientos de inventario en los tres estados.
+-- rol, comunidades, pacientes, dos proyectos sociales, una jornada finalizada y una en curso
+-- -- una colgando de cada proyecto --, medicamentos, lotes con distintas fechas de vencimiento
+-- y movimientos de inventario en los tres estados.
 --
 -- NUNCA ejecutar este archivo contra Ecopac-Digital-Prod. Por diseno del pipeline actual
 -- (.github/workflows/supabase.yml) ya es imposible que llegue ahi de forma automatica:
@@ -274,19 +275,50 @@ ON CONFLICT (id) DO UPDATE SET
   updated_at = NOW();
 
 -- ============================================================================
--- 8. Jornadas y personal asignado
+-- 8. Proyectos sociales (issue #864)
+-- ============================================================================
+-- Hasta ahora `proyectos` se quedaba vacia en los datos de demostracion, asi que el modulo se
+-- abria con "No hay proyectos que coincidan con los filtros" para todo el mundo y no habia forma
+-- de probar en pantalla quien ve cuales.
+--
+-- Hacen falta DOS y con distinta jornada colgada, porque desde la 00141 la politica de SELECT de
+-- `proyectos` le entrega al personal de campo **solo el proyecto de las jornadas a las que
+-- pertenece**. Con un unico proyecto no se distingue "ve el suyo" de "ve todos".
+INSERT INTO proyectos (id, nombre, descripcion, fecha_inicio, fecha_fin, responsable_id, estado, porcentaje_avance) VALUES
+  ('de00000e-0000-0000-0000-000000000001', 'Salud Rural Demo',
+   'Jornadas medicas y dentales en comunidades del altiplano. Proyecto de demostracion.',
+   CURRENT_DATE - 60, CURRENT_DATE + 120, 'de000001-0000-0000-0000-000000000001', 'en curso', 45),
+  ('de00000e-0000-0000-0000-000000000002', 'Nutricion Infantil Demo',
+   'Tamizaje nutricional y seguimiento de menores de cinco anios. Proyecto de demostracion.',
+   CURRENT_DATE - 20, CURRENT_DATE + 200, 'de000001-0000-0000-0000-000000000001', 'planificado', 10)
+ON CONFLICT (id) DO UPDATE SET
+  fecha_inicio = EXCLUDED.fecha_inicio,
+  fecha_fin = EXCLUDED.fecha_fin,
+  estado = EXCLUDED.estado,
+  porcentaje_avance = EXCLUDED.porcentaje_avance,
+  updated_at = NOW();
+
+-- ============================================================================
+-- 9. Jornadas y personal asignado
 -- ============================================================================
 -- J1 finalizada: created_at se fija antes de "fecha" a proposito (chk_jornadas_fecha_no
 -- _anterior_a_creacion, 00012, exige fecha >= created_at::date; con el DEFAULT NOW() una
 -- fecha en el pasado violaria el CHECK).
-INSERT INTO jornadas (id, nombre, fecha, comunidad_id, responsable_id, estado, presupuesto_asignado, created_at) VALUES
+-- Cada jornada cuelga de un proyecto DISTINTO a proposito (issue #864): Mario (medico) esta en
+-- el cuadro de turnos de El Rosario y es el responsable de Vista Hermosa, asi que ve los dos
+-- proyectos; Miriam (el otro medico) solo esta en Vista Hermosa y ve solo el suyo. Es lo que
+-- hace visible en pantalla la politica de SELECT de `proyectos` de la 00141.
+INSERT INTO jornadas (id, nombre, fecha, comunidad_id, responsable_id, estado, presupuesto_asignado, proyecto_id, created_at) VALUES
   ('de00000a-0000-0000-0000-000000000001', 'Jornada Demo El Rosario', CURRENT_DATE - 30,
-   'de000004-0000-0000-0000-000000000001', 'de000001-0000-0000-0000-000000000001', 'finalizada', 5000, CURRENT_DATE - 35),
+   'de000004-0000-0000-0000-000000000001', 'de000001-0000-0000-0000-000000000001', 'finalizada', 5000,
+   'de00000e-0000-0000-0000-000000000001', CURRENT_DATE - 35),
   ('de00000a-0000-0000-0000-000000000002', 'Jornada Demo Vista Hermosa', CURRENT_DATE,
-   'de000004-0000-0000-0000-000000000002', 'de000001-0000-0000-0000-000000000004', 'en curso', 3000, NOW())
+   'de000004-0000-0000-0000-000000000002', 'de000001-0000-0000-0000-000000000004', 'en curso', 3000,
+   'de00000e-0000-0000-0000-000000000002', NOW())
 ON CONFLICT (id) DO UPDATE SET
   fecha = EXCLUDED.fecha,
   estado = EXCLUDED.estado,
+  proyecto_id = EXCLUDED.proyecto_id,
   created_at = EXCLUDED.created_at,
   updated_at = NOW();
 
@@ -298,7 +330,7 @@ INSERT INTO jornada_personal (id, jornada_id, perfil_id, rol_en_jornada, hora_in
 ON CONFLICT (id) DO NOTHING;
 
 -- ============================================================================
--- 9. Movimientos de inventario en los tres estados
+-- 10. Movimientos de inventario en los tres estados
 -- ============================================================================
 -- Cada fila nace 'pendiente' (estado por defecto) y, salvo la que debe quedar en la
 -- bandeja de validacion, se transiciona con un UPDATE aparte guardado por

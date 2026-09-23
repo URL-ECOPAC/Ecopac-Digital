@@ -133,6 +133,25 @@ function Celda({ columna, fila, catalogos }) {
   }
 }
 
+/**
+ * Clases de la celda segun lo que declare la columna.
+ *
+ * `uppercase` (issue #864) lo pide la columna, no el componente: DataList lo comparten todas las
+ * pantallas y una regla global pondria en caja alta tambien las fechas y los nombres propios.
+ * Se resuelve con `text-uppercase` y no con `.toUpperCase()` sobre el dato para que el texto que
+ * lee un lector de pantalla siga siendo el original, y para que el valor que viaja a un CSV o a
+ * un PDF no cambie.
+ *
+ * Al vivir en el <td>, `text-transform` alcanza tambien a lo que dibuja adentro un StatusChip,
+ * que es lo que necesitan las columnas de estado de la bitacora.
+ */
+function clasesDeCelda(columna) {
+  const clases = [];
+  if (columna.principal) clases.push("fw-semibold");
+  if (columna.uppercase) clases.push("text-uppercase");
+  return clases.length > 0 ? clases.join(" ") : undefined;
+}
+
 export default function DataList({
   columnas = [],
   datos = [],
@@ -181,7 +200,7 @@ export default function DataList({
               style={{ cursor: interactiva ? "pointer" : undefined }}
             >
               {columnas.map((columna) => (
-                <td key={columna.id} className={columna.principal ? "fw-semibold" : undefined}>
+                <td key={columna.id} className={clasesDeCelda(columna)}>
                   <Celda columna={columna} fila={fila} catalogos={catalogos} />
                 </td>
               ))}

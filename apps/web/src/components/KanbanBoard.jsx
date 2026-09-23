@@ -35,6 +35,12 @@ export default function KanbanBoard({
 }) {
   const [arrastrada, setArrastrada] = useState(null);
 
+  // ISSUE #864: sin `onMover` el tablero es de solo lectura, y las tarjetas dejan de ser
+  // arrastrables. Antes `draggable` estaba siempre puesto, asi que un rol que no puede mover
+  // nada igual podia arrastrar una tarjeta de columna: la tarjeta volvia a su sitio y no pasaba
+  // nada, que es la peor forma de decir que no.
+  const sePuedeMover = typeof onMover === "function";
+
   const mover = (tarjeta, origenId, destinoId) => {
     if (!destinoId || destinoId === origenId) return;
     onMover?.(tarjeta.id, origenId, destinoId);
@@ -114,12 +120,20 @@ export default function KanbanBoard({
                 {tarjetas.map((tarjeta) => (
                   <div
                     key={tarjeta.id}
-                    draggable
-                    tabIndex={0}
-                    onKeyDown={(evento) => conTeclado(evento, tarjeta, indiceColumna)}
-                    onDragStart={() => setArrastrada({ tarjeta, columnaId: columna.id })}
-                    onDragEnd={() => setArrastrada(null)}
-                    style={{ cursor: "grab" }}
+                    draggable={sePuedeMover}
+                    tabIndex={sePuedeMover ? 0 : undefined}
+                    onKeyDown={
+                      sePuedeMover
+                        ? (evento) => conTeclado(evento, tarjeta, indiceColumna)
+                        : undefined
+                    }
+                    onDragStart={
+                      sePuedeMover
+                        ? () => setArrastrada({ tarjeta, columnaId: columna.id })
+                        : undefined
+                    }
+                    onDragEnd={sePuedeMover ? () => setArrastrada(null) : undefined}
+                    style={{ cursor: sePuedeMover ? "grab" : "default" }}
                   >
                     {renderTarjeta?.(tarjeta)}
                   </div>

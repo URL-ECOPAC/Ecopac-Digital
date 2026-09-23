@@ -78,6 +78,16 @@ export function filtrarStock(filas = [], filtros = FILTROS_STOCK_VACIOS) {
 }
 
 /**
+ * Cuantos medicamentos distintos hay en un juego de filas: la vista devuelve un renglon por
+ * lote y bodega, asi que dos lotes del mismo medicamento son dos filas y un solo producto.
+ *
+ * @param {ReturnType<typeof filaDeStock>[]} filas
+ */
+export function contarProductos(filas = []) {
+  return new Set(filas.map((fila) => fila.medicamentoId).filter(Boolean)).size;
+}
+
+/**
  * @param {{ inventarioInicial?: object[], bodegas?: { id: string, nombre: string }[] }} [opciones]
  *   `inventarioInicial`: filas de listarExistenciasDisponibles().
  */
@@ -109,6 +119,7 @@ export function useCatalogoMedicamentos({ inventarioInicial = [], bodegas = [] }
     catalogos,
     inventarioFiltrado,
     total: filas.length,
+    totalProductos: contarProductos(inventarioFiltrado),
     totalPorVencer: inventarioFiltrado.filter((fila) => fila.porVencer).length,
   };
 }

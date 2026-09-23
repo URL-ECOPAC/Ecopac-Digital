@@ -11,6 +11,11 @@ import { colors, radii, spacing, statusColors, typography } from "@ecopac/ui-tok
  *
  * En web el color sale de la variable --estado-* que publica theme.js; aqui se lee
  * statusColors directamente, que es la misma fuente.
+ *
+ * `uppercase` (issue #864) lo pide quien lo usa, no lo decide el chip: los estados de un
+ * historial se leen en caja alta, pero un chip que muestra un nombre propio -- el rol de una
+ * persona, una especialidad -- no. Es `textTransform` y no `.toUpperCase()` sobre el texto, para
+ * no cambiar lo que anuncia el lector de pantalla. Mismo criterio que el StatusChip de la web.
  */
 /**
  * Simbolo opcional del chip (issue #840). Espejo de ICONOS en el StatusChip de web: el catalogo
@@ -18,7 +23,7 @@ import { colors, radii, spacing, statusColors, typography } from "@ecopac/ui-tok
  */
 const ICONOS = { si: "checkmark", no: "close" };
 
-export default function StatusChip({ status, label, icono }) {
+export default function StatusChip({ status, label, icono, uppercase = false }) {
   if (status === null || status === undefined || status === "") return null;
 
   // React Native tampoco pinta booleanos: la columna de estado de COLUMNAS_USUARIO lee el
@@ -34,7 +39,7 @@ export default function StatusChip({ status, label, icono }) {
       {nombreDeIcono && (
         <Ionicons name={nombreDeIcono} size={12} color={colors.surface} aria-hidden />
       )}
-      <Text style={styles.texto}>{texto}</Text>
+      <Text style={[styles.texto, uppercase && styles.textoEnCajaAlta]}>{texto}</Text>
     </View>
   );
 }
@@ -54,5 +59,8 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.xs,
     fontWeight: typography.weights.semibold,
     color: colors.surface,
+  },
+  textoEnCajaAlta: {
+    textTransform: "uppercase",
   },
 });

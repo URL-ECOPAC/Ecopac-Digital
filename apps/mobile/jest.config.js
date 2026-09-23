@@ -12,6 +12,9 @@ module.exports = {
     "^react-native-webview$": path.resolve(__dirname, "src/__mocks__/react-native-webview.js"),
     // expo-notifications tambien (issue #755): ver src/__mocks__/expo-notifications.js.
     "^expo-notifications$": path.resolve(__dirname, "src/__mocks__/expo-notifications.js"),
+    // expo-print y expo-sharing (issue #866): impresion y hoja de compartir del sistema.
+    "^expo-print$": path.resolve(__dirname, "src/__mocks__/expo-print.js"),
+    "^expo-sharing$": path.resolve(__dirname, "src/__mocks__/expo-sharing.js"),
   },
   transformIgnorePatterns: [
     "node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@sentry/react-native|native-base|react-native-svg)",
