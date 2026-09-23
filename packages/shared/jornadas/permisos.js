@@ -15,7 +15,7 @@
 // Por la misma razon, ninguna funcion de jornadas/api.js consulta este archivo antes de
 // llamar: el cliente pregunta para dibujar; el servidor decide.
 
-import { esAdministrador, ROLES } from "../usuarios/roles.js";
+import { esAdministrador, ROLES, ROLES_DE_CAMPO } from "../usuarios/roles.js";
 import { ESTADOS_JORNADA } from "../enums.js";
 
 /**
@@ -32,31 +32,34 @@ export function puedeAdministrarJornadas(rol) {
  * Puede ver el personal COMPLETO asignado a una jornada, o solo su propia fila (issue #182,
  * criterio 5).
  *
- * Espejo exacto de la politica de SELECT de jornada_personal
- * (supabase/migrations/00039_politicas_rls_jornadas_proyectos.sql:63-69):
+ * Espejo de la politica de SELECT de jornada_personal, **tal como la deja la 00141**:
  *
- *   CREATE POLICY "Administrador y junta directiva leen asignaciones; cada quien lee la suya"
- *     ON jornada_personal FOR SELECT TO authenticated
- *     USING (
- *       public.es_administrador()
- *       OR public.rol_actual() = 'junta directiva'
- *       OR perfil_id = auth.uid()
- *     );
+ *   USING (
+ *     public.es_administrador()
+ *     OR public.participa_en_jornada(jornada_id)
+ *     OR perfil_id = auth.uid()
+ *   )
  *
- * A proposito NO usa un helper que agrupe consultivos (del tipo es_consultivo(), que si junta a
- * junta directiva y socio fundador en otras tablas, por ejemplo 00052_politicas_rls_gastos.sql):
- * esta politica en particular nombra 'junta directiva' por su valor literal y deja afuera a
- * socio fundador, que en jornada_personal solo puede leer su propia fila (perfil_id = auth.uid())
- * igual que medico y voluntario. Si esta politica cambia (por ejemplo si un dia agrupa a socio
- * fundador con junta directiva), esta funcion queda desactualizada sin que nada lo avise: RLS no
- * lanza en lecturas, asi que el sintoma seria una pantalla que dice "vista limitada" a alguien
- * que en realidad ya puede ver todo, o viceversa. Ver Notas de deploy del PR de #182.
+ * ISSUE #864, y son dos cambios en direcciones opuestas:
+ *
+ * - Junta directiva sale. La politica la nombraba por su valor literal desde la 00039 y la
+ *   00080 le sumo socio fundador con es_consultivo(); los dos roles consultivos se quedan con
+ *   Reportes como unica pantalla, asi que ni siquiera llegan al detalle de una jornada.
+ * - Medico y voluntario entran, pero por participacion, no por rol: el criterio 6 de la issue
+ *   pide que el medico vea "el resumen, el equipo y los pacientes atendidos" de la jornada, y
+ *   hasta ahora veia una sola fila -- la suya -- con un aviso de vista limitada. Quien esta en
+ *   el cuadro de turnos ve el cuadro entero de ESA jornada, no de las demas.
+ *
+ * Por eso esta funcion se queda en administrador y los dos roles de campo: para un rol de campo,
+ * la jornada que puede abrir es, por RLS, una en la que participa, asi que "completo" y "el de
+ * mi jornada" son lo mismo. La otra rama -- ver solo la propia fila -- ya no le toca a ningun
+ * rol que llegue a la pantalla, y se conserva por si una politica futura vuelve a acotarla.
  *
  * No vive en un archivo aparte ni en el hook de #182: es una regla de "que puede ver cada rol",
  * que es exactamente lo que este archivo declara para el resto del modulo.
  */
 export function puedeVerRosterCompleto(rol) {
-  return esAdministrador(rol) || rol === ROLES.JUNTA_DIRECTIVA;
+  return esAdministrador(rol) || ROLES_DE_CAMPO.includes(rol);
 }
 
 /**

@@ -11,7 +11,13 @@
 import { render, screen } from "@testing-library/react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { Text } from "react-native";
-import { puedeRegistrarMovimiento, ROLES, rolesDelModulo, TODOS_LOS_ROLES } from "@ecopac/shared";
+import {
+  puedeAprobarMovimiento,
+  puedeRegistrarMovimiento,
+  ROLES,
+  rolesDelModulo,
+  TODOS_LOS_ROLES,
+} from "@ecopac/shared";
 import AppNavigator, {
   InicioNavigator,
   InventarioNavigator,
@@ -23,6 +29,10 @@ import { ROUTES } from "./rutas";
 // El valor inicial debe ser un literal puro: jest.mock() no permite que su factory referencie una
 // variable externa cuya inicializacion dependa de otro import (babel-plugin-jest-hoist).
 const sesion = { perfil: { rol: "administrador" }, rol: "administrador" };
+jest.mock("../contexto/RegistroSinGuardarProvider", () => ({
+  useRegistroSinGuardar: () => ({ hayAlgoSinGuardar: () => false }),
+}));
+
 jest.mock("../contexto/SesionProvider", () => ({
   useSesionCompartida: () => sesion,
 }));
@@ -44,10 +54,6 @@ function mockPantalla(nombre) {
 jest.mock("../screens/InicioScreen", () => mockPantalla("inicio"));
 jest.mock("../screens/LoginScreen", () => mockPantalla("login"));
 jest.mock("../screens/AjustesScreen", () => mockPantalla("ajustes"));
-jest.mock("../screens/DonacionesScreen", () => mockPantalla("donaciones"));
-jest.mock("../screens/ProyectosScreen", () => mockPantalla("proyectos"));
-jest.mock("../screens/ColaboradoresScreen", () => mockPantalla("colaboradores"));
-jest.mock("../screens/FichaColaboradorScreen", () => mockPantalla("ficha-colaborador"));
 jest.mock("../screens/ComunidadesScreen", () => mockPantalla("comunidades"));
 jest.mock("../screens/BusquedaPacienteScreen", () => mockPantalla("busqueda-paciente"));
 jest.mock("../screens/FichaPacienteScreen", () => mockPantalla("ficha-paciente"));
@@ -55,6 +61,10 @@ jest.mock("../screens/RegistroPacienteScreen", () => mockPantalla("registro-paci
 jest.mock("../screens/HistorialPacienteScreen", () => mockPantalla("historial-paciente"));
 jest.mock("../screens/ConsultaScreen", () => mockPantalla("consulta"));
 jest.mock("../screens/RecetaScreen", () => mockPantalla("receta"));
+jest.mock("../screens/EntregaMedicamentosScreen", () => mockPantalla("entrega-medicamentos"));
+jest.mock("../screens/PacientesCronicosScreen", () => mockPantalla("pacientes-cronicos"));
+jest.mock("../screens/CatalogoCondicionesScreen", () => mockPantalla("catalogo-condiciones"));
+jest.mock("../screens/CatalogoDiagnosticosScreen", () => mockPantalla("catalogo-diagnosticos"));
 jest.mock("../screens/SeleccionJornadaScreen", () => mockPantalla("seleccion-jornada"));
 jest.mock("../screens/JornadaEnCursoScreen", () => mockPantalla("jornada-en-curso"));
 jest.mock("../screens/JornadasAsignadasScreen", () => mockPantalla("jornadas-asignadas"));
@@ -64,19 +74,15 @@ jest.mock("../screens/ExistenciasInventarioScreen", () => mockPantalla("existenc
 jest.mock("../screens/InventarioResumenAlertasScreen", () => mockPantalla("resumen-alertas"));
 jest.mock("../screens/MisMovimientosScreen", () => mockPantalla("mis-movimientos"));
 jest.mock("../screens/DetalleLoteScreen", () => mockPantalla("detalle-lote"));
+jest.mock("../screens/PrincipiosActivosScreen", () => mockPantalla("principios-activos"));
+jest.mock("../screens/RegistroSalidaScreen", () => mockPantalla("registro-salida"));
+jest.mock("../screens/ValidacionMovimientosScreen", () => mockPantalla("validacion-movimientos"));
 
 const ROLES_QUE_REGISTRAN = TODOS_LOS_ROLES.filter(puedeRegistrarMovimiento);
+const ROLES_QUE_APRUEBAN = TODOS_LOS_ROLES.filter(puedeAprobarMovimiento);
 
 const PANTALLAS = [
   { routeName: ROUTES.INICIO, navegador: "Inicio", roles: rolesDelModulo("inicio") },
-  { routeName: ROUTES.DONACIONES, navegador: "Inicio", roles: rolesDelModulo("donaciones") },
-  { routeName: ROUTES.PROYECTOS, navegador: "Inicio", roles: rolesDelModulo("proyectos") },
-  { routeName: ROUTES.COLABORADORES, navegador: "Inicio", roles: rolesDelModulo("colaboradores") },
-  {
-    routeName: ROUTES.FICHA_COLABORADOR,
-    navegador: "Inicio",
-    roles: rolesDelModulo("colaboradores"),
-  },
   { routeName: ROUTES.COMUNIDADES, navegador: "Inicio", roles: [ROLES.ADMINISTRADOR] },
   {
     routeName: ROUTES.BUSQUEDA_PACIENTE,
@@ -96,6 +102,26 @@ const PANTALLAS = [
   },
   { routeName: ROUTES.CONSULTA, navegador: "Pacientes", roles: rolesDelModulo("pacientes") },
   { routeName: ROUTES.RECETA, navegador: "Pacientes", roles: rolesDelModulo("pacientes") },
+  {
+    routeName: ROUTES.ENTREGA_MEDICAMENTOS,
+    navegador: "Pacientes",
+    roles: rolesDelModulo("pacientes"),
+  },
+  {
+    routeName: ROUTES.PACIENTES_CRONICOS,
+    navegador: "Pacientes",
+    roles: rolesDelModulo("pacientes"),
+  },
+  {
+    routeName: ROUTES.CATALOGO_CONDICIONES,
+    navegador: "Pacientes",
+    roles: rolesDelModulo("pacientes"),
+  },
+  {
+    routeName: ROUTES.CATALOGO_DIAGNOSTICOS,
+    navegador: "Pacientes",
+    roles: rolesDelModulo("pacientes"),
+  },
   { routeName: ROUTES.SELECCION_JORNADA, navegador: "Jornadas", roles: rolesDelModulo("jornadas") },
   { routeName: ROUTES.JORNADA_EN_CURSO, navegador: "Jornadas", roles: rolesDelModulo("jornadas") },
   {
@@ -117,6 +143,17 @@ const PANTALLAS = [
   },
   { routeName: ROUTES.MIS_MOVIMIENTOS, navegador: "Inventario", roles: ROLES_QUE_REGISTRAN },
   { routeName: ROUTES.DETALLE_LOTE, navegador: "Inventario", roles: rolesDelModulo("inventario") },
+  {
+    routeName: ROUTES.PRINCIPIOS_ACTIVOS,
+    navegador: "Inventario",
+    roles: rolesDelModulo("inventario"),
+  },
+  { routeName: ROUTES.REGISTRO_SALIDA, navegador: "Inventario", roles: ROLES_QUE_REGISTRAN },
+  {
+    routeName: ROUTES.VALIDACION_MOVIMIENTOS,
+    navegador: "Inventario",
+    roles: ROLES_QUE_APRUEBAN,
+  },
 ];
 
 const NAVEGADORES = {
@@ -155,7 +192,7 @@ describe("AppNavigator: la guarda de rol decide en cada pantalla (issue #820)", 
   // 21: Presupuestos se retiro en la #754 y Triaje en la #840 (los signos son un paso de la
   // consulta, no una pantalla aparte).
   it("todas las pantallas de los cuatro stacks estan en la tabla de esta prueba", () => {
-    expect(PANTALLAS).toHaveLength(21);
+    expect(PANTALLAS).toHaveLength(24);
     expect(PANTALLAS_RESTRINGIDAS.length).toBeGreaterThan(0);
   });
 

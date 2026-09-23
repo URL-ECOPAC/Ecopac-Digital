@@ -1,4 +1,4 @@
-import { ROLES } from "./usuarios/roles.js";
+import { ROLES, ROLES_DE_CAMPO } from "./usuarios/roles.js";
 
 /**
  * Los once módulos del sistema.
@@ -17,7 +17,7 @@ export const MODULOS = [
     ruta: "/",
     modulo: null,
     tabMovil: "Inicio",
-    soloWeb: false,
+    movil: true,
     icono: "Home",
     roles: Object.values(ROLES),
   },
@@ -28,7 +28,7 @@ export const MODULOS = [
     ruta: "/pacientes",
     modulo: "pacientes",
     tabMovil: "Pacientes",
-    soloWeb: false,
+    movil: true,
     icono: "Users",
     // ROLES.ADMINISTRADOR/MEDICO/VOLUNTARIO, no los cinco: espejo de "Administrador, medico y
     // voluntario leen pacientes" (00032). Antes tambien listaba ROLES.FARMACEUTICO y
@@ -44,9 +44,12 @@ export const MODULOS = [
     ruta: "/donaciones",
     modulo: "donaciones",
     tabMovil: false,
-    soloWeb: false,
+    movil: false,
     icono: "HeartHandshake",
-    roles: [ROLES.ADMINISTRADOR, ROLES.JUNTA_DIRECTIVA, ROLES.SOCIO_FUNDADOR],
+    // ISSUE #864: solo la administradora. Junta directiva y socio fundador salen de aqui junto
+    // con la lectura de donantes/donaciones/donacion_detalle que les retira la 00141: su unica
+    // pantalla es Reportes.
+    roles: [ROLES.ADMINISTRADOR],
   },
   {
     id: "inventario",
@@ -55,11 +58,17 @@ export const MODULOS = [
     ruta: "/inventario",
     modulo: "inventario",
     tabMovil: "Inventario",
-    soloWeb: false,
+    movil: true,
     icono: "Package",
-    // Los cinco roles reales (ver nota de ROLES.FARMACEUTICO/ENFERMERO en el modulo "pacientes"
-    // de arriba: dos claves inexistentes que aqui tambien se limpian, sin cambio de efecto).
-    roles: Object.values(ROLES),
+    // ISSUE #864: los tres roles que operan el inventario. Los consultivos ya no entran a la
+    // pantalla -su unica pantalla es Reportes-, aunque SI conservan la lectura de `existencias`
+    // y `lotes` en la base: los reportes de inventario las consultan directo (ver la 00141 y
+    // docs/PERMISOS.md, "Divergencias").
+    //
+    // Antes decia Object.values(ROLES), y ademas listaba ROLES.FARMACEUTICO y ROLES.ENFERMERO,
+    // dos claves que ROLES no declara -el enum real solo tiene cinco valores-, asi que
+    // evaluaban a undefined; se limpiaron en la #700.
+    roles: [ROLES.ADMINISTRADOR, ROLES.MEDICO, ROLES.VOLUNTARIO],
   },
   {
     id: "presupuestos",
@@ -68,9 +77,10 @@ export const MODULOS = [
     ruta: "/presupuestos",
     modulo: "presupuestos",
     tabMovil: false,
-    soloWeb: true,
+    movil: false,
     icono: "DollarSign",
-    roles: [ROLES.ADMINISTRADOR, ROLES.JUNTA_DIRECTIVA, ROLES.SOCIO_FUNDADOR],
+    // ISSUE #864: solo la administradora, como donaciones.
+    roles: [ROLES.ADMINISTRADOR],
   },
   {
     id: "proyectos",
@@ -79,9 +89,13 @@ export const MODULOS = [
     ruta: "/proyectos",
     modulo: "proyectos",
     tabMovil: false,
-    soloWeb: false,
+    movil: false,
     icono: "FolderKanban",
-    roles: [ROLES.ADMINISTRADOR, ROLES.JUNTA_DIRECTIVA, ROLES.SOCIO_FUNDADOR],
+    // ISSUE #864: entra medico y salen los consultivos. El medico ve **solo los proyectos de las
+    // jornadas en las que participa** -eso lo decide la politica de SELECT de `proyectos` que
+    // amplia la 00141, no esta lista- y sin insumos, sin gastos y sin poder crear ni editar
+    // nada (proyectos/permisos.js).
+    roles: [ROLES.ADMINISTRADOR, ROLES.MEDICO],
   },
   {
     id: "reportes",
@@ -90,7 +104,7 @@ export const MODULOS = [
     ruta: "/reportes",
     modulo: "reportes",
     tabMovil: false,
-    soloWeb: true,
+    movil: false,
     icono: "BarChart3",
     roles: [ROLES.ADMINISTRADOR, ROLES.JUNTA_DIRECTIVA, ROLES.SOCIO_FUNDADOR],
   },
@@ -101,9 +115,12 @@ export const MODULOS = [
     ruta: "/jornadas",
     modulo: "jornadas",
     tabMovil: "Jornadas",
-    soloWeb: false,
+    movil: true,
     icono: "Calendar",
-    roles: Object.values(ROLES),
+    // ISSUE #864: los tres roles de operacion. La base ya solo entregaba a medico y voluntario
+    // las jornadas en las que participan (00039/00079), y la 00141 le suma la que cada quien
+    // tiene a su cargo como `responsable_id`.
+    roles: [ROLES.ADMINISTRADOR, ROLES.MEDICO, ROLES.VOLUNTARIO],
   },
   {
     id: "colaboradores",
@@ -112,12 +129,16 @@ export const MODULOS = [
     ruta: "/colaboradores",
     modulo: "colaboradores",
     tabMovil: false,
-    soloWeb: true,
+    movil: false,
     icono: "UserCheck",
-    // Issue #756: puedeVerListadoUsuarios() (usuarios/permisos.js) ya declaraba que junta
-    // directiva podia ver el listado -perfiles_directorio (00038/00080) existe exactamente para
-    // eso-, pero el guard de esta ruta la dejaba fuera, asi que nunca llegaba a la pantalla.
-    roles: [ROLES.ADMINISTRADOR, ROLES.JUNTA_DIRECTIVA],
+    // ISSUE #864: solo la administradora.
+    //
+    // Esto revierte la #756, que habia abierto la pantalla a junta directiva porque
+    // puedeVerListadoUsuarios() ya lo permitia y el guard no. La #864 es posterior y explicita
+    // -"Junta directiva: solo ve reportes"-, asi que se cierran las dos capas a la vez: esta
+    // lista, puedeVerListadoUsuarios() y la vista `perfiles_directorio` (00141). Queda anotado
+    // en docs/PERMISOS.md para que no parezca un descuido.
+    roles: [ROLES.ADMINISTRADOR],
   },
   {
     id: "matriz-permisos",
@@ -126,7 +147,7 @@ export const MODULOS = [
     ruta: "/matriz-permisos",
     modulo: "matriz-permisos",
     tabMovil: false,
-    soloWeb: true,
+    movil: false,
     icono: "ShieldCheck",
     roles: [ROLES.ADMINISTRADOR],
   },
@@ -137,7 +158,7 @@ export const MODULOS = [
     ruta: "/bitacora-auditoria",
     modulo: "bitacora-auditoria",
     tabMovil: false,
-    soloWeb: true,
+    movil: false,
     icono: "History",
     roles: [ROLES.ADMINISTRADOR],
   },
@@ -152,6 +173,12 @@ export function rolesDelModulo(moduloId) {
   return mod ? mod.roles : [];
 }
 
+export const ROLES_CON_ACCESO_MOVIL = Object.freeze([ROLES.ADMINISTRADOR, ...ROLES_DE_CAMPO]);
+
+export function puedeUsarAppMovil(rol) {
+  return ROLES_CON_ACCESO_MOVIL.includes(rol);
+}
+
 /**
  * Módulos a los que un rol tiene acceso (Lista plana).
  */
@@ -160,14 +187,11 @@ export function modulosVisibles(rol, opciones = {}) {
 
   const { plataforma } = opciones;
 
+  if (plataforma === "mobile" && !puedeUsarAppMovil(rol)) return [];
+
   return MODULOS.filter((m) => {
     if (!m.roles.includes(rol)) return false;
-    if (
-      plataforma === "mobile" &&
-      (m.soloWeb || m.ruta === "/colaboradores" || m.ruta === "/reportes")
-    ) {
-      return false;
-    }
+    if (plataforma === "mobile" && !m.movil) return false;
     return true;
   });
 }

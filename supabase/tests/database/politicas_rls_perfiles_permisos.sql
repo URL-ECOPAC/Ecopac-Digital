@@ -118,16 +118,19 @@ SELECT is(
   'junta directiva solo ve su propia fila en la tabla base perfiles (no la de los demas)'
 );
 
--- Acotado al fixture por el mismo motivo que el conteo del administrador.
+-- ISSUE #864: perfiles_directorio existia para que junta directiva leyera al personal sin
+-- telefono ni correo, y la #756 le habia abierto la ruta para poder llegar a ella. La #864 la
+-- deja con Reportes como unica pantalla, asi que la 00141 le quita tambien la rama del WHERE.
+-- La vista se conserva: la administradora la sigue usando y cada quien se lee a si mismo.
 SELECT is(
   (SELECT count(*)::int FROM perfiles_directorio WHERE id BETWEEN '00000000-0000-0000-0000-000000000001'
-                     AND '00000000-0000-0000-0000-000000000006'), 6,
-  'junta directiva ve las 6 filas del fixture a traves de perfiles_directorio'
+                     AND '00000000-0000-0000-0000-000000000006'), 1,
+  'junta directiva ya solo se ve a si misma en perfiles_directorio (issue #864)'
 );
 
 SELECT is(
-  (SELECT telefono FROM perfiles_directorio WHERE id = '00000000-0000-0000-0000-000000000001'), NULL,
-  'junta directiva no ve el telefono de otro perfil en perfiles_directorio'
+  (SELECT count(*)::int FROM perfiles_directorio WHERE id = '00000000-0000-0000-0000-000000000001'), 0,
+  'y ya no ve la fila de otro perfil ni siquiera enmascarada'
 );
 
 SELECT is(

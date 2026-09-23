@@ -40,6 +40,7 @@ const ICONOS = {
   Settings: "settings-outline",
   // Tampoco es un modulo: la campana de notificaciones de la cabecera (issue #755).
   Bell: "notifications-outline",
+  LogOut: "log-out-outline",
 };
 
 /** El que se usa si llega un nombre sin traduccion, para no dejar la tab sin icono. */

@@ -1,8 +1,15 @@
 import { FlatList, StyleSheet, Text, View } from "react-native";
-import { FILTROS_STOCK, formatearFechaCorta, useCatalogoMedicamentos } from "@ecopac/shared";
+import {
+  FILTROS_STOCK,
+  formatearFechaCorta,
+  puedeAprobarMovimiento,
+  puedeRegistrarMovimiento,
+  useCatalogoMedicamentos,
+} from "@ecopac/shared";
 import { colors, labels, moduleAccents, radii, spacing, typography } from "@ecopac/ui-tokens";
 
 import {
+  AccesosDeSeccion,
   Card,
   EmptyState,
   FilterBar,
@@ -35,10 +42,37 @@ function textoDeVencimiento(fila) {
   return `Vence ${fecha}`;
 }
 
+function accesosDeInventario(rol) {
+  return [
+    { id: "principios", etiqueta: "Principios activos", ruta: ROUTES.PRINCIPIOS_ACTIVOS },
+    { id: "existencias", etiqueta: "Existencias", ruta: ROUTES.EXISTENCIAS_INVENTARIO },
+    { id: "alertas", etiqueta: "Alertas", ruta: ROUTES.RESUMEN_ALERTAS_INVENTARIO },
+    {
+      id: "movimientos",
+      etiqueta: "Mis movimientos",
+      ruta: ROUTES.MIS_MOVIMIENTOS,
+      visible: puedeRegistrarMovimiento(rol),
+    },
+    {
+      id: "salida",
+      etiqueta: "Registrar salida",
+      ruta: ROUTES.REGISTRO_SALIDA,
+      visible: puedeRegistrarMovimiento(rol),
+    },
+    {
+      id: "aprobar",
+      etiqueta: "Por aprobar",
+      ruta: ROUTES.VALIDACION_MOVIMIENTOS,
+      visible: puedeAprobarMovimiento(rol),
+    },
+  ].filter((acceso) => acceso.visible !== false);
+}
+
 export function CatalogoMedicamentosScreen({
   inventarioInicial = [],
   bodegas = [],
   medicamentosSinStock = 0,
+  rol,
   navigation,
 }) {
   const {
@@ -49,16 +83,12 @@ export function CatalogoMedicamentosScreen({
     catalogos,
     inventarioFiltrado,
     total,
+    totalProductos,
     totalPorVencer,
   } = useCatalogoMedicamentos({ inventarioInicial, bodegas });
 
-  // Tocar un lote abre el ingreso de ese medicamento (issue #165). Habia tambien un "modo
-  // seleccion" por parametros de ruta que ninguna pantalla usaba; se retiro con la #840.
   const alTocar = (fila) => {
-    navigation?.navigate(ROUTES.REGISTRO_INGRESO, {
-      medicamentoId: fila.medicamentoId,
-      medicamentoNombre: fila.nombre,
-    });
+    navigation?.navigate(ROUTES.DETALLE_LOTE, { loteId: fila.loteId });
   };
 
   return (
@@ -72,7 +102,7 @@ export function CatalogoMedicamentosScreen({
       />
 
       <View style={estilos.indicadores}>
-        <StatCard label="Lotes" value={inventarioFiltrado.length} style={estilos.indicador} />
+        <StatCard label="Productos" value={totalProductos} style={estilos.indicador} />
         <StatCard
           label="Por vencer"
           value={totalPorVencer}
@@ -86,6 +116,13 @@ export function CatalogoMedicamentosScreen({
           style={estilos.indicador}
         />
       </View>
+
+      {rol ? (
+        <AccesosDeSeccion
+          accesos={accesosDeInventario(rol)}
+          onAbrir={(acceso) => navigation?.navigate(acceso.ruta)}
+        />
+      ) : null}
 
       <FilterBar
         campos={FILTROS_STOCK}

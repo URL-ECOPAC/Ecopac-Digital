@@ -10,7 +10,9 @@
 import {
   type ConfiguracionSmtp,
   componerCorreo,
+  componerCorreoDeInvitacion,
   enviarCorreosPendientes,
+  envolverEnPlantilla,
   leerConfiguracionSmtp,
   type NotificacionParaCorreo,
   type Transporte,
@@ -146,4 +148,89 @@ Deno.test("manda un correo por notificacion, en orden, y marca solo las que sali
   assertEquals(falso.marcadasEnviadas, ["n-1", "n-3"]);
   assertEquals(falso.errores, { "n-2": "buzon lleno" });
   assertEquals(resultado, { correo: "error", correosEnviados: 2, correosFallidos: 1 });
+});
+
+// ============================================================================
+// Correo de invitacion (issue #864)
+// ============================================================================
+function contiene(texto: string, fragmento: string) {
+  if (!texto.includes(fragmento)) {
+    throw new Error(`No se encontro ${JSON.stringify(fragmento)} en el correo`);
+  }
+}
+
+function noContiene(texto: string, fragmento: string) {
+  if (texto.includes(fragmento)) {
+    throw new Error(`No deberia estar ${JSON.stringify(fragmento)} en el correo`);
+  }
+}
+
+// Lo que la issue pide distinguir: este correo NO puede leerse como un restablecimiento. Quien
+// lo recibe estrena su cuenta y nunca tuvo contrasena.
+Deno.test("el correo de invitacion se lee como una bienvenida, no como un restablecimiento", () => {
+  const correo = componerCorreoDeInvitacion(
+    "Ana",
+    "https://app.ecopac.test/nueva-contrasena?origen=invitacion",
+    "https://app.ecopac.test",
+  );
+
+  assertEquals(correo.asunto, "Te damos la bienvenida a Ecopac Digital");
+  contiene(correo.texto, "Hola, Ana:");
+  contiene(correo.texto, "Te dieron de alta en Ecopac Digital");
+  contiene(correo.html, "Te damos la bienvenida");
+  noContiene(correo.asunto, "Restablece");
+  noContiene(correo.texto, "Restablece");
+});
+
+Deno.test("sin nombre saluda igual, sin dejar el hueco a la vista", () => {
+  const correo = componerCorreoDeInvitacion("", "https://app.ecopac.test/x", "https://app.ecopac.test");
+
+  contiene(correo.texto, "Hola:");
+  noContiene(correo.texto, "Hola, :");
+});
+
+Deno.test("el enlace viaja en las dos versiones, para quien lee el correo en texto plano", () => {
+  const enlace = "https://app.ecopac.test/nueva-contrasena?origen=invitacion&token=abc";
+  const correo = componerCorreoDeInvitacion("Ana", enlace, "https://app.ecopac.test");
+
+  contiene(correo.texto, enlace);
+  contiene(correo.html, enlace);
+});
+
+// El logotipo se sirve desde la web, no incrustado: Gmail no pinta imagenes `data:`.
+Deno.test("la plantilla trae el logotipo de la web y los cuatro colores de la marca", () => {
+  const html = envolverEnPlantilla(
+    "https://app.ecopac.test/",
+    "Titulo",
+    "<p>Cuerpo</p>",
+    "Boton",
+    "https://app.ecopac.test/destino",
+    "Pie",
+  );
+
+  // La barra final de la URL base no se duplica.
+  contiene(html, 'src="https://app.ecopac.test/logo-ecopac.png"');
+  noContiene(html, "https://app.ecopac.test//logo-ecopac.png");
+
+  for (const color of ["#3db648", "#29abe2", "#f7941d", "#e91e8c"]) {
+    contiene(html, color);
+  }
+
+  // Estilos en linea y tabla: es lo unico que se ve igual en Gmail, Outlook y un telefono.
+  contiene(html, "<table");
+  noContiene(html, "<style");
+});
+
+Deno.test("quien no puede pulsar el boton igual tiene la direccion a la vista", () => {
+  const html = envolverEnPlantilla(
+    "https://app.ecopac.test",
+    "Titulo",
+    "<p>Cuerpo</p>",
+    "Boton",
+    "https://app.ecopac.test/destino-largo",
+    "Pie",
+  );
+
+  contiene(html, "copia y pega esta direcci");
+  contiene(html, "https://app.ecopac.test/destino-largo");
 });

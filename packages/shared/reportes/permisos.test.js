@@ -26,11 +26,10 @@ describe("permisos de reportes", () => {
     expect(puedeVerIndicadoresDeImpacto(ROLES.VOLUNTARIO)).toBe(false);
   });
 
-  // ISSUE #862. Este caso afirmaba lo contrario -que socio fundador NO podia, "excepcion
-  // deliberada" de la 00067- y era una afirmacion caduca: esa guarda desaparecio en la 00080 y la
-  // vigente (00132) es es_administrador() OR es_consultivo() OR tiene_permiso('reportes.exportar').
-  // El cliente le negaba una pestana que el servidor le concede.
-  it("administrador y los DOS consultivos ven el reporte de pacientes (00132)", () => {
+  // ISSUE #864: socio fundador estaba fuera citando la guarda de la 00067, que la 00086 ya
+  // habia reescrito a es_consultivo(). El cliente era mas estricto que el servidor y le escondia
+  // un reporte que la base si le entrega. Se corrige el cliente; la base no se toca.
+  it("administrador y los dos roles consultivos ven el reporte de pacientes (issue #864)", () => {
     expect(puedeVerReporteDePacientes(ROLES.ADMINISTRADOR)).toBe(true);
     expect(puedeVerReporteDePacientes(ROLES.JUNTA_DIRECTIVA)).toBe(true);
     expect(puedeVerReporteDePacientes(ROLES.SOCIO_FUNDADOR)).toBe(true);
@@ -50,14 +49,20 @@ describe("permisos de reportes", () => {
   });
 
   it("agrupa los permisos para que un hook no llame a las funciones sueltas", () => {
-    expect(permisosDeReportes(ROLES.SOCIO_FUNDADOR)).toEqual({
-      puedeVerIndicadoresDeImpacto: true,
-      puedeVerReporteDePacientes: true,
-      // La 00054 le retiro el acceso a las tablas clinicas que agrega el reporte de jornada.
-      puedeVerReporteJornada: false,
-      puedeVerReporteDeInventario: true,
-      puedeVerReporteDeVencimientos: true,
-    });
+    // Los dos roles consultivos, identicos: cuatro de los cinco reportes. El de jornada no,
+    // porque la 00054 les retiro el acceso a las tablas clinicas que agrega.
+    //
+    // `puedeVerReporteDeVencimientos` lo agrego la issue #862 al mezclar: el quinto reporte no
+    // tenia guarda propia y el hook usaba la de los indicadores de impacto, que es otra regla.
+    for (const rol of [ROLES.JUNTA_DIRECTIVA, ROLES.SOCIO_FUNDADOR]) {
+      expect(permisosDeReportes(rol)).toEqual({
+        puedeVerIndicadoresDeImpacto: true,
+        puedeVerReporteDePacientes: true,
+        puedeVerReporteJornada: false,
+        puedeVerReporteDeInventario: true,
+        puedeVerReporteDeVencimientos: true,
+      });
+    }
 
     expect(permisosDeReportes(ROLES.ADMINISTRADOR)).toEqual({
       puedeVerIndicadoresDeImpacto: true,

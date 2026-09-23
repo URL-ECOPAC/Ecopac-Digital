@@ -9,6 +9,7 @@
 
 export { default as ScreenContainer } from "./ScreenContainer";
 export { default as PageHeader } from "./PageHeader";
+export { default as PasswordField } from "./PasswordField";
 export { default as SectionHeader } from "./SectionHeader";
 
 export { default as TextField } from "./TextField";
@@ -40,5 +41,7 @@ export { default as LoadingState } from "./LoadingState";
 export { default as ErrorState } from "./ErrorState";
 
 export { default as UsuarioActivo } from "./UsuarioActivo";
+export { default as BotonCerrarSesion } from "./BotonCerrarSesion";
+export { default as AccesosDeSeccion } from "./AccesosDeSeccion";
 export { default as JornadaActivaBadge } from "./JornadaActivaBadge";
 export { default as IconoDeModulo, nombreDeIcono, ICONOS } from "./IconoDeModulo";

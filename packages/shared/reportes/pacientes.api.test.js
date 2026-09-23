@@ -68,8 +68,9 @@ describe("puedeVerReporteDePacientes", () => {
   it.each([
     [ROLES.ADMINISTRADOR, true],
     [ROLES.JUNTA_DIRECTIVA, true],
-    // ISSUE #862: socio fundador estaba en false, citando una guarda de la 00067 que dejo de
-    // existir en la 00080. La vigente (00132) incluye es_consultivo(), o sea a los dos.
+    // ISSUE #864: socio fundador pasa a true. No cambia la base: la guarda de
+    // fn_reporte_pacientes_atendidos ya decia es_consultivo() desde la 00086, y era el cliente
+    // el que se habia quedado con el texto de la 00067.
     [ROLES.SOCIO_FUNDADOR, true],
     [ROLES.MEDICO, false],
     [ROLES.VOLUNTARIO, false],

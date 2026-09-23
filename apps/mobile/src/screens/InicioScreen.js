@@ -36,34 +36,23 @@ import { ROUTES } from "../navigation/rutas";
 //    entradas como "Reportes", que en movil no existe, y un color propio por modulo en vez de
 //    moduleAccents. Ahora la lista es la que devuelve el hook, y nada mas.
 
-/** El acceso que corresponde a un modulo dentro del navegador movil. */
-function destinoDelModulo(modulo) {
-  if (modulo.tabMovil) return { tipo: "tab", nombre: modulo.tabMovil };
-
-  const RUTAS_POR_MODULO = {
-    donaciones: ROUTES.DONACIONES,
-    proyectos: ROUTES.PROYECTOS,
-    colaboradores: ROUTES.COLABORADORES,
-  };
-
-  const ruta = RUTAS_POR_MODULO[modulo.id];
-  return ruta ? { tipo: "pantalla", nombre: ruta } : null;
-}
-
 export default function InicioScreen({ navigation }) {
   const { perfil } = useSesionCompartida();
   const rol = perfil?.rol;
 
-  const { accesos, jornadasEnCurso, puedeVerJornadaEnCurso, cargando, error, recargar } =
-    usePanelDeInicio({ rol, plataforma: "mobile" });
+  const {
+    accesos,
+    accesosEnOtraPlataforma,
+    jornadasEnCurso,
+    puedeVerJornadaEnCurso,
+    cargando,
+    error,
+    recargar,
+  } = usePanelDeInicio({ rol, plataforma: "mobile" });
 
   const saludo = perfil?.nombres ? `Hola, ${perfil.nombres}` : "Hola";
 
-  // Un modulo sin destino en el navegador movil no se dibuja: una tarjeta que no lleva a ningun
-  // lado es peor que una tarjeta de menos.
-  const accesosNavegables = accesos
-    .map((modulo) => ({ ...modulo, destino: destinoDelModulo(modulo) }))
-    .filter((modulo) => modulo.destino !== null);
+  const accesosNavegables = accesos.filter((modulo) => Boolean(modulo.tabMovil));
 
   return (
     <ScreenContainer>
@@ -135,6 +124,26 @@ export default function InicioScreen({ navigation }) {
         <Text style={estilos.tituloSeccion}>Tus módulos</Text>
         <Text style={estilos.notaSeccion}>Lo que tu rol puede abrir</Text>
 
+        {/* ISSUE #864. Cuando no hay ni una tarjeta se dice por que, en vez de dejar el hueco.
+            Pasa con junta directiva y socio fundador: su unico modulo es Reportes, que no tiene
+            pantalla en movil (`soloWeb` en navegacion.js), asi que abrian la app y encontraban
+            esta seccion en blanco. Un vacio sin explicacion se lee como una app rota. */}
+        {accesosNavegables.length === 0 ? (
+          <View style={estilos.sinAccesos}>
+            <Text style={estilos.sinAccesosTitulo}>
+              {accesosEnOtraPlataforma.length > 0
+                ? "Tu trabajo está en la versión web"
+                : "Tu rol no abre ningún módulo desde el teléfono"}
+            </Text>
+            {accesosEnOtraPlataforma.length > 0 ? (
+              <Text style={estilos.sinAccesosTexto}>
+                Desde el teléfono no hay nada que abrir con tu rol. Entra por la web para{" "}
+                {accesosEnOtraPlataforma.map((modulo) => modulo.nombre).join(", ")}.
+              </Text>
+            ) : null}
+          </View>
+        ) : null}
+
         <View style={estilos.rejilla}>
           {accesosNavegables.map((modulo) => {
             const acento = moduleAccents[modulo.id] ?? colors.primary;
@@ -143,11 +152,7 @@ export default function InicioScreen({ navigation }) {
                 key={modulo.id}
                 style={({ pressed }) => [estilos.acceso, pressed && estilos.pulsada]}
                 accessibilityRole="button"
-                onPress={() =>
-                  modulo.destino.tipo === "tab"
-                    ? navigation.navigate(modulo.destino.nombre)
-                    : navigation.navigate(modulo.destino.nombre)
-                }
+                onPress={() => navigation.navigate(modulo.tabMovil)}
               >
                 <View style={[estilos.accesoIcono, { backgroundColor: `${acento}1F` }]}>
                   <IconoDeModulo nombre={modulo.icono} size={20} color={acento} />
@@ -235,6 +240,30 @@ const estilos = StyleSheet.create({
     padding: spacing.md,
   },
   vacioTexto: {
+    color: colors.textMuted,
+    fontFamily: typography.fontFamilyBase,
+    fontSize: typography.sizes.sm,
+  },
+  // Mismo recuadro que `vacio` -- es el patron de "aqui no hay nada" de esta pantalla -- pero con
+  // el filete del color primario, porque esto no es una lista vacia: es una explicacion.
+  sinAccesos: {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderLeftColor: colors.primary,
+    borderLeftWidth: 3,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    gap: spacing.xs,
+    marginTop: spacing.sm,
+    padding: spacing.md,
+  },
+  sinAccesosTitulo: {
+    color: colors.text,
+    fontFamily: typography.fontFamilyBase,
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.semibold,
+  },
+  sinAccesosTexto: {
     color: colors.textMuted,
     fontFamily: typography.fontFamilyBase,
     fontSize: typography.sizes.sm,

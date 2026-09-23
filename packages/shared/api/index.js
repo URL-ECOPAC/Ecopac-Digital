@@ -20,5 +20,6 @@ export {
   iniciarSesion,
   cerrarSesion,
   obtenerSesion,
+  establecerSesionDeRecuperacion,
   intercambiarSesionDeRecuperacion,
 } from "./sesion.js";

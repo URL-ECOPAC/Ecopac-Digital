@@ -496,6 +496,44 @@ textarea.form-control {
   padding-block: 0.6rem;
 }
 
+/* Boton de ojo de PasswordField (issue #864). Es el ultimo elemento del .input-group, asi que
+   comparte borde y radio con el campo en vez de dibujarse como un boton aparte pegado al lado.
+   El color es el texto secundario en reposo y el de marca cuando el valor esta a la vista, que
+   es la unica senal visual de que la contrasena se esta viendo. */
+.ec-ojo-contrasena {
+  align-items: center;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-bottom-right-radius: var(--radio-md);
+  border-left: 0;
+  border-top-right-radius: var(--radio-md);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  padding-inline: 0.75rem;
+}
+
+.ec-ojo-contrasena:hover:not(:disabled) {
+  color: var(--color-text);
+}
+
+.ec-ojo-contrasena[aria-pressed="true"] {
+  color: var(--color-primary);
+}
+
+.ec-ojo-contrasena:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* El foco del teclado llega por el campo, no por este boton (tabIndex -1), pero el foco visible
+   se respeta igual si alguien lo alcanza con un lector de pantalla. */
+.ec-ojo-contrasena:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
+}
+
 /* --------------------------------------------------------------------------
    Secciones de formulario
 

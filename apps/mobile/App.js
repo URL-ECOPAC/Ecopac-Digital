@@ -6,12 +6,14 @@ import {
   ESTADOS_DE_RESTAURACION,
   inicializarSupabase,
   intercambiarSesionDeRecuperacion,
+  puedeUsarAppMovil,
 } from "@ecopac/shared";
 import { almacenamientoMovil } from "./src/almacenamiento";
 import { JornadaActivaProvider } from "./src/contexto/JornadaActivaProvider";
 import { RegistroSinGuardarProvider } from "./src/contexto/RegistroSinGuardarProvider";
 import { SesionProvider, useSesionCompartida } from "./src/contexto/SesionProvider";
 import AppNavigator from "./src/navigation/AppNavigator";
+import AppSoloParaCampoScreen from "./src/screens/AppSoloParaCampoScreen";
 import NuevaContrasenaScreen from "./src/screens/NuevaContrasenaScreen";
 import RestaurandoSesionScreen from "./src/screens/RestaurandoSesionScreen";
 
@@ -37,7 +39,7 @@ try {
 }
 
 function Raiz() {
-  const { estadoRestauracion, haySesion } = useSesionCompartida();
+  const { estadoRestauracion, haySesion, perfil } = useSesionCompartida();
   const [estaEnRecuperacion, setEstaEnRecuperacion] = useState(false);
 
   useEffect(() => {
@@ -62,11 +64,15 @@ function Raiz() {
     return <NuevaContrasenaScreen alTerminar={() => setEstaEnRecuperacion(false)} />;
   }
 
-  return estadoRestauracion === ESTADOS_DE_RESTAURACION.CARGANDO ? (
-    <RestaurandoSesionScreen />
-  ) : (
-    <AppNavigator haySesion={haySesion} />
-  );
+  if (estadoRestauracion === ESTADOS_DE_RESTAURACION.CARGANDO) {
+    return <RestaurandoSesionScreen />;
+  }
+
+  if (haySesion && perfil?.rol && !puedeUsarAppMovil(perfil.rol)) {
+    return <AppSoloParaCampoScreen />;
+  }
+
+  return <AppNavigator haySesion={haySesion} />;
 }
 
 // Componente principal: NO renderiza nada hasta que Supabase esté listo

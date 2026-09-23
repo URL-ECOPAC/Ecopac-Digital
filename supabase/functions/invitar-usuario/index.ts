@@ -15,6 +15,11 @@
 import { createClient } from "@supabase/supabase-js";
 
 import { corsHeadersPara } from "../_shared/cors.ts";
+import {
+  componerCorreoDeInvitacion,
+  crearTransporte,
+  leerConfiguracionSmtp,
+} from "../_shared/correo.ts";
 
 // Mismo shape que COLUMNAS_DEL_PERFIL en packages/shared/usuarios/api.js. Se duplica: esta
 // funcion corre en Deno, fuera del bundle de shared, y las Edge Functions de este proyecto
@@ -223,17 +228,91 @@ export async function manejarSolicitud(
     // ========================================================================
     // 4. Correo para establecer contrasena. Mismo mecanismo que useRestablecerContrasena.js
     //    (packages/shared/usuarios): fn_crear_usuario_administrativo() no fija contrasena a
-    //    proposito. Sin redirectTo: la URL de retorno depende de la plataforma (web arma
-    //    `${window.location.origin}/nueva-contrasena`, que no existe en Deno), asi que se deja
-    //    ganar el Site URL configurado en Supabase Auth, igual que hace ese hook cuando no se
-    //    lo pasan. No bloquea el alta si el envio falla.
+    //    proposito. No bloquea el alta si el envio falla.
+    //
+    //    ISSUE #864, punto 5. Antes se enviaba SIN redirectTo, razonando que la URL de retorno
+    //    depende de la plataforma y que en Deno no hay `window.location.origin`, asi que ganaba
+    //    el Site URL de Supabase Auth. El problema es a donde lleva ese Site URL: a la RAIZ de
+    //    la aplicacion. Comprobado de punta a punta en local: quien recibe la invitacion abre el
+    //    enlace, el token de recuperacion se canjea, y la persona aterriza en la pantalla de
+    //    inicio **con sesion y sin contrasena**, sin nada que la lleve a ponerse una. La ruta
+    //    /nueva-contrasena existe y funciona -- es la que usa "olvide mi contrasena", que si pasa
+    //    su redirectTo --, pero a la invitacion no habia forma de llegar a ella.
+    //
+    //    La URL de la web no se puede deducir aqui, pero si se puede configurar: WEB_URL es la
+    //    misma variable que ya usa _shared/correo.ts para los enlaces de las notificaciones
+    //    (issue #755), asi que no se agrega una pieza nueva de configuracion. Si no esta puesta
+    //    se vuelve al comportamiento anterior en vez de romper el alta.
+    //
+    //    OJO AL DESPLEGAR: el destino tiene que estar en Authentication > URL Configuration >
+    //    Redirect URLs del proyecto remoto, o Supabase lo ignora y vuelve a caer en el Site URL.
+    //    En local lo cubre el comodin de additional_redirect_urls de supabase/config.toml.
     // ========================================================================
     const supabaseAnon = crearCliente(supabaseUrl, anonKey, {
       auth: { persistSession: false },
     });
 
-    const { error: errorDeCorreo } = await supabaseAnon.auth
-      .resetPasswordForEmail(email);
+    //    `?origen=invitacion` es lo que deja a la pantalla saber por cual de los dos caminos se
+    //    llego: "olvide mi contrasena" no lo lleva, asi que sigue leyendose como un
+    //    restablecimiento. Sin el, a quien estrena su cuenta se le pedia "restablecer" una
+    //    contrasena que nunca tuvo.
+    const urlDeLaWeb = Deno.env.get("WEB_URL")?.replace(/\/+$/, "");
+    const destinoParaFijarContrasena = urlDeLaWeb
+      ? `${urlDeLaWeb}/nueva-contrasena?origen=invitacion`
+      : undefined;
+
+    //    EL CORREO LO MANDAMOS NOSOTROS (issue #864). `resetPasswordForEmail()` dispara la
+    //    plantilla `recovery` de GoTrue, que es **la misma que usa "olvide mi contrasena"**: a
+    //    quien estrenaba su cuenta le llegaba un "Reset your password" en ingles, de una
+    //    contrasena que nunca tuvo, y no habia forma de distinguirlos cambiando la plantilla
+    //    porque es una sola para los dos casos.
+    //
+    //    `admin.generateLink()` devuelve el mismo enlace SIN mandar ningun correo, asi que el
+    //    texto lo componemos aqui (componerCorreoDeInvitacion) y lo enviamos por el SMTP que ya
+    //    usa enviar-notificaciones. La plantilla `recovery` queda entonces dedicada a lo unico
+    //    que le corresponde: recuperar el acceso de quien ya tenia cuenta.
+    //
+    //    Si el SMTP no esta configurado se vuelve al camino anterior en vez de dejar a la
+    //    persona sin enlace: peor que un correo en ingles es no recibir ninguno.
+    const configuracionSmtp = leerConfiguracionSmtp();
+    let errorDeCorreo: { message: string } | null = null;
+
+    if (configuracionSmtp && destinoParaFijarContrasena) {
+      const { data: enlace, error: errorDeEnlace } = await supabaseAdmin.auth.admin.generateLink({
+        type: "recovery",
+        email,
+        options: { redirectTo: destinoParaFijarContrasena },
+      });
+
+      const accionDelEnlace = enlace?.properties?.action_link;
+      if (errorDeEnlace || !accionDelEnlace) {
+        errorDeCorreo = errorDeEnlace ?? { message: "generateLink no devolvio action_link" };
+      } else {
+        const correo = componerCorreoDeInvitacion(
+          nombres,
+          accionDelEnlace,
+          configuracionSmtp.urlWeb,
+        );
+        try {
+          await crearTransporte(configuracionSmtp).sendMail({
+            from: configuracionSmtp.remitente,
+            to: email,
+            subject: correo.asunto,
+            text: correo.texto,
+            html: correo.html,
+          });
+        } catch (falloDeEnvio) {
+          errorDeCorreo = { message: String(falloDeEnvio) };
+        }
+      }
+    } else {
+      const { error } = await supabaseAnon.auth.resetPasswordForEmail(
+        email,
+        destinoParaFijarContrasena ? { redirectTo: destinoParaFijarContrasena } : undefined,
+      );
+      errorDeCorreo = error;
+    }
+
     if (errorDeCorreo) {
       console.error(
         "invitar-usuario: no se pudo enviar el correo para establecer contrasena:",

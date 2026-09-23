@@ -18,7 +18,15 @@ este seed corresponde a una persona o lugar real (regla de confidencialidad de
   comunidades y los tres estados de `estado_condicion_cronica`, con un paciente que tiene dos
   condiciones a la vez y otro cuya condicion ya esta `resuelta` - el caso que los listados de
   cronicos excluyen por defecto.
-- 2 jornadas: una `finalizada` (hace 30 dias) y una `en curso` (hoy).
+- 2 proyectos sociales (issue #864): "Salud Rural Demo" `en curso` al 45 % y "Nutricion Infantil
+  Demo" `planificado` al 10 %. Hasta ahora `proyectos` se quedaba vacia y el modulo se abria sin
+  una sola fila para nadie.
+- 2 jornadas: una `finalizada` (hace 30 dias) y una `en curso` (hoy), **cada una colgando de un
+  proyecto distinto**. Es a proposito: desde la `00141` el personal de campo lee solo el proyecto
+  de las jornadas a las que pertenece, y con un unico proyecto no se distingue "ve el suyo" de
+  "ve todos". Con estos datos, Mario (medico) ve los dos -esta en el cuadro de turnos de una y es
+  el responsable de la otra-, Miriam ve solo "Nutricion Infantil Demo", Victor (voluntario) solo
+  "Salud Rural Demo", y junta directiva no ve ninguno.
 - 7 medicamentos y 4 lotes: uno ya vencido, uno que vence dentro del mes y dos con
   vencimiento lejano - para probar alertas de caducidad y el bloqueo de salida de
   medicamentos vencidos.

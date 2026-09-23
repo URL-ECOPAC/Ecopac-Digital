@@ -5,13 +5,16 @@ import { permisosDeDonaciones, puedeRegistrarDonaciones, puedeVerDonaciones } fr
 
 describe("permisos de donaciones (#598)", () => {
   describe("puedeVerDonaciones", () => {
-    it("deja leer a administrador y a los dos roles consultivos", () => {
+    it("deja leer solo a administrador", () => {
       expect(puedeVerDonaciones(ROLES.ADMINISTRADOR)).toBe(true);
-      expect(puedeVerDonaciones(ROLES.JUNTA_DIRECTIVA)).toBe(true);
-      expect(puedeVerDonaciones(ROLES.SOCIO_FUNDADOR)).toBe(true);
     });
 
-    it("no deja leer a los roles de campo", () => {
+    // ISSUE #864: los dos roles consultivos leian donantes, donaciones y su detalle por el
+    // SELECT de la 00083. Su unica pantalla pasa a ser Reportes, y ningun reporte lee esas tres
+    // tablas, asi que la 00141 les retira tambien la politica.
+    it("no deja leer a los roles consultivos ni a los de campo", () => {
+      expect(puedeVerDonaciones(ROLES.JUNTA_DIRECTIVA)).toBe(false);
+      expect(puedeVerDonaciones(ROLES.SOCIO_FUNDADOR)).toBe(false);
       expect(puedeVerDonaciones(ROLES.MEDICO)).toBe(false);
       expect(puedeVerDonaciones(ROLES.VOLUNTARIO)).toBe(false);
     });
@@ -58,9 +61,9 @@ describe("permisos de donaciones (#598)", () => {
       });
     });
 
-    it("da solo lectura a junta directiva", () => {
+    it("no da nada a junta directiva (issue #864)", () => {
       expect(permisosDeDonaciones(ROLES.JUNTA_DIRECTIVA)).toEqual({
-        tieneAccesoLectura: true,
+        tieneAccesoLectura: false,
         puedeEscribir: false,
       });
     });

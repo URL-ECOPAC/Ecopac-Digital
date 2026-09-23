@@ -12,19 +12,19 @@
 // docs/PERMISOS.md. Se mudan aqui sin cambiar su logica; esos archivos las siguen exportando
 // via reexport nombrado para no romper lo que ya los importa.
 //
-// SOBRE SOCIO FUNDADOR Y EL REPORTE DE PACIENTES (issue #862). El comentario que estuvo aqui
-// hasta ahora justificaba excluirlo citando la guarda de la 00067,
-// `es_administrador() OR rol_actual() = 'junta directiva'`, y afirmaba que era "una de las pocas
-// excepciones reales" a tratar juntos a los dos roles consultivos. Esa guarda dejo de existir en
-// la 00080. La vigente -00086, conservada por 00095 y 00132- es
+// puedeVerReporteDePacientes excluia a socio fundador citando la guarda de
+// fn_reporte_pacientes_atendidos, y **esa cita dejo de ser cierta hace tiempo**. Era verdad en
+// la 00067 (`es_administrador() OR rol_actual() = 'junta directiva'`), pero la 00086 reescribio
+// la funcion entera con `es_administrador() OR es_consultivo() OR tiene_permiso(...)` al
+// conectar los permisos finos, y este archivo se quedo con el texto viejo.
 //
-//   es_administrador() OR es_consultivo() OR tiene_permiso('reportes.exportar')
+// O sea que era una divergencia de las que docs/PERMISOS.md llama defecto, y de las silenciosas:
+// el cliente era MAS estricto que el servidor, asi que a un socio fundador la pantalla le
+// escondia un reporte que la base le habria servido. No fallaba nada; simplemente no estaba.
+// ISSUE #864: se corrige el cliente, que es el lado equivocado, sin tocar la base. La #862 llego
+// a la misma conclusion por su cuenta y en paralelo; al mezclar se conserva esta redaccion.
 //
-// es decir, socio fundador SI puede. El cliente llevaba desde entonces ocultandole una pestana
-// que el servidor le concede: entraba al modulo, veia la pestana y recibia un error que decia
-// "Solo administracion y junta directiva", que era falso. Ahora es esConsultivo(), el espejo real.
-//
-// LO QUE ESTE ARCHIVO NO DECIDE. Que roles alcanzan la RUTA /reportes lo fija
+// LO QUE ESTE ARCHIVO NO DECIDE (issue #862). Que roles alcanzan la RUTA /reportes lo fija
 // navegacion.js (administrador, junta directiva y socio fundador), y es una decision deliberada
 // de la issue #426 que navegacion.test.js afirma: un medico o un voluntario no llegan hasta aqui,
 // y ven los vencimientos en Inventario > Alertas. Estas funciones solo deciden que pestana se
@@ -57,9 +57,16 @@ export function puedeVerIndicadoresDeImpacto(rol) {
 /**
  * Puede consultar el reporte de pacientes atendidos: administrador y los dos roles consultivos.
  *
- * Espejo de la guarda vigente de fn_reporte_pacientes_atendidos (00132, conservada desde la
- * 00086): `es_administrador() OR es_consultivo() OR tiene_permiso('reportes.exportar')`. Ver el
- * comentario de cabecera sobre por que socio fundador estaba excluido y por que ya no lo esta.
+ * Espejo de la guarda de fn_reporte_pacientes_atendidos **tal como esta desde la 00086**:
+ * administrador, cualquiera de los dos roles consultivos, o quien tenga reportes.exportar.
+ *
+ * ISSUE #864: decia administrador o junta directiva, copiado de la 00067, que la 00086 ya habia
+ * reescrito. El cliente le escondia a socio fundador un reporte que la base si le entrega. Con
+ * los dos roles consultivos reducidos a Reportes como unica pantalla, ese descuadre le quitaba
+ * uno de los cuatro reportes que le quedan.
+ *
+ * El permiso fino no se resuelve desde el rol, asi que aqui solo se cubre la parte por rol y el
+ * resto lo decide el servidor -- mismo criterio que puedeAprobarGasto().
  *
  * Ninguna columna del reporte identifica a un paciente -la RPC nunca devuelve una fila por
  * persona-, asi que dejarlo entrar no contradice la regla de la issue #426 de que los roles

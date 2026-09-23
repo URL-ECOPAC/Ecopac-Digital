@@ -122,6 +122,12 @@ Tras autenticarse, el usuario entra a un punto distinto segun su rol:
   de solo lectura con permisos identicos (issue #404).
 - **medico y voluntario general** entran al Tablero de Jornadas Activas.
 
+Desde la issue **#864**, junta directiva y socio fundador **solo ven Reportes**: su menu son Inicio
+y Reportes, y nada mas. Lo que ven los demas cambia tambien -el medico gana Proyectos, y los tres
+roles de operacion pierden lo que no les toca-, asi que la tabla de secciones de abajo ya no
+describe el menu de todos: describe **el menu completo, el de la administradora**. Quien ve cada
+modulo lo declara `packages/shared/navegacion.js` y lo detalla `docs/PERMISOS.md`.
+
 Los cinco nombres son los valores del enum `rol_usuario` (`packages/shared/usuarios/roles.js`),
 no las etiquetas que se muestran en pantalla: el rol es `voluntario general`, aunque la interfaz
 lo muestre como "Colaborador" (`ETIQUETAS_ROL`).
@@ -129,7 +135,7 @@ lo muestre como "Colaborador" (`ETIQUETAS_ROL`).
 Esconder una opcion del menu no es control de acceso: la restriccion real vive en las
 politicas RLS y en el guard de rutas.
 
-### Web: navegacion lateral, nueve modulos en cinco secciones
+### Web: navegacion lateral, el menu completo de la administradora
 
 | Seccion | Modulos |
 | ------- | ------- |

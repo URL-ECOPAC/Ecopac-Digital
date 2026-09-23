@@ -188,7 +188,7 @@ describe("DetalleJornadaPage", () => {
     irAPestaniaCierre();
 
     expect(
-      screen.getByText("Hay 3 atenciones registradas sin consulta todavia."),
+      screen.getByText("Hay 3 atenciones registradas sin consulta todavía."),
     ).toBeInTheDocument();
     expect(screen.getByText("Confirmar cierre")).toBeInTheDocument();
   });
