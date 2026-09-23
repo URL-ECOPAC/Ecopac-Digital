@@ -227,6 +227,10 @@ export default function DetalleJornadaPage() {
     if (pestania.id === "pacientes") return permisos.puedeVerDatosClinicos;
     if (pestania.id === "historial") return permisos.puedeVerHistorial;
     if (pestania.id === "presupuesto") return permisosPresupuesto.puedeVer;
+    // ISSUE #864: "Cierre" no tenia filtro, asi que la veia cualquier rol que llegara al
+    // detalle. Finalizar una jornada es puedeAdministrarJornadas() -- solo la administradora --,
+    // y la pestaña es justo la que finaliza (useResumenCierreJornada, issue #183).
+    if (pestania.id === "cierre") return permisos.puedeEditar;
     return true;
   });
 

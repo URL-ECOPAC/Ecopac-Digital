@@ -99,8 +99,14 @@ export default function NotificacionesPage() {
       <PageHeader
         title="Notificaciones"
         subtitle={noLeidas > 0 ? `${noLeidas} sin leer` : "Todo al día"}
-        actions={
-          noLeidas > 0
+        actions={[
+          // ISSUE #864: a esta ventana se entra desde "Mi perfil" y desde la campana de la
+          // cabecera, y no habia ninguna salida salvo el menu lateral. El destino es fijo
+          // (/perfil) y no navigate(-1), que es el criterio del resto de las subpantallas
+          // -- FichaPacientePage, los catalogos, ConstanciaDonacionPage --: con el historial
+          // del navegador, "volver" puede terminar en una pantalla que ya no corresponde.
+          { label: "Volver", onClick: () => navigate("/perfil"), variant: "neutra" },
+          ...(noLeidas > 0
             ? [
                 {
                   label: "Marcar todas como leídas",
@@ -109,8 +115,8 @@ export default function NotificacionesPage() {
                   icon: <CheckCheck size={16} aria-hidden="true" />,
                 },
               ]
-            : []
-        }
+            : []),
+        ]}
       />
 
       {errorAccion && <ErrorState message={errorAccion.mensaje} />}

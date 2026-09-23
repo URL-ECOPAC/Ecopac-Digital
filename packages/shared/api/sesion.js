@@ -98,6 +98,51 @@ export async function evaluarPerfilDeSesion(usuario) {
   return { perfil, rol: perfil.rol, error: null };
 }
 
+// ISSUE #864. Marca de "este cierre lo pidio esta capa", para el unico cierre que ocurre DENTRO
+// de packages/shared/api y no lo pide un consumidor: el de iniciarSesion() cuando el perfil no
+// sirve (cuenta desactivada o sin permiso).
+//
+// Sin esto, ese signOut llega a useSesion como un SIGNED_OUT que nadie pidio, es decir como una
+// sesion expirada, y quien tiene la cuenta desactivada recibe "Tu sesion expiro. Inicia sesion de
+// nuevo" -- un mensaje que le dice que reintente lo unico que no va a funcionar. Comprobado en el
+// telefono con una cuenta desactivada a proposito.
+//
+// Es una variable de modulo y no estado de React porque el hecho que describe es de este archivo:
+// useSesion no puede marcar un cierre que no dispara el. Es la contraparte de `cierreIntencional`,
+// que sigue cubriendo los cierres que si dispara el hook (ver requiereCerrarSesion).
+let cierreDeliberado = null;
+
+/**
+ * Lo lee useSesion cuando va a publicar un cierre. Se consume: una marca vale por un solo cierre.
+ *
+ * Devuelve `{ marcado, error }`. Existe por dos motivos, los dos de la #864:
+ *
+ * 1. EL MENSAJE TIENE QUE SOBREVIVIR AL DESMONTE DEL LOGIN. En movil, con la contrasena correcta
+ *    Supabase emite SIGNED_IN, `haySesion` pasa a true y App.js cambia el AuthNavigator por las
+ *    pestanas: eso destruye LoginScreen y se lleva el error que devolvio iniciarSesion(). El
+ *    error de la sesion vive por encima del navegador y si llega a la pantalla nueva.
+ *
+ * 2. Y TIENE QUE SER EL MISMO EN LAS DOS PLATAFORMAS. Un intento de login con cuenta desactivada
+ *    dispara DOS lecturas del perfil en paralelo -- la de iniciarSesion() y la de aplicarSesion()
+ *    en useSesion, que reacciona al SIGNED_IN --, y cual termina primero no esta determinado. Sin
+ *    esta marca, la web mostraba el mensaje generico y el telefono el especifico, para el mismo
+ *    hecho y segun quien ganara la carrera.
+ *
+ *    Gana el generico, que es el criterio 2 ya aceptado (OWASP A07): la cuenta desactivada y la
+ *    contrasena incorrecta responden lo mismo. Por eso la marca se pone ANTES de
+ *    `signInWithPassword` y la consume el primero de los dos caminos que publique el cierre.
+ *
+ * Sin marca, useSesion publica lo que ya publicaba. Ese es el caso de a quien desactivan CON la
+ * sesion abierta, donde el mensaje especifico si corresponde: no hay ningun intento de login que
+ * pueda enumerar nada.
+ */
+export function consumirCierreDeliberado() {
+  if (!cierreDeliberado) return { marcado: false, error: null };
+  const { error } = cierreDeliberado;
+  cierreDeliberado = null;
+  return { marcado: true, error };
+}
+
 /**
  * Cierra la sesion local.
  *
@@ -136,6 +181,42 @@ export async function cerrarSesion() {
  */
 export async function intercambiarSesionDeRecuperacion(codigo) {
   const { error } = await obtenerSupabase().auth.exchangeCodeForSession(codigo);
+  return { error: error ? normalizarError(error) : null };
+}
+
+/**
+ * Toma la sesion que viene DENTRO de un enlace de recuperacion, pisando la que hubiera.
+ *
+ * ISSUE #864, y es un defecto serio. El comentario de intercambiarSesionDeRecuperacion() dice
+ * que "en el navegador, Supabase Auth resuelve la sesion de recuperacion solo, leyendo el
+ * fragmento de la URL". Es cierto **solo si no hay ya una sesion abierta**: si la hay,
+ * supabase-js conserva la guardada y el fragmento se queda sin procesar.
+ *
+ * La consecuencia se comprobo de punta a punta en local: la administradora invita a alguien y,
+ * sin cerrar su sesion, abre el enlace de la invitacion en el mismo navegador. La pantalla de
+ * "elige tu contrasena" se dibuja igual, pero `updateUser({ password })` se aplica **a la sesion
+ * abierta**. Resultado: la contrasena que cambio fue la de la administradora, la persona
+ * invitada se quedo sin ninguna, y ninguna de las dos pantallas dijo nada raro.
+ *
+ * Por eso no alcanza con "dejar que Supabase lo resuelva": hay que fijar explicitamente la
+ * sesion del enlace antes de tocar nada. Los dos tokens salen del fragmento de la URL, que es un
+ * detalle del navegador y por eso los lee la pantalla (apps/web/src/pages/NuevaContrasenaPage),
+ * no esta funcion.
+ *
+ * @param {string} accessToken
+ * @param {string} refreshToken
+ * @returns {Promise<{ error: object|null }>}
+ */
+export async function establecerSesionDeRecuperacion(accessToken, refreshToken) {
+  if (!accessToken || !refreshToken) {
+    return { error: construirError(CODIGOS_DE_ERROR_DE_SUPABASE.SESION_EXPIRADA) };
+  }
+
+  const { error } = await obtenerSupabase().auth.setSession({
+    access_token: accessToken,
+    refresh_token: refreshToken,
+  });
+
   return { error: error ? normalizarError(error) : null };
 }
 
@@ -205,12 +286,20 @@ export async function iniciarSesion(correo, contrasena) {
   }
 
   const cliente = obtenerSupabase();
+
+  // ANTES del signIn, no despues: el SIGNED_IN que emite arranca aplicarSesion() en useSesion, que
+  // lee el perfil en paralelo y puede llegar a publicar el cierre antes que esta funcion.
+  cierreDeliberado = { error: ERROR_CREDENCIALES_INVALIDAS };
+
   const { data, error: errorDeAuth } = await cliente.auth.signInWithPassword({
     email: correoNormalizado,
     password: contrasena,
   });
 
   if (errorDeAuth) {
+    // No hubo sesion, asi que no va a haber ningun cierre que consuma la marca: se retira para no
+    // dejarla puesta contaminando el proximo cierre, que podria ser una sesion que si expiro.
+    cierreDeliberado = null;
     const normalizado = normalizarError(errorDeAuth);
     const error = esCredencialesInvalidas(normalizado) ? ERROR_CREDENCIALES_INVALIDAS : normalizado;
     return { sesion: null, perfil: null, rol: null, error, erroresDeCampo: SIN_ERRORES };
@@ -219,15 +308,22 @@ export async function iniciarSesion(correo, contrasena) {
   const { perfil, rol, error: errorDePerfil } = await evaluarPerfilDeSesion(data.session.user);
 
   if (errorDePerfil) {
-    if (requiereCerrarSesion(errorDePerfil)) {
-      await cerrarSesion();
-    }
-
     const esCuentaDesactivada =
       errorDePerfil.codigo === CODIGOS_DE_ERROR_DE_SUPABASE.CUENTA_DESACTIVADA;
     const error = esCuentaDesactivada ? ERROR_CREDENCIALES_INVALIDAS : errorDePerfil;
+
+    if (requiereCerrarSesion(errorDePerfil)) {
+      // La marca sigue puesta a proposito: si aplicarSesion() no la consumio ya, la consume el
+      // SIGNED_OUT que este signOut dispara.
+      await cerrarSesion();
+    } else {
+      cierreDeliberado = null;
+    }
+
     return { sesion: null, perfil: null, rol: null, error, erroresDeCampo: SIN_ERRORES };
   }
 
+  // El login sirvio: no hay ningun cierre que anunciar.
+  cierreDeliberado = null;
   return { sesion: data.session, perfil, rol, error: null, erroresDeCampo: SIN_ERRORES };
 }

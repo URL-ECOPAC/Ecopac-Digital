@@ -15,6 +15,7 @@ import {
   ErrorState,
   MultiSelector,
   PageHeader,
+  PasswordField,
   PrimaryButton,
   SecondaryButton,
   ScreenContainer,
@@ -248,27 +249,29 @@ export default function PerfilPage() {
 
           <form onSubmit={cambiarContrasena} noValidate>
             <div className="ec-form-grid">
-              <TextField
+              {/* PasswordField y no TextField con type="password" (issue #864): cada uno lleva
+                  su propio icono de ojo y su propio estado de visibilidad. Antes los tres
+                  campos estaban ocultos sin forma de verlos, que es donde mas duele -- aqui se
+                  escribe una contrasena nueva dos veces y no se puede comprobar si coinciden
+                  mas que enviando el formulario. */}
+              <PasswordField
                 label="Contraseña actual"
-                type="password"
                 autoComplete="current-password"
                 value={contrasena.actual}
                 onChange={(evento) => setCampoDeContrasena("actual", evento.target.value)}
                 error={erroresDeContrasena?.actual}
                 disabled={cambiandoContrasena}
               />
-              <TextField
+              <PasswordField
                 label="Contraseña nueva"
-                type="password"
                 autoComplete="new-password"
                 value={contrasena.nueva}
                 onChange={(evento) => setCampoDeContrasena("nueva", evento.target.value)}
                 error={erroresDeContrasena?.nueva}
                 disabled={cambiandoContrasena}
               />
-              <TextField
+              <PasswordField
                 label="Confirmar contraseña nueva"
-                type="password"
                 autoComplete="new-password"
                 value={contrasena.confirmarNueva}
                 onChange={(evento) => setCampoDeContrasena("confirmarNueva", evento.target.value)}

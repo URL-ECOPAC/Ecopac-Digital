@@ -29,6 +29,7 @@ import { modulosVisibles } from "../navegacion.js";
  * @param {string} [opciones.plataforma] "web" (por defecto) o "mobile".
  * @returns {{
  *   accesos: object[],
+ *   accesosEnOtraPlataforma: object[],
  *   jornadasEnCurso: object[],
  *   puedeVerJornadaEnCurso: boolean,
  *   cargando: boolean,
@@ -48,6 +49,25 @@ export function usePanelDeInicio({ rol, plataforma = "web" } = {}) {
     () => modulosVisibles(rol, { plataforma }).filter((modulo) => modulo.ruta !== "/"),
     [rol, plataforma],
   );
+
+  // ISSUE #864. Lo que el rol SI puede abrir, pero no desde esta plataforma.
+  //
+  // Sale de la #864, probando en el telefono: junta directiva y socio fundador pasaron a ver solo
+  // Reportes, y Reportes esta declarado `soloWeb` porque la pantalla no existe en movil. Resultado:
+  // los dos roles abrian la app y se encontraban "Tus modulos" en blanco, sin una linea que
+  // dijera por que. Una pantalla vacia se lee como una app rota, no como un limite de rol.
+  //
+  // Se calcula siempre -- no solo cuando `accesos` esta vacio -- porque es la respuesta a "y
+  // entonces donde hago mi trabajo", y quien la dibuja decide cuando hace falta. La lista es de
+  // modulos, no de texto: el mensaje lo escribe cada app.
+  const accesosEnOtraPlataforma = useMemo(() => {
+    if (plataforma === "web") return [];
+
+    const idsAqui = new Set(accesos.map((modulo) => modulo.id));
+    return modulosVisibles(rol, { plataforma: "web" }).filter(
+      (modulo) => modulo.ruta !== "/" && !idsAqui.has(modulo.id),
+    );
+  }, [rol, plataforma, accesos]);
 
   const cargar = useCallback(async () => {
     if (!puedeConsultarJornadas) {
@@ -81,6 +101,7 @@ export function usePanelDeInicio({ rol, plataforma = "web" } = {}) {
 
   return {
     accesos,
+    accesosEnOtraPlataforma,
     jornadasEnCurso,
     puedeVerJornadaEnCurso: puedeConsultarJornadas,
     cargando,

@@ -10,20 +10,23 @@
 // El modulo no tenia permisos.js: era el unico archivo de la estructura estandar que faltaba
 // (ver el encabezado de presupuestos/index.js).
 
-import { esAdministrador, ROLES, ROLES_CONSULTIVOS } from "../usuarios/roles.js";
+import { esAdministrador, ROLES } from "../usuarios/roles.js";
 import { ESTADOS_DE_GASTO } from "../enums.js";
 
 /**
  * Puede ver la bandeja de gastos completa.
  *
- * La politica de SELECT (00052) deja leer todo a administrador, junta directiva y socio fundador.
- * El personal de campo tambien lee, pero solo los gastos de las jornadas en las que participa, y
- * eso no se puede saber desde el rol: lo filtra participa_en_jornada() en el servidor. Por eso
+ * ISSUE #864: solo administrador. La politica de SELECT de la 00052 dejaba leer todos los gastos
+ * a junta directiva y a socio fundador -es la unica politica del esquema que nombraba a socio
+ * fundador por su nombre-, y la 00141 se la retira: su unica pantalla es Reportes.
+ *
+ * El personal de campo sigue leyendo los gastos de las jornadas en las que participa, y eso no se
+ * puede saber desde el rol: lo filtra participa_en_jornada() en el servidor. Por eso
  * `puedeVerTodosLosGastos` es lo que gobierna la pantalla global, y el listado por jornada se
  * dibuja para cualquier rol conocido.
  */
 export function puedeVerTodosLosGastos(rol) {
-  return esAdministrador(rol) || ROLES_CONSULTIVOS.includes(rol);
+  return esAdministrador(rol);
 }
 
 /** Cualquier rol conocido ve los gastos de una jornada; RLS recorta las filas que no le tocan. */
@@ -66,17 +69,18 @@ export function puedeEditarGasto(rol, estadoDelGasto) {
 /**
  * Que puede hacer un rol con el origen del presupuesto de una jornada (issue #840, 00135).
  *
- * Replica las politicas de jornada_presupuesto_origen: leen administrador y consultivos (y quien
- * tenga jornadas.gestionar, que no se resuelve desde el rol), y registran o quitan aportes quienes
- * pueden actualizar la jornada -administrador, o jornadas.gestionar-. El personal de campo ve el
- * total en la jornada, no el desglose.
+ * Replica las politicas de jornada_presupuesto_origen (00135): lee administrador -y quien tenga
+ * jornadas.gestionar, que no se resuelve desde el rol-, y registran o quitan aportes quienes
+ * pueden actualizar la jornada. El personal de campo ve el total en la jornada, no el desglose.
+ *
+ * ISSUE #864: los consultivos salen de la lectura, aqui y en la politica (00141).
  *
  * @param {string} rol
  * @returns {{ puedeVer: boolean, puedeGestionar: boolean }}
  */
 export function permisosDeOrigenDePresupuesto(rol) {
   return {
-    puedeVer: esAdministrador(rol) || ROLES_CONSULTIVOS.includes(rol),
+    puedeVer: esAdministrador(rol),
     puedeGestionar: esAdministrador(rol),
   };
 }

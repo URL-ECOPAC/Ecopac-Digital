@@ -19,7 +19,7 @@
 // es_administrador() a secas.
 
 import { rolesDelModulo } from "../navegacion.js";
-import { esAdministrador, ROLES } from "./roles.js";
+import { esAdministrador } from "./roles.js";
 
 /** Puede crear un perfil nuevo. Espejo de la politica de INSERT de perfiles (00038). */
 export function puedeCrearUsuario(rol) {
@@ -48,12 +48,14 @@ export function puedeReactivarUsuario(rol) {
 /**
  * Puede ver el listado completo de usuarios (nombres, apellidos, rol, sin datos de contacto).
  *
- * Espejo exacto de la vista perfiles_directorio (00038, linea 104): administrador o junta
- * directiva. Excluye a socio fundador a proposito -- la vista es la unica forma en la que junta
- * directiva lee perfiles ajenos, y su WHERE no incluye al otro rol consultivo.
+ * ISSUE #864: solo administrador. La vista perfiles_directorio (00038) le daba a junta directiva
+ * -y solo a ella, no a socio fundador- una lectura del personal sin datos de contacto ajenos, y
+ * la #756 habia abierto la ruta para que esa vista tuviera por donde llegarse. La #864 cierra
+ * las dos: "Junta directiva: solo ve reportes". La 00141 reescribe la vista para que su WHERE
+ * diga lo mismo que esta funcion.
  */
 export function puedeVerListadoUsuarios(rol) {
-  return esAdministrador(rol) || rol === ROLES.JUNTA_DIRECTIVA;
+  return esAdministrador(rol);
 }
 
 /**

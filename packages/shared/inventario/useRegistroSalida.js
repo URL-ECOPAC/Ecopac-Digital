@@ -86,7 +86,7 @@ export function useRegistroSalida({ usuarioId, onExito } = {}) {
   };
 
   const guardarSalida = async (e) => {
-    e.preventDefault();
+    e?.preventDefault?.();
     setError(null);
 
     if (!loteSeleccionado) {

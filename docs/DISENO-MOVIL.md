@@ -115,5 +115,41 @@ tabla), no el contenido ni las etiquetas.
 | Selectores largos | Búsqueda dentro del selector cuando pasa de ocho opciones (diagnósticos, comunidades) | 1, 3 |
 | Formularios de corrección | El mismo formulario que el alta, con lo que no se edita en solo lectura (`CampoDeFormulario`) | 11 |
 
-Pantallas que quedan fuera de este PR y se revisan contra esta lista cuando se toquen:
-`DonacionesScreen` y `ProyectosScreen` (su rediseño estructural quedó fuera de alcance en la issue).
+Pantallas que quedaban fuera de esa issue: `DonacionesScreen` y `ProyectosScreen`. La #866 las
+retiró de la app en vez de rediseñarlas (ver abajo).
+
+## Regla 12: si nadie puede llegar, no existe
+
+Una pantalla construida pero sin ruta, o una ruta que ningún botón abre, es peor que no tenerla:
+aparece en las pruebas y en la cobertura como si funcionara. Toda pantalla nueva se registra en
+`AppNavigator` **y** se abre desde algún sitio visible, y
+`apps/mobile/src/navigation/guardaDeRol.test.js` lo comprueba en las dos direcciones: ninguna
+pantalla sin guarda de rol, y ningún nombre de `ROUTES` sin pantalla registrada.
+
+## Cómo se aplicó en la issue #866
+
+| Pantalla | Qué se cambió | Reglas |
+| --- | --- | --- |
+| Inicio | Solo los cuatro módulos que existen en móvil; antes dibujaba tarjetas de donaciones y proyectos que no llevaban a ningún lado | 6, 12 |
+| Cabecera (todas) | "Cerrar sesión" a la par de la campana, con su aviso de cambios sin guardar; antes había que entrar a Ajustes y bajar hasta el final | 1, 2 |
+| Inventario (stock) | Los tres indicadores son productos, por vencer y sin stock; tocar un lote abre su detalle en vez del formulario de ingreso; fila de accesos a las demás secciones | 3, 5, 12 |
+| Pacientes | Fila de accesos a crónicos, condiciones y diagnósticos, que en móvil no existían | 11, 12 |
+| `StatCard` | Sin `toUpperCase()` en el rótulo | 4 |
+| Ficha del paciente, consulta, notificaciones | Sin `textTransform: "uppercase"` en rótulos y categorías | 4 |
+| Principios activos, Registrar salida, Por aprobar | Pantallas nuevas, con el mismo catálogo de componentes y los descriptores de la web | 7, 11 |
+| Receta | "Imprimir o guardar PDF" con `expo-print`, sobre el mismo `datosDeRecetaImprimible` que usa la web | 11 |
+
+**Mayúsculas forzadas: por qué se fueron.** La regla 4 las prohíbe desde la #840, pero
+`StatCard.js` seguía llamando a `String(label).toUpperCase()` y tres pantallas usaban
+`textTransform: "uppercase"`. En un rótulo corto ("POR VENCER", "CADUCIDAD") se lee peor, ocupa
+más ancho del que hay en 360 dp y el lector de pantalla puede deletrearlo. El tamaño del rótulo
+de `StatCard` subió de `xxs` a `xs` al quitarlas, que es lo que la regla de contraste pide para
+texto pequeño.
+
+**Pantallas que se retiraron.** `DonacionesScreen`, `ProyectosScreen`, `ColaboradoresScreen` y
+`FichaColaboradorScreen` salieron del repositorio, junto con `MenuDrawer.js`, que era el único
+sitio que las enlazaba y que **ningún archivo importaba**. Ninguno de los tres roles que entran a
+la app móvil (#866) puede abrirlas: donaciones y colaboradores son de junta directiva y socio
+fundador, que ya no entran, y proyectos no tiene política RLS que deje leer a un médico
+(`00080`/`00086`). Quien retome proyectos en móvil las recupera con
+`git show develop:apps/mobile/src/screens/ProyectosScreen.js`.

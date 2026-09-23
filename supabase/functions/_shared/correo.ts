@@ -69,6 +69,149 @@ export function componerCorreo(notificacion: NotificacionParaCorreo, urlWeb: str
   };
 }
 
+/**
+ * Envoltorio HTML de los correos que manda el sistema (issue #864).
+ *
+ * Un correo no es una pagina: no hay hoja de estilos, no hay flexbox y la mitad de los clientes
+ * recorta lo que no entiende. Por eso esto es una tabla con estilos en linea, que es lo unico
+ * que se ve igual en Gmail, Outlook y un telefono, y por eso los colores van escritos aqui en
+ * vez de salir de los tokens: `var(--color-primary)` no existe dentro de un correo. Son los
+ * mismos valores que publica @ecopac/ui-tokens (docs/DISENO.md).
+ *
+ * El filete de arriba son los cuatro colores del logo, en el mismo orden. El logotipo se sirve
+ * desde la propia web (`/logo-ecopac.png`): incrustarlo en base64 no sirve, porque Gmail no
+ * pinta imagenes `data:`. Si el correo se abre sin conexion a la web, el `alt` deja el nombre.
+ *
+ * @param urlWeb Base de la aplicacion, sin barra final.
+ * @param titulo Encabezado del correo, ya escapado.
+ * @param cuerpoHtml Parrafos del cuerpo, ya escapados.
+ * @param textoDelBoton Rotulo de la llamada a la accion, ya escapado.
+ * @param enlace Destino del boton.
+ * @param pieHtml Nota final en letra chica, ya escapada.
+ */
+export function envolverEnPlantilla(
+  urlWeb: string,
+  titulo: string,
+  cuerpoHtml: string,
+  textoDelBoton: string,
+  enlace: string,
+  pieHtml: string,
+): string {
+  const base = urlWeb.replace(/\/+$/, "");
+
+  return `<!doctype html>
+<html lang="es">
+  <body style="margin:0;padding:24px 12px;background-color:#f7f8fa;font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#2d2d2d;">
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+      <tr>
+        <td align="center">
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" style="max-width:600px;width:100%;background-color:#ffffff;border:1px solid #e2e4e9;border-radius:12px;overflow:hidden;">
+            <tr>
+              <td style="padding:0;">
+                <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                  <tr style="height:4px;">
+                    <td style="background-color:#3db648;height:4px;font-size:0;line-height:0;">&nbsp;</td>
+                    <td style="background-color:#29abe2;height:4px;font-size:0;line-height:0;">&nbsp;</td>
+                    <td style="background-color:#f7941d;height:4px;font-size:0;line-height:0;">&nbsp;</td>
+                    <td style="background-color:#e91e8c;height:4px;font-size:0;line-height:0;">&nbsp;</td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+            <tr>
+              <td align="center" style="padding:32px 32px 8px;">
+                <img src="${base}/logo-ecopac.png" width="64" height="64" alt="Ecopac" style="display:block;border:0;width:64px;height:64px;" />
+                <div style="margin-top:12px;font-size:18px;font-weight:700;color:#2d2d2d;letter-spacing:0.01em;">Ecopac Digital</div>
+                <div style="margin-top:2px;font-size:12px;color:#7a7a8a;text-transform:uppercase;letter-spacing:0.08em;">Jornadas medicas</div>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:16px 32px 0;">
+                <h1 style="margin:0 0 16px;font-size:22px;line-height:1.3;color:#2d2d2d;">${titulo}</h1>
+                ${cuerpoHtml}
+              </td>
+            </tr>
+            <tr>
+              <td align="center" style="padding:24px 32px 8px;">
+                <a href="${enlace}" style="background-color:#3db648;border-radius:999px;color:#ffffff;display:inline-block;font-size:15px;font-weight:600;padding:14px 32px;text-decoration:none;">${textoDelBoton}</a>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:8px 32px 28px;">
+                <p style="margin:16px 0 0;font-size:12px;line-height:1.6;color:#7a7a8a;">${pieHtml}</p>
+                <p style="margin:12px 0 0;font-size:12px;line-height:1.6;color:#7a7a8a;">Si el boton no funciona, copia y pega esta direccion en tu navegador:<br /><span style="color:#29abe2;word-break:break-all;">${enlace}</span></p>
+              </td>
+            </tr>
+          </table>
+          <div style="margin-top:16px;font-size:11px;color:#7a7a8a;">Ecopac Guatemala &middot; Este es un correo automatico, no hace falta responderlo.</div>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>`;
+}
+
+/**
+ * Correo de invitacion a una persona recien dada de alta (issue #864).
+ *
+ * POR QUE NO LO MANDA SUPABASE. El alta administrativa crea la cuenta sin contrasena y despues
+ * habia que mandar un enlace para que la persona eligiera la suya. Eso se hacia con
+ * `resetPasswordForEmail()`, que dispara la plantilla `recovery` de GoTrue -- **la misma que usa
+ * "olvide mi contrasena"**. Resultado: a quien estrenaba su cuenta le llegaba un "restablece tu
+ * contrasena", en ingles y de "Admin <admin@email.com>", de una contrasena que nunca tuvo. Y no
+ * habia forma de distinguirlos cambiando la plantilla, porque es una sola para los dos casos.
+ *
+ * Con este correo propio, la plantilla `recovery` queda dedicada a lo unico que le corresponde
+ * -- recuperar el acceso de quien ya tenia cuenta -- y la invitacion dice lo que es.
+ *
+ * @param nombres Nombre de pila de quien recibe la invitacion; puede venir vacio.
+ * @param enlace El action link que devuelve `admin.generateLink()`, ya con su redirectTo.
+ */
+export function componerCorreoDeInvitacion(
+  nombres: string,
+  enlace: string,
+  urlWeb: string,
+): Correo {
+  const saludo = nombres ? `Hola, ${nombres}:` : "Hola:";
+  const cuerpo =
+    "Te dieron de alta en Ecopac Digital, el sistema con el que la organizacion lleva las " +
+    "jornadas medicas, el inventario y los expedientes de los pacientes.";
+  const instruccion =
+    "Para entrar por primera vez solo falta un paso: elegir la contrasena con la que vas a " +
+    "iniciar sesion.";
+  const pie =
+    "Si no esperabas este correo puedes ignorarlo: mientras no elijas una contrasena, la " +
+    "cuenta no se puede usar. El enlace caduca por seguridad; si ya no funciona, pide uno " +
+    "nuevo desde \u00abOlvidaste tu contrasena?\u00bb en la pantalla de inicio de sesion.";
+
+  return {
+    asunto: "Te damos la bienvenida a Ecopac Digital",
+    texto: [
+      saludo,
+      "",
+      cuerpo,
+      "",
+      instruccion,
+      "",
+      `Elegir mi contrasena: ${enlace}`,
+      "",
+      pie,
+    ].join("\n"),
+    html: envolverEnPlantilla(
+      urlWeb,
+      "Te damos la bienvenida",
+      [
+        `<p style="margin:0 0 12px;font-size:15px;line-height:1.6;">${escaparHtml(saludo)}</p>`,
+        `<p style="margin:0 0 12px;font-size:15px;line-height:1.6;">${escaparHtml(cuerpo)}</p>`,
+        `<p style="margin:0;font-size:15px;line-height:1.6;">${escaparHtml(instruccion)}</p>`,
+      ].join("\n"),
+      "Elegir mi contrase&ntilde;a",
+      enlace,
+      escaparHtml(pie),
+    ),
+  };
+}
+
 export type ConfiguracionSmtp = {
   host: string;
   puerto: number;

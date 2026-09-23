@@ -341,7 +341,6 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.xs,
     fontWeight: typography.weights.semibold,
     marginBottom: spacing.xs,
-    textTransform: "uppercase",
   },
   texto: {
     color: colors.text,

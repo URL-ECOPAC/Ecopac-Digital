@@ -19,23 +19,23 @@
 // modulo respondian "Acceso denegado" incluso a la administradora. La intencion de esas listas
 // si era la correcta y es la que se conserva aqui; lo que estaba mal eran los valores.
 
-import { esAdministrador, esConsultivo } from "../usuarios/roles.js";
+import { esAdministrador } from "../usuarios/roles.js";
 
 /**
  * Puede consultar donantes, donaciones y su detalle.
  *
- * Administrador y los dos roles consultivos (junta directiva, socio fundador): espejo exacto
- * del SELECT de la 00083.
+ * ISSUE #864: solo administrador. Los dos roles consultivos leian donantes, donaciones y su
+ * detalle por el SELECT de la 00083; la 00141 les retira esa politica, porque su unica pantalla
+ * es Reportes y ningun reporte lee esas tres tablas.
  */
 export function puedeVerDonaciones(rol) {
-  return esAdministrador(rol) || esConsultivo(rol);
+  return esAdministrador(rol);
 }
 
 /**
  * Puede registrar un donante o una donacion, y anular una donacion.
  *
- * Solo administrador. Los roles consultivos leen pero no escriben, que es lo que dicen el
- * INSERT y el UPDATE de la 00083.
+ * Solo administrador, como la lectura desde la #864.
  */
 export function puedeRegistrarDonaciones(rol) {
   return esAdministrador(rol);

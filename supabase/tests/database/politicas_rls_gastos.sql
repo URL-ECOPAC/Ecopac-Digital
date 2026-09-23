@@ -108,13 +108,17 @@ SELECT ok(
 );
 
 -- ============================================================================
--- junta directiva: lectura de gastos, nada mas
+-- junta directiva: ya no lee gastos, y sigue sin escribir
 -- ============================================================================
+-- ISSUE #864: la 00052 -- ampliada por la 00080 -- era la UNICA politica del esquema que
+-- nombraba a socio fundador por su nombre, y daba a los dos roles consultivos la lectura de
+-- todos los gastos. La 00141 la deja en es_administrador() mas participa_en_jornada(): su unica
+-- pantalla pasa a ser Reportes, y el presupuesto no es uno de sus cuatro reportes.
 SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000029202';
 
-SELECT ok(
-  (SELECT count(*) FROM gastos) = 2,
-  'junta directiva lee todos los gastos'
+SELECT is(
+  (SELECT count(*) FROM gastos)::int, 0,
+  'junta directiva ya no lee gastos (issue #864)'
 );
 
 SELECT throws_ok(
@@ -137,9 +141,9 @@ SELECT is_empty(
 -- ============================================================================
 SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000029203';
 
-SELECT ok(
-  (SELECT count(*) FROM gastos) = 2,
-  'socio fundador lee todos los gastos'
+SELECT is(
+  (SELECT count(*) FROM gastos)::int, 0,
+  'socio fundador ya no lee gastos (issue #864)'
 );
 
 SELECT throws_ok(

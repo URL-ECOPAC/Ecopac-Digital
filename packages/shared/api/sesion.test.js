@@ -19,6 +19,7 @@ import { obtenerPerfil } from "../usuarios/api.js";
 import { CODIGOS_DE_ERROR_DE_SUPABASE } from "./errores-de-supabase.js";
 import {
   cerrarSesion,
+  consumirCierreDeliberado,
   evaluarPerfilDeSesion,
   iniciarSesion,
   intercambiarSesionDeRecuperacion,
@@ -364,4 +365,89 @@ describe("es la unica implementacion de la autenticacion (issue #512)", () => {
       expect(typeof barril.cerrarSesion).toBe("function");
     },
   );
+});
+
+// ISSUE #864. La marca de cierre deliberado: lo que useSesion publica cuando la sesion se cierra
+// sola. Es lo unico que llega a la pantalla en movil, donde el login se desmonta en cuanto
+// `haySesion` pasa a true y se lleva el error que devolvio iniciarSesion().
+describe("marca de cierre deliberado (issue #864)", () => {
+  beforeEach(() => {
+    // La marca es estado de modulo: se vacia entre pruebas para que una no arrastre a la otra.
+    consumirCierreDeliberado();
+  });
+
+  it("tras un login con cuenta desactivada, la sesion publica el mensaje GENERICO", async () => {
+    const cliente = clienteFalso({
+      signInWithPassword: vi.fn().mockResolvedValue({
+        data: { session: sesionDeSupabase() },
+        error: null,
+      }),
+    });
+    obtenerSupabase.mockReturnValue(cliente);
+    obtenerPerfil.mockResolvedValue({ perfil: PERFIL_DESACTIVADO, error: null });
+
+    await iniciarSesion(CORREO, CONTRASENA);
+
+    // El mismo error que devuelve el formulario: la cuenta desactivada y la contrasena
+    // incorrecta responden lo mismo (criterio 2, OWASP A07).
+    const { marcado, error } = consumirCierreDeliberado();
+    expect(marcado).toBe(true);
+    expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.CREDENCIALES_INVALIDAS);
+  });
+
+  it("la marca se consume una sola vez: el segundo cierre ya no la encuentra", async () => {
+    const cliente = clienteFalso({
+      signInWithPassword: vi.fn().mockResolvedValue({
+        data: { session: sesionDeSupabase() },
+        error: null,
+      }),
+    });
+    obtenerSupabase.mockReturnValue(cliente);
+    obtenerPerfil.mockResolvedValue({ perfil: PERFIL_DESACTIVADO, error: null });
+
+    await iniciarSesion(CORREO, CONTRASENA);
+
+    expect(consumirCierreDeliberado().marcado).toBe(true);
+    expect(consumirCierreDeliberado()).toEqual({ marcado: false, error: null });
+  });
+
+  it("un login que sale bien no deja marca", async () => {
+    const cliente = clienteFalso({
+      signInWithPassword: vi.fn().mockResolvedValue({
+        data: { session: sesionDeSupabase() },
+        error: null,
+      }),
+    });
+    obtenerSupabase.mockReturnValue(cliente);
+    obtenerPerfil.mockResolvedValue({ perfil: PERFIL_ACTIVO, error: null });
+
+    await iniciarSesion(CORREO, CONTRASENA);
+
+    expect(consumirCierreDeliberado()).toEqual({ marcado: false, error: null });
+  });
+
+  it("una contrasena incorrecta tampoco la deja puesta: contaminaria el proximo cierre", async () => {
+    const cliente = clienteFalso({
+      signInWithPassword: vi.fn().mockResolvedValue({ data: null, error: errorDeCredenciales() }),
+    });
+    obtenerSupabase.mockReturnValue(cliente);
+
+    await iniciarSesion(CORREO, "otra-clave-cualquiera");
+
+    // Si quedara puesta, la proxima sesion que expirara de verdad diria "credenciales invalidas"
+    // en vez de "tu sesion expiro".
+    expect(consumirCierreDeliberado()).toEqual({ marcado: false, error: null });
+  });
+
+  it("obtenerSesion() no marca nada: ahi no hay intento de login que enumerar", async () => {
+    const cliente = clienteFalso({
+      getSession: vi.fn().mockResolvedValue({ data: { session: sesionDeSupabase() }, error: null }),
+    });
+    obtenerSupabase.mockReturnValue(cliente);
+    obtenerPerfil.mockResolvedValue({ perfil: PERFIL_DESACTIVADO, error: null });
+
+    await obtenerSesion();
+
+    expect(consumirCierreDeliberado()).toEqual({ marcado: false, error: null });
+  });
 });

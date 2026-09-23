@@ -51,3 +51,159 @@
   letter-spacing: 0.02em;
   padding: 0.25rem 0.6rem;
 }
+
+/* --------------------------------------------------------------------------
+   Matriz de permisos por rol (issue #638, rediseñada en la #864)
+
+   La tabla vive dentro de una Card por modulo. Fijar el ancho de las columnas aqui -- y no
+   dejar que cada tabla se lo reparta sola -- es lo que hace que las cabeceras de rol queden
+   alineadas de una tarjeta a la siguiente y que las nueve se lean como una sola matriz.
+   -------------------------------------------------------------------------- */
+
+.matriz-resumen {
+  margin-bottom: var(--spacing-lg);
+}
+
+.matriz-permisos {
+  table-layout: fixed;
+}
+
+/* La columna del permiso se queda con lo que sobra; las cinco de rol miden lo mismo. */
+.matriz-permisos th:first-child,
+.matriz-permisos td:first-child {
+  width: auto;
+  min-width: 15rem;
+}
+
+.matriz-col-rol {
+  text-align: center;
+  vertical-align: bottom;
+  width: 9.5rem;
+}
+
+.matriz-rol-nombre {
+  display: block;
+}
+
+/* El rotulo de cabecera en versalitas apagadas, como las tablas del prototipo. */
+.matriz-permisos thead th {
+  font-size: var(--texto-xxs);
+  font-weight: var(--peso-bold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.matriz-rol-conteo {
+  color: var(--color-text-muted);
+  display: block;
+  font-size: var(--texto-xxs);
+  font-weight: var(--peso-regular);
+  letter-spacing: normal;
+  margin-top: 0.15rem;
+  text-transform: none;
+}
+
+/* Un rol que no ve el modulo: la columna entera se apaga en vez de repetir el aviso por celda. */
+.matriz-col-rol--sin-acceso {
+  color: var(--color-text-muted);
+}
+
+.matriz-permisos thead .matriz-col-rol--sin-acceso .permiso-sin-efecto {
+  letter-spacing: normal;
+  margin-top: 0.15rem;
+  max-width: 100%;
+  text-transform: none;
+  white-space: normal;
+}
+
+/* El aviso repetido en la celda solo existe para la vista angosta; en escritorio lo dice la
+   cabecera de la columna una sola vez. */
+.matriz-sin-acceso-celda {
+  display: none;
+}
+
+.matriz-permiso {
+  font-weight: var(--peso-regular);
+}
+
+.matriz-permiso-descripcion {
+  display: block;
+  font-weight: var(--peso-semibold);
+}
+
+.matriz-permiso-clave {
+  color: var(--color-text-muted);
+  font-family: var(--fuente-mono);
+  font-size: var(--texto-xxs);
+}
+
+/* "Siempre" de la columna de la administradora. Es un hecho del sistema, no una casilla
+   bloqueada: un interruptor marcado y deshabilitado se lee como algo que alguien apago. */
+.matriz-siempre {
+  align-items: center;
+  background-color: color-mix(in srgb, var(--color-primary) 14%, var(--color-surface));
+  border-radius: var(--radio-pill);
+  color: var(--color-primary);
+  cursor: help;
+  display: inline-flex;
+  font-size: var(--texto-xxs);
+  font-weight: var(--peso-semibold);
+  gap: 0.3rem;
+  letter-spacing: 0.02em;
+  padding: 0.25rem 0.6rem;
+  text-transform: uppercase;
+}
+
+/* En pantalla angosta la tabla no se desplaza en horizontal (docs/DISENO-MOVIL.md, regla 3):
+   cada fila pasa a ser una ficha y cada celda dice a que rol pertenece. Es el mismo DOM, sin
+   duplicar nada, asi que lo que lee un lector de pantalla no cambia. */
+@media (max-width: 900px) {
+  .matriz-permisos,
+  .matriz-permisos tbody,
+  .matriz-permisos tr,
+  .matriz-permisos td,
+  .matriz-permisos th {
+    display: block;
+    width: auto;
+  }
+
+  .matriz-permisos thead {
+    display: none;
+  }
+
+  .matriz-permisos tbody tr {
+    border: 1px solid var(--color-border);
+    border-radius: var(--radio-md);
+    margin-bottom: var(--spacing-sm);
+    padding: var(--spacing-sm);
+  }
+
+  .matriz-permisos td {
+    align-items: center;
+    display: flex;
+    justify-content: space-between;
+    padding: 0.35rem 0;
+    text-align: right;
+  }
+
+  .matriz-permisos td::before {
+    color: var(--color-text-muted);
+    content: attr(data-label);
+    font-size: var(--texto-xxs);
+    font-weight: var(--peso-bold);
+    letter-spacing: 0.08em;
+    text-align: left;
+    text-transform: uppercase;
+  }
+
+  .matriz-permisos th:first-child {
+    border-bottom: 1px solid var(--color-border);
+    margin-bottom: var(--spacing-xs);
+    padding-bottom: var(--spacing-xs);
+  }
+
+  .matriz-sin-acceso-celda {
+    display: inline-flex;
+    margin-right: var(--spacing-sm);
+  }
+}

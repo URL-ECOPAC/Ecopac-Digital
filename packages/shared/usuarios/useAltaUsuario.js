@@ -41,6 +41,46 @@ export function avisoDeCorreoNoEnviado(usuario) {
   );
 }
 
+/**
+ * Confirmacion de que la invitacion salio (issue #864).
+ *
+ * Hasta ahora esta pantalla **solo hablaba cuando algo fallaba**: si el correo no salia se
+ * mostraba un aviso, y si todo iba bien el modal se cerraba y no pasaba nada mas. Quien invitaba
+ * se quedaba sin saber si el correo se habia mandado, a que direccion, ni que tenia que esperar
+ * la otra persona -- y como la cuenta nace sin contrasena, "no pasa nada" y "fallo algo" se ven
+ * exactamente igual.
+ *
+ * @param {object|null} usuario Respuesta de crearUsuario().
+ * @returns {string} Mensaje de exito, siempre con el correo al que se mando.
+ */
+export function avisoDeInvitacionEnviada(usuario) {
+  const quien = usuario?.email ?? "la persona invitada";
+  return (
+    `Invitacion enviada a ${quien}. Le llego un correo para elegir su contrasena; hasta que lo ` +
+    "haga, la cuenta aparece creada pero no puede iniciar sesion."
+  );
+}
+
+/**
+ * El aviso que corresponde tras un alta, con su tono (issue #864).
+ *
+ * Un solo sitio decide que se dice y de que color, para que la pantalla no tenga que deducir
+ * "si no hay aviso de error, entonces fue bien" -- que es justo como se llego a no decir nada.
+ *
+ * @param {object|null} usuario Respuesta de crearUsuario().
+ * @param {string|null} avisoDeComplemento Aviso de los campos que no se pudieron guardar.
+ * @returns {{ tono: "exito"|"advertencia", mensaje: string }}
+ */
+export function avisoDeAlta(usuario, avisoDeComplemento = null) {
+  const problemas = [avisoDeCorreoNoEnviado(usuario), avisoDeComplemento].filter(Boolean);
+
+  if (problemas.length > 0) {
+    return { tono: "advertencia", mensaje: problemas.join(" ") };
+  }
+
+  return { tono: "exito", mensaje: avisoDeInvitacionEnviada(usuario) };
+}
+
 function valoresIniciales() {
   return CAMPOS_ALTA_USUARIO.reduce((valores, campo) => {
     valores[campo.id] = campo.valorPorDefecto ?? "";
@@ -136,9 +176,7 @@ export function useAltaUsuario() {
     return {
       ok: true,
       usuario: resultado.usuario,
-      aviso:
-        [avisoDeCorreoNoEnviado(resultado.usuario), avisoDeComplemento].filter(Boolean).join(" ") ||
-        null,
+      aviso: avisoDeAlta(resultado.usuario, avisoDeComplemento),
     };
   }, [valores, cancelar]);
 
