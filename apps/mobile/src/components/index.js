@@ -40,5 +40,7 @@ export { default as LoadingState } from "./LoadingState";
 export { default as ErrorState } from "./ErrorState";
 
 export { default as UsuarioActivo } from "./UsuarioActivo";
+export { default as BotonCerrarSesion } from "./BotonCerrarSesion";
+export { default as AccesosDeSeccion } from "./AccesosDeSeccion";
 export { default as JornadaActivaBadge } from "./JornadaActivaBadge";
 export { default as IconoDeModulo, nombreDeIcono, ICONOS } from "./IconoDeModulo";

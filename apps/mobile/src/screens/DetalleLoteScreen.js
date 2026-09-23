@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useRoute } from "@react-navigation/native";
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import {
@@ -5,6 +6,9 @@ import {
   ETIQUETAS_ORIGEN_LOTE,
   ETIQUETAS_TIPO_MOVIMIENTO,
   formatearFechaCorta,
+  formatearMoneda,
+  puedeCorregirLote,
+  puedeVerValorizacion,
   TIPOS_DE_MOVIMIENTO,
   useDetalleLote,
 } from "@ecopac/shared";
@@ -16,18 +20,24 @@ import {
   ErrorState,
   LoadingState,
   ScreenContainer,
+  SecondaryButton,
   StatusChip,
 } from "../components";
+import { useSesionCompartida } from "../contexto/SesionProvider";
+import ModalCorreccionLote from "./ModalCorreccionLote";
 
 // Pantalla de detalle de un lote (issue #791): Existencias y el alertario de vencimiento
 // navegaban a "DetalleLote", una ruta que nunca se construyo. Muestra los datos del lote
 // (medicamento, numero, proveedor, origen, fechas) y su kardex -los movimientos de
-// movimientos_inventario de ESE lote, via useKardexMovimientos({ loteId })-, no el costo
-// unitario: eso es informacion financiera gateada por puedeVerValorizacion (issue #752) y esta
-// pantalla la ve cualquier rol que pueda ver existencias.
+// movimientos_inventario de ESE lote, via useKardexMovimientos({ loteId })-. El costo unitario y
+// el boton de corregirlo solo aparecen para quien puedeVerValorizacion/puedeCorregirLote dejan
+// pasar (issues #752 y #866): es informacion financiera, y esta pantalla la abre cualquier rol
+// que pueda ver existencias.
 export default function DetalleLoteScreen() {
   const { params } = useRoute();
   const loteId = params?.loteId;
+  const { perfil } = useSesionCompartida();
+  const [corrigiendo, setCorrigiendo] = useState(false);
 
   const { lote, movimientos, cargando, error, recargar } = useDetalleLote(loteId);
 
@@ -101,7 +111,30 @@ export default function DetalleLoteScreen() {
             </Text>
           </View>
         </View>
+        {puedeVerValorizacion(perfil?.rol) ? (
+          <View style={estilos.filaDatos}>
+            <View style={estilos.dato}>
+              <Text style={estilos.etiquetaDato}>Costo unitario</Text>
+              <Text style={estilos.valorDato}>
+                {lote.costoUnitario === null || lote.costoUnitario === undefined
+                  ? "No se conoce"
+                  : formatearMoneda(lote.costoUnitario)}
+              </Text>
+            </View>
+          </View>
+        ) : null}
+
+        {puedeCorregirLote(perfil?.rol, lote, perfil?.id) ? (
+          <SecondaryButton title="Editar" onPress={() => setCorrigiendo(true)} />
+        ) : null}
       </Card>
+
+      <ModalCorreccionLote
+        visible={corrigiendo}
+        lote={lote}
+        onClose={() => setCorrigiendo(false)}
+        onGuardado={recargar}
+      />
 
       <Text style={estilos.tituloSeccion}>Movimientos ({movimientos.length})</Text>
 
@@ -177,7 +210,6 @@ const estilos = StyleSheet.create({
     fontFamily: typography.fontFamilyBase,
     fontSize: typography.sizes.xs,
     color: colors.textMuted,
-    textTransform: "uppercase",
   },
   valorDato: {
     fontFamily: typography.fontFamilyBase,

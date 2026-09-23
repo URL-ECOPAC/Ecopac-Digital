@@ -113,13 +113,42 @@ la migracion esta aplicada y no se edita.
 > los datos siguieron protegidos, porque la base seguia negando. Lo que fallaba ahi era la
 > experiencia: el usuario llegaba a una pantalla que se le iba a vaciar.
 >
-> Desde la **#820** la capa 2 ya existe entera en movil: las veintitres pantallas de los cuatro
+> Desde la **#820** la capa 2 ya existe entera en movil: todas las pantallas de los cuatro
 > stacks van envueltas en `RutaProtegida`, con los roles que `rolesDelModulo()` declara en
 > `packages/shared/navegacion.js`, y una lista de roles vacia **deniega** en vez de dejar pasar a
 > cualquier sesion autenticada. Que ninguna pantalla se registre sin guarda lo comprueba
 > `apps/mobile/src/navigation/guardaDeRol.test.js`, que recorre el arbol de navegacion. Sigue sin
 > proteger nada -es cliente-: lo que evita es que alguien llegue a una pantalla que no va a poder
 > usar.
+
+## Quien entra a la app movil (issue #866)
+
+La app del telefono **no es una version reducida del sistema entero**: es la herramienta de la
+jornada. Desde la #866 solo tres de los cinco roles inician sesion en ella.
+
+| Rol              | Entra a la app movil | Para que                                                           |
+| ---------------- | -------------------- | ------------------------------------------------------------------ |
+| Medico           | Si                   | Pacientes, consulta, receta, inventario y sus jornadas asignadas   |
+| Voluntario       | Si                   | Lo mismo, sin lo que su rol no permite (no aprueba ni corrige)     |
+| Administrador    | Si                   | Lo anterior, mas aprobar los movimientos de inventario pendientes  |
+| Junta directiva  | **No**               | Su trabajo -presupuestos, reportes, donaciones- vive solo en la web |
+| Socio fundador   | **No**               | Igual que junta directiva                                           |
+
+Lo declara `ROLES_CON_ACCESO_MOVIL` en `packages/shared/navegacion.js`, y lo aplica
+`puedeUsarAppMovil()` en dos sitios: `apps/mobile/App.js`, que en vez del navegador dibuja
+`AppSoloParaCampoScreen` -una pantalla que explica por que y ofrece cerrar sesion-, y
+`modulosVisibles(rol, { plataforma: "mobile" })`, que devuelve `[]`.
+
+**Esto no es control de acceso, es producto.** Junta directiva y socio fundador conservan
+exactamente los mismos permisos que ya tenian: si abrieran la API con su sesion, RLS les seguiria
+dejando leer lo de siempre. Lo que cambia es que la app no les abre pantallas que no les sirven
+-de los cuatro modulos que tiene, `00032` ya les niega pacientes, y los otros tres los leen mejor
+en la web-. Quien protege sigue siendo la capa 4.
+
+Los cuatro modulos que existen en movil los declara cada entrada de `MODULOS` con `movil: true`
+(inicio, pacientes, inventario y jornadas). Antes el filtro era `soloWeb` mas dos rutas escritas
+aparte, y por eso la pantalla de inicio dibujaba tarjetas de donaciones y proyectos, que en movil
+no llevan a ningun lado.
 
 ## La matriz
 

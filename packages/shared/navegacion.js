@@ -1,4 +1,4 @@
-import { ROLES } from "./usuarios/roles.js";
+import { ROLES, ROLES_DE_CAMPO } from "./usuarios/roles.js";
 
 /**
  * Los once módulos del sistema.
@@ -17,7 +17,7 @@ export const MODULOS = [
     ruta: "/",
     modulo: null,
     tabMovil: "Inicio",
-    soloWeb: false,
+    movil: true,
     icono: "Home",
     roles: Object.values(ROLES),
   },
@@ -28,7 +28,7 @@ export const MODULOS = [
     ruta: "/pacientes",
     modulo: "pacientes",
     tabMovil: "Pacientes",
-    soloWeb: false,
+    movil: true,
     icono: "Users",
     // ROLES.ADMINISTRADOR/MEDICO/VOLUNTARIO, no los cinco: espejo de "Administrador, medico y
     // voluntario leen pacientes" (00032). Antes tambien listaba ROLES.FARMACEUTICO y
@@ -44,7 +44,7 @@ export const MODULOS = [
     ruta: "/donaciones",
     modulo: "donaciones",
     tabMovil: false,
-    soloWeb: false,
+    movil: false,
     icono: "HeartHandshake",
     roles: [ROLES.ADMINISTRADOR, ROLES.JUNTA_DIRECTIVA, ROLES.SOCIO_FUNDADOR],
   },
@@ -55,7 +55,7 @@ export const MODULOS = [
     ruta: "/inventario",
     modulo: "inventario",
     tabMovil: "Inventario",
-    soloWeb: false,
+    movil: true,
     icono: "Package",
     // Los cinco roles reales (ver nota de ROLES.FARMACEUTICO/ENFERMERO en el modulo "pacientes"
     // de arriba: dos claves inexistentes que aqui tambien se limpian, sin cambio de efecto).
@@ -68,7 +68,7 @@ export const MODULOS = [
     ruta: "/presupuestos",
     modulo: "presupuestos",
     tabMovil: false,
-    soloWeb: true,
+    movil: false,
     icono: "DollarSign",
     roles: [ROLES.ADMINISTRADOR, ROLES.JUNTA_DIRECTIVA, ROLES.SOCIO_FUNDADOR],
   },
@@ -79,7 +79,7 @@ export const MODULOS = [
     ruta: "/proyectos",
     modulo: "proyectos",
     tabMovil: false,
-    soloWeb: false,
+    movil: false,
     icono: "FolderKanban",
     roles: [ROLES.ADMINISTRADOR, ROLES.JUNTA_DIRECTIVA, ROLES.SOCIO_FUNDADOR],
   },
@@ -90,7 +90,7 @@ export const MODULOS = [
     ruta: "/reportes",
     modulo: "reportes",
     tabMovil: false,
-    soloWeb: true,
+    movil: false,
     icono: "BarChart3",
     roles: [ROLES.ADMINISTRADOR, ROLES.JUNTA_DIRECTIVA, ROLES.SOCIO_FUNDADOR],
   },
@@ -101,7 +101,7 @@ export const MODULOS = [
     ruta: "/jornadas",
     modulo: "jornadas",
     tabMovil: "Jornadas",
-    soloWeb: false,
+    movil: true,
     icono: "Calendar",
     roles: Object.values(ROLES),
   },
@@ -112,7 +112,7 @@ export const MODULOS = [
     ruta: "/colaboradores",
     modulo: "colaboradores",
     tabMovil: false,
-    soloWeb: true,
+    movil: false,
     icono: "UserCheck",
     // Issue #756: puedeVerListadoUsuarios() (usuarios/permisos.js) ya declaraba que junta
     // directiva podia ver el listado -perfiles_directorio (00038/00080) existe exactamente para
@@ -126,7 +126,7 @@ export const MODULOS = [
     ruta: "/matriz-permisos",
     modulo: "matriz-permisos",
     tabMovil: false,
-    soloWeb: true,
+    movil: false,
     icono: "ShieldCheck",
     roles: [ROLES.ADMINISTRADOR],
   },
@@ -137,7 +137,7 @@ export const MODULOS = [
     ruta: "/bitacora-auditoria",
     modulo: "bitacora-auditoria",
     tabMovil: false,
-    soloWeb: true,
+    movil: false,
     icono: "History",
     roles: [ROLES.ADMINISTRADOR],
   },
@@ -152,6 +152,12 @@ export function rolesDelModulo(moduloId) {
   return mod ? mod.roles : [];
 }
 
+export const ROLES_CON_ACCESO_MOVIL = Object.freeze([ROLES.ADMINISTRADOR, ...ROLES_DE_CAMPO]);
+
+export function puedeUsarAppMovil(rol) {
+  return ROLES_CON_ACCESO_MOVIL.includes(rol);
+}
+
 /**
  * Módulos a los que un rol tiene acceso (Lista plana).
  */
@@ -160,14 +166,11 @@ export function modulosVisibles(rol, opciones = {}) {
 
   const { plataforma } = opciones;
 
+  if (plataforma === "mobile" && !puedeUsarAppMovil(rol)) return [];
+
   return MODULOS.filter((m) => {
     if (!m.roles.includes(rol)) return false;
-    if (
-      plataforma === "mobile" &&
-      (m.soloWeb || m.ruta === "/colaboradores" || m.ruta === "/reportes")
-    ) {
-      return false;
-    }
+    if (plataforma === "mobile" && !m.movil) return false;
     return true;
   });
 }

@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { datosDeRecetaImprimible, ENCABEZADO_DE_RECETA } from "./recetas.imprimible.js";
+import {
+  datosDeRecetaImprimible,
+  ENCABEZADO_DE_RECETA,
+  escaparHtml,
+  htmlDeRecetaImprimible,
+} from "./recetas.imprimible.js";
 
 const RECETA = {
   id: "r-1",
@@ -102,5 +107,70 @@ describe("datosDeRecetaImprimible", () => {
   it("es null sin receta", () => {
     expect(datosDeRecetaImprimible({ paciente: PACIENTE })).toBeNull();
     expect(datosDeRecetaImprimible()).toBeNull();
+  });
+});
+
+describe("htmlDeRecetaImprimible (issue #866)", () => {
+  it("sin receta no devuelve documento", () => {
+    expect(htmlDeRecetaImprimible({ receta: null, paciente: PACIENTE })).toBeNull();
+  });
+
+  it("lleva los mismos datos que la version de la web", () => {
+    const html = htmlDeRecetaImprimible({ receta: RECETA, paciente: PACIENTE });
+
+    expect(html).toContain(ENCABEZADO_DE_RECETA.organizacion);
+    expect(html).toContain(ENCABEZADO_DE_RECETA.documento);
+    expect(html).toContain("REC-000012");
+    expect(html).toContain("Maria Chun Tzoc");
+    expect(html).toContain("EXP-000042");
+    expect(html).toContain("Chuicutama");
+    expect(html).toContain("Luis Perez");
+    expect(html).toContain("Amoxicilina");
+    expect(html).toContain("Tomar con alimentos");
+  });
+
+  it("imprime la cantidad entregada vigente, no la original", () => {
+    const html = htmlDeRecetaImprimible({
+      receta: {
+        ...RECETA,
+        detalle: [{ ...RECETA.detalle[0], cantidadEntregada: 21, cantidadAjustada: 14 }],
+      },
+      paciente: PACIENTE,
+    });
+
+    expect(html).toContain("Cantidad entregada: 14");
+    expect(html).not.toContain("Cantidad entregada: 21");
+  });
+
+  it("marca la receta anulada con su motivo", () => {
+    const html = htmlDeRecetaImprimible({
+      receta: { ...RECETA, anulada: true, motivoAnulacion: "Error de transcripcion" },
+      paciente: PACIENTE,
+    });
+
+    expect(html).toContain("RECETA ANULADA");
+    expect(html).toContain("Error de transcripcion");
+  });
+
+  it("una receta sin folio lo dice, no deja el hueco", () => {
+    const html = htmlDeRecetaImprimible({ receta: { ...RECETA, folio: null }, paciente: PACIENTE });
+
+    expect(html).toContain("sin folio");
+  });
+
+  it("escapa el contenido: un nombre con < no puede cerrar una etiqueta", () => {
+    const html = htmlDeRecetaImprimible({
+      receta: RECETA,
+      paciente: { ...PACIENTE, nombres: "<script>alert(1)</script>" },
+    });
+
+    expect(html).not.toContain("<script>");
+    expect(html).toContain("&lt;script&gt;");
+  });
+
+  it("escaparHtml deja pasar el texto normal y convierte los cinco caracteres", () => {
+    expect(escaparHtml("Paracetamol 500 mg")).toBe("Paracetamol 500 mg");
+    expect(escaparHtml(`&<>"'`)).toBe("&amp;&lt;&gt;&quot;&#39;");
+    expect(escaparHtml(null)).toBe("");
   });
 });

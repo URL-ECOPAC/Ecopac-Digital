@@ -10,6 +10,7 @@ import {
 import { moduleAccents, spacing } from "@ecopac/ui-tokens";
 
 import {
+  AccesosDeSeccion,
   DataList,
   EmptyState,
   ErrorState,
@@ -23,6 +24,12 @@ import { useSesionCompartida } from "../contexto/SesionProvider";
 import { ROUTES } from "../navigation/rutas";
 
 const FILTROS_SECUNDARIOS = FILTROS_PACIENTE.filter((filtro) => filtro.id !== "busqueda");
+
+const ACCESOS_DE_PACIENTES = [
+  { id: "cronicos", etiqueta: "Crónicos", ruta: ROUTES.PACIENTES_CRONICOS },
+  { id: "condiciones", etiqueta: "Condiciones", ruta: ROUTES.CATALOGO_CONDICIONES },
+  { id: "diagnosticos", etiqueta: "Diagnósticos", ruta: ROUTES.CATALOGO_DIAGNOSTICOS },
+];
 const CAMPO_DE_BUSQUEDA = FILTROS_PACIENTE.find((filtro) => filtro.id === "busqueda");
 
 export default function BusquedaPacienteScreen() {
@@ -89,6 +96,11 @@ export default function BusquedaPacienteScreen() {
         valores={filtros}
         onChange={setFiltro}
         catalogos={catalogos}
+      />
+
+      <AccesosDeSeccion
+        accesos={ACCESOS_DE_PACIENTES}
+        onAbrir={(acceso) => navigation.navigate(acceso.ruta)}
       />
 
       <DataList

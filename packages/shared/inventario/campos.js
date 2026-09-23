@@ -51,6 +51,21 @@ export const OPCIONES_TIPO_MOVIMIENTO = opcionesDe(TIPOS_DE_MOVIMIENTO, ETIQUETA
 export const OPCIONES_ACCION_ALERTA = opcionesDe(ACCIONES_DE_ALERTA, ETIQUETAS_ACCION_ALERTA);
 
 /**
+ * Por que sale un medicamento de bodega (issue #690, movida aqui por la #866).
+ *
+ * `movimientos_inventario.motivo` es texto libre en la base, asi que esta lista no es un enum
+ * que la base valide: es el vocabulario acordado con la organizacion para que las dos
+ * plataformas escriban el mismo motivo y los reportes puedan agruparlos. Estaba escrita a mano
+ * dentro de ModalSalidaMedicamento.jsx, donde el movil no podia leerla.
+ */
+export const OPCIONES_MOTIVO_SALIDA = Object.freeze([
+  { value: "entrega", label: "Entrega a paciente" },
+  { value: "traslado", label: "Traslado entre bodegas" },
+  { value: "baja", label: "Baja por vencimiento" },
+  { value: "donacion", label: "Donación a terceros" },
+]);
+
+/**
  * Alta y edicion de un principio activo del catalogo (principios_activos, 00016).
  * nombreNormalizado no es un campo del formulario: lo calcula la base de datos
  * (columna generada de 00046) para la unicidad y la busqueda sin acentos.

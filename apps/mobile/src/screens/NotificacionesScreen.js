@@ -135,7 +135,7 @@ export default function NotificacionesScreen({ navigation }) {
         <View style={styles.grupoTitulo}>
           <View style={[styles.grupoPunto, { backgroundColor: colors[grupo.tono] }]} />
           <Text style={styles.grupoTexto}>
-            {grupo.etiqueta.toUpperCase()} ({grupo.notificaciones.length})
+            {grupo.etiqueta} ({grupo.notificaciones.length})
             {grupo.noLeidas > 0 ? ` · ${grupo.noLeidas} sin leer` : ""}
           </Text>
         </View>

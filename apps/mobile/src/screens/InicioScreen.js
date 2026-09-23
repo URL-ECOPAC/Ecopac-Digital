@@ -36,20 +36,6 @@ import { ROUTES } from "../navigation/rutas";
 //    entradas como "Reportes", que en movil no existe, y un color propio por modulo en vez de
 //    moduleAccents. Ahora la lista es la que devuelve el hook, y nada mas.
 
-/** El acceso que corresponde a un modulo dentro del navegador movil. */
-function destinoDelModulo(modulo) {
-  if (modulo.tabMovil) return { tipo: "tab", nombre: modulo.tabMovil };
-
-  const RUTAS_POR_MODULO = {
-    donaciones: ROUTES.DONACIONES,
-    proyectos: ROUTES.PROYECTOS,
-    colaboradores: ROUTES.COLABORADORES,
-  };
-
-  const ruta = RUTAS_POR_MODULO[modulo.id];
-  return ruta ? { tipo: "pantalla", nombre: ruta } : null;
-}
-
 export default function InicioScreen({ navigation }) {
   const { perfil } = useSesionCompartida();
   const rol = perfil?.rol;
@@ -59,11 +45,7 @@ export default function InicioScreen({ navigation }) {
 
   const saludo = perfil?.nombres ? `Hola, ${perfil.nombres}` : "Hola";
 
-  // Un modulo sin destino en el navegador movil no se dibuja: una tarjeta que no lleva a ningun
-  // lado es peor que una tarjeta de menos.
-  const accesosNavegables = accesos
-    .map((modulo) => ({ ...modulo, destino: destinoDelModulo(modulo) }))
-    .filter((modulo) => modulo.destino !== null);
+  const accesosNavegables = accesos.filter((modulo) => Boolean(modulo.tabMovil));
 
   return (
     <ScreenContainer>
@@ -143,11 +125,7 @@ export default function InicioScreen({ navigation }) {
                 key={modulo.id}
                 style={({ pressed }) => [estilos.acceso, pressed && estilos.pulsada]}
                 accessibilityRole="button"
-                onPress={() =>
-                  modulo.destino.tipo === "tab"
-                    ? navigation.navigate(modulo.destino.nombre)
-                    : navigation.navigate(modulo.destino.nombre)
-                }
+                onPress={() => navigation.navigate(modulo.tabMovil)}
               >
                 <View style={[estilos.accesoIcono, { backgroundColor: `${acento}1F` }]}>
                   <IconoDeModulo nombre={modulo.icono} size={20} color={acento} />

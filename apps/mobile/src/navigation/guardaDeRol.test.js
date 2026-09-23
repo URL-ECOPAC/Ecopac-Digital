@@ -17,7 +17,13 @@
 // La guarda del cliente NO es el control de acceso real: quien protege es RLS (capa 4 de
 // docs/PERMISOS.md). Lo que se comprueba aqui es que la pantalla correcta se dibuje.
 
-import { puedeRegistrarMovimiento, ROLES, rolesDelModulo, TODOS_LOS_ROLES } from "@ecopac/shared";
+import {
+  puedeAprobarMovimiento,
+  puedeRegistrarMovimiento,
+  ROLES,
+  rolesDelModulo,
+  TODOS_LOS_ROLES,
+} from "@ecopac/shared";
 
 import {
   conGuardaDeRol,
@@ -40,15 +46,12 @@ jest.mock("../contexto/SesionProvider", () => ({
 }));
 
 const ROLES_QUE_REGISTRAN = TODOS_LOS_ROLES.filter(puedeRegistrarMovimiento);
+const ROLES_QUE_APRUEBAN = TODOS_LOS_ROLES.filter(puedeAprobarMovimiento);
 
 // Lo que se espera de cada ruta, escrito aqui a proposito y no importado de AppNavigator: si los
 // dos leyeran la misma constante, cambiar el modulo de una pantalla no rompería nada.
 const ROLES_ESPERADOS = {
   [ROUTES.INICIO]: rolesDelModulo("inicio"),
-  [ROUTES.DONACIONES]: rolesDelModulo("donaciones"),
-  [ROUTES.PROYECTOS]: rolesDelModulo("proyectos"),
-  [ROUTES.COLABORADORES]: rolesDelModulo("colaboradores"),
-  [ROUTES.FICHA_COLABORADOR]: rolesDelModulo("colaboradores"),
   [ROUTES.COMUNIDADES]: [ROLES.ADMINISTRADOR],
 
   [ROUTES.BUSQUEDA_PACIENTE]: rolesDelModulo("pacientes"),
@@ -58,6 +61,10 @@ const ROLES_ESPERADOS = {
   [ROUTES.HISTORIAL_PACIENTE]: rolesDelModulo("pacientes"),
   [ROUTES.CONSULTA]: rolesDelModulo("pacientes"),
   [ROUTES.RECETA]: rolesDelModulo("pacientes"),
+  [ROUTES.ENTREGA_MEDICAMENTOS]: rolesDelModulo("pacientes"),
+  [ROUTES.PACIENTES_CRONICOS]: rolesDelModulo("pacientes"),
+  [ROUTES.CATALOGO_CONDICIONES]: rolesDelModulo("pacientes"),
+  [ROUTES.CATALOGO_DIAGNOSTICOS]: rolesDelModulo("pacientes"),
 
   [ROUTES.SELECCION_JORNADA]: rolesDelModulo("jornadas"),
   [ROUTES.JORNADA_EN_CURSO]: rolesDelModulo("jornadas"),
@@ -67,10 +74,15 @@ const ROLES_ESPERADOS = {
   [ROUTES.EXISTENCIAS_INVENTARIO]: rolesDelModulo("inventario"),
   [ROUTES.RESUMEN_ALERTAS_INVENTARIO]: rolesDelModulo("inventario"),
   [ROUTES.DETALLE_LOTE]: rolesDelModulo("inventario"),
+  [ROUTES.PRINCIPIOS_ACTIVOS]: rolesDelModulo("inventario"),
   // Mas estrecho que su modulo: los dos roles consultivos ven inventario pero no registran
   // movimientos (espejo de la politica de INSERT de la 00034).
   [ROUTES.REGISTRO_INGRESO]: ROLES_QUE_REGISTRAN,
   [ROUTES.MIS_MOVIMIENTOS]: ROLES_QUE_REGISTRAN,
+  [ROUTES.REGISTRO_SALIDA]: ROLES_QUE_REGISTRAN,
+  // Mas estrecho todavia: aprobar es exclusivo de administracion (espejo de aprobarMovimiento(),
+  // validacion.api.js, y de la politica de UPDATE de la 00048).
+  [ROUTES.VALIDACION_MOVIMIENTOS]: ROLES_QUE_APRUEBAN,
 };
 
 // Las dos pantallas del stack de autenticacion no llevan guarda a proposito: se montan cuando no

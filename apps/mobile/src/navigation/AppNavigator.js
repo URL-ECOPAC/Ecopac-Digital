@@ -7,6 +7,7 @@ import {
   etiquetaDeRol,
   tabsMoviles,
   MODULOS,
+  puedeAprobarMovimiento,
   puedeRegistrarMovimiento,
   rolesDelModulo,
   ROLES,
@@ -17,6 +18,7 @@ import { useCallback } from "react";
 import { useSesionCompartida } from "../contexto/SesionProvider";
 import { ContadorDeNotificacionesProvider } from "../contexto/NotificacionesProvider";
 import AvisosDelSistema from "../components/AvisosDelSistema";
+import BotonCerrarSesion from "../components/BotonCerrarSesion";
 import CampanaNotificaciones from "../components/CampanaNotificaciones";
 import RutaProtegida from "../components/RutaProtegida";
 import IconoDeModulo from "../components/IconoDeModulo";
@@ -44,10 +46,13 @@ import ExistenciasInventarioScreen from "../screens/ExistenciasInventarioScreen"
 import InventarioResumenAlertasScreen from "../screens/InventarioResumenAlertasScreen";
 import MisMovimientosScreen from "../screens/MisMovimientosScreen";
 import DetalleLoteScreen from "../screens/DetalleLoteScreen";
-import DonacionesScreen from "../screens/DonacionesScreen";
-import ProyectosScreen from "../screens/ProyectosScreen";
-import ColaboradoresScreen from "../screens/ColaboradoresScreen";
-import FichaColaboradorScreen from "../screens/FichaColaboradorScreen";
+import PrincipiosActivosScreen from "../screens/PrincipiosActivosScreen";
+import RegistroSalidaScreen from "../screens/RegistroSalidaScreen";
+import ValidacionMovimientosScreen from "../screens/ValidacionMovimientosScreen";
+import EntregaMedicamentosScreen from "../screens/EntregaMedicamentosScreen";
+import PacientesCronicosScreen from "../screens/PacientesCronicosScreen";
+import CatalogoCondicionesScreen from "../screens/CatalogoCondicionesScreen";
+import CatalogoDiagnosticosScreen from "../screens/CatalogoDiagnosticosScreen";
 import ComunidadesScreen from "../screens/ComunidadesScreen";
 import NotificacionesScreen from "../screens/NotificacionesScreen";
 
@@ -87,6 +92,7 @@ function CustomHeaderTitle({ title }) {
         </View>
         {/* Notificaciones (issue #755): a la par del nombre y el rol, en todas las pestanas. */}
         <CampanaNotificaciones />
+        <BotonCerrarSesion />
       </View>
     </View>
   );
@@ -143,32 +149,13 @@ function marcarComoGuarda(Componente, rolesPermitidos, nombre) {
 }
 
 const ROLES_QUE_REGISTRAN_MOVIMIENTOS = TODOS_LOS_ROLES.filter(puedeRegistrarMovimiento);
+const ROLES_QUE_APRUEBAN_MOVIMIENTOS = TODOS_LOS_ROLES.filter(puedeAprobarMovimiento);
 
 // ==================================================
 // PANTALLAS
 // ==================================================
 const PANTALLAS_INICIO = [
   { name: ROUTES.INICIO, componente: conGuardaDeRol(InicioScreen, "inicio"), titulo: "Inicio" },
-  {
-    name: ROUTES.DONACIONES,
-    componente: conGuardaDeRol(DonacionesScreen, "donaciones"),
-    titulo: "Donaciones",
-  },
-  {
-    name: ROUTES.PROYECTOS,
-    componente: conGuardaDeRol(ProyectosScreen, "proyectos"),
-    titulo: "Proyectos",
-  },
-  {
-    name: ROUTES.COLABORADORES,
-    componente: conGuardaDeRol(ColaboradoresScreen, "colaboradores"),
-    titulo: "Colaboradores",
-  },
-  {
-    name: ROUTES.FICHA_COLABORADOR,
-    componente: conGuardaDeRol(FichaColaboradorScreen, "colaboradores"),
-    titulo: "Ficha del personal",
-  },
   {
     name: ROUTES.COMUNIDADES,
     componente: conGuardaDeRoles(ComunidadesScreen, [ROLES.ADMINISTRADOR]),
@@ -203,6 +190,26 @@ const PANTALLAS_PACIENTES = [
     titulo: "Consulta",
   },
   { name: ROUTES.RECETA, componente: conGuardaDeRol(RecetaScreen, "pacientes"), titulo: "Receta" },
+  {
+    name: ROUTES.ENTREGA_MEDICAMENTOS,
+    componente: conGuardaDeRol(EntregaMedicamentosScreen, "pacientes"),
+    titulo: "Entrega de medicamentos",
+  },
+  {
+    name: ROUTES.PACIENTES_CRONICOS,
+    componente: conGuardaDeRol(PacientesCronicosScreen, "pacientes"),
+    titulo: "Pacientes cronicos",
+  },
+  {
+    name: ROUTES.CATALOGO_CONDICIONES,
+    componente: conGuardaDeRol(CatalogoCondicionesScreen, "pacientes"),
+    titulo: "Condiciones cronicas",
+  },
+  {
+    name: ROUTES.CATALOGO_DIAGNOSTICOS,
+    componente: conGuardaDeRol(CatalogoDiagnosticosScreen, "pacientes"),
+    titulo: "Diagnosticos",
+  },
 ];
 
 const PANTALLAS_JORNADAS = [
@@ -276,6 +283,21 @@ const PANTALLAS_INVENTARIO = [
     name: ROUTES.DETALLE_LOTE,
     componente: conGuardaDeRol(DetalleLoteScreen, "inventario"),
     titulo: "Detalle del lote",
+  },
+  {
+    name: ROUTES.PRINCIPIOS_ACTIVOS,
+    componente: conGuardaDeRol(PrincipiosActivosScreen, "inventario"),
+    titulo: "Principios activos",
+  },
+  {
+    name: ROUTES.REGISTRO_SALIDA,
+    componente: conGuardaDeRoles(RegistroSalidaScreen, ROLES_QUE_REGISTRAN_MOVIMIENTOS),
+    titulo: "Registrar salida",
+  },
+  {
+    name: ROUTES.VALIDACION_MOVIMIENTOS,
+    componente: conGuardaDeRoles(ValidacionMovimientosScreen, ROLES_QUE_APRUEBAN_MOVIMIENTOS),
+    titulo: "Por aprobar",
   },
 ];
 

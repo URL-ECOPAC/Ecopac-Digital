@@ -16,11 +16,6 @@ export const ROUTES = {
   // Pantallas dentro de cada stack
   INICIO: "InicioPanel",
   ACCESO_DENEGADO: "AccesoDenegado",
-  DONACIONES: "Donaciones",
-  PROYECTOS: "Proyectos",
-  // PRESUPUESTOS: "Presupuestos", // ← Se mantiene aquí, se retira solo del menú móvil
-  COLABORADORES: "Colaboradores",
-  FICHA_COLABORADOR: "FichaColaborador",
   COMUNIDADES: "Comunidades",
 
   BUSQUEDA_PACIENTE: "BusquedaPaciente",
@@ -29,6 +24,10 @@ export const ROUTES = {
   REGISTRO_PACIENTE: "RegistroPaciente",
   CONSULTA: "Consulta",
   RECETA: "Receta",
+  ENTREGA_MEDICAMENTOS: "EntregaMedicamentos",
+  PACIENTES_CRONICOS: "PacientesCronicos",
+  CATALOGO_CONDICIONES: "CatalogoCondiciones",
+  CATALOGO_DIAGNOSTICOS: "CatalogoDiagnosticos",
 
   SELECCION_JORNADA: "SeleccionJornada",
   JORNADA_EN_CURSO: "JornadaEnCurso",
@@ -41,6 +40,9 @@ export const ROUTES = {
   RESUMEN_ALERTAS_INVENTARIO: "ResumenAlertasInventario",
   MIS_MOVIMIENTOS: "MisMovimientos",
   DETALLE_LOTE: "DetalleLote",
+  PRINCIPIOS_ACTIVOS: "PrincipiosActivos",
+  REGISTRO_SALIDA: "RegistroSalida",
+  VALIDACION_MOVIMIENTOS: "ValidacionMovimientos",
 
   // Pantalla del Root, encima de las pestanas: se abre desde la campana de cualquier cabecera y
   // desde Ajustes (issue #755).

@@ -23,6 +23,7 @@ export default {
       // Notificaciones del sistema (issue #755). Expo Go ignora los plugins; este solo cuenta para
       // un development build o una build de tienda, donde fija el color de la notificacion.
       ["expo-notifications", { color: colors.primary }],
+      "expo-sharing",
       [
         "expo-splash-screen",
         {

@@ -6,16 +6,32 @@
 // calculo de "sin stock"-, no el catalogo en si (con su propia prueba, si la tuviera): se
 // reemplaza CatalogoMedicamentosScreen.js por un doble que expone las props que recibio.
 
-import { render, screen } from "@testing-library/react-native";
+import { act, render, screen } from "@testing-library/react-native";
 
 import StockScreen from "./StockScreen";
 
+const mockFoco = { alEnfocar: null };
+
+jest.mock("@react-navigation/native", () => {
+  const { useEffect } = jest.requireActual("react");
+  return {
+    useFocusEffect: (callback) => {
+      mockFoco.alEnfocar = callback;
+      useEffect(callback, [callback]);
+    },
+  };
+});
+
+jest.mock("../contexto/SesionProvider", () => ({
+  useSesionCompartida: () => ({ rol: "medico" }),
+}));
+
 jest.mock("./CatalogoMedicamentosScreen", () => ({
-  CatalogoMedicamentosScreen: ({ inventarioInicial, bodegas, medicamentosSinStock }) => {
+  CatalogoMedicamentosScreen: ({ inventarioInicial, bodegas, medicamentosSinStock, rol }) => {
     const { Text: RNText } = jest.requireActual("react-native");
     return (
       <RNText testID="props-catalogo">
-        {JSON.stringify({ inventarioInicial, bodegas, medicamentosSinStock })}
+        {JSON.stringify({ inventarioInicial, bodegas, medicamentosSinStock, rol })}
       </RNText>
     );
   },
@@ -64,6 +80,22 @@ describe("StockScreen", () => {
     listarExistenciasDisponibles.mockResolvedValue(RESPUESTA_EXISTENCIAS);
     listarBodegas.mockResolvedValue(RESPUESTA_BODEGAS);
     listarMedicamentos.mockResolvedValue(RESPUESTA_MEDICAMENTOS);
+  });
+
+  // Issue #866: la administradora aprueba un movimiento en "Por aprobar" y vuelve al inventario.
+  // Con un useEffect de montaje la pantalla seguia mostrando la existencia vieja -- verificado en
+  // el stack local: la base decia 105 y la pantalla 110. Se recarga al recuperar el foco.
+  it("se recarga cada vez que la pantalla recupera el foco, no solo al montar", async () => {
+    pantalla();
+
+    await screen.findByTestId("props-catalogo");
+    expect(listarExistenciasDisponibles).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      mockFoco.alEnfocar();
+    });
+
+    expect(listarExistenciasDisponibles).toHaveBeenCalledTimes(2);
   });
 
   it("mientras carga, muestra el estado de carga", () => {

@@ -118,8 +118,8 @@ describe("NotificacionesScreen", () => {
     mockEstado.agrupar = true;
     pantalla();
 
-    expect(screen.getByText(/CADUCIDAD \(1\)/)).toBeTruthy();
-    expect(screen.getByText(/VALIDACIÓN \(1\)/)).toBeTruthy();
+    expect(screen.getByText(/Caducidad \(1\)/)).toBeTruthy();
+    expect(screen.getByText(/Validación \(1\)/)).toBeTruthy();
   });
 
   it("sin notificaciones lo dice", () => {
