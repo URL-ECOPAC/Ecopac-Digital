@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { colors, spacing, typography } from "@ecopac/ui-tokens";
 import {
@@ -12,7 +12,6 @@ import {
 import {
   Card,
   ErrorState,
-  Modal,
   PasswordField,
   PrimaryButton,
   ScreenContainer,
@@ -37,10 +36,9 @@ const ID_FORMULARIO = "perfil-propio";
 // esta pantalla no escribe ninguna de esas etiquetas a mano, solo las de los campos de
 // contrasena, que no tienen descriptor (mismo patron que apps/web/src/pages/PerfilPage.jsx).
 export default function AjustesScreen({ navigation }) {
-  const { usuario, perfil, refrescarPerfil, logout } = useSesionCompartida();
-  const { hayAlgoSinGuardar, registrar, desregistrar } = useRegistroSinGuardar();
+  const { usuario, perfil, refrescarPerfil } = useSesionCompartida();
+  const { registrar, desregistrar } = useRegistroSinGuardar();
   const notificacionesSinLeer = useCantidadDeNotificaciones();
-  const [confirmando, setConfirmando] = useState(false);
 
   const {
     campos,
@@ -76,22 +74,6 @@ export default function AjustesScreen({ navigation }) {
     registrar(ID_FORMULARIO);
     return () => desregistrar(ID_FORMULARIO);
   }, [hayCambios, registrar, desregistrar]);
-
-  // Issue #110, criterio 2: un solo dialogo, y solo cuando hace falta. Si no hay nada sin
-  // guardar en ninguna pantalla registrada, cierra directo -sin esto el criterio 1 (cerrar
-  // sesion en dos toques) se rompe para el caso comun, que es no tener nada sin guardar.
-  const pedirCierre = () => {
-    if (hayAlgoSinGuardar()) {
-      setConfirmando(true);
-      return;
-    }
-    logout();
-  };
-
-  const cerrarSinGuardar = () => {
-    setConfirmando(false);
-    logout();
-  };
 
   return (
     <ScreenContainer contentContainerStyle={styles.contenido}>
@@ -233,30 +215,6 @@ export default function AjustesScreen({ navigation }) {
         />
         {contrasenaCambiada ? <Text style={styles.textoExito}>Contraseña actualizada.</Text> : null}
       </Card>
-
-      <PrimaryButton title="Cerrar sesión" onPress={pedirCierre} />
-
-      <Modal visible={confirmando} onClose={() => setConfirmando(false)}>
-        {/* Sin `title`: el encabezado del Modal trae su propio boton "Cerrar", redundante con
-            "Seguir editando" de aqui abajo -las dos hacen lo mismo-, asi que el titulo se pinta
-            a mano en vez de dejar que Modal dibuje su cabecera con ese boton de mas. */}
-        <Text style={styles.tituloModal}>Hay cambios sin guardar</Text>
-        <Text style={styles.textoModal}>
-          Si cierras sesión ahora se perderán los cambios hechos.
-        </Text>
-        <View style={styles.accionesModal}>
-          <SecondaryButton
-            title="Seguir editando"
-            onPress={() => setConfirmando(false)}
-            style={styles.botonModal}
-          />
-          <PrimaryButton
-            title="Cerrar sesión sin guardar"
-            onPress={cerrarSinGuardar}
-            style={styles.botonModal}
-          />
-        </View>
-      </Modal>
     </ScreenContainer>
   );
 }
@@ -300,25 +258,5 @@ const styles = StyleSheet.create({
   },
   boton: {
     marginTop: spacing.sm,
-  },
-  tituloModal: {
-    fontFamily: typography.fontFamilyBase,
-    fontSize: typography.sizes.lg,
-    fontWeight: typography.weights.bold,
-    color: colors.text,
-    marginBottom: spacing.md,
-  },
-  textoModal: {
-    fontFamily: typography.fontFamilyBase,
-    fontSize: typography.sizes.sm,
-    color: colors.text,
-    marginBottom: spacing.md,
-  },
-  accionesModal: {
-    flexDirection: "row",
-    gap: spacing.sm,
-  },
-  botonModal: {
-    flex: 1,
   },
 });

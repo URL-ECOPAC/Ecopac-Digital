@@ -6,7 +6,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import { MODULOS, modulosVisibles, tabsMoviles } from "./navegacion.js";
+import { MODULOS, modulosVisibles, puedeUsarAppMovil, tabsMoviles } from "./navegacion.js";
 import { ROLES } from "./usuarios/roles.js";
 
 function idsDe(modulos) {
@@ -120,12 +120,52 @@ describe("modulosVisibles", () => {
     expect(idsDe(modulosVisibles("coordinador"))).toEqual([]);
   });
 
-  it("reportes es soloWeb: no aparece en la plataforma movil, aunque el rol lo alcance", () => {
+  it("reportes no declara `movil`: no aparece en la plataforma movil, aunque el rol lo alcance", () => {
     const paraWeb = idsDe(modulosVisibles(ROLES.ADMINISTRADOR, { plataforma: "web" }));
     const paraMovil = idsDe(modulosVisibles(ROLES.ADMINISTRADOR, { plataforma: "mobile" }));
 
     expect(paraWeb).toContain("reportes");
     expect(paraMovil).not.toContain("reportes");
+  });
+});
+
+describe("acceso a la app movil (issue #866)", () => {
+  it("entran administrador, medico y colaborador; junta directiva y socio fundador no", () => {
+    expect(puedeUsarAppMovil(ROLES.ADMINISTRADOR)).toBe(true);
+    expect(puedeUsarAppMovil(ROLES.MEDICO)).toBe(true);
+    expect(puedeUsarAppMovil(ROLES.VOLUNTARIO)).toBe(true);
+
+    expect(puedeUsarAppMovil(ROLES.JUNTA_DIRECTIVA)).toBe(false);
+    expect(puedeUsarAppMovil(ROLES.SOCIO_FUNDADOR)).toBe(false);
+  });
+
+  it("un rol sin acceso no recibe ningun modulo movil, aunque en web vea varios", () => {
+    for (const rol of [ROLES.JUNTA_DIRECTIVA, ROLES.SOCIO_FUNDADOR]) {
+      expect(idsDe(modulosVisibles(rol, { plataforma: "web" })).length).toBeGreaterThan(0);
+      expect(modulosVisibles(rol, { plataforma: "mobile" })).toEqual([]);
+      expect(tabsMoviles(rol)).toEqual([]);
+    }
+  });
+
+  it("la app movil son cuatro modulos: inicio, pacientes, inventario y jornadas", () => {
+    expect(idsDe(modulosVisibles(ROLES.ADMINISTRADOR, { plataforma: "mobile" }))).toEqual([
+      "inicio",
+      "pacientes",
+      "inventario",
+      "jornadas",
+    ]);
+  });
+
+  it("ningun modulo marcado `movil` deja de tener una tab o una pantalla que lo dibuje", () => {
+    for (const modulo of MODULOS.filter((m) => m.movil)) {
+      expect(Boolean(modulo.tabMovil), `el modulo "${modulo.id}"`).toBe(true);
+    }
+  });
+
+  it("todo modulo declara `movil` como booleano, para que ninguno quede sin decidir", () => {
+    for (const modulo of MODULOS) {
+      expect(typeof modulo.movil, `el modulo "${modulo.id}"`).toBe("boolean");
+    }
   });
 });
 
