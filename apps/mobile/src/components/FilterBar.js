@@ -5,6 +5,7 @@ import { colors, radii, spacing, typography } from "@ecopac/ui-tokens";
 import DateField from "./DateField";
 import NumberField from "./NumberField";
 import PrimaryButton from "./PrimaryButton";
+import SecondaryButton from "./SecondaryButton";
 import Selector from "./Selector";
 import TextField from "./TextField";
 
@@ -34,8 +35,24 @@ const MIN_TOUCH_HEIGHT = 48;
  * Un rango sin `subtipo` cae en NumberField. Es a proposito y no al reves: siete de los ocho
  * rangos son de fecha, asi que el defecto contrario taparia el olvido. Que no llegue a pasar lo
  * comprueba packages/shared/filtros.test.js.
+ *
+ * `onLimpiar` y `hayFiltros` (issue #864) son las mismas props que en la web, con el mismo
+ * contrato: el boton solo existe si la pantalla pasa `onLimpiar`, y se deshabilita cuando no hay
+ * nada que limpiar. La adaptacion al telefono es donde va: dentro del panel, debajo de "Aplicar",
+ * porque aqui los filtros estan colapsados y un boton fuera del panel ocuparia una linea de una
+ * pantalla que ya es estrecha.
+ *
+ * Limpiar cierra el panel y avisa a la pantalla; el borrador no hace falta tocarlo, porque abrir
+ * el panel siempre lo vuelve a sembrar desde `valores`.
  */
-export default function FilterBar({ campos = [], valores = {}, onChange, catalogos = {} }) {
+export default function FilterBar({
+  campos = [],
+  valores = {},
+  onChange,
+  catalogos = {},
+  onLimpiar,
+  hayFiltros = true,
+}) {
   const [abierto, setAbierto] = useState(false);
   const [borrador, setBorrador] = useState(valores);
 
@@ -45,6 +62,11 @@ export default function FilterBar({ campos = [], valores = {}, onChange, catalog
   };
 
   const editar = (id, valor) => setBorrador((actual) => ({ ...actual, [id]: valor }));
+
+  const limpiar = () => {
+    onLimpiar?.();
+    setAbierto(false);
+  };
 
   const aplicar = () => {
     // Se emite un onChange por filtro que cambio, con la misma firma que en web, para que el
@@ -143,7 +165,18 @@ export default function FilterBar({ campos = [], valores = {}, onChange, catalog
             return null;
           })}
 
-          <PrimaryButton title="Aplicar" onPress={aplicar} />
+          <View style={styles.acciones}>
+            <PrimaryButton title="Aplicar" onPress={aplicar} style={styles.accion} />
+            {onLimpiar ? (
+              <SecondaryButton
+                title="Limpiar filtros"
+                variant="neutra"
+                onPress={limpiar}
+                disabled={!hayFiltros}
+                style={styles.accion}
+              />
+            ) : null}
+          </View>
         </View>
       ) : null}
     </View>
@@ -189,4 +222,8 @@ const styles = StyleSheet.create({
   },
   rangoFila: { flexDirection: "row", gap: spacing.sm },
   rangoCampo: { flex: 1 },
+  // En columna y no en fila: dos botones lado a lado en un telefono dejan cada etiqueta en dos
+  // lineas, y "Limpiar filtros" no cabe.
+  acciones: { gap: spacing.sm },
+  accion: { width: "100%" },
 });

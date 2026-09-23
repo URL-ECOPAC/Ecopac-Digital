@@ -37,6 +37,8 @@ export default function ColaboradoresScreen() {
     irAPaginaAnterior,
     irAPaginaSiguiente,
     catalogos,
+    limpiarFiltros,
+    hayFiltros,
   } = useUsuariosListado();
 
   if (error) {
@@ -49,11 +51,16 @@ export default function ColaboradoresScreen() {
 
   return (
     <ScreenContainer scrollable={false}>
+      {/* ISSUE #864. "Limpiar filtros" no existia en movil, ni aqui ni en ninguna otra pantalla
+          con FilterBar: para quitar cuatro filtros habia que abrir el panel y deshacerlos uno por
+          uno. Es el mismo defecto que el punto 1 de la issue describe en la web. */}
       <FilterBar
         campos={FILTROS_USUARIO}
         valores={filtros}
         onChange={setFiltro}
         catalogos={catalogos}
+        onLimpiar={limpiarFiltros}
+        hayFiltros={hayFiltros}
       />
 
       <DataList
