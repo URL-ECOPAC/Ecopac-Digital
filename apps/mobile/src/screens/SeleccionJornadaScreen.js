@@ -1,9 +1,10 @@
 import { StyleSheet, Text } from "react-native";
 import { useNavigation } from "@react-navigation/native";
-import { mensajeSinJornada } from "@ecopac/shared";
+import { mensajeSinJornada, puedeVerProyectos } from "@ecopac/shared";
 import { colors, spacing, typography } from "@ecopac/ui-tokens";
 
 import {
+  AccesosDeSeccion,
   Card,
   EmptyState,
   ErrorState,
@@ -12,10 +13,12 @@ import {
   ScreenContainer,
 } from "../components";
 import { useJornadaActivaCompartida } from "../contexto/JornadaActivaProvider";
+import { useSesionCompartida } from "../contexto/SesionProvider";
 import { ROUTES } from "../navigation/rutas";
 
 export default function SeleccionJornadaScreen() {
   const navigation = useNavigation();
+  const { perfil } = useSesionCompartida();
   const {
     jornadasEnCurso,
     jornadasAsignadas,
@@ -46,6 +49,13 @@ export default function SeleccionJornadaScreen() {
 
   return (
     <ScreenContainer>
+      {puedeVerProyectos(perfil?.rol) ? (
+        <AccesosDeSeccion
+          accesos={[{ id: "proyectos", etiqueta: "Proyectos", ruta: ROUTES.PROYECTOS }]}
+          onAbrir={(acceso) => navigation.navigate(acceso.ruta)}
+        />
+      ) : null}
+
       {mensaje ? (
         <EmptyState message={mensaje} />
       ) : (

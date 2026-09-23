@@ -313,6 +313,72 @@ son el default de la CLI, dejados explicitos para que quede documentado que exis
 sea facil ajustarlos. Son limites **por IP** en una ventana de 5 minutos: no bloquean una cuenta
 especifica ni dejan un registro de intentos por cuenta (ver la seccion siguiente).
 
+## 5. URLs de redireccion: el enlace de "olvide mi contrasena" (issue #875)
+
+El correo de recuperacion lleva un enlace a `/auth/v1/verify`, y ese enlace arrastra un
+`redirect_to` que decide **a donde cae la persona despues de verificar el token**. Cada
+plataforma pide el suyo:
+
+| Plataforma | Que manda como `redirectTo` | De donde sale |
+| --- | --- | --- |
+| Web | `https://<dominio>/nueva-contrasena` | `window.location.origin`, en `RestablecerContrasenaPage.jsx` |
+| Movil | `ecopac://recuperar` | `Linking.createURL("recuperar")`, en `RestablecerContrasenaScreen.js`; el esquema `ecopac` lo declara `apps/mobile/app.config.js` |
+
+GoTrue **no acepta cualquier `redirect_to`**: solo los que esten en la lista de redirecciones
+permitidas. Si el que llega no esta en la lista, no falla con un error visible: **cae en silencio
+al `site_url`**. Por eso el sintoma no es "no llego el correo", sino "el correo llego pero abrio
+la web en vez de la app".
+
+**El comodin `*` no cubre los esquemas propios.** Esta es la trampa que costo encontrar: aunque
+`additional_redirect_urls` incluya `"*"`, un `ecopac://recuperar` NO coincide y se descarta. El
+comodin solo cubre `http` y `https`. Hay que listar el esquema aparte.
+
+Reproducido contra el stack local: pidiendo `redirect_to=ecopac://recuperar`, el correo llegaba
+con `redirect_to=http://localhost:5173`. Agregando `ecopac://*` y `exp://*` a
+`additional_redirect_urls` en [`supabase/config.toml`](../supabase/config.toml), el mismo enlace
+pasa a llegar con `redirect_to=ecopac://recuperar`.
+
+### Que hay que registrar en cada proyecto
+
+`config.toml` **no gobierna los proyectos remotos** (ver la seccion 4 de arriba): el despliegue
+solo corre `supabase db push`. Estas entradas van a mano en el Dashboard.
+
+| Entrada | Para que |
+| --- | --- |
+| `ecopac://recuperar` | El deep link de una build de la app movil (development build o tienda) |
+| `exp://*` | Expo Go durante el desarrollo: el host y el puerto cambian en cada arranque |
+| `https://<dominio de la web>/nueva-contrasena` | El destino de la web en ese ambiente |
+
+`exp://*` solo tiene sentido en `Ecopac-Digital-Dev`. En `Ecopac-Digital-Prod` se registran
+unicamente el deep link de la app publicada y el dominio real de la web: un comodin en produccion
+es una redireccion abierta.
+
+### Instrucciones de Dashboard (repetir en los dos proyectos)
+
+1. Entrar a [supabase.com/dashboard](https://supabase.com/dashboard) y seleccionar el proyecto
+   (`Ecopac-Digital-Dev` primero).
+2. Ir a **Authentication > URL Configuration**.
+3. Comprobar que **Site URL** apunta al dominio de la web de ese ambiente.
+4. En **Redirect URLs**, agregar las entradas de la tabla de arriba con "Add URL".
+5. Guardar y repetir en `Ecopac-Digital-Prod`, sin el `exp://*`.
+
+### Como se comprueba que quedo bien
+
+Sin abrir el telefono, con
+[`scripts/verificar-redireccion-recuperacion.mjs`](../scripts/verificar-redireccion-recuperacion.mjs):
+
+```bash
+npm run verificar:redireccion -- <url-del-proyecto> <clave-publicable> <correo> ecopac://recuperar
+```
+
+Pide un correo de recuperacion con ese `redirect_to` y dice si el proyecto lo respeta o lo
+cambio por el `site_url`. Contra el stack local lee el enlace directo de Mailpit; contra un
+proyecto remoto informa que el correo salio y hay que abrirlo para confirmarlo, porque el enlace
+solo viaja en el correo.
+
+**Manda un correo de verdad a esa cuenta.** Contra `Ecopac-Digital-Prod`, usar una cuenta de
+prueba, nunca la de una persona de la organizacion.
+
 ## Endurecimiento de la plataforma (issue #760)
 
 Cinco frentes de OWASP (A03, A05, A06, A08 y cabeceras/cifrado) que nadie habia revisado antes de

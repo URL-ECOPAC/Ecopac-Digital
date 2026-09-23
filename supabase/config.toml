@@ -61,7 +61,7 @@ site_url = "http://localhost:5173"
 # (/nueva-contrasena) como los deep links de Expo, que cambian de puerto y de esquema segun como
 # se levante la app movil. En los proyectos remotos NO se pone "*": ahi se listan los destinos
 # reales, que es parte de la revision de configuracion de la issue #241.
-additional_redirect_urls = ["*"]
+additional_redirect_urls = ["*", "ecopac://*", "exp://*"]
 # jwt_expiry: cuanto dura una sesion sin que el cliente la refresque (issue #230, criterio 3).
 # El numero de segundos que corresponde esta pendiente de confirmar con la organizacion (ver
 # docs/SEGURIDAD.md); 3600 es el default de la CLI, no un acuerdo. enable_refresh_token_rotation
