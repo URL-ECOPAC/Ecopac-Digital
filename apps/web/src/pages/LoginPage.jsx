@@ -14,7 +14,6 @@ import {
 export default function LoginPage() {
   const location = useLocation();
   const { estadoRestauracion, haySesion, error: errorDeSesion } = useSesionCompartida();
-  const rutaPrevia = location.state?.from?.pathname;
 
   const {
     correo,
@@ -26,7 +25,7 @@ export default function LoginPage() {
     enviando,
     handleSubmit: ejecutarLogin,
     destinoPorDefecto,
-  } = useInicioSesion({ rutaPrevia });
+  } = useInicioSesion();
 
   const [verPassword, setVerPassword] = useState(false);
   const [erroresLocales, setErroresLocales] = useState({});

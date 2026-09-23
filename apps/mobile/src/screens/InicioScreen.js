@@ -40,15 +40,8 @@ export default function InicioScreen({ navigation }) {
   const { perfil } = useSesionCompartida();
   const rol = perfil?.rol;
 
-  const {
-    accesos,
-    accesosEnOtraPlataforma,
-    jornadasEnCurso,
-    puedeVerJornadaEnCurso,
-    cargando,
-    error,
-    recargar,
-  } = usePanelDeInicio({ rol, plataforma: "mobile" });
+  const { accesos, jornadasEnCurso, puedeVerJornadaEnCurso, cargando, error, recargar } =
+    usePanelDeInicio({ rol, plataforma: "mobile" });
 
   const saludo = perfil?.nombres ? `Hola, ${perfil.nombres}` : "Hola";
 
@@ -84,9 +77,7 @@ export default function InicioScreen({ navigation }) {
 
           {!cargando && !error && jornadasEnCurso.length === 0 ? (
             <View style={estilos.vacio}>
-              <Text style={estilos.vacioTexto}>
-                No hay ninguna jornada en curso ahora mismo. Cuando empiece una, aparecerá aquí.
-              </Text>
+              <Text style={estilos.vacioTexto}>No hay ninguna jornada en curso ahora mismo.</Text>
             </View>
           ) : null}
 
@@ -123,26 +114,6 @@ export default function InicioScreen({ navigation }) {
       <View style={estilos.seccion}>
         <Text style={estilos.tituloSeccion}>Tus módulos</Text>
         <Text style={estilos.notaSeccion}>Lo que tu rol puede abrir</Text>
-
-        {/* ISSUE #864. Cuando no hay ni una tarjeta se dice por que, en vez de dejar el hueco.
-            Pasa con junta directiva y socio fundador: su unico modulo es Reportes, que no tiene
-            pantalla en movil (`soloWeb` en navegacion.js), asi que abrian la app y encontraban
-            esta seccion en blanco. Un vacio sin explicacion se lee como una app rota. */}
-        {accesosNavegables.length === 0 ? (
-          <View style={estilos.sinAccesos}>
-            <Text style={estilos.sinAccesosTitulo}>
-              {accesosEnOtraPlataforma.length > 0
-                ? "Tu trabajo está en la versión web"
-                : "Tu rol no abre ningún módulo desde el teléfono"}
-            </Text>
-            {accesosEnOtraPlataforma.length > 0 ? (
-              <Text style={estilos.sinAccesosTexto}>
-                Desde el teléfono no hay nada que abrir con tu rol. Entra por la web para{" "}
-                {accesosEnOtraPlataforma.map((modulo) => modulo.nombre).join(", ")}.
-              </Text>
-            ) : null}
-          </View>
-        ) : null}
 
         <View style={estilos.rejilla}>
           {accesosNavegables.map((modulo) => {
@@ -240,30 +211,6 @@ const estilos = StyleSheet.create({
     padding: spacing.md,
   },
   vacioTexto: {
-    color: colors.textMuted,
-    fontFamily: typography.fontFamilyBase,
-    fontSize: typography.sizes.sm,
-  },
-  // Mismo recuadro que `vacio` -- es el patron de "aqui no hay nada" de esta pantalla -- pero con
-  // el filete del color primario, porque esto no es una lista vacia: es una explicacion.
-  sinAccesos: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderLeftColor: colors.primary,
-    borderLeftWidth: 3,
-    borderRadius: radii.lg,
-    borderWidth: 1,
-    gap: spacing.xs,
-    marginTop: spacing.sm,
-    padding: spacing.md,
-  },
-  sinAccesosTitulo: {
-    color: colors.text,
-    fontFamily: typography.fontFamilyBase,
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.semibold,
-  },
-  sinAccesosTexto: {
     color: colors.textMuted,
     fontFamily: typography.fontFamilyBase,
     fontSize: typography.sizes.sm,
