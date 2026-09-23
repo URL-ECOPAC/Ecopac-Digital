@@ -4,6 +4,7 @@ import {
   ETIQUETAS_TIPO_MOVIMIENTO,
   formatearFechaCorta,
   permisosDeMovimientos,
+  TIPOS_DE_MOVIMIENTO,
   usePendientesValidacion,
 } from "@ecopac/shared";
 import { colors, moduleAccents, spacing, typography } from "@ecopac/ui-tokens";
@@ -18,7 +19,6 @@ import {
   PrimaryButton,
   ScreenContainer,
   SecondaryButton,
-  StatusChip,
   TextField,
 } from "../components";
 import { useSesionCompartida } from "../contexto/SesionProvider";
@@ -110,8 +110,22 @@ export default function ValidacionMovimientosScreen() {
               <Text style={estilos.medicamento} numberOfLines={2}>
                 {movimiento.lote?.medicamento?.nombre ?? "Medicamento sin nombre"}
               </Text>
-              <Text style={estilos.cantidad}>{movimiento.cantidad}</Text>
+              <Text
+                style={[
+                  estilos.cantidad,
+                  movimiento.tipo === TIPOS_DE_MOVIMIENTO.SALIDA
+                    ? estilos.cantidadSalida
+                    : estilos.cantidadIngreso,
+                ]}
+              >
+                {movimiento.tipo === TIPOS_DE_MOVIMIENTO.SALIDA ? "-" : "+"}
+                {movimiento.cantidad}
+              </Text>
             </View>
+
+            <Text style={estilos.tipo}>
+              {ETIQUETAS_TIPO_MOVIMIENTO[movimiento.tipo] ?? movimiento.tipo}
+            </Text>
 
             <Text style={estilos.detalle}>
               {[
@@ -126,13 +140,6 @@ export default function ValidacionMovimientosScreen() {
               {nombreDeQuienRegistro(movimiento)} ·{" "}
               {formatearFechaCorta(movimiento.created_at) || "sin fecha"}
             </Text>
-
-            <View style={estilos.inferior}>
-              <StatusChip
-                status={movimiento.tipo}
-                label={ETIQUETAS_TIPO_MOVIMIENTO[movimiento.tipo] ?? movimiento.tipo}
-              />
-            </View>
 
             {puedeAprobar ? (
               <PrimaryButton
@@ -215,19 +222,26 @@ const estilos = StyleSheet.create({
     fontWeight: typography.weights.semibold,
   },
   cantidad: {
-    color: colors.text,
     fontFamily: typography.fontFamilyBase,
     fontSize: typography.sizes.lg,
     fontWeight: typography.weights.bold,
+  },
+  cantidadIngreso: {
+    color: colors.success,
+  },
+  cantidadSalida: {
+    color: colors.danger,
+  },
+  tipo: {
+    color: colors.text,
+    fontFamily: typography.fontFamilyBase,
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.semibold,
   },
   detalle: {
     color: colors.textMuted,
     fontFamily: typography.fontFamilyBase,
     fontSize: typography.sizes.sm,
-  },
-  inferior: {
-    flexDirection: "row",
-    marginTop: spacing.xs,
   },
   accion: {
     marginTop: spacing.sm,
