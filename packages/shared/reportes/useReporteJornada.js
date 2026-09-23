@@ -21,6 +21,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { obtenerPersonalDeJornada } from "../jornadas/api.js";
+import { listarUsuarios } from "../usuarios/api.js";
 import {
   CAMPOS_FICHA_RESULTADOS_JORNADA,
   COLUMNAS_DIAGNOSTICOS_MAS_FRECUENTES,
@@ -51,6 +52,7 @@ export function useReporteJornada(jornadaId, { rol } = {}) {
 
   const [datos, setDatos] = useState(null);
   const [personal, setPersonal] = useState([]);
+  const [nombresDelDirectorio, setNombresDelDirectorio] = useState(new Map());
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
 
@@ -97,13 +99,61 @@ export function useReporteJornada(jornadaId, { rol } = {}) {
     cargar();
   }, [cargar]);
 
+  // Los UUID que el roster de la jornada NO logro resolver a un nombre.
+  const sinResolver = useMemo(() => {
+    const nombres = indexarNombres(personal);
+    return (datos?.personal_participante ?? [])
+      .map((fila) => fila.usuario_id)
+      .filter((id) => id && !nombres.has(id));
+  }, [datos, personal]);
+
+  // ISSUE #862: el roster de la jornada (jornada_personal) NO cubre a todo el que registro
+  // atenciones. Quien atendio sin estar asignado -algo normal en campo- caia al UUID crudo. El
+  // directorio de perfiles completa esos nombres.
+  //
+  // SOLO SE PIDE SI DE VERDAD FALTA ALGUNO. La consulta al directorio es una llamada de red mas, y
+  // este hook tambien lo monta ResumenJornadaScreen en apps/mobile -que ni siquiera muestra los
+  // nombres, solo `personal.length`-, una app que se usa en campo y con mala conexion. Cuando el
+  // roster cubre a todo el mundo, que es el caso normal, no se pide nada.
+  //
+  // Su fallo tampoco importa: RLS decide quien puede leer el directorio (administrador y junta
+  // directiva, 00038/00080), asi que a un medico le volvera vacio y los nombres que falten caeran
+  // al rotulo neutro de abajo. No hay alternativa desde el cliente: un medico no puede leer el
+  // perfil de otro medico.
+  useEffect(() => {
+    if (!tieneAcceso || sinResolver.length === 0) return undefined;
+    let vigente = true;
+
+    listarUsuarios({ rolConsultor: rol }).then(({ usuarios }) => {
+      if (!vigente) return;
+      const porId = new Map();
+      for (const usuario of usuarios ?? []) {
+        const nombre = [usuario.nombres, usuario.apellidos].filter(Boolean).join(" ").trim();
+        if (usuario.id && nombre) porId.set(usuario.id, nombre);
+      }
+      setNombresDelDirectorio(porId);
+    });
+
+    return () => {
+      vigente = false;
+    };
+  }, [tieneAcceso, rol, sinResolver]);
+
   const filasDePersonal = useMemo(() => {
     const nombres = indexarNombres(personal);
+    for (const [id, nombre] of nombresDelDirectorio) {
+      if (!nombres.has(id)) nombres.set(id, nombre);
+    }
+
     return (datos?.personal_participante ?? []).map((fila) => ({
       ...fila,
-      usuario_id: nombres.get(fila.usuario_id) ?? fila.usuario_id,
+      // ISSUE #862: cuando el nombre no se resuelve, la celda mostraba el UUID crudo. En un
+      // reporte impreso eso es ruido -"de000001-0000-0000-0000-000000000005" no le dice nada a
+      // nadie-, asi que se dice lo que de verdad se sabe: que hubo atenciones de alguien cuyo
+      // nombre no se pudo leer.
+      usuario_id: nombres.get(fila.usuario_id) ?? "Persona no identificada",
     }));
-  }, [datos, personal]);
+  }, [datos, personal, nombresDelDirectorio]);
 
   const ficha = useMemo(() => {
     if (!datos?.jornada) return null;

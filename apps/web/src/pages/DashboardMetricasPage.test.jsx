@@ -2,7 +2,7 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import * as matchers from "@testing-library/jest-dom/matchers";
 
 import DashboardMetricasPage from "./DashboardMetricasPage";
@@ -32,13 +32,19 @@ const mockEstadoHook = {
   seriePrincipal: [],
   serieComparacion: [],
   calcularVariacion: vi.fn(() => 0),
-  rangosDisponibles: [{ valor: "mes", etiqueta: "Este mes" }],
+  // ISSUE #862: los catalogos del hook pasaron de { valor, etiqueta } a { value, label }, que es
+  // el idioma que hablan Selector y el resto del catalogo de componentes.
+  rangosDisponibles: [{ value: "mes", label: "Este mes" }],
   rangoSeleccionado: "mes",
   setRangoSeleccionado: vi.fn(),
-  agrupamientosDisponibles: [{ valor: "mes", etiqueta: "Mes" }],
+  agrupamientosDisponibles: [{ value: "mes", label: "Mes" }],
   agruparPor: "mes",
   setAgruparPor: vi.fn(),
-  metrica: "pacientesAtendidos",
+  metricasDisponibles: [
+    { value: "pacientes_atendidos", label: "Pacientes atendidos" },
+    { value: "consultas_realizadas", label: "Consultas realizadas" },
+  ],
+  metrica: "pacientes_atendidos",
   setMetrica: vi.fn(),
   comunidadId: "__todas__",
   setComunidadId: vi.fn(),
@@ -48,6 +54,7 @@ const mockEstadoHook = {
   setComunidadCompararId: vi.fn(),
   listaComunidades: [],
   valoresEspeciales: { TODAS: "__todas__", NINGUNA: "__ninguna__" },
+  recargar: vi.fn(),
 };
 
 vi.mock("@ecopac/shared", async (importarOriginal) => ({
@@ -78,7 +85,7 @@ describe("DashboardMetricasPage", () => {
 
     expect(
       screen.getByText(
-        "Solo administracion y los roles consultivos consultan los indicadores de impacto.",
+        "Solo administración y los roles consultivos consultan los indicadores de impacto.",
       ),
     ).toBeInTheDocument();
   });
@@ -87,7 +94,7 @@ describe("DashboardMetricasPage", () => {
     mockEstadoHook.cargando = true;
     pantalla();
 
-    expect(screen.getByText("Cargando métricas...")).toBeInTheDocument();
+    expect(screen.getByRole("status")).toBeInTheDocument();
   });
 
   // Con la base vacia (issue #759/#779): el periodo sin datos da indicadores en cero y una
@@ -97,15 +104,19 @@ describe("DashboardMetricasPage", () => {
 
     // Las cinco tarjetas, todas en 0 -- consultar por "0" a secas seria ambiguo (aparece cinco
     // veces), asi que se confirma que las cinco etiquetas de tarjeta esten presentes.
-    // "Consultas Realizadas" se agrego en la issue #756: consultas_realizadas ya llegaba en
+    // "Consultas realizadas" se agrego en la issue #756: consultas_realizadas ya llegaba en
     // COLUMNAS_DEL_REPORTE/INDICADORES (api.js, issue #693) pero useDashboardMetricas.js no lo
     // traducia a camelCase, asi que nunca llegaba a esta tarjeta.
-    expect(screen.getByText("Pacientes Atendidos")).toBeInTheDocument();
-    expect(screen.getByText("Consultas Realizadas")).toBeInTheDocument();
-    expect(screen.getByText("Comunidades Beneficiadas")).toBeInTheDocument();
-    expect(screen.getByText("Tratamientos Entregados")).toBeInTheDocument();
-    expect(screen.getByText("Medicamentos Utilizados")).toBeInTheDocument();
-    expect(screen.getAllByText("0")).toHaveLength(5);
+    // Se acota a las tarjetas: "Pacientes atendidos" tambien es una opcion del selector de
+    // metrica, que la issue #862 agrego -el hook exponia cinco metricas y no habia forma de
+    // elegirlas-.
+    const kpis = within(document.querySelector(".ec-kpis"));
+    expect(kpis.getByText("Pacientes atendidos")).toBeInTheDocument();
+    expect(kpis.getByText("Consultas realizadas")).toBeInTheDocument();
+    expect(kpis.getByText("Comunidades beneficiadas")).toBeInTheDocument();
+    expect(kpis.getByText("Tratamientos entregados")).toBeInTheDocument();
+    expect(kpis.getByText("Medicamentos utilizados")).toBeInTheDocument();
+    expect(kpis.getAllByText("0")).toHaveLength(5);
   });
 
   it("con datos, pinta los indicadores reales en las tarjetas", () => {
@@ -119,11 +130,14 @@ describe("DashboardMetricasPage", () => {
     mockEstadoHook.seriePrincipal = [{ etiqueta: "Enero", valor: 120 }];
     pantalla();
 
-    expect(screen.getByText("120")).toBeInTheDocument();
-    expect(screen.getByText("210")).toBeInTheDocument();
-    expect(screen.getByText("8")).toBeInTheDocument();
-    expect(screen.getByText("95")).toBeInTheDocument();
-    expect(screen.getByText("340")).toBeInTheDocument();
+    // Las cifras se buscan en su tarjeta y no en toda la pagina: la grafica publica los mismos
+    // numeros en su tabla accesible alternativa, asi que "120" sale dos veces (issue #862).
+    const kpis = within(document.querySelector(".ec-kpis"));
+    expect(kpis.getByText("120")).toBeInTheDocument();
+    expect(kpis.getByText("210")).toBeInTheDocument();
+    expect(kpis.getByText("8")).toBeInTheDocument();
+    expect(kpis.getByText("95")).toBeInTheDocument();
+    expect(kpis.getByText("340")).toBeInTheDocument();
   });
 
   it("con comparacion activa, muestra el panel de variacion porcentual", () => {
@@ -150,9 +164,7 @@ describe("DashboardMetricasPage", () => {
     mockEstadoHook.error = { mensaje: "No se pudieron cargar los indicadores." };
     pantalla();
 
-    expect(
-      screen.getByText("Error al cargar: No se pudieron cargar los indicadores."),
-    ).toBeInTheDocument();
-    expect(screen.queryByText("Pacientes Atendidos")).not.toBeInTheDocument();
+    expect(screen.getByText("No se pudieron cargar los indicadores.")).toBeInTheDocument();
+    expect(screen.queryByText("Pacientes atendidos")).not.toBeInTheDocument();
   });
 });

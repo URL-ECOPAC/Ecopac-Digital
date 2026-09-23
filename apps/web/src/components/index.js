@@ -24,6 +24,12 @@ export { default as NumberField } from "./NumberField";
 export { default as PrimaryButton } from "./PrimaryButton";
 export { default as SecondaryButton } from "./SecondaryButton";
 
+// Las dos salidas de un listado (issue #862). BotonExportarPDF vivia fuera del barril y por ruta
+// directa, que es parte de por que su defecto no lo vio nadie.
+export { default as BotonExportarCSV } from "./BotonExportarCSV";
+export { default as BotonImprimir } from "./BotonImprimir";
+export { default as descargarCSV } from "./descargarCSV";
+
 export { default as FilterBar } from "./FilterBar";
 export { default as DataList } from "./DataList";
 export { default as StatusChip } from "./StatusChip";
@@ -33,6 +39,8 @@ export { default as StatCard } from "./StatCard";
 export { default as KanbanBoard } from "./KanbanBoard";
 export { default as Tabs } from "./Tabs";
 export { default as Modal } from "./Modal";
+export { default as Paginacion } from "./Paginacion";
+export { default as GraficaDeBarras } from "./GraficaDeBarras";
 
 export { default as EmptyState } from "./EmptyState";
 export { default as LoadingState } from "./LoadingState";

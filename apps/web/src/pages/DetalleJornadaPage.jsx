@@ -12,6 +12,7 @@ import {
   formatearFechaCorta,
   formatearMoneda,
   permisosDeOrigenDePresupuesto,
+  puedeVerReporteJornada,
   puedeVerRosterCompleto,
   useCuadroTurnos,
   useDetalleJornada,
@@ -239,6 +240,22 @@ export default function DetalleJornadaPage() {
         title={jornada.nombre}
         subtitle={`${formatearFechaCorta(jornada.fecha)} · ${jornada.comunidad?.nombre ?? "—"}`}
         actions={[
+          // ISSUE #862: /reportes/jornada/:id existia como ruta y NINGUN enlace del sistema
+          // llevaba a ella -- el reporte se podia abrir solo escribiendo la direccion a mano.
+          // Es el mismo defecto que la issue #693 corrigio para /reportes/inventario-actual.
+          //
+          // Se ofrece solo a quien puede leerlo: puedeVerReporteJornada es el espejo de las
+          // politicas de la 00033 sobre consultas y recetas, asi que un rol consultivo veria un
+          // enlace que lo lleva a un aviso de permisos.
+          ...(puedeVerReporteJornada(rol)
+            ? [
+                {
+                  label: "Ver reporte",
+                  to: `/reportes/jornada/${jornada.id}`,
+                  variant: "secondary",
+                },
+              ]
+            : []),
           {
             label: "Volver",
             onClick: () => navigate("/jornadas"),
