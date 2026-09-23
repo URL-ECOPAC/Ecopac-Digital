@@ -283,7 +283,7 @@ describe("CAMPOS_TRIAJE", () => {
       presionDiastolica: "mmHg",
       frecuenciaCardiaca: "lpm",
       glucosa: "mg/dL",
-      peso: "kg",
+      peso: "lb",
       talla: "cm",
       temperatura: "°C",
     });
@@ -312,7 +312,7 @@ describe("CAMPOS_TRIAJE", () => {
       presionDiastolica: { min: 20, max: 200 },
       frecuenciaCardiaca: { min: 20, max: 250 },
       glucosa: { min: 20, max: 800 },
-      peso: { min: 1, max: 400 },
+      peso: { min: 1, max: 800 },
       talla: { min: 30, max: 250 },
       temperatura: { min: 25, max: 45 },
     });
