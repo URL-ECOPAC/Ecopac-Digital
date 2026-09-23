@@ -22,10 +22,10 @@ export default function CuadroTurnosImprimible({ jornada }) {
       <header className="turnos-imprimible__encabezado">
         {/* Issue #863: Logotipo incluido en el diseño del reporte impreso */}
         <div className="turnos-imprimible__logo-contenedor mb-2">
-          <img 
-            src="/logo-ecopac.png" 
-            alt="Logo Ecopac Digital" 
-            className="turnos-imprimible__logo" 
+          <img
+            src="/logo-ecopac.png"
+            alt="Logo Ecopac Digital"
+            className="turnos-imprimible__logo"
             style={{ maxHeight: "40px", objectFit: "contain" }}
           />
         </div>

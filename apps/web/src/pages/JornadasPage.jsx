@@ -118,12 +118,12 @@ export default function JornadasPage() {
   // Issue #863: Quitar el filtro de estado en jornadas y mantener comunidad y fecha.
   // Se excluyen 'busqueda' y 'estado'.
   const filtrosDelTablero = FILTROS_JORNADA.filter(
-    (campo) => campo.id !== "busqueda" && campo.id !== "estado"
+    (campo) => campo.id !== "busqueda" && campo.id !== "estado",
   );
 
   // Comprobar si hay filtros activos para habilitar/deshabilitar el botón de limpiar
   const hayFiltrosActivos = Object.values(filtros || {}).some(
-    (val) => val !== "" && val !== null && val !== undefined
+    (val) => val !== "" && val !== null && val !== undefined,
   );
 
   // Issue #183, trampa 1: el kanban ya no finaliza una jornada directamente (ni con el boton
