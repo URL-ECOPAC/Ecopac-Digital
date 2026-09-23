@@ -75,13 +75,18 @@ describe("permisos de jornadas", () => {
     });
   });
 
-  it("solo administrador y junta directiva ven el personal completo, espejo de 00039:63-69 (issue #182)", () => {
+  // ISSUE #864, dos cambios opuestos sobre la misma politica (00141):
+  //
+  // - Junta directiva sale: los dos roles consultivos ya no llegan al detalle de una jornada.
+  // - Medico y voluntario entran por participacion: el criterio 6 pide que el medico vea "el
+  //   equipo" de su jornada, y hasta ahora veia una sola fila con un aviso de vista limitada.
+  it("administrador y los roles de campo ven el personal completo (issues #182 y #864)", () => {
     expect(puedeVerRosterCompleto(ROLES.ADMINISTRADOR)).toBe(true);
-    expect(puedeVerRosterCompleto(ROLES.JUNTA_DIRECTIVA)).toBe(true);
+    expect(puedeVerRosterCompleto(ROLES.MEDICO)).toBe(true);
+    expect(puedeVerRosterCompleto(ROLES.VOLUNTARIO)).toBe(true);
 
+    expect(puedeVerRosterCompleto(ROLES.JUNTA_DIRECTIVA)).toBe(false);
     expect(puedeVerRosterCompleto(ROLES.SOCIO_FUNDADOR)).toBe(false);
-    expect(puedeVerRosterCompleto(ROLES.MEDICO)).toBe(false);
-    expect(puedeVerRosterCompleto(ROLES.VOLUNTARIO)).toBe(false);
   });
 
   it("agrupa los permisos para que un hook no llame a las cinco por separado", () => {

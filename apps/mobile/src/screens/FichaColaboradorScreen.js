@@ -5,6 +5,7 @@ import { useRoute } from "@react-navigation/native";
 import {
   CAMPOS_FICHA_COLABORADOR,
   ESTADOS_USUARIO,
+  ETIQUETAS_ESTADO_JORNADA,
   filasDeHistorial,
   formatearFechaCorta,
   ORIGEN_PERMISO,
@@ -84,13 +85,6 @@ function Campo({ campo, valores }) {
   );
 }
 
-/** Capitaliza la primera letra de un valor de enum para mostrarlo, sin una tabla de traduccion
- * aparte. Mismo criterio que capitalizar() en ColaboradoresPage.jsx (web). */
-function capitalizar(texto) {
-  const cadena = String(texto ?? "");
-  return cadena.charAt(0).toUpperCase() + cadena.slice(1);
-}
-
 /**
  * Permisos efectivos del perfil (criterio 2 de #273), solo lectura: useGestionPermisos() trae
  * ademas conceder/revocar/restablecer, pero esta pantalla no los dibuja -- mostrar los permisos
@@ -143,7 +137,14 @@ function SeccionHistorial({ perfilId }) {
         <Card key={jornada.id} style={styles.tarjetaJornada}>
           <View style={styles.filaJornadaCabecera}>
             <Text style={styles.jornadaNombre}>{jornada.nombre}</Text>
-            <StatusChip status={jornada.estado} label={capitalizar(jornada.estado)} />
+            {/* ISSUE #864. Antes capitalizaba el valor crudo del enum ("En curso"). Ahora usa
+                la etiqueta real y la pinta en caja alta, igual que la ficha de la web: asi el
+                texto no depende de como este escrito el enum en la migracion. */}
+            <StatusChip
+              status={jornada.estado}
+              label={ETIQUETAS_ESTADO_JORNADA[jornada.estado] ?? jornada.estado}
+              uppercase
+            />
           </View>
           <Text style={styles.jornadaDato}>
             {formatearFechaCorta(jornada.fecha)}

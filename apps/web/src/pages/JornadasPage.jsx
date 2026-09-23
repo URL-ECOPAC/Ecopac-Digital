@@ -176,9 +176,14 @@ export default function JornadasPage() {
       {cargando ? (
         <LoadingState />
       ) : (
+        // ISSUE #864: "no puede crear, ni editar, ni mover tarjetas en el kanban". Sin
+        // `onMover`, KanbanBoard deja las tarjetas sin `draggable` y el tablero es de solo
+        // lectura. Los botones "Atras"/"Avanzar" de cada tarjeta ya se gateaban con `puedeEditar`
+        // desde la #180; lo que faltaba era el arrastre, que estaba siempre activo y dejaba
+        // mover una tarjeta para que volviera sola a su sitio sin decir por que.
         <KanbanBoard
           columnas={columnas}
-          onMover={moverJornada}
+          onMover={puedeEditar ? moverJornada : undefined}
           mensajeVacio="Sin jornadas"
           columnaAtenuada={(id) => id === ESTADOS_JORNADA.CANCELADA}
           renderTarjeta={(tarjeta) => (

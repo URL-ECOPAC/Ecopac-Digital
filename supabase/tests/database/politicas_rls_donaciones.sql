@@ -93,23 +93,26 @@ SELECT lives_ok(
 );
 
 -- ============================================================================
--- junta directiva: lee las tres tablas, no escribe en ninguna
+-- junta directiva: ya no lee ninguna de las tres, y tampoco escribe
 -- ============================================================================
+-- ISSUE #864: la 00083 les habia dado la lectura de las tres tablas a los dos roles consultivos,
+-- y la 00141 se la retira: su unica pantalla pasa a ser Reportes, y ninguno de los cuatro
+-- reportes lee donantes, donaciones ni donacion_detalle. Las negativas de escritura no cambian.
 SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000404';
 
-SELECT ok(
-  (SELECT count(*) FROM donantes) > 0,
-  'junta directiva lee donantes'
+SELECT is(
+  (SELECT count(*) FROM donantes)::int, 0,
+  'junta directiva ya no lee donantes (issue #864)'
 );
 
-SELECT ok(
-  (SELECT count(*) FROM donaciones) > 0,
-  'junta directiva lee donaciones'
+SELECT is(
+  (SELECT count(*) FROM donaciones)::int, 0,
+  'junta directiva ya no lee donaciones (issue #864)'
 );
 
-SELECT ok(
-  (SELECT count(*) FROM donacion_detalle) > 0,
-  'junta directiva lee donacion_detalle'
+SELECT is(
+  (SELECT count(*) FROM donacion_detalle)::int, 0,
+  'junta directiva ya no lee donacion_detalle (issue #864)'
 );
 
 SELECT throws_ok(
@@ -148,23 +151,23 @@ SELECT is_empty(
 );
 
 -- ============================================================================
--- socio fundador: identico a junta directiva (es_consultivo() trata a los dos igual)
+-- socio fundador: identico a junta directiva, antes y despues de la #864
 -- ============================================================================
 SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000405';
 
-SELECT ok(
-  (SELECT count(*) FROM donantes) > 0,
-  'socio fundador lee donantes'
+SELECT is(
+  (SELECT count(*) FROM donantes)::int, 0,
+  'socio fundador ya no lee donantes (issue #864)'
 );
 
-SELECT ok(
-  (SELECT count(*) FROM donaciones) > 0,
-  'socio fundador lee donaciones'
+SELECT is(
+  (SELECT count(*) FROM donaciones)::int, 0,
+  'socio fundador ya no lee donaciones (issue #864)'
 );
 
-SELECT ok(
-  (SELECT count(*) FROM donacion_detalle) > 0,
-  'socio fundador lee donacion_detalle'
+SELECT is(
+  (SELECT count(*) FROM donacion_detalle)::int, 0,
+  'socio fundador ya no lee donacion_detalle (issue #864)'
 );
 
 SELECT throws_ok(

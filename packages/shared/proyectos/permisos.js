@@ -23,7 +23,7 @@
 // modulo como accesible y la consulta le devolvia cero filas, sin explicacion (mismo patron que
 // la issue #426 encontro en pacientes).
 
-import { ROLES, esAdministrador, esConsultivo } from "../usuarios/roles.js";
+import { ROLES, esAdministrador } from "../usuarios/roles.js";
 
 /** Rol que puede crear, editar y cambiar el estado de un proyecto: solo administrador (00039). */
 export const ROLES_QUE_ADMINISTRAN_PROYECTOS = Object.freeze([ROLES.ADMINISTRADOR]);
@@ -36,13 +36,31 @@ export function puedeAdministrarProyectos(rol) {
 /**
  * Puede ver el listado y la ficha de un proyecto.
  *
- * Solo administrador y los dos roles consultivos (junta directiva, socio fundador): espejo
- * exacto del SELECT de la 00080. Medico y voluntario no tienen ninguna politica de lectura
- * sobre proyectos -su necesidad de saber a que proyecto pertenece una jornada se resuelve desde
- * la propia jornada, no leyendo la tabla proyectos directamente.
+ * ISSUE #864, y es el reves exacto de lo que decia antes. Ahora son **administrador y medico**:
+ *
+ * - Los dos roles consultivos salen. Su unica pantalla es Reportes, y la 00141 les retira de
+ *   paso la politica de SELECT sobre `proyectos` que les habia dado la 00080.
+ * - Entra medico, pero **no ve todos los proyectos**: la 00141 amplia la politica de SELECT con
+ *   los proyectos de las jornadas en las que participa. Esta funcion no puede expresar ese
+ *   filtro -no sabe de que jornadas se trata-, y no le hace falta: decide si se dibuja la
+ *   pantalla, y las filas las elige la base.
+ *
+ * El voluntario general se queda fuera: la issue solo nombra al medico.
  */
 export function puedeVerProyectos(rol) {
-  return esAdministrador(rol) || esConsultivo(rol);
+  return esAdministrador(rol) || rol === ROLES.MEDICO;
+}
+
+/**
+ * Puede ver los insumos y los gastos de un proyecto.
+ *
+ * Solo administrador (issue #864). El medico ve el proyecto de su jornada -que es, en que
+ * estado esta, sus hitos- pero no lo que costo: `gastos` sigue sin politica de lectura para el
+ * fuera de las jornadas en las que participa (00052), y los insumos son informacion de
+ * planificacion que no le corresponde.
+ */
+export function puedeVerInsumosYGastosDeProyecto(rol) {
+  return esAdministrador(rol);
 }
 
 /**
@@ -59,5 +77,6 @@ export function permisosDeProyectos(rol) {
     puedeEditar: administra,
     puedeCambiarEstado: administra,
     puedeAsociarJornadas: administra,
+    puedeVerInsumosYGastos: puedeVerInsumosYGastosDeProyecto(rol),
   };
 }

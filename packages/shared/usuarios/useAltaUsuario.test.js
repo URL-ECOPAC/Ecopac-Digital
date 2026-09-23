@@ -7,7 +7,7 @@
 import { describe, expect, it } from "vitest";
 
 import { CAMPOS_ALTA_USUARIO, CAMPOS_USUARIO } from "./campos.js";
-import { avisoDeCorreoNoEnviado, complementoDeAlta } from "./useAltaUsuario.js";
+import { avisoDeAlta, avisoDeCorreoNoEnviado, complementoDeAlta } from "./useAltaUsuario.js";
 
 describe("avisoDeCorreoNoEnviado", () => {
   it("avisa cuando la funcion dice que el correo no salio", () => {
@@ -72,5 +72,51 @@ describe("complementoDeAlta", () => {
   it("sin nada que completar devuelve un objeto vacio", () => {
     expect(complementoDeAlta({ nombres: "Persona" })).toEqual({});
     expect(complementoDeAlta(undefined)).toEqual({});
+  });
+});
+
+// ISSUE #864: la pantalla solo hablaba cuando algo fallaba. Como la cuenta nace sin contrasena,
+// "todo bien" y "fallo el correo" se veian igual: el modal se cerraba y ya.
+describe("avisoDeAlta", () => {
+  it("confirma la invitacion, diciendo a que correo salio", () => {
+    const aviso = avisoDeAlta({ email: "nueva@ecopac.test", correoEnviado: true });
+
+    expect(aviso.tono).toBe("exito");
+    expect(aviso.mensaje).toContain("nueva@ecopac.test");
+    expect(aviso.mensaje).toContain("elegir su contrasena");
+  });
+
+  it("dice ademas que hasta entonces no puede entrar, que es lo que se pregunta despues", () => {
+    const aviso = avisoDeAlta({ email: "nueva@ecopac.test" });
+
+    expect(aviso.tono).toBe("exito");
+    expect(aviso.mensaje).toContain("no puede iniciar sesion");
+  });
+
+  it("si el correo no salio, gana la advertencia", () => {
+    const aviso = avisoDeAlta({ email: "nueva@ecopac.test", correoEnviado: false });
+
+    expect(aviso.tono).toBe("advertencia");
+    expect(aviso.mensaje).toContain("no se pudo enviar el correo");
+  });
+
+  it("si ademas fallo el complemento, los dos problemas van juntos", () => {
+    const aviso = avisoDeAlta(
+      { email: "nueva@ecopac.test", correoEnviado: false },
+      "No se guardaron la fecha de ingreso.",
+    );
+
+    expect(aviso.tono).toBe("advertencia");
+    expect(aviso.mensaje).toContain("no se pudo enviar el correo");
+    expect(aviso.mensaje).toContain("No se guardaron la fecha de ingreso.");
+  });
+
+  it("un fallo solo del complemento tampoco se anuncia como exito", () => {
+    const aviso = avisoDeAlta(
+      { email: "nueva@ecopac.test", correoEnviado: true },
+      "No se guardaron la fecha de ingreso.",
+    );
+
+    expect(aviso.tono).toBe("advertencia");
   });
 });

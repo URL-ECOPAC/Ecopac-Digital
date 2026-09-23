@@ -1,9 +1,9 @@
-import { useEffect, useRef, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { useEffect, useRef } from "react";
+import { StyleSheet, Text, View } from "react-native";
 import { colors, radii, spacing, typography } from "@ecopac/ui-tokens";
 import { useNuevaContrasena } from "@ecopac/shared";
 
-import { Card, PrimaryButton, ScreenContainer, TextField } from "../components";
+import { Card, PasswordField, PrimaryButton, ScreenContainer } from "../components";
 
 /**
  * Pantalla que muestra App.js mientras `estaEnRecuperacion` es verdadero (issue #644): llega
@@ -25,7 +25,6 @@ export default function NuevaContrasenaScreen({ alTerminar }) {
   } = useNuevaContrasena();
 
   const campoConfirmar = useRef(null);
-  const [verContrasena, setVerContrasena] = useState(false);
 
   useEffect(() => {
     if (exito) {
@@ -47,20 +46,16 @@ export default function NuevaContrasenaScreen({ alTerminar }) {
           </View>
         ) : null}
 
-        <View style={styles.encabezadoContrasena}>
-          <Text style={styles.labelContrasena}>Nueva contraseña</Text>
-          <Pressable onPress={() => setVerContrasena((valor) => !valor)} hitSlop={8}>
-            <Text style={styles.toggleContrasena}>{verContrasena ? "Ocultar" : "Mostrar"}</Text>
-          </Pressable>
-        </View>
-        <TextField
+        {/* ISSUE #864. Un estado de visibilidad POR CAMPO. Antes los dos compartian
+            `verContrasena`, asi que no se podia ver solo la confirmacion para comprobar donde
+            estaba la diferencia, que es justo lo que hace falta cuando el formulario dice que
+            las dos no coinciden. Mismo arreglo que en la web. */}
+        <PasswordField
+          label="Nueva contraseña"
           value={contrasena}
           onChangeText={setContrasena}
           error={erroresDeCampo?.contrasena}
           editable={!enviando}
-          secureTextEntry={!verContrasena}
-          autoCapitalize="none"
-          autoCorrect={false}
           textContentType="newPassword"
           autoComplete="password-new"
           returnKeyType="next"
@@ -68,16 +63,13 @@ export default function NuevaContrasenaScreen({ alTerminar }) {
           blurOnSubmit={false}
         />
 
-        <TextField
+        <PasswordField
           ref={campoConfirmar}
           label="Confirmar contraseña"
           value={confirmarContrasena}
           onChangeText={setConfirmarContrasena}
           error={erroresDeCampo?.confirmarContrasena}
           editable={!enviando}
-          secureTextEntry={!verContrasena}
-          autoCapitalize="none"
-          autoCorrect={false}
           textContentType="newPassword"
           autoComplete="password-new"
           returnKeyType="done"
@@ -135,24 +127,6 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.sm,
     color: colors.danger,
     textAlign: "center",
-  },
-  encabezadoContrasena: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: spacing.xs,
-  },
-  labelContrasena: {
-    fontFamily: typography.fontFamilyBase,
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.medium,
-    color: colors.text,
-  },
-  toggleContrasena: {
-    fontFamily: typography.fontFamilyBase,
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.semibold,
-    color: colors.primary,
   },
   boton: {
     marginTop: spacing.md,

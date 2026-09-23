@@ -58,6 +58,9 @@ function clienteFalso(
   opciones: { errorDeLimite?: { code: string; message: string } } = {},
 ) {
   const llamadasRpc: string[] = [];
+  // Issue #864: a donde manda el correo de "elige tu contrasena". Se guarda para poder
+  // comprobarlo, que es justo lo que no se estaba comprobando cuando el enlace caia en la raiz.
+  const destinosDeCorreo: (string | undefined)[] = [];
 
   function crearClienteFalso() {
     return {
@@ -67,7 +70,13 @@ function clienteFalso(
             data: { user: { id: "00000000-0000-0000-0000-000000000001" } },
             error: null,
           }),
-        resetPasswordForEmail: () => Promise.resolve({ error: null }),
+        resetPasswordForEmail: (
+          _correo: string,
+          opcionesDeCorreo?: { redirectTo?: string },
+        ) => {
+          destinosDeCorreo.push(opcionesDeCorreo?.redirectTo);
+          return Promise.resolve({ error: null });
+        },
       },
       from: () => ({
         select: () => ({
@@ -92,6 +101,8 @@ function clienteFalso(
 
   // deno-lint-ignore no-explicit-any
   (crearClienteFalso as any).llamadasRpc = llamadasRpc;
+  // deno-lint-ignore no-explicit-any
+  (crearClienteFalso as any).destinosDeCorreo = destinosDeCorreo;
   return crearClienteFalso;
 }
 
@@ -161,4 +172,54 @@ Deno.test("una peticion normal sigue funcionando cuando el limite no se supero",
   const llamadas = (fabrica as any).llamadasRpc as string[];
   assertEquals(llamadas.includes("fn_verificar_limite_invitaciones"), true);
   assertEquals(llamadas.includes("fn_crear_usuario_administrativo"), true);
+});
+
+// ISSUE #864, punto 5. El correo de invitacion llegaba, pero su enlace mandaba a la RAIZ de la
+// aplicacion: se enviaba sin `redirectTo` y ganaba el Site URL de Supabase Auth. Comprobado de
+// punta a punta en local antes del arreglo: la persona invitada abria el enlace y aterrizaba en
+// la pantalla de inicio, con sesion y sin contrasena, sin nada que la llevara a ponerse una.
+Deno.test("el correo de invitacion lleva a /nueva-contrasena cuando WEB_URL esta puesta", async () => {
+  Deno.env.set("WEB_URL", "http://localhost:5173");
+  // Sin SMTP: se usa el camino de respaldo (resetPasswordForEmail), que es el que registra
+  // `destinosDeCorreo`. El camino con SMTP -- correo propio via generateLink -- se prueba en
+  // _shared/correo_test.ts, que es donde vive el texto.
+  Deno.env.delete("SMTP_HOST");
+  const crearCliente = clienteFalso({ rol: "administrador", activo: true });
+
+  const res = await manejarSolicitud(solicitud(), { crearCliente });
+
+  assertEquals(res.status, 200);
+  // deno-lint-ignore no-explicit-any
+  const destinos = (crearCliente as any).destinosDeCorreo as (string | undefined)[];
+  assertEquals(destinos.length, 1);
+  assertEquals(destinos[0], "http://localhost:5173/nueva-contrasena?origen=invitacion");
+});
+
+// Una barra de mas al final de WEB_URL no tiene que producir "//nueva-contrasena": ese destino
+// no coincidiria con el que se registre en Redirect URLs y Supabase lo ignoraria, volviendo en
+// silencio al Site URL -- es decir, al defecto de arriba otra vez.
+Deno.test("WEB_URL con barra final no duplica la barra del destino", async () => {
+  Deno.env.set("WEB_URL", "http://localhost:5173/");
+  Deno.env.delete("SMTP_HOST");
+  const crearCliente = clienteFalso({ rol: "administrador", activo: true });
+
+  await manejarSolicitud(solicitud(), { crearCliente });
+
+  // deno-lint-ignore no-explicit-any
+  const destinos = (crearCliente as any).destinosDeCorreo as (string | undefined)[];
+  assertEquals(destinos[0], "http://localhost:5173/nueva-contrasena?origen=invitacion");
+});
+
+// Sin WEB_URL se vuelve al comportamiento anterior en vez de romper el alta: el correo sale
+// igual y gana el Site URL. Un despliegue sin esa variable no deja de invitar.
+Deno.test("sin WEB_URL el correo sale igual, sin redirectTo", async () => {
+  Deno.env.delete("WEB_URL");
+  const crearCliente = clienteFalso({ rol: "administrador", activo: true });
+
+  const res = await manejarSolicitud(solicitud(), { crearCliente });
+
+  assertEquals(res.status, 200);
+  // deno-lint-ignore no-explicit-any
+  const destinos = (crearCliente as any).destinosDeCorreo as (string | undefined)[];
+  assertEquals(destinos[0], undefined);
 });
