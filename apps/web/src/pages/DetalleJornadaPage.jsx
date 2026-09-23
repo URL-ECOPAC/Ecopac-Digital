@@ -39,48 +39,37 @@ import ModalJornada from "./ModalJornada";
 import NotFoundPage from "./NotFoundPage";
 import OrigenesDePresupuesto from "./OrigenesDePresupuesto";
 
-// Detalle de una jornada (issue #181): sus datos, el personal asignado, los pacientes
-// atendidos con su diagnostico principal y el historial de cambios de estado. Todo lo que se
-// dibuja aca sale de useDetalleJornada() (packages/shared/jornadas/); esta pantalla solo
-// arma las pestañas y traduce los datos ya resueltos a lo que DataList/Card saben pintar.
-//
-// Ruta propia, no modal (PLAN.md, decision del 2026-08-28): a diferencia de ModalJornada.jsx
-// (un formulario), esto es una pantalla con cuatro secciones, historial y una lista de
-// pacientes -- meterla en un modal habria significado anidar el futuro formulario de #182
-// (asignar personal) DENTRO de este modal, fragil con react-bootstrap. Una URL por jornada
-// ademas es util de verdad para un equipo que se pasa un enlace. La ruta vive en App.jsx con
-// el mismo guard de roles que ya protege /jornadas; no se toco navegacion.js (una ruta puede
-// existir sin entrada en MODULOS, como ya hace /perfil).
-//
-// Pestaña "Cierre" (issue #183, excepcion de alcance autorizada: pestaña nueva, mismo
-// tratamiento que "Equipo" de #185): unica dueña de la transicion en curso -> finalizada. El
-// boton "Avanzar" de la pestaña "Resumen" (mas abajo) NO llama a cambiarEstado() para ese
-// destino -- cambia pestaniaActiva a "cierre" en su lugar. Sirve para el resumen previo (criterios
-// 1-3, con useResumenCierreJornada()) y para consultarlo despues (criterio 5): es la misma
-// pestaña, no dos -- lo que cambia es si se ofrece el boton "Confirmar cierre" (solo con la
-// jornada en curso y permiso), no el contenido que se calcula.
 const PESTANIAS = [
   { id: "resumen", label: "Resumen" },
   { id: "equipo", label: "Equipo" },
   { id: "pacientes", label: "Pacientes atendidos" },
   { id: "historial", label: "Historial" },
-  // Issue #840: de donde viene el presupuesto de la jornada.
   { id: "presupuesto", label: "Presupuesto" },
   { id: "cierre", label: "Cierre" },
 ];
 
-/** Etiquetas de COLUMNAS_JORNADA, igual que JornadasPage.jsx, para no repetir texto suelto. */
+/** Etiquetas de COLUMNAS_JORNADA */
 const ETIQUETAS = Object.fromEntries(
   COLUMNAS_JORNADA.map((columna) => [columna.id, columna.label]),
 );
 
-/** Nombre completo de un perfil embebido ({ nombres, apellidos }), o `null` si no llego. */
+/** Convierte cadenas de texto a formato con Mayúscula Inicial (Title Case) */
+function capitalizar(texto) {
+  if (!texto) return "—";
+  return texto
+    .toString()
+    .split(" ")
+    .map((palabra) => palabra.charAt(0).toUpperCase() + palabra.slice(1).toLowerCase())
+    .join(" ");
+}
+
+/** Nombre completo de un perfil embebido ({ nombres, apellidos }), o `null` si no llegó */
 function nombreDePerfil(perfil) {
   const nombre = [perfil?.nombres, perfil?.apellidos].filter(Boolean).join(" ").trim();
   return nombre || null;
 }
 
-/** Los indicadores del dia de la jornada, en el orden en que se muestran. */
+/** Los indicadores del día de la jornada */
 const INDICADORES_DEL_DIA = [
   { clave: "pacientesAtendidos", etiqueta: "Pacientes atendidos" },
   { clave: "consultasRealizadas", etiqueta: "Consultas realizadas" },
@@ -88,14 +77,14 @@ const INDICADORES_DEL_DIA = [
   { clave: "medicamentosUtilizados", etiqueta: "Medicamentos utilizados" },
 ];
 
-/** Los que resume la pestaña de cierre (resumenCierre.js), con sus propias etiquetas. */
+/** Los indicadores resumidos en la pestaña de cierre */
 const INDICADORES_DEL_CIERRE = [
   { clave: "pacientesAtendidos", etiqueta: "Pacientes atendidos" },
   { clave: "consultasRealizadas", etiqueta: "Consultas registradas" },
   { clave: "tratamientosEntregados", etiqueta: "Medicamentos entregados" },
 ];
 
-/** Un dato de la ficha: rotulo sobre valor, con guion cuando falta. */
+/** Componente auxiliar para datos de ficha */
 function Dato({ etiqueta, valor, mono = false }) {
   const vacio = valor === null || valor === undefined || valor === "";
   return (
@@ -110,6 +99,7 @@ export default function DetalleJornadaPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { rol } = useSesionCompartida();
+
   const {
     jornada,
     historial,
@@ -128,20 +118,12 @@ export default function DetalleJornadaPage() {
 
   const permisosPresupuesto = permisosDeOrigenDePresupuesto(rol);
 
-  // Issue #185: advertencias de horario del cuadro de turnos (choque de dia completo de #182 +
-  // traslape real de horas, las dos conviven). Se llama incondicionalmente, antes de los early
-  // return de mas abajo, porque `jornada` todavia puede ser null en el primer render (reglas de
-  // hooks) -- el propio hook ya sabe esperar a que llegue jornadaFecha.
   const { advertencias, asignacionesDelDia, errorAdvertencias } = useCuadroTurnos({
     jornadaId: id,
     jornadaFecha: jornada?.fecha,
     personal: jornada?.personal,
   });
 
-  // Issue #183: resumen y confirmacion de la pestaña "Cierre". `onCerrada: recargar` es lo que
-  // hace que, al confirmar, esta pantalla vuelva a leer la jornada (useDetalleJornada.recargar) y
-  // se refleje el nuevo estado ("finalizada") en el resto de la pantalla -- mismo patron que
-  // onGuardado/onAsignado ya usan con recargarPersonal() en la pestaña Equipo.
   const {
     resumen: resumenCierre,
     cargando: cargandoResumenCierre,
@@ -152,20 +134,9 @@ export default function DetalleJornadaPage() {
   } = useResumenCierreJornada({ jornada, rol, onCerrada: recargar });
 
   const [pestaniaActiva, setPestaniaActiva] = useState("resumen");
-  // Issue #182: modal de buscar/asignar, gateado por permisos.puedeEditar mas abajo (espejo de
-  // la politica RLS de INSERT de jornada_personal, 00039:71-73, ver useAsignacionPersonal.js).
   const [mostrarAsignar, setMostrarAsignar] = useState(false);
-  // Issue #185: click en una fila abre la edicion de horario/responsabilidad; Desasignar (#182,
-  // 00044:24-26) vive ahora adentro de ese modal (ModalEdicionTurno.jsx), no en la fila.
   const [filaEnEdicion, setFilaEnEdicion] = useState(null);
-  // Issue #185, criterio 4: version imprimible, montada en un portal fuera de esta pantalla
-  // mientras `aImprimir` es true (CuadroTurnosImprimible.jsx). Mismo patron que
-  // PestaniaRecetasPaciente.jsx (#131): requestAnimationFrame para esperar al primer pintado del
-  // portal antes de llamar a window.print(), y "afterprint" para desmontarlo despues.
   const [aImprimir, setAImprimir] = useState(false);
-  // Issue #838: editar la jornada desde su propia pantalla. Hasta ahora el unico acceso al
-  // formulario era el boton "Editar" de la tarjeta del tablero, asi que desde el detalle habia
-  // que volver a /jornadas y buscarla otra vez.
   const [editandoJornada, setEditandoJornada] = useState(false);
 
   useEffect(() => {
@@ -181,8 +152,6 @@ export default function DetalleJornadaPage() {
     };
   }, [aImprimir]);
 
-  // Primera carga (o al navegar a otro id): todavia no hay nada que mostrar en el encabezado
-  // (el titulo sale de jornada.nombre), asi que la pantalla completa es un spinner.
   if (cargando && !jornada) {
     return (
       <ScreenContainer>
@@ -191,8 +160,6 @@ export default function DetalleJornadaPage() {
     );
   }
 
-  // Mismo caso, pero la primera carga fallo (red, servidor): sin jornada todavia no hay
-  // encabezado que pintar.
   if (error && !jornada) {
     return (
       <ScreenContainer>
@@ -205,12 +172,6 @@ export default function DetalleJornadaPage() {
     );
   }
 
-  // jornada llega en null sin error cuando la fila no existe o cuando RLS no la deja ver
-  // (obtenerJornada(), jornadas/api.js:220-222): son casos distintos para la base de datos
-  // pero el mismo para quien mira la pantalla, y confirmarle a alguien sin permiso que la fila
-  // SI existe (solo que no la puede ver) seria filtrar mas de lo que ya filtra el 404 comun.
-  // NotFoundPage ya dice exactamente eso ("no existe, no esta disponible o no tienes permisos
-  // para verla"), asi que se reusa tal cual en vez de escribir un mensaje nuevo.
   if (!jornada) {
     return <NotFoundPage />;
   }
@@ -221,35 +182,27 @@ export default function DetalleJornadaPage() {
     (esReapertura ? permisos.puedeReabrir : permisos.puedeEditar) && Boolean(destino);
 
   const pestaniasVisibles = PESTANIAS.filter((pestania) => {
-    // Ocultar, no mostrar vacio (PLAN.md seccion 4 / decision del 2026-08-28): quien no puede
-    // ver datos clinicos o el historial de estados nunca llega a pedirlos (useDetalleJornada.js
-    // ya no los trae para ese rol), asi que la pestaña tampoco se ofrece.
     if (pestania.id === "pacientes") return permisos.puedeVerDatosClinicos;
     if (pestania.id === "historial") return permisos.puedeVerHistorial;
     if (pestania.id === "presupuesto") return permisosPresupuesto.puedeVer;
     return true;
   });
 
-  // perfilId viaja ademas de lo que pinta COLUMNAS_PERSONAL_JORNADA: lo necesita
-  // ModalConfirmarDesasignacion (issue #182, ahora anidado en ModalEdicionTurno.jsx de #185) para
-  // llamar a desasignarPersonal(jornadaId, perfilId) -- fila.id es el id de la fila de
-  // jornada_personal, no el del perfil, y desasignarPersonal() pide el segundo.
   const puedeVerEquipoCompleto = puedeVerRosterCompleto(rol);
   const conteoPorRol = contarPersonalPorRol(jornada.personal);
+
+  // Mapeo del personal aplicando capitalización al rol en la jornada
   const filasPersonal = (jornada.personal ?? []).map((fila) => ({
     id: fila.id,
     perfilId: fila.perfilId,
     perfil: nombreDePerfil(fila.perfil) ?? "—",
-    rolEnJornada: fila.rolEnJornada,
+    rolEnJornada: capitalizar(fila.rolEnJornada),
     horaInicio: fila.horaInicio,
     horaFin: fila.horaFin,
     responsabilidad: fila.responsabilidad,
     asistio: fila.asistio,
   }));
 
-  // Issue #185, criterio 3: filas con alguna advertencia de horario activa (choque de dia
-  // completo y/o traslape real), para las alertas debajo del boton de asignar. `advertencias` ya
-  // viene indexado por perfilId (useCuadroTurnos.js).
   const filasConAdvertencia = filasPersonal.filter((fila) => {
     const advertencia = advertencias[fila.perfilId];
     return Boolean(advertencia?.choque || advertencia?.traslape);
@@ -261,10 +214,11 @@ export default function DetalleJornadaPage() {
     diagnosticoPrincipal: fila.diagnosticoPrincipal?.nombre ?? null,
   }));
 
+  // Mapeo del historial aplicando capitalización a los estados
   const filasHistorial = historial.map((fila) => ({
     id: fila.id,
-    estadoAnterior: fila.estadoAnterior,
-    estadoNuevo: fila.estadoNuevo,
+    estadoAnterior: capitalizar(fila.estadoAnterior),
+    estadoNuevo: capitalizar(fila.estadoNuevo),
     cambiadoPor: nombreDePerfil(fila.cambiadoPor) ?? "Sistema",
     cuando: formatearFechaConHora(fila.createdAt),
   }));
@@ -292,11 +246,6 @@ export default function DetalleJornadaPage() {
         </div>
       )}
 
-      {/* Una recarga posterior a la primera (por ejemplo, la que dispara cambiarEstado() al
-          terminar) vuelve a poner cargando en true sin borrar la jornada ya conocida
-          (useDetalleJornada.js): el encabezado de arriba no parpadea, solo el contenido de la
-          pestaña activa se reemplaza por el mismo LoadingState/ErrorState que ya usa
-          JornadasPage.jsx para el tablero. */}
       {cargando ? (
         <LoadingState />
       ) : error ? (
@@ -306,16 +255,7 @@ export default function DetalleJornadaPage() {
           {pestaniaActiva === "resumen" && (
             <Card>
               <div className="d-flex justify-content-between align-items-start gap-2 mb-3">
-                <StatusChip status={jornada.estado} />
-                {/* Cambiar estado: "Atras" (reapertura) sigue llamando a cambiarEstado()
-                  directamente, sin cambios. "Avanzar", cuando el destino es 'finalizada' (issue
-                  #183), YA NO llama a cambiarEstado(): cambia a la pestaña "Cierre", que es la
-                  unica dueña de esa transicion (resumen completo + confirmacion explicita, ver
-                  el comentario de PESTANIAS). Antes (issue #171) este boton finalizaba
-                  directamente, con un aviso aislado de atenciones incompletas.
-                  `disabled={moviendo}` evita un segundo click mientras la llamada esta en curso;
-                  por eso este control vive aca y no en PageHeader, cuyo contrato de `actions`
-                  (label/onClick/variant) no tiene forma de deshabilitar un boton. */}
+                <StatusChip status={capitalizar(jornada.estado)} />
                 {puedeMover && esReapertura && (
                   <SecondaryButton
                     title="← Atrás"
@@ -323,14 +263,6 @@ export default function DetalleJornadaPage() {
                     disabled={moviendo}
                   />
                 )}
-                {/* ISSUE #838: "Avanzar →" hacia 'finalizada' no avanzaba nada, solo cambiaba
-                    a la pestaña "Cierre" -- una pestaña que ya esta en la barra de arriba, a un
-                    click de distancia. Un boton primario que promete avanzar y lo unico que hace
-                    es moverte de pestaña, encima a la que cierra la jornada, asusta mas de lo que
-                    ayuda. Se quita. Las transiciones que SI cambian el estado se conservan, con
-                    el nombre de lo que hacen ("Iniciar jornada") en vez de un "Avanzar" generico.
-                    En su lugar va "Editar jornada", que es lo que de verdad hace falta desde el
-                    resumen y hasta ahora solo existia en la tarjeta del tablero. */}
                 <div className="d-flex gap-2">
                   {permisos.puedeEditar && (
                     <SecondaryButton
@@ -348,9 +280,7 @@ export default function DetalleJornadaPage() {
                   )}
                 </div>
               </div>
-              {/* Issue #840 (H1): el mismo lenguaje que el resto de las fichas -rotulo en
-                  versalitas sobre el valor, en una rejilla que cae a una columna en pantallas
-                  estrechas- en vez de una lista de definicion de Bootstrap a dos columnas fijas. */}
+
               <dl className="ec-ficha-datos">
                 <Dato etiqueta={ETIQUETAS.codigo} valor={jornada.codigo} mono />
                 <Dato
@@ -359,8 +289,6 @@ export default function DetalleJornadaPage() {
                 />
                 <Dato etiqueta={ETIQUETAS.cupoEstimado} valor={jornada.cupoEstimado} />
                 <Dato etiqueta={ETIQUETAS.botiquinBodega} valor={jornada.botiquinBodega?.nombre} />
-                {/* Cuando la jornada arranco y cerro de verdad. El guion es deliberado: una
-                    jornada planificada todavia no tiene inicio real, y tiene que notarse. */}
                 <Dato
                   etiqueta={ETIQUETAS.fechaInicioReal}
                   valor={jornada.fechaInicioReal && formatearFechaConHora(jornada.fechaInicioReal)}
@@ -369,8 +297,6 @@ export default function DetalleJornadaPage() {
                   etiqueta={ETIQUETAS.fechaFinReal}
                   valor={jornada.fechaFinReal && formatearFechaConHora(jornada.fechaFinReal)}
                 />
-                {/* El total no se edita aqui desde la #840: es la suma de los aportes de la
-                    pestaña Presupuesto, y la base rechaza escribirlo a mano (00135). */}
                 <div>
                   <dt className="ec-rotulo">Presupuesto asignado</dt>
                   <dd className="mb-0 d-flex flex-wrap align-items-center gap-2">
@@ -388,12 +314,6 @@ export default function DetalleJornadaPage() {
             </Card>
           )}
 
-          {/* Indicadores del dia (criterio 1): vienen de vista_reporte_impacto (00027), via
-              obtenerJornada(). `contadores` llega null cuando RLS no le da SELECT sobre esa vista
-              a este rol (medico y voluntario, 00064) -- ver useDetalleJornada.js. Un guion en vez
-              de 0 evita afirmar una atencion nula que no se puede confirmar. Desde la #840 son
-              StatCard, como los indicadores de donaciones y presupuesto, y no numeros sueltos
-              dentro de la tarjeta de datos. */}
           {pestaniaActiva === "resumen" && (
             <div className="ec-kpis mt-3">
               {INDICADORES_DEL_DIA.map(({ clave, etiqueta }) => (
@@ -409,45 +329,26 @@ export default function DetalleJornadaPage() {
 
           {pestaniaActiva === "equipo" && (
             <>
-              {/* Asignar personal (issue #182). El gate es permisos.puedeEditar
-                (puedeAdministrarJornadas(rol), jornadas/permisos.js), espejo exacto de las
-                politicas de INSERT y UPDATE de jornada_personal (00039:71-78): las dos exigen
-                unicamente es_administrador(), sin la excepcion de permiso fino que si tiene la
-                tabla jornadas. Guardar/desasignar llama a recargarPersonal(), no a recargar():
-                relee solo jornada_personal, sin releer historial ni contadores. */}
               <div className="d-flex justify-content-between align-items-start gap-2 mb-3">
-                {/* Conteo por rol (criterio 5): jornada.personal ya viene filtrado por la politica
-                  de SELECT de jornada_personal (00039:63-69) antes de llegar aca -- administrador
-                  y junta directiva ven todas las filas, cualquier otro rol solo la suya, sin
-                  error. Un conteo sobre una lista parcial se veria identico a uno completo, asi
-                  que puedeVerRosterCompleto() (jornadas/permisos.js) decide cual de los dos
-                  se muestra; nunca un numero sin marca de que puede estar incompleto. */}
                 {puedeVerEquipoCompleto ? (
                   <div className="d-flex flex-wrap gap-2">
                     {conteoPorRol.length === 0 ? (
-                      <span className="text-muted small">Todavia no hay personal asignado.</span>
+                      <span className="text-muted small">Todavía no hay personal asignado.</span>
                     ) : (
                       conteoPorRol.map((fila) => (
                         <span key={fila.rol} className="badge text-bg-light border">
-                          {fila.etiqueta}: {fila.cantidad}
+                          {capitalizar(fila.etiqueta)}: {fila.cantidad}
                         </span>
                       ))
                     )}
                   </div>
                 ) : (
                   <span className="text-muted small">
-                    Esta vista solo muestra tu propia asignacion, si tienes una: el conteo por rol
-                    no esta disponible para tu rol.
+                    Esta vista solo muestra tu propia asignación.
                   </span>
                 )}
 
                 <div className="d-flex gap-2">
-                  {/* Imprimir (issue #185, criterio 4) se gatea por puedeVerRosterCompleto(rol),
-                    no por permisos.puedeEditar: es una accion de lectura, y solo tiene sentido
-                    para quien ve el cuadro COMPLETO. Un medico o voluntario que solo ve su propia
-                    fila (RLS de jornada_personal, 00039:63-69) no ve este boton -- imprimir un
-                    cuadro de una sola fila y pegarlo como si fuera el completo seria peor que no
-                    ofrecer el boton. */}
                   {puedeVerEquipoCompleto && (
                     <SecondaryButton title="Imprimir" onClick={() => setAImprimir(true)} />
                   )}
@@ -460,14 +361,9 @@ export default function DetalleJornadaPage() {
                 </div>
               </div>
 
-              {/* Advertencias de horario (issue #185, criterio 3): el choque de dia completo de
-                #182 y el traslape real de horas de esta issue conviven como señales
-                independientes -- ver useCuadroTurnos.js. alert-danger para el traslape porque es
-                la señal mas fuerte. */}
               {errorAdvertencias && (
                 <div className="alert alert-warning" role="alert">
-                  No se pudo comprobar si hay traslapes de horario con otras jornadas. Revisa
-                  manualmente antes de confiar en que no hay ninguno.
+                  No se pudo comprobar si hay traslapes de horario con otras jornadas.
                 </div>
               )}
               {!errorAdvertencias &&
@@ -488,7 +384,7 @@ export default function DetalleJornadaPage() {
               <DataList
                 columnas={COLUMNAS_PERSONAL_JORNADA}
                 datos={filasPersonal}
-                vacio="Todavia no hay personal asignado a esta jornada."
+                vacio="Todavía no hay personal asignado a esta jornada."
                 onRowPress={permisos.puedeEditar ? (fila) => setFilaEnEdicion(fila) : undefined}
               />
             </>
@@ -498,7 +394,7 @@ export default function DetalleJornadaPage() {
             <DataList
               columnas={COLUMNAS_PACIENTES_ATENDIDOS_JORNADA}
               datos={filasPacientes}
-              vacio="Todavia no hay pacientes atendidos en esta jornada."
+              vacio="Todavía no hay pacientes atendidos en esta jornada."
             />
           )}
 
@@ -506,7 +402,7 @@ export default function DetalleJornadaPage() {
             <DataList
               columnas={COLUMNAS_HISTORIAL_JORNADA}
               datos={filasHistorial}
-              vacio="Esta jornada todavia no tiene cambios de estado registrados."
+              vacio="Esta jornada todavía no tiene cambios de estado registrados."
             />
           )}
 
@@ -519,23 +415,6 @@ export default function DetalleJornadaPage() {
             />
           )}
 
-          {/* Pestaña "Cierre" (issue #183). Misma pestaña antes y despues de finalizar
-              (criterio 5): lo unico que cambia es si mas abajo se ofrece "Confirmar cierre"
-              (jornada en curso + permiso), no el contenido -- ver el comentario de PESTANIAS mas
-              arriba. Los indicadores NO salen de vista_reporte_impacto (a diferencia de la
-              pestaña "Resumen"): salen de useResumenCierreJornada(), que reusa las mismas
-              funciones que el panel de la jornada en curso movil (issue #187) -- ver
-              resumenCierre.js.
-
-              Visible para los 5 roles (igual que "Resumen"), no solo administrador: quien puede
-              tocar "Confirmar cierre" es unicamente permisos.puedeEditar (administrador), pero
-              cualquiera que vea el detalle de la jornada puede consultar el resumen. pacientesAtendidos
-              y atencionesIncompletas pueden llegar en `null` para junta directiva/socio fundador (sin
-              SELECT sobre atenciones/consultas, 00033): se pintan como guion o como un aviso aparte,
-              NUNCA como 0 -- un 0 ahi diria "todo completo" cuando en realidad es "no se pudo saber",
-              justo lo que esta pantalla existe para evitar (ver resumenCierre.js). Como
-              administrador siempre tiene esas dos tablas visibles, quien de verdad puede confirmar el
-              cierre nunca ve un guion. */}
           {pestaniaActiva === "cierre" && (
             <Card>
               {cargandoResumenCierre ? (
@@ -547,36 +426,31 @@ export default function DetalleJornadaPage() {
                       <StatCard
                         key={clave}
                         label={etiqueta}
-                        value={resumenCierre.indicadores[clave] ?? "—"}
+                        value={resumenCierre.indicadores?.[clave] ?? "—"}
                         accent="var(--accent-jornadas)"
                       />
                     ))}
                   </div>
 
-                  {/* Advertencias (criterio 2): informan, nunca deshabilitan "Confirmar cierre"
-                      (criterio 8 -- se advierte, no se impide, mismo criterio que el excedente de
-                      presupuesto en #303). `atencionesIncompletas` en null (rol sin acceso a datos
-                      clinicos) se avisa aparte, con un mensaje distinto: no es lo mismo "no hay
-                      atenciones sin consulta" que "no pude verificarlo". */}
                   {resumenCierre.atencionesIncompletas === null && (
                     <div className="alert alert-secondary" role="alert">
                       No se pudo comprobar si hay atenciones sin consulta: tu rol no tiene acceso a
-                      esa informacion clinica.
+                      esa información clínica.
                     </div>
                   )}
                   {resumenCierre.atencionesIncompletas !== null &&
                     resumenCierre.atencionesIncompletas > 0 && (
                       <div className="alert alert-warning" role="alert">
                         {resumenCierre.atencionesIncompletas === 1
-                          ? "Hay 1 atencion registrada sin consulta todavia."
-                          : `Hay ${resumenCierre.atencionesIncompletas} atenciones registradas sin consulta todavia.`}
+                          ? "Hay 1 atención registrada sin consulta todavía."
+                          : `Hay ${resumenCierre.atencionesIncompletas} atenciones registradas sin consulta todavía.`}
                       </div>
                     )}
                   {resumenCierre.movimientosPendientes > 0 && (
                     <div className="alert alert-warning" role="alert">
                       {resumenCierre.movimientosPendientes === 1
-                        ? "Hay 1 movimiento de inventario del botiquin de esta jornada pendiente de validar."
-                        : `Hay ${resumenCierre.movimientosPendientes} movimientos de inventario del botiquin de esta jornada pendientes de validar.`}
+                        ? "Hay 1 movimiento de inventario del botiquín de esta jornada pendiente de validar."
+                        : `Hay ${resumenCierre.movimientosPendientes} movimientos de inventario del botiquín de esta jornada pendientes de validar.`}
                     </div>
                   )}
                   {!hayAdvertenciasDeCierre &&
@@ -593,10 +467,6 @@ export default function DetalleJornadaPage() {
                     </div>
                   )}
 
-                  {/* Confirmar cierre (criterio 3): solo con la jornada en curso y el mismo
-                      permiso que ya gatea "Avanzar" en la pestaña "Resumen" (permisos.puedeEditar,
-                      espejo de puedeAdministrarJornadas()). Finalizada, esta pestaña se queda solo
-                      con los numeros de arriba (criterio 5). */}
                   {jornada.estado === ESTADOS_JORNADA.EN_CURSO && permisos.puedeEditar && (
                     <div className="d-flex justify-content-end mt-3">
                       <PrimaryButton
@@ -613,8 +483,6 @@ export default function DetalleJornadaPage() {
         </Tabs>
       )}
 
-      {/* Issue #182. onAsignado llama a recargarPersonal() (useDetalleJornada.js), no a
-          recargar(): ver el comentario de la pestaña Equipo mas arriba. */}
       <ModalAsignarPersonal
         visible={mostrarAsignar}
         jornadaId={id}
@@ -624,10 +492,6 @@ export default function DetalleJornadaPage() {
         onAsignado={recargarPersonal}
       />
 
-      {/* Issue #185. key={filaEnEdicion.id}: useEdicionTurno() precarga sus valores desde `fila`
-          una sola vez (mismo criterio que useEdicionUsuario.js, #107), asi que cada fila que se
-          edite necesita una instancia nueva del componente. onGuardado/onDesasignado llaman a
-          recargarPersonal(), igual que el modal de alta. */}
       {filaEnEdicion && (
         <ModalEdicionTurno
           key={filaEnEdicion.id}
@@ -646,8 +510,6 @@ export default function DetalleJornadaPage() {
         />
       )}
 
-      {/* Issue #838: el mismo formulario del tablero, montado aqui. onGuardado recarga la
-          jornada entera -- no solo el personal -- porque lo que cambia son sus datos. */}
       {editandoJornada && (
         <ModalJornada
           visible
