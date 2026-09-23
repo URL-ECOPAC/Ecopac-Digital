@@ -108,12 +108,12 @@ function aColumnasDeTabla(valores = {}) {
   for (const [campo, columna] of Object.entries(MAPA_COLUMNAS_DEL_TRIAJE)) {
     if (!Object.prototype.hasOwnProperty.call(valores, campo)) continue;
     let valor = valores[campo];
-    
+
     //  Convertir peso de libras → kilogramos antes de guardar
     if (campo === "peso") {
       valor = librasAKg(valor);
     }
-    
+
     fila[columna] = valor === "" || valor === undefined ? null : valor;
   }
   return fila;

@@ -181,6 +181,6 @@ export default function RecetaImprimible({ receta, paciente }) {
         </footer>
       </article>
     </>,
-    document.body
+    document.body,
   );
 }

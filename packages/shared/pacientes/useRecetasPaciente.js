@@ -48,7 +48,7 @@ export function useRecetasPaciente(pacienteId, { rol } = {}) {
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
   const permitido = puedeVerHistorial(rol);
-  
+
   const cargar = useCallback(async () => {
     if (!pacienteId || !permitido) {
       setRecetas([]);
@@ -62,11 +62,11 @@ export function useRecetasPaciente(pacienteId, { rol } = {}) {
     setError(respuesta.error);
     setCargando(false);
   }, [pacienteId, permitido]);
-  
+
   useEffect(() => {
     cargar();
   }, [cargar]);
-  
+
   return {
     recetas,
     conteo: contarRecetas(recetas),

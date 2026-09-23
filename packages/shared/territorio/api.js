@@ -120,25 +120,25 @@ export async function listarComunidades({ municipioId } = {}) {
       .from("comunidades")
       .select(COLUMNAS_COMUNIDAD)
       .order("nombre", { ascending: true });
-    
+
     if (municipioId) {
       consulta = consulta.eq("municipio_id", municipioId);
     }
-    
+
     const { data, error } = await consulta;
-    
+
     if (error) {
       return { comunidades: [], error: normalizarError(error) };
     }
-    
+
     // FILTRO SOLO AQUÍ en JavaScript
     const todas = data ?? [];
-    
+
     const soloVigentes = todas.filter((c) => {
       console.log(`→ ${c.nombre} | esVigente=${c.esVigente}`);
       return c.esVigente !== false;
     });
-    
+
     return { comunidades: soloVigentes, error: null };
   } catch (error) {
     return { comunidades: [], error: normalizarError(error) };

@@ -47,8 +47,7 @@ export function usePacientesCronicos({ rol } = {}) {
     listarComunidades().then((respuesta) => {
       if (!vigente) return;
       setComunidades(
-        (respuesta.comunidades ?? [])
-          .map((fila) => ({ value: fila.id, label: fila.nombre }))
+        (respuesta.comunidades ?? []).map((fila) => ({ value: fila.id, label: fila.nombre })),
       );
     });
 
@@ -58,7 +57,9 @@ export function usePacientesCronicos({ rol } = {}) {
       setCondicionesCronicas(filas.map((f) => ({ value: f.id, label: f.nombre })));
     });
 
-    return () => { vigente = false; };
+    return () => {
+      vigente = false;
+    };
   }, []);
 
   const setFiltro = useCallback((id, valor) => {
