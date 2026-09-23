@@ -14,9 +14,7 @@ import {
   ESTADOS_MOVIMIENTO,
   ETIQUETAS_ESTADO_ALERTA,
   ETIQUETAS_ESTADO_MOVIMIENTO,
-  ETIQUETAS_PRESENTACION,
   ETIQUETAS_TIPO_MOVIMIENTO,
-  PRESENTACIONES_DE_MEDICAMENTO,
   TIPOS_DE_MOVIMIENTO,
   opcionesDe,
 } from "../enums.js";
@@ -30,6 +28,16 @@ export const FILTROS_PRINCIPIOS_ACTIVOS = [
   },
 ];
 
+/** Mismo patron que FILTROS_PRINCIPIOS_ACTIVOS (presentaciones, 00144). */
+export const FILTROS_PRESENTACIONES = [
+  {
+    id: "busqueda",
+    tipo: TIPOS_DE_FILTRO.BUSQUEDA,
+    label: "Buscar presentación",
+    placeholder: "Nombre de la presentación",
+  },
+];
+
 export const FILTROS_MEDICAMENTOS = [
   {
     id: "busqueda",
@@ -37,11 +45,12 @@ export const FILTROS_MEDICAMENTOS = [
     label: "Buscar medicamento",
     placeholder: "Nombre, marca, concentración o principio activo",
   },
+  // presentacion_id (00144): ya no es un enum fijo -- opcionesDesde carga el catalogo real.
   {
-    id: "presentacion",
+    id: "presentacionId",
     tipo: TIPOS_DE_FILTRO.SELECT,
     label: "Presentación",
-    opciones: opcionesDe(PRESENTACIONES_DE_MEDICAMENTO, ETIQUETAS_PRESENTACION),
+    opcionesDesde: "presentaciones",
   },
   // Valores como texto ('true'/'false'), igual que el resto de filtros SELECT del modulo: el
   // hook de pantalla los convierte al tipo real antes de llamar listarMedicamentos({ esPediatrico }).

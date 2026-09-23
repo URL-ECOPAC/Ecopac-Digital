@@ -46,28 +46,30 @@ describe("calcularDiasRestantes", () => {
 });
 
 describe("datosAtenderAlerta", () => {
-  it("arma los argumentos de atenderAlerta con la accion, el rol y la bodega destino", () => {
-    const resultado = datosAtenderAlerta("reubicado", { rolUsuario: "administrador" }, "bodega-1");
+  // PLAN.md punto 5 (00143): datosAtenderAlerta ahora traduce una LISTA de acciones, no una
+  // sola, mas el total que esa lista tiene que sumar.
+  it("arma los argumentos de atenderAlerta con las acciones, el rol y el total disponible", () => {
+    const acciones = [{ accion: "reubicado", cantidad: 10, bodegaDestinoId: "bodega-1" }];
+    const resultado = datosAtenderAlerta(acciones, { rolUsuario: "administrador" }, 10);
 
     expect(resultado).toEqual({
-      accion: "reubicado",
+      acciones,
       rolUsuario: "administrador",
-      bodegaDestinoId: "bodega-1",
+      totalDisponible: 10,
     });
   });
 
   // Issue #755: quien atiende lo fija la base con auth.uid(); un usuarioId del cliente ya no viaja.
   it("no manda usuarioId aunque la sesion lo traiga", () => {
-    const resultado = datosAtenderAlerta("descartado", {
+    const resultado = datosAtenderAlerta([{ accion: "descartado", cantidad: 5 }], {
       usuarioId: "user-1",
       rolUsuario: "administrador",
     });
 
     expect(resultado).not.toHaveProperty("usuarioId");
-    expect(resultado.bodegaDestinoId).toBeUndefined();
   });
 
   it("no inventa un rolUsuario si la sesion no lo trae", () => {
-    expect(datosAtenderAlerta("descartado", {}).rolUsuario).toBeUndefined();
+    expect(datosAtenderAlerta([{ accion: "descartado", cantidad: 5 }], {}).rolUsuario).toBeUndefined();
   });
 });

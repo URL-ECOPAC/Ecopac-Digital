@@ -245,7 +245,7 @@ const COLUMNAS_LOTES_POR_VENCER = [
   "numero_lote",
   "fecha_vencimiento",
   "medicamento_id",
-  "medicamentos!inner(nombre, concentracion, presentacion)",
+  "medicamentos!inner(nombre, concentracion, presentacion:presentaciones(nombre))",
   "existencias(cantidad_disponible, bodega_id, bodega:bodegas(nombre))",
 ].join(", ");
 
@@ -311,7 +311,8 @@ export async function listarLotesPorVencer({ horizonteDias, bodega, hoy = new Da
           numero_lote: fila.numero_lote,
           medicamento: fila.medicamentos?.nombre || "—",
           concentracion: fila.medicamentos?.concentracion || "",
-          presentacion: fila.medicamentos?.presentacion || "",
+          // presentacion:presentaciones(nombre) en el select llega anidado (00144).
+          presentacion: fila.medicamentos?.presentacion?.nombre || "",
           fecha_vencimiento: fila.fecha_vencimiento,
           vencimiento: fila.fecha_vencimiento,
           dias_restantes: diasHastaVencimiento(fila.fecha_vencimiento, inicio) ?? 0,

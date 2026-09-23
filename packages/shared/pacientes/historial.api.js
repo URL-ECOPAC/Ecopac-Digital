@@ -49,7 +49,7 @@ const COLUMNAS_DEL_HISTORIAL = [
     "recetas(id, folio, estado, createdAt:created_at,",
     "detalle:receta_detalle(cantidadEntregada:cantidad_entregada, cantidadAjustada:cantidad_ajustada,",
     "ajustadaEn:ajustada_en, ajustadaPorPerfil:perfiles(nombres, apellidos), dosis, frecuencia, duracion,",
-    "medicamento:medicamentos(nombre, concentracion, presentacion)))",
+    "medicamento:medicamentos(nombre, concentracion, presentacion:presentaciones(nombre))))",
     ")",
   ].join(" "),
 ].join(", ");
@@ -151,7 +151,9 @@ export function aEventos(atencion) {
         medicamentos: (receta.detalle ?? []).map((renglon) => ({
           medicamento: renglon.medicamento?.nombre ?? null,
           concentracion: renglon.medicamento?.concentracion ?? null,
-          presentacion: renglon.medicamento?.presentacion ?? null,
+          // presentacion:presentaciones(nombre) en el select llega anidado (00144): el embed de
+          // PostgREST nunca se aplana solo.
+          presentacion: renglon.medicamento?.presentacion?.nombre ?? null,
           cantidadEntregada: renglon.cantidadEntregada,
           cantidadAjustada: renglon.cantidadAjustada ?? null,
           ajustadaEn: renglon.ajustadaEn ?? null,

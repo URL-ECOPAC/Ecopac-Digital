@@ -25,28 +25,32 @@ import { TIPOS_DE_CAMPO } from "../descriptores.js";
 import { camposDeEdicion } from "../formularios.js";
 import {
   ACCIONES_DE_ALERTA,
+  ESTADOS_MOVIMIENTO,
   ETIQUETAS_ACCION_ALERTA,
+  ETIQUETAS_ESTADO_MOVIMIENTO,
   ETIQUETAS_ORIGEN_LOTE,
-  ETIQUETAS_PRESENTACION,
+  ETIQUETAS_TIPO_ARTICULO,
   ETIQUETAS_TIPO_MOVIMIENTO,
   ETIQUETAS_TIPO_PROVEEDOR,
   ORIGENES_DE_LOTE,
-  PRESENTACIONES_DE_MEDICAMENTO,
+  TIPOS_DE_ARTICULO,
   TIPOS_DE_MOVIMIENTO,
   TIPOS_DE_PROVEEDOR,
   opcionesDe,
 } from "../enums.js";
 
-export const OPCIONES_PRESENTACION = opcionesDe(
-  PRESENTACIONES_DE_MEDICAMENTO,
-  ETIQUETAS_PRESENTACION,
-);
+export const OPCIONES_TIPO_ARTICULO = opcionesDe(TIPOS_DE_ARTICULO, ETIQUETAS_TIPO_ARTICULO);
 
 export const OPCIONES_TIPO_PROVEEDOR = opcionesDe(TIPOS_DE_PROVEEDOR, ETIQUETAS_TIPO_PROVEEDOR);
 
 export const OPCIONES_ORIGEN_LOTE = opcionesDe(ORIGENES_DE_LOTE, ETIQUETAS_ORIGEN_LOTE);
 
 export const OPCIONES_TIPO_MOVIMIENTO = opcionesDe(TIPOS_DE_MOVIMIENTO, ETIQUETAS_TIPO_MOVIMIENTO);
+
+// Para columnas.js (COLUMNAS_MIS_MOVIMIENTOS.estado): mismo patron que OPCIONES_TIPO_MOVIMIENTO,
+// para que un chip de estado traduzca su etiqueta a Title Case en vez de mostrar el valor crudo
+// del enum (issue de consistencia de presentacion, PLAN.md punto 8).
+export const OPCIONES_ESTADO_MOVIMIENTO = opcionesDe(ESTADOS_MOVIMIENTO, ETIQUETAS_ESTADO_MOVIMIENTO);
 
 export const OPCIONES_ACCION_ALERTA = opcionesDe(ACCIONES_DE_ALERTA, ETIQUETAS_ACCION_ALERTA);
 
@@ -56,6 +60,19 @@ export const OPCIONES_ACCION_ALERTA = opcionesDe(ACCIONES_DE_ALERTA, ETIQUETAS_A
  * (columna generada de 00046) para la unicidad y la busqueda sin acentos.
  */
 export const CAMPOS_PRINCIPIO_ACTIVO = [
+  {
+    id: "nombre",
+    label: "Nombre",
+    tipo: TIPOS_DE_CAMPO.TEXTO,
+    validacion: { requerido: true, maxLongitud: 100 },
+  },
+];
+
+/**
+ * Alta y edicion de una presentacion del catalogo (presentaciones, 00144). Mismo patron que
+ * CAMPOS_PRINCIPIO_ACTIVO: un solo campo de texto libre, sin codigo ni slug.
+ */
+export const CAMPOS_PRESENTACION = [
   {
     id: "nombre",
     label: "Nombre",
@@ -77,17 +94,29 @@ export const CAMPOS_MEDICAMENTO = [
     tipo: TIPOS_DE_CAMPO.TEXTO,
     validacion: { requerido: true, maxLongitud: 150 },
   },
+  // tipo_articulo (00142): default 'medicamento' en la base, pero el formulario si lo pide
+  // explicito -- una persona registrando un insumo (gasas, jeringas...) no deberia depender de
+  // acordarse de cambiarlo despues de creado.
+  {
+    id: "tipoArticulo",
+    label: "Tipo de artículo",
+    tipo: TIPOS_DE_CAMPO.SELECT,
+    opciones: OPCIONES_TIPO_ARTICULO,
+    validacion: { requerido: true },
+  },
   {
     id: "concentracion",
     label: "Concentración",
     tipo: TIPOS_DE_CAMPO.TEXTO,
     validacion: { requerido: true, maxLongitud: 100 },
   },
+  // presentacion_id (00144): ya no es un enum fijo -- opcionesDesde carga el catalogo real,
+  // mismo patron que principiosActivos.
   {
-    id: "presentacion",
+    id: "presentacionId",
     label: "Presentación",
     tipo: TIPOS_DE_CAMPO.SELECT,
-    opciones: OPCIONES_PRESENTACION,
+    opcionesDesde: "presentaciones",
     validacion: { requerido: true },
   },
   {

@@ -1,8 +1,11 @@
+import { useEffect, useMemo, useState } from "react";
 import { Table } from "react-bootstrap";
 import {
   ESTADO_MOVIMIENTO,
+  ETIQUETAS_ESTADO_MOVIMIENTO,
   exportarFilasACSV,
   formatearFechaConHora,
+  listarLotes,
   TIPO_MOVIMIENTO,
   TIPOS_DE_PRESENTACION,
   useKardexMovimientos,
@@ -24,12 +27,6 @@ import StatusChip from "../components/StatusChip";
 const ETIQUETAS_TIPO = {
   [TIPO_MOVIMIENTO.INGRESO]: "Ingreso",
   [TIPO_MOVIMIENTO.SALIDA]: "Salida",
-};
-
-const ETIQUETAS_ESTADO = {
-  [ESTADO_MOVIMIENTO.APROBADO]: "Aprobado",
-  [ESTADO_MOVIMIENTO.RECHAZADO]: "Rechazado",
-  [ESTADO_MOVIMIENTO.PENDIENTE]: "Pendiente",
 };
 
 const OPCIONES_TIPO = [
@@ -86,8 +83,51 @@ export default function KardexMovimientosPage({
   medicamentoId = null,
   titulo = "Historial de Movimientos",
 }) {
+  // Uso embebido (un padre ya sabe que lote o medicamento mostrar, ej. una futura pantalla de
+  // detalle de lote): se respeta el id que llega por prop y no se ofrece selector propio -- ese
+  // caso no cambia. Uso general (pestana "Kardex" de InventarioPage, sin props): sin id,
+  // useKardexMovimientos nunca llamaba a listarMovimientos() y la pestana quedaba siempre vacia
+  // sin ninguna forma de elegir un lote desde la pantalla.
+  const usaSeleccionPropia = loteId === null && medicamentoId === null;
+
+  const [loteSeleccionadoId, setLoteSeleccionadoId] = useState(null);
+  const [lotes, setLotes] = useState([]);
+  const [cargandoLotes, setCargandoLotes] = useState(false);
+  const [errorLotes, setErrorLotes] = useState(null);
+
+  useEffect(() => {
+    if (!usaSeleccionPropia) return;
+
+    let vigente = true;
+    setCargandoLotes(true);
+    listarLotes().then(({ lotes: datos, error: errorDeListado }) => {
+      if (!vigente) return;
+      setLotes(datos ?? []);
+      setErrorLotes(errorDeListado);
+      setCargandoLotes(false);
+    });
+    return () => {
+      vigente = false;
+    };
+  }, [usaSeleccionPropia]);
+
+  // Mismo criterio de etiqueta que valoresDeCorreccionDeMovimiento() (useMisMovimientos.js):
+  // "Medicamento · Lote NNN".
+  const opcionesDeLote = useMemo(
+    () =>
+      [...lotes]
+        .sort((a, b) => (a.medicamento ?? "").localeCompare(b.medicamento ?? ""))
+        .map((lote) => ({
+          value: lote.id,
+          label: [lote.medicamento, lote.numeroLote && `Lote ${lote.numeroLote}`]
+            .filter(Boolean)
+            .join(" · "),
+        })),
+    [lotes],
+  );
+
   const { movimientos, cargando, error, filtros, setFiltros } = useKardexMovimientos({
-    loteId,
+    loteId: usaSeleccionPropia ? loteSeleccionadoId : loteId,
     medicamentoId,
   });
 
@@ -119,6 +159,20 @@ export default function KardexMovimientosPage({
       />
 
       <div className="ec-filtros">
+        {usaSeleccionPropia && (
+          <div className="ec-filtro">
+            <Selector
+              label="Lote"
+              value={loteSeleccionadoId}
+              options={opcionesDeLote}
+              onSelect={setLoteSeleccionadoId}
+              placeholder={cargandoLotes ? "Cargando lotes..." : "Selecciona un lote"}
+              disabled={cargandoLotes}
+              error={errorLotes ? "No se pudo cargar la lista de lotes." : undefined}
+              style={{ marginBottom: 0 }}
+            />
+          </div>
+        )}
         <fieldset className="ec-filtro ec-filtro--rango">
           <legend className="form-label">Fecha</legend>
           <div className="ec-rango-doble">
@@ -214,7 +268,7 @@ export default function KardexMovimientosPage({
                   <td>
                     <StatusChip
                       status={mov.estado}
-                      label={ETIQUETAS_ESTADO[mov.estado] ?? mov.estado}
+                      label={ETIQUETAS_ESTADO_MOVIMIENTO[mov.estado] ?? mov.estado}
                     />
                     {mov.estado === ESTADO_MOVIMIENTO.RECHAZADO && mov.motivo_rechazo && (
                       <span className="d-block small text-body-secondary mt-1">

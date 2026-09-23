@@ -226,14 +226,20 @@ ON CONFLICT (id) DO NOTHING;
 -- ============================================================================
 -- 6. Medicamentos y principios activos
 -- ============================================================================
-INSERT INTO medicamentos (id, nombre, concentracion, presentacion, marca, forma_farmaceutica, es_pediatrico) VALUES
-  ('de000007-0000-0000-0000-000000000001', 'Acetaminofen', '500 mg', 'tableta', 'Generico', NULL, FALSE),
-  ('de000007-0000-0000-0000-000000000002', 'Ibuprofeno', '400 mg', 'tableta', 'Generico', NULL, FALSE),
-  ('de000007-0000-0000-0000-000000000003', 'Amoxicilina', '250 mg/5 ml', 'jarabe', 'Generico', 'suspension', TRUE),
-  ('de000007-0000-0000-0000-000000000004', 'Loratadina', '10 mg', 'tableta', 'Generico', NULL, FALSE),
-  ('de000007-0000-0000-0000-000000000005', 'Omeprazol', '20 mg', 'capsula', 'Generico', NULL, FALSE),
-  ('de000007-0000-0000-0000-000000000006', 'Hidrocortisona', '1%', 'pomada', 'Generico', NULL, FALSE),
-  ('de000007-0000-0000-0000-000000000007', 'Ciprofloxacino', '0.3%', 'gotas ophthalmic', 'Generico', NULL, FALSE)
+-- presentacion_id (00144): sale de un lookup contra el catalogo por su etiqueta en espanol, no
+-- del slug viejo del enum -- presentacion_medicamento ya no existe.
+INSERT INTO medicamentos (id, nombre, concentracion, presentacion_id, marca, forma_farmaceutica, es_pediatrico)
+SELECT v.id, v.nombre, v.concentracion, p.id, v.marca, v.forma_farmaceutica, v.es_pediatrico
+FROM (VALUES
+  ('de000007-0000-0000-0000-000000000001'::uuid, 'Acetaminofen', '500 mg', 'Tableta', 'Generico', NULL::VARCHAR, FALSE),
+  ('de000007-0000-0000-0000-000000000002'::uuid, 'Ibuprofeno', '400 mg', 'Tableta', 'Generico', NULL, FALSE),
+  ('de000007-0000-0000-0000-000000000003'::uuid, 'Amoxicilina', '250 mg/5 ml', 'Jarabe', 'Generico', 'suspension', TRUE),
+  ('de000007-0000-0000-0000-000000000004'::uuid, 'Loratadina', '10 mg', 'Tableta', 'Generico', NULL, FALSE),
+  ('de000007-0000-0000-0000-000000000005'::uuid, 'Omeprazol', '20 mg', 'Cápsula', 'Generico', NULL, FALSE),
+  ('de000007-0000-0000-0000-000000000006'::uuid, 'Hidrocortisona', '1%', 'Pomada', 'Generico', NULL, FALSE),
+  ('de000007-0000-0000-0000-000000000007'::uuid, 'Ciprofloxacino', '0.3%', 'Gotas oftálmicas', 'Generico', NULL, FALSE)
+) AS v(id, nombre, concentracion, presentacion_nombre, marca, forma_farmaceutica, es_pediatrico)
+JOIN presentaciones p ON p.nombre = v.presentacion_nombre
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO principios_activos (id, nombre) VALUES

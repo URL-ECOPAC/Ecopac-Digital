@@ -59,6 +59,7 @@ function pantalla(props = {}) {
 
 describe("ModalSalidaMedicamento", () => {
   afterEach(() => {
+    mockEstadoHook.medicamentoId = "";
     mockEstadoHook.lotesDisponibles = [];
     mockEstadoHook.loteSeleccionado = null;
     mockEstadoHook.error = null;
@@ -87,12 +88,69 @@ describe("ModalSalidaMedicamento", () => {
     expect(screen.getByText(/Lote: LOTE-1/)).toBeInTheDocument();
   });
 
+  // Issue #859: vista_lotes_disponibles (00047) excluye un lote sin existencias (ingreso todavia
+  // pendiente de aprobacion, 00107), vencido, o agotado; sin este aviso la lista salia vacia sin
+  // decir por que, igual que antes de elegir medicamento.
+  it("con un medicamento elegido y sin lotes, explica por que puede estar vacio", () => {
+    mockEstadoHook.medicamentoId = "med-1";
+    mockEstadoHook.lotesDisponibles = [];
+    pantalla();
+
+    expect(
+      screen.getByText(/no tiene lotes disponibles para salida/),
+    ).toBeInTheDocument();
+  });
+
+  it("sin medicamento elegido todavia, no muestra el aviso de lotes vacios", () => {
+    pantalla();
+
+    expect(screen.queryByText(/no tiene lotes disponibles para salida/)).not.toBeInTheDocument();
+  });
+
+  it("mientras carga los lotes, no muestra el aviso de lotes vacios", () => {
+    mockEstadoHook.medicamentoId = "med-1";
+    mockEstadoHook.lotesDisponibles = [];
+    mockEstadoHook.cargando = true;
+    pantalla();
+
+    expect(screen.queryByText(/no tiene lotes disponibles para salida/)).not.toBeInTheDocument();
+  });
+
   it("enviar el formulario dispara guardarSalida()", () => {
     const { container } = pantalla();
 
     fireEvent.submit(container.querySelector("form"));
 
     expect(mockEstadoHook.guardarSalida).toHaveBeenCalled();
+  });
+
+  // Issue #859: el modal llamaba useRegistroSalida({ usuarioId, onExito: onClose }) directo, asi
+  // que una salida exitosa solo cerraba el modal -sin avisarle a InventarioPage que volviera a
+  // pedir lotesRaw/existenciasRaw-. La salida SI descontaba el stock en la base (para
+  // administracion, en el acto; para medico y voluntario, al aprobarse), pero la pantalla seguia
+  // mostrando los numeros de antes de abrir el modal. onExito ahora se encadena: primero el aviso
+  // al padre, despues el cierre.
+  it("al terminar con exito, avisa a onExito (para recargar datos) y despues cierra con onClose", () => {
+    const onExito = vi.fn();
+    const onClose = vi.fn();
+    pantalla({ onExito, onClose });
+
+    const opciones = useRegistroSalida.mock.calls.at(-1)[0];
+    opciones.onExito({ id: "mov-1" });
+
+    expect(onExito).toHaveBeenCalledWith({ id: "mov-1" });
+    expect(onClose).toHaveBeenCalled();
+    expect(onExito.mock.invocationCallOrder[0]).toBeLessThan(onClose.mock.invocationCallOrder[0]);
+  });
+
+  it("sin onExito del padre, terminar con exito igual cierra el modal", () => {
+    const onClose = vi.fn();
+    pantalla({ onClose });
+
+    const opciones = useRegistroSalida.mock.calls.at(-1)[0];
+    expect(() => opciones.onExito({ id: "mov-1" })).not.toThrow();
+
+    expect(onClose).toHaveBeenCalled();
   });
 
   it("mientras carga, Registrar Salida esta deshabilitado y dice Registrando...", () => {

@@ -45,6 +45,14 @@ const SQLSTATE = {
   CHECK_VIOLATION: "23514",
   INSUFFICIENT_PRIVILEGE: "42501",
   CONFIGURATION_LIMIT_EXCEEDED: "53400",
+  // PL/pgSQL propios, usados por RAISE EXCEPTION ... USING ERRCODE en las funciones del
+  // servidor (p.ej. fn_atender_alerta_caducidad, 00138/00143). Sin esta entrada caian en el
+  // "default" de clasificarPostgrest() -> DESCONOCIDO, y una alerta que no se pudo atender por
+  // una razon conocida (la fila ya no existe, o una accion no se pudo completar del todo)
+  // terminaba mostrando el mismo "Ocurrio un error inesperado" que un fallo de verdad
+  // impredecible, sin distincion.
+  NO_DATA_FOUND: "P0002",
+  OBJECT_NOT_IN_PREREQUISITE_STATE: "55000",
 };
 
 /** Codigos propios de PostgREST. */
@@ -213,6 +221,10 @@ function clasificarPostgrest(error) {
       return CODIGOS_DE_ERROR_DE_SUPABASE.SESION_EXPIRADA;
     case POSTGREST.SIN_FILAS:
       return CODIGOS_DE_ERROR_DE_SUPABASE.SIN_RESULTADOS;
+    case SQLSTATE.NO_DATA_FOUND:
+      return CODIGOS_DE_ERROR_DE_SUPABASE.SIN_RESULTADOS;
+    case SQLSTATE.OBJECT_NOT_IN_PREREQUISITE_STATE:
+      return CODIGOS_DE_ERROR_DE_SUPABASE.CHECK;
     default:
       return CODIGOS_DE_ERROR_DE_SUPABASE.DESCONOCIDO;
   }

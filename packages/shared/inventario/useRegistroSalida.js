@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 
 import { consultarLotesDisponibles } from "./existencias.api.js";
 import { registrarSalida } from "./movimientos.api.js";
+import { recargarAlertasMontadas } from "./useAlertasVencimiento.js";
 
 /**
  * Hook del formulario de salida de medicamentos (issue #690).
@@ -117,6 +118,12 @@ export function useRegistroSalida({ usuarioId, onExito } = {}) {
       setError(fallo.mensaje);
       return;
     }
+
+    // No se espera: es un refresco de cortesia para quien tenga el panel de alertas abierto en
+    // otra pestana, no algo de lo que dependa el resto de este flujo. recargarAlertasMontadas()
+    // nunca rechaza -las funciones que consulta ya atrapan su propio error-, asi que no hay nada
+    // que capturar aqui.
+    recargarAlertasMontadas();
 
     if (onExito) onExito(datos);
   };

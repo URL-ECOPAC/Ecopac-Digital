@@ -38,19 +38,21 @@ export function calcularDiasRestantes(fechaVencimiento, fechaIngreso) {
 }
 
 /**
- * Traduce la accion tomada mas la sesion actual a los argumentos que declara atenderAlerta()
+ * Traduce la lista de acciones mas la sesion actual a los argumentos que declara atenderAlerta()
  * (alertas.api.js). Se exporta aparte del hook para poder probar la traduccion sin montar un
  * componente (issue #709): el bug original mandaba { accionTomada } en vez de { accion, ... }.
  *
  * Desde la issue #755 ya no viaja usuarioId: quien atiende lo fija la base con auth.uid()
- * (fn_atender_alerta_caducidad, 00138). Viaja, en cambio, la bodega destino de una reubicacion.
+ * (fn_atender_alerta_caducidad, 00138, extendida por 00143 para aceptar varias acciones a la
+ * vez). `totalDisponible` es lo que las cantidades de `acciones` tienen que sumar exacto -el
+ * disponible vivo del lote, no cantidadAfectada.
  *
- * @param {string} accionTomada
+ * @param {{accion:string, cantidad:number, bodegaDestinoId?:string}[]} acciones
  * @param {{ rolUsuario?: string }} sesion
- * @param {string} [bodegaDestinoId]
+ * @param {number} totalDisponible
  */
-export function datosAtenderAlerta(accionTomada, { rolUsuario }, bodegaDestinoId) {
-  return { accion: accionTomada, rolUsuario, bodegaDestinoId };
+export function datosAtenderAlerta(acciones, { rolUsuario }, totalDisponible) {
+  return { acciones, rolUsuario, totalDisponible };
 }
 
 // Cuantas alertas atendidas muestra el bloque "Atendidas recientemente" del panel web.
@@ -61,6 +63,28 @@ export const LIMITE_DE_ATENDIDAS = 10;
 // InventarioPage- y sin este aviso el contador de la pestana seguia en el numero de antes hasta
 // recargar la pagina. En memoria y sin window, para que valga igual en el movil.
 const instanciasMontadas = new Set();
+
+/**
+ * Vuelve a consultar alertas_caducidad en cada instancia montada de useAlertasVencimiento(),
+ * desde fuera del hook.
+ *
+ * Es RECARGA, no sincronizacion: cada `consultar()` de la lista decide por su cuenta -con el
+ * `rolUsuario` de esa instancia- si ademas llama a sincronizarAlertas(), que es admin-only
+ * (fn_sincronizar_alertas_caducidad rechaza a cualquier otro rol con 42501). Por eso esta
+ * funcion es segura de llamar sin importar el rol de quien registro el movimiento que la
+ * dispara: para una instancia de administracion sincroniza y relista; para cualquier otra,
+ * relista nada mas.
+ *
+ * La usa marcarComoAtendida() de este mismo archivo, y tambien flujos de otros modulos que
+ * cambian existencias fuera de "atender una alerta" -registrar un ingreso o una salida, aprobar
+ * un movimiento pendiente- para que el panel de alertas no dependa de que alguien lo recargue a
+ * mano ni de esperar a la rutina programada del dia siguiente.
+ *
+ * @returns {Promise<unknown[]>}
+ */
+export function recargarAlertasMontadas() {
+  return Promise.all([...instanciasMontadas].map((consultarInstancia) => consultarInstancia()));
+}
 
 /**
  * View model del panel de alertas de vencimiento (issue #268, RF-19), y de la correccion de la
@@ -177,24 +201,20 @@ export function useAlertasVencimiento({ rolUsuario } = {}) {
   );
 
   const marcarComoAtendida = useCallback(
-    async (idAlerta, accionTomada, bodegaDestinoId) => {
-      if (!accionTomada || accionTomada.trim() === "") {
-        throw new Error("Debe indicar la acción tomada");
-      }
-
+    async (idAlerta, acciones, totalDisponible) => {
       const respuesta = await atenderAlerta(
         idAlerta,
-        datosAtenderAlerta(accionTomada, { rolUsuario }, bodegaDestinoId),
+        datosAtenderAlerta(acciones, { rolUsuario }, totalDisponible),
       );
 
       if (respuesta.error) {
         throw new Error(respuesta.error.mensaje);
       }
 
-      await Promise.all([...instanciasMontadas].map((recargarInstancia) => recargarInstancia()));
+      await recargarAlertasMontadas();
       return respuesta;
     },
-    [rolUsuario, consultar],
+    [rolUsuario],
   );
 
   return {

@@ -23,11 +23,17 @@ import {
 
 // Las columnas se enumeran en lugar de pedir "*" para que una columna nueva no empiece a viajar
 // sola hasta el cliente.
+// presentacion_id (00144) es un embed a presentaciones, no una columna propia: PostgREST siempre
+// devuelve un embed anidado ({ nombre: "..." }), nunca aplanado en la fila -- aplanarPresentacion()
+// mas abajo es lo unico que lo desenreda a la forma plana que el resto del catalogo espera
+// (medicamento.presentacion como string).
 const COLUMNAS_DEL_MEDICAMENTO = [
   "id",
   "nombre",
+  "tipoArticulo:tipo_articulo",
   "concentracion",
-  "presentacion",
+  "presentacionId:presentacion_id",
+  "presentacion:presentaciones(nombre)",
   "marca",
   "formaFarmaceutica:forma_farmaceutica",
   "esPediatrico:es_pediatrico",
@@ -56,8 +62,9 @@ function escaparPatron(texto) {
 function aColumnasDeTabla(datos = {}) {
   const mapa = {
     nombre: "nombre",
+    tipoArticulo: "tipo_articulo",
     concentracion: "concentracion",
-    presentacion: "presentacion",
+    presentacionId: "presentacion_id",
     marca: "marca",
     formaFarmaceutica: "forma_farmaceutica",
     esPediatrico: "es_pediatrico",
@@ -72,13 +79,25 @@ function aColumnasDeTabla(datos = {}) {
 }
 
 /**
+ * Aplana el embed de presentacion que trae COLUMNAS_DEL_MEDICAMENTO (presentaciones(nombre)) a
+ * un string plano. PostgREST siempre devuelve un embed anidado, nunca aplanado en la fila -- el
+ * resto del catalogo (catalogoMedicamentos.js, la tabla del Catalogo) espera
+ * medicamento.presentacion como string, igual que antes de la 00144.
+ */
+function aplanarPresentacion(fila) {
+  if (!fila) return fila;
+  return { ...fila, presentacion: fila.presentacion?.nombre ?? null };
+}
+
+/**
  * Traduce una fila de medicamentos en snake_case a las claves camelCase de
  * COLUMNAS_DEL_MEDICAMENTO.
  *
  * fn_registrar_medicamento retorna el tipo completo de la tabla (RETURNS medicamentos, 00050),
- * asi que entrega las columnas tal cual se llaman en Postgres. Las demas funciones de este
- * archivo piden las columnas con alias camelCase; este mapeo deja la fila recien registrada en
- * el mismo idioma que la que devuelven listarMedicamentos() o actualizarMedicamento().
+ * asi que entrega las columnas tal cual se llaman en Postgres, SIN el embed a presentaciones que
+ * si trae un .select(COLUMNAS_DEL_MEDICAMENTO) -- un RPC no hace joins. `presentacion` (el
+ * nombre resuelto) queda null aqui a proposito: quien llama a registrarMedicamento() siempre
+ * recarga la lista completa despues (InventarioPage.jsx), que es donde ese nombre si llega.
  */
 function aMedicamento(fila) {
   if (!fila) return null;
@@ -86,8 +105,10 @@ function aMedicamento(fila) {
   return {
     id: fila.id,
     nombre: fila.nombre,
+    tipoArticulo: fila.tipo_articulo,
     concentracion: fila.concentracion,
-    presentacion: fila.presentacion,
+    presentacionId: fila.presentacion_id,
+    presentacion: null,
     marca: fila.marca,
     formaFarmaceutica: fila.forma_farmaceutica,
     esPediatrico: fila.es_pediatrico,
@@ -103,11 +124,11 @@ function aMedicamento(fila) {
  * Se construye desde cero cada vez que hace falta (nunca se reutiliza un query builder ya
  * encadenado): los de supabase-js no estan pensados para bifurcarse despues de armados.
  */
-function consultaDeMedicamentos({ presentacion, esPediatrico, soloActivos = true } = {}) {
+function consultaDeMedicamentos({ presentacionId, esPediatrico, soloActivos = true } = {}) {
   let consulta = obtenerSupabase().from("medicamentos").select(COLUMNAS_DEL_MEDICAMENTO);
 
   if (soloActivos) consulta = consulta.eq("activo", true);
-  if (presentacion) consulta = consulta.eq("presentacion", presentacion);
+  if (presentacionId) consulta = consulta.eq("presentacion_id", presentacionId);
   if (typeof esPediatrico === "boolean") consulta = consulta.eq("es_pediatrico", esPediatrico);
 
   return consulta;
@@ -154,17 +175,17 @@ async function idsPorPrincipioActivo(texto) {
  * por defecto: el catalogo no muestra medicamentos desactivados salvo que se pida lo contrario
  * explicitamente.
  *
- * @param {{ busqueda?: string, presentacion?: string, esPediatrico?: boolean, soloActivos?: boolean }} [filtros]
+ * @param {{ busqueda?: string, presentacionId?: string, esPediatrico?: boolean, soloActivos?: boolean }} [filtros]
  * @returns {Promise<{ medicamentos: object[], error: object|null }>}
  */
 export async function listarMedicamentos({
   busqueda,
-  presentacion,
+  presentacionId,
   esPediatrico,
   soloActivos = true,
 } = {}) {
   try {
-    const filtros = { presentacion, esPediatrico, soloActivos };
+    const filtros = { presentacionId, esPediatrico, soloActivos };
     const texto = typeof busqueda === "string" ? escaparPatron(quitarAcentos(busqueda)) : "";
 
     if (texto === "") {
@@ -172,7 +193,7 @@ export async function listarMedicamentos({
         ascending: true,
       });
       if (error) return { medicamentos: [], error: normalizarError(error) };
-      return { medicamentos: data ?? [], error: null };
+      return { medicamentos: (data ?? []).map(aplanarPresentacion), error: null };
     }
 
     const [porTexto, idsDePrincipio] = await Promise.all([
@@ -199,7 +220,9 @@ export async function listarMedicamentos({
     }
 
     return {
-      medicamentos: [...combinados.values()].sort((a, b) => a.nombre.localeCompare(b.nombre)),
+      medicamentos: [...combinados.values()]
+        .map(aplanarPresentacion)
+        .sort((a, b) => a.nombre.localeCompare(b.nombre)),
       error: null,
     };
   } catch (error) {
@@ -242,11 +265,12 @@ export async function registrarMedicamento(datos = {}) {
       .rpc("fn_registrar_medicamento", {
         p_nombre: datos.nombre,
         p_concentracion: datos.concentracion,
-        p_presentacion: datos.presentacion,
+        p_presentacion_id: datos.presentacionId,
         p_marca: datos.marca,
         p_principios_ids: principiosActivosIds,
         p_forma_farmaceutica: datos.formaFarmaceutica ?? null,
         p_es_pediatrico: datos.esPediatrico ?? false,
+        p_tipo_articulo: datos.tipoArticulo ?? "medicamento",
       })
       .single();
 
@@ -308,7 +332,7 @@ export async function actualizarMedicamento(id, datos) {
       .maybeSingle();
 
     if (error) return { medicamento: null, error: normalizarError(error) };
-    return { medicamento: data ?? null, error: null };
+    return { medicamento: aplanarPresentacion(data), error: null };
   } catch (error) {
     return { medicamento: null, error: normalizarError(error) };
   }
@@ -357,7 +381,7 @@ export async function desactivarMedicamento(id) {
       .maybeSingle();
 
     if (error) return { medicamento: null, error: normalizarError(error) };
-    return { medicamento: data ?? null, error: null };
+    return { medicamento: aplanarPresentacion(data), error: null };
   } catch (error) {
     return { medicamento: null, error: normalizarError(error) };
   }
@@ -384,7 +408,7 @@ export async function reactivarMedicamento(id) {
       .maybeSingle();
 
     if (error) return { medicamento: null, error: normalizarError(error) };
-    return { medicamento: data ?? null, error: null };
+    return { medicamento: aplanarPresentacion(data), error: null };
   } catch (error) {
     return { medicamento: null, error: normalizarError(error) };
   }

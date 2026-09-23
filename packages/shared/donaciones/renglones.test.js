@@ -38,7 +38,9 @@ describe("opcionDeMedicamento", () => {
         id: "m1",
         nombre: "Paracetamol",
         concentracion: "500 mg",
-        presentacion: "tableta",
+        // Ya viene como la etiqueta resuelta (presentaciones.nombre, 00144), no como un valor
+        // de enum que opcionDeMedicamento() tuviera que traducir.
+        presentacion: "Tableta",
         marca: "Generico",
       }),
     ).toEqual({ value: "m1", label: "Paracetamol 500 mg · Tableta (Generico)" });

@@ -21,9 +21,19 @@ import { validarConDescriptores } from "../validations/index.js";
 import { CAMPOS_MEDICAMENTO } from "./campos.js";
 import { puedeAdministrarMedicamentos } from "./medicamentos.permisos.js";
 import { registrarMedicamento } from "./medicamentos.api.js";
+import { listarPresentaciones } from "./presentaciones.api.js";
 import { listarPrincipiosActivos } from "./principios-activos.api.js";
 
-const IDS_ALTA_EN_LINEA = ["nombre", "concentracion", "presentacion", "marca", "principiosActivos"];
+// presentacionId (00144): sigue el mismo id que CAMPOS_MEDICAMENTO declara -- un id que no
+// coincida con ninguno filtra el campo en silencio, el mismo defecto que AGENTS.md senala para
+// un import que falta (issues #818/#821).
+const IDS_ALTA_EN_LINEA = [
+  "nombre",
+  "concentracion",
+  "presentacionId",
+  "marca",
+  "principiosActivos",
+];
 
 /**
  * Los campos que exige el catalogo, en el orden del alta completa. formaFarmaceutica y
@@ -37,7 +47,7 @@ export const CAMPOS_ALTA_MEDICAMENTO_EN_LINEA = CAMPOS_MEDICAMENTO.filter((campo
 const VALORES_VACIOS = {
   nombre: "",
   concentracion: "",
-  presentacion: "",
+  presentacionId: "",
   marca: "",
   principiosActivos: [],
 };
@@ -63,7 +73,7 @@ function aOpciones(filas = []) {
  *   error: object|null,
  *   creando: boolean,
  *   crear: () => Promise<{ medicamento: object|null, error: object|null }>,
- *   catalogos: { principiosActivos: object[] },
+ *   catalogos: { principiosActivos: object[], presentaciones: object[] },
  * }}
  */
 export function useAltaDeMedicamentoEnLinea({ rol, alCrear } = {}) {
@@ -73,15 +83,20 @@ export function useAltaDeMedicamentoEnLinea({ rol, alCrear } = {}) {
   const [error, setError] = useState(null);
   const [creando, setCreando] = useState(false);
   const [principiosActivos, setPrincipiosActivos] = useState([]);
+  const [presentaciones, setPresentaciones] = useState([]);
 
-  // Los principios activos se piden al abrir, no al montar: la mayoria de las veces el
-  // medicamento ya esta en el catalogo y nadie abre el alta.
+  // Los principios activos y las presentaciones se piden al abrir, no al montar: la mayoria de
+  // las veces el medicamento ya esta en el catalogo y nadie abre el alta.
   const abrir = useCallback(async () => {
     setAbierto(true);
-    if (principiosActivos.length > 0) return;
-    const { principiosActivos: lista } = await listarPrincipiosActivos();
-    setPrincipiosActivos(aOpciones(lista ?? []));
-  }, [principiosActivos.length]);
+    if (principiosActivos.length > 0 && presentaciones.length > 0) return;
+
+    const [{ principiosActivos: listaDePrincipios }, { presentaciones: listaDePresentaciones }] =
+      await Promise.all([listarPrincipiosActivos(), listarPresentaciones()]);
+
+    setPrincipiosActivos(aOpciones(listaDePrincipios ?? []));
+    setPresentaciones(aOpciones(listaDePresentaciones ?? []));
+  }, [principiosActivos.length, presentaciones.length]);
 
   const cerrar = useCallback(() => {
     setAbierto(false);
@@ -110,7 +125,7 @@ export function useAltaDeMedicamentoEnLinea({ rol, alCrear } = {}) {
     const { medicamento, error: fallo } = await registrarMedicamento({
       nombre: valores.nombre.trim(),
       concentracion: valores.concentracion.trim(),
-      presentacion: valores.presentacion,
+      presentacionId: valores.presentacionId,
       marca: valores.marca.trim(),
       principiosActivosIds: valores.principiosActivos,
     });
@@ -139,6 +154,6 @@ export function useAltaDeMedicamentoEnLinea({ rol, alCrear } = {}) {
     error,
     creando,
     crear,
-    catalogos: { principiosActivos },
+    catalogos: { principiosActivos, presentaciones },
   };
 }

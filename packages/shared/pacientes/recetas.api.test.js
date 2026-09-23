@@ -96,7 +96,12 @@ const FILA_RECETA = {
       frecuencia: "cada 8 horas",
       duracion: "7 dias",
       cantidadEntregada: 21,
-      medicamento: { nombre: "Amoxicilina", concentracion: "500 mg", presentacion: "capsula" },
+      // presentacion:presentaciones(nombre) en el select real llega anidada (00144).
+      medicamento: {
+        nombre: "Amoxicilina",
+        concentracion: "500 mg",
+        presentacion: { nombre: "Cápsula" },
+      },
     },
   ],
   createdAt: "2026-06-15T10:00:00Z",

@@ -3,6 +3,7 @@ import { useState } from "react";
 import {
   COLUMNAS_MIS_MOVIMIENTOS,
   FILTROS_MIS_MOVIMIENTOS,
+  OPCIONES_ESTADO_MOVIMIENTO,
   OPCIONES_TIPO_MOVIMIENTO,
   useMisMovimientos,
 } from "@ecopac/shared";
@@ -73,7 +74,10 @@ export default function MisMovimientosPage() {
           columnas={COLUMNAS_MIS_MOVIMIENTOS}
           datos={movimientos}
           cargando={cargando}
-          catalogos={{ tiposMovimiento: OPCIONES_TIPO_MOVIMIENTO }}
+          catalogos={{
+            tiposMovimiento: OPCIONES_TIPO_MOVIMIENTO,
+            estadosMovimiento: OPCIONES_ESTADO_MOVIMIENTO,
+          }}
           onRowPress={(fila) => setModal({ movimiento: fila })}
           vacio="No hay movimientos que coincidan con el filtro."
         />
