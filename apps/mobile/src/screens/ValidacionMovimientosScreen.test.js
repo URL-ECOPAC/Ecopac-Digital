@@ -54,7 +54,21 @@ describe("ValidacionMovimientosScreen", () => {
     expect(screen.getByText("Medicamento Inventado")).toBeTruthy();
     expect(screen.getByText("Lote LOTE-INVENTADO-1 · Bodega Inventada")).toBeTruthy();
     expect(screen.getByText(/Ana Perez/)).toBeTruthy();
-    expect(screen.getByText("40")).toBeTruthy();
+    expect(screen.getByText("Ingreso")).toBeTruthy();
+  });
+
+  // La cantidad lleva el signo y el color del tipo, como en el kardex del detalle de lote:
+  // StatusChip es para estados (statusColors mapea estado_movimiento, no tipo_movimiento), asi
+  // que un chip con "Salida" salia sin color y ademas no decia si suma o resta.
+  it("una salida se ve con signo negativo y un ingreso con positivo", () => {
+    const ingreso = render(<ValidacionMovimientosScreen />);
+    expect(ingreso.getByText(/^\+\s*40$/)).toBeTruthy();
+    ingreso.unmount();
+
+    mockEstado.pendientes = [{ ...MOVIMIENTO, tipo: "salida" }];
+    const salida = render(<ValidacionMovimientosScreen />);
+    expect(salida.getByText(/^-\s*40$/)).toBeTruthy();
+    expect(salida.getByText("Salida")).toBeTruthy();
   });
 
   it("sin nada pendiente lo dice, no deja la pantalla en blanco", () => {

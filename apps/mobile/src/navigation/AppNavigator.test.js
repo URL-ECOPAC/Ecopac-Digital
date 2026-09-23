@@ -65,6 +65,7 @@ jest.mock("../screens/EntregaMedicamentosScreen", () => mockPantalla("entrega-me
 jest.mock("../screens/PacientesCronicosScreen", () => mockPantalla("pacientes-cronicos"));
 jest.mock("../screens/CatalogoCondicionesScreen", () => mockPantalla("catalogo-condiciones"));
 jest.mock("../screens/CatalogoDiagnosticosScreen", () => mockPantalla("catalogo-diagnosticos"));
+jest.mock("../screens/ProyectosScreen", () => mockPantalla("proyectos"));
 jest.mock("../screens/SeleccionJornadaScreen", () => mockPantalla("seleccion-jornada"));
 jest.mock("../screens/JornadaEnCursoScreen", () => mockPantalla("jornada-en-curso"));
 jest.mock("../screens/JornadasAsignadasScreen", () => mockPantalla("jornadas-asignadas"));
@@ -129,6 +130,7 @@ const PANTALLAS = [
     navegador: "Jornadas",
     roles: rolesDelModulo("jornadas"),
   },
+  { routeName: ROUTES.PROYECTOS, navegador: "Jornadas", roles: rolesDelModulo("proyectos") },
   { routeName: ROUTES.STOCK, navegador: "Inventario", roles: rolesDelModulo("inventario") },
   { routeName: ROUTES.REGISTRO_INGRESO, navegador: "Inventario", roles: ROLES_QUE_REGISTRAN },
   {
@@ -192,7 +194,7 @@ describe("AppNavigator: la guarda de rol decide en cada pantalla (issue #820)", 
   // 21: Presupuestos se retiro en la #754 y Triaje en la #840 (los signos son un paso de la
   // consulta, no una pantalla aparte).
   it("todas las pantallas de los cuatro stacks estan en la tabla de esta prueba", () => {
-    expect(PANTALLAS).toHaveLength(24);
+    expect(PANTALLAS).toHaveLength(25);
     expect(PANTALLAS_RESTRINGIDAS.length).toBeGreaterThan(0);
   });
 
