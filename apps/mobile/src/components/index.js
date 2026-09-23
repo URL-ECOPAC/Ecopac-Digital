@@ -9,6 +9,7 @@
 
 export { default as ScreenContainer } from "./ScreenContainer";
 export { default as PageHeader } from "./PageHeader";
+export { default as PasswordField } from "./PasswordField";
 export { default as SectionHeader } from "./SectionHeader";
 
 export { default as TextField } from "./TextField";

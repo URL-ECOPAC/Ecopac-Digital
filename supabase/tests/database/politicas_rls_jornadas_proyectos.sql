@@ -107,18 +107,26 @@ SELECT throws_ok(
 );
 
 -- ============================================================================
--- junta directiva: lectura de jornadas y proyectos, nada mas
+-- junta directiva: ya no lee jornadas ni proyectos, y sigue sin escribir
 -- ============================================================================
+-- ISSUE #864: la 00039 les daba la lectura de las dos tablas y la 00080 la extendio a socio
+-- fundador. La 00141 se la retira a los dos: su unica pantalla pasa a ser Reportes. Las
+-- negativas de escritura no cambian.
 SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000902';
 
-SELECT ok(
-  (SELECT count(*) FROM jornadas) >= 2,
-  'junta directiva puede leer jornadas'
+-- Una fila, no cero, y es la respuesta correcta: mas arriba de esta misma suite la
+-- administradora asigno a este perfil de junta directiva al cuadro de turnos de la jornada B.
+-- Lo que la 00141 retira es la lectura POR SER junta directiva; la rama de participacion sigue
+-- en pie para cualquiera que este en la jornada, sea cual sea su rol. Un consultivo que no esta
+-- en ninguna jornada no lee ninguna, que es el caso que comprueba permisos_por_rol_864.sql.
+SELECT is(
+  (SELECT count(*) FROM jornadas)::int, 1,
+  'junta directiva ya no lee jornadas por su rol: solo aquella en la que esta asignada (issue #864)'
 );
 
-SELECT ok(
-  (SELECT count(*) FROM proyectos) >= 1,
-  'junta directiva puede leer proyectos'
+SELECT is(
+  (SELECT count(*) FROM proyectos)::int, 0,
+  'junta directiva ya no lee proyectos (issue #864)'
 );
 
 SELECT throws_ok(
@@ -148,14 +156,14 @@ SELECT ok(
 -- ============================================================================
 SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000903';
 
-SELECT ok(
-  (SELECT count(*) FROM jornadas) >= 2,
-  'socio fundador lee jornadas, igual que junta directiva'
+SELECT is(
+  (SELECT count(*) FROM jornadas)::int, 0,
+  'socio fundador tampoco lee jornadas, igual que junta directiva (issue #864)'
 );
 
-SELECT ok(
-  (SELECT count(*) FROM proyectos) >= 1,
-  'socio fundador lee proyectos, igual que junta directiva'
+SELECT is(
+  (SELECT count(*) FROM proyectos)::int, 0,
+  'socio fundador tampoco lee proyectos, igual que junta directiva (issue #864)'
 );
 
 SELECT throws_ok(
@@ -213,16 +221,21 @@ SELECT is_empty(
   'medico no puede cambiar el estado de una jornada'
 );
 
--- Solo su propia asignacion: en los fixtures hay 3 filas (medico y voluntario en A,
--- junta en B agregada por admin), pero el medico solo ve la suya.
-SELECT ok(
-  (SELECT count(*) FROM jornada_personal) = 1,
-  'medico solo ve su propia asignacion de personal'
+-- ISSUE #864: antes veia UNA sola fila, la suya. Ahora ve el equipo completo de la jornada en
+-- la que participa -- el criterio 6 pide que vea "el equipo" --, pero solo de esa: en los
+-- fixtures hay 3 filas de jornada_personal y el medico esta en la jornada A, que tiene 2.
+SELECT is(
+  (SELECT count(*) FROM jornada_personal)::int, 2,
+  'medico ve el equipo completo de SU jornada, no el de la otra (issue #864)'
 );
 
-SELECT ok(
-  (SELECT count(*) FROM proyectos) = 0,
-  'medico no lee proyectos'
+-- Los proyectos del fixture no cuelgan de ninguna jornada (jornadas.proyecto_id es NULL), asi
+-- que el medico sigue sin leer ninguno: la rama nueva de la politica de la 00141 exige que el
+-- proyecto sea el de una jornada en la que participa. El caso positivo -- un proyecto que SI
+-- cuelga de su jornada -- vive en permisos_por_rol_864.sql, que arma ese fixture.
+SELECT is(
+  (SELECT count(*) FROM proyectos)::int, 0,
+  'medico no lee un proyecto que no cuelga de ninguna de sus jornadas'
 );
 
 -- ============================================================================

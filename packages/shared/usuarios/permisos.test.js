@@ -37,13 +37,15 @@ describe("permisos de usuarios", () => {
     }
   });
 
-  it("administrador y junta directiva ven el listado; socio fundador NO (perfiles_directorio)", () => {
+  // ISSUE #864: junta directiva leia el listado por la vista perfiles_directorio (00038), y la
+  // #756 le habia abierto la ruta para que esa vista tuviera por donde llegarse. Ahora su unica
+  // pantalla es Reportes, y la 00141 reescribe la vista para que diga lo mismo que esto.
+  it("solo administrador ve el listado de personal (issues #756 y #864)", () => {
     expect(puedeVerListadoUsuarios(ROLES.ADMINISTRADOR)).toBe(true);
-    expect(puedeVerListadoUsuarios(ROLES.JUNTA_DIRECTIVA)).toBe(true);
 
-    expect(puedeVerListadoUsuarios(ROLES.SOCIO_FUNDADOR)).toBe(false);
-    expect(puedeVerListadoUsuarios(ROLES.MEDICO)).toBe(false);
-    expect(puedeVerListadoUsuarios(ROLES.VOLUNTARIO)).toBe(false);
+    for (const rol of NO_ADMIN) {
+      expect(puedeVerListadoUsuarios(rol)).toBe(false);
+    }
   });
 
   it("solo administrador gestiona permisos finos de otra persona (usuario_permiso, 00038)", () => {
@@ -65,15 +67,16 @@ describe("permisos de usuarios", () => {
   });
 
   it("puedeNavegarModuloDelPermiso: un rol fuera de la lista del modulo no llega a la pantalla (issue #638)", () => {
-    // donaciones esta en navegacion.js con roles [administrador, junta directiva, socio
-    // fundador]: medico y voluntario nunca ven ese modulo, sin importar rol_permiso.
+    // Desde la #864, donaciones esta en navegacion.js con roles [administrador] a secas: nadie
+    // mas ve ese modulo, sin importar lo que diga rol_permiso.
     expect(puedeNavegarModuloDelPermiso(ROLES.ADMINISTRADOR, "donaciones")).toBe(true);
-    expect(puedeNavegarModuloDelPermiso(ROLES.JUNTA_DIRECTIVA, "donaciones")).toBe(true);
-    expect(puedeNavegarModuloDelPermiso(ROLES.MEDICO, "donaciones")).toBe(false);
-    expect(puedeNavegarModuloDelPermiso(ROLES.VOLUNTARIO, "donaciones")).toBe(false);
+
+    for (const rol of NO_ADMIN) {
+      expect(puedeNavegarModuloDelPermiso(rol, "donaciones")).toBe(false);
+    }
   });
 
-  it("puedeNavegarModuloDelPermiso: pacientes esta abierto a los cinco roles", () => {
+  it("puedeNavegarModuloDelPermiso: pacientes esta abierto a los tres roles de operacion", () => {
     for (const rol of [ROLES.ADMINISTRADOR, ...NO_ADMIN]) {
       expect(puedeNavegarModuloDelPermiso(rol, "pacientes")).toBe(
         rol !== ROLES.JUNTA_DIRECTIVA && rol !== ROLES.SOCIO_FUNDADOR,
@@ -102,15 +105,19 @@ describe("permisos de usuarios", () => {
   });
 
   it("agrupa los permisos para que un hook no llame a las funciones sueltas", () => {
-    expect(permisosDeUsuarios(ROLES.JUNTA_DIRECTIVA)).toEqual({
-      puedeCrear: false,
-      puedeEditarOtro: false,
-      puedeDesactivar: false,
-      puedeReactivar: false,
-      puedeVerListado: true,
-      puedeGestionarPermisosFinos: false,
-      puedeVerPermisosEfectivosDeOtro: false,
-    });
+    // ISSUE #864: junta directiva tenia `puedeVerListado: true` por perfiles_directorio. Ya no
+    // ve ningun modulo de usuarios: ninguno de los cuatro roles no administradores puede nada.
+    for (const rol of NO_ADMIN) {
+      expect(permisosDeUsuarios(rol)).toEqual({
+        puedeCrear: false,
+        puedeEditarOtro: false,
+        puedeDesactivar: false,
+        puedeReactivar: false,
+        puedeVerListado: false,
+        puedeGestionarPermisosFinos: false,
+        puedeVerPermisosEfectivosDeOtro: false,
+      });
+    }
 
     expect(permisosDeUsuarios(ROLES.ADMINISTRADOR)).toEqual({
       puedeCrear: true,

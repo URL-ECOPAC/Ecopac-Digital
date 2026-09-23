@@ -12,11 +12,16 @@
 // docs/PERMISOS.md. Se mudan aqui sin cambiar su logica; esos archivos las siguen exportando
 // via reexport nombrado para no romper lo que ya los importa.
 //
-// puedeVerReporteDePacientes excluye a socio fundador A PROPOSITO: fn_reporte_pacientes_atendidos
-// (00067, linea 25) tiene la guarda `es_administrador() OR rol_actual() = 'junta directiva'`
-// escrita en su propio cuerpo, sin socio fundador. Es una de las pocas excepciones reales a la
-// regla de que los dos roles consultivos se tratan siempre juntos -- no se "corrige" a
-// esConsultivo() porque el servidor de verdad hace esa distincion.
+// puedeVerReporteDePacientes excluia a socio fundador citando la guarda de
+// fn_reporte_pacientes_atendidos, y **esa cita dejo de ser cierta hace tiempo**. Era verdad en
+// la 00067 (`es_administrador() OR rol_actual() = 'junta directiva'`), pero la 00086 reescribio
+// la funcion entera con `es_administrador() OR es_consultivo() OR tiene_permiso(...)` al
+// conectar los permisos finos, y este archivo se quedo con el texto viejo.
+//
+// O sea que era una divergencia de las que docs/PERMISOS.md llama defecto, y de las silenciosas:
+// el cliente era MAS estricto que el servidor, asi que a un socio fundador la pantalla le
+// escondia un reporte que la base le habria servido. No fallaba nada; simplemente no estaba.
+// ISSUE #864: se corrige el cliente, que es el lado equivocado, sin tocar la base.
 //
 // LOS CUATRO REPORTES, NO DOS (issue #693). Este archivo cubria solo impacto y pacientes: el
 // comentario anterior decia que jornada se corregia en su propia issue (#489, ya cerrada) y que
@@ -39,11 +44,19 @@ export function puedeVerIndicadoresDeImpacto(rol) {
 /**
  * Puede consultar el reporte de pacientes atendidos.
  *
- * Espejo de la guarda de fn_reporte_pacientes_atendidos (00067): administrador o junta
- * directiva. Socio fundador queda fuera a proposito (ver comentario de cabecera).
+ * Espejo de la guarda de fn_reporte_pacientes_atendidos **tal como esta desde la 00086**:
+ * administrador, cualquiera de los dos roles consultivos, o quien tenga reportes.exportar.
+ *
+ * ISSUE #864: decia administrador o junta directiva, copiado de la 00067, que la 00086 ya habia
+ * reescrito. El cliente le escondia a socio fundador un reporte que la base si le entrega. Con
+ * los dos roles consultivos reducidos a Reportes como unica pantalla, ese descuadre le quitaba
+ * uno de los cuatro reportes que le quedan.
+ *
+ * El permiso fino no se resuelve desde el rol, asi que aqui solo se cubre la parte por rol y el
+ * resto lo decide el servidor -- mismo criterio que puedeAprobarGasto().
  */
 export function puedeVerReporteDePacientes(rol) {
-  return esAdministrador(rol) || rol === ROLES.JUNTA_DIRECTIVA;
+  return esAdministrador(rol) || esConsultivo(rol);
 }
 
 /**

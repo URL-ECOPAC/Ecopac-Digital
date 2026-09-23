@@ -27,7 +27,9 @@ import {
   listarPrincipiosDeMedicamento,
   listarProveedores,
   obtenerValorDeInventario,
+  pestanasDeInventario,
   puedeCorregirLote,
+  puedeDarDeAltaMedicamento,
   puedeRegistrarMovimiento,
   puedeVerValorizacion,
   reactivarMedicamento,
@@ -423,48 +425,77 @@ export default function InventarioPage() {
     [inventarioRaw, filtrosCatalogo, resumenDeLotes],
   );
 
-  // Acciones de la cabecera. Eran cuatro <button> con estilos en linea -dos verdes, uno ambar,
-  // hexadecimales fuera de la paleta- y el "+" escrito dentro del texto. Ahora son las acciones de
-  // PageHeader, que pone el "+" sola y dibuja los botones del catalogo.
-  const tabsSinAccionesDeCabecera = ["validacion", "administracion", "kardex"];
-  const accionesCabecera =
-    esAdmin && !tabsSinAccionesDeCabecera.includes(tabActiva)
-      ? [
-          {
-            label: "Registrar ingreso",
-            onClick: () => setModalRegistroIngresoAbierto(true),
-          },
-          {
-            label: "Registrar salida",
-            onClick: () => setModalSalidaAbierto(true),
-            variant: "secondary",
-          },
-          ...(tabActiva === "catalogo"
-            ? [{ label: "Nuevo medicamento", onClick: abrirModalNuevo }]
-            : []),
-          // Aqui estaba "Registrar lote". Se retira con la issue #846: registrarLote() insertaba
-          // en `lotes` y nada mas, asi que el lote nacia sin existencias en ninguna bodega y sin
-          // movimiento que lo respaldara. El stock solo nace de un ingreso, y "Registrar ingreso"
-          // -que crea el lote y el movimiento a la vez- ya esta arriba en esta misma barra. Un
-          // boton que parece dar de alta existencias y no las da es peor que no tenerlo.
-        ]
-      : [];
-
   // Pestanas. Eran nueve <button> con un color de subrayado distinto cada una (#10b981, #f59e0b,
   // #0284c7, #6366f1, #0d9488, #7c3aed): las pastillas de `.nav-tabs` de ui.css son las mismas
   // que usan pacientes, presupuestos y reportes.
   // Rotulos cortos: con los largos ("Catalogo de medicamentos", "Kardex de movimientos") las
   // ocho pestanas no cabian en una fila y "Validacion" caia sola a una segunda linea.
-  const pestanas = [
-    { id: "catalogo", label: "Catálogo" },
-    { id: "lotes", label: "Lotes" },
-    { id: "alertas", label: "Alertas", contador: cantidadPendientesAlertas },
-    { id: "kardex", label: "Kardex" },
-    { id: "administracion", label: "Bodegas y proveedores" },
-    { id: "principios-activos", label: "Principios activos" },
-    ...(puedeRegistrarMovimiento(rol) ? [{ id: "mis-movimientos", label: "Mis movimientos" }] : []),
-    { id: "validacion", label: "Validación", contador: conteo },
-  ];
+  //
+  // ISSUE #864: cuales ve cada rol lo decide pestanasDeInventario(rol) en packages/shared, no
+  // esta pantalla. El medico se queda con Catalogo, Principios activos y Mis movimientos: veia
+  // las ocho, incluida Validacion con el contador de pendientes que no puede aprobar.
+  const etiquetasDePestana = {
+    catalogo: { label: "Catálogo" },
+    lotes: { label: "Lotes" },
+    alertas: { label: "Alertas", contador: cantidadPendientesAlertas },
+    kardex: { label: "Kardex" },
+    administracion: { label: "Bodegas y proveedores" },
+    "principios-activos": { label: "Principios activos" },
+    "mis-movimientos": { label: "Mis movimientos" },
+    validacion: { label: "Validación", contador: conteo },
+  };
+
+  const pestanas = pestanasDeInventario(rol)
+    .filter((id) => id !== "mis-movimientos" || puedeRegistrarMovimiento(rol))
+    .map((id) => ({ id, ...etiquetasDePestana[id] }));
+
+  // A `?tab=` se llega desde una notificacion, y una notificacion puede apuntar a una pestana
+  // que este rol ya no tiene -- la de validacion, sin ir mas lejos, que se la mandan al
+  // administrador--. Sin esto, la barra no marcaria ninguna pestana como activa y debajo se
+  // dibujaria igual el contenido de una que el rol no deberia abrir.
+  const pestanaVisible = pestanas.some((pestana) => pestana.id === tabActiva)
+    ? tabActiva
+    : (pestanas[0]?.id ?? "catalogo");
+
+  // Acciones de la cabecera. Eran cuatro <button> con estilos en linea -dos verdes, uno ambar,
+  // hexadecimales fuera de la paleta- y el "+" escrito dentro del texto. Ahora son las acciones de
+  // PageHeader, que pone el "+" sola y dibuja los botones del catalogo.
+  //
+  // ISSUE #864: estaban las cuatro detras de `esAdmin`, y el criterio 6 dice que el medico
+  // "puede registrar ingresos, salidas y medicamentos nuevos". Pasan a sus permisos reales:
+  //
+  // - Registrar ingreso y salida -> puedeRegistrarMovimiento(rol). Es lo que la base ya permitia
+  //   desde la 00034 (medico y voluntario insertan movimientos, que nacen `pendiente` hasta que
+  //   la administracion los verifique) y lo que la app movil ya ofrecia a los dos por
+  //   ROLES_QUE_REGISTRAN_MOVIMIENTOS. La web era la unica de las tres capas que no.
+  // - Nuevo medicamento -> puedeDarDeAltaMedicamento(rol), abierto a medico por la 00141.
+  const tabsSinAccionesDeCabecera = ["validacion", "administracion", "kardex"];
+  const puedeRegistrarMovimientos = puedeRegistrarMovimiento(rol);
+  const accionesCabecera = tabsSinAccionesDeCabecera.includes(pestanaVisible)
+    ? []
+    : [
+        ...(puedeRegistrarMovimientos
+          ? [
+              {
+                label: "Registrar ingreso",
+                onClick: () => setModalRegistroIngresoAbierto(true),
+              },
+              {
+                label: "Registrar salida",
+                onClick: () => setModalSalidaAbierto(true),
+                variant: "secondary",
+              },
+            ]
+          : []),
+        ...(pestanaVisible === "catalogo" && puedeDarDeAltaMedicamento(rol)
+          ? [{ label: "Nuevo medicamento", onClick: abrirModalNuevo }]
+          : []),
+        // Aqui estaba "Registrar lote". Se retira con la issue #846: registrarLote() insertaba
+        // en `lotes` y nada mas, asi que el lote nacia sin existencias en ninguna bodega y sin
+        // movimiento que lo respaldara. El stock solo nace de un ingreso, y "Registrar ingreso"
+        // -que crea el lote y el movimiento a la vez- ya esta arriba en esta misma barra. Un
+        // boton que parece dar de alta existencias y no las da es peor que no tenerlo.
+      ];
 
   return (
     <ScreenContainer
@@ -480,7 +511,7 @@ export default function InventarioPage() {
         actions={accionesCabecera}
       />
 
-      <Nav variant="tabs" activeKey={tabActiva} onSelect={(clave) => setTabActiva(clave)}>
+      <Nav variant="tabs" activeKey={pestanaVisible} onSelect={(clave) => setTabActiva(clave)}>
         {pestanas.map((pestana) => (
           <Nav.Item key={pestana.id}>
             <Nav.Link eventKey={pestana.id}>
@@ -497,7 +528,7 @@ export default function InventarioPage() {
       )}
 
       {/* Catálogo */}
-      {tabActiva === "catalogo" && (
+      {pestanaVisible === "catalogo" && (
         <>
           <div className="ec-kpis">
             {/* StatCard, del catalogo de componentes: es esta misma tarjeta -rotulo en
@@ -695,7 +726,7 @@ export default function InventarioPage() {
       {/* Pestaña: Lotes. Misma barra de filtros y misma tabla que el catalogo: antes eran un input
           en pastilla, un <select> suelto y una tabla con hexadecimales en linea, y la fecha se
           pintaba con new Date(...).toLocaleDateString(), que en Guatemala la adelanta un dia. */}
-      {tabActiva === "lotes" && (
+      {pestanaVisible === "lotes" && (
         <>
           <div className="ec-filtros">
             <div className="ec-filtro ec-filtro--busqueda">
@@ -840,26 +871,26 @@ export default function InventarioPage() {
       )}
 
       {/* Pestaña: Alertas completada mediante PanelAlertasVencimiento */}
-      {tabActiva === "alertas" && (
+      {pestanaVisible === "alertas" && (
         <PanelAlertasVencimiento usuarioId={usuarioActual?.id} rolUsuario={usuarioActual?.rol} />
       )}
 
       {/* Pestaña: Kardex Movimientos */}
-      {tabActiva === "kardex" && <KardexMovimientosPage titulo="Historial de Movimientos" />}
+      {pestanaVisible === "kardex" && <KardexMovimientosPage titulo="Historial de Movimientos" />}
 
       {/* Pestaña: Administración */}
-      {tabActiva === "administracion" && <AdministracionBodegasProveedoresPage />}
+      {pestanaVisible === "administracion" && <AdministracionBodegasProveedoresPage />}
 
       {/* Pestaña: Validación */}
-      {tabActiva === "validacion" && (
+      {pestanaVisible === "validacion" && (
         <BandejaValidacionPage usuarioId={perfil?.id} rolUsuario={rol} />
       )}
 
       {/* Pestaña: Principios Activos */}
-      {tabActiva === "principios-activos" && <CatalogoPrincipiosActivosPage />}
+      {pestanaVisible === "principios-activos" && <CatalogoPrincipiosActivosPage />}
 
       {/* Pestaña: Mis Movimientos */}
-      {tabActiva === "mis-movimientos" && <MisMovimientosPage />}
+      {pestanaVisible === "mis-movimientos" && <MisMovimientosPage />}
 
       {/* Modales */}
       {modalAbierto && (

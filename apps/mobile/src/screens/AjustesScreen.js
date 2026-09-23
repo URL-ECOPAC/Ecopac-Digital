@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { useEffect } from "react";
+import { StyleSheet, Text, View } from "react-native";
 import { colors, spacing, typography } from "@ecopac/ui-tokens";
 import {
   TIPOS_DE_CAMPO,
@@ -12,6 +12,7 @@ import {
 import {
   Card,
   ErrorState,
+  PasswordField,
   PrimaryButton,
   ScreenContainer,
   SecondaryButton,
@@ -38,7 +39,6 @@ export default function AjustesScreen({ navigation }) {
   const { usuario, perfil, refrescarPerfil } = useSesionCompartida();
   const { registrar, desregistrar } = useRegistroSinGuardar();
   const notificacionesSinLeer = useCantidadDeNotificaciones();
-  const [verContrasena, setVerContrasena] = useState(false);
 
   const {
     campos,
@@ -174,44 +174,34 @@ export default function AjustesScreen({ navigation }) {
       <Card title="Cambiar contraseña">
         {errorGlobalDeContrasena ? <ErrorState message={errorGlobalDeContrasena} /> : null}
 
-        <View style={styles.encabezadoContrasena}>
-          <Text style={styles.labelContrasena}>Contraseña actual</Text>
-          <Pressable onPress={() => setVerContrasena((valor) => !valor)} hitSlop={8}>
-            <Text style={styles.toggleContrasena}>{verContrasena ? "Ocultar" : "Mostrar"}</Text>
-          </Pressable>
-        </View>
-        <TextField
+        {/* ISSUE #864. Tres campos, tres estados de visibilidad. Antes los tres compartian un
+            unico `verContrasena`: al mostrar uno se mostraban los tres, y aqui se escribe la
+            contrasena nueva dos veces sin poder comprobar cual de las dos esta mal escrita.
+            Mismo arreglo que en PerfilPage de la web. */}
+        <PasswordField
+          label="Contraseña actual"
           value={contrasena.actual}
           onChangeText={(texto) => setCampoDeContrasena("actual", texto)}
           error={erroresDeContrasena?.actual}
           editable={!cambiandoContrasena}
-          secureTextEntry={!verContrasena}
-          autoCapitalize="none"
-          autoCorrect={false}
           textContentType="password"
           autoComplete="current-password"
         />
-        <TextField
+        <PasswordField
           label="Contraseña nueva"
           value={contrasena.nueva}
           onChangeText={(texto) => setCampoDeContrasena("nueva", texto)}
           error={erroresDeContrasena?.nueva}
           editable={!cambiandoContrasena}
-          secureTextEntry={!verContrasena}
-          autoCapitalize="none"
-          autoCorrect={false}
           textContentType="newPassword"
           autoComplete="password-new"
         />
-        <TextField
+        <PasswordField
           label="Confirmar contraseña nueva"
           value={contrasena.confirmarNueva}
           onChangeText={(texto) => setCampoDeContrasena("confirmarNueva", texto)}
           error={erroresDeContrasena?.confirmarNueva}
           editable={!cambiandoContrasena}
-          secureTextEntry={!verContrasena}
-          autoCapitalize="none"
-          autoCorrect={false}
           textContentType="newPassword"
           autoComplete="password-new"
         />
@@ -258,24 +248,6 @@ const styles = StyleSheet.create({
     fontFamily: typography.fontFamilyBase,
     fontSize: typography.sizes.sm,
     color: colors.textMuted,
-  },
-  encabezadoContrasena: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: spacing.xs,
-  },
-  labelContrasena: {
-    fontFamily: typography.fontFamilyBase,
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.medium,
-    color: colors.text,
-  },
-  toggleContrasena: {
-    fontFamily: typography.fontFamilyBase,
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.semibold,
-    color: colors.primary,
   },
   textoExito: {
     marginTop: spacing.sm,
