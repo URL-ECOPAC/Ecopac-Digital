@@ -1,7 +1,13 @@
 import { useRegistroSalida } from "@ecopac/shared";
 import { useCerrarAlTocarFuera } from "../hooks/useCerrarAlTocarFuera";
 
-export function ModalSalidaMedicamento({ abierto, onClose, onExito, medicamentos = [], usuarioId }) {
+export function ModalSalidaMedicamento({
+  abierto,
+  onClose,
+  onExito,
+  medicamentos = [],
+  usuarioId,
+}) {
   const {
     motivo,
     setMotivo,
@@ -233,8 +239,8 @@ export function ModalSalidaMedicamento({ abierto, onClose, onExito, medicamentos
                     margin: "6px 0 0 0",
                   }}
                 >
-                  Este medicamento no tiene lotes disponibles para salida: puede que su ingreso
-                  esté pendiente de aprobación, que sus lotes ya vencieron, o que no quede stock.
+                  Este medicamento no tiene lotes disponibles para salida: puede que su ingreso esté
+                  pendiente de aprobación, que sus lotes ya vencieron, o que no quede stock.
                 </p>
               )}
             </div>

@@ -1,6 +1,10 @@
 import { useState } from "react";
 
-import { COLUMNAS_PRESENTACION, FILTROS_PRESENTACIONES, useCatalogoPresentaciones } from "@ecopac/shared";
+import {
+  COLUMNAS_PRESENTACION,
+  FILTROS_PRESENTACIONES,
+  useCatalogoPresentaciones,
+} from "@ecopac/shared";
 
 import DataList from "../components/DataList";
 import EmptyState from "../components/EmptyState";

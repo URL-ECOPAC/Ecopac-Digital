@@ -50,7 +50,10 @@ export const OPCIONES_TIPO_MOVIMIENTO = opcionesDe(TIPOS_DE_MOVIMIENTO, ETIQUETA
 // Para columnas.js (COLUMNAS_MIS_MOVIMIENTOS.estado): mismo patron que OPCIONES_TIPO_MOVIMIENTO,
 // para que un chip de estado traduzca su etiqueta a Title Case en vez de mostrar el valor crudo
 // del enum (issue de consistencia de presentacion, PLAN.md punto 8).
-export const OPCIONES_ESTADO_MOVIMIENTO = opcionesDe(ESTADOS_MOVIMIENTO, ETIQUETAS_ESTADO_MOVIMIENTO);
+export const OPCIONES_ESTADO_MOVIMIENTO = opcionesDe(
+  ESTADOS_MOVIMIENTO,
+  ETIQUETAS_ESTADO_MOVIMIENTO,
+);
 
 export const OPCIONES_ACCION_ALERTA = opcionesDe(ACCIONES_DE_ALERTA, ETIQUETAS_ACCION_ALERTA);
 

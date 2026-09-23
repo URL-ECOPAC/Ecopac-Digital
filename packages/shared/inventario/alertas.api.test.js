@@ -155,7 +155,10 @@ describe("listarAlertas", () => {
 
   it("cantidadDisponible es 0 sin existencias vivas (lote ya agotado por una salida aparte)", async () => {
     dobles.cliente = crearCliente({
-      respuesta: { data: [filaDeAlerta({ lote: { ...filaDeAlerta().lote, existencias: [] } })], error: null },
+      respuesta: {
+        data: [filaDeAlerta({ lote: { ...filaDeAlerta().lote, existencias: [] } })],
+        error: null,
+      },
     });
 
     const { alertas } = await listarAlertas();

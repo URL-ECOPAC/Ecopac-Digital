@@ -96,9 +96,7 @@ describe("ModalSalidaMedicamento", () => {
     mockEstadoHook.lotesDisponibles = [];
     pantalla();
 
-    expect(
-      screen.getByText(/no tiene lotes disponibles para salida/),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/no tiene lotes disponibles para salida/)).toBeInTheDocument();
   });
 
   it("sin medicamento elegido todavia, no muestra el aviso de lotes vacios", () => {

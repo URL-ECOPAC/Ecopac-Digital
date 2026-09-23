@@ -70,6 +70,8 @@ describe("datosAtenderAlerta", () => {
   });
 
   it("no inventa un rolUsuario si la sesion no lo trae", () => {
-    expect(datosAtenderAlerta([{ accion: "descartado", cantidad: 5 }], {}).rolUsuario).toBeUndefined();
+    expect(
+      datosAtenderAlerta([{ accion: "descartado", cantidad: 5 }], {}).rolUsuario,
+    ).toBeUndefined();
   });
 });

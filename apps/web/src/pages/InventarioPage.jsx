@@ -187,19 +187,26 @@ export default function InventarioPage() {
     try {
       setCargando(true);
       setError(null);
-      const [resMed, resPA, resPresentaciones, resBodegas, resProveedores, resLotes, resExistencias] =
-        await Promise.all([
-          // soloActivos:false (issue #756): antes el catalogo pedia listarMedicamentos() con su
-          // default (soloActivos:true), asi que un medicamento desactivado desaparecia sin
-          // ninguna forma de volver a verlo ni de reactivarlo desde la pantalla.
-          listarMedicamentos({ soloActivos: false }),
-          listarPrincipiosActivos(),
-          listarPresentaciones(),
-          listarBodegas(),
-          listarProveedores(),
-          listarLotes(),
-          listarExistenciasDisponibles(),
-        ]);
+      const [
+        resMed,
+        resPA,
+        resPresentaciones,
+        resBodegas,
+        resProveedores,
+        resLotes,
+        resExistencias,
+      ] = await Promise.all([
+        // soloActivos:false (issue #756): antes el catalogo pedia listarMedicamentos() con su
+        // default (soloActivos:true), asi que un medicamento desactivado desaparecia sin
+        // ninguna forma de volver a verlo ni de reactivarlo desde la pantalla.
+        listarMedicamentos({ soloActivos: false }),
+        listarPrincipiosActivos(),
+        listarPresentaciones(),
+        listarBodegas(),
+        listarProveedores(),
+        listarLotes(),
+        listarExistenciasDisponibles(),
+      ]);
 
       // Los siete fallos tienen que llegar a la pantalla. Antes solo lo hacia el de medicamentos:
       // los otros se escribian en la consola y la pestana seguia como si nada, con el
@@ -481,7 +488,11 @@ export default function InventarioPage() {
   // Para el filtro de presentacion (opcionesDesde: "presentaciones", 00144) y para el Selector
   // de ModalMedicamento: mismo catalogo cargado, sin volver a pedirlo.
   const opcionesPresentacion = useMemo(
-    () => presentaciones.map((presentacion) => ({ value: presentacion.id, label: presentacion.nombre })),
+    () =>
+      presentaciones.map((presentacion) => ({
+        value: presentacion.id,
+        label: presentacion.nombre,
+      })),
     [presentaciones],
   );
 

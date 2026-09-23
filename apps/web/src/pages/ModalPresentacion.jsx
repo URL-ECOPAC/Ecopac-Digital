@@ -21,7 +21,13 @@ function valoresDe(presentacion) {
 // `medicamentosEnUso` es la respuesta de eliminar() cuando la presentacion esta asociada a uno o
 // mas medicamentos: se queda en el modal, mostrando cuales, en vez de dejar que el intento falle
 // con el error generico de llave foranea.
-export default function ModalPresentacion({ visible, presentacion, onClose, onGuardar, onEliminar }) {
+export default function ModalPresentacion({
+  visible,
+  presentacion,
+  onClose,
+  onGuardar,
+  onEliminar,
+}) {
   const [valores, setValores] = useState(() => valoresDe(presentacion));
   const [error, setError] = useState(null);
   const [medicamentosEnUso, setMedicamentosEnUso] = useState(null);
