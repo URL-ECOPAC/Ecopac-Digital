@@ -436,6 +436,7 @@
     "#e2e4e9",
     "#e91e8c"
   ],
+  "apps/web/src/pages/RecetaImprimible.css": ["#1a365d", "#2c5282"],
   "apps/web/src/pages/reportes.css": [
     "#29abe2",
     "#2d2d2d",
