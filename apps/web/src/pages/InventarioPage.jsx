@@ -723,13 +723,19 @@ export default function InventarioPage() {
               <tbody>
                 {cargando ? (
                   <tr>
-                    <td colSpan={esAdmin ? 11 : 10} className="text-center text-body-secondary py-4">
+                    <td
+                      colSpan={esAdmin ? 11 : 10}
+                      className="text-center text-body-secondary py-4"
+                    >
                       Cargando el catalogo...
                     </td>
                   </tr>
                 ) : medicamentosVisibles.length === 0 ? (
                   <tr>
-                    <td colSpan={esAdmin ? 11 : 10} className="text-center text-body-secondary py-4">
+                    <td
+                      colSpan={esAdmin ? 11 : 10}
+                      className="text-center text-body-secondary py-4"
+                    >
                       {inventarioRaw.length === 0
                         ? "Todavia no hay medicamentos en el catalogo."
                         : "Ningun medicamento coincide con estos filtros."}
