@@ -48,10 +48,10 @@ const MEDICAMENTOS = [
 ];
 
 const LOTES = [
-  { medicamentoId: "m-1", numeroLote: "L-100", fechaVencimiento: enDias(40) },
-  { medicamentoId: "m-1", numeroLote: "L-101", fechaVencimiento: enDias(10) },
-  { medicamentoId: "m-1", numeroLote: "L-099", fechaVencimiento: enDias(-5) },
-  { medicamentoId: "m-2", numeroLote: "AMX-7", fechaVencimiento: enDias(200) },
+  { id: "l-100", medicamentoId: "m-1", numeroLote: "L-100", fechaVencimiento: enDias(40) },
+  { id: "l-101", medicamentoId: "m-1", numeroLote: "L-101", fechaVencimiento: enDias(10) },
+  { id: "l-099", medicamentoId: "m-1", numeroLote: "L-099", fechaVencimiento: enDias(-5) },
+  { id: "l-amx7", medicamentoId: "m-2", numeroLote: "AMX-7", fechaVencimiento: enDias(200) },
 ];
 
 describe("resumirLotesPorMedicamento", () => {
@@ -65,6 +65,20 @@ describe("resumirLotesPorMedicamento", () => {
       diasParaProximo: 10,
     });
     expect(resumen.get("m-3")).toBeUndefined();
+  });
+
+  it("suma lo disponible de cada lote del medicamento; sin el mapa, queda en 0", () => {
+    const disponiblePorLote = new Map([
+      ["l-100", 12],
+      ["l-101", 3],
+      ["l-099", 0],
+    ]);
+
+    const resumen = resumirLotesPorMedicamento(LOTES, disponiblePorLote);
+    expect(resumen.get("m-1")).toMatchObject({ disponible: 15 });
+    expect(resumen.get("m-2")).toMatchObject({ disponible: 0 });
+
+    expect(resumirLotesPorMedicamento(LOTES).get("m-1")).toMatchObject({ disponible: 0 });
   });
 });
 

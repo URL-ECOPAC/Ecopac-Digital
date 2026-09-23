@@ -84,6 +84,25 @@ export function filtrarPorRangoDeFecha(movimientos, fechaDesde, fechaHasta) {
 }
 
 /**
+ * Totales del kardex para el PDF. Solo cuentan los movimientos aprobados, igual que el saldo.
+ * Pura y exportada aparte del hook para probarla sin montar React.
+ *
+ * @param {object[]} movimientos Filas del hook, con `afectaSaldo` y `saldoAcumulado`.
+ */
+export function resumenDeKardex(movimientos) {
+  const aprobados = movimientos.filter((mov) => mov.afectaSaldo);
+  const sumar = (tipo) =>
+    aprobados.filter((mov) => mov.tipo === tipo).reduce((total, mov) => total + mov.cantidad, 0);
+
+  return {
+    movimientos: movimientos.length,
+    ingresos: sumar(TIPO_MOVIMIENTO.INGRESO),
+    salidas: sumar(TIPO_MOVIMIENTO.SALIDA),
+    saldo: movimientos.length ? movimientos[movimientos.length - 1].saldoAcumulado : 0,
+  };
+}
+
+/**
  * Hook Kardex de Movimientos (issue #161, reconectado por la #687).
  *
  * Hasta la #687 este hook devolvia cuatro movimientos escritos a mano con un TODO que esperaba

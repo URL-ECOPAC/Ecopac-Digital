@@ -90,14 +90,17 @@ export const FILTROS_CATALOGO_VACIOS = Object.freeze({
 });
 
 /**
- * Lotes agrupados por medicamento: cuantos hay, cuantos vencieron y el vencimiento mas proximo de
- * los que siguen vigentes.
+ * Lotes agrupados por medicamento: cuantos hay, cuantos vencieron, el vencimiento mas proximo de
+ * los que siguen vigentes y cuanto queda disponible hoy sumando todos sus lotes.
  *
  * @param {object[]} lotes Lo que devuelve listarLotes() (aLote, lotes.api.js).
+ * @param {Map<string, number>} [disponiblePorLote] De sumarExistenciasPorLote()
+ *   (useExistenciasPorLote.js): loteId -> cantidad disponible hoy. Sin ella, disponible queda en 0
+ *   para todos -- mismo criterio que el resto de esta pantalla cuando falta un dato complementario.
  * @returns {Map<string, { lotes: number, vencidos: number, proximoVencimiento: string|null,
- *   diasParaProximo: number|null, numeros: string[] }>}
+ *   diasParaProximo: number|null, numeros: string[], disponible: number }>}
  */
-export function resumirLotesPorMedicamento(lotes = []) {
+export function resumirLotesPorMedicamento(lotes = [], disponiblePorLote = new Map()) {
   const resumen = new Map();
 
   for (const lote of lotes) {
@@ -108,9 +111,11 @@ export function resumirLotesPorMedicamento(lotes = []) {
       proximoVencimiento: null,
       diasParaProximo: null,
       numeros: [],
+      disponible: 0,
     };
 
     actual.lotes += 1;
+    actual.disponible += Number(disponiblePorLote.get(lote.id) ?? 0);
     if (lote.numeroLote) actual.numeros.push(lote.numeroLote);
 
     const dias = diasHastaVencimiento(lote.fechaVencimiento);

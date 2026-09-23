@@ -100,6 +100,7 @@ export {
 export { useGestionLotes } from "./useGestionLotes.js";
 export {
   ESTADO_MOVIMIENTO,
+  resumenDeKardex,
   TIPO_MOVIMIENTO,
   useKardexMovimientos,
 } from "./useKardexMovimientos.js";

@@ -479,7 +479,12 @@ export default function InventarioPage() {
   );
 
   // Catalogo: filtros sobre los campos reales del modelo y resumen de lotes por medicamento.
-  const resumenDeLotes = useMemo(() => resumirLotesPorMedicamento(lotesRaw), [lotesRaw]);
+  // disponiblePorLote va aqui (no cantidadIngresada) por la misma razon que en la pestaña Lotes:
+  // es el stock que queda hoy, no el historico de entrada.
+  const resumenDeLotes = useMemo(
+    () => resumirLotesPorMedicamento(lotesRaw, disponiblePorLote),
+    [lotesRaw, disponiblePorLote],
+  );
   const medicamentosVisibles = useMemo(
     () => filtrarCatalogoMedicamentos(inventarioRaw, filtrosCatalogo, resumenDeLotes),
     [inventarioRaw, filtrosCatalogo, resumenDeLotes],
@@ -709,6 +714,7 @@ export default function InventarioPage() {
                   <th>Marca</th>
                   <th>Uso</th>
                   <th className="text-end">Lotes</th>
+                  <th className="text-end">Disponible</th>
                   <th>Proximo vencimiento</th>
                   <th>Estado</th>
                   {esAdmin && <th className="text-end">Acciones</th>}
@@ -717,13 +723,13 @@ export default function InventarioPage() {
               <tbody>
                 {cargando ? (
                   <tr>
-                    <td colSpan={esAdmin ? 10 : 9} className="text-center text-body-secondary py-4">
+                    <td colSpan={esAdmin ? 11 : 10} className="text-center text-body-secondary py-4">
                       Cargando el catalogo...
                     </td>
                   </tr>
                 ) : medicamentosVisibles.length === 0 ? (
                   <tr>
-                    <td colSpan={esAdmin ? 10 : 9} className="text-center text-body-secondary py-4">
+                    <td colSpan={esAdmin ? 11 : 10} className="text-center text-body-secondary py-4">
                       {inventarioRaw.length === 0
                         ? "Todavia no hay medicamentos en el catalogo."
                         : "Ningun medicamento coincide con estos filtros."}
@@ -768,6 +774,7 @@ export default function InventarioPage() {
                             </span>
                           )}
                         </td>
+                        <td className="text-end">{lotes?.disponible ?? 0}</td>
                         <td>
                           {lotes?.proximoVencimiento ? (
                             <>
