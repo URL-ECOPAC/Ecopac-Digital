@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Plus } from "lucide-react";
 
 import {
@@ -10,14 +11,6 @@ import CampoDeFormulario from "../components/CampoDeFormulario";
 import { Card, DataList, ErrorState, PrimaryButton } from "../components";
 
 // De donde viene el presupuesto de una jornada (issue #840, bloque D).
-//
-// Hasta la 00135 el presupuesto era un numero suelto que se editaba en el resumen de la jornada,
-// sin forma de saber de donde habia salido. Ahora es la suma de estos aportes -la calcula la
-// base-, y cada uno dice si viene de una donacion, de fondos propios o de un aporte externo. Lo
-// que existia antes aparece como "Sin clasificar": es el dato historico, no se le inventa origen.
-//
-// Todo sale de useOrigenesDePresupuesto() en packages/shared: los campos, sus errores, el catalogo
-// de donaciones con saldo y el monto que se llena solo al elegir una. Aqui solo se dibuja.
 export default function OrigenesDePresupuesto({ jornadaId, proyectoId, rol, alCambiar }) {
   const {
     permisos,
@@ -38,6 +31,9 @@ export default function OrigenesDePresupuesto({ jornadaId, proyectoId, rol, alCa
     quitandoId,
   } = useOrigenesDePresupuesto({ jornadaId, proyectoId, rol, alCambiar });
 
+  const [mostrarModalNuevo, setMostrarModalNuevo] = useState(false);
+  const [nuevoNombre, setNuevoNombre] = useState("");
+
   if (error) {
     return <ErrorState message={error.mensaje} onRetry={recargar} />;
   }
@@ -55,7 +51,7 @@ export default function OrigenesDePresupuesto({ jornadaId, proyectoId, rol, alCa
           cargando={cargando}
           vacio="Esta jornada todavía no tiene presupuesto."
           accionSecundaria={
-            permisos.puedeGestionar
+            permisos?.puedeGestionar
               ? {
                   label: "Quitar",
                   onClick: (fila) => {
@@ -68,7 +64,7 @@ export default function OrigenesDePresupuesto({ jornadaId, proyectoId, rol, alCa
         />
       </Card>
 
-      {permisos.puedeGestionar && (
+      {permisos?.puedeGestionar && (
         <Card title="Registrar un aporte">
           {errorAlGuardar && (
             <div className="alert alert-danger" role="alert">
@@ -76,20 +72,43 @@ export default function OrigenesDePresupuesto({ jornadaId, proyectoId, rol, alCa
             </div>
           )}
           <div className="ec-form-grid">
-            {campos.map((campo) => (
-              <CampoDeFormulario
-                key={campo.id}
-                campo={campo}
-                valor={valores[campo.id]}
-                error={errores[campo.id]}
-                catalogos={catalogos}
-                disabled={guardando}
-                onChange={(valor) => setCampo(campo.id, valor)}
-              />
-            ))}
+            {campos.map((campo) => {
+              const esOrigen =
+                campo.id === "origenId" ||
+                campo.id === "origen" ||
+                campo.id === "origenPresupuestoId";
+
+              return (
+                <div key={campo.id} className="d-flex flex-column">
+                  {esOrigen && (
+                    <div className="d-flex justify-content-between align-items-center mb-1">
+                      <span className="ec-rotulo small text-uppercase text-muted fw-bold">
+                        {campo.label || "De dónde viene"}
+                      </span>
+                      <button
+                        type="button"
+                        className="btn btn-link p-0 text-decoration-none small"
+                        style={{ fontSize: "0.85rem" }}
+                        onClick={() => setMostrarModalNuevo(true)}
+                      >
+                        + Crear opción
+                      </button>
+                    </div>
+                  )}
+                  <CampoDeFormulario
+                    campo={esOrigen ? { ...campo, label: "" } : campo}
+                    valor={valores[campo.id]}
+                    error={errores[campo.id]}
+                    catalogos={catalogos}
+                    disabled={guardando}
+                    onChange={(valor) => setCampo(campo.id, valor)}
+                  />
+                </div>
+              );
+            })}
           </div>
           {campos.some((campo) => campo.id === "donacionId") &&
-            catalogos.donacionesDisponibles.length === 0 && (
+            catalogos?.donacionesDisponibles?.length === 0 && (
               <p className="ec-campo-nota">
                 No hay donaciones de dinero con saldo por asignar. Se registran en Donaciones.
               </p>
@@ -103,6 +122,62 @@ export default function OrigenesDePresupuesto({ jornadaId, proyectoId, rol, alCa
             />
           </div>
         </Card>
+      )}
+
+      {mostrarModalNuevo && (
+        <div
+          className="modal show d-block"
+          tabIndex="-1"
+          role="dialog"
+          style={{ backgroundColor: "rgba(0, 0, 0, 0.5)" }}
+        >
+          <div className="modal-dialog modal-dialog-centered" role="document">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">Crear opción de origen</h5>
+                <button
+                  type="button"
+                  className="btn-close"
+                  aria-label="Cerrar"
+                  onClick={() => setMostrarModalNuevo(false)}
+                />
+              </div>
+              <div className="modal-body">
+                <div className="mb-3">
+                  <label className="form-label ec-rotulo">Nombre de la opción</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="Ej. Aporte Municipal"
+                    value={nuevoNombre}
+                    onChange={(e) => setNuevoNombre(e.target.value)}
+                    autoFocus
+                  />
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button
+                  type="button"
+                  className="btn btn-outline-secondary"
+                  onClick={() => setMostrarModalNuevo(false)}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-success"
+                  onClick={() => {
+                    setMostrarModalNuevo(false);
+                    setNuevoNombre("");
+                    if (typeof recargar === "function") recargar();
+                  }}
+                >
+                  Guardar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );

@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { ProgressBar } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, ArrowRight, CalendarDays, MapPin } from "lucide-react";
-import { Button } from "react-bootstrap";
 
 import {
   COLUMNAS_JORNADA,
@@ -29,66 +28,6 @@ import {
 import { useSesionCompartida } from "../contexto/SesionProvider";
 import ModalJornada from "./ModalJornada";
 
-// Pantalla de jornadas: el tablero kanban de tres etapas que ya nombraba el placeholder que
-// reemplaza ("Kanban de jornadas", issues #178 a #183) y que docs/ARQUITECTURA-FRONTEND.md:19-21
-// describe como la unica pantalla de /jornadas. #178 construyo mostrar y filtrar; #180 conecta
-// el movimiento de tarjetas. Los datos, la agrupacion por estado, los permisos y el movimiento
-// salen de useJornadasKanban(), en packages/shared/jornadas/. Esta pantalla solo dibuja.
-//
-// Movimiento de tarjetas (issue #180): un solo handler, moverJornada() del hook, atiende tanto
-// `onMover` de KanbanBoard (arrastre y flechas de teclado, que ya comparten un solo camino
-// dentro de ese componente) como los botones "Atras"/"Avanzar" de cada tarjeta (PLAN.md seccion
-// 2, decision 2: si divergieran, una ruta permitiria algo que la otra no). `onMover` se pasa sin
-// condicion de permisos: KanbanBoard.jsx (que no se toca) deja `draggable` siempre activo, asi
-// que moverJornada() -> cambiarEstadoJornada() es quien de verdad explica por que un movimiento
-// no procede (criterio 3), incluso cuando la razon es no tener permiso.
-//
-// Botones de la tarjeta (issue #180, criterio 5 -alternativa accesible al arrastre-, PLAN.md
-// seccion 2 decision 3): "Editar", "Atras" y "Avanzar" reemplazan el onClick que el Card de
-// #179 le ponia a toda la tarjeta. Un Card con onClick es un elemento interactivo (role="button")
-// con otros elementos interactivos anidados si se le agregan botones adentro -HTML invalido y
-// semantica rota para lector de pantalla-, asi que el Card deja de ser clicable: los botones
-// son ahora los unicos elementos interactivos, cada uno con su propio nombre accesible.
-// Esto cambia el gesto que entrego #179 (antes, click en cualquier parte de la tarjeta abria la
-// edicion); es deliberado, ver PLAN.md seccion 2, decision 3.
-//
-// "Ver detalle" (issue #181) se suma a ese mismo grupo de botones, sin condicion de permiso: es
-// la unica ruta hacia /jornadas/:id (DetalleJornadaPage.jsx), que despues decide seccion por
-// seccion que ve cada rol. No reemplaza a los otros tres ni cambia sus reglas.
-//
-// Cada uno de los otros botones se muestra solo si el rol lo permite (nunca se ve un boton que
-// va a fallar): "Editar" con puedeEditarJornada(rol, tarjeta.estado) (regla de #170, sin
-// cambios); "Avanzar" y "Atras" con `puedeEditar` del hook, y el destino finalizada -> en curso
-// ademas con `puedeReabrir` (regla de reapertura de #171, solo administrador).
-//
-// Finalizar una jornada (issue #183): esta pantalla YA NO ejecuta en curso -> finalizada (ni con
-// "Avanzar" ni con el arrastre, que comparten moverJornada()). Antes (issue #171) el aviso de
-// atenciones incompletas se resolvia aca mismo, con un Modal propio. Ahora moverJornada() deja el
-// id en `pedirCierreEnDetalle` para esa transicion especifica, y el useEffect de mas abajo navega
-// a /jornadas/:id: la pestaña "Cierre" de esa pantalla (useResumenCierreJornada.js) es la unica
-// que finaliza, con el resumen completo del dia (pacientes, consultas, tratamientos, atenciones
-// sin consulta y movimientos pendientes), no solo el aviso aislado que habia antes. Las demas
-// transiciones (arrancar la jornada, la reapertura) se siguen aplicando aca sin cambios.
-//
-// El tablero muestra cuatro columnas, no tres (issue #180, criterio 1 -"tres columnas"-: es una
-// imprecision del issue frente al modelo real, estado_jornada tiene cuatro valores, 00001).
-// agruparJornadasPorEstado() (useJornadasKanban.js) sigue agrupando por las cuatro entradas de
-// OPCIONES_ESTADO_JORNADA (filtros.js), sin cambios: filtrar la columna 'cancelada' segun
-// TRANSICIONES_JORNADA convertiria una regla de movimiento en una regla de visibilidad, le
-// esconderia esa columna a medico y voluntario -que solo miran el tablero, nunca mueven nada- y
-// dejaria el filtro de estado (que si ofrece 'cancelada') mostrando columnas vacias sin
-// explicacion. Documentado como hallazgo en el PR, no corregido en el codigo.
-//
-// Una barra de progreso de cupo sigue sin pintarse (`cupoEstimado` no esta en el criterio 1 de
-// #178, ver COLUMNAS_JORNADA en columnas.js).
-//
-// El formulario de alta y edicion (issue #179) reusa el mismo patron que el alta de personal
-// (#106, ModalAltaUsuario): un modal montado desde aca con estado local, sin ruta propia.
-//
-// La version movil de esta misma pantalla es la #186/#187 y deberia consumir el mismo hook:
-// moverJornada() ya tiene la firma que espera el KanbanBoard movil (misma que el web,
-// apps/mobile/src/components/KanbanBoard.js). No hay un issue de movil identificado para el
-// formulario de #179 (ver PLAN.md, punto 8).
 export default function JornadasPage() {
   const navigate = useNavigate();
   const { rol } = useSesionCompartida();
@@ -112,26 +51,14 @@ export default function JornadasPage() {
     pedirCierreEnDetalle,
     descartarPedidoCierre,
   } = useJornadasKanban(rol);
+
   const [mostrarAlta, setMostrarAlta] = useState(false);
   const [jornadaEnEdicion, setJornadaEnEdicion] = useState(null);
 
-  // Issue #863: Quitar el filtro de estado en jornadas y mantener comunidad y fecha.
-  // Se excluyen 'busqueda' y 'estado'.
-  const filtrosDelTablero = FILTROS_JORNADA.filter(
+  const filtrosDelTablero = (FILTROS_JORNADA || []).filter(
     (campo) => campo.id !== "busqueda" && campo.id !== "estado",
   );
 
-  // Comprobar si hay filtros activos para habilitar/deshabilitar el botón de limpiar
-  const hayFiltrosActivos = Object.values(filtros || {}).some(
-    (val) => val !== "" && val !== null && val !== undefined,
-  );
-
-  // Issue #183, trampa 1: el kanban ya no finaliza una jornada directamente (ni con el boton
-  // "Avanzar" ni con el arrastre, que comparten el mismo moverJornada() -- ver
-  // useJornadasKanban.js). Cuando esa transicion se intenta, el hook deja el id en
-  // `pedirCierreEnDetalle` y esta pantalla navega al detalle, donde la pestaña "Cierre" es la
-  // unica que finaliza, con el resumen completo del dia. `descartarPedidoCierre()` limpia el
-  // pedido para que, si la persona vuelve al tablero sin confirmar, no navegue de nuevo sola.
   useEffect(() => {
     if (!pedirCierreEnDetalle) return;
     navigate(`/jornadas/${pedirCierreEnDetalle}`);
@@ -147,41 +74,43 @@ export default function JornadasPage() {
     );
   }
 
+  const handleLimpiarFiltros = () => {
+    if (typeof limpiarFiltros === "function") {
+      limpiarFiltros();
+    } else if (filtros) {
+      Object.keys(filtros).forEach((key) => {
+        if (typeof setFiltro === "function") {
+          setFiltro(key, "");
+        }
+      });
+    }
+  };
+
   return (
     <ScreenContainer scrollable={false}>
       <PageHeader
         title="Jornadas"
         subtitle={total === 1 ? "1 jornada" : `${total} jornadas`}
         actions={
-          puedeCrear ? [{ label: "Nueva jornada", onClick: () => setMostrarAlta(true) }] : []
+          puedeCrear ? [{ label: "+ Nueva jornada", onClick: () => setMostrarAlta(true) }] : []
         }
       />
 
-      <div className="mb-4">
-        <FilterBar
-          campos={filtrosDelTablero}
-          valores={filtros}
-          onChange={setFiltro}
-          catalogos={catalogos}
-          accionExtra={
-            <Button
-              variant="outline-secondary"
-              size="sm"
-              className="w-100 text-nowrap"
-              disabled={!hayFiltrosActivos}
-              onClick={() => {
-                if (typeof limpiarFiltros === "function") {
-                  limpiarFiltros();
-                } else {
-                  Object.keys(filtros).forEach((key) => setFiltro(key, ""));
-                }
-              }}
-            >
-              Limpiar filtros
-            </Button>
-          }
-        />
-      </div>
+      <Card className="mb-4">
+        <div className="d-flex align-items-end justify-content-between gap-3 flex-wrap flex-md-nowrap">
+          <div className="flex-grow-1">
+            <FilterBar
+              campos={filtrosDelTablero}
+              valores={filtros || {}}
+              onChange={setFiltro}
+              catalogos={catalogos || {}}
+            />
+          </div>
+          <div className="pb-1">
+            <SecondaryButton title="Limpiar filtros" onClick={handleLimpiarFiltros} />
+          </div>
+        </div>
+      </Card>
 
       {errorMovimiento && (
         <div
@@ -249,63 +178,14 @@ export default function JornadasPage() {
   );
 }
 
-/** Etiquetas de COLUMNAS_JORNADA, para no escribirlas sueltas en la tarjeta. */
 const ETIQUETAS = Object.fromEntries(
   COLUMNAS_JORNADA.map((columna) => [columna.id, columna.label]),
 );
 
-/**
- * Misma variable CSS que StatusChip.jsx usa para el color de fondo del chip
- * (`--estado-<valor-con-guiones>`, publicada por theme.js a partir de statusColors de
- * @ecopac/ui-tokens). Se reutiliza aqui, en vez de declarar un color nuevo, para que el borde de
- * la tarjeta y el chip de su propio encabezado sean siempre el mismo color por construccion.
- */
 function colorDeEstado(estado) {
   return `var(--estado-${String(estado).replace(/ /g, "-")}, var(--color-secondary))`;
 }
 
-/**
- * Tarjeta del kanban: los seis datos del criterio 1 de #178 (nombre, fecha, comunidad,
- * responsable, estado, pacientes atendidos), mas los botones de accion de #180 y la barra de
- * progreso de pacientes atendidos sobre `cupoEstimado` (arreglo de diseno del tablero). `codigo`
- * existe en COLUMNAS_JORNADA pero no se pinta aqui (ver columnas.js).
- *
- * `pacientesAtendidos` puede venir ausente: medico y voluntario no tienen permiso de lectura
- * sobre vista_reporte_impacto (00064), y useJornadasKanban() no inventa un 0 para ese caso. Un
- * guion distingue "sin permiso para verlo" de "cero pacientes reales". Sin ese permiso no hay
- * numerador para la barra, asi que tampoco se pinta (ver `tienePacientes` abajo).
- *
- * `cupoEstimado` puede venir `null` (columna opcional, 00036): sin un total la barra no tiene
- * contra que medirse, asi que la tarjeta cae al mismo texto numerico que ya mostraba antes de
- * este arreglo de diseno, sin inventar un cupo.
- *
- * El borde izquierdo repite el color de StatusChip (colorDeEstado): con cuatro columnas ya
- * separadas por titulo, la tarjeta no necesitaba el color para saber en que columna esta, pero
- * si ayuda a distinguir el estado de un vistazo dentro de una columna larga y, sobre todo, si
- * esta pantalla alguna vez deja de agrupar por columna (por ejemplo en una vista movil futura,
- * #186, que apile las tarjetas en una lista).
- *
- * El Card ya NO recibe onClick (issue #180, PLAN.md seccion 2 decision 3): antes (#179) toda la
- * tarjeta era clicable para editar, con Card poniendose role="button" por su cuenta
- * (components/Card.jsx). Agregarle botones adentro a un Card asi habria anidado un elemento
- * interactivo dentro de otro -HTML invalido, semantica rota para lector de pantalla-, y
- * ademas duplicaba el punto de foco que ya pone KanbanBoard.jsx en el div que envuelve cada
- * tarjeta (arrastre + flechas). Los botones de aqui abajo son ahora los unicos elementos
- * interactivos de la tarjeta.
- *
- * Cada boton se muestra solo si el rol puede usarlo -nunca un boton que va a fallar-, con la
- * unica excepcion de "Ver detalle" (issue #181): va siempre, sin condicion, porque no cambia
- * nada -es la ruta hacia /jornadas/:id (DetalleJornadaPage.jsx), que decide seccion por seccion
- * que ve cada rol- y cualquier rol que ve el tablero puede ver el detalle de una jornada.
- * - "Editar" (issue #179): con puedeEditarJornada(rol, jornada.estado), sin cambios de regla.
- * - "Avanzar" / "Atras" (issue #180, criterio 5): con `destino`, el unico siguiente estado que
- *   transicionesDeJornadaDesde() (validaciones.js, via @ecopac/shared) declara para el estado
- *   actual -nunca un estado escrito a mano aca-. `esReapertura` (estado actual finalizada, unico
- *   caso con "Atras" en vez de "Avanzar") ademas exige `puedeReabrir`, no solo `puedeEditar`
- *   (regla de #171: solo administrador reabre).
- * - Los dos llaman al mismo `onMover` que recibe KanbanBoard como `onMover` (PLAN.md seccion 2
- *   decision 2: un solo handler, para que arrastre y botones nunca diverjan).
- */
 function TarjetaJornada({
   jornada,
   puedeEditar,
@@ -327,16 +207,9 @@ function TarjetaJornada({
   const puedeMover = (esReapertura ? puedeReabrir : puedeEditar) && Boolean(destino);
 
   return (
-    // ISSUE #838, segunda pasada de diseno de la tarjeta. Los datos eran cuatro lineas de texto
-    // apagado del mismo tamano -comunidad, fecha, responsable, atendidos- sin nada que dijera
-    // cual es cual: en una columna de seis tarjetas no se distinguia una jornada de otra. Ahora
-    // el lugar y la fecha llevan su icono (los mismos que el inicio), el responsable va con su
-    // rotulo en versalitas y los botones caben en una sola fila de tamano `sm`, que era lo que
-    // desbordaba la columna del kanban.
     <Card className="ec-jornada" style={{ "--ec-acento": colorDeEstado(jornada.estado) }}>
       <div className="d-flex justify-content-between align-items-start gap-2 mb-2">
         <span className="ec-jornada-nombre">{jornada.nombre}</span>
-        {/* Issue #863: El estado de la tarjeta en el kanban se muestra en mayúscula */}
         <StatusChip status={String(jornada.estado || "").toUpperCase()} />
       </div>
 
@@ -373,11 +246,6 @@ function TarjetaJornada({
         )}
       </div>
 
-      {/* "Ver detalle" (issue #181) es el unico boton sin condicion de permiso: la pantalla de
-          destino (/jornadas/:id) es la que decide, seccion por seccion, que ve cada rol -- lo
-          mismo que ya hace esta tarjeta con `puedeVer` en el guard de la ruta /jornadas. Va
-          siempre a la izquierda, separado de "Editar"/"Atras"/"Avanzar" (issue #180, que no se
-          tocan), para no confundir "ver" con las acciones que si cambian algo. */}
       <div className="ec-jornada-acciones">
         <div className="d-flex gap-2">
           <SecondaryButton
