@@ -264,6 +264,12 @@ BEGIN
 END;
 $$;
 
+-- Funcion recien creada (no CREATE OR REPLACE de una firma existente): nace con EXECUTE abierto
+-- a PUBLIC, el default nativo de Postgres para funciones (00102 documenta por que esto no se
+-- puede suprimir de una vez para todo el esquema). Sin este REVOKE, anon vuelve a poder
+-- ejecutarla via RPC.
+REVOKE EXECUTE ON FUNCTION fn_atender_alerta_caducidad(UUID, JSONB) FROM PUBLIC;
+
 GRANT EXECUTE ON FUNCTION fn_atender_alerta_caducidad(UUID, JSONB) TO authenticated;
 
 COMMENT ON FUNCTION fn_atender_alerta_caducidad(UUID, JSONB) IS

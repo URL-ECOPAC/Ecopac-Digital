@@ -40,8 +40,9 @@ ALTER TABLE perfiles ENABLE TRIGGER USER;
 INSERT INTO bodegas (id, nombre, es_movil) VALUES
   ('b1000000-0000-0000-0000-000000000001', 'Bodega 755', FALSE);
 
-INSERT INTO medicamentos (id, nombre, concentracion, presentacion, marca) VALUES
-  ('b2000000-0000-0000-0000-000000000001', 'Medicamento 755', '250 mg', 'tableta', 'Generico');
+INSERT INTO medicamentos (id, nombre, concentracion, presentacion_id, marca) VALUES
+  ('b2000000-0000-0000-0000-000000000001', 'Medicamento 755', '250 mg',
+   (SELECT id FROM presentaciones WHERE nombre = 'Tableta'), 'Generico');
 
 INSERT INTO proveedores (id, nombre, tipo) VALUES
   ('b3000000-0000-0000-0000-000000000001', 'Proveedor 755', 'comercial');

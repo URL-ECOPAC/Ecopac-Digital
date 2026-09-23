@@ -43,7 +43,11 @@ CREATE TABLE presentaciones (
 
 ALTER TABLE presentaciones ENABLE ROW LEVEL SECURITY;
 
-GRANT SELECT ON presentaciones TO anon, authenticated;
+-- Sin anon: 00049/00056 le retiraron todo privilegio sobre el esquema publico (issue #408/#435),
+-- y la prueba supabase/tests/database/privilegios_anon.sql lo comprueba tabla por tabla. anon no
+-- pasa por PostgREST en este proyecto, asi que no necesita acceso a ningun catalogo, tampoco a
+-- este.
+GRANT SELECT ON presentaciones TO authenticated;
 GRANT INSERT, UPDATE, DELETE ON presentaciones TO authenticated;
 
 CREATE POLICY "Autenticados leen presentaciones"
@@ -138,7 +142,7 @@ CREATE FUNCTION fn_registrar_medicamento(
 )
 RETURNS medicamentos AS $$
 DECLARE
-  v_medicamento medicamentos;
+  v_medicamento public.medicamentos;
   v_principio_id UUID;
 BEGIN
   IF p_principios_ids IS NULL OR array_length(p_principios_ids, 1) IS NULL THEN
@@ -146,7 +150,7 @@ BEGIN
       USING ERRCODE = '23514';
   END IF;
 
-  INSERT INTO medicamentos (
+  INSERT INTO public.medicamentos (
     nombre, concentracion, presentacion_id, marca, forma_farmaceutica, es_pediatrico,
     tipo_articulo
   )
@@ -157,13 +161,21 @@ BEGIN
   RETURNING * INTO v_medicamento;
 
   FOREACH v_principio_id IN ARRAY p_principios_ids LOOP
-    INSERT INTO medicamento_principio (medicamento_id, principio_id)
+    INSERT INTO public.medicamento_principio (medicamento_id, principio_id)
     VALUES (v_medicamento.id, v_principio_id);
   END LOOP;
 
   RETURN v_medicamento;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SET search_path = '';
+
+-- Funcion recien creada (no CREATE OR REPLACE de una firma existente): nace con EXECUTE abierto
+-- a PUBLIC, el default nativo de Postgres para funciones (00102 documenta por que esto no se
+-- puede suprimir de una vez para todo el esquema). Sin este REVOKE, anon vuelve a poder
+-- ejecutarla via RPC.
+REVOKE EXECUTE ON FUNCTION fn_registrar_medicamento(
+  VARCHAR, VARCHAR, UUID, VARCHAR, UUID[], VARCHAR, BOOLEAN, tipo_articulo
+) FROM PUBLIC;
 
 GRANT EXECUTE ON FUNCTION fn_registrar_medicamento(
   VARCHAR, VARCHAR, UUID, VARCHAR, UUID[], VARCHAR, BOOLEAN, tipo_articulo

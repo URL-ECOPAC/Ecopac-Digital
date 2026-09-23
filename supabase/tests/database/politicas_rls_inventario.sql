@@ -34,8 +34,9 @@ UPDATE perfiles SET rol = 'socio fundador' WHERE id = '00000000-0000-0000-0000-0
 
 ALTER TABLE perfiles ENABLE TRIGGER USER;
 
-INSERT INTO medicamentos (id, nombre, concentracion, presentacion, marca)
-VALUES ('70000000-0000-0000-0000-000000000001', 'Paracetamol prueba 89', '500 mg', 'tableta', 'Generico');
+INSERT INTO medicamentos (id, nombre, concentracion, presentacion_id, marca)
+VALUES ('70000000-0000-0000-0000-000000000001', 'Paracetamol prueba 89', '500 mg',
+  (SELECT id FROM presentaciones WHERE nombre = 'Tableta'), 'Generico');
 
 INSERT INTO proveedores (id, nombre, tipo)
 VALUES ('71000000-0000-0000-0000-000000000001', 'Proveedor prueba 91', 'comercial');
@@ -77,8 +78,9 @@ SELECT ok(
 );
 
 SELECT throws_ok(
-  $$ INSERT INTO medicamentos (nombre, concentracion, presentacion, marca)
-     VALUES ('Intento voluntario', '1 mg', 'tableta', 'Generico') $$,
+  $$ INSERT INTO medicamentos (nombre, concentracion, presentacion_id, marca)
+     VALUES ('Intento voluntario', '1 mg',
+       (SELECT id FROM presentaciones WHERE nombre = 'Tableta'), 'Generico') $$,
   '42501',
   NULL,
   'voluntario no puede crear un medicamento: solo administrador administra el catalogo'

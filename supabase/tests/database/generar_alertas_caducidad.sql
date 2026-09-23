@@ -36,8 +36,9 @@ INSERT INTO bodegas (id, nombre, es_movil) VALUES
   ('a1000000-0000-0000-0000-000000000001', 'Bodega A 166', FALSE),
   ('a1000000-0000-0000-0000-000000000002', 'Bodega B 166', FALSE);
 
-INSERT INTO medicamentos (id, nombre, concentracion, presentacion, marca) VALUES
-  ('a2000000-0000-0000-0000-000000000001', 'Medicamento 166', '500mg', 'tableta', 'Generico');
+INSERT INTO medicamentos (id, nombre, concentracion, presentacion_id, marca) VALUES
+  ('a2000000-0000-0000-0000-000000000001', 'Medicamento 166', '500mg',
+   (SELECT id FROM presentaciones WHERE nombre = 'Tableta'), 'Generico');
 
 INSERT INTO proveedores (id, nombre, tipo) VALUES
   ('a3000000-0000-0000-0000-000000000001', 'Proveedor 166', 'comercial');
