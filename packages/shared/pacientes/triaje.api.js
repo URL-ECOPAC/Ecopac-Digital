@@ -44,6 +44,26 @@ import {
 export { puedeTomarTriaje, puedeCorregirTriaje } from "./permisos.js";
 import { validarCambioDeTriaje, validarTriaje } from "./triaje.validaciones.js";
 
+// Factor de conversión exacto: 1 kg = 2.20462 lb
+const FACTOR_KG_A_LB = 2.20462;
+
+/** Convierte libras → kilogramos antes de guardar en BD */
+const librasAKg = (lb) => {
+  if (lb === null || lb === undefined || lb === "") return null;
+  const valor = Number(lb);
+  if (isNaN(valor)) return null;
+  // Redondea a 1 decimal para coincidir con precisión de la BD
+  return Math.round((valor / FACTOR_KG_A_LB) * 10) / 10;
+};
+
+/** Convierte kilogramos → libras al mostrar en pantalla */
+const kgALibras = (kg) => {
+  if (kg === null || kg === undefined) return null;
+  const valor = Number(kg);
+  if (isNaN(valor)) return null;
+  return Math.round(valor * FACTOR_KG_A_LB * 100) / 10;
+};
+
 /**
  * Del camelCase de CAMPOS_TRIAJE al snake_case de la tabla.
  *
@@ -87,8 +107,13 @@ function aColumnasDeTabla(valores = {}) {
   const fila = {};
   for (const [campo, columna] of Object.entries(MAPA_COLUMNAS_DEL_TRIAJE)) {
     if (!Object.prototype.hasOwnProperty.call(valores, campo)) continue;
-
-    const valor = valores[campo];
+    let valor = valores[campo];
+    
+    //  Convertir peso de libras → kilogramos antes de guardar
+    if (campo === "peso") {
+      valor = librasAKg(valor);
+    }
+    
     fila[columna] = valor === "" || valor === undefined ? null : valor;
   }
   return fila;

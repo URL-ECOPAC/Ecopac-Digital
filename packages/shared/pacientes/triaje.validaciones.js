@@ -95,7 +95,7 @@ function erroresDeRangoTriaje(valores = {}) {
     const imc = calcularImc(peso, talla);
     if (imc !== null && (imc < IMC_MINIMO || imc > IMC_MAXIMO)) {
       const mensaje =
-        `Con ${peso} kg y ${talla} cm el indice de masa corporal sale ${imc}, que no es posible. ` +
+        `Con ${peso} lb y ${talla} cm el indice de masa corporal sale ${imc}, que no es posible. ` +
         "Revisa el peso y la talla: la talla va en centimetros.";
       errores.peso = mensaje;
       errores.talla = mensaje;

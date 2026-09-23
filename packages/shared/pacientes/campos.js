@@ -214,9 +214,9 @@ export const CAMPOS_TRIAJE = [
     id: "peso",
     label: "Peso",
     tipo: TIPOS_DE_CAMPO.NUMERO,
-    sufijo: "kg",
+    sufijo: "lb",
     paso: 0.1,
-    validacion: { requerido: false, min: 1, max: 400 },
+    validacion: { requerido: false, min: 1, max: 800 },
   },
   {
     id: "talla",

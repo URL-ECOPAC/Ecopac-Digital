@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-
 import { listarComunidades } from "../territorio/api.js";
-import { obtenerCatalogoDeCondiciones, obtenerPacientesConCondicion } from "./condiciones.api.js";
+import { obtenerPacientesConCondicion, obtenerCatalogoDeCondiciones } from "./condiciones.api.js";
 import { OPCIONES_ESTADO_CONDICION } from "./condiciones.campos.js";
 import { FILTROS_PACIENTE_CRONICO_VACIOS } from "./condiciones.filtros.js";
 import { puedeVerCondiciones } from "./condiciones.permisos.js";
@@ -15,10 +14,8 @@ export function usePacientesCronicos({ rol } = {}) {
   const [pacientes, setPacientes] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
-
   const [comunidades, setComunidades] = useState([]);
   const [condicionesCronicas, setCondicionesCronicas] = useState([]);
-
   const permitido = puedeVerCondiciones(rol);
   const { comunidad, condicion, estado } = filtros;
 
@@ -28,16 +25,13 @@ export function usePacientesCronicos({ rol } = {}) {
       setCargando(false);
       return;
     }
-
     setCargando(true);
     setError(null);
-
     const respuesta = await obtenerPacientesConCondicion({
       comunidadId: comunidad || undefined,
       condicionId: condicion || undefined,
       estado: estado || undefined,
     });
-
     setPacientes(respuesta.pacientes ?? []);
     setError(respuesta.error);
     setCargando(false);
@@ -53,19 +47,18 @@ export function usePacientesCronicos({ rol } = {}) {
     listarComunidades().then((respuesta) => {
       if (!vigente) return;
       setComunidades(
-        (respuesta.comunidades ?? []).map((fila) => ({ value: fila.id, label: fila.nombre })),
+        (respuesta.comunidades ?? [])
+          .map((fila) => ({ value: fila.id, label: fila.nombre }))
       );
     });
 
     obtenerCatalogoDeCondiciones().then((respuesta) => {
       if (!vigente) return;
       const filas = respuesta.condiciones ?? respuesta.catalogo ?? [];
-      setCondicionesCronicas(filas.map((fila) => ({ value: fila.id, label: fila.nombre })));
+      setCondicionesCronicas(filas.map((f) => ({ value: f.id, label: f.nombre })));
     });
 
-    return () => {
-      vigente = false;
-    };
+    return () => { vigente = false; };
   }, []);
 
   const setFiltro = useCallback((id, valor) => {

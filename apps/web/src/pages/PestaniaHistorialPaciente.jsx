@@ -32,7 +32,7 @@ const ETIQUETAS_DE_SIGNOS = [
   ["frecuenciaCardiaca", "Frecuencia cardiaca", "lpm"],
   ["temperatura", "Temperatura", "°C"],
   ["glucosa", "Glucosa", "mg/dL"],
-  ["peso", "Peso", "kg"],
+  ["peso", "Peso", "lb"],
   ["talla", "Talla", "cm"],
   ["imc", "IMC"],
 ];
