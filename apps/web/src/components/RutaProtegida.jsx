@@ -29,7 +29,7 @@ export default function RutaProtegida({ roles = null }) {
   //    parpadeo que hay que evitar. useSesion no pasa a LISTO hasta que el perfil esta leido,
   //    justamente para que aqui no se decida con informacion a medias.
   if (estadoRestauracion === ESTADOS_DE_RESTAURACION.CARGANDO) {
-    return <LoadingState message="Comprobando tu sesion..." />;
+    return <LoadingState message="Comprobando tu sesión..." />;
   }
 
   // 2. No hay sesion: al login, conservando a donde queria ir. `replace` evita que el boton
@@ -44,7 +44,7 @@ export default function RutaProtegida({ roles = null }) {
   //    de abajo pintaba "no se pudo confirmar tu rol" un instante y despues la sesion entraba
   //    igual: el error que se veia en cada login (issue #840).
   if (!perfil && cargando) {
-    return <LoadingState message="Comprobando tu sesion..." />;
+    return <LoadingState message="Comprobando tu sesión..." />;
   }
 
   // 4. Hay token pero no se pudo leer el perfil. useSesion conserva la sesion a proposito para

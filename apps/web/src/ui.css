@@ -1046,7 +1046,50 @@ textarea.form-control {
   border: 1px solid var(--color-border);
   border-radius: var(--radio-lg);
   box-shadow: var(--sombra-sm);
-  overflow: hidden;
+
+  /* ISSUE #862: era `overflow: hidden`, y con eso una tabla mas ancha que su contenedor quedaba
+     recortada sin barra de desplazamiento. No se notaba porque DataList.jsx lo pisa con un
+     `style` en linea -- pero cualquier otra tabla que use la clase, como la de la pestana de
+     medicamentos por vencer, se cortaba en silencio. El recorte de las esquinas, que es lo que
+     `hidden` daba, lo sigue dando `auto`. */
+  overflow-x: auto;
+}
+
+/* Encabezado pulsable de una columna ordenable (issue #862). Un <button> de verdad, sin el
+   aspecto de boton: tiene que leerse como el encabezado que es y a la vez alcanzarse con el
+   teclado. */
+.ec-tabla-ordenar {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.ec-tabla-ordenar:hover {
+  color: var(--color-primary);
+}
+
+/* El foco tiene que verse: es la unica pista de donde esta quien navega con el teclado. */
+.ec-tabla-ordenar:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: var(--radio-sm);
+}
+
+/* Sin ordenar, la flecha doble se insinua; al ordenar, toma el color de la marca. */
+.ec-tabla-ordenar svg {
+  opacity: 0.4;
+  flex-shrink: 0;
+}
+
+.ec-tabla-ordenar svg.es-activa {
+  opacity: 1;
+  color: var(--color-primary);
 }
 
 /* ==========================================================================
@@ -1203,4 +1246,186 @@ textarea.form-control {
   gap: var(--spacing-sm);
   justify-content: space-between;
   margin-top: var(--spacing-sm);
+}
+
+/* ==========================================================================
+   Tablas en pantalla estrecha: modo tarjeta (issue #862)
+   ========================================================================== */
+
+/* POR QUE. Un reporte como el de pacientes atendidos tiene nueve columnas. En un telefono se
+   veian tres y el resto quedaba tras un desplazamiento horizontal que nada anunciaba: la
+   pantalla parecia decir que no habia mas datos. Bajo 768px cada fila se convierte en una
+   tarjeta con sus campos apilados, que es como la misma informacion se lee en apps/mobile.
+
+   Se hace con CSS y no renderizando un segundo arbol: DataList pone el rotulo de cada columna en
+   `data-label`, y aqui se pinta con ::before. Un solo DOM y ningun estado de layout en el
+   componente.
+
+   La semantica la sostienen los role="table"/"row"/"cell" que DataList declara: al cambiar el
+   display, el navegador deja de tratar esto como tabla, y sin esos roles un lector de pantalla
+   dejaria de anunciar filas y columnas. */
+@media (max-width: 767.98px) {
+  .ec-tabla {
+    background-color: transparent;
+    border: 0;
+    box-shadow: none;
+    overflow-x: visible;
+  }
+
+  .ec-tabla table,
+  .ec-tabla thead,
+  .ec-tabla tbody,
+  .ec-tabla tr,
+  .ec-tabla td {
+    display: block;
+    width: 100%;
+  }
+
+  /* El encabezado desaparece de la vista pero no del arbol de accesibilidad: cada celda ya lleva
+     su rotulo al lado, asi que repetirlo arriba seria decirlo dos veces. */
+  .ec-tabla thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .ec-tabla tr {
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radio-lg);
+    box-shadow: var(--sombra-sm);
+    margin-bottom: var(--spacing-sm);
+    padding: var(--spacing-sm);
+  }
+
+  .ec-tabla td {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--spacing-sm);
+    border: 0;
+    padding: var(--spacing-xs) 0;
+    text-align: right;
+  }
+
+  .ec-tabla td::before {
+    content: attr(data-label);
+    color: var(--color-text-muted);
+    font-size: var(--texto-xs);
+    font-weight: var(--peso-medio);
+    text-align: left;
+    /* El rotulo no se encoge y el valor se parte: al reves, "Adultos mayores" saldria en tres
+       lineas al lado de un numero de dos digitos. */
+    flex: 0 0 45%;
+  }
+
+  /* La celda de la accion secundaria no tiene rotulo que mostrar: su data-label viene vacio. */
+  .ec-tabla td:not([data-label])::before {
+    content: none;
+  }
+
+  .ec-tabla td:not([data-label]) {
+    justify-content: flex-end;
+    padding-top: var(--spacing-sm);
+  }
+
+  /* La columna principal encabeza la tarjeta, como el titulo de una tarjeta de movil. */
+  .ec-tabla td.fw-semibold {
+    font-size: var(--texto-md);
+    border-bottom: 1px solid var(--color-border);
+    margin-bottom: var(--spacing-xs);
+    padding-bottom: var(--spacing-sm);
+  }
+}
+
+/* ==========================================================================
+   Grafica de barras (issue #862)
+   ========================================================================== */
+
+.ec-grafica {
+  margin: 0;
+}
+
+.ec-gr-titulo {
+  border-left: 3px solid var(--ec-acento, var(--ec-acento-modulo, var(--color-primary)));
+  color: var(--color-text);
+  font-size: var(--texto-md);
+  font-weight: var(--peso-semibold);
+  margin: 0 0 var(--spacing-md);
+  padding-left: var(--spacing-sm);
+}
+
+/* El SVG escala con su viewBox: no lleva alto fijo, al contrario que las barras de divs que
+   sustituye. `display: block` quita el hueco del renglon que el navegador deja bajo un inline. */
+.ec-gr-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.ec-gr-guia {
+  stroke: var(--color-border);
+  stroke-width: 1;
+}
+
+.ec-gr-eje {
+  stroke: var(--color-text-muted);
+  stroke-width: 1;
+}
+
+.ec-gr-numero,
+.ec-gr-etiqueta {
+  fill: var(--color-text-muted);
+  font-family: var(--fuente-base);
+  font-size: 13px;
+}
+
+.ec-gr-barra {
+  fill: var(--ec-acento, var(--color-primary));
+}
+
+.ec-gr-barra--comparacion {
+  fill: var(--color-info);
+}
+
+.ec-gr-leyenda {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-md);
+  list-style: none;
+  margin: var(--spacing-sm) 0 0;
+  padding: 0;
+  color: var(--color-text-muted);
+  font-size: var(--texto-xs);
+}
+
+.ec-gr-leyenda li {
+  align-items: center;
+  display: flex;
+  gap: var(--spacing-xs);
+}
+
+.ec-gr-muestra {
+  background-color: var(--ec-acento, var(--color-primary));
+  border-radius: var(--radio-sm);
+  display: inline-block;
+  height: 10px;
+  width: 10px;
+}
+
+.ec-gr-muestra--comparacion {
+  background-color: var(--color-info);
+}
+
+.ec-gr-vacio {
+  background-color: var(--color-surface);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radio-lg);
+  color: var(--color-text-muted);
+  margin: 0;
+  padding: var(--spacing-lg);
+  text-align: center;
 }

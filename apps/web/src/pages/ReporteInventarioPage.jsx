@@ -1,43 +1,41 @@
-import {
-  exportarFilasACSV,
-  FILTROS_INVENTARIO_REPORTE,
-  formatearMoneda,
-  useExportarPDF,
-  useReporteInventario,
-} from "@ecopac/shared";
+import { useState } from "react";
+
+import { FILTROS_INVENTARIO_REPORTE, formatearMoneda, useReporteInventario } from "@ecopac/shared";
+import BotonExportarCSV from "../components/BotonExportarCSV";
+import BotonImprimir from "../components/BotonImprimir";
 import DataList from "../components/DataList";
+import descargarCSV from "../components/descargarCSV";
+import EmptyState from "../components/EmptyState";
 import ErrorState from "../components/ErrorState";
 import FilterBar from "../components/FilterBar";
 import LoadingState from "../components/LoadingState";
-import CabeceraDeReporte, { ContenedorDeReporte } from "./CabeceraDeReporte";
-import { useSesionCompartida } from "../contexto/SesionProvider";
-import BotonExportarPDF from "../components/BotonExportarPDF";
-import "./reportes.css";
+import Modal from "../components/Modal";
+import Paginacion from "../components/Paginacion";
 import StatCard from "../components/StatCard";
+import CabeceraDeReporte, { ContenedorDeReporte } from "./CabeceraDeReporte";
+import ReporteImprimible from "./ReporteImprimible";
+import { useSesionCompartida } from "../contexto/SesionProvider";
+import "./reportes.css";
 
 // Reporte de inventario actual (issue #212, reconectado por #693).
-// Agregada exportación PDF (issue #216).
-
-/** Descarga el CSV. Vive aca porque toca document, Blob y URL, que shared no puede tocar. */
-function descargarCSV(columnas, filas) {
-  const blob = new Blob([exportarFilasACSV(filas, columnas)], {
-    type: "text/csv;charset=utf-8;",
-  });
-  const url = URL.createObjectURL(blob);
-  const enlace = document.createElement("a");
-  enlace.href = url;
-  enlace.download = "inventario-actual.csv";
-  enlace.click();
-  URL.revokeObjectURL(url);
-}
+//
+// ISSUE #862. El desglose por lote se dibujaba como UNA SECCION CON SU PROPIA TABLA POR CADA
+// MEDICAMENTO, una debajo de otra y sin plegar: con doscientos medicamentos eran doscientas
+// tablas apiladas en la misma pagina. Ahora cada fila lleva "Ver lotes" y el desglose se abre en
+// un modal, que es el patron de BitacoraAuditoriaPage.
 
 export default function ReporteInventarioPage({ incrustado = false }) {
   const { rol } = useSesionCompartida();
+  const [imprimiendo, setImprimiendo] = useState(false);
+  const [medicamentoEnDetalle, setMedicamentoEnDetalle] = useState(null);
+
   const {
     tieneAcceso,
     cargando,
     error,
     medicamentos,
+    medicamentosCompletos,
+    total,
     totales,
     columnas,
     camposDeLote,
@@ -46,6 +44,11 @@ export default function ReporteInventarioPage({ incrustado = false }) {
     limpiarFiltros,
     hayFiltros,
     catalogos,
+    orden,
+    alternarOrden,
+    numeroDePagina,
+    totalPaginas,
+    irAPagina,
     recargar,
     tieneAccesoValorizacion,
     cargandoValorizacion,
@@ -56,18 +59,11 @@ export default function ReporteInventarioPage({ incrustado = false }) {
     recargarValorizacion,
   } = useReporteInventario({ rol });
 
-  // Exportación PDF — issue #216
-  const periodo = new Date().toLocaleDateString("es-GT", { dateStyle: "long" });
-  const { exportar, generando } = useExportarPDF({
-    tituloReporte: "Reporte de Inventario Actual",
-    periodo: `Al ${periodo}`,
-  });
-
   if (!tieneAcceso) {
     return (
       <ContenedorDeReporte incrustado={incrustado}>
         <CabeceraDeReporte incrustado={incrustado} title="Inventario actual" />
-        <ErrorState message="Se necesita una sesion activa para consultar el inventario." />
+        <ErrorState message="Se necesita una sesión activa para consultar el inventario." />
       </ContenedorDeReporte>
     );
   }
@@ -80,13 +76,24 @@ export default function ReporteInventarioPage({ incrustado = false }) {
         subtitle="Existencia por medicamento, con el desglose de cada lote y bodega"
         actions={[
           {
-            label: "Exportar CSV",
-            onClick: () => descargarCSV(columnas, medicamentos),
-            variant: "secondary",
+            key: "csv",
+            custom: (
+              <BotonExportarCSV
+                onClick={() =>
+                  descargarCSV(columnas, medicamentosCompletos, "inventario-actual.csv", catalogos)
+                }
+                disabled={medicamentosCompletos.length === 0}
+              />
+            ),
           },
-          // Nuevo botón de PDF
           {
-            custom: <BotonExportarPDF onClick={exportar} generando={generando} />,
+            key: "imprimir",
+            custom: (
+              <BotonImprimir
+                onClick={() => setImprimiendo(true)}
+                disabled={medicamentosCompletos.length === 0}
+              />
+            ),
           },
         ]}
       />
@@ -104,8 +111,7 @@ export default function ReporteInventarioPage({ incrustado = false }) {
       {!error && cargando && <LoadingState message="Consultando el inventario..." />}
 
       {!error && !cargando && (
-        // TODO el contenido que va al PDF DENTRO de este div
-        <div id="contenido-reporte-pdf">
+        <>
           <section className="reporte-seccion">
             <div className="ec-kpis">
               <StatCard label="Unidades disponibles" value={totales.unidadesDisponibles} />
@@ -152,31 +158,68 @@ export default function ReporteInventarioPage({ incrustado = false }) {
           )}
 
           <section className="reporte-seccion">
+            <p className="ec-rotulo reporte-conteo">
+              {total} {total === 1 ? "medicamento" : "medicamentos"}
+            </p>
+
             <DataList
               columnas={columnas}
               datos={medicamentos}
-              vacio="No hay existencias que coincidan con estos filtros."
+              catalogos={catalogos}
+              ordenarPor={orden}
+              onOrdenar={alternarOrden}
+              accionSecundaria={{
+                label: "Ver lotes",
+                onClick: (medicamento) => setMedicamentoEnDetalle(medicamento),
+              }}
+              vacio={
+                <EmptyState
+                  message={
+                    hayFiltros
+                      ? "No hay existencias que coincidan con estos filtros."
+                      : "No hay existencias registradas."
+                  }
+                  actionLabel={hayFiltros ? "Limpiar filtros" : undefined}
+                  onAction={hayFiltros ? limpiarFiltros : undefined}
+                />
+              }
             />
-          </section>
 
-          {medicamentos.map((medicamento) => (
-            <section
-              className="reporte-seccion"
-              key={medicamento.medicamentoId ?? medicamento.medicamento}
-            >
-              <h2 className="ec-seccion-titulo">
-                {medicamento.medicamento} - lotes ({medicamento.lotes?.length ?? 0})
-              </h2>
-              <DataList
-                columnas={camposDeLote}
-                datos={medicamento.lotes ?? []}
-                catalogos={catalogos}
-                vacio="Sin lotes registrados."
-              />
-            </section>
-          ))}
-        </div>
-        // Fin del contenido PDF
+            <Paginacion pagina={numeroDePagina} totalPaginas={totalPaginas} onCambiar={irAPagina} />
+          </section>
+        </>
+      )}
+
+      <Modal
+        visible={Boolean(medicamentoEnDetalle)}
+        onClose={() => setMedicamentoEnDetalle(null)}
+        title={
+          medicamentoEnDetalle
+            ? `${medicamentoEnDetalle.medicamento} · ${medicamentoEnDetalle.lotes?.length ?? 0} lotes`
+            : ""
+        }
+      >
+        <DataList
+          columnas={camposDeLote}
+          datos={medicamentoEnDetalle?.lotes ?? []}
+          catalogos={catalogos}
+          vacio="Sin lotes registrados."
+        />
+      </Modal>
+
+      {imprimiendo && (
+        <ReporteImprimible
+          titulo="Inventario actual"
+          totales={[
+            { etiqueta: "Unidades disponibles", valor: totales.unidadesDisponibles },
+            { etiqueta: "Unidades vencidas", valor: totales.unidadesVencidas },
+            { etiqueta: "Medicamentos distintos", valor: totales.medicamentosDistintos },
+            { etiqueta: "Renglones", valor: totales.renglonesDeInventario },
+          ]}
+          secciones={[{ columnas, filas: medicamentosCompletos }]}
+          catalogos={catalogos}
+          alTerminar={() => setImprimiendo(false)}
+        />
       )}
     </ContenedorDeReporte>
   );

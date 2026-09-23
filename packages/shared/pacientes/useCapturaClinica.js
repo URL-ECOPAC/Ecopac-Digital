@@ -116,8 +116,8 @@ export function useCapturaClinica({ habilitado = true } = {}) {
   if (!cargando && !error) {
     if (jornadas.length === 0) {
       motivo =
-        "No hay ninguna jornada en curso. La informacion clinica se registra dentro de una " +
-        "jornada, asi que primero hay que iniciarla desde el modulo de Jornadas.";
+        "No hay ninguna jornada en curso. La información clínica se registra dentro de una " +
+        "jornada, así que primero hay que iniciarla desde el módulo de Jornadas.";
     } else if (!jornadaId) {
       motivo = "Hay varias jornadas en curso: elige en cual se esta atendiendo a esta persona.";
     }

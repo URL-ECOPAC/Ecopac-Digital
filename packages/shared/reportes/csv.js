@@ -21,9 +21,17 @@
 //    aceptacion de la #207 exige que la fecha salga en un formato que la hoja de calculo
 //    reconozca, y dejarlo al hook de cada pantalla es la manera segura de que una de las
 //    cuatro pantallas de reporte lo olvide y exporte un ISO crudo. El resto de tipos
-//    (TEXTO, NUMERO, TELEFONO, BOOLEANO) se exportan tal cual llegan en la fila. ESTADO,
-//    CHIP, CHIPS y AVATAR quedan fuera de este formateo automatico: su etiqueta visible
-//    sale de un catalogo (etiquetasDesde) que vive en la app, no en esta funcion pura.
+//    (TEXTO, NUMERO, TELEFONO) se exportan tal cual llegan en la fila.
+//
+// 4. ESTADO y CHIP SI se traducen, desde la issue #862, pasando `catalogos` como tercer
+//    argumento. El comentario anterior decia que quedaban fuera "porque su etiqueta vive en la
+//    app": eso era cierto del COMPONENTE, no del catalogo, que es un descriptor de shared como
+//    cualquier otro y el hook ya tiene a mano. Sin esto, la columna "Alerta" del reporte de
+//    vencimientos exportaba la cadena del enum -"critico"- en vez de "Crítico", y la columna
+//    "Vencimiento" del desglose por lote exportaba `true` y `false`. Quien abre el CSV ve otra
+//    cosa que quien mira la pantalla, que es justo lo que un export no debe hacer.
+//
+//    `catalogos` es opcional: sin el, el comportamiento es exactamente el de antes.
 
 import { TIPOS_DE_PRESENTACION } from "../descriptores.js";
 import { formatearFechaCorta } from "../formato/fechas.js";
@@ -61,7 +69,7 @@ export function escaparCampoCSV(valor) {
   return `"${texto.replace(/"/g, '""')}"`;
 }
 
-function formatearValorDeCelda(valor, columna) {
+function formatearValorDeCelda(valor, columna, catalogos = {}) {
   if (valor === null || valor === undefined) return "";
 
   switch (columna?.tipo) {
@@ -69,9 +77,22 @@ function formatearValorDeCelda(valor, columna) {
       return formatearFechaCorta(valor);
     case TIPOS_DE_PRESENTACION.MONEDA:
       return formatearMoneda(valor) ?? "";
+    case TIPOS_DE_PRESENTACION.BOOLEANO:
+      return valor ? "Si" : "No";
     default:
-      return String(valor);
+      break;
   }
+
+  // Una columna de estado guarda el valor del enum -o un booleano, como `vencido`- y muestra la
+  // etiqueta de su catalogo. Mismo `etiquetasDesde` que leen DataList y ReporteImprimible.
+  if (columna?.etiquetasDesde) {
+    const catalogo = catalogos[columna.etiquetasDesde] ?? [];
+    const opcion = catalogo.find((entrada) => entrada.value === valor);
+    if (opcion) return String(opcion.label);
+  }
+
+  if (typeof valor === "boolean") return valor ? "Si" : "No";
+  return String(valor);
 }
 
 /**
@@ -79,10 +100,11 @@ function formatearValorDeCelda(valor, columna) {
  * encabezado y `columna.tipo` para formatear fechas y montos.
  *
  * @param {Array<Object>} filas
- * @param {Array<{id: string, label: string, tipo?: string}>} columnas
+ * @param {Array<{id: string, label: string, tipo?: string, etiquetasDesde?: string}>} columnas
+ * @param {Record<string, Array<{value: *, label: string}>>} [catalogos] Para las columnas ESTADO.
  * @returns {string} Contenido CSV completo, con BOM UTF-8 y terminadores CRLF.
  */
-export function exportarFilasACSV(filas, columnas) {
+export function exportarFilasACSV(filas, columnas, catalogos = {}) {
   const columnasSeguras = Array.isArray(columnas) ? columnas : [];
   const filasSeguras = Array.isArray(filas) ? filas : [];
 
@@ -92,7 +114,11 @@ export function exportarFilasACSV(filas, columnas) {
 
   const lineas = filasSeguras.map((fila) =>
     columnasSeguras
-      .map((columna) => escaparCampoCSV(formatearValorDeCelda(fila?.[columna.id], columna)))
+      .map((columna) =>
+        escaparCampoCSV(
+          formatearValorDeCelda(fila?.[columna.desde ?? columna.id], columna, catalogos),
+        ),
+      )
       .join(SEPARADOR_CAMPO),
   );
 

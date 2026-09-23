@@ -1,40 +1,30 @@
+import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import {
-  ESTADOS_JORNADA_REPORTE,
-  exportarFilasACSV,
-  formatearFechaLarga,
-  useExportarPDF,
-  useReporteJornada,
-} from "@ecopac/shared";
+import { ESTADOS_JORNADA_REPORTE, formatearFechaLarga, useReporteJornada } from "@ecopac/shared";
+import BotonExportarCSV from "../components/BotonExportarCSV";
+import BotonImprimir from "../components/BotonImprimir";
 import Card from "../components/Card";
 import DataList from "../components/DataList";
+import descargarCSV from "../components/descargarCSV";
 import ErrorState from "../components/ErrorState";
 import LoadingState from "../components/LoadingState";
 import PageHeader from "../components/PageHeader";
 import ScreenContainer from "../components/ScreenContainer";
 import StatusChip from "../components/StatusChip";
 import { useSesionCompartida } from "../contexto/SesionProvider";
-import BotonExportarPDF from "../components/BotonExportarPDF";
+import ReporteImprimible from "./ReporteImprimible";
 import "./reportes.css";
 import StatCard from "../components/StatCard";
 
 // Reporte de resultados de una jornada (issues #206 / #215, reconectado por #693).
-// Agregada exportación PDF (issue #216).
-
-/**
- * Descarga el CSV en el navegador. Vive acá y no en packages/shared porque toca `document`,
- * `Blob` y `URL`, que es justo la frontera que shared no puede cruzar.
- */
-function descargarCSV(nombreDeArchivo, columnas, filas) {
-  const csv = exportarFilasACSV(filas, columnas);
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const enlace = document.createElement("a");
-  enlace.href = url;
-  enlace.download = nombreDeArchivo;
-  enlace.click();
-  URL.revokeObjectURL(url);
-}
+//
+// ISSUE #862. Tres cosas se corrigen aqui:
+//
+//   - Los dos "Exportar CSV" eran <button> con una clase propia (.reporte-exportar): el unico
+//     sitio del modulo con un boton escrito a mano en vez del catalogo.
+//   - "Personal participante" era la unica de las tres secciones SIN boton de CSV.
+//   - El "Exportar PDF" no funcionaba (ver ReporteImprimible.jsx). Ahora la jornada entera sale
+//     en una sola hoja, con sus tres tablas, en vez de tres descargas sueltas.
 
 export default function ReporteJornada() {
   const { id } = useParams();
@@ -54,18 +44,23 @@ export default function ReporteJornada() {
     recargar,
   } = useReporteJornada(id, { rol });
 
-  // Exportación PDF — issue #216
+  const [imprimiendo, setImprimiendo] = useState(false);
+
   const periodo = ficha
     ? [ficha.comunidad, formatearFechaLarga(ficha.fecha)].filter(Boolean).join(" — ")
     : `Jornada: ${id}`;
-  const { exportar, generando } = useExportarPDF({
-    tituloReporte: ficha?.nombre ?? "Reporte de Resultados de Jornada",
-    periodo,
-  });
 
+  // ISSUE #862: decia "Volver a reportes" y llevaba a /reportes, que era arbitrario incluso antes
+  // de esta issue: al reporte de una jornada NO se llega desde ahi -no es una de las cuatro
+  // pestanas-, asi que el boton devolvia a una pantalla por la que no se habia pasado.
+  //
+  // El unico sitio que enlaza aqui es el detalle de la jornada, que es ademas donde uno espera
+  // volver: se sale del reporte de una jornada a esa jornada. `id` es justamente su UUID, asi que
+  // el destino existe siempre, tambien cuando alguien llega escribiendo la direccion a mano
+  // -caso en el que navigate(-1) no tendria a donde volver-.
   const volver = {
-    label: "Volver a reportes",
-    onClick: () => navigate("/reportes"),
+    label: "Volver a la jornada",
+    onClick: () => navigate(`/jornadas/${id}`),
     variant: "secondary",
   };
 
@@ -107,14 +102,12 @@ export default function ReporteJornada() {
         }
         actions={[
           volver,
-          // Botón de PDF
-          { custom: <BotonExportarPDF onClick={exportar} generando={generando} /> },
+          { key: "imprimir", custom: <BotonImprimir onClick={() => setImprimiendo(true)} /> },
         ]}
       />
 
       {ficha && (
-        // TODO el contenido que va al PDF DENTRO de este div
-        <div id="contenido-reporte-pdf">
+        <>
           <section className="reporte-seccion">
             <div className="ec-kpis">
               <StatCard label="Pacientes atendidos" value={ficha.pacientes_atendidos} />
@@ -138,20 +131,16 @@ export default function ReporteJornada() {
           <section className="reporte-seccion">
             <div className="reporte-cabecera-tabla">
               <h2 className="ec-seccion-titulo">Diagnósticos más frecuentes</h2>
-              <button
-                className="reporte-exportar"
-                disabled={diagnosticos.length === 0}
+              <BotonExportarCSV
                 onClick={() =>
                   descargarCSV(
-                    `diagnosticos-jornada-${id}.csv`,
                     columnasDeDiagnosticos,
                     diagnosticos,
+                    `diagnosticos-jornada-${id}.csv`,
                   )
                 }
-                type="button"
-              >
-                Exportar CSV
-              </button>
+                disabled={diagnosticos.length === 0}
+              />
             </div>
             <DataList
               columnas={columnasDeDiagnosticos}
@@ -163,20 +152,16 @@ export default function ReporteJornada() {
           <section className="reporte-seccion">
             <div className="reporte-cabecera-tabla">
               <h2 className="ec-seccion-titulo">Medicamentos más entregados</h2>
-              <button
-                className="reporte-exportar"
-                disabled={medicamentos.length === 0}
+              <BotonExportarCSV
                 onClick={() =>
                   descargarCSV(
-                    `medicamentos-jornada-${id}.csv`,
                     columnasDeMedicamentos,
                     medicamentos,
+                    `medicamentos-jornada-${id}.csv`,
                   )
                 }
-                type="button"
-              >
-                Exportar CSV
-              </button>
+                disabled={medicamentos.length === 0}
+              />
             </div>
             <DataList
               columnas={columnasDeMedicamentos}
@@ -186,15 +171,49 @@ export default function ReporteJornada() {
           </section>
 
           <section className="reporte-seccion">
-            <h2 className="ec-seccion-titulo">Personal participante</h2>
+            <div className="reporte-cabecera-tabla">
+              <h2 className="ec-seccion-titulo">Personal participante</h2>
+              {/* ISSUE #862: era la unica de las tres secciones sin su CSV. */}
+              <BotonExportarCSV
+                onClick={() =>
+                  descargarCSV(columnasDePersonal, personal, `personal-jornada-${id}.csv`)
+                }
+                disabled={personal.length === 0}
+              />
+            </div>
             <DataList
               columnas={columnasDePersonal}
               datos={personal}
               vacio="Nadie registró consultas en esta jornada."
             />
           </section>
-        </div>
-        // Fin del contenido PDF
+        </>
+      )}
+
+      {imprimiendo && ficha && (
+        <ReporteImprimible
+          titulo={ficha.nombre ?? "Resultados de la jornada"}
+          periodo={periodo}
+          totales={[
+            { etiqueta: "Pacientes atendidos", valor: ficha.pacientes_atendidos },
+            { etiqueta: "Consultas realizadas", valor: ficha.total_consultas },
+            { etiqueta: "Diagnósticos distintos", valor: diagnosticos.length },
+          ]}
+          secciones={[
+            {
+              titulo: "Diagnósticos más frecuentes",
+              columnas: columnasDeDiagnosticos,
+              filas: diagnosticos,
+            },
+            {
+              titulo: "Medicamentos más entregados",
+              columnas: columnasDeMedicamentos,
+              filas: medicamentos,
+            },
+            { titulo: "Personal participante", columnas: columnasDePersonal, filas: personal },
+          ]}
+          alTerminar={() => setImprimiendo(false)}
+        />
       )}
     </ScreenContainer>
   );

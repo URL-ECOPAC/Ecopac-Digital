@@ -107,7 +107,7 @@ const MOTIVO_POR_ESTADO = Object.freeze({
   [ESTADOS_JORNADA.FINALIZADA]:
     "La jornada ya esta finalizada. Solo un administrador puede reabrirla para seguir registrando.",
   [ESTADOS_JORNADA.CANCELADA]:
-    "La jornada esta cancelada y no admite registros. Registra la atencion en la jornada que corresponda.",
+    "La jornada está cancelada y no admite registros. Registra la atención en la jornada que corresponda.",
 });
 
 /**
@@ -137,7 +137,7 @@ export function puedeRegistrarEnJornada(estado) {
     puede: false,
     motivo:
       MOTIVO_POR_ESTADO[estado] ??
-      "No se pudo confirmar que la jornada este en curso, asi que no se puede registrar todavia.",
+      "No se pudo confirmar que la jornada esté en curso, así que no se puede registrar todavía.",
   };
 }
 

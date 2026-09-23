@@ -88,9 +88,9 @@ export function validarGasto(gasto = {}, jornada = null, hoy = new Date()) {
 
   // 2. Categoria obligatoria y dentro del enum categoria_gasto.
   if (estaVacio(gasto.categoria)) {
-    errores.push("La categoria de gasto es obligatoria.");
+    errores.push("La categoría de gasto es obligatoria.");
   } else if (!CATEGORIAS_VALIDAS.includes(gasto.categoria)) {
-    errores.push("La categoria seleccionada no es valida.");
+    errores.push("La categoría seleccionada no es válida.");
   }
 
   // 3. Monto mayor que cero. Lo mismo exige CHECK (monto > 0) en la tabla; se adelanta aqui para

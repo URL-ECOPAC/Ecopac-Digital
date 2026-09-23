@@ -112,7 +112,7 @@ function validarPorcentaje(valores) {
 
   const numero = Number(valor);
   if (!Number.isInteger(numero) || numero < 0 || numero > 100) {
-    return { porcentajeAvance: "El avance debe ser un numero entero entre 0 y 100." };
+    return { porcentajeAvance: "El avance debe ser un número entero entre 0 y 100." };
   }
   return {};
 }

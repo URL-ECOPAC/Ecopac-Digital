@@ -577,6 +577,29 @@ vista tuviera por donde llegarse. La `00141` la cierra en las tres capas a la ve
 ruta y la vista digan lo mismo. La vista se conserva porque la administradora la sigue usando y
 porque cada quien se lee a si mismo por ella.
 
+**`puedeVerReporteDeVencimientos`, el quinto reporte (issue #862).**
+`useReporteMedicamentosPorVencer` usaba `puedeVerIndicadoresDeImpacto` -la regla de
+`vista_reporte_impacto`, mas estrecha y de otro reporte-. El de vencimientos lee `existencias`
+(`00079`) y `lotes`/`medicamentos`/`bodegas` (`00034`), abiertas a toda sesion activa, igual que
+el de inventario. No cambia quien entra, porque los tres roles que alcanzan el modulo pasan las
+dos guardas; cambia que la funcion describe la politica que de verdad protege.
+
+**Que roles alcanzan `/reportes` no lo decide este archivo**, sino `navegacion.js`:
+administrador, junta directiva y socio fundador. Es una decision deliberada de la issue #426 que
+`navegacion.test.js` afirma, y la #862 la respeto sin tocarla. Un medico o un voluntario no llegan
+a estas pantallas, y ven los vencimientos en `Inventario > Alertas`.
+
+### Divergencia abierta: `reportes.exportar` es inoperante desde la interfaz
+
+Las tres guardas del servidor aceptan `tiene_permiso('reportes.exportar')`, pero **ninguna funcion
+de `reportes/permisos.js` lo mira**: todas deciden por rol base. Conceder ese permiso fino a
+alguien no cambia nada en la pantalla.
+
+Cerrarlo exige que la sesion cargue los permisos efectivos
+(`usuarios/permisos.api.js`, `obtenerPermisosEfectivos`) y eso es un cambio transversal al contexto
+de autenticacion, fuera del alcance de la #862. Mientras tanto, el permiso solo tendria efecto para
+un rol que ya alcance el modulo.
+
 ## Los permisos finos
 
 Junto al rol base hay un mecanismo de excepciones **por persona**: tres tablas de `00003`

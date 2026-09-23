@@ -47,5 +47,16 @@ export * from "./csv.js";
 // a mano-, y precisamente por eso se exporta: mientras nadie lo alcance desde el barril, un error
 // suyo no aparece hasta que alguien lo conecte, que es el defecto que esta guarda vigila.
 export * from "./dashboard.campos.js";
-export { useExportarPDF } from "./useExportarPDF.js";
-export { useReporteMedicamentosPorVencer } from "./useReporteMedicamentosPorVencer.js";
+export * from "./useOrdenYPagina.js";
+export {
+  calcularAlerta,
+  conNivelDeAlerta,
+  useReporteMedicamentosPorVencer,
+} from "./useReporteMedicamentosPorVencer.js";
+
+// useExportarPDF ya no existe (issue #862). Devolvia siempre `columnas: []` y `totalizadores: {}`
+// escritos a mano, llamaba a construirDatosPDF() sin argumentos, y su exportar(generarPDF)
+// esperaba una funcion generadora que ninguna de las cuatro pantallas le pasaba: le llegaba el
+// evento del click. No habia ademas ninguna libreria de PDF en el repo. La exportacion a papel la
+// hace ahora ReporteImprimible en apps/web, sobre DocumentoImprimible y window.print(), que es el
+// mecanismo que la constancia de donacion ya usaba.

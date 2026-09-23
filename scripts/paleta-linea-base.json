@@ -256,7 +256,12 @@
   "apps/mobile/src/screens/RestaurandoSesionScreen.js": ["#2d2d2d", "#3db648"],
   "apps/mobile/src/screens/ResumenJornadaScreen.js": ["#2d2d2d", "#3db648", "#7a7a8a", "#f7f8fa"],
   "apps/mobile/src/screens/SeleccionJornadaScreen.js": ["#2d2d2d", "#7a7a8a"],
-  "apps/mobile/src/screens/ValidacionMovimientosScreen.js": ["#2d2d2d", "#7a7a8a"],
+  "apps/mobile/src/screens/ValidacionMovimientosScreen.js": [
+    "#2d2d2d",
+    "#3db648",
+    "#7a7a8a",
+    "#e91e8c"
+  ],
   "apps/web/src/components/auth/AuthAlert.jsx": [
     "#16a34a",
     "#29abe2",
@@ -319,6 +324,7 @@
     "#e2e4e9",
     "#ffffff"
   ],
+  "apps/web/src/components/Paginacion.jsx": ["#7a7a8a"],
   "apps/web/src/components/ScreenContainer.jsx": ["#f7f8fa"],
   "apps/web/src/components/StatCard.jsx": ["#3db648"],
   "apps/web/src/components/StatusChip.jsx": ["#4d4d4d", "#ffffff"],
@@ -446,6 +452,7 @@
     "#f7f8fa",
     "#ffffff"
   ],
+  "apps/web/src/pages/ReportesPage.jsx": ["#f7941d"],
   "apps/web/src/pages/RestablecerContrasenaPage.jsx": ["#2563eb", "#64748b"],
   "apps/web/src/pages/signos.css": ["#7a7a8a", "#e2e4e9"],
   "apps/web/src/pages/VistaExistenciasPage.jsx": [
@@ -460,6 +467,7 @@
   ],
   "apps/web/src/ui.css": [
     "#1e7a28",
+    "#29abe2",
     "#2d2d2d",
     "#2d9e3a",
     "#3db648",

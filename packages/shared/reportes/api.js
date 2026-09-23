@@ -29,7 +29,6 @@ import { obtenerSupabase } from "../api/cliente.js";
 import { normalizarError } from "../api/errores-de-supabase.js";
 import { obtenerTodasLasFilas } from "../api/paginacion.js";
 import { puedeVerIndicadoresDeImpacto } from "./permisos.js";
-import { aCadenaFechaLocal, diasHastaVencimiento } from "../formato/fechas.js";
 
 // Reexportar funciones de permisos para mantener la interfaz unificada
 export {
@@ -40,11 +39,19 @@ export {
   permisosDeReportes,
 } from "./permisos.js";
 
-/** Columnas de vista_reporte_impacto que necesita el reporte. */
+/**
+ * Columnas de vista_reporte_impacto que necesita el reporte.
+ *
+ * ISSUE #862: faltaba `estado_jornada`, que la vista expone desde la 00027 y que nadie leia. Sin
+ * ella el reporte suma en el mismo total las jornadas finalizadas, las planificadas y las
+ * canceladas, sin forma de distinguirlas: una jornada cancelada aportaba sus cero pacientes al
+ * promedio y una planificada ensuciaba el conteo de comunidades beneficiadas.
+ */
 const COLUMNAS_DEL_REPORTE = [
   "jornada_id",
   "jornada",
   "fecha",
+  "estado_jornada",
   "comunidad_id",
   "comunidad",
   "proyecto_id",
@@ -141,6 +148,7 @@ function variacion(actual, anterior) {
  * @param {string} [opciones.comunidad] UUID de comunidad.
  * @param {string} [opciones.jornada] UUID de jornada.
  * @param {string} [opciones.proyecto] UUID de proyecto.
+ * @param {string} [opciones.estadoJornada] Uno de ESTADOS_JORNADA; sin el, todos los estados.
  * @returns {Promise<{ indicadores: object|null, error: object|null }>}
  */
 export async function obtenerIndicadoresImpacto({
@@ -151,13 +159,15 @@ export async function obtenerIndicadoresImpacto({
   comunidad,
   jornada,
   proyecto,
+  estadoJornada,
 } = {}) {
   if (!puedeVerIndicadoresDeImpacto(rol)) {
     return {
       indicadores: null,
       error: {
         codigo: "SIN_PERMISO",
-        mensaje: "Solo administración y junta directiva consultan los indicadores de impacto.",
+        mensaje:
+          "Solo administración y los roles consultivos consultan los indicadores de impacto.",
       },
     };
   }
@@ -179,6 +189,7 @@ export async function obtenerIndicadoresImpacto({
       if (comunidad) consulta = consulta.eq("comunidad_id", comunidad);
       if (jornada) consulta = consulta.eq("jornada_id", jornada);
       if (proyecto) consulta = consulta.eq("proyecto_id", proyecto);
+      if (estadoJornada) consulta = consulta.eq("estado_jornada", estadoJornada);
 
       return consulta;
     };

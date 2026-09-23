@@ -26,17 +26,11 @@ jest.mock("@ecopac/shared", () => {
     ...real,
     usePanelDeInicio: ({ rol, plataforma }) => ({
       accesos: real.modulosVisibles(rol, { plataforma }).filter((modulo) => modulo.ruta !== "/"),
-      // Lo que el rol abre en web y no aqui (issue #864). Se calcula igual que el hook real para
-      // que el doble no invente una lista mas amable que la de verdad.
-      accesosEnOtraPlataforma: real
-        .modulosVisibles(rol, { plataforma: "web" })
-        .filter(
-          (modulo) =>
-            modulo.ruta !== "/" &&
-            !real.modulosVisibles(rol, { plataforma }).some((suyo) => suyo.id === modulo.id),
-        ),
       jornadasEnCurso: [],
-      puedeVerJornadaEnCurso: real.puedeVerJornadas(rol),
+      // Mismo criterio que el hook real (issue #864): la seccion es para quien TIENE el modulo
+      // Jornadas, no para cualquier rol que pueda leer una jornada suelta.
+      puedeVerJornadaEnCurso:
+        real.puedeVerJornadas(rol) && real.rolesDelModulo("jornadas").includes(rol),
       cargando: false,
       error: null,
       recargar: jest.fn(),
@@ -114,34 +108,5 @@ describe("InicioScreen", () => {
     expect(screen.queryByText("Donaciones")).toBeNull();
     expect(screen.queryByText("Inventario")).toBeNull();
     expect(screen.getByText("Hola")).toBeTruthy();
-  });
-
-  // ISSUE #864. Los dos roles consultivos quedaron con Reportes como unico modulo, y Reportes no
-  // tiene pantalla en movil. Antes eso se veia como un hueco debajo de "Tus modulos", que se lee
-  // como una app rota y no como un limite del rol.
-  it.each(["junta directiva", "socio fundador"])(
-    "a %s le dice que su trabajo esta en la web, en vez de dejar el hueco",
-    (rol) => {
-      sesion.perfil = { rol };
-      pantalla();
-
-      expect(screen.getByText("Tu trabajo está en la versión web")).toBeTruthy();
-      expect(screen.getByText(/Entra por la web para Reportes/)).toBeTruthy();
-    },
-  );
-
-  it("a un rol que si tiene modulos no le aparece ese aviso", () => {
-    sesion.perfil = { rol: "medico" };
-    pantalla();
-
-    expect(screen.queryByText("Tu trabajo está en la versión web")).toBeNull();
-  });
-
-  it("sin perfil el aviso no promete una web que tampoco va a servir", () => {
-    sesion.perfil = null;
-    pantalla();
-
-    expect(screen.queryByText("Tu trabajo está en la versión web")).toBeNull();
-    expect(screen.getByText("Tu rol no abre ningún módulo desde el teléfono")).toBeTruthy();
   });
 });

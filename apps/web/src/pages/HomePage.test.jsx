@@ -89,4 +89,29 @@ describe("HomePage", () => {
 
     expect(screen.getByText("Hola, Ana")).toBeInTheDocument();
   });
+
+  // ISSUE #864. La 00141 le retiro a los dos roles consultivos la lectura de `jornadas`, pero el
+  // cliente les seguia dibujando la seccion: la consulta salia, RLS la devolvia vacia, y acababan
+  // leyendo "No hay ninguna jornada en curso ahora mismo" -- que es falso. Las hay; lo que pasa es
+  // que no son suyas.
+  it.each([ROLES.JUNTA_DIRECTIVA, ROLES.SOCIO_FUNDADOR])(
+    "%s no ve la seccion de jornadas, porque la base no le da ninguna",
+    (rol) => {
+      mockSesion.perfil = { rol, nombres: "Carmen" };
+      pantalla();
+
+      expect(screen.queryByText("Jornadas en curso")).not.toBeInTheDocument();
+      expect(screen.queryByText(/No hay ninguna jornada en curso/)).not.toBeInTheDocument();
+    },
+  );
+
+  it.each([ROLES.ADMINISTRADOR, ROLES.MEDICO, ROLES.VOLUNTARIO])(
+    "%s si tiene el modulo Jornadas, asi que la seccion sigue ahi",
+    (rol) => {
+      mockSesion.perfil = { rol, nombres: "Luis" };
+      pantalla();
+
+      expect(screen.getByText("Jornadas en curso")).toBeInTheDocument();
+    },
+  );
 });

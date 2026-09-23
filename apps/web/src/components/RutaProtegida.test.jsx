@@ -44,7 +44,7 @@ describe("RutaProtegida", () => {
 
     renderConRuta();
 
-    expect(screen.getByText(/comprobando tu sesion/i)).toBeInTheDocument();
+    expect(screen.getByText(/comprobando tu sesión/i)).toBeInTheDocument();
   });
 
   it("redirige a /login cuando no hay sesion", () => {
@@ -74,7 +74,7 @@ describe("RutaProtegida", () => {
 
     renderConRuta({ roles: ["administrador"] });
 
-    expect(screen.getByText(/comprobando tu sesion/i)).toBeInTheDocument();
+    expect(screen.getByText(/comprobando tu sesión/i)).toBeInTheDocument();
     expect(screen.queryByText(/no se pudo confirmar tu rol/i)).not.toBeInTheDocument();
   });
 

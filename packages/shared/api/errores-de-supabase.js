@@ -70,7 +70,7 @@ const MENSAJES = {
   [CODIGOS_DE_ERROR_DE_SUPABASE.UNICIDAD]:
     "Ese registro ya existe. Revisa los datos e intenta de nuevo.",
   [CODIGOS_DE_ERROR_DE_SUPABASE.LLAVE_FORANEA]:
-    "El registro esta relacionado con otros datos, asi que no se puede guardar o eliminar tal " +
+    "El registro está relacionado con otros datos, así que no se puede guardar o eliminar tal " +
     "como esta. Revisa que lo que seleccionaste siga existiendo.",
   [CODIGOS_DE_ERROR_DE_SUPABASE.CHECK]:
     "Alguno de los datos no cumple las reglas del sistema. Revisa el formulario y corrige lo " +
@@ -78,22 +78,22 @@ const MENSAJES = {
   [CODIGOS_DE_ERROR_DE_SUPABASE.CAMPO_REQUERIDO]:
     "Falta un dato obligatorio. Completa el formulario e intenta de nuevo.",
   [CODIGOS_DE_ERROR_DE_SUPABASE.PERMISO_DENEGADO]:
-    "Tu usuario no tiene permiso para hacer esto. Si crees que deberia tenerlo, pideselo a la " +
+    "Tu usuario no tiene permiso para hacer esto. Si crees que debería tenerlo, pídeselo a la " +
     "administradora.",
   [CODIGOS_DE_ERROR_DE_SUPABASE.SESION_EXPIRADA]:
-    "Tu sesion expiro. Inicia sesion de nuevo para continuar.",
+    "Tu sesión expiró. Inicia sesión de nuevo para continuar.",
   [CODIGOS_DE_ERROR_DE_SUPABASE.CREDENCIALES_INVALIDAS]:
-    "El correo o la contrasena no son correctos.",
+    "El correo o la contraseña no son correctos.",
   [CODIGOS_DE_ERROR_DE_SUPABASE.CUENTA_DESACTIVADA]:
     "Tu usuario esta desactivado. Pide a la administradora que lo reactive para volver a entrar.",
-  [CODIGOS_DE_ERROR_DE_SUPABASE.SIN_RESULTADOS]: "No se encontro el registro que buscabas.",
+  [CODIGOS_DE_ERROR_DE_SUPABASE.SIN_RESULTADOS]: "No se encontró el registro que buscabas.",
   [CODIGOS_DE_ERROR_DE_SUPABASE.FALLO_DE_RED]:
     `${labels.errorDeConexion}. Revisa tu conexion e intenta de nuevo; ` +
     "los datos que escribiste no se perdieron.",
   [CODIGOS_DE_ERROR_DE_SUPABASE.LIMITE_EXCEDIDO]:
     "Se hicieron demasiadas peticiones en poco tiempo. Espera un momento e intenta de nuevo.",
   [CODIGOS_DE_ERROR_DE_SUPABASE.DESCONOCIDO]:
-    "Ocurrio un error inesperado. Intenta de nuevo; si sigue pasando, avisa a la administradora.",
+    "Ocurrió un error inesperado. Intenta de nuevo; si sigue pasando, avisa a la administradora.",
 };
 
 /**

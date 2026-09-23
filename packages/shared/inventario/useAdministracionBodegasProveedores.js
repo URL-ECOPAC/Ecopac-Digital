@@ -17,7 +17,7 @@ import { listarProveedores, registrarProveedor, actualizarProveedor } from "./pr
  */
 export function resultadoDeListado(respuesta, coleccion) {
   if (respuesta?.error) {
-    return { items: [], error: respuesta.error.mensaje ?? "No se pudo cargar la informacion." };
+    return { items: [], error: respuesta.error.mensaje ?? "No se pudo cargar la información." };
   }
 
   return { items: respuesta?.[coleccion] ?? [], error: null };
