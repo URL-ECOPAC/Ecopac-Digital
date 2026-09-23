@@ -485,6 +485,36 @@ export default function InventarioPage() {
     [presentaciones],
   );
 
+  // Pestanas. Eran nueve <button> con un color de subrayado distinto cada una (#10b981, #f59e0b,
+  // #0284c7, #6366f1, #0d9488, #7c3aed): las pastillas de `.nav-tabs` de ui.css son las mismas
+  // que usan pacientes, presupuestos y reportes.
+  // Rotulos cortos: con los largos ("Catalogo de medicamentos", "Kardex de movimientos") las
+  // ocho pestanas no cabian en una fila y "Validacion" caia sola a una segunda linea.
+  //
+  // Cuales ve cada rol lo decide pestanasDeInventario(rol) en packages/shared (issue #864,
+  // extendida por #859), no esta pantalla.
+  const etiquetasDePestana = {
+    catalogo: { label: "Catálogo" },
+    lotes: { label: "Lotes" },
+    alertas: { label: "Alertas", contador: cantidadPendientesAlertas },
+    kardex: { label: "Kardex" },
+    administracion: { label: "Bodegas y proveedores" },
+    "principios-activos": { label: "Principios activos" },
+    presentaciones: { label: "Presentaciones" },
+    "mis-movimientos": { label: "Mis movimientos" },
+    validacion: { label: "Validación", contador: conteo },
+  };
+
+  const pestanas = pestanasDeInventario(rol).map((id) => ({ id, ...etiquetasDePestana[id] }));
+
+  // A ?tab= se llega desde una notificacion, y puede apuntar a una pestana que este rol ya no
+  // tiene -la de validacion, sin ir mas lejos, que se la mandan al administrador-. Sin esto la
+  // barra no marcaria ninguna pestana como activa y debajo se dibujaria igual el contenido de una
+  // que el rol no deberia abrir.
+  const pestanaVisible = pestanas.some((pestana) => pestana.id === tabActiva)
+    ? tabActiva
+    : (pestanas[0]?.id ?? "catalogo");
+
   // Acciones de la cabecera. Eran cuatro <button> con estilos en linea -dos verdes, uno ambar,
   // hexadecimales fuera de la paleta- y el "+" escrito dentro del texto. Ahora son las acciones de
   // PageHeader, que pone el "+" sola y dibuja los botones del catalogo.
@@ -494,10 +524,11 @@ export default function InventarioPage() {
   // movimiento, solo que nace 'pendiente' en vez de autoaprobado- no tenian boton en toda la web
   // para abrir ninguno de los dos modales. RLS los habria dejado insertar iguales -por eso
   // "Mis movimientos" ya existia para ellos-, pero sin el boton no habia como llegar ahi. Reportado
-  // como "no puedo registrar una salida en inventario".
+  // como "no puedo registrar una salida en inventario". "Nuevo medicamento" usa
+  // puedeDarDeAltaMedicamento(rol): administrador y medico (00141, issue #864).
   const tabsSinAccionesDeCabecera = ["validacion", "administracion", "kardex"];
   const puedeRegistrar = puedeRegistrarMovimiento(rol);
-  const accionesCabecera = tabsSinAccionesDeCabecera.includes(tabActiva)
+  const accionesCabecera = tabsSinAccionesDeCabecera.includes(pestanaVisible)
     ? []
     : [
         ...(puedeRegistrar
@@ -513,7 +544,7 @@ export default function InventarioPage() {
               },
             ]
           : []),
-        ...(esAdmin && tabActiva === "catalogo"
+        ...(pestanaVisible === "catalogo" && puedeDarDeAltaMedicamento(rol)
           ? [{ label: "Nuevo medicamento", onClick: abrirModalNuevo }]
           : []),
         // Aqui estaba "Registrar lote". Se retira con la issue #846: registrarLote() insertaba
@@ -522,25 +553,6 @@ export default function InventarioPage() {
         // -que crea el lote y el movimiento a la vez- ya esta arriba en esta misma barra. Un
         // boton que parece dar de alta existencias y no las da es peor que no tenerlo.
       ];
-
-  // Pestanas. Eran nueve <button> con un color de subrayado distinto cada una (#10b981, #f59e0b,
-  // #0284c7, #6366f1, #0d9488, #7c3aed): las pastillas de `.nav-tabs` de ui.css son las mismas
-  // que usan pacientes, presupuestos y reportes.
-  // Rotulos cortos: con los largos ("Catalogo de medicamentos", "Kardex de movimientos") las
-  // ocho pestanas no cabian en una fila y "Validacion" caia sola a una segunda linea.
-  const pestanas = [
-    { id: "catalogo", label: "Catálogo" },
-    { id: "lotes", label: "Lotes" },
-    { id: "alertas", label: "Alertas", contador: cantidadPendientesAlertas },
-    { id: "kardex", label: "Kardex" },
-    { id: "administracion", label: "Bodegas y proveedores" },
-    { id: "principios-activos", label: "Principios activos" },
-    { id: "presentaciones", label: "Presentaciones" },
-    ...(puedeRegistrarMovimiento(rol) ? [{ id: "mis-movimientos", label: "Mis movimientos" }] : []),
-    // Solo administracion (PLAN.md punto 9): la bandeja no es de solo lectura para nadie mas
-    // ahora, asi que un no-admin ya no tiene motivo para verla siquiera.
-    ...(esAdmin ? [{ id: "validacion", label: "Validación", contador: conteo }] : []),
-  ];
 
   // Un no-admin puede llegar a ?tab=validacion desde el enlace de una notificacion del buzon
   // (issue #755) sin saber que esa pestana ya no es la suya: en vez de pantalla vacia o error, se
@@ -963,7 +975,7 @@ export default function InventarioPage() {
       {pestanaVisible === "principios-activos" && <CatalogoPrincipiosActivosPage />}
 
       {/* Pestaña: Presentaciones */}
-      {tabActiva === "presentaciones" && <CatalogoPresentacionesPage />}
+      {pestanaVisible === "presentaciones" && <CatalogoPresentacionesPage />}
 
       {/* Pestaña: Mis Movimientos */}
       {pestanaVisible === "mis-movimientos" && <MisMovimientosPage />}

@@ -95,9 +95,9 @@ export function puedeVerValorizacion(rol) {
 }
 
 /**
- * Las pestanas de la pantalla de inventario que ve cada rol (issue #864).
+ * Las pestanas de la pantalla de inventario que ve cada rol (issue #864, extendida por #859).
  *
- * El criterio 6 de la issue le acota el inventario al medico a "solo catalogo, principios
+ * El criterio 6 de la issue #864 le acota el inventario al medico a "solo catalogo, principios
  * activos y Mis movimientos", conservando el registro de ingresos y salidas -que son acciones de
  * la cabecera, no una pestana-. Lo que se le quita es lo que no le corresponde mirar ni decidir:
  *
@@ -105,7 +105,12 @@ export function puedeVerValorizacion(rol) {
  * - Alertas de caducidad las atiende la administracion (fn_atender_alerta_caducidad, 00138, es
  *   `es_administrador()` en su propio cuerpo), y la notificacion le llega a ella (00138).
  * - Validacion es la bandeja donde se aprueban movimientos, y aprobar es `inventario.aprobar`:
- *   un medico la veia con el contador de pendientes y sin poder hacer nada con ellos.
+ *   solo la administracion puede hacer algo con un pendiente (puedeAprobarMovimiento), asi que
+ *   la #859 le retira la pestana a cualquier otro rol -antes solo se le quitaba al medico-, no
+ *   solo el contador de pendientes que no puede resolver.
+ *
+ * Presentaciones (#859) se suma a la lista de todos: su politica de SELECT es de lectura abierta
+ * (presentaciones.permisos.js, puedeVerPresentaciones), el mismo caso que principios activos.
  *
  * Vive aqui y no en la pantalla porque es una decision de negocio -- que le toca a cada rol --,
  * que es justo lo que packages/shared declara. La web la consume en InventarioPage.jsx.
@@ -118,19 +123,28 @@ export function puedeVerValorizacion(rol) {
  */
 export function pestanasDeInventario(rol) {
   if (rol === ROLES.MEDICO) {
-    return ["catalogo", "principios-activos", "mis-movimientos"];
+    return ["catalogo", "principios-activos", "presentaciones", "mis-movimientos"];
   }
 
-  return [
+  const pestanas = [
     "catalogo",
     "lotes",
     "alertas",
     "kardex",
     "administracion",
     "principios-activos",
-    "mis-movimientos",
-    "validacion",
+    "presentaciones",
   ];
+
+  if (puedeRegistrarMovimiento(rol)) {
+    pestanas.push("mis-movimientos");
+  }
+
+  if (esAdministrador(rol)) {
+    pestanas.push("validacion");
+  }
+
+  return pestanas;
 }
 
 /**
