@@ -59,19 +59,13 @@ function capitalizar(texto) {
   return texto
     .toString()
     .split(" ")
-    .map(
-      (palabra) =>
-        palabra.charAt(0).toUpperCase() + palabra.slice(1).toLowerCase(),
-    )
+    .map((palabra) => palabra.charAt(0).toUpperCase() + palabra.slice(1).toLowerCase())
     .join(" ");
 }
 
 /** Nombre completo de un perfil embebido ({ nombres, apellidos }), o `null` si no llegó */
 function nombreDePerfil(perfil) {
-  const nombre = [perfil?.nombres, perfil?.apellidos]
-    .filter(Boolean)
-    .join(" ")
-    .trim();
+  const nombre = [perfil?.nombres, perfil?.apellidos].filter(Boolean).join(" ").trim();
   return nombre || null;
 }
 
@@ -96,9 +90,7 @@ function Dato({ etiqueta, valor, mono = false }) {
   return (
     <div>
       <dt className="ec-rotulo">{etiqueta}</dt>
-      <dd className={mono && !vacio ? "mb-0 ec-mono" : "mb-0"}>
-        {vacio ? "—" : valor}
-      </dd>
+      <dd className={mono && !vacio ? "mb-0 ec-mono" : "mb-0"}>{vacio ? "—" : valor}</dd>
     </div>
   );
 }
@@ -126,12 +118,11 @@ export default function DetalleJornadaPage() {
 
   const permisosPresupuesto = permisosDeOrigenDePresupuesto(rol);
 
-  const { advertencias, asignacionesDelDia, errorAdvertencias } =
-    useCuadroTurnos({
-      jornadaId: id,
-      jornadaFecha: jornada?.fecha,
-      personal: jornada?.personal,
-    });
+  const { advertencias, asignacionesDelDia, errorAdvertencias } = useCuadroTurnos({
+    jornadaId: id,
+    jornadaFecha: jornada?.fecha,
+    personal: jornada?.personal,
+  });
 
   const {
     resumen: resumenCierre,
@@ -194,8 +185,7 @@ export default function DetalleJornadaPage() {
   const esReapertura = jornada.estado === ESTADOS_JORNADA.FINALIZADA;
   const [destino] = destinos;
   const puedeMover =
-    (esReapertura ? permisos.puedeReabrir : permisos.puedeEditar) &&
-    Boolean(destino);
+    (esReapertura ? permisos.puedeReabrir : permisos.puedeEditar) && Boolean(destino);
 
   const pestaniasVisibles = PESTANIAS.filter((pestania) => {
     if (pestania.id === "pacientes") return permisos.puedeVerDatosClinicos;
@@ -273,11 +263,7 @@ export default function DetalleJornadaPage() {
       ) : error ? (
         <ErrorState message={error.mensaje} onRetry={recargar} />
       ) : (
-        <Tabs
-          tabs={pestaniasVisibles}
-          activo={pestaniaActiva}
-          onChange={setPestaniaActiva}
-        >
+        <Tabs tabs={pestaniasVisibles} activo={pestaniaActiva} onChange={setPestaniaActiva}>
           {pestaniaActiva === "resumen" && (
             <Card>
               <div className="d-flex justify-content-between align-items-start gap-2 mb-3">
@@ -297,19 +283,13 @@ export default function DetalleJornadaPage() {
                       disabled={moviendo}
                     />
                   )}
-                  {puedeMover &&
-                    !esReapertura &&
-                    destino !== ESTADOS_JORNADA.FINALIZADA && (
-                      <PrimaryButton
-                        title={
-                          destino === ESTADOS_JORNADA.EN_CURSO
-                            ? "Iniciar jornada"
-                            : "Avanzar →"
-                        }
-                        onClick={() => cambiarEstado(destino)}
-                        loading={moviendo}
-                      />
-                    )}
+                  {puedeMover && !esReapertura && destino !== ESTADOS_JORNADA.FINALIZADA && (
+                    <PrimaryButton
+                      title={destino === ESTADOS_JORNADA.EN_CURSO ? "Iniciar jornada" : "Avanzar →"}
+                      onClick={() => cambiarEstado(destino)}
+                      loading={moviendo}
+                    />
+                  )}
                 </div>
               </div>
 
@@ -319,27 +299,15 @@ export default function DetalleJornadaPage() {
                   etiqueta={ETIQUETAS.responsable}
                   valor={nombreDePerfil(jornada.responsable)}
                 />
-                <Dato
-                  etiqueta={ETIQUETAS.cupoEstimado}
-                  valor={jornada.cupoEstimado}
-                />
-                <Dato
-                  etiqueta={ETIQUETAS.botiquinBodega}
-                  valor={jornada.botiquinBodega?.nombre}
-                />
+                <Dato etiqueta={ETIQUETAS.cupoEstimado} valor={jornada.cupoEstimado} />
+                <Dato etiqueta={ETIQUETAS.botiquinBodega} valor={jornada.botiquinBodega?.nombre} />
                 <Dato
                   etiqueta={ETIQUETAS.fechaInicioReal}
-                  valor={
-                    jornada.fechaInicioReal &&
-                    formatearFechaConHora(jornada.fechaInicioReal)
-                  }
+                  valor={jornada.fechaInicioReal && formatearFechaConHora(jornada.fechaInicioReal)}
                 />
                 <Dato
                   etiqueta={ETIQUETAS.fechaFinReal}
-                  valor={
-                    jornada.fechaFinReal &&
-                    formatearFechaConHora(jornada.fechaFinReal)
-                  }
+                  valor={jornada.fechaFinReal && formatearFechaConHora(jornada.fechaFinReal)}
                 />
                 <div>
                   <dt className="ec-rotulo">Presupuesto asignado</dt>
@@ -377,15 +345,10 @@ export default function DetalleJornadaPage() {
                 {puedeVerEquipoCompleto ? (
                   <div className="d-flex flex-wrap gap-2">
                     {conteoPorRol.length === 0 ? (
-                      <span className="text-muted small">
-                        Todavía no hay personal asignado.
-                      </span>
+                      <span className="text-muted small">Todavía no hay personal asignado.</span>
                     ) : (
                       conteoPorRol.map((fila) => (
-                        <span
-                          key={fila.rol}
-                          className="badge text-bg-light border"
-                        >
+                        <span key={fila.rol} className="badge text-bg-light border">
                           {capitalizar(fila.etiqueta)}: {fila.cantidad}
                         </span>
                       ))
@@ -399,10 +362,7 @@ export default function DetalleJornadaPage() {
 
                 <div className="d-flex gap-2">
                   {puedeVerEquipoCompleto && (
-                    <SecondaryButton
-                      title="Imprimir"
-                      onClick={() => setAImprimir(true)}
-                    />
+                    <SecondaryButton title="Imprimir" onClick={() => setAImprimir(true)} />
                   )}
                   {permisos.puedeEditar && (
                     <PrimaryButton
@@ -415,8 +375,7 @@ export default function DetalleJornadaPage() {
 
               {errorAdvertencias && (
                 <div className="alert alert-warning" role="alert">
-                  No se pudo comprobar si hay traslapes de horario con otras
-                  jornadas.
+                  No se pudo comprobar si hay traslapes de horario con otras jornadas.
                 </div>
               )}
               {!errorAdvertencias &&
@@ -431,9 +390,7 @@ export default function DetalleJornadaPage() {
                       role="alert"
                     >
                       <strong>{fila.perfil}:</strong>{" "}
-                      {[advertencia.traslape, advertencia.choque]
-                        .filter(Boolean)
-                        .join(" ")}
+                      {[advertencia.traslape, advertencia.choque].filter(Boolean).join(" ")}
                     </div>
                   );
                 })}
@@ -442,11 +399,7 @@ export default function DetalleJornadaPage() {
                 columnas={COLUMNAS_PERSONAL_JORNADA}
                 datos={filasPersonal}
                 vacio="Todavía no hay personal asignado a esta jornada."
-                onRowPress={
-                  permisos.puedeEditar
-                    ? (fila) => setFilaEnEdicion(fila)
-                    : undefined
-                }
+                onRowPress={permisos.puedeEditar ? (fila) => setFilaEnEdicion(fila) : undefined}
               />
             </>
           )}
@@ -495,8 +448,8 @@ export default function DetalleJornadaPage() {
 
                   {resumenCierre.atencionesIncompletas === null && (
                     <div className="alert alert-secondary" role="alert">
-                      No se pudo comprobar si hay atenciones sin consulta: tu
-                      rol no tiene acceso a esa información clínica.
+                      No se pudo comprobar si hay atenciones sin consulta: tu rol no tiene acceso a
+                      esa información clínica.
                     </div>
                   )}
                   {resumenCierre.atencionesIncompletas !== null &&
@@ -518,8 +471,7 @@ export default function DetalleJornadaPage() {
                     resumenCierre.atencionesIncompletas !== null &&
                     jornada.estado === ESTADOS_JORNADA.EN_CURSO && (
                       <div className="alert alert-success" role="alert">
-                        No hay atenciones sin consulta ni movimientos
-                        pendientes de validar.
+                        No hay atenciones sin consulta ni movimientos pendientes de validar.
                       </div>
                     )}
 
@@ -529,16 +481,15 @@ export default function DetalleJornadaPage() {
                     </div>
                   )}
 
-                  {jornada.estado === ESTADOS_JORNADA.EN_CURSO &&
-                    permisos.puedeEditar && (
-                      <div className="d-flex justify-content-end mt-3">
-                        <PrimaryButton
-                          title="Confirmar cierre"
-                          onClick={confirmarCierre}
-                          loading={confirmandoCierre}
-                        />
-                      </div>
-                    )}
+                  {jornada.estado === ESTADOS_JORNADA.EN_CURSO && permisos.puedeEditar && (
+                    <div className="d-flex justify-content-end mt-3">
+                      <PrimaryButton
+                        title="Confirmar cierre"
+                        onClick={confirmarCierre}
+                        loading={confirmandoCierre}
+                      />
+                    </div>
+                  )}
                 </>
               )}
             </Card>
