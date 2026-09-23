@@ -46,13 +46,36 @@ describe("CatalogoMedicamentosScreen", () => {
     expect(screen.queryByText("EPP")).toBeNull();
   });
 
-  it("tocar un lote abre el ingreso de ese medicamento", () => {
+  it("tocar un lote abre su detalle, donde estan sus datos y el boton de editar", () => {
     const navigation = pantalla();
 
     fireEvent.press(screen.getByText("Medicamento Inventado"));
-    expect(navigation.navigate).toHaveBeenCalledWith("RegistroIngreso", {
-      medicamentoId: "med-1",
-      medicamentoNombre: "Medicamento Inventado",
-    });
+    expect(navigation.navigate).toHaveBeenCalledWith("DetalleLote", { loteId: "lote-1" });
+  });
+
+  it("los tres indicadores son productos, por vencer y sin stock", () => {
+    pantalla();
+
+    expect(screen.getByText("Productos")).toBeTruthy();
+    expect(screen.getByText("Por vencer")).toBeTruthy();
+    expect(screen.getByText("Sin stock")).toBeTruthy();
+    expect(screen.queryByText("Lotes")).toBeNull();
+  });
+
+  it("dos lotes del mismo medicamento cuentan como un solo producto", () => {
+    render(
+      <CatalogoMedicamentosScreen
+        inventarioInicial={[
+          FILAS[0],
+          { ...FILAS[0], loteId: "lote-2", numeroLote: "LOTE-DEMO-PRINCIPAL-2" },
+        ]}
+        bodegas={[{ id: "bod-1", nombre: "Bodega Movil Inventada" }]}
+        medicamentosSinStock={2}
+        navigation={{ navigate: jest.fn() }}
+      />,
+    );
+
+    expect(screen.getByText("2 lotes en bodega")).toBeTruthy();
+    expect(screen.getByText("1")).toBeTruthy();
   });
 });

@@ -690,8 +690,9 @@ GitHub y ninguno se sube al repositorio.
    Sin ellas el trigger no hace nada: el correo no sale en el momento sino en la siguiente corrida
    diaria.
 
-En el stack local, el correo se ve en Mailpit (`http://localhost:54424`), con `SMTP_HOST` apuntando
-al contenedor de Mailpit y `SMTP_PORT=1025`; ver `.env.example`.
+En el stack local, el correo se ve en Mailpit (`http://localhost:54424`), con `SMTP_HOST=inbucket`
+y `SMTP_PORT=1025`; ver `.env.example`. El alias de red es `inbucket` a secas: el nombre largo del
+contenedor no resuelve desde el runtime de las funciones y el envio falla en silencio.
 
 ## Ambientes
 

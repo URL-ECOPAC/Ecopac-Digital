@@ -275,7 +275,7 @@ contrasena se establece despues, por uno de estos dos caminos:
   desde una maquina de confianza. Nunca desde el CI, que no debe manejar credenciales de personas.
 
 En local, tras `npx supabase db reset` el usuario existe igual y el correo de recuperacion se lee
-en Inbucket, en http://localhost:54324.
+en Mailpit, en http://localhost:54424.
 
 Ninguno de los dos caminos expone la llave `service_role` fuera del entorno seguro, que es el
 criterio que pedia la issue #111.

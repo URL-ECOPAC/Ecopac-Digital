@@ -1,16 +1,7 @@
 @import "bootstrap/dist/css/bootstrap.min.css";
-/* El lenguaje visual comun -botones, campos, tarjetas, pestanas, tablas- vive en ui.css. Aqui
-   solo queda el puente entre los tokens y las variables globales de Bootstrap. Las dos reglas
-   @import van juntas y arriba del todo porque CSS exige que ninguna otra regla las preceda. */
 @import "./ui.css";
 
-/* Las variables --color-*, --spacing-*, --accent-*, --estado-*, --radio-* y --sombra-*
-   las publica src/theme.js a partir de packages/ui-tokens. Aqui no se escribe ningun
-   color, radio ni sombra a mano: si hace falta un valor nuevo, se agrega primero al
-   paquete de tokens. */
-
 :root {
-  /* Sobrescritura de las variables globales de Bootstrap con la paleta del proyecto */
   --bs-primary: var(--color-primary);
   --bs-secondary: var(--color-secondary);
   --bs-danger: var(--color-danger);
@@ -22,15 +13,10 @@
   --bs-secondary-color: var(--color-text-muted);
   --bs-border-color: var(--color-border);
 
-  /* Tipografia: la letra del sistema, publicada por theme.js desde ui-tokens. Todo lo de
-     Bootstrap (cuerpo, botones, campos, .font-monospace) la hereda de aqui. */
   --bs-font-sans-serif: var(--fuente-base);
   --bs-body-font-family: var(--fuente-base);
   --bs-font-monospace: var(--fuente-mono);
 
-  /* Radios y elevaciones (issue #660). Se mapean a las variables globales de Bootstrap en
-     vez de a cada componente: asi botones, tarjetas, campos, modales y desplegables quedan
-     coherentes de una vez, y ninguna pantalla necesita escribir un radio a mano. */
   --bs-border-radius-sm: var(--radio-sm);
   --bs-border-radius: var(--radio-md);
   --bs-border-radius-lg: var(--radio-lg);
@@ -40,11 +26,6 @@
   --bs-box-shadow: var(--sombra-md);
 }
 
-/* Tarjetas, botones, campos, pestanas y tablas: ui.css. Lo que sigue son las piezas que no
-   forman parte de ese lenguaje comun -alertas y las dos hojas de impresion-. */
-
-/* Alertas: se tinen del color de estado con transparencia, en vez de fijar
-   un segundo juego de hex que habria que mantener en paralelo. */
 .alert-danger {
   --bs-alert-color: var(--color-danger);
   --bs-alert-bg: color-mix(in srgb, var(--color-danger) 8%, white);
@@ -69,65 +50,54 @@
   --bs-alert-border-color: color-mix(in srgb, var(--color-info) 28%, white);
 }
 
-/* Receta imprimible (issue #131). En pantalla no se ve: solo existe para la impresion, que es
-   donde el navegador tambien ofrece "Guardar como PDF". */
 .receta-imprimible {
   display: none;
 }
 
-/* Cuadro de turnos imprimible (issue #185). Mismo patron que .receta-imprimible de arriba: oculto
-   en pantalla, solo existe para la impresion. Comparte con la receta la pagina con nombre
-   `media-carta`; desde la #840 eso es una eleccion y no una herencia obligada (ver el bloque de
-   @page mas abajo). */
 .turnos-imprimible {
   display: none;
 }
 
-/* Documento imprimible generico (issue #840). Igual que los dos de arriba: no se ve en pantalla,
-   solo existe para la impresion. Lo monta DocumentoImprimible.jsx en un portal sobre el body. */
 .doc-imprimible {
   display: none;
 }
 
+/* Reglas exclusivas para impresión */
 @media print {
-  /* PAGINAS CON NOMBRE, UNA POR TAMANO DE PAPEL.
-     Antes habia una sola regla @page anonima en media carta, la de la receta, y por ser anonima
-     se la aplicaba al documento entero: cualquier otro papel salia tambien en media carta. El
-     comentario de arriba daba eso por inevitable ("dos reglas @page... compiten por el documento
-     entero"), y lo es entre reglas anonimas. Con nombre no: cada documento elige la suya con la
-     propiedad `page`, que es lo que hace .doc-imprimible--carta y --media-carta mas abajo. */
   @page carta {
-    size: letter;
-    margin: 0.6in;
-  }
-
-  /* Media carta, para la receta y el cuadro de turnos. El criterio 2 de la #131 pide que quepa
-     ahi y se lea en impresora monocromatica, asi que el diseno no depende de ningun color: solo
-     tamano, peso y lineas. */
-  @page media-carta {
-    size: 5.5in 8.5in;
+    size: letter portrait;
     margin: 0.4in;
   }
 
-  /* Criterio 4: fuera la navegacion, la cabecera y el resto de la aplicacion.
-     Esta regla es la que dejaba la constancia en blanco: la constancia se dibujaba DENTRO del
-     shell, asi que esconder el shell la escondia a ella. Ahora todo documento imprimible se monta
-     en un portal, fuera del shell, y esta regla solo se lleva lo que tiene que llevarse. */
+  @page media-carta {
+    size: 5.5in 8.5in;
+    margin: 0.3in;
+  }
+
   .app-shell {
     display: none !important;
   }
 
-  body {
-    background: var(--color-surface);
-    color: var(--color-text);
+  html, body {
+    background: transparent !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
   }
 
-  /* --- Documento imprimible generico (issue #840) --- */
-
   .doc-imprimible {
-    display: block;
-    font-size: 10pt;
-    line-height: 1.4;
+    display: block !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    page-break-before: avoid !important;
+    break-before: avoid !important;
+    page-break-after: avoid !important;
+    break-after: avoid !important;
   }
 
   .doc-imprimible--carta {
@@ -152,7 +122,6 @@
     width: auto;
   }
 
-  /* Empuja la referencia (folio y fecha) al borde derecho. */
   .doc-imprimible__identidad {
     flex: 1;
   }
@@ -174,7 +143,6 @@
     text-align: right;
   }
 
-  /* El folio se lee y se transcribe a mano: monoespaciada para no confundir un 0 con una O. */
   .doc-imprimible__folio {
     font-family: var(--fuente-mono);
     font-weight: 600;
@@ -192,7 +160,6 @@
     margin: 0 0 3pt;
   }
 
-  /* Ninguna tabla de un documento depende del color: solo lineas, como la receta. */
   .doc-imprimible__cuerpo table {
     border-collapse: collapse;
     width: 100%;
@@ -209,7 +176,7 @@
     display: flex;
     gap: 24pt;
     justify-content: space-around;
-    margin-top: 36pt;
+    margin-top: 24pt;
   }
 
   .doc-imprimible__firma {
@@ -229,13 +196,13 @@
     margin: 0;
   }
 
-  /* --- Receta (issue #131) --- */
-
   .receta-imprimible {
     display: block;
     font-size: 10pt;
     line-height: 1.35;
     page: media-carta;
+    page-break-before: avoid !important;
+    break-before: avoid !important;
   }
 
   .receta-imprimible__encabezado {
@@ -285,8 +252,6 @@
     margin-bottom: 5pt;
   }
 
-  /* La anulacion va en negrita y con marco, no en color: en monocromatica el color se pierde y
-     una receta anulada que se lea como valida es un riesgo clinico. */
   .receta-imprimible__anulada {
     border: 1pt solid var(--color-text);
     font-weight: 700;
@@ -311,7 +276,8 @@
     display: block;
     font-size: 10pt;
     line-height: 1.35;
-    page: media-carta;
+    page-break-before: avoid !important;
+    break-before: avoid !important;
   }
 
   .turnos-imprimible__encabezado {

@@ -6,7 +6,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import { MODULOS, modulosVisibles, tabsMoviles } from "./navegacion.js";
+import { MODULOS, modulosVisibles, puedeUsarAppMovil, tabsMoviles } from "./navegacion.js";
 import { ROLES } from "./usuarios/roles.js";
 
 function idsDe(modulos) {
@@ -39,7 +39,6 @@ describe("modulosVisibles", () => {
 
       expect(ids).not.toContain("donaciones");
       expect(ids).not.toContain("presupuestos");
-      expect(ids).not.toContain("proyectos");
       expect(ids).not.toContain("reportes");
       expect(ids).not.toContain("colaboradores");
       expect(ids).not.toContain("matriz-permisos");
@@ -47,40 +46,46 @@ describe("modulosVisibles", () => {
     }
   });
 
-  // El caso central de la issue #426: junta directiva y socio fundador no ven informacion
-  // clinica ni pacientes identificables (00032), solo agregados -- misma decision que #407 del
-  // lado de la base de datos. Antes de este fix, OPERATIVOS los incluia y la RLS les devolvia
-  // una pantalla vacia sin explicacion.
-  it("junta directiva y socio fundador NO ven pacientes, pero si inventario y jornadas", () => {
+  // ISSUE #864: el medico ve Proyectos -- solo los de las jornadas en las que participa, que lo
+  // decide la politica de SELECT de `proyectos` de la 00141, no esta lista -- y el voluntario
+  // general no. Es la unica diferencia de menu entre los dos roles de campo.
+  it("proyectos: el medico si, el voluntario general no", () => {
+    expect(idsDe(modulosVisibles(ROLES.MEDICO))).toContain("proyectos");
+    expect(idsDe(modulosVisibles(ROLES.VOLUNTARIO))).not.toContain("proyectos");
+  });
+
+  // El caso central de la issue #426 era que junta directiva y socio fundador no vieran
+  // informacion clinica ni pacientes identificables (00032), solo agregados.
+  //
+  // ISSUE #864 lo lleva hasta el final: los dos roles consultivos **solo ven Reportes**. Antes
+  // veian ocho y siete modulos respectivamente -- donaciones, inventario, presupuestos,
+  // proyectos, jornadas y, junta directiva, colaboradores --, que es gobernanza mirando la
+  // operacion del dia. Inicio se queda porque es la ruta "/" y su rejilla ya se filtra sola.
+  it("junta directiva y socio fundador solo ven Inicio y Reportes", () => {
     for (const rol of [ROLES.JUNTA_DIRECTIVA, ROLES.SOCIO_FUNDADOR]) {
-      const ids = idsDe(modulosVisibles(rol));
-
-      expect(ids).not.toContain("pacientes");
-
-      expect(ids).toContain("inventario");
-      expect(ids).toContain("jornadas");
-      expect(ids).toContain("donaciones");
-      expect(ids).toContain("presupuestos");
-      expect(ids).toContain("proyectos");
-      expect(ids).toContain("reportes");
-      expect(ids).not.toContain("matriz-permisos");
-      expect(ids).not.toContain("bitacora-auditoria");
+      expect(idsDe(modulosVisibles(rol))).toEqual(["inicio", "reportes"]);
     }
   });
 
-  // Issue #756: perfiles_directorio (00038/00080) da a junta directiva -y solo a junta
-  // directiva, no a socio fundador- una vista de solo lectura del personal, sin datos de
-  // contacto ajenos. La ruta tiene que reflejar exactamente esa misma linea, o la vista queda
-  // sin ninguna forma de llegar a ella.
-  it("colaboradores: solo administrador y junta directiva, no socio fundador", () => {
+  // La issue #756 habia abierto esta pantalla a junta directiva, porque perfiles_directorio
+  // (00038/00080) le daba una vista de solo lectura del personal y el guard la dejaba fuera.
+  //
+  // ISSUE #864 la cierra otra vez, y no por descuido: la issue dice "Junta directiva: solo ve
+  // reportes". Se cierran las tres capas a la vez -- esta lista, puedeVerListadoUsuarios() y la
+  // propia vista perfiles_directorio (00141) --, que es justo lo que la #756 pedia: que la ruta
+  // y la vista digan lo mismo.
+  it("colaboradores: solo administrador", () => {
     expect(idsDe(modulosVisibles(ROLES.ADMINISTRADOR))).toContain("colaboradores");
-    expect(idsDe(modulosVisibles(ROLES.JUNTA_DIRECTIVA))).toContain("colaboradores");
-    expect(idsDe(modulosVisibles(ROLES.SOCIO_FUNDADOR))).not.toContain("colaboradores");
+    for (const rol of [
+      ROLES.JUNTA_DIRECTIVA,
+      ROLES.SOCIO_FUNDADOR,
+      ROLES.MEDICO,
+      ROLES.VOLUNTARIO,
+    ]) {
+      expect(idsDe(modulosVisibles(rol))).not.toContain("colaboradores");
+    }
   });
 
-  // Issue #638: la matriz de permisos por rol cambia el default de acceso de TODO un rol -mas
-  // grave que la excepcion individual de usuario_permiso-, asi que solo administrador entra,
-  // ningun otro rol, ni siquiera los que ya ven pantallas administrativas como colaboradores.
   // Issue #638: la matriz de permisos por rol cambia el default de acceso de TODO un rol -mas
   // grave que la excepcion individual de usuario_permiso-, asi que solo administrador entra,
   // ningun otro rol, ni siquiera los que ya ven pantallas administrativas como colaboradores.
@@ -115,12 +120,52 @@ describe("modulosVisibles", () => {
     expect(idsDe(modulosVisibles("coordinador"))).toEqual([]);
   });
 
-  it("reportes es soloWeb: no aparece en la plataforma movil, aunque el rol lo alcance", () => {
+  it("reportes no declara `movil`: no aparece en la plataforma movil, aunque el rol lo alcance", () => {
     const paraWeb = idsDe(modulosVisibles(ROLES.ADMINISTRADOR, { plataforma: "web" }));
     const paraMovil = idsDe(modulosVisibles(ROLES.ADMINISTRADOR, { plataforma: "mobile" }));
 
     expect(paraWeb).toContain("reportes");
     expect(paraMovil).not.toContain("reportes");
+  });
+});
+
+describe("acceso a la app movil (issue #866)", () => {
+  it("entran administrador, medico y colaborador; junta directiva y socio fundador no", () => {
+    expect(puedeUsarAppMovil(ROLES.ADMINISTRADOR)).toBe(true);
+    expect(puedeUsarAppMovil(ROLES.MEDICO)).toBe(true);
+    expect(puedeUsarAppMovil(ROLES.VOLUNTARIO)).toBe(true);
+
+    expect(puedeUsarAppMovil(ROLES.JUNTA_DIRECTIVA)).toBe(false);
+    expect(puedeUsarAppMovil(ROLES.SOCIO_FUNDADOR)).toBe(false);
+  });
+
+  it("un rol sin acceso no recibe ningun modulo movil, aunque en web vea varios", () => {
+    for (const rol of [ROLES.JUNTA_DIRECTIVA, ROLES.SOCIO_FUNDADOR]) {
+      expect(idsDe(modulosVisibles(rol, { plataforma: "web" })).length).toBeGreaterThan(0);
+      expect(modulosVisibles(rol, { plataforma: "mobile" })).toEqual([]);
+      expect(tabsMoviles(rol)).toEqual([]);
+    }
+  });
+
+  it("la app movil son cuatro modulos: inicio, pacientes, inventario y jornadas", () => {
+    expect(idsDe(modulosVisibles(ROLES.ADMINISTRADOR, { plataforma: "mobile" }))).toEqual([
+      "inicio",
+      "pacientes",
+      "inventario",
+      "jornadas",
+    ]);
+  });
+
+  it("ningun modulo marcado `movil` deja de tener una tab o una pantalla que lo dibuje", () => {
+    for (const modulo of MODULOS.filter((m) => m.movil)) {
+      expect(Boolean(modulo.tabMovil), `el modulo "${modulo.id}"`).toBe(true);
+    }
+  });
+
+  it("todo modulo declara `movil` como booleano, para que ninguno quede sin decidir", () => {
+    for (const modulo of MODULOS) {
+      expect(typeof modulo.movil, `el modulo "${modulo.id}"`).toBe("boolean");
+    }
   });
 });
 

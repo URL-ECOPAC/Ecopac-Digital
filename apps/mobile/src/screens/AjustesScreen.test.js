@@ -179,22 +179,9 @@ describe("AjustesScreen", () => {
     expect(mockRegistro.registrar).not.toHaveBeenCalled();
   });
 
-  it("cerrar sesion sin cambios pendientes no muestra el modal de aviso", () => {
+  it("ya no dibuja el boton de cerrar sesion: vive en la cabecera (issue #866)", () => {
     pantalla();
 
-    fireEvent.press(screen.getByText("Cerrar sesión"));
-
-    expect(mockSesion.logout).toHaveBeenCalled();
-    expect(screen.queryByText("Hay cambios sin guardar")).toBeNull();
-  });
-
-  it("cerrar sesion con algo sin guardar en otra pantalla muestra el modal (issue #110)", () => {
-    mockRegistro.hayAlgoSinGuardar.mockReturnValue(true);
-    pantalla();
-
-    fireEvent.press(screen.getByText("Cerrar sesión"));
-
-    expect(mockSesion.logout).not.toHaveBeenCalled();
-    expect(screen.getByText("Hay cambios sin guardar")).toBeTruthy();
+    expect(screen.queryByText("Cerrar sesión")).toBeNull();
   });
 });

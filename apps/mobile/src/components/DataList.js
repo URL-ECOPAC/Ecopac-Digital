@@ -143,6 +143,12 @@ function Valor({ columna, fila, catalogos }) {
   }
 }
 
+export function sinContenido(columna, fila) {
+  const valor = fila?.[columna.desde ?? columna.id];
+  if (columna.tipo === "chips") return !Array.isArray(valor) || valor.length === 0;
+  return valor === null || valor === undefined || valor === "";
+}
+
 function Fila({ columna, fila, catalogos }) {
   if (columna.principal) {
     const valor = fila?.[columna.desde ?? columna.id];
@@ -156,6 +162,8 @@ function Fila({ columna, fila, catalogos }) {
   if (columna.tipo === "avatar") {
     return <Valor columna={columna} fila={fila} catalogos={catalogos} />;
   }
+
+  if (sinContenido(columna, fila)) return null;
 
   return (
     <View style={styles.campo}>

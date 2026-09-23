@@ -93,7 +93,12 @@ export default function FichaPacienteScreen({ route, navigation }) {
       <View style={styles.encabezado}>
         <Text style={styles.nombrePaciente}>{cabecera.nombreCompleto ?? "Sin nombre"}</Text>
         <Text style={styles.detallesPaciente}>
-          CUI/DPI: {paciente.dpi || "N/A"} | Edad: {cabecera.edad ?? "--"}
+          {[
+            paciente.dpi ? `CUI/DPI: ${paciente.dpi}` : "Sin CUI/DPI registrado",
+            cabecera.edad ? `Edad: ${cabecera.edad}` : null,
+          ]
+            .filter(Boolean)
+            .join(" | ")}
         </Text>
       </View>
 
@@ -138,12 +143,16 @@ export default function FichaPacienteScreen({ route, navigation }) {
         {pestaniaActiva === "historial" && (
           <VisitasPacienteSeccion
             pacienteId={paciente.id}
+            paciente={paciente}
             rol={rol}
             onAbrirConsulta={(visita) =>
               navigation.navigate(ROUTES.CONSULTA, {
                 pacienteId: paciente.id,
                 jornadaId: visita.jornadaId,
               })
+            }
+            onAbrirEntrega={(visita) =>
+              navigation.navigate(ROUTES.ENTREGA_MEDICAMENTOS, { atencionId: visita.atencionId })
             }
           />
         )}
@@ -253,7 +262,6 @@ const styles = StyleSheet.create({
     fontFamily: typography.fontFamilyBase,
     fontSize: typography.sizes.xs,
     fontWeight: typography.weights.semibold,
-    textTransform: "uppercase",
   },
   valorDeDato: {
     color: colors.text,

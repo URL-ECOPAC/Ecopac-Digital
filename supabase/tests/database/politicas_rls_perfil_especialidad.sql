@@ -68,9 +68,12 @@ SELECT is(
 -- ============================================================================
 SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000204';
 
+-- ISSUE #864: la 00085 le habia dado a los roles consultivos la lectura de las especialidades
+-- ajenas, para el cuadro de turnos que ya no ven. La 00141 la deja en es_administrador() mas la
+-- propia fila; junta directiva no tiene especialidades propias en este fixture, asi que ve cero.
 SELECT is(
-  (SELECT count(*)::int FROM perfil_especialidad), 2,
-  'junta directiva (consultivo) ve las especialidades de cualquier perfil'
+  (SELECT count(*)::int FROM perfil_especialidad), 0,
+  'junta directiva ya no ve las especialidades ajenas (issue #864)'
 );
 
 SELECT throws_ok(

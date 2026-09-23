@@ -6,12 +6,15 @@ import {
   describirMedicamento,
   describirPosologia,
   formatearFechaCorta,
+  htmlDeRecetaImprimible,
   partesDeVisita,
+  useRecetasPaciente,
   useVisitasPaciente,
 } from "@ecopac/shared";
 import { colors, radii, spacing, typography } from "@ecopac/ui-tokens";
 
 import { Card, EmptyState, ErrorState, LoadingState, SecondaryButton } from "../../components";
+import { imprimirHtml } from "../../impresion";
 
 /**
  * El historial clinico como lista de visitas (issue #840, bloque F). Espejo de
@@ -66,7 +69,7 @@ function Consulta({ consulta }) {
   );
 }
 
-function Receta({ receta }) {
+function Receta({ receta, onImprimir, imprimiendo }) {
   return (
     <View style={styles.receta}>
       <Text style={styles.textoFuerte}>
@@ -80,6 +83,15 @@ function Receta({ receta }) {
           {describirEntrega(renglon).texto ? ` (${describirEntrega(renglon).texto})` : ""}
         </Text>
       ))}
+      {onImprimir ? (
+        <SecondaryButton
+          title="Imprimir o guardar PDF"
+          onPress={onImprimir}
+          loading={imprimiendo}
+          disabled={imprimiendo}
+          style={styles.accionReceta}
+        />
+      ) : null}
     </View>
   );
 }
@@ -101,7 +113,15 @@ function Chip({ presente, children }) {
   );
 }
 
-function Visita({ visita, abierta, onAlternar, onAbrirConsulta }) {
+function Visita({
+  visita,
+  abierta,
+  onAlternar,
+  onAbrirConsulta,
+  onAbrirEntrega,
+  onImprimirReceta,
+  imprimiendo,
+}) {
   const partes = partesDeVisita(visita);
   return (
     <Card style={styles.tarjeta}>
@@ -148,9 +168,23 @@ function Visita({ visita, abierta, onAlternar, onAbrirConsulta }) {
             {visita.recetas.length === 0 ? (
               <Text style={styles.tenue}>Sin receta.</Text>
             ) : (
-              visita.recetas.map((receta) => <Receta key={receta.id} receta={receta} />)
+              visita.recetas.map((receta) => (
+                <Receta
+                  key={receta.id}
+                  receta={receta}
+                  imprimiendo={imprimiendo === receta.id}
+                  onImprimir={onImprimirReceta ? () => onImprimirReceta(receta.id) : undefined}
+                />
+              ))
             )}
           </Parte>
+          {onAbrirEntrega && visita.recetas.length > 0 ? (
+            <SecondaryButton
+              title="Entrega de medicamentos"
+              onPress={() => onAbrirEntrega(visita)}
+              style={styles.accion}
+            />
+          ) : null}
           {onAbrirConsulta ? (
             <SecondaryButton
               title="Abrir la consulta"
@@ -164,9 +198,18 @@ function Visita({ visita, abierta, onAlternar, onAbrirConsulta }) {
   );
 }
 
-export default function VisitasPacienteSeccion({ pacienteId, rol, onAbrirConsulta }) {
+export default function VisitasPacienteSeccion({
+  pacienteId,
+  paciente,
+  rol,
+  onAbrirConsulta,
+  onAbrirEntrega,
+}) {
   const { visitas, cargando, error, recargar } = useVisitasPaciente(pacienteId, { rol });
+  const { recetas } = useRecetasPaciente(pacienteId, { rol });
   const [abiertas, setAbiertas] = useState(null);
+  const [imprimiendo, setImprimiendo] = useState(null);
+  const [errorImpresion, setErrorImpresion] = useState(null);
 
   // La visita mas reciente abierta de entrada: es la que casi siempre se viene a ver.
   const abiertasEfectivas = abiertas ?? new Set(visitas[0] ? [visitas[0].atencionId] : []);
@@ -178,6 +221,26 @@ export default function VisitasPacienteSeccion({ pacienteId, rol, onAbrirConsult
     setAbiertas(siguiente);
   };
 
+  const recetasPorId = new Map(recetas.map((receta) => [receta.id, receta]));
+
+  const imprimirReceta = async (recetaId) => {
+    const completa = recetasPorId.get(recetaId);
+    setErrorImpresion(null);
+
+    if (!completa) {
+      setErrorImpresion("No se pudo leer la receta completa para imprimirla.");
+      return;
+    }
+
+    setImprimiendo(recetaId);
+    const resultado = await imprimirHtml(htmlDeRecetaImprimible({ receta: completa, paciente }), {
+      nombreDelArchivo: completa.folio ? `Receta ${completa.folio}` : "Receta",
+    });
+    setImprimiendo(null);
+
+    if (!resultado.ok) setErrorImpresion(resultado.error.mensaje);
+  };
+
   if (cargando && visitas.length === 0) return <LoadingState />;
   if (error) return <ErrorState message={error.mensaje} onRetry={recargar} />;
   if (visitas.length === 0) {
@@ -186,6 +249,7 @@ export default function VisitasPacienteSeccion({ pacienteId, rol, onAbrirConsult
 
   return (
     <View>
+      {errorImpresion ? <ErrorState message={errorImpresion} /> : null}
       {visitas.map((visita) => (
         <Visita
           key={visita.atencionId}
@@ -193,6 +257,9 @@ export default function VisitasPacienteSeccion({ pacienteId, rol, onAbrirConsult
           abierta={abiertasEfectivas.has(visita.atencionId)}
           onAlternar={() => alternar(visita.atencionId)}
           onAbrirConsulta={onAbrirConsulta}
+          onAbrirEntrega={onAbrirEntrega}
+          onImprimirReceta={paciente ? imprimirReceta : undefined}
+          imprimiendo={imprimiendo}
         />
       ))}
     </View>
@@ -263,10 +330,9 @@ const styles = StyleSheet.create({
   tituloParte: {
     color: colors.textMuted,
     fontFamily: typography.fontFamilyBase,
-    fontSize: typography.sizes.xs,
+    fontSize: typography.sizes.sm,
     fontWeight: typography.weights.semibold,
     marginBottom: spacing.xs,
-    textTransform: "uppercase",
   },
   receta: {
     marginBottom: spacing.xs,
@@ -286,6 +352,9 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontFamily: typography.fontFamilyBase,
     fontSize: typography.sizes.sm,
+  },
+  accionReceta: {
+    marginTop: spacing.sm,
   },
   accion: {
     marginTop: spacing.md,

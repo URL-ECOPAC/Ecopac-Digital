@@ -1,10 +1,10 @@
-import { useRef, useState } from "react";
+import { useRef } from "react";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { colors, radii, spacing, typography } from "@ecopac/ui-tokens";
 import { useInicioSesion } from "@ecopac/shared";
 
 import LOGO from "../../assets/icon.png";
-import { Card, PrimaryButton, ScreenContainer, TextField } from "../components";
+import { Card, PasswordField, PrimaryButton, ScreenContainer, TextField } from "../components";
 import { useSesionCompartida } from "../contexto/SesionProvider";
 import { ROUTES } from "../navigation/rutas";
 
@@ -20,9 +20,22 @@ export default function LoginScreen({ navigation }) {
     handleSubmit,
   } = useInicioSesion();
 
-  const { cerradaPorInactividad } = useSesionCompartida();
+  // ISSUE #864. `error` de la sesion, no del formulario: son dos cosas distintas y aqui hacen
+  // falta las dos (ver el comentario del bloque que las pinta).
+  const { cerradaPorInactividad, error: errorDeSesion } = useSesionCompartida();
   const campoContrasena = useRef(null);
-  const [verContrasena, setVerContrasena] = useState(false);
+
+  // ISSUE #864. A quien tiene la cuenta desactivada se le vaciaba el formulario sin decirle nada.
+  // La contrasena era correcta, asi que Supabase emite SIGNED_IN, `haySesion` pasa a true y App.js
+  // cambia el AuthNavigator entero por las pestanas: ESO DESMONTA ESTA PANTALLA. Un instante
+  // despues useSesion termina de evaluar el perfil, lo ve inactivo y cierra la sesion; se vuelve
+  // al login, pero con la pantalla montada de cero, y el error que `useInicioSesion` habia
+  // guardado se fue con el componente anterior.
+  //
+  // El error de la sesion sobrevive porque useSesion vive POR ENCIMA del navegador, asi que sirve
+  // de respaldo: se muestra solo cuando el formulario no tiene uno propio, que es exactamente el
+  // caso de a quien acaban de desactivar. Mismo arreglo que LoginPage.jsx en la web.
+  const errorAMostrar = error ?? errorDeSesion;
 
   return (
     <ScreenContainer contentContainerStyle={styles.contenido}>
@@ -36,7 +49,7 @@ export default function LoginScreen({ navigation }) {
         {/* Por que el cierre fue automatico. Sin esto, la sesion se cerraba sola y la pantalla
             de inicio aparecia sin explicar nada, que es el defecto que la web ya habia corregido
             (issue #840). Cede el lugar a un error de credenciales: ese es mas urgente. */}
-        {cerradaPorInactividad && !error ? (
+        {cerradaPorInactividad && !errorAMostrar ? (
           <View style={styles.avisoInactividad}>
             <Text style={styles.avisoInactividadTexto}>
               Cerramos tu sesión porque la app estuvo una hora sin usarse. Volvé a entrar para
@@ -45,9 +58,9 @@ export default function LoginScreen({ navigation }) {
           </View>
         ) : null}
 
-        {error ? (
+        {errorAMostrar ? (
           <View style={styles.errorGeneral}>
-            <Text style={styles.errorGeneralTexto}>{error.mensaje}</Text>
+            <Text style={styles.errorGeneralTexto}>{errorAMostrar.mensaje || errorAMostrar}</Text>
           </View>
         ) : null}
 
@@ -67,21 +80,16 @@ export default function LoginScreen({ navigation }) {
           blurOnSubmit={false}
         />
 
-        <View style={styles.encabezadoContrasena}>
-          <Text style={styles.labelContrasena}>Contraseña</Text>
-          <Pressable onPress={() => setVerContrasena((valor) => !valor)} hitSlop={8}>
-            <Text style={styles.toggleContrasena}>{verContrasena ? "Ocultar" : "Mostrar"}</Text>
-          </Pressable>
-        </View>
-        <TextField
+        {/* ISSUE #864. Antes el control era la palabra "Mostrar"/"Ocultar" a la derecha de la
+            etiqueta, fuera del campo. Ahora es el icono de ojo dentro del campo, igual que en la
+            web, y lo lleva el propio PasswordField: la pantalla ya no arrastra el estado. */}
+        <PasswordField
           ref={campoContrasena}
+          label="Contraseña"
           value={contrasena}
           onChangeText={setContrasena}
           error={erroresDeCampo.contrasena}
           editable={!enviando}
-          secureTextEntry={!verContrasena}
-          autoCapitalize="none"
-          autoCorrect={false}
           textContentType="password"
           autoComplete="password"
           returnKeyType="done"
@@ -166,24 +174,6 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.sm,
     color: colors.danger,
     textAlign: "center",
-  },
-  encabezadoContrasena: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: spacing.xs,
-  },
-  labelContrasena: {
-    fontFamily: typography.fontFamilyBase,
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.medium,
-    color: colors.text,
-  },
-  toggleContrasena: {
-    fontFamily: typography.fontFamilyBase,
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.semibold,
-    color: colors.primary,
   },
   olvideContrasena: {
     marginTop: spacing.sm,

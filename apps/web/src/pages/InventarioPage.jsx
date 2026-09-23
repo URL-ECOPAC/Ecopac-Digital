@@ -29,7 +29,9 @@ import {
   listarPrincipiosDeMedicamento,
   listarProveedores,
   obtenerValorDeInventario,
+  pestanasDeInventario,
   puedeCorregirLote,
+  puedeDarDeAltaMedicamento,
   puedeRegistrarMovimiento,
   puedeVerValorizacion,
   reactivarMedicamento,
@@ -564,7 +566,7 @@ export default function InventarioPage() {
         actions={accionesCabecera}
       />
 
-      <Nav variant="tabs" activeKey={tabActiva} onSelect={(clave) => setTabActiva(clave)}>
+      <Nav variant="tabs" activeKey={pestanaVisible} onSelect={(clave) => setTabActiva(clave)}>
         {pestanas.map((pestana) => (
           <Nav.Item key={pestana.id}>
             <Nav.Link eventKey={pestana.id}>
@@ -581,7 +583,7 @@ export default function InventarioPage() {
       )}
 
       {/* Catálogo */}
-      {tabActiva === "catalogo" && (
+      {pestanaVisible === "catalogo" && (
         <>
           <div className="ec-kpis">
             {/* StatCard, del catalogo de componentes: es esta misma tarjeta -rotulo en
@@ -783,7 +785,7 @@ export default function InventarioPage() {
       {/* Pestaña: Lotes. Misma barra de filtros y misma tabla que el catalogo: antes eran un input
           en pastilla, un <select> suelto y una tabla con hexadecimales en linea, y la fecha se
           pintaba con new Date(...).toLocaleDateString(), que en Guatemala la adelanta un dia. */}
-      {tabActiva === "lotes" && (
+      {pestanaVisible === "lotes" && (
         <>
           <div className="ec-filtros">
             <div className="ec-filtro ec-filtro--busqueda">
@@ -942,29 +944,29 @@ export default function InventarioPage() {
       )}
 
       {/* Pestaña: Alertas completada mediante PanelAlertasVencimiento */}
-      {tabActiva === "alertas" && (
+      {pestanaVisible === "alertas" && (
         <PanelAlertasVencimiento usuarioId={usuarioActual?.id} rolUsuario={usuarioActual?.rol} />
       )}
 
       {/* Pestaña: Kardex Movimientos */}
-      {tabActiva === "kardex" && <KardexMovimientosPage titulo="Historial de Movimientos" />}
+      {pestanaVisible === "kardex" && <KardexMovimientosPage titulo="Historial de Movimientos" />}
 
       {/* Pestaña: Administración */}
-      {tabActiva === "administracion" && <AdministracionBodegasProveedoresPage />}
+      {pestanaVisible === "administracion" && <AdministracionBodegasProveedoresPage />}
 
       {/* Pestaña: Validación */}
-      {tabActiva === "validacion" && (
+      {pestanaVisible === "validacion" && (
         <BandejaValidacionPage usuarioId={perfil?.id} rolUsuario={rol} />
       )}
 
       {/* Pestaña: Principios Activos */}
-      {tabActiva === "principios-activos" && <CatalogoPrincipiosActivosPage />}
+      {pestanaVisible === "principios-activos" && <CatalogoPrincipiosActivosPage />}
 
       {/* Pestaña: Presentaciones */}
       {tabActiva === "presentaciones" && <CatalogoPresentacionesPage />}
 
       {/* Pestaña: Mis Movimientos */}
-      {tabActiva === "mis-movimientos" && <MisMovimientosPage />}
+      {pestanaVisible === "mis-movimientos" && <MisMovimientosPage />}
 
       {/* Modales */}
       {modalAbierto && (

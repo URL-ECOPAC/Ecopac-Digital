@@ -93,3 +93,57 @@ export function permisosDeMovimientos(rol) {
 export function puedeVerValorizacion(rol) {
   return esAdministrador(rol) || esConsultivo(rol);
 }
+
+/**
+ * Las pestanas de la pantalla de inventario que ve cada rol (issue #864).
+ *
+ * El criterio 6 de la issue le acota el inventario al medico a "solo catalogo, principios
+ * activos y Mis movimientos", conservando el registro de ingresos y salidas -que son acciones de
+ * la cabecera, no una pestana-. Lo que se le quita es lo que no le corresponde mirar ni decidir:
+ *
+ * - Lotes, Kardex y Bodegas y proveedores son la administracion de la bodega.
+ * - Alertas de caducidad las atiende la administracion (fn_atender_alerta_caducidad, 00138, es
+ *   `es_administrador()` en su propio cuerpo), y la notificacion le llega a ella (00138).
+ * - Validacion es la bandeja donde se aprueban movimientos, y aprobar es `inventario.aprobar`:
+ *   un medico la veia con el contador de pendientes y sin poder hacer nada con ellos.
+ *
+ * Vive aqui y no en la pantalla porque es una decision de negocio -- que le toca a cada rol --,
+ * que es justo lo que packages/shared declara. La web la consume en InventarioPage.jsx.
+ *
+ * NO es una barrera: quien protege es RLS. Un medico que escriba la ruta a mano sigue viendo lo
+ * que la base le entregue; lo que esto evita es ofrecerle pestanas que no va a poder usar.
+ *
+ * @param {string} rol
+ * @returns {string[]} ids de pestana, en el orden en que se dibujan.
+ */
+export function pestanasDeInventario(rol) {
+  if (rol === ROLES.MEDICO) {
+    return ["catalogo", "principios-activos", "mis-movimientos"];
+  }
+
+  return [
+    "catalogo",
+    "lotes",
+    "alertas",
+    "kardex",
+    "administracion",
+    "principios-activos",
+    "mis-movimientos",
+    "validacion",
+  ];
+}
+
+/**
+ * Puede dar de alta un medicamento en el catalogo (issue #864).
+ *
+ * Administrador y medico. Es el espejo de la politica de INSERT de `medicamentos` y
+ * `medicamento_principio` que amplia la 00141: un medico que registra un ingreso de algo que el
+ * catalogo todavia no tiene se quedaba trabado, porque el alta en linea existia (la #851 la
+ * puso en el formulario de donacion) pero la politica seguia siendo solo `es_administrador()`.
+ *
+ * Solo el alta: editar y desactivar siguen siendo de la administracion
+ * (medicamentos.permisos.js, puedeAdministrarMedicamentos).
+ */
+export function puedeDarDeAltaMedicamento(rol) {
+  return esAdministrador(rol) || rol === ROLES.MEDICO;
+}

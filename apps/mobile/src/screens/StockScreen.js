@@ -1,7 +1,9 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
+import { useFocusEffect } from "@react-navigation/native";
 import { listarBodegas, listarExistenciasDisponibles, listarMedicamentos } from "@ecopac/shared";
 
 import { ErrorState, LoadingState, ScreenContainer } from "../components";
+import { useSesionCompartida } from "../contexto/SesionProvider";
 import { CatalogoMedicamentosScreen } from "./CatalogoMedicamentosScreen";
 
 // La traduccion de cada fila a lo que pinta la tarjeta vive en shared desde la #840
@@ -29,6 +31,7 @@ import { CatalogoMedicamentosScreen } from "./CatalogoMedicamentosScreen";
  * pantalla.
  */
 export default function StockScreen(props) {
+  const { rol } = useSesionCompartida();
   const [inventario, setInventario] = useState([]);
   const [bodegas, setBodegas] = useState([]);
   const [medicamentosSinStock, setMedicamentosSinStock] = useState(0);
@@ -58,9 +61,11 @@ export default function StockScreen(props) {
     setCargando(false);
   }, []);
 
-  useEffect(() => {
-    cargar();
-  }, [cargar]);
+  useFocusEffect(
+    useCallback(() => {
+      cargar();
+    }, [cargar]),
+  );
 
   if (cargando) {
     return (
@@ -84,6 +89,7 @@ export default function StockScreen(props) {
       inventarioInicial={inventario}
       bodegas={bodegas}
       medicamentosSinStock={medicamentosSinStock}
+      rol={rol}
     />
   );
 }

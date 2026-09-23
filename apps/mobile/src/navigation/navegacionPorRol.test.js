@@ -8,21 +8,29 @@
 // Es una prueba de la navegacion, no del control de acceso: ocultar una opcion del menu no
 // protege nada, quien protege es RLS. Que la opcion no aparezca es lo unico que se afirma.
 
-import { modulosVisibles, ROLES, tabsMoviles } from "@ecopac/shared";
+import { modulosVisibles, puedeUsarAppMovil, ROLES, tabsMoviles } from "@ecopac/shared";
 
 import { ROUTES } from "./rutas";
 
 describe("tabs de la app movil por rol", () => {
-  it("todos los roles reciben tabs, y ninguna se queda sin nombre en ROUTES", () => {
+  it("los roles de campo reciben tabs, y ninguna se queda sin nombre en ROUTES", () => {
     const nombresDeRuta = Object.values(ROUTES);
 
-    for (const rol of Object.values(ROLES)) {
+    for (const rol of Object.values(ROLES).filter(puedeUsarAppMovil)) {
       const tabs = tabsMoviles(rol);
       expect(tabs.length).toBeGreaterThan(0);
 
       for (const tab of tabs) {
         expect(nombresDeRuta).toContain(tab.tabMovil);
       }
+    }
+  });
+
+  it("junta directiva y socio fundador no entran a la app movil: ninguna tab, ningun modulo", () => {
+    for (const rol of [ROLES.JUNTA_DIRECTIVA, ROLES.SOCIO_FUNDADOR]) {
+      expect(puedeUsarAppMovil(rol)).toBe(false);
+      expect(tabsMoviles(rol)).toEqual([]);
+      expect(modulosVisibles(rol, { plataforma: "mobile" })).toEqual([]);
     }
   });
 
