@@ -12,7 +12,13 @@
 
 import { labels } from "@ecopac/ui-tokens";
 import { TIPOS_DE_CAMPO } from "../descriptores.js";
-import { ESTADOS_JORNADA, ETIQUETAS_ESTADO_JORNADA, opcionesConClave } from "../enums.js";
+import {
+  ESTADOS_JORNADA,
+  ETIQUETAS_ESTADO_JORNADA,
+  ETIQUETAS_NIVEL_ALERTA_VENCIMIENTO,
+  NIVELES_ALERTA_VENCIMIENTO,
+  opcionesConClave,
+} from "../enums.js";
 import { AGRUPACIONES_DE_IMPACTO } from "./api.js";
 import { ESTADOS_DE_VENCIMIENTO } from "./inventario.api.js";
 
@@ -64,9 +70,18 @@ export const VENCIMIENTO_DE_LOTE = [
  */
 export const ESTADOS_JORNADA_REPORTE = opcionesConClave(ESTADOS_JORNADA, ETIQUETAS_ESTADO_JORNADA);
 
-/** Las cuatro metricas de obtenerIndicadoresImpacto(), para el selector de #214. */
+/**
+ * Las metricas de obtenerIndicadoresImpacto(), para el selector de #214.
+ *
+ * ISSUE #862: faltaba `consultas_realizadas`. api.js la calcula (es una de las columnas de
+ * vista_reporte_impacto) y useDashboardMetricas la expone, pero al no estar en esta lista no
+ * habia forma de elegirla desde la pantalla. Es ademas la unica que distingue "cuanta gente se
+ * atendio" de "cuantas veces se atendio": un paciente con dos consultas cuenta una vez en
+ * pacientes_atendidos y dos aqui.
+ */
 export const OPCIONES_METRICA_IMPACTO = [
   { value: "pacientes_atendidos", label: "Pacientes atendidos" },
+  { value: "consultas_realizadas", label: "Consultas realizadas" },
   { value: "tratamientos_entregados", label: "Tratamientos entregados" },
   { value: "medicamentos_utilizados", label: "Medicamentos utilizados" },
   { value: "comunidades_beneficiadas", label: "Comunidades beneficiadas" },
@@ -110,9 +125,11 @@ export const CAMPOS_ANALISIS_IMPACTO = [
 
 /**
  * Reporte de medicamentos proximos a vencer (#213). Solo el horizonte de dias: es un numero
- * que la persona escribe, no depende de ninguna forma de respuesta de una API. La API de ese
- * reporte (issue #204, RF-33) todavia no existe en este modulo -- ver columnas.js para el
- * detalle de por que no se declaran columnas para esa pantalla todavia.
+ * que la persona escribe, no depende de ninguna forma de respuesta de una API.
+ *
+ * (El comentario anterior decia que la API de este reporte "todavia no existe en este modulo".
+ * Existe: vencimientos.api.js, obtenerReporteDeVencimientos. Se corrige en la issue #862, junto
+ * con el gemelo de columnas.js, que por lo mismo no declaraba columnas para esta pantalla.)
  */
 export const CAMPOS_REPORTE_VENCIMIENTO = [
   {
@@ -123,18 +140,60 @@ export const CAMPOS_REPORTE_VENCIMIENTO = [
   },
 ];
 
-// Umbrales de alerta en días
+/**
+ * Metas anuales de la organizacion contra las que el dashboard dibuja su barra de avance.
+ *
+ * ISSUE #862: estaban escritas como literales sueltos en el JSX de DashboardMetricasPage
+ * (meta="3000", meta="50", meta="1500", meta="5000"), sin nombre, sin explicacion y sin forma de
+ * cambiarlas salvo editando la pantalla. Son datos de negocio, asi que viven en shared con el
+ * resto del vocabulario del dominio.
+ *
+ * SON VALORES FIJOS, NO CONFIGURACION. Lo correcto seria una tabla de metas por periodo en la
+ * base, para que la junta directiva pudiera ajustarlas sin un despliegue; eso pide una migracion
+ * y queda anotado como issue aparte. Mientras tanto, al menos se leen en un solo sitio.
+ *
+ * `consultasRealizadas` no lleva meta a proposito: es una consecuencia de cuantos pacientes se
+ * atienden, no un objetivo que la organizacion se fije por separado.
+ */
+export const METAS_DE_IMPACTO = Object.freeze({
+  pacientesAtendidos: 3000,
+  comunidadesBeneficiadas: 50,
+  tratamientosEntregados: 1500,
+  medicamentosUtilizados: 5000,
+});
+
+/** Umbrales de alerta, en dias restantes. Los consume calcularAlerta(). */
 export const UMBRALES_ALERTA = {
   CRITICO: 7,
   ALTO: 15,
   MEDIO: 30,
 };
 
-// Opciones de horizonte de días
+/**
+ * Horizontes que ofrece el filtro.
+ *
+ * ISSUE #862: usaban `{ valor, etiqueta }`, los dos unicos descriptores del modulo que no seguian
+ * el `{ value, label }` del resto. Mientras la pantalla los recorria a mano para pintar <option>
+ * daba igual; en cuanto el horizonte pasa a ser un filtro de FilterBar, tiene que hablar el mismo
+ * idioma que Selector y que los demas catalogos.
+ */
 export const HORIZONTES_DISPONIBLES = [
-  { valor: 7, etiqueta: "Próximos 7 días" },
-  { valor: 15, etiqueta: "Próximos 15 días" },
-  { valor: 30, etiqueta: "Próximos 30 días" },
-  { valor: 60, etiqueta: "Próximos 60 días" },
-  { valor: 90, etiqueta: "Próximos 90 días" },
+  { value: 7, label: "Próximos 7 días" },
+  { value: 15, label: "Próximos 15 días" },
+  { value: 30, label: "Próximos 30 días" },
+  { value: 60, label: "Próximos 60 días" },
+  { value: 90, label: "Próximos 90 días" },
 ];
+
+/**
+ * Catalogo del nivel de alerta de un renglon por vencer, para la columna ESTADO.
+ *
+ * `value` es lo que calcularAlerta() devuelve, `clave` indexa el color de statusColors y `label`
+ * sale de ui-tokens via ETIQUETAS_NIVEL_ALERTA_VENCIMIENTO. Mismo patron que
+ * ESTADOS_DE_VENCIMIENTO_REPORTE: la pantalla no vuelve a traducir "critico" a un color ni a una
+ * palabra, que es como se habian colado antes dos vocabularios distintos para lo mismo (#700).
+ */
+export const NIVELES_DE_ALERTA_VENCIMIENTO = opcionesConClave(
+  NIVELES_ALERTA_VENCIMIENTO,
+  ETIQUETAS_NIVEL_ALERTA_VENCIMIENTO,
+);

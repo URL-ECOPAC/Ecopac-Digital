@@ -40,6 +40,21 @@ export const PRESETS_DE_RANGO = {
 };
 
 /**
+ * Los presets que una pantalla puede ofrecer como botones, con su etiqueta (issue #862).
+ *
+ * PERSONALIZADO no entra: no es una opcion que se elija, es el estado en el que queda el filtro
+ * cuando alguien escribe las fechas a mano. Ofrecerlo como boton no tendria a que resolverse.
+ *
+ * Hacia falta porque PRESETS_DE_RANGO es un objeto de cadenas, sin texto legible, y las etiquetas
+ * son decision de dominio -no de la pantalla-, como el resto de catalogos del modulo.
+ */
+export const OPCIONES_DE_PRESET = [
+  { value: PRESETS_DE_RANGO.ESTE_MES, label: "Este mes" },
+  { value: PRESETS_DE_RANGO.ULTIMO_TRIMESTRE, label: "Último trimestre" },
+  { value: PRESETS_DE_RANGO.ESTE_ANIO, label: "Este año" },
+];
+
+/**
  * Resuelve un preset de rango a fechas concretas.
  *
  * Los tres presets con nombre son "a la fecha": arrancan en el primer dia del periodo que

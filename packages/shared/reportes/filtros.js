@@ -16,7 +16,8 @@
 // escribir esto -- ver el contexto del plan).
 
 import { SUBTIPOS_DE_RANGO, TIPOS_DE_FILTRO } from "../descriptores.js";
-import { ESTADOS_DE_VENCIMIENTO_REPORTE } from "./campos.js";
+import { ESTADOS_DE_VENCIMIENTO_REPORTE, HORIZONTES_DISPONIBLES } from "./campos.js";
+import { HORIZONTE_POR_DEFECTO_EN_DIAS } from "./vencimientos.api.js";
 
 export const FILTROS_REPORTES = [
   {
@@ -82,6 +83,15 @@ export const FILTROS_INVENTARIO_REPORTE = [
     opcionesDesde: "bodegas",
   },
   {
+    // ISSUE #862: obtenerReporteDeInventario acepta `medicamento` desde que se escribio, y el
+    // descriptor no lo declaraba, asi que no habia forma de filtrar por uno. Con cientos de
+    // medicamentos era el filtro que mas falta hacia.
+    id: "medicamento",
+    tipo: TIPOS_DE_FILTRO.SELECT,
+    label: "Medicamento",
+    opcionesDesde: "medicamentos",
+  },
+  {
     id: "estadoVencimiento",
     tipo: TIPOS_DE_FILTRO.SELECT,
     label: "Estado de vencimiento",
@@ -91,5 +101,57 @@ export const FILTROS_INVENTARIO_REPORTE = [
 
 export const FILTROS_INVENTARIO_REPORTE_VACIOS = {
   bodega: null,
+  medicamento: null,
+  estadoVencimiento: null,
+};
+
+/**
+ * Filtros del reporte de medicamentos proximos a vencer (issue #862).
+ *
+ * No existian: esa pestana dibujaba dos <select> a mano en ReportesPage.jsx, fuera de FilterBar y
+ * fuera de todo descriptor, y era la unica del modulo que lo hacia.
+ *
+ * Los cuatro son exactamente los parametros que acepta obtenerReporteDeVencimientos. Se leyo esa
+ * funcion antes de declararlos; ninguno esta adivinado. Nota: NO hay filtro por comunidad, aunque
+ * el hook anterior tuviera un `comunidadId` con su setter. No se puede: `bodegas` no tiene
+ * `comunidad_id` y `existencias` se agrupa por lote y bodega, asi que el stock no tiene dimension
+ * de comunidad. Aquel filtro nunca llego a entrar en la consulta.
+ */
+export const FILTROS_VENCIMIENTOS = [
+  {
+    id: "horizonteDias",
+    tipo: TIPOS_DE_FILTRO.SELECT,
+    label: "Horizonte",
+    opciones: HORIZONTES_DISPONIBLES,
+  },
+  {
+    id: "bodega",
+    tipo: TIPOS_DE_FILTRO.SELECT,
+    label: "Bodega",
+    opcionesDesde: "bodegas",
+  },
+  {
+    id: "medicamento",
+    tipo: TIPOS_DE_FILTRO.SELECT,
+    label: "Medicamento",
+    opcionesDesde: "medicamentos",
+  },
+  {
+    id: "estadoVencimiento",
+    tipo: TIPOS_DE_FILTRO.SELECT,
+    label: "Estado de vencimiento",
+    opciones: ESTADOS_DE_VENCIMIENTO_REPORTE,
+  },
+];
+
+/**
+ * El horizonte arranca en el valor por defecto y no en null: a diferencia de los demas, "sin
+ * horizonte" no es un estado valido de este reporte -seria traer el inventario entero-, asi que
+ * limpiar los filtros lo devuelve al mes, que es la alerta operativa de RF-33.
+ */
+export const FILTROS_VENCIMIENTOS_VACIOS = {
+  horizonteDias: HORIZONTE_POR_DEFECTO_EN_DIAS,
+  bodega: null,
+  medicamento: null,
   estadoVencimiento: null,
 };

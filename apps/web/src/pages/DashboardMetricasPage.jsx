@@ -1,15 +1,36 @@
-import { exportarFilasACSV, aCadenaFechaLocal, useDashboardMetricas } from "@ecopac/shared";
+import { useState } from "react";
 import { Form } from "react-bootstrap";
-import StatCard from "../components/StatCard";
+
+import { aCadenaFechaLocal, METAS_DE_IMPACTO, useDashboardMetricas } from "@ecopac/shared";
+import BotonExportarCSV from "../components/BotonExportarCSV";
+import BotonImprimir from "../components/BotonImprimir";
+import Card from "../components/Card";
+import descargarCSV from "../components/descargarCSV";
+import ErrorState from "../components/ErrorState";
+import GraficaDeBarras from "../components/GraficaDeBarras";
+import LoadingState from "../components/LoadingState";
 import { AccionesDeCabecera } from "../components/PageHeader";
+import Selector from "../components/Selector";
+import StatCard from "../components/StatCard";
+import ReporteImprimible from "./ReporteImprimible";
 import { useSesionCompartida } from "../contexto/SesionProvider";
 import "./reportes.css";
 
-// Tarjeta de indicador con meta. Es StatCard -la tarjeta de indicador de todo el sistema- con la
-// barra de avance hacia la meta como pie. Antes era su propia tarjeta con cinco hexadecimales en
-// linea, un radio de 16px y una escala de letra que no se parecia a la de inventario, donaciones
-// ni presupuestos.
-const TarjetaMetrica = ({ etiqueta, valor, meta, acento }) => {
+// Panel de indicadores de impacto. Es la pestana por defecto de /reportes.
+//
+// ISSUE #862. Era la unica pantalla del modulo que se salia del catalogo: montaba
+// `<div className="alert alert-danger">`, `<div className="card"><div className="card-body">` y
+// `btn btn-sm btn-primary` a pelo, en vez de ErrorState, Card y los botones del sistema. Ademas:
+//
+//   - `metrica` y `setMetrica` se desestructuraban del hook y NO SE USABAN: el hook expone cinco
+//     metricas y la pantalla no tenia selector, asi que siempre se veia "pacientes atendidos".
+//   - Las metas estaban escritas como literales en el JSX (meta="3000", "50", "1500", "5000").
+//     Ahora salen de METAS_DE_IMPACTO, en shared.
+//   - La grafica eran divs con alto fijo de 180px y una barra `flex: 1` por punto, sin eje Y ni
+//     alternativa accesible. Ver GraficaDeBarras.jsx.
+
+/** StatCard con la barra de avance hacia la meta como pie. */
+function TarjetaMetrica({ etiqueta, valor, meta, acento }) {
   const progreso = meta ? Math.min((Number(valor) / Number(meta)) * 100, 100) : 0;
   return (
     <StatCard
@@ -28,17 +49,26 @@ const TarjetaMetrica = ({ etiqueta, valor, meta, acento }) => {
       }
     />
   );
-};
+}
+
+const COLUMNAS_DE_SERIE = [
+  { id: "etiqueta", label: "Período / grupo" },
+  { id: "valor", label: "Valor" },
+  { id: "comparado", label: "Comparado" },
+  { id: "variacion", label: "Variación %" },
+];
 
 export default function DashboardMetricasPage() {
   const { rol } = useSesionCompartida();
+  const [imprimiendo, setImprimiendo] = useState(false);
+
   const {
     tieneAcceso,
     cargando,
     error,
     indicadores,
-    seriePrincipal = [], // Asegura arreglo
-    serieComparacion = [], // Asegura arreglo
+    seriePrincipal = [],
+    serieComparacion = [],
     calcularVariacion,
     rangosDisponibles,
     rangoSeleccionado,
@@ -46,6 +76,7 @@ export default function DashboardMetricasPage() {
     agrupamientosDisponibles,
     agruparPor,
     setAgruparPor,
+    metricasDisponibles,
     metrica,
     setMetrica,
     comunidadId,
@@ -56,267 +87,254 @@ export default function DashboardMetricasPage() {
     setComunidadCompararId,
     listaComunidades = [],
     valoresEspeciales: { TODAS, NINGUNA },
+    recargar,
   } = useDashboardMetricas({ rol });
 
-  // Función de exportación CSV
-  const exportarCSV = () => {
-    if (!seriePrincipal || seriePrincipal.length === 0) return;
-    const columnas = [
-      { id: "etiqueta", label: agruparPor },
-      { id: "valor", label: "Valor principal" },
-      { id: "comparado", label: "Valor comparado" },
-      { id: "variacion", label: "Variacion %" },
-    ];
-    const filas = seriePrincipal.map((fila, i) => {
-      const comp = serieComparacion?.[i];
-      const varPc = comp ? calcularVariacion(fila.valor, comp.valor) : null;
-      return {
-        etiqueta: fila.etiqueta,
-        valor: fila.valor,
-        comparado: comp?.valor ?? "-",
-        variacion: varPc !== null ? `${varPc >= 0 ? "+" : ""}${varPc.toFixed(1)}%` : "-",
-      };
-    });
-    const blob = new Blob([exportarFilasACSV(filas, columnas)], {
-      type: "text/csv;charset=utf-8;",
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `panel-impacto-${aCadenaFechaLocal()}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  // Guardas de acceso
-  if (!tieneAcceso)
+  if (!tieneAcceso) {
     return (
-      <div className="alert alert-danger">
-        Solo administracion y los roles consultivos consultan los indicadores de impacto.
-      </div>
+      <ErrorState message="Solo administración y los roles consultivos consultan los indicadores de impacto." />
     );
+  }
 
-  if (cargando)
-    return <p className="text-center py-5 m-0 ec-cabecera-subtitulo">Cargando métricas...</p>;
+  if (cargando) return <LoadingState message="Calculando métricas..." />;
+  if (error) return <ErrorState message={error.mensaje} onRetry={recargar} />;
 
-  if (error) return <div className="alert alert-danger">Error al cargar: {error.mensaje}</div>;
-
-  // Datos de gráfica
   const tieneComparacion = serieComparacion.length > 0;
-  const valorMaximo =
-    seriePrincipal.length > 0 ? Math.max(...seriePrincipal.map((i) => i.valor), 1) : 1;
+
+  const etiquetaDeMetrica = metricasDisponibles.find((m) => m.value === metrica)?.label ?? "Valor";
+  const etiquetaDeAgrupacion =
+    agrupamientosDisponibles.find((a) => a.value === agruparPor)?.label ?? agruparPor;
+
+  // El hueco se deja VACIO y no como "-". Un valor que empieza por guion es un prefijo de formula
+  // y csv.js lo neutraliza anteponiendo un apostrofo (issue #698), asi que en el archivo salia
+  // literalmente `'-`. Una celda vacia se lee como "sin dato" en cualquier hoja de calculo y no
+  // necesita que nadie la desactive.
+  const filasDeSerie = seriePrincipal.map((punto, indice) => {
+    const comparado = serieComparacion[indice];
+    const variacion = comparado ? calcularVariacion(punto.valor, comparado.valor) : null;
+    return {
+      id: punto.etiqueta ?? indice,
+      etiqueta: punto.etiqueta,
+      valor: punto.valor,
+      comparado: comparado?.valor ?? "",
+      variacion: variacion !== null ? `${variacion >= 0 ? "+" : ""}${variacion.toFixed(1)}%` : "",
+    };
+  });
+
+  const nombreDeComunidad = (id) => listaComunidades.find((c) => c.id === id)?.nombre ?? "";
 
   return (
     <div>
-      {/* Descripcion del panel y "Exportar CSV" en una sola fila. El boton vivia solo en una fila
-          entera, dentro de un contenedor con 24px de relleno y 100vh de alto minimo, debajo de las
-          pestanas: de ahi el hueco tan grande entre las pestanas y los filtros. */}
       <div className="reporte-barra">
-        <p className="ec-cabecera-subtitulo m-0">
+        <p className="reporte-barra-texto">
           Volumen de atención por periodo y comunidad, con comparación opcional.
         </p>
         <AccionesDeCabecera
           actions={[
             {
-              label: "Exportar CSV",
-              onClick: exportarCSV,
-              variant: "secondary",
-              disabled: seriePrincipal.length === 0,
+              key: "csv",
+              custom: (
+                <BotonExportarCSV
+                  onClick={() =>
+                    descargarCSV(
+                      COLUMNAS_DE_SERIE,
+                      filasDeSerie,
+                      `panel-impacto-${aCadenaFechaLocal()}.csv`,
+                    )
+                  }
+                  disabled={filasDeSerie.length === 0}
+                />
+              ),
+            },
+            {
+              key: "imprimir",
+              custom: (
+                <BotonImprimir
+                  onClick={() => setImprimiendo(true)}
+                  disabled={filasDeSerie.length === 0}
+                />
+              ),
             },
           ]}
         />
       </div>
 
-      {/* Filtros */}
-      <div className="card mb-3">
-        <div className="card-body">
-          <span className="form-label d-block">Rango de fechas</span>
-          <div className="ec-acciones mb-3">
-            {rangosDisponibles.map((r) => (
-              <button
-                key={r.valor}
-                type="button"
-                onClick={() => setRangoSeleccionado(r.valor)}
-                aria-pressed={rangoSeleccionado === r.valor}
-                className={`btn btn-sm ${
-                  rangoSeleccionado === r.valor ? "btn-primary" : "btn-outline-secondary"
-                }`}
-              >
-                {r.etiqueta}
-              </button>
-            ))}
-          </div>
-
-          <div className="reporte-filtros">
-            <Form.Group controlId="impacto-agrupar">
-              <Form.Label>Agrupar por</Form.Label>
-              <Form.Select value={agruparPor} onChange={(e) => setAgruparPor(e.target.value)}>
-                {agrupamientosDisponibles.map((a) => (
-                  <option key={a.valor} value={a.valor}>
-                    {a.etiqueta}
-                  </option>
-                ))}
-              </Form.Select>
-            </Form.Group>
-
-            <Form.Group controlId="impacto-comunidad">
-              <Form.Label>Comunidad</Form.Label>
-              <Form.Select value={comunidadId} onChange={(e) => setComunidadId(e.target.value)}>
-                <option value={TODAS}>Todas las comunidades</option>
-                {listaComunidades.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.nombre}
-                  </option>
-                ))}
-              </Form.Select>
-            </Form.Group>
-
-            <Form.Group controlId="impacto-comparar">
-              <Form.Label>Comparar con</Form.Label>
-              <div className="d-flex align-items-center gap-2">
-                <Form.Check
-                  type="checkbox"
-                  aria-label="Activar la comparación"
-                  checked={modoComparacion}
-                  onChange={(e) => setModoComparacion(e.target.checked)}
-                />
-                <Form.Select
-                  aria-label="Comunidad con la que comparar"
-                  value={comunidadCompararId}
-                  onChange={(e) => setComunidadCompararId(e.target.value)}
-                  disabled={!modoComparacion}
-                >
-                  <option value={NINGUNA}>— Ninguna —</option>
-                  {listaComunidades.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.nombre}
-                    </option>
-                  ))}
-                </Form.Select>
-              </div>
-            </Form.Group>
-          </div>
+      <Card>
+        <span className="ec-rotulo">Rango de fechas</span>
+        <div className="reporte-presets">
+          {rangosDisponibles.map((rango) => (
+            <button
+              key={rango.value}
+              type="button"
+              onClick={() => setRangoSeleccionado(rango.value)}
+              aria-pressed={rangoSeleccionado === rango.value}
+              className={`btn btn-sm ${
+                rangoSeleccionado === rango.value ? "btn-primary" : "btn-outline-secondary"
+              }`}
+            >
+              {rango.label}
+            </button>
+          ))}
         </div>
-      </div>
 
-      {/* Tarjetas de indicador */}
+        <div className="reporte-filtros">
+          {/* ISSUE #862: este selector no existia. El hook expone cinco metricas y la pantalla
+              mostraba siempre la primera. */}
+          <Selector
+            label="Métrica"
+            value={metrica}
+            options={metricasDisponibles}
+            onSelect={setMetrica}
+          />
+
+          <Selector
+            label="Agrupar por"
+            value={agruparPor}
+            options={agrupamientosDisponibles}
+            onSelect={setAgruparPor}
+          />
+
+          <Selector
+            label="Comunidad"
+            value={comunidadId}
+            options={[
+              { value: TODAS, label: "Todas las comunidades" },
+              ...listaComunidades.map((c) => ({ value: c.id, label: c.nombre })),
+            ]}
+            onSelect={setComunidadId}
+          />
+
+          {/* Misma estructura que Selector -Form.Group + Form.Label + control- y no un <div> con
+              un <label> suelto: con el `align-items: end` de .reporte-filtros, un item construido
+              distinto no alinea su rotulo con el de los demas, y este quedaba descolgado. */}
+          <Form.Group className="mb-3">
+            <Form.Label htmlFor="impacto-comparar">Comparar con</Form.Label>
+            <div className="d-flex align-items-center gap-2">
+              <Form.Check
+                type="checkbox"
+                className="mb-0"
+                aria-label="Activar la comparación"
+                checked={modoComparacion}
+                onChange={(evento) => setModoComparacion(evento.target.checked)}
+              />
+              <Form.Select
+                id="impacto-comparar"
+                aria-label="Comunidad con la que comparar"
+                value={comunidadCompararId}
+                onChange={(evento) => setComunidadCompararId(evento.target.value)}
+                disabled={!modoComparacion}
+              >
+                <option value={NINGUNA}>— Ninguna —</option>
+                {listaComunidades.map((comunidad) => (
+                  <option key={comunidad.id} value={comunidad.id}>
+                    {comunidad.nombre}
+                  </option>
+                ))}
+              </Form.Select>
+            </div>
+          </Form.Group>
+        </div>
+      </Card>
+
       <div className="ec-kpis">
         <TarjetaMetrica
-          etiqueta="Pacientes Atendidos"
+          etiqueta="Pacientes atendidos"
           valor={indicadores?.pacientesAtendidos || 0}
-          meta="3000"
+          meta={METAS_DE_IMPACTO.pacientesAtendidos}
           acento="var(--color-primary)"
         />
         <TarjetaMetrica
-          etiqueta="Consultas Realizadas"
+          etiqueta="Consultas realizadas"
           valor={indicadores?.consultasRealizadas || 0}
-          acento="var(--accent-pacientes)"
-        />
-        <TarjetaMetrica
-          etiqueta="Comunidades Beneficiadas"
-          valor={indicadores?.comunidadesBeneficiadas || 0}
-          meta="50"
           acento="var(--color-info)"
         />
         <TarjetaMetrica
-          etiqueta="Tratamientos Entregados"
+          etiqueta="Comunidades beneficiadas"
+          valor={indicadores?.comunidadesBeneficiadas || 0}
+          meta={METAS_DE_IMPACTO.comunidadesBeneficiadas}
+          acento="var(--color-info)"
+        />
+        <TarjetaMetrica
+          etiqueta="Tratamientos entregados"
           valor={indicadores?.tratamientosEntregados || 0}
-          meta="1500"
+          meta={METAS_DE_IMPACTO.tratamientosEntregados}
           acento="var(--color-warning)"
         />
         <TarjetaMetrica
-          etiqueta="Medicamentos Utilizados"
+          etiqueta="Medicamentos utilizados"
           valor={indicadores?.medicamentosUtilizados || 0}
-          meta="5000"
+          meta={METAS_DE_IMPACTO.medicamentosUtilizados}
           acento="var(--color-danger)"
         />
       </div>
 
-      {/* Grafica de evolucion */}
       <div
         className={
           tieneComparacion ? "reporte-graficas reporte-graficas--doble" : "reporte-graficas"
         }
       >
-        <div className="card">
-          <div className="card-body">
-            <h2 className="ec-seccion-titulo">Pacientes atendidos por {agruparPor}</h2>
-            <div className="reporte-barras">
-              {seriePrincipal.map((item, i) => {
-                const alto = valorMaximo > 0 ? Math.max((item.valor / valorMaximo) * 100, 8) : 4;
+        <Card>
+          <GraficaDeBarras
+            titulo={`${etiquetaDeMetrica} · ${etiquetaDeAgrupacion}`}
+            serie={seriePrincipal}
+            serieComparacion={serieComparacion}
+            nombreSerie={comunidadId === TODAS ? "Todas" : nombreDeComunidad(comunidadId)}
+            nombreComparacion={nombreDeComunidad(comunidadCompararId)}
+          />
+        </Card>
+
+        {tieneComparacion && (
+          <Card>
+            <h2 className="ec-seccion-titulo">Variación porcentual</h2>
+            <div className="d-flex flex-column gap-2">
+              {seriePrincipal.map((punto, indice) => {
+                const comparado = serieComparacion[indice];
+                if (!comparado) return null;
+                const variacion = calcularVariacion(punto.valor, comparado.valor);
+                if (variacion === null) return null;
                 return (
-                  <div key={i} className="reporte-barras-grupo">
-                    <div className="reporte-barras-par">
-                      <div
-                        className="reporte-barra-valor"
-                        style={{ height: `${alto}%`, width: tieneComparacion ? "45%" : "80%" }}
-                        title={`Valor: ${item.valor}`}
-                      />
-                      {serieComparacion?.[i] && (
-                        <div
-                          className="reporte-barra-valor reporte-barra-valor--comparacion"
-                          style={{
-                            height: `${Math.max((serieComparacion[i].valor / valorMaximo) * 100, 4)}%`,
-                            width: "45%",
-                          }}
-                          title={`Comparación: ${serieComparacion[i].valor}`}
-                        />
-                      )}
-                    </div>
-                    <span className="reporte-barras-etiqueta">{item.etiqueta}</span>
+                  <div
+                    key={punto.etiqueta ?? indice}
+                    className={`reporte-variacion ${
+                      variacion >= 0 ? "reporte-variacion--sube" : "reporte-variacion--baja"
+                    }`}
+                  >
+                    <span>{punto.etiqueta}</span>
+                    <strong>
+                      {variacion >= 0 ? "↑" : "↓"} {Math.abs(variacion).toFixed(1)}%
+                    </strong>
                   </div>
                 );
               })}
             </div>
-
-            {tieneComparacion && (
-              <div className="reporte-leyenda">
-                <span className="reporte-leyenda-item">
-                  <span className="reporte-leyenda-muestra" aria-hidden="true" />
-                  Selección actual
-                </span>
-                <span className="reporte-leyenda-item">
-                  <span
-                    className="reporte-leyenda-muestra reporte-leyenda-muestra--comparacion"
-                    aria-hidden="true"
-                  />
-                  Comparación
-                </span>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Panel de variacion porcentual */}
-        {tieneComparacion && (
-          <div className="card">
-            <div className="card-body">
-              <h2 className="ec-seccion-titulo">Variación porcentual</h2>
-              <div className="d-flex flex-column gap-2">
-                {seriePrincipal.map((item, i) => {
-                  const comp = serieComparacion?.[i];
-                  if (!comp) return null;
-                  const varPc = calcularVariacion(item.valor, comp.valor);
-                  if (varPc === null) return null;
-                  return (
-                    <div
-                      key={i}
-                      className={`reporte-variacion ${
-                        varPc >= 0 ? "reporte-variacion--sube" : "reporte-variacion--baja"
-                      }`}
-                    >
-                      <span>{item.etiqueta}</span>
-                      <strong>
-                        {varPc >= 0 ? "↑" : "↓"} {Math.abs(varPc).toFixed(1)}%
-                      </strong>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
+          </Card>
         )}
       </div>
+
+      {imprimiendo && (
+        <ReporteImprimible
+          titulo="Indicadores de impacto"
+          periodo={`${etiquetaDeMetrica} · ${etiquetaDeAgrupacion}`}
+          totales={[
+            { etiqueta: "Pacientes atendidos", valor: indicadores?.pacientesAtendidos ?? 0 },
+            { etiqueta: "Consultas realizadas", valor: indicadores?.consultasRealizadas ?? 0 },
+            {
+              etiqueta: "Comunidades beneficiadas",
+              valor: indicadores?.comunidadesBeneficiadas ?? 0,
+            },
+            {
+              etiqueta: "Tratamientos entregados",
+              valor: indicadores?.tratamientosEntregados ?? 0,
+            },
+            {
+              etiqueta: "Medicamentos utilizados",
+              valor: indicadores?.medicamentosUtilizados ?? 0,
+            },
+          ]}
+          secciones={[{ columnas: COLUMNAS_DE_SERIE, filas: filasDeSerie }]}
+          alTerminar={() => setImprimiendo(false)}
+        />
+      )}
     </div>
   );
 }

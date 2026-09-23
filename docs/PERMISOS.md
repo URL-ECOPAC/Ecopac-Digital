@@ -484,8 +484,42 @@ sustituir a la politica que no la protege.
 
 Reflejo en el cliente: `reportes/permisos.js` (issue #396), que absorbio
 `puedeVerIndicadoresDeImpacto` y `puedeVerReporteDePacientes`, sueltas hasta ahora fuera de un
-`permisos.js`. Este ultimo excluye a socio fundador a proposito, espejo de la guarda de
-`fn_reporte_pacientes_atendidos`.
+`permisos.js`.
+
+**Corregido en la issue #862.** `puedeVerReporteDePacientes` excluia a socio fundador, citando la
+guarda de la `00067` (`es_administrador() OR rol_actual() = 'junta directiva'`). Esa guarda dejo de
+existir en la `00080`; la vigente -`00086`, conservada por `00095` y `00132`- es
+
+```sql
+es_administrador() OR es_consultivo() OR tiene_permiso('reportes.exportar')
+```
+
+es decir, **socio fundador si puede**. El cliente llevaba desde entonces ocultandole una pestaña
+que el servidor le concede: entraba al modulo, veia la pestaña y recibia el error "Solo
+administracion y junta directiva", que era falso. Ahora la funcion usa `esConsultivo()`.
+
+La misma issue agrego `puedeVerReporteDeVencimientos`, porque
+`useReporteMedicamentosPorVencer` usaba `puedeVerIndicadoresDeImpacto` -la regla de
+`vista_reporte_impacto`, que es mas estrecha y describe otro reporte-. El de vencimientos lee
+`existencias` (`00079`) y `lotes`/`medicamentos`/`bodegas` (`00034`), abiertas a toda sesion
+activa, igual que el de inventario. No cambia quien entra, porque los tres roles que alcanzan el
+modulo pasan las dos guardas; cambia que la funcion describe la politica que de verdad protege.
+
+**Que roles alcanzan `/reportes` no lo decide este archivo**, sino `navegacion.js`:
+administrador, junta directiva y socio fundador. Es una decision deliberada de la issue #426 que
+`navegacion.test.js` afirma, y la #862 la respeto sin tocarla. Un medico o un voluntario no llegan
+a estas pantallas, y ven los vencimientos en `Inventario > Alertas`.
+
+### Divergencia abierta: `reportes.exportar` es inoperante desde la interfaz
+
+Las tres guardas del servidor aceptan `tiene_permiso('reportes.exportar')`, pero **ninguna funcion
+de `reportes/permisos.js` lo mira**: todas deciden por rol base. Conceder ese permiso fino a
+alguien no cambia nada en la pantalla.
+
+Cerrarlo exige que la sesion cargue los permisos efectivos
+(`usuarios/permisos.api.js`, `obtenerPermisosEfectivos`) y eso es un cambio transversal al contexto
+de autenticacion, fuera del alcance de la #862. Mientras tanto, el permiso solo tendria efecto para
+un rol que ya alcance el modulo.
 
 ## Los permisos finos
 

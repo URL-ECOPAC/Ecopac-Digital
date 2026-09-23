@@ -68,9 +68,11 @@ describe("puedeVerReporteDePacientes", () => {
   it.each([
     [ROLES.ADMINISTRADOR, true],
     [ROLES.JUNTA_DIRECTIVA, true],
+    // ISSUE #862: socio fundador estaba en false, citando una guarda de la 00067 que dejo de
+    // existir en la 00080. La vigente (00132) incluye es_consultivo(), o sea a los dos.
+    [ROLES.SOCIO_FUNDADOR, true],
     [ROLES.MEDICO, false],
     [ROLES.VOLUNTARIO, false],
-    [ROLES.SOCIO_FUNDADOR, false],
   ])("%s -> %s", (rol, esperado) => {
     expect(puedeVerReporteDePacientes(rol)).toBe(esperado);
   });
@@ -122,7 +124,7 @@ describe("totalizar", () => {
 });
 
 describe("obtenerReportePacientesAtendidos", () => {
-  it.each([ROLES.MEDICO, ROLES.VOLUNTARIO, ROLES.SOCIO_FUNDADOR])(
+  it.each([ROLES.MEDICO, ROLES.VOLUNTARIO])(
     "%s no puede consultarlo y ni siquiera gasta la llamada",
     async (rol) => {
       const cliente = crearCliente();

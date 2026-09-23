@@ -27,19 +27,23 @@ import { AGRUPACIONES_DE_IMPACTO, obtenerIndicadoresImpacto } from "./api.js";
 import { OPCIONES_METRICA_IMPACTO } from "./campos.js";
 import { puedeVerIndicadoresDeImpacto } from "./permisos.js";
 
+// ISSUE #862: los dos usaban { valor, etiqueta }, distinto del { value, label } que hablan
+// Selector, FilterBar y el resto de catalogos del sistema. Mientras la pantalla los recorria a
+// mano para pintar <option> daba igual; en cuanto pasan por un componente del catalogo, tienen
+// que hablar su idioma.
 const RANGOS = [
-  { valor: "semana", etiqueta: "Última semana" },
-  { valor: "mes", etiqueta: "Último mes" },
-  { valor: "3meses", etiqueta: "Últimos 3 meses" },
-  { valor: "anio", etiqueta: "Último año" },
-  { valor: "personalizado", etiqueta: "Personalizado" },
+  { value: "semana", label: "Última semana" },
+  { value: "mes", label: "Último mes" },
+  { value: "3meses", label: "Últimos 3 meses" },
+  { value: "anio", label: "Último año" },
+  { value: "personalizado", label: "Personalizado" },
 ];
 
 const AGRUPAMIENTOS = [
-  { valor: AGRUPACIONES_DE_IMPACTO.MES, etiqueta: "Por mes" },
-  { valor: AGRUPACIONES_DE_IMPACTO.COMUNIDAD, etiqueta: "Por comunidad" },
-  { valor: AGRUPACIONES_DE_IMPACTO.JORNADA, etiqueta: "Por jornada" },
-  { valor: AGRUPACIONES_DE_IMPACTO.PROYECTO, etiqueta: "Por proyecto" },
+  { value: AGRUPACIONES_DE_IMPACTO.MES, label: "Por mes" },
+  { value: AGRUPACIONES_DE_IMPACTO.COMUNIDAD, label: "Por comunidad" },
+  { value: AGRUPACIONES_DE_IMPACTO.JORNADA, label: "Por jornada" },
+  { value: AGRUPACIONES_DE_IMPACTO.PROYECTO, label: "Por proyecto" },
 ];
 
 // Centinelas de la interfaz: significan "sin filtro" y nunca viajan a la base.
@@ -189,7 +193,14 @@ export function useDashboardMetricas({ rol } = {}) {
 
     // Comparacion
     modoComparacion,
-    setModoComparacion,
+    // ISSUE #862: apagar la comparacion deja tambien el selector sin eleccion. Antes solo se
+    // apagaba el modo y la comunidad elegida seguia ahi: al volver a activarlo reaparecia una
+    // seleccion que nadie habia vuelto a hacer, y mientras estaba apagado el combo mostraba un
+    // nombre que no se estaba comparando con nada.
+    setModoComparacion: (activo) => {
+      setModoComparacion(activo);
+      if (!activo) setComunidadCompararId(NINGUNA);
+    },
     comunidadCompararId,
     setComunidadCompararId,
 

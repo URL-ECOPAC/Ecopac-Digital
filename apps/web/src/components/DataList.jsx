@@ -1,5 +1,11 @@
+import { ArrowDown, ArrowUp, ChevronsUpDown } from "lucide-react";
 import { Table } from "react-bootstrap";
-import { formatearFechaConHora, formatearFechaCorta, formatearMoneda } from "@ecopac/shared";
+import {
+  DIRECCIONES,
+  formatearFechaConHora,
+  formatearFechaCorta,
+  formatearMoneda,
+} from "@ecopac/shared";
 import EmptyState from "./EmptyState";
 import LoadingState from "./LoadingState";
 import SecondaryButton from "./SecondaryButton";
@@ -19,6 +25,29 @@ import StatusChip from "./StatusChip";
  * dispara tambien `onRowPress` (se corta la propagacion en la celda que lo contiene). No hay
  * equivalente todavia en apps/mobile/src/components/DataList.js: queda pendiente para cuando
  * la pantalla que la necesite se porte a movil.
+ *
+ * ORDENAMIENTO (issue #862). `ordenarPor` y `onOrdenar` son igual de aditivas: una columna solo
+ * se vuelve pulsable si declara `ordenable: true` EN SU DESCRIPTOR y ademas llega `onOrdenar`.
+ * Sin las dos cosas, el <th> se dibuja exactamente como siempre, asi que las pantallas que no
+ * las pasan -auditoria, catalogos, colaboradores- no cambian en nada.
+ *
+ * Este componente NO ORDENA. Solo avisa de que encabezado se pulso; quien reordena es el hook de
+ * packages/shared (useOrdenYPagina), que es donde vive la regla de como se compara cada tipo y
+ * donde puede probarse sin un DOM.
+ *
+ * MODO TARJETA (issue #862). Una tabla de nueve columnas -- COLUMNAS_PACIENTES_ATENDIDOS -- en un
+ * telefono se recorta a tres y sin ninguna senal de que hay mas: era el peor problema de
+ * responsividad de los reportes. Bajo 768px las mismas filas se apilan como tarjetas.
+ *
+ * Se resuelve en CSS y no duplicando el arbol ni midiendo el ancho con matchMedia: cada <td>
+ * lleva su rotulo en `data-label` y la hoja lo pinta con ::before. Un solo DOM, sin estado de
+ * layout dentro de un componente de presentacion, y sin el parpadeo de renderizar primero la
+ * tabla y despues las tarjetas.
+ *
+ * Los `role` explicitos NO son decorativos: cambiar el `display` de un <table> le quita al
+ * navegador la semantica de tabla, y un lector de pantalla deja de anunciar filas y columnas.
+ * Declararlos a mano la conserva cuando el CSS de movil entra. Con `display: table` son
+ * redundantes y no molestan.
  */
 
 /** Iniciales de un nombre, para el avatar. Dos como maximo, que es lo que cabe en el circulo. */
@@ -133,6 +162,58 @@ function Celda({ columna, fila, catalogos }) {
   }
 }
 
+/**
+ * Encabezado de una columna. Es un <button> solo cuando de verdad ordena, y no un <th> con
+ * onClick: sin boton no se alcanza con el teclado ni se anuncia como algo pulsable.
+ */
+function EncabezadoDeColumna({ columna, ordenarPor, onOrdenar }) {
+  const ordenable = Boolean(columna.ordenable && onOrdenar);
+  const activa = ordenarPor?.id === columna.id;
+  const direccion = activa ? ordenarPor.direccion : null;
+
+  // aria-sort va en el <th>, no en el boton: es una propiedad de la columna, no del control.
+  const ariaSort = !ordenable
+    ? undefined
+    : direccion === DIRECCIONES.ASC
+      ? "ascending"
+      : direccion === DIRECCIONES.DESC
+        ? "descending"
+        : "none";
+
+  if (!ordenable) {
+    return (
+      <th scope="col" role="columnheader" style={{ width: columna.anchoWeb }}>
+        {columna.label}
+      </th>
+    );
+  }
+
+  const Flecha =
+    direccion === DIRECCIONES.ASC
+      ? ArrowUp
+      : direccion === DIRECCIONES.DESC
+        ? ArrowDown
+        : ChevronsUpDown;
+
+  return (
+    <th scope="col" role="columnheader" aria-sort={ariaSort} style={{ width: columna.anchoWeb }}>
+      <button type="button" className="ec-tabla-ordenar" onClick={() => onOrdenar(columna.id)}>
+        {columna.label}
+        {/* La flecha sola no dice que ordena: el texto accesible lo nombra, porque un icono
+            girado no se lee en voz alta y el color tampoco distingue nada aqui. */}
+        <Flecha size={14} aria-hidden="true" className={activa ? "es-activa" : undefined} />
+        <span className="visually-hidden">
+          {direccion === DIRECCIONES.ASC
+            ? ": ordenado de menor a mayor"
+            : direccion === DIRECCIONES.DESC
+              ? ": ordenado de mayor a menor"
+              : ": sin ordenar, pulsa para ordenar"}
+        </span>
+      </button>
+    </th>
+  );
+}
+
 export default function DataList({
   columnas = [],
   datos = [],
@@ -141,6 +222,8 @@ export default function DataList({
   onRowPress,
   accionSecundaria,
   catalogos = {},
+  ordenarPor,
+  onOrdenar,
 }) {
   if (cargando) return <LoadingState />;
 
@@ -162,31 +245,43 @@ export default function DataList({
     // .ec-tabla da el marco -borde, radio y elevacion-, que no puede ir en la <table>: con
     // border-collapse, una tabla no recorta sus propias esquinas.
     <div className="ec-tabla" style={{ overflowX: "auto" }}>
-      <Table hover={interactiva} className="align-middle mb-0">
-        <thead>
-          <tr>
+      <Table hover={interactiva} className="align-middle mb-0" role="table">
+        <thead role="rowgroup">
+          <tr role="row">
             {columnas.map((columna) => (
-              <th key={columna.id} scope="col" style={{ width: columna.anchoWeb }}>
-                {columna.label}
-              </th>
+              <EncabezadoDeColumna
+                key={columna.id}
+                columna={columna}
+                ordenarPor={ordenarPor}
+                onOrdenar={onOrdenar}
+              />
             ))}
-            {tieneAccionSecundaria && <th scope="col" aria-hidden="true" />}
+            {tieneAccionSecundaria && <th scope="col" role="columnheader" aria-hidden="true" />}
           </tr>
         </thead>
-        <tbody>
+        <tbody role="rowgroup">
           {datos.map((fila, indice) => (
             <tr
               key={fila.id ?? indice}
+              role="row"
               onClick={interactiva ? () => onRowPress(fila) : undefined}
               style={{ cursor: interactiva ? "pointer" : undefined }}
             >
               {columnas.map((columna) => (
-                <td key={columna.id} className={columna.principal ? "fw-semibold" : undefined}>
+                <td
+                  key={columna.id}
+                  role="cell"
+                  // El rotulo viaja en el atributo para que el modo tarjeta lo pinte con ::before
+                  // sin que el componente sepa a que ancho se esta dibujando.
+                  data-label={columna.label}
+                  className={columna.principal ? "fw-semibold" : undefined}
+                >
                   <Celda columna={columna} fila={fila} catalogos={catalogos} />
                 </td>
               ))}
               {tieneAccionSecundaria && (
                 <td
+                  role="cell"
                   className="text-end"
                   // Corta la propagacion: sin esto, el click del boton tambien dispararia
                   // onRowPress porque el <tr> escucha el evento en burbuja.
