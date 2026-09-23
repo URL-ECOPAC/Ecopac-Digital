@@ -32,8 +32,8 @@ const TOTAL_SEMBRADO = 1001;
 beforeAll(async () => {
   // INSERT ... SELECT generate_series: un solo viaje a la base, nada de 1001 llamadas.
   await consultar(
-    `INSERT INTO medicamentos (nombre, concentracion, presentacion, marca)
-     SELECT $1 || gs, '1mg', 'tableta', 'Generica'
+    `INSERT INTO medicamentos (nombre, concentracion, presentacion_id, marca)
+     SELECT $1 || gs, '1mg', (SELECT id FROM presentaciones WHERE nombre = 'Tableta'), 'Generica'
      FROM generate_series(1, $2) AS gs`,
     [PREFIJO, TOTAL_SEMBRADO],
   );
