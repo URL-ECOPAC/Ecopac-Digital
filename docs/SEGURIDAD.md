@@ -238,16 +238,18 @@ activar el ajuste en un Dashboard.
 ### Estado de cada ambiente
 
 - **Local y CI**: cerrado por `config.toml`.
-- **`Ecopac-Digital-Dev`**: revisado en el Dashboard el 28 de agosto de 2026. "Allow new users to
-  sign up" estaba **activado**. "Confirm email" tambien, lo que obliga a confirmar el correo antes
-  de poder iniciar sesion, pero **el perfil se crea igual** con rol `voluntario general`, y quien
-  use un buzon propio completa el paso sin problema. Cerrar ese ajuste es una tarea de Dashboard,
-  no de este repositorio; hasta que se haga, **quien protege a dev es el trigger de la `00074`**,
-  y por eso la defensa no se dejo solo en `config.toml`.
+- **`Ecopac-Digital-Dev`**: **cerrado desde el 23 de septiembre de 2026** (issue #879). Antes
+  estaba abierto, y lo unico que protegia era el trigger de la `00074` -- por eso la defensa no se
+  dejo solo en `config.toml`. Comprobado: `POST /auth/v1/signup` responde `422 signup_disabled`.
+  Vale la pena saber como fallaba antes, porque explica la forma de la defensa: respondia
+  `500 unexpected_failure "Database error saving new user"`, o sea que la base ya lo rechazaba y el
+  Dashboard cambio **como** falla, no **si** falla. "Confirm email" sigue activado a proposito; el
+  motivo esta en CFG-05 de [CONFIGURACION-SUPABASE.md](./CONFIGURACION-SUPABASE.md).
 - **`Ecopac-Digital-Prod`**: existe y esta **pausado**, asi que su API no responde y su
   configuracion no se puede leer sin reanudarlo. **Al reanudarlo hay que comprobar y cerrar el
   registro antes de exponerlo**: el default de Supabase al crear un proyecto es tenerlo abierto.
-  La migracion `00074` lo protege en cuanto se le apliquen las migraciones.
+  La migracion `00074` lo protege en cuanto se le apliquen las migraciones. El orden completo de
+  aprovisionamiento esta en [CONFIGURACION-SUPABASE.md](./CONFIGURACION-SUPABASE.md).
 
 ### Como se da de alta a una persona
 
@@ -284,24 +286,34 @@ SELECT fn_crear_usuario_administrativo(
 o guiar a la persona a pedirlo desde el login.
 
 **Nota de despliegue:** el workflow de CI (`supabase.yml`) hace lint de la funcion (`deno lint` +
-`deno check`) en cada PR, pero no tiene ningun paso `supabase functions deploy`: escribirla no la
-publica sola en `ecopac-dev`/`ecopac-prod`, hace falta desplegarla aparte.
+`deno check`) en cada PR y, al mergear, la despliega: el paso "Desplegar Edge Functions" corre
+`supabase functions deploy --use-api` sin argumentos, o sea todas las de `supabase/functions/`.
+
+Lo que si conviene saber es que **ese paso lleva `continue-on-error: true`**: si el despliegue
+falla, el job termina en verde igual, a proposito, porque las migraciones ya se aplicaron y un job
+en rojo sugeriria que la base quedo a medias. El resultado real sale en el resumen de la corrida,
+que es donde hay que mirarlo. Y desplegar el codigo no configura el proyecto: las variables que la
+funcion lee en tiempo de ejecucion viven en **Edge Function Secrets** de cada proyecto y se ponen a
+mano, una vez por ambiente.
 
 ## 4. `supabase/config.toml`: que aplica y que no
 
 **Aviso importante, para quien vaya a tocar `[auth]` en `config.toml` creyendo que eso alcanza
 produccion:** `.github/workflows/supabase.yml` (el unico workflow que despliega a
 `Ecopac-Digital-Dev` y `Ecopac-Digital-Prod`) solo corre `supabase db push`, que aplica
-**migraciones de esquema**. En ningun paso corre `supabase config push`, que es el comando que
-sincroniza la seccion `[auth]` de este archivo con un proyecto remoto.
+**migraciones de esquema**, y `supabase functions deploy`, que sube el codigo de las Edge
+Functions. En ningun paso corre `supabase config push`, que es el comando que sincroniza la
+seccion `[auth]` de este archivo con un proyecto remoto.
 
 Eso significa que `jwt_expiry`, `enable_refresh_token_rotation`, `refresh_token_reuse_interval`
 y `[auth.rate_limit]` en `config.toml` **hoy solo afectan el stack local** (`supabase start`,
-`supabase db reset`) y la validacion del CI. El valor que de verdad rige en `Ecopac-Digital-Dev`
-y `Ecopac-Digital-Prod` es el que este configurado en el Dashboard de cada proyecto
-(**Authentication > Sessions** para la duracion de sesion, **Authentication > Rate Limits**
-para los limites de intentos), y hay que mantenerlo sincronizado a mano con lo que diga este
-archivo.
+`supabase db reset`) y la validacion del CI. El valor que de verdad rige en los proyectos remotos
+es el del Dashboard de cada uno, y hay que mantenerlo sincronizado a mano.
+
+**Que ajuste va en que pantalla, que valor lleva, como se comprueba y cual es el estado de cada
+ambiente esta en [CONFIGURACION-SUPABASE.md](./CONFIGURACION-SUPABASE.md).** Aqui se explica *por
+que* importa cada uno; alli se registra *si esta puesto*. Cuando los dos hablen del mismo ajuste,
+manda el registro.
 
 **Recomendacion, no implementada:** agregar un paso `supabase config push` al job `aplicar` de
 `.github/workflows/supabase.yml`, para que `config.toml` deje de ser documentacion y pase a ser

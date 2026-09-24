@@ -188,16 +188,21 @@ Detalles en [CONTRIBUTING.md](./CONTRIBUTING.md).
 despliegue solo corre `supabase db push`, nunca `supabase config push`. En `ecopac-dev` y
 `ecopac-prod` manda el Dashboard, y esto hay que ponerlo a mano una vez por proyecto.
 
-| Dónde en el Dashboard                        | Que poner                                        | Que se rompe si falta                                                                    |
-| -------------------------------------------- | ------------------------------------------------ | ---------------------------------------------------------------------------------------- |
-| Authentication > URL Configuration > Site URL | La URL real de la web                            | El enlace de "olvide mi contrasena" apunta a otro sitio y nadie puede fijar su contrasena |
-| Authentication > URL Configuration > Redirect | Agregar la ruta `/nueva-contrasena`              | Igual que arriba: Supabase rechaza el destino del enlace                                  |
-| Authentication > Providers > Email > Signup   | **Desactivado**                                  | Cualquiera con la llave anonima -que viaja en el bundle- se da de alta solo                |
-| Authentication > SMTP Settings                | Un proveedor de correo propio                    | Los correos de invitacion y recuperacion no salen (ver abajo)                              |
+**La lista completa esta en [CONFIGURACION-SUPABASE.md](./CONFIGURACION-SUPABASE.md)**: una fila
+por ajuste, con la ruta exacta en el Dashboard, el valor, como se comprueba, y una columna por
+ambiente. Se recorre entera al aprovisionar un proyecto; aqui no se repite para que no haya dos
+listas que puedan contradecirse.
 
-Sobre `enable_signup`: la linea de `config.toml` **no protege a los proyectos remotos**, solo al
-stack local. La defensa que si viaja con las migraciones es la `00074`, que cierra el alta publica
-en la base. Apagarlo tambien en el Dashboard es la segunda capa, no la unica.
+Lo unico que conviene saber antes de abrirla, porque es lo que se rompe mas caro:
+
+- **El registro se cierra a mano.** `enable_signup = false` en `config.toml` **no protege a los
+  proyectos remotos**. La defensa que si viaja con las migraciones es la `00074`, que cierra el
+  alta publica en la base; apagarlo en el Dashboard es la segunda capa, no la unica.
+- **No confundir "Allow new users to sign up" con "Enable email provider".** Lo segundo apaga el
+  login de todo el mundo.
+- **La llave de servicio que hay que usar es la `sb_secret_`, no la legacy `service_role`.** Las
+  dos funcionan contra la REST API, asi que equivocarse no se nota hasta que una Edge Function
+  responde 401.
 
 ### El correo: por que hace falta SMTP propio
 
@@ -206,8 +211,18 @@ proyecto** y va limitado a unos pocos mensajes por hora. Sirve para que el equip
 no sirve para el personal de la organizacion.
 
 El sistema manda muy poco correo -invitacion al crear una cuenta y recuperacion de contrasena, un
-punado al mes-, asi que cualquier capa gratuita alcanza de sobra. Se configura en Authentication >
-SMTP Settings con los datos que de el proveedor (host, puerto 465 o 587, usuario y contrasena).
+punado al mes-, asi que cualquier capa gratuita alcanza de sobra.
+
+**Ojo: son dos canales de correo distintos, y se configuran en dos sitios distintos.**
+
+| Canal | Quien lo manda | Donde se configura | Puerto |
+| --- | --- | --- | --- |
+| Recuperacion de contrasena | Auth (GoTrue) | Authentication > SMTP Settings | 465 o 587 |
+| Invitacion y notificaciones | las Edge Functions | Edge Functions > Secrets (`SMTP_*`) | **465 y solo 465** |
+
+El segundo no admite 587: las Edge Functions de Supabase tienen bloqueados los puertos 25 y 587, y
+465 es el unico de envio que dejan abrir (`supabase/functions/_shared/correo.ts`, `crearTransporte`).
+Configurar el de Auth **no** configura el de las funciones.
 
 Sin SMTP configurado, `invitar-usuario` **crea igual la cuenta**: lo que no llega es el correo para
 establecer la contrasena, y esa se puede fijar desde el Dashboard mientras tanto.
