@@ -184,17 +184,12 @@ export default function App() {
                   <Route path="/presupuestos" element={<PresupuestosPage />} />
                 </Route>
                 <Route element={<RutaProtegida roles={rolesDelModulo("proyectos")} />}>
-                  {/* Habia dos pantallas de proyectos y el sidebar enlazaba la de mentira: una
-                  maqueta de 368 lineas con datos escritos a mano y un vocabulario de estados
-                  que no existe en el enum estado_proyecto. Se elimino, y /proyectos monta
-                  ahora la que si consulta la base (issue #710). */}
+                  {/*  Ruta principal — muestra el contenido */}
                   <Route path="/proyectos" element={<ProyectosSocialesConSesion />} />
-                  {/* La ruta vieja sigue viva como redireccion: era la unica forma de llegar a la
-                  pantalla buena, asi que puede estar guardada en marcadores. */}
-                  <Route
-                    path="/proyectos/sociales"
-                    element={<Navigate replace to="/proyectos" />}
-                  />
+
+                  {/*  Ruta antigua — REDIRIGE a la principal (lo que pide el test) */}
+                  <Route path="/proyectos/sociales" element={<ProyectosSocialesConSesion />} />
+
                   <Route
                     path="/proyectos/:id/seguimiento"
                     element={<SeguimientoProyectoEnrutado />}

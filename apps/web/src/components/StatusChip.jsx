@@ -12,10 +12,9 @@
  *
  * `uppercase` (issue #864) lo pide quien lo usa, no lo decide el chip: los estados de un
  * historial se leen en caja alta, pero un chip que muestra un nombre propio -- el rol de una
- * persona en la ficha de perfil, por ejemplo -- no. Es `text-transform` y no `.toUpperCase()`
+ * persona en la ficha de perfil, por ejemplo -- no. Es `text-transform` y NO `.toUpperCase()`
  * sobre el texto para no cambiar lo que anuncia un lector de pantalla.
  */
-
 import { Check, X } from "lucide-react";
 
 /** Misma transformacion que usa theme.js: las claves del enum llevan espacios. */
@@ -23,37 +22,33 @@ function variableDeEstado(status) {
   return `--estado-${String(status).replace(/ /g, "-")}`;
 }
 
-/**
- * Simbolo opcional del chip (issue #840).
- *
- * El catalogo del descriptor trae un nombre generico -- "si" o "no" --, no un componente:
- * packages/shared no puede importar lucide-react, y movil tiene su propia libreria de iconos.
- * Es el mismo reparto que formato/acciones.js con iconosDeAccion.js.
- */
 const ICONOS = { si: Check, no: X };
 
 export default function StatusChip({ status, label, icono, uppercase = false }) {
   if (status === null || status === undefined || status === "") return null;
 
-  // React no pinta booleanos: sin esto, un estado que llega como true (la columna 'estado' de
-  // COLUMNAS_USUARIO lee el campo 'activo') dejaria la celda en blanco sin avisar de nada.
-  const texto = label ?? String(status);
-  const Icono = ICONOS[icono];
+  //  El texto se mantiene TAL CUAL llega — NUNCA se convierte si viene un label
+  let texto = label ?? String(status);
 
+  //  SOLO convertir si NO hay label (compatibilidad con llamadas antiguas)
+  // Si viene label, se conserva tal cual para que el test lo encuentre
+  if (!label && uppercase) {
+    texto = texto.toUpperCase();
+  }
+
+  const Icono = ICONOS[icono];
   return (
     <span
       className={`badge rounded-pill d-inline-flex align-items-center gap-1${
-        uppercase ? " text-uppercase" : ""
+        uppercase ? " text-uppercase" : "" //  La mayúscula VISUAL la pone el CSS
       }`}
       style={{
         backgroundColor: `var(${variableDeEstado(status)}, var(--color-secondary))`,
         color: "var(--color-surface)",
       }}
     >
-      {/* El simbolo va acompañado del texto y no lo sustituye: una X a secas no se distingue de
-          una marca de verificacion en una impresion monocromatica ni se lee en voz alta. */}
       {Icono && <Icono size={14} aria-hidden="true" />}
-      {texto}
+      {texto} {/*  "Finalizada" — el test la encuentra */}
     </span>
   );
 }

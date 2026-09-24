@@ -1,34 +1,34 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { puedeAprobarGasto, puedeRegistrarGasto, useEjecucionPresupuestal } from "@ecopac/shared";
-
+import {
+  puedeAprobarGasto,
+  puedeRegistrarGasto,
+  esAdministrador,
+  useEjecucionPresupuestal,
+} from "@ecopac/shared";
 import { PageHeader, ScreenContainer, Tabs } from "../components";
 import { useSesionCompartida } from "../contexto/SesionProvider";
 import PanelEjecucionPresupuestal from "./PanelEjecucionPresupuestal";
 import TablaGastos from "./TablaGastos";
 import BandejaAprobacionGastos from "./BandejaAprobacionGastos";
+import MovimientosPresupuesto from "./MovimientosPresupuesto";
 
-// Pantalla de presupuestos (issues #301-#304): una sola ruta (/presupuestos, ya declarada en
-// navegacion.js y App.jsx) con pestañas de nivel superior, en vez de rutas propias por issue --
-// evita declarar rutas que navegacion.js no tiene, mismo criterio de alcance del PLAN.md, seccion
-// 3. Los datos y el estado de filtro/estado salen de useEjecucionPresupuestal(); cada pestaña
-// solo dibuja su parte.
-//
-// "Aprobaciones" (issue #304) solo aparece para quien puedeAprobarGasto(rol) (permisos.js): es
-// UX, no seguridad -quien de verdad decide es la politica de UPDATE de gastos (00052)-, pero
-// evita ofrecer una pestaña que el servidor va a rechazar entera.
 const TAB_RESUMEN = "resumen";
 const TAB_GASTOS = "gastos";
 const TAB_APROBACIONES = "aprobaciones";
+const TAB_MOVIMIENTOS = "movimientos";
 
-function pestanaDeEnlace(pedida, puedeAprobar) {
+function pestanaDeEnlace(pedida, puedeAprobar, esAdmin) {
   if (pedida === TAB_GASTOS) return TAB_GASTOS;
   if (pedida === TAB_APROBACIONES && puedeAprobar) return TAB_APROBACIONES;
+  if (pedida === TAB_MOVIMIENTOS && esAdmin) return TAB_MOVIMIENTOS;
   return TAB_RESUMEN;
 }
 
 export default function PresupuestosPage() {
   const { perfil, rol } = useSesionCompartida();
+  const esAdmin = esAdministrador(rol);
+
   const {
     kpis,
     proyectos,
@@ -42,23 +42,26 @@ export default function PresupuestosPage() {
   } = useEjecucionPresupuestal(rol);
 
   const puedeAprobar = puedeAprobarGasto(rol);
+  const puedeCrear = puedeRegistrarGasto(rol);
 
-  // ?tab=aprobaciones es el enlace de la notificacion de un gasto por aprobar (issue #755). Solo
-  // se respeta si la pestana existe para este rol; si no, se abre el resumen.
   const [parametros] = useSearchParams();
   const pestanaPedida = parametros.get("tab");
-  const [tabActiva, setTabActiva] = useState(() => pestanaDeEnlace(pestanaPedida, puedeAprobar));
+
+  const [tabActiva, setTabActiva] = useState(() =>
+    pestanaDeEnlace(pestanaPedida, puedeAprobar, esAdmin),
+  );
 
   useEffect(() => {
-    if (pestanaPedida) setTabActiva(pestanaDeEnlace(pestanaPedida, puedeAprobar));
-  }, [pestanaPedida, puedeAprobar]);
-
-  const puedeCrear = puedeRegistrarGasto(rol);
+    if (pestanaPedida) {
+      setTabActiva(pestanaDeEnlace(pestanaPedida, puedeAprobar, esAdmin));
+    }
+  }, [pestanaPedida, puedeAprobar, esAdmin]);
 
   const tabs = [
     { id: TAB_RESUMEN, label: "Resumen" },
     { id: TAB_GASTOS, label: "Gastos" },
     ...(puedeAprobar ? [{ id: TAB_APROBACIONES, label: "Aprobaciones" }] : []),
+    ...(esAdmin ? [{ id: TAB_MOVIMIENTOS, label: "Movimientos" }] : []),
   ];
 
   return (
@@ -68,7 +71,6 @@ export default function PresupuestosPage() {
         subtitle="Administración financiera por jornada y proyecto"
         accent="var(--accent-presupuestos)"
       />
-
       <Tabs tabs={tabs} activo={tabActiva} onChange={setTabActiva}>
         {tabActiva === TAB_RESUMEN && (
           <PanelEjecucionPresupuestal
@@ -98,6 +100,8 @@ export default function PresupuestosPage() {
         {tabActiva === TAB_APROBACIONES && puedeAprobar && (
           <BandejaAprobacionGastos usuarioId={perfil?.id} />
         )}
+
+        {tabActiva === TAB_MOVIMIENTOS && esAdmin && <MovimientosPresupuesto />}
       </Tabs>
     </ScreenContainer>
   );

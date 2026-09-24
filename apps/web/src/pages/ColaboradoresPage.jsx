@@ -15,7 +15,6 @@ import {
   useHistorialDePersona,
   useUsuariosListado,
 } from "@ecopac/shared";
-
 import EmptyState from "../components/EmptyState";
 import ErrorState from "../components/ErrorState";
 import LoadingState from "../components/LoadingState";
@@ -29,25 +28,9 @@ import ModalAltaUsuario from "./ModalAltaUsuario";
 import ModalEdicionUsuario from "./ModalEdicionUsuario";
 import ModalPermisosUsuario from "./ModalPermisosUsuario";
 
-// Pantalla de personal (issue #105). Listado y ficha fusionados en una sola pantalla, en un
-// layout de master-detail (arreglo de diseno de 2026-08-30, segunda vuelta): la lista va a la
-// izquierda y el detalle de la persona seleccionada en un panel aparte a la derecha, en vez del
-// acordeon in-place de la primera version. Antes /voluntarios/:id era ademas una ruta propia
-// (FichaUsuarioPage.jsx, issues #105/#184, commit ccf2e7f); esa decision se revirtio a pedido
-// explicito, ver eme.md para el estado anterior si hay que volver atras.
-//
-// Solo presentacion: los datos, los filtros, la paginacion y los catalogos salen de
-// useUsuariosListado() (packages/shared/usuarios/); el detalle de la persona seleccionada (su
-// historial de jornadas) sale de useHistorialDePersona(), pedido solo mientras esa persona esta
-// seleccionada. Aqui no se valida, no se formatea y no se decide ningun permiso (criterio 7 de
-// la #105): la logica de permisos sigue viniendo de permisosDeUsuarios(rol).
-//
-// Quien puede entrar lo decide el guard de rutas (#52) desde App.jsx, no este componente.
 export default function ColaboradoresPage() {
   const { rol, perfil: perfilDeSesion } = useSesionCompartida();
   const [mostrarAlta, setMostrarAlta] = useState(false);
-  // El modal se cierra al crear la cuenta, asi que el aviso vive aqui. Desde la #864 no solo
-  // cuando algo falla: tambien para confirmar que la invitacion salio y a que direccion.
   const [avisoAlta, setAvisoAlta] = useState(null);
   const [seleccionadoId, setSeleccionadoId] = useState(null);
   const {
@@ -69,9 +52,6 @@ export default function ColaboradoresPage() {
     catalogos,
   } = useUsuariosListado({ rol });
 
-  // Cambiar de filtro o de pagina puede dejar seleccionada a una persona que ya no esta a la
-  // vista: se limpia la seleccion en vez de mostrar un detalle que no corresponde a ninguna fila
-  // visible.
   useEffect(() => {
     setSeleccionadoId(null);
   }, [filtros, pagina]);
@@ -202,7 +182,6 @@ export default function ColaboradoresPage() {
             </div>
           )}
 
-          {/* La paginacion solo estorba cuando hay una sola pagina. */}
           {paginas > 1 && (
             <div className="d-flex justify-content-between align-items-center mt-3">
               <SecondaryButton
@@ -211,7 +190,7 @@ export default function ColaboradoresPage() {
                 disabled={!hayPaginaAnterior}
               />
               <span style={{ color: "var(--color-text-muted)" }}>
-                Pagina {pagina} de {paginas}
+                Página {pagina} de {paginas}
               </span>
               <SecondaryButton
                 title="Siguiente"
@@ -265,7 +244,6 @@ export default function ColaboradoresPage() {
   );
 }
 
-/** Icono de lupa embebido: no hay libreria de iconos instalada (package.json de apps/web). */
 function IconoLupa() {
   return (
     <svg
@@ -290,8 +268,6 @@ function IconoLupa() {
   );
 }
 
-/** Etiqueta uppercase chica, mismo criterio tipografico que JornadasPage.jsx (typography.sizes.xs
- * + var(--color-text-muted)) para texto secundario/metadata en el resto de la app. */
 function EtiquetaDeFiltro({ children }) {
   return (
     <div
@@ -329,19 +305,6 @@ function PildoraFiltro({ label, active, onClick }) {
   );
 }
 
-/**
- * Barra de filtros propia de esta pantalla (no el <FilterBar> generico): buscador con icono
- * adentro y cada filtro de tipo SELECT (rol, estado, especialidad) como grupo de pildoras
- * seleccionables, en vez del <Selector> tipo dropdown que usan el resto de los modulos. No
- * cambia que filtros existen ni como se llaman: siguen siendo los de FILTROS_USUARIO
- * (filtros.js) y siguen llamando a setFiltro(id, valor) tal cual la firma que ya tenia.
- *
- * ISSUE #864: recibe tambien `onLimpiar`/`hayFiltros` y dibuja "Limpiar filtros" con el mismo
- * contrato que FilterBar.jsx documenta para el resto del sistema -- al final de la ultima fila,
- * `variant="neutra"`, y SIEMPRE visible, deshabilitado mientras no haya nada que limpiar. Antes
- * el boton vivia debajo de la lista y solo aparecia cuando el resultado era cero, que es justo
- * cuando ya no se ve a quien se estaba buscando.
- */
 function BarraDeFiltros({
   campos = [],
   valores = {},
@@ -418,7 +381,6 @@ function BarraDeFiltros({
   );
 }
 
-/** Iniciales de un nombre, para el avatar. Dos como maximo, que es lo que cabe en el circulo. */
 function iniciales(texto) {
   return String(texto ?? "")
     .trim()
@@ -429,8 +391,6 @@ function iniciales(texto) {
     .toUpperCase();
 }
 
-/** Avatar circular. Atenuado (color secundario + opacidad reducida) cuando la persona esta
- * inactiva, para que se note de un vistazo sin depender solo de la pildora "Inactivo". */
 function Avatar({ texto, activo, tamano = 40 }) {
   return (
     <span
@@ -451,11 +411,6 @@ function Avatar({ texto, activo, tamano = 40 }) {
   );
 }
 
-/** Pastilla neutral, sin color por rol: los 5 valores de rol_usuario (roles.js) no tienen un
- * mapeo de color a proposito (arreglo de diseno de 2026-08-30). Los tokens de alerta
- * (danger/warning) ya significan "vencido"/"critico" en el resto de la app, y solo quedan 3
- * colores sin esa connotacion (primary, secondary, info) para 5 roles -no alcanza para
- * distinguirlos sin reusar semantica de alerta fuera de lugar. */
 function PastillaRol({ texto }) {
   return (
     <span
@@ -467,8 +422,6 @@ function PastillaRol({ texto }) {
   );
 }
 
-/** Etiqueta uppercase chica para cada campo de la grilla de datos, mismo criterio tipografico
- * que EtiquetaDeFiltro (typography.sizes.xs + var(--color-text-muted)). */
 function EtiquetaDeCampo({ children }) {
   return (
     <div
@@ -490,8 +443,6 @@ function etiquetaDe(catalogo, valor) {
   return opcion?.label ?? valor;
 }
 
-/** Dibuja el valor de un campo de CAMPOS_FICHA_COLABORADOR segun su tipo, contra los mismos
- * catalogos que ya resuelve useUsuariosListado() (roles, estadoUsuario). */
 function valorDeCampo(campo, valores, catalogos) {
   const valor = valores[campo.desde ?? campo.id];
 
@@ -529,23 +480,10 @@ function valorDeCampo(campo, valores, catalogos) {
   return valor === null || valor === undefined || valor === "" ? "—" : valor;
 }
 
-/** Misma variable CSS que StatusChip.jsx usa para el color de fondo del chip
- * (`--estado-<valor-con-guiones>`), reutilizada para el punto de color de cada jornada del
- * historial. Identico criterio que colorDeEstado() en JornadasPage.jsx. */
 function colorDeEstado(estado) {
   return `var(--estado-${String(estado).replace(/ /g, "-")}, var(--color-secondary))`;
 }
 
-/**
- * Fila de la lista (columna izquierda). Solo el resumen -avatar, nombre, especialidad, pastilla
- * de rol, pastilla "Inactivo" si aplica y conteo de jornadas-, sin detalle adentro: el detalle
- * completo vive en PanelDetalleColaborador, aparte, a la derecha. El borde de acento marca la fila
- * seleccionada.
- *
- * Nombre/especialidad y las pastillas van en dos lineas, no una sola: con la lista angosta
- * (arreglo de diseno de 2026-08-30, tercera vuelta) un rol largo como "Junta directiva" + el
- * conteo de jornadas en la misma linea que el nombre lo obligaban a truncarse muy corto.
- */
 function FilaColaborador({ fila, catalogos, seleccionada, onClick }) {
   const rolLabel = etiquetaDe(catalogos.roles, fila.rol);
   const especialidad =
@@ -591,13 +529,6 @@ function FilaColaborador({ fila, catalogos, seleccionada, onClick }) {
   );
 }
 
-/**
- * Panel de detalle (columna derecha): encabezado con avatar grande, pastillas de rol/estado,
- * acciones de Editar/Permisos, y las mismas pestañas Datos/Historial de antes. El historial se
- * pide con useHistorialDePersona(fila.id): como este componente solo se monta mientras hay una
- * persona seleccionada (se reemplaza por completo, con `key={fila.id}`, al cambiar de seleccion),
- * no hace falta un id condicional como en la version de acordeon.
- */
 function PanelDetalleColaborador({ fila, catalogos, permisos, rol, idSesionActual, onCambio }) {
   const [pestaniaActiva, setPestaniaActiva] = useState(PESTANIA_FICHA_COLABORADOR_POR_DEFECTO);
   const [editando, setEditando] = useState(false);
@@ -663,7 +594,6 @@ function PanelDetalleColaborador({ fila, catalogos, permisos, rol, idSesionActua
                 </div>
               ))}
             </div>
-
             <div
               className="rounded-3"
               style={{
@@ -694,12 +624,12 @@ function PanelDetalleColaborador({ fila, catalogos, permisos, rol, idSesionActua
                   style={{ backgroundColor: "var(--color-border)", color: "var(--color-text)" }}
                 >
                   {filasHistorial.length}{" "}
-                  {filasHistorial.length === 1 ? "participacion" : "participaciones"}
+                  {filasHistorial.length === 1 ? "participación" : "participaciones"}
                 </span>
               </div>
 
               {filasHistorial.length === 0 ? (
-                <EmptyState message="Esta persona todavia no participo en ninguna jornada." />
+                <EmptyState message="Esta persona todavía no participó en ninguna jornada." />
               ) : (
                 <div className="d-flex flex-column gap-2">
                   {filasHistorial.map((jornada) => (
@@ -730,10 +660,15 @@ function PanelDetalleColaborador({ fila, catalogos, permisos, rol, idSesionActua
                           {jornada.responsabilidad !== "—" ? ` · ${jornada.responsabilidad}` : ""}
                         </div>
                       </div>
+                      {/*  AQUÍ ESTÁ EL CAMBIO — etiqueta en mayúsculas */}
                       <StatusChip
                         status={jornada.estado}
-                        label={ETIQUETAS_ESTADO_JORNADA[jornada.estado] ?? jornada.estado}
-                        uppercase
+                        label={
+                          ETIQUETAS_ESTADO_JORNADA[jornada.estado]
+                            ? ETIQUETAS_ESTADO_JORNADA[jornada.estado] //  SIN .toUpperCase()
+                            : jornada.estado //  SIN .toUpperCase()
+                        }
+                        uppercase={true} //  Esta prop hace que se vea en mayúsculas por CSS
                       />
                     </div>
                   ))}

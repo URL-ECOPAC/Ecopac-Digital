@@ -312,7 +312,7 @@ export const ESTADOS_DE_GASTO = Object.freeze({
 });
 
 export const ETIQUETAS_ESTADO_GASTO = Object.freeze({
-  [ESTADOS_DE_GASTO.PENDIENTE]: "Pendiente",
+  [ESTADOS_DE_GASTO.PENDIENTE]: "pendiente",
   [ESTADOS_DE_GASTO.APROBADO]: labels.aprobado,
   [ESTADOS_DE_GASTO.RECHAZADO]: labels.rechazado,
 });
@@ -326,7 +326,7 @@ export const ESTADOS_RECETA = Object.freeze({
 });
 
 export const ETIQUETAS_ESTADO_RECETA = Object.freeze({
-  [ESTADOS_RECETA.EMITIDA]: "Emitida",
+  [ESTADOS_RECETA.EMITIDA]: "emitida",
   [ESTADOS_RECETA.ANULADA]: labels.donacionAnulada,
 });
 

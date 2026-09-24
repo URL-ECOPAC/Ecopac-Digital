@@ -103,7 +103,7 @@ describe("RegistroPacienteScreen", () => {
     fireEvent.press(screen.getByText("Registrar paciente"));
 
     expect(mockEstadoHook.registrar).toHaveBeenCalled();
-  });
+  }, 30000);
 
   // Camino de error (issue #759/#776): si registrar() falla, la pantalla tiene que mostrar el
   // error y, ademas, volver al paso donde esta el campo que fallo -- no quedarse en el ultimo

@@ -26,6 +26,7 @@ export const COLUMNAS_BITACORA_AUDITORIA = [
     // Un instante, no un dia de calendario: dos cambios de la misma tarde se leerian iguales
     // con TIPOS_DE_PRESENTACION.FECHA.
     tipo: TIPOS_DE_PRESENTACION.FECHA_HORA,
+    uppercase: false,
   },
   // `uppercase` en las tres columnas de valor, no en la fecha (issue #864): una bitacora se lee
   // barriendo la columna en vertical para encontrar el evento, y la caja alta iguala la altura
