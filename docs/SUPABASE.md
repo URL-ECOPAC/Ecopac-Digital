@@ -22,6 +22,13 @@ el dashboard una vez que el desarrollo esta en marcha. Se edita escribiendo arch
 `supabase/migrations/`. Asi el historial de cambios a la base de datos queda versionado en Git
 como cualquier otro codigo, y no depende de que alguien recuerde que cambio y por que.
 
+**Y la regla simetrica, que se olvida mas:** todo lo que *no* es esquema -las URLs de
+redireccion, si el registro esta abierto, la politica de contrasenas, las plantillas de correo,
+los secrets de las Edge Functions, las entradas de Vault- **solo** se pone a mano en el
+dashboard. El despliegue nunca corre `supabase config push`, asi que `config.toml` no lo
+alcanza. La lista completa, con como se comprueba cada cosa y una columna por ambiente, esta en
+[CONFIGURACION-SUPABASE.md](./CONFIGURACION-SUPABASE.md).
+
 ### 2. El stack local (`supabase start`)
 
 `supabase/config.toml` es la configuracion para correr una copia completa de Supabase

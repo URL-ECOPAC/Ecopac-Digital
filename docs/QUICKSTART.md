@@ -188,16 +188,21 @@ Detalles en [CONTRIBUTING.md](./CONTRIBUTING.md).
 despliegue solo corre `supabase db push`, nunca `supabase config push`. En `ecopac-dev` y
 `ecopac-prod` manda el Dashboard, y esto hay que ponerlo a mano una vez por proyecto.
 
-| Dónde en el Dashboard                        | Que poner                                        | Que se rompe si falta                                                                    |
-| -------------------------------------------- | ------------------------------------------------ | ---------------------------------------------------------------------------------------- |
-| Authentication > URL Configuration > Site URL | La URL real de la web                            | El enlace de "olvide mi contrasena" apunta a otro sitio y nadie puede fijar su contrasena |
-| Authentication > URL Configuration > Redirect | Agregar la ruta `/nueva-contrasena`              | Igual que arriba: Supabase rechaza el destino del enlace                                  |
-| Authentication > Providers > Email > Signup   | **Desactivado**                                  | Cualquiera con la llave anonima -que viaja en el bundle- se da de alta solo                |
-| Authentication > SMTP Settings                | Un proveedor de correo propio                    | Los correos de invitacion y recuperacion no salen (ver abajo)                              |
+**La lista completa esta en [CONFIGURACION-SUPABASE.md](./CONFIGURACION-SUPABASE.md)**: una fila
+por ajuste, con la ruta exacta en el Dashboard, el valor, como se comprueba, y una columna por
+ambiente. Se recorre entera al aprovisionar un proyecto; aqui no se repite para que no haya dos
+listas que puedan contradecirse.
 
-Sobre `enable_signup`: la linea de `config.toml` **no protege a los proyectos remotos**, solo al
-stack local. La defensa que si viaja con las migraciones es la `00074`, que cierra el alta publica
-en la base. Apagarlo tambien en el Dashboard es la segunda capa, no la unica.
+Lo unico que conviene saber antes de abrirla, porque es lo que se rompe mas caro:
+
+- **El registro se cierra a mano.** `enable_signup = false` en `config.toml` **no protege a los
+  proyectos remotos**. La defensa que si viaja con las migraciones es la `00074`, que cierra el
+  alta publica en la base; apagarlo en el Dashboard es la segunda capa, no la unica.
+- **No confundir "Allow new users to sign up" con "Enable email provider".** Lo segundo apaga el
+  login de todo el mundo.
+- **La llave de servicio que hay que usar es la `sb_secret_`, no la legacy `service_role`.** Las
+  dos funcionan contra la REST API, asi que equivocarse no se nota hasta que una Edge Function
+  responde 401.
 
 ### El correo: por que hace falta SMTP propio
 
