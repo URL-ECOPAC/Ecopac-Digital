@@ -61,11 +61,7 @@ export default function TablaGastos({
           formatear: (fila) => {
             const valor = fila.estado;
             if (!valor) return "—";
-            return (
-              <span style={{ textTransform: "uppercase" }}>
-                {String(valor)}
-              </span>
-            );
+            return <span style={{ textTransform: "uppercase" }}>{String(valor)}</span>;
           },
         };
       }
@@ -81,7 +77,7 @@ export default function TablaGastos({
   const hayFiltros =
     Boolean(filtroEstado) ||
     Object.values(filtrosAdicionales).some((valor) =>
-      valor && typeof valor === "object" ? Boolean(valor.min || valor.max) : Boolean(valor)
+      valor && typeof valor === "object" ? Boolean(valor.min || valor.max) : Boolean(valor),
     );
 
   const limpiarFiltros = () => {

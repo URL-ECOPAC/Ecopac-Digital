@@ -3,13 +3,18 @@ import { listarJornadas } from "../jornadas/api.js";
 import { listarUsuarios } from "../usuarios/api.js";
 import { nombreCompletoDe } from "../usuarios/useUsuariosListado.js";
 import { CATEGORIAS_DE_GASTO } from "@ecopac/shared";
-import { editarGasto, obtenerPresupuestoJornada, registrarGasto, listarCategoriasGasto } from "./api.js";
+import {
+  editarGasto,
+  obtenerPresupuestoJornada,
+  registrarGasto,
+  listarCategoriasGasto,
+} from "./api.js";
 import { validarGasto } from "./validaciones.js";
 
 function aOpciones(filas, etiquetaDe) {
-  return (filas ?? []).map((fila) => ({ 
-    value: fila.id,  //  UUID real
-    label: etiquetaDe(fila) 
+  return (filas ?? []).map((fila) => ({
+    value: fila.id, //  UUID real
+    label: etiquetaDe(fila),
   }));
 }
 
@@ -63,14 +68,14 @@ export function useFormularioGasto({ gasto, usuarioId, estadoInicial } = {}) {
     listarCategoriasGasto().then(({ categorias }) => {
       if (vigente) setCategoriasExtra(categorias);
     });
-    return () => { vigente = false; };
+    return () => {
+      vigente = false;
+    };
   }, []);
 
   const categoriasCompletas = useMemo(() => {
-    const fijasValores = categoriasFijas.map(c => c.value);
-    const soloNuevas = (categoriasExtra || []).filter(
-      c => !fijasValores.includes(c.value)
-    );
+    const fijasValores = categoriasFijas.map((c) => c.value);
+    const soloNuevas = (categoriasExtra || []).filter((c) => !fijasValores.includes(c.value));
     return [...categoriasFijas, ...soloNuevas];
   }, [categoriasExtra]);
 
@@ -83,17 +88,22 @@ export function useFormularioGasto({ gasto, usuarioId, estadoInicial } = {}) {
     obtenerPresupuestoJornada(valores.jornada_id).then(({ presupuesto }) => {
       if (vigente) setPresupuestoDeJornada(presupuesto);
     });
-    return () => { vigente = false; };
+    return () => {
+      vigente = false;
+    };
   }, [valores.jornada_id]);
 
   const jornadaElegida = jornadas.find((jornada) => jornada.id === valores.jornada_id) ?? null;
-  const contextoDeJornada = useMemo(() =>
-    jornadaElegida && presupuestoDeJornada ? {
-      presupuesto_asignado: presupuestoDeJornada.asignado,
-      gasto_acumulado: presupuestoDeJornada.gastado,
-      fecha_inicio: jornadaElegida.fecha,
-    } : null,
-    [jornadaElegida, presupuestoDeJornada]
+  const contextoDeJornada = useMemo(
+    () =>
+      jornadaElegida && presupuestoDeJornada
+        ? {
+            presupuesto_asignado: presupuestoDeJornada.asignado,
+            gasto_acumulado: presupuestoDeJornada.gastado,
+            fecha_inicio: jornadaElegida.fecha,
+          }
+        : null,
+    [jornadaElegida, presupuestoDeJornada],
   );
 
   const resultadoValidacion = validarGasto(valores, contextoDeJornada);

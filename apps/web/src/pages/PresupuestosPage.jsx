@@ -48,7 +48,7 @@ export default function PresupuestosPage() {
   const pestanaPedida = parametros.get("tab");
 
   const [tabActiva, setTabActiva] = useState(() =>
-    pestanaDeEnlace(pestanaPedida, puedeAprobar, esAdmin)
+    pestanaDeEnlace(pestanaPedida, puedeAprobar, esAdmin),
   );
 
   useEffect(() => {
@@ -101,9 +101,7 @@ export default function PresupuestosPage() {
           <BandejaAprobacionGastos usuarioId={perfil?.id} />
         )}
 
-        {tabActiva === TAB_MOVIMIENTOS && esAdmin && (
-          <MovimientosPresupuesto />
-        )}
+        {tabActiva === TAB_MOVIMIENTOS && esAdmin && <MovimientosPresupuesto />}
       </Tabs>
     </ScreenContainer>
   );

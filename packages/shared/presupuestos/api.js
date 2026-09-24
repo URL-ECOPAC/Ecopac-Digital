@@ -43,7 +43,7 @@ export async function obtenerPresupuestoProyecto(idProyecto) {
   return consultar(
     "presupuesto_de_proyecto",
     { p_proyecto_id: idProyecto },
-    { ...PRESUPUESTO_VACIO }
+    { ...PRESUPUESTO_VACIO },
   );
 }
 
@@ -201,7 +201,7 @@ export async function editarGasto(idGasto, datosGasto) {
         `
         *,
         jornadas ( id, proyecto_id, proyectos ( id, nombre ) )
-        `
+        `,
       )
       .single();
 
@@ -224,8 +224,8 @@ export async function listarCategoriasGasto() {
       return { categorias: [], error };
     }
 
-    const unicas = [...new Set(data.map(fila => fila.categoria))];
-    const opciones = unicas.map(nombre => ({ value: nombre, label: nombre }));
+    const unicas = [...new Set(data.map((fila) => fila.categoria))];
+    const opciones = unicas.map((nombre) => ({ value: nombre, label: nombre }));
     return { categorias: opciones, error: null };
   } catch (error) {
     return { categorias: [], error };
@@ -237,9 +237,20 @@ export function conProyectoId(gastos = []) {
 }
 
 const COLUMNAS_DE_GASTO = [
-  "id", "jornada_id", "concepto", "categoria", "monto", "fecha",
-  "responsable_id", "estado", "registrado_por", "aprobado_por",
-  "aprobado_en", "motivo_rechazo", "created_at", "updated_at",
+  "id",
+  "jornada_id",
+  "concepto",
+  "categoria",
+  "monto",
+  "fecha",
+  "responsable_id",
+  "estado",
+  "registrado_por",
+  "aprobado_por",
+  "aprobado_en",
+  "motivo_rechazo",
+  "created_at",
+  "updated_at",
 ].join(", ");
 
 export async function listarGastos(filtros = {}) {

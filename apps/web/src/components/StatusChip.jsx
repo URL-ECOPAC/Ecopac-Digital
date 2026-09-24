@@ -44,8 +44,9 @@ export default function StatusChip({ status, label, icono, uppercase = false }) 
 
   return (
     <span
-      className={`badge rounded-pill d-inline-flex align-items-center gap-1${uppercase ? " text-uppercase" : ""
-        }`}
+      className={`badge rounded-pill d-inline-flex align-items-center gap-1${
+        uppercase ? " text-uppercase" : ""
+      }`}
       style={{
         backgroundColor: `var(${variableDeEstado(status)}, var(--color-secondary))`,
         color: "var(--color-surface)",

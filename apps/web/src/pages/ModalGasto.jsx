@@ -59,9 +59,9 @@ export default function ModalGasto({
 
   const categoriasDisponibles = useMemo(() => {
     const desdeHook = catalogos.categorias || [];
-    const valoresExistentes = desdeHook.map(c => String(c.value ?? c));
+    const valoresExistentes = desdeHook.map((c) => String(c.value ?? c));
     const soloNuevas = categoriasTemporales.filter(
-      c => !valoresExistentes.includes(String(c.value))
+      (c) => !valoresExistentes.includes(String(c.value)),
     );
     return [...desdeHook, ...soloNuevas];
   }, [catalogos.categorias, categoriasTemporales]);
@@ -72,11 +72,11 @@ export default function ModalGasto({
     if (!nombreLimpio) return;
 
     const nuevaOpcion = { value: nombreLimpio, label: nombreLimpio };
-    setCategoriasTemporales(anteriores => [...anteriores, nuevaOpcion]);
-    
+    setCategoriasTemporales((anteriores) => [...anteriores, nuevaOpcion]);
+
     //  Enviar SOLO el texto, NUNCA un objeto
     setCampo("categoria", nombreLimpio);
-    
+
     setCreandoCategoria(false);
     setNombreNuevaCategoria("");
   };
@@ -89,7 +89,7 @@ export default function ModalGasto({
   const bloqueadoPorPermisos = gastoResuelto || sinPermisoDeEdicion;
   const bloqueado = enviando || bloqueadoPorPermisos;
   const nombreDeQuienDecidio = catalogos.perfiles?.find(
-    (perfil) => perfil.value === gasto?.aprobado_por
+    (perfil) => perfil.value === gasto?.aprobado_por,
   )?.label;
 
   const pedirCierre = () => {
@@ -113,9 +113,11 @@ export default function ModalGasto({
     }
   };
 
-  const textoEstado = !esEdicion && estadoInicial
-    ? estadoInicial.toUpperCase() + (estadoInicial === "pendiente" ? " — pendiente de aprobación" : "")
-    : null;
+  const textoEstado =
+    !esEdicion && estadoInicial
+      ? estadoInicial.toUpperCase() +
+        (estadoInicial === "pendiente" ? " — pendiente de aprobación" : "")
+      : null;
 
   return (
     <>
@@ -186,7 +188,9 @@ export default function ModalGasto({
                           setCampo(campo.id, valorFinal);
                         }}
                         placeholder={opciones.length === 0 ? "Cargando..." : "Seleccionar"}
-                        disabled={bloqueado || (campo.validacion?.requerido && opciones.length === 0)}
+                        disabled={
+                          bloqueado || (campo.validacion?.requerido && opciones.length === 0)
+                        }
                       />
                     </div>
                     {!bloqueado && (
@@ -209,10 +213,7 @@ export default function ModalGasto({
                         autoFocus
                       />
                     </div>
-                    <PrimaryButton
-                      title="Guardar"
-                      onClick={agregarCategoria}
-                    >
+                    <PrimaryButton title="Guardar" onClick={agregarCategoria}>
                       Guardar
                     </PrimaryButton>
                     <SecondaryButton

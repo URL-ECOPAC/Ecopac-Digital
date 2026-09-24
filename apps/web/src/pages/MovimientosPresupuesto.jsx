@@ -8,7 +8,7 @@ export default function MovimientosPresupuesto() {
 
   const totalAsignado = proyectos.reduce((sum, p) => sum + (p.montoAsignado || 0), 0);
   const totalGastado = gastos
-    .filter(g => g.estado === "aprobado")
+    .filter((g) => g.estado === "aprobado")
     .reduce((sum, g) => sum + (g.monto || 0), 0);
   const saldo = totalAsignado - totalGastado;
 
@@ -46,7 +46,7 @@ export default function MovimientosPresupuesto() {
             if (g.estado !== "aprobado") return agrupado;
             agrupado[g.categoria] = (agrupado[g.categoria] || 0) + (g.monto || 0);
             return agrupado;
-          }, {})
+          }, {}),
         ).map(([cat, monto]) => (
           <li key={cat} className="list-group-item d-flex justify-content-between">
             <span>{cat}</span>
@@ -57,17 +57,22 @@ export default function MovimientosPresupuesto() {
 
       <h4 className="h6 mb-2">Gastos pendientes de aprobación</h4>
       <ul className="list-group">
-        {gastos.filter(g => g.estado === "pendiente").length === 0 ? (
+        {gastos.filter((g) => g.estado === "pendiente").length === 0 ? (
           <li className="list-group-item text-muted">Sin gastos pendientes</li>
         ) : (
           gastos
-            .filter(g => g.estado === "pendiente")
-            .map(g => (
-              <li key={g.id} className="list-group-item d-flex justify-content-between align-items-center">
+            .filter((g) => g.estado === "pendiente")
+            .map((g) => (
+              <li
+                key={g.id}
+                className="list-group-item d-flex justify-content-between align-items-center"
+              >
                 <div>
                   <strong>{g.concepto}</strong>
                   <span className="badge bg-secondary ms-2 text-uppercase">{g.estado}</span>
-                  <p className="mb-0 small text-muted">{g.jornada?.nombre} · {g.fecha}</p>
+                  <p className="mb-0 small text-muted">
+                    {g.jornada?.nombre} · {g.fecha}
+                  </p>
                 </div>
                 <strong>Q {g.monto?.toFixed(2)}</strong>
               </li>
