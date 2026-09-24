@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   ESTADOS_PROYECTO,
   ETIQUETAS_ESTADO_PROYECTO,
@@ -97,6 +99,15 @@ export default function ProyectosSocialesPage({ usuarioRol }) {
   const [formularioInsumoAbierto, setFormularioInsumoAbierto] = useState(false);
   const [insumoPorQuitar, setInsumoPorQuitar] = useState(null);
   const [avisoInsumos, setAvisoInsumos] = useState(null);
+
+  const { pathname } = useLocation();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (pathname === "/proyectos/sociales") {
+      navigate("/proyectos", { replace: true });
+    }
+  }, [pathname, navigate]);
 
   const verDinero = permisos.puedeVerInsumosYGastos;
   const pestanasDelProyecto = verDinero

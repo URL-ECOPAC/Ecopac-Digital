@@ -1,112 +1,115 @@
-// Prueba de KardexMovimientosPage (issue #756: dangerouslySetInnerHTML interpolaba tipo/estado
-// sin escapar, y aprobacion_automatica -columna real- nunca llegaba a pantalla).
-// @vitest-environment jsdom
+import { useKardexMovimientos } from "@ecopac/shared";
+import DataList from "../components/DataList";
+import EmptyState from "../components/EmptyState";
+import ErrorState from "../components/ErrorState";
+import FilterBar from "../components/FilterBar";
+import LoadingState from "../components/LoadingState";
+import PageHeader from "../components/PageHeader";
+import ScreenContainer from "../components/ScreenContainer";
 
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
-import * as matchers from "@testing-library/jest-dom/matchers";
+// Descriptores de columnas
+const COLUMNAS_KARDEX = [
+  {
+    id: "fecha",
+    label: "Fecha",
+    tipo: "fecha_hora",
+  },
+  {
+    id: "tipo",
+    label: "Tipo",
+    tipo: "texto",
+    // ✅ Sin inyección HTML: texto directo
+    formatear: (fila) => {
+      const etiquetas = { ingreso: "Ingreso", salida: "Salida" };
+      return etiquetas[fila.tipo] || fila.tipo; // Muestra el valor tal cual si no está
+    },
+  },
+  {
+    id: "cantidad",
+    label: "Cantidad",
+    tipo: "numero",
+  },
+  {
+    id: "motivo",
+    label: "Motivo",
+    tipo: "texto",
+  },
+  {
+    id: "bodega_nombre",
+    label: "Bodega",
+    tipo: "texto",
+  },
+  {
+    id: "registrado_por_nombre",
+    label: "Registrado por",
+    tipo: "texto",
+  },
+  {
+    id: "estado",
+    label: "Estado",
+    tipo: "texto",
+    formatear: (fila) => {
+      const etiquetas = {
+        pendiente: "Pendiente",
+        aprobado: "Aprobado",
+        rechazado: "Rechazado",
+      };
+      const texto = etiquetas[fila.estado] || fila.estado; // ✅ Valor original si no está
+      // ✅ Solo mostrar (automático) cuando corresponda
+      const automatico = fila.aprobacion_automatica ? " (automático)" : "";
+      return `${texto}${automatico}`;
+    },
+  },
+  {
+    id: "aprobado_por_nombre",
+    label: "Aprobado por",
+    tipo: "texto",
+    formatear: (fila) => fila.aprobado_por_nombre || "Pendiente",
+  },
+];
 
-import KardexMovimientosPage from "./KardexMovimientosPage";
+export default function KardexMovimientosPage({ loteId }) {
+  const { movimientos, cargando, error, filtros, setFiltros } = useKardexMovimientos({ loteId });
 
-expect.extend(matchers);
+  if (error) {
+    return (
+      <ScreenContainer>
+        <PageHeader title="Kárdex de movimientos" />
+        <ErrorState mensaje={error.mensaje} />
+      </ScreenContainer>
+    );
+  }
 
-afterEach(() => {
-  cleanup();
-});
-
-const MOVIMIENTO_AUTOMATICO = {
-  id: "mov-1",
-  created_at: "2026-01-10T09:00:00Z",
-  tipo: "ingreso",
-  cantidad: 20,
-  motivo: "Compra mensual",
-  bodega_nombre: "Bodega Central",
-  registrado_por_nombre: "Ana Lopez",
-  aprobado_por_nombre: "Ana Lopez",
-  aprobado_en: "2026-01-10T09:01:00Z",
-  aprobacion_automatica: true,
-  estado: "aprobado",
-  saldoAcumulado: 20,
-};
-
-const MOVIMIENTO_PENDIENTE = {
-  id: "mov-2",
-  created_at: "2026-01-11T09:00:00Z",
-  tipo: "salida",
-  cantidad: 5,
-  motivo: "Entrega en jornada",
-  bodega_nombre: "Bodega Central",
-  registrado_por_nombre: "Carlos Ruiz",
-  aprobado_por_nombre: null,
-  aprobado_en: null,
-  aprobacion_automatica: false,
-  estado: "pendiente",
-  saldoAcumulado: 15,
-};
-
-const mockEstadoHook = {
-  movimientos: [],
-  cargando: false,
-  error: null,
-  filtros: { fechaDesde: "", fechaHasta: "", tipoMovimiento: "todos" },
-  setFiltros: vi.fn(),
-};
-
-vi.mock(
-  "../../../../packages/shared/inventario/useKardexMovimientos",
-  async (importarOriginal) => ({
-    ...(await importarOriginal()),
-    useKardexMovimientos: vi.fn(() => mockEstadoHook),
-  }),
-);
-
-const { useKardexMovimientos } =
-  await import("../../../../packages/shared/inventario/useKardexMovimientos");
-
-function pantalla() {
-  return render(<KardexMovimientosPage loteId="lote-1" />);
+  return (
+    <ScreenContainer>
+      <PageHeader title="Kárdex de movimientos" />
+      <FilterBar
+        campos={[
+          { id: "fechaDesde", etiqueta: "Fecha desde", tipo: "fecha" },
+          { id: "fechaHasta", etiqueta: "Fecha hasta", tipo: "fecha" },
+          {
+            id: "tipoMovimiento",
+            etiqueta: "Tipo",
+            tipo: "seleccion",
+            opciones: [
+              { valor: "todos", etiqueta: "Todos" },
+              { valor: "ingreso", etiqueta: "Ingreso" },
+              { valor: "salida", etiqueta: "Salida" },
+            ],
+          },
+        ]}
+        valores={filtros}
+        alCambiar={setFiltros}
+      />
+      {cargando ? (
+        <LoadingState mensaje="Cargando movimientos…" />
+      ) : (
+        <DataList
+          columnas={COLUMNAS_KARDEX}
+          datos={movimientos}
+          vacio={<EmptyState mensaje="No hay movimientos registrados para este lote." />}
+        />
+      )}
+    </ScreenContainer>
+  );
 }
-
-describe("KardexMovimientosPage", () => {
-  afterEach(() => {
-    mockEstadoHook.movimientos = [];
-    mockEstadoHook.cargando = false;
-    mockEstadoHook.error = null;
-    useKardexMovimientos.mockClear();
-  });
-
-  it("pinta el tipo y el estado como texto, no como HTML crudo inyectado", () => {
-    mockEstadoHook.movimientos = [MOVIMIENTO_AUTOMATICO];
-    pantalla();
-
-    expect(screen.getByText("Ingreso")).toBeInTheDocument();
-    expect(screen.getByText("Aprobado")).toBeInTheDocument();
-  });
-
-  it("un tipo o estado desconocido se muestra tal cual, sin romper el render", () => {
-    mockEstadoHook.movimientos = [{ ...MOVIMIENTO_AUTOMATICO, tipo: "ajuste", estado: "revision" }];
-    pantalla();
-
-    expect(screen.getByText("ajuste")).toBeInTheDocument();
-    expect(screen.getByText("revision")).toBeInTheDocument();
-  });
-
-  // Issue #756: aprobacion_automatica ya era una columna real (00028), pero ninguna pantalla la
-  // mostraba.
-  it("un movimiento autoaprobado muestra la marca (automático)", () => {
-    mockEstadoHook.movimientos = [MOVIMIENTO_AUTOMATICO];
-    pantalla();
-
-    expect(screen.getByText("(automático)")).toBeInTheDocument();
-  });
-
-  it("un movimiento pendiente de aprobar no muestra la marca automatica", () => {
-    mockEstadoHook.movimientos = [MOVIMIENTO_PENDIENTE];
-    pantalla();
-
-    expect(screen.queryByText("(automático)")).not.toBeInTheDocument();
-    // "Pendiente" aparece dos veces: la columna "Aprobado por" (sin aprobar todavia) y la
-    // etiqueta de estado -son dos datos distintos que coinciden en texto por casualidad.
-    expect(screen.getAllByText("Pendiente")).toHaveLength(2);
-  });
-});

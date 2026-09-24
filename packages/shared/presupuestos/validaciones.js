@@ -55,7 +55,7 @@ export function validarOrigenDePresupuesto(valores = {}, { disponibleDeDonacion 
  * Criterios de aceptacion de #296:
  * - El monto de un gasto debe ser mayor que cero.
  * - La fecha no puede ser posterior a hoy ni anterior al inicio de su jornada.
- * - El concepto y la categoria son obligatorios, y la categoria puede ser fija o nueva.
+ * - El concepto y la categoria son obligatorios, y la categoria debe pertenecer a la lista permitida.
  * - Un gasto que dejaria la jornada por encima de su presupuesto asignado se marca como excedente
  *   (aviso, sin bloquear).
  *
@@ -77,11 +77,12 @@ export function validarGasto(gasto = {}, jornada = null, hoy = new Date()) {
     errores.push("El concepto del gasto es obligatorio.");
   }
 
-  // 2. Categoría obligatoria — ACEPTA CUALQUIER NOMBRE (fija o nueva)
+  // 2. Categoría obligatoria Y debe pertenecer a la lista permitida
   if (estaVacio(gasto.categoria)) {
     errores.push("La categoría de gasto es obligatoria.");
+  } else if (!CATEGORIAS_VALIDAS.includes(gasto.categoria)) {
+    errores.push("La categoría seleccionada no es válida.");
   }
-  //  Ya no se valida contra lista fija: se permiten categorías creadas por el usuario
 
   // 3. Monto mayor que cero. Lo mismo exige CHECK (monto > 0) en la tabla; se adelanta aqui para
   //    dar el mensaje en el formulario en vez de esperar el rechazo de Postgres.

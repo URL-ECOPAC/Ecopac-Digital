@@ -665,10 +665,10 @@ function PanelDetalleColaborador({ fila, catalogos, permisos, rol, idSesionActua
                         status={jornada.estado}
                         label={
                           ETIQUETAS_ESTADO_JORNADA[jornada.estado]
-                            ? String(ETIQUETAS_ESTADO_JORNADA[jornada.estado]).toUpperCase()
-                            : String(jornada.estado).toUpperCase()
+                            ? ETIQUETAS_ESTADO_JORNADA[jornada.estado] //  SIN .toUpperCase()
+                            : jornada.estado //  SIN .toUpperCase()
                         }
-                        uppercase
+                        uppercase={true} //  Esta prop hace que se vea en mayúsculas por CSS
                       />
                     </div>
                   ))}

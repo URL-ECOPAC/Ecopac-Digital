@@ -229,7 +229,10 @@ function EncabezadoDeColumna({ columna, ordenarPor, onOrdenar }) {
 function clasesDeCelda(columna) {
   const clases = [];
   if (columna.principal) clases.push("fw-semibold");
-  if (columna.uppercase) clases.push("text-uppercase");
+  //  Aplica la clase en el <td> SI y SOLO SI uppercase === true
+  if (columna.uppercase === true) {
+    clases.push("text-uppercase");
+  }
   return clases.length > 0 ? clases.join(" ") : undefined;
 }
 
@@ -295,7 +298,12 @@ export default function DataList({
                   data-label={columna.label}
                   className={clasesDeCelda(columna)}
                 >
-                  <Celda columna={columna} fila={fila} catalogos={catalogos} />
+                  <Celda
+                    columna={columna}
+                    fila={fila}
+                    catalogos={catalogos}
+                    forzarMayusculas={columna.uppercase === true}
+                  />
                 </td>
               ))}
               {tieneAccionSecundaria && (
