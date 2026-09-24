@@ -156,14 +156,10 @@ export async function registrarGasto(datosGasto, { usuarioId, estado } = {}) {
       .single();
 
     if (error) {
-      console.error(" ERROR DE INSERCIÓN:", error);
       return { gasto: null, error: normalizarError(error) };
     }
-
-    console.log(" GUARDADO:", data);
     return { gasto: data, error: null };
   } catch (error) {
-    console.error(" EXCEPCIÓN:", error);
     return { gasto: null, error: normalizarError(error) };
   }
 }
@@ -225,7 +221,6 @@ export async function listarCategoriasGasto() {
       .order("categoria", { ascending: true });
 
     if (error) {
-      console.error("Error al cargar categorías:", error);
       return { categorias: [], error };
     }
 
@@ -233,7 +228,6 @@ export async function listarCategoriasGasto() {
     const opciones = unicas.map(nombre => ({ value: nombre, label: nombre }));
     return { categorias: opciones, error: null };
   } catch (error) {
-    console.error("Excepción al cargar categorías:", error);
     return { categorias: [], error };
   }
 }

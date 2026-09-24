@@ -21,7 +21,7 @@ export default function TablaGastos({
   const [gastoEnEdicion, setGastoEnEdicion] = useState(null);
   const [mostrarAlta, setMostrarAlta] = useState(false);
 
-  //  Punto 3: Definir permisos según rol
+  // Punto 3: Definir permisos según rol
   const puedeAprobar = puedeAprobarGasto(rol);
   const estadoInicialPorRol = puedeAprobar ? "aprobado" : "pendiente";
 
@@ -33,6 +33,7 @@ export default function TablaGastos({
     setFiltrosAdicionales((anteriores) => ({ ...anteriores, [id]: valor }));
   };
 
+  //  PRIMERO: TODOS los useMemo, SIN return antes
   const gastosFiltrados = useMemo(() => {
     return gastos.filter((gasto) => {
       if (filtrosAdicionales.categoria && gasto.categoria !== filtrosAdicionales.categoria) {
@@ -51,7 +52,30 @@ export default function TablaGastos({
     });
   }, [gastos, filtrosAdicionales]);
 
+  //  Punto 5: useMemo en MAYÚSCULA — ANTES de cualquier return
+  const columnasConMayuscula = useMemo(() => {
+    return COLUMNAS_GASTO.map((columna) => {
+      if (columna.id === "estado") {
+        return {
+          ...columna,
+          formatear: (fila) => {
+            const valor = fila.estado;
+            if (!valor) return "—";
+            return (
+              <span style={{ textTransform: "uppercase" }}>
+                {String(valor)}
+              </span>
+            );
+          },
+        };
+      }
+      return columna;
+    });
+  }, []);
+
+  //  AHORA SÍ: los return condicionales DESPUÉS de todos los hooks
   if (error) return <ErrorState message={error.mensaje} onRetry={recargar} />;
+  if (!gastos || gastos.length === 0) return <p>No hay gastos registrados</p>;
 
   const valoresDeFiltro = { ...filtrosAdicionales, estado: filtroEstado || null };
   const hayFiltros =
@@ -65,31 +89,6 @@ export default function TablaGastos({
     cambiarFiltroEstado("");
   };
 
- // Punto 5: Asegurar que el estado se muestre en MAYÚSCULA
-// COLUMNA_GASTO ya debería formatearlo, pero lo garantizamos aquí
-const columnasConMayuscula = useMemo(() => {
-  return COLUMNAS_GASTO.map((columna) => {
-    if (columna.id === "estado") {
-      return {
-        ...columna,
-        formatear: (fila) => {
-          const valor = fila.estado;
-          if (!valor) return "—";
-          return (
-            <span style={{ textTransform: "uppercase" }}>
-              {String(valor)}
-            </span>
-          );
-        },
-      };
-    }
-    return columna;
-  });
-}, []);
-
-//  El return condicional VA DESPUÉS del hook
-if (!datos) return <EstadoVacio />;
-
   return (
     <div className="d-flex flex-column gap-3">
       <div className="d-flex justify-content-end">
@@ -97,7 +96,6 @@ if (!datos) return <EstadoVacio />;
           <PrimaryButton title="Registrar gasto" onClick={() => setMostrarAlta(true)} />
         )}
       </div>
-
       <FilterBar
         campos={FILTROS_SIN_BUSQUEDA}
         valores={valoresDeFiltro}
@@ -106,7 +104,6 @@ if (!datos) return <EstadoVacio />;
         onLimpiar={limpiarFiltros}
         hayFiltros={hayFiltros}
       />
-
       <DataList
         columnas={columnasConMayuscula}
         datos={gastosFiltrados}
@@ -115,7 +112,6 @@ if (!datos) return <EstadoVacio />;
         catalogos={catalogos}
         onRowPress={(gasto) => setGastoEnEdicion(gasto)}
       />
-
       {mostrarAlta && (
         <ModalGasto
           usuarioId={usuarioId}
@@ -128,7 +124,6 @@ if (!datos) return <EstadoVacio />;
           }}
         />
       )}
-
       {gastoEnEdicion && (
         <ModalGasto
           key={gastoEnEdicion.id}

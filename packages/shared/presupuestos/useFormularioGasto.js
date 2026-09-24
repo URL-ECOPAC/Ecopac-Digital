@@ -61,7 +61,6 @@ export function useFormularioGasto({ gasto, usuarioId, estadoInicial } = {}) {
       if (vigente) setPerfiles(aOpciones(usuarios, nombreCompletoDe));
     });
     listarCategoriasGasto().then(({ categorias }) => {
-      console.log("Categorías cargadas:", categorias);
       if (vigente) setCategoriasExtra(categorias);
     });
     return () => { vigente = false; };
