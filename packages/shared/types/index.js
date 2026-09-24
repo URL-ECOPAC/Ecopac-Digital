@@ -828,6 +828,38 @@
  * @property {string} createdAt
  */
 
+/**
+ * Fila de `proyecto_personal` (00146_proyecto_personal.sql): una persona en el equipo de un
+ * proyecto. No es `JornadaPersonal`: aquella es el turno de una jornada, esta es la gente del
+ * proyecto.
+ *
+ * @typedef {object} ProyectoPersonal
+ * @property {string} id
+ * @property {string} proyectoId
+ * @property {string} perfilId
+ * @property {string|null} rolEnProyecto Funcion en este proyecto, en texto libre; null si no se
+ *   anoto ninguna.
+ * @property {string} createdAt
+ * @property {string} updatedAt
+ */
+
+/**
+ * Fila de `proyecto_insumos` (00147_proyecto_insumos.sql): un insumo PREVISTO para un proyecto. Es
+ * una lista de planificacion; no descuenta existencias ni crea movimientos de inventario.
+ *
+ * @typedef {object} ProyectoInsumo
+ * @property {string} id
+ * @property {string} proyectoId
+ * @property {string} medicamentoId Articulo del catalogo de inventario (medicamento o insumo).
+ * @property {number} cantidad Entero mayor que cero.
+ * @property {string} unidad En que se cuenta la cantidad ("cajas", "unidades").
+ * @property {number|null} costoUnitarioEstimado Costo de UNA unidad, en quetzales. null es "no
+ *   estimado"; 0 es un costo estimado de cero.
+ * @property {string|null} nota
+ * @property {string} createdAt
+ * @property {string} updatedAt
+ */
+
 // --- Presupuestos ---------------------------------------------------------------------------
 
 /**

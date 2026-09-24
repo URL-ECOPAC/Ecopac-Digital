@@ -48,8 +48,11 @@ export function valoresInicialesDeGasto(gasto) {
  *   fecha: string, responsable_id: string|null }|null} [opciones.gasto] Con `id`, edicion; sin
  *   `id` o ausente, alta.
  * @param {string} [opciones.usuarioId] Quien registra, para registrarGasto() (alta unicamente).
+ * @param {string} [opciones.proyectoId] Si viene, el selector de jornada ofrece solo las de ese
+ *   proyecto (un gasto cuelga de una jornada, y desde la ficha de un proyecto no debe poder
+ *   caer en otro). Sin el, ofrece todas, como en Presupuestos.
  */
-export function useFormularioGasto({ gasto, usuarioId } = {}) {
+export function useFormularioGasto({ gasto, usuarioId, proyectoId } = {}) {
   const gastoId = gasto?.id ?? null;
   const esEdicion = Boolean(gastoId);
 
@@ -67,7 +70,7 @@ export function useFormularioGasto({ gasto, usuarioId } = {}) {
   useEffect(() => {
     let vigente = true;
 
-    listarJornadas().then(({ jornadas: filas }) => {
+    listarJornadas(proyectoId ? { proyecto: proyectoId } : {}).then(({ jornadas: filas }) => {
       if (vigente) setJornadas(filas);
     });
 
@@ -78,7 +81,7 @@ export function useFormularioGasto({ gasto, usuarioId } = {}) {
     return () => {
       vigente = false;
     };
-  }, []);
+  }, [proyectoId]);
 
   // Presupuesto de la jornada elegida, para el aviso de excedente del criterio 3.
   useEffect(() => {

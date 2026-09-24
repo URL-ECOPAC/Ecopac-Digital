@@ -58,6 +58,8 @@ describe("permisos de proyectos", () => {
       puedeEditar: false,
       puedeCambiarEstado: false,
       puedeAsociarJornadas: false,
+      puedeGestionarEquipo: false,
+      puedeGestionarInsumos: false,
       puedeVerInsumosYGastos: false,
     });
   });
@@ -71,6 +73,8 @@ describe("permisos de proyectos", () => {
         puedeEditar: false,
         puedeCambiarEstado: false,
         puedeAsociarJornadas: false,
+        puedeGestionarEquipo: false,
+        puedeGestionarInsumos: false,
         puedeVerInsumosYGastos: false,
       });
     }
@@ -81,6 +85,8 @@ describe("permisos de proyectos", () => {
       puedeEditar: true,
       puedeCambiarEstado: true,
       puedeAsociarJornadas: true,
+      puedeGestionarEquipo: true,
+      puedeGestionarInsumos: true,
       puedeVerInsumosYGastos: true,
     });
 
@@ -92,6 +98,8 @@ describe("permisos de proyectos", () => {
       puedeEditar: false,
       puedeCambiarEstado: false,
       puedeAsociarJornadas: false,
+      puedeGestionarEquipo: false,
+      puedeGestionarInsumos: false,
       puedeVerInsumosYGastos: false,
     });
   });

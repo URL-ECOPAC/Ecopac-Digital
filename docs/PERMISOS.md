@@ -396,6 +396,8 @@ reabrir una jornada finalizada **solo al administrador**. Reflejo en el cliente:
 | `proyecto_hitos`            | C R U D       | —                                | —                | —                  | `00053` + `00141`                                                 |
 | `proyecto_seguimiento`      | C R           | —                                | —                | —                  | `00053` + `00141`                                                 |
 | `proyecto_estado_historial` | R             | —                                | —                | —                  | `00039`                                                           |
+| `proyecto_insumos`          | C R U D       | —                                | —                | —                  | `00147`. Leer y escribir: `es_administrador()` o `tiene_permiso('proyectos.gestionar')`. El medico ve el proyecto pero NO sus insumos (dinero, como `gastos`) |
+| `proyecto_personal`         | C R U D       | —                                | R el equipo del proyecto que ve | R el equipo del proyecto que ve | `00146`. Escribir admite tambien `tiene_permiso('proyectos.gestionar')`, igual que editar el proyecto |
 | `gastos`                    | C R **A**     | —                                | C R si participa | C R si participa   | `00052` + `00141`. Era la unica tabla donde `socio fundador` aparecia por su nombre |
 | `jornada_presupuesto_origen` | C R U D      | —                                | —                | —                  | `00135` + `00141`. Escribir admite tambien `tiene_permiso('jornadas.gestionar')`, igual que actualizar la jornada; su lectura tambien, por el `INSERT ... RETURNING` |
 
@@ -405,6 +407,35 @@ Solo el proyecto del que cuelga una jornada en la que esta. En la interfaz, el m
 Proyectos pero **sin las pestañas de insumos y gastos y sin poder crear ni editar nada**
 (`puedeVerInsumosYGastosDeProyecto()` en `proyectos/permisos.js`); el voluntario general no tiene
 el modulo en el menu, aunque la politica le entregue la misma fila si la pidiera.
+
+`proyecto_personal` (00146) es el **equipo del proyecto**: quien participa en el, con una funcion
+opcional en texto libre (`rol_en_proyecto`). No es `jornada_personal`: aquella es el cuadro de turnos
+de UNA jornada, con horario y rol clinico, y esta es la gente que sostiene el proyecto, este o no en
+el turno de alguna de sus jornadas. La lectura es `EXISTS (SELECT 1 FROM proyectos ...)`, o sea que
+**pasa por la politica de `proyectos` y la sigue**: quien ve el proyecto ve su equipo completo, y cada
+quien lee su propia asignacion aunque no vea el proyecto. **Estar en el equipo no hace visible el
+proyecto** (esa politica no se toco): el medico sigue viendo solo los proyectos de las jornadas en las
+que participa. Los **nombres** salen de `equipo_de_proyecto(proyecto_id)` (DEFINER, `00146`), no de un
+join a `perfiles`: esa tabla solo la lee el administrador y cada quien la suya (`00038`), y con el
+join el medico veria al resto del equipo sin nombre. La funcion devuelve unicamente nombres y
+apellidos, nunca telefono ni correo, y solo de las filas que la persona ya puede ver. Como un DEFINER
+no pasa por la RLS, **repite a mano la regla de lectura de la tabla**; `proyecto_personal.sql` las
+compara rol por rol para que no diverjan. (El equipo de una *jornada* sigue sin esa funcion: ahi el
+medico ve las filas sin nombre.) Reflejo en el cliente:
+`permisosDeProyectos().puedeGestionarEquipo` en `proyectos/permisos.js` (solo administrador, mas
+estricto que la base, como en el resto del modulo) y `proyectos/equipo.api.js`. Lo afirma
+`proyecto_personal.sql`.
+
+`proyecto_insumos` (00147) es la **lista de insumos previstos** de un proyecto: un articulo del
+catalogo de inventario -el mismo que ofrece "Producto / Insumo" en "Registrar ingreso", medicamentos e
+insumos juntos, sin filtrar por `tipo_articulo`-, su cantidad, su unidad y un costo unitario estimado (el total sale de
+cantidad x costo y no se guarda; `NULL` es "no estimado", distinto de 0). **No mueve inventario**: no
+toca `existencias`, `lotes_existencias` ni `movimientos_inventario`, mismo criterio con que la `00089`
+desacoplo los gastos. Un articulo figura una vez por proyecto y no se borra del catalogo mientras un
+proyecto lo tenga previsto (`ON DELETE RESTRICT`). Es planificacion con dinero, asi que el medico no
+la lee aunque vea el proyecto (#864). Reflejo en el cliente: `permisosDeProyectos().puedeGestionarInsumos`
+(solo administrador) y `puedeVerInsumosYGastos` para leer, en `proyectos/permisos.js`, y
+`proyectos/insumos.api.js`. Lo afirma `proyecto_insumos.sql`.
 
 `jornada_presupuesto_origen` (issue #840) dice de donde viene cada parte del presupuesto de una
 jornada: una donacion de dinero, fondos propios o un aporte externo. `jornadas.presupuesto_asignado`
@@ -618,7 +649,7 @@ su rol no tiene, sin cambiarle el rol.**
 | `pacientes.editar`            | administrador, medico                          | **Si** — UPDATE de `pacientes` y `expedientes` (`00086`)                             |
 | `inventario.aprobar`          | administrador                                  | **Si** — UPDATE de `movimientos_inventario` (`00086`)                                |
 | `donaciones.registrar`        | administrador                                  | **Si** — INSERT de `donantes`, `donaciones` y `donacion_detalle` (`00086`)           |
-| `proyectos.gestionar`         | administrador                                  | **Si** — INSERT y UPDATE de `proyectos` (`00086`)                                    |
+| `proyectos.gestionar`         | administrador                                  | **Si** — INSERT y UPDATE de `proyectos` (`00086`, y las escrituras de `proyecto_personal` `00146` y `proyecto_insumos` `00147`) |
 | `usuarios.gestionar_permisos` | administrador                                  | **Si** — INSERT/UPDATE/DELETE de `usuario_permiso` (`00086`)                         |
 | `reportes.exportar`           | administrador, junta directiva, socio fundador | **Si** — `vista_reporte_impacto`, `pacientes_reporte`, `fn_reporte_pacientes_atendidos` (`00086`) |
 

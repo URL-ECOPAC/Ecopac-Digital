@@ -18,10 +18,13 @@
 // y seguimiento de avance, y el tablero kanban -- con su propia tabla o su propia vista sobre
 // proyectos. Mismo patron que pacientes/ usa con triaje.api.js.
 
+export { vacioANull } from "./normalizacion.js";
 export * from "./validaciones.js";
 export * from "./api.js";
 export * from "./permisos.js";
 export * from "./avance.api.js";
+export * from "./equipo.api.js";
+export * from "./insumos.api.js";
 export * from "./tableroProyectosApi.js";
 export * from "./campos.js";
 export * from "./columnas.js";

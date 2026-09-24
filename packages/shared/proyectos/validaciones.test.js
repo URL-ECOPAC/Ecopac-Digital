@@ -15,6 +15,7 @@ import {
   TRANSICIONES_PROYECTO,
   transicionesDeProyectoDesde,
   validarCambioDeEstadoProyecto,
+  validarInsumoDeProyecto,
   validarProyecto,
 } from "./validaciones.js";
 import { ESTADOS_PROYECTO } from "../enums.js";
@@ -161,5 +162,60 @@ describe("validarCambioDeEstadoProyecto", () => {
 
   it("rechaza un estado que no es del enum", () => {
     expect(validarCambioDeEstadoProyecto("planificado", "pausado")).toHaveProperty("estado");
+  });
+});
+
+describe("validarInsumoDeProyecto", () => {
+  const VALIDO = {
+    medicamentoId: "m-1",
+    cantidad: 10,
+    unidad: "cajas",
+    costoUnitarioEstimado: "12.50",
+    nota: "",
+  };
+
+  it("un insumo completo y uno sin costo ni nota son validos", () => {
+    expect(validarInsumoDeProyecto(VALIDO, { esAlta: true })).toEqual({});
+    expect(
+      validarInsumoDeProyecto(
+        { medicamentoId: "m-1", cantidad: "3", unidad: "u", costoUnitarioEstimado: "" },
+        { esAlta: true },
+      ),
+    ).toEqual({});
+  });
+
+  it("al agregar exige el insumo; al editar no, porque el articulo no cambia", () => {
+    const sinArticulo = { ...VALIDO, medicamentoId: "" };
+
+    expect(validarInsumoDeProyecto(sinArticulo, { esAlta: true })).toHaveProperty("medicamentoId");
+    expect(validarInsumoDeProyecto(sinArticulo)).toEqual({});
+  });
+
+  it("la cantidad es un entero mayor que cero", () => {
+    for (const cantidad of [0, -1, 1.5, "abc", ""]) {
+      expect(validarInsumoDeProyecto({ ...VALIDO, cantidad })).toHaveProperty("cantidad");
+    }
+  });
+
+  it("la unidad es obligatoria y tiene tope de largo", () => {
+    expect(validarInsumoDeProyecto({ ...VALIDO, unidad: "   " })).toHaveProperty("unidad");
+    expect(validarInsumoDeProyecto({ ...VALIDO, unidad: "x".repeat(31) })).toHaveProperty("unidad");
+  });
+
+  it("el costo es opcional, no negativo y con hasta dos decimales; cero es valido", () => {
+    expect(validarInsumoDeProyecto({ ...VALIDO, costoUnitarioEstimado: "0" })).toEqual({});
+    expect(validarInsumoDeProyecto({ ...VALIDO, costoUnitarioEstimado: -1 })).toHaveProperty(
+      "costoUnitarioEstimado",
+    );
+    expect(validarInsumoDeProyecto({ ...VALIDO, costoUnitarioEstimado: "abc" })).toHaveProperty(
+      "costoUnitarioEstimado",
+    );
+    expect(validarInsumoDeProyecto({ ...VALIDO, costoUnitarioEstimado: "1.234" })).toHaveProperty(
+      "costoUnitarioEstimado",
+    );
+  });
+
+  it("la nota tiene tope de largo", () => {
+    expect(validarInsumoDeProyecto({ ...VALIDO, nota: "x".repeat(501) })).toHaveProperty("nota");
   });
 });

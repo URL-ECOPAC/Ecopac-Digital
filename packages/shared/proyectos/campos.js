@@ -109,3 +109,45 @@ export const CAMPOS_SEGUIMIENTO = [
     validacion: { requerido: false, min: 0, max: 100 },
   },
 ];
+
+/**
+ * Formulario de un insumo previsto de un proyecto (proyecto_insumos, 00147). `medicamentoId` sale
+ * del catalogo de inventario -el mismo de "Producto / Insumo" en "Registrar ingreso"- (catalogo
+ * `articulos`, que arma el hook) y solo se elige al agregar: al editar la fila ya es "este articulo en este proyecto".
+ *
+ * El costo es el de UNA unidad; el total lo calcula la lista (cantidad x costo) y no se captura.
+ */
+export const CAMPOS_INSUMO_PROYECTO = [
+  {
+    id: "medicamentoId",
+    label: "Producto / Insumo",
+    tipo: TIPOS_DE_CAMPO.SELECT,
+    opcionesDesde: "articulos",
+    validacion: { requerido: true },
+  },
+  {
+    id: "cantidad",
+    label: "Cantidad prevista",
+    tipo: TIPOS_DE_CAMPO.NUMERO,
+    validacion: { requerido: true, minimo: 1 },
+  },
+  {
+    id: "unidad",
+    label: "Unidad",
+    tipo: TIPOS_DE_CAMPO.TEXTO,
+    placeholder: "cajas, unidades, frascos...",
+    validacion: { requerido: true, maxLongitud: 30 },
+  },
+  {
+    id: "costoUnitarioEstimado",
+    label: "Costo estimado por unidad (Q)",
+    tipo: TIPOS_DE_CAMPO.NUMERO,
+    validacion: { requerido: false, minimo: 0 },
+  },
+  {
+    id: "nota",
+    label: "Nota",
+    tipo: TIPOS_DE_CAMPO.TEXTO_LARGO,
+    validacion: { requerido: false, maxLongitud: 500 },
+  },
+];

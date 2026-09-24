@@ -22,6 +22,7 @@ import {
   construirError,
   normalizarError,
 } from "../api/errores-de-supabase.js";
+import { vacioANull } from "./normalizacion.js";
 import { validarCambioDeEstadoProyecto } from "./validaciones.js";
 import { ESTADOS_PROYECTO } from "../enums.js";
 
@@ -67,6 +68,10 @@ function aProyecto(fila) {
   };
 }
 
+// Columnas opcionales: el formulario las manda como "" y la BD las quiere en NULL (las de fecha
+// ademas rechazan "" con 22007).
+const CAMPOS_OPCIONALES = new Set(["descripcion", "fechaInicio", "fechaFin", "responsableId"]);
+
 /** Traduce del camelCase de las pantallas al snake_case de la tabla, omitiendo lo no enviado. */
 function aColumnasDeTabla(datos = {}) {
   const mapa = {
@@ -83,7 +88,9 @@ function aColumnasDeTabla(datos = {}) {
   const fila = {};
   for (const [campo, columna] of Object.entries(mapa)) {
     // Solo se envia lo que venga en el objeto: un update parcial no debe borrar lo que no toca.
-    if (Object.prototype.hasOwnProperty.call(datos, campo)) fila[columna] = datos[campo];
+    if (Object.prototype.hasOwnProperty.call(datos, campo)) {
+      fila[columna] = CAMPOS_OPCIONALES.has(campo) ? vacioANull(datos[campo]) : datos[campo];
+    }
   }
   return fila;
 }
