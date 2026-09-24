@@ -3,6 +3,7 @@ import { useState } from "react";
 import { registrarIngreso } from "./movimientos.api.js";
 import { registrarMedicamento } from "./medicamentos.api.js";
 import { puedeAdministrarMedicamentos } from "./medicamentos.permisos.js";
+import { recargarAlertasMontadas } from "./useAlertasVencimiento.js";
 
 const ITEM_VACIO = {
   medicamento_id: "",
@@ -228,6 +229,12 @@ export function useRegistroIngreso({
     }
 
     setResumenGuardado({ origen, proveedorId, numeroComprobante, movimientos });
+
+    // No se espera: es un refresco de cortesia para quien tenga el panel de alertas abierto en
+    // otra pestana, no algo de lo que dependa el resto de este flujo (mismo criterio que
+    // useRegistroSalida.js).
+    recargarAlertasMontadas();
+
     // `items` va en el mismo orden que `movimientos` -el for de arriba empuja uno por otro sin
     // reordenar-, asi que quien reciba los dos puede correlacionar movimientos[i] con
     // items[i].donacionDetalleId sin adivinar.

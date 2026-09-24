@@ -3,13 +3,13 @@ import { useSearchParams } from "react-router-dom";
 import { useSesionCompartida } from "../contexto/SesionProvider";
 import ModalMedicamento from "./ModalMedicamento.jsx";
 import ModalPrincipioActivo from "./ModalPrincipioActivo.jsx";
+import ModalPresentacion from "./ModalPresentacion.jsx";
 import ModalRegistroIngreso from "./ModalRegistroIngreso.jsx";
 import { ModalSalidaMedicamento } from "./ModalSalidaMedicamento";
 import BandejaValidacionPage from "./BandejaValidacionPage";
 import {
   actualizarLote,
   actualizarMedicamento,
-  ETIQUETAS_PRESENTACION,
   filtrarCatalogoMedicamentos,
   FILTROS_CATALOGO_MEDICAMENTOS,
   FILTROS_CATALOGO_VACIOS,
@@ -21,8 +21,10 @@ import {
   ETIQUETAS_ORIGEN_LOTE,
   formatearMoneda,
   listarBodegas,
+  listarExistenciasDisponibles,
   listarLotes,
   listarMedicamentos,
+  listarPresentaciones,
   listarPrincipiosActivos,
   listarPrincipiosDeMedicamento,
   listarProveedores,
@@ -34,10 +36,13 @@ import {
   puedeVerValorizacion,
   reactivarMedicamento,
   registrarMedicamento,
+  registrarPresentacion,
   registrarPrincipioActivo,
+  sumarExistenciasPorLote,
+  ETIQUETAS_TIPO_ARTICULO,
+  TIPOS_DE_ARTICULO,
   totalizarValorizacion,
   useAlertasVencimiento,
-  useGestionLotes,
   usePendientesValidacion,
 } from "@ecopac/shared";
 import { Form, Nav, Table } from "react-bootstrap";
@@ -54,6 +59,7 @@ import PanelAlertasVencimiento from "./PanelAlertasVencimiento.jsx";
 import AdministracionBodegasProveedoresPage from "./AdministracionBodegasProveedoresPage.jsx";
 import KardexMovimientosPage from "./KardexMovimientosPage.jsx";
 import CatalogoPrincipiosActivosPage from "./CatalogoPrincipiosActivosPage.jsx";
+import CatalogoPresentacionesPage from "./CatalogoPresentacionesPage.jsx";
 import MisMovimientosPage from "./MisMovimientosPage.jsx";
 
 // Pestanas que se pueden abrir con ?tab=. Es el enlace de las notificaciones del buzon (issue
@@ -66,6 +72,7 @@ const PESTANAS_ENLAZABLES = [
   "kardex",
   "administracion",
   "principios-activos",
+  "presentaciones",
   "validacion",
 ];
 
@@ -84,7 +91,11 @@ export default function InventarioPage() {
   }, [pestanaPedida]);
   const [inventarioRaw, setInventarioRaw] = useState([]);
   const [principiosActivos, setPrincipiosActivos] = useState([]);
+  const [presentaciones, setPresentaciones] = useState([]);
   const [lotesRaw, setLotesRaw] = useState([]);
+  // Existencias vivas (vista_lotes_disponibles), para la columna "Disponible" de la pestaña
+  // Lotes: lotesRaw.cantidadIngresada es el historico de entrada, no el stock que queda hoy.
+  const [existenciasRaw, setExistenciasRaw] = useState([]);
   const [bodegas, setBodegas] = useState([]);
   const [proveedores, setProveedores] = useState([]);
   const [cargando, setCargando] = useState(true);
@@ -107,24 +118,40 @@ export default function InventarioPage() {
   const [modoEdicion, setModoEdicion] = useState(false);
   const [cargandoGuardar, setCargandoGuardar] = useState(false);
   const [modalPrincipioActivoAbierto, setModalPrincipioActivoAbierto] = useState(false);
+  const [modalPresentacionAbierto, setModalPresentacionAbierto] = useState(false);
   const [advertenciaDuplicado, setAdvertenciaDuplicado] = useState(false);
   // Un fallo al guardar se pinta dentro del modal, no en un alert() del navegador (issue #762).
   const [errorGuardarMedicamento, setErrorGuardarMedicamento] = useState(null);
   const [formData, setFormData] = useState({
     nombre: "",
+    tipoArticulo: TIPOS_DE_ARTICULO.MEDICAMENTO,
     principio_activo_id: "",
     concentracion: "",
-    presentacion: "",
+    presentacionId: "",
     marca: "",
     formaFarmaceutica: "",
   });
 
-  // Solo se usa el conteo, para el indicador de la pestaña: el resto de este hook -busqueda,
-  // porVencer/vencidas- lo vuelve a calcular PanelAlertasVencimiento.jsx con su propia llamada a
-  // useAlertasVencimiento(), que es la que de verdad se pinta en pantalla. Las dos llamadas leen
-  // alertas_caducidad de forma independiente (mismo patron que usePendientesValidacion() en la
-  // bandeja de validacion), no derivan el conteo de lotesRaw.
-  const { cantidadPendientes: cantidadPendientesAlertas } = useAlertasVencimiento({});
+  // El indicador de la pestaña y el aviso "Alertas de caducidad" del catálogo leen las mismas
+  // alertas pendientes que PanelAlertasVencimiento.jsx -su propia llamada a useAlertasVencimiento()
+  // es la que de verdad se pinta en la pestaña Alertas-, no derivan de lotesRaw (mismo patron de
+  // instancias independientes que usePendientesValidacion() en la bandeja de validacion).
+  //
+  // Antes el aviso del catalogo salia de useGestionLotes(), que recalculaba "por vencer" a partir
+  // de la fecha de cada lote sin mirar alertas_caducidad.estado: atender una alerta en la pestaña
+  // Alertas no cambia la fecha de vencimiento del lote, asi que el aviso nunca se quitaba aunque la
+  // alerta ya estuviera resuelta. recargarAlertasMontadas() (useAlertasVencimiento.js) ya avisa a
+  // esta instancia cuando otra atiende una alerta; con la lista de pendientes real, el aviso se
+  // actualiza solo.
+  const {
+    cantidadPendientes: cantidadPendientesAlertas,
+    porVencer: alertasPorVencer,
+    vencidas: alertasVencidas,
+  } = useAlertasVencimiento({});
+  const alertasCriticas = useMemo(
+    () => [...alertasVencidas, ...alertasPorVencer],
+    [alertasVencidas, alertasPorVencer],
+  );
 
   // Modales Lotes y Alertas. Aqui habia un modalAltaLoteAbierto para "Registrar lote": se
   // retiro con la issue #846 (ver el comentario de la barra de acciones).
@@ -148,8 +175,6 @@ export default function InventarioPage() {
 
   const [filtrosCatalogo, setFiltrosCatalogo] = useState(FILTROS_CATALOGO_VACIOS);
 
-  const { alertasCriticas } = useGestionLotes({ lotesIniciales: lotesRaw });
-
   // Busqueda y filtro por origen de la pestaña "Lotes" (issue #752): la tabla se arma directo
   // contra lotesRaw -la forma real de aLote() (lotes.api.js)-, ya no contra useVistaExistencias(),
   // que agrupaba por medicamento y esperaba campos que un lote no tiene (bodega, entre otros: un
@@ -162,19 +187,29 @@ export default function InventarioPage() {
     try {
       setCargando(true);
       setError(null);
-      const [resMed, resPA, resBodegas, resProveedores, resLotes] = await Promise.all([
+      const [
+        resMed,
+        resPA,
+        resPresentaciones,
+        resBodegas,
+        resProveedores,
+        resLotes,
+        resExistencias,
+      ] = await Promise.all([
         // soloActivos:false (issue #756): antes el catalogo pedia listarMedicamentos() con su
         // default (soloActivos:true), asi que un medicamento desactivado desaparecia sin
         // ninguna forma de volver a verlo ni de reactivarlo desde la pantalla.
         listarMedicamentos({ soloActivos: false }),
         listarPrincipiosActivos(),
+        listarPresentaciones(),
         listarBodegas(),
         listarProveedores(),
         listarLotes(),
+        listarExistenciasDisponibles(),
       ]);
 
-      // Los cinco fallos tienen que llegar a la pantalla. Antes solo lo hacia el de medicamentos:
-      // los otros cuatro se escribian en la consola y la pestana seguia como si nada, con el
+      // Los siete fallos tienen que llegar a la pantalla. Antes solo lo hacia el de medicamentos:
+      // los otros se escribian en la consola y la pestana seguia como si nada, con el
       // desplegable de bodegas vacio o el kardex sin lotes y sin decir por que. Es el fallo
       // silencioso que describe la issue #762: algo no funciona y el sistema dice que si.
       const fallos = [];
@@ -185,6 +220,9 @@ export default function InventarioPage() {
       if (resPA.error) fallos.push(["principios activos", resPA.error]);
       else setPrincipiosActivos(resPA.principiosActivos || []);
 
+      if (resPresentaciones.error) fallos.push(["presentaciones", resPresentaciones.error]);
+      else setPresentaciones(resPresentaciones.presentaciones || []);
+
       if (resBodegas.error) fallos.push(["bodegas", resBodegas.error]);
       else setBodegas(resBodegas.bodegas || []);
 
@@ -193,6 +231,12 @@ export default function InventarioPage() {
 
       if (resLotes.error) fallos.push(["lotes", resLotes.error]);
       else setLotesRaw(resLotes.lotes || []);
+
+      // Sin cantidadDisponible por lote si esto falla: la tabla de Lotes sigue mostrando lo
+      // historico (cantidadIngresada) y la columna "Disponible" cae a 0 para todos, no se tapa
+      // la pestana entera por un dato que es un complemento del resto.
+      if (resExistencias.error) fallos.push(["existencias", resExistencias.error]);
+      else setExistenciasRaw(resExistencias.existencias || []);
 
       // Aparte del Promise.all: es una consulta distinta (RPC, no una tabla) y solo administracion
       // y los roles consultivos la reciben. Un rol sin acceso no la dispara siquiera -la funcion
@@ -218,7 +262,7 @@ export default function InventarioPage() {
           console.error(`Error cargando ${recurso}:`, fallo.detalle);
         }
 
-        // Un solo mensaje para todos: en la practica los cinco fallan por la misma causa -red
+        // Un solo mensaje para todos: en la practica todos fallan por la misma causa -red
         // caida, sesion expirada- y `mensaje` ya es el texto que se le ensena a una persona.
         const recursos = fallos.map(([recurso]) => recurso).join(", ");
         setError(`No se pudo cargar: ${recursos}. ${fallos[0][1].mensaje ?? ""}`.trim());
@@ -239,9 +283,10 @@ export default function InventarioPage() {
     setModoEdicion(false);
     setFormData({
       nombre: "",
+      tipoArticulo: TIPOS_DE_ARTICULO.MEDICAMENTO,
       principio_activo_id: "",
       concentracion: "",
-      presentacion: "",
+      presentacionId: "",
       marca: "",
       formaFarmaceutica: "",
     });
@@ -255,11 +300,12 @@ export default function InventarioPage() {
     setFormData({
       id: item.id,
       nombre: item.nombre || "",
+      tipoArticulo: item.tipoArticulo || TIPOS_DE_ARTICULO.MEDICAMENTO,
       // listarMedicamentos() no trae la relacion con principios_activos: se llena abajo, en
       // cuanto listarPrincipiosDeMedicamento() resuelva.
       principio_activo_id: "",
       concentracion: item.concentracion || "",
-      presentacion: item.presentacion || "",
+      presentacionId: item.presentacionId || "",
       marca: item.marca || "",
       formaFarmaceutica: item.formaFarmaceutica || item.forma_farmaceutica || "",
       esPediatrico: Boolean(item.esPediatrico),
@@ -284,22 +330,26 @@ export default function InventarioPage() {
     return { ok: true, principioActivo };
   };
 
-  const normalizarPresentacion = (valor) => {
-    if (!valor) return "";
-    return valor
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "");
+  const handleGuardarPresentacionNueva = async (_id, datos) => {
+    const { presentacion, error: errorPresentacion } = await registrarPresentacion(datos);
+    if (errorPresentacion) return { ok: false, error: errorPresentacion };
+
+    setPresentaciones((prev) => [...prev, presentacion]);
+    setFormData((prev) => ({ ...prev, presentacionId: presentacion.id }));
+    return { ok: true, presentacion };
   };
 
   const handleGuardarMedicamento = async () => {
     setErrorGuardarMedicamento(null);
+    // presentacionId (00144): se compara el id, no una etiqueta -- dos presentaciones podrian
+    // compartir texto parecido, pero el catalogo real las distingue por id, no por como se
+    // escriban.
     const duplicado = inventarioRaw.some(
       (item) =>
         item.id !== formData.id &&
         item.nombre?.toLowerCase() === formData.nombre?.toLowerCase() &&
         item.concentracion?.toLowerCase() === formData.concentracion?.toLowerCase() &&
-        item.presentacion?.toLowerCase() === formData.presentacion?.toLowerCase() &&
+        item.presentacionId === formData.presentacionId &&
         item.marca?.toLowerCase() === formData.marca?.toLowerCase(),
     );
     if (duplicado) {
@@ -311,8 +361,9 @@ export default function InventarioPage() {
       if (modoEdicion) {
         const { error: errorUpdate } = await actualizarMedicamento(formData.id, {
           nombre: formData.nombre.trim(),
+          tipoArticulo: formData.tipoArticulo,
           concentracion: formData.concentracion.trim(),
-          presentacion: normalizarPresentacion(formData.presentacion),
+          presentacionId: formData.presentacionId,
           marca: formData.marca.trim(),
           formaFarmaceutica: formData.formaFarmaceutica ? formData.formaFarmaceutica.trim() : null,
           esPediatrico: Boolean(formData.esPediatrico),
@@ -330,8 +381,9 @@ export default function InventarioPage() {
         }
         const payload = {
           nombre: formData.nombre.trim(),
+          tipoArticulo: formData.tipoArticulo,
           concentracion: formData.concentracion.trim(),
-          presentacion: normalizarPresentacion(formData.presentacion),
+          presentacionId: formData.presentacionId,
           marca: formData.marca.trim(),
           formaFarmaceutica: formData.formaFarmaceutica ? formData.formaFarmaceutica.trim() : null,
           esPediatrico: Boolean(formData.esPediatrico),
@@ -418,11 +470,35 @@ export default function InventarioPage() {
     return coincideTexto && coincideOrigen;
   });
 
+  // Lotes: cuanto queda hoy de cada lote, sumado en todas las bodegas. Reutiliza el mismo
+  // helper probado que arma la pantalla movil de existencias por lote (useExistenciasPorLote.js);
+  // sin bodegaId suma todas, igual que "Cantidad" (cantidadIngresada) tampoco distingue bodega.
+  const disponiblePorLote = useMemo(
+    () => sumarExistenciasPorLote(existenciasRaw),
+    [existenciasRaw],
+  );
+
   // Catalogo: filtros sobre los campos reales del modelo y resumen de lotes por medicamento.
-  const resumenDeLotes = useMemo(() => resumirLotesPorMedicamento(lotesRaw), [lotesRaw]);
+  // disponiblePorLote va aqui (no cantidadIngresada) por la misma razon que en la pestaña Lotes:
+  // es el stock que queda hoy, no el historico de entrada.
+  const resumenDeLotes = useMemo(
+    () => resumirLotesPorMedicamento(lotesRaw, disponiblePorLote),
+    [lotesRaw, disponiblePorLote],
+  );
   const medicamentosVisibles = useMemo(
     () => filtrarCatalogoMedicamentos(inventarioRaw, filtrosCatalogo, resumenDeLotes),
     [inventarioRaw, filtrosCatalogo, resumenDeLotes],
+  );
+
+  // Para el filtro de presentacion (opcionesDesde: "presentaciones", 00144) y para el Selector
+  // de ModalMedicamento: mismo catalogo cargado, sin volver a pedirlo.
+  const opcionesPresentacion = useMemo(
+    () =>
+      presentaciones.map((presentacion) => ({
+        value: presentacion.id,
+        label: presentacion.nombre,
+      })),
+    [presentaciones],
   );
 
   // Pestanas. Eran nueve <button> con un color de subrayado distinto cada una (#10b981, #f59e0b,
@@ -431,9 +507,8 @@ export default function InventarioPage() {
   // Rotulos cortos: con los largos ("Catalogo de medicamentos", "Kardex de movimientos") las
   // ocho pestanas no cabian en una fila y "Validacion" caia sola a una segunda linea.
   //
-  // ISSUE #864: cuales ve cada rol lo decide pestanasDeInventario(rol) en packages/shared, no
-  // esta pantalla. El medico se queda con Catalogo, Principios activos y Mis movimientos: veia
-  // las ocho, incluida Validacion con el contador de pendientes que no puede aprobar.
+  // Cuales ve cada rol lo decide pestanasDeInventario(rol) en packages/shared (issue #864,
+  // extendida por #859), no esta pantalla.
   const etiquetasDePestana = {
     catalogo: { label: "Catálogo" },
     lotes: { label: "Lotes" },
@@ -441,18 +516,17 @@ export default function InventarioPage() {
     kardex: { label: "Kardex" },
     administracion: { label: "Bodegas y proveedores" },
     "principios-activos": { label: "Principios activos" },
+    presentaciones: { label: "Presentaciones" },
     "mis-movimientos": { label: "Mis movimientos" },
     validacion: { label: "Validación", contador: conteo },
   };
 
-  const pestanas = pestanasDeInventario(rol)
-    .filter((id) => id !== "mis-movimientos" || puedeRegistrarMovimiento(rol))
-    .map((id) => ({ id, ...etiquetasDePestana[id] }));
+  const pestanas = pestanasDeInventario(rol).map((id) => ({ id, ...etiquetasDePestana[id] }));
 
-  // A `?tab=` se llega desde una notificacion, y una notificacion puede apuntar a una pestana
-  // que este rol ya no tiene -- la de validacion, sin ir mas lejos, que se la mandan al
-  // administrador--. Sin esto, la barra no marcaria ninguna pestana como activa y debajo se
-  // dibujaria igual el contenido de una que el rol no deberia abrir.
+  // A ?tab= se llega desde una notificacion, y puede apuntar a una pestana que este rol ya no
+  // tiene -la de validacion, sin ir mas lejos, que se la mandan al administrador-. Sin esto la
+  // barra no marcaria ninguna pestana como activa y debajo se dibujaria igual el contenido de una
+  // que el rol no deberia abrir.
   const pestanaVisible = pestanas.some((pestana) => pestana.id === tabActiva)
     ? tabActiva
     : (pestanas[0]?.id ?? "catalogo");
@@ -461,20 +535,19 @@ export default function InventarioPage() {
   // hexadecimales fuera de la paleta- y el "+" escrito dentro del texto. Ahora son las acciones de
   // PageHeader, que pone el "+" sola y dibuja los botones del catalogo.
   //
-  // ISSUE #864: estaban las cuatro detras de `esAdmin`, y el criterio 6 dice que el medico
-  // "puede registrar ingresos, salidas y medicamentos nuevos". Pasan a sus permisos reales:
-  //
-  // - Registrar ingreso y salida -> puedeRegistrarMovimiento(rol). Es lo que la base ya permitia
-  //   desde la 00034 (medico y voluntario insertan movimientos, que nacen `pendiente` hasta que
-  //   la administracion los verifique) y lo que la app movil ya ofrecia a los dos por
-  //   ROLES_QUE_REGISTRAN_MOVIMIENTOS. La web era la unica de las tres capas que no.
-  // - Nuevo medicamento -> puedeDarDeAltaMedicamento(rol), abierto a medico por la 00141.
+  // "Registrar ingreso"/"Registrar salida" se gateaban con esAdmin: medico y voluntario -que
+  // permisos.js (puedeRegistrarMovimiento) y la politica de INSERT (00034) SI dejan registrar un
+  // movimiento, solo que nace 'pendiente' en vez de autoaprobado- no tenian boton en toda la web
+  // para abrir ninguno de los dos modales. RLS los habria dejado insertar iguales -por eso
+  // "Mis movimientos" ya existia para ellos-, pero sin el boton no habia como llegar ahi. Reportado
+  // como "no puedo registrar una salida en inventario". "Nuevo medicamento" usa
+  // puedeDarDeAltaMedicamento(rol): administrador y medico (00141, issue #864).
   const tabsSinAccionesDeCabecera = ["validacion", "administracion", "kardex"];
-  const puedeRegistrarMovimientos = puedeRegistrarMovimiento(rol);
+  const puedeRegistrar = puedeRegistrarMovimiento(rol);
   const accionesCabecera = tabsSinAccionesDeCabecera.includes(pestanaVisible)
     ? []
     : [
-        ...(puedeRegistrarMovimientos
+        ...(puedeRegistrar
           ? [
               {
                 label: "Registrar ingreso",
@@ -496,6 +569,16 @@ export default function InventarioPage() {
         // -que crea el lote y el movimiento a la vez- ya esta arriba en esta misma barra. Un
         // boton que parece dar de alta existencias y no las da es peor que no tenerlo.
       ];
+
+  // Un no-admin puede llegar a ?tab=validacion desde el enlace de una notificacion del buzon
+  // (issue #755) sin saber que esa pestana ya no es la suya: en vez de pantalla vacia o error, se
+  // le manda en silencio al catalogo -la misma pestana por defecto a la que ya cae cualquier
+  // ?tab= desconocido en pestanaDeEnlace(), arriba-.
+  useEffect(() => {
+    if (tabActiva === "validacion" && !esAdmin) {
+      setTabActiva("catalogo");
+    }
+  }, [tabActiva, esAdmin]);
 
   return (
     <ScreenContainer
@@ -554,7 +637,7 @@ export default function InventarioPage() {
             <StatCard
               label="Por vencer"
               value={alertasCriticas.length}
-              caption="&le; 60 dias"
+              caption="alertas pendientes"
               accent="var(--color-warning)"
             />
             <StatCard
@@ -591,9 +674,8 @@ export default function InventarioPage() {
               <ul className="mb-0 ps-3">
                 {alertasCriticas.map((item) => (
                   <li key={item.id}>
-                    {/* item viene de aLote() (lotes.api.js) via useGestionLotes: medicamento ya
-                        es el nombre (una cadena), y el numero de lote es numeroLote, no
-                        numero_lote/lote. */}
+                    {/* item viene de aAlerta() (alertas.api.js) via useAlertasVencimiento: solo
+                        alertas pendientes de verdad, no lotes por fecha. */}
                     <strong>{item.medicamento}</strong> · lote{" "}
                     <span className="ec-mono">{item.numeroLote}</span> · vence en{" "}
                     {item.diasRestantes} dias
@@ -609,6 +691,7 @@ export default function InventarioPage() {
           <FilterBar
             campos={FILTROS_CATALOGO_MEDICAMENTOS}
             valores={filtrosCatalogo}
+            catalogos={{ presentaciones: opcionesPresentacion }}
             onChange={(id, valor) => setFiltrosCatalogo((previos) => ({ ...previos, [id]: valor }))}
             onLimpiar={() => setFiltrosCatalogo(FILTROS_CATALOGO_VACIOS)}
             hayFiltros={hayFiltrosDeCatalogo(filtrosCatalogo)}
@@ -625,11 +708,13 @@ export default function InventarioPage() {
               <thead>
                 <tr>
                   <th>Medicamento</th>
+                  <th>Tipo</th>
                   <th>Concentracion</th>
                   <th>Presentacion</th>
                   <th>Marca</th>
                   <th>Uso</th>
                   <th className="text-end">Lotes</th>
+                  <th className="text-end">Disponible</th>
                   <th>Proximo vencimiento</th>
                   <th>Estado</th>
                   {esAdmin && <th className="text-end">Acciones</th>}
@@ -638,13 +723,19 @@ export default function InventarioPage() {
               <tbody>
                 {cargando ? (
                   <tr>
-                    <td colSpan={esAdmin ? 9 : 8} className="text-center text-body-secondary py-4">
+                    <td
+                      colSpan={esAdmin ? 11 : 10}
+                      className="text-center text-body-secondary py-4"
+                    >
                       Cargando el catalogo...
                     </td>
                   </tr>
                 ) : medicamentosVisibles.length === 0 ? (
                   <tr>
-                    <td colSpan={esAdmin ? 9 : 8} className="text-center text-body-secondary py-4">
+                    <td
+                      colSpan={esAdmin ? 11 : 10}
+                      className="text-center text-body-secondary py-4"
+                    >
                       {inventarioRaw.length === 0
                         ? "Todavia no hay medicamentos en el catalogo."
                         : "Ningun medicamento coincide con estos filtros."}
@@ -663,8 +754,11 @@ export default function InventarioPage() {
                             </span>
                           )}
                         </td>
+                        <td>{ETIQUETAS_TIPO_ARTICULO[item.tipoArticulo] ?? item.tipoArticulo}</td>
                         <td>{item.concentracion}</td>
-                        <td>{ETIQUETAS_PRESENTACION[item.presentacion] ?? item.presentacion}</td>
+                        {/* item.presentacion ya es la etiqueta resuelta (presentaciones.nombre,
+                            00144), no un valor de enum que traducir. */}
+                        <td>{item.presentacion}</td>
                         <td>{item.marca}</td>
                         <td>
                           <span
@@ -686,6 +780,7 @@ export default function InventarioPage() {
                             </span>
                           )}
                         </td>
+                        <td className="text-end">{lotes?.disponible ?? 0}</td>
                         <td>
                           {lotes?.proximoVencimiento ? (
                             <>
@@ -777,8 +872,10 @@ export default function InventarioPage() {
                   <th>Medicamento</th>
                   <th>Lote</th>
                   <th>Origen</th>
-                  <th className="text-end">Cantidad</th>
+                  <th className="text-end">Ingresada</th>
+                  <th className="text-end">Disponible</th>
                   <th className="text-end">Costo unitario</th>
+                  <th className="text-end">Total</th>
                   <th>Vencimiento</th>
                   <th>Estado</th>
                   <th className="text-end">Acción</th>
@@ -787,7 +884,7 @@ export default function InventarioPage() {
               <tbody>
                 {lotesFiltrados.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="text-center text-body-secondary py-4">
+                    <td colSpan={10} className="text-center text-body-secondary py-4">
                       {lotesRaw.length === 0
                         ? "Todavia no hay lotes registrados."
                         : "Ningun lote coincide con estos filtros."}
@@ -804,6 +901,7 @@ export default function InventarioPage() {
                         <td className="ec-mono">{lote.numeroLote}</td>
                         <td>{ETIQUETAS_ORIGEN_LOTE[lote.origen] ?? lote.origen}</td>
                         <td className="text-end">{lote.cantidadIngresada}</td>
+                        <td className="text-end">{disponiblePorLote.get(lote.id) ?? 0}</td>
                         <td className="text-end">
                           {enCorreccion ? (
                             <Form.Control
@@ -821,6 +919,17 @@ export default function InventarioPage() {
                           ) : (
                             (formatearMoneda(lote.costoUnitario) ?? "Sin registrar")
                           )}
+                        </td>
+                        <td className="text-end">
+                          {/* Costo unitario x stock DISPONIBLE (no cantidadIngresada): un lote
+                              con salidas ya aplicadas o parcialmente vencido no vale lo mismo
+                              que el dia que entro. Sin costo registrado (null) el total es
+                              desconocido, no cero -- mismo criterio que "Sin registrar" arriba. */}
+                          {lote.costoUnitario === null
+                            ? "—"
+                            : formatearMoneda(
+                                lote.costoUnitario * (disponiblePorLote.get(lote.id) ?? 0),
+                              )}
                         </td>
                         <td>
                           {lote.fechaVencimiento
@@ -889,6 +998,9 @@ export default function InventarioPage() {
       {/* Pestaña: Principios Activos */}
       {pestanaVisible === "principios-activos" && <CatalogoPrincipiosActivosPage />}
 
+      {/* Pestaña: Presentaciones */}
+      {pestanaVisible === "presentaciones" && <CatalogoPresentacionesPage />}
+
       {/* Pestaña: Mis Movimientos */}
       {pestanaVisible === "mis-movimientos" && <MisMovimientosPage />}
 
@@ -901,11 +1013,13 @@ export default function InventarioPage() {
           formData={formData}
           setFormData={setFormData}
           principiosActivos={principiosActivos}
+          presentaciones={presentaciones}
           advertenciaDuplicado={advertenciaDuplicado}
           error={errorGuardarMedicamento}
           onSubmit={handleGuardarMedicamento}
           onClose={() => setModalAbierto(false)}
           onCrearPrincipioActivo={() => setModalPrincipioActivoAbierto(true)}
+          onCrearPresentacion={() => setModalPresentacionAbierto(true)}
           onAlternarActivo={handleAlternarActivoMedicamento}
         />
       )}
@@ -920,12 +1034,30 @@ export default function InventarioPage() {
         />
       )}
 
-      <ModalSalidaMedicamento
-        abierto={modalSalidaAbierto}
-        onClose={() => setModalSalidaAbierto(false)}
-        medicamentos={inventarioRaw}
-        usuarioId={usuarioActual?.id}
-      />
+      {modalPresentacionAbierto && (
+        <ModalPresentacion
+          visible
+          presentacion={null}
+          onClose={() => setModalPresentacionAbierto(false)}
+          onGuardar={handleGuardarPresentacionNueva}
+          onEliminar={async () => ({ ok: false })}
+        />
+      )}
+
+      {/* Montado solo mientras esta abierto (igual que ModalRegistroIngreso, abajo): estaba
+          montado siempre, con el propio componente devolviendo null cuando abierto=false, asi
+          que el estado de useRegistroSalida (motivo, medicamento, lote, cantidad) sobrevivia al
+          cierre y la siguiente salida arrancaba con los datos de la anterior en vez de en blanco
+          (issue #859). Montar y desmontar de nuevo es lo que reinicia ese estado. */}
+      {modalSalidaAbierto && (
+        <ModalSalidaMedicamento
+          abierto={modalSalidaAbierto}
+          onClose={() => setModalSalidaAbierto(false)}
+          onExito={cargarDatos}
+          medicamentos={inventarioRaw}
+          usuarioId={usuarioActual?.id}
+        />
+      )}
 
       {modalRegistroIngresoAbierto && (
         <ModalRegistroIngreso

@@ -116,7 +116,8 @@ const ATENCION = {
               medicamento: {
                 nombre: "Amoxicilina",
                 concentracion: "500 mg",
-                presentacion: "capsula",
+                // presentacion:presentaciones(nombre) en el select real llega anidada (00144).
+                presentacion: { nombre: "Cápsula" },
               },
             },
           ],

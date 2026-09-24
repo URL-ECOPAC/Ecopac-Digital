@@ -29,9 +29,11 @@ UPDATE perfiles SET rol = 'socio fundador' WHERE id = '00000000-0000-0000-0000-0
 
 ALTER TABLE perfiles ENABLE TRIGGER USER;
 
-INSERT INTO medicamentos (id, nombre, concentracion, presentacion, marca) VALUES
-  ('70000000-0000-0000-0000-000000075201', 'Medicamento con costo 752', '500 mg', 'tableta', 'Generico'),
-  ('70000000-0000-0000-0000-000000075202', 'Medicamento sin costo 752', '250 mg', 'tableta', 'Generico');
+INSERT INTO medicamentos (id, nombre, concentracion, presentacion_id, marca) VALUES
+  ('70000000-0000-0000-0000-000000075201', 'Medicamento con costo 752', '500 mg',
+   (SELECT id FROM presentaciones WHERE nombre = 'Tableta'), 'Generico'),
+  ('70000000-0000-0000-0000-000000075202', 'Medicamento sin costo 752', '250 mg',
+   (SELECT id FROM presentaciones WHERE nombre = 'Tableta'), 'Generico');
 
 INSERT INTO proveedores (id, nombre, tipo)
 VALUES ('71000000-0000-0000-0000-000000075201', 'Proveedor prueba 752', 'comercial');

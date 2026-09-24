@@ -18,6 +18,10 @@ const ALERTA_POR_VENCER = {
   medicamento: "Loratadina",
   numeroLote: "LOTE-1",
   cantidadAfectada: 40,
+  // cantidadDisponible es lo que de verdad queda hoy en el lote (issue #859): la pantalla arma
+  // el total a repartir sobre este campo, no sobre cantidadAfectada (la instantanea congelada al
+  // generar la alerta). En estas pruebas coinciden porque no hay ninguna salida de por medio.
+  cantidadDisponible: 40,
   fechaVencimiento: "2026-02-01",
   diasRestantes: 15,
 };
@@ -27,6 +31,7 @@ const ALERTA_VENCIDA = {
   medicamento: "Acetaminofen",
   numeroLote: "LOTE-2",
   cantidadAfectada: 20,
+  cantidadDisponible: 20,
   fechaVencimiento: "2026-01-01",
   diasRestantes: -5,
 };
@@ -133,7 +138,7 @@ describe("PanelAlertasVencimiento", () => {
     expect(screen.getByText("Confirmar")).toBeDisabled();
   });
 
-  it("con una accion elegida y confirmada, llama a marcarComoAtendida() y cierra el modal", async () => {
+  it("con una accion que cubre todo lo disponible, llama a marcarComoAtendida() y cierra el modal", async () => {
     mockEstadoHook.porVencer = [ALERTA_POR_VENCER];
     pantalla();
 
@@ -141,12 +146,49 @@ describe("PanelAlertasVencimiento", () => {
     fireEvent.change(screen.getAllByRole("combobox").at(-1), {
       target: { value: "descartado" },
     });
+    fireEvent.change(screen.getByLabelText("Cantidad *"), { target: { value: "40" } });
+    fireEvent.click(screen.getByText("Agregar acción"));
     fireEvent.click(screen.getByText("Confirmar"));
 
-    expect(mockEstadoHook.marcarComoAtendida).toHaveBeenCalledWith("a-1", "descartado", undefined);
+    expect(mockEstadoHook.marcarComoAtendida).toHaveBeenCalledWith(
+      "a-1",
+      [expect.objectContaining({ accion: "descartado", cantidad: 40 })],
+      40,
+    );
     // El hook decide si la alerta desaparece de porVencer; esta pantalla solo cierra su modal.
     await waitFor(() =>
       expect(screen.queryByText("Registrar Acción Tomada")).not.toBeInTheDocument(),
+    );
+  });
+
+  // PLAN.md punto 5 (00143): una alerta se puede repartir en varias acciones que sumen el total.
+  it("dos acciones que juntas cubren el total tambien se pueden confirmar", async () => {
+    mockEstadoHook.porVencer = [ALERTA_POR_VENCER];
+    pantalla();
+
+    fireEvent.click(screen.getByText("Atender"));
+
+    fireEvent.change(screen.getAllByRole("combobox").at(-1), { target: { value: "donado" } });
+    fireEvent.change(screen.getByLabelText("Cantidad *"), { target: { value: "10" } });
+    fireEvent.click(screen.getByText("Agregar acción"));
+
+    expect(screen.getByText("Faltan 30 de 40 unidades por asignar.")).toBeInTheDocument();
+    expect(screen.getByText("Confirmar")).toBeDisabled();
+
+    fireEvent.change(screen.getAllByRole("combobox").at(-1), { target: { value: "descartado" } });
+    fireEvent.change(screen.getByLabelText("Cantidad *"), { target: { value: "30" } });
+    fireEvent.click(screen.getByText("Agregar acción"));
+
+    expect(screen.getByText("Todas las unidades quedaron asignadas.")).toBeInTheDocument();
+    fireEvent.click(screen.getByText("Confirmar"));
+
+    expect(mockEstadoHook.marcarComoAtendida).toHaveBeenCalledWith(
+      "a-1",
+      [
+        expect.objectContaining({ accion: "donado", cantidad: 10 }),
+        expect.objectContaining({ accion: "descartado", cantidad: 30 }),
+      ],
+      40,
     );
   });
 
@@ -161,6 +203,8 @@ describe("PanelAlertasVencimiento", () => {
 
     fireEvent.click(screen.getByText("Atender"));
     fireEvent.change(screen.getAllByRole("combobox").at(-1), { target: { value: "descartado" } });
+    fireEvent.change(screen.getByLabelText("Cantidad *"), { target: { value: "40" } });
+    fireEvent.click(screen.getByText("Agregar acción"));
     fireEvent.click(screen.getByText("Confirmar"));
 
     expect(await screen.findByText("No se pudo registrar la accion.")).toBeInTheDocument();
@@ -196,14 +240,15 @@ describe("PanelAlertasVencimiento", () => {
   });
 
   // Issue #755: atender mueve o da de baja el stock, y se dice antes de confirmar.
-  it("al elegir descartado, avisa que se dan de baja las unidades del lote", () => {
+  it("al elegir descartado y una cantidad, avisa que se dan de baja las unidades", () => {
     mockEstadoHook.porVencer = [ALERTA_POR_VENCER];
     pantalla();
 
     fireEvent.click(screen.getByText("Atender"));
     fireEvent.change(screen.getAllByRole("combobox").at(-1), { target: { value: "descartado" } });
+    fireEvent.change(screen.getByLabelText("Cantidad *"), { target: { value: "40" } });
 
-    expect(screen.getByText(/Se dan de baja las 40 unidades del lote/)).toBeInTheDocument();
+    expect(screen.getByText(/Se dan de baja 40 unidades del lote/)).toBeInTheDocument();
   });
 
   it("reubicar exige elegir la bodega destino y la manda al hook", async () => {
@@ -212,13 +257,19 @@ describe("PanelAlertasVencimiento", () => {
 
     fireEvent.click(screen.getByText("Atender"));
     fireEvent.change(screen.getAllByRole("combobox").at(-1), { target: { value: "reubicado" } });
+    fireEvent.change(screen.getByLabelText("Cantidad *"), { target: { value: "40" } });
 
-    expect(screen.getByText("Confirmar")).toBeDisabled();
+    expect(screen.getByText("Agregar acción")).toBeDisabled();
 
     fireEvent.change(screen.getAllByRole("combobox").at(-1), { target: { value: "b-1" } });
+    fireEvent.click(screen.getByText("Agregar acción"));
     fireEvent.click(screen.getByText("Confirmar"));
 
-    expect(mockEstadoHook.marcarComoAtendida).toHaveBeenCalledWith("a-1", "reubicado", "b-1");
+    expect(mockEstadoHook.marcarComoAtendida).toHaveBeenCalledWith(
+      "a-1",
+      [expect.objectContaining({ accion: "reubicado", cantidad: 40, bodegaDestinoId: "b-1" })],
+      40,
+    );
   });
 
   it("un lote vencido no ofrece reubicar", () => {

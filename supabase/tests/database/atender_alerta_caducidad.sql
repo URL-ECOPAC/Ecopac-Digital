@@ -28,8 +28,9 @@ INSERT INTO bodegas (id, nombre, es_movil) VALUES
   ('c1000000-0000-0000-0000-000000000002', 'Bodega otra 755', FALSE),
   ('c1000000-0000-0000-0000-000000000003', 'Bodega destino 755', FALSE);
 
-INSERT INTO medicamentos (id, nombre, concentracion, presentacion, marca) VALUES
-  ('c2000000-0000-0000-0000-000000000001', 'Medicamento 755b', '100 mg', 'tableta', 'Generico');
+INSERT INTO medicamentos (id, nombre, concentracion, presentacion_id, marca) VALUES
+  ('c2000000-0000-0000-0000-000000000001', 'Medicamento 755b', '100 mg',
+   (SELECT id FROM presentaciones WHERE nombre = 'Tableta'), 'Generico');
 
 INSERT INTO proveedores (id, nombre, tipo) VALUES
   ('c3000000-0000-0000-0000-000000000001', 'Proveedor 755b', 'comercial');
@@ -66,7 +67,7 @@ SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub', 'c0000000-0000-0000-0000-000000000002', TRUE);
 
 SELECT throws_ok(
-  format($$ SELECT fn_atender_alerta_caducidad(%L, 'descartado') $$,
+  format($$ SELECT fn_atender_alerta_caducidad(%L, '[{"accion":"descartado","cantidad":10}]'::jsonb) $$,
          pg_temp.alerta_pendiente('c4000000-0000-0000-0000-000000000001')),
   '42501',
   NULL,
@@ -89,7 +90,7 @@ SELECT set_config('request.jwt.claim.sub', 'c0000000-0000-0000-0000-000000000001
 -- 2. Descartar un vencido: baja de todo el lote
 -- ============================================================================
 SELECT lives_ok(
-  format($$ SELECT fn_atender_alerta_caducidad(%L, 'descartado') $$,
+  format($$ SELECT fn_atender_alerta_caducidad(%L, '[{"accion":"descartado","cantidad":10}]'::jsonb) $$,
          pg_temp.alerta_pendiente('c4000000-0000-0000-0000-000000000001')),
   'descartar un lote vencido no choca con la regla que impide ENTREGAR un vencido'
 );
@@ -168,7 +169,7 @@ SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub', 'c0000000-0000-0000-0000-000000000001', TRUE);
 
 SELECT throws_ok(
-  format($$ SELECT fn_atender_alerta_caducidad(%L, 'reubicado') $$,
+  format($$ SELECT fn_atender_alerta_caducidad(%L, '[{"accion":"reubicado","cantidad":9}]'::jsonb) $$,
          pg_temp.alerta_pendiente('c4000000-0000-0000-0000-000000000002')),
   '23502',
   NULL,
@@ -176,9 +177,12 @@ SELECT throws_ok(
 );
 
 SELECT lives_ok(
-  format($$ SELECT fn_atender_alerta_caducidad(%L, 'reubicado', %L) $$,
+  format($$ SELECT fn_atender_alerta_caducidad(%L, %L::jsonb) $$,
          pg_temp.alerta_pendiente('c4000000-0000-0000-0000-000000000002'),
-         'c1000000-0000-0000-0000-000000000003'),
+         jsonb_build_array(jsonb_build_object(
+           'accion', 'reubicado', 'cantidad', 9,
+           'bodegaDestinoId', 'c1000000-0000-0000-0000-000000000003'
+         ))::text),
   'reubicar un lote por vencer a una bodega destino'
 );
 
@@ -222,8 +226,8 @@ SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub', 'c0000000-0000-0000-0000-000000000001', TRUE);
 
 SELECT throws_ok(
-  $$ SELECT fn_atender_alerta_caducidad('c5000000-0000-0000-0000-000000000001', 'reubicado',
-       'c1000000-0000-0000-0000-000000000003') $$,
+  $$ SELECT fn_atender_alerta_caducidad('c5000000-0000-0000-0000-000000000001',
+       '[{"accion":"reubicado","cantidad":4,"bodegaDestinoId":"c1000000-0000-0000-0000-000000000003"}]'::jsonb) $$,
   '23514',
   NULL,
   'un lote vencido no se reubica: se descarta o se dona'

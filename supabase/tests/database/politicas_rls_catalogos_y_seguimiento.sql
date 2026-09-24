@@ -98,8 +98,9 @@ INSERT INTO padecimientos_cronicos (id, paciente_id, condicion_id, fecha_diagnos
 INSERT INTO principios_activos (id, nombre) VALUES
   ('73000000-0000-0000-0000-000000221001', 'Principio de prueba 221');
 
-INSERT INTO medicamentos (id, nombre, concentracion, presentacion, marca) VALUES
-  ('74000000-0000-0000-0000-000000221001', 'Medicamento 221', '500 mg', 'tableta', 'Generico');
+INSERT INTO medicamentos (id, nombre, concentracion, presentacion_id, marca) VALUES
+  ('74000000-0000-0000-0000-000000221001', 'Medicamento 221', '500 mg',
+   (SELECT id FROM presentaciones WHERE nombre = 'Tableta'), 'Generico');
 
 INSERT INTO medicamento_principio (medicamento_id, principio_id) VALUES
   ('74000000-0000-0000-0000-000000221001', '73000000-0000-0000-0000-000000221001');

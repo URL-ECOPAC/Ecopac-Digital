@@ -97,6 +97,7 @@ function filaDeAlerta(cambios = {}) {
       numeroLote: "L-001",
       fechaVencimiento: "2026-09-15",
       medicamento: { nombre: "Amoxicilina" },
+      existencias: [{ cantidadDisponible: 20 }],
     },
     ...cambios,
   };
@@ -123,6 +124,46 @@ describe("listarAlertas", () => {
       cantidadAfectada: 20,
     });
     expect(alertas[0].diasRestantes).not.toBeNull();
+  });
+
+  // Issue #859: cantidadAfectada queda congelada al generar la alerta y no baja si despues se
+  // registra una salida del lote por fuera de "Atender" -entrega, traslado, baja manual-, asi
+  // que la pantalla seguia mostrando (y ofreciendo repartir) un total que ya no existia.
+  // cantidadDisponible suma las existencias embebidas, la misma cuenta que hace el servidor en
+  // fn_atender_alerta_caducidad (00143).
+  it("cantidadDisponible suma las existencias vivas del lote, no cantidadAfectada", async () => {
+    dobles.cliente = crearCliente({
+      respuesta: {
+        data: [
+          filaDeAlerta({
+            cantidadAfectada: 20,
+            lote: {
+              ...filaDeAlerta().lote,
+              existencias: [{ cantidadDisponible: 5 }, { cantidadDisponible: 3 }],
+            },
+          }),
+        ],
+        error: null,
+      },
+    });
+
+    const { alertas } = await listarAlertas();
+
+    expect(alertas[0].cantidadAfectada).toBe(20);
+    expect(alertas[0].cantidadDisponible).toBe(8);
+  });
+
+  it("cantidadDisponible es 0 sin existencias vivas (lote ya agotado por una salida aparte)", async () => {
+    dobles.cliente = crearCliente({
+      respuesta: {
+        data: [filaDeAlerta({ lote: { ...filaDeAlerta().lote, existencias: [] } })],
+        error: null,
+      },
+    });
+
+    const { alertas } = await listarAlertas();
+
+    expect(alertas[0].cantidadDisponible).toBe(0);
   });
 
   it("solo pide alertas pendientes", async () => {
@@ -212,8 +253,9 @@ describe("historialAlertas", () => {
 describe("atenderAlerta", () => {
   it("solo administracion puede atender, sin llegar a la red", async () => {
     const { alerta, error } = await atenderAlerta("alerta-1", {
-      accion: "donado",
+      acciones: [{ accion: "donado", cantidad: 5 }],
       rolUsuario: "medico",
+      totalDisponible: 5,
     });
 
     expect(alerta).toBeNull();
@@ -223,8 +265,9 @@ describe("atenderAlerta", () => {
 
   it("exige una accion valida (una de ACCIONES_DE_ALERTA)", async () => {
     const { error } = await atenderAlerta("alerta-1", {
-      accion: "tirado a la basura",
+      acciones: [{ accion: "tirado a la basura", cantidad: 5 }],
       rolUsuario: "administrador",
+      totalDisponible: 5,
     });
 
     expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.CAMPO_REQUERIDO);
@@ -232,17 +275,31 @@ describe("atenderAlerta", () => {
 
   it("reubicar exige la bodega destino, sin llegar a la red", async () => {
     const { error } = await atenderAlerta("alerta-1", {
-      accion: "reubicado",
+      acciones: [{ accion: "reubicado", cantidad: 5 }],
       rolUsuario: "administrador",
+      totalDisponible: 5,
     });
 
     expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.CAMPO_REQUERIDO);
     expect(dobles.cliente).toBeNull();
   });
 
+  it("exige que la suma de las acciones sea exactamente el disponible, sin llegar a la red", async () => {
+    const { error } = await atenderAlerta("alerta-1", {
+      acciones: [{ accion: "descartado", cantidad: 4 }],
+      rolUsuario: "administrador",
+      totalDisponible: 5,
+    });
+
+    expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.CAMPO_REQUERIDO);
+    expect(error.detalle).toContain("exactamente");
+    expect(dobles.cliente).toBeNull();
+  });
+
   // Issue #755: atender era un UPDATE de la alerta y nada mas; el stock quedaba igual y el
   // generador la volvia a crear. Ahora pasa por fn_atender_alerta_caducidad, que da de baja o
-  // traslada el stock en la misma transaccion.
+  // traslada el stock en la misma transaccion. PLAN.md punto 5 (00143): p_acciones es una lista,
+  // no una sola accion sobre el total.
   it("atiende por fn_atender_alerta_caducidad y devuelve la alerta cerrada", async () => {
     const cliente = crearCliente({
       respuesta: {
@@ -253,9 +310,9 @@ describe("atenderAlerta", () => {
     dobles.cliente = cliente;
 
     const { alerta, error } = await atenderAlerta("alerta-1", {
-      accion: "descartado",
+      acciones: [{ accion: "descartado", cantidad: 10 }],
       rolUsuario: "administrador",
-      bodegaDestinoId: "no-se-usa",
+      totalDisponible: 10,
     });
 
     expect(error).toBeNull();
@@ -263,25 +320,50 @@ describe("atenderAlerta", () => {
     expect(cliente.llamadas).toContainEqual({
       paso: "rpc",
       nombre: "fn_atender_alerta_caducidad",
-      argumentos: { p_alerta_id: "alerta-1", p_accion: "descartado", p_bodega_destino_id: null },
+      argumentos: {
+        p_alerta_id: "alerta-1",
+        p_acciones: [{ accion: "descartado", cantidad: 10, bodegaDestinoId: null }],
+      },
     });
     expect(cliente.llamadas.some((l) => l.paso === "update")).toBe(false);
   });
 
-  it("reubicar manda la bodega destino a la funcion", async () => {
+  it("varias acciones que suman el disponible se mandan todas en la lista", async () => {
+    const cliente = crearCliente({
+      respuesta: { data: filaDeAlerta({ estado: "atendida", accion: null }), error: null },
+    });
+    dobles.cliente = cliente;
+
+    await atenderAlerta("alerta-1", {
+      acciones: [
+        { accion: "donado", cantidad: 6 },
+        { accion: "descartado", cantidad: 4 },
+      ],
+      rolUsuario: "administrador",
+      totalDisponible: 10,
+    });
+
+    const rpc = cliente.llamadas.find((l) => l.paso === "rpc");
+    expect(rpc.argumentos.p_acciones).toEqual([
+      { accion: "donado", cantidad: 6, bodegaDestinoId: null },
+      { accion: "descartado", cantidad: 4, bodegaDestinoId: null },
+    ]);
+  });
+
+  it("reubicar manda la bodega destino de esa accion a la funcion", async () => {
     const cliente = crearCliente({
       respuesta: { data: filaDeAlerta({ estado: "atendida", accion: "reubicado" }), error: null },
     });
     dobles.cliente = cliente;
 
     await atenderAlerta("alerta-1", {
-      accion: "reubicado",
+      acciones: [{ accion: "reubicado", cantidad: 10, bodegaDestinoId: "bodega-9" }],
       rolUsuario: "administrador",
-      bodegaDestinoId: "bodega-9",
+      totalDisponible: 10,
     });
 
     const rpc = cliente.llamadas.find((l) => l.paso === "rpc");
-    expect(rpc.argumentos.p_bodega_destino_id).toBe("bodega-9");
+    expect(rpc.argumentos.p_acciones[0].bodegaDestinoId).toBe("bodega-9");
   });
 
   it("si la base lo rechaza, devuelve el error", async () => {
@@ -290,9 +372,9 @@ describe("atenderAlerta", () => {
     });
 
     const { alerta, error } = await atenderAlerta("alerta-1", {
-      accion: "reubicado",
+      acciones: [{ accion: "reubicado", cantidad: 10, bodegaDestinoId: "bodega-9" }],
       rolUsuario: "administrador",
-      bodegaDestinoId: "bodega-9",
+      totalDisponible: 10,
     });
 
     expect(alerta).toBeNull();
@@ -324,7 +406,7 @@ describe("accionesPermitidasParaAlerta", () => {
 
 describe("efectoDeAccionSobreElStock", () => {
   it("dice cuantas unidades se dan de baja o se trasladan", () => {
-    expect(efectoDeAccionSobreElStock("descartado", 12)).toContain("dan de baja las 12 unidades");
+    expect(efectoDeAccionSobreElStock("descartado", 12)).toContain("dan de baja 12 unidades");
     expect(efectoDeAccionSobreElStock("reubicado", 12)).toContain("trasladan");
     expect(efectoDeAccionSobreElStock("", 12)).toBeNull();
   });

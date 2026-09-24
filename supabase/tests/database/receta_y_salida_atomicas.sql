@@ -76,9 +76,11 @@ INSERT INTO bodegas (id, nombre) VALUES
 INSERT INTO proveedores (id, nombre, tipo) VALUES
   ('80000000-0000-0000-0000-000000000711', 'Proveedor de prueba 711', 'comercial');
 
-INSERT INTO medicamentos (id, nombre, concentracion, presentacion, marca) VALUES
-  ('90000000-0000-0000-0000-000000000711', 'Medicamento A 711', '500mg', 'tableta', 'Generico'),
-  ('90000000-0000-0000-0000-000000000712', 'Medicamento B 711', '250mg', 'tableta', 'Generico');
+INSERT INTO medicamentos (id, nombre, concentracion, presentacion_id, marca) VALUES
+  ('90000000-0000-0000-0000-000000000711', 'Medicamento A 711', '500mg',
+   (SELECT id FROM presentaciones WHERE nombre = 'Tableta'), 'Generico'),
+  ('90000000-0000-0000-0000-000000000712', 'Medicamento B 711', '250mg',
+   (SELECT id FROM presentaciones WHERE nombre = 'Tableta'), 'Generico');
 
 -- Lote A con existencia de sobra; lote B con existencia deliberadamente corta.
 INSERT INTO lotes (id, medicamento_id, numero_lote, fecha_vencimiento, proveedor_id, origen, cantidad_ingresada)

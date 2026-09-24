@@ -1,4 +1,4 @@
-import { ETIQUETAS_PRESENTACION, PRESENTACIONES_DE_MEDICAMENTO } from "@ecopac/shared";
+import { ETIQUETAS_TIPO_ARTICULO, TIPOS_DE_ARTICULO } from "@ecopac/shared";
 import { Form } from "react-bootstrap";
 import { Plus, Save, X } from "lucide-react";
 
@@ -15,9 +15,9 @@ import TextField from "../components/TextField";
 // radio de 12px, botones en pastilla y un verde (#059669) que no es el de la marca, y no se cerraba
 // al tocar fuera. Ahora es el Modal del catalogo con los campos y botones de todos los demas
 // formularios; el contrato de props no cambia.
-const OPCIONES_PRESENTACION = Object.values(PRESENTACIONES_DE_MEDICAMENTO).map((valor) => ({
+const OPCIONES_TIPO_ARTICULO = Object.values(TIPOS_DE_ARTICULO).map((valor) => ({
   value: valor,
-  label: ETIQUETAS_PRESENTACION[valor],
+  label: ETIQUETAS_TIPO_ARTICULO[valor],
 }));
 
 export default function ModalMedicamento({
@@ -29,6 +29,8 @@ export default function ModalMedicamento({
   onSubmit,
   principiosActivos = [],
   onCrearPrincipioActivo,
+  presentaciones = [],
+  onCrearPresentacion,
   onAlternarActivo,
   advertenciaDuplicado,
   // Fallo al guardar, ya como texto apto para pantalla (normalizarError()).
@@ -44,6 +46,10 @@ export default function ModalMedicamento({
 
   const opcionesPrincipio = (Array.isArray(principiosActivos) ? principiosActivos : []).map(
     (principio) => ({ value: String(principio.id), label: principio.nombre }),
+  );
+
+  const opcionesPresentacion = (Array.isArray(presentaciones) ? presentaciones : []).map(
+    (presentacion) => ({ value: String(presentacion.id), label: presentacion.nombre }),
   );
 
   return (
@@ -77,6 +83,15 @@ export default function ModalMedicamento({
               placeholder="Ej. Dolo Neurobion, Amoxicilina"
               value={formData.nombre || ""}
               onChange={(e) => setCampo("nombre", e.target.value)}
+              disabled={cargando}
+            />
+
+            <Selector
+              label="Tipo de artículo *"
+              value={formData.tipoArticulo || null}
+              options={OPCIONES_TIPO_ARTICULO}
+              onSelect={(valor) => setCampo("tipoArticulo", valor ?? "")}
+              placeholder="Selecciona un tipo"
               disabled={cargando}
             />
 
@@ -127,14 +142,28 @@ export default function ModalMedicamento({
               onChange={(e) => setCampo("concentracion", e.target.value)}
               disabled={cargando}
             />
-            <Selector
-              label="Presentación *"
-              value={formData.presentacion || null}
-              options={OPCIONES_PRESENTACION}
-              onSelect={(valor) => setCampo("presentacion", valor ?? "")}
-              placeholder="Selecciona una presentación"
-              disabled={cargando}
-            />
+            <div>
+              <Selector
+                label="Presentación *"
+                value={formData.presentacionId ? String(formData.presentacionId) : null}
+                options={opcionesPresentacion}
+                onSelect={(valor) => setCampo("presentacionId", valor ?? "")}
+                placeholder="Selecciona una presentación"
+                disabled={cargando}
+                style={{ marginBottom: onCrearPresentacion ? "var(--spacing-xs)" : undefined }}
+              />
+              {onCrearPresentacion && (
+                <div className="mb-3">
+                  <SecondaryButton
+                    title="Crear una presentación"
+                    size="sm"
+                    icon={<Plus size={14} aria-hidden="true" />}
+                    onClick={onCrearPresentacion}
+                    disabled={cargando}
+                  />
+                </div>
+              )}
+            </div>
             <TextField
               label="Marca / laboratorio *"
               placeholder="Ej. Bayer"

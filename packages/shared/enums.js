@@ -179,26 +179,23 @@ export const ETIQUETAS_ACCION_ALERTA = Object.freeze({
   [ACCIONES_DE_ALERTA.DESCARTADO]: "Descartado",
 });
 
-/** `presentacion_medicamento` (00001_initial_schema.sql). */
-export const PRESENTACIONES_DE_MEDICAMENTO = Object.freeze({
-  TABLETA: "tableta",
-  JARABE: "jarabe",
-  CAPSULA: "capsula",
-  INYECTABLE: "inyectable",
-  POMADA: "pomada",
-  GOTAS_OFTALMICAS: "gotas ophthalmic",
-  GOTAS_OTICAS: "gotas otic",
+// PRESENTACIONES_DE_MEDICAMENTO / ETIQUETAS_PRESENTACION (presentacion_medicamento,
+// 00001_initial_schema.sql) vivieron aqui hasta la 00144_presentaciones_catalogo.sql: ese enum
+// se reemplazo por la tabla `presentaciones` (catalogo administrable, PLAN.md punto 11), asi que
+// dejaron de corresponder a nada en la base -- LA BASE DE DATOS MANDA, ver el encabezado de este
+// archivo. Quien necesite las opciones de presentacion las pide con
+// listarPresentaciones()/useCatalogoMedicamentos() (inventario/presentaciones.api.js), como
+// cualquier otro catalogo cargado (principiosActivos, bodegas...), no como un enum fijo.
+
+/** `tipo_articulo` (00142_tipo_articulo_de_medicamento.sql). */
+export const TIPOS_DE_ARTICULO = Object.freeze({
+  MEDICAMENTO: "medicamento",
+  INSUMO: "insumo",
 });
 
-export const ETIQUETAS_PRESENTACION = Object.freeze({
-  [PRESENTACIONES_DE_MEDICAMENTO.TABLETA]: "Tableta",
-  [PRESENTACIONES_DE_MEDICAMENTO.JARABE]: "Jarabe",
-  [PRESENTACIONES_DE_MEDICAMENTO.CAPSULA]: "Capsula",
-  [PRESENTACIONES_DE_MEDICAMENTO.INYECTABLE]: "Inyectable",
-  [PRESENTACIONES_DE_MEDICAMENTO.POMADA]: "Pomada",
-  // El valor del enum esta en ingles y la etiqueta en espanol: no se corrige el enum, se traduce.
-  [PRESENTACIONES_DE_MEDICAMENTO.GOTAS_OFTALMICAS]: "Gotas oftalmicas",
-  [PRESENTACIONES_DE_MEDICAMENTO.GOTAS_OTICAS]: "Gotas oticas",
+export const ETIQUETAS_TIPO_ARTICULO = Object.freeze({
+  [TIPOS_DE_ARTICULO.MEDICAMENTO]: "Medicamento",
+  [TIPOS_DE_ARTICULO.INSUMO]: "Insumo",
 });
 
 /** `origen_lote` (00020_lotes_existencias.sql). */

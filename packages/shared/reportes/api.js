@@ -28,6 +28,7 @@
 import { obtenerSupabase } from "../api/cliente.js";
 import { normalizarError } from "../api/errores-de-supabase.js";
 import { obtenerTodasLasFilas } from "../api/paginacion.js";
+import { aCadenaFechaLocal, diasHastaVencimiento } from "../formato/fechas.js";
 import { puedeVerIndicadoresDeImpacto } from "./permisos.js";
 
 // Reexportar funciones de permisos para mantener la interfaz unificada
@@ -245,12 +246,98 @@ export async function obtenerIndicadoresImpacto({
   }
 }
 
-// El reporte de medicamentos proximos a vencer NO vive aqui: es obtenerReporteDeVencimientos()
-// en vencimientos.api.js.
-//
-// Aqui estuvo listarLotesPorVencer(), que hacia lo mismo peor y era la que la pantalla usaba:
-// consultaba `lotes` con un `await` directo, sin obtenerTodasLasFilas(), asi que pasadas las
-// 1000 filas de max_rows PostgREST cortaba la respuesta sin error y el total de unidades en
-// riesgo -sumado en JavaScript sobre esas filas- mentia en silencio. Es el bug #773, que el
-// resto del modulo ya habia corregido. Se borra en la issue #862 en vez de arreglarla: tener
-// dos implementaciones del mismo reporte fue justo lo que dejo la buena sin usar durante meses.
+// ──────────────────────────────────────────────────────────────────────────────
+// REPORTE DE MEDICAMENTOS PRÓXIMOS A VENCER (issue #213)
+// ──────────────────────────────────────────────────────────────────────────────
+
+// Un lote con sus existencias por bodega. `existencias` es el stock vivo (00020, 00047); la cantidad
+// que entro al lote (`cantidad_ingresada`) no dice cuanto queda.
+const COLUMNAS_LOTES_POR_VENCER = [
+  "id",
+  "numero_lote",
+  "fecha_vencimiento",
+  "medicamento_id",
+  "medicamentos!inner(nombre, concentracion, presentacion:presentaciones(nombre))",
+  "existencias(cantidad_disponible, bodega_id, bodega:bodegas(nombre))",
+].join(", ");
+
+/**
+ * Lotes que vencen entre hoy y `horizonteDias`, con las unidades que quedan de cada uno.
+ *
+ * QUE ESTABA MAL, y por que el reporte decia "Ningun lote vence" mientras la pestana de alertas
+ * mostraba uno:
+ *
+ *   - La cantidad era la cadena "—" ("columna por confirmar nombre"), asi que el total en riesgo
+ *     salia NaN o cero; la bodega, igual.
+ *   - Hoy y la fecha limite se calculaban con toISOString(), en UTC: de noche el rango empezaba
+ *     manana y un lote que vence hoy quedaba fuera. Los dias restantes, con new Date("AAAA-MM-DD"),
+ *     llegaban adelantados un dia.
+ *   - Los filtros de bodega y comunidad estaban comentados: elegir uno no hacia nada.
+ *   - Y la causa principal, del lado de la pantalla: el hook se llamaba sin el rol, asi que su
+ *     permiso salia falso y nunca consultaba (ver ReportesPage.jsx).
+ *
+ * El filtro de comunidad se retira: `bodegas` no tiene comunidad (00017) y un lote no vive en
+ * ninguna, asi que no hay forma honesta de responderlo.
+ *
+ * @param {object} opciones
+ * @param {number} [opciones.horizonteDias] Dias hacia adelante (30 por defecto).
+ * @param {string} [opciones.bodega] UUID de bodega, o undefined para todas.
+ * @param {Date} [opciones.hoy] Solo para pruebas.
+ * @returns {Promise<{ lotes: Array, error: object|null }>}
+ */
+export async function listarLotesPorVencer({ horizonteDias, bodega, hoy = new Date() } = {}) {
+  try {
+    const inicio = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
+    // Clona inicio en vez de aFechaLocal(inicio) -que devolveria la MISMA referencia- porque a
+    // continuacion se muta con setDate: mutar inicio directamente correria tambien el limite de
+    // busqueda inferior.
+    // eslint-disable-next-line no-restricted-syntax -- clona para mutar sin afectar el parametro
+    const limite = new Date(inicio);
+    limite.setDate(inicio.getDate() + (horizonteDias ?? 30));
+
+    const { data, error } = await obtenerSupabase()
+      .from("lotes")
+      .select(COLUMNAS_LOTES_POR_VENCER)
+      .gte("fecha_vencimiento", aCadenaFechaLocal(inicio))
+      .lte("fecha_vencimiento", aCadenaFechaLocal(limite))
+      .order("fecha_vencimiento", { ascending: true });
+
+    if (error) throw error;
+
+    const lotes = (data ?? [])
+      .map((fila) => {
+        const existencias = (fila.existencias ?? []).filter(
+          (existencia) => !bodega || existencia.bodega_id === bodega,
+        );
+        const cantidad = existencias.reduce(
+          (suma, existencia) => suma + Number(existencia.cantidad_disponible || 0),
+          0,
+        );
+        const bodegas = [
+          ...new Set(existencias.map((existencia) => existencia.bodega?.nombre).filter(Boolean)),
+        ];
+
+        return {
+          id: fila.id,
+          lote: fila.numero_lote,
+          numero_lote: fila.numero_lote,
+          medicamento: fila.medicamentos?.nombre || "—",
+          concentracion: fila.medicamentos?.concentracion || "",
+          // presentacion:presentaciones(nombre) en el select llega anidado (00144).
+          presentacion: fila.medicamentos?.presentacion?.nombre || "",
+          fecha_vencimiento: fila.fecha_vencimiento,
+          vencimiento: fila.fecha_vencimiento,
+          dias_restantes: diasHastaVencimiento(fila.fecha_vencimiento, inicio) ?? 0,
+          cantidad,
+          bodega: bodegas.join(", ") || null,
+          tieneExistenciaEnBodega: existencias.length > 0,
+        };
+      })
+      // Con una bodega elegida, solo los lotes que tienen existencia en ella.
+      .filter((lote) => !bodega || lote.tieneExistenciaEnBodega);
+
+    return { lotes, error: null };
+  } catch (error) {
+    return { lotes: [], error: normalizarError(error) };
+  }
+}
