@@ -115,7 +115,7 @@ enable_confirmations = false
 # despliegue solo corre `supabase db push`, nunca `supabase config push`, asi que en los proyectos
 # remotos hay que pegar el mismo contenido en Authentication > Emails > Reset Password.
 [auth.email.template.recovery]
-subject = "Restablece tu contrasena de Ecopac Digital"
+subject = "Restablece tu contraseña de Ecopac Digital"
 content_path = "./supabase/templates/recovery.html"
 
 [edge_runtime]
