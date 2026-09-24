@@ -151,7 +151,7 @@ export function useDetalleJornada({ jornadaId, rol } = {}) {
       if (!actualizada) {
         setErrorMovimiento(
           "No se pudo cambiar el estado de esta jornada. Es posible que no tengas permiso, o " +
-            "que otra persona ya la haya cambiado; actualiza la pagina e intenta de nuevo.",
+            "que otra persona ya la haya cambiado; actualiza la página e intenta de nuevo.",
         );
         return;
       }

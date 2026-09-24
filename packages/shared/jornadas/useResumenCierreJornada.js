@@ -96,7 +96,7 @@ export function useResumenCierreJornada({ jornada, rol, onCerrada } = {}) {
     if (!actualizada) {
       setErrorCierre(
         "No se pudo finalizar esta jornada. Es posible que no tengas permiso, o que otra " +
-          "persona ya haya cambiado su estado; actualiza la pagina e intenta de nuevo.",
+          "persona ya haya cambiado su estado; actualiza la página e intenta de nuevo.",
       );
       return;
     }

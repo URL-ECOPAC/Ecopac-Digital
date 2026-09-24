@@ -24,6 +24,8 @@ export * from "./columnas.js";
 export * from "./filtros.js";
 export * from "./principios-activos.api.js";
 export * from "./principios-activos.permisos.js";
+export * from "./presentaciones.api.js";
+export * from "./presentaciones.permisos.js";
 export * from "./medicamentos.api.js";
 export * from "./medicamentos.permisos.js";
 export * from "./lotes.api.js";
@@ -43,6 +45,7 @@ export * from "./validacion.api.js";
 export * from "./useCatalogoMedicamentos.js";
 export * from "./catalogoMedicamentos.js";
 export * from "./useCatalogoPrincipiosActivos.js";
+export * from "./useCatalogoPresentaciones.js";
 export * from "./useInventario.js";
 export * from "./usePendientesValidacion.js";
 export * from "./useRegistroIngreso.js";
@@ -61,7 +64,11 @@ export {
   calcularEstadoVencimiento,
   useVistaExistencias,
 } from "./useVistaExistencias.js";
-export { datosAtenderAlerta, useAlertasVencimiento } from "./useAlertasVencimiento.js";
+export {
+  datosAtenderAlerta,
+  recargarAlertasMontadas,
+  useAlertasVencimiento,
+} from "./useAlertasVencimiento.js";
 
 // Mismo caso que los dos de arriba: useExistenciasPorLote.js es de existencias lote a lote (la
 // pantalla movil de inventario, issue #838) y no comparte nombres con useVistaExistencias.js, que
@@ -93,6 +100,7 @@ export {
 export { useGestionLotes } from "./useGestionLotes.js";
 export {
   ESTADO_MOVIMIENTO,
+  resumenDeKardex,
   TIPO_MOVIMIENTO,
   useKardexMovimientos,
 } from "./useKardexMovimientos.js";

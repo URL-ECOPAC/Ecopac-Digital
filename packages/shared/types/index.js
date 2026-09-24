@@ -77,7 +77,7 @@
 /** @typedef {(typeof import("../enums.js").ESTADOS_PROYECTO)[keyof typeof import("../enums.js").ESTADOS_PROYECTO]} EstadoProyecto */
 /** @typedef {(typeof import("../enums.js").ESTADOS_RECETA)[keyof typeof import("../enums.js").ESTADOS_RECETA]} EstadoReceta */
 /** @typedef {(typeof import("../enums.js").ORIGENES_DE_LOTE)[keyof typeof import("../enums.js").ORIGENES_DE_LOTE]} OrigenLote */
-/** @typedef {(typeof import("../enums.js").PRESENTACIONES_DE_MEDICAMENTO)[keyof typeof import("../enums.js").PRESENTACIONES_DE_MEDICAMENTO]} PresentacionMedicamento */
+/** @typedef {(typeof import("../enums.js").TIPOS_DE_ARTICULO)[keyof typeof import("../enums.js").TIPOS_DE_ARTICULO]} TipoArticulo */
 /** @typedef {(typeof import("../enums.js").TIPOS_DE_DONACION)[keyof typeof import("../enums.js").TIPOS_DE_DONACION]} TipoDonacion */
 /** @typedef {(typeof import("../enums.js").TIPOS_DE_DONANTE)[keyof typeof import("../enums.js").TIPOS_DE_DONANTE]} TipoDonante */
 /** @typedef {(typeof import("../enums.js").TIPOS_DE_MOVIMIENTO)[keyof typeof import("../enums.js").TIPOS_DE_MOVIMIENTO]} TipoMovimiento */
@@ -504,13 +504,15 @@
 // --- Inventario -----------------------------------------------------------------------------
 
 /**
- * Fila de `medicamentos` (00016_medicamentos.sql; activo lo agrega la 00050).
+ * Fila de `medicamentos` (00016_medicamentos.sql; activo lo agrega la 00050; presentacion_id
+ * reemplazo a presentacion en la 00144).
  *
  * @typedef {object} Medicamento
  * @property {string} id
  * @property {string} nombre
+ * @property {TipoArticulo} tipoArticulo
  * @property {string} concentracion
- * @property {PresentacionMedicamento} presentacion
+ * @property {string} presentacionId
  * @property {string} marca
  * @property {string|null} formaFarmaceutica
  * @property {boolean} esPediatrico
@@ -538,6 +540,17 @@
  * @typedef {object} MedicamentoPrincipio
  * @property {string} medicamentoId
  * @property {string} principioId
+ */
+
+/**
+ * Fila de `presentaciones` (00144_presentaciones_catalogo.sql, PLAN.md punto 11). Mismo
+ * catalogo administrable que PrincipioActivo, sin nombre_normalizado: el catalogo es chico y no
+ * tiene busqueda sin acentos, a diferencia de principios_activos (00046).
+ *
+ * @typedef {object} Presentacion
+ * @property {string} id
+ * @property {string} nombre
+ * @property {string} createdAt
  */
 
 /**
@@ -636,16 +649,37 @@
  *
  * Las genera la rutina programada de la 00088, no el cliente.
  *
+ * aAlerta() (alertas.api.js) agrega ademas `cantidadDisponible` -la suma de existencias vivas
+ * del lote, calculada en JS a partir de la tabla `existencias` embebida, no una columna propia-,
+ * asi que no lleva `@property` aqui: esta prueba (types/index.test.js) exige que cada propiedad
+ * declarada corresponda a una columna real de la tabla que el typedef cita (issue #859).
+ *
  * @typedef {object} AlertaCaducidad
  * @property {string} id
  * @property {string} loteId
  * @property {EstadoAlerta} estado
- * @property {number} cantidadAfectada
+ * @property {number} cantidadAfectada Instantanea del lote al generar la alerta; no baja si
+ *   despues se registra una salida del lote por fuera de "Atender" (issue #859).
  * @property {AccionAlerta|null} accion
  * @property {string|null} atendidaPor
  * @property {string|null} atendidaEn
  * @property {string} createdAt
  * @property {string} updatedAt
+ */
+
+/**
+ * Fila de `alerta_caducidad_detalle` (00143_dividir_atencion_de_alerta_de_caducidad.sql,
+ * PLAN.md punto 5): una de las acciones aplicadas al atender una alerta -siempre al menos una,
+ * incluso cuando la alerta se resolvio con una sola-. La llena fn_atender_alerta_caducidad
+ * (SECURITY DEFINER); no hay GRANT de escritura para ningun rol.
+ *
+ * @typedef {object} AlertaCaducidadDetalle
+ * @property {string} id
+ * @property {string} alertaId
+ * @property {AccionAlerta} accion
+ * @property {number} cantidad
+ * @property {string|null} bodegaDestinoId
+ * @property {string} createdAt
  */
 
 /**

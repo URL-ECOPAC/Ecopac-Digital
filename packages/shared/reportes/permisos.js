@@ -3,7 +3,7 @@
 // ESTO DECIDE QUE MUESTRA LA INTERFAZ, NO QUE PROTEGE EL SERVIDOR.
 //
 // Quien de verdad decide es el WHERE de cada vista o funcion agregada: vista_reporte_impacto
-// (00054, issue #407) y fn_reporte_pacientes_atendidos (00067). Por la misma razon, ninguna
+// (00086) y fn_reporte_pacientes_atendidos (00132). Por la misma razon, ninguna
 // funcion de api.js/pacientes.api.js consulta este archivo antes de llamar: el cliente
 // pregunta para dibujar; el servidor decide.
 //
@@ -21,7 +21,20 @@
 // O sea que era una divergencia de las que docs/PERMISOS.md llama defecto, y de las silenciosas:
 // el cliente era MAS estricto que el servidor, asi que a un socio fundador la pantalla le
 // escondia un reporte que la base le habria servido. No fallaba nada; simplemente no estaba.
-// ISSUE #864: se corrige el cliente, que es el lado equivocado, sin tocar la base.
+// ISSUE #864: se corrige el cliente, que es el lado equivocado, sin tocar la base. La #862 llego
+// a la misma conclusion por su cuenta y en paralelo; al mezclar se conserva esta redaccion.
+//
+// LO QUE ESTE ARCHIVO NO DECIDE (issue #862). Que roles alcanzan la RUTA /reportes lo fija
+// navegacion.js (administrador, junta directiva y socio fundador), y es una decision deliberada
+// de la issue #426 que navegacion.test.js afirma: un medico o un voluntario no llegan hasta aqui,
+// y ven los vencimientos en Inventario > Alertas. Estas funciones solo deciden que pestana se
+// dibuja para quien YA entro.
+//
+// EL PERMISO FINO `reportes.exportar` NO SE CONTEMPLA TODAVIA. Las tres guardas del servidor lo
+// aceptan, pero ninguna funcion de aqui lo mira: hacerlo exige que la sesion cargue los permisos
+// efectivos (usuarios/permisos.api.js, obtenerPermisosEfectivos) y eso es un cambio transversal
+// al contexto de autenticacion. Queda como issue aparte; mientras tanto, conceder ese permiso a
+// un rol que no alcanza el modulo no tiene efecto en la interfaz.
 //
 // LOS CUATRO REPORTES, NO DOS (issue #693). Este archivo cubria solo impacto y pacientes: el
 // comentario anterior decia que jornada se corregia en su propia issue (#489, ya cerrada) y que
@@ -42,7 +55,7 @@ export function puedeVerIndicadoresDeImpacto(rol) {
 }
 
 /**
- * Puede consultar el reporte de pacientes atendidos.
+ * Puede consultar el reporte de pacientes atendidos: administrador y los dos roles consultivos.
  *
  * Espejo de la guarda de fn_reporte_pacientes_atendidos **tal como esta desde la 00086**:
  * administrador, cualquiera de los dos roles consultivos, o quien tenga reportes.exportar.
@@ -54,6 +67,10 @@ export function puedeVerIndicadoresDeImpacto(rol) {
  *
  * El permiso fino no se resuelve desde el rol, asi que aqui solo se cubre la parte por rol y el
  * resto lo decide el servidor -- mismo criterio que puedeAprobarGasto().
+ *
+ * Ninguna columna del reporte identifica a un paciente -la RPC nunca devuelve una fila por
+ * persona-, asi que dejarlo entrar no contradice la regla de la issue #426 de que los roles
+ * consultivos solo ven agregados.
  */
 export function puedeVerReporteDePacientes(rol) {
   return esAdministrador(rol) || esConsultivo(rol);
@@ -85,6 +102,22 @@ export function puedeVerReporteDeInventario(rol) {
 }
 
 /**
+ * Puede consultar el reporte de medicamentos proximos a vencer: cualquier rol conocido.
+ *
+ * Misma regla que el reporte de inventario, y por la misma razon: los dos leen `existencias`
+ * ("Sesion activa lee existencias", 00079) cruzada con `lotes` y `medicamentos` (00034).
+ *
+ * Existe porque useReporteMedicamentosPorVencer usaba puedeVerIndicadoresDeImpacto, que es la
+ * regla de OTRO reporte -la de la vista agregada, restringida a administrador y consultivos- y
+ * no describia lo que el servidor hace con este. Hoy no cambia quien entra, porque los tres roles
+ * que alcanzan el modulo pasan las dos guardas; cambia que la funcion dice la verdad, y que el
+ * dia que la ruta se abra a mas roles no herede una restriccion que nadie escribio a proposito.
+ */
+export function puedeVerReporteDeVencimientos(rol) {
+  return puedeVerReporteDeInventario(rol);
+}
+
+/**
  * Permisos de un rol, en la forma que consume una pantalla.
  *
  * Se devuelven juntos para que un hook no tenga que llamar a las funciones sueltas ni acordarse
@@ -96,5 +129,6 @@ export function permisosDeReportes(rol) {
     puedeVerReporteDePacientes: puedeVerReporteDePacientes(rol),
     puedeVerReporteJornada: puedeVerReporteJornada(rol),
     puedeVerReporteDeInventario: puedeVerReporteDeInventario(rol),
+    puedeVerReporteDeVencimientos: puedeVerReporteDeVencimientos(rol),
   };
 }

@@ -19,7 +19,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ESTADOS_JORNADA } from "../enums.js";
 import { listarJornadas } from "../jornadas/api.js";
 import { puedeVerJornadas } from "../jornadas/permisos.js";
-import { modulosVisibles } from "../navegacion.js";
+import { modulosVisibles, rolesDelModulo } from "../navegacion.js";
 
 /**
  * Datos de la pantalla de inicio para un rol.
@@ -29,7 +29,6 @@ import { modulosVisibles } from "../navegacion.js";
  * @param {string} [opciones.plataforma] "web" (por defecto) o "mobile".
  * @returns {{
  *   accesos: object[],
- *   accesosEnOtraPlataforma: object[],
  *   jornadasEnCurso: object[],
  *   puedeVerJornadaEnCurso: boolean,
  *   cargando: boolean,
@@ -38,7 +37,19 @@ import { modulosVisibles } from "../navegacion.js";
  * }}
  */
 export function usePanelDeInicio({ rol, plataforma = "web" } = {}) {
-  const puedeConsultarJornadas = puedeVerJornadas(rol);
+  // La jornada en curso se le muestra a quien TIENE el modulo Jornadas, no a cualquier rol que
+  // pueda leer una jornada suelta.
+  //
+  // ISSUE #864. La 00141 le retiro a junta directiva y socio fundador la lectura de `jornadas`,
+  // pero puedeVerJornadas() siguio devolviendo true para los cinco roles, asi que el inicio les
+  // dibujaba la seccion, disparaba la consulta, RLS la devolvia vacia y acababan leyendo "No hay
+  // ninguna jornada en curso ahora mismo" -- que es falso: las hay, pero no son suyas. Decirle a
+  // alguien que no existe lo que en realidad no le corresponde ver es peor que no decirle nada.
+  //
+  // No se toca puedeVerJornadas(), que gobierna el listado y la ficha del modulo: alli lo que ve
+  // cada rol lo acota RLS fila por fila, y ese criterio sigue siendo el correcto. Lo que aqui se
+  // decide es otra cosa -- si esta pantalla le dedica una seccion al tema.
+  const puedeConsultarJornadas = puedeVerJornadas(rol) && rolesDelModulo("jornadas").includes(rol);
 
   const [jornadasEnCurso, setJornadasEnCurso] = useState([]);
   const [cargando, setCargando] = useState(puedeConsultarJornadas);
@@ -49,25 +60,6 @@ export function usePanelDeInicio({ rol, plataforma = "web" } = {}) {
     () => modulosVisibles(rol, { plataforma }).filter((modulo) => modulo.ruta !== "/"),
     [rol, plataforma],
   );
-
-  // ISSUE #864. Lo que el rol SI puede abrir, pero no desde esta plataforma.
-  //
-  // Sale de la #864, probando en el telefono: junta directiva y socio fundador pasaron a ver solo
-  // Reportes, y Reportes esta declarado `soloWeb` porque la pantalla no existe en movil. Resultado:
-  // los dos roles abrian la app y se encontraban "Tus modulos" en blanco, sin una linea que
-  // dijera por que. Una pantalla vacia se lee como una app rota, no como un limite de rol.
-  //
-  // Se calcula siempre -- no solo cuando `accesos` esta vacio -- porque es la respuesta a "y
-  // entonces donde hago mi trabajo", y quien la dibuja decide cuando hace falta. La lista es de
-  // modulos, no de texto: el mensaje lo escribe cada app.
-  const accesosEnOtraPlataforma = useMemo(() => {
-    if (plataforma === "web") return [];
-
-    const idsAqui = new Set(accesos.map((modulo) => modulo.id));
-    return modulosVisibles(rol, { plataforma: "web" }).filter(
-      (modulo) => modulo.ruta !== "/" && !idsAqui.has(modulo.id),
-    );
-  }, [rol, plataforma, accesos]);
 
   const cargar = useCallback(async () => {
     if (!puedeConsultarJornadas) {
@@ -101,7 +93,6 @@ export function usePanelDeInicio({ rol, plataforma = "web" } = {}) {
 
   return {
     accesos,
-    accesosEnOtraPlataforma,
     jornadasEnCurso,
     puedeVerJornadaEnCurso: puedeConsultarJornadas,
     cargando,

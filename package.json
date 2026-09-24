@@ -22,6 +22,7 @@
     "verificar:shared-esquema": "node scripts/verificar-shared-vs-esquema.mjs",
     "verificar:sin-emojis": "node scripts/verificar-sin-emojis.mjs",
     "verificar:paleta": "node scripts/verificar-paleta.mjs",
+    "verificar:redireccion": "node scripts/verificar-redireccion-recuperacion.mjs",
     "verificar:contratos": "node scripts/verificar-contratos-de-api.mjs",
     "verificar:rewrite-vercel": "node scripts/verificar-rewrite-vercel.mjs",
     "verificar:cabeceras-http": "node scripts/verificar-cabeceras-http.mjs",

@@ -31,10 +31,6 @@ vi.mock("../contexto/SesionProvider", () => ({
   useSesionCompartida: () => ({ rol: "administrador" }),
 }));
 
-vi.mock("../../../../packages/shared/reportes/useExportarPDF", () => ({
-  useExportarPDF: () => ({ exportar: vi.fn(), generando: false }),
-}));
-
 const FICHA_DE_EJEMPLO = {
   nombre: "Jornada Vista Hermosa",
   fecha: "2026-03-01",
@@ -138,12 +134,16 @@ describe("ReporteJornada", () => {
     expect(screen.getByText("Loratadina")).toBeInTheDocument();
   });
 
-  it("Volver a reportes navega a /reportes", () => {
+  // ISSUE #862: volvia a /reportes, donde no se puede llegar a este reporte -no es una de sus
+  // cuatro pestanas-, asi que devolvia a una pantalla por la que no se habia pasado. El unico
+  // sitio que enlaza aqui es el detalle de la jornada, y es donde uno espera salir.
+  it("Volver a la jornada navega al detalle de esa jornada, no a /reportes", () => {
     pantalla();
 
-    fireEvent.click(screen.getByText("Volver a reportes"));
+    fireEvent.click(screen.getByText("Volver a la jornada"));
 
-    expect(mockNavigate).toHaveBeenCalledWith("/reportes");
+    expect(mockNavigate).toHaveBeenCalledWith("/jornadas/jor-1");
+    expect(mockNavigate).not.toHaveBeenCalledWith("/reportes");
   });
 
   // Camino de error (issue #759/#779): si la consulta falla, se muestra el error con boton de

@@ -1,21 +1,26 @@
+import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Form, Table } from "react-bootstrap";
 import {
-  ETIQUETAS_NIVEL_ALERTA_VENCIMIENTO,
-  useExportarPDF,
+  aCadenaFechaLocal,
+  formatearFechaCorta,
   useReporteMedicamentosPorVencer,
 } from "@ecopac/shared";
 import DashboardMetricasPage from "./DashboardMetricasPage";
+import ReporteImprimible from "./ReporteImprimible";
 import ReporteInventarioPage from "./ReporteInventarioPage";
 import ReportePacientesPage from "./ReportePacientesPage";
-import BotonExportarPDF from "../components/BotonExportarPDF";
-import Card from "../components/Card";
+import BotonExportarCSV from "../components/BotonExportarCSV";
+import BotonImprimir from "../components/BotonImprimir";
+import DataList from "../components/DataList";
+import descargarCSV from "../components/descargarCSV";
 import EmptyState from "../components/EmptyState";
 import ErrorState from "../components/ErrorState";
+import FilterBar from "../components/FilterBar";
 import LoadingState from "../components/LoadingState";
 import PageHeader, { AccionesDeCabecera } from "../components/PageHeader";
+import Paginacion from "../components/Paginacion";
 import ScreenContainer from "../components/ScreenContainer";
-import StatusChip from "../components/StatusChip";
+import StatCard from "../components/StatCard";
 import Tabs from "../components/Tabs";
 import { useSesionCompartida } from "../contexto/SesionProvider";
 import "./reportes.css";
@@ -76,138 +81,176 @@ export default function ReportesPage() {
   );
 }
 
+/**
+ * Pestana de medicamentos proximos a vencer.
+ *
+ * ISSUE #862. Era la unica pantalla del modulo que dibujaba su propia <Table> de react-bootstrap
+ * y sus propios <select>, fuera de DataList y fuera de todo descriptor -- porque columnas.js
+ * afirmaba que la API de este reporte "todavia no existe", cosa que dejo de ser cierta hace
+ * tiempo. Ahora usa FilterBar + DataList + Paginacion como las demas, con COLUMNAS_VENCIMIENTO y
+ * FILTROS_VENCIMIENTOS, y gana el "Exportar CSV" que era la unica pestana sin el.
+ */
 function PestanaMedicamentosPorVencer() {
   const { rol } = useSesionCompartida();
+  const [imprimiendo, setImprimiendo] = useState(false);
+
   const {
+    tieneAcceso,
     cargando,
     error,
-    filas,
+    renglones,
+    total,
     totalUnidadesEnRiesgo,
-    horizonteDias,
-    setHorizonteDias,
-    bodegaId,
-    setBodegaId,
-    horizontesDisponibles,
-    listaBodegas,
-    valoresEspeciales,
+    columnas,
+    definicionDeFiltros,
+    filtros,
+    setFiltro,
+    limpiarFiltros,
+    hayFiltros,
+    catalogos,
+    orden,
+    alternarOrden,
+    numeroDePagina,
+    totalPaginas,
+    irAPagina,
     recargar,
-    // El rol es lo que decide si el reporte consulta. Sin el, puedeVerIndicadoresDeImpacto(undefined)
-    // era falso, el hook no llamaba nunca a la base y la pestana decia "Ningun lote vence" aunque
-    // la de alertas mostrara lotes por vencer.
   } = useReporteMedicamentosPorVencer({ rol });
 
-  // Exportacion PDF (issue #216).
-  const { exportar, generando } = useExportarPDF({
-    tituloReporte: "Reporte de Medicamentos Próximos a Vencer",
-    periodo: `Próximos ${horizonteDias} días`,
-  });
+  if (!tieneAcceso) {
+    return <ErrorState message="Se necesita una sesión activa para consultar los vencimientos." />;
+  }
+
+  // aCadenaFechaLocal y no toISOString(): en Guatemala, despues de las 18:00 el dia UTC ya es
+  // manana, y el reporte saldria fechado con el dia siguiente (issue #840).
+  const periodo = `Horizonte de ${filtros.horizonteDias} días · al ${formatearFechaCorta(
+    aCadenaFechaLocal(),
+  )}`;
 
   return (
     <>
       <div className="reporte-barra">
-        <p className="ec-cabecera-subtitulo m-0">
-          Lotes que vencen dentro del horizonte elegido, del más urgente al menos urgente.
+        <p className="reporte-barra-texto">
+          Un renglón por lote y bodega, del más urgente al que más plazo tiene.
         </p>
         <AccionesDeCabecera
-          actions={[{ custom: <BotonExportarPDF onClick={exportar} generando={generando} /> }]}
+          actions={[
+            {
+              key: "csv",
+              custom: (
+                <BotonExportarCSV
+                  onClick={() =>
+                    descargarCSV(columnas, renglones, "medicamentos-por-vencer.csv", catalogos)
+                  }
+                  disabled={renglones.length === 0}
+                />
+              ),
+            },
+            {
+              key: "imprimir",
+              custom: (
+                <BotonImprimir
+                  onClick={() => setImprimiendo(true)}
+                  disabled={renglones.length === 0}
+                />
+              ),
+            },
+          ]}
         />
       </div>
 
-      {/* Filtros: fuera del contenido del PDF. Eran tres <select> y un boton con estilos en
-          linea (#cbd5e1, #475569, #f1f5f9); ahora son los campos del sistema. */}
-      <Card className="mb-3">
-        <div className="reporte-filtros">
-          <Form.Group controlId="vencimientos-horizonte">
-            <Form.Label>Horizonte de días</Form.Label>
-            <Form.Select
-              value={horizonteDias}
-              onChange={(e) => setHorizonteDias(Number(e.target.value))}
-            >
-              {horizontesDisponibles.map((opt) => (
-                <option key={opt.valor} value={opt.valor}>
-                  {opt.etiqueta}
-                </option>
-              ))}
-            </Form.Select>
-          </Form.Group>
-          <Form.Group controlId="vencimientos-bodega">
-            <Form.Label>Bodega</Form.Label>
-            <Form.Select value={bodegaId} onChange={(e) => setBodegaId(e.target.value)}>
-              <option value={valoresEspeciales.TODAS}>Todas las bodegas</option>
-              {listaBodegas.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.nombre}
-                </option>
-              ))}
-            </Form.Select>
-          </Form.Group>
-          <div className="reporte-filtros-accion">
-            <AccionesDeCabecera
-              actions={[{ label: "Actualizar", onClick: recargar, variant: "neutra" }]}
+      <FilterBar
+        campos={definicionDeFiltros}
+        valores={filtros}
+        onChange={setFiltro}
+        catalogos={catalogos}
+        onLimpiar={limpiarFiltros}
+        hayFiltros={hayFiltros}
+      />
+
+      {error ? (
+        <ErrorState message={error.mensaje} onRetry={recargar} />
+      ) : cargando ? (
+        <LoadingState />
+      ) : (
+        <>
+          {/* El total en riesgo va arriba y no al pie: es la cifra por la que se abre este
+              reporte, y al pie de una tabla paginada quedaria escondida. */}
+          <div className="ec-kpis">
+            <StatCard
+              label="Unidades en riesgo"
+              value={totalUnidadesEnRiesgo.toLocaleString("es-GT")}
+              accent="var(--color-warning)"
+              caption={`en ${total} ${total === 1 ? "renglón" : "renglones"}`}
             />
           </div>
-        </div>
-      </Card>
 
-      <div id="contenido-reporte-pdf">
-        <div className="alert alert-warning mb-3">
-          <span>
-            <strong>{totalUnidadesEnRiesgo.toLocaleString("es-GT")}</strong> unidades en riesgo de
-            vencimiento
-          </span>
-        </div>
+          <p className="ec-rotulo reporte-conteo">
+            {total} {total === 1 ? "renglón" : "renglones"}
+          </p>
 
-        {cargando ? (
-          <LoadingState message="Cargando lotes próximos a vencer..." />
-        ) : error ? (
-          <ErrorState
-            message={`Error al cargar: ${error.mensaje || "Desconocido"}`}
-            onRetry={recargar}
+          <DataList
+            columnas={columnas}
+            datos={renglones}
+            catalogos={catalogos}
+            ordenarPor={orden}
+            onOrdenar={alternarOrden}
+            vacio={
+              <EmptyState
+                message={
+                  hayFiltros
+                    ? "Ningún lote coincide con los filtros aplicados."
+                    : "Ningún lote vence dentro del horizonte elegido."
+                }
+                actionLabel={hayFiltros ? "Limpiar filtros" : undefined}
+                onAction={hayFiltros ? limpiarFiltros : undefined}
+              />
+            }
           />
-        ) : filas.length === 0 ? (
-          <EmptyState message={`Ningún lote vence en los próximos ${horizonteDias} días`} />
-        ) : (
-          <div className="ec-tabla">
-            <Table responsive hover className="mb-0">
-              <thead>
-                <tr>
-                  <th>Estado</th>
-                  <th>Medicamento</th>
-                  <th>Lote</th>
-                  <th>Vencimiento</th>
-                  <th className="text-end">Días restantes</th>
-                  <th className="text-end">Cantidad</th>
-                  <th>Bodega</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filas.map((fila) => (
-                  <tr key={fila.id}>
-                    <td>
-                      {/* El nivel sale de enums.js y el color de statusColors, via StatusChip
-                          (issue #700). */}
-                      <StatusChip
-                        status={fila.alerta}
-                        label={ETIQUETAS_NIVEL_ALERTA_VENCIMIENTO[fila.alerta]}
-                      />
-                    </td>
-                    <td>{fila.medicamento}</td>
-                    <td className="ec-mono">{fila.lote}</td>
-                    <td>{fila.fechaVencimiento}</td>
-                    <td className="text-end">
-                      <strong>{fila.diasRestantes}</strong>
-                    </td>
-                    <td className="text-end fw-semibold">
-                      {fila.cantidad.toLocaleString("es-GT")}
-                    </td>
-                    <td>{fila.bodega || "—"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </Table>
-          </div>
-        )}
-      </div>
+
+          <Paginacion pagina={numeroDePagina} totalPaginas={totalPaginas} onCambiar={irAPagina} />
+        </>
+      )}
+
+      {imprimiendo && (
+        <ReporteImprimible
+          titulo="Medicamentos próximos a vencer"
+          periodo={periodo}
+          filtrosAplicados={filtrosParaPapel(filtros, catalogos)}
+          totales={[
+            {
+              etiqueta: "Unidades en riesgo",
+              valor: totalUnidadesEnRiesgo.toLocaleString("es-GT"),
+            },
+            { etiqueta: "Renglones", valor: total },
+          ]}
+          secciones={[{ columnas, filas: renglones }]}
+          catalogos={catalogos}
+          alTerminar={() => setImprimiendo(false)}
+        />
+      )}
     </>
   );
+}
+
+/** Los criterios aplicados, en texto, para que el papel diga de que es el recorte. */
+function filtrosParaPapel(filtros, catalogos) {
+  const etiqueta = (lista, valor) => lista?.find((o) => o.value === valor)?.label;
+
+  return [
+    { etiqueta: "Horizonte", valor: `${filtros.horizonteDias} días` },
+    filtros.bodega && {
+      etiqueta: "Bodega",
+      valor: etiqueta(catalogos.bodegas, filtros.bodega) ?? filtros.bodega,
+    },
+    filtros.medicamento && {
+      etiqueta: "Medicamento",
+      valor: etiqueta(catalogos.medicamentos, filtros.medicamento) ?? filtros.medicamento,
+    },
+    filtros.estadoVencimiento && {
+      etiqueta: "Estado",
+      valor:
+        etiqueta(catalogos.estadosDeVencimientoReporte, filtros.estadoVencimiento) ??
+        filtros.estadoVencimiento,
+    },
+  ].filter(Boolean);
 }

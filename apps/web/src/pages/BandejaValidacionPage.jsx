@@ -1,6 +1,7 @@
 import { useState } from "react";
 
 import {
+  ETIQUETAS_TIPO_MOVIMIENTO,
   formatearFechaCorta,
   permisosDeMovimientos,
   usePendientesValidacion,
@@ -262,13 +263,12 @@ export default function BandejaValidacionPage({ usuarioId, rolUsuario }) {
                           borderRadius: "9999px",
                           fontSize: "var(--texto-xxs)",
                           fontWeight: "var(--peso-bold)",
-                          textTransform: "uppercase",
                           backgroundColor: mov.tipo === "ingreso" ? "#d1fae5" : "#fef3c7",
                           color: mov.tipo === "ingreso" ? "#065f46" : "#78350f",
                           letterSpacing: "0.5px",
                         }}
                       >
-                        {mov.tipo}
+                        {ETIQUETAS_TIPO_MOVIMIENTO[mov.tipo] ?? mov.tipo}
                       </span>
                     </td>
 

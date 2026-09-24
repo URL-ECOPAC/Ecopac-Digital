@@ -8,7 +8,27 @@
 import { describe, expect, it } from "vitest";
 
 import { conZonaHorariaDeGuatemala } from "../pruebas/zonaHoraria.js";
-import { filasDeKardex, filtrarPorRangoDeFecha, nombreDe } from "./useKardexMovimientos.js";
+import {
+  filasDeKardex,
+  filtrarPorRangoDeFecha,
+  nombreDe,
+  resumenDeKardex,
+} from "./useKardexMovimientos.js";
+
+describe("resumenDeKardex", () => {
+  it("suma solo los movimientos aprobados y toma el saldo de la ultima fila", () => {
+    const resumen = resumenDeKardex([
+      { tipo: "ingreso", cantidad: 10, afectaSaldo: true, saldoAcumulado: 10 },
+      { tipo: "salida", cantidad: 3, afectaSaldo: true, saldoAcumulado: 7 },
+      { tipo: "salida", cantidad: 5, afectaSaldo: false, saldoAcumulado: 7 },
+    ]);
+    expect(resumen).toEqual({ movimientos: 3, ingresos: 10, salidas: 3, saldo: 7 });
+  });
+
+  it("sin movimientos todo es cero", () => {
+    expect(resumenDeKardex([])).toEqual({ movimientos: 0, ingresos: 0, salidas: 0, saldo: 0 });
+  });
+});
 
 describe("nombreDe", () => {
   it("junta nombres y apellidos del perfil embebido", () => {

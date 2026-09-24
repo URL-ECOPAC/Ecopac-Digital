@@ -86,8 +86,9 @@ VALUES (
 INSERT INTO diagnosticos (id, nombre) VALUES
   ('90000000-0000-0000-0000-000000000001', 'Diagnostico de prueba 89');
 
-INSERT INTO medicamentos (id, nombre, concentracion, presentacion, marca) VALUES
-  ('70000000-0000-0000-0000-000000000001', 'Medicamento de prueba 89', '500mg', 'tableta', 'Generico');
+INSERT INTO medicamentos (id, nombre, concentracion, presentacion_id, marca) VALUES
+  ('70000000-0000-0000-0000-000000000001', 'Medicamento de prueba 89', '500mg',
+   (SELECT id FROM presentaciones WHERE nombre = 'Tableta'), 'Generico');
 
 -- ============================================================================
 -- voluntario: registra triaje, no lee informacion clinica

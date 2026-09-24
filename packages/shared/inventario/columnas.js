@@ -8,8 +8,19 @@ export const COLUMNAS_PRINCIPIO_ACTIVO = [
   { id: "nombre", label: "Nombre", tipo: TIPOS_DE_PRESENTACION.TEXTO, principal: true },
 ];
 
+/** Mismo patron que COLUMNAS_PRINCIPIO_ACTIVO (presentaciones, 00144). */
+export const COLUMNAS_PRESENTACION = [
+  { id: "nombre", label: "Nombre", tipo: TIPOS_DE_PRESENTACION.TEXTO, principal: true },
+];
+
 export const COLUMNAS_MEDICAMENTO = [
   { id: "nombre", label: "Nombre", tipo: TIPOS_DE_PRESENTACION.TEXTO, principal: true },
+  {
+    id: "tipoArticulo",
+    label: "Tipo",
+    tipo: TIPOS_DE_PRESENTACION.TEXTO,
+    etiquetasDesde: "tiposArticulo",
+  },
   { id: "concentracion", label: "Concentración", tipo: TIPOS_DE_PRESENTACION.TEXTO },
   { id: "presentacion", label: "Presentación", tipo: TIPOS_DE_PRESENTACION.TEXTO },
   { id: "marca", label: "Marca", tipo: TIPOS_DE_PRESENTACION.TEXTO },
@@ -62,7 +73,16 @@ export const COLUMNAS_MIS_MOVIMIENTOS = [
   { id: "numeroLote", label: "Lote", tipo: TIPOS_DE_PRESENTACION.TEXTO },
   { id: "bodegaNombre", label: "Bodega", tipo: TIPOS_DE_PRESENTACION.TEXTO },
   { id: "cantidad", label: "Cantidad", tipo: TIPOS_DE_PRESENTACION.NUMERO },
-  { id: "estado", label: "Estado", tipo: TIPOS_DE_PRESENTACION.CHIP },
+  // ESTADO y no CHIP: el valor crudo ya es la clave de color correcta (statusColors lo indexa
+  // directo), pero CHIP no traduce con etiquetasDesde -- solo lo hace ESTADO (mismo patron que
+  // COLUMNAS_USUARIO.estado en usuarios/columnas.js). Sin esto, la celda mostraba el valor crudo
+  // del enum ("pendiente") en vez de su etiqueta Title Case.
+  {
+    id: "estado",
+    label: "Estado",
+    tipo: TIPOS_DE_PRESENTACION.ESTADO,
+    etiquetasDesde: "estadosMovimiento",
+  },
   { id: "registradoPorNombre", label: "Registrado por", tipo: TIPOS_DE_PRESENTACION.TEXTO },
   { id: "createdAt", label: "Fecha", tipo: TIPOS_DE_PRESENTACION.FECHA },
 ];
@@ -89,6 +109,8 @@ export const COLUMNAS_ALERTA = [
   { id: "medicamento", label: "Medicamento", tipo: TIPOS_DE_PRESENTACION.TEXTO, principal: true },
   { id: "numeroLote", label: "Lote", tipo: TIPOS_DE_PRESENTACION.TEXTO },
   { id: "fechaVencimiento", label: "Vence", tipo: TIPOS_DE_PRESENTACION.FECHA },
-  { id: "cantidadAfectada", label: "Cantidad afectada", tipo: TIPOS_DE_PRESENTACION.NUMERO },
+  // cantidadDisponible, no cantidadAfectada: esta ultima queda congelada al generar la alerta y
+  // no baja si despues se registra una salida del lote por fuera de "Atender" (issue #859).
+  { id: "cantidadDisponible", label: "Cantidad disponible", tipo: TIPOS_DE_PRESENTACION.NUMERO },
   { id: "estado", label: "Estado", tipo: TIPOS_DE_PRESENTACION.CHIP },
 ];

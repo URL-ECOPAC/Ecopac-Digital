@@ -53,6 +53,7 @@ import EntregaMedicamentosScreen from "../screens/EntregaMedicamentosScreen";
 import PacientesCronicosScreen from "../screens/PacientesCronicosScreen";
 import CatalogoCondicionesScreen from "../screens/CatalogoCondicionesScreen";
 import CatalogoDiagnosticosScreen from "../screens/CatalogoDiagnosticosScreen";
+import ProyectosScreen from "../screens/ProyectosScreen";
 import ComunidadesScreen from "../screens/ComunidadesScreen";
 import NotificacionesScreen from "../screens/NotificacionesScreen";
 
@@ -232,6 +233,11 @@ const PANTALLAS_JORNADAS = [
     name: ROUTES.KANBAN_JORNADAS,
     componente: conGuardaDeRol(KanbanJornadasScreen, "jornadas"),
     titulo: "Tablero de Jornadas",
+  },
+  {
+    name: ROUTES.PROYECTOS,
+    componente: conGuardaDeRol(ProyectosScreen, "proyectos"),
+    titulo: "Proyectos",
   },
 ];
 

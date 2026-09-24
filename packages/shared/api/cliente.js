@@ -70,7 +70,7 @@ export function inicializarSupabase({ almacenamiento, entorno } = {}) {
   } else {
     console.warn(
       "inicializarSupabase() se llamo sin adaptador de almacenamiento: la sesion se guarda " +
-        "solo en memoria y se pierde al recargar la pagina o cerrar la app.",
+        "solo en memoria y se pierde al recargar la página o cerrar la app.",
     );
     almacenamientoDeSesion = crearAlmacenamientoEnMemoria();
   }

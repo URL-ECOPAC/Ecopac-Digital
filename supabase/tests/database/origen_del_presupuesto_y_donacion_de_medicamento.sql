@@ -30,8 +30,9 @@ UPDATE perfiles SET rol = 'medico' WHERE id = '00000000-0000-0000-0000-000000084
 UPDATE perfiles SET rol = 'junta directiva' WHERE id = '00000000-0000-0000-0000-000000084003';
 ALTER TABLE perfiles ENABLE TRIGGER USER;
 
-INSERT INTO medicamentos (id, nombre, concentracion, presentacion, marca) VALUES
-  ('90000000-0000-0000-0000-000000000840', 'Medicamento 840', '500 mg', 'tableta', 'Generico');
+INSERT INTO medicamentos (id, nombre, concentracion, presentacion_id, marca) VALUES
+  ('90000000-0000-0000-0000-000000000840', 'Medicamento 840', '500 mg',
+   (SELECT id FROM presentaciones WHERE nombre = 'Tableta'), 'Generico');
 
 INSERT INTO donantes (id, nombre, tipo) VALUES
   ('d0000000-0000-0000-0000-000000084001', 'Donante de prueba 840', 'organizacion');
@@ -222,7 +223,7 @@ SELECT lives_ok(
 SELECT is(
   (SELECT (descripcion, unidad, cantidad)::TEXT FROM donacion_detalle
    WHERE medicamento_id = '90000000-0000-0000-0000-000000000840'),
-  '("Medicamento 840 500 mg",tableta,25.00)',
+  '("Medicamento 840 500 mg",Tableta,25.00)',
   'la descripcion y la unidad salen del catalogo, no del texto del cliente'
 );
 
@@ -250,8 +251,9 @@ SELECT lives_ok(
 -- enlazarLoteConDonacion() fallaba con permission denied y la donacion nunca quedaba ligada.
 RESET ROLE;
 
-INSERT INTO medicamentos (id, nombre, concentracion, presentacion, marca) VALUES
-  ('90000000-0000-0000-0000-000000000841', 'Otro medicamento 840', '5 mg', 'tableta', 'Generico');
+INSERT INTO medicamentos (id, nombre, concentracion, presentacion_id, marca) VALUES
+  ('90000000-0000-0000-0000-000000000841', 'Otro medicamento 840', '5 mg',
+   (SELECT id FROM presentaciones WHERE nombre = 'Tableta'), 'Generico');
 
 INSERT INTO proveedores (id, nombre, tipo) VALUES
   ('b0000000-0000-0000-0000-000000084001', 'Proveedor de prueba 840', 'donante');

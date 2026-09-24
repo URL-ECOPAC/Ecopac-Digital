@@ -248,7 +248,8 @@ sin reasignar, bajo el absorbido. Reflejo en el cliente: `puedeFusionarPacientes
 | ------------------------ | ------------- | -------------------------------- | ------ | ------------------ | ----------------------------------------------------------------------------------------------------------- |
 | `medicamentos`           | C R U         | R                                | **C** R | R                  | `00034` + `00141`, alta por `fn_registrar_medicamento` (`00050`). La lectura la endurecio la `00079` a `rol_actual() IS NOT NULL`: un perfil desactivado deja de verla |
 | `principios_activos`     | C R U D       | R                                | R      | R                  | `00034` + `00046`                                                                                           |
-| `medicamento_principio`  | C R           | R                                | **C** R | R                  | `00034` + `00141`                                                                                           |
+| `presentaciones`         | C R U D       | R                                | R      | R                  | `00144`. Mismo patron que `principios_activos`: catalogo abierto a lectura, escritura solo administrador. RESTRICT desde `medicamentos.presentacion_id`: una presentacion en uso no se borra |
+| `medicamento_principio`  | C R           | R                                | R      | R                  | `00034`                                                                                                     |
 | `lotes`                  | C R U         | R                                | C R U\* | C R U\*            | `00034` + `00107`. \*Medico y voluntario dan de alta el lote que acompania a su ingreso, pero **nace provisional** (`confirmado = FALSE`) y solo lo pueden editar mientras siga asi; al aprobar el ingreso pasa a firme y deja de ser suyo. La politica les exige ademas `registrado_por = auth.uid()`. **Sin DELETE para nadie** |
 | `existencias`            | C R U         | R                                | R      | R                  | `00034`; disponibilidad por `fn_existencias_disponibles` (`00065`)                                          |
 | `bodegas`                | C R U         | R                                | R      | R                  | `00034`, con la lectura endurecida por la `00079` a `rol_actual() IS NOT NULL`. Las politicas duplicadas de la `00061`/`00062` las retiro esa misma migracion (era la Divergencia 12). **Sin DELETE para nadie**, y no solo por politica: la `00034` nunca otorgo `GRANT DELETE`, asi que el borrado muere en `42501` antes de llegar a RLS. Cubierto rol por rol en `politicas_rls_inventario.sql` (issue #513)                                                          |
@@ -428,7 +429,7 @@ inserta el propio administrador, sin ajuste de existencias: un gasto no mueve in
 | ------------------ | ------------- | -------------------------------- | ------ | ------------------ | --------------------------------------------------------- |
 | `donantes`         | C R U         | —                                | —      | —                  | `00083` + `00086` + `00141` (registrar Y SU LECTURA admiten `tiene_permiso('donaciones.registrar')`, mismo motivo que `proyectos`: `registrarDonante()` hace `.insert().select()`). `es_administrador()` escribe, `es_consultivo()` o el permiso fino leen |
 | `donaciones`       | C R U         | —                                | —      | —                  | `00083` + `00086` + `00141`, mismo cambio. La anulacion (UPDATE) exige `estado = 'anulada'` y `motivo_anulacion` |
-| `donacion_detalle` | C R U (`lote_id`) | —                            | —      | —                  | `00083` + `00086` + `00141`, mismo cambio. El detalle no se corrige, se anula la donacion completa. Desde la `00135` el renglon de una donacion de medicamentos lleva `medicamento_id`, que exige `fn_registrar_donacion` (INVOKER: no cambia quien puede escribir). El unico UPDATE es enlazar el lote que produjo el renglon: GRANT de la columna `lote_id` y nada mas, una sola vez (la politica solo alcanza `lote_id IS NULL`), con un lote del mismo medicamento (trigger), y lo hace quien registra donaciones (`es_administrador() OR tiene_permiso('donaciones.registrar')`). Hasta la `00135` no habia GRANT ni politica y `enlazarLoteConDonacion()` fallaba siempre |
+| `donacion_detalle` | C R U (`lote_id`) | —                            | —      | —                  | `00083` + `00086` + `00141`, mismo cambio. El detalle no se corrige, se anula la donacion completa. Desde la `00135` el renglon de una donacion de medicamentos lleva `medicamento_id`, que exige `fn_registrar_donacion` (INVOKER: no cambia quien puede escribir). El unico UPDATE es enlazar el lote que produjo el renglon: GRANT de la columna `lote_id` y nada mas, una sola vez (la politica solo alcanza `lote_id IS NULL`), con un lote del mismo medicamento (trigger), y lo hace quien registra donaciones (`es_administrador() OR tiene_permiso('donaciones.registrar')`). Hasta la `00135` no habia GRANT ni politica y `enlazarLoteConDonacion()` fallaba siempre. La `00135` concedio el GRANT de columna sin revocar el UPDATE de tabla completa que `authenticated` ya traia por default desde que la tabla se creo (`00022`, antes de que la `00120` empezara a revocar privilegios por defecto): el resto del renglon si se podia corregir con un UPDATE directo hasta que la `00145` revoco el UPDATE amplio |
 
 Hasta la `00083`, las tres tablas estaban **denegadas a los cinco roles, incluido el
 administrador**, por dos motivos independientes que detalla la Divergencia 1 (resuelta).
@@ -575,6 +576,29 @@ vista tuviera por donde llegarse. La `00141` la cierra en las tres capas a la ve
 `puedeVerListadoUsuarios()` y `navegacion.js`-, que es exactamente lo que la #756 pedia: que la
 ruta y la vista digan lo mismo. La vista se conserva porque la administradora la sigue usando y
 porque cada quien se lee a si mismo por ella.
+
+**`puedeVerReporteDeVencimientos`, el quinto reporte (issue #862).**
+`useReporteMedicamentosPorVencer` usaba `puedeVerIndicadoresDeImpacto` -la regla de
+`vista_reporte_impacto`, mas estrecha y de otro reporte-. El de vencimientos lee `existencias`
+(`00079`) y `lotes`/`medicamentos`/`bodegas` (`00034`), abiertas a toda sesion activa, igual que
+el de inventario. No cambia quien entra, porque los tres roles que alcanzan el modulo pasan las
+dos guardas; cambia que la funcion describe la politica que de verdad protege.
+
+**Que roles alcanzan `/reportes` no lo decide este archivo**, sino `navegacion.js`:
+administrador, junta directiva y socio fundador. Es una decision deliberada de la issue #426 que
+`navegacion.test.js` afirma, y la #862 la respeto sin tocarla. Un medico o un voluntario no llegan
+a estas pantallas, y ven los vencimientos en `Inventario > Alertas`.
+
+### Divergencia abierta: `reportes.exportar` es inoperante desde la interfaz
+
+Las tres guardas del servidor aceptan `tiene_permiso('reportes.exportar')`, pero **ninguna funcion
+de `reportes/permisos.js` lo mira**: todas deciden por rol base. Conceder ese permiso fino a
+alguien no cambia nada en la pantalla.
+
+Cerrarlo exige que la sesion cargue los permisos efectivos
+(`usuarios/permisos.api.js`, `obtenerPermisosEfectivos`) y eso es un cambio transversal al contexto
+de autenticacion, fuera del alcance de la #862. Mientras tanto, el permiso solo tendria efecto para
+un rol que ya alcance el modulo.
 
 ## Los permisos finos
 

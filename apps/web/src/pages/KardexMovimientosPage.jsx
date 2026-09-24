@@ -1,18 +1,24 @@
+import { useEffect, useMemo, useState } from "react";
 import { Table } from "react-bootstrap";
 import {
   ESTADO_MOVIMIENTO,
+  ETIQUETAS_ESTADO_MOVIMIENTO,
   exportarFilasACSV,
   formatearFechaConHora,
+  listarLotes,
+  resumenDeKardex,
   TIPO_MOVIMIENTO,
   TIPOS_DE_PRESENTACION,
   useKardexMovimientos,
 } from "@ecopac/shared";
 
+import BotonExportarPDF from "../components/BotonExportarPDF";
 import DateField from "../components/DateField";
 import SectionHeader from "../components/SectionHeader";
 import SecondaryButton from "../components/SecondaryButton";
 import Selector from "../components/Selector";
 import StatusChip from "../components/StatusChip";
+import DocumentoImprimible from "./DocumentoImprimible";
 
 // Kardex de movimientos de inventario.
 //
@@ -24,12 +30,6 @@ import StatusChip from "../components/StatusChip";
 const ETIQUETAS_TIPO = {
   [TIPO_MOVIMIENTO.INGRESO]: "Ingreso",
   [TIPO_MOVIMIENTO.SALIDA]: "Salida",
-};
-
-const ETIQUETAS_ESTADO = {
-  [ESTADO_MOVIMIENTO.APROBADO]: "Aprobado",
-  [ESTADO_MOVIMIENTO.RECHAZADO]: "Rechazado",
-  [ESTADO_MOVIMIENTO.PENDIENTE]: "Pendiente",
 };
 
 const OPCIONES_TIPO = [
@@ -86,12 +86,87 @@ export default function KardexMovimientosPage({
   medicamentoId = null,
   titulo = "Historial de Movimientos",
 }) {
+  // Uso embebido (un padre ya sabe que lote o medicamento mostrar, ej. una futura pantalla de
+  // detalle de lote): se respeta el id que llega por prop y no se ofrece selector propio -- ese
+  // caso no cambia. Uso general (pestana "Kardex" de InventarioPage, sin props): sin id,
+  // useKardexMovimientos nunca llamaba a listarMovimientos() y la pestana quedaba siempre vacia
+  // sin ninguna forma de elegir un lote desde la pantalla.
+  const usaSeleccionPropia = loteId === null && medicamentoId === null;
+
+  const [loteSeleccionadoId, setLoteSeleccionadoId] = useState(null);
+  const [lotes, setLotes] = useState([]);
+  const [cargandoLotes, setCargandoLotes] = useState(false);
+  const [errorLotes, setErrorLotes] = useState(null);
+
+  useEffect(() => {
+    if (!usaSeleccionPropia) return;
+
+    let vigente = true;
+    setCargandoLotes(true);
+    listarLotes().then(({ lotes: datos, error: errorDeListado }) => {
+      if (!vigente) return;
+      setLotes(datos ?? []);
+      setErrorLotes(errorDeListado);
+      setCargandoLotes(false);
+    });
+    return () => {
+      vigente = false;
+    };
+  }, [usaSeleccionPropia]);
+
+  // Mismo criterio de etiqueta que valoresDeCorreccionDeMovimiento() (useMisMovimientos.js):
+  // "Medicamento · Lote NNN".
+  const opcionesDeLote = useMemo(
+    () =>
+      [...lotes]
+        .sort((a, b) => (a.medicamento ?? "").localeCompare(b.medicamento ?? ""))
+        .map((lote) => ({
+          value: lote.id,
+          label: [lote.medicamento, lote.numeroLote && `Lote ${lote.numeroLote}`]
+            .filter(Boolean)
+            .join(" · "),
+        })),
+    [lotes],
+  );
+
   const { movimientos, cargando, error, filtros, setFiltros } = useKardexMovimientos({
-    loteId,
+    loteId: usaSeleccionPropia ? loteSeleccionadoId : loteId,
     medicamentoId,
   });
 
   const formatoFecha = (fechaIso) => (fechaIso ? formatearFechaConHora(fechaIso) : "—");
+
+  // Exportar PDF: se monta el documento imprimible (portal sobre document.body), se abre el
+  // dialogo de impresion del navegador y se desmonta al terminar. Mismo mecanismo que el cuadro
+  // de turnos de una jornada; el usuario elige "Guardar como PDF".
+  const [aImprimir, setAImprimir] = useState(false);
+
+  useEffect(() => {
+    if (!aImprimir) return undefined;
+
+    const limpiar = () => setAImprimir(false);
+    window.addEventListener("afterprint", limpiar);
+    const cuadro = window.requestAnimationFrame(() => window.print());
+
+    return () => {
+      window.removeEventListener("afterprint", limpiar);
+      window.cancelAnimationFrame(cuadro);
+    };
+  }, [aImprimir]);
+
+  const resumen = useMemo(() => resumenDeKardex(movimientos), [movimientos]);
+  const loteImpreso = opcionesDeLote.find((opcion) => opcion.value === loteSeleccionadoId);
+  const descripcionDeFiltros = [
+    usaSeleccionPropia && loteImpreso ? loteImpreso.label : null,
+    filtros.fechaDesde || filtros.fechaHasta
+      ? `${filtros.fechaDesde || "—"} al ${filtros.fechaHasta || "—"}`
+      : "Todo el histórico",
+    filtros.tipoMovimiento && filtros.tipoMovimiento !== "todos"
+      ? ETIQUETAS_TIPO[filtros.tipoMovimiento]
+      : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
   const hayFiltros = Boolean(
     filtros.fechaDesde ||
@@ -115,10 +190,33 @@ export default function KardexMovimientosPage({
             disabled: movimientos.length === 0,
             variant: "secondary",
           },
+          {
+            custom: (
+              <BotonExportarPDF
+                onClick={() => setAImprimir(true)}
+                generando={aImprimir}
+                disabled={movimientos.length === 0}
+              />
+            ),
+          },
         ]}
       />
 
       <div className="ec-filtros">
+        {usaSeleccionPropia && (
+          <div className="ec-filtro">
+            <Selector
+              label="Lote"
+              value={loteSeleccionadoId}
+              options={opcionesDeLote}
+              onSelect={setLoteSeleccionadoId}
+              placeholder={cargandoLotes ? "Cargando lotes..." : "Selecciona un lote"}
+              disabled={cargandoLotes}
+              error={errorLotes ? "No se pudo cargar la lista de lotes." : undefined}
+              style={{ marginBottom: 0 }}
+            />
+          </div>
+        )}
         <fieldset className="ec-filtro ec-filtro--rango">
           <legend className="form-label">Fecha</legend>
           <div className="ec-rango-doble">
@@ -214,7 +312,7 @@ export default function KardexMovimientosPage({
                   <td>
                     <StatusChip
                       status={mov.estado}
-                      label={ETIQUETAS_ESTADO[mov.estado] ?? mov.estado}
+                      label={ETIQUETAS_ESTADO_MOVIMIENTO[mov.estado] ?? mov.estado}
                     />
                     {mov.estado === ESTADO_MOVIMIENTO.RECHAZADO && mov.motivo_rechazo && (
                       <span className="d-block small text-body-secondary mt-1">
@@ -237,6 +335,58 @@ export default function KardexMovimientosPage({
       <p className="small text-body-secondary mt-3 mb-0">
         Solo los movimientos aprobados modifican el saldo; los pendientes y los rechazados no.
       </p>
+
+      {aImprimir && (
+        <DocumentoImprimible documento="Kardex de movimientos" fecha={new Date().toISOString()}>
+          <p className="doc-imprimible__periodo">{descripcionDeFiltros}</p>
+          <div className="doc-imprimible__kpis">
+            {[
+              ["Movimientos", resumen.movimientos],
+              ["Ingresos aprobados", resumen.ingresos],
+              ["Salidas aprobadas", resumen.salidas],
+              ["Saldo", resumen.saldo],
+            ].map(([etiqueta, valor]) => (
+              <div key={etiqueta} className="doc-imprimible__kpi">
+                <span className="doc-imprimible__kpi-etiqueta">{etiqueta}</span>
+                <span className="doc-imprimible__kpi-valor">{valor}</span>
+              </div>
+            ))}
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Fecha registro</th>
+                <th>Tipo</th>
+                <th>Cantidad</th>
+                <th>Motivo</th>
+                <th>Bodega</th>
+                <th>Registrado por</th>
+                <th>Aprobado por</th>
+                <th>Estado</th>
+                <th>Saldo</th>
+              </tr>
+            </thead>
+            <tbody>
+              {movimientos.map((mov) => (
+                <tr key={mov.id}>
+                  <td>{formatoFecha(mov.created_at)}</td>
+                  <td>{ETIQUETAS_TIPO[mov.tipo] ?? mov.tipo}</td>
+                  <td>
+                    {mov.tipo === TIPO_MOVIMIENTO.INGRESO ? "+" : ""}
+                    {mov.cantidad}
+                  </td>
+                  <td>{mov.motivo}</td>
+                  <td>{mov.bodega_nombre || "—"}</td>
+                  <td>{mov.registrado_por_nombre || "—"}</td>
+                  <td>{mov.aprobado_por_nombre || "Pendiente"}</td>
+                  <td>{ETIQUETAS_ESTADO_MOVIMIENTO[mov.estado] ?? mov.estado}</td>
+                  <td>{mov.saldoAcumulado}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </DocumentoImprimible>
+      )}
     </div>
   );
 }

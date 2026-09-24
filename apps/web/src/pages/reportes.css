@@ -298,3 +298,119 @@
     break-after: avoid;
   }
 }
+/* Botonera de presets de rango (issue #862). useFiltrosReportes los tenia escritos y probados
+   desde la issue #208 y ninguna pantalla los dibujaba. */
+.reporte-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-md);
+}
+
+/* Contador de resultados sobre la tabla. El patron de BitacoraAuditoriaPage, que los reportes no
+   seguian: sin el, una tabla paginada no dice cuantas filas hay en total. */
+.reporte-conteo {
+  margin: 0 0 var(--spacing-sm);
+}
+
+/* Barra de titulo y acciones de una pestana que no lleva CabeceraDeReporte propia. */
+.reporte-barra {
+  align-items: flex-start;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-md);
+  justify-content: space-between;
+  margin-bottom: var(--spacing-md);
+}
+
+.reporte-barra-texto {
+  color: var(--color-text-muted);
+  font-size: var(--texto-sm);
+  margin: 0;
+  max-width: 60ch;
+}
+
+/* --------------------------------------------------------------------------
+   El reporte en papel (issue #862)
+   -------------------------------------------------------------------------- */
+
+.reporte-papel-periodo {
+  color: var(--color-text-muted);
+  font-size: var(--texto-sm);
+  margin: 0 0 var(--spacing-xs);
+}
+
+.reporte-papel-filtros {
+  color: var(--color-text-muted);
+  font-size: var(--texto-xs);
+  margin: 0 0 var(--spacing-md);
+}
+
+.reporte-papel-totales {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-lg);
+  margin: 0 0 var(--spacing-lg);
+}
+
+.reporte-papel-totales dt {
+  color: var(--color-text-muted);
+  font-size: var(--texto-xxs);
+  font-weight: var(--peso-medium);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.reporte-papel-totales dd {
+  font-size: var(--texto-lg);
+  font-weight: var(--peso-bold);
+  margin: 0;
+}
+
+.reporte-papel-seccion {
+  margin-bottom: var(--spacing-lg);
+}
+
+.reporte-papel-subtitulo {
+  font-size: var(--texto-md);
+  font-weight: var(--peso-semibold);
+  margin: 0 0 var(--spacing-sm);
+}
+
+.reporte-papel-tabla {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.reporte-papel-tabla th,
+.reporte-papel-tabla td {
+  border-bottom: 1px solid var(--color-border);
+  font-size: var(--texto-xs);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  text-align: left;
+}
+
+.reporte-papel-tabla th {
+  border-bottom: 2px solid var(--color-text);
+  font-weight: var(--peso-semibold);
+}
+
+.reporte-papel-vacio {
+  color: var(--color-text-muted);
+  font-size: var(--texto-xs);
+  margin: 0;
+}
+
+@media print {
+  /* El encabezado se repite en cada hoja: una tabla de dos paginas cuya segunda pagina son
+     numeros sin titulo no se puede leer. */
+  .reporte-papel-tabla thead {
+    display: table-header-group;
+  }
+
+  /* Una fila o una seccion partida por el salto de pagina se lee mal en los dos lados. */
+  .reporte-papel-tabla tr,
+  .reporte-papel-seccion {
+    break-inside: avoid;
+  }
+}

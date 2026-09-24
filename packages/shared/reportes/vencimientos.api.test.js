@@ -64,7 +64,8 @@ function fila({ cantidad, vence, lote, bodega, medicamentoId = "med-1", nombre =
       medicamento: {
         nombre,
         concentracion: "500 mg",
-        presentacion: "capsula",
+        // presentacion:presentaciones(nombre) en el select real llega anidada (00144).
+        presentacion: { nombre: "Cápsula" },
         marca: "Generico",
       },
     },

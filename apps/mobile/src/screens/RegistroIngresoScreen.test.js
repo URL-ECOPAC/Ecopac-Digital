@@ -59,6 +59,7 @@ jest.mock("@ecopac/shared", () => ({
   listarProveedores: jest.fn(async () => CATALOGO_RESPUESTA.proveedores),
   listarBodegas: jest.fn(async () => CATALOGO_RESPUESTA.bodegas),
   listarPrincipiosActivos: jest.fn(async () => ({ principiosActivos: [] })),
+  listarPresentaciones: jest.fn(async () => ({ presentaciones: [] })),
   useRegistroIngreso: jest.fn(() => mockEstadoIngreso),
 }));
 

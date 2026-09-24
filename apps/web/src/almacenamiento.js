@@ -26,7 +26,7 @@ function crearAlmacenamientoWeb() {
   if (!hayLocalStorage()) {
     console.warn(
       "localStorage no esta disponible: la sesion se guardara solo en memoria y se perdera " +
-        "al recargar la pagina. Suele pasar en ventanas privadas o con el almacenamiento " +
+        "al recargar la página. Suele pasar en ventanas privadas o con el almacenamiento " +
         "bloqueado por el navegador.",
     );
     return crearAlmacenamientoEnMemoria();

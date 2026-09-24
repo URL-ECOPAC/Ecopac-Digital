@@ -145,8 +145,9 @@ SELECT is(
 -- ademas una politica de SELECT, el INSERT fallaria entero (docs/PERMISOS.md, regla del
 -- RETURNING). La politica de SELECT de medicamentos es rol_actual() IS NOT NULL, asi que pasa.
 SELECT lives_ok(
-  $$ INSERT INTO medicamentos (id, nombre, concentracion, presentacion, marca)
-     VALUES ('80000000-0000-0000-0000-000000008641', 'Medicamento 864', '500 mg', 'tableta', 'Generico')
+  $$ INSERT INTO medicamentos (id, nombre, concentracion, presentacion_id, marca)
+     VALUES ('80000000-0000-0000-0000-000000008641', 'Medicamento 864', '500 mg',
+       (SELECT id FROM presentaciones WHERE nombre = 'Tableta'), 'Generico')
      RETURNING id $$,
   'el medico da de alta un medicamento del catalogo'
 );

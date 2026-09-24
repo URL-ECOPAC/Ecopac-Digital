@@ -8,12 +8,12 @@ import SecondaryButton from "./SecondaryButton";
  * que no se parecia al "Exportar CSV" de al lado, un SecondaryButton. Ahora son el mismo boton:
  * contorno, misma letra, mismo radio, y el giro de carga del catalogo mientras se genera.
  */
-export default function BotonExportarPDF({ onClick, generando = false }) {
+export default function BotonExportarPDF({ onClick, generando = false, disabled = false }) {
   return (
     <SecondaryButton
       title={generando ? "Generando PDF..." : "Exportar PDF"}
       onClick={onClick}
-      disabled={generando}
+      disabled={generando || disabled}
       icon={<FileDown size={16} aria-hidden="true" />}
     />
   );

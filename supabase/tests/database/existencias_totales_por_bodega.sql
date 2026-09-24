@@ -21,8 +21,9 @@ ALTER TABLE perfiles DISABLE TRIGGER USER;
 UPDATE perfiles SET rol = 'administrador' WHERE id = '00000000-0000-0000-0000-000000077301';
 ALTER TABLE perfiles ENABLE TRIGGER USER;
 
-INSERT INTO medicamentos (id, nombre, concentracion, presentacion, marca) VALUES
-  ('70000000-0000-0000-0000-000000077301', 'Medicamento prueba 773', '500 mg', 'tableta', 'Generico');
+INSERT INTO medicamentos (id, nombre, concentracion, presentacion_id, marca) VALUES
+  ('70000000-0000-0000-0000-000000077301', 'Medicamento prueba 773', '500 mg',
+   (SELECT id FROM presentaciones WHERE nombre = 'Tableta'), 'Generico');
 
 INSERT INTO proveedores (id, nombre, tipo) VALUES
   ('71000000-0000-0000-0000-000000077301', 'Proveedor prueba 773', 'comercial');

@@ -11,7 +11,7 @@
 // pediatrico y si esta activo) y lo que depende de los lotes -cuantos hay y cuando vence el
 // proximo- se calcula de verdad a partir de listarLotes().
 
-import { ETIQUETAS_PRESENTACION, PRESENTACIONES_DE_MEDICAMENTO, opcionesDe } from "../enums.js";
+import { ETIQUETAS_TIPO_ARTICULO, TIPOS_DE_ARTICULO, opcionesDe } from "../enums.js";
 import { TIPOS_DE_FILTRO } from "../descriptores.js";
 import { diasHastaVencimiento } from "../formato/fechas.js";
 import { textoComparable } from "../formato/opciones.js";
@@ -24,13 +24,13 @@ import { textoComparable } from "../formato/opciones.js";
  * "Paracetamol" en una lista son indistinguibles.
  *
  * @param {{ id: string, nombre: string, concentracion?: string, presentacion?: string,
- *   marca?: string }} medicamento
+ *   marca?: string }} medicamento `presentacion` ya es la etiqueta resuelta (presentaciones.nombre,
+ *   00144), no un valor de enum que traducir.
  * @returns {{ value: string, label: string }}
  */
 export function opcionDeMedicamento(medicamento) {
   const principal = [medicamento.nombre, medicamento.concentracion].filter(Boolean).join(" ");
-  const presentacion = ETIQUETAS_PRESENTACION[medicamento.presentacion] ?? medicamento.presentacion;
-  const conPresentacion = [principal, presentacion].filter(Boolean).join(" · ");
+  const conPresentacion = [principal, medicamento.presentacion].filter(Boolean).join(" · ");
   return {
     value: medicamento.id,
     label: medicamento.marca ? `${conPresentacion} (${medicamento.marca})` : conPresentacion,
@@ -45,11 +45,19 @@ export const FILTROS_CATALOGO_MEDICAMENTOS = [
     placeholder: "Nombre, marca, concentración o número de lote",
   },
   {
-    id: "presentacion",
+    id: "tipoArticulo",
+    tipo: TIPOS_DE_FILTRO.SELECT,
+    label: "Tipo de artículo",
+    placeholder: "Todos",
+    opciones: opcionesDe(TIPOS_DE_ARTICULO, ETIQUETAS_TIPO_ARTICULO),
+  },
+  // presentacion_id (00144): ya no es un enum fijo -- opcionesDesde carga el catalogo real.
+  {
+    id: "presentacionId",
     tipo: TIPOS_DE_FILTRO.SELECT,
     label: "Presentación",
     placeholder: "Todas",
-    opciones: opcionesDe(PRESENTACIONES_DE_MEDICAMENTO, ETIQUETAS_PRESENTACION),
+    opcionesDesde: "presentaciones",
   },
   {
     id: "poblacion",
@@ -75,20 +83,24 @@ export const FILTROS_CATALOGO_MEDICAMENTOS = [
 
 export const FILTROS_CATALOGO_VACIOS = Object.freeze({
   busqueda: "",
-  presentacion: null,
+  tipoArticulo: null,
+  presentacionId: null,
   poblacion: null,
   estado: null,
 });
 
 /**
- * Lotes agrupados por medicamento: cuantos hay, cuantos vencieron y el vencimiento mas proximo de
- * los que siguen vigentes.
+ * Lotes agrupados por medicamento: cuantos hay, cuantos vencieron, el vencimiento mas proximo de
+ * los que siguen vigentes y cuanto queda disponible hoy sumando todos sus lotes.
  *
  * @param {object[]} lotes Lo que devuelve listarLotes() (aLote, lotes.api.js).
+ * @param {Map<string, number>} [disponiblePorLote] De sumarExistenciasPorLote()
+ *   (useExistenciasPorLote.js): loteId -> cantidad disponible hoy. Sin ella, disponible queda en 0
+ *   para todos -- mismo criterio que el resto de esta pantalla cuando falta un dato complementario.
  * @returns {Map<string, { lotes: number, vencidos: number, proximoVencimiento: string|null,
- *   diasParaProximo: number|null, numeros: string[] }>}
+ *   diasParaProximo: number|null, numeros: string[], disponible: number }>}
  */
-export function resumirLotesPorMedicamento(lotes = []) {
+export function resumirLotesPorMedicamento(lotes = [], disponiblePorLote = new Map()) {
   const resumen = new Map();
 
   for (const lote of lotes) {
@@ -99,9 +111,11 @@ export function resumirLotesPorMedicamento(lotes = []) {
       proximoVencimiento: null,
       diasParaProximo: null,
       numeros: [],
+      disponible: 0,
     };
 
     actual.lotes += 1;
+    actual.disponible += Number(disponiblePorLote.get(lote.id) ?? 0);
     if (lote.numeroLote) actual.numeros.push(lote.numeroLote);
 
     const dias = diasHastaVencimiento(lote.fechaVencimiento);
@@ -135,7 +149,10 @@ export function filtrarCatalogoMedicamentos(medicamentos = [], filtros = {}, res
   return medicamentos.filter((medicamento) => {
     if (!medicamento) return false;
 
-    if (filtros.presentacion && medicamento.presentacion !== filtros.presentacion) return false;
+    if (filtros.tipoArticulo && medicamento.tipoArticulo !== filtros.tipoArticulo) return false;
+    if (filtros.presentacionId && medicamento.presentacionId !== filtros.presentacionId) {
+      return false;
+    }
     if (filtros.poblacion === "pediatrico" && !medicamento.esPediatrico) return false;
     if (filtros.poblacion === "general" && medicamento.esPediatrico) return false;
     if (filtros.estado === "activos" && medicamento.activo === false) return false;
@@ -158,7 +175,8 @@ export function filtrarCatalogoMedicamentos(medicamentos = [], filtros = {}, res
 export function hayFiltrosDeCatalogo(filtros = {}) {
   return Boolean(
     (filtros.busqueda && filtros.busqueda.trim()) ||
-    filtros.presentacion ||
+    filtros.tipoArticulo ||
+    filtros.presentacionId ||
     filtros.poblacion ||
     filtros.estado,
   );

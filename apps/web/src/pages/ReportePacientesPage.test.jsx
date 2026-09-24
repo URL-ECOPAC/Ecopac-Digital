@@ -4,6 +4,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import * as matchers from "@testing-library/jest-dom/matchers";
+import { MemoryRouter } from "react-router-dom";
 
 import { COLUMNAS_PACIENTES_ATENDIDOS, FILTROS_REPORTES } from "@ecopac/shared";
 
@@ -19,10 +20,6 @@ vi.mock("../contexto/SesionProvider", () => ({
   useSesionCompartida: () => ({ rol: "administrador" }),
 }));
 
-vi.mock("../../../../packages/shared/reportes/useExportarPDF", () => ({
-  useExportarPDF: () => ({ exportar: vi.fn(), generando: false }),
-}));
-
 const GRUPO_DE_EJEMPLO = {
   id: "g-1",
   nombre: "Jornada enero",
@@ -36,13 +33,25 @@ const mockEstadoHook = {
   cargando: false,
   error: null,
   grupos: [],
+  gruposCompletos: [],
+  total: 0,
   totales: { pacientes: 0, nuevos: 0, recurrentes: 0 },
   columnas: COLUMNAS_PACIENTES_ATENDIDOS,
   definicionDeFiltros: FILTROS_REPORTES,
-  valores: {},
+  valores: { periodo: { min: null, max: null } },
+  presetActivo: null,
+  presets: [],
+  parametrosDeUrl: {},
   setFiltro: vi.fn(),
+  setPreset: vi.fn(),
   limpiarFiltros: vi.fn(),
+  hayFiltros: false,
   catalogos: {},
+  orden: null,
+  alternarOrden: vi.fn(),
+  numeroDePagina: 1,
+  totalPaginas: 1,
+  irAPagina: vi.fn(),
   agruparPor: "jornada",
   setAgruparPor: vi.fn(),
   recargar: vi.fn(),
@@ -55,8 +64,14 @@ vi.mock("@ecopac/shared", async (importarOriginal) => ({
 
 const { useReportePacientes } = await import("@ecopac/shared");
 
-function pantalla() {
-  return render(<ReportePacientesPage />);
+// ISSUE #862: la pantalla sincroniza los filtros con la barra de direcciones (useSearchParams),
+// asi que necesita un router alrededor.
+function pantalla(ruta = "/reportes/pacientes-atendidos") {
+  return render(
+    <MemoryRouter initialEntries={[ruta]}>
+      <ReportePacientesPage />
+    </MemoryRouter>,
+  );
 }
 
 describe("ReportePacientesPage", () => {
@@ -76,7 +91,9 @@ describe("ReportePacientesPage", () => {
     pantalla();
 
     expect(
-      screen.getByText("Solo administración y junta directiva consultan el reporte de pacientes."),
+      screen.getByText(
+        "Solo administración y los roles consultivos consultan el reporte de pacientes.",
+      ),
     ).toBeInTheDocument();
   });
 
@@ -93,9 +110,7 @@ describe("ReportePacientesPage", () => {
     const { container } = pantalla();
 
     expect(container.querySelector(".ec-kpis")).toHaveTextContent("Pacientes atendidos");
-    expect(
-      screen.getByText("No hay atenciones registradas con estos filtros."),
-    ).toBeInTheDocument();
+    expect(screen.getByText("No hay atenciones registradas todavía.")).toBeInTheDocument();
   });
 
   it("con datos, pinta los totales y el grupo", () => {

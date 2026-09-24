@@ -87,9 +87,7 @@ export default function HomePage() {
 
           {!cargando && !error && jornadasEnCurso.length === 0 && (
             <div className="ec-panel-vacio" style={{ minHeight: "140px" }}>
-              <p className="inicio-vacio">
-                No hay ninguna jornada en curso ahora mismo. Cuando empiece una, aparecera aqui.
-              </p>
+              <p className="inicio-vacio">No hay ninguna jornada en curso ahora mismo.</p>
             </div>
           )}
 

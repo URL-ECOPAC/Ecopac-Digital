@@ -29,12 +29,15 @@ import {
   COLUMNAS_MEDICAMENTOS_MAS_ENTREGADOS,
   COLUMNAS_PACIENTES_ATENDIDOS,
   COLUMNAS_PERSONAL_PARTICIPANTE,
+  COLUMNAS_VENCIMIENTO,
 } from "./columnas.js";
 import {
   FILTROS_INVENTARIO_REPORTE,
   FILTROS_INVENTARIO_REPORTE_VACIOS,
   FILTROS_REPORTES,
   FILTROS_REPORTES_VACIOS,
+  FILTROS_VENCIMIENTOS,
+  FILTROS_VENCIMIENTOS_VACIOS,
 } from "./filtros.js";
 import { AGRUPACIONES_DE_IMPACTO } from "./api.js";
 import { ESTADOS_DE_VENCIMIENTO } from "./inventario.api.js";
@@ -54,9 +57,16 @@ const TODAS_LAS_LISTAS_DE_COLUMNAS = {
   COLUMNAS_MEDICAMENTOS_MAS_ENTREGADOS,
   COLUMNAS_PACIENTES_ATENDIDOS,
   COLUMNAS_PERSONAL_PARTICIPANTE,
+  COLUMNAS_VENCIMIENTO,
 };
 
-const TODAS_LAS_LISTAS_DE_FILTROS = { FILTROS_REPORTES, FILTROS_INVENTARIO_REPORTE };
+const TODAS_LAS_LISTAS_DE_FILTROS = {
+  FILTROS_REPORTES,
+  FILTROS_INVENTARIO_REPORTE,
+  // ISSUE #862: la pestana de medicamentos por vencer dibujaba sus <select> a mano, fuera de todo
+  // descriptor, asi que esta guarda nunca la habia mirado.
+  FILTROS_VENCIMIENTOS,
+};
 
 // Catalogos que un hook de pantalla (fuera de esta issue) tiene que pasar por `catalogos`.
 const CATALOGOS_CONOCIDOS = new Set([
@@ -64,6 +74,12 @@ const CATALOGOS_CONOCIDOS = new Set([
   "jornadas",
   "proyectos",
   "bodegas",
+  // ISSUE #862: lo consumen el filtro de medicamento del reporte de inventario y el de
+  // vencimientos. Los dos hooks lo cargan con listarMedicamentos().
+  "medicamentos",
+  // El nivel de alerta de un renglon por vencer: lo calcula calcularAlerta() en el hook, no la
+  // API, y por eso tiene catalogo propio y no el del filtro (#862).
+  "nivelesDeAlerta",
   // El del filtro de vencimiento, indexado por las cadenas "vigentes"/"vencidos".
   "estadosDeVencimientoReporte",
   // El de la columna de vencimiento de un lote, indexado por el booleano de la fila (#840).
@@ -173,6 +189,9 @@ describe("filtros.js solo usa el vocabulario de TIPOS_DE_FILTRO", () => {
     expect(Object.keys(FILTROS_INVENTARIO_REPORTE_VACIOS).sort()).toEqual(
       FILTROS_INVENTARIO_REPORTE.map((f) => f.id).sort(),
     );
+    expect(Object.keys(FILTROS_VENCIMIENTOS_VACIOS).sort()).toEqual(
+      FILTROS_VENCIMIENTOS.map((f) => f.id).sort(),
+    );
   });
 });
 
@@ -238,10 +257,14 @@ describe("los catalogos de estado reflejan los enum reales", () => {
     );
   });
 
-  it("OPCIONES_METRICA_IMPACTO tiene las cuatro metricas del reporte de impacto", () => {
+  // ISSUE #862: eran cuatro y faltaba consultas_realizadas, que vista_reporte_impacto calcula,
+  // COLUMNAS_DEL_REPORTE selecciona y useDashboardMetricas expone. Al no estar en esta lista no
+  // habia forma de elegirla desde la pantalla, y esta prueba afirmaba esa ausencia como correcta.
+  it("OPCIONES_METRICA_IMPACTO tiene las cinco metricas del reporte de impacto", () => {
     expect(OPCIONES_METRICA_IMPACTO.map((o) => o.value).sort()).toEqual(
       [
         "pacientes_atendidos",
+        "consultas_realizadas",
         "tratamientos_entregados",
         "medicamentos_utilizados",
         "comunidades_beneficiadas",

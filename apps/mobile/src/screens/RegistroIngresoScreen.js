@@ -6,9 +6,9 @@ import {
   ESTADOS_MOVIMIENTO,
   ETIQUETAS_ESTADO_MOVIMIENTO,
   OPCIONES_ORIGEN_LOTE,
-  OPCIONES_PRESENTACION,
   listarBodegas,
   listarMedicamentos,
+  listarPresentaciones,
   listarPrincipiosActivos,
   listarProveedores,
   useRegistroIngreso,
@@ -34,7 +34,7 @@ import {
 const FORM_MEDICAMENTO_VACIO = {
   nombre: "",
   concentracion: "",
-  presentacion: "",
+  presentacionId: "",
   marca: "",
   principioActivoId: "",
 };
@@ -77,6 +77,7 @@ export default function RegistroIngresoScreen() {
   const [errorCatalogos, setErrorCatalogos] = useState(null);
 
   const [principiosActivos, setPrincipiosActivos] = useState([]);
+  const [presentaciones, setPresentaciones] = useState([]);
   const [modalMedicamentoVisible, setModalMedicamentoVisible] = useState(false);
   const [formMedicamento, setFormMedicamento] = useState(FORM_MEDICAMENTO_VACIO);
 
@@ -165,13 +166,17 @@ export default function RegistroIngresoScreen() {
       const { principiosActivos: lista } = await listarPrincipiosActivos();
       setPrincipiosActivos(lista);
     }
+    if (presentaciones.length === 0) {
+      const { presentaciones: lista } = await listarPresentaciones();
+      setPresentaciones(lista);
+    }
   };
 
   const guardarMedicamentoNuevo = async () => {
     const { medicamento, error: errorCreacion } = await crearMedicamentoNuevo({
       nombre: formMedicamento.nombre,
       concentracion: formMedicamento.concentracion,
-      presentacion: formMedicamento.presentacion,
+      presentacionId: formMedicamento.presentacionId,
       marca: formMedicamento.marca,
       principiosActivosIds: formMedicamento.principioActivoId
         ? [formMedicamento.principioActivoId]
@@ -360,9 +365,9 @@ export default function RegistroIngresoScreen() {
           />
           <Selector
             label="Presentación"
-            value={formMedicamento.presentacion || null}
-            options={OPCIONES_PRESENTACION}
-            onSelect={(valor) => setFormMedicamento({ ...formMedicamento, presentacion: valor })}
+            value={formMedicamento.presentacionId || null}
+            options={aOpciones(presentaciones)}
+            onSelect={(valor) => setFormMedicamento({ ...formMedicamento, presentacionId: valor })}
           />
           <TextField
             label="Marca"

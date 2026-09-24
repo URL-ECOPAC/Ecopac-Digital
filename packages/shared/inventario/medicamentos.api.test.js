@@ -149,13 +149,13 @@ describe("listarMedicamentos", () => {
     const cliente = crearCliente({ tablas: { medicamentos: { data: [], error: null } } });
     dobles.cliente = cliente;
 
-    await listarMedicamentos({ presentacion: "tableta", esPediatrico: true });
+    await listarMedicamentos({ presentacionId: "pres-1", esPediatrico: true });
 
     expect(cliente.llamadas).toContainEqual({
       tabla: "medicamentos",
       paso: "eq",
-      columna: "presentacion",
-      valor: "tableta",
+      columna: "presentacion_id",
+      valor: "pres-1",
     });
     expect(cliente.llamadas).toContainEqual({
       tabla: "medicamentos",
@@ -238,7 +238,7 @@ describe("registrarMedicamento", () => {
             id: "med-1",
             nombre: "Paracetamol",
             concentracion: "500 mg",
-            presentacion: "tableta",
+            presentacion_id: "pres-1",
             marca: "Generico",
             forma_farmaceutica: null,
             es_pediatrico: false,
@@ -255,7 +255,7 @@ describe("registrarMedicamento", () => {
     const { medicamento, error } = await registrarMedicamento({
       nombre: "Paracetamol",
       concentracion: "500 mg",
-      presentacion: "tableta",
+      presentacionId: "pres-1",
       marca: "Generico",
       principiosActivosIds: ["principio-1"],
     });
@@ -265,7 +265,10 @@ describe("registrarMedicamento", () => {
       id: "med-1",
       nombre: "Paracetamol",
       concentracion: "500 mg",
-      presentacion: "tableta",
+      presentacionId: "pres-1",
+      // El nombre resuelto de la presentacion no llega por el RPC (sin join, ver aMedicamento()
+      // en medicamentos.api.js); queda null hasta la proxima recarga completa del catalogo.
+      presentacion: null,
       marca: "Generico",
       formaFarmaceutica: null,
       esPediatrico: false,
@@ -280,13 +283,59 @@ describe("registrarMedicamento", () => {
       argumentos: {
         p_nombre: "Paracetamol",
         p_concentracion: "500 mg",
-        p_presentacion: "tableta",
+        p_presentacion_id: "pres-1",
         p_marca: "Generico",
         p_principios_ids: ["principio-1"],
         p_forma_farmaceutica: null,
         p_es_pediatrico: false,
+        p_tipo_articulo: "medicamento",
       },
     });
+  });
+
+  // 00142_tipo_articulo_de_medicamento.sql: fn_registrar_medicamento default 'medicamento' si
+  // nadie manda tipoArticulo (test de arriba), pero un alta de insumo tiene que llegar hasta el
+  // RPC con su propio valor -- no quedarse pisada por el default silenciosamente.
+  it("envia tipoArticulo cuando el formulario registra un insumo", async () => {
+    const cliente = crearCliente({
+      rpc: {
+        fn_registrar_medicamento: {
+          data: {
+            id: "med-2",
+            nombre: "Gasas esteriles",
+            tipo_articulo: "insumo",
+            concentracion: "10x10 cm",
+            presentacion_id: "pres-1",
+            marca: "Generico",
+            forma_farmaceutica: null,
+            es_pediatrico: false,
+            activo: true,
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
+          },
+          error: null,
+        },
+      },
+    });
+    dobles.cliente = cliente;
+
+    const { medicamento, error } = await registrarMedicamento({
+      nombre: "Gasas esteriles",
+      tipoArticulo: "insumo",
+      concentracion: "10x10 cm",
+      presentacionId: "pres-1",
+      marca: "Generico",
+      principiosActivosIds: ["principio-1"],
+    });
+
+    expect(error).toBeNull();
+    expect(medicamento.tipoArticulo).toBe("insumo");
+    expect(cliente.llamadas).toContainEqual(
+      expect.objectContaining({
+        nombre: "fn_registrar_medicamento",
+        argumentos: expect.objectContaining({ p_tipo_articulo: "insumo" }),
+      }),
+    );
   });
 
   it("normaliza como unicidad la violacion del combo nombre+concentracion+presentacion+marca", async () => {
@@ -360,7 +409,9 @@ describe("desactivarMedicamento", () => {
     const { medicamento, error } = await desactivarMedicamento("med-1");
 
     expect(error).toBeNull();
-    expect(medicamento).toEqual({ id: "med-1", activo: false });
+    // presentacion: null porque el doble no trae el embed a presentaciones -- aplanarPresentacion()
+    // lo deja en null cuando no hay nada que aplanar, no revienta.
+    expect(medicamento).toEqual({ id: "med-1", activo: false, presentacion: null });
     expect(cliente.llamadas).toContainEqual({
       tabla: "medicamentos",
       paso: "update",
@@ -389,7 +440,7 @@ describe("reactivarMedicamento", () => {
     const { medicamento, error } = await reactivarMedicamento("med-1");
 
     expect(error).toBeNull();
-    expect(medicamento).toEqual({ id: "med-1", activo: true });
+    expect(medicamento).toEqual({ id: "med-1", activo: true, presentacion: null });
     expect(cliente.llamadas).toContainEqual({
       tabla: "medicamentos",
       paso: "update",

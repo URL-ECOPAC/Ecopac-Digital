@@ -74,9 +74,10 @@ INSERT INTO consultas (id, expediente_id, atencion_id, medico_id, jornada_id, mo
    '50000000-0000-0000-0000-000000001b01', '00000000-0000-0000-0000-000000001004',
    '40000000-0000-0000-0000-000000001a01', 'Consulta de prueba 91');
 
--- medicamentos (00016) exige nombre, concentracion, presentacion y marca.
-INSERT INTO medicamentos (id, nombre, concentracion, presentacion, marca) VALUES
-  ('a0000000-0000-0000-0000-0000000010a1', 'Medicamento prueba 91', '500 mg', 'tableta', 'Generico');
+-- medicamentos (00016) exige nombre, concentracion, presentacion_id y marca.
+INSERT INTO medicamentos (id, nombre, concentracion, presentacion_id, marca) VALUES
+  ('a0000000-0000-0000-0000-0000000010a1', 'Medicamento prueba 91', '500 mg',
+   (SELECT id FROM presentaciones WHERE nombre = 'Tableta'), 'Generico');
 
 INSERT INTO recetas (id, consulta_id, medico_id) VALUES
   ('70000000-0000-0000-0000-000000001d01', '60000000-0000-0000-0000-000000001c01', '00000000-0000-0000-0000-000000001004');

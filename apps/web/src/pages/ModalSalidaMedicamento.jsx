@@ -1,7 +1,13 @@
 import { useRegistroSalida } from "@ecopac/shared";
 import { useCerrarAlTocarFuera } from "../hooks/useCerrarAlTocarFuera";
 
-export function ModalSalidaMedicamento({ abierto, onClose, medicamentos = [], usuarioId }) {
+export function ModalSalidaMedicamento({
+  abierto,
+  onClose,
+  onExito,
+  medicamentos = [],
+  usuarioId,
+}) {
   const {
     motivo,
     setMotivo,
@@ -15,7 +21,18 @@ export function ModalSalidaMedicamento({ abierto, onClose, medicamentos = [], us
     error,
     cargando,
     guardarSalida,
-  } = useRegistroSalida({ usuarioId, onExito: onClose });
+  } = useRegistroSalida({
+    usuarioId,
+    // onExito (issue #859) faltaba: el modal se cerraba solo, sin avisarle al padre que recargara
+    // lotesRaw/existenciasRaw. La salida SI descontaba el stock en la base -para administracion,
+    // en el acto (fn_autoaprobar_movimiento_inventario); para medico y voluntario, al aprobarse-,
+    // pero InventarioPage seguia mostrando los numeros de antes de abrir el modal hasta que
+    // alguien recargara la pagina entera.
+    onExito: (datos) => {
+      if (onExito) onExito(datos);
+      onClose();
+    },
+  });
 
   const fondo = useCerrarAlTocarFuera(onClose, { activo: abierto });
 
@@ -209,6 +226,23 @@ export function ModalSalidaMedicamento({ abierto, onClose, medicamentos = [], us
                   </option>
                 ))}
               </select>
+              {/* Sin esto, un medicamento sin lotes en vista_lotes_disponibles (00047) se veia
+                  igual que uno todavia sin elegir: la lista simplemente salia vacia, sin decir
+                  por que. Las tres causas posibles son las que excluye esa vista: el unico
+                  ingreso del medicamento sigue pendiente de aprobacion (no tiene existencias
+                  todavia, 00107), sus lotes ya vencieron, o ya no les queda stock. */}
+              {medicamentoId && !cargando && !error && lotesDisponibles.length === 0 && (
+                <p
+                  style={{
+                    fontSize: "var(--texto-xs)",
+                    color: "#64748b",
+                    margin: "6px 0 0 0",
+                  }}
+                >
+                  Este medicamento no tiene lotes disponibles para salida: puede que su ingreso esté
+                  pendiente de aprobación, que sus lotes ya vencieron, o que no quede stock.
+                </p>
+              )}
             </div>
 
             {/* Cantidad */}

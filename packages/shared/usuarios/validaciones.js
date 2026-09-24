@@ -49,7 +49,7 @@ export const REGLAS_DE_CONTRASENA = [
   },
   {
     id: "numeros",
-    texto: "Al menos un numero",
+    texto: "Al menos un número",
     cumple: (contrasena) => /\d/.test(contrasena),
   },
 ];
@@ -107,7 +107,7 @@ export function validarContrasena(contrasena) {
 
   if (valor === "") {
     return {
-      errores: { contrasena: "Escribe una contrasena." },
+      errores: { contrasena: "Escribe una contraseña." },
       reglasIncumplidas: REGLAS_DE_CONTRASENA,
     };
   }
@@ -212,7 +212,7 @@ export function validarCambioContrasena({ actual, nueva, confirmarNueva } = {}) 
   const errores = {};
 
   if (esTextoVacio(actual)) {
-    errores.actual = "Escribe tu contrasena actual.";
+    errores.actual = "Escribe tu contraseña actual.";
   }
 
   // validarContrasena() reporta su error bajo la clave "contrasena" (pensada para un
@@ -223,9 +223,9 @@ export function validarCambioContrasena({ actual, nueva, confirmarNueva } = {}) 
   if (erroresDeNueva.contrasena) errores.nueva = erroresDeNueva.contrasena;
 
   if (!errores.nueva && !esTextoVacio(confirmarNueva) && nueva !== confirmarNueva) {
-    errores.confirmarNueva = "Las contrasenas no coinciden.";
+    errores.confirmarNueva = "Las contraseñas no coinciden.";
   } else if (!errores.nueva && esTextoVacio(confirmarNueva)) {
-    errores.confirmarNueva = "Confirma la contrasena nueva.";
+    errores.confirmarNueva = "Confirma la contraseña nueva.";
   }
 
   return errores;
@@ -247,7 +247,7 @@ export function validarCredenciales({ correo, contrasena } = {}) {
   const errores = { ...erroresDeCorreo };
 
   if (esTextoVacio(contrasena)) {
-    errores.contrasena = "Escribe tu contrasena.";
+    errores.contrasena = "Escribe tu contraseña.";
   }
 
   return { correo: valor, errores };

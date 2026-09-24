@@ -133,7 +133,7 @@ describe("DetalleLoteScreen", () => {
   it("sin lote y sin error (id inexistente), muestra el mensaje de vacio", () => {
     pantalla();
 
-    expect(screen.getByText("No se encontro el lote.")).toBeTruthy();
+    expect(screen.getByText("No se encontró el lote.")).toBeTruthy();
   });
 
   // Issue #866: "al presionar una tarjeta se deben ver sus datos y un boton de editar". Quien

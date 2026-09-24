@@ -21,7 +21,7 @@ const COLUMNAS_DE_LA_RECETA = [
   "medico:perfiles!recetas_medico_id_fkey(nombres, apellidos)",
   "anuladaPorPerfil:perfiles!recetas_anulada_por_fkey(nombres, apellidos)",
   "consulta:consultas!inner(id, jornadaId:jornada_id, expedienteId:expediente_id, jornada:jornadas(nombre, fecha), expediente:expedientes!inner(pacienteId:paciente_id))",
-  "detalle:receta_detalle(id, medicamentoId:medicamento_id, loteId:lote_id, dosis, frecuencia, duracion, cantidadEntregada:cantidad_entregada, cantidadAjustada:cantidad_ajustada, ajustadaPor:ajustada_por, ajustadaEn:ajustada_en, ajustadaPorPerfil:perfiles(nombres, apellidos), medicamento:medicamentos(nombre, concentracion, presentacion))",
+  "detalle:receta_detalle(id, medicamentoId:medicamento_id, loteId:lote_id, dosis, frecuencia, duracion, cantidadEntregada:cantidad_entregada, cantidadAjustada:cantidad_ajustada, ajustadaPor:ajustada_por, ajustadaEn:ajustada_en, ajustadaPorPerfil:perfiles(nombres, apellidos), medicamento:medicamentos(nombre, concentracion, presentacion:presentaciones(nombre)))",
 ].join(", ");
 
 function aReceta(fila) {
@@ -55,7 +55,9 @@ function aReceta(fila) {
       medicamentoId: renglon.medicamentoId,
       medicamento: renglon.medicamento?.nombre ?? null,
       concentracion: renglon.medicamento?.concentracion ?? null,
-      presentacion: renglon.medicamento?.presentacion ?? null,
+      // presentacion:presentaciones(nombre) en el select llega anidado (00144): el embed de
+      // PostgREST nunca se aplana solo.
+      presentacion: renglon.medicamento?.presentacion?.nombre ?? null,
       loteId: renglon.loteId ?? null,
       dosis: renglon.dosis,
       frecuencia: renglon.frecuencia,
@@ -351,7 +353,7 @@ export async function anularReceta(id, { motivo, anuladaPor } = {}) {
           ...construirError(CODIGOS_DE_ERROR_DE_SUPABASE.PERMISO_DENEGADO),
           mensaje:
             "No se pudo anular la receta. Solo puede anularla quien la emitio, y solo mientras " +
-            "siga vigente; si ya estaba anulada o la firmo otra persona, pideselo a la " +
+            "siga vigente; si ya estaba anulada o la firmó otra persona, pídeselo a la " +
             "administradora.",
         },
       };

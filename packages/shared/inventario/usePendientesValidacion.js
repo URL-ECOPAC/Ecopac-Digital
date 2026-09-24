@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { esRespuestaVigente } from "../hooks/useBusquedaPacientes.js";
 import { listarMovimientos } from "./movimientos.api.js";
+import { recargarAlertasMontadas } from "./useAlertasVencimiento.js";
 import { aprobarMovimiento, rechazarMovimiento } from "./validacion.api.js";
 
 /**
@@ -74,7 +75,14 @@ export function usePendientesValidacion({ usuarioId, rolUsuario } = {}) {
   const aprobar = useCallback(
     async (idMovimiento) => {
       const respuesta = await aprobarMovimiento(idMovimiento, { usuarioId, rolUsuario });
-      if (debeRecargarTrasAccion(respuesta)) await consultar();
+      if (debeRecargarTrasAccion(respuesta)) {
+        await consultar();
+        // Aprobar es lo que de verdad ajusta existencias (tr_actualizar_existencias, 00047): un
+        // ingreso o una salida recien aprobados pueden dejar un lote sin alerta o generarle una
+        // nueva. rechazar() no toca existencias, asi que no dispara este refresco (mismo
+        // criterio que useRegistroSalida.js/useRegistroIngreso.js: es cortesia, no se espera).
+        recargarAlertasMontadas();
+      }
       return respuesta;
     },
     [usuarioId, rolUsuario, consultar],

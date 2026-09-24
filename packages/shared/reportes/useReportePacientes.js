@@ -21,7 +21,12 @@ import { COLUMNAS_PACIENTES_ATENDIDOS } from "./columnas.js";
 import { FILTROS_REPORTES } from "./filtros.js";
 import { AGRUPACIONES_DE_PACIENTES, obtenerReportePacientesAtendidos } from "./pacientes.api.js";
 import { puedeVerReporteDePacientes } from "./permisos.js";
-import { useFiltrosReportes } from "./useFiltrosReportes.js";
+import {
+  OPCIONES_DE_PRESET,
+  serializarFiltrosReportes,
+  useFiltrosReportes,
+} from "./useFiltrosReportes.js";
+import { useOrdenYPagina } from "./useOrdenYPagina.js";
 
 /**
  * Aplana un grupo para que DataList pueda leerlo.
@@ -47,8 +52,10 @@ function aplanarGrupo(grupo) {
  *
  * @param {object} [opciones]
  * @param {string} [opciones.rol] Rol de quien consulta.
+ * @param {{valores: object, presetActivo: string|null}} [opciones.valoresIniciales] Estado con el
+ *   que arrancar, normalmente el que la pantalla resolvio desde la URL.
  */
-export function useReportePacientes({ rol } = {}) {
+export function useReportePacientes({ rol, valoresIniciales } = {}) {
   const tieneAcceso = puedeVerReporteDePacientes(rol);
 
   const {
@@ -57,11 +64,13 @@ export function useReportePacientes({ rol } = {}) {
     presetActivo,
     setFiltro,
     setPreset,
+    limpiarFiltro,
     limpiarFiltros,
     aplicarFiltros,
     catalogos,
     cargandoCatalogos,
-  } = useFiltrosReportes();
+    errorDeCatalogos,
+  } = useFiltrosReportes({ valoresIniciales });
 
   const [agruparPor, setAgruparPor] = useState(AGRUPACIONES_DE_PACIENTES.JORNADA);
   const [grupos, setGrupos] = useState([]);
@@ -73,6 +82,9 @@ export function useReportePacientes({ rol } = {}) {
     if (!tieneAcceso) {
       setGrupos([]);
       setTotales(null);
+      // ISSUE #862: faltaba limpiar el error. Uno viejo sobrevivia a perder el acceso, y la
+      // pantalla mostraba a la vez el aviso de "sin permiso" y un fallo de red anterior.
+      setError(null);
       setCargando(false);
       return;
     }
@@ -111,23 +123,61 @@ export function useReportePacientes({ rol } = {}) {
 
   const filas = useMemo(() => grupos.map(aplanarGrupo), [grupos]);
 
+  // El periodo es un rango: tiene valor incluso vacio ({min:null,max:null}), asi que se mira
+  // dentro en vez de preguntar si existe, o "Limpiar filtros" quedaria activo siempre.
+  const hayFiltros = useMemo(
+    () =>
+      Boolean(
+        valores.comunidad ||
+        valores.jornada ||
+        valores.proyecto ||
+        valores.periodo?.min ||
+        valores.periodo?.max,
+      ),
+    [valores],
+  );
+
+  const { pagina, orden, alternarOrden, numeroDePagina, totalPaginas, irAPagina, total } =
+    useOrdenYPagina(filas, { columnas: COLUMNAS_PACIENTES_ATENDIDOS });
+
   return {
     tieneAcceso,
     cargando: cargando || cargandoCatalogos,
     error,
-    grupos: filas,
+    grupos: pagina,
+    gruposCompletos: filas,
+    total,
     totales,
     columnas: COLUMNAS_PACIENTES_ATENDIDOS,
     definicionDeFiltros: FILTROS_REPORTES,
     valores,
     presetActivo,
+    presets: OPCIONES_DE_PRESET,
+    // ISSUE #862: serializarFiltrosReportes estaba escrita y probada desde la #208 y ninguna
+    // pantalla la llamaba, asi que un reporte filtrado no se podia enlazar ni compartir. El hook
+    // la expone ya resuelta; escribirla en la barra de direcciones es de la app, porque toca
+    // `window`.
+    parametrosDeUrl: serializarFiltrosReportes(valores, presetActivo),
     setFiltro,
     setPreset,
+    // ISSUE #862: limpiarFiltro (singular) y errorDeCatalogos los devuelve useFiltrosReportes y
+    // este hook se los tragaba, asi que la pantalla no podia quitar un filtro suelto ni enterarse
+    // de que los catalogos no habian cargado.
+    limpiarFiltro,
     limpiarFiltros,
+    hayFiltros,
     aplicarFiltros,
     catalogos,
+    errorDeCatalogos,
     agruparPor,
     setAgruparPor,
+
+    orden,
+    alternarOrden,
+    numeroDePagina,
+    totalPaginas,
+    irAPagina,
+
     recargar: cargar,
   };
 }

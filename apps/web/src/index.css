@@ -172,6 +172,47 @@
     text-align: left;
   }
 
+  .doc-imprimible__periodo {
+    color: var(--color-text-muted);
+    font-size: 10pt;
+    margin: 0 0 6pt !important;
+  }
+
+  .doc-imprimible__kpis {
+    display: flex;
+    gap: 24pt;
+    margin-bottom: 10pt;
+  }
+
+  .doc-imprimible__kpi {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .doc-imprimible__kpi-etiqueta {
+    color: var(--color-text-muted);
+    font-size: 8pt;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .doc-imprimible__kpi-valor {
+    font-size: 14pt;
+    font-weight: 700;
+  }
+
+  .doc-imprimible__cuerpo table {
+    font-size: 8pt;
+  }
+
+  .doc-imprimible__cuerpo thead {
+    display: table-header-group;
+  }
+
+  .doc-imprimible__cuerpo tr {
+    break-inside: avoid;
+  }
+
   .doc-imprimible__pie {
     display: flex;
     gap: 24pt;
@@ -276,7 +317,6 @@
     display: block;
     font-size: 10pt;
     line-height: 1.35;
-    page: media-carta;
     page-break-before: avoid !important;
     break-before: avoid !important;
   }

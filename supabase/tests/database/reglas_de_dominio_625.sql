@@ -36,8 +36,9 @@ UPDATE perfiles SET rol = 'medico'        WHERE id = '00000000-0000-0000-0000-00
 -- Los dos voluntarios se quedan con el rol por defecto (voluntario general).
 ALTER TABLE perfiles ENABLE TRIGGER USER;
 
-INSERT INTO medicamentos (id, nombre, concentracion, presentacion, marca) VALUES
-  ('74000000-0000-0000-0000-000000625001', 'Medicamento 625', '500 mg', 'tableta', 'Generico');
+INSERT INTO medicamentos (id, nombre, concentracion, presentacion_id, marca) VALUES
+  ('74000000-0000-0000-0000-000000625001', 'Medicamento 625', '500 mg',
+   (SELECT id FROM presentaciones WHERE nombre = 'Tableta'), 'Generico');
 
 INSERT INTO proveedores (id, nombre, tipo) VALUES
   ('75000000-0000-0000-0000-000000625001', 'Proveedor 625', 'comercial');

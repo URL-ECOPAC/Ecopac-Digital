@@ -29,7 +29,7 @@ const COLUMNAS_DEL_REPORTE = [
   "cantidadDisponible:cantidad_disponible",
   "bodegaId:bodega_id",
   "bodega:bodegas!inner(nombre)",
-  "lote:lotes!inner(id, numeroLote:numero_lote, fechaVencimiento:fecha_vencimiento, medicamentoId:medicamento_id, medicamento:medicamentos!inner(nombre, concentracion, presentacion, marca))",
+  "lote:lotes!inner(id, numeroLote:numero_lote, fechaVencimiento:fecha_vencimiento, medicamentoId:medicamento_id, medicamento:medicamentos!inner(nombre, concentracion, presentacion:presentaciones(nombre), marca))",
 ].join(", ");
 
 function aRenglon(fila, hoy) {
@@ -41,7 +41,8 @@ function aRenglon(fila, hoy) {
     medicamentoId: lote.medicamentoId ?? null,
     medicamento: medicamento.nombre ?? null,
     concentracion: medicamento.concentracion ?? null,
-    presentacion: medicamento.presentacion ?? null,
+    // presentacion:presentaciones(nombre) en el select llega anidado (00144).
+    presentacion: medicamento.presentacion?.nombre ?? null,
     marca: medicamento.marca ?? null,
     loteId: lote.id ?? null,
     numeroLote: lote.numeroLote ?? null,

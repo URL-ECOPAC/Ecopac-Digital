@@ -19,10 +19,6 @@ vi.mock("../contexto/SesionProvider", () => ({
   useSesionCompartida: () => ({ rol: "administrador" }),
 }));
 
-vi.mock("../../../../packages/shared/reportes/useExportarPDF", () => ({
-  useExportarPDF: () => ({ exportar: vi.fn(), generando: false }),
-}));
-
 const TOTALES_VACIOS = {
   unidadesDisponibles: 0,
   unidadesVencidas: 0,
@@ -41,6 +37,8 @@ const mockEstadoHook = {
   cargando: false,
   error: null,
   medicamentos: [],
+  medicamentosCompletos: [],
+  total: 0,
   totales: TOTALES_VACIOS,
   columnas: COLUMNAS_INVENTARIO_REPORTE,
   camposDeLote: CAMPOS_FICHA_LOTE_INVENTARIO,
@@ -49,6 +47,11 @@ const mockEstadoHook = {
   limpiarFiltros: vi.fn(),
   hayFiltros: false,
   catalogos: {},
+  orden: null,
+  alternarOrden: vi.fn(),
+  numeroDePagina: 1,
+  totalPaginas: 1,
+  irAPagina: vi.fn(),
   recargar: vi.fn(),
 };
 
@@ -80,7 +83,7 @@ describe("ReporteInventarioPage", () => {
     pantalla();
 
     expect(
-      screen.getByText("Se necesita una sesion activa para consultar el inventario."),
+      screen.getByText("Se necesita una sesión activa para consultar el inventario."),
     ).toBeInTheDocument();
   });
 
@@ -97,9 +100,7 @@ describe("ReporteInventarioPage", () => {
     pantalla();
 
     expect(screen.getByText("Unidades disponibles")).toBeInTheDocument();
-    expect(
-      screen.getByText("No hay existencias que coincidan con estos filtros."),
-    ).toBeInTheDocument();
+    expect(screen.getByText("No hay existencias registradas.")).toBeInTheDocument();
   });
 
   it("con datos, pinta el medicamento, sus totales y el desglose de lotes", () => {
@@ -113,7 +114,14 @@ describe("ReporteInventarioPage", () => {
     pantalla();
 
     expect(screen.getByText("Loratadina")).toBeInTheDocument();
-    expect(screen.getByText("Loratadina - lotes (1)")).toBeInTheDocument();
+
+    // ISSUE #862: antes habia una seccion con su propia tabla POR CADA medicamento, apiladas
+    // todas en la pagina. Ahora el desglose se abre por fila.
+    expect(screen.queryByText("LOTE-1")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Ver lotes" }));
+
+    expect(screen.getByText("Loratadina · 1 lotes")).toBeInTheDocument();
     expect(screen.getByText("LOTE-1")).toBeInTheDocument();
   });
 
@@ -121,7 +129,9 @@ describe("ReporteInventarioPage", () => {
     mockEstadoHook.hayFiltros = true;
     pantalla();
 
-    fireEvent.click(screen.getByText("Limpiar filtros"));
+    // Con la tabla vacia, "Limpiar filtros" sale dos veces: en FilterBar y en el vacio
+    // contextual. Las dos llaman a lo mismo; se pulsa la primera.
+    fireEvent.click(screen.getAllByRole("button", { name: "Limpiar filtros" })[0]);
 
     expect(mockEstadoHook.limpiarFiltros).toHaveBeenCalled();
   });
@@ -133,9 +143,7 @@ describe("ReporteInventarioPage", () => {
     pantalla();
 
     expect(screen.getByText("No se pudo cargar el inventario.")).toBeInTheDocument();
-    expect(
-      screen.queryByText("No hay existencias que coincidan con estos filtros."),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText("No hay existencias registradas.")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByText("Reintentar"));
     expect(mockEstadoHook.recargar).toHaveBeenCalled();
