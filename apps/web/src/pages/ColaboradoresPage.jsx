@@ -660,7 +660,7 @@ function PanelDetalleColaborador({ fila, catalogos, permisos, rol, idSesionActua
                           {jornada.responsabilidad !== "—" ? ` · ${jornada.responsabilidad}` : ""}
                         </div>
                       </div>
-                      {/* ✅ AQUÍ ESTÁ EL CAMBIO — etiqueta en mayúsculas */}
+                      {/*  AQUÍ ESTÁ EL CAMBIO — etiqueta en mayúsculas */}
                       <StatusChip
                         status={jornada.estado}
                         label={
