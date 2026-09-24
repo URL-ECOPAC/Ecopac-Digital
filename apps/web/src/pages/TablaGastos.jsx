@@ -87,7 +87,7 @@ const columnasConMayuscula = useMemo(() => {
   });
 }, []);
 
-//  Cualquier return condicional VA DESPUÉS del useMemo
+//  El return condicional VA DESPUÉS del hook
 if (!datos) return <EstadoVacio />;
 
   return (

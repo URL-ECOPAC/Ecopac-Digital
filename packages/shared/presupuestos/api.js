@@ -1,6 +1,6 @@
 import { obtenerSupabase } from "../api/cliente.js";
 import { normalizarError } from "../api/errores-de-supabase.js";
-
+import { aCadenaFechaLocal } from "@ecopac/shared/formato/fechas.js";
 const PRESUPUESTO_VACIO = {
   asignado: 0,
   gastado: 0,
