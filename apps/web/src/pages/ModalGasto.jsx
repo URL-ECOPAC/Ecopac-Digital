@@ -33,7 +33,15 @@ import TextField from "../components/TextField";
 // hook marca si hay cambios sin guardar; cerrar con cambios pendientes pide confirmacion con el
 // mismo patron de Modal + alert-warning que ya usa JornadasPage.jsx para confirmar finalizar una
 // jornada, en vez de un window.confirm() nativo fuera del catalogo visual de la app.
-export default function ModalGasto({ visible = true, gasto, usuarioId, rol, onClose, onGuardado }) {
+export default function ModalGasto({
+  visible = true,
+  gasto,
+  usuarioId,
+  proyectoId,
+  rol,
+  onClose,
+  onGuardado,
+}) {
   const {
     valores,
     errores,
@@ -47,7 +55,7 @@ export default function ModalGasto({ visible = true, gasto, usuarioId, rol, onCl
     setCampo,
     enviar,
     cancelar,
-  } = useFormularioGasto({ gasto, usuarioId });
+  } = useFormularioGasto({ gasto, usuarioId, proyectoId });
 
   const [pidiendoConfirmacionDeDescarte, setPidiendoConfirmacionDeDescarte] = useState(false);
 

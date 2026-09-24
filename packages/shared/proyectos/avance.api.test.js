@@ -118,6 +118,27 @@ describe("registrarHito", () => {
     });
   });
 
+  it("crear hito solo con nombre y fecha prevista no envia fecha_real vacia", async () => {
+    const { cliente, llamadas } = doble({ data: { id: "hito-1" }, error: null });
+    dobles.cliente = cliente;
+
+    // Asi llega desde ModalHito: todo lo que no se lleno viaja como "".
+    await registrarHito("proyecto-1", {
+      nombre: "Entrega",
+      descripcion: "",
+      fechaPrevista: "2026-09-01",
+      fechaReal: "",
+    });
+
+    expect(pasos(llamadas, "insert")[0].valores).toEqual({
+      proyecto_id: "proyecto-1",
+      nombre: "Entrega",
+      descripcion: null,
+      fecha_prevista: "2026-09-01",
+      fecha_real: null,
+    });
+  });
+
   it("no toca el servidor si no hay proyecto", async () => {
     const { hito, error } = await registrarHito(undefined, { nombre: "Sin proyecto" });
 
@@ -289,6 +310,39 @@ describe("listarSeguimiento", () => {
       columna: "created_at",
       opciones: { ascending: false },
     });
+  });
+
+  it("pide el perfil de quien registro y lo aplana a registradoPorNombre", async () => {
+    const { cliente, llamadas } = doble({
+      data: [
+        {
+          id: "entrada-1",
+          registradoPor: "u-1",
+          registradoPorPerfil: { nombres: "Ana", apellidos: "Lopez" },
+        },
+      ],
+      error: null,
+    });
+    dobles.cliente = cliente;
+
+    const { bitacora } = await listarSeguimiento("proyecto-1");
+
+    expect(pasos(llamadas, "select")[0].columnas).toContain(
+      "registradoPorPerfil:perfiles(nombres, apellidos)",
+    );
+    expect(bitacora[0].registradoPorNombre).toBe("Ana Lopez");
+    expect(bitacora[0]).not.toHaveProperty("registradoPorPerfil");
+  });
+
+  it("una entrada sin autor dice Usuario eliminado, no atribuye a quien la mira", async () => {
+    dobles.cliente = doble({
+      data: [{ id: "entrada-1", registradoPor: null, registradoPorPerfil: null }],
+      error: null,
+    }).cliente;
+
+    const { bitacora } = await listarSeguimiento("proyecto-1");
+
+    expect(bitacora[0].registradoPorNombre).toBe("Usuario eliminado");
   });
 });
 

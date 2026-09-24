@@ -8,12 +8,7 @@ import StatusChip from "../components/StatusChip";
 import ModalHito from "./ModalHito";
 import SecondaryButton from "../components/SecondaryButton";
 
-export default function SeguimientoProyectoPage({
-  proyectoId,
-  proyectoInicial,
-  usuarioActual = "Usuario Actual",
-  onVolver,
-}) {
+export default function SeguimientoProyectoPage({ proyectoId, proyectoInicial, onVolver }) {
   const {
     proyecto,
     hitos,
@@ -215,7 +210,7 @@ export default function SeguimientoProyectoPage({
                         )}
                         <div className="d-flex justify-content-between text-muted extra-small pt-2 border-top">
                           <span>
-                            Registrado por: <strong>{item.registradoPor || usuarioActual}</strong>
+                            Registrado por: <strong>{item.registradoPorNombre}</strong>
                           </span>
                           <span>
                             {item.createdAt

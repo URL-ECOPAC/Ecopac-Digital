@@ -8,7 +8,7 @@ import {
   useParams,
 } from "react-router-dom";
 import { lazy, Suspense, useEffect, useState } from "react";
-import { nombreCompletoDe, obtenerDonacion, rolesDelModulo } from "@ecopac/shared";
+import { obtenerDonacion, rolesDelModulo } from "@ecopac/shared";
 import { labels } from "@ecopac/ui-tokens";
 import { SesionProvider, useSesionCompartida } from "./contexto/SesionProvider";
 import MainLayout from "./components/MainLayout";
@@ -125,7 +125,6 @@ function ConstanciaDonacionEnrutada() {
 // enlace directo o refrescar la pagina dejaba la ficha vacia. proyectoInicial se conserva como
 // adelanto: pinta el encabezado antes de que termine la primera consulta.
 function SeguimientoProyectoEnrutado() {
-  const { perfil } = useSesionCompartida();
   const { id } = useParams();
   const { state } = useLocation();
   const navigate = useNavigate();
@@ -134,7 +133,6 @@ function SeguimientoProyectoEnrutado() {
     <SeguimientoProyectoPage
       proyectoId={id}
       proyectoInicial={proyectoInicial}
-      usuarioActual={nombreCompletoDe(perfil ?? {}) || "Usuario"}
       onVolver={() => navigate("/proyectos")}
     />
   );
