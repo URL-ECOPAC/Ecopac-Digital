@@ -143,3 +143,55 @@ export function validarCambioDeEstadoProyecto(estadoActual, estadoNuevo) {
 
   return {};
 }
+
+export const LONGITUD_MAXIMA_UNIDAD_INSUMO = 30;
+export const LONGITUD_MAXIMA_NOTA_INSUMO = 500;
+
+/**
+ * Valida un insumo previsto de un proyecto antes de mandarlo al servidor. Espejo de los CHECK de
+ * proyecto_insumos (00147): cantidad entera mayor que cero, unidad con texto, costo no negativo.
+ *
+ * `medicamentoId` solo se exige al agregar (`{ esAlta: true }`): al editar el articulo no cambia.
+ * Que el articulo exista en el catalogo lo garantiza la FK de la tabla.
+ *
+ * @param {object} valores
+ * @param {{ esAlta?: boolean }} [opciones]
+ * @returns {Record<string, string>} Errores por campo. Vacio si todo esta bien.
+ */
+export function validarInsumoDeProyecto(valores, { esAlta = false } = {}) {
+  const errores = {};
+
+  if (esAlta && esTextoVacio(valores?.medicamentoId)) {
+    errores.medicamentoId = "Elige el producto o insumo del catálogo.";
+  }
+
+  const cantidad = Number(valores?.cantidad);
+  if (esTextoVacio(String(valores?.cantidad ?? ""))) {
+    errores.cantidad = "La cantidad es obligatoria.";
+  } else if (!Number.isInteger(cantidad) || cantidad <= 0) {
+    errores.cantidad = "La cantidad debe ser un número entero mayor que cero.";
+  }
+
+  const unidad = normalizarTexto(valores?.unidad);
+  if (unidad === "") {
+    errores.unidad = "La unidad es obligatoria (por ejemplo: cajas, unidades).";
+  } else if (unidad.length > LONGITUD_MAXIMA_UNIDAD_INSUMO) {
+    errores.unidad = `La unidad no puede pasar de ${LONGITUD_MAXIMA_UNIDAD_INSUMO} caracteres.`;
+  }
+
+  // El costo es opcional: vacio significa "no estimado", que no es lo mismo que cero.
+  if (!esTextoVacio(String(valores?.costoUnitarioEstimado ?? ""))) {
+    const costo = Number(valores.costoUnitarioEstimado);
+    if (Number.isNaN(costo) || costo < 0) {
+      errores.costoUnitarioEstimado = "El costo estimado debe ser un número mayor o igual a cero.";
+    } else if (Math.round(costo * 100) / 100 !== costo) {
+      errores.costoUnitarioEstimado = "El costo estimado admite hasta dos decimales.";
+    }
+  }
+
+  if (normalizarTexto(valores?.nota).length > LONGITUD_MAXIMA_NOTA_INSUMO) {
+    errores.nota = `La nota no puede pasar de ${LONGITUD_MAXIMA_NOTA_INSUMO} caracteres.`;
+  }
+
+  return errores;
+}

@@ -14,11 +14,18 @@ import {
 } from "./campos.js";
 import {
   CAMPOS_FICHA_PROYECTO,
+  COLUMNAS_GASTO_DE_PROYECTO,
   COLUMNAS_HITO,
   COLUMNAS_PROYECTO,
   COLUMNAS_SEGUIMIENTO,
 } from "./columnas.js";
-import { FILTROS_PROYECTO, FILTROS_PROYECTO_VACIOS } from "./filtros.js";
+import {
+  FILTROS_PROYECTO,
+  FILTROS_PROYECTO_PANTALLA_VACIOS,
+  FILTROS_PROYECTO_VACIOS,
+  hayFiltrosDeProyecto,
+  soloJornadasSinProyecto,
+} from "./filtros.js";
 import { TODOS_LOS_ESTADOS_PROYECTO } from "./validaciones.js";
 
 const TODAS_LAS_LISTAS_DE_CAMPOS = { CAMPOS_PROYECTO, CAMPOS_HITO, CAMPOS_SEGUIMIENTO };
@@ -26,6 +33,7 @@ const TODAS_LAS_LISTAS_DE_CAMPOS = { CAMPOS_PROYECTO, CAMPOS_HITO, CAMPOS_SEGUIM
 const TODAS_LAS_LISTAS_DE_COLUMNAS = {
   COLUMNAS_PROYECTO,
   CAMPOS_FICHA_PROYECTO,
+  COLUMNAS_GASTO_DE_PROYECTO,
   COLUMNAS_HITO,
   COLUMNAS_SEGUIMIENTO,
 };
@@ -152,5 +160,40 @@ describe("los catalogos de estado reflejan estado_proyecto (00007)", () => {
     expect(OPCIONES_ESTADO_PROYECTO.find((o) => o.value === "cancelado").label).toBe(
       labels.proyectoCancelado,
     );
+  });
+});
+
+describe("hayFiltrosDeProyecto", () => {
+  it("no hay filtros con el estado inicial ni con solo espacios en el responsable", () => {
+    expect(hayFiltrosDeProyecto(FILTROS_PROYECTO_PANTALLA_VACIOS)).toBe(false);
+    expect(hayFiltrosDeProyecto({ estado: "", responsable: "   " })).toBe(false);
+    expect(hayFiltrosDeProyecto()).toBe(false);
+  });
+
+  it("hay filtros con un estado o con un responsable escrito", () => {
+    expect(hayFiltrosDeProyecto({ estado: "activo", responsable: "" })).toBe(true);
+    expect(hayFiltrosDeProyecto({ estado: "", responsable: "Ana" })).toBe(true);
+  });
+});
+
+describe("soloJornadasSinProyecto", () => {
+  it("deja solo las jornadas que no pertenecen a ningun proyecto", () => {
+    const jornadas = [
+      { id: "j-1", proyectoId: null },
+      { id: "j-2", proyectoId: "p-1" },
+      { id: "j-3" },
+    ];
+
+    expect(soloJornadasSinProyecto(jornadas).map((j) => j.id)).toEqual(["j-1", "j-3"]);
+    expect(soloJornadasSinProyecto()).toEqual([]);
+  });
+});
+
+describe("COLUMNAS_GASTO_DE_PROYECTO", () => {
+  it("son las de gastos sin la columna Proyecto", () => {
+    const ids = COLUMNAS_GASTO_DE_PROYECTO.map((columna) => columna.id);
+
+    expect(ids).not.toContain("proyecto_id");
+    expect(ids).toEqual(expect.arrayContaining(["concepto", "jornada_id", "monto", "estado"]));
   });
 });

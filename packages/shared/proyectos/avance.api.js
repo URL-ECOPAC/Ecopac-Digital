@@ -5,6 +5,7 @@ import {
   normalizarError,
 } from "../api/errores-de-supabase.js";
 import { aCadenaFechaLocal } from "../formato/fechas.js";
+import { vacioANull } from "./normalizacion.js";
 
 export const PORCENTAJE_AVANCE_MINIMO = 0;
 export const PORCENTAJE_AVANCE_MAXIMO = 100;
@@ -29,7 +30,30 @@ const COLUMNAS_DEL_SEGUIMIENTO = [
   "porcentajeNuevo:porcentaje_nuevo",
   "registradoPor:registrado_por",
   "createdAt:created_at",
+  // Mismo patron que responsable:perfiles(...) en api.js. Solo el administrador lee esta tabla
+  // (00141) y el administrador lee perfiles completo (00038), asi que el join no queda vacio por
+  // RLS. Sin el, la pantalla solo tenia el UUID de registrado_por para pintar.
+  "registradoPorPerfil:perfiles(nombres, apellidos)",
 ].join(", ");
+
+export const ETIQUETA_USUARIO_ELIMINADO = "Usuario eliminado";
+
+/**
+ * Aplana el perfil embebido a `registradoPorNombre`. registrado_por es ON DELETE SET NULL
+ * (00053): sin perfil, la entrada es de alguien que ya no existe, no de quien la mira.
+ */
+function aEntradaDeSeguimiento(fila) {
+  if (!fila) return null;
+  const { registradoPorPerfil, ...resto } = fila;
+  const nombre = [registradoPorPerfil?.nombres, registradoPorPerfil?.apellidos]
+    .filter(Boolean)
+    .join(" ")
+    .trim();
+  return { ...resto, registradoPorNombre: nombre || ETIQUETA_USUARIO_ELIMINADO };
+}
+
+// fecha_real es DATE y "" la rechaza con 22007; un hito nuevo se crea sin ella (pendiente).
+const CAMPOS_OPCIONALES_DEL_HITO = new Set(["descripcion", "fechaReal"]);
 
 function aColumnasDelHito(datos = {}) {
   const mapa = {
@@ -42,7 +66,11 @@ function aColumnasDelHito(datos = {}) {
 
   const fila = {};
   for (const [campo, columna] of Object.entries(mapa)) {
-    if (Object.prototype.hasOwnProperty.call(datos, campo)) fila[columna] = datos[campo];
+    if (Object.prototype.hasOwnProperty.call(datos, campo)) {
+      fila[columna] = CAMPOS_OPCIONALES_DEL_HITO.has(campo)
+        ? vacioANull(datos[campo])
+        : datos[campo];
+    }
   }
   return fila;
 }
@@ -255,7 +283,7 @@ export async function registrarNota(proyectoId, nota) {
       .single();
 
     if (error) return { entrada: null, error: normalizarError(error) };
-    return { entrada: data ?? null, error: null };
+    return { entrada: aEntradaDeSeguimiento(data), error: null };
   } catch (error) {
     return { entrada: null, error: normalizarError(error) };
   }
@@ -283,7 +311,7 @@ export async function listarSeguimiento(proyectoId) {
       .order("created_at", { ascending: false });
 
     if (error) return { bitacora: [], error: normalizarError(error) };
-    return { bitacora: data ?? [], error: null };
+    return { bitacora: (data ?? []).map(aEntradaDeSeguimiento), error: null };
   } catch (error) {
     return { bitacora: [], error: normalizarError(error) };
   }

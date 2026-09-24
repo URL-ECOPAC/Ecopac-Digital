@@ -1,6 +1,7 @@
 // Esquema declarativo de las columnas/ficha de proyectos, hitos y seguimiento (issue #287).
 
 import { TIPOS_DE_PRESENTACION } from "../descriptores.js";
+import { COLUMNAS_GASTO } from "../presupuestos/columnas.js";
 
 export const COLUMNAS_PROYECTO = [
   { id: "nombre", label: "Nombre", tipo: TIPOS_DE_PRESENTACION.TEXTO, principal: true },
@@ -35,6 +36,14 @@ export const CAMPOS_FICHA_PROYECTO = [
   { id: "porcentajeAvance", label: "Avance", tipo: TIPOS_DE_PRESENTACION.NUMERO, sufijo: "%" },
 ];
 
+/**
+ * Gastos dentro de la ficha de un proyecto: las de COLUMNAS_GASTO menos "Proyecto", que ahi es
+ * siempre el mismo y solo ocuparia una columna.
+ */
+export const COLUMNAS_GASTO_DE_PROYECTO = COLUMNAS_GASTO.filter(
+  (columna) => columna.id !== "proyecto_id",
+);
+
 /** Hitos de un proyecto (proyecto_hitos, 00053); campos ya en camelCase por avance.api.js. */
 export const COLUMNAS_HITO = [
   { id: "nombre", label: "Hito", tipo: TIPOS_DE_PRESENTACION.TEXTO, principal: true },
@@ -51,4 +60,21 @@ export const COLUMNAS_SEGUIMIENTO = [
   { id: "nota", label: "Nota", tipo: TIPOS_DE_PRESENTACION.TEXTO, principal: true },
   { id: "porcentajeAnterior", label: "Antes", tipo: TIPOS_DE_PRESENTACION.NUMERO, sufijo: "%" },
   { id: "porcentajeNuevo", label: "Después", tipo: TIPOS_DE_PRESENTACION.NUMERO, sufijo: "%" },
+];
+
+/**
+ * Insumos previstos de un proyecto (proyecto_insumos, 00147); campos ya en camelCase por
+ * insumos.api.js. El total no es una columna de la tabla: lo calcula esa API.
+ */
+export const COLUMNAS_INSUMO_PROYECTO = [
+  {
+    id: "articuloNombre",
+    label: "Producto / Insumo",
+    tipo: TIPOS_DE_PRESENTACION.TEXTO,
+    principal: true,
+  },
+  { id: "cantidad", label: "Cantidad", tipo: TIPOS_DE_PRESENTACION.NUMERO },
+  { id: "unidad", label: "Unidad", tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  { id: "costoUnitarioEstimado", label: "Costo unitario", tipo: TIPOS_DE_PRESENTACION.MONEDA },
+  { id: "costoTotalEstimado", label: "Costo total", tipo: TIPOS_DE_PRESENTACION.MONEDA },
 ];

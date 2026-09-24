@@ -17,19 +17,44 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { hayErrores } from "../validations/index.js";
+import { listarMedicamentos } from "../inventario/medicamentos.api.js";
+import { listarJornadas } from "../jornadas/api.js";
+import { listarGastos, obtenerPresupuestoProyecto } from "../presupuestos/api.js";
+import { puedeRegistrarGasto } from "../presupuestos/permisos.js";
 import { listarUsuarios } from "../usuarios/api.js";
 import {
   actualizarProyecto,
+  asociarJornadaAProyecto,
   cambiarEstadoProyecto,
   crearProyecto,
   listarJornadasDelProyecto,
   listarProyectos,
 } from "./api.js";
-import { COLUMNAS_PROYECTO } from "./columnas.js";
-import { FILTROS_PROYECTO } from "./filtros.js";
-import { CAMPOS_PROYECTO } from "./campos.js";
-import { validarProyecto } from "./validaciones.js";
-import { puedeAdministrarProyectos, puedeVerProyectos } from "./permisos.js";
+import {
+  COLUMNAS_GASTO_DE_PROYECTO,
+  COLUMNAS_INSUMO_PROYECTO,
+  COLUMNAS_PROYECTO,
+} from "./columnas.js";
+import {
+  asignarPersonalAProyecto,
+  desasignarPersonalDeProyecto,
+  listarEquipoDelProyecto,
+} from "./equipo.api.js";
+import {
+  FILTROS_PROYECTO,
+  FILTROS_PROYECTO_PANTALLA_VACIOS,
+  hayFiltrosDeProyecto,
+  soloJornadasSinProyecto,
+} from "./filtros.js";
+import { CAMPOS_INSUMO_PROYECTO, CAMPOS_PROYECTO } from "./campos.js";
+import {
+  actualizarInsumoDeProyecto,
+  agregarInsumoAProyecto,
+  listarInsumosDelProyecto,
+  quitarInsumoDeProyecto,
+} from "./insumos.api.js";
+import { validarInsumoDeProyecto, validarProyecto } from "./validaciones.js";
+import { permisosDeProyectos, puedeVerProyectos } from "./permisos.js";
 
 /** Mismo criterio que jornadas/useFormularioJornada.js: nombre completo para un <select>. */
 function nombreDePerfil(perfil) {
@@ -70,12 +95,30 @@ export function useProyectosSociales({ usuarioRol } = {}) {
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
 
-  const [filtrosState, setFiltrosState] = useState({ estado: "", responsable: "" });
+  const [filtrosState, setFiltrosState] = useState(FILTROS_PROYECTO_PANTALLA_VACIOS);
   const [proyectoSeleccionadoId, setProyectoSeleccionadoId] = useState(null);
   const [tabActivo, setTabActivo] = useState("resumen");
   const [erroresFormulario, setErroresFormulario] = useState({});
 
-  const puedeEditar = useMemo(() => puedeAdministrarProyectos(usuarioRol), [usuarioRol]);
+  // Lo que puede hacer el rol lo decide permisos.js; la pantalla solo lee estas banderas.
+  const permisos = useMemo(() => permisosDeProyectos(usuarioRol), [usuarioRol]);
+  const puedeEditar = permisos.puedeEditar;
+  const puedeRegistrarGastos = permisos.puedeVerInsumosYGastos && puedeRegistrarGasto(usuarioRol);
+
+  const [presupuestoProyecto, setPresupuestoProyecto] = useState(null);
+  const [gastosProyecto, setGastosProyecto] = useState([]);
+  const [cargandoGastos, setCargandoGastos] = useState(false);
+  const [errorGastos, setErrorGastos] = useState(null);
+  const [jornadasDisponibles, setJornadasDisponibles] = useState([]);
+  const [errorJornadas, setErrorJornadas] = useState(null);
+  const [insumos, setInsumos] = useState([]);
+  const [cargandoInsumos, setCargandoInsumos] = useState(false);
+  const [errorInsumos, setErrorInsumos] = useState(null);
+  const [erroresInsumo, setErroresInsumo] = useState({});
+  const [articulos, setArticulos] = useState([]);
+  const [equipo, setEquipo] = useState([]);
+  const [cargandoEquipo, setCargandoEquipo] = useState(false);
+  const [errorEquipo, setErrorEquipo] = useState(null);
 
   const cargarProyectos = useCallback(async () => {
     if (!tieneAccesoLectura) {
@@ -127,6 +170,15 @@ export function useProyectosSociales({ usuarioRol } = {}) {
 
   // Las jornadas se piden solo del proyecto abierto en el detalle: son el contenido de una
   // pestania, no de la tabla, y traerlas todas por adelantado no le sirve a nadie.
+  const cargarJornadasDelProyecto = useCallback(async () => {
+    if (!proyectoSeleccionadoId) {
+      setJornadasProyecto([]);
+      return;
+    }
+    const { jornadas } = await listarJornadasDelProyecto(proyectoSeleccionadoId);
+    setJornadasProyecto(jornadas ?? []);
+  }, [proyectoSeleccionadoId]);
+
   useEffect(() => {
     let vigente = true;
 
@@ -147,6 +199,245 @@ export function useProyectosSociales({ usuarioRol } = {}) {
     };
   }, [proyectoSeleccionadoId]);
 
+  // Presupuesto del proyecto abierto para el Resumen. Solo se pide a quien puede ver dinero
+  // (#864): al medico ni se le consulta, no basta con esconder el numero. `proyectos` no trae
+  // presupuesto (COLUMNAS_DEL_PROYECTO), por eso el Resumen mostraba siempre 0.00.
+  useEffect(() => {
+    let vigente = true;
+    setPresupuestoProyecto(null);
+
+    if (!proyectoSeleccionadoId || !permisos.puedeVerInsumosYGastos) {
+      return () => {
+        vigente = false;
+      };
+    }
+
+    obtenerPresupuestoProyecto(proyectoSeleccionadoId).then(({ presupuesto }) => {
+      if (vigente) setPresupuestoProyecto(presupuesto ?? null);
+    });
+
+    return () => {
+      vigente = false;
+    };
+  }, [proyectoSeleccionadoId, permisos.puedeVerInsumosYGastos]);
+
+  const cargarGastosDelProyecto = useCallback(async () => {
+    if (!proyectoSeleccionadoId || !permisos.puedeVerInsumosYGastos) {
+      setGastosProyecto([]);
+      return;
+    }
+    setCargandoGastos(true);
+    const { gastos, error: fallo } = await listarGastos({ proyecto_id: proyectoSeleccionadoId });
+    setGastosProyecto(gastos);
+    setErrorGastos(fallo);
+    setCargandoGastos(false);
+  }, [proyectoSeleccionadoId, permisos.puedeVerInsumosYGastos]);
+
+  // Los gastos y las jornadas candidatas se piden al abrir su pestana, no al abrir el proyecto.
+  useEffect(() => {
+    if (tabActivo === "gastos") cargarGastosDelProyecto();
+  }, [tabActivo, cargarGastosDelProyecto]);
+
+  const cargarJornadasDisponibles = useCallback(async () => {
+    if (!permisos.puedeAsociarJornadas) {
+      setJornadasDisponibles([]);
+      return;
+    }
+    const { jornadas, error: fallo } = await listarJornadas();
+    setJornadasDisponibles(soloJornadasSinProyecto(jornadas));
+    if (fallo) setErrorJornadas(fallo);
+  }, [permisos.puedeAsociarJornadas]);
+
+  useEffect(() => {
+    if (tabActivo === "jornadas" && proyectoSeleccionadoId) cargarJornadasDisponibles();
+  }, [tabActivo, proyectoSeleccionadoId, cargarJornadasDisponibles]);
+
+  // Insumos previstos: planificacion con dinero, solo para quien ve insumos y gastos (#864).
+  const cargarInsumos = useCallback(async () => {
+    if (!proyectoSeleccionadoId || !permisos.puedeVerInsumosYGastos) {
+      setInsumos([]);
+      return;
+    }
+    setCargandoInsumos(true);
+    const { insumos: filas, error: fallo } = await listarInsumosDelProyecto(proyectoSeleccionadoId);
+    setInsumos(filas);
+    setErrorInsumos(fallo);
+    setCargandoInsumos(false);
+  }, [proyectoSeleccionadoId, permisos.puedeVerInsumosYGastos]);
+
+  useEffect(() => {
+    if (tabActivo === "insumos") cargarInsumos();
+  }, [tabActivo, cargarInsumos]);
+
+  // Catalogo de articulos que se pueden prever: el MISMO que ofrece "Producto / Insumo" en
+  // "Registrar ingreso al inventario" (InventarioPage lo arma con listarMedicamentos(), sin filtrar
+  // por tipo), con la misma etiqueta "nombre (concentracion)". Asi lo previsto sale del catalogo
+  // donde despues se registra su ingreso.
+  useEffect(() => {
+    if (tabActivo !== "insumos" || !permisos.puedeGestionarInsumos) return undefined;
+
+    let vigente = true;
+    listarMedicamentos().then(({ medicamentos }) => {
+      if (!vigente) return;
+      setArticulos(
+        (medicamentos ?? []).map((articulo) => ({
+          value: articulo.id,
+          label: articulo.concentracion
+            ? `${articulo.nombre} (${articulo.concentracion})`
+            : articulo.nombre,
+        })),
+      );
+    });
+    return () => {
+      vigente = false;
+    };
+  }, [tabActivo, permisos.puedeGestionarInsumos]);
+
+  // A quien todavia no se le previo nada: un articulo figura una sola vez por proyecto.
+  const articulosDisponibles = useMemo(() => {
+    const yaPrevistos = new Set(insumos.map((insumo) => insumo.medicamentoId));
+    return articulos.filter((articulo) => !yaPrevistos.has(articulo.value));
+  }, [articulos, insumos]);
+
+  // Suma de lo que si tiene costo; los que no lo tienen se cuentan aparte para no fingir un total.
+  const resumenDeInsumos = useMemo(
+    () => ({
+      totalEstimado:
+        Math.round(
+          insumos.reduce((suma, insumo) => suma + (insumo.costoTotalEstimado ?? 0), 0) * 100,
+        ) / 100,
+      sinCosto: insumos.filter((insumo) => insumo.costoTotalEstimado === null).length,
+    }),
+    [insumos],
+  );
+
+  /** Agrega (`insumoId` null) o edita un insumo previsto del proyecto abierto. */
+  const guardarInsumo = useCallback(
+    async (insumoId, datosFormulario) => {
+      if (!permisos.puedeGestionarInsumos || !proyectoSeleccionadoId) return { ok: false };
+
+      const errores = validarInsumoDeProyecto(datosFormulario, { esAlta: !insumoId });
+      setErroresInsumo(errores);
+      if (hayErrores(errores)) return { ok: false, errores };
+
+      const resultado = insumoId
+        ? await actualizarInsumoDeProyecto(insumoId, datosFormulario)
+        : await agregarInsumoAProyecto(proyectoSeleccionadoId, datosFormulario);
+      if (resultado.error) return { ok: false, error: resultado.error };
+
+      await cargarInsumos();
+      return { ok: true, insumo: resultado.insumo };
+    },
+    [permisos.puedeGestionarInsumos, proyectoSeleccionadoId, cargarInsumos],
+  );
+
+  /** Quita un insumo de la lista. `ok: false` sin error significa que la base no lo dejo. */
+  const quitarInsumo = useCallback(
+    async (insumoId) => {
+      if (!permisos.puedeGestionarInsumos) return { ok: false, error: null };
+
+      const { quitado, error: fallo } = await quitarInsumoDeProyecto(insumoId);
+      setErrorInsumos(fallo);
+      if (fallo) return { ok: false, error: fallo };
+      if (!quitado) return { ok: false, error: null };
+
+      await cargarInsumos();
+      return { ok: true, error: null };
+    },
+    [permisos.puedeGestionarInsumos, cargarInsumos],
+  );
+
+  const cargarEquipo = useCallback(async () => {
+    if (!proyectoSeleccionadoId) {
+      setEquipo([]);
+      return;
+    }
+    setCargandoEquipo(true);
+    const { equipo: miembros, error: fallo } =
+      await listarEquipoDelProyecto(proyectoSeleccionadoId);
+    setEquipo(miembros);
+    setErrorEquipo(fallo);
+    setCargandoEquipo(false);
+  }, [proyectoSeleccionadoId]);
+
+  useEffect(() => {
+    if (tabActivo === "equipo") cargarEquipo();
+  }, [tabActivo, cargarEquipo]);
+
+  // A quien todavia se puede agregar: el catalogo de personas activas menos quien ya esta.
+  const personalDisponible = useMemo(() => {
+    const yaEnElEquipo = new Set(equipo.map((miembro) => miembro.perfilId));
+    return perfiles.filter((perfil) => !yaEnElEquipo.has(perfil.value));
+  }, [perfiles, equipo]);
+
+  /** Agrega a `perfilId` al equipo del proyecto abierto. `rolEnProyecto` es opcional. */
+  const agregarAlEquipo = useCallback(
+    async (perfilId, rolEnProyecto) => {
+      if (!permisos.puedeGestionarEquipo || !proyectoSeleccionadoId) {
+        return { ok: false, error: null };
+      }
+      const { error: fallo } = await asignarPersonalAProyecto(proyectoSeleccionadoId, {
+        perfilId,
+        rolEnProyecto,
+      });
+      setErrorEquipo(fallo);
+      if (fallo) return { ok: false, error: fallo };
+
+      await cargarEquipo();
+      return { ok: true, error: null };
+    },
+    [permisos.puedeGestionarEquipo, proyectoSeleccionadoId, cargarEquipo],
+  );
+
+  /** Quita a `perfilId` del equipo del proyecto abierto. */
+  const quitarDelEquipo = useCallback(
+    async (perfilId) => {
+      if (!permisos.puedeGestionarEquipo || !proyectoSeleccionadoId) {
+        return { ok: false, error: null };
+      }
+      const { desasignado, error: fallo } = await desasignarPersonalDeProyecto(
+        proyectoSeleccionadoId,
+        perfilId,
+      );
+      setErrorEquipo(fallo);
+      if (fallo) return { ok: false, error: fallo };
+      // RLS no avisa cuando no deja borrar: cero filas. Se dice, no se finge que se quito.
+      if (!desasignado) return { ok: false, error: null };
+
+      await cargarEquipo();
+      return { ok: true, error: null };
+    },
+    [permisos.puedeGestionarEquipo, proyectoSeleccionadoId, cargarEquipo],
+  );
+
+  /**
+   * Asocia una jornada al proyecto abierto, o la quita si `asociar` es false. Delega en
+   * asociarJornadaAProyecto() (api.js); aqui solo se filtra por permiso y se recargan las dos
+   * listas para que la jornada cambie de lado sin recargar la pantalla.
+   */
+  const cambiarAsociacionDeJornada = useCallback(
+    async (jornadaId, asociar) => {
+      if (!permisos.puedeAsociarJornadas || !proyectoSeleccionadoId) {
+        return { ok: false, error: null };
+      }
+      const { error: fallo } = await asociarJornadaAProyecto(
+        jornadaId,
+        asociar ? proyectoSeleccionadoId : null,
+      );
+      setErrorJornadas(fallo);
+      if (fallo) return { ok: false, error: fallo };
+
+      await Promise.all([cargarJornadasDelProyecto(), cargarJornadasDisponibles()]);
+      return { ok: true, error: null };
+    },
+    [
+      permisos.puedeAsociarJornadas,
+      proyectoSeleccionadoId,
+      cargarJornadasDelProyecto,
+      cargarJornadasDisponibles,
+    ],
+  );
+
   // El estado ya lo filtro la consulta; aqui queda la busqueda por responsable, que la pantalla
   // ofrece como texto libre y listarProyectos solo acepta como UUID.
   const proyectosFiltrados = useMemo(() => {
@@ -164,6 +455,8 @@ export function useProyectosSociales({ usuarioRol } = {}) {
     setErroresFormulario(resultado.errores);
     return resultado;
   };
+
+  const limpiarFiltros = useCallback(() => setFiltrosState(FILTROS_PROYECTO_PANTALLA_VACIOS), []);
 
   /**
    * Crea o edita un proyecto (issue #756: "+ Nuevo Proyecto" no tenia onClick pese a que
@@ -221,11 +514,41 @@ export function useProyectosSociales({ usuarioRol } = {}) {
     jornadasProyecto,
     catalogos: { perfiles },
     puedeEditar,
+    permisos,
+    puedeRegistrarGastos,
+    presupuestoProyecto,
+    columnasGastos: COLUMNAS_GASTO_DE_PROYECTO,
+    gastosProyecto,
+    cargandoGastos,
+    errorGastos,
+    recargarGastos: cargarGastosDelProyecto,
+    jornadasDisponibles,
+    errorJornadas,
+    insumos,
+    cargandoInsumos,
+    errorInsumos,
+    erroresInsumo,
+    columnasInsumos: COLUMNAS_INSUMO_PROYECTO,
+    camposInsumo: CAMPOS_INSUMO_PROYECTO,
+    catalogosInsumo: { articulos: articulosDisponibles },
+    resumenDeInsumos,
+    guardarInsumo,
+    quitarInsumo,
+    equipo,
+    cargandoEquipo,
+    errorEquipo,
+    personalDisponible,
+    agregarAlEquipo,
+    quitarDelEquipo,
+    asociarJornada: (jornadaId) => cambiarAsociacionDeJornada(jornadaId, true),
+    quitarJornada: (jornadaId) => cambiarAsociacionDeJornada(jornadaId, false),
     cambiarEtapaProyecto,
     guardarProyecto,
     recargar: cargarProyectos,
     filtrosState,
     setFiltrosState,
+    limpiarFiltros,
+    hayFiltros: hayFiltrosDeProyecto(filtrosState),
     proyectoSeleccionadoId,
     setProyectoSeleccionadoId,
     tabActivo,

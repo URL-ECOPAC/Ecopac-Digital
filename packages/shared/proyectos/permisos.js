@@ -77,6 +77,12 @@ export function permisosDeProyectos(rol) {
     puedeEditar: administra,
     puedeCambiarEstado: administra,
     puedeAsociarJornadas: administra,
+    // Armar el equipo del proyecto (00146): la misma regla que editarlo. Leerlo lo decide
+    // puedeVer, y las filas que se ven las elige la base.
+    puedeGestionarEquipo: administra,
+    // Lista de insumos previstos (00147): planificacion con dinero. Verla es puedeVerInsumosYGastos;
+    // agregar, editar y quitar, la misma regla que editar el proyecto.
+    puedeGestionarInsumos: administra,
     puedeVerInsumosYGastos: puedeVerInsumosYGastosDeProyecto(rol),
   };
 }
