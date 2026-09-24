@@ -288,7 +288,6 @@ export const CATEGORIAS_DE_GASTO = Object.freeze({
   HONORARIOS: "Honorarios",
   EDUCACION: "Educacion",
   INFRAESTRUCTURA: "Infraestructura",
-  OFICINA: "Oficina",
 });
 
 export const ETIQUETAS_CATEGORIA_GASTO = Object.freeze({
@@ -298,7 +297,6 @@ export const ETIQUETAS_CATEGORIA_GASTO = Object.freeze({
   [CATEGORIAS_DE_GASTO.HONORARIOS]: "Honorarios",
   [CATEGORIAS_DE_GASTO.EDUCACION]: "Educacion",
   [CATEGORIAS_DE_GASTO.INFRAESTRUCTURA]: "Infraestructura",
-  [CATEGORIAS_DE_GASTO.OFICINA]: "Oficina",
 });
 
 /**
@@ -308,13 +306,13 @@ export const ETIQUETAS_CATEGORIA_GASTO = Object.freeze({
  * justamente para desacoplar los gastos del inventario. No compartir constante con aquel.
  */
 export const ESTADOS_DE_GASTO = Object.freeze({
-  PENDIENTE: "PENDIENTE",
-  APROBADO: "APROBADO",
-  RECHAZADO: "RECHAZADO",
+  PENDIENTE: "pendiente",
+  APROBADO: "aprobado",
+  RECHAZADO: "rechazado",
 });
 
 export const ETIQUETAS_ESTADO_GASTO = Object.freeze({
-  [ESTADOS_DE_GASTO.PENDIENTE]: "PENDIENTE",
+  [ESTADOS_DE_GASTO.PENDIENTE]: "pendiente",
   [ESTADOS_DE_GASTO.APROBADO]: labels.aprobado,
   [ESTADOS_DE_GASTO.RECHAZADO]: labels.rechazado,
 });
@@ -323,12 +321,12 @@ export const ETIQUETAS_ESTADO_GASTO = Object.freeze({
 
 /** `estado_receta` (00066_recetas.sql). */
 export const ESTADOS_RECETA = Object.freeze({
-  EMITIDA: "EMITIDA",
-  ANULADA: "ANULADA",
+  EMITIDA: "emitida",
+  ANULADA: "anulada",
 });
 
 export const ETIQUETAS_ESTADO_RECETA = Object.freeze({
-  [ESTADOS_RECETA.EMITIDA]: "EMITIDA",
+  [ESTADOS_RECETA.EMITIDA]: "emitida",
   [ESTADOS_RECETA.ANULADA]: labels.donacionAnulada,
 });
 
