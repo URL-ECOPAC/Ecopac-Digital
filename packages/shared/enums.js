@@ -291,6 +291,7 @@ export const CATEGORIAS_DE_GASTO = Object.freeze({
   HONORARIOS: "Honorarios",
   EDUCACION: "Educacion",
   INFRAESTRUCTURA: "Infraestructura",
+  OFICINA: "Oficina",
 });
 
 export const ETIQUETAS_CATEGORIA_GASTO = Object.freeze({
@@ -300,6 +301,7 @@ export const ETIQUETAS_CATEGORIA_GASTO = Object.freeze({
   [CATEGORIAS_DE_GASTO.HONORARIOS]: "Honorarios",
   [CATEGORIAS_DE_GASTO.EDUCACION]: "Educacion",
   [CATEGORIAS_DE_GASTO.INFRAESTRUCTURA]: "Infraestructura",
+  [CATEGORIAS_DE_GASTO.OFICINA]: "Oficina",
 });
 
 /**

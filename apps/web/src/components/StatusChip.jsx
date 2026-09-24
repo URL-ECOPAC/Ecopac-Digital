@@ -37,14 +37,15 @@ export default function StatusChip({ status, label, icono, uppercase = false }) 
 
   // React no pinta booleanos: sin esto, un estado que llega como true (la columna 'estado' de
   // COLUMNAS_USUARIO lee el campo 'activo') dejaria la celda en blanco sin avisar de nada.
-  const texto = label ?? String(status);
+  const texto = (label ?? String(status)).toUpperCase();
+  if (uppercase) texto = texto.toUpperCase();
+
   const Icono = ICONOS[icono];
 
   return (
     <span
-      className={`badge rounded-pill d-inline-flex align-items-center gap-1${
-        uppercase ? " text-uppercase" : ""
-      }`}
+      className={`badge rounded-pill d-inline-flex align-items-center gap-1${uppercase ? " text-uppercase" : ""
+        }`}
       style={{
         backgroundColor: `var(${variableDeEstado(status)}, var(--color-secondary))`,
         color: "var(--color-surface)",

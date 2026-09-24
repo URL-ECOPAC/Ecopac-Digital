@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   CAMPOS_GASTO,
   ESTADOS_DE_GASTO,
@@ -7,7 +7,6 @@ import {
   puedeEditarGasto,
   useFormularioGasto,
 } from "@ecopac/shared";
-
 import Modal from "../components/Modal";
 import NumberField from "../components/NumberField";
 import { X } from "lucide-react";
@@ -17,23 +16,29 @@ import Selector from "../components/Selector";
 import SecondaryButton from "../components/SecondaryButton";
 import TextField from "../components/TextField";
 
-// Modal de alta y edicion de gasto (issue #303), montado desde TablaGastos.jsx con estado
-// local: mismo patron que ModalJornada.jsx. `gasto` ausente es alta; `gasto` con datos es
-// edicion.
-//
-// Bloqueo de edicion (criterio 5): un gasto ya `aprobado`/`rechazado` no se puede editar
-// (puedeEditarGasto() de permisos.js, que ya recibe el estado ademas del rol -
-// tr_bloquear_gasto_finalizado en 00052 lo impide igual en el servidor). El formulario se
-// deshabilita entero y se explica por que, en vez de dejar que el intento de guardar falle en
-// silencio contra el trigger.
-//
-// Descarte con confirmacion (criterio 6): no hay ruteo que bloquear -es un modal, no una ruta
-// propia, y apps/web no tiene ningun mecanismo de bloqueo de navegacion todavia (se verifico
-// antes de escribir esto)-, asi que "abandonar la pantalla" es cerrar el modal. `sucio` del
-// hook marca si hay cambios sin guardar; cerrar con cambios pendientes pide confirmacion con el
-// mismo patron de Modal + alert-warning que ya usa JornadasPage.jsx para confirmar finalizar una
-// jornada, en vez de un window.confirm() nativo fuera del catalogo visual de la app.
-export default function ModalGasto({ visible = true, gasto, usuarioId, rol, onClose, onGuardado }) {
+//  Función mejorada: maneja todos los formatos
+function extraerValor(valor) {
+  if (!valor && valor !== 0) return "";
+  if (typeof valor === "object" && valor !== null) {
+    if (valor.value !== undefined) return String(valor.value);
+    if (valor.id !== undefined) return String(valor.id);
+  }
+  return String(valor ?? "");
+}
+
+export default function ModalGasto({
+  visible = true,
+  gasto,
+  usuarioId,
+  rol,
+  estadoInicial,
+  onClose,
+  onGuardado,
+}) {
+  const [creandoCategoria, setCreandoCategoria] = useState(false);
+  const [nombreNuevaCategoria, setNombreNuevaCategoria] = useState("");
+  const [categoriasTemporales, setCategoriasTemporales] = useState([]);
+
   const {
     valores,
     errores,
@@ -46,29 +51,45 @@ export default function ModalGasto({ visible = true, gasto, usuarioId, rol, onCl
     mensajeExcedente,
     setCampo,
     enviar,
-    cancelar,
-  } = useFormularioGasto({ gasto, usuarioId });
+  } = useFormularioGasto({
+    gasto,
+    usuarioId,
+    estadoInicial,
+  });
+
+  const categoriasDisponibles = useMemo(() => {
+    const desdeHook = catalogos.categorias || [];
+    const valoresExistentes = desdeHook.map(c => String(c.value ?? c));
+    const soloNuevas = categoriasTemporales.filter(
+      c => !valoresExistentes.includes(String(c.value))
+    );
+    return [...desdeHook, ...soloNuevas];
+  }, [catalogos.categorias, categoriasTemporales]);
+
+  //  Agregar categoría y forzar valor como texto plano
+  const agregarCategoria = () => {
+    const nombreLimpio = nombreNuevaCategoria?.trim();
+    if (!nombreLimpio) return;
+
+    const nuevaOpcion = { value: nombreLimpio, label: nombreLimpio };
+    setCategoriasTemporales(anteriores => [...anteriores, nuevaOpcion]);
+    
+    //  Enviar SOLO el texto, NUNCA un objeto
+    setCampo("categoria", nombreLimpio);
+    
+    setCreandoCategoria(false);
+    setNombreNuevaCategoria("");
+  };
 
   const [pidiendoConfirmacionDeDescarte, setPidiendoConfirmacionDeDescarte] = useState(false);
-
-  // Dos motivos distintos por los que una edicion puede estar bloqueada, con dos mensajes
-  // distintos: el gasto ya se resolvio (aprobado/rechazado, bloqueado para CUALQUIER rol --
-  // tr_bloquear_gasto_finalizado en 00052 tampoco distingue), o el gasto sigue pendiente pero
-  // quien mira esta pantalla no tiene permiso para editarlo (puedeEditarGasto(), permisos.js).
   const gastoResuelto =
     esEdicion &&
-    (gasto.estado === ESTADOS_DE_GASTO.APROBADO || gasto.estado === ESTADOS_DE_GASTO.RECHAZADO);
-  const sinPermisoDeEdicion = esEdicion && !gastoResuelto && !puedeEditarGasto(rol, gasto.estado);
+    (gasto?.estado === ESTADOS_DE_GASTO.APROBADO || gasto?.estado === ESTADOS_DE_GASTO.RECHAZADO);
+  const sinPermisoDeEdicion = esEdicion && !gastoResuelto && !puedeEditarGasto(rol, gasto?.estado);
   const bloqueadoPorPermisos = gastoResuelto || sinPermisoDeEdicion;
-
   const bloqueado = enviando || bloqueadoPorPermisos;
-
-  // Quien decidio y cuando (issue #756: aprobado_por/aprobado_en/motivo_rechazo se capturaban
-  // pero no se mostraban en ningun lado una vez que el gasto dejaba de estar pendiente).
-  // aprobarGasto()/rechazarGasto() reutilizan aprobado_por/aprobado_en para las dos decisiones
-  // (aprobacionGastosApi.js), asi que el mismo par sirve para las dos ramas.
-  const nombreDeQuienDecidio = catalogos.perfiles.find(
-    (perfil) => perfil.value === gasto?.aprobado_por,
+  const nombreDeQuienDecidio = catalogos.perfiles?.find(
+    (perfil) => perfil.value === gasto?.aprobado_por
   )?.label;
 
   const pedirCierre = () => {
@@ -76,13 +97,11 @@ export default function ModalGasto({ visible = true, gasto, usuarioId, rol, onCl
       setPidiendoConfirmacionDeDescarte(true);
       return;
     }
-    cancelar();
     onClose?.();
   };
 
   const confirmarDescarte = () => {
     setPidiendoConfirmacionDeDescarte(false);
-    cancelar();
     onClose?.();
   };
 
@@ -93,6 +112,10 @@ export default function ModalGasto({ visible = true, gasto, usuarioId, rol, onCl
       onClose?.();
     }
   };
+
+  const textoEstado = !esEdicion && estadoInicial
+    ? estadoInicial.toUpperCase() + (estadoInicial === "pendiente" ? " — pendiente de aprobación" : "")
+    : null;
 
   return (
     <>
@@ -146,10 +169,68 @@ export default function ModalGasto({ visible = true, gasto, usuarioId, rol, onCl
         )}
 
         {CAMPOS_GASTO.map((campo) => {
+          if (campo.id === "categoria") {
+            const opciones = categoriasDisponibles;
+            return (
+              <div key={campo.id} className="mb-3">
+                {!creandoCategoria ? (
+                  <div className="d-flex align-items-center gap-2">
+                    <div className="flex-grow-1">
+                      <Selector
+                        label={campo.label}
+                        value={valores[campo.id] || null}
+                        options={opciones}
+                        onSelect={(valor) => {
+                          //  Garantizar texto plano SIEMPRE
+                          const valorFinal = extraerValor(valor);
+                          setCampo(campo.id, valorFinal);
+                        }}
+                        placeholder={opciones.length === 0 ? "Cargando..." : "Seleccionar"}
+                        disabled={bloqueado || (campo.validacion?.requerido && opciones.length === 0)}
+                      />
+                    </div>
+                    {!bloqueado && (
+                      <PrimaryButton
+                        title="+ Crear categoría nueva"
+                        onClick={() => setCreandoCategoria(true)}
+                      >
+                        + Crear categoría nueva
+                      </PrimaryButton>
+                    )}
+                  </div>
+                ) : (
+                  <div className="d-flex align-items-center gap-2">
+                    <div className="flex-grow-1">
+                      <TextField
+                        label="Nueva categoría"
+                        value={nombreNuevaCategoria}
+                        onChange={(e) => setNombreNuevaCategoria(e.target.value)}
+                        placeholder="Escribe el nombre..."
+                        autoFocus
+                      />
+                    </div>
+                    <PrimaryButton
+                      title="Guardar"
+                      onClick={agregarCategoria}
+                    >
+                      Guardar
+                    </PrimaryButton>
+                    <SecondaryButton
+                      title="Cancelar"
+                      onClick={() => {
+                        setCreandoCategoria(false);
+                        setNombreNuevaCategoria("");
+                      }}
+                    >
+                      Cancelar
+                    </SecondaryButton>
+                  </div>
+                )}
+              </div>
+            );
+          }
+
           if (campo.tipo === TIPOS_DE_CAMPO.SELECT) {
-            // "categoria" trae sus opciones ya escritas (campo.opciones, el enum
-            // categoria_gasto vía campos.js) en vez de opcionesDesde: es un catálogo cerrado,
-            // no uno que salga de la base. Mismo orden de resolución que FilterBar.jsx.
             const opciones = campo.opciones ?? catalogos[campo.opcionesDesde] ?? [];
             return (
               <Selector
@@ -157,7 +238,10 @@ export default function ModalGasto({ visible = true, gasto, usuarioId, rol, onCl
                 label={campo.label}
                 value={valores[campo.id] || null}
                 options={opciones}
-                onSelect={(valor) => setCampo(campo.id, valor)}
+                onSelect={(valor) => {
+                  const valorFinal = extraerValor(valor);
+                  setCampo(campo.id, valorFinal);
+                }}
                 placeholder={opciones.length === 0 ? "Cargando..." : "Seleccionar"}
                 disabled={bloqueado || (campo.validacion?.requerido && opciones.length === 0)}
               />
