@@ -133,8 +133,6 @@ export function useFormularioGasto({ gasto, usuarioId, estadoInicial } = {}) {
       categoria: extraerValor(valores.categoria),
     };
 
-    console.log(" Enviando gasto:", datosLimpios); // ← Ahora verás cada valor
-
     const respuesta = esEdicion
       ? await editarGasto(gastoId, datosLimpios)
       : await registrarGasto(datosLimpios, { usuarioId, estado: valores.estado });

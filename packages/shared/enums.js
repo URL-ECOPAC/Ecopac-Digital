@@ -308,13 +308,13 @@ export const ETIQUETAS_CATEGORIA_GASTO = Object.freeze({
  * justamente para desacoplar los gastos del inventario. No compartir constante con aquel.
  */
 export const ESTADOS_DE_GASTO = Object.freeze({
-  PENDIENTE: "pendiente",
-  APROBADO: "aprobado",
-  RECHAZADO: "rechazado",
+  PENDIENTE: "PENDIENTE",
+  APROBADO: "APROBADO",
+  RECHAZADO: "RECHAZADO",
 });
 
 export const ETIQUETAS_ESTADO_GASTO = Object.freeze({
-  [ESTADOS_DE_GASTO.PENDIENTE]: "Pendiente",
+  [ESTADOS_DE_GASTO.PENDIENTE]: "PENDIENTE",
   [ESTADOS_DE_GASTO.APROBADO]: labels.aprobado,
   [ESTADOS_DE_GASTO.RECHAZADO]: labels.rechazado,
 });
@@ -323,12 +323,12 @@ export const ETIQUETAS_ESTADO_GASTO = Object.freeze({
 
 /** `estado_receta` (00066_recetas.sql). */
 export const ESTADOS_RECETA = Object.freeze({
-  EMITIDA: "emitida",
-  ANULADA: "anulada",
+  EMITIDA: "EMITIDA",
+  ANULADA: "ANULADA",
 });
 
 export const ETIQUETAS_ESTADO_RECETA = Object.freeze({
-  [ESTADOS_RECETA.EMITIDA]: "Emitida",
+  [ESTADOS_RECETA.EMITIDA]: "EMITIDA",
   [ESTADOS_RECETA.ANULADA]: labels.donacionAnulada,
 });
 

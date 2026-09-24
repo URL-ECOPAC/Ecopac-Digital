@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 import { COLUMNAS_GASTO, FILTROS_GASTO, puedeAprobarGasto } from "@ecopac/shared";
 import { DataList, ErrorState, FilterBar, PrimaryButton } from "../components";
-import StatusChip from "../components/StatusChip";
 import ModalGasto from "./ModalGasto";
 
 const FILTROS_SIN_BUSQUEDA = FILTROS_GASTO.filter((filtro) => filtro.id !== "busqueda");
@@ -66,27 +65,30 @@ export default function TablaGastos({
     cambiarFiltroEstado("");
   };
 
-  //  Punto 5: Asegurar que el estado se muestre en MAYÚSCULA
-  // COLUMNAS_GASTO ya debería formatearlo, pero lo garantizamos aquí
-  const columnasConMayuscula = useMemo(() => {
-    return COLUMNAS_GASTO.map((columna) => {
-      if (columna.id === "estado") {
-        return {
-          ...columna,
-          formatear: (fila) => {
-            const valor = fila.estado;
-            if (!valor) return "—";
-            return (
-              <span style={{ textTransform: "uppercase" }}>
-                {String(valor)}
-              </span>
-            );
-          },
-        };
-      }
-      return columna;
-    });
-  }, []);
+ // Punto 5: Asegurar que el estado se muestre en MAYÚSCULA
+// COLUMNA_GASTO ya debería formatearlo, pero lo garantizamos aquí
+const columnasConMayuscula = useMemo(() => {
+  return COLUMNAS_GASTO.map((columna) => {
+    if (columna.id === "estado") {
+      return {
+        ...columna,
+        formatear: (fila) => {
+          const valor = fila.estado;
+          if (!valor) return "—";
+          return (
+            <span style={{ textTransform: "uppercase" }}>
+              {String(valor)}
+            </span>
+          );
+        },
+      };
+    }
+    return columna;
+  });
+}, []);
+
+//  Cualquier return condicional VA DESPUÉS del useMemo
+if (!datos) return <EstadoVacio />;
 
   return (
     <div className="d-flex flex-column gap-3">

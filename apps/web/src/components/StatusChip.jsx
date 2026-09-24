@@ -37,7 +37,7 @@ export default function StatusChip({ status, label, icono, uppercase = false }) 
 
   // React no pinta booleanos: sin esto, un estado que llega como true (la columna 'estado' de
   // COLUMNAS_USUARIO lee el campo 'activo') dejaria la celda en blanco sin avisar de nada.
-  const texto = (label ?? String(status)).toUpperCase();
+  let texto = (label ?? String(status)).toUpperCase();
   if (uppercase) texto = texto.toUpperCase();
 
   const Icono = ICONOS[icono];
