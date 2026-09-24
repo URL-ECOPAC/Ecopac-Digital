@@ -717,11 +717,17 @@ Se configuran en Settings > Secrets and variables > Actions.
 | `SUPABASE_PROJECT_REF_DEV`                              | Aplicar migraciones en develop |
 | `SUPABASE_PROJECT_REF_PROD`                             | Aplicar migraciones en main    |
 | `SUPABASE_SERVICE_ROLE_KEY_DEV`                         | Disparar alertas-vencimiento y keep-alive |
+| `SUPABASE_URL_DEV`, `SUPABASE_ANON_KEY_DEV`             | Keep-alive de la rama `main`   |
+| `VITE_SUPABASE_URL_DEV`, `VITE_SUPABASE_ANON_KEY_DEV`   | Build de la web en develop y keep-alive |
+| `VITE_SUPABASE_URL_PROD`, `VITE_SUPABASE_ANON_KEY_PROD` | Build de la web en main        |
 
 Los valores SMTP y las entradas de Vault del correo de notificaciones **no** van aqui: son secrets de
 las Edge Functions y de la base, ver "Las notificaciones al administrador y su correo".
-| `VITE_SUPABASE_URL_DEV`, `VITE_SUPABASE_ANON_KEY_DEV`   | Build de la web en develop y keep-alive |
-| `VITE_SUPABASE_URL_PROD`, `VITE_SUPABASE_ANON_KEY_PROD` | Build de la web en main        |
+
+`SUPABASE_URL_DEV` y `VITE_SUPABASE_URL_DEV` son la misma URL con dos nombres, y conviven a
+proposito: el keep-alive de `main` lee el primero y el de `develop` el segundo. Renombrar uno
+mientras las dos ramas no esten al dia deja un workflow sin secret, que es justo el caso que
+termina en verde sin haber hecho nada.
 
 Cuando falta un secret, el workflow **avisa de forma visible pero no falla**: deja un bloque en
 el resumen de la corrida y una anotacion de warning. La idea es no bloquear al equipo mientras
@@ -787,8 +793,19 @@ La prueba solo cuenta si, despues de restaurar:
 
 | Proyecto | Respaldos del plan (confirmado en Dashboard) | Ultima restauracion probada | Quien |
 | --- | --- | --- | --- |
-| Ecopac-Digital-Dev | pendiente de confirmar | nunca | - |
+| Ecopac-Digital-Dev | **ninguno**: plan Free (24-09-2026) | nunca | - |
 | Ecopac-Digital-Prod | pendiente de confirmar | nunca | - |
+
+Database > Backups de `Ecopac-Digital-Dev` dice literalmente "Free Plan does not include project
+backups. Upgrade to the Pro Plan for up to 7 days of scheduled backups" (issue #879). O sea que
+para dev **el respaldo propio de arriba no es un complemento: es el unico que hay**, y mientras
+nadie lo corra no existe ninguna copia. `Ecopac-Digital-Prod` esta pausado y su plan se confirma al
+reanudarlo (issue #252).
+
+La prueba de restauracion sigue sin hacerse. No es un olvido: `supabase db dump --linked` necesita
+vincular la CLI, y vincular pide la contrasena de la base. Queda como procedimiento escrito hasta
+que la persona responsable de la base lo corra, y esta fila es la que hay que actualizar cuando
+pase.
 
 ## La regla mas importante: una migracion aplicada no se edita
 

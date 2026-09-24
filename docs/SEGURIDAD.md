@@ -284,8 +284,15 @@ SELECT fn_crear_usuario_administrativo(
 o guiar a la persona a pedirlo desde el login.
 
 **Nota de despliegue:** el workflow de CI (`supabase.yml`) hace lint de la funcion (`deno lint` +
-`deno check`) en cada PR, pero no tiene ningun paso `supabase functions deploy`: escribirla no la
-publica sola en `ecopac-dev`/`ecopac-prod`, hace falta desplegarla aparte.
+`deno check`) en cada PR y, al mergear, la despliega: el paso "Desplegar Edge Functions" corre
+`supabase functions deploy --use-api` sin argumentos, o sea todas las de `supabase/functions/`.
+
+Lo que si conviene saber es que **ese paso lleva `continue-on-error: true`**: si el despliegue
+falla, el job termina en verde igual, a proposito, porque las migraciones ya se aplicaron y un job
+en rojo sugeriria que la base quedo a medias. El resultado real sale en el resumen de la corrida,
+que es donde hay que mirarlo. Y desplegar el codigo no configura el proyecto: las variables que la
+funcion lee en tiempo de ejecucion viven en **Edge Function Secrets** de cada proyecto y se ponen a
+mano, una vez por ambiente.
 
 ## 4. `supabase/config.toml`: que aplica y que no
 

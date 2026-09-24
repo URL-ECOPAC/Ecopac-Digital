@@ -206,8 +206,18 @@ proyecto** y va limitado a unos pocos mensajes por hora. Sirve para que el equip
 no sirve para el personal de la organizacion.
 
 El sistema manda muy poco correo -invitacion al crear una cuenta y recuperacion de contrasena, un
-punado al mes-, asi que cualquier capa gratuita alcanza de sobra. Se configura en Authentication >
-SMTP Settings con los datos que de el proveedor (host, puerto 465 o 587, usuario y contrasena).
+punado al mes-, asi que cualquier capa gratuita alcanza de sobra.
+
+**Ojo: son dos canales de correo distintos, y se configuran en dos sitios distintos.**
+
+| Canal | Quien lo manda | Donde se configura | Puerto |
+| --- | --- | --- | --- |
+| Recuperacion de contrasena | Auth (GoTrue) | Authentication > SMTP Settings | 465 o 587 |
+| Invitacion y notificaciones | las Edge Functions | Edge Functions > Secrets (`SMTP_*`) | **465 y solo 465** |
+
+El segundo no admite 587: las Edge Functions de Supabase tienen bloqueados los puertos 25 y 587, y
+465 es el unico de envio que dejan abrir (`supabase/functions/_shared/correo.ts`, `crearTransporte`).
+Configurar el de Auth **no** configura el de las funciones.
 
 Sin SMTP configurado, `invitar-usuario` **crea igual la cuenta**: lo que no llega es el correo para
 establecer la contrasena, y esa se puede fijar desde el Dashboard mientras tanto.
