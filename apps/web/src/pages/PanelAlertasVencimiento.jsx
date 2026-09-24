@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { atenderAlerta, marcarComoAtendida, useAlertasVencimiento } from "@ecopac/shared";
+import { useAlertasVencimiento } from "@ecopac/shared";
 import DataList from "../components/DataList";
 import EmptyState from "../components/EmptyState";
 import ErrorState from "../components/ErrorState";
