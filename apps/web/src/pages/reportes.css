@@ -289,7 +289,8 @@
     size: auto;
     margin: 15mm;
   }
-  body, html {
+  body,
+  html {
     height: auto !important;
     overflow: visible !important;
   }

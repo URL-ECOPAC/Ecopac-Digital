@@ -6,7 +6,7 @@ import ErrorState from "../components/ErrorState";
 import LoadingState from "../components/LoadingState";
 import PageHeader from "../components/PageHeader";
 import ScreenContainer from "../components/ScreenContainer";
-import ModalAtencionAlerta from "./ModalAtencionAlerta";
+//import ModalAtencionAlerta from "./ModalAtencionAlerta";
 
 // Etiquetas de acción
 const ETIQUETAS_ACCION = {
@@ -131,18 +131,6 @@ export default function PanelAlertasVencimiento() {
             <EmptyState mensaje="No hay alertas pendientes ni atendidas." />
           )}
         </>
-      )}
-
-      {alertaSeleccionada && (
-        <ModalAtencionAlerta
-          alerta={alertaSeleccionada}
-          onCerrar={() => setAlertaSeleccionada(null)}
-          onConfirmar={async (datosAtencion) => {
-            await marcarComoAtendida(alertaSeleccionada.id, datosAtencion);
-            setAlertaSeleccionada(null);
-            recargar();
-          }}
-        />
       )}
     </ScreenContainer>
   );

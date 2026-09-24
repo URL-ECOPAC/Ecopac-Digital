@@ -78,7 +78,8 @@
     display: none !important;
   }
 
-  html, body {
+  html,
+  body {
     background: transparent !important;
     height: auto !important;
     margin: 0 !important;
