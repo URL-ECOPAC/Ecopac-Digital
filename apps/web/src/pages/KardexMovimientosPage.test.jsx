@@ -18,7 +18,7 @@ const COLUMNAS_KARDEX = [
     id: "tipo",
     label: "Tipo",
     tipo: "texto",
-    // ✅ Sin inyección HTML: texto directo
+    //  Sin inyección HTML: texto directo
     formatear: (fila) => {
       const etiquetas = { ingreso: "Ingreso", salida: "Salida" };
       return etiquetas[fila.tipo] || fila.tipo; // Muestra el valor tal cual si no está
@@ -54,8 +54,8 @@ const COLUMNAS_KARDEX = [
         aprobado: "Aprobado",
         rechazado: "Rechazado",
       };
-      const texto = etiquetas[fila.estado] || fila.estado; // ✅ Valor original si no está
-      // ✅ Solo mostrar (automático) cuando corresponda
+      const texto = etiquetas[fila.estado] || fila.estado; //  Valor original si no está
+      //  Solo mostrar (automático) cuando corresponda
       const automatico = fila.aprobacion_automatica ? " (automático)" : "";
       return `${texto}${automatico}`;
     },

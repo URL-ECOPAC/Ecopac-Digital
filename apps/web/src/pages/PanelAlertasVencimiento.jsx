@@ -66,7 +66,7 @@ export default function PanelAlertasVencimiento() {
         <EmptyState mensaje="No hay alertas de vencimiento." />
       ) : (
         <>
-          {/* ✅ Bloque 1: Por vencer */}
+          {/*  Bloque 1: Por vencer */}
           {porVencer.length > 0 && (
             <div className="mb-5">
               <h3 className="h5 mb-3">Por vencer ({porVencer.length})</h3>
@@ -84,7 +84,7 @@ export default function PanelAlertasVencimiento() {
             </div>
           )}
 
-          {/* ✅ Bloque 2: Vencidas */}
+          {/*  Bloque 2: Vencidas */}
           {vencidas.length > 0 && (
             <div className="mb-5">
               <h3 className="h5 mb-3 text-danger">Vencidas ({vencidas.length})</h3>
@@ -102,7 +102,7 @@ export default function PanelAlertasVencimiento() {
             </div>
           )}
 
-          {/* ✅ Bloque 3: Atendidas con acción y responsable */}
+          {/*  Bloque 3: Atendidas con acción y responsable */}
           {atendidas.length > 0 && (
             <div className="mt-6">
               <h3 className="h5 mb-3">Atendidas ({atendidas.length})</h3>
