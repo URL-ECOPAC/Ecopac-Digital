@@ -68,7 +68,7 @@ export default function TarjetaReceta({ receta, onImprimir, puedeAnular, onAnula
     <div className="pac-receta" style={{ opacity: receta.anulada ? 0.75 : 1 }}>
       <div className="d-flex flex-wrap align-items-center gap-2">
         <strong>{receta.folio ?? "Sin folio"}</strong>
-        <StatusChip status={receta.estado} />
+        <StatusChip status={receta.estado} uppercase />
         <span className="pac-fecha">{formatearFechaCorta(receta.createdAt)}</span>
         <div className="d-flex flex-wrap gap-2 ms-auto">
           <SecondaryButton

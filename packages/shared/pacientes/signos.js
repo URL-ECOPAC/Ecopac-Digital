@@ -58,7 +58,7 @@ export const SERIES_DE_SIGNOS = Object.freeze([
     id: "peso",
     grupo: "antropometrico",
     label: "Peso",
-    sufijo: "kg",
+    sufijo: "lb",
     // Sin banda normal: el peso "normal" depende de la talla, y eso es justamente lo que mide el
     // IMC de mas abajo.
     lineas: [{ id: "peso", label: "Peso", normal: null }],

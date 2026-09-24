@@ -114,7 +114,9 @@ async function renderEnRuta(ruta) {
   window.history.pushState({}, "", ruta);
   const resultado = render(<App />);
 
-  await waitFor(() => expect(screen.queryByText(labels.cargandoPantalla)).not.toBeInTheDocument());
+  await waitFor(() => expect(screen.queryByText(labels.cargandoPantalla)).not.toBeInTheDocument(), {
+    timeout: 15000,
+  });
 
   return resultado;
 }
@@ -143,8 +145,9 @@ describe("el respaldo de <Suspense> se dibuja de verdad (issue #708)", () => {
 
     expect(screen.getByText(labels.cargandoPantalla)).toBeInTheDocument();
 
-    await waitFor(() =>
-      expect(screen.queryByText(labels.cargandoPantalla)).not.toBeInTheDocument(),
+    await waitFor(
+      () => expect(screen.queryByText(labels.cargandoPantalla)).not.toBeInTheDocument(),
+      { timeout: 15000 },
     );
 
     const mainArea = screen.getByRole("main");

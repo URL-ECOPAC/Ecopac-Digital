@@ -1,6 +1,6 @@
 import { createPortal } from "react-dom";
-
 import { datosDeRecetaImprimible, formatearFechaCorta } from "@ecopac/shared";
+import "./RecetaImprimible.css"; //  Estilos externos
 
 function Dato({ etiqueta, valor }) {
   return (
@@ -17,11 +17,21 @@ export default function RecetaImprimible({ receta, paciente }) {
   return createPortal(
     <article className="receta-imprimible">
       <header className="receta-imprimible__encabezado">
-        <h1 className="receta-imprimible__organizacion">{datos.organizacion}</h1>
-        <p className="receta-imprimible__documento">{datos.documento}</p>
-        <p className="receta-imprimible__folio">
-          Folio {datos.folio ?? "sin folio"} · {formatearFechaCorta(datos.fecha)}
-        </p>
+        {/* Logo — verifica que la ruta sea correcta en tu proyecto */}
+        <img
+          src="/logo-ecopac.png"
+          alt="Logo Ecopac"
+          className="receta-imprimible__logo"
+          onError={(e) => {
+            e.target.style.display = "none";
+          }}
+        />
+        <div className="receta-imprimible__encabezado-texto">
+          <h1 className="receta-imprimible__organizacion">{datos.organizacion}</h1>
+          <p className="receta-imprimible__documento">{datos.documento}</p>
+          {/* Folio eliminado — solo fecha */}
+          <p className="receta-imprimible__fecha">{formatearFechaCorta(datos.fecha)}</p>
+        </div>
       </header>
 
       {datos.anulada && (
@@ -77,7 +87,7 @@ export default function RecetaImprimible({ receta, paciente }) {
 
       <footer className="receta-imprimible__firma">
         <span className="receta-imprimible__linea" />
-        <p>{datos.medico ?? "Firma del medico"}</p>
+        <p>{datos.medico ?? "Firma del médico"}</p>
       </footer>
     </article>,
     document.body,
