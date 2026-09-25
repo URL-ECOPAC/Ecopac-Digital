@@ -4,6 +4,15 @@ import { puedeVerHistorial } from "./permisos.js";
 import { agruparSeriesDeSignos, aSeriesDeSignos, hayAlgunaMedicion } from "./signos.js";
 import { obtenerTriajes } from "./triaje.api.js";
 
+/**
+ * Evolucion de los signos vitales de un paciente a lo largo de sus triajes.
+ *
+ * @param {string} pacienteId
+ * @param {object} [opciones]
+ * @param {string} [opciones.rol] Rol de la sesion.
+ * @returns {{ series: object[], grupos: object[], hayMediciones: boolean, cargando: boolean,
+ *   error: object|null, recargar: () => Promise<void> }}
+ */
 export function useEvolucionSignos(pacienteId, { rol } = {}) {
   const [triajes, setTriajes] = useState([]);
   const [cargando, setCargando] = useState(true);

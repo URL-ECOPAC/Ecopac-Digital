@@ -32,10 +32,22 @@ import {
   puedeVerCatalogoDeCondiciones,
 } from "./condiciones.permisos.js";
 
+/**
+ * @param {{ busqueda?: string }} [filtros]
+ * @returns {boolean} Si hay texto de busqueda.
+ */
 export function hayFiltrosDeCatalogoCondiciones(filtros = {}) {
   return Boolean(filtros.busqueda?.trim());
 }
 
+/**
+ * Catalogo de condiciones cronicas: busqueda, alta y edicion (00140).
+ *
+ * @param {object} [opciones]
+ * @param {string} [opciones.rol] Rol de la sesion; decide `permitido` y `puedeCrear`.
+ * @returns {object} `{ filas, total, filtros, setFiltro, limpiarFiltros, hayFiltros, cargando,
+ *   error, enviando, erroresForm, recargar, permitido, puedeCrear, ... }`.
+ */
 export function useCatalogoCondiciones({ rol } = {}) {
   const [filtros, setFiltros] = useState(FILTROS_CATALOGO_CONDICIONES_VACIOS);
   const [condiciones, setCondiciones] = useState([]);

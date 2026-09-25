@@ -4,8 +4,21 @@ Que limite tiene cada servicio que usa Ecopac Digital, cuanto se espera consumir
 primero y que cuesta el siguiente escalon. Responde a la issue #234.
 
 **Limites consultados el 11 de septiembre de 2026** en la documentacion oficial de cada servicio.
-Los precios cambian; antes de decidir con este documento en la mano, vale la pena volver a mirar
-las paginas enlazadas al final.
+**Supabase se volvio a verificar el 24 de septiembre** -sin cambios- y ese dia se agrego Sentry
+(seccion 4.1). Los precios cambian; antes de decidir con este documento en la mano, vale la pena
+volver a mirar las paginas enlazadas al final.
+
+**Estado: cerrado como analisis (issue #234).** Las decisiones que se desprenden de aqui -donde se
+despliega la web, si se paga Supabase Pro- no se toman en este documento: son de la #252 (salida a
+produccion) y, la de respaldos, tambien de la #762.
+
+| Criterio de la #234 | Donde se responde |
+| --- | --- |
+| Limites de Supabase, Vercel, GitHub Actions y EAS | Secciones 1 a 4 (y 4.1, monitoreo) |
+| Consumo esperado con el volumen real | Seccion 5, sobre supuestos que Ecopac tiene que confirmar (seccion 9) |
+| Que servicio se agotaria primero y con que volumen | Seccion 6: ninguno por volumen; tres restricciones estructurales |
+| Plan si se supera un limite, y su costo | Secciones 6 y 7 |
+| Programas de descuento para organizaciones sin fines de lucro | Seccion 8 |
 
 ---
 
@@ -42,10 +55,15 @@ Es el servicio critico: base de datos, autenticacion y Edge Functions.
 | Usuarios activos al mes (MAU)  | 50,000                      | 100,000                              |
 | Invocaciones de Edge Functions | 500,000/mes                 | 2,000,000/mes                        |
 | Proyectos activos por organizacion | **2**                   | Sin ese limite                       |
-| Respaldos                      | **Ninguno**                 | 7 dias de retencion                  |
+| Respaldos                      | **Ninguno** (confirmado en el Dashboard de dev, #879) | Diarios, 7 dias de retencion |
 | Pausa por inactividad          | **A la semana sin actividad** | No se pausa                        |
+| Retencion de logs (API, Auth, base) | **1 dia**              | 7 dias                               |
 
-Dos notas que importan mas que los numeros:
+La ultima fila importa para la #762: los intentos de inicio de sesion fallidos solo quedan en los
+logs de Auth, asi que en Free se pierden al dia siguiente (`docs/SEGURIDAD.md`, "Eventos de
+seguridad y bitacora").
+
+Notas que importan mas que los numeros:
 
 - **El proyecto no usa Supabase Storage.** No hay ni una llamada a `.storage` en todo el
   repositorio, asi que el limite de 1 GB de archivos hoy no aplica. Cambiaria el dia que se
@@ -112,6 +130,22 @@ Compila la aplicacion movil.
 sino **la cola de baja prioridad**: en epoca de entrega, una compilacion puede tardar horas en
 empezar. Es un riesgo de calendario, no de dinero, y se mitiga compilando con tiempo.
 
+## 4.1 Sentry (monitoreo de errores)
+
+**Todavia no esta contratado**: es la herramienta que recomienda la #762 (`docs/SEGURIDAD.md`,
+"Herramienta de monitoreo"), y entra aqui porque la #762 exige que quepa en una capa gratuita.
+
+| Recurso            | Developer (gratis)  | Team                        |
+| ------------------ | ------------------- | --------------------------- |
+| Precio             | 0 USD               | 26 USD/mes, facturado anual |
+| Usuarios           | **1**               | Sin limite                  |
+| Errores al mes     | 5,000               | 50,000                      |
+| Historial          | 30 dias             | -                           |
+
+5,000 errores al mes no se agotan con uso normal; si se agotan es porque un mismo fallo se repite en
+bucle, y los que ya entraron siguen visibles. **Lo que aprieta es el usuario unico**: alcanza
+mientras una sola persona mantenga el sistema.
+
 ---
 
 ## 5. Estimacion de consumo
@@ -132,13 +166,15 @@ Contando el peso de una fila con su sobrecarga de Postgres y sus indices:
 | Atenciones, triajes, consultas, diagnosticos, recetas (~9,000) | ~2 KB | ~18 MB |
 | Movimientos de inventario (~45,000)                 | ~0.3 KB    | ~14 MB    |
 | Lotes, medicamentos, catalogos                      | -          | ~5 MB     |
+| Bitacora de auditoria (`eventos_auditoria`, ~8 eventos por atencion) | ~8 KB por atencion | ~75 MB |
 
-**Total a cinco anos: del orden de 45 MB, menos del 10% de los 500 MB.**
+**Total a cinco anos: del orden de 120 MB, alrededor del 25% de los 500 MB.**
 
-La excepcion es `eventos_auditoria`, que crece con cada accion registrada y no tiene politica de
-retencion escrita. Es la unica tabla del esquema sin techo conocido. Definir cuanto se conserva es
-justamente uno de los puntos de la issue #762, y hasta que se defina esta estimacion tiene un cabo
-suelto.
+La fila de la bitacora ya no es una suposicion: se midio el 24 de septiembre en el stack local
+(543 bytes de media por evento, hasta 1.2 KB en una actualizacion que guarda el antes y el
+despues). Es la tabla que mas pesa y la unica sin techo, porque no tiene politica de retencion. La
+#762 propone conservarlo todo mientras la base este por debajo del 50% del limite y que Ecopac
+confirme el plazo (`docs/SEGURIDAD.md`, "Eventos de seguridad y bitacora").
 
 ### Egress (limite: 5 GB/mes)
 
@@ -235,8 +271,9 @@ El plan Free de Supabase no incluye respaldos de ningun tipo. Un `DELETE` mal fi
 proyecto borrado por accidente, **no se puede deshacer**.
 
 Choca de frente con la issue #762, que pide "respaldos confirmados, restauracion probada y
-procedimiento documentado". Ese punto **no se puede cerrar en el plan Free**: no hay nada que
-probar.
+procedimiento documentado". Con el plan Free, lo unico que se puede probar es la restauracion de
+un volcado propio: el procedimiento esta en `docs/CI-CD.md`, "Respaldos y restauracion", y se
+ensayo contra el stack local el 24 de septiembre.
 
 Salidas:
 
@@ -255,8 +292,10 @@ sin pasar a Pro o sin crear otra organizacion.
 
 Y el limite muerde por partida doble: un proyecto Free **se pausa tras una semana sin actividad**.
 Para eso existe `keep-alive-supabase.yml`, que segun la issue #762 llevaba desde el 13 de agosto
-reportando verde mientras cada ping fallaba. Un proyecto pausado no responde hasta que alguien lo
-reactiva a mano desde el panel, y si eso pasa en mitad de una jornada, el sistema no esta.
+reportando verde mientras cada ping fallaba; desde la #830 falla con el error HTTP y avisa cuando
+no hizo nada por falta de secrets. Un proyecto pausado no responde hasta que alguien lo reactiva a
+mano desde el panel, y si eso pasa en mitad de una jornada, el sistema no esta. `Ecopac-Digital-Prod`
+esta pausado hoy (#252).
 
 ---
 
@@ -265,8 +304,9 @@ reactiva a mano desde el panel, y si eso pasa en mitad de una jornada, el sistem
 | Servicio | Plan   | Costo                 | Que desbloquea                                       |
 | -------- | ------ | --------------------- | ----------------------------------------------------- |
 | Supabase | Pro    | 25 USD/mes            | Respaldos de 7 dias, sin pausa, sin limite de 2 proyectos |
-| Vercel   | Pro    | 20 USD/usuario/mes    | Repositorios de organizacion, funciones de 60 s, logs de 1 dia |
+| Vercel   | Pro    | 20 USD/usuario/mes    | Repositorios de organizacion con previews por PR, logs de 1 dia |
 | EAS      | Starter| 19 USD/mes            | 45 USD de credito de build y cola con prioridad       |
+| Sentry   | Team   | 26 USD/mes (anual)    | Mas de un usuario mirando los errores                  |
 | GitHub   | -      | 0 mientras sea publico | -                                                     |
 
 **Minimo para cubrir lo imprescindible (respaldos y despliegue web): 45 USD al mes**, que son
@@ -298,6 +338,7 @@ esta validando el sistema.
 | Vercel   | Open Source Program       | Creditos de plataforma                      | Solicitable: el repo es publico |
 | Supabase | Sin programa publicado    | Evalua creditos caso por caso               | Hay que escribirles          |
 | Expo     | Sin programa para ONG publicado | -                                     | -                             |
+| Sentry   | Patrocinio para codigo abierto | Sin verificar                       | No figura en la pagina de precios; hay que preguntarles si aplica a una ONG con repo publico |
 
 **GitHub for Nonprofits** es el de criterios mas claros: pide ser una organizacion 501(c)(3) o
 equivalente, no gubernamental, no academica, no comercial, no politica y sin afiliacion religiosa.
@@ -323,13 +364,15 @@ Se dejan escritos para que se confirmen o se corrijan, no para que se den por bu
 4. **Si se piensan subir archivos** -fotos de recetas, documentos escaneados-, que es lo unico que
    pondria el limite de 1 GB de Storage en juego.
 5. **Cuanto tiempo debe conservarse `eventos_auditoria`**, que es la unica tabla sin techo
-   conocido (lo pide tambien la issue #762).
+   conocido. La #762 deja una propuesta; falta que Ecopac la confirme.
 6. **Que figura legal tiene Ecopac** y si califica para GitHub for Nonprofits.
 
 Si los dos primeros numeros resultaran ser un orden de magnitud mayores -120 jornadas al ano en vez
-de 12-, la estimacion de base de datos subiria a unos 450 MB a cinco anos y **el limite de 500 MB
-si entraria en juego**. Es el unico supuesto cuya correccion cambiaria la conclusion de este
-documento.
+de 12-, la estimacion de base de datos subiria a **alrededor de 1.2 GB a cinco anos** (unos 450 MB
+de datos y unos 750 MB de bitacora), unos 240 MB por ano, y **el limite de 500 MB se pasaria en el
+tercer ano**. Es el
+unico supuesto cuya correccion cambiaria la conclusion de este documento, y lo que cambiaria es
+que Supabase Pro (8 GB) dejaria de ser opcional.
 
 ---
 
@@ -345,3 +388,4 @@ documento.
 - [GitHub for Nonprofits](https://docs.github.com/en/nonprofit/nonprofit-teams-plan)
 - [Vercel Open Source Program](https://vercel.com/open-source-program)
 - [Supabase: credits](https://supabase.com/docs/guides/platform/credits)
+- [Sentry Pricing](https://sentry.io/pricing/)

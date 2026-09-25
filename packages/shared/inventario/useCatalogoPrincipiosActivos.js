@@ -17,6 +17,15 @@ import {
 } from "./principios-activos.api.js";
 import { permisosDePrincipiosActivos } from "./principios-activos.permisos.js";
 
+/**
+ * Catalogo administrable de principios activos: busqueda, alta, edicion y borrado. Escribir es solo
+ * del administrador.
+ *
+ * @param {object} [opciones]
+ * @param {string} [opciones.rol] Rol de la sesion; decide `permisos`.
+ * @returns {object} `{ filas, total, filtros, setFiltro, limpiarFiltros, hayFiltros, cargando, error,
+ *   recargar, guardar, eliminar, permisos }`.
+ */
 export function useCatalogoPrincipiosActivos({ rol } = {}) {
   const [busqueda, setBusqueda] = useState("");
   const [principiosActivos, setPrincipiosActivos] = useState([]);

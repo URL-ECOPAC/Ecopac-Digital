@@ -3,6 +3,7 @@
   "apps/mobile/src/components/AccesosDeSeccion.js": ["#3db648", "#e2e4e9", "#ffffff"],
   "apps/mobile/src/components/AvisoDeInactividad.js": ["#2d2d2d"],
   "apps/mobile/src/components/AvisosDelSistema.js": ["#3db648"],
+  "apps/mobile/src/components/AvisoSinConexion.js": ["#2d2d2d", "#f7941d", "#ffffff"],
   "apps/mobile/src/components/BotonCerrarSesion.js": ["#2d2d2d", "#4d4d4d"],
   "apps/mobile/src/components/CampanaNotificaciones.js": ["#4d4d4d", "#f7941d", "#ffffff"],
   "apps/mobile/src/components/Card.js": ["#2d2d2d", "#7a7a8a", "#e2e4e9", "#ffffff"],
@@ -42,6 +43,7 @@
     "#f7f8fa",
     "#ffffff"
   ],
+  "apps/mobile/src/components/LimiteDeError.js": ["#2d2d2d", "#7a7a8a", "#f7f8fa"],
   "apps/mobile/src/components/LoadingState.js": ["#3db648", "#7a7a8a"],
   "apps/mobile/src/components/MapaUbicacionComunidad.js": [
     "#3db648",

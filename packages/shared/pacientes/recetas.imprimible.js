@@ -11,6 +11,15 @@ export const ENCABEZADO_DE_RECETA = Object.freeze({
   documento: "Receta medica",
 });
 
+/**
+ * Los datos de una receta listos para imprimir: encabezado de la organizacion, folio, medico,
+ * paciente y renglones.
+ *
+ * @param {object} [opciones]
+ * @param {object} opciones.receta Receta ya normalizada por la API.
+ * @param {object} [opciones.paciente] Paciente de la receta.
+ * @returns {object|null} `null` sin receta.
+ */
 export function datosDeRecetaImprimible({ receta, paciente } = {}) {
   if (!receta) return null;
 
@@ -52,6 +61,12 @@ const ESCAPES_HTML = Object.freeze({
   "'": "&#39;",
 });
 
+/**
+ * Escapa `& < > " '` para insertar un valor en HTML sin que se interprete como marcado.
+ *
+ * @param {unknown} valor
+ * @returns {string} `""` para `null` y `undefined`.
+ */
 export function escaparHtml(valor) {
   if (valor === null || valor === undefined) return "";
   return String(valor).replace(/[&<>"']/g, (caracter) => ESCAPES_HTML[caracter]);
@@ -63,6 +78,15 @@ function dato(etiqueta, valor) {
   }</p>`;
 }
 
+/**
+ * Documento HTML completo de la receta, tamano carta, para imprimir o exportar a PDF desde
+ * cualquiera de las dos apps. Todo valor pasa por `escaparHtml`.
+ *
+ * @param {object} [opciones]
+ * @param {object} opciones.receta Receta ya normalizada por la API.
+ * @param {object} [opciones.paciente] Paciente de la receta.
+ * @returns {string|null} `null` sin receta.
+ */
 export function htmlDeRecetaImprimible({ receta, paciente } = {}) {
   const datos = datosDeRecetaImprimible({ receta, paciente });
   if (!datos) return null;

@@ -175,6 +175,12 @@ export function rolesDelModulo(moduloId) {
 
 export const ROLES_CON_ACCESO_MOVIL = Object.freeze([ROLES.ADMINISTRADOR, ...ROLES_DE_CAMPO]);
 
+/**
+ * Si un rol puede usar la app movil: el administrador y los roles de campo. Los consultivos no.
+ *
+ * @param {string} rol Valor de `ROLES`.
+ * @returns {boolean}
+ */
 export function puedeUsarAppMovil(rol) {
   return ROLES_CON_ACCESO_MOVIL.includes(rol);
 }

@@ -15,6 +15,8 @@ module.exports = {
     // expo-print y expo-sharing (issue #866): impresion y hoja de compartir del sistema.
     "^expo-print$": path.resolve(__dirname, "src/__mocks__/expo-print.js"),
     "^expo-sharing$": path.resolve(__dirname, "src/__mocks__/expo-sharing.js"),
+    // NetInfo (issue #762): el aviso de sin conexion. Ver src/__mocks__/netinfo.js.
+    "^@react-native-community/netinfo$": path.resolve(__dirname, "src/__mocks__/netinfo.js"),
   },
   transformIgnorePatterns: [
     "node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@sentry/react-native|native-base|react-native-svg)",

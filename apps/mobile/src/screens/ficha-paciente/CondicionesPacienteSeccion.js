@@ -81,14 +81,11 @@ export default function CondicionesPacienteSeccion({ pacienteId, rol, alActualiz
       {
         text: "Resolver",
         onPress: async () => {
+          // Si falla, el motivo lo deja el hook en `errorDeAlta` y se pinta arriba de la tarjeta.
+          // Antes era un Alert.alert con un "no se pudo" generico que tiraba el motivo real
+          // (issue #762: ningun error de escritura en un dialogo que se cierra y no deja rastro).
           const { ok } = await marcarResuelta(condicion.id);
-
-          if (!ok) {
-            Alert.alert("Error", "No se pudo resolver la condición. Intentalo de nuevo.");
-            return;
-          }
-
-          alActualizar?.();
+          if (ok) alActualizar?.();
         },
       },
     ]);
@@ -104,6 +101,10 @@ export default function CondicionesPacienteSeccion({ pacienteId, rol, alActualiz
 
   return (
     <Card title="Condiciones crónicas" style={styles.tarjeta}>
+      {/* Arriba y fuera del bloque de alta: tambien lo deja un "Resolver" fallido, y quien solo
+          puede resolver no ve ese bloque. */}
+      {errorDeAlta ? <Text style={styles.errorAlta}>{errorDeAlta.mensaje}</Text> : null}
+
       {!condiciones || condiciones.length === 0 ? (
         <Text style={styles.vacio}>Sin condiciones crónicas registradas.</Text>
       ) : (
@@ -138,8 +139,6 @@ export default function CondicionesPacienteSeccion({ pacienteId, rol, alActualiz
       {permisos.puedeRegistrar && (
         <View style={styles.alta}>
           <Text style={styles.tituloAlta}>Agregar una condición</Text>
-
-          {errorDeAlta ? <Text style={styles.errorAlta}>{errorDeAlta.mensaje}</Text> : null}
 
           {campos.map((campo) =>
             /* La condicion se dibuja con SelectorConAlta, no con CampoDeFormulario: en jornada

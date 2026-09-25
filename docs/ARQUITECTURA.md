@@ -84,17 +84,21 @@ graph TB
     LOGICA --> PG
     LOGICA --> EDGE
     EDGE --> PG
+    PG -->|pg_net: incidencia nueva| EDGE
+    EDGE -->|correo SMTP| SMTP[Proveedor de correo]
     GH -->|dispara diariamente| EDGE
     GH -->|aplica migraciones| PG
 ```
 
 Quien usa que:
 
-- **Web**: administracion, planificacion, reportes y gobernanza. La usan la administradora y los
-  roles consultivos (junta directiva, socio fundador).
+- **Web**: administracion, planificacion, reportes y gobernanza. La usa la administradora; los
+  roles consultivos (junta directiva, socio fundador) entran **solo a Reportes** desde la #864.
 - **Movil**: lo que pasa durante la jornada. La usan medicos y voluntarios: registrar al
-  paciente, tomar el triaje, hacer la consulta, emitir la receta, descontar del botiquin.
-- **Reportes** existe unicamente en la web (`soloWeb: true` en `packages/shared/navegacion.js`).
+  paciente, tomar el triaje, hacer la consulta, emitir la receta, descontar del botiquin. Los
+  roles consultivos no pueden usarla (`puedeUsarAppMovil` en `packages/shared/navegacion.js`).
+- **Reportes**, donaciones, presupuestos, proyectos, colaboradores, la matriz de permisos y la
+  bitacora de auditoria existen unicamente en la web (`movil: false` en `navegacion.js`).
 
 ---
 
@@ -212,7 +216,7 @@ tabla `triajes`, calculada por Postgres. El cliente no puede mentir sobre el IMC
 
 ### 6.1 La seguridad vive en la base de datos, no en el cliente
 
-Las **107 politicas RLS** son la frontera real. El cliente esconde botones; la base niega filas.
+Las **130 politicas RLS** son la frontera real. El cliente esconde botones; la base niega filas.
 
 La postura de partida es **denegacion por defecto** (migracion `00030`): una tabla sin politica no
 devuelve nada a nadie. Encima de eso:
@@ -220,13 +224,17 @@ devuelve nada a nadie. Encima de eso:
 - Un perfil desactivado pierde su rol efectivo (`00079`): no basta con quitarle la contrasena.
 - No se puede quedar sin administrador activo (`00072` y `00103`), ni desactivarse a si mismo.
 - Los roles consultivos (junta directiva, socio fundador) ven agregados, **no filas clinicas**
-  (`00054`): la junta directiva puede ver cuantos pacientes se atendieron, no quienes son.
+  (`00054`): la junta directiva puede ver cuantos pacientes se atendieron, no quienes son. Desde la
+  `00141` tampoco leen la operacion del dia (jornadas, proyectos, gastos, donaciones).
+- "Esta jornada es mia" es estar en su cuadro de turnos **o** ser su responsable
+  (`pertenece_a_jornada`, `00141`): antes el responsable de una jornada no la veia.
 - El acceso directo por id ajeno esta cerrado (`00082`, IDOR clinico): un medico no registra en la
   consulta de otro medico aunque conozca el UUID.
 - `anon` no tiene privilegios (`00049`, `00056`), y el registro publico de cuentas esta cerrado
   (`00074`): las cuentas se crean por invitacion.
 
-Se comprueba con **27 archivos de pruebas pgTAP** en `supabase/tests/database/`, que corren en CI.
+Se comprueba con **48 archivos de pruebas pgTAP** (754 pruebas) en `supabase/tests/database/`,
+que corren en CI.
 
 La matriz completa esta en [PERMISOS.md](./PERMISOS.md).
 
@@ -268,6 +276,12 @@ La logica de la rutina **no vive en la Edge Function**: vive en SQL (`fn_generar
 migracion `00088`). La funcion es un envoltorio delgado. Asi la rutina es comprobable con pgTAP y
 no depende del disparador.
 
+Lo que tiene que pasar **en el momento** y no una vez al dia -avisar a la administracion de un
+movimiento por validar, un gasto por aprobar o un medicamento sin stock- no usa GitHub Actions:
+un trigger escribe la fila en `notificaciones` y `pg_net` (incluido en el plan gratuito) llama a la
+Edge Function `enviar-notificaciones`, que manda el correo por un proveedor SMTP propio (`00138`,
+issue #755). Otra vez, la decision de que se notifica vive en SQL; la funcion solo entrega.
+
 ### 6.5 JavaScript, no TypeScript
 
 El paquete compartido fue TypeScript y dejo de serlo (issue #493). El tipado se conserva donde
@@ -292,43 +306,65 @@ unico: se deja la diferencia y se documenta con `COMMENT ON` en la migracion. Lo
 existentes son `tipo_proveedor` / `origen_lote` (`00090`) y `pacientes.telefono_contacto`
 (`00093`).
 
+### 6.7 Los errores pasan por un solo punto, y sin datos de paciente
+
+Todo error que la aplicacion no puede resolver pasa por `reportarError`
+(`packages/shared/observabilidad/errores.js`), que quita UUID, DPI, telefonos, correos y tokens
+antes de mandarlo a ningun sitio. Las dos apps enganchan ahi lo que solo ellas ven -un limite de
+error de React alrededor de las pantallas y el manejador global de errores de cada plataforma-, y
+las dos muestran un aviso cuando se pierde la red. Conectar una herramienta de monitoreo es cambiar
+el destino con `configurarDestinoDeErrores`, no recorrer cada `catch`.
+
+La regla que lo motiva es la de `AGENTS.md` aplicada a la observabilidad: **algo que no funciona no
+puede verse igual que algo que si**. Por eso un error se pinta en la pantalla que lo provoco, nunca
+se sustituye por una lista vacia, y nunca se reporta en un dialogo que se cierra y no deja rastro.
+Estado y lo que falta: [SEGURIDAD.md, "Observabilidad"](./SEGURIDAD.md).
+
 ---
 
 ## 7. Que hay construido hoy
 
-Estado sobre `develop`, septiembre de 2026.
+Estado sobre `develop`, 24 de septiembre de 2026. El esquema se cuenta en el catalogo de Postgres
+despues de un `supabase db reset`, no contando archivos (ver [MODELO-DE-DATOS.md](./MODELO-DE-DATOS.md)).
 
 | Area                       | Tamano                                                                  |
 | -------------------------- | ----------------------------------------------------------------------- |
-| Migraciones                | 103 archivos                                                            |
-| Esquema                    | 42 tablas, 20 enums, 49 funciones, 7 vistas, 107 politicas RLS          |
-| `packages/shared`          | 10 modulos de dominio y 6 de infraestructura, 191 archivos              |
-| `apps/web`                 | 61 paginas, 20 componentes, 27 rutas                                    |
-| `apps/mobile`              | 23 pantallas, 23 componentes, 5 tabs                                    |
-| Edge Functions             | 2 (`invitar-usuario`, `alertas-vencimiento`)                            |
-| Pruebas                    | 116 archivos de prueba (vitest) + 27 de pgTAP                           |
+| Migraciones                | 139 archivos, numerados hasta la `00147`                                |
+| Esquema                    | 49 tablas, 23 enums, 76 funciones, 7 vistas, 130 politicas RLS, 68 triggers |
+| `packages/shared`          | 20 carpetas (dominio e infraestructura), 419 archivos versionados       |
+| `apps/web`                 | 86 paginas, 42 componentes, 35 rutas                                    |
+| `apps/mobile`              | 43 pantallas, 40 componentes, 5 tabs (cuatro modulos y Ajustes)         |
+| Edge Functions             | 3 (`invitar-usuario`, `alertas-vencimiento`, `enviar-notificaciones`)  |
+| Pruebas                    | 240 archivos de prueba (vitest y jest) + 48 de pgTAP (754 pruebas)      |
 | Workflows de CI/CD         | 5                                                                       |
 
-Los nueve modulos del sistema, definidos una sola vez en `packages/shared/navegacion.js`:
+Los once modulos del sistema, definidos una sola vez en `packages/shared/navegacion.js`:
 
-| Modulo       | Web | Movil | Quien lo ve                                            |
-| ------------ | --- | ----- | ------------------------------------------------------ |
-| Inicio       | Si  | Tab   | Todos                                                  |
-| Pacientes    | Si  | Tab   | Administrador, medico, voluntario                      |
-| Donaciones   | Si  | Si    | Administrador y consultivos                            |
-| Inventario   | Si  | Tab   | Administrador, consultivos, medico, voluntario         |
-| Presupuestos | Si  | Si    | Administrador y consultivos                            |
-| Proyectos    | Si  | Si    | Administrador y consultivos                            |
-| Reportes     | Si  | No    | Administrador y consultivos                            |
-| Jornadas     | Si  | Tab   | Administrador, consultivos, medico, voluntario         |
-| Voluntarios  | Si  | Si    | Solo administrador                                     |
+| Modulo                | Web | Movil | Quien lo ve                         |
+| --------------------- | --- | ----- | ----------------------------------- |
+| Inicio                | Si  | Tab   | Todos                               |
+| Pacientes             | Si  | Tab   | Administrador, medico, voluntario   |
+| Inventario            | Si  | Tab   | Administrador, medico, voluntario   |
+| Jornadas              | Si  | Tab   | Administrador, medico, voluntario   |
+| Proyectos             | Si  | No    | Administrador y medico (solo los de sus jornadas, sin editar) |
+| Donaciones            | Si  | No    | Solo administrador                  |
+| Presupuestos          | Si  | No    | Solo administrador                  |
+| Colaboradores         | Si  | No    | Solo administrador                  |
+| Matriz de permisos    | Si  | No    | Solo administrador                  |
+| Bitacora de auditoria | Si  | No    | Solo administrador                  |
+| Reportes              | Si  | No    | Administrador y consultivos         |
+
+El reparto por rol es el de la #864: la administradora ve todo, junta directiva y socio fundador
+solo reportes, y medico y voluntario la operacion de sus jornadas. La lista de `navegacion.js`
+decide que se muestra; lo que cada rol puede leer de verdad lo decide RLS
+([PERMISOS.md](./PERMISOS.md)).
 
 Detalle pantalla por pantalla en [MODULOS.md](./MODULOS.md).
 
-> **Nota sobre el estado real.** Que un modulo aparezca aqui significa que existe, no que este
-> terminado y conectado. Hay pantallas que muestran datos de ejemplo como si fueran reales
-> (#687, #688, #689) y piezas terminadas y probadas que nadie llego a conectar (#693). Antes de
-> asumir que algo funciona de punta a punta, revisar las issues abiertas del modulo.
+> **Nota sobre el estado real.** Las pantallas que mostraban datos de ejemplo como si fueran reales
+> (#687, #688, #689) y las piezas que nadie habia conectado (#693) ya estan resueltas. Aun asi, que
+> un modulo aparezca aqui significa que existe; antes de asumir que algo funciona de punta a punta,
+> revisar las issues abiertas del modulo.
 
 ---
 
@@ -356,6 +392,12 @@ Las variables de entorno se copian desde `.env.example`. **Nunca se suben llaves
 repositorio**, y `packages/shared/entorno/reglas.js` rechaza al arrancar una `service_role` que
 aparezca en el bundle del cliente.
 
+**Lo que este diagrama describe y lo que hay hoy no es lo mismo.** `ecopac-prod` esta pausado,
+`main` no tiene los secrets de produccion, y el plan Hobby de Vercel no puede conectarse a un
+repositorio de una organizacion. Todo eso -y la eleccion entre desplegar por CLI, pagar Vercel Pro o
+mover la web- se resuelve en la #252. Los limites y costos de cada servicio estan en
+[COSTOS-Y-LIMITES.md](./COSTOS-Y-LIMITES.md).
+
 Que valida cada workflow y que hacer cuando falla: [CI-CD.md](./CI-CD.md).
 Nube contra stack local: [SUPABASE.md](./SUPABASE.md).
 
@@ -376,16 +418,23 @@ Referencia tecnica
 
 Operacion
   QUICKSTART.md            instalar y correr
-  CI-CD.md                 workflows, migraciones, despliegue
+  CI-CD.md                 workflows, migraciones, despliegue, respaldos y restauracion
   SUPABASE.md              nube contra local
+  CONFIGURACION-SUPABASE.md lo que se configura a mano en el Dashboard de cada ambiente
+  COSTOS-Y-LIMITES.md      capas gratuitas, que se agota primero, siguiente escalon
   DATOS-DEMO.md            datos de prueba
   DEPENDENCIES.md          politica de versionado
 
 Seguridad
-  SEGURIDAD.md             contrasenas, sesion, credenciales
+  SEGURIDAD.md             contrasenas, sesion, credenciales, observabilidad
   PROTECCION-DE-DATOS.md   logs, almacenamiento movil, cifrado, secretos
+
+Calidad
+  PLAN-DE-PRUEBAS.md       tipos de prueba y criterio de aprobacion
+  CASOS-DE-PRUEBA.md       cada caso vinculado a su requerimiento
 
 Proceso y diseno
   CONTRIBUTING.md          ramas, commits, PRs, tablero
   DISENO.md                pantallas, navegacion, paleta
+  DISENO-MOVIL.md          criterio de diseno de la app movil
 ```

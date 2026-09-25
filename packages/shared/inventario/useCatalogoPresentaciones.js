@@ -13,6 +13,15 @@ import {
 } from "./presentaciones.api.js";
 import { permisosDePresentaciones } from "./presentaciones.permisos.js";
 
+/**
+ * Catalogo administrable de presentaciones (tabla `presentaciones`, 00144): busqueda, alta, edicion
+ * y borrado. Escribir es solo del administrador.
+ *
+ * @param {object} [opciones]
+ * @param {string} [opciones.rol] Rol de la sesion; decide `permisos`.
+ * @returns {object} `{ filas, total, filtros, setFiltro, limpiarFiltros, hayFiltros, cargando, error,
+ *   recargar, guardar, eliminar, permisos }`.
+ */
 export function useCatalogoPresentaciones({ rol } = {}) {
   const [busqueda, setBusqueda] = useState("");
   const [presentaciones, setPresentaciones] = useState([]);

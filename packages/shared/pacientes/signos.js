@@ -89,6 +89,13 @@ function esNumero(valor) {
   return typeof valor === "number" && Number.isFinite(valor);
 }
 
+/**
+ * Convierte los triajes de un paciente en series por signo vital para graficar su evolucion,
+ * ordenadas por fecha, con el minimo y el maximo para la escala.
+ *
+ * @param {object[]} [triajes]
+ * @returns {object[]} Una serie por signo: `{ ...definicion, lineas, mediciones, min, max }`.
+ */
 export function aSeriesDeSignos(triajes = []) {
   const ordenados = [...triajes].sort((uno, otro) => {
     const a = Date.parse(fechaDeTriaje(uno) ?? "");
@@ -127,6 +134,10 @@ export function aSeriesDeSignos(triajes = []) {
   });
 }
 
+/**
+ * @param {{ lineas: { label: string, puntos: object[] }[] }} serie
+ * @returns {object|undefined} El ultimo punto de la serie, con la linea a la que pertenece.
+ */
 export function ultimaMedicion(serie) {
   const puntos = serie.lineas.flatMap((linea) =>
     linea.puntos.map((punto) => ({ ...punto, linea: linea.label })),
@@ -135,11 +146,20 @@ export function ultimaMedicion(serie) {
   return puntos[puntos.length - 1];
 }
 
+/**
+ * @param {number} valor
+ * @param {{ min: number, max: number } | null} normal Rango normal del signo.
+ * @returns {boolean} `false` si no hay rango o el valor no es numerico.
+ */
 export function estaFueraDeRango(valor, normal) {
   if (!normal || !esNumero(valor)) return false;
   return valor < normal.min || valor > normal.max;
 }
 
+/**
+ * @param {{ mediciones: number }[]} [series]
+ * @returns {boolean} Si alguna serie tiene al menos una medicion.
+ */
 export function hayAlgunaMedicion(series = []) {
   return series.some((serie) => serie.mediciones > 0);
 }

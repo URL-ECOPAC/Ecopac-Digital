@@ -122,7 +122,19 @@ Ya se cumple; no hubo que cambiar codigo.
 
 La pregunta de la #762 es **cuando algo falle en una comunidad rural sin senal, como nos enteramos
 y como lo recuperamos**, y el patron que tiene que hacer imposible es "algo no funciona y el
-sistema dice que si". Este es el estado por bloque.
+sistema dice que si". Este es el estado por bloque, revisado el 24 de septiembre de 2026.
+
+| Criterio de la #762 | Estado |
+| --- | --- |
+| Eventos de seguridad definidos, con su retencion | **Definidos** (tabla de abajo). La retencion esta **propuesta**, falta que Ecopac la confirme |
+| Bitacora consultable desde la aplicacion | **Hecho** (#643, cerrada por la #853) |
+| Monitoreo conectado en las dos apps y en las Edge Functions | **Punto unico listo en web y movil**; falta crear la cuenta de la herramienta y conectarla. Edge Functions sin empezar |
+| Revisado el codigo en busca de errores tragados | **Hecho** (segundo barrido, 24-09) |
+| Comportamiento ante fallo de red en movil | **Definido y aplicado** (aviso sin conexion) |
+| Ningun error de escritura con `alert()` | **Hecho** |
+| Deriva entre receta emitida y stock no descontado | **Resuelto** (#711) |
+| Respaldos confirmados, restauracion probada, procedimiento documentado | Dev confirmado **sin respaldos** (Free); procedimiento **corregido y ensayado en local**; falta la prueba con un volcado remoto |
+| `docs/SEGURIDAD.md` y `docs/CI-CD.md` actualizados | Hecho en este mismo corte |
 
 ### Reporte de errores
 
@@ -138,28 +150,65 @@ Todo error pasa por un unico punto,
 - `configurarDestinoDeErrores(destino)` es el **unico** punto que hay que tocar para conectar una
   herramienta de monitoreo. Hoy el destino es la consola del equipo: no sale de el.
 
-Lo que se captura en la web:
+Lo que se captura:
 
-| Fuente | Donde se engancha |
-| --- | --- |
-| Excepcion al pintar una pantalla | `LimiteDeError` alrededor del `<Outlet />` de `MainLayout` (el menu sigue vivo y se reinicia al navegar) y otro alrededor de `<App />` en `main.jsx` |
-| Excepcion en un manejador de eventos o un `setTimeout` | `window` `error`, en `main.jsx` |
-| Promesa rechazada que nadie espero | `window` `unhandledrejection`, en `main.jsx` |
+| Fuente | Web | Movil |
+| --- | --- | --- |
+| Excepcion al pintar una pantalla | `LimiteDeError` alrededor del `<Outlet />` de `MainLayout` (el menu sigue vivo y se reinicia al navegar) y otro alrededor de `<App />` en `main.jsx` | `LimiteDeError` (`apps/mobile/src/components/`) alrededor de la navegacion, en `App.js` |
+| Excepcion en un manejador de eventos o un temporizador | `window` `error`, en `main.jsx` | `ErrorUtils.setGlobalHandler`, en `App.js`. Reporta y le pasa el error al manejador que ya estaba, asi que no cambia la pantalla roja de desarrollo ni lo que hace un error fatal |
+| Promesa rechazada que nadie espero | `window` `unhandledrejection`, en `main.jsx` | **No se captura todavia.** React Native no expone un evento publico equivalente; queda para cuando se conecte la herramienta, cuyo SDK lo trae resuelto |
+| Fallo de SecureStore (la sesion no se lee o no se guarda) | - | `apps/mobile/src/almacenamiento.js`, que antes solo escribia en la consola del telefono |
 
 Antes de esto, una excepcion al pintar dejaba **la pagina en blanco** -sin menu, sin mensaje y sin
-registro-: es lo que pasaba con "Nuevo paciente" hasta la #827.
+registro-: es lo que pasaba con "Nuevo paciente" hasta la #827. En movil el equivalente era peor:
+la app se cerraba sola en una build de tienda.
 
-**Pendiente:** elegir la herramienta (dentro de la capa gratuita, ver #234), conectarla con
-`configurarDestinoDeErrores` en las dos apps y en las Edge Functions, y enganchar los errores
-globales de movil (`ErrorUtils.setGlobalHandler`).
+#### Herramienta de monitoreo: recomendacion
+
+**Sentry, plan Developer (gratuito).** Consultado el 24 de septiembre de 2026: 0 USD, **un
+usuario**, 5,000 errores al mes y 30 dias de historial; tiene SDK para React, para React Native y
+para Deno (el runtime de las Edge Functions). El plan Team, si hiciera falta mas de una persona
+mirando, cuesta 26 USD al mes facturado anual.
+
+Por que encaja aqui:
+
+- **5,000 errores al mes sobran** para un sistema que usan decenas de personas unas doce semanas
+  al ano. Si se agotaran, seria porque un mismo fallo se repite en bucle, que es justo lo que hay
+  que ver.
+- **Un solo usuario alcanza** si esa persona es quien mantiene el sistema. Es el limite que mas
+  aprieta: si el mantenimiento pasa a un equipo, o se comparte la cuenta o se paga Team.
+- **La limpieza de datos ya esta hecha antes del SDK.** Conectarla es una linea por app:
+  `configurarDestinoDeErrores((reporte) => Sentry.captureMessage(reporte.mensaje, { extra: reporte }))`.
+  Hay que **apagar** en el SDK todo lo que recoge por su cuenta -`sendDefaultPii: false`, sin
+  breadcrumbs de red ni de consola, sin captura automatica de la URL- porque eso no pasa por
+  `limpiarDatosSensibles`, y las rutas llevan el UUID del paciente.
+
+Lo que falta, en orden: crear la cuenta (la organizacion, no una persona), guardar el DSN como
+variable de entorno por ambiente (`VITE_SENTRY_DSN`, `EXPO_PUBLIC_SENTRY_DSN`; el DSN es publico
+por diseno, igual que la llave anonima), conectar las dos apps con la linea de arriba, y despues las
+Edge Functions. Ninguna de las tres cosas se puede hacer desde el repositorio sin la cuenta.
+
+La otra opcion evaluada es no usar un servicio externo y guardar los reportes en una tabla propia
+de Supabase. Se descarta: la base es de 500 MB y ya lleva la unica tabla sin techo
+(`eventos_auditoria`, abajo), y un error de red -el caso mas comun- es precisamente el que no
+llegaria a la base.
 
 ### Errores tragados
 
-Revisados en `apps/` y `packages/shared`:
+Revisados en `apps/` y `packages/shared`, la segunda vez el 24 de septiembre de 2026 con un script
+que recorre cada bloque `catch` y marca los que no tienen ninguna sentencia o solo hacen
+`console.*` o `return` vacio:
 
 - **`alert()` para errores de escritura:** no queda ninguno en la web. Los de `InventarioPage`,
   `AdministracionBodegasProveedoresPage` y `PanelAlertasVencimiento` ya pintan el error en la
-  pantalla que lo provoco.
+  pantalla que lo provoco. En movil quedaba uno con el mismo defecto: "Resolver" una condicion
+  cronica en la ficha avisaba de un fallo con `Alert.alert("Error", "No se pudo...")` y tiraba el
+  motivo real. Ahora el motivo se pinta en la propia tarjeta. El unico `Alert.alert` que queda en
+  movil es la confirmacion previa de esa misma accion, que no es un error.
+- **`catch` que solo escribian en la consola:** los tres de `apps/mobile/src/almacenamiento.js` y
+  el de `cerrarSesionYLimpiarJornada` (`packages/shared/hooks/useSesion.js`) pasan ahora por
+  `reportarError`. El comportamiento no cambia -siguen sin propagar, por contrato-, pero ya no
+  quedan fuera del punto unico, y el de `useSesion` escribia el id del usuario en claro.
 - **`catch` vacios:** quedan cinco y los cinco son deliberados y comentados: `cerrarSesion()` (el
   objetivo, no dejar sesion, ya se persigue en supabase-js), `useRestablecerContrasena` (distinguir
   "correo enviado" de "no existe esa cuenta" permite enumerar usuarios), el cuerpo no JSON de una
@@ -182,8 +231,30 @@ Revisados en `apps/` y `packages/shared`:
   la base. `navigator.onLine` en `false` es fiable; en `true` solo dice que hay una interfaz de
   red, por eso alimenta un aviso y no una decision: quien sabe si una escritura llego es la
   respuesta de la API, que ya se pinta en pantalla.
-- **Pendiente en movil:** definir que se puede seguir haciendo sin red, que se bloquea y que se le
-  dice a quien atiende. Hoy movil no tiene el aviso.
+- **Movil:** `useEnLinea` (`apps/mobile/src/`) escucha `@react-native-community/netinfo`, que
+  viene incluido en Expo Go. Sin red aparece `AvisoSinConexion`, la misma franja y el mismo texto
+  que en web, arriba de todas las pantallas. Cuenta como sin conexion tanto no tener red como
+  **estar conectado a una red que no llega a internet** (`isInternetReachable === false`), que es
+  el caso comun en jornada: el wifi del centro de salud sin salida. Mientras NetInfo todavia no
+  sabe (`null` al arrancar) no avisa, para que la franja no parpadee al abrir la app.
+
+**Comportamiento sin red, decidido:**
+
+| Que | Sin red |
+| --- | --- |
+| Ver lo que ya esta en pantalla | Se puede. No se borra nada de lo cargado |
+| Escribir en un formulario | Se puede. Lo escrito sigue en la pantalla mientras no se salga de ella |
+| Guardar | **Falla, y se dice.** La pantalla muestra el error de la API donde ya lo mostraba. No se encola nada para despues |
+| Que se le dice a quien atiende | La franja, desde el momento en que se pierde la senal, **antes** de que intente guardar |
+
+**Por que no hay cola sin conexion.** Guardar en el telefono y sincronizar despues parece lo
+natural para una app de campo, y es lo que se descarto a proposito para esta version: casi todo lo
+clinico depende de reglas que solo la base puede comprobar en el momento -jornada en curso, stock
+disponible por lote y bodega, la receta y su salida de inventario en una transaccion (#711)- y una
+receta encolada que al sincronizar ya no tiene stock no tiene una resolucion correcta automatica.
+Ademas, lo encolado seria dato clinico guardado en el telefono, con lo que eso implica
+(`docs/PROTECCION-DE-DATOS.md`). Si Ecopac confirma que las jornadas pasan horas enteras sin
+senal, esa es una issue propia, con su diseno de conflictos, no un parche de esta.
 - **Receta emitida con stock sin descontar** (R-57 de la revision integral): resuelto por la #711.
   La receta y sus salidas de inventario se escriben juntas en `fn_generar_receta` (00112): si una
   salida falla por red o por stock, no queda ni la receta ni el descuento, en vez de una receta
@@ -191,18 +262,65 @@ Revisados en `apps/` y `packages/shared`:
 
 ### Eventos de seguridad y bitacora
 
-`eventos_auditoria` (00026, 00045, 00070) ya registra los borrados logicos y los cambios de
-permisos. Consultarla desde la aplicacion es la #643. **Pendiente de decidir:** que eventos de
-autenticacion se registran (intentos fallidos, desactivaciones, invitaciones), cuanto se
-conservan, y confirmar que ninguno guarda datos clinicos de mas. El cierre por inactividad
-**no** se registra en la base: ocurre en el cliente y quien lo necesita es la persona que vuelve a
-entrar, a quien ya se le dice.
+La bitacora se consulta desde la web, solo el administrador (#643, cerrada por la #853).
+
+**Que se registra y donde**, comprobado contra el catalogo el 24 de septiembre de 2026:
+
+| Evento | Donde queda | Retencion hoy |
+| --- | --- | --- |
+| Alta, cambio de rol y desactivacion de una cuenta | `eventos_auditoria`, trigger sobre `perfiles` (el alta por invitacion es un INSERT en `perfiles`) | Sin limite |
+| Cambio de permisos por rol o por persona | `eventos_auditoria`, triggers sobre `rol_permiso` (00139) y `usuario_permiso` (00045) | Sin limite |
+| Escritura clinica: paciente, expediente, padecimiento, consulta, receta | `eventos_auditoria`, triggers sobre esas cinco tablas | Sin limite |
+| Movimiento de inventario y su aprobacion | `eventos_auditoria`, trigger sobre `movimientos_inventario` | Sin limite |
+| Inicio de sesion, cierre, recuperacion de contrasena | `auth.audit_log_entries` de Supabase Auth | La de Supabase; no la controla el repositorio |
+| Intento de inicio de sesion **fallido** | Solo en los logs de Auth del Dashboard | **1 dia** en el plan Free (7 en Pro) |
+| Acceso denegado por RLS | No queda en ningun sitio del servidor: RLS filtra filas en silencio y un INSERT denegado solo le devuelve `42501` al cliente | - |
+| Cierre por inactividad | No se registra, a proposito: ocurre en el cliente y quien lo necesita es la persona que vuelve a entrar, a quien ya se le dice | - |
+
+**Lo que no se registra de mas.** `eventos_auditoria` guarda el antes y el despues de la fila
+completa, asi que **si contiene datos clinicos**: es su funcion, para poder responder quien cambio
+que en un expediente. Por eso la lee solo el administrador (una politica, `00026`) y nadie la
+escribe desde el cliente. No guarda contrasenas ni tokens: `auth.users` no tiene trigger de
+auditoria propio.
+
+**Dos huecos que se dejan escritos y no se cierran aqui:**
+
+- **Intentos fallidos con retencion de un dia.** Para investigar un ataque de fuerza bruta un dia
+  no alcanza. Moverlos a una tabla propia exige un Auth Hook de Supabase, y el bloqueo por
+  intentos fallidos ya es una issue aparte (ver "Bloqueo por intentos fallidos (fuera de
+  alcance)", arriba): se resuelven juntos.
+- **Accesos denegados por RLS.** El cliente si los ve (`42501`). Cuando se conecte la herramienta
+  de monitoreo, `reportarError` los mandara como cualquier otro error, que es la forma barata de
+  tenerlos; no merece la pena un registro en la base para esto.
+
+**Retencion propuesta para `eventos_auditoria`**, que Ecopac tiene que confirmar porque depende de
+cuanto tiempo debe poder reconstruir quien toco un expediente:
+
+- Medido en el stack local: una fila ocupa **543 bytes de media**, hasta 1.2 KB en una actualizacion
+  con el antes y el despues. Una atencion completa genera del orden de ocho eventos, unos 8 KB con
+  indices.
+- Con el supuesto de `docs/COSTOS-Y-LIMITES.md` (1,800 atenciones al ano) son **~15 MB al ano y
+  ~75 MB a cinco anos**: cabe en el plan Free sin borrar nada.
+- **Propuesta: conservar todo mientras la base este por debajo del 50% de su limite**, y revisar el
+  tamano en cada cierre de ano. Si hubiera que recortar, se borran primero los eventos de
+  `movimientos_inventario` de mas de dos anos -el kardex ya conserva el movimiento en si- y nunca
+  los de expedientes, consultas, recetas ni permisos. Un borrado asi se hace con una migracion
+  nueva, nunca a mano.
 
 ### Respaldos
 
 Procedimiento en [CI-CD.md, "Respaldos y restauracion"](./CI-CD.md#respaldos-y-restauracion).
-**La restauracion no esta probada todavia**: un respaldo sin restauracion probada no es un
-respaldo, y esa prueba es el criterio que sigue abierto de la #762.
+
+- **Que respalda Supabase:** en `Ecopac-Digital-Dev`, nada; el plan Free no incluye respaldos
+  (confirmado en el Dashboard, #879). `Ecopac-Digital-Prod` se confirma al reanudarlo (#252).
+- **El procedimiento estaba mal y se corrigio.** El ensayo contra el stack local del 24 de
+  septiembre encontro que, tal como estaba escrito, la restauracion daba 29 errores y dejaba
+  tablas enteras sin cargar, porque el reset y las propias migraciones siembran datos que chocan
+  con el volcado. La version corregida paso los tres criterios de la prueba.
+- **Lo que sigue abierto:** repetir la prueba con un volcado real de `Ecopac-Digital-Dev`, que
+  necesita la contrasena de la base y la persona responsable de ella; y decidir entre Supabase Pro
+  (25 USD al mes, 7 dias de respaldos diarios) o un volcado propio programado
+  (`docs/COSTOS-Y-LIMITES.md`, seccion 6.2). Hasta entonces **no existe ninguna copia de la base**.
 
 ## Alta de cuentas: quien entra al sistema y como (issue #508)
 

@@ -30,6 +30,15 @@ export function debeBloquearPorInactivo(perfil) {
   return perfil?.activo === false;
 }
 
+/**
+ * Formulario de nueva contrasena despues del enlace de recuperacion: valida la politica y la
+ * confirmacion y actualiza la contrasena de la sesion de recuperacion.
+ *
+ * @returns {{ contrasena: string, setContrasena: Function, confirmarContrasena: string,
+ *   setConfirmarContrasena: Function, enviando: boolean, errorGlobal: string,
+ *   erroresDeCampo: object, exito: boolean, actualizarContrasena: (evento?: object) => Promise<void> }}
+ *   `errorGlobal` es `""` mientras no hay error.
+ */
 export function useNuevaContrasena() {
   const [contrasena, setContrasena] = useState("");
   const [confirmarContrasena, setConfirmarContrasena] = useState("");

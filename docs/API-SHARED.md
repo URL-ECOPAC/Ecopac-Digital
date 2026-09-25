@@ -6,7 +6,10 @@ Sirve para responder dos preguntas antes de escribir codigo nuevo: **"esto ya ex
 **"como se llama?"**. La causa mas repetida de deuda en este repositorio es una segunda
 implementacion de algo que ya estaba escrito, hecha aparte y peor.
 
-Estado al 4 de septiembre de 2026, sobre `develop`.
+Estado al 4 de septiembre de 2026, sobre `develop`, mas lo que entro hasta el 24 de septiembre en
+la seccion ["Lo que entro despues del 4 de septiembre"](#lo-que-entro-despues-del-4-de-septiembre).
+Que recibe y que devuelve cada funcion esta en su JSDoc: toda funcion exportada lo tiene, y
+`npm run verificar:jsdoc` lo comprueba en CI.
 
 ---
 
@@ -459,6 +462,37 @@ de Postgres.
 `useGestionPermisos`, `useFichaVoluntario`, `useHistorialDePersona`.
 
 ---
+
+## Lo que entro despues del 4 de septiembre
+
+Archivos de los que las secciones de arriba no mencionaban ninguna exportacion, encontrados al
+cruzar cada export de `packages/shared` con este documento el 24 de septiembre. Van agrupados por
+modulo; en la proxima revision conviene llevarlos a la seccion de cada uno.
+
+| Modulo | Archivo | Que exporta y para que |
+| --- | --- | --- |
+| `api/` | `paginacion.js` | `obtenerTodasLasFilas`: recorre con `.range()` una consulta que agrega o cuenta en el cliente, porque PostgREST corta en 1000 filas sin avisar (#773) |
+| raiz | `formularios.js` | `camposDeEdicion`, `idsEditables`, `textoDeCampoSoloLectura`: un solo juego de campos para alta y edicion, con lo no editable en solo lectura en vez de oculto (#840, B1) |
+| `hooks/` | `usePanelDeInicio.js` | `usePanelDeInicio`: la pantalla de inicio por rol, con los accesos de `modulosVisibles()` (#710) |
+| `auditoria/` | `useBitacoraAuditoria.js`, `detalle.js` | `useBitacoraAuditoria`, `armarFilasDeAuditoria`, `calcularPaginasDeAuditoria`, `EVENTOS_POR_PAGINA`; `diferenciaDeEvento`, `nombreDeCampo`, `formatearValorDeAuditoria`: la bitacora de auditoria de la web y el antes/despues de cada evento (#643) |
+| `pacientes/` | `useCapturaClinica.js` | `useCapturaClinica`: la atencion y la jornada de la que cuelgan triaje, consulta y receta cuando se capturan desde la web |
+| `pacientes/` | `useCatalogoCondiciones.js`, `useAltaDeCondicionEnLinea.js` | Catalogo de condiciones cronicas y su alta sin salir del formulario (`resolverCondicionEscrita`) (00140, #850) |
+| `pacientes/` | `useCatalogoDiagnosticos.js`, `useFormularioDiagnostico.js`, `catalogoDiagnosticos.{campos,columnas,filtros}.js` | Catalogo de diagnosticos: listado, activar y desactivar, alta y edicion |
+| `pacientes/` | `useDuplicadosPacientes.js`, `useFusionPacientes.js`, `useFusionesDelPaciente.js`, `duplicados.columnas.js` | Deteccion de duplicados, fusion, y la nota de fusiones recibidas en la ficha (#637) |
+| `inventario/` | `presentaciones.api.js`, `presentaciones.permisos.js`, `useCatalogoPresentaciones.js` | Catalogo de presentaciones (00144): listar, registrar, actualizar, eliminar y sus permisos |
+| `inventario/` | `useCatalogoPrincipiosActivos.js` | Catalogo de principios activos |
+| `inventario/` | `useAltaDeMedicamentoEnLinea.js` | `useAltaDeMedicamentoEnLinea`, `CAMPOS_ALTA_MEDICAMENTO_EN_LINEA`: alta de un medicamento desde el renglon de una donacion (#840, C) |
+| `inventario/` | `useDetalleLote.js`, `useExistenciasPorLote.js` | Detalle de un lote y existencias por lote (`estadoDeLote`, `sumarExistenciasPorLote`, `armarFilasDeExistencias`, sus filtros) |
+| `inventario/` | `useEntregaMedicamentos.js`, `entrega.api.js` | Entrega de lo recetado y su correccion (`obtenerRecetaPorAtencion`, `ajustarEntregaReceta`, #764) |
+| `inventario/` | `useMisMovimientos.js` | Los movimientos propios y su correccion (`filaDeMisMovimientos`, `valoresDeCorreccionDeMovimiento`) |
+| `inventario/` | `valorizacion.api.js` | `obtenerValorDeInventario`, `totalizarValorizacion`, `desglosarValorizacionPorOrigen`: valor del stock (00122, #752) |
+| `jornadas/` | `turnos.imprimible.js`, `useSeleccionJornada.js` | Cuadro de turnos imprimible (`datosDeCuadroTurnosImprimible`); `mensajeSinJornada` para la seleccion de jornada activa en movil |
+| `donaciones/` | `registro.api.js`, `useResumenDonaciones.js` | `registrarDonacion` y `anularDonacion` (`fn_registrar_donacion`, `fn_anular_donacion`), `aDetalleParaGuardar`; KPIs del modulo |
+| `proyectos/` | `equipo.api.js`, `insumos.api.js`, `normalizacion.js` | Equipo del proyecto (00146) e insumos previstos (00147): listar, asignar o agregar, actualizar, quitar. `vacioANull` para columnas DATE y UUID opcionales |
+| `reportes/` | `useOrdenYPagina.js` | `useOrdenYPagina` y sus piezas puras (`ordenarFilas`, `compararValores`, `contarPaginas`, `recortarAPagina`, `siguienteOrden`): orden y paginacion en cliente de los reportes |
+| `territorio/` | `useCatalogoComunidades.js`, `useFormularioComunidad.js`, `useAltaDeComunidadEnLinea.js`, `comunidades.validaciones.js` | Catalogo de comunidades, su formulario, su validacion y el alta en linea desde el registro de paciente (#838) |
+| `usuarios/` | `useFichaColaborador.js`, `ficha.js`, `useEspecialidadesDePerfil.js` | Ficha de una persona del equipo: pestanas, historial y especialidades |
+| `usuarios/` | `useMatrizPermisosPorRol.js` | Matriz de permisos por rol (00139, #638), con escribir y releer para detectar lo que RLS no dejo cambiar |
 
 ## Reglas de la frontera
 

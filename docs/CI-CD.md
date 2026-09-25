@@ -12,9 +12,15 @@ Que corre automaticamente, cuando, contra que ambiente, y que hacer cuando algo 
 | Mantener Supabase activo | `.github/workflows/keep-alive-supabase.yml`  | Cada 3 dias, y a mano                        |
 | Alertas de vencimiento   | `.github/workflows/alertas-vencimiento.yml`  | Todos los dias a las 06:00 UTC, y a mano     |
 
-El despliegue de la web **no** es un workflow: lo hace la app de Vercel conectada al
+El despliegue de la web **no** es un workflow: esta pensado para la app de Vercel conectada al
 repositorio. Vercel publica un preview por cada PR y produccion desde `main`, al margen del
 CI, asi que un CI en rojo no detiene un deploy de Vercel.
+
+> **Esa conexion no es posible en el plan Hobby**, porque el repositorio pertenece a una
+> organizacion de GitHub (`docs/COSTOS-Y-LIMITES.md`, seccion 6.1). Las salidas -desplegar por CLI
+> desde un workflow, Vercel Pro, o mover la web a Cloudflare Pages o Netlify- y su costo estan en
+> ese documento; la decision se toma en la #252 (salida a produccion). Mientras no se tome, este
+> parrafo describe el diseno, no lo que hay desplegado.
 
 ## Que hace el workflow de CI
 
@@ -318,6 +324,15 @@ La guarda tiene sus propias pruebas: `npm run verificar:contratos -- --autoprueb
 casos, cada comprobacion con su caso bueno y su caso malo, incluido el de la forma abierta, que es el
 unico falso positivo que aparecio al calibrarla. `scripts/` no es un workspace, asi que `npm test` no
 lo alcanza; por eso es un paso propio del CI.
+
+### Toda funcion exportada de `packages/shared` lleva JSDoc
+
+`npm run verificar:jsdoc` (issue #233). `packages/shared` es la API que consumen las dos apps, y
+su documentacion vive en el propio codigo: [API-SHARED.md](./API-SHARED.md) dice que exporta cada
+modulo, y el JSDoc de cada funcion dice que recibe y que devuelve. El paso **falla** si un export
+no tiene un bloque `/** ... */` encima. Los bloques que existen pero no nombran sus `@param` solo
+se informan (eran 183 al escribir la guarda, bloques anteriores que explican el porque en prosa);
+`-- --estricto` los hace fallar tambien, y `-- --lista` los enumera.
 
 ### La frontera entre las apps y `packages/shared`
 
@@ -736,9 +751,11 @@ exitoso.
 
 ## Respaldos y restauracion
 
-Issue #762, bloque 4. **Estado: procedimiento escrito, restauracion todavia no probada.** Un
-respaldo sin restauracion probada no es un respaldo, asi que esta seccion no da por cerrado nada
-hasta que alguien complete la prueba de abajo y anote la fecha en la tabla del final.
+Issue #762, bloque 4. **Estado: procedimiento ensayado de punta a punta contra el stack local (24
+de septiembre de 2026); restauracion desde un proyecto remoto todavia no probada.** Un respaldo sin
+restauracion probada no es un respaldo, asi que esta seccion no da por cerrado nada hasta que
+alguien complete la prueba de abajo con un volcado de `Ecopac-Digital-Dev` y anote la fecha en la
+tabla del final.
 
 ### Que respalda Supabase por su cuenta
 
@@ -773,13 +790,45 @@ Contra el stack local, que es desechable:
 
 ```bash
 supabase start
-supabase db reset          # base local vacia con el esquema de supabase/migrations
-psql "postgresql://postgres:postgres@127.0.0.1:54422/postgres" -f datos.sql  # puerto de [db] en supabase/config.toml
+supabase db reset --no-seed    # esquema de supabase/migrations, SIN seed.sql ni seed-demo.sql
+docker exec -i supabase_db_ecopac-digital psql -U postgres -d postgres -v ON_ERROR_STOP=1 <<'SQL'
+DO $$
+DECLARE tablas TEXT;
+BEGIN
+  SELECT string_agg(format('public.%I', tablename), ', ') INTO tablas
+  FROM pg_tables WHERE schemaname = 'public';
+  EXECUTE 'TRUNCATE ' || tablas || ', auth.users CASCADE';
+END $$;
+SQL
+docker exec -i supabase_db_ecopac-digital psql -U postgres -d postgres < datos.sql
 ```
+
+(Con `psql` instalado en el equipo vale igual `psql "postgresql://postgres:postgres@127.0.0.1:54422/postgres"`,
+puerto de `[db]` en `supabase/config.toml`; el `docker exec` evita tener que instalarlo.)
 
 Se restauran los **datos** sobre el esquema de las migraciones, y no el `esquema.sql` volcado,
 porque la fuente de verdad del esquema es `supabase/migrations/` (AGENTS.md): si el volcado y las
 migraciones no coinciden, eso ya es un hallazgo que hay que reportar.
+
+**Por que el `--no-seed` y el `TRUNCATE`, que la primera version de este procedimiento no tenia.**
+El ensayo del 24 de septiembre lo encontro: con un `db reset` a secas, la carga de `datos.sql` da 29
+errores de clave duplicada, porque el reset vuelve a sembrar los datos de demostracion. Con
+`--no-seed` quedan 13, porque **las propias migraciones tambien siembran**: el catalogo geografico,
+los idiomas, los permisos, las presentaciones, las condiciones cronicas, los diagnosticos, las
+bodegas y el primer administrador (`00063`). Y un `COPY` que choca con una sola fila **descarta la
+tabla entera**: en ese ensayo `perfiles` y `auth.users` quedaron con una fila en vez de ocho, y
+`eventos_auditoria` con dos en vez de 57. El `TRUNCATE` de todo `public` y de `auth.users` vacia lo
+que sembraron las migraciones sin tocar el esquema, y el volcado repone todo lo demas.
+
+No hace falta desactivar triggers a mano: `supabase db dump --data-only` abre el archivo con
+`SET session_replication_role = replica`, que los apaga durante la carga. Sin eso, cada fila de
+`movimientos_inventario` volveria a mover `existencias` y cada escritura sensible volveria a
+escribir en `eventos_auditoria`. Las secuencias las repone el propio volcado con `setval`.
+
+Dos errores son **esperados** y no invalidan la prueba: `permission denied for table
+buckets_vectors` y `... vector_indexes`, dos tablas vacias de `storage` que `postgres` no puede
+escribir en el stack local. El proyecto no usa Storage (`docs/COSTOS-Y-LIMITES.md`, seccion 1).
+Cualquier otro `ERROR` en la salida de la carga si invalida la prueba.
 
 La prueba solo cuenta si, despues de restaurar:
 
@@ -795,6 +844,12 @@ La prueba solo cuenta si, despues de restaurar:
 | --- | --- | --- | --- |
 | Ecopac-Digital-Dev | **ninguno**: plan Free (24-09-2026) | nunca | - |
 | Ecopac-Digital-Prod | pendiente de confirmar | nunca | - |
+| Stack local (ensayo del procedimiento) | no aplica | 24-09-2026: conteos identicos en las nueve tablas comparadas, sesion del administrador demo y lectura de pacientes con su expediente, `supabase test db` 48 archivos / 754 pruebas en verde | PR de la #762 |
+
+El ensayo local **no sustituye** la prueba con `Ecopac-Digital-Dev`: prueba que los comandos y el
+orden son correctos con el esquema y los datos de demostracion actuales, no que un volcado remoto
+real se restaure. Lo que queda es correr los tres `supabase db dump --linked` de arriba contra dev y
+repetir exactamente esto.
 
 Database > Backups de `Ecopac-Digital-Dev` dice literalmente "Free Plan does not include project
 backups. Upgrade to the Pro Plan for up to 7 days of scheduled backups" (issue #879). O sea que

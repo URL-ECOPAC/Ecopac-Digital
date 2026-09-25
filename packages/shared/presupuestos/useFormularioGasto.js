@@ -23,6 +23,11 @@ const categoriasFijas = Object.entries(CATEGORIAS_DE_GASTO).map(([_, valor]) => 
   label: valor,
 }));
 
+/**
+ * @param {object|null} gasto Gasto a editar; `null` para uno nuevo.
+ * @param {string} [estadoInicial] Estado de un gasto nuevo; por defecto `pendiente`.
+ * @returns {object} Valores del formulario, con `""` donde no hay dato.
+ */
 export function valoresInicialesDeGasto(gasto, estadoInicial) {
   return {
     jornada_id: gasto?.jornada_id ?? "",
@@ -44,6 +49,17 @@ function extraerValor(valor) {
   return valor;
 }
 
+/**
+ * Formulario de alta y edicion de un gasto, con catalogos y el aviso de que el gasto excede el
+ * disponible de la jornada.
+ *
+ * @param {object} [opciones]
+ * @param {object|null} [opciones.gasto] Gasto a editar; sin el, es un alta.
+ * @param {string} [opciones.usuarioId] Quien registra.
+ * @param {string} [opciones.estadoInicial] Estado de un gasto nuevo.
+ * @returns {object} `{ valores, errores, error, enviando, esEdicion, sucio, catalogos, esExcedente,
+ *   mensajeExcedente, ... }`.
+ */
 export function useFormularioGasto({ gasto, usuarioId, estadoInicial } = {}) {
   const gastoId = gasto?.id ?? null;
   const esEdicion = Boolean(gastoId);

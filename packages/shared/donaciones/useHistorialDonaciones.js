@@ -24,6 +24,14 @@ import { anularDonacion } from "./registro.api.js";
 
 const TOTALES_VACIOS = Object.freeze({ dinero: 0, medicamentos: 0, insumos: 0, servicios: 0 });
 
+/**
+ * Historial de donaciones con filtros por donante, tipo y proyecto, y totales por tipo.
+ *
+ * @param {object} [opciones]
+ * @param {string} [opciones.usuarioRol] Rol de la sesion; sin acceso de lectura no se consulta nada.
+ * @returns {object} `{ tieneAccesoLectura, cargando, error, donaciones, totalesPorTipo, recargar,
+ *   filtros }`: `donaciones` ya filtradas y `filtros` con cada valor y su setter.
+ */
 export function useHistorialDonaciones({ usuarioRol } = {}) {
   const tieneAccesoLectura = puedeVerDonaciones(usuarioRol);
 

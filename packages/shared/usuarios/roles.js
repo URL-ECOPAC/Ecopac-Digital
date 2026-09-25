@@ -38,14 +38,26 @@ export const ROLES_DE_CAMPO = [ROLES.MEDICO, ROLES.VOLUNTARIO];
 
 export const TODOS_LOS_ROLES = Object.values(ROLES);
 
+/**
+ * @param {string} rol
+ * @returns {boolean}
+ */
 export function esAdministrador(rol) {
   return rol === ROLES.ADMINISTRADOR;
 }
 
+/**
+ * @param {string} rol
+ * @returns {boolean} Junta directiva o socio fundador.
+ */
 export function esConsultivo(rol) {
   return ROLES_CONSULTIVOS.includes(rol);
 }
 
+/**
+ * @param {string} rol Valor de `ROLES`.
+ * @returns {string} La etiqueta para mostrar; el propio valor si no tiene etiqueta.
+ */
 export function etiquetaDeRol(rol) {
   return ETIQUETAS_ROL[rol] ?? rol;
 }

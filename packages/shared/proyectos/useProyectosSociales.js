@@ -86,6 +86,15 @@ export function validacionDeProyecto(valores) {
   return { ok: !hayErrores(errores), errores };
 }
 
+/**
+ * Pantalla de proyectos: listado filtrable, detalle con sus jornadas, alta, edicion y cambio de
+ * estado (el kanban de movil). Lo que ve cada rol lo decide RLS; `permisos` solo decide que se ofrece.
+ *
+ * @param {object} [opciones]
+ * @param {string} [opciones.usuarioRol] Rol de la sesion.
+ * @returns {object} `{ columnas, filtros, campos, tieneAccesoLectura, cargando, error, proyectos,
+ *   proyectoDetalle, jornadasProyecto, catalogos, puedeEditar, permisos, ... }`.
+ */
 export function useProyectosSociales({ usuarioRol } = {}) {
   const tieneAccesoLectura = puedeVerProyectos(usuarioRol);
 
