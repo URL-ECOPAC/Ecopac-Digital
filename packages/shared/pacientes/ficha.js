@@ -32,11 +32,21 @@ function etiquetaDeOpcion(opciones, valor) {
   return opciones.find((opcion) => opcion.value === valor)?.label ?? valor;
 }
 
+/**
+ * @param {{ nombres?: string, apellidos?: string } | null} paciente
+ * @returns {string|null} Nombres y apellidos unidos, o `null` si no hay ninguno.
+ */
 export function nombreCompletoDePaciente(paciente) {
   const nombre = [paciente?.nombres, paciente?.apellidos].filter(Boolean).join(" ").trim();
   return nombre || null;
 }
 
+/**
+ * Las pestanas de la ficha que ve un rol: las clinicas solo si puede ver el historial.
+ *
+ * @param {string} rol Valor de `ROLES`.
+ * @returns {object[]} Subconjunto de `PESTANIAS_FICHA_PACIENTE`.
+ */
 export function pestaniasDeFicha(rol) {
   const verClinicos = puedeVerHistorial(rol);
   return PESTANIAS_FICHA_PACIENTE.filter(
@@ -44,11 +54,24 @@ export function pestaniasDeFicha(rol) {
   );
 }
 
+/**
+ * La pestana a abrir: la pedida si el rol la ve, y si no la de por defecto.
+ *
+ * @param {string} id Pestana pedida (por ejemplo, desde la URL).
+ * @param {string} rol Valor de `ROLES`.
+ * @returns {string} Id de pestana valido para ese rol.
+ */
 export function resolverPestaniaDeFicha(id, rol) {
   const visibles = pestaniasDeFicha(rol);
   return visibles.some((pestania) => pestania.id === id) ? id : PESTANIA_FICHA_POR_DEFECTO;
 }
 
+/**
+ * Condiciones cronicas que se destacan en la cabecera: las que no estan resueltas.
+ *
+ * @param {{ condicionesCronicas?: object[] } | null} paciente
+ * @returns {{ id: string, nombre: string, estado: string, etiquetaEstado: string }[]}
+ */
 export function condicionesDestacadas(paciente) {
   return (paciente?.condicionesCronicas ?? [])
     .filter((condicion) => condicion?.estado !== ESTADOS_CONDICION_CRONICA.RESUELTA)
@@ -64,6 +87,13 @@ export function condicionesDestacadas(paciente) {
     .filter((condicion) => condicion.nombre);
 }
 
+/**
+ * Datos de la cabecera de la ficha.
+ *
+ * @param {object|null} paciente Paciente ya normalizado por la API.
+ * @returns {{ numeroFicha: string|null, nombreCompleto: string|null, edad: string|null,
+ *   comunidad: string|null, condiciones: object[] } | null}
+ */
 export function cabeceraDePaciente(paciente) {
   if (!paciente) return null;
 
@@ -76,6 +106,13 @@ export function cabeceraDePaciente(paciente) {
   };
 }
 
+/**
+ * Valores para los campos de la pestana de datos generales, con los catalogos ya traducidos a su
+ * etiqueta (tipo de sangre, idioma, territorio).
+ *
+ * @param {object|null} paciente Paciente ya normalizado por la API.
+ * @returns {Record<string, string|null>} Valor por id de campo; `{}` sin paciente.
+ */
 export function valoresDeFichaPaciente(paciente) {
   if (!paciente) return {};
 
@@ -106,6 +143,13 @@ export function valoresDeFichaPaciente(paciente) {
   };
 }
 
+/**
+ * Resumen de la ultima atencion del paciente para la ficha.
+ *
+ * @param {{ ultimaAtencion?: object } | null} paciente
+ * @returns {{ tipo: string|null, fecha: string|null, jornada: string|null, comunidad: string|null,
+ *   profesional: string|null, diagnostico: string|null } | null}
+ */
 export function resumenDeUltimaAtencion(paciente) {
   const evento = paciente?.ultimaAtencion;
   if (!evento) return null;
@@ -120,6 +164,13 @@ export function resumenDeUltimaAtencion(paciente) {
   };
 }
 
+/**
+ * Que acciones de la ficha ofrece la interfaz a un rol. La restriccion real es RLS.
+ *
+ * @param {string} rol Valor de `ROLES`.
+ * @returns {{ puedeEditar: boolean, puedeVerDatosClinicos: boolean, puedeTomarTriaje: boolean,
+ *   puedeCrearConsulta: boolean, puedeEmitirReceta: boolean, puedeNuevaConsulta: boolean }}
+ */
 export function permisosDeFicha(rol) {
   return {
     puedeEditar: puedeEditarPaciente(rol),

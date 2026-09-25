@@ -141,6 +141,18 @@ export function resumenLegibleDeDonacion(resumen, { medicamentos = [], proyectos
   };
 }
 
+/**
+ * Formulario de registro de una donacion con sus renglones. Guarda con `fn_registrar_donacion`, que
+ * crea la donacion y su detalle en una transaccion.
+ *
+ * @param {object} opciones
+ * @param {object} [opciones._client] Cliente de Supabase para pruebas; por defecto el compartido.
+ * @param {string} opciones.usuarioRol Rol de la sesion (`ROLES`).
+ * @param {(donacion: object) => void} [opciones.onGuardarExito] Se llama con la donacion guardada.
+ * @returns {object} `{ permisos, tipoDonacion, donanteId, proyectoId, fecha, observaciones,
+ *   detalles, ... }`: cada campo con su setter, las operaciones sobre renglones, los errores de
+ *   validacion y la accion de guardar.
+ */
 export function useRegistroDonacion({ _client, usuarioRol, onGuardarExito }) {
   const puedeEscribir = puedeRegistrarDonaciones(usuarioRol);
   const tieneAccesoLectura = puedeVerDonaciones(usuarioRol);

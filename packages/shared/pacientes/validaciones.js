@@ -108,6 +108,16 @@ function claveDeNombre(nombres, apellidos) {
     .toLowerCase();
 }
 
+/**
+ * Aviso -no bloqueo- cuando ya existe un paciente con el mismo nombre y fecha de nacimiento.
+ *
+ * @param {object} [opciones]
+ * @param {object[]} opciones.pacientes Candidatos ya buscados.
+ * @param {string} opciones.nombres
+ * @param {string} opciones.apellidos
+ * @param {string} opciones.fechaNacimiento Fecha `AAAA-MM-DD`.
+ * @returns {string|null} El mensaje, con las fichas si se conocen; `null` si no hay coincidencia.
+ */
 export function advertirPacienteDuplicado({ pacientes, nombres, apellidos, fechaNacimiento } = {}) {
   if (esTextoVacio(fechaNacimiento)) return null;
 

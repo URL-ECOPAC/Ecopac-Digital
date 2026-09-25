@@ -35,6 +35,7 @@
 
 import { Platform } from "react-native";
 import * as SecureStore from "expo-secure-store";
+import { reportarError } from "@ecopac/shared";
 
 /**
  * SecureStore solo acepta [A-Za-z0-9._-] en las claves (docs.expo.dev/versions/v57.0.0/sdk/securestore),
@@ -51,6 +52,15 @@ function claveSeguraParaSecureStore(clave) {
   );
 }
 
+// Un fallo de SecureStore se reporta y no se propaga: el contrato de almacenamiento no lanza, y un
+// getItem que falla ya se traduce en "no hay sesion". Pero antes solo iba a la consola del
+// telefono, que nadie ve en jornada: una sesion que no persiste parecia "me saca solo" y no dejaba
+// rastro (issue #762). reportarError limpia el id de perfil que llevan claves como
+// "jornada_activa:<perfilId>".
+function reportarFalloDeAlmacenamiento(error, operacion, clave) {
+  reportarError(error, { origen: `almacenamiento-${operacion}`, modulo: "sesion", ruta: clave });
+}
+
 export const almacenamientoMovil = {
   async getItem(clave) {
     try {
@@ -59,7 +69,7 @@ export const almacenamientoMovil = {
       }
       return await SecureStore.getItemAsync(claveSeguraParaSecureStore(clave));
     } catch (error) {
-      console.error(`Error al leer la clave "${clave}":`, error);
+      reportarFalloDeAlmacenamiento(error, "leer", clave);
       return null;
     }
   },
@@ -74,7 +84,7 @@ export const almacenamientoMovil = {
       }
       await SecureStore.setItemAsync(claveSeguraParaSecureStore(clave), valor);
     } catch (error) {
-      console.error(`Error al guardar la clave "${clave}":`, error);
+      reportarFalloDeAlmacenamiento(error, "guardar", clave);
     }
   },
 
@@ -88,7 +98,7 @@ export const almacenamientoMovil = {
       }
       await SecureStore.deleteItemAsync(claveSeguraParaSecureStore(clave));
     } catch (error) {
-      console.error(`Error al eliminar la clave "${clave}":`, error);
+      reportarFalloDeAlmacenamiento(error, "eliminar", clave);
     }
   },
 };

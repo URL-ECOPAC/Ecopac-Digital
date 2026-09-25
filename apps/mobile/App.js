@@ -7,8 +7,12 @@ import {
   inicializarSupabase,
   intercambiarSesionDeRecuperacion,
   puedeUsarAppMovil,
+  reportarError,
 } from "@ecopac/shared";
 import { almacenamientoMovil } from "./src/almacenamiento";
+import AvisoSinConexion from "./src/components/AvisoSinConexion";
+import LimiteDeError from "./src/components/LimiteDeError";
+import { useEnLinea } from "./src/useEnLinea";
 import { JornadaActivaProvider } from "./src/contexto/JornadaActivaProvider";
 import { RegistroSinGuardarProvider } from "./src/contexto/RegistroSinGuardarProvider";
 import { SesionProvider, useSesionCompartida } from "./src/contexto/SesionProvider";
@@ -37,6 +41,17 @@ try {
     error.message,
   );
 }
+
+// Errores que no pasan por ningun `catch` ni por el limite de error de React: una excepcion en un
+// manejador de eventos o en un temporizador (issue #762). Espejo del `window.addEventListener
+// ("error")` de apps/web/src/main.jsx. Se reporta y despues se le pasa al manejador que ya estaba,
+// que es el que muestra la pantalla roja en desarrollo y decide si un error fatal cierra la app:
+// esto agrega un registro, no cambia el comportamiento.
+const manejadorAnterior = globalThis.ErrorUtils?.getGlobalHandler?.();
+globalThis.ErrorUtils?.setGlobalHandler?.((error, esFatal) => {
+  reportarError(error, { origen: esFatal ? "error-global-fatal" : "error-global" });
+  manejadorAnterior?.(error, esFatal);
+});
 
 function Raiz() {
   const { estadoRestauracion, haySesion, perfil } = useSesionCompartida();
@@ -78,6 +93,7 @@ function Raiz() {
 // Componente principal: NO renderiza nada hasta que Supabase esté listo
 export default function App() {
   const [listo, setListo] = useState(supabaseListo);
+  const enLinea = useEnLinea();
 
   useEffect(() => {
     if (!listo) {
@@ -101,7 +117,10 @@ export default function App() {
         <SesionProvider>
           <JornadaActivaProvider>
             <RegistroSinGuardarProvider>
-              <Raiz />
+              <AvisoSinConexion enLinea={enLinea} />
+              <LimiteDeError>
+                <Raiz />
+              </LimiteDeError>
             </RegistroSinGuardarProvider>
           </JornadaActivaProvider>
         </SesionProvider>

@@ -33,11 +33,23 @@ async function consultar(nombreDeFuncion, argumentos, presupuestoSinFilas) {
   }
 }
 
+/**
+ * Asignado, ejecutado y disponible de una jornada (`presupuesto_de_jornada`).
+ *
+ * @param {string} idJornada
+ * @returns {Promise<{ presupuesto: object|null, error: object|null }>}
+ */
 export async function obtenerPresupuestoJornada(idJornada) {
   if (!idJornada) return { presupuesto: null, error: null };
   return consultar("presupuesto_de_jornada", { p_jornada_id: idJornada }, null);
 }
 
+/**
+ * Asignado, ejecutado y disponible de un proyecto (`presupuesto_de_proyecto`).
+ *
+ * @param {string} idProyecto
+ * @returns {Promise<{ presupuesto: object|null, error: object|null }>} En ceros si no hay datos.
+ */
 export async function obtenerPresupuestoProyecto(idProyecto) {
   if (!idProyecto) return { presupuesto: null, error: null };
   return consultar(
@@ -47,10 +59,22 @@ export async function obtenerPresupuestoProyecto(idProyecto) {
   );
 }
 
+/**
+ * Totales de presupuesto de todo el sistema (`presupuesto_del_sistema`).
+ *
+ * @returns {Promise<{ presupuesto: object, error: object|null }>}
+ */
 export async function obtenerPresupuestoSistema() {
   return consultar("presupuesto_del_sistema", {}, { ...PRESUPUESTO_VACIO });
 }
 
+/**
+ * Presupuesto de varios proyectos en una sola llamada (`presupuestos_de_proyectos`, 00123).
+ *
+ * @param {string[]} [idsDeProyecto]
+ * @returns {Promise<{ presupuestos: Record<string, object>, error: object|null }>} Por id de
+ *   proyecto. Un id ausente se trata como presupuesto en ceros.
+ */
 export async function obtenerPresupuestosDeProyectos(idsDeProyecto = []) {
   const ids = (idsDeProyecto || []).filter(Boolean);
   if (ids.length === 0) return { presupuestos: {}, error: null };
@@ -69,6 +93,13 @@ export async function obtenerPresupuestosDeProyectos(idsDeProyecto = []) {
   }
 }
 
+/**
+ * Presupuesto de varias jornadas en una sola llamada (`presupuestos_de_jornadas`, 00123).
+ *
+ * @param {string[]} [idsDeJornada]
+ * @returns {Promise<{ presupuestos: Record<string, object>, error: object|null }>} Por id de
+ *   jornada. Un id ausente se trata como presupuesto en ceros.
+ */
 export async function obtenerPresupuestosDeJornadas(idsDeJornada = []) {
   const ids = (idsDeJornada || []).filter(Boolean);
   if (ids.length === 0) return { presupuestos: {}, error: null };
@@ -118,6 +149,16 @@ function normalizarFecha(fecha) {
   return fecha;
 }
 
+/**
+ * Registra un gasto de una jornada. Si lo registra un administrador, la base lo autoaprueba.
+ *
+ * @param {{ concepto: string, categoria: string, monto: number|string, fecha: string,
+ *   responsable_id?: string, jornada_id: string }} datosGasto
+ * @param {object} [opciones]
+ * @param {string} [opciones.usuarioId] Quien lo registra.
+ * @param {string} [opciones.estado] Estado inicial, si la pantalla lo fija.
+ * @returns {Promise<{ gasto: object|null, error: object|null }>}
+ */
 export async function registrarGasto(datosGasto, { usuarioId, estado } = {}) {
   try {
     const { concepto, categoria, monto, fecha, responsable_id, jornada_id } = datosGasto || {};
@@ -164,6 +205,13 @@ export async function registrarGasto(datosGasto, { usuarioId, estado } = {}) {
   }
 }
 
+/**
+ * Edita un gasto. La base rechaza editar uno ya aprobado o rechazado.
+ *
+ * @param {string} idGasto
+ * @param {object} datosGasto Los mismos campos que `registrarGasto`.
+ * @returns {Promise<{ gasto: object|null, error: object|null }>}
+ */
 export async function editarGasto(idGasto, datosGasto) {
   if (!idGasto) return { gasto: null, error: null };
   try {
@@ -212,6 +260,11 @@ export async function editarGasto(idGasto, datosGasto) {
   }
 }
 
+/**
+ * Categorias de gasto que ya aparecen en `gastos`, como opciones de selector.
+ *
+ * @returns {Promise<{ categorias: { value: string, label: string }[], error: object|null }>}
+ */
 export async function listarCategoriasGasto() {
   try {
     const { data, error } = await obtenerSupabase()
@@ -232,6 +285,12 @@ export async function listarCategoriasGasto() {
   }
 }
 
+/**
+ * Sube a cada gasto el `proyecto_id` de su jornada embebida, para poder filtrar por proyecto.
+ *
+ * @param {object[]} [gastos] Gastos con `jornadas` embebida.
+ * @returns {object[]} Los mismos gastos con `proyecto_id`.
+ */
 export function conProyectoId(gastos = []) {
   return gastos.map((gasto) => ({ ...gasto, proyecto_id: gasto.jornadas?.proyecto_id ?? null }));
 }
@@ -253,6 +312,13 @@ const COLUMNAS_DE_GASTO = [
   "updated_at",
 ].join(", ");
 
+/**
+ * Gastos con su jornada, filtrables por estado, categoria, jornada, proyecto y rango de fechas.
+ *
+ * @param {{ estado?: string, categoria?: string, jornada_id?: string, proyecto_id?: string,
+ *   fecha_inicio?: string, fecha_fin?: string }} [filtros]
+ * @returns {Promise<{ gastos: object[], error: object|null }>}
+ */
 export async function listarGastos(filtros = {}) {
   try {
     const { estado, categoria, jornada_id, proyecto_id, fecha_inicio, fecha_fin } = filtros;

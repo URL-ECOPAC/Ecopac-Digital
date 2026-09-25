@@ -31,6 +31,13 @@ const VALORES_INICIALES = CAMPOS_CONDICION_CRONICA.reduce((valores, campo) => {
   return valores;
 }, {});
 
+/**
+ * Que puede hacer un rol con las condiciones cronicas de un paciente. La restriccion real es RLS.
+ *
+ * @param {string} rol Valor de `ROLES`.
+ * @returns {{ puedeVer: boolean, puedeRegistrar: boolean, puedeEditar: boolean,
+ *   puedeQuitar: boolean }}
+ */
 export function permisosDeCondiciones(rol) {
   return {
     puedeVer: puedeVerCondiciones(rol),
@@ -40,6 +47,17 @@ export function permisosDeCondiciones(rol) {
   };
 }
 
+/**
+ * Condiciones cronicas de un paciente: listar, agregar, corregir, marcar resuelta y quitar, y dar de
+ * alta en el catalogo una condicion que falte.
+ *
+ * @param {string} pacienteId
+ * @param {object} [opciones]
+ * @param {string} [opciones.rol] Rol de la sesion; decide `permisos`.
+ * @returns {object} `{ condiciones, campos, valores, errores, error, errorDeAlta, enviando,
+ *   cargando, permisos, setCampo, agregar, marcarResuelta, recargar, catalogos, ... }`. Las acciones
+ *   devuelven `{ ok }` y dejan el motivo de un fallo en `errorDeAlta`.
+ */
 export function useCondicionesPaciente(pacienteId, { rol } = {}) {
   const [condiciones, setCondiciones] = useState([]);
   const [catalogo, setCatalogo] = useState([]);

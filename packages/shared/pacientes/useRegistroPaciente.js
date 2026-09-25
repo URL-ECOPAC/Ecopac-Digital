@@ -13,6 +13,18 @@ const VALORES_INICIALES = CAMPOS_REGISTRO_PACIENTE.reduce((valores, campo) => {
   return valores;
 }, {});
 
+/**
+ * Formulario de registro de paciente por pasos: validacion, cascada de territorio, edad calculada,
+ * aviso de posible duplicado y alta con `registrarPaciente` (paciente y expediente en una sola
+ * transaccion).
+ *
+ * @param {object} [opciones]
+ * @param {string|null} [opciones.comunidadInicial] Comunidad preseleccionada (la de la jornada).
+ * @param {string} [opciones.nombresInicial] Nombres traidos de una busqueda sin resultado.
+ * @param {string} [opciones.rol] Rol de la sesion.
+ * @returns {object} `{ campos, valores, errores, error, enviando, edad, advertenciaDuplicado,
+ *   registrado, departamentoId, municipioId, setCampo, setDepartamento, setMunicipio, ... }`.
+ */
 export function useRegistroPaciente({ comunidadInicial = null, nombresInicial = "", rol } = {}) {
   const [valores, setValores] = useState(() =>
     nombresInicial ? { ...VALORES_INICIALES, nombres: nombresInicial } : VALORES_INICIALES,

@@ -34,6 +34,14 @@ export const TIPO_PROVEEDOR = {
   DONANTE: "donante",
 };
 
+/**
+ * Administracion de bodegas y proveedores: carga, alta y edicion de cada uno, y la existencia total
+ * por bodega. Un fallo de carga se expone en `errorBodegas`/`errorProveedores`, nunca como lista
+ * vacia.
+ *
+ * @returns {object} `{ bodegas, cargandoBodegas, errorBodegas, cargarBodegas, guardarBodega,
+ *   existenciaPorBodega, TIPO_BODEGA, proveedores, cargandoProveedores, errorProveedores, ... }`.
+ */
 export function useAdministracionBodegasProveedores() {
   // ─── BODEGAS ───
   const [bodegas, setBodegas] = useState([]);

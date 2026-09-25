@@ -35,6 +35,14 @@ export function esVacio(valor) {
   return valor === null || valor === undefined || valor === "";
 }
 
+/**
+ * Comparador para ordenar columnas: numerico y sin distinguir mayusculas ni acentos, con los vacios
+ * siempre al final.
+ *
+ * @param {unknown} uno
+ * @param {unknown} otro
+ * @returns {number} Negativo, cero o positivo, como espera `Array.prototype.sort`.
+ */
 export function compararValores(uno, otro) {
   if (esVacio(uno) && esVacio(otro)) return 0;
   if (esVacio(uno)) return 1;

@@ -19,10 +19,22 @@ function quitarAcentos(texto) {
     .replace(new RegExp("[\\u0300-\\u036f]", "g"), "");
 }
 
+/**
+ * @param {{ busqueda?: string }} [filtros]
+ * @returns {boolean} Si hay texto de busqueda.
+ */
 export function hayFiltrosDeCatalogoDiagnosticos(filtros = {}) {
   return Boolean(filtros.busqueda?.trim());
 }
 
+/**
+ * Catalogo de diagnosticos: busqueda y activar o desactivar cada uno.
+ *
+ * @param {object} [opciones]
+ * @param {string} [opciones.rol] Rol de la sesion; decide `permitido` y `puedeAdministrar`.
+ * @returns {object} `{ filas, total, filtros, setFiltro, limpiarFiltros, hayFiltros, cargando,
+ *   error, recargar, permitido, puedeAdministrar, alternarActivo, actualizandoId }`.
+ */
 export function useCatalogoDiagnosticos({ rol } = {}) {
   const [filtros, setFiltros] = useState(FILTROS_CATALOGO_DIAGNOSTICOS_VACIOS);
   const [diagnosticos, setDiagnosticos] = useState([]);

@@ -16,6 +16,12 @@ export function suscribirCambiosDelBuzon(alCambiar) {
   return () => suscriptores.delete(alCambiar);
 }
 
+/**
+ * Avisa a cada suscriptor de que el buzon cambio (se leyo o llego una notificacion), para que el
+ * contador de no leidas se vuelva a pedir sin esperar al siguiente intervalo.
+ *
+ * @returns {void}
+ */
 export function avisarCambioDelBuzon() {
   suscriptores.forEach((alCambiar) => alCambiar());
 }

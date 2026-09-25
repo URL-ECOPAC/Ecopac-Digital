@@ -45,6 +45,12 @@ export const FILTROS_NOTIFICACIONES_VACIOS = Object.freeze({
   estado: null,
 });
 
+/**
+ * Si hay algun filtro activo en la bandeja de notificaciones.
+ *
+ * @param {{ busqueda?: string, categoria?: string, estado?: string }} filtros
+ * @returns {boolean}
+ */
 export function hayFiltrosDeNotificaciones(filtros) {
   return Boolean(filtros.busqueda?.trim() || filtros.categoria || filtros.estado);
 }

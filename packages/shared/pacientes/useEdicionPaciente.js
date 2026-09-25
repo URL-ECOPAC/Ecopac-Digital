@@ -8,6 +8,13 @@ import { CAMPOS_REGISTRO_PACIENTE, OPCIONES_SEXO } from "./campos.js";
 
 export const CAMPOS_EDICION_PACIENTE = CAMPOS_REGISTRO_PACIENTE;
 
+/**
+ * Valores iniciales del formulario de edicion a partir del paciente. La comunidad se toma de
+ * `comunidadId`.
+ *
+ * @param {object|null} paciente
+ * @returns {Record<string, string>} Valor por id de campo; `""` donde no hay dato.
+ */
 export function valoresDesdePaciente(paciente) {
   return CAMPOS_EDICION_PACIENTE.reduce((valores, campo) => {
     const valor = campo.id === "comunidad" ? paciente?.comunidadId : paciente?.[campo.id];
@@ -16,6 +23,11 @@ export function valoresDesdePaciente(paciente) {
   }, {});
 }
 
+/**
+ * @param {Record<string, string>} valores Valores actuales del formulario.
+ * @param {Record<string, string>} iniciales Los de `valoresDesdePaciente`.
+ * @returns {boolean} Si algun campo editable cambio.
+ */
 export function hayCambiosPendientes(valores, iniciales) {
   return CAMPOS_EDICION_PACIENTE.some((campo) => valores[campo.id] !== iniciales[campo.id]);
 }

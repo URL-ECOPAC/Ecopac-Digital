@@ -17,6 +17,13 @@
 
 import { PLATAFORMAS } from "./reglas.js";
 
+/**
+ * Lee la configuracion de Supabase cuando Metro empaqueta la app movil para web
+ * (`expo start --web`): las variables `EXPO_PUBLIC_*` y si es desarrollo.
+ *
+ * @returns {{ plataforma: string, esDesarrollo: boolean, valores: { url: string|undefined,
+ *   anonKey: string|undefined } }}
+ */
 export function leerFuente() {
   return {
     plataforma: PLATAFORMAS.MOVIL,

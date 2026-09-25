@@ -17,11 +17,13 @@ export const ESTADO_EXISTENCIA = {
 // ─── Umbrales ───
 const DIAS_AVISO_VENCIMIENTO = 30; // días antes = "Próximo a vencer"
 
-// ─── Cálculo de días restantes ───
-// Devuelve:
-//   > 0 → días por delante
-//   = 0 → vence hoy → SIGUE SIENDO VÁLIDO
-//   < 0 → ya venció
+/**
+ * Dias que faltan para que venza un lote, en calendario local (issue #694).
+ *
+ * @param {string|null} fechaCaducidad Fecha `AAAA-MM-DD`.
+ * @returns {number|null} Positivo: dias por delante. `0`: vence hoy y **sigue siendo valido**.
+ *   Negativo: ya vencio. `null` sin fecha.
+ */
 export function calcularDiasRestantes(fechaCaducidad) {
   // issue #694: calculaba con new Date(fechaCaducidad), que interpreta una cadena AAAA-MM-DD
   // como medianoche UTC. En Guatemala (UTC-6) eso adelanta un dia cualquier fecha de
@@ -30,11 +32,15 @@ export function calcularDiasRestantes(fechaCaducidad) {
   return diasHastaVencimiento(fechaCaducidad);
 }
 
-// ─── Estado según reglas del sistema (migración #597) ───
-// COINCIDE CON:
-//   • vista_lotes_disponibles → fecha_vencimiento >= CURRENT_DATE
-//   • fn_aplicar_ajuste_existencias → rechaza solo si < CURRENT_DATE
-//   • esLoteEntregable() → true si días >= 0
+/**
+ * Estado de una existencia segun las mismas reglas que la base: `vista_lotes_disponibles`
+ * (`fecha_vencimiento >= CURRENT_DATE`), `fn_aplicar_ajuste_existencias` (rechaza solo si ya vencio)
+ * y `esLoteEntregable()`.
+ *
+ * @param {string|null} fechaCaducidad Fecha `AAAA-MM-DD`.
+ * @param {number|string|null} stockDisponible Cantidad disponible.
+ * @returns {string} Un valor de `ESTADO_EXISTENCIA`: sin stock, vencido, por vencer o disponible.
+ */
 export function calcularEstadoVencimiento(fechaCaducidad, stockDisponible) {
   const stock = Number(stockDisponible ?? 0);
   if (stock <= 0) return ESTADO_EXISTENCIA.SIN_STOCK;
@@ -50,6 +56,15 @@ export function calcularEstadoVencimiento(fechaCaducidad, stockDisponible) {
 }
 
 // ─── Hook principal ───
+/**
+ * Vista de existencias agrupada por medicamento, con filtros por texto, bodega y estado.
+ *
+ * @param {object} opciones
+ * @param {object[]} [opciones.existencias] Existencias ya cargadas.
+ * @param {object[]} [opciones.bodegas] Bodegas para el filtro.
+ * @returns {object} `{ medicamentos, columnas, bodegasDisponibles, busqueda, filtroBodega,
+ *   filtroEstado, ocultarSinExistencia, limpiarFiltros, ... }`, cada filtro con su setter.
+ */
 export function useVistaExistencias({ existencias = [], bodegas = [] }) {
   // Filtros
   const [busqueda, setBusqueda] = useState("");

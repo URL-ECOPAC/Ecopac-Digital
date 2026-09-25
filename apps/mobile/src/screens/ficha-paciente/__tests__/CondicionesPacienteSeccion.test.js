@@ -150,7 +150,9 @@ describe("CondicionesPacienteSeccion", () => {
     expect(alActualizar).toHaveBeenCalled();
   });
 
-  it("si resolver falla lo dice y no avisa al padre", async () => {
+  it("si resolver falla no avisa al padre ni abre un segundo dialogo", async () => {
+    // Issue #762: un error de escritura no se reporta en un dialogo que se cierra y no deja
+    // rastro. El motivo lo deja el hook en `errorDeAlta` y se pinta en la tarjeta (prueba de abajo).
     const marcarResuelta = jest.fn(async () => ({ ok: false }));
     const alActualizar = jest.fn();
     useCondicionesPaciente.mockReturnValue(estado({ marcarResuelta }));
@@ -163,8 +165,24 @@ describe("CondicionesPacienteSeccion", () => {
     const [, , botones] = Alert.alert.mock.calls[0];
     await botones.find((boton) => boton.text === "Resolver").onPress();
 
-    await waitFor(() => expect(Alert.alert).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(marcarResuelta).toHaveBeenCalledWith("condicion-101"));
+    expect(Alert.alert).toHaveBeenCalledTimes(1);
     expect(alActualizar).not.toHaveBeenCalled();
+  });
+
+  it("el motivo de un resolver fallido se ve aunque no se pueda registrar", () => {
+    // Quien solo puede resolver no ve el bloque de alta, asi que el error no puede vivir ahi.
+    useCondicionesPaciente.mockReturnValue(
+      estado({
+        permisos: { ...PERMISOS_DE_MEDICO, puedeRegistrar: false },
+        errorDeAlta: { mensaje: "No tienes permiso para modificar esta condicion" },
+      }),
+    );
+
+    render(<CondicionesPacienteSeccion pacienteId="p-1" rol="medico" />);
+
+    expect(screen.queryByText("Agregar una condición")).toBeNull();
+    expect(screen.getByText("No tienes permiso para modificar esta condicion")).toBeTruthy();
   });
 });
 

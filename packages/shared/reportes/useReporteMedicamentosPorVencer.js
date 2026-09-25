@@ -64,6 +64,15 @@ export function conNivelDeAlerta(renglones = []) {
   }));
 }
 
+/**
+ * Reporte de medicamentos por vencer, filtrable, ordenable y paginado, con el total de unidades en
+ * riesgo.
+ *
+ * @param {object} [opciones]
+ * @param {string} [opciones.rol] Rol de la sesion; sin acceso no se consulta nada.
+ * @returns {object} `{ tieneAcceso, cargando, error, renglones, total, totalUnidadesEnRiesgo,
+ *   columnas, definicionDeFiltros, ... }`.
+ */
 export function useReporteMedicamentosPorVencer({ rol } = {}) {
   const tieneAcceso = puedeVerReporteDeVencimientos(rol);
 

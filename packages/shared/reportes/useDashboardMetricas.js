@@ -88,11 +88,26 @@ function aSerie(agrupados = [], metrica) {
   }));
 }
 
+/**
+ * Variacion porcentual entre dos periodos, con dos decimales.
+ *
+ * @param {number} actual
+ * @param {number} anterior
+ * @returns {number} `100` si antes era cero y ahora no, `0` si los dos son cero.
+ */
 export function calcularVariacion(actual, anterior) {
   if (!anterior) return actual > 0 ? 100 : 0;
   return Number((((actual - anterior) / anterior) * 100).toFixed(2));
 }
 
+/**
+ * Panel de indicadores de impacto: rango de fechas, agrupamiento y metricas elegidas.
+ *
+ * @param {object} [opciones]
+ * @param {string} [opciones.rol] Rol de la sesion; sin acceso no se consulta nada.
+ * @returns {object} `{ tieneAcceso, rangosDisponibles, agrupamientosDisponibles,
+ *   metricasDisponibles, rangoSeleccionado, fechaInicio, ... }`, cada filtro con su setter.
+ */
 export function useDashboardMetricas({ rol } = {}) {
   const tieneAcceso = puedeVerIndicadoresDeImpacto(rol);
 

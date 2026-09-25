@@ -5,10 +5,22 @@ import { OPCIONES_ESTADO_CONDICION } from "./condiciones.campos.js";
 import { FILTROS_PACIENTE_CRONICO_VACIOS } from "./condiciones.filtros.js";
 import { puedeVerCondiciones } from "./condiciones.permisos.js";
 
+/**
+ * @param {object} [filtros] Filtros de `FILTROS_PACIENTE_CRONICO_VACIOS`.
+ * @returns {boolean} Si alguno tiene valor.
+ */
 export function hayFiltrosDeCronicos(filtros = {}) {
   return Object.keys(FILTROS_PACIENTE_CRONICO_VACIOS).some((clave) => Boolean(filtros[clave]));
 }
 
+/**
+ * Listado de pacientes con condiciones cronicas, filtrable por comunidad, condicion y estado.
+ *
+ * @param {object} [opciones]
+ * @param {string} [opciones.rol] Rol de la sesion.
+ * @returns {object} `{ filas, total, filtros, setFiltro, limpiarFiltros, hayFiltros, cargando,
+ *   error, recargar, catalogos }`.
+ */
 export function usePacientesCronicos({ rol } = {}) {
   const [filtros, setFiltros] = useState(FILTROS_PACIENTE_CRONICO_VACIOS);
   const [pacientes, setPacientes] = useState([]);

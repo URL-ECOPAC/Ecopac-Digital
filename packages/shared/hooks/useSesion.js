@@ -13,6 +13,7 @@ import {
   requiereCerrarSesion,
 } from "../api/sesion.js";
 import { claveDeAlmacenamiento } from "../jornadas/useJornadaActiva.js";
+import { reportarError } from "../observabilidad/errores.js";
 
 const ESTADOS_DE_RESTAURACION = {
   CARGANDO: "cargando",
@@ -42,7 +43,8 @@ async function cerrarSesionYLimpiarJornada(almacenamiento, usuarioId) {
   try {
     await almacenamiento.removeItem(claveDeAlmacenamiento(usuarioId));
   } catch (error) {
-    console.error(`No se pudo borrar la jornada activa persistida de ${usuarioId}:`, error);
+    // Por reportarError y no console.error con el id en claro: el reporte sale ya limpio (#762).
+    reportarError(error, { origen: "cerrar-sesion", modulo: "sesion" });
   }
 }
 

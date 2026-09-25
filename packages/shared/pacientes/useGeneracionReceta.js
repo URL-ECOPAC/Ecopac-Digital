@@ -4,6 +4,15 @@ import { consultarExistencias, consultarLotesDisponibles } from "../inventario/e
 import { listarMedicamentos } from "../inventario/medicamentos.api.js";
 import { generarReceta } from "./recetas.api.js";
 
+/**
+ * Anota a cada medicamento del catalogo cuanto hay disponible y si se puede recetar.
+ *
+ * @param {object[]} [medicamentos]
+ * @param {{ medicamentoId: string, cantidadDisponible: number,
+ *   fechaVencimientoProxima?: string }[]} [existencias]
+ * @returns {object[]} Cada medicamento con `cantidadDisponible`, `fechaVencimientoProxima`,
+ *   `seleccionable` y `motivoNoSeleccionable`.
+ */
 export function anotarDisponibilidad(medicamentos = [], existencias = []) {
   const porMedicamento = new Map(
     existencias.map((existencia) => [existencia.medicamentoId, existencia]),
@@ -26,6 +35,10 @@ export function anotarDisponibilidad(medicamentos = [], existencias = []) {
   });
 }
 
+/**
+ * @param {{ nombre?: string, concentracion?: string, presentacion?: string, marca?: string }} medicamento
+ * @returns {string} Nombre, concentracion, presentacion y marca, separados por espacio.
+ */
 export function describirExistencia(medicamento) {
   return [
     medicamento.nombre,
@@ -37,6 +50,12 @@ export function describirExistencia(medicamento) {
     .join(" ");
 }
 
+/**
+ * Que le falta a un renglon de la receta para poder emitirla.
+ *
+ * @param {object} [renglon]
+ * @returns {string|null} El primer dato que falta, o `null` si esta completo.
+ */
 export function renglonIncompleto(renglon = {}) {
   if (!renglon.medicamentoId) return "Falta elegir el medicamento.";
   if (!renglon.loteId) return "Falta elegir el lote.";
@@ -49,6 +68,16 @@ export function renglonIncompleto(renglon = {}) {
   return null;
 }
 
+/**
+ * Emision de una receta: busqueda en el catalogo con su disponibilidad, lotes por medicamento,
+ * renglones y emision con `fn_generar_receta`, que descuenta el inventario en la misma transaccion.
+ *
+ * @param {object} [opciones]
+ * @param {string} opciones.consultaId Consulta a la que pertenece la receta.
+ * @param {string} opciones.perfilId Medico que la emite.
+ * @returns {object} `{ busqueda, setBusqueda, catalogo, cargandoCatalogo, lotesPorMedicamento,
+ *   renglones, problemas, indicacionesGenerales, error, enviando, receta, agregarMedicamento, ... }`.
+ */
 export function useGeneracionReceta({ consultaId, perfilId } = {}) {
   const [busqueda, setBusqueda] = useState("");
   const [catalogo, setCatalogo] = useState([]);

@@ -4,6 +4,12 @@ import { obtenerHistorialMedico } from "./historial.api.js";
 import { FILTROS_HISTORIAL_VACIOS } from "./historial.filtros.js";
 import { puedeVerHistorial } from "./permisos.js";
 
+/**
+ * Agrupa los eventos del historial por jornada, conservando el orden de llegada.
+ *
+ * @param {object[]} [eventos]
+ * @returns {object[]} Un grupo por jornada con sus eventos.
+ */
 export function agruparPorJornada(eventos = []) {
   const grupos = [];
   const porClave = new Map();
@@ -31,17 +37,36 @@ export function agruparPorJornada(eventos = []) {
   return grupos;
 }
 
+/**
+ * @param {object[]} [eventos]
+ * @param {string} [tipo] Tipo de evento; sin tipo no filtra.
+ * @returns {object[]}
+ */
 export function filtrarPorTipo(eventos = [], tipo) {
   if (!tipo) return eventos;
   return eventos.filter((evento) => evento.tipo === tipo);
 }
 
+/**
+ * @param {object} [filtros] Filtros de `FILTROS_HISTORIAL_VACIOS`.
+ * @returns {boolean} Si alguno difiere de su valor vacio.
+ */
 export function hayFiltrosDeHistorial(filtros = {}) {
   return Object.entries(FILTROS_HISTORIAL_VACIOS).some(
     ([clave, vacio]) => (filtros[clave] ?? vacio) !== vacio,
   );
 }
 
+/**
+ * Historial clinico de un paciente agrupado por jornada, con filtros y paginacion "ver mas".
+ *
+ * @param {string} pacienteId
+ * @param {object} [opciones]
+ * @param {string} [opciones.rol] Rol de la sesion.
+ * @param {number|null} [opciones.limiteInicial] Cuantos eventos mostrar al principio; `null`, todos.
+ * @returns {object} `{ grupos, eventos, total, hayMas, verMas, filtros, setFiltro, limpiarFiltros,
+ *   hayFiltros, cargando, error, recargar }`.
+ */
 export function useHistorialPaciente(pacienteId, { rol, limiteInicial = null } = {}) {
   const [filtros, setFiltros] = useState(FILTROS_HISTORIAL_VACIOS);
   const [limite, setLimite] = useState(limiteInicial);

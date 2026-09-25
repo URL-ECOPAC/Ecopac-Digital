@@ -137,6 +137,11 @@ export async function sincronizarAlertas() {
   }
 }
 
+/**
+ * Lista las alertas de caducidad pendientes, de la que vence antes a la que vence despues.
+ *
+ * @returns {Promise<{ alertas: object[], error: object|null }>} `alertas` vacia si hubo error.
+ */
 export async function listarAlertas() {
   try {
     const { data, error } = await obtenerSupabase()

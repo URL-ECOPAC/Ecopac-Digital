@@ -7,16 +7,23 @@ hace cumplir la base de datos por si misma, y donde esta escrito cada cosa.
 coincidan, manda el SQL. Cada tabla indica entre corchetes la migracion que la creo, y cada
 columna anadida despues indica la migracion que la agrego.
 
-Estado al 4 de septiembre de 2026, sobre `develop`.
+Estado al 24 de septiembre de 2026, sobre `develop`, hasta la migracion `00147`. Las cifras salen
+del catalogo de Postgres (`pg_tables`, `pg_type`, `pg_proc`, `pg_views`, `pg_policies`) despues de
+un `supabase db reset` local, no de contar archivos, porque varias migraciones borran o reemplazan
+lo que crearon otras.
 
 | Elemento          | Cantidad |
 | ----------------- | -------- |
-| Migraciones       | 103      |
-| Tablas            | 42       |
-| Tipos enumerados  | 20       |
-| Funciones         | 49       |
+| Migraciones       | 139 (numeradas hasta `00147`; la numeracion tiene huecos) |
+| Tablas            | 49       |
+| Tipos enumerados  | 23       |
+| Funciones         | 76       |
 | Vistas            | 7        |
-| Politicas RLS     | 107      |
+| Politicas RLS     | 130      |
+| Triggers          | 68       |
+
+Para volver a sacar estas cifras: `supabase db reset` y, contra la base local, las consultas de
+conteo sobre esas cinco vistas del catalogo filtrando `schemaname = 'public'`.
 
 ---
 
@@ -188,6 +195,13 @@ con los identificadores de `packages/shared/navegacion.js`.
 
 Que trae cada rol de fabrica: `rol` (`rol_usuario`) + `permiso_id`.
 
+Desde la `00139` (issue #638) la escribe el administrador desde la matriz de permisos de la web:
+conceder es `INSERT`, retirar es `DELETE` (no hay columnas que actualizar). La politica de
+escritura es **solo** `es_administrador()`, sin la via de `tiene_permiso(...)`, y cada cambio
+queda en `eventos_auditoria` por el trigger `registrar_evento_auditoria_rol_permiso`. A diferencia
+de `usuario_permiso`, **no** tiene el guardia que impide dar un permiso de escritura a un rol
+consultivo; la asimetria esta documentada en `docs/PERMISOS.md`.
+
 ### `usuario_permiso` [00003]
 
 Excepcion por persona sobre lo que da el rol.
@@ -208,7 +222,17 @@ puede conceder un permiso de escritura a un rol consultivo
 
 Bitacora de escrituras sensibles. `tabla_afectada`, `fila_id`, `operacion`
 (`insercion`/`actualizacion`/`baja`/`eliminacion`), `realizado_por`, `realizado_en`, y el antes y
-el despues como `JSONB` (`valores_anteriores`, `valores_nuevos`). Solo la lee el administrador.
+el despues como `JSONB` (`valores_anteriores`, `valores_nuevos`). Solo la lee el administrador,
+desde la bitacora de auditoria de la web (#853). No tiene politica de retencion todavia: es la
+unica tabla sin techo de crecimiento conocido (ver `docs/SEGURIDAD.md`, "Eventos de seguridad").
+
+### `limites_de_uso` [00134]
+
+Contador de limite de peticiones por `recurso` (`'invitar_usuario'`, `'buscar_pacientes'`) y
+`actor_id`, con `contador` y `ventana_inicio`; la ventana es fija y se reinicia sola al expirar
+(issue #761). **RLS activo y sin ninguna politica**: nadie la lee ni la escribe directamente. La
+tocan solo `fn_verificar_y_contar_limite` y sus dos envoltorios (`fn_verificar_limite_invitaciones`,
+`fn_verificar_limite_busqueda_pacientes`), que son `SECURITY DEFINER`.
 
 ---
 
@@ -454,6 +478,8 @@ erDiagram
     lotes ||--o{ movimientos_inventario : mueve
     bodegas ||--o{ movimientos_inventario : "desde/hacia"
     lotes ||--o{ alertas_caducidad : "por vencer"
+    alertas_caducidad ||--o{ alerta_caducidad_detalle : "se resuelve con"
+    presentaciones ||--o{ medicamentos : "se presenta como"
 ```
 
 **Un modelo, no dos.** El esquema llego a tener dos modelos de stock en paralelo (`lotes` +
@@ -464,9 +490,23 @@ codigo o documentacion, es codigo muerto.
 
 ### `medicamentos` [00016]
 
-`nombre`, `concentracion`, `presentacion` (`presentacion_medicamento`), `marca`,
-`forma_farmaceutica`, `es_pediatrico`, y `activo` ([+00050], baja logica del catalogo). Se registra
-con `fn_registrar_medicamento()`, que asocia los principios activos en la misma llamada.
+`nombre`, `concentracion`, `marca`, `forma_farmaceutica`, `es_pediatrico`, `activo` ([+00050],
+baja logica del catalogo), `tipo_articulo` ([+00142], `medicamento`/`insumo`, DEFAULT
+`medicamento`) y `presentacion_id` ([+00144], FK NOT NULL a `presentaciones`). Se registra con
+`fn_registrar_medicamento()`, que asocia los principios activos en la misma llamada.
+
+Pese al nombre, la tabla guarda **tambien los insumos** (gasas, jeringas, guantes) desde la
+`00142`: el catalogo es uno solo, y lo que distingue a un insumo es `tipo_articulo`. La columna
+`presentacion` (enum `presentacion_medicamento`) **ya no existe**: la `00144` la reemplazo por
+`presentacion_id` y borro el enum.
+
+### `presentaciones` [00144]
+
+`nombre` (unico). Catalogo administrable de presentaciones -tableta, jarabe, capsula...-, que antes
+era un enum fijo de siete valores y para agregar uno habia que desplegar. Mismo patron que
+`principios_activos`: lectura para cualquier sesion, escritura solo administrador. Se sembro con
+las etiquetas en espanol, incluidos los dos valores que el enum tenia en ingles por error
+(`gotas ophthalmic`, `gotas otic`).
 
 ### `principios_activos` [00016] y `medicamento_principio` [00016]
 
@@ -549,8 +589,21 @@ Las genera `fn_generar_alertas_caducidad()` (`00088`, redefinida por la `00129`)
 existencia positiva que vencen en 30 dias o menos, o que ya vencieron, sin duplicar las que ya
 existen ni volver a alertar un lote ya atendido en la misma etapa -por vencer o vencido- (`00138`).
 La dispara diariamente un workflow de GitHub Actions, no `pg_cron`. Cada alerta nueva notifica a la
-administracion (`notificaciones`, `00138`). Se atiende con `fn_atender_alerta_caducidad` (`00138`),
-que descuenta o traslada el stock del lote; nadie la cierra con un `UPDATE` directo.
+administracion (`notificaciones`, `00138`). Se atiende con `fn_atender_alerta_caducidad` (`00138`,
+redefinida en la `00143`), que descuenta o traslada el stock del lote; nadie la cierra con un
+`UPDATE` directo.
+
+Desde la `00143` una alerta se puede resolver **con varias acciones** -donar una parte, descartar
+otra-: la funcion recibe `p_acciones` (JSONB, arreglo de `{ accion, cantidad, bodegaDestinoId? }`)
+y exige que la suma sea **exactamente** el stock vivo del lote. `accion` solo se llena cuando hubo
+una unica accion; con varias queda en NULL y el desglose vive en `alerta_caducidad_detalle`.
+
+### `alerta_caducidad_detalle` [00143]
+
+`alerta_id` (CASCADE), `accion` (`accion_alerta`), `cantidad` (> 0) y `bodega_destino_id` (solo en
+`reubicado`). Una fila por accion aplicada, **siempre**, aunque haya sido una sola. Lectura para
+cualquier sesion; nadie tiene `GRANT` de escritura: solo la escribe `fn_atender_alerta_caducidad`,
+que es `SECURITY DEFINER`.
 
 ### `notificaciones` [00138]
 
@@ -610,6 +663,11 @@ renglon de una donacion de medicamentos y arma `descripcion` y `unidad` (la pres
 catalogo; los otros tipos lo dejan en NULL y siguen en texto libre. Con el, el ingreso a
 inventario desde la donacion ya no vuelve a preguntar el medicamento.
 
+Un renglon ya insertado **solo** admite `UPDATE` de `lote_id` (el enlace con el lote que se creo al
+ingresarlo). La `00135` lo pretendia con un `GRANT` de columna, pero la tabla conservaba el `UPDATE`
+completo que Supabase concede por defecto; la `00145` revoca el de tabla y vuelve a conceder solo
+el de columna. Lo que esta mal en un renglon se corrige anulando la donacion completa.
+
 ---
 
 ## 10. Proyectos y presupuesto
@@ -620,6 +678,9 @@ erDiagram
     proyectos ||--o{ proyecto_hitos : "planifica"
     proyectos ||--o{ proyecto_seguimiento : "bitacora"
     proyectos ||--o{ proyecto_estado_historial : "cambios"
+    proyectos ||--o{ proyecto_personal : "equipo"
+    proyectos ||--o{ proyecto_insumos : "prevé"
+    medicamentos ||--o{ proyecto_insumos : "articulo"
     jornadas ||--o{ gastos : "gasta en"
     perfiles ||--o{ gastos : "registra/aprueba"
 ```
@@ -640,6 +701,25 @@ kanban). Las transiciones de estado las valida
 Bitacora de avance: `nota`, `porcentaje_anterior`, `porcentaje_nuevo`, `registrado_por`. La escribe
 el trigger `registrar_avance_de_proyecto()`, de modo que ningun cambio de porcentaje quede sin
 rastro.
+
+### `proyecto_personal` [00146]
+
+`proyecto_id`, `perfil_id` (UNIQUE juntos, CASCADE en las dos) y `rol_en_proyecto` (texto libre y
+opcional: "Coordinadora", "Enlace con la comunidad"). Es **el equipo del proyecto**, distinto del
+cuadro de turnos de una jornada (`jornada_personal`): alguien puede coordinar un proyecto sin estar
+en el turno de ninguna de sus jornadas, y al reves. Estar en el equipo **no** amplia la lectura de
+`proyectos`. La lee quien ve el proyecto (y cada quien su propia asignacion); la escribe el
+administrador o quien tenga `proyectos.gestionar`. `equipo_de_proyecto(proyecto)` devuelve el
+equipo con los nombres, sin abrir `perfiles`.
+
+### `proyecto_insumos` [00147]
+
+`proyecto_id` (CASCADE), `medicamento_id` (RESTRICT: un articulo previsto no se borra del catalogo
+en silencio), `cantidad` (> 0), `unidad`, `costo_unitario_estimado` (NULL = "no estimado", nunca
+cero) y `nota` (hasta 500). UNIQUE (`proyecto_id`, `medicamento_id`). Es **la lista de lo previsto**
+para el proyecto, con articulos del mismo catalogo de inventario: **no mueve inventario**, igual
+que `gastos` desde la `00089`. Lleva dinero, asi que solo la leen y escriben el administrador y
+quien tenga `proyectos.gestionar`; el medico que ve el proyecto de su jornada no ve sus insumos.
 
 ### `gastos` [00025]
 
@@ -675,8 +755,6 @@ Los totales no se guardan: los calculan `presupuesto_de_jornada()`, `presupuesto
 | -------------------------- | ------------------------------------------------------------------------------ | --------- |
 | `rol_usuario`              | administrador, junta directiva, socio fundador, medico, voluntario general      | 00001     |
 | `estado_jornada`           | planificada, en curso, finalizada, cancelada                                   | 00001     |
-| `presentacion_medicamento` | tableta, jarabe, capsula, inyectable, pomada, gotas ophthalmic, gotas otic     | 00001     |
-| `idioma_preferido`         | espanol, quiche, mam, otros                                                    | 00001     |
 | `estado_proyecto`          | planificado, en curso, finalizado, cancelado                                   | 00007     |
 | `estado_condicion_cronica` | activa, controlada, resuelta                                                   | 00010     |
 | `tipo_proveedor`           | comercial, donante                                                             | 00017     |
@@ -694,11 +772,18 @@ Los totales no se guardan: los calculan `presupuesto_de_jornada()`, `presupuesto
 | `sexo_paciente`            | Femenino, Masculino                                                            | 00132     |
 | `estado_receta`            | emitida, anulada                                                               | 00066     |
 | `estado_gasto`             | pendiente, aprobado, rechazado                                                 | 00089     |
+| `moneda_lote`              | GTQ                                                                            | 00121     |
+| `origen_de_presupuesto`    | donacion, fondos_propios, aporte_externo, sin_clasificar                       | 00135     |
+| `categoria_notificacion`   | caducidad, stock, validacion, presupuestos                                     | 00138     |
+| `tipo_articulo`            | medicamento, insumo                                                            | 00142     |
 
-Dos notas:
+Tres notas:
 
-- `idioma_preferido` sigue existiendo pero **ya no lo usa nadie**: `pacientes.idioma` paso al
-  catalogo `idiomas` en `00110`.
+- Dos enums de la `00001` ya no existen: `idioma_preferido` lo borro la `00110`, cuando
+  `pacientes.idioma` paso al catalogo `idiomas`, y `presentacion_medicamento` la `00144`, cuando la
+  presentacion paso al catalogo `presentaciones`. Si aparecen en codigo, es codigo muerto.
+- `moneda_lote` tiene un solo valor a proposito: el sistema no opera en mas de una moneda, y el
+  enum deja escrito en que moneda esta `lotes.costo_unitario`.
 - `tipo_proveedor` y `origen_lote` tienen valores parecidos y son cosas distintas a proposito: uno
   describe **a quien le compras**, el otro **como llego el lote**. La razon esta documentada con
   `COMMENT ON` en `00090`.
@@ -718,7 +803,8 @@ Del lado del cliente, estos valores nacen una sola vez en `packages/shared/enums
 | `es_administrador()`                             | BOOLEAN       |                                                    |
 | `es_consultivo()`                                | BOOLEAN       | Junta directiva o socio fundador                   |
 | `tiene_permiso(codigo)`                          | BOOLEAN       | Rol + excepciones de `usuario_permiso`             |
-| `participa_en_jornada(jornada_id)`               | BOOLEAN       | Si esta asignado a esa jornada                     |
+| `participa_en_jornada(jornada_id)`               | BOOLEAN       | Si esta en el cuadro de turnos de esa jornada      |
+| `pertenece_a_jornada(jornada_id)`                | BOOLEAN       | [00141] La jornada es suya: esta en el cuadro de turnos **o** es su `responsable_id`. La usan las politicas de "esta jornada es mia" (leer la jornada y su equipo) |
 | `personal_registro_atenciones(jornada, perfil)`  | BOOLEAN       |                                                    |
 | `alta_de_cuenta_permitida(usuario, app_meta)`    | BOOLEAN       | Cierra el registro publico (`00074`)               |
 
@@ -730,7 +816,9 @@ Del lado del cliente, estos valores nacen una sola vez en `packages/shared/enums
 | `fn_buscar_pacientes(...)`              | Busqueda paginada con filtros (termino, comunidad, sexo, edad, condicion) |
 | `fn_detectar_pacientes_duplicados()`    | Propone candidatos a fusion                                       |
 | `fn_fusionar_pacientes(sobrevive, absorbido)` | Ejecuta la fusion y la registra                             |
-| `fn_registrar_medicamento(...)`         | Alta de medicamento con sus principios activos                    |
+| `fn_registrar_medicamento(...)`         | Alta de medicamento o insumo con sus principios activos. Desde la `00144` recibe `p_presentacion_id` (UUID) y desde la `00142` `p_tipo_articulo` |
+| `fn_medicamento_tiene_existencias(medicamento)` | [00050] Si tiene stock positivo no vencido; se consulta antes de dar de baja un medicamento |
+| `existencias_totales_por_bodega(bodegas[])` | [00124] Suma de stock por bodega en una sola llamada. `SECURITY INVOKER` |
 | `fn_generar_receta(...)`                | Emite la receta y descuenta inventario, atomicamente              |
 | `fn_ajustar_entrega_receta(...)`        | Corrige la cantidad realmente entregada de un renglon, sin descontar el inventario dos veces |
 | `fn_existencias_disponibles(...)`       | Stock consultable, filtrado y paginado                            |
@@ -739,11 +827,15 @@ Del lado del cliente, estos valores nacen una sola vez en `packages/shared/enums
 | `fn_registrar_donacion(...)`            | [00114] Crea la donacion y su detalle en una transaccion. Devuelve JSONB, no la fila: quien llama necesita el id real de cada renglon para poder generar despues el ingreso de inventario |
 | `fn_anular_donacion(donacion, motivo)`  | [00114] Anula y sella `anulada_por` / `anulada_en`                 |
 | `fn_generar_alertas_caducidad()`        | Genera alertas de lo que vence en 30 dias o ya vencio (00129)     |
-| `fn_atender_alerta_caducidad(alerta, accion, bodega_destino)` | [00138] Cierra la alerta y da de baja (descartado/donado) o traslada (reubicado) el stock del lote, en una transaccion |
+| `fn_sincronizar_alertas_caducidad()`    | [00129] Corre el generador a peticion de la administradora, sin esperar a la rutina diaria |
+| `fn_atender_alerta_caducidad(alerta, acciones)` | [00138, contrato nuevo en 00143] Cierra la alerta repartiendo el stock vivo del lote entre una o varias acciones (descartado/donado/reubicado); la suma tiene que ser exacta. Todo en una transaccion |
 | `fn_notificar_administradores(...)`     | [00138] Una notificacion por administrador activo; la usan los triggers |
 | `fn_reclamar_correos_de_notificaciones(limite)` | [00138] Reparte lo pendiente de correo sin que dos corridas lo repitan; solo `service_role` |
 | `fn_crear_usuario_administrativo(...)`  | Alta de cuenta; SECURITY DEFINER, sin GRANT a PUBLIC              |
 | `presupuesto_de_jornada / _de_proyecto / _del_sistema()` | Asignado, ejecutado y disponible             |
+| `presupuestos_de_jornadas(ids[]) / presupuestos_de_proyectos(ids[])` | [00123] Lo mismo en lote: una fila por id en vez de una RPC por fila. Un id ausente del resultado se trata como presupuesto en ceros |
+| `equipo_de_proyecto(proyecto)`          | [00146] El equipo del proyecto con nombres, sin abrir `perfiles`  |
+| `fn_verificar_y_contar_limite(recurso, actor, maximo, ventana)` | [00134] Limite de peticiones sobre `limites_de_uso`; lanza si se paso del umbral. Lo envuelven `fn_verificar_limite_invitaciones` y `fn_verificar_limite_busqueda_pacientes` |
 | `fn_reporte_pacientes_atendidos(...)`   | Reporte agregado con agrupacion configurable                      |
 | `fn_atenciones_de_persona_por_jornada(perfil)` | Cuantas atendio cada quien                                 |
 | `fn_contar_atenciones_incompletas(jornada)` | Bloquea el cierre de jornada                                  |
@@ -776,6 +868,12 @@ Del lado del cliente, estos valores nacen una sola vez en `packages/shared/enums
 | `impedir_permiso_escritura_a_consultivo`   | `usuario_permiso`           |                                                |
 | `registrar_evento_auditoria`               | tablas sensibles            | Escribe en `eventos_auditoria`                 |
 | `registrar_evento_auditoria_usuario_permiso` | `usuario_permiso`         |                                                |
+| `registrar_evento_auditoria_rol_permiso`   | `rol_permiso`               | [00139] Audita la matriz de permisos por rol   |
+
+La tabla recoge los triggers que explican una regla de negocio; hay 68 en total. Los de
+notificaciones (`fn_notificar_*`, `00138`), los de presupuesto por origen (`00135`) y los de
+`updated_at` de cada tabla nueva siguen el mismo patron y se listan con
+`SELECT tgname, tgrelid::regclass FROM pg_trigger WHERE NOT tgisinternal`.
 
 ---
 
@@ -829,7 +927,7 @@ de que la interfaz se comporte bien**:
 **Denegacion por defecto** (`00030`): una tabla sin politica no devuelve nada a nadie. La vista
 `tablas_sin_rls` existe para comprobarlo.
 
-Las 107 politicas vigentes siguen cuatro patrones:
+Las 130 politicas vigentes siguen cuatro patrones:
 
 | Patron                    | Ejemplo                                                        | Se lee como                                    |
 | ------------------------- | -------------------------------------------------------------- | ---------------------------------------------- |
@@ -838,35 +936,30 @@ Las 107 politicas vigentes siguen cuatro patrones:
 | Por participacion         | "El personal asignado lee los de su jornada"                   | `participa_en_jornada()`                       |
 | Por autoria               | "El medico que creo la consulta la edita"                      | Compara contra `auth.uid()`                    |
 
-Politicas por tabla (numero de politicas vigentes):
+Politicas por tabla (numero de politicas vigentes, sacado de `pg_policies`):
 
-| Tabla                       | Pol. | Tabla                      | Pol. | Tabla                      | Pol. |
-| --------------------------- | ---- | -------------------------- | ---- | -------------------------- | ---- |
-| `gastos`                    | 4    | `atenciones`               | 3    | `donacion_detalle`         | 2    |
-| `jornada_personal`          | 4    | `bodegas`                  | 3    | `medicamento_principio`    | 2    |
-| `padecimientos_cronicos`    | 4    | `consultas`                | 3    | `proyecto_seguimiento`     | 2    |
-| `principios_activos`        | 4    | `diagnosticos`             | 3    | `receta_detalle`           | 2    |
-| `proyecto_hitos`            | 4    | `donaciones`               | 3    | `alertas_caducidad`        | 2    |
-| `usuario_permiso`           | 4    | `donantes`                 | 3    | `comunidades`              | 1    |
-| `existencias`               | 3    | `expedientes`              | 3    | `condiciones_cronicas`     | 1    |
-| `jornadas`                  | 3    | `lotes`                    | 3    | `departamentos`            | 1    |
-| `medicamentos`              | 3    | `movimientos_inventario`   | 3    | `municipios`               | 1    |
-| `pacientes`                 | 3    | `perfil_especialidad`      | 3    | `idiomas`                  | 1    |
-| `perfiles`                  | 3    | `proveedores`              | 3    | `permisos`                 | 1    |
-| `proyectos`                 | 3    | `recetas`                  | 3    | `rol_permiso`              | 1    |
-| `triajes`                   | 3    | `consulta_diagnostico`     | 2    | `eventos_auditoria`        | 1    |
-| `fusiones_pacientes`        | 1    | `jornada_estado_historial` | 1    | `proyecto_estado_historial`| 1    |
+| Pol. | Tablas |
+| ---- | ------ |
+| 4    | `jornada_personal`, `jornada_presupuesto_origen`, `padecimientos_cronicos`, `presentaciones`, `principios_activos`, `proyecto_hitos`, `proyecto_insumos`, `proyecto_personal`, `usuario_permiso` |
+| 3    | `atenciones`, `bodegas`, `comunidades`, `condiciones_cronicas`, `consulta_diagnostico`, `consultas`, `diagnosticos`, `donacion_detalle`, `donaciones`, `donantes`, `existencias`, `expedientes`, `gastos`, `jornadas`, `lotes`, `medicamentos`, `movimientos_inventario`, `pacientes`, `perfil_especialidad`, `perfiles`, `proveedores`, `proyectos`, `recetas`, `rol_permiso`, `triajes` |
+| 2    | `alertas_caducidad`, `medicamento_principio`, `notificaciones`, `proyecto_seguimiento`, `receta_detalle` |
+| 1    | `alerta_caducidad_detalle`, `departamentos`, `eventos_auditoria`, `fusiones_pacientes`, `idiomas`, `jornada_estado_historial`, `municipios`, `permisos`, `proyecto_estado_historial` |
+| 0    | `limites_de_uso`: RLS activo y ninguna politica, a proposito. Solo la tocan funciones `SECURITY DEFINER` |
+
+Una tabla con **una** politica es de solo lectura desde el cliente: la escribe un trigger o una
+funcion `SECURITY DEFINER` (historiales, auditoria, detalle de alertas) o es un catalogo fijo.
 
 **Quien puede que, modulo por modulo, esta en [PERMISOS.md](./PERMISOS.md)**: ese documento es la
 fuente de verdad del control de acceso, y un PR que cambia una politica o un GRANT lo actualiza en
 el mismo PR.
 
-Las politicas se comprueban con 27 archivos pgTAP en `supabase/tests/database/`, que corren en CI
+Las politicas se comprueban con 48 archivos pgTAP en `supabase/tests/database/`, que corren en CI
 sobre una base creada desde cero.
 
 ## 16. Auditoria campo-a-vista (issue #756)
 
-Para las 42 tablas y 7 vistas del esquema, tres preguntas por columna: se **muestra** en alguna
+Para las 42 tablas y 7 vistas que tenia el esquema cuando se hizo (las siete tablas posteriores, de
+la `00134` a la `00147`, no entraron en esta auditoria), tres preguntas por columna: se **muestra** en alguna
 pantalla, se **captura** desde alguna pantalla (al crear o al editar), se **corrige** despues.
 Metodologia: se recorrio cada `api.js`/`campos.js`/`columnas.js` de `packages/shared` y se cruzo
 contra las pantallas reales de `apps/web` y `apps/mobile` (llamadas de funcion, no solo

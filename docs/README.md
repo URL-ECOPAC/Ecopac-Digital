@@ -14,7 +14,7 @@ configuracion de GitHub (plantillas de issues, PR y los workflows de CI/CD) esta
 | [DISENO.md](./DISENO.md)             | Referencia de diseno: pantallas, navegacion y trazabilidad con issues  |
 | [DISENO-MOVIL.md](./DISENO-MOVIL.md) | Criterio de diseno de la app movil: reglas, fuentes y donde se aplicaron |
 | [CI-CD.md](./CI-CD.md)               | Que valida y despliega cada workflow, y que hacer cuando falla         |
-| [SEGURIDAD.md](./SEGURIDAD.md)       | Politica de contrasenas, expiracion de sesion y almacenamiento de credenciales |
+| [SEGURIDAD.md](./SEGURIDAD.md)       | Politica de contrasenas, expiracion de sesion, credenciales y observabilidad (errores, fallos de red, bitacora, respaldos) |
 | [CONFIGURACION-SUPABASE.md](./CONFIGURACION-SUPABASE.md) | Lista de verificacion de lo que se configura a mano en el Dashboard de cada ambiente |
 | [PROTECCION-DE-DATOS.md](./PROTECCION-DE-DATOS.md) | Logs, almacenamiento movil, cifrado de columnas y secretos (OWASP A02) |
 
