@@ -1380,7 +1380,7 @@ textarea.form-control {
 .ec-gr-etiqueta {
   fill: var(--color-text-muted);
   font-family: var(--fuente-base);
-  font-size: 13px;
+  font-size: var(--texto-xs);
 }
 
 .ec-gr-barra {

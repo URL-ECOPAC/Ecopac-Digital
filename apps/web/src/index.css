@@ -50,10 +50,6 @@
   --bs-alert-border-color: color-mix(in srgb, var(--color-info) 28%, white);
 }
 
-.receta-imprimible {
-  display: none;
-}
-
 .turnos-imprimible {
   display: none;
 }

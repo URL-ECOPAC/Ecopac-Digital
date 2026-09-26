@@ -10,8 +10,9 @@ export default function AuthLayout({ title, subtitle, children }) {
       style={{
         minHeight: "100vh",
         width: "100%",
-        backgroundColor: "#EFF6FF",
-        backgroundImage: "linear-gradient(135deg, #F0FDF4 0%, #E0F2FE 100%)",
+        backgroundImage:
+          "linear-gradient(135deg, color-mix(in srgb, var(--color-success) 12%, white) 0%, " +
+          "color-mix(in srgb, var(--color-info) 12%, white) 100%)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -24,11 +25,11 @@ export default function AuthLayout({ title, subtitle, children }) {
           width: "100%",
           maxWidth: "380px",
           margin: "0 auto",
-          backgroundColor: "#FFFFFF",
+          backgroundColor: "var(--color-surface)",
           borderRadius: "24px",
           padding: "36px 28px",
-          boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04)",
-          border: "1px solid #E2E8F0",
+          boxShadow: "var(--sombra-lg)",
+          border: "1px solid var(--color-border)",
           boxSizing: "border-box",
         }}
       >
@@ -42,6 +43,8 @@ export default function AuthLayout({ title, subtitle, children }) {
               marginBottom: "12px",
             }}
           >
+            {/* Los cuatro puntos son los cuatro colores del logo de EcoPac (verde, azul,
+                naranja, magenta), los mismos que moduleAccents reparte por modulo -- issue #700. */}
             <div
               style={{
                 display: "grid",
@@ -53,7 +56,7 @@ export default function AuthLayout({ title, subtitle, children }) {
             >
               <span
                 style={{
-                  backgroundColor: "#22C55E",
+                  backgroundColor: "var(--color-success)",
                   borderRadius: "50%",
                   width: "12px",
                   height: "12px",
@@ -61,7 +64,7 @@ export default function AuthLayout({ title, subtitle, children }) {
               ></span>
               <span
                 style={{
-                  backgroundColor: "#3B82F6",
+                  backgroundColor: "var(--color-info)",
                   borderRadius: "50%",
                   width: "12px",
                   height: "12px",
@@ -69,7 +72,7 @@ export default function AuthLayout({ title, subtitle, children }) {
               ></span>
               <span
                 style={{
-                  backgroundColor: "#F59E0B",
+                  backgroundColor: "var(--color-warning)",
                   borderRadius: "50%",
                   width: "12px",
                   height: "12px",
@@ -77,7 +80,7 @@ export default function AuthLayout({ title, subtitle, children }) {
               ></span>
               <span
                 style={{
-                  backgroundColor: "#EC4899",
+                  backgroundColor: "var(--color-danger)",
                   borderRadius: "50%",
                   width: "12px",
                   height: "12px",
@@ -90,7 +93,7 @@ export default function AuthLayout({ title, subtitle, children }) {
                   display: "block",
                   fontSize: "var(--texto-lg)",
                   fontWeight: "var(--peso-bold)",
-                  color: "#1E293B",
+                  color: "var(--color-text)",
                   lineHeight: "1",
                 }}
               >
@@ -103,14 +106,18 @@ export default function AuthLayout({ title, subtitle, children }) {
             style={{
               fontSize: "var(--texto-lg)",
               fontWeight: "var(--peso-bold)",
-              color: "#0F172A",
+              color: "var(--color-text)",
               margin: "14px 0 4px 0",
             }}
           >
             {title}
           </h2>
           {subtitle && (
-            <p style={{ fontSize: "var(--texto-xs)", color: "#64748B", margin: "0" }}>{subtitle}</p>
+            <p
+              style={{ fontSize: "var(--texto-xs)", color: "var(--color-text-muted)", margin: "0" }}
+            >
+              {subtitle}
+            </p>
           )}
         </div>
 

@@ -1,95 +1,107 @@
-import { createPortal } from "react-dom";
 import { datosDeRecetaImprimible, formatearFechaCorta } from "@ecopac/shared";
-import "./RecetaImprimible.css"; //  Estilos externos
+import DocumentoImprimible, { LineaDeFirma } from "./DocumentoImprimible";
 
 function Dato({ etiqueta, valor }) {
   return (
-    <p className="receta-imprimible__dato">
-      <span className="receta-imprimible__etiqueta">{etiqueta}:</span> {valor ?? "—"}
+    <p>
+      <strong>{etiqueta}:</strong> {valor ?? "—"}
     </p>
   );
 }
 
+/**
+ * Receta lista para imprimir (issue #865: usaba su propia paleta en RecetaImprimible.css,
+ * previa a DocumentoImprimible/issue #840, y nunca se migro). Ahora reutiliza el mismo
+ * envoltorio que constancia/turnos/reporte -- misma identidad de organizacion, mismos tokens de
+ * color y tipografia, cero valores escritos a mano -- en vez de mantener su propio azul y su
+ * propio "Ecopac Guatemala" (ENCABEZADO_DE_RECETA, packages/shared/pacientes/recetas.imprimible.js).
+ *
+ * Tamaño media-carta: es media hoja, no una hoja carta completa, y asi lo previo el propio
+ * DocumentoImprimible.jsx desde que se escribio.
+ */
 export default function RecetaImprimible({ receta, paciente }) {
   const datos = datosDeRecetaImprimible({ receta, paciente });
   if (!datos) return null;
 
-  return createPortal(
-    <article className="receta-imprimible">
-      <header className="receta-imprimible__encabezado">
-        {/* Logo — verifica que la ruta sea correcta en tu proyecto */}
-        <img
-          src="/logo-ecopac.png"
-          alt="Logo Ecopac"
-          className="receta-imprimible__logo"
-          onError={(e) => {
-            e.target.style.display = "none";
-          }}
-        />
-        <div className="receta-imprimible__encabezado-texto">
-          <h1 className="receta-imprimible__organizacion">{datos.organizacion}</h1>
-          <p className="receta-imprimible__documento">{datos.documento}</p>
-          {/* Folio eliminado — solo fecha */}
-          <p className="receta-imprimible__fecha">{formatearFechaCorta(datos.fecha)}</p>
-        </div>
-      </header>
-
+  return (
+    <DocumentoImprimible
+      documento={datos.documento}
+      fecha={datos.fecha}
+      tamanio="media-carta"
+      pie={<LineaDeFirma rotulo={datos.medico ?? "Firma del médico"} />}
+    >
       {datos.anulada && (
-        <p className="receta-imprimible__anulada">
+        <p
+          style={{
+            textAlign: "center",
+            fontWeight: "var(--peso-bold)",
+            color: "var(--color-danger)",
+            border: "1px solid var(--color-danger)",
+            borderRadius: "6px",
+            padding: "6px",
+            margin: "0 0 10px 0",
+          }}
+        >
           RECETA ANULADA
           {datos.anuladaEn ? ` el ${formatearFechaCorta(datos.anuladaEn)}` : ""}
           {datos.motivoAnulacion ? `: ${datos.motivoAnulacion}` : ""}
         </p>
       )}
 
-      <section className="receta-imprimible__bloque">
-        <Dato etiqueta="Paciente" valor={datos.paciente.nombre} />
-        <Dato etiqueta="Ficha" valor={datos.paciente.numeroFicha} />
-        <Dato etiqueta="Edad" valor={datos.paciente.edad} />
-        <Dato etiqueta="Sexo" valor={datos.paciente.sexo} />
-        <Dato etiqueta="Comunidad" valor={datos.paciente.comunidad} />
-      </section>
+      <Dato etiqueta="Paciente" valor={datos.paciente.nombre} />
+      <Dato etiqueta="Ficha" valor={datos.paciente.numeroFicha} />
+      <Dato etiqueta="Edad" valor={datos.paciente.edad} />
+      <Dato etiqueta="Sexo" valor={datos.paciente.sexo} />
+      <Dato etiqueta="Comunidad" valor={datos.paciente.comunidad} />
 
-      <section className="receta-imprimible__bloque">
-        <Dato etiqueta="Médico" valor={datos.medico} />
-        <Dato etiqueta="Jornada" valor={datos.jornada} />
-        <Dato
-          etiqueta="Fecha de jornada"
-          valor={datos.fechaDeJornada ? formatearFechaCorta(datos.fechaDeJornada) : null}
-        />
-      </section>
+      <Dato etiqueta="Médico" valor={datos.medico} />
+      <Dato etiqueta="Jornada" valor={datos.jornada} />
+      <Dato
+        etiqueta="Fecha de jornada"
+        valor={datos.fechaDeJornada ? formatearFechaCorta(datos.fechaDeJornada) : null}
+      />
 
-      <section>
-        <h2 className="receta-imprimible__titulo">Medicamentos</h2>
-        {datos.medicamentos.length === 0 ? (
-          <p>Sin medicamentos.</p>
-        ) : (
-          <ol className="receta-imprimible__medicamentos">
-            {datos.medicamentos.map((medicamento) => (
-              <li key={medicamento.id}>
-                <strong>{medicamento.descripcion}</strong>
-                {medicamento.posologia && <div>{medicamento.posologia}</div>}
-                {medicamento.cantidadEntregada != null && (
-                  <div>Cantidad entregada: {medicamento.cantidadEntregada}</div>
-                )}
-              </li>
-            ))}
-          </ol>
-        )}
-      </section>
-
-      {datos.indicacionesGenerales && (
-        <section>
-          <h2 className="receta-imprimible__titulo">Indicaciones generales</h2>
-          <p>{datos.indicacionesGenerales}</p>
-        </section>
+      <h3
+        style={{
+          fontSize: "var(--texto-sm)",
+          fontWeight: "var(--peso-bold)",
+          color: "var(--color-text)",
+          margin: "10px 0 4px 0",
+        }}
+      >
+        Medicamentos
+      </h3>
+      {datos.medicamentos.length === 0 ? (
+        <p>Sin medicamentos.</p>
+      ) : (
+        <ol style={{ margin: 0, paddingLeft: "20px" }}>
+          {datos.medicamentos.map((medicamento) => (
+            <li key={medicamento.id}>
+              <strong>{medicamento.descripcion}</strong>
+              {medicamento.posologia && <div>{medicamento.posologia}</div>}
+              {medicamento.cantidadEntregada != null && (
+                <div>Cantidad entregada: {medicamento.cantidadEntregada}</div>
+              )}
+            </li>
+          ))}
+        </ol>
       )}
 
-      <footer className="receta-imprimible__firma">
-        <span className="receta-imprimible__linea" />
-        <p>{datos.medico ?? "Firma del médico"}</p>
-      </footer>
-    </article>,
-    document.body,
+      {datos.indicacionesGenerales && (
+        <>
+          <h3
+            style={{
+              fontSize: "var(--texto-sm)",
+              fontWeight: "var(--peso-bold)",
+              color: "var(--color-text)",
+              margin: "10px 0 4px 0",
+            }}
+          >
+            Indicaciones generales
+          </h3>
+          <p>{datos.indicacionesGenerales}</p>
+        </>
+      )}
+    </DocumentoImprimible>
   );
 }

@@ -40,14 +40,14 @@
 .app-brand__name {
   display: block;
   font-weight: 700;
-  font-size: 1.05rem;
+  font-size: var(--texto-md);
   color: var(--color-primary);
   line-height: 1.1;
 }
 
 .app-brand__tagline {
   display: block;
-  font-size: 0.62rem;
+  font-size: var(--texto-xxs);
   letter-spacing: 0.09em;
   text-transform: uppercase;
   color: var(--color-text-muted);
@@ -66,7 +66,7 @@
 .app-nav__title {
   margin: 0 0 var(--spacing-xs);
   padding: 0 var(--spacing-sm);
-  font-size: 0.62rem;
+  font-size: var(--texto-xxs);
   letter-spacing: 0.09em;
   text-transform: uppercase;
   color: var(--color-text-muted);
@@ -80,7 +80,7 @@
   border-radius: var(--spacing-sm);
   color: var(--color-text);
   text-decoration: none;
-  font-size: 0.92rem;
+  font-size: var(--texto-sm);
 }
 
 .app-nav__item svg {
@@ -131,20 +131,20 @@
   border-radius: 50%;
   background: color-mix(in srgb, var(--color-primary) 15%, transparent);
   color: var(--color-primary);
-  font-size: 0.75rem;
+  font-size: var(--texto-xs);
   font-weight: 700;
 }
 
 .app-user__name {
   display: block;
-  font-size: 0.85rem;
+  font-size: var(--texto-sm);
   font-weight: 600;
   color: var(--color-text);
 }
 
 .app-user__role {
   display: block;
-  font-size: 0.7rem;
+  font-size: var(--texto-xxs);
   color: var(--color-text-muted);
 }
 
@@ -169,14 +169,14 @@
 
 .app-header__title {
   margin: 0;
-  font-size: 1.1rem;
+  font-size: var(--texto-md);
   font-weight: 700;
   color: var(--color-text);
 }
 
 .app-header__subtitle {
   margin: 0;
-  font-size: 0.75rem;
+  font-size: var(--texto-xs);
   color: var(--color-text-muted);
 }
 
@@ -230,7 +230,7 @@
   border-radius: 999px;
   background: color-mix(in srgb, var(--color-primary) 10%, transparent);
   color: var(--color-primary);
-  font-size: 0.72rem;
+  font-size: var(--texto-xs);
   font-weight: 600;
 }
 
@@ -321,7 +321,7 @@
     display: block;
     position: fixed;
     inset: 0;
-    background: rgb(0 0 0 / 40%);
+    background: color-mix(in srgb, var(--color-text) 40%, transparent);
     z-index: 1000;
   }
 
@@ -333,7 +333,7 @@
     min-width: 232px;
     transform: translateX(-100%);
     transition: transform 0.2s ease;
-    box-shadow: 2px 0 12px rgb(0 0 0 / 15%);
+    box-shadow: 2px 0 12px color-mix(in srgb, var(--color-text) 15%, transparent);
   }
 
   .app-sidebar--abierto {

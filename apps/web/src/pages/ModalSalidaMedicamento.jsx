@@ -44,7 +44,7 @@ export function ModalSalidaMedicamento({
       style={{
         position: "fixed",
         inset: 0,
-        background: "rgba(15, 23, 42, 0.4)",
+        background: "color-mix(in srgb, var(--color-text) 45%, transparent)",
         backdropFilter: "blur(4px)",
         display: "flex",
         alignItems: "center",
@@ -55,11 +55,11 @@ export function ModalSalidaMedicamento({
     >
       <div
         style={{
-          background: "#ffffff",
+          background: "var(--color-surface)",
           borderRadius: "24px",
           width: "100%",
           maxWidth: "560px",
-          boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1)",
+          boxShadow: "var(--sombra-lg)",
           overflow: "hidden",
         }}
       >
@@ -67,7 +67,7 @@ export function ModalSalidaMedicamento({
         <div
           style={{
             padding: "20px 24px",
-            borderBottom: "1px solid #f1f5f9",
+            borderBottom: "1px solid var(--color-border)",
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
@@ -78,13 +78,19 @@ export function ModalSalidaMedicamento({
               style={{
                 fontSize: "var(--texto-md)",
                 fontWeight: "var(--peso-bold)",
-                color: "#1e293b",
+                color: "var(--color-text)",
                 margin: 0,
               }}
             >
               Registro de Salida de Medicamentos
             </h2>
-            <p style={{ fontSize: "var(--texto-xs)", color: "#94a3b8", margin: "2px 0 0 0" }}>
+            <p
+              style={{
+                fontSize: "var(--texto-xs)",
+                color: "var(--color-text-muted)",
+                margin: "2px 0 0 0",
+              }}
+            >
               Control de entrega, traslados y bajas con sugerencia FEFO
             </p>
           </div>
@@ -94,7 +100,7 @@ export function ModalSalidaMedicamento({
               border: "none",
               background: "none",
               fontSize: "var(--texto-lg)",
-              color: "#94a3b8",
+              color: "var(--color-text-muted)",
               cursor: "pointer",
             }}
           >
@@ -108,8 +114,8 @@ export function ModalSalidaMedicamento({
             <div
               style={{
                 padding: "10px 14px",
-                backgroundColor: "#fef2f2",
-                color: "#991b1b",
+                backgroundColor: "color-mix(in srgb, var(--color-danger) 8%, var(--color-surface))",
+                color: "var(--color-danger)",
                 borderRadius: "10px",
                 fontSize: "var(--texto-xs)",
                 marginBottom: "16px",
@@ -127,7 +133,7 @@ export function ModalSalidaMedicamento({
                   display: "block",
                   fontSize: "var(--texto-xs)",
                   fontWeight: "var(--peso-bold)",
-                  color: "#475569",
+                  color: "var(--color-text)",
                   marginBottom: "6px",
                 }}
               >
@@ -141,9 +147,9 @@ export function ModalSalidaMedicamento({
                   width: "100%",
                   padding: "10px 14px",
                   borderRadius: "10px",
-                  border: "1px solid #e2e8f0",
+                  border: "1px solid var(--color-border)",
                   fontSize: "var(--texto-xs)",
-                  backgroundColor: "#f8fafc",
+                  backgroundColor: "var(--color-background)",
                 }}
               >
                 <option value="">Seleccione motivo...</option>
@@ -161,7 +167,7 @@ export function ModalSalidaMedicamento({
                   display: "block",
                   fontSize: "var(--texto-xs)",
                   fontWeight: "var(--peso-bold)",
-                  color: "#475569",
+                  color: "var(--color-text)",
                   marginBottom: "6px",
                 }}
               >
@@ -175,9 +181,9 @@ export function ModalSalidaMedicamento({
                   width: "100%",
                   padding: "10px 14px",
                   borderRadius: "10px",
-                  border: "1px solid #e2e8f0",
+                  border: "1px solid var(--color-border)",
                   fontSize: "var(--texto-xs)",
-                  backgroundColor: "#f8fafc",
+                  backgroundColor: "var(--color-background)",
                 }}
               >
                 <option value="">Seleccione medicamento...</option>
@@ -196,7 +202,7 @@ export function ModalSalidaMedicamento({
                   display: "block",
                   fontSize: "var(--texto-xs)",
                   fontWeight: "var(--peso-bold)",
-                  color: "#475569",
+                  color: "var(--color-text)",
                   marginBottom: "6px",
                 }}
               >
@@ -213,9 +219,9 @@ export function ModalSalidaMedicamento({
                   width: "100%",
                   padding: "10px 14px",
                   borderRadius: "10px",
-                  border: "1px solid #e2e8f0",
+                  border: "1px solid var(--color-border)",
                   fontSize: "var(--texto-xs)",
-                  backgroundColor: "#f8fafc",
+                  backgroundColor: "var(--color-background)",
                 }}
               >
                 <option value="">Lote sugerido por orden de vencimiento...</option>
@@ -235,7 +241,7 @@ export function ModalSalidaMedicamento({
                 <p
                   style={{
                     fontSize: "var(--texto-xs)",
-                    color: "#64748b",
+                    color: "var(--color-text-muted)",
                     margin: "6px 0 0 0",
                   }}
                 >
@@ -252,7 +258,7 @@ export function ModalSalidaMedicamento({
                   display: "block",
                   fontSize: "var(--texto-xs)",
                   fontWeight: "var(--peso-bold)",
-                  color: "#475569",
+                  color: "var(--color-text)",
                   marginBottom: "6px",
                 }}
               >
@@ -269,9 +275,9 @@ export function ModalSalidaMedicamento({
                   width: "100%",
                   padding: "10px 14px",
                   borderRadius: "10px",
-                  border: "1px solid #e2e8f0",
+                  border: "1px solid var(--color-border)",
                   fontSize: "var(--texto-xs)",
-                  backgroundColor: "#f8fafc",
+                  backgroundColor: "var(--color-background)",
                   boxSizing: "border-box",
                 }}
               />
@@ -286,7 +292,7 @@ export function ModalSalidaMedicamento({
               gap: "10px",
               marginTop: "24px",
               paddingTop: "16px",
-              borderTop: "1px solid #f1f5f9",
+              borderTop: "1px solid var(--color-border)",
             }}
           >
             <button
@@ -295,9 +301,9 @@ export function ModalSalidaMedicamento({
               style={{
                 padding: "10px 20px",
                 borderRadius: "9999px",
-                border: "1px solid #e2e8f0",
-                backgroundColor: "#ffffff",
-                color: "#64748b",
+                border: "1px solid var(--color-border)",
+                backgroundColor: "var(--color-surface)",
+                color: "var(--color-text-muted)",
                 fontSize: "var(--texto-xs)",
                 fontWeight: "var(--peso-bold)",
                 cursor: "pointer",
@@ -312,8 +318,8 @@ export function ModalSalidaMedicamento({
                 padding: "10px 24px",
                 borderRadius: "9999px",
                 border: "none",
-                backgroundColor: "#2563eb",
-                color: "#ffffff",
+                backgroundColor: "var(--color-primary)",
+                color: "var(--color-surface)",
                 fontSize: "var(--texto-xs)",
                 fontWeight: "var(--peso-bold)",
                 cursor: "pointer",

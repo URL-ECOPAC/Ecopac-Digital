@@ -73,9 +73,9 @@ export default function BandejaValidacionPage({ usuarioId, rolUsuario }) {
           style={{
             padding: "12px 16px",
             borderRadius: "8px",
-            backgroundColor: "#fef2f2",
-            border: "1px solid #fecaca",
-            color: "#991b1b",
+            backgroundColor: "color-mix(in srgb, var(--color-danger) 8%, var(--color-surface))",
+            border: "1px solid color-mix(in srgb, var(--color-danger) 25%, var(--color-surface))",
+            color: "var(--color-danger)",
             fontSize: "var(--texto-xs)",
           }}
         >
@@ -86,10 +86,10 @@ export default function BandejaValidacionPage({ usuarioId, rolUsuario }) {
       {/* Tabla / Lista de movimientos */}
       <div
         style={{
-          backgroundColor: "#ffffff",
+          backgroundColor: "var(--color-surface)",
           borderRadius: "20px",
-          border: "1px solid #f1f5f9",
-          boxShadow: "0 1px 3px rgba(0, 0, 0, 0.04)",
+          border: "1px solid var(--color-border)",
+          boxShadow: "var(--sombra-sm)",
           overflow: "hidden",
         }}
       >
@@ -104,8 +104,8 @@ export default function BandejaValidacionPage({ usuarioId, rolUsuario }) {
             <thead>
               <tr
                 style={{
-                  borderBottom: "1px solid #f1f5f9",
-                  backgroundColor: "#fafafa",
+                  borderBottom: "1px solid var(--color-border)",
+                  backgroundColor: "var(--color-background)",
                 }}
               >
                 <th
@@ -113,7 +113,7 @@ export default function BandejaValidacionPage({ usuarioId, rolUsuario }) {
                     padding: "14px 20px",
                     fontSize: "var(--texto-xxs)",
                     fontWeight: "var(--peso-bold)",
-                    color: "#64748b",
+                    color: "var(--color-text-muted)",
                     letterSpacing: "0.5px",
                     textTransform: "uppercase",
                     textAlign: "left",
@@ -126,7 +126,7 @@ export default function BandejaValidacionPage({ usuarioId, rolUsuario }) {
                     padding: "14px 20px",
                     fontSize: "var(--texto-xxs)",
                     fontWeight: "var(--peso-bold)",
-                    color: "#64748b",
+                    color: "var(--color-text-muted)",
                     letterSpacing: "0.5px",
                     textTransform: "uppercase",
                     textAlign: "left",
@@ -139,7 +139,7 @@ export default function BandejaValidacionPage({ usuarioId, rolUsuario }) {
                     padding: "14px 20px",
                     fontSize: "var(--texto-xxs)",
                     fontWeight: "var(--peso-bold)",
-                    color: "#64748b",
+                    color: "var(--color-text-muted)",
                     letterSpacing: "0.5px",
                     textTransform: "uppercase",
                     textAlign: "center",
@@ -152,7 +152,7 @@ export default function BandejaValidacionPage({ usuarioId, rolUsuario }) {
                     padding: "14px 20px",
                     fontSize: "var(--texto-xxs)",
                     fontWeight: "var(--peso-bold)",
-                    color: "#64748b",
+                    color: "var(--color-text-muted)",
                     letterSpacing: "0.5px",
                     textTransform: "uppercase",
                     textAlign: "left",
@@ -165,7 +165,7 @@ export default function BandejaValidacionPage({ usuarioId, rolUsuario }) {
                     padding: "14px 20px",
                     fontSize: "var(--texto-xxs)",
                     fontWeight: "var(--peso-bold)",
-                    color: "#64748b",
+                    color: "var(--color-text-muted)",
                     letterSpacing: "0.5px",
                     textTransform: "uppercase",
                     textAlign: "left",
@@ -178,7 +178,7 @@ export default function BandejaValidacionPage({ usuarioId, rolUsuario }) {
                     padding: "14px 20px",
                     fontSize: "var(--texto-xxs)",
                     fontWeight: "var(--peso-bold)",
-                    color: "#64748b",
+                    color: "var(--color-text-muted)",
                     letterSpacing: "0.5px",
                     textTransform: "uppercase",
                     textAlign: "left",
@@ -192,7 +192,7 @@ export default function BandejaValidacionPage({ usuarioId, rolUsuario }) {
                       padding: "14px 20px",
                       fontSize: "var(--texto-xxs)",
                       fontWeight: "var(--peso-bold)",
-                      color: "#64748b",
+                      color: "var(--color-text-muted)",
                       letterSpacing: "0.5px",
                       textTransform: "uppercase",
                       textAlign: "center",
@@ -211,7 +211,7 @@ export default function BandejaValidacionPage({ usuarioId, rolUsuario }) {
                     style={{
                       padding: "40px 20px",
                       textAlign: "center",
-                      color: "#94a3b8",
+                      color: "var(--color-text-muted)",
                       fontSize: "var(--texto-sm)",
                     }}
                   >
@@ -225,7 +225,7 @@ export default function BandejaValidacionPage({ usuarioId, rolUsuario }) {
                     style={{
                       padding: "40px 20px",
                       textAlign: "center",
-                      color: "#dc2626",
+                      color: "var(--color-danger)",
                       fontSize: "var(--texto-sm)",
                     }}
                   >
@@ -239,7 +239,7 @@ export default function BandejaValidacionPage({ usuarioId, rolUsuario }) {
                     style={{
                       padding: "40px 20px",
                       textAlign: "center",
-                      color: "#94a3b8",
+                      color: "var(--color-text-muted)",
                       fontSize: "var(--texto-sm)",
                     }}
                   >
@@ -251,7 +251,7 @@ export default function BandejaValidacionPage({ usuarioId, rolUsuario }) {
                   <tr
                     key={mov.id}
                     style={{
-                      borderBottom: "1px solid #f8fafc",
+                      borderBottom: "1px solid var(--color-border)",
                     }}
                   >
                     {/* Tipo */}
@@ -263,8 +263,14 @@ export default function BandejaValidacionPage({ usuarioId, rolUsuario }) {
                           borderRadius: "9999px",
                           fontSize: "var(--texto-xxs)",
                           fontWeight: "var(--peso-bold)",
-                          backgroundColor: mov.tipo === "ingreso" ? "#d1fae5" : "#fef3c7",
-                          color: mov.tipo === "ingreso" ? "#065f46" : "#78350f",
+                          backgroundColor:
+                            mov.tipo === "ingreso"
+                              ? "color-mix(in srgb, var(--color-success) 18%, var(--color-surface))"
+                              : "color-mix(in srgb, var(--color-warning) 18%, var(--color-surface))",
+                          color:
+                            mov.tipo === "ingreso"
+                              ? "var(--color-success)"
+                              : "var(--color-warning)",
                           letterSpacing: "0.5px",
                         }}
                       >
@@ -274,13 +280,15 @@ export default function BandejaValidacionPage({ usuarioId, rolUsuario }) {
 
                     {/* Medicamento / Lote */}
                     <td style={{ padding: "16px 20px", textAlign: "left" }}>
-                      <div style={{ fontWeight: "var(--peso-semibold)", color: "#1e293b" }}>
+                      <div
+                        style={{ fontWeight: "var(--peso-semibold)", color: "var(--color-text)" }}
+                      >
                         {mov.lote?.medicamento?.nombre || "—"}
                       </div>
                       <div
                         style={{
                           fontSize: "var(--texto-xs)",
-                          color: "#0284c7",
+                          color: "var(--color-info)",
                           marginTop: "2px",
                         }}
                       >
@@ -289,7 +297,7 @@ export default function BandejaValidacionPage({ usuarioId, rolUsuario }) {
                       <div
                         style={{
                           fontSize: "var(--texto-xxs)",
-                          color: "#94a3b8",
+                          color: "var(--color-text-muted)",
                           marginTop: "4px",
                           fontFamily: "var(--fuente-mono)",
                         }}
@@ -305,7 +313,7 @@ export default function BandejaValidacionPage({ usuarioId, rolUsuario }) {
                         textAlign: "center",
                         fontSize: "var(--texto-md)",
                         fontWeight: "var(--peso-bold)",
-                        color: "#0f172a",
+                        color: "var(--color-text)",
                       }}
                     >
                       {mov.cantidad}
@@ -315,7 +323,7 @@ export default function BandejaValidacionPage({ usuarioId, rolUsuario }) {
                     <td
                       style={{
                         padding: "16px 20px",
-                        color: "#475569",
+                        color: "var(--color-text)",
                         fontSize: "var(--texto-xs)",
                       }}
                     >
@@ -328,7 +336,7 @@ export default function BandejaValidacionPage({ usuarioId, rolUsuario }) {
                     <td
                       style={{
                         padding: "16px 20px",
-                        color: "#475569",
+                        color: "var(--color-text)",
                         fontSize: "var(--texto-xs)",
                       }}
                     >
@@ -336,7 +344,7 @@ export default function BandejaValidacionPage({ usuarioId, rolUsuario }) {
                     </td>
 
                     {/* Fecha */}
-                    <td style={{ padding: "16px 20px", color: "#475569" }}>
+                    <td style={{ padding: "16px 20px", color: "var(--color-text)" }}>
                       {formatoFecha(mov.created_at)}
                     </td>
 
@@ -363,8 +371,8 @@ export default function BandejaValidacionPage({ usuarioId, rolUsuario }) {
                                 padding: "8px 16px",
                                 borderRadius: "8px",
                                 border: "none",
-                                backgroundColor: "#059669",
-                                color: "#ffffff",
+                                backgroundColor: "var(--color-success)",
+                                color: "var(--color-surface)",
                                 fontSize: "var(--texto-xs)",
                                 fontWeight: "var(--peso-bold)",
                                 cursor: procesandoId === mov.id ? "not-allowed" : "pointer",
@@ -382,9 +390,9 @@ export default function BandejaValidacionPage({ usuarioId, rolUsuario }) {
                               style={{
                                 padding: "8px 16px",
                                 borderRadius: "8px",
-                                border: "1px solid #ef4444",
-                                backgroundColor: "#ffffff",
-                                color: "#dc2626",
+                                border: "1px solid var(--color-danger)",
+                                backgroundColor: "var(--color-surface)",
+                                color: "var(--color-danger)",
                                 fontSize: "var(--texto-xs)",
                                 fontWeight: "var(--peso-bold)",
                                 cursor: procesandoId === mov.id ? "not-allowed" : "pointer",
