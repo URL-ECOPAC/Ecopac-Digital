@@ -127,12 +127,14 @@ function ConstanciaDonacionEnrutada() {
 function SeguimientoProyectoEnrutado() {
   const { id } = useParams();
   const { state } = useLocation();
+  const { perfil } = useSesionCompartida();
   const navigate = useNavigate();
   const proyectoInicial = String(state?.proyecto?.id) === id ? state.proyecto : null;
   return (
     <SeguimientoProyectoPage
       proyectoId={id}
       proyectoInicial={proyectoInicial}
+      rol={perfil?.rol}
       onVolver={() => navigate("/proyectos")}
     />
   );

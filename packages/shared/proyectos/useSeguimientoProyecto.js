@@ -3,7 +3,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ESTADOS_JORNADA } from "../enums.js";
 import { aCadenaFechaLocal } from "../formato/fechas.js";
 import { obtenerPresupuestoProyecto } from "../presupuestos/api.js";
-import { listarJornadasDelProyecto, obtenerProyecto } from "./api.js";
+import { listarJornadasDelProyecto, obtenerHistorialDeProyecto, obtenerProyecto } from "./api.js";
+import { puedeVerHistorialProyecto } from "./permisos.js";
 import {
   actualizarAvance,
   actualizarHito,
@@ -44,14 +45,24 @@ export function procesarHito(hito, fechaHoy) {
  * hook las llama el mismo con `proyectoId`, igual que useProyectosSociales hace con
  * listarProyectos().
  */
-export function useSeguimientoProyecto({ proyectoId, proyectoInicial = null, hoy = new Date() }) {
+export function useSeguimientoProyecto({
+  proyectoId,
+  proyectoInicial = null,
+  hoy = new Date(),
+  rol,
+} = {}) {
   const [proyecto, setProyecto] = useState(proyectoInicial);
   const [hitos, setHitos] = useState([]);
   const [bitacora, setBitacora] = useState([]);
   const [jornadas, setJornadas] = useState([]);
   const [presupuesto, setPresupuesto] = useState(null);
+  const [historial, setHistorial] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [errorCarga, setErrorCarga] = useState(null);
+
+  // El historial es una seccion, no el contenido central (mismo criterio que
+  // useDetalleJornada.js): no se pide si el rol no va a poder verlo.
+  const puedeVerHistorialDeEstados = puedeVerHistorialProyecto(rol);
 
   const [nuevoPorcentaje, setNuevoPorcentaje] = useState(proyectoInicial?.porcentajeAvance ?? 0);
   const [nuevaNota, setNuevaNota] = useState("");
@@ -72,13 +83,17 @@ export function useSeguimientoProyecto({ proyectoId, proyectoInicial = null, hoy
     }
 
     setCargando(true);
-    const [resProyecto, resHitos, resBitacora, resJornadas, resPresupuesto] = await Promise.all([
-      obtenerProyecto(proyectoId),
-      listarHitos(proyectoId),
-      listarSeguimiento(proyectoId),
-      listarJornadasDelProyecto(proyectoId),
-      obtenerPresupuestoProyecto(proyectoId),
-    ]);
+    const [resProyecto, resHitos, resBitacora, resJornadas, resPresupuesto, resHistorial] =
+      await Promise.all([
+        obtenerProyecto(proyectoId),
+        listarHitos(proyectoId),
+        listarSeguimiento(proyectoId),
+        listarJornadasDelProyecto(proyectoId),
+        obtenerPresupuestoProyecto(proyectoId),
+        puedeVerHistorialDeEstados
+          ? obtenerHistorialDeProyecto(proyectoId, { rol })
+          : Promise.resolve({ historial: [], error: null }),
+      ]);
 
     setProyecto(resProyecto.proyecto);
     setErrorCarga(resProyecto.error);
@@ -86,9 +101,10 @@ export function useSeguimientoProyecto({ proyectoId, proyectoInicial = null, hoy
     setBitacora(resBitacora.bitacora ?? []);
     setJornadas(resJornadas.jornadas ?? []);
     setPresupuesto(resPresupuesto.presupuesto);
+    setHistorial(resHistorial.historial ?? []);
     setNuevoPorcentaje(resProyecto.proyecto?.porcentajeAvance ?? 0);
     setCargando(false);
-  }, [proyectoId]);
+  }, [proyectoId, rol, puedeVerHistorialDeEstados]);
 
   useEffect(() => {
     cargar();
@@ -211,6 +227,8 @@ export function useSeguimientoProyecto({ proyectoId, proyectoInicial = null, hoy
     hitos: hitosProcesados,
     bitacora,
     jornadas,
+    historial,
+    puedeVerHistorial: puedeVerHistorialDeEstados,
     indicadoresJornadas,
     campos: CAMPOS_HITO,
     cargando,

@@ -61,6 +61,7 @@ describe("permisos de proyectos", () => {
       puedeGestionarEquipo: false,
       puedeGestionarInsumos: false,
       puedeVerInsumosYGastos: false,
+      puedeVerHistorial: false,
     });
   });
 
@@ -76,6 +77,7 @@ describe("permisos de proyectos", () => {
         puedeGestionarEquipo: false,
         puedeGestionarInsumos: false,
         puedeVerInsumosYGastos: false,
+        puedeVerHistorial: false,
       });
     }
 
@@ -88,6 +90,7 @@ describe("permisos de proyectos", () => {
       puedeGestionarEquipo: true,
       puedeGestionarInsumos: true,
       puedeVerInsumosYGastos: true,
+      puedeVerHistorial: true,
     });
 
     // El medico entra a la pantalla y no puede tocar nada: ni crear, ni editar, ni ver el
@@ -101,6 +104,7 @@ describe("permisos de proyectos", () => {
       puedeGestionarEquipo: false,
       puedeGestionarInsumos: false,
       puedeVerInsumosYGastos: false,
+      puedeVerHistorial: false,
     });
   });
 });

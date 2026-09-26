@@ -1,18 +1,42 @@
 import { useState } from "react";
-import { ETIQUETAS_ESTADO_PROYECTO, useSeguimientoProyecto } from "@ecopac/shared";
+import {
+  COLUMNAS_HISTORIAL_PROYECTO,
+  ETIQUETAS_ESTADO_PROYECTO,
+  formatearFechaConHora,
+  useSeguimientoProyecto,
+} from "@ecopac/shared";
 import { Container, Row, Col, Card, Form, Button, Badge, Alert, Spinner } from "react-bootstrap";
 
+import DataList from "../components/DataList";
 import PageHeader from "../components/PageHeader";
 import ScreenContainer from "../components/ScreenContainer";
 import StatusChip from "../components/StatusChip";
 import ModalHito from "./ModalHito";
 import SecondaryButton from "../components/SecondaryButton";
 
-export default function SeguimientoProyectoPage({ proyectoId, proyectoInicial, onVolver }) {
+/** Convierte cadenas de texto a formato con Mayúscula Inicial (Title Case). */
+function capitalizar(texto) {
+  if (!texto) return "—";
+  return texto
+    .toString()
+    .split(" ")
+    .map((palabra) => palabra.charAt(0).toUpperCase() + palabra.slice(1).toLowerCase())
+    .join(" ");
+}
+
+/** Nombre completo de un perfil embebido ({ nombres, apellidos }), o `null` si no llegó. */
+function nombreDePerfil(perfil) {
+  const nombre = [perfil?.nombres, perfil?.apellidos].filter(Boolean).join(" ").trim();
+  return nombre || null;
+}
+
+export default function SeguimientoProyectoPage({ proyectoId, proyectoInicial, rol, onVolver }) {
   const {
     proyecto,
     hitos,
     bitacora,
+    historial,
+    puedeVerHistorial,
     indicadoresJornadas,
     campos,
     cargando,
@@ -27,12 +51,20 @@ export default function SeguimientoProyectoPage({ proyectoId, proyectoInicial, o
     guardarSeguimiento,
     cambiarEstadoHito,
     guardarHito,
-  } = useSeguimientoProyecto({ proyectoId, proyectoInicial });
+  } = useSeguimientoProyecto({ proyectoId, proyectoInicial, rol });
 
   const [hitoEnEdicion, setHitoEnEdicion] = useState(null);
   const [formularioHitoAbierto, setFormularioHitoAbierto] = useState(false);
 
   const proyectoDatos = proyecto || proyectoInicial;
+
+  const filasHistorial = historial.map((fila) => ({
+    id: fila.id,
+    estadoAnterior: capitalizar(fila.estadoAnterior),
+    estadoNuevo: capitalizar(fila.estadoNuevo),
+    cambiadoPor: nombreDePerfil(fila.cambiadoPor) ?? "Sistema",
+    cuando: formatearFechaConHora(fila.createdAt),
+  }));
 
   if (cargando && !proyectoDatos) {
     return (
@@ -299,6 +331,27 @@ export default function SeguimientoProyectoPage({ proyectoId, proyectoInicial, o
           </Card>
         </Col>
       </Row>
+
+      {/* Historial de cambios de estado (proyecto_estado_historial, 00029): solo administrador
+          la lee (00039), mismo criterio que el historial de jornadas en DetalleJornadaPage.jsx. */}
+      {puedeVerHistorial && (
+        <Row className="g-4 mt-1">
+          <Col>
+            <Card className="border shadow-sm">
+              <Card.Body className="p-4">
+                <Card.Title as="h5" className="mb-3 text-dark fw-bold">
+                  Historial de estado
+                </Card.Title>
+                <DataList
+                  columnas={COLUMNAS_HISTORIAL_PROYECTO}
+                  datos={filasHistorial}
+                  vacio="Este proyecto todavía no tiene cambios de estado registrados."
+                />
+              </Card.Body>
+            </Card>
+          </Col>
+        </Row>
+      )}
 
       <ModalHito
         visible={formularioHitoAbierto}

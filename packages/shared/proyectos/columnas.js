@@ -63,6 +63,18 @@ export const COLUMNAS_SEGUIMIENTO = [
 ];
 
 /**
+ * Historial de cambios de estado de un proyecto (proyecto_estado_historial, 00029), issue #856.
+ * Espejo exacto de COLUMNAS_HISTORIAL_JORNADA (jornadas/columnas.js): mismas cuatro columnas,
+ * mismo orden.
+ */
+export const COLUMNAS_HISTORIAL_PROYECTO = [
+  { id: "estadoAnterior", label: "Estado anterior", tipo: TIPOS_DE_PRESENTACION.CHIP },
+  { id: "estadoNuevo", label: "Estado nuevo", tipo: TIPOS_DE_PRESENTACION.CHIP, principal: true },
+  { id: "cambiadoPor", label: "Quien", tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  { id: "cuando", label: "Cuando", tipo: TIPOS_DE_PRESENTACION.TEXTO },
+];
+
+/**
  * Insumos previstos de un proyecto (proyecto_insumos, 00147); campos ya en camelCase por
  * insumos.api.js. El total no es una columna de la tabla: lo calcula esa API.
  */

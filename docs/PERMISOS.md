@@ -255,6 +255,7 @@ sin reasignar, bajo el absorbido. Reflejo en el cliente: `puedeFusionarPacientes
 | `bodegas`                | C R U         | R                                | R      | R                  | `00034`, con la lectura endurecida por la `00079` a `rol_actual() IS NOT NULL`. Las politicas duplicadas de la `00061`/`00062` las retiro esa misma migracion (era la Divergencia 12). **Sin DELETE para nadie**, y no solo por politica: la `00034` nunca otorgo `GRANT DELETE`, asi que el borrado muere en `42501` antes de llegar a RLS. Cubierto rol por rol en `politicas_rls_inventario.sql` (issue #513)                                                          |
 | `proveedores`            | C R U         | R                                | R      | R                  | `00034`, con la lectura endurecida por la `00079` a `rol_actual() IS NOT NULL`. Las politicas duplicadas de la `00061`/`00062` las retiro esa misma migracion (era la Divergencia 12). **Sin DELETE para nadie**, y no solo por politica: la `00034` nunca otorgo `GRANT DELETE`, asi que el borrado muere en `42501` antes de llegar a RLS. Cubierto rol por rol en `politicas_rls_inventario.sql` (issue #513)                                                                             |
 | `alertas_caducidad`      | R **A**       | R                                | R      | R                  | `00034` + `00138`. Sin INSERT DIRECTO para nadie: las genera `fn_generar_alertas_caducidad` (`00088`, redefinida por la `00129` y la `00138`), que es `SECURITY DEFINER`. La invocan la rutina programada con `service_role` y, desde la `00129`, tambien la administradora a traves de `fn_sincronizar_alertas_caducidad` (ver abajo). **Sin UPDATE directo para nadie desde la `00138`**: se atiende solo con `fn_atender_alerta_caducidad`, que ademas descuenta el stock (ver abajo) |
+| `alerta_caducidad_detalle` | R           | R                                | R      | R                  | `00143`. Desglose de las acciones aplicadas al atender una alerta con varias acciones a la vez. **Sin GRANT de escritura para nadie**: la unica fila la inserta `fn_atender_alerta_caducidad`, `SECURITY DEFINER` |
 | `movimientos_inventario` | R U **A**     | R                                | C R U\* | C R U\*            | `00034` + `00048` + `00086` (aprobar admite tambien `tiene_permiso('inventario.aprobar')`) + `00106`. \*Solo el **propio** movimiento y solo mientras siga `pendiente` |
 | `notificaciones`         | R U\*\*       | R U\*\*                          | R U\*\* | R U\*\*             | `00138` (issue #755). \*\*Cada perfil activo solo **sus propias** filas (`perfil_id = auth.uid() AND rol_actual() IS NOT NULL`), y el UPDATE solo alcanza a `leida_en` (`GRANT UPDATE (leida_en)`, por columna). Sin INSERT ni DELETE para nadie: las escriben triggers `SECURITY DEFINER` (ver abajo). Hoy solo la administracion recibe filas |
 
@@ -523,6 +524,7 @@ dejando el sistema sin administrador igual. Ver Divergencia 15.
 | `municipios`           | cualquier autenticado | **nadie**              | Igual que departamentos                                 |
 | `comunidades`          | cualquier autenticado | administrador: C U     | Lectura: `00008` (politica) + `00041` (GRANT); la politica de `00041` se retiro en `00104` por redundante. Escritura: `00116` (politicas de INSERT y UPDATE) + `00118` (`GRANT INSERT, UPDATE`), y `00117` agrega `es_vigente` como retiro logico |
 | `condiciones_cronicas` | cualquier autenticado | administrador: C U; medico y voluntario general: C | Lectura: `00010` (politica), reescrita en `00079`; GRANT en `00032`. Escritura: `00140` (issue #850), que agrega `GRANT INSERT, UPDATE`, una politica de INSERT para los tres roles que atienden y una de UPDATE solo para administrador. `00115` habia agregado `es_vigente` como retiro logico |
+| `idiomas`              | cualquier autenticado | **nadie**              | `00110` (issue #663): reemplaza al enum `idioma_preferido`. Politica de SELECT + `GRANT SELECT` a `authenticated`, sin ningun GRANT de escritura -mismo criterio que `departamentos`/`municipios`: agregar un idioma es un `INSERT` en una migracion, no una accion de la aplicacion |
 
 **Ni `departamentos` ni `municipios` se escriben desde la aplicacion, y es deliberado**: son el
 catalogo oficial de Guatemala, con `id` entero fijo, y quien lo necesite corregir lo hace en una
@@ -630,6 +632,15 @@ Cerrarlo exige que la sesion cargue los permisos efectivos
 (`usuarios/permisos.api.js`, `obtenerPermisosEfectivos`) y eso es un cambio transversal al contexto
 de autenticacion, fuera del alcance de la #862. Mientras tanto, el permiso solo tendria efecto para
 un rol que ya alcance el modulo.
+
+### Tablas sin ningun rol (issue #856)
+
+`limites_de_uso` (`00134`, issue #761) es la unica tabla del esquema sin una fila en las
+matrices de arriba, y a proposito: RLS habilitado, cero politicas, `REVOKE ALL ... FROM
+PUBLIC`. Ningun rol -ni administrador- lee ni escribe ahi directo; es el contador de rate
+limiting de `fn_verificar_y_contar_limite`, que la toca porque corre `SECURITY DEFINER`, con
+el mismo dueno que la creo. No es una tabla de dominio con permisos por rol que documentar, y
+listarla en una matriz de "quien hace que" seria forzar una pregunta que no aplica.
 
 ## Los permisos finos
 

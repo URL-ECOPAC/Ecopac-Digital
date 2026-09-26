@@ -24,7 +24,20 @@ import {
 } from "../api/errores-de-supabase.js";
 import { vacioANull } from "./normalizacion.js";
 import { validarCambioDeEstadoProyecto } from "./validaciones.js";
+import { puedeVerHistorialProyecto } from "./permisos.js";
 import { ESTADOS_PROYECTO } from "../enums.js";
+
+// Historial de cambios de estado del proyecto (00029), con quien lo hizo embebido para no
+// pedirlo aparte. Mismo patron que jornadas/api.js (COLUMNAS_DE_HISTORIAL): la columna anterior
+// nace NULL en la fila de creacion si el trigger corrio sin auth.uid() (poblado por una
+// migracion, por ejemplo).
+const COLUMNAS_DE_HISTORIAL = [
+  "id",
+  "estadoAnterior:estado_anterior",
+  "estadoNuevo:estado_nuevo",
+  "createdAt:created_at",
+  "cambiadoPor:perfiles(nombres, apellidos)",
+].join(", ");
 
 // Las columnas se enumeran en lugar de pedir "*" para que una columna nueva en proyectos no
 // empiece a viajar sola hasta el cliente.
@@ -299,5 +312,47 @@ export async function listarJornadasDelProyecto(proyectoId) {
     return { jornadas: data ?? [], error: null };
   } catch (error) {
     return { jornadas: [], error: normalizarError(error) };
+  }
+}
+
+/**
+ * Historial de cambios de estado de un proyecto (issue #856: proyecto_estado_historial se
+ * llenaba desde la 00029 pero ningun modulo de packages/shared lo leia, a diferencia de su
+ * espejo en jornadas).
+ *
+ * El chequeo de `rol` (si se pasa) evita disparar una consulta que la politica de SELECT de
+ * proyecto_estado_historial (00039, solo administrador) va a devolver vacia de todas formas para
+ * cualquier otro rol -- mismo patron que obtenerHistorialDeJornada(). No es la restriccion real:
+ * la politica RLS de la base es quien de verdad decide.
+ *
+ * @param {string} proyectoId UUID del proyecto.
+ * @param {object} [opciones]
+ * @param {string} [opciones.rol] Rol de quien consulta, para el chequeo previo.
+ * @returns {Promise<{ historial: object[], error: object|null }>}
+ */
+export async function obtenerHistorialDeProyecto(proyectoId, { rol } = {}) {
+  if (!proyectoId) return { historial: [], error: null };
+
+  if (rol !== undefined && !puedeVerHistorialProyecto(rol)) {
+    return {
+      historial: [],
+      error: {
+        ...construirError(CODIGOS_DE_ERROR_DE_SUPABASE.PERMISO_DENEGADO),
+        mensaje: "Solo la administradora puede ver el historial de cambios de estado.",
+      },
+    };
+  }
+
+  try {
+    const { data, error } = await obtenerSupabase()
+      .from("proyecto_estado_historial")
+      .select(COLUMNAS_DE_HISTORIAL)
+      .eq("proyecto_id", proyectoId)
+      .order("created_at", { ascending: false });
+
+    if (error) return { historial: [], error: normalizarError(error) };
+    return { historial: data ?? [], error: null };
+  } catch (error) {
+    return { historial: [], error: normalizarError(error) };
   }
 }
