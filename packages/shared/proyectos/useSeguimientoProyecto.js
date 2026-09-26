@@ -3,11 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ESTADOS_JORNADA } from "../enums.js";
 import { aCadenaFechaLocal } from "../formato/fechas.js";
 import { obtenerPresupuestoProyecto } from "../presupuestos/api.js";
-import {
-  listarJornadasDelProyecto,
-  obtenerHistorialDeProyecto,
-  obtenerProyecto,
-} from "./api.js";
+import { listarJornadasDelProyecto, obtenerHistorialDeProyecto, obtenerProyecto } from "./api.js";
 import { puedeVerHistorialProyecto } from "./permisos.js";
 import {
   actualizarAvance,
