@@ -64,6 +64,16 @@ export function puedeVerInsumosYGastosDeProyecto(rol) {
 }
 
 /**
+ * Puede ver el historial de cambios de estado del proyecto (proyecto_estado_historial, 00029).
+ *
+ * Solo administrador: es el espejo exacto de puedeVerHistorialJornada() (jornadas/permisos.js),
+ * y la politica de SELECT de la 00039 sobre proyecto_estado_historial coincide -- issue #856.
+ */
+export function puedeVerHistorialProyecto(rol) {
+  return esAdministrador(rol);
+}
+
+/**
  * Permisos de un rol, en la forma que consume una pantalla.
  *
  * Se devuelven juntos para que un hook no tenga que llamar a las tres por separado ni
@@ -84,5 +94,6 @@ export function permisosDeProyectos(rol) {
     // agregar, editar y quitar, la misma regla que editar el proyecto.
     puedeGestionarInsumos: administra,
     puedeVerInsumosYGastos: puedeVerInsumosYGastosDeProyecto(rol),
+    puedeVerHistorial: puedeVerHistorialProyecto(rol),
   };
 }

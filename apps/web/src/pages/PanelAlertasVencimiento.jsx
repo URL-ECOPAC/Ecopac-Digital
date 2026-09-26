@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useAlertasVencimiento } from "@ecopac/shared";
+import { ETIQUETAS_ACCION_ALERTA, useAlertasVencimiento } from "@ecopac/shared";
 import DataList from "../components/DataList";
 import EmptyState from "../components/EmptyState";
 import ErrorState from "../components/ErrorState";
@@ -8,18 +8,35 @@ import PageHeader from "../components/PageHeader";
 import ScreenContainer from "../components/ScreenContainer";
 //import ModalAtencionAlerta from "./ModalAtencionAlerta";
 
-// Etiquetas de acción
-const ETIQUETAS_ACCION = {
-  consumir: "Consumido",
-  descartar: "Descartado / dado de baja",
-  reubicar: "Reubicado",
-};
+/**
+ * Una alerta atendida con una sola acción trae `accion`; con varias (issue #143) esa columna
+ * queda NULL y el desglose vive en `detalle`. `bodegas` traduce bodegaDestinoId a nombre para
+ * un reubicado.
+ */
+function etiquetaAccionTomada(fila, bodegas) {
+  if (fila.accion) return ETIQUETAS_ACCION_ALERTA[fila.accion] ?? fila.accion;
+
+  if (fila.detalle?.length > 0) {
+    return fila.detalle
+      .map((item) => {
+        const etiqueta = ETIQUETAS_ACCION_ALERTA[item.accion] ?? item.accion;
+        const bodega = item.bodegaDestinoId
+          ? bodegas.find((b) => b.id === item.bodegaDestinoId)?.nombre
+          : null;
+        return `${etiqueta} (${item.cantidad}${bodega ? ` → ${bodega}` : ""})`;
+      })
+      .join(", ");
+  }
+
+  return "—";
+}
 
 export default function PanelAlertasVencimiento() {
   const {
     porVencer = [],
     vencidas = [],
     atendidas = [],
+    bodegas = [],
     cargando,
     error,
     recargar,
@@ -72,10 +89,9 @@ export default function PanelAlertasVencimiento() {
               <h3 className="h5 mb-3">Por vencer ({porVencer.length})</h3>
               <DataList
                 columnas={[
-                  { id: "lote", label: "Lote" },
-                  { id: "producto", label: "Producto" },
-                  { id: "bodega", label: "Bodega" },
-                  { id: "cantidad", label: "Cantidad", tipo: "numero" },
+                  { id: "numeroLote", label: "Lote" },
+                  { id: "medicamento", label: "Producto" },
+                  { id: "cantidadDisponible", label: "Cantidad", tipo: "numero" },
                   { id: "fechaVencimiento", label: "Vencimiento", tipo: "fecha" },
                 ]}
                 datos={porVencer}
@@ -90,10 +106,9 @@ export default function PanelAlertasVencimiento() {
               <h3 className="h5 mb-3 text-danger">Vencidas ({vencidas.length})</h3>
               <DataList
                 columnas={[
-                  { id: "lote", label: "Lote" },
-                  { id: "producto", label: "Producto" },
-                  { id: "bodega", label: "Bodega" },
-                  { id: "cantidad", label: "Cantidad", tipo: "numero" },
+                  { id: "numeroLote", label: "Lote" },
+                  { id: "medicamento", label: "Producto" },
+                  { id: "cantidadDisponible", label: "Cantidad", tipo: "numero" },
                   { id: "fechaVencimiento", label: "Vencimiento", tipo: "fecha" },
                 ]}
                 datos={vencidas}
@@ -108,17 +123,17 @@ export default function PanelAlertasVencimiento() {
               <h3 className="h5 mb-3">Atendidas ({atendidas.length})</h3>
               <DataList
                 columnas={[
-                  { id: "lote", label: "Lote" },
-                  { id: "producto", label: "Producto" },
+                  { id: "numeroLote", label: "Lote" },
+                  { id: "medicamento", label: "Producto" },
                   {
                     id: "accion",
                     label: "Acción tomada",
-                    formatear: (fila) => ETIQUETAS_ACCION[fila.accionTomada] || fila.accionTomada,
+                    formatear: (fila) => etiquetaAccionTomada(fila, bodegas),
                   },
                   {
-                    id: "atendidoPor",
+                    id: "atendidaPorNombre",
                     label: "Atendido por",
-                    formatear: (fila) => fila.nombreResponsable || "—",
+                    formatear: (fila) => fila.atendidaPorNombre || "—",
                   },
                 ]}
                 datos={atendidas}
