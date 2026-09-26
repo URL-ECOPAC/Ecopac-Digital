@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { X } from "lucide-react";
 
 import Modal from "../components/Modal";
 import PrimaryButton from "../components/PrimaryButton";
@@ -23,6 +22,7 @@ export default function ModalCondicionCronica({
   enviando = false,
   errores = {},
   puedeMantener = false,
+  puedeRetirar = false,
   onClose,
   onCrear,
   onEditar,
@@ -61,7 +61,8 @@ export default function ModalCondicionCronica({
 
       <div className="d-flex justify-content-between align-items-center mt-3">
         <div>
-          {editando && puedeMantener && (
+          {/* Retirar es de la administradora (00148); reactivar, de quien mantiene el catalogo. */}
+          {editando && puedeMantener && (!condicion.esVigente || puedeRetirar) && (
             <SecondaryButton
               title={condicion.esVigente ? "Retirar" : "Reactivar"}
               onClick={alternarVigencia}
@@ -70,14 +71,9 @@ export default function ModalCondicionCronica({
           )}
         </div>
         <div className="d-flex gap-2">
-          <SecondaryButton
-            title="Cancelar"
-            onClick={onClose}
-            disabled={enviando}
-            icon={<X size={16} aria-hidden="true" />}
-          />
+          <SecondaryButton title="Cancelar" onClick={onClose} disabled={enviando} />
           <PrimaryButton
-            title={editando ? "Guardar cambios" : "Crear"}
+            title={editando ? "Guardar cambios" : "Crear condición"}
             onClick={guardar}
             loading={enviando}
           />

@@ -130,7 +130,8 @@ poner solos el "+" y el basurero; ninguna pantalla los escribe a mano.
 | `reportarError(error, contexto)` | Punto unico por el que pasan los errores. Nunca lanza          |
 | `construirReporteDeError`     | Convierte cualquier cosa lanzada en un reporte plano y ya limpio   |
 | `limpiarDatosSensibles`       | Quita UUID, correos, DPI, telefonos, tokens y el valor del `detail` de Postgres, dejando legible el resto |
-| `configurarDestinoDeErrores`  | A donde van los reportes. Hoy, la consola; es lo unico que hay que tocar para conectar una herramienta de monitoreo |
+| `configurarDestinoDeErrores`  | A donde van los reportes. Sin DSN, la consola; con DSN, el destino de Sentry |
+| `crearDestinoSentry`          | Destino que manda el reporte ya limpio a Sentry, sin SDK. `null` sin DSN; lanza con un DSN mal escrito |
 
 Complementa a `sanearDetalle` (`api/`), que se sigue usando para el `detail` de Postgres: esa
 borra todo lo entrecomillado y entre parentesis, que aplicado a una pila de JavaScript la dejaria

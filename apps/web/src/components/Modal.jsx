@@ -1,4 +1,5 @@
 import { Modal as ModalBootstrap } from "react-bootstrap";
+import { EnFormulario } from "./contextoDeFormulario";
 
 /**
  * Dialogo modal.
@@ -8,6 +9,9 @@ import { Modal as ModalBootstrap } from "react-bootstrap";
  * portarse. Aqui se traduce a la `show` que espera react-bootstrap.
  *
  * En movil el equivalente sube desde abajo como hoja inferior; en web va centrado.
+ *
+ * El cuerpo va marcado como formulario (contextoDeFormulario.js): el boton verde que confirma
+ * -"Registrar donante", "Crear jornada", "Guardar"- lleva el disquete, y "Cancelar", la X en gris.
  */
 export default function Modal({ visible = false, onClose, title, children, ...rest }) {
   return (
@@ -19,7 +23,9 @@ export default function Modal({ visible = false, onClose, title, children, ...re
           </ModalBootstrap.Title>
         </ModalBootstrap.Header>
       )}
-      <ModalBootstrap.Body>{children}</ModalBootstrap.Body>
+      <ModalBootstrap.Body>
+        <EnFormulario>{children}</EnFormulario>
+      </ModalBootstrap.Body>
     </ModalBootstrap>
   );
 }

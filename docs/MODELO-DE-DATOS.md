@@ -157,6 +157,7 @@ erDiagram
     perfiles ||--o{ usuario_permiso : "permiso fino"
     permisos ||--o{ rol_permiso : "por rol"
     permisos ||--o{ usuario_permiso : "por persona"
+    perfiles ||--o{ rol_modulo : "otorga"
 ```
 
 ### `perfiles` [00002]
@@ -195,12 +196,27 @@ con los identificadores de `packages/shared/navegacion.js`.
 
 Que trae cada rol de fabrica: `rol` (`rol_usuario`) + `permiso_id`.
 
-Desde la `00139` (issue #638) la escribe el administrador desde la matriz de permisos de la web:
-conceder es `INSERT`, retirar es `DELETE` (no hay columnas que actualizar). La politica de
-escritura es **solo** `es_administrador()`, sin la via de `tiene_permiso(...)`, y cada cambio
-queda en `eventos_auditoria` por el trigger `registrar_evento_auditoria_rol_permiso`. A diferencia
-de `usuario_permiso`, **no** tiene el guardia que impide dar un permiso de escritura a un rol
-consultivo; la asimetria esta documentada en `docs/PERMISOS.md`.
+La `00139` (issue #638) la abrio a la administradora desde una matriz de permisos de la web; la
+`00148` se lo retira (politicas y `GRANT` de escritura): vuelve a ser de solo lectura y se mantiene
+por migracion. El trigger de auditoria `registrar_evento_auditoria_rol_permiso` se conserva.
+
+### `rol_modulo` [00148]
+
+La matriz de acceso: que modulo **ademas** de los suyos por defecto ve un rol, en solo lectura.
+
+| Columna        | Tipo                   | Notas                                                          |
+| -------------- | ---------------------- | -------------------------------------------------------------- |
+| `id`           | UUID PK                |                                                                |
+| `rol`          | `rol_usuario` NOT NULL | UNIQUE con `modulo`                                            |
+| `modulo`       | VARCHAR(50) NOT NULL   | CHECK: pacientes, inventario, jornadas, proyectos, presupuestos, donaciones, reportes, colaboradores |
+| `otorgado_por` | UUID                   | Por defecto `auth.uid()`                                       |
+| `otorgado_en`  | TIMESTAMPTZ NOT NULL   |                                                                |
+
+Un CHECK con `modulo_por_defecto()` impide abrir lo que el rol ya tiene (incluido todo para la
+administradora). Escribe solo la administradora (`INSERT`/`DELETE`); la leen todas las sesiones
+activas. `accede_a_modulo_por_matriz(modulo)` la consulta desde las politicas de **lectura** de cada
+modulo, y `mis_accesos()` se la entrega al cliente al iniciar sesion. Auditada con el trigger
+generico. Detalle en `docs/PERMISOS.md`, "Acceso a modulos y funciones delegables".
 
 ### `usuario_permiso` [00003]
 
@@ -869,6 +885,9 @@ Del lado del cliente, estos valores nacen una sola vez en `packages/shared/enums
 | `registrar_evento_auditoria`               | tablas sensibles            | Escribe en `eventos_auditoria`                 |
 | `registrar_evento_auditoria_usuario_permiso` | `usuario_permiso`         |                                                |
 | `registrar_evento_auditoria_rol_permiso`   | `rol_permiso`               | [00139] Audita la matriz de permisos por rol   |
+| `impedir_baja_de_paciente_sin_ser_administrador` | `pacientes`           | [00148] La baja (`fecha_baja`) es de la administradora |
+| `impedir_desactivar_sin_ser_administrador` | `diagnosticos`, `medicamentos` | [00148] Desactivar es de la administradora |
+| `impedir_retirar_sin_ser_administrador`    | `condiciones_cronicas`, `comunidades` | [00148] Retirar (`es_vigente`) es de la administradora |
 
 La tabla recoge los triggers que explican una regla de negocio; hay 68 en total. Los de
 notificaciones (`fn_notificar_*`, `00138`), los de presupuesto por origen (`00135`) y los de
@@ -1531,9 +1550,12 @@ rol a la ruta.
 **`permisos`** (catalogo, sembrado por `00003`): `clave`/`modulo`/`descripcion` se muestran en
 `ModalPermisosUsuario.jsx`; sin pantalla de mantenimiento (correcto, es catalogo de esquema).
 
-**`rol_permiso`**: sin listado propio; su efecto se ve indirectamente como chip "Del rol" en
+**`rol_permiso`**: sin listado propio; su efecto se ve indirectamente como chip "Lo trae su rol" en
 `ModalPermisosUsuario.jsx`. No es un hueco: es la matriz de permisos por defecto, se mantiene por
-migracion.
+migracion (la `00148` le retira la escritura desde la aplicacion).
+
+**`rol_modulo`** (`00148`): se edita en la pantalla "Matriz de permisos" (`MatrizPermisosPorRolPage.jsx`,
+hook `useMatrizDeAccesoPorRol`).
 
 **`usuario_permiso`**
 

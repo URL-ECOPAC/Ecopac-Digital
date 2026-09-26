@@ -103,11 +103,13 @@ SELECT is(
   'el medico ve el equipo completo del proyecto de su jornada, no solo su fila'
 );
 
+-- 00148: estar en el equipo de un proyecto es pertenecer a el, igual que participar en una de sus
+-- jornadas. El administrador acaba de sumarlo al equipo de B, asi que ve tambien a su companero.
 SELECT is(
   (SELECT count(*) FROM proyecto_personal
     WHERE proyecto_id = '50000000-0000-0000-0000-000000001462'
-      AND perfil_id <> '00000000-0000-0000-0000-000000014613')::int, 0,
-  'pero no el equipo de un proyecto que no ve (solo su propia asignacion, si la tiene)'
+      AND perfil_id <> '00000000-0000-0000-0000-000000014613')::int, 1,
+  'y el equipo completo de un proyecto al que pertenece por estar en su equipo (00148)'
 );
 
 SELECT throws_ok(
@@ -148,24 +150,27 @@ SELECT ok(
 );
 
 SELECT is(
-  (SELECT count(*) FROM equipo_de_proyecto('50000000-0000-0000-0000-000000001462')
-    WHERE perfil_id <> '00000000-0000-0000-0000-000000014613')::int, 0,
-  'y no cuela el equipo de un proyecto que no ve'
+  (SELECT count(*) FROM equipo_de_proyecto('50000000-0000-0000-0000-000000001462'))::int,
+  (SELECT count(*) FROM proyecto_personal
+    WHERE proyecto_id = '50000000-0000-0000-0000-000000001462')::int,
+  'equipo_de_proyecto coincide con la tabla tambien en el proyecto al que pertenece por equipo'
 );
 
 -- ============================================================================
--- Quien solo tiene su propia asignacion, y la junta directiva
+-- Quien solo esta en el equipo de un proyecto, y la junta directiva
 -- ============================================================================
+-- El medico 14614 no participa en ninguna jornada: su unica via es estar en el equipo de B.
 SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000014614';
 
 SELECT is(
-  (SELECT count(*) FROM proyecto_personal)::int, 1,
-  'una persona del equipo de un proyecto que no ve lee su propia asignacion y nada mas'
+  (SELECT count(*) FROM proyecto_personal
+    WHERE proyecto_id = '50000000-0000-0000-0000-000000001461')::int, 0,
+  'quien esta en el equipo de un proyecto no ve el equipo de otro al que no pertenece'
 );
 
 SELECT is(
-  (SELECT count(*) FROM equipo_de_proyecto('50000000-0000-0000-0000-000000001462'))::int, 1,
-  'equipo_de_proyecto le devuelve lo mismo que la tabla: su propia asignacion'
+  (SELECT count(*) FROM equipo_de_proyecto('50000000-0000-0000-0000-000000001461'))::int, 0,
+  'ni la funcion se lo abre'
 );
 
 SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000014612';

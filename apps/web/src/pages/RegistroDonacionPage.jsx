@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   enlazarLoteConDonacion,
   ETIQUETAS_TIPO_DONACION,
@@ -23,9 +24,12 @@ import CampoDeFormulario from "../components/CampoDeFormulario";
 import ModalRegistroIngreso from "./ModalRegistroIngreso.jsx";
 import { Plus, Trash2 } from "lucide-react";
 import SecondaryButton from "../components/SecondaryButton";
+import PrimaryButton from "../components/PrimaryButton";
+import { EnFormulario } from "../components/contextoDeFormulario";
 
 export default function RegistroDonacionPage({ usuarioRol }) {
   const { perfil } = useSesionCompartida();
+  const navigate = useNavigate();
   const [catalogosIngreso, setCatalogosIngreso] = useState({
     medicamentos: [],
     insumos: [],
@@ -385,10 +389,19 @@ export default function RegistroDonacionPage({ usuarioRol }) {
       )}
 
       {permisos?.puedeEscribir && (
-        <div className="d-flex justify-content-end mb-4">
-          <Button variant="primary" onClick={guardarDonacion} disabled={guardando}>
-            {guardando ? "Guardando..." : "Guardar Donación"}
-          </Button>
+        <div className="ec-form-pie mb-4">
+          <EnFormulario>
+            <SecondaryButton
+              title="Cancelar"
+              onClick={() => navigate(ACCION_VOLVER_A_DONACIONES.to)}
+              disabled={guardando}
+            />
+            <PrimaryButton
+              title="Registrar donación"
+              onClick={guardarDonacion}
+              loading={guardando}
+            />
+          </EnFormulario>
         </div>
       )}
 
@@ -509,13 +522,19 @@ export default function RegistroDonacionPage({ usuarioRol }) {
           </Form.Group>
         </Modal.Body>
         <Modal.Footer>
-          <Button
-            variant="primary"
-            onClick={crearDonanteRapido}
-            disabled={guardandoNuevoDonante || !nuevoDonanteNombre.trim()}
-          >
-            {guardandoNuevoDonante ? "Guardando..." : "Guardar y Seleccionar"}
-          </Button>
+          <EnFormulario>
+            <SecondaryButton
+              title="Cancelar"
+              onClick={cerrarModalNuevoDonante}
+              disabled={guardandoNuevoDonante}
+            />
+            <PrimaryButton
+              title="Registrar donante"
+              onClick={crearDonanteRapido}
+              loading={guardandoNuevoDonante}
+              disabled={!nuevoDonanteNombre.trim()}
+            />
+          </EnFormulario>
         </Modal.Footer>
       </Modal>
     </ScreenContainer>

@@ -8,18 +8,16 @@
 // ninguna funcion de principios-activos.api.js consulta este archivo antes de
 // llamar: el cliente pregunta para dibujar; el servidor decide.
 
-import { esAdministrador, ROLES } from "../usuarios/roles.js";
+import { esAdministrador, ROLES, ROLES_DE_CAMPO } from "../usuarios/roles.js";
 
 /**
- * Puede crear, editar o eliminar principios activos del catalogo.
+ * Puede crear o editar principios activos del catalogo.
  *
- * Espejo exacto de las tres politicas de escritura de principios_activos: las tres
- * exigen unicamente es_administrador(), sin el permiso fino que si existe en
- * jornadas (jornadas.gestionar). Aqui no hay excepcion que el cliente deba dejar
- * pasar.
+ * Espejo de las politicas de INSERT y UPDATE de la 00148: administrador y personal de campo.
+ * Eliminar no: la politica de DELETE sigue siendo solo de la administradora.
  */
 export function puedeAdministrarPrincipiosActivos(rol) {
-  return esAdministrador(rol);
+  return esAdministrador(rol) || ROLES_DE_CAMPO.includes(rol);
 }
 
 /**
@@ -46,6 +44,6 @@ export function permisosDePrincipiosActivos(rol) {
     puedeVer: puedeVerPrincipiosActivos(rol),
     puedeCrear: puedeAdministrar,
     puedeEditar: puedeAdministrar,
-    puedeEliminar: puedeAdministrar,
+    puedeEliminar: esAdministrador(rol),
   };
 }

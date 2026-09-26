@@ -10,23 +10,26 @@
 // El modulo no tenia permisos.js: era el unico archivo de la estructura estandar que faltaba
 // (ver el encabezado de presupuestos/index.js).
 
-import { esAdministrador, ROLES } from "../usuarios/roles.js";
+import { accedeAModuloPorMatriz, tienePermisoFino } from "../usuarios/acceso.js";
+import { esAdministrador, ROLES, ROLES_DE_CAMPO } from "../usuarios/roles.js";
 import { ESTADOS_DE_GASTO } from "../enums.js";
 
 /**
- * Puede ver la bandeja de gastos completa.
+ * Puede entrar a la pantalla de Presupuestos (resumen y gastos).
  *
- * ISSUE #864: solo administrador. La politica de SELECT de la 00052 dejaba leer todos los gastos
- * a junta directiva y a socio fundador -es la unica politica del esquema que nombraba a socio
- * fundador por su nombre-, y la 00141 se la retira: su unica pantalla es Reportes.
- *
- * El personal de campo sigue leyendo los gastos de las jornadas en las que participa, y eso no se
- * puede saber desde el rol: lo filtra participa_en_jornada() en el servidor. Por eso
- * `puedeVerTodosLosGastos` es lo que gobierna la pantalla global, y el listado por jornada se
- * dibuja para cualquier rol conocido.
+ * Desde la 00148 tambien el personal de campo: ve el presupuesto de lo suyo -RLS le entrega las
+ * jornadas y los gastos de las jornadas en las que participa, y los totales se calculan sobre eso-.
+ * Ademas quien tiene presupuestos.registrar o presupuestos.aprobar delegado, que desde la 00148 ve
+ * todos los gastos, y el rol al que la matriz le abrio el modulo (solo lectura).
  */
 export function puedeVerTodosLosGastos(rol) {
-  return esAdministrador(rol);
+  return (
+    esAdministrador(rol) ||
+    ROLES_DE_CAMPO.includes(rol) ||
+    tienePermisoFino(rol, "presupuestos.registrar") ||
+    tienePermisoFino(rol, "presupuestos.aprobar") ||
+    accedeAModuloPorMatriz(rol, "presupuestos")
+  );
 }
 
 /** Cualquier rol conocido ve los gastos de una jornada; RLS recorta las filas que no le tocan. */
@@ -37,22 +40,24 @@ export function puedeVerGastosDeJornada(rol) {
 /**
  * Puede registrar un gasto.
  *
- * La politica de INSERT admite a administrador, a quien tenga el permiso presupuestos.registrar, y
- * al personal asignado a la jornada. Los roles consultivos quedan fuera: leen sin modificar.
+ * La politica de INSERT (00089) admite a administrador, a quien tenga presupuestos.registrar, y al
+ * personal asignado a la jornada, cuyo gasto entra pendiente y pasa por la aprobacion. Quien tiene
+ * el modulo abierto por la matriz solo lee.
  */
 export function puedeRegistrarGasto(rol) {
-  return esAdministrador(rol) || [ROLES.MEDICO, ROLES.VOLUNTARIO].includes(rol);
+  return (
+    esAdministrador(rol) ||
+    ROLES_DE_CAMPO.includes(rol) ||
+    tienePermisoFino(rol, "presupuestos.registrar")
+  );
 }
 
 /**
- * Puede aprobar o rechazar un gasto.
- *
- * Solo administrador o quien tenga presupuestos.aprobar (sembrado en 00037). El permiso fino no se
- * puede resolver desde el rol, asi que aqui se cubre el caso por rol y el resto lo decide el
- * servidor.
+ * Puede aprobar o rechazar un gasto: la administradora o quien tenga presupuestos.aprobar
+ * delegado por persona (00052, conectado en el cliente por la 00148). Es la pestana Aprobaciones.
  */
 export function puedeAprobarGasto(rol) {
-  return esAdministrador(rol);
+  return tienePermisoFino(rol, "presupuestos.aprobar");
 }
 
 /**
@@ -79,9 +84,15 @@ export function puedeEditarGasto(rol, estadoDelGasto) {
  * @returns {{ puedeVer: boolean, puedeGestionar: boolean }}
  */
 export function permisosDeOrigenDePresupuesto(rol) {
+  // 00148: tambien quien gestiona jornadas por delegacion (lee y gestiona) y quien tiene Jornadas o
+  // Presupuestos abierto por la matriz (solo lee).
+  const gestiona = tienePermisoFino(rol, "jornadas.gestionar");
   return {
-    puedeVer: esAdministrador(rol),
-    puedeGestionar: esAdministrador(rol),
+    puedeVer:
+      gestiona ||
+      accedeAModuloPorMatriz(rol, "jornadas") ||
+      accedeAModuloPorMatriz(rol, "presupuestos"),
+    puedeGestionar: gestiona,
   };
 }
 

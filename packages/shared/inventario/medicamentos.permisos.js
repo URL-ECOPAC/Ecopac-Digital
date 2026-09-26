@@ -8,16 +8,23 @@
 // razon, ninguna funcion de medicamentos.api.js consulta este archivo antes de llamar: el
 // cliente pregunta para dibujar; el servidor decide.
 
-import { esAdministrador, ROLES } from "../usuarios/roles.js";
+import { esAdministrador, ROLES, ROLES_DE_CAMPO } from "../usuarios/roles.js";
 
 /**
- * Puede crear, editar o desactivar medicamentos del catalogo.
+ * Puede crear o editar medicamentos del catalogo.
  *
- * Espejo de puedeAdministrarPrincipiosActivos: las politicas de escritura de medicamentos
- * (00034) exigen unicamente es_administrador(), sin el permiso fino que si existe en jornadas
- * (jornadas.gestionar).
+ * Espejo de las politicas de INSERT y UPDATE de la 00148: administrador y personal de campo.
+ * Desactivar no: es puedeDesactivarMedicamentos().
  */
 export function puedeAdministrarMedicamentos(rol) {
+  return esAdministrador(rol) || ROLES_DE_CAMPO.includes(rol);
+}
+
+/**
+ * Puede desactivar un medicamento del catalogo: sacarlo de uso, lo mas parecido a eliminarlo.
+ * Solo la administradora (trigger impedir_desactivar_sin_ser_administrador, 00148).
+ */
+export function puedeDesactivarMedicamentos(rol) {
   return esAdministrador(rol);
 }
 
@@ -45,6 +52,6 @@ export function permisosDeMedicamentos(rol) {
     puedeVer: puedeVerMedicamentos(rol),
     puedeCrear: puedeAdministrar,
     puedeEditar: puedeAdministrar,
-    puedeEliminar: puedeAdministrar,
+    puedeEliminar: puedeDesactivarMedicamentos(rol),
   };
 }

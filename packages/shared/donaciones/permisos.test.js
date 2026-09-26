@@ -1,5 +1,6 @@
-import { describe, it, expect } from "vitest";
+import { afterEach, describe, it, expect } from "vitest";
 
+import { fijarAccesoDeSesion, limpiarAccesoDeSesion } from "../usuarios/acceso.js";
 import { ROLES } from "../usuarios/roles.js";
 import { permisosDeDonaciones, puedeRegistrarDonaciones, puedeVerDonaciones } from "./permisos.js";
 
@@ -54,10 +55,11 @@ describe("permisos de donaciones (#598)", () => {
   });
 
   describe("permisosDeDonaciones", () => {
-    it("da lectura y escritura a administrador", () => {
+    it("da lectura, escritura y correccion a administrador", () => {
       expect(permisosDeDonaciones(ROLES.ADMINISTRADOR)).toEqual({
         tieneAccesoLectura: true,
         puedeEscribir: true,
+        puedeCorregir: true,
       });
     });
 
@@ -65,6 +67,7 @@ describe("permisos de donaciones (#598)", () => {
       expect(permisosDeDonaciones(ROLES.JUNTA_DIRECTIVA)).toEqual({
         tieneAccesoLectura: false,
         puedeEscribir: false,
+        puedeCorregir: false,
       });
     });
 
@@ -72,6 +75,32 @@ describe("permisos de donaciones (#598)", () => {
       expect(permisosDeDonaciones(ROLES.MEDICO)).toEqual({
         tieneAccesoLectura: false,
         puedeEscribir: false,
+        puedeCorregir: false,
+      });
+    });
+  });
+
+  // 00148: la matriz abre el modulo en solo lectura, y donaciones.registrar se delega por persona.
+  describe("matriz de acceso y delegacion por persona (00148)", () => {
+    afterEach(() => {
+      limpiarAccesoDeSesion();
+    });
+
+    it("con Donaciones abierto por la matriz, el medico lee pero no registra", () => {
+      fijarAccesoDeSesion({ rol: ROLES.MEDICO, modulos: ["donaciones"] });
+      expect(permisosDeDonaciones(ROLES.MEDICO)).toEqual({
+        tieneAccesoLectura: true,
+        puedeEscribir: false,
+        puedeCorregir: false,
+      });
+    });
+
+    it("con donaciones.registrar delegado, registra; corregir y anular siguen siendo de ella", () => {
+      fijarAccesoDeSesion({ rol: ROLES.MEDICO, permisos: ["donaciones.registrar"] });
+      expect(permisosDeDonaciones(ROLES.MEDICO)).toEqual({
+        tieneAccesoLectura: true,
+        puedeEscribir: true,
+        puedeCorregir: false,
       });
     });
   });

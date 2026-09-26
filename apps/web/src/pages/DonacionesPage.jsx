@@ -2,6 +2,7 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { Alert, Badge, Button, Card, Col, Form, Row, Spinner, Table } from "react-bootstrap";
 import { formatearMoneda, useResumenDonaciones } from "@ecopac/shared";
+import BotonLimpiarFiltros from "../components/BotonLimpiarFiltros";
 import PageHeader from "../components/PageHeader";
 import ScreenContainer from "../components/ScreenContainer";
 import StatCard from "../components/StatCard";
@@ -61,18 +62,13 @@ export default function DonacionesPage() {
                 </Form.Group>
               </Col>
               <Col xs={12} sm={4} md={4}>
-                <Button
-                  variant="outline-secondary"
-                  size="sm"
-                  className="w-100 text-nowrap"
-                  disabled={!fechaInicio && !fechaFin}
+                <BotonLimpiarFiltros
+                  hayFiltros={Boolean(fechaInicio || fechaFin)}
                   onClick={() => {
                     setFechaInicio("");
                     setFechaFin("");
                   }}
-                >
-                  Limpiar filtros
-                </Button>
+                />
               </Col>
             </Row>
           </Form>

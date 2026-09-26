@@ -11,5 +11,6 @@ export {
   useBitacoraAuditoria,
   armarFilasDeAuditoria,
   calcularPaginasDeAuditoria,
+  catalogoDeTablas,
   EVENTOS_POR_PAGINA,
 } from "./useBitacoraAuditoria.js";

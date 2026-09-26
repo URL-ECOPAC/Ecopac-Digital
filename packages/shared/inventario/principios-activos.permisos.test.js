@@ -16,13 +16,13 @@ import {
 } from "./principios-activos.permisos.js";
 
 describe("permisos del catalogo de principios activos", () => {
-  it("solo Administrador administra, como pide el criterio de aceptacion", () => {
+  it("administrador y personal de campo crean y corrigen (00148); los consultivos no", () => {
     expect(puedeAdministrarPrincipiosActivos(ROLES.ADMINISTRADOR)).toBe(true);
+    expect(puedeAdministrarPrincipiosActivos(ROLES.MEDICO)).toBe(true);
+    expect(puedeAdministrarPrincipiosActivos(ROLES.VOLUNTARIO)).toBe(true);
 
     expect(puedeAdministrarPrincipiosActivos(ROLES.JUNTA_DIRECTIVA)).toBe(false);
     expect(puedeAdministrarPrincipiosActivos(ROLES.SOCIO_FUNDADOR)).toBe(false);
-    expect(puedeAdministrarPrincipiosActivos(ROLES.MEDICO)).toBe(false);
-    expect(puedeAdministrarPrincipiosActivos(ROLES.VOLUNTARIO)).toBe(false);
   });
 
   it("cualquier rol conocido puede ver el catalogo", () => {
@@ -41,10 +41,11 @@ describe("permisos del catalogo de principios activos", () => {
   });
 
   it("agrupa los permisos para que un hook no llame a las funciones sueltas", () => {
+    // Crea y corrige, nunca elimina: la politica de DELETE sigue siendo de la administradora.
     expect(permisosDePrincipiosActivos(ROLES.MEDICO)).toEqual({
       puedeVer: true,
-      puedeCrear: false,
-      puedeEditar: false,
+      puedeCrear: true,
+      puedeEditar: true,
       puedeEliminar: false,
     });
 

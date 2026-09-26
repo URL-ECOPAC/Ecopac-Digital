@@ -7,43 +7,26 @@ vi.mock("../api/cliente.js", () => ({
   obtenerSupabase: vi.fn(),
 }));
 
-function mockSupabaseCon({ consultas, recetas }) {
-  return {
-    from: vi.fn((tabla) => {
-      if (tabla === "jornadas") {
-        return {
-          select: vi.fn().mockReturnThis(),
-          eq: vi.fn().mockReturnThis(),
-          single: vi.fn().mockResolvedValue({
-            data: {
-              id: "JOR-1",
-              nombre: "Jornada Central",
-              fecha: "2026-08-01",
-              estado: "finalizada",
-              comunidad: { id: "COM-1", nombre: "El Rosario" },
-            },
-            error: null,
-          }),
-        };
-      }
-      if (tabla === "consultas") {
-        return {
-          select: vi.fn().mockReturnThis(),
-          eq: vi.fn().mockResolvedValue({ data: consultas, error: null }),
-        };
-      }
-      if (tabla === "recetas") {
-        return {
-          select: vi.fn().mockReturnThis(),
-          in: vi.fn().mockResolvedValue({ data: recetas, error: null }),
-        };
-      }
-      return {};
-    }),
-  };
+// Lo que devuelve fn_reporte_jornada (00148): el reporte ya agregado en la base.
+const REPORTE = {
+  jornada: {
+    id: "JOR-1",
+    nombre: "Jornada Central",
+    fecha: "2026-08-01",
+    estado: "finalizada",
+    comunidad: { id: "COM-1", nombre: "El Rosario" },
+  },
+  resumen: { total_consultas: 3, pacientes_atendidos: 2 },
+  diagnosticos_mas_frecuentes: [{ diagnostico: "Gripe", cantidad: 2 }],
+  medicamentos_mas_entregados: [{ medicamento: "Paracetamol", cantidad: 10 }],
+  personal_participante: [{ usuario_id: "MED-1", nombre: "Ana Inventada", total_atenciones: 2 }],
+};
+
+function clienteConRpc(respuesta) {
+  return { rpc: vi.fn().mockResolvedValue(respuesta) };
 }
 
-describe("Módulo de Reportes - API Resultados por Jornada (#489)", () => {
+describe("Módulo de Reportes - API Resultados por Jornada (#489, 00148)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -56,23 +39,15 @@ describe("Módulo de Reportes - API Resultados por Jornada (#489)", () => {
     expect(obtenerSupabase).not.toHaveBeenCalled();
   });
 
-  it("puedeVerReporteJornada solo admite administrador y medico", () => {
+  it("lo consultan la administradora, los roles consultivos y el medico; el colaborador no", () => {
     expect(puedeVerReporteJornada(ROLES.ADMINISTRADOR)).toBe(true);
+    expect(puedeVerReporteJornada(ROLES.JUNTA_DIRECTIVA)).toBe(true);
+    expect(puedeVerReporteJornada(ROLES.SOCIO_FUNDADOR)).toBe(true);
     expect(puedeVerReporteJornada(ROLES.MEDICO)).toBe(true);
     expect(puedeVerReporteJornada(ROLES.VOLUNTARIO)).toBe(false);
-    expect(puedeVerReporteJornada(ROLES.JUNTA_DIRECTIVA)).toBe(false);
-    expect(puedeVerReporteJornada(ROLES.SOCIO_FUNDADOR)).toBe(false);
   });
 
-  it("junta directiva no puede ver el reporte y no llega a tocar el cliente", async () => {
-    const res = await obtenerReporteJornada({ jornadaId: "JOR-1", rol: ROLES.JUNTA_DIRECTIVA });
-
-    expect(res.datos).toBeNull();
-    expect(res.error.codigo).toBe("SIN_PERMISO");
-    expect(obtenerSupabase).not.toHaveBeenCalled();
-  });
-
-  it("voluntario general no puede ver el reporte", async () => {
+  it("voluntario general no puede ver el reporte y no llega a tocar el cliente", async () => {
     const res = await obtenerReporteJornada({ jornadaId: "JOR-1", rol: ROLES.VOLUNTARIO });
 
     expect(res.datos).toBeNull();
@@ -80,99 +55,32 @@ describe("Módulo de Reportes - API Resultados por Jornada (#489)", () => {
     expect(obtenerSupabase).not.toHaveBeenCalled();
   });
 
-  it("consolida la información completa de la jornada usando las columnas reales", async () => {
-    const mockSupabase = mockSupabaseCon({
-      consultas: [
-        {
-          id: "C1",
-          medico_id: "MED-1",
-          expedientes: { paciente_id: "P1" },
-          consulta_diagnostico: [{ diagnosticos: { nombre: "Gripe" } }],
-        },
-        {
-          id: "C2",
-          medico_id: "MED-1",
-          expedientes: { paciente_id: "P2" },
-          consulta_diagnostico: [{ diagnosticos: { nombre: "Gripe" } }],
-        },
-        {
-          id: "C3",
-          medico_id: "MED-2",
-          expedientes: { paciente_id: "P1" },
-          consulta_diagnostico: [{ diagnosticos: { nombre: "Infección" } }],
-        },
-      ],
-      recetas: [
-        {
-          id: "R1",
-          consulta_id: "C1",
-          receta_detalle: [{ cantidad_entregada: 10, medicamentos: { nombre: "Paracetamol" } }],
-        },
-        {
-          id: "R2",
-          consulta_id: "C2",
-          receta_detalle: [{ cantidad_entregada: 5, medicamentos: { nombre: "Amoxicilina" } }],
-        },
-      ],
-    });
+  it("pide el reporte ya agregado a fn_reporte_jornada y lo devuelve tal cual", async () => {
+    const cliente = clienteConRpc({ data: REPORTE, error: null });
+    obtenerSupabase.mockReturnValue(cliente);
 
-    obtenerSupabase.mockReturnValue(mockSupabase);
-
-    const res = await obtenerReporteJornada({ jornadaId: "JOR-1", rol: ROLES.MEDICO });
+    const res = await obtenerReporteJornada({ jornadaId: "JOR-1", rol: ROLES.JUNTA_DIRECTIVA });
 
     expect(res.error).toBeNull();
-    expect(res.datos.jornada.comunidad).toEqual({ id: "COM-1", nombre: "El Rosario" });
-    expect(res.datos.resumen.total_consultas).toBe(3);
-    expect(res.datos.resumen.pacientes_atendidos).toBe(2);
-    expect(res.datos.diagnosticos_mas_frecuentes[0]).toEqual({
-      diagnostico: "Gripe",
-      cantidad: 2,
-    });
-    expect(res.datos.personal_participante).toEqual(
-      expect.arrayContaining([
-        { usuario_id: "MED-1", total_atenciones: 2 },
-        { usuario_id: "MED-2", total_atenciones: 1 },
-      ]),
-    );
-    expect(res.datos.medicamentos_mas_entregados).toEqual([
-      { medicamento: "Paracetamol", cantidad: 10 },
-      { medicamento: "Amoxicilina", cantidad: 5 },
-    ]);
-
-    // La tabla real es receta_detalle vía recetas, nunca "recetas_detalle".
-    const tablasConsultadas = mockSupabase.from.mock.calls.map(([tabla]) => tabla);
-    expect(tablasConsultadas).not.toContain("recetas_detalle");
-    expect(tablasConsultadas).toContain("recetas");
+    expect(res.datos).toEqual(REPORTE);
+    expect(cliente.rpc).toHaveBeenCalledWith("fn_reporte_jornada", { p_jornada_id: "JOR-1" });
   });
 
-  it("no consulta recetas si la jornada no tiene consultas", async () => {
-    const mockSupabase = mockSupabaseCon({ consultas: [], recetas: [] });
-    obtenerSupabase.mockReturnValue(mockSupabase);
+  it("una jornada que no existe (la funcion devuelve NULL) es un error, no un reporte vacio", async () => {
+    obtenerSupabase.mockReturnValue(clienteConRpc({ data: null, error: null }));
 
-    const res = await obtenerReporteJornada({ jornadaId: "JOR-1", rol: ROLES.MEDICO });
+    const res = await obtenerReporteJornada({ jornadaId: "JOR-X", rol: ROLES.ADMINISTRADOR });
 
-    expect(res.error).toBeNull();
-    expect(res.datos.resumen.total_consultas).toBe(0);
-    expect(res.datos.medicamentos_mas_entregados).toEqual([]);
-
-    const tablasConsultadas = mockSupabase.from.mock.calls.map(([tabla]) => tabla);
-    expect(tablasConsultadas).not.toContain("recetas");
+    expect(res.datos).toBeNull();
+    expect(res.error.codigo).toBe("SIN_RESULTADOS");
   });
 
   it("normaliza el error del servidor en { datos: null, error } en vez de devolverlo suelto", async () => {
-    const mockSupabase = {
-      from: vi.fn(() => ({
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        single: vi.fn().mockResolvedValue({ data: null, error: { code: "42501" } }),
-      })),
-    };
-    obtenerSupabase.mockReturnValue(mockSupabase);
+    obtenerSupabase.mockReturnValue(clienteConRpc({ data: null, error: { code: "42501" } }));
 
     const res = await obtenerReporteJornada({ jornadaId: "JOR-1", rol: ROLES.MEDICO });
 
     expect(res).toHaveProperty("datos", null);
-    expect(res).toHaveProperty("error");
     expect(res.error.codigo).toBe("permiso_denegado");
   });
 });

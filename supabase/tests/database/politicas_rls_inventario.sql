@@ -77,13 +77,11 @@ SELECT ok(
   'voluntario puede leer el catalogo de medicamentos'
 );
 
-SELECT throws_ok(
+SELECT lives_ok(
   $$ INSERT INTO medicamentos (nombre, concentracion, presentacion_id, marca)
-     VALUES ('Intento voluntario', '1 mg',
+     VALUES ('Alta del voluntario', '1 mg',
        (SELECT id FROM presentaciones WHERE nombre = 'Tableta'), 'Generico') $$,
-  '42501',
-  NULL,
-  'voluntario no puede crear un medicamento: solo administrador administra el catalogo'
+  'voluntario da de alta un medicamento: el personal de campo crea en el catalogo (00148)'
 );
 
 -- ============================================================================
@@ -366,19 +364,15 @@ SELECT throws_ok(
 );
 
 SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000303';
-SELECT throws_ok(
+SELECT lives_ok(
   $$ INSERT INTO proveedores (nombre, tipo) VALUES ('Proveedor 513 medico', 'comercial') $$,
-  '42501',
-  NULL,
-  'NEGATIVA proveedores INSERT: medico no crea (el WITH CHECK lanza 42501)'
+  'POSITIVA proveedores INSERT: medico crea (00148)'
 );
 
 SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000304';
-SELECT throws_ok(
+SELECT lives_ok(
   $$ INSERT INTO proveedores (nombre, tipo) VALUES ('Proveedor 513 voluntario general', 'comercial') $$,
-  '42501',
-  NULL,
-  'NEGATIVA proveedores INSERT: voluntario general no crea (el WITH CHECK lanza 42501)'
+  'POSITIVA proveedores INSERT: voluntario general crea (00148)'
 );
 
 SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000305';
@@ -396,17 +390,17 @@ SELECT is_empty(
 );
 
 SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000303';
-SELECT is_empty(
+SELECT isnt_empty(
   $$ UPDATE proveedores SET contacto = 'cambio de medico'
      WHERE id = '71000000-0000-0000-0000-000000000001' RETURNING id $$,
-  'NEGATIVA proveedores UPDATE: medico no edita (el USING no afecta filas)'
+  'POSITIVA proveedores UPDATE: medico corrige (00148)'
 );
 
 SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000304';
-SELECT is_empty(
+SELECT isnt_empty(
   $$ UPDATE proveedores SET contacto = 'cambio de voluntario general'
      WHERE id = '71000000-0000-0000-0000-000000000001' RETURNING id $$,
-  'NEGATIVA proveedores UPDATE: voluntario general no edita (el USING no afecta filas)'
+  'POSITIVA proveedores UPDATE: voluntario general corrige (00148)'
 );
 
 SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000301';
@@ -488,19 +482,15 @@ SELECT throws_ok(
 );
 
 SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000303';
-SELECT throws_ok(
+SELECT lives_ok(
   $$ INSERT INTO bodegas (nombre) VALUES ('Bodega 513 medico') $$,
-  '42501',
-  NULL,
-  'NEGATIVA bodegas INSERT: medico no crea (el WITH CHECK lanza 42501)'
+  'POSITIVA bodegas INSERT: medico crea (00148)'
 );
 
 SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000304';
-SELECT throws_ok(
+SELECT lives_ok(
   $$ INSERT INTO bodegas (nombre) VALUES ('Bodega 513 voluntario general') $$,
-  '42501',
-  NULL,
-  'NEGATIVA bodegas INSERT: voluntario general no crea (el WITH CHECK lanza 42501)'
+  'POSITIVA bodegas INSERT: voluntario general crea (00148)'
 );
 
 SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000305';
@@ -518,17 +508,17 @@ SELECT is_empty(
 );
 
 SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000303';
-SELECT is_empty(
+SELECT isnt_empty(
   $$ UPDATE bodegas SET ubicacion = 'cambio de medico'
      WHERE id = '72000000-0000-0000-0000-000000000001' RETURNING id $$,
-  'NEGATIVA bodegas UPDATE: medico no edita (el USING no afecta filas)'
+  'POSITIVA bodegas UPDATE: medico corrige (00148)'
 );
 
 SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000304';
-SELECT is_empty(
+SELECT isnt_empty(
   $$ UPDATE bodegas SET ubicacion = 'cambio de voluntario general'
      WHERE id = '72000000-0000-0000-0000-000000000001' RETURNING id $$,
-  'NEGATIVA bodegas UPDATE: voluntario general no edita (el USING no afecta filas)'
+  'POSITIVA bodegas UPDATE: voluntario general corrige (00148)'
 );
 
 SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000301';

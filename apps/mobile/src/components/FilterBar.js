@@ -2,10 +2,10 @@ import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { SUBTIPOS_DE_RANGO, TIPOS_DE_FILTRO } from "@ecopac/shared";
 import { colors, radii, spacing, typography } from "@ecopac/ui-tokens";
+import BotonLimpiarFiltros from "./BotonLimpiarFiltros";
 import DateField from "./DateField";
 import NumberField from "./NumberField";
 import PrimaryButton from "./PrimaryButton";
-import SecondaryButton from "./SecondaryButton";
 import Selector from "./Selector";
 import TextField from "./TextField";
 
@@ -168,11 +168,9 @@ export default function FilterBar({
           <View style={styles.acciones}>
             <PrimaryButton title="Aplicar" onPress={aplicar} style={styles.accion} />
             {onLimpiar ? (
-              <SecondaryButton
-                title="Limpiar filtros"
-                variant="neutra"
+              <BotonLimpiarFiltros
                 onPress={limpiar}
-                disabled={!hayFiltros}
+                hayFiltros={hayFiltros}
                 style={styles.accion}
               />
             ) : null}

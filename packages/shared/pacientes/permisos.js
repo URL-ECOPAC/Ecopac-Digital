@@ -16,37 +16,55 @@
 // condiciones.permisos.js cubre las condiciones cronicas por separado: es otra tabla
 // (padecimientos_cronicos, 00010) con su propia matriz de roles, y se queda como esta.
 
-import { esAdministrador, ROLES } from "../usuarios/roles.js";
+import { accedeAModuloPorMatriz, tienePermisoFino } from "../usuarios/acceso.js";
+import { esAdministrador, ROLES, ROLES_DE_CAMPO } from "../usuarios/roles.js";
 // El estado se importa en vez de escribir 'emitida' a mano: el enum estado_receta lo define la
 // 00066 y su unica copia en shared vive en recetas.api.js (regla del bug #365).
 import { ESTADOS_RECETA } from "../enums.js";
 
+/** Medico o voluntario general: el personal que atiende en campo (es_personal_de_campo, 00148). */
+function esPersonalDeCampo(rol) {
+  return ROLES_DE_CAMPO.includes(rol);
+}
+
 /**
  * Puede ver pacientes.
  *
- * Espejo de la politica de SELECT de pacientes (00032): administrador, medico y voluntario
- * general. Los roles consultivos no tienen ninguna politica sobre esta tabla a proposito
- * (docs/PERMISOS.md): en pacientes el nombre, apellidos y DPI son la fila misma, asi que no hay
- * un subconjunto de columnas "no identificable" que enmascarar con una vista.
+ * Espejo de la politica de SELECT de pacientes (00148): administrador y personal de campo, y el rol
+ * al que la matriz de acceso le abrio Pacientes, en solo lectura. Los roles consultivos no lo
+ * tienen por defecto (docs/PERMISOS.md): en pacientes el nombre, apellidos y DPI son la fila
+ * misma, asi que no hay un subconjunto "no identificable" que enmascarar; abrirselo es una
+ * decision explicita de la administradora.
  */
 export function puedeVerPacientes(rol) {
-  return esAdministrador(rol) || rol === ROLES.MEDICO || rol === ROLES.VOLUNTARIO;
-}
-
-/** Espejo de la politica de INSERT de pacientes (00032), identica a la de SELECT. */
-export function puedeRegistrarPaciente(rol) {
-  return puedeVerPacientes(rol);
+  return esAdministrador(rol) || esPersonalDeCampo(rol) || accedeAModuloPorMatriz(rol, "pacientes");
 }
 
 /**
- * Puede editar un paciente ya registrado, incluida la baja logica (UPDATE de fecha_baja).
+ * Espejo de la politica de INSERT de pacientes (00032): administrador y personal de campo. Quien
+ * tiene el modulo abierto por la matriz solo lee.
+ */
+export function puedeRegistrarPaciente(rol) {
+  return esAdministrador(rol) || esPersonalDeCampo(rol);
+}
+
+/**
+ * Puede editar un paciente ya registrado.
  *
- * Espejo de la politica de UPDATE de pacientes (00032): mas estrecha que registrar, solo
- * administrador y medico. Nadie tiene politica de DELETE: ademas del default-deny, un trigger
- * (00026) bloquea cualquier borrado fisico.
+ * Espejo de la politica de UPDATE de pacientes (00086): el permiso fino pacientes.editar, que el
+ * medico y, desde la 00148, el colaborador traen por defecto, y que se puede revocar o conceder
+ * por persona. La baja no esta aqui: es puedeDarDeBajaPaciente().
  */
 export function puedeEditarPaciente(rol) {
-  return esAdministrador(rol) || rol === ROLES.MEDICO;
+  return tienePermisoFino(rol, "pacientes.editar");
+}
+
+/**
+ * Puede dar de baja a un paciente (fecha_baja): eliminarlo, en la practica. Solo la
+ * administradora: lo impone el trigger impedir_baja_de_paciente_sin_ser_administrador (00148).
+ */
+export function puedeDarDeBajaPaciente(rol) {
+  return esAdministrador(rol);
 }
 
 /** Espejo de la politica de SELECT de expedientes (00032), identica a la de pacientes. */
@@ -59,7 +77,7 @@ export function puedeCrearExpediente(rol) {
   return puedeVerPacientes(rol);
 }
 
-/** Espejo de la politica de UPDATE de expedientes (00032): solo administrador y medico. */
+/** Espejo de la politica de UPDATE de expedientes (00086): el mismo permiso que editar pacientes. */
 export function puedeEditarExpediente(rol) {
   return puedeEditarPaciente(rol);
 }
@@ -67,32 +85,31 @@ export function puedeEditarExpediente(rol) {
 /**
  * Puede leer el historial clinico (triajes, consultas y recetas) de un paciente.
  *
- * Espejo de la politica de SELECT de consultas/recetas (00033): solo administrador y medico.
- * Un voluntario general registra pacientes y toma triaje, pero el historial clinico completo no
- * lo ve.
+ * Espejo de la politica de SELECT de consultas/recetas (00148): quien ve pacientes lo ve completo,
+ * historial incluido. Hasta la 00148 el colaborador registraba pacientes y tomaba triaje sin ver
+ * el historial.
  */
 export function puedeVerHistorial(rol) {
-  return esAdministrador(rol) || rol === ROLES.MEDICO;
+  return puedeVerPacientes(rol);
 }
 
 /**
  * Puede tomar el triaje de una atencion.
  *
- * Espejo de la politica de INSERT de triajes (00033): administrador, medico y voluntario
- * general.
+ * Espejo de la politica de INSERT de triajes (00033): administrador y personal de campo.
  */
 export function puedeTomarTriaje(rol) {
-  return esAdministrador(rol) || rol === ROLES.MEDICO || rol === ROLES.VOLUNTARIO;
+  return esAdministrador(rol) || esPersonalDeCampo(rol);
 }
 
 /**
  * Puede corregir un triaje ya registrado.
  *
- * Espejo de la politica de UPDATE de triajes (00033), mas estrecha que la de INSERT: solo
- * administrador y medico.
+ * Espejo de la politica de UPDATE de triajes (00148): administrador y personal de campo. Hasta la
+ * 00148 solo el medico; el colaborador que lo toma tambien lo corrige.
  */
 export function puedeCorregirTriaje(rol) {
-  return esAdministrador(rol) || rol === ROLES.MEDICO;
+  return esAdministrador(rol) || esPersonalDeCampo(rol);
 }
 
 /**
@@ -193,6 +210,7 @@ export function permisosDePacientes(rol) {
     puedeVer: puedeVerPacientes(rol),
     puedeCrear: puedeRegistrarPaciente(rol),
     puedeEditar: puedeEditarPaciente(rol),
+    puedeDarDeBaja: puedeDarDeBajaPaciente(rol),
     puedeVerHistorial: puedeVerHistorial(rol),
     puedeTomarTriaje: puedeTomarTriaje(rol),
     puedeCorregirTriaje: puedeCorregirTriaje(rol),
@@ -207,24 +225,31 @@ export function permisosDePacientes(rol) {
 /**
  * Puede ver la pantalla del catalogo de diagnosticos (issue #639).
  *
- * Espejo de la politica de SELECT de diagnosticos (00033): administrador y medico. Voluntario
- * general queda fuera a proposito, mismo criterio que la 00105 documenta sobre esa misma
- * politica: es informacion clinica.
+ * Espejo de la politica de SELECT de diagnosticos (00148): quien ve pacientes. El colaborador
+ * entra desde la 00148, que le abre pacientes por completo.
  */
 export function puedeVerCatalogoDiagnosticos(rol) {
-  return esAdministrador(rol) || rol === ROLES.MEDICO;
+  return puedeVerPacientes(rol);
 }
 
 /**
- * Puede mantener el catalogo de diagnosticos: agregar uno nuevo y corregir los existentes.
+ * Puede mantener el catalogo de diagnosticos: agregar uno nuevo, corregir los existentes y
+ * reactivar uno retirado.
  *
- * Espejo de las politicas de INSERT y UPDATE de la 00105, que son es_administrador(). Leerlo es
- * mas amplio -medico tambien (00033)-, pero mantenerlo no: un catalogo que cada quien edita deja
- * de ser un catalogo.
+ * Espejo de las politicas de INSERT y UPDATE (00148): administrador y personal de campo. Retirarlo
+ * no: es puedeRetirarDiagnostico().
  *
  * No hay `puedeEliminarDiagnostico`: consulta_diagnostico referencia diagnosticos ON DELETE
  * RESTRICT (00018) y no hay GRANT de DELETE. Un diagnostico ya usado es historia clinica.
  */
 export function puedeAdministrarDiagnosticos(rol) {
+  return esAdministrador(rol) || esPersonalDeCampo(rol);
+}
+
+/**
+ * Puede retirar un diagnostico del selector (activo = false): sacarlo de uso, lo mas parecido a
+ * eliminarlo. Solo la administradora (trigger impedir_desactivar_sin_ser_administrador, 00148).
+ */
+export function puedeRetirarDiagnostico(rol) {
   return esAdministrador(rol);
 }

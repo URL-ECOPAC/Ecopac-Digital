@@ -13,7 +13,9 @@ import {
   EVENTOS_POR_PAGINA,
   armarFilasDeAuditoria,
   calcularPaginasDeAuditoria,
+  catalogoDeTablas,
 } from "./useBitacoraAuditoria.js";
+import { TABLAS_AUDITADAS, etiquetaDeTablaAuditada } from "./filtros.js";
 
 const EVENTOS = [
   { id: 1, realizadoPor: "p1", tablaAfectada: "pacientes", operacion: "insercion" },
@@ -52,6 +54,34 @@ describe("armarFilasDeAuditoria", () => {
   it("una lista vacia no revienta", () => {
     expect(armarFilasDeAuditoria([], new Map())).toEqual([]);
     expect(armarFilasDeAuditoria()).toEqual([]);
+  });
+});
+
+describe("etiquetaDeTablaAuditada", () => {
+  it("usa la etiqueta de TABLAS_AUDITADAS", () => {
+    expect(etiquetaDeTablaAuditada("perfiles")).toBe("Perfiles de usuario");
+    expect(etiquetaDeTablaAuditada("rol_permiso")).toBe("Permisos por rol");
+  });
+
+  it("una tabla fuera de la lista se lee sin guiones bajos, no cruda", () => {
+    expect(etiquetaDeTablaAuditada("tabla_nueva_auditada")).toBe("Tabla nueva auditada");
+  });
+});
+
+describe("catalogoDeTablas", () => {
+  it("sin tablas desconocidas devuelve TABLAS_AUDITADAS tal cual", () => {
+    expect(catalogoDeTablas(EVENTOS)).toBe(TABLAS_AUDITADAS);
+  });
+
+  it("agrega una sola vez cada tabla que no esta en la lista", () => {
+    const catalogo = catalogoDeTablas([
+      ...EVENTOS,
+      { id: 4, tablaAfectada: "tabla_nueva" },
+      { id: 5, tablaAfectada: "tabla_nueva" },
+    ]);
+
+    expect(catalogo).toHaveLength(TABLAS_AUDITADAS.length + 1);
+    expect(catalogo.at(-1)).toEqual({ value: "tabla_nueva", label: "Tabla nueva" });
   });
 });
 

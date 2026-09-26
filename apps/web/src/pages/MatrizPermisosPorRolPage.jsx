@@ -1,59 +1,42 @@
-import { Info, ShieldCheck } from "lucide-react";
+import { Check, Eye, ShieldCheck } from "lucide-react";
 import { Alert, Form, Table } from "react-bootstrap";
+import { Link } from "react-router-dom";
 
 import {
   esAdministrador,
   esConsultivo,
+  ESTADOS_DE_ACCESO,
   ETIQUETAS_ROL,
-  MODULOS,
-  puedeNavegarModuloDelPermiso,
-  TODOS_LOS_ROLES,
-  useMatrizPermisosPorRol,
+  useMatrizDeAccesoPorRol,
 } from "@ecopac/shared";
 
 import Card from "../components/Card";
 import ErrorState from "../components/ErrorState";
+import IconoModulo from "../components/IconoModulo";
 import LoadingState from "../components/LoadingState";
 import PageHeader from "../components/PageHeader";
 import ScreenContainer from "../components/ScreenContainer";
 import StatCard from "../components/StatCard";
 import "./permisos.css";
 
-// Matriz de permisos por rol (issue #638): que permiso trae cada rol por defecto (rol_permiso,
-// migracion 00003), antes de solo lectura y ahora editable solo para administrador (00139).
+// Matriz de acceso a modulos por rol (migracion 00148).
 //
-// SEGUNDA PASADA DE DISENO (issue #864). Eran nueve tarjetas, cada una con su tabla y su propio
-// ancho de columnas, asi que las cabeceras de rol no quedaban alineadas de una tarjeta a la
-// siguiente y la vista no se leia como una matriz. Ademas el aviso "Sin acceso al modulo" se
-// repetia celda por celda -hasta cuatro veces en una fila de un solo permiso- y la columna de la
-// administradora era un interruptor marcado y apagado que no explicaba por que.
+// Hasta la 00148 esta pantalla editaba rol_permiso -los nueve permisos finos por defecto de cada
+// rol- y no servia: conceder uno no le abria nada a nadie, porque el menu y los botones se decidian
+// por rol. Ahora dice una sola cosa, que es la que se le preguntaba: que modulos ve cada rol.
 //
-// Lo que se toma del prototipo (docs/DISENO.md; pantallas "Voluntarios y Medicos" e "Inventario"):
-// la fila de indicadores arriba -punto de color, rotulo en versalitas, cifra grande y pie-, los
-// rotulos de cabecera de tabla en versalitas apagadas, y las pastillas de estado en caja alta.
-// El prototipo no tiene pantalla de permisos -es anterior a la #638-, asi que lo que se sigue es
-// su lenguaje visual, no una pantalla suya.
+//   - "Por defecto": el modulo es del rol y lo usa con todo lo que su rol puede hacer.
+//   - Interruptor encendido: la administradora se lo abrio, en SOLO LECTURA. Ve la pantalla y sus
+//     datos; registrar, aprobar o eliminar sigue siendo de quien ya podia.
+//   - Las funciones de la administradora no se abren aqui: se delegan a una persona concreta desde
+//     Colaboradores > Permisos (usuario_permiso).
 //
-// `ETIQUETAS_MODULO`/`ACENTOS_MODULO` calcan la misma derivacion que ya usa
-// ModalPermisosUsuario.jsx a partir de MODULOS (navegacion.js): item.modulo coincide a proposito
-// con la columna `modulo` de la tabla `permisos`.
-const ETIQUETAS_MODULO = Object.fromEntries(
-  MODULOS.filter((item) => item.modulo).map((item) => [item.modulo, item.nombre]),
-);
-
-const ACENTOS_MODULO = Object.fromEntries(
-  MODULOS.filter((item) => item.modulo).map((item) => [
-    item.modulo,
-    `var(--accent-${item.id}, var(--color-primary))`,
-  ]),
-);
+// Matriz de permisos y Bitacora no aparecen: se quedan siempre en la administradora (restriccion
+// chk_rol_modulo_modulo de la 00148).
 
 /**
- * Acento de la tarjeta de resumen de cada rol.
- *
- * No es un color por rol elegido a ojo: son los tres grupos que ya declara
- * packages/shared/usuarios/roles.js -ROLES_ADMINISTRATIVOS, ROLES_CONSULTIVOS y ROLES_DE_CAMPO-,
- * que es la unica agrupacion de roles que el sistema reconoce.
+ * Acento de la tarjeta de resumen de cada rol: los tres grupos que declara usuarios/roles.js, que
+ * es la unica agrupacion de roles que el sistema reconoce.
  */
 function acentoDeRol(rol) {
   if (esAdministrador(rol)) return "var(--color-primary)";
@@ -61,64 +44,19 @@ function acentoDeRol(rol) {
   return "var(--color-warning)";
 }
 
-const EXPLICACION_COLUMNA_ADMINISTRADOR =
-  "La administradora siempre tiene acceso completo a todo el sistema, sin importar esta " +
-  "casilla: marcarla o desmarcarla no cambia lo que puede hacer.";
+const EXPLICACION = {
+  [ESTADOS_DE_ACCESO.SIEMPRE]: "La administradora ve y usa todos los módulos, siempre.",
+  [ESTADOS_DE_ACCESO.POR_DEFECTO]:
+    "Es un módulo del rol: lo usa con todo lo que su rol puede hacer. No se cierra desde aquí.",
+};
 
-/**
- * Encontrado probando en vivo (issue #638): conceder un permiso a un rol que ese modulo no le
- * muestra en el menu no tiene ningun efecto -el rol nunca llega a la pantalla donde importaria-.
- * Se advierte en vez de bloquear: sigue siendo un valor real y guardado, por si el modulo se
- * abre a ese rol mas adelante.
- *
- * Desde la #864 el aviso vive en la cabecera de la columna y no en cada celda: es una propiedad
- * del par (rol, modulo), no de la celda, asi que repetirlo por fila solo hacia ruido.
- */
-function explicacionSinAcceso(rol) {
-  const etiqueta = ETIQUETAS_ROL[rol] ?? rol;
-  return `${etiqueta} no ve este módulo en el sistema, así que estos permisos no tendrían ningún efecto aunque queden marcados.`;
-}
+function CeldaDeAcceso({ fila, celda, enProceso, aviso, onAlternar }) {
+  const etiquetaRol = ETIQUETAS_ROL[celda.rol] ?? celda.rol;
 
-/** Cuantos permisos de esta lista tiene concedidos el rol. La administradora los tiene todos. */
-function concedidosDe(permisos, rol) {
-  if (esAdministrador(rol)) return permisos.length;
-  return permisos.filter((permiso) => permiso.rolesConcedidos?.has(rol)).length;
-}
-
-function CabeceraDeRol({ rol, permisos, modulo }) {
-  const sinAcceso = !esAdministrador(rol) && !puedeNavegarModuloDelPermiso(rol, modulo);
-  const concedidos = concedidosDe(permisos, rol);
-
-  return (
-    <th scope="col" className={`matriz-col-rol${sinAcceso ? " matriz-col-rol--sin-acceso" : ""}`}>
-      <span className="matriz-rol-nombre">{ETIQUETAS_ROL[rol] ?? rol}</span>
-      {sinAcceso ? (
-        /* El rotulo va corto -- "Sin acceso" y no "Sin acceso al modulo" -- porque la columna
-           mide lo mismo que las otras cuatro y el texto largo la ensanchaba, que es justo lo que
-           desalineaba las cabeceras entre tarjetas. La frase entera vive en el title. */
-        <span className="permiso-sin-efecto" title={explicacionSinAcceso(rol)}>
-          <Info size={12} aria-hidden="true" />
-          Sin acceso
-        </span>
-      ) : (
-        <span className="matriz-rol-conteo">
-          {concedidos} de {permisos.length}
-        </span>
-      )}
-    </th>
-  );
-}
-
-function CasillaDePermiso({ rol, permiso, enProceso, avisoSinEfecto, onCambiar }) {
-  const concedido = permiso.rolesConcedidos?.has(rol) ?? false;
-  const sinAcceso = !esAdministrador(rol) && !puedeNavegarModuloDelPermiso(rol, permiso.modulo);
-
-  // La administradora no lleva interruptor: lo llevaba marcado y deshabilitado, que se lee como
-  // "esto se podria cambiar y alguien lo bloqueo". Es un hecho del sistema, no una casilla.
-  if (esAdministrador(rol)) {
+  if (celda.estado === ESTADOS_DE_ACCESO.SIEMPRE) {
     return (
-      <td className="text-center" data-label={ETIQUETAS_ROL[rol] ?? rol}>
-        <span className="matriz-siempre" title={EXPLICACION_COLUMNA_ADMINISTRADOR}>
+      <td className="text-center" data-label={etiquetaRol}>
+        <span className="matriz-siempre" title={EXPLICACION[celda.estado]}>
           <ShieldCheck size={12} aria-hidden="true" />
           Siempre
         </span>
@@ -126,122 +64,131 @@ function CasillaDePermiso({ rol, permiso, enProceso, avisoSinEfecto, onCambiar }
     );
   }
 
-  return (
-    <td className="text-center" data-label={ETIQUETAS_ROL[rol] ?? rol}>
-      {/* En pantalla angosta la cabecera de la tabla no se dibuja, asi que el aviso de "este rol
-          no ve el modulo" tiene que volver a la celda o se pierde. Es el mismo DOM en las dos
-          anchuras: el CSS lo esconde en escritorio, donde ya lo dice la cabecera. */}
-      {sinAcceso && (
-        <span
-          className="permiso-sin-efecto matriz-sin-acceso-celda"
-          title={explicacionSinAcceso(rol)}
-        >
-          <Info size={12} aria-hidden="true" />
-          Sin acceso
+  if (celda.estado === ESTADOS_DE_ACCESO.POR_DEFECTO) {
+    return (
+      <td className="text-center" data-label={etiquetaRol}>
+        <span className="matriz-por-defecto" title={EXPLICACION[celda.estado]}>
+          <Check size={12} aria-hidden="true" />
+          Por defecto
         </span>
-      )}
-      <Form.Check
-        type="switch"
-        className="d-inline-block"
-        checked={concedido}
-        disabled={enProceso}
-        onChange={() => onCambiar(rol, permiso.clave, concedido)}
-        aria-label={`${permiso.clave} para ${ETIQUETAS_ROL[rol] ?? rol}`}
-      />
-      {avisoSinEfecto?.rol === rol && avisoSinEfecto?.clave === permiso.clave && (
-        <div className="text-danger small">{avisoSinEfecto.mensaje}</div>
+      </td>
+    );
+  }
+
+  const abierto = celda.estado === ESTADOS_DE_ACCESO.ABIERTO;
+
+  return (
+    <td className="text-center" data-label={etiquetaRol}>
+      <div className="d-inline-flex align-items-center gap-2">
+        <Form.Check
+          type="switch"
+          className="d-inline-block mb-0"
+          checked={abierto}
+          disabled={enProceso}
+          onChange={() => onAlternar(celda.rol, fila.modulo, abierto)}
+          aria-label={`${fila.nombre} para ${etiquetaRol}`}
+        />
+        {abierto && (
+          <span className="matriz-solo-lectura" title="Ve el módulo sin registrar ni aprobar.">
+            <Eye size={12} aria-hidden="true" />
+            Solo ver
+          </span>
+        )}
+      </div>
+      {aviso?.rol === celda.rol && aviso?.modulo === fila.modulo && (
+        <div className="text-danger small">{aviso.mensaje}</div>
       )}
     </td>
   );
 }
 
 export default function MatrizPermisosPorRolPage() {
-  const { modulos, cargando, error, celdaEnProceso, avisoSinEfecto, alternar } =
-    useMatrizPermisosPorRol();
+  const {
+    filas,
+    modulosPorRol,
+    totalDeModulos,
+    cargando,
+    error,
+    celdaEnProceso,
+    avisoSinEfecto,
+    alternar,
+  } = useMatrizDeAccesoPorRol();
 
-  const todosLosPermisos = modulos.flatMap((grupo) => grupo.permisos);
+  const roles = filas[0]?.celdas.map((celda) => celda.rol) ?? [];
 
   return (
     <ScreenContainer>
       <PageHeader
-        title="Matriz de permisos por rol"
-        subtitle="Qué puede hacer cada rol por defecto, y quién lo cambió"
+        title="Acceso a módulos por rol"
+        subtitle="Qué módulos ve cada rol, además de los suyos"
       />
 
       <Alert variant="info">
-        Esta pantalla cambia lo que un rol puede hacer <strong>por defecto</strong>. Marcar o quitar
-        una casilla aquí no da ni quita acceso por sí sola: la protección real la aplica el sistema
-        del lado del servidor, no esta pantalla. Si el sistema todavía no usa un permiso para
-        decidir algo, cambiarlo aquí no tendrá ningún efecto.
+        Abrir un módulo a un rol le deja <strong>ver</strong> sus pantallas y sus datos, sin
+        registrar, aprobar ni eliminar. Las funciones de la administradora (aprobar movimientos,
+        gestionar jornadas o proyectos, registrar donaciones...) se delegan a una persona concreta
+        desde <Link to="/colaboradores">Colaboradores</Link>, en sus permisos.
       </Alert>
 
       {error && <ErrorState message={error.mensaje} />}
-      {cargando && <LoadingState />}
+      {cargando && filas.length === 0 && <LoadingState />}
 
-      {!cargando && todosLosPermisos.length > 0 && (
-        // El resumen contesta de un vistazo la pregunta con la que se entra a esta pantalla
-        // -cuanto puede hacer cada rol-, que antes obligaba a contar interruptores en nueve
-        // tablas.
-        <div className="ec-kpis matriz-resumen">
-          {TODOS_LOS_ROLES.map((rol) => (
-            <StatCard
-              key={rol}
-              label={ETIQUETAS_ROL[rol] ?? rol}
-              value={concedidosDe(todosLosPermisos, rol)}
-              caption={`de ${todosLosPermisos.length} permisos`}
-              accent={acentoDeRol(rol)}
-            />
-          ))}
-        </div>
-      )}
+      {filas.length > 0 && (
+        <>
+          <div className="ec-kpis matriz-resumen">
+            {roles.map((rol) => (
+              <StatCard
+                key={rol}
+                label={ETIQUETAS_ROL[rol] ?? rol}
+                value={modulosPorRol[rol]}
+                caption={`de ${totalDeModulos} módulos`}
+                accent={acentoDeRol(rol)}
+              />
+            ))}
+          </div>
 
-      {!cargando &&
-        modulos.map(({ modulo, permisos }) => (
-          <div className="mb-3" key={modulo}>
-            <Card
-              title={ETIQUETAS_MODULO[modulo] ?? modulo}
-              accent={ACENTOS_MODULO[modulo] ?? "var(--color-primary)"}
-            >
-              <Table responsive hover className="align-middle mb-0 matriz-permisos">
-                <thead>
-                  <tr>
-                    <th scope="col">Permiso</th>
-                    {TODOS_LOS_ROLES.map((rol) => (
-                      <CabeceraDeRol key={rol} rol={rol} permisos={permisos} modulo={modulo} />
+          <Card>
+            <Table responsive hover className="align-middle mb-0 matriz-permisos">
+              <thead>
+                <tr>
+                  <th scope="col">Módulo</th>
+                  {roles.map((rol) => (
+                    <th key={rol} scope="col" className="matriz-col-rol">
+                      <span className="matriz-rol-nombre">{ETIQUETAS_ROL[rol] ?? rol}</span>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {filas.map((fila) => (
+                  <tr key={fila.id}>
+                    <th scope="row" className="matriz-permiso">
+                      <span className="matriz-permiso-descripcion d-flex align-items-center gap-2">
+                        <IconoModulo nombre={fila.icono} size={16} />
+                        {fila.nombre}
+                      </span>
+                      <span className="matriz-permiso-clave">{fila.descripcion}</span>
+                    </th>
+                    {fila.celdas.map((celda) => (
+                      <CeldaDeAcceso
+                        key={celda.rol}
+                        fila={fila}
+                        celda={celda}
+                        enProceso={
+                          celdaEnProceso?.rol === celda.rol &&
+                          celdaEnProceso?.modulo === fila.modulo
+                        }
+                        aviso={avisoSinEfecto}
+                        onAlternar={alternar}
+                      />
                     ))}
                   </tr>
-                </thead>
-                <tbody>
-                  {permisos.map((permiso) => (
-                    <tr key={permiso.clave}>
-                      <th scope="row" className="matriz-permiso">
-                        <span className="matriz-permiso-descripcion">
-                          {permiso.descripcion || permiso.clave}
-                        </span>
-                        {/* La clave en monoespaciada porque es un identificador que se lee
-                            caracter por caracter (docs/DISENO.md, "Tipografia"), y porque es
-                            exactamente lo que aparece despues en la bitacora de auditoria. */}
-                        <code className="matriz-permiso-clave">{permiso.clave}</code>
-                      </th>
-                      {TODOS_LOS_ROLES.map((rol) => (
-                        <CasillaDePermiso
-                          key={rol}
-                          rol={rol}
-                          permiso={permiso}
-                          enProceso={
-                            celdaEnProceso?.rol === rol && celdaEnProceso?.clave === permiso.clave
-                          }
-                          avisoSinEfecto={avisoSinEfecto}
-                          onCambiar={alternar}
-                        />
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </Table>
-            </Card>
-          </div>
-        ))}
+                ))}
+              </tbody>
+            </Table>
+          </Card>
+        </>
+      )}
     </ScreenContainer>
   );
 }

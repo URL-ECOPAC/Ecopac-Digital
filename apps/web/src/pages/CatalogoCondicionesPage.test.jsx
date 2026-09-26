@@ -58,6 +58,7 @@ function estado(extra = {}) {
     permitido: true,
     puedeCrear: true,
     puedeMantener: true,
+    puedeRetirar: true,
     crear: vi.fn(async () => ({ ok: true })),
     editar: vi.fn(async () => ({ ok: true })),
     alternarVigencia: vi.fn(async () => ({ ok: true })),
@@ -122,6 +123,17 @@ describe("CatalogoCondicionesPage", () => {
 
     expect(screen.getByText("Editar condición")).toBeInTheDocument();
     expect(screen.getByText("Retirar")).toBeInTheDocument();
+  });
+
+  // 00148: el personal de campo mantiene el catalogo, pero retirar es de la administradora.
+  it("quien mantiene sin poder retirar abre la fila y no ve Retirar", () => {
+    estado({ puedeMantener: true, puedeRetirar: false });
+    render(<CatalogoCondicionesPage />);
+
+    fireEvent.click(screen.getByText("Diabetes"));
+
+    expect(screen.getByText("Editar condición")).toBeInTheDocument();
+    expect(screen.queryByText("Retirar")).not.toBeInTheDocument();
   });
 
   it("una condicion ya retirada se ofrece reactivar, no retirar de nuevo", () => {

@@ -20,6 +20,7 @@ import {
   crearTransporte,
   leerConfiguracionSmtp,
 } from "../_shared/correo.ts";
+import { reportarErrorDeFuncion } from "../_shared/errores.ts";
 
 // Mismo shape que COLUMNAS_DEL_PERFIL en packages/shared/usuarios/api.js. Se duplica: esta
 // funcion corre en Deno, fuera del bundle de shared, y las Edge Functions de este proyecto
@@ -58,7 +59,7 @@ export async function manejarSolicitud(
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
   if (!supabaseUrl || !anonKey || !serviceRoleKey) {
-    console.error("invitar-usuario: faltan variables de entorno de Supabase.");
+    await reportarErrorDeFuncion("invitar-usuario", "faltan variables de entorno de Supabase");
     return respuestaDeError(
       req,
       500,
@@ -218,9 +219,10 @@ export async function manejarSolicitud(
         .eq("id", idNuevoUsuario);
 
       if (errorDeTelefono) {
-        console.error(
-          "invitar-usuario: no se pudo guardar el telefono:",
-          errorDeTelefono.message,
+        await reportarErrorDeFuncion(
+          "invitar-usuario",
+          "no se pudo guardar el telefono",
+          errorDeTelefono,
         );
       }
     }
@@ -314,9 +316,10 @@ export async function manejarSolicitud(
     }
 
     if (errorDeCorreo) {
-      console.error(
-        "invitar-usuario: no se pudo enviar el correo para establecer contrasena:",
-        errorDeCorreo.message,
+      await reportarErrorDeFuncion(
+        "invitar-usuario",
+        "no se pudo enviar el correo para establecer contrasena",
+        errorDeCorreo,
       );
     }
 
@@ -338,7 +341,7 @@ export async function manejarSolicitud(
       correoEnviado: !errorDeCorreo,
     });
   } catch (error) {
-    console.error("invitar-usuario: error inesperado.", error);
+    await reportarErrorDeFuncion("invitar-usuario", "error inesperado", error);
     return respuestaDeError(
       req,
       500,

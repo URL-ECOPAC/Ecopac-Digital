@@ -80,13 +80,15 @@ describe("cambiosDeDiagnosticos", () => {
 });
 
 describe("permisosDeConsulta", () => {
-  it("un voluntario toma signos nuevos pero no los corrige ni registra la consulta", () => {
+  // 00148: el colaborador corrige el triaje que toma; la consulta y la receta siguen siendo del
+  // medico.
+  it("un voluntario toma y corrige signos, pero no registra la consulta", () => {
     expect(permisosDeConsulta(ROLES.VOLUNTARIO, null, "vol-1")).toEqual({
       signos: true,
       consulta: false,
       receta: false,
     });
-    expect(permisosDeConsulta(ROLES.VOLUNTARIO, visita, "vol-1").signos).toBe(false);
+    expect(permisosDeConsulta(ROLES.VOLUNTARIO, visita, "vol-1").signos).toBe(true);
   });
 
   it("un medico corrige su propia consulta y no la de otro", () => {

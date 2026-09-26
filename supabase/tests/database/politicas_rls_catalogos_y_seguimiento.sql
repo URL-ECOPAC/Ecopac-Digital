@@ -244,36 +244,36 @@ SELECT is_empty(
   'NEGATIVA padecimientos_cronicos DELETE: el medico NO borra, solo el administrador'
 );
 
+-- 00148: el colaborador ve pacientes por completo, sus padecimientos incluidos.
 SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000221004';
 
-SELECT is(
-  (SELECT count(*)::int FROM padecimientos_cronicos), 0,
-  'NEGATIVA padecimientos_cronicos SELECT: el voluntario no lee informacion clinica'
+SELECT ok(
+  (SELECT count(*)::int FROM padecimientos_cronicos) > 0,
+  'POSITIVA padecimientos_cronicos SELECT: el voluntario lee los padecimientos (00148)'
 );
 
 -- ============================================================================
--- principios_activos: autenticados leen; solo administrador escribe (4 politicas)
+-- principios_activos: autenticados leen; administrador y personal de campo crean y corrigen;
+-- solo administrador borra (4 politicas)
 -- ============================================================================
 SELECT ok(
   (SELECT count(*) FROM principios_activos) > 0,
   'POSITIVA principios_activos SELECT: un voluntario lee el catalogo'
 );
 
--- Un INSERT que no pasa el WITH CHECK de la politica LANZA 42501; no devuelve cero filas.
--- La diferencia importa al escribir la prueba: los UPDATE y DELETE de mas abajo si se comprueban
--- con is_empty(), porque ahi la politica filtra por USING y la sentencia corre sin afectar nada.
-SELECT throws_ok(
-  $$ INSERT INTO principios_activos (nombre) VALUES ('Intento 221') $$,
-  '42501',
-  NULL,
-  'NEGATIVA principios_activos INSERT: el voluntario no crea principios'
+SELECT lives_ok(
+  $$ INSERT INTO principios_activos (id, nombre)
+     VALUES ('73000000-0000-0000-0000-000000221002', 'Principio del voluntario 221') $$,
+  'POSITIVA principios_activos INSERT: el voluntario crea un principio (00148)'
 );
 
-SELECT is_empty(
+SELECT isnt_empty(
   $$ UPDATE principios_activos SET nombre = 'Cambiado 221'
      WHERE id = '73000000-0000-0000-0000-000000221001' RETURNING id $$,
-  'NEGATIVA principios_activos UPDATE: el voluntario no edita el catalogo'
+  'POSITIVA principios_activos UPDATE: el voluntario corrige el catalogo (00148)'
 );
+
+-- Un DELETE que no pasa el USING no lanza: corre y no afecta ninguna fila. Por eso is_empty().
 
 SELECT is_empty(
   $$ DELETE FROM principios_activos WHERE id = '73000000-0000-0000-0000-000000221001' RETURNING id $$,
@@ -288,7 +288,7 @@ SELECT lives_ok(
 );
 
 -- ============================================================================
--- medicamento_principio: autenticados leen; solo administrador asocia (2 politicas)
+-- medicamento_principio: autenticados leen; administrador y personal de campo asocian (2 politicas)
 -- ============================================================================
 SELECT lives_ok(
   $$ INSERT INTO medicamento_principio (medicamento_id, principio_id)
@@ -304,20 +304,21 @@ SELECT ok(
   'POSITIVA medicamento_principio SELECT: un voluntario lee la composicion'
 );
 
-SELECT throws_ok(
+SELECT lives_ok(
   $$ INSERT INTO medicamento_principio (medicamento_id, principio_id)
-     VALUES ('74000000-0000-0000-0000-000000221001', '73000000-0000-0000-0000-000000221001') $$,
-  '42501',
-  NULL,
-  'NEGATIVA medicamento_principio INSERT: el voluntario no asocia principios'
+     VALUES ('74000000-0000-0000-0000-000000221001', '73000000-0000-0000-0000-000000221002') $$,
+  'POSITIVA medicamento_principio INSERT: el voluntario asocia un principio (00148)'
 );
 
 -- ============================================================================
--- consulta_diagnostico: medico y administrador leen y registran (2 politicas)
+-- consulta_diagnostico: medico y administrador registran; desde la 00148 el colaborador tambien
+-- lee (2 politicas)
 -- ============================================================================
+SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000221002';
+
 SELECT is(
   (SELECT count(*)::int FROM consulta_diagnostico), 0,
-  'NEGATIVA consulta_diagnostico SELECT: el voluntario no lee diagnosticos de una consulta'
+  'NEGATIVA consulta_diagnostico SELECT: un rol consultivo no lee diagnosticos de una consulta'
 );
 
 SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000221003';

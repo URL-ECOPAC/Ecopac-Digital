@@ -10,16 +10,16 @@
 // Los dos catalogos comparten archivo porque comparten exactamente las mismas politicas y se
 // administran desde la misma pantalla de configuracion de inventario.
 
-import { esAdministrador, ROLES } from "../usuarios/roles.js";
+import { esAdministrador, ROLES, ROLES_DE_CAMPO } from "../usuarios/roles.js";
 
 /**
  * Puede crear o editar bodegas.
  *
- * La politica "Solo Administrador puede modificar bodegas" (00034) es FOR ALL y exige que el
- * perfil de auth.uid() tenga rol 'administrador'.
+ * Espejo de las politicas de INSERT y UPDATE de la 00148: administrador y personal de campo. Nadie
+ * las borra (no hay DELETE).
  */
 export function puedeAdministrarBodegas(rol) {
-  return esAdministrador(rol);
+  return esAdministrador(rol) || ROLES_DE_CAMPO.includes(rol);
 }
 
 /**
@@ -32,9 +32,9 @@ export function puedeVerBodegas(rol) {
   return Object.values(ROLES).includes(rol);
 }
 
-/** Espejo de puedeAdministrarBodegas: la politica de proveedores de la 00034 es identica. */
+/** Espejo de puedeAdministrarBodegas: las politicas de proveedores de la 00148 son identicas. */
 export function puedeAdministrarProveedores(rol) {
-  return esAdministrador(rol);
+  return esAdministrador(rol) || ROLES_DE_CAMPO.includes(rol);
 }
 
 /** Espejo de puedeVerBodegas. */

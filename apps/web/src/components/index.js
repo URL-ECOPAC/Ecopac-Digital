@@ -31,6 +31,7 @@ export { default as BotonImprimir } from "./BotonImprimir";
 export { default as descargarCSV } from "./descargarCSV";
 
 export { default as FilterBar } from "./FilterBar";
+export { default as BotonLimpiarFiltros } from "./BotonLimpiarFiltros";
 export { default as DataList } from "./DataList";
 export { default as StatusChip } from "./StatusChip";
 export { default as Card } from "./Card";

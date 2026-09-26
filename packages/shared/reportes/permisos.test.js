@@ -4,8 +4,9 @@
 // arrastra @supabase/supabase-js y el modulo de entorno, y estas pruebas tienen que correr sin
 // .env y sin conexion. Mismo patron que jornadas/permisos.test.js.
 
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
+import { fijarAccesoDeSesion, limpiarAccesoDeSesion } from "../usuarios/acceso.js";
 import { ROLES } from "../usuarios/roles.js";
 import {
   permisosDeReportes,
@@ -49,8 +50,8 @@ describe("permisos de reportes", () => {
   });
 
   it("agrupa los permisos para que un hook no llame a las funciones sueltas", () => {
-    // Los dos roles consultivos, identicos: cuatro de los cinco reportes. El de jornada no,
-    // porque la 00054 les retiro el acceso a las tablas clinicas que agrega.
+    // Los dos roles consultivos, identicos: los cinco reportes. El de jornada entra con la 00148,
+    // que lo agrega en la base (fn_reporte_jornada) sin darles las tablas clinicas.
     //
     // `puedeVerReporteDeVencimientos` lo agrego la issue #862 al mezclar: el quinto reporte no
     // tenia guarda propia y el hook usaba la de los indicadores de impacto, que es otra regla.
@@ -58,7 +59,7 @@ describe("permisos de reportes", () => {
       expect(permisosDeReportes(rol)).toEqual({
         puedeVerIndicadoresDeImpacto: true,
         puedeVerReporteDePacientes: true,
-        puedeVerReporteJornada: false,
+        puedeVerReporteJornada: true,
         puedeVerReporteDeInventario: true,
         puedeVerReporteDeVencimientos: true,
       });
@@ -75,15 +76,36 @@ describe("permisos de reportes", () => {
 
   // Las dos guardas que agrego la issue #693 al conectar los cuatro reportes a su API.
   describe("reporte de jornada", () => {
-    it("lo ven administrador y medico, que son quienes leen las tablas clinicas (00033)", () => {
-      expect(puedeVerReporteJornada(ROLES.ADMINISTRADOR)).toBe(true);
-      expect(puedeVerReporteJornada(ROLES.MEDICO)).toBe(true);
+    it("lo ven administrador, medico y, desde la 00148, los dos roles consultivos", () => {
+      for (const rol of [
+        ROLES.ADMINISTRADOR,
+        ROLES.MEDICO,
+        ROLES.JUNTA_DIRECTIVA,
+        ROLES.SOCIO_FUNDADOR,
+      ]) {
+        expect(puedeVerReporteJornada(rol)).toBe(true);
+      }
     });
 
-    it("no lo ven los roles consultivos ni el voluntario", () => {
-      expect(puedeVerReporteJornada(ROLES.JUNTA_DIRECTIVA)).toBe(false);
-      expect(puedeVerReporteJornada(ROLES.SOCIO_FUNDADOR)).toBe(false);
+    it("no lo ve el voluntario", () => {
       expect(puedeVerReporteJornada(ROLES.VOLUNTARIO)).toBe(false);
+    });
+  });
+
+  describe("delegacion y matriz (00148)", () => {
+    afterEach(() => {
+      limpiarAccesoDeSesion();
+    });
+
+    it("quien tiene reportes.exportar delegado consulta los reportes", () => {
+      fijarAccesoDeSesion({ rol: ROLES.MEDICO, permisos: ["reportes.exportar"] });
+      expect(puedeVerIndicadoresDeImpacto(ROLES.MEDICO)).toBe(true);
+    });
+
+    it("el rol al que la matriz le abrio Reportes tambien", () => {
+      fijarAccesoDeSesion({ rol: ROLES.VOLUNTARIO, modulos: ["reportes"] });
+      expect(puedeVerReporteDePacientes(ROLES.VOLUNTARIO)).toBe(true);
+      expect(puedeVerReporteJornada(ROLES.VOLUNTARIO)).toBe(true);
     });
   });
 

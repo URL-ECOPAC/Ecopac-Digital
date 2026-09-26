@@ -12,6 +12,7 @@ import {
 import {
   puedeCrearComunidad,
   puedeEditarComunidad,
+  puedeRetirarComunidad,
   puedeVerCatalogoComunidades,
 } from "./permisos.js";
 
@@ -41,6 +42,8 @@ export function useCatalogoComunidades({ rol } = {}) {
     puedeVer: puedeVerCatalogoComunidades(rol),
     puedeCrear: puedeCrearComunidad(rol),
     puedeEditar: puedeEditarComunidad(rol),
+    // Retirar (es_vigente = false) es solo de la administradora (00148).
+    puedeRetirar: puedeRetirarComunidad(rol),
   };
 
   useEffect(() => {
@@ -85,6 +88,11 @@ export function useCatalogoComunidades({ rol } = {}) {
     async (id, datos) => {
       const puedeGuardar = id ? permisos.puedeEditar : permisos.puedeCrear;
       if (!puedeGuardar) return { ok: false };
+      // Retirar es pasar de vigente a no vigente; editar una ya retirada no lo es.
+      const estabaVigente = comunidades.find((comunidad) => comunidad.id === id)?.esVigente;
+      if (id && estabaVigente && datos?.esVigente === false && !permisos.puedeRetirar) {
+        return { ok: false };
+      }
 
       const errores = validarComunidad(datos);
       if (Object.keys(errores).length > 0) {
@@ -107,7 +115,7 @@ export function useCatalogoComunidades({ rol } = {}) {
       await cargar();
       return { ok: true };
     },
-    [permisos.puedeCrear, permisos.puedeEditar, cargar],
+    [permisos.puedeCrear, permisos.puedeEditar, permisos.puedeRetirar, comunidades, cargar],
   );
 
   // No pasa por guardar()/validarComunidad(): es un parche de un solo campo booleano, y
@@ -116,6 +124,7 @@ export function useCatalogoComunidades({ rol } = {}) {
   const alternarVigencia = useCallback(
     async (id, esVigenteActual) => {
       if (!permisos.puedeEditar) return { ok: false };
+      if (esVigenteActual && !permisos.puedeRetirar) return { ok: false };
 
       setEnviando(true);
       setError(null);
@@ -132,7 +141,7 @@ export function useCatalogoComunidades({ rol } = {}) {
       await cargar();
       return { ok: true };
     },
-    [permisos.puedeEditar, cargar],
+    [permisos.puedeEditar, permisos.puedeRetirar, cargar],
   );
 
   return {

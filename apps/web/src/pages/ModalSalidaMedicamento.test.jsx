@@ -151,12 +151,15 @@ describe("ModalSalidaMedicamento", () => {
     expect(onClose).toHaveBeenCalled();
   });
 
-  it("mientras carga, Registrar Salida esta deshabilitado y dice Registrando...", () => {
+  // El boton es el PrimaryButton del catalogo: mientras carga muestra el indicador de espera
+  // (aria-busy) en vez de cambiar el texto a mano.
+  it("mientras carga, Registrar salida esta deshabilitado y ocupado", () => {
     mockEstadoHook.cargando = true;
     pantalla();
 
-    const boton = screen.getByText("Registrando...");
+    const boton = screen.getByRole("button", { busy: true });
     expect(boton).toBeDisabled();
+    expect(boton).toHaveAttribute("type", "submit");
   });
 
   // Camino de error (issue #759/#777): si guardarSalida() falla, el modal se queda abierto con

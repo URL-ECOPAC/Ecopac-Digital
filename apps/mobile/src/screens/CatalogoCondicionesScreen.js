@@ -41,6 +41,7 @@ export default function CatalogoCondicionesScreen() {
     permitido,
     puedeCrear,
     puedeMantener,
+    puedeRetirar,
     crear,
     editar,
     alternarVigencia,
@@ -142,7 +143,8 @@ export default function CatalogoCondicionesScreen() {
           style={estilos.accion}
         />
 
-        {enEdicion?.condicion ? (
+        {/* Retirar es de la administradora (00148); reactivar, de quien mantiene el catalogo. */}
+        {enEdicion?.condicion && (!enEdicion.condicion.esVigente || puedeRetirar) ? (
           <SecondaryButton
             title={enEdicion.condicion.esVigente ? "Retirar del catálogo" : "Reactivar"}
             onPress={async () => {

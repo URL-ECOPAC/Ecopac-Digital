@@ -1,7 +1,7 @@
 import { SUBTIPOS_DE_RANGO, TIPOS_DE_FILTRO } from "@ecopac/shared";
+import BotonLimpiarFiltros from "./BotonLimpiarFiltros";
 import DateField from "./DateField";
 import NumberField from "./NumberField";
-import SecondaryButton from "./SecondaryButton";
 import Selector from "./Selector";
 import TextField from "./TextField";
 
@@ -92,8 +92,8 @@ function Rango({ campo, rango, onChange }) {
  * a la izquierda, o solo cuando habia algun filtro puesto, asi que el boton aparecia y
  * desaparecia moviendo la pantalla. Ahora:
  *
- *   - `onLimpiar`: el boton va SIEMPRE, al final de la ultima fila, deshabilitado mientras no
- *     haya nada que limpiar (`hayFiltros`).
+ *   - `onLimpiar`: el boton va SIEMPRE, al final de la ultima fila, gris y deshabilitado mientras
+ *     no haya nada que limpiar (`hayFiltros`) y en verde cuando si (BotonLimpiarFiltros.jsx).
  *   - `children`: controles de la pantalla que no son un filtro del descriptor ("Agrupar por")
  *     y van en la misma barra, antes del boton.
  */
@@ -164,16 +164,7 @@ export default function FilterBar({
 
       {children}
 
-      {onLimpiar && (
-        <div className="ec-filtros-limpiar">
-          <SecondaryButton
-            title="Limpiar filtros"
-            variant="neutra"
-            onClick={onLimpiar}
-            disabled={!hayFiltros}
-          />
-        </div>
-      )}
+      {onLimpiar && <BotonLimpiarFiltros onClick={onLimpiar} hayFiltros={hayFiltros} />}
     </div>
   );
 }

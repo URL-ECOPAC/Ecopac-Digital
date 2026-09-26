@@ -10,7 +10,11 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ESTADOS_DIAGNOSTICO } from "./catalogoDiagnosticos.columnas.js";
 import { FILTROS_CATALOGO_DIAGNOSTICOS_VACIOS } from "./catalogoDiagnosticos.filtros.js";
 import { activarDiagnostico, desactivarDiagnostico, listarDiagnosticos } from "./consultas.api.js";
-import { puedeAdministrarDiagnosticos, puedeVerCatalogoDiagnosticos } from "./permisos.js";
+import {
+  puedeAdministrarDiagnosticos,
+  puedeRetirarDiagnostico,
+  puedeVerCatalogoDiagnosticos,
+} from "./permisos.js";
 
 function quitarAcentos(texto) {
   return String(texto ?? "")
@@ -33,7 +37,7 @@ export function hayFiltrosDeCatalogoDiagnosticos(filtros = {}) {
  * @param {object} [opciones]
  * @param {string} [opciones.rol] Rol de la sesion; decide `permitido` y `puedeAdministrar`.
  * @returns {object} `{ filas, total, filtros, setFiltro, limpiarFiltros, hayFiltros, cargando,
- *   error, recargar, permitido, puedeAdministrar, alternarActivo, actualizandoId }`.
+ *   error, recargar, permitido, puedeAdministrar, puedeRetirar, alternarActivo, actualizandoId }`.
  */
 export function useCatalogoDiagnosticos({ rol } = {}) {
   const [filtros, setFiltros] = useState(FILTROS_CATALOGO_DIAGNOSTICOS_VACIOS);
@@ -44,6 +48,7 @@ export function useCatalogoDiagnosticos({ rol } = {}) {
 
   const permitido = puedeVerCatalogoDiagnosticos(rol);
   const puedeAdministrar = puedeAdministrarDiagnosticos(rol);
+  const puedeRetirar = puedeRetirarDiagnostico(rol);
 
   const cargar = useCallback(async () => {
     if (!permitido) {
@@ -84,11 +89,13 @@ export function useCatalogoDiagnosticos({ rol } = {}) {
 
   /**
    * Retira o reactiva un diagnostico (issue #639, criterio 3). No borra: alterna `activo` con
-   * desactivarDiagnostico()/activarDiagnostico() (consultas.api.js), que es la 00113.
+   * desactivarDiagnostico()/activarDiagnostico() (consultas.api.js), que es la 00113. Retirar es
+   * solo de la administradora (00148); reactivar, de quien mantiene el catalogo.
    */
   const alternarActivo = useCallback(
     async (diagnostico) => {
-      if (!puedeAdministrar || !diagnostico?.id) return { ok: false };
+      if (!diagnostico?.id) return { ok: false };
+      if (diagnostico.activo ? !puedeRetirar : !puedeAdministrar) return { ok: false };
 
       setActualizandoId(diagnostico.id);
       const accion = diagnostico.activo ? desactivarDiagnostico : activarDiagnostico;
@@ -103,7 +110,7 @@ export function useCatalogoDiagnosticos({ rol } = {}) {
       await cargar();
       return { ok: true };
     },
-    [puedeAdministrar, cargar],
+    [puedeAdministrar, puedeRetirar, cargar],
   );
 
   return {
@@ -118,6 +125,7 @@ export function useCatalogoDiagnosticos({ rol } = {}) {
     recargar: cargar,
     permitido,
     puedeAdministrar,
+    puedeRetirar,
     alternarActivo,
     actualizandoId,
     catalogos: { estadoDiagnostico: ESTADOS_DIAGNOSTICO },

@@ -188,7 +188,8 @@
 
 /* Campana del buzon (issue #755). El contador va en warning: una notificacion pide atencion pero
    no bloquea nada, que es justo lo que ese token significa en docs/DISENO.md. */
-.app-buzon {
+.app-buzon,
+.app-salir {
   align-items: center;
   background: none;
   border: 0;
@@ -205,6 +206,12 @@
 .app-buzon:focus-visible {
   background: color-mix(in srgb, var(--color-primary) 8%, transparent);
   color: var(--color-primary);
+}
+
+.app-salir:hover,
+.app-salir:focus-visible {
+  background: color-mix(in srgb, var(--color-danger) 8%, transparent);
+  color: var(--color-danger);
 }
 
 .app-buzon__contador {

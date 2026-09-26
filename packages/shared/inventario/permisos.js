@@ -19,7 +19,8 @@
 // permiso por rol, y cambiarla es una decision de producto que esta issue no pidio. Queda
 // anotado para quien la revise.
 
-import { esAdministrador, esConsultivo, ROLES } from "../usuarios/roles.js";
+import { accedeAModuloPorMatriz, tienePermisoFino } from "../usuarios/acceso.js";
+import { esAdministrador, esConsultivo, ROLES, ROLES_DE_CAMPO } from "../usuarios/roles.js";
 
 /**
  * Puede corregir la cantidad realmente entregada de un renglon de receta (issue #764).
@@ -53,12 +54,12 @@ export function puedeRegistrarMovimiento(rol) {
 /**
  * Puede aprobar o rechazar un movimiento pendiente.
  *
- * Espejo de la politica de UPDATE vigente (00048): solo administrador, sin excepcion de "nunca
- * lo que uno mismo registro" (esa restriccion la tenia la politica anterior de 00034 y 00048 la
- * quito a proposito, issue #410).
+ * Espejo de la politica de UPDATE vigente (00086/00106): la administradora, o quien tenga
+ * inventario.aprobar delegado por persona (usuarios/acceso.js). Sin excepcion de "nunca lo que uno
+ * mismo registro" (esa restriccion la tenia la politica de la 00034 y la 00048 la quito, #410).
  */
 export function puedeAprobarMovimiento(rol) {
-  return esAdministrador(rol);
+  return tienePermisoFino(rol, "inventario.aprobar");
 }
 
 /** Espejo de puedeAprobarMovimiento: la misma politica de UPDATE gobierna aprobar y rechazar. */
@@ -91,41 +92,36 @@ export function permisosDeMovimientos(rol) {
  * hacer su trabajo, aunque los dos vean el resto de un lote.
  */
 export function puedeVerValorizacion(rol) {
-  return esAdministrador(rol) || esConsultivo(rol);
+  // Espejo de puede_consultar_reportes() (00148), que es la guarda de la funcion desde entonces.
+  return (
+    esAdministrador(rol) ||
+    esConsultivo(rol) ||
+    tienePermisoFino(rol, "reportes.exportar") ||
+    accedeAModuloPorMatriz(rol, "reportes")
+  );
 }
 
 /**
- * Las pestanas de la pantalla de inventario que ve cada rol (issue #864, extendida por #859).
+ * Las pestanas de la pantalla de inventario que ve cada rol (issue #864, #859, 00148).
  *
- * El criterio 6 de la issue #864 le acota el inventario al medico a "solo catalogo, principios
- * activos y Mis movimientos", conservando el registro de ingresos y salidas -que son acciones de
- * la cabecera, no una pestana-. Lo que se le quita es lo que no le corresponde mirar ni decidir:
+ * Desde la 00148 medico y colaborador ven el inventario entero salvo la Validacion: registran
+ * movimientos -que siguen pasando por la validacion- y crean y corrigen catalogos. Hasta ahi el
+ * medico solo veia catalogo, principios activos, presentaciones y sus movimientos.
  *
- * - Lotes, Kardex y Bodegas y proveedores son la administracion de la bodega.
- * - Alertas de caducidad las atiende la administracion (fn_atender_alerta_caducidad, 00138, es
- *   `es_administrador()` en su propio cuerpo), y la notificacion le llega a ella (00138).
- * - Validacion es la bandeja donde se aprueban movimientos, y aprobar es `inventario.aprobar`:
- *   solo la administracion puede hacer algo con un pendiente (puedeAprobarMovimiento), asi que
- *   la #859 le retira la pestana a cualquier otro rol -antes solo se le quitaba al medico-, no
- *   solo el contador de pendientes que no puede resolver.
- *
- * Presentaciones (#859) se suma a la lista de todos: su politica de SELECT es de lectura abierta
- * (presentaciones.permisos.js, puedeVerPresentaciones), el mismo caso que principios activos.
+ * Validacion es la bandeja donde se aprueban movimientos, y aprobar es `inventario.aprobar`: la
+ * ve la administradora y quien lo tenga delegado (puedeAprobarMovimiento). Quien tiene el modulo
+ * abierto por la matriz lo ve en solo lectura: sin Mis movimientos, porque no registra.
  *
  * Vive aqui y no en la pantalla porque es una decision de negocio -- que le toca a cada rol --,
  * que es justo lo que packages/shared declara. La web la consume en InventarioPage.jsx.
  *
- * NO es una barrera: quien protege es RLS. Un medico que escriba la ruta a mano sigue viendo lo
- * que la base le entregue; lo que esto evita es ofrecerle pestanas que no va a poder usar.
+ * NO es una barrera: quien protege es RLS. Lo que esto evita es ofrecer pestanas que no se van a
+ * poder usar.
  *
  * @param {string} rol
  * @returns {string[]} ids de pestana, en el orden en que se dibujan.
  */
 export function pestanasDeInventario(rol) {
-  if (rol === ROLES.MEDICO) {
-    return ["catalogo", "principios-activos", "presentaciones", "mis-movimientos"];
-  }
-
   const pestanas = [
     "catalogo",
     "lotes",
@@ -140,7 +136,7 @@ export function pestanasDeInventario(rol) {
     pestanas.push("mis-movimientos");
   }
 
-  if (esAdministrador(rol)) {
+  if (puedeAprobarMovimiento(rol)) {
     pestanas.push("validacion");
   }
 
@@ -159,5 +155,6 @@ export function pestanasDeInventario(rol) {
  * (medicamentos.permisos.js, puedeAdministrarMedicamentos).
  */
 export function puedeDarDeAltaMedicamento(rol) {
-  return esAdministrador(rol) || rol === ROLES.MEDICO;
+  // 00148: tambien el colaborador, que crea en los catalogos de inventario.
+  return esAdministrador(rol) || ROLES_DE_CAMPO.includes(rol);
 }

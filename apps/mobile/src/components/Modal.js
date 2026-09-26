@@ -1,5 +1,6 @@
 import { Modal as ModalNativo, Pressable, StyleSheet, Text, View } from "react-native";
 import { colors, spacing, typography } from "@ecopac/ui-tokens";
+import { EnFormulario } from "./contextoDeFormulario";
 
 const MIN_TOUCH_HEIGHT = 48;
 
@@ -32,7 +33,7 @@ export default function Modal({ visible = false, onClose, title, children }) {
               </Pressable>
             </View>
           ) : null}
-          {children}
+          <EnFormulario>{children}</EnFormulario>
         </View>
       </View>
     </ModalNativo>

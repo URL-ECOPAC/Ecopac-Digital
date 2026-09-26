@@ -23,54 +23,66 @@
 // modulo como accesible y la consulta le devolvia cero filas, sin explicacion (mismo patron que
 // la issue #426 encontro en pacientes).
 
-import { ROLES, esAdministrador } from "../usuarios/roles.js";
+import { accedeAModuloPorMatriz, tienePermisoFino } from "../usuarios/acceso.js";
+import { ROLES, ROLES_DE_CAMPO, esAdministrador } from "../usuarios/roles.js";
 
-/** Rol que puede crear, editar y cambiar el estado de un proyecto: solo administrador (00039). */
+/** Rol que administra proyectos por defecto: solo administrador (00039). */
 export const ROLES_QUE_ADMINISTRAN_PROYECTOS = Object.freeze([ROLES.ADMINISTRADOR]);
 
-/** Puede crear, editar, cambiar de estado y asociar jornadas. */
+/**
+ * Puede crear, editar, cambiar de estado y asociar jornadas: la administradora o quien tenga
+ * `proyectos.gestionar` delegado por persona (00086, conectado en el cliente por la 00148).
+ */
 export function puedeAdministrarProyectos(rol) {
-  return ROLES_QUE_ADMINISTRAN_PROYECTOS.includes(rol);
+  return tienePermisoFino(rol, "proyectos.gestionar");
+}
+
+/**
+ * Quien ve el proyecto entero -hitos, bitacora, insumos, historial-: quien lo administra, y el rol
+ * al que la matriz le abrio Proyectos (en solo lectura). El personal de campo no: su detalle es de
+ * consulta (00148).
+ */
+function veElProyectoEntero(rol) {
+  return puedeAdministrarProyectos(rol) || accedeAModuloPorMatriz(rol, "proyectos");
 }
 
 /**
  * Puede ver el listado y la ficha de un proyecto.
  *
- * ISSUE #864, y es el reves exacto de lo que decia antes. Ahora son **administrador y medico**:
- *
- * - Los dos roles consultivos salen. Su unica pantalla es Reportes, y la 00141 les retira de
- *   paso la politica de SELECT sobre `proyectos` que les habia dado la 00080.
- * - Entra medico, pero **no ve todos los proyectos**: la 00141 amplia la politica de SELECT con
- *   los proyectos de las jornadas en las que participa. Esta funcion no puede expresar ese
- *   filtro -no sabe de que jornadas se trata-, y no le hace falta: decide si se dibuja la
- *   pantalla, y las filas las elige la base.
- *
- * El voluntario general se queda fuera: la issue solo nombra al medico.
+ * Administrador, personal de campo (00148: tambien el colaborador), quien gestiona proyectos por
+ * delegacion y el rol al que la matriz le abrio el modulo. El personal de campo **no ve todos**:
+ * solo los proyectos a los que pertenece -por su equipo o por una de sus jornadas,
+ * pertenece_a_proyecto()-. Esta funcion no puede expresar ese filtro y no le hace falta: decide si
+ * se dibuja la pantalla, y las filas las elige la base.
  */
 export function puedeVerProyectos(rol) {
-  return esAdministrador(rol) || rol === ROLES.MEDICO;
+  return esAdministrador(rol) || ROLES_DE_CAMPO.includes(rol) || veElProyectoEntero(rol);
 }
 
 /**
- * Puede ver los insumos y los gastos de un proyecto.
+ * Puede ver los insumos y los gastos de un proyecto, y su presupuesto en el resumen.
  *
- * Solo administrador (issue #864). El medico ve el proyecto de su jornada -que es, en que
- * estado esta, sus hitos- pero no lo que costo: `gastos` sigue sin politica de lectura para el
- * fuera de las jornadas en las que participa (00052), y los insumos son informacion de
- * planificacion que no le corresponde.
+ * El personal de campo no (issue #864, 00148): ve que es el proyecto, en que estado esta, su
+ * equipo y sus jornadas, no lo que costo.
  */
 export function puedeVerInsumosYGastosDeProyecto(rol) {
-  return esAdministrador(rol);
+  return veElProyectoEntero(rol);
 }
 
 /**
  * Puede ver el historial de cambios de estado del proyecto (proyecto_estado_historial, 00029).
- *
- * Solo administrador: es el espejo exacto de puedeVerHistorialJornada() (jornadas/permisos.js),
- * y la politica de SELECT de la 00039 sobre proyecto_estado_historial coincide -- issue #856.
+ * Espejo de su politica de SELECT desde la 00148.
  */
 export function puedeVerHistorialProyecto(rol) {
-  return esAdministrador(rol);
+  return veElProyectoEntero(rol);
+}
+
+/**
+ * Puede abrir el seguimiento de un proyecto -hitos y bitacora de avance-. El personal de campo no
+ * (00148): su detalle del proyecto es de consulta.
+ */
+export function puedeVerSeguimientoProyecto(rol) {
+  return veElProyectoEntero(rol);
 }
 
 /**
@@ -95,5 +107,6 @@ export function permisosDeProyectos(rol) {
     puedeGestionarInsumos: administra,
     puedeVerInsumosYGastos: puedeVerInsumosYGastosDeProyecto(rol),
     puedeVerHistorial: puedeVerHistorialProyecto(rol),
+    puedeVerSeguimiento: puedeVerSeguimientoProyecto(rol),
   };
 }

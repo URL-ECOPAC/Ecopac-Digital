@@ -154,6 +154,31 @@
   text-transform: uppercase;
 }
 
+/* "Por defecto": el modulo es del rol. Mismo dibujo que "Siempre", en el tono neutro: no se
+   cierra desde la matriz, pero tampoco es la administradora. */
+.matriz-por-defecto {
+  align-items: center;
+  background-color: color-mix(in srgb, var(--color-secondary) 12%, var(--color-surface));
+  border-radius: var(--radio-pill);
+  color: var(--color-text);
+  cursor: help;
+  display: inline-flex;
+  font-size: var(--texto-xxs);
+  font-weight: var(--peso-semibold);
+  gap: 0.3rem;
+  padding: 0.25rem 0.6rem;
+}
+
+/* Lo que la matriz abrio es de solo lectura: se dice junto al interruptor. */
+.matriz-solo-lectura {
+  align-items: center;
+  color: var(--color-info);
+  display: inline-flex;
+  font-size: var(--texto-xxs);
+  font-weight: var(--peso-semibold);
+  gap: 0.25rem;
+}
+
 /* En pantalla angosta la tabla no se desplaza en horizontal (docs/DISENO-MOVIL.md, regla 3):
    cada fila pasa a ser una ficha y cada celda dice a que rol pertenece. Es el mismo DOM, sin
    duplicar nada, asi que lo que lee un lector de pantalla no cambia. */

@@ -342,11 +342,12 @@ describe("permisos del triaje", () => {
     expect(puedeTomarTriaje(ROLES.JUNTA_DIRECTIVA)).toBe(false);
   });
 
-  it("corregirlo es mas estrecho: solo administrador y medico", () => {
-    // Espejo de la politica de UPDATE. Es la razon de que registrar y corregir sean dos
-    // funciones: el voluntario que tomo el triaje no puede arreglar su propio error de dedo.
+  it("corregirlo lo puede el personal de campo (00148); los consultivos no", () => {
+    // Espejo de la politica de UPDATE. Hasta la 00148 el voluntario que tomo el triaje no podia
+    // arreglar su propio error de dedo.
     expect(puedeCorregirTriaje(ROLES.ADMINISTRADOR)).toBe(true);
     expect(puedeCorregirTriaje(ROLES.MEDICO)).toBe(true);
-    expect(puedeCorregirTriaje(ROLES.VOLUNTARIO)).toBe(false);
+    expect(puedeCorregirTriaje(ROLES.VOLUNTARIO)).toBe(true);
+    expect(puedeCorregirTriaje(ROLES.JUNTA_DIRECTIVA)).toBe(false);
   });
 });

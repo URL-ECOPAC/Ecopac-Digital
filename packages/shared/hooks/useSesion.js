@@ -14,6 +14,24 @@ import {
 } from "../api/sesion.js";
 import { claveDeAlmacenamiento } from "../jornadas/useJornadaActiva.js";
 import { reportarError } from "../observabilidad/errores.js";
+import { fijarAccesoDeSesion, limpiarAccesoDeSesion } from "../usuarios/acceso.js";
+import { obtenerMisAccesos } from "../usuarios/permisos.api.js";
+
+/**
+ * Perfil y accesos de un usuario ya autenticado (00148): lo que evaluarPerfilDeSesion() dice del
+ * perfil, mas los modulos que la matriz le abrio a su rol y sus permisos finos efectivos. Sin los
+ * accesos la sesion no se da por resuelta: una persona con una funcion delegada se veria como una
+ * sin ella, y el menu no le mostraria el modulo donde la tiene que usar.
+ */
+async function resolverPerfilYAccesos(usuario) {
+  const evaluacion = await evaluarPerfilDeSesion(usuario);
+  if (evaluacion.error) return { ...evaluacion, accesos: null };
+
+  const { accesos, error } = await obtenerMisAccesos();
+  if (error) return { perfil: null, rol: null, accesos: null, error };
+
+  return { ...evaluacion, accesos };
+}
 
 const ESTADOS_DE_RESTAURACION = {
   CARGANDO: "cargando",
@@ -116,6 +134,7 @@ export function useSesion({ almacenamiento } = {}) {
     function limpiarSesion(error) {
       resolucion.current += 1;
       sinSesionPublicada.current = true;
+      limpiarAccesoDeSesion();
       cliente.auth.stopAutoRefresh();
       if (!activo.current) return;
       setSesion({ ...SIN_SESION, error: error ?? null });
@@ -155,7 +174,7 @@ export function useSesion({ almacenamiento } = {}) {
         }));
       }
 
-      const { perfil, error } = await evaluarPerfilDeSesion(usuario);
+      const { perfil, accesos, error } = await resolverPerfilYAccesos(usuario);
 
       // Llego otro evento mientras se leia: esta respuesta ya no describe la sesion actual.
       if (!activo.current || turno !== resolucion.current) return;
@@ -187,6 +206,8 @@ export function useSesion({ almacenamiento } = {}) {
       }
 
       sinSesionPublicada.current = false;
+      // Antes de publicar el perfil: el primer render con este perfil ya tiene que ver sus accesos.
+      fijarAccesoDeSesion({ rol: perfil.rol, ...accesos });
       setSesion({ usuario, perfil, cargando: false, error: null });
     }
 
@@ -308,6 +329,7 @@ export function useSesion({ almacenamiento } = {}) {
     cierreIntencional.current = true;
     await cerrarSesionYLimpiarJornada(almacenamiento, sesion.usuario?.id);
     resolucion.current += 1;
+    limpiarAccesoDeSesion();
     setSesion({ ...SIN_SESION });
   }, [sesion.usuario, almacenamiento]);
 
@@ -338,7 +360,7 @@ export function useSesion({ almacenamiento } = {}) {
     const usuarioActual = sesion.usuario;
     const turno = (resolucion.current += 1);
 
-    const { perfil, error } = await evaluarPerfilDeSesion(usuarioActual);
+    const { perfil, accesos, error } = await resolverPerfilYAccesos(usuarioActual);
 
     if (!activo.current || turno !== resolucion.current) return;
 
@@ -352,10 +374,12 @@ export function useSesion({ almacenamiento } = {}) {
       await cerrarSesionYLimpiarJornada(almacenamiento, usuarioActual.id);
       resolucion.current += 1;
       cliente.auth.stopAutoRefresh();
+      limpiarAccesoDeSesion();
       setSesion({ ...SIN_SESION, error });
       return;
     }
 
+    fijarAccesoDeSesion({ rol: perfil.rol, ...accesos });
     setSesion((anterior) => ({ ...anterior, usuario: usuarioActual, perfil, error: null }));
   }, [sesion.usuario, almacenamiento]);
 

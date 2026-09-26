@@ -1,6 +1,6 @@
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { Outlet, NavLink, useNavigate, useLocation } from "react-router-dom";
-import { Button } from "react-bootstrap";
+import { LogOut } from "lucide-react";
 import {
   MODULOS,
   seccionesVisibles,
@@ -189,9 +189,17 @@ export default function MainLayout() {
               <span className="app-status__dot" aria-hidden="true" />
               {enLinea ? "En línea" : "Sin conexión"}
             </span>
-            <Button variant="outline-secondary" size="sm" onClick={handleLogout}>
-              Cerrar sesion
-            </Button>
+            {/* Icono en vez de texto, como la campana y como la cabecera movil; el nombre queda
+                en aria-label y en el title para lectores de pantalla y el tooltip. */}
+            <button
+              type="button"
+              className="app-salir"
+              onClick={handleLogout}
+              aria-label="Cerrar sesión"
+              title="Cerrar sesión"
+            >
+              <LogOut size={18} aria-hidden="true" />
+            </button>
           </div>
         </header>
 

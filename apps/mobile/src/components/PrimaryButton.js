@@ -1,6 +1,7 @@
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 import { rotuloSinSigno } from "@ecopac/shared";
 import { colors, radii, spacing, typography } from "@ecopac/ui-tokens";
+import { useEnFormulario } from "./contextoDeFormulario";
 import { iconoDeAccion } from "./iconoDeAccion";
 
 const MIN_TOUCH_HEIGHT = 48;
@@ -41,6 +42,7 @@ export default function PrimaryButton({
   style,
 }) {
   const isInactive = disabled || loading;
+  const enFormulario = useEnFormulario();
   const fondo = COLOR_POR_VARIANTE[variant] ?? colors.primary;
 
   return (
@@ -62,7 +64,7 @@ export default function PrimaryButton({
         <ActivityIndicator color={colors.background} />
       ) : (
         <View style={styles.contenido}>
-          {iconoDeAccion(title, icon, colors.background)}
+          {iconoDeAccion(title, icon, colors.background, enFormulario)}
           <Text style={[styles.text, size === "sm" && styles.textSm]}>{rotuloSinSigno(title)}</Text>
         </View>
       )}

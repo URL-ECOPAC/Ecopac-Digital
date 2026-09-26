@@ -15,6 +15,7 @@ import {
   Selector,
   TextField,
 } from "../components";
+import { EnFormulario } from "../components/contextoDeFormulario";
 import { useJornadaActivaCompartida } from "../contexto/JornadaActivaProvider";
 import { useSesionCompartida } from "../contexto/SesionProvider";
 import { ROUTES } from "../navigation/rutas";
@@ -185,31 +186,42 @@ export default function RegistroPacienteScreen() {
         );
       })}
 
-      <View style={styles.navegacion}>
-        {indice > 0 && (
-          <SecondaryButton
-            title="Atrás"
-            onPress={() => setIndice(indice - 1)}
-            disabled={enviando}
-            style={styles.mitad}
-          />
-        )}
-        {esUltimo ? (
-          <PrimaryButton
-            title="Registrar paciente"
-            onPress={guardar}
-            loading={enviando}
-            style={styles.mitad}
-          />
-        ) : (
-          <PrimaryButton
-            title="Siguiente"
-            onPress={() => setIndice(indice + 1)}
-            disabled={enviando}
-            style={styles.mitad}
-          />
-        )}
-      </View>
+      {/* El primer paso ofrece "Cancelar" en el lugar de "Atrás": mismo par gris y verde que
+          cualquier formulario de alta. */}
+      <EnFormulario>
+        <View style={styles.navegacion}>
+          {indice > 0 ? (
+            <SecondaryButton
+              title="Atrás"
+              onPress={() => setIndice(indice - 1)}
+              disabled={enviando}
+              style={styles.mitad}
+            />
+          ) : (
+            <SecondaryButton
+              title="Cancelar"
+              onPress={() => navigation.goBack()}
+              disabled={enviando}
+              style={styles.mitad}
+            />
+          )}
+          {esUltimo ? (
+            <PrimaryButton
+              title="Registrar paciente"
+              onPress={guardar}
+              loading={enviando}
+              style={styles.mitad}
+            />
+          ) : (
+            <PrimaryButton
+              title="Siguiente"
+              onPress={() => setIndice(indice + 1)}
+              disabled={enviando}
+              style={styles.mitad}
+            />
+          )}
+        </View>
+      </EnFormulario>
     </ScreenContainer>
   );
 }

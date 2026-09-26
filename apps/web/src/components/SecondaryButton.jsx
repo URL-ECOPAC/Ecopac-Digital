@@ -1,4 +1,5 @@
 import { Button, Spinner } from "react-bootstrap";
+import { TIPOS_DE_ACCION, tipoDeAccion } from "@ecopac/shared";
 import { iconoDeAccion, rotuloSinSigno } from "./iconosDeAccion";
 
 /**
@@ -18,6 +19,9 @@ import { iconoDeAccion, rotuloSinSigno } from "./iconosDeAccion";
  *     verde, para que un pie de modal no ofrezca dos botones que compiten por la vista.
  *   - "peligro": borrar, anular, rechazar.
  *
+ * "Cancelar" sin `variant` explicito sale "neutra" y con la X: es el par gris del boton verde que
+ * confirma, en todos los formularios por igual.
+ *
  * @param {"outline"|"neutra"|"peligro"} [props.variant]
  * @param {"sm"|"md"|"lg"} [props.size]
  * @param {import("react").ReactNode} [props.icon] Sin pasarlo, una alta lleva el "+" y un borrado
@@ -34,7 +38,7 @@ export default function SecondaryButton({
   onClick,
   disabled = false,
   loading = false,
-  variant = "outline",
+  variant,
   size = "md",
   icon,
   block = false,
@@ -43,13 +47,15 @@ export default function SecondaryButton({
   ...rest
 }) {
   const inactivo = disabled || loading;
+  const variante =
+    variant ?? (tipoDeAccion(title) === TIPOS_DE_ACCION.CANCELAR ? "neutra" : "outline");
   const tamano = size === "md" ? undefined : size;
 
   const clases = ["btn-icono", block ? "w-100" : null, className].filter(Boolean).join(" ");
 
   return (
     <Button
-      variant={VARIANTES[variant] ?? VARIANTES.outline}
+      variant={VARIANTES[variante] ?? VARIANTES.outline}
       size={tamano}
       onClick={onClick}
       disabled={inactivo}
@@ -62,6 +68,8 @@ export default function SecondaryButton({
         <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" />
       ) : (
         <>
+          {/* Sin `enFormulario`: un "Crear un principio activo" secundario dentro de un modal abre
+              un alta en linea, no confirma el formulario; conserva el "+". */}
           {iconoDeAccion(title, icon)}
           {rotuloSinSigno(title)}
         </>

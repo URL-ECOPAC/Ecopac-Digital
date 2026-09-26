@@ -1,5 +1,8 @@
 import { useRegistroSalida } from "@ecopac/shared";
 import { useCerrarAlTocarFuera } from "../hooks/useCerrarAlTocarFuera";
+import PrimaryButton from "../components/PrimaryButton";
+import SecondaryButton from "../components/SecondaryButton";
+import { EnFormulario } from "../components/contextoDeFormulario";
 
 export function ModalSalidaMedicamento({
   abierto,
@@ -284,49 +287,11 @@ export function ModalSalidaMedicamento({
             </div>
           </div>
 
-          {/* Botones */}
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "flex-end",
-              gap: "10px",
-              marginTop: "24px",
-              paddingTop: "16px",
-              borderTop: "1px solid var(--color-border)",
-            }}
-          >
-            <button
-              type="button"
-              onClick={onClose}
-              style={{
-                padding: "10px 20px",
-                borderRadius: "9999px",
-                border: "1px solid var(--color-border)",
-                backgroundColor: "var(--color-surface)",
-                color: "var(--color-text-muted)",
-                fontSize: "var(--texto-xs)",
-                fontWeight: "var(--peso-bold)",
-                cursor: "pointer",
-              }}
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={cargando}
-              style={{
-                padding: "10px 24px",
-                borderRadius: "9999px",
-                border: "none",
-                backgroundColor: "var(--color-primary)",
-                color: "var(--color-surface)",
-                fontSize: "var(--texto-xs)",
-                fontWeight: "var(--peso-bold)",
-                cursor: "pointer",
-              }}
-            >
-              {cargando ? "Registrando..." : "Registrar Salida"}
-            </button>
+          <div className="ec-form-pie">
+            <EnFormulario>
+              <SecondaryButton title="Cancelar" onClick={onClose} disabled={cargando} />
+              <PrimaryButton type="submit" title="Registrar salida" loading={cargando} />
+            </EnFormulario>
           </div>
         </form>
       </div>

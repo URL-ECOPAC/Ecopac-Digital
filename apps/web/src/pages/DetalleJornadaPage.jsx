@@ -12,8 +12,10 @@ import {
   formatearFechaCorta,
   formatearMoneda,
   permisosDeOrigenDePresupuesto,
+  puedeVerModulo,
   puedeVerReporteJornada,
   puedeVerRosterCompleto,
+  seccionesDeDetalleJornada,
   useCuadroTurnos,
   useDetalleJornada,
   useResumenCierreJornada,
@@ -188,7 +190,10 @@ export default function DetalleJornadaPage() {
   const puedeMover =
     (esReapertura ? permisos.puedeReabrir : permisos.puedeEditar) && Boolean(destino);
 
+  // 00148: el personal de campo solo ve Equipo y Pacientes atendidos (seccionesDeDetalleJornada).
+  const seccionesDelRol = seccionesDeDetalleJornada(rol);
   const pestaniasVisibles = PESTANIAS.filter((pestania) => {
+    if (!seccionesDelRol.includes(pestania.id)) return false;
     if (pestania.id === "pacientes") return permisos.puedeVerDatosClinicos;
     if (pestania.id === "historial") return permisos.puedeVerHistorial;
     if (pestania.id === "presupuesto") return permisosPresupuesto.puedeVer;
@@ -198,6 +203,10 @@ export default function DetalleJornadaPage() {
     if (pestania.id === "cierre") return permisos.puedeEditar;
     return true;
   });
+  // La pestana pedida si el rol la ve; si no -el personal de campo no tiene "Resumen"-, la primera.
+  const pestaniaMostrada = pestaniasVisibles.some((pestania) => pestania.id === pestaniaActiva)
+    ? pestaniaActiva
+    : pestaniasVisibles[0]?.id;
 
   const puedeVerEquipoCompleto = puedeVerRosterCompleto(rol);
   const conteoPorRol = contarPersonalPorRol(jornada.personal);
@@ -247,7 +256,8 @@ export default function DetalleJornadaPage() {
           // Se ofrece solo a quien puede leerlo: puedeVerReporteJornada es el espejo de las
           // politicas de la 00033 sobre consultas y recetas, asi que un rol consultivo veria un
           // enlace que lo lleva a un aviso de permisos.
-          ...(puedeVerReporteJornada(rol)
+          // Y solo si llega a Reportes: el reporte vive en esa ruta (00148).
+          ...(puedeVerReporteJornada(rol) && puedeVerModulo(rol, "reportes")
             ? [
                 {
                   label: "Ver reporte",
@@ -284,8 +294,8 @@ export default function DetalleJornadaPage() {
       ) : error ? (
         <ErrorState message={error.mensaje} onRetry={recargar} />
       ) : (
-        <Tabs tabs={pestaniasVisibles} activo={pestaniaActiva} onChange={setPestaniaActiva}>
-          {pestaniaActiva === "resumen" && (
+        <Tabs tabs={pestaniasVisibles} activo={pestaniaMostrada} onChange={setPestaniaActiva}>
+          {pestaniaMostrada === "resumen" && (
             <Card>
               <div className="d-flex justify-content-between align-items-start gap-2 mb-3">
                 <StatusChip status={capitalizar(jornada.estado)} />
@@ -347,7 +357,7 @@ export default function DetalleJornadaPage() {
             </Card>
           )}
 
-          {pestaniaActiva === "resumen" && (
+          {pestaniaMostrada === "resumen" && (
             <div className="ec-kpis mt-3">
               {INDICADORES_DEL_DIA.map(({ clave, etiqueta }) => (
                 <StatCard
@@ -360,7 +370,7 @@ export default function DetalleJornadaPage() {
             </div>
           )}
 
-          {pestaniaActiva === "equipo" && (
+          {pestaniaMostrada === "equipo" && (
             <>
               <div className="d-flex justify-content-between align-items-start gap-2 mb-3">
                 {puedeVerEquipoCompleto ? (
@@ -425,7 +435,7 @@ export default function DetalleJornadaPage() {
             </>
           )}
 
-          {pestaniaActiva === "pacientes" && (
+          {pestaniaMostrada === "pacientes" && (
             <DataList
               columnas={COLUMNAS_PACIENTES_ATENDIDOS_JORNADA}
               datos={filasPacientes}
@@ -433,7 +443,7 @@ export default function DetalleJornadaPage() {
             />
           )}
 
-          {pestaniaActiva === "historial" && (
+          {pestaniaMostrada === "historial" && (
             <DataList
               columnas={COLUMNAS_HISTORIAL_JORNADA}
               datos={filasHistorial}
@@ -441,7 +451,7 @@ export default function DetalleJornadaPage() {
             />
           )}
 
-          {pestaniaActiva === "presupuesto" && (
+          {pestaniaMostrada === "presupuesto" && (
             <OrigenesDePresupuesto
               jornadaId={jornada.id}
               proyectoId={jornada.proyectoId}
@@ -450,7 +460,7 @@ export default function DetalleJornadaPage() {
             />
           )}
 
-          {pestaniaActiva === "cierre" && (
+          {pestaniaMostrada === "cierre" && (
             <Card>
               {cargandoResumenCierre ? (
                 <LoadingState />

@@ -8,7 +8,7 @@ import {
   useParams,
 } from "react-router-dom";
 import { lazy, Suspense, useEffect, useState } from "react";
-import { obtenerDonacion, rolesDelModulo } from "@ecopac/shared";
+import { obtenerDonacion } from "@ecopac/shared";
 import { labels } from "@ecopac/ui-tokens";
 import { SesionProvider, useSesionCompartida } from "./contexto/SesionProvider";
 import MainLayout from "./components/MainLayout";
@@ -25,7 +25,7 @@ import LoginPage from "./pages/LoginPage";
 // ejecutan en comunidades rurales sobre datos moviles, y ahi eso se paga en segundos de espera.
 //
 // POR QUE ESTE CORTE Y NO OTRO. Cada grupo de rutas ya esta dentro de su
-// `<RutaProtegida roles={rolesDelModulo("...")} />` (issue #820), asi que el corte cae justo donde
+// `<RutaProtegida modulo="..." />` (issue #820), asi que el corte cae justo donde
 // cae el permiso: una ruta que un rol no puede montar es un chunk que su navegador no pide. No hace
 // falta agrupar a mano.
 //
@@ -62,12 +62,10 @@ const NotificacionesPage = lazy(() => import("./pages/NotificacionesPage"));
 const NotFoundPage = lazy(() => import("./pages/NotFoundPage"));
 const ReporteJornada = lazy(() => import("./pages/ReporteJornada"));
 
-// Los roles de cada grupo de rutas salen de rolesDelModulo() de @ecopac/shared (issue #820). Este
-// archivo tenia su propia copia, `rolesDe(ruta)`, que resolvia por `m.ruta`; la app movil tenia una
-// tercera, que resolvia solo por `m.id`. Tres definiciones de la misma decision de permisos, dos de
-// ellas dentro de una app, que es lo que prohibe AGENTS.md. El argumento pasa a ser el id del
-// modulo -"pacientes", "inicio"- en vez de su ruta: es la misma entrada de MODULOS, nombrada por
-// donde nace y no por donde se dibuja.
+// Quien entra a cada grupo de rutas lo decide puedeVerModulo() de @ecopac/shared, con el id del
+// modulo -"pacientes", "inicio"-: la misma entrada de MODULOS que arma el menu. Hasta la #820 este
+// archivo tenia su propia copia de los roles, y hasta la 00148 el guard comparaba una lista fija de
+// roles, asi que un modulo abierto por la matriz aparecia en el menu y la ruta lo negaba.
 
 // Las pantallas de donaciones y proyectos reciben el rol por prop en vez de leerlo ellas
 // mismas. Este envoltorio se lo saca a la sesion compartida para no repetir el mismo
@@ -157,10 +155,10 @@ export default function App() {
             {/* Rutas autenticadas */}
             <Route element={<RutaProtegida />}>
               <Route element={<MainLayout />}>
-                <Route element={<RutaProtegida roles={rolesDelModulo("inicio")} />}>
+                <Route element={<RutaProtegida modulo="inicio" />}>
                   <Route path="/" element={<HomePage />} />
                 </Route>
-                <Route element={<RutaProtegida roles={rolesDelModulo("pacientes")} />}>
+                <Route element={<RutaProtegida modulo="pacientes" />}>
                   <Route path="/pacientes" element={<PacientesPage />} />
                   <Route path="/pacientes/cronicos" element={<PacientesCronicosPage />} />
                   <Route path="/pacientes/diagnosticos" element={<CatalogoDiagnosticosPage />} />
@@ -169,7 +167,7 @@ export default function App() {
                   <Route path="/pacientes/duplicados" element={<PosiblesDuplicadosPage />} />
                   <Route path="/pacientes/:id" element={<FichaPacientePage />} />
                 </Route>
-                <Route element={<RutaProtegida roles={rolesDelModulo("donaciones")} />}>
+                <Route element={<RutaProtegida modulo="donaciones" />}>
                   <Route path="/donaciones" element={<DonacionesPage />} />
                   <Route path="/donaciones/registro" element={<RegistroDonacionConSesion />} />
                   <Route path="/donaciones/historial" element={<HistorialDonacionesConSesion />} />
@@ -179,13 +177,13 @@ export default function App() {
                   />
                   <Route path="/donantes" element={<DonantesConSesion />} />
                 </Route>
-                <Route element={<RutaProtegida roles={rolesDelModulo("inventario")} />}>
+                <Route element={<RutaProtegida modulo="inventario" />}>
                   <Route path="/inventario" element={<InventarioPage />} />
                 </Route>
-                <Route element={<RutaProtegida roles={rolesDelModulo("presupuestos")} />}>
+                <Route element={<RutaProtegida modulo="presupuestos" />}>
                   <Route path="/presupuestos" element={<PresupuestosPage />} />
                 </Route>
-                <Route element={<RutaProtegida roles={rolesDelModulo("proyectos")} />}>
+                <Route element={<RutaProtegida modulo="proyectos" />}>
                   {/*  Ruta principal — muestra el contenido */}
                   <Route path="/proyectos" element={<ProyectosSocialesConSesion />} />
 
@@ -197,7 +195,7 @@ export default function App() {
                     element={<SeguimientoProyectoEnrutado />}
                   />
                 </Route>
-                <Route element={<RutaProtegida roles={rolesDelModulo("reportes")} />}>
+                <Route element={<RutaProtegida modulo="reportes" />}>
                   {/* Las pestanas del hub son rutas: todas montan ReportesPage, que elige la
                   pestana por la direccion. Antes "pacientes atendidos" montaba su reporte suelto,
                   sin las pestanas, y desde ahi no habia forma de volver a las demas. */}
@@ -208,24 +206,24 @@ export default function App() {
                   <Route path="/reportes/inventario-actual" element={<ReportesPage />} />
                   <Route path="/reportes/jornada/:id" element={<ReporteJornada />} />
                 </Route>
-                <Route element={<RutaProtegida roles={rolesDelModulo("jornadas")} />}>
+                <Route element={<RutaProtegida modulo="jornadas" />}>
                   <Route path="/jornadas" element={<JornadasPage />} />
                   <Route path="/jornadas/:id" element={<DetalleJornadaPage />} />
                 </Route>
-                <Route element={<RutaProtegida roles={rolesDelModulo("colaboradores")} />}>
+                <Route element={<RutaProtegida modulo="colaboradores" />}>
                   {/* Listado y ficha fusionados en una sola pantalla de tarjetas expandibles
                   (arreglo de diseno de 2026-08-30): ya no hay una ruta /colaboradores/:id propia.
                   Ver eme.md para el estado anterior (dos rutas separadas) si hay que revertir. */}
                   <Route path="/colaboradores" element={<ColaboradoresPage />} />
                 </Route>
-                <Route element={<RutaProtegida roles={rolesDelModulo("matriz-permisos")} />}>
+                <Route element={<RutaProtegida modulo="matriz-permisos" />}>
                   <Route path="/matriz-permisos" element={<MatrizPermisosPorRolPage />} />
                 </Route>
-                <Route element={<RutaProtegida roles={rolesDelModulo("bitacora-auditoria")} />}>
+                <Route element={<RutaProtegida modulo="bitacora-auditoria" />}>
                   <Route path="/bitacora-auditoria" element={<BitacoraAuditoriaPage />} />
                 </Route>
 
-                {/* Fuera de cualquier grupo de rolesDelModulo() a proposito: el perfil propio no es un
+                {/* Fuera de cualquier grupo de modulo a proposito: el perfil propio no es un
                   modulo con roles permitidos, cualquier rol autenticado tiene el suyo. */}
                 <Route path="/perfil" element={<PerfilPage />} />
                 {/* Igual que /perfil: las notificaciones son de cada perfil, no de un modulo

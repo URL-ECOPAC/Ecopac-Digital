@@ -24,10 +24,11 @@ describe("permisosDeCondiciones", () => {
     expect(permisosDeCondiciones(ROLES.MEDICO).puedeQuitar).toBe(false);
   });
 
-  it("un voluntario no modifica condiciones", () => {
+  // 00148: el colaborador registra y corrige condiciones; quitarlas es de la administradora.
+  it("un voluntario registra y corrige condiciones, pero no las quita", () => {
     const permisos = permisosDeCondiciones(ROLES.VOLUNTARIO);
-    expect(permisos.puedeRegistrar).toBe(false);
-    expect(permisos.puedeEditar).toBe(false);
+    expect(permisos.puedeRegistrar).toBe(true);
+    expect(permisos.puedeEditar).toBe(true);
     expect(permisos.puedeQuitar).toBe(false);
   });
 

@@ -1,7 +1,7 @@
 -- Pruebas de diagnosticos.activo (issue #639, migracion 00113). Corre con: supabase test db
 --
--- Cubre solo lo que agrega la 00113: que la columna nace en TRUE, que alternarla sigue la misma
--- politica de UPDATE que el resto del catalogo (administrador si, medico no) y que retirar un
+-- Cubre solo lo que agrega la 00113: que la columna nace en TRUE, quien la alterna (desde la
+-- 00148: retirar solo la administradora, reactivar tambien el personal de campo) y que retirar un
 -- diagnostico no le quita visibilidad a quien ya lo podia leer (00033). Las reglas que la 00113
 -- no toca -unicidad de codigo, quien inserta, ON DELETE RESTRICT- ya las cubre
 -- reglas_de_dominio_625.sql.
@@ -56,21 +56,13 @@ SELECT is(
   'y queda marcado como no vigente'
 );
 
-SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000639002';
-
-UPDATE diagnosticos SET activo = TRUE
-  WHERE id = '7d000000-0000-0000-0000-000000639001';
-
-SELECT is(
-  (SELECT activo FROM diagnosticos WHERE id = '7d000000-0000-0000-0000-000000639001'),
-  FALSE,
-  'NEGATIVA UPDATE: el medico lee el catalogo pero no lo mantiene, tambien para activo (USING lo filtra: cero filas)'
-);
-
 -- ============================================================================
 -- Un diagnostico retirado sigue siendo legible por quien ya podia leerlo (00033): la 00113 no
--- toca la politica de SELECT, asi que la visibilidad no depende de `activo`.
+-- toca la politica de SELECT, asi que la visibilidad no depende de `activo`. Desde la 00148 el
+-- voluntario tambien lo lee.
 -- ============================================================================
+SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000639002';
+
 SELECT isnt_empty(
   $$ SELECT 1 FROM diagnosticos WHERE id = '7d000000-0000-0000-0000-000000639001' $$,
   'POSITIVA SELECT: el medico sigue viendo el diagnostico retirado (su consulta lo puede haber citado)'
@@ -78,26 +70,35 @@ SELECT isnt_empty(
 
 SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000639003';
 
-SELECT is_empty(
+SELECT isnt_empty(
   $$ SELECT 1 FROM diagnosticos WHERE id = '7d000000-0000-0000-0000-000000639001' $$,
-  'NEGATIVA SELECT: el voluntario sigue sin ver diagnosticos, retirado o no'
+  'POSITIVA SELECT: el voluntario ve diagnosticos, retirados o no (00148)'
 );
 
 -- ============================================================================
--- Reactivarlo: de vuelta a la administradora
+-- Reactivarlo lo puede el personal de campo (corregir el catalogo, 00148); retirarlo no, porque es
+-- sacarlo de uso: trigger impedir_desactivar_sin_ser_administrador.
 -- ============================================================================
-SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000639001';
+SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000639002';
 
 SELECT lives_ok(
   $$ UPDATE diagnosticos SET activo = TRUE
      WHERE id = '7d000000-0000-0000-0000-000000639001' $$,
-  'POSITIVA UPDATE: la administradora reactiva un diagnostico retirado'
+  'POSITIVA UPDATE: el medico reactiva un diagnostico retirado (00148)'
 );
 
 SELECT is(
   (SELECT activo FROM diagnosticos WHERE id = '7d000000-0000-0000-0000-000000639001'),
   TRUE,
   'y vuelve a ofrecerse en el selector'
+);
+
+SELECT throws_ok(
+  $$ UPDATE diagnosticos SET activo = FALSE
+     WHERE id = '7d000000-0000-0000-0000-000000639001' $$,
+  '42501',
+  NULL,
+  'NEGATIVA UPDATE: el medico no retira un diagnostico; desactivar es de la administradora (00148)'
 );
 
 SELECT * FROM finish();

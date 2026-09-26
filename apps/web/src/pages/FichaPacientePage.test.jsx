@@ -144,13 +144,14 @@ describe("FichaPacientePage", () => {
     expect(screen.queryByText("Recetas")).not.toBeInTheDocument();
   });
 
-  it("un voluntario general ve Nueva consulta -toma los signos- pero no el historial", () => {
+  // 00148: el colaborador ve pacientes por completo, historial incluido.
+  it("un voluntario general ve Nueva consulta -toma los signos- y el historial", () => {
     sesion.rol = ROLES.VOLUNTARIO;
     sesion.perfil = { id: "perf-2", rol: ROLES.VOLUNTARIO };
 
     pantalla("historial");
 
     expect(screen.getByText("Nueva consulta")).toBeInTheDocument();
-    expect(screen.queryByText("Historial clínico")).not.toBeInTheDocument();
+    expect(screen.getByText("Historial clínico")).toBeInTheDocument();
   });
 });
