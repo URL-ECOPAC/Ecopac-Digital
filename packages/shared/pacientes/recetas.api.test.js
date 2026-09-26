@@ -369,8 +369,11 @@ describe("contarRecetasDeJornada", () => {
     expect(cantidad).toBe(2);
   });
 
-  it("voluntario general no tiene SELECT sobre recetas (00033): cantidad null, sin llamar al cliente", async () => {
-    const { cantidad, error } = await contarRecetasDeJornada("jor-1", { rol: ROLES.VOLUNTARIO });
+  it("un rol sin SELECT sobre recetas: cantidad null, sin llamar al cliente", async () => {
+    // Desde la 00148 el colaborador si lee recetas; los roles consultivos siguen sin hacerlo.
+    const { cantidad, error } = await contarRecetasDeJornada("jor-1", {
+      rol: ROLES.JUNTA_DIRECTIVA,
+    });
 
     expect(cantidad).toBeNull();
     expect(error).toBeNull();

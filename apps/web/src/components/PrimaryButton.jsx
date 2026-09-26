@@ -1,4 +1,5 @@
 import { Button, Spinner } from "react-bootstrap";
+import { useEnFormulario } from "./contextoDeFormulario";
 import { iconoDeAccion, rotuloSinSigno } from "./iconosDeAccion";
 
 /**
@@ -19,8 +20,8 @@ import { iconoDeAccion, rotuloSinSigno } from "./iconosDeAccion";
  * @param {"primary"|"danger"|"warning"|"success"} [props.variant] Intencion de la accion.
  * @param {"sm"|"md"|"lg"} [props.size]
  * @param {import("react").ReactNode} [props.icon] Icono a la izquierda del texto. Sin pasarlo, una
- *   alta ("Nuevo...", "Registrar...") lleva el "+" y un borrado el basurero (iconosDeAccion.jsx);
- *   `null` lo quita.
+ *   alta ("Nuevo...", "Registrar...") lleva el "+" y un borrado el basurero (iconosDeAccion.js);
+ *   dentro de un modal, el alta es la accion que guarda y lleva el disquete. `null` lo quita.
  * @param {boolean} [props.block] Ocupa todo el ancho disponible.
  */
 export default function PrimaryButton({
@@ -37,6 +38,7 @@ export default function PrimaryButton({
   ...rest
 }) {
   const inactivo = disabled || loading;
+  const enFormulario = useEnFormulario();
 
   // "md" es el tamano base y no existe como clase en Bootstrap: se pasa undefined.
   const tamano = size === "md" ? undefined : size;
@@ -58,7 +60,7 @@ export default function PrimaryButton({
         <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" />
       ) : (
         <>
-          {iconoDeAccion(title, icon)}
+          {iconoDeAccion(title, icon, enFormulario)}
           {rotuloSinSigno(title)}
         </>
       )}

@@ -19,25 +19,33 @@
 // modulo respondian "Acceso denegado" incluso a la administradora. La intencion de esas listas
 // si era la correcta y es la que se conserva aqui; lo que estaba mal eran los valores.
 
+import { accedeAModuloPorMatriz, tienePermisoFino } from "../usuarios/acceso.js";
 import { esAdministrador } from "../usuarios/roles.js";
 
 /**
  * Puede consultar donantes, donaciones y su detalle.
  *
- * ISSUE #864: solo administrador. Los dos roles consultivos leian donantes, donaciones y su
- * detalle por el SELECT de la 00083; la 00141 les retira esa politica, porque su unica pantalla
- * es Reportes y ningun reporte lee esas tres tablas.
+ * Espejo del SELECT de las tres tablas (00148): la administradora, quien tenga
+ * donaciones.registrar delegado, y el rol al que la matriz le abrio Donaciones (solo lectura).
  */
 export function puedeVerDonaciones(rol) {
-  return esAdministrador(rol);
+  return tienePermisoFino(rol, "donaciones.registrar") || accedeAModuloPorMatriz(rol, "donaciones");
 }
 
 /**
- * Puede registrar un donante o una donacion, y anular una donacion.
- *
- * Solo administrador, como la lectura desde la #864.
+ * Puede registrar un donante o una donacion: la administradora o quien tenga
+ * donaciones.registrar delegado por persona (INSERT de las tres tablas, 00086).
  */
 export function puedeRegistrarDonaciones(rol) {
+  return tienePermisoFino(rol, "donaciones.registrar");
+}
+
+/**
+ * Puede corregir o dar de baja a un donante y anular una donacion: solo la administradora. Las
+ * politicas de UPDATE de donantes y donaciones no admiten el permiso fino: registrar se delega,
+ * deshacer no.
+ */
+export function puedeCorregirDonaciones(rol) {
   return esAdministrador(rol);
 }
 
@@ -54,5 +62,6 @@ export function permisosDeDonaciones(rol) {
   return {
     tieneAccesoLectura: puedeVerDonaciones(rol),
     puedeEscribir: puedeRegistrarDonaciones(rol),
+    puedeCorregir: puedeCorregirDonaciones(rol),
   };
 }

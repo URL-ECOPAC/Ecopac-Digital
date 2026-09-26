@@ -23,7 +23,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { cambiarEstadoJornada, contarPacientesAtendidosPorJornada, listarJornadas } from "./api.js";
-import { FILTROS_JORNADA_VACIOS, OPCIONES_ESTADO_JORNADA } from "./filtros.js";
+import { FILTROS_JORNADA_VACIOS, OPCIONES_ESTADO_JORNADA, hayFiltrosDeJornada } from "./filtros.js";
 import { permisosDeJornadas } from "./permisos.js";
 import { ESTADOS_JORNADA } from "../enums.js";
 
@@ -357,6 +357,7 @@ export function useJornadasKanban(rol) {
     filtros,
     setFiltro,
     limpiarFiltros,
+    hayFiltros: hayFiltrosDeJornada(filtros),
     cargando,
     error,
     recargar: cargar,

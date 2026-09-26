@@ -22,15 +22,26 @@
 // eran enlaces de texto distintos en cada tabla. Decidirlo aqui, por el rotulo, es lo que hace que
 // las dos apps los pinten igual sin que ninguna pantalla vuelva a elegir un icono.
 
+//
+// Cancelar y guardado se agregan para el pie de los formularios de alta: "Cancelar" en gris con
+// una X y la accion que confirma en verde con el disquete, en todos los modales por igual. Un
+// alta ("Registrar donante", "Crear jornada") DENTRO de un formulario tambien es la accion que
+// confirma, no la que abre uno nuevo: eso lo decide cada app segun donde se dibuje el boton
+// (esConfirmacionDeFormulario), porque el rotulo solo no lo distingue.
+
 export const TIPOS_DE_ACCION = Object.freeze({
   ALTA: "alta",
   BORRADO: "borrado",
   RETORNO: "retorno",
   EDICION: "edicion",
   DETALLE: "detalle",
+  CANCELAR: "cancelar",
+  GUARDADO: "guardado",
 });
 
 const PATRON_ALTA = /^(nuev[oa]s?|crear|agregar|añadir|anadir|registrar|alta de)(\s|$)/i;
+const PATRON_CANCELAR = /^cancelar$/i;
+const PATRON_GUARDADO = /^(guardar|confirmar)(\s|$)/i;
 const PATRON_BORRADO = /^(eliminar|borrar|quitar)(\s|$)/i;
 const PATRON_RETORNO = /^(volver|regresar|atrás|atras)(\s|$)/i;
 const PATRON_EDICION = /^(editar|corregir|modificar)(\s|$)/i;
@@ -42,18 +53,36 @@ const SIGNO_MAS_INICIAL = /^\+\s*/;
 
 /**
  * @param {unknown} rotulo
- * @returns {"alta"|"borrado"|"retorno"|"edicion"|"detalle"|null}
+ * @returns {"alta"|"borrado"|"retorno"|"edicion"|"detalle"|"cancelar"|"guardado"|null}
  */
 export function tipoDeAccion(rotulo) {
   if (typeof rotulo !== "string") return null;
   const limpio = rotulo.trim();
   if (SIGNO_MAS_INICIAL.test(limpio)) return TIPOS_DE_ACCION.ALTA;
   if (PATRON_ALTA.test(limpio)) return TIPOS_DE_ACCION.ALTA;
+  if (PATRON_CANCELAR.test(limpio)) return TIPOS_DE_ACCION.CANCELAR;
+  if (PATRON_GUARDADO.test(limpio)) return TIPOS_DE_ACCION.GUARDADO;
   if (PATRON_BORRADO.test(limpio)) return TIPOS_DE_ACCION.BORRADO;
   if (PATRON_RETORNO.test(limpio)) return TIPOS_DE_ACCION.RETORNO;
   if (PATRON_EDICION.test(limpio)) return TIPOS_DE_ACCION.EDICION;
   if (PATRON_DETALLE.test(limpio)) return TIPOS_DE_ACCION.DETALLE;
   return null;
+}
+
+/**
+ * Tipo con el que se dibuja un boton, sabiendo si esta dentro de un formulario (un modal).
+ *
+ * Dentro de un formulario, un alta es la accion que lo confirma -"Registrar donante" guarda el
+ * donante que se acaba de escribir-, asi que se dibuja como guardado. Fuera, sigue siendo el "+"
+ * que abre el formulario.
+ *
+ * @param {unknown} rotulo
+ * @param {{ enFormulario?: boolean }} [opciones]
+ */
+export function tipoDeAccionDeBoton(rotulo, { enFormulario = false } = {}) {
+  const tipo = tipoDeAccion(rotulo);
+  if (enFormulario && tipo === TIPOS_DE_ACCION.ALTA) return TIPOS_DE_ACCION.GUARDADO;
+  return tipo;
 }
 
 /**

@@ -16,13 +16,13 @@ import {
 } from "./medicamentos.permisos.js";
 
 describe("permisos del catalogo de medicamentos", () => {
-  it("solo Administrador administra (registra, edita, desactiva)", () => {
+  it("administrador y personal de campo registran y editan (00148); los consultivos no", () => {
     expect(puedeAdministrarMedicamentos(ROLES.ADMINISTRADOR)).toBe(true);
+    expect(puedeAdministrarMedicamentos(ROLES.MEDICO)).toBe(true);
+    expect(puedeAdministrarMedicamentos(ROLES.VOLUNTARIO)).toBe(true);
 
     expect(puedeAdministrarMedicamentos(ROLES.JUNTA_DIRECTIVA)).toBe(false);
     expect(puedeAdministrarMedicamentos(ROLES.SOCIO_FUNDADOR)).toBe(false);
-    expect(puedeAdministrarMedicamentos(ROLES.MEDICO)).toBe(false);
-    expect(puedeAdministrarMedicamentos(ROLES.VOLUNTARIO)).toBe(false);
   });
 
   it("cualquier rol conocido puede ver el catalogo", () => {
@@ -41,10 +41,11 @@ describe("permisos del catalogo de medicamentos", () => {
   });
 
   it("agrupa los permisos para que un hook no llame a las funciones sueltas", () => {
+    // Registra y edita, nunca desactiva: trigger impedir_desactivar_sin_ser_administrador (00148).
     expect(permisosDeMedicamentos(ROLES.MEDICO)).toEqual({
       puedeVer: true,
-      puedeCrear: false,
-      puedeEditar: false,
+      puedeCrear: true,
+      puedeEditar: true,
       puedeEliminar: false,
     });
 

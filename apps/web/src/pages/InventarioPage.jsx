@@ -50,6 +50,7 @@ import PrimaryButton from "../components/PrimaryButton";
 import Selector from "../components/Selector";
 import TextField from "../components/TextField";
 import FilterBar from "../components/FilterBar";
+import BotonLimpiarFiltros from "../components/BotonLimpiarFiltros";
 import SecondaryButton from "../components/SecondaryButton";
 import StatusChip from "../components/StatusChip";
 import PageHeader from "../components/PageHeader";
@@ -846,17 +847,13 @@ export default function InventarioPage() {
                 style={{ marginBottom: 0 }}
               />
             </div>
-            <div className="ec-filtros-limpiar">
-              <SecondaryButton
-                title="Limpiar filtros"
-                variant="neutra"
-                disabled={!busquedaLotes && filtroBodega === "todas"}
-                onClick={() => {
-                  setBusquedaLotes("");
-                  setFiltroBodega("todas");
-                }}
-              />
-            </div>
+            <BotonLimpiarFiltros
+              hayFiltros={Boolean(busquedaLotes) || filtroBodega !== "todas"}
+              onClick={() => {
+                setBusquedaLotes("");
+                setFiltroBodega("todas");
+              }}
+            />
           </div>
 
           {errorCorreccionCosto && (

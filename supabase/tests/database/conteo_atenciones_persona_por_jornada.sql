@@ -10,9 +10,10 @@
 -- Se prueba la misma fila (la actividad de M1 en la jornada) desde cuatro roles, con SET LOCAL
 -- ROLE authenticated + SET LOCAL request.jwt.claim.sub (mismo patron que
 -- politicas_rls_perfiles_permisos.sql), para dejar escrito como prueba -no solo como
--- comentario- el limite conocido de RLS que documenta la migracion 00059: administrador y
--- medico ven los tres contadores completos; voluntario general ve triajes bien pero consultas
--- en cero (y por eso tambien subcuenta pacientes); junta directiva no ve ninguna fila.
+-- comentario- el limite de RLS que documenta la migracion 00059: administrador y medico ven los
+-- tres contadores completos; junta directiva no ve ninguna fila. El voluntario general veia
+-- consultas en cero hasta la 00148, que le abre el historial clinico: desde ahi cuenta igual que
+-- el medico.
 --
 -- Ningun dato real: la comunidad, los pacientes y el personal son inventados.
 
@@ -135,8 +136,8 @@ SELECT is(
 );
 
 -- ============================================================================
--- voluntario general: triajes correcto, consultas en cero (RLS de consultas no lo incluye),
--- y por eso pacientes tambien queda subcontado (solo el paciente alcanzado por triaje)
+-- voluntario general: desde la 00148 lee consultas, asi que ve los tres contadores completos
+-- (antes consultas quedaba en cero y pacientes subcontado)
 -- ============================================================================
 SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000177';
 
@@ -148,14 +149,14 @@ SELECT is(
 
 SELECT is(
   (SELECT consultas FROM fn_atenciones_de_persona_por_jornada('00000000-0000-0000-0000-000000000176')),
-  0,
-  'voluntario: las consultas de M1 quedan en cero, no en 2 (consultas no le da SELECT por rol)'
+  2,
+  'voluntario: ve las dos consultas de M1 (00148 le abre el historial clinico)'
 );
 
 SELECT is(
   (SELECT pacientes FROM fn_atenciones_de_persona_por_jornada('00000000-0000-0000-0000-000000000176')),
-  1,
-  'voluntario: pacientes tambien queda subcontado en 1, no en 2 (arrastra el hueco de consultas)'
+  2,
+  'voluntario: cuenta los dos pacientes de M1, sin el hueco que dejaba consultas'
 );
 
 -- ============================================================================

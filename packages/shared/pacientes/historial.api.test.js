@@ -135,7 +135,8 @@ describe("puedeVerHistorial", () => {
   it.each([
     [ROLES.ADMINISTRADOR, true],
     [ROLES.MEDICO, true],
-    [ROLES.VOLUNTARIO, false],
+    // 00148: el colaborador ve pacientes por completo, historial incluido.
+    [ROLES.VOLUNTARIO, true],
     [ROLES.JUNTA_DIRECTIVA, false],
     [ROLES.SOCIO_FUNDADOR, false],
   ])("%s -> %s", (rol, esperado) => {
@@ -272,7 +273,7 @@ describe("obtenerHistorialMedico", () => {
     expect(error).toBeNull();
   });
 
-  it.each([ROLES.VOLUNTARIO, ROLES.JUNTA_DIRECTIVA, ROLES.SOCIO_FUNDADOR])(
+  it.each([ROLES.JUNTA_DIRECTIVA, ROLES.SOCIO_FUNDADOR])(
     "%s no puede consultarlo y ni siquiera gasta la llamada",
     async (rol) => {
       const cliente = crearCliente();
@@ -389,7 +390,7 @@ describe("obtenerUltimaAtencion", () => {
     expect(error).toBeNull();
   });
 
-  it.each([ROLES.VOLUNTARIO, ROLES.JUNTA_DIRECTIVA, ROLES.SOCIO_FUNDADOR])(
+  it.each([ROLES.JUNTA_DIRECTIVA, ROLES.SOCIO_FUNDADOR])(
     "%s no puede consultarla y ni siquiera gasta la llamada",
     async (rol) => {
       const cliente = crearCliente();

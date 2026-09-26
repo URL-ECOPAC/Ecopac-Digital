@@ -30,11 +30,10 @@
 // y ven los vencimientos en Inventario > Alertas. Estas funciones solo deciden que pestana se
 // dibuja para quien YA entro.
 //
-// EL PERMISO FINO `reportes.exportar` NO SE CONTEMPLA TODAVIA. Las tres guardas del servidor lo
-// aceptan, pero ninguna funcion de aqui lo mira: hacerlo exige que la sesion cargue los permisos
-// efectivos (usuarios/permisos.api.js, obtenerPermisosEfectivos) y eso es un cambio transversal
-// al contexto de autenticacion. Queda como issue aparte; mientras tanto, conceder ese permiso a
-// un rol que no alcanza el modulo no tiene efecto en la interfaz.
+// EL PERMISO FINO `reportes.exportar`. Hasta la 00148 ninguna funcion de aqui lo miraba, porque el
+// cliente no conocia los permisos efectivos. Desde la 00148 la sesion los carga (mis_accesos(),
+// usuarios/acceso.js), y quien lo tiene delegado llega a Reportes y ve lo mismo que un rol
+// consultivo.
 //
 // LOS CUATRO REPORTES, NO DOS (issue #693). Este archivo cubria solo impacto y pacientes: el
 // comentario anterior decia que jornada se corregia en su propia issue (#489, ya cerrada) y que
@@ -47,11 +46,27 @@
 // puedeVerReporteJornada se declara aqui y jornada.api.js la reexporta, igual que se hizo con
 // las otras dos: asi el modulo tiene un solo sitio donde mirar quien puede que.
 
+import { accedeAModuloPorMatriz, tienePermisoFino } from "../usuarios/acceso.js";
 import { esAdministrador, esConsultivo, ROLES } from "../usuarios/roles.js";
 
-/** Puede consultar los indicadores de impacto: administrador y los dos roles consultivos. */
+/**
+ * Quien consulta reportes: espejo de puede_consultar_reportes() (00148), la guarda de todas las
+ * vistas y funciones de reportes. Administradora, roles consultivos, quien tiene
+ * reportes.exportar delegado y el rol al que la matriz le abrio Reportes. Desde la 00148 el
+ * permiso fino SI se mira aqui: la sesion carga sus permisos efectivos (usuarios/acceso.js).
+ */
+function consultaReportes(rol) {
+  return (
+    esAdministrador(rol) ||
+    esConsultivo(rol) ||
+    tienePermisoFino(rol, "reportes.exportar") ||
+    accedeAModuloPorMatriz(rol, "reportes")
+  );
+}
+
+/** Puede consultar los indicadores de impacto. */
 export function puedeVerIndicadoresDeImpacto(rol) {
-  return esAdministrador(rol) || esConsultivo(rol);
+  return consultaReportes(rol);
 }
 
 /**
@@ -73,20 +88,19 @@ export function puedeVerIndicadoresDeImpacto(rol) {
  * consultivos solo ven agregados.
  */
 export function puedeVerReporteDePacientes(rol) {
-  return esAdministrador(rol) || esConsultivo(rol);
+  return consultaReportes(rol);
 }
 
 /**
- * Puede consultar el reporte de resultados de una jornada: administrador o medico.
+ * Puede consultar el reporte de resultados de una jornada.
  *
- * Espejo exacto de las politicas de SELECT de la 00033 sobre consultas, consulta_diagnostico,
- * diagnosticos, recetas y receta_detalle, que son las tablas que agrega obtenerReporteJornada().
- * Los roles consultivos quedan fuera a proposito: la 00054 les retiro el acceso a esas tablas
- * (issue #407) porque el reporte agrega filas clinicas crudas antes de resumirlas, aunque lo que
- * se muestre al final sean solo totales.
+ * Espejo de la guarda de fn_reporte_jornada() (00148): quien consulta reportes, mas el medico (lo
+ * monta el resumen de jornada de la app movil). Hasta la 00148 los roles consultivos no lo tenian:
+ * el cliente agregaba filas clinicas crudas (consultas, diagnosticos, recetas) que la 00054 les
+ * retiro. Ahora la base lo entrega ya agregado, sin ninguna fila de paciente.
  */
 export function puedeVerReporteJornada(rol) {
-  return esAdministrador(rol) || rol === ROLES.MEDICO;
+  return consultaReportes(rol) || rol === ROLES.MEDICO;
 }
 
 /**

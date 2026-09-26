@@ -35,6 +35,7 @@ export default function CatalogoDiagnosticosScreen() {
     recargar,
     permitido,
     puedeAdministrar,
+    puedeRetirar,
     alternarActivo,
     catalogos,
   } = useCatalogoDiagnosticos({ rol });
@@ -106,6 +107,7 @@ export default function CatalogoDiagnosticosScreen() {
           onClose={() => setModal(null)}
           onGuardado={recargar}
           onAlternarActivo={alternarActivo}
+          puedeRetirar={puedeRetirar}
         />
       ) : null}
     </ScreenContainer>

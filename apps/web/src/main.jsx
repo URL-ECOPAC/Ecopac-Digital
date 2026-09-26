@@ -1,6 +1,11 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
-import { inicializarSupabase, reportarError } from "@ecopac/shared";
+import {
+  configurarDestinoDeErrores,
+  crearDestinoSentry,
+  inicializarSupabase,
+  reportarError,
+} from "@ecopac/shared";
 import App from "./App";
 import LimiteDeError from "./components/LimiteDeError";
 import "./index.css";
@@ -25,6 +30,20 @@ try {
     "Supabase no se inicializo: la aplicacion arranca pero no habra datos.",
     error.message,
   );
+}
+
+// Monitoreo de errores (issue #762): con VITE_SENTRY_DSN definido, cada reporte -ya limpio de datos
+// de paciente- va tambien a Sentry. Sin la variable se queda en la consola, que es lo que se quiere
+// en local. Un DSN mal escrito se dice aqui y no tumba la aplicacion.
+try {
+  const destino = crearDestinoSentry({
+    dsn: import.meta.env.VITE_SENTRY_DSN,
+    ambiente: import.meta.env.MODE,
+    plataforma: "web",
+  });
+  if (destino) configurarDestinoDeErrores(destino);
+} catch (error) {
+  console.error("El monitoreo de errores no quedo conectado.", error.message);
 }
 
 // Errores que no pasan por ningun `catch` ni por el limite de error de React: una excepcion en un

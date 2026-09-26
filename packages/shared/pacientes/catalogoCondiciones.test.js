@@ -20,6 +20,7 @@ import {
 import {
   puedeCrearCondicionDelCatalogo,
   puedeMantenerCatalogoCondiciones,
+  puedeRetirarCondicionDelCatalogo,
   puedeVerCatalogoDeCondiciones,
 } from "./condiciones.permisos.js";
 import { resolverCondicionEscrita } from "./useAltaDeCondicionEnLinea.js";
@@ -38,10 +39,16 @@ describe("quien escribe el catalogo de condiciones (espejo de la 00140)", () => 
     }
   });
 
-  it("dar de alta y mantener no son el mismo permiso: solo el administrador renombra y retira", () => {
-    expect(puedeMantenerCatalogoCondiciones(ROLES.ADMINISTRADOR)).toBe(true);
-    expect(puedeMantenerCatalogoCondiciones(ROLES.MEDICO)).toBe(false);
-    expect(puedeMantenerCatalogoCondiciones(ROLES.VOLUNTARIO)).toBe(false);
+  // 00148: el personal de campo tambien renombra; retirar sigue siendo de la administradora.
+  it("mantener y retirar no son el mismo permiso: retirar es solo de la administradora", () => {
+    for (const rol of [ROLES.ADMINISTRADOR, ROLES.MEDICO, ROLES.VOLUNTARIO]) {
+      expect(puedeMantenerCatalogoCondiciones(rol)).toBe(true);
+    }
+    expect(puedeMantenerCatalogoCondiciones(ROLES.JUNTA_DIRECTIVA)).toBe(false);
+
+    expect(puedeRetirarCondicionDelCatalogo(ROLES.ADMINISTRADOR)).toBe(true);
+    expect(puedeRetirarCondicionDelCatalogo(ROLES.MEDICO)).toBe(false);
+    expect(puedeRetirarCondicionDelCatalogo(ROLES.VOLUNTARIO)).toBe(false);
   });
 
   it("un rol desconocido no escribe de ninguna de las dos formas", () => {

@@ -10,7 +10,7 @@ import {
 import CampoDeFormulario from "../components/CampoDeFormulario";
 import DataList from "../components/DataList";
 import Modal from "../components/Modal";
-import { Plus, Save } from "lucide-react";
+import { Save } from "lucide-react";
 import PrimaryButton from "../components/PrimaryButton";
 import SecondaryButton from "../components/SecondaryButton";
 import SelectorConAlta from "../components/SelectorConAlta";
@@ -202,13 +202,8 @@ export default function ModalCondicionesPaciente({ pacienteId, rol, onClose, onC
           )}
 
           <div className="d-flex justify-content-end gap-2 mt-3">
-            <SecondaryButton title="Cerrar" onClick={onClose} disabled={enviando} />
-            <PrimaryButton
-              title="Agregar condición"
-              onClick={guardar}
-              loading={enviando}
-              icon={<Plus size={16} aria-hidden="true" />}
-            />
+            <SecondaryButton title="Cancelar" onClick={onClose} disabled={enviando} />
+            <PrimaryButton title="Agregar condición" onClick={guardar} loading={enviando} />
           </div>
         </>
       )}

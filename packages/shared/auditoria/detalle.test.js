@@ -10,6 +10,11 @@ describe("nombreDeCampo", () => {
   it("una sola palabra se capitaliza igual", () => {
     expect(nombreDeCampo("nombres")).toBe("Nombres");
   });
+
+  it("las marcas de tiempo en ingles se traducen", () => {
+    expect(nombreDeCampo("updated_at")).toBe("Actualizado");
+    expect(nombreDeCampo("created_at")).toBe("Creado");
+  });
 });
 
 describe("formatearValorDeAuditoria", () => {
@@ -22,6 +27,19 @@ describe("formatearValorDeAuditoria", () => {
     [43, "43"],
   ])("%s -> %s", (valor, esperado) => {
     expect(formatearValorDeAuditoria(valor)).toBe(esperado);
+  });
+
+  it("una columna DATE se muestra como fecha corta, sin correrse un dia", () => {
+    expect(formatearValorDeAuditoria("2026-09-18")).toBe("18/09/2026");
+  });
+
+  it("una marca de tiempo se muestra con fecha y hora", () => {
+    // Sin zona horaria para que la prueba no dependa de la zona de la maquina que la corre.
+    expect(formatearValorDeAuditoria("2026-09-18T04:22:59.45233")).toBe("18/09/2026 04:22");
+  });
+
+  it("un texto que solo empieza con cifras no se toma por fecha", () => {
+    expect(formatearValorDeAuditoria("2026-09")).toBe("2026-09");
   });
 
   it("un objeto anidado se muestra como JSON", () => {

@@ -1,5 +1,5 @@
 import { Navigate, Outlet, useLocation } from "react-router-dom";
-import { ESTADOS_DE_RESTAURACION } from "@ecopac/shared";
+import { ESTADOS_DE_RESTAURACION, puedeVerModulo } from "@ecopac/shared";
 import { useSesionCompartida } from "../contexto/SesionProvider";
 import AccesoDenegadoPage from "../pages/AccesoDenegadoPage";
 import LoadingState from "./LoadingState";
@@ -11,17 +11,19 @@ import LoadingState from "./LoadingState";
  * guard de cliente; lo que de verdad protege los datos son las politicas RLS de la base. Aqui
  * se evita que alguien llegue a una pantalla que no va a poder usar y se le explica por que.
  *
- * `roles` es la lista de roles permitidos en esa ruta. Sale de MODULOS en
- * packages/shared/navegacion.js, para que quien puede ver que se siga declarando en un solo
- * archivo y el sidebar y el guard no puedan discrepar.
+ * `modulo` es el id del modulo de MODULOS (packages/shared/navegacion.js) al que pertenece la
+ * ruta, y lo decide puedeVerModulo(): el mismo que arma el menu, asi que el sidebar y el guard no
+ * pueden discrepar. Cuenta lo que el rol tiene por defecto, lo que la matriz de acceso le abrio y
+ * las funciones delegadas a la persona (00148); con una lista de roles fija, un modulo abierto por
+ * la matriz aparecia en el menu y la ruta lo negaba.
  *
- * Sin `roles` solo comprueba que haya sesion. Se usa asi por encima de MainLayout: el layout
+ * Sin `modulo` solo comprueba que haya sesion. Se usa asi por encima de MainLayout: el layout
  * dibuja el nombre y el rol de quien entro, asi que no puede montarse antes de saber si hay
- * alguien. Los roles se comprueban despues, ruta por ruta, ya dentro del layout.
+ * alguien. El modulo se comprueba despues, ruta por ruta, ya dentro del layout.
  *
  * El orden de las comprobaciones importa y es el que sigue.
  */
-export default function RutaProtegida({ roles = null }) {
+export default function RutaProtegida({ modulo = null }) {
   const { estadoRestauracion, haySesion, perfil, rol, cargando } = useSesionCompartida();
   const location = useLocation();
 
@@ -55,7 +57,7 @@ export default function RutaProtegida({ roles = null }) {
   }
 
   // 5. El rol no alcanza este modulo. Se dibuja en el sitio, sin cambiar la URL.
-  if (roles !== null && !roles.includes(rol)) {
+  if (modulo !== null && !puedeVerModulo(rol, modulo)) {
     return <AccesoDenegadoPage rol={rol} />;
   }
 

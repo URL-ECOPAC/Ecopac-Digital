@@ -15,17 +15,49 @@
 // Por la misma razon, ninguna funcion de jornadas/api.js consulta este archivo antes de
 // llamar: el cliente pregunta para dibujar; el servidor decide.
 
+import { accedeAModuloPorMatriz, tienePermisoFino } from "../usuarios/acceso.js";
 import { esAdministrador, ROLES, ROLES_DE_CAMPO } from "../usuarios/roles.js";
 import { ESTADOS_JORNADA } from "../enums.js";
 
 /**
  * Puede crear y modificar jornadas (asignacion de personal incluida).
  *
- * Espejo del rol de la politica de escritura de 00039. El permiso fino `jornadas.gestionar`
- * no se refleja aqui porque el cliente no puede evaluarlo.
+ * Espejo de la politica de escritura de 00039 y, desde la 00148, de las de jornada_personal:
+ * la administradora o quien tenga `jornadas.gestionar` delegado por persona (usuarios/acceso.js).
  */
 export function puedeAdministrarJornadas(rol) {
-  return esAdministrador(rol);
+  return tienePermisoFino(rol, "jornadas.gestionar");
+}
+
+/** Pestanas del detalle de una jornada, en el orden en que se dibujan. */
+export const SECCIONES_DETALLE_JORNADA = Object.freeze([
+  "resumen",
+  "equipo",
+  "pacientes",
+  "historial",
+  "presupuesto",
+  "cierre",
+]);
+
+/**
+ * Que pestanas del detalle de una jornada puede ver el rol (00148).
+ *
+ * El personal de campo solo mira la jornada en la que participa: su equipo y los pacientes que se
+ * atendieron. El resumen (presupuesto asignado, contadores), el historial de estados, el origen del
+ * presupuesto y el cierre son de quien administra la jornada. Quien tiene `jornadas.gestionar` la
+ * administra, asi que ve todo.
+ *
+ * Es el techo por rol: la pantalla sigue quitando la seccion que el rol no puede leer (pacientes
+ * sin puedeVerHistorial, historial sin puedeVerHistorialJornada, etc.).
+ *
+ * @param {string} rol
+ * @returns {string[]}
+ */
+export function seccionesDeDetalleJornada(rol) {
+  if (ROLES_DE_CAMPO.includes(rol) && !puedeAdministrarJornadas(rol)) {
+    return ["equipo", "pacientes"];
+  }
+  return [...SECCIONES_DETALLE_JORNADA];
 }
 
 /**
@@ -59,7 +91,12 @@ export function puedeAdministrarJornadas(rol) {
  * que es exactamente lo que este archivo declara para el resto del modulo.
  */
 export function puedeVerRosterCompleto(rol) {
-  return esAdministrador(rol) || ROLES_DE_CAMPO.includes(rol);
+  return (
+    esAdministrador(rol) ||
+    ROLES_DE_CAMPO.includes(rol) ||
+    puedeAdministrarJornadas(rol) ||
+    accedeAModuloPorMatriz(rol, "jornadas")
+  );
 }
 
 /**
@@ -86,7 +123,8 @@ export function puedeEditarJornada(rol, estado) {
 }
 
 /**
- * Puede reabrir una jornada finalizada (volverla a 'en curso').
+ * Puede reabrir una jornada finalizada (volverla a 'en curso'). Sigue siendo solo de la
+ * administradora aunque se delegue jornadas.gestionar: lo decide el trigger, no la politica.
  *
  * Espejo del trigger tr_validar_transicion_estado_jornada (migracion 00051, issue #171): la
  * reapertura exige es_administrador() ahi, sin excepcion del permiso fino. Igual que el resto
@@ -114,7 +152,8 @@ export function puedeReabrirJornada(rol) {
  * eso dos funciones distintas.
  */
 export function puedeVerHistorialJornada(rol) {
-  return esAdministrador(rol);
+  // 00148: tambien quien gestiona jornadas por delegacion y quien tiene el modulo abierto.
+  return puedeAdministrarJornadas(rol) || accedeAModuloPorMatriz(rol, "jornadas");
 }
 
 /**

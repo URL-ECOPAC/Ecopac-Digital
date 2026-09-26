@@ -15,7 +15,7 @@
 
 BEGIN;
 
-SELECT plan(24);
+SELECT plan(25);
 
 -- ============================================================================
 -- Setup
@@ -152,14 +152,22 @@ SELECT lives_ok(
   'el medico da de alta un medicamento del catalogo'
 );
 
--- Un UPDATE denegado no lanza: corre y afecta cero filas. Se comprueba contando.
+-- 00148: el personal de campo tambien corrige el catalogo. Lo que no hace es desactivarlo.
 UPDATE medicamentos SET nombre = 'Renombrado por el medico'
   WHERE id = '80000000-0000-0000-0000-000000008641';
 
 SELECT is(
   (SELECT nombre FROM medicamentos WHERE id = '80000000-0000-0000-0000-000000008641'),
-  'Medicamento 864',
-  'pero no puede editarlo despues: el UPDATE sigue siendo de la administradora'
+  'Renombrado por el medico',
+  'y lo corrige despues (00148); desactivarlo sigue siendo de la administradora'
+);
+
+SELECT throws_ok(
+  $$ UPDATE medicamentos SET activo = FALSE
+     WHERE id = '80000000-0000-0000-0000-000000008641' $$,
+  '42501',
+  NULL,
+  'NEGATIVA UPDATE: el medico no desactiva un medicamento (impedir_desactivar_sin_ser_administrador, 00148)'
 );
 
 -- ============================================================================

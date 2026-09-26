@@ -112,9 +112,10 @@ SELECT ok(
   'voluntario puede consultar triajes'
 );
 
-SELECT is(
-  (SELECT count(*)::int FROM diagnosticos), 0,
-  'voluntario no puede leer el catalogo de diagnosticos'
+-- 00148: el colaborador ve pacientes por completo, catalogo de diagnosticos incluido.
+SELECT ok(
+  (SELECT count(*)::int FROM diagnosticos) > 0,
+  'voluntario lee el catalogo de diagnosticos (00148)'
 );
 
 SELECT is(

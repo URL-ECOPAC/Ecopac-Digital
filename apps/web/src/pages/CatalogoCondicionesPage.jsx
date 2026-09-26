@@ -50,6 +50,7 @@ export default function CatalogoCondicionesPage() {
     permitido,
     puedeCrear,
     puedeMantener,
+    puedeRetirar,
     crear,
     editar,
     alternarVigencia,
@@ -133,6 +134,7 @@ export default function CatalogoCondicionesPage() {
             enviando={enviando}
             errores={erroresForm}
             puedeMantener={puedeMantener}
+            puedeRetirar={puedeRetirar}
             onClose={() => setModal(null)}
             onCrear={crear}
             onEditar={editar}

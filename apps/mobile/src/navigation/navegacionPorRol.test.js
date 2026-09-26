@@ -34,14 +34,14 @@ describe("tabs de la app movil por rol", () => {
     }
   });
 
-  it("el administrador ve las cinco tabs del diseno", () => {
+  it("el administrador ve las cuatro tabs, en el orden del menu web", () => {
     const tabs = tabsMoviles(ROLES.ADMINISTRADOR).map((t) => t.tabMovil);
 
     expect(tabs).toEqual([
       ROUTES.TAB_INICIO,
-      ROUTES.TAB_PACIENTES,
-      ROUTES.TAB_INVENTARIO,
       ROUTES.TAB_JORNADAS,
+      ROUTES.TAB_INVENTARIO,
+      ROUTES.TAB_PACIENTES,
     ]);
   });
 

@@ -11,7 +11,11 @@ import {
 } from "./donantes.api.js";
 import { TIPOS_DE_DONANTE } from "../enums.js";
 import { FILTROS_DONANTE } from "./filtros.js";
-import { puedeRegistrarDonaciones, puedeVerDonaciones } from "./permisos.js";
+import {
+  puedeCorregirDonaciones,
+  puedeRegistrarDonaciones,
+  puedeVerDonaciones,
+} from "./permisos.js";
 import { validarDonante } from "./validaciones.js";
 
 /** Valor del filtro de tipo que no filtra nada. */
@@ -102,6 +106,8 @@ export function useDonantesPage({ usuarioRol } = {}) {
 
   const tieneAccesoLectura = puedeVerDonaciones(usuarioRol);
   const puedeEscribir = puedeRegistrarDonaciones(usuarioRol);
+  // Corregir o dar de baja a un donante no se delega: la politica de UPDATE es de la administradora.
+  const puedeCorregir = puedeCorregirDonaciones(usuarioRol);
 
   const cargarDonantes = useCallback(async () => {
     if (!tieneAccesoLectura) {
@@ -211,8 +217,13 @@ export function useDonantesPage({ usuarioRol } = {}) {
    */
   const guardarDonante = useCallback(
     async (datosDelFormulario) => {
-      if (!puedeEscribir) {
-        const error = { mensaje: "No tienes permiso para registrar donantes." };
+      const editando = modoEdicion && donanteSeleccionado;
+      if (editando ? !puedeCorregir : !puedeEscribir) {
+        const error = {
+          mensaje: editando
+            ? "Solo la administradora corrige los datos de un donante."
+            : "No tienes permiso para registrar donantes.",
+        };
         setErrorFormulario(error);
         return { ok: false, error };
       }
@@ -245,13 +256,21 @@ export function useDonantesPage({ usuarioRol } = {}) {
       cerrarModal();
       return { ok: true, error: null };
     },
-    [puedeEscribir, modoEdicion, donanteSeleccionado, usuarioRol, cargarDonantes, cerrarModal],
+    [
+      puedeEscribir,
+      puedeCorregir,
+      modoEdicion,
+      donanteSeleccionado,
+      usuarioRol,
+      cargarDonantes,
+      cerrarModal,
+    ],
   );
 
   /** Da de baja a un donante. Es baja logica: donantes.activo pasa a false, la fila se queda. */
   const darDeBaja = useCallback(
     async (donanteId) => {
-      if (!puedeEscribir) {
+      if (!puedeCorregir) {
         return { ok: false, error: { mensaje: "No tienes permiso para dar de baja donantes." } };
       }
 
@@ -261,11 +280,11 @@ export function useDonantesPage({ usuarioRol } = {}) {
       await cargarDonantes();
       return { ok: true, error: null };
     },
-    [puedeEscribir, usuarioRol, cargarDonantes],
+    [puedeCorregir, usuarioRol, cargarDonantes],
   );
 
   return {
-    permisos: { tieneAccesoLectura, puedeEscribir },
+    permisos: { tieneAccesoLectura, puedeEscribir, puedeCorregir },
     cargando,
     guardando,
     error,

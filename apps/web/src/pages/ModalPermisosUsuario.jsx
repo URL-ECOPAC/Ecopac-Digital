@@ -1,11 +1,10 @@
 import { useState } from "react";
-import { Info } from "lucide-react";
 
 import {
   MODULOS,
   ORIGEN_PERMISO,
   accionesDisponibles,
-  permisoGobiernaAlgunaPolitica,
+  etiquetaDeModuloDePermiso,
   useGestionPermisos,
 } from "@ecopac/shared";
 
@@ -38,9 +37,8 @@ import "./permisos.css";
 //      Ahora el motivo se despliega al pedirlo, y solo en la fila que se esta cambiando.
 //   2. Conceder y Revocar eran los dos el mismo boton verde solido. Revocar QUITA un permiso:
 //      va como accion destructiva, en contorno rojo.
-//   3. El aviso de "sin efecto todavia" estaba dos veces -un bloque azul arriba explicando la
-//      situacion, y una linea repetida bajo cada permiso-. Queda una marca por fila, y la
-//      explicacion larga se lee al pasar por encima.
+//   3. El aviso de "sin efecto todavia" estaba dos veces. Desde la 00148 ya no existe: los nueve
+//      permisos gobiernan una politica y el cliente los lee (usuarios/acceso.js).
 //   4. Los modulos eran un h6 gris sobre una lista corrida. Ahora cada uno es una tarjeta, que
 //      es como se agrupa cualquier otra cosa en el sistema.
 // `item.nombre`, no `item.etiqueta`: MODULOS (navegacion.js) no tiene ningun campo `etiqueta`
@@ -48,10 +46,8 @@ import "./permisos.css";
 // inicio, y que su prueba fija desde entonces. Aqui seguia: como el valor era undefined, cada
 // grupo caia al `?? modulo` de mas abajo y se titulaba con la CLAVE de la tabla `permisos`
 // ("pacientes", "presupuestos") en vez de con el nombre legible del modulo.
-const ETIQUETAS_MODULO = Object.fromEntries(
-  MODULOS.filter((item) => item.modulo).map((item) => [item.modulo, item.nombre]),
-);
-
+// Desde entonces el titulo sale de etiquetaDeModuloDePermiso() (usuarios/permisos.js), que tambien
+// cubre `usuarios`, el unico grupo sin entrada en MODULOS.
 const ACENTOS_MODULO = Object.fromEntries(
   MODULOS.filter((item) => item.modulo).map((item) => [
     item.modulo,
@@ -59,9 +55,14 @@ const ACENTOS_MODULO = Object.fromEntries(
   ]),
 );
 
-const EXPLICACION_SIN_EFECTO =
-  "Queda guardado y auditado, pero hoy ninguna politica del servidor lo consulta: concederlo o " +
-  "revocarlo no cambia lo que esta persona puede hacer hasta que la issue #409 lo conecte.";
+// La marca decia "Del rol" tambien cuando el rol NO lo da, y se leia como "ya lo tiene". Ahora
+// dice de donde sale y si la persona lo tiene.
+function etiquetaDeOrigen(permiso) {
+  if (permiso.origen === ORIGEN_PERMISO.INDIVIDUAL) {
+    return permiso.concedido ? "Concedido a esta persona" : "Revocado a esta persona";
+  }
+  return permiso.concedido ? "Lo trae su rol" : "No lo tiene";
+}
 
 function FilaDePermiso({
   permiso,
@@ -76,20 +77,13 @@ function FilaDePermiso({
   const [pidiendoMotivo, setPidiendoMotivo] = useState(false);
   const esIndividual = permiso.origen === ORIGEN_PERMISO.INDIVIDUAL;
   const { mostrarConceder, mostrarRevocar, mostrarRestablecer } = accionesDisponibles(permiso);
-  const sinEfecto = !permisoGobiernaAlgunaPolitica(permiso.clave);
 
   return (
     <div className="permiso-fila">
       <div className="permiso-descripcion">
         <div className="d-flex align-items-center gap-2 flex-wrap">
           <span className="fw-semibold">{permiso.descripcion || permiso.clave}</span>
-          <StatusChip status={permiso.origen} label={esIndividual ? "Individual" : "Del rol"} />
-          {sinEfecto && (
-            <span className="permiso-sin-efecto" title={EXPLICACION_SIN_EFECTO}>
-              <Info size={12} aria-hidden="true" />
-              Sin efecto todavia
-            </span>
-          )}
+          <StatusChip status={permiso.origen} label={etiquetaDeOrigen(permiso)} />
         </div>
 
         {esIndividual && (permiso.otorgadoPorNombre || permiso.motivo) && (
@@ -199,9 +193,10 @@ export default function ModalPermisosUsuario({ perfil, onClose }) {
   return (
     <Modal visible onClose={onClose} title={`Permisos de ${nombre}`} size="xl">
       <p className="text-body-secondary small">
-        Un permiso <strong>del rol</strong> lo trae el rol de la persona. Uno{" "}
-        <strong>individual</strong> se concedio o se revoco aparte, y queda registrado con quien lo
-        hizo. &quot;Restablecer&quot; devuelve el permiso a lo que dicta el rol.
+        Aquí se le <strong>delegan a esta persona funciones de la administradora</strong>: al
+        concederle una, le aparece el módulo donde se usa y puede hacerla. Lo que se concede o se
+        revoca queda registrado con quien lo hizo; &quot;Restablecer&quot; la devuelve a lo que
+        dicta su rol. Qué módulos ve cada rol se decide en la matriz de acceso.
       </p>
 
       {error && (
@@ -220,7 +215,7 @@ export default function ModalPermisosUsuario({ perfil, onClose }) {
         modulos.map(({ modulo, permisos }) => (
           <div className="mb-3" key={modulo}>
             <Card
-              title={ETIQUETAS_MODULO[modulo] ?? modulo}
+              title={etiquetaDeModuloDePermiso(modulo)}
               accent={ACENTOS_MODULO[modulo] ?? "var(--color-primary)"}
             >
               {permisos.map((permiso) => (

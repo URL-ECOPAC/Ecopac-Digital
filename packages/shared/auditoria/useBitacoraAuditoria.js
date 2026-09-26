@@ -2,7 +2,11 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { listarEventosAuditoria, listarPerfilesParaFiltro } from "./api.js";
 import { OPCIONES_OPERACION_AUDITORIA } from "./columnas.js";
-import { FILTROS_BITACORA_AUDITORIA_VACIOS, TABLAS_AUDITADAS } from "./filtros.js";
+import {
+  FILTROS_BITACORA_AUDITORIA_VACIOS,
+  TABLAS_AUDITADAS,
+  etiquetaDeTablaAuditada,
+} from "./filtros.js";
 
 export const EVENTOS_POR_PAGINA = 20;
 
@@ -24,6 +28,22 @@ export function armarFilasDeAuditoria(eventos = [], nombresPorId = new Map()) {
         ? "Sistema"
         : (nombresPorId.get(evento.realizadoPor) ?? "Usuario eliminado"),
   }));
+}
+
+/**
+ * Catalogo de etiquetas para la columna Tabla: TABLAS_AUDITADAS mas cualquier tabla de estos
+ * eventos que no este en la lista, con su etiqueta de respaldo. Asi una tabla auditada que nadie
+ * agrego a TABLAS_AUDITADAS se lee "Rol permiso" y no "rol_permiso".
+ *
+ * @param {object[]} eventos
+ * @returns {{ value: string, label: string }[]}
+ */
+export function catalogoDeTablas(eventos = []) {
+  const conocidas = new Set(TABLAS_AUDITADAS.map((opcion) => opcion.value));
+  const faltantes = [...new Set(eventos.map((evento) => evento.tablaAfectada))]
+    .filter((tabla) => tabla && !conocidas.has(tabla))
+    .map((tabla) => ({ value: tabla, label: etiquetaDeTablaAuditada(tabla) }));
+  return faltantes.length === 0 ? TABLAS_AUDITADAS : [...TABLAS_AUDITADAS, ...faltantes];
 }
 
 /**
@@ -121,6 +141,8 @@ export function useBitacoraAuditoria({ porPagina = EVENTOS_POR_PAGINA } = {}) {
     [eventos, nombresPorId],
   );
 
+  const tablas = useMemo(() => catalogoDeTablas(eventos), [eventos]);
+
   const paginas = calcularPaginasDeAuditoria(total, porPagina);
 
   return {
@@ -144,7 +166,7 @@ export function useBitacoraAuditoria({ porPagina = EVENTOS_POR_PAGINA } = {}) {
       // ISSUE #864: la columna Tabla mostraba el nombre crudo de la tabla de Postgres
       // ("movimientos_inventario"). TABLAS_AUDITADAS ya traia la etiqueta legible de las ocho,
       // pero solo se usaba para el desplegable del filtro.
-      tablas: TABLAS_AUDITADAS,
+      tablas,
     },
   };
 }

@@ -5,18 +5,42 @@
 // una de las ocho tablas auditadas (serian decenas de columnas, y crece cada vez que una de esas
 // tablas gana una columna nueva).
 
-/** "fecha_nacimiento" -> "Fecha nacimiento". Genérico: no traduce, solo hace legible la columna. */
+import { formatearFechaConHora, formatearFechaCorta } from "../formato/fechas.js";
+
+// Las unicas columnas en ingles de las tablas auditadas: las marcas de tiempo que cada tabla trae
+// desde su migracion de creacion. El resto ya esta en español y basta con separar las palabras.
+const NOMBRES_DE_CAMPO = {
+  created_at: "Creado",
+  updated_at: "Actualizado",
+};
+
+/** "fecha_nacimiento" -> "Fecha Nacimiento". Genérico: solo traduce las columnas en ingles. */
 export function nombreDeCampo(clave) {
+  if (NOMBRES_DE_CAMPO[clave]) return NOMBRES_DE_CAMPO[clave];
   return clave
     .split("_")
     .map((palabra) => palabra.charAt(0).toUpperCase() + palabra.slice(1))
     .join(" ");
 }
 
-/** Un valor de columna a texto: null/undefined como "-", booleanos como Si/No, el resto tal cual. */
+// to_jsonb() deja las columnas DATE como "2026-09-18" y las TIMESTAMPTZ como
+// "2026-09-18T04:22:59.45233+00:00". Se reconocen por su forma, sin saber de que columna vienen.
+const FECHA_ISO = /^\d{4}-\d{2}-\d{2}$/;
+const MARCA_DE_TIEMPO_ISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/;
+
+/**
+ * Un valor de columna a texto: null/undefined como "-", booleanos como Si/No, fechas como
+ * "18/09/2026" y marcas de tiempo como "18/09/2026 10:22" en hora local; el resto tal cual.
+ */
 export function formatearValorDeAuditoria(valor) {
   if (valor === null || valor === undefined) return "—";
   if (typeof valor === "boolean") return valor ? "Sí" : "No";
+  if (typeof valor === "string" && FECHA_ISO.test(valor)) {
+    return formatearFechaCorta(valor) || valor;
+  }
+  if (typeof valor === "string" && MARCA_DE_TIEMPO_ISO.test(valor)) {
+    return formatearFechaConHora(valor) || valor;
+  }
   if (typeof valor === "object") return JSON.stringify(valor);
   return String(valor);
 }

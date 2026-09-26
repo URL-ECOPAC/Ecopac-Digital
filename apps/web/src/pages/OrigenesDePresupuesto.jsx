@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Plus } from "lucide-react";
 
 import {
   COLUMNAS_ORIGEN_PRESUPUESTO,
@@ -8,7 +7,8 @@ import {
 } from "@ecopac/shared";
 
 import CampoDeFormulario from "../components/CampoDeFormulario";
-import { Card, DataList, ErrorState, PrimaryButton } from "../components";
+import { Card, DataList, ErrorState, PrimaryButton, SecondaryButton } from "../components";
+import { EnFormulario } from "../components/contextoDeFormulario";
 
 // De donde viene el presupuesto de una jornada (issue #840, bloque D).
 export default function OrigenesDePresupuesto({ jornadaId, proyectoId, rol, alCambiar }) {
@@ -114,12 +114,9 @@ export default function OrigenesDePresupuesto({ jornadaId, proyectoId, rol, alCa
               </p>
             )}
           <div className="ec-form-pie">
-            <PrimaryButton
-              title="Agregar aporte"
-              icon={<Plus size={16} aria-hidden="true" />}
-              onClick={registrar}
-              loading={guardando}
-            />
+            <EnFormulario>
+              <PrimaryButton title="Agregar aporte" onClick={registrar} loading={guardando} />
+            </EnFormulario>
           </div>
         </Card>
       )}
@@ -156,24 +153,17 @@ export default function OrigenesDePresupuesto({ jornadaId, proyectoId, rol, alCa
                 </div>
               </div>
               <div className="modal-footer">
-                <button
-                  type="button"
-                  className="btn btn-outline-secondary"
-                  onClick={() => setMostrarModalNuevo(false)}
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-success"
-                  onClick={() => {
-                    setMostrarModalNuevo(false);
-                    setNuevoNombre("");
-                    if (typeof recargar === "function") recargar();
-                  }}
-                >
-                  Guardar
-                </button>
+                <EnFormulario>
+                  <SecondaryButton title="Cancelar" onClick={() => setMostrarModalNuevo(false)} />
+                  <PrimaryButton
+                    title="Guardar"
+                    onClick={() => {
+                      setMostrarModalNuevo(false);
+                      setNuevoNombre("");
+                      if (typeof recargar === "function") recargar();
+                    }}
+                  />
+                </EnFormulario>
               </div>
             </div>
           </div>

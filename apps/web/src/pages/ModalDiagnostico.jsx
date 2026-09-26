@@ -4,7 +4,6 @@ import Modal from "../components/Modal";
 import PrimaryButton from "../components/PrimaryButton";
 import SecondaryButton from "../components/SecondaryButton";
 import TextField from "../components/TextField";
-import { X } from "lucide-react";
 
 // Modal de alta y edicion del catalogo de diagnosticos (issue #639), montado desde
 // CatalogoDiagnosticosPage.jsx con estado local: no tiene ruta propia, mismo patron que
@@ -20,6 +19,7 @@ export default function ModalDiagnostico({
   onClose,
   onGuardado,
   onAlternarActivo,
+  puedeRetirar = false,
 }) {
   const { campos, valores, error, enviando, editando, setCampo, enviar } =
     useFormularioDiagnostico(diagnostico);
@@ -64,7 +64,8 @@ export default function ModalDiagnostico({
 
       <div className="d-flex justify-content-between align-items-center mt-3">
         <div>
-          {editando && (
+          {/* Retirar es de la administradora (00148); reactivar, de quien mantiene el catalogo. */}
+          {editando && (!diagnostico.activo || puedeRetirar) && (
             <SecondaryButton
               title={diagnostico.activo ? "Retirar" : "Reactivar"}
               onClick={alternarActivo}
@@ -73,14 +74,9 @@ export default function ModalDiagnostico({
           )}
         </div>
         <div className="d-flex gap-2">
-          <SecondaryButton
-            title="Cancelar"
-            onClick={onClose}
-            disabled={enviando}
-            icon={<X size={16} aria-hidden="true" />}
-          />
+          <SecondaryButton title="Cancelar" onClick={onClose} disabled={enviando} />
           <PrimaryButton
-            title={editando ? "Guardar cambios" : "Crear"}
+            title={editando ? "Guardar cambios" : "Crear diagnóstico"}
             onClick={guardar}
             loading={enviando}
           />

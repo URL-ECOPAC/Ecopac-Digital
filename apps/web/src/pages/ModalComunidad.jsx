@@ -9,7 +9,6 @@ import PrimaryButton from "../components/PrimaryButton";
 import SecondaryButton from "../components/SecondaryButton";
 import Selector from "../components/Selector";
 import TextField from "../components/TextField";
-import { X } from "lucide-react";
 
 function valoresDe(comunidad) {
   return {
@@ -28,7 +27,14 @@ function valoresDe(comunidad) {
  * compartido (useFormularioComunidad), porque necesita resolver el departamento de una
  * comunidad ya existente contra el servidor -no es un binding simple de un input.
  */
-export default function ModalComunidad({ visible, comunidad, onClose, onGuardar, erroresForm }) {
+export default function ModalComunidad({
+  visible,
+  comunidad,
+  onClose,
+  onGuardar,
+  erroresForm,
+  puedeRetirar = false,
+}) {
   const editando = Boolean(comunidad?.id);
   const [valores, setValores] = useState(() => valoresDe(comunidad));
   const [error, setError] = useState(null);
@@ -150,17 +156,14 @@ export default function ModalComunidad({ visible, comunidad, onClose, onGuardar,
             label="Comunidad vigente"
             checked={valores.esVigente}
             onChange={(evento) => cambiar("esVigente", evento.target.checked)}
+            // Retirar una comunidad vigente es de la administradora (00148); reactivar, no.
+            disabled={comunidad.esVigente && !puedeRetirar}
             className="mb-3"
           />
         )}
 
         <div className="d-flex justify-content-end gap-2 mt-3">
-          <SecondaryButton
-            title="Cancelar"
-            onClick={onClose}
-            disabled={enviando}
-            icon={<X size={16} aria-hidden="true" />}
-          />
+          <SecondaryButton title="Cancelar" onClick={onClose} disabled={enviando} />
           <PrimaryButton
             title={editando ? "Guardar cambios" : "Crear comunidad"}
             onClick={guardar}

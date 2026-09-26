@@ -8,7 +8,7 @@
 
 BEGIN;
 
-SELECT plan(29);
+SELECT plan(30);
 
 -- ============================================================================
 -- Setup: seis perfiles de prueba, uno por rol (mas un segundo voluntario para
@@ -93,19 +93,24 @@ SELECT lives_ok(
   'administrador puede otorgar un permiso puntual en usuario_permiso'
 );
 
--- Matriz de permisos por rol (issue #638, migracion 00139): conceder y retirar el default de un
--- rol entero en rol_permiso, antes de solo lectura.
-SELECT lives_ok(
+-- 00148: la matriz ya no edita rol_permiso -queda como el valor por defecto de cada rol, sembrado
+-- por migracion-; ahora concede MODULOS en rol_modulo. Ni la administradora escribe rol_permiso.
+SELECT throws_ok(
   $$ INSERT INTO rol_permiso (rol, permiso_id)
      SELECT 'voluntario general', id FROM permisos WHERE clave = 'donaciones.registrar' $$,
-  'administrador concede un permiso por defecto a un rol en rol_permiso (issue #638)'
+  '42501',
+  NULL,
+  'ni la administradora escribe rol_permiso: desde la 00148 es de solo lectura'
 );
 
 SELECT lives_ok(
-  $$ DELETE FROM rol_permiso
-     WHERE rol = 'voluntario general'
-       AND permiso_id = (SELECT id FROM permisos WHERE clave = 'donaciones.registrar') $$,
-  'administrador retira el permiso por defecto que acaba de conceder (issue #638)'
+  $$ INSERT INTO rol_modulo (rol, modulo) VALUES ('voluntario general', 'donaciones') $$,
+  'la administradora abre un modulo a un rol en la matriz de acceso (00148)'
+);
+
+SELECT lives_ok(
+  $$ DELETE FROM rol_modulo WHERE rol = 'voluntario general' AND modulo = 'donaciones' $$,
+  'y lo vuelve a cerrar'
 );
 
 -- ============================================================================

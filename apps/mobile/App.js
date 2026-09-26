@@ -3,6 +3,8 @@ import * as Linking from "expo-linking";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import {
+  configurarDestinoDeErrores,
+  crearDestinoSentry,
   ESTADOS_DE_RESTAURACION,
   inicializarSupabase,
   intercambiarSesionDeRecuperacion,
@@ -52,6 +54,29 @@ globalThis.ErrorUtils?.setGlobalHandler?.((error, esFatal) => {
   reportarError(error, { origen: esFatal ? "error-global-fatal" : "error-global" });
   manejadorAnterior?.(error, esFatal);
 });
+
+// Monitoreo de errores (issue #762), espejo de apps/web/src/main.jsx: con EXPO_PUBLIC_SENTRY_DSN
+// definido, cada reporte ya limpio va tambien a Sentry.
+try {
+  const destino = crearDestinoSentry({
+    dsn: process.env.EXPO_PUBLIC_SENTRY_DSN,
+    ambiente: process.env.NODE_ENV === "production" ? "production" : "development",
+    plataforma: "movil",
+  });
+  if (destino) configurarDestinoDeErrores(destino);
+} catch (error) {
+  console.error("El monitoreo de errores no quedo conectado.", error.message);
+}
+
+// Promesas rechazadas que nadie espero (issue #762). La web las ve con `unhandledrejection`; React
+// Native no tiene ese evento, pero Hermes -el motor de Expo- expone su rastreador. Solo fuera de
+// desarrollo: en desarrollo React Native ya lo usa para el aviso amarillo, y reemplazarlo lo apagaria.
+if (process.env.NODE_ENV === "production") {
+  globalThis.HermesInternal?.enablePromiseRejectionTracker?.({
+    allRejections: true,
+    onUnhandled: (_id, motivo) => reportarError(motivo, { origen: "promesa-sin-capturar" }),
+  });
+}
 
 function Raiz() {
   const { estadoRestauracion, haySesion, perfil } = useSesionCompartida();

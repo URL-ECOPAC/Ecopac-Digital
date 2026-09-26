@@ -10,6 +10,7 @@ export default function ModalDiagnostico({
   onClose,
   onGuardado,
   onAlternarActivo,
+  puedeRetirar = false,
 }) {
   const { campos, valores, error, enviando, editando, setCampo, enviar } =
     useFormularioDiagnostico(diagnostico);
@@ -53,7 +54,8 @@ export default function ModalDiagnostico({
         style={estilos.accion}
       />
 
-      {editando ? (
+      {/* Retirar es de la administradora (00148); reactivar, de quien mantiene el catalogo. */}
+      {editando && (!diagnostico?.activo || puedeRetirar) ? (
         <SecondaryButton
           title={diagnostico?.activo ? "Retirar del catálogo" : "Reactivar"}
           onPress={alternarActivo}

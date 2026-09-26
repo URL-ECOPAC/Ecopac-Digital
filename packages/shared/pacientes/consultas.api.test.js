@@ -476,8 +476,9 @@ describe("listarPacientesAtendidosDeJornada", () => {
   });
 
   it("un rol sin permiso no llega a llamar al cliente y recibe el motivo", async () => {
+    // Desde la 00148 el colaborador ve el historial clinico; socio fundador sigue sin verlo.
     const { pacientes, error } = await listarPacientesAtendidosDeJornada("jor-1", {
-      rol: ROLES.VOLUNTARIO,
+      rol: ROLES.SOCIO_FUNDADOR,
     });
 
     expect(pacientes).toEqual([]);
@@ -534,9 +535,10 @@ describe("contarConsultasDeJornada", () => {
     expect(cantidad).toBe(3);
   });
 
-  it("voluntario general no tiene SELECT sobre consultas (00033): cantidad null, sin llamar al cliente", async () => {
+  it("un rol sin SELECT sobre consultas: cantidad null, sin llamar al cliente", async () => {
+    // Desde la 00148 el colaborador si lee consultas; los roles consultivos siguen sin hacerlo.
     const { cantidad, error } = await contarConsultasDeJornada("jor-1", {
-      rol: ROLES.VOLUNTARIO,
+      rol: ROLES.JUNTA_DIRECTIVA,
     });
 
     expect(cantidad).toBeNull();

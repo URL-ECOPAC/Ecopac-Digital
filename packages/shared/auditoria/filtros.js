@@ -3,11 +3,12 @@
 import { SUBTIPOS_DE_RANGO, TIPOS_DE_FILTRO } from "../descriptores.js";
 
 /**
- * Las ocho tablas que hoy escriben en eventos_auditoria, una por cada
- * `CREATE TRIGGER ... EXECUTE FUNCTION registrar_evento_auditoria[_usuario_permiso]()` de
- * supabase/migrations/ (00026, 00045, 00070). Es una lista a mano y no una consulta al
+ * Las nueve tablas que hoy escriben en eventos_auditoria, una por cada
+ * `CREATE TRIGGER ... EXECUTE FUNCTION registrar_evento_auditoria[_usuario_permiso|_rol_permiso]()`
+ * de supabase/migrations/ (00026, 00045, 00070, 00139). Es una lista a mano y no una consulta al
  * catalogo de Postgres: audita una tabla nueva es de por si un cambio de migracion deliberado,
- * y ese mismo PR actualiza esta lista.
+ * y ese mismo PR actualiza esta lista. La 00139 no la actualizo, y la bitacora mostraba
+ * "ROL_PERMISO" crudo; etiquetaDeTablaAuditada() cubre ese olvido si se repite.
  */
 export const TABLAS_AUDITADAS = [
   { value: "pacientes", label: "Pacientes" },
@@ -17,8 +18,24 @@ export const TABLAS_AUDITADAS = [
   { value: "movimientos_inventario", label: "Movimientos de inventario" },
   { value: "perfiles", label: "Perfiles de usuario" },
   { value: "usuario_permiso", label: "Permisos por usuario" },
+  { value: "rol_permiso", label: "Permisos por rol" },
   { value: "padecimientos_cronicos", label: "Padecimientos crónicos" },
 ];
+
+/**
+ * Etiqueta legible de una tabla auditada: la de TABLAS_AUDITADAS, o, si la tabla no esta en la
+ * lista, su nombre con los guiones bajos como espacios ("rol_permiso" -> "Rol permiso"), nunca el
+ * nombre crudo de Postgres.
+ *
+ * @param {string} tabla Valor de eventos_auditoria.tabla_afectada.
+ * @returns {string}
+ */
+export function etiquetaDeTablaAuditada(tabla) {
+  const conocida = TABLAS_AUDITADAS.find((opcion) => opcion.value === tabla);
+  if (conocida) return conocida.label;
+  const texto = String(tabla ?? "").replaceAll("_", " ");
+  return texto.charAt(0).toUpperCase() + texto.slice(1);
+}
 
 export const FILTROS_BITACORA_AUDITORIA_VACIOS = {
   usuarioId: null,

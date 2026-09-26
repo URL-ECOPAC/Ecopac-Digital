@@ -143,15 +143,17 @@ describe("obtenerResumenCierre", () => {
     expect(dobles.contarAtencionesIncompletas).toHaveBeenCalledWith("jor-1");
   });
 
-  it("voluntario ve pacientesAtendidos real (esta en la politica de atenciones) pero atencionesIncompletas en null (no en consultas)", async () => {
+  // 00148: el colaborador lee consultas, asi que ve lo mismo que el medico.
+  it("voluntario ve pacientesAtendidos y atencionesIncompletas reales, igual que el medico", async () => {
     dobles.contarPacientesDeJornada.mockResolvedValue({ cantidad: 8, error: null });
+    dobles.contarAtencionesIncompletas.mockResolvedValue({ cantidad: 2, error: null });
 
     const resumen = await obtenerResumenCierre({ id: "jor-1" }, { rol: ROLES.VOLUNTARIO });
 
     expect(resumen.indicadores.pacientesAtendidos).toBe(8);
-    expect(resumen.atencionesIncompletas).toBeNull();
+    expect(resumen.atencionesIncompletas).toBe(2);
     expect(dobles.contarPacientesDeJornada).toHaveBeenCalledWith("jor-1");
-    expect(dobles.contarAtencionesIncompletas).not.toHaveBeenCalled();
+    expect(dobles.contarAtencionesIncompletas).toHaveBeenCalledWith("jor-1");
   });
 
   it("junta directiva no tiene SELECT sobre atenciones ni consultas: pacientesAtendidos y atencionesIncompletas quedan en null, nunca en 0 falso", async () => {

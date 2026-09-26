@@ -15,7 +15,7 @@ import {
 import BotonExportarPDF from "../components/BotonExportarPDF";
 import DateField from "../components/DateField";
 import SectionHeader from "../components/SectionHeader";
-import SecondaryButton from "../components/SecondaryButton";
+import BotonLimpiarFiltros from "../components/BotonLimpiarFiltros";
 import Selector from "../components/Selector";
 import StatusChip from "../components/StatusChip";
 import DocumentoImprimible from "./DocumentoImprimible";
@@ -247,16 +247,12 @@ export default function KardexMovimientosPage({
             style={{ marginBottom: 0 }}
           />
         </div>
-        <div className="ec-filtros-limpiar">
-          <SecondaryButton
-            title="Limpiar filtros"
-            variant="neutra"
-            disabled={!hayFiltros}
-            onClick={() =>
-              setFiltros({ ...filtros, fechaDesde: "", fechaHasta: "", tipoMovimiento: "todos" })
-            }
-          />
-        </div>
+        <BotonLimpiarFiltros
+          hayFiltros={hayFiltros}
+          onClick={() =>
+            setFiltros({ ...filtros, fechaDesde: "", fechaHasta: "", tipoMovimiento: "todos" })
+          }
+        />
       </div>
 
       {cargando ? (

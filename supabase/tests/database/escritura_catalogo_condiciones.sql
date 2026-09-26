@@ -1,7 +1,8 @@
 -- Pruebas de la escritura del catalogo de condiciones cronicas (issue #850, migracion 00140).
 -- Corre con: supabase test db
 --
--- Cubre lo que agrega la 00140 y nada mas: quien inserta, quien mantiene, que nadie borra, y que
+-- Cubre lo que agrega la 00140 (y ajusta la 00148): quien inserta, quien mantiene -desde la 00148
+-- tambien el personal de campo, salvo retirar-, que nadie borra, y que
 -- el indice normalizado impide el mismo nombre escrito de otra forma. La lectura del catalogo y
 -- las politicas de padecimientos_cronicos ya las cubre politicas_rls_catalogos_y_seguimiento.sql.
 --
@@ -98,7 +99,7 @@ SELECT throws_ok(
 );
 
 -- ============================================================================
--- Mantener el catalogo: renombrar y retirar, solo la administracion
+-- Mantener el catalogo: la administracion renombra y retira
 -- ============================================================================
 SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000850001';
 
@@ -120,26 +121,30 @@ SELECT is(
   'y queda marcada como no vigente'
 );
 
+-- 00148: el personal de campo tambien corrige el catalogo y reactiva lo retirado. Retirar es
+-- sacarlo de uso -lo mas parecido a eliminarlo- y sigue siendo de la administradora.
 SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000850002';
 
-SELECT is_empty(
+SELECT isnt_empty(
   $$ UPDATE condiciones_cronicas SET es_vigente = TRUE
      WHERE id = 'cc000000-0000-0000-0000-000000850002' RETURNING id $$,
-  'NEGATIVA UPDATE: el medico da de alta pero no mantiene el catalogo (el USING filtra: cero filas)'
-);
-
-SELECT is(
-  (SELECT es_vigente FROM condiciones_cronicas WHERE id = 'cc000000-0000-0000-0000-000000850002'),
-  FALSE,
-  'y la condicion retirada sigue retirada'
+  'POSITIVA UPDATE: el medico reactiva una condicion retirada (00148)'
 );
 
 SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000850003';
 
-SELECT is_empty(
-  $$ UPDATE condiciones_cronicas SET nombre = 'Nombre puesto por el voluntario'
+SELECT throws_ok(
+  $$ UPDATE condiciones_cronicas SET es_vigente = FALSE
+     WHERE id = 'cc000000-0000-0000-0000-000000850002' $$,
+  '42501',
+  NULL,
+  'NEGATIVA UPDATE: el voluntario no retira una condicion del catalogo (00148)'
+);
+
+SELECT isnt_empty(
+  $$ UPDATE condiciones_cronicas SET nombre = 'Nombre corregido por el voluntario'
      WHERE id = 'cc000000-0000-0000-0000-000000850002' RETURNING id $$,
-  'NEGATIVA UPDATE: el voluntario tampoco renombra lo que ya citan otras fichas'
+  'POSITIVA UPDATE: el voluntario corrige el nombre de una condicion (00148)'
 );
 
 -- ============================================================================

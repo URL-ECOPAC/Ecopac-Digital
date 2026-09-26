@@ -17,6 +17,7 @@ import {
   SecondaryButton,
   Selector,
 } from "../components";
+import { EnFormulario } from "../components/contextoDeFormulario";
 import { useSesionCompartida } from "../contexto/SesionProvider";
 
 function etiquetaDeLote(lote) {
@@ -131,19 +132,21 @@ export default function RegistroSalidaScreen({ navigation }) {
         editable={!cargando}
       />
 
-      <PrimaryButton
-        title="Registrar salida"
-        onPress={guardarSalida}
-        loading={cargando}
-        disabled={!listo || cargando}
-        style={estilos.accion}
-      />
-      <SecondaryButton
-        title="Cancelar"
-        onPress={() => navigation?.goBack()}
-        disabled={cargando}
-        style={estilos.accion}
-      />
+      <EnFormulario>
+        <PrimaryButton
+          title="Registrar salida"
+          onPress={guardarSalida}
+          loading={cargando}
+          disabled={!listo || cargando}
+          style={estilos.accion}
+        />
+        <SecondaryButton
+          title="Cancelar"
+          onPress={() => navigation?.goBack()}
+          disabled={cargando}
+          style={estilos.accion}
+        />
+      </EnFormulario>
     </ScreenContainer>
   );
 }

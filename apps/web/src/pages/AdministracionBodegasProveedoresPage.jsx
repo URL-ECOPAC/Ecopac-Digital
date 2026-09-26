@@ -3,6 +3,8 @@ import ErrorState from "../components/ErrorState";
 import { useAdministracionBodegasProveedores, TIPO_BODEGA, TIPO_PROVEEDOR } from "@ecopac/shared";
 import { Nav } from "react-bootstrap";
 import PrimaryButton from "../components/PrimaryButton";
+import SecondaryButton from "../components/SecondaryButton";
+import { EnFormulario } from "../components/contextoDeFormulario";
 import SectionHeader from "../components/SectionHeader";
 import { useCerrarAlTocarFuera } from "../hooks/useCerrarAlTocarFuera";
 
@@ -519,38 +521,14 @@ export default function AdministracionBodegasProveedoresPage() {
               Es bodega móvil (viaja a jornadas)
             </label>
 
-            <div
-              style={{ display: "flex", gap: "10px", justifyContent: "flex-end", marginTop: "8px" }}
-            >
-              <button
-                type="button"
-                onClick={() => setModalBodega(null)}
-                style={{
-                  padding: "8px 16px",
-                  borderRadius: "8px",
-                  border: "1px solid var(--color-border)",
-                  backgroundColor: "var(--color-surface)",
-                  fontSize: "var(--texto-xs)",
-                  cursor: "pointer",
-                }}
-              >
-                Cancelar
-              </button>
-              <button
-                type="submit"
-                style={{
-                  padding: "8px 16px",
-                  borderRadius: "8px",
-                  border: "none",
-                  backgroundColor: "var(--color-success)",
-                  color: "var(--color-surface)",
-                  fontSize: "var(--texto-xs)",
-                  fontWeight: 500,
-                  cursor: "pointer",
-                }}
-              >
-                {modalBodega.modo === "crear" ? "Crear" : "Guardar Cambios"}
-              </button>
+            <div className="ec-form-pie">
+              <EnFormulario>
+                <SecondaryButton title="Cancelar" onClick={() => setModalBodega(null)} />
+                <PrimaryButton
+                  type="submit"
+                  title={modalBodega.modo === "crear" ? "Crear bodega" : "Guardar cambios"}
+                />
+              </EnFormulario>
             </div>
           </form>
         </div>
@@ -672,38 +650,14 @@ export default function AdministracionBodegasProveedoresPage() {
               </select>
             </div>
 
-            <div
-              style={{ display: "flex", gap: "10px", justifyContent: "flex-end", marginTop: "8px" }}
-            >
-              <button
-                type="button"
-                onClick={() => setModalProveedor(null)}
-                style={{
-                  padding: "8px 16px",
-                  borderRadius: "8px",
-                  border: "1px solid var(--color-border)",
-                  backgroundColor: "var(--color-surface)",
-                  fontSize: "var(--texto-xs)",
-                  cursor: "pointer",
-                }}
-              >
-                Cancelar
-              </button>
-              <button
-                type="submit"
-                style={{
-                  padding: "8px 16px",
-                  borderRadius: "8px",
-                  border: "none",
-                  backgroundColor: "var(--color-success)",
-                  color: "var(--color-surface)",
-                  fontSize: "var(--texto-xs)",
-                  fontWeight: 500,
-                  cursor: "pointer",
-                }}
-              >
-                {modalProveedor.modo === "crear" ? "Crear" : "Guardar Cambios"}
-              </button>
+            <div className="ec-form-pie">
+              <EnFormulario>
+                <SecondaryButton title="Cancelar" onClick={() => setModalProveedor(null)} />
+                <PrimaryButton
+                  type="submit"
+                  title={modalProveedor.modo === "crear" ? "Crear proveedor" : "Guardar cambios"}
+                />
+              </EnFormulario>
             </div>
           </form>
         </div>

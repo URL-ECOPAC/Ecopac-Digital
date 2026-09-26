@@ -43,14 +43,15 @@ const PACIENTE = {
 
 describe("pestaniasDeFicha", () => {
   // Issue #840: signos y recetas dejan de ser pestanas hermanas; viven dentro de cada visita.
-  it("da datos generales e historial a medico y administrador", () => {
-    for (const rol of [ROLES.MEDICO, ROLES.ADMINISTRADOR]) {
+  // 00148: el colaborador ve pacientes por completo, historial incluido.
+  it("da datos generales e historial a administrador y personal de campo", () => {
+    for (const rol of [ROLES.MEDICO, ROLES.VOLUNTARIO, ROLES.ADMINISTRADOR]) {
       expect(pestaniasDeFicha(rol).map((p) => p.id)).toEqual(["generales", "historial"]);
     }
   });
 
   it("deja solo datos generales a los roles sin acceso clinico", () => {
-    for (const rol of [ROLES.VOLUNTARIO, ROLES.JUNTA_DIRECTIVA, ROLES.SOCIO_FUNDADOR, undefined]) {
+    for (const rol of [ROLES.JUNTA_DIRECTIVA, ROLES.SOCIO_FUNDADOR, undefined]) {
       expect(pestaniasDeFicha(rol).map((p) => p.id)).toEqual(["generales"]);
     }
   });
@@ -71,7 +72,9 @@ describe("resolverPestaniaDeFicha", () => {
   });
 
   it("cae a la de por defecto si el rol no puede ver esa pestania", () => {
-    expect(resolverPestaniaDeFicha("historial", ROLES.VOLUNTARIO)).toBe(PESTANIA_FICHA_POR_DEFECTO);
+    expect(resolverPestaniaDeFicha("historial", ROLES.JUNTA_DIRECTIVA)).toBe(
+      PESTANIA_FICHA_POR_DEFECTO,
+    );
   });
 });
 
@@ -153,7 +156,7 @@ describe("valoresDeFichaPaciente", () => {
 });
 
 describe("permisosDeFicha", () => {
-  it("solo medico y administrador editan y ven datos clinicos", () => {
+  it("el personal de campo edita y ve datos clinicos; consulta y receta son del medico", () => {
     expect(permisosDeFicha(ROLES.MEDICO)).toEqual({
       puedeEditar: true,
       puedeVerDatosClinicos: true,
@@ -171,11 +174,10 @@ describe("permisosDeFicha", () => {
       puedeNuevaConsulta: true,
     });
     expect(permisosDeFicha(ROLES.VOLUNTARIO)).toEqual({
-      puedeEditar: false,
-      puedeVerDatosClinicos: false,
-      // El voluntario general SI toma triaje (00033, politica de INSERT de triajes): es la
-      // unica de las tres capturas clinicas que alcanza a su rol, y la ficha tiene que
-      // ofrecersela aunque no pueda ver el historial completo.
+      // 00148: edita el paciente y ve el historial. Toma triaje (00033); consulta y receta no,
+      // porque las firma un medico.
+      puedeEditar: true,
+      puedeVerDatosClinicos: true,
       puedeTomarTriaje: true,
       puedeCrearConsulta: false,
       puedeEmitirReceta: false,

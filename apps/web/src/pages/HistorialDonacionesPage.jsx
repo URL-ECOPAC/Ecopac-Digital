@@ -21,7 +21,7 @@ import {
 
 import DateField from "../components/DateField";
 import PageHeader from "../components/PageHeader";
-import SecondaryButton from "../components/SecondaryButton";
+import BotonLimpiarFiltros from "../components/BotonLimpiarFiltros";
 import Selector from "../components/Selector";
 import StatCard from "../components/StatCard";
 import TextField from "../components/TextField";
@@ -162,13 +162,7 @@ export default function HistorialDonacionesPage({ usuarioRol }) {
             />
           </div>
         </fieldset>
-        <div className="ec-filtros-limpiar">
-          <SecondaryButton
-            title="Limpiar filtros"
-            variant="neutra"
-            onClick={filtros.limpiarFiltros}
-          />
-        </div>
+        <BotonLimpiarFiltros onClick={filtros.limpiarFiltros} hayFiltros={filtros.hayFiltros} />
       </div>
 
       {/* Tabla de Historial */}

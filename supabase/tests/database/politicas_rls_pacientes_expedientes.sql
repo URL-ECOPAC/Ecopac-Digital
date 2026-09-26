@@ -6,7 +6,7 @@
 
 BEGIN;
 
-SELECT plan(25);
+SELECT plan(28);
 
 -- ============================================================================
 -- Setup: un perfil de cada rol y una comunidad para poder registrar pacientes.
@@ -89,8 +89,17 @@ SELECT ok(
 );
 
 SELECT lives_ok(
+  $$ UPDATE pacientes SET telefono_contacto = '5555-1002' WHERE id = '20000000-0000-0000-0000-000000000002' $$,
+  'medico puede editar un paciente ya registrado'
+);
+
+-- 00148: dar de baja es eliminar, y eso es solo de la administradora. Lo corta el trigger
+-- impedir_baja_de_paciente_sin_ser_administrador, no la politica de UPDATE.
+SELECT throws_ok(
   $$ UPDATE pacientes SET fecha_baja = CURRENT_DATE WHERE id = '20000000-0000-0000-0000-000000000002' $$,
-  'medico puede editar un paciente ya registrado (dar de baja logica)'
+  '42501',
+  NULL,
+  'medico NO puede dar de baja a un paciente: eliminar es de la administradora (00148)'
 );
 
 SELECT lives_ok(
@@ -103,9 +112,14 @@ SELECT lives_ok(
   'medico puede editar un expediente ya creado'
 );
 
--- eventos_auditoria solo la lee administrador (00026): se cambia de sesion
--- puntualmente para esta verificacion y se vuelve a medico despues.
+-- La baja la da la administradora, y eventos_auditoria solo la lee ella (00026): se cambia de
+-- sesion para las dos cosas y se vuelve a medico despues.
 SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000101';
+
+SELECT lives_ok(
+  $$ UPDATE pacientes SET fecha_baja = CURRENT_DATE WHERE id = '20000000-0000-0000-0000-000000000002' $$,
+  'administrador da de baja logica a un paciente'
+);
 
 SELECT ok(
   (SELECT count(*) FROM eventos_auditoria WHERE tabla_afectada = 'pacientes' AND operacion = 'baja') > 0,
@@ -157,16 +171,14 @@ SELECT ok(
   'voluntario puede consultar pacientes'
 );
 
--- El UPDATE de un rol sin politica de UPDATE no lanza excepcion: la clausula USING
--- simplemente excluye la fila (como un WHERE que no matchea nada), asi que el UPDATE
--- termina "exitosamente" sin afectar ninguna fila. Se verifica que el valor no cambio,
--- en vez de esperar una excepcion.
+-- 00148: el colaborador edita pacientes y expedientes igual que el medico -recibe pacientes.editar
+-- por defecto en rol_permiso-. Lo unico que no hace es darlos de baja.
 UPDATE pacientes SET telefono_contacto = '5555-0000' WHERE id = '20000000-0000-0000-0000-000000000003';
 
 SELECT is(
   (SELECT telefono_contacto FROM pacientes WHERE id = '20000000-0000-0000-0000-000000000003'),
-  '5555-1003',
-  'voluntario no puede editar un paciente ya registrado (el UPDATE no afecta ninguna fila)'
+  '5555-0000',
+  'voluntario puede editar un paciente ya registrado (00148)'
 );
 
 SELECT lives_ok(
@@ -178,33 +190,46 @@ UPDATE expedientes SET numero_ficha = 'F-0003-B' WHERE paciente_id = '20000000-0
 
 SELECT is(
   (SELECT numero_ficha FROM expedientes WHERE paciente_id = '20000000-0000-0000-0000-000000000003'),
-  'F-0003',
-  'voluntario no puede editar un expediente ya creado (el UPDATE no afecta ninguna fila)'
+  'F-0003-B',
+  'voluntario puede editar un expediente ya creado (00148)'
+);
+
+SELECT throws_ok(
+  $$ UPDATE pacientes SET fecha_baja = CURRENT_DATE WHERE id = '20000000-0000-0000-0000-000000000003' $$,
+  '42501',
+  NULL,
+  'voluntario NO puede dar de baja a un paciente (00148)'
 );
 
 -- ============================================================================
--- pacientes.editar concedido puntualmente a voluntario (issue #409): la operacion que las dos
--- pruebas de arriba mostraron negada ahora se permite.
+-- pacientes.editar revocado puntualmente a voluntario (issue #409): la operacion que las pruebas de
+-- arriba mostraron permitida deja de estarlo. Mismo caso que el del medico, del otro lado.
 -- ============================================================================
 SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000101';
 
 SELECT lives_ok(
   $$ INSERT INTO usuario_permiso (perfil_id, permiso_id, concedido, otorgado_por)
-     SELECT '00000000-0000-0000-0000-000000000105', id, true, '00000000-0000-0000-0000-000000000101'
+     SELECT '00000000-0000-0000-0000-000000000105', id, false, '00000000-0000-0000-0000-000000000101'
      FROM permisos WHERE clave = 'pacientes.editar' $$,
-  'administrador concede pacientes.editar a voluntario105 (issue #409)'
+  'administrador revoca pacientes.editar a voluntario105 (issue #409)'
 );
 
 SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000105';
 
-SELECT lives_ok(
-  $$ UPDATE pacientes SET telefono_contacto = '5555-9003' WHERE id = '20000000-0000-0000-0000-000000000003' $$,
-  'voluntario con pacientes.editar concedido puntualmente si puede editar un paciente (issue #409)'
+UPDATE pacientes SET telefono_contacto = '5555-9003' WHERE id = '20000000-0000-0000-0000-000000000003';
+
+SELECT is(
+  (SELECT telefono_contacto FROM pacientes WHERE id = '20000000-0000-0000-0000-000000000003'),
+  '5555-0000',
+  'voluntario sin pacientes.editar (revocado puntualmente) ya no edita pacientes (issue #409)'
 );
 
-SELECT lives_ok(
-  $$ UPDATE expedientes SET numero_ficha = 'F-0003-C' WHERE paciente_id = '20000000-0000-0000-0000-000000000003' $$,
-  'voluntario con pacientes.editar concedido puntualmente si puede editar un expediente (issue #409)'
+UPDATE expedientes SET numero_ficha = 'F-0003-C' WHERE paciente_id = '20000000-0000-0000-0000-000000000003';
+
+SELECT is(
+  (SELECT numero_ficha FROM expedientes WHERE paciente_id = '20000000-0000-0000-0000-000000000003'),
+  'F-0003-B',
+  'voluntario sin pacientes.editar (revocado puntualmente) ya no edita expedientes (issue #409)'
 );
 
 -- ============================================================================

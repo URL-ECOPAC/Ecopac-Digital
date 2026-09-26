@@ -147,12 +147,7 @@ export default function ModalAltaPaciente({ onClose, onRegistrado, rol }) {
           onClick={cerrar}
           disabled={enviando}
         />
-        <PrimaryButton
-          title="Registrar paciente"
-          icon={<Plus size={16} aria-hidden="true" />}
-          onClick={registrar}
-          loading={enviando}
-        />
+        <PrimaryButton title="Registrar paciente" onClick={registrar} loading={enviando} />
       </div>
     </Modal>
   );

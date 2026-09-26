@@ -115,7 +115,7 @@ SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000075202';
 SELECT throws_ok(
   $$ SELECT * FROM fn_valor_de_inventario_disponible() $$,
   '42501',
-  'Solo administracion y los roles consultivos consultan la valorizacion de inventario.',
+  'Solo administracion y quien consulta reportes ve la valorizacion de inventario.',
   'medico no puede consultar la valorizacion de inventario'
 );
 
@@ -124,7 +124,7 @@ SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000075205';
 SELECT throws_ok(
   $$ SELECT * FROM fn_valor_de_inventario_disponible() $$,
   '42501',
-  'Solo administracion y los roles consultivos consultan la valorizacion de inventario.',
+  'Solo administracion y quien consulta reportes ve la valorizacion de inventario.',
   'voluntario general no puede consultar la valorizacion de inventario'
 );
 

@@ -8,38 +8,42 @@
 // Aqui se replica el rol que esas politicas piden, para no ofrecer una accion que el servidor va
 // a rechazar con un 42501.
 
-import { esAdministrador, ROLES, TODOS_LOS_ROLES } from "../usuarios/roles.js";
+import { accedeAModuloPorMatriz } from "../usuarios/acceso.js";
+import { esAdministrador, ROLES_DE_CAMPO, TODOS_LOS_ROLES } from "../usuarios/roles.js";
+
+function esPersonalDeCampo(rol) {
+  return ROLES_DE_CAMPO.includes(rol);
+}
 
 /**
  * Puede ver las condiciones cronicas de un paciente.
  *
- * Espejo de la politica de SELECT de 00010, que admite solo administrador y medico. Es la
- * politica mas cerrada del modulo de pacientes: un voluntario general registra pacientes y toma
- * triaje, pero el diagnostico cronico es informacion clinica y no la ve. Para el, la consulta no
- * falla: devuelve cero filas.
+ * Espejo de la politica de SELECT de padecimientos_cronicos (00148): administrador, personal de
+ * campo, y el rol al que la matriz le abrio Pacientes. El colaborador entra desde la 00148, que le
+ * abre pacientes por completo.
  */
 export function puedeVerCondiciones(rol) {
-  return esAdministrador(rol) || rol === ROLES.MEDICO;
+  return esAdministrador(rol) || esPersonalDeCampo(rol) || accedeAModuloPorMatriz(rol, "pacientes");
 }
 
 /**
  * Puede asociar una condicion cronica a un paciente.
  *
- * Espejo de la politica de INSERT de 00010: administrador y medico.
+ * Espejo de la politica de INSERT (00148): administrador y personal de campo.
  */
 export function puedeRegistrarCondicion(rol) {
-  return esAdministrador(rol) || rol === ROLES.MEDICO;
+  return esAdministrador(rol) || esPersonalDeCampo(rol);
 }
 
 /**
- * Puede corregir una condicion ya registrada o darla de baja.
+ * Puede corregir una condicion ya registrada o darla de alta al paciente (resuelta).
  *
- * Espejo de la politica de UPDATE de 00010: administrador y medico. Cubre tanto
+ * Espejo de la politica de UPDATE (00148): administrador y personal de campo. Cubre tanto
  * actualizarCondicion() como desasociarCondicion(), porque la baja es un cambio de estado y no
  * un borrado: las dos son el mismo UPDATE para la base de datos.
  */
 export function puedeEditarCondicion(rol) {
-  return esAdministrador(rol) || rol === ROLES.MEDICO;
+  return esAdministrador(rol) || esPersonalDeCampo(rol);
 }
 
 /**
@@ -75,24 +79,26 @@ export function puedeVerCatalogoDeCondiciones(rol) {
  *
  * Los dos roles consultivos -junta directiva y socio fundador- quedan fuera: desde la 00054 no
  * tocan ninguna fila clinica, y este catalogo lo es.
- *
- * OJO con el voluntario general: puede dar de alta en el catalogo, pero no vera el resultado en
- * la ficha de ningun paciente, porque padecimientos_cronicos (00010) no tiene ninguna politica
- * para su rol, ni de SELECT. Para el, el unico camino es la pantalla de catalogo. Esta asimetria
- * esta documentada en docs/PERMISOS.md; no es un olvido de esta funcion.
  */
 export function puedeCrearCondicionDelCatalogo(rol) {
-  return esAdministrador(rol) || rol === ROLES.MEDICO || rol === ROLES.VOLUNTARIO;
+  return esAdministrador(rol) || esPersonalDeCampo(rol);
 }
 
 /**
- * Puede renombrar una condicion del catalogo o retirarla con `es_vigente` (issue #850).
+ * Puede renombrar una condicion del catalogo o reactivar una retirada.
  *
- * Espejo de la politica de UPDATE de la 00140, mas estrecha que la de INSERT a proposito: solo
- * administrador. Dar de alta y retirar no son la misma accion. Retirar quita la condicion del
- * selector de TODAS las fichas, y renombrarla reescribe lo que ya citan expedientes ajenos: eso
- * es curaduria del catalogo, no captura en jornada.
+ * Espejo de la politica de UPDATE (00148): administrador y personal de campo. Retirarla
+ * (es_vigente = false) no: la quita del selector de TODAS las fichas, que es lo mas parecido a
+ * eliminarla, y queda en puedeRetirarCondicionDelCatalogo().
  */
 export function puedeMantenerCatalogoCondiciones(rol) {
+  return esAdministrador(rol) || esPersonalDeCampo(rol);
+}
+
+/**
+ * Puede retirar una condicion del catalogo (es_vigente = false). Solo la administradora: trigger
+ * impedir_retirar_sin_ser_administrador (00148).
+ */
+export function puedeRetirarCondicionDelCatalogo(rol) {
   return esAdministrador(rol);
 }

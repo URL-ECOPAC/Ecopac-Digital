@@ -162,6 +162,18 @@
  * @property {string|null} motivo
  */
 
+/**
+ * Fila de `rol_modulo` (00148_acceso_a_modulos_por_rol.sql): un modulo que la administradora le
+ * abrio a un rol ademas de los suyos, en solo lectura.
+ *
+ * @typedef {object} RolModulo
+ * @property {string} id
+ * @property {RolUsuario} rol
+ * @property {string} modulo `MODULOS[].modulo`, p. ej. "donaciones".
+ * @property {string|null} otorgadoPor
+ * @property {string} otorgadoEn
+ */
+
 // --- Territorio -----------------------------------------------------------------------------
 
 /**

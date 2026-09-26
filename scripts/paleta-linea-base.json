@@ -377,7 +377,6 @@
   "apps/web/src/pages/ModalRegistroIngreso.jsx": ["#2d2d2d"],
   "apps/web/src/pages/ModalSalidaMedicamento.jsx": [
     "#2d2d2d",
-    "#3db648",
     "#7a7a8a",
     "#e2e4e9",
     "#e91e8c",
@@ -396,7 +395,16 @@
   ],
   "apps/web/src/pages/PanelEjecucionPresupuestal.jsx": ["#29abe2", "#3db648", "#7a7a8a", "#f7941d"],
   "apps/web/src/pages/perfil.css": ["#1e7a28", "#2d2d2d", "#3db648", "#7a7a8a", "#ffffff"],
-  "apps/web/src/pages/permisos.css": ["#3db648", "#7a7a8a", "#e2e4e9", "#f7941d", "#ffffff"],
+  "apps/web/src/pages/permisos.css": [
+    "#29abe2",
+    "#2d2d2d",
+    "#3db648",
+    "#4d4d4d",
+    "#7a7a8a",
+    "#e2e4e9",
+    "#f7941d",
+    "#ffffff"
+  ],
   "apps/web/src/pages/PestaniaSignosPaciente.jsx": [
     "#29abe2",
     "#3db648",

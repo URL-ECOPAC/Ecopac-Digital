@@ -86,6 +86,7 @@ export default function ComunidadesScreen() {
           onClose={() => setModal(null)}
           onGuardar={guardar}
           erroresForm={erroresForm}
+          puedeRetirar={permisos.puedeRetirar}
         />
       )}
     </ScreenContainer>

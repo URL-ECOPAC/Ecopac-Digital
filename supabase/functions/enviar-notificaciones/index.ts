@@ -15,6 +15,7 @@
 
 import { createClient } from "@supabase/supabase-js";
 import { enviarCorreosPendientes, leerConfiguracionSmtp } from "../_shared/correo.ts";
+import { reportarErrorDeFuncion } from "../_shared/errores.ts";
 
 function responder(cuerpo: unknown, status = 200) {
   return new Response(JSON.stringify(cuerpo), {
@@ -33,7 +34,10 @@ Deno.serve(async (req: Request) => {
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   if (!supabaseUrl) {
-    console.error("enviar-notificaciones: falta SUPABASE_URL en el entorno de la funcion.");
+    await reportarErrorDeFuncion(
+      "enviar-notificaciones",
+      "falta SUPABASE_URL en el entorno de la funcion",
+    );
     return responder({ error: "Configuracion incompleta del entorno." }, 500);
   }
 
@@ -48,7 +52,7 @@ Deno.serve(async (req: Request) => {
     return responder(resultado);
   } catch (error) {
     const mensaje = error instanceof Error ? error.message : String(error);
-    console.error("enviar-notificaciones:", mensaje);
+    await reportarErrorDeFuncion("enviar-notificaciones", "el envio de correos fallo", error);
     return responder({ error: mensaje }, 500);
   }
 });

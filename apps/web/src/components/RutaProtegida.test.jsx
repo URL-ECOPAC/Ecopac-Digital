@@ -20,11 +20,11 @@ vi.mock("../contexto/SesionProvider", () => ({
   useSesionCompartida: vi.fn(),
 }));
 
-function renderConRuta({ roles = null } = {}) {
+function renderConRuta({ modulo = null } = {}) {
   return render(
     <MemoryRouter initialEntries={["/protegida"]}>
       <Routes>
-        <Route element={<RutaProtegida roles={roles} />}>
+        <Route element={<RutaProtegida modulo={modulo} />}>
           <Route path="/protegida" element={<div>Contenido protegido</div>} />
         </Route>
         <Route path="/login" element={<div>Pantalla de login</div>} />
@@ -72,7 +72,7 @@ describe("RutaProtegida", () => {
       cargando: true,
     });
 
-    renderConRuta({ roles: ["administrador"] });
+    renderConRuta({ modulo: "matriz-permisos" });
 
     expect(screen.getByText(/comprobando tu sesión/i)).toBeInTheDocument();
     expect(screen.queryByText(/no se pudo confirmar tu rol/i)).not.toBeInTheDocument();
@@ -87,12 +87,12 @@ describe("RutaProtegida", () => {
       cargando: false,
     });
 
-    renderConRuta({ roles: ["administrador"] });
+    renderConRuta({ modulo: "matriz-permisos" });
 
     expect(screen.getByText(/no se pudo confirmar tu rol/i)).toBeInTheDocument();
   });
 
-  it("muestra acceso denegado cuando el rol no esta en la lista permitida", () => {
+  it("muestra acceso denegado cuando el rol no llega al modulo", () => {
     useSesionCompartida.mockReturnValue({
       estadoRestauracion: "listo",
       haySesion: true,
@@ -100,12 +100,12 @@ describe("RutaProtegida", () => {
       rol: "voluntario general",
     });
 
-    renderConRuta({ roles: ["administrador"] });
+    renderConRuta({ modulo: "matriz-permisos" });
 
     expect(screen.getByText(/tu usuario tiene el rol de/i)).toBeInTheDocument();
   });
 
-  it("deja pasar cuando el rol esta en la lista permitida", () => {
+  it("deja pasar cuando el rol llega al modulo", () => {
     useSesionCompartida.mockReturnValue({
       estadoRestauracion: "listo",
       haySesion: true,
@@ -113,12 +113,12 @@ describe("RutaProtegida", () => {
       rol: "administrador",
     });
 
-    renderConRuta({ roles: ["administrador"] });
+    renderConRuta({ modulo: "matriz-permisos" });
 
     expect(screen.getByText("Contenido protegido")).toBeInTheDocument();
   });
 
-  it("sin lista de roles (roles=null), cualquier sesion valida pasa", () => {
+  it("sin modulo (modulo=null), cualquier sesion valida pasa", () => {
     useSesionCompartida.mockReturnValue({
       estadoRestauracion: "listo",
       haySesion: true,
@@ -126,7 +126,7 @@ describe("RutaProtegida", () => {
       rol: "voluntario general",
     });
 
-    renderConRuta({ roles: null });
+    renderConRuta({ modulo: null });
 
     expect(screen.getByText("Contenido protegido")).toBeInTheDocument();
   });

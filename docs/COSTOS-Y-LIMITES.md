@@ -284,6 +284,10 @@ Salidas:
    convierte en una decision de proteccion de datos, no solo tecnica (ver
    `docs/PROTECCION-DE-DATOS.md`)-.
 
+**Decidido como se cierra:** dev se queda sin respaldos (no tiene datos reales), y los de produccion
+se implementan en la issue de salida a produccion (#252), antes del primer dato real, con el plan
+de `docs/CI-CD.md`, "Plan para produccion". La recomendacion sigue siendo la salida 1.
+
 ### 6.3 Dos proyectos activos por organizacion
 
 `ecopac-dev` y `ecopac-prod` ocupan exactamente los dos que permite el plan Free. **No hay sitio

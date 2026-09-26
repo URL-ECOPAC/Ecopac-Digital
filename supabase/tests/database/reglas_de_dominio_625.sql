@@ -19,7 +19,7 @@
 
 BEGIN;
 
-SELECT plan(28);
+SELECT plan(29);
 
 -- ============================================================================
 -- Setup
@@ -86,11 +86,17 @@ SELECT throws_ok(
 
 SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000625002';
 
-SELECT throws_ok(
+SELECT lives_ok(
   $$ INSERT INTO diagnosticos (codigo, nombre) VALUES ('Z625M', 'Diagnostico del medico') $$,
-  '42501',
+  'POSITIVA INSERT: el medico agrega un diagnostico al catalogo (00148)'
+);
+
+-- El codigo sigue sin poder repetirse aunque lo escriba el personal de campo.
+SELECT throws_ok(
+  $$ INSERT INTO diagnosticos (codigo, nombre) VALUES ('Z625M', 'Otro del medico') $$,
+  '23505',
   NULL,
-  'NEGATIVA INSERT: el medico lee el catalogo pero no lo mantiene'
+  'NEGATIVA INSERT: el medico tampoco repite un codigo'
 );
 
 SELECT isnt_empty(
@@ -100,9 +106,9 @@ SELECT isnt_empty(
 
 SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000625003';
 
-SELECT is_empty(
+SELECT isnt_empty(
   $$ SELECT 1 FROM diagnosticos WHERE id = '7d000000-0000-0000-0000-000000625001' $$,
-  'NEGATIVA SELECT: el voluntario no ve diagnosticos, que son informacion clinica'
+  'POSITIVA SELECT: el voluntario ve diagnosticos, parte de ver pacientes por completo (00148)'
 );
 
 -- ============================================================================

@@ -19,7 +19,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { listarProyectos } from "../proyectos/api.js";
 import { listarDonaciones } from "./historial.api.js";
-import { puedeRegistrarDonaciones, puedeVerDonaciones } from "./permisos.js";
+import { puedeCorregirDonaciones, puedeVerDonaciones } from "./permisos.js";
 import { anularDonacion } from "./registro.api.js";
 
 const TOTALES_VACIOS = Object.freeze({ dinero: 0, medicamentos: 0, insumos: 0, servicios: 0 });
@@ -175,6 +175,9 @@ export function useHistorialDonaciones({ usuarioRol } = {}) {
       fechaFin,
       setFechaFin,
       limpiarFiltros,
+      hayFiltros: Boolean(
+        filtroDonante.trim() || filtroTipo || filtroProyecto || fechaInicio || fechaFin,
+      ),
       proyectosOptions,
     },
     modalDetalle: {
@@ -184,7 +187,7 @@ export function useHistorialDonaciones({ usuarioRol } = {}) {
       cerrarDetalle,
     },
     anulacion: {
-      puedeAnular: puedeRegistrarDonaciones(usuarioRol),
+      puedeAnular: puedeCorregirDonaciones(usuarioRol),
       anulando,
       errorAnular,
       anular,

@@ -24,12 +24,11 @@ import {
   Spinner,
 } from "react-bootstrap";
 
-import { DataList } from "../components";
+import { BotonLimpiarFiltros, DataList } from "../components";
 import { useSesionCompartida } from "../contexto/SesionProvider";
 import PageHeader from "../components/PageHeader";
 import PrimaryButton from "../components/PrimaryButton";
 import ScreenContainer from "../components/ScreenContainer";
-import SecondaryButton from "../components/SecondaryButton";
 import ModalGasto from "./ModalGasto";
 import ModalInsumoProyecto from "./ModalInsumoProyecto";
 import ModalProyecto from "./ModalProyecto";
@@ -204,14 +203,7 @@ export default function ProyectosSocialesPage({ usuarioRol }) {
 
             {/* Mismo boton y misma clase que FilterBar: siempre visible, apagado sin filtros. */}
             <Col md={3} lg={2} className="d-flex align-items-end">
-              <div className="ec-filtros-limpiar">
-                <SecondaryButton
-                  title="Limpiar filtros"
-                  variant="neutra"
-                  onClick={limpiarFiltros}
-                  disabled={!hayFiltros}
-                />
-              </div>
+              <BotonLimpiarFiltros onClick={limpiarFiltros} hayFiltros={hayFiltros} />
             </Col>
           </Row>
         </Card.Body>
@@ -287,17 +279,20 @@ export default function ProyectosSocialesPage({ usuarioRol }) {
                         Ver Detalle
                       </Button>
                       {/* El proyecto viaja en el state para que el seguimiento no repita la
-                          consulta que este listado ya hizo. */}
-                      <Button
-                        as={Link}
-                        to={`/proyectos/${p.id}/seguimiento`}
-                        state={{ proyecto: p }}
-                        variant="outline-secondary"
-                        size="sm"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        Seguimiento
-                      </Button>
+                          consulta que este listado ya hizo. El personal de campo no lo ve
+                          (00148): su detalle es de consulta. */}
+                      {permisos.puedeVerSeguimiento && (
+                        <Button
+                          as={Link}
+                          to={`/proyectos/${p.id}/seguimiento`}
+                          state={{ proyecto: p }}
+                          variant="outline-secondary"
+                          size="sm"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          Seguimiento
+                        </Button>
+                      )}
                     </td>
                   </tr>
                 ))

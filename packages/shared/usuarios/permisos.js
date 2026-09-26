@@ -13,12 +13,12 @@
 // persona, o cambiarle el rol a alguien (bloqueado ademas por el trigger
 // impedir_cambio_de_rol_propio para el propio usuario, sin importar su rol).
 //
-// El permiso fino usuarios.gestionar_permisos no se refleja aqui: existe en el catalogo pero no
-// gobierna ninguna politica (docs/PERMISOS.md), igual que jornadas.gestionar en
-// jornadas/permisos.js -- el cliente solo conoce el rol, y aqui la politica real exige
-// es_administrador() a secas.
+// El permiso fino usuarios.gestionar_permisos gobierna usuario_permiso (00086) y, desde la 00148,
+// el cliente lo lee (usuarios/acceso.js): quien lo tiene entra a Colaboradores y gestiona los
+// permisos de los demas, nunca los suyos.
 
-import { rolesDelModulo } from "../navegacion.js";
+import { MODULOS } from "../navegacion.js";
+import { accedeAModuloPorMatriz, tienePermisoFino } from "./acceso.js";
 import { esAdministrador } from "./roles.js";
 
 /** Puede crear un perfil nuevo. Espejo de la politica de INSERT de perfiles (00038). */
@@ -46,36 +46,51 @@ export function puedeReactivarUsuario(rol) {
 }
 
 /**
- * Puede ver el listado completo de usuarios (nombres, apellidos, rol, sin datos de contacto).
+ * Puede ver el listado del personal (nombres, apellidos, rol, sin datos de contacto ajenos).
  *
- * ISSUE #864: solo administrador. La vista perfiles_directorio (00038) le daba a junta directiva
- * -y solo a ella, no a socio fundador- una lectura del personal sin datos de contacto ajenos, y
- * la #756 habia abierto la ruta para que esa vista tuviera por donde llegarse. La #864 cierra
- * las dos: "Junta directiva: solo ve reportes". La 00141 reescribe la vista para que su WHERE
- * diga lo mismo que esta funcion.
+ * Espejo del WHERE de perfiles_directorio (00148): la administradora, el rol al que la matriz le
+ * abrio Colaboradores (solo lectura) y quien tiene usuarios.gestionar_permisos delegado, que
+ * necesita el listado para llegar a la persona cuyos permisos gestiona.
  */
 export function puedeVerListadoUsuarios(rol) {
-  return esAdministrador(rol);
+  return (
+    esAdministrador(rol) ||
+    accedeAModuloPorMatriz(rol, "colaboradores") ||
+    tienePermisoFino(rol, "usuarios.gestionar_permisos")
+  );
 }
 
 /**
- * Puede conceder, revocar o restablecer un permiso fino de otra persona.
- *
- * Espejo de las politicas de INSERT/UPDATE/DELETE de usuario_permiso (00038): solo
- * administrador. Cualquiera lee los suyos, pero eso es por identidad, no por rol.
+ * Puede conceder, revocar o restablecer un permiso fino de OTRA persona: la administradora o quien
+ * tenga usuarios.gestionar_permisos delegado (00086). Los propios no: la 00148 lo impide en la
+ * politica, y la pantalla no ofrece el boton sobre la fila propia.
  */
 export function puedeGestionarPermisosFinos(rol) {
-  return esAdministrador(rol);
+  return tienePermisoFino(rol, "usuarios.gestionar_permisos");
+}
+
+/**
+ * Puede gestionar los permisos de UNA persona concreta: como puedeGestionarPermisosFinos(), pero
+ * sin la propia fila si no es la administradora. Espejo de la condicion `perfil_id <> auth.uid()`
+ * que la 00148 agrego a las politicas de escritura de usuario_permiso: quien recibio la gestion de
+ * permisos no se concede nada a si mismo.
+ *
+ * @param {string} rol
+ * @param {{ esPropioPerfil?: boolean }} [contexto]
+ */
+export function puedeGestionarPermisosDe(rol, { esPropioPerfil = false } = {}) {
+  if (esAdministrador(rol)) return true;
+  return puedeGestionarPermisosFinos(rol) && !esPropioPerfil;
 }
 
 /**
  * Puede ver los permisos efectivos de otra persona.
  *
- * Espejo de la politica de SELECT de usuario_permiso (00038): administrador, o ser el propio
- * perfil.
+ * Espejo de la politica de SELECT de usuario_permiso (00086): la administradora, quien gestiona
+ * permisos por delegacion, o ser el propio perfil (eso es identidad, no rol).
  */
 export function puedeVerPermisosEfectivosDeOtro(rol) {
-  return esAdministrador(rol);
+  return tienePermisoFino(rol, "usuarios.gestionar_permisos");
 }
 
 /**
@@ -102,40 +117,31 @@ export function puedeGestionarEspecialidades(rol, { esPropioPerfil = false } = {
 }
 
 /**
- * Puede conceder o retirar un permiso del valor por defecto de un rol entero (matriz de
- * permisos por rol, issue #638).
- *
- * Espejo de las politicas de INSERT/DELETE de rol_permiso (00139): solo administrador, sin el
- * "OR tiene_permiso(...)" que si tienen las politicas de usuario_permiso -la issue exige que
- * unicamente el administrador entre a esta pantalla, no un permiso fino delegable.
+ * Puede abrir o cerrar modulos a un rol en la matriz de acceso (00148). Espejo de las politicas
+ * de INSERT/DELETE de rol_modulo: solo la administradora, no es una funcion delegable.
  */
 export function puedeGestionarMatrizDePermisosPorRol(rol) {
   return esAdministrador(rol);
 }
 
+// `permisos.modulo` que no tiene entrada propia en MODULOS: `usuarios.gestionar_permisos` se usa
+// dentro de Colaboradores, pero el grupo se sigue llamando por lo que gobierna.
+const ETIQUETAS_DE_MODULO_SIN_PANTALLA = { usuarios: "Usuarios" };
+
 /**
- * Si `rol` puede llegar, navegando la app, al modulo dueno de un permiso -y por lo tanto si
- * concederselo en la matriz de permisos por rol (issue #638) puede tener algun efecto practico.
+ * Titulo legible del grupo de un permiso (columna `permisos.modulo`, 00003): el nombre del modulo
+ * en MODULOS, y si no hay, la clave con mayuscula inicial y sin guiones bajos. Nunca la clave
+ * cruda en minusculas, que es lo que mostraba "usuarios" en la matriz.
  *
- * Hallado probando en vivo: conceder `donaciones.registrar` a medico no cambiaba nada, porque
- * medico no esta en `rolesDelModulo("donaciones")` -nunca ve el modulo Donaciones en el menu, y
- * la ruta le cae en acceso denegado-. El permiso queda guardado y gobierna una politica real,
- * pero nadie con ese rol llega nunca a la pantalla donde importaria.
- *
- * `permisos.modulo` no siempre coincide con una entrada real de MODULOS: `usuarios` es el caso
- * conocido (la pantalla que de verdad usa `usuarios.gestionar_permisos` vive dentro de la ruta
- * `colaboradores`, ModalPermisosUsuario.jsx). Cuando `rolesDelModulo()` no encuentra ninguna
- * entrada (arreglo vacio) se asume que SI puede navegarlo -mejor no advertir de mas sobre un
- * permiso que si importa que advertir en falso.
- *
- * @param {string} rol
- * @param {string} modulo `permisos.modulo` (columna de la migracion 00003).
- * @returns {boolean}
+ * @param {string} modulo
+ * @returns {string}
  */
-export function puedeNavegarModuloDelPermiso(rol, modulo) {
-  const roles = rolesDelModulo(modulo);
-  if (roles.length === 0) return true;
-  return roles.includes(rol);
+export function etiquetaDeModuloDePermiso(modulo) {
+  const entrada = MODULOS.find((item) => item.modulo === modulo);
+  if (entrada) return entrada.nombre;
+  if (ETIQUETAS_DE_MODULO_SIN_PANTALLA[modulo]) return ETIQUETAS_DE_MODULO_SIN_PANTALLA[modulo];
+  const texto = String(modulo ?? "").replaceAll("_", " ");
+  return texto.charAt(0).toUpperCase() + texto.slice(1);
 }
 
 /**

@@ -739,6 +739,20 @@ Se configuran en Settings > Secrets and variables > Actions.
 Los valores SMTP y las entradas de Vault del correo de notificaciones **no** van aqui: son secrets de
 las Edge Functions y de la base, ver "Las notificaciones al administrador y su correo".
 
+El monitoreo de errores (issue #762) tampoco usa secrets de Actions. Son tres variables, una por
+destino, y ninguna es obligatoria: sin ella los errores se quedan en la consola o en el log de la
+funcion, como en local.
+
+| Variable | Donde se configura | La lee |
+| --- | --- | --- |
+| `VITE_SENTRY_DSN` | Vercel, Environment Variables, por ambiente | `apps/web/src/main.jsx` |
+| `EXPO_PUBLIC_SENTRY_DSN` | EAS, variables del perfil de build | `apps/mobile/App.js` |
+| `SENTRY_DSN` | `supabase secrets set SENTRY_DSN=... --project-ref <ref>` | `supabase/functions/_shared/errores.ts` |
+| `AMBIENTE` (opcional) | `supabase secrets set AMBIENTE=production ...` | La etiqueta de ambiente del evento de una Edge Function |
+
+El DSN es publico por diseno. Un DSN mal escrito no tumba nada: la app lo dice en la consola al
+arrancar y la funcion en su log.
+
 `SUPABASE_URL_DEV` y `VITE_SUPABASE_URL_DEV` son la misma URL con dos nombres, y conviven a
 proposito: el keep-alive de `main` lee el primero y el de `develop` el segundo. Renombrar uno
 mientras las dos ramas no esten al dia deja un workflow sin secret, que es justo el caso que
@@ -752,7 +766,8 @@ exitoso.
 ## Respaldos y restauracion
 
 Issue #762, bloque 4. **Estado: procedimiento ensayado de punta a punta contra el stack local (24
-de septiembre de 2026); restauracion desde un proyecto remoto todavia no probada.** Un respaldo sin
+de septiembre de 2026); restauracion desde un proyecto remoto todavia no probada. Los respaldos de
+produccion se implementan en la #252, con el plan de "Plan para produccion", abajo.** Un respaldo sin
 restauracion probada no es un respaldo, asi que esta seccion no da por cerrado nada hasta que
 alguien complete la prueba de abajo con un volcado de `Ecopac-Digital-Dev` y anote la fecha en la
 tabla del final.
@@ -861,6 +876,30 @@ La prueba de restauracion sigue sin hacerse. No es un olvido: `supabase db dump 
 vincular la CLI, y vincular pide la contrasena de la base. Queda como procedimiento escrito hasta
 que la persona responsable de la base lo corra, y esta fila es la que hay que actualizar cuando
 pase.
+
+### Plan para produccion (se implementa en la #252)
+
+`Ecopac-Digital-Dev` se queda sin respaldos a proposito: no tiene datos reales y el plan Free no los
+ofrece. Lo que no puede pasar es que **produccion** arranque igual. Por eso los respaldos no se
+cierran en la #762 sino en la issue de salida a produccion (#252), que es donde se crea
+`Ecopac-Digital-Prod` y se decide su plan. El plan queda fijado asi:
+
+1. **Antes de cargar el primer dato real**, la organizacion decide entre las dos salidas de
+   `docs/COSTOS-Y-LIMITES.md`, seccion 6.2. La recomendada es **Supabase Pro** (25 USD al mes):
+   respaldos diarios con 7 dias de retencion, restaurables desde el Dashboard, y sin pausa por
+   inactividad.
+2. **Si se contrata Pro**: se confirma en Database > Backups de `Ecopac-Digital-Prod` y se anota en
+   la tabla de "Registro".
+3. **Si produccion se queda en Free**, el respaldo propio pasa a ser obligatorio y programado: un
+   workflow semanal que corre los tres `supabase db dump --linked` de "Respaldo propio", cifra los
+   archivos con una llave publica de la organizacion antes de que salgan del runner, y los deja en
+   un almacenamiento de Ecopac. **Nunca como artefacto de GitHub Actions**: en un repositorio
+   publico los artefactos los descarga cualquier cuenta de GitHub. Donde se guarda un volcado con
+   expedientes es una decision de proteccion de datos (`docs/PROTECCION-DE-DATOS.md`), y se toma en
+   la #252 con la organizacion.
+4. **En los dos casos**, la primera restauracion real se hace con el procedimiento de arriba y se
+   anota su fecha en "Registro" antes de dar produccion por abierta. Despues, una vez por ano, al
+   cierre de temporada de jornadas.
 
 ## La regla mas importante: una migracion aplicada no se edita
 

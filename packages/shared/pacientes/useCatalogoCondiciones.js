@@ -29,6 +29,7 @@ import { FILTROS_CATALOGO_CONDICIONES_VACIOS } from "./condiciones.filtros.js";
 import {
   puedeCrearCondicionDelCatalogo,
   puedeMantenerCatalogoCondiciones,
+  puedeRetirarCondicionDelCatalogo,
   puedeVerCatalogoDeCondiciones,
 } from "./condiciones.permisos.js";
 
@@ -59,6 +60,7 @@ export function useCatalogoCondiciones({ rol } = {}) {
   const permitido = puedeVerCatalogoDeCondiciones(rol);
   const puedeCrear = puedeCrearCondicionDelCatalogo(rol);
   const puedeMantener = puedeMantenerCatalogoCondiciones(rol);
+  const puedeRetirar = puedeRetirarCondicionDelCatalogo(rol);
 
   const cargar = useCallback(async () => {
     if (!permitido) {
@@ -119,6 +121,8 @@ export function useCatalogoCondiciones({ rol } = {}) {
   const editar = useCallback(
     async (id, { nombre, esVigente } = {}) => {
       if (!puedeMantener) return { ok: false };
+      // Retirar (es_vigente = false) es solo de la administradora (00148).
+      if (esVigente === false && !puedeRetirar) return { ok: false };
       setEnviando(true);
       setErroresForm({});
 
@@ -138,7 +142,7 @@ export function useCatalogoCondiciones({ rol } = {}) {
       await cargar();
       return { ok: true, condicion: res.condicion };
     },
-    [puedeMantener, cargar],
+    [puedeMantener, puedeRetirar, cargar],
   );
 
   /**
@@ -168,6 +172,7 @@ export function useCatalogoCondiciones({ rol } = {}) {
     permitido,
     puedeCrear,
     puedeMantener,
+    puedeRetirar,
     crear,
     editar,
     alternarVigencia,

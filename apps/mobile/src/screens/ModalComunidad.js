@@ -22,7 +22,14 @@ function valoresDe(comunidad) {
  * cascada (useFormularioComunidad), mismo guardar()/erroresForm que resuelve la pantalla de
  * catalogo.
  */
-export default function ModalComunidad({ visible, comunidad, onClose, onGuardar, erroresForm }) {
+export default function ModalComunidad({
+  visible,
+  comunidad,
+  onClose,
+  onGuardar,
+  erroresForm,
+  puedeRetirar = false,
+}) {
   const editando = Boolean(comunidad?.id);
   const [valores, setValores] = useState(() => valoresDe(comunidad));
   const [error, setError] = useState(null);
@@ -126,6 +133,8 @@ export default function ModalComunidad({ visible, comunidad, onClose, onGuardar,
             <Switch
               value={valores.esVigente}
               onValueChange={(valor) => cambiar("esVigente", valor)}
+              // Retirar una comunidad vigente es de la administradora (00148); reactivar, no.
+              disabled={comunidad.esVigente && !puedeRetirar}
               trackColor={{ true: colors.primary }}
             />
           </View>

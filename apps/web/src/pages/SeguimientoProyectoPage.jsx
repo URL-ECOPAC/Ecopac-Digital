@@ -3,10 +3,12 @@ import {
   COLUMNAS_HISTORIAL_PROYECTO,
   ETIQUETAS_ESTADO_PROYECTO,
   formatearFechaConHora,
+  puedeVerSeguimientoProyecto,
   useSeguimientoProyecto,
 } from "@ecopac/shared";
 import { Container, Row, Col, Card, Form, Button, Badge, Alert, Spinner } from "react-bootstrap";
 
+import AccesoDenegadoPage from "./AccesoDenegadoPage";
 import DataList from "../components/DataList";
 import PageHeader from "../components/PageHeader";
 import ScreenContainer from "../components/ScreenContainer";
@@ -55,6 +57,12 @@ export default function SeguimientoProyectoPage({ proyectoId, proyectoInicial, r
 
   const [hitoEnEdicion, setHitoEnEdicion] = useState(null);
   const [formularioHitoAbierto, setFormularioHitoAbierto] = useState(false);
+
+  // 00148: el personal de campo ve el proyecto en consulta, sin su seguimiento. La lista ya no le
+  // ofrece el enlace; esto cubre a quien escriba la direccion a mano.
+  if (!puedeVerSeguimientoProyecto(rol)) {
+    return <AccesoDenegadoPage rol={rol} />;
+  }
 
   const proyectoDatos = proyecto || proyectoInicial;
 

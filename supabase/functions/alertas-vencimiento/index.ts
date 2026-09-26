@@ -37,6 +37,7 @@
 
 import { createClient } from "@supabase/supabase-js";
 import { enviarCorreosPendientes, leerConfiguracionSmtp } from "../_shared/correo.ts";
+import { reportarErrorDeFuncion } from "../_shared/errores.ts";
 
 Deno.serve(async (req: Request) => {
   const llaveDeServicio = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -51,7 +52,10 @@ Deno.serve(async (req: Request) => {
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   if (!supabaseUrl) {
-    console.error("alertas-vencimiento: falta SUPABASE_URL en el entorno de la funcion.");
+    await reportarErrorDeFuncion(
+      "alertas-vencimiento",
+      "falta SUPABASE_URL en el entorno de la funcion",
+    );
     return new Response(JSON.stringify({ error: "Configuracion incompleta del entorno." }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
@@ -66,7 +70,7 @@ Deno.serve(async (req: Request) => {
     // Se registra completo en los logs de la funcion (Supabase los captura); no queda ninguna
     // ejecucion a medias porque fn_generar_alertas_caducidad() es una sola sentencia SQL
     // atomica -- un fallo no inserta nada, no hay estado parcial que limpiar aqui.
-    console.error("alertas-vencimiento: fn_generar_alertas_caducidad fallo.", error);
+    await reportarErrorDeFuncion("alertas-vencimiento", "fn_generar_alertas_caducidad fallo", error);
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
@@ -80,7 +84,7 @@ Deno.serve(async (req: Request) => {
     envio = await enviarCorreosPendientes(supabase, leerConfiguracionSmtp());
   } catch (errorDeCorreo) {
     const mensaje = errorDeCorreo instanceof Error ? errorDeCorreo.message : String(errorDeCorreo);
-    console.error("alertas-vencimiento: el barrido de correos fallo.", mensaje);
+    await reportarErrorDeFuncion("alertas-vencimiento", "el barrido de correos fallo", errorDeCorreo);
     envio = { correo: "error", correosEnviados: 0, correosFallidos: 0, errorDeCorreo: mensaje };
   }
 

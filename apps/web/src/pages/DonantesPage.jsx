@@ -11,6 +11,7 @@ import {
 } from "@ecopac/shared";
 import { Save, X } from "lucide-react";
 
+import BotonLimpiarFiltros from "../components/BotonLimpiarFiltros";
 import Card from "../components/Card";
 import DataList from "../components/DataList";
 import ErrorState from "../components/ErrorState";
@@ -244,17 +245,13 @@ export default function DonantesPage({ usuarioRol }) {
             style={{ marginBottom: 0 }}
           />
         </div>
-        <div className="ec-filtros-limpiar">
-          <SecondaryButton
-            title="Limpiar filtros"
-            variant="neutra"
-            disabled={!busqueda && filtroTipo === "todos"}
-            onClick={() => {
-              setBusqueda("");
-              setFiltroTipo("todos");
-            }}
-          />
-        </div>
+        <BotonLimpiarFiltros
+          hayFiltros={Boolean(busqueda) || filtroTipo !== "todos"}
+          onClick={() => {
+            setBusqueda("");
+            setFiltroTipo("todos");
+          }}
+        />
       </div>
 
       {error ? (
@@ -267,7 +264,7 @@ export default function DonantesPage({ usuarioRol }) {
           vacio="No se encontraron donantes."
           onRowPress={(fila) => verFicha(fila.id)}
           accionSecundaria={
-            permisos?.puedeEscribir ? { label: "Editar", onClick: abrirEdicion } : undefined
+            permisos?.puedeCorregir ? { label: "Editar", onClick: abrirEdicion } : undefined
           }
           catalogos={catalogos}
         />
@@ -277,7 +274,7 @@ export default function DonantesPage({ usuarioRol }) {
         <FichaDonante
           donante={donanteSeleccionado}
           historico={historicoDelDonante}
-          puedeEscribir={permisos?.puedeEscribir}
+          puedeEscribir={permisos?.puedeCorregir}
           onEditar={abrirEdicion}
           onCerrar={() => verFicha(null)}
         />

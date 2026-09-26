@@ -14,6 +14,7 @@ import {
 } from "@ecopac/shared";
 
 import {
+  BotonLimpiarFiltros,
   Card,
   ErrorState,
   FilterBar,
@@ -36,6 +37,7 @@ export default function JornadasPage() {
     filtros,
     setFiltro,
     limpiarFiltros,
+    hayFiltros,
     cargando,
     error,
     recargar,
@@ -74,18 +76,6 @@ export default function JornadasPage() {
     );
   }
 
-  const handleLimpiarFiltros = () => {
-    if (typeof limpiarFiltros === "function") {
-      limpiarFiltros();
-    } else if (filtros) {
-      Object.keys(filtros).forEach((key) => {
-        if (typeof setFiltro === "function") {
-          setFiltro(key, "");
-        }
-      });
-    }
-  };
-
   return (
     <ScreenContainer scrollable={false}>
       <PageHeader
@@ -107,7 +97,7 @@ export default function JornadasPage() {
             />
           </div>
           <div className="pb-1">
-            <SecondaryButton title="Limpiar filtros" onClick={handleLimpiarFiltros} />
+            <BotonLimpiarFiltros onClick={limpiarFiltros} hayFiltros={hayFiltros} />
           </div>
         </div>
       </Card>

@@ -4,19 +4,24 @@
 // arrastra @supabase/supabase-js y el modulo de entorno, y estas pruebas tienen que correr sin
 // .env y sin conexion. Mismo patron que jornadas/permisos.test.js.
 
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
+import { fijarAccesoDeSesion, limpiarAccesoDeSesion } from "../usuarios/acceso.js";
 import { ROLES } from "../usuarios/roles.js";
 import {
   permisosDePacientes,
   puedeAdministrarDiagnosticos,
+  puedeDarDeBajaPaciente,
+  puedeRetirarDiagnostico,
   puedeVerCatalogoDiagnosticos,
   puedeAnularReceta,
   puedeCorregirConsulta,
   puedeCorregirTriaje,
+  puedeCrearConsulta,
   puedeCrearExpediente,
   puedeEditarExpediente,
   puedeEditarPaciente,
+  puedeEmitirReceta,
   puedeFusionarPacientes,
   puedeRegistrarPaciente,
   puedeTomarTriaje,
@@ -25,59 +30,90 @@ import {
   puedeVerPacientes,
 } from "./permisos.js";
 
-describe("permisos de pacientes y expedientes", () => {
-  it("administrador, medico y voluntario ven y registran pacientes (00032)", () => {
-    for (const rol of [ROLES.ADMINISTRADOR, ROLES.MEDICO, ROLES.VOLUNTARIO]) {
+const CAMPO = [ROLES.MEDICO, ROLES.VOLUNTARIO];
+const CONSULTIVOS = [ROLES.JUNTA_DIRECTIVA, ROLES.SOCIO_FUNDADOR];
+
+afterEach(() => {
+  limpiarAccesoDeSesion();
+});
+
+describe("permisos de pacientes y expedientes (00148)", () => {
+  it("administrador y personal de campo ven y registran pacientes", () => {
+    for (const rol of [ROLES.ADMINISTRADOR, ...CAMPO]) {
       expect(puedeVerPacientes(rol)).toBe(true);
       expect(puedeRegistrarPaciente(rol)).toBe(true);
       expect(puedeVerExpedientes(rol)).toBe(true);
       expect(puedeCrearExpediente(rol)).toBe(true);
     }
 
-    expect(puedeVerPacientes(ROLES.JUNTA_DIRECTIVA)).toBe(false);
-    expect(puedeVerPacientes(ROLES.SOCIO_FUNDADOR)).toBe(false);
+    for (const rol of CONSULTIVOS) {
+      expect(puedeVerPacientes(rol)).toBe(false);
+    }
   });
 
-  it("solo administrador y medico editan pacientes y expedientes", () => {
-    expect(puedeEditarPaciente(ROLES.ADMINISTRADOR)).toBe(true);
-    expect(puedeEditarPaciente(ROLES.MEDICO)).toBe(true);
-
-    expect(puedeEditarPaciente(ROLES.VOLUNTARIO)).toBe(false);
-    expect(puedeEditarPaciente(ROLES.JUNTA_DIRECTIVA)).toBe(false);
-    expect(puedeEditarPaciente(ROLES.SOCIO_FUNDADOR)).toBe(false);
-
-    expect(puedeEditarExpediente(ROLES.ADMINISTRADOR)).toBe(true);
-    expect(puedeEditarExpediente(ROLES.MEDICO)).toBe(true);
-    expect(puedeEditarExpediente(ROLES.VOLUNTARIO)).toBe(false);
-  });
-
-  it("solo administrador y medico ven el historial clinico (00033)", () => {
-    expect(puedeVerHistorial(ROLES.ADMINISTRADOR)).toBe(true);
-    expect(puedeVerHistorial(ROLES.MEDICO)).toBe(true);
-
-    expect(puedeVerHistorial(ROLES.VOLUNTARIO)).toBe(false);
-    expect(puedeVerHistorial(ROLES.JUNTA_DIRECTIVA)).toBe(false);
-    expect(puedeVerHistorial(ROLES.SOCIO_FUNDADOR)).toBe(false);
-  });
-
-  it("administrador, medico y voluntario toman triaje; solo administrador y medico lo corrigen", () => {
-    for (const rol of [ROLES.ADMINISTRADOR, ROLES.MEDICO, ROLES.VOLUNTARIO]) {
-      expect(puedeTomarTriaje(rol)).toBe(true);
+  it("medico y colaborador editan pacientes y expedientes (pacientes.editar por defecto)", () => {
+    for (const rol of [ROLES.ADMINISTRADOR, ...CAMPO]) {
+      expect(puedeEditarPaciente(rol)).toBe(true);
+      expect(puedeEditarExpediente(rol)).toBe(true);
     }
 
-    expect(puedeCorregirTriaje(ROLES.ADMINISTRADOR)).toBe(true);
-    expect(puedeCorregirTriaje(ROLES.MEDICO)).toBe(true);
-    expect(puedeCorregirTriaje(ROLES.VOLUNTARIO)).toBe(false);
-    expect(puedeCorregirTriaje(ROLES.JUNTA_DIRECTIVA)).toBe(false);
-    expect(puedeCorregirTriaje(ROLES.SOCIO_FUNDADOR)).toBe(false);
+    for (const rol of CONSULTIVOS) {
+      expect(puedeEditarPaciente(rol)).toBe(false);
+    }
+  });
+
+  it("una revocacion puntual de pacientes.editar se respeta en la sesion", () => {
+    fijarAccesoDeSesion({ rol: ROLES.MEDICO, permisos: [] });
+    expect(puedeEditarPaciente(ROLES.MEDICO)).toBe(false);
+  });
+
+  it("dar de baja a un paciente (eliminarlo) es solo de la administradora", () => {
+    expect(puedeDarDeBajaPaciente(ROLES.ADMINISTRADOR)).toBe(true);
+    for (const rol of [...CAMPO, ...CONSULTIVOS]) {
+      expect(puedeDarDeBajaPaciente(rol)).toBe(false);
+    }
+  });
+
+  it("quien ve pacientes ve el historial clinico completo: el colaborador tambien", () => {
+    for (const rol of [ROLES.ADMINISTRADOR, ...CAMPO]) {
+      expect(puedeVerHistorial(rol)).toBe(true);
+    }
+    for (const rol of CONSULTIVOS) {
+      expect(puedeVerHistorial(rol)).toBe(false);
+    }
+  });
+
+  it("consultas y recetas siguen siendo del medico: las firma un medico", () => {
+    expect(puedeCrearConsulta(ROLES.MEDICO)).toBe(true);
+    expect(puedeEmitirReceta(ROLES.MEDICO)).toBe(true);
+    expect(puedeCrearConsulta(ROLES.VOLUNTARIO)).toBe(false);
+    expect(puedeEmitirReceta(ROLES.VOLUNTARIO)).toBe(false);
+  });
+
+  it("el personal de campo toma y corrige triaje", () => {
+    for (const rol of [ROLES.ADMINISTRADOR, ...CAMPO]) {
+      expect(puedeTomarTriaje(rol)).toBe(true);
+      expect(puedeCorregirTriaje(rol)).toBe(true);
+    }
+    for (const rol of CONSULTIVOS) {
+      expect(puedeCorregirTriaje(rol)).toBe(false);
+    }
+  });
+
+  it("un rol consultivo con Pacientes abierto por la matriz lee, no registra", () => {
+    fijarAccesoDeSesion({ rol: ROLES.JUNTA_DIRECTIVA, modulos: ["pacientes"] });
+
+    expect(puedeVerPacientes(ROLES.JUNTA_DIRECTIVA)).toBe(true);
+    expect(puedeVerHistorial(ROLES.JUNTA_DIRECTIVA)).toBe(true);
+    expect(puedeRegistrarPaciente(ROLES.JUNTA_DIRECTIVA)).toBe(false);
+    expect(puedeEditarPaciente(ROLES.JUNTA_DIRECTIVA)).toBe(false);
   });
 
   it("solo administrador fusiona expedientes (issue #140)", () => {
     expect(puedeFusionarPacientes(ROLES.ADMINISTRADOR)).toBe(true);
-    expect(puedeFusionarPacientes(ROLES.MEDICO)).toBe(false);
-    expect(puedeFusionarPacientes(ROLES.VOLUNTARIO)).toBe(false);
-    expect(puedeFusionarPacientes(ROLES.JUNTA_DIRECTIVA)).toBe(false);
-    expect(puedeFusionarPacientes(ROLES.SOCIO_FUNDADOR)).toBe(false);
+    for (const rol of [...CAMPO, ...CONSULTIVOS]) {
+      expect(puedeFusionarPacientes(rol)).toBe(false);
+    }
   });
 
   it("un rol que no existe no puede nada", () => {
@@ -85,6 +121,7 @@ describe("permisos de pacientes y expedientes", () => {
       puedeVer: false,
       puedeCrear: false,
       puedeEditar: false,
+      puedeDarDeBaja: false,
       puedeVerHistorial: false,
       puedeTomarTriaje: false,
       puedeCorregirTriaje: false,
@@ -108,21 +145,23 @@ describe("permisos de pacientes y expedientes", () => {
     expect(permisosDePacientes(ROLES.VOLUNTARIO)).toEqual({
       puedeVer: true,
       puedeCrear: true,
-      puedeEditar: false,
-      puedeVerHistorial: false,
+      puedeEditar: true,
+      puedeDarDeBaja: false,
+      puedeVerHistorial: true,
       puedeTomarTriaje: true,
-      puedeCorregirTriaje: false,
+      puedeCorregirTriaje: true,
       puedeCrearConsulta: false,
       puedeEmitirReceta: false,
       puedeFusionarPacientes: false,
-      puedeVerCatalogoDiagnosticos: false,
-      puedeAdministrarDiagnosticos: false,
+      puedeVerCatalogoDiagnosticos: true,
+      puedeAdministrarDiagnosticos: true,
     });
 
     expect(permisosDePacientes(ROLES.ADMINISTRADOR)).toEqual({
       puedeVer: true,
       puedeCrear: true,
       puedeEditar: true,
+      puedeDarDeBaja: true,
       puedeVerHistorial: true,
       puedeTomarTriaje: true,
       puedeCorregirTriaje: true,
@@ -134,25 +173,20 @@ describe("permisos de pacientes y expedientes", () => {
     });
   });
 
-  it("mantener el catalogo de diagnosticos es solo de la administradora (issue #625)", () => {
-    // Leerlo es mas amplio -- el medico tambien (00033) -- pero mantenerlo no: un catalogo que
-    // cada quien edita deja de ser un catalogo. Espejo de las politicas de la 00105.
-    expect(puedeAdministrarDiagnosticos(ROLES.ADMINISTRADOR)).toBe(true);
+  it("el personal de campo agrega y corrige diagnosticos; retirarlos es de la administradora", () => {
+    for (const rol of [ROLES.ADMINISTRADOR, ...CAMPO]) {
+      expect(puedeAdministrarDiagnosticos(rol)).toBe(true);
+      expect(puedeVerCatalogoDiagnosticos(rol)).toBe(true);
+    }
+    for (const rol of CONSULTIVOS) {
+      expect(puedeAdministrarDiagnosticos(rol)).toBe(false);
+      expect(puedeVerCatalogoDiagnosticos(rol)).toBe(false);
+    }
 
-    expect(puedeAdministrarDiagnosticos(ROLES.MEDICO)).toBe(false);
-    expect(puedeAdministrarDiagnosticos(ROLES.VOLUNTARIO)).toBe(false);
-    expect(puedeAdministrarDiagnosticos(ROLES.JUNTA_DIRECTIVA)).toBe(false);
-    expect(puedeAdministrarDiagnosticos(ROLES.SOCIO_FUNDADOR)).toBe(false);
-  });
-
-  it("ver el catalogo de diagnosticos es de administrador y medico (issue #639)", () => {
-    // Espejo de la politica de SELECT de diagnosticos (00033).
-    expect(puedeVerCatalogoDiagnosticos(ROLES.ADMINISTRADOR)).toBe(true);
-    expect(puedeVerCatalogoDiagnosticos(ROLES.MEDICO)).toBe(true);
-
-    expect(puedeVerCatalogoDiagnosticos(ROLES.VOLUNTARIO)).toBe(false);
-    expect(puedeVerCatalogoDiagnosticos(ROLES.JUNTA_DIRECTIVA)).toBe(false);
-    expect(puedeVerCatalogoDiagnosticos(ROLES.SOCIO_FUNDADOR)).toBe(false);
+    expect(puedeRetirarDiagnostico(ROLES.ADMINISTRADOR)).toBe(true);
+    for (const rol of [...CAMPO, ...CONSULTIVOS]) {
+      expect(puedeRetirarDiagnostico(rol)).toBe(false);
+    }
   });
 });
 

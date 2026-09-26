@@ -58,6 +58,9 @@ El sistema decide permisos en cuatro sitios. **Solo el ultimo protege.**
 | 3   | `permisos.js` de cada modulo | `packages/shared/<modulo>/permisos.js`      | Decide que botones se dibujan y cuales se deshabilitan | **No.** Es presentacion                                  |
 | 4   | **RLS + GRANT**              | `supabase/migrations/`                      | Decide que filas devuelve y acepta la base             | **Si. Es la unica.**                                     |
 
+Desde la `00148` las capas 1 a 3 no deciden solo por rol: leen tambien lo que la base le abrio a la
+sesion (`mis_accesos()`, ver "Acceso a modulos y funciones delegables").
+
 Las capas 1 a 3 existen para que la interfaz no ofrezca lo que va a fallar. Si una de ellas dice
 que si y la capa 4 dice que no, el usuario ve un error; si dice que no y la capa 4 diria que si,
 la funcion es inalcanzable. Las dos situaciones son defectos, y las que hay estan en
@@ -127,6 +130,78 @@ la migracion esta aplicada y no se edita.
 > proteger nada -es cliente-: lo que evita es que alguien llegue a una pantalla que no va a poder
 > usar.
 
+## Acceso a modulos y funciones delegables (migracion 00148)
+
+Hasta la `00148` las capas 1 a 3 decidian **solo por rol**, con listas escritas en el codigo, y
+ninguna leia `rol_permiso` ni `usuario_permiso`. El resultado se veia en la matriz de permisos por
+rol (`00139`): conceder un permiso a un rol no le abria nada, porque el menu, las rutas y los botones
+no se enteraban. Desde la `00148` el acceso tiene tres piezas, cada una con un solo trabajo:
+
+| Pieza | Que decide | Donde vive | Quien la cambia |
+| ----- | ---------- | ---------- | --------------- |
+| **Modulos por defecto de cada rol** | Que modulos usa cada rol, con todo lo que su rol puede hacer | `MODULOS[].roles` en `navegacion.js` y `modulo_por_defecto()` en la base (deben coincidir) | Una migracion |
+| **Matriz de acceso** (`rol_modulo`) | Que modulo **ademas** ve un rol, en **solo lectura** | Pantalla "Matriz de permisos" (web) | La administradora |
+| **Funciones delegadas** (`usuario_permiso`) | Que funcion de la administradora tiene una persona concreta | Colaboradores > Permisos | La administradora, o quien tenga `usuarios.gestionar_permisos` (nunca sobre si mismo) |
+
+### Los modulos por defecto
+
+| Modulo | administrador | junta directiva / socio fundador | medico | voluntario general |
+| ------ | :-: | :-: | :-: | :-: |
+| Pacientes | Si | — | Si | Si |
+| Inventario | Si | — | Si | Si |
+| Jornadas | Si | — | Si (las suyas) | Si (las suyas) |
+| Proyectos | Si | — | Si (los suyos, solo consulta) | Si (los suyos, solo consulta) |
+| Presupuestos | Si | — | Si (lo suyo, sin aprobar) | Si (lo suyo, sin aprobar) |
+| Donaciones | Si | — | — | — |
+| Reportes | Si | Si | — | — |
+| Colaboradores | Si | — | — | — |
+| Matriz de permisos / Bitacora | Si | — | — | — |
+
+Lo que el personal de campo **no** hace, aunque tenga el modulo: eliminar o dar de baja pacientes,
+retirar diagnosticos, condiciones cronicas o comunidades, eliminar o desactivar nada de los
+catalogos de inventario, validar movimientos, aprobar gastos, crear o editar jornadas y proyectos.
+En el detalle de una jornada ve solo **Equipo** y **Pacientes atendidos**; en el de un proyecto, sin
+presupuesto, insumos, gastos ni seguimiento. Consultas y recetas siguen siendo del **medico**: las
+firma un medico (`medico_id`).
+
+### La matriz de acceso: abrir es de solo lectura
+
+`rol_modulo` (`00148`) guarda solo lo que la administradora abrio **ademas** de los modulos por
+defecto. Sus restricciones impiden abrir un modulo que el rol ya tiene, darle algo a la
+administradora, o abrir la matriz y la bitacora, que se quedan siempre en ella. Esta auditada con el
+trigger generico (`eventos_auditoria`, `tabla_afectada = 'rol_modulo'`).
+
+En la base, abrir un modulo es `accede_a_modulo_por_matriz(modulo)` sumada **solo a las politicas de
+lectura** de las tablas del modulo (y a `perfiles_directorio`, `pacientes_reporte`,
+`vista_reporte_impacto` y las funciones de reportes). **Ninguna politica de escritura la mira**: por
+eso abrir es de solo lectura y no hay que confiar en que el cliente esconda los botones.
+
+### Funciones delegadas por persona
+
+Los nueve permisos finos (ver "Los permisos finos") se conceden a una persona desde Colaboradores.
+Desde la `00148`:
+
+- **El cliente los lee.** Al iniciar sesion, `useSesion()` llama a `mis_accesos()` (modulos abiertos
+  al rol y permisos efectivos de la persona) y lo fija en `usuarios/acceso.js`. Las funciones
+  `puede...(rol)` de cada `permisos.js` consultan `tienePermisoFino()` y
+  `accedeAModuloPorMatriz()`; el menu y el guard de rutas, `puedeVerModulo()`. Si `mis_accesos()`
+  falla, la sesion no se da por resuelta: una persona con una funcion delegada no puede verse como
+  una sin ella.
+- **Quien recibe una funcion llega a su modulo**: `donaciones.registrar` abre Donaciones,
+  `presupuestos.*` Presupuestos, `usuarios.gestionar_permisos` Colaboradores, etc.
+  (`MODULO_DE_PERMISO_FINO`).
+- **Las delegaciones leen lo que necesitan.** `jornadas.gestionar` ve todas las jornadas, su
+  historial y asigna personal (`jornada_personal`); `proyectos.gestionar` lee y escribe hitos,
+  bitacora e historial; `presupuestos.registrar`/`aprobar` ven los gastos que registran o aprueban;
+  quien gestiona jornadas, proyectos o permisos lee `perfiles_directorio` para elegir personas.
+- **Nadie se concede permisos a si mismo**: las politicas de escritura de `usuario_permiso` exigen
+  `perfil_id <> auth.uid()` salvo a la administradora.
+- `rol_permiso` **deja de editarse desde la aplicacion** (`00148` retira sus politicas y el `GRANT`
+  de escritura): queda como el valor por defecto de cada rol, sembrado por migracion. La `00148` le
+  suma `pacientes.editar` al voluntario general.
+
+Lo prueba `supabase/tests/database/acceso_a_modulos_por_rol.sql`.
+
 ## Quien entra a la app movil (issue #866)
 
 La app del telefono **no es una version reducida del sistema entero**: es la herramienta de la
@@ -162,16 +237,16 @@ no llevan a ningun lado.
 
 | Tabla                     | administrador | junta directiva / socio fundador | medico | voluntario general | Como se implementa                                                                                                     |
 | ------------------------- | ------------- | -------------------------------- | ------ | ------------------ | ---------------------------------------------------------------------------------------------------------------------- |
-| `pacientes`               | C R U         | —                                | C R U  | C R                | `00032` + `00086` (editar paso de `rol_actual() = 'medico'` a `tiene_permiso('pacientes.editar')`, que medico recibe por rol desde la `00003`). Sin DELETE para nadie; ademas el trigger de `00026` bloquea el borrado fisico |
-| `expedientes`             | C R U         | —                                | C R U  | C R                | `00032` + `00086`, mismo cambio                                                                                       |
-| `triajes`                 | C R U         | —                                | C R U  | C R U              | `00033`. El voluntario crea y corrige el triaje; el `imc` es columna generada y no se envia                            |
+| `pacientes`               | C R U         | —                                | C R U  | C R U              | `00032` + `00086` (editar es `tiene_permiso('pacientes.editar')`, que medico recibe por rol desde la `00003` y voluntario desde la `00148`). **La baja (`fecha_baja`) es solo de la administradora**: trigger `impedir_baja_de_paciente_sin_ser_administrador` (`00148`). Sin DELETE para nadie; ademas el trigger de `00026` bloquea el borrado fisico |
+| `expedientes`             | C R U         | —                                | C R U  | C R U              | `00032` + `00086` + `00148`, mismo cambio                                                                              |
+| `triajes`                 | C R U         | —                                | C R U  | C R U              | `00033` + `00148` (el UPDATE, que era de administrador y medico, suma al voluntario). El `imc` es columna generada y no se envia |
 | `atenciones`              | C R U         | —                                | C R U  | C R                | `00033`; cola de la jornada en `00060`                                                                                 |
-| `consultas`               | C R U         | —                                | C R U  | —                  | `00033`. El INSERT exige `medico_id = auth.uid()` **y** `participa_en_jornada()`; el UPDATE, ser el medico que atendio |
-| `consulta_diagnostico`    | C R D         | —                                | C R D  | —                  | `00033` (INSERT sin exigir consulta propia) + `00082` (INSERT: medico solo en su propia consulta, `EXISTS` contra `consultas.medico_id`) + `00127` (issue #756: mismo actor de la `00082` para DELETE, para corregir un diagnostico mal elegido) |
-| `recetas`                 | C R U         | —                                | C R U  | —                  | `00033`; anulacion en `00066`. El UPDATE exige ser el medico que la firmo **y** que siga `emitida` (`00075`)           |
-| `receta_detalle`          | C R           | —                                | C R    | —                  | `00033`                                                                                                                |
-| `padecimientos_cronicos`  | C R U D       | —                                | C R U  | —                  | `00010`. Unica tabla clinica con DELETE, y solo para administrador. Auditada desde la `00070`                          |
-| `diagnosticos` (catalogo) | C R U         | —                                | R      | —                  | `00033` (lectura) + `00105` (mantenimiento). Hasta la `00105` era un catalogo VACIO y de solo lectura -nadie lo podia poblar por la API-, asi que el paso "diagnostico CIE-10" del flujo clinico no existia; esa migracion siembra el conjunto inicial y deja el mantenimiento a la administradora. **Sin DELETE:** `consulta_diagnostico` lo referencia `ON DELETE RESTRICT` (`00018`) y un diagnostico ya usado es historia clinica |
+| `consultas`               | C R U         | —                                | C R U  | R                  | `00033` + `00148` (el voluntario lee). El INSERT exige `medico_id = auth.uid()` **y** `participa_en_jornada()`; el UPDATE, ser el medico que atendio |
+| `consulta_diagnostico`    | C R D         | —                                | C R D  | R                  | `00033` (INSERT sin exigir consulta propia) + `00082` (INSERT: medico solo en su propia consulta, `EXISTS` contra `consultas.medico_id`) + `00127` (issue #756: mismo actor de la `00082` para DELETE, para corregir un diagnostico mal elegido) + `00148` (el voluntario lee) |
+| `recetas`                 | C R U         | —                                | C R U  | R                  | `00033`; anulacion en `00066`. El UPDATE exige ser el medico que la firmo **y** que siga `emitida` (`00075`). `00148`: el voluntario lee |
+| `receta_detalle`          | C R           | —                                | C R    | R                  | `00033` + `00148` (el voluntario lee)                                                                                  |
+| `padecimientos_cronicos`  | C R U D       | —                                | C R U  | C R U              | `00010` + `00148` (el voluntario lee, registra y corrige). Unica tabla clinica con DELETE, y solo para administrador. Auditada desde la `00070` |
+| `diagnosticos` (catalogo) | C R U         | —                                | C R U  | C R U              | `00033` (lectura) + `00105` (mantenimiento) + `00148` (el personal de campo lee, agrega y corrige). **Retirarlo (`activo = false`) es solo de la administradora**: trigger `impedir_desactivar_sin_ser_administrador` (`00148`). **Sin DELETE:** `consulta_diagnostico` lo referencia `ON DELETE RESTRICT` (`00018`) y un diagnostico ya usado es historia clinica |
 | `fusiones_pacientes`      | R             | —                                | —      | —                  | `00101` (issue #140). Solo administrador lee; sin politicas de escritura, la unica que inserta es `fn_fusionar_pacientes()` (SECURITY DEFINER) |
 
 **Casi ninguna tabla clinica tiene politica de DELETE**: las excepciones son
@@ -193,12 +268,19 @@ conserva, es un error de captura. Por eso no lleva el mismo trigger de auditoria
 > filas, no columnas. Los agregados les llegan por vista.
 >
 > Aqui el PDF del entregable quedo desactualizado: concede a junta directiva el "listado de
-> pacientes". El criterio vigente es que **nunca ven pacientes identificables**.
+> pacientes". El criterio vigente es que **no ven pacientes identificables por defecto**: solo si
+> la administradora les abre Pacientes en la matriz de acceso (`00148`).
 
-> **El voluntario no accede a consultas ni recetas, ni siquiera para leer.** Es lo que dice el PDF
-> (`-` en las dos filas) y su descripcion de rol -"no accede a diagnosticos ni consultas medicas
-> completas"-, y es coherente con la regla de `00054`: una politica de lectura le entregaria
-> sintomas, tratamiento y observaciones enteros.
+> **El colaborador (voluntario general) ve pacientes por completo desde la `00148`.** Hasta ahi no
+> accedia a consultas ni recetas, ni siquiera para leer -era lo que decia el PDF del entregable-. La
+> administracion decidio que el personal de campo trabaja con el paciente entero: lee el historial
+> clinico, edita pacientes y expedientes, corrige el triaje y registra condiciones cronicas. Lo que
+> sigue siendo del medico es **escribir** consultas y recetas, que firma un medico. Ninguno de los
+> dos elimina: la baja de un paciente y el retiro de un diagnostico, una condicion o una comunidad
+> son de la administradora.
+>
+> Un rol al que la matriz de acceso le abre Pacientes -por ejemplo, junta directiva- **lee** todo lo
+> de esta tabla, clinico incluido. Es una decision explicita de la administradora, no un default.
 
 Reflejo en el cliente: `pacientes/permisos.js` (issue #396), que tambien absorbio
 `puedeVerHistorial` y `puedeCorregirTriaje`/`puedeTomarTriaje`, sueltas hasta ahora fuera de un
@@ -246,18 +328,27 @@ sin reasignar, bajo el absorbido. Reflejo en el cliente: `puedeFusionarPacientes
 
 | Tabla                    | administrador | junta directiva / socio fundador | medico | voluntario general | Como se implementa                                                                                          |
 | ------------------------ | ------------- | -------------------------------- | ------ | ------------------ | ----------------------------------------------------------------------------------------------------------- |
-| `medicamentos`           | C R U         | R                                | **C** R | R                  | `00034` + `00141`, alta por `fn_registrar_medicamento` (`00050`). La lectura la endurecio la `00079` a `rol_actual() IS NOT NULL`: un perfil desactivado deja de verla |
-| `principios_activos`     | C R U D       | R                                | R      | R                  | `00034` + `00046`                                                                                           |
-| `presentaciones`         | C R U D       | R                                | R      | R                  | `00144`. Mismo patron que `principios_activos`: catalogo abierto a lectura, escritura solo administrador. RESTRICT desde `medicamentos.presentacion_id`: una presentacion en uso no se borra |
-| `medicamento_principio`  | C R           | R                                | R      | R                  | `00034`                                                                                                     |
+| `medicamentos`           | C R U         | R                                | C R U  | C R U              | `00034` + `00141` + `00148` (el personal de campo crea y corrige), alta por `fn_registrar_medicamento` (`00050`). **Desactivarlo es solo de la administradora**: trigger `impedir_desactivar_sin_ser_administrador` (`00148`). La lectura la endurecio la `00079` a `rol_actual() IS NOT NULL`: un perfil desactivado deja de verla |
+| `principios_activos`     | C R U D       | R                                | C R U  | C R U              | `00034` + `00046` + `00148` (el personal de campo crea y corrige; el DELETE sigue siendo de la administradora) |
+| `presentaciones`         | C R U D       | R                                | C R U  | C R U              | `00144` + `00148`, mismo reparto que `principios_activos`. RESTRICT desde `medicamentos.presentacion_id`: una presentacion en uso no se borra |
+| `medicamento_principio`  | C R           | R                                | C R    | C R                | `00034` + `00148`                                                                                           |
 | `lotes`                  | C R U         | R                                | C R U\* | C R U\*            | `00034` + `00107`. \*Medico y voluntario dan de alta el lote que acompania a su ingreso, pero **nace provisional** (`confirmado = FALSE`) y solo lo pueden editar mientras siga asi; al aprobar el ingreso pasa a firme y deja de ser suyo. La politica les exige ademas `registrado_por = auth.uid()`. **Sin DELETE para nadie** |
 | `existencias`            | C R U         | R                                | R      | R                  | `00034`; disponibilidad por `fn_existencias_disponibles` (`00065`)                                          |
-| `bodegas`                | C R U         | R                                | R      | R                  | `00034`, con la lectura endurecida por la `00079` a `rol_actual() IS NOT NULL`. Las politicas duplicadas de la `00061`/`00062` las retiro esa misma migracion (era la Divergencia 12). **Sin DELETE para nadie**, y no solo por politica: la `00034` nunca otorgo `GRANT DELETE`, asi que el borrado muere en `42501` antes de llegar a RLS. Cubierto rol por rol en `politicas_rls_inventario.sql` (issue #513)                                                          |
-| `proveedores`            | C R U         | R                                | R      | R                  | `00034`, con la lectura endurecida por la `00079` a `rol_actual() IS NOT NULL`. Las politicas duplicadas de la `00061`/`00062` las retiro esa misma migracion (era la Divergencia 12). **Sin DELETE para nadie**, y no solo por politica: la `00034` nunca otorgo `GRANT DELETE`, asi que el borrado muere en `42501` antes de llegar a RLS. Cubierto rol por rol en `politicas_rls_inventario.sql` (issue #513)                                                                             |
+| `bodegas`                | C R U         | R                                | C R U  | C R U              | `00034` + `00148` (el personal de campo crea y corrige), con la lectura endurecida por la `00079` a `rol_actual() IS NOT NULL`. Las politicas duplicadas de la `00061`/`00062` las retiro esa misma migracion (era la Divergencia 12). **Sin DELETE para nadie**, y no solo por politica: la `00034` nunca otorgo `GRANT DELETE`, asi que el borrado muere en `42501` antes de llegar a RLS. Cubierto rol por rol en `politicas_rls_inventario.sql` (issue #513)                                                          |
+| `proveedores`            | C R U         | R                                | C R U  | C R U              | `00034` + `00148` (el personal de campo crea y corrige), con la lectura endurecida por la `00079` a `rol_actual() IS NOT NULL`. Las politicas duplicadas de la `00061`/`00062` las retiro esa misma migracion (era la Divergencia 12). **Sin DELETE para nadie**, y no solo por politica: la `00034` nunca otorgo `GRANT DELETE`, asi que el borrado muere en `42501` antes de llegar a RLS. Cubierto rol por rol en `politicas_rls_inventario.sql` (issue #513)                                                                             |
 | `alertas_caducidad`      | R **A**       | R                                | R      | R                  | `00034` + `00138`. Sin INSERT DIRECTO para nadie: las genera `fn_generar_alertas_caducidad` (`00088`, redefinida por la `00129` y la `00138`), que es `SECURITY DEFINER`. La invocan la rutina programada con `service_role` y, desde la `00129`, tambien la administradora a traves de `fn_sincronizar_alertas_caducidad` (ver abajo). **Sin UPDATE directo para nadie desde la `00138`**: se atiende solo con `fn_atender_alerta_caducidad`, que ademas descuenta el stock (ver abajo) |
 | `alerta_caducidad_detalle` | R           | R                                | R      | R                  | `00143`. Desglose de las acciones aplicadas al atender una alerta con varias acciones a la vez. **Sin GRANT de escritura para nadie**: la unica fila la inserta `fn_atender_alerta_caducidad`, `SECURITY DEFINER` |
 | `movimientos_inventario` | R U **A**     | R                                | C R U\* | C R U\*            | `00034` + `00048` + `00086` (aprobar admite tambien `tiene_permiso('inventario.aprobar')`) + `00106`. \*Solo el **propio** movimiento y solo mientras siga `pendiente` |
 | `notificaciones`         | R U\*\*       | R U\*\*                          | R U\*\* | R U\*\*             | `00138` (issue #755). \*\*Cada perfil activo solo **sus propias** filas (`perfil_id = auth.uid() AND rol_actual() IS NOT NULL`), y el UPDATE solo alcanza a `leida_en` (`GRANT UPDATE (leida_en)`, por columna). Sin INSERT ni DELETE para nadie: las escriben triggers `SECURITY DEFINER` (ver abajo). Hoy solo la administracion recibe filas |
+
+**El personal de campo crea y corrige los catalogos de inventario, nunca elimina (`00148`).**
+Medico y colaborador crean y editan medicamentos, principios activos, presentaciones, bodegas y
+proveedores. Borrar (`principios_activos`, `presentaciones`) sigue siendo de la administradora por
+politica, y desactivar un medicamento por el trigger `impedir_desactivar_sin_ser_administrador`:
+una politica de UPDATE no puede comparar el valor viejo con el nuevo. Lotes no cambia: el personal
+de campo ya los proponia provisionales (`00107`), y sus movimientos siguen pasando por la
+validacion. En la interfaz, los dos ven todas las pestanas del inventario salvo **Validacion**, que
+es de quien tiene `inventario.aprobar` (`pestanasDeInventario()`).
 
 **El medico da de alta un medicamento (issue #864).** `fn_registrar_medicamento` (`00050`) **no es
 `SECURITY DEFINER` a proposito**, asi que quien puede llamarla lo deciden las politicas de INSERT de
@@ -368,9 +459,14 @@ Reflejo en el cliente: `inventario/medicamentos.permisos.js`, `lotes.permisos.js
 
 | Tabla                      | administrador | junta directiva / socio fundador | medico         | voluntario general | Como se implementa                                                           |
 | -------------------------- | ------------- | -------------------------------- | -------------- | ------------------ | ---------------------------------------------------------------------------- |
-| `jornadas`                 | C R U         | —                                | R si participa o es su responsable | R si participa o es su responsable | `00039`, `00141`. Crear y editar admite tambien `tiene_permiso('jornadas.gestionar')` |
-| `jornada_personal`         | C R U D       | —                                | R el equipo de su jornada | R el equipo de su jornada | `00039` + `00044` + `00141`                                       |
-| `jornada_estado_historial` | R             | —                                | —              | —                  | `00039`. Lo escribe un trigger DEFINER, nadie por la API                     |
+| `jornadas`                 | C R U         | —                                | R si participa o es su responsable | R si participa o es su responsable | `00039`, `00141`, `00148`. Crear y editar admite tambien `tiene_permiso('jornadas.gestionar')`, que desde la `00148` ademas **lee todas** las jornadas |
+| `jornada_personal`         | C R U D       | —                                | R el equipo de su jornada | R el equipo de su jornada | `00039` + `00044` + `00141` + `00148` (escribir y leer admiten `tiene_permiso('jornadas.gestionar')`: armar el equipo es parte de gestionar la jornada) |
+| `jornada_estado_historial` | R             | —                                | —              | —                  | `00039` + `00148` (lo lee tambien quien tiene `jornadas.gestionar`). Lo escribe un trigger DEFINER, nadie por la API |
+
+**En el detalle de una jornada, el personal de campo ve solo Equipo y Pacientes atendidos
+(`00148`).** El resumen (presupuesto, contadores), el historial de estados, el origen del
+presupuesto y el cierre son de quien administra la jornada: la administradora o quien tenga
+`jornadas.gestionar`. Lo decide `seccionesDeDetalleJornada()` en `jornadas/permisos.js`.
 
 La transicion de estados la valida `fn_validar_transicion_estado_jornada` (`00051`), que deja
 reabrir una jornada finalizada **solo al administrador**. Reflejo en el cliente:
@@ -393,21 +489,27 @@ reabrir una jornada finalizada **solo al administrador**. Reflejo en el cliente:
 
 | Tabla                       | administrador | junta directiva / socio fundador | medico           | voluntario general | Como se implementa                                                |
 | --------------------------- | ------------- | -------------------------------- | ---------------- | ------------------ | ----------------------------------------------------------------- |
-| `proyectos`                 | C R U         | —                                | R el de su jornada | R el de su jornada | `00039` + `00086` + `00141` (crear/editar, y tambien SU LECTURA, admiten `tiene_permiso('proyectos.gestionar')`: sin eso, `INSERT ... RETURNING` -patron real de `crearProyecto()`- falla igual aunque el `WITH CHECK` del INSERT ya lo permita) |
-| `proyecto_hitos`            | C R U D       | —                                | —                | —                  | `00053` + `00141`                                                 |
-| `proyecto_seguimiento`      | C R           | —                                | —                | —                  | `00053` + `00141`                                                 |
-| `proyecto_estado_historial` | R             | —                                | —                | —                  | `00039`                                                           |
+| `proyectos`                 | C R U         | —                                | R los suyos      | R los suyos        | `00039` + `00086` + `00141` + `00148` (crear/editar, y tambien SU LECTURA, admiten `tiene_permiso('proyectos.gestionar')`: sin eso, `INSERT ... RETURNING` -patron real de `crearProyecto()`- falla igual aunque el `WITH CHECK` del INSERT ya lo permita). "Los suyos" es `pertenece_a_proyecto()` (`00148`): estar en su equipo o participar en una de sus jornadas |
+| `proyecto_hitos`            | C R U D       | —                                | —                | —                  | `00053` + `00141` + `00148` (leer y escribir admiten `tiene_permiso('proyectos.gestionar')`) |
+| `proyecto_seguimiento`      | C R           | —                                | —                | —                  | `00053` + `00141` + `00148`, mismo cambio                        |
+| `proyecto_estado_historial` | R             | —                                | —                | —                  | `00039` + `00148` (lo lee tambien quien tiene `proyectos.gestionar`) |
 | `proyecto_insumos`          | C R U D       | —                                | —                | —                  | `00147`. Leer y escribir: `es_administrador()` o `tiene_permiso('proyectos.gestionar')`. El medico ve el proyecto pero NO sus insumos (dinero, como `gastos`) |
 | `proyecto_personal`         | C R U D       | —                                | R el equipo del proyecto que ve | R el equipo del proyecto que ve | `00146`. Escribir admite tambien `tiene_permiso('proyectos.gestionar')`, igual que editar el proyecto |
-| `gastos`                    | C R **A**     | —                                | C R si participa | C R si participa   | `00052` + `00141`. Era la unica tabla donde `socio fundador` aparecia por su nombre |
+| `gastos`                    | C R **A**     | —                                | C R si participa | C R si participa   | `00052` + `00141` + `00148` (lo leen tambien quien tiene `presupuestos.registrar` o `presupuestos.aprobar`: antes aprobaba un gasto que no podia ver). El gasto del personal de campo entra `pendiente` y pasa por la aprobacion |
 | `jornada_presupuesto_origen` | C R U D      | —                                | —                | —                  | `00135` + `00141`. Escribir admite tambien `tiene_permiso('jornadas.gestionar')`, igual que actualizar la jornada; su lectura tambien, por el `INSERT ... RETURNING` |
 
-**La lectura de `proyectos` del personal de campo (issue #864)** no es "todos los proyectos": es
-`EXISTS (SELECT 1 FROM jornadas j WHERE j.proyecto_id = proyectos.id AND participa_en_jornada(j.id))`.
-Solo el proyecto del que cuelga una jornada en la que esta. En la interfaz, el medico entra a
-Proyectos pero **sin las pestañas de insumos y gastos y sin poder crear ni editar nada**
-(`puedeVerInsumosYGastosDeProyecto()` en `proyectos/permisos.js`); el voluntario general no tiene
-el modulo en el menu, aunque la politica le entregue la misma fila si la pidiera.
+**La lectura de `proyectos` del personal de campo** no es "todos los proyectos": es
+`pertenece_a_proyecto(id)` (`00148`), que mira el equipo del proyecto (`proyecto_personal`) y sus
+jornadas. Es SECURITY DEFINER a proposito: la politica de `proyecto_personal` consulta `proyectos`,
+y mirar `proyecto_personal` desde la politica de `proyectos` seria una recursion. En la interfaz,
+medico y colaborador (este, desde la `00148`) entran a Proyectos en **solo consulta**: sin
+presupuesto, insumos, gastos ni seguimiento, y sin crear ni editar nada
+(`permisosDeProyectos()` en `proyectos/permisos.js`).
+
+**Presupuestos para el personal de campo (`00148`).** Medico y colaborador entran al modulo y ven el
+presupuesto **de lo suyo**: las funciones de presupuesto son SECURITY INVOKER, y RLS les entrega las
+jornadas en las que participan y sus gastos. Registran gastos, que nacen `pendiente`; la pestana
+Aprobaciones es de quien tiene `presupuestos.aprobar`, y Movimientos de la administradora.
 
 `proyecto_personal` (00146) es el **equipo del proyecto**: quien participa en el, con una funcion
 opcional en texto libre (`rol_en_proyecto`). No es `jornada_personal`: aquella es el cuadro de turnos
@@ -421,7 +523,8 @@ join a `perfiles`: esa tabla solo la lee el administrador y cada quien la suya (
 join el medico veria al resto del equipo sin nombre. La funcion devuelve unicamente nombres y
 apellidos, nunca telefono ni correo, y solo de las filas que la persona ya puede ver. Como un DEFINER
 no pasa por la RLS, **repite a mano la regla de lectura de la tabla**; `proyecto_personal.sql` las
-compara rol por rol para que no diverjan. (El equipo de una *jornada* sigue sin esa funcion: ahi el
+compara rol por rol para que no diverjan. Desde la `00148` **estar en el equipo si hace visible el
+proyecto** (`pertenece_a_proyecto()`), y la funcion lo sigue. (El equipo de una *jornada* sigue sin esa funcion: ahi el
 medico ve las filas sin nombre.) Reflejo en el cliente:
 `permisosDeProyectos().puedeGestionarEquipo` en `proyectos/permisos.js` (solo administrador, mas
 estricto que la base, como en el resto del modulo) y `proyectos/equipo.api.js`. Lo afirma
@@ -468,7 +571,10 @@ administrador**, por dos motivos independientes que detalla la Divergencia 1 (re
 
 Desde la **`00141`** (issue #864) las lee **solo la administradora**, o quien tenga
 `donaciones.registrar`. Los dos roles consultivos salen: su unica pantalla es Reportes y ninguno
-de los cuatro reportes lee donantes, donaciones ni su detalle.
+de los cuatro reportes lee donantes, donaciones ni su detalle. Desde la `00148` tambien las lee el
+rol al que la matriz le abre Donaciones. Registrar se delega (`donaciones.registrar`); corregir o
+dar de baja un donante y anular una donacion no -sus politicas de UPDATE son solo
+`es_administrador()`-, y el cliente lo refleja con `puedeCorregirDonaciones()`.
 
 ### Usuarios y permisos
 
@@ -477,8 +583,9 @@ de los cuatro reportes lee donantes, donaciones ni su detalle.
 | `perfiles`            | C R U         | R el propio                      | R el propio | R el propio        | `00038`. Cada quien lee y edita solo su perfil. La fila la crea el trigger de la `00002`, que desde la `00074` rechaza el alta si viene del registro publico |
 | `perfil_especialidad` | C R D         | R las propias                     | C R D la propia | C R D la propia | `00058`, `00085`, `00141`. `es_administrador()` lee/escribe cualquiera; cada perfil crea y borra las suyas. La lectura de las ajenas que la `00085` dio a los roles consultivos existia para el cuadro de turnos, que ya no ven: se la retira la `00141`. Sin UPDATE: la PK incluye el nombre, cambiar una especialidad es borrar e insertar |
 | `permisos`            | R             | R                                | R           | R                  | `00038`. Catalogo de solo lectura              |
-| `rol_permiso`         | C R D         | R                                | R           | R                  | `00038` lee; `00139` (issue #638) abre C/D solo a administrador, sin U (no hay columna que actualizar); auditoria propia con `permiso_id` como `fila_id` |
-| `usuario_permiso`     | C R U D       | R el propio                      | R el propio | R el propio        | `00038`, con auditoria en `00045`; escribir Y LEER LA FILA AJENA QUE SE ACABA DE ESCRIBIR admiten `tiene_permiso('usuarios.gestionar_permisos')` desde `00086` |
+| `rol_permiso`         | R             | R                                | R           | R                  | `00038` lee. La `00139` (issue #638) le habia abierto C/D a la administradora para la matriz; la `00148` se lo retira (politicas y `GRANT`): la matriz ahora edita `rol_modulo`, y `rol_permiso` es el valor por defecto de cada rol, sembrado por migracion |
+| `rol_modulo`          | C R D         | R                                | R           | R                  | `00148`. La matriz de acceso: modulos abiertos a un rol, en solo lectura. Escribe solo la administradora; sin U. Auditada con el trigger generico |
+| `usuario_permiso`     | C R U D       | R el propio                      | R el propio | R el propio        | `00038`, con auditoria en `00045`; escribir Y LEER LA FILA AJENA QUE SE ACABA DE ESCRIBIR admiten `tiene_permiso('usuarios.gestionar_permisos')` desde `00086`, **nunca sobre la fila propia** desde la `00148` (`perfil_id <> auth.uid()`, salvo la administradora) |
 | `eventos_auditoria`   | R             | —                                | —           | —                  | `00026`. Lo escriben triggers DEFINER          |
 
 **Nadie puede cambiar su propio rol.** Eso no lo impide una politica -RLS no puede comparar el
@@ -522,8 +629,8 @@ dejando el sistema sin administrador igual. Ver Divergencia 15.
 | ---------------------- | --------------------- | ---------------------- | ------------------------------------------------------- |
 | `departamentos`        | cualquier autenticado | **nadie**              | `00006` (politica) + `00073` (GRANT, issue #406 resuelto). El catalogo lo siembra la `00125`, no la aplicacion |
 | `municipios`           | cualquier autenticado | **nadie**              | Igual que departamentos                                 |
-| `comunidades`          | cualquier autenticado | administrador: C U     | Lectura: `00008` (politica) + `00041` (GRANT); la politica de `00041` se retiro en `00104` por redundante. Escritura: `00116` (politicas de INSERT y UPDATE) + `00118` (`GRANT INSERT, UPDATE`), y `00117` agrega `es_vigente` como retiro logico |
-| `condiciones_cronicas` | cualquier autenticado | administrador: C U; medico y voluntario general: C | Lectura: `00010` (politica), reescrita en `00079`; GRANT en `00032`. Escritura: `00140` (issue #850), que agrega `GRANT INSERT, UPDATE`, una politica de INSERT para los tres roles que atienden y una de UPDATE solo para administrador. `00115` habia agregado `es_vigente` como retiro logico |
+| `comunidades`          | cualquier autenticado | administrador, medico y voluntario general: C U; **retirar solo administrador** | Lectura: `00008` (politica) + `00041` (GRANT); la politica de `00041` se retiro en `00104` por redundante. Escritura: `00116` (politicas de INSERT y UPDATE) + `00118` (`GRANT INSERT, UPDATE`), y `00117` agrega `es_vigente` como retiro logico. `00148`: el personal de campo crea y corrige, y el trigger `impedir_retirar_sin_ser_administrador` deja el retiro en la administradora |
+| `condiciones_cronicas` | cualquier autenticado | administrador, medico y voluntario general: C U; **retirar solo administrador** | Lectura: `00010` (politica), reescrita en `00079`; GRANT en `00032`. Escritura: `00140` (issue #850) + `00148` (el UPDATE suma al personal de campo; el retiro por `es_vigente` lo impide el mismo trigger que en comunidades). `00115` habia agregado `es_vigente` como retiro logico |
 | `idiomas`              | cualquier autenticado | **nadie**              | `00110` (issue #663): reemplaza al enum `idioma_preferido`. Politica de SELECT + `GRANT SELECT` a `authenticated`, sin ningun GRANT de escritura -mismo criterio que `departamentos`/`municipios`: agregar un idioma es un `INSERT` en una migracion, no una accion de la aplicacion |
 
 **Ni `departamentos` ni `municipios` se escriben desde la aplicacion, y es deliberado**: son el
@@ -579,17 +686,25 @@ tabla:
 
 | Vista                     | Modo                    | Quien la lee                                                                       | Migracion                 |
 | ------------------------- | ----------------------- | ---------------------------------------------------------------------------------- | ------------------------- |
-| `vista_reporte_impacto`   | **DEFINER**             | administrador, los dos consultivos y quien tiene `reportes.exportar`, por el `WHERE` | `00027`, `00054`, `00064`, `00080`, `00086` |
-| `pacientes_reporte`       | **DEFINER**             | administrador, los dos consultivos y quien tiene `reportes.exportar`, por el `WHERE`. Solo expone `id` y `comunidad_id` | `00041`, `00080`, `00086` |
-| `perfiles_directorio`     | **DEFINER**             | administrador y el propio; enmascara telefono y correo                             | `00038`, `00141`          |
+| `vista_reporte_impacto`   | **DEFINER**             | `puede_consultar_reportes()` en el `WHERE`: administrador, los dos consultivos, quien tiene `reportes.exportar` y el rol al que la matriz le abre Reportes | `00027`, `00054`, `00064`, `00080`, `00086`, `00148` |
+| `pacientes_reporte`       | **DEFINER**             | `puede_consultar_reportes()`, igual que la anterior. Solo expone `id` y `comunidad_id` | `00041`, `00080`, `00086`, `00148` |
+| `perfiles_directorio`     | **DEFINER**             | administrador y el propio; desde la `00148` tambien quien tiene `usuarios.gestionar_permisos`, `jornadas.gestionar` o `proyectos.gestionar`, y el rol al que la matriz le abre Colaboradores. Enmascara telefono y correo | `00038`, `00141`, `00148` |
 | `vista_cola_jornada`      | **DEFINER**             | administrador y quien participa en la jornada                                      | `00060`                   |
 | `vista_lotes_disponibles` | `security_invoker=true` | cualquier autenticado, con su propia RLS                                           | `00024`, `00041`, `00047` |
 | `privilegios_de_anon`     | DEFINER                 | nadie: es una guarda de CI                                                         | `00056`                   |
 | `tablas_sin_rls`          | DEFINER                 | nadie: es introspeccion                                                            | `00030`                   |
 
-`fn_reporte_pacientes_atendidos` (`00067`, guarda actualizada en `00080` y `00086`) es la unica
-funcion de negocio con la comprobacion de rol escrita en su cuerpo, porque es DEFINER y tiene que
-sustituir a la politica que no la protege.
+`fn_reporte_pacientes_atendidos` (`00067`, guarda actualizada en `00080`, `00086` y `00148`) y
+`fn_valor_de_inventario_disponible` (`00122`, guarda en `00148`) llevan la comprobacion escrita en
+su cuerpo, porque son DEFINER y tienen que sustituir a la politica que no las protege. Desde la
+`00148` las dos preguntan `puede_consultar_reportes()`.
+
+**El reporte de jornada es una funcion agregada (`00148`).** `fn_reporte_jornada(p_jornada_id)`
+es SECURITY DEFINER y devuelve un JSONB con la jornada, su resumen (pacientes, atenciones,
+consultas, recetas), los diagnosticos mas frecuentes, los medicamentos mas entregados y el personal
+con su total de atenciones. Nada identifica a un paciente. Hasta ahi el cliente armaba el reporte
+leyendo `atenciones`, `consultas` y `recetas` con la sesion, y los roles consultivos -que no leen
+filas clinicas- recibian un reporte vacio. La guarda es `puede_consultar_reportes()` o ser medico.
 
 Reflejo en el cliente: `reportes/permisos.js` (issue #396), que absorbio
 `puedeVerIndicadoresDeImpacto` y `puedeVerReporteDePacientes`, sueltas hasta ahora fuera de un
@@ -617,21 +732,17 @@ porque cada quien se lee a si mismo por ella.
 el de inventario. No cambia quien entra, porque los tres roles que alcanzan el modulo pasan las
 dos guardas; cambia que la funcion describe la politica que de verdad protege.
 
-**Que roles alcanzan `/reportes` no lo decide este archivo**, sino `navegacion.js`:
-administrador, junta directiva y socio fundador. Es una decision deliberada de la issue #426 que
-`navegacion.test.js` afirma, y la #862 la respeto sin tocarla. Un medico o un voluntario no llegan
-a estas pantallas, y ven los vencimientos en `Inventario > Alertas`.
+**Que roles alcanzan `/reportes` no lo decide este archivo**, sino `puedeVerModulo()` en
+`navegacion.js`: administrador, junta directiva y socio fundador por defecto, mas quien tiene
+`reportes.exportar` y el rol al que la matriz le abre Reportes. Un medico o un voluntario sin eso no
+llegan a estas pantallas, y ven los vencimientos en `Inventario > Alertas`.
 
-### Divergencia abierta: `reportes.exportar` es inoperante desde la interfaz
+### `reportes.exportar` ya opera desde la interfaz (`00148`)
 
-Las tres guardas del servidor aceptan `tiene_permiso('reportes.exportar')`, pero **ninguna funcion
-de `reportes/permisos.js` lo mira**: todas deciden por rol base. Conceder ese permiso fino a
-alguien no cambia nada en la pantalla.
-
-Cerrarlo exige que la sesion cargue los permisos efectivos
-(`usuarios/permisos.api.js`, `obtenerPermisosEfectivos`) y eso es un cambio transversal al contexto
-de autenticacion, fuera del alcance de la #862. Mientras tanto, el permiso solo tendria efecto para
-un rol que ya alcance el modulo.
+Hasta la `00148` las tres guardas del servidor aceptaban `tiene_permiso('reportes.exportar')`, pero
+ninguna funcion de `reportes/permisos.js` lo miraba: conceder ese permiso fino no cambiaba nada en la
+pantalla. Ahora la sesion carga sus permisos efectivos (`mis_accesos()`), y `reportes/permisos.js`
+pregunta `tienePermisoFino(rol, "reportes.exportar")` y `accedeAModuloPorMatriz(rol, "reportes")`.
 
 ### Tablas sin ningun rol (issue #856)
 
@@ -654,10 +765,10 @@ su rol no tiene, sin cambiarle el rol.**
 
 | Permiso                       | Por defecto lo tienen                          | Gobierna alguna politica?                                                             |
 | ----------------------------- | ----------------------------------------------- | -------------------------------------------------------------------------------------- |
-| `jornadas.gestionar`          | administrador                                  | **Si** — INSERT y UPDATE de `jornadas` (`00039`); escritura y lectura de `jornada_presupuesto_origen` (`00135`) |
-| `presupuestos.registrar`      | administrador                                  | **Si** — INSERT de `gastos` (`00052`)                                                |
-| `presupuestos.aprobar`        | administrador                                  | **Si** — UPDATE de `gastos` (`00052`)                                                |
-| `pacientes.editar`            | administrador, medico                          | **Si** — UPDATE de `pacientes` y `expedientes` (`00086`)                             |
+| `jornadas.gestionar`          | administrador                                  | **Si** — INSERT y UPDATE de `jornadas` (`00039`); escritura y lectura de `jornada_presupuesto_origen` (`00135`); lectura de todas las jornadas, su historial y escritura de `jornada_personal` (`00148`) |
+| `presupuestos.registrar`      | administrador                                  | **Si** — INSERT de `gastos` (`00052`); lectura de `gastos` (`00148`)                 |
+| `presupuestos.aprobar`        | administrador                                  | **Si** — UPDATE de `gastos` (`00052`); lectura de `gastos` (`00148`)                 |
+| `pacientes.editar`            | administrador, medico, voluntario general (`00148`) | **Si** — UPDATE de `pacientes` y `expedientes` (`00086`)                        |
 | `inventario.aprobar`          | administrador                                  | **Si** — UPDATE de `movimientos_inventario` (`00086`)                                |
 | `donaciones.registrar`        | administrador                                  | **Si** — INSERT de `donantes`, `donaciones` y `donacion_detalle` (`00086`)           |
 | `proyectos.gestionar`         | administrador                                  | **Si** — INSERT y UPDATE de `proyectos` (`00086`, y las escrituras de `proyecto_personal` `00146` y `proyecto_insumos` `00147`) |
@@ -671,15 +782,13 @@ su rol no tiene, sin cambiarle el rol.**
 **Las ocho politicas conectadas por la `00086` son siempre `es_administrador() OR
 tiene_permiso(clave)`, nunca solo `tiene_permiso(clave)`.** Consecuencia directa: para el rol
 `administrador`, lo que diga `rol_permiso` sobre estos nueve permisos no cambia nada en la
-practica -ese rol ya tiene acceso completo por diseno, con o sin la fila-. La matriz de permisos
-por rol (issue #638) deshabilita la columna `administrador` por este motivo, con un aviso en
-pantalla en vez de dejarla editable sin efecto.
+practica -ese rol ya tiene acceso completo por diseno, con o sin la fila-.
 
-Consecuencia practica: `permisos` sigue siendo de **solo lectura** para todos -el catalogo de
-permisos que existen se define por migracion, no por la aplicacion-, pero `rol_permiso` ya no lo
-es: la matriz de permisos por rol (issue #638, migracion `00139`) le da a administrador **C R D**
-sobre el default de cada rol (sin U: no hay columna que actualizar, conceder es insertar la fila y
-retirar es borrarla), con auditoria propia. `usuario_permiso` sigue siendo la excepcion por
+Consecuencia practica: `permisos` y `rol_permiso` son de **solo lectura** para todos: el catalogo
+de permisos y el valor por defecto de cada rol se definen por migracion. La `00139` (issue #638)
+habia abierto `rol_permiso` a la administradora para una matriz de permisos por rol; la `00148` lo
+cierra otra vez, porque esa matriz no abria nada en la interfaz. La matriz de hoy edita `rol_modulo`
+(ver "Acceso a modulos y funciones delegables"). `usuario_permiso` sigue siendo la excepcion por
 persona, con su propio CRUD y auditoria desde antes (`00045`).
 
 Guardia asociado: ningun permiso fino de escritura puede concederse **por excepcion individual**
@@ -687,12 +796,10 @@ a un perfil `junta directiva` o `socio fundador` (son consultivos por definicion
 `impedir_permiso_escritura_a_consultivo` sobre `usuario_permiso` (`00086`). Ver la regla dedicada
 mas abajo.
 
-**Asimetria conocida, dejada asi a proposito (issue #638):** `rol_permiso` no tiene ese mismo
-guardia. Un administrador puede, desde la matriz de permisos por rol, marcar un permiso de
-escritura como parte del **default de todo un rol consultivo** -mas grave que la excepcion
-individual, porque afecta a todas las personas con ese rol, presentes y futuras-, y ninguna
-politica ni trigger lo impide todavia. Queda para una issue futura si se decide cerrar esta
-brecha.
+**La asimetria de la issue #638 queda cerrada por la `00148`.** `rol_permiso` no tiene ese mismo
+guardia, y la administradora podia marcar desde la matriz un permiso de escritura como default de
+todo un rol consultivo. Como `rol_permiso` ya no se escribe desde la aplicacion, esa via no existe;
+abrirle un modulo a un rol consultivo por `rol_modulo` es de solo lectura por construccion.
 
 ## Las reglas que explican el diseno
 
@@ -760,7 +867,9 @@ las filas vivian sueltas en la prosa de cada modulo o en `docs/REVISION-INTEGRAL
 | 12 | `bodegas` y `proveedores` tenian politicas duplicadas (`00061`/`00062`) | **Resuelta** por la `00079` |
 | 15 | Borrar el ultimo administrador via `DELETE` en cascada desde `auth.users` no lo para ningun trigger | **Abierta**. `impedir_dejar_sin_administrador_activo` (`00072`) cubre el UPDATE, no el DELETE |
 | — | `lotes.costo_unitario` y `lotes.moneda`: el `REVOKE SELECT` por columna no funciona, y lo que protege de verdad el dato es `fn_valor_de_inventario_disponible` (`00122`) | **Abierta**, limitacion conocida (ver la seccion de Inventario) |
-| — | `rol_permiso` no tiene el guardia `impedir_permiso_escritura_a_consultivo` que si tiene `usuario_permiso` | **Abierta** (`00139`) |
+| — | `rol_permiso` no tiene el guardia `impedir_permiso_escritura_a_consultivo` que si tiene `usuario_permiso` | **Resuelta** por la `00148`: `rol_permiso` ya no se escribe desde la aplicacion |
+| — | La matriz de permisos por rol (`00139`) y los permisos por persona no cambiaban el menu, las rutas ni los botones: el cliente decidia por listas de roles | **Resuelta** por la `00148` (`rol_modulo`, `mis_accesos()`, `usuarios/acceso.js`) |
+| — | `reportes.exportar` no tenia efecto en la interfaz | **Resuelta** por la `00148` |
 | — | `authenticated` conserva `GRANT INSERT, UPDATE` sobre `departamentos` y `municipios`; hoy solo RLS lo frena | **Abierta** (ver "Territorio y catalogos") |
 | — | **Los roles consultivos conservan la lectura de inventario aunque solo vean Reportes** | **Abierta y deliberada** (issue #864). Dos de sus cuatro reportes leen `existencias` y `lotes` directo de la tabla. La salida es pasarlos a vistas `SECURITY DEFINER`, y va en su propia issue |
 
@@ -779,14 +888,16 @@ silenciosas -ninguna fallaba, las dos escondian algo-:
 No basta con leer las migraciones: lo que vale es lo que responde la base. Las celdas de esta
 matriz estan cubiertas por las suites pgTAP de `supabase/tests/database/`, que **corren en cada
 PR** dentro del job "Validar migraciones y funciones". Entre otras, ya afirman que
-`voluntario general` no lee consultas ni recetas, y que `junta directiva` no accede a atenciones,
-consultas ni recetas.
+`voluntario general` lee consultas y recetas pero no las escribe (`00148`), y que `junta directiva`
+no accede a atenciones, consultas ni recetas mientras la matriz no le abra Pacientes.
 
 Lo que cambio la issue #864 lo afirma `permisos_por_rol_864.sql`, rol por rol: que los dos roles
 consultivos reciben **cero filas** de jornadas, proyectos, gastos y donaciones y **si** conservan
 `existencias`; que el medico lee el proyecto de su jornada y no el de al lado; que ve el equipo
-completo de su jornada; que da de alta un medicamento y no puede editarlo despues; y que el
-responsable de una jornada la lee aunque no este en su cuadro de turnos.
+completo de su jornada; que da de alta un medicamento; y que el responsable de una jornada la lee
+aunque no este en su cuadro de turnos. Desde la `00148` el personal de campo tambien corrige el
+medicamento, pero no lo desactiva: lo afirman `permisos_por_rol_864.sql` y
+`acceso_a_modulos_por_rol.sql`.
 
 Para comprobar una celda a mano contra la base local, el patron es el de esas suites:
 

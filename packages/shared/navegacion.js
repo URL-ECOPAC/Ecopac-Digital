@@ -1,7 +1,11 @@
+import { accedeAModuloPorMatriz, modulosPorPermisoFino } from "./usuarios/acceso.js";
 import { ROLES, ROLES_DE_CAMPO } from "./usuarios/roles.js";
 
 /**
- * Los once módulos del sistema.
+ * Los once módulos del sistema, en el orden en que aparecen en el menu, en la rejilla de inicio y
+ * en las pestanas de movil: primero la planificacion (proyectos, jornadas, presupuestos,
+ * donaciones), despues la operacion (inventario, pacientes) y al final la consulta y la
+ * administracion.
  *
  * `descripcion` es una linea de que se hace en cada modulo. La pantalla de inicio la pinta
  * debajo del nombre en cada acceso: una rejilla de nueve palabras sueltas no le dice a nadie
@@ -22,20 +26,47 @@ export const MODULOS = [
     roles: Object.values(ROLES),
   },
   {
-    id: "pacientes",
-    nombre: "Pacientes",
-    descripcion: "Expedientes clinicos, triaje, consultas y recetas.",
-    ruta: "/pacientes",
-    modulo: "pacientes",
-    tabMovil: "Pacientes",
+    id: "proyectos",
+    nombre: "Proyectos",
+    descripcion: "Proyectos sociales, hitos y seguimiento.",
+    ruta: "/proyectos",
+    modulo: "proyectos",
+    tabMovil: false,
+    movil: false,
+    icono: "FolderKanban",
+    // El personal de campo ve **solo los proyectos a los que pertenece** -por su equipo o por una
+    // de sus jornadas, pertenece_a_proyecto() de la 00148, no esta lista- y en solo consulta: sin
+    // presupuesto, insumos, gastos ni seguimiento (proyectos/permisos.js). La 00148 suma al
+    // colaborador, que hasta ahi no lo tenia.
+    roles: [ROLES.ADMINISTRADOR, ...ROLES_DE_CAMPO],
+  },
+  {
+    id: "jornadas",
+    nombre: "Jornadas",
+    descripcion: "Planificacion, equipo, cuadro de turnos y cierre.",
+    ruta: "/jornadas",
+    modulo: "jornadas",
+    tabMovil: "Jornadas",
     movil: true,
-    icono: "Users",
-    // ROLES.ADMINISTRADOR/MEDICO/VOLUNTARIO, no los cinco: espejo de "Administrador, medico y
-    // voluntario leen pacientes" (00032). Antes tambien listaba ROLES.FARMACEUTICO y
-    // ROLES.ENFERMERO, dos claves que ROLES (usuarios/roles.js) no declara -el enum real solo
-    // tiene cinco valores-, asi que evaluaban a undefined; sin efecto en el resultado (un
-    // undefined no coincide con ningun rol real), pero se limpian por higiene.
+    icono: "Calendar",
+    // ISSUE #864: los tres roles de operacion. La base ya solo entregaba a medico y voluntario
+    // las jornadas en las que participan (00039/00079), y la 00141 le suma la que cada quien
+    // tiene a su cargo como `responsable_id`.
     roles: [ROLES.ADMINISTRADOR, ROLES.MEDICO, ROLES.VOLUNTARIO],
+  },
+  {
+    id: "presupuestos",
+    nombre: "Presupuestos",
+    descripcion: "Presupuesto por jornada y proyecto, gastos y aprobaciones.",
+    ruta: "/presupuestos",
+    modulo: "presupuestos",
+    tabMovil: false,
+    movil: false,
+    icono: "DollarSign",
+    // 00148: el personal de campo ve el presupuesto de lo suyo -RLS le entrega los gastos de sus
+    // jornadas- y registra gastos, que entran pendientes. Aprobar no: esa pestana es de quien
+    // tiene presupuestos.aprobar (presupuestos/permisos.js).
+    roles: [ROLES.ADMINISTRADOR, ...ROLES_DE_CAMPO],
   },
   {
     id: "donaciones",
@@ -71,31 +102,20 @@ export const MODULOS = [
     roles: [ROLES.ADMINISTRADOR, ROLES.MEDICO, ROLES.VOLUNTARIO],
   },
   {
-    id: "presupuestos",
-    nombre: "Presupuestos",
-    descripcion: "Presupuesto por jornada y proyecto, gastos y aprobaciones.",
-    ruta: "/presupuestos",
-    modulo: "presupuestos",
-    tabMovil: false,
-    movil: false,
-    icono: "DollarSign",
-    // ISSUE #864: solo la administradora, como donaciones.
-    roles: [ROLES.ADMINISTRADOR],
-  },
-  {
-    id: "proyectos",
-    nombre: "Proyectos",
-    descripcion: "Proyectos sociales, hitos y seguimiento.",
-    ruta: "/proyectos",
-    modulo: "proyectos",
-    tabMovil: false,
-    movil: false,
-    icono: "FolderKanban",
-    // ISSUE #864: entra medico y salen los consultivos. El medico ve **solo los proyectos de las
-    // jornadas en las que participa** -eso lo decide la politica de SELECT de `proyectos` que
-    // amplia la 00141, no esta lista- y sin insumos, sin gastos y sin poder crear ni editar
-    // nada (proyectos/permisos.js).
-    roles: [ROLES.ADMINISTRADOR, ROLES.MEDICO],
+    id: "pacientes",
+    nombre: "Pacientes",
+    descripcion: "Expedientes clinicos, triaje, consultas y recetas.",
+    ruta: "/pacientes",
+    modulo: "pacientes",
+    tabMovil: "Pacientes",
+    movil: true,
+    icono: "Users",
+    // ROLES.ADMINISTRADOR/MEDICO/VOLUNTARIO, no los cinco: espejo de "Administrador, medico y
+    // voluntario leen pacientes" (00032). Antes tambien listaba ROLES.FARMACEUTICO y
+    // ROLES.ENFERMERO, dos claves que ROLES (usuarios/roles.js) no declara -el enum real solo
+    // tiene cinco valores-, asi que evaluaban a undefined; sin efecto en el resultado (un
+    // undefined no coincide con ningun rol real), pero se limpian por higiene.
+    roles: [ROLES.ADMINISTRADOR, ROLES.MEDICO, ROLES.VOLUNTARIO],
   },
   {
     id: "reportes",
@@ -107,20 +127,6 @@ export const MODULOS = [
     movil: false,
     icono: "BarChart3",
     roles: [ROLES.ADMINISTRADOR, ROLES.JUNTA_DIRECTIVA, ROLES.SOCIO_FUNDADOR],
-  },
-  {
-    id: "jornadas",
-    nombre: "Jornadas",
-    descripcion: "Planificacion, equipo, cuadro de turnos y cierre.",
-    ruta: "/jornadas",
-    modulo: "jornadas",
-    tabMovil: "Jornadas",
-    movil: true,
-    icono: "Calendar",
-    // ISSUE #864: los tres roles de operacion. La base ya solo entregaba a medico y voluntario
-    // las jornadas en las que participan (00039/00079), y la 00141 le suma la que cada quien
-    // tiene a su cargo como `responsable_id`.
-    roles: [ROLES.ADMINISTRADOR, ROLES.MEDICO, ROLES.VOLUNTARIO],
   },
   {
     id: "colaboradores",
@@ -165,12 +171,50 @@ export const MODULOS = [
 ];
 
 /**
- * Obtener los roles autorizados para un módulo dado.
+ * Obtener los roles que tienen un modulo POR DEFECTO. Lo que abre la matriz o una delegacion no
+ * esta aqui: para saber si alguien entra, puedeVerModulo().
  */
 export function rolesDelModulo(moduloId) {
   if (!moduloId) return [];
   const mod = MODULOS.find((m) => m.id === moduloId || m.modulo === moduloId);
   return mod ? mod.roles : [];
+}
+
+/**
+ * Los modulos que la matriz de acceso puede abrir a un rol (00148, chk_rol_modulo_modulo). Inicio
+ * lo tiene todo el mundo; la matriz y la bitacora se quedan siempre en la administradora.
+ */
+export const MODULOS_DE_LA_MATRIZ = MODULOS.filter(
+  (m) => !["inicio", "matriz-permisos", "bitacora-auditoria"].includes(m.id),
+);
+
+/**
+ * Si el rol tiene el modulo por defecto: espejo de modulo_por_defecto() de la 00148, que tambien
+ * usa la restriccion de rol_modulo para no conceder lo que el rol ya tiene.
+ *
+ * @param {string} rol
+ * @param {string} moduloId `MODULOS[].id`.
+ */
+export function esModuloPorDefecto(rol, moduloId) {
+  return rolesDelModulo(moduloId).includes(rol);
+}
+
+/**
+ * Si el rol entra a un modulo: por defecto, porque la matriz se lo abrio (solo lectura), o porque a
+ * la persona de la sesion se le delego una funcion de ese modulo (usuarios/acceso.js). Es lo que
+ * deciden el menu y el guard de rutas de las dos apps.
+ *
+ * @param {string} rol
+ * @param {string} moduloId `MODULOS[].id`.
+ * @returns {boolean}
+ */
+export function puedeVerModulo(rol, moduloId) {
+  if (!rol) return false;
+  const mod = MODULOS.find((m) => m.id === moduloId);
+  if (!mod) return false;
+  if (mod.roles.includes(rol)) return true;
+  if (!MODULOS_DE_LA_MATRIZ.includes(mod)) return false;
+  return accedeAModuloPorMatriz(rol, mod.modulo) || modulosPorPermisoFino(rol).has(mod.id);
 }
 
 export const ROLES_CON_ACCESO_MOVIL = Object.freeze([ROLES.ADMINISTRADOR, ...ROLES_DE_CAMPO]);
@@ -196,7 +240,7 @@ export function modulosVisibles(rol, opciones = {}) {
   if (plataforma === "mobile" && !puedeUsarAppMovil(rol)) return [];
 
   return MODULOS.filter((m) => {
-    if (!m.roles.includes(rol)) return false;
+    if (!puedeVerModulo(rol, m.id)) return false;
     if (plataforma === "mobile" && !m.movil) return false;
     return true;
   });

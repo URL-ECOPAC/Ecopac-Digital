@@ -8,6 +8,7 @@ import {
   FILTROS_USUARIO,
   formatearFechaCorta,
   permisosDeUsuarios,
+  puedeGestionarPermisosDe,
   PESTANIA_FICHA_COLABORADOR_POR_DEFECTO,
   PESTANIAS_FICHA_COLABORADOR,
   TIPOS_DE_FILTRO,
@@ -15,6 +16,7 @@ import {
   useHistorialDePersona,
   useUsuariosListado,
 } from "@ecopac/shared";
+import BotonLimpiarFiltros from "../components/BotonLimpiarFiltros";
 import EmptyState from "../components/EmptyState";
 import ErrorState from "../components/ErrorState";
 import LoadingState from "../components/LoadingState";
@@ -366,16 +368,7 @@ function BarraDeFiltros({
           );
         })}
 
-        {onLimpiar && (
-          <div className="ec-filtros-limpiar">
-            <SecondaryButton
-              title="Limpiar filtros"
-              variant="neutra"
-              onClick={onLimpiar}
-              disabled={!hayFiltros}
-            />
-          </div>
-        )}
+        {onLimpiar && <BotonLimpiarFiltros onClick={onLimpiar} hayFiltros={hayFiltros} />}
       </div>
     </div>
   );
@@ -546,6 +539,10 @@ function PanelDetalleColaborador({ fila, catalogos, permisos, rol, idSesionActua
       ? fila.especialidades.join(", ")
       : "Sin especialidad";
   const filasHistorial = filasDeHistorial(historial);
+  // 00148: quien recibio la gestion de permisos no abre los suyos.
+  const puedeGestionarLosPermisos = puedeGestionarPermisosDe(rol, {
+    esPropioPerfil: fila.id === idSesionActual,
+  });
 
   return (
     <div className="panel-detalle-contenido bg-white rounded-3 border" style={{ padding: "2rem" }}>
@@ -572,12 +569,12 @@ function PanelDetalleColaborador({ fila, catalogos, permisos, rol, idSesionActua
         />
       </div>
 
-      {(permisos.puedeEditarOtro || permisos.puedeGestionarPermisosFinos) && (
+      {(permisos.puedeEditarOtro || puedeGestionarLosPermisos) && (
         <div className="d-flex gap-2 mb-3">
           {permisos.puedeEditarOtro && (
             <SecondaryButton title="Editar" onClick={() => setEditando(true)} />
           )}
-          {permisos.puedeGestionarPermisosFinos && (
+          {puedeGestionarLosPermisos && (
             <SecondaryButton title="Permisos" onClick={() => setGestionandoPermisos(true)} />
           )}
         </div>

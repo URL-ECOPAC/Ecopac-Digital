@@ -42,6 +42,7 @@ export default function CatalogoDiagnosticosPage() {
     recargar,
     permitido,
     puedeAdministrar,
+    puedeRetirar,
     alternarActivo,
     catalogos,
   } = useCatalogoDiagnosticos({ rol });
@@ -131,6 +132,7 @@ export default function CatalogoDiagnosticosPage() {
             onClose={() => setModal(null)}
             onGuardado={recargar}
             onAlternarActivo={alternarActivo}
+            puedeRetirar={puedeRetirar}
           />
         )}
       </div>

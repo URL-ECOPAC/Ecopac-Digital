@@ -1,6 +1,6 @@
 import { Table } from "react-bootstrap";
 
-import { diferenciaDeEvento, formatearFechaConHora } from "@ecopac/shared";
+import { diferenciaDeEvento, etiquetaDeTablaAuditada, formatearFechaConHora } from "@ecopac/shared";
 
 import Modal from "../components/Modal";
 
@@ -72,8 +72,10 @@ export default function ModalDetalleEventoAuditoria({ evento, onClose }) {
   return (
     <Modal visible onClose={onClose} title="Detalle del evento" size="lg">
       <p className="mb-1">
-        <strong>{evento.tablaAfectada}</strong> · {evento.realizadoPorNombre} ·{" "}
-        {formatearFechaConHora(evento.realizadoEn)}
+        {/* Etiqueta de la tabla, no su nombre de Postgres, y en mayusculas como en la columna
+            Tabla del listado (auditoria/columnas.js). */}
+        <strong className="text-uppercase">{etiquetaDeTablaAuditada(evento.tablaAfectada)}</strong>{" "}
+        · {evento.realizadoPorNombre} · {formatearFechaConHora(evento.realizadoEn)}
       </p>
       <p className="pac-rotulo mb-3">
         Registro afectado: <span className="text-body">{evento.filaId}</span>

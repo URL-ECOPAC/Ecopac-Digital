@@ -1,5 +1,5 @@
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
-import { rotuloSinSigno } from "@ecopac/shared";
+import { TIPOS_DE_ACCION, rotuloSinSigno, tipoDeAccion } from "@ecopac/shared";
 import { colors, radii, spacing, typography } from "@ecopac/ui-tokens";
 import { iconoDeAccion } from "./iconoDeAccion";
 
@@ -32,14 +32,17 @@ export default function SecondaryButton({
   onPress,
   disabled = false,
   loading = false,
-  variant = "outline",
+  variant,
   size = "md",
   icon,
   block = false,
   style,
 }) {
   const inactivo = disabled || loading;
-  const acento = COLOR_POR_VARIANTE[variant] ?? colors.primary;
+  // "Cancelar" sin variante explicita sale gris: es el par del boton verde que confirma.
+  const variante =
+    variant ?? (tipoDeAccion(title) === TIPOS_DE_ACCION.CANCELAR ? "neutra" : "outline");
+  const acento = COLOR_POR_VARIANTE[variante] ?? colors.primary;
 
   return (
     <Pressable

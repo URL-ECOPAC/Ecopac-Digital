@@ -6,7 +6,16 @@
 
 import { describe, expect, it } from "vitest";
 
-import { MODULOS, modulosVisibles, puedeUsarAppMovil, tabsMoviles } from "./navegacion.js";
+import {
+  MODULOS,
+  MODULOS_DE_LA_MATRIZ,
+  esModuloPorDefecto,
+  modulosVisibles,
+  puedeUsarAppMovil,
+  puedeVerModulo,
+  tabsMoviles,
+} from "./navegacion.js";
+import { fijarAccesoDeSesion, limpiarAccesoDeSesion } from "./usuarios/acceso.js";
 import { ROLES } from "./usuarios/roles.js";
 
 function idsDe(modulos) {
@@ -14,44 +23,69 @@ function idsDe(modulos) {
 }
 
 describe("modulosVisibles", () => {
-  it("administrador ve los diez modulos", () => {
+  it("administrador ve los once modulos, en el orden del menu", () => {
     expect(idsDe(modulosVisibles(ROLES.ADMINISTRADOR))).toEqual([
       "inicio",
-      "pacientes",
+      "proyectos",
+      "jornadas",
+      "presupuestos",
       "donaciones",
       "inventario",
-      "presupuestos",
-      "proyectos",
+      "pacientes",
       "reportes",
-      "jornadas",
       "colaboradores",
       "matriz-permisos",
       "bitacora-auditoria",
     ]);
   });
 
-  it("medico y voluntario general ven pacientes, inventario y jornadas, no lo administrativo", () => {
+  // 00148: medico y colaborador tienen el mismo menu. Ven pacientes, inventario, jornadas,
+  // proyectos y presupuestos -de lo que les toca: las filas las elige la base-, y nada de lo
+  // administrativo.
+  it("medico y voluntario general ven la operacion, no lo administrativo", () => {
     for (const rol of [ROLES.MEDICO, ROLES.VOLUNTARIO]) {
-      const ids = idsDe(modulosVisibles(rol));
-      expect(ids).toContain("pacientes");
-      expect(ids).toContain("inventario");
-      expect(ids).toContain("jornadas");
-
-      expect(ids).not.toContain("donaciones");
-      expect(ids).not.toContain("presupuestos");
-      expect(ids).not.toContain("reportes");
-      expect(ids).not.toContain("colaboradores");
-      expect(ids).not.toContain("matriz-permisos");
-      expect(ids).not.toContain("bitacora-auditoria");
+      expect(idsDe(modulosVisibles(rol))).toEqual([
+        "inicio",
+        "proyectos",
+        "jornadas",
+        "presupuestos",
+        "inventario",
+        "pacientes",
+      ]);
     }
   });
 
-  // ISSUE #864: el medico ve Proyectos -- solo los de las jornadas en las que participa, que lo
-  // decide la politica de SELECT de `proyectos` de la 00141, no esta lista -- y el voluntario
-  // general no. Es la unica diferencia de menu entre los dos roles de campo.
-  it("proyectos: el medico si, el voluntario general no", () => {
-    expect(idsDe(modulosVisibles(ROLES.MEDICO))).toContain("proyectos");
-    expect(idsDe(modulosVisibles(ROLES.VOLUNTARIO))).not.toContain("proyectos");
+  it("un modulo abierto por la matriz aparece en el menu del rol de la sesion", () => {
+    fijarAccesoDeSesion({ rol: ROLES.MEDICO, modulos: ["donaciones"] });
+    expect(idsDe(modulosVisibles(ROLES.MEDICO))).toContain("donaciones");
+    // Otro rol no lo hereda.
+    expect(idsDe(modulosVisibles(ROLES.VOLUNTARIO))).not.toContain("donaciones");
+    limpiarAccesoDeSesion();
+  });
+
+  it("una funcion delegada lleva al modulo donde se usa", () => {
+    fijarAccesoDeSesion({ rol: ROLES.VOLUNTARIO, permisos: ["usuarios.gestionar_permisos"] });
+    expect(puedeVerModulo(ROLES.VOLUNTARIO, "colaboradores")).toBe(true);
+    limpiarAccesoDeSesion();
+  });
+
+  it("la matriz y la bitacora no se abren por la matriz ni por delegacion", () => {
+    fijarAccesoDeSesion({
+      rol: ROLES.MEDICO,
+      modulos: ["matriz-permisos", "bitacora-auditoria"],
+      permisos: ["usuarios.gestionar_permisos"],
+    });
+    expect(puedeVerModulo(ROLES.MEDICO, "matriz-permisos")).toBe(false);
+    expect(puedeVerModulo(ROLES.MEDICO, "bitacora-auditoria")).toBe(false);
+    limpiarAccesoDeSesion();
+  });
+
+  it("esModuloPorDefecto es el espejo de modulo_por_defecto() de la 00148", () => {
+    expect(esModuloPorDefecto(ROLES.VOLUNTARIO, "presupuestos")).toBe(true);
+    expect(esModuloPorDefecto(ROLES.JUNTA_DIRECTIVA, "reportes")).toBe(true);
+    expect(esModuloPorDefecto(ROLES.JUNTA_DIRECTIVA, "pacientes")).toBe(false);
+    expect(idsDe(MODULOS_DE_LA_MATRIZ)).not.toContain("matriz-permisos");
+    expect(idsDe(MODULOS_DE_LA_MATRIZ)).not.toContain("inicio");
   });
 
   // El caso central de la issue #426 era que junta directiva y socio fundador no vieran
@@ -150,9 +184,9 @@ describe("acceso a la app movil (issue #866)", () => {
   it("la app movil son cuatro modulos: inicio, pacientes, inventario y jornadas", () => {
     expect(idsDe(modulosVisibles(ROLES.ADMINISTRADOR, { plataforma: "mobile" }))).toEqual([
       "inicio",
-      "pacientes",
-      "inventario",
       "jornadas",
+      "inventario",
+      "pacientes",
     ]);
   });
 

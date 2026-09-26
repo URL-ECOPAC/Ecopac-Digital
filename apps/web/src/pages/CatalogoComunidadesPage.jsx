@@ -124,6 +124,7 @@ export default function CatalogoComunidadesPage() {
             onClose={() => setModal(null)}
             onGuardar={guardar}
             erroresForm={erroresForm}
+            puedeRetirar={permisos.puedeRetirar}
           />
         )}
       </div>

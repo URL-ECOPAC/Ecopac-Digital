@@ -122,19 +122,20 @@ Ya se cumple; no hubo que cambiar codigo.
 
 La pregunta de la #762 es **cuando algo falle en una comunidad rural sin senal, como nos enteramos
 y como lo recuperamos**, y el patron que tiene que hacer imposible es "algo no funciona y el
-sistema dice que si". Este es el estado por bloque, revisado el 24 de septiembre de 2026.
+sistema dice que si". Este es el estado por bloque, revisado el 26 de septiembre de 2026, al cerrar
+la issue.
 
 | Criterio de la #762 | Estado |
 | --- | --- |
-| Eventos de seguridad definidos, con su retencion | **Definidos** (tabla de abajo). La retencion esta **propuesta**, falta que Ecopac la confirme |
+| Eventos de seguridad definidos, con su retencion | **Definidos** (tabla de abajo). La retencion queda **propuesta** y la confirma Ecopac; no bloquea nada, porque hoy no se borra ningun evento |
 | Bitacora consultable desde la aplicacion | **Hecho** (#643, cerrada por la #853) |
-| Monitoreo conectado en las dos apps y en las Edge Functions | **Punto unico listo en web y movil**; falta crear la cuenta de la herramienta y conectarla. Edge Functions sin empezar |
+| Monitoreo conectado en las dos apps y en las Edge Functions | **Hecho en codigo** (26-09): web, movil y las tres Edge Functions mandan a Sentry en cuanto exista su DSN. Crear la cuenta y cargar los DSN es configuracion de cuentas y va con la salida a produccion (#252) |
 | Revisado el codigo en busca de errores tragados | **Hecho** (segundo barrido, 24-09) |
 | Comportamiento ante fallo de red en movil | **Definido y aplicado** (aviso sin conexion) |
 | Ningun error de escritura con `alert()` | **Hecho** |
 | Deriva entre receta emitida y stock no descontado | **Resuelto** (#711) |
-| Respaldos confirmados, restauracion probada, procedimiento documentado | Dev confirmado **sin respaldos** (Free); procedimiento **corregido y ensayado en local**; falta la prueba con un volcado remoto |
-| `docs/SEGURIDAD.md` y `docs/CI-CD.md` actualizados | Hecho en este mismo corte |
+| Respaldos confirmados, restauracion probada, procedimiento documentado | Dev confirmado **sin respaldos** (Free); procedimiento **corregido y ensayado en local**. Los de produccion **se implementan en la #252** con el plan fijado en `docs/CI-CD.md`, "Plan para produccion" |
+| `docs/SEGURIDAD.md` y `docs/CI-CD.md` actualizados | Hecho |
 
 ### Reporte de errores
 
@@ -147,8 +148,9 @@ Todo error pasa por un unico punto,
 - **Nada sale sin pasar por `limpiarDatosSensibles`**, que quita UUID (las rutas llevan el del
   paciente), correos, DPI, telefonos, corridas de 8 o mas digitos, el valor que Postgres copia en
   el `detail` de una violacion de unicidad (`Key (dpi)=(...)`) y tokens. Prefiere quitar de mas.
-- `configurarDestinoDeErrores(destino)` es el **unico** punto que hay que tocar para conectar una
-  herramienta de monitoreo. Hoy el destino es la consola del equipo: no sale de el.
+- `configurarDestinoDeErrores(destino)` es el **unico** punto por el que se conecta una herramienta
+  de monitoreo. Sin DSN el destino es la consola del equipo: no sale de el. Con DSN, cada app le
+  pasa el destino de Sentry (ver "Herramienta de monitoreo").
 
 Lo que se captura:
 
@@ -156,7 +158,8 @@ Lo que se captura:
 | --- | --- | --- |
 | Excepcion al pintar una pantalla | `LimiteDeError` alrededor del `<Outlet />` de `MainLayout` (el menu sigue vivo y se reinicia al navegar) y otro alrededor de `<App />` en `main.jsx` | `LimiteDeError` (`apps/mobile/src/components/`) alrededor de la navegacion, en `App.js` |
 | Excepcion en un manejador de eventos o un temporizador | `window` `error`, en `main.jsx` | `ErrorUtils.setGlobalHandler`, en `App.js`. Reporta y le pasa el error al manejador que ya estaba, asi que no cambia la pantalla roja de desarrollo ni lo que hace un error fatal |
-| Promesa rechazada que nadie espero | `window` `unhandledrejection`, en `main.jsx` | **No se captura todavia.** React Native no expone un evento publico equivalente; queda para cuando se conecte la herramienta, cuyo SDK lo trae resuelto |
+| Promesa rechazada que nadie espero | `window` `unhandledrejection`, en `main.jsx` | El rastreador de promesas de Hermes (`HermesInternal.enablePromiseRejectionTracker`), en `App.js`. Solo fuera de desarrollo: en desarrollo React Native ya lo usa para su aviso amarillo |
+| Error en una Edge Function | - | `reportarErrorDeFuncion()` (`supabase/functions/_shared/errores.ts`) en los caminos de error de `invitar-usuario`, `alertas-vencimiento` y `enviar-notificaciones` |
 | Fallo de SecureStore (la sesion no se lee o no se guarda) | - | `apps/mobile/src/almacenamiento.js`, que antes solo escribia en la consola del telefono |
 
 Antes de esto, una excepcion al pintar dejaba **la pagina en blanco** -sin menu, sin mensaje y sin
@@ -177,16 +180,32 @@ Por que encaja aqui:
   que ver.
 - **Un solo usuario alcanza** si esa persona es quien mantiene el sistema. Es el limite que mas
   aprieta: si el mantenimiento pasa a un equipo, o se comparte la cuenta o se paga Team.
-- **La limpieza de datos ya esta hecha antes del SDK.** Conectarla es una linea por app:
-  `configurarDestinoDeErrores((reporte) => Sentry.captureMessage(reporte.mensaje, { extra: reporte }))`.
-  Hay que **apagar** en el SDK todo lo que recoge por su cuenta -`sendDefaultPii: false`, sin
-  breadcrumbs de red ni de consola, sin captura automatica de la URL- porque eso no pasa por
-  `limpiarDatosSensibles`, y las rutas llevan el UUID del paciente.
+- **La limpieza de datos ya esta hecha antes de enviar.**
 
-Lo que falta, en orden: crear la cuenta (la organizacion, no una persona), guardar el DSN como
-variable de entorno por ambiente (`VITE_SENTRY_DSN`, `EXPO_PUBLIC_SENTRY_DSN`; el DSN es publico
-por diseno, igual que la llave anonima), conectar las dos apps con la linea de arriba, y despues las
-Edge Functions. Ninguna de las tres cosas se puede hacer desde el repositorio sin la cuenta.
+**Como quedo conectada: sin el SDK de Sentry.** Los SDK recogen por su cuenta la URL (las rutas
+llevan el UUID del paciente), los breadcrumbs de red y de consola y el usuario, y nada de eso pasa
+por `limpiarDatosSensibles`. En vez de apagar cada opcion en cada app,
+[`packages/shared/observabilidad/sentry.js`](../packages/shared/observabilidad/sentry.js) manda a la
+API de ingesta de Sentry (formato "envelope") **solo el reporte que ya armo
+`construirReporteDeError()`**: mensaje, tipo, pila, codigo, origen y modulo, todo limpio. Tampoco
+suma una dependencia nativa a la app de Expo.
+
+- `crearDestinoSentry({ dsn, ambiente, plataforma })` devuelve el destino, o `null` sin DSN. Con un
+  DSN mal escrito **lanza**, y la app lo dice en la consola al arrancar: quien quiso conectarlo tiene
+  que enterarse de que no quedo conectado.
+- Web (`main.jsx`) lo conecta con `VITE_SENTRY_DSN`; movil (`App.js`), con `EXPO_PUBLIC_SENTRY_DSN`.
+- El mismo error no se manda dos veces en un minuto, y como mucho 100 eventos por sesion: un error
+  en bucle no agota en una tarde los 5,000 eventos al mes del plan gratuito.
+- Un fallo del envio (sin red, Sentry caido) no se reporta ni se reintenta; el error ya quedo en la
+  consola.
+- Las Edge Functions tienen su copia en Deno (`supabase/functions/_shared/errores.ts`), porque el
+  despliegue de una funcion no alcanza a `packages/`. Leen el secret `SENTRY_DSN`, limpian el
+  mensaje con las mismas expresiones y esperan a Sentry como mucho dos segundos.
+
+Donde se configura cada variable esta en `docs/CI-CD.md`, "Secrets". Lo unico que queda fuera del
+repositorio es **crear la cuenta de Sentry a nombre de la organizacion y cargar los tres DSN**, que
+es configuracion de cuentas y va en la lista de la salida a produccion (#252). Mientras no se
+carguen, todo sigue como hoy: consola y log de la funcion.
 
 La otra opcion evaluada es no usar un servicio externo y guardar los reportes en una tabla propia
 de Supabase. Se descarta: la base es de 500 MB y ya lleva la unica tabla sin techo
@@ -269,7 +288,7 @@ La bitacora se consulta desde la web, solo el administrador (#643, cerrada por l
 | Evento | Donde queda | Retencion hoy |
 | --- | --- | --- |
 | Alta, cambio de rol y desactivacion de una cuenta | `eventos_auditoria`, trigger sobre `perfiles` (el alta por invitacion es un INSERT en `perfiles`) | Sin limite |
-| Cambio de permisos por rol o por persona | `eventos_auditoria`, triggers sobre `rol_permiso` (00139) y `usuario_permiso` (00045) | Sin limite |
+| Cambio de permisos por rol o por persona | `eventos_auditoria`, triggers sobre `rol_modulo` (00148, la matriz de acceso), `rol_permiso` (00139) y `usuario_permiso` (00045) | Sin limite |
 | Escritura clinica: paciente, expediente, padecimiento, consulta, receta | `eventos_auditoria`, triggers sobre esas cinco tablas | Sin limite |
 | Movimiento de inventario y su aprobacion | `eventos_auditoria`, trigger sobre `movimientos_inventario` | Sin limite |
 | Inicio de sesion, cierre, recuperacion de contrasena | `auth.audit_log_entries` de Supabase Auth | La de Supabase; no la controla el repositorio |
@@ -289,9 +308,9 @@ auditoria propio.
   no alcanza. Moverlos a una tabla propia exige un Auth Hook de Supabase, y el bloqueo por
   intentos fallidos ya es una issue aparte (ver "Bloqueo por intentos fallidos (fuera de
   alcance)", arriba): se resuelven juntos.
-- **Accesos denegados por RLS.** El cliente si los ve (`42501`). Cuando se conecte la herramienta
-  de monitoreo, `reportarError` los mandara como cualquier otro error, que es la forma barata de
-  tenerlos; no merece la pena un registro en la base para esto.
+- **Accesos denegados por RLS.** El cliente si los ve (`42501`). Con el DSN cargado,
+  `reportarError` los manda a Sentry como cualquier otro error, que es la forma barata de tenerlos;
+  no merece la pena un registro en la base para esto.
 
 **Retencion propuesta para `eventos_auditoria`**, que Ecopac tiene que confirmar porque depende de
 cuanto tiempo debe poder reconstruir quien toco un expediente:
@@ -317,10 +336,13 @@ Procedimiento en [CI-CD.md, "Respaldos y restauracion"](./CI-CD.md#respaldos-y-r
   septiembre encontro que, tal como estaba escrito, la restauracion daba 29 errores y dejaba
   tablas enteras sin cargar, porque el reset y las propias migraciones siembran datos que chocan
   con el volcado. La version corregida paso los tres criterios de la prueba.
-- **Lo que sigue abierto:** repetir la prueba con un volcado real de `Ecopac-Digital-Dev`, que
-  necesita la contrasena de la base y la persona responsable de ella; y decidir entre Supabase Pro
-  (25 USD al mes, 7 dias de respaldos diarios) o un volcado propio programado
-  (`docs/COSTOS-Y-LIMITES.md`, seccion 6.2). Hasta entonces **no existe ninguna copia de la base**.
+- **Como se cierra: en la salida a produccion (#252).** Dev no tiene datos reales y se queda sin
+  respaldos. Para produccion el plan ya esta fijado en `docs/CI-CD.md`, "Plan para produccion":
+  antes del primer dato real se elige entre Supabase Pro (25 USD al mes, 7 dias de respaldos
+  diarios, la recomendada) o un volcado propio semanal cifrado y guardado fuera de GitHub
+  (`docs/COSTOS-Y-LIMITES.md`, seccion 6.2), y se hace la primera restauracion real con el
+  procedimiento ensayado. Hasta que eso pase **no existe ninguna copia de la base**, y por eso
+  produccion no se abre sin ello.
 
 ## Alta de cuentas: quien entra al sistema y como (issue #508)
 

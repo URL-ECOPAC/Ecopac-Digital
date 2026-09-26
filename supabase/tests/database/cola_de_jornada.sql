@@ -153,21 +153,22 @@ SELECT ok(
 -- ============================================================================
 -- 4. LA PRUEBA QUE JUSTIFICA EL SECURITY DEFINER
 -- ============================================================================
--- El voluntario no puede leer consultas ni recetas. Si la vista fuera security_invoker, aqui
--- veria 'espera consulta' para los pacientes Tres y Cuatro, y la cola mandaria a atender dos
--- veces a la misma persona.
+-- Hasta la 00148 el voluntario no leia consultas ni recetas, y era esta la prueba de que la vista
+-- tenia que ser SECURITY DEFINER: con security_invoker veria 'espera consulta' para los pacientes
+-- Tres y Cuatro. Desde la 00148 el colaborador lee el historial clinico completo, asi que ese
+-- hueco ya no existe para el; el SECURITY DEFINER se queda porque la cola sigue sin depender de
+-- que cada rol pueda leer cada tabla del flujo. Lo que se sigue afirmando es el resultado.
 SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000174';
 
-SELECT is(
-  (SELECT count(*)::int FROM consultas),
-  0,
-  'confirmado: el voluntario NO puede leer la tabla consultas'
+SELECT ok(
+  (SELECT count(*)::int FROM consultas) > 0,
+  'desde la 00148 el voluntario lee la tabla consultas (historial clinico completo)'
 );
 
 SELECT is(
   (SELECT etapa FROM vista_cola_jornada WHERE atencion_id = '50000000-0000-0000-0000-000000000103'),
   'espera entrega',
-  'aun sin poder leer consultas, el voluntario ve la MISMA etapa que el medico'
+  'el voluntario ve la MISMA etapa que el medico'
 );
 
 SELECT is(
