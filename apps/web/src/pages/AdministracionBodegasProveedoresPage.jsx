@@ -148,7 +148,7 @@ export default function AdministracionBodegasProveedoresPage() {
       {pestañaActiva === "bodegas" && (
         <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <p style={{ fontSize: "var(--texto-xs)", color: "#64748b", margin: 0 }}>
+            <p style={{ fontSize: "var(--texto-xs)", color: "var(--color-text-muted)", margin: 0 }}>
               {errorBodegas
                 ? "No se pudo cargar el listado"
                 : `${bodegas.length} bodegas registradas`}
@@ -160,7 +160,7 @@ export default function AdministracionBodegasProveedoresPage() {
             <p
               style={{
                 fontSize: "var(--texto-xs)",
-                color: "#94a3b8",
+                color: "var(--color-text-muted)",
                 textAlign: "center",
                 padding: "20px",
               }}
@@ -173,7 +173,7 @@ export default function AdministracionBodegasProveedoresPage() {
             <p
               style={{
                 fontSize: "var(--texto-xs)",
-                color: "#94a3b8",
+                color: "var(--color-text-muted)",
                 textAlign: "center",
                 padding: "20px",
               }}
@@ -185,27 +185,57 @@ export default function AdministracionBodegasProveedoresPage() {
               style={{ width: "100%", borderCollapse: "collapse", fontSize: "var(--texto-xs)" }}
             >
               <thead>
-                <tr style={{ borderBottom: "1px solid #e2e8f0" }}>
-                  <th style={{ textAlign: "left", padding: "10px 12px", color: "#64748b" }}>
+                <tr style={{ borderBottom: "1px solid var(--color-border)" }}>
+                  <th
+                    style={{
+                      textAlign: "left",
+                      padding: "10px 12px",
+                      color: "var(--color-text-muted)",
+                    }}
+                  >
                     Nombre
                   </th>
-                  <th style={{ textAlign: "left", padding: "10px 12px", color: "#64748b" }}>
+                  <th
+                    style={{
+                      textAlign: "left",
+                      padding: "10px 12px",
+                      color: "var(--color-text-muted)",
+                    }}
+                  >
                     Tipo
                   </th>
-                  <th style={{ textAlign: "left", padding: "10px 12px", color: "#64748b" }}>
+                  <th
+                    style={{
+                      textAlign: "left",
+                      padding: "10px 12px",
+                      color: "var(--color-text-muted)",
+                    }}
+                  >
                     Ubicación
                   </th>
-                  <th style={{ textAlign: "right", padding: "10px 12px", color: "#64748b" }}>
+                  <th
+                    style={{
+                      textAlign: "right",
+                      padding: "10px 12px",
+                      color: "var(--color-text-muted)",
+                    }}
+                  >
                     Existencias
                   </th>
-                  <th style={{ textAlign: "center", padding: "10px 12px", color: "#64748b" }}>
+                  <th
+                    style={{
+                      textAlign: "center",
+                      padding: "10px 12px",
+                      color: "var(--color-text-muted)",
+                    }}
+                  >
                     Acciones
                   </th>
                 </tr>
               </thead>
               <tbody>
                 {bodegas.map((b) => (
-                  <tr key={b.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                  <tr key={b.id} style={{ borderBottom: "1px solid var(--color-border)" }}>
                     <td style={{ padding: "10px 12px", fontWeight: 500 }}>{b.nombre}</td>
                     <td style={{ padding: "10px 12px" }}>
                       <span
@@ -214,15 +244,19 @@ export default function AdministracionBodegasProveedoresPage() {
                           borderRadius: "9999px",
                           fontSize: "var(--texto-xxs)",
                           fontWeight: 600,
-                          backgroundColor: b.es_movil ? "#dbeafe" : "#f0fdf4",
-                          color: b.es_movil ? "#1d4ed8" : "#15803d",
+                          backgroundColor: b.es_movil
+                            ? "color-mix(in srgb, var(--color-info) 18%, var(--color-surface))"
+                            : "color-mix(in srgb, var(--color-success) 18%, var(--color-surface))",
+                          color: b.es_movil ? "var(--color-info)" : "var(--color-success)",
                         }}
                       >
                         {b.es_movil ? " Móvil" : " Fija"}
                       </span>
                     </td>
-                    <td style={{ padding: "10px 12px", color: "#64748b" }}>
-                      {b.ubicacion || <span style={{ color: "#cbd5e1" }}>— Sin ubicación</span>}
+                    <td style={{ padding: "10px 12px", color: "var(--color-text-muted)" }}>
+                      {b.ubicacion || (
+                        <span style={{ color: "var(--color-text-muted)" }}>— Sin ubicación</span>
+                      )}
                     </td>
                     <td style={{ padding: "10px 12px", textAlign: "right", fontWeight: 600 }}>
                       {existenciaPorBodega[b.id] ?? 0}
@@ -234,7 +268,7 @@ export default function AdministracionBodegasProveedoresPage() {
                           padding: "4px 10px",
                           fontSize: "var(--texto-xs)",
                           border: "none",
-                          backgroundColor: "#f1f5f9",
+                          backgroundColor: "var(--color-border)",
                           borderRadius: "6px",
                           cursor: "pointer",
                         }}
@@ -254,7 +288,7 @@ export default function AdministracionBodegasProveedoresPage() {
       {pestañaActiva === "proveedores" && (
         <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <p style={{ fontSize: "var(--texto-xs)", color: "#64748b", margin: 0 }}>
+            <p style={{ fontSize: "var(--texto-xs)", color: "var(--color-text-muted)", margin: 0 }}>
               {errorProveedores
                 ? "No se pudo cargar el listado"
                 : `${proveedores.length} proveedores y donantes`}
@@ -266,7 +300,7 @@ export default function AdministracionBodegasProveedoresPage() {
             <p
               style={{
                 fontSize: "var(--texto-xs)",
-                color: "#94a3b8",
+                color: "var(--color-text-muted)",
                 textAlign: "center",
                 padding: "20px",
               }}
@@ -279,7 +313,7 @@ export default function AdministracionBodegasProveedoresPage() {
             <p
               style={{
                 fontSize: "var(--texto-xs)",
-                color: "#94a3b8",
+                color: "var(--color-text-muted)",
                 textAlign: "center",
                 padding: "20px",
               }}
@@ -291,24 +325,48 @@ export default function AdministracionBodegasProveedoresPage() {
               style={{ width: "100%", borderCollapse: "collapse", fontSize: "var(--texto-xs)" }}
             >
               <thead>
-                <tr style={{ borderBottom: "1px solid #e2e8f0" }}>
-                  <th style={{ textAlign: "left", padding: "10px 12px", color: "#64748b" }}>
+                <tr style={{ borderBottom: "1px solid var(--color-border)" }}>
+                  <th
+                    style={{
+                      textAlign: "left",
+                      padding: "10px 12px",
+                      color: "var(--color-text-muted)",
+                    }}
+                  >
                     Nombre
                   </th>
-                  <th style={{ textAlign: "left", padding: "10px 12px", color: "#64748b" }}>
+                  <th
+                    style={{
+                      textAlign: "left",
+                      padding: "10px 12px",
+                      color: "var(--color-text-muted)",
+                    }}
+                  >
                     Tipo
                   </th>
-                  <th style={{ textAlign: "left", padding: "10px 12px", color: "#64748b" }}>
+                  <th
+                    style={{
+                      textAlign: "left",
+                      padding: "10px 12px",
+                      color: "var(--color-text-muted)",
+                    }}
+                  >
                     Contacto
                   </th>
-                  <th style={{ textAlign: "center", padding: "10px 12px", color: "#64748b" }}>
+                  <th
+                    style={{
+                      textAlign: "center",
+                      padding: "10px 12px",
+                      color: "var(--color-text-muted)",
+                    }}
+                  >
                     Acciones
                   </th>
                 </tr>
               </thead>
               <tbody>
                 {proveedores.map((p) => (
-                  <tr key={p.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                  <tr key={p.id} style={{ borderBottom: "1px solid var(--color-border)" }}>
                     <td style={{ padding: "10px 12px", fontWeight: 500 }}>{p.nombre}</td>
                     <td style={{ padding: "10px 12px" }}>
                       <span
@@ -317,15 +375,21 @@ export default function AdministracionBodegasProveedoresPage() {
                           borderRadius: "9999px",
                           fontSize: "var(--texto-xxs)",
                           fontWeight: 600,
-                          backgroundColor: p.tipo === "donante" ? "#fef3c7" : "#dbeafe",
-                          color: p.tipo === "donante" ? "#92400e" : "#1d4ed8",
+                          backgroundColor:
+                            p.tipo === "donante"
+                              ? "color-mix(in srgb, var(--color-warning) 18%, var(--color-surface))"
+                              : "color-mix(in srgb, var(--color-info) 18%, var(--color-surface))",
+                          color:
+                            p.tipo === "donante" ? "var(--color-warning)" : "var(--color-info)",
                         }}
                       >
                         {p.tipo === "donante" ? " Donante" : " Comercial"}
                       </span>
                     </td>
-                    <td style={{ padding: "10px 12px", color: "#64748b" }}>
-                      {p.contacto || <span style={{ color: "#cbd5e1" }}>— Sin contacto</span>}
+                    <td style={{ padding: "10px 12px", color: "var(--color-text-muted)" }}>
+                      {p.contacto || (
+                        <span style={{ color: "var(--color-text-muted)" }}>— Sin contacto</span>
+                      )}
                     </td>
                     <td style={{ padding: "10px 12px", textAlign: "center" }}>
                       <button
@@ -334,7 +398,7 @@ export default function AdministracionBodegasProveedoresPage() {
                           padding: "4px 10px",
                           fontSize: "var(--texto-xs)",
                           border: "none",
-                          backgroundColor: "#f1f5f9",
+                          backgroundColor: "var(--color-border)",
                           borderRadius: "6px",
                           cursor: "pointer",
                         }}
@@ -357,7 +421,7 @@ export default function AdministracionBodegasProveedoresPage() {
           style={{
             position: "fixed",
             inset: 0,
-            backgroundColor: "rgba(0,0,0,0.5)",
+            backgroundColor: "color-mix(in srgb, var(--color-text) 45%, transparent)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -367,7 +431,7 @@ export default function AdministracionBodegasProveedoresPage() {
           <form
             onSubmit={handleGuardarBodega}
             style={{
-              backgroundColor: "#fff",
+              backgroundColor: "var(--color-surface)",
               borderRadius: "12px",
               padding: "24px",
               width: "100%",
@@ -393,7 +457,7 @@ export default function AdministracionBodegasProveedoresPage() {
                   marginBottom: "4px",
                 }}
               >
-                Nombre <span style={{ color: "#ef4444" }}>*</span>
+                Nombre <span style={{ color: "var(--color-danger)" }}>*</span>
               </label>
               <input
                 type="text"
@@ -406,7 +470,7 @@ export default function AdministracionBodegasProveedoresPage() {
                   width: "100%",
                   padding: "10px 14px",
                   borderRadius: "8px",
-                  border: "1px solid #e2e8f0",
+                  border: "1px solid var(--color-border)",
                   fontSize: "var(--texto-xs)",
                 }}
               />
@@ -433,7 +497,7 @@ export default function AdministracionBodegasProveedoresPage() {
                   width: "100%",
                   padding: "10px 14px",
                   borderRadius: "8px",
-                  border: "1px solid #e2e8f0",
+                  border: "1px solid var(--color-border)",
                   fontSize: "var(--texto-xs)",
                 }}
               />
@@ -464,8 +528,8 @@ export default function AdministracionBodegasProveedoresPage() {
                 style={{
                   padding: "8px 16px",
                   borderRadius: "8px",
-                  border: "1px solid #e2e8f0",
-                  backgroundColor: "#fff",
+                  border: "1px solid var(--color-border)",
+                  backgroundColor: "var(--color-surface)",
                   fontSize: "var(--texto-xs)",
                   cursor: "pointer",
                 }}
@@ -478,8 +542,8 @@ export default function AdministracionBodegasProveedoresPage() {
                   padding: "8px 16px",
                   borderRadius: "8px",
                   border: "none",
-                  backgroundColor: "#10b981",
-                  color: "#fff",
+                  backgroundColor: "var(--color-success)",
+                  color: "var(--color-surface)",
                   fontSize: "var(--texto-xs)",
                   fontWeight: 500,
                   cursor: "pointer",
@@ -499,7 +563,7 @@ export default function AdministracionBodegasProveedoresPage() {
           style={{
             position: "fixed",
             inset: 0,
-            backgroundColor: "rgba(0,0,0,0.5)",
+            backgroundColor: "color-mix(in srgb, var(--color-text) 45%, transparent)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -509,7 +573,7 @@ export default function AdministracionBodegasProveedoresPage() {
           <form
             onSubmit={handleGuardarProveedor}
             style={{
-              backgroundColor: "#fff",
+              backgroundColor: "var(--color-surface)",
               borderRadius: "12px",
               padding: "24px",
               width: "100%",
@@ -535,7 +599,7 @@ export default function AdministracionBodegasProveedoresPage() {
                   marginBottom: "4px",
                 }}
               >
-                Nombre <span style={{ color: "#ef4444" }}>*</span>
+                Nombre <span style={{ color: "var(--color-danger)" }}>*</span>
               </label>
               <input
                 type="text"
@@ -548,7 +612,7 @@ export default function AdministracionBodegasProveedoresPage() {
                   width: "100%",
                   padding: "10px 14px",
                   borderRadius: "8px",
-                  border: "1px solid #e2e8f0",
+                  border: "1px solid var(--color-border)",
                   fontSize: "var(--texto-xs)",
                 }}
               />
@@ -575,7 +639,7 @@ export default function AdministracionBodegasProveedoresPage() {
                   width: "100%",
                   padding: "10px 14px",
                   borderRadius: "8px",
-                  border: "1px solid #e2e8f0",
+                  border: "1px solid var(--color-border)",
                   fontSize: "var(--texto-xs)",
                 }}
               />
@@ -590,7 +654,7 @@ export default function AdministracionBodegasProveedoresPage() {
                   marginBottom: "4px",
                 }}
               >
-                Tipo <span style={{ color: "#ef4444" }}>*</span>
+                Tipo <span style={{ color: "var(--color-danger)" }}>*</span>
               </label>
               <select
                 value={formProveedor.tipo}
@@ -599,7 +663,7 @@ export default function AdministracionBodegasProveedoresPage() {
                   width: "100%",
                   padding: "10px 14px",
                   borderRadius: "8px",
-                  border: "1px solid #e2e8f0",
+                  border: "1px solid var(--color-border)",
                   fontSize: "var(--texto-xs)",
                 }}
               >
@@ -617,8 +681,8 @@ export default function AdministracionBodegasProveedoresPage() {
                 style={{
                   padding: "8px 16px",
                   borderRadius: "8px",
-                  border: "1px solid #e2e8f0",
-                  backgroundColor: "#fff",
+                  border: "1px solid var(--color-border)",
+                  backgroundColor: "var(--color-surface)",
                   fontSize: "var(--texto-xs)",
                   cursor: "pointer",
                 }}
@@ -631,8 +695,8 @@ export default function AdministracionBodegasProveedoresPage() {
                   padding: "8px 16px",
                   borderRadius: "8px",
                   border: "none",
-                  backgroundColor: "#10b981",
-                  color: "#fff",
+                  backgroundColor: "var(--color-success)",
+                  color: "var(--color-surface)",
                   fontSize: "var(--texto-xs)",
                   fontWeight: 500,
                   cursor: "pointer",

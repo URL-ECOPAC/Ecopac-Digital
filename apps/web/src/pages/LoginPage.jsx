@@ -81,8 +81,8 @@ export default function LoginPage() {
           minHeight: "100vh",
           alignItems: "center",
           justifyContent: "center",
-          backgroundColor: "#F8FAFC",
-          color: "#16A34A",
+          backgroundColor: "var(--color-background)",
+          color: "var(--color-success)",
         }}
       >
         Cargando EcoPac...
@@ -185,12 +185,16 @@ export default function LoginPage() {
             marginTop: "8px",
             fontSize: "var(--texto-xs)",
             textAlign: "center",
-            color: "#64748B",
+            color: "var(--color-text-muted)",
           }}
         >
           <Link
             to="/restablecer-contrasena"
-            style={{ color: "#2563EB", textDecoration: "none", fontWeight: "var(--peso-medium)" }}
+            style={{
+              color: "var(--color-info)",
+              textDecoration: "none",
+              fontWeight: "var(--peso-medium)",
+            }}
           >
             ¿Olvidaste tu contraseña?
           </Link>

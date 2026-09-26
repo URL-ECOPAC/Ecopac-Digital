@@ -19,7 +19,7 @@ export default function AuthField({
           display: "block",
           fontSize: "var(--texto-xs)",
           fontWeight: "var(--peso-semibold)",
-          color: "#334155",
+          color: "var(--color-text)",
           marginBottom: "6px",
         }}
       >
@@ -38,12 +38,12 @@ export default function AuthField({
             display: "block",
             padding: rightAdornment ? "11px 65px 11px 14px" : "11px 14px",
             fontSize: "var(--texto-sm)",
-            backgroundColor: "#F8FAFC",
-            border: error ? "1px solid #EF4444" : "1px solid #CBD5E1",
+            backgroundColor: "var(--color-background)",
+            border: error ? "1px solid var(--color-danger)" : "1px solid var(--color-border)",
             borderRadius: "12px",
             outline: "none",
             boxSizing: "border-box",
-            color: "#0F172A",
+            color: "var(--color-text)",
             transition: "all 0.2s ease",
           }}
         />
@@ -65,7 +65,7 @@ export default function AuthField({
           style={{
             fontSize: "var(--texto-xxs)",
             fontWeight: "var(--peso-medium)",
-            color: "#EF4444",
+            color: "var(--color-danger)",
             marginTop: "4px",
             display: "block",
           }}

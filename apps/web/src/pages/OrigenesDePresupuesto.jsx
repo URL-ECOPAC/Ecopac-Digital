@@ -88,7 +88,7 @@ export default function OrigenesDePresupuesto({ jornadaId, proyectoId, rol, alCa
                       <button
                         type="button"
                         className="btn btn-link p-0 text-decoration-none small"
-                        style={{ fontSize: "0.85rem" }}
+                        style={{ fontSize: "var(--texto-sm)" }}
                         onClick={() => setMostrarModalNuevo(true)}
                       >
                         + Crear opción
@@ -129,7 +129,7 @@ export default function OrigenesDePresupuesto({ jornadaId, proyectoId, rol, alCa
           className="modal show d-block"
           tabIndex="-1"
           role="dialog"
-          style={{ backgroundColor: "rgba(0, 0, 0, 0.5)" }}
+          style={{ backgroundColor: "color-mix(in srgb, var(--color-text) 45%, transparent)" }}
         >
           <div className="modal-dialog modal-dialog-centered" role="document">
             <div className="modal-content">

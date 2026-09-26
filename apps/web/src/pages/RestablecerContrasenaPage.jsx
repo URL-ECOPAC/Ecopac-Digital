@@ -56,12 +56,16 @@ export default function RestablecerContrasenaPage() {
           marginTop: "20px",
           fontSize: "var(--texto-xs)",
           textAlign: "center",
-          color: "#64748B",
+          color: "var(--color-text-muted)",
         }}
       >
         <Link
           to="/login"
-          style={{ color: "#2563EB", textDecoration: "none", fontWeight: "var(--peso-medium)" }}
+          style={{
+            color: "var(--color-info)",
+            textDecoration: "none",
+            fontWeight: "var(--peso-medium)",
+          }}
         >
           Volver al inicio de sesión
         </Link>

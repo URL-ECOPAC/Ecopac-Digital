@@ -33,8 +33,16 @@
    plano. Decorativos: no llevan contenido ni capturan el puntero. */
 .inicio-banner::after {
   background:
-    radial-gradient(circle at 92% 12%, rgb(255 255 255 / 14%) 0%, transparent 42%),
-    radial-gradient(circle at 78% 96%, rgb(255 255 255 / 10%) 0%, transparent 38%);
+    radial-gradient(
+      circle at 92% 12%,
+      color-mix(in srgb, var(--color-surface) 14%, transparent) 0%,
+      transparent 42%
+    ),
+    radial-gradient(
+      circle at 78% 96%,
+      color-mix(in srgb, var(--color-surface) 10%, transparent) 0%,
+      transparent 38%
+    );
   content: "";
   inset: 0;
   pointer-events: none;
@@ -70,8 +78,8 @@
 
 .inicio-banner-chip {
   align-items: center;
-  background-color: rgb(255 255 255 / 18%);
-  border: 1px solid rgb(255 255 255 / 28%);
+  background-color: color-mix(in srgb, var(--color-surface) 18%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-surface) 28%, transparent);
   border-radius: var(--radio-pill);
   display: inline-flex;
   font-size: var(--texto-xs);

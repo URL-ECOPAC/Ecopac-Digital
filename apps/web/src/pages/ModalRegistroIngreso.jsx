@@ -70,7 +70,10 @@ export default function ModalRegistroIngreso({
       {...fondo}
       className="modal fade show d-block"
       tabIndex="-1"
-      style={{ backgroundColor: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}
+      style={{
+        backgroundColor: "color-mix(in srgb, var(--color-text) 45%, transparent)",
+        backdropFilter: "blur(4px)",
+      }}
     >
       <div className="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
         <div className="modal-content rounded-4 border-0 shadow-lg">
@@ -89,9 +92,8 @@ export default function ModalRegistroIngreso({
           <div className="modal-body px-4 py-3">
             {!esAdministrador && (
               <div
-                className="alert border-0 rounded-3 text-dark mb-3 p-3"
+                className="alert alert-warning border-0 rounded-3 mb-3 p-3"
                 style={{
-                  backgroundColor: "#FFF3CD",
                   fontSize: "var(--texto-xs)",
                   lineHeight: "1.5",
                 }}
@@ -453,8 +455,7 @@ export default function ModalRegistroIngreso({
                 type="button"
                 onClick={handleGuardar}
                 disabled={guardando}
-                className="btn btn-sm text-white rounded-3 px-4 fw-semibold"
-                style={{ backgroundColor: "#009963" }}
+                className="btn btn-success btn-sm rounded-3 px-4 fw-semibold"
               >
                 {guardando ? "Guardando..." : "Guardar Movimiento"}
               </button>

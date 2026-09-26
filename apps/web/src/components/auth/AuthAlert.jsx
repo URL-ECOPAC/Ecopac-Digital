@@ -1,8 +1,16 @@
 // Banner de error/exito de las pantallas de autenticacion, con el mismo estilo que LoginPage.
 
 const VARIANTES = {
-  error: { backgroundColor: "#FEF2F2", border: "1px solid #FEE2E2", color: "#DC2626" },
-  success: { backgroundColor: "#F0FDF4", border: "1px solid #DCFCE7", color: "#16A34A" },
+  error: {
+    backgroundColor: "color-mix(in srgb, var(--color-danger) 8%, var(--color-surface))",
+    border: "1px solid color-mix(in srgb, var(--color-danger) 25%, var(--color-surface))",
+    color: "var(--color-danger)",
+  },
+  success: {
+    backgroundColor: "color-mix(in srgb, var(--color-success) 8%, var(--color-surface))",
+    border: "1px solid color-mix(in srgb, var(--color-success) 25%, var(--color-surface))",
+    color: "var(--color-success)",
+  },
   // Aviso que no es un error: la sesion se cerro por inactividad. Con tokens, no con hex.
   info: {
     backgroundColor: "color-mix(in srgb, var(--color-info) 10%, var(--color-surface))",
