@@ -17,6 +17,7 @@ import {
   puedeVerRosterCompleto,
   seccionesDeDetalleJornada,
   mayusculaInicial,
+  puedeVerInsumosDeJornada,
   useCuadroTurnos,
   useDetalleJornada,
   useResumenCierreJornada,
@@ -35,12 +36,14 @@ import {
   StatusChip,
   Tabs,
 } from "../components";
+import BotonImprimir from "../components/BotonImprimir";
 import { useSesionCompartida } from "../contexto/SesionProvider";
 import CuadroTurnosImprimible from "./CuadroTurnosImprimible";
 import ModalAsignarPersonal from "./ModalAsignarPersonal";
 import ModalEdicionTurno from "./ModalEdicionTurno";
 import ModalJornada from "./ModalJornada";
 import NotFoundPage from "./NotFoundPage";
+import InsumosDeJornada from "./InsumosDeJornada";
 import OrigenesDePresupuesto from "./OrigenesDePresupuesto";
 
 const PESTANIAS = [
@@ -49,6 +52,7 @@ const PESTANIAS = [
   { id: "pacientes", label: "Pacientes atendidos" },
   { id: "historial", label: "Historial" },
   { id: "presupuesto", label: "Presupuesto" },
+  { id: "insumos", label: "Insumos" },
   { id: "cierre", label: "Cierre" },
 ];
 
@@ -198,6 +202,7 @@ export default function DetalleJornadaPage() {
     if (pestania.id === "pacientes") return permisos.puedeVerDatosClinicos;
     if (pestania.id === "historial") return permisos.puedeVerHistorial;
     if (pestania.id === "presupuesto") return permisosPresupuesto.puedeVer;
+    if (pestania.id === "insumos") return puedeVerInsumosDeJornada(rol);
     // ISSUE #864: "Cierre" no tenia filtro, asi que la veia cualquier rol que llegara al
     // detalle. Finalizar una jornada es puedeAdministrarJornadas() -- solo la administradora --,
     // y la pestaña es justo la que finaliza (useResumenCierreJornada, issue #183).
@@ -393,9 +398,7 @@ export default function DetalleJornadaPage() {
                 )}
 
                 <div className="d-flex gap-2">
-                  {puedeVerEquipoCompleto && (
-                    <SecondaryButton title="Imprimir" onClick={() => setAImprimir(true)} />
-                  )}
+                  {puedeVerEquipoCompleto && <BotonImprimir onClick={() => setAImprimir(true)} />}
                   {permisos.puedeEditar && (
                     <PrimaryButton
                       title="Asignar personal"
@@ -460,6 +463,8 @@ export default function DetalleJornadaPage() {
               alCambiar={recargar}
             />
           )}
+
+          {pestaniaMostrada === "insumos" && <InsumosDeJornada jornadaId={jornada.id} rol={rol} />}
 
           {pestaniaMostrada === "cierre" && (
             <Card>

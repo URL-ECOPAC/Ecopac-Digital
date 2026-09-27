@@ -39,7 +39,7 @@ function aCentavos(valor) {
  * El total no se guarda (cambiar la cantidad no debe obligar a rehacer el costo): sale de
  * cantidad x costo unitario, y es null cuando no hay costo estimado -"no estimado" no es 0-.
  */
-function aInsumo(fila) {
+export function aInsumoPrevisto(fila) {
   if (!fila) return null;
   const { articulo, ...resto } = fila;
   const costo = resto.costoUnitarioEstimado;
@@ -62,7 +62,7 @@ function aCosto(valor) {
 }
 
 /** Traduce del camelCase de las pantallas al snake_case de la tabla, omitiendo lo no enviado. */
-function aColumnasDelInsumo(datos = {}) {
+export function aColumnasDeInsumoPrevisto(datos = {}) {
   const tiene = (campo) => Object.prototype.hasOwnProperty.call(datos, campo);
   const fila = {};
 
@@ -97,7 +97,7 @@ export async function listarInsumosDelProyecto(proyectoId) {
 
     if (error) return { insumos: [], error: normalizarError(error) };
     // Siempre un arreglo: una lista vacia se dibuja sola, un null obliga a comprobarlo cada vez.
-    return { insumos: (data ?? []).map(aInsumo), error: null };
+    return { insumos: (data ?? []).map(aInsumoPrevisto), error: null };
   } catch (error) {
     return { insumos: [], error: normalizarError(error) };
   }
@@ -120,12 +120,12 @@ export async function agregarInsumoAProyecto(proyectoId, datos = {}) {
   try {
     const { data, error } = await obtenerSupabase()
       .from("proyecto_insumos")
-      .insert({ ...aColumnasDelInsumo(datos), proyecto_id: proyectoId })
+      .insert({ ...aColumnasDeInsumoPrevisto(datos), proyecto_id: proyectoId })
       .select(COLUMNAS_DEL_INSUMO)
       .single();
 
     if (error) return { insumo: null, error: normalizarError(error) };
-    return { insumo: aInsumo(data), error: null };
+    return { insumo: aInsumoPrevisto(data), error: null };
   } catch (error) {
     return { insumo: null, error: normalizarError(error) };
   }
@@ -148,7 +148,7 @@ export async function actualizarInsumoDeProyecto(id, datos = {}) {
   // El articulo no se cambia por aqui, aunque venga en el objeto.
   const editable = { ...datos };
   delete editable.medicamentoId;
-  const fila = aColumnasDelInsumo(editable);
+  const fila = aColumnasDeInsumoPrevisto(editable);
   if (Object.keys(fila).length === 0) return { insumo: null, error: null };
 
   try {
@@ -160,9 +160,35 @@ export async function actualizarInsumoDeProyecto(id, datos = {}) {
       .maybeSingle();
 
     if (error) return { insumo: null, error: normalizarError(error) };
-    return { insumo: aInsumo(data), error: null };
+    return { insumo: aInsumoPrevisto(data), error: null };
   } catch (error) {
     return { insumo: null, error: normalizarError(error) };
+  }
+}
+
+/**
+ * Pasa un insumo planeado a nivel proyecto a una jornada de ese proyecto
+ * (fn_pasar_insumo_de_proyecto_a_jornada, 00151): queda en la jornada y sale del proyecto, en una
+ * sola transaccion. Desde la 00151 los insumos se planean por jornada, y este es el camino de los
+ * que ya existian a nivel proyecto.
+ *
+ * @param {string} insumoId UUID de la fila de proyecto_insumos.
+ * @param {string} jornadaId UUID de la jornada destino, del mismo proyecto.
+ * @returns {Promise<{ insumoDeJornadaId: string|null, error: object|null }>}
+ */
+export async function pasarInsumoDelProyectoAJornada(insumoId, jornadaId) {
+  if (!insumoId || !jornadaId) return { insumoDeJornadaId: null, error: null };
+
+  try {
+    const { data, error } = await obtenerSupabase().rpc("fn_pasar_insumo_de_proyecto_a_jornada", {
+      p_insumo_id: insumoId,
+      p_jornada_id: jornadaId,
+    });
+
+    if (error) return { insumoDeJornadaId: null, error: normalizarError(error) };
+    return { insumoDeJornadaId: data ?? null, error: null };
+  } catch (error) {
+    return { insumoDeJornadaId: null, error: normalizarError(error) };
   }
 }
 

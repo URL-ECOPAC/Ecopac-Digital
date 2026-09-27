@@ -18,14 +18,16 @@ function valoresDe(insumo, campos) {
 }
 
 /**
- * Alta y edicion de un insumo previsto de un proyecto (proyecto_insumos, 00147). Mismo patron
- * generico dirigido por descriptores (CAMPOS_INSUMO_PROYECTO) que ModalHito.jsx: no valida ni
- * decide permisos aca, solo dibuja lo que useProyectosSociales() le entrega.
+ * Alta y edicion de un insumo previsto de una jornada (jornada_insumos, 00151). Antes era el de los
+ * insumos del proyecto (ModalInsumoProyecto); desde la 00151 los insumos se planean por jornada y el
+ * proyecto solo los muestra. Mismo patron generico dirigido por descriptores
+ * (CAMPOS_INSUMO_PROYECTO) que ModalHito.jsx: no valida ni decide permisos aca, solo dibuja lo que
+ * useInsumosDeJornada() le entrega.
  *
- * Al editar, el insumo (el articulo) no se puede cambiar: la fila es "este articulo en este
- * proyecto", y cambiar de articulo es quitarlo y agregar otro. Se muestra su nombre, no un select.
+ * Al editar, el insumo (el articulo) no se puede cambiar: la fila es "este articulo en esta
+ * jornada", y cambiar de articulo es quitarlo y agregar otro. Se muestra su nombre, no un select.
  */
-export default function ModalInsumoProyecto({
+export default function ModalInsumoPrevisto({
   visible,
   insumo,
   campos,

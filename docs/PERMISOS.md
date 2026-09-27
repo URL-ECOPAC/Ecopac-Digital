@@ -493,7 +493,8 @@ reabrir una jornada finalizada **solo al administrador**. Reflejo en el cliente:
 | `proyecto_hitos`            | C R U D       | —                                | —                | —                  | `00053` + `00141` + `00148` (leer y escribir admiten `tiene_permiso('proyectos.gestionar')`) |
 | `proyecto_seguimiento`      | C R           | —                                | —                | —                  | `00053` + `00141` + `00148`, mismo cambio                        |
 | `proyecto_estado_historial` | R             | —                                | —                | —                  | `00039` + `00148` (lo lee tambien quien tiene `proyectos.gestionar`) |
-| `proyecto_insumos`          | C R U D       | —                                | —                | —                  | `00147`. Leer y escribir: `es_administrador()` o `tiene_permiso('proyectos.gestionar')`. El medico ve el proyecto pero NO sus insumos (dinero, como `gastos`) |
+| `proyecto_insumos`          | C R U D       | —                                | —                | —                  | `00147`. Leer y escribir: `es_administrador()` o `tiene_permiso('proyectos.gestionar')`. El medico ve el proyecto pero NO sus insumos (dinero, como `gastos`). Desde la `00151` la aplicacion ya no agrega filas: las que hay se muestran "sin jornada" y se pasan a una jornada |
+| `jornada_insumos`           | C R U D       | —                                | —                | —                  | `00151`. Escribir: `es_administrador()` o `tiene_permiso('jornadas.gestionar')`. Leer: ademas `tiene_permiso('proyectos.gestionar')` (el proyecto la muestra) y el rol al que la matriz le abrio Jornadas o Proyectos. El personal de campo no la lee |
 | `proyecto_personal`         | C R U D       | —                                | R el equipo del proyecto que ve | R el equipo del proyecto que ve | `00146`. Escribir admite tambien `tiene_permiso('proyectos.gestionar')`, igual que editar el proyecto |
 | `gastos`                    | C R **A**     | —                                | C R si participa | C R si participa   | `00052` + `00141` + `00148` (lo leen tambien quien tiene `presupuestos.registrar` o `presupuestos.aprobar`: antes aprobaba un gasto que no podia ver). El gasto del personal de campo entra `pendiente` y pasa por la aprobacion |
 | `jornada_presupuesto_origen` | C R U D      | —                                | —                | —                  | `00135` + `00141`. Escribir admite tambien `tiene_permiso('jornadas.gestionar')`, igual que actualizar la jornada; su lectura tambien, por el `INSERT ... RETURNING`. `00149` le suma `fuente_id` (solo con origen `aporte_externo`, por CHECK) |
@@ -542,6 +543,24 @@ la lee aunque vea el proyecto (#864). Reflejo en el cliente: `permisosDeProyecto
 (solo administrador) y `puedeVerInsumosYGastos` para leer, en `proyectos/permisos.js`, y
 `proyectos/insumos.api.js`. Lo afirma `proyecto_insumos.sql`.
 
+`jornada_insumos` (00151) es la misma lista, colgada de una **jornada**: la organizacion decidio que
+los insumos se planean en cada jornada, como los gastos, y que el proyecto solo los muestra agrupados
+por jornada, sin agregar. Misma forma y mismas reglas que `proyecto_insumos` (no mueve inventario, un
+articulo una vez por jornada, `ON DELETE RESTRICT` sobre el catalogo). La escribe quien administra la
+jornada; la lee tambien quien gestiona proyectos. Lo planeado antes a nivel proyecto se pasa a una
+jornada del mismo proyecto con `fn_pasar_insumo_de_proyecto_a_jornada()`, **SECURITY INVOKER**: corre
+con la RLS de quien llama, asi que hace falta poder quitar la fila del proyecto y agregarla a la
+jornada (la administradora puede las dos), y todo ocurre en una transaccion. Reflejo en el cliente:
+`puedeVerInsumosDeJornada()` y `puedeGestionarInsumosDeJornada()` en `jornadas/permisos.js`, y
+`jornadas/insumos.api.js`. Lo afirma `jornada_insumos.sql`.
+
+**El equipo del proyecto es la union (`00150`).** `equipo_de_proyecto(proyecto_id)` devuelve, ademas
+de las filas de `proyecto_personal`, a quien esta en el equipo de alguna jornada del proyecto
+(`jornada_personal`), con las jornadas en que esta (`jornadas`) y si esta tambien en el equipo del
+proyecto (`en_equipo_del_proyecto`). La guarda de lectura de la funcion no cambio: la ve quien ve el
+proyecto. Quitar solo aplica a quien esta en `proyecto_personal`; a quien llega por una jornada se le
+quita desde esa jornada. Lo afirma `proyecto_personal.sql`.
+
 `jornada_presupuesto_origen` (issue #840) dice de donde viene cada parte del presupuesto de una
 jornada: una donacion de dinero, fondos propios o un aporte externo. `jornadas.presupuesto_asignado`
 es la suma de estas filas y la mantiene `fn_sincronizar_presupuesto_de_jornada` (DEFINER); un UPDATE
@@ -564,7 +583,7 @@ inserta el propio administrador, sin ajuste de existencias: un gasto no mueve in
 | Tabla              | administrador | junta directiva / socio fundador | medico | voluntario general | Como se implementa                                       |
 | ------------------ | ------------- | -------------------------------- | ------ | ------------------ | --------------------------------------------------------- |
 | `donantes`         | C R U         | —                                | —      | —                  | `00083` + `00086` + `00141` (registrar Y SU LECTURA admiten `tiene_permiso('donaciones.registrar')`, mismo motivo que `proyectos`: `registrarDonante()` hace `.insert().select()`). `es_administrador()` escribe, `es_consultivo()` o el permiso fino leen |
-| `donaciones`       | C R U         | —                                | —      | —                  | `00083` + `00086` + `00141`, mismo cambio. La anulacion (UPDATE) exige `estado = 'anulada'` y `motivo_anulacion` |
+| `donaciones`       | C R U         | —                                | —      | —                  | `00083` + `00086` + `00141`, mismo cambio. La anulacion (UPDATE) exige `estado = 'anulada'` y `motivo_anulacion`. Desde la `00153` una donacion puede ser para una jornada (`jornada_id`); el trigger `fn_proyecto_de_la_jornada_de_la_donacion` (DEFINER, sin EXECUTE para nadie) pone el proyecto de esa jornada aunque quien registra por delegacion no lea `jornadas`. No cambia quien puede escribir |
 | `donacion_detalle` | C R U (`lote_id`) | —                            | —      | —                  | `00083` + `00086` + `00141`, mismo cambio. El detalle no se corrige, se anula la donacion completa. Desde la `00135` el renglon de una donacion de medicamentos lleva `medicamento_id`, que exige `fn_registrar_donacion` (INVOKER: no cambia quien puede escribir). El unico UPDATE es enlazar el lote que produjo el renglon: GRANT de la columna `lote_id` y nada mas, una sola vez (la politica solo alcanza `lote_id IS NULL`), con un lote del mismo medicamento (trigger), y lo hace quien registra donaciones (`es_administrador() OR tiene_permiso('donaciones.registrar')`). Hasta la `00135` no habia GRANT ni politica y `enlazarLoteConDonacion()` fallaba siempre. La `00135` concedio el GRANT de columna sin revocar el UPDATE de tabla completa que `authenticated` ya traia por default desde que la tabla se creo (`00022`, antes de que la `00120` empezara a revocar privilegios por defecto): el resto del renglon si se podia corregir con un UPDATE directo hasta que la `00145` revoco el UPDATE amplio |
 
 Hasta la `00083`, las tres tablas estaban **denegadas a los cinco roles, incluido el

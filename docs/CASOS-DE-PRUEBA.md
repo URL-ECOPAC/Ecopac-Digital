@@ -166,7 +166,7 @@ el numero del backlog. Este documento usa siempre la numeracion de la matriz.
 | --- | --- | --- | --- | --- |
 | CP-RNF01-01 | RNF-1: interfaz intuitiva | Personal de la organizacion completa las tareas de HU01 a HU07 sin ayuda | Criterio en el plan, seccion Usabilidad | **Manual**, pendiente con la organizacion |
 | CP-RNF02-01 | RNF-2: registro agil en movil | Cronometrar el registro de un paciente y su consulta en una jornada real | No retrasa la atencion; umbral a fijar con la organizacion | **Manual**, pendiente |
-| CP-RNF03-01 | RNF-3: formularios fieles a la ficha fisica | Poner la ficha clinica fisica al lado del formulario de alta y de consulta, en web y movil, y comparar campo por campo | Mismos campos y mismo orden, o mejora justificada | **Manual**, sin ejecutar |
+| CP-RNF03-01 | RNF-3: formularios fieles a la ficha fisica | Poner la ficha clinica fisica al lado del formulario de alta y de consulta, en web y movil, y comparar campo por campo | Mismos campos y mismo orden, o mejora justificada | **Manual**, ejecutado por la organizacion el 27 de septiembre de 2026: aprobado |
 | CP-RNF04-01 | RNF-4: dashboard claro | El dashboard muestra los indicadores con graficas | Renderiza los indicadores y el estado de error | `apps/web/src/pages/DashboardMetricasPage.test.jsx`; claridad: manual, con la organizacion |
 | CP-RNF05-01 | RNF-5: 50 pacientes por jornada | Registrar, tomar triaje, consultar y recetar a 50 pacientes | Ningun maximo crece con el indice del paciente | `scripts/prueba-de-carga-jornada-50-pacientes.mjs` |
 | CP-RNF06-01 | RNF-6: crecimiento de la base | Consultas sobre mas de 1000 filas | No se truncan en silencio | `paginacion-max-rows.e2e.test.js`; volumen de anos: sin caso |
@@ -176,7 +176,7 @@ el numero del backlog. Este documento usa siempre la numeracion de la matriz.
 | CP-RNF10-01 | RNF-10: autenticacion segura | Reglas de contrasena y restablecimiento | Rechaza contrasenas que no cumplen la politica | `packages/shared/usuarios/validaciones.test.js`, `useNuevaContrasena.test.js`. Solo del lado del cliente: `supabase/config.toml` no fija una longitud minima en el servidor |
 | CP-RNF10-02 | RNF-10: las cuentas pueden iniciar sesion | Ninguna cuenta queda con columnas de token nulas que GoTrue no sabe leer | Las siete cuentas de demostracion inician sesion | `tokens_auth_users.sql` (3) |
 | CP-RNF11-01 | RNF-11: confiabilidad en jornada | Los flujos criticos de una jornada funcionan de punta a punta | 49 de 49 pruebas e2e en verde en cada PR que toca la base | `pruebas/e2e/` en el CI |
-| CP-RNF12-01 | RNF-12: respaldos | Restaurar la base desde un respaldo | La informacion vuelve integra | **No ejecutable hoy**: el plan Free no tiene respaldos |
+| CP-RNF12-01 | RNF-12: respaldos | Restaurar la base desde un respaldo | La informacion vuelve integra | **No ejecutable hoy**: se ejecuta en la salida a produccion (#252), con el respaldo que un workflow guarda en Google Drive |
 | CP-RNF13-01 | RNF-13: codigo mantenible | Lint, formato y guarda de esquema | Cero errores | `npm run lint`, `npm run format:check`, `scripts/verificar-shared-vs-esquema.mjs` |
 | CP-RNF14-01 | RNF-14: herramientas abiertas y capas gratuitas | Revisar el costo de cada servicio | Todo en capa gratuita o con justificacion | Verificacion documental en `docs/COSTOS-Y-LIMITES.md` |
 | CP-RNF15-01 | RNF-15: responsiva y compatible | Recorrer las pantallas principales en Chrome, Firefox y Safari, a 1366, 768 y 375 px | Sin desbordes ni controles inaccesibles | **Manual**, sin ejecutar |
@@ -188,10 +188,9 @@ Lo que hoy no se puede afirmar que este probado:
 
 | Requerimiento | Situacion | Que falta |
 | --- | --- | --- |
-| **RNF-12** respaldos | **No se cumple**, no es solo falta de prueba: el plan Free de Supabase no incluye respaldos (`docs/COSTOS-Y-LIMITES.md`, seccion 6.2) | Issue #762 abierta. Sin respaldo no hay restauracion que probar |
+| **RNF-12** respaldos | Pendiente de produccion: el plan Free de Supabase no incluye respaldos, y la organizacion decidio un workflow de GitHub Actions que guarde el volcado en Google Drive | Se implementa en la issue de salida a produccion (#252), con el plan de `docs/CI-CD.md`, "Plan para produccion". Sin respaldo no hay restauracion que probar |
 | **RNF-1** interfaz intuitiva | Caso definido, nunca ejecutado | Sesion de usabilidad con el personal de la organizacion |
 | **RNF-2** registro agil | Solo existe el piso de la prueba de carga (5.8 ms por registro contra el stack local), que no mide el tiempo de una persona | Cronometraje en una jornada real |
-| **RNF-3** fidelidad con la ficha fisica | Caso manual definido, nunca ejecutado. La prueba de regresion del alta solo comprueba que el formulario monte, no el orden de los campos | Comparacion campo por campo con la ficha fisica |
 | **RNF-8** HTTPS | Sin caso ejecutado | Revision manual de la web desplegada |
 | **RNF-15** responsiva y navegadores | Sin caso ejecutado | Recorrido manual en la matriz de navegadores y anchos |
 | **RNF-6** crecimiento de la base | Cubierto solo el limite de 1000 filas de PostgREST | Una prueba con volumen de varios anos de jornadas |

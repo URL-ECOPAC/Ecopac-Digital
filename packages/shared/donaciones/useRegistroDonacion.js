@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { ETIQUETAS_TIPO_DONACION, TIPOS_DE_DONACION, TIPOS_DE_DONANTE } from "../enums.js";
-import { aCadenaFechaLocal, formatearFechaLarga } from "../formato/fechas.js";
+import { aCadenaFechaLocal, formatearFechaCorta, formatearFechaLarga } from "../formato/fechas.js";
 import { formatearMoneda } from "../formato/moneda.js";
 import { opcionDeMedicamento } from "../inventario/catalogoMedicamentos.js";
 import { listarMedicamentos } from "../inventario/medicamentos.api.js";
 import { useAltaDeMedicamentoEnLinea } from "../inventario/useAltaDeMedicamentoEnLinea.js";
+import { listarJornadas } from "../jornadas/api.js";
 import { listarProyectos } from "../proyectos/api.js";
 import { camposDeRenglonDeDonacion } from "./campos.js";
 import { listarDonantes, registrarDonante } from "./donantes.api.js";
@@ -92,7 +93,10 @@ export function conIdsReales(detallesLocales, detalleIds = []) {
  * @returns {{ titulo: string, datos: {label: string, valor: string}[],
  *   renglones: {id: string, texto: string, detalle: string|null}[] }|null}
  */
-export function resumenLegibleDeDonacion(resumen, { medicamentos = [], proyectos = [] } = {}) {
+export function resumenLegibleDeDonacion(
+  resumen,
+  { medicamentos = [], proyectos = [], jornadas = [] } = {},
+) {
   if (!resumen) return null;
 
   const nombreDeMedicamento = (id) => medicamentos.find((m) => m.value === id)?.label ?? null;
@@ -110,6 +114,8 @@ export function resumenLegibleDeDonacion(resumen, { medicamentos = [], proyectos
     { label: "Fecha", valor: formatearFechaLarga(resumen.fecha) || "—" },
   ];
 
+  const jornada = jornadas.find((j) => j.value === resumen.jornadaId)?.label;
+  if (jornada) datos.push({ label: "Jornada", valor: jornada });
   const proyecto = proyectos.find((p) => p.value === resumen.proyectoId)?.label;
   if (proyecto) datos.push({ label: "Proyecto", valor: proyecto });
 
@@ -163,6 +169,10 @@ export function useRegistroDonacion({ _client, usuarioRol, onGuardarExito }) {
   const [tipoDonacion, setTipoDonacion] = useState(TIPOS_DE_DONACION.DINERO);
   const [donanteId, setDonanteId] = useState("");
   const [proyectoId, setProyectoId] = useState("");
+  // Para que jornada se recibio (00153). Si hay jornada, el proyecto es el de la jornada: la base lo
+  // impone con un trigger, y aqui se refleja para que la pantalla no ofrezca otro.
+  const [jornadaId, setJornadaIdCrudo] = useState("");
+  const [jornadasOptions, setJornadasOptions] = useState([]);
   // aCadenaFechaLocal() y no toISOString(): esa da el dia UTC, y en Guatemala a partir de las
   // 18:00 ya es manana. Las donaciones registradas por la tarde se guardaban con la fecha del
   // dia siguiente sin que nadie la tocara (issue #840).
@@ -206,6 +216,17 @@ export function useRegistroDonacion({ _client, usuarioRol, onGuardarExito }) {
 
     listarProyectos().then(({ proyectos }) => {
       if (vigente) setProyectosOptions(aOpciones(proyectos));
+    });
+
+    listarJornadas().then(({ jornadas }) => {
+      if (!vigente) return;
+      setJornadasOptions(
+        (jornadas ?? []).map((jornada) => ({
+          value: jornada.id,
+          label: [jornada.nombre, formatearFechaCorta(jornada.fecha)].filter(Boolean).join(" · "),
+          proyectoId: jornada.proyectoId ?? null,
+        })),
+      );
     });
 
     // Desde la #840 el renglon de una donacion de medicamentos elige del catalogo.
@@ -253,6 +274,18 @@ export function useRegistroDonacion({ _client, usuarioRol, onGuardarExito }) {
     setRenglonDeAlta(null);
     cerrarAltaInterna();
   }, [cerrarAltaInterna]);
+
+  /** Elige la jornada y, con ella, su proyecto (o ninguno si la jornada no tiene). */
+  const setJornadaId = useCallback(
+    (valor) => {
+      setJornadaIdCrudo(valor || "");
+      if (valor) {
+        const jornada = jornadasOptions.find((opcion) => opcion.value === valor);
+        setProyectoId(jornada?.proyectoId ?? "");
+      }
+    },
+    [jornadasOptions],
+  );
 
   const agregarRenglon = () => {
     setDetalles((prev) => [...prev, renglonVacio()]);
@@ -330,6 +363,7 @@ export function useRegistroDonacion({ _client, usuarioRol, onGuardarExito }) {
     const payload = {
       donanteId,
       proyectoId: proyectoId || null,
+      jornadaId: jornadaId || null,
       tipo: tipoDonacion,
       fecha,
       observaciones: observaciones.trim() || null,
@@ -373,6 +407,7 @@ export function useRegistroDonacion({ _client, usuarioRol, onGuardarExito }) {
     setTipoDonacion(TIPOS_DE_DONACION.DINERO);
     setDonanteId("");
     setProyectoId("");
+    setJornadaIdCrudo("");
     setFecha(aCadenaFechaLocal());
     setObservaciones("");
     setDetalles([renglonVacio()]);
@@ -386,6 +421,11 @@ export function useRegistroDonacion({ _client, usuarioRol, onGuardarExito }) {
     setDonanteId,
     proyectoId,
     setProyectoId,
+    jornadaId,
+    setJornadaId,
+    jornadasOptions,
+    // Con jornada elegida el proyecto sale de ella y no se elige a mano.
+    proyectoFijadoPorJornada: Boolean(jornadaId),
     fecha,
     setFecha,
     observaciones,
@@ -405,6 +445,7 @@ export function useRegistroDonacion({ _client, usuarioRol, onGuardarExito }) {
     resumenLegible: resumenLegibleDeDonacion(resumenRegistro, {
       medicamentos: medicamentosOptions,
       proyectos: proyectosOptions,
+      jornadas: jornadasOptions,
     }),
     donantesOptions,
     proyectosOptions,

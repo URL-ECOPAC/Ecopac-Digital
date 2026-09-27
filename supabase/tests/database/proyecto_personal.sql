@@ -8,7 +8,7 @@
 
 BEGIN;
 
-SELECT plan(17);
+SELECT plan(20);
 
 -- ============================================================================
 -- Setup
@@ -20,7 +20,8 @@ INSERT INTO auth.users (id, email) VALUES
   ('00000000-0000-0000-0000-000000014611', 'admin1461@test.ecopac.local'),
   ('00000000-0000-0000-0000-000000014612', 'junta1461@test.ecopac.local'),
   ('00000000-0000-0000-0000-000000014613', 'medico1461@test.ecopac.local'),
-  ('00000000-0000-0000-0000-000000014614', 'medico2-1461@test.ecopac.local');
+  ('00000000-0000-0000-0000-000000014614', 'medico2-1461@test.ecopac.local'),
+  ('00000000-0000-0000-0000-000000014615', 'voluntario1461@test.ecopac.local');
 
 ALTER TABLE perfiles DISABLE TRIGGER USER;
 UPDATE perfiles SET rol = 'administrador'   WHERE id = '00000000-0000-0000-0000-000000014611';
@@ -183,6 +184,39 @@ SELECT is(
 SELECT is(
   (SELECT count(*) FROM equipo_de_proyecto('50000000-0000-0000-0000-000000001461'))::int, 0,
   'ni la funcion le abre lo que la tabla le cierra'
+);
+
+-- ============================================================================
+-- 00150: el equipo del proyecto es la union de su equipo y el de sus jornadas
+-- ============================================================================
+RESET ROLE;
+-- El voluntario 14615 solo esta en el cuadro de turnos de la jornada A, no en el equipo de A.
+INSERT INTO jornada_personal (jornada_id, perfil_id, rol_en_jornada, hora_inicio, hora_fin) VALUES
+  ('40000000-0000-0000-0000-000000001461', '00000000-0000-0000-0000-000000014615',
+   'voluntario general', '08:00', '12:00');
+
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000014611';
+
+SELECT is(
+  (SELECT count(*) FROM equipo_de_proyecto('50000000-0000-0000-0000-000000001461'))::int, 3,
+  'el equipo de A suma a quien solo esta en una de sus jornadas, sin repetir a quien esta en los dos'
+);
+
+SELECT is(
+  (SELECT row(en_equipo_del_proyecto, jornadas)::text
+     FROM equipo_de_proyecto('50000000-0000-0000-0000-000000001461')
+    WHERE perfil_id = '00000000-0000-0000-0000-000000014615'),
+  row(false, ARRAY['Jornada A 1461']::text[])::text,
+  'quien viene de una jornada se marca como tal y dice de cual'
+);
+
+SELECT is(
+  (SELECT row(en_equipo_del_proyecto, jornadas, rol_en_proyecto)::text
+     FROM equipo_de_proyecto('50000000-0000-0000-0000-000000001461')
+    WHERE perfil_id = '00000000-0000-0000-0000-000000014613'),
+  row(true, ARRAY['Jornada A 1461']::text[], 'Coordinacion'::text)::text,
+  'quien esta en el equipo y en una jornada conserva su rol en el proyecto y su jornada'
 );
 
 -- ============================================================================

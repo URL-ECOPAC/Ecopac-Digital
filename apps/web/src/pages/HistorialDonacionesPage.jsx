@@ -263,6 +263,7 @@ export default function HistorialDonacionesPage({ usuarioRol }) {
                     modalDetalle.donacionSeleccionada.tipo,
                 ],
                 ["Fecha", formatearFechaCorta(modalDetalle.donacionSeleccionada.fecha)],
+                ["Jornada", modalDetalle.donacionSeleccionada.jornadaNombre],
                 ["Proyecto", modalDetalle.donacionSeleccionada.proyectoNombre],
                 ["Registrada por", modalDetalle.donacionSeleccionada.registradoPorNombre],
               ].map(([rotulo, valor]) => (

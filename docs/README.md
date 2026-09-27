@@ -31,6 +31,7 @@ configuracion de GitHub (plantillas de issues, PR y los workflows de CI/CD) esta
 | [DATOS-DEMO.md](./DATOS-DEMO.md)                       | Datos de prueba para desarrollo                                       |
 | [PLAN-DE-PRUEBAS.md](./PLAN-DE-PRUEBAS.md)             | Los ocho tipos de prueba con su criterio de aprobacion, que mide la cobertura, politica de evidencias y riesgos al ejecutarlo |
 | [CASOS-DE-PRUEBA.md](./CASOS-DE-PRUEBA.md)             | Cada caso de prueba vinculado a su requerimiento, y los requerimientos que no tienen ninguno |
+| [CUMPLIMIENTO-DE-REQUERIMIENTOS.md](./CUMPLIMIENTO-DE-REQUERIMIENTOS.md) | Los 34 RF y 15 RNF: donde esta cada uno, que issues lo cubren, su evidencia y su estado (issue #253) |
 | [evidencias/](./evidencias/)                           | Registro de cada ejecucion completa del plan, con fecha y commit      |
 
 ## Dependencias y Herramientas

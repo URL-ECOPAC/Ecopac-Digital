@@ -5,6 +5,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import {
   ESTADOS_PROYECTO,
   ETIQUETAS_ESTADO_PROYECTO,
+  formatearFechaCorta,
   formatearMoneda,
   useProyectosSociales,
 } from "@ecopac/shared";
@@ -25,12 +26,8 @@ import {
 } from "react-bootstrap";
 
 import { BotonLimpiarFiltros, DataList } from "../components";
-import { useSesionCompartida } from "../contexto/SesionProvider";
 import PageHeader from "../components/PageHeader";
-import PrimaryButton from "../components/PrimaryButton";
 import ScreenContainer from "../components/ScreenContainer";
-import ModalGasto from "./ModalGasto";
-import ModalInsumoProyecto from "./ModalInsumoProyecto";
 import ModalProyecto from "./ModalProyecto";
 
 export default function ProyectosSocialesPage({ usuarioRol }) {
@@ -44,13 +41,11 @@ export default function ProyectosSocialesPage({ usuarioRol }) {
     catalogos,
     puedeEditar,
     permisos,
-    puedeRegistrarGastos,
     presupuestoProyecto,
     columnasGastos,
     gastosProyecto,
     cargandoGastos,
     errorGastos,
-    recargarGastos,
     jornadasDisponibles,
     errorJornadas,
     asociarJornada,
@@ -62,16 +57,13 @@ export default function ProyectosSocialesPage({ usuarioRol }) {
     personalDisponible,
     agregarAlEquipo,
     quitarDelEquipo,
-    insumos,
+    insumosPorJornada,
+    insumosSinJornada,
     cargandoInsumos,
     errorInsumos,
-    erroresInsumo,
     columnasInsumos,
-    camposInsumo,
-    catalogosInsumo,
     resumenDeInsumos,
-    guardarInsumo,
-    quitarInsumo,
+    pasarInsumoAJornada,
     guardarProyecto,
     filtrosState,
     setFiltrosState,
@@ -85,20 +77,14 @@ export default function ProyectosSocialesPage({ usuarioRol }) {
   const [proyectoEnEdicion, setProyectoEnEdicion] = useState(null);
   const [formularioAbierto, setFormularioAbierto] = useState(false);
 
-  // Solo el id de quien mira, para registrar_por de un gasto; nada de decisiones de permiso aqui.
-  const { perfil } = useSesionCompartida();
-  const [gastoEnEdicion, setGastoEnEdicion] = useState(null);
-  const [registrandoGasto, setRegistrandoGasto] = useState(false);
   const [jornadaPorAsociar, setJornadaPorAsociar] = useState("");
   const [jornadaPorQuitar, setJornadaPorQuitar] = useState(null);
   const [personaPorAgregar, setPersonaPorAgregar] = useState("");
   const [rolPorAgregar, setRolPorAgregar] = useState("");
   const [personaPorQuitar, setPersonaPorQuitar] = useState(null);
   const [avisoEquipo, setAvisoEquipo] = useState(null);
-  const [insumoEnEdicion, setInsumoEnEdicion] = useState(null);
-  const [formularioInsumoAbierto, setFormularioInsumoAbierto] = useState(false);
-  const [insumoPorQuitar, setInsumoPorQuitar] = useState(null);
-  const [avisoInsumos, setAvisoInsumos] = useState(null);
+  const [insumoPorPasar, setInsumoPorPasar] = useState(null);
+  const [jornadaDestino, setJornadaDestino] = useState("");
 
   const { pathname } = useLocation();
   const navigate = useNavigate();
@@ -357,80 +343,112 @@ export default function ProyectosSocialesPage({ usuarioRol }) {
               </div>
             )}
 
+            {/* Insumos (00151): se planean en cada jornada; aqui solo se ven, agrupados. */}
             {pestanaDelProyectoVisible === "insumos" && (
               <div className="d-flex flex-column gap-3">
                 <p className="text-muted small mb-0">
-                  Lista de lo previsto para este proyecto. No descuenta existencias del inventario.
+                  Lo previsto en cada jornada del proyecto. Se agrega y se corrige desde el detalle
+                  de cada jornada, en su pestaña Insumos. No descuenta existencias del inventario.
                 </p>
-                {(errorInsumos || avisoInsumos) && (
+                {errorInsumos && (
                   <Alert variant="danger" className="mb-0 py-2 px-3 small">
-                    {errorInsumos
-                      ? `No se pudo actualizar los insumos: ${errorInsumos.mensaje}`
-                      : avisoInsumos}
+                    No se pudieron cargar los insumos: {errorInsumos.mensaje}
                   </Alert>
                 )}
-                {permisos.puedeGestionarInsumos && (
-                  <div className="d-flex justify-content-end">
-                    <PrimaryButton
-                      title="Agregar insumo"
-                      onClick={() => {
-                        setInsumoEnEdicion(null);
-                        setFormularioInsumoAbierto(true);
-                      }}
+                {cargandoInsumos && <p className="text-muted small mb-0">Cargando insumos...</p>}
+                {!cargandoInsumos &&
+                  insumosPorJornada.length === 0 &&
+                  insumosSinJornada.length === 0 && (
+                    <p className="text-muted small mb-0">
+                      Ninguna jornada de este proyecto tiene insumos previstos.
+                    </p>
+                  )}
+
+                {insumosPorJornada.map((grupo) => (
+                  <div key={grupo.jornadaId}>
+                    <div className="d-flex justify-content-between align-items-baseline mb-1">
+                      <h6 className="fw-bold mb-0">{grupo.jornadaNombre}</h6>
+                      <span className="text-muted small">
+                        {formatearFechaCorta(grupo.jornadaFecha)} ·{" "}
+                        {formatearMoneda(grupo.resumen.totalEstimado)}
+                      </span>
+                    </div>
+                    <DataList columnas={columnasInsumos} datos={grupo.insumos} vacio={null} />
+                  </div>
+                ))}
+
+                {/* Lo que se habia planeado para el proyecto antes de la 00151, sin jornada. */}
+                {insumosSinJornada.length > 0 && (
+                  <div>
+                    <h6 className="fw-bold mb-1">Previstos para el proyecto, sin jornada</h6>
+                    <p className="text-muted small mb-2">
+                      Se anotaron antes de que los insumos se planearan por jornada.
+                      {permisos.puedeGestionarInsumos && " Pásalos a la jornada que corresponda."}
+                    </p>
+                    {insumoPorPasar && (
+                      <Alert variant="secondary" className="py-2 px-3 small">
+                        <div className="d-flex flex-wrap align-items-center gap-2">
+                          <span>Pasar {insumoPorPasar.articuloNombre} a</span>
+                          <Form.Select
+                            size="sm"
+                            aria-label="Jornada destino"
+                            className="w-auto"
+                            value={jornadaDestino}
+                            onChange={(e) => setJornadaDestino(e.target.value)}
+                          >
+                            <option value="">Seleccionar jornada</option>
+                            {jornadasProyecto.map((j) => (
+                              <option key={j.id} value={j.id}>
+                                {j.nombre}
+                              </option>
+                            ))}
+                          </Form.Select>
+                          <Button
+                            variant="primary"
+                            size="sm"
+                            disabled={!jornadaDestino}
+                            onClick={async () => {
+                              const { ok } = await pasarInsumoAJornada(
+                                insumoPorPasar.id,
+                                jornadaDestino,
+                              );
+                              if (ok) {
+                                setInsumoPorPasar(null);
+                                setJornadaDestino("");
+                              }
+                            }}
+                          >
+                            Pasar
+                          </Button>
+                          <Button
+                            variant="outline-secondary"
+                            size="sm"
+                            onClick={() => {
+                              setInsumoPorPasar(null);
+                              setJornadaDestino("");
+                            }}
+                          >
+                            Cancelar
+                          </Button>
+                        </div>
+                      </Alert>
+                    )}
+                    <DataList
+                      columnas={columnasInsumos}
+                      datos={insumosSinJornada}
+                      vacio={null}
+                      accionSecundaria={
+                        permisos.puedeGestionarInsumos && jornadasProyecto.length > 0
+                          ? { label: "Pasar a una jornada", onClick: setInsumoPorPasar }
+                          : undefined
+                      }
                     />
                   </div>
                 )}
-                {insumoPorQuitar && (
-                  <Alert variant="warning" className="mb-0 py-2 px-3 small">
-                    <div className="d-flex flex-wrap align-items-center justify-content-between gap-2">
-                      <span>
-                        ¿Quitar {insumoPorQuitar.articuloNombre} de la lista del proyecto?
-                      </span>
-                      <span className="d-flex gap-2">
-                        <Button
-                          variant="danger"
-                          size="sm"
-                          onClick={async () => {
-                            const { ok, error } = await quitarInsumo(insumoPorQuitar.id);
-                            setAvisoInsumos(ok || error ? null : "No se pudo quitar el insumo.");
-                            setInsumoPorQuitar(null);
-                          }}
-                        >
-                          Confirmar
-                        </Button>
-                        <Button
-                          variant="outline-secondary"
-                          size="sm"
-                          onClick={() => setInsumoPorQuitar(null)}
-                        >
-                          Cancelar
-                        </Button>
-                      </span>
-                    </div>
-                  </Alert>
-                )}
-                <DataList
-                  columnas={columnasInsumos}
-                  datos={insumos}
-                  cargando={cargandoInsumos}
-                  vacio="Este proyecto todavía no tiene insumos previstos."
-                  onRowPress={
-                    permisos.puedeGestionarInsumos
-                      ? (insumo) => {
-                          setInsumoEnEdicion(insumo);
-                          setFormularioInsumoAbierto(true);
-                        }
-                      : undefined
-                  }
-                  accionSecundaria={
-                    permisos.puedeGestionarInsumos
-                      ? { label: "Quitar", onClick: (insumo) => setInsumoPorQuitar(insumo) }
-                      : undefined
-                  }
-                />
-                {insumos.length > 0 && (
+
+                {(insumosPorJornada.length > 0 || insumosSinJornada.length > 0) && (
                   <p className="mb-0 text-end">
-                    <strong>Total estimado:</strong>{" "}
+                    <strong>Total estimado del proyecto:</strong>{" "}
                     {formatearMoneda(resumenDeInsumos.totalEstimado)}
                     {resumenDeInsumos.sinCosto > 0 && (
                       <span className="text-muted small ms-2">
@@ -466,8 +484,16 @@ export default function ProyectosSocialesPage({ usuarioRol }) {
                           {miembro.rolEnProyecto && (
                             <span className="text-muted small ms-2">{miembro.rolEnProyecto}</span>
                           )}
+                          {/* 00150: el equipo es tambien el de sus jornadas. Se dice de cual, y
+                              quien solo viene de una jornada se quita en esa jornada, no aqui. */}
+                          {miembro.jornadas.length > 0 && (
+                            <span className="d-block text-muted small">
+                              En {miembro.jornadas.join(", ")}
+                            </span>
+                          )}
                         </span>
                         {permisos.puedeGestionarEquipo &&
+                          miembro.enEquipoDelProyecto &&
                           (personaPorQuitar === miembro.perfilId ? (
                             <span className="d-flex align-items-center gap-2 small">
                               ¿Quitar del equipo?
@@ -506,14 +532,18 @@ export default function ProyectosSocialesPage({ usuarioRol }) {
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-muted small mb-0">Este proyecto todavía no tiene equipo.</p>
+                  <p className="text-muted small mb-0">
+                    Este proyecto todavía no tiene equipo: se arma con el personal de sus jornadas y
+                    con quien se agregue aquí.
+                  </p>
                 )}
 
+                {/* Agregar a alguien que no esta en ninguna jornada (quien solo coordina, por
+                    ejemplo). Los tres controles en una fila: el boton no se parte en dos lineas. */}
                 {permisos.puedeGestionarEquipo && (
-                  <div className="d-flex flex-wrap gap-2 mt-3">
+                  <div className="ec-fila-agregar mt-3">
                     <Form.Select
                       aria-label="Persona a agregar"
-                      className="w-auto flex-grow-1"
                       value={personaPorAgregar}
                       onChange={(e) => setPersonaPorAgregar(e.target.value)}
                     >
@@ -526,7 +556,6 @@ export default function ProyectosSocialesPage({ usuarioRol }) {
                     </Form.Select>
                     <Form.Control
                       aria-label="Rol en el proyecto"
-                      className="w-auto flex-grow-1"
                       type="text"
                       maxLength={100}
                       placeholder="Rol en el proyecto (opcional)"
@@ -535,6 +564,7 @@ export default function ProyectosSocialesPage({ usuarioRol }) {
                     />
                     <Button
                       variant="outline-primary"
+                      className="text-nowrap"
                       disabled={!personaPorAgregar || ocupadoEquipo}
                       aria-busy={ocupadoEquipo}
                       onClick={async () => {
@@ -617,7 +647,7 @@ export default function ProyectosSocialesPage({ usuarioRol }) {
                 )}
 
                 {permisos.puedeAsociarJornadas && (
-                  <div className="d-flex gap-2 mt-3">
+                  <div className="ec-fila-agregar mt-3">
                     <Form.Select
                       aria-label="Jornada sin proyecto"
                       value={jornadaPorAsociar}
@@ -636,6 +666,7 @@ export default function ProyectosSocialesPage({ usuarioRol }) {
                     </Form.Select>
                     <Button
                       variant="outline-primary"
+                      className="text-nowrap"
                       disabled={!jornadaPorAsociar}
                       onClick={async () => {
                         const { ok } = await asociarJornada(jornadaPorAsociar);
@@ -656,31 +687,20 @@ export default function ProyectosSocialesPage({ usuarioRol }) {
                     No se pudieron cargar los gastos: {errorGastos.mensaje}
                   </Alert>
                 )}
-                {puedeRegistrarGastos && (
-                  <div className="d-flex align-items-center justify-content-end gap-3">
-                    {/* Un gasto cuelga de una jornada; sin jornadas en el proyecto no hay donde. */}
-                    {jornadasProyecto.length === 0 && (
-                      <span className="text-muted small">
-                        Asocia una jornada al proyecto para registrar gastos.
-                      </span>
-                    )}
-                    <PrimaryButton
-                      title="Registrar gasto"
-                      disabled={jornadasProyecto.length === 0}
-                      onClick={() => setRegistrandoGasto(true)}
-                    />
-                  </div>
-                )}
+                {/* Solo consulta: los gastos de las jornadas del proyecto. Se registran contra una
+                    jornada en Presupuestos, donde pasan por la aprobacion. */}
+                <p className="text-muted small mb-0">
+                  Los gastos de las jornadas de este proyecto. Se registran en Presupuestos.
+                </p>
                 <DataList
                   columnas={columnasGastos}
                   datos={gastosProyecto}
                   cargando={cargandoGastos}
-                  vacio="Este proyecto todavía no tiene gastos."
+                  vacio="Las jornadas de este proyecto todavía no tienen gastos."
                   catalogos={{
                     jornadas: jornadasProyecto.map((j) => ({ value: j.id, label: j.nombre })),
                     perfiles: catalogos.perfiles,
                   }}
-                  onRowPress={(gasto) => setGastoEnEdicion(gasto)}
                 />
               </div>
             )}
@@ -702,46 +722,6 @@ export default function ProyectosSocialesPage({ usuarioRol }) {
             </Button>
           </Modal.Footer>
         </Modal>
-      )}
-
-      {/* proyectoId acota el selector de jornada a las de este proyecto. */}
-      {registrandoGasto && (
-        <ModalGasto
-          usuarioId={perfil?.id}
-          proyectoId={proyectoDetalle?.id}
-          rol={usuarioRol}
-          onClose={() => setRegistrandoGasto(false)}
-          onGuardado={() => {
-            setRegistrandoGasto(false);
-            recargarGastos();
-          }}
-        />
-      )}
-      {gastoEnEdicion && (
-        <ModalGasto
-          key={gastoEnEdicion.id}
-          gasto={gastoEnEdicion}
-          usuarioId={perfil?.id}
-          proyectoId={proyectoDetalle?.id}
-          rol={usuarioRol}
-          onClose={() => setGastoEnEdicion(null)}
-          onGuardado={() => {
-            setGastoEnEdicion(null);
-            recargarGastos();
-          }}
-        />
-      )}
-
-      {formularioInsumoAbierto && (
-        <ModalInsumoProyecto
-          visible
-          insumo={insumoEnEdicion}
-          campos={camposInsumo}
-          catalogos={catalogosInsumo}
-          errores={erroresInsumo}
-          onClose={() => setFormularioInsumoAbierto(false)}
-          onGuardar={guardarInsumo}
-        />
       )}
 
       <ModalProyecto

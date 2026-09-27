@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Ban, EyeOff, Printer } from "lucide-react";
+import { Ban, EyeOff } from "lucide-react";
 
 import {
   describirMedicamento,
@@ -8,6 +8,7 @@ import {
   formatearFechaCorta,
 } from "@ecopac/shared";
 
+import BotonImprimir from "../components/BotonImprimir";
 import SecondaryButton from "../components/SecondaryButton";
 import StatusChip from "../components/StatusChip";
 
@@ -82,13 +83,7 @@ export default function TarjetaReceta({ receta, onImprimir, puedeAnular, onAnula
             onClick={() => setAbierta((valor) => !valor)}
             aria-expanded={abierta}
           />
-          <SecondaryButton
-            title="Imprimir o guardar PDF"
-            variant="neutra"
-            size="sm"
-            icon={<Printer size={16} aria-hidden="true" />}
-            onClick={() => onImprimir(receta)}
-          />
+          <BotonImprimir size="sm" onClick={() => onImprimir(receta)} />
           {puedeAnular && !receta.anulada && !anulando && (
             <SecondaryButton
               title="Anular"
