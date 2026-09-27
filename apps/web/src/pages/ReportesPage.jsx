@@ -122,7 +122,9 @@ function PestanaMedicamentosPorVencer() {
 
   // aCadenaFechaLocal y no toISOString(): en Guatemala, despues de las 18:00 el dia UTC ya es
   // manana, y el reporte saldria fechado con el dia siguiente (issue #840).
-  const periodo = `Horizonte de ${filtros.horizonteDias} días · al ${formatearFechaCorta(
+  // "Horizonte" era la palabra tecnica del plazo, y en el papel salia dos veces (aqui y en los
+  // filtros). Una sola frase que se entiende sin saber que es un horizonte.
+  const periodo = `Lotes que vencen en los próximos ${filtros.horizonteDias} días, al ${formatearFechaCorta(
     aCadenaFechaLocal(),
   )}`;
 
@@ -199,7 +201,7 @@ function PestanaMedicamentosPorVencer() {
                 message={
                   hayFiltros
                     ? "Ningún lote coincide con los filtros aplicados."
-                    : "Ningún lote vence dentro del horizonte elegido."
+                    : "Ningún lote vence dentro del plazo elegido."
                 }
                 actionLabel={hayFiltros ? "Limpiar filtros" : undefined}
                 onAction={hayFiltros ? limpiarFiltros : undefined}
@@ -236,8 +238,8 @@ function PestanaMedicamentosPorVencer() {
 function filtrosParaPapel(filtros, catalogos) {
   const etiqueta = (lista, valor) => lista?.find((o) => o.value === valor)?.label;
 
+  // El plazo ya va en el periodo del documento; aqui solo los recortes que eligio la persona.
   return [
-    { etiqueta: "Horizonte", valor: `${filtros.horizonteDias} días` },
     filtros.bodega && {
       etiqueta: "Bodega",
       valor: etiqueta(catalogos.bodegas, filtros.bodega) ?? filtros.bodega,

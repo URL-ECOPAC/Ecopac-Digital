@@ -22,8 +22,8 @@ export const OPCIONES_ESTADO_PROYECTO = opcionesConClave(
 /**
  * Formulario de creacion/edicion de un proyecto (proyectos, 00007). `estado` no es un campo de
  * este formulario: el trigger de transiciones (00029) y cambiarEstadoProyecto() lo gobiernan, no
- * una edicion manual -mismo criterio que jornadas/campos.js excluye estado/orden_kanban de
- * CAMPOS_JORNADA por la misma razon ("los mueve el kanban... no una edicion manual").
+ * una edicion manual -mismo criterio que jornadas/campos.js excluye estado de CAMPOS_JORNADA-. En
+ * la web se cambia desde el seguimiento del proyecto (useSeguimientoProyecto, cambiarEstado).
  */
 export const CAMPOS_PROYECTO = [
   {

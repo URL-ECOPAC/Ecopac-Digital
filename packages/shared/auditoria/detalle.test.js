@@ -10,10 +10,28 @@ describe("nombreDeCampo", () => {
   it("una sola palabra se capitaliza igual", () => {
     expect(nombreDeCampo("nombres")).toBe("Nombres");
   });
+});
 
-  it("las marcas de tiempo en ingles se traducen", () => {
-    expect(nombreDeCampo("updated_at")).toBe("Actualizado");
-    expect(nombreDeCampo("created_at")).toBe("Creado");
+describe("campos tecnicos", () => {
+  it("id, created_at y updated_at no se muestran en ningun tipo de evento", () => {
+    const tecnicos = {
+      id: "x",
+      created_at: "2026-09-18T04:22:59",
+      updated_at: "2026-09-19T04:22:59",
+    };
+
+    const creacion = diferenciaDeEvento({
+      valoresAnteriores: null,
+      valoresNuevos: { ...tecnicos, nombres: "Ana" },
+    });
+    expect(creacion.campos.map((campo) => campo.clave)).toEqual(["nombres"]);
+
+    // En una actualizacion updated_at cambia siempre: no puede aparecer como si fuera lo editado.
+    const cambio = diferenciaDeEvento({
+      valoresAnteriores: { ...tecnicos, nombres: "Ana" },
+      valoresNuevos: { ...tecnicos, updated_at: "2026-09-20T00:00:00", nombres: "Ana" },
+    });
+    expect(cambio.campos).toEqual([]);
   });
 });
 

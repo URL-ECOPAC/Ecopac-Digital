@@ -373,6 +373,7 @@
   "apps/web/src/pages/KardexMovimientosPage.jsx": ["#3db648", "#4d4d4d", "#f7941d"],
   "apps/web/src/pages/LoginPage.jsx": ["#29abe2", "#3db648", "#7a7a8a", "#f7f8fa"],
   "apps/web/src/pages/MatrizPermisosPorRolPage.jsx": ["#29abe2", "#3db648", "#f7941d"],
+  "apps/web/src/pages/ModalGasto.jsx": ["#7a7a8a"],
   "apps/web/src/pages/ModalPermisosUsuario.jsx": ["#3db648"],
   "apps/web/src/pages/ModalRegistroIngreso.jsx": ["#2d2d2d"],
   "apps/web/src/pages/ModalSalidaMedicamento.jsx": [
@@ -383,7 +384,6 @@
     "#f7f8fa",
     "#ffffff"
   ],
-  "apps/web/src/pages/OrigenesDePresupuesto.jsx": ["#2d2d2d"],
   "apps/web/src/pages/pacientes.css": [
     "#29abe2",
     "#2d2d2d",

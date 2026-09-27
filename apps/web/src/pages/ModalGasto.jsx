@@ -9,7 +9,7 @@ import {
 } from "@ecopac/shared";
 import Modal from "../components/Modal";
 import NumberField from "../components/NumberField";
-import { X } from "lucide-react";
+import { Plus, X } from "lucide-react";
 import DateField from "../components/DateField";
 import PrimaryButton from "../components/PrimaryButton";
 import Selector from "../components/Selector";
@@ -91,6 +91,11 @@ export default function ModalGasto({
   const nombreDeQuienDecidio = catalogos.perfiles?.find(
     (perfil) => perfil.value === gasto?.aprobado_por,
   )?.label;
+  // Quien lo registro: con el personal de campo registrando gastos que pasan por la aprobacion,
+  // quien lo revisa tiene que ver de quien viene, no solo en la bandeja.
+  const nombreDeQuienRegistro = catalogos.perfiles?.find(
+    (perfil) => perfil.value === gasto?.registrado_por,
+  )?.label;
 
   const pedirCierre = () => {
     if (sucio && !bloqueadoPorPermisos) {
@@ -126,6 +131,13 @@ export default function ModalGasto({
         onClose={pedirCierre}
         title={esEdicion ? "Editar gasto" : "Registrar gasto"}
       >
+        {esEdicion && gasto?.registrado_por && (
+          <p className="small mb-2" style={{ color: "var(--color-text-muted)" }}>
+            Registrado por {nombreDeQuienRegistro || "una persona que ya no está en el directorio"}
+            {gasto.created_at ? ` el ${formatearFechaCorta(gasto.created_at)}` : ""}.
+          </p>
+        )}
+
         {gastoResuelto && (
           <div className="alert alert-secondary" role="alert">
             <div>Este gasto ya esta {gasto.estado} y no se puede editar.</div>
@@ -175,57 +187,61 @@ export default function ModalGasto({
             const opciones = categoriasDisponibles;
             return (
               <div key={campo.id} className="mb-3">
+                {/* Crear una opcion dentro de un formulario es una accion secundaria: boton en
+                    contorno con "+" debajo del selector, el mismo de "Crear una comunidad"
+                    (SelectorConAlta). El verde solido con icono de guardar es solo del boton que
+                    guarda el formulario. */}
                 {!creandoCategoria ? (
-                  <div className="d-flex align-items-center gap-2">
-                    <div className="flex-grow-1">
-                      <Selector
-                        label={campo.label}
-                        value={valores[campo.id] || null}
-                        options={opciones}
-                        onSelect={(valor) => {
-                          //  Garantizar texto plano SIEMPRE
-                          const valorFinal = extraerValor(valor);
-                          setCampo(campo.id, valorFinal);
-                        }}
-                        placeholder={opciones.length === 0 ? "Cargando..." : "Seleccionar"}
-                        disabled={
-                          bloqueado || (campo.validacion?.requerido && opciones.length === 0)
-                        }
-                      />
-                    </div>
-                    {!bloqueado && (
-                      <PrimaryButton
-                        title="+ Crear categoría nueva"
-                        onClick={() => setCreandoCategoria(true)}
-                      >
-                        + Crear categoría nueva
-                      </PrimaryButton>
-                    )}
-                  </div>
-                ) : (
-                  <div className="d-flex align-items-center gap-2">
-                    <div className="flex-grow-1">
-                      <TextField
-                        label="Nueva categoría"
-                        value={nombreNuevaCategoria}
-                        onChange={(e) => setNombreNuevaCategoria(e.target.value)}
-                        placeholder="Escribe el nombre..."
-                        autoFocus
-                      />
-                    </div>
-                    <PrimaryButton title="Guardar" onClick={agregarCategoria}>
-                      Guardar
-                    </PrimaryButton>
-                    <SecondaryButton
-                      title="Cancelar"
-                      onClick={() => {
-                        setCreandoCategoria(false);
-                        setNombreNuevaCategoria("");
+                  <>
+                    <Selector
+                      label={campo.label}
+                      value={valores[campo.id] || null}
+                      options={opciones}
+                      onSelect={(valor) => {
+                        //  Garantizar texto plano SIEMPRE
+                        const valorFinal = extraerValor(valor);
+                        setCampo(campo.id, valorFinal);
                       }}
-                    >
-                      Cancelar
-                    </SecondaryButton>
-                  </div>
+                      placeholder={opciones.length === 0 ? "Cargando..." : "Seleccionar"}
+                      disabled={bloqueado || (campo.validacion?.requerido && opciones.length === 0)}
+                    />
+                    {!bloqueado && (
+                      <SecondaryButton
+                        title="Crear categoría nueva"
+                        size="sm"
+                        icon={<Plus size={14} aria-hidden="true" />}
+                        onClick={() => setCreandoCategoria(true)}
+                      />
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <TextField
+                      label="Nueva categoría"
+                      value={nombreNuevaCategoria}
+                      onChange={(e) => setNombreNuevaCategoria(e.target.value)}
+                      placeholder="Escribe el nombre..."
+                      autoFocus
+                    />
+                    <div className="ec-acciones">
+                      <PrimaryButton
+                        title="Guardar"
+                        size="sm"
+                        onClick={agregarCategoria}
+                        disabled={!nombreNuevaCategoria.trim()}
+                      />
+                      <SecondaryButton
+                        title="Cancelar"
+                        variant="neutra"
+                        size="sm"
+                        icon={<X size={14} aria-hidden="true" />}
+                        onClick={() => {
+                          setCreandoCategoria(false);
+                          setNombreNuevaCategoria("");
+                        }}
+                      />
+                    </div>
+                  </>
                 )}
               </div>
             );

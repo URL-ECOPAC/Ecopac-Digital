@@ -58,6 +58,7 @@ export default function ProyectosSocialesPage({ usuarioRol }) {
     equipo,
     cargandoEquipo,
     errorEquipo,
+    ocupadoEquipo,
     personalDisponible,
     agregarAlEquipo,
     quitarDelEquipo,
@@ -473,6 +474,7 @@ export default function ProyectosSocialesPage({ usuarioRol }) {
                               <Button
                                 variant="danger"
                                 size="sm"
+                                disabled={ocupadoEquipo}
                                 onClick={async () => {
                                   const { ok, error } = await quitarDelEquipo(miembro.perfilId);
                                   setAvisoEquipo(
@@ -533,17 +535,22 @@ export default function ProyectosSocialesPage({ usuarioRol }) {
                     />
                     <Button
                       variant="outline-primary"
-                      disabled={!personaPorAgregar}
+                      disabled={!personaPorAgregar || ocupadoEquipo}
+                      aria-busy={ocupadoEquipo}
                       onClick={async () => {
-                        const { ok } = await agregarAlEquipo(personaPorAgregar, rolPorAgregar);
+                        const { ok, yaEstaba } = await agregarAlEquipo(
+                          personaPorAgregar,
+                          rolPorAgregar,
+                        );
                         setAvisoEquipo(null);
-                        if (ok) {
+                        // Si ya estaba en el equipo, tambien se limpia: la persona ya aparece.
+                        if (ok || yaEstaba) {
                           setPersonaPorAgregar("");
                           setRolPorAgregar("");
                         }
                       }}
                     >
-                      Agregar al equipo
+                      {ocupadoEquipo ? "Agregando..." : "Agregar al equipo"}
                     </Button>
                   </div>
                 )}

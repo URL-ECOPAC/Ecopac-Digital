@@ -61,7 +61,6 @@ const COLUMNAS_DE_JORNADA = [
   "presupuestoAsignado:presupuesto_asignado",
   "cupoEstimado:cupo_estimado",
   "botiquinBodegaId:botiquin_bodega_id",
-  "ordenKanban:orden_kanban",
   "fechaInicioReal:fecha_inicio_real",
   "fechaFinReal:fecha_fin_real",
   "createdAt:created_at",

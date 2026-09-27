@@ -55,7 +55,6 @@ const COLUMNAS_DEL_PROYECTO = [
   "responsableId:responsable_id",
   "estado",
   "porcentajeAvance:porcentaje_avance",
-  "ordenColumna:orden_columna",
   "createdAt:created_at",
   "updatedAt:updated_at",
   // Mismo patron que jornadas/api.js: la pantalla muestra al responsable por su nombre, y sin
@@ -95,7 +94,6 @@ function aColumnasDeTabla(datos = {}) {
     responsableId: "responsable_id",
     estado: "estado",
     porcentajeAvance: "porcentaje_avance",
-    ordenColumna: "orden_columna",
   };
 
   const fila = {};

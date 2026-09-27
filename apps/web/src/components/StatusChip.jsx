@@ -16,6 +16,7 @@
  * sobre el texto para no cambiar lo que anuncia un lector de pantalla.
  */
 import { Check, X } from "lucide-react";
+import { etiquetaDeValor } from "@ecopac/shared";
 
 /** Misma transformacion que usa theme.js: las claves del enum llevan espacios. */
 function variableDeEstado(status) {
@@ -27,8 +28,9 @@ const ICONOS = { si: Check, no: X };
 export default function StatusChip({ status, label, icono, uppercase = false }) {
   if (status === null || status === undefined || status === "") return null;
 
-  //  El texto se mantiene TAL CUAL llega — NUNCA se convierte si viene un label
-  let texto = label ?? String(status);
+  // Un label se respeta tal cual. Sin label, el valor crudo del enum ("aprobado", "en_curso") se
+  // lee como etiqueta: mayuscula inicial y sin guiones bajos.
+  let texto = label ?? etiquetaDeValor(status);
 
   //  SOLO convertir si NO hay label (compatibilidad con llamadas antiguas)
   // Si viene label, se conserva tal cual para que el test lo encuentre

@@ -56,13 +56,15 @@ describe("registrarOrigenDePresupuesto", () => {
     expect(error).toBeNull();
     expect(origen.monto).toBe(300);
     expect(cliente.llamadas).toContainEqual({ paso: "from", tabla: "jornada_presupuesto_origen" });
-    // La donacion solo viaja cuando el origen es una donacion: la base exige la coherencia.
+    // La donacion solo viaja cuando el origen es una donacion, y la fuente solo con un aporte
+    // externo: la base exige las dos coherencias (00135, 00149).
     expect(cliente.llamadas).toContainEqual({
       paso: "insert",
       valores: {
         jornada_id: "j1",
         origen: "fondos_propios",
         donacion_id: null,
+        fuente_id: null,
         monto: 300,
         descripcion: "Fondos",
       },

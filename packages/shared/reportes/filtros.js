@@ -121,7 +121,8 @@ export const FILTROS_VENCIMIENTOS = [
   {
     id: "horizonteDias",
     tipo: TIPOS_DE_FILTRO.SELECT,
-    label: "Horizonte",
+    // "Vencen en: Próximos 30 días". Decia "Horizonte", el termino tecnico del plazo.
+    label: "Vencen en",
     opciones: HORIZONTES_DISPONIBLES,
   },
   {

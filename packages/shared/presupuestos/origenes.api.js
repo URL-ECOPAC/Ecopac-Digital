@@ -27,6 +27,9 @@ const COLUMNAS_DEL_ORIGEN = [
   "registradoPor:registrado_por",
   "createdAt:created_at",
   "donacion:donaciones(fecha, donante:donantes(nombre))",
+  "fuenteId:fuente_id",
+  "fuente:fuentes_de_presupuesto(nombre)",
+  "registradoPorPerfil:perfiles!jornada_presupuesto_origen_registrado_por_fkey(nombres, apellidos)",
 ].join(", ");
 
 /**
@@ -54,13 +57,20 @@ function aOrigen(fila) {
   const detalleDeDonacion = donanteNombre
     ? `${donanteNombre}${fechaDonacion ? `, ${formatearFechaCorta(fechaDonacion)}` : ""}`
     : null;
+  const { registradoPorPerfil, fuente, ...resto } = fila;
+  const fuenteNombre = fuente?.nombre ?? null;
   return {
-    ...fila,
+    ...resto,
+    registradoPorNombre:
+      [registradoPorPerfil?.nombres, registradoPorPerfil?.apellidos].filter(Boolean).join(" ") ||
+      null,
     monto: Number(fila.monto),
     donanteNombre,
     fechaDonacion,
+    fuenteNombre,
     etiqueta: ETIQUETAS_ORIGEN_PRESUPUESTO[fila.origen] ?? fila.origen,
-    detalle: [detalleDeDonacion, fila.descripcion].filter(Boolean).join(" · ") || null,
+    detalle:
+      [detalleDeDonacion, fuenteNombre, fila.descripcion].filter(Boolean).join(" · ") || null,
   };
 }
 
@@ -95,14 +105,16 @@ export async function listarOrigenesDePresupuesto(jornadaId) {
  * temprano. Que una donacion no se asigne mas alla de su saldo lo decide la base
  * (fn_validar_origen_de_presupuesto), porque solo ella ve lo que ya asignaron las demas jornadas.
  *
- * @param {{ jornadaId: string, origen: string, donacionId?: string|null, monto: number|string,
- *   descripcion?: string|null }} datos
+ * @param {{ jornadaId: string, origen: string, donacionId?: string|null, fuenteId?: string|null,
+ *   monto: number|string, descripcion?: string|null }} datos `fuenteId` solo viaja con un aporte
+ *   externo (chk_presupuesto_origen_fuente_solo_externo, 00149).
  * @returns {Promise<{ origen: object|null, error: object|null }>}
  */
 export async function registrarOrigenDePresupuesto({
   jornadaId,
   origen,
   donacionId,
+  fuenteId,
   monto,
   descripcion,
 } = {}) {
@@ -121,6 +133,7 @@ export async function registrarOrigenDePresupuesto({
         jornada_id: jornadaId,
         origen,
         donacion_id: origen === ORIGENES_DE_PRESUPUESTO.DONACION ? donacionId || null : null,
+        fuente_id: origen === ORIGENES_DE_PRESUPUESTO.APORTE_EXTERNO ? fuenteId || null : null,
         monto: cantidad,
         descripcion: descripcion?.trim() || null,
       })
@@ -131,6 +144,52 @@ export async function registrarOrigenDePresupuesto({
     return { origen: aOrigen(data), error: null };
   } catch (error) {
     return { origen: null, error: normalizarError(error) };
+  }
+}
+
+/**
+ * Fuentes de aportes externos (fuentes_de_presupuesto, 00149), por nombre.
+ *
+ * @returns {Promise<{ fuentes: { id: string, nombre: string }[], error: object|null }>}
+ */
+export async function listarFuentesDePresupuesto() {
+  try {
+    const { data, error } = await obtenerSupabase()
+      .from("fuentes_de_presupuesto")
+      .select("id, nombre")
+      .order("nombre", { ascending: true });
+
+    if (error) return { fuentes: [], error: normalizarError(error) };
+    return { fuentes: data ?? [], error: null };
+  } catch (error) {
+    return { fuentes: [], error: normalizarError(error) };
+  }
+}
+
+/**
+ * Agrega una fuente de aporte externo al catalogo. El nombre no se repite ignorando mayusculas y
+ * espacios (uq_fuentes_de_presupuesto_nombre): repetirlo llega como violacion de unicidad.
+ *
+ * @param {string} nombre
+ * @returns {Promise<{ fuente: { id: string, nombre: string }|null, error: object|null }>}
+ */
+export async function crearFuenteDePresupuesto(nombre) {
+  const limpio = typeof nombre === "string" ? nombre.trim() : "";
+  if (!limpio) {
+    return { fuente: null, error: construirError(CODIGOS_DE_ERROR_DE_SUPABASE.CAMPO_REQUERIDO) };
+  }
+
+  try {
+    const { data, error } = await obtenerSupabase()
+      .from("fuentes_de_presupuesto")
+      .insert({ nombre: limpio })
+      .select("id, nombre")
+      .single();
+
+    if (error) return { fuente: null, error: normalizarError(error) };
+    return { fuente: data, error: null };
+  } catch (error) {
+    return { fuente: null, error: normalizarError(error) };
   }
 }
 

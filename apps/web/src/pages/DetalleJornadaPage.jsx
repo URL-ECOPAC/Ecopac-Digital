@@ -16,6 +16,7 @@ import {
   puedeVerReporteJornada,
   puedeVerRosterCompleto,
   seccionesDeDetalleJornada,
+  mayusculaInicial,
   useCuadroTurnos,
   useDetalleJornada,
   useResumenCierreJornada,
@@ -219,7 +220,7 @@ export default function DetalleJornadaPage() {
     rolEnJornada: capitalizar(fila.rolEnJornada),
     horaInicio: fila.horaInicio,
     horaFin: fila.horaFin,
-    responsabilidad: fila.responsabilidad,
+    responsabilidad: mayusculaInicial(fila.responsabilidad) || null,
     asistio: fila.asistio,
   }));
 

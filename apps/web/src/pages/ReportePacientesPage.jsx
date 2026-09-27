@@ -15,7 +15,7 @@ import ErrorState from "../components/ErrorState";
 import FilterBar from "../components/FilterBar";
 import LoadingState from "../components/LoadingState";
 import Paginacion from "../components/Paginacion";
-import SecondaryButton from "../components/SecondaryButton";
+import BotonesDeRango from "../components/BotonesDeRango";
 import Selector from "../components/Selector";
 import StatCard from "../components/StatCard";
 import CabeceraDeReporte, { ContenedorDeReporte } from "./CabeceraDeReporte";
@@ -140,17 +140,7 @@ export default function ReportePacientesPage({ incrustado = false }) {
 
       {/* Los presets de rango estaban escritos y probados en useFiltrosReportes desde la issue
           #208, y ninguna pantalla los dibujaba. */}
-      <div className="reporte-presets">
-        {presets.map((preset) => (
-          <SecondaryButton
-            key={preset.value}
-            size="sm"
-            title={preset.label}
-            variant={presetActivo === preset.value ? "outline" : "neutra"}
-            onClick={() => setPreset(preset.value)}
-          />
-        ))}
-      </div>
+      <BotonesDeRango opciones={presets} activo={presetActivo} onElegir={setPreset} />
 
       <FilterBar
         campos={definicionDeFiltros}

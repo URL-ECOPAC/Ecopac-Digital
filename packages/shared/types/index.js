@@ -311,7 +311,7 @@
 
 /**
  * Fila de `jornadas` (00012_jornadas.sql; codigo, fecha_inicio_real, fecha_fin_real,
- * orden_kanban, cupo_estimado y botiquin_bodega_id los agrega la 00036).
+ * cupo_estimado y botiquin_bodega_id los agrega la 00036; orden_kanban se retiro en la 00149).
  *
  * @typedef {object} Jornada
  * @property {string} id
@@ -328,7 +328,6 @@
  * @property {string|null} codigo
  * @property {string|null} fechaInicioReal
  * @property {string|null} fechaFinReal
- * @property {number|null} ordenKanban
  * @property {number|null} cupoEstimado
  * @property {string|null} botiquinBodegaId
  */
@@ -348,11 +347,22 @@
  * @property {string} jornadaId
  * @property {OrigenDePresupuesto} origen
  * @property {string|null} donacionId Obligatoria si y solo si origen es 'donacion'.
+ * @property {string|null} fuenteId Quien hizo un aporte externo (00149); solo con 'aporte_externo'.
  * @property {number} monto
  * @property {string|null} descripcion
  * @property {string|null} registradoPor
  * @property {string} createdAt
  * @property {string} updatedAt
+ */
+
+/**
+ * Fila de `fuentes_de_presupuesto` (00149): quien aporta de fuera al presupuesto de una jornada.
+ *
+ * @typedef {object} FuenteDePresupuesto
+ * @property {string} id
+ * @property {string} nombre
+ * @property {string|null} registradoPor
+ * @property {string} createdAt
  */
 
 /**
@@ -778,7 +788,8 @@
 // --- Proyectos ------------------------------------------------------------------------------
 
 /**
- * Fila de `proyectos` (00007_proyectos.sql; orden_columna lo agrega la 00029).
+ * Fila de `proyectos` (00007_proyectos.sql; la 00029 le agrego orden_columna y la 00149 se lo
+ * retiro, sin uso).
  *
  * `estado` es `estado_proyecto`, no `estado_jornada`: son dos enums distintos aunque compartan
  * el valor 'en curso'.
@@ -794,7 +805,6 @@
  * @property {number} porcentajeAvance
  * @property {string} createdAt
  * @property {string} updatedAt
- * @property {number} ordenColumna
  */
 
 /**

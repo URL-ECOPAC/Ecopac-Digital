@@ -7,3 +7,4 @@ export * from "./fechas.js";
 export * from "./moneda.js";
 export * from "./acciones.js";
 export * from "./opciones.js";
+export * from "./texto.js";

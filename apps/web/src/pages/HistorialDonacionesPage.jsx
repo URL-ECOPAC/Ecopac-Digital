@@ -3,6 +3,8 @@ import { Link } from "react-router-dom";
 import {
   ESTADOS_DE_DONACION,
   ETIQUETAS_TIPO_DONACION,
+  formatearFechaConHora,
+  formatearFechaCorta,
   formatearMoneda,
   TIPOS_DE_DONACION,
   useHistorialDonaciones,
@@ -24,6 +26,7 @@ import PageHeader from "../components/PageHeader";
 import BotonLimpiarFiltros from "../components/BotonLimpiarFiltros";
 import Selector from "../components/Selector";
 import StatCard from "../components/StatCard";
+import StatusChip from "../components/StatusChip";
 import TextField from "../components/TextField";
 import { ACCION_VOLVER_A_DONACIONES } from "./donacionesNavegacion";
 import ScreenContainer from "../components/ScreenContainer";
@@ -246,26 +249,38 @@ export default function HistorialDonacionesPage({ usuarioRol }) {
       {modalDetalle.modalDetalleAbierto && modalDetalle.donacionSeleccionada && (
         <Modal show={modalDetalle.modalDetalleAbierto} onHide={cerrarDetalleYAnulacion} centered>
           <Modal.Header closeButton>
-            <Modal.Title as="h5">
-              Detalle de Donación #{modalDetalle.donacionSeleccionada.id}
-            </Modal.Title>
+            <Modal.Title as="h5">Detalle de la donación</Modal.Title>
           </Modal.Header>
           <Modal.Body>
-            <div className="mb-3">
-              <p className="mb-1">
-                <strong>Donante:</strong> {modalDetalle.donacionSeleccionada.donanteNombre || "-"}
-              </p>
-              <p className="mb-1">
-                <strong>Tipo:</strong>{" "}
-                {ETIQUETAS_TIPO_DONACION[modalDetalle.donacionSeleccionada.tipo] ??
-                  modalDetalle.donacionSeleccionada.tipo}
-              </p>
-              <p className="mb-1">
-                <strong>Fecha:</strong> {modalDetalle.donacionSeleccionada.fecha}
-              </p>
-              <p className="mb-1">
-                <strong>Estado:</strong> {modalDetalle.donacionSeleccionada.estado}
-              </p>
+            {/* Ficha en dos columnas (rotulo arriba, dato abajo) en vez de una lista de
+                "Etiqueta: valor" corrida: se lee de un vistazo y el estado va con su chip. */}
+            <div className="row g-3 mb-3">
+              {[
+                ["Donante", modalDetalle.donacionSeleccionada.donanteNombre],
+                [
+                  "Tipo",
+                  ETIQUETAS_TIPO_DONACION[modalDetalle.donacionSeleccionada.tipo] ??
+                    modalDetalle.donacionSeleccionada.tipo,
+                ],
+                ["Fecha", formatearFechaCorta(modalDetalle.donacionSeleccionada.fecha)],
+                ["Proyecto", modalDetalle.donacionSeleccionada.proyectoNombre],
+                ["Registrada por", modalDetalle.donacionSeleccionada.registradoPorNombre],
+              ].map(([rotulo, valor]) => (
+                <div className="col-6" key={rotulo}>
+                  <div className="pac-rotulo">{rotulo}</div>
+                  <div>{valor || "—"}</div>
+                </div>
+              ))}
+              <div className="col-6">
+                <div className="pac-rotulo">Estado</div>
+                <StatusChip status={modalDetalle.donacionSeleccionada.estado} />
+              </div>
+              {modalDetalle.donacionSeleccionada.observaciones && (
+                <div className="col-12">
+                  <div className="pac-rotulo">Observaciones</div>
+                  <div>{modalDetalle.donacionSeleccionada.observaciones}</div>
+                </div>
+              )}
             </div>
 
             {modalDetalle.donacionSeleccionada.estado === ESTADOS_DE_DONACION.ANULADA && (
@@ -280,30 +295,46 @@ export default function HistorialDonacionesPage({ usuarioRol }) {
                 </p>
                 <p className="mb-0">
                   <strong>Fecha de Anulación:</strong>{" "}
-                  {modalDetalle.donacionSeleccionada.anuladaEn || "-"}
+                  {formatearFechaConHora(modalDetalle.donacionSeleccionada.anuladaEn) || "-"}
                 </p>
               </Alert>
             )}
 
-            <hr />
-            <h6 className="fw-bold mb-2">Renglones del Detalle:</h6>
-            <ul className="mb-0 ps-3">
-              {(modalDetalle.donacionSeleccionada.detalles || []).length === 0 ? (
-                <li>Sin detalles registrados</li>
-              ) : (
-                modalDetalle.donacionSeleccionada.detalles.map((item) => (
-                  <li key={item.id}>
-                    {item.descripcion}
-                    {item.cantidad !== null && item.cantidad !== undefined
-                      ? ` - ${item.cantidad} ${item.unidad || "unidades"}`
-                      : ""}
-                    {item.monto !== null && item.monto !== undefined
-                      ? ` - Q ${Number(item.monto).toFixed(2)}`
-                      : ""}
-                  </li>
-                ))
-              )}
-            </ul>
+            <div className="pac-rotulo mb-2">Qué se donó</div>
+            {(modalDetalle.donacionSeleccionada.detalles || []).length === 0 ? (
+              <p className="text-body-secondary mb-0">Sin detalles registrados.</p>
+            ) : (
+              <div className="ec-tabla">
+                <Table size="sm" className="mb-0">
+                  <thead>
+                    <tr>
+                      <th>Descripción</th>
+                      <th className="text-end">Cantidad</th>
+                      {/* El monto solo dice algo en una donacion en dinero: en una de
+                          medicamentos era siempre "Q 0.00". */}
+                      {modalDetalle.donacionSeleccionada.tipo === TIPOS_DE_DONACION.DINERO && (
+                        <th className="text-end">Monto</th>
+                      )}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {modalDetalle.donacionSeleccionada.detalles.map((item) => (
+                      <tr key={item.id}>
+                        <td>{item.descripcion}</td>
+                        <td className="text-end">
+                          {item.cantidad !== null && item.cantidad !== undefined
+                            ? `${item.cantidad} ${item.unidad || "unidades"}`
+                            : "—"}
+                        </td>
+                        {modalDetalle.donacionSeleccionada.tipo === TIPOS_DE_DONACION.DINERO && (
+                          <td className="text-end">{formatearMoneda(item.monto) ?? "—"}</td>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </Table>
+              </div>
+            )}
 
             {/* Issue #756: anularDonacion() ya existia (issue #635), sin ningun boton que la
                 llamara. */}

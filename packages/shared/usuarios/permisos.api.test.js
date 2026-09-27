@@ -413,7 +413,14 @@ describe("listarAccesosPorRol", () => {
   it("devuelve las filas de rol_modulo tal cual, ordenadas por rol y modulo", async () => {
     const { cliente, llamadas } = clienteConTablas({
       rol_modulo: {
-        data: [{ rol: ROLES.JUNTA_DIRECTIVA, modulo: "pacientes" }],
+        data: [
+          {
+            rol: ROLES.JUNTA_DIRECTIVA,
+            modulo: "pacientes",
+            otorgadoEn: "2026-09-26T10:00:00Z",
+            otorgadoPor: { nombres: "Ana", apellidos: "Prueba" },
+          },
+        ],
         error: null,
       },
     });
@@ -422,7 +429,15 @@ describe("listarAccesosPorRol", () => {
     const { accesos, error } = await listarAccesosPorRol();
 
     expect(error).toBeNull();
-    expect(accesos).toEqual([{ rol: ROLES.JUNTA_DIRECTIVA, modulo: "pacientes" }]);
+    // Quien lo abrio llega como nombre plano, no como el perfil embebido.
+    expect(accesos).toEqual([
+      {
+        rol: ROLES.JUNTA_DIRECTIVA,
+        modulo: "pacientes",
+        otorgadoEn: "2026-09-26T10:00:00Z",
+        otorgadoPorNombre: "Ana Prueba",
+      },
+    ]);
     expect(pasos(llamadas, { tabla: "rol_modulo", paso: "order" })).toHaveLength(2);
   });
 

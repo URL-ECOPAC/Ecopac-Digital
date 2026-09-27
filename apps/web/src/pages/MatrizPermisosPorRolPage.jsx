@@ -7,6 +7,7 @@ import {
   esConsultivo,
   ESTADOS_DE_ACCESO,
   ETIQUETAS_ROL,
+  formatearFechaCorta,
   useMatrizDeAccesoPorRol,
 } from "@ecopac/shared";
 
@@ -95,6 +96,13 @@ function CeldaDeAcceso({ fila, celda, enProceso, aviso, onAlternar }) {
           </span>
         )}
       </div>
+      {/* Quien lo abrio y cuando (rol_modulo.otorgado_por/otorgado_en). */}
+      {abierto && celda.otorgamiento?.otorgadoEn && (
+        <div className="small text-body-secondary">
+          {celda.otorgamiento.otorgadoPorNombre ? `${celda.otorgamiento.otorgadoPorNombre}, ` : ""}
+          {formatearFechaCorta(celda.otorgamiento.otorgadoEn)}
+        </div>
+      )}
       {aviso?.rol === celda.rol && aviso?.modulo === fila.modulo && (
         <div className="text-danger small">{aviso.mensaje}</div>
       )}

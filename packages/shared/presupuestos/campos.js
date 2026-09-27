@@ -62,6 +62,14 @@ export const CAMPOS_ORIGEN_PRESUPUESTO = [
     validacion: { requerido: true },
   },
   {
+    // Quien aporta de fuera (fuentes_de_presupuesto, 00149). Opcional: el detalle libre sigue.
+    id: "fuenteId",
+    label: "Quién aporta",
+    tipo: TIPOS_DE_CAMPO.SELECT,
+    opcionesDesde: "fuentesDePresupuesto",
+    validacion: { requerido: false },
+  },
+  {
     id: "monto",
     label: "Monto (Q)",
     tipo: TIPOS_DE_CAMPO.NUMERO,
@@ -80,15 +88,18 @@ export const CAMPOS_ORIGEN_PRESUPUESTO = [
 
 /**
  * Los campos que aplican segun el origen elegido: la donacion solo se pide si el origen es una
- * donacion (chk_presupuesto_origen_donacion_coherente, 00135).
+ * donacion (chk_presupuesto_origen_donacion_coherente, 00135), y la fuente solo en un aporte
+ * externo (chk_presupuesto_origen_fuente_solo_externo, 00149).
  *
  * @param {string} origen
  * @returns {object[]}
  */
 export function camposDeOrigenDePresupuesto(origen) {
-  return CAMPOS_ORIGEN_PRESUPUESTO.filter(
-    (campo) => campo.id !== "donacionId" || origen === ORIGENES_DE_PRESUPUESTO.DONACION,
-  );
+  return CAMPOS_ORIGEN_PRESUPUESTO.filter((campo) => {
+    if (campo.id === "donacionId") return origen === ORIGENES_DE_PRESUPUESTO.DONACION;
+    if (campo.id === "fuenteId") return origen === ORIGENES_DE_PRESUPUESTO.APORTE_EXTERNO;
+    return true;
+  });
 }
 
 export const OPCIONES_CATEGORIA_GASTO = opcionesDe(CATEGORIAS_DE_GASTO, ETIQUETAS_CATEGORIA_GASTO);

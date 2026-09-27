@@ -7,16 +7,16 @@
 
 import { formatearFechaConHora, formatearFechaCorta } from "../formato/fechas.js";
 
-// Las unicas columnas en ingles de las tablas auditadas: las marcas de tiempo que cada tabla trae
-// desde su migracion de creacion. El resto ya esta en español y basta con separar las palabras.
-const NOMBRES_DE_CAMPO = {
-  created_at: "Creado",
-  updated_at: "Actualizado",
-};
+// Columnas tecnicas que no se muestran en el detalle: el identificador de la fila y las marcas de
+// tiempo que cada tabla trae desde su migracion de creacion. El evento ya dice cuando ocurrio
+// (realizado_en), y updated_at cambia en cada actualizacion, asi que en un "cambio" siempre
+// aparecia como si fuera parte de lo que se modifico.
+export const CAMPOS_TECNICOS_DE_AUDITORIA = Object.freeze(["id", "created_at", "updated_at"]);
 
-/** "fecha_nacimiento" -> "Fecha Nacimiento". Genérico: solo traduce las columnas en ingles. */
+const esCampoVisible = (clave) => !CAMPOS_TECNICOS_DE_AUDITORIA.includes(clave);
+
+/** "fecha_nacimiento" -> "Fecha Nacimiento". Las columnas del esquema ya estan en español. */
 export function nombreDeCampo(clave) {
-  if (NOMBRES_DE_CAMPO[clave]) return NOMBRES_DE_CAMPO[clave];
   return clave
     .split("_")
     .map((palabra) => palabra.charAt(0).toUpperCase() + palabra.slice(1))
@@ -62,28 +62,33 @@ export function diferenciaDeEvento({ valoresAnteriores, valoresNuevos }) {
   if (!valoresAnteriores) {
     return {
       tipo: "creacion",
-      campos: Object.entries(valoresNuevos ?? {}).map(([clave, valor]) => ({
-        clave,
-        nombre: nombreDeCampo(clave),
-        valor: formatearValorDeAuditoria(valor),
-      })),
+      campos: Object.entries(valoresNuevos ?? {})
+        .filter(([clave]) => esCampoVisible(clave))
+        .map(([clave, valor]) => ({
+          clave,
+          nombre: nombreDeCampo(clave),
+          valor: formatearValorDeAuditoria(valor),
+        })),
     };
   }
 
   if (!valoresNuevos) {
     return {
       tipo: "eliminacion",
-      campos: Object.entries(valoresAnteriores ?? {}).map(([clave, valor]) => ({
-        clave,
-        nombre: nombreDeCampo(clave),
-        valor: formatearValorDeAuditoria(valor),
-      })),
+      campos: Object.entries(valoresAnteriores ?? {})
+        .filter(([clave]) => esCampoVisible(clave))
+        .map(([clave, valor]) => ({
+          clave,
+          nombre: nombreDeCampo(clave),
+          valor: formatearValorDeAuditoria(valor),
+        })),
     };
   }
 
   const claves = new Set([...Object.keys(valoresAnteriores), ...Object.keys(valoresNuevos)]);
   const campos = [];
   for (const clave of claves) {
+    if (!esCampoVisible(clave)) continue;
     const antes = valoresAnteriores[clave];
     const despues = valoresNuevos[clave];
     if (JSON.stringify(antes) === JSON.stringify(despues)) continue;

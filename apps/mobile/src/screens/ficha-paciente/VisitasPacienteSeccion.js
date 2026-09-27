@@ -81,6 +81,7 @@ function Receta({ receta, onImprimir, imprimiendo }) {
           {describirMedicamento(renglon)}
           {describirPosologia(renglon) ? ` — ${describirPosologia(renglon)}` : ""}
           {describirEntrega(renglon).texto ? ` (${describirEntrega(renglon).texto})` : ""}
+          {renglon.bodega ? `. Salió de ${renglon.bodega}` : ""}
         </Text>
       ))}
       {onImprimir ? (
@@ -178,6 +179,14 @@ function Visita({
               ))
             )}
           </Parte>
+          {/* Cierre de la visita (atenciones.cerrada_en y motivo_cierre, 00060). La web ya lo
+              mostraba; una visita que se cerro sin consulta no dejaba rastro en el telefono. */}
+          {visita.cerradaEn ? (
+            <Text style={[styles.tenue, styles.cierre]}>
+              Visita cerrada el {formatearFechaCorta(visita.cerradaEn)}
+              {visita.motivoCierre ? `: ${visita.motivoCierre}` : ""}
+            </Text>
+          ) : null}
           {onAbrirEntrega && visita.recetas.length > 0 ? (
             <SecondaryButton
               title="Entrega de medicamentos"
@@ -354,6 +363,9 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.sm,
   },
   accionReceta: {
+    marginTop: spacing.sm,
+  },
+  cierre: {
     marginTop: spacing.sm,
   },
   accion: {

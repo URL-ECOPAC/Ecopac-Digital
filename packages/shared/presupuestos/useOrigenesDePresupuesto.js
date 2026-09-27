@@ -15,7 +15,9 @@ import { formatearFechaCorta } from "../formato/fechas.js";
 import { formatearMoneda } from "../formato/moneda.js";
 import { camposDeOrigenDePresupuesto } from "./campos.js";
 import {
+  crearFuenteDePresupuesto,
   listarDonacionesConSaldo,
+  listarFuentesDePresupuesto,
   listarOrigenesDePresupuesto,
   quitarOrigenDePresupuesto,
   registrarOrigenDePresupuesto,
@@ -26,6 +28,7 @@ import { validarOrigenDePresupuesto } from "./validaciones.js";
 const VALORES_VACIOS = {
   origen: ORIGENES_DE_PRESUPUESTO.FONDOS_PROPIOS,
   donacionId: "",
+  fuenteId: "",
   monto: "",
   descripcion: "",
 };
@@ -54,6 +57,9 @@ export function useOrigenesDePresupuesto({ jornadaId, proyectoId = null, rol, al
 
   const [origenes, setOrigenes] = useState([]);
   const [donaciones, setDonaciones] = useState([]);
+  const [fuentes, setFuentes] = useState([]);
+  const [creandoFuente, setCreandoFuente] = useState(false);
+  const [errorFuente, setErrorFuente] = useState(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
 
@@ -69,15 +75,19 @@ export function useOrigenesDePresupuesto({ jornadaId, proyectoId = null, rol, al
       return;
     }
     setCargando(true);
-    const [lista, conSaldo] = await Promise.all([
+    const [lista, conSaldo, catalogoDeFuentes] = await Promise.all([
       listarOrigenesDePresupuesto(jornadaId),
       permisos.puedeGestionar
         ? listarDonacionesConSaldo({ proyectoId })
         : Promise.resolve({ donaciones: [], error: null }),
+      permisos.puedeGestionar
+        ? listarFuentesDePresupuesto()
+        : Promise.resolve({ fuentes: [], error: null }),
     ]);
     setOrigenes(lista.origenes);
     setDonaciones(conSaldo.donaciones);
-    setError(lista.error ?? conSaldo.error);
+    setFuentes(catalogoDeFuentes.fuentes);
+    setError(lista.error ?? conSaldo.error ?? catalogoDeFuentes.error);
     setCargando(false);
   }, [jornadaId, proyectoId, permisos.puedeVer, permisos.puedeGestionar]);
 
@@ -98,6 +108,9 @@ export function useOrigenesDePresupuesto({ jornadaId, proyectoId = null, rol, al
         }
         if (id === "origen" && valor !== ORIGENES_DE_PRESUPUESTO.DONACION) {
           siguientes.donacionId = "";
+        }
+        if (id === "origen" && valor !== ORIGENES_DE_PRESUPUESTO.APORTE_EXTERNO) {
+          siguientes.fuenteId = "";
         }
         return siguientes;
       });
@@ -152,6 +165,34 @@ export function useOrigenesDePresupuesto({ jornadaId, proyectoId = null, rol, al
     [cargar, alCambiar],
   );
 
+  /**
+   * Agrega una fuente de aporte externo y la deja elegida en el formulario (origen "Aporte
+   * externo"). Es lo que hace "Crear fuente": antes cerraba un modal sin guardar nada.
+   *
+   * @param {string} nombre
+   * @returns {Promise<boolean>}
+   */
+  const crearFuente = useCallback(async (nombre) => {
+    setCreandoFuente(true);
+    setErrorFuente(null);
+    const { fuente, error: fallo } = await crearFuenteDePresupuesto(nombre);
+    setCreandoFuente(false);
+    if (fallo) {
+      setErrorFuente(fallo);
+      return false;
+    }
+    setFuentes((anteriores) =>
+      [...anteriores, fuente].sort((a, b) => a.nombre.localeCompare(b.nombre, "es")),
+    );
+    setValores((anteriores) => ({
+      ...anteriores,
+      origen: ORIGENES_DE_PRESUPUESTO.APORTE_EXTERNO,
+      donacionId: "",
+      fuenteId: fuente.id,
+    }));
+    return true;
+  }, []);
+
   const total = useMemo(
     () => origenes.reduce((suma, origen) => suma + (Number(origen.monto) || 0), 0),
     [origenes],
@@ -166,7 +207,14 @@ export function useOrigenesDePresupuesto({ jornadaId, proyectoId = null, rol, al
     recargar: cargar,
 
     campos: camposDeOrigenDePresupuesto(valores.origen),
-    catalogos: { donacionesDisponibles: donaciones.map(opcionDeDonacionConSaldo) },
+    catalogos: {
+      donacionesDisponibles: donaciones.map(opcionDeDonacionConSaldo),
+      fuentesDePresupuesto: fuentes.map((fuente) => ({ value: fuente.id, label: fuente.nombre })),
+    },
+    crearFuente,
+    creandoFuente,
+    errorFuente,
+    limpiarErrorFuente: () => setErrorFuente(null),
     valores,
     setCampo,
     errores,

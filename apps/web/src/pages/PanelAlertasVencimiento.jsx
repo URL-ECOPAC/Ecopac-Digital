@@ -1,5 +1,9 @@
 import { useState } from "react";
-import { ETIQUETAS_ACCION_ALERTA, useAlertasVencimiento } from "@ecopac/shared";
+import {
+  ETIQUETAS_ACCION_ALERTA,
+  formatearFechaConHora,
+  useAlertasVencimiento,
+} from "@ecopac/shared";
 import DataList from "../components/DataList";
 import EmptyState from "../components/EmptyState";
 import ErrorState from "../components/ErrorState";
@@ -134,6 +138,11 @@ export default function PanelAlertasVencimiento() {
                     id: "atendidaPorNombre",
                     label: "Atendido por",
                     formatear: (fila) => fila.atendidaPorNombre || "—",
+                  },
+                  {
+                    id: "atendidaEn",
+                    label: "Atendida el",
+                    formatear: (fila) => formatearFechaConHora(fila.atendidaEn) || "—",
                   },
                 ]}
                 datos={atendidas}

@@ -14,9 +14,7 @@ export const COLUMNAS_PROYECTO = [
   },
   { id: "fechaInicio", label: "Inicio", tipo: TIPOS_DE_PRESENTACION.FECHA },
   { id: "fechaFin", label: "Fin", tipo: TIPOS_DE_PRESENTACION.FECHA },
-  // proyectos.estado guarda el valor del enum tal cual (00007): CHIP, no ESTADO. Se usa la
-  // columna real `estado`, NO `etapa` -tableroProyectosApi.js lee `proyecto.etapa`, que no es
-  // una columna real desde la 00029 (bug preexistente, fuera de alcance de esta issue).
+  // proyectos.estado guarda el valor del enum tal cual (00007): CHIP, no ESTADO.
   { id: "estado", label: "Estado", tipo: TIPOS_DE_PRESENTACION.CHIP },
   { id: "porcentajeAvance", label: "Avance", tipo: TIPOS_DE_PRESENTACION.NUMERO, sufijo: "%" },
 ];
@@ -89,4 +87,6 @@ export const COLUMNAS_INSUMO_PROYECTO = [
   { id: "unidad", label: "Unidad", tipo: TIPOS_DE_PRESENTACION.TEXTO },
   { id: "costoUnitarioEstimado", label: "Costo unitario", tipo: TIPOS_DE_PRESENTACION.MONEDA },
   { id: "costoTotalEstimado", label: "Costo total", tipo: TIPOS_DE_PRESENTACION.MONEDA },
+  // Se escribia al agregar el insumo y no se veia en ningun lado.
+  { id: "nota", label: "Nota", tipo: TIPOS_DE_PRESENTACION.TEXTO },
 ];

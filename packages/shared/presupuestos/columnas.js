@@ -37,6 +37,9 @@ export const COLUMNAS_ORIGEN_PRESUPUESTO = [
   { id: "etiqueta", label: "Origen", tipo: TIPOS_DE_PRESENTACION.TEXTO, principal: true },
   { id: "detalle", label: "Detalle", tipo: TIPOS_DE_PRESENTACION.TEXTO },
   { id: "monto", label: "Monto", tipo: TIPOS_DE_PRESENTACION.MONEDA },
+  // Quien asigno el aporte y cuando: jornada_presupuesto_origen lo guarda desde la 00135.
+  { id: "registradoPorNombre", label: "Registrado por", tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  { id: "createdAt", label: "Fecha", tipo: TIPOS_DE_PRESENTACION.FECHA },
 ];
 
 export const COLUMNAS_GASTO = [

@@ -1,9 +1,11 @@
 import { useState } from "react";
 import {
   COLUMNAS_HISTORIAL_PROYECTO,
+  ESTADOS_PROYECTO,
   ETIQUETAS_ESTADO_PROYECTO,
   formatearFechaConHora,
   puedeVerSeguimientoProyecto,
+  transicionesDeProyectoDesde,
   useSeguimientoProyecto,
 } from "@ecopac/shared";
 import { Container, Row, Col, Card, Form, Button, Badge, Alert, Spinner } from "react-bootstrap";
@@ -25,6 +27,10 @@ function capitalizar(texto) {
     .map((palabra) => palabra.charAt(0).toUpperCase() + palabra.slice(1).toLowerCase())
     .join(" ");
 }
+
+// Un estado sin salidas (TRANSICIONES_PROYECTO, espejo del trigger) no tiene vuelta atras: se
+// confirma antes de aplicarlo.
+const esEstadoTerminal = (estado) => transicionesDeProyectoDesde(estado).length === 0;
 
 /** Nombre completo de un perfil embebido ({ nombres, apellidos }), o `null` si no llegó. */
 function nombreDePerfil(perfil) {
@@ -53,10 +59,13 @@ export default function SeguimientoProyectoPage({ proyectoId, proyectoInicial, r
     guardarSeguimiento,
     cambiarEstadoHito,
     guardarHito,
+    estadosSiguientes,
+    cambiarEstado,
   } = useSeguimientoProyecto({ proyectoId, proyectoInicial, rol });
 
   const [hitoEnEdicion, setHitoEnEdicion] = useState(null);
   const [formularioHitoAbierto, setFormularioHitoAbierto] = useState(false);
+  const [estadoPorConfirmar, setEstadoPorConfirmar] = useState(null);
 
   // 00148: el personal de campo ve el proyecto en consulta, sin su seguimiento. La lista ya no le
   // ofrece el enlace; esto cubre a quien escriba la direccion a mano.
@@ -128,6 +137,64 @@ export default function SeguimientoProyectoPage({ proyectoId, proyectoInicial, r
           </div>
         )}
       </PageHeader>
+
+      {/* Estado del proyecto. Hasta aqui la web no tenia donde cambiarlo (solo el kanban movil).
+          Finalizar y cancelar no tienen vuelta atras (el trigger de la 00029 los deja
+          terminales), por eso piden confirmacion. */}
+      {estadosSiguientes.length > 0 && (
+        <Card className="border shadow-sm mb-4">
+          <Card.Body className="p-4">
+            <Card.Title as="h5" className="mb-2 text-dark fw-bold">
+              Estado del proyecto
+            </Card.Title>
+            {estadoPorConfirmar ? (
+              <div className="d-flex flex-wrap align-items-center gap-2">
+                <span className="small">
+                  ¿Pasar el proyecto a{" "}
+                  <strong>{ETIQUETAS_ESTADO_PROYECTO[estadoPorConfirmar]}</strong>? No se podrá
+                  volver a abrir.
+                </span>
+                <Button
+                  variant={estadoPorConfirmar === ESTADOS_PROYECTO.CANCELADO ? "danger" : "primary"}
+                  size="sm"
+                  disabled={cargandoAccion}
+                  onClick={async () => {
+                    await cambiarEstado(estadoPorConfirmar);
+                    setEstadoPorConfirmar(null);
+                  }}
+                >
+                  Confirmar
+                </Button>
+                <SecondaryButton
+                  title="Cancelar"
+                  size="sm"
+                  onClick={() => setEstadoPorConfirmar(null)}
+                />
+              </div>
+            ) : (
+              <div className="d-flex flex-wrap gap-2">
+                {estadosSiguientes.map((estado) => (
+                  <Button
+                    key={estado}
+                    variant={
+                      estado === ESTADOS_PROYECTO.CANCELADO ? "outline-danger" : "outline-primary"
+                    }
+                    size="sm"
+                    disabled={cargandoAccion}
+                    onClick={() =>
+                      esEstadoTerminal(estado)
+                        ? setEstadoPorConfirmar(estado)
+                        : cambiarEstado(estado)
+                    }
+                  >
+                    Pasar a {ETIQUETAS_ESTADO_PROYECTO[estado] ?? estado}
+                  </Button>
+                ))}
+              </div>
+            )}
+          </Card.Body>
+        </Card>
+      )}
 
       {/* Indicadores Agregados */}
       <Row className="g-3 mb-4">

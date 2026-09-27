@@ -292,9 +292,10 @@ export async function listarUsuarios({
 }
 
 /**
- * Cuenta en cuantas jornadas participo cada perfil de la lista que se le pase.
+ * Cuenta en cuantas jornadas participo cada perfil de la lista que se le pase: con turno o como
+ * responsable.
  *
- * Una sola consulta a jornada_personal para todos los perfiles de la pagina, y el conteo se
+ * Dos consultas para todos los perfiles de la pagina (turnos y responsables), y el conteo se
  * hace aqui. Es a proposito: obtenerJornadasDePersona() de jornadas/api.js resuelve una persona
  * a la vez, y llamarla por fila seria el N+1 que fn_atenciones_de_persona_por_jornada (00059) se
  * escribio justamente para evitar.
@@ -312,17 +313,29 @@ export async function contarJornadasPorPerfil(perfilIds = []) {
   }
 
   try {
-    const { data, error } = await obtenerSupabase()
-      .from("jornada_personal")
-      .select("perfil_id")
-      .in("perfil_id", perfilIds);
+    // Mismas dos formas de participar que obtenerJornadasDePersona() (issue #838): estar en el
+    // cuadro de turnos o ser la responsable de la jornada. Solo contaba la primera, y la lista de
+    // colaboradores decia "1 jornada" mientras el historial de la misma persona mostraba dos.
+    // Se cuentan jornadas distintas: ser responsable y tener turno en la misma cuenta una vez.
+    const supabase = obtenerSupabase();
+    const [turnos, responsables] = await Promise.all([
+      supabase.from("jornada_personal").select("perfil_id, jornada_id").in("perfil_id", perfilIds),
+      supabase.from("jornadas").select("id, responsable_id").in("responsable_id", perfilIds),
+    ]);
 
-    if (error) return { conteos: {}, error: normalizarError(error) };
+    if (turnos.error) return { conteos: {}, error: normalizarError(turnos.error) };
+    if (responsables.error) return { conteos: {}, error: normalizarError(responsables.error) };
+
+    const jornadasPorPerfil = new Map();
+    const anotar = (perfilId, jornadaId) => {
+      if (!jornadasPorPerfil.has(perfilId)) jornadasPorPerfil.set(perfilId, new Set());
+      jornadasPorPerfil.get(perfilId).add(jornadaId);
+    };
+    for (const fila of turnos.data ?? []) anotar(fila.perfil_id, fila.jornada_id);
+    for (const fila of responsables.data ?? []) anotar(fila.responsable_id, fila.id);
 
     const conteos = {};
-    for (const fila of data ?? []) {
-      conteos[fila.perfil_id] = (conteos[fila.perfil_id] ?? 0) + 1;
-    }
+    for (const [perfilId, jornadas] of jornadasPorPerfil) conteos[perfilId] = jornadas.size;
 
     return { conteos, error: null };
   } catch (error) {

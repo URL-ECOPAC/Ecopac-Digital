@@ -155,7 +155,7 @@ describe("ReportesPage", () => {
     pantalla();
     irAVencimientos();
 
-    expect(screen.getByText("Ningún lote vence dentro del horizonte elegido.")).toBeInTheDocument();
+    expect(screen.getByText("Ningún lote vence dentro del plazo elegido.")).toBeInTheDocument();
     expect(screen.getByText("Unidades en riesgo")).toBeInTheDocument();
   });
 
@@ -211,7 +211,7 @@ describe("ReportesPage", () => {
 
     expect(screen.getByText("No se pudo cargar el reporte de vencimientos.")).toBeInTheDocument();
     expect(
-      screen.queryByText("Ningún lote vence dentro del horizonte elegido."),
+      screen.queryByText("Ningún lote vence dentro del plazo elegido."),
     ).not.toBeInTheDocument();
   });
 

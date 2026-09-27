@@ -487,8 +487,8 @@ export default function InventarioPage() {
     [lotesRaw, disponiblePorLote],
   );
   const medicamentosVisibles = useMemo(
-    () => filtrarCatalogoMedicamentos(inventarioRaw, filtrosCatalogo, resumenDeLotes),
-    [inventarioRaw, filtrosCatalogo, resumenDeLotes],
+    () => filtrarCatalogoMedicamentos(inventarioRaw, filtrosCatalogo),
+    [inventarioRaw, filtrosCatalogo],
   );
 
   // Para el filtro de presentacion (opcionesDesde: "presentaciones", 00144) y para el Selector
@@ -714,9 +714,9 @@ export default function InventarioPage() {
                   <th>Presentacion</th>
                   <th>Marca</th>
                   <th>Uso</th>
-                  <th className="text-end">Lotes</th>
+                  {/* Sin "Lotes" ni "Proximo vencimiento": el catalogo es de productos. Los lotes
+                      y sus vencimientos estan en la pestana Lotes y en Alertas. */}
                   <th className="text-end">Disponible</th>
-                  <th>Proximo vencimiento</th>
                   <th>Estado</th>
                   {esAdmin && <th className="text-end">Acciones</th>}
                 </tr>
@@ -724,19 +724,13 @@ export default function InventarioPage() {
               <tbody>
                 {cargando ? (
                   <tr>
-                    <td
-                      colSpan={esAdmin ? 11 : 10}
-                      className="text-center text-body-secondary py-4"
-                    >
+                    <td colSpan={esAdmin ? 8 : 7} className="text-center text-body-secondary py-4">
                       Cargando el catalogo...
                     </td>
                   </tr>
                 ) : medicamentosVisibles.length === 0 ? (
                   <tr>
-                    <td
-                      colSpan={esAdmin ? 11 : 10}
-                      className="text-center text-body-secondary py-4"
-                    >
+                    <td colSpan={esAdmin ? 8 : 7} className="text-center text-body-secondary py-4">
                       {inventarioRaw.length === 0
                         ? "Todavia no hay medicamentos en el catalogo."
                         : "Ningun medicamento coincide con estos filtros."}
@@ -773,27 +767,7 @@ export default function InventarioPage() {
                             {item.esPediatrico ? "Pediatrico" : "General"}
                           </span>
                         </td>
-                        <td className="text-end">
-                          {lotes?.lotes ?? 0}
-                          {lotes?.vencidos > 0 && (
-                            <span className="d-block small text-danger">
-                              {lotes.vencidos} vencido{lotes.vencidos === 1 ? "" : "s"}
-                            </span>
-                          )}
-                        </td>
                         <td className="text-end">{lotes?.disponible ?? 0}</td>
-                        <td>
-                          {lotes?.proximoVencimiento ? (
-                            <>
-                              {formatearFechaCorta(lotes.proximoVencimiento)}
-                              <span className="d-block small text-body-secondary">
-                                en {lotes.diasParaProximo} dias
-                              </span>
-                            </>
-                          ) : (
-                            <span className="text-body-secondary">Sin lotes vigentes</span>
-                          )}
-                        </td>
                         <td>
                           <StatusChip
                             status={item.activo === false ? "inactivo" : "activo"}
@@ -895,8 +869,22 @@ export default function InventarioPage() {
                         <td>
                           <strong>{lote.medicamento}</strong>
                         </td>
-                        <td className="ec-mono">{lote.numeroLote}</td>
-                        <td>{ETIQUETAS_ORIGEN_LOTE[lote.origen] ?? lote.origen}</td>
+                        <td>
+                          <span className="ec-mono">{lote.numeroLote}</span>
+                          {/* Cuando entro y quien lo dio de alta: se guardaban y no se veian. */}
+                          <span className="d-block small text-body-secondary">
+                            Ingreso {formatearFechaCorta(lote.fechaIngreso) || "sin fecha"}
+                            {lote.registradoPorNombre ? ` · ${lote.registradoPorNombre}` : ""}
+                          </span>
+                        </td>
+                        <td>
+                          {ETIQUETAS_ORIGEN_LOTE[lote.origen] ?? lote.origen}
+                          {lote.proveedor && (
+                            <span className="d-block small text-body-secondary">
+                              {lote.proveedor}
+                            </span>
+                          )}
+                        </td>
                         <td className="text-end">{lote.cantidadIngresada}</td>
                         <td className="text-end">{disponiblePorLote.get(lote.id) ?? 0}</td>
                         <td className="text-end">

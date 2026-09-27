@@ -24,13 +24,23 @@ import { obtenerMisAccesos } from "../usuarios/permisos.api.js";
  * sin ella, y el menu no le mostraria el modulo donde la tiene que usar.
  */
 async function resolverPerfilYAccesos(usuario) {
-  const evaluacion = await evaluarPerfilDeSesion(usuario);
+  // Las dos lecturas en paralelo: no dependen una de otra (mis_accesos() resuelve por auth.uid()),
+  // y en serie cada inicio de sesion -y cada vuelta a la pestana- esperaba dos viajes al servidor.
+  const [evaluacion, respuestaDeAccesos] = await Promise.all([
+    evaluarPerfilDeSesion(usuario),
+    obtenerMisAccesos(),
+  ]);
   if (evaluacion.error) return { ...evaluacion, accesos: null };
 
-  const { accesos, error } = await obtenerMisAccesos();
+  const { accesos, error } = respuestaDeAccesos;
   if (error) return { perfil: null, rol: null, accesos: null, error };
 
   return { ...evaluacion, accesos };
+}
+
+/** Mismo contenido, aunque sean objetos distintos: evita redibujar la app entera por nada. */
+function mismoContenido(uno, otro) {
+  return JSON.stringify(uno ?? null) === JSON.stringify(otro ?? null);
 }
 
 const ESTADOS_DE_RESTAURACION = {
@@ -125,6 +135,8 @@ export function useSesion({ almacenamiento } = {}) {
   // ya esta cerrada no describe nada nuevo y no tiene nada que anunciar.
   const sinSesionPublicada = useRef(true);
   const activo = useRef(true);
+  // Los ultimos accesos publicados: si una relectura trae los mismos, la sesion no se republica.
+  const ultimosAccesos = useRef(null);
 
   useEffect(() => {
     activo.current = true;
@@ -134,6 +146,7 @@ export function useSesion({ almacenamiento } = {}) {
     function limpiarSesion(error) {
       resolucion.current += 1;
       sinSesionPublicada.current = true;
+      ultimosAccesos.current = null;
       limpiarAccesoDeSesion();
       cliente.auth.stopAutoRefresh();
       if (!activo.current) return;
@@ -164,14 +177,22 @@ export function useSesion({ almacenamiento } = {}) {
       cliente.auth.startAutoRefresh();
 
       if (activo.current) {
-        setSesion((anterior) => ({
-          usuario,
-          // Conservar el perfil cuando es el mismo usuario evita que la pantalla se quede sin
-          // nombre ni rol mientras se vuelve a leer.
-          perfil: anterior.perfil?.id === usuario.id ? anterior.perfil : null,
-          cargando: true,
-          error: null,
-        }));
+        setSesion((anterior) => {
+          // supabase-js vuelve a emitir SIGNED_IN cada vez que la pestana recupera el foco. Para
+          // el mismo usuario con su perfil ya resuelto no se toca el estado mientras se relee: el
+          // valor de la sesion alcanza a toda la app, y cambiarlo dos veces por cada vuelta a la
+          // pestana la redibujaba entera. La relectura sigue ocurriendo (una cuenta desactivada
+          // tiene que notarse), solo que sin parpadeo.
+          if (anterior.perfil?.id === usuario.id && !anterior.error) return anterior;
+          return {
+            usuario,
+            // Conservar el perfil cuando es el mismo usuario evita que la pantalla se quede sin
+            // nombre ni rol mientras se vuelve a leer.
+            perfil: anterior.perfil?.id === usuario.id ? anterior.perfil : null,
+            cargando: true,
+            error: null,
+          };
+        });
       }
 
       const { perfil, accesos, error } = await resolverPerfilYAccesos(usuario);
@@ -208,7 +229,19 @@ export function useSesion({ almacenamiento } = {}) {
       sinSesionPublicada.current = false;
       // Antes de publicar el perfil: el primer render con este perfil ya tiene que ver sus accesos.
       fijarAccesoDeSesion({ rol: perfil.rol, ...accesos });
-      setSesion({ usuario, perfil, cargando: false, error: null });
+      const accesosCambiaron = !mismoContenido(ultimosAccesos.current, accesos);
+      ultimosAccesos.current = accesos;
+      setSesion((anterior) =>
+        !accesosCambiaron &&
+        // Si la relectura trajo lo mismo que ya habia, se conserva el objeto: ningun componente
+        // que dependa de la sesion tiene por que volver a pintarse ni a pedir sus datos.
+        anterior.usuario?.id === usuario.id &&
+        !anterior.cargando &&
+        !anterior.error &&
+        mismoContenido(anterior.perfil, perfil)
+          ? anterior
+          : { usuario, perfil, cargando: false, error: null },
+      );
     }
 
     /**

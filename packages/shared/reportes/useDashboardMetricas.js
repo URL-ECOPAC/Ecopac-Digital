@@ -183,8 +183,28 @@ export function useDashboardMetricas({ rol } = {}) {
     };
   }, [tieneAcceso]);
 
+  // "Limpiar filtros": vuelve a lo que se ve al entrar. Hay filtros si algo difiere de eso.
+  const limpiarFiltros = () => {
+    setRangoSeleccionado("mes");
+    setFechaInicio("");
+    setFechaFin("");
+    setAgruparPor(AGRUPACIONES_DE_IMPACTO.MES);
+    setMetrica(OPCIONES_METRICA_IMPACTO[0].value);
+    setComunidadId(TODAS);
+    setModoComparacion(false);
+    setComunidadCompararId(NINGUNA);
+  };
+  const hayFiltros =
+    rangoSeleccionado !== "mes" ||
+    agruparPor !== AGRUPACIONES_DE_IMPACTO.MES ||
+    metrica !== OPCIONES_METRICA_IMPACTO[0].value ||
+    comunidadId !== TODAS ||
+    modoComparacion;
+
   return {
     tieneAcceso,
+    limpiarFiltros,
+    hayFiltros,
 
     // Opciones
     rangosDisponibles: RANGOS,

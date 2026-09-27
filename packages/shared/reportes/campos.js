@@ -134,7 +134,7 @@ export const CAMPOS_ANALISIS_IMPACTO = [
 export const CAMPOS_REPORTE_VENCIMIENTO = [
   {
     id: "horizonteDias",
-    label: "Horizonte (días)",
+    label: "Vencen en los próximos (días)",
     tipo: TIPOS_DE_CAMPO.NUMERO,
     validacion: { requerido: true, min: 1, max: 365 },
   },
