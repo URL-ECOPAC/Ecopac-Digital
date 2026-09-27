@@ -3,23 +3,61 @@
 import { SUBTIPOS_DE_RANGO, TIPOS_DE_FILTRO } from "../descriptores.js";
 
 /**
- * Las nueve tablas que hoy escriben en eventos_auditoria, una por cada
+ * Las tablas que escriben en eventos_auditoria, una por cada
  * `CREATE TRIGGER ... EXECUTE FUNCTION registrar_evento_auditoria[_usuario_permiso|_rol_permiso]()`
- * de supabase/migrations/ (00026, 00045, 00070, 00139). Es una lista a mano y no una consulta al
- * catalogo de Postgres: audita una tabla nueva es de por si un cambio de migracion deliberado,
- * y ese mismo PR actualiza esta lista. La 00139 no la actualizo, y la bitacora mostraba
- * "ROL_PERMISO" crudo; etiquetaDeTablaAuditada() cubre ese olvido si se repite.
+ * de supabase/migrations/ (00026, 00045, 00070, 00139, 00148, 00149 y la 00152, que audita todas
+ * las tablas de negocio). Es una lista a mano y no una consulta al catalogo de Postgres: auditar
+ * una tabla nueva es de por si un cambio de migracion deliberado, y ese mismo PR actualiza esta
+ * lista. etiquetaDeTablaAuditada() cubre el olvido si se repite. Ordenadas por modulo.
  */
 export const TABLAS_AUDITADAS = [
+  // Pacientes y atencion clinica
   { value: "pacientes", label: "Pacientes" },
   { value: "expedientes", label: "Expedientes" },
+  { value: "padecimientos_cronicos", label: "Padecimientos crónicos" },
+  { value: "fusiones_pacientes", label: "Fusiones de expedientes" },
+  { value: "atenciones", label: "Atenciones" },
+  { value: "triajes", label: "Signos vitales" },
   { value: "consultas", label: "Consultas" },
+  { value: "consulta_diagnostico", label: "Diagnósticos de consulta" },
   { value: "recetas", label: "Recetas" },
+  { value: "receta_detalle", label: "Medicamentos de receta" },
+  { value: "diagnosticos", label: "Catálogo de diagnósticos" },
+  { value: "condiciones_cronicas", label: "Catálogo de condiciones crónicas" },
+  { value: "comunidades", label: "Comunidades" },
+  // Inventario
+  { value: "medicamentos", label: "Medicamentos e insumos" },
+  { value: "medicamento_principio", label: "Principios de un medicamento" },
+  { value: "principios_activos", label: "Principios activos" },
+  { value: "presentaciones", label: "Presentaciones" },
+  { value: "bodegas", label: "Bodegas" },
+  { value: "proveedores", label: "Proveedores" },
+  { value: "lotes", label: "Lotes" },
   { value: "movimientos_inventario", label: "Movimientos de inventario" },
+  { value: "alertas_caducidad", label: "Alertas de vencimiento" },
+  // Jornadas
+  { value: "jornadas", label: "Jornadas" },
+  { value: "jornada_personal", label: "Equipo de jornada" },
+  { value: "jornada_presupuesto_origen", label: "Aportes al presupuesto" },
+  { value: "fuentes_de_presupuesto", label: "Fuentes de aportes" },
+  { value: "jornada_insumos", label: "Insumos de jornada" },
+  // Proyectos y presupuesto
+  { value: "proyectos", label: "Proyectos" },
+  { value: "proyecto_personal", label: "Equipo de proyecto" },
+  { value: "proyecto_hitos", label: "Hitos de proyecto" },
+  { value: "proyecto_seguimiento", label: "Seguimiento de proyecto" },
+  { value: "proyecto_insumos", label: "Insumos de proyecto" },
+  { value: "gastos", label: "Gastos" },
+  // Donaciones
+  { value: "donantes", label: "Donantes" },
+  { value: "donaciones", label: "Donaciones" },
+  { value: "donacion_detalle", label: "Detalle de donación" },
+  // Usuarios y permisos
   { value: "perfiles", label: "Perfiles de usuario" },
+  { value: "perfil_especialidad", label: "Especialidades" },
   { value: "usuario_permiso", label: "Permisos por usuario" },
   { value: "rol_permiso", label: "Permisos por rol" },
-  { value: "padecimientos_cronicos", label: "Padecimientos crónicos" },
+  { value: "rol_modulo", label: "Acceso a módulos por rol" },
 ];
 
 /**

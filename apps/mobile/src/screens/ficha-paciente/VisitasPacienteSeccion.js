@@ -86,7 +86,7 @@ function Receta({ receta, onImprimir, imprimiendo }) {
       ))}
       {onImprimir ? (
         <SecondaryButton
-          title="Imprimir o guardar PDF"
+          title="Imprimir / PDF"
           onPress={onImprimir}
           loading={imprimiendo}
           disabled={imprimiendo}

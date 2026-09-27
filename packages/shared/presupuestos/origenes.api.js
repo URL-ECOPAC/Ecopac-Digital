@@ -241,20 +241,20 @@ export function saldoDeDonacion(fila) {
  * Donaciones de dinero registradas que todavia tienen saldo sin asignar a ninguna jornada. Es el
  * catalogo del que se elige un origen "donacion" sin volver a teclear el monto (issue #840).
  *
- * Si se pasa `proyectoId`, las del proyecto de la jornada van primero: una donacion asignada a
- * un proyecto es la candidata natural para financiar sus jornadas.
+ * Van primero las recibidas para la misma jornada (`jornadaId`, 00153) y despues las del proyecto
+ * de la jornada (`proyectoId`): son las candidatas naturales para financiarla.
  *
- * @param {{ proyectoId?: string|null }} [opciones]
+ * @param {{ proyectoId?: string|null, jornadaId?: string|null }} [opciones]
  * @returns {Promise<{ donaciones: { id: string, fecha: string, donanteNombre: string|null,
  *   proyectoId: string|null, total: number, asignado: number, disponible: number }[],
  *   error: object|null }>}
  */
-export async function listarDonacionesConSaldo({ proyectoId } = {}) {
+export async function listarDonacionesConSaldo({ proyectoId, jornadaId } = {}) {
   try {
     const { data, error } = await obtenerSupabase()
       .from("donaciones")
       .select(
-        "id, fecha, proyecto_id, donante:donantes(nombre), donacion_detalle(monto), jornada_presupuesto_origen(monto)",
+        "id, fecha, proyecto_id, jornada_id, donante:donantes(nombre), donacion_detalle(monto), jornada_presupuesto_origen(monto)",
       )
       .eq("tipo", "dinero")
       .eq("estado", "registrada")
@@ -268,10 +268,15 @@ export async function listarDonacionesConSaldo({ proyectoId } = {}) {
         fecha: fila.fecha,
         donanteNombre: fila.donante?.nombre ?? null,
         proyectoId: fila.proyecto_id ?? null,
+        jornadaId: fila.jornada_id ?? null,
         ...saldoDeDonacion(fila),
       }))
       .filter((donacion) => donacion.disponible > 0)
       .sort((a, b) => {
+        const porJornada = jornadaId
+          ? Number(b.jornadaId === jornadaId) - Number(a.jornadaId === jornadaId)
+          : 0;
+        if (porJornada !== 0) return porJornada;
         if (!proyectoId) return 0;
         return Number(b.proyectoId === proyectoId) - Number(a.proyectoId === proyectoId);
       });

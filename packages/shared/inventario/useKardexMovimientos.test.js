@@ -9,11 +9,69 @@ import { describe, expect, it } from "vitest";
 
 import { conZonaHorariaDeGuatemala } from "../pruebas/zonaHoraria.js";
 import {
+  conSaldoAcumulado,
   filasDeKardex,
   filtrarPorRangoDeFecha,
   nombreDe,
   resumenDeKardex,
 } from "./useKardexMovimientos.js";
+
+describe("conSaldoAcumulado", () => {
+  it("acumula del mas antiguo al mas reciente aunque lleguen al reves", () => {
+    // listarMovimientos() los devuelve del mas reciente al mas antiguo.
+    const filas = conSaldoAcumulado([
+      {
+        id: "s",
+        created_at: "2026-09-20T19:10:00Z",
+        tipo: "salida",
+        estado: "aprobado",
+        cantidad: 200,
+      },
+      {
+        id: "i",
+        created_at: "2026-08-31T21:44:00Z",
+        tipo: "ingreso",
+        estado: "aprobado",
+        cantidad: 200,
+      },
+    ]);
+
+    expect(filas.map((fila) => [fila.id, fila.saldoAcumulado])).toEqual([
+      ["i", 200],
+      ["s", 0],
+    ]);
+    expect(resumenDeKardex(filas).saldo).toBe(0);
+  });
+
+  it("un movimiento pendiente o rechazado no mueve el saldo", () => {
+    const filas = conSaldoAcumulado([
+      {
+        id: "a",
+        created_at: "2026-09-01T00:00:00Z",
+        tipo: "ingreso",
+        estado: "aprobado",
+        cantidad: 50,
+      },
+      {
+        id: "b",
+        created_at: "2026-09-02T00:00:00Z",
+        tipo: "salida",
+        estado: "pendiente",
+        cantidad: 10,
+      },
+      {
+        id: "c",
+        created_at: "2026-09-03T00:00:00Z",
+        tipo: "salida",
+        estado: "rechazado",
+        cantidad: 5,
+      },
+    ]);
+
+    expect(filas.map((fila) => fila.saldoAcumulado)).toEqual([50, 50, 50]);
+    expect(filas.map((fila) => fila.afectaSaldo)).toEqual([true, false, false]);
+  });
+});
 
 describe("resumenDeKardex", () => {
   it("suma solo los movimientos aprobados y toma el saldo de la ultima fila", () => {

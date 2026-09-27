@@ -69,8 +69,19 @@ describe("listarEquipoDelProyecto", () => {
           created_at: "2026-09-01T00:00:00Z",
           nombres: "Ana",
           apellidos: "Lopez",
+          en_equipo_del_proyecto: true,
+          jornadas: ["Jornada 1"],
         },
-        { id: "a-2", proyecto_id: "p-1", perfil_id: "u-2", nombres: null, apellidos: null },
+        // 00150: quien solo esta en una jornada del proyecto llega sin id de proyecto_personal.
+        {
+          id: null,
+          proyecto_id: "p-1",
+          perfil_id: "u-2",
+          nombres: null,
+          apellidos: null,
+          en_equipo_del_proyecto: false,
+          jornadas: ["Jornada 2"],
+        },
       ],
       error: null,
     });
@@ -91,8 +102,15 @@ describe("listarEquipoDelProyecto", () => {
       rolEnProyecto: "Coordinacion",
       createdAt: "2026-09-01T00:00:00Z",
       nombre: "Ana Lopez",
+      enEquipoDelProyecto: true,
+      jornadas: ["Jornada 1"],
     });
-    expect(equipo[1].nombre).toBe("Nombre no disponible");
+    expect(equipo[1]).toMatchObject({
+      id: "jornada-u-2",
+      nombre: "Nombre no disponible",
+      enEquipoDelProyecto: false,
+      jornadas: ["Jornada 2"],
+    });
   });
 
   it("sin proyecto no sale a la red y devuelve una lista vacia", async () => {

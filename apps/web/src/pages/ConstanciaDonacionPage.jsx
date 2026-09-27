@@ -6,7 +6,8 @@ import {
   useConstanciaDonacion,
 } from "@ecopac/shared";
 import { organizacion } from "@ecopac/ui-tokens";
-import { Container, Row, Col, Button, Card, Badge, Alert } from "react-bootstrap";
+import { Container, Row, Col, Card, Badge, Alert } from "react-bootstrap";
+import BotonImprimir from "../components/BotonImprimir";
 import { AccionesDeCabecera } from "../components/PageHeader";
 import DocumentoImprimible, { LineaDeFirma } from "./DocumentoImprimible";
 import { ACCION_VOLVER_A_DONACIONES } from "./donacionesNavegacion";
@@ -123,9 +124,7 @@ export default function ConstanciaDonacionPage({ usuarioRol, donacion }) {
             },
           ]}
         />
-        <Button variant="primary" onClick={manejarImpresion}>
-          Imprimir / Descargar PDF
-        </Button>
+        <BotonImprimir onClick={manejarImpresion} />
       </div>
 
       <DocumentoImprimible

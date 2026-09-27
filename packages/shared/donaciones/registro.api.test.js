@@ -124,6 +124,7 @@ describe("registrarDonacion (#635)", () => {
       ],
       p_proyecto_id: "PROY-1",
       p_observaciones: null,
+      p_jornada_id: null,
     });
 
     const detalleEnviado = mockSupabase.rpc.mock.calls[0][1].p_detalle[0];

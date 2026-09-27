@@ -73,6 +73,7 @@ function aDonacionRegistrada(fila) {
     id: fila.id,
     donanteId: fila.donante_id,
     proyectoId: fila.proyecto_id,
+    jornadaId: fila.jornada_id ?? null,
     tipo: fila.tipo,
     fecha: fila.fecha,
     observaciones: fila.observaciones,
@@ -100,8 +101,8 @@ function aDonacionRegistrada(fila) {
  * `donacion.detalles`: lo necesita el hook para poder ofrecer despues el paso de generar el
  * ingreso de inventario con un id que existe de verdad (criterio 6; ver useRegistroDonacion.js).
  *
- * @param {{ donanteId?: string, proyectoId?: string, tipo?: string, fecha?: string,
- *   observaciones?: string, detalles?: object[] }} donacion
+ * @param {{ donanteId?: string, proyectoId?: string, jornadaId?: string, tipo?: string,
+ *   fecha?: string, observaciones?: string, detalles?: object[] }} donacion
  * @param {{ rolUsuario: string }} contexto
  * @returns {Promise<{ datos: (object & { detalleIds: string[] })|null, error: object|null }>}
  *   `error.campos` trae el detalle por campo cuando el fallo es de validacion.
@@ -129,6 +130,8 @@ export async function registrarDonacion(donacion = {}, { rolUsuario } = {}) {
       p_detalle: aDetalleParaGuardar(donacion.detalles),
       p_proyecto_id: donacion.proyectoId || null,
       p_observaciones: donacion.observaciones || null,
+      // 00153: la jornada para la que se recibio. Con jornada, la base toma el proyecto de ella.
+      p_jornada_id: donacion.jornadaId || null,
     });
 
     if (error) return { datos: null, error: normalizarError(error) };

@@ -764,6 +764,8 @@
  * @property {string} createdAt
  * @property {string} updatedAt
  * @property {string|null} proyectoId
+ * @property {string|null} jornadaId Jornada para la que se recibio (00153); con ella, proyectoId
+ *   es el de la jornada.
  */
 
 /**
@@ -877,6 +879,22 @@
  * @property {string} unidad En que se cuenta la cantidad ("cajas", "unidades").
  * @property {number|null} costoUnitarioEstimado Costo de UNA unidad, en quetzales. null es "no
  *   estimado"; 0 es un costo estimado de cero.
+ * @property {string|null} nota
+ * @property {string} createdAt
+ * @property {string} updatedAt
+ */
+
+/**
+ * Fila de `jornada_insumos` (00151): un articulo PREVISTO para una jornada. Desde la 00151 los
+ * insumos se planean por jornada; el proyecto los muestra agrupados.
+ *
+ * @typedef {object} JornadaInsumo
+ * @property {string} id
+ * @property {string} jornadaId
+ * @property {string} medicamentoId Articulo del catalogo de inventario (medicamento o insumo).
+ * @property {number} cantidad Entero mayor que cero.
+ * @property {string} unidad
+ * @property {number|null} costoUnitarioEstimado null es "no estimado".
  * @property {string|null} nota
  * @property {string} createdAt
  * @property {string} updatedAt

@@ -289,8 +289,9 @@ La bitacora se consulta desde la web, solo el administrador (#643, cerrada por l
 | --- | --- | --- |
 | Alta, cambio de rol y desactivacion de una cuenta | `eventos_auditoria`, trigger sobre `perfiles` (el alta por invitacion es un INSERT en `perfiles`) | Sin limite |
 | Cambio de permisos por rol o por persona | `eventos_auditoria`, triggers sobre `rol_modulo` (00148, la matriz de acceso), `rol_permiso` (00139) y `usuario_permiso` (00045) | Sin limite |
-| Escritura clinica: paciente, expediente, padecimiento, consulta, receta | `eventos_auditoria`, triggers sobre esas cinco tablas | Sin limite |
+| Escritura clinica: paciente, expediente, padecimiento, atencion, signos vitales, consulta y sus diagnosticos, receta y sus medicamentos | `eventos_auditoria`, un trigger por tabla (00026, 00070 y la 00152) | Sin limite |
 | Movimiento de inventario y su aprobacion | `eventos_auditoria`, trigger sobre `movimientos_inventario` | Sin limite |
+| Cualquier otro cambio de la aplicacion: jornadas y su equipo, proyectos, gastos, donaciones, lotes, catalogos, aportes al presupuesto | `eventos_auditoria`: la 00152 audita todas las tablas de negocio. Quedan fuera solo las derivadas o del sistema (existencias, historiales de estado, notificaciones, catalogos fijos) | Sin limite |
 | Inicio de sesion, cierre, recuperacion de contrasena | `auth.audit_log_entries` de Supabase Auth | La de Supabase; no la controla el repositorio |
 | Intento de inicio de sesion **fallido** | Solo en los logs de Auth del Dashboard | **1 dia** en el plan Free (7 en Pro) |
 | Acceso denegado por RLS | No queda en ningun sitio del servidor: RLS filtra filas en silencio y un INSERT denegado solo le devuelve `42501` al cliente | - |
@@ -316,10 +317,12 @@ auditoria propio.
 cuanto tiempo debe poder reconstruir quien toco un expediente:
 
 - Medido en el stack local: una fila ocupa **543 bytes de media**, hasta 1.2 KB en una actualizacion
-  con el antes y el despues. Una atencion completa genera del orden de ocho eventos, unos 8 KB con
-  indices.
-- Con el supuesto de `docs/COSTOS-Y-LIMITES.md` (1,800 atenciones al ano) son **~15 MB al ano y
-  ~75 MB a cinco anos**: cabe en el plan Free sin borrar nada.
+  con el antes y el despues. Una atencion completa generaba del orden de ocho eventos; desde la
+  00152, que audita tambien la atencion, los signos y los renglones de receta y diagnostico, son del
+  orden de catorce, unos 14 KB con indices.
+- Con el supuesto de `docs/COSTOS-Y-LIMITES.md` (1,800 atenciones al ano) son **~25 MB al ano y
+  ~130 MB a cinco anos**, sumando el resto de tablas que ahora se auditan: sigue cabiendo en el
+  plan Free sin borrar nada.
 - **Propuesta: conservar todo mientras la base este por debajo del 50% de su limite**, y revisar el
   tamano en cada cierre de ano. Si hubiera que recortar, se borran primero los eventos de
   `movimientos_inventario` de mas de dos anos -el kardex ya conserva el movimiento en si- y nunca
@@ -337,12 +340,11 @@ Procedimiento en [CI-CD.md, "Respaldos y restauracion"](./CI-CD.md#respaldos-y-r
   tablas enteras sin cargar, porque el reset y las propias migraciones siembran datos que chocan
   con el volcado. La version corregida paso los tres criterios de la prueba.
 - **Como se cierra: en la salida a produccion (#252).** Dev no tiene datos reales y se queda sin
-  respaldos. Para produccion el plan ya esta fijado en `docs/CI-CD.md`, "Plan para produccion":
-  antes del primer dato real se elige entre Supabase Pro (25 USD al mes, 7 dias de respaldos
-  diarios, la recomendada) o un volcado propio semanal cifrado y guardado fuera de GitHub
-  (`docs/COSTOS-Y-LIMITES.md`, seccion 6.2), y se hace la primera restauracion real con el
-  procedimiento ensayado. Hasta que eso pase **no existe ninguna copia de la base**, y por eso
-  produccion no se abre sin ello.
+  respaldos. Para produccion la organizacion decidio (27 de septiembre de 2026) un workflow de
+  GitHub Actions que saca el volcado de la base, lo cifra y lo guarda en Google Drive, en la cuenta
+  dedicada al proyecto (`docs/CI-CD.md`, "Plan para produccion"). Antes del primer dato real se
+  hace la primera restauracion con el procedimiento ensayado. Hasta que eso pase **no existe
+  ninguna copia de la base**, y por eso produccion no se abre sin ello.
 
 ## Alta de cuentas: quien entra al sistema y como (issue #508)
 

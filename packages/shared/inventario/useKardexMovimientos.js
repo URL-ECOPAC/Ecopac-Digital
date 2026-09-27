@@ -103,6 +103,40 @@ export function resumenDeKardex(movimientos) {
 }
 
 /**
+ * Movimientos del mas antiguo al mas reciente, por created_at. No muta el arreglo recibido.
+ *
+ * @param {Array<{ created_at?: string }>} movimientos
+ * @returns {Array<object>}
+ */
+export function ordenarMovimientosPorFecha(movimientos = []) {
+  const tiempo = (mov) => aFechaLocal(mov.created_at)?.getTime() ?? 0;
+  return [...movimientos].sort((uno, otro) => tiempo(uno) - tiempo(otro));
+}
+
+/**
+ * Movimientos del kardex en orden cronologico, cada uno con el saldo que queda despues de el.
+ * Solo los APROBADOS mueven el saldo; pendientes y rechazados se muestran sin tocarlo.
+ *
+ * Del mas antiguo al mas reciente, como se lee un kardex. listarMovimientos() los devuelve del mas
+ * reciente al mas antiguo, y acumular en ese orden restaba la salida antes de sumar el ingreso: un
+ * lote que entro con 200 y salio con 200 mostraba -200 y despues 0.
+ *
+ * @param {Array<{ created_at: string, estado: string, tipo: string, cantidad: number }>} movimientos
+ * @returns {Array<object>} Cada movimiento con `saldoAcumulado` y `afectaSaldo`.
+ */
+export function conSaldoAcumulado(movimientos = []) {
+  let saldo = 0;
+  return ordenarMovimientosPorFecha(movimientos).map((mov) => {
+    const esAprobado = mov.estado === ESTADO_MOVIMIENTO.APROBADO;
+    if (esAprobado) {
+      if (mov.tipo === TIPO_MOVIMIENTO.INGRESO) saldo += mov.cantidad;
+      else if (mov.tipo === TIPO_MOVIMIENTO.SALIDA) saldo -= mov.cantidad;
+    }
+    return { ...mov, saldoAcumulado: saldo, afectaSaldo: esAprobado };
+  });
+}
+
+/**
  * Hook Kardex de Movimientos (issue #161, reconectado por la #687).
  *
  * Hasta la #687 este hook devolvia cuatro movimientos escritos a mano con un TODO que esperaba
@@ -150,28 +184,7 @@ export function useKardexMovimientos({ loteId = null, medicamentoId = null }) {
     setCargando(false);
   }, [loteId, medicamentoId]);
 
-  // ─── CALCULAR SALDO ACUMULADO ───
-  // Solo movimientos APROBADOS modifican el saldo
-  const movimientosConSaldo = useMemo(() => {
-    let saldo = 0;
-    return movimientos.map((mov) => {
-      const esAprobado = mov.estado === ESTADO_MOVIMIENTO.APROBADO;
-
-      if (esAprobado) {
-        if (mov.tipo === TIPO_MOVIMIENTO.INGRESO) {
-          saldo += mov.cantidad;
-        } else if (mov.tipo === TIPO_MOVIMIENTO.SALIDA) {
-          saldo -= mov.cantidad;
-        }
-      }
-
-      return {
-        ...mov,
-        saldoAcumulado: saldo,
-        afectaSaldo: esAprobado,
-      };
-    });
-  }, [movimientos]);
+  const movimientosConSaldo = useMemo(() => conSaldoAcumulado(movimientos), [movimientos]);
 
   // ─── APLICAR FILTROS ───
   const movimientosFiltrados = useMemo(() => {

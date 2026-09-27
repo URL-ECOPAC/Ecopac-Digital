@@ -96,6 +96,9 @@ function Rango({ campo, rango, onChange }) {
  *     no haya nada que limpiar (`hayFiltros`) y en verde cuando si (BotonLimpiarFiltros.jsx).
  *   - `children`: controles de la pantalla que no son un filtro del descriptor ("Agrupar por")
  *     y van en la misma barra, antes del boton.
+ *   - `encabezado`: una fila entera arriba, dentro de la misma tarjeta (los botones de rango de
+ *     fechas de los reportes). Iban sueltos encima de la tarjeta, y el panel de impacto los tenia
+ *     dentro: ahora los dos reportes se ven igual.
  */
 export default function FilterBar({
   campos = [],
@@ -104,12 +107,14 @@ export default function FilterBar({
   catalogos = {},
   onLimpiar,
   hayFiltros = true,
+  encabezado,
   children,
 }) {
   const cambiar = (id, valor) => onChange?.(id, valor);
 
   return (
     <div className="ec-filtros">
+      {encabezado && <div className="ec-filtros-encabezado">{encabezado}</div>}
       {campos.map((campo) => {
         const valor = valores[campo.id];
 

@@ -12,7 +12,8 @@ import {
   useKardexMovimientos,
 } from "@ecopac/shared";
 
-import BotonExportarPDF from "../components/BotonExportarPDF";
+import BotonExportarCSV from "../components/BotonExportarCSV";
+import BotonImprimir from "../components/BotonImprimir";
 import DateField from "../components/DateField";
 import SectionHeader from "../components/SectionHeader";
 import BotonLimpiarFiltros from "../components/BotonLimpiarFiltros";
@@ -187,17 +188,20 @@ export default function KardexMovimientosPage({
         }
         actions={[
           {
-            label: "Exportar historial",
-            onClick: () => descargarCSV(movimientos),
-            disabled: movimientos.length === 0,
-            variant: "secondary",
+            key: "csv",
+            custom: (
+              <BotonExportarCSV
+                onClick={() => descargarCSV(movimientos)}
+                disabled={movimientos.length === 0}
+              />
+            ),
           },
           {
+            key: "imprimir",
             custom: (
-              <BotonExportarPDF
+              <BotonImprimir
                 onClick={() => setAImprimir(true)}
-                generando={aImprimir}
-                disabled={movimientos.length === 0}
+                disabled={aImprimir || movimientos.length === 0}
               />
             ),
           },

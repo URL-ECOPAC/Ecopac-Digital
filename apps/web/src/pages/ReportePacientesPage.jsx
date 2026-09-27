@@ -140,13 +140,18 @@ export default function ReportePacientesPage({ incrustado = false }) {
 
       {/* Los presets de rango estaban escritos y probados en useFiltrosReportes desde la issue
           #208, y ninguna pantalla los dibujaba. */}
-      <BotonesDeRango opciones={presets} activo={presetActivo} onElegir={setPreset} />
-
+      {/* El rango de fechas va dentro de la tarjeta de filtros, como en el panel de impacto. */}
       <FilterBar
         campos={definicionDeFiltros}
         valores={valores}
         onChange={setFiltro}
         catalogos={catalogos}
+        encabezado={
+          <>
+            <span className="ec-rotulo">Rango de fechas</span>
+            <BotonesDeRango opciones={presets} activo={presetActivo} onElegir={setPreset} />
+          </>
+        }
         onLimpiar={limpiarFiltros}
         // ISSUE #862: faltaba, asi que FilterBar tomaba su defecto `true` y "Limpiar filtros"
         // nunca se veia deshabilitado, ni siquiera recien abierta la pantalla.

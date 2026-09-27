@@ -882,24 +882,26 @@ pase.
 `Ecopac-Digital-Dev` se queda sin respaldos a proposito: no tiene datos reales y el plan Free no los
 ofrece. Lo que no puede pasar es que **produccion** arranque igual. Por eso los respaldos no se
 cierran en la #762 sino en la issue de salida a produccion (#252), que es donde se crea
-`Ecopac-Digital-Prod` y se decide su plan. El plan queda fijado asi:
+`Ecopac-Digital-Prod`.
 
-1. **Antes de cargar el primer dato real**, la organizacion decide entre las dos salidas de
-   `docs/COSTOS-Y-LIMITES.md`, seccion 6.2. La recomendada es **Supabase Pro** (25 USD al mes):
-   respaldos diarios con 7 dias de retencion, restaurables desde el Dashboard, y sin pausa por
-   inactividad.
-2. **Si se contrata Pro**: se confirma en Database > Backups de `Ecopac-Digital-Prod` y se anota en
-   la tabla de "Registro".
-3. **Si produccion se queda en Free**, el respaldo propio pasa a ser obligatorio y programado: un
-   workflow semanal que corre los tres `supabase db dump --linked` de "Respaldo propio", cifra los
-   archivos con una llave publica de la organizacion antes de que salgan del runner, y los deja en
-   un almacenamiento de Ecopac. **Nunca como artefacto de GitHub Actions**: en un repositorio
-   publico los artefactos los descarga cualquier cuenta de GitHub. Donde se guarda un volcado con
-   expedientes es una decision de proteccion de datos (`docs/PROTECCION-DE-DATOS.md`), y se toma en
-   la #252 con la organizacion.
-4. **En los dos casos**, la primera restauracion real se hace con el procedimiento de arriba y se
-   anota su fecha en "Registro" antes de dar produccion por abierta. Despues, una vez por ano, al
-   cierre de temporada de jornadas.
+**Decision de la organizacion (27 de septiembre de 2026):** produccion se queda en el plan Free, y
+el respaldo es un **workflow de GitHub Actions que saca el volcado de la base y lo guarda en Google
+Drive**, en la cuenta dedicada al proyecto que se va a crear. Queda asi:
+
+1. **La cuenta:** una cuenta de Google a nombre de la organizacion, dedicada al proyecto, no la de
+   una persona. Su acceso a Drive lo usa el workflow con una credencial guardada como secret del
+   repositorio.
+2. **El workflow:** programado (semanal como minimo, y a mano cuando haga falta), corre los tres
+   `supabase db dump --linked` de "Respaldo propio" contra `Ecopac-Digital-Prod`, cifra los archivos
+   con una llave de la organizacion **antes de que salgan del runner**, y los sube a una carpeta de
+   esa cuenta. **Nunca como artefacto de GitHub Actions**: en un repositorio publico los artefactos
+   los descarga cualquier cuenta de GitHub. Conserva un numero fijo de respaldos y borra los mas
+   viejos, para no llenar el Drive.
+3. **Quien los ve:** un volcado de produccion contiene expedientes clinicos. La carpeta la ve solo
+   la persona responsable de la base (`docs/PROTECCION-DE-DATOS.md`).
+4. **La prueba:** la primera restauracion real se hace con el procedimiento de arriba, desde un
+   respaldo bajado de Drive, y se anota su fecha en "Registro" antes de dar produccion por abierta.
+   Despues, una vez por ano, al cierre de temporada de jornadas.
 
 ## La regla mas importante: una migracion aplicada no se edita
 

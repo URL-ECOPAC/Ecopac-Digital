@@ -78,7 +78,7 @@ export function useOrigenesDePresupuesto({ jornadaId, proyectoId = null, rol, al
     const [lista, conSaldo, catalogoDeFuentes] = await Promise.all([
       listarOrigenesDePresupuesto(jornadaId),
       permisos.puedeGestionar
-        ? listarDonacionesConSaldo({ proyectoId })
+        ? listarDonacionesConSaldo({ proyectoId, jornadaId })
         : Promise.resolve({ donaciones: [], error: null }),
       permisos.puedeGestionar
         ? listarFuentesDePresupuesto()

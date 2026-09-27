@@ -18,10 +18,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { CODIGOS_DE_ERROR_DE_SUPABASE } from "../api/errores-de-supabase.js";
 import { hayErrores } from "../validations/index.js";
-import { listarMedicamentos } from "../inventario/medicamentos.api.js";
 import { listarJornadas } from "../jornadas/api.js";
+import { listarInsumosDeLasJornadasDelProyecto } from "../jornadas/insumos.api.js";
+import { resumirInsumosPrevistos } from "../jornadas/useInsumosDeJornada.js";
 import { listarGastos, obtenerPresupuestoProyecto } from "../presupuestos/api.js";
-import { puedeRegistrarGasto } from "../presupuestos/permisos.js";
 import { listarUsuarios } from "../usuarios/api.js";
 import {
   actualizarProyecto,
@@ -47,14 +47,9 @@ import {
   hayFiltrosDeProyecto,
   soloJornadasSinProyecto,
 } from "./filtros.js";
-import { CAMPOS_INSUMO_PROYECTO, CAMPOS_PROYECTO } from "./campos.js";
-import {
-  actualizarInsumoDeProyecto,
-  agregarInsumoAProyecto,
-  listarInsumosDelProyecto,
-  quitarInsumoDeProyecto,
-} from "./insumos.api.js";
-import { validarInsumoDeProyecto, validarProyecto } from "./validaciones.js";
+import { CAMPOS_PROYECTO } from "./campos.js";
+import { listarInsumosDelProyecto, pasarInsumoDelProyectoAJornada } from "./insumos.api.js";
+import { validarProyecto } from "./validaciones.js";
 import { permisosDeProyectos, puedeVerProyectos } from "./permisos.js";
 
 /** Mismo criterio que jornadas/useFormularioJornada.js: nombre completo para un <select>. */
@@ -113,7 +108,8 @@ export function useProyectosSociales({ usuarioRol } = {}) {
   // Lo que puede hacer el rol lo decide permisos.js; la pantalla solo lee estas banderas.
   const permisos = useMemo(() => permisosDeProyectos(usuarioRol), [usuarioRol]);
   const puedeEditar = permisos.puedeEditar;
-  const puedeRegistrarGastos = permisos.puedeVerInsumosYGastos && puedeRegistrarGasto(usuarioRol);
+  // Los gastos se registran contra una jornada (Presupuestos, o el detalle de la jornada); el
+  // proyecto solo muestra los de sus jornadas.
 
   const [presupuestoProyecto, setPresupuestoProyecto] = useState(null);
   const [gastosProyecto, setGastosProyecto] = useState([]);
@@ -122,10 +118,9 @@ export function useProyectosSociales({ usuarioRol } = {}) {
   const [jornadasDisponibles, setJornadasDisponibles] = useState([]);
   const [errorJornadas, setErrorJornadas] = useState(null);
   const [insumos, setInsumos] = useState([]);
+  const [insumosSinJornada, setInsumosSinJornada] = useState([]);
   const [cargandoInsumos, setCargandoInsumos] = useState(false);
   const [errorInsumos, setErrorInsumos] = useState(null);
-  const [erroresInsumo, setErroresInsumo] = useState({});
-  const [articulos, setArticulos] = useState([]);
   const [equipo, setEquipo] = useState([]);
   const [cargandoEquipo, setCargandoEquipo] = useState(false);
   const [errorEquipo, setErrorEquipo] = useState(null);
@@ -262,16 +257,24 @@ export function useProyectosSociales({ usuarioRol } = {}) {
     if (tabActivo === "jornadas" && proyectoSeleccionadoId) cargarJornadasDisponibles();
   }, [tabActivo, proyectoSeleccionadoId, cargarJornadasDisponibles]);
 
-  // Insumos previstos: planificacion con dinero, solo para quien ve insumos y gastos (#864).
+  // Insumos (00151): se planean en cada jornada y el proyecto solo los muestra, agrupados por
+  // jornada. Aparte van los que se habian planeado a nivel proyecto antes de la 00151 ("sin
+  // jornada"), que se pueden pasar a una de sus jornadas. Planificacion con dinero: solo para quien
+  // ve insumos y gastos (#864).
   const cargarInsumos = useCallback(async () => {
     if (!proyectoSeleccionadoId || !permisos.puedeVerInsumosYGastos) {
       setInsumos([]);
+      setInsumosSinJornada([]);
       return;
     }
     setCargandoInsumos(true);
-    const { insumos: filas, error: fallo } = await listarInsumosDelProyecto(proyectoSeleccionadoId);
-    setInsumos(filas);
-    setErrorInsumos(fallo);
+    const [deJornadas, sinJornada] = await Promise.all([
+      listarInsumosDeLasJornadasDelProyecto(proyectoSeleccionadoId),
+      listarInsumosDelProyecto(proyectoSeleccionadoId),
+    ]);
+    setInsumos(deJornadas.insumos);
+    setInsumosSinJornada(sinJornada.insumos);
+    setErrorInsumos(deJornadas.error ?? sinJornada.error);
     setCargandoInsumos(false);
   }, [proyectoSeleccionadoId, permisos.puedeVerInsumosYGastos]);
 
@@ -279,78 +282,37 @@ export function useProyectosSociales({ usuarioRol } = {}) {
     if (tabActivo === "insumos") cargarInsumos();
   }, [tabActivo, cargarInsumos]);
 
-  // Catalogo de articulos que se pueden prever: el MISMO que ofrece "Producto / Insumo" en
-  // "Registrar ingreso al inventario" (InventarioPage lo arma con listarMedicamentos(), sin filtrar
-  // por tipo), con la misma etiqueta "nombre (concentracion)". Asi lo previsto sale del catalogo
-  // donde despues se registra su ingreso.
-  useEffect(() => {
-    if (tabActivo !== "insumos" || !permisos.puedeGestionarInsumos) return undefined;
+  // Agrupados por jornada, en el orden de las fechas, con el total de cada una.
+  const insumosPorJornada = useMemo(() => {
+    const grupos = new Map();
+    for (const insumo of insumos) {
+      if (!grupos.has(insumo.jornadaId)) {
+        grupos.set(insumo.jornadaId, {
+          jornadaId: insumo.jornadaId,
+          jornadaNombre: insumo.jornadaNombre,
+          jornadaFecha: insumo.jornadaFecha,
+          insumos: [],
+        });
+      }
+      grupos.get(insumo.jornadaId).insumos.push(insumo);
+    }
+    return [...grupos.values()]
+      .sort((a, b) => String(a.jornadaFecha).localeCompare(String(b.jornadaFecha)))
+      .map((grupo) => ({ ...grupo, resumen: resumirInsumosPrevistos(grupo.insumos) }));
+  }, [insumos]);
 
-    let vigente = true;
-    listarMedicamentos().then(({ medicamentos }) => {
-      if (!vigente) return;
-      setArticulos(
-        (medicamentos ?? []).map((articulo) => ({
-          value: articulo.id,
-          label: articulo.concentracion
-            ? `${articulo.nombre} (${articulo.concentracion})`
-            : articulo.nombre,
-        })),
-      );
-    });
-    return () => {
-      vigente = false;
-    };
-  }, [tabActivo, permisos.puedeGestionarInsumos]);
-
-  // A quien todavia no se le previo nada: un articulo figura una sola vez por proyecto.
-  const articulosDisponibles = useMemo(() => {
-    const yaPrevistos = new Set(insumos.map((insumo) => insumo.medicamentoId));
-    return articulos.filter((articulo) => !yaPrevistos.has(articulo.value));
-  }, [articulos, insumos]);
-
-  // Suma de lo que si tiene costo; los que no lo tienen se cuentan aparte para no fingir un total.
   const resumenDeInsumos = useMemo(
-    () => ({
-      totalEstimado:
-        Math.round(
-          insumos.reduce((suma, insumo) => suma + (insumo.costoTotalEstimado ?? 0), 0) * 100,
-        ) / 100,
-      sinCosto: insumos.filter((insumo) => insumo.costoTotalEstimado === null).length,
-    }),
-    [insumos],
+    () => resumirInsumosPrevistos([...insumos, ...insumosSinJornada]),
+    [insumos, insumosSinJornada],
   );
 
-  /** Agrega (`insumoId` null) o edita un insumo previsto del proyecto abierto. */
-  const guardarInsumo = useCallback(
-    async (insumoId, datosFormulario) => {
-      if (!permisos.puedeGestionarInsumos || !proyectoSeleccionadoId) return { ok: false };
-
-      const errores = validarInsumoDeProyecto(datosFormulario, { esAlta: !insumoId });
-      setErroresInsumo(errores);
-      if (hayErrores(errores)) return { ok: false, errores };
-
-      const resultado = insumoId
-        ? await actualizarInsumoDeProyecto(insumoId, datosFormulario)
-        : await agregarInsumoAProyecto(proyectoSeleccionadoId, datosFormulario);
-      if (resultado.error) return { ok: false, error: resultado.error };
-
-      await cargarInsumos();
-      return { ok: true, insumo: resultado.insumo };
-    },
-    [permisos.puedeGestionarInsumos, proyectoSeleccionadoId, cargarInsumos],
-  );
-
-  /** Quita un insumo de la lista. `ok: false` sin error significa que la base no lo dejo. */
-  const quitarInsumo = useCallback(
-    async (insumoId) => {
+  /** Pasa un insumo planeado a nivel proyecto a una de sus jornadas (00151). */
+  const pasarInsumoAJornada = useCallback(
+    async (insumoId, jornadaId) => {
       if (!permisos.puedeGestionarInsumos) return { ok: false, error: null };
-
-      const { quitado, error: fallo } = await quitarInsumoDeProyecto(insumoId);
+      const { error: fallo } = await pasarInsumoDelProyectoAJornada(insumoId, jornadaId);
       setErrorInsumos(fallo);
       if (fallo) return { ok: false, error: fallo };
-      if (!quitado) return { ok: false, error: null };
-
       await cargarInsumos();
       return { ok: true, error: null };
     },
@@ -554,7 +516,6 @@ export function useProyectosSociales({ usuarioRol } = {}) {
     catalogos: { perfiles },
     puedeEditar,
     permisos,
-    puedeRegistrarGastos,
     presupuestoProyecto,
     columnasGastos: COLUMNAS_GASTO_DE_PROYECTO,
     gastosProyecto,
@@ -563,16 +524,13 @@ export function useProyectosSociales({ usuarioRol } = {}) {
     recargarGastos: cargarGastosDelProyecto,
     jornadasDisponibles,
     errorJornadas,
-    insumos,
+    insumosPorJornada,
+    insumosSinJornada,
     cargandoInsumos,
     errorInsumos,
-    erroresInsumo,
     columnasInsumos: COLUMNAS_INSUMO_PROYECTO,
-    camposInsumo: CAMPOS_INSUMO_PROYECTO,
-    catalogosInsumo: { articulos: articulosDisponibles },
     resumenDeInsumos,
-    guardarInsumo,
-    quitarInsumo,
+    pasarInsumoAJornada,
     equipo,
     cargandoEquipo,
     errorEquipo,

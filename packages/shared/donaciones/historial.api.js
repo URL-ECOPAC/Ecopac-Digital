@@ -30,8 +30,10 @@ const COLUMNAS_DE_LA_DONACION = [
   "registradoPor:registrado_por",
   "donanteId:donante_id",
   "proyectoId:proyecto_id",
+  "jornadaId:jornada_id",
   "donante:donantes(nombre)",
   "proyecto:proyectos(nombre)",
+  "jornada:jornadas(nombre)",
   "anuladaPorPerfil:perfiles!donaciones_anulada_por_fkey(nombres, apellidos)",
   "registradoPorPerfil:perfiles!donaciones_registrada_por_fkey(nombres, apellidos)",
   // Los renglones vienen con la donacion y no en una segunda consulta: el historial los usa
@@ -81,8 +83,10 @@ function aDonacion(fila) {
     registradoPor: fila.registradoPor,
     donanteId: fila.donanteId,
     proyectoId: fila.proyectoId,
+    jornadaId: fila.jornadaId ?? null,
     donanteNombre: fila.donante?.nombre ?? null,
     proyectoNombre: fila.proyecto?.nombre ?? null,
+    jornadaNombre: fila.jornada?.nombre ?? null,
     anuladaPorNombre:
       [fila.anuladaPorPerfil?.nombres, fila.anuladaPorPerfil?.apellidos]
         .filter(Boolean)

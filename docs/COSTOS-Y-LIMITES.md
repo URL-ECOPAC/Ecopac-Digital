@@ -166,9 +166,9 @@ Contando el peso de una fila con su sobrecarga de Postgres y sus indices:
 | Atenciones, triajes, consultas, diagnosticos, recetas (~9,000) | ~2 KB | ~18 MB |
 | Movimientos de inventario (~45,000)                 | ~0.3 KB    | ~14 MB    |
 | Lotes, medicamentos, catalogos                      | -          | ~5 MB     |
-| Bitacora de auditoria (`eventos_auditoria`, ~8 eventos por atencion) | ~8 KB por atencion | ~75 MB |
+| Bitacora de auditoria (`eventos_auditoria`, ~14 eventos por atencion desde la `00152`) | ~14 KB por atencion | ~130 MB |
 
-**Total a cinco anos: del orden de 120 MB, alrededor del 25% de los 500 MB.**
+**Total a cinco anos: del orden de 175 MB, alrededor del 35% de los 500 MB.**
 
 La fila de la bitacora ya no es una suposicion: se midio el 24 de septiembre en el stack local
 (543 bytes de media por evento, hasta 1.2 KB en una actualizacion que guarda el antes y el
@@ -284,9 +284,10 @@ Salidas:
    convierte en una decision de proteccion de datos, no solo tecnica (ver
    `docs/PROTECCION-DE-DATOS.md`)-.
 
-**Decidido como se cierra:** dev se queda sin respaldos (no tiene datos reales), y los de produccion
-se implementan en la issue de salida a produccion (#252), antes del primer dato real, con el plan
-de `docs/CI-CD.md`, "Plan para produccion". La recomendacion sigue siendo la salida 1.
+**Decidido (27 de septiembre de 2026):** la salida 2. Dev se queda sin respaldos (no tiene datos
+reales), y para produccion un workflow de GitHub Actions saca el volcado y lo guarda cifrado en
+Google Drive, en la cuenta dedicada al proyecto. Se implementa en la issue de salida a produccion
+(#252), antes del primer dato real; el detalle esta en `docs/CI-CD.md`, "Plan para produccion".
 
 ### 6.3 Dos proyectos activos por organizacion
 

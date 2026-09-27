@@ -66,6 +66,10 @@ export default function RegistroDonacionPage({ usuarioRol }) {
     setDonanteId,
     proyectoId,
     setProyectoId,
+    jornadaId,
+    setJornadaId,
+    jornadasOptions,
+    proyectoFijadoPorJornada,
     fecha,
     setFecha,
     observaciones,
@@ -211,11 +215,30 @@ export default function RegistroDonacionPage({ usuarioRol }) {
               </Form.Group>
             </Col>
 
+            {/* 00153: la donacion puede ser para una jornada; su proyecto sale de ella. */}
+            <Col md={6}>
+              <Form.Group controlId="formJornada">
+                <Form.Label>Jornada</Form.Label>
+                <Form.Select
+                  disabled={!permisos?.puedeEscribir}
+                  value={jornadaId}
+                  onChange={(e) => setJornadaId(e.target.value)}
+                >
+                  <option value="">Sin jornada...</option>
+                  {jornadasOptions.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </Form.Select>
+              </Form.Group>
+            </Col>
+
             <Col md={6}>
               <Form.Group controlId="formProyecto">
                 <Form.Label>Proyecto Asociado</Form.Label>
                 <Form.Select
-                  disabled={!permisos?.puedeEscribir}
+                  disabled={!permisos?.puedeEscribir || proyectoFijadoPorJornada}
                   value={proyectoId}
                   onChange={(e) => setProyectoId(e.target.value)}
                 >
@@ -226,6 +249,9 @@ export default function RegistroDonacionPage({ usuarioRol }) {
                     </option>
                   ))}
                 </Form.Select>
+                {proyectoFijadoPorJornada && (
+                  <Form.Text muted>El proyecto es el de la jornada elegida.</Form.Text>
+                )}
               </Form.Group>
             </Col>
 
@@ -251,8 +277,16 @@ export default function RegistroDonacionPage({ usuarioRol }) {
           {(detalles || []).map((item, indice) => (
             <div key={item.id} className="ec-renglon">
               <div className="ec-form-grid">
+                {/* Todos los campos que el tipo declara (camposDeRenglonDeDonacion), salvo los dos
+                    que tienen control propio abajo: el medicamento del catalogo y el insumo. Solo
+                    se dibujaba "cantidad", asi que una donacion en dinero o de servicios no tenia
+                    donde poner el concepto ni el monto, y a un insumo le faltaba la unidad. */}
                 {camposDeRenglon
-                  .filter((campo) => campo.id === "cantidad")
+                  .filter(
+                    (campo) =>
+                      campo.id !== "medicamentoId" &&
+                      !(tipoDonacion === TIPOS_DE_DONACION.INSUMOS && campo.id === "descripcion"),
+                  )
                   .map((campo) => {
                     const errorDeCampo = error?.campos?.[`detalles_${indice}_${campo.id}`];
                     return (

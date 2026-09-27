@@ -36,8 +36,31 @@ export const SECCIONES_DETALLE_JORNADA = Object.freeze([
   "pacientes",
   "historial",
   "presupuesto",
+  "insumos",
   "cierre",
 ]);
+
+/**
+ * Puede ver los insumos previstos de una jornada (jornada_insumos, 00151). Espejo de su politica de
+ * SELECT: quien administra jornadas o proyectos, o tiene alguno de los dos modulos abierto por la
+ * matriz. Llevan costo, asi que el personal de campo no los ve (#864).
+ */
+export function puedeVerInsumosDeJornada(rol) {
+  return (
+    puedeAdministrarJornadas(rol) ||
+    tienePermisoFino(rol, "proyectos.gestionar") ||
+    accedeAModuloPorMatriz(rol, "jornadas") ||
+    accedeAModuloPorMatriz(rol, "proyectos")
+  );
+}
+
+/**
+ * Puede agregar, corregir y quitar insumos previstos de una jornada. Espejo de las politicas de
+ * escritura de jornada_insumos (00151): quien administra jornadas.
+ */
+export function puedeGestionarInsumosDeJornada(rol) {
+  return puedeAdministrarJornadas(rol);
+}
 
 /**
  * Que pestanas del detalle de una jornada puede ver el rol (00148).

@@ -655,6 +655,7 @@ incidencia salvo "sin stock", que puede volver a ocurrir despues de reponer.
 | `anulada_en`        | TIMESTAMPTZ                 |                                          |
 | `registrado_por`    | UUID                        | Antes `registrada_por` [renombrada 00091] |
 | `proyecto_id`       | UUID                        | [+00097] A que proyecto se destina       |
+| `jornada_id`        | UUID                        | [+00153] Para que jornada se recibio (SET NULL). Si esta puesta, `proyecto_id` lo fija el trigger `fn_proyecto_de_la_jornada_de_la_donacion` desde la jornada |
 
 ### `jornada_presupuesto_origen` [00135]
 
@@ -708,6 +709,8 @@ erDiagram
     proyectos ||--o{ proyecto_personal : "equipo"
     proyectos ||--o{ proyecto_insumos : "prevé"
     medicamentos ||--o{ proyecto_insumos : "articulo"
+    jornadas ||--o{ jornada_insumos : "prevé"
+    medicamentos ||--o{ jornada_insumos : "articulo"
     jornadas ||--o{ gastos : "gasta en"
     perfiles ||--o{ gastos : "registra/aprueba"
 ```
@@ -735,10 +738,14 @@ rastro.
 `proyecto_id`, `perfil_id` (UNIQUE juntos, CASCADE en las dos) y `rol_en_proyecto` (texto libre y
 opcional: "Coordinadora", "Enlace con la comunidad"). Es **el equipo del proyecto**, distinto del
 cuadro de turnos de una jornada (`jornada_personal`): alguien puede coordinar un proyecto sin estar
-en el turno de ninguna de sus jornadas, y al reves. Estar en el equipo **no** amplia la lectura de
-`proyectos`. La lee quien ve el proyecto (y cada quien su propia asignacion); la escribe el
-administrador o quien tenga `proyectos.gestionar`. `equipo_de_proyecto(proyecto)` devuelve el
-equipo con los nombres, sin abrir `perfiles`.
+en el turno de ninguna de sus jornadas, y al reves. Desde la `00148` estar en el equipo si hace
+visible el proyecto (`pertenece_a_proyecto()`). La lee quien ve el proyecto (y cada quien su propia
+asignacion); la escribe el administrador o quien tenga `proyectos.gestionar`.
+`equipo_de_proyecto(proyecto)` devuelve el equipo con los nombres, sin abrir `perfiles`. Desde la
+`00150` devuelve **la union** de esta tabla y del equipo de las jornadas del proyecto
+(`jornada_personal`), con dos columnas mas: `jornadas` (nombres de las jornadas en que esta la
+persona) y `en_equipo_del_proyecto` (si tiene fila aqui, que es lo unico que se puede quitar desde
+el proyecto).
 
 ### `proyecto_insumos` [00147]
 
@@ -748,6 +755,18 @@ cero) y `nota` (hasta 500). UNIQUE (`proyecto_id`, `medicamento_id`). Es **la li
 para el proyecto, con articulos del mismo catalogo de inventario: **no mueve inventario**, igual
 que `gastos` desde la `00089`. Lleva dinero, asi que solo la leen y escriben el administrador y
 quien tenga `proyectos.gestionar`; el medico que ve el proyecto de su jornada no ve sus insumos.
+Desde la `00151` la aplicacion ya no agrega filas aqui: los insumos se planean por jornada
+(`jornada_insumos`), y lo que ya habia se muestra "sin jornada" hasta pasarlo a una.
+
+### `jornada_insumos` [00151]
+
+La misma forma que `proyecto_insumos`, colgada de una jornada: `jornada_id` (CASCADE),
+`medicamento_id` (RESTRICT), `cantidad` (> 0), `unidad`, `costo_unitario_estimado`, `nota`. UNIQUE
+(`jornada_id`, `medicamento_id`). No mueve inventario. La escriben el administrador y quien tenga
+`jornadas.gestionar`; la leen ademas quien tenga `proyectos.gestionar` y el rol al que la matriz le
+abrio Jornadas o Proyectos. El proyecto la muestra agrupada por jornada.
+`fn_pasar_insumo_de_proyecto_a_jornada(insumo, jornada)` (INVOKER) mueve una fila de
+`proyecto_insumos` a una jornada del mismo proyecto en una sola transaccion.
 
 ### `gastos` [00025]
 
@@ -852,7 +871,7 @@ Del lado del cliente, estos valores nacen una sola vez en `packages/shared/enums
 | `fn_existencias_disponibles(...)`       | Stock consultable, filtrado y paginado                            |
 | `fn_valor_de_inventario_disponible(...)` | [00122] Valoriza el stock por bodega, medicamento y origen; declara aparte lo que no tiene `costo_unitario` |
 | `fn_aplicar_ajuste_existencias(...)`    | Suma o resta stock por (lote, bodega); lanza error si no alcanza   |
-| `fn_registrar_donacion(...)`            | [00114] Crea la donacion y su detalle en una transaccion. Devuelve JSONB, no la fila: quien llama necesita el id real de cada renglon para poder generar despues el ingreso de inventario |
+| `fn_registrar_donacion(...)`            | [00114] Crea la donacion y su detalle en una transaccion. Devuelve JSONB, no la fila: quien llama necesita el id real de cada renglon para poder generar despues el ingreso de inventario. [00153] Recibe `p_jornada_id` |
 | `fn_anular_donacion(donacion, motivo)`  | [00114] Anula y sella `anulada_por` / `anulada_en`                 |
 | `fn_generar_alertas_caducidad()`        | Genera alertas de lo que vence en 30 dias o ya vencio (00129)     |
 | `fn_sincronizar_alertas_caducidad()`    | [00129] Corre el generador a peticion de la administradora, sin esperar a la rutina diaria |
@@ -862,7 +881,8 @@ Del lado del cliente, estos valores nacen una sola vez en `packages/shared/enums
 | `fn_crear_usuario_administrativo(...)`  | Alta de cuenta; SECURITY DEFINER, sin GRANT a PUBLIC              |
 | `presupuesto_de_jornada / _de_proyecto / _del_sistema()` | Asignado, ejecutado y disponible             |
 | `presupuestos_de_jornadas(ids[]) / presupuestos_de_proyectos(ids[])` | [00123] Lo mismo en lote: una fila por id en vez de una RPC por fila. Un id ausente del resultado se trata como presupuesto en ceros |
-| `equipo_de_proyecto(proyecto)`          | [00146] El equipo del proyecto con nombres, sin abrir `perfiles`  |
+| `equipo_de_proyecto(proyecto)`          | [00146] El equipo del proyecto con nombres, sin abrir `perfiles`. [00150] Union con el equipo de sus jornadas |
+| `fn_pasar_insumo_de_proyecto_a_jornada(insumo, jornada)` | [00151] INVOKER. Mueve un insumo previsto del proyecto a una de sus jornadas, en una transaccion |
 | `fn_verificar_y_contar_limite(recurso, actor, maximo, ventana)` | [00134] Limite de peticiones sobre `limites_de_uso`; lanza si se paso del umbral. Lo envuelven `fn_verificar_limite_invitaciones` y `fn_verificar_limite_busqueda_pacientes` |
 | `fn_reporte_pacientes_atendidos(...)`   | Reporte agregado con agrupacion configurable                      |
 | `fn_atenciones_de_persona_por_jornada(perfil)` | Cuantas atendio cada quien                                 |
@@ -894,14 +914,16 @@ Del lado del cliente, estos valores nacen una sola vez en `packages/shared/enums
 | `impedir_dejar_sin_administrador_activo`   | `perfiles`                  |                                                |
 | `impedir_borrar_ultimo_administrador`      | `perfiles`                  |                                                |
 | `impedir_permiso_escritura_a_consultivo`   | `usuario_permiso`           |                                                |
-| `registrar_evento_auditoria`               | tablas sensibles            | Escribe en `eventos_auditoria`                 |
+| `registrar_evento_auditoria`               | todas las tablas de negocio | Escribe en `eventos_auditoria`. Desde la `00152` cubre todas las tablas que escribe la aplicacion; las de clave compuesta pasan la columna que identifica la fila como argumento (`medicamento_principio`, `perfil_especialidad`). Quedan fuera las derivadas y las del sistema: `existencias`, historiales de estado, `notificaciones`, `alerta_caducidad_detalle`, `limites_de_uso`, catalogos fijos |
+| `fn_proyecto_de_la_jornada_de_la_donacion` | `donaciones`                | [00153] El proyecto de una donacion para una jornada es el de la jornada |
 | `registrar_evento_auditoria_usuario_permiso` | `usuario_permiso`         |                                                |
 | `registrar_evento_auditoria_rol_permiso`   | `rol_permiso`               | [00139] Audita la matriz de permisos por rol   |
 | `impedir_baja_de_paciente_sin_ser_administrador` | `pacientes`           | [00148] La baja (`fecha_baja`) es de la administradora |
 | `impedir_desactivar_sin_ser_administrador` | `diagnosticos`, `medicamentos` | [00148] Desactivar es de la administradora |
 | `impedir_retirar_sin_ser_administrador`    | `condiciones_cronicas`, `comunidades` | [00148] Retirar (`es_vigente`) es de la administradora |
 
-La tabla recoge los triggers que explican una regla de negocio; hay 68 en total. Los de
+La tabla recoge los triggers que explican una regla de negocio; hay 107 en total en `public`, 41 de
+ellos de auditoria. Los de
 notificaciones (`fn_notificar_*`, `00138`), los de presupuesto por origen (`00135`) y los de
 `updated_at` de cada tabla nueva siguen el mismo patron y se listan con
 `SELECT tgname, tgrelid::regclass FROM pg_trigger WHERE NOT tgisinternal`.
@@ -958,7 +980,7 @@ de que la interfaz se comporte bien**:
 **Denegacion por defecto** (`00030`): una tabla sin politica no devuelve nada a nadie. La vista
 `tablas_sin_rls` existe para comprobarlo.
 
-Las 130 politicas vigentes siguen cuatro patrones:
+Las 138 politicas vigentes siguen cuatro patrones:
 
 | Patron                    | Ejemplo                                                        | Se lee como                                    |
 | ------------------------- | -------------------------------------------------------------- | ---------------------------------------------- |
@@ -971,10 +993,10 @@ Politicas por tabla (numero de politicas vigentes, sacado de `pg_policies`):
 
 | Pol. | Tablas |
 | ---- | ------ |
-| 4    | `jornada_personal`, `jornada_presupuesto_origen`, `padecimientos_cronicos`, `presentaciones`, `principios_activos`, `proyecto_hitos`, `proyecto_insumos`, `proyecto_personal`, `usuario_permiso` |
-| 3    | `atenciones`, `bodegas`, `comunidades`, `condiciones_cronicas`, `consulta_diagnostico`, `consultas`, `diagnosticos`, `donacion_detalle`, `donaciones`, `donantes`, `existencias`, `expedientes`, `gastos`, `jornadas`, `lotes`, `medicamentos`, `movimientos_inventario`, `pacientes`, `perfil_especialidad`, `perfiles`, `proveedores`, `proyectos`, `recetas`, `rol_permiso`, `triajes` |
-| 2    | `alertas_caducidad`, `medicamento_principio`, `notificaciones`, `proyecto_seguimiento`, `receta_detalle` |
-| 1    | `alerta_caducidad_detalle`, `departamentos`, `eventos_auditoria`, `fusiones_pacientes`, `idiomas`, `jornada_estado_historial`, `municipios`, `permisos`, `proyecto_estado_historial` |
+| 4    | `jornada_insumos`, `jornada_personal`, `jornada_presupuesto_origen`, `padecimientos_cronicos`, `presentaciones`, `principios_activos`, `proyecto_hitos`, `proyecto_insumos`, `proyecto_personal`, `usuario_permiso` |
+| 3    | `atenciones`, `bodegas`, `comunidades`, `condiciones_cronicas`, `consulta_diagnostico`, `consultas`, `diagnosticos`, `donacion_detalle`, `donaciones`, `donantes`, `existencias`, `expedientes`, `gastos`, `jornadas`, `lotes`, `medicamentos`, `movimientos_inventario`, `notificaciones`, `pacientes`, `perfil_especialidad`, `perfiles`, `proveedores`, `proyectos`, `recetas`, `rol_modulo`, `triajes` |
+| 2    | `alertas_caducidad`, `fuentes_de_presupuesto`, `medicamento_principio`, `proyecto_seguimiento`, `receta_detalle` |
+| 1    | `alerta_caducidad_detalle`, `departamentos`, `eventos_auditoria`, `fusiones_pacientes`, `idiomas`, `jornada_estado_historial`, `municipios`, `permisos`, `proyecto_estado_historial`, `rol_permiso` |
 | 0    | `limites_de_uso`: RLS activo y ninguna politica, a proposito. Solo la tocan funciones `SECURITY DEFINER` |
 
 Una tabla con **una** politica es de solo lectura desde el cliente: la escribe un trigger o una
@@ -984,7 +1006,7 @@ funcion `SECURITY DEFINER` (historiales, auditoria, detalle de alertas) o es un 
 fuente de verdad del control de acceso, y un PR que cambia una politica o un GRANT lo actualiza en
 el mismo PR.
 
-Las politicas se comprueban con 49 archivos pgTAP en `supabase/tests/database/`, que corren en CI
+Las politicas se comprueban con 52 archivos pgTAP en `supabase/tests/database/`, que corren en CI
 sobre una base creada desde cero.
 
 ## 16. Auditoria campo-a-vista (issue #756)

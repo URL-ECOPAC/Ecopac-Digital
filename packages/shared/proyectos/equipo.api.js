@@ -39,20 +39,30 @@ function aMiembro(fila) {
   return { ...resto, nombre: aNombre(perfil) || ETIQUETA_PERSONA_SIN_NOMBRE };
 }
 
-/** Una fila de equipo_de_proyecto() (snake_case, nombres planos) a la forma de aMiembro(). */
+/**
+ * Una fila de equipo_de_proyecto() (snake_case, nombres planos) a la forma de aMiembro().
+ *
+ * Desde la 00150 el equipo es la union del equipo asignado al proyecto y el de sus jornadas:
+ * `enEquipoDelProyecto` dice si la persona esta asignada al proyecto (la unica que se puede quitar
+ * desde ahi) y `jornadas` en que jornadas del proyecto esta.
+ */
 function deFilaDeLaFuncion(fila) {
   return {
-    id: fila.id,
+    id: fila.id ?? `jornada-${fila.perfil_id}`,
     proyectoId: fila.proyecto_id,
     perfilId: fila.perfil_id,
     rolEnProyecto: fila.rol_en_proyecto,
     createdAt: fila.created_at,
     nombre: aNombre(fila) || ETIQUETA_PERSONA_SIN_NOMBRE,
+    enEquipoDelProyecto: fila.en_equipo_del_proyecto === true,
+    jornadas: fila.jornadas ?? [],
   };
 }
 
 /**
- * Equipo de un proyecto, en el orden en que se fue armando.
+ * Equipo de un proyecto (00150): quienes estan asignados al proyecto, en el orden en que se armo,
+ * y despues quienes solo estan en el cuadro de turnos de alguna de sus jornadas. Una fila por
+ * persona.
  *
  * @param {string} proyectoId UUID del proyecto.
  * @returns {Promise<{ equipo: object[], error: object|null }>}

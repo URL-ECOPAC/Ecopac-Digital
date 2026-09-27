@@ -739,6 +739,15 @@ textarea.form-control {
   padding: var(--spacing-md);
 }
 
+/* Fila entera arriba de los filtros, dentro de la tarjeta (FilterBar, prop `encabezado`). */
+.ec-filtros-encabezado {
+  flex: 1 1 100%;
+}
+
+.ec-filtros-encabezado .reporte-presets {
+  margin-bottom: 0;
+}
+
 .ec-filtro {
   flex: 1 1 180px;
   margin: 0;
@@ -1428,4 +1437,31 @@ textarea.form-control {
   margin: 0;
   padding: var(--spacing-lg);
   text-align: center;
+}
+
+/* Fila de "elegir y agregar" (equipo y jornadas del proyecto): los controles comparten la fila y
+   el boton conserva su ancho natural, en una sola linea. Antes el selector ocupaba todo lo que
+   podia y el boton se partia en dos renglones. En pantalla angosta pasa a columna. */
+.ec-fila-agregar {
+  align-items: center;
+  display: flex;
+  gap: var(--spacing-sm);
+}
+
+.ec-fila-agregar > .form-select,
+.ec-fila-agregar > .form-control {
+  flex: 1 1 12rem;
+  min-width: 0;
+}
+
+.ec-fila-agregar > .btn {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+@media (max-width: 575.98px) {
+  .ec-fila-agregar {
+    align-items: stretch;
+    flex-direction: column;
+  }
 }

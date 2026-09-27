@@ -61,7 +61,7 @@ describe("TarjetaReceta", () => {
   it("imprimir entrega la receta a quien la imprime", () => {
     const { onImprimir } = pantalla();
 
-    fireEvent.click(screen.getByText("Imprimir o guardar PDF"));
+    fireEvent.click(screen.getByText("Imprimir / PDF"));
     expect(onImprimir).toHaveBeenCalledWith(RECETA_DE_EJEMPLO);
   });
 
