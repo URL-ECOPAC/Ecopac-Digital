@@ -14,9 +14,10 @@
 // esa carpeta convivia con donantes y donaciones (issue #189). Aqui recupera la estructura
 // estandar sin prefijo.
 //
-// avance.api.js y tableroProyectosApi.js son entidades propias dentro del mismo modulo -- hitos
-// y seguimiento de avance, y el tablero kanban -- con su propia tabla o su propia vista sobre
-// proyectos. Mismo patron que pacientes/ usa con triaje.api.js.
+// avance.api.js, equipo.api.js e insumos.api.js son entidades propias dentro del mismo modulo
+// -hitos y seguimiento, equipo, insumos previstos-, cada una con su tabla. Mismo patron que
+// pacientes/ usa con triaje.api.js. tableroProyectosApi.js se retiro con la 00149: nadie lo
+// llamaba, leia una columna `etapa` que no existe y ordenaba por orden_columna, que ya no esta.
 
 export { vacioANull } from "./normalizacion.js";
 export * from "./validaciones.js";
@@ -25,7 +26,6 @@ export * from "./permisos.js";
 export * from "./avance.api.js";
 export * from "./equipo.api.js";
 export * from "./insumos.api.js";
-export * from "./tableroProyectosApi.js";
 export * from "./campos.js";
 export * from "./columnas.js";
 export * from "./filtros.js";

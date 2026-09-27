@@ -68,6 +68,10 @@ export const statusColors = {
   pendiente: colors.info,
   aprobado: colors.success,
   rechazado: colors.danger,
+  // Envio del correo de una notificacion (bitacora, 00149). No es un enum de la base: lo deriva
+  // estadoDeCorreo() de notificaciones/api.js de las columnas correo_* de la 00138.
+  enviado: colors.success,
+  fallido: colors.danger,
   // estado_alerta (alertas_caducidad.estado, 00021)
   atendida: colors.success,
   // estado_jornada

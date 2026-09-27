@@ -96,14 +96,14 @@ describe("filtrarCatalogoMedicamentos", () => {
     expect(ids({ estado: "inactivos" })).toEqual(["m-3"]);
   });
 
-  it("busca por nombre sin acentos, por marca y por numero de lote", () => {
-    const resumen = resumirLotesPorMedicamento(LOTES);
+  it("busca por nombre sin acentos y por marca, pero no por numero de lote", () => {
     const buscar = (busqueda) =>
-      filtrarCatalogoMedicamentos(MEDICAMENTOS, { busqueda }, resumen).map((m) => m.id);
+      filtrarCatalogoMedicamentos(MEDICAMENTOS, { busqueda }).map((m) => m.id);
 
     expect(buscar("acetaminofén")).toEqual(["m-1"]);
     expect(buscar("bayer")).toEqual(["m-2"]);
-    expect(buscar("amx-7")).toEqual(["m-2"]);
+    // El catalogo es de productos: un lote se busca en la pestana Lotes.
+    expect(buscar("amx-7")).toEqual([]);
   });
 });
 

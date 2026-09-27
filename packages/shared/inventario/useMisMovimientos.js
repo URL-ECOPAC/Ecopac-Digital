@@ -155,6 +155,12 @@ export function useMisMovimientos({ usuarioId, rolUsuario } = {}) {
     total: movimientos.length,
     filtros,
     setFiltro,
+    limpiarFiltros: () => setFiltros(FILTROS_MIS_MOVIMIENTOS_VACIOS),
+    // "Hay filtros" es cualquier cosa distinta de lo que se ve al entrar: todos los estados, solo
+    // los movimientos propios.
+    hayFiltros:
+      filtros.estado !== FILTROS_MIS_MOVIMIENTOS_VACIOS.estado ||
+      filtros.alcance !== FILTROS_MIS_MOVIMIENTOS_VACIOS.alcance,
     cargando,
     error,
     enviando,

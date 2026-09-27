@@ -863,31 +863,66 @@ describe("contarJornadasPorPerfil", () => {
     expect(error).toBeNull();
   });
 
-  it("cuenta cuantas filas tiene cada perfil", async () => {
-    const { cliente } = doble({
-      data: [{ perfil_id: "p1" }, { perfil_id: "p1" }, { perfil_id: "p2" }, { perfil_id: "p1" }],
-      error: null,
+  // Cliente que responde distinto segun la tabla: turnos (jornada_personal) y responsables
+  // (jornadas). Anota cada consulta para comprobar que no hay una por persona.
+  function clientePorTabla(respuestas) {
+    const consultas = [];
+    return {
+      consultas,
+      cliente: {
+        from(tabla) {
+          return {
+            select() {
+              return {
+                in(columna, valores) {
+                  consultas.push({ tabla, columna, valores });
+                  return Promise.resolve(respuestas[tabla] ?? { data: [], error: null });
+                },
+              };
+            },
+          };
+        },
+      },
+    };
+  }
+
+  it("cuenta jornadas distintas: con turno o como responsable, sin repetir", async () => {
+    const { cliente } = clientePorTabla({
+      jornada_personal: {
+        data: [
+          { perfil_id: "p1", jornada_id: "j1" },
+          { perfil_id: "p1", jornada_id: "j2" },
+          { perfil_id: "p2", jornada_id: "j1" },
+        ],
+        error: null,
+      },
+      // p1 es responsable de j2 (ya contada por su turno) y de j3 (sin turno); p3 solo organiza.
+      jornadas: {
+        data: [
+          { id: "j2", responsable_id: "p1" },
+          { id: "j3", responsable_id: "p1" },
+          { id: "j4", responsable_id: "p3" },
+        ],
+        error: null,
+      },
     });
     dobles.cliente = cliente;
 
-    const { conteos } = await contarJornadasPorPerfil(["p1", "p2"]);
+    const { conteos } = await contarJornadasPorPerfil(["p1", "p2", "p3"]);
 
-    expect(conteos).toEqual({ p1: 3, p2: 1 });
+    expect(conteos).toEqual({ p1: 3, p2: 1, p3: 1 });
   });
 
-  it("pide todos los perfiles en UNA sola consulta, no una por persona", async () => {
-    const { cliente, llamadas } = doble({ data: [], error: null });
+  it("pide todos los perfiles en dos consultas en total, no una por persona", async () => {
+    const { cliente, consultas } = clientePorTabla({});
     dobles.cliente = cliente;
 
     await contarJornadasPorPerfil(["p1", "p2", "p3"]);
 
-    expect(pasos(llamadas, "from")).toHaveLength(1);
-    expect(pasos(llamadas, "from")[0].tabla).toBe("jornada_personal");
-    expect(pasos(llamadas, "in")[0]).toEqual({
-      paso: "in",
-      columna: "perfil_id",
-      valores: ["p1", "p2", "p3"],
-    });
+    expect(consultas).toEqual([
+      { tabla: "jornada_personal", columna: "perfil_id", valores: ["p1", "p2", "p3"] },
+      { tabla: "jornadas", columna: "responsable_id", valores: ["p1", "p2", "p3"] },
+    ]);
   });
 
   it("un perfil sin jornadas no aparece en el resultado", async () => {

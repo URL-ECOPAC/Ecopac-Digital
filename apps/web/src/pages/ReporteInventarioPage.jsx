@@ -193,6 +193,9 @@ export default function ReporteInventarioPage({ incrustado = false }) {
       <Modal
         visible={Boolean(medicamentoEnDetalle)}
         onClose={() => setMedicamentoEnDetalle(null)}
+        // Ancho suficiente para las cinco columnas del lote sin barra horizontal: en el ancho por
+        // defecto (500px) la fecha de vencimiento y el estado quedaban fuera de vista.
+        size="lg"
         title={
           medicamentoEnDetalle
             ? `${medicamentoEnDetalle.medicamento} · ${medicamentoEnDetalle.lotes?.length ?? 0} lotes`

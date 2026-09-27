@@ -26,6 +26,8 @@ export default function MisMovimientosScreen() {
     total,
     filtros,
     setFiltro,
+    limpiarFiltros,
+    hayFiltros,
     cargando,
     error,
     recargar,
@@ -60,7 +62,13 @@ export default function MisMovimientosScreen() {
     <ScreenContainer scrollable={false}>
       <PageHeader title="Mis movimientos" subtitle="Movimientos de inventario que registraste" />
 
-      <FilterBar campos={campos} valores={filtros} onChange={setFiltro} />
+      <FilterBar
+        campos={campos}
+        valores={filtros}
+        onChange={setFiltro}
+        onLimpiar={limpiarFiltros}
+        hayFiltros={hayFiltros}
+      />
 
       <Text style={styles.total}>{total === 1 ? "1 movimiento" : `${total} movimientos`}</Text>
 

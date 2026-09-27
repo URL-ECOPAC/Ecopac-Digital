@@ -33,6 +33,7 @@ const COLUMNAS_DE_LA_DONACION = [
   "donante:donantes(nombre)",
   "proyecto:proyectos(nombre)",
   "anuladaPorPerfil:perfiles!donaciones_anulada_por_fkey(nombres, apellidos)",
+  "registradoPorPerfil:perfiles!donaciones_registrada_por_fkey(nombres, apellidos)",
   // Los renglones vienen con la donacion y no en una segunda consulta: el historial los usa
   // para el resumen de cada fila y para el detalle del modal, y la constancia los imprime. Sin
   // esto la pantalla dibujaba siempre "Sin detalles registrados".
@@ -84,6 +85,10 @@ function aDonacion(fila) {
     proyectoNombre: fila.proyecto?.nombre ?? null,
     anuladaPorNombre:
       [fila.anuladaPorPerfil?.nombres, fila.anuladaPorPerfil?.apellidos]
+        .filter(Boolean)
+        .join(" ") || null,
+    registradoPorNombre:
+      [fila.registradoPorPerfil?.nombres, fila.registradoPorPerfil?.apellidos]
         .filter(Boolean)
         .join(" ") || null,
     detalles: fila.detalles ?? [],

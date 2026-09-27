@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Plus, X } from "lucide-react";
 
 import {
   COLUMNAS_ORIGEN_PRESUPUESTO,
@@ -7,10 +8,59 @@ import {
 } from "@ecopac/shared";
 
 import CampoDeFormulario from "../components/CampoDeFormulario";
-import { Card, DataList, ErrorState, PrimaryButton, SecondaryButton } from "../components";
+import {
+  Card,
+  DataList,
+  ErrorState,
+  PrimaryButton,
+  SecondaryButton,
+  TextField,
+} from "../components";
 import { EnFormulario } from "../components/contextoDeFormulario";
 
 // De donde viene el presupuesto de una jornada (issue #840, bloque D).
+//
+// "Crear quien aporta" (00149) reemplaza a "+ Crear opcion", que abria un modal y cerraba sin
+// guardar nada: el origen es un enum de la base y no se le pueden sumar valores. Lo que se crea es
+// una fuente de aporte externo -la municipalidad, una empresa-, que queda elegida en el formulario.
+
+function AltaDeFuente({ creando, error, onCrear, onCancelar }) {
+  const [nombre, setNombre] = useState("");
+
+  return (
+    <div className="ec-form-grid--ancho mt-2">
+      <TextField
+        label="Quién aporta"
+        placeholder="Ej. Municipalidad de San Juan"
+        value={nombre}
+        onChange={(evento) => setNombre(evento.target.value)}
+        error={error?.mensaje}
+        disabled={creando}
+        autoFocus
+      />
+      <div className="ec-acciones">
+        <PrimaryButton
+          title="Guardar"
+          size="sm"
+          onClick={async () => {
+            if (await onCrear(nombre)) setNombre("");
+          }}
+          loading={creando}
+          disabled={!nombre.trim()}
+        />
+        <SecondaryButton
+          title="Cancelar"
+          variant="neutra"
+          size="sm"
+          icon={<X size={14} aria-hidden="true" />}
+          onClick={onCancelar}
+          disabled={creando}
+        />
+      </div>
+    </div>
+  );
+}
+
 export default function OrigenesDePresupuesto({ jornadaId, proyectoId, rol, alCambiar }) {
   const {
     permisos,
@@ -29,17 +79,26 @@ export default function OrigenesDePresupuesto({ jornadaId, proyectoId, rol, alCa
     registrar,
     quitar,
     quitandoId,
+    crearFuente,
+    creandoFuente,
+    errorFuente,
+    limpiarErrorFuente,
   } = useOrigenesDePresupuesto({ jornadaId, proyectoId, rol, alCambiar });
 
-  const [mostrarModalNuevo, setMostrarModalNuevo] = useState(false);
-  const [nuevoNombre, setNuevoNombre] = useState("");
+  const [creandoFuenteNueva, setCreandoFuenteNueva] = useState(false);
 
   if (error) {
     return <ErrorState message={error.mensaje} onRetry={recargar} />;
   }
 
+  const cerrarAltaDeFuente = () => {
+    setCreandoFuenteNueva(false);
+    limpiarErrorFuente();
+  };
+
   return (
-    <>
+    // Dos secciones con aire entre ellas: la lista de aportes y el formulario para registrar uno.
+    <div className="d-flex flex-column gap-4">
       <Card title={`Presupuesto: ${formatearMoneda(total) ?? formatearMoneda(0)}`}>
         <p className="text-body-secondary small mb-3">
           El presupuesto de la jornada es la suma de estos aportes. Para cambiarlo se registra o se
@@ -71,104 +130,56 @@ export default function OrigenesDePresupuesto({ jornadaId, proyectoId, rol, alCa
               {errorAlGuardar.mensaje}
             </div>
           )}
-          <div className="ec-form-grid">
-            {campos.map((campo) => {
-              const esOrigen =
-                campo.id === "origenId" ||
-                campo.id === "origen" ||
-                campo.id === "origenPresupuestoId";
-
-              return (
+          <EnFormulario>
+            <div className="ec-form-grid">
+              {campos.map((campo) => (
                 <div key={campo.id} className="d-flex flex-column">
-                  {esOrigen && (
-                    <div className="d-flex justify-content-between align-items-center mb-1">
-                      <span className="ec-rotulo small text-uppercase text-muted fw-bold">
-                        {campo.label || "De dónde viene"}
-                      </span>
-                      <button
-                        type="button"
-                        className="btn btn-link p-0 text-decoration-none small"
-                        style={{ fontSize: "var(--texto-sm)" }}
-                        onClick={() => setMostrarModalNuevo(true)}
-                      >
-                        + Crear opción
-                      </button>
-                    </div>
-                  )}
                   <CampoDeFormulario
-                    campo={esOrigen ? { ...campo, label: "" } : campo}
+                    campo={campo}
                     valor={valores[campo.id]}
                     error={errores[campo.id]}
                     catalogos={catalogos}
                     disabled={guardando}
                     onChange={(valor) => setCampo(campo.id, valor)}
                   />
+                  {campo.id === "origen" && !creandoFuenteNueva && (
+                    <div className="mt-2">
+                      <SecondaryButton
+                        title="Crear quién aporta"
+                        size="sm"
+                        icon={<Plus size={14} aria-hidden="true" />}
+                        onClick={() => setCreandoFuenteNueva(true)}
+                        disabled={guardando}
+                      />
+                    </div>
+                  )}
+                  {campo.id === "origen" && creandoFuenteNueva && (
+                    <AltaDeFuente
+                      creando={creandoFuente}
+                      error={errorFuente}
+                      onCrear={async (nombre) => {
+                        const creada = await crearFuente(nombre);
+                        if (creada) setCreandoFuenteNueva(false);
+                        return creada;
+                      }}
+                      onCancelar={cerrarAltaDeFuente}
+                    />
+                  )}
                 </div>
-              );
-            })}
-          </div>
-          {campos.some((campo) => campo.id === "donacionId") &&
-            catalogos?.donacionesDisponibles?.length === 0 && (
-              <p className="ec-campo-nota">
-                No hay donaciones de dinero con saldo por asignar. Se registran en Donaciones.
-              </p>
-            )}
-          <div className="ec-form-pie">
-            <EnFormulario>
+              ))}
+            </div>
+            {campos.some((campo) => campo.id === "donacionId") &&
+              catalogos?.donacionesDisponibles?.length === 0 && (
+                <p className="ec-campo-nota">
+                  No hay donaciones de dinero con saldo por asignar. Se registran en Donaciones.
+                </p>
+              )}
+            <div className="ec-form-pie">
               <PrimaryButton title="Agregar aporte" onClick={registrar} loading={guardando} />
-            </EnFormulario>
-          </div>
+            </div>
+          </EnFormulario>
         </Card>
       )}
-
-      {mostrarModalNuevo && (
-        <div
-          className="modal show d-block"
-          tabIndex="-1"
-          role="dialog"
-          style={{ backgroundColor: "color-mix(in srgb, var(--color-text) 45%, transparent)" }}
-        >
-          <div className="modal-dialog modal-dialog-centered" role="document">
-            <div className="modal-content">
-              <div className="modal-header">
-                <h5 className="modal-title">Crear opción de origen</h5>
-                <button
-                  type="button"
-                  className="btn-close"
-                  aria-label="Cerrar"
-                  onClick={() => setMostrarModalNuevo(false)}
-                />
-              </div>
-              <div className="modal-body">
-                <div className="mb-3">
-                  <label className="form-label ec-rotulo">Nombre de la opción</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    placeholder="Ej. Aporte Municipal"
-                    value={nuevoNombre}
-                    onChange={(e) => setNuevoNombre(e.target.value)}
-                    autoFocus
-                  />
-                </div>
-              </div>
-              <div className="modal-footer">
-                <EnFormulario>
-                  <SecondaryButton title="Cancelar" onClick={() => setMostrarModalNuevo(false)} />
-                  <PrimaryButton
-                    title="Guardar"
-                    onClick={() => {
-                      setMostrarModalNuevo(false);
-                      setNuevoNombre("");
-                      if (typeof recargar === "function") recargar();
-                    }}
-                  />
-                </EnFormulario>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-    </>
+    </div>
   );
 }

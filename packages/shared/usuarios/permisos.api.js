@@ -322,18 +322,30 @@ export async function obtenerMisAccesos() {
  * de los que cada rol ya tiene por defecto. rol_modulo es chica -ocho modulos por cuatro roles como
  * maximo- asi que se trae completa.
  *
- * @returns {Promise<{ accesos: Array<{ rol: string, modulo: string }>, error: object|null }>}
+ * Cada acceso trae ademas quien lo abrio y cuando (`otorgado_por`/`otorgado_en`): la matriz lo
+ * guardaba y no lo decia.
+ *
+ * @returns {Promise<{ accesos: Array<{ rol: string, modulo: string, otorgadoEn: string|null,
+ *   otorgadoPorNombre: string|null }>, error: object|null }>}
  */
 export async function listarAccesosPorRol() {
   try {
     const { data, error } = await obtenerSupabase()
       .from("rol_modulo")
-      .select("rol, modulo")
+      .select("rol, modulo, otorgadoEn:otorgado_en, otorgadoPor:perfiles(nombres, apellidos)")
       .order("rol", { ascending: true })
       .order("modulo", { ascending: true });
 
     if (error) return { accesos: [], error: normalizarError(error) };
-    return { accesos: data ?? [], error: null };
+    return {
+      accesos: (data ?? []).map(({ otorgadoPor, ...fila }) => ({
+        ...fila,
+        otorgadoEn: fila.otorgadoEn ?? null,
+        otorgadoPorNombre:
+          [otorgadoPor?.nombres, otorgadoPor?.apellidos].filter(Boolean).join(" ") || null,
+      })),
+      error: null,
+    };
   } catch (error) {
     return { accesos: [], error: normalizarError(error) };
   }

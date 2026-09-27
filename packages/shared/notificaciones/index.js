@@ -17,3 +17,4 @@ export * from "./eventos.js";
 export * from "./filtros.js";
 export * from "./useBuzonNotificaciones.js";
 export * from "./useContadorNotificaciones.js";
+export * from "./useEnviosDeCorreo.js";

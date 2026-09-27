@@ -1,6 +1,7 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { StyleSheet, Text, View } from "react-native";
 import { colors, radii, spacing, statusColors, typography } from "@ecopac/ui-tokens";
+import { etiquetaDeValor } from "@ecopac/shared";
 
 /**
  * Chip de estado. Espejo de apps/web/src/components/StatusChip.jsx.
@@ -28,7 +29,9 @@ export default function StatusChip({ status, label, icono, uppercase = false }) 
 
   // React Native tampoco pinta booleanos: la columna de estado de COLUMNAS_USUARIO lee el
   // campo activo, y sin convertirlo el chip saldria vacio.
-  const texto = label ?? String(status);
+  // Sin label, el valor crudo del enum se lee como etiqueta ("aprobado" -> "Aprobado"), igual
+  // que en web.
+  const texto = label ?? etiquetaDeValor(status);
   const fondo = statusColors[status] ?? colors.secondary;
   const nombreDeIcono = ICONOS[icono];
 

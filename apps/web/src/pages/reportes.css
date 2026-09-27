@@ -324,11 +324,20 @@
   margin-bottom: var(--spacing-md);
 }
 
+/* Ocupa lo que dejen los botones de la derecha, en vez de cortarse a 60 caracteres: una frase
+   corta ("... con comparacion opcional.") partia su ultima palabra a otra linea con media barra
+   vacia. En pantalla angosta sigue envolviendo. */
 .reporte-barra-texto {
   color: var(--color-text-muted);
+  flex: 1 1 24rem;
   font-size: var(--texto-sm);
   margin: 0;
-  max-width: 60ch;
+  min-width: 0;
+}
+
+/* Aire entre la tarjeta de filtros y las cifras de abajo: iban pegadas. */
+.reporte-filtros-tarjeta {
+  margin-bottom: var(--spacing-lg);
 }
 
 /* --------------------------------------------------------------------------

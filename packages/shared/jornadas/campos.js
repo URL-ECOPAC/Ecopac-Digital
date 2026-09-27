@@ -3,11 +3,10 @@
 //
 // Los campos y su validacion reflejan las columnas y los CHECK reales de jornadas y
 // jornada_personal (00012, mas codigo/fecha_inicio_real/fecha_fin_real/
-// orden_kanban/cupo_estimado/botiquin_bodega_id/asistio agregados en la 00036), no el
+// cupo_estimado/botiquin_bodega_id/asistio agregados en la 00036), no el
 // diccionario de datos original cuando difieren (ver AGENTS.md, "Fuente de verdad").
-// estado, orden_kanban, fecha_inicio_real y fecha_fin_real no son campos de este
-// formulario: los mueve el kanban (arrastrar una tarjeta) y las acciones de iniciar/
-// finalizar jornada, no una edicion manual.
+// estado, fecha_inicio_real y fecha_fin_real no son campos de este formulario: los mueven
+// el kanban y las acciones de iniciar/finalizar jornada, no una edicion manual.
 
 import { TIPOS_DE_CAMPO } from "../descriptores.js";
 import { camposDeEdicion } from "../formularios.js";

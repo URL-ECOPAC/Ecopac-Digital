@@ -47,6 +47,9 @@ const COLUMNAS_DEL_LOTE = [
   "updatedAt:updated_at",
   "medicamento:medicamentos(nombre)",
   "proveedor:proveedores(nombre)",
+  // Quien dio de alta el lote, por nombre. La politica de perfiles solo deja leer ajenos a la
+  // administradora: para el resto llega null y la pantalla dice "—", no un UUID.
+  "registradoPorPerfil:perfiles!lotes_registrado_por_fkey(nombres, apellidos)",
 ].join(", ");
 
 // Aqui vivian CAMPOS_REQUERIDOS_DE_LOTE y faltaAlgunCampoRequerido(), que solo servian a
@@ -100,6 +103,10 @@ function aLote(fila) {
         : Number(fila.costoUnitario),
     moneda: fila.moneda ?? null,
     registradoPor: fila.registradoPor ?? null,
+    registradoPorNombre:
+      [fila.registradoPorPerfil?.nombres, fila.registradoPorPerfil?.apellidos]
+        .filter(Boolean)
+        .join(" ") || null,
     confirmado: fila.confirmado ?? null,
     vencido: (diasHastaVencimiento(fila.fechaVencimiento) ?? 0) < 0,
     createdAt: fila.createdAt,

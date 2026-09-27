@@ -19,7 +19,7 @@
 
 BEGIN;
 
-SELECT plan(26);
+SELECT plan(27);
 
 -- ============================================================================
 -- Setup
@@ -269,11 +269,29 @@ SELECT is(
 SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub', 'b0000000-0000-0000-0000-000000000001', TRUE);
 
-SELECT is(
+-- 00149: la administracion lee las notificaciones de todas las personas, para ver en la bitacora
+-- si su correo salio. Antes solo veia las suyas.
+SELECT cmp_ok(
   (SELECT count(*)::int FROM notificaciones WHERE perfil_id <> 'b0000000-0000-0000-0000-000000000001'),
+  '>',
   0,
-  'un administrador solo ve sus propias notificaciones, no las de los demas'
+  'la administracion lee las notificaciones de los demas, para la bitacora de correos (00149)'
 );
+
+-- Leerlas no es tocarlas: marcar como leida sigue siendo de cada quien. Un UPDATE que RLS no deja
+-- pasar no lanza, afecta cero filas.
+UPDATE notificaciones SET leida_en = NOW()
+  WHERE perfil_id <> 'b0000000-0000-0000-0000-000000000001' AND leida_en IS NULL;
+
+RESET ROLE;
+SELECT is(
+  (SELECT count(*)::int FROM notificaciones
+    WHERE perfil_id <> 'b0000000-0000-0000-0000-000000000001' AND leida_en IS NOT NULL),
+  0,
+  'la administracion no marca como leidas las notificaciones de otra persona'
+);
+SET LOCAL ROLE authenticated;
+SELECT set_config('request.jwt.claim.sub', 'b0000000-0000-0000-0000-000000000001', TRUE);
 
 SELECT lives_ok(
   $$ UPDATE notificaciones SET leida_en = NOW()

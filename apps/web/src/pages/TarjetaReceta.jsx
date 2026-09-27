@@ -36,6 +36,9 @@ function Detalle({ receta }) {
             <strong>{describirMedicamento(renglon)}</strong>
             {describirPosologia(renglon) && ` — ${describirPosologia(renglon)}`}
             {describirEntrega(renglon).texto && ` (${describirEntrega(renglon).texto})`}
+            {renglon.bodega && (
+              <span className="d-block small text-body-secondary">Salió de {renglon.bodega}</span>
+            )}
           </li>
         ))}
       </ul>

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { formatearFechaCorta } from "../formato/fechas.js";
 import { puedeVerHistorial } from "./permisos.js";
 import { obtenerRecetas } from "./recetas.api.js";
 
@@ -51,6 +52,8 @@ export function describirEntrega(renglon) {
   }
   const detalle = [`corregido de ${original}`];
   if (renglon.ajustadaPorNombre) detalle.push(`por ${renglon.ajustadaPorNombre}`);
+  // Cuando se corrigio (receta_detalle.ajustada_en, 00128): se guardaba y no se decia.
+  if (renglon.ajustadaEn) detalle.push(`el ${formatearFechaCorta(renglon.ajustadaEn)}`);
   return { vigente, original, corregida, texto: `entregadas: ${vigente} (${detalle.join(" ")})` };
 }
 

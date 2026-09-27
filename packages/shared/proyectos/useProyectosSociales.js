@@ -14,8 +14,9 @@
 //   nadie cargaba. listarJornadasDelProyecto(id) ya consulta solo las de ese proyecto, asi que
 //   se piden al seleccionar y no se filtra nada.
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { CODIGOS_DE_ERROR_DE_SUPABASE } from "../api/errores-de-supabase.js";
 import { hayErrores } from "../validations/index.js";
 import { listarMedicamentos } from "../inventario/medicamentos.api.js";
 import { listarJornadas } from "../jornadas/api.js";
@@ -379,44 +380,73 @@ export function useProyectosSociales({ usuarioRol } = {}) {
     return perfiles.filter((perfil) => !yaEnElEquipo.has(perfil.value));
   }, [perfiles, equipo]);
 
+  // Una sola operacion del equipo a la vez. El boton no se deshabilitaba mientras esperaba, y con
+  // la latencia de un proyecto remoto un segundo clic mandaba la misma alta otra vez: la segunda
+  // chocaba con el UNIQUE (proyecto, persona) y la pantalla mostraba un error aunque la primera ya
+  // habia agregado a la persona. La marca es un ref para cortar tambien dos clics del mismo render.
+  const operacionDeEquipoEnCurso = useRef(false);
+  const [ocupadoEquipo, setOcupadoEquipo] = useState(false);
+
+  const conEquipoOcupado = useCallback(async (operacion) => {
+    if (operacionDeEquipoEnCurso.current) return { ok: false, error: null, enCurso: true };
+    operacionDeEquipoEnCurso.current = true;
+    setOcupadoEquipo(true);
+    try {
+      return await operacion();
+    } finally {
+      operacionDeEquipoEnCurso.current = false;
+      setOcupadoEquipo(false);
+    }
+  }, []);
+
   /** Agrega a `perfilId` al equipo del proyecto abierto. `rolEnProyecto` es opcional. */
   const agregarAlEquipo = useCallback(
-    async (perfilId, rolEnProyecto) => {
-      if (!permisos.puedeGestionarEquipo || !proyectoSeleccionadoId) {
-        return { ok: false, error: null };
-      }
-      const { error: fallo } = await asignarPersonalAProyecto(proyectoSeleccionadoId, {
-        perfilId,
-        rolEnProyecto,
-      });
-      setErrorEquipo(fallo);
-      if (fallo) return { ok: false, error: fallo };
+    (perfilId, rolEnProyecto) =>
+      conEquipoOcupado(async () => {
+        if (!permisos.puedeGestionarEquipo || !proyectoSeleccionadoId) {
+          return { ok: false, error: null };
+        }
+        const { error: fallo } = await asignarPersonalAProyecto(proyectoSeleccionadoId, {
+          perfilId,
+          rolEnProyecto,
+        });
+        if (fallo?.codigo === CODIGOS_DE_ERROR_DE_SUPABASE.UNICIDAD) {
+          // Ya estaba en el equipo (la agrego otra pestana u otra persona): se dice asi, no como
+          // un fallo, y se recarga para que aparezca.
+          const yaEsta = { ...fallo, mensaje: "Esa persona ya está en el equipo del proyecto." };
+          setErrorEquipo(yaEsta);
+          await cargarEquipo();
+          return { ok: false, error: yaEsta, yaEstaba: true };
+        }
+        setErrorEquipo(fallo);
+        if (fallo) return { ok: false, error: fallo };
 
-      await cargarEquipo();
-      return { ok: true, error: null };
-    },
-    [permisos.puedeGestionarEquipo, proyectoSeleccionadoId, cargarEquipo],
+        await cargarEquipo();
+        return { ok: true, error: null };
+      }),
+    [permisos.puedeGestionarEquipo, proyectoSeleccionadoId, cargarEquipo, conEquipoOcupado],
   );
 
   /** Quita a `perfilId` del equipo del proyecto abierto. */
   const quitarDelEquipo = useCallback(
-    async (perfilId) => {
-      if (!permisos.puedeGestionarEquipo || !proyectoSeleccionadoId) {
-        return { ok: false, error: null };
-      }
-      const { desasignado, error: fallo } = await desasignarPersonalDeProyecto(
-        proyectoSeleccionadoId,
-        perfilId,
-      );
-      setErrorEquipo(fallo);
-      if (fallo) return { ok: false, error: fallo };
-      // RLS no avisa cuando no deja borrar: cero filas. Se dice, no se finge que se quito.
-      if (!desasignado) return { ok: false, error: null };
+    (perfilId) =>
+      conEquipoOcupado(async () => {
+        if (!permisos.puedeGestionarEquipo || !proyectoSeleccionadoId) {
+          return { ok: false, error: null };
+        }
+        const { desasignado, error: fallo } = await desasignarPersonalDeProyecto(
+          proyectoSeleccionadoId,
+          perfilId,
+        );
+        setErrorEquipo(fallo);
+        if (fallo) return { ok: false, error: fallo };
+        // RLS no avisa cuando no deja borrar: cero filas. Se dice, no se finge que se quito.
+        if (!desasignado) return { ok: false, error: null };
 
-      await cargarEquipo();
-      return { ok: true, error: null };
-    },
-    [permisos.puedeGestionarEquipo, proyectoSeleccionadoId, cargarEquipo],
+        await cargarEquipo();
+        return { ok: true, error: null };
+      }),
+    [permisos.puedeGestionarEquipo, proyectoSeleccionadoId, cargarEquipo, conEquipoOcupado],
   );
 
   /**
@@ -546,6 +576,7 @@ export function useProyectosSociales({ usuarioRol } = {}) {
     equipo,
     cargandoEquipo,
     errorEquipo,
+    ocupadoEquipo,
     personalDisponible,
     agregarAlEquipo,
     quitarDelEquipo,

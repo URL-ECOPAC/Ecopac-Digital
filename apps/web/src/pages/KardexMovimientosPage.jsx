@@ -169,6 +169,7 @@ export default function KardexMovimientosPage({
     .join(" · ");
 
   const hayFiltros = Boolean(
+    (usaSeleccionPropia && loteSeleccionadoId) ||
     filtros.fechaDesde ||
     filtros.fechaHasta ||
     (filtros.tipoMovimiento && filtros.tipoMovimiento !== "todos"),
@@ -180,7 +181,8 @@ export default function KardexMovimientosPage({
         title={titulo}
         subtitle={
           <>
-            Historial cronológico • Solo movimientos <strong>aprobados</strong> afectan el saldo
+            Entradas y salidas de un lote, en orden, con el saldo que queda después de cada una.
+            Solo los movimientos <strong>aprobados</strong> cambian el saldo.
           </>
         }
         actions={[
@@ -249,9 +251,10 @@ export default function KardexMovimientosPage({
         </div>
         <BotonLimpiarFiltros
           hayFiltros={hayFiltros}
-          onClick={() =>
-            setFiltros({ ...filtros, fechaDesde: "", fechaHasta: "", tipoMovimiento: "todos" })
-          }
+          onClick={() => {
+            if (usaSeleccionPropia) setLoteSeleccionadoId(null);
+            setFiltros({ ...filtros, fechaDesde: "", fechaHasta: "", tipoMovimiento: "todos" });
+          }}
         />
       </div>
 
@@ -261,9 +264,18 @@ export default function KardexMovimientosPage({
         <div className="alert alert-danger" role="alert">
           No se pudo cargar el historial. {error.mensaje}
         </div>
+      ) : usaSeleccionPropia && !loteSeleccionadoId ? (
+        // Sin lote elegido no hay nada que consultar: el kardex es de UN lote. Antes decia "No hay
+        // movimientos registrados", que se leia como que el inventario estaba vacio.
+        <p className="ec-subseccion-vacio text-center">
+          Elige un lote para ver su kardex: cada ingreso y cada salida que tuvo, quién los registró
+          y cuánto quedó después.
+        </p>
       ) : movimientos.length === 0 ? (
         <p className="ec-subseccion-vacio text-center">
-          No hay movimientos registrados. Seleccione un lote o medicamento para ver su historial.
+          {hayFiltros
+            ? "Este lote no tiene movimientos con estos filtros."
+            : "Este lote todavía no tiene movimientos."}
         </p>
       ) : (
         <div className="ec-tabla">

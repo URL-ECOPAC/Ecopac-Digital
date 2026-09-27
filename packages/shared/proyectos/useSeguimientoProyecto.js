@@ -3,8 +3,14 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ESTADOS_JORNADA } from "../enums.js";
 import { aCadenaFechaLocal } from "../formato/fechas.js";
 import { obtenerPresupuestoProyecto } from "../presupuestos/api.js";
-import { listarJornadasDelProyecto, obtenerHistorialDeProyecto, obtenerProyecto } from "./api.js";
-import { puedeVerHistorialProyecto } from "./permisos.js";
+import {
+  cambiarEstadoProyecto,
+  listarJornadasDelProyecto,
+  obtenerHistorialDeProyecto,
+  obtenerProyecto,
+} from "./api.js";
+import { permisosDeProyectos, puedeVerHistorialProyecto } from "./permisos.js";
+import { transicionesDeProyectoDesde } from "./validaciones.js";
 import {
   actualizarAvance,
   actualizarHito,
@@ -222,8 +228,34 @@ export function useSeguimientoProyecto({
     [proyecto, cargarHitos],
   );
 
+  // Cambio de estado del proyecto. La web no tenia donde hacerlo: solo el kanban de la app movil
+  // lo movia. Se ofrecen las transiciones que el trigger de la 00029 acepta desde el estado actual
+  // (TRANSICIONES_PROYECTO), y solo a quien puede editar proyectos.
+  const puedeCambiarEstado = permisosDeProyectos(rol).puedeEditar;
+  const estadosSiguientes = puedeCambiarEstado ? transicionesDeProyectoDesde(proyecto?.estado) : [];
+
+  const cambiarEstado = useCallback(
+    async (nuevoEstado) => {
+      if (!proyecto?.id || !puedeCambiarEstado) return { ok: false };
+      setErrorAccion(null);
+      setEnviando(true);
+      const resultado = await cambiarEstadoProyecto(proyecto.id, nuevoEstado);
+      setEnviando(false);
+      if (resultado.error) {
+        setErrorAccion(resultado.error.mensaje || "No se pudo cambiar el estado del proyecto.");
+        return { ok: false, error: resultado.error };
+      }
+      // Se recarga todo: el historial de estados lo escribe un trigger y no llega en la respuesta.
+      await cargar();
+      return { ok: true };
+    },
+    [proyecto?.id, puedeCambiarEstado, cargar],
+  );
+
   return {
     proyecto,
+    estadosSiguientes,
+    cambiarEstado,
     hitos: hitosProcesados,
     bitacora,
     jornadas,

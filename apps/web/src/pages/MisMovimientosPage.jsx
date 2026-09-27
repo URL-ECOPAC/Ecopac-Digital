@@ -34,6 +34,8 @@ export default function MisMovimientosPage() {
     total,
     filtros,
     setFiltro,
+    limpiarFiltros,
+    hayFiltros,
     cargando,
     error,
     recargar,
@@ -64,7 +66,13 @@ export default function MisMovimientosPage() {
       />
 
       <div className="pac-filtros">
-        <FilterBar campos={campos} valores={filtros} onChange={setFiltro} />
+        <FilterBar
+          campos={campos}
+          valores={filtros}
+          onChange={setFiltro}
+          onLimpiar={limpiarFiltros}
+          hayFiltros={hayFiltros}
+        />
       </div>
 
       <p className="pac-rotulo mb-2">{total === 1 ? "1 movimiento" : `${total} movimientos`}</p>

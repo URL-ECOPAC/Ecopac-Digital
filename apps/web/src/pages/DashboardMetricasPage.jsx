@@ -3,6 +3,8 @@ import { Form } from "react-bootstrap";
 
 import { aCadenaFechaLocal, METAS_DE_IMPACTO, useDashboardMetricas } from "@ecopac/shared";
 import BotonExportarCSV from "../components/BotonExportarCSV";
+import BotonLimpiarFiltros from "../components/BotonLimpiarFiltros";
+import BotonesDeRango from "../components/BotonesDeRango";
 import BotonImprimir from "../components/BotonImprimir";
 import Card from "../components/Card";
 import descargarCSV from "../components/descargarCSV";
@@ -51,12 +53,16 @@ function TarjetaMetrica({ etiqueta, valor, meta, acento }) {
   );
 }
 
-const COLUMNAS_DE_SERIE = [
-  { id: "etiqueta", label: "Período / grupo" },
-  { id: "valor", label: "Valor" },
-  { id: "comparado", label: "Comparado" },
-  { id: "variacion", label: "Variación %" },
-];
+// La columna del valor lleva el nombre de la metrica elegida ("Pacientes atendidos"): decia
+// "Valor" a secas, y en el PDF no habia forma de saber de que era el numero.
+function columnasDeSerie(etiquetaDeMetrica, etiquetaDeAgrupacion) {
+  return [
+    { id: "etiqueta", label: etiquetaDeAgrupacion || "Período / grupo" },
+    { id: "valor", label: etiquetaDeMetrica },
+    { id: "comparado", label: `${etiquetaDeMetrica} (comparación)` },
+    { id: "variacion", label: "Variación %" },
+  ];
+}
 
 export default function DashboardMetricasPage() {
   const { rol } = useSesionCompartida();
@@ -88,6 +94,8 @@ export default function DashboardMetricasPage() {
     listaComunidades = [],
     valoresEspeciales: { TODAS, NINGUNA },
     recargar,
+    limpiarFiltros,
+    hayFiltros,
   } = useDashboardMetricas({ rol });
 
   if (!tieneAcceso) {
@@ -137,7 +145,7 @@ export default function DashboardMetricasPage() {
                 <BotonExportarCSV
                   onClick={() =>
                     descargarCSV(
-                      COLUMNAS_DE_SERIE,
+                      columnasDeSerie(etiquetaDeMetrica, etiquetaDeAgrupacion),
                       filasDeSerie,
                       `panel-impacto-${aCadenaFechaLocal()}.csv`,
                     )
@@ -159,82 +167,78 @@ export default function DashboardMetricasPage() {
         />
       </div>
 
-      <Card>
-        <span className="ec-rotulo">Rango de fechas</span>
-        <div className="reporte-presets">
-          {rangosDisponibles.map((rango) => (
-            <button
-              key={rango.value}
-              type="button"
-              onClick={() => setRangoSeleccionado(rango.value)}
-              aria-pressed={rangoSeleccionado === rango.value}
-              className={`btn btn-sm ${
-                rangoSeleccionado === rango.value ? "btn-primary" : "btn-outline-secondary"
-              }`}
-            >
-              {rango.label}
-            </button>
-          ))}
-        </div>
+      <div className="reporte-filtros-tarjeta">
+        <Card>
+          <span className="ec-rotulo">Rango de fechas</span>
+          <BotonesDeRango
+            opciones={rangosDisponibles}
+            activo={rangoSeleccionado}
+            onElegir={setRangoSeleccionado}
+          />
 
-        <div className="reporte-filtros">
-          {/* ISSUE #862: este selector no existia. El hook expone cinco metricas y la pantalla
+          <div className="reporte-filtros">
+            {/* ISSUE #862: este selector no existia. El hook expone cinco metricas y la pantalla
               mostraba siempre la primera. */}
-          <Selector
-            label="Métrica"
-            value={metrica}
-            options={metricasDisponibles}
-            onSelect={setMetrica}
-          />
+            <Selector
+              label="Métrica"
+              value={metrica}
+              options={metricasDisponibles}
+              onSelect={setMetrica}
+            />
 
-          <Selector
-            label="Agrupar por"
-            value={agruparPor}
-            options={agrupamientosDisponibles}
-            onSelect={setAgruparPor}
-          />
+            <Selector
+              label="Agrupar por"
+              value={agruparPor}
+              options={agrupamientosDisponibles}
+              onSelect={setAgruparPor}
+            />
 
-          <Selector
-            label="Comunidad"
-            value={comunidadId}
-            options={[
-              { value: TODAS, label: "Todas las comunidades" },
-              ...listaComunidades.map((c) => ({ value: c.id, label: c.nombre })),
-            ]}
-            onSelect={setComunidadId}
-          />
+            <Selector
+              label="Comunidad"
+              value={comunidadId}
+              options={[
+                { value: TODAS, label: "Todas las comunidades" },
+                ...listaComunidades.map((c) => ({ value: c.id, label: c.nombre })),
+              ]}
+              onSelect={setComunidadId}
+            />
 
-          {/* Misma estructura que Selector -Form.Group + Form.Label + control- y no un <div> con
+            {/* Misma estructura que Selector -Form.Group + Form.Label + control- y no un <div> con
               un <label> suelto: con el `align-items: end` de .reporte-filtros, un item construido
               distinto no alinea su rotulo con el de los demas, y este quedaba descolgado. */}
-          <Form.Group className="mb-3">
-            <Form.Label htmlFor="impacto-comparar">Comparar con</Form.Label>
-            <div className="d-flex align-items-center gap-2">
-              <Form.Check
-                type="checkbox"
-                className="mb-0"
-                aria-label="Activar la comparación"
-                checked={modoComparacion}
-                onChange={(evento) => setModoComparacion(evento.target.checked)}
-              />
-              <Form.Select
-                id="impacto-comparar"
-                aria-label="Comunidad con la que comparar"
-                value={comunidadCompararId}
-                onChange={(evento) => setComunidadCompararId(evento.target.value)}
-                disabled={!modoComparacion}
-              >
-                <option value={NINGUNA}>— Ninguna —</option>
-                {listaComunidades.map((comunidad) => (
-                  <option key={comunidad.id} value={comunidad.id}>
-                    {comunidad.nombre}
-                  </option>
-                ))}
-              </Form.Select>
+            <Form.Group className="mb-3">
+              <Form.Label htmlFor="impacto-comparar">Comparar con</Form.Label>
+              <div className="d-flex align-items-center gap-2">
+                <Form.Check
+                  type="checkbox"
+                  className="mb-0"
+                  aria-label="Activar la comparación"
+                  checked={modoComparacion}
+                  onChange={(evento) => setModoComparacion(evento.target.checked)}
+                />
+                <Form.Select
+                  id="impacto-comparar"
+                  aria-label="Comunidad con la que comparar"
+                  value={comunidadCompararId}
+                  onChange={(evento) => setComunidadCompararId(evento.target.value)}
+                  disabled={!modoComparacion}
+                >
+                  <option value={NINGUNA}>— Ninguna —</option>
+                  {listaComunidades.map((comunidad) => (
+                    <option key={comunidad.id} value={comunidad.id}>
+                      {comunidad.nombre}
+                    </option>
+                  ))}
+                </Form.Select>
+              </div>
+            </Form.Group>
+
+            <div className="mb-3">
+              <BotonLimpiarFiltros hayFiltros={hayFiltros} onClick={limpiarFiltros} />
             </div>
-          </Form.Group>
-        </div>
-      </Card>
+          </div>
+        </Card>
+      </div>
 
       <div className="ec-kpis">
         <TarjetaMetrica
@@ -331,7 +335,12 @@ export default function DashboardMetricasPage() {
               valor: indicadores?.medicamentosUtilizados ?? 0,
             },
           ]}
-          secciones={[{ columnas: COLUMNAS_DE_SERIE, filas: filasDeSerie }]}
+          secciones={[
+            {
+              columnas: columnasDeSerie(etiquetaDeMetrica, etiquetaDeAgrupacion),
+              filas: filasDeSerie,
+            },
+          ]}
           alTerminar={() => setImprimiendo(false)}
         />
       )}

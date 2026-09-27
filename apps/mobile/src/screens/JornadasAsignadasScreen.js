@@ -6,6 +6,7 @@ import {
   ESTADOS_JORNADA,
   ETIQUETAS_ESTADO_JORNADA,
   formatearFechaCorta,
+  mayusculaInicial,
   useJornadasAsignadas,
 } from "@ecopac/shared";
 import { colors, spacing, typography } from "@ecopac/ui-tokens";
@@ -58,7 +59,9 @@ function FilaDeJornada({ jornada, onPress }) {
       <Text style={styles.dato}>{formatearFechaCorta(jornada.fecha)}</Text>
       <Text style={styles.dato}>{jornada.comunidad?.nombre ?? "Comunidad sin definir"}</Text>
       {horario && <Text style={styles.dato}>{horario}</Text>}
-      {jornada.responsabilidad && <Text style={styles.dato}>{jornada.responsabilidad}</Text>}
+      {jornada.responsabilidad && (
+        <Text style={styles.dato}>{mayusculaInicial(jornada.responsabilidad)}</Text>
+      )}
       {esEnCurso && <Text style={styles.enCurso}>Toca para ir al panel de trabajo</Text>}
     </Card>
   );

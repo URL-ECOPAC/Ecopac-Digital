@@ -359,7 +359,6 @@ Registro de deduplicacion. `paciente_absorbido_id` (UNIQUE: no se absorbe dos ve
 | `codigo`               | VARCHAR(30) UNIQUE          | [+00036]                                  |
 | `fecha_inicio_real`    | TIMESTAMPTZ                 | [+00036] Cuando de verdad empezo          |
 | `fecha_fin_real`       | TIMESTAMPTZ                 | [+00036]                                  |
-| `orden_kanban`         | INT                         | [+00036] Posicion en el tablero           |
 | `cupo_estimado`        | INT                         | [+00036]                                  |
 | `botiquin_bodega_id`   | UUID                        | [+00036] Bodega movil que viaja           |
 
@@ -668,6 +667,18 @@ directo de esa columna se rechaza. Lo asignado desde una donacion no puede pasar
 total en ninguna combinacion de jornadas. El presupuesto que existia antes de la 00135, y el de
 un INSERT de jornada que ya lo traia, entran como `sin_clasificar`.
 
+`fuente_id` [+00149]: quien hizo un aporte externo (`fuentes_de_presupuesto`). Solo con origen
+`aporte_externo` (CHECK `chk_presupuesto_origen_fuente_solo_externo`) y opcional: el detalle libre
+sigue existiendo.
+
+### `fuentes_de_presupuesto` [00149]
+
+Catalogo de quienes aportan de fuera al presupuesto de una jornada: `nombre` (unico sin importar
+mayusculas ni espacios, indice `uq_fuentes_de_presupuesto_nombre`), `registrado_por`,
+`created_at`. Se crea desde "Registrar un aporte" ("Crear quién aporta"). Sin UPDATE ni DELETE:
+una fuente ya usada es parte de la historia del presupuesto. Reemplaza al "+ Crear opción" que no
+guardaba nada: el origen es un enum y no admite valores nuevos desde la aplicacion.
+
 ### `donacion_detalle` [00022]
 
 `descripcion`, `cantidad`, `unidad`, `monto`, y `lote_id` **UNIQUE**: cuando la donacion es de
@@ -704,9 +715,10 @@ erDiagram
 ### `proyectos` [00007]
 
 `nombre`, `descripcion`, `fecha_inicio`, `fecha_fin`, `responsable_id`, `estado`
-(`estado_proyecto`), `porcentaje_avance` (INTEGER), y `orden_columna` ([+00029], posicion en el
-kanban). Las transiciones de estado las valida
-`fn_validar_transicion_estado_proyecto()`, y quedan en `proyecto_estado_historial`.
+(`estado_proyecto`) y `porcentaje_avance` (INTEGER). La 00029 le agrego `orden_columna` (posicion
+manual en el kanban) y la 00149 se lo retiro: ninguna pantalla reordenaba a mano. Las transiciones
+de estado las valida `fn_validar_transicion_estado_proyecto()`, y quedan en
+`proyecto_estado_historial`. En la web el estado se cambia desde el seguimiento del proyecto.
 
 ### `proyecto_hitos` [00053]
 
@@ -972,7 +984,7 @@ funcion `SECURITY DEFINER` (historiales, auditoria, detalle de alertas) o es un 
 fuente de verdad del control de acceso, y un PR que cambia una politica o un GRANT lo actualiza en
 el mismo PR.
 
-Las politicas se comprueban con 48 archivos pgTAP en `supabase/tests/database/`, que corren en CI
+Las politicas se comprueban con 49 archivos pgTAP en `supabase/tests/database/`, que corren en CI
 sobre una base creada desde cero.
 
 ## 16. Auditoria campo-a-vista (issue #756)
@@ -1093,7 +1105,8 @@ de condiciones cronicas en `apps/mobile`, alcance ya decidido en la issue #122.
 | cupo_estimado | Si | Si (alta+edicion) | Si | Resuelto (#756) |
 | botiquin_bodega_id | Si, resuelto a nombre | Si (alta+edicion), solo bodegas moviles | Si | Resuelto (#756) |
 | codigo | Si (`DetalleJornadaPage.jsx`, antes siempre "—") | **Generado por el servidor**, migracion `00126` | n/a | Resuelto en esta misma issue: ver nota tecnica abajo |
-| fecha_inicio_real / fecha_fin_real / orden_kanban | No | No | No | Se seleccionan pero ninguna pantalla los lee ni los escribe; el orden real del tablero es por `fecha`. Sin issue propia: bajo impacto, se resuelven si alguna vez se construye la accion que les da sentido ("iniciar jornada", reordenar tablero a mano) |
+| fecha_inicio_real / fecha_fin_real | Si (`DetalleJornadaPage.jsx`, "Inicio real"/"Fin real") | Por las acciones de iniciar/finalizar | n/a | Revisado en la revision de campos de la 00149 |
+| orden_kanban | — | — | — | **Retirada en la 00149**: nunca tuvo pantalla; el tablero ordena por `fecha` |
 
 **Nota tecnica sobre `codigo`**: hasta la migracion `00126` la columna era `NOT NULL`... no, era
 nullable + `UNIQUE` (`00036`) sin ningun `DEFAULT` ni trigger que la generara, y
@@ -1344,11 +1357,10 @@ un id, y `ModalProyecto.jsx`/`.js` (web y movil) es un formulario generico dirig
 `CAMPOS_PROYECTO`, mismo patron que `ModalEdicionPaciente`. El boton "+ Nuevo Proyecto" y un boton
 "Editar proyecto" en el detalle ya lo abren; movil suma el mismo formulario aunque su pantalla
 sigue siendo solo kanban/lista (issue #688), sin ficha de detalle a la que conectar hitos o
-seguimiento -ver nota de alcance movil, mas abajo. `estado` sigue moviendose solo desde el kanban
-movil (la web no tiene ese control; fuera de alcance de este cambio). `porcentaje_avance` completo
-(slider + boton "Guardar", web). `orden_columna` sigue sin uso: es el orden manual de las tarjetas
-dentro de una columna del kanban, y ninguna pantalla ofrece reordenarlas a mano todavia. Bajo
-impacto, sin issue propia (mismo criterio que `fecha_inicio_real`/`orden_kanban` de jornadas).
+seguimiento -ver nota de alcance movil, mas abajo. `estado` se mueve desde el kanban movil y,
+desde la revision de campos de la 00149, tambien desde el seguimiento del proyecto en la web
+("Estado del proyecto", con confirmacion para los estados finales). `porcentaje_avance` completo
+(slider + boton "Guardar", web). `orden_columna` se retiro en la 00149: nunca tuvo pantalla.
 
 **`proyecto_hitos`**: `nombre`/`descripcion`/`fecha_prevista` se mostraban parcialmente pero no
 tenian formulario de alta; `fecha_real` se marcaba/desmarcaba con un checkbox ("cumplido"), sin
@@ -1576,6 +1588,32 @@ resueltos a nombre y fecha. No existe en `apps/mobile`: `FichaPacienteScreen.js`
 edicion de los 11 campos del paciente en esta misma issue #756 (ver seccion de Pacientes, arriba),
 pero esta lista de fusiones es un dato secundario de la ficha que ese cambio no cubrio. Bajo
 impacto, sin issue propia -queda declarado como hueco, no omitido en silencio.
+
+### Revision de campos visibles (migracion 00149)
+
+Segunda pasada sobre las 50 tablas, incluidas las que la auditoria de arriba no cubrio (de la
+`00134` a la `00148`). Cada columna se cruzo contra el codigo y cada candidata se verifico a mano.
+Lo que se guardaba y no se veia, y donde se ve ahora:
+
+| Columna | Donde se ve |
+| --- | --- |
+| `gastos.registrado_por` | Tambien al abrir el gasto (`ModalGasto.jsx`), no solo en la bandeja de aprobacion |
+| `donaciones.registrado_por` | Detalle de la donacion ("Registrada por") |
+| `lotes.registrado_por`, `fecha_ingreso`, proveedor | Pestana Lotes: bajo el numero de lote y el origen |
+| `jornada_presupuesto_origen.registrado_por`, `created_at` | Lista de aportes de la jornada |
+| `alertas_caducidad.atendida_en` | Alertas atendidas ("Atendida el") |
+| `receta_detalle.ajustada_en`, `bodega_id` | Detalle de la receta, web y movil ("corregido de N por X el ...", "Salio de ...") |
+| `proyecto_insumos.nota` | Lista de insumos del proyecto |
+| `rol_modulo.otorgado_por`, `otorgado_en` | Bajo el interruptor de la matriz de acceso |
+| `notificaciones.correo_enviado_en`, `correo_error` | Bitacora, pestana "Correos de notificaciones" (requirio que la administradora lea las notificaciones de todos, `00149`) |
+| `atenciones.cerrada_en`, `motivo_cierre` | Tambien en el historial del movil |
+
+Retiradas por no tener uso: `jornadas.orden_kanban` y `proyectos.orden_columna` (y con ellas
+`proyectos/tableroProyectosApi.js`, que nadie llamaba). Se dejan sin mostrar a proposito los
+identificadores y marcas tecnicas (`id`, `created_at`, `updated_at` -tampoco en el detalle de la
+bitacora-), `limites_de_uso`, `lotes.confirmado`, `principios_activos.nombre_normalizado` y
+`notificaciones.origen_tabla`/`origen_id`. Las fusiones de expedientes siguen solo en la web: son
+tarea de la administradora.
 
 ## 17. Auditoria de esquema (issue #840, bloque E)
 

@@ -74,6 +74,8 @@ export function estadoDeCeldaDeAcceso(rol, modulo, abiertos) {
  */
 export function useMatrizDeAccesoPorRol() {
   const [abiertos, setAbiertos] = useState(() => new Set());
+  // Quien abrio cada celda y cuando, por clave "rol|modulo".
+  const [otorgamientos, setOtorgamientos] = useState(() => new Map());
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
   const [celdaEnProceso, setCeldaEnProceso] = useState(null);
@@ -84,6 +86,17 @@ export function useMatrizDeAccesoPorRol() {
     const { accesos, error: errorDeCarga } = await listarAccesosPorRol();
     const nuevos = new Set(accesos.map((fila) => clave(fila.rol, fila.modulo)));
     setAbiertos(nuevos);
+    setOtorgamientos(
+      new Map(
+        accesos.map((fila) => [
+          clave(fila.rol, fila.modulo),
+          {
+            otorgadoEn: fila.otorgadoEn ?? null,
+            otorgadoPorNombre: fila.otorgadoPorNombre ?? null,
+          },
+        ]),
+      ),
+    );
     setError(errorDeCarga);
     setCargando(false);
     return nuevos;
@@ -128,9 +141,10 @@ export function useMatrizDeAccesoPorRol() {
         celdas: ROLES_DE_LA_MATRIZ.map((rol) => ({
           rol,
           estado: estadoDeCeldaDeAcceso(rol, modulo, abiertos),
+          otorgamiento: otorgamientos.get(clave(rol, modulo.modulo)) ?? null,
         })),
       })),
-    [abiertos],
+    [abiertos, otorgamientos],
   );
 
   // Cuantos modulos ve cada rol, por defecto mas lo que se le abrio: es la pregunta con la que se

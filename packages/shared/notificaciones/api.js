@@ -115,6 +115,79 @@ export async function marcarLeida(idNotificacion) {
   }
 }
 
+/** Estado del correo de una notificacion, para la bitacora. */
+export const ESTADOS_DE_CORREO = Object.freeze({
+  ENVIADO: "enviado",
+  FALLIDO: "fallido",
+  PENDIENTE: "pendiente",
+});
+
+export const ETIQUETAS_ESTADO_DE_CORREO = Object.freeze({
+  [ESTADOS_DE_CORREO.ENVIADO]: "Enviado",
+  [ESTADOS_DE_CORREO.FALLIDO]: "No se pudo enviar",
+  [ESTADOS_DE_CORREO.PENDIENTE]: "Pendiente",
+});
+
+/**
+ * Estado del correo de una notificacion a partir de sus tres columnas (00138): salio, fallo el
+ * ultimo intento, o todavia no se intento.
+ *
+ * @param {{ correoEnviadoEn?: string|null, correoError?: string|null }} fila
+ * @returns {string} Un valor de ESTADOS_DE_CORREO.
+ */
+export function estadoDeCorreo(fila) {
+  if (fila?.correoEnviadoEn) return ESTADOS_DE_CORREO.ENVIADO;
+  if (fila?.correoError) return ESTADOS_DE_CORREO.FALLIDO;
+  return ESTADOS_DE_CORREO.PENDIENTE;
+}
+
+const LIMITE_DE_ENVIOS = 200;
+
+/**
+ * Envios de correo de todas las notificaciones, el mas reciente primero, para la bitacora (00149:
+ * la administradora lee las notificaciones de todas las personas). No es el buzon: no filtra por
+ * perfil y no trae el cuerpo.
+ *
+ * @param {{ estado?: string }} [filtros] `estado` es un valor de ESTADOS_DE_CORREO.
+ * @returns {Promise<{ envios: object[], error: object|null }>}
+ */
+export async function listarEnviosDeCorreo({ estado } = {}) {
+  try {
+    let consulta = obtenerSupabase()
+      .from("notificaciones")
+      .select(
+        "id, categoria, titulo, createdAt:created_at, correoEnviadoEn:correo_enviado_en, " +
+          "correoIntentadoEn:correo_intentado_en, correoError:correo_error, " +
+          "destinatario:perfiles(nombres, apellidos)",
+      )
+      .order("created_at", { ascending: false })
+      .limit(LIMITE_DE_ENVIOS);
+
+    if (estado === ESTADOS_DE_CORREO.ENVIADO)
+      consulta = consulta.not("correo_enviado_en", "is", null);
+    if (estado === ESTADOS_DE_CORREO.FALLIDO) {
+      consulta = consulta.is("correo_enviado_en", null).not("correo_error", "is", null);
+    }
+    if (estado === ESTADOS_DE_CORREO.PENDIENTE) {
+      consulta = consulta.is("correo_enviado_en", null).is("correo_error", null);
+    }
+
+    const { data, error } = await consulta;
+    if (error) return { envios: [], error: normalizarError(error) };
+    return {
+      envios: (data ?? []).map(({ destinatario, ...fila }) => ({
+        ...fila,
+        destinatarioNombre:
+          [destinatario?.nombres, destinatario?.apellidos].filter(Boolean).join(" ") || null,
+        estadoCorreo: estadoDeCorreo(fila),
+      })),
+      error: null,
+    };
+  } catch (error) {
+    return { envios: [], error: normalizarError(error) };
+  }
+}
+
 /**
  * Marca como leidas todas las notificaciones pendientes del perfil.
  *

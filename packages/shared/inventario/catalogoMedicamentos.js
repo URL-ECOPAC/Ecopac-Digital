@@ -42,7 +42,7 @@ export const FILTROS_CATALOGO_MEDICAMENTOS = [
     id: "busqueda",
     tipo: TIPOS_DE_FILTRO.BUSQUEDA,
     label: "Buscar medicamento",
-    placeholder: "Nombre, marca, concentración o número de lote",
+    placeholder: "Nombre, marca o concentración",
   },
   {
     id: "tipoArticulo",
@@ -138,12 +138,14 @@ export function resumirLotesPorMedicamento(lotes = [], disponiblePorLote = new M
 /**
  * Aplica los filtros del catalogo.
  *
+ * La busqueda mira el nombre, la marca, la concentracion y la forma: el catalogo es de productos,
+ * no de lotes. Buscar un lote es de la pestana Lotes.
+ *
  * @param {object[]} medicamentos Lo que devuelve listarMedicamentos().
  * @param {object} filtros Forma de FILTROS_CATALOGO_VACIOS.
- * @param {Map} [resumenDeLotes] De resumirLotesPorMedicamento(), para buscar por numero de lote.
  * @returns {object[]}
  */
-export function filtrarCatalogoMedicamentos(medicamentos = [], filtros = {}, resumenDeLotes) {
+export function filtrarCatalogoMedicamentos(medicamentos = [], filtros = {}) {
   const termino = textoComparable(filtros.busqueda);
 
   return medicamentos.filter((medicamento) => {
@@ -160,13 +162,11 @@ export function filtrarCatalogoMedicamentos(medicamentos = [], filtros = {}, res
 
     if (!termino) return true;
 
-    const lotes = resumenDeLotes?.get(medicamento.id)?.numeros ?? [];
     return [
       medicamento.nombre,
       medicamento.marca,
       medicamento.concentracion,
       medicamento.formaFarmaceutica,
-      ...lotes,
     ].some((valor) => textoComparable(valor).includes(termino));
   });
 }
