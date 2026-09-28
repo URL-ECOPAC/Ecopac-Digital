@@ -485,20 +485,41 @@ COMMENT ON FUNCTION public.impedir_retirar_sin_ser_administrador() IS
 -- ----------------------------------------------------------------------------
 -- Tipos enumerados
 -- ----------------------------------------------------------------------------
-COMMENT ON TYPE public.accion_alerta IS 'Que se hace con un lote vencido o por vencer: donarlo, reubicarlo en otra bodega o descartarlo.';
-COMMENT ON TYPE public.categoria_gasto IS 'Categoria de un gasto de jornada.';
-COMMENT ON TYPE public.estado_alerta IS 'Estado de una alerta de caducidad.';
-COMMENT ON TYPE public.estado_condicion_cronica IS 'Si una condicion cronica de un paciente sigue activa.';
-COMMENT ON TYPE public.estado_donacion IS 'Estado de una donacion: registrada o anulada.';
-COMMENT ON TYPE public.estado_jornada IS 'Estado de una jornada. Las transiciones las valida un trigger.';
-COMMENT ON TYPE public.estado_movimiento IS 'Estado de un movimiento de inventario: pendiente, aprobado o rechazado.';
-COMMENT ON TYPE public.estado_proyecto IS 'Estado de un proyecto. Finalizado y cancelado son terminales.';
-COMMENT ON TYPE public.estado_receta IS 'Estado de una receta: emitida o anulada.';
-COMMENT ON TYPE public.operacion_auditoria IS 'Operacion registrada en la bitacora de auditoria.';
-COMMENT ON TYPE public.origen_de_presupuesto IS 'De donde viene una parte del presupuesto de una jornada.';
-COMMENT ON TYPE public.rol_usuario IS 'Roles del sistema. Lo replica packages/shared/usuarios/roles.js; ver docs/PERMISOS.md.';
-COMMENT ON TYPE public.tipo_articulo IS 'Si un articulo del inventario es medicamento o insumo.';
-COMMENT ON TYPE public.tipo_donacion IS 'Que se dono: dinero, medicamentos, insumos o servicios.';
-COMMENT ON TYPE public.tipo_donante IS 'Tipo de donante: persona u organizacion.';
-COMMENT ON TYPE public.tipo_movimiento IS 'Ingreso o salida de inventario.';
-COMMENT ON TYPE public.tipo_sanguineo IS 'Grupo sanguineo de un paciente.';
+-- Cada uno solo si existe en public. Un COMMENT ON TYPE sobre un tipo que no existe aborta toda la
+-- migracion, y al aplicarla en un ambiente remoto `public.categoria_gasto` no existia (SQLSTATE
+-- 42704) aunque la 00025 lo crea: esa base no coincide del todo con las migraciones. Un comentario
+-- no es motivo para bloquear el despliegue. Lo que falte lo senala la prueba
+-- diccionario_de_datos.sql, que corre contra una base creada desde cero.
+DO $$
+DECLARE
+  v_tipo RECORD;
+BEGIN
+  FOR v_tipo IN
+    SELECT * FROM (VALUES
+      ('accion_alerta', 'Que se hace con un lote vencido o por vencer: donarlo, reubicarlo en otra bodega o descartarlo.'),
+      ('categoria_gasto', 'Categoria de un gasto de jornada.'),
+      ('estado_alerta', 'Estado de una alerta de caducidad.'),
+      ('estado_condicion_cronica', 'Si una condicion cronica de un paciente sigue activa.'),
+      ('estado_donacion', 'Estado de una donacion: registrada o anulada.'),
+      ('estado_jornada', 'Estado de una jornada. Las transiciones las valida un trigger.'),
+      ('estado_movimiento', 'Estado de un movimiento de inventario: pendiente, aprobado o rechazado.'),
+      ('estado_proyecto', 'Estado de un proyecto. Finalizado y cancelado son terminales.'),
+      ('estado_receta', 'Estado de una receta: emitida o anulada.'),
+      ('operacion_auditoria', 'Operacion registrada en la bitacora de auditoria.'),
+      ('origen_de_presupuesto', 'De donde viene una parte del presupuesto de una jornada.'),
+      ('rol_usuario', 'Roles del sistema. Lo replica packages/shared/usuarios/roles.js; ver docs/PERMISOS.md.'),
+      ('tipo_articulo', 'Si un articulo del inventario es medicamento o insumo.'),
+      ('tipo_donacion', 'Que se dono: dinero, medicamentos, insumos o servicios.'),
+      ('tipo_donante', 'Tipo de donante: persona u organizacion.'),
+      ('tipo_movimiento', 'Ingreso o salida de inventario.'),
+      ('tipo_sanguineo', 'Grupo sanguineo de un paciente.')
+    ) AS t(nombre, texto)
+  LOOP
+    IF to_regtype(format('public.%I', v_tipo.nombre)) IS NOT NULL THEN
+      EXECUTE format('COMMENT ON TYPE public.%I IS %L', v_tipo.nombre, v_tipo.texto);
+    ELSE
+      RAISE NOTICE '00156: el tipo public.% no existe en esta base; se omite su comentario.', v_tipo.nombre;
+    END IF;
+  END LOOP;
+END;
+$$;
