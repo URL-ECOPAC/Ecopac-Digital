@@ -6,10 +6,9 @@ Sirve para responder dos preguntas antes de escribir codigo nuevo: **"esto ya ex
 **"como se llama?"**. La causa mas repetida de deuda en este repositorio es una segunda
 implementacion de algo que ya estaba escrito, hecha aparte y peor.
 
-Estado al 4 de septiembre de 2026, sobre `develop`, mas lo que entro hasta el 24 de septiembre en
-la seccion ["Lo que entro despues del 4 de septiembre"](#lo-que-entro-despues-del-4-de-septiembre).
-Que recibe y que devuelve cada funcion esta en su JSDoc: toda funcion exportada lo tiene, y
-`npm run verificar:jsdoc` lo comprueba en CI.
+Estado al 28 de septiembre de 2026, sobre `develop`. Que recibe y que devuelve cada funcion esta en
+su JSDoc: toda funcion exportada lo tiene, con sus `@param` y su `@returns`, y
+`npm run verificar:jsdoc -- --estricto` lo comprueba en CI.
 
 ---
 
@@ -82,6 +81,20 @@ Convencion de nombres, sin excepciones:
 `packages/shared` **no puede** tocar `localStorage` ni `AsyncStorage`: cada app inyecta su
 almacenamiento y este modulo lo valida.
 
+`obtenerTodasLasFilas` (`paginacion.js`) recorre con `.range()` una consulta que se agrega o se
+cuenta en el cliente: PostgREST corta en 1000 filas sin avisar (#773).
+
+### Raiz del paquete
+
+`formularios.js`: `camposDeEdicion`, `idsEditables`, `textoDeCampoSoloLectura`. Un solo juego de
+campos para alta y edicion, con lo que no se edita en solo lectura en vez de oculto (#840, B1).
+
+`navegacion.js`: `modulosVisibles`, `seccionesVisibles`, `tabsMoviles`, `moduloDeRuta`,
+`rolesDelModulo`: que modulos ve cada rol en la web y en las pestanas del movil.
+
+`enums.js`: los valores de cada enum de la base y sus etiquetas (`ETIQUETAS_*`), con `opcionesDe`
+y `opcionesConClave` para armar catalogos `{ value, label }` en el orden del `CREATE TYPE`.
+
 ### `entorno/` - configuracion validada al arrancar
 
 `obtenerEntorno`, `resolverEntorno`, `reiniciarEntorno`, `leerFuente`, `ErrorDeEntorno`,
@@ -93,10 +106,14 @@ app no levanta.
 ### `formato/` - fechas y dinero
 
 `formatearFechaCorta`, `formatearFechaLarga`, `formatearFechaConHora`, `aFechaLocal`,
-`esFechaValida`, `calcularEdad`, `diasHastaVencimiento`, `formatearMoneda`, `MONEDA`, `MESES`,
-`DIAS_DE_LA_SEMANA`, `fechaLocalISO`.
+`esFechaValida`, `calcularEdad`, `diasHastaVencimiento`, `describirVencimiento`, `formatearMoneda`,
+`MONEDA`, `MESES`, `OPCIONES_DE_MES`, `DIAS_DE_LA_SEMANA`, `fechaLocalISO`.
 
 Ninguna pantalla formatea una fecha por su cuenta.
+
+`describirVencimiento(dias)` da la frase de unos dias restantes: "vencio hace 2 dias", "vence hoy",
+"vence manana", "vence en 12 dias". `MESES` va en minuscula para usarlo dentro de una frase
+("18 de agosto de 2026"); `OPCIONES_DE_MES` son los meses con mayuscula inicial para un selector.
 
 `fechaLocalISO(fecha?)` es la unica forma de escribir "hoy" como `AAAA-MM-DD`.
 `new Date().toISOString().slice(0, 10)` da el dia UTC, que en Guatemala es manana a partir de las
@@ -122,6 +139,14 @@ poner solos el "+" y el basurero; ninguna pantalla los escribe a mano.
 | `haVencidoPorInactividad`, `segundosHastaElCierre`, `actividadMasReciente` | La logica pura del temporizador, probada sin reloj real |
 | `olvidarUltimaActividad`, `CLAVE_ULTIMA_ACTIVIDAD` | Borran / nombran la marca guardada; la pantalla de inicio de sesion la borra |
 | `esRespuestaVigente`, `debeDescartarseLaRespuesta`, `combinarResultados`, `hayMasResultados` | Descartan respuestas de una busqueda ya superada |
+| `usePanelDeInicio`               | La pantalla de inicio por rol, con los accesos de `modulosVisibles()` (#710) |
+
+### `auditoria/` - bitacora (#643)
+
+`useBitacoraAuditoria`, `armarFilasDeAuditoria`, `calcularPaginasDeAuditoria`,
+`EVENTOS_POR_PAGINA`: la bitacora de la web. `diferenciaDeEvento`, `nombreDeCampo` y
+`formatearValorDeAuditoria(valor, clave)` arman el antes y el despues de cada evento; un estado se
+muestra con mayuscula inicial ("Emitida").
 
 ### `observabilidad/` - reporte de errores (issue #762)
 
@@ -144,6 +169,10 @@ ilegible.
 `useCascadaTerritorial({ comunidadInicial, alElegirComunidad })`: departamento -> municipio ->
 comunidad encadenados, posicionados solos en la comunidad inicial. La usan el alta y la edicion de
 paciente (issue #840); departamento y municipio son filtros, no campos que se guarden.
+
+`useCatalogoComunidades`, `useFormularioComunidad`, `useAltaDeComunidadEnLinea` y
+`comunidades.validaciones.js`: el catalogo de comunidades de la web, su formulario, su validacion y
+el alta en linea desde el registro de paciente (#838).
 
 ---
 
@@ -214,7 +243,12 @@ web y la tarjeta estrecha del movil.
 
 `usePacientesListado`, `usePaciente`, `useRegistroPaciente`, `useEdicionPaciente`,
 `useHistorialPaciente`, `useEvolucionSignos`, `useCondicionesPaciente`, `usePacientesCronicos`,
-`useConsulta`, `useVisitasPaciente`, `useGeneracionReceta`, `useRecetasPaciente`.
+`useConsulta`, `useVisitasPaciente`, `useGeneracionReceta`, `useRecetasPaciente`,
+`useCapturaClinica` (la atencion y la jornada de las que cuelgan triaje, consulta y receta en la
+web), `useCatalogoCondiciones` y `useAltaDeCondicionEnLinea` (`resolverCondicionEscrita`, 00140,
+#850), `useCatalogoDiagnosticos` y `useFormularioDiagnostico` (con
+`catalogoDiagnosticos.{campos,columnas,filtros}.js`), `useDuplicadosPacientes`,
+`useFusionPacientes` y `useFusionesDelPaciente` (con `duplicados.columnas.js`, #637).
 
 `useConsulta({ pacienteId, jornadaId, rol, perfilId, ... })` es la consulta como unidad (issue
 #840, F): signos vitales opcionales, consulta y receta en un solo flujo, y el mismo hook para crear
@@ -264,6 +298,17 @@ ni consulta no dejaba ningun rastro en el historial del paciente.
 
 `useJornadaActiva` es el estado que el movil comparte entre pantallas: se elige la jornada una vez
 y toda la operacion de campo la hereda.
+
+**Insumos previstos** (00151, `insumos.api.js`, `useInsumosDeJornada.js`): `listarInsumosDeJornada`,
+`listarInsumosDeLasJornadasDelProyecto`, agregar, actualizar y quitar, y `resumirInsumosPrevistos`
+(total estimado).
+
+**Formulario**: `useFormularioJornada` ofrece como botiquin todas las bodegas, las moviles primero
+(`opcionesDeBodegaDeBotiquin`), no ofrece proyectos cancelados, y expone `catalogosCargados` para
+distinguir "cargando" de "no hay opciones".
+
+**Otros**: `datosDeCuadroTurnosImprimible` (`turnos.imprimible.js`), y `mensajeSinJornada` para la
+seleccion de jornada activa en el movil (`useSeleccionJornada.js`).
 
 ### `atenciones/`
 
@@ -325,6 +370,25 @@ administrador confirma despues (migracion `00107`).
 `useKardexMovimientos`, `useRegistroIngreso`, `useRegistroSalida`, `usePendientesValidacion`,
 `useAlertasVencimiento`, `useAdministracionBodegasProveedores`.
 
+**Catalogos**: presentaciones (00144: `presentaciones.api.js`, `presentaciones.permisos.js`,
+`useCatalogoPresentaciones`), principios activos (`useCatalogoPrincipiosActivos`) y el alta de un
+medicamento desde el renglon de una donacion (`useAltaDeMedicamentoEnLinea`,
+`CAMPOS_ALTA_MEDICAMENTO_EN_LINEA`, #840, C).
+
+**Lotes y existencias**: `useDetalleLote` y `useExistenciasPorLote` (`estadoDeLote`,
+`sumarExistenciasPorLote`, `armarFilasDeExistencias` y sus filtros).
+
+**Entrega** (#764): `useEntregaMedicamentos`, `entrega.api.js` (`obtenerRecetaPorAtencion`,
+`ajustarEntregaReceta`).
+
+**Movimientos**: `useMisMovimientos` (`filaDeMisMovimientos`, `valoresDeCorreccionDeMovimiento`).
+En el kardex, `conSaldoAcumulado` y `ordenarMovimientosPorFecha` acumulan el saldo en orden
+cronologico, y `etiquetaDeMotivoDeMovimiento` muestra un motivo del sistema (`entrega`) con su
+etiqueta ("Entrega a paciente") y el texto libre tal cual.
+
+**Valorizacion** (00122, #752, `valorizacion.api.js`): `obtenerValorDeInventario`,
+`totalizarValorizacion`, `desglosarValorizacionPorOrigen`.
+
 ### `notificaciones/`
 
 El buzon interno del perfil (issue #755). Las filas las escriben triggers de la migracion `00138`;
@@ -366,6 +430,10 @@ si con `suscribirCambiosDelBuzon` / `avisarCambioDelBuzon` (`eventos.js`).
 `generarIngresoDesdeDonacion` es la costura entre donaciones e inventario: una donacion de
 medicamentos crea el lote correspondiente.
 
+`registro.api.js`: `registrarDonacion` y `anularDonacion` (`fn_registrar_donacion`,
+`fn_anular_donacion`), y `aDetalleParaGuardar`. Una donacion puede ser para una jornada (00153);
+el formulario no ofrece proyectos cancelados. `useResumenDonaciones` da los indicadores del modulo.
+
 ### `presupuestos/`
 
 **Consultas**: `listarGastos`, `listarGastosPendientes`, `obtenerPresupuestoJornada`,
@@ -401,8 +469,16 @@ total guardado se desincroniza.
 `transicionesDeProyectoDesde`, `obtenerTransicionesPermitidas`, `validarCambioDeEstadoProyecto`,
 `obtenerAdvertenciaDeCierre`, `esPorcentajeDeAvanceValido`.
 
-> Estas son las que `apps/web/src/pages/ProyectosPage.jsx` **no** usa: define su propia tabla de
-> transiciones dentro del componente (issue #710). Ver [MODULOS.md](./MODULOS.md).
+**Proyecto cancelado** (00154): `proyectoAdmiteCambios(estado)` es falso para un proyecto
+cancelado; `permisosDeProyectos(rol, proyecto)` apaga entonces todo lo que lo modifica (editar,
+estado, jornadas, equipo, insumos, `puedeRegistrarSeguimiento`), sea cual sea el rol.
+`proyectosQueAdmitenCambios(proyectos, conservarId)` es la lista para un selector que asocia algo
+nuevo a un proyecto; `MENSAJE_PROYECTO_CANCELADO` es el aviso que se muestra. Quien lo impide de
+verdad son los triggers de la 00154.
+
+**Equipo e insumos**: `equipo.api.js` (00146; desde la 00150, union con el equipo de sus jornadas),
+`insumos.api.js` (00147: listar, quitar y `pasarInsumoDelProyectoAJornada`, 00151) y
+`normalizacion.js` (`vacioANull` para columnas DATE y UUID opcionales).
 
 **Hooks**: `useProyectosSociales`, `useSeguimientoProyecto`.
 
@@ -414,7 +490,15 @@ total guardado se desincroniza.
 **Filtros compartidos**: `FILTROS_REPORTES`, `PRESETS_DE_RANGO`, `resolverRangoDePreset`,
 `serializarFiltrosReportes`, `resolverFiltrosReportesDesdeParametros`, `useFiltrosReportes`.
 
-Los filtros se serializan a la URL: un reporte filtrado se puede compartir por enlace.
+Los filtros se serializan a la URL: un reporte filtrado se puede compartir por enlace. "Este mes" y
+"Este anio" cubren el periodo calendario completo, hasta su ultimo dia.
+
+**Por comunidad** es la comunidad de donde viene el paciente, y la de la jornada solo si el paciente
+no tiene una asignada (00155): `obtenerIndicadoresImpacto` lee `vista_reporte_impacto_por_comunidad`
+y `fn_reporte_pacientes_atendidos` agrupa y filtra igual.
+
+**Orden y paginacion en cliente**: `useOrdenYPagina` y sus piezas puras (`ordenarFilas`,
+`compararValores`, `contarPaginas`, `recortarAPagina`, `siguienteOrden`).
 
 **Medicamentos por vencer**: `listarLotesPorVencer({ horizonteDias, bodega })` devuelve cada lote
 con las unidades que quedan (suma de `existencias`, 00020) y sus bodegas, con el rango y los dias
@@ -462,40 +546,11 @@ de Postgres.
 `useUsuariosListado`, `useAltaUsuario`, `useEdicionUsuario`, `useDesactivacionUsuario`,
 `useGestionPermisos`, `useFichaVoluntario`, `useHistorialDePersona`.
 
+`useFichaColaborador`, `ficha.js` y `useEspecialidadesDePerfil`: la ficha de una persona del
+equipo, con sus pestanas, historial y especialidades. `useMatrizPermisosPorRol` (00139, #638): la
+matriz de permisos por rol, que escribe y vuelve a leer para detectar lo que RLS no dejo cambiar.
+
 ---
-
-## Lo que entro despues del 4 de septiembre
-
-Archivos de los que las secciones de arriba no mencionaban ninguna exportacion, encontrados al
-cruzar cada export de `packages/shared` con este documento el 24 de septiembre. Van agrupados por
-modulo; en la proxima revision conviene llevarlos a la seccion de cada uno.
-
-| Modulo | Archivo | Que exporta y para que |
-| --- | --- | --- |
-| `api/` | `paginacion.js` | `obtenerTodasLasFilas`: recorre con `.range()` una consulta que agrega o cuenta en el cliente, porque PostgREST corta en 1000 filas sin avisar (#773) |
-| raiz | `formularios.js` | `camposDeEdicion`, `idsEditables`, `textoDeCampoSoloLectura`: un solo juego de campos para alta y edicion, con lo no editable en solo lectura en vez de oculto (#840, B1) |
-| `hooks/` | `usePanelDeInicio.js` | `usePanelDeInicio`: la pantalla de inicio por rol, con los accesos de `modulosVisibles()` (#710) |
-| `auditoria/` | `useBitacoraAuditoria.js`, `detalle.js` | `useBitacoraAuditoria`, `armarFilasDeAuditoria`, `calcularPaginasDeAuditoria`, `EVENTOS_POR_PAGINA`; `diferenciaDeEvento`, `nombreDeCampo`, `formatearValorDeAuditoria`: la bitacora de auditoria de la web y el antes/despues de cada evento (#643) |
-| `pacientes/` | `useCapturaClinica.js` | `useCapturaClinica`: la atencion y la jornada de la que cuelgan triaje, consulta y receta cuando se capturan desde la web |
-| `pacientes/` | `useCatalogoCondiciones.js`, `useAltaDeCondicionEnLinea.js` | Catalogo de condiciones cronicas y su alta sin salir del formulario (`resolverCondicionEscrita`) (00140, #850) |
-| `pacientes/` | `useCatalogoDiagnosticos.js`, `useFormularioDiagnostico.js`, `catalogoDiagnosticos.{campos,columnas,filtros}.js` | Catalogo de diagnosticos: listado, activar y desactivar, alta y edicion |
-| `pacientes/` | `useDuplicadosPacientes.js`, `useFusionPacientes.js`, `useFusionesDelPaciente.js`, `duplicados.columnas.js` | Deteccion de duplicados, fusion, y la nota de fusiones recibidas en la ficha (#637) |
-| `inventario/` | `presentaciones.api.js`, `presentaciones.permisos.js`, `useCatalogoPresentaciones.js` | Catalogo de presentaciones (00144): listar, registrar, actualizar, eliminar y sus permisos |
-| `inventario/` | `useCatalogoPrincipiosActivos.js` | Catalogo de principios activos |
-| `inventario/` | `useAltaDeMedicamentoEnLinea.js` | `useAltaDeMedicamentoEnLinea`, `CAMPOS_ALTA_MEDICAMENTO_EN_LINEA`: alta de un medicamento desde el renglon de una donacion (#840, C) |
-| `inventario/` | `useDetalleLote.js`, `useExistenciasPorLote.js` | Detalle de un lote y existencias por lote (`estadoDeLote`, `sumarExistenciasPorLote`, `armarFilasDeExistencias`, sus filtros) |
-| `inventario/` | `useEntregaMedicamentos.js`, `entrega.api.js` | Entrega de lo recetado y su correccion (`obtenerRecetaPorAtencion`, `ajustarEntregaReceta`, #764) |
-| `inventario/` | `useMisMovimientos.js` | Los movimientos propios y su correccion (`filaDeMisMovimientos`, `valoresDeCorreccionDeMovimiento`) |
-| `inventario/` | `valorizacion.api.js` | `obtenerValorDeInventario`, `totalizarValorizacion`, `desglosarValorizacionPorOrigen`: valor del stock (00122, #752) |
-| `jornadas/` | `turnos.imprimible.js`, `useSeleccionJornada.js` | Cuadro de turnos imprimible (`datosDeCuadroTurnosImprimible`); `mensajeSinJornada` para la seleccion de jornada activa en movil |
-| `donaciones/` | `registro.api.js`, `useResumenDonaciones.js` | `registrarDonacion` y `anularDonacion` (`fn_registrar_donacion`, `fn_anular_donacion`), `aDetalleParaGuardar`; KPIs del modulo |
-| `jornadas/` | `insumos.api.js`, `useInsumosDeJornada.js` | Insumos previstos por jornada (00151): `listarInsumosDeJornada`, `listarInsumosDeLasJornadasDelProyecto`, agregar, actualizar, quitar; `resumirInsumosPrevistos` (total estimado) |
-| `proyectos/` | `equipo.api.js`, `insumos.api.js`, `normalizacion.js` | Equipo del proyecto (00146; desde la 00150, union con el equipo de sus jornadas) e insumos previstos del proyecto (00147): listar, quitar y `pasarInsumoDelProyectoAJornada` (00151). `vacioANull` para columnas DATE y UUID opcionales |
-| `inventario/` | `useKardexMovimientos.js` | `conSaldoAcumulado` y `ordenarMovimientosPorFecha`: el saldo del kardex se acumula en orden cronologico |
-| `reportes/` | `useOrdenYPagina.js` | `useOrdenYPagina` y sus piezas puras (`ordenarFilas`, `compararValores`, `contarPaginas`, `recortarAPagina`, `siguienteOrden`): orden y paginacion en cliente de los reportes |
-| `territorio/` | `useCatalogoComunidades.js`, `useFormularioComunidad.js`, `useAltaDeComunidadEnLinea.js`, `comunidades.validaciones.js` | Catalogo de comunidades, su formulario, su validacion y el alta en linea desde el registro de paciente (#838) |
-| `usuarios/` | `useFichaColaborador.js`, `ficha.js`, `useEspecialidadesDePerfil.js` | Ficha de una persona del equipo: pestanas, historial y especialidades |
-| `usuarios/` | `useMatrizPermisosPorRol.js` | Matriz de permisos por rol (00139, #638), con escribir y releer para detectar lo que RLS no dejo cambiar |
 
 ## Reglas de la frontera
 

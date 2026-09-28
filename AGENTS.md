@@ -235,6 +235,10 @@ Commits (Conventional Commits):
   modulo, que politica RLS lo implementa, y las divergencias abiertas. Es la fuente de verdad
   del control de acceso.
 - `docs/README.md` - indice de documentacion.
+- `docs/MANUAL-TECNICO.md` - punto de entrada: herramientas, configuracion, claves, convenciones.
+- `docs/DICCIONARIO-DE-DATOS.md` y `docs/PANTALLAS.md` - generados (`npm run docs:diccionario`,
+  `npm run docs:pantallas`); no se editan a mano. Una tabla o columna nueva lleva su `COMMENT ON`
+  en la migracion (lo exige `supabase/tests/database/diccionario_de_datos.sql`).
 - `docs/QUICKSTART.md` - guia de inicio rapido.
 - `docs/CONTRIBUTING.md` - guia de contribucion.
 - `docs/entregables/` - PDFs de entregables del curso.

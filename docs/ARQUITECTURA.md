@@ -407,10 +407,13 @@ Nube contra stack local: [SUPABASE.md](./SUPABASE.md).
 
 ```
 Empezar aqui
+  MANUAL-TECNICO.md        herramientas, puesta en marcha, configuracion, claves y convenciones
   ARQUITECTURA.md          <- este documento: vision general y decisiones
 
 Referencia tecnica
-  MODELO-DE-DATOS.md       tablas, enums, funciones, vistas, RLS
+  DICCIONARIO-DE-DATOS.md  (generado) cada tabla, campo, relacion, politica y trigger
+  PANTALLAS.md             (generado) cada pantalla y los datos que usa
+  MODELO-DE-DATOS.md       tablas, enums, funciones, vistas, RLS: el porque
   MODULOS.md               que pantalla existe, en que app, servida por que hook
   API-SHARED.md            que exporta cada modulo de packages/shared
   ARQUITECTURA-FRONTEND.md la regla de la frontera, en detalle

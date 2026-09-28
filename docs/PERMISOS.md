@@ -500,6 +500,17 @@ reabrir una jornada finalizada **solo al administrador**. Reflejo en el cliente:
 | `jornada_presupuesto_origen` | C R U D      | —                                | —                | —                  | `00135` + `00141`. Escribir admite tambien `tiene_permiso('jornadas.gestionar')`, igual que actualizar la jornada; su lectura tambien, por el `INSERT ... RETURNING`. `00149` le suma `fuente_id` (solo con origen `aporte_externo`, por CHECK) |
 | `fuentes_de_presupuesto`     | C R          | —                                | —                | —                  | `00149`. Quien aporta de fuera al presupuesto de una jornada. La lee quien lee los aportes y la crea quien los registra (administradora o `jornadas.gestionar`). Sin U ni D: una fuente usada es historia del presupuesto. Auditada |
 
+**Un proyecto cancelado no lo modifica nadie (`00154`)**, ni la administradora: lo que de la tabla
+de arriba dice "C", "U" o "D" deja de valer para un proyecto en estado `cancelado`. No son
+politicas sino dos triggers, porque la regla no depende del rol sino del estado:
+`fn_proyecto_cancelado_no_se_modifica` rechaza cualquier UPDATE de la fila y
+`fn_proyecto_de_la_fila_no_esta_cancelado` (SECURITY DEFINER, sin EXECUTE para nadie) rechaza
+escribir sus hitos, su seguimiento, su equipo, sus insumos previstos y asociarle o sacarle una
+jornada (error `55000`). Cancelar sigue siendo posible, y las jornadas del proyecto se siguen
+editando mientras no cambien de proyecto. Reflejo en el cliente: `permisosDeProyectos(rol,
+proyecto)` y `proyectoAdmiteCambios(estado)` en `proyectos/`. Lo afirma
+`proyecto_cancelado_solo_lectura.sql`.
+
 **La lectura de `proyectos` del personal de campo** no es "todos los proyectos": es
 `pertenece_a_proyecto(id)` (`00148`), que mira el equipo del proyecto (`proyecto_personal`) y sus
 jornadas. Es SECURITY DEFINER a proposito: la politica de `proyecto_personal` consulta `proyectos`,
@@ -707,12 +718,18 @@ tabla:
 | Vista                     | Modo                    | Quien la lee                                                                       | Migracion                 |
 | ------------------------- | ----------------------- | ---------------------------------------------------------------------------------- | ------------------------- |
 | `vista_reporte_impacto`   | **DEFINER**             | `puede_consultar_reportes()` en el `WHERE`: administrador, los dos consultivos, quien tiene `reportes.exportar` y el rol al que la matriz le abre Reportes | `00027`, `00054`, `00064`, `00080`, `00086`, `00148` |
+| `vista_reporte_impacto_por_comunidad` | **DEFINER**  | `puede_consultar_reportes()`, igual que la anterior; `GRANT SELECT` a `authenticated`, nada a `anon`. Mismos indicadores con grano (jornada, comunidad de origen del paciente). Nada identifica a un paciente | `00155` |
 | `pacientes_reporte`       | **DEFINER**             | `puede_consultar_reportes()`, igual que la anterior. Solo expone `id` y `comunidad_id` | `00041`, `00080`, `00086`, `00148` |
 | `perfiles_directorio`     | **DEFINER**             | administrador y el propio; desde la `00148` tambien quien tiene `usuarios.gestionar_permisos`, `jornadas.gestionar` o `proyectos.gestionar`, y el rol al que la matriz le abre Colaboradores. Enmascara telefono y correo | `00038`, `00141`, `00148` |
 | `vista_cola_jornada`      | **DEFINER**             | administrador y quien participa en la jornada                                      | `00060`                   |
 | `vista_lotes_disponibles` | `security_invoker=true` | cualquier autenticado, con su propia RLS                                           | `00024`, `00041`, `00047` |
 | `privilegios_de_anon`     | DEFINER                 | nadie: es una guarda de CI                                                         | `00056`                   |
 | `tablas_sin_rls`          | DEFINER                 | nadie: es introspeccion                                                            | `00030`                   |
+
+Desde la `00155`, "por comunidad" en los reportes es la comunidad de origen del paciente (la de la
+jornada solo si no tiene): el panel de impacto lee `vista_reporte_impacto_por_comunidad` y
+`fn_reporte_pacientes_atendidos` agrupa y filtra igual. Cambia que se cuenta, no quien lo lee: la
+guarda de las dos es la misma de antes.
 
 `fn_reporte_pacientes_atendidos` (`00067`, guarda actualizada en `00080`, `00086` y `00148`) y
 `fn_valor_de_inventario_disponible` (`00122`, guarda en `00148`) llevan la comprobacion escrita en
