@@ -54,7 +54,6 @@ function mockPantalla(nombre) {
 jest.mock("../screens/InicioScreen", () => mockPantalla("inicio"));
 jest.mock("../screens/LoginScreen", () => mockPantalla("login"));
 jest.mock("../screens/AjustesScreen", () => mockPantalla("ajustes"));
-jest.mock("../screens/ComunidadesScreen", () => mockPantalla("comunidades"));
 jest.mock("../screens/BusquedaPacienteScreen", () => mockPantalla("busqueda-paciente"));
 jest.mock("../screens/FichaPacienteScreen", () => mockPantalla("ficha-paciente"));
 jest.mock("../screens/RegistroPacienteScreen", () => mockPantalla("registro-paciente"));
@@ -84,7 +83,6 @@ const ROLES_QUE_APRUEBAN = TODOS_LOS_ROLES.filter(puedeAprobarMovimiento);
 
 const PANTALLAS = [
   { routeName: ROUTES.INICIO, navegador: "Inicio", roles: rolesDelModulo("inicio") },
-  { routeName: ROUTES.COMUNIDADES, navegador: "Inicio", roles: [ROLES.ADMINISTRADOR] },
   {
     routeName: ROUTES.BUSQUEDA_PACIENTE,
     navegador: "Pacientes",
@@ -191,10 +189,11 @@ describe("AppNavigator: la guarda de rol decide en cada pantalla (issue #820)", 
     darSesion(ROLES.ADMINISTRADOR);
   });
 
-  // 21: Presupuestos se retiro en la #754 y Triaje en la #840 (los signos son un paso de la
-  // consulta, no una pantalla aparte).
+  // Presupuestos se retiro en la #754 y Triaje en la #840 (los signos son un paso de la consulta,
+  // no una pantalla aparte). El catalogo de comunidades salio del movil: solo se abria desde
+  // Ajustes y se administra en la web.
   it("todas las pantallas de los cuatro stacks estan en la tabla de esta prueba", () => {
-    expect(PANTALLAS).toHaveLength(25);
+    expect(PANTALLAS).toHaveLength(24);
     expect(PANTALLAS_RESTRINGIDAS.length).toBeGreaterThan(0);
   });
 

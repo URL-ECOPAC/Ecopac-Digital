@@ -104,7 +104,11 @@ const styles = StyleSheet.create({
   buttonDisabled: {
     borderColor: colors.secondary,
   },
+  // Si el rotulo no cabe y parte en dos lineas, las dos van centradas (y no la segunda pegada a
+  // la izquierda del boton).
   text: {
+    flexShrink: 1,
+    textAlign: "center",
     fontFamily: typography.fontFamilyBase,
     fontSize: typography.sizes.md,
     fontWeight: typography.weights.semibold,

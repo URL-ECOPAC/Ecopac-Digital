@@ -1,8 +1,8 @@
-import { View, Text, StyleSheet, Pressable } from "react-native";
+import { View, Text, StyleSheet } from "react-native";
 import { DefaultTheme, NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import { colors, spacing, typography } from "@ecopac/ui-tokens";
+import { colors, spacing } from "@ecopac/ui-tokens";
 import {
   etiquetaDeRol,
   tabsMoviles,
@@ -10,7 +10,6 @@ import {
   puedeAprobarMovimiento,
   puedeRegistrarMovimiento,
   rolesDelModulo,
-  ROLES,
   TODOS_LOS_ROLES,
   useContadorNotificaciones,
 } from "@ecopac/shared";
@@ -54,7 +53,6 @@ import PacientesCronicosScreen from "../screens/PacientesCronicosScreen";
 import CatalogoCondicionesScreen from "../screens/CatalogoCondicionesScreen";
 import CatalogoDiagnosticosScreen from "../screens/CatalogoDiagnosticosScreen";
 import ProyectosScreen from "../screens/ProyectosScreen";
-import ComunidadesScreen from "../screens/ComunidadesScreen";
 import NotificacionesScreen from "../screens/NotificacionesScreen";
 
 export {
@@ -157,11 +155,6 @@ const ROLES_QUE_APRUEBAN_MOVIMIENTOS = TODOS_LOS_ROLES.filter(puedeAprobarMovimi
 // ==================================================
 const PANTALLAS_INICIO = [
   { name: ROUTES.INICIO, componente: conGuardaDeRol(InicioScreen, "inicio"), titulo: "Inicio" },
-  {
-    name: ROUTES.COMUNIDADES,
-    componente: conGuardaDeRoles(ComunidadesScreen, [ROLES.ADMINISTRADOR]),
-    titulo: "Comunidades",
-  },
 ];
 
 const PANTALLAS_PACIENTES = [
@@ -241,29 +234,13 @@ const PANTALLAS_JORNADAS = [
   },
 ];
 
-const opcionesDeStock =
-  ({ puedeRegistrarIngreso }) =>
-  ({ navigation }) => ({
-    ...opcionesStack("Inventario"),
-    headerRight: puedeRegistrarIngreso
-      ? () => (
-          <Pressable
-            onPress={() => navigation.navigate(ROUTES.REGISTRO_INGRESO)}
-            style={styles.botonHeaderIngreso}
-            accessibilityRole="button"
-          >
-            <Text style={styles.textoBotonHeaderIngreso}>+ Ingreso</Text>
-          </Pressable>
-        )
-      : undefined,
-  });
-
+// "Registrar ingreso" ya no va en la cabecera de Inventario, junto a la campana y a cerrar
+// sesion: es un boton fijo abajo en la propia pantalla (CatalogoMedicamentosScreen.js).
 const PANTALLAS_INVENTARIO = [
   {
     name: ROUTES.STOCK,
     componente: conGuardaDeRol(StockScreen, "inventario"),
     titulo: "Inventario",
-    opciones: opcionesDeStock,
   },
   {
     name: ROUTES.REGISTRO_INGRESO,
@@ -341,12 +318,9 @@ function JornadasNavigator() {
 }
 
 function InventarioNavigator() {
-  const { rol } = useSesionCompartida();
   return (
     <InventarioStack.Navigator>
-      {pantallasDe(InventarioStack, PANTALLAS_INVENTARIO, {
-        puedeRegistrarIngreso: puedeRegistrarMovimiento(rol),
-      })}
+      {pantallasDe(InventarioStack, PANTALLAS_INVENTARIO)}
     </InventarioStack.Navigator>
   );
 }
@@ -550,16 +524,5 @@ const styles = StyleSheet.create({
   rolText: {
     fontSize: 10,
     color: colors.textMuted,
-  },
-  botonHeaderIngreso: {
-    minHeight: 48,
-    justifyContent: "center",
-    paddingHorizontal: spacing.sm,
-  },
-  textoBotonHeaderIngreso: {
-    fontFamily: typography.fontFamilyBase,
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.semibold,
-    color: colors?.primary || colors.primary,
   },
 });

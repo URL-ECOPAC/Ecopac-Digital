@@ -1,49 +1,69 @@
 import { useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
-import { SUBTIPOS_DE_RANGO, TIPOS_DE_FILTRO } from "@ecopac/shared";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { SUBTIPOS_DE_RANGO, TIPOS_DE_FILTRO, formatearFechaCorta } from "@ecopac/shared";
 import { colors, radii, spacing, typography } from "@ecopac/ui-tokens";
 import BotonLimpiarFiltros from "./BotonLimpiarFiltros";
 import DateField from "./DateField";
 import NumberField from "./NumberField";
+import PanelLateral from "./PanelLateral";
 import PrimaryButton from "./PrimaryButton";
 import Selector from "./Selector";
 import TextField from "./TextField";
 
 const MIN_TOUCH_HEIGHT = 48;
 
+/** Un filtro tiene valor: texto no vacio, opcion elegida o un rango con algun extremo. */
+function tieneValor(campo, valor) {
+  if (campo.tipo === TIPOS_DE_FILTRO.RANGO) {
+    return Boolean(valor) && (valor.min != null || valor.max != null);
+  }
+  return valor !== null && valor !== undefined && valor !== "";
+}
+
+/** Texto del chip de un filtro activo: "Bodega: Principal", "Fecha: 01/09/2026 - 30/09/2026". */
+function textoDelChip(campo, valor, catalogos) {
+  if (campo.tipo === TIPOS_DE_FILTRO.SELECT) {
+    const opciones = campo.opciones ?? catalogos[campo.opcionesDesde] ?? [];
+    const opcion = opciones.find((o) => o.value === valor);
+    return `${campo.label}: ${opcion?.label ?? valor}`;
+  }
+  if (campo.tipo === TIPOS_DE_FILTRO.RANGO) {
+    const esFecha = campo.subtipo === SUBTIPOS_DE_RANGO.FECHA;
+    const ver = (v) => (v == null ? "" : esFecha ? formatearFechaCorta(v) : String(v));
+    if (valor.min != null && valor.max != null) {
+      return `${campo.label}: ${ver(valor.min)} - ${ver(valor.max)}`;
+    }
+    return valor.min != null
+      ? `${campo.label}: desde ${ver(valor.min)}`
+      : `${campo.label}: hasta ${ver(valor.max)}`;
+  }
+  return `${campo.label}: ${valor}`;
+}
+
 /**
- * Barra de filtros. Espejo de apps/web/src/components/FilterBar.jsx: no conoce los filtros
- * de ningun modulo, solo la forma generica del descriptor.
+ * Barra de filtros del movil. Mismas props que apps/web/src/components/FilterBar.jsx: no conoce
+ * los filtros de ningun modulo, solo la forma generica del descriptor.
  *
- * Diferencia deliberada con la web, que fija el contrato: aqui es un PANEL COLAPSABLE con
- * boton "Aplicar", no una fila de controles siempre visible. Cuatro filtros desplegados se
- * comen la pantalla de un telefono antes de que se vea un solo resultado.
+ * COMO SE VE. El patron de filtros de las apps moviles (Material 3 "side sheet", y el de las
+ * tiendas y bancas moviles): en la pantalla queda solo lo que se usa siempre -el buscador, si el
+ * descriptor trae uno, y un boton "Filtros" con cuantos hay puestos-; el resto vive en un PANEL
+ * LATERAL que entra desde la derecha, con su propio scroll y "Aplicar" fijo al pie. Los filtros
+ * puestos se ven debajo como chips, y cada uno se quita con su "x" sin abrir el panel.
  *
- * Consecuencia de colapsar: los cambios se acumulan en un borrador local y solo salen por
- * onChange al pulsar "Aplicar". Es lo que espera quien filtra en un telefono, donde cada
- * cambio suelto dispararia una consulta a mitad de la seleccion.
+ * Antes era un panel que se desplegaba dentro de la pantalla: con cuatro filtros abiertos se comia
+ * la altura del telefono y, dentro de una lista, ya no se podia bajar hasta los resultados.
  *
- * Sobre las opciones de un select: un descriptor puede traerlas ya escritas (`opciones`, las
- * de un enum cerrado como estado o presentacion) o decir de que catalogo salen
- * (`opcionesDesde: 'comunidades'`, las que vienen de la base de datos). Un catalogo que
- * todavia no cargo deja el select vacio y deshabilitado.
+ * El buscador se aplica al escribir, como en la web. Lo del panel se acumula en un borrador y sale
+ * por onChange al pulsar "Aplicar", un onChange por filtro que cambio y con la misma firma que en
+ * la web: en un telefono cada cambio suelto dispararia una consulta a mitad de la seleccion.
  *
- * De que es un rango lo dice el descriptor en `subtipo` (issue #386), y aqui no se adivina:
- * antes, si no lo declaraba, se miraba si traia limites numericos, y un rango numerico sin
- * limites -legitimo- habria dibujado selectores de fecha sin que nadie lo notara hasta usarlo.
+ * Sobre las opciones de un select: un descriptor puede traerlas escritas (`opciones`) o decir de
+ * que catalogo salen (`opcionesDesde`). De que es un rango lo dice `subtipo` (issue #386); un rango
+ * sin subtipo cae en NumberField, a proposito (filtros.test.js de shared lo comprueba).
  *
- * Un rango sin `subtipo` cae en NumberField. Es a proposito y no al reves: siete de los ocho
- * rangos son de fecha, asi que el defecto contrario taparia el olvido. Que no llegue a pasar lo
- * comprueba packages/shared/filtros.test.js.
- *
- * `onLimpiar` y `hayFiltros` (issue #864) son las mismas props que en la web, con el mismo
- * contrato: el boton solo existe si la pantalla pasa `onLimpiar`, y se deshabilita cuando no hay
- * nada que limpiar. La adaptacion al telefono es donde va: dentro del panel, debajo de "Aplicar",
- * porque aqui los filtros estan colapsados y un boton fuera del panel ocuparia una linea de una
- * pantalla que ya es estrecha.
- *
- * Limpiar cierra el panel y avisa a la pantalla; el borrador no hace falta tocarlo, porque abrir
- * el panel siempre lo vuelve a sembrar desde `valores`.
+ * `onLimpiar` y `hayFiltros` (issue #864) tienen el mismo contrato que en la web: el boton solo
+ * existe si la pantalla pasa `onLimpiar`, y se deshabilita cuando no hay nada que limpiar.
  */
 export default function FilterBar({
   campos = [],
@@ -56,10 +76,16 @@ export default function FilterBar({
   const [abierto, setAbierto] = useState(false);
   const [borrador, setBorrador] = useState(valores);
 
+  const busquedas = campos.filter((campo) => campo.tipo === TIPOS_DE_FILTRO.BUSQUEDA);
+  const delPanel = campos.filter((campo) => campo.tipo !== TIPOS_DE_FILTRO.BUSQUEDA);
+  const activos = delPanel.filter((campo) => tieneValor(campo, valores[campo.id]));
+
   const abrir = () => {
     setBorrador(valores);
     setAbierto(true);
   };
+
+  const cerrar = () => setAbierto(false);
 
   const editar = (id, valor) => setBorrador((actual) => ({ ...actual, [id]: valor }));
 
@@ -69,147 +95,222 @@ export default function FilterBar({
   };
 
   const aplicar = () => {
-    // Se emite un onChange por filtro que cambio, con la misma firma que en web, para que el
-    // handler de una pantalla portada no tenga que distinguir la plataforma.
-    for (const campo of campos) {
+    for (const campo of delPanel) {
       if (borrador[campo.id] !== valores[campo.id]) onChange?.(campo.id, borrador[campo.id]);
     }
     setAbierto(false);
   };
 
-  const activos = campos.filter((campo) => {
-    const valor = valores[campo.id];
-    return valor !== null && valor !== undefined && valor !== "";
-  }).length;
+  const quitar = (campo) =>
+    onChange?.(campo.id, campo.tipo === TIPOS_DE_FILTRO.RANGO ? { min: null, max: null } : null);
 
   return (
     <View style={styles.container}>
-      <Pressable
-        style={({ pressed }) => [styles.cabecera, pressed && styles.cabeceraPressed]}
-        onPress={() => (abierto ? setAbierto(false) : abrir())}
-        accessibilityRole="button"
-        accessibilityState={{ expanded: abierto }}
-      >
-        <Text style={styles.cabeceraTexto}>Filtros{activos > 0 ? ` (${activos})` : ""}</Text>
-        <Text style={styles.cabeceraTexto}>{abierto ? "-" : "+"}</Text>
-      </Pressable>
+      <View style={styles.fila}>
+        {busquedas.map((campo) => (
+          <TextField
+            key={campo.id}
+            placeholder={campo.placeholder ?? campo.label}
+            accessibilityLabel={campo.label}
+            value={valores[campo.id] ?? ""}
+            onChangeText={(texto) => onChange?.(campo.id, texto)}
+            style={styles.busqueda}
+            returnKeyType="search"
+            autoCorrect={false}
+            clearButtonMode="while-editing"
+          />
+        ))}
 
-      {abierto ? (
-        <View style={styles.panel}>
-          {campos.map((campo) => {
-            const valor = borrador[campo.id];
-
-            if (campo.tipo === TIPOS_DE_FILTRO.BUSQUEDA) {
-              return (
-                <TextField
-                  key={campo.id}
-                  label={campo.label}
-                  placeholder={campo.placeholder}
-                  value={valor ?? ""}
-                  onChangeText={(texto) => editar(campo.id, texto)}
-                />
-              );
+        {delPanel.length > 0 ? (
+          <Pressable
+            style={({ pressed }) => [
+              styles.botonFiltros,
+              busquedas.length === 0 && styles.botonFiltrosSolo,
+              activos.length > 0 && styles.botonFiltrosActivo,
+              pressed && styles.presionado,
+            ]}
+            onPress={abrir}
+            accessibilityRole="button"
+            accessibilityLabel={
+              activos.length > 0 ? `Filtros, ${activos.length} activos` : "Filtros"
             }
-
-            if (campo.tipo === TIPOS_DE_FILTRO.SELECT) {
-              const opciones = campo.opciones ?? catalogos[campo.opcionesDesde] ?? [];
-              return (
-                <Selector
-                  key={campo.id}
-                  label={campo.label}
-                  value={valor ?? null}
-                  options={opciones}
-                  onSelect={(elegido) => editar(campo.id, elegido)}
-                  placeholder={opciones.length === 0 ? "Sin opciones" : "Todos"}
-                  style={opciones.length === 0 ? styles.deshabilitado : undefined}
-                />
-              );
-            }
-
-            if (campo.tipo === TIPOS_DE_FILTRO.RANGO) {
-              const rango = valor ?? {};
-              const esFecha = campo.subtipo === SUBTIPOS_DE_RANGO.FECHA;
-              const Campo = esFecha ? DateField : NumberField;
-              const limites = esFecha
-                ? [{ maxDate: rango.max ?? undefined }, { minDate: rango.min ?? undefined }]
-                : [
-                    { min: campo.min, max: rango.max ?? campo.max },
-                    { min: rango.min ?? campo.min, max: campo.max },
-                  ];
-
-              return (
-                <View key={campo.id} style={styles.rango}>
-                  <Text style={styles.rangoLabel}>{campo.label}</Text>
-                  <View style={styles.rangoFila}>
-                    <Campo
-                      label="Desde"
-                      value={rango.min ?? null}
-                      onChange={(nuevo) => editar(campo.id, { ...rango, min: nuevo })}
-                      style={styles.rangoCampo}
-                      {...limites[0]}
-                    />
-                    <Campo
-                      label="Hasta"
-                      value={rango.max ?? null}
-                      onChange={(nuevo) => editar(campo.id, { ...rango, max: nuevo })}
-                      style={styles.rangoCampo}
-                      {...limites[1]}
-                    />
-                  </View>
-                </View>
-              );
-            }
-
-            // Un tipo que este componente todavia no sabe dibujar se omite en silencio: el
-            // resto de los filtros sigue siendo util.
-            return null;
-          })}
-
-          <View style={styles.acciones}>
-            <PrimaryButton title="Aplicar" onPress={aplicar} style={styles.accion} />
-            {onLimpiar ? (
-              <BotonLimpiarFiltros
-                onPress={limpiar}
-                hayFiltros={hayFiltros}
-                style={styles.accion}
-              />
+            accessibilityState={{ expanded: abierto }}
+          >
+            <Ionicons
+              name="options-outline"
+              size={20}
+              color={activos.length > 0 ? colors.primary : colors.text}
+            />
+            <Text style={[styles.botonFiltrosTexto, activos.length > 0 && styles.textoActivo]}>
+              Filtros
+            </Text>
+            {activos.length > 0 ? (
+              <View style={styles.insignia}>
+                <Text style={styles.insigniaTexto}>{activos.length}</Text>
+              </View>
             ) : null}
-          </View>
-        </View>
+          </Pressable>
+        ) : null}
+      </View>
+
+      {activos.length > 0 ? (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.chips}
+        >
+          {activos.map((campo) => (
+            <Pressable
+              key={campo.id}
+              onPress={() => quitar(campo)}
+              style={({ pressed }) => [styles.chip, pressed && styles.presionado]}
+              accessibilityRole="button"
+              accessibilityLabel={`Quitar filtro ${campo.label}`}
+            >
+              <Text style={styles.chipTexto} numberOfLines={1}>
+                {textoDelChip(campo, valores[campo.id], catalogos)}
+              </Text>
+              <Ionicons name="close" size={16} color={colors.primaryDark} />
+            </Pressable>
+          ))}
+        </ScrollView>
       ) : null}
+
+      <PanelLateral
+        visible={abierto}
+        onClose={cerrar}
+        title="Filtros"
+        pie={
+          // Pie fijo: "Aplicar" siempre a la vista, por largo que sea el panel. En columna: dos
+          // botones lado a lado en un panel estrecho parten "Limpiar filtros" en dos lineas.
+          <>
+            <PrimaryButton title="Aplicar" onPress={aplicar} icon={null} />
+            {onLimpiar ? <BotonLimpiarFiltros onPress={limpiar} hayFiltros={hayFiltros} /> : null}
+          </>
+        }
+      >
+        {delPanel.map((campo) => {
+          const valor = borrador[campo.id];
+
+          if (campo.tipo === TIPOS_DE_FILTRO.SELECT) {
+            const opciones = campo.opciones ?? catalogos[campo.opcionesDesde] ?? [];
+            return (
+              <Selector
+                key={campo.id}
+                label={campo.label}
+                value={valor ?? null}
+                options={opciones}
+                onSelect={(elegido) => editar(campo.id, elegido)}
+                placeholder={opciones.length === 0 ? "Sin opciones" : "Todos"}
+                disabled={opciones.length === 0}
+              />
+            );
+          }
+
+          if (campo.tipo === TIPOS_DE_FILTRO.RANGO) {
+            const rango = valor ?? {};
+            const esFecha = campo.subtipo === SUBTIPOS_DE_RANGO.FECHA;
+            const Campo = esFecha ? DateField : NumberField;
+            const limites = esFecha
+              ? [{ maxDate: rango.max ?? undefined }, { minDate: rango.min ?? undefined }]
+              : [
+                  { min: campo.min, max: rango.max ?? campo.max },
+                  { min: rango.min ?? campo.min, max: campo.max },
+                ];
+
+            return (
+              <View key={campo.id} style={styles.rango}>
+                <Text style={styles.rangoLabel}>{campo.label}</Text>
+                <View style={styles.rangoFila}>
+                  <Campo
+                    label="Desde"
+                    value={rango.min ?? null}
+                    onChange={(nuevo) => editar(campo.id, { ...rango, min: nuevo })}
+                    style={styles.rangoCampo}
+                    {...limites[0]}
+                  />
+                  <Campo
+                    label="Hasta"
+                    value={rango.max ?? null}
+                    onChange={(nuevo) => editar(campo.id, { ...rango, max: nuevo })}
+                    style={styles.rangoCampo}
+                    {...limites[1]}
+                  />
+                </View>
+              </View>
+            );
+          }
+
+          // Un tipo que este componente todavia no sabe dibujar se omite en silencio: el
+          // resto de los filtros sigue siendo util.
+          return null;
+        })}
+      </PanelLateral>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { marginBottom: spacing.md },
-  cabecera: {
+  container: { marginBottom: spacing.md, gap: spacing.sm },
+  fila: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  busqueda: { flex: 1, marginBottom: 0 },
+  botonFiltros: {
     minHeight: MIN_TOUCH_HEIGHT,
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    gap: spacing.xs,
     paddingHorizontal: spacing.md,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radii.md,
     backgroundColor: colors.surface,
   },
-  cabeceraPressed: { opacity: 0.7 },
-  cabeceraTexto: {
+  // Sin buscador al lado, el boton se alinea a la derecha, donde se abre el panel.
+  botonFiltrosSolo: { marginLeft: "auto" },
+  botonFiltrosActivo: { borderColor: colors.primary },
+  botonFiltrosTexto: {
     fontFamily: typography.fontFamilyBase,
     fontSize: typography.sizes.md,
     fontWeight: typography.weights.semibold,
     color: colors.text,
   },
-  panel: {
-    marginTop: spacing.sm,
-    padding: spacing.md,
+  textoActivo: { color: colors.primary },
+  insignia: {
+    minWidth: 22,
+    height: 22,
+    paddingHorizontal: spacing.xs,
+    borderRadius: radii.pill,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.primary,
+  },
+  insigniaTexto: {
+    fontFamily: typography.fontFamilyBase,
+    fontSize: typography.sizes.xs,
+    fontWeight: typography.weights.bold,
+    color: colors.surface,
+  },
+  presionado: { opacity: 0.7 },
+  chips: { gap: spacing.sm, paddingRight: spacing.sm },
+  chip: {
+    maxWidth: 260,
+    minHeight: 36,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+    paddingHorizontal: spacing.md,
+    borderRadius: radii.pill,
     borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radii.md,
+    borderColor: colors.primary,
     backgroundColor: colors.surface,
   },
-  deshabilitado: { opacity: 0.5 },
+  chipTexto: {
+    flexShrink: 1,
+    fontFamily: typography.fontFamilyBase,
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.medium,
+    color: colors.primaryDark,
+  },
   rango: { marginBottom: spacing.md },
   rangoLabel: {
     fontFamily: typography.fontFamilyBase,
@@ -220,8 +321,4 @@ const styles = StyleSheet.create({
   },
   rangoFila: { flexDirection: "row", gap: spacing.sm },
   rangoCampo: { flex: 1 },
-  // En columna y no en fila: dos botones lado a lado en un telefono dejan cada etiqueta en dos
-  // lineas, y "Limpiar filtros" no cabe.
-  acciones: { gap: spacing.sm },
-  accion: { width: "100%" },
 });

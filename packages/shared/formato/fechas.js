@@ -37,6 +37,18 @@ export const MESES = [
   "diciembre",
 ];
 
+/**
+ * Los meses como opciones de un selector: `{ value: 1..12, label: "Enero".."Diciembre" }`. En una
+ * frase el mes va en minuscula ("18 de agosto de 2026", MESES); solo, como opcion de una lista,
+ * con mayuscula inicial.
+ */
+export const OPCIONES_DE_MES = Object.freeze(
+  MESES.map((nombre, indice) => ({
+    value: indice + 1,
+    label: nombre.charAt(0).toUpperCase() + nombre.slice(1),
+  })),
+);
+
 /** Dias de la semana en espanol, empezando en domingo como devuelve getDay(). */
 export const DIAS_DE_LA_SEMANA = [
   "domingo",

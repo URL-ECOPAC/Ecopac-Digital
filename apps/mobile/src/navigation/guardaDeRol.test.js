@@ -20,7 +20,6 @@
 import {
   puedeAprobarMovimiento,
   puedeRegistrarMovimiento,
-  ROLES,
   rolesDelModulo,
   TODOS_LOS_ROLES,
 } from "@ecopac/shared";
@@ -52,7 +51,6 @@ const ROLES_QUE_APRUEBAN = TODOS_LOS_ROLES.filter(puedeAprobarMovimiento);
 // dos leyeran la misma constante, cambiar el modulo de una pantalla no rompería nada.
 const ROLES_ESPERADOS = {
   [ROUTES.INICIO]: rolesDelModulo("inicio"),
-  [ROUTES.COMUNIDADES]: [ROLES.ADMINISTRADOR],
 
   [ROUTES.BUSQUEDA_PACIENTE]: rolesDelModulo("pacientes"),
   [ROUTES.FICHA_PACIENTE]: rolesDelModulo("pacientes"),

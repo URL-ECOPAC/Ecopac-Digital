@@ -16,7 +16,6 @@ export const ROUTES = {
   // Pantallas dentro de cada stack
   INICIO: "InicioPanel",
   ACCESO_DENEGADO: "AccesoDenegado",
-  COMUNIDADES: "Comunidades",
 
   BUSQUEDA_PACIENTE: "BusquedaPaciente",
   FICHA_PACIENTE: "FichaPaciente",

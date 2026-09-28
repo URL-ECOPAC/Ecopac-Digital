@@ -23,6 +23,7 @@ import {
   formatearFechaCorta,
   formatearFechaLarga,
   MESES,
+  OPCIONES_DE_MES,
 } from "./fechas.js";
 
 describe("aFechaLocal", () => {
@@ -253,5 +254,17 @@ describe("describirVencimiento", () => {
   it("sin numero no dice nada", () => {
     expect(describirVencimiento(null)).toBe("");
     expect(describirVencimiento(undefined)).toBe("");
+  });
+});
+
+describe("OPCIONES_DE_MES", () => {
+  it("los doce meses, con mayuscula inicial y su numero", () => {
+    expect(OPCIONES_DE_MES).toHaveLength(12);
+    expect(OPCIONES_DE_MES[0]).toEqual({ value: 1, label: "Enero" });
+    expect(OPCIONES_DE_MES[8]).toEqual({ value: 9, label: "Septiembre" });
+  });
+
+  it("MESES sigue en minuscula, para usarlo dentro de una frase", () => {
+    expect(MESES[0]).toBe("enero");
   });
 });
