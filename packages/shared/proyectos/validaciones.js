@@ -42,14 +42,57 @@ export const TRANSICIONES_PROYECTO = Object.freeze({
   [ESTADOS_PROYECTO.CANCELADO]: [],
 });
 
-/** Estados a los que se puede mover un proyecto desde donde esta. Lista vacia si es terminal. */
+/**
+ * Estados a los que se puede mover un proyecto desde donde esta. Lista vacia si es terminal.
+ *
+ * @param {string} estado
+ * @returns {string[]}
+ */
 export function transicionesDeProyectoDesde(estado) {
   return TRANSICIONES_PROYECTO[estado] ?? [];
 }
 
-/** Indica si un proyecto puede pasar de un estado a otro. */
+/**
+ * Indica si un proyecto puede pasar de un estado a otro.
+ *
+ * @param {string} desde Estado actual.
+ * @param {string} hacia Estado al que se quiere pasar.
+ * @returns {boolean}
+ */
 export function esTransicionDeProyectoValida(desde, hacia) {
   return transicionesDeProyectoDesde(desde).includes(hacia);
+}
+
+/** Lo que se le dice a quien intenta modificar un proyecto cancelado. */
+export const MENSAJE_PROYECTO_CANCELADO =
+  "Este proyecto está cancelado: se puede consultar, pero ya no se modifica.";
+
+/**
+ * Indica si a un proyecto en este estado todavia se le pueden hacer cambios. Uno cancelado queda
+ * como quedo: se consulta, no se edita -datos, avance, bitacora, hitos, equipo, jornadas ni
+ * insumos-. Espejo de los triggers de la 00154, que son los que de verdad lo impiden.
+ *
+ * @param {string} estado
+ * @returns {boolean}
+ */
+export function proyectoAdmiteCambios(estado) {
+  return estado !== ESTADOS_PROYECTO.CANCELADO;
+}
+
+/**
+ * Proyectos a los que se puede asociar algo nuevo (una jornada, una donacion): todos menos los
+ * cancelados. `conservarId` deja el que ya estaba elegido, para que un formulario en edicion siga
+ * mostrando su valor aunque ese proyecto se haya cancelado despues.
+ *
+ * @param {object[]} proyectos Filas de listarProyectos().
+ * @param {string|null} [conservarId]
+ * @returns {object[]}
+ */
+export function proyectosQueAdmitenCambios(proyectos, conservarId = null) {
+  return (proyectos ?? []).filter(
+    (proyecto) =>
+      proyectoAdmiteCambios(proyecto.estado) || (conservarId && proyecto.id === conservarId),
+  );
 }
 
 /**
@@ -121,6 +164,8 @@ function validarPorcentaje(valores) {
  * Valida un cambio de estado antes de mandarlo al servidor.
  *
  * @returns {Record<string, string>} Vacio si la transicion es legal.
+ * @param {string} estadoActual
+ * @param {string} estadoNuevo
  */
 export function validarCambioDeEstadoProyecto(estadoActual, estadoNuevo) {
   if (!TODOS_LOS_ESTADOS_PROYECTO.includes(estadoNuevo)) {

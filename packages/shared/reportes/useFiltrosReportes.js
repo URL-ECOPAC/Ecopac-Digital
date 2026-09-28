@@ -57,13 +57,12 @@ export const OPCIONES_DE_PRESET = [
 /**
  * Resuelve un preset de rango a fechas concretas.
  *
- * Los tres presets con nombre son "a la fecha": arrancan en el primer dia del periodo que
- * corresponda y terminan hoy, no al final del periodo -un reporte filtra datos que ya
- * ocurrieron, y un `max` en el futuro no excluye nada que no excluya ya `hoy`-.
- * `ULTIMO_TRIMESTRE` es una ventana movil de tres meses hacia atras desde hoy, no el trimestre
- * calendario anterior: es coherente con que los otros dos presets tambien sean "a la fecha" y no
- * saltan de un criterio a otro segun el preset. `PERSONALIZADO` no calcula nada: el rango a mano
- * lo pone la persona.
+ * `ESTE_MES` y `ESTE_ANIO` son el periodo calendario completo: del primer al ultimo dia del mes
+ * (o del anio). Antes terminaban hoy, y "Este mes" el 28 de septiembre mostraba del 1 al 28, que
+ * no es "este mes": dejaba fuera las jornadas que quedan en el mes.
+ * `ULTIMO_TRIMESTRE` es una ventana movil de tres meses hacia atras que termina hoy, no el
+ * trimestre calendario anterior. `PERSONALIZADO` no calcula nada: el rango a mano lo pone la
+ * persona.
  *
  * @param {string} preset Uno de PRESETS_DE_RANGO.
  * @param {Date} [hoy] Entra por parametro para poder fijarlo en la prueba.
@@ -74,14 +73,21 @@ export function resolverRangoDePreset(preset, hoy = new Date()) {
 
   switch (preset) {
     case PRESETS_DE_RANGO.ESTE_MES:
-      return { min: aCadenaFechaLocal(new Date(hoy.getFullYear(), hoy.getMonth(), 1)), max };
+      // Dia 0 del mes siguiente = ultimo dia de este mes (28, 29, 30 o 31).
+      return {
+        min: aCadenaFechaLocal(new Date(hoy.getFullYear(), hoy.getMonth(), 1)),
+        max: aCadenaFechaLocal(new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0)),
+      };
     case PRESETS_DE_RANGO.ULTIMO_TRIMESTRE:
       return {
         min: aCadenaFechaLocal(new Date(hoy.getFullYear(), hoy.getMonth() - 3, hoy.getDate())),
         max,
       };
     case PRESETS_DE_RANGO.ESTE_ANIO:
-      return { min: aCadenaFechaLocal(new Date(hoy.getFullYear(), 0, 1)), max };
+      return {
+        min: aCadenaFechaLocal(new Date(hoy.getFullYear(), 0, 1)),
+        max: aCadenaFechaLocal(new Date(hoy.getFullYear(), 11, 31)),
+      };
     default:
       return { min: null, max: null };
   }
@@ -157,6 +163,7 @@ export function mapearCatalogoAOpciones(filas, { valor = "id", etiqueta = "nombr
  * (packages/shared/reportes/api.js): `periodo` anidado con `fechaInicio`/`fechaFin`.
  *
  * @param {typeof FILTROS_REPORTES_VACIOS} filtrosAplicados
+ * @returns {{ periodo: { fechaInicio: string|null, fechaFin: string|null }, comunidad: string|undefined, jornada: string|undefined, proyecto: string|undefined }}
  */
 export function aParametrosDeIndicadoresImpacto(filtrosAplicados) {
   return {
@@ -178,6 +185,7 @@ export function aParametrosDeIndicadoresImpacto(filtrosAplicados) {
  * proyecto ahi tambien-.
  *
  * @param {typeof FILTROS_REPORTES_VACIOS} filtrosAplicados
+ * @returns {{ desde: string|undefined, hasta: string|undefined, comunidad: string|undefined, jornada: string|undefined }}
  */
 export function aParametrosDeReportePacientes(filtrosAplicados) {
   return {
@@ -203,6 +211,7 @@ export function aParametrosDeReportePacientes(filtrosAplicados) {
  * consultas hasta que el usuario confirma o pasa el retardo"-.
  *
  * @param {{ retardoMs?: number, valoresIniciales?: { valores: object, presetActivo: string|null } }} [opciones]
+ * @returns {object} Con: valores, filtrosAplicados, presetActivo, setFiltro, setPreset, limpiarFiltro, limpiarFiltros, aplicarFiltros, catalogos, cargandoCatalogos, errorDeCatalogos.
  */
 export function useFiltrosReportes({ retardoMs = RETARDO_DE_FILTROS_MS, valoresIniciales } = {}) {
   const [valores, setValores] = useState(valoresIniciales?.valores ?? FILTROS_REPORTES_VACIOS);

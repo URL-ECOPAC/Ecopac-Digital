@@ -11,6 +11,8 @@ import { describe, expect, it } from "vitest";
 import {
   esTransicionDeProyectoValida,
   LONGITUD_MAXIMA_NOMBRE_PROYECTO,
+  proyectoAdmiteCambios,
+  proyectosQueAdmitenCambios,
   TODOS_LOS_ESTADOS_PROYECTO,
   TRANSICIONES_PROYECTO,
   transicionesDeProyectoDesde,
@@ -117,6 +119,29 @@ describe("transiciones de estado", () => {
 
   it("un estado desconocido no ofrece ninguna transicion", () => {
     expect(transicionesDeProyectoDesde("pausado")).toEqual([]);
+  });
+
+  // Espejo de los triggers de la 00154.
+  it("solo un proyecto cancelado deja de admitir cambios", () => {
+    expect(proyectoAdmiteCambios(ESTADOS_PROYECTO.CANCELADO)).toBe(false);
+    for (const estado of [
+      ESTADOS_PROYECTO.PLANIFICADO,
+      ESTADOS_PROYECTO.EN_CURSO,
+      ESTADOS_PROYECTO.FINALIZADO,
+    ]) {
+      expect(proyectoAdmiteCambios(estado)).toBe(true);
+    }
+  });
+
+  it("los cancelados no se ofrecen para asociar, salvo el que ya estaba elegido", () => {
+    const proyectos = [
+      { id: "a", estado: ESTADOS_PROYECTO.EN_CURSO },
+      { id: "b", estado: ESTADOS_PROYECTO.CANCELADO },
+      { id: "c", estado: ESTADOS_PROYECTO.CANCELADO },
+    ];
+    expect(proyectosQueAdmitenCambios(proyectos).map((p) => p.id)).toEqual(["a"]);
+    expect(proyectosQueAdmitenCambios(proyectos, "b").map((p) => p.id)).toEqual(["a", "b"]);
+    expect(proyectosQueAdmitenCambios(null)).toEqual([]);
   });
 
   it("el mapa declara los cuatro estados del enum, sin sobrar ninguno", () => {

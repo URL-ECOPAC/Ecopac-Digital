@@ -36,6 +36,8 @@ export function debeRecargarTrasAccion(respuesta) {
  *
  * @param {{ usuarioId: string, rolUsuario: string }} contexto Quien esta operando la bandeja;
  *   viaja tal cual a aprobarMovimiento()/rechazarMovimiento().
+ *
+ * @returns {{ pendientes: object[], conteo: number, cargando: boolean, error: object|null, recargar: Function, aprobar: Function, rechazar: Function }}
  */
 export function usePendientesValidacion({ usuarioId, rolUsuario } = {}) {
   const [pendientes, setPendientes] = useState([]);

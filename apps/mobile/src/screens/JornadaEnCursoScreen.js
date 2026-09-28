@@ -227,13 +227,14 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.xs,
     color: colors.textMuted,
   },
+  // Uno debajo del otro, a todo lo ancho. Lado a lado, "Registrar paciente" no cabia en medio
+  // telefono y partia el rotulo en dos lineas junto al "+".
   acciones: {
-    flexDirection: "row",
     gap: spacing.sm,
     marginBottom: spacing.md,
   },
   accion: {
-    flex: 1,
+    alignSelf: "stretch",
   },
   grupo: {
     marginBottom: spacing.md,

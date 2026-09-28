@@ -34,6 +34,7 @@ function conVencimiento(detalle) {
  * ajustarEntrega() con uno de esos renglones recibe ese mismo error.
  *
  * @param {string} atencionId
+ * @returns {{ cargando: boolean, error: object|null, receta: object|null, detalles: object[], recargar: Function, ajustarEntrega: Function }}
  */
 export function useEntregaMedicamentos(atencionId) {
   const [cargando, setCargando] = useState(true);

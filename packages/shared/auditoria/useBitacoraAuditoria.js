@@ -72,6 +72,7 @@ export function calcularPaginasDeAuditoria(total, porPagina) {
  * vacia sin explicacion.
  *
  * @param {{ porPagina?: number }} [opciones]
+ * @returns {object} Con: filas, filtros, setFiltro, limpiarFiltros, cargando, error, recargar, pagina, paginas, total, hayPaginaAnterior, hayPaginaSiguiente, irAPaginaAnterior, irAPaginaSiguiente, catalogos.
  */
 export function useBitacoraAuditoria({ porPagina = EVENTOS_POR_PAGINA } = {}) {
   const [filtros, setFiltros] = useState(FILTROS_BITACORA_AUDITORIA_VACIOS);

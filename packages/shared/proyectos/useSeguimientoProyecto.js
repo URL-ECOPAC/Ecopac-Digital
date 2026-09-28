@@ -10,7 +10,11 @@ import {
   obtenerProyecto,
 } from "./api.js";
 import { permisosDeProyectos, puedeVerHistorialProyecto } from "./permisos.js";
-import { transicionesDeProyectoDesde } from "./validaciones.js";
+import {
+  MENSAJE_PROYECTO_CANCELADO,
+  proyectoAdmiteCambios,
+  transicionesDeProyectoDesde,
+} from "./validaciones.js";
 import {
   actualizarAvance,
   actualizarHito,
@@ -31,6 +35,7 @@ import { CAMPOS_HITO } from "./campos.js";
  *
  * @param {{ fechaReal?: string, fechaPrevista?: string }} hito
  * @param {string} fechaHoy "AAAA-MM-DD", normalmente aCadenaFechaLocal(hoy).
+ * @returns {object} Los campos de la fila de origen, mas: esCumplido, esVencido.
  */
 export function procesarHito(hito, fechaHoy) {
   const esCumplido = Boolean(hito.fechaReal);
@@ -50,6 +55,13 @@ export function procesarHito(hito, fechaHoy) {
  * listarJornadasDelProyecto) ya existian en el modulo sin que ningun hook las llamara. Ahora el
  * hook las llama el mismo con `proyectoId`, igual que useProyectosSociales hace con
  * listarProyectos().
+ *
+ * @param {object} [opciones]
+ * @param {string} [opciones.proyectoId]
+ * @param {object|null} [opciones.proyectoInicial] El proyecto que ya traia el listado.
+ * @param {Date} [opciones.hoy]
+ * @param {string} [opciones.rol]
+ * @returns {object} Con: proyecto, proyectoCancelado, puedeRegistrarSeguimiento, estadosSiguientes, cambiarEstado, hitos, bitacora, jornadas, historial, puedeVerHistorial, indicadoresJornadas, campos, cargando, errorCarga, nuevoPorcentaje, setNuevoPorcentaje, nuevaNota, setNuevaNota, errorAccion, erroresHito, cargandoAccion, guardarSeguimiento, cambiarEstadoHito, guardarHito, recargar.
  */
 export function useSeguimientoProyecto({
   proyectoId,
@@ -138,9 +150,15 @@ export function useSeguimientoProyecto({
     };
   }, [jornadas, presupuesto]);
 
+  // Lo que se puede modificar de ESTE proyecto: avance, notas, hitos y estado. Uno cancelado no se
+  // modifica (00154), y el rol que ve el seguimiento en solo lectura tampoco escribe (00148).
+  const permisos = permisosDeProyectos(rol, proyecto);
+  const puedeRegistrarSeguimiento = permisos.puedeRegistrarSeguimiento;
+  const proyectoCancelado = Boolean(proyecto) && !proyectoAdmiteCambios(proyecto.estado);
+
   // Handler para actualizar avance y registrar la nota en la bitácora
   const guardarSeguimiento = async () => {
-    if (!proyecto?.id) return false;
+    if (!proyecto?.id || !puedeRegistrarSeguimiento) return false;
 
     setErrorAccion(null);
     const porcentajeNum = Number(nuevoPorcentaje);
@@ -179,6 +197,7 @@ export function useSeguimientoProyecto({
 
   // Handler para cambiar cumplimiento del hito
   const cambiarEstadoHito = async (hitoId, completado) => {
+    if (!puedeRegistrarSeguimiento) return;
     setEnviando(true);
     const fechaRealActualizada = completado ? fechaHoy : null;
 
@@ -215,6 +234,12 @@ export function useSeguimientoProyecto({
       if (Object.keys(errores).length > 0) return { ok: false, errores };
 
       if (!proyecto?.id) return { ok: false };
+      if (!puedeRegistrarSeguimiento) {
+        const mensaje = proyectoCancelado
+          ? MENSAJE_PROYECTO_CANCELADO
+          : "No tienes permiso para modificar los hitos de este proyecto.";
+        return { ok: false, error: { mensaje } };
+      }
 
       const resultado = hitoId
         ? await actualizarHito(hitoId, datosFormulario)
@@ -225,13 +250,13 @@ export function useSeguimientoProyecto({
       await cargarHitos();
       return { ok: true, hito: resultado.hito };
     },
-    [proyecto, cargarHitos],
+    [proyecto, puedeRegistrarSeguimiento, proyectoCancelado, cargarHitos],
   );
 
   // Cambio de estado del proyecto. La web no tenia donde hacerlo: solo el kanban de la app movil
   // lo movia. Se ofrecen las transiciones que el trigger de la 00029 acepta desde el estado actual
   // (TRANSICIONES_PROYECTO), y solo a quien puede editar proyectos.
-  const puedeCambiarEstado = permisosDeProyectos(rol).puedeEditar;
+  const puedeCambiarEstado = permisos.puedeCambiarEstado;
   const estadosSiguientes = puedeCambiarEstado ? transicionesDeProyectoDesde(proyecto?.estado) : [];
 
   const cambiarEstado = useCallback(
@@ -254,6 +279,8 @@ export function useSeguimientoProyecto({
 
   return {
     proyecto,
+    proyectoCancelado,
+    puedeRegistrarSeguimiento,
     estadosSiguientes,
     cambiarEstado,
     hitos: hitosProcesados,

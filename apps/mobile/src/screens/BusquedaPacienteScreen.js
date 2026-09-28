@@ -10,27 +10,46 @@ import {
 import { moduleAccents, spacing } from "@ecopac/ui-tokens";
 
 import {
-  AccesosDeSeccion,
   DataList,
   EmptyState,
   ErrorState,
   FilterBar,
+  MenuLateral,
   PageHeader,
   ScreenContainer,
   SecondaryButton,
-  TextField,
 } from "../components";
 import { useSesionCompartida } from "../contexto/SesionProvider";
 import { ROUTES } from "../navigation/rutas";
 
-const FILTROS_SECUNDARIOS = FILTROS_PACIENTE.filter((filtro) => filtro.id !== "busqueda");
-
-const ACCESOS_DE_PACIENTES = [
-  { id: "cronicos", etiqueta: "Crónicos", ruta: ROUTES.PACIENTES_CRONICOS },
-  { id: "condiciones", etiqueta: "Condiciones", ruta: ROUTES.CATALOGO_CONDICIONES },
-  { id: "diagnosticos", etiqueta: "Diagnósticos", ruta: ROUTES.CATALOGO_DIAGNOSTICOS },
+const GRUPOS_DE_PACIENTES = [
+  {
+    titulo: "Consultar",
+    opciones: [
+      {
+        id: "cronicos",
+        etiqueta: "Pacientes crónicos",
+        descripcion: "Con una condición crónica activa",
+        icono: "pulse-outline",
+        ruta: ROUTES.PACIENTES_CRONICOS,
+      },
+      {
+        id: "condiciones",
+        etiqueta: "Catálogo de condiciones",
+        descripcion: "Condiciones crónicas que se registran",
+        icono: "list-outline",
+        ruta: ROUTES.CATALOGO_CONDICIONES,
+      },
+      {
+        id: "diagnosticos",
+        etiqueta: "Catálogo de diagnósticos",
+        descripcion: "Diagnósticos que se eligen en la consulta",
+        icono: "medkit-outline",
+        ruta: ROUTES.CATALOGO_DIAGNOSTICOS,
+      },
+    ],
+  },
 ];
-const CAMPO_DE_BUSQUEDA = FILTROS_PACIENTE.find((filtro) => filtro.id === "busqueda");
 
 export default function BusquedaPacienteScreen() {
   const navigation = useNavigation();
@@ -68,39 +87,35 @@ export default function BusquedaPacienteScreen() {
           RegistroPacienteScreen era el estado vacio de la lista, o sea que habia que buscar a
           alguien, no encontrarlo y solo entonces aparecia la opcion. Ahora es una accion de la
           cabecera, como en la web. */}
-      <PageHeader
-        title="Pacientes"
-        subtitle="Busca un expediente o registra uno nuevo"
-        accent={moduleAccents.pacientes}
-        actions={
-          puedeRegistrarPaciente(perfil?.rol)
-            ? [{ label: "Nuevo paciente", onPress: irARegistro }]
-            : []
-        }
-      />
+      <View style={styles.encabezado}>
+        <View style={styles.encabezadoTitulo}>
+          <PageHeader
+            title="Pacientes"
+            subtitle="Busca un expediente o registra uno nuevo"
+            accent={moduleAccents.pacientes}
+            actions={
+              puedeRegistrarPaciente(perfil?.rol)
+                ? [{ label: "Nuevo paciente", onPress: irARegistro }]
+                : []
+            }
+          />
+        </View>
+        {/* Crónicos, condiciones y diagnósticos eran una fila de botones sobre la lista: van en
+            el menú lateral, como en Inventario (docs/DISENO-MOVIL.md, regla 3). */}
+        <MenuLateral
+          titulo="Pacientes"
+          grupos={GRUPOS_DE_PACIENTES}
+          onElegir={(opcion) => navigation.navigate(opcion.ruta)}
+        />
+      </View>
 
-      <TextField
-        label={CAMPO_DE_BUSQUEDA?.label ?? "Buscar paciente"}
-        // El placeholder sale del descriptor compartido y no de un texto propio: decia "Nombre o
-        // número de ficha" cuando la busqueda tambien acepta DPI desde la #838.
-        placeholder={CAMPO_DE_BUSQUEDA?.placeholder}
-        value={filtros.busqueda ?? ""}
-        onChangeText={(valor) => setFiltro("busqueda", valor)}
-        autoCorrect={false}
-        autoCapitalize="words"
-        style={styles.busqueda}
-      />
-
+      {/* El buscador y los filtros en una fila: el placeholder sale del descriptor compartido
+          (acepta nombre, número de ficha o DPI desde la #838). */}
       <FilterBar
-        campos={FILTROS_SECUNDARIOS}
+        campos={FILTROS_PACIENTE}
         valores={filtros}
         onChange={setFiltro}
         catalogos={catalogos}
-      />
-
-      <AccesosDeSeccion
-        accesos={ACCESOS_DE_PACIENTES}
-        onAbrir={(acceso) => navigation.navigate(acceso.ruta)}
       />
 
       <DataList
@@ -142,8 +157,14 @@ export default function BusquedaPacienteScreen() {
 }
 
 const styles = StyleSheet.create({
-  busqueda: {
-    marginBottom: spacing.sm,
+  // El boton del menu a la derecha del titulo, alineado con el.
+  encabezado: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: spacing.sm,
+  },
+  encabezadoTitulo: {
+    flex: 1,
   },
   pie: {
     marginTop: spacing.sm,

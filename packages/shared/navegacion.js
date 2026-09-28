@@ -173,6 +173,9 @@ export const MODULOS = [
 /**
  * Obtener los roles que tienen un modulo POR DEFECTO. Lo que abre la matriz o una delegacion no
  * esta aqui: para saber si alguien entra, puedeVerModulo().
+ *
+ * @param {string} moduloId
+ * @returns {string[]}
  */
 export function rolesDelModulo(moduloId) {
   if (!moduloId) return [];
@@ -194,6 +197,7 @@ export const MODULOS_DE_LA_MATRIZ = MODULOS.filter(
  *
  * @param {string} rol
  * @param {string} moduloId `MODULOS[].id`.
+ * @returns {boolean}
  */
 export function esModuloPorDefecto(rol, moduloId) {
   return rolesDelModulo(moduloId).includes(rol);
@@ -231,6 +235,10 @@ export function puedeUsarAppMovil(rol) {
 
 /**
  * Módulos a los que un rol tiene acceso (Lista plana).
+ *
+ * @param {string} rol
+ * @param {object} [opciones]
+ * @returns {object[]}
  */
 export function modulosVisibles(rol, opciones = {}) {
   if (!rol) return [];
@@ -248,6 +256,9 @@ export function modulosVisibles(rol, opciones = {}) {
 
 /**
  * Secciones estructuradas requeridas por la interfaz Web (`MainLayout.jsx`).
+ *
+ * @param {string} rol
+ * @returns {object[]}
  */
 export function seccionesVisibles(rol) {
   const modulos = modulosVisibles(rol);
@@ -264,6 +275,9 @@ export function seccionesVisibles(rol) {
 
 /**
  * Encuentra el módulo correspondiente según la ruta actual de la Web.
+ *
+ * @param {string} pathname
+ * @returns {object|null} El modulo de MODULOS, o null.
  */
 export function moduloDeRuta(pathname) {
   if (!pathname) return null;
@@ -272,7 +286,12 @@ export function moduloDeRuta(pathname) {
   return MODULOS.find((m) => m.ruta !== "/" && pathname.startsWith(m.ruta)) || null;
 }
 
-/** Destinos de la tab bar móvil según el rol */
+/**
+ * Destinos de la tab bar móvil según el rol
+ *
+ * @param {string} rol
+ * @returns {object[]}
+ */
 export function tabsMoviles(rol) {
   return modulosVisibles(rol, { plataforma: "mobile" }).filter((m) => Boolean(m.tabMovil));
 }

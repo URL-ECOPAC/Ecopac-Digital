@@ -50,6 +50,7 @@ export function calcularAlertaDeLote(fechaVencimiento, hoy = new Date()) {
  * @param {object[]} lotesIniciales
  * @param {{ busqueda?: string, bodegaSeleccionada?: string, categoriaSeleccionada?: string }} filtros
  * @param {Date} [hoy]
+ * @returns {object[]}
  */
 export function procesarLotes(
   lotesIniciales,
@@ -94,6 +95,11 @@ export function procesarLotes(
 /**
  * Hook para la gestión de lotes y alertas de caducidad (#155 / #144).
  * Cumple con la estructura DDL de lotes, existencias y alertas_caducidad.
+ *
+ * @param {object} [opciones]
+ * @param {object[]} [opciones.lotesIniciales]
+ * @param {object[]} [opciones.alertasIniciales]
+ * @returns {object} Con: busqueda, setBusqueda, bodegaSeleccionada, setBodegaSeleccionada, categoriaSeleccionada, setCategoriaSeleccionada, lotesFiltrados, alertasCriticas, alertas, setAlertas.
  */
 export function useGestionLotes({ lotesIniciales = [], alertasIniciales = [] } = {}) {
   const [busqueda, setBusqueda] = useState("");

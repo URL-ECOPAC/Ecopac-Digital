@@ -44,7 +44,12 @@ const PERMISOS_QUE_GOBIERNAN_UNA_POLITICA = new Set([
   "reportes.exportar",
 ]);
 
-/** Si conceder o revocar este permiso cambia de verdad lo que el servidor permite hoy. */
+/**
+ * Si conceder o revocar este permiso cambia de verdad lo que el servidor permite hoy.
+ *
+ * @param {string} clave
+ * @returns {boolean}
+ */
 export function permisoGobiernaAlgunaPolitica(clave) {
   return PERMISOS_QUE_GOBIERNAN_UNA_POLITICA.has(clave);
 }

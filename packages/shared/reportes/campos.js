@@ -140,28 +140,6 @@ export const CAMPOS_REPORTE_VENCIMIENTO = [
   },
 ];
 
-/**
- * Metas anuales de la organizacion contra las que el dashboard dibuja su barra de avance.
- *
- * ISSUE #862: estaban escritas como literales sueltos en el JSX de DashboardMetricasPage
- * (meta="3000", meta="50", meta="1500", meta="5000"), sin nombre, sin explicacion y sin forma de
- * cambiarlas salvo editando la pantalla. Son datos de negocio, asi que viven en shared con el
- * resto del vocabulario del dominio.
- *
- * SON VALORES FIJOS, NO CONFIGURACION. Lo correcto seria una tabla de metas por periodo en la
- * base, para que la junta directiva pudiera ajustarlas sin un despliegue; eso pide una migracion
- * y queda anotado como issue aparte. Mientras tanto, al menos se leen en un solo sitio.
- *
- * `consultasRealizadas` no lleva meta a proposito: es una consecuencia de cuantos pacientes se
- * atienden, no un objetivo que la organizacion se fije por separado.
- */
-export const METAS_DE_IMPACTO = Object.freeze({
-  pacientesAtendidos: 3000,
-  comunidadesBeneficiadas: 50,
-  tratamientosEntregados: 1500,
-  medicamentosUtilizados: 5000,
-});
-
 /** Umbrales de alerta, en dias restantes. Los consume calcularAlerta(). */
 export const UMBRALES_ALERTA = {
   CRITICO: 7,

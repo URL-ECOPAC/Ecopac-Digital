@@ -23,6 +23,8 @@ function aOpciones(filas, etiquetaDe) {
 /**
  * @param {{ usuarioId: string }} contexto Quien opera la bandeja; viaja tal cual a
  *   aprobarGasto()/rechazarGasto().
+ *
+ * @returns {{ pendientes: object[], conteo: number, catalogos: object, cargando: boolean, error: object|null, recargar: Function, aprobar: Function, rechazar: Function }}
  */
 export function usePendientesAprobacionGastos({ usuarioId } = {}) {
   const [pendientes, setPendientes] = useState([]);

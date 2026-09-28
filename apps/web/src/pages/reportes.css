@@ -116,28 +116,6 @@
   justify-content: flex-end;
 }
 
-.reporte-meta {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-xs);
-  margin-top: var(--spacing-xs);
-}
-
-.reporte-meta-barra {
-  background-color: var(--color-border);
-  border-radius: var(--radio-pill);
-  display: block;
-  height: 6px;
-  overflow: hidden;
-}
-
-.reporte-meta-barra > span {
-  background-color: var(--ec-acento, var(--color-primary));
-  border-radius: var(--radio-pill);
-  display: block;
-  height: 100%;
-}
-
 .reporte-graficas {
   display: grid;
   gap: var(--spacing-md);

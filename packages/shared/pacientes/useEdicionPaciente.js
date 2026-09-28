@@ -43,6 +43,7 @@ export function hayCambiosPendientes(valores, iniciales) {
  *
  * @param {object|null} paciente
  * @param {{ rol?: string }} [opciones] El rol decide si se ofrece crear una comunidad que falta.
+ * @returns {object} Con: campos, valores, errores, error, enviando, hayCambios, departamentoId, municipioId, setCampo, setDepartamento, setMunicipio, descartar, guardar, puedeCrearComunidad, registrarComunidad, erroresComunidad, creandoComunidad, catalogos.
  */
 export function useEdicionPaciente(paciente, { rol } = {}) {
   const iniciales = useMemo(() => valoresDesdePaciente(paciente), [paciente]);

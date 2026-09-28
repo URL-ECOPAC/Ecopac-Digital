@@ -2,6 +2,9 @@ import { esTextoVacio, normalizarTexto } from "../validations/index.js";
 
 /**
  * Normaliza los campos de texto de una comunidad.
+ *
+ * @param {object} [datos]
+ * @returns {object}
  */
 export function normalizarDatosComunidad(datos = {}) {
   const normalizados = { ...datos };
@@ -24,6 +27,9 @@ function tieneValor(valor) {
  * `latitud`/`longitud` son opcionales -no toda comunidad rural tiene coordenadas capturadas-,
  * pero si una llega la otra tiene que llegar tambien: un punto en el mapa no existe a medias.
  * Fuera de ese rango (-90..90 / -180..180) no es una coordenada real, sea cual sea su origen.
+ *
+ * @param {object} [datosObjeto]
+ * @returns {object}
  */
 export function validarComunidad(datosObjeto = {}) {
   const datos = normalizarDatosComunidad(datosObjeto);

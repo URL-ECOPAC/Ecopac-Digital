@@ -130,6 +130,8 @@ export function combinarJornadasConPresupuesto(jornadas = [], presupuestosPorJor
  *
  * @param {string} [rol] Rol de la sesion actual, para resolver `puedeVer` con permisosDeGastos().
  *   Un rol ausente resuelve a `false`, igual que permisosDeGastos(undefined).
+ *
+ * @returns {object} Con: kpis, proyectos, gastos, catalogos, filtroEstado, cambiarFiltroEstado, limpiarFiltroEstado, cargando, error, recargar, puedeVer.
  */
 export function useEjecucionPresupuestal(rol) {
   const [kpis, setKpis] = useState(KPIS_VACIOS);

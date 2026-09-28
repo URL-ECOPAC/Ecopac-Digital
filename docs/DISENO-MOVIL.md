@@ -47,15 +47,35 @@ Botones, filas de lista, chips, cabeceras de sección que se abren y selectores:
 
 La acción que resuelve la pantalla es un `PrimaryButton`; las demás son `SecondaryButton`. Ejemplos:
 en la jornada en curso es "Buscar paciente"; en la ficha, "Nueva consulta"; en la consulta,
-"Guardar consulta". Dos botones primarios compitiendo es un error de diseño.
+"Guardar consulta"; en inventario, "Registrar ingreso", fijo abajo. Dos botones primarios
+compitiendo es un error de diseño.
+
+La cabecera es de la sesión (la campana y cerrar sesión), no de la pantalla: una acción de la
+pantalla no va ahí. Cuando una sección tiene más de tres o cuatro opciones además de su acción
+principal, no se ponen todas a la vista: van en el menú lateral (`MenuLateral`, el mismo panel
+desde la derecha que los filtros), agrupadas y con una línea que dice qué hace cada una.
+
+Dos botones con rótulos de dos palabras no van lado a lado a medio ancho, porque el rótulo se
+parte en dos líneas: van uno debajo del otro a todo lo ancho, o el secundario a su ancho natural y
+la acción principal ocupando el resto, a la derecha (el "Atrás / Registrar paciente" de un
+formulario en pasos).
 
 ### 3. Nada se esconde a la derecha
 
 Nada de filas con desplazamiento horizontal para información o filtros. En un teléfono de 360 dp
 lo que no cabe queda cortado en el borde ("Bodega P...") y la persona no sabe que hay más. Los
-indicadores se reparten el ancho (`flex: 1`); los filtros van en el panel colapsable de
+indicadores se reparten el ancho (`flex: 1`); los filtros van en el panel lateral de
 `FilterBar`, con los mismos descriptores que la web. La excepción es una galería que se entiende
-como tal (el tablero kanban), y aun así con alternativa.
+como tal (el tablero kanban), y aun así con alternativa; y los chips de filtros activos, que son un
+resumen de lo que ya está en el panel y se leen completos ahí.
+
+**Cómo son los filtros.** Es el patrón de las apps móviles (Material 3, *side sheet*): en la
+pantalla queda el buscador, si lo hay, y un botón "Filtros" con un contador de los que están
+puestos. El botón abre un panel que entra desde la derecha, con su propio scroll, "Aplicar" fijo al
+pie y "Limpiar filtros" debajo. Lo que está filtrado se ve como chips debajo del buscador y cada
+chip se quita de un toque, sin abrir el panel. El buscador se aplica al escribir; lo del panel, al
+pulsar "Aplicar". Antes el panel se desplegaba dentro de la pantalla y, con varios filtros
+abiertos, dentro de una lista ya no se podía bajar.
 
 ### 4. El texto se ajusta, no se trunca
 
@@ -101,7 +121,7 @@ correcto se abre solo (`decimal-pad` para un peso, `phone-pad` para un teléfono
 ### 11. Mismo lenguaje que la web
 
 Mismos nombres de componente, mismas props, mismos descriptores, mismas palabras. Lo que cambia
-entre plataformas es la disposición (panel colapsable en vez de fila de filtros, tarjetas en vez de
+entre plataformas es la disposición (panel lateral en vez de fila de filtros, tarjetas en vez de
 tabla), no el contenido ni las etiquetas.
 
 ## Cómo se aplicó en la issue #840
@@ -138,6 +158,19 @@ pantalla sin guarda de rol, y ningún nombre de `ROUTES` sin pantalla registrada
 | Ficha del paciente, consulta, notificaciones | Sin `textTransform: "uppercase"` en rótulos y categorías | 4 |
 | Principios activos, Registrar salida, Por aprobar | Pantallas nuevas, con el mismo catálogo de componentes y los descriptores de la web | 7, 11 |
 | Receta | "Imprimir o guardar PDF" con `expo-print`, sobre el mismo `datosDeRecetaImprimible` que usa la web | 11 |
+
+## Cómo se aplicó en la revisión de septiembre de 2026
+
+| Pantalla | Qué se cambió | Reglas |
+| --- | --- | --- |
+| Todas las que filtran | `FilterBar`: buscador a la vista, botón "Filtros" con contador, panel lateral desde la derecha con scroll propio y chips para quitar cada filtro | 1, 3 |
+| Inventario (stock) | Los seis accesos (existencias, alertas, principios activos, mis movimientos, registrar salida, por aprobar) y "Registrar ingreso", que estaba en la cabecera junto a la campana y cerrar sesión, pasan a un **menú lateral** (`MenuLateral`) que se abre con "Opciones" junto al título, agrupados en Movimientos y Consultar; el "Limpiar filtros" suelto sobra con los chips | 2, 3 |
+| Pacientes | Crónicos, condiciones y diagnósticos pasan al mismo menú lateral; el buscador y "Filtros" van en una fila | 2, 3 |
+| Jornada en curso | "Buscar paciente" y "Registrar paciente" uno debajo del otro, a todo lo ancho | 2, 4 |
+| Registro de paciente | En cada paso, "Atrás" o "Cancelar" a su ancho natural y la acción principal ocupando el resto, a la derecha: repartiendo el ancho a partes fijas, uno de los dos rótulos se partía | 2, 4 |
+| Selector de fecha | Los meses de la lista con mayúscula inicial ("Enero"); dentro de una frase siguen en minúscula ("18 de agosto de 2026") | 4 |
+| `PrimaryButton`, `SecondaryButton` | Si el rótulo parte en dos líneas, las dos van centradas | 4 |
+| Ajustes | Sin el acceso al catálogo de comunidades: se administra en la web. La pantalla, su formulario y el mapa (con `react-native-webview`) salieron del móvil por la regla 12 | 12 |
 
 **Mayúsculas forzadas: por qué se fueron.** La regla 4 las prohíbe desde la #840, pero
 `StatCard.js` seguía llamando a `String(label).toUpperCase()` y tres pantallas usaban

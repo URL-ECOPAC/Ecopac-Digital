@@ -30,6 +30,7 @@ import { obtenerReporteJornada, puedeVerReporteJornada } from "./jornada.api.js"
  * @param {string} jornadaId
  * @param {object} [opciones]
  * @param {string} [opciones.rol] Rol de quien consulta.
+ * @returns {object} Con: tieneAcceso, cargando, error, ficha, camposDeFicha, diagnosticos, columnasDeDiagnosticos, medicamentos, columnasDeMedicamentos, personal, columnasDePersonal, recargar.
  */
 export function useReporteJornada(jornadaId, { rol } = {}) {
   const tieneAcceso = puedeVerReporteJornada(rol);

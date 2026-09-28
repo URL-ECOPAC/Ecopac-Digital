@@ -30,38 +30,37 @@ export default function DonacionesPage() {
         actions={ACCESOS_NAV}
       />
 
-      {/* Filtro de Rango de Fechas */}
-      <Card className="mb-4 border-0 shadow-sm bg-body-tertiary">
-        <Card.Body className="py-3">
+      {/* Filtro de rango de fechas. Misma tarjeta que los filtros de Proyectos: blanca, sin borde,
+          con sombra. Era gris (bg-body-tertiary) sobre el fondo gris y casi no se distinguia. */}
+      <Card className="mb-4 border-0 shadow-sm">
+        <Card.Body>
           <Form>
-            <Row className="g-3 align-items-end">
-              <Col xs={12} sm={4} md={4}>
+            <Row className="g-3">
+              <Col md={4} lg={3}>
                 <Form.Group controlId="fechaInicio">
-                  <Form.Label className="small text-body-secondary fw-semibold mb-1">
+                  <Form.Label className="small fw-semibold text-secondary mb-1">
                     Fecha inicio
                   </Form.Label>
                   <Form.Control
                     type="date"
-                    size="sm"
                     value={fechaInicio}
                     onChange={(e) => setFechaInicio(e.target.value)}
                   />
                 </Form.Group>
               </Col>
-              <Col xs={12} sm={4} md={4}>
+              <Col md={4} lg={3}>
                 <Form.Group controlId="fechaFin">
-                  <Form.Label className="small text-body-secondary fw-semibold mb-1">
+                  <Form.Label className="small fw-semibold text-secondary mb-1">
                     Fecha fin
                   </Form.Label>
                   <Form.Control
                     type="date"
-                    size="sm"
                     value={fechaFin}
                     onChange={(e) => setFechaFin(e.target.value)}
                   />
                 </Form.Group>
               </Col>
-              <Col xs={12} sm={4} md={4}>
+              <Col md={3} lg={2} className="d-flex align-items-end">
                 <BotonLimpiarFiltros
                   hayFiltros={Boolean(fechaInicio || fechaFin)}
                   onClick={() => {

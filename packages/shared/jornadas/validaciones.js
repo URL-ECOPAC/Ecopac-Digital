@@ -39,12 +39,23 @@ export const TRANSICIONES_JORNADA = Object.freeze({
   [ESTADOS_JORNADA.CANCELADA]: [],
 });
 
-/** Estados a los que se puede mover una jornada desde donde esta. Lista vacia si es terminal. */
+/**
+ * Estados a los que se puede mover una jornada desde donde esta. Lista vacia si es terminal.
+ *
+ * @param {string} estado
+ * @returns {string[]}
+ */
 export function transicionesDeJornadaDesde(estado) {
   return TRANSICIONES_JORNADA[estado] ?? [];
 }
 
-/** Indica si una jornada puede pasar de un estado a otro. */
+/**
+ * Indica si una jornada puede pasar de un estado a otro.
+ *
+ * @param {string} desde Estado actual.
+ * @param {string} hacia Estado al que se quiere pasar.
+ * @returns {boolean}
+ */
 export function esTransicionDeJornadaValida(desde, hacia) {
   return transicionesDeJornadaDesde(desde).includes(hacia);
 }

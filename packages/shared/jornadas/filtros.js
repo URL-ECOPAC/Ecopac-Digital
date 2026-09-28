@@ -49,7 +49,12 @@ export const FILTROS_JORNADA_VACIOS = {
   rangoFecha: null,
 };
 
-/** Si hay algun filtro del tablero puesto: decide si "Limpiar filtros" se enciende. */
+/**
+ * Si hay algun filtro del tablero puesto: decide si "Limpiar filtros" se enciende.
+ *
+ * @param {object} [filtros]
+ * @returns {boolean}
+ */
 export function hayFiltrosDeJornada(filtros = {}) {
   return Boolean(
     filtros.estado || filtros.comunidad || filtros.rangoFecha?.min || filtros.rangoFecha?.max,

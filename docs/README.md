@@ -8,7 +8,8 @@ configuracion de GitHub (plantillas de issues, PR y los workflows de CI/CD) esta
 
 | Documento                            | Para que sirve                                                          |
 | ------------------------------------ | ----------------------------------------------------------------------- |
-| [ARQUITECTURA.md](./ARQUITECTURA.md) | **Empezar aqui**: que construye el sistema, en que piezas se divide y por que |
+| [MANUAL-TECNICO.md](./MANUAL-TECNICO.md) | **Empezar aqui**: herramientas, requisitos, puesta en marcha, configuracion y claves, arquitectura, buenas practicas, base de datos y pantallas, con enlaces al detalle |
+| [ARQUITECTURA.md](./ARQUITECTURA.md) | Que construye el sistema, en que piezas se divide y por que |
 | [QUICKSTART.md](./QUICKSTART.md)     | Guia de inicio rapido: instalar y correr el proyecto (con y sin Docker) |
 | [CONTRIBUTING.md](./CONTRIBUTING.md) | Como contribuir: ramas, commits, PRs, issues y el tablero               |
 | [DISENO.md](./DISENO.md)             | Referencia de diseno: pantallas, navegacion y trazabilidad con issues  |
@@ -22,7 +23,9 @@ configuracion de GitHub (plantillas de issues, PR y los workflows de CI/CD) esta
 
 | Documento                                              | Para que sirve                                                        |
 | ------------------------------------------------------ | --------------------------------------------------------------------- |
-| [MODELO-DE-DATOS.md](./MODELO-DE-DATOS.md)             | Tablas, columnas, enums, funciones, vistas y politicas RLS            |
+| [DICCIONARIO-DE-DATOS.md](./DICCIONARIO-DE-DATOS.md)   | **Generado** (`npm run docs:diccionario`). Cada tabla con todos sus campos, tipos, llaves, restricciones, relaciones, politicas y triggers; diagramas entidad-relacion por modulo; vistas, enums y funciones |
+| [PANTALLAS.md](./PANTALLAS.md)                         | **Generado** (`npm run docs:pantallas`). Las pantallas de la web y del movil y que tablas, vistas y funciones usa cada una |
+| [MODELO-DE-DATOS.md](./MODELO-DE-DATOS.md)             | El porque del modelo: tablas, enums, funciones, vistas y politicas RLS |
 | [MODULOS.md](./MODULOS.md)                             | Que pantalla existe, en que app, servida por que hook y en que estado |
 | [API-SHARED.md](./API-SHARED.md)                       | Que exporta cada modulo de `packages/shared`                          |
 | [ARQUITECTURA-FRONTEND.md](./ARQUITECTURA-FRONTEND.md) | Como se comparte el frontend entre web y movil                        |

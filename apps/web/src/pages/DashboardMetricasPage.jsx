@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Form } from "react-bootstrap";
 
-import { aCadenaFechaLocal, METAS_DE_IMPACTO, useDashboardMetricas } from "@ecopac/shared";
+import { aCadenaFechaLocal, useDashboardMetricas } from "@ecopac/shared";
 import BotonExportarCSV from "../components/BotonExportarCSV";
 import BotonLimpiarFiltros from "../components/BotonLimpiarFiltros";
 import BotonesDeRango from "../components/BotonesDeRango";
@@ -26,31 +26,15 @@ import "./reportes.css";
 //
 //   - `metrica` y `setMetrica` se desestructuraban del hook y NO SE USABAN: el hook expone cinco
 //     metricas y la pantalla no tenia selector, asi que siempre se veia "pacientes atendidos".
-//   - Las metas estaban escritas como literales en el JSX (meta="3000", "50", "1500", "5000").
-//     Ahora salen de METAS_DE_IMPACTO, en shared.
 //   - La grafica eran divs con alto fijo de 180px y una barra `flex: 1` por punto, sin eje Y ni
 //     alternativa accesible. Ver GraficaDeBarras.jsx.
 
-/** StatCard con la barra de avance hacia la meta como pie. */
-function TarjetaMetrica({ etiqueta, valor, meta, acento }) {
-  const progreso = meta ? Math.min((Number(valor) / Number(meta)) * 100, 100) : 0;
-  return (
-    <StatCard
-      label={etiqueta}
-      value={valor}
-      accent={acento}
-      caption={
-        meta ? (
-          <span className="reporte-meta">
-            <span className="reporte-meta-barra" aria-hidden="true">
-              <span style={{ width: `${progreso}%` }} />
-            </span>
-            meta: {Number(meta).toLocaleString("es-GT")}
-          </span>
-        ) : undefined
-      }
-    />
-  );
+/**
+ * Un indicador. Llevaba debajo una barra de avance hacia una meta fija (3,000 pacientes, 50
+ * comunidades...) que la organizacion no usa: se quito a pedido suyo.
+ */
+function TarjetaMetrica({ etiqueta, valor, acento }) {
+  return <StatCard label={etiqueta} value={valor} accent={acento} />;
 }
 
 // La columna del valor lleva el nombre de la metrica elegida ("Pacientes atendidos"): decia
@@ -244,7 +228,6 @@ export default function DashboardMetricasPage() {
         <TarjetaMetrica
           etiqueta="Pacientes atendidos"
           valor={indicadores?.pacientesAtendidos || 0}
-          meta={METAS_DE_IMPACTO.pacientesAtendidos}
           acento="var(--color-primary)"
         />
         <TarjetaMetrica
@@ -255,19 +238,16 @@ export default function DashboardMetricasPage() {
         <TarjetaMetrica
           etiqueta="Comunidades beneficiadas"
           valor={indicadores?.comunidadesBeneficiadas || 0}
-          meta={METAS_DE_IMPACTO.comunidadesBeneficiadas}
           acento="var(--color-info)"
         />
         <TarjetaMetrica
           etiqueta="Tratamientos entregados"
           valor={indicadores?.tratamientosEntregados || 0}
-          meta={METAS_DE_IMPACTO.tratamientosEntregados}
           acento="var(--color-warning)"
         />
         <TarjetaMetrica
           etiqueta="Medicamentos utilizados"
           valor={indicadores?.medicamentosUtilizados || 0}
-          meta={METAS_DE_IMPACTO.medicamentosUtilizados}
           acento="var(--color-danger)"
         />
       </div>

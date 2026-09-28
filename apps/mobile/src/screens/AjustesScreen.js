@@ -4,7 +4,6 @@ import { colors, spacing, typography } from "@ecopac/ui-tokens";
 import {
   TIPOS_DE_CAMPO,
   etiquetaDeRol,
-  puedeVerCatalogoComunidades,
   usePerfilPropio,
   valoresInicialesDePerfil,
 } from "@ecopac/shared";
@@ -91,15 +90,6 @@ export default function AjustesScreen({ navigation }) {
           onPress={() => navigation.navigate(ROUTES.NOTIFICACIONES)}
         />
       </Card>
-
-      {puedeVerCatalogoComunidades(perfil?.rol) && (
-        <Card title="Administración">
-          <PrimaryButton
-            title="Catalogo de comunidades"
-            onPress={() => navigation.navigate(ROUTES.TAB_INICIO, { screen: ROUTES.COMUNIDADES })}
-          />
-        </Card>
-      )}
 
       <Card title="Mi perfil">
         {errorGlobal ? <ErrorState message={errorGlobal} /> : null}

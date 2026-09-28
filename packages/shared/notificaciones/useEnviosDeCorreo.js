@@ -47,6 +47,8 @@ const aOpciones = (etiquetas) =>
  *
  * @param {{ activo?: boolean }} [opciones] `activo` en false no consulta nada: la seccion se pide
  *   al abrirla, no al entrar a la bitacora.
+ *
+ * @returns {object} Con: columnas, filtrosDisponibles, envios, totalFallidos, filtros, setFiltro, limpiarFiltros, hayFiltros, catalogos, cargando, error, recargar.
  */
 export function useEnviosDeCorreo({ activo = true } = {}) {
   const [envios, setEnvios] = useState([]);

@@ -4,11 +4,23 @@ import {
   ESTADOS_PROYECTO,
   ETIQUETAS_ESTADO_PROYECTO,
   formatearFechaConHora,
+  MENSAJE_PROYECTO_CANCELADO,
   puedeVerSeguimientoProyecto,
   transicionesDeProyectoDesde,
   useSeguimientoProyecto,
 } from "@ecopac/shared";
-import { Container, Row, Col, Card, Form, Button, Badge, Alert, Spinner } from "react-bootstrap";
+import {
+  Container,
+  Row,
+  Col,
+  Card,
+  Form,
+  Button,
+  Badge,
+  Alert,
+  ProgressBar,
+  Spinner,
+} from "react-bootstrap";
 
 import AccesoDenegadoPage from "./AccesoDenegadoPage";
 import DataList from "../components/DataList";
@@ -41,6 +53,8 @@ function nombreDePerfil(perfil) {
 export default function SeguimientoProyectoPage({ proyectoId, proyectoInicial, rol, onVolver }) {
   const {
     proyecto,
+    proyectoCancelado,
+    puedeRegistrarSeguimiento,
     hitos,
     bitacora,
     historial,
@@ -137,6 +151,13 @@ export default function SeguimientoProyectoPage({ proyectoId, proyectoInicial, r
           </div>
         )}
       </PageHeader>
+
+      {/* 00154: un proyecto cancelado se consulta, no se edita. */}
+      {proyectoCancelado && (
+        <Alert variant="secondary" className="mb-4">
+          {MENSAJE_PROYECTO_CANCELADO}
+        </Alert>
+      )}
 
       {/* Estado del proyecto. Hasta aqui la web no tenia donde cambiarlo (solo el kanban movil).
           Finalizar y cancelar no tienen vuelta atras (el trigger de la 00029 los deja
@@ -241,53 +262,77 @@ export default function SeguimientoProyectoPage({ proyectoId, proyectoInicial, r
       <Row className="g-4">
         {/* Columna Izquierda: Avance y Bitácora */}
         <Col lg={8}>
-          <Card className="border shadow-sm mb-4">
-            <Card.Body className="p-4">
-              <Card.Title as="h5" className="mb-3 text-dark fw-bold">
-                Actualizar Avance y Bitácora
-              </Card.Title>
+          {/* Sin permiso para registrar (proyecto cancelado, o un rol que solo consulta), el
+              avance se muestra y no se mueve. */}
+          {!puedeRegistrarSeguimiento && (
+            <Card className="border shadow-sm mb-4">
+              <Card.Body className="p-4">
+                <div className="d-flex justify-content-between align-items-center mb-2">
+                  <Card.Title as="h5" className="mb-0 text-dark fw-bold">
+                    Avance
+                  </Card.Title>
+                  <span className="fw-bold text-primary">
+                    {proyectoDatos.porcentajeAvance ?? 0}%
+                  </span>
+                </div>
+                <ProgressBar now={proyectoDatos.porcentajeAvance ?? 0} style={{ height: "8px" }} />
+              </Card.Body>
+            </Card>
+          )}
 
-              {errorAccion && (
-                <Alert variant="danger" className="py-2 px-3 small mb-3">
-                  {errorAccion}
-                </Alert>
-              )}
+          {puedeRegistrarSeguimiento && (
+            <Card className="border shadow-sm mb-4">
+              <Card.Body className="p-4">
+                <Card.Title as="h5" className="mb-3 text-dark fw-bold">
+                  Actualizar Avance y Bitácora
+                </Card.Title>
 
-              <Form className="d-flex flex-column gap-3">
-                <div>
-                  <div className="d-flex justify-content-between align-items-center mb-1">
-                    <Form.Label className="small fw-medium mb-0">
-                      Porcentaje de avance (%)
-                    </Form.Label>
-                    <span className="fw-bold text-primary">{nuevoPorcentaje}%</span>
+                {errorAccion && (
+                  <Alert variant="danger" className="py-2 px-3 small mb-3">
+                    {errorAccion}
+                  </Alert>
+                )}
+
+                <Form className="d-flex flex-column gap-3">
+                  <div>
+                    <div className="d-flex justify-content-between align-items-center mb-1">
+                      <Form.Label className="small fw-medium mb-0">
+                        Porcentaje de avance (%)
+                      </Form.Label>
+                      <span className="fw-bold text-primary">{nuevoPorcentaje}%</span>
+                    </div>
+                    <Form.Range
+                      min={0}
+                      max={100}
+                      value={nuevoPorcentaje}
+                      onChange={(e) => setNuevoPorcentaje(Number(e.target.value))}
+                    />
                   </div>
-                  <Form.Range
-                    min={0}
-                    max={100}
-                    value={nuevoPorcentaje}
-                    onChange={(e) => setNuevoPorcentaje(Number(e.target.value))}
-                  />
-                </div>
 
-                <Form.Group>
-                  <Form.Label className="small fw-medium mb-1">Nota de seguimiento</Form.Label>
-                  <Form.Control
-                    as="textarea"
-                    rows={3}
-                    value={nuevaNota}
-                    onChange={(e) => setNuevaNota(e.target.value)}
-                    placeholder="Escribe los detalles o avances alcanzados..."
-                  />
-                </Form.Group>
+                  <Form.Group>
+                    <Form.Label className="small fw-medium mb-1">Nota de seguimiento</Form.Label>
+                    <Form.Control
+                      as="textarea"
+                      rows={3}
+                      value={nuevaNota}
+                      onChange={(e) => setNuevaNota(e.target.value)}
+                      placeholder="Escribe los detalles o avances alcanzados..."
+                    />
+                  </Form.Group>
 
-                <div className="d-flex justify-content-end">
-                  <Button variant="primary" onClick={guardarSeguimiento} disabled={cargandoAccion}>
-                    {cargandoAccion ? "Guardando..." : "Guardar Actualización"}
-                  </Button>
-                </div>
-              </Form>
-            </Card.Body>
-          </Card>
+                  <div className="d-flex justify-content-end">
+                    <Button
+                      variant="primary"
+                      onClick={guardarSeguimiento}
+                      disabled={cargandoAccion}
+                    >
+                      {cargandoAccion ? "Guardando..." : "Guardar Actualización"}
+                    </Button>
+                  </div>
+                </Form>
+              </Card.Body>
+            </Card>
+          )}
 
           <Card className="border shadow-sm">
             <Card.Body className="p-4">
@@ -340,7 +385,9 @@ export default function SeguimientoProyectoPage({ proyectoId, proyectoInicial, r
             <Card.Body className="p-4">
               <div className="d-flex justify-content-between align-items-center mb-3">
                 <h2 className="ec-seccion-titulo mb-0">Hitos del proyecto</h2>
-                <SecondaryButton title="Agregar hito" size="sm" onClick={abrirAltaHito} />
+                {puedeRegistrarSeguimiento && (
+                  <SecondaryButton title="Agregar hito" size="sm" onClick={abrirAltaHito} />
+                )}
               </div>
 
               {hitos.length === 0 ? (
@@ -361,6 +408,8 @@ export default function SeguimientoProyectoPage({ proyectoId, proyectoInicial, r
                           <Form.Check
                             type="checkbox"
                             checked={hito.esCumplido}
+                            disabled={!puedeRegistrarSeguimiento}
+                            aria-label={`Hito cumplido: ${hito.nombre}`}
                             onChange={(e) => cambiarEstadoHito(hito.id, e.target.checked)}
                             className="mt-1"
                           />
@@ -388,14 +437,16 @@ export default function SeguimientoProyectoPage({ proyectoId, proyectoInicial, r
                               </p>
                             )}
                           </div>
-                          <Button
-                            variant="link"
-                            size="sm"
-                            className="p-0 text-decoration-none"
-                            onClick={() => abrirEdicionHito(hito)}
-                          >
-                            Corregir
-                          </Button>
+                          {puedeRegistrarSeguimiento && (
+                            <Button
+                              variant="link"
+                              size="sm"
+                              className="p-0 text-decoration-none"
+                              onClick={() => abrirEdicionHito(hito)}
+                            >
+                              Corregir
+                            </Button>
+                          )}
                         </div>
                       </div>
                     );

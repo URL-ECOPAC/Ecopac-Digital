@@ -39,6 +39,7 @@ export const FILTROS_STOCK_VACIOS = Object.freeze({ busqueda: "", bodega: "" });
  *
  * @param {object} fila
  * @param {Date} [hoy]
+ * @returns {object} Con: id, loteId, medicamentoId, nombre, numeroLote, bodegaId, bodega, fechaVencimiento, diasRestantes, cantidadDisponible, porVencer.
  */
 export function filaDeStock(fila, hoy = new Date()) {
   const diasRestantes = diasHastaVencimiento(fila.fechaVencimiento, hoy);
@@ -65,6 +66,7 @@ export function filaDeStock(fila, hoy = new Date()) {
  *
  * @param {ReturnType<typeof filaDeStock>[]} filas
  * @param {typeof FILTROS_STOCK_VACIOS} filtros
+ * @returns {object[]}
  */
 export function filtrarStock(filas = [], filtros = FILTROS_STOCK_VACIOS) {
   const deLaBodega = filtros.bodega
@@ -82,6 +84,7 @@ export function filtrarStock(filas = [], filtros = FILTROS_STOCK_VACIOS) {
  * lote y bodega, asi que dos lotes del mismo medicamento son dos filas y un solo producto.
  *
  * @param {ReturnType<typeof filaDeStock>[]} filas
+ * @returns {number}
  */
 export function contarProductos(filas = []) {
   return new Set(filas.map((fila) => fila.medicamentoId).filter(Boolean)).size;
@@ -90,6 +93,8 @@ export function contarProductos(filas = []) {
 /**
  * @param {{ inventarioInicial?: object[], bodegas?: { id: string, nombre: string }[] }} [opciones]
  *   `inventarioInicial`: filas de listarExistenciasDisponibles().
+ *
+ * @returns {object} Con: filtros, setFiltro, limpiarFiltros, hayFiltros, catalogos, inventarioFiltrado, total, totalProductos, totalPorVencer.
  */
 export function useCatalogoMedicamentos({ inventarioInicial = [], bodegas = [] } = {}) {
   const [filtros, setFiltros] = useState(FILTROS_STOCK_VACIOS);

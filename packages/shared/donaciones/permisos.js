@@ -27,6 +27,9 @@ import { esAdministrador } from "../usuarios/roles.js";
  *
  * Espejo del SELECT de las tres tablas (00148): la administradora, quien tenga
  * donaciones.registrar delegado, y el rol al que la matriz le abrio Donaciones (solo lectura).
+ *
+ * @param {string} rol
+ * @returns {boolean}
  */
 export function puedeVerDonaciones(rol) {
   return tienePermisoFino(rol, "donaciones.registrar") || accedeAModuloPorMatriz(rol, "donaciones");
@@ -35,6 +38,9 @@ export function puedeVerDonaciones(rol) {
 /**
  * Puede registrar un donante o una donacion: la administradora o quien tenga
  * donaciones.registrar delegado por persona (INSERT de las tres tablas, 00086).
+ *
+ * @param {string} rol
+ * @returns {boolean}
  */
 export function puedeRegistrarDonaciones(rol) {
   return tienePermisoFino(rol, "donaciones.registrar");
@@ -44,6 +50,9 @@ export function puedeRegistrarDonaciones(rol) {
  * Puede corregir o dar de baja a un donante y anular una donacion: solo la administradora. Las
  * politicas de UPDATE de donantes y donaciones no admiten el permiso fino: registrar se delega,
  * deshacer no.
+ *
+ * @param {string} rol
+ * @returns {boolean}
  */
 export function puedeCorregirDonaciones(rol) {
   return esAdministrador(rol);
@@ -57,6 +66,9 @@ export function puedeCorregirDonaciones(rol) {
  *
  * `tieneAccesoLectura` y `puedeEscribir` conservan los nombres con los que ya los leen los
  * hooks del modulo, para no tocar las pantallas desde aqui.
+ *
+ * @param {string} rol
+ * @returns {{ tieneAccesoLectura: boolean, puedeEscribir: boolean, puedeCorregir: boolean }}
  */
 export function permisosDeDonaciones(rol) {
   return {

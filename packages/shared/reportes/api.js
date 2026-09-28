@@ -6,8 +6,11 @@
 // en la 00064). Ademas comparaba el rol contra "junta_directiva" con guion bajo, cuando el enum
 // rol_usuario declara 'junta directiva' con espacio: junta directiva nunca pasaba el chequeo.
 //
-// La vista tiene grano de UNA FILA POR JORNADA. Los cuatro indicadores del requerimiento salen de
-// agregar esas filas, no de columnas propias:
+// Desde la 00155 se lee vista_reporte_impacto_por_comunidad: mismas columnas, con grano (jornada,
+// comunidad de origen del paciente). `comunidad_id` es de donde vienen los pacientes -la de la
+// jornada solo si el paciente no tiene-, asi que agrupar y filtrar por comunidad cuentan por su
+// origen. Una jornada puede tener varias filas, una por comunidad. Los indicadores salen de agregar
+// esas filas, no de columnas propias:
 //
 // pacientes atendidos     SUM(pacientes_atendidos)
 // comunidades beneficiadas COUNT(DISTINCT comunidad_id)   <- no es una columna, y no puede serlo:
@@ -124,7 +127,11 @@ function agregar(filas) {
 
   for (const fila of filas) {
     for (const indicador of INDICADORES) totales[indicador] += Number(fila[indicador] ?? 0);
-    if (fila.comunidad_id) comunidades.add(fila.comunidad_id);
+    // Beneficiada es de donde vino al menos un paciente: una jornada sin atenciones trae la fila de
+    // su comunidad con todo en cero, y esa no cuenta.
+    if (fila.comunidad_id && Number(fila.pacientes_atendidos) > 0) {
+      comunidades.add(fila.comunidad_id);
+    }
   }
 
   return { ...totales, comunidades_beneficiadas: comunidades.size };
@@ -181,7 +188,7 @@ export async function obtenerIndicadoresImpacto({
   function fabricaDeConsulta(rango) {
     return () => {
       let consulta = obtenerSupabase()
-        .from("vista_reporte_impacto")
+        .from("vista_reporte_impacto_por_comunidad")
         .select(COLUMNAS_DEL_REPORTE)
         .order("fecha", { ascending: true });
 

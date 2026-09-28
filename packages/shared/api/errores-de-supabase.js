@@ -110,6 +110,9 @@ const REINTENTABLES = new Set([CODIGOS_DE_ERROR_DE_SUPABASE.FALLO_DE_RED]);
  * `Key (dpi)=(2547891230101) already exists.` queda como `Key (...)=(...) already exists.`:
  * se conserva la forma del problema, que es lo que sirve para diagnosticar, y desaparece el
  * dato del paciente. Tambien se recorta, porque un log no necesita parrafos.
+ *
+ * @param {string} texto
+ * @returns {string}
  */
 export function sanearDetalle(texto) {
   if (typeof texto !== "string" || texto.trim() === "") return "";
@@ -140,6 +143,9 @@ function nombreDeRestriccion(mensaje) {
  * contiene ninguna de las cadenas de abajo, asi que sin esta linea caia en "error inesperado".
  * El navegador no deja distinguir un corte de red de un preflight CORS rechazado -por ejemplo,
  * una funcion que no esta desplegada y responde 404 al OPTIONS-: los dos llegan como este error.
+ *
+ * @param {object} error
+ * @returns {boolean}
  */
 export function esErrorDeRed(error) {
   if (!error) return false;

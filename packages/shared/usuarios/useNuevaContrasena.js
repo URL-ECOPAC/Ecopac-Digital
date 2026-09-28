@@ -25,6 +25,8 @@ import { validarContrasena } from "./validaciones.js";
  *
  * @param {{ activo?: boolean }|null|undefined} perfil Fila de perfiles de quien tiene la sesion
  *   de recuperacion, o null/undefined si no se pudo leer.
+ *
+ * @returns {boolean}
  */
 export function debeBloquearPorInactivo(perfil) {
   return perfil?.activo === false;

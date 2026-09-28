@@ -22,6 +22,8 @@ import { validarCorreo } from "./validaciones.js";
  * @param {{ urlDeRetorno?: string }} [opciones] Direccion a la que Supabase manda a la persona
  *   desde el correo. En web se construye con `${window.location.origin}/nueva-contrasena`; la
  *   pantalla la pasa, el hook no la adivina.
+ *
+ * @returns {{ correo: string, setCorreo: Function, enviando: boolean, mensajeExito: string|boolean, errorCampo: string, solicitarRestablecimiento: Function }}
  */
 export function useRestablecerContrasena({ urlDeRetorno } = {}) {
   const [correo, setCorreo] = useState("");

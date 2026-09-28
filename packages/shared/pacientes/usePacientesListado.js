@@ -88,6 +88,7 @@ export function aFiltrosDeBusqueda(filtros = {}) {
  * recortaria solo la pagina actual y dejaria el total mintiendo.
  *
  * @param {{ porPagina?: number }} [opciones]
+ * @returns {object} Con: filas, filtros, setFiltro, limpiarFiltros, hayFiltros, recargar, cargando, error, total, hayMas, cargarMas, catalogos.
  */
 export function usePacientesListado({ porPagina } = {}) {
   const [filtros, setFiltros] = useState(FILTROS_PACIENTE_VACIOS);

@@ -28,7 +28,12 @@ export function camposDeEdicion(campos, idsEditables) {
   );
 }
 
-/** Los ids de un juego de campos que la edicion deja escribir. */
+/**
+ * Los ids de un juego de campos que la edicion deja escribir.
+ *
+ * @param {object[]} campos Descriptores de campo (campos.js de cada modulo).
+ * @returns {string[]}
+ */
 export function idsEditables(campos) {
   return campos.filter((campo) => !campo.soloLectura).map((campo) => campo.id);
 }

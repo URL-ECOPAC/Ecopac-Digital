@@ -16,6 +16,12 @@ import { ESTADOS_MOVIMIENTO, TIPOS_DE_MOVIMIENTO } from "../enums.js";
  * movimiento que registre un administrador (auto-aprobacion, sin excepcion) y mantenerla solo
  * en el UPDATE manual era una restriccion a medias. La trazabilidad sigue viva en
  * registrado_por/aprobado_por/aprobado_en y en eventos_auditoria (00026).
+ *
+ * @param {string} idMovimiento
+ * @param {object} opciones
+ * @param {string} opciones.usuarioId
+ * @param {string} opciones.rolUsuario
+ * @returns {Promise<{ datos: object|null, error: object|null }>}
  */
 export async function aprobarMovimiento(idMovimiento, { usuarioId, rolUsuario }) {
   try {
@@ -93,6 +99,13 @@ export async function aprobarMovimiento(idMovimiento, { usuarioId, rolUsuario })
  *
  * motivo_rechazo (00084) es la columna que faltaba; sin ella esta operacion fallaba siempre
  * con 42703 (issue #491, mismo defecto que #490 en gastos).
+ *
+ * @param {string} idMovimiento
+ * @param {object} opciones
+ * @param {string} opciones.motivo
+ * @param {string} opciones.usuarioId
+ * @param {string} opciones.rolUsuario
+ * @returns {Promise<{ datos: object|null, error: object|null }>}
  */
 export async function rechazarMovimiento(idMovimiento, { motivo, usuarioId, rolUsuario }) {
   try {
@@ -148,6 +161,10 @@ export async function rechazarMovimiento(idMovimiento, { motivo, usuarioId, rolU
 
 /**
  * Aprueba múltiples movimientos en lote, indicando cuáles fallaron y la razón.
+ *
+ * @param {string[]} idsMovimientos
+ * @param {object} contextoUsuario
+ * @returns {Promise<{ datos: object, error: object|null }>}
  */
 export async function aprobarMovimientosEnLote(idsMovimientos, contextoUsuario) {
   const aprobados = [];

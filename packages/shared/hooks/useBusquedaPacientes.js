@@ -101,6 +101,7 @@ export function hayMasResultados(cargados, total) {
  *   cambiar la firma de este hook (issue #124).
  * @param {number} [opciones.porPagina] Tamano de pagina.
  * @param {number} [opciones.retardoMs] Retardo antes de consultar; se baja en las pruebas.
+ * @returns {object} Con: termino, setTermino, recargar, resultados, total, cargando, error, terminoDemasiadoCorto, hayMas, cargarMas.
  */
 export function useBusquedaPacientes({
   comunidad,

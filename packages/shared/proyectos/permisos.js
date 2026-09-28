@@ -25,6 +25,7 @@
 
 import { accedeAModuloPorMatriz, tienePermisoFino } from "../usuarios/acceso.js";
 import { ROLES, ROLES_DE_CAMPO, esAdministrador } from "../usuarios/roles.js";
+import { proyectoAdmiteCambios } from "./validaciones.js";
 
 /** Rol que administra proyectos por defecto: solo administrador (00039). */
 export const ROLES_QUE_ADMINISTRAN_PROYECTOS = Object.freeze([ROLES.ADMINISTRADOR]);
@@ -32,6 +33,9 @@ export const ROLES_QUE_ADMINISTRAN_PROYECTOS = Object.freeze([ROLES.ADMINISTRADO
 /**
  * Puede crear, editar, cambiar de estado y asociar jornadas: la administradora o quien tenga
  * `proyectos.gestionar` delegado por persona (00086, conectado en el cliente por la 00148).
+ *
+ * @param {string} rol
+ * @returns {boolean}
  */
 export function puedeAdministrarProyectos(rol) {
   return tienePermisoFino(rol, "proyectos.gestionar");
@@ -54,6 +58,9 @@ function veElProyectoEntero(rol) {
  * solo los proyectos a los que pertenece -por su equipo o por una de sus jornadas,
  * pertenece_a_proyecto()-. Esta funcion no puede expresar ese filtro y no le hace falta: decide si
  * se dibuja la pantalla, y las filas las elige la base.
+ *
+ * @param {string} rol
+ * @returns {boolean}
  */
 export function puedeVerProyectos(rol) {
   return esAdministrador(rol) || ROLES_DE_CAMPO.includes(rol) || veElProyectoEntero(rol);
@@ -64,6 +71,9 @@ export function puedeVerProyectos(rol) {
  *
  * El personal de campo no (issue #864, 00148): ve que es el proyecto, en que estado esta, su
  * equipo y sus jornadas, no lo que costo.
+ *
+ * @param {string} rol
+ * @returns {boolean}
  */
 export function puedeVerInsumosYGastosDeProyecto(rol) {
   return veElProyectoEntero(rol);
@@ -72,6 +82,9 @@ export function puedeVerInsumosYGastosDeProyecto(rol) {
 /**
  * Puede ver el historial de cambios de estado del proyecto (proyecto_estado_historial, 00029).
  * Espejo de su politica de SELECT desde la 00148.
+ *
+ * @param {string} rol
+ * @returns {boolean}
  */
 export function puedeVerHistorialProyecto(rol) {
   return veElProyectoEntero(rol);
@@ -80,6 +93,9 @@ export function puedeVerHistorialProyecto(rol) {
 /**
  * Puede abrir el seguimiento de un proyecto -hitos y bitacora de avance-. El personal de campo no
  * (00148): su detalle del proyecto es de consulta.
+ *
+ * @param {string} rol
+ * @returns {boolean}
  */
 export function puedeVerSeguimientoProyecto(rol) {
   return veElProyectoEntero(rol);
@@ -90,21 +106,32 @@ export function puedeVerSeguimientoProyecto(rol) {
  *
  * Se devuelven juntos para que un hook no tenga que llamar a las tres por separado ni
  * acordarse de cuales existen.
+ *
+ * Con `proyecto`, son los permisos sobre ESE proyecto: si esta cancelado, nada de lo que lo
+ * modifica queda abierto (00154), sea cual sea el rol. Crear otro proyecto no depende de cual
+ * este abierto, asi que `puedeCrear` no cambia.
+ *
+ * @param {string} rol
+ * @param {{ estado?: string }|null} [proyecto]
+ * @returns {object} Con: puedeVer, puedeCrear, puedeEditar, puedeCambiarEstado, puedeAsociarJornadas, puedeGestionarEquipo, puedeGestionarInsumos, puedeRegistrarSeguimiento, puedeVerInsumosYGastos, puedeVerHistorial, puedeVerSeguimiento.
  */
-export function permisosDeProyectos(rol) {
+export function permisosDeProyectos(rol, proyecto = null) {
   const administra = puedeAdministrarProyectos(rol);
+  const modifica = administra && proyectoAdmiteCambios(proyecto?.estado);
   return {
     puedeVer: puedeVerProyectos(rol),
     puedeCrear: administra,
-    puedeEditar: administra,
-    puedeCambiarEstado: administra,
-    puedeAsociarJornadas: administra,
+    puedeEditar: modifica,
+    puedeCambiarEstado: modifica,
+    puedeAsociarJornadas: modifica,
     // Armar el equipo del proyecto (00146): la misma regla que editarlo. Leerlo lo decide
     // puedeVer, y las filas que se ven las elige la base.
-    puedeGestionarEquipo: administra,
+    puedeGestionarEquipo: modifica,
     // Lista de insumos previstos (00147): planificacion con dinero. Verla es puedeVerInsumosYGastos;
     // agregar, editar y quitar, la misma regla que editar el proyecto.
-    puedeGestionarInsumos: administra,
+    puedeGestionarInsumos: modifica,
+    // Avance, notas de la bitacora e hitos (00053): la misma regla que editar el proyecto.
+    puedeRegistrarSeguimiento: modifica,
     puedeVerInsumosYGastos: puedeVerInsumosYGastosDeProyecto(rol),
     puedeVerHistorial: puedeVerHistorialProyecto(rol),
     puedeVerSeguimiento: puedeVerSeguimientoProyecto(rol),

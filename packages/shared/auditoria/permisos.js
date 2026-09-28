@@ -6,7 +6,12 @@
 
 import { esAdministrador } from "../usuarios/roles.js";
 
-/** Si `rol` puede ver la bitacora de auditoria. */
+/**
+ * Si `rol` puede ver la bitacora de auditoria.
+ *
+ * @param {string} rol
+ * @returns {boolean}
+ */
 export function puedeVerBitacoraAuditoria(rol) {
   return esAdministrador(rol);
 }

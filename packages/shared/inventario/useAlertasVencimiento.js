@@ -50,6 +50,7 @@ export function calcularDiasRestantes(fechaVencimiento, fechaIngreso) {
  * @param {{accion:string, cantidad:number, bodegaDestinoId?:string}[]} acciones
  * @param {{ rolUsuario?: string }} sesion
  * @param {number} totalDisponible
+ * @returns {{ acciones: object[], rolUsuario: string, totalDisponible: number }}
  */
 export function datosAtenderAlerta(acciones, { rolUsuario }, totalDisponible) {
   return { acciones, rolUsuario, totalDisponible };
@@ -104,6 +105,8 @@ export function recargarAlertasMontadas() {
  *
  * @param {{ rolUsuario: string }} contexto Quien esta operando el panel. El rol decide si se
  *   sincroniza al abrir y viaja a atenderAlerta(); quien atiende lo fija la base (issue #755).
+ *
+ * @returns {object} Con: porVencer, vencidas, cantidadPendientes, atendidas, errorAtendidas, bodegas, errorBodegas, cargando, error, recargar, busqueda, setBusqueda, marcarComoAtendida.
  */
 export function useAlertasVencimiento({ rolUsuario } = {}) {
   const [alertas, setAlertas] = useState([]);

@@ -23,6 +23,7 @@ import { consultarExistencias } from "./existencias.api.js";
  * bodega rapido no deje ganar a una respuesta vieja que llego tarde.
  *
  * @param {{ bodega?: string, busqueda?: string, limite?: number }} [opciones]
+ * @returns {{ existencias: object[], total: number, pagina: number, cargando: boolean, error: object|null, recargar: Function, irAPagina: Function }}
  */
 export function useInventario({ bodega, busqueda, limite } = {}) {
   const [existencias, setExistencias] = useState([]);

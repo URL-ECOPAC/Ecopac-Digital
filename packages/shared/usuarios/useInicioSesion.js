@@ -31,6 +31,9 @@ import { modulosVisibles } from "../navegacion.js";
  * Sale de navegacion.js y no de una lista de ifs por rol: si un modulo cambia de roles, el
  * destino de entrada cambia solo. La version anterior tenia esa tabla escrita a mano y apuntaba
  * a /dashboard y /jornadas-activas, dos rutas que App.jsx no declara.
+ *
+ * @param {string} rol
+ * @returns {string} La ruta del primer modulo visible, o "/".
  */
 export function rutaInicialDe(rol) {
   return modulosVisibles(rol)[0]?.ruta ?? "/";
@@ -45,6 +48,8 @@ export function rutaInicialDe(rol) {
  * distinta: se probo en ecopac-dev cerrando la sesion de un rol consultivo en /reportes y
  * entrando como medico, y lo primero que vio fue "Acceso restringido" -- la ruta era de la sesion
  * anterior, no suya-. El destino de entrada tiene que depender de quien entra, no de quien salio.
+ *
+ * @returns {object} Con: correo, setCorreo, contrasena, setContrasena, erroresDeCampo, error, enviando, handleSubmit, destinoPorDefecto.
  */
 export function useInicioSesion() {
   const [correo, setCorreo] = useState("");

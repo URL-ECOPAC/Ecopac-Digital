@@ -21,7 +21,12 @@ import { MODULOS } from "../navegacion.js";
 import { accedeAModuloPorMatriz, tienePermisoFino } from "./acceso.js";
 import { esAdministrador } from "./roles.js";
 
-/** Puede crear un perfil nuevo. Espejo de la politica de INSERT de perfiles (00038). */
+/**
+ * Puede crear un perfil nuevo. Espejo de la politica de INSERT de perfiles (00038).
+ *
+ * @param {string} rol
+ * @returns {boolean}
+ */
 export function puedeCrearUsuario(rol) {
   return esAdministrador(rol);
 }
@@ -30,17 +35,30 @@ export function puedeCrearUsuario(rol) {
  * Puede editar el perfil de otra persona (no el propio: eso lo permite la identidad, no el rol).
  *
  * Espejo de la politica de UPDATE de perfiles (00038): administrador, o ser el propio perfil.
+ *
+ * @param {string} rol
+ * @returns {boolean}
  */
 export function puedeEditarOtroPerfil(rol) {
   return esAdministrador(rol);
 }
 
-/** Espejo de puedeEditarOtroPerfil: desactivar o reactivar un perfil es el mismo UPDATE. */
+/**
+ * Espejo de puedeEditarOtroPerfil: desactivar o reactivar un perfil es el mismo UPDATE.
+ *
+ * @param {string} rol
+ * @returns {boolean}
+ */
 export function puedeDesactivarUsuario(rol) {
   return esAdministrador(rol);
 }
 
-/** Espejo de puedeDesactivarUsuario. */
+/**
+ * Espejo de puedeDesactivarUsuario.
+ *
+ * @param {string} rol
+ * @returns {boolean}
+ */
 export function puedeReactivarUsuario(rol) {
   return esAdministrador(rol);
 }
@@ -51,6 +69,9 @@ export function puedeReactivarUsuario(rol) {
  * Espejo del WHERE de perfiles_directorio (00148): la administradora, el rol al que la matriz le
  * abrio Colaboradores (solo lectura) y quien tiene usuarios.gestionar_permisos delegado, que
  * necesita el listado para llegar a la persona cuyos permisos gestiona.
+ *
+ * @param {string} rol
+ * @returns {boolean}
  */
 export function puedeVerListadoUsuarios(rol) {
   return (
@@ -64,6 +85,9 @@ export function puedeVerListadoUsuarios(rol) {
  * Puede conceder, revocar o restablecer un permiso fino de OTRA persona: la administradora o quien
  * tenga usuarios.gestionar_permisos delegado (00086). Los propios no: la 00148 lo impide en la
  * politica, y la pantalla no ofrece el boton sobre la fila propia.
+ *
+ * @param {string} rol
+ * @returns {boolean}
  */
 export function puedeGestionarPermisosFinos(rol) {
   return tienePermisoFino(rol, "usuarios.gestionar_permisos");
@@ -77,6 +101,7 @@ export function puedeGestionarPermisosFinos(rol) {
  *
  * @param {string} rol
  * @param {{ esPropioPerfil?: boolean }} [contexto]
+ * @returns {boolean}
  */
 export function puedeGestionarPermisosDe(rol, { esPropioPerfil = false } = {}) {
   if (esAdministrador(rol)) return true;
@@ -88,6 +113,9 @@ export function puedeGestionarPermisosDe(rol, { esPropioPerfil = false } = {}) {
  *
  * Espejo de la politica de SELECT de usuario_permiso (00086): la administradora, quien gestiona
  * permisos por delegacion, o ser el propio perfil (eso es identidad, no rol).
+ *
+ * @param {string} rol
+ * @returns {boolean}
  */
 export function puedeVerPermisosEfectivosDeOtro(rol) {
   return tienePermisoFino(rol, "usuarios.gestionar_permisos");
@@ -111,6 +139,7 @@ export function puedeVerPermisosEfectivosDeOtro(rol) {
  *
  * @param {string} rol Rol de quien mira la pantalla.
  * @param {{ esPropioPerfil?: boolean }} [contexto]
+ * @returns {boolean}
  */
 export function puedeGestionarEspecialidades(rol, { esPropioPerfil = false } = {}) {
   return esAdministrador(rol) || esPropioPerfil;
@@ -119,6 +148,9 @@ export function puedeGestionarEspecialidades(rol, { esPropioPerfil = false } = {
 /**
  * Puede abrir o cerrar modulos a un rol en la matriz de acceso (00148). Espejo de las politicas
  * de INSERT/DELETE de rol_modulo: solo la administradora, no es una funcion delegable.
+ *
+ * @param {string} rol
+ * @returns {boolean}
  */
 export function puedeGestionarMatrizDePermisosPorRol(rol) {
   return esAdministrador(rol);
@@ -152,6 +184,9 @@ export function etiquetaDeModuloDePermiso(modulo) {
  *
  * puedeGestionarEspecialidades no esta aqui a proposito, por el mismo motivo que puedeAnularReceta
  * no esta en permisosDePacientes(): no depende solo del rol, sino de que perfil se este mirando.
+ *
+ * @param {string} rol
+ * @returns {{ puedeCrear: boolean, puedeEditarOtro: boolean, puedeDesactivar: boolean, puedeReactivar: boolean, puedeVerListado: boolean, puedeGestionarPermisosFinos: boolean, puedeVerPermisosEfectivosDeOtro: boolean }}
  */
 export function permisosDeUsuarios(rol) {
   return {

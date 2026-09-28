@@ -54,6 +54,8 @@ function aplanarGrupo(grupo) {
  * @param {string} [opciones.rol] Rol de quien consulta.
  * @param {{valores: object, presetActivo: string|null}} [opciones.valoresIniciales] Estado con el
  *   que arrancar, normalmente el que la pantalla resolvio desde la URL.
+ *
+ * @returns {object} Con: tieneAcceso, cargando, error, grupos, gruposCompletos, total, totales, columnas, definicionDeFiltros, valores, presetActivo, presets, parametrosDeUrl, setFiltro, setPreset, limpiarFiltro, limpiarFiltros, hayFiltros, aplicarFiltros, catalogos, errorDeCatalogos, agruparPor, setAgruparPor, orden, alternarOrden, numeroDePagina, totalPaginas, irAPagina, recargar.
  */
 export function useReportePacientes({ rol, valoresIniciales } = {}) {
   const tieneAcceso = puedeVerReporteDePacientes(rol);

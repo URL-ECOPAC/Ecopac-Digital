@@ -151,11 +151,11 @@ jobs:
       - name: Comprobar el verificador de contratos contra sus propios casos
         run: npm run verificar:contratos -- --autoprueba
 
-      # Toda funcion exportada de packages/shared lleva JSDoc (issue #233): es la API que consumen
-      # las dos apps. Falla si falta el bloque; los bloques sin @param solo se informan, porque
-      # eran 183 al escribir la guarda (la cabecera del script lo explica).
-      - name: Comprobar que las funciones exportadas de shared tengan JSDoc
-        run: npm run verificar:jsdoc
+      # Toda funcion exportada de packages/shared lleva JSDoc completo (issue #233): es la API que
+      # consumen las dos apps. En modo estricto falla si falta el bloque, si una funcion con
+      # parametros no nombra ningun @param o si una que devuelve algo no tiene @returns.
+      - name: Comprobar que las funciones exportadas de shared tengan JSDoc completo
+        run: npm run verificar:jsdoc -- --estricto
 
       - name: Ejecutar lint en todos los workspaces
         run: npm run lint

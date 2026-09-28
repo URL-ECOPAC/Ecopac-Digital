@@ -70,12 +70,21 @@ export const RETARDO_DE_BORRADOR_MS = 800;
 /**
  * Donde se guarda el borrador de una consulta nueva. Por paciente y jornada, no por atencion:
  * la atencion todavia no existe mientras se escribe (se crea al guardar).
+ *
+ * @param {string} pacienteId
+ * @param {string} jornadaId
+ * @returns {string}
  */
 export function claveDeBorrador(pacienteId, jornadaId) {
   return `ecopac:consulta:${pacienteId}:${jornadaId}`;
 }
 
-/** Solo los signos que se midieron: un signo vacio no viaja al INSERT. */
+/**
+ * Solo los signos que se midieron: un signo vacio no viaja al INSERT.
+ *
+ * @param {object} [valores]
+ * @returns {object}
+ */
 export function soloSignosCapturados(valores = {}) {
   return Object.fromEntries(
     Object.entries(valores).filter(
@@ -84,7 +93,12 @@ export function soloSignosCapturados(valores = {}) {
   );
 }
 
-/** Si la consulta tiene algo escrito. Una lista de diagnosticos vacia no cuenta. */
+/**
+ * Si la consulta tiene algo escrito. Una lista de diagnosticos vacia no cuenta.
+ *
+ * @param {object} [valores]
+ * @returns {boolean}
+ */
 export function hayBorradorConDatos(valores = {}) {
   return Object.values(valores).some((valor) =>
     Array.isArray(valor) ? valor.length > 0 : String(valor ?? "").trim() !== "",
@@ -94,6 +108,14 @@ export function hayBorradorConDatos(valores = {}) {
 /**
  * Los valores del formulario en la forma que espera registrarConsulta(). El primer diagnostico
  * elegido es el principal.
+ *
+ * @param {object} [valores]
+ * @param {object} opciones
+ * @param {string} opciones.expedienteId
+ * @param {string} opciones.atencionId
+ * @param {string} opciones.medicoId
+ * @param {string} opciones.jornadaId
+ * @returns {object} Con: expediente, atencion, medico, jornada, motivoConsulta, antecedentes, sintomas, exploracion, tratamiento, observaciones, planSeguimiento, diagnosticos.
  */
 export function aDatosDeConsulta(valores = {}, { expedienteId, atencionId, medicoId, jornadaId }) {
   return {
@@ -193,6 +215,7 @@ export function cambiosDeDiagnosticos(elegidos = [], guardados = []) {
  * @param {string} rol
  * @param {object|null} visita
  * @param {string|null} perfilId
+ * @returns {{ signos: boolean, consulta: boolean, receta: boolean }}
  */
 export function permisosDeConsulta(rol, visita, perfilId) {
   const signosExistentes = Boolean(visita?.signos);
@@ -218,6 +241,8 @@ export function permisosDeConsulta(rol, visita, perfilId) {
  * @param {object} [opciones.almacenamiento] Adaptador de la app (AsyncStorage/localStorage). Con
  *   el, lo que se escribe en una consulta nueva se guarda solo cada pocos cientos de milisegundos
  *   y sobrevive a un cierre accidental: en jornada, con la bateria justa, pasa.
+ *
+ * @returns {object} Con: visita, esNueva, jornadaId, bloqueo, permisos, camposDeSignos, signos, setSigno, avisos, imc, signosTomadosPor, seccionesDeConsulta, consulta, setCampoDeConsulta, catalogos, crearDiagnosticoNuevo, errorDiagnostico, errores, error, enviando, guardadaAlMenosUnaVez, guardar, descartarBorrador, hayCambios, receta.
  */
 export function useConsulta({
   paciente,

@@ -16,6 +16,7 @@ export const INTERVALO_CONTADOR_NOTIFICACIONES_MS = 60_000;
  * aviso, y ponerlo a cero en silencio diria "no hay nada" cuando no se sabe.
  *
  * @param {{ perfilId?: string, intervaloMs?: number }} contexto
+ * @returns {{ cantidad: number, error: object|null, recargar: Function }}
  */
 export function useContadorNotificaciones({
   perfilId,

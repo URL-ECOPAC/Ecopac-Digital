@@ -41,6 +41,10 @@ import { labels } from "@ecopac/ui-tokens";
  *
  * Es lo que evita que un catalogo vuelva a escribir los valores: se derivan del enum, en el
  * orden en que este los declara, que es el mismo del `CREATE TYPE`.
+ *
+ * @param {object} valores
+ * @param {Record<string, string>} etiquetas
+ * @returns {{ value: string, label: string }[]}
  */
 export function opcionesDe(valores, etiquetas) {
   return Object.values(valores).map((value) => ({ value, label: etiquetas[value] ?? value }));
@@ -56,6 +60,10 @@ export function opcionesDe(valores, etiquetas) {
  *
  * Los catalogos donde NO coinciden -una columna booleana como donantes.activo, que guarda
  * true/false y colorea por 'activo'/'inactivo'- se escriben a mano y no usan esto.
+ *
+ * @param {object} valores
+ * @param {Record<string, string>} etiquetas
+ * @returns {object[]}
  */
 export function opcionesConClave(valores, etiquetas) {
   return opcionesDe(valores, etiquetas).map((opcion) => ({ ...opcion, clave: opcion.value }));

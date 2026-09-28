@@ -25,7 +25,13 @@
   ],
   "apps/mobile/src/components/EmptyState.js": ["#7a7a8a", "#e2e4e9", "#ffffff"],
   "apps/mobile/src/components/ErrorState.js": ["#2d2d2d", "#e91e8c", "#ffffff"],
-  "apps/mobile/src/components/FilterBar.js": ["#2d2d2d", "#e2e4e9", "#ffffff"],
+  "apps/mobile/src/components/FilterBar.js": [
+    "#1e7a28",
+    "#2d2d2d",
+    "#3db648",
+    "#e2e4e9",
+    "#ffffff"
+  ],
   "apps/mobile/src/components/FormularioSignosVitales.js": [
     "#2d2d2d",
     "#7a7a8a",
@@ -45,7 +51,8 @@
   ],
   "apps/mobile/src/components/LimiteDeError.js": ["#2d2d2d", "#7a7a8a", "#f7f8fa"],
   "apps/mobile/src/components/LoadingState.js": ["#3db648", "#7a7a8a"],
-  "apps/mobile/src/components/MapaUbicacionComunidad.js": [
+  "apps/mobile/src/components/MenuLateral.js": [
+    "#2d2d2d",
     "#3db648",
     "#7a7a8a",
     "#e2e4e9",
@@ -63,6 +70,7 @@
   ],
   "apps/mobile/src/components/NumberField.js": ["#7a7a8a"],
   "apps/mobile/src/components/PageHeader.js": ["#2d2d2d", "#3db648", "#7a7a8a"],
+  "apps/mobile/src/components/PanelLateral.js": ["#2d2d2d", "#e2e4e9", "#f7f8fa"],
   "apps/mobile/src/components/PasswordField.js": [
     "#2d2d2d",
     "#3db648",
@@ -127,7 +135,6 @@
     "#e91e8c",
     "#f7941d"
   ],
-  "apps/mobile/src/screens/ComunidadesScreen.js": ["#7a7a8a"],
   "apps/mobile/src/screens/ConsultaScreen.js": [
     "#2d2d2d",
     "#3db648",
@@ -217,7 +224,6 @@
   ],
   "apps/mobile/src/screens/MisMovimientosScreen.js": ["#7a7a8a"],
   "apps/mobile/src/screens/ModalAjusteEntrega.js": ["#2d2d2d", "#7a7a8a", "#e91e8c"],
-  "apps/mobile/src/screens/ModalComunidad.js": ["#2d2d2d", "#3db648", "#e91e8c", "#f7941d"],
   "apps/mobile/src/screens/ModalCorreccionLote.js": ["#7a7a8a", "#e91e8c"],
   "apps/mobile/src/screens/ModalCorreccionMovimiento.js": ["#7a7a8a", "#e91e8c", "#f7941d"],
   "apps/mobile/src/screens/ModalDiagnostico.js": ["#e91e8c"],

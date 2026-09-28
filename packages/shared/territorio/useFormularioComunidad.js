@@ -12,6 +12,9 @@ import { listarDepartamentos, listarMunicipios, obtenerComunidad } from "./api.j
  * Los campos de texto (nombre, referenciaAcceso, esVigente) y la ubicacion del mapa no viven
  * aqui: ModalComunidad los maneja como estado local, igual que ModalPrincipioActivo.jsx -son
  * bindings simples que no necesitan pedir nada a la red.
+ *
+ * @param {string} comunidadId
+ * @returns {{ departamentos: object[], municipios: object[], departamentoId: string|null, elegirDepartamento: Function, municipioId: string|null, setMunicipioId: Function, cargando: boolean }}
  */
 export function useFormularioComunidad(comunidadId) {
   const [departamentos, setDepartamentos] = useState([]);

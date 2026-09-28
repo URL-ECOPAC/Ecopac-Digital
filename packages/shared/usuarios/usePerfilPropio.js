@@ -94,6 +94,7 @@ export function valoresInicialesDePerfil(perfil) {
  *
  * @param {{ nombres: string, apellidos: string, telefono: string, rol: string|null }} valores
  * @param {boolean} esAdmin
+ * @returns {{ nombres: string, apellidos: string, telefono: string, rol: string }}
  */
 export function datosParaGuardarPerfil(valores, esAdmin) {
   const { nombres, apellidos, telefono, rol } = valores;
@@ -138,6 +139,8 @@ const VALORES_CONTRASENA_VACIOS = { actual: "", nueva: "", confirmarNueva: "" };
  *     rol?: string}|null,
  *   refrescarPerfil: () => Promise<void>,
  * }} sesion Lo que la pantalla ya lee de useSesionCompartida() (o useSesion() en movil).
+ *
+ * @returns {object} Con: campos, valores, setCampo, erroresDeCampo, guardando, errorGlobal, guardadoExitoso, guardarPerfil, especialidades, cargandoEspecialidades, esAdministrador, contrasena, setCampoDeContrasena, erroresDeContrasena, cambiandoContrasena, errorGlobalDeContrasena, contrasenaCambiada, cambiarContrasena.
  */
 export function usePerfilPropio({ usuario, perfil, refrescarPerfil }) {
   const esAdmin = esAdministrador(perfil?.rol);

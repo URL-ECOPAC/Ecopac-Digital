@@ -195,14 +195,14 @@ export default function RegistroPacienteScreen() {
               title="Atrás"
               onPress={() => setIndice(indice - 1)}
               disabled={enviando}
-              style={styles.mitad}
+              style={styles.secundario}
             />
           ) : (
             <SecondaryButton
               title="Cancelar"
               onPress={() => navigation.goBack()}
               disabled={enviando}
-              style={styles.mitad}
+              style={styles.secundario}
             />
           )}
           {esUltimo ? (
@@ -210,14 +210,14 @@ export default function RegistroPacienteScreen() {
               title="Registrar paciente"
               onPress={guardar}
               loading={enviando}
-              style={styles.mitad}
+              style={styles.principal}
             />
           ) : (
             <PrimaryButton
               title="Siguiente"
               onPress={() => setIndice(indice + 1)}
               disabled={enviando}
-              style={styles.mitad}
+              style={styles.principal}
             />
           )}
         </View>
@@ -278,7 +278,13 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     marginTop: spacing.md,
   },
-  mitad: {
+  // "Atras" o "Cancelar" a su ancho natural, sin encogerse, y la accion principal ocupa el resto,
+  // a la derecha. Repartiendo el ancho a partes fijas, uno de los dos rotulos siempre se partia:
+  // "Registrar paciente" a medio ancho, o "Cancela/r" a un tercio.
+  secundario: {
+    flexShrink: 0,
+  },
+  principal: {
     flex: 1,
   },
 });

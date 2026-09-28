@@ -24,6 +24,7 @@ const NADA = {
   puedeAsociarJornadas: false,
   puedeGestionarEquipo: false,
   puedeGestionarInsumos: false,
+  puedeRegistrarSeguimiento: false,
   puedeVerInsumosYGastos: false,
   puedeVerHistorial: false,
   puedeVerSeguimiento: false,
@@ -77,6 +78,7 @@ describe("permisos de proyectos", () => {
       puedeAsociarJornadas: true,
       puedeGestionarEquipo: true,
       puedeGestionarInsumos: true,
+      puedeRegistrarSeguimiento: true,
       puedeVerInsumosYGastos: true,
       puedeVerHistorial: true,
       puedeVerSeguimiento: true,
@@ -113,6 +115,7 @@ describe("permisos de proyectos", () => {
       puedeAsociarJornadas: true,
       puedeGestionarEquipo: true,
       puedeGestionarInsumos: true,
+      puedeRegistrarSeguimiento: true,
       puedeVerInsumosYGastos: true,
       puedeVerHistorial: true,
       puedeVerSeguimiento: true,
@@ -123,5 +126,25 @@ describe("permisos de proyectos", () => {
     for (const rol of [ROLES.MEDICO, ROLES.VOLUNTARIO]) {
       expect(permisosDeProyectos(rol)).toEqual({ ...NADA, puedeVer: true });
     }
+  });
+
+  // 00154: un proyecto cancelado se consulta, no se edita, ni siquiera por la administradora.
+  it("sobre un proyecto cancelado nadie modifica nada; se sigue viendo y se puede crear otro", () => {
+    expect(permisosDeProyectos(ROLES.ADMINISTRADOR, { estado: "cancelado" })).toEqual({
+      ...NADA,
+      puedeVer: true,
+      puedeCrear: true,
+      puedeVerInsumosYGastos: true,
+      puedeVerHistorial: true,
+      puedeVerSeguimiento: true,
+    });
+  });
+
+  it("un proyecto en otro estado, o sin proyecto, no cambia lo que puede el rol", () => {
+    const delRol = permisosDeProyectos(ROLES.ADMINISTRADOR);
+    for (const estado of ["planificado", "en curso", "finalizado"]) {
+      expect(permisosDeProyectos(ROLES.ADMINISTRADOR, { estado })).toEqual(delRol);
+    }
+    expect(delRol.puedeEditar).toBe(true);
   });
 });

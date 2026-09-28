@@ -15,6 +15,8 @@ import { PLATAFORMAS } from "./reglas.js";
  *
  * Expo incrusta las EXPO_PUBLIC_* al empaquetar, no las lee en tiempo de ejecucion: cambiar
  * el .env obliga a reiniciar Metro con la cache limpia para que el valor nuevo entre.
+ *
+ * @returns {{ plataforma: string, esDesarrollo: boolean, valores: object }}
  */
 export function leerFuente() {
   return {

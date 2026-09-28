@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
-import { MESES } from "@ecopac/shared";
+import { MESES, OPCIONES_DE_MES } from "@ecopac/shared";
 import { colors, radii, spacing, typography } from "@ecopac/ui-tokens";
 import PrimaryButton from "./PrimaryButton";
 import Selector from "./Selector";
@@ -103,7 +103,7 @@ export default function DateField({
     label: String(i + 1),
     value: i + 1,
   }));
-  const meses = MESES.map((nombre, indice) => ({ label: nombre, value: indice + 1 }));
+  const meses = OPCIONES_DE_MES;
 
   return (
     <View style={[styles.container, style]}>

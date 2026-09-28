@@ -188,7 +188,12 @@ export async function historialAlertas({ limite = 20 } = {}) {
   }
 }
 
-/** Reubicar es la unica accion que traslada en vez de dar de baja: necesita bodega destino. */
+/**
+ * Reubicar es la unica accion que traslada en vez de dar de baja: necesita bodega destino.
+ *
+ * @param {string} accion
+ * @returns {boolean}
+ */
 export function requiereBodegaDestino(accion) {
   return accion === ACCIONES_DE_ALERTA.REUBICADO;
 }
@@ -296,6 +301,7 @@ export async function atenderAlerta(idAlerta, { acciones, rolUsuario, totalDispo
  *
  * @param {{ diasRestantes: number|null }} alerta
  * @param {{ value: string, label: string }[]} opciones Normalmente OPCIONES_ACCION_ALERTA.
+ * @returns {{ value: string, label: string }[]}
  */
 export function accionesPermitidasParaAlerta(alerta, opciones) {
   const vencida = (alerta?.diasRestantes ?? 0) < 0;
@@ -307,6 +313,7 @@ export function accionesPermitidasParaAlerta(alerta, opciones) {
  *
  * @param {string} accion
  * @param {number} cantidad Unidades afectadas por la alerta.
+ * @returns {null|string}
  */
 export function efectoDeAccionSobreElStock(accion, cantidad) {
   if (!ACCIONES_VALIDAS.includes(accion)) return null;

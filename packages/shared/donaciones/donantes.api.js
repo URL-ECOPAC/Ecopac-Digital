@@ -68,6 +68,11 @@ function soloColumnasDeDonante(datos = {}) {
 
 /**
  * Registra un nuevo donante (persona u organización).
+ *
+ * @param {object} datosDonante
+ * @param {object} opciones
+ * @param {string} opciones.rolUsuario
+ * @returns {Promise<{ datos: object|null, error: object|null }>}
  */
 export async function registrarDonante(datosDonante, { rolUsuario }) {
   const errorRol = validarRolEscritura(rolUsuario);
@@ -114,6 +119,13 @@ export async function registrarDonante(datosDonante, { rolUsuario }) {
 
 /**
  * Consulta la lista de donantes con opción de filtro por nombre.
+ *
+ * @param {object} [opciones]
+ * @param {string} [opciones.busqueda]
+ * @param {boolean} [opciones.soloActivos]
+ * @param {object} contexto
+ * @param {string} contexto.rolUsuario
+ * @returns {Promise<{ datos: object[], error: object|null }>}
  */
 export async function listarDonantes({ busqueda, soloActivos = true } = {}, { rolUsuario }) {
   const errorRol = validarRolLectura(rolUsuario);
@@ -143,6 +155,12 @@ export async function listarDonantes({ busqueda, soloActivos = true } = {}, { ro
 
 /**
  * Actualiza la información de un donante existente.
+ *
+ * @param {string} idDonante
+ * @param {object} datosNuevos
+ * @param {object} opciones
+ * @param {string} opciones.rolUsuario
+ * @returns {Promise<{ datos: object|null, error: object|null }>}
  */
 export async function actualizarDonante(idDonante, datosNuevos, { rolUsuario }) {
   const errorRol = validarRolEscritura(rolUsuario);
@@ -174,6 +192,11 @@ export async function actualizarDonante(idDonante, datosNuevos, { rolUsuario }) 
 
 /**
  * Dar de baja a un donante (borrado lógico, seteando activo = false).
+ *
+ * @param {string} idDonante
+ * @param {object} opciones
+ * @param {string} opciones.rolUsuario
+ * @returns {Promise<{ datos: object|null, error: object|null }>}
  */
 export async function darDeBajaDonante(idDonante, { rolUsuario }) {
   return actualizarDonante(idDonante, { activo: false }, { rolUsuario });
@@ -214,6 +237,11 @@ function totalesPorTipoDe(donaciones = []) {
  * historial.api.js -> calcularTotalesPorTipo(). Antes esta funcion sumaba `d.monto_total`, una
  * columna que nunca existio en `donaciones`, asi que `totalAcumulado` daba siempre 0 (issue
  * #636).
+ *
+ * @param {string} idDonante
+ * @param {object} opciones
+ * @param {string} opciones.rolUsuario
+ * @returns {Promise<{ datos: object|null, error: object|null }>}
  */
 export async function obtenerHistoricoDonante(idDonante, { rolUsuario }) {
   const errorRol = validarRolLectura(rolUsuario);

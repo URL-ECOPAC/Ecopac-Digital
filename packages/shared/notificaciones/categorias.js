@@ -64,6 +64,7 @@ const POR_CATEGORIA = new Map(DESCRIPTORES_CATEGORIA_NOTIFICACION.map((d) => [d.
  * paquete -el enum crecio y enums.js no-, asi que lanza en vez de devolver un descriptor vacio.
  *
  * @param {string} categoria
+ * @returns {object} Descriptor de CATEGORIAS_DE_NOTIFICACION.
  */
 export function descriptorDeCategoria(categoria) {
   const descriptor = POR_CATEGORIA.get(categoria);

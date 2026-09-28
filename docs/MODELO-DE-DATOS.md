@@ -7,23 +7,27 @@ hace cumplir la base de datos por si misma, y donde esta escrito cada cosa.
 coincidan, manda el SQL. Cada tabla indica entre corchetes la migracion que la creo, y cada
 columna anadida despues indica la migracion que la agrego.
 
-Estado al 24 de septiembre de 2026, sobre `develop`, hasta la migracion `00147`. Las cifras salen
-del catalogo de Postgres (`pg_tables`, `pg_type`, `pg_proc`, `pg_views`, `pg_policies`) despues de
-un `supabase db reset` local, no de contar archivos, porque varias migraciones borran o reemplazan
-lo que crearon otras.
+Estado al 28 de septiembre de 2026, sobre `develop`, hasta la migracion `00156`. Las cifras salen
+del catalogo de Postgres (`pg_tables`, `pg_type`, `pg_proc`, `pg_views`, `pg_policies`,
+`pg_trigger`) despues de un `supabase db reset` local, no de contar archivos, porque varias
+migraciones borran o reemplazan lo que crearon otras.
 
 | Elemento          | Cantidad |
 | ----------------- | -------- |
-| Migraciones       | 139 (numeradas hasta `00147`; la numeracion tiene huecos) |
-| Tablas            | 49       |
+| Migraciones       | 148 (numeradas hasta `00156`; la numeracion tiene huecos) |
+| Tablas            | 52       |
 | Tipos enumerados  | 23       |
-| Funciones         | 76       |
-| Vistas            | 7        |
-| Politicas RLS     | 130      |
-| Triggers          | 68       |
+| Funciones         | 90 (49 de negocio o de autorizacion y 41 de trigger) |
+| Vistas            | 8        |
+| Politicas RLS     | 138      |
+| Triggers          | 114 (41 de auditoria) |
 
-Para volver a sacar estas cifras: `supabase db reset` y, contra la base local, las consultas de
-conteo sobre esas cinco vistas del catalogo filtrando `schemaname = 'public'`.
+**La referencia exhaustiva -cada columna con su tipo, nulo, valor por defecto, llaves,
+restricciones, politicas y triggers, con diagramas por modulo- es
+[DICCIONARIO-DE-DATOS.md](DICCIONARIO-DE-DATOS.md)**, que se genera del catalogo con
+`npm run docs:diccionario` y trae esas mismas cifras. Este documento explica el porque. Desde la
+`00156` toda tabla, columna, vista, enum y funcion tiene su `COMMENT ON`, y la prueba
+`diccionario_de_datos.sql` falla si una migracion nueva agrega algo sin descripcion.
 
 ---
 
@@ -884,7 +888,7 @@ Del lado del cliente, estos valores nacen una sola vez en `packages/shared/enums
 | `equipo_de_proyecto(proyecto)`          | [00146] El equipo del proyecto con nombres, sin abrir `perfiles`. [00150] Union con el equipo de sus jornadas |
 | `fn_pasar_insumo_de_proyecto_a_jornada(insumo, jornada)` | [00151] INVOKER. Mueve un insumo previsto del proyecto a una de sus jornadas, en una transaccion |
 | `fn_verificar_y_contar_limite(recurso, actor, maximo, ventana)` | [00134] Limite de peticiones sobre `limites_de_uso`; lanza si se paso del umbral. Lo envuelven `fn_verificar_limite_invitaciones` y `fn_verificar_limite_busqueda_pacientes` |
-| `fn_reporte_pacientes_atendidos(...)`   | Reporte agregado con agrupacion configurable                      |
+| `fn_reporte_pacientes_atendidos(...)`   | Reporte agregado con agrupacion configurable. [00155] La comunidad es la del paciente (la de la jornada si no tiene) |
 | `fn_atenciones_de_persona_por_jornada(perfil)` | Cuantas atendio cada quien                                 |
 | `fn_contar_atenciones_incompletas(jornada)` | Bloquea el cierre de jornada                                  |
 | `f_unaccent(texto)`                     | Normaliza acentos para busqueda                                   |
@@ -921,8 +925,10 @@ Del lado del cliente, estos valores nacen una sola vez en `packages/shared/enums
 | `impedir_baja_de_paciente_sin_ser_administrador` | `pacientes`           | [00148] La baja (`fecha_baja`) es de la administradora |
 | `impedir_desactivar_sin_ser_administrador` | `diagnosticos`, `medicamentos` | [00148] Desactivar es de la administradora |
 | `impedir_retirar_sin_ser_administrador`    | `condiciones_cronicas`, `comunidades` | [00148] Retirar (`es_vigente`) es de la administradora |
+| `fn_proyecto_cancelado_no_se_modifica`     | `proyectos`                 | [00154] Un proyecto cancelado ya no se modifica |
+| `fn_proyecto_de_la_fila_no_esta_cancelado` | `proyecto_hitos`, `proyecto_seguimiento`, `proyecto_personal`, `proyecto_insumos`, `jornadas` (solo `proyecto_id`) | [00154] DEFINER. Rechaza escribir lo que cuelga de un proyecto cancelado, y asociarle o sacarle una jornada |
 
-La tabla recoge los triggers que explican una regla de negocio; hay 107 en total en `public`, 41 de
+La tabla recoge los triggers que explican una regla de negocio; hay 114 en total en `public`, 41 de
 ellos de auditoria. Los de
 notificaciones (`fn_notificar_*`, `00138`), los de presupuesto por origen (`00135`) y los de
 `updated_at` de cada tabla nueva siguen el mismo patron y se listan con
@@ -934,7 +940,8 @@ notificaciones (`fn_notificar_*`, `00138`), los de presupuesto por origen (`0013
 
 | Vista                    | Para que sirve                                                            |
 | ------------------------ | ------------------------------------------------------------------------- |
-| `vista_reporte_impacto`  | Indicadores agregados de impacto, con proyecto desde `00064`              |
+| `vista_reporte_impacto`  | Indicadores agregados de impacto, con proyecto desde `00064`. Una fila por jornada: la leen el detalle y el kanban de jornadas |
+| `vista_reporte_impacto_por_comunidad` | [00155] Los mismos indicadores con grano (jornada, comunidad de origen del paciente); la de la jornada si el paciente no tiene. La lee el panel de impacto |
 | `pacientes_reporte`      | Agregados de pacientes **sin filas identificables**, para roles consultivos |
 | `vista_cola_jornada`     | Quien esta esperando en la jornada y desde hace cuanto                    |
 | `vista_lotes_disponibles`| Lotes entregables (no vencidos, con existencia), por lote y bodega        |
@@ -960,6 +967,7 @@ de que la interfaz se comporte bien**:
 | No se registra atencion ni consulta fuera de jornada en curso       | Triggers `00055` y `00018`                        |
 | Una jornada no se finaliza con atenciones abiertas                  | `fn_contar_atenciones_incompletas`                |
 | Los estados de jornada y proyecto siguen su maquina de estados      | Triggers de validacion `00051` y `00029`          |
+| Un proyecto cancelado no se modifica: ni sus datos ni lo que cuelga de el | Triggers de la `00154`                      |
 | No se entrega medicamento vencido                                   | `00024` y `vista_lotes_disponibles`               |
 | El stock nunca queda negativo                                       | `fn_aplicar_ajuste_existencias` lanza "Existencia insuficiente" |
 | Quien registra un movimiento no lo aprueba                          | `fn_proteger_decision_de_movimiento` (`00106`)    |
@@ -1006,7 +1014,7 @@ funcion `SECURITY DEFINER` (historiales, auditoria, detalle de alertas) o es un 
 fuente de verdad del control de acceso, y un PR que cambia una politica o un GRANT lo actualiza en
 el mismo PR.
 
-Las politicas se comprueban con 52 archivos pgTAP en `supabase/tests/database/`, que corren en CI
+Las politicas se comprueban con 55 archivos pgTAP en `supabase/tests/database/`, que corren en CI
 sobre una base creada desde cero.
 
 ## 16. Auditoria campo-a-vista (issue #756)

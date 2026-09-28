@@ -51,6 +51,7 @@ const VALORIZACION_VACIA = { valorDisponible: null, unidadesSinCosto: 0, lotesSi
  *
  * @param {object} [opciones]
  * @param {string} [opciones.rol] Rol de quien consulta.
+ * @returns {object} Con: tieneAcceso, cargando, error, medicamentos, medicamentosCompletos, total, orden, alternarOrden, numeroDePagina, totalPaginas, irAPagina, totales, columnas, camposDeLote, camposDeTotales, filtros, setFiltro, limpiarFiltros, hayFiltros, catalogos, recargar, tieneAccesoValorizacion, cargandoValorizacion, errorValorizacion, valorizacion, valorizacionPorOrigen, columnasValorizacionPorOrigen, recargarValorizacion.
  */
 export function useReporteInventario({ rol } = {}) {
   const tieneAcceso = puedeVerReporteDeInventario(rol);

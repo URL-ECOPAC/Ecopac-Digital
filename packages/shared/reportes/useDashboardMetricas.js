@@ -50,7 +50,16 @@ const AGRUPAMIENTOS = [
 const TODAS = "__todas__";
 const NINGUNA = "__ninguna__";
 
-/** Traduce el rango elegido en la interfaz al `{ fechaInicio, fechaFin }` que espera la API. */
+/**
+ * Traduce el rango elegido en la interfaz al `{ fechaInicio, fechaFin }` que espera la API.
+ *
+ * @param {string} rango Uno de los rangos del panel (semana, mes, 3meses, anio, personalizado).
+ * @param {object} [opciones]
+ * @param {string} [opciones.fechaInicio] AAAA-MM-DD, solo para personalizado.
+ * @param {string} [opciones.fechaFin] AAAA-MM-DD, solo para personalizado.
+ * @param {Date} [hoy]
+ * @returns {{ fechaInicio: string|undefined, fechaFin: string|undefined }}
+ */
 export function resolverRangoDeDashboard(rango, { fechaInicio, fechaFin } = {}, hoy = new Date()) {
   if (rango === "personalizado") {
     return { fechaInicio: fechaInicio || undefined, fechaFin: fechaFin || undefined };

@@ -73,6 +73,19 @@ export const OPCIONES_MOTIVO_SALIDA = Object.freeze([
 ]);
 
 /**
+ * Como se muestra el motivo de un movimiento. Si es uno de OPCIONES_MOTIVO_SALIDA -un codigo que
+ * escribe el sistema, como `entrega`-, su etiqueta; si es texto libre (el numero de comprobante de
+ * un ingreso, una nota escrita a mano), tal cual. El kardex mostraba el codigo crudo.
+ *
+ * @param {string|null|undefined} motivo
+ * @returns {string}
+ */
+export function etiquetaDeMotivoDeMovimiento(motivo) {
+  if (!motivo) return "";
+  return OPCIONES_MOTIVO_SALIDA.find((opcion) => opcion.value === motivo)?.label ?? motivo;
+}
+
+/**
  * Alta y edicion de un principio activo del catalogo (principios_activos, 00016).
  * nombreNormalizado no es un campo del formulario: lo calcula la base de datos
  * (columna generada de 00046) para la unicidad y la busqueda sin acentos.

@@ -16,7 +16,12 @@ export const ESTADO_MOVIMIENTO = {
   RECHAZADO: "rechazado",
 };
 
-/** Nombre completo de un perfil embebido, o null si RLS no dejo verlo (ver listarMovimientos()). */
+/**
+ * Nombre completo de un perfil embebido, o null si RLS no dejo verlo (ver listarMovimientos()).
+ *
+ * @param {object} perfil
+ * @returns {null|string}
+ */
 export function nombreDe(perfil) {
   if (!perfil) return null;
   return [perfil.nombres, perfil.apellidos].filter(Boolean).join(" ") || null;
@@ -33,6 +38,8 @@ export function nombreDe(perfil) {
  * @param {object[]} datos Filas de listarMovimientos().
  * @param {string|null} medicamentoId medicamento_id no es filtro de listarMovimientos() -vive en
  *   lotes, no en movimientos_inventario-, asi que se aplica aqui sobre el lote embebido.
+ *
+ * @returns {object[]}
  */
 export function filasDeKardex(datos, medicamentoId) {
   const filas = medicamentoId
@@ -57,6 +64,7 @@ export function filasDeKardex(datos, medicamentoId) {
  * @param {object[]} movimientos
  * @param {string} [fechaDesde]
  * @param {string} [fechaHasta]
+ * @returns {object[]}
  */
 export function filtrarPorRangoDeFecha(movimientos, fechaDesde, fechaHasta) {
   let resultado = movimientos;
@@ -88,6 +96,7 @@ export function filtrarPorRangoDeFecha(movimientos, fechaDesde, fechaHasta) {
  * Pura y exportada aparte del hook para probarla sin montar React.
  *
  * @param {object[]} movimientos Filas del hook, con `afectaSaldo` y `saldoAcumulado`.
+ * @returns {{ movimientos: number, ingresos: number, salidas: number, saldo: number }}
  */
 export function resumenDeKardex(movimientos) {
   const aprobados = movimientos.filter((mov) => mov.afectaSaldo);
@@ -146,6 +155,11 @@ export function conSaldoAcumulado(movimientos = []) {
  * `medicamentoId` no es un filtro que listarMovimientos() entienda (medicamento_id vive en
  * lotes, no en movimientos_inventario): se aplica aqui sobre el lote embebido de cada fila. Solo
  * movimientos APROBADOS afectan el saldo; rechazados y pendientes se muestran pero no lo tocan.
+ *
+ * @param {object} opciones
+ * @param {string|null} [opciones.loteId]
+ * @param {string|null} [opciones.medicamentoId]
+ * @returns {object} Con: movimientos (object[]), cargando, error, filtros, setFiltros, recargar, TIPO_MOVIMIENTO y ESTADO_MOVIMIENTO.
  */
 export function useKardexMovimientos({ loteId = null, medicamentoId = null }) {
   const [movimientos, setMovimientos] = useState([]);

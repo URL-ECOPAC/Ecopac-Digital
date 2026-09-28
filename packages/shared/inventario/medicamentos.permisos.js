@@ -15,6 +15,9 @@ import { esAdministrador, ROLES, ROLES_DE_CAMPO } from "../usuarios/roles.js";
  *
  * Espejo de las politicas de INSERT y UPDATE de la 00148: administrador y personal de campo.
  * Desactivar no: es puedeDesactivarMedicamentos().
+ *
+ * @param {string} rol
+ * @returns {boolean}
  */
 export function puedeAdministrarMedicamentos(rol) {
   return esAdministrador(rol) || ROLES_DE_CAMPO.includes(rol);
@@ -23,6 +26,9 @@ export function puedeAdministrarMedicamentos(rol) {
 /**
  * Puede desactivar un medicamento del catalogo: sacarlo de uso, lo mas parecido a eliminarlo.
  * Solo la administradora (trigger impedir_desactivar_sin_ser_administrador, 00148).
+ *
+ * @param {string} rol
+ * @returns {boolean}
  */
 export function puedeDesactivarMedicamentos(rol) {
   return esAdministrador(rol);
@@ -33,6 +39,9 @@ export function puedeDesactivarMedicamentos(rol) {
  *
  * La politica de SELECT de medicamentos es de lectura abierta para cualquier autenticado
  * (USING (true)): cualquier rol conocido puede ver el listado completo.
+ *
+ * @param {string} rol
+ * @returns {boolean}
  */
 export function puedeVerMedicamentos(rol) {
   return Object.values(ROLES).includes(rol);
@@ -44,6 +53,9 @@ export function puedeVerMedicamentos(rol) {
  * Se devuelven juntos para que un hook no tenga que llamar a las funciones sueltas ni acordarse
  * de cuales existen. `puedeEliminar` gatea la accion de desactivar: medicamentos no tiene
  * DELETE fisico ni politica de DELETE (00034), a diferencia de principios_activos.
+ *
+ * @param {string} rol
+ * @returns {{ puedeVer: boolean, puedeCrear: boolean, puedeEditar: boolean, puedeEliminar: boolean }}
  */
 export function permisosDeMedicamentos(rol) {
   const puedeAdministrar = puedeAdministrarMedicamentos(rol);

@@ -60,6 +60,7 @@ export function hayFiltrosDeNotificaciones(filtros) {
  *
  * @param {object[]} notificaciones
  * @param {{ busqueda?: string, categoria?: string|null, estado?: string|null }} filtros
+ * @returns {object[]}
  */
 export function filtrarNotificaciones(notificaciones, filtros) {
   const termino = (filtros.busqueda ?? "").trim().toLowerCase();

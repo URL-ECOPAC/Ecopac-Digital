@@ -37,6 +37,18 @@ export const MESES = [
   "diciembre",
 ];
 
+/**
+ * Los meses como opciones de un selector: `{ value: 1..12, label: "Enero".."Diciembre" }`. En una
+ * frase el mes va en minuscula ("18 de agosto de 2026", MESES); solo, como opcion de una lista,
+ * con mayuscula inicial.
+ */
+export const OPCIONES_DE_MES = Object.freeze(
+  MESES.map((nombre, indice) => ({
+    value: indice + 1,
+    label: nombre.charAt(0).toUpperCase() + nombre.slice(1),
+  })),
+);
+
 /** Dias de la semana en espanol, empezando en domingo como devuelve getDay(). */
 export const DIAS_DE_LA_SEMANA = [
   "domingo",
@@ -90,7 +102,12 @@ export function aFechaLocal(valor) {
   return Number.isNaN(fecha.getTime()) ? null : fecha;
 }
 
-/** Indica si el valor se puede interpretar como fecha. */
+/**
+ * Indica si el valor se puede interpretar como fecha.
+ *
+ * @param {Date|string|null|undefined} valor
+ * @returns {boolean}
+ */
 export function esFechaValida(valor) {
   return aFechaLocal(valor) !== null;
 }
@@ -130,6 +147,7 @@ function aDiaDeCalendario(fecha) {
  * Fecha corta, la de las tablas y los listados.
  *
  * @returns {string} `"18/08/2026"`, o cadena vacia si el valor no es una fecha.
+ * @param {Date|string|null|undefined} valor
  */
 export function formatearFechaCorta(valor) {
   const fecha = aFechaLocal(valor);
@@ -142,6 +160,7 @@ export function formatearFechaCorta(valor) {
  * Fecha larga, la de encabezados y documentos imprimibles como la receta.
  *
  * @returns {string} `"18 de agosto de 2026"`, o cadena vacia.
+ * @param {Date|string|null|undefined} valor
  */
 export function formatearFechaLarga(valor) {
   const fecha = aFechaLocal(valor);
@@ -154,6 +173,7 @@ export function formatearFechaLarga(valor) {
  * Fecha con hora, para registros de auditoria y movimientos de inventario.
  *
  * @returns {string} `"18/08/2026 14:30"`, o cadena vacia.
+ * @param {Date|string|null|undefined} valor
  */
 export function formatearFechaConHora(valor) {
   const fecha = aFechaLocal(valor);
@@ -228,4 +248,23 @@ export function diasHastaVencimiento(fechaVencimiento, hoy = new Date()) {
   if (!vencimiento || !referencia) return null;
 
   return Math.round((aDiaDeCalendario(vencimiento) - aDiaDeCalendario(referencia)) / MS_POR_DIA);
+}
+
+/**
+ * Frase para los dias de diasHastaVencimiento(): "vencio hace 2 dias", "vence hoy", "vence
+ * mañana", "vence en 5 dias". Las alertas decian "vence en -2 dias" de un lote ya vencido.
+ *
+ * @param {number|null|undefined} diasRestantes
+ * @returns {string} Vacio si no hay numero.
+ */
+export function describirVencimiento(diasRestantes) {
+  if (diasRestantes === null || diasRestantes === undefined || Number.isNaN(diasRestantes)) {
+    return "";
+  }
+  const dias = Math.abs(diasRestantes);
+  const unidad = dias === 1 ? "día" : "días";
+  if (diasRestantes < 0) return `venció hace ${dias} ${unidad}`;
+  if (diasRestantes === 0) return "vence hoy";
+  if (diasRestantes === 1) return "vence mañana";
+  return `vence en ${dias} ${unidad}`;
 }

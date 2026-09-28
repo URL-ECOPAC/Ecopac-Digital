@@ -15,6 +15,7 @@ import {
   aCadenaFechaLocal,
   aFechaLocal,
   calcularEdad,
+  describirVencimiento,
   diasHastaVencimiento,
   DIAS_DE_LA_SEMANA,
   esFechaValida,
@@ -22,6 +23,7 @@ import {
   formatearFechaCorta,
   formatearFechaLarga,
   MESES,
+  OPCIONES_DE_MES,
 } from "./fechas.js";
 
 describe("aFechaLocal", () => {
@@ -234,5 +236,35 @@ describe("tablas de calendario", () => {
     expect(DIAS_DE_LA_SEMANA).toHaveLength(7);
     expect(DIAS_DE_LA_SEMANA[0]).toBe("domingo");
     expect(DIAS_DE_LA_SEMANA[new Date(2026, 7, 18).getDay()]).toBe("martes");
+  });
+});
+
+describe("describirVencimiento", () => {
+  it("un lote ya vencido dice cuanto hace, no 'vence en -2 dias'", () => {
+    expect(describirVencimiento(-2)).toBe("venció hace 2 días");
+    expect(describirVencimiento(-1)).toBe("venció hace 1 día");
+  });
+
+  it("hoy, mañana y los dias que faltan", () => {
+    expect(describirVencimiento(0)).toBe("vence hoy");
+    expect(describirVencimiento(1)).toBe("vence mañana");
+    expect(describirVencimiento(12)).toBe("vence en 12 días");
+  });
+
+  it("sin numero no dice nada", () => {
+    expect(describirVencimiento(null)).toBe("");
+    expect(describirVencimiento(undefined)).toBe("");
+  });
+});
+
+describe("OPCIONES_DE_MES", () => {
+  it("los doce meses, con mayuscula inicial y su numero", () => {
+    expect(OPCIONES_DE_MES).toHaveLength(12);
+    expect(OPCIONES_DE_MES[0]).toEqual({ value: 1, label: "Enero" });
+    expect(OPCIONES_DE_MES[8]).toEqual({ value: 9, label: "Septiembre" });
+  });
+
+  it("MESES sigue en minuscula, para usarlo dentro de una frase", () => {
+    expect(MESES[0]).toBe("enero");
   });
 });

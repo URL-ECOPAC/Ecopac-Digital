@@ -159,6 +159,8 @@ export const SECCIONES_PACIENTE = Object.freeze([
  *
  * Un id que no exista en CAMPOS_REGISTRO_PACIENTE se descarta en vez de dejar un hueco: es lo
  * que pasaria si alguien renombrara un campo y olvidara esta lista.
+ *
+ * @returns {object[]}
  */
 export function seccionesDePaciente() {
   return SECCIONES_PACIENTE.map((seccion) => ({

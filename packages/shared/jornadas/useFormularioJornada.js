@@ -30,10 +30,11 @@
 // DOM, mismo motivo que useAltaUsuario.test.js/useEdicionUsuario.test.js): valoresInicialesDeJornada() y
 // aDatosDeJornada() se exportan aparte para poder probarlas sin montar nada.
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { listarBodegas } from "../inventario/bodegas.api.js";
 import { listarProyectos } from "../proyectos/api.js";
+import { proyectosQueAdmitenCambios } from "../proyectos/validaciones.js";
 import {
   listarComunidades,
   listarDepartamentos,
@@ -103,6 +104,22 @@ function aOpciones(filas, etiquetaDe) {
   return (filas ?? []).map((fila) => ({ value: fila.id, label: etiquetaDe(fila) }));
 }
 
+/**
+ * Opciones del selector de bodega de botiquin: todas las bodegas, las moviles primero y con
+ * "(movil)" en la etiqueta. Se exporta aparte para poder probarla sin montar el hook.
+ *
+ * @param {{ id: string, nombre: string, esMovil?: boolean }[]} bodegas
+ * @returns {{ value: string, label: string }[]}
+ */
+export function opcionesDeBodegaDeBotiquin(bodegas) {
+  return [...(bodegas ?? [])]
+    .sort((una, otra) => Number(Boolean(otra.esMovil)) - Number(Boolean(una.esMovil)))
+    .map((bodega) => ({
+      value: bodega.id,
+      label: bodega.esMovil ? `${bodega.nombre} (móvil)` : bodega.nombre,
+    }));
+}
+
 function nombreDePerfil(perfil) {
   return [perfil.nombres, perfil.apellidos].filter(Boolean).join(" ");
 }
@@ -165,26 +182,42 @@ export function useFormularioJornada({ jornada, rol } = {}) {
 
   const [advertenciaDuplicado, setAdvertenciaDuplicado] = useState(null);
 
+  // Que catalogos ya respondieron, aunque sea con cero filas. Sin esto el formulario no distinguia
+  // "todavia no llego" de "no hay ninguno" y dejaba el <select> en "Cargando..." para siempre.
+  const [catalogosCargados, setCatalogosCargados] = useState({});
+  const marcarCargado = (nombre) =>
+    setCatalogosCargados((previos) => ({ ...previos, [nombre]: true }));
+
   // Catalogos que no dependen de la cascada: se cargan una sola vez, al montar.
   useEffect(() => {
     let vigente = true;
 
     listarDepartamentos().then(({ departamentos: filas }) => {
-      if (vigente) setDepartamentos(aOpciones(filas, (fila) => fila.nombre));
+      if (!vigente) return;
+      setDepartamentos(aOpciones(filas, (fila) => fila.nombre));
+      marcarCargado("departamentos");
     });
 
     listarUsuarios({ estado: true }).then(({ usuarios }) => {
-      if (vigente) setPerfiles(aOpciones(usuarios, nombreDePerfil));
+      if (!vigente) return;
+      setPerfiles(aOpciones(usuarios, nombreDePerfil));
+      marcarCargado("perfiles");
     });
 
+    // Filas completas, no opciones: el estado decide cuales se ofrecen (mas abajo).
     listarProyectos().then(({ proyectos: filas }) => {
-      if (vigente) setProyectos(aOpciones(filas, (fila) => fila.nombre));
+      if (!vigente) return;
+      setProyectos(filas ?? []);
+      marcarCargado("proyectos");
     });
 
-    // Solo bodegas moviles: botiquin_bodega_id (00036) es "la bodega movil que viaja" a la
-    // jornada, no cualquier bodega del catalogo (ver docs/MODELO-DE-DATOS.md).
-    listarBodegas({ esMovil: true }).then(({ bodegas: filas }) => {
-      if (vigente) setBodegas(aOpciones(filas, (fila) => fila.nombre));
+    // botiquin_bodega_id (00036) es la bodega que viaja a la jornada. Se pedian solo las moviles, y
+    // una organizacion sin ninguna marcada como movil se quedaba sin opciones: el selector no
+    // cargaba nunca. Ahora van todas, las moviles primero y rotuladas.
+    listarBodegas().then(({ bodegas: filas }) => {
+      if (!vigente) return;
+      setBodegas(opcionesDeBodegaDeBotiquin(filas));
+      marcarCargado("bodegas");
     });
 
     return () => {
@@ -333,6 +366,17 @@ export function useFormularioJornada({ jornada, rol } = {}) {
     creando: creandoComunidad,
   } = useAltaDeComunidadEnLinea({ municipioId, rol, alCrear: alCrearComunidad });
 
+  // A un proyecto cancelado no se le asocian jornadas (00154): no se ofrece. En edicion se conserva
+  // el que la jornada ya tenia, para que el <select> siga mostrando su valor.
+  const opcionesDeProyecto = useMemo(
+    () =>
+      aOpciones(
+        proyectosQueAdmitenCambios(proyectos, jornadaBase?.proyectoId ?? null),
+        (fila) => fila.nombre,
+      ),
+    [proyectos, jornadaBase],
+  );
+
   const cancelar = useCallback(() => {
     setValores(valoresInicialesDeJornada(esEdicion ? jornadaBase : jornada));
     setErrores({});
@@ -374,7 +418,15 @@ export function useFormularioJornada({ jornada, rol } = {}) {
     enviando,
     cargando,
     esEdicion,
-    catalogos: { departamentos, municipios, comunidades, perfiles, proyectos, bodegas },
+    catalogos: {
+      departamentos,
+      municipios,
+      comunidades,
+      perfiles,
+      proyectos: opcionesDeProyecto,
+      bodegas,
+    },
+    catalogosCargados,
     departamentoId,
     municipioId,
     setDepartamento,

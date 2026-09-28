@@ -18,11 +18,20 @@ import {
 describe("resolverRangoDePreset", () => {
   const hoy = new Date(2026, 7, 29); // 29 de agosto de 2026
 
-  it("este mes: del primer dia del mes a hoy", () => {
+  it("este mes: del primer al ultimo dia del mes, no hasta hoy", () => {
     expect(resolverRangoDePreset(PRESETS_DE_RANGO.ESTE_MES, hoy)).toEqual({
       min: "2026-08-01",
-      max: "2026-08-29",
+      max: "2026-08-31",
     });
+  });
+
+  it("este mes sabe cuantos dias tiene cada mes", () => {
+    const enSeptiembre = new Date(2026, 8, 28);
+    expect(resolverRangoDePreset(PRESETS_DE_RANGO.ESTE_MES, enSeptiembre).max).toBe("2026-09-30");
+    const enFebreroBisiesto = new Date(2028, 1, 3);
+    expect(resolverRangoDePreset(PRESETS_DE_RANGO.ESTE_MES, enFebreroBisiesto).max).toBe(
+      "2028-02-29",
+    );
   });
 
   it("ultimo trimestre: tres meses calendario atras, mismo dia, a hoy", () => {
@@ -40,10 +49,10 @@ describe("resolverRangoDePreset", () => {
     });
   });
 
-  it("este anio: del 1 de enero a hoy", () => {
+  it("este anio: del 1 de enero al 31 de diciembre", () => {
     expect(resolverRangoDePreset(PRESETS_DE_RANGO.ESTE_ANIO, hoy)).toEqual({
       min: "2026-01-01",
-      max: "2026-08-29",
+      max: "2026-12-31",
     });
   });
 

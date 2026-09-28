@@ -38,6 +38,9 @@ export const GRUPOS_DE_EDAD = Object.freeze([
  *
  * Lo necesita FilterBar para saber si pintar el desplegable en un grupo o en "Personalizado"
  * cuando el rango llega desde fuera (por ejemplo al recargar con filtros puestos).
+ *
+ * @param {object} rango
+ * @returns {string|null} El id del grupo de GRUPOS_DE_EDAD, o null.
  */
 export function grupoDeEdadDe(rango) {
   if (!rango) return null;

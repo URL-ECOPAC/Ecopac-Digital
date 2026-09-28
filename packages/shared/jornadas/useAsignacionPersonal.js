@@ -61,12 +61,23 @@ export function estaYaAsignado(perfilId, personal) {
   return (personal ?? []).some((fila) => fila?.perfilId === perfilId);
 }
 
-/** Resultados de listarUsuarios() sin quienes ya estan en `personal` (ver estaYaAsignado()). */
+/**
+ * Resultados de listarUsuarios() sin quienes ya estan en `personal` (ver estaYaAsignado()).
+ *
+ * @param {object[]} usuarios
+ * @param {object[]} personal Personal ya asignado a la jornada.
+ * @returns {object[]}
+ */
 export function excluirYaAsignados(usuarios, personal) {
   return (usuarios ?? []).filter((usuario) => !estaYaAsignado(usuario.id, personal));
 }
 
-/** Traduce un perfil de listarUsuarios() a la fila que pinta COLUMNAS_RESULTADOS_ASIGNACION_PERSONAL. */
+/**
+ * Traduce un perfil de listarUsuarios() a la fila que pinta COLUMNAS_RESULTADOS_ASIGNACION_PERSONAL.
+ *
+ * @param {object} usuario
+ * @returns {{ id: string, nombreCompleto: string, rolEtiqueta: string, rol: string }}
+ */
 export function armarFilaDeResultado(usuario) {
   return {
     id: usuario.id,
