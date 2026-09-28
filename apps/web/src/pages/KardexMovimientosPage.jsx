@@ -3,6 +3,7 @@ import { Table } from "react-bootstrap";
 import {
   ESTADO_MOVIMIENTO,
   ETIQUETAS_ESTADO_MOVIMIENTO,
+  etiquetaDeMotivoDeMovimiento,
   exportarFilasACSV,
   formatearFechaConHora,
   listarLotes,
@@ -71,7 +72,11 @@ const COLUMNAS_CSV_KARDEX = [
 
 /** Descarga el CSV. Vive aca porque toca document, Blob y URL, que shared no puede tocar. */
 function descargarCSV(movimientos) {
-  const blob = new Blob([exportarFilasACSV(movimientos, COLUMNAS_CSV_KARDEX)], {
+  const filas = movimientos.map((mov) => ({
+    ...mov,
+    motivo: etiquetaDeMotivoDeMovimiento(mov.motivo),
+  }));
+  const blob = new Blob([exportarFilasACSV(filas, COLUMNAS_CSV_KARDEX)], {
     type: "text/csv;charset=utf-8;",
   });
   const url = URL.createObjectURL(blob);
@@ -309,7 +314,7 @@ export default function KardexMovimientosPage({
                     {mov.tipo === TIPO_MOVIMIENTO.INGRESO ? "+" : ""}
                     {mov.cantidad}
                   </td>
-                  <td>{mov.motivo}</td>
+                  <td>{etiquetaDeMotivoDeMovimiento(mov.motivo)}</td>
                   <td>{mov.bodega_nombre || "—"}</td>
                   <td>{mov.registrado_por_nombre || "—"}</td>
                   <td>
@@ -387,7 +392,7 @@ export default function KardexMovimientosPage({
                     {mov.tipo === TIPO_MOVIMIENTO.INGRESO ? "+" : ""}
                     {mov.cantidad}
                   </td>
-                  <td>{mov.motivo}</td>
+                  <td>{etiquetaDeMotivoDeMovimiento(mov.motivo)}</td>
                   <td>{mov.bodega_nombre || "—"}</td>
                   <td>{mov.registrado_por_nombre || "—"}</td>
                   <td>{mov.aprobado_por_nombre || "Pendiente"}</td>

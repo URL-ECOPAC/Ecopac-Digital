@@ -65,6 +65,29 @@ describe("formatearValorDeAuditoria", () => {
   });
 });
 
+describe("estados con mayuscula inicial", () => {
+  it("un estado se muestra capitalizado, como en el resto de pantallas", () => {
+    expect(formatearValorDeAuditoria("emitida", "estado")).toBe("Emitida");
+    expect(formatearValorDeAuditoria("en curso", "estado_nuevo")).toBe("En curso");
+    expect(formatearValorDeAuditoria("planificada", "estado_jornada")).toBe("Planificada");
+  });
+
+  it("el resto de columnas de texto quedan tal cual", () => {
+    expect(formatearValorDeAuditoria("emitida", "folio")).toBe("emitida");
+    expect(formatearValorDeAuditoria("emitida")).toBe("emitida");
+    // "estadio" contiene "estad" pero no es una columna de estado.
+    expect(formatearValorDeAuditoria("uno", "estadio")).toBe("uno");
+  });
+
+  it("el diff de un cambio capitaliza el antes y el despues del estado", () => {
+    const { campos } = diferenciaDeEvento({
+      valoresAnteriores: { estado: "emitida" },
+      valoresNuevos: { estado: "anulada" },
+    });
+    expect(campos[0]).toMatchObject({ antes: "Emitida", despues: "Anulada" });
+  });
+});
+
 describe("diferenciaDeEvento", () => {
   it("una insercion (sin valoresAnteriores) lista todos los campos de valoresNuevos", () => {
     const { tipo, campos } = diferenciaDeEvento({

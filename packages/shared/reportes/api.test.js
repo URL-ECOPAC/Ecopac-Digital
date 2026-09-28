@@ -156,12 +156,33 @@ describe("obtenerIndicadoresImpacto", () => {
     expect(error.codigo).toBe("SIN_PERMISO");
   });
 
-  it("consulta vista_reporte_impacto y no una vista inexistente", async () => {
+  // 00155: la vista por comunidad de origen del paciente, no la de una fila por jornada.
+  it("consulta vista_reporte_impacto_por_comunidad y no una vista inexistente", async () => {
     dobles.cliente = crearCliente([{ data: FILAS, error: null }]);
 
     await obtenerIndicadoresImpacto({ rol: ROLES.ADMINISTRADOR });
 
-    expect(dobles.cliente.llamadas[0]).toEqual({ paso: "from", tabla: "vista_reporte_impacto" });
+    expect(dobles.cliente.llamadas[0]).toEqual({
+      paso: "from",
+      tabla: "vista_reporte_impacto_por_comunidad",
+    });
+  });
+
+  it("una comunidad sin pacientes atendidos no cuenta como beneficiada", async () => {
+    const jornadaSinAtenciones = {
+      ...FILAS[2],
+      jornada_id: "j-4",
+      comunidad_id: "c-3",
+      pacientes_atendidos: 0,
+      consultas_realizadas: 0,
+      tratamientos_entregados: 0,
+      medicamentos_utilizados: 0,
+    };
+    dobles.cliente = crearCliente([{ data: [...FILAS, jornadaSinAtenciones], error: null }]);
+
+    const { indicadores } = await obtenerIndicadoresImpacto({ rol: ROLES.ADMINISTRADOR });
+
+    expect(indicadores.totales.comunidades_beneficiadas).toBe(2);
   });
 
   it("no pide columnas que la vista no tiene", async () => {

@@ -7,7 +7,11 @@
 
 import { describe, expect, it } from "vitest";
 
-import { aDatosDeJornada, valoresInicialesDeJornada } from "./useFormularioJornada.js";
+import {
+  aDatosDeJornada,
+  opcionesDeBodegaDeBotiquin,
+  valoresInicialesDeJornada,
+} from "./useFormularioJornada.js";
 
 describe("valoresInicialesDeJornada", () => {
   it("sin jornada, arranca vacia (alta)", () => {
@@ -121,5 +125,25 @@ describe("aDatosDeJornada", () => {
   it("no toca cupoEstimado: NumberField ya entrega numero o null", () => {
     expect(aDatosDeJornada({ cupoEstimado: 50 }).cupoEstimado).toBe(50);
     expect(aDatosDeJornada({ cupoEstimado: null }).cupoEstimado).toBeNull();
+  });
+});
+
+describe("opcionesDeBodegaDeBotiquin", () => {
+  it("ofrece todas las bodegas, las moviles primero y rotuladas", () => {
+    const bodegas = [
+      { id: "b1", nombre: "Bodega Principal", esMovil: false },
+      { id: "b2", nombre: "Botiquin A", esMovil: true },
+    ];
+    expect(opcionesDeBodegaDeBotiquin(bodegas)).toEqual([
+      { value: "b2", label: "Botiquin A (móvil)" },
+      { value: "b1", label: "Bodega Principal" },
+    ]);
+  });
+
+  it("sin ninguna movil, igual ofrece las fijas (antes el selector no cargaba nunca)", () => {
+    expect(opcionesDeBodegaDeBotiquin([{ id: "b1", nombre: "Bodega Principal" }])).toEqual([
+      { value: "b1", label: "Bodega Principal" },
+    ]);
+    expect(opcionesDeBodegaDeBotiquin(null)).toEqual([]);
   });
 });

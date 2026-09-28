@@ -229,3 +229,22 @@ export function diasHastaVencimiento(fechaVencimiento, hoy = new Date()) {
 
   return Math.round((aDiaDeCalendario(vencimiento) - aDiaDeCalendario(referencia)) / MS_POR_DIA);
 }
+
+/**
+ * Frase para los dias de diasHastaVencimiento(): "vencio hace 2 dias", "vence hoy", "vence
+ * mañana", "vence en 5 dias". Las alertas decian "vence en -2 dias" de un lote ya vencido.
+ *
+ * @param {number|null|undefined} diasRestantes
+ * @returns {string} Vacio si no hay numero.
+ */
+export function describirVencimiento(diasRestantes) {
+  if (diasRestantes === null || diasRestantes === undefined || Number.isNaN(diasRestantes)) {
+    return "";
+  }
+  const dias = Math.abs(diasRestantes);
+  const unidad = dias === 1 ? "día" : "días";
+  if (diasRestantes < 0) return `venció hace ${dias} ${unidad}`;
+  if (diasRestantes === 0) return "vence hoy";
+  if (diasRestantes === 1) return "vence mañana";
+  return `vence en ${dias} ${unidad}`;
+}

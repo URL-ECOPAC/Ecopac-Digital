@@ -25,6 +25,7 @@
 
 import { accedeAModuloPorMatriz, tienePermisoFino } from "../usuarios/acceso.js";
 import { ROLES, ROLES_DE_CAMPO, esAdministrador } from "../usuarios/roles.js";
+import { proyectoAdmiteCambios } from "./validaciones.js";
 
 /** Rol que administra proyectos por defecto: solo administrador (00039). */
 export const ROLES_QUE_ADMINISTRAN_PROYECTOS = Object.freeze([ROLES.ADMINISTRADOR]);
@@ -90,21 +91,31 @@ export function puedeVerSeguimientoProyecto(rol) {
  *
  * Se devuelven juntos para que un hook no tenga que llamar a las tres por separado ni
  * acordarse de cuales existen.
+ *
+ * Con `proyecto`, son los permisos sobre ESE proyecto: si esta cancelado, nada de lo que lo
+ * modifica queda abierto (00154), sea cual sea el rol. Crear otro proyecto no depende de cual
+ * este abierto, asi que `puedeCrear` no cambia.
+ *
+ * @param {string} rol
+ * @param {{ estado?: string }|null} [proyecto]
  */
-export function permisosDeProyectos(rol) {
+export function permisosDeProyectos(rol, proyecto = null) {
   const administra = puedeAdministrarProyectos(rol);
+  const modifica = administra && proyectoAdmiteCambios(proyecto?.estado);
   return {
     puedeVer: puedeVerProyectos(rol),
     puedeCrear: administra,
-    puedeEditar: administra,
-    puedeCambiarEstado: administra,
-    puedeAsociarJornadas: administra,
+    puedeEditar: modifica,
+    puedeCambiarEstado: modifica,
+    puedeAsociarJornadas: modifica,
     // Armar el equipo del proyecto (00146): la misma regla que editarlo. Leerlo lo decide
     // puedeVer, y las filas que se ven las elige la base.
-    puedeGestionarEquipo: administra,
+    puedeGestionarEquipo: modifica,
     // Lista de insumos previstos (00147): planificacion con dinero. Verla es puedeVerInsumosYGastos;
     // agregar, editar y quitar, la misma regla que editar el proyecto.
-    puedeGestionarInsumos: administra,
+    puedeGestionarInsumos: modifica,
+    // Avance, notas de la bitacora e hitos (00053): la misma regla que editar el proyecto.
+    puedeRegistrarSeguimiento: modifica,
     puedeVerInsumosYGastos: puedeVerInsumosYGastosDeProyecto(rol),
     puedeVerHistorial: puedeVerHistorialProyecto(rol),
     puedeVerSeguimiento: puedeVerSeguimientoProyecto(rol),

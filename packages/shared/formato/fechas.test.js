@@ -15,6 +15,7 @@ import {
   aCadenaFechaLocal,
   aFechaLocal,
   calcularEdad,
+  describirVencimiento,
   diasHastaVencimiento,
   DIAS_DE_LA_SEMANA,
   esFechaValida,
@@ -234,5 +235,23 @@ describe("tablas de calendario", () => {
     expect(DIAS_DE_LA_SEMANA).toHaveLength(7);
     expect(DIAS_DE_LA_SEMANA[0]).toBe("domingo");
     expect(DIAS_DE_LA_SEMANA[new Date(2026, 7, 18).getDay()]).toBe("martes");
+  });
+});
+
+describe("describirVencimiento", () => {
+  it("un lote ya vencido dice cuanto hace, no 'vence en -2 dias'", () => {
+    expect(describirVencimiento(-2)).toBe("venció hace 2 días");
+    expect(describirVencimiento(-1)).toBe("venció hace 1 día");
+  });
+
+  it("hoy, mañana y los dias que faltan", () => {
+    expect(describirVencimiento(0)).toBe("vence hoy");
+    expect(describirVencimiento(1)).toBe("vence mañana");
+    expect(describirVencimiento(12)).toBe("vence en 12 días");
+  });
+
+  it("sin numero no dice nada", () => {
+    expect(describirVencimiento(null)).toBe("");
+    expect(describirVencimiento(undefined)).toBe("");
   });
 });

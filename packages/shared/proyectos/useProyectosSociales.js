@@ -49,7 +49,11 @@ import {
 } from "./filtros.js";
 import { CAMPOS_PROYECTO } from "./campos.js";
 import { listarInsumosDelProyecto, pasarInsumoDelProyectoAJornada } from "./insumos.api.js";
-import { validarProyecto } from "./validaciones.js";
+import {
+  MENSAJE_PROYECTO_CANCELADO,
+  proyectoAdmiteCambios,
+  validarProyecto,
+} from "./validaciones.js";
 import { permisosDeProyectos, puedeVerProyectos } from "./permisos.js";
 
 /** Mismo criterio que jornadas/useFormularioJornada.js: nombre completo para un <select>. */
@@ -106,8 +110,18 @@ export function useProyectosSociales({ usuarioRol } = {}) {
   const [erroresFormulario, setErroresFormulario] = useState({});
 
   // Lo que puede hacer el rol lo decide permisos.js; la pantalla solo lee estas banderas.
-  const permisos = useMemo(() => permisosDeProyectos(usuarioRol), [usuarioRol]);
-  const puedeEditar = permisos.puedeEditar;
+  // `permisosDelRol` son los del listado (crear, ver); los del proyecto abierto se calculan mas
+  // abajo con su estado, porque uno cancelado ya no se modifica (00154).
+  const permisosDelRol = useMemo(() => permisosDeProyectos(usuarioRol), [usuarioRol]);
+
+  const proyectoDetalle = useMemo(() => {
+    return proyectos.find((p) => p.id === proyectoSeleccionadoId) || null;
+  }, [proyectos, proyectoSeleccionadoId]);
+
+  const permisos = useMemo(
+    () => permisosDeProyectos(usuarioRol, proyectoDetalle),
+    [usuarioRol, proyectoDetalle],
+  );
   // Los gastos se registran contra una jornada (Presupuestos, o el detalle de la jornada); el
   // proyecto solo muestra los de sus jornadas.
 
@@ -447,10 +461,6 @@ export function useProyectosSociales({ usuarioRol } = {}) {
     return proyectos.filter((p) => p.responsableNombre?.toLowerCase().includes(busqueda));
   }, [proyectos, filtrosState.responsable]);
 
-  const proyectoDetalle = useMemo(() => {
-    return proyectos.find((p) => p.id === proyectoSeleccionadoId) || null;
-  }, [proyectos, proyectoSeleccionadoId]);
-
   const manejarValidacion = (datosFormulario) => {
     const resultado = validacionDeProyecto(datosFormulario);
     setErroresFormulario(resultado.errores);
@@ -468,6 +478,11 @@ export function useProyectosSociales({ usuarioRol } = {}) {
       const validacion = manejarValidacion(datosFormulario);
       if (!validacion.ok) return { ok: false, errores: validacion.errores };
 
+      const actual = id ? proyectos.find((p) => p.id === id) : null;
+      if (actual && !proyectoAdmiteCambios(actual.estado)) {
+        return { ok: false, error: { mensaje: MENSAJE_PROYECTO_CANCELADO } };
+      }
+
       const resultado = id
         ? await actualizarProyecto(id, datosFormulario)
         : await crearProyecto(datosFormulario);
@@ -477,7 +492,7 @@ export function useProyectosSociales({ usuarioRol } = {}) {
       await cargarProyectos();
       return { ok: true, proyecto: resultado.proyecto };
     },
-    [cargarProyectos],
+    [proyectos, cargarProyectos],
   );
 
   /**
@@ -489,7 +504,7 @@ export function useProyectosSociales({ usuarioRol } = {}) {
    */
   const cambiarEtapaProyecto = useCallback(
     async (id, nuevoEstado) => {
-      if (!puedeEditar) {
+      if (!permisosDelRol.puedeCambiarEstado) {
         return {
           proyecto: null,
           error: { mensaje: "No tienes permiso para cambiar el estado de un proyecto." },
@@ -500,7 +515,7 @@ export function useProyectosSociales({ usuarioRol } = {}) {
       if (!resultado.error) await cargarProyectos();
       return resultado;
     },
-    [puedeEditar, cargarProyectos],
+    [permisosDelRol.puedeCambiarEstado, cargarProyectos],
   );
 
   return {
@@ -514,7 +529,10 @@ export function useProyectosSociales({ usuarioRol } = {}) {
     proyectoDetalle,
     jornadasProyecto,
     catalogos: { perfiles },
-    puedeEditar,
+    // Crear no depende del proyecto abierto; editar si: uno cancelado no se edita (00154).
+    puedeCrear: permisosDelRol.puedeCrear,
+    puedeEditar: permisos.puedeEditar,
+    proyectoCancelado: Boolean(proyectoDetalle) && !proyectoAdmiteCambios(proyectoDetalle.estado),
     permisos,
     presupuestoProyecto,
     columnasGastos: COLUMNAS_GASTO_DE_PROYECTO,

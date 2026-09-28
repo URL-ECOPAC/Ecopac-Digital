@@ -39,6 +39,7 @@ export default function ModalJornada({ visible = true, jornada, rol, onClose, on
     cargando,
     esEdicion,
     catalogos,
+    catalogosCargados,
     departamentoId,
     municipioId,
     setDepartamento,
@@ -143,6 +144,11 @@ export default function ModalJornada({ visible = true, jornada, rol, onClose, on
 
     if (campo.tipo === TIPOS_DE_CAMPO.SELECT) {
       const opciones = catalogos[campo.opcionesDesde] ?? [];
+      // "Cargando..." solo mientras el catalogo no respondio; si respondio vacio, se dice.
+      let placeholder = "Seleccionar";
+      if (opciones.length === 0) {
+        placeholder = catalogosCargados?.[campo.opcionesDesde] ? "No hay opciones" : "Cargando...";
+      }
       return (
         <Selector
           key={campo.id}
@@ -150,7 +156,7 @@ export default function ModalJornada({ visible = true, jornada, rol, onClose, on
           value={valores[campo.id] || null}
           options={opciones}
           onSelect={(valor) => setCampo(campo.id, valor)}
-          placeholder={opciones.length === 0 ? "Cargando..." : "Seleccionar"}
+          placeholder={placeholder}
           disabled={bloqueado || opciones.length === 0}
           error={errores[campo.id]}
         />

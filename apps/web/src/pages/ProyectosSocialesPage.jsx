@@ -7,6 +7,7 @@ import {
   ETIQUETAS_ESTADO_PROYECTO,
   formatearFechaCorta,
   formatearMoneda,
+  MENSAJE_PROYECTO_CANCELADO,
   useProyectosSociales,
 } from "@ecopac/shared";
 import {
@@ -39,7 +40,9 @@ export default function ProyectosSocialesPage({ usuarioRol }) {
     proyectoDetalle,
     jornadasProyecto,
     catalogos,
+    puedeCrear,
     puedeEditar,
+    proyectoCancelado,
     permisos,
     presupuestoProyecto,
     columnasGastos,
@@ -119,7 +122,7 @@ export default function ProyectosSocialesPage({ usuarioRol }) {
         title="Proyectos sociales"
         subtitle="Gestión de proyectos, presupuestos y jornadas de campo"
         actions={
-          puedeEditar
+          puedeCrear
             ? [
                 {
                   label: "Nuevo proyecto",
@@ -302,6 +305,14 @@ export default function ProyectosSocialesPage({ usuarioRol }) {
           </Modal.Header>
           <Modal.Body>
             <p className="text-secondary small mb-3">{proyectoDetalle.descripcion}</p>
+
+            {/* 00154: un proyecto cancelado se consulta, no se edita. Los botones de agregar,
+                quitar, asociar y editar ya no aparecen (permisos del proyecto abierto). */}
+            {proyectoCancelado && (
+              <Alert variant="secondary" className="py-2 px-3 small">
+                {MENSAJE_PROYECTO_CANCELADO}
+              </Alert>
+            )}
 
             {/* Tabs de Detalle */}
             <Nav

@@ -8,6 +8,7 @@ import { listarMedicamentos } from "../inventario/medicamentos.api.js";
 import { useAltaDeMedicamentoEnLinea } from "../inventario/useAltaDeMedicamentoEnLinea.js";
 import { listarJornadas } from "../jornadas/api.js";
 import { listarProyectos } from "../proyectos/api.js";
+import { proyectosQueAdmitenCambios } from "../proyectos/validaciones.js";
 import { camposDeRenglonDeDonacion } from "./campos.js";
 import { listarDonantes, registrarDonante } from "./donantes.api.js";
 import { puedeRegistrarDonaciones, puedeVerDonaciones } from "./permisos.js";
@@ -214,8 +215,9 @@ export function useRegistroDonacion({ _client, usuarioRol, onGuardarExito }) {
       });
     }
 
+    // Una donacion nueva no se asigna a un proyecto cancelado (00154).
     listarProyectos().then(({ proyectos }) => {
-      if (vigente) setProyectosOptions(aOpciones(proyectos));
+      if (vigente) setProyectosOptions(aOpciones(proyectosQueAdmitenCambios(proyectos)));
     });
 
     listarJornadas().then(({ jornadas }) => {

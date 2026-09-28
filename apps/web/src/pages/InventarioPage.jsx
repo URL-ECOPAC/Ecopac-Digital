@@ -10,6 +10,7 @@ import BandejaValidacionPage from "./BandejaValidacionPage";
 import {
   actualizarLote,
   actualizarMedicamento,
+  describirVencimiento,
   filtrarCatalogoMedicamentos,
   FILTROS_CATALOGO_MEDICAMENTOS,
   FILTROS_CATALOGO_VACIOS,
@@ -678,8 +679,8 @@ export default function InventarioPage() {
                     {/* item viene de aAlerta() (alertas.api.js) via useAlertasVencimiento: solo
                         alertas pendientes de verdad, no lotes por fecha. */}
                     <strong>{item.medicamento}</strong> · lote{" "}
-                    <span className="ec-mono">{item.numeroLote}</span> · vence en{" "}
-                    {item.diasRestantes} dias
+                    <span className="ec-mono">{item.numeroLote}</span> ·{" "}
+                    {describirVencimiento(item.diasRestantes)}
                   </li>
                 ))}
               </ul>

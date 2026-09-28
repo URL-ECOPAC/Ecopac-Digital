@@ -14,7 +14,6 @@ import {
 } from "@ecopac/shared";
 
 import {
-  BotonLimpiarFiltros,
   Card,
   ErrorState,
   FilterBar,
@@ -86,21 +85,16 @@ export default function JornadasPage() {
         }
       />
 
-      <Card className="mb-4">
-        <div className="d-flex align-items-end justify-content-between gap-3 flex-wrap flex-md-nowrap">
-          <div className="flex-grow-1">
-            <FilterBar
-              campos={filtrosDelTablero}
-              valores={filtros || {}}
-              onChange={setFiltro}
-              catalogos={catalogos || {}}
-            />
-          </div>
-          <div className="pb-1">
-            <BotonLimpiarFiltros onClick={limpiarFiltros} hayFiltros={hayFiltros} />
-          </div>
-        </div>
-      </Card>
+      {/* FilterBar ya es la tarjeta y trae "Limpiar filtros": envolverla en otra Card dibujaba
+          dos rectangulos, uno dentro del otro. */}
+      <FilterBar
+        campos={filtrosDelTablero}
+        valores={filtros || {}}
+        onChange={setFiltro}
+        catalogos={catalogos || {}}
+        onLimpiar={limpiarFiltros}
+        hayFiltros={hayFiltros}
+      />
 
       {errorMovimiento && (
         <div

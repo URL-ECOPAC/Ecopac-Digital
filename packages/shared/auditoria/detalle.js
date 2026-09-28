@@ -28,12 +28,24 @@ export function nombreDeCampo(clave) {
 const FECHA_ISO = /^\d{4}-\d{2}-\d{2}$/;
 const MARCA_DE_TIEMPO_ISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/;
 
+/** Columnas de estado: `estado`, `estado_anterior`, `estado_nuevo`, `estado_jornada`... */
+const esColumnaDeEstado = (clave) => typeof clave === "string" && /(^|_)estado(_|$)/.test(clave);
+
 /**
  * Un valor de columna a texto: null/undefined como "-", booleanos como Si/No, fechas como
  * "18/09/2026" y marcas de tiempo como "18/09/2026 10:22" en hora local; el resto tal cual.
+ *
+ * Con `clave`, un estado va con mayuscula inicial ("emitida" -> "Emitida"): los enums de la base
+ * estan en minuscula y la bitacora los mostraba asi, distinto de como los muestra cada pantalla.
+ *
+ * @param {unknown} valor
+ * @param {string} [clave] Nombre de la columna.
  */
-export function formatearValorDeAuditoria(valor) {
+export function formatearValorDeAuditoria(valor, clave) {
   if (valor === null || valor === undefined) return "—";
+  if (typeof valor === "string" && valor && esColumnaDeEstado(clave)) {
+    return valor.charAt(0).toUpperCase() + valor.slice(1);
+  }
   if (typeof valor === "boolean") return valor ? "Sí" : "No";
   if (typeof valor === "string" && FECHA_ISO.test(valor)) {
     return formatearFechaCorta(valor) || valor;
@@ -67,7 +79,7 @@ export function diferenciaDeEvento({ valoresAnteriores, valoresNuevos }) {
         .map(([clave, valor]) => ({
           clave,
           nombre: nombreDeCampo(clave),
-          valor: formatearValorDeAuditoria(valor),
+          valor: formatearValorDeAuditoria(valor, clave),
         })),
     };
   }
@@ -80,7 +92,7 @@ export function diferenciaDeEvento({ valoresAnteriores, valoresNuevos }) {
         .map(([clave, valor]) => ({
           clave,
           nombre: nombreDeCampo(clave),
-          valor: formatearValorDeAuditoria(valor),
+          valor: formatearValorDeAuditoria(valor, clave),
         })),
     };
   }
@@ -96,8 +108,8 @@ export function diferenciaDeEvento({ valoresAnteriores, valoresNuevos }) {
     campos.push({
       clave,
       nombre: nombreDeCampo(clave),
-      antes: formatearValorDeAuditoria(antes),
-      despues: formatearValorDeAuditoria(despues),
+      antes: formatearValorDeAuditoria(antes, clave),
+      despues: formatearValorDeAuditoria(despues, clave),
     });
   }
 
