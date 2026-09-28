@@ -17,6 +17,16 @@ import { ESTADOS_MOVIMIENTO, ORIGENES_DE_LOTE, TIPOS_DE_MOVIMIENTO } from "../en
  * un medico o voluntario que mire el kardex de un movimiento ajeno recibe null en ese embed, no
  * un error -- es el mismo limite de visibilidad que ya rige el resto de la aplicacion, no algo
  * que esta funcion deba evadir.
+ *
+ * @param {object} [opciones]
+ * @param {string} [opciones.tipo]
+ * @param {string} [opciones.estado]
+ * @param {string} [opciones.bodega_id]
+ * @param {string} [opciones.lote_id]
+ * @param {string} [opciones.registrado_por]
+ * @param {string} [opciones.fecha_inicio] AAAA-MM-DD.
+ * @param {string} [opciones.fecha_fin] AAAA-MM-DD.
+ * @returns {Promise<{ datos: object[], error: object|null }>}
  */
 export async function listarMovimientos({
   tipo,
@@ -78,6 +88,20 @@ export async function listarMovimientos({
  * (00028/00047) si quien registra es administrador -el movimiento nace ya 'aprobado'-, o
  * tr_actualizar_existencias cuando alguien lo aprueba despues (validacion.api.js). Escribir
  * existencias.cantidad_disponible aqui lo duplicaria.
+ *
+ * @param {object} opciones
+ * @param {string} opciones.origen Uno de ORIGENES_DE_LOTE.
+ * @param {string} opciones.bodega_id
+ * @param {string} opciones.medicamento_id
+ * @param {string} opciones.lote_id
+ * @param {string} opciones.numero_lote
+ * @param {string} opciones.fecha_vencimiento AAAA-MM-DD.
+ * @param {string} opciones.proveedor_id
+ * @param {number} opciones.cantidad
+ * @param {string} opciones.motivo
+ * @param {string} opciones.usuarioId
+ * @param {number} opciones.costo_unitario
+ * @returns {Promise<{ datos: object|null, error: object|null }>}
  */
 export async function registrarIngreso({
   origen,
@@ -199,6 +223,14 @@ export async function registrarIngreso({
 
 /**
  * Registra una salida de medicamentos previa validación de disponibilidad y fecha de vencimiento.
+ *
+ * @param {object} opciones
+ * @param {string} opciones.bodega_id
+ * @param {string} opciones.lote_id
+ * @param {number} opciones.cantidad
+ * @param {string} opciones.motivo
+ * @param {string} opciones.usuarioId
+ * @returns {Promise<{ datos: object|null, error: object|null }>}
  */
 export async function registrarSalida({ bodega_id, lote_id, cantidad, motivo, usuarioId }) {
   try {
@@ -295,6 +327,11 @@ export async function registrarSalida({ bodega_id, lote_id, cantidad, motivo, us
  * `estado = 'pendiente'` tambien en la fila nueva, y fn_proteger_decision_de_movimiento (00106)
  * rechaza que quien registro toque aprobado_por, aprobado_en, motivo_rechazo o
  * aprobacion_automatica. Aprobar y rechazar viven en validacion.api.js.
+ *
+ * @param {string} idMovimiento
+ * @param {object} datosNuevos
+ * @param {string} usuarioActualId
+ * @returns {Promise<{ datos: object|null, error: object|null }>}
  */
 export async function editarMovimiento(idMovimiento, datosNuevos, usuarioActualId) {
   try {

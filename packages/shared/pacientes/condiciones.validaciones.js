@@ -25,6 +25,9 @@ const ESTADOS_VALIDOS = Object.values(ESTADOS_CONDICION_CRONICA);
  *
  * Es deliberado que no se sustituya por 'activa' aqui: el valor por defecto vive en la migracion,
  * y repetirlo en el cliente es la clase de duplicado que se desincroniza sin que nadie lo note.
+ *
+ * @param {object} [datos]
+ * @returns {object}
  */
 export function normalizarDatosCondicion(datos = {}) {
   const normalizados = { ...datos };
@@ -66,6 +69,10 @@ function erroresDeNegocioCondicion(datos, hoy) {
 
 /**
  * Valida el formulario de alta de una condición crónica.
+ *
+ * @param {object} datosObjeto
+ * @param {Date} [hoy]
+ * @returns {Record<string, string>} Errores por campo; vacio si todo esta bien.
  */
 export function validarCondicionCronica(datosObjeto, hoy = new Date()) {
   const datos = normalizarDatosCondicion(datosObjeto);
@@ -76,6 +83,10 @@ export function validarCondicionCronica(datosObjeto, hoy = new Date()) {
 
 /**
  * Valida una corrección parcial de una condición ya registrada.
+ *
+ * @param {object} datosObjeto
+ * @param {Date} [hoy]
+ * @returns {Record<string, string>} Errores por campo; vacio si todo esta bien.
  */
 export function validarCambioDeCondicion(datosObjeto, hoy = new Date()) {
   const datos = normalizarDatosCondicion(datosObjeto);
@@ -84,6 +95,9 @@ export function validarCambioDeCondicion(datosObjeto, hoy = new Date()) {
 
 /**
  * Valida el nombre al crear o editar una condición en el catálogo.
+ *
+ * @param {object} [datos]
+ * @returns {object}
  */
 export function validarCondicionCatalogo(datos = {}) {
   const errores = {};

@@ -38,6 +38,9 @@ function aCentavos(valor) {
  *
  * El total no se guarda (cambiar la cantidad no debe obligar a rehacer el costo): sale de
  * cantidad x costo unitario, y es null cuando no hay costo estimado -"no estimado" no es 0-.
+ *
+ * @param {object} fila
+ * @returns {null|object} Los campos de la fila de origen, mas: articuloNombre, costoTotalEstimado.
  */
 export function aInsumoPrevisto(fila) {
   if (!fila) return null;
@@ -61,7 +64,12 @@ function aCosto(valor) {
   return limpio === null || limpio === undefined ? null : Number(limpio);
 }
 
-/** Traduce del camelCase de las pantallas al snake_case de la tabla, omitiendo lo no enviado. */
+/**
+ * Traduce del camelCase de las pantallas al snake_case de la tabla, omitiendo lo no enviado.
+ *
+ * @param {object} [datos]
+ * @returns {object}
+ */
 export function aColumnasDeInsumoPrevisto(datos = {}) {
   const tiene = (campo) => Object.prototype.hasOwnProperty.call(datos, campo);
   const fila = {};

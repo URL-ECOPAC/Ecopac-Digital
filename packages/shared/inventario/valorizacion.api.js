@@ -26,6 +26,7 @@ function aFilaDeValorizacion(fila) {
  * base (00121/00122).
  *
  * @param {ReturnType<typeof aFilaDeValorizacion>[]} filas
+ * @returns {{ valorDisponible: number, unidadesSinCosto: number, lotesSinCosto: number }}
  */
 export function totalizarValorizacion(filas = []) {
   const conCosto = filas.filter((fila) => fila.valorDisponible !== null);

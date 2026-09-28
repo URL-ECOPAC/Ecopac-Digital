@@ -664,6 +664,9 @@ const LARGO_MAXIMO_ESPECIALIDAD = 100;
  * "PEDIATRIA" son la misma especialidad para una persona, y la PK de perfil_especialidad
  * (perfil_id, nombre_especialidad) si las distingue, asi que sin esto el mismo medico podria
  * acabar con las dos filas-. Se conserva la primera forma escrita, que es la que la persona vio.
+ *
+ * @param {object[]} [especialidades]
+ * @returns {object[]}
  */
 export function normalizarEspecialidades(especialidades = []) {
   const vistas = new Set();
@@ -687,6 +690,7 @@ export function normalizarEspecialidades(especialidades = []) {
  * Valida una lista de especialidades contra el CHECK implicito de la columna.
  *
  * @returns {Record<string, string>} Vacio si todas son validas.
+ * @param {object[]} [especialidades]
  */
 export function validarEspecialidades(especialidades = []) {
   const larga = especialidades.find((nombre) => String(nombre).length > LARGO_MAXIMO_ESPECIALIDAD);

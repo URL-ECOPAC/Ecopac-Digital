@@ -78,6 +78,7 @@ export function tipoDeAccion(rotulo) {
  *
  * @param {unknown} rotulo
  * @param {{ enFormulario?: boolean }} [opciones]
+ * @returns {string} Uno de TIPOS_DE_ACCION.
  */
 export function tipoDeAccionDeBoton(rotulo, { enFormulario = false } = {}) {
   const tipo = tipoDeAccion(rotulo);

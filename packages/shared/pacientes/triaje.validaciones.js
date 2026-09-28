@@ -35,6 +35,8 @@ const IMC_MAXIMO = 200;
  * dos copias de una formula se separan. useConsulta() la usa para la previsualizacion.
  *
  * @returns {number|null} null si falta algun valor o no es un numero positivo.
+ * @param {number|string} peso Kilogramos.
+ * @param {number|string} talla Centimetros.
  */
 export function calcularImc(peso, talla) {
   const kilos = Number(peso);

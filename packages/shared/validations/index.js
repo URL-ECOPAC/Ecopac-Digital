@@ -12,12 +12,22 @@
 /** Resultado cuando no hay nada que corregir. */
 export const SIN_ERRORES = Object.freeze({});
 
-/** Indica si un objeto de errores trae al menos un campo con problema. */
+/**
+ * Indica si un objeto de errores trae al menos un campo con problema.
+ *
+ * @param {object} errores
+ * @returns {boolean}
+ */
 export function hayErrores(errores) {
   return Object.keys(errores ?? {}).length > 0;
 }
 
-/** Recorta espacios y trata cualquier cosa que no sea texto como cadena vacia. */
+/**
+ * Recorta espacios y trata cualquier cosa que no sea texto como cadena vacia.
+ *
+ * @param {*} valor Cualquier valor; solo un texto se recorta.
+ * @returns {string}
+ */
 export function normalizarTexto(valor) {
   return typeof valor === "string" ? valor.trim() : "";
 }
@@ -32,6 +42,9 @@ export function normalizarTexto(valor) {
  * cantidadEntregada de CAMPOS_RECETA y a cantidadIngresada de CAMPOS_INGRESO.
  *
  * NaN si cuenta como vacio: es lo que produce un `Number("")` o un input numerico sin llenar.
+ *
+ * @param {*} valor Texto, arreglo, numero, booleano, null o undefined.
+ * @returns {boolean}
  */
 export function esTextoVacio(valor) {
   if (Array.isArray(valor)) return valor.length === 0;
@@ -102,6 +115,9 @@ export function validarConDescriptores(campos, valores) {
  * Gana el primero que reporte cada campo: las reglas del descriptor se evaluan antes, y una
  * regla de negocio posterior no debe tapar un "es obligatorio" con un "formato invalido"
  * cuando el campo simplemente esta vacio.
+ *
+ * @param {...Record<string, string>} gruposDeErrores
+ * @returns {Record<string, string>}
  */
 export function combinarErrores(...gruposDeErrores) {
   const combinados = {};

@@ -134,6 +134,9 @@ export async function crearProyecto(datos) {
  * `proyecto` llega en null sin error cuando la fila no existe o cuando RLS no deja verla. Son
  * casos distintos para la base de datos pero el mismo para el cliente: no hay proyecto con el
  * que trabajar.
+ *
+ * @param {string} id
+ * @returns {Promise<{ proyecto: object|null, error: object|null }>}
  */
 export async function obtenerProyecto(id) {
   if (!id) return { proyecto: null, error: null };
@@ -191,6 +194,10 @@ export async function listarProyectos({ estado, responsableId } = {}) {
  * No cambia el estado aunque se le pase: para eso esta cambiarEstadoProyecto(), que valida la
  * transicion. Dejar que un update generico moviera el estado permitiria saltarse esa validacion
  * sin querer.
+ *
+ * @param {string} id
+ * @param {object} datos
+ * @returns {Promise<{ proyecto: object|null, error: object|null }>}
  */
 export async function actualizarProyecto(id, datos) {
   // El estado se quita a proposito: moverlo es tarea de cambiarEstadoProyecto(), que valida la
@@ -229,6 +236,10 @@ export async function actualizarProyecto(id, datos) {
  * Primero se lee el estado actual para poder decir que transiciones si son posibles. El trigger
  * tr_validar_transicion_estado_proyecto (migracion 00029) vuelve a comprobarlo en el servidor:
  * esta validacion es para dar un mensaje util, no para sustituirlo.
+ *
+ * @param {string} id
+ * @param {string} nuevoEstado Uno de ESTADOS_PROYECTO.
+ * @returns {Promise<{ proyecto: object|null, error: object|null }>}
  */
 export async function cambiarEstadoProyecto(id, nuevoEstado) {
   const { proyecto, error: errorDeLectura } = await obtenerProyecto(id);
@@ -266,7 +277,12 @@ export async function cambiarEstadoProyecto(id, nuevoEstado) {
   }
 }
 
-/** Cierra un proyecto: lo pasa a finalizado, si viene de en curso. */
+/**
+ * Cierra un proyecto: lo pasa a finalizado, si viene de en curso.
+ *
+ * @param {string} id
+ * @returns {Promise<{ proyecto: object|null, error: object|null }>}
+ */
 export function cerrarProyecto(id) {
   return cambiarEstadoProyecto(id, ESTADOS_PROYECTO.FINALIZADO);
 }
@@ -276,6 +292,10 @@ export function cerrarProyecto(id) {
  *
  * El vinculo vive en jornadas.proyecto_id (migracion 00012) y no en una tabla intermedia: una
  * jornada pertenece a un solo proyecto.
+ *
+ * @param {string} jornadaId
+ * @param {string} proyectoId
+ * @returns {Promise<{ jornada: object|null, error: object|null }>}
  */
 export async function asociarJornadaAProyecto(jornadaId, proyectoId) {
   if (!jornadaId) return { jornada: null, error: null };
@@ -295,7 +315,12 @@ export async function asociarJornadaAProyecto(jornadaId, proyectoId) {
   }
 }
 
-/** Jornadas asociadas a un proyecto. Util para la ficha del proyecto. */
+/**
+ * Jornadas asociadas a un proyecto. Util para la ficha del proyecto.
+ *
+ * @param {string} proyectoId
+ * @returns {Promise<{ jornadas: object[], error: object|null }>}
+ */
 export async function listarJornadasDelProyecto(proyectoId) {
   if (!proyectoId) return { jornadas: [], error: null };
 

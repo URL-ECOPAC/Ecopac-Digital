@@ -21,6 +21,9 @@ import { ESTADOS_DE_GASTO } from "../enums.js";
  * jornadas y los gastos de las jornadas en las que participa, y los totales se calculan sobre eso-.
  * Ademas quien tiene presupuestos.registrar o presupuestos.aprobar delegado, que desde la 00148 ve
  * todos los gastos, y el rol al que la matriz le abrio el modulo (solo lectura).
+ *
+ * @param {string} rol
+ * @returns {boolean}
  */
 export function puedeVerTodosLosGastos(rol) {
   return (
@@ -32,7 +35,12 @@ export function puedeVerTodosLosGastos(rol) {
   );
 }
 
-/** Cualquier rol conocido ve los gastos de una jornada; RLS recorta las filas que no le tocan. */
+/**
+ * Cualquier rol conocido ve los gastos de una jornada; RLS recorta las filas que no le tocan.
+ *
+ * @param {string} rol
+ * @returns {boolean}
+ */
 export function puedeVerGastosDeJornada(rol) {
   return Object.values(ROLES).includes(rol);
 }
@@ -43,6 +51,9 @@ export function puedeVerGastosDeJornada(rol) {
  * La politica de INSERT (00089) admite a administrador, a quien tenga presupuestos.registrar, y al
  * personal asignado a la jornada, cuyo gasto entra pendiente y pasa por la aprobacion. Quien tiene
  * el modulo abierto por la matriz solo lee.
+ *
+ * @param {string} rol
+ * @returns {boolean}
  */
 export function puedeRegistrarGasto(rol) {
   return (
@@ -55,6 +66,9 @@ export function puedeRegistrarGasto(rol) {
 /**
  * Puede aprobar o rechazar un gasto: la administradora o quien tenga presupuestos.aprobar
  * delegado por persona (00052, conectado en el cliente por la 00148). Es la pestana Aprobaciones.
+ *
+ * @param {string} rol
+ * @returns {boolean}
  */
 export function puedeAprobarGasto(rol) {
   return tienePermisoFino(rol, "presupuestos.aprobar");
@@ -65,6 +79,10 @@ export function puedeAprobarGasto(rol) {
  *
  * tr_bloquear_gasto_finalizado (00052) deja inmutable cualquier gasto que ya esta aprobado o
  * rechazado, sin importar el rol. Por eso esta funcion recibe el estado y no solo el rol.
+ *
+ * @param {string} rol
+ * @param {string} estadoDelGasto Uno de ESTADOS_DE_GASTO.
+ * @returns {boolean}
  */
 export function puedeEditarGasto(rol, estadoDelGasto) {
   if (estadoDelGasto !== ESTADOS_DE_GASTO.PENDIENTE) return false;
@@ -101,6 +119,9 @@ export function permisosDeOrigenDePresupuesto(rol) {
  *
  * Sin `puedeEliminar`: gastos no tiene politica de DELETE ni GRANT de DELETE (00052), asi que
  * borrar un gasto no es una operacion del sistema.
+ *
+ * @param {string} rol
+ * @returns {{ puedeVer: boolean, puedeVerTodo: boolean, puedeCrear: boolean, puedeAprobar: boolean }}
  */
 export function permisosDeGastos(rol) {
   return {

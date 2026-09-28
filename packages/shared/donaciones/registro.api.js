@@ -51,6 +51,9 @@ function numeroONulo(valor) {
  * `medicamentoId` SI viaja desde la #840: es `donacion_detalle.medicamento_id` (00135), y con el
  * la funcion arma la descripcion y la unidad desde el catalogo. Hasta entonces se quedaba en el
  * estado del formulario y el paso de ingreso a inventario tenia que adivinar el medicamento.
+ *
+ * @param {object[]} [detalles]
+ * @returns {object[]}
  */
 export function aDetalleParaGuardar(detalles = []) {
   return detalles.map(({ descripcion, cantidad, unidad, monto, medicamentoId }) => ({

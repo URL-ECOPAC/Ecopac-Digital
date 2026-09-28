@@ -45,6 +45,9 @@ function esCredencialesInvalidas(error) {
  * de React que este archivo no puede tocar (packages/shared no puede depender de como cada
  * consumidor organiza su estado). Cada quien decide cuándo y cómo cerrar; esta función solo
  * dice si hace falta.
+ *
+ * @param {object} error
+ * @returns {boolean}
  */
 export function requiereCerrarSesion(error) {
   return (
@@ -135,6 +138,8 @@ let cierreDeliberado = null;
  * Sin marca, useSesion publica lo que ya publicaba. Ese es el caso de a quien desactivan CON la
  * sesion abierta, donde el mensaje especifico si corresponde: no hay ningun intento de login que
  * pueda enumerar nada.
+ *
+ * @returns {{ marcado: boolean, error: object|null }}
  */
 export function consumirCierreDeliberado() {
   if (!cierreDeliberado) return { marcado: false, error: null };

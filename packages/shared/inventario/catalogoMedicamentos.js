@@ -171,7 +171,12 @@ export function filtrarCatalogoMedicamentos(medicamentos = [], filtros = {}) {
   });
 }
 
-/** Si hay algun filtro del catalogo puesto. */
+/**
+ * Si hay algun filtro del catalogo puesto.
+ *
+ * @param {object} [filtros]
+ * @returns {boolean}
+ */
 export function hayFiltrosDeCatalogo(filtros = {}) {
   return Boolean(
     (filtros.busqueda && filtros.busqueda.trim()) ||

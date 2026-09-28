@@ -51,6 +51,8 @@ export function opcionDeDonacionConSaldo(donacion) {
  * @param {{ jornadaId: string, proyectoId?: string|null, rol: string,
  *   alCambiar?: () => void }} opciones `alCambiar` avisa a la pantalla que el total de la
  *   jornada cambio, para que lo vuelva a leer.
+ *
+ * @returns {object} Con: permisos, origenes, total, cargando, error, recargar, campos, catalogos, crearFuente, creandoFuente, errorFuente, limpiarErrorFuente, valores, setCampo, errores, errorAlGuardar, guardando, registrar, quitar, quitandoId.
  */
 export function useOrigenesDePresupuesto({ jornadaId, proyectoId = null, rol, alCambiar } = {}) {
   const permisos = permisosDeOrigenDePresupuesto(rol);

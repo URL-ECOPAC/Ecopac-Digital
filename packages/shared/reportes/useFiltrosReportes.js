@@ -163,6 +163,7 @@ export function mapearCatalogoAOpciones(filas, { valor = "id", etiqueta = "nombr
  * (packages/shared/reportes/api.js): `periodo` anidado con `fechaInicio`/`fechaFin`.
  *
  * @param {typeof FILTROS_REPORTES_VACIOS} filtrosAplicados
+ * @returns {{ periodo: { fechaInicio: string|null, fechaFin: string|null }, comunidad: string|undefined, jornada: string|undefined, proyecto: string|undefined }}
  */
 export function aParametrosDeIndicadoresImpacto(filtrosAplicados) {
   return {
@@ -184,6 +185,7 @@ export function aParametrosDeIndicadoresImpacto(filtrosAplicados) {
  * proyecto ahi tambien-.
  *
  * @param {typeof FILTROS_REPORTES_VACIOS} filtrosAplicados
+ * @returns {{ desde: string|undefined, hasta: string|undefined, comunidad: string|undefined, jornada: string|undefined }}
  */
 export function aParametrosDeReportePacientes(filtrosAplicados) {
   return {
@@ -209,6 +211,7 @@ export function aParametrosDeReportePacientes(filtrosAplicados) {
  * consultas hasta que el usuario confirma o pasa el retardo"-.
  *
  * @param {{ retardoMs?: number, valoresIniciales?: { valores: object, presetActivo: string|null } }} [opciones]
+ * @returns {object} Con: valores, filtrosAplicados, presetActivo, setFiltro, setPreset, limpiarFiltro, limpiarFiltros, aplicarFiltros, catalogos, cargandoCatalogos, errorDeCatalogos.
  */
 export function useFiltrosReportes({ retardoMs = RETARDO_DE_FILTROS_MS, valoresIniciales } = {}) {
   const [valores, setValores] = useState(valoresIniciales?.valores ?? FILTROS_REPORTES_VACIOS);

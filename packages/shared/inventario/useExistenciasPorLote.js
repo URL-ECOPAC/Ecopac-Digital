@@ -152,6 +152,8 @@ export function armarFilasDeExistencias(lotes = [], existencias = [], filtros = 
  * @param {{ estadosDeLote?: object[] }} [opciones] Etiquetas de estado, para el selector. Las
  *   pone quien llama porque salen de @ecopac/ui-tokens, que shared no importa para texto de
  *   estado -- el mismo reparto que ya usan las columnas con `etiquetasDesde`.
+ *
+ * @returns {object} Con: filas, total, totalSinFiltrar, filtros, setFiltro, limpiarFiltros, hayFiltros, cargando, error, recargar, catalogos.
  */
 export function useExistenciasPorLote({ estadosDeLote = [] } = {}) {
   const [lotes, setLotes] = useState([]);

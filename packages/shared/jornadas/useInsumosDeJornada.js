@@ -37,6 +37,8 @@ export function resumirInsumosPrevistos(insumos = []) {
  *
  * @param {{ jornadaId?: string, rol?: string, activo?: boolean }} opciones `activo` en false no
  *   consulta nada: la pestana se carga al abrirse.
+ *
+ * @returns {object} Con: puedeVer, puedeGestionar, columnas, campos, catalogos, insumos, resumen, cargando, error, errores, ocupado, guardar, quitar, recargar.
  */
 export function useInsumosDeJornada({ jornadaId, rol, activo = true } = {}) {
   const puedeVer = puedeVerInsumosDeJornada(rol);

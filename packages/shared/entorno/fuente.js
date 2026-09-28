@@ -18,6 +18,8 @@ import { PLATAFORMAS } from "./reglas.js";
  * Los accesos se escriben completos, uno por uno y sin encadenamiento opcional, porque Vite
  * sustituye exactamente esa expresion por el valor literal al compilar. Si la variable no
  * esta definida llega como undefined y resolverEntorno la reporta por su nombre exacto.
+ *
+ * @returns {{ plataforma: string, esDesarrollo: boolean, valores: object }}
  */
 export function leerFuente() {
   return {

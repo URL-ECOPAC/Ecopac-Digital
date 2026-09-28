@@ -17,6 +17,10 @@ import { nombreDe } from "./useKardexMovimientos.js";
  *
  * Exportada aparte del hook para poder probarla sin montar React (packages/shared corre vitest
  * en environment "node", sin DOM), mismo motivo que filasDeKardex() en useKardexMovimientos.js.
+ *
+ * @param {object} mov Fila de movimientos_inventario con sus relaciones.
+ * @param {string} usuarioId
+ * @returns {object} Los campos de la fila de origen, mas: medicamentoNombre, numeroLote, bodegaNombre, registradoPorNombre, createdAt, puedeEditar.
  */
 export function filaDeMisMovimientos(mov, usuarioId) {
   return {
@@ -65,6 +69,11 @@ export function valoresDeCorreccionDeMovimiento(movimiento) {
  * activa desde la 00034/00079, y el UPDATE de 00106 solo alcanza lo propio y pendiente): este
  * hook filtra por comodidad de pantalla, no como barrera de seguridad -mismo criterio que deja
  * escrito el encabezado de permisos.js.
+ *
+ * @param {object} [opciones]
+ * @param {string} [opciones.usuarioId]
+ * @param {string} [opciones.rolUsuario]
+ * @returns {object} Con: movimientos, total, filtros, setFiltro, limpiarFiltros, hayFiltros, cargando, error, enviando, erroresForm, puedeVer, puedeVerTodos, editar, recargar.
  */
 export function useMisMovimientos({ usuarioId, rolUsuario } = {}) {
   const [movimientos, setMovimientos] = useState([]);

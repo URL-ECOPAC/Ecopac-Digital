@@ -17,6 +17,8 @@ import { combinarJornadasConPresupuesto } from "./useEjecucionPresupuestal.js";
  * @param {string|null} proyectoId Proyecto cuyo detalle se quiere ver. `null`/`undefined` deja
  *   el hook inactivo (sin consultar, sin jornadas), para poder llamarlo siempre y activarlo solo
  *   cuando la pantalla abre un proyecto.
+ *
+ * @returns {{ jornadas: object[], cargando: boolean, error: object|null, recargar: Function }}
  */
 export function useDetalleProyectoPresupuesto(proyectoId) {
   const [jornadas, setJornadas] = useState([]);

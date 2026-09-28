@@ -14,6 +14,9 @@ import { esAdministrador, ROLES } from "../usuarios/roles.js";
  * Espejo de la politica de INSERT de 00033, que admite administrador, medico y voluntario
  * general: registrar en la mesa de entrada es lo primero del flujo de campo y no lo hace solo
  * el personal medico.
+ *
+ * @param {string} rol
+ * @returns {boolean}
  */
 export function puedeIniciarAtencion(rol) {
   return esAdministrador(rol) || rol === ROLES.MEDICO || rol === ROLES.VOLUNTARIO;
@@ -27,6 +30,9 @@ export function puedeIniciarAtencion(rol) {
  * esos dos roles: quien cierra el flujo es quien lo termina.
  *
  * Un voluntario registra pacientes y toma triaje, pero no decide que una atencion termino.
+ *
+ * @param {string} rol
+ * @returns {boolean}
  */
 export function puedeCerrarAtencion(rol) {
   return esAdministrador(rol) || rol === ROLES.MEDICO;
@@ -38,6 +44,9 @@ export function puedeCerrarAtencion(rol) {
  * Cualquier rol conocido: que filas devuelve la vista lo acota su propio WHERE (00060), que
  * limita a quien participa en la jornada mas la administradora. Esta funcion no lo replica
  * porque el cliente no sabe en que jornadas esta asignada la persona sin preguntar.
+ *
+ * @param {string} rol
+ * @returns {boolean}
  */
 export function puedeVerCola(rol) {
   return Object.values(ROLES).includes(rol);

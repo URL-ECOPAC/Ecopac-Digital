@@ -26,6 +26,9 @@ const ITEM_VACIO = {
  * cada movimiento creado con el renglon que lo origino (por ejemplo, para enlazar el lote de
  * vuelta con donacion_detalle.lote_id, donaciones/ingreso.api.js): datosIngresoParaRegistrar()
  * no lo lee, asi que nunca llega al servidor.
+ *
+ * @param {object} renglon
+ * @returns {object} Los campos de la fila de origen, mas: medicamento_id, cantidad, donacionDetalleId, medicamentoFijo.
  */
 export function itemDesdeRenglonDeDonacion(renglon) {
   return {
@@ -48,6 +51,7 @@ export function itemDesdeRenglonDeDonacion(renglon) {
  *
  * @param {object} item
  * @param {{ origen: string, proveedorId: string, numeroComprobante: string, usuarioId?: string }} datosComunes
+ * @returns {object} Con: origen, bodega_id, medicamento_id, numero_lote, fecha_vencimiento, proveedor_id, cantidad, motivo, usuarioId, costo_unitario.
  */
 export function datosIngresoParaRegistrar(
   item,
@@ -118,6 +122,8 @@ export function datosIngresoParaRegistrar(
  *   onGuardarExitoso?: (movimientos: object[], items: object[]) => void,
  *   detallesDonacion?: { donacionDetalleId: string, cantidad: number, medicamentoId?: string,
  *     descripcion?: string }[], proveedorIdInicial?: string }} [opciones]
+ *
+ * @returns {object} Con: origen, setOrigen, proveedorId, setProveedorId, numeroComprobante, setNumeroComprobante, items, itemActual, setItemActual, agregarItem, eliminarItem, guardarMovimiento, resumenGuardado, resetFormulario, error, guardando, puedeCrearMedicamento, crearMedicamentoNuevo, creandoMedicamento, errorMedicamento.
  */
 export function useRegistroIngreso({
   usuarioId,

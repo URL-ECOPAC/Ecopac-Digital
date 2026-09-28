@@ -7,7 +7,12 @@
 // sin senal con varias incidencias acumuladas).
 export const MAXIMO_DE_AVISOS_INDIVIDUALES = 3;
 
-/** La fecha de la notificacion mas reciente de la lista, o null si esta vacia. */
+/**
+ * La fecha de la notificacion mas reciente de la lista, o null si esta vacia.
+ *
+ * @param {object[]} notificaciones
+ * @returns {string|null} El createdAt mas reciente, o null si no hay ninguna.
+ */
 export function marcaMasReciente(notificaciones) {
   return notificaciones.reduce(
     (marca, n) => (marca === null || n.createdAt > marca ? n.createdAt : marca),
@@ -21,6 +26,7 @@ export function marcaMasReciente(notificaciones) {
  *
  * @param {object[]} notificaciones
  * @param {string|null} marca createdAt ISO de la ultima notificacion conocida
+ * @returns {object[]}
  */
 export function notificacionesNuevasDesde(notificaciones, marca) {
   if (!marca) return [];

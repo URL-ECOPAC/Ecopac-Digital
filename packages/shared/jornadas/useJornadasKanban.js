@@ -171,6 +171,8 @@ export function agruparJornadasPorEstado(jornadas = [], pacientesPorJornada = {}
  *   resolver `puedeCrear`/`puedeEditar`/`puedeReabrir` con permisosDeJornadas() y para pasarle
  *   el rol a cambiarEstadoJornada(). Un rol ausente resuelve a todo en `false`, igual que
  *   permisosDeJornadas(undefined).
+ *
+ * @returns {object} Con: columnas, filtros, setFiltro, limpiarFiltros, hayFiltros, cargando, error, recargar, total, catalogos, puedeCrear, puedeEditar, puedeReabrir, moverJornada, moviendo, errorMovimiento, descartarErrorMovimiento, pedirCierreEnDetalle, descartarPedidoCierre.
  */
 export function useJornadasKanban(rol) {
   const [filtros, setFiltros] = useState(FILTROS_JORNADA_VACIOS);

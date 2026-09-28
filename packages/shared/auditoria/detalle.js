@@ -15,7 +15,12 @@ export const CAMPOS_TECNICOS_DE_AUDITORIA = Object.freeze(["id", "created_at", "
 
 const esCampoVisible = (clave) => !CAMPOS_TECNICOS_DE_AUDITORIA.includes(clave);
 
-/** "fecha_nacimiento" -> "Fecha Nacimiento". Las columnas del esquema ya estan en español. */
+/**
+ * "fecha_nacimiento" -> "Fecha Nacimiento". Las columnas del esquema ya estan en español.
+ *
+ * @param {string} clave
+ * @returns {string}
+ */
 export function nombreDeCampo(clave) {
   return clave
     .split("_")
@@ -40,6 +45,7 @@ const esColumnaDeEstado = (clave) => typeof clave === "string" && /(^|_)estado(_
  *
  * @param {unknown} valor
  * @param {string} [clave] Nombre de la columna.
+ * @returns {string}
  */
 export function formatearValorDeAuditoria(valor, clave) {
   if (valor === null || valor === undefined) return "—";

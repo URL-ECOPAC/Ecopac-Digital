@@ -14,6 +14,7 @@ import { useKardexMovimientos } from "./useKardexMovimientos.js";
  * combinar su propio estado con useAlertasVencimiento().
  *
  * @param {string} loteId
+ * @returns {{ lote: object|null, movimientos: object[], cargando: boolean, error: object|null, recargar: Function }}
  */
 export function useDetalleLote(loteId) {
   const [lote, setLote] = useState(null);

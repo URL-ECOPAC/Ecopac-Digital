@@ -20,6 +20,9 @@ import { esAdministrador, ROLES, ROLES_DE_CAMPO } from "../usuarios/roles.js";
  * Puede administrar el catalogo de lotes: darlos de alta ya firmes y editar los que ya lo son.
  *
  * Espejo de la rama `es_administrador()` de las dos politicas de la 00107.
+ *
+ * @param {string} rol
+ * @returns {boolean}
  */
 export function puedeAdministrarLotes(rol) {
   return esAdministrador(rol);
@@ -30,6 +33,9 @@ export function puedeAdministrarLotes(rol) {
  *
  * Para un rol de campo el lote nace provisional y solo lo puede corregir mientras siga asi; para
  * la administradora nace firme. Espejo de la politica de INSERT de la 00107.
+ *
+ * @param {string} rol
+ * @returns {boolean}
  */
 export function puedeProponerLote(rol) {
   return esAdministrador(rol) || ROLES_DE_CAMPO.includes(rol);
@@ -41,6 +47,9 @@ export function puedeProponerLote(rol) {
  * La politica de SELECT de lotes es de lectura abierta para cualquier autenticado: cualquier rol
  * conocido puede ver el listado completo, provisionales incluidos -- quien registro uno tiene que
  * poder encontrarlo, y la administradora tiene que poder revisarlo antes de aprobar.
+ *
+ * @param {string} rol
+ * @returns {boolean}
  */
 export function puedeVerLotes(rol) {
   return Object.values(ROLES).includes(rol);
@@ -76,6 +85,9 @@ export function puedeCorregirLote(rol, lote, usuarioId) {
  * `puedeCrear` responde "se le puede ofrecer el formulario de alta"; `puedeAdministrar`, "lo que
  * cree nace firme y ademas puede editar los ajenos". Sin `puedeEliminar`: no hay politica ni
  * GRANT de DELETE sobre lotes para nadie.
+ *
+ * @param {string} rol
+ * @returns {{ puedeVer: boolean, puedeCrear: boolean, puedeAdministrar: boolean }}
  */
 export function permisosDeLotes(rol) {
   return {

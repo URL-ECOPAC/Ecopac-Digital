@@ -24,6 +24,7 @@ export function textoComparable(texto) {
  *
  * @param {{ value: unknown, label: string }[]} opciones
  * @param {string} texto
+ * @returns {{ value: *, label: string }|null}
  */
 export function buscarOpcionPorEtiqueta(opciones = [], texto = "") {
   const buscado = textoComparable(texto);

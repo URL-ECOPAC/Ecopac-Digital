@@ -33,6 +33,9 @@ export const ROLES_QUE_ADMINISTRAN_PROYECTOS = Object.freeze([ROLES.ADMINISTRADO
 /**
  * Puede crear, editar, cambiar de estado y asociar jornadas: la administradora o quien tenga
  * `proyectos.gestionar` delegado por persona (00086, conectado en el cliente por la 00148).
+ *
+ * @param {string} rol
+ * @returns {boolean}
  */
 export function puedeAdministrarProyectos(rol) {
   return tienePermisoFino(rol, "proyectos.gestionar");
@@ -55,6 +58,9 @@ function veElProyectoEntero(rol) {
  * solo los proyectos a los que pertenece -por su equipo o por una de sus jornadas,
  * pertenece_a_proyecto()-. Esta funcion no puede expresar ese filtro y no le hace falta: decide si
  * se dibuja la pantalla, y las filas las elige la base.
+ *
+ * @param {string} rol
+ * @returns {boolean}
  */
 export function puedeVerProyectos(rol) {
   return esAdministrador(rol) || ROLES_DE_CAMPO.includes(rol) || veElProyectoEntero(rol);
@@ -65,6 +71,9 @@ export function puedeVerProyectos(rol) {
  *
  * El personal de campo no (issue #864, 00148): ve que es el proyecto, en que estado esta, su
  * equipo y sus jornadas, no lo que costo.
+ *
+ * @param {string} rol
+ * @returns {boolean}
  */
 export function puedeVerInsumosYGastosDeProyecto(rol) {
   return veElProyectoEntero(rol);
@@ -73,6 +82,9 @@ export function puedeVerInsumosYGastosDeProyecto(rol) {
 /**
  * Puede ver el historial de cambios de estado del proyecto (proyecto_estado_historial, 00029).
  * Espejo de su politica de SELECT desde la 00148.
+ *
+ * @param {string} rol
+ * @returns {boolean}
  */
 export function puedeVerHistorialProyecto(rol) {
   return veElProyectoEntero(rol);
@@ -81,6 +93,9 @@ export function puedeVerHistorialProyecto(rol) {
 /**
  * Puede abrir el seguimiento de un proyecto -hitos y bitacora de avance-. El personal de campo no
  * (00148): su detalle del proyecto es de consulta.
+ *
+ * @param {string} rol
+ * @returns {boolean}
  */
 export function puedeVerSeguimientoProyecto(rol) {
   return veElProyectoEntero(rol);
@@ -98,6 +113,7 @@ export function puedeVerSeguimientoProyecto(rol) {
  *
  * @param {string} rol
  * @param {{ estado?: string }|null} [proyecto]
+ * @returns {object} Con: puedeVer, puedeCrear, puedeEditar, puedeCambiarEstado, puedeAsociarJornadas, puedeGestionarEquipo, puedeGestionarInsumos, puedeRegistrarSeguimiento, puedeVerInsumosYGastos, puedeVerHistorial, puedeVerSeguimiento.
  */
 export function permisosDeProyectos(rol, proyecto = null) {
   const administra = puedeAdministrarProyectos(rol);

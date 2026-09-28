@@ -35,6 +35,7 @@ import { CAMPOS_HITO } from "./campos.js";
  *
  * @param {{ fechaReal?: string, fechaPrevista?: string }} hito
  * @param {string} fechaHoy "AAAA-MM-DD", normalmente aCadenaFechaLocal(hoy).
+ * @returns {object} Los campos de la fila de origen, mas: esCumplido, esVencido.
  */
 export function procesarHito(hito, fechaHoy) {
   const esCumplido = Boolean(hito.fechaReal);
@@ -54,6 +55,13 @@ export function procesarHito(hito, fechaHoy) {
  * listarJornadasDelProyecto) ya existian en el modulo sin que ningun hook las llamara. Ahora el
  * hook las llama el mismo con `proyectoId`, igual que useProyectosSociales hace con
  * listarProyectos().
+ *
+ * @param {object} [opciones]
+ * @param {string} [opciones.proyectoId]
+ * @param {object|null} [opciones.proyectoInicial] El proyecto que ya traia el listado.
+ * @param {Date} [opciones.hoy]
+ * @param {string} [opciones.rol]
+ * @returns {object} Con: proyecto, proyectoCancelado, puedeRegistrarSeguimiento, estadosSiguientes, cambiarEstado, hitos, bitacora, jornadas, historial, puedeVerHistorial, indicadoresJornadas, campos, cargando, errorCarga, nuevoPorcentaje, setNuevoPorcentaje, nuevaNota, setNuevaNota, errorAccion, erroresHito, cargandoAccion, guardarSeguimiento, cambiarEstadoHito, guardarHito, recargar.
  */
 export function useSeguimientoProyecto({
   proyectoId,

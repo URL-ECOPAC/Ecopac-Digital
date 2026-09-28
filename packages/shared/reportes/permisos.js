@@ -64,7 +64,12 @@ function consultaReportes(rol) {
   );
 }
 
-/** Puede consultar los indicadores de impacto. */
+/**
+ * Puede consultar los indicadores de impacto.
+ *
+ * @param {string} rol
+ * @returns {boolean}
+ */
 export function puedeVerIndicadoresDeImpacto(rol) {
   return consultaReportes(rol);
 }
@@ -86,6 +91,9 @@ export function puedeVerIndicadoresDeImpacto(rol) {
  * Ninguna columna del reporte identifica a un paciente -la RPC nunca devuelve una fila por
  * persona-, asi que dejarlo entrar no contradice la regla de la issue #426 de que los roles
  * consultivos solo ven agregados.
+ *
+ * @param {string} rol
+ * @returns {boolean}
  */
 export function puedeVerReporteDePacientes(rol) {
   return consultaReportes(rol);
@@ -98,6 +106,9 @@ export function puedeVerReporteDePacientes(rol) {
  * monta el resumen de jornada de la app movil). Hasta la 00148 los roles consultivos no lo tenian:
  * el cliente agregaba filas clinicas crudas (consultas, diagnosticos, recetas) que la 00054 les
  * retiro. Ahora la base lo entrega ya agregado, sin ninguna fila de paciente.
+ *
+ * @param {string} rol
+ * @returns {boolean}
  */
 export function puedeVerReporteJornada(rol) {
   return consultaReportes(rol) || rol === ROLES.MEDICO;
@@ -110,6 +121,9 @@ export function puedeVerReporteJornada(rol) {
  * lotes, medicamentos y bodegas son igual de abiertas (00034): quien tiene un perfil activo ve
  * el inventario. Un perfil desactivado no llega hasta aqui, porque rol_actual() le devuelve NULL
  * al servidor y este hook no recibe rol.
+ *
+ * @param {string} rol
+ * @returns {boolean}
  */
 export function puedeVerReporteDeInventario(rol) {
   return Object.values(ROLES).includes(rol);
@@ -126,6 +140,9 @@ export function puedeVerReporteDeInventario(rol) {
  * no describia lo que el servidor hace con este. Hoy no cambia quien entra, porque los tres roles
  * que alcanzan el modulo pasan las dos guardas; cambia que la funcion dice la verdad, y que el
  * dia que la ruta se abra a mas roles no herede una restriccion que nadie escribio a proposito.
+ *
+ * @param {string} rol
+ * @returns {boolean}
  */
 export function puedeVerReporteDeVencimientos(rol) {
   return puedeVerReporteDeInventario(rol);
@@ -136,6 +153,9 @@ export function puedeVerReporteDeVencimientos(rol) {
  *
  * Se devuelven juntos para que un hook no tenga que llamar a las funciones sueltas ni acordarse
  * de cuales existen.
+ *
+ * @param {string} rol
+ * @returns {{ puedeVerIndicadoresDeImpacto: boolean, puedeVerReporteDePacientes: boolean, puedeVerReporteJornada: boolean, puedeVerReporteDeInventario: boolean, puedeVerReporteDeVencimientos: boolean }}
  */
 export function permisosDeReportes(rol) {
   return {

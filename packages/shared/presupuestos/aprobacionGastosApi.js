@@ -7,6 +7,8 @@ import {
 
 /**
  * Obtiene la lista de gastos pendientes de aprobación ordenados por fecha.
+ *
+ * @returns {Promise<{ gastos: object[], error: object|null }>}
  */
 export async function listarGastosPendientes() {
   try {
@@ -29,6 +31,11 @@ export async function listarGastosPendientes() {
  * El ejecutado de la jornada/proyecto no se materializa aqui: presupuesto_de_jornada(),
  * presupuesto_de_proyecto() y presupuesto_del_sistema() (00040) lo calculan en vivo sumando
  * gastos aprobados en el momento de consultarlo.
+ *
+ * @param {object} opciones
+ * @param {string} opciones.gastoId
+ * @param {string} opciones.usuarioId
+ * @returns {Promise<{ gasto: object|null, error: object|null }>}
  */
 export async function aprobarGasto({ gastoId, usuarioId }) {
   if (!gastoId || !usuarioId) {
@@ -68,6 +75,12 @@ export async function aprobarGasto({ gastoId, usuarioId }) {
  * Reutiliza aprobado_por/aprobado_en para la auditoria de la decision, igual que
  * movimientos_inventario (00023): no hay rechazado_por ni fecha_rechazo. motivo_rechazo
  * (00071) es la unica columna nueva.
+ *
+ * @param {object} opciones
+ * @param {string} opciones.gastoId
+ * @param {string} opciones.usuarioId
+ * @param {string} opciones.motivo
+ * @returns {Promise<{ gasto: object|null, error: object|null }>}
  */
 export async function rechazarGasto({ gastoId, usuarioId, motivo }) {
   if (!gastoId || !usuarioId) {

@@ -30,6 +30,9 @@ export const DIRECCIONES = Object.freeze({ ASC: "asc", DESC: "desc" });
  * Los nulos van SIEMPRE al final, en las dos direcciones: un medicamento sin fecha de vencimiento
  * no es "el que vence primero" ni "el ultimo", es un dato que falta, y mezclarlo entre los que si
  * tienen fecha hace leer mal la tabla.
+ *
+ * @param {*} valor Cualquier valor de celda.
+ * @returns {boolean}
  */
 export function esVacio(valor) {
   return valor === null || valor === undefined || valor === "";
@@ -56,7 +59,14 @@ export function compararValores(uno, otro) {
   return String(uno).localeCompare(String(otro), "es", { numeric: true, sensitivity: "base" });
 }
 
-/** Ordena una copia de `filas` por la clave de una columna. No muta el arreglo recibido. */
+/**
+ * Ordena una copia de `filas` por la clave de una columna. No muta el arreglo recibido.
+ *
+ * @param {object[]} filas
+ * @param {{ id: string, direccion: string }|null} orden
+ * @param {object[]} [columnas]
+ * @returns {object[]}
+ */
 export function ordenarFilas(filas, orden, columnas = []) {
   if (!orden?.id) return filas;
 
@@ -79,12 +89,25 @@ export function ordenarFilas(filas, orden, columnas = []) {
   });
 }
 
-/** Cuantas paginas hacen falta. Un conjunto vacio es UNA pagina vacia, no cero. */
+/**
+ * Cuantas paginas hacen falta. Un conjunto vacio es UNA pagina vacia, no cero.
+ *
+ * @param {number} total
+ * @param {number} [tamanoPagina]
+ * @returns {number}
+ */
 export function contarPaginas(total, tamanoPagina = TAMANO_DE_PAGINA_POR_DEFECTO) {
   return Math.max(1, Math.ceil(total / tamanoPagina));
 }
 
-/** La rebanada que toca a una pagina, 1-indexada. */
+/**
+ * La rebanada que toca a una pagina, 1-indexada.
+ *
+ * @param {object[]} [filas]
+ * @param {number} [numeroDePagina]
+ * @param {number} [tamanoPagina]
+ * @returns {object[]}
+ */
 export function recortarAPagina(
   filas = [],
   numeroDePagina = 1,
@@ -100,6 +123,10 @@ export function recortarAPagina(
  * Primer clic ascendente, segundo descendente, tercero lo quita y devuelve el orden natural que
  * trae la API -que no es arbitrario: vencimientos viene por dias restantes ascendente y jornada
  * por frecuencia descendente, y esos son los ordenes en los que cada reporte se lee mejor-.
+ *
+ * @param {{ id: string, direccion: string }|null} actual
+ * @param {string} id
+ * @returns {{ id: string, direccion: string }|null}
  */
 export function siguienteOrden(actual, id) {
   if (actual?.id !== id) return { id, direccion: DIRECCIONES.ASC };
@@ -115,6 +142,7 @@ export function siguienteOrden(actual, id) {
  * @param {object[]} [opciones.columnas] Descriptor, para resolver `desde` al ordenar.
  * @param {{id: string, direccion: string}} [opciones.ordenInicial]
  * @param {number} [opciones.tamanoPagina]
+ * @returns {{ pagina: object[], filasOrdenadas: object[], orden: object|null, alternarOrden: Function, numeroDePagina: number, totalPaginas: number, irAPagina: Function, total: number }}
  */
 export function useOrdenYPagina(
   filas = [],

@@ -29,12 +29,22 @@ function colaVacia() {
   return Object.fromEntries(ORDEN_DE_ETAPAS.map((etapa) => [etapa, []]));
 }
 
-/** Clave de almacenamiento de la jornada elegida por esta persona. */
+/**
+ * Clave de almacenamiento de la jornada elegida por esta persona.
+ *
+ * @param {string} perfilId
+ * @returns {string}
+ */
 export function claveDeAlmacenamiento(perfilId) {
   return `jornada_activa:${perfilId}`;
 }
 
-/** Subconjunto de jornadas asignadas que estan en curso ahora mismo. */
+/**
+ * Subconjunto de jornadas asignadas que estan en curso ahora mismo.
+ *
+ * @param {object[]} [jornadas]
+ * @returns {object[]}
+ */
 export function filtrarJornadasEnCurso(jornadas = []) {
   return jornadas.filter((jornada) => jornada.estado === ESTADOS_JORNADA.EN_CURSO);
 }

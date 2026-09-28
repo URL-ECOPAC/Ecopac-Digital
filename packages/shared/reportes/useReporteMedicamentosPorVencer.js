@@ -42,7 +42,12 @@ import { obtenerReporteDeVencimientos } from "./vencimientos.api.js";
 // dependencias de cargar(). Se borra entero, y en su lugar se exponen los dos filtros que la API
 // SI acepta y no se ofrecian: medicamento y estado de vencimiento.
 
-/** Nivel de alerta segun los dias que le quedan al lote. Negativo = ya vencido. */
+/**
+ * Nivel de alerta segun los dias que le quedan al lote. Negativo = ya vencido.
+ *
+ * @param {number} diasRestantes
+ * @returns {string} Uno de NIVELES_ALERTA_VENCIMIENTO.
+ */
 export function calcularAlerta(diasRestantes) {
   if (diasRestantes <= UMBRALES_ALERTA.CRITICO) return NIVELES_ALERTA_VENCIMIENTO.CRITICO;
   if (diasRestantes <= UMBRALES_ALERTA.ALTO) return NIVELES_ALERTA_VENCIMIENTO.ALTO;
@@ -55,6 +60,9 @@ export function calcularAlerta(diasRestantes) {
  *
  * Es lo unico que hace falta traducir: los demas nombres que declara COLUMNAS_VENCIMIENTO ya
  * salen tal cual de aRenglon() en vencimientos.api.js.
+ *
+ * @param {object[]} [renglones]
+ * @returns {object[]}
  */
 export function conNivelDeAlerta(renglones = []) {
   return renglones.map((renglon) => ({

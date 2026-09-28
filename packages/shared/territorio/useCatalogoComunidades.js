@@ -28,6 +28,10 @@ function filaDe(comunidad) {
  * Hook de vista de la pantalla de catalogo de comunidades (issue #756). Espejo de
  * useCatalogoPrincipiosActivos.js (packages/shared/inventario/): lista, filtra, crea y edita,
  * mas el municipio de cada fila resuelto a nombre.
+ *
+ * @param {object} [opciones]
+ * @param {string} [opciones.rol]
+ * @returns {object} Con: comunidades, total, filtros, setFiltro, limpiarFiltros, hayFiltros, cargando, error, enviando, erroresForm, permisos, guardar, alternarVigencia, recargar, catalogos.
  */
 export function useCatalogoComunidades({ rol } = {}) {
   const [comunidades, setComunidades] = useState([]);

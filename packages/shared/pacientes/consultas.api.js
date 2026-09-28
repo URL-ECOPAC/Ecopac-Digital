@@ -645,7 +645,12 @@ export async function desactivarDiagnostico(id) {
   return cambiarActivoDelDiagnostico(id, false);
 }
 
-/** Reactiva un diagnostico retirado (issue #639): vuelve a ofrecerse en el selector. */
+/**
+ * Reactiva un diagnostico retirado (issue #639): vuelve a ofrecerse en el selector.
+ *
+ * @param {string} id
+ * @returns {Promise<{ diagnostico: object|null, error: object|null }>}
+ */
 export async function activarDiagnostico(id) {
   return cambiarActivoDelDiagnostico(id, true);
 }

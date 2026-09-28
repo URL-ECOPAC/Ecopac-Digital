@@ -70,6 +70,7 @@ export function calcularPaginas(total, porPagina) {
  * junta directiva terminaba viendo solo su propia fila).
  *
  * @param {{ porPagina?: number, rol?: string }} [opciones]
+ * @returns {object} Con: filas, filtros, setFiltro, limpiarFiltros, hayFiltros, cargando, error, recargar, pagina, paginas, total, hayPaginaAnterior, hayPaginaSiguiente, irAPaginaAnterior, irAPaginaSiguiente, catalogos.
  */
 export function useUsuariosListado({ porPagina = USUARIOS_POR_PAGINA, rol } = {}) {
   const [filtros, setFiltros] = useState(FILTROS_USUARIO_VACIOS);

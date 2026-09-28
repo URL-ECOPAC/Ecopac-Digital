@@ -15,6 +15,9 @@ import { esAdministrador, ROLES, ROLES_DE_CAMPO } from "../usuarios/roles.js";
  *
  * Espejo de las politicas de INSERT y UPDATE de la 00148: administrador y personal de campo.
  * Eliminar no: la politica de DELETE sigue siendo solo de la administradora.
+ *
+ * @param {string} rol
+ * @returns {boolean}
  */
 export function puedeAdministrarPrincipiosActivos(rol) {
   return esAdministrador(rol) || ROLES_DE_CAMPO.includes(rol);
@@ -26,6 +29,9 @@ export function puedeAdministrarPrincipiosActivos(rol) {
  * La politica de SELECT de principios_activos es de lectura abierta para cualquier
  * autenticado (USING (true)): a diferencia de jornadas, aqui no hay filas que un rol
  * vea y otro no, asi que cualquier rol conocido puede ver el listado completo.
+ *
+ * @param {string} rol
+ * @returns {boolean}
  */
 export function puedeVerPrincipiosActivos(rol) {
   return Object.values(ROLES).includes(rol);
@@ -36,6 +42,9 @@ export function puedeVerPrincipiosActivos(rol) {
  *
  * Se devuelven juntos para que un hook no tenga que llamar a las funciones sueltas
  * ni acordarse de cuales existen.
+ *
+ * @param {string} rol
+ * @returns {{ puedeVer: boolean, puedeCrear: boolean, puedeEditar: boolean, puedeEliminar: boolean }}
  */
 export function permisosDePrincipiosActivos(rol) {
   const puedeAdministrar = puedeAdministrarPrincipiosActivos(rol);

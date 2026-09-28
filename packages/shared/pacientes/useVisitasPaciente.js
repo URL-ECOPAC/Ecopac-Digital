@@ -29,6 +29,7 @@ export function partesDeVisita(visita) {
 /**
  * @param {string} pacienteId
  * @param {{ rol: string }} opciones
+ * @returns {object} Con: permitido, visitas, filtros, setFiltro, limpiarFiltros, hayFiltros, cargando, error, recargar.
  */
 export function useVisitasPaciente(pacienteId, { rol } = {}) {
   const [visitas, setVisitas] = useState([]);

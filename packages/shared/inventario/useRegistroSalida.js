@@ -36,6 +36,7 @@ import { recargarAlertasMontadas } from "./useAlertasVencimiento.js";
  * criterio que puede no coincidir con el que ya trae la lista.
  *
  * @param {{ usuarioId?: string, onExito?: (datos: object) => void }} [opciones]
+ * @returns {object} Con: motivo, setMotivo, medicamentoId, setMedicamentoId, loteSeleccionado, seleccionarLote, cantidad, setCantidad, lotesDisponibles, error, cargando, guardarSalida.
  */
 export function useRegistroSalida({ usuarioId, onExito } = {}) {
   const [motivo, setMotivo] = useState("");

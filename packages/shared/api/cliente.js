@@ -99,7 +99,11 @@ export function obtenerSupabase() {
   return cliente;
 }
 
-/** Indica si ya hay cliente, para quien necesite preguntarlo sin provocar un error. */
+/**
+ * Indica si ya hay cliente, para quien necesite preguntarlo sin provocar un error.
+ *
+ * @returns {boolean}
+ */
 export function haySupabase() {
   return cliente !== null;
 }

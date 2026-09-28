@@ -24,6 +24,9 @@ import { ESTADOS_JORNADA } from "../enums.js";
  *
  * Espejo de la politica de escritura de 00039 y, desde la 00148, de las de jornada_personal:
  * la administradora o quien tenga `jornadas.gestionar` delegado por persona (usuarios/acceso.js).
+ *
+ * @param {string} rol
+ * @returns {boolean}
  */
 export function puedeAdministrarJornadas(rol) {
   return tienePermisoFino(rol, "jornadas.gestionar");
@@ -44,6 +47,9 @@ export const SECCIONES_DETALLE_JORNADA = Object.freeze([
  * Puede ver los insumos previstos de una jornada (jornada_insumos, 00151). Espejo de su politica de
  * SELECT: quien administra jornadas o proyectos, o tiene alguno de los dos modulos abierto por la
  * matriz. Llevan costo, asi que el personal de campo no los ve (#864).
+ *
+ * @param {string} rol
+ * @returns {boolean}
  */
 export function puedeVerInsumosDeJornada(rol) {
   return (
@@ -57,6 +63,9 @@ export function puedeVerInsumosDeJornada(rol) {
 /**
  * Puede agregar, corregir y quitar insumos previstos de una jornada. Espejo de las politicas de
  * escritura de jornada_insumos (00151): quien administra jornadas.
+ *
+ * @param {string} rol
+ * @returns {boolean}
  */
 export function puedeGestionarInsumosDeJornada(rol) {
   return puedeAdministrarJornadas(rol);
@@ -112,6 +121,9 @@ export function seccionesDeDetalleJornada(rol) {
  *
  * No vive en un archivo aparte ni en el hook de #182: es una regla de "que puede ver cada rol",
  * que es exactamente lo que este archivo declara para el resto del modulo.
+ *
+ * @param {string} rol
+ * @returns {boolean}
  */
 export function puedeVerRosterCompleto(rol) {
   return (
@@ -127,6 +139,9 @@ export function puedeVerRosterCompleto(rol) {
  *
  * Cualquier rol conocido: lo que ve de cada fila lo acota RLS, no esta funcion. Un medico o
  * voluntario solo ve las jornadas donde esta asignado; quien no esta en ninguna no ve nada.
+ *
+ * @param {string} rol
+ * @returns {boolean}
  */
 export function puedeVerJornadas(rol) {
   return Object.values(ROLES).includes(rol);
@@ -137,6 +152,10 @@ export function puedeVerJornadas(rol) {
  *
  * Encapsula la regla del criterio de aceptacion: una jornada finalizada no se edita salvo por
  * la administradora. El resto de estados solo los edita quien administra jornadas.
+ *
+ * @param {string} rol
+ * @param {string} estado
+ * @returns {boolean}
  */
 export function puedeEditarJornada(rol, estado) {
   if (estado === ESTADOS_JORNADA.FINALIZADA) {
@@ -153,6 +172,9 @@ export function puedeEditarJornada(rol, estado) {
  * reapertura exige es_administrador() ahi, sin excepcion del permiso fino. Igual que el resto
  * de este archivo, esto decide que muestra la interfaz; quien impide de verdad la reapertura es
  * el trigger.
+ *
+ * @param {string} rol
+ * @returns {boolean}
  */
 export function puedeReabrirJornada(rol) {
   return esAdministrador(rol);
@@ -173,6 +195,9 @@ export function puedeReabrirJornada(rol) {
  * consultas/recetas (00033, administrador o medico); esta cubre jornada_estado_historial
  * (00039, solo administrador). Son dos politicas RLS distintas, sobre tablas distintas, y por
  * eso dos funciones distintas.
+ *
+ * @param {string} rol
+ * @returns {boolean}
  */
 export function puedeVerHistorialJornada(rol) {
   // 00148: tambien quien gestiona jornadas por delegacion y quien tiene el modulo abierto.
@@ -184,6 +209,9 @@ export function puedeVerHistorialJornada(rol) {
  *
  * Se devuelven juntos para que un hook no tenga que llamar a las funciones sueltas ni acordarse
  * de cuales existen.
+ *
+ * @param {string} rol
+ * @returns {{ puedeVer: boolean, puedeCrear: boolean, puedeEditar: boolean, puedeReabrir: boolean, puedeVerHistorial: boolean }}
  */
 export function permisosDeJornadas(rol) {
   return {

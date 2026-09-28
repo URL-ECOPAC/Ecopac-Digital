@@ -15,6 +15,9 @@ const EDAD_MAXIMA_ANOS = 120;
 
 /**
  * Normaliza los datos de paciente eliminando espacios sobrantes.
+ *
+ * @param {object} [datos]
+ * @returns {object} Los campos de la fila de origen, mas: nombres, apellidos, comunidad, dpi.
  */
 export function normalizarDatosPaciente(datos = {}) {
   return {

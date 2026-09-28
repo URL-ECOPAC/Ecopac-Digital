@@ -41,6 +41,8 @@ export const METODOS_DE_ALMACENAMIENTO = ["getItem", "setItem", "removeItem"];
  *
  * Es el respaldo cuando nadie entrega un adaptador y la pieza que usan las pruebas. La
  * sesion vive lo que viva el proceso: al recargar la pagina o cerrar la app se pierde.
+ *
+ * @returns {{ getItem: Function, setItem: Function, removeItem: Function }}
  */
 export function crearAlmacenamientoEnMemoria() {
   const datos = new Map();
@@ -63,6 +65,9 @@ export function crearAlmacenamientoEnMemoria() {
  *
  * Un adaptador a medias no falla al crear el cliente: falla despues, como una sesion que no
  * se guarda y a nadie se le ocurre atribuir al almacenamiento. Mejor descartarlo aqui.
+ *
+ * @param {object} almacenamiento Adaptador con getItem, setItem y removeItem.
+ * @returns {object} El mismo adaptador, si implementa los tres metodos.
  */
 export function validarAlmacenamiento(almacenamiento) {
   const faltantes = METODOS_DE_ALMACENAMIENTO.filter(

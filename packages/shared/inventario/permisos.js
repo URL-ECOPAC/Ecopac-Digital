@@ -30,12 +30,20 @@ import { esAdministrador, esConsultivo, ROLES, ROLES_DE_CAMPO } from "../usuario
  * no ajustarla-. La funcion valida el rol a mano porque, al ser SECURITY DEFINER, RLS no se
  * evalua; este reflejo evita que la pantalla ofrezca un campo editable que el servidor va a
  * rechazar de todas formas.
+ *
+ * @param {string} rol
+ * @returns {boolean}
  */
 export function puedeAjustarEntregaReceta(rol) {
   return esAdministrador(rol) || rol === ROLES.MEDICO;
 }
 
-/** Puede consultar movimientos. Espejo de la politica de SELECT (00034): abierta a cualquiera. */
+/**
+ * Puede consultar movimientos. Espejo de la politica de SELECT (00034): abierta a cualquiera.
+ *
+ * @param {string} rol
+ * @returns {boolean}
+ */
 export function puedeVerMovimientos(rol) {
   return Object.values(ROLES).includes(rol);
 }
@@ -46,6 +54,9 @@ export function puedeVerMovimientos(rol) {
  * Espejo de la politica de INSERT (00034): administrador, medico y voluntario general. Un
  * no-administrador solo puede insertar en estado 'pendiente' y como registrado_por = auth.uid(),
  * pero eso lo exige el servidor con los datos de la fila, no algo que el cliente decida por rol.
+ *
+ * @param {string} rol
+ * @returns {boolean}
  */
 export function puedeRegistrarMovimiento(rol) {
   return esAdministrador(rol) || rol === ROLES.MEDICO || rol === ROLES.VOLUNTARIO;
@@ -57,12 +68,20 @@ export function puedeRegistrarMovimiento(rol) {
  * Espejo de la politica de UPDATE vigente (00086/00106): la administradora, o quien tenga
  * inventario.aprobar delegado por persona (usuarios/acceso.js). Sin excepcion de "nunca lo que uno
  * mismo registro" (esa restriccion la tenia la politica de la 00034 y la 00048 la quito, #410).
+ *
+ * @param {string} rol
+ * @returns {boolean}
  */
 export function puedeAprobarMovimiento(rol) {
   return tienePermisoFino(rol, "inventario.aprobar");
 }
 
-/** Espejo de puedeAprobarMovimiento: la misma politica de UPDATE gobierna aprobar y rechazar. */
+/**
+ * Espejo de puedeAprobarMovimiento: la misma politica de UPDATE gobierna aprobar y rechazar.
+ *
+ * @param {string} rol
+ * @returns {boolean}
+ */
 export function puedeRechazarMovimiento(rol) {
   return puedeAprobarMovimiento(rol);
 }
@@ -72,6 +91,9 @@ export function puedeRechazarMovimiento(rol) {
  *
  * Se devuelven juntos para que un hook no tenga que llamar a las funciones sueltas ni acordarse
  * de cuales existen.
+ *
+ * @param {string} rol
+ * @returns {{ puedeVer: boolean, puedeRegistrar: boolean, puedeAprobar: boolean, puedeRechazar: boolean }}
  */
 export function permisosDeMovimientos(rol) {
   return {
@@ -90,6 +112,9 @@ export function permisosDeMovimientos(rol) {
  * resto de reportes financieros (presupuesto_de_jornada/proyecto/sistema, obtenerIndicadoresImpacto).
  * costo_unitario es informacion financiera que ni medico ni voluntario general necesitan para
  * hacer su trabajo, aunque los dos vean el resto de un lote.
+ *
+ * @param {string} rol
+ * @returns {boolean}
  */
 export function puedeVerValorizacion(rol) {
   // Espejo de puede_consultar_reportes() (00148), que es la guarda de la funcion desde entonces.
@@ -153,6 +178,9 @@ export function pestanasDeInventario(rol) {
  *
  * Solo el alta: editar y desactivar siguen siendo de la administracion
  * (medicamentos.permisos.js, puedeAdministrarMedicamentos).
+ *
+ * @param {string} rol
+ * @returns {boolean}
  */
 export function puedeDarDeAltaMedicamento(rol) {
   // 00148: tambien el colaborador, que crea en los catalogos de inventario.

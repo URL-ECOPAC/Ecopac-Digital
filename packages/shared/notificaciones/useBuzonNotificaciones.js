@@ -22,6 +22,7 @@ import {
  * sin leer: no se marca solo en pantalla.
  *
  * @param {{ perfilId?: string }} contexto
+ * @returns {object} Con: notificaciones, total, grupos, filtros, setFiltro, limpiarFiltros, hayFiltros, agrupar, setAgrupar, noLeidas, cargando, error, errorAccion, recargar, abrir, marcarTodas.
  */
 export function useBuzonNotificaciones({ perfilId } = {}) {
   const [notificaciones, setNotificaciones] = useState([]);
