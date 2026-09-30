@@ -208,6 +208,19 @@ funcionales de las issues #776 a #779:
 
 Registro completo en [evidencias/2026-09-16.md](./evidencias/2026-09-16.md).
 
+**Medicion del 2026-09-29** (commit `f1d0f69`, 40 suites, 356 pruebas), sin que ninguna issue lo
+pidiera como objetivo propio: es el efecto acumulado de las pruebas funcionales que cada pantalla
+nueva trae consigo desde la medicion anterior.
+
+| Metrica    | % de cobertura |
+| ---------- | --------------- |
+| Statements | 64.75%          |
+| Branches   | 56.26%          |
+| Functions  | 55.30%          |
+| Lines      | 66.31%          |
+
+Registro completo en [evidencias/2026-09-29.md](./evidencias/2026-09-29.md).
+
 ## Prueba de carga: jornada de 50 pacientes (issue #774)
 
 Script: `scripts/prueba-de-carga-jornada-50-pacientes.mjs` (`npm run prueba:carga-jornada`).
