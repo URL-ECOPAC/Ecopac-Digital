@@ -8,6 +8,9 @@ import {
 import { listarBodegas } from "./bodegas.api.js";
 import { esAdministrador } from "../usuarios/roles.js";
 import { aFechaLocal, diasHastaVencimiento } from "../formato/fechas.js";
+import { resumenDeAvisos } from "./configuracionAlertas.validaciones.js";
+import { puedeAtenderAlertasVencimiento, puedeConfigurarAlertasVencimiento } from "./permisos.js";
+import { useVentanaDeAvisoVencimiento } from "./useVentanaDeAvisoVencimiento.js";
 
 /**
  * Dias restantes para que venza un lote (negativo si ya vencio, 0 si vence hoy). Se exporta
@@ -54,6 +57,30 @@ export function calcularDiasRestantes(fechaVencimiento, fechaIngreso) {
  */
 export function datosAtenderAlerta(acciones, { rolUsuario }, totalDisponible) {
   return { acciones, rolUsuario, totalDisponible };
+}
+
+/**
+ * Mensaje de la lista "Por vencer" cuando esta vacia, con la ventana configurada (issue #899): antes
+ * web y movil decian "30 dias" escrito a mano, aunque la rutina usara otra cosa.
+ *
+ * @param {number} diasAviso La antelacion mas larga configurada.
+ * @returns {string}
+ */
+export function textoSinLotesPorVencer(diasAviso) {
+  if (!diasAviso) return "No hay lotes que venzan hoy";
+  return `No hay lotes por vencer en los próximos ${diasAviso} días`;
+}
+
+/**
+ * Que lotes entran en la lista de alertas, con la ventana configurada. Sin antelaciones (ventana
+ * 0) solo entra lo que vence hoy o ya vencio.
+ *
+ * @param {number} diasAviso
+ * @returns {string}
+ */
+export function textoVentanaDeAlertas(diasAviso) {
+  if (!diasAviso) return "Lotes que vencen hoy o que ya vencieron";
+  return `Lotes que vencen en los próximos ${diasAviso} días o que ya vencieron`;
 }
 
 // Cuantas alertas atendidas muestra el bloque "Atendidas recientemente" del panel web.
@@ -106,9 +133,14 @@ export function recargarAlertasMontadas() {
  * @param {{ rolUsuario: string }} contexto Quien esta operando el panel. El rol decide si se
  *   sincroniza al abrir y viaja a atenderAlerta(); quien atiende lo fija la base (issue #755).
  *
- * @returns {object} Con: porVencer, vencidas, cantidadPendientes, atendidas, errorAtendidas, bodegas, errorBodegas, cargando, error, recargar, busqueda, setBusqueda, marcarComoAtendida.
+ * Desde la issue #899 tambien entrega la configuracion de avisos (umbrales, diasAviso,
+ * resumenAvisos) y si quien lo usa puede atender (puedeAtender). Sin rolUsuario no sincroniza ni
+ * puede atender: el panel web lo llamaba asi y por eso nunca ponia al dia la tabla.
+ *
+ * @returns {object} Con: porVencer, vencidas, cantidadPendientes, atendidas, errorAtendidas, bodegas, errorBodegas, cargando, error, recargar, busqueda, setBusqueda, marcarComoAtendida, puedeAtender, puedeConfigurar, umbrales, diasAviso, resumenAvisos, textoSinPorVencer, textoVentana.
  */
 export function useAlertasVencimiento({ rolUsuario } = {}) {
+  const { umbrales, diasAviso } = useVentanaDeAvisoVencimiento();
   const [alertas, setAlertas] = useState([]);
   // Las ya atendidas (issue #755): quien, cuando y que accion. Su fallo va aparte de `error`: el
   // historial es informativo, y no puede tapar la lista de pendientes, que es la que pide accion.
@@ -236,5 +268,13 @@ export function useAlertasVencimiento({ rolUsuario } = {}) {
     setBusqueda,
 
     marcarComoAtendida,
+
+    puedeAtender: puedeAtenderAlertasVencimiento(rolUsuario),
+    puedeConfigurar: puedeConfigurarAlertasVencimiento(rolUsuario),
+    umbrales,
+    diasAviso,
+    resumenAvisos: resumenDeAvisos(umbrales),
+    textoSinPorVencer: textoSinLotesPorVencer(diasAviso),
+    textoVentana: textoVentanaDeAlertas(diasAviso),
   };
 }

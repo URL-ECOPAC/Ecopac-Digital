@@ -5,7 +5,6 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  DIAS_AVISO_VENCIMIENTO_STOCK,
   FILTROS_STOCK,
   FILTROS_STOCK_VACIOS,
   filaDeStock,
@@ -30,9 +29,15 @@ function fila(cambios = {}) {
 
 describe("filaDeStock", () => {
   it("marca por vencer lo que vence dentro del aviso, y no lo que vence despues", () => {
-    expect(filaDeStock(fila({ fechaVencimiento: "2026-10-01" }), HOY).porVencer).toBe(true);
-    expect(filaDeStock(fila(), HOY).porVencer).toBe(false);
-    expect(DIAS_AVISO_VENCIMIENTO_STOCK).toBe(30);
+    expect(filaDeStock(fila({ fechaVencimiento: "2026-10-01" }), HOY, 30).porVencer).toBe(true);
+    expect(filaDeStock(fila(), HOY, 30).porVencer).toBe(false);
+  });
+
+  // Issue #899: la ventana es la de los avisos de vencimiento configurados, no un 30 fijo.
+  it("la ventana de por vencer es la que se le pasa", () => {
+    const lejano = fila({ fechaVencimiento: "2026-10-01" });
+    expect(filaDeStock(lejano, HOY, 1).porVencer).toBe(false);
+    expect(filaDeStock(lejano, HOY, 365).porVencer).toBe(true);
   });
 
   it("un mismo lote en dos bodegas son dos filas distintas", () => {

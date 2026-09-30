@@ -1,12 +1,13 @@
 // Ecopac Digital - Edge Function programada de alertas de vencimiento (issue #166, RF-19).
 //
-// Revisa diariamente los lotes con existencia positiva que vencen dentro de 30 dias -o que ya
-// vencieron, desde la 00129 (issue #838)- y genera una alerta pendiente por cada uno que todavia no
-// la tenga. La logica de que lote necesita alerta -y la garantia de no duplicar- vive en
-// fn_generar_alertas_caducidad() (migraciones 00088 y 00129, SQL): esta funcion es un envoltorio
-// delgado que solo la invoca y reporta el resultado.
+// Revisa diariamente los lotes con existencia positiva que vencen dentro de la antelacion mas larga
+// configurada -o que ya vencieron, desde la 00129 (issue #838)- y genera una alerta pendiente por
+// cada uno que todavia no la tenga. La logica de que lote necesita alerta, de cuando avisar -cada
+// antelacion configurada y el dia del vencimiento, 00162 (issue #899)- y la garantia de no duplicar
+// vive en fn_generar_alertas_caducidad() (SQL): esta funcion es un envoltorio delgado que solo la
+// invoca y reporta el resultado.
 //
-// Cada alerta nueva notifica a la administracion (trigger de la 00138, issue #755). Despues de
+// Cada aviso notifica a la administracion (trigger de avisos_caducidad, 00162; issue #755). Despues de
 // generar, esta funcion barre ademas los correos de notificaciones que hayan quedado sin salir
 // -de hoy o de cualquier incidencia anterior cuyo webhook fallo-: es el reintento diario del
 // correo. Que el correo falle no hace fallar la corrida: las alertas ya quedaron creadas y en el

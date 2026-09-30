@@ -22,7 +22,7 @@ import {
   construirError,
   normalizarError,
 } from "../api/errores-de-supabase.js";
-import { ACCIONES_DE_ALERTA, ESTADOS_ALERTA } from "../enums.js";
+import { ACCIONES_DE_ALERTA, ESTADOS_ALERTA, ETIQUETAS_ACCION_ALERTA } from "../enums.js";
 import { diasHastaVencimiento } from "../formato/fechas.js";
 import { esAdministrador } from "../usuarios/roles.js";
 
@@ -45,6 +45,10 @@ const COLUMNAS_DE_LA_ALERTA = [
   "atendidaEn:atendida_en",
   "createdAt:created_at",
   "updatedAt:updated_at",
+  // Etapa ya avisada (0 = dia del vencimiento) y cierre automatico por falta de existencia
+  // (00162, issue #899).
+  "umbralNotificadoDias:umbral_notificado_dias",
+  "cerradaSinExistencia:cerrada_sin_existencia",
   // existencias(cantidadDisponible) embebida (issue #859): cantidadAfectada queda congelada al
   // generar la alerta (arriba), y una salida registrada por fuera de "Atender" -entrega,
   // traslado, baja manual- reduce existencias sin tocar esa columna ni la fila de la alerta, que
@@ -98,6 +102,8 @@ function aAlerta(fila) {
       ? `${fila.atendidaPorPerfil.nombres} ${fila.atendidaPorPerfil.apellidos}`.trim()
       : null,
     atendidaEn: fila.atendidaEn,
+    umbralNotificadoDias: fila.umbralNotificadoDias ?? null,
+    cerradaSinExistencia: Boolean(fila.cerradaSinExistencia),
     createdAt: fila.createdAt,
     updatedAt: fila.updatedAt,
   };
@@ -321,4 +327,33 @@ export function efectoDeAccionSobreElStock(accion, cantidad) {
     return `${cantidad} unidades del lote se trasladan a la bodega destino.`;
   }
   return `Se dan de baja ${cantidad} unidades del lote. Queda registrado en el Kardex.`;
+}
+
+/**
+ * La accion tomada sobre una alerta atendida, en texto. Con una sola accion viene en `accion`; con
+ * varias (00143) esa columna queda NULL y el desglose vive en `detalle`. `bodegas` traduce
+ * bodegaDestinoId a nombre para un reubicado. Una alerta que la rutina cerro porque el lote se
+ * quedo sin existencia (00162, issue #899) no tiene accion: lo dice.
+ *
+ * @param {{ accion?: string|null, detalle?: object[], cerradaSinExistencia?: boolean }} alerta
+ * @param {{ id: string, nombre: string }[]} [bodegas]
+ * @returns {string}
+ */
+export function etiquetaAccionTomada(alerta, bodegas = []) {
+  if (alerta?.cerradaSinExistencia) return "Cierre automático (sin existencia)";
+  if (alerta?.accion) return ETIQUETAS_ACCION_ALERTA[alerta.accion] ?? alerta.accion;
+
+  if (alerta?.detalle?.length > 0) {
+    return alerta.detalle
+      .map((item) => {
+        const etiqueta = ETIQUETAS_ACCION_ALERTA[item.accion] ?? item.accion;
+        const bodega = item.bodegaDestinoId
+          ? bodegas.find((b) => b.id === item.bodegaDestinoId)?.nombre
+          : null;
+        return `${etiqueta}: ${item.cantidad}${bodega ? ` a ${bodega}` : ""}`;
+      })
+      .join(", ");
+  }
+
+  return "—";
 }

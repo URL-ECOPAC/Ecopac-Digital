@@ -8,7 +8,7 @@ Dice que tablas y vistas (`.from`), funciones de la base (`.rpc`), Edge Function
 
 | App | Pantallas (rutas) |
 | --- | --- |
-| Web (`apps/web`) | 35 |
+| Web (`apps/web`) | 36 |
 | Movil (`apps/mobile`) | 29 |
 
 Una ruta con parametro (`/pacientes/:id`) cuenta una vez. Los dialogos (modales) no son pantallas: lo que consultan se suma a la pantalla que los abre.
@@ -33,7 +33,8 @@ Una ruta con parametro (`/pacientes/:id`) cuenta una vez. Los dialogos (modales)
 | `/donaciones/historial` | `donaciones` | `HistorialDonacionesConSesion` | `donaciones`, `proyectos` | `fn_anular_donacion` | — |
 | `/donaciones/:id/constancia` | `donaciones` | `apps/web/src/pages/ConstanciaDonacionPage.jsx` | `donaciones` | — | — |
 | `/donantes` | `donaciones` | `DonantesConSesion` | `donaciones`, `donantes` | — | — |
-| `/inventario` | `inventario` | `apps/web/src/pages/InventarioPage.jsx` | `alertas_caducidad`, `bodegas`, `existencias`, `lotes`, `medicamento_principio`, `medicamentos`, `movimientos_inventario`, `presentaciones`, `principios_activos`, `proveedores`, `vista_lotes_disponibles` | `existencias_totales_por_bodega`, `fn_atender_alerta_caducidad`, `fn_medicamento_tiene_existencias`, `fn_registrar_medicamento`, `fn_sincronizar_alertas_caducidad`, `fn_valor_de_inventario_disponible` | — |
+| `/inventario` | `inventario` | `apps/web/src/pages/InventarioPage.jsx` | `alertas_caducidad`, `bodegas`, `configuracion_alertas_caducidad`, `existencias`, `lotes`, `medicamento_principio`, `medicamentos`, `movimientos_inventario`, `presentaciones`, `principios_activos`, `proveedores`, `vista_lotes_disponibles` | `existencias_totales_por_bodega`, `fn_atender_alerta_caducidad`, `fn_medicamento_tiene_existencias`, `fn_registrar_medicamento`, `fn_sincronizar_alertas_caducidad`, `fn_valor_de_inventario_disponible` | — |
+| `/inventario/avisos-vencimiento` | `inventario` | `apps/web/src/pages/AvisosVencimientoPage.jsx` | `configuracion_alertas_caducidad` | `fn_sincronizar_alertas_caducidad` | — |
 | `/presupuestos` | `presupuestos` | `apps/web/src/pages/PresupuestosPage.jsx` | `categorias_de_gasto`, `gastos`, `jornadas`, `nombres_de_perfiles`, `proyectos` | `presupuestos_de_jornadas`, `presupuestos_de_proyectos` | — |
 | `/proyectos` | `proyectos` | `ProyectosSocialesConSesion` | `gastos`, `jornada_insumos`, `jornadas`, `perfil_especialidad`, `perfiles`, `perfiles_directorio`, `proyecto_insumos`, `proyecto_personal`, `proyectos` | `equipo_de_proyecto`, `fn_pasar_insumo_de_proyecto_a_jornada` | — |
 | `/proyectos/sociales` | `proyectos` | `ProyectosSocialesConSesion` | `gastos`, `jornada_insumos`, `jornadas`, `perfil_especialidad`, `perfiles`, `perfiles_directorio`, `proyecto_insumos`, `proyecto_personal`, `proyectos` | `equipo_de_proyecto`, `fn_pasar_insumo_de_proyecto_a_jornada` | — |
@@ -73,10 +74,10 @@ Una ruta con parametro (`/pacientes/:id`) cuenta una vez. Los dialogos (modales)
 | Mis jornadas (`JornadasAsignadas`) | jornadas, modulo `jornadas` | `apps/mobile/src/screens/JornadasAsignadasScreen.js` | `jornada_personal`, `jornadas` | `fn_atenciones_de_persona_por_jornada` | — |
 | Tablero de Jornadas (`KanbanJornadas`) | jornadas, modulo `jornadas` | `apps/mobile/src/screens/KanbanJornadasScreen.js` | `jornadas`, `vista_reporte_impacto` | — | — |
 | Proyectos (`Proyectos`) | jornadas, modulo `proyectos` | `apps/mobile/src/screens/ProyectosScreen.js` | `gastos`, `jornada_insumos`, `jornadas`, `perfil_especialidad`, `perfiles`, `perfiles_directorio`, `proyecto_insumos`, `proyecto_personal`, `proyectos` | `equipo_de_proyecto`, `fn_pasar_insumo_de_proyecto_a_jornada` | — |
-| Inventario (`Stock`) | inventario, modulo `inventario` | `apps/mobile/src/screens/StockScreen.js` | `bodegas`, `medicamento_principio`, `medicamentos`, `principios_activos`, `vista_lotes_disponibles` | `existencias_totales_por_bodega` | — |
+| Inventario (`Stock`) | inventario, modulo `inventario` | `apps/mobile/src/screens/StockScreen.js` | `bodegas`, `configuracion_alertas_caducidad`, `medicamento_principio`, `medicamentos`, `principios_activos`, `vista_lotes_disponibles` | `existencias_totales_por_bodega` | — |
 | Registrar ingreso (`RegistroIngreso`) | inventario, por roles | `apps/mobile/src/screens/RegistroIngresoScreen.js` | `bodegas`, `lotes`, `medicamento_principio`, `medicamentos`, `movimientos_inventario`, `presentaciones`, `principios_activos`, `proveedores` | `existencias_totales_por_bodega`, `fn_registrar_medicamento` | — |
-| Existencias (`ExistenciasInventario`) | inventario, modulo `inventario` | `apps/mobile/src/screens/ExistenciasInventarioScreen.js` | `bodegas`, `lotes`, `vista_lotes_disponibles` | `existencias_totales_por_bodega` | — |
-| Resumen y alertas (`ResumenAlertasInventario`) | inventario, modulo `inventario` | `apps/mobile/src/screens/InventarioResumenAlertasScreen.js` | `alertas_caducidad`, `bodegas`, `lotes`, `medicamento_principio`, `medicamentos`, `principios_activos` | `existencias_totales_por_bodega`, `fn_atender_alerta_caducidad`, `fn_sincronizar_alertas_caducidad` | — |
+| Existencias (`ExistenciasInventario`) | inventario, modulo `inventario` | `apps/mobile/src/screens/ExistenciasInventarioScreen.js` | `bodegas`, `configuracion_alertas_caducidad`, `lotes`, `vista_lotes_disponibles` | `existencias_totales_por_bodega` | — |
+| Resumen y alertas (`ResumenAlertasInventario`) | inventario, modulo `inventario` | `apps/mobile/src/screens/InventarioResumenAlertasScreen.js` | `alertas_caducidad`, `bodegas`, `configuracion_alertas_caducidad`, `lotes`, `medicamento_principio`, `medicamentos`, `principios_activos` | `existencias_totales_por_bodega`, `fn_atender_alerta_caducidad`, `fn_sincronizar_alertas_caducidad` | — |
 | Mis movimientos (`MisMovimientos`) | inventario, por roles | `apps/mobile/src/screens/MisMovimientosScreen.js` | `movimientos_inventario` | — | — |
 | Detalle del lote (`DetalleLote`) | inventario, modulo `inventario` | `apps/mobile/src/screens/DetalleLoteScreen.js` | `lotes`, `movimientos_inventario` | — | — |
 | Principios activos (`PrincipiosActivos`) | inventario, modulo `inventario` | `apps/mobile/src/screens/PrincipiosActivosScreen.js` | `medicamento_principio`, `principios_activos` | — | — |
@@ -97,6 +98,7 @@ Una ruta con parametro (`/pacientes/:id`) cuenta una vez. Los dialogos (modales)
 | `categorias_de_gasto` | `/presupuestos` | — |
 | `comunidades` | `/jornadas`, `/jornadas/:id`, `/pacientes`, `/pacientes/:id`, `/pacientes/comunidades`, `/pacientes/cronicos`, `/reportes`, `/reportes/dashboard`, `/reportes/inventario-actual`, `/reportes/medicamentos-por-vencer`, `/reportes/pacientes-atendidos` | `BusquedaPaciente`, `FichaPaciente`, `PacientesCronicos`, `RegistroPaciente` |
 | `condiciones_cronicas` | `/pacientes`, `/pacientes/:id`, `/pacientes/condiciones`, `/pacientes/cronicos` | `BusquedaPaciente`, `CatalogoCondiciones`, `FichaPaciente`, `PacientesCronicos` |
+| `configuracion_alertas_caducidad` | `/inventario`, `/inventario/avisos-vencimiento` | `ExistenciasInventario`, `ResumenAlertasInventario`, `Stock` |
 | `consulta_diagnostico` | `/pacientes/:id` | `Consulta` |
 | `consultas` | `/jornadas/:id`, `/pacientes/:id` | `Consulta`, `JornadaEnCurso` |
 | `departamentos` | `/jornadas`, `/jornadas/:id`, `/pacientes`, `/pacientes/:id`, `/pacientes/comunidades` | `FichaPaciente`, `RegistroPaciente` |
@@ -127,7 +129,7 @@ Una ruta con parametro (`/pacientes/:id`) cuenta una vez. Los dialogos (modales)
 | `fn_registrar_paciente` | `/pacientes` | `RegistroPaciente` |
 | `fn_reporte_jornada` | `/reportes/jornada/:id` | `JornadaEnCurso` |
 | `fn_reporte_pacientes_atendidos` | `/reportes`, `/reportes/dashboard`, `/reportes/inventario-actual`, `/reportes/medicamentos-por-vencer`, `/reportes/pacientes-atendidos` | — |
-| `fn_sincronizar_alertas_caducidad` | `/inventario` | `ResumenAlertasInventario` |
+| `fn_sincronizar_alertas_caducidad` | `/inventario`, `/inventario/avisos-vencimiento` | `ResumenAlertasInventario` |
 | `fn_valor_de_inventario_disponible` | `/inventario`, `/reportes`, `/reportes/dashboard`, `/reportes/inventario-actual`, `/reportes/medicamentos-por-vencer`, `/reportes/pacientes-atendidos` | — |
 | `fuentes_de_presupuesto` | `/jornadas/:id` | — |
 | `fusiones_pacientes` | `/pacientes/:id` | — |

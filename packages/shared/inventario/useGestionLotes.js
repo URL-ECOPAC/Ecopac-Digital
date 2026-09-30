@@ -1,6 +1,8 @@
 import { useState, useMemo } from "react";
 
 import { aFechaLocal, diasHastaVencimiento } from "../formato/fechas.js";
+import { ventanaDeAviso } from "./configuracionAlertas.validaciones.js";
+import { useVentanaDeAvisoVencimiento } from "./useVentanaDeAvisoVencimiento.js";
 
 // Aqui vivian valoresInicialesDeLote(), datosLoteParaRegistrar() y validarDatosDeLote(): las tres
 // eran el formulario de "Registrar lote", que se retiro con la issue #846 porque creaba lotes sin
@@ -8,7 +10,8 @@ import { aFechaLocal, diasHastaVencimiento } from "../formato/fechas.js";
 // donde sale CAMPOS_CORRECCION_LOTE, que es el unico formulario de lote que queda.
 
 /**
- * Dias restantes y estado de alerta de un lote ("normal"/"warning"/"danger" para <= 30/0 dias).
+ * Dias restantes y estado de alerta de un lote ("warning" dentro de la ventana de los avisos de
+ * vencimiento -issue #899-, "danger" si vence hoy o ya vencio).
  * Pura y exportada aparte del hook por la misma razon que validarDatosDeLote() y
  * datosLoteParaRegistrar(): usa diasHastaVencimiento() (formato/fechas.js) en vez de restar
  * `new Date(fecha_vencimiento) - new Date()` a mano, que interpretaba la columna DATE como
@@ -16,16 +19,21 @@ import { aFechaLocal, diasHastaVencimiento } from "../formato/fechas.js";
  *
  * @param {string} fechaVencimiento
  * @param {Date} [hoy]
+ * @param {number} [diasAviso]
  * @returns {{ diasRestantes: number|null, estadoAlerta: "normal"|"warning"|"danger" }}
  */
-export function calcularAlertaDeLote(fechaVencimiento, hoy = new Date()) {
+export function calcularAlertaDeLote(
+  fechaVencimiento,
+  hoy = new Date(),
+  diasAviso = ventanaDeAviso(),
+) {
   const diasRestantes = diasHastaVencimiento(fechaVencimiento, hoy);
 
   let estadoAlerta = "normal";
   if (diasRestantes !== null) {
     if (diasRestantes <= 0) {
       estadoAlerta = "danger";
-    } else if (diasRestantes <= 30) {
+    } else if (diasRestantes <= diasAviso) {
       estadoAlerta = "warning";
     }
   }
@@ -50,18 +58,24 @@ export function calcularAlertaDeLote(fechaVencimiento, hoy = new Date()) {
  * @param {object[]} lotesIniciales
  * @param {{ busqueda?: string, bodegaSeleccionada?: string, categoriaSeleccionada?: string }} filtros
  * @param {Date} [hoy]
+ * @param {number} [diasAviso]
  * @returns {object[]}
  */
 export function procesarLotes(
   lotesIniciales,
   { busqueda = "", bodegaSeleccionada = "Todas", categoriaSeleccionada = "Todos" } = {},
   hoy = new Date(),
+  diasAviso = ventanaDeAviso(),
 ) {
   const termino = busqueda.trim().toLowerCase();
 
   return lotesIniciales
     .map((lote) => {
-      const { diasRestantes, estadoAlerta } = calcularAlertaDeLote(lote.fechaVencimiento, hoy);
+      const { diasRestantes, estadoAlerta } = calcularAlertaDeLote(
+        lote.fechaVencimiento,
+        hoy,
+        diasAviso,
+      );
 
       const existenciasRelacionadas = lote.existencias || [];
       const existenciaFiltrada = existenciasRelacionadas.filter(
@@ -102,6 +116,7 @@ export function procesarLotes(
  * @returns {object} Con: busqueda, setBusqueda, bodegaSeleccionada, setBodegaSeleccionada, categoriaSeleccionada, setCategoriaSeleccionada, lotesFiltrados, alertasCriticas, alertas, setAlertas.
  */
 export function useGestionLotes({ lotesIniciales = [], alertasIniciales = [] } = {}) {
+  const { diasAviso } = useVentanaDeAvisoVencimiento();
   const [busqueda, setBusqueda] = useState("");
   const [bodegaSeleccionada, setBodegaSeleccionada] = useState("Todas");
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState("Todos");
@@ -111,11 +126,17 @@ export function useGestionLotes({ lotesIniciales = [], alertasIniciales = [] } =
   // corregido aqui dentro el corte por dia de calendario; esa correccion vive ahora dentro de
   // calcularAlertaDeLote(), que es a quien procesarLotes() se lo pregunta.
   const lotesFiltrados = useMemo(
-    () => procesarLotes(lotesIniciales, { busqueda, bodegaSeleccionada, categoriaSeleccionada }),
-    [lotesIniciales, busqueda, bodegaSeleccionada, categoriaSeleccionada],
+    () =>
+      procesarLotes(
+        lotesIniciales,
+        { busqueda, bodegaSeleccionada, categoriaSeleccionada },
+        new Date(),
+        diasAviso,
+      ),
+    [lotesIniciales, busqueda, bodegaSeleccionada, categoriaSeleccionada, diasAviso],
   );
 
-  // Alertas críticas (vencidos o por vencer en <= 30 días)
+  // Alertas críticas (vencidos o dentro de la ventana de avisos de vencimiento)
   const alertasCriticas = useMemo(() => {
     return lotesFiltrados.filter((item) => item.estadoAlerta !== "normal");
   }, [lotesFiltrados]);

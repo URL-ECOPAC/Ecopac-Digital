@@ -17,9 +17,12 @@ import { TIPOS_DE_FILTRO } from "../descriptores.js";
 import { listarBodegas } from "./bodegas.api.js";
 import { listarExistenciasDisponibles } from "./existencias.api.js";
 import { listarLotes } from "./lotes.api.js";
+import { ventanaDeAviso } from "./configuracionAlertas.validaciones.js";
+import { useVentanaDeAvisoVencimiento } from "./useVentanaDeAvisoVencimiento.js";
 
+// "Critico" es un nivel visual de urgencia dentro de "por vencer", no la regla de las alertas: por
+// eso se queda fijo. La ventana de "por vencer" si sale de la configuracion (issue #899).
 const DIAS_CRITICO = 7;
-const DIAS_AVISO_VENCIMIENTO = 30;
 
 /**
  * Estado de un lote por su vencimiento y su existencia.
@@ -41,13 +44,14 @@ export const ESTADOS_DE_LOTE = Object.freeze({
  *
  * @param {number|null} diasRestantes
  * @param {number} cantidadDisponible
+ * @param {number} [diasAviso] Ventana de los avisos de vencimiento (issue #899).
  * @returns {string} Uno de ESTADOS_DE_LOTE.
  */
-export function estadoDeLote(diasRestantes, cantidadDisponible) {
+export function estadoDeLote(diasRestantes, cantidadDisponible, diasAviso = ventanaDeAviso()) {
   if (diasRestantes !== null && diasRestantes < 0) return ESTADOS_DE_LOTE.VENCIDO;
   if (Number(cantidadDisponible ?? 0) <= 0) return ESTADOS_DE_LOTE.AGOTADO;
   if (diasRestantes !== null && diasRestantes <= DIAS_CRITICO) return ESTADOS_DE_LOTE.CRITICO;
-  if (diasRestantes !== null && diasRestantes <= DIAS_AVISO_VENCIMIENTO) {
+  if (diasRestantes !== null && diasRestantes <= diasAviso) {
     return ESTADOS_DE_LOTE.POR_VENCER;
   }
   return ESTADOS_DE_LOTE.DISPONIBLE;
@@ -105,9 +109,15 @@ export function sumarExistenciasPorLote(existencias = [], bodegaId = null) {
  * @param {object[]} lotes
  * @param {object[]} existencias
  * @param {{ busqueda?: string, bodega?: string|null, estado?: string|null }} [filtros]
+ * @param {number} [diasAviso]
  * @returns {object[]}
  */
-export function armarFilasDeExistencias(lotes = [], existencias = [], filtros = {}) {
+export function armarFilasDeExistencias(
+  lotes = [],
+  existencias = [],
+  filtros = {},
+  diasAviso = ventanaDeAviso(),
+) {
   const porLote = sumarExistenciasPorLote(existencias, filtros.bodega ?? null);
   const termino = (filtros.busqueda ?? "").trim().toLowerCase();
 
@@ -128,7 +138,7 @@ export function armarFilasDeExistencias(lotes = [], existencias = [], filtros = 
         fechaVencimiento: lote.fechaVencimiento,
         cantidadDisponible,
         diasRestantes,
-        estado: estadoDeLote(diasRestantes, cantidadDisponible),
+        estado: estadoDeLote(diasRestantes, cantidadDisponible, diasAviso),
       };
     })
     .filter((fila) => {
@@ -156,6 +166,7 @@ export function armarFilasDeExistencias(lotes = [], existencias = [], filtros = 
  * @returns {object} Con: filas, total, totalSinFiltrar, filtros, setFiltro, limpiarFiltros, hayFiltros, cargando, error, recargar, catalogos.
  */
 export function useExistenciasPorLote({ estadosDeLote = [] } = {}) {
+  const { diasAviso } = useVentanaDeAvisoVencimiento();
   const [lotes, setLotes] = useState([]);
   const [existencias, setExistencias] = useState([]);
   const [bodegas, setBodegas] = useState([]);
@@ -193,8 +204,8 @@ export function useExistenciasPorLote({ estadosDeLote = [] } = {}) {
   const limpiarFiltros = useCallback(() => setFiltros(FILTROS_EXISTENCIAS_POR_LOTE_VACIOS), []);
 
   const filas = useMemo(
-    () => armarFilasDeExistencias(lotes, existencias, filtros),
-    [lotes, existencias, filtros],
+    () => armarFilasDeExistencias(lotes, existencias, filtros, diasAviso),
+    [lotes, existencias, filtros, diasAviso],
   );
 
   const hayFiltros = Object.keys(FILTROS_EXISTENCIAS_POR_LOTE_VACIOS).some(

@@ -35,6 +35,7 @@ export const TABLAS_AUDITADAS = [
   { value: "lotes", label: "Lotes" },
   { value: "movimientos_inventario", label: "Movimientos de inventario" },
   { value: "alertas_caducidad", label: "Alertas de vencimiento" },
+  { value: "configuracion_alertas_caducidad", label: "Avisos de vencimiento (configuración)" },
   // Jornadas
   { value: "jornadas", label: "Jornadas" },
   { value: "jornada_personal", label: "Equipo de jornada" },

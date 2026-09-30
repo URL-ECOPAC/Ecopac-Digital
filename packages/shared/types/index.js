@@ -690,6 +690,38 @@
  * @property {string|null} atendidaEn
  * @property {string} createdAt
  * @property {string} updatedAt
+ * @property {number|null} umbralNotificadoDias Etapa mas cercana ya avisada: la antelacion en
+ *   dias, o 0 para el dia del vencimiento (00162, issue #899).
+ * @property {boolean} cerradaSinExistencia La cerro la rutina porque el lote se quedo sin
+ *   existencia; no tiene accion ni atendidaPor (00162).
+ */
+
+/**
+ * Fila de `avisos_caducidad` (00162_umbrales_configurables_de_alertas_de_caducidad.sql, issue
+ * #899): un aviso de vencimiento enviado, uno por alerta y por etapa. Su INSERT genera la
+ * notificacion; lo escribe solo fn_generar_alertas_caducidad() y lo lee la administracion.
+ *
+ * @typedef {object} AvisoCaducidad
+ * @property {string} id
+ * @property {string} alertaId
+ * @property {number} umbralDias Antelacion avisada en dias, o 0 para el dia del vencimiento.
+ * @property {number} diasRestantes Negativo si ya habia vencido al avisar.
+ * @property {number} cantidadEnExistencia
+ * @property {string} createdAt
+ */
+
+/**
+ * Fila de `configuracion_alertas_caducidad` (00162, issue #899): una sola fila con las
+ * antelaciones de los avisos de vencimiento. La leen todos los roles con sesion activa; solo la
+ * administracion cambia umbralesDias.
+ *
+ * @typedef {object} ConfiguracionAlertasCaducidad
+ * @property {string} id
+ * @property {boolean} unica Siempre true; garantiza la fila unica.
+ * @property {number[]} umbralesDias De 0 a 4 antelaciones distintas, de mayor a menor; vacio = solo el dia del vencimiento.
+ * @property {string|null} actualizadoPor
+ * @property {string} createdAt
+ * @property {string} updatedAt
  */
 
 /**

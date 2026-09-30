@@ -1,8 +1,9 @@
 name: Alertas de vencimiento
 
 # Dispara diariamente la Edge Function alertas-vencimiento (issue #166, RF-19), que genera una
-# alerta pendiente por cada lote con existencia positiva que vence en 30 dias o menos, o que ya
-# vencio (00129, issue #838). El proyecto esta en el plan gratuito de Supabase, que no incluye
+# alerta pendiente por cada lote con existencia positiva que vence dentro de la antelacion mas larga
+# configurada (por defecto 90 dias), o que ya vencio (00129, issue #838), y avisa en cada antelacion
+# y el dia del vencimiento (00162, issue #899). El proyecto esta en el plan gratuito de Supabase, que no incluye
 # pg_cron: este workflow es el cron externo que reemplaza esa pieza.
 #
 # CORREO (issue #755)
@@ -153,7 +154,7 @@ jobs:
               '## Por que importa',
               '',
               'Mientras esto siga fallando, **nadie esta revisando los vencimientos**. Los lotes',
-              'que caduquen en los proximos 30 dias no van a generar su alerta, y la',
+              'que entren en la antelacion configurada no van a generar su aviso, y la',
               'administradora no tiene forma de notarlo desde la aplicacion: la pantalla de',
               'alertas se ve igual de vacia cuando no hay nada que alertar que cuando la rutina',
               'no corrio.',
@@ -163,7 +164,7 @@ jobs:
               '1. Abrir la corrida y ver si fallo el `curl` (funcion caida, secret rotado) o el',
               '   propio paso de verificacion de secrets.',
               '2. Revisar los logs de la funcion en el panel de Supabase.',
-              '3. `fn_generar_alertas_caducidad` (migracion 00088) es idempotente: se puede',
+              '3. `fn_generar_alertas_caducidad` (migracion 00162) es idempotente: se puede',
               '   volver a disparar el workflow a mano con `workflow_dispatch` sin duplicar',
               '   alertas.',
               '',

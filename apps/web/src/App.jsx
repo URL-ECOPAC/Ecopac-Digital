@@ -48,6 +48,7 @@ const RegistroDonacionPage = lazy(() => import("./pages/RegistroDonacionPage"));
 const HistorialDonacionesPage = lazy(() => import("./pages/HistorialDonacionesPage"));
 const ConstanciaDonacionPage = lazy(() => import("./pages/ConstanciaDonacionPage"));
 const InventarioPage = lazy(() => import("./pages/InventarioPage"));
+const AvisosVencimientoPage = lazy(() => import("./pages/AvisosVencimientoPage"));
 const PresupuestosPage = lazy(() => import("./pages/PresupuestosPage"));
 const ProyectosSocialesPage = lazy(() => import("./pages/ProyectosSocialesPage"));
 const SeguimientoProyectoPage = lazy(() => import("./pages/SeguimientoProyectoPage"));
@@ -179,6 +180,12 @@ export default function App() {
                 </Route>
                 <Route element={<RutaProtegida modulo="inventario" />}>
                   <Route path="/inventario" element={<InventarioPage />} />
+                  {/* Solo administracion (la pagina lo comprueba, como /pacientes/duplicados):
+                  antelaciones de los avisos de vencimiento, issue #899. */}
+                  <Route
+                    path="/inventario/avisos-vencimiento"
+                    element={<AvisosVencimientoPage />}
+                  />
                 </Route>
                 <Route element={<RutaProtegida modulo="presupuestos" />}>
                   <Route path="/presupuestos" element={<PresupuestosPage />} />

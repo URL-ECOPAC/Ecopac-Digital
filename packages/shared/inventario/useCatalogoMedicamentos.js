@@ -17,9 +17,8 @@ import { useCallback, useMemo, useState } from "react";
 import { TIPOS_DE_FILTRO } from "../descriptores.js";
 import { diasHastaVencimiento } from "../formato/fechas.js";
 import { filtrarOpcionesPorTexto } from "../formato/opciones.js";
-
-/** Con cuantos dias de anticipacion un lote cuenta como "por vencer" en esta pantalla. */
-export const DIAS_AVISO_VENCIMIENTO_STOCK = 30;
+import { ventanaDeAviso } from "./configuracionAlertas.validaciones.js";
+import { useVentanaDeAvisoVencimiento } from "./useVentanaDeAvisoVencimiento.js";
 
 export const FILTROS_STOCK = Object.freeze([
   {
@@ -37,11 +36,15 @@ export const FILTROS_STOCK_VACIOS = Object.freeze({ busqueda: "", bodega: "" });
  * Una fila de listarExistenciasDisponibles() (vista_lotes_disponibles) lista para la tarjeta. La
  * vista ya excluye lo vencido y lo agotado (00047): lo que se puede marcar es lo que vence pronto.
  *
+ * "Por vencer" usa la ventana de los avisos de vencimiento (la antelacion mas larga de
+ * configuracion_alertas_caducidad, issue #899), la misma con la que la rutina genera alertas.
+ *
  * @param {object} fila
  * @param {Date} [hoy]
+ * @param {number} [diasAviso]
  * @returns {object} Con: id, loteId, medicamentoId, nombre, numeroLote, bodegaId, bodega, fechaVencimiento, diasRestantes, cantidadDisponible, porVencer.
  */
-export function filaDeStock(fila, hoy = new Date()) {
+export function filaDeStock(fila, hoy = new Date(), diasAviso = ventanaDeAviso()) {
   const diasRestantes = diasHastaVencimiento(fila.fechaVencimiento, hoy);
 
   return {
@@ -55,8 +58,7 @@ export function filaDeStock(fila, hoy = new Date()) {
     fechaVencimiento: fila.fechaVencimiento,
     diasRestantes,
     cantidadDisponible: fila.cantidadDisponible,
-    porVencer:
-      diasRestantes !== null && diasRestantes >= 0 && diasRestantes <= DIAS_AVISO_VENCIMIENTO_STOCK,
+    porVencer: diasRestantes !== null && diasRestantes >= 0 && diasRestantes <= diasAviso,
   };
 }
 
@@ -97,11 +99,12 @@ export function contarProductos(filas = []) {
  * @returns {object} Con: filtros, setFiltro, limpiarFiltros, hayFiltros, catalogos, inventarioFiltrado, total, totalProductos, totalPorVencer.
  */
 export function useCatalogoMedicamentos({ inventarioInicial = [], bodegas = [] } = {}) {
+  const { diasAviso } = useVentanaDeAvisoVencimiento();
   const [filtros, setFiltros] = useState(FILTROS_STOCK_VACIOS);
 
   const filas = useMemo(
-    () => inventarioInicial.map((fila) => filaDeStock(fila)),
-    [inventarioInicial],
+    () => inventarioInicial.map((fila) => filaDeStock(fila, new Date(), diasAviso)),
+    [inventarioInicial, diasAviso],
   );
   const inventarioFiltrado = useMemo(() => filtrarStock(filas, filtros), [filas, filtros]);
 
