@@ -84,6 +84,7 @@ describe("validarGasto", () => {
   it("acepta un gasto valido dentro del presupuesto", () => {
     const resultado = validarGasto(
       {
+        jornada_id: "j1",
         concepto: "Compra de mascarillas",
         categoria: "Medicamentos",
         monto: 150.0,
@@ -101,6 +102,7 @@ describe("validarGasto", () => {
   it("rechaza montos menores o iguales a cero", () => {
     const resultado = validarGasto(
       {
+        jornada_id: "j1",
         concepto: "Prueba",
         categoria: "Logistica",
         monto: 0,
@@ -114,6 +116,17 @@ describe("validarGasto", () => {
     expect(resultado.errores).toContain("El monto del gasto debe ser mayor que cero.");
   });
 
+  it("exige la jornada", () => {
+    const resultado = validarGasto(
+      { concepto: "Bus", categoria: "Logistica", monto: 10, fecha: hoy() },
+      null,
+      HOY,
+    );
+
+    expect(resultado.valido).toBe(false);
+    expect(resultado.errores).toContain("La jornada del gasto es obligatoria.");
+  });
+
   it("exige concepto y categoria", () => {
     const resultado = validarGasto({ monto: 10, fecha: hoy() }, null, HOY);
 
@@ -123,7 +136,7 @@ describe("validarGasto", () => {
 
   it("acepta una categoria recien creada: la valida el catalogo de la base (00158)", () => {
     const resultado = validarGasto(
-      { concepto: "Bus", categoria: "Transporte", monto: 100, fecha: hoy() },
+      { jornada_id: "j1", concepto: "Bus", categoria: "Transporte", monto: 100, fecha: hoy() },
       null,
       HOY,
     );
@@ -134,6 +147,7 @@ describe("validarGasto", () => {
   it("sin jornada, rechaza una fecha posterior a hoy", () => {
     const resultado = validarGasto(
       {
+        jornada_id: "j1",
         concepto: "Compra adelantada",
         categoria: "Logistica",
         monto: 100,
@@ -148,7 +162,13 @@ describe("validarGasto", () => {
 
   it("acepta la fecha de su jornada aunque sea futura", () => {
     const resultado = validarGasto(
-      { concepto: "Reserva", categoria: "Logistica", monto: 100, fecha: "2026-06-20" },
+      {
+        jornada_id: "j1",
+        concepto: "Reserva",
+        categoria: "Logistica",
+        monto: 100,
+        fecha: "2026-06-20",
+      },
       jornadaConPresupuesto,
       HOY,
     );
@@ -158,7 +178,13 @@ describe("validarGasto", () => {
 
   it("rechaza una fecha posterior a su jornada", () => {
     const resultado = validarGasto(
-      { concepto: "Reserva", categoria: "Logistica", monto: 100, fecha: "2026-06-21" },
+      {
+        jornada_id: "j1",
+        concepto: "Reserva",
+        categoria: "Logistica",
+        monto: 100,
+        fecha: "2026-06-21",
+      },
       jornadaConPresupuesto,
       HOY,
     );
@@ -169,7 +195,13 @@ describe("validarGasto", () => {
 
   it("acepta un gasto de preparacion de antes de la jornada", () => {
     const resultado = validarGasto(
-      { concepto: "Compra previa", categoria: "Logistica", monto: 100, fecha: "2026-03-01" },
+      {
+        jornada_id: "j1",
+        concepto: "Compra previa",
+        categoria: "Logistica",
+        monto: 100,
+        fecha: "2026-03-01",
+      },
       jornadaConPresupuesto,
       HOY,
     );
@@ -182,14 +214,20 @@ describe("validarGasto", () => {
 
     expect(
       validarGasto(
-        { concepto: "Factura", categoria: "Logistica", monto: 100, fecha: hoy() },
+        { jornada_id: "j1", concepto: "Factura", categoria: "Logistica", monto: 100, fecha: hoy() },
         jornadaPasada,
         HOY,
       ).valido,
     ).toBe(true);
     expect(
       validarGasto(
-        { concepto: "Factura", categoria: "Logistica", monto: 100, fecha: enDias(1) },
+        {
+          jornada_id: "j1",
+          concepto: "Factura",
+          categoria: "Logistica",
+          monto: 100,
+          fecha: enDias(1),
+        },
         jornadaPasada,
         HOY,
       ).valido,
@@ -199,6 +237,7 @@ describe("validarGasto", () => {
   it("bloquea un gasto que pasa el presupuesto contando lo comprometido", () => {
     const resultado = validarGasto(
       {
+        jornada_id: "j1",
         concepto: "Alquiler extra de planta",
         categoria: "Infraestructura",
         monto: 500.0,
@@ -217,7 +256,7 @@ describe("validarGasto", () => {
 
   it("rechaza un gasto en una jornada finalizada", () => {
     const resultado = validarGasto(
-      { concepto: "Factura", categoria: "Logistica", monto: 10, fecha: hoy() },
+      { jornada_id: "j1", concepto: "Factura", categoria: "Logistica", monto: 10, fecha: hoy() },
       { ...jornadaConPresupuesto, estado: "finalizada" },
       HOY,
     );
@@ -228,7 +267,7 @@ describe("validarGasto", () => {
 
   it("acepta un gasto que llega justo al presupuesto", () => {
     const resultado = validarGasto(
-      { concepto: "Resto", categoria: "Logistica", monto: 800, fecha: hoy() },
+      { jornada_id: "j1", concepto: "Resto", categoria: "Logistica", monto: 800, fecha: hoy() },
       jornadaConPresupuesto,
       HOY,
     );
@@ -240,6 +279,7 @@ describe("validarGasto", () => {
   it("no evalua el excedente cuando la jornada no trae presupuesto asignado", () => {
     const resultado = validarGasto(
       {
+        jornada_id: "j1",
         concepto: "Insumos varios",
         categoria: "Medicamentos",
         monto: 5000,
@@ -263,6 +303,7 @@ describe("validarGasto", () => {
     it("rechaza un gasto fechado manana, aunque su medianoche UTC ya haya pasado", () => {
       const resultado = validarGasto(
         {
+          jornada_id: "j1",
           concepto: "Compra adelantada",
           categoria: "Logistica",
           monto: 100,
@@ -278,6 +319,7 @@ describe("validarGasto", () => {
     it("acepta un gasto fechado hoy, aunque ya sean las 20:00 en Guatemala", () => {
       const resultado = validarGasto(
         {
+          jornada_id: "j1",
           concepto: "Compra de la tarde",
           categoria: "Logistica",
           monto: 100,

@@ -45,10 +45,12 @@ import {
 // Las columnas se enumeran en lugar de pedir "*" para que una columna nueva en jornadas no
 // empiece a viajar sola hasta el cliente.
 //
-// comunidad, responsable y botiquinBodega se piden embebidos (comunidades.nombre, perfiles.nombres y
-// apellidos, bodegas.nombre) para que la pantalla pinte el nombre sin una segunda consulta. Si RLS
-// no deja ver el perfil, la comunidad o la bodega, el objeto embebido llega en null y la pantalla
-// cae a su respaldo; el id propio (comunidadId, responsableId, botiquinBodegaId) siempre viaja.
+// comunidad, responsable y botiquinBodega se piden embebidos (comunidades.nombre, nombres y
+// apellidos, bodegas.nombre) para que la pantalla pinte el nombre sin una segunda consulta. Los
+// nombres de personas salen de la vista nombres_de_perfiles (00161), que los ve toda persona
+// activa: desde `perfiles` un colaborador recibia al responsable y al equipo en null. Si RLS no
+// deja ver la comunidad o la bodega, el objeto llega en null y la pantalla cae a su respaldo; el id
+// propio (comunidadId, responsableId, botiquinBodegaId) siempre viaja.
 const COLUMNAS_DE_JORNADA = [
   "id",
   "nombre",
@@ -66,7 +68,7 @@ const COLUMNAS_DE_JORNADA = [
   "createdAt:created_at",
   "updatedAt:updated_at",
   "comunidad:comunidades(nombre)",
-  "responsable:perfiles(nombres, apellidos)",
+  "responsable:nombres_de_perfiles(nombres, apellidos)",
   "botiquinBodega:bodegas(nombre)",
 ].join(", ");
 
@@ -79,7 +81,7 @@ const COLUMNAS_DE_PERSONAL = [
   "horaFin:hora_fin",
   "responsabilidad",
   "asistio",
-  "perfil:perfiles(nombres, apellidos)",
+  "perfil:nombres_de_perfiles(nombres, apellidos)",
 ].join(", ");
 
 // Contadores de atenciones de la jornada, desde vista_reporte_impacto (00027).
@@ -97,7 +99,7 @@ const COLUMNAS_DE_HISTORIAL = [
   "estadoAnterior:estado_anterior",
   "estadoNuevo:estado_nuevo",
   "createdAt:created_at",
-  "cambiadoPor:perfiles(nombres, apellidos)",
+  "cambiadoPor:nombres_de_perfiles(nombres, apellidos)",
 ].join(", ");
 
 /**

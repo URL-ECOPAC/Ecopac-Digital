@@ -31,6 +31,9 @@ describe("nombreCompletoDe", () => {
     ["solo apellidos", { apellidos: "Lopez" }, "Lopez"],
     ["perfil vacio", {}, ""],
     ["sin argumento", undefined, ""],
+    // El embebido que no trajo nada llega en null; antes esto lanzaba y rompia la impresion del
+    // cuadro de turnos.
+    ["perfil null", null, ""],
   ])("%s -> '%s'", (_caso, perfil, esperado) => {
     expect(nombreCompletoDe(perfil)).toBe(esperado);
   });

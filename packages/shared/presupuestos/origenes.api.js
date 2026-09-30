@@ -31,7 +31,7 @@ const COLUMNAS_DEL_ORIGEN = [
   "donacion:donaciones(fecha, donante:donantes(nombre))",
   "fuenteId:fuente_id",
   "fuente:fuentes_de_presupuesto(nombre)",
-  "registradoPorPerfil:perfiles!jornada_presupuesto_origen_registrado_por_fkey(nombres, apellidos)",
+  "registradoPorPerfil:nombres_de_perfiles!jornada_presupuesto_origen_registrado_por_fkey(nombres, apellidos)",
 ].join(", ");
 
 /**

@@ -11,7 +11,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { debeRecargarTrasAccion } from "../inventario/usePendientesValidacion.js";
-import { listarUsuarios } from "../usuarios/api.js";
+import { listarNombresDePerfiles } from "../usuarios/api.js";
 import { nombreCompletoDe } from "../usuarios/useUsuariosListado.js";
 import { aprobarGasto, rechazarGasto } from "./aprobacionGastosApi.js";
 import { listarGastos } from "./api.js";
@@ -53,8 +53,9 @@ export function usePendientesAprobacionGastos({ usuarioId } = {}) {
   // (criterio 1). Se carga una sola vez: no cambia mientras la bandeja esta abierta.
   useEffect(() => {
     let vigente = true;
-    listarUsuarios({ estado: true }).then(({ usuarios }) => {
-      if (vigente) setPerfiles(aOpciones(usuarios, nombreCompletoDe));
+    // nombres_de_perfiles (00161): quien aprueba por delegacion no lee perfiles.
+    listarNombresDePerfiles().then(({ perfiles: filas }) => {
+      if (vigente) setPerfiles(aOpciones(filas, nombreCompletoDe));
     });
     return () => {
       vigente = false;

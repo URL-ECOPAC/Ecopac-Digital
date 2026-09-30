@@ -1,6 +1,6 @@
 # Diccionario de datos
 
-> **Documento generado.** No se edita a mano: sale de `npm run docs:diccionario` (`scripts/generar-diccionario-de-datos.mjs`), que lee el catalogo de PostgreSQL de una base con todas las migraciones aplicadas, hasta la `00160_sobrante_de_jornada.sql`. Las descripciones son los `COMMENT ON` de las migraciones: si falta una, se agrega con una migracion nueva y se regenera.
+> **Documento generado.** No se edita a mano: sale de `npm run docs:diccionario` (`scripts/generar-diccionario-de-datos.mjs`), que lee el catalogo de PostgreSQL de una base con todas las migraciones aplicadas, hasta la `00161_nombres_de_perfiles.sql`. Las descripciones son los `COMMENT ON` de las migraciones: si falta una, se agrega con una migracion nueva y se regenera.
 
 Complementa a [MODELO-DE-DATOS.md](MODELO-DE-DATOS.md), que explica el porque de cada decision, y a [PERMISOS.md](PERMISOS.md), que explica que puede hacer cada rol. Este documento es la referencia exhaustiva: cada tabla, cada campo, cada restriccion, cada politica y cada trigger.
 
@@ -10,9 +10,9 @@ Complementa a [MODELO-DE-DATOS.md](MODELO-DE-DATOS.md), que explica el porque de
 | --- | --- |
 | Tablas | 53 |
 | Tablas con RLS activo | 53 |
-| Vistas | 8 |
+| Vistas | 9 |
 | Tipos enumerados | 22 |
-| Columnas (tablas y vistas) | 478 |
+| Columnas (tablas y vistas) | 482 |
 | Llaves foraneas | 93 |
 | Restricciones CHECK | 56 |
 | Politicas RLS | 140 |
@@ -103,6 +103,7 @@ Complementa a [MODELO-DE-DATOS.md](MODELO-DE-DATOS.md), que explica el porque de
 | Tabla | Descripcion |
 | --- | --- |
 | [`gastos`](#gastos) | Gasto de una jornada. Se registra pendiente y lo aprueba o rechaza quien administra presupuestos. |
+| [`categorias_de_gasto`](#categorias_de_gasto) | Categorias de gasto (00158). Catalogo que crece desde el formulario de gasto ("Crear categoria nueva"); reemplaza al enum categoria_gasto. |
 | [`fuentes_de_presupuesto`](#fuentes_de_presupuesto) | Quien aporta de fuera al presupuesto de una jornada (origen aporte_externo). Catalogo que crece desde "Registrar un aporte". |
 | [`jornada_presupuesto_origen`](#jornada_presupuesto_origen) | De donde viene cada parte del presupuesto de una jornada (issue #840). jornadas.presupuesto_asignado es la suma de estas filas y la mantiene fn_sincronizar_presupuesto_de_jornada; nadie la escribe a mano. |
 
@@ -131,12 +132,6 @@ Complementa a [MODELO-DE-DATOS.md](MODELO-DE-DATOS.md), que explica el porque de
 | --- | --- |
 | [`notificaciones`](#notificaciones) | Buzon interno de cada perfil y bandeja de salida del correo (issue #755). Una fila por incidencia y por destinatario. Solo la escriben los triggers de esta migracion; cada perfil lee las suyas y solo puede cambiar leida_en. |
 | [`eventos_auditoria`](#eventos_auditoria) | Bitacora de cambios sobre informacion sensible. Se escribe solo por trigger y solo la lee la administradora. Sin politicas de INSERT, UPDATE ni DELETE: con RLS habilitado, lo que no tiene politica esta prohibido. No se usa FORCE ROW LEVEL SECURITY porque el dueno debe seguir eximido para que los triggers SECURITY DEFINER puedan insertar. |
-
-### Otras
-
-| Tabla | Descripcion |
-| --- | --- |
-| [`categorias_de_gasto`](#categorias_de_gasto) | Categorias de gasto (00158). Catalogo que crece desde el formulario de gasto ("Crear categoria nueva"); reemplaza al enum categoria_gasto. |
 
 ## Diagramas entidad-relacion
 
@@ -666,6 +661,12 @@ erDiagram
     timestamptz updated_at
     text motivo_rechazo
   }
+  categorias_de_gasto {
+    uuid id PK
+    text nombre UK
+    uuid registrado_por FK
+    timestamptz created_at
+  }
   fuentes_de_presupuesto {
     uuid id PK
     varchar nombre
@@ -686,6 +687,7 @@ erDiagram
     numeric devuelto
     uuid traspasado_desde FK
   }
+  perfiles |o--o{ categorias_de_gasto : "registrado_por"
   perfiles |o--o{ fuentes_de_presupuesto : "registrado_por"
   categorias_de_gasto ||--o{ gastos : "categoria"
   perfiles |o--o{ gastos : "aprobado_por"
@@ -862,20 +864,6 @@ erDiagram
     jsonb valores_nuevos
   }
   perfiles ||--o{ notificaciones : "perfil_id"
-```
-
-### Otras
-
-```mermaid
-erDiagram
-  categorias_de_gasto {
-    uuid id PK
-    text nombre UK
-    uuid registrado_por FK
-    timestamptz created_at
-  }
-  perfiles |o--o{ categorias_de_gasto : "registrado_por"
-  categorias_de_gasto ||--o{ gastos : "categoria"
 ```
 
 ## Tablas
@@ -2420,6 +2408,41 @@ Gasto de una jornada. Se registra pendiente y lo aprueba o rechaza quien adminis
 | `trg_gastos_notificar` | AFTER INSERT cuando `(new.estado = 'pendiente'::estado_gasto)` | `fn_notificar_gasto_por_aprobar()` |
 | `trg_gastos_validar_contra_presupuesto` | BEFORE INSERT OR UPDATE | `fn_validar_gasto_contra_presupuesto()` |
 
+#### categorias_de_gasto
+
+Categorias de gasto (00158). Catalogo que crece desde el formulario de gasto ("Crear categoria nueva"); reemplaza al enum categoria_gasto.
+
+| Campo | Tipo | Nulo | Por defecto | Llave | Descripcion |
+| --- | --- | --- | --- | --- | --- |
+| `id` | `uuid` | no | `extensions.gen_random_uuid()` | PK | Identificador de la categoria. |
+| `nombre` | `text` | no |  |  | Nombre de la categoria, tal como se muestra y como lo guarda gastos.categoria. Unico sin importar mayusculas. |
+| `registrado_por` | `uuid` | si | `auth.uid()` | FK -> `perfiles` | Quien creo la categoria (auth.uid()). |
+| `created_at` | `timestamptz` | no | `now()` |  | Cuando se creo la categoria. |
+
+**Llaves y restricciones**
+
+| Nombre | Tipo | Definicion |
+| --- | --- | --- |
+| `chk_categorias_de_gasto_nombre` | CHECK | `CHECK ((((length(btrim(nombre)) >= 1) AND (length(btrim(nombre)) <= 80)) AND (nombre = btrim(nombre))))` |
+| `categorias_de_gasto_registrado_por_fkey` | FK | `FOREIGN KEY (registrado_por) REFERENCES perfiles(id) ON DELETE SET NULL` (al borrar: SET NULL) |
+| `categorias_de_gasto_pkey` | PK | `PRIMARY KEY (id)` |
+| `uq_categorias_de_gasto_nombre_exacto` | UNIQUE | `UNIQUE (nombre)` |
+
+**La referencian:** `gastos.categoria` (RESTRICT).
+
+**Proteccion.** RLS activo. Privilegios: `authenticated`: INSERT, SELECT; `anon`: ninguno.
+
+| Politica | Operacion | Roles | USING | WITH CHECK |
+| --- | --- | --- | --- | --- |
+| Crean categorias de gasto quien registra o aprueba gastos | Crear | public |  | `(es_administrador() OR tiene_permiso('presupuestos.registrar'::text) OR tiene_permiso('presupuestos.aprobar'::text))` |
+| Leen categorias de gasto las personas activas | Leer | public | `(rol_actual() IS NOT NULL)` |  |
+
+**Triggers**
+
+| Trigger | Cuando | Funcion |
+| --- | --- | --- |
+| `trg_categorias_de_gasto_auditoria` | AFTER INSERT | `registrar_evento_auditoria()` |
+
 #### fuentes_de_presupuesto
 
 Quien aporta de fuera al presupuesto de una jornada (origen aporte_externo). Catalogo que crece desde "Registrar un aporte".
@@ -2963,44 +2986,20 @@ Bitacora de cambios sobre informacion sensible. Se escribe solo por trigger y so
 | --- | --- | --- | --- | --- |
 | Solo administrador lee eventos_auditoria | Leer | public | `es_administrador()` |  |
 
-### Modulo: Otras
-
-#### categorias_de_gasto
-
-Categorias de gasto (00158). Catalogo que crece desde el formulario de gasto ("Crear categoria nueva"); reemplaza al enum categoria_gasto.
-
-| Campo | Tipo | Nulo | Por defecto | Llave | Descripcion |
-| --- | --- | --- | --- | --- | --- |
-| `id` | `uuid` | no | `extensions.gen_random_uuid()` | PK | Identificador de la categoria. |
-| `nombre` | `text` | no |  |  | Nombre de la categoria, tal como se muestra y como lo guarda gastos.categoria. Unico sin importar mayusculas. |
-| `registrado_por` | `uuid` | si | `auth.uid()` | FK -> `perfiles` | Quien creo la categoria (auth.uid()). |
-| `created_at` | `timestamptz` | no | `now()` |  | Cuando se creo la categoria. |
-
-**Llaves y restricciones**
-
-| Nombre | Tipo | Definicion |
-| --- | --- | --- |
-| `chk_categorias_de_gasto_nombre` | CHECK | `CHECK ((((length(btrim(nombre)) >= 1) AND (length(btrim(nombre)) <= 80)) AND (nombre = btrim(nombre))))` |
-| `categorias_de_gasto_registrado_por_fkey` | FK | `FOREIGN KEY (registrado_por) REFERENCES perfiles(id) ON DELETE SET NULL` (al borrar: SET NULL) |
-| `categorias_de_gasto_pkey` | PK | `PRIMARY KEY (id)` |
-| `uq_categorias_de_gasto_nombre_exacto` | UNIQUE | `UNIQUE (nombre)` |
-
-**La referencian:** `gastos.categoria` (RESTRICT).
-
-**Proteccion.** RLS activo. Privilegios: `authenticated`: INSERT, SELECT; `anon`: ninguno.
-
-| Politica | Operacion | Roles | USING | WITH CHECK |
-| --- | --- | --- | --- | --- |
-| Crean categorias de gasto quien registra o aprueba gastos | Crear | public |  | `(es_administrador() OR tiene_permiso('presupuestos.registrar'::text) OR tiene_permiso('presupuestos.aprobar'::text))` |
-| Leen categorias de gasto las personas activas | Leer | public | `(rol_actual() IS NOT NULL)` |  |
-
-**Triggers**
-
-| Trigger | Cuando | Funcion |
-| --- | --- | --- |
-| `trg_categorias_de_gasto_auditoria` | AFTER INSERT | `registrar_evento_auditoria()` |
-
 ## Vistas
+
+### nombres_de_perfiles
+
+Nombre de cada persona (id, nombres, apellidos, activo), sin datos de contacto, para toda persona activa (00161). Pone nombre a los ids que el RLS de cada tabla ya deja ver.
+
+Seguridad: corre con los permisos de su dueno; filtra con su propio WHERE. Privilegios: `authenticated`: SELECT; `anon`: ninguno.
+
+| Campo | Tipo |
+| --- | --- |
+| `id` | `uuid` |
+| `nombres` | `varchar(100)` |
+| `apellidos` | `varchar(100)` |
+| `activo` | `boolean` |
 
 ### pacientes_reporte
 

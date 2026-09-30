@@ -16,8 +16,8 @@ import { vacioANull } from "./normalizacion.js";
 
 export const ETIQUETA_PERSONA_SIN_NOMBRE = "Nombre no disponible";
 
-// Al INSERTAR el perfil viaja embebido; al LEER no, porque perfiles solo la lee el administrador y
-// cada quien la suya (00038), y quien no es administrador recibiria a los demas sin nombre. La
+// Al INSERTAR el perfil viaja embebido (nombres_de_perfiles, 00161); al LEER no, porque
+// perfiles solo la lee el administrador y cada quien la suya (00038). La
 // lectura pasa por equipo_de_proyecto() (00146), una funcion DEFINER que devuelve solo nombres.
 const COLUMNAS_DEL_EQUIPO = [
   "id",
@@ -25,7 +25,7 @@ const COLUMNAS_DEL_EQUIPO = [
   "perfilId:perfil_id",
   "rolEnProyecto:rol_en_proyecto",
   "createdAt:created_at",
-  "perfil:perfiles(nombres, apellidos)",
+  "perfil:nombres_de_perfiles(nombres, apellidos)",
 ].join(", ");
 
 function aNombre(perfil) {

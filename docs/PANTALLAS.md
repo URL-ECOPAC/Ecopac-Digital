@@ -34,7 +34,7 @@ Una ruta con parametro (`/pacientes/:id`) cuenta una vez. Los dialogos (modales)
 | `/donaciones/:id/constancia` | `donaciones` | `apps/web/src/pages/ConstanciaDonacionPage.jsx` | `donaciones` | — | — |
 | `/donantes` | `donaciones` | `DonantesConSesion` | `donaciones`, `donantes` | — | — |
 | `/inventario` | `inventario` | `apps/web/src/pages/InventarioPage.jsx` | `alertas_caducidad`, `bodegas`, `existencias`, `lotes`, `medicamento_principio`, `medicamentos`, `movimientos_inventario`, `presentaciones`, `principios_activos`, `proveedores`, `vista_lotes_disponibles` | `existencias_totales_por_bodega`, `fn_atender_alerta_caducidad`, `fn_medicamento_tiene_existencias`, `fn_registrar_medicamento`, `fn_sincronizar_alertas_caducidad`, `fn_valor_de_inventario_disponible` | — |
-| `/presupuestos` | `presupuestos` | `apps/web/src/pages/PresupuestosPage.jsx` | `categorias_de_gasto`, `gastos`, `jornadas`, `perfil_especialidad`, `perfiles`, `perfiles_directorio`, `proyectos` | `presupuestos_de_jornadas`, `presupuestos_de_proyectos` | — |
+| `/presupuestos` | `presupuestos` | `apps/web/src/pages/PresupuestosPage.jsx` | `categorias_de_gasto`, `gastos`, `jornadas`, `nombres_de_perfiles`, `proyectos` | `presupuestos_de_jornadas`, `presupuestos_de_proyectos` | — |
 | `/proyectos` | `proyectos` | `ProyectosSocialesConSesion` | `gastos`, `jornada_insumos`, `jornadas`, `perfil_especialidad`, `perfiles`, `perfiles_directorio`, `proyecto_insumos`, `proyecto_personal`, `proyectos` | `equipo_de_proyecto`, `fn_pasar_insumo_de_proyecto_a_jornada` | — |
 | `/proyectos/sociales` | `proyectos` | `ProyectosSocialesConSesion` | `gastos`, `jornada_insumos`, `jornadas`, `perfil_especialidad`, `perfiles`, `perfiles_directorio`, `proyecto_insumos`, `proyecto_personal`, `proyectos` | `equipo_de_proyecto`, `fn_pasar_insumo_de_proyecto_a_jornada` | — |
 | `/proyectos/:id/seguimiento` | `proyectos` | `apps/web/src/pages/SeguimientoProyectoPage.jsx` | `jornadas`, `proyecto_estado_historial`, `proyecto_hitos`, `proyecto_seguimiento`, `proyectos` | — | — |
@@ -143,12 +143,13 @@ Una ruta con parametro (`/pacientes/:id`) cuenta una vez. Los dialogos (modales)
 | `medicamentos` | `/donaciones/registro`, `/inventario`, `/jornadas/:id`, `/pacientes/:id`, `/reportes`, `/reportes/dashboard`, `/reportes/inventario-actual`, `/reportes/medicamentos-por-vencer`, `/reportes/pacientes-atendidos` | `Receta`, `RegistroIngreso`, `RegistroSalida`, `ResumenAlertasInventario`, `Stock` |
 | `movimientos_inventario` | `/donaciones/registro`, `/inventario`, `/jornadas/:id` | `DetalleLote`, `MisMovimientos`, `RegistroIngreso`, `RegistroSalida`, `ValidacionMovimientos` |
 | `municipios` | `/jornadas`, `/jornadas/:id`, `/pacientes`, `/pacientes/:id`, `/pacientes/comunidades` | `FichaPaciente`, `RegistroPaciente` |
+| `nombres_de_perfiles` | `/presupuestos` | — |
 | `notificaciones` | `/bitacora-auditoria`, `/notificaciones`, `/perfil` | `Notificaciones` |
 | `pacientes` | `/pacientes`, `/pacientes/:id`, `/pacientes/duplicados` | `BusquedaPaciente`, `Consulta`, `FichaPaciente`, `Receta`, `RegistroPaciente` |
 | `padecimientos_cronicos` | `/pacientes/:id`, `/pacientes/cronicos`, `/pacientes/duplicados` | `Consulta`, `FichaPaciente`, `PacientesCronicos`, `Receta` |
-| `perfil_especialidad` | `/bitacora-auditoria`, `/colaboradores`, `/jornadas`, `/jornadas/:id`, `/perfil`, `/presupuestos`, `/proyectos`, `/proyectos/sociales` | `Proyectos` |
-| `perfiles` | `/bitacora-auditoria`, `/colaboradores`, `/jornadas`, `/jornadas/:id`, `/login`, `/nueva-contrasena`, `/perfil`, `/presupuestos`, `/proyectos`, `/proyectos/sociales` | `Login`, `Proyectos` |
-| `perfiles_directorio` | `/bitacora-auditoria`, `/colaboradores`, `/jornadas`, `/jornadas/:id`, `/presupuestos`, `/proyectos`, `/proyectos/sociales` | `Proyectos` |
+| `perfil_especialidad` | `/bitacora-auditoria`, `/colaboradores`, `/jornadas`, `/jornadas/:id`, `/perfil`, `/proyectos`, `/proyectos/sociales` | `Proyectos` |
+| `perfiles` | `/bitacora-auditoria`, `/colaboradores`, `/jornadas`, `/jornadas/:id`, `/login`, `/nueva-contrasena`, `/perfil`, `/proyectos`, `/proyectos/sociales` | `Login`, `Proyectos` |
+| `perfiles_directorio` | `/bitacora-auditoria`, `/colaboradores`, `/jornadas`, `/jornadas/:id`, `/proyectos`, `/proyectos/sociales` | `Proyectos` |
 | `permisos` | `/colaboradores` | — |
 | `personal_registro_atenciones` | `/jornadas/:id` | — |
 | `presentaciones` | `/donaciones/registro`, `/inventario` | `RegistroIngreso` |

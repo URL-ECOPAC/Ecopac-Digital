@@ -328,7 +328,7 @@ describe("listarSeguimiento", () => {
     const { bitacora } = await listarSeguimiento("proyecto-1");
 
     expect(pasos(llamadas, "select")[0].columnas).toContain(
-      "registradoPorPerfil:perfiles(nombres, apellidos)",
+      "registradoPorPerfil:nombres_de_perfiles(nombres, apellidos)",
     );
     expect(bitacora[0].registradoPorNombre).toBe("Ana Lopez");
     expect(bitacora[0]).not.toHaveProperty("registradoPorPerfil");
