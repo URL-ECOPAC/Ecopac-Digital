@@ -570,7 +570,9 @@ de las filas de `proyecto_personal`, a quien esta en el equipo de alguna jornada
 (`jornada_personal`), con las jornadas en que esta (`jornadas`) y si esta tambien en el equipo del
 proyecto (`en_equipo_del_proyecto`). La guarda de lectura de la funcion no cambio: la ve quien ve el
 proyecto. Quitar solo aplica a quien esta en `proyecto_personal`; a quien llega por una jornada se le
-quita desde esa jornada. Lo afirma `proyecto_personal.sql`.
+quita desde esa jornada. Desde la `00157` suma tambien al responsable de cada jornada del proyecto,
+que ya pertenecia a el para RLS (`pertenece_a_jornada()`, `00141`); no cambia quien la ve. Lo afirma
+`proyecto_personal.sql`.
 
 `jornada_presupuesto_origen` (issue #840) dice de donde viene cada parte del presupuesto de una
 jornada: una donacion de dinero, fondos propios o un aporte externo. `jornadas.presupuesto_asignado`

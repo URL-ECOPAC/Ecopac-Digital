@@ -18,10 +18,12 @@ import {
   armarResultadosDeBusqueda,
   calcularLimiteDeBusqueda,
   contarPersonalPorRol,
+  equipoDeJornada,
   estaYaAsignado,
   excluirYaAsignados,
   LIMITE_BUSQUEDA_PERSONAL,
   mensajeDeErrorDeAsignacion,
+  RESPONSABILIDAD_DEL_RESPONSABLE,
 } from "./useAsignacionPersonal.js";
 
 describe("estaYaAsignado", () => {
@@ -176,6 +178,63 @@ describe("contarPersonalPorRol", () => {
   it("lista vacia o ausente da un conteo vacio", () => {
     expect(contarPersonalPorRol([])).toEqual([]);
     expect(contarPersonalPorRol(undefined)).toEqual([]);
+  });
+});
+
+describe("equipoDeJornada", () => {
+  const RESPONSABLE = { nombres: "Ana", apellidos: "Perez" };
+  const TURNO = {
+    id: "fila-1",
+    perfilId: "perfil-medico",
+    rolEnJornada: ROLES.MEDICO,
+    horaInicio: "08:00",
+    horaFin: "12:00",
+    responsabilidad: null,
+  };
+
+  it("un responsable sin turno va primero, sin horario ni rol y sin turno que editar", () => {
+    const equipo = equipoDeJornada({
+      responsableId: "perfil-responsable",
+      responsable: RESPONSABLE,
+      personal: [TURNO],
+    });
+
+    expect(equipo).toHaveLength(2);
+    expect(equipo[0]).toMatchObject({
+      perfilId: "perfil-responsable",
+      perfil: RESPONSABLE,
+      rolEnJornada: null,
+      horaInicio: null,
+      responsabilidad: RESPONSABILIDAD_DEL_RESPONSABLE,
+      esResponsable: true,
+      tieneTurno: false,
+    });
+    expect(equipo[1]).toMatchObject({ id: "fila-1", esResponsable: false, tieneTurno: true });
+  });
+
+  it("un responsable con turno aparece una sola vez, en su fila, con su responsabilidad", () => {
+    const equipo = equipoDeJornada({
+      responsableId: "perfil-medico",
+      responsable: RESPONSABLE,
+      personal: [{ ...TURNO, responsabilidad: "triaje" }],
+    });
+
+    expect(equipo).toHaveLength(1);
+    expect(equipo[0]).toMatchObject({
+      id: "fila-1",
+      esResponsable: true,
+      tieneTurno: true,
+      responsabilidad: `${RESPONSABILIDAD_DEL_RESPONSABLE} · Triaje`,
+    });
+  });
+
+  it("sin personal, el equipo es el responsable", () => {
+    const equipo = equipoDeJornada({ responsableId: "perfil-responsable", personal: [] });
+    expect(equipo.map((fila) => fila.perfilId)).toEqual(["perfil-responsable"]);
+  });
+
+  it("sin jornada, un equipo vacio", () => {
+    expect(equipoDeJornada(null)).toEqual([]);
   });
 });
 

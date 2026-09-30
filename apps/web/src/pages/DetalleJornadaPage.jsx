@@ -7,6 +7,7 @@ import {
   COLUMNAS_PACIENTES_ATENDIDOS_JORNADA,
   COLUMNAS_PERSONAL_JORNADA,
   contarPersonalPorRol,
+  equipoDeJornada,
   ESTADOS_JORNADA,
   formatearFechaConHora,
   formatearFechaCorta,
@@ -190,10 +191,11 @@ export default function DetalleJornadaPage() {
     return <NotFoundPage />;
   }
 
-  const esReapertura = jornada.estado === ESTADOS_JORNADA.FINALIZADA;
+  // Una jornada finalizada se consulta: el detalle no ofrece reabrirla (eso queda en el tablero) y
+  // deja a la vista, deshabilitado, lo que la modificaria.
+  const jornadaFinalizada = jornada.estado === ESTADOS_JORNADA.FINALIZADA;
   const [destino] = destinos;
-  const puedeMover =
-    (esReapertura ? permisos.puedeReabrir : permisos.puedeEditar) && Boolean(destino);
+  const puedeMover = !jornadaFinalizada && permisos.puedeEditar && Boolean(destino);
 
   // 00148: el personal de campo solo ve Equipo y Pacientes atendidos (seccionesDeDetalleJornada).
   const seccionesDelRol = seccionesDeDetalleJornada(rol);
@@ -217,16 +219,21 @@ export default function DetalleJornadaPage() {
   const puedeVerEquipoCompleto = puedeVerRosterCompleto(rol);
   const conteoPorRol = contarPersonalPorRol(jornada.personal);
 
+  // El equipo es el cuadro de turnos mas el responsable de la jornada (equipoDeJornada). Quien no
+  // ve el cuadro completo solo ve su propia asignacion, asi que ahi se queda el cuadro tal cual.
+  const equipo = puedeVerEquipoCompleto ? equipoDeJornada(jornada) : (jornada.personal ?? []);
+
   // Mapeo del personal aplicando capitalización al rol en la jornada
-  const filasPersonal = (jornada.personal ?? []).map((fila) => ({
+  const filasPersonal = equipo.map((fila) => ({
     id: fila.id,
     perfilId: fila.perfilId,
     perfil: nombreDePerfil(fila.perfil) ?? "—",
-    rolEnJornada: capitalizar(fila.rolEnJornada),
+    rolEnJornada: fila.rolEnJornada ? capitalizar(fila.rolEnJornada) : null,
     horaInicio: fila.horaInicio,
     horaFin: fila.horaFin,
     responsabilidad: mayusculaInicial(fila.responsabilidad) || null,
     asistio: fila.asistio,
+    tieneTurno: fila.tieneTurno !== false,
   }));
 
   const filasConAdvertencia = filasPersonal.filter((fila) => {
@@ -305,22 +312,15 @@ export default function DetalleJornadaPage() {
             <Card>
               <div className="d-flex justify-content-between align-items-start gap-2 mb-3">
                 <StatusChip status={capitalizar(jornada.estado)} />
-                {puedeMover && esReapertura && (
-                  <SecondaryButton
-                    title="← Atrás"
-                    onClick={() => cambiarEstado(destino)}
-                    disabled={moviendo}
-                  />
-                )}
                 <div className="d-flex gap-2">
                   {permisos.puedeEditar && (
                     <SecondaryButton
                       title="Editar jornada"
                       onClick={() => setEditandoJornada(true)}
-                      disabled={moviendo}
+                      disabled={moviendo || jornadaFinalizada}
                     />
                   )}
-                  {puedeMover && !esReapertura && destino !== ESTADOS_JORNADA.FINALIZADA && (
+                  {puedeMover && destino !== ESTADOS_JORNADA.FINALIZADA && (
                     <PrimaryButton
                       title={destino === ESTADOS_JORNADA.EN_CURSO ? "Iniciar jornada" : "Avanzar →"}
                       onClick={() => cambiarEstado(destino)}
@@ -382,7 +382,9 @@ export default function DetalleJornadaPage() {
                 {puedeVerEquipoCompleto ? (
                   <div className="d-flex flex-wrap gap-2">
                     {conteoPorRol.length === 0 ? (
-                      <span className="text-muted small">Todavía no hay personal asignado.</span>
+                      <span className="text-muted small">
+                        Todavía no hay personal con turno asignado.
+                      </span>
                     ) : (
                       conteoPorRol.map((fila) => (
                         <span key={fila.rol} className="badge text-bg-light border">
@@ -403,6 +405,7 @@ export default function DetalleJornadaPage() {
                     <PrimaryButton
                       title="Asignar personal"
                       onClick={() => setMostrarAsignar(true)}
+                      disabled={jornadaFinalizada}
                     />
                   )}
                 </div>
@@ -434,7 +437,12 @@ export default function DetalleJornadaPage() {
                 columnas={COLUMNAS_PERSONAL_JORNADA}
                 datos={filasPersonal}
                 vacio="Todavía no hay personal asignado a esta jornada."
-                onRowPress={permisos.puedeEditar ? (fila) => setFilaEnEdicion(fila) : undefined}
+                // El responsable sin turno no tiene turno que editar; una jornada finalizada, ninguno.
+                onRowPress={
+                  permisos.puedeEditar && !jornadaFinalizada
+                    ? (fila) => fila.tieneTurno && setFilaEnEdicion(fila)
+                    : undefined
+                }
               />
             </>
           )}
@@ -461,10 +469,13 @@ export default function DetalleJornadaPage() {
               proyectoId={jornada.proyectoId}
               rol={rol}
               alCambiar={recargar}
+              soloConsulta={jornadaFinalizada}
             />
           )}
 
-          {pestaniaMostrada === "insumos" && <InsumosDeJornada jornadaId={jornada.id} rol={rol} />}
+          {pestaniaMostrada === "insumos" && (
+            <InsumosDeJornada jornadaId={jornada.id} rol={rol} soloConsulta={jornadaFinalizada} />
+          )}
 
           {pestaniaMostrada === "cierre" && (
             <Card>

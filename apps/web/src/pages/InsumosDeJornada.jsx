@@ -8,7 +8,9 @@ import ModalInsumoPrevisto from "./ModalInsumoPrevisto";
 
 // Pestana Insumos del detalle de una jornada (00151): lo previsto para la jornada, con alta,
 // correccion y baja para quien la administra. El proyecto de la jornada solo los muestra.
-export default function InsumosDeJornada({ jornadaId, rol }) {
+// `soloConsulta`: la jornada esta finalizada; "Agregar insumo" queda deshabilitado y la lista sin
+// edicion ni "Quitar".
+export default function InsumosDeJornada({ jornadaId, rol, soloConsulta = false }) {
   const {
     puedeGestionar,
     columnas,
@@ -28,6 +30,7 @@ export default function InsumosDeJornada({ jornadaId, rol }) {
   const [formularioAbierto, setFormularioAbierto] = useState(false);
   const [insumoPorQuitar, setInsumoPorQuitar] = useState(null);
   const [aviso, setAviso] = useState(null);
+  const modifica = puedeGestionar && !soloConsulta;
 
   return (
     <div className="d-flex flex-column gap-3">
@@ -50,6 +53,7 @@ export default function InsumosDeJornada({ jornadaId, rol }) {
               setInsumoEnEdicion(null);
               setFormularioAbierto(true);
             }}
+            disabled={soloConsulta}
           />
         </div>
       )}
@@ -89,16 +93,14 @@ export default function InsumosDeJornada({ jornadaId, rol }) {
         cargando={cargando}
         vacio="Esta jornada todavía no tiene insumos previstos."
         onRowPress={
-          puedeGestionar
+          modifica
             ? (insumo) => {
                 setInsumoEnEdicion(insumo);
                 setFormularioAbierto(true);
               }
             : undefined
         }
-        accionSecundaria={
-          puedeGestionar ? { label: "Quitar", onClick: setInsumoPorQuitar } : undefined
-        }
+        accionSecundaria={modifica ? { label: "Quitar", onClick: setInsumoPorQuitar } : undefined}
       />
 
       {insumos.length > 0 && (

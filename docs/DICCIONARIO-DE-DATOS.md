@@ -1,6 +1,6 @@
 # Diccionario de datos
 
-> **Documento generado.** No se edita a mano: sale de `npm run docs:diccionario` (`scripts/generar-diccionario-de-datos.mjs`), que lee el catalogo de PostgreSQL de una base con todas las migraciones aplicadas, hasta la `00156_comentarios_del_diccionario_de_datos.sql`. Las descripciones son los `COMMENT ON` de las migraciones: si falta una, se agrega con una migracion nueva y se regenera.
+> **Documento generado.** No se edita a mano: sale de `npm run docs:diccionario` (`scripts/generar-diccionario-de-datos.mjs`), que lee el catalogo de PostgreSQL de una base con todas las migraciones aplicadas, hasta la `00157_responsable_de_jornada_en_equipo_de_proyecto.sql`. Las descripciones son los `COMMENT ON` de las migraciones: si falta una, se agrega con una migracion nueva y se regenera.
 
 Complementa a [MODELO-DE-DATOS.md](MODELO-DE-DATOS.md), que explica el porque de cada decision, y a [PERMISOS.md](PERMISOS.md), que explica que puede hacer cada rol. Este documento es la referencia exhaustiva: cada tabla, cada campo, cada restriccion, cada politica y cada trigger.
 
@@ -3094,7 +3094,7 @@ Seguridad: corre con los permisos de su dueno; filtra con su propio WHERE. Privi
 | --- | --- | --- | --- | --- |
 | `accede_a_modulo_por_matriz(p_modulo text)` | `boolean` | DEFINER | authenticated | Si la matriz de acceso le abrio este modulo al rol de la sesion. Solo se usa en politicas de LECTURA: abrir un modulo no da escritura. |
 | `alta_de_cuenta_permitida(p_usuario_de_sesion text, p_app_meta jsonb)` | `boolean` | INVOKER | nadie | Decide si un alta en auth.users puede continuar. Recibe el usuario de sesion en vez de leerlo para que sea comprobable desde pgTAP: postgres no puede hacer SET SESSION AUTHORIZATION en el stack local. |
-| `equipo_de_proyecto(p_proyecto_id uuid)` | `TABLE(id uuid, proyecto_id uuid, perfil_id uuid, rol_en_proyecto text, created_at timestamp with time zone, nombres character varying, apellidos character varying, en_equipo_del_proyecto boolean, jornadas text[])` | DEFINER | authenticated | Equipo de un proyecto: la union de proyecto_personal y del cuadro de turnos de sus jornadas, una fila por persona, con sus nombres (00150). |
+| `equipo_de_proyecto(p_proyecto_id uuid)` | `TABLE(id uuid, proyecto_id uuid, perfil_id uuid, rol_en_proyecto text, created_at timestamp with time zone, nombres character varying, apellidos character varying, en_equipo_del_proyecto boolean, jornadas text[])` | DEFINER | authenticated | Equipo de un proyecto: la union de proyecto_personal, del cuadro de turnos de sus jornadas y de sus responsables, una fila por persona, con sus nombres (00150, 00157). |
 | `es_administrador()` | `boolean` | INVOKER | authenticated | TRUE si quien esta conectado tiene rol administrador y su cuenta esta activa. La usan las politicas RLS. |
 | `es_consultivo()` | `boolean` | INVOKER | authenticated | TRUE si el usuario autenticado es junta directiva o socio fundador: los dos roles de gobernanza de solo lectura, con permisos identicos (issue #404). Reemplaza las comparaciones a mano contra 'junta directiva' que dejaban fuera a socio fundador. |
 | `es_personal_de_campo()` | `boolean` | INVOKER | authenticated | Si la sesion es medico o voluntario general (y esta activa: rol_actual() es NULL para un perfil desactivado). |
