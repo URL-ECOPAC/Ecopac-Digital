@@ -8,7 +8,7 @@
 
 BEGIN;
 
-SELECT plan(20);
+SELECT plan(23);
 
 -- ============================================================================
 -- Setup
@@ -150,11 +150,13 @@ SELECT ok(
   'y le trae el nombre de TODAS las personas del equipo, aunque no pueda leer perfiles'
 );
 
+-- En B el administrador 14611 no esta en el equipo ni en un turno, pero es el responsable de su
+-- jornada: desde la 00157 la funcion lo suma.
 SELECT is(
   (SELECT count(*) FROM equipo_de_proyecto('50000000-0000-0000-0000-000000001462'))::int,
   (SELECT count(*) FROM proyecto_personal
-    WHERE proyecto_id = '50000000-0000-0000-0000-000000001462')::int,
-  'equipo_de_proyecto coincide con la tabla tambien en el proyecto al que pertenece por equipo'
+    WHERE proyecto_id = '50000000-0000-0000-0000-000000001462')::int + 1,
+  'equipo_de_proyecto coincide con la tabla, mas el responsable de su jornada, en el proyecto al que pertenece por equipo'
 );
 
 -- ============================================================================
@@ -217,6 +219,40 @@ SELECT is(
     WHERE perfil_id = '00000000-0000-0000-0000-000000014613'),
   row(true, ARRAY['Jornada A 1461']::text[], 'Coordinacion'::text)::text,
   'quien esta en el equipo y en una jornada conserva su rol en el proyecto y su jornada'
+);
+
+-- ============================================================================
+-- 00157: el responsable de una jornada es parte del equipo del proyecto
+-- ============================================================================
+RESET ROLE;
+-- El medico 14614 organiza la jornada C del proyecto A sin estar en su equipo ni en ningun turno.
+INSERT INTO jornadas (id, nombre, fecha, comunidad_id, responsable_id, proyecto_id) VALUES
+  ('40000000-0000-0000-0000-000000001463', 'Jornada C 1461', CURRENT_DATE + 32,
+   '10000000-0000-0000-0000-000000001461', '00000000-0000-0000-0000-000000014614',
+   '50000000-0000-0000-0000-000000001461');
+
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000014611';
+
+SELECT is(
+  (SELECT count(*) FROM equipo_de_proyecto('50000000-0000-0000-0000-000000001461'))::int, 4,
+  'el equipo de A suma al responsable de una de sus jornadas aunque no tenga turno'
+);
+
+SELECT is(
+  (SELECT row(en_equipo_del_proyecto, jornadas)::text
+     FROM equipo_de_proyecto('50000000-0000-0000-0000-000000001461')
+    WHERE perfil_id = '00000000-0000-0000-0000-000000014614'),
+  row(false, ARRAY['Jornada C 1461']::text[])::text,
+  'el responsable se marca como quien viene de una jornada y dice de cual'
+);
+
+SELECT is(
+  (SELECT row(count(*), bool_and(en_equipo_del_proyecto), max(jornadas::text))::text
+     FROM equipo_de_proyecto('50000000-0000-0000-0000-000000001461')
+    WHERE perfil_id = '00000000-0000-0000-0000-000000014611'),
+  row(1::bigint, true, ARRAY['Jornada A 1461']::text)::text,
+  'quien es responsable de una jornada y esta en el equipo aparece una sola vez'
 );
 
 -- ============================================================================

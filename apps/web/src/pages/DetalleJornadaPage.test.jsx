@@ -105,6 +105,7 @@ function irAPestaniaCierre() {
 describe("DetalleJornadaPage", () => {
   afterEach(() => {
     mockEstadoDetalle.jornada = JORNADA_EN_CURSO;
+    mockEstadoDetalle.destinos = ["finalizada"];
     mockEstadoDetalle.cargando = false;
     mockEstadoDetalle.error = null;
     mockEstadoCierre.resumen = {
@@ -241,5 +242,49 @@ describe("DetalleJornadaPage", () => {
     irAPestaniaCierre();
 
     expect(screen.getByText("No se pudo confirmar el cierre de la jornada.")).toBeInTheDocument();
+  });
+
+  describe("jornada finalizada: solo consulta", () => {
+    function finalizada() {
+      mockEstadoDetalle.jornada = { ...JORNADA_EN_CURSO, estado: "finalizada" };
+      mockEstadoDetalle.destinos = ["en curso"];
+    }
+
+    it("el resumen ya no ofrece Atras y deja Editar jornada deshabilitado", () => {
+      finalizada();
+      pantalla();
+
+      expect(screen.queryByRole("button", { name: /Atrás/ })).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /Editar jornada/ })).toBeDisabled();
+    });
+
+    it("en Equipo, Asignar personal queda deshabilitado", () => {
+      finalizada();
+      pantalla();
+      fireEvent.click(screen.getByText("Equipo"));
+
+      expect(screen.getByRole("button", { name: /Asignar personal/ })).toBeDisabled();
+    });
+
+    it("una jornada en curso sigue con Editar jornada y Asignar personal habilitados", () => {
+      pantalla();
+      expect(screen.getByRole("button", { name: /Editar jornada/ })).toBeEnabled();
+
+      fireEvent.click(screen.getByText("Equipo"));
+      expect(screen.getByRole("button", { name: /Asignar personal/ })).toBeEnabled();
+    });
+  });
+
+  it("el responsable de la jornada aparece en Equipo aunque no tenga turno", () => {
+    mockEstadoDetalle.jornada = {
+      ...JORNADA_EN_CURSO,
+      responsableId: "perfil-responsable",
+      responsable: { nombres: "Ana", apellidos: "Perez" },
+    };
+    pantalla();
+    fireEvent.click(screen.getByText("Equipo"));
+
+    expect(screen.getByText("Ana Perez")).toBeInTheDocument();
+    expect(screen.getByText("Responsable de la jornada")).toBeInTheDocument();
   });
 });

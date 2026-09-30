@@ -61,7 +61,15 @@ function AltaDeFuente({ creando, error, onCrear, onCancelar }) {
   );
 }
 
-export default function OrigenesDePresupuesto({ jornadaId, proyectoId, rol, alCambiar }) {
+// `soloConsulta`: la jornada esta finalizada. El formulario queda a la vista, deshabilitado, y la
+// lista sin "Quitar".
+export default function OrigenesDePresupuesto({
+  jornadaId,
+  proyectoId,
+  rol,
+  alCambiar,
+  soloConsulta = false,
+}) {
   const {
     permisos,
     origenes,
@@ -110,7 +118,7 @@ export default function OrigenesDePresupuesto({ jornadaId, proyectoId, rol, alCa
           cargando={cargando}
           vacio="Esta jornada todavía no tiene presupuesto."
           accionSecundaria={
-            permisos?.puedeGestionar
+            permisos?.puedeGestionar && !soloConsulta
               ? {
                   label: "Quitar",
                   onClick: (fila) => {
@@ -139,7 +147,7 @@ export default function OrigenesDePresupuesto({ jornadaId, proyectoId, rol, alCa
                     valor={valores[campo.id]}
                     error={errores[campo.id]}
                     catalogos={catalogos}
-                    disabled={guardando}
+                    disabled={guardando || soloConsulta}
                     onChange={(valor) => setCampo(campo.id, valor)}
                   />
                   {campo.id === "origen" && !creandoFuenteNueva && (
@@ -149,11 +157,11 @@ export default function OrigenesDePresupuesto({ jornadaId, proyectoId, rol, alCa
                         size="sm"
                         icon={<Plus size={14} aria-hidden="true" />}
                         onClick={() => setCreandoFuenteNueva(true)}
-                        disabled={guardando}
+                        disabled={guardando || soloConsulta}
                       />
                     </div>
                   )}
-                  {campo.id === "origen" && creandoFuenteNueva && (
+                  {campo.id === "origen" && creandoFuenteNueva && !soloConsulta && (
                     <AltaDeFuente
                       creando={creandoFuente}
                       error={errorFuente}
@@ -175,7 +183,12 @@ export default function OrigenesDePresupuesto({ jornadaId, proyectoId, rol, alCa
                 </p>
               )}
             <div className="ec-form-pie">
-              <PrimaryButton title="Agregar aporte" onClick={registrar} loading={guardando} />
+              <PrimaryButton
+                title="Agregar aporte"
+                onClick={registrar}
+                loading={guardando}
+                disabled={soloConsulta}
+              />
             </div>
           </EnFormulario>
         </Card>

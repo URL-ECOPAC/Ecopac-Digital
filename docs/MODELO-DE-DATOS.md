@@ -749,7 +749,8 @@ asignacion); la escribe el administrador o quien tenga `proyectos.gestionar`.
 `00150` devuelve **la union** de esta tabla y del equipo de las jornadas del proyecto
 (`jornada_personal`), con dos columnas mas: `jornadas` (nombres de las jornadas en que esta la
 persona) y `en_equipo_del_proyecto` (si tiene fila aqui, que es lo unico que se puede quitar desde
-el proyecto).
+el proyecto). Desde la `00157` suma tambien al responsable de cada jornada del proyecto
+(`jornadas.responsable_id`), aunque no tenga turno en ella.
 
 ### `proyecto_insumos` [00147]
 
@@ -885,7 +886,7 @@ Del lado del cliente, estos valores nacen una sola vez en `packages/shared/enums
 | `fn_crear_usuario_administrativo(...)`  | Alta de cuenta; SECURITY DEFINER, sin GRANT a PUBLIC              |
 | `presupuesto_de_jornada / _de_proyecto / _del_sistema()` | Asignado, ejecutado y disponible             |
 | `presupuestos_de_jornadas(ids[]) / presupuestos_de_proyectos(ids[])` | [00123] Lo mismo en lote: una fila por id en vez de una RPC por fila. Un id ausente del resultado se trata como presupuesto en ceros |
-| `equipo_de_proyecto(proyecto)`          | [00146] El equipo del proyecto con nombres, sin abrir `perfiles`. [00150] Union con el equipo de sus jornadas |
+| `equipo_de_proyecto(proyecto)`          | [00146] El equipo del proyecto con nombres, sin abrir `perfiles`. [00150] Union con el equipo de sus jornadas. [00157] Y con sus responsables |
 | `fn_pasar_insumo_de_proyecto_a_jornada(insumo, jornada)` | [00151] INVOKER. Mueve un insumo previsto del proyecto a una de sus jornadas, en una transaccion |
 | `fn_verificar_y_contar_limite(recurso, actor, maximo, ventana)` | [00134] Limite de peticiones sobre `limites_de_uso`; lanza si se paso del umbral. Lo envuelven `fn_verificar_limite_invitaciones` y `fn_verificar_limite_busqueda_pacientes` |
 | `fn_reporte_pacientes_atendidos(...)`   | Reporte agregado con agrupacion configurable. [00155] La comunidad es la del paciente (la de la jornada si no tiene) |

@@ -476,7 +476,7 @@ estado, jornadas, equipo, insumos, `puedeRegistrarSeguimiento`), sea cual sea el
 nuevo a un proyecto; `MENSAJE_PROYECTO_CANCELADO` es el aviso que se muestra. Quien lo impide de
 verdad son los triggers de la 00154.
 
-**Equipo e insumos**: `equipo.api.js` (00146; desde la 00150, union con el equipo de sus jornadas),
+**Equipo e insumos**: `equipo.api.js` (00146; desde la 00150, union con el equipo de sus jornadas, y desde la 00157 con sus responsables),
 `insumos.api.js` (00147: listar, quitar y `pasarInsumoDelProyectoAJornada`, 00151) y
 `normalizacion.js` (`vacioANull` para columnas DATE y UUID opcionales).
 
