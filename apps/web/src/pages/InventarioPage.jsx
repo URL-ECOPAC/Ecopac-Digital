@@ -965,10 +965,9 @@ export default function InventarioPage() {
         </>
       )}
 
-      {/* Pestaña: Alertas completada mediante PanelAlertasVencimiento */}
-      {pestanaVisible === "alertas" && (
-        <PanelAlertasVencimiento usuarioId={usuarioActual?.id} rolUsuario={usuarioActual?.rol} />
-      )}
+      {/* Pestaña: Alertas. El rol decide si sincroniza al abrir y si puede atender (issue #899):
+          quien atiende lo fija la base con auth.uid(), por eso no viaja el id. */}
+      {pestanaVisible === "alertas" && <PanelAlertasVencimiento rolUsuario={rol} />}
 
       {/* Pestaña: Kardex Movimientos */}
       {pestanaVisible === "kardex" && <KardexMovimientosPage titulo="Historial de Movimientos" />}

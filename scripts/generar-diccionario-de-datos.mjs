@@ -104,6 +104,8 @@ const MODULOS = [
       "movimientos_inventario",
       "alertas_caducidad",
       "alerta_caducidad_detalle",
+      "avisos_caducidad",
+      "configuracion_alertas_caducidad",
     ],
   },
   {

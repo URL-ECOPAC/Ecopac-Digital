@@ -1,161 +1,208 @@
-import { useState } from "react";
+import { Table } from "react-bootstrap";
 import {
-  ETIQUETAS_ACCION_ALERTA,
+  describirEtapa,
+  etiquetaAccionTomada,
   formatearFechaConHora,
+  formatearFechaCorta,
   useAlertasVencimiento,
+  useAtencionAlertaCaducidad,
 } from "@ecopac/shared";
-import DataList from "../components/DataList";
-import EmptyState from "../components/EmptyState";
+
 import ErrorState from "../components/ErrorState";
 import LoadingState from "../components/LoadingState";
-import PageHeader from "../components/PageHeader";
-import ScreenContainer from "../components/ScreenContainer";
-//import ModalAtencionAlerta from "./ModalAtencionAlerta";
+import SecondaryButton from "../components/SecondaryButton";
+import SectionHeader from "../components/SectionHeader";
+import StatusChip from "../components/StatusChip";
+import TextField from "../components/TextField";
+import ModalAtencionAlerta from "./ModalAtencionAlerta";
+
+// Urgencia de un lote por vencer, para el color del chip: cuanto mas cerca, mas fuerte. Los 7
+// dias son un nivel visual, no la regla de los avisos (esa es la configuracion, issue #899).
+const DIAS_CRITICOS = 7;
 
 /**
- * Una alerta atendida con una sola acción trae `accion`; con varias (issue #143) esa columna
- * queda NULL y el desglose vive en `detalle`. `bodegas` traduce bodegaDestinoId a nombre para
- * un reubicado.
+ * Pestana "Alertas" de Inventario (issue #268, RF-19).
+ *
+ * Issue #899: el PR #881 dejo este panel sin `rolUsuario` -asi que nunca sincronizaba las alertas-
+ * y sin el flujo de "Registrar acción tomada", de modo que ninguna alerta se podia atender desde
+ * la web y las pendientes bloqueaban los avisos siguientes. Ambas cosas vuelven, con el estado
+ * del formulario en packages/shared (useAtencionAlertaCaducidad).
+ *
+ * @param {{ rolUsuario: string }} props
  */
-function etiquetaAccionTomada(fila, bodegas) {
-  if (fila.accion) return ETIQUETAS_ACCION_ALERTA[fila.accion] ?? fila.accion;
-
-  if (fila.detalle?.length > 0) {
-    return fila.detalle
-      .map((item) => {
-        const etiqueta = ETIQUETAS_ACCION_ALERTA[item.accion] ?? item.accion;
-        const bodega = item.bodegaDestinoId
-          ? bodegas.find((b) => b.id === item.bodegaDestinoId)?.nombre
-          : null;
-        return `${etiqueta} (${item.cantidad}${bodega ? ` → ${bodega}` : ""})`;
-      })
-      .join(", ");
-  }
-
-  return "—";
-}
-
-export default function PanelAlertasVencimiento() {
+export default function PanelAlertasVencimiento({ rolUsuario }) {
   const {
-    porVencer = [],
-    vencidas = [],
-    atendidas = [],
-    bodegas = [],
+    porVencer,
+    vencidas,
+    cantidadPendientes,
+    atendidas,
+    errorAtendidas,
+    bodegas,
+    errorBodegas,
     cargando,
     error,
     recargar,
+    busqueda,
     setBusqueda,
-  } = useAlertasVencimiento();
+    marcarComoAtendida,
+    puedeAtender,
+    puedeConfigurar,
+    resumenAvisos,
+    textoSinPorVencer,
+    textoVentana,
+  } = useAlertasVencimiento({ rolUsuario });
 
-  const [alertaSeleccionada, setAlertaSeleccionada] = useState(null);
+  const atencion = useAtencionAlertaCaducidad({ marcarComoAtendida, bodegas });
 
-  if (cargando) {
-    return (
-      <ScreenContainer>
-        <PageHeader title="Alertas de vencimiento" />
-        <LoadingState mensaje="Cargando alertas…" />
-      </ScreenContainer>
-    );
-  }
+  if (cargando) return <LoadingState />;
+  if (error) return <ErrorState message={error.mensaje} onRetry={recargar} />;
 
-  if (error) {
-    return (
-      <ScreenContainer>
-        <PageHeader title="Alertas de vencimiento" />
-        <ErrorState mensaje={error.mensaje} onReintentar={recargar} />
-      </ScreenContainer>
-    );
-  }
-
-  const hayPendientes = porVencer.length > 0 || vencidas.length > 0;
+  const tablaDeAlertas = (alertas, { vencidas: sonVencidas }) => (
+    <div className="ec-tabla">
+      <Table responsive hover className="mb-0">
+        <thead>
+          <tr>
+            <th>Medicamento</th>
+            <th>Lote</th>
+            <th className="text-end">Cantidad disponible</th>
+            <th>Vencimiento</th>
+            <th className="text-center">{sonVencidas ? "Días vencido" : "Días restantes"}</th>
+            <th>Último aviso</th>
+            {puedeAtender && <th className="text-end">Acción</th>}
+          </tr>
+        </thead>
+        <tbody>
+          {alertas.map((alerta) => (
+            <tr key={alerta.id}>
+              <td>
+                <strong>{alerta.medicamento}</strong>
+              </td>
+              <td className="ec-mono">{alerta.numeroLote}</td>
+              <td className="text-end">{alerta.cantidadDisponible}</td>
+              <td>
+                {alerta.fechaVencimiento ? formatearFechaCorta(alerta.fechaVencimiento) : "—"}
+              </td>
+              <td className="text-center">
+                <StatusChip
+                  status={
+                    sonVencidas || alerta.diasRestantes <= DIAS_CRITICOS ? "critico" : "por vencer"
+                  }
+                  label={
+                    sonVencidas
+                      ? `${Math.abs(alerta.diasRestantes)}d`
+                      : alerta.diasRestantes === 0
+                        ? "HOY"
+                        : `${alerta.diasRestantes}d`
+                  }
+                />
+              </td>
+              <td>{describirEtapa(alerta.umbralNotificadoDias)}</td>
+              {puedeAtender && (
+                <td className="text-end">
+                  <SecondaryButton
+                    title={sonVencidas ? "Registrar baja" : "Atender"}
+                    size="sm"
+                    variant={sonVencidas ? "peligro" : "outline"}
+                    onClick={() => atencion.abrir(alerta)}
+                  />
+                </td>
+              )}
+            </tr>
+          ))}
+        </tbody>
+      </Table>
+    </div>
+  );
 
   return (
-    <ScreenContainer>
-      <PageHeader title="Alertas de vencimiento" />
+    <div>
+      <SectionHeader
+        title="Alertas de vencimiento"
+        subtitle={`${textoVentana} • ${cantidadPendientes} pendientes • Avisos: ${resumenAvisos}`}
+        actions={
+          puedeConfigurar
+            ? [
+                {
+                  label: "Configurar avisos",
+                  to: "/inventario/avisos-vencimiento",
+                  variant: "outline",
+                },
+              ]
+            : []
+        }
+      />
 
-      {/* Buscador */}
-      <div className="mb-3">
-        <input
-          type="search"
-          className="form-control"
-          placeholder="Buscar por lote, producto o bodega…"
-          onChange={(e) => setBusqueda(e.target.value)}
-        />
+      <div className="ec-filtros">
+        <div className="ec-filtro ec-filtro--busqueda">
+          <TextField
+            label="Buscar alerta"
+            placeholder="Buscar medicamento o lote..."
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+            style={{ marginBottom: 0 }}
+          />
+        </div>
       </div>
 
-      {!hayPendientes && atendidas.length === 0 ? (
-        <EmptyState mensaje="No hay alertas de vencimiento." />
-      ) : (
-        <>
-          {/*  Bloque 1: Por vencer */}
-          {porVencer.length > 0 && (
-            <div className="mb-5">
-              <h3 className="h5 mb-3">Por vencer ({porVencer.length})</h3>
-              <DataList
-                columnas={[
-                  { id: "numeroLote", label: "Lote" },
-                  { id: "medicamento", label: "Producto" },
-                  { id: "cantidadDisponible", label: "Cantidad", tipo: "numero" },
-                  { id: "fechaVencimiento", label: "Vencimiento", tipo: "fecha" },
-                ]}
-                datos={porVencer}
-                onRowPress={setAlertaSeleccionada}
-              />
-            </div>
-          )}
+      <section className="ec-subseccion" style={{ "--ec-acento": "var(--color-warning)" }}>
+        <h3 className="ec-subseccion-titulo">Próximos a vencer ({porVencer.length})</h3>
+        {porVencer.length === 0 ? (
+          <p className="ec-subseccion-vacio">{textoSinPorVencer}</p>
+        ) : (
+          tablaDeAlertas(porVencer, { vencidas: false })
+        )}
+      </section>
 
-          {/*  Bloque 2: Vencidas */}
-          {vencidas.length > 0 && (
-            <div className="mb-5">
-              <h3 className="h5 mb-3 text-danger">Vencidas ({vencidas.length})</h3>
-              <DataList
-                columnas={[
-                  { id: "numeroLote", label: "Lote" },
-                  { id: "medicamento", label: "Producto" },
-                  { id: "cantidadDisponible", label: "Cantidad", tipo: "numero" },
-                  { id: "fechaVencimiento", label: "Vencimiento", tipo: "fecha" },
-                ]}
-                datos={vencidas}
-                onRowPress={setAlertaSeleccionada}
-              />
-            </div>
-          )}
+      <section className="ec-subseccion" style={{ "--ec-acento": "var(--color-danger)" }}>
+        <h3 className="ec-subseccion-titulo">Vencidos — Para dar de baja ({vencidas.length})</h3>
+        {vencidas.length === 0 ? (
+          <p className="ec-subseccion-vacio">No hay lotes vencidos</p>
+        ) : (
+          tablaDeAlertas(vencidas, { vencidas: true })
+        )}
+      </section>
 
-          {/*  Bloque 3: Atendidas con acción y responsable */}
-          {atendidas.length > 0 && (
-            <div className="mt-6">
-              <h3 className="h5 mb-3">Atendidas ({atendidas.length})</h3>
-              <DataList
-                columnas={[
-                  { id: "numeroLote", label: "Lote" },
-                  { id: "medicamento", label: "Producto" },
-                  {
-                    id: "accion",
-                    label: "Acción tomada",
-                    formatear: (fila) => etiquetaAccionTomada(fila, bodegas),
-                  },
-                  {
-                    id: "atendidaPorNombre",
-                    label: "Atendido por",
-                    formatear: (fila) => fila.atendidaPorNombre || "—",
-                  },
-                  {
-                    id: "atendidaEn",
-                    label: "Atendida el",
-                    formatear: (fila) => formatearFechaConHora(fila.atendidaEn) || "—",
-                  },
-                ]}
-                datos={atendidas}
-                vacio={null}
-              />
-            </div>
-          )}
+      {/* Lo ya atendido (issue #755): que se hizo, quien y cuando. Su fallo se dice aqui y no tapa
+          las pendientes, que son las que piden accion. */}
+      <section className="ec-subseccion" style={{ "--ec-acento": "var(--color-success)" }}>
+        <h3 className="ec-subseccion-titulo">Atendidas recientemente ({atendidas.length})</h3>
+        {errorAtendidas ? (
+          <ErrorState message={errorAtendidas.mensaje} onRetry={recargar} />
+        ) : atendidas.length === 0 ? (
+          <p className="ec-subseccion-vacio">Todavía no se ha atendido ninguna alerta</p>
+        ) : (
+          <div className="ec-tabla">
+            <Table responsive hover className="mb-0">
+              <thead>
+                <tr>
+                  <th>Medicamento</th>
+                  <th>Lote</th>
+                  <th>Acción tomada</th>
+                  <th>Atendida por</th>
+                  <th>Fecha</th>
+                </tr>
+              </thead>
+              <tbody>
+                {atendidas.map((alerta) => (
+                  <tr key={alerta.id}>
+                    <td>
+                      <strong>{alerta.medicamento}</strong>
+                    </td>
+                    <td className="ec-mono">{alerta.numeroLote}</td>
+                    <td>{etiquetaAccionTomada(alerta, bodegas)}</td>
+                    <td>
+                      {alerta.cerradaSinExistencia ? "Sistema" : (alerta.atendidaPorNombre ?? "—")}
+                    </td>
+                    <td>{alerta.atendidaEn ? formatearFechaConHora(alerta.atendidaEn) : "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </Table>
+          </div>
+        )}
+      </section>
 
-          {!hayPendientes && atendidas.length === 0 && (
-            <EmptyState mensaje="No hay alertas pendientes ni atendidas." />
-          )}
-        </>
-      )}
-    </ScreenContainer>
+      <ModalAtencionAlerta atencion={atencion} errorBodegas={errorBodegas} />
+    </div>
   );
 }

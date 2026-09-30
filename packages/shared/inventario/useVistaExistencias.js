@@ -1,6 +1,8 @@
 import { useState, useMemo, useCallback } from "react";
 
 import { diasHastaVencimiento } from "../formato/fechas.js";
+import { ventanaDeAviso } from "./configuracionAlertas.validaciones.js";
+import { useVentanaDeAvisoVencimiento } from "./useVentanaDeAvisoVencimiento.js";
 
 // ─── Estados de vencimiento ───
 // REGLAS ALINEADAS CON MIGRACIÓN #597:
@@ -14,8 +16,7 @@ export const ESTADO_EXISTENCIA = {
   SIN_STOCK: "Sin existencia",
 };
 
-// ─── Umbrales ───
-const DIAS_AVISO_VENCIMIENTO = 30; // días antes = "Próximo a vencer"
+// "Proximo a vencer" usa la ventana de los avisos de vencimiento (issue #899), no un numero fijo.
 
 /**
  * Dias que faltan para que venza un lote, en calendario local (issue #694).
@@ -39,9 +40,14 @@ export function calcularDiasRestantes(fechaCaducidad) {
  *
  * @param {string|null} fechaCaducidad Fecha `AAAA-MM-DD`.
  * @param {number|string|null} stockDisponible Cantidad disponible.
+ * @param {number} [diasAviso] Ventana de los avisos de vencimiento (issue #899).
  * @returns {string} Un valor de `ESTADO_EXISTENCIA`: sin stock, vencido, por vencer o disponible.
  */
-export function calcularEstadoVencimiento(fechaCaducidad, stockDisponible) {
+export function calcularEstadoVencimiento(
+  fechaCaducidad,
+  stockDisponible,
+  diasAviso = ventanaDeAviso(),
+) {
   const stock = Number(stockDisponible ?? 0);
   if (stock <= 0) return ESTADO_EXISTENCIA.SIN_STOCK;
 
@@ -51,7 +57,7 @@ export function calcularEstadoVencimiento(fechaCaducidad, stockDisponible) {
   // === REGLAS ALINEADAS CON #597 ===
   if (diasRestantes < 0) return ESTADO_EXISTENCIA.VENCIDO; // ya venció
   if (diasRestantes === 0) return ESTADO_EXISTENCIA.DISPONIBLE; // vence HOY → válido
-  if (diasRestantes <= DIAS_AVISO_VENCIMIENTO) return ESTADO_EXISTENCIA.POR_VENCER;
+  if (diasRestantes <= diasAviso) return ESTADO_EXISTENCIA.POR_VENCER;
   return ESTADO_EXISTENCIA.DISPONIBLE;
 }
 
@@ -66,6 +72,7 @@ export function calcularEstadoVencimiento(fechaCaducidad, stockDisponible) {
  *   filtroEstado, ocultarSinExistencia, limpiarFiltros, ... }`, cada filtro con su setter.
  */
 export function useVistaExistencias({ existencias = [], bodegas = [] }) {
+  const { diasAviso } = useVentanaDeAvisoVencimiento();
   // Filtros
   const [busqueda, setBusqueda] = useState("");
   const [filtroBodega, setFiltroBodega] = useState("todas");
@@ -78,9 +85,9 @@ export function useVistaExistencias({ existencias = [], bodegas = [] }) {
     return existencias.map((item) => ({
       ...item,
       diasRestantes: calcularDiasRestantes(item.fechaCaducidad),
-      estado: calcularEstadoVencimiento(item.fechaCaducidad, item.stockTotal),
+      estado: calcularEstadoVencimiento(item.fechaCaducidad, item.stockTotal, diasAviso),
     }));
-  }, [existencias]);
+  }, [existencias, diasAviso]);
 
   // ─── Aplicar filtros ───
   const existenciasFiltradas = useMemo(() => {
@@ -143,9 +150,13 @@ export function useVistaExistencias({ existencias = [], bodegas = [] }) {
     // Recalcular estado del grupo según su vencimiento más próximo
     return Array.from(mapa.values()).map((grupo) => ({
       ...grupo,
-      estado: calcularEstadoVencimiento(grupo.fechaVencimientoMasProxima, grupo.stockTotal),
+      estado: calcularEstadoVencimiento(
+        grupo.fechaVencimientoMasProxima,
+        grupo.stockTotal,
+        diasAviso,
+      ),
     }));
-  }, [existenciasFiltradas]);
+  }, [existenciasFiltradas, diasAviso]);
 
   // ─── Manejadores de expansión ───
   const toggleExpandir = useCallback((clave) => {

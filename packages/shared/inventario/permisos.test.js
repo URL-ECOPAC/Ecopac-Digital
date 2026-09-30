@@ -4,13 +4,16 @@
 // arrastra @supabase/supabase-js y el modulo de entorno, y estas pruebas tienen que correr sin
 // .env y sin conexion. Mismo patron que jornadas/permisos.test.js.
 
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
+import { fijarAccesoDeSesion, limpiarAccesoDeSesion } from "../usuarios/acceso.js";
 import { ROLES } from "../usuarios/roles.js";
 import {
   permisosDeMovimientos,
   puedeAjustarEntregaReceta,
   puedeAprobarMovimiento,
+  puedeAtenderAlertasVencimiento,
+  puedeConfigurarAlertasVencimiento,
   puedeRechazarMovimiento,
   puedeRegistrarMovimiento,
   puedeVerMovimientos,
@@ -102,5 +105,22 @@ describe("puedeAjustarEntregaReceta (issue #764)", () => {
 
   it("un rol que no existe no ajusta nada", () => {
     expect(puedeAjustarEntregaReceta("coordinador")).toBe(false);
+  });
+});
+
+describe("avisos de vencimiento (issue #899)", () => {
+  afterEach(() => limpiarAccesoDeSesion());
+
+  it("por defecto solo la administracion configura y atiende", () => {
+    expect(puedeConfigurarAlertasVencimiento("administrador")).toBe(true);
+    expect(puedeConfigurarAlertasVencimiento("medico")).toBe(false);
+    expect(puedeAtenderAlertasVencimiento("medico")).toBe(false);
+  });
+
+  it("el permiso fino inventario.configurar_alertas deja configurar, no atender", () => {
+    fijarAccesoDeSesion({ rol: "medico", permisos: ["inventario.configurar_alertas"] });
+
+    expect(puedeConfigurarAlertasVencimiento("medico")).toBe(true);
+    expect(puedeAtenderAlertasVencimiento("medico")).toBe(false);
   });
 });

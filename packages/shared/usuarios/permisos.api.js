@@ -26,7 +26,8 @@ export const ORIGEN_PERMISO = Object.freeze({
  * seccion "Los permisos finos"). Los nueve del catalogo estan conectados desde la issue #409:
  * jornadas.gestionar (00039), presupuestos.registrar y presupuestos.aprobar (00052), y
  * pacientes.editar, inventario.aprobar, donaciones.registrar, proyectos.gestionar,
- * usuarios.gestionar_permisos y reportes.exportar (00086).
+ * usuarios.gestionar_permisos y reportes.exportar (00086). inventario.configurar_alertas gobierna
+ * la escritura de configuracion_alertas_caducidad desde su creacion (00162, issue #899).
  *
  * Se declara la lista de los que SI funcionan, no la de los inertes: si el catalogo crece con
  * un permiso nuevo que todavia no gobierna ninguna politica, alcanza con no agregarlo aca (un
@@ -38,6 +39,7 @@ const PERMISOS_QUE_GOBIERNAN_UNA_POLITICA = new Set([
   "presupuestos.aprobar",
   "pacientes.editar",
   "inventario.aprobar",
+  "inventario.configurar_alertas",
   "donaciones.registrar",
   "proyectos.gestionar",
   "usuarios.gestionar_permisos",

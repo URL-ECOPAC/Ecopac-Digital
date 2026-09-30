@@ -29,6 +29,7 @@ import { esAdministrador, ROLES } from "./roles.js";
 export const MODULO_DE_PERMISO_FINO = Object.freeze({
   "pacientes.editar": "pacientes",
   "inventario.aprobar": "inventario",
+  "inventario.configurar_alertas": "inventario",
   "jornadas.gestionar": "jornadas",
   "proyectos.gestionar": "proyectos",
   "presupuestos.registrar": "presupuestos",

@@ -1,6 +1,6 @@
 # Diccionario de datos
 
-> **Documento generado.** No se edita a mano: sale de `npm run docs:diccionario` (`scripts/generar-diccionario-de-datos.mjs`), que lee el catalogo de PostgreSQL de una base con todas las migraciones aplicadas, hasta la `00161_nombres_de_perfiles.sql`. Las descripciones son los `COMMENT ON` de las migraciones: si falta una, se agrega con una migracion nueva y se regenera.
+> **Documento generado.** No se edita a mano: sale de `npm run docs:diccionario` (`scripts/generar-diccionario-de-datos.mjs`), que lee el catalogo de PostgreSQL de una base con todas las migraciones aplicadas, hasta la `00162_umbrales_configurables_de_alertas_de_caducidad.sql`. Las descripciones son los `COMMENT ON` de las migraciones: si falta una, se agrega con una migracion nueva y se regenera.
 
 Complementa a [MODELO-DE-DATOS.md](MODELO-DE-DATOS.md), que explica el porque de cada decision, y a [PERMISOS.md](PERMISOS.md), que explica que puede hacer cada rol. Este documento es la referencia exhaustiva: cada tabla, cada campo, cada restriccion, cada politica y cada trigger.
 
@@ -8,17 +8,17 @@ Complementa a [MODELO-DE-DATOS.md](MODELO-DE-DATOS.md), que explica el porque de
 
 | Objeto | Cantidad |
 | --- | --- |
-| Tablas | 53 |
-| Tablas con RLS activo | 53 |
+| Tablas | 55 |
+| Tablas con RLS activo | 55 |
 | Vistas | 9 |
 | Tipos enumerados | 22 |
-| Columnas (tablas y vistas) | 482 |
-| Llaves foraneas | 93 |
-| Restricciones CHECK | 56 |
-| Politicas RLS | 140 |
-| Triggers | 119 |
-| Funciones (sin contar las de trigger) | 52 |
-| Funciones de trigger | 45 |
+| Columnas (tablas y vistas) | 496 |
+| Llaves foraneas | 95 |
+| Restricciones CHECK | 61 |
+| Politicas RLS | 143 |
+| Triggers | 122 |
+| Funciones (sin contar las de trigger) | 56 |
+| Funciones de trigger | 46 |
 
 ### Como leer las tablas de este documento
 
@@ -88,6 +88,8 @@ Complementa a [MODELO-DE-DATOS.md](MODELO-DE-DATOS.md), que explica el porque de
 | [`movimientos_inventario`](#movimientos_inventario) | Ingresos y salidas de inventario. Un movimiento pendiente no cambia existencias; al aprobarse, si. |
 | [`alertas_caducidad`](#alertas_caducidad) | Alerta de un lote vencido o por vencer. La genera la rutina diaria y se atiende donando, reubicando o descartando. |
 | [`alerta_caducidad_detalle`](#alerta_caducidad_detalle) | Como se reparte la atencion de una alerta entre varias acciones (por ejemplo, parte donada y parte descartada). |
+| [`avisos_caducidad`](#avisos_caducidad) | Cada aviso de vencimiento enviado: uno por alerta y por etapa (antelacion configurada o dia del vencimiento). Su INSERT genera la notificacion a la administracion (issue #899). |
+| [`configuracion_alertas_caducidad`](#configuracion_alertas_caducidad) | Antelaciones con las que se avisa que un lote va a vencer (issue #899). Una sola fila. El aviso del dia del vencimiento no se configura: siempre se envia. La cambia la administracion, o quien tenga el permiso inventario.configurar_alertas, desde la web. |
 
 ### Jornadas
 
@@ -191,6 +193,7 @@ erDiagram
   }
   perfiles |o--o{ alertas_caducidad : "atendida_por"
   perfiles |o--o{ categorias_de_gasto : "registrado_por"
+  perfiles |o--o{ configuracion_alertas_caducidad : "actualizado_por"
   perfiles ||--o{ consultas : "medico_id"
   perfiles |o--o{ donaciones : "anulada_por"
   perfiles |o--o{ donaciones : "registrado_por"
@@ -537,6 +540,8 @@ erDiagram
     timestamptz atendida_en
     timestamptz created_at
     timestamptz updated_at
+    integer umbral_notificado_dias
+    boolean cerrada_sin_existencia
   }
   alerta_caducidad_detalle {
     uuid id PK
@@ -546,10 +551,28 @@ erDiagram
     uuid bodega_destino_id FK
     timestamptz created_at
   }
+  avisos_caducidad {
+    uuid id PK
+    uuid alerta_id FK
+    integer umbral_dias
+    integer dias_restantes
+    integer cantidad_en_existencia
+    timestamptz created_at
+  }
+  configuracion_alertas_caducidad {
+    uuid id PK
+    boolean unica UK
+    integer_array umbrales_dias
+    uuid actualizado_por FK
+    timestamptz created_at
+    timestamptz updated_at
+  }
   alertas_caducidad ||--o{ alerta_caducidad_detalle : "alerta_id"
   bodegas |o--o{ alerta_caducidad_detalle : "bodega_destino_id"
   perfiles |o--o{ alertas_caducidad : "atendida_por"
   lotes ||--o{ alertas_caducidad : "lote_id"
+  alertas_caducidad ||--o{ avisos_caducidad : "alerta_id"
+  perfiles |o--o{ configuracion_alertas_caducidad : "actualizado_por"
   lotes |o--o| donacion_detalle : "lote_id"
   medicamentos |o--o{ donacion_detalle : "medicamento_id"
   bodegas ||--o{ existencias : "bodega_id"
@@ -897,7 +920,7 @@ Persona que usa el sistema. Una fila por cuenta de auth.users (mismo id), creada
 | `perfiles_pkey` | PK | `PRIMARY KEY (id)` |
 | `perfiles_email_key` | UNIQUE | `UNIQUE (email)` |
 
-**La referencian:** `alertas_caducidad.atendida_por` (RESTRICT), `categorias_de_gasto.registrado_por` (SET NULL), `consultas.medico_id` (RESTRICT), `donaciones.anulada_por` (RESTRICT), `donaciones.registrado_por` (RESTRICT), `fuentes_de_presupuesto.registrado_por` (SET NULL), `fusiones_pacientes.realizada_por` (RESTRICT), `gastos.aprobado_por` (RESTRICT), `gastos.responsable_id` (SET NULL), `gastos.registrado_por` (RESTRICT), `jornada_estado_historial.cambiado_por` (RESTRICT), `jornada_personal.perfil_id` (CASCADE), `jornada_presupuesto_origen.registrado_por` (SET NULL), `jornadas.responsable_id` (RESTRICT), `lotes.registrado_por` (NO ACTION), `movimientos_inventario.aprobado_por` (RESTRICT), `movimientos_inventario.registrado_por` (RESTRICT), `notificaciones.perfil_id` (CASCADE), `perfil_especialidad.perfil_id` (CASCADE), `proyecto_estado_historial.cambiado_por` (RESTRICT), `proyecto_hitos.registrado_por` (SET NULL), `proyecto_personal.perfil_id` (CASCADE), `proyecto_seguimiento.registrado_por` (SET NULL), `proyectos.responsable_id` (SET NULL), `receta_detalle.ajustada_por` (RESTRICT), `recetas.anulada_por` (RESTRICT), `recetas.medico_id` (RESTRICT), `rol_modulo.otorgado_por` (SET NULL), `triajes.tomado_por` (RESTRICT), `usuario_permiso.otorgado_por` (NO ACTION), `usuario_permiso.perfil_id` (CASCADE).
+**La referencian:** `alertas_caducidad.atendida_por` (RESTRICT), `categorias_de_gasto.registrado_por` (SET NULL), `configuracion_alertas_caducidad.actualizado_por` (SET NULL), `consultas.medico_id` (RESTRICT), `donaciones.anulada_por` (RESTRICT), `donaciones.registrado_por` (RESTRICT), `fuentes_de_presupuesto.registrado_por` (SET NULL), `fusiones_pacientes.realizada_por` (RESTRICT), `gastos.aprobado_por` (RESTRICT), `gastos.responsable_id` (SET NULL), `gastos.registrado_por` (RESTRICT), `jornada_estado_historial.cambiado_por` (RESTRICT), `jornada_personal.perfil_id` (CASCADE), `jornada_presupuesto_origen.registrado_por` (SET NULL), `jornadas.responsable_id` (RESTRICT), `lotes.registrado_por` (NO ACTION), `movimientos_inventario.aprobado_por` (RESTRICT), `movimientos_inventario.registrado_por` (RESTRICT), `notificaciones.perfil_id` (CASCADE), `perfil_especialidad.perfil_id` (CASCADE), `proyecto_estado_historial.cambiado_por` (RESTRICT), `proyecto_hitos.registrado_por` (SET NULL), `proyecto_personal.perfil_id` (CASCADE), `proyecto_seguimiento.registrado_por` (SET NULL), `proyectos.responsable_id` (SET NULL), `receta_detalle.ajustada_por` (RESTRICT), `recetas.anulada_por` (RESTRICT), `recetas.medico_id` (RESTRICT), `rol_modulo.otorgado_por` (SET NULL), `triajes.tomado_por` (RESTRICT), `usuario_permiso.otorgado_por` (NO ACTION), `usuario_permiso.perfil_id` (CASCADE).
 
 **Proteccion.** RLS activo. Privilegios: `authenticated`: INSERT, SELECT, UPDATE; `anon`: ninguno.
 
@@ -934,7 +957,7 @@ Especialidades clinicas de un perfil (medicina general, odontologia, ...). Una p
 | `perfil_especialidad_perfil_id_fkey` | FK | `FOREIGN KEY (perfil_id) REFERENCES perfiles(id) ON DELETE CASCADE` (al borrar: CASCADE) |
 | `perfil_especialidad_pkey` | PK | `PRIMARY KEY (perfil_id, nombre_especialidad)` |
 
-**Proteccion.** RLS activo. Privilegios: `authenticated`: DELETE, INSERT, SELECT; `anon`: ninguno.
+**Proteccion.** RLS activo. Privilegios: `authenticated`: DELETE, INSERT, SELECT, UPDATE; `anon`: ninguno.
 
 | Politica | Operacion | Roles | USING | WITH CHECK |
 | --- | --- | --- | --- | --- |
@@ -968,7 +991,7 @@ Catalogo de permisos finos que se pueden delegar por rol (rol_permiso) o por per
 
 **La referencian:** `rol_permiso.permiso_id` (CASCADE), `usuario_permiso.permiso_id` (CASCADE).
 
-**Proteccion.** RLS activo. Privilegios: `authenticated`: SELECT; `anon`: ninguno.
+**Proteccion.** RLS activo. Privilegios: `authenticated`: INSERT, SELECT, UPDATE; `anon`: ninguno.
 
 | Politica | Operacion | Roles | USING | WITH CHECK |
 | --- | --- | --- | --- | --- |
@@ -990,7 +1013,7 @@ Permisos finos que un rol tiene por defecto.
 | `rol_permiso_permiso_id_fkey` | FK | `FOREIGN KEY (permiso_id) REFERENCES permisos(id) ON DELETE CASCADE` (al borrar: CASCADE) |
 | `rol_permiso_pkey` | PK | `PRIMARY KEY (rol, permiso_id)` |
 
-**Proteccion.** RLS activo. Privilegios: `authenticated`: SELECT; `anon`: ninguno.
+**Proteccion.** RLS activo. Privilegios: `authenticated`: SELECT, UPDATE; `anon`: ninguno.
 
 | Politica | Operacion | Roles | USING | WITH CHECK |
 | --- | --- | --- | --- | --- |
@@ -1061,7 +1084,7 @@ Modulos que la administradora abrio a un rol ademas de los suyos (matriz de acce
 | `rol_modulo_pkey` | PK | `PRIMARY KEY (id)` |
 | `uq_rol_modulo` | UNIQUE | `UNIQUE (rol, modulo)` |
 
-**Proteccion.** RLS activo. Privilegios: `authenticated`: DELETE, INSERT, SELECT; `anon`: ninguno.
+**Proteccion.** RLS activo. Privilegios: `authenticated`: DELETE, INSERT, SELECT, UPDATE; `anon`: ninguno.
 
 | Politica | Operacion | Roles | USING | WITH CHECK |
 | --- | --- | --- | --- | --- |
@@ -1092,7 +1115,7 @@ Contador de limite de peticiones (rate limiting) por recurso y actor, con ventan
 | --- | --- | --- |
 | `limites_de_uso_pkey` | PK | `PRIMARY KEY (recurso, actor_id)` |
 
-**Proteccion.** RLS activo. Privilegios: `authenticated`: ninguno; `anon`: ninguno.
+**Proteccion.** RLS activo. Privilegios: `authenticated`: INSERT, SELECT, UPDATE; `anon`: ninguno.
 
 Sin politicas: con RLS activo y ninguna politica, nadie la lee ni la escribe directamente; solo funciones SECURITY DEFINER.
 
@@ -1118,7 +1141,7 @@ Los 22 departamentos de Guatemala. Catalogo fijo, cargado por migracion.
 
 **La referencian:** `municipios.departamento_id` (CASCADE).
 
-**Proteccion.** RLS activo. Privilegios: `authenticated`: SELECT; `anon`: ninguno.
+**Proteccion.** RLS activo. Privilegios: `authenticated`: INSERT, SELECT, UPDATE; `anon`: ninguno.
 
 | Politica | Operacion | Roles | USING | WITH CHECK |
 | --- | --- | --- | --- | --- |
@@ -1152,7 +1175,7 @@ Municipios de Guatemala, cada uno en su departamento. Catalogo fijo, cargado por
 
 **La referencian:** `comunidades.municipio_id` (CASCADE).
 
-**Proteccion.** RLS activo. Privilegios: `authenticated`: SELECT; `anon`: ninguno.
+**Proteccion.** RLS activo. Privilegios: `authenticated`: INSERT, SELECT, UPDATE; `anon`: ninguno.
 
 | Politica | Operacion | Roles | USING | WITH CHECK |
 | --- | --- | --- | --- | --- |
@@ -1227,7 +1250,7 @@ Catalogo de idiomas del paciente (issue #663). Sustituye al enum idioma_preferid
 
 **La referencian:** `pacientes.idioma` (RESTRICT).
 
-**Proteccion.** RLS activo. Privilegios: `authenticated`: SELECT; `anon`: ninguno.
+**Proteccion.** RLS activo. Privilegios: `authenticated`: INSERT, SELECT, UPDATE; `anon`: ninguno.
 
 | Politica | Operacion | Roles | USING | WITH CHECK |
 | --- | --- | --- | --- | --- |
@@ -1347,7 +1370,7 @@ Registra que expediente absorbio a cual (issue #140). Se escribe solo por fn_fus
 | `fusiones_pacientes_pkey` | PK | `PRIMARY KEY (id)` |
 | `fusiones_pacientes_paciente_absorbido_id_key` | UNIQUE | `UNIQUE (paciente_absorbido_id)` |
 
-**Proteccion.** RLS activo. Privilegios: `authenticated`: SELECT; `anon`: ninguno.
+**Proteccion.** RLS activo. Privilegios: `authenticated`: INSERT, SELECT, UPDATE; `anon`: ninguno.
 
 | Politica | Operacion | Roles | USING | WITH CHECK |
 | --- | --- | --- | --- | --- |
@@ -1641,7 +1664,7 @@ Diagnosticos de una consulta; uno puede marcarse como principal.
 | `consulta_diagnostico_pkey` | PK | `PRIMARY KEY (id)` |
 | `uq_consulta_diagnostico` | UNIQUE | `UNIQUE (consulta_id, diagnostico_id)` |
 
-**Proteccion.** RLS activo. Privilegios: `authenticated`: DELETE, INSERT, SELECT; `anon`: ninguno.
+**Proteccion.** RLS activo. Privilegios: `authenticated`: DELETE, INSERT, SELECT, UPDATE; `anon`: ninguno.
 
 | Politica | Operacion | Roles | USING | WITH CHECK |
 | --- | --- | --- | --- | --- |
@@ -1735,7 +1758,7 @@ Renglones de una receta: cada medicamento, su dosis y cuanto se entrego, de que 
 | `receta_detalle_receta_id_fkey` | FK | `FOREIGN KEY (receta_id) REFERENCES recetas(id) ON DELETE CASCADE` (al borrar: CASCADE) |
 | `receta_detalle_pkey` | PK | `PRIMARY KEY (id)` |
 
-**Proteccion.** RLS activo. Privilegios: `authenticated`: INSERT, SELECT; `anon`: ninguno.
+**Proteccion.** RLS activo. Privilegios: `authenticated`: INSERT, SELECT, UPDATE; `anon`: ninguno.
 
 | Politica | Operacion | Roles | USING | WITH CHECK |
 | --- | --- | --- | --- | --- |
@@ -1845,7 +1868,7 @@ Principios activos de cada medicamento (un medicamento puede tener varios).
 | `medicamento_principio_principio_id_fkey` | FK | `FOREIGN KEY (principio_id) REFERENCES principios_activos(id) ON DELETE RESTRICT` (al borrar: RESTRICT) |
 | `medicamento_principio_pkey` | PK | `PRIMARY KEY (medicamento_id, principio_id)` |
 
-**Proteccion.** RLS activo. Privilegios: `authenticated`: INSERT, SELECT; `anon`: ninguno.
+**Proteccion.** RLS activo. Privilegios: `authenticated`: INSERT, SELECT, UPDATE; `anon`: ninguno.
 
 | Politica | Operacion | Roles | USING | WITH CHECK |
 | --- | --- | --- | --- | --- |
@@ -2121,20 +2144,23 @@ Alerta de un lote vencido o por vencer. La genera la rutina diaria y se atiende 
 | `atendida_en` | `timestamptz` | si |  |  | Cuando se atendio. |
 | `created_at` | `timestamptz` | no | `now()` |  | Cuando se creo la fila. Lo pone la base. |
 | `updated_at` | `timestamptz` | no | `now()` |  | Cuando se modifico la fila por ultima vez. Lo mantiene el trigger actualizar_timestamp_updated_at. |
+| `umbral_notificado_dias` | `integer` | si |  |  | Etapa mas cercana ya avisada: la antelacion en dias, o 0 para el aviso del dia del vencimiento. NULL mientras no se ha avisado nada. Evita repetir un aviso y permite enviar el siguiente (issue #899). |
+| `cerrada_sin_existencia` | `boolean` | no | `false` |  | TRUE si la rutina cerro la alerta porque el lote se quedo sin existencia por otra via. No tiene accion ni atendida_por: nadie la atendio (issue #899). |
 
 **Llaves y restricciones**
 
 | Nombre | Tipo | Definicion |
 | --- | --- | --- |
 | `chk_alertas_caducidad_cantidad_positiva` | CHECK | `CHECK ((cantidad_afectada > 0))` |
-| `chk_alertas_caducidad_cierre_coherente` | CHECK | `CHECK ((((estado = 'pendiente'::estado_alerta) AND (accion IS NULL) AND (atendida_por IS NULL) AND (atendida_en IS NULL)) OR ((estado = 'atendida'::estado_alerta) AND (atendida_por IS NOT NULL) AND (atendida_en IS NOT NULL))))` |
+| `chk_alertas_caducidad_cierre_coherente` | CHECK | `CHECK ((((estado = 'pendiente'::estado_alerta) AND (accion IS NULL) AND (atendida_por IS NULL) AND (atendida_en IS NULL) AND (NOT cerrada_sin_existencia)) OR ((estado = 'atendida'::estado_alerta) AND (atendida_en IS NOT NULL) AND (((NOT cerrada_sin_existencia) AND (atendida_por IS NOT NULL)) OR (cerrada_sin_existencia AND (atendida_por IS NULL) AND (accion IS NULL))))))` |
+| `chk_alertas_caducidad_umbral_no_negativo` | CHECK | `CHECK ((umbral_notificado_dias >= 0))` |
 | `alertas_caducidad_atendida_por_fkey` | FK | `FOREIGN KEY (atendida_por) REFERENCES perfiles(id) ON DELETE RESTRICT` (al borrar: RESTRICT) |
 | `alertas_caducidad_lote_id_fkey` | FK | `FOREIGN KEY (lote_id) REFERENCES lotes(id) ON DELETE CASCADE` (al borrar: CASCADE) |
 | `alertas_caducidad_pkey` | PK | `PRIMARY KEY (id)` |
 
-**La referencian:** `alerta_caducidad_detalle.alerta_id` (CASCADE).
+**La referencian:** `alerta_caducidad_detalle.alerta_id` (CASCADE), `avisos_caducidad.alerta_id` (CASCADE).
 
-**Proteccion.** RLS activo. Privilegios: `authenticated`: SELECT; `anon`: ninguno.
+**Proteccion.** RLS activo. Privilegios: `authenticated`: INSERT, SELECT; `anon`: ninguno.
 
 | Politica | Operacion | Roles | USING | WITH CHECK |
 | --- | --- | --- | --- | --- |
@@ -2146,7 +2172,6 @@ Alerta de un lote vencido o por vencer. La genera la rutina diaria y se atiende 
 | Trigger | Cuando | Funcion |
 | --- | --- | --- |
 | `trg_alertas_caducidad_auditoria` | AFTER INSERT OR DELETE OR UPDATE | `registrar_evento_auditoria()` |
-| `trg_alertas_caducidad_notificar` | AFTER INSERT | `fn_notificar_alerta_caducidad()` |
 | `trg_alertas_caducidad_updated_at` | BEFORE UPDATE | `actualizar_timestamp_updated_at()` |
 
 #### alerta_caducidad_detalle
@@ -2171,11 +2196,84 @@ Como se reparte la atencion de una alerta entre varias acciones (por ejemplo, pa
 | `alerta_caducidad_detalle_bodega_destino_id_fkey` | FK | `FOREIGN KEY (bodega_destino_id) REFERENCES bodegas(id) ON DELETE RESTRICT` (al borrar: RESTRICT) |
 | `alerta_caducidad_detalle_pkey` | PK | `PRIMARY KEY (id)` |
 
-**Proteccion.** RLS activo. Privilegios: `authenticated`: SELECT; `anon`: ninguno.
+**Proteccion.** RLS activo. Privilegios: `authenticated`: INSERT, SELECT, UPDATE; `anon`: ninguno.
 
 | Politica | Operacion | Roles | USING | WITH CHECK |
 | --- | --- | --- | --- | --- |
 | Autenticados leen alerta_caducidad_detalle | Leer | authenticated | `true` |  |
+
+#### avisos_caducidad
+
+Cada aviso de vencimiento enviado: uno por alerta y por etapa (antelacion configurada o dia del vencimiento). Su INSERT genera la notificacion a la administracion (issue #899).
+
+| Campo | Tipo | Nulo | Por defecto | Llave | Descripcion |
+| --- | --- | --- | --- | --- | --- |
+| `id` | `uuid` | no | `extensions.gen_random_uuid()` | PK | Identificador del aviso; es el origen_id de su notificacion. |
+| `alerta_id` | `uuid` | no |  | FK -> `alertas_caducidad` | Alerta de caducidad a la que pertenece. |
+| `umbral_dias` | `integer` | no |  |  | Etapa avisada: la antelacion en dias, o 0 para el dia del vencimiento. |
+| `dias_restantes` | `integer` | no |  |  | Dias que faltaban para el vencimiento al avisar (negativo si ya habia vencido). |
+| `cantidad_en_existencia` | `integer` | no |  |  | Unidades del lote en existencia al avisar. |
+| `created_at` | `timestamptz` | no | `now()` |  | Momento del aviso. |
+
+**Llaves y restricciones**
+
+| Nombre | Tipo | Definicion |
+| --- | --- | --- |
+| `chk_avisos_caducidad_cantidad_positiva` | CHECK | `CHECK ((cantidad_en_existencia > 0))` |
+| `chk_avisos_caducidad_umbral_no_negativo` | CHECK | `CHECK ((umbral_dias >= 0))` |
+| `avisos_caducidad_alerta_id_fkey` | FK | `FOREIGN KEY (alerta_id) REFERENCES alertas_caducidad(id) ON DELETE CASCADE` (al borrar: CASCADE) |
+| `avisos_caducidad_pkey` | PK | `PRIMARY KEY (id)` |
+| `uq_avisos_caducidad_alerta_umbral` | UNIQUE | `UNIQUE (alerta_id, umbral_dias)` |
+
+**Proteccion.** RLS activo. Privilegios: `authenticated`: SELECT; `anon`: ninguno.
+
+| Politica | Operacion | Roles | USING | WITH CHECK |
+| --- | --- | --- | --- | --- |
+| Solo administrador lee avisos_caducidad | Leer | authenticated | `es_administrador()` |  |
+
+**Triggers**
+
+| Trigger | Cuando | Funcion |
+| --- | --- | --- |
+| `trg_avisos_caducidad_notificar` | AFTER INSERT | `fn_notificar_aviso_caducidad()` |
+
+#### configuracion_alertas_caducidad
+
+Antelaciones con las que se avisa que un lote va a vencer (issue #899). Una sola fila. El aviso del dia del vencimiento no se configura: siempre se envia. La cambia la administracion, o quien tenga el permiso inventario.configurar_alertas, desde la web.
+
+| Campo | Tipo | Nulo | Por defecto | Llave | Descripcion |
+| --- | --- | --- | --- | --- | --- |
+| `id` | `uuid` | no | `extensions.gen_random_uuid()` | PK | Identificador de la fila. |
+| `unica` | `boolean` | no | `true` |  | Siempre TRUE; con su UNIQUE garantiza que la tabla tenga una sola fila. |
+| `umbrales_dias` | `integer[]` | no | `'{90}'::integer[]` |  | Dias antes del vencimiento en que se avisa, de mayor a menor. De 0 a 4 valores distintos entre 1 y 365. Por defecto {90}. La mayor es la ventana: un lote mas lejos no genera alerta. Vacio: solo se avisa el dia del vencimiento (la ventana es 0). |
+| `actualizado_por` | `uuid` | si |  | FK -> `perfiles` | Perfil que guardo el ultimo cambio. Lo fija el trigger con auth.uid(). |
+| `created_at` | `timestamptz` | no | `now()` |  | Fecha de creacion de la fila. |
+| `updated_at` | `timestamptz` | no | `now()` |  | Fecha del ultimo cambio. |
+
+**Llaves y restricciones**
+
+| Nombre | Tipo | Definicion |
+| --- | --- | --- |
+| `chk_configuracion_alertas_caducidad_umbrales_validos` | CHECK | `CHECK (fn_umbrales_caducidad_validos(umbrales_dias))` |
+| `chk_configuracion_alertas_caducidad_unica` | CHECK | `CHECK (unica)` |
+| `configuracion_alertas_caducidad_actualizado_por_fkey` | FK | `FOREIGN KEY (actualizado_por) REFERENCES perfiles(id) ON DELETE SET NULL` (al borrar: SET NULL) |
+| `configuracion_alertas_caducidad_pkey` | PK | `PRIMARY KEY (id)` |
+| `uq_configuracion_alertas_caducidad_unica` | UNIQUE | `UNIQUE (unica)` |
+
+**Proteccion.** RLS activo. Privilegios: `authenticated`: SELECT; `anon`: ninguno.
+
+| Politica | Operacion | Roles | USING | WITH CHECK |
+| --- | --- | --- | --- | --- |
+| Sesion activa lee configuracion_alertas_caducidad | Leer | authenticated | `(rol_actual() IS NOT NULL)` |  |
+| Administracion o permiso configura alertas de caducidad | Editar | authenticated | `(es_administrador() OR tiene_permiso('inventario.configurar_alertas'::text))` | `(es_administrador() OR tiene_permiso('inventario.configurar_alertas'::text))` |
+
+**Triggers**
+
+| Trigger | Cuando | Funcion |
+| --- | --- | --- |
+| `trg_configuracion_alertas_caducidad_auditoria` | AFTER INSERT OR DELETE OR UPDATE | `registrar_evento_auditoria()` |
+| `trg_configuracion_alertas_caducidad_normalizar` | BEFORE INSERT OR UPDATE | `fn_normalizar_configuracion_alertas_caducidad()` |
+| `trg_configuracion_alertas_caducidad_updated_at` | BEFORE UPDATE | `actualizar_timestamp_updated_at()` |
 
 ### Modulo: Jornadas
 
@@ -2302,7 +2400,7 @@ Cada cambio de estado de una jornada, con quien lo hizo. Lo escribe un trigger.
 | `jornada_estado_historial_jornada_id_fkey` | FK | `FOREIGN KEY (jornada_id) REFERENCES jornadas(id) ON DELETE CASCADE` (al borrar: CASCADE) |
 | `jornada_estado_historial_pkey` | PK | `PRIMARY KEY (id)` |
 
-**Proteccion.** RLS activo. Privilegios: `authenticated`: SELECT; `anon`: ninguno.
+**Proteccion.** RLS activo. Privilegios: `authenticated`: INSERT, SELECT, UPDATE; `anon`: ninguno.
 
 | Politica | Operacion | Roles | USING | WITH CHECK |
 | --- | --- | --- | --- | --- |
@@ -2430,7 +2528,7 @@ Categorias de gasto (00158). Catalogo que crece desde el formulario de gasto ("C
 
 **La referencian:** `gastos.categoria` (RESTRICT).
 
-**Proteccion.** RLS activo. Privilegios: `authenticated`: INSERT, SELECT; `anon`: ninguno.
+**Proteccion.** RLS activo. Privilegios: `authenticated`: INSERT, SELECT, UPDATE; `anon`: ninguno.
 
 | Politica | Operacion | Roles | USING | WITH CHECK |
 | --- | --- | --- | --- | --- |
@@ -2464,7 +2562,7 @@ Quien aporta de fuera al presupuesto de una jornada (origen aporte_externo). Cat
 
 **La referencian:** `jornada_presupuesto_origen.fuente_id` (RESTRICT).
 
-**Proteccion.** RLS activo. Privilegios: `authenticated`: INSERT, SELECT; `anon`: ninguno.
+**Proteccion.** RLS activo. Privilegios: `authenticated`: INSERT, SELECT, UPDATE; `anon`: ninguno.
 
 | Politica | Operacion | Roles | USING | WITH CHECK |
 | --- | --- | --- | --- | --- |
@@ -2648,7 +2746,7 @@ Bitacora de un proyecto: notas escritas a mano y cambios de porcentaje de avance
 | `proyecto_seguimiento_registrado_por_fkey` | FK | `FOREIGN KEY (registrado_por) REFERENCES perfiles(id) ON DELETE SET NULL` (al borrar: SET NULL) |
 | `proyecto_seguimiento_pkey` | PK | `PRIMARY KEY (id)` |
 
-**Proteccion.** RLS activo. Privilegios: `authenticated`: INSERT, SELECT; `anon`: ninguno.
+**Proteccion.** RLS activo. Privilegios: `authenticated`: INSERT, SELECT, UPDATE; `anon`: ninguno.
 
 | Politica | Operacion | Roles | USING | WITH CHECK |
 | --- | --- | --- | --- | --- |
@@ -2683,7 +2781,7 @@ Cada cambio de estado de un proyecto, con quien lo hizo. Lo escribe un trigger.
 | `proyecto_estado_historial_proyecto_id_fkey` | FK | `FOREIGN KEY (proyecto_id) REFERENCES proyectos(id) ON DELETE CASCADE` (al borrar: CASCADE) |
 | `proyecto_estado_historial_pkey` | PK | `PRIMARY KEY (id)` |
 
-**Proteccion.** RLS activo. Privilegios: `authenticated`: SELECT; `anon`: ninguno.
+**Proteccion.** RLS activo. Privilegios: `authenticated`: INSERT, SELECT, UPDATE; `anon`: ninguno.
 
 | Politica | Operacion | Roles | USING | WITH CHECK |
 | --- | --- | --- | --- | --- |
@@ -2928,7 +3026,7 @@ Buzon interno de cada perfil y bandeja de salida del correo (issue #755). Una fi
 | `titulo` | `text` | no |  |  | Titulo corto. |
 | `cuerpo` | `text` | no |  |  | Texto de la notificacion. |
 | `enlace` | `text` | no |  |  | Ruta de la web donde se resuelve la incidencia (p. ej. /inventario?tab=alertas). La app movil no la usa tal cual: traduce la categoria a su propia pantalla (packages/shared/notificaciones/categorias.js). |
-| `origen_tabla` | `text` | no |  |  | Tabla de la incidencia que produjo la notificacion: alertas_caducidad, movimientos_inventario, gastos o medicamentos. Con origen_id identifica la incidencia sin FK, porque apunta a tablas distintas segun la categoria. |
+| `origen_tabla` | `text` | no |  |  | Tabla de la incidencia que produjo la notificacion: avisos_caducidad (desde la 00162; antes alertas_caducidad), movimientos_inventario, gastos o medicamentos. Con origen_id identifica la incidencia sin FK, porque apunta a tablas distintas segun la categoria. |
 | `origen_id` | `uuid` | no |  |  | Fila que la origino, en la tabla que dice origen_tabla. Sin llave foranea: apunta a tablas distintas. |
 | `leida_en` | `timestamptz` | si |  |  | Cuando la leyo. NULL = sin leer. |
 | `correo_enviado_en` | `timestamptz` | si |  |  | NULL mientras el correo no salio. La Edge Function enviar-notificaciones lo fija solo cuando el servidor SMTP acepto el mensaje, asi que un envio fallido se reintenta y uno exitoso no se repite. |
@@ -2980,7 +3078,7 @@ Bitacora de cambios sobre informacion sensible. Se escribe solo por trigger y so
 | --- | --- | --- |
 | `eventos_auditoria_pkey` | PK | `PRIMARY KEY (id)` |
 
-**Proteccion.** RLS activo. Privilegios: `authenticated`: SELECT; `anon`: ninguno.
+**Proteccion.** RLS activo. Privilegios: `authenticated`: INSERT, SELECT, UPDATE; `anon`: ninguno.
 
 | Politica | Operacion | Roles | USING | WITH CHECK |
 | --- | --- | --- | --- | --- |
@@ -2992,7 +3090,7 @@ Bitacora de cambios sobre informacion sensible. Se escribe solo por trigger y so
 
 Nombre de cada persona (id, nombres, apellidos, activo), sin datos de contacto, para toda persona activa (00161). Pone nombre a los ids que el RLS de cada tabla ya deja ver.
 
-Seguridad: corre con los permisos de su dueno; filtra con su propio WHERE. Privilegios: `authenticated`: SELECT; `anon`: ninguno.
+Seguridad: corre con los permisos de su dueno; filtra con su propio WHERE. Privilegios: `authenticated`: INSERT, SELECT, UPDATE; `anon`: ninguno.
 
 | Campo | Tipo |
 | --- | --- |
@@ -3005,7 +3103,7 @@ Seguridad: corre con los permisos de su dueno; filtra con su propio WHERE. Privi
 
 Subconjunto no identificable de pacientes (id, comunidad_id) para reportes agregados. SECURITY DEFINER: el owner lee la tabla base pacientes (sin politica para los roles consultivos, 00032); el WHERE de la vista restringe filas a administrador, a los dos roles consultivos y a quien tenga el permiso fino reportes.exportar (issue #409). Acceso controlado por GRANT (las vistas no soportan RLS).
 
-Seguridad: corre con los permisos de su dueno; filtra con su propio WHERE. Privilegios: `authenticated`: SELECT; `anon`: ninguno.
+Seguridad: corre con los permisos de su dueno; filtra con su propio WHERE. Privilegios: `authenticated`: INSERT, SELECT, UPDATE; `anon`: ninguno.
 
 | Campo | Tipo |
 | --- | --- |
@@ -3016,7 +3114,7 @@ Seguridad: corre con los permisos de su dueno; filtra con su propio WHERE. Privi
 
 Perfiles sin datos de contacto sensibles (telefono, email) salvo para administrador y para el propio perfil. Junta directiva leia por aqui hasta la 00141 (issue #864), que la deja con Reportes como unica pantalla; la vista se conserva porque sigue siendo el unico camino enmascarado a perfiles ajenos y porque cada quien lee su propia fila por ella.
 
-Seguridad: corre con los permisos de su dueno; filtra con su propio WHERE. Privilegios: `authenticated`: SELECT; `anon`: ninguno.
+Seguridad: corre con los permisos de su dueno; filtra con su propio WHERE. Privilegios: `authenticated`: INSERT, SELECT, UPDATE; `anon`: ninguno.
 
 | Campo | Tipo |
 | --- | --- |
@@ -3056,7 +3154,7 @@ Seguridad: corre con los permisos de su dueno; filtra con su propio WHERE. Privi
 
 Cola de pacientes de una jornada, por etapa del flujo (issue #173, RF-24). Solo atenciones abiertas (cerrada_en IS NULL). Desde la 00136 (issue #840) la etapa se decide de lo mas avanzado a lo menos, porque los signos vitales son opcionales: una consulta sin triaje ya no deja al paciente en "espera triaje". SECURITY DEFINER a proposito: un voluntario general no puede leer consultas ni recetas (00033), asi que con security_invoker veria a todo paciente ya atendido como si siguiera esperando consulta. El owner lee las tablas base y el WHERE restringe las filas a quien participa en la jornada, mas la administradora. No expone ningun dato clinico: se ve QUE hubo consulta, no lo que dice.
 
-Seguridad: corre con los permisos de su dueno; filtra con su propio WHERE. Privilegios: `authenticated`: SELECT; `anon`: ninguno.
+Seguridad: corre con los permisos de su dueno; filtra con su propio WHERE. Privilegios: `authenticated`: INSERT, SELECT, UPDATE; `anon`: ninguno.
 
 | Campo | Tipo |
 | --- | --- |
@@ -3073,7 +3171,7 @@ Seguridad: corre con los permisos de su dueno; filtra con su propio WHERE. Privi
 
 Muestra las combinaciones (lote, bodega) con stock positivo cuyo lote no ha alcanzado su fecha de vencimiento. security_invoker = TRUE hace que respete las politicas RLS de existencias, lotes, medicamentos y bodegas (00034). Issue #369: reconstruida sobre lotes/existencias (antes lotes_existencias); una fila por bodega en vez de una fila por lote, porque existencias trackea cantidad por bodega.
 
-Seguridad: `security_invoker = true` (aplica la RLS de quien consulta). Privilegios: `authenticated`: SELECT; `anon`: ninguno.
+Seguridad: `security_invoker = true` (aplica la RLS de quien consulta). Privilegios: `authenticated`: INSERT, SELECT, UPDATE; `anon`: ninguno.
 
 | Campo | Tipo |
 | --- | --- |
@@ -3092,7 +3190,7 @@ Seguridad: `security_invoker = true` (aplica la RLS de quien consulta). Privileg
 
 Indicadores de impacto por jornada, agrupables por jornada, comunidad y rango de fechas. DECISION (issue #407): los roles consultivos ven agregados, nunca filas clinicas. Las politicas de lectura que la 00041 abrio sobre atenciones, consultas, recetas y receta_detalle se eliminaron aqui: RLS filtra filas, no columnas, y una politica FOR SELECT entrega la fila entera, incluido el texto clinico libre de consultas. La vista no lleva security_invoker: el dueno lee las tablas base y el WHERE de aqui abajo restringe quien obtiene filas, el mismo patron de perfiles_directorio (00038) y pacientes_reporte (00041). Las vistas no soportan RLS, asi que el acceso se gobierna con GRANT. La proxima issue de reportes NO debe volver a abrir las tablas base: si un reporte necesita mas datos, se amplia esta vista o se crea otra con el mismo patron.
 
-Seguridad: corre con los permisos de su dueno; filtra con su propio WHERE. Privilegios: `authenticated`: SELECT; `anon`: ninguno.
+Seguridad: corre con los permisos de su dueno; filtra con su propio WHERE. Privilegios: `authenticated`: INSERT, SELECT, UPDATE; `anon`: ninguno.
 
 | Campo | Tipo |
 | --- | --- |
@@ -3113,7 +3211,7 @@ Seguridad: corre con los permisos de su dueno; filtra con su propio WHERE. Privi
 
 Indicadores de impacto por jornada y por comunidad de origen del paciente (la de la jornada si el paciente no tiene). Una jornada puede tener varias filas; sumadas dan lo mismo que vista_reporte_impacto (00155).
 
-Seguridad: corre con los permisos de su dueno; filtra con su propio WHERE. Privilegios: `authenticated`: SELECT; `anon`: ninguno.
+Seguridad: corre con los permisos de su dueno; filtra con su propio WHERE. Privilegios: `authenticated`: INSERT, SELECT, UPDATE; `anon`: ninguno.
 
 | Campo | Tipo |
 | --- | --- |
@@ -3164,7 +3262,7 @@ Seguridad: corre con los permisos de su dueno; filtra con su propio WHERE. Privi
 | Funcion | Devuelve | Seguridad | Ejecuta | Descripcion |
 | --- | --- | --- | --- | --- |
 | `accede_a_modulo_por_matriz(p_modulo text)` | `boolean` | DEFINER | authenticated | Si la matriz de acceso le abrio este modulo al rol de la sesion. Solo se usa en politicas de LECTURA: abrir un modulo no da escritura. |
-| `alta_de_cuenta_permitida(p_usuario_de_sesion text, p_app_meta jsonb)` | `boolean` | INVOKER | nadie | Decide si un alta en auth.users puede continuar. Recibe el usuario de sesion en vez de leerlo para que sea comprobable desde pgTAP: postgres no puede hacer SET SESSION AUTHORIZATION en el stack local. |
+| `alta_de_cuenta_permitida(p_usuario_de_sesion text, p_app_meta jsonb)` | `boolean` | INVOKER | authenticated | Decide si un alta en auth.users puede continuar. Recibe el usuario de sesion en vez de leerlo para que sea comprobable desde pgTAP: postgres no puede hacer SET SESSION AUTHORIZATION en el stack local. |
 | `comprometido_de_jornada(p_jornada_id uuid, p_sin_gasto uuid)` | `numeric` | DEFINER | nadie | Suma de los gastos pendientes y aprobados de una jornada, sin contar p_sin_gasto (el que se esta revisando). SECURITY DEFINER para ver todos los gastos (00159). |
 | `equipo_de_proyecto(p_proyecto_id uuid)` | `TABLE(id uuid, proyecto_id uuid, perfil_id uuid, rol_en_proyecto text, created_at timestamp with time zone, nombres character varying, apellidos character varying, en_equipo_del_proyecto boolean, jornadas text[])` | DEFINER | authenticated | Equipo de un proyecto: la union de proyecto_personal, del cuadro de turnos de sus jornadas y de sus responsables, una fila por persona, con sus nombres (00150, 00157). |
 | `es_administrador()` | `boolean` | INVOKER | authenticated | TRUE si quien esta conectado tiene rol administrador y su cuenta esta activa. La usan las politicas RLS. |
@@ -3179,13 +3277,16 @@ Seguridad: corre con los permisos de su dueno; filtra con su propio WHERE. Privi
 | `fn_atender_alerta_caducidad(p_alerta_id uuid, p_acciones jsonb)` | `uuid` | DEFINER | authenticated | Cierra una alerta de caducidad y ejecuta una o mas acciones sobre el stock, en una transaccion (issue de division de alertas, PLAN.md punto 5): p_acciones es un arreglo de { accion, cantidad, bodegaDestinoId? } cuyas cantidades tienen que sumar exactamente el disponible vivo del lote (todas las bodegas) al momento de atender, no cantidad_afectada (el numero congelado al generar la alerta). descartado/donado dan de baja esa cantidad con salidas aprobadas; reubicado la traslada a bodegaDestinoId (exige que el lote no haya vencido). Cada accion aplicada queda en alerta_caducidad_detalle; alertas_caducidad.accion solo se llena cuando hubo una unica accion. Solo administracion; lanza 42501 a cualquier otro rol. |
 | `fn_buscar_pacientes(p_termino text, p_comunidad_id uuid, p_pagina integer, p_por_pagina integer, p_condicion_cronica_id uuid, p_sexo text, p_edad_min integer, p_edad_max integer)` | `TABLE(paciente_id uuid, nombres character varying, apellidos character varying, fecha_nacimiento date, sexo character varying, comunidad_id uuid, comunidad_nombre character varying, numero_ficha character varying, ultima_atencion date, condiciones text[], relevancia real, pagina integer, por_pagina integer, total bigint)` | INVOKER | authenticated | Busca pacientes por nombre (tolerando acentos y errores de tipeo, via el indice de trigramas de 00011 y el operador <% de word_similarity), filtrando opcionalmente por comunidad y por condicion cronica vigente, con resultados paginados y ordenados por relevancia. Si la pagina pedida cae despues del final, devuelve la ultima pagina real (columna pagina) en vez de una lista vacia con el total perdido. Excluye pacientes con fecha_baja. La usa buscarPacientes() de packages/shared/pacientes/api.js. Existe como funcion porque PostgREST no puede reproducir la expresion indexada ni ordenar por similarity(). SECURITY INVOKER: respeta las politicas de SELECT de 00032/00008, incluida la de padecimientos_cronicos, que solo deja leer a medico y administrador; para el resto de roles la columna condiciones llega vacia, que es lo correcto. Issue #535: se agrego la columna condiciones, que la tabla del listado dibuja como chips desde el PR #311. El dato se resuelve aqui y no con una segunda consulta desde el cliente porque la funcion ya recorre padecimientos_cronicos para el filtro, asi que no cuesta ningun viaje de red adicional; esa era la objecion que dejo escrita el PR #482 al omitirlas. Vigente significa estado <> resuelta, o sea activa y controlada, misma definicion que soloVigentes en obtenerCondicionesDelPaciente() (#122): una condicion controlada se sigue padeciendo. La 00076 usaba estado = activa tanto aqui como en el filtro, asi que un diabetico controlado ni salia al filtrar por Diabetes ni mostraba su chip; las dos cosas se corrigen en esta migracion para que columna y filtro no se contradigan. Issue #761: ahora exige fn_verificar_limite_busqueda_pacientes() (60 busquedas por usuario cada minuto) via la CTE _limite, referenciada con CROSS JOIN para que el planner no la elimine por no estar correlacionada con pacientes. |
 | `fn_contar_atenciones_incompletas(p_jornada_id uuid)` | `integer` | INVOKER | authenticated | Cuenta las atenciones de una jornada que todavia no tienen consulta asociada. jornadas/api.js la consulta antes de finalizar una jornada para advertir -sin bloquear- si hay atenciones incompletas (issue #171, criterio de aceptacion 4). No es SECURITY DEFINER: respeta las politicas de SELECT de atenciones/consultas (00033). |
-| `fn_crear_usuario_administrativo(p_correo text, p_nombres text, p_apellidos text, p_rol rol_usuario)` | `uuid` | DEFINER | nadie | Da de alta a una persona con el rol indicado, sin contrasena: la establece con "olvide mi contrasena". Es el camino administrativo mientras no exista la Edge Function invitar-usuario. No se concede a ningun rol de la aplicacion: se ejecuta desde el SQL editor del Dashboard. |
+| `fn_crear_usuario_administrativo(p_correo text, p_nombres text, p_apellidos text, p_rol rol_usuario)` | `uuid` | DEFINER | authenticated | Da de alta a una persona con el rol indicado, sin contrasena: la establece con "olvide mi contrasena". Es el camino administrativo mientras no exista la Edge Function invitar-usuario. No se concede a ningun rol de la aplicacion: se ejecuta desde el SQL editor del Dashboard. |
 | `fn_detectar_pacientes_duplicados()` | `TABLE(paciente_a_id uuid, nombres_a character varying, apellidos_a character varying, numero_ficha_a character varying, paciente_b_id uuid, nombres_b character varying, apellidos_b character varying, numero_ficha_b character varying, fecha_nacimiento date, similitud real)` | INVOKER | authenticated | Posibles pacientes duplicados: misma fecha de nacimiento y nombre similar (pg_trgm), ordenados por similitud. SECURITY INVOKER: la ve quien ya puede leer pacientes (00032). |
+| `fn_etapa_caducidad(p_dias integer, p_umbrales integer[])` | `integer` | INVOKER | authenticated | Etapa de aviso de un lote a p_dias de vencer: 0 si vence hoy o ya vencio (aviso obligatorio), si no la antelacion mas corta que ya alcanzo, o NULL si todavia esta fuera de la ventana. packages/shared/inventario/configuracionAlertas.validaciones.js (etapaDeVencimiento) la replica. |
 | `fn_existencias_disponibles(p_bodega_id uuid, p_busqueda text, p_limite integer, p_desplazamiento integer)` | `TABLE(medicamento_id uuid, medicamento text, concentracion text, presentacion text, marca text, componentes text[], cantidad_disponible integer, fecha_vencimiento_proxima date, lotes_disponibles integer, total_medicamentos bigint)` | INVOKER | authenticated | Inventario disponible agregado por medicamento: cantidad total, fecha de vencimiento mas proxima y numero de lotes con existencia. Se apoya en vista_lotes_disponibles (00047), que ya excluye lo vencido y lo que tiene cantidad cero, asi que la exclusion de vencidos no se repite aqui. p_bodega_id nulo suma todas las bodegas; con valor, agrupa despues de filtrar, que es el motivo por el que esto es una funcion y no una vista de granularidad fija. p_busqueda compara sin acentos contra nombre, marca, concentracion y los principios activos del medicamento. total_medicamentos repite en cada fila el total sin paginar, para que quien consume sepa cuantas paginas hay sin una segunda consulta. SECURITY INVOKER: respeta las politicas RLS de existencias, lotes, medicamentos y bodegas (00034), igual que la vista. Issue #145 (RF-18). |
 | `fn_fusionar_pacientes(p_sobreviviente_id uuid, p_absorbido_id uuid)` | `fusiones_pacientes` | DEFINER | authenticated | Fusiona dos expedientes: reasigna atenciones/condiciones/consultas sin violar sus UNIQUE, da de baja al absorbido y registra la fusion. Solo administrador (issue #140). Aborta si a alguno de los dos les falta el expediente, en vez de fusionar a medias (issue #637). |
-| `fn_generar_alertas_caducidad()` | `integer` | DEFINER | nadie | Genera una alerta pendiente por cada lote con existencia total mayor que cero que vence en 30 dias o menos, incluidos los ya vencidos (00129), que no tenga ya una pendiente ni una atendida en la misma etapa -por vencer o vencido- (00138, issue #755). SECURITY DEFINER; la invocan la Edge Function programada y fn_sincronizar_alertas_caducidad(). |
+| `fn_generar_alertas_caducidad()` | `integer` | DEFINER | nadie | Rutina de vencimientos (issue #899). Con la fecha de Guatemala y las antelaciones de configuracion_alertas_caducidad: cierra las alertas pendientes sin existencia, crea una alerta por lote con existencia dentro de la ventana (incluidos los vencidos) que no tenga una pendiente ni una atendida en la misma etapa, y registra un aviso -con su notificacion- cada vez que una alerta pendiente llega a una etapa mas cercana: cada antelacion y el dia del vencimiento. Idempotente. Devuelve cuantas alertas nuevas creo. SECURITY DEFINER; la invocan la Edge Function programada y fn_sincronizar_alertas_caducidad(). |
 | `fn_generar_receta(p_consulta_id uuid, p_medico_id uuid, p_indicaciones_generales text, p_detalle jsonb)` | `uuid` | INVOKER | authenticated | Crea una receta con todos sus renglones Y registra la salida de inventario correspondiente, todo en una sola transaccion (issues #120 y #711): si un renglon o una salida falla, no queda ni la receta ni el movimiento. Antes de insertar cada renglon con lote comprueba que el lote no este vencido, que la existencia alcance y que venga la bodega de la que sale. Los renglones sin lote no se comprueban ni generan movimiento: recetar sin especificar lote es valido (receta_detalle.lote_id es nullable en la 00019) y ahi el control ocurre al despachar. Los movimientos se agrupan por (lote, bodega), asi que dos renglones del mismo lote dan una sola salida. Desde la issue #764 tambien persiste bodega_id en receta_detalle, que fn_ajustar_entrega_receta() necesita para corregir la cantidad entregada mas adelante sin descontar el inventario dos veces. SECURITY INVOKER: quien puede crear la receta y quien puede registrar el movimiento lo deciden las politicas de la 00033 y la 00034, no esta funcion; el flujo de aprobacion no cambia (administrador autoaprueba por la 00028, medico y voluntario dejan el movimiento pendiente). |
+| `fn_hoy_guatemala(p_instante timestamp with time zone)` | `date` | INVOKER | authenticated | Fecha calendario de Guatemala en el instante dado (por defecto, ahora). La base corre en UTC, asi que CURRENT_DATE se adelanta un dia entre las 18:00 y las 23:59 de Guatemala (issue #899). |
 | `fn_liquidar_sobrante_de_jornada(p_jornada_id uuid, p_decisiones jsonb)` | `integer` | DEFINER | authenticated | Liquida el sobrante de una jornada finalizada sin gastos pendientes: por cada aporte elegido, lo devuelve a su origen o lo traspasa a otra jornada planificada o en curso del mismo proyecto (00160). Administradora o jornadas.gestionar. |
+| `fn_lotes_en_ventana_de_caducidad(p_hoy date, p_umbrales integer[])` | `TABLE(lote_id uuid, dias integer, etapa integer, cantidad integer)` | INVOKER | nadie | Lotes con existencia total mayor que cero que vencen dentro de la antelacion mas larga, incluidos los ya vencidos, con sus dias restantes y su etapa de aviso. Uso interno de fn_generar_alertas_caducidad(). |
 | `fn_medicamento_tiene_existencias(p_medicamento_id uuid)` | `boolean` | INVOKER | authenticated | TRUE si el medicamento tiene stock positivo no vencido (existencias.cantidad_disponible > 0 y lote con fecha_vencimiento >= hoy) en algun lote. medicamentos.api.js la consulta antes de desactivar un medicamento (issue #142); un medicamento con lotes historicos ya agotados o vencidos si se puede desactivar. |
 | `fn_notificar_administradores(p_categoria categoria_notificacion, p_titulo text, p_cuerpo text, p_enlace text, p_origen_tabla text, p_origen_id uuid)` | `integer` | DEFINER | nadie | Crea la misma notificacion para cada administrador activo (un perfil desactivado no recibe nada, mismo criterio que la 00079). Devuelve cuantas creo. Solo la llaman los triggers de la 00138: sin EXECUTE para ningun rol de aplicacion. |
 | `fn_pasar_insumo_de_proyecto_a_jornada(p_insumo_id uuid, p_jornada_id uuid)` | `uuid` | INVOKER | authenticated | Pasa un insumo previsto a nivel proyecto (proyecto_insumos) a una jornada de ese proyecto (jornada_insumos), en una sola transaccion (00151). |
@@ -3195,11 +3296,12 @@ Seguridad: corre con los permisos de su dueno; filtra con su propio WHERE. Privi
 | `fn_registrar_paciente(p_nombres character varying, p_apellidos character varying, p_fecha_nacimiento date, p_sexo character varying, p_comunidad_id uuid, p_telefono_contacto character varying, p_idioma character varying, p_dpi character varying, p_tipo_sangre tipo_sanguineo, p_nombre_responsable character varying, p_parentesco_responsable character varying)` | `TABLE(id uuid, nombres character varying, apellidos character varying, fecha_nacimiento date, sexo character varying, comunidad_id uuid, telefono_contacto character varying, idioma character varying, dpi character varying, tipo_sangre tipo_sanguineo, nombre_responsable character varying, parentesco_responsable character varying, fecha_baja date, created_at timestamp with time zone, updated_at timestamp with time zone, numero_ficha character varying)` | INVOKER | authenticated | Inserta un paciente y su expediente en una sola transaccion. numero_ficha ya no es un parametro: lo genera el DEFAULT de expedientes (nextval de expedientes_numero_ficha_seq, 00081), formateado a 6 digitos con ceros a la izquierda. nextval() es atomico y nunca repite valor entre sesiones concurrentes, asi que dos dispositivos registrando a la vez en la misma jornada no pueden colisionar. No es SECURITY DEFINER: las politicas de INSERT de pacientes y expedientes (00032) siguen decidiendo quien puede llamarla. Issue #663: p_idioma pasa de idioma_preferido a VARCHAR. El idioma ya no es un enum sino un codigo del catalogo idiomas, con clave foranea, para poder agregar idiomas sin desplegar. |
 | `fn_reporte_jornada(p_jornada_id uuid)` | `jsonb` | DEFINER | authenticated | Reporte de resultados de una jornada, ya agregado: totales, diagnosticos, medicamentos y personal. Sin filas de paciente. NULL si la jornada no existe. |
 | `fn_reporte_pacientes_atendidos(p_agrupar_por text, p_jornada_id uuid, p_comunidad_id uuid, p_desde date, p_hasta date)` | `TABLE(grupo_id text, grupo text, pacientes integer, nuevos integer, recurrentes integer, hombres integer, mujeres integer, menores integer, adultos integer, adultos_mayores integer)` | DEFINER | authenticated | Pacientes atendidos agregados por jornada, comunidad o mes, con el desglose por sexo y por rango de edad y la distincion entre pacientes nuevos y recurrentes (issue #202, RF-31). Cuenta pacientes distintos, no atenciones: dos atenciones del mismo paciente en la misma jornada son un solo paciente atendido. La edad se calcula a la fecha de la jornada, no a la de hoy, para que un reporte de hace tres anios no envejezca con el tiempo. SECURITY DEFINER con guarda de rol explicita: los roles consultivos no tienen politica de SELECT sobre pacientes (00032) y esta funcion necesita sexo y fecha_nacimiento para los desgloses. Devuelve UNICAMENTE agregados: ninguna fila del resultado identifica a un paciente, que es la regla que fija la 00054 (issue #407). La 00095 corrigio dos errores de calculo (issue #596): el sexo se comparaba contra la inicial cuando la columna guardaba la palabra completa, asi que hombres y mujeres salian en cero; y un paciente recurrente contaba como nuevo en todos sus grupos. La 00132 (issue #699) retira el parche que dejo la 00095: con sexo convertido en el enum sexo_paciente, el desglose vuelve a compararse por igualdad y no por la inicial con LIKE. |
-| `fn_sincronizar_alertas_caducidad()` | `integer` | DEFINER | authenticated | Ejecuta fn_generar_alertas_caducidad() a peticion de la administradora, para que la pestana de alertas no dependa de cuando corrio por ultima vez la rutina programada (issue #838). Devuelve cuantas alertas nuevas creo. Comprueba es_administrador(); sin ese rol lanza 42501. |
+| `fn_sincronizar_alertas_caducidad()` | `integer` | DEFINER | authenticated | Ejecuta fn_generar_alertas_caducidad() a peticion de la administracion o de quien tenga inventario.configurar_alertas, para no depender de cuando corrio la rutina programada (issues #838 y #899). Devuelve cuantas alertas nuevas creo. Sin ese rol o permiso lanza 42501. |
+| `fn_umbrales_caducidad_validos(p_umbrales integer[])` | `boolean` | INVOKER | authenticated | Regla de las antelaciones de aviso de vencimiento: de 0 a 4 valores, distintos, entre 1 y 365 dias. La usa el CHECK de configuracion_alertas_caducidad; packages/shared/inventario/configuracionAlertas.validaciones.js replica la misma regla. |
 | `fn_valor_de_inventario_disponible(p_bodega_id uuid)` | `TABLE(bodega_id uuid, bodega text, medicamento_id uuid, medicamento text, origen origen_lote, cantidad_disponible bigint, valor_disponible numeric, unidades_sin_costo bigint, lotes_sin_costo bigint)` | DEFINER | authenticated | Valor monetario del inventario disponible (existencias.cantidad_disponible, no lotes.cantidad_ingresada), agregado por bodega, medicamento y origen. p_bodega_id nulo suma todas las bodegas. valor_disponible solo suma lotes con costo_unitario conocido; unidades_sin_costo y lotes_sin_costo cuentan aparte lo que no tiene costo capturado, para que el reporte declare cuanto del inventario queda sin valorizar en vez de contarlo como cero. SECURITY DEFINER: solo administrador y los roles consultivos (junta directiva, socio fundador) reciben resultado, por la misma razon que protege presupuesto_de_jornada/proyecto/sistema (00080) y obtenerIndicadoresImpacto (reportes/api.js) -- costo_unitario es informacion financiera que la 00121 no pudo restringir a nivel de columna. Issue #752. |
 | `fn_verificar_limite_busqueda_pacientes()` | `void` | DEFINER | authenticated | Limite de busquedas por usuario (issue #761): 60 cada minuto. La llama fn_buscar_pacientes() en una CTE al inicio, antes de la busqueda real. SECURITY DEFINER para poder escribir en limites_de_uso, que authenticated no puede tocar directamente; se concede EXECUTE a authenticated porque fn_buscar_pacientes corre SECURITY INVOKER y necesita poder llamarla. |
-| `fn_verificar_limite_invitaciones(p_administrador_id uuid)` | `void` | DEFINER | nadie | Limite de invitaciones por administrador (issue #761): 20 cada hora. La llama supabase/functions/invitar-usuario/index.ts antes de fn_crear_usuario_administrativo(), con la llave de servicio. No se concede a ningun rol de la aplicacion, solo a service_role. |
-| `fn_verificar_y_contar_limite(p_recurso text, p_actor_id uuid, p_maximo integer, p_ventana interval)` | `void` | DEFINER | nadie | Incrementa atomicamente el contador de (recurso, actor_id) y falla con SQLSTATE 53400 (configuration_limit_exceeded) si supera p_maximo dentro de la ventana p_ventana. Reinicia la ventana sola cuando expiro. Nucleo compartido; llamarla siempre a traves de una funcion companera con el recurso y el umbral ya fijos (issue #761). |
+| `fn_verificar_limite_invitaciones(p_administrador_id uuid)` | `void` | DEFINER | authenticated | Limite de invitaciones por administrador (issue #761): 20 cada hora. La llama supabase/functions/invitar-usuario/index.ts antes de fn_crear_usuario_administrativo(), con la llave de servicio. No se concede a ningun rol de la aplicacion, solo a service_role. |
+| `fn_verificar_y_contar_limite(p_recurso text, p_actor_id uuid, p_maximo integer, p_ventana interval)` | `void` | DEFINER | authenticated | Incrementa atomicamente el contador de (recurso, actor_id) y falla con SQLSTATE 53400 (configuration_limit_exceeded) si supera p_maximo dentro de la ventana p_ventana. Reinicia la ventana sola cuando expiro. Nucleo compartido; llamarla siempre a traves de una funcion companera con el recurso y el umbral ya fijos (issue #761). |
 | `mis_accesos()` | `jsonb` | DEFINER | authenticated | Modulos abiertos por la matriz al rol de la sesion y sus permisos finos efectivos. Solo describe a quien llama. |
 | `modulo_por_defecto(p_rol rol_usuario, p_modulo text)` | `boolean` | INVOKER | authenticated | Modulos que un rol ve por defecto, espejo de MODULOS[].roles (packages/shared/navegacion.js). La matriz de acceso (rol_modulo) solo concede modulos fuera de esta lista. |
 | `participa_en_jornada(p_jornada_id uuid)` | `boolean` | DEFINER | authenticated | TRUE si quien esta conectado, con la cuenta activa, esta en el equipo de la jornada (jornada_personal). La usan las politicas RLS. |
@@ -3232,7 +3334,8 @@ Seguridad: corre con los permisos de su dueno; filtra con su propio WHERE. Privi
 | `fn_impedir_devuelto_a_mano()` | INVOKER | Trigger de jornada_presupuesto_origen (00160): devuelto y traspasado_desde solo los escribe fn_liquidar_sobrante_de_jornada(). |
 | `fn_impedir_presupuesto_a_mano()` | INVOKER | Trigger: rechaza un UPDATE que cambie jornadas.presupuesto_asignado fuera de la sincronizacion con jornada_presupuesto_origen (00135). |
 | `fn_impedir_quitar_aporte_liquidado()` | INVOKER | Trigger de jornada_presupuesto_origen (00160): un aporte con sobrante liquidado no se borra. |
-| `fn_notificar_alerta_caducidad()` | DEFINER | Trigger: avisa en el buzon de la administracion cuando aparece una alerta de caducidad (00138). |
+| `fn_normalizar_configuracion_alertas_caducidad()` | INVOKER | Trigger: ordena las antelaciones de mayor a menor y registra quien guardo el cambio. |
+| `fn_notificar_aviso_caducidad()` | DEFINER | Trigger: avisa en el buzon (y por correo) de la administracion cada vez que se registra un aviso de vencimiento: "Lote por vencer en N dias", "Lote vence hoy" o "Lote vencido" (issue #899). Reemplaza a fn_notificar_alerta_caducidad (00138), que avisaba una sola vez por alerta. |
 | `fn_notificar_gasto_por_aprobar()` | DEFINER | Trigger: avisa a quien aprueba gastos cuando se registra uno pendiente (00138). |
 | `fn_notificar_medicamento_sin_stock()` | DEFINER | Trigger: avisa cuando un medicamento se queda sin existencias en todas las bodegas (00138). |
 | `fn_notificar_movimiento_por_validar()` | DEFINER | Trigger: avisa a quien valida movimientos cuando se registra uno pendiente (00138). |

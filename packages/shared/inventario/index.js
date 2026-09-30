@@ -40,6 +40,11 @@ export * from "./proveedores.api.js";
 export * from "./bodegas.permisos.js";
 export * from "./movimientos.api.js";
 export * from "./alertas.api.js";
+export * from "./configuracionAlertas.api.js";
+export * from "./configuracionAlertas.validaciones.js";
+export * from "./useConfiguracionAlertasVencimiento.js";
+export * from "./useVentanaDeAvisoVencimiento.js";
+export * from "./useAtencionAlertaCaducidad.js";
 export * from "./permisos.js";
 export * from "./validacion.api.js";
 export * from "./useCatalogoMedicamentos.js";
@@ -67,6 +72,8 @@ export {
 export {
   datosAtenderAlerta,
   recargarAlertasMontadas,
+  textoSinLotesPorVencer,
+  textoVentanaDeAlertas,
   useAlertasVencimiento,
 } from "./useAlertasVencimiento.js";
 

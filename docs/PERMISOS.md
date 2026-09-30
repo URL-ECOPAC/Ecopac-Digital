@@ -336,8 +336,10 @@ sin reasignar, bajo el absorbido. Reflejo en el cliente: `puedeFusionarPacientes
 | `existencias`            | C R U         | R                                | R      | R                  | `00034`; disponibilidad por `fn_existencias_disponibles` (`00065`)                                          |
 | `bodegas`                | C R U         | R                                | C R U  | C R U              | `00034` + `00148` (el personal de campo crea y corrige), con la lectura endurecida por la `00079` a `rol_actual() IS NOT NULL`. Las politicas duplicadas de la `00061`/`00062` las retiro esa misma migracion (era la Divergencia 12). **Sin DELETE para nadie**, y no solo por politica: la `00034` nunca otorgo `GRANT DELETE`, asi que el borrado muere en `42501` antes de llegar a RLS. Cubierto rol por rol en `politicas_rls_inventario.sql` (issue #513)                                                          |
 | `proveedores`            | C R U         | R                                | C R U  | C R U              | `00034` + `00148` (el personal de campo crea y corrige), con la lectura endurecida por la `00079` a `rol_actual() IS NOT NULL`. Las politicas duplicadas de la `00061`/`00062` las retiro esa misma migracion (era la Divergencia 12). **Sin DELETE para nadie**, y no solo por politica: la `00034` nunca otorgo `GRANT DELETE`, asi que el borrado muere en `42501` antes de llegar a RLS. Cubierto rol por rol en `politicas_rls_inventario.sql` (issue #513)                                                                             |
-| `alertas_caducidad`      | R **A**       | R                                | R      | R                  | `00034` + `00138`. Sin INSERT DIRECTO para nadie: las genera `fn_generar_alertas_caducidad` (`00088`, redefinida por la `00129` y la `00138`), que es `SECURITY DEFINER`. La invocan la rutina programada con `service_role` y, desde la `00129`, tambien la administradora a traves de `fn_sincronizar_alertas_caducidad` (ver abajo). **Sin UPDATE directo para nadie desde la `00138`**: se atiende solo con `fn_atender_alerta_caducidad`, que ademas descuenta el stock (ver abajo) |
+| `alertas_caducidad`      | R **A**       | R                                | R      | R                  | `00034` + `00138` + `00162`. Sin INSERT DIRECTO para nadie: las genera `fn_generar_alertas_caducidad` (`00088`, redefinida por la `00129`, la `00138` y la `00162`, que ademas cierra sola -`cerrada_sin_existencia`- la alerta pendiente de un lote que se quedo sin existencia), que es `SECURITY DEFINER`. La invocan la rutina programada con `service_role` y, desde la `00129`, tambien la administradora a traves de `fn_sincronizar_alertas_caducidad` (ver abajo). **Sin UPDATE directo para nadie desde la `00138`**: se atiende solo con `fn_atender_alerta_caducidad`, que ademas descuenta el stock (ver abajo) |
 | `alerta_caducidad_detalle` | R           | R                                | R      | R                  | `00143`. Desglose de las acciones aplicadas al atender una alerta con varias acciones a la vez. **Sin GRANT de escritura para nadie**: la unica fila la inserta `fn_atender_alerta_caducidad`, `SECURITY DEFINER` |
+| `configuracion_alertas_caducidad` | R U | R | R | R | `00162` (issue #899). Una sola fila con las antelaciones de los avisos de vencimiento (de 0 a 4, entre 1 y 365 dias; por defecto 90; sin ninguna solo se avisa el dia del vencimiento). La lee toda sesion activa (`rol_actual() IS NOT NULL`): las listas de inventario marcan "por vencer" con la misma ventana. **La cambia la administracion, o quien tenga el permiso fino `inventario.configurar_alertas`** (politica "Administracion o permiso configura alertas de caducidad", que se delega en Colaboradores > Permisos), y solo la columna `umbrales_dias` (`GRANT UPDATE (umbrales_dias)`). Sin INSERT ni DELETE para nadie. Se audita. Se edita solo desde la web (`/inventario/avisos-vencimiento`) |
+| `avisos_caducidad` | R | — | — | — | `00162` (issue #899). Un aviso por alerta y por etapa (cada antelacion y el dia del vencimiento); su INSERT genera la notificacion. Lo escribe solo `fn_generar_alertas_caducidad` (`SECURITY DEFINER`); lectura solo para la administracion (`es_administrador()`) |
 | `movimientos_inventario` | R U **A**     | R                                | C R U\* | C R U\*            | `00034` + `00048` + `00086` (aprobar admite tambien `tiene_permiso('inventario.aprobar')`) + `00106`. \*Solo el **propio** movimiento y solo mientras siga `pendiente` |
 | `notificaciones`         | R U\*\*       | R U\*\*                          | R U\*\* | R U\*\*             | `00138` (issue #755). \*\*Cada perfil activo solo **sus propias** filas (`perfil_id = auth.uid() AND rol_actual() IS NOT NULL`), y el UPDATE solo alcanza a `leida_en` (`GRANT UPDATE (leida_en)`, por columna). Sin INSERT ni DELETE para nadie: las escriben triggers `SECURITY DEFINER` (ver abajo). Hoy solo la administracion recibe filas. **Desde la `00149` la administradora lee ademas las de todas las personas** (politica "La administracion lee el envio de todas las notificaciones", `es_administrador()`): la Bitacora muestra si el correo de cada una salio o fallo. Solo lectura: marcar como leida sigue siendo de cada quien |
 
@@ -376,6 +378,9 @@ siguiente de la rutina nocturna en aparecer. Es un envoltorio `SECURITY DEFINER`
 es crear alertas pendientes que la rutina habria creado igual. No abre ninguna puerta nueva: es la
 misma regla que la politica "Solo administrador atiende alertas_caducidad" (`00034`) ya exige para
 cerrarlas.
+Desde la `00162` (issue #899) tambien la puede ejecutar quien tenga `inventario.configurar_alertas`:
+al guardar las antelaciones la pantalla sincroniza para que los lotes que entran a la ventana nueva
+avisen en el momento. Atender las alertas sigue siendo solo de la administracion.
 
 **`fn_atender_alerta_caducidad` (issue #755, `00138`): atender una alerta descuenta el stock.**
 Atender era un `UPDATE` de la alerta y nada mas: las unidades seguian en existencias y el
@@ -392,7 +397,8 @@ ella, la salida de un vencido sigue rechazada como antes (CP-RF03-04).
 
 **Notificaciones al administrador (issue #755, `00138`): quien las escribe.** Nadie las inserta
 desde la aplicacion. Las crean cuatro triggers `SECURITY DEFINER` -`AFTER INSERT` en
-`alertas_caducidad`, en `movimientos_inventario` con `estado = 'pendiente'` y en `gastos` con
+`avisos_caducidad` (desde la `00162`, issue #899; antes en `alertas_caducidad`, que solo avisaba una
+vez por alerta), en `movimientos_inventario` con `estado = 'pendiente'` y en `gastos` con
 `estado = 'pendiente'`, y `AFTER UPDATE` de sentencia en `existencias` cuando el total de un
 medicamento pasa de mayor que cero a cero- a traves de `fn_notificar_administradores`, que inserta
 una fila por **administrador activo** (un perfil desactivado no recibe nada, mismo criterio que la
@@ -831,14 +837,15 @@ su rol no tiene, sin cambiarle el rol.**
 | `presupuestos.aprobar`        | administrador                                  | **Si** — UPDATE de `gastos` (`00052`); lectura de `gastos` (`00148`)                 |
 | `pacientes.editar`            | administrador, medico, voluntario general (`00148`) | **Si** — UPDATE de `pacientes` y `expedientes` (`00086`)                        |
 | `inventario.aprobar`          | administrador                                  | **Si** — UPDATE de `movimientos_inventario` (`00086`)                                |
+| `inventario.configurar_alertas` | administrador                                | **Si** — UPDATE de `configuracion_alertas_caducidad` y `fn_sincronizar_alertas_caducidad` (`00162`, issue #899). No da permiso para atender alertas |
 | `donaciones.registrar`        | administrador                                  | **Si** — INSERT de `donantes`, `donaciones` y `donacion_detalle` (`00086`)           |
 | `proyectos.gestionar`         | administrador                                  | **Si** — INSERT y UPDATE de `proyectos` (`00086`, y las escrituras de `proyecto_personal` `00146` y `proyecto_insumos` `00147`) |
 | `usuarios.gestionar_permisos` | administrador                                  | **Si** — INSERT/UPDATE/DELETE de `usuario_permiso` (`00086`)                         |
 | `reportes.exportar`           | administrador, junta directiva, socio fundador | **Si** — `vista_reporte_impacto`, `pacientes_reporte`, `fn_reporte_pacientes_atendidos` (`00086`) |
 
-**Los nueve permisos gobiernan de verdad una politica.** Concederlos o revocarlos en
+**Los diez permisos gobiernan de verdad una politica.** Concederlos o revocarlos en
 `usuario_permiso` cambia lo que el servidor permite. Resuelto por la issue #409 (migracion
-`00086`).
+`00086`); `inventario.configurar_alertas` nace conectado (`00162`, issue #899).
 
 **Las ocho politicas conectadas por la `00086` son siempre `es_administrador() OR
 tiene_permiso(clave)`, nunca solo `tiene_permiso(clave)`.** Consecuencia directa: para el rol
