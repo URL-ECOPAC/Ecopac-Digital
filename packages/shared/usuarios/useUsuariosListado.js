@@ -15,7 +15,9 @@ export const USUARIOS_POR_PAGINA = 20;
  * @returns {string}
  */
 export function nombreCompletoDe(perfil = {}) {
-  return [perfil.nombres, perfil.apellidos].filter(Boolean).join(" ").trim();
+  // `perfil` llega en null cuando el embebido no trajo nada: el valor por defecto solo cubre
+  // undefined, y sin el ?. imprimir el cuadro de turnos rompia la pantalla.
+  return [perfil?.nombres, perfil?.apellidos].filter(Boolean).join(" ").trim();
 }
 
 /**

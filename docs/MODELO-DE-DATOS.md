@@ -969,6 +969,7 @@ notificaciones (`fn_notificar_*`, `00138`), los de presupuesto por origen (`0013
 | `vista_cola_jornada`     | Quien esta esperando en la jornada y desde hace cuanto                    |
 | `vista_lotes_disponibles`| Lotes entregables (no vencidos, con existencia), por lote y bodega        |
 | `perfiles_directorio`    | Directorio de personal sin exponer la tabla completa                      |
+| `nombres_de_perfiles`    | [00161] Solo el nombre de cada persona (id, nombres, apellidos, activo), para toda persona activa |
 | `tablas_sin_rls`         | **Verificacion**: lista tablas sin RLS. Debe estar vacia                  |
 | `privilegios_de_anon`    | **Verificacion**: lista privilegios de `anon`. Debe estar vacia           |
 

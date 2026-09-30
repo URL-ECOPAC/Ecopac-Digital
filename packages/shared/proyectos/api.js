@@ -36,7 +36,7 @@ const COLUMNAS_DE_HISTORIAL = [
   "estadoAnterior:estado_anterior",
   "estadoNuevo:estado_nuevo",
   "createdAt:created_at",
-  "cambiadoPor:perfiles(nombres, apellidos)",
+  "cambiadoPor:nombres_de_perfiles(nombres, apellidos)",
 ].join(", ");
 
 // Las columnas se enumeran en lugar de pedir "*" para que una columna nueva en proyectos no
@@ -59,7 +59,7 @@ const COLUMNAS_DEL_PROYECTO = [
   "updatedAt:updated_at",
   // Mismo patron que jornadas/api.js: la pantalla muestra al responsable por su nombre, y sin
   // este join solo tenia el UUID de responsable_id para pintar en la columna.
-  "responsable:perfiles(nombres, apellidos)",
+  "responsable:nombres_de_perfiles(nombres, apellidos)",
 ].join(", ");
 
 /**

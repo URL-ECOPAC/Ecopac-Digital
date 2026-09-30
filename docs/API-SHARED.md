@@ -532,7 +532,7 @@ permiso sale falso y no consulta. No hay filtro por comunidad: `bodegas` no tien
 Los valores son exactamente los del enum `rol_usuario` de la migracion `00001`. Un rol escrito
 como string suelto es un error de revision.
 
-**Consultas**: `listarUsuarios`, `obtenerPerfil`, `obtenerEspecialidadesDePerfil`,
+**Consultas**: `listarUsuarios`, `listarNombresDePerfiles` (00161: solo nombres, para toda persona activa), `obtenerPerfil`, `obtenerEspecialidadesDePerfil`,
 `listarCatalogoEspecialidades`, `listarCatalogoPermisos`, `obtenerPermisosEfectivos`,
 `contarAdministradoresActivos`, `contarJornadasPorPerfil`.
 

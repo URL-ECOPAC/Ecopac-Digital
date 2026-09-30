@@ -114,7 +114,12 @@ const MODULOS = [
   {
     id: "presupuestos",
     titulo: "Presupuestos y gastos",
-    tablas: ["gastos", "fuentes_de_presupuesto", "jornada_presupuesto_origen"],
+    tablas: [
+      "gastos",
+      "categorias_de_gasto",
+      "fuentes_de_presupuesto",
+      "jornada_presupuesto_origen",
+    ],
   },
   {
     id: "proyectos",

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { listarJornadas } from "../jornadas/api.js";
-import { listarUsuarios } from "../usuarios/api.js";
+import { listarNombresDePerfiles } from "../usuarios/api.js";
 import { nombreCompletoDe } from "../usuarios/useUsuariosListado.js";
 import { ESTADOS_DE_GASTO, ESTADOS_JORNADA } from "../enums.js";
 import {
@@ -79,9 +79,6 @@ export function useFormularioGasto({ gasto, usuarioId, estadoInicial, rol } = {}
     listarJornadas().then(({ jornadas: filas }) => {
       if (vigente) setJornadas(filas);
     });
-    listarUsuarios({ estado: true }).then(({ usuarios }) => {
-      if (vigente) setPerfiles(aOpciones(usuarios, nombreCompletoDe));
-    });
     listarCategoriasGasto().then(({ categorias: catalogo }) => {
       if (vigente) setCategorias(catalogo);
     });
@@ -89,6 +86,29 @@ export function useFormularioGasto({ gasto, usuarioId, estadoInicial, rol } = {}
       vigente = false;
     };
   }, []);
+
+  // nombres_de_perfiles (00161): quien registra un gasto en su jornada no lee perfiles, y el
+  // selector de encargado y "Registrado por" quedaban vacios. Se ofrecen las personas activas y,
+  // si el gasto ya las nombra, las que ya no lo estan.
+  const responsableDelGasto = gasto?.responsable_id ?? null;
+  const registradoPorDelGasto = gasto?.registrado_por ?? null;
+  const aprobadoPorDelGasto = gasto?.aprobado_por ?? null;
+  useEffect(() => {
+    let vigente = true;
+    const nombrados = [responsableDelGasto, registradoPorDelGasto, aprobadoPorDelGasto];
+    listarNombresDePerfiles().then(({ perfiles: filas }) => {
+      if (!vigente) return;
+      setPerfiles(
+        aOpciones(
+          filas.filter((fila) => fila.activo || nombrados.includes(fila.id)),
+          nombreCompletoDe,
+        ),
+      );
+    });
+    return () => {
+      vigente = false;
+    };
+  }, [responsableDelGasto, registradoPorDelGasto, aprobadoPorDelGasto]);
 
   useEffect(() => {
     if (!valores.jornada_id) {

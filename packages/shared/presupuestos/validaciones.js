@@ -53,7 +53,7 @@ export function validarOrigenDePresupuesto(valores = {}, { disponibleDeDonacion 
  * - El monto de un gasto debe ser mayor que cero.
  * - La fecha llega hasta el dia de su jornada aunque sea futuro -un gasto de preparacion se
  *   registra antes- y, pasada la jornada, hasta hoy. No hay limite hacia atras.
- * - El concepto y la categoria son obligatorios.
+ * - El concepto, la categoria y la jornada son obligatorios.
  * - Una jornada finalizada no admite gastos nuevos: ya cerro.
  * - Un gasto no deja lo comprometido de la jornada (gastos pendientes y aprobados) por encima de
  *   su presupuesto asignado. Se marca `esExcedente` con su mensaje y el gasto no es valido.
@@ -80,6 +80,12 @@ export function validarGasto(gasto = {}, jornada = null, hoy = new Date()) {
   // 2. Categoria obligatoria. Que exista en el catalogo lo decide la llave foranea (00158).
   if (estaVacio(gasto.categoria)) {
     errores.push("La categoría de gasto es obligatoria.");
+  }
+
+  // 2a. Jornada obligatoria: gastos.jornada_id es NOT NULL (00025) y sin ella no hay presupuesto
+  //     contra el que comparar.
+  if (estaVacio(gasto.jornada_id)) {
+    errores.push("La jornada del gasto es obligatoria.");
   }
 
   // 2b. Una jornada que ya cerro no admite gastos nuevos (00159).

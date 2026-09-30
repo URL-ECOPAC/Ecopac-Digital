@@ -11,7 +11,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { listarProyectos } from "../proyectos/api.js";
 import { listarJornadas } from "../jornadas/api.js";
-import { listarUsuarios } from "../usuarios/api.js";
+import { listarNombresDePerfiles } from "../usuarios/api.js";
 import { nombreCompletoDe } from "../usuarios/useUsuariosListado.js";
 import {
   listarCategoriasGasto,
@@ -173,12 +173,14 @@ export function useEjecucionPresupuestal(rol) {
     const [
       { proyectos: filas },
       { jornadas: filasDeJornada },
-      { usuarios: filasDePerfil },
+      { perfiles: filasDePerfil },
       { categorias },
     ] = await Promise.all([
       listarProyectos(),
       listarJornadas(),
-      listarUsuarios({ estado: true }),
+      // Nombres de todas las personas (00161): la columna Encargado los necesita aunque quien
+      // mira no tenga Colaboradores, y aunque la persona ya no este activa.
+      listarNombresDePerfiles(),
       listarCategoriasGasto(),
     ]);
 
