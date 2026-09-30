@@ -18,6 +18,7 @@ configuracion de GitHub (plantillas de issues, PR y los workflows de CI/CD) esta
 | [SEGURIDAD.md](./SEGURIDAD.md)       | Politica de contrasenas, expiracion de sesion, credenciales y observabilidad (errores, fallos de red, bitacora, respaldos) |
 | [CONFIGURACION-SUPABASE.md](./CONFIGURACION-SUPABASE.md) | Lista de verificacion de lo que se configura a mano en el Dashboard de cada ambiente |
 | [PROTECCION-DE-DATOS.md](./PROTECCION-DE-DATOS.md) | Logs, almacenamiento movil, cifrado de columnas y secretos (OWASP A02) |
+| [formal/documentacion-tecnica.docx](./formal/documentacion-tecnica.docx) | Documento formal para quien no tiene acceso al repositorio (issue #867): permisos, modelo de datos, pantallas, conexion con Supabase, configuracion y herramientas, consolidados de los `.md` de esta carpeta |
 
 ## Referencia tecnica
 
