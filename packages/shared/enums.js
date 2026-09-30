@@ -284,28 +284,8 @@ export const ETIQUETAS_ESTADO_DONACION = Object.freeze({
 
 // --- Presupuestos ---------------------------------------------------------------------------
 
-/**
- * `categoria_gasto` (00025_presupuestos_gastos.sql).
- *
- * Los valores van capitalizados en la base, al reves que el resto de los enums del esquema.
- */
-export const CATEGORIAS_DE_GASTO = Object.freeze({
-  MEDICAMENTOS: "Medicamentos",
-  LOGISTICA: "Logistica",
-  DIAGNOSTICO: "Diagnostico",
-  HONORARIOS: "Honorarios",
-  EDUCACION: "Educacion",
-  INFRAESTRUCTURA: "Infraestructura",
-});
-
-export const ETIQUETAS_CATEGORIA_GASTO = Object.freeze({
-  [CATEGORIAS_DE_GASTO.MEDICAMENTOS]: "Medicamentos",
-  [CATEGORIAS_DE_GASTO.LOGISTICA]: "Logistica",
-  [CATEGORIAS_DE_GASTO.DIAGNOSTICO]: "Diagnostico",
-  [CATEGORIAS_DE_GASTO.HONORARIOS]: "Honorarios",
-  [CATEGORIAS_DE_GASTO.EDUCACION]: "Educacion",
-  [CATEGORIAS_DE_GASTO.INFRAESTRUCTURA]: "Infraestructura",
-});
+// Las categorias de gasto ya no son un enum: desde la 00158 son el catalogo categorias_de_gasto,
+// que se lee con listarCategoriasGasto() (presupuestos/api.js).
 
 /**
  * `estado_gasto` (00089_desacoplar_gastos_de_inventario.sql).
@@ -320,7 +300,7 @@ export const ESTADOS_DE_GASTO = Object.freeze({
 });
 
 export const ETIQUETAS_ESTADO_GASTO = Object.freeze({
-  [ESTADOS_DE_GASTO.PENDIENTE]: "pendiente",
+  [ESTADOS_DE_GASTO.PENDIENTE]: labels.pendiente,
   [ESTADOS_DE_GASTO.APROBADO]: labels.aprobado,
   [ESTADOS_DE_GASTO.RECHAZADO]: labels.rechazado,
 });

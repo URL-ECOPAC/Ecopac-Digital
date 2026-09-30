@@ -66,7 +66,6 @@
 // --- Alias de los enums del dominio ------------------------------------------------------
 
 /** @typedef {(typeof import("../enums.js").ACCIONES_DE_ALERTA)[keyof typeof import("../enums.js").ACCIONES_DE_ALERTA]} AccionAlerta */
-/** @typedef {(typeof import("../enums.js").CATEGORIAS_DE_GASTO)[keyof typeof import("../enums.js").CATEGORIAS_DE_GASTO]} CategoriaGasto */
 /** @typedef {(typeof import("../enums.js").ESTADOS_ALERTA)[keyof typeof import("../enums.js").ESTADOS_ALERTA]} EstadoAlerta */
 /** @typedef {(typeof import("../enums.js").CATEGORIAS_NOTIFICACION)[keyof typeof import("../enums.js").CATEGORIAS_NOTIFICACION]} CategoriaNotificacion */
 /** @typedef {(typeof import("../enums.js").ESTADOS_CONDICION_CRONICA)[keyof typeof import("../enums.js").ESTADOS_CONDICION_CRONICA]} EstadoCondicionCronica */
@@ -349,6 +348,10 @@
  * @property {string|null} donacionId Obligatoria si y solo si origen es 'donacion'.
  * @property {string|null} fuenteId Quien hizo un aporte externo (00149); solo con 'aporte_externo'.
  * @property {number} monto
+ * @property {number} devuelto Lo que salio de la jornada al liquidar su sobrante (00160). Lo que
+ *   cuenta del aporte es monto - devuelto.
+ * @property {string|null} traspasadoDesde Si es el sobrante de otra jornada, el aporte del que
+ *   salio (00160).
  * @property {string|null} descripcion
  * @property {string|null} registradoPor
  * @property {string} createdAt
@@ -913,7 +916,8 @@
  * @property {string} id
  * @property {string} jornadaId
  * @property {string} concepto
- * @property {CategoriaGasto} categoria
+ * @property {string} categoria Nombre de una fila de categorias_de_gasto (00158; antes el enum
+ *   categoria_gasto).
  * @property {number} monto
  * @property {string} fecha
  * @property {string|null} responsableId
@@ -925,6 +929,17 @@
  * @property {string} createdAt
  * @property {string} updatedAt
  * @property {string|null} motivoRechazo
+ */
+
+/**
+ * Fila de `categorias_de_gasto` (00158): el catalogo de categorias de gasto, que crece desde el
+ * formulario de gasto.
+ *
+ * @typedef {object} CategoriaDeGasto
+ * @property {string} id
+ * @property {string} nombre
+ * @property {string|null} registradoPor
+ * @property {string} createdAt
  */
 
 // --- Auditoria ------------------------------------------------------------------------------

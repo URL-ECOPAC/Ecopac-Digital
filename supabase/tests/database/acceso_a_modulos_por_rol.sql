@@ -42,9 +42,10 @@ INSERT INTO donaciones (id, donante_id, tipo) VALUES
   ('d1000000-0000-0000-0000-000000148001', 'd0000000-0000-0000-0000-000000148001', 'dinero');
 
 -- Una jornada en la que no participa nadie de los perfiles de prueba, con un gasto.
-INSERT INTO jornadas (id, nombre, fecha, comunidad_id, responsable_id, estado) VALUES
+-- Con presupuesto: desde la 00159 un gasto no pasa el de su jornada.
+INSERT INTO jornadas (id, nombre, fecha, comunidad_id, responsable_id, estado, presupuesto_asignado) VALUES
   ('30000000-0000-0000-0000-000000148001', 'Jornada 148', CURRENT_DATE + 10,
-   '10000000-0000-0000-0000-000000148001', '00000000-0000-0000-0000-000000148001', 'planificada');
+   '10000000-0000-0000-0000-000000148001', '00000000-0000-0000-0000-000000148001', 'planificada', 1000);
 
 INSERT INTO gastos (id, jornada_id, concepto, categoria, monto, registrado_por) VALUES
   ('6a000000-0000-0000-0000-000000148001', '30000000-0000-0000-0000-000000148001',

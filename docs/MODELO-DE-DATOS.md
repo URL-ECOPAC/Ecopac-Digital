@@ -676,6 +676,15 @@ un INSERT de jornada que ya lo traia, entran como `sin_clasificar`.
 `aporte_externo` (CHECK `chk_presupuesto_origen_fuente_solo_externo`) y opcional: el detalle libre
 sigue existiendo.
 
+`devuelto` y `traspasado_desde` [+00160]: al liquidar el sobrante de una jornada finalizada
+(`fn_liquidar_sobrante_de_jornada`), lo que sobro de cada aporte sale de la jornada (`devuelto`,
+0 <= devuelto <= monto) y, si se traspasa, entra en otra jornada del mismo proyecto como un aporte
+del mismo origen con `traspasado_desde` apuntando al que lo cedio. Lo que cuenta de un aporte es
+`monto - devuelto`: con eso se calculan `presupuesto_asignado` y el saldo de una donacion. Que parte
+de cada aporte uso la jornada lo dice `sobrante_de_jornada()`: primero donaciones y aportes
+externos, al final fondos propios. Quitar o rebajar un aporte por debajo de lo comprometido en
+gastos se rechaza (`00159`), y un aporte ya liquidado no se toca.
+
 ### `fuentes_de_presupuesto` [00149]
 
 Catalogo de quienes aportan de fuera al presupuesto de una jornada: `nombre` (unico sin importar
@@ -779,7 +788,7 @@ abrio Jornadas o Proyectos. El proyecto la muestra agrupada por jornada.
 | ---------------- | --------------------------- | -------------------------------------------------- |
 | `jornada_id`     | UUID NOT NULL               |                                                    |
 | `concepto`       | TEXT NOT NULL               |                                                    |
-| `categoria`      | `categoria_gasto` NOT NULL  | Medicamentos, Logistica, Diagnostico, Honorarios, Educacion, Infraestructura |
+| `categoria`      | TEXT NOT NULL               | [00158] FK a `categorias_de_gasto(nombre)`; antes el enum `categoria_gasto` |
 | `monto`          | NUMERIC(12,2) CHECK (> 0)   |                                                    |
 | `fecha`          | DATE NOT NULL               |                                                    |
 | `responsable_id` | UUID                        | Antes `encargado_id` [renombrada 00092]            |
@@ -798,6 +807,20 @@ La migracion `00089` **desacoplo gastos de inventario**: antes compartian el enu
 
 Los totales no se guardan: los calculan `presupuesto_de_jornada()`, `presupuesto_de_proyecto()` y
 `presupuesto_del_sistema()` (`00040`).
+
+Desde la `00159` un gasto pendiente o aprobado no deja lo comprometido de su jornada (pendientes
+mas aprobados, `comprometido_de_jornada()`) por encima de `jornadas.presupuesto_asignado`, y su
+`fecha` llega hasta el dia de la jornada (o hasta hoy, si ya paso); hacia atras no hay limite, para
+los gastos de preparacion. Una jornada finalizada no admite gastos nuevos; sus pendientes se
+siguen aprobando o rechazando. Lo aplica el trigger `fn_validar_gasto_contra_presupuesto`.
+
+### `categorias_de_gasto` [00158]
+
+`nombre` (TEXT, unico exacto y unico sin importar mayusculas, indice
+`uq_categorias_de_gasto_nombre`), `registrado_por`, `created_at`. Reemplaza al enum
+`categoria_gasto`: se siembra con sus seis valores y con las categorias que ya usaban los gastos, y
+crece desde "Crear categoria nueva" del formulario de gasto. `gastos.categoria` la referencia por
+nombre (`ON UPDATE CASCADE`). Sin UPDATE ni DELETE.
 
 ---
 
@@ -818,7 +841,6 @@ Los totales no se guardan: los calculan `presupuesto_de_jornada()`, `presupuesto
 | `estado_donacion`          | registrada, anulada                                                            | 00022     |
 | `tipo_movimiento`          | ingreso, salida                                                                | 00023     |
 | `estado_movimiento`        | pendiente, aprobado, rechazado                                                 | 00023     |
-| `categoria_gasto`          | Medicamentos, Logistica, Diagnostico, Honorarios, Educacion, Infraestructura   | 00025     |
 | `operacion_auditoria`      | insercion, actualizacion, baja, eliminacion                                    | 00026     |
 | `tipo_sanguineo`           | A+, A-, B+, B-, AB+, AB-, O+, O-                                               | 00035     |
 | `sexo_paciente`            | Femenino, Masculino                                                            | 00132     |

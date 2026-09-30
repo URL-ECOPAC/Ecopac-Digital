@@ -195,8 +195,13 @@ export function useOrigenesDePresupuesto({ jornadaId, proyectoId = null, rol, al
     return true;
   }, []);
 
+  // Lo que cuenta de cada aporte es su monto menos lo devuelto al liquidar el sobrante (00160).
   const total = useMemo(
-    () => origenes.reduce((suma, origen) => suma + (Number(origen.monto) || 0), 0),
+    () =>
+      origenes.reduce(
+        (suma, origen) => suma + (Number(origen.monto) || 0) - (Number(origen.devuelto) || 0),
+        0,
+      ),
     [origenes],
   );
 

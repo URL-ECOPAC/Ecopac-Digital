@@ -86,6 +86,28 @@ vi.mock("@ecopac/shared", async (importarOriginal) => ({
   useDetalleJornada: vi.fn(() => mockEstadoDetalle),
   useCuadroTurnos: vi.fn(() => mockEstadoCuadroTurnos),
   useResumenCierreJornada: vi.fn(() => mockEstadoCierre),
+  // La seccion de sobrante (00160) tiene su propia prueba (SobranteDeJornada.test.jsx): aqui solo
+  // importa que aparezca con la jornada finalizada.
+  useSobranteDeJornada: vi.fn(({ jornada }) => ({
+    visible: jornada?.estado === "finalizada",
+    puedeLiquidar: true,
+    cargando: false,
+    error: null,
+    filas: [],
+    liquidados: [],
+    totalSobrante: 0,
+    hayGastosPendientes: false,
+    jornadasDestino: [],
+    opcionesDeDestino: () => [],
+    decisiones: {},
+    errores: {},
+    setDestino: vi.fn(),
+    setJornadaDestino: vi.fn(),
+    liquidar: vi.fn(),
+    liquidando: false,
+    errorAlLiquidar: null,
+    recargar: vi.fn(),
+  })),
 }));
 
 const { useDetalleJornada, useResumenCierreJornada } = await import("@ecopac/shared");
@@ -219,6 +241,21 @@ describe("DetalleJornadaPage", () => {
     irAPestaniaCierre();
 
     expect(screen.queryByText("Confirmar cierre")).not.toBeInTheDocument();
+  });
+
+  it("una jornada finalizada muestra en Cierre el sobrante del presupuesto (00160)", () => {
+    mockEstadoDetalle.jornada = { ...JORNADA_EN_CURSO, estado: "finalizada" };
+    pantalla();
+    irAPestaniaCierre();
+
+    expect(screen.getByText("Sobrante del presupuesto")).toBeInTheDocument();
+  });
+
+  it("una jornada en curso todavia no muestra el sobrante", () => {
+    pantalla();
+    irAPestaniaCierre();
+
+    expect(screen.queryByText("Sobrante del presupuesto")).not.toBeInTheDocument();
   });
 
   // Camino de error, carga (issue #759/#778): si la jornada no carga, se muestra el error con

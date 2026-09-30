@@ -8,7 +8,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import { CATEGORIAS_DE_GASTO, ORIGENES_DE_PRESUPUESTO } from "../enums.js";
+import { ORIGENES_DE_PRESUPUESTO } from "../enums.js";
 import { aCadenaFechaLocal } from "../formato/fechas.js";
 import { conZonaHorariaDeGuatemala } from "../pruebas/zonaHoraria.js";
 import { validarGasto, validarOrigenDePresupuesto } from "./validaciones.js";
@@ -75,9 +75,9 @@ function enDias(dias) {
 }
 
 const jornadaConPresupuesto = {
-  fecha_inicio: "2026-01-01",
+  fecha: "2026-06-20",
   presupuesto_asignado: 1000.0,
-  gasto_acumulado: 200.0,
+  comprometido: 200.0,
 };
 
 describe("validarGasto", () => {
@@ -85,7 +85,7 @@ describe("validarGasto", () => {
     const resultado = validarGasto(
       {
         concepto: "Compra de mascarillas",
-        categoria: CATEGORIAS_DE_GASTO.MEDICAMENTOS,
+        categoria: "Medicamentos",
         monto: 150.0,
         fecha: hoy(),
       },
@@ -102,7 +102,7 @@ describe("validarGasto", () => {
     const resultado = validarGasto(
       {
         concepto: "Prueba",
-        categoria: CATEGORIAS_DE_GASTO.LOGISTICA,
+        categoria: "Logistica",
         monto: 0,
         fecha: hoy(),
       },
@@ -121,27 +121,21 @@ describe("validarGasto", () => {
     expect(resultado.errores).toContain("La categoría de gasto es obligatoria.");
   });
 
-  it("rechaza una categoria que no esta en el enum categoria_gasto", () => {
+  it("acepta una categoria recien creada: la valida el catalogo de la base (00158)", () => {
     const resultado = validarGasto(
-      {
-        concepto: "Alquiler de vehiculo",
-        // Valor que usaba la version anterior de estas pruebas y que Postgres rechaza.
-        categoria: "transporte",
-        monto: 100,
-        fecha: hoy(),
-      },
+      { concepto: "Bus", categoria: "Transporte", monto: 100, fecha: hoy() },
       null,
       HOY,
     );
 
-    expect(resultado.errores).toContain("La categoría seleccionada no es válida.");
+    expect(resultado.valido).toBe(true);
   });
 
-  it("rechaza una fecha posterior a hoy", () => {
+  it("sin jornada, rechaza una fecha posterior a hoy", () => {
     const resultado = validarGasto(
       {
         concepto: "Compra adelantada",
-        categoria: CATEGORIAS_DE_GASTO.LOGISTICA,
+        categoria: "Logistica",
         monto: 100,
         fecha: enDias(3),
       },
@@ -152,51 +146,106 @@ describe("validarGasto", () => {
     expect(resultado.errores).toContain("La fecha de un gasto no puede ser posterior a hoy.");
   });
 
-  it("rechaza una fecha anterior al inicio de la jornada", () => {
+  it("acepta la fecha de su jornada aunque sea futura", () => {
     const resultado = validarGasto(
-      {
-        concepto: "Gasto previo",
-        categoria: CATEGORIAS_DE_GASTO.LOGISTICA,
-        monto: 100,
-        fecha: "2025-12-15",
-      },
+      { concepto: "Reserva", categoria: "Logistica", monto: 100, fecha: "2026-06-20" },
       jornadaConPresupuesto,
       HOY,
     );
 
-    expect(resultado.errores).toContain(
-      "La fecha del gasto no puede ser anterior al inicio de su jornada.",
-    );
+    expect(resultado.valido).toBe(true);
   });
 
-  it("marca como excedente sin bloquear si supera el presupuesto de la jornada", () => {
+  it("rechaza una fecha posterior a su jornada", () => {
     const resultado = validarGasto(
-      {
-        concepto: "Alquiler extra de planta",
-        categoria: CATEGORIAS_DE_GASTO.INFRAESTRUCTURA,
-        monto: 500.0,
-        fecha: hoy(),
-      },
-      { ...jornadaConPresupuesto, gasto_acumulado: 800.0 },
+      { concepto: "Reserva", categoria: "Logistica", monto: 100, fecha: "2026-06-21" },
+      jornadaConPresupuesto,
       HOY,
     );
 
-    // Sigue siendo valido: una jornada en campo no se detiene porque el presupuesto se quede
-    // corto, solo tiene que quedar registrado.
+    expect(resultado.valido).toBe(false);
+    expect(resultado.errores[0]).toContain("hasta el día de su jornada (20/06/2026)");
+  });
+
+  it("acepta un gasto de preparacion de antes de la jornada", () => {
+    const resultado = validarGasto(
+      { concepto: "Compra previa", categoria: "Logistica", monto: 100, fecha: "2026-03-01" },
+      jornadaConPresupuesto,
+      HOY,
+    );
+
     expect(resultado.valido).toBe(true);
+  });
+
+  it("pasada la jornada, la fecha llega hasta hoy", () => {
+    const jornadaPasada = { ...jornadaConPresupuesto, fecha: "2026-06-01" };
+
+    expect(
+      validarGasto(
+        { concepto: "Factura", categoria: "Logistica", monto: 100, fecha: hoy() },
+        jornadaPasada,
+        HOY,
+      ).valido,
+    ).toBe(true);
+    expect(
+      validarGasto(
+        { concepto: "Factura", categoria: "Logistica", monto: 100, fecha: enDias(1) },
+        jornadaPasada,
+        HOY,
+      ).valido,
+    ).toBe(false);
+  });
+
+  it("bloquea un gasto que pasa el presupuesto contando lo comprometido", () => {
+    const resultado = validarGasto(
+      {
+        concepto: "Alquiler extra de planta",
+        categoria: "Infraestructura",
+        monto: 500.0,
+        fecha: hoy(),
+      },
+      { ...jornadaConPresupuesto, comprometido: 800.0 },
+      HOY,
+    );
+
+    expect(resultado.valido).toBe(false);
     expect(resultado.esExcedente).toBe(true);
-    expect(resultado.mensajeExcedente).toContain("Q300.00");
+    expect(resultado.errores).toContain("El gasto pasa el presupuesto disponible de la jornada.");
+    expect(resultado.mensajeExcedente).toContain("300.00");
+    expect(resultado.mensajeExcedente).toContain("200.00");
+  });
+
+  it("rechaza un gasto en una jornada finalizada", () => {
+    const resultado = validarGasto(
+      { concepto: "Factura", categoria: "Logistica", monto: 10, fecha: hoy() },
+      { ...jornadaConPresupuesto, estado: "finalizada" },
+      HOY,
+    );
+
+    expect(resultado.valido).toBe(false);
+    expect(resultado.errores).toContain("La jornada ya cerró: no admite gastos nuevos.");
+  });
+
+  it("acepta un gasto que llega justo al presupuesto", () => {
+    const resultado = validarGasto(
+      { concepto: "Resto", categoria: "Logistica", monto: 800, fecha: hoy() },
+      jornadaConPresupuesto,
+      HOY,
+    );
+
+    expect(resultado.valido).toBe(true);
+    expect(resultado.esExcedente).toBe(false);
   });
 
   it("no evalua el excedente cuando la jornada no trae presupuesto asignado", () => {
     const resultado = validarGasto(
       {
         concepto: "Insumos varios",
-        categoria: CATEGORIAS_DE_GASTO.MEDICAMENTOS,
+        categoria: "Medicamentos",
         monto: 5000,
         fecha: hoy(),
       },
-      { fecha_inicio: "2026-01-01" },
+      { fecha: "2026-06-20" },
       HOY,
     );
 
@@ -215,7 +264,7 @@ describe("validarGasto", () => {
       const resultado = validarGasto(
         {
           concepto: "Compra adelantada",
-          categoria: CATEGORIAS_DE_GASTO.LOGISTICA,
+          categoria: "Logistica",
           monto: 100,
           fecha: "2026-06-16",
         },
@@ -230,7 +279,7 @@ describe("validarGasto", () => {
       const resultado = validarGasto(
         {
           concepto: "Compra de la tarde",
-          categoria: CATEGORIAS_DE_GASTO.LOGISTICA,
+          categoria: "Logistica",
           monto: 100,
           fecha: "2026-06-15",
         },

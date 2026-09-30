@@ -1,6 +1,6 @@
 # Diccionario de datos
 
-> **Documento generado.** No se edita a mano: sale de `npm run docs:diccionario` (`scripts/generar-diccionario-de-datos.mjs`), que lee el catalogo de PostgreSQL de una base con todas las migraciones aplicadas, hasta la `00157_responsable_de_jornada_en_equipo_de_proyecto.sql`. Las descripciones son los `COMMENT ON` de las migraciones: si falta una, se agrega con una migracion nueva y se regenera.
+> **Documento generado.** No se edita a mano: sale de `npm run docs:diccionario` (`scripts/generar-diccionario-de-datos.mjs`), que lee el catalogo de PostgreSQL de una base con todas las migraciones aplicadas, hasta la `00160_sobrante_de_jornada.sql`. Las descripciones son los `COMMENT ON` de las migraciones: si falta una, se agrega con una migracion nueva y se regenera.
 
 Complementa a [MODELO-DE-DATOS.md](MODELO-DE-DATOS.md), que explica el porque de cada decision, y a [PERMISOS.md](PERMISOS.md), que explica que puede hacer cada rol. Este documento es la referencia exhaustiva: cada tabla, cada campo, cada restriccion, cada politica y cada trigger.
 
@@ -8,17 +8,17 @@ Complementa a [MODELO-DE-DATOS.md](MODELO-DE-DATOS.md), que explica el porque de
 
 | Objeto | Cantidad |
 | --- | --- |
-| Tablas | 52 |
-| Tablas con RLS activo | 52 |
+| Tablas | 53 |
+| Tablas con RLS activo | 53 |
 | Vistas | 8 |
-| Tipos enumerados | 23 |
-| Columnas (tablas y vistas) | 472 |
-| Llaves foraneas | 90 |
-| Restricciones CHECK | 54 |
-| Politicas RLS | 138 |
-| Triggers | 114 |
-| Funciones (sin contar las de trigger) | 49 |
-| Funciones de trigger | 41 |
+| Tipos enumerados | 22 |
+| Columnas (tablas y vistas) | 478 |
+| Llaves foraneas | 93 |
+| Restricciones CHECK | 56 |
+| Politicas RLS | 140 |
+| Triggers | 119 |
+| Funciones (sin contar las de trigger) | 52 |
+| Funciones de trigger | 45 |
 
 ### Como leer las tablas de este documento
 
@@ -132,6 +132,12 @@ Complementa a [MODELO-DE-DATOS.md](MODELO-DE-DATOS.md), que explica el porque de
 | [`notificaciones`](#notificaciones) | Buzon interno de cada perfil y bandeja de salida del correo (issue #755). Una fila por incidencia y por destinatario. Solo la escriben los triggers de esta migracion; cada perfil lee las suyas y solo puede cambiar leida_en. |
 | [`eventos_auditoria`](#eventos_auditoria) | Bitacora de cambios sobre informacion sensible. Se escribe solo por trigger y solo la lee la administradora. Sin politicas de INSERT, UPDATE ni DELETE: con RLS habilitado, lo que no tiene politica esta prohibido. No se usa FORCE ROW LEVEL SECURITY porque el dueno debe seguir eximido para que los triggers SECURITY DEFINER puedan insertar. |
 
+### Otras
+
+| Tabla | Descripcion |
+| --- | --- |
+| [`categorias_de_gasto`](#categorias_de_gasto) | Categorias de gasto (00158). Catalogo que crece desde el formulario de gasto ("Crear categoria nueva"); reemplaza al enum categoria_gasto. |
+
 ## Diagramas entidad-relacion
 
 Un diagrama por modulo, con todas las columnas de sus tablas. Las tablas de otros modulos a las que apuntan aparecen solo con su nombre. `||` es obligatorio, `|o` opcional (FK que admite NULL); `o{` es "muchos" y `o|` "a lo sumo uno" (FK unica). GitHub dibuja los bloques `mermaid`.
@@ -189,6 +195,7 @@ erDiagram
     timestamptz ventana_inicio
   }
   perfiles |o--o{ alertas_caducidad : "atendida_por"
+  perfiles |o--o{ categorias_de_gasto : "registrado_por"
   perfiles ||--o{ consultas : "medico_id"
   perfiles |o--o{ donaciones : "anulada_por"
   perfiles |o--o{ donaciones : "registrado_por"
@@ -647,7 +654,7 @@ erDiagram
     uuid id PK
     uuid jornada_id FK
     text concepto
-    categoria_gasto categoria
+    text categoria FK
     numeric monto
     date fecha
     uuid responsable_id FK
@@ -676,8 +683,11 @@ erDiagram
     timestamptz created_at
     timestamptz updated_at
     uuid fuente_id FK
+    numeric devuelto
+    uuid traspasado_desde FK
   }
   perfiles |o--o{ fuentes_de_presupuesto : "registrado_por"
+  categorias_de_gasto ||--o{ gastos : "categoria"
   perfiles |o--o{ gastos : "aprobado_por"
   perfiles |o--o{ gastos : "responsable_id"
   jornadas ||--o{ gastos : "jornada_id"
@@ -686,6 +696,7 @@ erDiagram
   fuentes_de_presupuesto |o--o{ jornada_presupuesto_origen : "fuente_id"
   jornadas ||--o{ jornada_presupuesto_origen : "jornada_id"
   perfiles |o--o{ jornada_presupuesto_origen : "registrado_por"
+  jornada_presupuesto_origen |o--o{ jornada_presupuesto_origen : "traspasado_desde"
 ```
 
 ### Proyectos sociales
@@ -853,6 +864,20 @@ erDiagram
   perfiles ||--o{ notificaciones : "perfil_id"
 ```
 
+### Otras
+
+```mermaid
+erDiagram
+  categorias_de_gasto {
+    uuid id PK
+    text nombre UK
+    uuid registrado_por FK
+    timestamptz created_at
+  }
+  perfiles |o--o{ categorias_de_gasto : "registrado_por"
+  categorias_de_gasto ||--o{ gastos : "categoria"
+```
+
 ## Tablas
 
 ### Modulo: Usuarios, roles y permisos
@@ -884,7 +909,7 @@ Persona que usa el sistema. Una fila por cuenta de auth.users (mismo id), creada
 | `perfiles_pkey` | PK | `PRIMARY KEY (id)` |
 | `perfiles_email_key` | UNIQUE | `UNIQUE (email)` |
 
-**La referencian:** `alertas_caducidad.atendida_por` (RESTRICT), `consultas.medico_id` (RESTRICT), `donaciones.anulada_por` (RESTRICT), `donaciones.registrado_por` (RESTRICT), `fuentes_de_presupuesto.registrado_por` (SET NULL), `fusiones_pacientes.realizada_por` (RESTRICT), `gastos.aprobado_por` (RESTRICT), `gastos.responsable_id` (SET NULL), `gastos.registrado_por` (RESTRICT), `jornada_estado_historial.cambiado_por` (RESTRICT), `jornada_personal.perfil_id` (CASCADE), `jornada_presupuesto_origen.registrado_por` (SET NULL), `jornadas.responsable_id` (RESTRICT), `lotes.registrado_por` (NO ACTION), `movimientos_inventario.aprobado_por` (RESTRICT), `movimientos_inventario.registrado_por` (RESTRICT), `notificaciones.perfil_id` (CASCADE), `perfil_especialidad.perfil_id` (CASCADE), `proyecto_estado_historial.cambiado_por` (RESTRICT), `proyecto_hitos.registrado_por` (SET NULL), `proyecto_personal.perfil_id` (CASCADE), `proyecto_seguimiento.registrado_por` (SET NULL), `proyectos.responsable_id` (SET NULL), `receta_detalle.ajustada_por` (RESTRICT), `recetas.anulada_por` (RESTRICT), `recetas.medico_id` (RESTRICT), `rol_modulo.otorgado_por` (SET NULL), `triajes.tomado_por` (RESTRICT), `usuario_permiso.otorgado_por` (NO ACTION), `usuario_permiso.perfil_id` (CASCADE).
+**La referencian:** `alertas_caducidad.atendida_por` (RESTRICT), `categorias_de_gasto.registrado_por` (SET NULL), `consultas.medico_id` (RESTRICT), `donaciones.anulada_por` (RESTRICT), `donaciones.registrado_por` (RESTRICT), `fuentes_de_presupuesto.registrado_por` (SET NULL), `fusiones_pacientes.realizada_por` (RESTRICT), `gastos.aprobado_por` (RESTRICT), `gastos.responsable_id` (SET NULL), `gastos.registrado_por` (RESTRICT), `jornada_estado_historial.cambiado_por` (RESTRICT), `jornada_personal.perfil_id` (CASCADE), `jornada_presupuesto_origen.registrado_por` (SET NULL), `jornadas.responsable_id` (RESTRICT), `lotes.registrado_por` (NO ACTION), `movimientos_inventario.aprobado_por` (RESTRICT), `movimientos_inventario.registrado_por` (RESTRICT), `notificaciones.perfil_id` (CASCADE), `perfil_especialidad.perfil_id` (CASCADE), `proyecto_estado_historial.cambiado_por` (RESTRICT), `proyecto_hitos.registrado_por` (SET NULL), `proyecto_personal.perfil_id` (CASCADE), `proyecto_seguimiento.registrado_por` (SET NULL), `proyectos.responsable_id` (SET NULL), `receta_detalle.ajustada_por` (RESTRICT), `recetas.anulada_por` (RESTRICT), `recetas.medico_id` (RESTRICT), `rol_modulo.otorgado_por` (SET NULL), `triajes.tomado_por` (RESTRICT), `usuario_permiso.otorgado_por` (NO ACTION), `usuario_permiso.perfil_id` (CASCADE).
 
 **Proteccion.** RLS activo. Privilegios: `authenticated`: INSERT, SELECT, UPDATE; `anon`: ninguno.
 
@@ -2351,7 +2376,7 @@ Gasto de una jornada. Se registra pendiente y lo aprueba o rechaza quien adminis
 | `id` | `uuid` | no | `extensions.gen_random_uuid()` | PK | Identificador de la fila. Lo genera la base. |
 | `jornada_id` | `uuid` | no |  | FK -> `jornadas` | Jornada a la que se carga el gasto. |
 | `concepto` | `text` | no |  |  | En que se gasto. |
-| `categoria` | `categoria_gasto` | no |  |  | Categoria del gasto (medicamentos, logistica, honorarios, ...). |
+| `categoria` | `text` | no |  | FK -> `categorias_de_gasto` | Categoria del gasto: el nombre de una fila de categorias_de_gasto (00158; antes el enum categoria_gasto). |
 | `monto` | `numeric(12,2)` | no |  |  | Monto en quetzales; mayor que cero. |
 | `fecha` | `date` | no | `CURRENT_DATE` |  | Fecha del gasto. |
 | `responsable_id` | `uuid` | si |  | FK -> `perfiles` | Quien hizo el gasto. |
@@ -2369,6 +2394,7 @@ Gasto de una jornada. Se registra pendiente y lo aprueba o rechaza quien adminis
 | --- | --- | --- |
 | `chk_gastos_motivo_rechazo_coherente` | CHECK | `CHECK ((((estado = 'rechazado'::estado_gasto) AND (motivo_rechazo IS NOT NULL) AND (length(TRIM(BOTH FROM motivo_rechazo)) > 0)) OR ((estado <> 'rechazado'::estado_gasto) AND (motivo_rechazo IS NULL))))` |
 | `gastos_monto_check` | CHECK | `CHECK ((monto > (0)::numeric))` |
+| `fk_gastos_categoria` | FK | `FOREIGN KEY (categoria) REFERENCES categorias_de_gasto(nombre) ON UPDATE CASCADE ON DELETE RESTRICT` (al borrar: RESTRICT) |
 | `gastos_aprobado_por_fkey` | FK | `FOREIGN KEY (aprobado_por) REFERENCES perfiles(id) ON DELETE RESTRICT` (al borrar: RESTRICT) |
 | `gastos_encargado_id_fkey` | FK | `FOREIGN KEY (responsable_id) REFERENCES perfiles(id) ON DELETE SET NULL` (al borrar: SET NULL) |
 | `gastos_jornada_id_fkey` | FK | `FOREIGN KEY (jornada_id) REFERENCES jornadas(id) ON DELETE RESTRICT` (al borrar: RESTRICT) |
@@ -2392,6 +2418,7 @@ Gasto de una jornada. Se registra pendiente y lo aprueba o rechaza quien adminis
 | `tr_gastos_updated_at` | BEFORE UPDATE | `actualizar_timestamp_updated_at()` |
 | `trg_gastos_auditoria` | AFTER INSERT OR DELETE OR UPDATE | `registrar_evento_auditoria()` |
 | `trg_gastos_notificar` | AFTER INSERT cuando `(new.estado = 'pendiente'::estado_gasto)` | `fn_notificar_gasto_por_aprobar()` |
+| `trg_gastos_validar_contra_presupuesto` | BEFORE INSERT OR UPDATE | `fn_validar_gasto_contra_presupuesto()` |
 
 #### fuentes_de_presupuesto
 
@@ -2443,11 +2470,14 @@ De donde viene cada parte del presupuesto de una jornada (issue #840). jornadas.
 | `created_at` | `timestamptz` | no | `now()` |  | Cuando se creo la fila. Lo pone la base. |
 | `updated_at` | `timestamptz` | no | `now()` |  | Cuando se modifico la fila por ultima vez. Lo mantiene el trigger actualizar_timestamp_updated_at. |
 | `fuente_id` | `uuid` | si |  | FK -> `fuentes_de_presupuesto` | Quien hizo el aporte externo (fuentes_de_presupuesto). Opcional: el detalle libre sigue existiendo. |
+| `devuelto` | `numeric(12,2)` | no | `0` |  | Lo que salio de la jornada al liquidar su sobrante: devuelto a su origen o traspasado a otra jornada (00160). Lo que cuenta del aporte es monto - devuelto. |
+| `traspasado_desde` | `uuid` | si |  | FK -> `jornada_presupuesto_origen` | Si este aporte es el sobrante de otra jornada, el aporte del que salio (00160). |
 
 **Llaves y restricciones**
 
 | Nombre | Tipo | Definicion |
 | --- | --- | --- |
+| `chk_presupuesto_origen_devuelto` | CHECK | `CHECK (((devuelto >= (0)::numeric) AND (devuelto <= monto)))` |
 | `chk_presupuesto_origen_donacion_coherente` | CHECK | `CHECK (((origen = 'donacion'::origen_de_presupuesto) = (donacion_id IS NOT NULL)))` |
 | `chk_presupuesto_origen_fuente_solo_externo` | CHECK | `CHECK (((fuente_id IS NULL) OR (origen = 'aporte_externo'::origen_de_presupuesto)))` |
 | `chk_presupuesto_origen_monto_positivo` | CHECK | `CHECK ((monto > (0)::numeric))` |
@@ -2455,7 +2485,10 @@ De donde viene cada parte del presupuesto de una jornada (issue #840). jornadas.
 | `jornada_presupuesto_origen_fuente_id_fkey` | FK | `FOREIGN KEY (fuente_id) REFERENCES fuentes_de_presupuesto(id) ON DELETE RESTRICT` (al borrar: RESTRICT) |
 | `jornada_presupuesto_origen_jornada_id_fkey` | FK | `FOREIGN KEY (jornada_id) REFERENCES jornadas(id) ON DELETE CASCADE` (al borrar: CASCADE) |
 | `jornada_presupuesto_origen_registrado_por_fkey` | FK | `FOREIGN KEY (registrado_por) REFERENCES perfiles(id) ON DELETE SET NULL` (al borrar: SET NULL) |
+| `jornada_presupuesto_origen_traspasado_desde_fkey` | FK | `FOREIGN KEY (traspasado_desde) REFERENCES jornada_presupuesto_origen(id) ON DELETE RESTRICT` (al borrar: RESTRICT) |
 | `jornada_presupuesto_origen_pkey` | PK | `PRIMARY KEY (id)` |
+
+**La referencian:** `jornada_presupuesto_origen.traspasado_desde` (RESTRICT).
 
 **Proteccion.** RLS activo. Privilegios: `authenticated`: DELETE, INSERT, SELECT, UPDATE; `anon`: ninguno.
 
@@ -2471,6 +2504,9 @@ De donde viene cada parte del presupuesto de una jornada (issue #840). jornadas.
 | Trigger | Cuando | Funcion |
 | --- | --- | --- |
 | `trg_jornada_presupuesto_origen_auditoria` | AFTER INSERT OR DELETE OR UPDATE | `registrar_evento_auditoria()` |
+| `trg_presupuesto_origen_impedir_devuelto_a_mano` | BEFORE INSERT OR UPDATE | `fn_impedir_devuelto_a_mano()` |
+| `trg_presupuesto_origen_impedir_quitar_liquidado` | BEFORE DELETE | `fn_impedir_quitar_aporte_liquidado()` |
+| `trg_presupuesto_origen_proteger_comprometido` | BEFORE DELETE OR UPDATE | `fn_proteger_presupuesto_comprometido()` |
 | `trg_presupuesto_origen_registrado_por` | BEFORE INSERT | `fn_fijar_registrado_por_origen_de_presupuesto()` |
 | `trg_presupuesto_origen_sincronizar` | AFTER INSERT OR DELETE OR UPDATE | `fn_sincronizar_presupuesto_de_jornada()` |
 | `trg_presupuesto_origen_updated_at` | BEFORE UPDATE | `actualizar_timestamp_updated_at()` |
@@ -2927,6 +2963,43 @@ Bitacora de cambios sobre informacion sensible. Se escribe solo por trigger y so
 | --- | --- | --- | --- | --- |
 | Solo administrador lee eventos_auditoria | Leer | public | `es_administrador()` |  |
 
+### Modulo: Otras
+
+#### categorias_de_gasto
+
+Categorias de gasto (00158). Catalogo que crece desde el formulario de gasto ("Crear categoria nueva"); reemplaza al enum categoria_gasto.
+
+| Campo | Tipo | Nulo | Por defecto | Llave | Descripcion |
+| --- | --- | --- | --- | --- | --- |
+| `id` | `uuid` | no | `extensions.gen_random_uuid()` | PK | Identificador de la categoria. |
+| `nombre` | `text` | no |  |  | Nombre de la categoria, tal como se muestra y como lo guarda gastos.categoria. Unico sin importar mayusculas. |
+| `registrado_por` | `uuid` | si | `auth.uid()` | FK -> `perfiles` | Quien creo la categoria (auth.uid()). |
+| `created_at` | `timestamptz` | no | `now()` |  | Cuando se creo la categoria. |
+
+**Llaves y restricciones**
+
+| Nombre | Tipo | Definicion |
+| --- | --- | --- |
+| `chk_categorias_de_gasto_nombre` | CHECK | `CHECK ((((length(btrim(nombre)) >= 1) AND (length(btrim(nombre)) <= 80)) AND (nombre = btrim(nombre))))` |
+| `categorias_de_gasto_registrado_por_fkey` | FK | `FOREIGN KEY (registrado_por) REFERENCES perfiles(id) ON DELETE SET NULL` (al borrar: SET NULL) |
+| `categorias_de_gasto_pkey` | PK | `PRIMARY KEY (id)` |
+| `uq_categorias_de_gasto_nombre_exacto` | UNIQUE | `UNIQUE (nombre)` |
+
+**La referencian:** `gastos.categoria` (RESTRICT).
+
+**Proteccion.** RLS activo. Privilegios: `authenticated`: INSERT, SELECT; `anon`: ninguno.
+
+| Politica | Operacion | Roles | USING | WITH CHECK |
+| --- | --- | --- | --- | --- |
+| Crean categorias de gasto quien registra o aprueba gastos | Crear | public |  | `(es_administrador() OR tiene_permiso('presupuestos.registrar'::text) OR tiene_permiso('presupuestos.aprobar'::text))` |
+| Leen categorias de gasto las personas activas | Leer | public | `(rol_actual() IS NOT NULL)` |  |
+
+**Triggers**
+
+| Trigger | Cuando | Funcion |
+| --- | --- | --- |
+| `trg_categorias_de_gasto_auditoria` | AFTER INSERT | `registrar_evento_auditoria()` |
+
 ## Vistas
 
 ### pacientes_reporte
@@ -3063,7 +3136,6 @@ Seguridad: corre con los permisos de su dueno; filtra con su propio WHERE. Privi
 | Tipo | Valores | Descripcion |
 | --- | --- | --- |
 | `accion_alerta` | `donado`, `reubicado`, `descartado` | Que se hace con un lote vencido o por vencer: donarlo, reubicarlo en otra bodega o descartarlo. |
-| `categoria_gasto` | `Medicamentos`, `Logistica`, `Diagnostico`, `Honorarios`, `Educacion`, `Infraestructura` | Categoria de un gasto de jornada. |
 | `categoria_notificacion` | `caducidad`, `stock`, `validacion`, `presupuestos` | De que trata una notificacion (issue #755). Es tambien el criterio por el que el buzon las agrupa. packages/shared/enums.js (CATEGORIAS_NOTIFICACION) replica estos valores. |
 | `estado_alerta` | `pendiente`, `atendida` | Estado de una alerta de caducidad. |
 | `estado_condicion_cronica` | `activa`, `controlada`, `resuelta` | Si una condicion cronica de un paciente sigue activa. |
@@ -3094,6 +3166,7 @@ Seguridad: corre con los permisos de su dueno; filtra con su propio WHERE. Privi
 | --- | --- | --- | --- | --- |
 | `accede_a_modulo_por_matriz(p_modulo text)` | `boolean` | DEFINER | authenticated | Si la matriz de acceso le abrio este modulo al rol de la sesion. Solo se usa en politicas de LECTURA: abrir un modulo no da escritura. |
 | `alta_de_cuenta_permitida(p_usuario_de_sesion text, p_app_meta jsonb)` | `boolean` | INVOKER | nadie | Decide si un alta en auth.users puede continuar. Recibe el usuario de sesion en vez de leerlo para que sea comprobable desde pgTAP: postgres no puede hacer SET SESSION AUTHORIZATION en el stack local. |
+| `comprometido_de_jornada(p_jornada_id uuid, p_sin_gasto uuid)` | `numeric` | DEFINER | nadie | Suma de los gastos pendientes y aprobados de una jornada, sin contar p_sin_gasto (el que se esta revisando). SECURITY DEFINER para ver todos los gastos (00159). |
 | `equipo_de_proyecto(p_proyecto_id uuid)` | `TABLE(id uuid, proyecto_id uuid, perfil_id uuid, rol_en_proyecto text, created_at timestamp with time zone, nombres character varying, apellidos character varying, en_equipo_del_proyecto boolean, jornadas text[])` | DEFINER | authenticated | Equipo de un proyecto: la union de proyecto_personal, del cuadro de turnos de sus jornadas y de sus responsables, una fila por persona, con sus nombres (00150, 00157). |
 | `es_administrador()` | `boolean` | INVOKER | authenticated | TRUE si quien esta conectado tiene rol administrador y su cuenta esta activa. La usan las politicas RLS. |
 | `es_consultivo()` | `boolean` | INVOKER | authenticated | TRUE si el usuario autenticado es junta directiva o socio fundador: los dos roles de gobernanza de solo lectura, con permisos identicos (issue #404). Reemplaza las comparaciones a mano contra 'junta directiva' que dejaban fuera a socio fundador. |
@@ -3113,6 +3186,7 @@ Seguridad: corre con los permisos de su dueno; filtra con su propio WHERE. Privi
 | `fn_fusionar_pacientes(p_sobreviviente_id uuid, p_absorbido_id uuid)` | `fusiones_pacientes` | DEFINER | authenticated | Fusiona dos expedientes: reasigna atenciones/condiciones/consultas sin violar sus UNIQUE, da de baja al absorbido y registra la fusion. Solo administrador (issue #140). Aborta si a alguno de los dos les falta el expediente, en vez de fusionar a medias (issue #637). |
 | `fn_generar_alertas_caducidad()` | `integer` | DEFINER | nadie | Genera una alerta pendiente por cada lote con existencia total mayor que cero que vence en 30 dias o menos, incluidos los ya vencidos (00129), que no tenga ya una pendiente ni una atendida en la misma etapa -por vencer o vencido- (00138, issue #755). SECURITY DEFINER; la invocan la Edge Function programada y fn_sincronizar_alertas_caducidad(). |
 | `fn_generar_receta(p_consulta_id uuid, p_medico_id uuid, p_indicaciones_generales text, p_detalle jsonb)` | `uuid` | INVOKER | authenticated | Crea una receta con todos sus renglones Y registra la salida de inventario correspondiente, todo en una sola transaccion (issues #120 y #711): si un renglon o una salida falla, no queda ni la receta ni el movimiento. Antes de insertar cada renglon con lote comprueba que el lote no este vencido, que la existencia alcance y que venga la bodega de la que sale. Los renglones sin lote no se comprueban ni generan movimiento: recetar sin especificar lote es valido (receta_detalle.lote_id es nullable en la 00019) y ahi el control ocurre al despachar. Los movimientos se agrupan por (lote, bodega), asi que dos renglones del mismo lote dan una sola salida. Desde la issue #764 tambien persiste bodega_id en receta_detalle, que fn_ajustar_entrega_receta() necesita para corregir la cantidad entregada mas adelante sin descontar el inventario dos veces. SECURITY INVOKER: quien puede crear la receta y quien puede registrar el movimiento lo deciden las politicas de la 00033 y la 00034, no esta funcion; el flujo de aprobacion no cambia (administrador autoaprueba por la 00028, medico y voluntario dejan el movimiento pendiente). |
+| `fn_liquidar_sobrante_de_jornada(p_jornada_id uuid, p_decisiones jsonb)` | `integer` | DEFINER | authenticated | Liquida el sobrante de una jornada finalizada sin gastos pendientes: por cada aporte elegido, lo devuelve a su origen o lo traspasa a otra jornada planificada o en curso del mismo proyecto (00160). Administradora o jornadas.gestionar. |
 | `fn_medicamento_tiene_existencias(p_medicamento_id uuid)` | `boolean` | INVOKER | authenticated | TRUE si el medicamento tiene stock positivo no vencido (existencias.cantidad_disponible > 0 y lote con fecha_vencimiento >= hoy) en algun lote. medicamentos.api.js la consulta antes de desactivar un medicamento (issue #142); un medicamento con lotes historicos ya agotados o vencidos si se puede desactivar. |
 | `fn_notificar_administradores(p_categoria categoria_notificacion, p_titulo text, p_cuerpo text, p_enlace text, p_origen_tabla text, p_origen_id uuid)` | `integer` | DEFINER | nadie | Crea la misma notificacion para cada administrador activo (un perfil desactivado no recibe nada, mismo criterio que la 00079). Devuelve cuantas creo. Solo la llaman los triggers de la 00138: sin EXECUTE para ningun rol de aplicacion. |
 | `fn_pasar_insumo_de_proyecto_a_jornada(p_insumo_id uuid, p_jornada_id uuid)` | `uuid` | INVOKER | authenticated | Pasa un insumo previsto a nivel proyecto (proyecto_insumos) a una jornada de ese proyecto (jornada_insumos), en una sola transaccion (00151). |
@@ -3140,6 +3214,7 @@ Seguridad: corre con los permisos de su dueno; filtra con su propio WHERE. Privi
 | `presupuestos_de_proyectos(p_proyecto_ids uuid[])` | `TABLE(proyecto_id uuid, asignado numeric, gastado numeric, disponible numeric, pendiente numeric)` | INVOKER | authenticated | Version en lote de presupuesto_de_proyecto(): un id por fila en vez de una RPC por proyecto (issue #771). Un proyecto sin jornadas visibles no genera fila -- a diferencia de presupuesto_de_proyecto(), que siempre devuelve una fila en ceros -- porque agrupa por proyecto_id y no hay nada que agrupar. Quien llama trata "id ausente en el resultado" igual que un presupuesto en ceros. |
 | `puede_consultar_reportes()` | `boolean` | INVOKER | authenticated | Administradora, roles consultivos, quien tiene reportes.exportar o el rol al que la matriz le abrio Reportes. |
 | `rol_actual()` | `rol_usuario` | DEFINER | authenticated | Rol del perfil de la sesion, o NULL si no hay sesion o el perfil esta desactivado (issue #529). De esta funcion cuelga casi toda la matriz RLS. |
+| `sobrante_de_jornada(p_jornada_id uuid)` | `TABLE(origen_id uuid, origen origen_de_presupuesto, monto numeric, devuelto numeric, usado numeric, sobrante numeric)` | DEFINER | authenticated | Por cada aporte de una jornada: lo que cuenta, lo usado por los gastos pendientes y aprobados (primero donaciones y aportes externos, al final fondos propios) y lo que sobra (00160). La ve quien ve los aportes. |
 | `tiene_permiso(p_codigo text)` | `boolean` | DEFINER | authenticated | TRUE si quien esta conectado tiene el permiso fino p_codigo: por su rol (rol_permiso) salvo que se le revoque, o concedido a el (usuario_permiso). La usan las politicas RLS. |
 
 ### Funciones de trigger
@@ -3155,17 +3230,21 @@ Seguridad: corre con los permisos de su dueno; filtra con su propio WHERE. Privi
 | `fn_bloquear_movimiento_finalizado()` | DEFINER | Un movimiento aprobado o rechazado no lo edita quien lo registro, y ni siquiera la administradora puede cambiar lo que movio stock (tipo, lote, bodega, cantidad, estado, registrado_por): eso se corrige con un movimiento compensatorio. Ella si puede corregir el texto -motivo, motivo_rechazo-, que antes tambien quedaba congelado sin que eso protegiera ninguna integridad (issue #625). El DELETE sigue prohibido para todos. |
 | `fn_disparar_correo_de_notificaciones()` | DEFINER | Trigger: pide a la Edge Function de correo (pg_net) que envie por correo la notificacion recien creada (00138). |
 | `fn_fijar_registrado_por_origen_de_presupuesto()` | INVOKER | Trigger: pone registrado_por con auth.uid() en un origen de presupuesto; el cliente no lo manda ni lo puede falsear. |
+| `fn_impedir_devuelto_a_mano()` | INVOKER | Trigger de jornada_presupuesto_origen (00160): devuelto y traspasado_desde solo los escribe fn_liquidar_sobrante_de_jornada(). |
 | `fn_impedir_presupuesto_a_mano()` | INVOKER | Trigger: rechaza un UPDATE que cambie jornadas.presupuesto_asignado fuera de la sincronizacion con jornada_presupuesto_origen (00135). |
+| `fn_impedir_quitar_aporte_liquidado()` | INVOKER | Trigger de jornada_presupuesto_origen (00160): un aporte con sobrante liquidado no se borra. |
 | `fn_notificar_alerta_caducidad()` | DEFINER | Trigger: avisa en el buzon de la administracion cuando aparece una alerta de caducidad (00138). |
 | `fn_notificar_gasto_por_aprobar()` | DEFINER | Trigger: avisa a quien aprueba gastos cuando se registra uno pendiente (00138). |
 | `fn_notificar_medicamento_sin_stock()` | DEFINER | Trigger: avisa cuando un medicamento se queda sin existencias en todas las bodegas (00138). |
 | `fn_notificar_movimiento_por_validar()` | DEFINER | Trigger: avisa a quien valida movimientos cuando se registra uno pendiente (00138). |
 | `fn_origen_del_presupuesto_inicial()` | DEFINER | Trigger: una jornada que se crea con presupuesto_asignado mayor que cero registra ese monto como un origen sin_clasificar, para que el asignado siga siendo la suma de sus origenes (00135). |
 | `fn_proteger_decision_de_movimiento()` | DEFINER | Impide que quien registro un movimiento escriba las columnas que documentan la decision de quien lo aprueba o lo rechaza (issue #625). La politica RLS ya le impide cambiar estado; esto cubre las cuatro columnas que la acompanian, que WITH CHECK no puede vigilar porque lo que importa es el cambio y no el valor final. |
+| `fn_proteger_presupuesto_comprometido()` | DEFINER | Trigger de jornada_presupuesto_origen (00159): quitar o rebajar un aporte no puede dejar la jornada con menos presupuesto que lo comprometido en gastos. |
 | `fn_proyecto_cancelado_no_se_modifica()` | INVOKER | Rechaza cualquier UPDATE de un proyecto cuyo estado ya es cancelado (00154). |
 | `fn_proyecto_de_la_fila_no_esta_cancelado()` | DEFINER | Rechaza escribir una fila que cuelga de un proyecto cancelado: hitos, seguimiento, equipo, insumos previstos y la asociacion de una jornada (00154). |
 | `fn_proyecto_de_la_jornada_de_la_donacion()` | DEFINER | Trigger: si una donacion es para una jornada, su proyecto es el de esa jornada (00153). |
 | `fn_sincronizar_presupuesto_de_jornada()` | DEFINER | Mantiene jornadas.presupuesto_asignado igual a la suma de sus filas de jornada_presupuesto_origen (issue #840). Es la unica via que escribe esa columna. |
+| `fn_validar_gasto_contra_presupuesto()` | DEFINER | Trigger de gastos (00159): una jornada finalizada no admite gastos nuevos, la fecha llega hasta el dia de la jornada o hasta hoy, y un gasto que compromete mas dinero no deja lo comprometido (pendiente + aprobado) por encima del presupuesto asignado. |
 | `fn_validar_lote_de_renglon_de_donacion()` | INVOKER | Trigger: el lote que se enlaza a un renglon de donacion tiene que ser del mismo medicamento que se dono (00135). |
 | `fn_validar_origen_de_presupuesto()` | DEFINER | Un origen de tipo donacion tiene que apuntar a una donacion de dinero registrada, y lo asignado desde ella en todas las jornadas no puede pasar de su monto (issue #840). |
 | `fn_validar_transicion_estado_jornada()` | INVOKER | Bloquea cambios de estado de jornadas que no esten en la lista de transiciones permitidas (planificada->en curso, en curso->finalizada, finalizada->en curso). La reapertura (finalizada->en curso) exige ademas es_administrador(). No es SECURITY DEFINER: evalua con los privilegios de quien hace el UPDATE. Issue #171. |

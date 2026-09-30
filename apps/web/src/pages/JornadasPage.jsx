@@ -256,8 +256,15 @@ function TarjetaJornada({
           )}
         </div>
         <div className="d-flex gap-2">
+          {/* Una jornada finalizada se consulta: "Editar" queda a la vista, deshabilitado, igual que
+              en su detalle. Reabrirla ("Atrás") sigue aqui. */}
           {onEditar && (
-            <SecondaryButton title="Editar" size="sm" onClick={onEditar} disabled={moviendo} />
+            <SecondaryButton
+              title="Editar"
+              size="sm"
+              onClick={onEditar}
+              disabled={moviendo || esReapertura}
+            />
           )}
           {puedeMover && !esReapertura && (
             <PrimaryButton

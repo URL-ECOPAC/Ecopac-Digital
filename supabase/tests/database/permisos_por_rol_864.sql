@@ -47,13 +47,14 @@ INSERT INTO proyectos (id, nombre) VALUES
 
 -- Jornada A: del proyecto A, con el medico 8644 y el voluntario en el cuadro de turnos.
 -- Jornada B: del proyecto B, sin nadie asignado, y con el medico 8645 como RESPONSABLE.
-INSERT INTO jornadas (id, nombre, fecha, comunidad_id, responsable_id, proyecto_id) VALUES
+-- Con presupuesto: desde la 00159 un gasto no pasa el de su jornada.
+INSERT INTO jornadas (id, nombre, fecha, comunidad_id, responsable_id, proyecto_id, presupuesto_asignado) VALUES
   ('40000000-0000-0000-0000-000000008641', 'Jornada asignada 864', CURRENT_DATE + 30,
    '10000000-0000-0000-0000-000000000864', '00000000-0000-0000-0000-000000008641',
-   '50000000-0000-0000-0000-000000008641'),
+   '50000000-0000-0000-0000-000000008641', 1000),
   ('40000000-0000-0000-0000-000000008642', 'Jornada del responsable 864', CURRENT_DATE + 31,
    '10000000-0000-0000-0000-000000000864', '00000000-0000-0000-0000-000000008645',
-   '50000000-0000-0000-0000-000000008642');
+   '50000000-0000-0000-0000-000000008642', 1000);
 
 INSERT INTO jornada_personal (jornada_id, perfil_id, rol_en_jornada, hora_inicio, hora_fin) VALUES
   ('40000000-0000-0000-0000-000000008641', '00000000-0000-0000-0000-000000008644', 'medico', '08:00', '13:00'),

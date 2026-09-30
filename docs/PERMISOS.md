@@ -499,6 +499,7 @@ reabrir una jornada finalizada **solo al administrador**. Reflejo en el cliente:
 | `gastos`                    | C R **A**     | —                                | C R si participa | C R si participa   | `00052` + `00141` + `00148` (lo leen tambien quien tiene `presupuestos.registrar` o `presupuestos.aprobar`: antes aprobaba un gasto que no podia ver). El gasto del personal de campo entra `pendiente` y pasa por la aprobacion |
 | `jornada_presupuesto_origen` | C R U D      | —                                | —                | —                  | `00135` + `00141`. Escribir admite tambien `tiene_permiso('jornadas.gestionar')`, igual que actualizar la jornada; su lectura tambien, por el `INSERT ... RETURNING`. `00149` le suma `fuente_id` (solo con origen `aporte_externo`, por CHECK) |
 | `fuentes_de_presupuesto`     | C R          | —                                | —                | —                  | `00149`. Quien aporta de fuera al presupuesto de una jornada. La lee quien lee los aportes y la crea quien los registra (administradora o `jornadas.gestionar`). Sin U ni D: una fuente usada es historia del presupuesto. Auditada |
+| `categorias_de_gasto`        | C R          | R                                | R                | R                  | `00158`. El catalogo de categorias de gasto (antes el enum `categoria_gasto`). La lee toda persona activa (`rol_actual() IS NOT NULL`); la crea la administradora o quien tenga `presupuestos.registrar` o `presupuestos.aprobar`. Sin U ni D. Auditada |
 
 **Un proyecto cancelado no lo modifica nadie (`00154`)**, ni la administradora: lo que de la tabla
 de arriba dice "C", "U" o "D" deja de valer para un proyecto en estado `cancelado`. No son
@@ -583,6 +584,26 @@ pero no el desglose. Que una donacion no se asigne por encima de su monto lo val
 `fn_validar_origen_de_presupuesto` (DEFINER, solo lee), para que valga igual aunque quien escribe no
 tenga lectura sobre `donaciones`. Reflejo en el cliente: `permisosDeOrigenDePresupuesto()` en
 `presupuestos/permisos.js`.
+
+**El dinero comprometido no pasa el presupuesto (`00159`).** Son reglas de datos, no de rol, y valen
+para todos, la administradora incluida. `fn_validar_gasto_contra_presupuesto` (DEFINER, porque quien
+registra en su jornada no ve por RLS los gastos de los demas) rechaza un gasto pendiente o aprobado
+que deje lo comprometido de la jornada (pendientes + aprobados, `comprometido_de_jornada()`, sin
+EXECUTE para nadie) por encima de `presupuesto_asignado`, y una fecha posterior al dia de la jornada
+(o a hoy, si ya paso), y cualquier gasto nuevo en una jornada finalizada: ya cerro, y sus
+pendientes solo se aprueban o se rechazan. `fn_proteger_presupuesto_comprometido` rechaza quitar o rebajar un aporte por
+debajo de lo comprometido. Como corren antes que RLS, una fila sin permiso y sin presupuesto recibe
+el `23514` del presupuesto y no el `42501`: las pruebas de RLS dan presupuesto a sus jornadas.
+
+**El sobrante de una jornada finalizada (`00160`).** `sobrante_de_jornada(jornada)` (DEFINER, con la
+misma guarda de lectura que los aportes) dice cuanto usaron los gastos de cada aporte y cuanto
+sobra. `fn_liquidar_sobrante_de_jornada(jornada, decisiones)` (DEFINER) lo devuelve a su origen o lo
+traspasa a otra jornada planificada o en curso del mismo proyecto; exige `es_administrador()` o
+`tiene_permiso('jornadas.gestionar')` -los mismos que escriben aportes-, jornada finalizada y sin
+gastos pendientes. `jornada_presupuesto_origen.devuelto` y `traspasado_desde` solo los escribe esa
+funcion (`fn_impedir_devuelto_a_mano`), y un aporte ya liquidado no se corrige ni se quita. Reflejo
+en el cliente: `useSobranteDeJornada()` en `presupuestos/`. Lo afirma
+`presupuesto_gastos_y_sobrante.sql`.
 
 `gastos` es el otro circuito de aprobacion: quien participa en la jornada registra en estado
 `pendiente` y a su nombre; aprobar es un UPDATE que exige `es_administrador()` o
