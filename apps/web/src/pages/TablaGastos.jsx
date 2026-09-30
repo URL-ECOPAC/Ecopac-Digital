@@ -71,7 +71,6 @@ export default function TablaGastos({
 
   //  AHORA SÍ: los return condicionales DESPUÉS de todos los hooks
   if (error) return <ErrorState message={error.mensaje} onRetry={recargar} />;
-  if (!gastos || gastos.length === 0) return <p>No hay gastos registrados</p>;
 
   const valoresDeFiltro = { ...filtrosAdicionales, estado: filtroEstado || null };
   const hayFiltros =
@@ -104,7 +103,13 @@ export default function TablaGastos({
         columnas={columnasConMayuscula}
         datos={gastosFiltrados}
         cargando={cargando}
-        vacio="No hay gastos que coincidan con estos filtros."
+        // El filtro de estado se aplica en la consulta: una lista vacia puede ser "nada con ese
+        // estado", asi que la barra de filtros y el alta se quedan a la vista.
+        vacio={
+          hayFiltros
+            ? "No hay gastos que coincidan con estos filtros."
+            : "Todavía no hay gastos registrados."
+        }
         catalogos={catalogos}
         onRowPress={(gasto) => setGastoEnEdicion(gasto)}
       />

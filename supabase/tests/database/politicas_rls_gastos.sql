@@ -35,11 +35,13 @@ UPDATE perfiles SET rol = 'medico' WHERE id = '00000000-0000-0000-0000-000000029
 ALTER TABLE perfiles ENABLE TRIGGER USER;
 
 -- responsable_id NOT NULL (00012); fecha futura por el check de 00012.
-INSERT INTO jornadas (id, nombre, fecha, comunidad_id, responsable_id) VALUES
+-- Con presupuesto: desde la 00159 un gasto no pasa el de su jornada, y esa regla corre antes que
+-- RLS; sin presupuesto, un rol sin permiso recibiria el rechazo por presupuesto y no el de RLS.
+INSERT INTO jornadas (id, nombre, fecha, comunidad_id, responsable_id, presupuesto_asignado) VALUES
   ('40000000-0000-0000-0000-000000029201', 'Jornada asignada 292', CURRENT_DATE + 30,
-   '10000000-0000-0000-0000-000000000292', '00000000-0000-0000-0000-000000029201'),
+   '10000000-0000-0000-0000-000000000292', '00000000-0000-0000-0000-000000029201', 1000),
   ('40000000-0000-0000-0000-000000029202', 'Jornada libre 292', CURRENT_DATE + 31,
-   '10000000-0000-0000-0000-000000000292', '00000000-0000-0000-0000-000000029201');
+   '10000000-0000-0000-0000-000000000292', '00000000-0000-0000-0000-000000029201', 1000);
 
 INSERT INTO jornada_personal (jornada_id, perfil_id, rol_en_jornada, hora_inicio, hora_fin) VALUES
   ('40000000-0000-0000-0000-000000029201', '00000000-0000-0000-0000-000000029204', 'medico', '08:00', '13:00'),

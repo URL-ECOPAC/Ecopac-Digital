@@ -23,6 +23,8 @@ const COLUMNAS_DEL_ORIGEN = [
   "origen",
   "donacionId:donacion_id",
   "monto",
+  "devuelto",
+  "traspasadoDesde:traspasado_desde",
   "descripcion",
   "registradoPor:registrado_por",
   "createdAt:created_at",
@@ -65,6 +67,9 @@ function aOrigen(fila) {
       [registradoPorPerfil?.nombres, registradoPorPerfil?.apellidos].filter(Boolean).join(" ") ||
       null,
     monto: Number(fila.monto),
+    // Lo que salio de la jornada al liquidar su sobrante (00160). Solo se muestra si hubo.
+    devuelto: Number(fila.devuelto ?? 0),
+    devueltoMostrado: Number(fila.devuelto ?? 0) > 0 ? Number(fila.devuelto) : null,
     donanteNombre,
     fechaDonacion,
     fuenteNombre,
@@ -223,15 +228,22 @@ function sumarMontos(filas = []) {
 }
 
 /**
- * Lo que queda por asignar de una donacion: su total menos lo que ya se asigno en cualquier
- * jornada. Pura y exportada para probarla sin base.
+ * Lo que queda por asignar de una donacion: su total menos lo que sigue asignado en cualquier
+ * jornada. Lo devuelto al liquidar el sobrante de una jornada (00160) vuelve a estar libre. Pura y
+ * exportada para probarla sin base.
  *
- * @param {{ donacion_detalle?: {monto: unknown}[], jornada_presupuesto_origen?: {monto: unknown}[] }} fila
+ * @param {{ donacion_detalle?: {monto: unknown}[],
+ *   jornada_presupuesto_origen?: {monto: unknown, devuelto?: unknown}[] }} fila
  * @returns {{ total: number, asignado: number, disponible: number }}
  */
 export function saldoDeDonacion(fila) {
   const total = sumarMontos(fila?.donacion_detalle);
-  const asignado = sumarMontos(fila?.jornada_presupuesto_origen);
+  const devuelto = (fila?.jornada_presupuesto_origen ?? []).reduce(
+    (suma, aporte) => suma + (Number(aporte.devuelto) || 0),
+    0,
+  );
+  const asignado =
+    Math.round((sumarMontos(fila?.jornada_presupuesto_origen) - devuelto) * 100) / 100;
   // Redondeo a centavos: sumar decimales en coma flotante deja restos como 0.0000001.
   const disponible = Math.round((total - asignado) * 100) / 100;
   return { total, asignado, disponible };
@@ -254,7 +266,7 @@ export async function listarDonacionesConSaldo({ proyectoId, jornadaId } = {}) {
     const { data, error } = await obtenerSupabase()
       .from("donaciones")
       .select(
-        "id, fecha, proyecto_id, jornada_id, donante:donantes(nombre), donacion_detalle(monto), jornada_presupuesto_origen(monto)",
+        "id, fecha, proyecto_id, jornada_id, donante:donantes(nombre), donacion_detalle(monto), jornada_presupuesto_origen(monto, devuelto)",
       )
       .eq("tipo", "dinero")
       .eq("estado", "registrada")

@@ -33,7 +33,6 @@ import { describe, expect, it } from "vitest";
 import * as barril from "./index.js";
 import {
   ACCIONES_DE_ALERTA,
-  CATEGORIAS_DE_GASTO,
   CATEGORIAS_NOTIFICACION,
   ESTADOS_ALERTA,
   ESTADOS_CONDICION_CRONICA,
@@ -69,17 +68,13 @@ import {
 import { OPCIONES_ESTADO_JORNADA } from "./jornadas/filtros.js";
 import { OPCIONES_TIPO_SANGRE } from "./pacientes/campos.js";
 import { OPCIONES_ESTADO_CONDICION } from "./pacientes/condiciones.campos.js";
-import { OPCIONES_CATEGORIA_GASTO, OPCIONES_ESTADO_GASTO } from "./presupuestos/campos.js";
+import { OPCIONES_ESTADO_GASTO } from "./presupuestos/campos.js";
 import { OPCIONES_ESTADO_PROYECTO } from "./proyectos/campos.js";
 import { ESTADOS_JORNADA_REPORTE } from "./reportes/campos.js";
 
 /** Cada enum del dominio con los valores que declara su migracion, escritos a mano aqui. */
 const ENUMS = {
   ACCIONES_DE_ALERTA: [ACCIONES_DE_ALERTA, ["donado", "reubicado", "descartado"]],
-  CATEGORIAS_DE_GASTO: [
-    CATEGORIAS_DE_GASTO,
-    ["Medicamentos", "Logistica", "Diagnostico", "Honorarios", "Educacion", "Infraestructura"],
-  ],
   CATEGORIAS_NOTIFICACION: [
     CATEGORIAS_NOTIFICACION,
     ["caducidad", "stock", "validacion", "presupuestos"],
@@ -112,7 +107,6 @@ const ENUMS = {
 const CATALOGOS = {
   ESTADOS_JORNADA_REPORTE: [ESTADOS_JORNADA_REPORTE, ESTADOS_JORNADA],
   OPCIONES_ACCION_ALERTA: [OPCIONES_ACCION_ALERTA, ACCIONES_DE_ALERTA],
-  OPCIONES_CATEGORIA_GASTO: [OPCIONES_CATEGORIA_GASTO, CATEGORIAS_DE_GASTO],
   OPCIONES_ESTADO_CONDICION: [OPCIONES_ESTADO_CONDICION, ESTADOS_CONDICION_CRONICA],
   OPCIONES_ESTADO_DONACION: [OPCIONES_ESTADO_DONACION, ESTADOS_DE_DONACION],
   OPCIONES_ESTADO_GASTO: [OPCIONES_ESTADO_GASTO, ESTADOS_DE_GASTO],

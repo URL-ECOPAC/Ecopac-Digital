@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import {
   CAMPOS_GASTO,
   ESTADOS_DE_GASTO,
@@ -35,9 +35,8 @@ export default function ModalGasto({
   onClose,
   onGuardado,
 }) {
-  const [creandoCategoria, setCreandoCategoria] = useState(false);
+  const [altaDeCategoriaAbierta, setAltaDeCategoriaAbierta] = useState(false);
   const [nombreNuevaCategoria, setNombreNuevaCategoria] = useState("");
-  const [categoriasTemporales, setCategoriasTemporales] = useState([]);
 
   const {
     valores,
@@ -51,34 +50,31 @@ export default function ModalGasto({
     mensajeExcedente,
     setCampo,
     enviar,
+    puedeCrearCategoria,
+    crearCategoria,
+    creandoCategoria,
+    errorCategoria,
+    limpiarErrorCategoria,
   } = useFormularioGasto({
     gasto,
     usuarioId,
     estadoInicial,
+    rol,
   });
 
-  const categoriasDisponibles = useMemo(() => {
-    const desdeHook = catalogos.categorias || [];
-    const valoresExistentes = desdeHook.map((c) => String(c.value ?? c));
-    const soloNuevas = categoriasTemporales.filter(
-      (c) => !valoresExistentes.includes(String(c.value)),
-    );
-    return [...desdeHook, ...soloNuevas];
-  }, [catalogos.categorias, categoriasTemporales]);
+  // La categoria se guarda en el catalogo (00158) y queda elegida; si falla, el formulario de alta
+  // sigue abierto con el error.
+  const agregarCategoria = async () => {
+    if (await crearCategoria(nombreNuevaCategoria)) {
+      setAltaDeCategoriaAbierta(false);
+      setNombreNuevaCategoria("");
+    }
+  };
 
-  //  Agregar categoría y forzar valor como texto plano
-  const agregarCategoria = () => {
-    const nombreLimpio = nombreNuevaCategoria?.trim();
-    if (!nombreLimpio) return;
-
-    const nuevaOpcion = { value: nombreLimpio, label: nombreLimpio };
-    setCategoriasTemporales((anteriores) => [...anteriores, nuevaOpcion]);
-
-    //  Enviar SOLO el texto, NUNCA un objeto
-    setCampo("categoria", nombreLimpio);
-
-    setCreandoCategoria(false);
+  const cerrarAltaDeCategoria = () => {
+    setAltaDeCategoriaAbierta(false);
     setNombreNuevaCategoria("");
+    limpiarErrorCategoria();
   };
 
   const [pidiendoConfirmacionDeDescarte, setPidiendoConfirmacionDeDescarte] = useState(false);
@@ -177,21 +173,21 @@ export default function ModalGasto({
         )}
 
         {esExcedente && (
-          <div className="alert alert-warning" role="alert">
+          <div className="alert alert-danger" role="alert">
             {mensajeExcedente}
           </div>
         )}
 
         {CAMPOS_GASTO.map((campo) => {
           if (campo.id === "categoria") {
-            const opciones = categoriasDisponibles;
+            const opciones = catalogos.categorias;
             return (
               <div key={campo.id} className="mb-3">
                 {/* Crear una opcion dentro de un formulario es una accion secundaria: boton en
                     contorno con "+" debajo del selector, el mismo de "Crear una comunidad"
                     (SelectorConAlta). El verde solido con icono de guardar es solo del boton que
                     guarda el formulario. */}
-                {!creandoCategoria ? (
+                {!altaDeCategoriaAbierta ? (
                   <>
                     <Selector
                       label={campo.label}
@@ -205,12 +201,12 @@ export default function ModalGasto({
                       placeholder={opciones.length === 0 ? "Cargando..." : "Seleccionar"}
                       disabled={bloqueado || (campo.validacion?.requerido && opciones.length === 0)}
                     />
-                    {!bloqueado && (
+                    {!bloqueado && puedeCrearCategoria && (
                       <SecondaryButton
                         title="Crear categoría nueva"
                         size="sm"
                         icon={<Plus size={14} aria-hidden="true" />}
-                        onClick={() => setCreandoCategoria(true)}
+                        onClick={() => setAltaDeCategoriaAbierta(true)}
                       />
                     )}
                   </>
@@ -221,6 +217,8 @@ export default function ModalGasto({
                       value={nombreNuevaCategoria}
                       onChange={(e) => setNombreNuevaCategoria(e.target.value)}
                       placeholder="Escribe el nombre..."
+                      error={errorCategoria?.mensaje}
+                      disabled={creandoCategoria}
                       autoFocus
                     />
                     <div className="ec-acciones">
@@ -228,6 +226,7 @@ export default function ModalGasto({
                         title="Guardar"
                         size="sm"
                         onClick={agregarCategoria}
+                        loading={creandoCategoria}
                         disabled={!nombreNuevaCategoria.trim()}
                       />
                       <SecondaryButton
@@ -235,10 +234,8 @@ export default function ModalGasto({
                         variant="neutra"
                         size="sm"
                         icon={<X size={14} aria-hidden="true" />}
-                        onClick={() => {
-                          setCreandoCategoria(false);
-                          setNombreNuevaCategoria("");
-                        }}
+                        onClick={cerrarAltaDeCategoria}
+                        disabled={creandoCategoria}
                       />
                     </div>
                   </>

@@ -2,7 +2,7 @@
 -- tipo con estado_movimiento, y fn_gastos_updated_at() deja de duplicar a
 -- actualizar_timestamp_updated_at(). Corre con: supabase test db
 --
--- Reutiliza fixtures de seed-demo.sql (perfil de000001-...-0001, jornada de00000a-...-0001) en
+-- Reutiliza fixtures de seed-demo.sql (perfil de000001-...-0001, jornada de00000a-...-0002) en
 -- vez de armar una cadena de comunidad/jornada/perfil propia: esta prueba no ejercita RLS, asi
 -- que no hace falta impersonar ningun rol ni aislar datos de otra suite.
 
@@ -29,16 +29,17 @@ SELECT is(
 -- ============================================================================
 -- 2. El vocabulario se conserva: los mismos tres valores siguen siendo validos.
 -- ============================================================================
+-- La jornada en curso del seed (la otra esta finalizada y, desde la 00159, no admite gastos).
 SELECT lives_ok(
   $$ INSERT INTO gastos (id, jornada_id, concepto, categoria, monto, registrado_por)
-     VALUES ('70000000-0000-0000-0000-000000000089', 'de00000a-0000-0000-0000-000000000001',
+     VALUES ('70000000-0000-0000-0000-000000000089', 'de00000a-0000-0000-0000-000000000002',
              'Gasto de prueba 412', 'Logistica', 50.00, 'de000001-0000-0000-0000-000000000001') $$,
   'un gasto nuevo sigue naciendo en estado pendiente (DEFAULT) sin especificarlo'
 );
 
 SELECT throws_ok(
   $$ INSERT INTO gastos (id, jornada_id, concepto, categoria, monto, registrado_por, estado)
-     VALUES ('70000000-0000-0000-0000-000000000090', 'de00000a-0000-0000-0000-000000000001',
+     VALUES ('70000000-0000-0000-0000-000000000090', 'de00000a-0000-0000-0000-000000000002',
              'Gasto invalido 412', 'Logistica', 50.00, 'de000001-0000-0000-0000-000000000001',
              'invalido') $$,
   '22P02',

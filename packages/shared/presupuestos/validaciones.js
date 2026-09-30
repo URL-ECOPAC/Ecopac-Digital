@@ -6,14 +6,11 @@
 // validaciones no llegaban a mirar los datos reales: daban por faltantes campos que si venian, y
 // dejaban pasar los que no.
 //
-// La lista de categorias validas ya no se recibe por parametro: sale de CATEGORIAS_DE_GASTO en
-// campos.js, que replica el enum categoria_gasto de la migracion. Pasarla desde fuera invitaba a
-// que cada pantalla trajera su propia copia, que es el bug que esta misma rama corrige en
-// donaciones.
-import { CATEGORIAS_DE_GASTO, ORIGENES_DE_PRESUPUESTO } from "../enums.js";
-import { aFechaLocal } from "../formato/fechas.js";
+// La categoria ya no se compara contra una lista: desde la 00158 es un catalogo que crece
+// (categorias_de_gasto) y la llave foranea de gastos.categoria es quien la valida.
+import { ESTADOS_JORNADA, ORIGENES_DE_PRESUPUESTO } from "../enums.js";
+import { aFechaLocal, formatearFechaCorta } from "../formato/fechas.js";
 import { formatearMoneda } from "../formato/moneda.js";
-const CATEGORIAS_VALIDAS = Object.values(CATEGORIAS_DE_GASTO);
 function estaVacio(valor) {
   return valor === undefined || valor === null || String(valor).trim() === "";
 }
@@ -52,17 +49,20 @@ export function validarOrigenDePresupuesto(valores = {}, { disponibleDeDonacion 
 /**
  * Valida los datos de un gasto segun las reglas de negocio del modulo de presupuestos.
  *
- * Criterios de aceptacion de #296:
+ * Adelanta lo que la base rechaza (00159, fn_validar_gasto_contra_presupuesto):
  * - El monto de un gasto debe ser mayor que cero.
- * - La fecha no puede ser posterior a hoy ni anterior al inicio de su jornada.
- * - El concepto y la categoria son obligatorios, y la categoria debe pertenecer a la lista permitida.
- * - Un gasto que dejaria la jornada por encima de su presupuesto asignado se marca como excedente
- *   (aviso, sin bloquear).
+ * - La fecha llega hasta el dia de su jornada aunque sea futuro -un gasto de preparacion se
+ *   registra antes- y, pasada la jornada, hasta hoy. No hay limite hacia atras.
+ * - El concepto y la categoria son obligatorios.
+ * - Una jornada finalizada no admite gastos nuevos: ya cerro.
+ * - Un gasto no deja lo comprometido de la jornada (gastos pendientes y aprobados) por encima de
+ *   su presupuesto asignado. Se marca `esExcedente` con su mensaje y el gasto no es valido.
  *
  * @param {{ concepto?: string, categoria?: string, monto?: number|string, fecha?: string,
  *   jornada_id?: string }} gasto Datos del gasto, con las claves de las columnas de `gastos`.
- * @param {{ presupuesto_asignado?: number, fecha_inicio?: string, gasto_acumulado?: number }|null}
- *   [jornada] Datos de la jornada a la que se carga el gasto.
+ * @param {{ fecha?: string, estado?: string, presupuesto_asignado?: number,
+ *   comprometido?: number }|null} [jornada] La jornada del gasto: su fecha, su estado, su
+ *   presupuesto y lo que ya tiene comprometido sin contar este gasto.
  * @param {Date} [hoy] Entra por parametro para poder probarlo sin depender del reloj.
  * @returns {{ valido: boolean, errores: string[], esExcedente: boolean,
  *   mensajeExcedente: string|null }}
@@ -77,11 +77,14 @@ export function validarGasto(gasto = {}, jornada = null, hoy = new Date()) {
     errores.push("El concepto del gasto es obligatorio.");
   }
 
-  // 2. Categoría obligatoria Y debe pertenecer a la lista permitida
+  // 2. Categoria obligatoria. Que exista en el catalogo lo decide la llave foranea (00158).
   if (estaVacio(gasto.categoria)) {
     errores.push("La categoría de gasto es obligatoria.");
-  } else if (!CATEGORIAS_VALIDAS.includes(gasto.categoria)) {
-    errores.push("La categoría seleccionada no es válida.");
+  }
+
+  // 2b. Una jornada que ya cerro no admite gastos nuevos (00159).
+  if (jornada?.estado === ESTADOS_JORNADA.FINALIZADA) {
+    errores.push("La jornada ya cerró: no admite gastos nuevos.");
   }
 
   // 3. Monto mayor que cero. Lo mismo exige CHECK (monto > 0) en la tabla; se adelanta aqui para
@@ -92,7 +95,7 @@ export function validarGasto(gasto = {}, jornada = null, hoy = new Date()) {
     errores.push("El monto del gasto debe ser mayor que cero.");
   }
 
-  // 4. Fecha: ni futura ni anterior al inicio de la jornada.
+  // 4. Fecha: hasta el dia de la jornada, o hasta hoy si la jornada ya paso.
   if (estaVacio(gasto.fecha)) {
     errores.push("La fecha del gasto es obligatoria.");
   } else {
@@ -115,32 +118,30 @@ export function validarGasto(gasto = {}, jornada = null, hoy = new Date()) {
         59,
         999,
       );
-      if (fecha > finDeHoy) {
-        errores.push("La fecha de un gasto no puede ser posterior a hoy.");
-      }
-      if (jornada?.fecha_inicio) {
-        // Sin setHours(): aFechaLocal() ya devuelve la medianoche local de una columna DATE, y
-        // mutarla alteraria el Date que haya pasado quien llama (#849).
-        const inicioDeJornada = aFechaLocal(jornada.fecha_inicio);
-        if (inicioDeJornada && fecha < inicioDeJornada) {
-          errores.push("La fecha del gasto no puede ser anterior al inicio de su jornada.");
-        }
+      const diaDeJornada = jornada?.fecha ? aFechaLocal(jornada.fecha) : null;
+      const limite = diaDeJornada && diaDeJornada > finDeHoy ? diaDeJornada : finDeHoy;
+      if (fecha > limite) {
+        errores.push(
+          diaDeJornada
+            ? `La fecha de un gasto llega hasta el día de su jornada (${formatearFechaCorta(jornada.fecha)}) o hasta hoy si ya pasó.`
+            : "La fecha de un gasto no puede ser posterior a hoy.",
+        );
       }
     }
   }
 
-  // 5. Excedente de presupuesto: avisa, no bloquea. Una jornada en campo no se detiene porque el
-  //    presupuesto se quede corto; lo que se necesita es que quede registrado.
+  // 5. Presupuesto: lo comprometido mas este gasto no pasa lo asignado.
   if (jornada && jornada.presupuesto_asignado !== undefined && montoEsNumero) {
-    const acumulado = Number(jornada.gasto_acumulado ?? 0);
+    const comprometido = Number(jornada.comprometido ?? 0);
     const asignado = Number(jornada.presupuesto_asignado);
-    const total = acumulado + monto;
-    if (total > asignado) {
+    const disponible = Math.max(asignado - comprometido, 0);
+    if (comprometido + monto > asignado) {
       esExcedente = true;
-      const diferencia = total - asignado;
       mensajeExcedente =
-        `Atencion: este gasto deja la jornada por encima de su presupuesto asignado por ` +
-        `Q${diferencia.toFixed(2)}. El registro se permite igual.`;
+        `Este gasto pasa el presupuesto de la jornada por ` +
+        `${formatearMoneda(comprometido + monto - asignado)}: le quedan ` +
+        `${formatearMoneda(disponible)} contando los gastos pendientes de aprobar.`;
+      errores.push("El gasto pasa el presupuesto disponible de la jornada.");
     }
   }
 

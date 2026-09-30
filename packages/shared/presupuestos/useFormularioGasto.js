@@ -2,13 +2,15 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { listarJornadas } from "../jornadas/api.js";
 import { listarUsuarios } from "../usuarios/api.js";
 import { nombreCompletoDe } from "../usuarios/useUsuariosListado.js";
-import { CATEGORIAS_DE_GASTO } from "@ecopac/shared";
+import { ESTADOS_DE_GASTO, ESTADOS_JORNADA } from "../enums.js";
 import {
+  crearCategoriaDeGasto,
   editarGasto,
+  listarCategoriasGasto,
   obtenerPresupuestoJornada,
   registrarGasto,
-  listarCategoriasGasto,
 } from "./api.js";
+import { puedeCrearCategoriaDeGasto } from "./permisos.js";
 import { validarGasto } from "./validaciones.js";
 
 function aOpciones(filas, etiquetaDe) {
@@ -17,11 +19,6 @@ function aOpciones(filas, etiquetaDe) {
     label: etiquetaDe(fila),
   }));
 }
-
-const categoriasFijas = Object.entries(CATEGORIAS_DE_GASTO).map(([_, valor]) => ({
-  value: valor,
-  label: valor,
-}));
 
 /**
  * @param {object|null} gasto Gasto a editar; `null` para uno nuevo.
@@ -57,10 +54,12 @@ function extraerValor(valor) {
  * @param {object|null} [opciones.gasto] Gasto a editar; sin el, es un alta.
  * @param {string} [opciones.usuarioId] Quien registra.
  * @param {string} [opciones.estadoInicial] Estado de un gasto nuevo.
+ * @param {string} [opciones.rol] Rol de la sesion, para ofrecer o no crear una categoria.
  * @returns {object} `{ valores, errores, error, enviando, esEdicion, sucio, catalogos, esExcedente,
- *   mensajeExcedente, ... }`.
+ *   mensajeExcedente, puedeCrearCategoria, crearCategoria, creandoCategoria, errorCategoria,
+ *   limpiarErrorCategoria, ... }`.
  */
-export function useFormularioGasto({ gasto, usuarioId, estadoInicial } = {}) {
+export function useFormularioGasto({ gasto, usuarioId, estadoInicial, rol } = {}) {
   const gastoId = gasto?.id ?? null;
   const esEdicion = Boolean(gastoId);
   const [valores, setValores] = useState(() => valoresInicialesDeGasto(gasto, estadoInicial));
@@ -70,7 +69,9 @@ export function useFormularioGasto({ gasto, usuarioId, estadoInicial } = {}) {
   const [sucio, setSucio] = useState(false);
   const [jornadas, setJornadas] = useState([]);
   const [perfiles, setPerfiles] = useState([]);
-  const [categoriasExtra, setCategoriasExtra] = useState([]);
+  const [categorias, setCategorias] = useState([]);
+  const [creandoCategoria, setCreandoCategoria] = useState(false);
+  const [errorCategoria, setErrorCategoria] = useState(null);
   const [presupuestoDeJornada, setPresupuestoDeJornada] = useState(null);
 
   useEffect(() => {
@@ -81,19 +82,13 @@ export function useFormularioGasto({ gasto, usuarioId, estadoInicial } = {}) {
     listarUsuarios({ estado: true }).then(({ usuarios }) => {
       if (vigente) setPerfiles(aOpciones(usuarios, nombreCompletoDe));
     });
-    listarCategoriasGasto().then(({ categorias }) => {
-      if (vigente) setCategoriasExtra(categorias);
+    listarCategoriasGasto().then(({ categorias: catalogo }) => {
+      if (vigente) setCategorias(catalogo);
     });
     return () => {
       vigente = false;
     };
   }, []);
-
-  const categoriasCompletas = useMemo(() => {
-    const fijasValores = categoriasFijas.map((c) => c.value);
-    const soloNuevas = (categoriasExtra || []).filter((c) => !fijasValores.includes(c.value));
-    return [...categoriasFijas, ...soloNuevas];
-  }, [categoriasExtra]);
 
   useEffect(() => {
     if (!valores.jornada_id) {
@@ -110,16 +105,30 @@ export function useFormularioGasto({ gasto, usuarioId, estadoInicial } = {}) {
   }, [valores.jornada_id]);
 
   const jornadaElegida = jornadas.find((jornada) => jornada.id === valores.jornada_id) ?? null;
+  // Lo comprometido es lo aprobado mas lo pendiente (00159). Al editar un gasto pendiente de la
+  // misma jornada, su monto anterior ya esta en esa suma y no se cuenta dos veces.
+  const yaContado =
+    esEdicion &&
+    gasto?.estado === ESTADOS_DE_GASTO.PENDIENTE &&
+    gasto?.jornada_id === valores.jornada_id
+      ? Number(gasto.monto) || 0
+      : 0;
   const contextoDeJornada = useMemo(
     () =>
-      jornadaElegida && presupuestoDeJornada
+      jornadaElegida
         ? {
-            presupuesto_asignado: presupuestoDeJornada.asignado,
-            gasto_acumulado: presupuestoDeJornada.gastado,
-            fecha_inicio: jornadaElegida.fecha,
+            fecha: jornadaElegida.fecha,
+            estado: jornadaElegida.estado,
+            ...(presupuestoDeJornada
+              ? {
+                  presupuesto_asignado: presupuestoDeJornada.asignado,
+                  comprometido:
+                    presupuestoDeJornada.gastado + presupuestoDeJornada.pendiente - yaContado,
+                }
+              : {}),
           }
         : null,
-    [jornadaElegida, presupuestoDeJornada],
+    [jornadaElegida, presupuestoDeJornada, yaContado],
   );
 
   const resultadoValidacion = validarGasto(valores, contextoDeJornada);
@@ -172,12 +181,33 @@ export function useFormularioGasto({ gasto, usuarioId, estadoInicial } = {}) {
     setSucio(false);
     if (!esEdicion) {
       setValores(valoresInicialesDeGasto(null, estadoInicial));
-      listarCategoriasGasto().then(({ categorias }) => {
-        setCategoriasExtra(categorias);
-      });
     }
     return { ok: true, gasto: respuesta.gasto };
   }, [valores, contextoDeJornada, esEdicion, gastoId, usuarioId, estadoInicial]);
+
+  /**
+   * Agrega una categoria al catalogo (00158) y la deja elegida. Antes "Crear categoria nueva"
+   * solo la agregaba en pantalla y el gasto se rechazaba al guardar.
+   *
+   * @param {string} nombre
+   * @returns {Promise<boolean>}
+   */
+  const crearCategoria = useCallback(async (nombre) => {
+    setCreandoCategoria(true);
+    setErrorCategoria(null);
+    const { categoria, error: fallo } = await crearCategoriaDeGasto(nombre);
+    setCreandoCategoria(false);
+    if (fallo) {
+      setErrorCategoria(fallo);
+      return false;
+    }
+    setCategorias((anteriores) =>
+      [...anteriores, categoria].sort((a, b) => a.label.localeCompare(b.label, "es")),
+    );
+    setValores((anteriores) => ({ ...anteriores, categoria: categoria.value }));
+    setSucio(true);
+    return true;
+  }, []);
 
   return {
     valores,
@@ -187,12 +217,25 @@ export function useFormularioGasto({ gasto, usuarioId, estadoInicial } = {}) {
     esEdicion,
     sucio,
     catalogos: {
-      jornadas: aOpciones(jornadas, (jornada) => jornada.nombre),
+      // Una jornada finalizada ya no admite gastos (00159): no se ofrece, salvo la del gasto que
+      // se esta viendo.
+      jornadas: aOpciones(
+        jornadas.filter(
+          (jornada) =>
+            jornada.estado !== ESTADOS_JORNADA.FINALIZADA || jornada.id === gasto?.jornada_id,
+        ),
+        (jornada) => jornada.nombre,
+      ),
       perfiles,
-      categorias: categoriasCompletas,
+      categorias,
     },
     esExcedente: resultadoValidacion.esExcedente,
     mensajeExcedente: resultadoValidacion.mensajeExcedente,
+    puedeCrearCategoria: puedeCrearCategoriaDeGasto(rol),
+    crearCategoria,
+    creandoCategoria,
+    errorCategoria,
+    limpiarErrorCategoria: () => setErrorCategoria(null),
     setCampo,
     enviar,
     cancelar,

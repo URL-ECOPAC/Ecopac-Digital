@@ -236,6 +236,7 @@ export const typography = {
 export const labels = {
   medicamentoVencido: "Medicamento vencido",
   proximoAVencer: "Próximo a vencer",
+  pendiente: "Pendiente",
   aprobado: "Aprobado",
   rechazado: "Rechazado",
   disponible: "Disponible",

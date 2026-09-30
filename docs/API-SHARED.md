@@ -440,7 +440,14 @@ el formulario no ofrece proyectos cancelados. `useResumenDonaciones` da los indi
 `obtenerPresupuestoProyecto`, `obtenerPresupuestoSistema`.
 
 **Escrituras**: `registrarGasto`, `editarGasto`, `aprobarGasto`, `rechazarGasto`,
-`registrarOrigenDePresupuesto`, `quitarOrigenDePresupuesto`.
+`registrarOrigenDePresupuesto`, `quitarOrigenDePresupuesto`, `crearCategoriaDeGasto` (00158),
+`liquidarSobranteDeJornada` (00160).
+
+**Categorias y sobrante**: `listarCategoriasGasto` lee el catalogo `categorias_de_gasto` (00158; ya
+no hay `CATEGORIAS_DE_GASTO`). `obtenerSobranteDeJornada` y `liquidarSobranteDeJornada`
+(`sobrante.api.js`, 00160) con `DESTINOS_DE_SOBRANTE`; `useSobranteDeJornada` es la seccion de
+sobrante de la pestana Cierre. `validarGasto` bloquea el gasto que pasa lo comprometido de la
+jornada o que cae en una jornada finalizada, y acepta fechas hasta el dia de la jornada (00159).
 
 El presupuesto de una jornada ya no se escribe a mano: es la suma de sus origenes
 (`jornada_presupuesto_origen`, 00135), cada uno de una donacion en efectivo con saldo o de fondos
@@ -451,7 +458,7 @@ donaciones de donde puede salir.
 `combinarProyectosConPresupuesto`, `totalizar`.
 
 **Hooks**: `useEjecucionPresupuestal`, `useFormularioGasto`, `usePendientesAprobacionGastos`,
-`useDetalleProyectoPresupuesto`.
+`useDetalleProyectoPresupuesto`, `useSobranteDeJornada`.
 
 Los totales salen de las tres funciones SQL de la migracion `00040`. No hay columna de total: un
 total guardado se desincroniza.

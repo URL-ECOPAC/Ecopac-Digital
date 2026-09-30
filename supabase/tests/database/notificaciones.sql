@@ -159,8 +159,10 @@ SELECT is(
 -- ============================================================================
 SELECT set_config('request.jwt.claim.sub', 'b0000000-0000-0000-0000-000000000003', TRUE);
 
+-- Una jornada abierta y con presupuesto: desde la 00159 una finalizada no admite gastos y ninguno
+-- pasa el presupuesto de su jornada.
 INSERT INTO gastos (id, jornada_id, concepto, categoria, monto, registrado_por)
-VALUES ('b7000000-0000-0000-0000-000000000001', (SELECT id FROM jornadas ORDER BY id LIMIT 1),
+VALUES ('b7000000-0000-0000-0000-000000000001', (SELECT id FROM jornadas WHERE estado <> 'finalizada' AND presupuesto_asignado >= 2000 ORDER BY id LIMIT 1),
         'Transporte 755', 'Logistica', 1250.5, 'b0000000-0000-0000-0000-000000000003');
 
 SELECT is(
@@ -181,7 +183,7 @@ SELECT ok(
 SELECT set_config('request.jwt.claim.sub', 'b0000000-0000-0000-0000-000000000001', TRUE);
 
 INSERT INTO gastos (id, jornada_id, concepto, categoria, monto, registrado_por)
-VALUES ('b7000000-0000-0000-0000-000000000002', (SELECT id FROM jornadas ORDER BY id LIMIT 1),
+VALUES ('b7000000-0000-0000-0000-000000000002', (SELECT id FROM jornadas WHERE estado <> 'finalizada' AND presupuesto_asignado >= 2000 ORDER BY id LIMIT 1),
         'Material 755', 'Logistica', 10, 'b0000000-0000-0000-0000-000000000001');
 
 SELECT is(

@@ -46,6 +46,7 @@ import ModalJornada from "./ModalJornada";
 import NotFoundPage from "./NotFoundPage";
 import InsumosDeJornada from "./InsumosDeJornada";
 import OrigenesDePresupuesto from "./OrigenesDePresupuesto";
+import SobranteDeJornada from "./SobranteDeJornada";
 
 const PESTANIAS = [
   { id: "resumen", label: "Resumen" },
@@ -478,69 +479,74 @@ export default function DetalleJornadaPage() {
           )}
 
           {pestaniaMostrada === "cierre" && (
-            <Card>
-              {cargandoResumenCierre ? (
-                <LoadingState />
-              ) : (
-                <>
-                  <div className="ec-kpis mb-3">
-                    {INDICADORES_DEL_CIERRE.map(({ clave, etiqueta }) => (
-                      <StatCard
-                        key={clave}
-                        label={etiqueta}
-                        value={resumenCierre.indicadores?.[clave] ?? "—"}
-                        accent="var(--accent-jornadas)"
-                      />
-                    ))}
-                  </div>
-
-                  {resumenCierre.atencionesIncompletas === null && (
-                    <div className="alert alert-secondary" role="alert">
-                      No se pudo comprobar si hay atenciones sin consulta: tu rol no tiene acceso a
-                      esa información clínica.
+            <>
+              <Card>
+                {cargandoResumenCierre ? (
+                  <LoadingState />
+                ) : (
+                  <>
+                    <div className="ec-kpis mb-3">
+                      {INDICADORES_DEL_CIERRE.map(({ clave, etiqueta }) => (
+                        <StatCard
+                          key={clave}
+                          label={etiqueta}
+                          value={resumenCierre.indicadores?.[clave] ?? "—"}
+                          accent="var(--accent-jornadas)"
+                        />
+                      ))}
                     </div>
-                  )}
-                  {resumenCierre.atencionesIncompletas !== null &&
-                    resumenCierre.atencionesIncompletas > 0 && (
+
+                    {resumenCierre.atencionesIncompletas === null && (
+                      <div className="alert alert-secondary" role="alert">
+                        No se pudo comprobar si hay atenciones sin consulta: tu rol no tiene acceso
+                        a esa información clínica.
+                      </div>
+                    )}
+                    {resumenCierre.atencionesIncompletas !== null &&
+                      resumenCierre.atencionesIncompletas > 0 && (
+                        <div className="alert alert-warning" role="alert">
+                          {resumenCierre.atencionesIncompletas === 1
+                            ? "Hay 1 atención registrada sin consulta todavía."
+                            : `Hay ${resumenCierre.atencionesIncompletas} atenciones registradas sin consulta todavía.`}
+                        </div>
+                      )}
+                    {resumenCierre.movimientosPendientes > 0 && (
                       <div className="alert alert-warning" role="alert">
-                        {resumenCierre.atencionesIncompletas === 1
-                          ? "Hay 1 atención registrada sin consulta todavía."
-                          : `Hay ${resumenCierre.atencionesIncompletas} atenciones registradas sin consulta todavía.`}
+                        {resumenCierre.movimientosPendientes === 1
+                          ? "Hay 1 movimiento de inventario del botiquín de esta jornada pendiente de validar."
+                          : `Hay ${resumenCierre.movimientosPendientes} movimientos de inventario del botiquín de esta jornada pendientes de validar.`}
                       </div>
                     )}
-                  {resumenCierre.movimientosPendientes > 0 && (
-                    <div className="alert alert-warning" role="alert">
-                      {resumenCierre.movimientosPendientes === 1
-                        ? "Hay 1 movimiento de inventario del botiquín de esta jornada pendiente de validar."
-                        : `Hay ${resumenCierre.movimientosPendientes} movimientos de inventario del botiquín de esta jornada pendientes de validar.`}
-                    </div>
-                  )}
-                  {!hayAdvertenciasDeCierre &&
-                    resumenCierre.atencionesIncompletas !== null &&
-                    jornada.estado === ESTADOS_JORNADA.EN_CURSO && (
-                      <div className="alert alert-success" role="alert">
-                        No hay atenciones sin consulta ni movimientos pendientes de validar.
+                    {!hayAdvertenciasDeCierre &&
+                      resumenCierre.atencionesIncompletas !== null &&
+                      jornada.estado === ESTADOS_JORNADA.EN_CURSO && (
+                        <div className="alert alert-success" role="alert">
+                          No hay atenciones sin consulta ni movimientos pendientes de validar.
+                        </div>
+                      )}
+
+                    {errorCierre && (
+                      <div className="alert alert-danger" role="alert">
+                        {errorCierre}
                       </div>
                     )}
 
-                  {errorCierre && (
-                    <div className="alert alert-danger" role="alert">
-                      {errorCierre}
-                    </div>
-                  )}
-
-                  {jornada.estado === ESTADOS_JORNADA.EN_CURSO && permisos.puedeEditar && (
-                    <div className="d-flex justify-content-end mt-3">
-                      <PrimaryButton
-                        title="Confirmar cierre"
-                        onClick={confirmarCierre}
-                        loading={confirmandoCierre}
-                      />
-                    </div>
-                  )}
-                </>
-              )}
-            </Card>
+                    {jornada.estado === ESTADOS_JORNADA.EN_CURSO && permisos.puedeEditar && (
+                      <div className="d-flex justify-content-end mt-3">
+                        <PrimaryButton
+                          title="Confirmar cierre"
+                          onClick={confirmarCierre}
+                          loading={confirmandoCierre}
+                        />
+                      </div>
+                    )}
+                  </>
+                )}
+              </Card>
+              {/* 00160: con la jornada finalizada, lo que sobro de su presupuesto se devuelve o se
+                pasa a otra jornada del proyecto. */}
+              <SobranteDeJornada jornada={jornada} rol={rol} alLiquidar={recargar} />
+            </>
           )}
         </Tabs>
       )}

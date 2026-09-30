@@ -20,9 +20,7 @@
 
 import { TIPOS_DE_CAMPO } from "../descriptores.js";
 import {
-  CATEGORIAS_DE_GASTO,
   ESTADOS_DE_GASTO,
-  ETIQUETAS_CATEGORIA_GASTO,
   ETIQUETAS_ESTADO_GASTO,
   ETIQUETAS_ORIGEN_PRESUPUESTO,
   ORIGENES_DE_PRESUPUESTO,
@@ -102,8 +100,6 @@ export function camposDeOrigenDePresupuesto(origen) {
   });
 }
 
-export const OPCIONES_CATEGORIA_GASTO = opcionesDe(CATEGORIAS_DE_GASTO, ETIQUETAS_CATEGORIA_GASTO);
-
 export const OPCIONES_ESTADO_GASTO = opcionesDe(ESTADOS_DE_GASTO, ETIQUETAS_ESTADO_GASTO);
 
 /**
@@ -125,7 +121,8 @@ export const CAMPOS_GASTO = [
     id: "categoria",
     label: "Categoría",
     tipo: TIPOS_DE_CAMPO.SELECT,
-    opciones: OPCIONES_CATEGORIA_GASTO,
+    // Catalogo de la base (categorias_de_gasto, 00158), no un enum: crece desde el formulario.
+    opcionesDesde: "categorias",
     validacion: { requerido: true },
   },
   {
