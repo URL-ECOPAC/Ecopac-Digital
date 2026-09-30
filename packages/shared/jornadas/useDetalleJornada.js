@@ -44,6 +44,7 @@ import {
 } from "./api.js";
 import { permisosDeJornadas, puedeVerHistorialJornada } from "./permisos.js";
 import { transicionesDeJornadaDesde } from "./validaciones.js";
+import { useCambiosEnTiempoReal } from "../hooks/useCambiosEnTiempoReal.js";
 
 const ESTADO_INICIAL = {
   jornada: null,
@@ -85,34 +86,40 @@ export function useDetalleJornada({ jornadaId, rol } = {}) {
   const puedeVerHistorialDeEstados = puedeVerHistorialJornada(rol);
   const puedeVerClinico = puedeVerDatosClinicos(rol);
 
-  const cargar = useCallback(async () => {
-    setEstado((anterior) => ({ ...anterior, cargando: true, error: null }));
+  // `silencioso`: relee sin pasar por "cargando". Es la recarga de tiempo real (00163): la pantalla
+  // cambia el contenido de las pestanas por el indicador de carga mientras carga, y un aviso a
+  // mitad de un formulario (un aporte, un turno) borraria lo que se estaba escribiendo.
+  const cargar = useCallback(
+    async ({ silencioso = false } = {}) => {
+      if (!silencioso) setEstado((anterior) => ({ ...anterior, cargando: true, error: null }));
 
-    // Historial y pacientes atendidos no se piden si el rol no los va a poder ver: la
-    // pantalla oculta esas pestañas, asi que pedirlas igual solo gastaria una llamada que RLS
-    // va a devolver vacia (o que la propia funcion rechaza antes de llamar, ver su doc).
-    const [respuestaJornada, respuestaHistorial, respuestaPacientes] = await Promise.all([
-      obtenerJornada(jornadaId),
-      puedeVerHistorialDeEstados
-        ? obtenerHistorialDeJornada(jornadaId, { rol })
-        : Promise.resolve({ historial: [], error: null }),
-      puedeVerClinico
-        ? listarPacientesAtendidosDeJornada(jornadaId, { rol })
-        : Promise.resolve({ pacientes: [], error: null }),
-    ]);
+      // Historial y pacientes atendidos no se piden si el rol no los va a poder ver: la
+      // pantalla oculta esas pestañas, asi que pedirlas igual solo gastaria una llamada que RLS
+      // va a devolver vacia (o que la propia funcion rechaza antes de llamar, ver su doc).
+      const [respuestaJornada, respuestaHistorial, respuestaPacientes] = await Promise.all([
+        obtenerJornada(jornadaId),
+        puedeVerHistorialDeEstados
+          ? obtenerHistorialDeJornada(jornadaId, { rol })
+          : Promise.resolve({ historial: [], error: null }),
+        puedeVerClinico
+          ? listarPacientesAtendidosDeJornada(jornadaId, { rol })
+          : Promise.resolve({ pacientes: [], error: null }),
+      ]);
 
-    // El error de la jornada es el unico que puede dejar la pantalla en blanco (criterio de
-    // verificacion B): historial y pacientes atendidos son secciones, no el contenido central,
-    // mismo criterio que contarPacientesAtendidosPorJornada() en useJornadasKanban.js -- si
-    // fallan, esas pestañas quedan vacias en vez de tumbar toda la pantalla.
-    setEstado({
-      jornada: respuestaJornada.jornada,
-      historial: respuestaHistorial.historial,
-      pacientesAtendidos: respuestaPacientes.pacientes,
-      cargando: false,
-      error: respuestaJornada.error,
-    });
-  }, [jornadaId, rol, puedeVerHistorialDeEstados, puedeVerClinico]);
+      // El error de la jornada es el unico que puede dejar la pantalla en blanco (criterio de
+      // verificacion B): historial y pacientes atendidos son secciones, no el contenido central,
+      // mismo criterio que contarPacientesAtendidosPorJornada() en useJornadasKanban.js -- si
+      // fallan, esas pestañas quedan vacias en vez de tumbar toda la pantalla.
+      setEstado({
+        jornada: respuestaJornada.jornada,
+        historial: respuestaHistorial.historial,
+        pacientesAtendidos: respuestaPacientes.pacientes,
+        cargando: false,
+        error: respuestaJornada.error,
+      });
+    },
+    [jornadaId, rol, puedeVerHistorialDeEstados, puedeVerClinico],
+  );
 
   useEffect(() => {
     cargar();
@@ -169,6 +176,13 @@ export function useDetalleJornada({ jornadaId, rol } = {}) {
   // relee la jornada cuando ese hook avisa que el total cambio.
 
   const destinos = estado.jornada ? transicionesDeJornadaDesde(estado.jornada.estado) : [];
+
+  // Se relee sola cuando cambian la jornada, su equipo o lo atendido (00163).
+  useCambiosEnTiempoReal(
+    ["jornadas", "jornada_personal", "jornada_estado_historial", "atenciones", "consultas"],
+    () => cargar({ silencioso: true }),
+    { activo: Boolean(jornadaId) },
+  );
 
   return {
     jornada: estado.jornada,

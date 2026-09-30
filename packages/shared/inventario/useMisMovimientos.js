@@ -7,6 +7,7 @@ import { FILTROS_MIS_MOVIMIENTOS_VACIOS } from "./filtros.js";
 import { editarMovimiento, listarMovimientos } from "./movimientos.api.js";
 import { puedeAprobarMovimiento, puedeRegistrarMovimiento } from "./permisos.js";
 import { nombreDe } from "./useKardexMovimientos.js";
+import { useCambiosEnTiempoReal } from "../hooks/useCambiosEnTiempoReal.js";
 
 /**
  * Aplana los embeds de listarMovimientos() a los campos planos que pide
@@ -158,6 +159,9 @@ export function useMisMovimientos({ usuarioId, rolUsuario } = {}) {
     },
     [usuarioId, cargar],
   );
+
+  // Se recarga sola cuando cambian estas tablas (00163).
+  useCambiosEnTiempoReal(["movimientos_inventario"], cargar);
 
   return {
     movimientos,

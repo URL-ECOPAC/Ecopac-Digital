@@ -13,6 +13,7 @@ import { useCallback, useEffect, useState } from "react";
 import { ESTADOS_JORNADA } from "../enums.js";
 import { cambiarEstadoJornada } from "./api.js";
 import { hayAdvertenciasDeCierre, obtenerResumenCierre } from "./resumenCierre.js";
+import { useCambiosEnTiempoReal } from "../hooks/useCambiosEnTiempoReal.js";
 
 const RESUMEN_INICIAL = {
   indicadores: {
@@ -103,6 +104,9 @@ export function useResumenCierreJornada({ jornada, rol, onCerrada } = {}) {
 
     if (onCerrada) await onCerrada();
   }, [jornadaId, rol, onCerrada]);
+
+  // Se recarga sola cuando cambian estas tablas (00163).
+  useCambiosEnTiempoReal(["atenciones", "consultas", "movimientos_inventario"], cargar);
 
   return {
     resumen,

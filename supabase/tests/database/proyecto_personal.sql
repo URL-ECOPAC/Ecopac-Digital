@@ -71,7 +71,13 @@ SELECT is(
 SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000014611';
 
-SELECT is((SELECT count(*) FROM proyecto_personal)::int, 3, 'el administrador lee todos los equipos');
+SELECT is(
+  (SELECT count(*) FROM proyecto_personal
+    WHERE proyecto_id IN ('50000000-0000-0000-0000-000000001461',
+                          '50000000-0000-0000-0000-000000001462'))::int,
+  3,
+  'el administrador lee todos los equipos'
+);
 
 SELECT lives_ok(
   $$ INSERT INTO proyecto_personal (proyecto_id, perfil_id, rol_en_proyecto)

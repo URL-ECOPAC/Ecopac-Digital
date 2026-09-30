@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { obtenerLote } from "./lotes.api.js";
 import { useKardexMovimientos } from "./useKardexMovimientos.js";
+import { useCambiosEnTiempoReal } from "../hooks/useCambiosEnTiempoReal.js";
 
 /**
  * View model de la pantalla de detalle de un lote (issue #791): Existencias y el alertario de
@@ -53,6 +54,9 @@ export function useDetalleLote(loteId) {
     () => Promise.all([cargarLote(), recargarMovimientos()]),
     [cargarLote, recargarMovimientos],
   );
+
+  // Se recarga sola cuando cambian estas tablas (00163).
+  useCambiosEnTiempoReal(["lotes", "existencias", "movimientos_inventario"], recargar);
 
   return {
     lote,

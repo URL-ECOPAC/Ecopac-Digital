@@ -118,14 +118,18 @@ SELECT ok(
   'voluntario lee el catalogo de diagnosticos (00148)'
 );
 
-SELECT is(
-  (SELECT count(*)::int FROM consultas), 0,
-  'voluntario no puede leer consultas'
+-- 00148: el personal de campo lee consultas y recetas (docs/PERMISOS.md). Esta prueba decia lo
+-- contrario y pasaba solo porque, en este punto, ninguna tabla tenia filas; con las consultas y
+-- recetas del seed de demostracion se veia que la regla ya era otra. Se afirma contra las del
+-- seed, que existen desde antes de que corra esta suite.
+SELECT ok(
+  (SELECT count(*) FROM consultas WHERE id::text LIKE 'de000016-%') > 0,
+  'voluntario lee las consultas (00148)'
 );
 
-SELECT is(
-  (SELECT count(*)::int FROM recetas), 0,
-  'voluntario no puede leer recetas'
+SELECT ok(
+  (SELECT count(*) FROM recetas WHERE id::text LIKE 'de000018-%') > 0,
+  'voluntario lee las recetas (00148)'
 );
 
 -- ============================================================================

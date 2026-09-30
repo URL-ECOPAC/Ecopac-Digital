@@ -26,6 +26,7 @@ import { listarComunidades } from "../territorio/api.js";
 import { AGRUPACIONES_DE_IMPACTO, obtenerIndicadoresImpacto } from "./api.js";
 import { OPCIONES_METRICA_IMPACTO } from "./campos.js";
 import { puedeVerIndicadoresDeImpacto } from "./permisos.js";
+import { useCambiosEnTiempoReal } from "../hooks/useCambiosEnTiempoReal.js";
 
 // ISSUE #862: los dos usaban { valor, etiqueta }, distinto del { value, label } que hablan
 // Selector, FilterBar y el resto de catalogos del sistema. Mientras la pantalla los recorria a
@@ -209,6 +210,9 @@ export function useDashboardMetricas({ rol } = {}) {
     metrica !== OPCIONES_METRICA_IMPACTO[0].value ||
     comunidadId !== TODAS ||
     modoComparacion;
+
+  // Se recarga sola cuando cambian estas tablas (00163).
+  useCambiosEnTiempoReal(["atenciones", "consultas", "recetas", "jornadas"], cargar);
 
   return {
     tieneAcceso,

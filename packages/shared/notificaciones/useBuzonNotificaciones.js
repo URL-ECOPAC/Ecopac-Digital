@@ -7,6 +7,7 @@ import {
   filtrarNotificaciones,
   hayFiltrosDeNotificaciones,
 } from "./filtros.js";
+import { useCambiosEnTiempoReal } from "../hooks/useCambiosEnTiempoReal.js";
 
 /**
  * View model de las notificaciones (issue #755). Sirve igual a la ventana dedicada
@@ -109,6 +110,9 @@ export function useBuzonNotificaciones({ perfilId } = {}) {
     avisarCambioDelBuzon();
     return true;
   }, [perfilId, consultar]);
+
+  // Se recarga sola cuando cambian estas tablas (00163).
+  useCambiosEnTiempoReal(["notificaciones"], consultar);
 
   return {
     notificaciones: filtradas,

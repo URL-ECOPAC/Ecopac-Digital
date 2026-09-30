@@ -11,6 +11,7 @@ import { aFechaLocal, diasHastaVencimiento } from "../formato/fechas.js";
 import { resumenDeAvisos } from "./configuracionAlertas.validaciones.js";
 import { puedeAtenderAlertasVencimiento, puedeConfigurarAlertasVencimiento } from "./permisos.js";
 import { useVentanaDeAvisoVencimiento } from "./useVentanaDeAvisoVencimiento.js";
+import { useCambiosEnTiempoReal } from "../hooks/useCambiosEnTiempoReal.js";
 
 /**
  * Dias restantes para que venza un lote (negativo si ya vencio, 0 si vence hoy). Se exporta
@@ -251,6 +252,9 @@ export function useAlertasVencimiento({ rolUsuario } = {}) {
     },
     [rolUsuario],
   );
+
+  // Se recarga sola cuando cambian estas tablas (00163).
+  useCambiosEnTiempoReal(["alertas_caducidad", "lotes", "existencias"], recargar);
 
   return {
     porVencer,

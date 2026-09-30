@@ -140,6 +140,7 @@ poner solos el "+" y el basurero; ninguna pantalla los escribe a mano.
 | `olvidarUltimaActividad`, `CLAVE_ULTIMA_ACTIVIDAD` | Borran / nombran la marca guardada; la pantalla de inicio de sesion la borra |
 | `esRespuestaVigente`, `debeDescartarseLaRespuesta`, `combinarResultados`, `hayMasResultados` | Descartan respuestas de una busqueda ya superada |
 | `usePanelDeInicio`               | La pantalla de inicio por rol, con los accesos de `modulosVisibles()` (#710) |
+| `useCambiosEnTiempoReal`         | Recarga una pantalla cuando cambian sus tablas (Realtime, 00163). Junta una racha de avisos en una sola recarga (`ESPERA_DE_TIEMPO_REAL_MS`); `suscribirACambios` es la logica, probada con un cliente de mentira. Lo usan los hooks de listas, tableros, detalles y reportes |
 
 ### `auditoria/` - bitacora (#643)
 
@@ -332,6 +333,11 @@ La cola de la jornada. Modulo pequeno y con una sola responsabilidad.
 `hayFiltrosDeCatalogo`. Filtran por los campos que `medicamentos` tiene de verdad (presentacion, uso
 pediatrico, activo) y resumen los lotes de cada medicamento; la "categoria", el codigo y el precio
 que mostraba la pantalla no eran columnas.
+
+**Insumos (00164)**: `pideDatosFarmacologicos(tipoArticulo)` y `CAMPOS_SOLO_DE_MEDICAMENTO`
+dicen que campos solo tiene un medicamento; `registrarMedicamento` pide principio activo solo a
+un medicamento. `useRegistroIngreso` expone `renglonesDonacion` (el estado de cada renglon de una
+donacion en el ingreso) y no deja guardar mientras falte alguno.
 
 **Escrituras**: `registrarMedicamento`, `actualizarMedicamento`, `desactivarMedicamento`,
 `registrarIngreso`, `registrarSalida`, `editarMovimiento`, `aprobarMovimiento`,

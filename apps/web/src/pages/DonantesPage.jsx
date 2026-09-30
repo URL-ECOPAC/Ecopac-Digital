@@ -101,6 +101,13 @@ function FichaDonante({ donante, historico, onCerrar, onEditar, puedeEscribir })
               caption="unidades"
               accent="var(--color-warning)"
             />
+            {/* Un servicio no tiene unidades: se cuenta cada donacion de servicios. */}
+            <StatCard
+              label="Servicios"
+              value={totales.servicios || 0}
+              caption="donados"
+              accent="var(--color-success)"
+            />
             <StatCard
               label="Donaciones"
               value={donaciones.length}

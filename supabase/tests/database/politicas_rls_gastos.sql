@@ -68,7 +68,8 @@ SELECT lives_ok(
 );
 
 SELECT ok(
-  (SELECT count(*) FROM gastos) = 2,
+  (SELECT count(*) FROM gastos WHERE jornada_id IN ('40000000-0000-0000-0000-000000029201',
+                                                   '40000000-0000-0000-0000-000000029202')) = 2,
   'administrador lee todos los gastos'
 );
 

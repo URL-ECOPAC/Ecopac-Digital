@@ -61,6 +61,11 @@ El sistema decide permisos en cuatro sitios. **Solo el ultimo protege.**
 Desde la `00148` las capas 1 a 3 no deciden solo por rol: leen tambien lo que la base le abrio a la
 sesion (`mis_accesos()`, ver "Acceso a modulos y funciones delegables").
 
+**Tiempo real (`00163`).** Las tablas de negocio estan en la publicacion `supabase_realtime`
+para que las pantallas se recarguen solas cuando cambian. No abre nada: Realtime solo avisa de las
+filas que la politica de SELECT de cada tabla ya deja leer a la sesion, y el cliente no usa el
+contenido del aviso, vuelve a leer con su consulta de siempre (`useCambiosEnTiempoReal`).
+
 Las capas 1 a 3 existen para que la interfaz no ofrezca lo que va a fallar. Si una de ellas dice
 que si y la capa 4 dice que no, el usuario ve un error; si dice que no y la capa 4 diria que si,
 la funcion es inalcanzable. Las dos situaciones son defectos, y las que hay estan en

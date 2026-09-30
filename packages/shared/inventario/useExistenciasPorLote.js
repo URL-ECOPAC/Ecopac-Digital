@@ -19,6 +19,7 @@ import { listarExistenciasDisponibles } from "./existencias.api.js";
 import { listarLotes } from "./lotes.api.js";
 import { ventanaDeAviso } from "./configuracionAlertas.validaciones.js";
 import { useVentanaDeAvisoVencimiento } from "./useVentanaDeAvisoVencimiento.js";
+import { useCambiosEnTiempoReal } from "../hooks/useCambiosEnTiempoReal.js";
 
 // "Critico" es un nivel visual de urgencia dentro de "por vencer", no la regla de las alertas: por
 // eso se queda fijo. La ventana de "por vencer" si sale de la configuracion (issue #899).
@@ -211,6 +212,9 @@ export function useExistenciasPorLote({ estadosDeLote = [] } = {}) {
   const hayFiltros = Object.keys(FILTROS_EXISTENCIAS_POR_LOTE_VACIOS).some(
     (clave) => Boolean(filtros[clave]) !== Boolean(FILTROS_EXISTENCIAS_POR_LOTE_VACIOS[clave]),
   );
+
+  // Se recarga sola cuando cambian estas tablas (00163).
+  useCambiosEnTiempoReal(["existencias", "lotes"], cargar);
 
   return {
     filas,

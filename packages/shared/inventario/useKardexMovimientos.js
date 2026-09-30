@@ -2,6 +2,7 @@ import { useState, useCallback, useMemo, useEffect } from "react";
 
 import { aFechaLocal } from "../formato/fechas.js";
 import { listarMovimientos } from "./movimientos.api.js";
+import { useCambiosEnTiempoReal } from "../hooks/useCambiosEnTiempoReal.js";
 
 // tipo_movimiento ENUM: 'ingreso', 'salida'
 export const TIPO_MOVIMIENTO = {
@@ -221,6 +222,9 @@ export function useKardexMovimientos({ loteId = null, medicamentoId = null }) {
   useEffect(() => {
     cargarMovimientos();
   }, [loteId, medicamentoId, cargarMovimientos]);
+
+  // Se recarga sola cuando cambian estas tablas (00163).
+  useCambiosEnTiempoReal(["movimientos_inventario"], cargarMovimientos);
 
   return {
     movimientos: movimientosFiltrados,

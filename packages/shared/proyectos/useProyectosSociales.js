@@ -55,6 +55,7 @@ import {
   validarProyecto,
 } from "./validaciones.js";
 import { permisosDeProyectos, puedeVerProyectos } from "./permisos.js";
+import { useCambiosEnTiempoReal } from "../hooks/useCambiosEnTiempoReal.js";
 
 /** Mismo criterio que jornadas/useFormularioJornada.js: nombre completo para un <select>. */
 function nombreDePerfil(perfil) {
@@ -517,6 +518,9 @@ export function useProyectosSociales({ usuarioRol } = {}) {
     },
     [permisosDelRol.puedeCambiarEstado, cargarProyectos],
   );
+
+  // Se recarga sola cuando cambian estas tablas (00163).
+  useCambiosEnTiempoReal(["proyectos", "jornadas"], cargarProyectos);
 
   return {
     columnas: COLUMNAS_PROYECTO,

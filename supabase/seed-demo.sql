@@ -390,3 +390,221 @@ UPDATE movimientos_inventario
 
 -- 'de00000c-...-0000000006' se deja tal cual, en 'pendiente': es la fila que puebla la
 -- bandeja de validacion (DoD del issue #94).
+
+-- ============================================================================
+-- 11. Insumos del catalogo (00164: sin principio activo ni concentracion)
+-- ============================================================================
+INSERT INTO presentaciones (nombre)
+SELECT v.nombre FROM (VALUES ('Unidad'), ('Caja')) AS v(nombre)
+WHERE NOT EXISTS (SELECT 1 FROM presentaciones p WHERE p.nombre = v.nombre);
+
+INSERT INTO medicamentos (id, nombre, concentracion, presentacion_id, marca, tipo_articulo)
+SELECT v.id, v.nombre, NULL, p.id, v.marca, 'insumo'
+FROM (VALUES
+  ('de000007-0000-0000-0000-000000000008'::uuid, 'Guantes de nitrilo', 'Caja', 'Generico'),
+  ('de000007-0000-0000-0000-000000000009'::uuid, 'Jeringa 5 ml', 'Unidad', 'Generico')
+) AS v(id, nombre, presentacion_nombre, marca)
+JOIN presentaciones p ON p.nombre = v.presentacion_nombre
+ON CONFLICT (id) DO NOTHING;
+
+-- ============================================================================
+-- 12. Una tercera jornada, planificada: la preparacion y el destino del sobrante
+-- ============================================================================
+INSERT INTO jornadas (id, nombre, fecha, comunidad_id, responsable_id, estado, proyecto_id) VALUES
+  ('de00000a-0000-0000-0000-000000000003', 'Jornada Demo Nueva Esperanza', CURRENT_DATE + 20,
+   'de000004-0000-0000-0000-000000000003', 'de000001-0000-0000-0000-000000000001', 'planificada',
+   'de00000e-0000-0000-0000-000000000001')
+ON CONFLICT (id) DO UPDATE SET fecha = EXCLUDED.fecha, updated_at = NOW();
+
+INSERT INTO jornada_personal (id, jornada_id, perfil_id, rol_en_jornada, hora_inicio, hora_fin, responsabilidad) VALUES
+  ('de00000b-0000-0000-0000-000000000005', 'de00000a-0000-0000-0000-000000000003', 'de000001-0000-0000-0000-000000000004', 'medico', '08:00', '14:00', 'Consulta general'),
+  ('de00000b-0000-0000-0000-000000000006', 'de00000a-0000-0000-0000-000000000003', 'de000001-0000-0000-0000-000000000006', 'voluntario general', '07:00', '14:00', 'Registro y triaje')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO jornada_insumos (id, jornada_id, medicamento_id, cantidad, unidad, costo_unitario_estimado, nota) VALUES
+  ('de00001c-0000-0000-0000-000000000001', 'de00000a-0000-0000-0000-000000000003', 'de000007-0000-0000-0000-000000000001', 200, 'tabletas', 0.50, 'Para dolor y fiebre'),
+  ('de00001c-0000-0000-0000-000000000002', 'de00000a-0000-0000-0000-000000000003', 'de000007-0000-0000-0000-000000000008', 5, 'cajas', 45.00, NULL)
+ON CONFLICT (id) DO NOTHING;
+
+-- ============================================================================
+-- 13. Donantes y donaciones de los cuatro tipos
+-- ============================================================================
+INSERT INTO donantes (id, nombre, tipo, contacto, telefono, email) VALUES
+  ('de00000f-0000-0000-0000-000000000001', 'Fundacion Manos Solidarias Demo', 'organizacion', 'Coordinacion de programas', '5999-2001', 'programas@manossolidariasdemo.test'),
+  ('de00000f-0000-0000-0000-000000000002', 'Club de Servicio Demo', 'organizacion', 'Tesoreria', '5999-2002', 'tesoreria@clubdemo.test'),
+  ('de00000f-0000-0000-0000-000000000003', 'Carlos Ejemplo Demo', 'persona', NULL, '5999-2003', NULL)
+ON CONFLICT (id) DO NOTHING;
+
+-- La de dinero es para la jornada en curso: su proyecto lo fija el trigger desde la jornada.
+INSERT INTO donaciones (id, donante_id, fecha, tipo, observaciones, registrado_por, jornada_id, proyecto_id) VALUES
+  ('de000010-0000-0000-0000-000000000001', 'de00000f-0000-0000-0000-000000000001', CURRENT_DATE - 40, 'dinero',
+   'Aporte para la jornada de Vista Hermosa (demo)', 'de000001-0000-0000-0000-000000000001', 'de00000a-0000-0000-0000-000000000002', NULL),
+  ('de000010-0000-0000-0000-000000000002', 'de00000f-0000-0000-0000-000000000002', CURRENT_DATE - 25, 'medicamentos',
+   'Dos medicamentos; uno ya ingreso a inventario (demo)', 'de000001-0000-0000-0000-000000000001', NULL, 'de00000e-0000-0000-0000-000000000001'),
+  ('de000010-0000-0000-0000-000000000003', 'de00000f-0000-0000-0000-000000000003', CURRENT_DATE - 10, 'insumos',
+   'Guantes para las jornadas (demo)', 'de000001-0000-0000-0000-000000000001', NULL, NULL),
+  ('de000010-0000-0000-0000-000000000004', 'de00000f-0000-0000-0000-000000000002', CURRENT_DATE - 5, 'servicios',
+   'Transporte de la brigada (demo)', 'de000001-0000-0000-0000-000000000001', NULL, 'de00000e-0000-0000-0000-000000000001')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO donacion_detalle (id, donacion_id, descripcion, cantidad, unidad, monto, lote_id, medicamento_id) VALUES
+  ('de000011-0000-0000-0000-000000000001', 'de000010-0000-0000-0000-000000000001', 'Aporte para jornadas', NULL, NULL, 2500, NULL, NULL),
+  ('de000011-0000-0000-0000-000000000002', 'de000010-0000-0000-0000-000000000002', 'Amoxicilina 250 mg/5 ml', 80, 'frascos', NULL, 'de000009-0000-0000-0000-000000000003', 'de000007-0000-0000-0000-000000000003'),
+  ('de000011-0000-0000-0000-000000000003', 'de000010-0000-0000-0000-000000000002', 'Acetaminofen 500 mg', 100, 'tabletas', NULL, NULL, 'de000007-0000-0000-0000-000000000001'),
+  ('de000011-0000-0000-0000-000000000004', 'de000010-0000-0000-0000-000000000003', 'Guantes de nitrilo', 10, 'cajas', NULL, NULL, NULL),
+  ('de000011-0000-0000-0000-000000000005', 'de000010-0000-0000-0000-000000000004', 'Transporte de la brigada', NULL, NULL, 300, NULL, NULL)
+ON CONFLICT (id) DO NOTHING;
+
+-- ============================================================================
+-- 14. Presupuesto: aportes y gastos
+-- ============================================================================
+-- El Rosario y Vista Hermosa ya traen su presupuesto inicial como aporte "sin clasificar"
+-- (fn_origen_del_presupuesto_inicial, 00135). Aqui se suman un aporte de la donacion de dinero a
+-- Vista Hermosa y fondos propios para la jornada planificada.
+INSERT INTO jornada_presupuesto_origen (id, jornada_id, origen, donacion_id, monto, descripcion) VALUES
+  ('de000012-0000-0000-0000-000000000001', 'de00000a-0000-0000-0000-000000000002', 'donacion',
+   'de000010-0000-0000-0000-000000000001', 2000, NULL),
+  ('de000012-0000-0000-0000-000000000002', 'de00000a-0000-0000-0000-000000000003', 'fondos_propios',
+   NULL, 1500, 'Presupuesto de preparacion')
+ON CONFLICT (id) DO NOTHING;
+
+-- Vista Hermosa (en curso): uno aprobado, uno pendiente y uno rechazado. Nueva Esperanza
+-- (planificada): un gasto de preparacion, de antes de la jornada.
+INSERT INTO gastos (id, jornada_id, concepto, categoria, monto, fecha, responsable_id, estado, registrado_por, aprobado_por, aprobado_en, motivo_rechazo) VALUES
+  ('de000013-0000-0000-0000-000000000001', 'de00000a-0000-0000-0000-000000000002', 'Combustible para el traslado', 'Logistica', 350, CURRENT_DATE,
+   'de000001-0000-0000-0000-000000000007', 'aprobado', 'de000001-0000-0000-0000-000000000001', 'de000001-0000-0000-0000-000000000001', NOW(), NULL),
+  ('de000013-0000-0000-0000-000000000002', 'de00000a-0000-0000-0000-000000000002', 'Refrigerios del equipo', 'Logistica', 150, CURRENT_DATE,
+   'de000001-0000-0000-0000-000000000007', 'pendiente', 'de000001-0000-0000-0000-000000000007', NULL, NULL, NULL),
+  ('de000013-0000-0000-0000-000000000003', 'de00000a-0000-0000-0000-000000000002', 'Compra sin factura', 'Medicamentos', 80, CURRENT_DATE,
+   'de000001-0000-0000-0000-000000000007', 'rechazado', 'de000001-0000-0000-0000-000000000007', 'de000001-0000-0000-0000-000000000001', NOW(),
+   'No se adjunto la factura'),
+  ('de000013-0000-0000-0000-000000000004', 'de00000a-0000-0000-0000-000000000003', 'Impresion de fichas de registro', 'Educacion', 120, CURRENT_DATE - 1,
+   'de000001-0000-0000-0000-000000000006', 'pendiente', 'de000001-0000-0000-0000-000000000006', NULL, NULL, NULL)
+ON CONFLICT (id) DO NOTHING;
+
+-- ============================================================================
+-- 15. Proyectos: equipo e hitos
+-- ============================================================================
+INSERT INTO proyecto_personal (id, proyecto_id, perfil_id, rol_en_proyecto) VALUES
+  ('de00001a-0000-0000-0000-000000000001', 'de00000e-0000-0000-0000-000000000001', 'de000001-0000-0000-0000-000000000004', 'Coordinacion medica'),
+  ('de00001a-0000-0000-0000-000000000002', 'de00000e-0000-0000-0000-000000000001', 'de000001-0000-0000-0000-000000000006', 'Logistica'),
+  ('de00001a-0000-0000-0000-000000000003', 'de00000e-0000-0000-0000-000000000002', 'de000001-0000-0000-0000-000000000005', 'Coordinacion nutricional')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO proyecto_hitos (id, proyecto_id, nombre, fecha_prevista, fecha_real) VALUES
+  ('de00001b-0000-0000-0000-000000000001', 'de00000e-0000-0000-0000-000000000001', 'Primera jornada en El Rosario', CURRENT_DATE - 30, CURRENT_DATE - 30),
+  ('de00001b-0000-0000-0000-000000000002', 'de00000e-0000-0000-0000-000000000001', 'Jornada en Nueva Esperanza', CURRENT_DATE + 20, NULL),
+  ('de00001b-0000-0000-0000-000000000003', 'de00000e-0000-0000-0000-000000000002', 'Tamizaje inicial de menores', CURRENT_DATE + 10, NULL)
+ON CONFLICT (id) DO NOTHING;
+
+-- ============================================================================
+-- 16. Atencion clinica: triaje, consulta, diagnostico y receta
+-- ============================================================================
+-- Vista Hermosa esta en curso: sus atenciones pasan por los triggers de siempre. Sofia y Juan ya
+-- se atendieron, Rosa tiene triaje y espera consulta, Miguel acaba de llegar.
+INSERT INTO atenciones (id, paciente_id, jornada_id) VALUES
+  ('de000014-0000-0000-0000-000000000005', 'de000005-0000-0000-0000-000000000005', 'de00000a-0000-0000-0000-000000000002'),
+  ('de000014-0000-0000-0000-000000000006', 'de000005-0000-0000-0000-000000000006', 'de00000a-0000-0000-0000-000000000002'),
+  ('de000014-0000-0000-0000-000000000007', 'de000005-0000-0000-0000-000000000007', 'de00000a-0000-0000-0000-000000000002'),
+  ('de000014-0000-0000-0000-000000000008', 'de000005-0000-0000-0000-000000000008', 'de00000a-0000-0000-0000-000000000002')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO triajes (id, atencion_id, presion_sistolica, presion_diastolica, glucosa, peso, talla, temperatura, frecuencia_cardiaca, tomado_por) VALUES
+  ('de000015-0000-0000-0000-000000000005', 'de000014-0000-0000-0000-000000000005', 118, 76, 92, 58, 158, 37.8, 88, 'de000001-0000-0000-0000-000000000007'),
+  ('de000015-0000-0000-0000-000000000006', 'de000014-0000-0000-0000-000000000006', 150, 95, 210, 72, 165, 36.6, 80, 'de000001-0000-0000-0000-000000000007'),
+  ('de000015-0000-0000-0000-000000000007', 'de000014-0000-0000-0000-000000000007', NULL, NULL, NULL, 18, 105, 38.4, 120, 'de000001-0000-0000-0000-000000000007')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO consultas (id, expediente_id, atencion_id, medico_id, jornada_id, motivo_consulta, sintomas, tratamiento, observaciones) VALUES
+  ('de000016-0000-0000-0000-000000000005', 'de000006-0000-0000-0000-000000000005', 'de000014-0000-0000-0000-000000000005', 'de000001-0000-0000-0000-000000000005',
+   'de00000a-0000-0000-0000-000000000002', 'Diarrea de dos dias', 'Evacuaciones liquidas, fiebre leve', 'Hidratacion oral e ibuprofeno', NULL),
+  ('de000016-0000-0000-0000-000000000006', 'de000006-0000-0000-0000-000000000006', 'de000014-0000-0000-0000-000000000006', 'de000001-0000-0000-0000-000000000005',
+   'de00000a-0000-0000-0000-000000000002', 'Control de diabetes', 'Sed, vision borrosa', 'Ajuste de dieta; referir a control', 'Glucosa elevada en triaje')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO consulta_diagnostico (id, consulta_id, diagnostico_id, es_principal)
+SELECT v.id, v.consulta_id, d.id, TRUE
+FROM (VALUES
+  ('de000017-0000-0000-0000-000000000005'::uuid, 'de000016-0000-0000-0000-000000000005'::uuid, 'A09'),
+  ('de000017-0000-0000-0000-000000000006'::uuid, 'de000016-0000-0000-0000-000000000006'::uuid, 'E11')
+) AS v(id, consulta_id, codigo)
+JOIN diagnosticos d ON d.codigo = v.codigo
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO recetas (id, consulta_id, medico_id, indicaciones_generales) VALUES
+  ('de000018-0000-0000-0000-000000000005', 'de000016-0000-0000-0000-000000000005', 'de000001-0000-0000-0000-000000000005', 'Tomar abundantes liquidos.')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO receta_detalle (id, receta_id, medicamento_id, lote_id, bodega_id, dosis, frecuencia, duracion, cantidad_entregada) VALUES
+  ('de000019-0000-0000-0000-000000000005', 'de000018-0000-0000-0000-000000000005', 'de000007-0000-0000-0000-000000000002',
+   'de000009-0000-0000-0000-000000000002', 'de000002-0000-0000-0000-000000000001', '1 tableta', 'Cada 8 horas', '3 dias', 9)
+ON CONFLICT (id) DO NOTHING;
+
+-- El Rosario ya esta finalizada, y las atenciones, consultas y gastos solo entran en una jornada
+-- que no cerro (trg_validar_jornada_en_curso y 00159). Para sembrar su historia se apagan los
+-- triggers de esta sesion con session_replication_role = replica: las filas quedan como si se
+-- hubieran capturado ese dia. Tambien apaga las llaves foraneas, asi que cada id de este bloque
+-- apunta a una fila que ya existe arriba.
+SET session_replication_role = replica;
+
+INSERT INTO atenciones (id, paciente_id, jornada_id, created_at, updated_at) VALUES
+  ('de000014-0000-0000-0000-000000000001', 'de000005-0000-0000-0000-000000000001', 'de00000a-0000-0000-0000-000000000001', CURRENT_DATE - 30 + TIME '08:10', CURRENT_DATE - 30 + TIME '08:10'),
+  ('de000014-0000-0000-0000-000000000002', 'de000005-0000-0000-0000-000000000002', 'de00000a-0000-0000-0000-000000000001', CURRENT_DATE - 30 + TIME '08:40', CURRENT_DATE - 30 + TIME '08:40'),
+  ('de000014-0000-0000-0000-000000000003', 'de000005-0000-0000-0000-000000000003', 'de00000a-0000-0000-0000-000000000001', CURRENT_DATE - 30 + TIME '09:15', CURRENT_DATE - 30 + TIME '09:15'),
+  ('de000014-0000-0000-0000-000000000004', 'de000005-0000-0000-0000-000000000004', 'de00000a-0000-0000-0000-000000000001', CURRENT_DATE - 30 + TIME '10:05', CURRENT_DATE - 30 + TIME '10:05')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO triajes (id, atencion_id, presion_sistolica, presion_diastolica, glucosa, peso, talla, temperatura, frecuencia_cardiaca, tomado_por, tomado_en) VALUES
+  ('de000015-0000-0000-0000-000000000001', 'de000014-0000-0000-0000-000000000001', 145, 90, 180, 61, 150, 36.5, 78, 'de000001-0000-0000-0000-000000000006', CURRENT_DATE - 30 + TIME '08:15'),
+  ('de000015-0000-0000-0000-000000000002', 'de000014-0000-0000-0000-000000000002', 120, 80, NULL, 70, 170, 36.8, 72, 'de000001-0000-0000-0000-000000000006', CURRENT_DATE - 30 + TIME '08:45'),
+  ('de000015-0000-0000-0000-000000000003', 'de000014-0000-0000-0000-000000000003', NULL, NULL, NULL, 24, 128, 37.2, 96, 'de000001-0000-0000-0000-000000000006', CURRENT_DATE - 30 + TIME '09:20'),
+  ('de000015-0000-0000-0000-000000000004', 'de000014-0000-0000-0000-000000000004', 160, 100, NULL, 80, 168, 36.6, 84, 'de000001-0000-0000-0000-000000000006', CURRENT_DATE - 30 + TIME '10:10')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO consultas (id, expediente_id, atencion_id, medico_id, jornada_id, motivo_consulta, sintomas, tratamiento, created_at, updated_at) VALUES
+  ('de000016-0000-0000-0000-000000000001', 'de000006-0000-0000-0000-000000000001', 'de000014-0000-0000-0000-000000000001', 'de000001-0000-0000-0000-000000000004',
+   'de00000a-0000-0000-0000-000000000001', 'Control de diabetes e hipertension', 'Mareo ocasional', 'Continuar metformina', CURRENT_DATE - 30 + TIME '08:30', CURRENT_DATE - 30 + TIME '08:30'),
+  ('de000016-0000-0000-0000-000000000002', 'de000006-0000-0000-0000-000000000002', 'de000014-0000-0000-0000-000000000002', 'de000001-0000-0000-0000-000000000004',
+   'de00000a-0000-0000-0000-000000000001', 'Dolor lumbar', 'Dolor al cargar', 'Ibuprofeno y reposo', CURRENT_DATE - 30 + TIME '09:00', CURRENT_DATE - 30 + TIME '09:00'),
+  ('de000016-0000-0000-0000-000000000003', 'de000006-0000-0000-0000-000000000003', 'de000014-0000-0000-0000-000000000003', 'de000001-0000-0000-0000-000000000004',
+   'de00000a-0000-0000-0000-000000000001', 'Tos y fiebre', 'Tos productiva de cinco dias', 'Amoxicilina', CURRENT_DATE - 30 + TIME '09:35', CURRENT_DATE - 30 + TIME '09:35'),
+  ('de000016-0000-0000-0000-000000000004', 'de000006-0000-0000-0000-000000000004', 'de000014-0000-0000-0000-000000000004', 'de000001-0000-0000-0000-000000000004',
+   'de00000a-0000-0000-0000-000000000001', 'Presion alta', 'Cefalea', 'Referir a centro de salud', CURRENT_DATE - 30 + TIME '10:25', CURRENT_DATE - 30 + TIME '10:25')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO consulta_diagnostico (id, consulta_id, diagnostico_id, es_principal)
+SELECT v.id, v.consulta_id, d.id, TRUE
+FROM (VALUES
+  ('de000017-0000-0000-0000-000000000001'::uuid, 'de000016-0000-0000-0000-000000000001'::uuid, 'E11'),
+  ('de000017-0000-0000-0000-000000000003'::uuid, 'de000016-0000-0000-0000-000000000003'::uuid, 'B82.9')
+) AS v(id, consulta_id, codigo)
+JOIN diagnosticos d ON d.codigo = v.codigo
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO recetas (id, consulta_id, medico_id, indicaciones_generales, created_at, updated_at) VALUES
+  ('de000018-0000-0000-0000-000000000002', 'de000016-0000-0000-0000-000000000002', 'de000001-0000-0000-0000-000000000004', NULL, CURRENT_DATE - 30 + TIME '09:05', CURRENT_DATE - 30 + TIME '09:05'),
+  ('de000018-0000-0000-0000-000000000003', 'de000016-0000-0000-0000-000000000003', 'de000001-0000-0000-0000-000000000004', 'Completar el tratamiento.', CURRENT_DATE - 30 + TIME '09:40', CURRENT_DATE - 30 + TIME '09:40')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO receta_detalle (id, receta_id, medicamento_id, lote_id, bodega_id, dosis, frecuencia, duracion, cantidad_entregada, created_at) VALUES
+  ('de000019-0000-0000-0000-000000000002', 'de000018-0000-0000-0000-000000000002', 'de000007-0000-0000-0000-000000000004',
+   'de000009-0000-0000-0000-000000000004', (SELECT id FROM bodegas WHERE nombre = 'Bodega Principal'), '1 tableta', 'Cada 24 horas', '5 dias', 5, CURRENT_DATE - 30 + TIME '09:05'),
+  ('de000019-0000-0000-0000-000000000003', 'de000018-0000-0000-0000-000000000003', 'de000007-0000-0000-0000-000000000003',
+   'de000009-0000-0000-0000-000000000003', (SELECT id FROM bodegas WHERE nombre = 'Bodega Principal'), '5 ml', 'Cada 8 horas', '7 dias', 1, CURRENT_DATE - 30 + TIME '09:40')
+ON CONFLICT (id) DO NOTHING;
+
+-- Gastos de El Rosario: lo que sobra de sus Q5,000 queda para liquidar desde la pestana Cierre.
+INSERT INTO gastos (id, jornada_id, concepto, categoria, monto, fecha, responsable_id, estado, registrado_por, aprobado_por, aprobado_en) VALUES
+  ('de000013-0000-0000-0000-000000000005', 'de00000a-0000-0000-0000-000000000001', 'Transporte del equipo', 'Logistica', 600, CURRENT_DATE - 31,
+   'de000001-0000-0000-0000-000000000006', 'aprobado', 'de000001-0000-0000-0000-000000000001', 'de000001-0000-0000-0000-000000000001', CURRENT_DATE - 29 + TIME '10:00'),
+  ('de000013-0000-0000-0000-000000000006', 'de00000a-0000-0000-0000-000000000001', 'Medicamentos complementarios', 'Medicamentos', 450, CURRENT_DATE - 32,
+   'de000001-0000-0000-0000-000000000004', 'aprobado', 'de000001-0000-0000-0000-000000000001', 'de000001-0000-0000-0000-000000000001', CURRENT_DATE - 29 + TIME '10:05'),
+  ('de000013-0000-0000-0000-000000000007', 'de00000a-0000-0000-0000-000000000001', 'Honorarios de odontologia', 'Honorarios', 500, CURRENT_DATE - 30,
+   'de000001-0000-0000-0000-000000000004', 'aprobado', 'de000001-0000-0000-0000-000000000001', 'de000001-0000-0000-0000-000000000001', CURRENT_DATE - 29 + TIME '10:10')
+ON CONFLICT (id) DO NOTHING;
+
+SET session_replication_role = DEFAULT;
+
+-- Las alertas de vencimiento no se siembran: las genera la rutina programada
+-- (supabase/functions/alertas-vencimiento), y las pruebas de alertas crean las suyas sobre estos
+-- mismos lotes.

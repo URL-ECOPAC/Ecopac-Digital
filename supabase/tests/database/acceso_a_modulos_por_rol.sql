@@ -93,7 +93,7 @@ SELECT is(
 SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000148002';
 
 SELECT is(
-  (SELECT count(*)::int FROM donaciones), 1,
+  (SELECT count(*)::int FROM donaciones WHERE id = 'd1000000-0000-0000-0000-000000148001'), 1,
   'con el modulo abierto, el colaborador lee las donaciones'
 );
 

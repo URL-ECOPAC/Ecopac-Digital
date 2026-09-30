@@ -20,6 +20,7 @@ import {
   construirError,
   normalizarError,
 } from "../api/errores-de-supabase.js";
+import { pideDatosFarmacologicos } from "./campos.js";
 
 // Las columnas se enumeran en lugar de pedir "*" para que una columna nueva no empiece a viajar
 // sola hasta el cliente.
@@ -245,7 +246,8 @@ export async function listarMedicamentos({
  * de uno claro.
  *
  * @param {object} datos Campos en camelCase, los ids de CAMPOS_MEDICAMENTO, mas
- *   `principiosActivosIds` (arreglo de UUID, obligatorio: al menos uno).
+ *   `principiosActivosIds` (arreglo de UUID; al menos uno para un medicamento, ninguno para un
+ *   insumo, 00164).
  * @returns {Promise<{ medicamento: object|null, error: object|null }>}
  */
 export async function registrarMedicamento(datos = {}) {
@@ -253,7 +255,9 @@ export async function registrarMedicamento(datos = {}) {
     ? datos.principiosActivosIds
     : [];
 
-  if (principiosActivosIds.length === 0) {
+  // Solo un medicamento pide principio activo: un insumo no lo tiene (00164).
+  const esMedicamento = pideDatosFarmacologicos(datos.tipoArticulo);
+  if (esMedicamento && principiosActivosIds.length === 0) {
     return {
       medicamento: null,
       error: construirError(CODIGOS_DE_ERROR_DE_SUPABASE.CAMPO_REQUERIDO),
@@ -264,10 +268,10 @@ export async function registrarMedicamento(datos = {}) {
     const { data, error } = await obtenerSupabase()
       .rpc("fn_registrar_medicamento", {
         p_nombre: datos.nombre,
-        p_concentracion: datos.concentracion,
+        p_concentracion: esMedicamento ? datos.concentracion : null,
         p_presentacion_id: datos.presentacionId,
         p_marca: datos.marca,
-        p_principios_ids: principiosActivosIds,
+        p_principios_ids: esMedicamento ? principiosActivosIds : [],
         p_forma_farmaceutica: datos.formaFarmaceutica ?? null,
         p_es_pediatrico: datos.esPediatrico ?? false,
         p_tipo_articulo: datos.tipoArticulo ?? "medicamento",

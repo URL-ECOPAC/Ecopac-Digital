@@ -519,6 +519,11 @@ Pese al nombre, la tabla guarda **tambien los insumos** (gasas, jeringas, guante
 `presentacion` (enum `presentacion_medicamento`) **ya no existe**: la `00144` la reemplazo por
 `presentacion_id` y borro el enum.
 
+Desde la `00164` un insumo no tiene datos farmacologicos: `concentracion` admite NULL (el CHECK
+`chk_medicamentos_concentracion_de_medicamento` la sigue exigiendo a un medicamento) y
+`fn_registrar_medicamento()` pide principio activo solo a un medicamento; a un insumo no le guarda
+principio, concentracion, forma farmaceutica ni uso pediatrico aunque lleguen.
+
 ### `presentaciones` [00144]
 
 `nombre` (unico). Catalogo administrable de presentaciones -tableta, jarabe, capsula...-, que antes

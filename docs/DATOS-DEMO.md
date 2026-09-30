@@ -21,8 +21,9 @@ este seed corresponde a una persona o lugar real (regla de confidencialidad de
 - 2 proyectos sociales (issue #864): "Salud Rural Demo" `en curso` al 45 % y "Nutricion Infantil
   Demo" `planificado` al 10 %. Hasta ahora `proyectos` se quedaba vacia y el modulo se abria sin
   una sola fila para nadie.
-- 2 jornadas: una `finalizada` (hace 30 dias) y una `en curso` (hoy), **cada una colgando de un
-  proyecto distinto**. Es a proposito: desde la `00141` el personal de campo lee solo el proyecto
+- 3 jornadas: una `finalizada` (hace 30 dias), una `en curso` (hoy) y una `planificada` (en 20
+  dias, del mismo proyecto que la finalizada: es a donde se puede traspasar su sobrante). Las dos
+  primeras **cuelgan de un proyecto distinto cada una**. Es a proposito: desde la `00141` el personal de campo lee solo el proyecto
   de las jornadas a las que pertenece, y con un unico proyecto no se distingue "ve el suyo" de
   "ve todos". Con estos datos, Mario (medico) ve los dos -esta en el cuadro de turnos de una y es
   el responsable de la otra-, Miriam ve solo "Nutricion Infantil Demo", Victor (voluntario) solo
@@ -32,6 +33,18 @@ este seed corresponde a una persona o lugar real (regla de confidencialidad de
   medicamentos vencidos.
 - 7 movimientos de inventario cubriendo los tres estados: `pendiente` (poblando la bandeja
   de validacion), `aprobado` y `rechazado`.
+- 2 insumos del catalogo (guantes y jeringas), sin principio activo ni concentracion (`00164`).
+- 3 donantes y 4 donaciones, una de cada tipo: dinero (para la jornada en curso), medicamentos
+  (dos renglones, uno ya ingresado a inventario), insumos y servicios.
+- Presupuesto: la jornada en curso suma un aporte de la donacion de dinero; la planificada tiene
+  fondos propios. Gastos en los tres estados, uno de preparacion antes de la jornada, y los de la
+  jornada finalizada dejan un sobrante para liquidar desde la pestana Cierre.
+- Atencion clinica: triaje, consulta con diagnostico y receta en las dos primeras jornadas; en la
+  en curso ademas un paciente con triaje esperando consulta y uno recien llegado.
+- Equipo e hitos de los dos proyectos, e insumos previstos para la jornada planificada.
+
+Las alertas de vencimiento no se siembran: las genera la rutina programada
+(`supabase/functions/alertas-vencimiento`) sobre los lotes de arriba.
 
 ## Credenciales (SOLO DESARROLLO)
 
@@ -74,6 +87,32 @@ nacia sin ese catalogo y sin forma de cargarlo desde la aplicacion.
 Las tres comunidades de `seed-demo.sql` siguen colgando de los municipios 106, 401 y 1601, que
 ahora llegan por migracion, asi que el seed de demostracion no cambio.
 
+### Recargar `ecopac-dev` desde cero: `scripts/recargar-datos-demo.sh`
+
+Deja `ecopac-dev` con los datos de este seed y nada mas, **conservando las cuentas del equipo**:
+
+1. Vacia los datos de negocio (pacientes, jornadas, proyectos, donaciones, presupuesto, gastos,
+   inventario, notificaciones y auditoria). Conserva cuentas, permisos y catalogos. La lista esta
+   en `scripts/recargar-datos-demo/vaciar-datos-de-negocio.sql`.
+2. Corre `supabase/seed-demo.sql`.
+3. Deja una cuenta de administradora con el correo y la contrasena que se le pasan (si existe, le
+   fija la contrasena y el rol; si no, la crea).
+
+Todo en una sola transaccion: si algo falla, la base queda como estaba. Las credenciales llegan
+por variables de entorno y no quedan en el repositorio:
+
+```bash
+ECOPAC_DB_URL='postgresql://...'        # Project Settings > Database de ecopac-dev
+ECOPAC_ADMIN_CORREO='...'
+ECOPAC_ADMIN_CLAVE='...'
+ECOPAC_CONFIRMAR_VACIADO=si
+ECOPAC_REF_PRODUCCION='<ref de ecopac-prod>'  # opcional: si la URL lo contiene, se niega
+bash scripts/recargar-datos-demo.sh
+```
+
+Necesita `psql`. Los datos de negocio que se borran no vuelven: `ecopac-dev` no tiene respaldos
+(plan Free, `docs/CI-CD.md`). **Nunca contra `ecopac-prod`.**
+
 ### `ecopac-dev` (manual, una sola vez, con criterio del equipo)
 
 `supabase db push` (lo que aplica el CI/CD en push a `develop`) **nunca ejecuta seeds**, solo
@@ -96,8 +135,9 @@ ningun comando de este repositorio que lo intente: el job que aplica migraciones
 
 ## Fuera de alcance de este seed
 
-No incluye `proyectos`, `atenciones`/`consultas`/`recetas` ni `donantes`/`donaciones`: no estan
-en el alcance del issue #94. Se puede ampliar en un seed posterior si el equipo lo necesita.
+Desde la recarga completa ya incluye proyectos, atencion clinica, donaciones, presupuesto y
+gastos. Siguen fuera las notificaciones de correo y la configuracion de alertas, que salen de las
+migraciones y de la aplicacion.
 
 Las condiciones cronicas si estaban fuera de ese alcance y entraron despues, con la issue #122:
 la API expone un listado de pacientes cronicos por comunidad, y sin datos no habia forma de ver

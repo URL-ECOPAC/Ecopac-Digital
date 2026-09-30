@@ -17,6 +17,7 @@ import {
   puedeVerDonaciones,
 } from "./permisos.js";
 import { validarDonante } from "./validaciones.js";
+import { useCambiosEnTiempoReal } from "../hooks/useCambiosEnTiempoReal.js";
 
 /** Valor del filtro de tipo que no filtra nada. */
 export const TIPO_DONANTE_TODOS = "todos";
@@ -282,6 +283,9 @@ export function useDonantesPage({ usuarioRol } = {}) {
     },
     [puedeCorregir, usuarioRol, cargarDonantes],
   );
+
+  // Se recarga sola cuando cambian estas tablas (00163).
+  useCambiosEnTiempoReal(["donantes", "donaciones", "donacion_detalle"], cargarDonantes);
 
   return {
     permisos: { tieneAccesoLectura, puedeEscribir, puedeCorregir },
