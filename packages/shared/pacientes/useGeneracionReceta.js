@@ -69,6 +69,78 @@ export function renglonIncompleto(renglon = {}) {
 }
 
 /**
+ * Reparte la cantidad de cada renglon entre los lotes de su medicamento: primero el lote elegido
+ * y, si no alcanza, los siguientes en orden de vencimiento (los que vencen antes salen primero).
+ * Dos renglones del mismo medicamento no cuentan dos veces la misma existencia: lo que toma uno
+ * ya no esta para el siguiente.
+ *
+ * Asi una receta de 20 con un lote de 10 no se rechaza: salen 10 de ese lote y 10 del siguiente,
+ * y la pantalla lo dice.
+ *
+ * @param {object[]} renglones Con clave, medicamentoId, loteId, bodegaId y cantidadEntregada.
+ * @param {Record<string, object[]>} lotesPorMedicamento Lotes de consultarLotesDisponibles(), ya
+ *   ordenados por vencimiento.
+ * @returns {Record<string, { partes: { loteId: string, bodegaId: string|null,
+ *   numeroLote: string|null, cantidad: number }[], faltante: number, disponible: number }>} Por
+ *   clave de renglon. `faltante` es lo que no cubre ningun lote.
+ */
+export function repartirEntreLotes(renglones = [], lotesPorMedicamento = {}) {
+  const usado = new Map();
+  const claveDeLote = (lote) => `${lote.loteId}|${lote.bodegaId ?? ""}`;
+  const restante = (lote) =>
+    Math.max(0, (lote.cantidadDisponible ?? 0) - (usado.get(claveDeLote(lote)) ?? 0));
+
+  const repartos = {};
+  for (const renglon of renglones) {
+    const lotes = lotesPorMedicamento[renglon.medicamentoId] ?? [];
+    const elegido = lotes.find(
+      (lote) =>
+        lote.loteId === renglon.loteId &&
+        (renglon.bodegaId == null || lote.bodegaId === renglon.bodegaId),
+    );
+    const enOrden = elegido ? [elegido, ...lotes.filter((lote) => lote !== elegido)] : lotes;
+    const disponible = lotes.reduce((suma, lote) => suma + restante(lote), 0);
+
+    let porCubrir = Number(renglon.cantidadEntregada) || 0;
+    const partes = [];
+    for (const lote of enOrden) {
+      if (porCubrir <= 0) break;
+      const tomar = Math.min(porCubrir, restante(lote));
+      if (tomar <= 0) continue;
+      usado.set(claveDeLote(lote), (usado.get(claveDeLote(lote)) ?? 0) + tomar);
+      partes.push({
+        loteId: lote.loteId,
+        bodegaId: lote.bodegaId ?? null,
+        numeroLote: lote.numeroLote ?? null,
+        cantidad: tomar,
+      });
+      porCubrir -= tomar;
+    }
+
+    repartos[renglon.clave] = { partes, faltante: Math.max(0, porCubrir), disponible };
+  }
+  return repartos;
+}
+
+/**
+ * La nota que explica de que lotes sale un renglon, cuando no es solo el elegido.
+ *
+ * @param {{ partes: { numeroLote: string|null, cantidad: number }[] }} [reparto]
+ * @returns {string|null} `null` si todo sale de un solo lote.
+ */
+export function describirReparto(reparto) {
+  if (!reparto || reparto.partes.length < 2) return null;
+  const tramos = reparto.partes.map(
+    (parte) => `${parte.cantidad} del lote ${parte.numeroLote ?? "sin numero"}`,
+  );
+  const lista =
+    tramos.length === 2
+      ? tramos.join(" y ")
+      : `${tramos.slice(0, -1).join(", ")} y ${tramos[tramos.length - 1]}`;
+  return `El lote elegido no alcanza: se entregan ${lista}.`;
+}
+
+/**
  * Emision de una receta: busqueda en el catalogo con su disponibilidad, lotes por medicamento,
  * renglones y emision con `fn_generar_receta`, que descuenta el inventario en la misma transaccion.
  *
@@ -76,7 +148,8 @@ export function renglonIncompleto(renglon = {}) {
  * @param {string} opciones.consultaId Consulta a la que pertenece la receta.
  * @param {string} opciones.perfilId Medico que la emite.
  * @returns {object} `{ busqueda, setBusqueda, catalogo, cargandoCatalogo, lotesPorMedicamento,
- *   renglones, problemas, indicacionesGenerales, error, enviando, receta, agregarMedicamento, ... }`.
+ *   renglones, problemas, avisosDeReparto, indicacionesGenerales, error, enviando, receta,
+ *   agregarMedicamento, ... }`.
  */
 export function useGeneracionReceta({ consultaId, perfilId } = {}) {
   const [busqueda, setBusqueda] = useState("");
@@ -161,14 +234,35 @@ export function useGeneracionReceta({ consultaId, perfilId } = {}) {
     setRenglones((anteriores) => anteriores.filter((renglon) => renglon.clave !== clave));
   }, []);
 
+  const repartos = useMemo(
+    () => repartirEntreLotes(renglones, lotesPorMedicamento),
+    [renglones, lotesPorMedicamento],
+  );
+
   const problemas = useMemo(
     () =>
       renglones.reduce((acumulado, renglon) => {
-        const problema = renglonIncompleto(renglon);
+        const reparto = repartos[renglon.clave];
+        const problema =
+          renglonIncompleto(renglon) ??
+          (reparto?.faltante > 0
+            ? `Solo hay ${reparto.disponible} disponibles de este medicamento entre todos sus lotes.`
+            : null);
         if (problema) acumulado[renglon.clave] = problema;
         return acumulado;
       }, {}),
-    [renglones],
+    [renglones, repartos],
+  );
+
+  // La nota de cada renglon que sale de mas de un lote.
+  const avisosDeReparto = useMemo(
+    () =>
+      Object.fromEntries(
+        Object.entries(repartos)
+          .map(([clave, reparto]) => [clave, describirReparto(reparto)])
+          .filter(([, aviso]) => aviso),
+      ),
+    [repartos],
   );
 
   const guardar = useCallback(async () => {
@@ -194,17 +288,21 @@ export function useGeneracionReceta({ consultaId, perfilId } = {}) {
       consulta: consultaId,
       medico: perfilId,
       indicacionesGenerales: indicacionesGenerales || null,
-      detalle: renglones.map((renglon) => ({
-        medicamento: renglon.medicamentoId,
-        loteId: renglon.loteId,
-        // La bodega la exige la funcion cuando el renglon trae lote: existencias esta
-        // particionada por (lote, bodega) desde la 00047.
-        bodegaId: renglon.bodegaId,
-        dosis: renglon.dosis,
-        frecuencia: renglon.frecuencia,
-        duracion: renglon.duracion,
-        cantidadEntregada: Number(renglon.cantidadEntregada),
-      })),
+      // Un renglon por lote: receta_detalle guarda un lote por fila, asi que lo que se reparte
+      // entre varios lotes (repartirEntreLotes) sale como varias filas con la misma indicacion.
+      detalle: renglones.flatMap((renglon) =>
+        repartos[renglon.clave].partes.map((parte) => ({
+          medicamento: renglon.medicamentoId,
+          loteId: parte.loteId,
+          // La bodega la exige la funcion cuando el renglon trae lote: existencias esta
+          // particionada por (lote, bodega) desde la 00047.
+          bodegaId: parte.bodegaId,
+          dosis: renglon.dosis,
+          frecuencia: renglon.frecuencia,
+          duracion: renglon.duracion,
+          cantidadEntregada: parte.cantidad,
+        })),
+      ),
     });
 
     setEnviando(false);
@@ -216,7 +314,7 @@ export function useGeneracionReceta({ consultaId, perfilId } = {}) {
 
     setReceta(resultado.receta);
     return { ok: true, receta: resultado.receta };
-  }, [renglones, problemas, consultaId, perfilId, indicacionesGenerales]);
+  }, [renglones, repartos, problemas, consultaId, perfilId, indicacionesGenerales]);
 
   return {
     busqueda,
@@ -226,6 +324,7 @@ export function useGeneracionReceta({ consultaId, perfilId } = {}) {
     lotesPorMedicamento,
     renglones,
     problemas,
+    avisosDeReparto,
     indicacionesGenerales,
     setIndicacionesGenerales,
     error,
