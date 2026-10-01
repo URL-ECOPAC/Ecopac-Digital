@@ -103,20 +103,28 @@ function ConstanciaDonacionEnrutada() {
   const desdeElHistorial = String(state?.donacion?.id) === id ? state.donacion : null;
 
   const [donacion, setDonacion] = useState(desdeElHistorial);
+  // Mientras se consulta, la pagina muestra la carga: sin esto, "No se ha seleccionado ninguna
+  // donacion" se asomaba un instante al abrir la constancia desde el resumen, que no manda la fila.
+  const [buscando, setBuscando] = useState(!desdeElHistorial);
 
   useEffect(() => {
     if (desdeElHistorial || !id || !perfil?.rol) return undefined;
 
     let vigente = true;
+    setBuscando(true);
     obtenerDonacion(id, { rolUsuario: perfil.rol }).then(({ datos }) => {
-      if (vigente) setDonacion(datos);
+      if (!vigente) return;
+      setDonacion(datos);
+      setBuscando(false);
     });
     return () => {
       vigente = false;
     };
   }, [id, perfil?.rol, desdeElHistorial]);
 
-  return <ConstanciaDonacionPage usuarioRol={perfil?.rol} donacion={donacion} />;
+  return (
+    <ConstanciaDonacionPage usuarioRol={perfil?.rol} donacion={donacion} cargando={buscando} />
+  );
 }
 
 // useSeguimientoProyecto ahora resuelve el :id el mismo (issue #756): antes solo recibia lo que

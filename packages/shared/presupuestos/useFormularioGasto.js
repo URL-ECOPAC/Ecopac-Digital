@@ -23,11 +23,12 @@ function aOpciones(filas, etiquetaDe) {
 /**
  * @param {object|null} gasto Gasto a editar; `null` para uno nuevo.
  * @param {string} [estadoInicial] Estado de un gasto nuevo; por defecto `pendiente`.
+ * @param {string|null} [jornadaId] Jornada de un gasto nuevo, si ya se sabe cual es.
  * @returns {object} Valores del formulario, con `""` donde no hay dato.
  */
-export function valoresInicialesDeGasto(gasto, estadoInicial) {
+export function valoresInicialesDeGasto(gasto, estadoInicial, jornadaId = null) {
   return {
-    jornada_id: gasto?.jornada_id ?? "",
+    jornada_id: gasto?.jornada_id ?? jornadaId ?? "",
     concepto: gasto?.concepto ?? "",
     categoria: gasto?.categoria ?? "",
     monto: gasto?.monto ?? "",
@@ -55,14 +56,25 @@ function extraerValor(valor) {
  * @param {string} [opciones.usuarioId] Quien registra.
  * @param {string} [opciones.estadoInicial] Estado de un gasto nuevo.
  * @param {string} [opciones.rol] Rol de la sesion, para ofrecer o no crear una categoria.
+ * @param {string|null} [opciones.jornadaId] Jornada fija de un gasto nuevo: el que se registra
+ *   desde el detalle de una jornada ya sabe de cual es.
  * @returns {object} `{ valores, errores, error, enviando, esEdicion, sucio, catalogos, esExcedente,
  *   mensajeExcedente, puedeCrearCategoria, crearCategoria, creandoCategoria, errorCategoria,
- *   limpiarErrorCategoria, ... }`.
+ *   limpiarErrorCategoria, jornadaFija, ... }`.
  */
-export function useFormularioGasto({ gasto, usuarioId, estadoInicial, rol } = {}) {
+export function useFormularioGasto({
+  gasto,
+  usuarioId,
+  estadoInicial,
+  rol,
+  jornadaId = null,
+} = {}) {
   const gastoId = gasto?.id ?? null;
   const esEdicion = Boolean(gastoId);
-  const [valores, setValores] = useState(() => valoresInicialesDeGasto(gasto, estadoInicial));
+  const jornadaFija = !esEdicion && Boolean(jornadaId);
+  const [valores, setValores] = useState(() =>
+    valoresInicialesDeGasto(gasto, estadoInicial, jornadaId),
+  );
   const [errores, setErrores] = useState([]);
   const [error, setError] = useState(null);
   const [enviando, setEnviando] = useState(false);
@@ -163,12 +175,12 @@ export function useFormularioGasto({ gasto, usuarioId, estadoInicial, rol } = {}
   }, []);
 
   const cancelar = useCallback(() => {
-    setValores(valoresInicialesDeGasto(gasto, estadoInicial));
+    setValores(valoresInicialesDeGasto(gasto, estadoInicial, jornadaId));
     setErrores([]);
     setError(null);
     setEnviando(false);
     setSucio(false);
-  }, [gastoId, estadoInicial]);
+  }, [gastoId, estadoInicial, jornadaId]);
 
   const enviar = useCallback(async () => {
     const resultado = validarGasto(valores, contextoDeJornada);
@@ -200,10 +212,10 @@ export function useFormularioGasto({ gasto, usuarioId, estadoInicial, rol } = {}
 
     setSucio(false);
     if (!esEdicion) {
-      setValores(valoresInicialesDeGasto(null, estadoInicial));
+      setValores(valoresInicialesDeGasto(null, estadoInicial, jornadaId));
     }
     return { ok: true, gasto: respuesta.gasto };
-  }, [valores, contextoDeJornada, esEdicion, gastoId, usuarioId, estadoInicial]);
+  }, [valores, contextoDeJornada, esEdicion, gastoId, usuarioId, estadoInicial, jornadaId]);
 
   /**
    * Agrega una categoria al catalogo (00158) y la deja elegida. Antes "Crear categoria nueva"
@@ -251,6 +263,8 @@ export function useFormularioGasto({ gasto, usuarioId, estadoInicial, rol } = {}
     },
     esExcedente: resultadoValidacion.esExcedente,
     mensajeExcedente: resultadoValidacion.mensajeExcedente,
+    // La jornada viene dada y no se cambia (alta desde el detalle de la jornada).
+    jornadaFija,
     puedeCrearCategoria: puedeCrearCategoriaDeGasto(rol),
     crearCategoria,
     creandoCategoria,

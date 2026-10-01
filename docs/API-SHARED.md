@@ -464,7 +464,12 @@ donaciones de donde puede salir.
 `combinarProyectosConPresupuesto`, `totalizar`.
 
 **Hooks**: `useEjecucionPresupuestal`, `useFormularioGasto`, `usePendientesAprobacionGastos`,
-`useDetalleProyectoPresupuesto`, `useSobranteDeJornada`.
+`useDetalleProyectoPresupuesto`, `useSobranteDeJornada`, `useGastosDeJornada`.
+
+`useGastosDeJornada` es la pestana Gastos del detalle de una jornada: sus gastos
+(`COLUMNAS_GASTO_DE_JORNADA`) y `resumirGastosDeJornada`, que da presupuesto, aprobado, pendiente y
+disponible (lo asignado menos lo aprobado y lo pendiente, como lo cuenta la 00159). El alta desde
+ahi usa `useFormularioGasto({ jornadaId })`, que deja la jornada fija (`jornadaFija`).
 
 Los totales salen de las tres funciones SQL de la migracion `00040`. No hay columna de total: un
 total guardado se desincroniza.

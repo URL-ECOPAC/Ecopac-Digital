@@ -99,6 +99,27 @@ describe("ModalGasto", () => {
     expect(screen.queryByRole("button", { name: /Crear categoría nueva/ })).not.toBeInTheDocument();
   });
 
+  it("con la jornada fija (alta desde el detalle de la jornada), la jornada no se cambia", () => {
+    mockEstado = estado({
+      jornadaFija: true,
+      valores: { ...estado().valores, jornada_id: "j-1" },
+      catalogos: { ...estado().catalogos, jornadas: [{ value: "j-1", label: "Jornada Uno" }] },
+    });
+    pantalla();
+
+    expect(screen.getByLabelText("Jornada")).toBeDisabled();
+    expect(screen.getByLabelText("Jornada")).toHaveValue("j-1");
+  });
+
+  it("sin jornada fija, la jornada se elige", () => {
+    mockEstado = estado({
+      catalogos: { ...estado().catalogos, jornadas: [{ value: "j-1", label: "Jornada Uno" }] },
+    });
+    pantalla();
+
+    expect(screen.getByLabelText("Jornada")).toBeEnabled();
+  });
+
   it("un gasto que pasa el presupuesto muestra el aviso como error", () => {
     mockEstado = estado({
       esExcedente: true,

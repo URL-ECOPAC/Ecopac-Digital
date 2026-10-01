@@ -27,4 +27,5 @@ export * from "./aprobacionGastosApi.js";
 export * from "./useEjecucionPresupuestal.js";
 export * from "./useDetalleProyectoPresupuesto.js";
 export * from "./useFormularioGasto.js";
+export * from "./useGastosDeJornada.js";
 export * from "./usePendientesAprobacionGastos.js";

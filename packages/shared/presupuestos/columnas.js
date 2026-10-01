@@ -70,6 +70,14 @@ export const COLUMNAS_GASTO = [
   { id: "estado", label: "Estado", tipo: TIPOS_DE_PRESENTACION.CHIP },
 ];
 
+/**
+ * Gastos dentro del detalle de una jornada: las de COLUMNAS_GASTO menos "Proyecto" y "Jornada",
+ * que ahi son siempre los mismos.
+ */
+export const COLUMNAS_GASTO_DE_JORNADA = COLUMNAS_GASTO.filter(
+  (columna) => columna.id !== "proyecto_id" && columna.id !== "jornada_id",
+);
+
 /** Datos de la ficha de un gasto, en el orden en que el diseno los presenta. */
 export const CAMPOS_FICHA_GASTO = [
   { id: "concepto", label: "Concepto", tipo: TIPOS_DE_PRESENTACION.TEXTO, principal: true },
