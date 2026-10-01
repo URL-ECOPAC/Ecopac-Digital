@@ -510,6 +510,7 @@ reabrir una jornada finalizada **solo al administrador**. Reflejo en el cliente:
 | `gastos`                    | C R **A**     | —                                | C R si participa | C R si participa   | `00052` + `00141` + `00148` (lo leen tambien quien tiene `presupuestos.registrar` o `presupuestos.aprobar`: antes aprobaba un gasto que no podia ver). El gasto del personal de campo entra `pendiente` y pasa por la aprobacion |
 | `jornada_presupuesto_origen` | C R U D      | —                                | —                | —                  | `00135` + `00141`. Escribir admite tambien `tiene_permiso('jornadas.gestionar')`, igual que actualizar la jornada; su lectura tambien, por el `INSERT ... RETURNING`. `00149` le suma `fuente_id` (solo con origen `aporte_externo`, por CHECK) |
 | `fuentes_de_presupuesto`     | C R          | —                                | —                | —                  | `00149`. Quien aporta de fuera al presupuesto de una jornada. La lee quien lee los aportes y la crea quien los registra (administradora o `jornadas.gestionar`). Sin U ni D: una fuente usada es historia del presupuesto. Auditada |
+| `movimientos_de_caja`        | R            | —                                | —                | —                  | `00168`. El libro de la caja. La lee quien lee los aportes (administradora, `jornadas.gestionar`, o Jornadas o Presupuestos abiertos por la matriz). **Sin escritura para nadie**: la entrada la escribe `fn_liquidar_sobrante_de_jornada` y la salida un trigger de `jornada_presupuesto_origen`, los dos `SECURITY DEFINER` |
 | `categorias_de_gasto`        | C R          | R                                | R                | R                  | `00158`. El catalogo de categorias de gasto (antes el enum `categoria_gasto`). La lee toda persona activa (`rol_actual() IS NOT NULL`); la crea la administradora o quien tenga `presupuestos.registrar` o `presupuestos.aprobar`. Sin U ni D. Auditada |
 
 **Un proyecto cancelado no lo modifica nadie (`00154`)**, ni la administradora: lo que de la tabla
@@ -615,6 +616,16 @@ gastos pendientes. `jornada_presupuesto_origen.devuelto` y `traspasado_desde` so
 funcion (`fn_impedir_devuelto_a_mano`), y un aporte ya liquidado no se corrige ni se quita. Reflejo
 en el cliente: `useSobranteDeJornada()` en `presupuestos/`. Lo afirma
 `presupuesto_gastos_y_sobrante.sql`.
+
+**La caja (`00167`, `00168`).** Lo devuelto de un aporte que no es de una donacion -fondos propios,
+aporte externo, sin clasificar o la propia caja- entra a la caja (`movimientos_de_caja`), y la caja
+es un origen mas de un aporte (`origen = 'caja'`). Registrar ese aporte es la misma politica de
+INSERT de `jornada_presupuesto_origen`; `fn_validar_aporte_de_caja` (DEFINER) rechaza con `23514`
+sacar mas de lo que hay, y `fn_registrar_salida_de_caja` (DEFINER) anota la salida. Quitar el
+aporte borra su salida (CASCADE) y el dinero vuelve a la caja. `saldo_de_caja()` (DEFINER) devuelve
+el saldo con la misma guarda de lectura que la tabla, y NULL a quien no la ve. Reflejo en el
+cliente: `useCajaDePresupuesto()` y la pestana Caja de Presupuestos. Lo afirma
+`caja_de_sobrantes.sql`.
 
 `gastos` es el otro circuito de aprobacion: quien participa en la jornada registra en estado
 `pendiente` y a su nombre; aprobar es un UPDATE que exige `es_administrador()` o

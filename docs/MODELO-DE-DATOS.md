@@ -669,7 +669,8 @@ incidencia salvo "sin stock", que puede volver a ocurrir despues de reponer.
 ### `jornada_presupuesto_origen` [00135]
 
 De donde viene cada parte del presupuesto de una jornada (issue #840): `origen`
-(`origen_de_presupuesto`: `donacion`, `fondos_propios`, `aporte_externo`, `sin_clasificar`),
+(`origen_de_presupuesto`: `donacion`, `fondos_propios`, `aporte_externo`, `sin_clasificar` y,
+desde la 00167, `caja`),
 `donacion_id` (obligatoria si y solo si el origen es una donacion; tiene que ser de dinero y estar
 registrada), `monto` (> 0), `descripcion`, `registrado_por` (lo fija `auth.uid()`).
 `jornadas.presupuesto_asignado` es la suma de estas filas y la mantiene un trigger; un UPDATE
@@ -689,6 +690,19 @@ del mismo origen con `traspasado_desde` apuntando al que lo cedio. Lo que cuenta
 de cada aporte uso la jornada lo dice `sobrante_de_jornada()`: primero donaciones y aportes
 externos, al final fondos propios. Quitar o rebajar un aporte por debajo de lo comprometido en
 gastos se rechaza (`00159`), y un aporte ya liquidado no se toca.
+
+### `movimientos_de_caja` [00168]
+
+El libro de la caja, donde queda el sobrante que no vuelve a una donacion: `tipo` (`entrada` o
+`salida`, CHECK), `monto` (> 0), `aporte_id` (en una entrada, el aporte cuyo sobrante se devolvio;
+en una salida, el aporte con origen `caja`; CASCADE), `jornada_id`, `descripcion`,
+`registrado_por`, `created_at`. Una entrada la escribe `fn_liquidar_sobrante_de_jornada` al
+devolver el sobrante de un aporte que no es de una donacion; una salida, el trigger
+`fn_registrar_salida_de_caja` al registrar un aporte con origen `caja` (una sola por aporte, indice
+`uq_movimientos_de_caja_salida_por_aporte`). Un traspaso entre jornadas no pasa por la caja. El
+saldo es entradas menos salidas (`saldo_de_caja()`), y un aporte de la caja no puede pasar de el
+(`fn_validar_aporte_de_caja`). Lo que se habia devuelto antes de la 00168 entro como entrada con la
+fecha de su liquidacion.
 
 ### `fuentes_de_presupuesto` [00149]
 
@@ -1033,9 +1047,9 @@ Politicas por tabla (numero de politicas vigentes, sacado de `pg_policies`):
 | Pol. | Tablas |
 | ---- | ------ |
 | 4    | `jornada_insumos`, `jornada_personal`, `jornada_presupuesto_origen`, `padecimientos_cronicos`, `presentaciones`, `principios_activos`, `proyecto_hitos`, `proyecto_insumos`, `proyecto_personal`, `usuario_permiso` |
-| 3    | `atenciones`, `bodegas`, `comunidades`, `condiciones_cronicas`, `consulta_diagnostico`, `consultas`, `diagnosticos`, `donacion_detalle`, `donaciones`, `donantes`, `existencias`, `expedientes`, `gastos`, `jornadas`, `lotes`, `medicamentos`, `movimientos_inventario`, `notificaciones`, `pacientes`, `perfil_especialidad`, `perfiles`, `proveedores`, `proyectos`, `recetas`, `rol_modulo`, `triajes` |
-| 2    | `alertas_caducidad`, `fuentes_de_presupuesto`, `medicamento_principio`, `proyecto_seguimiento`, `receta_detalle` |
-| 1    | `alerta_caducidad_detalle`, `departamentos`, `eventos_auditoria`, `fusiones_pacientes`, `idiomas`, `jornada_estado_historial`, `municipios`, `permisos`, `proyecto_estado_historial`, `rol_permiso` |
+| 3    | `atenciones`, `bodegas`, `comunidades`, `condiciones_cronicas`, `consulta_diagnostico`, `consultas`, `diagnosticos`, `donacion_detalle`, `donaciones`, `donantes`, `existencias`, `expedientes`, `gastos`, `jornadas`, `lotes`, `medicamento_principio`, `medicamentos`, `movimientos_inventario`, `notificaciones`, `pacientes`, `perfil_especialidad`, `perfiles`, `proveedores`, `proyectos`, `recetas`, `rol_modulo`, `triajes` |
+| 2    | `alertas_caducidad`, `fuentes_de_presupuesto`, `proyecto_seguimiento`, `receta_detalle` |
+| 1    | `alerta_caducidad_detalle`, `departamentos`, `eventos_auditoria`, `fusiones_pacientes`, `idiomas`, `jornada_estado_historial`, `movimientos_de_caja`, `municipios`, `permisos`, `proyecto_estado_historial`, `rol_permiso` |
 | 0    | `limites_de_uso`: RLS activo y ninguna politica, a proposito. Solo la tocan funciones `SECURITY DEFINER` |
 
 Una tabla con **una** politica es de solo lectura desde el cliente: la escribe un trigger o una

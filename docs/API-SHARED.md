@@ -339,7 +339,7 @@ dicen que campos solo tiene un medicamento; `registrarMedicamento` pide principi
 un medicamento. `useRegistroIngreso` expone `renglonesDonacion` (el estado de cada renglon de una
 donacion en el ingreso) y no deja guardar mientras falte alguno.
 
-**Escrituras**: `registrarMedicamento`, `actualizarMedicamento`, `desactivarMedicamento`,
+**Escrituras**: `registrarMedicamento`, `actualizarMedicamento`, `cambiarPrincipioDeMedicamento` (00166), `desactivarMedicamento`,
 `registrarIngreso`, `registrarSalida`, `editarMovimiento`, `aprobarMovimiento`,
 `rechazarMovimiento`, `aprobarMovimientosEnLote`, `registrarBodega`, `actualizarBodega`,
 `registrarProveedor`, `actualizarProveedor`, `registrarPrincipioActivo`,
@@ -465,6 +465,12 @@ donaciones de donde puede salir.
 
 **Hooks**: `useEjecucionPresupuestal`, `useFormularioGasto`, `usePendientesAprobacionGastos`,
 `useDetalleProyectoPresupuesto`, `useSobranteDeJornada`, `useGastosDeJornada`.
+
+**Caja** (`caja.api.js`, 00168): `obtenerSaldoDeCaja`, `listarMovimientosDeCaja`,
+`aMovimientoDeCaja`, `TIPOS_DE_MOVIMIENTO_DE_CAJA`; `useCajaDePresupuesto` es la pestana Caja de
+Presupuestos (`COLUMNAS_MOVIMIENTO_CAJA`). El sobrante que no vuelve a una donacion entra a la caja,
+y la caja es un origen de aporte (`ORIGENES_DE_PRESUPUESTO.CAJA`): `useOrigenesDePresupuesto`
+devuelve `saldoDeCaja` y `validarOrigenDePresupuesto` no deja pasarse de el.
 
 `useGastosDeJornada` es la pestana Gastos del detalle de una jornada: sus gastos
 (`COLUMNAS_GASTO_DE_JORNADA`) y `resumirGastosDeJornada`, que da presupuesto, aprobado, pendiente y

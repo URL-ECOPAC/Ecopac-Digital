@@ -332,9 +332,9 @@
  */
 
 /**
- * Enum `origen_de_presupuesto` (00135).
+ * Enum `origen_de_presupuesto` (00135; 'caja' desde la 00167).
  *
- * @typedef {'donacion'|'fondos_propios'|'aporte_externo'|'sin_clasificar'} OrigenDePresupuesto
+ * @typedef {'donacion'|'fondos_propios'|'aporte_externo'|'sin_clasificar'|'caja'} OrigenDePresupuesto
  */
 
 /**
@@ -356,6 +356,23 @@
  * @property {string|null} registradoPor
  * @property {string} createdAt
  * @property {string} updatedAt
+ */
+
+/**
+ * Fila de `movimientos_de_caja` (00168): entra el sobrante de una jornada que no vuelve a una
+ * donacion y sale lo que se asigna a una jornada con origen 'caja'. Solo la escriben funciones de
+ * la base.
+ *
+ * @typedef {object} MovimientoDeCaja
+ * @property {string} id
+ * @property {'entrada'|'salida'} tipo
+ * @property {number} monto
+ * @property {string} aporteId En una entrada, el aporte cuyo sobrante se devolvio; en una salida,
+ *   el aporte con origen caja.
+ * @property {string} jornadaId
+ * @property {string|null} descripcion
+ * @property {string|null} registradoPor
+ * @property {string} createdAt
  */
 
 /**

@@ -262,6 +262,8 @@ export const ORIGENES_DE_PRESUPUESTO = Object.freeze({
   FONDOS_PROPIOS: "fondos_propios",
   APORTE_EXTERNO: "aporte_externo",
   SIN_CLASIFICAR: "sin_clasificar",
+  // El sobrante que no vuelve a una donacion (00167, 00168).
+  CAJA: "caja",
 });
 
 export const ETIQUETAS_ORIGEN_PRESUPUESTO = Object.freeze({
@@ -269,6 +271,7 @@ export const ETIQUETAS_ORIGEN_PRESUPUESTO = Object.freeze({
   [ORIGENES_DE_PRESUPUESTO.FONDOS_PROPIOS]: "Fondos propios",
   [ORIGENES_DE_PRESUPUESTO.APORTE_EXTERNO]: "Aporte externo",
   [ORIGENES_DE_PRESUPUESTO.SIN_CLASIFICAR]: "Sin clasificar",
+  [ORIGENES_DE_PRESUPUESTO.CAJA]: "Caja",
 });
 
 /** `estado_donacion` (00022_donantes_donaciones.sql). */

@@ -58,6 +58,20 @@ describe("validarOrigenDePresupuesto", () => {
       ),
     ).toEqual({});
   });
+
+  it("de la caja no se saca mas de lo que hay (00168)", () => {
+    const errores = validarOrigenDePresupuesto(
+      { origen: ORIGENES_DE_PRESUPUESTO.CAJA, monto: 501 },
+      { saldoDeCaja: 500 },
+    );
+    expect(errores.monto).toMatch(/500/);
+    expect(
+      validarOrigenDePresupuesto(
+        { origen: ORIGENES_DE_PRESUPUESTO.CAJA, monto: 500 },
+        { saldoDeCaja: 500 },
+      ),
+    ).toEqual({});
+  });
 });
 
 // Fijo, y no el reloj real: `hoy` entra por parametro en validarGasto() (issue #725) para que

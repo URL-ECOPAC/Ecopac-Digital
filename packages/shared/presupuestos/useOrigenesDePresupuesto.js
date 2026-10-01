@@ -22,6 +22,7 @@ import {
   quitarOrigenDePresupuesto,
   registrarOrigenDePresupuesto,
 } from "./origenes.api.js";
+import { obtenerSaldoDeCaja } from "./caja.api.js";
 import { permisosDeOrigenDePresupuesto } from "./permisos.js";
 import { validarOrigenDePresupuesto } from "./validaciones.js";
 import { useCambiosEnTiempoReal } from "../hooks/useCambiosEnTiempoReal.js";
@@ -53,7 +54,7 @@ export function opcionDeDonacionConSaldo(donacion) {
  *   alCambiar?: () => void }} opciones `alCambiar` avisa a la pantalla que el total de la
  *   jornada cambio, para que lo vuelva a leer.
  *
- * @returns {object} Con: permisos, origenes, total, cargando, error, recargar, campos, catalogos, crearFuente, creandoFuente, errorFuente, limpiarErrorFuente, valores, setCampo, errores, errorAlGuardar, guardando, registrar, quitar, quitandoId.
+ * @returns {object} Con: permisos, origenes, total, saldoDeCaja, cargando, error, recargar, campos, catalogos, crearFuente, creandoFuente, errorFuente, limpiarErrorFuente, valores, setCampo, errores, errorAlGuardar, guardando, registrar, quitar, quitandoId.
  */
 export function useOrigenesDePresupuesto({ jornadaId, proyectoId = null, rol, alCambiar } = {}) {
   const permisos = permisosDeOrigenDePresupuesto(rol);
@@ -61,6 +62,7 @@ export function useOrigenesDePresupuesto({ jornadaId, proyectoId = null, rol, al
   const [origenes, setOrigenes] = useState([]);
   const [donaciones, setDonaciones] = useState([]);
   const [fuentes, setFuentes] = useState([]);
+  const [saldoDeCaja, setSaldoDeCaja] = useState(null);
   const [creandoFuente, setCreandoFuente] = useState(false);
   const [errorFuente, setErrorFuente] = useState(null);
   const [cargando, setCargando] = useState(true);
@@ -78,7 +80,7 @@ export function useOrigenesDePresupuesto({ jornadaId, proyectoId = null, rol, al
       return;
     }
     setCargando(true);
-    const [lista, conSaldo, catalogoDeFuentes] = await Promise.all([
+    const [lista, conSaldo, catalogoDeFuentes, caja] = await Promise.all([
       listarOrigenesDePresupuesto(jornadaId),
       permisos.puedeGestionar
         ? listarDonacionesConSaldo({ proyectoId, jornadaId })
@@ -86,11 +88,16 @@ export function useOrigenesDePresupuesto({ jornadaId, proyectoId = null, rol, al
       permisos.puedeGestionar
         ? listarFuentesDePresupuesto()
         : Promise.resolve({ fuentes: [], error: null }),
+      // Lo que hay en la caja (00168), para ofrecerla como origen sin pasarse.
+      permisos.puedeGestionar
+        ? obtenerSaldoDeCaja()
+        : Promise.resolve({ saldo: null, error: null }),
     ]);
     setOrigenes(lista.origenes);
     setDonaciones(conSaldo.donaciones);
     setFuentes(catalogoDeFuentes.fuentes);
-    setError(lista.error ?? conSaldo.error ?? catalogoDeFuentes.error);
+    setSaldoDeCaja(caja.saldo);
+    setError(lista.error ?? conSaldo.error ?? catalogoDeFuentes.error ?? caja.error);
     setCargando(false);
   }, [jornadaId, proyectoId, permisos.puedeVer, permisos.puedeGestionar]);
 
@@ -128,6 +135,7 @@ export function useOrigenesDePresupuesto({ jornadaId, proyectoId = null, rol, al
   const registrar = useCallback(async () => {
     const erroresDeValidacion = validarOrigenDePresupuesto(valores, {
       disponibleDeDonacion: donacionElegida?.disponible ?? null,
+      saldoDeCaja,
     });
     if (Object.keys(erroresDeValidacion).length > 0) {
       setErrores(erroresDeValidacion);
@@ -149,7 +157,7 @@ export function useOrigenesDePresupuesto({ jornadaId, proyectoId = null, rol, al
     await cargar();
     alCambiar?.();
     return true;
-  }, [valores, donacionElegida, jornadaId, cargar, alCambiar]);
+  }, [valores, donacionElegida, saldoDeCaja, jornadaId, cargar, alCambiar]);
 
   const quitar = useCallback(
     async (origenId) => {
@@ -207,12 +215,17 @@ export function useOrigenesDePresupuesto({ jornadaId, proyectoId = null, rol, al
   );
 
   // Se recarga sola cuando cambian estas tablas (00163).
-  useCambiosEnTiempoReal(["jornada_presupuesto_origen", "donaciones", "donacion_detalle"], cargar);
+  useCambiosEnTiempoReal(
+    ["jornada_presupuesto_origen", "donaciones", "donacion_detalle", "movimientos_de_caja"],
+    cargar,
+  );
 
   return {
     permisos,
     origenes,
     total,
+    // Lo que hay en la caja; null si no se pudo leer o el rol no gestiona aportes.
+    saldoDeCaja,
     cargando,
     error,
     recargar: cargar,

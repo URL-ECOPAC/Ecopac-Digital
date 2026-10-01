@@ -15,6 +15,8 @@
 
 export * from "./api.js";
 export * from "./origenes.api.js";
+export * from "./caja.api.js";
+export * from "./useCajaDePresupuesto.js";
 export * from "./useOrigenesDePresupuesto.js";
 export * from "./sobrante.api.js";
 export * from "./useSobranteDeJornada.js";

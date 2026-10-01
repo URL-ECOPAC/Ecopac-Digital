@@ -44,6 +44,15 @@ export const COLUMNAS_ORIGEN_PRESUPUESTO = [
   { id: "createdAt", label: "Fecha", tipo: TIPOS_DE_PRESENTACION.FECHA },
 ];
 
+/** Movimientos de la caja (00168); campos ya resueltos por aMovimientoDeCaja() (caja.api.js). */
+export const COLUMNAS_MOVIMIENTO_CAJA = [
+  { id: "createdAt", label: "Fecha", tipo: TIPOS_DE_PRESENTACION.FECHA },
+  { id: "tipoEtiqueta", label: "Movimiento", tipo: TIPOS_DE_PRESENTACION.TEXTO, principal: true },
+  { id: "descripcion", label: "Detalle", tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  { id: "importe", label: "Monto", tipo: TIPOS_DE_PRESENTACION.MONEDA },
+  { id: "registradoPorNombre", label: "Registrado por", tipo: TIPOS_DE_PRESENTACION.TEXTO },
+];
+
 export const COLUMNAS_GASTO = [
   { id: "concepto", label: "Concepto", tipo: TIPOS_DE_PRESENTACION.TEXTO, principal: true },
   { id: "categoria", label: "Categoría", tipo: TIPOS_DE_PRESENTACION.TEXTO },
