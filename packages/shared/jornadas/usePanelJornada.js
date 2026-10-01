@@ -11,6 +11,7 @@ import { cerrarAtencion, contarPacientesDeJornada } from "../atenciones/api.js";
 import { puedeCerrarAtencion } from "../atenciones/permisos.js";
 import { contarConsultasDeJornada } from "../pacientes/consultas.api.js";
 import { contarRecetasDeJornada } from "../pacientes/recetas.api.js";
+import { useCambiosEnTiempoReal } from "../hooks/useCambiosEnTiempoReal.js";
 
 const ESTADO_INICIAL = {
   pacientesRegistrados: 0,
@@ -91,6 +92,9 @@ export function usePanelJornada({ jornadaId, rol } = {}) {
     const { atencion, error } = await cerrarAtencion(atencionId, motivo);
     return { ok: atencion !== null, error };
   }, []);
+
+  // Se recarga sola cuando cambian estas tablas (00163).
+  useCambiosEnTiempoReal(["jornadas", "atenciones", "triajes", "consultas"], cargar);
 
   return {
     pacientesRegistrados: estado.pacientesRegistrados,

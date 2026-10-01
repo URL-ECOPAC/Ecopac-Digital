@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { contarJornadasPorPerfil, listarCatalogoEspecialidades, listarUsuarios } from "./api.js";
 import { ESTADOS_USUARIO, OPCIONES_ROL } from "./campos.js";
 import { FILTROS_USUARIO_VACIOS, hayFiltrosDeUsuario } from "./filtros.js";
+import { useCambiosEnTiempoReal } from "../hooks/useCambiosEnTiempoReal.js";
 
 export const USUARIOS_POR_PAGINA = 20;
 
@@ -141,6 +142,9 @@ export function useUsuariosListado({ porPagina = USUARIOS_POR_PAGINA, rol } = {}
   );
 
   const paginas = calcularPaginas(total, porPagina);
+
+  // Se recarga sola cuando cambian estas tablas (00163).
+  useCambiosEnTiempoReal(["perfiles"], cargar);
 
   return {
     filas,

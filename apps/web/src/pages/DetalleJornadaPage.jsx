@@ -47,6 +47,7 @@ import NotFoundPage from "./NotFoundPage";
 import InsumosDeJornada from "./InsumosDeJornada";
 import OrigenesDePresupuesto from "./OrigenesDePresupuesto";
 import SobranteDeJornada from "./SobranteDeJornada";
+import { imprimirCuandoEsteListo } from "../impresion";
 
 const PESTANIAS = [
   { id: "resumen", label: "Resumen" },
@@ -154,11 +155,12 @@ export default function DetalleJornadaPage() {
 
     const limpiar = () => setAImprimir(false);
     window.addEventListener("afterprint", limpiar);
-    const cuadro = window.requestAnimationFrame(() => window.print());
+    // Espera al logo: impreso un fotograma despues, el papel salia sin el.
+    const cancelarImpresion = imprimirCuandoEsteListo();
 
     return () => {
       window.removeEventListener("afterprint", limpiar);
-      window.cancelAnimationFrame(cuadro);
+      cancelarImpresion();
     };
   }, [aImprimir]);
 

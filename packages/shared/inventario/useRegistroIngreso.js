@@ -17,6 +17,26 @@ const ITEM_VACIO = {
 };
 
 /**
+ * Los renglones de una donacion con su estado en el ingreso: `agregado` (ya esta en la lista),
+ * `en captura` (es el que esta en el formulario) o `pendiente`. Pura y exportada para probarla sin
+ * montar el hook.
+ *
+ * @param {{ donacionDetalleId: string }[]} detallesDonacion
+ * @param {{ donacionDetalleId?: string|null }[]} items Items ya agregados.
+ * @param {{ donacionDetalleId?: string|null }} itemActual
+ * @returns {object[]} Los renglones, cada uno con `estado`.
+ */
+export function estadoDeRenglonesDeDonacion(detallesDonacion, items, itemActual) {
+  return (detallesDonacion ?? []).map((renglon) => {
+    const id = renglon.donacionDetalleId;
+    let estado = "pendiente";
+    if (items.some((item) => item.donacionDetalleId === id)) estado = "agregado";
+    else if (itemActual?.donacionDetalleId === id) estado = "en captura";
+    return { ...renglon, estado };
+  });
+}
+
+/**
  * Item de arranque para un renglon de donacion pendiente de convertirse en ingreso (issue #756):
  * la cantidad viene ya capturada en donacion_detalle.cantidad, y medicamentoId si la persona ya
  * lo habia escrito al registrar la donacion (no es obligatorio ahi). El resto -bodega, lote,
@@ -123,7 +143,7 @@ export function datosIngresoParaRegistrar(
  *   detallesDonacion?: { donacionDetalleId: string, cantidad: number, medicamentoId?: string,
  *     descripcion?: string }[], proveedorIdInicial?: string }} [opciones]
  *
- * @returns {object} Con: origen, setOrigen, proveedorId, setProveedorId, numeroComprobante, setNumeroComprobante, items, itemActual, setItemActual, agregarItem, eliminarItem, guardarMovimiento, resumenGuardado, resetFormulario, error, guardando, puedeCrearMedicamento, crearMedicamentoNuevo, creandoMedicamento, errorMedicamento.
+ * @returns {object} Con: origen, setOrigen, proveedorId, setProveedorId, numeroComprobante, setNumeroComprobante, items, itemActual, setItemActual, renglonesDonacion, agregarItem, eliminarItem, guardarMovimiento, resumenGuardado, resetFormulario, error, guardando, puedeCrearMedicamento, crearMedicamentoNuevo, creandoMedicamento, errorMedicamento.
  */
 export function useRegistroIngreso({
   usuarioId,
@@ -136,7 +156,6 @@ export function useRegistroIngreso({
   const [proveedorId, setProveedorId] = useState(proveedorIdInicial);
   const [numeroComprobante, setNumeroComprobante] = useState("");
 
-  const [indiceRenglonDonacion, setIndiceRenglonDonacion] = useState(0);
   const [items, setItems] = useState([]);
   const [itemActual, setItemActual] = useState(() =>
     detallesDonacion.length > 0 ? itemDesdeRenglonDeDonacion(detallesDonacion[0]) : ITEM_VACIO,
@@ -172,30 +191,42 @@ export function useRegistroIngreso({
       return;
     }
 
-    setItems((prev) => [
-      ...prev,
-      {
-        ...itemActual,
-        cantidad: Number(itemActual.cantidad),
-        id: Date.now(),
-      },
-    ]);
+    const agregado = { ...itemActual, cantidad: Number(itemActual.cantidad), id: Date.now() };
+    const siguientesItems = [...items, agregado];
+    setItems(siguientesItems);
 
     // Con renglones de donacion pendientes, el siguiente reemplaza al vacio de siempre: es lo
-    // que deja a la persona seguir sin volver a escribir la cantidad de cada renglon.
-    const siguienteIndice = indiceRenglonDonacion + 1;
-    setItemActual(
-      siguienteIndice < detallesDonacion.length
-        ? itemDesdeRenglonDeDonacion(detallesDonacion[siguienteIndice])
-        : ITEM_VACIO,
+    // que deja a la persona seguir sin volver a escribir la cantidad de cada renglon. La bodega se
+    // conserva: una donacion casi siempre entra entera a la misma.
+    const siguiente = detallesDonacion.find(
+      (renglon) =>
+        !siguientesItems.some((item) => item.donacionDetalleId === renglon.donacionDetalleId),
     );
-    setIndiceRenglonDonacion(siguienteIndice);
+    setItemActual(
+      siguiente
+        ? { ...itemDesdeRenglonDeDonacion(siguiente), bodega_id: itemActual.bodega_id }
+        : { ...ITEM_VACIO, bodega_id: itemActual.bodega_id },
+    );
     setError(null);
   };
 
   const eliminarItem = (id) => {
+    const quitado = items.find((item) => item.id === id);
     setItems((prev) => prev.filter((item) => item.id !== id));
+    // Un renglon de la donacion que se quita vuelve a quedar por capturar: si el formulario esta
+    // libre, se carga ahi mismo para no perderlo.
+    const formularioLibre = !itemActual.donacionDetalleId && !itemActual.medicamento_id;
+    if (quitado?.donacionDetalleId && formularioLibre) {
+      const renglon = detallesDonacion.find(
+        (d) => d.donacionDetalleId === quitado.donacionDetalleId,
+      );
+      if (renglon) {
+        setItemActual({ ...itemDesdeRenglonDeDonacion(renglon), bodega_id: itemActual.bodega_id });
+      }
+    }
   };
+
+  const renglonesDonacion = estadoDeRenglonesDeDonacion(detallesDonacion, items, itemActual);
 
   /** @returns {Promise<boolean>} Si el ingreso completo (todos sus items) se registro sin error. */
   const guardarMovimiento = async () => {
@@ -206,6 +237,18 @@ export function useRegistroIngreso({
 
     if (!proveedorId) {
       setError("Debes seleccionar el proveedor o donante de procedencia.");
+      return false;
+    }
+
+    // Cada renglon de la donacion tiene que entrar: un ingreso a medias dejaba los demas fuera del
+    // inventario sin que nadie lo notara.
+    const faltan = renglonesDonacion.filter((renglon) => renglon.estado !== "agregado");
+    if (faltan.length > 0) {
+      setError(
+        faltan.length === 1
+          ? "Falta 1 renglon de la donacion: completa su lote y bodega y pulsa Añadir."
+          : `Faltan ${faltan.length} renglones de la donacion: completa su lote y bodega y pulsa Añadir.`,
+      );
       return false;
     }
 
@@ -253,7 +296,6 @@ export function useRegistroIngreso({
     setProveedorId(proveedorIdInicial);
     setNumeroComprobante("");
     setItems([]);
-    setIndiceRenglonDonacion(0);
     setItemActual(
       detallesDonacion.length > 0 ? itemDesdeRenglonDeDonacion(detallesDonacion[0]) : ITEM_VACIO,
     );
@@ -312,6 +354,7 @@ export function useRegistroIngreso({
     items,
     itemActual,
     setItemActual,
+    renglonesDonacion,
     agregarItem,
     eliminarItem,
     guardarMovimiento,

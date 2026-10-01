@@ -20,6 +20,7 @@ import {
   obtenerPresupuestoSistema,
 } from "./api.js";
 import { permisosDeGastos } from "./permisos.js";
+import { useCambiosEnTiempoReal } from "../hooks/useCambiosEnTiempoReal.js";
 
 const KPIS_VACIOS = { asignado: 0, gastado: 0, disponible: 0, pendiente: 0, porcentaje: 0 };
 
@@ -215,6 +216,9 @@ export function useEjecucionPresupuestal(rol) {
   }, []);
 
   const permisos = permisosDeGastos(rol);
+
+  // Se recarga sola cuando cambian estas tablas (00163).
+  useCambiosEnTiempoReal(["gastos", "jornadas", "proyectos", "jornada_presupuesto_origen"], cargar);
 
   return {
     kpis,

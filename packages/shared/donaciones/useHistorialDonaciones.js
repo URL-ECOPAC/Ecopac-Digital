@@ -21,6 +21,7 @@ import { listarProyectos } from "../proyectos/api.js";
 import { listarDonaciones } from "./historial.api.js";
 import { puedeCorregirDonaciones, puedeVerDonaciones } from "./permisos.js";
 import { anularDonacion } from "./registro.api.js";
+import { useCambiosEnTiempoReal } from "../hooks/useCambiosEnTiempoReal.js";
 
 const TOTALES_VACIOS = Object.freeze({ dinero: 0, medicamentos: 0, insumos: 0, servicios: 0 });
 
@@ -155,6 +156,9 @@ export function useHistorialDonaciones({ usuarioRol } = {}) {
     },
     [usuarioRol, cargarDonaciones],
   );
+
+  // Se recarga sola cuando cambian estas tablas (00163).
+  useCambiosEnTiempoReal(["donaciones", "donacion_detalle"], cargarDonaciones);
 
   return {
     tieneAccesoLectura,

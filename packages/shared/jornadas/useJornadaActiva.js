@@ -23,6 +23,7 @@ import { obtenerJornadasDePersona, puedeRegistrarConsulta } from "./api.js";
 import { ESTADOS_JORNADA } from "../enums.js";
 import { obtenerCola } from "../atenciones/api.js";
 import { ORDEN_DE_ETAPAS } from "../atenciones/etapas.js";
+import { useCambiosEnTiempoReal } from "../hooks/useCambiosEnTiempoReal.js";
 
 /** Cola vacia con las cuatro etapas siempre presentes, igual que obtenerCola(). */
 function colaVacia() {
@@ -222,6 +223,9 @@ export function useJornadaActiva({ perfilId, almacenamiento } = {}) {
 
   const jornadasEnCurso = filtrarJornadasEnCurso(estado.jornadasAsignadas);
   const jornada = estado.jornadasAsignadas.find((j) => j.id === estado.jornadaId) ?? null;
+
+  // Se recarga sola cuando cambian estas tablas (00163).
+  useCambiosEnTiempoReal(["jornadas", "jornada_personal"], recargar);
 
   return {
     jornadasEnCurso,

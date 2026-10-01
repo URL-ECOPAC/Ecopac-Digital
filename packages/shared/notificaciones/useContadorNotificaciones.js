@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { contarNoLeidas } from "./api.js";
 import { suscribirCambiosDelBuzon } from "./eventos.js";
+import { useCambiosEnTiempoReal } from "../hooks/useCambiosEnTiempoReal.js";
 
 // Cada cuanto se vuelve a contar. Una incidencia nueva no avisa al cliente -no hay Realtime en
 // esta tabla-, asi que el contador se pone al dia solo; un minuto es poco para quien espera y
@@ -43,6 +44,9 @@ export function useContadorNotificaciones({
   }, [contar, intervaloMs]);
 
   useEffect(() => suscribirCambiosDelBuzon(contar), [contar]);
+
+  // Se recarga sola cuando cambian estas tablas (00163).
+  useCambiosEnTiempoReal(["notificaciones"], contar);
 
   return { cantidad, error, recargar: contar };
 }

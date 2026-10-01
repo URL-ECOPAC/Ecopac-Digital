@@ -42,6 +42,7 @@ import {
   sumarExistenciasPorLote,
   ETIQUETAS_TIPO_ARTICULO,
   TIPOS_DE_ARTICULO,
+  pideDatosFarmacologicos,
   totalizarValorizacion,
   useAlertasVencimiento,
   usePendientesValidacion,
@@ -358,17 +359,25 @@ export default function InventarioPage() {
       setAdvertenciaDuplicado(true);
       return;
     }
+    // Un insumo no lleva principio activo, concentracion, forma farmaceutica ni uso pediatrico
+    // (00164).
+    const esMedicamento = pideDatosFarmacologicos(formData.tipoArticulo);
+    const datosFarmacologicos = esMedicamento
+      ? {
+          concentracion: (formData.concentracion || "").trim(),
+          formaFarmaceutica: formData.formaFarmaceutica ? formData.formaFarmaceutica.trim() : null,
+          esPediatrico: Boolean(formData.esPediatrico),
+        }
+      : { concentracion: null, formaFarmaceutica: null, esPediatrico: false };
     try {
       setCargandoGuardar(true);
       if (modoEdicion) {
         const { error: errorUpdate } = await actualizarMedicamento(formData.id, {
           nombre: formData.nombre.trim(),
           tipoArticulo: formData.tipoArticulo,
-          concentracion: formData.concentracion.trim(),
           presentacionId: formData.presentacionId,
           marca: formData.marca.trim(),
-          formaFarmaceutica: formData.formaFarmaceutica ? formData.formaFarmaceutica.trim() : null,
-          esPediatrico: Boolean(formData.esPediatrico),
+          ...datosFarmacologicos,
         });
         if (errorUpdate) {
           setErrorGuardarMedicamento(
@@ -377,19 +386,17 @@ export default function InventarioPage() {
           return;
         }
       } else {
-        if (!formData.principio_activo_id) {
+        if (esMedicamento && !formData.principio_activo_id) {
           setErrorGuardarMedicamento("Debes seleccionar un principio activo.");
           return;
         }
         const payload = {
           nombre: formData.nombre.trim(),
           tipoArticulo: formData.tipoArticulo,
-          concentracion: formData.concentracion.trim(),
           presentacionId: formData.presentacionId,
           marca: formData.marca.trim(),
-          formaFarmaceutica: formData.formaFarmaceutica ? formData.formaFarmaceutica.trim() : null,
-          esPediatrico: Boolean(formData.esPediatrico),
-          principiosActivosIds: [formData.principio_activo_id],
+          ...datosFarmacologicos,
+          principiosActivosIds: esMedicamento ? [formData.principio_activo_id] : [],
         };
         const { error: errorReg } = await registrarMedicamento(payload);
         if (errorReg) {
@@ -751,7 +758,7 @@ export default function InventarioPage() {
                           )}
                         </td>
                         <td>{ETIQUETAS_TIPO_ARTICULO[item.tipoArticulo] ?? item.tipoArticulo}</td>
-                        <td>{item.concentracion}</td>
+                        <td>{item.concentracion || "—"}</td>
                         {/* item.presentacion ya es la etiqueta resuelta (presentaciones.nombre,
                             00144), no un valor de enum que traducir. */}
                         <td>{item.presentacion}</td>

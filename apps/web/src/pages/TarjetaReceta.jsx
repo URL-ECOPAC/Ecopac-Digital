@@ -11,6 +11,7 @@ import {
 import BotonImprimir from "../components/BotonImprimir";
 import SecondaryButton from "../components/SecondaryButton";
 import StatusChip from "../components/StatusChip";
+import { imprimirCuandoEsteListo } from "../impresion";
 
 // Una receta con su detalle, su impresion y su anulacion.
 //
@@ -164,11 +165,12 @@ export function useImpresionDeReceta() {
 
     const limpiar = () => setAImprimir(null);
     window.addEventListener("afterprint", limpiar);
-    const cuadro = window.requestAnimationFrame(() => window.print());
+    // Espera al logo: impreso un fotograma despues, el papel salia sin el.
+    const cancelarImpresion = imprimirCuandoEsteListo();
 
     return () => {
       window.removeEventListener("afterprint", limpiar);
-      window.cancelAnimationFrame(cuadro);
+      cancelarImpresion();
     };
   }, [aImprimir]);
 

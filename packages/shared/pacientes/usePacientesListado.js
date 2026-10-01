@@ -6,6 +6,7 @@ import { listarComunidades } from "../territorio/api.js";
 import { obtenerCatalogoDeCondiciones } from "./condiciones.api.js";
 import { OPCIONES_SEXO } from "./campos.js";
 import { FILTROS_PACIENTE_VACIOS } from "./filtros.js";
+import { useCambiosEnTiempoReal } from "../hooks/useCambiosEnTiempoReal.js";
 
 // El filtro de sexo usa OPCIONES_SEXO, que desde la #699 nace en campos.js a partir del enum
 // sexo_paciente (00132). Vivia aqui, escrita a mano, y su comentario explicaba que el `value` tenia
@@ -148,6 +149,9 @@ export function usePacientesListado({ porPagina } = {}) {
   }, [setTermino]);
 
   const filas = useMemo(() => armarFilasDePacientes(resultados), [resultados]);
+
+  // Se recarga sola cuando cambian estas tablas (00163).
+  useCambiosEnTiempoReal(["pacientes"], recargar);
 
   return {
     filas,

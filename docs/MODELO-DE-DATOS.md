@@ -519,6 +519,11 @@ Pese al nombre, la tabla guarda **tambien los insumos** (gasas, jeringas, guante
 `presentacion` (enum `presentacion_medicamento`) **ya no existe**: la `00144` la reemplazo por
 `presentacion_id` y borro el enum.
 
+Desde la `00164` un insumo no tiene datos farmacologicos: `concentracion` admite NULL (el CHECK
+`chk_medicamentos_concentracion_de_medicamento` la sigue exigiendo a un medicamento) y
+`fn_registrar_medicamento()` pide principio activo solo a un medicamento; a un insumo no le guarda
+principio, concentracion, forma farmaceutica ni uso pediatrico aunque lleguen.
+
 ### `presentaciones` [00144]
 
 `nombre` (unico). Catalogo administrable de presentaciones -tableta, jarabe, capsula...-, que antes
@@ -813,6 +818,8 @@ mas aprobados, `comprometido_de_jornada()`) por encima de `jornadas.presupuesto_
 `fecha` llega hasta el dia de la jornada (o hasta hoy, si ya paso); hacia atras no hay limite, para
 los gastos de preparacion. Una jornada finalizada no admite gastos nuevos; sus pendientes se
 siguen aprobando o rechazando. Lo aplica el trigger `fn_validar_gasto_contra_presupuesto`.
+"Hoy" es el mas tardio entre el dia del servidor (UTC, el de `fecha DEFAULT CURRENT_DATE`) y el
+de Guatemala (`00165`): desde las 18:00 de Guatemala el servidor ya va un dia adelante.
 
 ### `categorias_de_gasto` [00158]
 

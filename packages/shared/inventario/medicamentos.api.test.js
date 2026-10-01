@@ -338,6 +338,47 @@ describe("registrarMedicamento", () => {
     );
   });
 
+  // 00164: un insumo (guantes, jeringas) no tiene principio activo ni concentracion.
+  it("registra un insumo sin principio activo y no le manda datos farmacologicos", async () => {
+    const cliente = crearCliente({
+      rpc: {
+        fn_registrar_medicamento: {
+          data: {
+            id: "med-3",
+            nombre: "Guantes de nitrilo",
+            tipo_articulo: "insumo",
+            concentracion: null,
+            presentacion_id: "pres-1",
+            marca: "Generico",
+            forma_farmaceutica: null,
+            es_pediatrico: false,
+            activo: true,
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
+          },
+          error: null,
+        },
+      },
+    });
+    dobles.cliente = cliente;
+
+    const { error } = await registrarMedicamento({
+      nombre: "Guantes de nitrilo",
+      tipoArticulo: "insumo",
+      concentracion: "no aplica",
+      presentacionId: "pres-1",
+      marca: "Generico",
+    });
+
+    expect(error).toBeNull();
+    expect(cliente.llamadas).toContainEqual(
+      expect.objectContaining({
+        nombre: "fn_registrar_medicamento",
+        argumentos: expect.objectContaining({ p_concentracion: null, p_principios_ids: [] }),
+      }),
+    );
+  });
+
   it("normaliza como unicidad la violacion del combo nombre+concentracion+presentacion+marca", async () => {
     dobles.cliente = crearCliente({
       rpc: { fn_registrar_medicamento: { data: null, error: { code: "23505" } } },

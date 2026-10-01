@@ -8,6 +8,7 @@ import {
   TIPOS_DE_PRESENTACION,
 } from "@ecopac/shared";
 import DocumentoImprimible from "./DocumentoImprimible";
+import { imprimirCuandoEsteListo } from "../impresion";
 
 /**
  * Un reporte puesto en papel (issue #862).
@@ -54,16 +55,16 @@ export default function ReporteImprimible({
   alTerminar,
 }) {
   useEffect(() => {
-    // Un fotograma antes de imprimir: sin el, el dialogo puede abrirse mientras el portal todavia
-    // no esta pintado y la vista previa sale vacia, que es el defecto que se esta corrigiendo.
-    const id = requestAnimationFrame(() => window.print());
+    // Se imprime cuando el portal ya esta pintado y el logo cargo: un fotograma despues bastaba
+    // para el texto, pero el reporte salia sin logo (imprimirCuandoEsteListo, ../impresion.js).
+    const cancelarImpresion = imprimirCuandoEsteListo();
 
     // afterprint cubre tanto imprimir como cancelar; no hay evento de "cancelado" aparte.
     const alCerrar = () => alTerminar?.();
     window.addEventListener("afterprint", alCerrar);
 
     return () => {
-      cancelAnimationFrame(id);
+      cancelarImpresion();
       window.removeEventListener("afterprint", alCerrar);
     };
   }, [alTerminar]);

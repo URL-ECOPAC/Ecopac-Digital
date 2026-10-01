@@ -21,6 +21,7 @@ import BotonLimpiarFiltros from "../components/BotonLimpiarFiltros";
 import Selector from "../components/Selector";
 import StatusChip from "../components/StatusChip";
 import DocumentoImprimible from "./DocumentoImprimible";
+import { imprimirCuandoEsteListo } from "../impresion";
 
 // Kardex de movimientos de inventario.
 //
@@ -152,11 +153,12 @@ export default function KardexMovimientosPage({
 
     const limpiar = () => setAImprimir(false);
     window.addEventListener("afterprint", limpiar);
-    const cuadro = window.requestAnimationFrame(() => window.print());
+    // Espera al logo: impreso un fotograma despues, el papel salia sin el.
+    const cancelarImpresion = imprimirCuandoEsteListo();
 
     return () => {
       window.removeEventListener("afterprint", limpiar);
-      window.cancelAnimationFrame(cuadro);
+      cancelarImpresion();
     };
   }, [aImprimir]);
 

@@ -27,6 +27,7 @@ export default function ModalRegistroIngreso({
     items,
     itemActual,
     setItemActual,
+    renglonesDonacion,
     agregarItem,
     eliminarItem,
     guardarMovimiento,
@@ -240,6 +241,47 @@ export default function ModalRegistroIngreso({
                 </div>
 
                 <hr className="my-2 text-muted opacity-25" />
+
+                {renglonesDonacion.length > 0 && (
+                  <div>
+                    <h6
+                      className="fw-bold text-secondary uppercase mb-2"
+                      style={{ fontSize: "var(--texto-xxs)" }}
+                    >
+                      Renglones de la donación (
+                      {renglonesDonacion.filter((r) => r.estado === "agregado").length} de{" "}
+                      {renglonesDonacion.length} agregados)
+                    </h6>
+                    <ul className="list-unstyled small mb-2">
+                      {renglonesDonacion.map((renglon) => (
+                        <li
+                          key={renglon.donacionDetalleId}
+                          className="d-flex justify-content-between gap-2"
+                        >
+                          <span>
+                            {nombreDeProducto(renglon.medicamentoId) || renglon.descripcion} ·{" "}
+                            {renglon.cantidad}
+                          </span>
+                          <span
+                            className={
+                              renglon.estado === "agregado"
+                                ? "text-success"
+                                : renglon.estado === "en captura"
+                                  ? "fw-semibold"
+                                  : "text-muted"
+                            }
+                          >
+                            {renglon.estado === "agregado"
+                              ? "Agregado"
+                              : renglon.estado === "en captura"
+                                ? "En captura"
+                                : "Pendiente"}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
 
                 <div>
                   <h6

@@ -12,6 +12,7 @@ import {
   quitarInsumoDeJornada,
 } from "./insumos.api.js";
 import { puedeGestionarInsumosDeJornada, puedeVerInsumosDeJornada } from "./permisos.js";
+import { useCambiosEnTiempoReal } from "../hooks/useCambiosEnTiempoReal.js";
 
 /**
  * Resumen de una lista de insumos previstos: suma de lo que tiene costo y cuantos no lo tienen.
@@ -140,6 +141,9 @@ export function useInsumosDeJornada({ jornadaId, rol, activo = true } = {}) {
       }),
     [conUnaOperacion, puedeGestionar, cargar],
   );
+
+  // Se recarga sola cuando cambian estas tablas (00163).
+  useCambiosEnTiempoReal(["jornada_insumos"], cargar);
 
   return {
     puedeVer,

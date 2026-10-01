@@ -23,6 +23,7 @@ import {
   liquidarSobranteDeJornada,
   obtenerSobranteDeJornada,
 } from "./sobrante.api.js";
+import { useCambiosEnTiempoReal } from "../hooks/useCambiosEnTiempoReal.js";
 
 /** A donde vuelve el sobrante de un aporte segun su origen, dicho como opcion. */
 const DEVOLVER_SEGUN_ORIGEN = {
@@ -219,6 +220,9 @@ export function useSobranteDeJornada({ jornada, rol, onLiquidado } = {}) {
     onLiquidado?.();
     return true;
   }, [filas, decisiones, jornadaId, cargar, onLiquidado]);
+
+  // Se recarga sola cuando cambian estas tablas (00163).
+  useCambiosEnTiempoReal(["jornada_presupuesto_origen", "gastos"], cargar);
 
   return {
     visible,

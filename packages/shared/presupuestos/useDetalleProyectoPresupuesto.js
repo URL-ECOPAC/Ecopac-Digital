@@ -12,6 +12,7 @@ import { useCallback, useEffect, useState } from "react";
 import { listarJornadasDelProyecto } from "../proyectos/api.js";
 import { obtenerPresupuestosDeJornadas } from "./api.js";
 import { combinarJornadasConPresupuesto } from "./useEjecucionPresupuestal.js";
+import { useCambiosEnTiempoReal } from "../hooks/useCambiosEnTiempoReal.js";
 
 /**
  * @param {string|null} proyectoId Proyecto cuyo detalle se quiere ver. `null`/`undefined` deja
@@ -55,6 +56,9 @@ export function useDetalleProyectoPresupuesto(proyectoId) {
   useEffect(() => {
     cargar();
   }, [cargar]);
+
+  // Se recarga sola cuando cambian estas tablas (00163).
+  useCambiosEnTiempoReal(["jornadas", "gastos", "jornada_presupuesto_origen"], cargar);
 
   return { jornadas, cargando, error, recargar: cargar };
 }

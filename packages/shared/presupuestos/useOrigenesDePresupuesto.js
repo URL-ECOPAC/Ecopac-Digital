@@ -24,6 +24,7 @@ import {
 } from "./origenes.api.js";
 import { permisosDeOrigenDePresupuesto } from "./permisos.js";
 import { validarOrigenDePresupuesto } from "./validaciones.js";
+import { useCambiosEnTiempoReal } from "../hooks/useCambiosEnTiempoReal.js";
 
 const VALORES_VACIOS = {
   origen: ORIGENES_DE_PRESUPUESTO.FONDOS_PROPIOS,
@@ -204,6 +205,9 @@ export function useOrigenesDePresupuesto({ jornadaId, proyectoId = null, rol, al
       ),
     [origenes],
   );
+
+  // Se recarga sola cuando cambian estas tablas (00163).
+  useCambiosEnTiempoReal(["jornada_presupuesto_origen", "donaciones", "donacion_detalle"], cargar);
 
   return {
     permisos,

@@ -15,6 +15,7 @@ import { listarNombresDePerfiles } from "../usuarios/api.js";
 import { nombreCompletoDe } from "../usuarios/useUsuariosListado.js";
 import { aprobarGasto, rechazarGasto } from "./aprobacionGastosApi.js";
 import { listarGastos } from "./api.js";
+import { useCambiosEnTiempoReal } from "../hooks/useCambiosEnTiempoReal.js";
 
 function aOpciones(filas, etiquetaDe) {
   return (filas ?? []).map((fila) => ({ value: fila.id, label: etiquetaDe(fila) }));
@@ -85,6 +86,9 @@ export function usePendientesAprobacionGastos({ usuarioId } = {}) {
     },
     [usuarioId, consultar],
   );
+
+  // Se recarga sola cuando cambian estas tablas (00163).
+  useCambiosEnTiempoReal(["gastos"], recargar);
 
   return {
     pendientes,

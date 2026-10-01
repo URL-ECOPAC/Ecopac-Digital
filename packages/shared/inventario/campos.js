@@ -118,6 +118,29 @@ export const CAMPOS_PRESENTACION = [
  * lo envia como principiosActivosIds a fn_registrar_medicamento (00050), que inserta el
  * medicamento y sus principios activos en una sola transaccion.
  */
+/**
+ * Campos que solo tienen sentido para un medicamento: un insumo (guantes, jeringas, agujas) no
+ * tiene principio activo, concentracion, forma farmaceutica ni uso pediatrico (00164).
+ */
+export const CAMPOS_SOLO_DE_MEDICAMENTO = Object.freeze([
+  "principiosActivos",
+  "concentracion",
+  "formaFarmaceutica",
+  "esPediatrico",
+]);
+
+/**
+ * Si el articulo pide datos farmacologicos (principio activo, concentracion, forma farmaceutica y
+ * uso pediatrico): solo un medicamento. Sin tipo, se trata como medicamento, que es el default de
+ * la base (00142).
+ *
+ * @param {string|null|undefined} tipoArticulo Uno de TIPOS_DE_ARTICULO.
+ * @returns {boolean}
+ */
+export function pideDatosFarmacologicos(tipoArticulo) {
+  return (tipoArticulo || TIPOS_DE_ARTICULO.MEDICAMENTO) === TIPOS_DE_ARTICULO.MEDICAMENTO;
+}
+
 export const CAMPOS_MEDICAMENTO = [
   {
     id: "nombre",
