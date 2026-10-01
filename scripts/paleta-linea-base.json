@@ -363,6 +363,7 @@
   "apps/web/src/pages/DashboardMetricasPage.jsx": ["#29abe2", "#3db648", "#e91e8c", "#f7941d"],
   "apps/web/src/pages/DonacionesPage.jsx": ["#3db648", "#e91e8c", "#f7941d"],
   "apps/web/src/pages/DonantesPage.jsx": ["#29abe2", "#3db648", "#f7941d"],
+  "apps/web/src/pages/GastosDeJornada.jsx": ["#3db648", "#e91e8c", "#f7941d"],
   "apps/web/src/pages/HistorialDonacionesPage.jsx": ["#3db648", "#f7941d"],
   "apps/web/src/pages/HomePage.jsx": ["#3db648"],
   "apps/web/src/pages/inicio.css": [
@@ -380,6 +381,7 @@
   "apps/web/src/pages/LoginPage.jsx": ["#29abe2", "#3db648", "#7a7a8a", "#f7f8fa"],
   "apps/web/src/pages/MatrizPermisosPorRolPage.jsx": ["#29abe2", "#3db648", "#f7941d"],
   "apps/web/src/pages/ModalGasto.jsx": ["#7a7a8a"],
+  "apps/web/src/pages/ModalGeneracionReceta.jsx": ["#7a7a8a"],
   "apps/web/src/pages/ModalPermisosUsuario.jsx": ["#3db648"],
   "apps/web/src/pages/ModalRegistroIngreso.jsx": ["#2d2d2d"],
   "apps/web/src/pages/ModalSalidaMedicamento.jsx": [
