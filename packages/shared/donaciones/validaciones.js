@@ -35,6 +35,13 @@ import { aFechaLocal } from "../formato/fechas.js";
 // 'servicios' queda fuera a proposito: una jornada de voluntariado medico no tiene unidades.
 const TIPOS_QUE_EXIGEN_CANTIDAD = [TIPOS_DE_DONACION.MEDICAMENTOS, TIPOS_DE_DONACION.INSUMOS];
 
+// Tipos cuyo renglon elige un articulo del catalogo (medicamento_id), con el nombre del articulo
+// para el mensaje. Espejo de fn_registrar_donacion (00135, 00170).
+const TIPOS_CON_ARTICULO_DEL_CATALOGO = {
+  [TIPOS_DE_DONACION.MEDICAMENTOS]: "medicamento",
+  [TIPOS_DE_DONACION.INSUMOS]: "insumo",
+};
+
 function estaVacio(valor) {
   return valor === undefined || valor === null || String(valor).trim() === "";
 }
@@ -109,12 +116,13 @@ function validarDetalle(detalle = {}, indice, tipoDeDonacion) {
   const prefijo = `detalles_${indice}`;
   const renglon = indice + 1;
 
-  if (tipoDeDonacion === TIPOS_DE_DONACION.MEDICAMENTOS) {
+  if (TIPOS_CON_ARTICULO_DEL_CATALOGO[tipoDeDonacion]) {
     // Desde la #840 el medicamento se elige del catalogo y la descripcion la arma
-    // fn_registrar_donacion con el (00135): pedir texto aqui volveria a la adivinanza.
+    // fn_registrar_donacion con el (00135): pedir texto aqui volveria a la adivinanza. Los
+    // insumos, igual desde la 00170.
     if (estaVacio(detalle.medicamentoId)) {
       errores[`${prefijo}_medicamentoId`] =
-        `El renglon ${renglon} tiene que elegir un medicamento del catalogo.`;
+        `El renglon ${renglon} tiene que elegir un ${TIPOS_CON_ARTICULO_DEL_CATALOGO[tipoDeDonacion]} del catalogo.`;
     }
   } else if (estaVacio(detalle.descripcion)) {
     errores[`${prefijo}_descripcion`] = `El renglon ${renglon} necesita una descripcion.`;

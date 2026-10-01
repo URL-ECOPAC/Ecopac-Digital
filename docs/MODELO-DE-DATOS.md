@@ -357,7 +357,7 @@ Registro de deduplicacion. `paciente_absorbido_id` (UNIQUE: no se absorbe dos ve
 | `fecha`                | DATE NOT NULL               | Fecha planificada                         |
 | `comunidad_id`         | UUID NOT NULL               |                                           |
 | `responsable_id`       | UUID NOT NULL               | Perfil a cargo                            |
-| `proyecto_id`          | UUID                        | Opcional                                  |
+| `proyecto_id`          | UUID                        | [00169] Obligatorio al crear y no se quita (trigger); solo las jornadas anteriores pueden no tenerlo. FK RESTRICT |
 | `estado`               | `estado_jornada` NOT NULL   | `planificada`/`en curso`/`finalizada`/`cancelada` |
 | `presupuesto_asignado` | NUMERIC(12,2) NOT NULL      | Suma de `jornada_presupuesto_origen` [00135]; no se escribe a mano |
 | `codigo`               | VARCHAR(30) UNIQUE          | [+00036]                                  |
@@ -718,9 +718,10 @@ guardaba nada: el origen es un enum y no admite valores nuevos desde la aplicaci
 medicamentos, la linea del detalle apunta al lote que se creo en inventario. La unicidad es lo que
 impide que dos donaciones reclamen el mismo lote.
 
-`medicamento_id` [+00135]: el medicamento del catalogo. `fn_registrar_donacion` lo exige en cada
-renglon de una donacion de medicamentos y arma `descripcion` y `unidad` (la presentacion) desde el
-catalogo; los otros tipos lo dejan en NULL y siguen en texto libre. Con el, el ingreso a
+`medicamento_id` [+00135]: el articulo del catalogo. `fn_registrar_donacion` lo exige en cada
+renglon de una donacion de medicamentos y, desde la 00170, de insumos, siempre del mismo
+`tipo_articulo` que la donacion, y arma `descripcion` y `unidad` (la presentacion) desde el
+catalogo; dinero y servicios lo dejan en NULL y siguen en texto libre. Con el, el ingreso a
 inventario desde la donacion ya no vuelve a preguntar el medicamento.
 
 Un renglon ya insertado **solo** admite `UPDATE` de `lote_id` (el enlace con el lote que se creo al
@@ -919,7 +920,7 @@ Del lado del cliente, estos valores nacen una sola vez en `packages/shared/enums
 | `fn_existencias_disponibles(...)`       | Stock consultable, filtrado y paginado                            |
 | `fn_valor_de_inventario_disponible(...)` | [00122] Valoriza el stock por bodega, medicamento y origen; declara aparte lo que no tiene `costo_unitario` |
 | `fn_aplicar_ajuste_existencias(...)`    | Suma o resta stock por (lote, bodega); lanza error si no alcanza   |
-| `fn_registrar_donacion(...)`            | [00114] Crea la donacion y su detalle en una transaccion. Devuelve JSONB, no la fila: quien llama necesita el id real de cada renglon para poder generar despues el ingreso de inventario. [00153] Recibe `p_jornada_id` |
+| `fn_registrar_donacion(...)`            | [00114] Crea la donacion y su detalle en una transaccion. Devuelve JSONB, no la fila: quien llama necesita el id real de cada renglon para poder generar despues el ingreso de inventario. [00153] Recibe `p_jornada_id`. [00170] Insumos tambien eligen del catalogo, y el articulo debe ser del tipo de la donacion |
 | `fn_anular_donacion(donacion, motivo)`  | [00114] Anula y sella `anulada_por` / `anulada_en`                 |
 | `fn_generar_alertas_caducidad()`        | Genera alertas de lo que vence en 30 dias o ya vencio (00129)     |
 | `fn_sincronizar_alertas_caducidad()`    | [00129] Corre el generador a peticion de la administradora, sin esperar a la rutina diaria |
@@ -971,6 +972,7 @@ Del lado del cliente, estos valores nacen una sola vez en `packages/shared/enums
 | `impedir_retirar_sin_ser_administrador`    | `condiciones_cronicas`, `comunidades` | [00148] Retirar (`es_vigente`) es de la administradora |
 | `fn_proyecto_cancelado_no_se_modifica`     | `proyectos`                 | [00154] Un proyecto cancelado ya no se modifica |
 | `fn_proyecto_de_la_fila_no_esta_cancelado` | `proyecto_hitos`, `proyecto_seguimiento`, `proyecto_personal`, `proyecto_insumos`, `jornadas` (solo `proyecto_id`) | [00154] DEFINER. Rechaza escribir lo que cuelga de un proyecto cancelado, y asociarle o sacarle una jornada |
+| `fn_jornada_exige_proyecto`                | `jornadas`                  | [00169] Toda jornada nueva lleva proyecto, y a ninguna se le quita (23502) |
 
 La tabla recoge los triggers que explican una regla de negocio; hay 114 en total en `public`, 41 de
 ellos de auditoria. Los de
@@ -1370,8 +1372,8 @@ distingue bodega -un lote puede repartirse en varias- y `medicamentos` no tiene 
 
 **`donantes`**: `nombre`/`tipo`/`contacto`/`telefono`/`email` completos (CRUD desde
 `DonantesPage.jsx`). `direccion` se captura y se corrige pero nunca se muestra (bajo impacto, sin
-issue propia). `activo`: `darDeBajaDonante()` existe en el hook pero la pantalla no le pone
-boton -bajo impacto, agrupado con el hueco de `donaciones.estado` si se retoma ese modulo.
+issue propia). `activo`: la ficha del donante tiene "Dar de baja" y "Reactivar" (solo administradora) y la
+lista filtra por estado; el registro de donaciones solo ofrece donantes activos.
 
 **`donaciones`**
 
@@ -1385,8 +1387,8 @@ boton -bajo impacto, agrupado con el hueco de `donaciones.estado` si se retoma e
 
 **`donacion_detalle`**: `descripcion`/`cantidad`/`monto` completos al registrar. Desde la #840 el
 renglon de una donacion de medicamentos elige `medicamento_id` del catalogo (con alta en linea si
-falta) y no pide descripcion ni unidad: las arma la base desde el catalogo. `unidad` queda como
-campo solo para insumos. Los campos de cada tipo salen de `camposDeRenglonDeDonacion()`. No hay campo de
+falta) y no pide descripcion ni unidad: las arma la base desde el catalogo. Desde la 00170 los
+insumos igual, con el selector filtrado a insumos y alta en linea de insumo. Los campos de cada tipo salen de `camposDeRenglonDeDonacion()`. No hay campo de
 `fechaVencimiento` en este formulario (se probo y se quito): no es una columna de la tabla y el
 vencimiento real se captura mas abajo, al generar el ingreso -pedirlo aqui tambien era una nota
 que nunca se guardaba en ningun lado. `lote_id` -el enlace real a un lote de farmacia-

@@ -427,19 +427,19 @@ export function useProyectosSociales({ usuarioRol } = {}) {
   );
 
   /**
-   * Asocia una jornada al proyecto abierto, o la quita si `asociar` es false. Delega en
-   * asociarJornadaAProyecto() (api.js); aqui solo se filtra por permiso y se recargan las dos
-   * listas para que la jornada cambie de lado sin recargar la pantalla.
+   * Asocia una jornada sin proyecto al proyecto abierto. Delega en asociarJornadaAProyecto()
+   * (api.js); aqui solo se filtra por permiso y se recargan las dos listas para que la jornada
+   * cambie de lado sin recargar la pantalla.
+   *
+   * No hay contraparte para quitarla: desde la 00169 una jornada no se queda sin proyecto. Para
+   * pasarla a otro proyecto se edita la jornada.
    */
-  const cambiarAsociacionDeJornada = useCallback(
-    async (jornadaId, asociar) => {
+  const asociarJornada = useCallback(
+    async (jornadaId) => {
       if (!permisos.puedeAsociarJornadas || !proyectoSeleccionadoId) {
         return { ok: false, error: null };
       }
-      const { error: fallo } = await asociarJornadaAProyecto(
-        jornadaId,
-        asociar ? proyectoSeleccionadoId : null,
-      );
+      const { error: fallo } = await asociarJornadaAProyecto(jornadaId, proyectoSeleccionadoId);
       setErrorJornadas(fallo);
       if (fallo) return { ok: false, error: fallo };
 
@@ -560,8 +560,7 @@ export function useProyectosSociales({ usuarioRol } = {}) {
     personalDisponible,
     agregarAlEquipo,
     quitarDelEquipo,
-    asociarJornada: (jornadaId) => cambiarAsociacionDeJornada(jornadaId, true),
-    quitarJornada: (jornadaId) => cambiarAsociacionDeJornada(jornadaId, false),
+    asociarJornada,
     cambiarEtapaProyecto,
     guardarProyecto,
     recargar: cargarProyectos,

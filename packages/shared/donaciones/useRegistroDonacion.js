@@ -1,6 +1,11 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { ETIQUETAS_TIPO_DONACION, TIPOS_DE_DONACION, TIPOS_DE_DONANTE } from "../enums.js";
+import {
+  ETIQUETAS_TIPO_DONACION,
+  TIPOS_DE_ARTICULO,
+  TIPOS_DE_DONACION,
+  TIPOS_DE_DONANTE,
+} from "../enums.js";
 import { aCadenaFechaLocal, formatearFechaCorta, formatearFechaLarga } from "../formato/fechas.js";
 import { formatearMoneda } from "../formato/moneda.js";
 import { opcionDeMedicamento } from "../inventario/catalogoMedicamentos.js";
@@ -44,9 +49,37 @@ function aOpciones(filas = []) {
 }
 
 /**
+ * Que tipo de articulo del catalogo elige el renglon de cada tipo de donacion. Los tipos que no
+ * aparecen (dinero, servicios) no eligen del catalogo. Espejo de fn_registrar_donacion (00170),
+ * que rechaza un articulo del otro tipo.
+ */
+const TIPO_DE_ARTICULO_POR_DONACION = {
+  [TIPOS_DE_DONACION.MEDICAMENTOS]: TIPOS_DE_ARTICULO.MEDICAMENTO,
+  [TIPOS_DE_DONACION.INSUMOS]: TIPOS_DE_ARTICULO.INSUMO,
+};
+
+/**
+ * Opciones del selector del renglon: solo los articulos del tipo que lleva la donacion. Una
+ * donacion de medicamentos ofrecia tambien guantes y jeringas, y una de insumos todo el catalogo.
+ * Pura y exportada para probarla sin montar el hook.
+ *
+ * @param {{ id: string, tipoArticulo?: string }[]} articulos Filas de listarMedicamentos().
+ * @param {string} tipoDonacion Uno de TIPOS_DE_DONACION.
+ * @returns {{ value: string, label: string }[]} Vacio si el tipo no elige del catalogo.
+ */
+export function opcionesDeArticuloParaDonacion(articulos, tipoDonacion) {
+  const tipoArticulo = TIPO_DE_ARTICULO_POR_DONACION[tipoDonacion];
+  if (!tipoArticulo) return [];
+  return (articulos ?? [])
+    .filter((articulo) => articulo.tipoArticulo === tipoArticulo)
+    .map(opcionDeMedicamento);
+}
+
+/**
  * Decide si, tras un intento de guardarDonacion(), corresponde ofrecer el paso de generar el
- * ingreso de inventario. Solo si la donacion se guardo sin error y es de tipo medicamentos
- * (criterio 6 de #635: un error de registrarDonacion() no debe avanzar al paso 2).
+ * ingreso de inventario. Solo si la donacion se guardo sin error y es de medicamentos o, desde la
+ * 00170 -que les da un articulo del catalogo-, de insumos (criterio 6 de #635: un error de
+ * registrarDonacion() no debe avanzar al paso 2).
  *
  * Aislada como funcion pura exportada -en vez de vivir inline dentro de guardarDonacion()- para
  * poder probar ese invariante sin montar el hook: packages/shared corre sus pruebas en entorno
@@ -58,7 +91,7 @@ function aOpciones(filas = []) {
  * @returns {boolean}
  */
 export function debeOfrecerIngresoInventario(tipoDonacion, error) {
-  return error == null && tipoDonacion === TIPOS_DE_DONACION.MEDICAMENTOS;
+  return error == null && Boolean(TIPO_DE_ARTICULO_POR_DONACION[tipoDonacion]);
 }
 
 /**
@@ -186,7 +219,8 @@ export function useRegistroDonacion({ _client, usuarioRol, onGuardarExito }) {
 
   const [donantesOptions, setDonantesOptions] = useState([]);
   const [proyectosOptions, setProyectosOptions] = useState([]);
-  const [medicamentosOptions, setMedicamentosOptions] = useState([]);
+  // Filas completas, no opciones: el tipo de donacion decide cuales se ofrecen (mas abajo).
+  const [articulos, setArticulos] = useState([]);
 
   // El renglon que pidio dar de alta un medicamento: el nuevo queda elegido en ESE renglon.
   const [renglonDeAlta, setRenglonDeAlta] = useState(null);
@@ -231,9 +265,10 @@ export function useRegistroDonacion({ _client, usuarioRol, onGuardarExito }) {
       );
     });
 
-    // Desde la #840 el renglon de una donacion de medicamentos elige del catalogo.
+    // Desde la #840 el renglon de una donacion de medicamentos elige del catalogo, y desde la
+    // 00170 tambien el de insumos.
     listarMedicamentos({ soloActivos: true }).then(({ medicamentos }) => {
-      if (vigente) setMedicamentosOptions((medicamentos ?? []).map(opcionDeMedicamento));
+      if (vigente) setArticulos(medicamentos ?? []);
     });
 
     return () => {
@@ -241,9 +276,17 @@ export function useRegistroDonacion({ _client, usuarioRol, onGuardarExito }) {
     };
   }, [tieneAccesoLectura, usuarioRol]);
 
+  // Todo el catalogo, para el recibo (que nombra lo que se guardo aunque el tipo ya cambio), y lo
+  // del tipo de la donacion, para el selector del renglon.
+  const todasLasOpciones = useMemo(() => articulos.map(opcionDeMedicamento), [articulos]);
+  const opcionesDelTipo = useMemo(
+    () => opcionesDeArticuloParaDonacion(articulos, tipoDonacion),
+    [articulos, tipoDonacion],
+  );
+
   const alCrearMedicamento = useCallback(
     async (medicamento) => {
-      setMedicamentosOptions((anteriores) => [...anteriores, opcionDeMedicamento(medicamento)]);
+      setArticulos((anteriores) => [...anteriores, medicamento]);
       if (renglonDeAlta !== null) {
         setDetalles((prev) =>
           prev.map((item) =>
@@ -256,9 +299,12 @@ export function useRegistroDonacion({ _client, usuarioRol, onGuardarExito }) {
     [renglonDeAlta],
   );
 
+  // Lo que se da de alta es del tipo de la donacion: un insumo nuevo no pide principio activo ni
+  // concentracion (00164), y un medicamento nuevo no apareceria en el selector de insumos.
   const altaDeMedicamento = useAltaDeMedicamentoEnLinea({
     rol: usuarioRol,
     alCrear: alCrearMedicamento,
+    tipoArticulo: TIPO_DE_ARTICULO_POR_DONACION[tipoDonacion] ?? TIPOS_DE_ARTICULO.MEDICAMENTO,
   });
 
   const { abrir: abrirAltaInterna, cerrar: cerrarAltaInterna } = altaDeMedicamento;
@@ -307,6 +353,8 @@ export function useRegistroDonacion({ _client, usuarioRol, onGuardarExito }) {
   const manejarCambioTipo = (nuevoTipo) => {
     setTipoDonacion(nuevoTipo);
     setDetalles([renglonVacio()]);
+    // Un alta abierta era del tipo anterior (medicamento o insumo): ya no corresponde.
+    cerrarAltaDeMedicamento();
   };
 
   const cerrarModalNuevoDonante = () => {
@@ -437,7 +485,7 @@ export function useRegistroDonacion({ _client, usuarioRol, onGuardarExito }) {
     quitarRenglon,
     actualizarRenglon,
     camposDeRenglon: camposDeRenglonDeDonacion(tipoDonacion),
-    catalogosDeRenglon: { medicamentos: medicamentosOptions },
+    catalogosDeRenglon: { medicamentos: opcionesDelTipo },
     altaDeMedicamento: {
       ...altaDeMedicamento,
       renglonId: renglonDeAlta,
@@ -445,7 +493,7 @@ export function useRegistroDonacion({ _client, usuarioRol, onGuardarExito }) {
       cerrar: cerrarAltaDeMedicamento,
     },
     resumenLegible: resumenLegibleDeDonacion(resumenRegistro, {
-      medicamentos: medicamentosOptions,
+      medicamentos: todasLasOpciones,
       proyectos: proyectosOptions,
       jornadas: jornadasOptions,
     }),

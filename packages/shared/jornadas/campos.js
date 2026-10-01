@@ -65,12 +65,13 @@ export const CAMPOS_JORNADA = [
     opcionesDesde: "perfiles",
     validacion: { requerido: true },
   },
+  // Obligatorio desde la 00169: la base rechaza crear una jornada sin proyecto o quitarselo.
   {
     id: "proyecto",
     label: "Proyecto",
     tipo: TIPOS_DE_CAMPO.SELECT,
     opcionesDesde: "proyectos",
-    validacion: { requerido: false },
+    validacion: { requerido: true },
   },
   {
     id: "cupoEstimado",

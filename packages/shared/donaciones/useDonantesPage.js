@@ -6,6 +6,7 @@ import {
   darDeBajaDonante,
   listarDonantes,
   obtenerHistoricoDonante,
+  reactivarDonante,
   registrarDonante,
   actualizarDonante,
 } from "./donantes.api.js";
@@ -21,6 +22,19 @@ import { useCambiosEnTiempoReal } from "../hooks/useCambiosEnTiempoReal.js";
 
 /** Valor del filtro de tipo que no filtra nada. */
 export const TIPO_DONANTE_TODOS = "todos";
+
+/** Valores del filtro de estado. La pantalla arranca en ACTIVOS: lo de todos los dias. */
+export const FILTRO_ESTADO_DONANTE = Object.freeze({
+  ACTIVOS: "activos",
+  INACTIVOS: "inactivos",
+  TODOS: "todos",
+});
+
+export const OPCIONES_FILTRO_ESTADO_DONANTE = [
+  { value: FILTRO_ESTADO_DONANTE.ACTIVOS, label: "Activos" },
+  { value: FILTRO_ESTADO_DONANTE.INACTIVOS, label: "Dados de baja" },
+  { value: FILTRO_ESTADO_DONANTE.TODOS, label: "Todos" },
+];
 
 /** Valores iniciales del formulario de alta/edicion, mismas claves que CAMPOS_DONANTE
  * (campos.js) y que las columnas escribibles de `donantes` (00022). `tipo` arranca en
@@ -50,9 +64,15 @@ const CAMPOS_VACIOS = Object.freeze({
  * @param {object[]} donantes
  * @param {string} busqueda
  * @param {string} tipo Uno de TIPOS_DE_DONANTE, o TIPO_DONANTE_TODOS.
+ * @param {string} [estado] Uno de FILTRO_ESTADO_DONANTE; sin el, no filtra por estado.
  * @returns {object[]}
  */
-export function filtrarDonantes(donantes = [], busqueda = "", tipo = TIPO_DONANTE_TODOS) {
+export function filtrarDonantes(
+  donantes = [],
+  busqueda = "",
+  tipo = TIPO_DONANTE_TODOS,
+  estado = FILTRO_ESTADO_DONANTE.TODOS,
+) {
   const termino = busqueda.trim().toLowerCase();
 
   return donantes.filter((donante) => {
@@ -61,7 +81,10 @@ export function filtrarDonantes(donantes = [], busqueda = "", tipo = TIPO_DONANT
     const coincideNombre =
       termino === "" || (donante?.nombre ?? "").toLowerCase().includes(termino);
     const coincideTipo = tipo === TIPO_DONANTE_TODOS || donante?.tipo === tipo;
-    return coincideNombre && coincideTipo;
+    const coincideEstado =
+      estado === FILTRO_ESTADO_DONANTE.TODOS ||
+      (estado === FILTRO_ESTADO_DONANTE.ACTIVOS) === Boolean(donante?.activo);
+    return coincideNombre && coincideTipo && coincideEstado;
   });
 }
 
@@ -92,6 +115,9 @@ export function useDonantesPage({ usuarioRol } = {}) {
 
   const [busqueda, setBusqueda] = useState("");
   const [filtroTipo, setFiltroTipo] = useState(TIPO_DONANTE_TODOS);
+  const [filtroEstado, setFiltroEstado] = useState(FILTRO_ESTADO_DONANTE.ACTIVOS);
+  const [cambiandoEstado, setCambiandoEstado] = useState(false);
+  const [errorEstado, setErrorEstado] = useState(null);
 
   const [donanteSeleccionado, setDonanteSeleccionado] = useState(null);
   const [historicoDelDonante, setHistoricoDelDonante] = useState(null);
@@ -118,8 +144,10 @@ export function useDonantesPage({ usuarioRol } = {}) {
     }
 
     setCargando(true);
+    // Todos, no solo los activos: el filtro de estado decide que se ve. Con soloActivos un donante
+    // dado de baja desaparecia de la pantalla y ya no habia como reactivarlo.
     const { datos, error: fallo } = await listarDonantes(
-      { soloActivos: true },
+      { soloActivos: false },
       { rolUsuario: usuarioRol },
     );
 
@@ -138,8 +166,8 @@ export function useDonantesPage({ usuarioRol } = {}) {
   }, [cargarDonantes]);
 
   const donantesFiltrados = useMemo(
-    () => filtrarDonantes(donantes, busqueda, filtroTipo),
-    [donantes, busqueda, filtroTipo],
+    () => filtrarDonantes(donantes, busqueda, filtroTipo, filtroEstado),
+    [donantes, busqueda, filtroTipo, filtroEstado],
   );
 
   const abrirAlta = useCallback(() => {
@@ -195,6 +223,7 @@ export function useDonantesPage({ usuarioRol } = {}) {
       const donante = donantes.find((candidato) => candidato.id === donanteId) ?? null;
       setDonanteSeleccionado(donante);
       setHistoricoDelDonante(null);
+      setErrorEstado(null);
 
       if (!donante || !tieneAccesoLectura) return;
 
@@ -268,20 +297,49 @@ export function useDonantesPage({ usuarioRol } = {}) {
     ],
   );
 
-  /** Da de baja a un donante. Es baja logica: donantes.activo pasa a false, la fila se queda. */
-  const darDeBaja = useCallback(
-    async (donanteId) => {
+  /**
+   * Da de baja a un donante (`activo` false) o lo reactiva (`activo` true). Es baja logica: la
+   * fila y su historico se quedan, y un donante dado de baja deja de ofrecerse al registrar una
+   * donacion (useRegistroDonacion lista solo activos).
+   *
+   * La ficha abierta se actualiza con la fila que devuelve el servidor, para que el estado y el
+   * boton cambien sin cerrarla.
+   */
+  const cambiarEstadoDonante = useCallback(
+    async (donanteId, activo) => {
       if (!puedeCorregir) {
-        return { ok: false, error: { mensaje: "No tienes permiso para dar de baja donantes." } };
+        const error = { mensaje: "Solo la administradora da de baja o reactiva a un donante." };
+        setErrorEstado(error);
+        return { ok: false, error };
       }
 
-      const { error: fallo } = await darDeBajaDonante(donanteId, { rolUsuario: usuarioRol });
-      if (fallo) return { ok: false, error: fallo };
+      setCambiandoEstado(true);
+      setErrorEstado(null);
+      const accion = activo ? reactivarDonante : darDeBajaDonante;
+      const { datos, error: fallo } = await accion(donanteId, { rolUsuario: usuarioRol });
+      setCambiandoEstado(false);
 
+      if (fallo) {
+        setErrorEstado(fallo);
+        return { ok: false, error: fallo };
+      }
+
+      setDonanteSeleccionado((actual) =>
+        actual?.id === donanteId ? { ...actual, ...datos } : actual,
+      );
       await cargarDonantes();
       return { ok: true, error: null };
     },
     [puedeCorregir, usuarioRol, cargarDonantes],
+  );
+
+  const darDeBaja = useCallback(
+    (donanteId) => cambiarEstadoDonante(donanteId, false),
+    [cambiarEstadoDonante],
+  );
+  const reactivar = useCallback(
+    (donanteId) => cambiarEstadoDonante(donanteId, true),
+    [cambiarEstadoDonante],
   );
 
   // Se recarga sola cuando cambian estas tablas (00163).
@@ -308,6 +366,9 @@ export function useDonantesPage({ usuarioRol } = {}) {
     setBusqueda,
     filtroTipo,
     setFiltroTipo,
+    filtroEstado,
+    setFiltroEstado,
+    opcionesFiltroEstado: OPCIONES_FILTRO_ESTADO_DONANTE,
     modalAbierto,
     setModalAbierto,
     cerrarModal,
@@ -322,6 +383,9 @@ export function useDonantesPage({ usuarioRol } = {}) {
     verFicha,
     guardarDonante,
     darDeBaja,
+    reactivar,
+    cambiandoEstado,
+    errorEstado,
     recargar: cargarDonantes,
   };
 }

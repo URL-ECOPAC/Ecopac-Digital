@@ -56,10 +56,10 @@ beforeAll(async () => {
   existenciasIniciales = await instantaneaDeExistencias([[DEMO.loteSano, bodega]]);
 
   await consultar(
-    `INSERT INTO jornadas (id, nombre, fecha, comunidad_id, responsable_id)
-     VALUES ($1, 'Jornada vacia (prueba e2e #772)', CURRENT_DATE + 60, $2, $3)
+    `INSERT INTO jornadas (id, nombre, fecha, comunidad_id, responsable_id, proyecto_id)
+     VALUES ($1, 'Jornada vacia (prueba e2e #772)', CURRENT_DATE + 60, $2, $3, $4)
      ON CONFLICT (id) DO NOTHING`,
-    [JORNADA_VACIA_ID, DEMO.comunidad, CUENTAS.ADMINISTRADORA.perfilId],
+    [JORNADA_VACIA_ID, DEMO.comunidad, CUENTAS.ADMINISTRADORA.perfilId, DEMO.proyecto],
   );
 
   // Flujo minimo para que los reportes "con datos" tengan algo real que agregar.

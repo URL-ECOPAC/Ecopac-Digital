@@ -15,6 +15,12 @@ BEGIN;
 
 SELECT plan(24);
 
+-- Desde la 00169 toda jornada nueva lleva proyecto. Estas pruebas no tratan de proyectos: sus
+-- jornadas reciben uno de prueba como DEFAULT de la columna, que el ROLLBACK del final deshace.
+INSERT INTO proyectos (id, nombre) VALUES
+  ('5f000000-0000-0000-0000-000000000169', 'Proyecto de prueba 00169');
+ALTER TABLE jornadas ALTER COLUMN proyecto_id SET DEFAULT '5f000000-0000-0000-0000-000000000169';
+
 -- ============================================================================
 -- Setup
 -- ============================================================================

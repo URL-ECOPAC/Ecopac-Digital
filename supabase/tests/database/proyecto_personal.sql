@@ -265,6 +265,9 @@ SELECT is(
 -- Borrado de un proyecto
 -- ============================================================================
 RESET ROLE;
+-- Desde la 00169 un proyecto con jornadas no se borra (ON DELETE RESTRICT): primero se va su
+-- jornada. Lo que se prueba aqui es la cascada sobre el equipo, no sobre las jornadas.
+DELETE FROM jornadas WHERE proyecto_id = '50000000-0000-0000-0000-000000001462';
 DELETE FROM proyectos WHERE id = '50000000-0000-0000-0000-000000001462';
 
 SELECT is(

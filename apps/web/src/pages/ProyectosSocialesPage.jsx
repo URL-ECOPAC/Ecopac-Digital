@@ -52,7 +52,6 @@ export default function ProyectosSocialesPage({ usuarioRol }) {
     jornadasDisponibles,
     errorJornadas,
     asociarJornada,
-    quitarJornada,
     equipo,
     cargandoEquipo,
     errorEquipo,
@@ -81,7 +80,6 @@ export default function ProyectosSocialesPage({ usuarioRol }) {
   const [formularioAbierto, setFormularioAbierto] = useState(false);
 
   const [jornadaPorAsociar, setJornadaPorAsociar] = useState("");
-  const [jornadaPorQuitar, setJornadaPorQuitar] = useState(null);
   const [personaPorAgregar, setPersonaPorAgregar] = useState("");
   const [rolPorAgregar, setRolPorAgregar] = useState("");
   const [personaPorQuitar, setPersonaPorQuitar] = useState(null);
@@ -614,40 +612,9 @@ export default function ProyectosSocialesPage({ usuarioRol }) {
                         className="list-group-item d-flex justify-content-between align-items-center px-0 py-2"
                       >
                         <span>{j.nombre}</span>
-                        <span className="d-flex align-items-center gap-3">
-                          <span className="text-muted small">{j.fecha}</span>
-                          {permisos.puedeAsociarJornadas &&
-                            (jornadaPorQuitar === j.id ? (
-                              <span className="d-flex align-items-center gap-2 small">
-                                ¿Quitar del proyecto?
-                                <Button
-                                  variant="danger"
-                                  size="sm"
-                                  onClick={async () => {
-                                    await quitarJornada(j.id);
-                                    setJornadaPorQuitar(null);
-                                  }}
-                                >
-                                  Confirmar
-                                </Button>
-                                <Button
-                                  variant="outline-secondary"
-                                  size="sm"
-                                  onClick={() => setJornadaPorQuitar(null)}
-                                >
-                                  Cancelar
-                                </Button>
-                              </span>
-                            ) : (
-                              <Button
-                                variant="outline-danger"
-                                size="sm"
-                                onClick={() => setJornadaPorQuitar(j.id)}
-                              >
-                                Quitar
-                              </Button>
-                            ))}
-                        </span>
+                        {/* Sin "Quitar": desde la 00169 una jornada no se queda sin proyecto.
+                            Para pasarla a otro proyecto se edita la jornada. */}
+                        <span className="text-muted small">{j.fecha}</span>
                       </li>
                     ))}
                   </ul>
