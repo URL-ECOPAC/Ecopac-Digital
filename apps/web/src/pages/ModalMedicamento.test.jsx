@@ -1,5 +1,5 @@
 // Prueba de ModalMedicamento: un insumo no pide principio activo, concentracion, forma
-// farmaceutica ni uso pediatrico (00164).
+// farmaceutica ni uso pediatrico (00164), y el principio activo se cambia al editar (00166).
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -14,12 +14,12 @@ afterEach(() => {
   cleanup();
 });
 
-function pantalla(tipoArticulo) {
+function pantalla(tipoArticulo, { modoEdicion = false } = {}) {
   return render(
     <ModalMedicamento
       isOpen
       onClose={vi.fn()}
-      modoEdicion={false}
+      modoEdicion={modoEdicion}
       formData={{ tipoArticulo }}
       setFormData={vi.fn()}
       onSubmit={vi.fn()}
@@ -46,5 +46,12 @@ describe("ModalMedicamento", () => {
     expect(screen.queryByLabelText("Forma farmacéutica")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Es de uso pediatrico")).not.toBeInTheDocument();
     expect(screen.getByLabelText("Marca / laboratorio *")).toBeInTheDocument();
+  });
+
+  it("al editar, el principio activo se puede cambiar (00166)", () => {
+    pantalla("medicamento", { modoEdicion: true });
+
+    expect(screen.getByLabelText("Principio activo *")).toBeEnabled();
+    expect(screen.queryByText(/no se puede cambiar/)).not.toBeInTheDocument();
   });
 });
