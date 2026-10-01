@@ -31,6 +31,7 @@ TRUNCATE
   public.jornada_estado_historial,
   public.jornada_insumos,
   public.jornada_presupuesto_origen,
+  public.movimientos_de_caja,
   public.proyectos,
   public.proyecto_hitos,
   public.proyecto_seguimiento,

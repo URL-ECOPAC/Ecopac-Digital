@@ -98,6 +98,15 @@ describe("opcionesDeDestinoDeSobrante", () => {
     ]);
   });
 
+  it("lo que no es de una donacion pasa a la caja (00168)", () => {
+    for (const origen of ["fondos_propios", "aporte_externo", "sin_clasificar"]) {
+      expect(opcionesDeDestinoDeSobrante(origen, false)).toEqual([
+        { value: "devolver", label: "Pasar a la caja" },
+      ]);
+    }
+    expect(opcionesDeDestinoDeSobrante("caja", false)[0].label).toBe("Devolver a la caja");
+  });
+
   it("ofrece traspasar solo si hay otra jornada del proyecto que lo reciba", () => {
     expect(opcionesDeDestinoDeSobrante("fondos_propios", true).map((o) => o.value)).toEqual([
       "devolver",

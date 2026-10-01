@@ -215,26 +215,29 @@ export default function HistorialDonacionesPage({ usuarioRol }) {
                           <Badge bg="success">Activa</Badge>
                         )}
                       </td>
-                      <td className="text-end">
-                        <Button
-                          variant="outline-primary"
-                          size="sm"
-                          className="me-2"
-                          onClick={() => modalDetalle.abrirDetalle(d)}
-                        >
-                          Ver Detalle
-                        </Button>
-                        {/* La fila viaja en el state para que la constancia se dibuje sin una
+                      <td>
+                        {/* Con gap y no con margen: cuando la columna es angosta los botones se
+                            apilan, y el margen lateral los dejaba pegados uno sobre otro. */}
+                        <div className="d-flex flex-wrap justify-content-end gap-2">
+                          <Button
+                            variant="outline-primary"
+                            size="sm"
+                            onClick={() => modalDetalle.abrirDetalle(d)}
+                          >
+                            Ver Detalle
+                          </Button>
+                          {/* La fila viaja en el state para que la constancia se dibuje sin una
                             segunda consulta; si se entra por URL la resuelve obtenerDonacion(). */}
-                        <Button
-                          as={Link}
-                          to={`/donaciones/${d.id}/constancia`}
-                          state={{ donacion: d }}
-                          variant="outline-secondary"
-                          size="sm"
-                        >
-                          Constancia
-                        </Button>
+                          <Button
+                            as={Link}
+                            to={`/donaciones/${d.id}/constancia`}
+                            state={{ donacion: d }}
+                            variant="outline-secondary"
+                            size="sm"
+                          >
+                            Constancia
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   );

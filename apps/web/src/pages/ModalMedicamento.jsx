@@ -112,25 +112,20 @@ export default function ModalMedicamento({
                   options={opcionesPrincipio}
                   onSelect={(valor) => setCampo("principio_activo_id", valor ?? "")}
                   placeholder="Selecciona un principio activo"
-                  disabled={modoEdicion || cargando}
+                  disabled={cargando}
                   style={{ marginBottom: "var(--spacing-xs)" }}
                 />
-                {modoEdicion ? (
-                  <p className="form-text mt-0 mb-3">
-                    El principio activo no se puede cambiar desde aqui.
-                  </p>
-                ) : (
-                  onCrearPrincipioActivo && (
-                    <div className="mb-3">
-                      <SecondaryButton
-                        title="Crear un principio activo"
-                        size="sm"
-                        icon={<Plus size={14} aria-hidden="true" />}
-                        onClick={onCrearPrincipioActivo}
-                        disabled={cargando}
-                      />
-                    </div>
-                  )
+                {/* Desde la 00166 tambien se cambia al editar. */}
+                {onCrearPrincipioActivo && (
+                  <div className="mb-3">
+                    <SecondaryButton
+                      title="Crear un principio activo"
+                      size="sm"
+                      icon={<Plus size={14} aria-hidden="true" />}
+                      onClick={onCrearPrincipioActivo}
+                      disabled={cargando}
+                    />
+                  </div>
                 )}
               </div>
             )}

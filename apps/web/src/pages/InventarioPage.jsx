@@ -10,6 +10,7 @@ import BandejaValidacionPage from "./BandejaValidacionPage";
 import {
   actualizarLote,
   actualizarMedicamento,
+  cambiarPrincipioDeMedicamento,
   describirVencimiento,
   filtrarCatalogoMedicamentos,
   FILTROS_CATALOGO_MEDICAMENTOS,
@@ -369,6 +370,10 @@ export default function InventarioPage() {
           esPediatrico: Boolean(formData.esPediatrico),
         }
       : { concentracion: null, formaFarmaceutica: null, esPediatrico: false };
+    if (esMedicamento && !formData.principio_activo_id) {
+      setErrorGuardarMedicamento("Debes seleccionar un principio activo.");
+      return;
+    }
     try {
       setCargandoGuardar(true);
       if (modoEdicion) {
@@ -385,11 +390,18 @@ export default function InventarioPage() {
           );
           return;
         }
-      } else {
-        if (esMedicamento && !formData.principio_activo_id) {
-          setErrorGuardarMedicamento("Debes seleccionar un principio activo.");
+        // El principio activo va aparte (00166); a un insumo se le quitan los que tenga.
+        const { error: errorPrincipio } = await cambiarPrincipioDeMedicamento(
+          formData.id,
+          esMedicamento ? formData.principio_activo_id : null,
+        );
+        if (errorPrincipio) {
+          setErrorGuardarMedicamento(
+            errorPrincipio.mensaje || "No se pudo cambiar el principio activo.",
+          );
           return;
         }
+      } else {
         const payload = {
           nombre: formData.nombre.trim(),
           tipoArticulo: formData.tipoArticulo,

@@ -95,7 +95,7 @@ const ENUMS = {
   TIPOS_DE_DONACION: [TIPOS_DE_DONACION, ["medicamentos", "insumos", "dinero", "servicios"]],
   ORIGENES_DE_PRESUPUESTO: [
     ORIGENES_DE_PRESUPUESTO,
-    ["donacion", "fondos_propios", "aporte_externo", "sin_clasificar"],
+    ["donacion", "fondos_propios", "aporte_externo", "sin_clasificar", "caja"],
   ],
   TIPOS_DE_DONANTE: [TIPOS_DE_DONANTE, ["persona", "organizacion"]],
   TIPOS_DE_MOVIMIENTO: [TIPOS_DE_MOVIMIENTO, ["ingreso", "salida"]],

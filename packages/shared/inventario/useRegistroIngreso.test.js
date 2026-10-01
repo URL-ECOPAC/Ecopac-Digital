@@ -53,15 +53,15 @@ describe("datosIngresoParaRegistrar", () => {
     expect(resultado.proveedor_id).toBe("donante-1");
   });
 
-  it("envia motivo undefined (no un string vacio) cuando no se indica numero de comprobante", () => {
-    const resultado = datosIngresoParaRegistrar(item, {
-      origen: "compra",
-      proveedorId: "prov-1",
-      numeroComprobante: "   ",
-      usuarioId: "user-1",
-    });
+  it("sin numero de comprobante, el motivo dice de donde vino (motivo es NOT NULL, 00023)", () => {
+    const datos = { proveedorId: "prov-1", numeroComprobante: "   ", usuarioId: "user-1" };
 
-    expect(resultado.motivo).toBeUndefined();
+    expect(datosIngresoParaRegistrar(item, { ...datos, origen: "compra" }).motivo).toBe(
+      "Ingreso por compra",
+    );
+    expect(datosIngresoParaRegistrar(item, { ...datos, origen: "donacion" }).motivo).toBe(
+      "Ingreso por donación",
+    );
   });
 
   it("envia costo_unitario undefined (no NaN) cuando el item no trae costo (issue #752)", () => {

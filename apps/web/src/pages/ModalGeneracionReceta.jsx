@@ -72,6 +72,7 @@ export default function ModalGeneracionReceta({
     lotesPorMedicamento,
     renglones,
     problemas,
+    avisosDeReparto,
     indicacionesGenerales,
     setIndicacionesGenerales,
     error,
@@ -253,6 +254,11 @@ export default function ModalGeneracionReceta({
 
                   {problemas[renglon.clave] && (
                     <p className="text-danger small mb-0">{problemas[renglon.clave]}</p>
+                  )}
+                  {!problemas[renglon.clave] && avisosDeReparto[renglon.clave] && (
+                    <p className="small mb-0" style={{ color: "var(--color-text-muted)" }}>
+                      {avisosDeReparto[renglon.clave]}
+                    </p>
                   )}
                 </div>
               );

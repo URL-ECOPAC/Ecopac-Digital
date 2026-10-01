@@ -1,6 +1,6 @@
 # Diccionario de datos
 
-> **Documento generado.** No se edita a mano: sale de `npm run docs:diccionario` (`scripts/generar-diccionario-de-datos.mjs`), que lee el catalogo de PostgreSQL de una base con todas las migraciones aplicadas, hasta la `00165_fecha_de_gasto_sin_depender_de_la_zona_horaria.sql`. Las descripciones son los `COMMENT ON` de las migraciones: si falta una, se agrega con una migracion nueva y se regenera.
+> **Documento generado.** No se edita a mano: sale de `npm run docs:diccionario` (`scripts/generar-diccionario-de-datos.mjs`), que lee el catalogo de PostgreSQL de una base con todas las migraciones aplicadas, hasta la `00168_caja_de_sobrantes.sql`. Las descripciones son los `COMMENT ON` de las migraciones: si falta una, se agrega con una migracion nueva y se regenera.
 
 Complementa a [MODELO-DE-DATOS.md](MODELO-DE-DATOS.md), que explica el porque de cada decision, y a [PERMISOS.md](PERMISOS.md), que explica que puede hacer cada rol. Este documento es la referencia exhaustiva: cada tabla, cada campo, cada restriccion, cada politica y cada trigger.
 
@@ -8,17 +8,17 @@ Complementa a [MODELO-DE-DATOS.md](MODELO-DE-DATOS.md), que explica el porque de
 
 | Objeto | Cantidad |
 | --- | --- |
-| Tablas | 55 |
-| Tablas con RLS activo | 55 |
+| Tablas | 56 |
+| Tablas con RLS activo | 56 |
 | Vistas | 9 |
 | Tipos enumerados | 22 |
-| Columnas (tablas y vistas) | 496 |
-| Llaves foraneas | 95 |
-| Restricciones CHECK | 62 |
-| Politicas RLS | 143 |
-| Triggers | 122 |
-| Funciones (sin contar las de trigger) | 56 |
-| Funciones de trigger | 46 |
+| Columnas (tablas y vistas) | 504 |
+| Llaves foraneas | 98 |
+| Restricciones CHECK | 64 |
+| Politicas RLS | 145 |
+| Triggers | 124 |
+| Funciones (sin contar las de trigger) | 59 |
+| Funciones de trigger | 48 |
 
 ### Como leer las tablas de este documento
 
@@ -135,6 +135,12 @@ Complementa a [MODELO-DE-DATOS.md](MODELO-DE-DATOS.md), que explica el porque de
 | [`notificaciones`](#notificaciones) | Buzon interno de cada perfil y bandeja de salida del correo (issue #755). Una fila por incidencia y por destinatario. Solo la escriben los triggers de esta migracion; cada perfil lee las suyas y solo puede cambiar leida_en. |
 | [`eventos_auditoria`](#eventos_auditoria) | Bitacora de cambios sobre informacion sensible. Se escribe solo por trigger y solo la lee la administradora. Sin politicas de INSERT, UPDATE ni DELETE: con RLS habilitado, lo que no tiene politica esta prohibido. No se usa FORCE ROW LEVEL SECURITY porque el dueno debe seguir eximido para que los triggers SECURITY DEFINER puedan insertar. |
 
+### Otras
+
+| Tabla | Descripcion |
+| --- | --- |
+| [`movimientos_de_caja`](#movimientos_de_caja) | Libro de la caja (00168): entra el sobrante devuelto de los aportes que no son de una donacion y sale lo que se asigna a una jornada con origen caja. Lo escriben fn_liquidar_sobrante_de_jornada y un trigger de jornada_presupuesto_origen; nadie a mano. |
+
 ## Diagramas entidad-relacion
 
 Un diagrama por modulo, con todas las columnas de sus tablas. Las tablas de otros modulos a las que apuntan aparecen solo con su nombre. `||` es obligatorio, `|o` opcional (FK que admite NULL); `o{` es "muchos" y `o|` "a lo sumo uno" (FK unica). GitHub dibuja los bloques `mermaid`.
@@ -207,6 +213,7 @@ erDiagram
   perfiles |o--o{ jornada_presupuesto_origen : "registrado_por"
   perfiles ||--o{ jornadas : "responsable_id"
   perfiles |o--o{ lotes : "registrado_por"
+  perfiles |o--o{ movimientos_de_caja : "registrado_por"
   perfiles |o--o{ movimientos_inventario : "aprobado_por"
   perfiles ||--o{ movimientos_inventario : "registrado_por"
   perfiles ||--o{ notificaciones : "perfil_id"
@@ -662,6 +669,7 @@ erDiagram
   comunidades ||--o{ jornadas : "comunidad_id"
   proyectos |o--o{ jornadas : "proyecto_id"
   perfiles ||--o{ jornadas : "responsable_id"
+  jornadas ||--o{ movimientos_de_caja : "jornada_id"
 ```
 
 ### Presupuestos y gastos
@@ -722,6 +730,7 @@ erDiagram
   jornadas ||--o{ jornada_presupuesto_origen : "jornada_id"
   perfiles |o--o{ jornada_presupuesto_origen : "registrado_por"
   jornada_presupuesto_origen |o--o{ jornada_presupuesto_origen : "traspasado_desde"
+  jornada_presupuesto_origen ||--o{ movimientos_de_caja : "aporte_id"
 ```
 
 ### Proyectos sociales
@@ -889,6 +898,25 @@ erDiagram
   perfiles ||--o{ notificaciones : "perfil_id"
 ```
 
+### Otras
+
+```mermaid
+erDiagram
+  movimientos_de_caja {
+    uuid id PK
+    varchar tipo
+    numeric monto
+    uuid aporte_id FK
+    uuid jornada_id FK
+    varchar descripcion
+    uuid registrado_por FK
+    timestamptz created_at
+  }
+  jornada_presupuesto_origen ||--o{ movimientos_de_caja : "aporte_id"
+  jornadas ||--o{ movimientos_de_caja : "jornada_id"
+  perfiles |o--o{ movimientos_de_caja : "registrado_por"
+```
+
 ## Tablas
 
 ### Modulo: Usuarios, roles y permisos
@@ -920,7 +948,7 @@ Persona que usa el sistema. Una fila por cuenta de auth.users (mismo id), creada
 | `perfiles_pkey` | PK | `PRIMARY KEY (id)` |
 | `perfiles_email_key` | UNIQUE | `UNIQUE (email)` |
 
-**La referencian:** `alertas_caducidad.atendida_por` (RESTRICT), `categorias_de_gasto.registrado_por` (SET NULL), `configuracion_alertas_caducidad.actualizado_por` (SET NULL), `consultas.medico_id` (RESTRICT), `donaciones.anulada_por` (RESTRICT), `donaciones.registrado_por` (RESTRICT), `fuentes_de_presupuesto.registrado_por` (SET NULL), `fusiones_pacientes.realizada_por` (RESTRICT), `gastos.aprobado_por` (RESTRICT), `gastos.responsable_id` (SET NULL), `gastos.registrado_por` (RESTRICT), `jornada_estado_historial.cambiado_por` (RESTRICT), `jornada_personal.perfil_id` (CASCADE), `jornada_presupuesto_origen.registrado_por` (SET NULL), `jornadas.responsable_id` (RESTRICT), `lotes.registrado_por` (NO ACTION), `movimientos_inventario.aprobado_por` (RESTRICT), `movimientos_inventario.registrado_por` (RESTRICT), `notificaciones.perfil_id` (CASCADE), `perfil_especialidad.perfil_id` (CASCADE), `proyecto_estado_historial.cambiado_por` (RESTRICT), `proyecto_hitos.registrado_por` (SET NULL), `proyecto_personal.perfil_id` (CASCADE), `proyecto_seguimiento.registrado_por` (SET NULL), `proyectos.responsable_id` (SET NULL), `receta_detalle.ajustada_por` (RESTRICT), `recetas.anulada_por` (RESTRICT), `recetas.medico_id` (RESTRICT), `rol_modulo.otorgado_por` (SET NULL), `triajes.tomado_por` (RESTRICT), `usuario_permiso.otorgado_por` (NO ACTION), `usuario_permiso.perfil_id` (CASCADE).
+**La referencian:** `alertas_caducidad.atendida_por` (RESTRICT), `categorias_de_gasto.registrado_por` (SET NULL), `configuracion_alertas_caducidad.actualizado_por` (SET NULL), `consultas.medico_id` (RESTRICT), `donaciones.anulada_por` (RESTRICT), `donaciones.registrado_por` (RESTRICT), `fuentes_de_presupuesto.registrado_por` (SET NULL), `fusiones_pacientes.realizada_por` (RESTRICT), `gastos.aprobado_por` (RESTRICT), `gastos.responsable_id` (SET NULL), `gastos.registrado_por` (RESTRICT), `jornada_estado_historial.cambiado_por` (RESTRICT), `jornada_personal.perfil_id` (CASCADE), `jornada_presupuesto_origen.registrado_por` (SET NULL), `jornadas.responsable_id` (RESTRICT), `lotes.registrado_por` (NO ACTION), `movimientos_de_caja.registrado_por` (SET NULL), `movimientos_inventario.aprobado_por` (RESTRICT), `movimientos_inventario.registrado_por` (RESTRICT), `notificaciones.perfil_id` (CASCADE), `perfil_especialidad.perfil_id` (CASCADE), `proyecto_estado_historial.cambiado_por` (RESTRICT), `proyecto_hitos.registrado_por` (SET NULL), `proyecto_personal.perfil_id` (CASCADE), `proyecto_seguimiento.registrado_por` (SET NULL), `proyectos.responsable_id` (SET NULL), `receta_detalle.ajustada_por` (RESTRICT), `recetas.anulada_por` (RESTRICT), `recetas.medico_id` (RESTRICT), `rol_modulo.otorgado_por` (SET NULL), `triajes.tomado_por` (RESTRICT), `usuario_permiso.otorgado_por` (NO ACTION), `usuario_permiso.perfil_id` (CASCADE).
 
 **Proteccion.** RLS activo. Privilegios: `authenticated`: INSERT, SELECT, UPDATE; `anon`: ninguno.
 
@@ -1869,10 +1897,11 @@ Principios activos de cada medicamento (un medicamento puede tener varios).
 | `medicamento_principio_principio_id_fkey` | FK | `FOREIGN KEY (principio_id) REFERENCES principios_activos(id) ON DELETE RESTRICT` (al borrar: RESTRICT) |
 | `medicamento_principio_pkey` | PK | `PRIMARY KEY (medicamento_id, principio_id)` |
 
-**Proteccion.** RLS activo. Privilegios: `authenticated`: INSERT, SELECT; `anon`: ninguno.
+**Proteccion.** RLS activo. Privilegios: `authenticated`: DELETE, INSERT, SELECT; `anon`: ninguno.
 
 | Politica | Operacion | Roles | USING | WITH CHECK |
 | --- | --- | --- | --- | --- |
+| Administrador y personal de campo quitan principios | Borrar | authenticated | `(es_administrador() OR es_personal_de_campo())` |  |
 | Administrador y personal de campo asocian principios | Crear | public |  | `(es_administrador() OR es_personal_de_campo())` |
 | Sesion activa lee medicamento_principio | Leer | authenticated | `(rol_actual() IS NOT NULL)` |  |
 
@@ -2314,7 +2343,7 @@ Jornada medica o dental en una comunidad: su fecha, responsable, estado, presupu
 | `jornadas_pkey` | PK | `PRIMARY KEY (id)` |
 | `jornadas_codigo_key` | UNIQUE | `UNIQUE (codigo)` |
 
-**La referencian:** `atenciones.jornada_id` (RESTRICT), `consultas.jornada_id` (RESTRICT), `donaciones.jornada_id` (SET NULL), `gastos.jornada_id` (RESTRICT), `jornada_estado_historial.jornada_id` (CASCADE), `jornada_insumos.jornada_id` (CASCADE), `jornada_personal.jornada_id` (CASCADE), `jornada_presupuesto_origen.jornada_id` (CASCADE).
+**La referencian:** `atenciones.jornada_id` (RESTRICT), `consultas.jornada_id` (RESTRICT), `donaciones.jornada_id` (SET NULL), `gastos.jornada_id` (RESTRICT), `jornada_estado_historial.jornada_id` (CASCADE), `jornada_insumos.jornada_id` (CASCADE), `jornada_personal.jornada_id` (CASCADE), `jornada_presupuesto_origen.jornada_id` (CASCADE), `movimientos_de_caja.jornada_id` (CASCADE).
 
 **Proteccion.** RLS activo. Privilegios: `authenticated`: INSERT, SELECT, UPDATE; `anon`: ninguno.
 
@@ -2584,7 +2613,7 @@ De donde viene cada parte del presupuesto de una jornada (issue #840). jornadas.
 | --- | --- | --- | --- | --- | --- |
 | `id` | `uuid` | no | `extensions.gen_random_uuid()` | PK | Identificador de la fila. Lo genera la base. |
 | `jornada_id` | `uuid` | no |  | FK -> `jornadas` | Jornada cuyo presupuesto se explica. |
-| `origen` | `origen_de_presupuesto` | no |  |  | donacion: sale de una donacion de dinero (donacion_id). fondos_propios: dinero de la organizacion. aporte_externo: otra fuente que no pasa por el registro de donaciones. sin_clasificar: el presupuesto que existia antes de la 00135, o el de un INSERT de jornada que traia el monto ya puesto. |
+| `origen` | `origen_de_presupuesto` | no |  |  | donacion: sale de una donacion de dinero (donacion_id). fondos_propios: dinero de la organizacion. aporte_externo: otra fuente que no pasa por el registro de donaciones. sin_clasificar: el presupuesto que existia antes de la 00135, o el de un INSERT de jornada que traia el monto ya puesto. caja: sale de la caja, donde queda el sobrante que no vuelve a una donacion (00168). |
 | `donacion_id` | `uuid` | si |  | FK -> `donaciones` | La donacion de dinero de la que sale el monto. Obligatoria si y solo si origen = donacion. |
 | `monto` | `numeric(12,2)` | no |  |  | Parte del presupuesto que viene de este origen. |
 | `descripcion` | `varchar(200)` | si |  |  | Detalle del aporte. |
@@ -2610,7 +2639,7 @@ De donde viene cada parte del presupuesto de una jornada (issue #840). jornadas.
 | `jornada_presupuesto_origen_traspasado_desde_fkey` | FK | `FOREIGN KEY (traspasado_desde) REFERENCES jornada_presupuesto_origen(id) ON DELETE RESTRICT` (al borrar: RESTRICT) |
 | `jornada_presupuesto_origen_pkey` | PK | `PRIMARY KEY (id)` |
 
-**La referencian:** `jornada_presupuesto_origen.traspasado_desde` (RESTRICT).
+**La referencian:** `jornada_presupuesto_origen.traspasado_desde` (RESTRICT), `movimientos_de_caja.aporte_id` (CASCADE).
 
 **Proteccion.** RLS activo. Privilegios: `authenticated`: DELETE, INSERT, SELECT, UPDATE; `anon`: ninguno.
 
@@ -2630,9 +2659,11 @@ De donde viene cada parte del presupuesto de una jornada (issue #840). jornadas.
 | `trg_presupuesto_origen_impedir_quitar_liquidado` | BEFORE DELETE | `fn_impedir_quitar_aporte_liquidado()` |
 | `trg_presupuesto_origen_proteger_comprometido` | BEFORE DELETE OR UPDATE | `fn_proteger_presupuesto_comprometido()` |
 | `trg_presupuesto_origen_registrado_por` | BEFORE INSERT | `fn_fijar_registrado_por_origen_de_presupuesto()` |
+| `trg_presupuesto_origen_salida_de_caja` | AFTER INSERT OR UPDATE | `fn_registrar_salida_de_caja()` |
 | `trg_presupuesto_origen_sincronizar` | AFTER INSERT OR DELETE OR UPDATE | `fn_sincronizar_presupuesto_de_jornada()` |
 | `trg_presupuesto_origen_updated_at` | BEFORE UPDATE | `actualizar_timestamp_updated_at()` |
 | `trg_presupuesto_origen_validar` | BEFORE INSERT OR UPDATE | `fn_validar_origen_de_presupuesto()` |
+| `trg_presupuesto_origen_validar_caja` | BEFORE INSERT OR UPDATE | `fn_validar_aporte_de_caja()` |
 
 ### Modulo: Proyectos sociales
 
@@ -3085,6 +3116,40 @@ Bitacora de cambios sobre informacion sensible. Se escribe solo por trigger y so
 | --- | --- | --- | --- | --- |
 | Solo administrador lee eventos_auditoria | Leer | public | `es_administrador()` |  |
 
+### Modulo: Otras
+
+#### movimientos_de_caja
+
+Libro de la caja (00168): entra el sobrante devuelto de los aportes que no son de una donacion y sale lo que se asigna a una jornada con origen caja. Lo escriben fn_liquidar_sobrante_de_jornada y un trigger de jornada_presupuesto_origen; nadie a mano.
+
+| Campo | Tipo | Nulo | Por defecto | Llave | Descripcion |
+| --- | --- | --- | --- | --- | --- |
+| `id` | `uuid` | no | `extensions.gen_random_uuid()` | PK | Identificador del movimiento. |
+| `tipo` | `varchar(10)` | no |  |  | entrada: sobrante devuelto a la caja. salida: aporte a una jornada que sale de la caja. |
+| `monto` | `numeric(12,2)` | no |  |  | Cuanto entra o sale, en quetzales. |
+| `aporte_id` | `uuid` | no |  | FK -> `jornada_presupuesto_origen` | En una entrada, el aporte cuyo sobrante se devolvio; en una salida, el aporte con origen caja. |
+| `jornada_id` | `uuid` | no |  | FK -> `jornadas` | La jornada de ese aporte: de la que viene el sobrante o la que recibe el dinero. |
+| `descripcion` | `varchar(200)` | si |  |  | Que fue, en palabras. |
+| `registrado_por` | `uuid` | si | `auth.uid()` | FK -> `perfiles` | Quien hizo la operacion. |
+| `created_at` | `timestamptz` | no | `now()` |  | Cuando entro o salio el dinero. |
+
+**Llaves y restricciones**
+
+| Nombre | Tipo | Definicion |
+| --- | --- | --- |
+| `chk_movimientos_de_caja_monto_positivo` | CHECK | `CHECK ((monto > (0)::numeric))` |
+| `chk_movimientos_de_caja_tipo` | CHECK | `CHECK (((tipo)::text = ANY ((ARRAY['entrada'::character varying, 'salida'::character varying])::text[])))` |
+| `movimientos_de_caja_aporte_id_fkey` | FK | `FOREIGN KEY (aporte_id) REFERENCES jornada_presupuesto_origen(id) ON DELETE CASCADE` (al borrar: CASCADE) |
+| `movimientos_de_caja_jornada_id_fkey` | FK | `FOREIGN KEY (jornada_id) REFERENCES jornadas(id) ON DELETE CASCADE` (al borrar: CASCADE) |
+| `movimientos_de_caja_registrado_por_fkey` | FK | `FOREIGN KEY (registrado_por) REFERENCES perfiles(id) ON DELETE SET NULL` (al borrar: SET NULL) |
+| `movimientos_de_caja_pkey` | PK | `PRIMARY KEY (id)` |
+
+**Proteccion.** RLS activo. Privilegios: `authenticated`: SELECT; `anon`: ninguno.
+
+| Politica | Operacion | Roles | USING | WITH CHECK |
+| --- | --- | --- | --- | --- |
+| Leen la caja quien ve los aportes | Leer | authenticated | `(es_administrador() OR tiene_permiso('jornadas.gestionar'::text) OR accede_a_modulo_por_matriz('jornadas'::text) OR accede_a_modulo_por_matriz('presupuestos'::text))` |  |
+
 ## Vistas
 
 ### nombres_de_perfiles
@@ -3245,7 +3310,7 @@ Seguridad: corre con los permisos de su dueno; filtra con su propio WHERE. Privi
 | `estado_receta` | `emitida`, `anulada` | Estado de una receta: emitida o anulada. |
 | `moneda_lote` | `GTQ` | Un solo valor a proposito: todo el sistema opera en quetzales (packages/shared/formato/moneda.js, MONEDA). Anadir una moneda nueva el dia que haga falta es ALTER TYPE ... ADD VALUE, no una migracion de esquema. Issue #752. |
 | `operacion_auditoria` | `insercion`, `actualizacion`, `baja`, `eliminacion` | Operacion registrada en la bitacora de auditoria. |
-| `origen_de_presupuesto` | `donacion`, `fondos_propios`, `aporte_externo`, `sin_clasificar` | De donde viene una parte del presupuesto de una jornada. |
+| `origen_de_presupuesto` | `donacion`, `fondos_propios`, `aporte_externo`, `sin_clasificar`, `caja` | De donde viene una parte del presupuesto de una jornada. |
 | `origen_lote` | `compra`, `donacion` | Como se adquirio un lote: compra o donacion. Mismo eje del negocio que tipo_proveedor (comercial/donante, 00017), con vocabulario propio porque describe la transaccion (un lote) y no la entidad (un proveedor); se documenta la relacion en vez de unificar el vocabulario (issue #412). Sin CHECK que ate esto al tipo del proveedor referenciado. |
 | `rol_usuario` | `administrador`, `junta directiva`, `socio fundador`, `medico`, `voluntario general` | Roles del sistema. Lo replica packages/shared/usuarios/roles.js; ver docs/PERMISOS.md. |
 | `sexo_paciente` | `Femenino`, `Masculino` | Sexo del paciente (issue #699). Los dos valores son los que la aplicacion ya escribia desde OPCIONES_SEXO y los unicos que hay en la base. Espejo de SEXOS en packages/shared/enums.js. Agregar un valor es ALTER TYPE ... ADD VALUE, y exige actualizar ese archivo en el mismo PR. |
@@ -3277,6 +3342,7 @@ Seguridad: corre con los permisos de su dueno; filtra con su propio WHERE. Privi
 | `fn_atenciones_de_persona_por_jornada(p_perfil_id uuid)` | `TABLE(jornada_id uuid, consultas integer, triajes integer, pacientes integer)` | INVOKER | authenticated | Cuenta, por jornada, las consultas (consultas.medico_id), los triajes (triajes.tomado_por) y los pacientes distintos alcanzados por cualquiera de las dos vias, para un perfil dado. Solo devuelve una fila por jornada donde hubo al menos un evento visible para quien llama; una jornada sin actividad clinica de esa persona, o cuya actividad RLS no deja ver, simplemente no aparece en el resultado -- son el mismo caso para esta funcion. Quien la consume (obtenerJornadasDePersona() de packages/shared/jornadas/api.js) le asigna { consultas: 0, triajes: 0, pacientes: 0 } a toda jornada ausente. Issue #175, criterio 4. No es SECURITY DEFINER: respeta las politicas de SELECT de consultas, triajes y atenciones (00033), igual que personal_registro_atenciones (00044) y fn_contar_atenciones_incompletas (00051). Junta directiva y socio fundador no tienen SELECT sobre ninguna de las tres tablas: para ellos esta funcion no devuelve ninguna fila, para ninguna jornada, sin importar la actividad real. Voluntario general lee triajes y atenciones pero no consultas: para ese rol el conteo de pacientes tambien queda incompleto (solo cuenta los alcanzados por triaje), sin que nada lo distinga de un conteo completo -- limite conocido de RLS, no de esta funcion. |
 | `fn_atender_alerta_caducidad(p_alerta_id uuid, p_acciones jsonb)` | `uuid` | DEFINER | authenticated | Cierra una alerta de caducidad y ejecuta una o mas acciones sobre el stock, en una transaccion (issue de division de alertas, PLAN.md punto 5): p_acciones es un arreglo de { accion, cantidad, bodegaDestinoId? } cuyas cantidades tienen que sumar exactamente el disponible vivo del lote (todas las bodegas) al momento de atender, no cantidad_afectada (el numero congelado al generar la alerta). descartado/donado dan de baja esa cantidad con salidas aprobadas; reubicado la traslada a bodegaDestinoId (exige que el lote no haya vencido). Cada accion aplicada queda en alerta_caducidad_detalle; alertas_caducidad.accion solo se llena cuando hubo una unica accion. Solo administracion; lanza 42501 a cualquier otro rol. |
 | `fn_buscar_pacientes(p_termino text, p_comunidad_id uuid, p_pagina integer, p_por_pagina integer, p_condicion_cronica_id uuid, p_sexo text, p_edad_min integer, p_edad_max integer)` | `TABLE(paciente_id uuid, nombres character varying, apellidos character varying, fecha_nacimiento date, sexo character varying, comunidad_id uuid, comunidad_nombre character varying, numero_ficha character varying, ultima_atencion date, condiciones text[], relevancia real, pagina integer, por_pagina integer, total bigint)` | INVOKER | authenticated | Busca pacientes por nombre (tolerando acentos y errores de tipeo, via el indice de trigramas de 00011 y el operador <% de word_similarity), filtrando opcionalmente por comunidad y por condicion cronica vigente, con resultados paginados y ordenados por relevancia. Si la pagina pedida cae despues del final, devuelve la ultima pagina real (columna pagina) en vez de una lista vacia con el total perdido. Excluye pacientes con fecha_baja. La usa buscarPacientes() de packages/shared/pacientes/api.js. Existe como funcion porque PostgREST no puede reproducir la expresion indexada ni ordenar por similarity(). SECURITY INVOKER: respeta las politicas de SELECT de 00032/00008, incluida la de padecimientos_cronicos, que solo deja leer a medico y administrador; para el resto de roles la columna condiciones llega vacia, que es lo correcto. Issue #535: se agrego la columna condiciones, que la tabla del listado dibuja como chips desde el PR #311. El dato se resuelve aqui y no con una segunda consulta desde el cliente porque la funcion ya recorre padecimientos_cronicos para el filtro, asi que no cuesta ningun viaje de red adicional; esa era la objecion que dejo escrita el PR #482 al omitirlas. Vigente significa estado <> resuelta, o sea activa y controlada, misma definicion que soloVigentes en obtenerCondicionesDelPaciente() (#122): una condicion controlada se sigue padeciendo. La 00076 usaba estado = activa tanto aqui como en el filtro, asi que un diabetico controlado ni salia al filtrar por Diabetes ni mostraba su chip; las dos cosas se corrigen en esta migracion para que columna y filtro no se contradigan. Issue #761: ahora exige fn_verificar_limite_busqueda_pacientes() (60 busquedas por usuario cada minuto) via la CTE _limite, referenciada con CROSS JOIN para que el planner no la elimine por no estar correlacionada con pacientes. |
+| `fn_cambiar_principio_de_medicamento(p_medicamento_id uuid, p_principio_id uuid)` | `void` | INVOKER | authenticated | Deja al medicamento con este principio activo y ningun otro, en una transaccion (00166). A un insumo le quita los que tenga. No es SECURITY DEFINER: la deciden las politicas de medicamento_principio. |
 | `fn_contar_atenciones_incompletas(p_jornada_id uuid)` | `integer` | INVOKER | authenticated | Cuenta las atenciones de una jornada que todavia no tienen consulta asociada. jornadas/api.js la consulta antes de finalizar una jornada para advertir -sin bloquear- si hay atenciones incompletas (issue #171, criterio de aceptacion 4). No es SECURITY DEFINER: respeta las politicas de SELECT de atenciones/consultas (00033). |
 | `fn_crear_usuario_administrativo(p_correo text, p_nombres text, p_apellidos text, p_rol rol_usuario)` | `uuid` | DEFINER | nadie | Da de alta a una persona con el rol indicado, sin contrasena: la establece con "olvide mi contrasena". Es el camino administrativo mientras no exista la Edge Function invitar-usuario. No se concede a ningun rol de la aplicacion: se ejecuta desde el SQL editor del Dashboard. |
 | `fn_detectar_pacientes_duplicados()` | `TABLE(paciente_a_id uuid, nombres_a character varying, apellidos_a character varying, numero_ficha_a character varying, paciente_b_id uuid, nombres_b character varying, apellidos_b character varying, numero_ficha_b character varying, fecha_nacimiento date, similitud real)` | INVOKER | authenticated | Posibles pacientes duplicados: misma fecha de nacimiento y nombre similar (pg_trgm), ordenados por similitud. SECURITY INVOKER: la ve quien ya puede leer pacientes (00032). |
@@ -3286,7 +3352,7 @@ Seguridad: corre con los permisos de su dueno; filtra con su propio WHERE. Privi
 | `fn_generar_alertas_caducidad()` | `integer` | DEFINER | nadie | Rutina de vencimientos (issue #899). Con la fecha de Guatemala y las antelaciones de configuracion_alertas_caducidad: cierra las alertas pendientes sin existencia, crea una alerta por lote con existencia dentro de la ventana (incluidos los vencidos) que no tenga una pendiente ni una atendida en la misma etapa, y registra un aviso -con su notificacion- cada vez que una alerta pendiente llega a una etapa mas cercana: cada antelacion y el dia del vencimiento. Idempotente. Devuelve cuantas alertas nuevas creo. SECURITY DEFINER; la invocan la Edge Function programada y fn_sincronizar_alertas_caducidad(). |
 | `fn_generar_receta(p_consulta_id uuid, p_medico_id uuid, p_indicaciones_generales text, p_detalle jsonb)` | `uuid` | INVOKER | authenticated | Crea una receta con todos sus renglones Y registra la salida de inventario correspondiente, todo en una sola transaccion (issues #120 y #711): si un renglon o una salida falla, no queda ni la receta ni el movimiento. Antes de insertar cada renglon con lote comprueba que el lote no este vencido, que la existencia alcance y que venga la bodega de la que sale. Los renglones sin lote no se comprueban ni generan movimiento: recetar sin especificar lote es valido (receta_detalle.lote_id es nullable en la 00019) y ahi el control ocurre al despachar. Los movimientos se agrupan por (lote, bodega), asi que dos renglones del mismo lote dan una sola salida. Desde la issue #764 tambien persiste bodega_id en receta_detalle, que fn_ajustar_entrega_receta() necesita para corregir la cantidad entregada mas adelante sin descontar el inventario dos veces. SECURITY INVOKER: quien puede crear la receta y quien puede registrar el movimiento lo deciden las politicas de la 00033 y la 00034, no esta funcion; el flujo de aprobacion no cambia (administrador autoaprueba por la 00028, medico y voluntario dejan el movimiento pendiente). |
 | `fn_hoy_guatemala(p_instante timestamp with time zone)` | `date` | INVOKER | authenticated | Fecha calendario de Guatemala en el instante dado (por defecto, ahora). La base corre en UTC, asi que CURRENT_DATE se adelanta un dia entre las 18:00 y las 23:59 de Guatemala (issue #899). |
-| `fn_liquidar_sobrante_de_jornada(p_jornada_id uuid, p_decisiones jsonb)` | `integer` | DEFINER | authenticated | Liquida el sobrante de una jornada finalizada sin gastos pendientes: por cada aporte elegido, lo devuelve a su origen o lo traspasa a otra jornada planificada o en curso del mismo proyecto (00160). Administradora o jornadas.gestionar. |
+| `fn_liquidar_sobrante_de_jornada(p_jornada_id uuid, p_decisiones jsonb)` | `integer` | DEFINER | authenticated | Liquida el sobrante de una jornada finalizada sin gastos pendientes: por cada aporte elegido, lo devuelve a su origen o lo traspasa a otra jornada planificada o en curso del mismo proyecto (00160). Lo devuelto que no es de una donacion entra a la caja (00168). Administradora o jornadas.gestionar. |
 | `fn_lotes_en_ventana_de_caducidad(p_hoy date, p_umbrales integer[])` | `TABLE(lote_id uuid, dias integer, etapa integer, cantidad integer)` | INVOKER | nadie | Lotes con existencia total mayor que cero que vencen dentro de la antelacion mas larga, incluidos los ya vencidos, con sus dias restantes y su etapa de aviso. Uso interno de fn_generar_alertas_caducidad(). |
 | `fn_medicamento_tiene_existencias(p_medicamento_id uuid)` | `boolean` | INVOKER | authenticated | TRUE si el medicamento tiene stock positivo no vencido (existencias.cantidad_disponible > 0 y lote con fecha_vencimiento >= hoy) en algun lote. medicamentos.api.js la consulta antes de desactivar un medicamento (issue #142); un medicamento con lotes historicos ya agotados o vencidos si se puede desactivar. |
 | `fn_notificar_administradores(p_categoria categoria_notificacion, p_titulo text, p_cuerpo text, p_enlace text, p_origen_tabla text, p_origen_id uuid)` | `integer` | DEFINER | nadie | Crea la misma notificacion para cada administrador activo (un perfil desactivado no recibe nada, mismo criterio que la 00079). Devuelve cuantas creo. Solo la llaman los triggers de la 00138: sin EXECUTE para ningun rol de aplicacion. |
@@ -3297,6 +3363,7 @@ Seguridad: corre con los permisos de su dueno; filtra con su propio WHERE. Privi
 | `fn_registrar_paciente(p_nombres character varying, p_apellidos character varying, p_fecha_nacimiento date, p_sexo character varying, p_comunidad_id uuid, p_telefono_contacto character varying, p_idioma character varying, p_dpi character varying, p_tipo_sangre tipo_sanguineo, p_nombre_responsable character varying, p_parentesco_responsable character varying)` | `TABLE(id uuid, nombres character varying, apellidos character varying, fecha_nacimiento date, sexo character varying, comunidad_id uuid, telefono_contacto character varying, idioma character varying, dpi character varying, tipo_sangre tipo_sanguineo, nombre_responsable character varying, parentesco_responsable character varying, fecha_baja date, created_at timestamp with time zone, updated_at timestamp with time zone, numero_ficha character varying)` | INVOKER | authenticated | Inserta un paciente y su expediente en una sola transaccion. numero_ficha ya no es un parametro: lo genera el DEFAULT de expedientes (nextval de expedientes_numero_ficha_seq, 00081), formateado a 6 digitos con ceros a la izquierda. nextval() es atomico y nunca repite valor entre sesiones concurrentes, asi que dos dispositivos registrando a la vez en la misma jornada no pueden colisionar. No es SECURITY DEFINER: las politicas de INSERT de pacientes y expedientes (00032) siguen decidiendo quien puede llamarla. Issue #663: p_idioma pasa de idioma_preferido a VARCHAR. El idioma ya no es un enum sino un codigo del catalogo idiomas, con clave foranea, para poder agregar idiomas sin desplegar. |
 | `fn_reporte_jornada(p_jornada_id uuid)` | `jsonb` | DEFINER | authenticated | Reporte de resultados de una jornada, ya agregado: totales, diagnosticos, medicamentos y personal. Sin filas de paciente. NULL si la jornada no existe. |
 | `fn_reporte_pacientes_atendidos(p_agrupar_por text, p_jornada_id uuid, p_comunidad_id uuid, p_desde date, p_hasta date)` | `TABLE(grupo_id text, grupo text, pacientes integer, nuevos integer, recurrentes integer, hombres integer, mujeres integer, menores integer, adultos integer, adultos_mayores integer)` | DEFINER | authenticated | Pacientes atendidos agregados por jornada, comunidad o mes, con el desglose por sexo y por rango de edad y la distincion entre pacientes nuevos y recurrentes (issue #202, RF-31). Cuenta pacientes distintos, no atenciones: dos atenciones del mismo paciente en la misma jornada son un solo paciente atendido. La edad se calcula a la fecha de la jornada, no a la de hoy, para que un reporte de hace tres anios no envejezca con el tiempo. SECURITY DEFINER con guarda de rol explicita: los roles consultivos no tienen politica de SELECT sobre pacientes (00032) y esta funcion necesita sexo y fecha_nacimiento para los desgloses. Devuelve UNICAMENTE agregados: ninguna fila del resultado identifica a un paciente, que es la regla que fija la 00054 (issue #407). La 00095 corrigio dos errores de calculo (issue #596): el sexo se comparaba contra la inicial cuando la columna guardaba la palabra completa, asi que hombres y mujeres salian en cero; y un paciente recurrente contaba como nuevo en todos sus grupos. La 00132 (issue #699) retira el parche que dejo la 00095: con sexo convertido en el enum sexo_paciente, el desglose vuelve a compararse por igualdad y no por la inicial con LIKE. |
+| `fn_saldo_de_caja_sin_filtro()` | `numeric` | DEFINER | nadie | Saldo de la caja sin pasar por RLS (00168). Solo la usan los triggers; la pantalla lee saldo_de_caja(). |
 | `fn_sincronizar_alertas_caducidad()` | `integer` | DEFINER | authenticated | Ejecuta fn_generar_alertas_caducidad() a peticion de la administracion o de quien tenga inventario.configurar_alertas, para no depender de cuando corrio la rutina programada (issues #838 y #899). Devuelve cuantas alertas nuevas creo. Sin ese rol o permiso lanza 42501. |
 | `fn_umbrales_caducidad_validos(p_umbrales integer[])` | `boolean` | INVOKER | authenticated | Regla de las antelaciones de aviso de vencimiento: de 0 a 4 valores, distintos, entre 1 y 365 dias. La usa el CHECK de configuracion_alertas_caducidad; packages/shared/inventario/configuracionAlertas.validaciones.js replica la misma regla. |
 | `fn_valor_de_inventario_disponible(p_bodega_id uuid)` | `TABLE(bodega_id uuid, bodega text, medicamento_id uuid, medicamento text, origen origen_lote, cantidad_disponible bigint, valor_disponible numeric, unidades_sin_costo bigint, lotes_sin_costo bigint)` | DEFINER | authenticated | Valor monetario del inventario disponible (existencias.cantidad_disponible, no lotes.cantidad_ingresada), agregado por bodega, medicamento y origen. p_bodega_id nulo suma todas las bodegas. valor_disponible solo suma lotes con costo_unitario conocido; unidades_sin_costo y lotes_sin_costo cuentan aparte lo que no tiene costo capturado, para que el reporte declare cuanto del inventario queda sin valorizar en vez de contarlo como cero. SECURITY DEFINER: solo administrador y los roles consultivos (junta directiva, socio fundador) reciben resultado, por la misma razon que protege presupuesto_de_jornada/proyecto/sistema (00080) y obtenerIndicadoresImpacto (reportes/api.js) -- costo_unitario es informacion financiera que la 00121 no pudo restringir a nivel de columna. Issue #752. |
@@ -3316,6 +3383,7 @@ Seguridad: corre con los permisos de su dueno; filtra con su propio WHERE. Privi
 | `presupuestos_de_proyectos(p_proyecto_ids uuid[])` | `TABLE(proyecto_id uuid, asignado numeric, gastado numeric, disponible numeric, pendiente numeric)` | INVOKER | authenticated | Version en lote de presupuesto_de_proyecto(): un id por fila en vez de una RPC por proyecto (issue #771). Un proyecto sin jornadas visibles no genera fila -- a diferencia de presupuesto_de_proyecto(), que siempre devuelve una fila en ceros -- porque agrupa por proyecto_id y no hay nada que agrupar. Quien llama trata "id ausente en el resultado" igual que un presupuesto en ceros. |
 | `puede_consultar_reportes()` | `boolean` | INVOKER | authenticated | Administradora, roles consultivos, quien tiene reportes.exportar o el rol al que la matriz le abrio Reportes. |
 | `rol_actual()` | `rol_usuario` | DEFINER | authenticated | Rol del perfil de la sesion, o NULL si no hay sesion o el perfil esta desactivado (issue #529). De esta funcion cuelga casi toda la matriz RLS. |
+| `saldo_de_caja()` | `numeric` | DEFINER | authenticated | Lo que hay en la caja: entradas menos salidas (00168). NULL para quien no ve los aportes. |
 | `sobrante_de_jornada(p_jornada_id uuid)` | `TABLE(origen_id uuid, origen origen_de_presupuesto, monto numeric, devuelto numeric, usado numeric, sobrante numeric)` | DEFINER | authenticated | Por cada aporte de una jornada: lo que cuenta, lo usado por los gastos pendientes y aprobados (primero donaciones y aportes externos, al final fondos propios) y lo que sobra (00160). La ve quien ve los aportes. |
 | `tiene_permiso(p_codigo text)` | `boolean` | DEFINER | authenticated | TRUE si quien esta conectado tiene el permiso fino p_codigo: por su rol (rol_permiso) salvo que se le revoque, o concedido a el (usuario_permiso). La usan las politicas RLS. |
 
@@ -3346,7 +3414,9 @@ Seguridad: corre con los permisos de su dueno; filtra con su propio WHERE. Privi
 | `fn_proyecto_cancelado_no_se_modifica()` | INVOKER | Rechaza cualquier UPDATE de un proyecto cuyo estado ya es cancelado (00154). |
 | `fn_proyecto_de_la_fila_no_esta_cancelado()` | DEFINER | Rechaza escribir una fila que cuelga de un proyecto cancelado: hitos, seguimiento, equipo, insumos previstos y la asociacion de una jornada (00154). |
 | `fn_proyecto_de_la_jornada_de_la_donacion()` | DEFINER | Trigger: si una donacion es para una jornada, su proyecto es el de esa jornada (00153). |
+| `fn_registrar_salida_de_caja()` | DEFINER | Trigger de jornada_presupuesto_origen (00168): un aporte con origen caja deja su salida en movimientos_de_caja. |
 | `fn_sincronizar_presupuesto_de_jornada()` | DEFINER | Mantiene jornadas.presupuesto_asignado igual a la suma de sus filas de jornada_presupuesto_origen (issue #840). Es la unica via que escribe esa columna. |
+| `fn_validar_aporte_de_caja()` | DEFINER | Trigger de jornada_presupuesto_origen (00168): un aporte con origen caja no saca mas de lo que hay en ella. |
 | `fn_validar_gasto_contra_presupuesto()` | DEFINER | Trigger de gastos (00159): una jornada finalizada no admite gastos nuevos, la fecha llega hasta el dia de la jornada o hasta hoy, y un gasto que compromete mas dinero no deja lo comprometido (pendiente + aprobado) por encima del presupuesto asignado. |
 | `fn_validar_lote_de_renglon_de_donacion()` | INVOKER | Trigger: el lote que se enlaza a un renglon de donacion tiene que ser del mismo medicamento que se dono (00135). |
 | `fn_validar_origen_de_presupuesto()` | DEFINER | Un origen de tipo donacion tiene que apuntar a una donacion de dinero registrada, y lo asignado desde ella en todas las jornadas no puede pasar de su monto (issue #840). |

@@ -4,6 +4,7 @@ import { Plus, X } from "lucide-react";
 import {
   COLUMNAS_ORIGEN_PRESUPUESTO,
   formatearMoneda,
+  ORIGENES_DE_PRESUPUESTO,
   useOrigenesDePresupuesto,
 } from "@ecopac/shared";
 
@@ -74,6 +75,7 @@ export default function OrigenesDePresupuesto({
     permisos,
     origenes,
     total,
+    saldoDeCaja,
     cargando,
     error,
     recargar,
@@ -176,6 +178,12 @@ export default function OrigenesDePresupuesto({
                 </div>
               ))}
             </div>
+            {valores.origen === ORIGENES_DE_PRESUPUESTO.CAJA && saldoDeCaja !== null && (
+              <p className="ec-campo-nota">
+                En la caja hay {formatearMoneda(saldoDeCaja)}: el sobrante de las jornadas que no
+                vuelve a una donación.
+              </p>
+            )}
             {campos.some((campo) => campo.id === "donacionId") &&
               catalogos?.donacionesDisponibles?.length === 0 && (
                 <p className="ec-campo-nota">

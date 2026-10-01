@@ -1,5 +1,6 @@
 import { useState } from "react";
 
+import { ORIGENES_DE_LOTE } from "../enums.js";
 import { registrarIngreso } from "./movimientos.api.js";
 import { registrarMedicamento } from "./medicamentos.api.js";
 import { puedeAdministrarMedicamentos } from "./medicamentos.permisos.js";
@@ -85,7 +86,11 @@ export function datosIngresoParaRegistrar(
     fecha_vencimiento: item.fecha_vencimiento,
     proveedor_id: proveedorId,
     cantidad: item.cantidad,
-    motivo: numeroComprobante.trim() || undefined,
+    // movimientos_inventario.motivo es NOT NULL (00023) y el comprobante es opcional: sin el, el
+    // ingreso se rechazaba con "Falta un dato obligatorio" sin decir cual. Se dice de donde vino.
+    motivo:
+      numeroComprobante.trim() ||
+      (origen === ORIGENES_DE_LOTE.DONACION ? "Ingreso por donación" : "Ingreso por compra"),
     usuarioId,
     // costo_unitario es opcional (issue #752): sin el, o con el campo vacio del formulario, se
     // traduce a undefined, no a NaN ni a 0 -- registrarIngreso() (movimientos.api.js) omite la

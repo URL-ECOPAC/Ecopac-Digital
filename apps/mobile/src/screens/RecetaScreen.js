@@ -51,7 +51,7 @@ function Disponible({ medicamento, onAgregar }) {
   );
 }
 
-function Renglon({ renglon, lotes, problema, onEditar, onQuitar, deshabilitado }) {
+function Renglon({ renglon, lotes, problema, aviso, onEditar, onQuitar, deshabilitado }) {
   return (
     <Card style={styles.tarjeta}>
       <View style={styles.cabeceraRenglon}>
@@ -104,6 +104,7 @@ function Renglon({ renglon, lotes, problema, onEditar, onQuitar, deshabilitado }
       />
 
       {problema && <Text style={styles.motivo}>{problema}</Text>}
+      {!problema && aviso && <Text style={styles.aviso}>{aviso}</Text>}
     </Card>
   );
 }
@@ -124,6 +125,7 @@ export default function RecetaScreen() {
     lotesPorMedicamento,
     renglones,
     problemas,
+    avisosDeReparto,
     indicacionesGenerales,
     setIndicacionesGenerales,
     error,
@@ -218,6 +220,7 @@ export default function RecetaScreen() {
           renglon={renglon}
           lotes={lotesPorMedicamento[renglon.medicamentoId]}
           problema={problemas[renglon.clave]}
+          aviso={avisosDeReparto[renglon.clave]}
           onEditar={editarRenglon}
           onQuitar={quitarRenglon}
           deshabilitado={enviando}
@@ -294,6 +297,10 @@ const styles = StyleSheet.create({
   },
   motivo: {
     color: colors.danger,
+    fontSize: typography.sizes.sm,
+  },
+  aviso: {
+    color: colors.textMuted,
     fontSize: typography.sizes.sm,
   },
   agregar: {

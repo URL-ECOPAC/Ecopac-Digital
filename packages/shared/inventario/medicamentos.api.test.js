@@ -30,6 +30,7 @@ vi.mock("../api/cliente.js", () => ({
 const { CODIGOS_DE_ERROR_DE_SUPABASE } = await import("../api/errores-de-supabase.js");
 const {
   actualizarMedicamento,
+  cambiarPrincipioDeMedicamento,
   desactivarMedicamento,
   listarMedicamentos,
   listarPrincipiosDeMedicamento,
@@ -391,6 +392,47 @@ describe("registrarMedicamento", () => {
 
     expect(medicamento).toBeNull();
     expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.UNICIDAD);
+  });
+});
+
+describe("cambiarPrincipioDeMedicamento", () => {
+  it("llama fn_cambiar_principio_de_medicamento (00166) con el medicamento y el principio", async () => {
+    const cliente = crearCliente();
+    dobles.cliente = cliente;
+
+    const { error } = await cambiarPrincipioDeMedicamento("med-1", "principio-2");
+
+    expect(error).toBeNull();
+    expect(cliente.llamadas).toContainEqual({
+      tabla: null,
+      paso: "rpc",
+      nombre: "fn_cambiar_principio_de_medicamento",
+      argumentos: { p_medicamento_id: "med-1", p_principio_id: "principio-2" },
+    });
+  });
+
+  it("sin principio (un insumo) manda null, no una cadena vacia", async () => {
+    const cliente = crearCliente();
+    dobles.cliente = cliente;
+
+    await cambiarPrincipioDeMedicamento("med-1", "");
+
+    expect(cliente.llamadas.at(-1).argumentos.p_principio_id).toBeNull();
+  });
+
+  it("devuelve el error de la base normalizado", async () => {
+    dobles.cliente = crearCliente({
+      rpc: {
+        fn_cambiar_principio_de_medicamento: {
+          data: null,
+          error: { code: "42501", message: "permission denied" },
+        },
+      },
+    });
+
+    const { error } = await cambiarPrincipioDeMedicamento("med-1", "principio-2");
+
+    expect(error).not.toBeNull();
   });
 });
 

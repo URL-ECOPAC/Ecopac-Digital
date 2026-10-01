@@ -14,6 +14,11 @@
 -- (local, y el job "validar" del CI, ambos desechables) o si alguien lo aplica a mano
 -- contra ecopac-dev. Ver docs/DATOS-DEMO.md para las credenciales y el procedimiento.
 --
+-- Catalogos que se conservan al recargar ecopac-dev (bodegas, proveedores, comunidades, principios
+-- activos): se crean con su id fijo solo si no hay ya una fila con el mismo nombre, y todo lo que
+-- los usa los busca por nombre. Asi el seed convive con lo que el equipo ya registro
+-- (scripts/recargar-datos-demo.sh vacia los datos de negocio pero no los catalogos).
+--
 -- Idempotencia: todos los IDs son UUIDs fijos (prefijo "de00000X-" por tipo de entidad,
 -- para no chocar con los fixtures de supabase/tests/database/, que usan bloques
 -- "00000000-...-0NNN" dentro de transacciones que siempre hacen ROLLBACK). Se usa
@@ -39,7 +44,7 @@
 -- movil que "viaja" con la jornada en curso.
 INSERT INTO bodegas (id, nombre, ubicacion, es_movil) VALUES
   ('de000002-0000-0000-0000-000000000001', 'Bodega Movil Demo', NULL, TRUE)
-ON CONFLICT (id) DO NOTHING;
+ON CONFLICT DO NOTHING;
 
 INSERT INTO proveedores (id, nombre, contacto, tipo) VALUES
   ('de000003-0000-0000-0000-000000000001', 'Distribuidora Farmaceutica Demo, S.A.', 'ventas@distribuidorademo.test', 'comercial'),
@@ -51,7 +56,7 @@ INSERT INTO proveedores (id, nombre, contacto, tipo) VALUES
   -- alguien que todavia no esta en el catalogo no podria cerrar el ingreso sin llamar a la
   -- administradora. Solo dato (INSERT), sin tocar esquema ni RLS.
   ('de000003-0000-0000-0000-000000000003', 'Donante no identificado', NULL, 'donante')
-ON CONFLICT (id) DO NOTHING;
+ON CONFLICT DO NOTHING;
 
 -- ============================================================================
 -- 2. Usuarios: uno por rol (medico y voluntario general llevan dos, para poblar
@@ -157,24 +162,24 @@ INSERT INTO comunidades (id, municipio_id, nombre, latitud, longitud, referencia
   ('de000004-0000-0000-0000-000000000001', 106, 'Caserio El Rosario Demo', 14.712000, -90.470000, 'Acceso por camino de terraceria a 15 minutos de la cabecera municipal.'),
   ('de000004-0000-0000-0000-000000000002', 401, 'Aldea Vista Hermosa Demo', 14.660000, -90.820000, 'Se llega por la ruta departamental, ultimo tramo sin asfaltar.'),
   ('de000004-0000-0000-0000-000000000003', 1601, 'Comunidad Nueva Esperanza Demo', 15.470000, -90.370000, 'Punto de encuentro en la escuela local.')
-ON CONFLICT (id) DO NOTHING;
+ON CONFLICT DO NOTHING;
 
 -- ============================================================================
 -- 4. Pacientes y expedientes
 -- ============================================================================
 INSERT INTO pacientes (id, nombres, apellidos, fecha_nacimiento, sexo, comunidad_id, telefono_contacto, idioma, dpi) VALUES
-  ('de000005-0000-0000-0000-000000000001', 'Marta', 'Xiloj Demo', '1958-03-12', 'Femenino', 'de000004-0000-0000-0000-000000000001', '5999-1001', 'quiche', '9999900000001'),
-  ('de000005-0000-0000-0000-000000000002', 'Pedro', 'Vasquez Demo', '1990-07-22', 'Masculino', 'de000004-0000-0000-0000-000000000001', '5999-1002', 'espanol', '9999900000002'),
-  ('de000005-0000-0000-0000-000000000003', 'Elena', 'Ramirez Demo', '2015-01-05', 'Femenino', 'de000004-0000-0000-0000-000000000001', '5999-1003', 'espanol', NULL),
-  ('de000005-0000-0000-0000-000000000004', 'Carlos', 'Tzul Demo', '1975-11-30', 'Masculino', 'de000004-0000-0000-0000-000000000001', '5999-1004', 'quiche', NULL),
-  ('de000005-0000-0000-0000-000000000005', 'Sofia', 'Morales Demo', '2001-09-14', 'Femenino', 'de000004-0000-0000-0000-000000000002', '5999-1005', 'espanol', '9999900000005'),
-  ('de000005-0000-0000-0000-000000000006', 'Juan', 'Perez Demo', '1948-05-02', 'Masculino', 'de000004-0000-0000-0000-000000000002', '5999-1006', 'espanol', '9999900000006'),
-  ('de000005-0000-0000-0000-000000000007', 'Rosa', 'Cotzojay Demo', '2018-06-19', 'Femenino', 'de000004-0000-0000-0000-000000000002', '5999-1007', 'mam', NULL),
-  ('de000005-0000-0000-0000-000000000008', 'Miguel', 'Gomez Demo', '1983-02-27', 'Masculino', 'de000004-0000-0000-0000-000000000002', '5999-1008', 'espanol', NULL),
-  ('de000005-0000-0000-0000-000000000009', 'Ana', 'Lopez Demo', '1995-12-08', 'Femenino', 'de000004-0000-0000-0000-000000000003', '5999-1009', 'espanol', '9999900000009'),
-  ('de000005-0000-0000-0000-000000000010', 'Diego', 'Us Demo', '1965-04-17', 'Masculino', 'de000004-0000-0000-0000-000000000003', '5999-1010', 'mam', NULL),
-  ('de000005-0000-0000-0000-000000000011', 'Luisa', 'Chavez Demo', '2010-10-25', 'Femenino', 'de000004-0000-0000-0000-000000000003', '5999-1011', 'espanol', NULL),
-  ('de000005-0000-0000-0000-000000000012', 'Andres', 'Tum Demo', '1937-08-09', 'Masculino', 'de000004-0000-0000-0000-000000000003', '5999-1012', 'quiche', '9999900000012')
+  ('de000005-0000-0000-0000-000000000001', 'Marta', 'Xiloj Demo', '1958-03-12', 'Femenino', (SELECT id FROM comunidades WHERE municipio_id = 106 AND nombre = 'Caserio El Rosario Demo'), '5999-1001', 'quiche', '9999900000001'),
+  ('de000005-0000-0000-0000-000000000002', 'Pedro', 'Vasquez Demo', '1990-07-22', 'Masculino', (SELECT id FROM comunidades WHERE municipio_id = 106 AND nombre = 'Caserio El Rosario Demo'), '5999-1002', 'espanol', '9999900000002'),
+  ('de000005-0000-0000-0000-000000000003', 'Elena', 'Ramirez Demo', '2015-01-05', 'Femenino', (SELECT id FROM comunidades WHERE municipio_id = 106 AND nombre = 'Caserio El Rosario Demo'), '5999-1003', 'espanol', NULL),
+  ('de000005-0000-0000-0000-000000000004', 'Carlos', 'Tzul Demo', '1975-11-30', 'Masculino', (SELECT id FROM comunidades WHERE municipio_id = 106 AND nombre = 'Caserio El Rosario Demo'), '5999-1004', 'quiche', NULL),
+  ('de000005-0000-0000-0000-000000000005', 'Sofia', 'Morales Demo', '2001-09-14', 'Femenino', (SELECT id FROM comunidades WHERE municipio_id = 401 AND nombre = 'Aldea Vista Hermosa Demo'), '5999-1005', 'espanol', '9999900000005'),
+  ('de000005-0000-0000-0000-000000000006', 'Juan', 'Perez Demo', '1948-05-02', 'Masculino', (SELECT id FROM comunidades WHERE municipio_id = 401 AND nombre = 'Aldea Vista Hermosa Demo'), '5999-1006', 'espanol', '9999900000006'),
+  ('de000005-0000-0000-0000-000000000007', 'Rosa', 'Cotzojay Demo', '2018-06-19', 'Femenino', (SELECT id FROM comunidades WHERE municipio_id = 401 AND nombre = 'Aldea Vista Hermosa Demo'), '5999-1007', 'mam', NULL),
+  ('de000005-0000-0000-0000-000000000008', 'Miguel', 'Gomez Demo', '1983-02-27', 'Masculino', (SELECT id FROM comunidades WHERE municipio_id = 401 AND nombre = 'Aldea Vista Hermosa Demo'), '5999-1008', 'espanol', NULL),
+  ('de000005-0000-0000-0000-000000000009', 'Ana', 'Lopez Demo', '1995-12-08', 'Femenino', (SELECT id FROM comunidades WHERE municipio_id = 1601 AND nombre = 'Comunidad Nueva Esperanza Demo'), '5999-1009', 'espanol', '9999900000009'),
+  ('de000005-0000-0000-0000-000000000010', 'Diego', 'Us Demo', '1965-04-17', 'Masculino', (SELECT id FROM comunidades WHERE municipio_id = 1601 AND nombre = 'Comunidad Nueva Esperanza Demo'), '5999-1010', 'mam', NULL),
+  ('de000005-0000-0000-0000-000000000011', 'Luisa', 'Chavez Demo', '2010-10-25', 'Femenino', (SELECT id FROM comunidades WHERE municipio_id = 1601 AND nombre = 'Comunidad Nueva Esperanza Demo'), '5999-1011', 'espanol', NULL),
+  ('de000005-0000-0000-0000-000000000012', 'Andres', 'Tum Demo', '1937-08-09', 'Masculino', (SELECT id FROM comunidades WHERE municipio_id = 1601 AND nombre = 'Comunidad Nueva Esperanza Demo'), '5999-1012', 'quiche', '9999900000012')
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO expedientes (id, paciente_id, numero_ficha) VALUES
@@ -247,12 +252,17 @@ INSERT INTO principios_activos (id, nombre) VALUES
   ('de000008-0000-0000-0000-000000000001', 'Paracetamol'),
   ('de000008-0000-0000-0000-000000000002', 'Ibuprofeno'),
   ('de000008-0000-0000-0000-000000000003', 'Amoxicilina')
-ON CONFLICT (id) DO NOTHING;
+ON CONFLICT DO NOTHING;
 
-INSERT INTO medicamento_principio (medicamento_id, principio_id) VALUES
-  ('de000007-0000-0000-0000-000000000001', 'de000008-0000-0000-0000-000000000001'),
-  ('de000007-0000-0000-0000-000000000002', 'de000008-0000-0000-0000-000000000002'),
-  ('de000007-0000-0000-0000-000000000003', 'de000008-0000-0000-0000-000000000003')
+-- Por nombre y no por id: en una base que ya tenia ese principio activo, es el que hay.
+INSERT INTO medicamento_principio (medicamento_id, principio_id)
+SELECT v.medicamento_id, pa.id
+FROM (VALUES
+  ('de000007-0000-0000-0000-000000000001'::uuid, 'Paracetamol'),
+  ('de000007-0000-0000-0000-000000000002'::uuid, 'Ibuprofeno'),
+  ('de000007-0000-0000-0000-000000000003'::uuid, 'Amoxicilina')
+) AS v(medicamento_id, principio)
+JOIN principios_activos pa ON pa.nombre = v.principio
 ON CONFLICT DO NOTHING;
 
 -- ============================================================================
@@ -266,13 +276,13 @@ ON CONFLICT DO NOTHING;
 -- que la demo muestre tambien el caso normal.
 INSERT INTO lotes (id, medicamento_id, numero_lote, proveedor_id, origen, cantidad_ingresada, fecha_ingreso, fecha_vencimiento, costo_unitario) VALUES
   ('de000009-0000-0000-0000-000000000001', 'de000007-0000-0000-0000-000000000001',
-   'LOTE-DEMO-VENCIDO', 'de000003-0000-0000-0000-000000000001', 'compra', 200, CURRENT_DATE - 400, CURRENT_DATE - 10, NULL),
+   'LOTE-DEMO-VENCIDO', (SELECT id FROM proveedores WHERE nombre = 'Distribuidora Farmaceutica Demo, S.A.'), 'compra', 200, CURRENT_DATE - 400, CURRENT_DATE - 10, NULL),
   ('de000009-0000-0000-0000-000000000002', 'de000007-0000-0000-0000-000000000002',
-   'LOTE-DEMO-POR-VENCER', 'de000003-0000-0000-0000-000000000001', 'compra', 150, CURRENT_DATE - 60, CURRENT_DATE + 20, 1.00),
+   'LOTE-DEMO-POR-VENCER', (SELECT id FROM proveedores WHERE nombre = 'Distribuidora Farmaceutica Demo, S.A.'), 'compra', 150, CURRENT_DATE - 60, CURRENT_DATE + 20, 1.00),
   ('de000009-0000-0000-0000-000000000003', 'de000007-0000-0000-0000-000000000003',
-   'LOTE-DEMO-DONACION', 'de000003-0000-0000-0000-000000000002', 'donacion', 80, CURRENT_DATE - 30, CURRENT_DATE + 400, NULL),
+   'LOTE-DEMO-DONACION', (SELECT id FROM proveedores WHERE nombre = 'Fundacion Manos Solidarias Demo'), 'donacion', 80, CURRENT_DATE - 30, CURRENT_DATE + 400, NULL),
   ('de000009-0000-0000-0000-000000000004', 'de000007-0000-0000-0000-000000000004',
-   'LOTE-DEMO-SANO', 'de000003-0000-0000-0000-000000000001', 'compra', 300, CURRENT_DATE - 200, CURRENT_DATE + 500, 2.50)
+   'LOTE-DEMO-SANO', (SELECT id FROM proveedores WHERE nombre = 'Distribuidora Farmaceutica Demo, S.A.'), 'compra', 300, CURRENT_DATE - 200, CURRENT_DATE + 500, 2.50)
 ON CONFLICT (id) DO UPDATE SET
   cantidad_ingresada = EXCLUDED.cantidad_ingresada,
   fecha_ingreso = EXCLUDED.fecha_ingreso,
@@ -316,10 +326,10 @@ ON CONFLICT (id) DO UPDATE SET
 -- hace visible en pantalla la politica de SELECT de `proyectos` de la 00141.
 INSERT INTO jornadas (id, nombre, fecha, comunidad_id, responsable_id, estado, presupuesto_asignado, proyecto_id, created_at) VALUES
   ('de00000a-0000-0000-0000-000000000001', 'Jornada Demo El Rosario', CURRENT_DATE - 30,
-   'de000004-0000-0000-0000-000000000001', 'de000001-0000-0000-0000-000000000001', 'finalizada', 5000,
+   (SELECT id FROM comunidades WHERE municipio_id = 106 AND nombre = 'Caserio El Rosario Demo'), 'de000001-0000-0000-0000-000000000001', 'finalizada', 5000,
    'de00000e-0000-0000-0000-000000000001', CURRENT_DATE - 35),
   ('de00000a-0000-0000-0000-000000000002', 'Jornada Demo Vista Hermosa', CURRENT_DATE,
-   'de000004-0000-0000-0000-000000000002', 'de000001-0000-0000-0000-000000000004', 'en curso', 3000,
+   (SELECT id FROM comunidades WHERE municipio_id = 401 AND nombre = 'Aldea Vista Hermosa Demo'), 'de000001-0000-0000-0000-000000000004', 'en curso', 3000,
    'de00000e-0000-0000-0000-000000000002', NOW())
 ON CONFLICT (id) DO UPDATE SET
   fecha = EXCLUDED.fecha,
@@ -348,7 +358,7 @@ INSERT INTO movimientos_inventario (id, tipo, lote_id, bodega_id, cantidad, moti
    (SELECT id FROM bodegas WHERE nombre = 'Bodega Principal'), 200,
    'Ingreso inicial de compra (demo)', 'de000001-0000-0000-0000-000000000006'),
   ('de00000c-0000-0000-0000-000000000002', 'ingreso', 'de000009-0000-0000-0000-000000000002',
-   'de000002-0000-0000-0000-000000000001', 150,
+   (SELECT id FROM bodegas WHERE nombre = 'Bodega Movil Demo'), 150,
    'Ingreso a bodega movil para la jornada en curso (demo)', 'de000001-0000-0000-0000-000000000005'),
   ('de00000c-0000-0000-0000-000000000003', 'ingreso', 'de000009-0000-0000-0000-000000000003',
    (SELECT id FROM bodegas WHERE nombre = 'Bodega Principal'), 80,
@@ -357,7 +367,7 @@ INSERT INTO movimientos_inventario (id, tipo, lote_id, bodega_id, cantidad, moti
    (SELECT id FROM bodegas WHERE nombre = 'Bodega Principal'), 300,
    'Ingreso inicial de compra (demo)', 'de000001-0000-0000-0000-000000000004'),
   ('de00000c-0000-0000-0000-000000000005', 'salida', 'de000009-0000-0000-0000-000000000002',
-   'de000002-0000-0000-0000-000000000001', 40,
+   (SELECT id FROM bodegas WHERE nombre = 'Bodega Movil Demo'), 40,
    'Dispensacion durante la jornada en curso (demo)', 'de000001-0000-0000-0000-000000000005'),
   ('de00000c-0000-0000-0000-000000000006', 'ingreso', 'de000009-0000-0000-0000-000000000003',
    (SELECT id FROM bodegas WHERE nombre = 'Bodega Principal'), 25,
@@ -412,7 +422,7 @@ ON CONFLICT (id) DO NOTHING;
 -- ============================================================================
 INSERT INTO jornadas (id, nombre, fecha, comunidad_id, responsable_id, estado, proyecto_id) VALUES
   ('de00000a-0000-0000-0000-000000000003', 'Jornada Demo Nueva Esperanza', CURRENT_DATE + 20,
-   'de000004-0000-0000-0000-000000000003', 'de000001-0000-0000-0000-000000000001', 'planificada',
+   (SELECT id FROM comunidades WHERE municipio_id = 1601 AND nombre = 'Comunidad Nueva Esperanza Demo'), 'de000001-0000-0000-0000-000000000001', 'planificada',
    'de00000e-0000-0000-0000-000000000001')
 ON CONFLICT (id) DO UPDATE SET fecha = EXCLUDED.fecha, updated_at = NOW();
 
@@ -537,7 +547,7 @@ ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO receta_detalle (id, receta_id, medicamento_id, lote_id, bodega_id, dosis, frecuencia, duracion, cantidad_entregada) VALUES
   ('de000019-0000-0000-0000-000000000005', 'de000018-0000-0000-0000-000000000005', 'de000007-0000-0000-0000-000000000002',
-   'de000009-0000-0000-0000-000000000002', 'de000002-0000-0000-0000-000000000001', '1 tableta', 'Cada 8 horas', '3 dias', 9)
+   'de000009-0000-0000-0000-000000000002', (SELECT id FROM bodegas WHERE nombre = 'Bodega Movil Demo'), '1 tableta', 'Cada 8 horas', '3 dias', 9)
 ON CONFLICT (id) DO NOTHING;
 
 -- El Rosario ya esta finalizada, y las atenciones, consultas y gastos solo entran en una jornada

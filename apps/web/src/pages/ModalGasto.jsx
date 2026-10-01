@@ -32,6 +32,7 @@ export default function ModalGasto({
   usuarioId,
   rol,
   estadoInicial,
+  jornadaId = null,
   onClose,
   onGuardado,
 }) {
@@ -55,11 +56,13 @@ export default function ModalGasto({
     creandoCategoria,
     errorCategoria,
     limpiarErrorCategoria,
+    jornadaFija,
   } = useFormularioGasto({
     gasto,
     usuarioId,
     estadoInicial,
     rol,
+    jornadaId,
   });
 
   // La categoria se guarda en el catalogo (00158) y queda elegida; si falla, el formulario de alta
@@ -257,7 +260,11 @@ export default function ModalGasto({
                   setCampo(campo.id, valorFinal);
                 }}
                 placeholder={opciones.length === 0 ? "Cargando..." : "Seleccionar"}
-                disabled={bloqueado || (campo.validacion?.requerido && opciones.length === 0)}
+                disabled={
+                  bloqueado ||
+                  (campo.id === "jornada_id" && jornadaFija) ||
+                  (campo.validacion?.requerido && opciones.length === 0)
+                }
               />
             );
           }

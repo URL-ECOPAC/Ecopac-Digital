@@ -23,10 +23,14 @@ function estaVacio(valor) {
  * garantia real es fn_validar_origen_de_presupuesto, que ve lo que asignaron las demas jornadas.
  *
  * @param {{ origen?: string, donacionId?: string, monto?: number|string }} valores
- * @param {{ disponibleDeDonacion?: number|null }} [contexto]
+ * @param {{ disponibleDeDonacion?: number|null, saldoDeCaja?: number|null }} [contexto]
+ *   `saldoDeCaja`: lo que hay en la caja, si el origen es la caja (00168).
  * @returns {Record<string, string>} Errores por campo; vacio si el aporte es valido.
  */
-export function validarOrigenDePresupuesto(valores = {}, { disponibleDeDonacion = null } = {}) {
+export function validarOrigenDePresupuesto(
+  valores = {},
+  { disponibleDeDonacion = null, saldoDeCaja = null } = {},
+) {
   const errores = {};
   if (estaVacio(valores.origen)) {
     errores.origen = "Indica de dónde viene el dinero.";
@@ -43,6 +47,12 @@ export function validarOrigenDePresupuesto(valores = {}, { disponibleDeDonacion 
     errores.monto = "El monto tiene que ser mayor que cero.";
   } else if (esDonacion && disponibleDeDonacion !== null && monto > disponibleDeDonacion) {
     errores.monto = `A esa donación le quedan ${formatearMoneda(disponibleDeDonacion)} por asignar.`;
+  } else if (
+    valores.origen === ORIGENES_DE_PRESUPUESTO.CAJA &&
+    saldoDeCaja !== null &&
+    monto > saldoDeCaja
+  ) {
+    errores.monto = `En la caja hay ${formatearMoneda(saldoDeCaja)}.`;
   }
   return errores;
 }

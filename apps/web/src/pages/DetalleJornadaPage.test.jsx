@@ -81,9 +81,25 @@ const mockEstadoCierre = {
   errorCierre: null,
 };
 
+const mockEstadoGastos = {
+  puedeRegistrar: true,
+  estadoInicial: "aprobado",
+  columnas: [
+    { id: "concepto", label: "Concepto", tipo: "texto", principal: true },
+    { id: "monto", label: "Monto", tipo: "moneda" },
+  ],
+  catalogos: { perfiles: [] },
+  gastos: [{ id: "g-1", concepto: "Transporte del equipo", monto: 350, estado: "aprobado" }],
+  resumen: { asignado: 5000, aprobado: 350, pendiente: 150, disponible: 4500 },
+  cargando: false,
+  error: null,
+  recargar: vi.fn(),
+};
+
 vi.mock("@ecopac/shared", async (importarOriginal) => ({
   ...(await importarOriginal()),
   useDetalleJornada: vi.fn(() => mockEstadoDetalle),
+  useGastosDeJornada: vi.fn(() => mockEstadoGastos),
   useCuadroTurnos: vi.fn(() => mockEstadoCuadroTurnos),
   useResumenCierreJornada: vi.fn(() => mockEstadoCierre),
   // La seccion de sobrante (00160) tiene su propia prueba (SobranteDeJornada.test.jsx): aqui solo
@@ -309,6 +325,28 @@ describe("DetalleJornadaPage", () => {
 
       fireEvent.click(screen.getByText("Equipo"));
       expect(screen.getByRole("button", { name: /Asignar personal/ })).toBeEnabled();
+    });
+  });
+
+  describe("pestaña Gastos", () => {
+    it("muestra los gastos de la jornada y como van contra el presupuesto", () => {
+      pantalla();
+      fireEvent.click(screen.getByText("Gastos"));
+
+      expect(screen.getByText("Transporte del equipo")).toBeInTheDocument();
+      expect(screen.getByText("Gastado")).toBeInTheDocument();
+      expect(screen.getByText("Por aprobar")).toBeInTheDocument();
+      expect(screen.getByText("Disponible")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /Registrar gasto/ })).toBeEnabled();
+    });
+
+    it("con la jornada finalizada ya no se registran gastos (00159)", () => {
+      mockEstadoDetalle.jornada = { ...JORNADA_EN_CURSO, estado: "finalizada" };
+      pantalla();
+      fireEvent.click(screen.getByText("Gastos"));
+
+      expect(screen.getByText("Transporte del equipo")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /Registrar gasto/ })).toBeDisabled();
     });
   });
 

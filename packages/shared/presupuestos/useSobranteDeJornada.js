@@ -1,8 +1,8 @@
 // View model de la liquidacion del sobrante de una jornada finalizada (00160). Se muestra en la
 // pestana Cierre del detalle de la jornada.
 //
-// Por cada aporte al que le sobra dinero se elige un destino: devolverlo a su origen (una donacion
-// vuelve a tener ese saldo libre) o traspasarlo a otra jornada del mismo proyecto que todavia no
+// Por cada aporte al que le sobra dinero se elige un destino: devolverlo (una donacion vuelve a
+// tener ese saldo libre; lo demas entra a la caja, 00168) o traspasarlo a otra jornada del mismo proyecto que todavia no
 // termino. Por defecto se devuelve. Mientras la jornada tenga gastos pendientes de aprobar el
 // sobrante todavia puede cambiar, y no se ofrece liquidar.
 
@@ -28,9 +28,11 @@ import { useCambiosEnTiempoReal } from "../hooks/useCambiosEnTiempoReal.js";
 /** A donde vuelve el sobrante de un aporte segun su origen, dicho como opcion. */
 const DEVOLVER_SEGUN_ORIGEN = {
   [ORIGENES_DE_PRESUPUESTO.DONACION]: "Devolver a la donación",
-  [ORIGENES_DE_PRESUPUESTO.FONDOS_PROPIOS]: "Devolver a fondos propios",
-  [ORIGENES_DE_PRESUPUESTO.APORTE_EXTERNO]: "Devolver a quien aportó",
-  [ORIGENES_DE_PRESUPUESTO.SIN_CLASIFICAR]: "Devolver a su origen",
+  // 00168: lo que no vuelve a una donacion entra a la caja.
+  [ORIGENES_DE_PRESUPUESTO.FONDOS_PROPIOS]: "Pasar a la caja",
+  [ORIGENES_DE_PRESUPUESTO.APORTE_EXTERNO]: "Pasar a la caja",
+  [ORIGENES_DE_PRESUPUESTO.SIN_CLASIFICAR]: "Pasar a la caja",
+  [ORIGENES_DE_PRESUPUESTO.CAJA]: "Devolver a la caja",
 };
 
 /** Una copia de `objeto` sin `clave`. */

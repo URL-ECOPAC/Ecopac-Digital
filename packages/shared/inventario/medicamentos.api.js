@@ -316,8 +316,29 @@ export async function listarPrincipiosDeMedicamento(medicamentoId) {
 }
 
 /**
- * Actualiza los datos de un medicamento. No toca sus principios activos: editar esa relacion no
- * esta en los criterios de aceptacion de esta issue.
+ * Deja al medicamento con este principio activo y ningun otro, en una transaccion
+ * (fn_cambiar_principio_de_medicamento, 00166). A un insumo le quita los que tenga: con
+ * `principioId` nulo es lo que corresponde a un articulo que paso a ser insumo.
+ *
+ * @param {string} medicamentoId UUID del medicamento.
+ * @param {string|null} principioId UUID del principio activo; `null` para un insumo.
+ * @returns {Promise<{ error: object|null }>}
+ */
+export async function cambiarPrincipioDeMedicamento(medicamentoId, principioId) {
+  try {
+    const { error } = await obtenerSupabase().rpc("fn_cambiar_principio_de_medicamento", {
+      p_medicamento_id: medicamentoId,
+      p_principio_id: principioId || null,
+    });
+    return { error: error ? normalizarError(error) : null };
+  } catch (error) {
+    return { error: normalizarError(error) };
+  }
+}
+
+/**
+ * Actualiza los datos de un medicamento. No toca sus principios activos: eso lo hace
+ * cambiarPrincipioDeMedicamento().
  *
  * @param {string} id UUID del medicamento.
  * @param {object} datos Campos en camelCase, los ids de CAMPOS_MEDICAMENTO.

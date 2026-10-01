@@ -39,6 +39,7 @@ export const SECCIONES_DETALLE_JORNADA = Object.freeze([
   "pacientes",
   "historial",
   "presupuesto",
+  "gastos",
   "insumos",
   "cierre",
 ]);
