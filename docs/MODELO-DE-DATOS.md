@@ -549,7 +549,7 @@ las etiquetas en espanol, incluidos los dos valores que el enum tenia en ingles 
 | -------------------- | ----------------------- | ---------------------------------------------------- |
 | `medicamento_id`     | UUID NOT NULL           |                                                      |
 | `numero_lote`        | VARCHAR(50) NOT NULL    |                                                      |
-| `fecha_vencimiento`  | DATE                    |                                                      |
+| `fecha_vencimiento`  | DATE                    | [00171] Obligatoria en un lote de medicamento (trigger); un lote de insumo puede no tenerla y no vence |
 | `proveedor_id`       | UUID NOT NULL           | [+00020]                                             |
 | `origen`             | `origen_lote` NOT NULL  | [+00020] `compra` / `donacion`                       |
 | `cantidad_ingresada` | INT NOT NULL            | [+00020] Cuanto entro; lo disponible esta en `existencias` |
@@ -913,7 +913,7 @@ Del lado del cliente, estos valores nacen una sola vez en `packages/shared/enums
 | `fn_detectar_pacientes_duplicados()`    | Propone candidatos a fusion                                       |
 | `fn_fusionar_pacientes(sobrevive, absorbido)` | Ejecuta la fusion y la registra                             |
 | `fn_registrar_medicamento(...)`         | Alta de medicamento o insumo con sus principios activos. Desde la `00144` recibe `p_presentacion_id` (UUID) y desde la `00142` `p_tipo_articulo` |
-| `fn_medicamento_tiene_existencias(medicamento)` | [00050] Si tiene stock positivo no vencido; se consulta antes de dar de baja un medicamento |
+| `fn_medicamento_tiene_existencias(medicamento)` | [00050] Si tiene stock positivo no vencido (un lote sin fecha no vence, 00171); se consulta antes de dar de baja un medicamento |
 | `existencias_totales_por_bodega(bodegas[])` | [00124] Suma de stock por bodega en una sola llamada. `SECURITY INVOKER` |
 | `fn_generar_receta(...)`                | Emite la receta y descuenta inventario, atomicamente              |
 | `fn_ajustar_entrega_receta(...)`        | Corrige la cantidad realmente entregada de un renglon, sin descontar el inventario dos veces |

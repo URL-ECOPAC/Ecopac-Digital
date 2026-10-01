@@ -141,6 +141,18 @@ export function pideDatosFarmacologicos(tipoArticulo) {
   return (tipoArticulo || TIPOS_DE_ARTICULO.MEDICAMENTO) === TIPOS_DE_ARTICULO.MEDICAMENTO;
 }
 
+/**
+ * Si un lote del articulo tiene que llevar fecha de vencimiento: un medicamento si, un insumo no
+ * (00171). Sin tipo, se trata como medicamento: es lo seguro, y lo mismo que exige la base.
+ * Espejo del trigger trg_lotes_medicamento_con_vencimiento.
+ *
+ * @param {string|null|undefined} tipoArticulo Uno de TIPOS_DE_ARTICULO.
+ * @returns {boolean}
+ */
+export function exigeFechaDeVencimiento(tipoArticulo) {
+  return (tipoArticulo || TIPOS_DE_ARTICULO.MEDICAMENTO) === TIPOS_DE_ARTICULO.MEDICAMENTO;
+}
+
 export const CAMPOS_MEDICAMENTO = [
   {
     id: "nombre",

@@ -53,10 +53,14 @@ function selectorDeBodega(container) {
   );
 }
 
-function capturarYAnadir(container, lote, { conBodega = false } = {}) {
+// Son medicamentos: llevan fecha de vencimiento (00171). Sin ella, "Añadir" ya no los agrega.
+function capturarYAnadir(container, lote, { conBodega = false, vence = "2027-01-01" } = {}) {
   fireEvent.change(container.querySelector('input[placeholder="LOT-123"]'), {
     target: { value: lote },
   });
+  if (vence) {
+    fireEvent.change(container.querySelector('input[type="date"]'), { target: { value: vence } });
+  }
   if (conBodega) fireEvent.change(selectorDeBodega(container), { target: { value: "b1" } });
   fireEvent.click(screen.getByRole("button", { name: /Añadir/ }));
 }
@@ -89,5 +93,38 @@ describe("ModalRegistroIngreso con una donacion de varios renglones", () => {
     fireEvent.click(screen.getByRole("button", { name: /Guardar Movimiento/ }));
 
     expect(screen.getByText(/Faltan 2 renglones de la donacion/)).toBeInTheDocument();
+  });
+
+  it("un medicamento sin fecha de vencimiento no se agrega", () => {
+    const { container } = pantalla();
+
+    capturarYAnadir(container, "L1", { conBodega: true, vence: "" });
+
+    expect(screen.getByText(/obligatoria para un medicamento/)).toBeInTheDocument();
+    expect(screen.getByText(/\(0 de 3 agregados\)/)).toBeInTheDocument();
+  });
+});
+
+// 00171: solo un insumo puede ir sin fecha de vencimiento.
+describe("ModalRegistroIngreso con un insumo", () => {
+  it("la fecha es opcional y el insumo se agrega sin ella", () => {
+    const { container } = render(
+      <ModalRegistroIngreso
+        abierto
+        catalogos={{
+          ...CATALOGOS,
+          medicamentos: [{ id: "i1", nombre: "Gasas", tipoArticulo: "insumo" }],
+        }}
+        detallesDonacion={[{ donacionDetalleId: "d1", medicamentoId: "i1", cantidad: 5 }]}
+        proveedorIdInicial="p1"
+      />,
+    );
+
+    expect(screen.getByText(/Fecha Vencimiento \(opcional\)/)).toBeInTheDocument();
+
+    capturarYAnadir(container, "L1", { conBodega: true, vence: "" });
+
+    expect(screen.getByText(/\(1 de 1 agregados\)/)).toBeInTheDocument();
+    expect(screen.getByText("Sin vencimiento")).toBeInTheDocument();
   });
 });

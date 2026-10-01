@@ -1,7 +1,8 @@
 import { useState, useMemo } from "react";
 
-import { aFechaLocal, diasHastaVencimiento } from "../formato/fechas.js";
+import { diasHastaVencimiento } from "../formato/fechas.js";
 import { ventanaDeAviso } from "./configuracionAlertas.validaciones.js";
+import { compararPorVencimiento } from "./lotes.validaciones.js";
 import { useVentanaDeAvisoVencimiento } from "./useVentanaDeAvisoVencimiento.js";
 
 // Aqui vivian valoresInicialesDeLote(), datosLoteParaRegistrar() y validarDatosDeLote(): las tres
@@ -103,7 +104,7 @@ export function procesarLotes(
 
       return coincideBusqueda && coincideBodega && coincideCategoria;
     })
-    .sort((a, b) => aFechaLocal(a.fechaVencimiento) - aFechaLocal(b.fechaVencimiento));
+    .sort((a, b) => compararPorVencimiento(a.fechaVencimiento, b.fechaVencimiento));
 }
 
 /**

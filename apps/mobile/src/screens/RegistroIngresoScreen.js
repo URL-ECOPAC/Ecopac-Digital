@@ -98,11 +98,12 @@ export default function RegistroIngresoScreen() {
     resetFormulario,
     error,
     guardando,
+    vencimientoObligatorio,
     puedeCrearMedicamento,
     crearMedicamentoNuevo,
     creandoMedicamento,
     errorMedicamento,
-  } = useRegistroIngreso({ usuarioId: perfil?.id, rol });
+  } = useRegistroIngreso({ usuarioId: perfil?.id, rol, articulos: catalogos.medicamentos });
 
   const cargarCatalogos = useCallback(async () => {
     setCargandoCatalogos(true);
@@ -289,8 +290,9 @@ export default function RegistroIngresoScreen() {
         onChangeText={(texto) => setItemActual({ ...itemActual, numero_lote: texto })}
       />
 
+      {/* Solo un insumo puede ir sin vencimiento (00171). */}
       <DateField
-        label="Fecha de vencimiento"
+        label={vencimientoObligatorio ? "Fecha de vencimiento" : "Fecha de vencimiento (opcional)"}
         value={itemActual.fecha_vencimiento || null}
         onChange={(valor) => setItemActual({ ...itemActual, fecha_vencimiento: valor ?? "" })}
         minDate={ANIO_MINIMO_VENCIMIENTO}

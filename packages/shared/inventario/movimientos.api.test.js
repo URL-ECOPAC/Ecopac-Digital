@@ -58,6 +58,27 @@ describe("Módulo de Inventario - API Movimientos", () => {
       expect(mockSupabase.insert).not.toHaveBeenCalled();
     });
 
+    // 00171: un lote de insumo puede no tener fecha. A uno de medicamento se la exige la base.
+    it("crea el lote sin fecha de vencimiento como NULL, no como cadena vacia", async () => {
+      mockSupabase.single
+        .mockResolvedValueOnce({ data: { id: "LOTE-NUEVO" }, error: null })
+        .mockResolvedValueOnce({ data: { id: "MOV-1", tipo: "ingreso" }, error: null });
+
+      const res = await registrarIngreso({
+        origen: "donacion",
+        bodega_id: "B-1",
+        medicamento_id: "INSUMO-1",
+        numero_lote: "LOT-200",
+        fecha_vencimiento: "",
+        proveedor_id: "P-1",
+        cantidad: 50,
+        usuarioId: "U-1",
+      });
+
+      expect(res.error).toBeNull();
+      expect(mockSupabase.insert.mock.calls[0][0].fecha_vencimiento).toBeNull();
+    });
+
     it("crea el lote nuevo con todas sus columnas obligatorias (issue #222)", async () => {
       mockSupabase.single
         .mockResolvedValueOnce({ data: { id: "LOTE-NUEVO" }, error: null })

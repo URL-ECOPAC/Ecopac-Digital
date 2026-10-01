@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { esLoteEntregable, motivoLoteNoEntregable, sugerirLote } from "./lotes.validaciones.js";
+import {
+  compararPorVencimiento,
+  esLoteEntregable,
+  motivoLoteNoEntregable,
+  sugerirLote,
+} from "./lotes.validaciones.js";
 
 const HOY = new Date("2026-06-15T10:30:00");
 
@@ -35,11 +40,18 @@ describe("esLoteEntregable", () => {
   it.each([
     ["sin lote", undefined],
     ["lote nulo", null],
-    ["sin fecha", {}],
-    ["fecha vacia", { fechaVencimiento: "" }],
     ["fecha invalida", { fechaVencimiento: "no es fecha" }],
   ])("%s no es entregable: ante la duda no se entrega", (_caso, valor) => {
     expect(esLoteEntregable(valor, HOY)).toBe(false);
+  });
+
+  // 00171: un lote sin fecha es un insumo que no vence. A uno de medicamento la base se la exige.
+  it.each([
+    ["sin fecha", {}],
+    ["fecha null", { fechaVencimiento: null }],
+    ["fecha vacia", { fechaVencimiento: "" }],
+  ])("%s es entregable: un insumo sin vencimiento no vence", (_caso, valor) => {
+    expect(esLoteEntregable(valor, HOY)).toBe(true);
   });
 
   it("acepta tambien la fila cruda de la base, en snake_case", () => {
@@ -60,11 +72,15 @@ describe("motivoLoteNoEntregable", () => {
     expect(motivo).toMatch(/14/);
   });
 
-  it("un lote sin fecha legible lo dice sin inventarse una fecha", () => {
-    const motivo = motivoLoteNoEntregable({}, HOY);
+  it("un lote con una fecha ilegible lo dice sin inventarse una fecha", () => {
+    const motivo = motivoLoteNoEntregable({ fechaVencimiento: "no es fecha" }, HOY);
 
     expect(motivo).toContain("fecha de vencimiento");
     expect(motivo).not.toMatch(/\d{4}/);
+  });
+
+  it("un lote sin fecha (insumo, 00171) no tiene motivo", () => {
+    expect(motivoLoteNoEntregable({}, HOY)).toBeNull();
   });
 
   it("coincide siempre con esLoteEntregable", () => {
@@ -131,5 +147,33 @@ describe("sugerirLote (Criterio FEFO)", () => {
 
     expect(resultado.suficiente).toBe(true);
     expect(resultado.lotesSugeridos[0]?.lote_id).toBe("LOTE-HOY");
+  });
+});
+
+describe("compararPorVencimiento (00171)", () => {
+  it("ordena primero lo que vence antes y deja al final los lotes sin fecha", () => {
+    const fechas = ["2026-12-01", null, "2026-09-15", "", "2026-10-20"];
+
+    expect([...fechas].sort(compararPorVencimiento)).toEqual([
+      "2026-09-15",
+      "2026-10-20",
+      "2026-12-01",
+      null,
+      "",
+    ]);
+  });
+
+  it("en sugerirLote, un insumo sin fecha sale despues de los que vencen", () => {
+    const resultado = sugerirLote(
+      [
+        { id: "SIN-FECHA", fecha_vencimiento: null, cantidad_disponible: 10 },
+        { id: "CON-FECHA", fecha_vencimiento: "2026-07-01", cantidad_disponible: 5 },
+      ],
+      12,
+      HOY,
+    );
+
+    expect(resultado.lotesSugeridos.map((l) => l.lote_id)).toEqual(["CON-FECHA", "SIN-FECHA"]);
+    expect(resultado.suficiente).toBe(true);
   });
 });

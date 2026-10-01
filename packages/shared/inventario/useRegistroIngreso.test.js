@@ -9,7 +9,31 @@
 
 import { describe, expect, it } from "vitest";
 
-import { datosIngresoParaRegistrar, itemDesdeRenglonDeDonacion } from "./useRegistroIngreso.js";
+import {
+  datosIngresoParaRegistrar,
+  itemDesdeRenglonDeDonacion,
+  vencimientoObligatorioDe,
+} from "./useRegistroIngreso.js";
+
+describe("vencimientoObligatorioDe (00171)", () => {
+  const ARTICULOS = [
+    { id: "M-1", tipoArticulo: "medicamento" },
+    { id: "I-1", tipoArticulo: "insumo" },
+  ];
+
+  it("un medicamento lleva fecha de vencimiento", () => {
+    expect(vencimientoObligatorioDe("M-1", ARTICULOS)).toBe(true);
+  });
+
+  it("un insumo puede ir sin ella", () => {
+    expect(vencimientoObligatorioDe("I-1", ARTICULOS)).toBe(false);
+  });
+
+  it("si no se sabe que es, se pide: es lo que exige la base a un medicamento", () => {
+    expect(vencimientoObligatorioDe("", ARTICULOS)).toBe(true);
+    expect(vencimientoObligatorioDe("I-1")).toBe(true);
+  });
+});
 
 describe("datosIngresoParaRegistrar", () => {
   const item = {

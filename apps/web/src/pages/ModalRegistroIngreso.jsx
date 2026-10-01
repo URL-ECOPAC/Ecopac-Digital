@@ -17,6 +17,8 @@ export default function ModalRegistroIngreso({
   const { rol } = useSesionCompartida();
   const esAdministrador = rol === "administrador" || rol === "admin";
 
+  const listaProductos = [...(catalogos?.medicamentos || []), ...(catalogos?.insumos || [])];
+
   const {
     origen,
     setOrigen,
@@ -35,11 +37,13 @@ export default function ModalRegistroIngreso({
     resetFormulario,
     error,
     guardando,
+    vencimientoObligatorio,
   } = useRegistroIngreso({
     usuarioId,
     onGuardarExitoso: onExito,
     detallesDonacion,
     proveedorIdInicial,
+    articulos: listaProductos,
   });
 
   const fondo = useCerrarAlTocarFuera(() => handleCerrarModal(), { activo: abierto });
@@ -55,8 +59,6 @@ export default function ModalRegistroIngreso({
   const handleGuardar = async () => {
     await guardarMovimiento();
   };
-
-  const listaProductos = [...(catalogos?.medicamentos || []), ...(catalogos?.insumos || [])];
 
   const nombreDeProducto = (id) => listaProductos.find((p) => p.id === id)?.nombre || id;
 
@@ -400,7 +402,10 @@ export default function ModalRegistroIngreso({
                           className="form-label text-muted mb-1"
                           style={{ fontSize: "var(--texto-xxs)" }}
                         >
-                          Fecha Vencimiento
+                          {/* Solo un insumo puede ir sin vencimiento (00171). */}
+                          {vencimientoObligatorio
+                            ? "Fecha Vencimiento *"
+                            : "Fecha Vencimiento (opcional)"}
                         </label>
                         <div className="d-flex gap-2">
                           <input
@@ -458,7 +463,7 @@ export default function ModalRegistroIngreso({
                             </td>
                             <td className="px-3">{item.numero_lote}</td>
                             <td className="px-3">{nombreDeBodega(item.bodega_id)}</td>
-                            <td className="px-3">{item.fecha_vencimiento || "N/A"}</td>
+                            <td className="px-3">{item.fecha_vencimiento || "Sin vencimiento"}</td>
                             <td className="px-3 fw-bold">{item.cantidad}</td>
                             <td className="px-3">
                               {item.costo_unitario === "" || item.costo_unitario === undefined

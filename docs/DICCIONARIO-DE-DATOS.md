@@ -1,6 +1,6 @@
 # Diccionario de datos
 
-> **Documento generado.** No se edita a mano: sale de `npm run docs:diccionario` (`scripts/generar-diccionario-de-datos.mjs`), que lee el catalogo de PostgreSQL de una base con todas las migraciones aplicadas, hasta la `00170_insumo_del_catalogo_en_donacion.sql`. Las descripciones son los `COMMENT ON` de las migraciones: si falta una, se agrega con una migracion nueva y se regenera.
+> **Documento generado.** No se edita a mano: sale de `npm run docs:diccionario` (`scripts/generar-diccionario-de-datos.mjs`), que lee el catalogo de PostgreSQL de una base con todas las migraciones aplicadas, hasta la `00171_insumo_sin_fecha_de_vencimiento.sql`. Las descripciones son los `COMMENT ON` de las migraciones: si falta una, se agrega con una migracion nueva y se regenera.
 
 Complementa a [MODELO-DE-DATOS.md](MODELO-DE-DATOS.md), que explica el porque de cada decision, y a [PERMISOS.md](PERMISOS.md), que explica que puede hacer cada rol. Este documento es la referencia exhaustiva: cada tabla, cada campo, cada restriccion, cada politica y cada trigger.
 
@@ -16,9 +16,9 @@ Complementa a [MODELO-DE-DATOS.md](MODELO-DE-DATOS.md), que explica el porque de
 | Llaves foraneas | 98 |
 | Restricciones CHECK | 64 |
 | Politicas RLS | 145 |
-| Triggers | 126 |
+| Triggers | 127 |
 | Funciones (sin contar las de trigger) | 59 |
-| Funciones de trigger | 49 |
+| Funciones de trigger | 50 |
 
 ### Como leer las tablas de este documento
 
@@ -2028,7 +2028,7 @@ Lote de un articulo: numero, vencimiento, de donde vino y cuanto entro. Lo dispo
 | `id` | `uuid` | no | `extensions.gen_random_uuid()` | PK | Identificador de la fila. Lo genera la base. |
 | `medicamento_id` | `uuid` | no |  | FK -> `medicamentos` | Articulo del lote. |
 | `numero_lote` | `varchar(50)` | no |  |  | Numero de lote del fabricante. |
-| `fecha_vencimiento` | `date` | no |  |  | Fecha de vencimiento; un lote vencido no se entrega. |
+| `fecha_vencimiento` | `date` | si |  |  | Fecha de vencimiento; un lote vencido no se entrega. Obligatoria en un lote de medicamento; un lote de insumo puede no tenerla y entonces no vence (00171). |
 | `created_at` | `timestamptz` | no | `now()` |  | Cuando se creo la fila. Lo pone la base. |
 | `updated_at` | `timestamptz` | no | `now()` |  | Cuando se modifico la fila por ultima vez. Lo mantiene el trigger actualizar_timestamp_updated_at. |
 | `proveedor_id` | `uuid` | no |  | FK -> `proveedores` | Proveedor o donante del que entro. |
@@ -2067,6 +2067,7 @@ Lote de un articulo: numero, vencimiento, de donde vino y cuanto entro. Lo dispo
 | Trigger | Cuando | Funcion |
 | --- | --- | --- |
 | `trg_lotes_auditoria` | AFTER INSERT OR DELETE OR UPDATE | `registrar_evento_auditoria()` |
+| `trg_lotes_medicamento_con_vencimiento` | BEFORE INSERT OR UPDATE OF fecha_vencimiento, medicamento_id | `fn_lote_de_medicamento_tiene_vencimiento()` |
 | `trg_lotes_updated_at` | BEFORE UPDATE | `actualizar_timestamp_updated_at()` |
 
 #### existencias
@@ -3237,7 +3238,7 @@ Seguridad: corre con los permisos de su dueno; filtra con su propio WHERE. Privi
 
 ### vista_lotes_disponibles
 
-Muestra las combinaciones (lote, bodega) con stock positivo cuyo lote no ha alcanzado su fecha de vencimiento. security_invoker = TRUE hace que respete las politicas RLS de existencias, lotes, medicamentos y bodegas (00034). Issue #369: reconstruida sobre lotes/existencias (antes lotes_existencias); una fila por bodega en vez de una fila por lote, porque existencias trackea cantidad por bodega.
+Muestra las combinaciones (lote, bodega) con stock positivo cuyo lote no ha alcanzado su fecha de vencimiento, o no tiene (un insumo, 00171). security_invoker = TRUE hace que respete las politicas RLS de existencias, lotes, medicamentos y bodegas (00034). Issue #369: reconstruida sobre lotes/existencias (antes lotes_existencias); una fila por bodega en vez de una fila por lote, porque existencias trackea cantidad por bodega.
 
 Seguridad: `security_invoker = true` (aplica la RLS de quien consulta). Privilegios: `authenticated`: SELECT; `anon`: ninguno.
 
@@ -3356,7 +3357,7 @@ Seguridad: corre con los permisos de su dueno; filtra con su propio WHERE. Privi
 | `fn_hoy_guatemala(p_instante timestamp with time zone)` | `date` | INVOKER | authenticated | Fecha calendario de Guatemala en el instante dado (por defecto, ahora). La base corre en UTC, asi que CURRENT_DATE se adelanta un dia entre las 18:00 y las 23:59 de Guatemala (issue #899). |
 | `fn_liquidar_sobrante_de_jornada(p_jornada_id uuid, p_decisiones jsonb)` | `integer` | DEFINER | authenticated | Liquida el sobrante de una jornada finalizada sin gastos pendientes: por cada aporte elegido, lo devuelve a su origen o lo traspasa a otra jornada planificada o en curso del mismo proyecto (00160). Lo devuelto que no es de una donacion entra a la caja (00168). Administradora o jornadas.gestionar. |
 | `fn_lotes_en_ventana_de_caducidad(p_hoy date, p_umbrales integer[])` | `TABLE(lote_id uuid, dias integer, etapa integer, cantidad integer)` | INVOKER | nadie | Lotes con existencia total mayor que cero que vencen dentro de la antelacion mas larga, incluidos los ya vencidos, con sus dias restantes y su etapa de aviso. Uso interno de fn_generar_alertas_caducidad(). |
-| `fn_medicamento_tiene_existencias(p_medicamento_id uuid)` | `boolean` | INVOKER | authenticated | TRUE si el medicamento tiene stock positivo no vencido (existencias.cantidad_disponible > 0 y lote con fecha_vencimiento >= hoy) en algun lote. medicamentos.api.js la consulta antes de desactivar un medicamento (issue #142); un medicamento con lotes historicos ya agotados o vencidos si se puede desactivar. |
+| `fn_medicamento_tiene_existencias(p_medicamento_id uuid)` | `boolean` | INVOKER | authenticated | TRUE si el medicamento tiene stock positivo no vencido (existencias.cantidad_disponible > 0 y lote con fecha_vencimiento >= hoy, o sin fecha, 00171) en algun lote. medicamentos.api.js la consulta antes de desactivar un medicamento (issue #142); un medicamento con lotes historicos ya agotados o vencidos si se puede desactivar. |
 | `fn_notificar_administradores(p_categoria categoria_notificacion, p_titulo text, p_cuerpo text, p_enlace text, p_origen_tabla text, p_origen_id uuid)` | `integer` | DEFINER | nadie | Crea la misma notificacion para cada administrador activo (un perfil desactivado no recibe nada, mismo criterio que la 00079). Devuelve cuantas creo. Solo la llaman los triggers de la 00138: sin EXECUTE para ningun rol de aplicacion. |
 | `fn_pasar_insumo_de_proyecto_a_jornada(p_insumo_id uuid, p_jornada_id uuid)` | `uuid` | INVOKER | authenticated | Pasa un insumo previsto a nivel proyecto (proyecto_insumos) a una jornada de ese proyecto (jornada_insumos), en una sola transaccion (00151). |
 | `fn_reclamar_correos_de_notificaciones(p_limite integer)` | `TABLE(id uuid, email text, nombres text, categoria categoria_notificacion, titulo text, cuerpo text, enlace text, created_at timestamp with time zone)` | DEFINER | nadie | Marca como en curso hasta p_limite notificaciones sin correo enviado, en orden de llegada, y las devuelve con el correo de su destinatario (issue #755). Solo service_role. |
@@ -3406,6 +3407,7 @@ Seguridad: corre con los permisos de su dueno; filtra con su propio WHERE. Privi
 | `fn_impedir_presupuesto_a_mano()` | INVOKER | Trigger: rechaza un UPDATE que cambie jornadas.presupuesto_asignado fuera de la sincronizacion con jornada_presupuesto_origen (00135). |
 | `fn_impedir_quitar_aporte_liquidado()` | INVOKER | Trigger de jornada_presupuesto_origen (00160): un aporte con sobrante liquidado no se borra. |
 | `fn_jornada_exige_proyecto()` | INVOKER | Rechaza crear una jornada sin proyecto o quitarle el que tiene (00169). |
+| `fn_lote_de_medicamento_tiene_vencimiento()` | DEFINER | Rechaza un lote de medicamento sin fecha de vencimiento; un lote de insumo puede no tenerla (00171). |
 | `fn_normalizar_configuracion_alertas_caducidad()` | INVOKER | Trigger: ordena las antelaciones de mayor a menor y registra quien guardo el cambio. |
 | `fn_notificar_aviso_caducidad()` | DEFINER | Trigger: avisa en el buzon (y por correo) de la administracion cada vez que se registra un aviso de vencimiento: "Lote por vencer en N dias", "Lote vence hoy" o "Lote vencido" (issue #899). Reemplaza a fn_notificar_alerta_caducidad (00138), que avisaba una sola vez por alerta. |
 | `fn_notificar_gasto_por_aprobar()` | DEFINER | Trigger: avisa a quien aprueba gastos cuando se registra uno pendiente (00138). |
