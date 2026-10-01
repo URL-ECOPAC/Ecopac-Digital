@@ -426,7 +426,7 @@ si con `suscribirCambiosDelBuzon` / `avisarCambioDelBuzon` (`eventos.js`).
 `obtenerDonacionDeLote`, `filtrarDonantes`.
 
 **Escrituras**: `registrarDonante`, `actualizarDonante`, `darDeBajaDonante`,
-`generarIngresoDesdeDonacion`.
+`reactivarDonante`, `generarIngresoDesdeDonacion`.
 
 **Validaciones**: `validarDonacion`, `validarDonante`, `validarAnulacionDeDonacion`.
 

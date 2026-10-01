@@ -83,8 +83,10 @@ export function valoresInicialesDeJornada(jornada) {
 /**
  * Traduce `valores` del formulario a lo que registrarJornada()/actualizarJornada() esperan.
  *
- * Solo normaliza `proyecto` y `botiquinBodega` (issue #756): son los dos campos opcionales que
- * resuelve un `<select>`, y un `''` sin elegir no es un UUID valido para una columna nullable.
+ * Solo normaliza `proyecto` y `botiquinBodega` (issue #756): los dos se resuelven con un
+ * `<select>`, y un `''` sin elegir no es un UUID valido. `botiquinBodega` es opcional; `proyecto`
+ * es obligatorio desde la 00169 y validarJornada() ya lo exige, pero si un `''` se colara igual
+ * viaja como null y la base lo rechaza como dato obligatorio, no como UUID mal formado.
  * `cupoEstimado` no necesita normalizarse aca: NumberField ya entrega numero o `null`. El resto
  * de campos viaja tal cual.
  *

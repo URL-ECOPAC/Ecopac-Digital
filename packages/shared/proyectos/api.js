@@ -288,10 +288,11 @@ export function cerrarProyecto(id) {
 }
 
 /**
- * Asocia una jornada a un proyecto, o la desasocia si `proyectoId` es null.
+ * Asocia una jornada a un proyecto, o la cambia de proyecto.
  *
  * El vinculo vive en jornadas.proyecto_id (migracion 00012) y no en una tabla intermedia: una
- * jornada pertenece a un solo proyecto.
+ * jornada pertenece a un solo proyecto. Desde la 00169 no se desasocia: la base rechaza dejar
+ * una jornada sin proyecto (23502), asi que `proyectoId` null vuelve como error.
  *
  * @param {string} jornadaId
  * @param {string} proyectoId

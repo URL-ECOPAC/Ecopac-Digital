@@ -9,7 +9,11 @@
 import { describe, expect, it } from "vitest";
 
 import { TIPOS_DE_DONACION } from "../enums.js";
-import { conIdsReales, debeOfrecerIngresoInventario } from "./useRegistroDonacion.js";
+import {
+  conIdsReales,
+  debeOfrecerIngresoInventario,
+  opcionesDeArticuloParaDonacion,
+} from "./useRegistroDonacion.js";
 
 describe("debeOfrecerIngresoInventario (#635, criterio 6)", () => {
   it("un error de registrarDonacion() no ofrece el paso de inventario, aunque el tipo sea medicamentos", () => {
@@ -22,10 +26,36 @@ describe("debeOfrecerIngresoInventario (#635, criterio 6)", () => {
     expect(debeOfrecerIngresoInventario(TIPOS_DE_DONACION.MEDICAMENTOS, null)).toBe(true);
   });
 
-  it("sin error pero de un tipo distinto a medicamentos, no ofrece el paso de inventario", () => {
+  // 00170: un insumo ya tiene articulo del catalogo, asi que tambien entra a inventario.
+  it("sin error y de insumos, tambien ofrece el paso de inventario", () => {
+    expect(debeOfrecerIngresoInventario(TIPOS_DE_DONACION.INSUMOS, null)).toBe(true);
+  });
+
+  it("sin error pero de dinero o servicios, no ofrece el paso de inventario", () => {
     expect(debeOfrecerIngresoInventario(TIPOS_DE_DONACION.DINERO, null)).toBe(false);
-    expect(debeOfrecerIngresoInventario(TIPOS_DE_DONACION.INSUMOS, null)).toBe(false);
     expect(debeOfrecerIngresoInventario(TIPOS_DE_DONACION.SERVICIOS, null)).toBe(false);
+  });
+});
+
+describe("opcionesDeArticuloParaDonacion", () => {
+  const ARTICULOS = [
+    { id: "m1", nombre: "Acetaminofen", concentracion: "500 mg", tipoArticulo: "medicamento" },
+    { id: "i1", nombre: "Guantes", tipoArticulo: "insumo" },
+    { id: "m2", nombre: "Loratadina", concentracion: "10 mg", tipoArticulo: "medicamento" },
+  ];
+  const valores = (tipo) => opcionesDeArticuloParaDonacion(ARTICULOS, tipo).map((o) => o.value);
+
+  it("una donacion de medicamentos solo ofrece medicamentos", () => {
+    expect(valores(TIPOS_DE_DONACION.MEDICAMENTOS)).toEqual(["m1", "m2"]);
+  });
+
+  it("una donacion de insumos solo ofrece insumos", () => {
+    expect(valores(TIPOS_DE_DONACION.INSUMOS)).toEqual(["i1"]);
+  });
+
+  it("dinero y servicios no eligen del catalogo", () => {
+    expect(valores(TIPOS_DE_DONACION.DINERO)).toEqual([]);
+    expect(valores(TIPOS_DE_DONACION.SERVICIOS)).toEqual([]);
   });
 });
 

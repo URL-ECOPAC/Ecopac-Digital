@@ -184,7 +184,8 @@ function campoDeRenglon(id, cambios = {}) {
  *   cuantas unidades. No hay descripcion ni unidad: las pone fn_registrar_donacion desde el
  *   catalogo (00135) -la unidad es la presentacion-, que es lo que la persona pidio: "ya se sabe
  *   que son, se pone la cantidad".
- * - insumos: texto libre, cantidad y unidad. No hay catalogo de insumos contra el que validar.
+ * - insumos: igual que medicamentos desde la 00170, pero el selector solo ofrece insumos del
+ *   catalogo (tipo_articulo, 00142). Antes era texto libre con cantidad y unidad.
  * - dinero: concepto y monto.
  * - servicios: que se presto y, si se conoce, cuanto vale.
  */
@@ -194,9 +195,8 @@ export const CAMPOS_RENGLON_POR_TIPO_DE_DONACION = {
     campoDeRenglon("cantidad", { label: "Cantidad (unidades)", validacion: { requerido: true } }),
   ],
   [TIPOS_DE_DONACION.INSUMOS]: [
-    campoDeRenglon("descripcion", { label: "Insumo" }),
-    campoDeRenglon("cantidad", { validacion: { requerido: true } }),
-    campoDeRenglon("unidad"),
+    campoDeRenglon("medicamentoId", { label: "Insumo", validacion: { requerido: true } }),
+    campoDeRenglon("cantidad", { label: "Cantidad (unidades)", validacion: { requerido: true } }),
   ],
   [TIPOS_DE_DONACION.DINERO]: [
     campoDeRenglon("descripcion", { label: "Concepto" }),

@@ -153,7 +153,9 @@ export default function OrigenesDePresupuesto({
                     onChange={(valor) => setCampo(campo.id, valor)}
                   />
                   {campo.id === "origen" && !creandoFuenteNueva && (
-                    <div className="mt-2">
+                    // mb-3: el margen inferior que trae un campo. Sin el, la .ec-campo-nota de abajo
+                    // (que sube con margen negativo para pegarse al campo) se encima al boton.
+                    <div className="mt-2 mb-3">
                       <SecondaryButton
                         title="Crear quién aporta"
                         size="sm"

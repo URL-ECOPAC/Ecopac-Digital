@@ -2,7 +2,8 @@
 -- Corre con: supabase test db
 --
 -- C. fn_registrar_donacion exige un medicamento del catalogo en cada renglon de una donacion de
---    medicamentos, y toma de ahi la descripcion y la unidad.
+--    medicamentos, y toma de ahi la descripcion y la unidad. Desde la 00170, lo mismo con un
+--    insumo en una donacion de insumos, y cada una solo acepta articulos de su tipo.
 -- C. El renglon se enlaza una vez, con un lote de su mismo medicamento.
 -- D. jornadas.presupuesto_asignado es la suma de jornada_presupuesto_origen, nadie lo escribe a
 --    mano, y un origen de donacion no puede gastar mas de lo que se dono.
@@ -11,7 +12,13 @@
 
 BEGIN;
 
-SELECT plan(27);
+SELECT plan(30);
+
+-- Desde la 00169 toda jornada nueva lleva proyecto. Estas pruebas no tratan de proyectos: sus
+-- jornadas reciben uno de prueba como DEFAULT de la columna, que el ROLLBACK del final deshace.
+INSERT INTO proyectos (id, nombre) VALUES
+  ('5f000000-0000-0000-0000-000000000169', 'Proyecto de prueba 00169');
+ALTER TABLE jornadas ALTER COLUMN proyecto_id SET DEFAULT '5f000000-0000-0000-0000-000000000169';
 
 -- ============================================================================
 -- Setup (como dueno, exento de RLS)
@@ -33,6 +40,11 @@ ALTER TABLE perfiles ENABLE TRIGGER USER;
 INSERT INTO medicamentos (id, nombre, concentracion, presentacion_id, marca) VALUES
   ('90000000-0000-0000-0000-000000000840', 'Medicamento 840', '500 mg',
    (SELECT id FROM presentaciones WHERE nombre = 'Tableta'), 'Generico');
+
+-- Un insumo del catalogo (00142, 00164: sin concentracion), para la donacion de insumos (00170).
+INSERT INTO medicamentos (id, nombre, concentracion, presentacion_id, marca, tipo_articulo) VALUES
+  ('90000000-0000-0000-0000-000000000842', 'Guantes 840', NULL,
+   (SELECT id FROM presentaciones ORDER BY nombre LIMIT 1), 'Generico', 'insumo');
 
 INSERT INTO donantes (id, nombre, tipo) VALUES
   ('d0000000-0000-0000-0000-000000084001', 'Donante de prueba 840', 'organizacion');
@@ -234,14 +246,40 @@ SELECT throws_ok(
           "descripcion": "Guantes", "cantidad": 5}]'::JSONB) $$,
   '23514',
   NULL,
-  'una donacion de insumos no lleva medicamento del catalogo'
+  'una donacion de insumos no lleva un medicamento (00170)'
+);
+
+-- 00170: el insumo tambien se elige del catalogo. Antes era texto libre.
+SELECT throws_ok(
+  $$ SELECT fn_registrar_donacion(
+       'd0000000-0000-0000-0000-000000084001', 'insumos', CURRENT_DATE,
+       '[{"descripcion": "Guantes 840", "cantidad": 5, "unidad": "cajas"}]'::JSONB) $$,
+  '23514',
+  NULL,
+  'una donacion de insumos sin insumo del catalogo se rechaza (00170)'
 );
 
 SELECT lives_ok(
   $$ SELECT fn_registrar_donacion(
        'd0000000-0000-0000-0000-000000084001', 'insumos', CURRENT_DATE,
-       '[{"descripcion": "Guantes 840", "cantidad": 5, "unidad": "cajas"}]'::JSONB) $$,
-  'una donacion de insumos sigue aceptando texto libre'
+       '[{"medicamentoId": "90000000-0000-0000-0000-000000000842", "cantidad": 5}]'::JSONB) $$,
+  'una donacion de insumos con insumo del catalogo se registra (00170)'
+);
+
+SELECT is(
+  (SELECT descripcion FROM donacion_detalle
+   WHERE medicamento_id = '90000000-0000-0000-0000-000000000842'),
+  'Guantes 840',
+  'la descripcion del insumo sale del catalogo, sin concentracion'
+);
+
+SELECT throws_ok(
+  $$ SELECT fn_registrar_donacion(
+       'd0000000-0000-0000-0000-000000084001', 'medicamentos', CURRENT_DATE,
+       '[{"medicamentoId": "90000000-0000-0000-0000-000000000842", "cantidad": 5}]'::JSONB) $$,
+  '23514',
+  NULL,
+  'una donacion de medicamentos no lleva un insumo (00170)'
 );
 
 -- ============================================================================

@@ -17,8 +17,9 @@
 
 import { useCallback, useState } from "react";
 
+import { TIPOS_DE_ARTICULO } from "../enums.js";
 import { validarConDescriptores } from "../validations/index.js";
-import { CAMPOS_MEDICAMENTO } from "./campos.js";
+import { CAMPOS_MEDICAMENTO, pideDatosFarmacologicos } from "./campos.js";
 import { puedeAdministrarMedicamentos } from "./medicamentos.permisos.js";
 import { registrarMedicamento } from "./medicamentos.api.js";
 import { listarPresentaciones } from "./presentaciones.api.js";
@@ -44,6 +45,14 @@ export const CAMPOS_ALTA_MEDICAMENTO_EN_LINEA = CAMPOS_MEDICAMENTO.filter((campo
   IDS_ALTA_EN_LINEA.includes(campo.id),
 );
 
+/**
+ * Lo mismo para un insumo: sin concentracion ni principio activo, que un insumo no tiene (00164).
+ * Nombre, presentacion y marca siguen distinguiendo un insumo de otro.
+ */
+export const CAMPOS_ALTA_INSUMO_EN_LINEA = CAMPOS_ALTA_MEDICAMENTO_EN_LINEA.filter(
+  (campo) => !["concentracion", "principiosActivos"].includes(campo.id),
+);
+
 const VALORES_VACIOS = {
   nombre: "",
   concentracion: "",
@@ -61,8 +70,11 @@ function aOpciones(filas = []) {
  * @param {object} opciones
  * @param {string} [opciones.rol] Rol de quien tiene el formulario abierto.
  * @param {(medicamento: object) => void|Promise<void>} [opciones.alCrear]
+ * @param {string} [opciones.tipoArticulo] Uno de TIPOS_DE_ARTICULO; medicamento por defecto. Con
+ *   insumo, el formulario no pide concentracion ni principio activo.
  * @returns {{
  *   puedeCrear: boolean,
+ *   tipoArticulo: string,
  *   abierto: boolean,
  *   abrir: () => Promise<void>,
  *   cerrar: () => void,
@@ -76,7 +88,14 @@ function aOpciones(filas = []) {
  *   catalogos: { principiosActivos: object[], presentaciones: object[] },
  * }}
  */
-export function useAltaDeMedicamentoEnLinea({ rol, alCrear } = {}) {
+export function useAltaDeMedicamentoEnLinea({
+  rol,
+  alCrear,
+  tipoArticulo = TIPOS_DE_ARTICULO.MEDICAMENTO,
+} = {}) {
+  const esMedicamento = pideDatosFarmacologicos(tipoArticulo);
+  const campos = esMedicamento ? CAMPOS_ALTA_MEDICAMENTO_EN_LINEA : CAMPOS_ALTA_INSUMO_EN_LINEA;
+
   const [abierto, setAbierto] = useState(false);
   const [valores, setValores] = useState(VALORES_VACIOS);
   const [errores, setErrores] = useState({});
@@ -114,7 +133,7 @@ export function useAltaDeMedicamentoEnLinea({ rol, alCrear } = {}) {
   }, []);
 
   const crear = useCallback(async () => {
-    const erroresDeValidacion = validarConDescriptores(CAMPOS_ALTA_MEDICAMENTO_EN_LINEA, valores);
+    const erroresDeValidacion = validarConDescriptores(campos, valores);
     if (Object.keys(erroresDeValidacion).length > 0) {
       setErrores(erroresDeValidacion);
       return { medicamento: null, error: null };
@@ -122,12 +141,14 @@ export function useAltaDeMedicamentoEnLinea({ rol, alCrear } = {}) {
 
     setCreando(true);
     setError(null);
+    // Para un insumo, registrarMedicamento() ya descarta concentracion y principios (00164).
     const { medicamento, error: fallo } = await registrarMedicamento({
       nombre: valores.nombre.trim(),
       concentracion: valores.concentracion.trim(),
       presentacionId: valores.presentacionId,
       marca: valores.marca.trim(),
       principiosActivosIds: valores.principiosActivos,
+      tipoArticulo,
     });
 
     if (fallo) {
@@ -140,14 +161,15 @@ export function useAltaDeMedicamentoEnLinea({ rol, alCrear } = {}) {
     setCreando(false);
     cerrar();
     return { medicamento, error: null };
-  }, [valores, alCrear, cerrar]);
+  }, [campos, valores, alCrear, cerrar, tipoArticulo]);
 
   return {
     puedeCrear: puedeAdministrarMedicamentos(rol),
+    tipoArticulo,
     abierto,
     abrir,
     cerrar,
-    campos: CAMPOS_ALTA_MEDICAMENTO_EN_LINEA,
+    campos,
     valores,
     setCampo,
     errores,

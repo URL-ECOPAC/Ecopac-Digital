@@ -1,6 +1,6 @@
 # Diccionario de datos
 
-> **Documento generado.** No se edita a mano: sale de `npm run docs:diccionario` (`scripts/generar-diccionario-de-datos.mjs`), que lee el catalogo de PostgreSQL de una base con todas las migraciones aplicadas, hasta la `00168_caja_de_sobrantes.sql`. Las descripciones son los `COMMENT ON` de las migraciones: si falta una, se agrega con una migracion nueva y se regenera.
+> **Documento generado.** No se edita a mano: sale de `npm run docs:diccionario` (`scripts/generar-diccionario-de-datos.mjs`), que lee el catalogo de PostgreSQL de una base con todas las migraciones aplicadas, hasta la `00170_insumo_del_catalogo_en_donacion.sql`. Las descripciones son los `COMMENT ON` de las migraciones: si falta una, se agrega con una migracion nueva y se regenera.
 
 Complementa a [MODELO-DE-DATOS.md](MODELO-DE-DATOS.md), que explica el porque de cada decision, y a [PERMISOS.md](PERMISOS.md), que explica que puede hacer cada rol. Este documento es la referencia exhaustiva: cada tabla, cada campo, cada restriccion, cada politica y cada trigger.
 
@@ -16,9 +16,9 @@ Complementa a [MODELO-DE-DATOS.md](MODELO-DE-DATOS.md), que explica el porque de
 | Llaves foraneas | 98 |
 | Restricciones CHECK | 64 |
 | Politicas RLS | 145 |
-| Triggers | 124 |
+| Triggers | 126 |
 | Funciones (sin contar las de trigger) | 59 |
-| Funciones de trigger | 48 |
+| Funciones de trigger | 49 |
 
 ### Como leer las tablas de este documento
 
@@ -2318,7 +2318,7 @@ Jornada medica o dental en una comunidad: su fecha, responsable, estado, presupu
 | `fecha` | `date` | no |  |  | Fecha programada; no puede ser anterior a la creacion. |
 | `comunidad_id` | `uuid` | no |  | FK -> `comunidades` | Comunidad donde se hace. |
 | `responsable_id` | `uuid` | no |  | FK -> `perfiles` | Persona a cargo. |
-| `proyecto_id` | `uuid` | si |  | FK -> `proyectos` | Proyecto social al que pertenece, si alguno. |
+| `proyecto_id` | `uuid` | si |  | FK -> `proyectos` | Proyecto social al que pertenece. Obligatorio al crear la jornada y no se puede quitar (00169); solo las jornadas anteriores a la 00169 pueden no tenerlo. |
 | `estado` | `estado_jornada` | no | `'planificada'::estado_jornada` |  | Planificada, en curso, finalizada o cancelada. Las transiciones las valida un trigger. |
 | `presupuesto_asignado` | `numeric(12,2)` | no | `0` |  | Presupuesto de la jornada: la suma de sus origenes en jornada_presupuesto_origen, que mantiene un trigger. No se escribe a mano (00135). |
 | `created_at` | `timestamptz` | no | `now()` |  | Cuando se creo la fila. Lo pone la base. |
@@ -2338,7 +2338,7 @@ Jornada medica o dental en una comunidad: su fecha, responsable, estado, presupu
 | `chk_jornadas_presupuesto_no_negativo` | CHECK | `CHECK ((presupuesto_asignado >= (0)::numeric))` |
 | `jornadas_botiquin_bodega_id_fkey` | FK | `FOREIGN KEY (botiquin_bodega_id) REFERENCES bodegas(id) ON DELETE SET NULL` (al borrar: SET NULL) |
 | `jornadas_comunidad_id_fkey` | FK | `FOREIGN KEY (comunidad_id) REFERENCES comunidades(id) ON DELETE RESTRICT` (al borrar: RESTRICT) |
-| `jornadas_proyecto_id_fkey` | FK | `FOREIGN KEY (proyecto_id) REFERENCES proyectos(id) ON DELETE SET NULL` (al borrar: SET NULL) |
+| `jornadas_proyecto_id_fkey` | FK | `FOREIGN KEY (proyecto_id) REFERENCES proyectos(id) ON DELETE RESTRICT` (al borrar: RESTRICT) |
 | `jornadas_responsable_id_fkey` | FK | `FOREIGN KEY (responsable_id) REFERENCES perfiles(id) ON DELETE RESTRICT` (al borrar: RESTRICT) |
 | `jornadas_pkey` | PK | `PRIMARY KEY (id)` |
 | `jornadas_codigo_key` | UNIQUE | `UNIQUE (codigo)` |
@@ -2364,6 +2364,8 @@ Jornada medica o dental en una comunidad: su fecha, responsable, estado, presupu
 | `trg_jornadas_origen_del_presupuesto_inicial` | AFTER INSERT | `fn_origen_del_presupuesto_inicial()` |
 | `trg_jornadas_proyecto_no_cancelado_al_asociar` | BEFORE UPDATE OF proyecto_id cuando `(old.proyecto_id IS DISTINCT FROM new.proyecto_id)` | `fn_proyecto_de_la_fila_no_esta_cancelado()` |
 | `trg_jornadas_proyecto_no_cancelado_al_crear` | BEFORE INSERT cuando `(new.proyecto_id IS NOT NULL)` | `fn_proyecto_de_la_fila_no_esta_cancelado()` |
+| `trg_jornadas_proyecto_obligatorio_al_cambiar` | BEFORE UPDATE OF proyecto_id cuando `(old.proyecto_id IS DISTINCT FROM new.proyecto_id)` | `fn_jornada_exige_proyecto()` |
+| `trg_jornadas_proyecto_obligatorio_al_crear` | BEFORE INSERT | `fn_jornada_exige_proyecto()` |
 | `trg_jornadas_updated_at` | BEFORE UPDATE | `actualizar_timestamp_updated_at()` |
 
 #### jornada_personal
@@ -2692,7 +2694,7 @@ Proyecto social que agrupa jornadas: su equipo, gastos e insumos salen de ellas.
 | `proyectos_responsable_id_fkey` | FK | `FOREIGN KEY (responsable_id) REFERENCES perfiles(id) ON DELETE SET NULL` (al borrar: SET NULL) |
 | `proyectos_pkey` | PK | `PRIMARY KEY (id)` |
 
-**La referencian:** `donaciones.proyecto_id` (RESTRICT), `jornadas.proyecto_id` (SET NULL), `proyecto_estado_historial.proyecto_id` (CASCADE), `proyecto_hitos.proyecto_id` (CASCADE), `proyecto_insumos.proyecto_id` (CASCADE), `proyecto_personal.proyecto_id` (CASCADE), `proyecto_seguimiento.proyecto_id` (CASCADE).
+**La referencian:** `donaciones.proyecto_id` (RESTRICT), `jornadas.proyecto_id` (RESTRICT), `proyecto_estado_historial.proyecto_id` (CASCADE), `proyecto_hitos.proyecto_id` (CASCADE), `proyecto_insumos.proyecto_id` (CASCADE), `proyecto_personal.proyecto_id` (CASCADE), `proyecto_seguimiento.proyecto_id` (CASCADE).
 
 **Proteccion.** RLS activo. Privilegios: `authenticated`: INSERT, SELECT, UPDATE; `anon`: ninguno.
 
@@ -3014,7 +3016,7 @@ Renglones de una donacion: que se dono y cuanto. Un renglon de medicamentos pued
 | `lote_id` | `uuid` | si |  | FK -> `lotes` | Lote que se creo al ingresar este renglon a inventario; unico. |
 | `created_at` | `timestamptz` | no | `now()` |  | Cuando se creo la fila. Lo pone la base. |
 | `updated_at` | `timestamptz` | no | `now()` |  | Cuando se modifico la fila por ultima vez. Lo mantiene el trigger actualizar_timestamp_updated_at. |
-| `medicamento_id` | `uuid` | si |  | FK -> `medicamentos` | Medicamento del catalogo que se dono (issue #840). Obligatorio para las donaciones de medicamentos registradas desde la 00135 -lo exige fn_registrar_donacion-, NULL para los otros tipos y para las donaciones de medicamentos anteriores, que se capturaban como texto libre. Con el, el ingreso a inventario desde la donacion ya no pide volver a elegir el medicamento. |
+| `medicamento_id` | `uuid` | si |  | FK -> `medicamentos` | Articulo del catalogo del renglon: un medicamento en una donacion de medicamentos, un insumo en una de insumos (00135, 00170). NULL en dinero y servicios, y en los insumos registrados antes de la 00170. |
 
 **Llaves y restricciones**
 
@@ -3358,7 +3360,7 @@ Seguridad: corre con los permisos de su dueno; filtra con su propio WHERE. Privi
 | `fn_notificar_administradores(p_categoria categoria_notificacion, p_titulo text, p_cuerpo text, p_enlace text, p_origen_tabla text, p_origen_id uuid)` | `integer` | DEFINER | nadie | Crea la misma notificacion para cada administrador activo (un perfil desactivado no recibe nada, mismo criterio que la 00079). Devuelve cuantas creo. Solo la llaman los triggers de la 00138: sin EXECUTE para ningun rol de aplicacion. |
 | `fn_pasar_insumo_de_proyecto_a_jornada(p_insumo_id uuid, p_jornada_id uuid)` | `uuid` | INVOKER | authenticated | Pasa un insumo previsto a nivel proyecto (proyecto_insumos) a una jornada de ese proyecto (jornada_insumos), en una sola transaccion (00151). |
 | `fn_reclamar_correos_de_notificaciones(p_limite integer)` | `TABLE(id uuid, email text, nombres text, categoria categoria_notificacion, titulo text, cuerpo text, enlace text, created_at timestamp with time zone)` | DEFINER | nadie | Marca como en curso hasta p_limite notificaciones sin correo enviado, en orden de llegada, y las devuelve con el correo de su destinatario (issue #755). Solo service_role. |
-| `fn_registrar_donacion(p_donante_id uuid, p_tipo tipo_donacion, p_fecha date, p_detalle jsonb, p_proyecto_id uuid, p_observaciones text, p_jornada_id uuid)` | `jsonb` | INVOKER | authenticated | Registra una donacion y sus renglones en una sola transaccion. En una de medicamentos, la descripcion y la unidad de cada renglon salen del catalogo, no del cliente. |
+| `fn_registrar_donacion(p_donante_id uuid, p_tipo tipo_donacion, p_fecha date, p_detalle jsonb, p_proyecto_id uuid, p_observaciones text, p_jornada_id uuid)` | `jsonb` | INVOKER | authenticated | Registra una donacion con sus renglones en una transaccion. En medicamentos e insumos cada renglon elige un articulo del catalogo de su mismo tipo, y la descripcion y la unidad salen de el (00135, 00170). |
 | `fn_registrar_medicamento(p_nombre character varying, p_concentracion character varying, p_presentacion_id uuid, p_marca character varying, p_principios_ids uuid[], p_forma_farmaceutica character varying, p_es_pediatrico boolean, p_tipo_articulo tipo_articulo)` | `medicamentos` | INVOKER | authenticated | Registra un articulo del catalogo en una transaccion. Un medicamento exige al menos un principio activo y su concentracion; un insumo no guarda principio, concentracion, forma farmaceutica ni uso pediatrico (00164). |
 | `fn_registrar_paciente(p_nombres character varying, p_apellidos character varying, p_fecha_nacimiento date, p_sexo character varying, p_comunidad_id uuid, p_telefono_contacto character varying, p_idioma character varying, p_dpi character varying, p_tipo_sangre tipo_sanguineo, p_nombre_responsable character varying, p_parentesco_responsable character varying)` | `TABLE(id uuid, nombres character varying, apellidos character varying, fecha_nacimiento date, sexo character varying, comunidad_id uuid, telefono_contacto character varying, idioma character varying, dpi character varying, tipo_sangre tipo_sanguineo, nombre_responsable character varying, parentesco_responsable character varying, fecha_baja date, created_at timestamp with time zone, updated_at timestamp with time zone, numero_ficha character varying)` | INVOKER | authenticated | Inserta un paciente y su expediente en una sola transaccion. numero_ficha ya no es un parametro: lo genera el DEFAULT de expedientes (nextval de expedientes_numero_ficha_seq, 00081), formateado a 6 digitos con ceros a la izquierda. nextval() es atomico y nunca repite valor entre sesiones concurrentes, asi que dos dispositivos registrando a la vez en la misma jornada no pueden colisionar. No es SECURITY DEFINER: las politicas de INSERT de pacientes y expedientes (00032) siguen decidiendo quien puede llamarla. Issue #663: p_idioma pasa de idioma_preferido a VARCHAR. El idioma ya no es un enum sino un codigo del catalogo idiomas, con clave foranea, para poder agregar idiomas sin desplegar. |
 | `fn_reporte_jornada(p_jornada_id uuid)` | `jsonb` | DEFINER | authenticated | Reporte de resultados de una jornada, ya agregado: totales, diagnosticos, medicamentos y personal. Sin filas de paciente. NULL si la jornada no existe. |
@@ -3403,6 +3405,7 @@ Seguridad: corre con los permisos de su dueno; filtra con su propio WHERE. Privi
 | `fn_impedir_devuelto_a_mano()` | INVOKER | Trigger de jornada_presupuesto_origen (00160): devuelto y traspasado_desde solo los escribe fn_liquidar_sobrante_de_jornada(). |
 | `fn_impedir_presupuesto_a_mano()` | INVOKER | Trigger: rechaza un UPDATE que cambie jornadas.presupuesto_asignado fuera de la sincronizacion con jornada_presupuesto_origen (00135). |
 | `fn_impedir_quitar_aporte_liquidado()` | INVOKER | Trigger de jornada_presupuesto_origen (00160): un aporte con sobrante liquidado no se borra. |
+| `fn_jornada_exige_proyecto()` | INVOKER | Rechaza crear una jornada sin proyecto o quitarle el que tiene (00169). |
 | `fn_normalizar_configuracion_alertas_caducidad()` | INVOKER | Trigger: ordena las antelaciones de mayor a menor y registra quien guardo el cambio. |
 | `fn_notificar_aviso_caducidad()` | DEFINER | Trigger: avisa en el buzon (y por correo) de la administracion cada vez que se registra un aviso de vencimiento: "Lote por vencer en N dias", "Lote vence hoy" o "Lote vencido" (issue #899). Reemplaza a fn_notificar_alerta_caducidad (00138), que avisaba una sola vez por alerta. |
 | `fn_notificar_gasto_por_aprobar()` | DEFINER | Trigger: avisa a quien aprueba gastos cuando se registra uno pendiente (00138). |

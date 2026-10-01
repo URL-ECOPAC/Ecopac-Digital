@@ -203,6 +203,19 @@ export async function darDeBajaDonante(idDonante, { rolUsuario }) {
 }
 
 /**
+ * Vuelve a activar a un donante dado de baja (activo = true). Contraparte de darDeBajaDonante():
+ * sin ella, una baja por error no tenia vuelta atras desde la pantalla.
+ *
+ * @param {string} idDonante
+ * @param {object} opciones
+ * @param {string} opciones.rolUsuario
+ * @returns {Promise<{ datos: object|null, error: object|null }>}
+ */
+export async function reactivarDonante(idDonante, { rolUsuario }) {
+  return actualizarDonante(idDonante, { activo: true }, { rolUsuario });
+}
+
+/**
  * Agrega `donaciones` (con su `donacion_detalle` embebido) por tipo, mismo criterio que
  * historial.api.js -> calcularTotalesPorTipo(): dinero suma `monto`, medicamentos/insumos suman
  * `cantidad`, servicios cuenta donaciones (no tiene unidades propias).

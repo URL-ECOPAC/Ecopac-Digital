@@ -106,10 +106,16 @@ export default function RegistroDonacionPage({ usuarioRol }) {
 
   const abrirFormularioIngreso = async () => {
     setResolviendoProveedor(true);
-    const { proveedorId } = await obtenerOCrearProveedorPorNombre(
-      donanteNombre,
-      TIPO_PROVEEDOR.DONANTE,
-    );
+    // El catalogo se vuelve a pedir: el que se cargo al montar no tiene lo que se dio de alta en
+    // linea durante la donacion, y el ingreso mostraba ese renglon con su UUID y el selector en
+    // blanco.
+    const [{ proveedorId }, { medicamentos }] = await Promise.all([
+      obtenerOCrearProveedorPorNombre(donanteNombre, TIPO_PROVEEDOR.DONANTE),
+      listarMedicamentos({ soloActivos: true }),
+    ]);
+    if (medicamentos) {
+      setCatalogosIngreso((anteriores) => ({ ...anteriores, medicamentos }));
+    }
 
     if (proveedorId) {
       setCatalogosIngreso((anteriores) => {
@@ -277,16 +283,12 @@ export default function RegistroDonacionPage({ usuarioRol }) {
           {(detalles || []).map((item, indice) => (
             <div key={item.id} className="ec-renglon">
               <div className="ec-form-grid">
-                {/* Todos los campos que el tipo declara (camposDeRenglonDeDonacion), salvo los dos
-                    que tienen control propio abajo: el medicamento del catalogo y el insumo. Solo
-                    se dibujaba "cantidad", asi que una donacion en dinero o de servicios no tenia
-                    donde poner el concepto ni el monto, y a un insumo le faltaba la unidad. */}
+                {/* Todos los campos que el tipo declara (camposDeRenglonDeDonacion), salvo el
+                    articulo del catalogo, que tiene control propio abajo. Solo se dibujaba
+                    "cantidad", asi que una donacion en dinero o de servicios no tenia donde poner
+                    el concepto ni el monto. */}
                 {camposDeRenglon
-                  .filter(
-                    (campo) =>
-                      campo.id !== "medicamentoId" &&
-                      !(tipoDonacion === TIPOS_DE_DONACION.INSUMOS && campo.id === "descripcion"),
-                  )
+                  .filter((campo) => campo.id !== "medicamentoId")
                   .map((campo) => {
                     const errorDeCampo = error?.campos?.[`detalles_${indice}_${campo.id}`];
                     return (
@@ -302,80 +304,46 @@ export default function RegistroDonacionPage({ usuarioRol }) {
                     );
                   })}
 
-                {tipoDonacion === TIPOS_DE_DONACION.INSUMOS && (
-                  <div className="ec-form-subgrid ec-form-grid--ancho">
-                    <Form.Group controlId={`insumoSelect_${item.id}`}>
-                      <Form.Label className="small text-body-secondary fw-semibold mb-1">
-                        Insumo
-                      </Form.Label>
-                      <Form.Select
-                        size="sm"
+                {/* Medicamentos e insumos eligen del catalogo (00135, 00170). Las opciones ya
+                    llegan filtradas por el tipo de la donacion, y el alta crea un articulo de ese
+                    tipo. El renglon de insumos guardaba el id del articulo como descripcion. */}
+                {camposDeRenglon
+                  .filter((campo) => campo.id === "medicamentoId")
+                  .map((campo) => {
+                    const errorDeCampo = error?.campos?.[`detalles_${indice}_${campo.id}`];
+                    const control = (
+                      <CampoDeFormulario
+                        key={campo.id}
+                        campo={campo}
+                        valor={item[campo.id]}
+                        error={errorDeCampo}
+                        catalogos={catalogosDeRenglon}
                         disabled={!permisos?.puedeEscribir}
-                        value={item.insumoId || ""}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          actualizarRenglon(item.id, "insumoId", val);
-                          actualizarRenglon(item.id, "descripcion", val);
-                        }}
-                      >
-                        <option value="">Seleccionar...</option>
-                        {(catalogosDeRenglon.insumos || catalogosDeRenglon.medicamentos || []).map(
-                          (opt) => (
-                            <option key={opt.id || opt.value} value={opt.id || opt.value}>
-                              {opt.nombre || opt.label}
-                            </option>
-                          ),
+                        onChange={(valor) => actualizarRenglon(item.id, campo.id, valor)}
+                      />
+                    );
+                    if (!altaDeMedicamento.puedeCrear) return control;
+                    return (
+                      <div key={campo.id} className="ec-form-subgrid ec-form-grid--ancho">
+                        {control}
+                        {!altaDeMedicamento.abierto && (
+                          <div className="ec-form-subgrid-accion">
+                            <SecondaryButton
+                              title={
+                                tipoDonacion === TIPOS_DE_DONACION.INSUMOS
+                                  ? "Nuevo insumo"
+                                  : "Nuevo medicamento"
+                              }
+                              size="sm"
+                              icon={<Plus size={14} aria-hidden="true" />}
+                              onClick={() => altaDeMedicamento.abrir(item.id)}
+                              disabled={!permisos?.puedeEscribir}
+                            />
+                          </div>
                         )}
-                      </Form.Select>
-                    </Form.Group>
-                    {!altaDeMedicamento.abierto && (
-                      <div className="ec-form-subgrid-accion">
-                        <SecondaryButton
-                          title="Nuevo insumo"
-                          size="sm"
-                          icon={<Plus size={14} aria-hidden="true" />}
-                          onClick={() => altaDeMedicamento.abrir(item.id)}
-                          disabled={!permisos?.puedeEscribir}
-                        />
                       </div>
-                    )}
-                  </div>
-                )}
-
-                {tipoDonacion === TIPOS_DE_DONACION.MEDICAMENTOS &&
-                  camposDeRenglon
-                    .filter((campo) => campo.id === "medicamentoId")
-                    .map((campo) => {
-                      const errorDeCampo = error?.campos?.[`detalles_${indice}_${campo.id}`];
-                      const control = (
-                        <CampoDeFormulario
-                          key={campo.id}
-                          campo={campo}
-                          valor={item[campo.id]}
-                          error={errorDeCampo}
-                          catalogos={catalogosDeRenglon}
-                          disabled={!permisos?.puedeEscribir}
-                          onChange={(valor) => actualizarRenglon(item.id, campo.id, valor)}
-                        />
-                      );
-                      if (!altaDeMedicamento.puedeCrear) return control;
-                      return (
-                        <div key={campo.id} className="ec-form-subgrid ec-form-grid--ancho">
-                          {control}
-                          {!altaDeMedicamento.abierto && (
-                            <div className="ec-form-subgrid-accion">
-                              <SecondaryButton
-                                title="Nuevo medicamento"
-                                size="sm"
-                                icon={<Plus size={14} aria-hidden="true" />}
-                                onClick={() => altaDeMedicamento.abrir(item.id)}
-                                disabled={!permisos?.puedeEscribir}
-                              />
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
+                    );
+                  })}
 
                 {altaDeMedicamento.renglonId === item.id && (
                   <AltaDeMedicamentoEnLinea alta={altaDeMedicamento} />

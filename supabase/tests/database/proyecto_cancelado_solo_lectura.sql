@@ -25,16 +25,20 @@ UPDATE perfiles SET rol = 'medico'        WHERE id = '00000000-0000-0000-0000-00
 ALTER TABLE perfiles ENABLE TRIGGER USER;
 
 -- 1541: el proyecto que se cancela. 1542: uno abierto, para comprobar que no se bloquea de mas.
+-- 1543: otro abierto, de donde sale la jornada 1542 (desde la 00169 toda jornada nueva lleva
+-- proyecto, asi que ya no se arranca de una jornada sin proyecto).
 INSERT INTO proyectos (id, nombre) VALUES
   ('50000000-0000-0000-0000-000000001541', 'Proyecto cancelado 1541'),
-  ('50000000-0000-0000-0000-000000001542', 'Proyecto abierto 1542');
+  ('50000000-0000-0000-0000-000000001542', 'Proyecto abierto 1542'),
+  ('50000000-0000-0000-0000-000000001543', 'Proyecto abierto 1543');
 
 INSERT INTO jornadas (id, nombre, fecha, comunidad_id, responsable_id, proyecto_id) VALUES
   ('40000000-0000-0000-0000-000000001541', 'Jornada del cancelado 1541', CURRENT_DATE + 30,
    '10000000-0000-0000-0000-000000001541', '00000000-0000-0000-0000-000000015411',
    '50000000-0000-0000-0000-000000001541'),
-  ('40000000-0000-0000-0000-000000001542', 'Jornada sin proyecto 1542', CURRENT_DATE + 30,
-   '10000000-0000-0000-0000-000000001541', '00000000-0000-0000-0000-000000015411', NULL);
+  ('40000000-0000-0000-0000-000000001542', 'Jornada de otro proyecto 1542', CURRENT_DATE + 30,
+   '10000000-0000-0000-0000-000000001541', '00000000-0000-0000-0000-000000015411',
+   '50000000-0000-0000-0000-000000001543');
 
 INSERT INTO medicamentos (id, nombre, concentracion, presentacion_id, marca, tipo_articulo) VALUES
   ('90000000-0000-0000-0000-000000001541', 'Guantes 1541', 'talla M',
@@ -136,11 +140,13 @@ SELECT throws_ok(
   $$ UPDATE jornadas SET proyecto_id = '50000000-0000-0000-0000-000000001541'
       WHERE id = '40000000-0000-0000-0000-000000001542' $$,
   '55000', NULL,
-  'no se asocia una jornada a un proyecto cancelado'
+  'no se pasa una jornada a un proyecto cancelado'
 );
 
+-- Pasarla a otro proyecto, no a NULL: dejarla sin proyecto ya lo rechaza la 00169 por su cuenta.
 SELECT throws_ok(
-  $$ UPDATE jornadas SET proyecto_id = NULL WHERE id = '40000000-0000-0000-0000-000000001541' $$,
+  $$ UPDATE jornadas SET proyecto_id = '50000000-0000-0000-0000-000000001542'
+      WHERE id = '40000000-0000-0000-0000-000000001541' $$,
   '55000', NULL,
   'no se saca una jornada de un proyecto cancelado'
 );
@@ -176,7 +182,7 @@ SELECT lives_ok(
 SELECT lives_ok(
   $$ UPDATE jornadas SET proyecto_id = '50000000-0000-0000-0000-000000001542'
       WHERE id = '40000000-0000-0000-0000-000000001542' $$,
-  'y se le siguen asociando jornadas'
+  'y se le siguen pasando jornadas'
 );
 
 -- ============================================================================

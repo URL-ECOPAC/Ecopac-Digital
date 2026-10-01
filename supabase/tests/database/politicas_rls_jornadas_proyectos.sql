@@ -10,6 +10,13 @@ BEGIN;
 
 SELECT plan(31);
 
+-- Desde la 00169 toda jornada nueva lleva proyecto. Las que se crean DENTRO de las pruebas (como
+-- authenticated) reciben uno de prueba como DEFAULT de la columna, que el ROLLBACK del final
+-- deshace. Las del fixture, en cambio, se crean sin proyecto (ver mas abajo).
+INSERT INTO proyectos (id, nombre) VALUES
+  ('5f000000-0000-0000-0000-000000000169', 'Proyecto de prueba 00169');
+ALTER TABLE jornadas ALTER COLUMN proyecto_id SET DEFAULT '5f000000-0000-0000-0000-000000000169';
+
 -- ============================================================================
 -- Setup: una comunidad, un usuario de cada rol, dos jornadas (una con personal
 -- asignado y otra libre) y un proyecto.
@@ -39,11 +46,15 @@ ALTER TABLE perfiles ENABLE TRIGGER USER;
 
 -- Jornada A: con medico y voluntario asignados. Jornada B: sin asignar a nadie.
 -- responsable_id es NOT NULL (00012); fecha futura por el check de 00012.
-INSERT INTO jornadas (id, nombre, fecha, comunidad_id, responsable_id) VALUES
+-- Sin proyecto, como una jornada anterior a la 00169: las pruebas de lectura de proyectos de mas
+-- abajo cuentan con que ningun proyecto cuelga de estas dos jornadas. Por eso se salta el trigger.
+ALTER TABLE jornadas DISABLE TRIGGER trg_jornadas_proyecto_obligatorio_al_crear;
+INSERT INTO jornadas (id, nombre, fecha, comunidad_id, responsable_id, proyecto_id) VALUES
   ('40000000-0000-0000-0000-000000000a01', 'Jornada asignada 90', CURRENT_DATE + 30,
-   '10000000-0000-0000-0000-000000000090', '00000000-0000-0000-0000-000000000901'),
+   '10000000-0000-0000-0000-000000000090', '00000000-0000-0000-0000-000000000901', NULL),
   ('40000000-0000-0000-0000-000000000a02', 'Jornada libre 90', CURRENT_DATE + 31,
-   '10000000-0000-0000-0000-000000000090', '00000000-0000-0000-0000-000000000901');
+   '10000000-0000-0000-0000-000000000090', '00000000-0000-0000-0000-000000000901', NULL);
+ALTER TABLE jornadas ENABLE TRIGGER trg_jornadas_proyecto_obligatorio_al_crear;
 
 INSERT INTO jornada_personal (jornada_id, perfil_id, rol_en_jornada, hora_inicio, hora_fin) VALUES
   ('40000000-0000-0000-0000-000000000a01', '00000000-0000-0000-0000-000000000904', 'medico', '08:00', '13:00'),

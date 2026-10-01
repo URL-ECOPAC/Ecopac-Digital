@@ -32,6 +32,7 @@ function jornadaValida(cambios = {}) {
     fecha: fechaEnDias(5),
     comunidad: "10000000-0000-0000-0000-000000000001",
     responsable: "00000000-0000-0000-0000-000000000001",
+    proyecto: "50000000-0000-0000-0000-000000000001",
     ...cambios,
   };
 }
@@ -66,6 +67,12 @@ describe("validarJornada", () => {
     expect(validarJornada(jornadaValida({ fecha: "" }))).toHaveProperty("fecha");
     expect(validarJornada(jornadaValida({ comunidad: "" }))).toHaveProperty("comunidad");
     expect(validarJornada(jornadaValida({ responsable: "" }))).toHaveProperty("responsable");
+  });
+
+  // Espejo de los triggers trg_jornadas_proyecto_obligatorio_* de la 00169.
+  it("exige proyecto", () => {
+    expect(validarJornada(jornadaValida({ proyecto: "" }))).toHaveProperty("proyecto");
+    expect(validarJornada(jornadaValida({ proyecto: null }))).toHaveProperty("proyecto");
   });
 
   it("no deja planificar una jornada en una fecha pasada", () => {

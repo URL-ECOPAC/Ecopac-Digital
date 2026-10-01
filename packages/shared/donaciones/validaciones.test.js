@@ -151,15 +151,16 @@ describe("validarDonacion", () => {
     expect(errores).toEqual({});
   });
 
-  it("un renglon de insumos sigue necesitando descripcion", () => {
+  // 00170: el renglon de insumos elige un insumo del catalogo, como el de medicamentos.
+  it("un renglon de insumos tiene que elegir un insumo del catalogo", () => {
     const errores = validarDonacion({
       donanteId: "uuid-1",
       tipo: TIPOS_DE_DONACION.INSUMOS,
       fecha: hoy(),
-      detalles: [{ cantidad: 5 }],
+      detalles: [{ descripcion: "Guantes de latex", cantidad: 5 }],
     });
 
-    expect(errores.detalles_0_descripcion).toBeTruthy();
+    expect(errores.detalles_0_medicamentoId).toContain("insumo");
   });
 
   it("rechaza un renglon de medicamentos escrito como texto libre", () => {
@@ -178,7 +179,7 @@ describe("validarDonacion", () => {
       donanteId: "uuid-1",
       tipo: TIPOS_DE_DONACION.INSUMOS,
       fecha: hoy(),
-      detalles: [{ descripcion: "Guantes de latex", cantidad: 500, unidad: "pares" }],
+      detalles: [{ medicamentoId: "insumo-1", cantidad: 500 }],
     });
 
     expect(errores).toEqual({});
