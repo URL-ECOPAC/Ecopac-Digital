@@ -24,14 +24,19 @@ import {
   CAMPOS_FICHA_RESULTADOS_JORNADA,
   CAMPOS_TOTALES_INVENTARIO_REPORTE,
   COLUMNAS_DIAGNOSTICOS_MAS_FRECUENTES,
+  COLUMNAS_EVOLUCION_ENFERMEDAD,
   COLUMNAS_INDICADORES_IMPACTO,
   COLUMNAS_INVENTARIO_REPORTE,
   COLUMNAS_MEDICAMENTOS_MAS_ENTREGADOS,
   COLUMNAS_PACIENTES_ATENDIDOS,
   COLUMNAS_PERSONAL_PARTICIPANTE,
+  COLUMNAS_RANKING_ENFERMEDADES,
   COLUMNAS_VENCIMIENTO,
+  columnasDeComparacionDeEnfermedades,
 } from "./columnas.js";
 import {
+  FILTROS_ENFERMEDADES,
+  FILTROS_ENFERMEDADES_VACIOS,
   FILTROS_INVENTARIO_REPORTE,
   FILTROS_INVENTARIO_REPORTE_VACIOS,
   FILTROS_REPORTES,
@@ -58,6 +63,12 @@ const TODAS_LAS_LISTAS_DE_COLUMNAS = {
   COLUMNAS_PACIENTES_ATENDIDOS,
   COLUMNAS_PERSONAL_PARTICIPANTE,
   COLUMNAS_VENCIMIENTO,
+  // ISSUE #916.
+  COLUMNAS_RANKING_ENFERMEDADES,
+  COLUMNAS_EVOLUCION_ENFERMEDAD,
+  COLUMNAS_COMPARACION_ENFERMEDADES: columnasDeComparacionDeEnfermedades([
+    { clave: "grupo_1", nombre: "Jornada 1" },
+  ]),
 };
 
 const TODAS_LAS_LISTAS_DE_FILTROS = {
@@ -66,6 +77,8 @@ const TODAS_LAS_LISTAS_DE_FILTROS = {
   // ISSUE #862: la pestana de medicamentos por vencer dibujaba sus <select> a mano, fuera de todo
   // descriptor, asi que esta guarda nunca la habia mirado.
   FILTROS_VENCIMIENTOS,
+  // ISSUE #916.
+  FILTROS_ENFERMEDADES,
 };
 
 // Catalogos que un hook de pantalla (fuera de esta issue) tiene que pasar por `catalogos`.
@@ -85,6 +98,9 @@ const CATALOGOS_CONOCIDOS = new Set([
   // El de la columna de vencimiento de un lote, indexado por el booleano de la fila (#840).
   "vencimientoDeLote",
   "estadosJornadaReporte",
+  // ISSUE #916: el territorio en cascada del reporte de enfermedades.
+  "departamentos",
+  "municipios",
 ]);
 
 describe("campos.js solo usa el vocabulario de TIPOS_DE_CAMPO", () => {
@@ -191,6 +207,9 @@ describe("filtros.js solo usa el vocabulario de TIPOS_DE_FILTRO", () => {
     );
     expect(Object.keys(FILTROS_VENCIMIENTOS_VACIOS).sort()).toEqual(
       FILTROS_VENCIMIENTOS.map((f) => f.id).sort(),
+    );
+    expect(Object.keys(FILTROS_ENFERMEDADES_VACIOS).sort()).toEqual(
+      FILTROS_ENFERMEDADES.map((f) => f.id).sort(),
     );
   });
 });

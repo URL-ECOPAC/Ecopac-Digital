@@ -322,3 +322,73 @@ export const COLUMNAS_VENCIMIENTO = [
     etiquetasDesde: "nivelesDeAlerta",
   },
 ];
+
+// ---------------------------------------------------------------------------------------------
+// Reporte de enfermedades (issue #916)
+// ---------------------------------------------------------------------------------------------
+//
+// Las cifras de estas tablas pueden llegar como CIFRA_PROTEGIDA ("< 5") en vez de un numero: la
+// base suprime toda cifra de 1 a 4, y el hook pone ese texto en la celda. La columna sigue siendo
+// NUMERO para que se alinee y se ordene como cifra; "< 5" ordena por debajo de cualquier numero.
+
+/** Desglose por sexo y grupo de edad, comun a las tablas del reporte. */
+const COLUMNAS_DESGLOSE_ENFERMEDADES = [
+  { id: "hombres", label: "Hombres", tipo: TIPOS_DE_PRESENTACION.NUMERO, ordenable: true },
+  { id: "mujeres", label: "Mujeres", tipo: TIPOS_DE_PRESENTACION.NUMERO, ordenable: true },
+  { id: "menores", label: "Menores de 18", tipo: TIPOS_DE_PRESENTACION.NUMERO, ordenable: true },
+  { id: "adultos", label: "18 a 59 años", tipo: TIPOS_DE_PRESENTACION.NUMERO, ordenable: true },
+  {
+    id: "adultosMayores",
+    label: "60 años o más",
+    tipo: TIPOS_DE_PRESENTACION.NUMERO,
+    ordenable: true,
+  },
+];
+
+/** Enfermedades mas frecuentes (enfermedades.api.js, vista ranking). Una fila por diagnostico. */
+export const COLUMNAS_RANKING_ENFERMEDADES = [
+  {
+    id: "diagnostico",
+    label: "Enfermedad",
+    tipo: TIPOS_DE_PRESENTACION.TEXTO,
+    principal: true,
+    ordenable: true,
+  },
+  { id: "codigo", label: "CIE-10", tipo: TIPOS_DE_PRESENTACION.TEXTO, ordenable: true },
+  { id: "casos", label: "Casos", tipo: TIPOS_DE_PRESENTACION.NUMERO, ordenable: true },
+  ...COLUMNAS_DESGLOSE_ENFERMEDADES,
+];
+
+/** Evolucion de una enfermedad (vista evolucion). Una fila por mes, incluidos los meses en cero. */
+export const COLUMNAS_EVOLUCION_ENFERMEDAD = [
+  { id: "periodo", label: "Mes", tipo: TIPOS_DE_PRESENTACION.TEXTO, principal: true },
+  { id: "casos", label: "Casos", tipo: TIPOS_DE_PRESENTACION.NUMERO },
+  ...COLUMNAS_DESGLOSE_ENFERMEDADES.map((columna) => ({ ...columna, ordenable: false })),
+];
+
+/**
+ * Columnas de una comparacion entre jornadas o comunidades: la enfermedad y una columna por
+ * grupo comparado. Son dinamicas porque los grupos los elige la persona; el id de cada columna es
+ * el que arma pivotearComparacionDeEnfermedades() (enfermedades.js).
+ *
+ * @param {Array<{ clave: string, nombre: string }>} grupos
+ * @returns {object[]}
+ */
+export function columnasDeComparacionDeEnfermedades(grupos = []) {
+  return [
+    {
+      id: "diagnostico",
+      label: "Enfermedad",
+      tipo: TIPOS_DE_PRESENTACION.TEXTO,
+      principal: true,
+      ordenable: true,
+    },
+    { id: "codigo", label: "CIE-10", tipo: TIPOS_DE_PRESENTACION.TEXTO, ordenable: true },
+    ...grupos.map((grupo) => ({
+      id: grupo.clave,
+      label: grupo.nombre,
+      tipo: TIPOS_DE_PRESENTACION.NUMERO,
+      ordenable: true,
+    })),
+  ];
+}
