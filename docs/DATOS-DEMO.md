@@ -13,7 +13,9 @@ este seed corresponde a una persona o lugar real (regla de confidencialidad de
 - Un usuario por rol (`administrador`, `junta directiva`, `socio fundador`, dos `medico`, dos
   `voluntario general`).
 - 3 comunidades ficticias.
-- 12 pacientes ficticios con su expediente.
+- 72 pacientes ficticios con su expediente: los 12 de siempre, con nombre y telefono, y 60 mas
+  (del 101 al 160, apellido "Demo N") que solo existen para el historial clinico del reporte de
+  enfermedades.
 - 11 condiciones cronicas repartidas entre 9 de esos pacientes (issue #122): cubren las tres
   comunidades y los tres estados de `estado_condicion_cronica`, con un paciente que tiene dos
   condiciones a la vez y otro cuya condicion ya esta `resuelta` - el caso que los listados de
@@ -42,6 +44,12 @@ este seed corresponde a una persona o lugar real (regla de confidencialidad de
 - Atencion clinica: triaje, consulta con diagnostico y receta en las dos primeras jornadas; en la
   en curso ademas un paciente con triaje esperando consulta y uno recien llegado.
 - Equipo e hitos de los dos proyectos, e insumos previstos para la jornada planificada.
+- Historial para el reporte de enfermedades (issue #916): 3 jornadas mas, ya `finalizadas`, una por
+  comunidad y en meses distintos (hace 150, 95 y 60 dias), con 20 consultas cada una. Cada
+  consulta lleva su diagnostico principal y, en parte, dos secundarios (fiebre y anemia). El
+  reparto da enfermedades con 5 casos o mas y otras con menos, para ver las cifras protegidas
+  ("< 5"), y uno de cada cuatro pacientes no tiene comunidad o es de otra, para que "comunidad de
+  la jornada" y "comunidad del paciente" den resultados distintos.
 
 Las alertas de vencimiento no se siembran: las genera la rutina programada
 (`supabase/functions/alertas-vencimiento`) sobre los lotes de arriba.
