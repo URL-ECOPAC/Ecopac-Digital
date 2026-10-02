@@ -7,8 +7,9 @@
 // totales.
 //
 // PRIVACIDAD. La base devuelve NULL en toda cifra de 1 a 4 (`suprimido`), para que un conteo bajo
-// en una comunidad pequena no identifique a una persona. Aqui no se reconstruye nada: el NULL se
-// conserva y la pantalla lo presenta como CIFRA_PROTEGIDA.
+// en una comunidad pequena no identifique a una persona; si una celda del desglose por sexo o por
+// edad cae bajo el umbral, el desglose entero sale en NULL, porque restando del total se deduciria.
+// Aqui no se reconstruye nada: el NULL se conserva y la pantalla lo presenta como CIFRA_PROTEGIDA.
 
 import { obtenerSupabase } from "../api/cliente.js";
 import { normalizarError } from "../api/errores-de-supabase.js";

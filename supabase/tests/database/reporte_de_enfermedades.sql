@@ -223,8 +223,8 @@ SELECT results_eq(
   $$ SELECT mujeres, hombres, adultos, menores FROM fn_reporte_enfermedades('jornada',
        p_jornada_ids => ARRAY['40000000-0000-0000-0000-000000177001']::uuid[])
      WHERE diagnostico_id = '90000000-0000-0000-0000-000000177001' $$,
-  $$ VALUES (5, NULL::int, 6, 0) $$,
-  'desglose: 5 mujeres exactas, 1 hombre suprimido, 6 adultos, 0 menores (el cero no se suprime)'
+  $$ VALUES (NULL::int, NULL::int, 6, 0) $$,
+  'desglose: 1 hombre suprime todo el desglose por sexo (5 mujeres de 6 casos lo delataria); la edad, sin cifras bajas, sale exacta'
 );
 
 SELECT is(

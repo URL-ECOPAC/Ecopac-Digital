@@ -247,7 +247,7 @@ export default function ReporteEnfermedadesPage({ incrustado = false }) {
       </p>
       <p className="ec-campo-nota reporte-nota">
         Para proteger la identidad de los pacientes, las cifras de 1 a {umbral - 1} casos se
-        muestran como «{cifraProtegida}».
+        muestran como «{cifraProtegida}», y con ellas el desglose por sexo o edad de esa fila.
       </p>
 
       {error && <ErrorState message={error.mensaje} onRetry={recargar} />}

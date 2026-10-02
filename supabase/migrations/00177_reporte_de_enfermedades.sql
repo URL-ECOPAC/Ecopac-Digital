@@ -17,7 +17,8 @@
 -- bajo en una comunidad pequena identifica a una persona ("1 caso de VIH en la comunidad X"). La
 -- organizacion decidio que toda cifra de 1 a 4 sale como "menos de 5", para todos los roles. La
 -- supresion se hace aqui y no en el cliente: si la hiciera la pantalla, la cifra exacta viajaria
--- igual en la respuesta de la API.
+-- igual en la respuesta de la API. Si una celda del desglose por sexo o por edad se suprime, se
+-- suprime el desglose entero, para que no se pueda deducir restando del total.
 --
 -- Mismo patron que 00148/00155: SECURITY DEFINER con la guarda puede_consultar_reportes() en el
 -- cuerpo, porque la funcion lee tablas clinicas que los roles consultivos no pueden leer.
@@ -158,6 +159,20 @@ BEGIN
       row_number() OVER (ORDER BY count(*) DESC, cb.d_nombre, cb.d_id)::INT AS puesto
     FROM casos_base cb
     GROUP BY cb.d_id, cb.d_nombre
+  ),
+  protegidos AS (
+    -- Un desglose suma los casos: hombres + mujeres = casos, y lo mismo los tres grupos de edad.
+    -- Suprimir una sola celda no basta, porque se deduce restando ("8 casos, 5 mujeres" dice que
+    -- hay 3 hombres). Por eso, si alguna celda de un desglose queda por debajo del umbral, se
+    -- suprime el desglose entero.
+    SELECT
+      a.*,
+      (a.n_hombres BETWEEN 1 AND v_umbral - 1 OR a.n_mujeres BETWEEN 1 AND v_umbral - 1)
+        AS sexo_protegido,
+      (a.n_menores BETWEEN 1 AND v_umbral - 1
+        OR a.n_adultos BETWEEN 1 AND v_umbral - 1
+        OR a.n_mayores BETWEEN 1 AND v_umbral - 1) AS edad_protegida
+    FROM agrupados a
   )
   SELECT
     a.g_id,
@@ -169,12 +184,12 @@ BEGIN
     r.puesto,
     CASE WHEN a.n < v_umbral THEN NULL ELSE a.n END,
     a.n < v_umbral,
-    CASE WHEN a.n_hombres BETWEEN 1 AND v_umbral - 1 THEN NULL ELSE a.n_hombres END,
-    CASE WHEN a.n_mujeres BETWEEN 1 AND v_umbral - 1 THEN NULL ELSE a.n_mujeres END,
-    CASE WHEN a.n_menores BETWEEN 1 AND v_umbral - 1 THEN NULL ELSE a.n_menores END,
-    CASE WHEN a.n_adultos BETWEEN 1 AND v_umbral - 1 THEN NULL ELSE a.n_adultos END,
-    CASE WHEN a.n_mayores BETWEEN 1 AND v_umbral - 1 THEN NULL ELSE a.n_mayores END
-  FROM agrupados a
+    CASE WHEN a.sexo_protegido THEN NULL ELSE a.n_hombres END,
+    CASE WHEN a.sexo_protegido THEN NULL ELSE a.n_mujeres END,
+    CASE WHEN a.edad_protegida THEN NULL ELSE a.n_menores END,
+    CASE WHEN a.edad_protegida THEN NULL ELSE a.n_adultos END,
+    CASE WHEN a.edad_protegida THEN NULL ELSE a.n_mayores END
+  FROM protegidos a
   JOIN ranking r ON r.d_id = a.d_id
   -- Dentro de un grupo, las cifras protegidas van al final y entre ellas por nombre: ordenarlas por
   -- su valor real revelaria cual de dos "menos de 5" es mayor.
@@ -184,7 +199,7 @@ END;
 $$;
 
 COMMENT ON FUNCTION public.fn_reporte_enfermedades(TEXT, DATE, DATE, UUID[], UUID[], INTEGER, INTEGER, UUID, UUID, BOOLEAN, TEXT) IS
-  'Casos por diagnostico del catalogo, agrupados por nada, jornada, comunidad (de la jornada o del paciente) o mes, con desglose por sexo y edad. Cifras de 1 a 4 salen NULL (suprimido): nada identifica a un paciente (issue #916, 00177).';
+  'Casos por diagnostico del catalogo, agrupados por nada, jornada, comunidad (de la jornada o del paciente) o mes, con desglose por sexo y edad. Cifras de 1 a 4 salen NULL (suprimido), y con ellas el desglose entero: nada identifica a un paciente (issue #916, 00177).';
 
 REVOKE EXECUTE ON FUNCTION public.fn_reporte_enfermedades(TEXT, DATE, DATE, UUID[], UUID[], INTEGER, INTEGER, UUID, UUID, BOOLEAN, TEXT) FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION public.fn_reporte_enfermedades(TEXT, DATE, DATE, UUID[], UUID[], INTEGER, INTEGER, UUID, UUID, BOOLEAN, TEXT) FROM anon;
