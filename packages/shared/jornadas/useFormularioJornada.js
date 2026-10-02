@@ -84,8 +84,8 @@ export function valoresInicialesDeJornada(jornada) {
  * Traduce `valores` del formulario a lo que registrarJornada()/actualizarJornada() esperan.
  *
  * Solo normaliza `proyecto` y `botiquinBodega` (issue #756): los dos se resuelven con un
- * `<select>`, y un `''` sin elegir no es un UUID valido. `botiquinBodega` es opcional; `proyecto`
- * es obligatorio desde la 00169 y validarJornada() ya lo exige, pero si un `''` se colara igual
+ * `<select>`, y un `''` sin elegir no es un UUID valido. `botiquinBodega` (00178) y `proyecto`
+ * (00169) son obligatorios y validarJornada() ya los exige, pero si un `''` se colara igual
  * viaja como null y la base lo rechaza como dato obligatorio, no como UUID mal formado.
  * `cupoEstimado` no necesita normalizarse aca: NumberField ya entrega numero o `null`. El resto
  * de campos viaja tal cual.
@@ -107,19 +107,16 @@ function aOpciones(filas, etiquetaDe) {
 }
 
 /**
- * Opciones del selector de bodega de botiquin: todas las bodegas, las moviles primero y con
- * "(movil)" en la etiqueta. Se exporta aparte para poder probarla sin montar el hook.
+ * Opciones del selector de bodega de botiquin: solo las bodegas moviles (00178: la base rechaza una
+ * fija). Se exporta aparte para poder probarla sin montar el hook.
  *
  * @param {{ id: string, nombre: string, esMovil?: boolean }[]} bodegas
  * @returns {{ value: string, label: string }[]}
  */
 export function opcionesDeBodegaDeBotiquin(bodegas) {
-  return [...(bodegas ?? [])]
-    .sort((una, otra) => Number(Boolean(otra.esMovil)) - Number(Boolean(una.esMovil)))
-    .map((bodega) => ({
-      value: bodega.id,
-      label: bodega.esMovil ? `${bodega.nombre} (móvil)` : bodega.nombre,
-    }));
+  return (bodegas ?? [])
+    .filter((bodega) => bodega.esMovil)
+    .map((bodega) => ({ value: bodega.id, label: bodega.nombre }));
 }
 
 function nombreDePerfil(perfil) {
@@ -213,10 +210,10 @@ export function useFormularioJornada({ jornada, rol } = {}) {
       marcarCargado("proyectos");
     });
 
-    // botiquin_bodega_id (00036) es la bodega que viaja a la jornada. Se pedian solo las moviles, y
-    // una organizacion sin ninguna marcada como movil se quedaba sin opciones: el selector no
-    // cargaba nunca. Ahora van todas, las moviles primero y rotuladas.
-    listarBodegas().then(({ bodegas: filas }) => {
+    // botiquin_bodega_id (00036) es la bodega que viaja a la jornada, obligatoria y movil desde la
+    // 00178. Sin ninguna bodega movil el selector dice "No hay opciones" (catalogosCargados): hay que
+    // crear una en Inventario > Bodegas.
+    listarBodegas({ esMovil: true }).then(({ bodegas: filas }) => {
       if (!vigente) return;
       setBodegas(opcionesDeBodegaDeBotiquin(filas));
       marcarCargado("bodegas");

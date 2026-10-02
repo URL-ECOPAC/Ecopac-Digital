@@ -70,6 +70,8 @@ const COLUMNAS_DE_JORNADA = [
   "comunidad:comunidades(nombre)",
   "responsable:nombres_de_perfiles(nombres, apellidos)",
   "botiquinBodega:bodegas(nombre)",
+  // El detalle dice a que proyecto pertenece. Si RLS no deja leer el proyecto, llega en null.
+  "proyecto:proyectos(nombre)",
 ].join(", ");
 
 // Personal asignado a una jornada, con el nombre del perfil embebido para el detalle.

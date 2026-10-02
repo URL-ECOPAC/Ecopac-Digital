@@ -129,21 +129,16 @@ describe("aDatosDeJornada", () => {
 });
 
 describe("opcionesDeBodegaDeBotiquin", () => {
-  it("ofrece todas las bodegas, las moviles primero y rotuladas", () => {
+  it("ofrece solo las bodegas moviles (00178)", () => {
     const bodegas = [
       { id: "b1", nombre: "Bodega Principal", esMovil: false },
       { id: "b2", nombre: "Botiquin A", esMovil: true },
     ];
-    expect(opcionesDeBodegaDeBotiquin(bodegas)).toEqual([
-      { value: "b2", label: "Botiquin A (móvil)" },
-      { value: "b1", label: "Bodega Principal" },
-    ]);
+    expect(opcionesDeBodegaDeBotiquin(bodegas)).toEqual([{ value: "b2", label: "Botiquin A" }]);
   });
 
-  it("sin ninguna movil, igual ofrece las fijas (antes el selector no cargaba nunca)", () => {
-    expect(opcionesDeBodegaDeBotiquin([{ id: "b1", nombre: "Bodega Principal" }])).toEqual([
-      { value: "b1", label: "Bodega Principal" },
-    ]);
+  it("sin ninguna movil no ofrece nada", () => {
+    expect(opcionesDeBodegaDeBotiquin([{ id: "b1", nombre: "Bodega Principal" }])).toEqual([]);
     expect(opcionesDeBodegaDeBotiquin(null)).toEqual([]);
   });
 });

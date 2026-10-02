@@ -7,6 +7,12 @@ BEGIN;
 
 SELECT plan(5);
 
+-- Desde la 00178 toda jornada nueva lleva una bodega movil. Estas pruebas no tratan de bodegas:
+-- sus jornadas reciben una de prueba como DEFAULT de la columna, que el ROLLBACK del final deshace.
+INSERT INTO bodegas (id, nombre, es_movil) VALUES
+  ('5b000000-0000-0000-0000-000000000178', 'Bodega movil de prueba 00178', TRUE);
+ALTER TABLE jornadas ALTER COLUMN botiquin_bodega_id SET DEFAULT '5b000000-0000-0000-0000-000000000178';
+
 INSERT INTO comunidades (id, municipio_id, nombre) VALUES
   ('10000000-0000-0000-0000-000000001531', 101, 'Comunidad de prueba 1531');
 

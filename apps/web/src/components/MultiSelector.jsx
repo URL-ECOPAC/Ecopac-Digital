@@ -4,6 +4,7 @@ import { Check, X } from "lucide-react";
 import { buscarOpcionPorEtiqueta } from "@ecopac/shared";
 
 import SecondaryButton from "./SecondaryButton";
+import MarcaDeRequerido from "./MarcaDeRequerido";
 
 /**
  * Seleccion multiple sobre un catalogo, con alta de valores nuevos en el mismo lugar.
@@ -34,6 +35,7 @@ import SecondaryButton from "./SecondaryButton";
  */
 export default function MultiSelector({
   label,
+  requerido,
   value = [],
   options = [],
   onChange,
@@ -126,6 +128,7 @@ export default function MultiSelector({
   return (
     <Form.Group className="mb-3" style={style}>
       {label && <Form.Label htmlFor={id}>{label}</Form.Label>}
+      {label && <MarcaDeRequerido requerido={requerido} />}
 
       {seleccionados.length > 0 && (
         <div className="d-flex flex-wrap gap-2 mb-2">

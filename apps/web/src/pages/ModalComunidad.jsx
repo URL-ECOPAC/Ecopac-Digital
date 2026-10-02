@@ -100,6 +100,7 @@ export default function ModalComunidad({
       <form onSubmit={guardar}>
         <TextField
           label="Nombre"
+          requerido
           value={valores.nombre}
           onChange={(evento) => cambiar("nombre", evento.target.value)}
           maxLength={100}
@@ -110,6 +111,7 @@ export default function ModalComunidad({
           <div className="col-md-6">
             <Selector
               label="Departamento"
+              requerido
               value={departamentoId}
               options={departamentos}
               onSelect={elegirDepartamento}
@@ -119,6 +121,7 @@ export default function ModalComunidad({
           <div className="col-md-6">
             <Selector
               label="Municipio"
+              requerido
               value={municipioId}
               options={municipios}
               onSelect={setMunicipioId}
@@ -130,6 +133,7 @@ export default function ModalComunidad({
 
         <TextField
           label="Referencia de acceso"
+          requerido={false}
           as="textarea"
           rows={2}
           placeholder="Como llegar cuando no hay dirección formal (ej. desvio, punto de referencia)"

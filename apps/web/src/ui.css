@@ -565,6 +565,18 @@ textarea.form-control {
   padding-left: var(--spacing-sm);
 }
 
+/* Marca de obligatorio u opcional en el rotulo de un campo (MarcaDeRequerido.jsx). */
+.ec-requerido {
+  color: var(--color-danger);
+  font-weight: var(--peso-bold);
+}
+
+.ec-opcional {
+  color: var(--color-text-muted);
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-regular);
+}
+
 .ec-form-seccion-titulo {
   color: var(--color-text);
   font-size: var(--texto-sm);

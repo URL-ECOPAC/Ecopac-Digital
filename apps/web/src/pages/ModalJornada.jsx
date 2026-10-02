@@ -79,6 +79,7 @@ export default function ModalJornada({ visible = true, jornada, rol, onClose, on
         <div key="comunidad-cascada" className="ec-form-grid--ancho ec-form-grid">
           <Selector
             label="Departamento"
+            requerido
             value={departamentoId}
             options={catalogos.departamentos}
             onSelect={setDepartamento}
@@ -87,6 +88,7 @@ export default function ModalJornada({ visible = true, jornada, rol, onClose, on
           />
           <Selector
             label="Municipio"
+            requerido
             value={municipioId}
             options={catalogos.municipios}
             onSelect={setMunicipio}
@@ -97,6 +99,7 @@ export default function ModalJornada({ visible = true, jornada, rol, onClose, on
               (issue #838): se crea aqui mismo, con el mismo control que el alta de paciente. */}
           <SelectorConAlta
             label={campo.label}
+            requerido={campo.validacion?.requerido}
             value={valores.comunidad || null}
             options={catalogos.comunidades}
             onSelect={(valor) => setCampo("comunidad", valor)}
@@ -120,6 +123,7 @@ export default function ModalJornada({ visible = true, jornada, rol, onClose, on
         <NumberField
           key={campo.id}
           label={campo.label}
+          requerido={campo.validacion?.requerido}
           value={valores[campo.id] ?? null}
           min={campo.validacion?.min}
           onChange={(valor) => setCampo(campo.id, valor)}
@@ -134,6 +138,7 @@ export default function ModalJornada({ visible = true, jornada, rol, onClose, on
         <DateField
           key={campo.id}
           label={campo.label}
+          requerido={campo.validacion?.requerido}
           value={valores[campo.id] || null}
           onChange={(valor) => setCampo(campo.id, valor)}
           error={errores[campo.id]}
@@ -153,6 +158,7 @@ export default function ModalJornada({ visible = true, jornada, rol, onClose, on
         <Selector
           key={campo.id}
           label={campo.label}
+          requerido={campo.validacion?.requerido}
           value={valores[campo.id] || null}
           options={opciones}
           onSelect={(valor) => setCampo(campo.id, valor)}
@@ -167,6 +173,7 @@ export default function ModalJornada({ visible = true, jornada, rol, onClose, on
       <TextField
         key={campo.id}
         label={campo.label}
+        requerido={campo.validacion?.requerido}
         type={TIPO_DE_INPUT[campo.tipo] ?? "text"}
         maxLength={campo.validacion?.maxLongitud}
         value={valores[campo.id] ?? ""}

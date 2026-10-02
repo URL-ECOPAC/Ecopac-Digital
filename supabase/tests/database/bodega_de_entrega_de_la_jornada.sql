@@ -10,6 +10,12 @@ BEGIN;
 
 SELECT plan(8);
 
+-- Desde la 00178 toda jornada nueva lleva una bodega movil. Estas pruebas no tratan de bodegas:
+-- sus jornadas reciben una de prueba como DEFAULT de la columna, que el ROLLBACK del final deshace.
+INSERT INTO bodegas (id, nombre, es_movil) VALUES
+  ('5b000000-0000-0000-0000-000000000178', 'Bodega movil de prueba 00178', TRUE);
+ALTER TABLE jornadas ALTER COLUMN botiquin_bodega_id SET DEFAULT '5b000000-0000-0000-0000-000000000178';
+
 INSERT INTO proyectos (id, nombre) VALUES
   ('5f000000-0000-0000-0000-000000001761', 'Proyecto de prueba 1761');
 
@@ -30,11 +36,13 @@ INSERT INTO expedientes (id, paciente_id, numero_ficha)
 VALUES ('40000000-0000-0000-0000-000000001761', '20000000-0000-0000-0000-000000001761', 'F-1761');
 
 -- Dos bodegas de prueba: la del botiquin de la jornada 1761 y otra cualquiera.
-INSERT INTO bodegas (id, nombre) VALUES
-  ('70000000-0000-0000-0000-000000001761', 'Botiquin de prueba 1761'),
-  ('70000000-0000-0000-0000-000000001762', 'Otra bodega 1762');
+INSERT INTO bodegas (id, nombre, es_movil) VALUES
+  ('70000000-0000-0000-0000-000000001761', 'Botiquin de prueba 1761', TRUE),
+  ('70000000-0000-0000-0000-000000001762', 'Otra bodega 1762', FALSE);
 
--- 1761 con botiquin, 1762 sin botiquin.
+-- 1761 con botiquin, 1762 sin botiquin. Desde la 00178 una jornada nueva no puede nacer sin
+-- bodega: 1762 nace con la de prueba y despues se le quita con el trigger apagado, que es como
+-- quedan las jornadas anteriores a la 00178.
 INSERT INTO jornadas (id, nombre, fecha, comunidad_id, responsable_id, proyecto_id, botiquin_bodega_id) VALUES
   ('30000000-0000-0000-0000-000000001761', 'Jornada con botiquin 1761',
    (NOW() AT TIME ZONE 'America/Guatemala')::date,
@@ -43,7 +51,11 @@ INSERT INTO jornadas (id, nombre, fecha, comunidad_id, responsable_id, proyecto_
   ('30000000-0000-0000-0000-000000001762', 'Jornada sin botiquin 1762',
    (NOW() AT TIME ZONE 'America/Guatemala')::date,
    '10000000-0000-0000-0000-000000001761', '00000000-0000-0000-0000-000000001761',
-   '5f000000-0000-0000-0000-000000001761', NULL);
+   '5f000000-0000-0000-0000-000000001761', '5b000000-0000-0000-0000-000000000178');
+
+ALTER TABLE jornadas DISABLE TRIGGER trg_jornadas_requiere_bodega_movil_al_cambiar;
+UPDATE jornadas SET botiquin_bodega_id = NULL WHERE id = '30000000-0000-0000-0000-000000001762';
+ALTER TABLE jornadas ENABLE TRIGGER trg_jornadas_requiere_bodega_movil_al_cambiar;
 
 UPDATE jornadas SET estado = 'en curso'
 WHERE id IN ('30000000-0000-0000-0000-000000001761', '30000000-0000-0000-0000-000000001762');

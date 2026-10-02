@@ -15,7 +15,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import { validacionDeProyecto } from "./useProyectosSociales.js";
+import { resumirGastosDeProyecto, validacionDeProyecto } from "./useProyectosSociales.js";
 
 const PROYECTO_VALIDO = {
   nombre: "Proyecto de agua segura",
@@ -61,5 +61,19 @@ describe("validacionDeProyecto", () => {
 
     expect(resultado).not.toHaveProperty("esValido");
     expect(resultado.errores).not.toHaveProperty("errores");
+  });
+});
+
+describe("resumirGastosDeProyecto", () => {
+  it("separa lo aprobado de lo pendiente y no suma lo rechazado", () => {
+    expect(
+      resumirGastosDeProyecto([
+        { monto: "600.00", estado: "aprobado" },
+        { monto: 450.1, estado: "aprobado" },
+        { monto: 120, estado: "pendiente" },
+        { monto: 999, estado: "rechazado" },
+      ]),
+    ).toEqual({ aprobado: 1050.1, pendiente: 120, rechazados: 1 });
+    expect(resumirGastosDeProyecto()).toEqual({ aprobado: 0, pendiente: 0, rechazados: 0 });
   });
 });

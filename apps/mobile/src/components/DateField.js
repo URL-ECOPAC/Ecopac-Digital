@@ -3,6 +3,7 @@ import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import { MESES, OPCIONES_DE_MES } from "@ecopac/shared";
 import { colors, radii, spacing, typography } from "@ecopac/ui-tokens";
 import PrimaryButton from "./PrimaryButton";
+import RotuloDeCampo from "./RotuloDeCampo";
 import Selector from "./Selector";
 
 const MIN_TOUCH_HEIGHT = 48;
@@ -53,6 +54,7 @@ function opcionesDeAnio(minDate, maxDate) {
 
 export default function DateField({
   label,
+  requerido,
   value = null,
   onChange,
   minDate,
@@ -107,7 +109,7 @@ export default function DateField({
 
   return (
     <View style={[styles.container, style]}>
-      {label ? <Text style={styles.label}>{label}</Text> : null}
+      {label ? <RotuloDeCampo texto={label} requerido={requerido} style={styles.label} /> : null}
 
       <Pressable
         style={({ pressed }) => [

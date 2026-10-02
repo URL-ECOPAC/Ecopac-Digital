@@ -53,6 +53,7 @@ export default function ModalDiagnostico({
         <TextField
           key={campo.id}
           label={campo.label}
+          requerido={campo.validacion?.requerido}
           as={campo.tipo === TIPOS_DE_CAMPO.TEXTO_LARGO ? "textarea" : undefined}
           rows={campo.tipo === TIPOS_DE_CAMPO.TEXTO_LARGO ? 3 : undefined}
           placeholder={campo.placeholder}

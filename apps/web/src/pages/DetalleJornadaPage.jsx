@@ -46,6 +46,7 @@ import ModalEdicionTurno from "./ModalEdicionTurno";
 import ModalJornada from "./ModalJornada";
 import NotFoundPage from "./NotFoundPage";
 import GastosDeJornada from "./GastosDeJornada";
+import ConsumoDeJornada from "./ConsumoDeJornada";
 import InsumosDeJornada from "./InsumosDeJornada";
 import OrigenesDePresupuesto from "./OrigenesDePresupuesto";
 import SobranteDeJornada from "./SobranteDeJornada";
@@ -59,6 +60,7 @@ const PESTANIAS = [
   { id: "presupuesto", label: "Presupuesto" },
   { id: "gastos", label: "Gastos" },
   { id: "insumos", label: "Insumos" },
+  { id: "consumo", label: "Consumo" },
   { id: "cierre", label: "Cierre" },
 ];
 
@@ -212,6 +214,7 @@ export default function DetalleJornadaPage() {
     if (pestania.id === "presupuesto") return permisosPresupuesto.puedeVer;
     if (pestania.id === "gastos") return puedeVerTodosLosGastos(rol);
     if (pestania.id === "insumos") return puedeVerInsumosDeJornada(rol);
+    if (pestania.id === "consumo") return puedeVerInsumosDeJornada(rol);
     // ISSUE #864: "Cierre" no tenia filtro, asi que la veia cualquier rol que llegara al
     // detalle. Finalizar una jornada es puedeAdministrarJornadas() -- solo la administradora --,
     // y la pestaña es justo la que finaliza (useResumenCierreJornada, issue #183).
@@ -339,6 +342,7 @@ export default function DetalleJornadaPage() {
 
               <dl className="ec-ficha-datos">
                 <Dato etiqueta={ETIQUETAS.codigo} valor={jornada.codigo} mono />
+                <Dato etiqueta={ETIQUETAS.proyecto} valor={jornada.proyecto?.nombre} />
                 <Dato
                   etiqueta={ETIQUETAS.responsable}
                   valor={nombreDePerfil(jornada.responsable)}
@@ -501,6 +505,8 @@ export default function DetalleJornadaPage() {
               soloConsulta={jornadaFinalizada}
             />
           )}
+
+          {pestaniaMostrada === "consumo" && <ConsumoDeJornada jornadaId={jornada.id} rol={rol} />}
 
           {pestaniaMostrada === "cierre" && (
             <>

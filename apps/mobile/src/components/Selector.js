@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { FlatList, Modal, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { OPCIONES_PARA_OFRECER_BUSQUEDA, filtrarOpcionesPorTexto } from "@ecopac/shared";
+import RotuloDeCampo from "./RotuloDeCampo";
 import { colors, radii, spacing, typography } from "@ecopac/ui-tokens";
 
 const MIN_TOUCH_HEIGHT = 48;
@@ -20,6 +21,7 @@ const MIN_TOUCH_HEIGHT = 48;
  */
 export default function Selector({
   label,
+  requerido,
   value,
   options,
   onSelect,
@@ -42,7 +44,7 @@ export default function Selector({
 
   return (
     <View style={[styles.container, style]}>
-      {label ? <Text style={styles.label}>{label}</Text> : null}
+      {label ? <RotuloDeCampo texto={label} requerido={requerido} style={styles.label} /> : null}
 
       <Pressable
         disabled={disabled}

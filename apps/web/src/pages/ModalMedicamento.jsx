@@ -90,7 +90,8 @@ export default function ModalMedicamento({
 
           <div className="ec-form-grid">
             <TextField
-              label="Nombre comercial *"
+              label="Nombre comercial"
+              requerido
               placeholder="Ej. Dolo Neurobion, Amoxicilina"
               value={formData.nombre || ""}
               onChange={(e) => setCampo("nombre", e.target.value)}
@@ -99,7 +100,8 @@ export default function ModalMedicamento({
             />
 
             <Selector
-              label="Tipo de artículo *"
+              label="Tipo de artículo"
+              requerido
               value={formData.tipoArticulo || null}
               options={OPCIONES_TIPO_ARTICULO}
               onSelect={(valor) => setCampo("tipoArticulo", valor ?? "")}
@@ -111,7 +113,8 @@ export default function ModalMedicamento({
             {esMedicamento && (
               <div>
                 <Selector
-                  label="Principio activo *"
+                  label="Principio activo"
+                  requerido
                   value={formData.principio_activo_id ? String(formData.principio_activo_id) : null}
                   options={opcionesPrincipio}
                   onSelect={(valor) => setCampo("principio_activo_id", valor ?? "")}
@@ -150,7 +153,8 @@ export default function ModalMedicamento({
           <div className="ec-form-grid">
             {esMedicamento && (
               <TextField
-                label="Concentración *"
+                label="Concentración"
+                requerido
                 placeholder="Ej. 500 mg"
                 value={formData.concentracion || ""}
                 onChange={(e) => setCampo("concentracion", e.target.value)}
@@ -160,7 +164,8 @@ export default function ModalMedicamento({
             )}
             <div>
               <Selector
-                label="Presentación *"
+                label="Presentación"
+                requerido
                 value={formData.presentacionId ? String(formData.presentacionId) : null}
                 options={opcionesPresentacion}
                 onSelect={(valor) => setCampo("presentacionId", valor ?? "")}
@@ -182,7 +187,8 @@ export default function ModalMedicamento({
               )}
             </div>
             <TextField
-              label="Marca / laboratorio *"
+              label="Marca / laboratorio"
+              requerido
               placeholder="Ej. Bayer"
               value={formData.marca || ""}
               onChange={(e) => setCampo("marca", e.target.value)}
@@ -192,6 +198,7 @@ export default function ModalMedicamento({
             {esMedicamento && (
               <TextField
                 label="Forma farmacéutica"
+                requerido={false}
                 placeholder="Ej. Solido oral"
                 value={formData.formaFarmaceutica || ""}
                 onChange={(e) => setCampo("formaFarmaceutica", e.target.value)}

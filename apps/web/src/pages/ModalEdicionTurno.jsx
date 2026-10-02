@@ -84,6 +84,7 @@ export default function ModalEdicionTurno({
                 type="checkbox"
                 id={`edicion-turno-${campo.id}`}
                 label={campo.label}
+                requerido={campo.validacion?.requerido}
                 className="mb-3"
                 checked={Boolean(valores[campo.id])}
                 onChange={(evento) => setCampo(campo.id, evento.target.checked)}

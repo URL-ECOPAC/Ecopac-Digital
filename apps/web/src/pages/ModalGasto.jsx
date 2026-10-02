@@ -194,6 +194,7 @@ export default function ModalGasto({
                   <>
                     <Selector
                       label={campo.label}
+                      requerido={campo.validacion?.requerido}
                       value={valores[campo.id] || null}
                       options={opciones}
                       onSelect={(valor) => {
@@ -217,6 +218,7 @@ export default function ModalGasto({
                   <>
                     <TextField
                       label="Nueva categoría"
+                      requerido
                       value={nombreNuevaCategoria}
                       onChange={(e) => setNombreNuevaCategoria(e.target.value)}
                       placeholder="Escribe el nombre..."
@@ -253,6 +255,7 @@ export default function ModalGasto({
               <Selector
                 key={campo.id}
                 label={campo.label}
+                requerido={campo.validacion?.requerido}
                 value={valores[campo.id] || null}
                 options={opciones}
                 onSelect={(valor) => {
@@ -274,6 +277,7 @@ export default function ModalGasto({
               <NumberField
                 key={campo.id}
                 label={campo.label}
+                requerido={campo.validacion?.requerido}
                 value={valores[campo.id] === "" ? null : Number(valores[campo.id])}
                 min={campo.validacion?.minimo}
                 step={0.01}
@@ -288,6 +292,7 @@ export default function ModalGasto({
               <DateField
                 key={campo.id}
                 label={campo.label}
+                requerido={campo.validacion?.requerido}
                 value={valores[campo.id] || null}
                 onChange={(valor) => setCampo(campo.id, valor || "")}
                 disabled={bloqueado}
@@ -299,6 +304,7 @@ export default function ModalGasto({
             <TextField
               key={campo.id}
               label={campo.label}
+              requerido={campo.validacion?.requerido}
               placeholder={campo.placeholder}
               value={valores[campo.id] ?? ""}
               onChange={(evento) => setCampo(campo.id, evento.target.value)}

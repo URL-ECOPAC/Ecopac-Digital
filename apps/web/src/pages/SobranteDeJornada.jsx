@@ -84,6 +84,7 @@ export default function SobranteDeJornada({ jornada, rol, alLiquidar }) {
                     </div>
                     <Selector
                       label="Qué hacer"
+                      requerido
                       value={destino}
                       options={opcionesDeDestino(fila.origen)}
                       onSelect={(valor) =>
@@ -95,6 +96,7 @@ export default function SobranteDeJornada({ jornada, rol, alLiquidar }) {
                     {destino === DESTINOS_DE_SOBRANTE.TRASPASAR && (
                       <Selector
                         label="Jornada que lo recibe"
+                        requerido
                         value={decision?.jornadaDestinoId ?? null}
                         options={jornadasDestino}
                         onSelect={(valor) => setJornadaDestino(fila.origenId, valor)}

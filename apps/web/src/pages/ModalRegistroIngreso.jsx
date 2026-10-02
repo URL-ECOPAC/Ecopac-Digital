@@ -221,7 +221,7 @@ export default function ModalRegistroIngreso({
                       className="form-label fw-semibold text-secondary"
                       style={{ fontSize: "var(--texto-xs)" }}
                     >
-                      No. Factura / Comprobante
+                      No. Factura / Comprobante (opcional)
                     </label>
                     <input
                       type="text"
@@ -385,7 +385,7 @@ export default function ModalRegistroIngreso({
                           className="form-label text-muted mb-1"
                           style={{ fontSize: "var(--texto-xxs)" }}
                         >
-                          Costo Unitario (Q)
+                          Costo Unitario (Q) (opcional)
                         </label>
                         <input
                           type="number"

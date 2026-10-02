@@ -47,7 +47,7 @@ Una ruta con parametro (`/pacientes/:id`) cuenta una vez. Los dialogos (modales)
 | `/reportes/enfermedades` | `reportes` | `apps/web/src/pages/ReportesPage.jsx` | `bodegas`, `comunidades`, `departamentos`, `existencias`, `jornadas`, `medicamento_principio`, `medicamentos`, `municipios`, `principios_activos`, `proyectos`, `vista_reporte_impacto_por_comunidad` | `existencias_totales_por_bodega`, `fn_opciones_reporte_enfermedades`, `fn_reporte_enfermedades`, `fn_reporte_pacientes_atendidos`, `fn_valor_de_inventario_disponible` | — |
 | `/reportes/jornada/:id` | `reportes` | `apps/web/src/pages/ReporteJornada.jsx` | — | `fn_reporte_jornada` | — |
 | `/jornadas` | `jornadas` | `apps/web/src/pages/JornadasPage.jsx` | `bodegas`, `comunidades`, `departamentos`, `jornada_personal`, `jornadas`, `municipios`, `perfil_especialidad`, `perfiles`, `perfiles_directorio`, `proyectos`, `vista_reporte_impacto` | `existencias_totales_por_bodega` | — |
-| `/jornadas/:id` | `jornadas` | `apps/web/src/pages/DetalleJornadaPage.jsx` | `atenciones`, `bodegas`, `categorias_de_gasto`, `comunidades`, `consultas`, `departamentos`, `donaciones`, `existencias`, `fuentes_de_presupuesto`, `gastos`, `jornada_estado_historial`, `jornada_insumos`, `jornada_personal`, `jornada_presupuesto_origen`, `jornadas`, `medicamento_principio`, `medicamentos`, `movimientos_inventario`, `municipios`, `nombres_de_perfiles`, `perfil_especialidad`, `perfiles`, `perfiles_directorio`, `principios_activos`, `proyectos`, `recetas`, `vista_reporte_impacto` | `existencias_totales_por_bodega`, `fn_contar_atenciones_incompletas`, `fn_liquidar_sobrante_de_jornada`, `personal_registro_atenciones`, `saldo_de_caja`, `sobrante_de_jornada` | — |
+| `/jornadas/:id` | `jornadas` | `apps/web/src/pages/DetalleJornadaPage.jsx` | `atenciones`, `bodegas`, `categorias_de_gasto`, `comunidades`, `consultas`, `departamentos`, `donaciones`, `existencias`, `fuentes_de_presupuesto`, `gastos`, `jornada_estado_historial`, `jornada_insumos`, `jornada_personal`, `jornada_presupuesto_origen`, `jornadas`, `medicamento_principio`, `medicamentos`, `movimientos_inventario`, `municipios`, `nombres_de_perfiles`, `perfil_especialidad`, `perfiles`, `perfiles_directorio`, `principios_activos`, `proyectos`, `recetas`, `vista_lotes_disponibles`, `vista_reporte_impacto` | `existencias_totales_por_bodega`, `fn_cargar_insumo_a_bodega_de_jornada`, `fn_consumo_de_insumos_de_jornada`, `fn_contar_atenciones_incompletas`, `fn_liquidar_sobrante_de_jornada`, `personal_registro_atenciones`, `saldo_de_caja`, `sobrante_de_jornada` | — |
 | `/colaboradores` | `colaboradores` | `apps/web/src/pages/ColaboradoresPage.jsx` | `jornada_personal`, `jornadas`, `perfil_especialidad`, `perfiles`, `perfiles_directorio`, `permisos`, `rol_permiso`, `usuario_permiso` | `fn_atenciones_de_persona_por_jornada` | `invitar-usuario` |
 | `/matriz-permisos` | `matriz-permisos` | `apps/web/src/pages/MatrizPermisosPorRolPage.jsx` | `rol_modulo` | — | — |
 | `/bitacora-auditoria` | `bitacora-auditoria` | `apps/web/src/pages/BitacoraAuditoriaPage.jsx` | `eventos_auditoria`, `notificaciones`, `perfil_especialidad`, `perfiles`, `perfiles_directorio` | — | — |
@@ -118,6 +118,8 @@ Una ruta con parametro (`/pacientes/:id`) cuenta una vez. Los dialogos (modales)
 | `fn_bodega_de_entrega_de_consulta` | `/pacientes/:id` | `Receta` |
 | `fn_buscar_pacientes` | `/pacientes`, `/pacientes/:id` | `BusquedaPaciente`, `RegistroPaciente` |
 | `fn_cambiar_principio_de_medicamento` | `/inventario` | — |
+| `fn_cargar_insumo_a_bodega_de_jornada` | `/jornadas/:id` | — |
+| `fn_consumo_de_insumos_de_jornada` | `/jornadas/:id` | — |
 | `fn_contar_atenciones_incompletas` | `/jornadas/:id` | — |
 | `fn_detectar_pacientes_duplicados` | `/pacientes/duplicados` | — |
 | `fn_existencias_disponibles` | `/pacientes/:id` | `Receta` |
@@ -177,7 +179,7 @@ Una ruta con parametro (`/pacientes/:id`) cuenta una vez. Los dialogos (modales)
 | `sobrante_de_jornada` | `/jornadas/:id` | — |
 | `triajes` | `/pacientes/:id` | `Consulta` |
 | `usuario_permiso` | `/colaboradores` | — |
-| `vista_lotes_disponibles` | `/inventario`, `/pacientes/:id` | `ExistenciasInventario`, `Receta`, `RegistroSalida`, `Stock` |
+| `vista_lotes_disponibles` | `/inventario`, `/jornadas/:id`, `/pacientes/:id` | `ExistenciasInventario`, `Receta`, `RegistroSalida`, `Stock` |
 | `vista_reporte_impacto` | `/jornadas`, `/jornadas/:id` | `KanbanJornadas` |
 | `vista_reporte_impacto_por_comunidad` | `/reportes`, `/reportes/dashboard`, `/reportes/enfermedades`, `/reportes/inventario-actual`, `/reportes/medicamentos-por-vencer`, `/reportes/pacientes-atendidos` | — |
 

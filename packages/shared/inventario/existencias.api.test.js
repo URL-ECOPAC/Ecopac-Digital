@@ -14,6 +14,7 @@ vi.mock("../api/cliente.js", () => ({
 
 const {
   aContenidoDeBodega,
+  valorizarContenidoDeBodega,
   consultarExistencias,
   consultarExistenciasDeBodega,
   consultarLotesDisponibles,
@@ -48,12 +49,35 @@ describe("aContenidoDeBodega", () => {
       articulo: "Amoxicilina (500 mg)",
       tipoArticulo: "medicamento",
       cantidadDisponible: 12,
+      costoUnitario: null,
+      valor: null,
+    });
+  });
+
+  it("valoriza lo que queda con el costo del lote (00178)", () => {
+    const conCosto = { ...fila, lote: { ...fila.lote, costoUnitario: "0.35" } };
+    expect(aContenidoDeBodega(conCosto, "2026-01-01")).toMatchObject({
+      costoUnitario: 0.35,
+      valor: 4.2,
     });
   });
 
   it("un lote sin fecha (un insumo, 00171) no vence", () => {
     const sinFecha = { ...fila, lote: { ...fila.lote, fechaVencimiento: null } };
     expect(aContenidoDeBodega(sinFecha, "2030-01-01").vencido).toBe(false);
+  });
+});
+
+describe("valorizarContenidoDeBodega", () => {
+  it("suma lo que tiene costo y cuenta los lotes sin costo, sin fingir un cero", () => {
+    expect(
+      valorizarContenidoDeBodega([
+        { valor: 10.5, cantidadDisponible: 3 },
+        { valor: null, cantidadDisponible: 4 },
+        { valor: 0.25, cantidadDisponible: 1 },
+      ]),
+    ).toEqual({ valor: 10.75, lotesSinCosto: 1, unidades: 8 });
+    expect(valorizarContenidoDeBodega()).toEqual({ valor: 0, lotesSinCosto: 0, unidades: 0 });
   });
 });
 

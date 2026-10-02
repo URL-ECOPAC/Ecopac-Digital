@@ -156,6 +156,7 @@ export default function ModalEdicionUsuario({
 
           <MultiSelector
             label="Especialidades del colaborador"
+            requerido={false}
             value={especialidades.especialidades}
             options={especialidades.catalogo}
             onChange={especialidades.setEspecialidades}

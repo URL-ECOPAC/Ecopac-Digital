@@ -687,6 +687,7 @@
  * @property {string} updatedAt
  * @property {boolean} aprobacionAutomatica
  * @property {string|null} motivoRechazo
+ * @property {string|null} jornadaId Jornada para la que se cargo su bodega movil (00178).
  */
 
 /**
