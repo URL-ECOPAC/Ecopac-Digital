@@ -42,6 +42,7 @@ export { default as Tabs } from "./Tabs";
 export { default as Modal } from "./Modal";
 export { default as Paginacion } from "./Paginacion";
 export { default as GraficaDeBarras } from "./GraficaDeBarras";
+export { default as GraficaDeLineas } from "./GraficaDeLineas";
 
 export { default as EmptyState } from "./EmptyState";
 export { default as LoadingState } from "./LoadingState";

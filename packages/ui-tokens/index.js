@@ -57,6 +57,21 @@ export const moduleAccents = {
 };
 
 /**
+ * Colores de las series de una grafica, en el orden en que se asignan (issue #916). Cuando una
+ * grafica compara varias jornadas o comunidades cada una necesita su color, y escribirlos en la
+ * pantalla saltaria la paleta. Salen todos de `colors`; la web los publica como
+ * `--color-serie-1`, `--color-serie-2`...
+ */
+export const chartSeries = [
+  colors.primary,
+  colors.info,
+  colors.warning,
+  colors.danger,
+  colors.secondary,
+  colors.primaryDark,
+];
+
+/**
  * Color de los chips de estado. Las claves coinciden exactamente con los valores de los
  * enums de supabase/migrations/00001_initial_schema.sql, que son la fuente de verdad.
  */
@@ -302,6 +317,7 @@ export const organizacion = {
 
 export default {
   colors,
+  chartSeries,
   moduleAccents,
   statusColors,
   spacing,

@@ -219,6 +219,7 @@ export default function App() {
                   <Route path="/reportes/medicamentos-por-vencer" element={<ReportesPage />} />
                   <Route path="/reportes/pacientes-atendidos" element={<ReportesPage />} />
                   <Route path="/reportes/inventario-actual" element={<ReportesPage />} />
+                  <Route path="/reportes/enfermedades" element={<ReportesPage />} />
                   <Route path="/reportes/jornada/:id" element={<ReporteJornada />} />
                 </Route>
                 <Route element={<RutaProtegida modulo="jornadas" />}>

@@ -19,24 +19,64 @@ import { useId } from "react";
  * mismos numeros. Un lector de pantalla lee la tabla; quien ve la pantalla, las barras. Es la
  * unica forma de que el dato no dependa del color ni de la altura.
  *
+ * VARIAS SERIES (issue #916). El reporte de enfermedades compara dos o mas jornadas o comunidades
+ * lado a lado. Para eso se pasan `etiquetas` y `series` en vez de `serie`/`serieComparacion`: una
+ * barra por serie en cada grupo, cada serie con su color de `chartSeries` (--color-serie-N). Un
+ * valor `null` es un dato que no se puede mostrar -una cifra protegida por privacidad-: no dibuja
+ * barra y, si se da `etiquetaDeNulo`, la escribe sobre el eje para que no se lea como cero.
+ *
  * @param {object} props
- * @param {Array<{etiqueta: string, valor: number}>} props.serie
+ * @param {Array<{etiqueta: string, valor: number}>} [props.serie]
  * @param {Array<{etiqueta: string, valor: number}>} [props.serieComparacion]
+ * @param {string[]} [props.etiquetas] Rotulos del eje X, con `series`.
+ * @param {Array<{nombre: string, valores: Array<number|null>}>} [props.series]
  * @param {string} props.titulo Lo que mide la grafica ("Pacientes atendidos por mes").
  * @param {string} [props.nombreSerie] Rotulo de la serie principal en la leyenda.
  * @param {string} [props.nombreComparacion]
+ * @param {string} [props.encabezadoDeEtiquetas] Encabezado de la primera columna de la tabla
+ *   accesible ("Período", "Enfermedad").
+ * @param {string} [props.etiquetaDeNulo] Que escribir donde un valor es null ("< 5").
  */
 export default function GraficaDeBarras({
   serie = [],
   serieComparacion = [],
+  etiquetas,
+  series,
   titulo,
   nombreSerie = "Principal",
   nombreComparacion = "Comparación",
+  encabezadoDeEtiquetas = "Período",
+  etiquetaDeNulo,
 }) {
   const id = useId();
-  const hayComparacion = serieComparacion.length > 0;
 
-  if (serie.length === 0) {
+  // Las dos formas de llamarla se reducen a una sola: rotulos del eje y series de valores.
+  const multiserie = Array.isArray(series);
+  const rotulos = multiserie ? (etiquetas ?? []) : serie.map((punto) => punto.etiqueta);
+  const conjuntos = multiserie
+    ? series.map((s, indice) => ({
+        nombre: s.nombre,
+        valores: s.valores ?? [],
+        // El color sale de la clase ec-gr-serie-N de ui.css, que lee --color-serie-N.
+        clase: `ec-gr-barra ec-gr-barra--serie ec-gr-serie-${(indice % 6) + 1}`,
+        serie: `ec-gr-serie-${(indice % 6) + 1}`,
+      }))
+    : [
+        { nombre: nombreSerie, valores: serie.map((p) => p.valor), clase: "ec-gr-barra" },
+        ...(serieComparacion.length > 0
+          ? [
+              {
+                nombre: nombreComparacion,
+                valores: rotulos.map((_, indice) => serieComparacion[indice]?.valor ?? null),
+                clase: "ec-gr-barra ec-gr-barra--comparacion",
+                etiquetasPropias: serieComparacion.map((p) => p.etiqueta),
+              },
+            ]
+          : []),
+      ];
+  const hayLeyenda = conjuntos.length > 1;
+
+  if (rotulos.length === 0 || conjuntos.length === 0) {
     return <p className="ec-gr-vacio">Sin datos para graficar en el período seleccionado.</p>;
   }
 
@@ -49,30 +89,27 @@ export default function GraficaDeBarras({
   const areaAlto = ALTO - MARGEN.arriba - MARGEN.abajo;
 
   const maximo = Math.max(
-    ...serie.map((p) => Number(p.valor) || 0),
-    ...serieComparacion.map((p) => Number(p.valor) || 0),
+    ...conjuntos.flatMap((conjunto) => conjunto.valores.map((valor) => Number(valor) || 0)),
     // Con todo en cero, un maximo de 0 daria una division por cero al calcular las alturas.
     1,
   );
   const tope = redondearHaciaArriba(maximo);
   const marcas = marcasDelEje(tope);
 
-  const anchoGrupo = areaAncho / serie.length;
-  // Deja aire entre grupos; con dos series, cada barra ocupa la mitad de lo disponible.
+  const anchoGrupo = areaAncho / rotulos.length;
+  // Deja aire entre grupos; con N series, cada barra ocupa la N-esima parte de lo disponible.
   //
   // El tope de 72 unidades es lo que impide que con dos o tres puntos salgan losas del ancho de
   // media grafica: una barra muy ancha deja de leerse como barra y el ojo la toma por un bloque
   // de color. Por debajo de ese tope manda el reparto proporcional.
   const ANCHO_MAXIMO_DE_BARRA = 72;
-  const anchoBarra = Math.min(
-    (anchoGrupo * 0.62) / (hayComparacion ? 2 : 1),
-    ANCHO_MAXIMO_DE_BARRA,
-  );
+  const anchoBarra = Math.min((anchoGrupo * 0.62) / conjuntos.length, ANCHO_MAXIMO_DE_BARRA);
 
   const alturaDe = (valor) => ((Number(valor) || 0) / tope) * areaAlto;
 
   // Con muchos puntos las etiquetas no caben: se muestra una de cada N en vez de encimarlas.
-  const saltoEtiqueta = Math.ceil(serie.length / 12);
+  const saltoEtiqueta = Math.ceil(rotulos.length / 12);
+  const formatear = (valor) => Number(valor).toLocaleString("es-GT");
 
   return (
     <figure className="ec-grafica">
@@ -80,12 +117,12 @@ export default function GraficaDeBarras({
 
       {/* El scroll aparece solo cuando hay tantos puntos que una barra bajaria de ~28 unidades.
           Con pocos, la grafica ocupa el ancho disponible sin barra de desplazamiento. */}
-      <div className="ec-gr-lienzo" style={{ overflowX: serie.length > 16 ? "auto" : "visible" }}>
+      <div className="ec-gr-lienzo" style={{ overflowX: rotulos.length > 16 ? "auto" : "visible" }}>
         <svg
           viewBox={`0 0 ${ANCHO} ${ALTO}`}
           preserveAspectRatio="xMidYMid meet"
           className="ec-gr-svg"
-          style={{ minWidth: serie.length > 16 ? `${serie.length * 42}px` : undefined }}
+          style={{ minWidth: rotulos.length > 16 ? `${rotulos.length * 42}px` : undefined }}
           role="img"
           aria-labelledby={`${id}-titulo`}
         >
@@ -110,37 +147,51 @@ export default function GraficaDeBarras({
             );
           })}
 
-          {serie.map((punto, indice) => {
+          {rotulos.map((rotulo, indice) => {
             const xGrupo = MARGEN.izquierda + indice * anchoGrupo;
-            const comparado = serieComparacion[indice];
             const centro = xGrupo + anchoGrupo / 2;
-            const xPrincipal = hayComparacion ? centro - anchoBarra : centro - anchoBarra / 2;
+            // Las barras del grupo quedan centradas sobre su rotulo, una junto a otra.
+            const xInicial = centro - (anchoBarra * conjuntos.length) / 2;
 
             return (
               <g key={indice}>
-                <rect
-                  x={xPrincipal}
-                  y={MARGEN.arriba + areaAlto - alturaDe(punto.valor)}
-                  width={anchoBarra}
-                  height={alturaDe(punto.valor)}
-                  className="ec-gr-barra"
-                >
-                  <title>{`${punto.etiqueta}: ${Number(punto.valor).toLocaleString("es-GT")}`}</title>
-                </rect>
+                {conjuntos.map((conjunto, posicion) => {
+                  const valor = conjunto.valores[indice];
+                  const x = xInicial + posicion * anchoBarra;
+                  const etiquetaDelPunto = conjunto.etiquetasPropias?.[indice] ?? rotulo;
 
-                {hayComparacion && comparado && (
-                  <rect
-                    x={centro}
-                    y={MARGEN.arriba + areaAlto - alturaDe(comparado.valor)}
-                    width={anchoBarra}
-                    height={alturaDe(comparado.valor)}
-                    className="ec-gr-barra ec-gr-barra--comparacion"
-                  >
-                    <title>
-                      {`${comparado.etiqueta}: ${Number(comparado.valor).toLocaleString("es-GT")}`}
-                    </title>
-                  </rect>
-                )}
+                  if (valor === null || valor === undefined) {
+                    return etiquetaDeNulo ? (
+                      <text
+                        key={posicion}
+                        x={x + anchoBarra / 2}
+                        y={MARGEN.arriba + areaAlto - 4}
+                        className="ec-gr-nulo"
+                        textAnchor="middle"
+                      >
+                        {etiquetaDeNulo}
+                        <title>{`${etiquetaDelPunto} · ${conjunto.nombre}: ${etiquetaDeNulo}`}</title>
+                      </text>
+                    ) : null;
+                  }
+
+                  return (
+                    <rect
+                      key={posicion}
+                      x={x}
+                      y={MARGEN.arriba + areaAlto - alturaDe(valor)}
+                      width={anchoBarra}
+                      height={alturaDe(valor)}
+                      className={conjunto.clase}
+                    >
+                      <title>
+                        {hayLeyenda && multiserie
+                          ? `${etiquetaDelPunto} · ${conjunto.nombre}: ${formatear(valor)}`
+                          : `${etiquetaDelPunto}: ${formatear(valor)}`}
+                      </title>
+                    </rect>
+                  );
+                })}
 
                 {indice % saltoEtiqueta === 0 && (
                   <text
@@ -149,7 +200,8 @@ export default function GraficaDeBarras({
                     className="ec-gr-etiqueta"
                     textAnchor="middle"
                   >
-                    {punto.etiqueta}
+                    {recortar(rotulo, rotulos.length)}
+                    <title>{rotulo}</title>
                   </text>
                 )}
               </g>
@@ -166,16 +218,23 @@ export default function GraficaDeBarras({
         </svg>
       </div>
 
-      {hayComparacion && (
+      {hayLeyenda && (
         <ul className="ec-gr-leyenda">
-          <li>
-            <span className="ec-gr-muestra" aria-hidden="true" />
-            {nombreSerie}
-          </li>
-          <li>
-            <span className="ec-gr-muestra ec-gr-muestra--comparacion" aria-hidden="true" />
-            {nombreComparacion}
-          </li>
+          {conjuntos.map((conjunto, posicion) => (
+            <li key={posicion}>
+              <span
+                className={
+                  conjunto.serie
+                    ? `ec-gr-muestra ec-gr-muestra--serie ${conjunto.serie}`
+                    : conjunto.clase.includes("comparacion")
+                      ? "ec-gr-muestra ec-gr-muestra--comparacion"
+                      : "ec-gr-muestra"
+                }
+                aria-hidden="true"
+              />
+              {conjunto.nombre}
+            </li>
+          ))}
         </ul>
       )}
 
@@ -185,17 +244,26 @@ export default function GraficaDeBarras({
         <caption>{titulo}</caption>
         <thead>
           <tr>
-            <th scope="col">Período</th>
-            <th scope="col">{nombreSerie}</th>
-            {hayComparacion && <th scope="col">{nombreComparacion}</th>}
+            <th scope="col">{encabezadoDeEtiquetas}</th>
+            {conjuntos.map((conjunto, posicion) => (
+              <th scope="col" key={posicion}>
+                {conjunto.nombre}
+              </th>
+            ))}
           </tr>
         </thead>
         <tbody>
-          {serie.map((punto, indice) => (
+          {rotulos.map((rotulo, indice) => (
             <tr key={indice}>
-              <th scope="row">{punto.etiqueta}</th>
-              <td>{punto.valor}</td>
-              {hayComparacion && <td>{serieComparacion[indice]?.valor ?? ""}</td>}
+              <th scope="row">{rotulo}</th>
+              {conjuntos.map((conjunto, posicion) => {
+                const valor = conjunto.valores[indice];
+                return (
+                  <td key={posicion}>
+                    {valor === null || valor === undefined ? (etiquetaDeNulo ?? "") : valor}
+                  </td>
+                );
+              })}
             </tr>
           ))}
         </tbody>
@@ -224,4 +292,14 @@ function redondearHaciaArriba(maximo) {
 function marcasDelEje(tope) {
   const valores = [0, 0.25, 0.5, 0.75, 1].map((fraccion) => Math.round(tope * fraccion));
   return [...new Set(valores)];
+}
+
+/**
+ * Un rotulo largo ("Infeccion respiratoria aguda") no cabe bajo su grupo cuando hay muchos: se
+ * corta con puntos suspensivos y el nombre completo queda en el <title> y en la tabla accesible.
+ */
+function recortar(texto, cantidadDeGrupos) {
+  const maximo = cantidadDeGrupos > 8 ? 10 : cantidadDeGrupos > 4 ? 16 : 28;
+  const cadena = String(texto ?? "");
+  return cadena.length > maximo ? `${cadena.slice(0, maximo - 1)}…` : cadena;
 }

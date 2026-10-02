@@ -402,3 +402,12 @@
     break-inside: avoid;
   }
 }
+
+/* Reporte de enfermedades (issue #916): lo que el reporte cuenta, y la nota de privacidad. */
+.reporte-criterios {
+  margin: var(--spacing-md) 0 var(--spacing-xs);
+}
+
+.reporte-nota {
+  margin: var(--spacing-xs) 0 var(--spacing-md);
+}
