@@ -24,10 +24,10 @@ export * from "./validaciones.js";
 export * from "./donantes.api.js";
 export * from "./ingreso.api.js";
 export * from "./historial.api.js";
-// registrarDonacion/anularDonacion (issue #635): escritura de donaciones y donacion_detalle,
-// la unica pieza que la #191 dejo sin entregar. Los helpers internos del archivo (guardas de
-// rol, mapeo de detalle a JSONB, traduccion del error de fn_anular_donacion) no llevan `export`
-// y por tanto no salen por este barril.
+// registrarDonacion (issue #635): escritura de donaciones y donacion_detalle, la unica pieza que
+// la #191 dejo sin entregar. Los helpers internos del archivo (guarda de rol, mapeo de detalle a
+// JSONB) no llevan `export` y por tanto no salen por este barril. La anulacion se quito en la
+// 00173 (issue #911).
 export * from "./registro.api.js";
 export * from "./campos.js";
 export * from "./columnas.js";

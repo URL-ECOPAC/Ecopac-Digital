@@ -1,9 +1,8 @@
-// Pruebas de obtenerOCrearProveedorPorNombre() (issue #756).
+// Pruebas de obtenerProveedorDeDonante() (00175, issue #911).
 //
-// El resto de proveedores.api.js ya tiene sus pruebas en bodegas.api.test.js (issue #143); esta
-// funcion queda aparte porque encadena dos llamadas distintas -una busqueda y, condicionalmente,
-// una creacion- y necesita un doble que pueda devolver una respuesta diferente para cada una, no
-// solo un mismo doble de obtenerSupabase() de nuevo.
+// El resto de proveedores.api.js ya tiene sus pruebas en bodegas.api.test.js (issue #143). Esta
+// funcion reemplaza a obtenerOCrearProveedorPorNombre() (issue #756): ya no busca por nombre ni crea
+// nada, lee el proveedor que la base enlazo con el donante.
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -18,57 +17,30 @@ vi.mock("../api/cliente.js", () => ({
   },
 }));
 
-const { obtenerOCrearProveedorPorNombre } = await import("./proveedores.api.js");
+const { obtenerProveedorDeDonante } = await import("./proveedores.api.js");
 
-/** Doble de obtenerSupabase() con una cola de respuestas por tabla, en el orden en que se piden. */
-function crearCliente(respuestasPorTabla) {
+/** Doble de obtenerSupabase() que responde siempre lo mismo y anota cada paso de la consulta. */
+function crearCliente(respuesta) {
   const llamadas = [];
-  const colas = new Map(
-    Object.entries(respuestasPorTabla).map(([tabla, respuesta]) => [
-      tabla,
-      Array.isArray(respuesta) ? [...respuesta] : [respuesta],
-    ]),
-  );
-
-  function siguienteRespuesta(tabla) {
-    const cola = colas.get(tabla);
-    if (!cola || cola.length === 0) {
-      throw new Error(`La prueba no configuro una respuesta para la tabla "${tabla}".`);
-    }
-    return cola.length > 1 ? cola.shift() : cola[0];
-  }
-
+  const encadenable = {
+    select(columnas) {
+      llamadas.push({ paso: "select", columnas });
+      return encadenable;
+    },
+    eq(columna, valor) {
+      llamadas.push({ paso: "eq", columna, valor });
+      return encadenable;
+    },
+    insert(datos) {
+      llamadas.push({ paso: "insert", datos });
+      return encadenable;
+    },
+    maybeSingle: async () => (respuesta instanceof Error ? Promise.reject(respuesta) : respuesta),
+  };
   return {
     llamadas,
     from(tabla) {
       llamadas.push({ paso: "from", tabla });
-      const respuesta = siguienteRespuesta(tabla);
-      const resolver = async () =>
-        respuesta instanceof Error ? Promise.reject(respuesta) : respuesta;
-
-      const encadenable = {
-        select(columnas) {
-          llamadas.push({ paso: "select", tabla, columnas });
-          return encadenable;
-        },
-        insert(datos) {
-          llamadas.push({ paso: "insert", tabla, datos });
-          return encadenable;
-        },
-        ilike(columna, valor) {
-          llamadas.push({ paso: "ilike", tabla, columna, valor });
-          return encadenable;
-        },
-        order(columna, opciones) {
-          llamadas.push({ paso: "order", tabla, columna, opciones });
-          return encadenable;
-        },
-        single: resolver,
-        then(resolve, reject) {
-          return resolver().then(resolve, reject);
-        },
-      };
-
       return encadenable;
     },
   };
@@ -78,79 +50,43 @@ beforeEach(() => {
   dobles.cliente = null;
 });
 
-describe("obtenerOCrearProveedorPorNombre", () => {
-  it("sin nombre no consulta nada", async () => {
-    const { proveedorId, error } = await obtenerOCrearProveedorPorNombre("", "donante");
-
-    expect(proveedorId).toBeNull();
-    expect(error).toBeNull();
+describe("obtenerProveedorDeDonante", () => {
+  it("sin donante no consulta nada", async () => {
+    expect(await obtenerProveedorDeDonante("")).toEqual({ proveedorId: null, error: null });
   });
 
-  it("reutiliza el proveedor existente si el nombre coincide, sin acentos ni mayusculas", async () => {
-    const cliente = crearCliente({
-      proveedores: {
-        data: [{ id: "prov-1", nombre: "Farmacéuticos Únidos" }],
-        error: null,
-      },
-    });
+  it("busca el proveedor por su enlace con el donante, no por el nombre", async () => {
+    const cliente = crearCliente({ data: { id: "prov-1" }, error: null });
     dobles.cliente = cliente;
 
-    const { proveedorId, error } = await obtenerOCrearProveedorPorNombre(
-      "farmaceuticos unidos",
-      "donante",
-    );
+    const { proveedorId, error } = await obtenerProveedorDeDonante("don-1");
 
     expect(error).toBeNull();
     expect(proveedorId).toBe("prov-1");
+    expect(cliente.llamadas).toContainEqual({ paso: "from", tabla: "proveedores" });
+    expect(cliente.llamadas).toContainEqual({ paso: "eq", columna: "donante_id", valor: "don-1" });
     expect(cliente.llamadas.some((llamada) => llamada.paso === "insert")).toBe(false);
   });
 
-  it("crea el proveedor si no existe ninguno con ese nombre", async () => {
-    const cliente = crearCliente({
-      proveedores: [
-        { data: [], error: null },
-        { data: { id: "prov-nuevo", nombre: "Cruz Roja Guatemalteca" }, error: null },
-      ],
-    });
-    dobles.cliente = cliente;
+  it("un donante sin proveedor visible devuelve null sin error", async () => {
+    dobles.cliente = crearCliente({ data: null, error: null });
 
-    const { proveedorId, error } = await obtenerOCrearProveedorPorNombre(
-      "Cruz Roja Guatemalteca",
-      "donante",
-    );
-
-    expect(error).toBeNull();
-    expect(proveedorId).toBe("prov-nuevo");
-    expect(cliente.llamadas).toContainEqual({
-      paso: "insert",
-      tabla: "proveedores",
-      datos: { nombre: "Cruz Roja Guatemalteca", tipo: "donante" },
-    });
+    expect(await obtenerProveedorDeDonante("don-2")).toEqual({ proveedorId: null, error: null });
   });
 
-  it("normaliza el error si la busqueda falla", async () => {
-    dobles.cliente = crearCliente({
-      proveedores: { data: null, error: { code: "42501" } },
-    });
+  it("normaliza el error si la consulta falla", async () => {
+    dobles.cliente = crearCliente({ data: null, error: { code: "42501" } });
 
-    const { proveedorId, error } = await obtenerOCrearProveedorPorNombre("Alguien", "donante");
+    const { proveedorId, error } = await obtenerProveedorDeDonante("don-3");
 
     expect(proveedorId).toBeNull();
     expect(error).not.toBeNull();
   });
 
-  it("normaliza el error si la creacion falla", async () => {
-    dobles.cliente = crearCliente({
-      proveedores: [
-        { data: [], error: null },
-        { data: null, error: { code: "23505" } },
-      ],
-    });
+  it("un fallo de red tambien vuelve como error, no como excepcion", async () => {
+    dobles.cliente = crearCliente(new Error("Failed to fetch"));
 
-    const { proveedorId, error } = await obtenerOCrearProveedorPorNombre(
-      "Alguien Nuevo",
-      "donante",
-    );
+    const { proveedorId, error } = await obtenerProveedorDeDonante("don-4");
 
     expect(proveedorId).toBeNull();
     expect(error).not.toBeNull();

@@ -1,5 +1,6 @@
 import { useState, useCallback, useMemo } from "react";
 import { listarBodegas, registrarBodega, actualizarBodega } from "./bodegas.api.js";
+import { listarContenidoDeBodegas } from "./existencias.api.js";
 import { listarProveedores, registrarProveedor, actualizarProveedor } from "./proveedores.api.js";
 
 /**
@@ -35,12 +36,31 @@ export const TIPO_PROVEEDOR = {
 };
 
 /**
- * Administracion de bodegas y proveedores: carga, alta y edicion de cada uno, y la existencia total
- * por bodega. Un fallo de carga se expone en `errorBodegas`/`errorProveedores`, nunca como lista
- * vacia.
+ * Si un proveedor es el de un donante (00175): no se edita aqui sino en Donantes, porque su nombre
+ * y su contacto los mantiene la base a partir del donante (issue #911). Pura y exportada.
+ *
+ * @param {{ donanteId?: string|null }} proveedor
+ * @returns {boolean}
+ */
+export function esProveedorDeDonante(proveedor) {
+  return Boolean(proveedor?.donanteId);
+}
+
+const CONTENIDO_CERRADO = Object.freeze({
+  bodega: null,
+  contenido: [],
+  cargando: false,
+  error: null,
+});
+
+/**
+ * Administracion de bodegas y proveedores: carga, alta y edicion de cada uno, la existencia total
+ * por bodega y lo que hay dentro de cada una. Un fallo de carga se expone en
+ * `errorBodegas`/`errorProveedores`, nunca como lista vacia.
  *
  * @returns {object} `{ bodegas, cargandoBodegas, errorBodegas, cargarBodegas, guardarBodega,
- *   existenciaPorBodega, TIPO_BODEGA, proveedores, cargandoProveedores, errorProveedores, ... }`.
+ *   existenciaPorBodega, contenidoBodega, verContenidoBodega, cerrarContenidoBodega, TIPO_BODEGA,
+ *   proveedores, cargandoProveedores, errorProveedores, ... }`.
  */
 export function useAdministracionBodegasProveedores() {
   // ─── BODEGAS ───
@@ -108,6 +128,23 @@ export function useAdministracionBodegasProveedores() {
     [existenciaPorBodega, cargarBodegas],
   );
 
+  // Lo que hay dentro de una bodega (issue #911): la tabla solo daba el total de unidades.
+  const [contenidoBodega, setContenidoBodega] = useState(CONTENIDO_CERRADO);
+
+  const verContenidoBodega = useCallback(async (bodega) => {
+    if (!bodega?.id) return;
+    setContenidoBodega({ bodega, contenido: [], cargando: true, error: null });
+    const { contenido, error } = await listarContenidoDeBodegas([bodega.id]);
+    setContenidoBodega((actual) =>
+      // Si mientras cargaba se abrio otra bodega, esta respuesta ya no es la que se mira.
+      actual.bodega?.id === bodega.id
+        ? { bodega, contenido, cargando: false, error: error?.mensaje ?? null }
+        : actual,
+    );
+  }, []);
+
+  const cerrarContenidoBodega = useCallback(() => setContenidoBodega(CONTENIDO_CERRADO), []);
+
   // ─── PROVEEDORES ───
   const [proveedores, setProveedores] = useState([]);
   const [cargandoProveedores, setCargandoProveedores] = useState(false);
@@ -127,14 +164,20 @@ export function useAdministracionBodegasProveedores() {
 
   const guardarProveedor = useCallback(
     async (proveedor) => {
+      // El proveedor de un donante lo mantiene la base desde el donante (00175).
+      if (esProveedorDeDonante(proveedor)) {
+        throw new Error("Este proveedor es un donante: se edita en Donaciones > Donantes.");
+      }
+
       const datos = {
         nombre: proveedor.nombre?.trim(),
         contacto: proveedor.contacto?.trim() || null,
-        tipo: proveedor.tipo, // "comercial" o "donante"
+        // Un proveedor nuevo es comercial: los donantes se registran en Donaciones y su proveedor
+        // aparece aqui solo (issue #911). Uno que ya existia conserva su tipo.
+        tipo: proveedor.tipo || TIPO_PROVEEDOR.COMERCIAL,
       };
 
       if (!datos.nombre) throw new Error("El nombre es obligatorio");
-      if (!datos.tipo) throw new Error("El tipo es obligatorio");
 
       let resultado;
       if (proveedor.id) {
@@ -161,6 +204,9 @@ export function useAdministracionBodegasProveedores() {
     cargarBodegas,
     guardarBodega,
     existenciaPorBodega,
+    contenidoBodega,
+    verContenidoBodega,
+    cerrarContenidoBodega,
     TIPO_BODEGA,
 
     // Proveedores

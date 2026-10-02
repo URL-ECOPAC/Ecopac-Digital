@@ -70,6 +70,7 @@ export default function ModalGeneracionReceta({
     catalogo,
     cargandoCatalogo,
     lotesPorMedicamento,
+    bodegaDeEntrega,
     renglones,
     problemas,
     avisosDeReparto,
@@ -132,6 +133,13 @@ export default function ModalGeneracionReceta({
           <section className="ec-form-seccion" style={{ "--ec-acento": "var(--accent-pacientes)" }}>
             <div className="ec-form-seccion-cabecera">
               <h3 className="ec-form-seccion-titulo">Medicamentos</h3>
+              {/* 00176, issue #911: solo se ofrecen los lotes de esta bodega, el que vence antes
+                  primero. */}
+              {bodegaDeEntrega?.nombre && (
+                <p className="ec-form-seccion-descripcion">
+                  Salen de la bodega {bodegaDeEntrega.nombre}, primero el lote que vence antes.
+                </p>
+              )}
             </div>
 
             <TextField

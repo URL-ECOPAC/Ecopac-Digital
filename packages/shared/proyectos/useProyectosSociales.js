@@ -19,7 +19,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CODIGOS_DE_ERROR_DE_SUPABASE } from "../api/errores-de-supabase.js";
 import { hayErrores } from "../validations/index.js";
 import { listarJornadas } from "../jornadas/api.js";
-import { listarInsumosDeLasJornadasDelProyecto } from "../jornadas/insumos.api.js";
+import {
+  listarBodegasDeLasJornadasDelProyecto,
+  listarInsumosDeLasJornadasDelProyecto,
+} from "../jornadas/insumos.api.js";
+import { listarContenidoDeBodegas } from "../inventario/existencias.api.js";
 import { resumirInsumosPrevistos } from "../jornadas/useInsumosDeJornada.js";
 import { listarGastos, obtenerPresupuestoProyecto } from "../presupuestos/api.js";
 import { listarUsuarios } from "../usuarios/api.js";
@@ -136,6 +140,9 @@ export function useProyectosSociales({ usuarioRol } = {}) {
   const [insumosSinJornada, setInsumosSinJornada] = useState([]);
   const [cargandoInsumos, setCargandoInsumos] = useState(false);
   const [errorInsumos, setErrorInsumos] = useState(null);
+  // Lo que hay en las bodegas de botiquin de sus jornadas (issue #911).
+  const [bodegasDeJornadas, setBodegasDeJornadas] = useState([]);
+  const [existenciasEnBodegas, setExistenciasEnBodegas] = useState([]);
   const [equipo, setEquipo] = useState([]);
   const [cargandoEquipo, setCargandoEquipo] = useState(false);
   const [errorEquipo, setErrorEquipo] = useState(null);
@@ -276,20 +283,31 @@ export function useProyectosSociales({ usuarioRol } = {}) {
   // jornada. Aparte van los que se habian planeado a nivel proyecto antes de la 00151 ("sin
   // jornada"), que se pueden pasar a una de sus jornadas. Planificacion con dinero: solo para quien
   // ve insumos y gastos (#864).
+  //
+  // Ademas, lo que hay en la bodega de botiquin de cada jornada tambien es insumo del proyecto
+  // (issue #911): se suma aparte, lote por lote y con su bodega.
   const cargarInsumos = useCallback(async () => {
     if (!proyectoSeleccionadoId || !permisos.puedeVerInsumosYGastos) {
       setInsumos([]);
       setInsumosSinJornada([]);
+      setBodegasDeJornadas([]);
+      setExistenciasEnBodegas([]);
       return;
     }
     setCargandoInsumos(true);
-    const [deJornadas, sinJornada] = await Promise.all([
+    const [deJornadas, sinJornada, deBodegas] = await Promise.all([
       listarInsumosDeLasJornadasDelProyecto(proyectoSeleccionadoId),
       listarInsumosDelProyecto(proyectoSeleccionadoId),
+      listarBodegasDeLasJornadasDelProyecto(proyectoSeleccionadoId),
     ]);
+    const enBodegas = await listarContenidoDeBodegas(
+      deBodegas.bodegas.map((bodega) => bodega.bodegaId),
+    );
     setInsumos(deJornadas.insumos);
     setInsumosSinJornada(sinJornada.insumos);
-    setErrorInsumos(deJornadas.error ?? sinJornada.error);
+    setBodegasDeJornadas(deBodegas.bodegas);
+    setExistenciasEnBodegas(enBodegas.contenido);
+    setErrorInsumos(deJornadas.error ?? sinJornada.error ?? deBodegas.error ?? enBodegas.error);
     setCargandoInsumos(false);
   }, [proyectoSeleccionadoId, permisos.puedeVerInsumosYGastos]);
 
@@ -548,6 +566,8 @@ export function useProyectosSociales({ usuarioRol } = {}) {
     errorJornadas,
     insumosPorJornada,
     insumosSinJornada,
+    bodegasDeJornadas,
+    existenciasEnBodegas,
     cargandoInsumos,
     errorInsumos,
     columnasInsumos: COLUMNAS_INSUMO_PROYECTO,

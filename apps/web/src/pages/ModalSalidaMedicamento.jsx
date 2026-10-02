@@ -16,11 +16,14 @@ export function ModalSalidaMedicamento({
     setMotivo,
     medicamentoId,
     setMedicamentoId,
-    loteSeleccionado,
-    seleccionarLote,
+    claveLoteSeleccionado,
+    seleccionarLotePorClave,
     cantidad,
     setCantidad,
     lotesDisponibles,
+    sinExistencia,
+    avisoCantidad,
+    puedeGuardar,
     error,
     cargando,
     guardarSalida,
@@ -111,8 +114,10 @@ export function ModalSalidaMedicamento({
           </button>
         </div>
 
-        {/* Formulario */}
-        <form onSubmit={guardarSalida} style={{ padding: "24px" }}>
+        {/* Formulario. noValidate: lo que falta lo dice la pantalla y el boton no se habilita
+            (issue #911); el aviso del navegador ("Please select an item in the list") salia en
+            ingles y tapaba el texto de abajo. */}
+        <form onSubmit={guardarSalida} noValidate style={{ padding: "24px" }}>
           {error && (
             <div
               style={{
@@ -145,7 +150,6 @@ export function ModalSalidaMedicamento({
               <select
                 value={motivo}
                 onChange={(e) => setMotivo(e.target.value)}
-                required
                 style={{
                   width: "100%",
                   padding: "10px 14px",
@@ -179,7 +183,6 @@ export function ModalSalidaMedicamento({
               <select
                 value={medicamentoId}
                 onChange={(e) => setMedicamentoId(e.target.value)}
-                required
                 style={{
                   width: "100%",
                   padding: "10px 14px",
@@ -211,13 +214,12 @@ export function ModalSalidaMedicamento({
               >
                 Lote Sugerido (FEFO) *
               </label>
+              {/* Las opciones se identifican por lote Y bodega (claveDeLoteDeSalida): un lote en
+                  dos bodegas daba dos opciones con el mismo value. */}
               <select
-                value={loteSeleccionado?.loteId || ""}
-                onChange={(e) => {
-                  const loteEncontrado = lotesDisponibles.find((l) => l.loteId === e.target.value);
-                  if (loteEncontrado) seleccionarLote(loteEncontrado);
-                }}
-                required
+                value={claveLoteSeleccionado}
+                onChange={(e) => seleccionarLotePorClave(e.target.value)}
+                disabled={sinExistencia}
                 style={{
                   width: "100%",
                   padding: "10px 14px",
@@ -227,29 +229,34 @@ export function ModalSalidaMedicamento({
                   backgroundColor: "var(--color-background)",
                 }}
               >
-                <option value="">Lote sugerido por orden de vencimiento...</option>
+                <option value="">
+                  {sinExistencia ? "Sin existencia" : "Lote sugerido por orden de vencimiento..."}
+                </option>
                 {lotesDisponibles.map((lote) => (
-                  <option key={lote.loteId} value={lote.loteId}>
-                    Lote: {lote.numeroLote} - Bodega: {lote.bodega} - Vence: {lote.fechaVencimiento}{" "}
-                    (Disp: {lote.cantidadDisponible})
+                  <option
+                    key={`${lote.loteId}|${lote.bodegaId}`}
+                    value={`${lote.loteId}|${lote.bodegaId ?? ""}`}
+                  >
+                    Lote: {lote.numeroLote} - Bodega: {lote.bodega} - Vence:{" "}
+                    {lote.fechaVencimiento ?? "no vence"} (Disp: {lote.cantidadDisponible})
                   </option>
                 ))}
               </select>
-              {/* Sin esto, un medicamento sin lotes en vista_lotes_disponibles (00047) se veia
-                  igual que uno todavia sin elegir: la lista simplemente salia vacia, sin decir
-                  por que. Las tres causas posibles son las que excluye esa vista: el unico
-                  ingreso del medicamento sigue pendiente de aprobacion (no tiene existencias
-                  todavia, 00107), sus lotes ya vencieron, o ya no les queda stock. */}
-              {medicamentoId && !cargando && !error && lotesDisponibles.length === 0 && (
+              {/* Las tres causas posibles son las que excluye vista_lotes_disponibles (00047): el
+                  unico ingreso del medicamento sigue pendiente de aprobacion (00107), sus lotes ya
+                  vencieron, o ya no les queda existencia. */}
+              {sinExistencia && !error && (
                 <p
+                  role="alert"
                   style={{
                     fontSize: "var(--texto-xs)",
-                    color: "var(--color-text-muted)",
+                    color: "var(--color-danger)",
+                    fontWeight: "var(--peso-bold)",
                     margin: "6px 0 0 0",
                   }}
                 >
-                  Este medicamento no tiene lotes disponibles para salida: puede que su ingreso esté
-                  pendiente de aprobación, que sus lotes ya vencieron, o que no quede stock.
+                  No hay existencia de este medicamento. Puede que su ingreso esté pendiente de
+                  aprobación, que sus lotes ya vencieron, o que ya no quede.
                 </p>
               )}
             </div>
@@ -273,24 +280,45 @@ export function ModalSalidaMedicamento({
                 value={cantidad}
                 onChange={(e) => setCantidad(e.target.value)}
                 placeholder="0"
-                required
+                disabled={sinExistencia}
+                aria-invalid={Boolean(avisoCantidad)}
                 style={{
                   width: "100%",
                   padding: "10px 14px",
                   borderRadius: "10px",
-                  border: "1px solid var(--color-border)",
+                  border: avisoCantidad
+                    ? "1px solid var(--color-danger)"
+                    : "1px solid var(--color-border)",
                   fontSize: "var(--texto-xs)",
                   backgroundColor: "var(--color-background)",
                   boxSizing: "border-box",
                 }}
               />
+              {avisoCantidad && (
+                <p
+                  role="alert"
+                  style={{
+                    fontSize: "var(--texto-xs)",
+                    color: "var(--color-danger)",
+                    margin: "6px 0 0 0",
+                  }}
+                >
+                  {avisoCantidad}
+                </p>
+              )}
             </div>
           </div>
 
           <div className="ec-form-pie">
             <EnFormulario>
               <SecondaryButton title="Cancelar" onClick={onClose} disabled={cargando} />
-              <PrimaryButton type="submit" title="Registrar salida" loading={cargando} />
+              {/* Sin motivo, lote o una cantidad que alcance, no se habilita (issue #911). */}
+              <PrimaryButton
+                type="submit"
+                title="Registrar salida"
+                loading={cargando}
+                disabled={!puedeGuardar}
+              />
             </EnFormulario>
           </div>
         </form>

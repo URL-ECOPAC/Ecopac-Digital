@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { consultarExistencias, consultarLotesDisponibles } from "../inventario/existencias.api.js";
 import { listarMedicamentos } from "../inventario/medicamentos.api.js";
-import { generarReceta } from "./recetas.api.js";
+import { generarReceta, obtenerBodegaDeEntrega } from "./recetas.api.js";
 
 /**
  * Anota a cada medicamento del catalogo cuanto hay disponible y si se puede recetar.
@@ -10,10 +10,12 @@ import { generarReceta } from "./recetas.api.js";
  * @param {object[]} [medicamentos]
  * @param {{ medicamentoId: string, cantidadDisponible: number,
  *   fechaVencimientoProxima?: string }[]} [existencias]
+ * @param {{ nombre?: string|null }|null} [bodega] La bodega de la que sale la receta (00176): el
+ *   motivo de "no se puede recetar" la nombra.
  * @returns {object[]} Cada medicamento con `cantidadDisponible`, `fechaVencimientoProxima`,
  *   `seleccionable` y `motivoNoSeleccionable`.
  */
-export function anotarDisponibilidad(medicamentos = [], existencias = []) {
+export function anotarDisponibilidad(medicamentos = [], existencias = [], bodega = null) {
   const porMedicamento = new Map(
     existencias.map((existencia) => [existencia.medicamentoId, existencia]),
   );
@@ -30,7 +32,9 @@ export function anotarDisponibilidad(medicamentos = [], existencias = []) {
       motivoNoSeleccionable:
         disponible > 0
           ? null
-          : "Sin existencia disponible: no hay lotes vigentes de este medicamento.",
+          : bodega?.nombre
+            ? `Sin existencia en ${bodega.nombre}: no hay lotes vigentes de este medicamento en la bodega de la que sale esta receta.`
+            : "Sin existencia disponible: no hay lotes vigentes de este medicamento.",
     };
   });
 }
@@ -144,12 +148,18 @@ export function describirReparto(reparto) {
  * Emision de una receta: busqueda en el catalogo con su disponibilidad, lotes por medicamento,
  * renglones y emision con `fn_generar_receta`, que descuenta el inventario en la misma transaccion.
  *
+ * BODEGA DE ENTREGA (00176, issue #911). Lo que se receta en una jornada sale solo de su bodega de
+ * botiquin o, si no tiene, de la bodega principal. El hook la pregunta primero
+ * (obtenerBodegaDeEntrega) y despues pide la disponibilidad y los lotes SOLO de esa bodega: el
+ * lote sugerido es el que vence antes ahi, y el reparto entre lotes (repartirEntreLotes) nunca toma
+ * de otra. La base rechaza cualquier otra bodega, asi que esto no es solo de pantalla.
+ *
  * @param {object} [opciones]
  * @param {string} opciones.consultaId Consulta a la que pertenece la receta.
  * @param {string} opciones.perfilId Medico que la emite.
  * @returns {object} `{ busqueda, setBusqueda, catalogo, cargandoCatalogo, lotesPorMedicamento,
- *   renglones, problemas, avisosDeReparto, indicacionesGenerales, error, enviando, receta,
- *   agregarMedicamento, ... }`.
+ *   bodegaDeEntrega, renglones, problemas, avisosDeReparto, indicacionesGenerales, error, enviando,
+ *   receta, agregarMedicamento, ... }`.
  */
 export function useGeneracionReceta({ consultaId, perfilId } = {}) {
   const [busqueda, setBusqueda] = useState("");
@@ -161,8 +171,29 @@ export function useGeneracionReceta({ consultaId, perfilId } = {}) {
   const [error, setError] = useState(null);
   const [enviando, setEnviando] = useState(false);
   const [receta, setReceta] = useState(null);
+  // `resuelta` en false mientras se pregunta: hasta saber la bodega no se pide el catalogo, para no
+  // ofrecer por un instante lo que hay en otras.
+  const [bodegaDeEntrega, setBodegaDeEntrega] = useState({ bodega: null, resuelta: false });
 
   useEffect(() => {
+    let vigente = true;
+    setBodegaDeEntrega({ bodega: null, resuelta: false });
+    obtenerBodegaDeEntrega(consultaId).then(({ bodega, error: fallo }) => {
+      if (!vigente) return;
+      // Si no se pudo saber, se ofrece todo y la base rechaza la bodega equivocada con su mensaje.
+      if (fallo) setError(fallo);
+      setBodegaDeEntrega({ bodega, resuelta: true });
+      setLotesPorMedicamento({});
+    });
+    return () => {
+      vigente = false;
+    };
+  }, [consultaId]);
+
+  const bodegaId = bodegaDeEntrega.bodega?.id;
+
+  useEffect(() => {
+    if (!bodegaDeEntrega.resuelta) return undefined;
     let vigente = true;
 
     (async () => {
@@ -170,7 +201,7 @@ export function useGeneracionReceta({ consultaId, perfilId } = {}) {
 
       const [respuestaCatalogo, respuestaExistencias] = await Promise.all([
         listarMedicamentos({ busqueda: busqueda || undefined, soloActivos: true }),
-        consultarExistencias({ busqueda: busqueda || undefined }),
+        consultarExistencias({ busqueda: busqueda || undefined, bodega: bodegaId }),
       ]);
 
       if (!vigente) return;
@@ -179,6 +210,7 @@ export function useGeneracionReceta({ consultaId, perfilId } = {}) {
         anotarDisponibilidad(
           respuestaCatalogo.medicamentos ?? [],
           respuestaExistencias.existencias ?? [],
+          bodegaDeEntrega.bodega,
         ),
       );
       setCargandoCatalogo(false);
@@ -187,13 +219,16 @@ export function useGeneracionReceta({ consultaId, perfilId } = {}) {
     return () => {
       vigente = false;
     };
-  }, [busqueda]);
+  }, [busqueda, bodegaDeEntrega, bodegaId]);
 
-  const cargarLotes = useCallback(async (medicamentoId) => {
-    const { lotes } = await consultarLotesDisponibles(medicamentoId);
-    setLotesPorMedicamento((anteriores) => ({ ...anteriores, [medicamentoId]: lotes }));
-    return lotes;
-  }, []);
+  const cargarLotes = useCallback(
+    async (medicamentoId) => {
+      const { lotes } = await consultarLotesDisponibles(medicamentoId, { bodega: bodegaId });
+      setLotesPorMedicamento((anteriores) => ({ ...anteriores, [medicamentoId]: lotes }));
+      return lotes;
+    },
+    [bodegaId],
+  );
 
   const agregarMedicamento = useCallback(
     async (medicamento) => {
@@ -322,6 +357,7 @@ export function useGeneracionReceta({ consultaId, perfilId } = {}) {
     catalogo,
     cargandoCatalogo,
     lotesPorMedicamento,
+    bodegaDeEntrega: bodegaDeEntrega.bodega,
     renglones,
     problemas,
     avisosDeReparto,

@@ -490,7 +490,16 @@ export default function DetalleJornadaPage() {
           )}
 
           {pestaniaMostrada === "insumos" && (
-            <InsumosDeJornada jornadaId={jornada.id} rol={rol} soloConsulta={jornadaFinalizada} />
+            <InsumosDeJornada
+              jornadaId={jornada.id}
+              bodega={
+                jornada.botiquinBodegaId
+                  ? { id: jornada.botiquinBodegaId, nombre: jornada.botiquinBodega?.nombre ?? "" }
+                  : null
+              }
+              rol={rol}
+              soloConsulta={jornadaFinalizada}
+            />
           )}
 
           {pestaniaMostrada === "cierre" && (

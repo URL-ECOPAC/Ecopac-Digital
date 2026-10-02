@@ -200,24 +200,3 @@ export function validarDonacion(donacion = {}) {
 
   return errores;
 }
-
-/**
- * Valida la anulacion de una donacion.
- *
- * chk_donaciones_anulacion_coherente (00022) exige que al pasar a 'anulada' viajen juntos
- * motivo_anulacion, anulada_por y anulada_en. El motivo es el unico que escribe la persona, asi
- * que es el unico que se valida aqui; los otros dos los pone la API.
- *
- * @param {object} [opciones]
- * @param {string} [opciones.motivo]
- * @returns {object}
- */
-export function validarAnulacionDeDonacion({ motivo } = {}) {
-  const errores = {};
-
-  if (estaVacio(motivo)) {
-    errores.motivo = "Anular una donacion exige indicar el motivo.";
-  }
-
-  return errores;
-}

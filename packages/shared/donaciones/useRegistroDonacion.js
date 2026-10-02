@@ -261,6 +261,8 @@ export function useRegistroDonacion({ _client, usuarioRol, onGuardarExito }) {
           value: jornada.id,
           label: [jornada.nombre, formatearFechaCorta(jornada.fecha)].filter(Boolean).join(" · "),
           proyectoId: jornada.proyectoId ?? null,
+          // La bodega de botiquin: el ingreso a inventario de la donacion la trae ya puesta.
+          bodegaId: jornada.botiquinBodegaId ?? null,
         })),
       );
     });
@@ -434,14 +436,19 @@ export function useRegistroDonacion({ _client, usuarioRol, onGuardarExito }) {
     // sin el segundo, ese paso posterior recibiria el id local de renglonVacio() -un Date.now(),
     // no un UUID de la base- y fallaria buscando un donacion_detalle inexistente (criterio 6).
     //
-    // `donanteNombre` tambien queda congelado aqui (issue #756): el paso de generar el ingreso lo
-    // usa para resolver el proveedor del donante (obtenerOCrearProveedorPorNombre(),
-    // inventario/proveedores.api.js), y el formulario se limpia -incluido donanteId- apenas
-    // termina esta funcion, asi que ese paso ya no podria leerlo de ahi.
+    // `donanteId` (en el payload) y `donanteNombre` tambien quedan congelados aqui (issue #756): el
+    // paso de generar el ingreso usa el id para leer el proveedor del donante
+    // (obtenerProveedorDeDonante(), inventario/proveedores.api.js, 00175) y el nombre para
+    // mostrarlo, y el formulario se limpia -incluido donanteId- apenas termina esta funcion, asi
+    // que ese paso ya no podria leerlos de ahi.
     setResumenRegistro({
       ...payload,
       detalles: conIdsReales(detalles, datos.detalleIds),
       donanteNombre: donantesOptions.find((opcion) => opcion.value === donanteId)?.label ?? null,
+      // La bodega de botiquin de la jornada, si tiene (issue #911): el ingreso a inventario la
+      // trae elegida, sin obligar a que sea esa.
+      bodegaIdDeJornada:
+        jornadasOptions.find((opcion) => opcion.value === jornadaId)?.bodegaId ?? null,
     });
 
     if (debeOfrecerIngresoInventario(tipoDonacion, fallo)) {

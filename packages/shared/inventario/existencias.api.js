@@ -1,7 +1,96 @@
 import { obtenerSupabase } from "../api/cliente.js";
 import { normalizarError } from "../api/errores-de-supabase.js";
+import { obtenerTodasLasFilas } from "../api/paginacion.js";
+import { aCadenaFechaLocal } from "../formato/fechas.js";
 
 export const LIMITE_DE_EXISTENCIAS_POR_DEFECTO = 50;
+
+const COLUMNAS_DEL_CONTENIDO = [
+  "loteId:lote_id",
+  "bodegaId:bodega_id",
+  "cantidadDisponible:cantidad_disponible",
+  "bodega:bodegas(nombre)",
+  "lote:lotes(numeroLote:numero_lote, fechaVencimiento:fecha_vencimiento, " +
+    "medicamentoId:medicamento_id, " +
+    "articulo:medicamentos(nombre, concentracion, tipoArticulo:tipo_articulo))",
+].join(", ");
+
+/**
+ * Aplana una fila de existencias con su lote y su articulo. `vencido` se calcula contra `hoy`: un
+ * lote sin fecha (un insumo, 00171) no vence. Pura y exportada para probarla sin Supabase.
+ *
+ * @param {object} fila
+ * @param {string} [hoy] Fecha local AAAA-MM-DD; se inyecta en las pruebas.
+ * @returns {object} Con: loteId, bodegaId, bodega, numeroLote, fechaVencimiento, vencido, medicamentoId, articulo, tipoArticulo, cantidadDisponible.
+ */
+export function aContenidoDeBodega(fila, hoy = aCadenaFechaLocal()) {
+  const lote = fila.lote ?? {};
+  const articulo = lote.articulo ?? {};
+  const fechaVencimiento = lote.fechaVencimiento ?? null;
+  return {
+    loteId: fila.loteId,
+    bodegaId: fila.bodegaId,
+    bodega: fila.bodega?.nombre ?? null,
+    numeroLote: lote.numeroLote ?? null,
+    fechaVencimiento,
+    vencido: Boolean(fechaVencimiento) && fechaVencimiento < hoy,
+    medicamentoId: lote.medicamentoId ?? null,
+    articulo: articulo.concentracion
+      ? `${articulo.nombre} (${articulo.concentracion})`
+      : (articulo.nombre ?? ""),
+    tipoArticulo: articulo.tipoArticulo ?? null,
+    cantidadDisponible: Number(fila.cantidadDisponible ?? 0),
+  };
+}
+
+/** Por articulo y, dentro de el, el que vence antes primero; un lote sin fecha va al final. */
+function compararContenido(uno, otro) {
+  const porArticulo = uno.articulo.localeCompare(otro.articulo, "es");
+  if (porArticulo !== 0) return porArticulo;
+  if (uno.fechaVencimiento === otro.fechaVencimiento) return 0;
+  if (!uno.fechaVencimiento) return 1;
+  if (!otro.fechaVencimiento) return -1;
+  return uno.fechaVencimiento < otro.fechaVencimiento ? -1 : 1;
+}
+
+/**
+ * Lo que hay en una o varias bodegas: cada lote con existencia, con su articulo, su vencimiento y su
+ * bodega (issue #911). Es la pantalla "Ver contenido" de una bodega y lo que la bodega de botiquin
+ * le aporta a los insumos de su jornada y de su proyecto.
+ *
+ * A diferencia de listarExistenciasDisponibles(), los lotes vencidos SI aparecen, marcados con
+ * `vencido`: siguen fisicamente en la bodega y alguien tiene que darlos de baja. Lo que esta en
+ * cero no aparece.
+ *
+ * Trae todas las filas, no solo las primeras 1000 que corta PostgREST (issue #773).
+ *
+ * @param {string[]} bodegaIds
+ * @returns {Promise<{ contenido: object[], error: object|null }>}
+ */
+export async function listarContenidoDeBodegas(bodegaIds = []) {
+  const ids = [...new Set((bodegaIds ?? []).filter(Boolean))];
+  if (ids.length === 0) return { contenido: [], error: null };
+
+  try {
+    const { filas, error } = await obtenerTodasLasFilas(() =>
+      obtenerSupabase()
+        .from("existencias")
+        .select(COLUMNAS_DEL_CONTENIDO)
+        .in("bodega_id", ids)
+        .gt("cantidad_disponible", 0)
+        .order("lote_id", { ascending: true }),
+    );
+
+    if (error) return { contenido: [], error: normalizarError(error) };
+    const hoy = aCadenaFechaLocal();
+    return {
+      contenido: (filas ?? []).map((fila) => aContenidoDeBodega(fila, hoy)).sort(compararContenido),
+      error: null,
+    };
+  } catch (error) {
+    return { contenido: [], error: normalizarError(error) };
+  }
+}
 
 function aExistencia(fila) {
   if (!fila) return null;

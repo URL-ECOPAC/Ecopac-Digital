@@ -42,10 +42,14 @@ export default function RegistroSalidaScreen({ navigation }) {
     medicamentoId,
     setMedicamentoId,
     loteSeleccionado,
-    seleccionarLote,
+    claveLoteSeleccionado,
+    seleccionarLotePorClave,
     cantidad,
     setCantidad,
     lotesDisponibles,
+    sinExistencia,
+    avisoCantidad,
+    puedeGuardar,
     error,
     cargando,
     guardarSalida,
@@ -67,8 +71,6 @@ export default function RegistroSalidaScreen({ navigation }) {
       vigente = false;
     };
   }, []);
-
-  const listo = motivo && medicamentoId && loteSeleccionado && Number(cantidad) > 0;
 
   return (
     <ScreenContainer>
@@ -102,20 +104,26 @@ export default function RegistroSalidaScreen({ navigation }) {
         disabled={cargando}
       />
 
+      {/* El valor es lote Y bodega: un lote en dos bodegas daba dos opciones con el mismo valor. */}
       <Selector
         label="Lote"
-        value={loteSeleccionado?.loteId ?? ""}
+        value={claveLoteSeleccionado}
         options={lotesDisponibles.map((lote) => ({
-          value: lote.loteId,
+          value: `${lote.loteId}|${lote.bodegaId ?? ""}`,
           label: etiquetaDeLote(lote),
         }))}
-        onSelect={(valor) => {
-          const elegido = lotesDisponibles.find((lote) => lote.loteId === valor);
-          if (elegido) seleccionarLote(elegido);
-        }}
+        onSelect={seleccionarLotePorClave}
         placeholder={medicamentoId ? "Elegir lote" : "Primero elige un medicamento"}
-        disabled={cargando || !medicamentoId}
+        disabled={cargando || !medicamentoId || sinExistencia}
       />
+
+      {/* Issue #911: sin existencia se dice, y el boton no se habilita. */}
+      {sinExistencia ? (
+        <Text style={estilos.error}>
+          No hay existencia de este medicamento. Puede que su ingreso esté pendiente de aprobación,
+          que sus lotes ya vencieron, o que ya no quede.
+        </Text>
+      ) : null}
 
       {loteSeleccionado ? (
         <Text style={estilos.nota}>
@@ -129,7 +137,8 @@ export default function RegistroSalidaScreen({ navigation }) {
         onChangeText={setCantidad}
         min={1}
         max={loteSeleccionado?.cantidadDisponible}
-        editable={!cargando}
+        editable={!cargando && !sinExistencia}
+        error={avisoCantidad}
       />
 
       <EnFormulario>
@@ -137,7 +146,7 @@ export default function RegistroSalidaScreen({ navigation }) {
           title="Registrar salida"
           onPress={guardarSalida}
           loading={cargando}
-          disabled={!listo || cargando}
+          disabled={!puedeGuardar}
           style={estilos.accion}
         />
         <SecondaryButton

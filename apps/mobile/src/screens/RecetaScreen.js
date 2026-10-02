@@ -123,6 +123,7 @@ export default function RecetaScreen() {
     catalogo,
     cargandoCatalogo,
     lotesPorMedicamento,
+    bodegaDeEntrega,
     renglones,
     problemas,
     avisosDeReparto,
@@ -181,6 +182,14 @@ export default function RecetaScreen() {
   return (
     <ScreenContainer>
       <Text style={styles.paciente}>{nombreCompletoDePaciente(paciente) ?? "Paciente"}</Text>
+
+      {/* 00176, issue #911: solo se ofrecen los lotes de esta bodega, el que vence antes primero. */}
+      {bodegaDeEntrega?.nombre ? (
+        <Text style={styles.textoTenue}>
+          Los medicamentos salen de la bodega {bodegaDeEntrega.nombre}, primero el lote que vence
+          antes.
+        </Text>
+      ) : null}
 
       {error && (
         <Card style={styles.tarjeta}>

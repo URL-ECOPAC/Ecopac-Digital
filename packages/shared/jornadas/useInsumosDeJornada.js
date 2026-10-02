@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { listarContenidoDeBodegas } from "../inventario/existencias.api.js";
 import { listarMedicamentos } from "../inventario/medicamentos.api.js";
 import { COLUMNAS_INSUMO_PROYECTO } from "../proyectos/columnas.js";
 import { CAMPOS_INSUMO_PROYECTO } from "../proyectos/campos.js";
@@ -13,6 +14,8 @@ import {
 } from "./insumos.api.js";
 import { puedeGestionarInsumosDeJornada, puedeVerInsumosDeJornada } from "./permisos.js";
 import { useCambiosEnTiempoReal } from "../hooks/useCambiosEnTiempoReal.js";
+
+const SIN_EXISTENCIAS = Object.freeze({ contenido: [], cargando: false, error: null });
 
 /**
  * Resumen de una lista de insumos previstos: suma de lo que tiene costo y cuantos no lo tienen.
@@ -36,12 +39,17 @@ export function resumirInsumosPrevistos(insumos = []) {
  * con alta, correccion y baja para quien la administra. Mismos campos, validacion y columnas que
  * tenian los insumos del proyecto, que ahora solo los muestra.
  *
- * @param {{ jornadaId?: string, rol?: string, activo?: boolean }} opciones `activo` en false no
- *   consulta nada: la pestana se carga al abrirse.
+ * Con `bodegaId` (la bodega de botiquin de la jornada) suma ademas lo que hay en esa bodega
+ * (issue #911): es parte de los insumos de la jornada sin que nadie tenga que volver a anotarlo.
+ * Llega aparte, en `existenciasDeBodega`, porque no es una prevision con costo estimado sino lo que
+ * fisicamente hay, lote por lote.
  *
- * @returns {object} Con: puedeVer, puedeGestionar, columnas, campos, catalogos, insumos, resumen, cargando, error, errores, ocupado, guardar, quitar, recargar.
+ * @param {{ jornadaId?: string, bodegaId?: string|null, rol?: string, activo?: boolean }} opciones
+ *   `activo` en false no consulta nada: la pestana se carga al abrirse.
+ *
+ * @returns {object} Con: puedeVer, puedeGestionar, columnas, campos, catalogos, insumos, resumen, existenciasDeBodega, cargando, error, errores, ocupado, guardar, quitar, recargar.
  */
-export function useInsumosDeJornada({ jornadaId, rol, activo = true } = {}) {
+export function useInsumosDeJornada({ jornadaId, bodegaId = null, rol, activo = true } = {}) {
   const puedeVer = puedeVerInsumosDeJornada(rol);
   const puedeGestionar = puedeGestionarInsumosDeJornada(rol);
 
@@ -68,6 +76,23 @@ export function useInsumosDeJornada({ jornadaId, rol, activo = true } = {}) {
   useEffect(() => {
     cargar();
   }, [cargar]);
+
+  // Lo que hay en la bodega de botiquin (issue #911).
+  const [existenciasDeBodega, setExistenciasDeBodega] = useState(SIN_EXISTENCIAS);
+
+  const cargarExistencias = useCallback(async () => {
+    if (!activo || !bodegaId || !puedeVer) {
+      setExistenciasDeBodega(SIN_EXISTENCIAS);
+      return;
+    }
+    setExistenciasDeBodega((actual) => ({ ...actual, cargando: true }));
+    const { contenido, error: fallo } = await listarContenidoDeBodegas([bodegaId]);
+    setExistenciasDeBodega({ contenido, cargando: false, error: fallo?.mensaje ?? null });
+  }, [activo, bodegaId, puedeVer]);
+
+  useEffect(() => {
+    cargarExistencias();
+  }, [cargarExistencias]);
 
   // Catalogo de articulos: el mismo de "Registrar ingreso al inventario".
   useEffect(() => {
@@ -144,6 +169,9 @@ export function useInsumosDeJornada({ jornadaId, rol, activo = true } = {}) {
 
   // Se recarga sola cuando cambian estas tablas (00163).
   useCambiosEnTiempoReal(["jornada_insumos"], cargar);
+  useCambiosEnTiempoReal(["existencias"], cargarExistencias, {
+    activo: Boolean(activo && bodegaId),
+  });
 
   return {
     puedeVer,
@@ -153,6 +181,7 @@ export function useInsumosDeJornada({ jornadaId, rol, activo = true } = {}) {
     catalogos: { articulos: articulosDisponibles },
     insumos,
     resumen: resumirInsumosPrevistos(insumos),
+    existenciasDeBodega,
     cargando,
     error,
     errores,

@@ -13,11 +13,59 @@ vi.mock("../api/cliente.js", () => ({
 }));
 
 const {
+  aContenidoDeBodega,
   consultarExistencias,
   consultarExistenciasDeBodega,
   consultarLotesDisponibles,
+  listarContenidoDeBodegas,
   listarExistenciasDisponibles,
 } = await import("./existencias.api.js");
+
+// Issue #911: lo que hay en una bodega, lote por lote.
+describe("aContenidoDeBodega", () => {
+  const fila = {
+    loteId: "l-1",
+    bodegaId: "b-1",
+    cantidadDisponible: "12",
+    bodega: { nombre: "Botiquin 1" },
+    lote: {
+      numeroLote: "L-001",
+      fechaVencimiento: "2026-01-31",
+      medicamentoId: "m-1",
+      articulo: { nombre: "Amoxicilina", concentracion: "500 mg", tipoArticulo: "medicamento" },
+    },
+  };
+
+  it("aplana el lote y el articulo, y marca el lote vencido", () => {
+    expect(aContenidoDeBodega(fila, "2026-02-01")).toEqual({
+      loteId: "l-1",
+      bodegaId: "b-1",
+      bodega: "Botiquin 1",
+      numeroLote: "L-001",
+      fechaVencimiento: "2026-01-31",
+      vencido: true,
+      medicamentoId: "m-1",
+      articulo: "Amoxicilina (500 mg)",
+      tipoArticulo: "medicamento",
+      cantidadDisponible: 12,
+    });
+  });
+
+  it("un lote sin fecha (un insumo, 00171) no vence", () => {
+    const sinFecha = { ...fila, lote: { ...fila.lote, fechaVencimiento: null } };
+    expect(aContenidoDeBodega(sinFecha, "2030-01-01").vencido).toBe(false);
+  });
+});
+
+describe("listarContenidoDeBodegas", () => {
+  it("sin bodegas no consulta nada", async () => {
+    expect(await listarContenidoDeBodegas([])).toEqual({ contenido: [], error: null });
+    expect(await listarContenidoDeBodegas([null, undefined])).toEqual({
+      contenido: [],
+      error: null,
+    });
+  });
+});
 
 /**
  * Doble de query builder para las funciones que consultan vista_lotes_disponibles con el query

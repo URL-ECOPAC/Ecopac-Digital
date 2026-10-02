@@ -7,7 +7,7 @@ import {
   listarBodegas,
   listarMedicamentos,
   listarProveedores,
-  obtenerOCrearProveedorPorNombre,
+  obtenerProveedorDeDonante,
   TIPO_PROVEEDOR,
   TIPOS_DE_DONACION,
   TIPOS_DE_DONANTE,
@@ -108,9 +108,9 @@ export default function RegistroDonacionPage({ usuarioRol }) {
     setResolviendoProveedor(true);
     // El catalogo se vuelve a pedir: el que se cargo al montar no tiene lo que se dio de alta en
     // linea durante la donacion, y el ingreso mostraba ese renglon con su UUID y el selector en
-    // blanco.
+    // blanco. El proveedor es el del donante, que la base crea con el (00175).
     const [{ proveedorId }, { medicamentos }] = await Promise.all([
-      obtenerOCrearProveedorPorNombre(donanteNombre, TIPO_PROVEEDOR.DONANTE),
+      obtenerProveedorDeDonante(resumenRegistro?.donanteId),
       listarMedicamentos({ soloActivos: true }),
     ]);
     if (medicamentos) {
@@ -472,6 +472,7 @@ export default function RegistroDonacionPage({ usuarioRol }) {
           usuarioId={perfil?.id}
           detallesDonacion={resumenRegistro?.detalles}
           proveedorIdInicial={proveedorIdIngreso}
+          bodegaIdInicial={resumenRegistro?.bodegaIdDeJornada}
           onExito={(movimientos, items) => {
             movimientos.forEach((movimiento, indice) => {
               const donacionDetalleId = items[indice]?.donacionDetalleId;

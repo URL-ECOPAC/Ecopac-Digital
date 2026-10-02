@@ -364,7 +364,7 @@
   "apps/web/src/pages/DonacionesPage.jsx": ["#3db648", "#e91e8c", "#f7941d"],
   "apps/web/src/pages/DonantesPage.jsx": ["#29abe2", "#3db648", "#f7941d"],
   "apps/web/src/pages/GastosDeJornada.jsx": ["#3db648", "#e91e8c", "#f7941d"],
-  "apps/web/src/pages/HistorialDonacionesPage.jsx": ["#3db648", "#f7941d"],
+  "apps/web/src/pages/HistorialDonacionesPage.jsx": ["#29abe2", "#3db648", "#f7941d"],
   "apps/web/src/pages/HomePage.jsx": ["#3db648"],
   "apps/web/src/pages/inicio.css": [
     "#1e7a28",

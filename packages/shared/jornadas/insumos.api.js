@@ -87,6 +87,45 @@ export async function listarInsumosDeLasJornadasDelProyecto(proyectoId) {
 }
 
 /**
+ * Las bodegas de botiquin de las jornadas de un proyecto, cada una con las jornadas que la usan
+ * (issue #911). Lo que hay en ellas es parte de los insumos del proyecto; dos jornadas pueden
+ * compartir bodega, y entonces se cuenta una vez.
+ *
+ * @param {string} proyectoId UUID del proyecto.
+ * @returns {Promise<{ bodegas: { bodegaId: string, bodegaNombre: string|null,
+ *   jornadas: string[] }[], error: object|null }>}
+ */
+export async function listarBodegasDeLasJornadasDelProyecto(proyectoId) {
+  if (!proyectoId) return { bodegas: [], error: null };
+
+  try {
+    const { data, error } = await obtenerSupabase()
+      .from("jornadas")
+      .select("nombre, fecha, bodegaId:botiquin_bodega_id, bodega:bodegas(nombre)")
+      .eq("proyecto_id", proyectoId)
+      .not("botiquin_bodega_id", "is", null)
+      .order("fecha", { ascending: true });
+
+    if (error) return { bodegas: [], error: normalizarError(error) };
+
+    const porBodega = new Map();
+    for (const jornada of data ?? []) {
+      if (!porBodega.has(jornada.bodegaId)) {
+        porBodega.set(jornada.bodegaId, {
+          bodegaId: jornada.bodegaId,
+          bodegaNombre: jornada.bodega?.nombre ?? null,
+          jornadas: [],
+        });
+      }
+      porBodega.get(jornada.bodegaId).jornadas.push(jornada.nombre);
+    }
+    return { bodegas: [...porBodega.values()], error: null };
+  } catch (error) {
+    return { bodegas: [], error: normalizarError(error) };
+  }
+}
+
+/**
  * Agrega un insumo previsto a una jornada. Un articulo figura una sola vez por jornada: repetirlo
  * llega como violacion de unicidad ya normalizada.
  *

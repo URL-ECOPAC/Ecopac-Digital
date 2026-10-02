@@ -303,6 +303,12 @@ stock espera a que administracion lo apruebe. Lo que la `00112` garantiza no es 
 siempre en el momento, sino que **nunca exista una receta emitida sin su movimiento registrado**.
 No hace falta ningun `GRANT` nuevo: el que ya tenia (`authenticated`) sigue siendo el mismo.
 
+Desde la `00176` (issue #911) `fn_generar_receta()` solo descuenta de la **bodega de entrega** de la
+consulta: la de botiquin de su jornada o, si no tiene, la bodega principal (`bodegas.es_principal`).
+Otra bodega se rechaza con `55000`. La dice `fn_bodega_de_entrega_de_consulta()`, SECURITY DEFINER
+con `EXECUTE` para `authenticated`: el medico puede no leer la jornada por RLS, y con su consulta
+la funcion caeria a la principal. Solo devuelve el id de una bodega, que toda sesion ya lee.
+
 `fn_ajustar_entrega_receta()` (`00128`, issue #764) corrige la cantidad realmente entregada de un
 renglon sin reescribir `cantidad_entregada` ni descontar el inventario dos veces: calcula la
 diferencia contra el ultimo valor confirmado y registra un movimiento nuevo solo por esa
@@ -524,6 +530,10 @@ editando mientras no cambien de proyecto. Reflejo en el cliente: `permisosDeProy
 proyecto)` y `proyectoAdmiteCambios(estado)` en `proyectos/`. Lo afirma
 `proyecto_cancelado_solo_lectura.sql`.
 
+**Desde la `00172` (issue #911) lo mismo vale para un proyecto `finalizado`**: los dos triggers de
+arriba rechazan tambien ese estado. Finalizar sigue siendo posible; despues, el proyecto se
+consulta y no se modifica. Lo afirma `proyecto_finalizado_solo_lectura.sql`.
+
 **La lectura de `proyectos` del personal de campo** no es "todos los proyectos": es
 `pertenece_a_proyecto(id)` (`00148`), que mira el equipo del proyecto (`proyecto_personal`) y sus
 jornadas. Es SECURITY DEFINER a proposito: la politica de `proyecto_personal` consulta `proyectos`,
@@ -639,8 +649,8 @@ inserta el propio administrador, sin ajuste de existencias: un gasto no mueve in
 | Tabla              | administrador | junta directiva / socio fundador | medico | voluntario general | Como se implementa                                       |
 | ------------------ | ------------- | -------------------------------- | ------ | ------------------ | --------------------------------------------------------- |
 | `donantes`         | C R U         | —                                | —      | —                  | `00083` + `00086` + `00141` (registrar Y SU LECTURA admiten `tiene_permiso('donaciones.registrar')`, mismo motivo que `proyectos`: `registrarDonante()` hace `.insert().select()`). `es_administrador()` escribe, `es_consultivo()` o el permiso fino leen |
-| `donaciones`       | C R U         | —                                | —      | —                  | `00083` + `00086` + `00141`, mismo cambio. La anulacion (UPDATE) exige `estado = 'anulada'` y `motivo_anulacion`. Desde la `00153` una donacion puede ser para una jornada (`jornada_id`); el trigger `fn_proyecto_de_la_jornada_de_la_donacion` (DEFINER, sin EXECUTE para nadie) pone el proyecto de esa jornada aunque quien registra por delegacion no lea `jornadas`. No cambia quien puede escribir |
-| `donacion_detalle` | C R U (`lote_id`) | —                            | —      | —                  | `00083` + `00086` + `00141`, mismo cambio. El detalle no se corrige, se anula la donacion completa. Desde la `00135` el renglon de una donacion de medicamentos lleva `medicamento_id`, que exige `fn_registrar_donacion` (INVOKER: no cambia quien puede escribir). El unico UPDATE es enlazar el lote que produjo el renglon: GRANT de la columna `lote_id` y nada mas, una sola vez (la politica solo alcanza `lote_id IS NULL`), con un lote del mismo medicamento (trigger), y lo hace quien registra donaciones (`es_administrador() OR tiene_permiso('donaciones.registrar')`). Hasta la `00135` no habia GRANT ni politica y `enlazarLoteConDonacion()` fallaba siempre. La `00135` concedio el GRANT de columna sin revocar el UPDATE de tabla completa que `authenticated` ya traia por default desde que la tabla se creo (`00022`, antes de que la `00120` empezara a revocar privilegios por defecto): el resto del renglon si se podia corregir con un UPDATE directo hasta que la `00145` revoco el UPDATE amplio |
+| `donaciones`       | C R           | —                                | —      | —                  | `00083` + `00086` + `00141`, mismo cambio. Desde la `00173` (issue #911) no hay politica de UPDATE ni `fn_anular_donacion`: una donacion ya no se anula, porque no hay proceso para devolver lo donado; las anuladas antes conservan su estado. Desde la `00153` una donacion puede ser para una jornada (`jornada_id`); el trigger `fn_proyecto_de_la_jornada_de_la_donacion` (DEFINER, sin EXECUTE para nadie) pone el proyecto de esa jornada aunque quien registra por delegacion no lea `jornadas`. No cambia quien puede escribir |
+| `donacion_detalle` | C R U (`lote_id`) | —                            | —      | —                  | `00083` + `00086` + `00141`, mismo cambio. El detalle no se corrige. Desde la `00135` el renglon de una donacion de medicamentos lleva `medicamento_id`, que exige `fn_registrar_donacion` (INVOKER: no cambia quien puede escribir). El unico UPDATE es enlazar el lote que produjo el renglon: GRANT de la columna `lote_id` y nada mas, una sola vez (la politica solo alcanza `lote_id IS NULL`), con un lote del mismo medicamento (trigger), y lo hace quien registra donaciones (`es_administrador() OR tiene_permiso('donaciones.registrar')`). Hasta la `00135` no habia GRANT ni politica y `enlazarLoteConDonacion()` fallaba siempre. La `00135` concedio el GRANT de columna sin revocar el UPDATE de tabla completa que `authenticated` ya traia por default desde que la tabla se creo (`00022`, antes de que la `00120` empezara a revocar privilegios por defecto): el resto del renglon si se podia corregir con un UPDATE directo hasta que la `00145` revoco el UPDATE amplio |
 
 Hasta la `00083`, las tres tablas estaban **denegadas a los cinco roles, incluido el
 administrador**, por dos motivos independientes que detalla la Divergencia 1 (resuelta).
@@ -649,8 +659,13 @@ Desde la **`00141`** (issue #864) las lee **solo la administradora**, o quien te
 `donaciones.registrar`. Los dos roles consultivos salen: su unica pantalla es Reportes y ninguno
 de los cuatro reportes lee donantes, donaciones ni su detalle. Desde la `00148` tambien las lee el
 rol al que la matriz le abre Donaciones. Registrar se delega (`donaciones.registrar`); corregir o
-dar de baja un donante y anular una donacion no -sus politicas de UPDATE son solo
-`es_administrador()`-, y el cliente lo refleja con `puedeCorregirDonaciones()`.
+dar de baja un donante no -su politica de UPDATE es solo `es_administrador()`-, y el cliente lo
+refleja con `puedeCorregirDonaciones()`. Una donacion no la anula nadie desde la `00173`.
+
+Desde la **`00175`** cada donante tiene su proveedor (`proveedores.donante_id`): lo crea y lo
+mantiene el trigger `trg_donantes_proveedor` con `fn_sincronizar_proveedor_de_donante` (DEFINER,
+sin EXECUTE para nadie), asi que quien registra donantes por delegacion no necesita escribir
+`proveedores`. No cambia quien puede escribir ninguna de las dos tablas.
 
 ### Usuarios y permisos
 

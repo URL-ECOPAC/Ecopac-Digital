@@ -4,13 +4,17 @@ import { Alert, Button } from "react-bootstrap";
 import { formatearMoneda, useInsumosDeJornada } from "@ecopac/shared";
 
 import { DataList, PrimaryButton } from "../components";
+import ContenidoDeBodega from "../components/ContenidoDeBodega";
 import ModalInsumoPrevisto from "./ModalInsumoPrevisto";
 
 // Pestana Insumos del detalle de una jornada (00151): lo previsto para la jornada, con alta,
 // correccion y baja para quien la administra. El proyecto de la jornada solo los muestra.
 // `soloConsulta`: la jornada esta finalizada; "Agregar insumo" queda deshabilitado y la lista sin
 // edicion ni "Quitar".
-export default function InsumosDeJornada({ jornadaId, rol, soloConsulta = false }) {
+//
+// Con bodega de botiquin (`bodega`), lo que hay en ella tambien es insumo de la jornada (issue
+// #911): va debajo, lote por lote, sin que nadie tenga que volver a anotarlo.
+export default function InsumosDeJornada({ jornadaId, bodega = null, rol, soloConsulta = false }) {
   const {
     puedeGestionar,
     columnas,
@@ -18,13 +22,14 @@ export default function InsumosDeJornada({ jornadaId, rol, soloConsulta = false 
     catalogos,
     insumos,
     resumen,
+    existenciasDeBodega,
     cargando,
     error,
     errores,
     ocupado,
     guardar,
     quitar,
-  } = useInsumosDeJornada({ jornadaId, rol });
+  } = useInsumosDeJornada({ jornadaId, bodegaId: bodega?.id ?? null, rol });
 
   const [insumoEnEdicion, setInsumoEnEdicion] = useState(null);
   const [formularioAbierto, setFormularioAbierto] = useState(false);
@@ -110,6 +115,22 @@ export default function InsumosDeJornada({ jornadaId, rol, soloConsulta = false 
             <span className="text-muted small ms-2">({resumen.sinCosto} sin costo estimado)</span>
           )}
         </p>
+      )}
+
+      {bodega?.id && (
+        <section className="d-flex flex-column gap-2 mt-2">
+          <h3 className="ec-seccion-titulo mb-0">En la bodega de botiquín: {bodega.nombre}</h3>
+          <p className="text-muted small mb-0">
+            Lo que hay en la bodega asignada a esta jornada también es parte de sus insumos, y de
+            ella salen los medicamentos que se recetan aquí.
+          </p>
+          <ContenidoDeBodega
+            contenido={existenciasDeBodega.contenido}
+            cargando={existenciasDeBodega.cargando}
+            error={existenciasDeBodega.error}
+            vacio="La bodega de botiquín no tiene existencias."
+          />
+        </section>
       )}
 
       {formularioAbierto && (

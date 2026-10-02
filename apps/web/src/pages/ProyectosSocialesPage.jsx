@@ -27,6 +27,7 @@ import {
 } from "react-bootstrap";
 
 import { BotonLimpiarFiltros, DataList } from "../components";
+import ContenidoDeBodega from "../components/ContenidoDeBodega";
 import PageHeader from "../components/PageHeader";
 import ScreenContainer from "../components/ScreenContainer";
 import ModalProyecto from "./ModalProyecto";
@@ -61,6 +62,8 @@ export default function ProyectosSocialesPage({ usuarioRol }) {
     quitarDelEquipo,
     insumosPorJornada,
     insumosSinJornada,
+    bodegasDeJornadas,
+    existenciasEnBodegas,
     cargandoInsumos,
     errorInsumos,
     columnasInsumos,
@@ -304,7 +307,7 @@ export default function ProyectosSocialesPage({ usuarioRol }) {
           <Modal.Body>
             <p className="text-secondary small mb-3">{proyectoDetalle.descripcion}</p>
 
-            {/* 00154: un proyecto cancelado se consulta, no se edita. Los botones de agregar,
+            {/* 00154 y 00172: un proyecto cancelado o finalizado se consulta, no se edita. Los botones de agregar,
                 quitar, asociar y editar ya no aparecen (permisos del proyecto abierto). */}
             {proyectoCancelado && (
               <Alert variant="secondary" className="py-2 px-3 small">
@@ -358,6 +361,7 @@ export default function ProyectosSocialesPage({ usuarioRol }) {
                 <p className="text-muted small mb-0">
                   Lo previsto en cada jornada del proyecto. Se agrega y se corrige desde el detalle
                   de cada jornada, en su pestaña Insumos. No descuenta existencias del inventario.
+                  Al final, lo que ya hay en las bodegas de botiquín de sus jornadas.
                 </p>
                 {errorInsumos && (
                   <Alert variant="danger" className="mb-0 py-2 px-3 small">
@@ -465,6 +469,27 @@ export default function ProyectosSocialesPage({ usuarioRol }) {
                       </span>
                     )}
                   </p>
+                )}
+
+                {/* Issue #911: lo que hay en la bodega de botiquin de cada jornada tambien es
+                    insumo del proyecto. */}
+                {bodegasDeJornadas.length > 0 && (
+                  <div>
+                    <h6 className="fw-bold mb-1">En las bodegas de botiquín de sus jornadas</h6>
+                    <ul className="text-muted small mb-2 ps-3">
+                      {bodegasDeJornadas.map((bodega) => (
+                        <li key={bodega.bodegaId}>
+                          {bodega.bodegaNombre ?? "Bodega"}: {bodega.jornadas.join(", ")}
+                        </li>
+                      ))}
+                    </ul>
+                    <ContenidoDeBodega
+                      contenido={existenciasEnBodegas}
+                      cargando={cargandoInsumos}
+                      vacio="Las bodegas de botiquín de sus jornadas no tienen existencias."
+                      mostrarBodega={bodegasDeJornadas.length > 1}
+                    />
+                  </div>
                 )}
               </div>
             )}
