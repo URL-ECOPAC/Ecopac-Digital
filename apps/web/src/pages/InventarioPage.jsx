@@ -22,6 +22,7 @@ import {
   esAdministrador,
   ETIQUETAS_ORIGEN_LOTE,
   formatearMoneda,
+  hayErrores,
   listarBodegas,
   listarExistenciasDisponibles,
   listarLotes,
@@ -47,6 +48,7 @@ import {
   totalizarValorizacion,
   useAlertasVencimiento,
   usePendientesValidacion,
+  validarMedicamentoDelCatalogo,
 } from "@ecopac/shared";
 import { Form, Nav, Table } from "react-bootstrap";
 import PrimaryButton from "../components/PrimaryButton";
@@ -126,6 +128,8 @@ export default function InventarioPage() {
   const [advertenciaDuplicado, setAdvertenciaDuplicado] = useState(false);
   // Un fallo al guardar se pinta dentro del modal, no en un alert() del navegador (issue #762).
   const [errorGuardarMedicamento, setErrorGuardarMedicamento] = useState(null);
+  // Errores por campo del formulario (validarMedicamentoDelCatalogo, issue #911).
+  const [erroresMedicamento, setErroresMedicamento] = useState({});
   const [formData, setFormData] = useState({
     nombre: "",
     tipoArticulo: TIPOS_DE_ARTICULO.MEDICAMENTO,
@@ -296,6 +300,7 @@ export default function InventarioPage() {
     });
     setAdvertenciaDuplicado(false);
     setErrorGuardarMedicamento(null);
+    setErroresMedicamento({});
     setModalAbierto(true);
   };
 
@@ -317,6 +322,7 @@ export default function InventarioPage() {
     });
     setAdvertenciaDuplicado(false);
     setErrorGuardarMedicamento(null);
+    setErroresMedicamento({});
     setModalAbierto(true);
 
     const { principiosActivos: asociados } = await listarPrincipiosDeMedicamento(item.id);
@@ -345,6 +351,11 @@ export default function InventarioPage() {
 
   const handleGuardarMedicamento = async () => {
     setErrorGuardarMedicamento(null);
+    // Cada campo obligatorio vacio se marca debajo del suyo (issue #911): antes viajaba al
+    // servidor y solo volvia "Ocurrio un error inesperado".
+    const errores = validarMedicamentoDelCatalogo(formData);
+    setErroresMedicamento(errores);
+    if (hayErrores(errores)) return;
     // presentacionId (00144): se compara el id, no una etiqueta -- dos presentaciones podrian
     // compartir texto parecido, pero el catalogo real las distingue por id, no por como se
     // escriban.
@@ -370,10 +381,6 @@ export default function InventarioPage() {
           esPediatrico: Boolean(formData.esPediatrico),
         }
       : { concentracion: null, formaFarmaceutica: null, esPediatrico: false };
-    if (esMedicamento && !formData.principio_activo_id) {
-      setErrorGuardarMedicamento("Debes seleccionar un principio activo.");
-      return;
-    }
     try {
       setCargandoGuardar(true);
       if (modoEdicion) {
@@ -1020,6 +1027,7 @@ export default function InventarioPage() {
           presentaciones={presentaciones}
           advertenciaDuplicado={advertenciaDuplicado}
           error={errorGuardarMedicamento}
+          errores={erroresMedicamento}
           onSubmit={handleGuardarMedicamento}
           onClose={() => setModalAbierto(false)}
           onCrearPrincipioActivo={() => setModalPrincipioActivoAbierto(true)}

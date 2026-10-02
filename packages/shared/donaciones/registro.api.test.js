@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { registrarDonacion, anularDonacion } from "./registro.api.js";
+import { registrarDonacion } from "./registro.api.js";
 import { obtenerSupabase } from "../api/cliente.js";
 import { ROLES } from "../usuarios/roles.js";
 
@@ -149,87 +149,5 @@ describe("registrarDonacion (#635)", () => {
     expect(res.datos).toBeNull();
     expect(res.error).not.toBeNull();
     expect(res.error.mensaje).toBeDefined();
-  });
-});
-
-describe("anularDonacion (#635, criterio 7)", () => {
-  let mockSupabase;
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockSupabase = {
-      rpc: vi.fn().mockReturnThis(),
-      single: vi.fn(),
-    };
-    obtenerSupabase.mockReturnValue(mockSupabase);
-  });
-
-  it("deniega a quien no es administrador, sin llegar a Supabase", async () => {
-    const res = await anularDonacion(
-      "DONAC-1",
-      { motivo: "Donante se retracto" },
-      { rolUsuario: ROLES.SOCIO_FUNDADOR },
-    );
-
-    expect(res.datos).toBeNull();
-    expect(res.error.mensaje).toContain("Administrador");
-    expect(obtenerSupabase).not.toHaveBeenCalled();
-  });
-
-  it("exige el motivo antes de escribir", async () => {
-    const res = await anularDonacion("DONAC-1", {}, { rolUsuario: ROLES.ADMINISTRADOR });
-
-    expect(res.datos).toBeNull();
-    expect(res.error.campos.motivo).toBeTruthy();
-    expect(obtenerSupabase).not.toHaveBeenCalled();
-  });
-
-  it("anula con exito: llama a fn_anular_donacion y devuelve la donacion actualizada", async () => {
-    mockSupabase.single.mockResolvedValueOnce({
-      data: {
-        id: "DONAC-1",
-        donante_id: "DON-1",
-        proyecto_id: null,
-        tipo: "dinero",
-        fecha: HOY,
-        observaciones: null,
-        estado: "anulada",
-        motivo_anulacion: "Donante se retracto",
-        anulada_por: "USR-1",
-        anulada_en: "2026-03-05T10:00:00Z",
-        registrado_por: "USR-1",
-      },
-      error: null,
-    });
-
-    const res = await anularDonacion(
-      "DONAC-1",
-      { motivo: "Donante se retracto" },
-      { rolUsuario: ROLES.ADMINISTRADOR },
-    );
-
-    expect(mockSupabase.rpc).toHaveBeenCalledWith("fn_anular_donacion", {
-      p_donacion_id: "DONAC-1",
-      p_motivo: "Donante se retracto",
-    });
-    expect(res.error).toBeNull();
-    expect(res.datos.estado).toBe("anulada");
-    expect(res.datos.anuladaPor).toBe("USR-1");
-  });
-
-  it("traduce el error P0001 de fn_anular_donacion a un mensaje especifico, sin el texto crudo de Postgres", async () => {
-    mockSupabase.single.mockResolvedValueOnce({
-      data: null,
-      error: { code: "P0001", message: "La donacion no existe o ya esta anulada." },
-    });
-
-    const res = await anularDonacion(
-      "DONAC-1",
-      { motivo: "Donante se retracto" },
-      { rolUsuario: ROLES.ADMINISTRADOR },
-    );
-
-    expect(res.datos).toBeNull();
-    expect(res.error.mensaje).toBe("La donación no existe o ya fue anulada.");
   });
 });

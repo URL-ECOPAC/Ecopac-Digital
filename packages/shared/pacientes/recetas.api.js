@@ -122,6 +122,40 @@ function aRenglonesDeLaBase(detalle) {
 }
 
 /**
+ * De que bodega sale lo que se receta en una consulta (00176, issue #911): la de botiquin de su
+ * jornada o, si la jornada no tiene, la bodega principal. La receta solo ofrece lotes de esa
+ * bodega, y fn_generar_receta rechaza cualquier otra.
+ *
+ * `bodega: null` sin error es un resultado valido: no hay bodega principal marcada. Entonces la
+ * receta ofrece todas las bodegas, como antes.
+ *
+ * @param {string} consultaId UUID de la consulta.
+ * @returns {Promise<{ bodega: { id: string, nombre: string|null }|null, error: object|null }>}
+ */
+export async function obtenerBodegaDeEntrega(consultaId) {
+  if (!consultaId) return { bodega: null, error: null };
+
+  try {
+    const cliente = obtenerSupabase();
+    const { data: bodegaId, error } = await cliente.rpc("fn_bodega_de_entrega_de_consulta", {
+      p_consulta_id: consultaId,
+    });
+    if (error) return { bodega: null, error: normalizarError(error) };
+    if (!bodegaId) return { bodega: null, error: null };
+
+    // El nombre es para decirle a quien receta de donde sale; sin el, la receta igual funciona.
+    const { data: fila } = await cliente
+      .from("bodegas")
+      .select("nombre")
+      .eq("id", bodegaId)
+      .maybeSingle();
+    return { bodega: { id: bodegaId, nombre: fila?.nombre ?? null }, error: null };
+  } catch (error) {
+    return { bodega: null, error: normalizarError(error) };
+  }
+}
+
+/**
  * Genera la receta de una consulta con todo su detalle, en una sola operacion.
  *
  * Llama por RPC a fn_generar_receta (00066, ampliada en la 00112), que inserta la receta, sus

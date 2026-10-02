@@ -121,23 +121,20 @@ describe("transiciones de estado", () => {
     expect(transicionesDeProyectoDesde("pausado")).toEqual([]);
   });
 
-  // Espejo de los triggers de la 00154.
-  it("solo un proyecto cancelado deja de admitir cambios", () => {
+  // Espejo de los triggers de la 00154 y la 00172.
+  it("un proyecto cancelado o finalizado deja de admitir cambios", () => {
     expect(proyectoAdmiteCambios(ESTADOS_PROYECTO.CANCELADO)).toBe(false);
-    for (const estado of [
-      ESTADOS_PROYECTO.PLANIFICADO,
-      ESTADOS_PROYECTO.EN_CURSO,
-      ESTADOS_PROYECTO.FINALIZADO,
-    ]) {
+    expect(proyectoAdmiteCambios(ESTADOS_PROYECTO.FINALIZADO)).toBe(false);
+    for (const estado of [ESTADOS_PROYECTO.PLANIFICADO, ESTADOS_PROYECTO.EN_CURSO]) {
       expect(proyectoAdmiteCambios(estado)).toBe(true);
     }
   });
 
-  it("los cancelados no se ofrecen para asociar, salvo el que ya estaba elegido", () => {
+  it("los cerrados no se ofrecen para asociar, salvo el que ya estaba elegido", () => {
     const proyectos = [
       { id: "a", estado: ESTADOS_PROYECTO.EN_CURSO },
       { id: "b", estado: ESTADOS_PROYECTO.CANCELADO },
-      { id: "c", estado: ESTADOS_PROYECTO.CANCELADO },
+      { id: "c", estado: ESTADOS_PROYECTO.FINALIZADO },
     ];
     expect(proyectosQueAdmitenCambios(proyectos).map((p) => p.id)).toEqual(["a"]);
     expect(proyectosQueAdmitenCambios(proyectos, "b").map((p) => p.id)).toEqual(["a", "b"]);

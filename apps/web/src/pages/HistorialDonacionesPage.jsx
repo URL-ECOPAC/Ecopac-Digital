@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Link } from "react-router-dom";
 import {
   ESTADOS_DE_DONACION,
@@ -9,17 +8,7 @@ import {
   TIPOS_DE_DONACION,
   useHistorialDonaciones,
 } from "@ecopac/shared";
-import {
-  Container,
-  Card,
-  Form,
-  Button,
-  Table,
-  Badge,
-  Alert,
-  Modal,
-  Spinner,
-} from "react-bootstrap";
+import { Container, Card, Button, Table, Badge, Alert, Modal, Spinner } from "react-bootstrap";
 
 import DateField from "../components/DateField";
 import PageHeader from "../components/PageHeader";
@@ -32,35 +21,8 @@ import { ACCION_VOLVER_A_DONACIONES } from "./donacionesNavegacion";
 import ScreenContainer from "../components/ScreenContainer";
 
 export default function HistorialDonacionesPage({ usuarioRol }) {
-  const {
-    tieneAccesoLectura,
-    cargando,
-    error,
-    donaciones,
-    totalesPorTipo,
-    filtros,
-    modalDetalle,
-    anulacion,
-  } = useHistorialDonaciones({ usuarioRol });
-
-  // Issue #756: motivo de anulacion, local a la pantalla porque solo una donacion esta
-  // seleccionada a la vez (el modal de detalle ya es el contexto de "cual").
-  const [anulando, setAnulando] = useState(false);
-  const [motivoAnular, setMotivoAnular] = useState("");
-
-  const cerrarDetalleYAnulacion = () => {
-    setAnulando(false);
-    setMotivoAnular("");
-    modalDetalle.cerrarDetalle();
-  };
-
-  const confirmarAnulacion = async () => {
-    const resultado = await anulacion.anular(modalDetalle.donacionSeleccionada.id, motivoAnular);
-    if (resultado.ok) {
-      setAnulando(false);
-      setMotivoAnular("");
-    }
-  };
+  const { tieneAccesoLectura, cargando, error, donaciones, totalesPorTipo, filtros, modalDetalle } =
+    useHistorialDonaciones({ usuarioRol });
 
   if (!tieneAccesoLectura) {
     return (
@@ -76,7 +38,7 @@ export default function HistorialDonacionesPage({ usuarioRol }) {
     <ScreenContainer>
       <PageHeader
         title="Historial de donaciones recibidas"
-        subtitle="Consulta, detalle y anulación de las donaciones registradas"
+        subtitle="Consulta y detalle de las donaciones registradas"
         actions={[ACCION_VOLVER_A_DONACIONES]}
       />
 
@@ -87,26 +49,32 @@ export default function HistorialDonacionesPage({ usuarioRol }) {
       )}
 
       {/* Totales por tipo con StatCard, como el resumen de donaciones, inventario y presupuestos.
-          Eran tres <Card> de Bootstrap con borde azul, verde y celeste, fondo gris y el monto con
-          toFixed(2) en vez de formatearMoneda. */}
+          Una tarjeta por cada tipo de donacion (issue #911): faltaba servicios, que se cuenta en
+          donaciones porque no tiene unidades. */}
       <div className="ec-kpis">
         <StatCard
-          label="Total en dinero"
+          label={ETIQUETAS_TIPO_DONACION[TIPOS_DE_DONACION.DINERO]}
           value={formatearMoneda(totalesPorTipo?.dinero || 0)}
           accent="var(--accent-donaciones)"
           esTexto
         />
         <StatCard
-          label="Medicamentos"
+          label={ETIQUETAS_TIPO_DONACION[TIPOS_DE_DONACION.MEDICAMENTOS]}
           value={totalesPorTipo?.medicamentos || 0}
           caption="unidades"
           accent="var(--color-primary)"
         />
         <StatCard
-          label="Insumos y bienes"
+          label={ETIQUETAS_TIPO_DONACION[TIPOS_DE_DONACION.INSUMOS]}
           value={totalesPorTipo?.insumos || 0}
-          caption="items"
+          caption="unidades"
           accent="var(--color-warning)"
+        />
+        <StatCard
+          label={ETIQUETAS_TIPO_DONACION[TIPOS_DE_DONACION.SERVICIOS]}
+          value={totalesPorTipo?.servicios || 0}
+          caption={totalesPorTipo?.servicios === 1 ? "donación" : "donaciones"}
+          accent="var(--color-info)"
         />
       </div>
 
@@ -250,7 +218,7 @@ export default function HistorialDonacionesPage({ usuarioRol }) {
 
       {/* Modal de Detalle Completo */}
       {modalDetalle.modalDetalleAbierto && modalDetalle.donacionSeleccionada && (
-        <Modal show={modalDetalle.modalDetalleAbierto} onHide={cerrarDetalleYAnulacion} centered>
+        <Modal show={modalDetalle.modalDetalleAbierto} onHide={modalDetalle.cerrarDetalle} centered>
           <Modal.Header closeButton>
             <Modal.Title as="h5">Detalle de la donación</Modal.Title>
           </Modal.Header>
@@ -340,62 +308,13 @@ export default function HistorialDonacionesPage({ usuarioRol }) {
               </div>
             )}
 
-            {/* Issue #756: anularDonacion() ya existia (issue #635), sin ningun boton que la
-                llamara. */}
-            {anulacion.puedeAnular &&
-              modalDetalle.donacionSeleccionada.estado !== ESTADOS_DE_DONACION.ANULADA && (
-                <>
-                  <hr />
-                  {anulacion.errorAnular && (
-                    <Alert variant="danger" className="py-2">
-                      {anulacion.errorAnular.mensaje}
-                    </Alert>
-                  )}
-                  {anulando ? (
-                    <Form.Group controlId="formMotivoAnulacion">
-                      <Form.Label>Motivo de la anulación</Form.Label>
-                      <Form.Control
-                        as="textarea"
-                        rows={2}
-                        value={motivoAnular}
-                        onChange={(e) => setMotivoAnular(e.target.value)}
-                        disabled={anulacion.anulando}
-                      />
-                    </Form.Group>
-                  ) : (
-                    <Button variant="outline-danger" size="sm" onClick={() => setAnulando(true)}>
-                      Anular donación
-                    </Button>
-                  )}
-                </>
-              )}
+            {/* Aqui estaba "Anular donación" (issue #756). Se quito en la issue #911: no hay
+                proceso para devolver lo donado, y la base ya no deja anular (00173). */}
           </Modal.Body>
           <Modal.Footer>
-            {anulando ? (
-              <>
-                <Button
-                  variant="secondary"
-                  onClick={() => {
-                    setAnulando(false);
-                    setMotivoAnular("");
-                  }}
-                  disabled={anulacion.anulando}
-                >
-                  Cancelar anulación
-                </Button>
-                <Button
-                  variant="danger"
-                  onClick={confirmarAnulacion}
-                  disabled={anulacion.anulando || !motivoAnular.trim()}
-                >
-                  {anulacion.anulando ? "Anulando..." : "Confirmar anulación"}
-                </Button>
-              </>
-            ) : (
-              <Button variant="secondary" onClick={cerrarDetalleYAnulacion}>
-                Cerrar
-              </Button>
-            )}
+            <Button variant="secondary" onClick={modalDetalle.cerrarDetalle}>
+              Cerrar
+            </Button>
           </Modal.Footer>
         </Modal>
       )}

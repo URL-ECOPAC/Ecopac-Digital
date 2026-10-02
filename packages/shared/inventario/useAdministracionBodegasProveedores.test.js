@@ -12,7 +12,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import { resultadoDeListado } from "./useAdministracionBodegasProveedores.js";
+import { esProveedorDeDonante, resultadoDeListado } from "./useAdministracionBodegasProveedores.js";
 
 describe("resultadoDeListado (#762)", () => {
   it("un error de carga devuelve el mensaje, y NO un listado vacio que se lea como 'no hay nada'", () => {
@@ -58,5 +58,17 @@ describe("resultadoDeListado (#762)", () => {
     // Quien recibe esto hace .map() y .length sin comprobar: devolver undefined lo reventaria.
     expect(resultadoDeListado({ error: null }, "bodegas")).toEqual({ items: [], error: null });
     expect(resultadoDeListado(undefined, "bodegas")).toEqual({ items: [], error: null });
+  });
+});
+
+// 00175, issue #911: el proveedor de un donante se edita en Donantes.
+describe("esProveedorDeDonante", () => {
+  it("es de un donante si tiene donanteId", () => {
+    expect(esProveedorDeDonante({ donanteId: "d-1", tipo: "donante" })).toBe(true);
+  });
+
+  it("un comercial, o uno sin enlace, no lo es", () => {
+    expect(esProveedorDeDonante({ donanteId: null, tipo: "comercial" })).toBe(false);
+    expect(esProveedorDeDonante(null)).toBe(false);
   });
 });

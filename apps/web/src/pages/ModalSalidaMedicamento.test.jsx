@@ -30,9 +30,14 @@ const mockEstadoHook = {
   setMedicamentoId: vi.fn(),
   loteSeleccionado: null,
   seleccionarLote: vi.fn(),
+  claveLoteSeleccionado: "",
+  seleccionarLotePorClave: vi.fn(),
   cantidad: "",
   setCantidad: vi.fn(),
   lotesDisponibles: [],
+  sinExistencia: false,
+  avisoCantidad: null,
+  puedeGuardar: false,
   error: null,
   cargando: false,
   guardarSalida: vi.fn((evento) => evento?.preventDefault?.()),
@@ -62,6 +67,9 @@ describe("ModalSalidaMedicamento", () => {
     mockEstadoHook.medicamentoId = "";
     mockEstadoHook.lotesDisponibles = [];
     mockEstadoHook.loteSeleccionado = null;
+    mockEstadoHook.sinExistencia = false;
+    mockEstadoHook.avisoCantidad = null;
+    mockEstadoHook.puedeGuardar = false;
     mockEstadoHook.error = null;
     mockEstadoHook.cargando = false;
     useRegistroSalida.mockClear();
@@ -90,28 +98,37 @@ describe("ModalSalidaMedicamento", () => {
 
   // Issue #859: vista_lotes_disponibles (00047) excluye un lote sin existencias (ingreso todavia
   // pendiente de aprobacion, 00107), vencido, o agotado; sin este aviso la lista salia vacia sin
-  // decir por que, igual que antes de elegir medicamento.
-  it("con un medicamento elegido y sin lotes, explica por que puede estar vacio", () => {
+  // decir por que. Issue #911: el aviso dice que no hay existencia y el boton no se habilita.
+  it("sin existencia, lo dice y no deja registrar la salida", () => {
     mockEstadoHook.medicamentoId = "med-1";
-    mockEstadoHook.lotesDisponibles = [];
+    mockEstadoHook.sinExistencia = true;
     pantalla();
 
-    expect(screen.getByText(/no tiene lotes disponibles para salida/)).toBeInTheDocument();
+    expect(screen.getByText(/No hay existencia de este medicamento/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Registrar salida/ })).toBeDisabled();
   });
 
-  it("sin medicamento elegido todavia, no muestra el aviso de lotes vacios", () => {
+  it("sin medicamento elegido todavia, no muestra el aviso de existencia", () => {
     pantalla();
 
-    expect(screen.queryByText(/no tiene lotes disponibles para salida/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/No hay existencia de este medicamento/)).not.toBeInTheDocument();
   });
 
-  it("mientras carga los lotes, no muestra el aviso de lotes vacios", () => {
-    mockEstadoHook.medicamentoId = "med-1";
-    mockEstadoHook.lotesDisponibles = [];
-    mockEstadoHook.cargando = true;
+  it("si la cantidad no alcanza, lo dice debajo y no deja registrar", () => {
+    mockEstadoHook.lotesDisponibles = [LOTE_DE_EJEMPLO];
+    mockEstadoHook.loteSeleccionado = LOTE_DE_EJEMPLO;
+    mockEstadoHook.avisoCantidad = "No hay existencia suficiente: el lote tiene 40 disponibles.";
     pantalla();
 
-    expect(screen.queryByText(/no tiene lotes disponibles para salida/)).not.toBeInTheDocument();
+    expect(screen.getByText(/el lote tiene 40 disponibles/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Registrar salida/ })).toBeDisabled();
+  });
+
+  it("con todo listo, Registrar salida se habilita", () => {
+    mockEstadoHook.puedeGuardar = true;
+    pantalla();
+
+    expect(screen.getByRole("button", { name: /Registrar salida/ })).toBeEnabled();
   });
 
   it("enviar el formulario dispara guardarSalida()", () => {

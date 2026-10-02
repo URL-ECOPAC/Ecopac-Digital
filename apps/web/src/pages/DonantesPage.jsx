@@ -10,7 +10,8 @@ import {
   useDonantesPage,
 } from "@ecopac/shared";
 import { Save, X } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 
 import BotonLimpiarFiltros from "../components/BotonLimpiarFiltros";
 import Card from "../components/Card";
@@ -258,6 +259,18 @@ export default function DonantesPage({ usuarioRol }) {
     cambiandoEstado,
     errorEstado,
   } = useDonantesPage({ usuarioRol });
+
+  // ?editar=<id> abre la edicion de ese donante: es a donde lleva "Editar en Donantes" desde
+  // Inventario > Proveedores y donantes, porque el proveedor de un donante sigue al donante (00175,
+  // issue #911). El parametro se consume una vez, para que volver a la pantalla no lo reabra.
+  const [parametros, setParametros] = useSearchParams();
+  const donanteAEditar = parametros.get("editar");
+  useEffect(() => {
+    if (!donanteAEditar || cargando) return;
+    const donante = (donantes ?? []).find((fila) => fila.id === donanteAEditar);
+    if (donante && permisos?.puedeCorregir) abrirEdicion(donante);
+    setParametros({}, { replace: true });
+  }, [donanteAEditar, cargando, donantes, permisos?.puedeCorregir, abrirEdicion, setParametros]);
 
   if (!permisos?.tieneAccesoLectura) {
     return (

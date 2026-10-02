@@ -37,6 +37,8 @@ const COLUMNAS_DE_LA_BODEGA = [
   "nombre",
   "ubicacion",
   "esMovil:es_movil",
+  // 00176: la bodega de la que sale lo que se receta en una jornada sin botiquin.
+  "esPrincipal:es_principal",
   "createdAt:created_at",
   "updatedAt:updated_at",
 ].join(", ");
@@ -78,6 +80,7 @@ function aBodega(fila, totalExistencias) {
     nombre: fila.nombre,
     ubicacion: fila.ubicacion,
     esMovil: fila.esMovil,
+    esPrincipal: Boolean(fila.esPrincipal),
     existenciasTotales: totalExistencias === undefined ? null : totalExistencias,
     createdAt: fila.createdAt,
     updatedAt: fila.updatedAt,

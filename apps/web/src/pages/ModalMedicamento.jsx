@@ -39,6 +39,8 @@ export default function ModalMedicamento({
   advertenciaDuplicado,
   // Fallo al guardar, ya como texto apto para pantalla (normalizarError()).
   error,
+  // Errores por campo (validarMedicamentoDelCatalogo, issue #911): cada uno debajo del suyo.
+  errores = {},
   cargando,
 }) {
   const setCampo = (nombre, valor) => setFormData((prev) => ({ ...prev, [nombre]: valor }));
@@ -92,6 +94,7 @@ export default function ModalMedicamento({
               placeholder="Ej. Dolo Neurobion, Amoxicilina"
               value={formData.nombre || ""}
               onChange={(e) => setCampo("nombre", e.target.value)}
+              error={errores.nombre}
               disabled={cargando}
             />
 
@@ -101,6 +104,7 @@ export default function ModalMedicamento({
               options={OPCIONES_TIPO_ARTICULO}
               onSelect={(valor) => setCampo("tipoArticulo", valor ?? "")}
               placeholder="Selecciona un tipo"
+              error={errores.tipoArticulo}
               disabled={cargando}
             />
 
@@ -112,6 +116,7 @@ export default function ModalMedicamento({
                   options={opcionesPrincipio}
                   onSelect={(valor) => setCampo("principio_activo_id", valor ?? "")}
                   placeholder="Selecciona un principio activo"
+                  error={errores.principio_activo_id}
                   disabled={cargando}
                   style={{ marginBottom: "var(--spacing-xs)" }}
                 />
@@ -149,6 +154,7 @@ export default function ModalMedicamento({
                 placeholder="Ej. 500 mg"
                 value={formData.concentracion || ""}
                 onChange={(e) => setCampo("concentracion", e.target.value)}
+                error={errores.concentracion}
                 disabled={cargando}
               />
             )}
@@ -159,6 +165,7 @@ export default function ModalMedicamento({
                 options={opcionesPresentacion}
                 onSelect={(valor) => setCampo("presentacionId", valor ?? "")}
                 placeholder="Selecciona una presentación"
+                error={errores.presentacionId}
                 disabled={cargando}
                 style={{ marginBottom: onCrearPresentacion ? "var(--spacing-xs)" : undefined }}
               />
@@ -179,6 +186,7 @@ export default function ModalMedicamento({
               placeholder="Ej. Bayer"
               value={formData.marca || ""}
               onChange={(e) => setCampo("marca", e.target.value)}
+              error={errores.marca}
               disabled={cargando}
             />
             {esMedicamento && (

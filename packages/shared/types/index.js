@@ -604,6 +604,7 @@
  * @property {string|null} contacto
  * @property {TipoProveedor} tipo De donde viene el proveedor, no de donde vino un lote suyo
  *   (00090).
+ * @property {string|null} donanteId El donante del que sale (00175); null en uno comercial.
  * @property {string} createdAt
  * @property {string} updatedAt
  */
@@ -617,6 +618,8 @@
  * @property {string} nombre
  * @property {string|null} ubicacion
  * @property {boolean} esMovil
+ * @property {boolean} esPrincipal La bodega principal (00176): de ella sale lo que se receta en
+ *   una jornada sin botiquin.
  * @property {string} createdAt
  * @property {string} updatedAt
  */

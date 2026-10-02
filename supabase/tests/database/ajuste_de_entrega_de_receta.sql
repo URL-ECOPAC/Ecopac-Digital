@@ -89,6 +89,10 @@ VALUES (
 INSERT INTO bodegas (id, nombre) VALUES
   ('70000000-0000-0000-0000-000000000764', 'Bodega de prueba 764');
 
+-- Desde la 00176 la receta sale de la bodega del botiquin de la jornada: es la de esta prueba.
+UPDATE jornadas SET botiquin_bodega_id = '70000000-0000-0000-0000-000000000764'
+WHERE id = '30000000-0000-0000-0000-000000000764';
+
 INSERT INTO proveedores (id, nombre, tipo) VALUES
   ('80000000-0000-0000-0000-000000000764', 'Proveedor de prueba 764', 'comercial');
 

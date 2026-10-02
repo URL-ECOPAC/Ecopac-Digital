@@ -13,6 +13,8 @@ export default function ModalRegistroIngreso({
   usuarioId,
   detallesDonacion,
   proveedorIdInicial,
+  // Bodega de arranque del primer item: la del botiquin de la jornada de la donacion (issue #911).
+  bodegaIdInicial,
 }) {
   const { rol } = useSesionCompartida();
   const esAdministrador = rol === "administrador" || rol === "admin";
@@ -43,6 +45,7 @@ export default function ModalRegistroIngreso({
     onGuardarExitoso: onExito,
     detallesDonacion,
     proveedorIdInicial,
+    bodegaIdInicial,
     articulos: listaProductos,
   });
 

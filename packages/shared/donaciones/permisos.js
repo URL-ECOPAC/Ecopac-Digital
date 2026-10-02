@@ -47,9 +47,9 @@ export function puedeRegistrarDonaciones(rol) {
 }
 
 /**
- * Puede corregir o dar de baja a un donante y anular una donacion: solo la administradora. Las
- * politicas de UPDATE de donantes y donaciones no admiten el permiso fino: registrar se delega,
- * deshacer no.
+ * Puede corregir o dar de baja a un donante: solo la administradora. La politica de UPDATE de
+ * donantes no admite el permiso fino: registrar se delega, deshacer no. Una donacion ya no la
+ * corrige ni la anula nadie (00173): no tiene politica de UPDATE.
  *
  * @param {string} rol
  * @returns {boolean}

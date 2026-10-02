@@ -19,8 +19,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { listarProyectos } from "../proyectos/api.js";
 import { listarDonaciones } from "./historial.api.js";
-import { puedeCorregirDonaciones, puedeVerDonaciones } from "./permisos.js";
-import { anularDonacion } from "./registro.api.js";
+import { puedeVerDonaciones } from "./permisos.js";
 import { useCambiosEnTiempoReal } from "../hooks/useCambiosEnTiempoReal.js";
 
 const TOTALES_VACIOS = Object.freeze({ dinero: 0, medicamentos: 0, insumos: 0, servicios: 0 });
@@ -68,8 +67,6 @@ export function useHistorialDonaciones({ usuarioRol } = {}) {
 
   const [donacionSeleccionada, setDonacionSeleccionada] = useState(null);
   const [modalDetalleAbierto, setModalDetalleAbierto] = useState(false);
-  const [anulando, setAnulando] = useState(false);
-  const [errorAnular, setErrorAnular] = useState(null);
 
   const cargarDonaciones = useCallback(async () => {
     if (!tieneAccesoLectura) {
@@ -131,31 +128,8 @@ export function useHistorialDonaciones({ usuarioRol } = {}) {
     setFechaFin("");
   };
 
-  // Issue #756: anularDonacion() y CAMPOS_ANULACION_DONACION ya existian (issue #635, criterio
-  // 7), declarados sin consumidor de pantalla a proposito hasta que hubiera una. Esta es esa
-  // pantalla.
-  const anular = useCallback(
-    async (idDonacion, motivo) => {
-      setAnulando(true);
-      setErrorAnular(null);
-      const { error: fallo } = await anularDonacion(
-        idDonacion,
-        { motivo },
-        { rolUsuario: usuarioRol },
-      );
-      setAnulando(false);
-
-      if (fallo) {
-        setErrorAnular(fallo);
-        return { ok: false, error: fallo };
-      }
-
-      cerrarDetalle();
-      await cargarDonaciones();
-      return { ok: true };
-    },
-    [usuarioRol, cargarDonaciones],
-  );
+  // La anulacion que agrego la issue #756 se quito: desde la 00173 una donacion ya no se anula,
+  // porque no hay proceso para devolver lo donado (issue #911).
 
   // Se recarga sola cuando cambian estas tablas (00163).
   useCambiosEnTiempoReal(["donaciones", "donacion_detalle"], cargarDonaciones);
@@ -189,12 +163,6 @@ export function useHistorialDonaciones({ usuarioRol } = {}) {
       modalDetalleAbierto,
       abrirDetalle,
       cerrarDetalle,
-    },
-    anulacion: {
-      puedeAnular: puedeCorregirDonaciones(usuarioRol),
-      anulando,
-      errorAnular,
-      anular,
     },
   };
 }

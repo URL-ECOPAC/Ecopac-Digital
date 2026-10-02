@@ -107,9 +107,9 @@ export function puedeVerSeguimientoProyecto(rol) {
  * Se devuelven juntos para que un hook no tenga que llamar a las tres por separado ni
  * acordarse de cuales existen.
  *
- * Con `proyecto`, son los permisos sobre ESE proyecto: si esta cancelado, nada de lo que lo
- * modifica queda abierto (00154), sea cual sea el rol. Crear otro proyecto no depende de cual
- * este abierto, asi que `puedeCrear` no cambia.
+ * Con `proyecto`, son los permisos sobre ESE proyecto: si esta cancelado (00154) o finalizado
+ * (00172), nada de lo que lo modifica queda abierto, sea cual sea el rol. Crear otro proyecto no
+ * depende de cual este abierto, asi que `puedeCrear` no cambia.
  *
  * @param {string} rol
  * @param {{ estado?: string }|null} [proyecto]

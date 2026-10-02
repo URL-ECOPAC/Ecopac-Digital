@@ -442,7 +442,9 @@ ON CONFLICT (id) DO NOTHING;
 INSERT INTO donantes (id, nombre, tipo, contacto, telefono, email) VALUES
   ('de00000f-0000-0000-0000-000000000001', 'Fundacion Manos Solidarias Demo', 'organizacion', 'Coordinacion de programas', '5999-2001', 'programas@manossolidariasdemo.test'),
   ('de00000f-0000-0000-0000-000000000002', 'Club de Servicio Demo', 'organizacion', 'Tesoreria', '5999-2002', 'tesoreria@clubdemo.test'),
-  ('de00000f-0000-0000-0000-000000000003', 'Carlos Ejemplo Demo', 'persona', NULL, '5999-2003', NULL)
+  ('de00000f-0000-0000-0000-000000000003', 'Carlos Ejemplo Demo', 'persona', NULL, '5999-2003', NULL),
+  -- Desde la 00175 cada proveedor donante es un donante: este adopta el proveedor de la seccion 1.
+  ('de00000f-0000-0000-0000-000000000004', 'Donante no identificado', 'persona', NULL, NULL, NULL)
 ON CONFLICT (id) DO NOTHING;
 
 -- La de dinero es para la jornada en curso: su proyecto lo fija el trigger desde la jornada.

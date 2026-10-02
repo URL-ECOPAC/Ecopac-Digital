@@ -162,10 +162,14 @@ export function datosIngresoParaRegistrar(
  * articulo elegido es un insumo, el unico cuyo lote puede ir sin fecha de vencimiento. Sin el,
  * todo se trata como medicamento y la fecha se pide siempre, como antes.
  *
+ * `bodegaIdInicial` (issue #911) deja elegida la bodega del primer item -tipico: la del botiquin
+ * de la jornada para la que se recibio la donacion-. Es solo el valor de arranque: la persona la
+ * cambia si el ingreso va a otra bodega, y los items siguientes conservan la ultima elegida.
+ *
  * @param {{ usuarioId?: string, rol?: string,
  *   onGuardarExitoso?: (movimientos: object[], items: object[]) => void,
  *   detallesDonacion?: { donacionDetalleId: string, cantidad: number, medicamentoId?: string,
- *     descripcion?: string }[], proveedorIdInicial?: string,
+ *     descripcion?: string }[], proveedorIdInicial?: string, bodegaIdInicial?: string,
  *   articulos?: { id: string, tipoArticulo?: string }[] }} [opciones]
  *
  * @returns {object} Con: origen, setOrigen, proveedorId, setProveedorId, numeroComprobante, setNumeroComprobante, items, itemActual, setItemActual, renglonesDonacion, agregarItem, eliminarItem, guardarMovimiento, resumenGuardado, resetFormulario, error, guardando, vencimientoObligatorio, puedeCrearMedicamento, crearMedicamentoNuevo, creandoMedicamento, errorMedicamento.
@@ -176,16 +180,20 @@ export function useRegistroIngreso({
   onGuardarExitoso,
   detallesDonacion = [],
   proveedorIdInicial = "",
+  bodegaIdInicial = "",
   articulos = [],
 } = {}) {
   const [origen, setOrigenState] = useState(detallesDonacion.length > 0 ? "donacion" : "compra");
   const [proveedorId, setProveedorId] = useState(proveedorIdInicial);
   const [numeroComprobante, setNumeroComprobante] = useState("");
 
+  const itemInicial = () => ({
+    ...(detallesDonacion.length > 0 ? itemDesdeRenglonDeDonacion(detallesDonacion[0]) : ITEM_VACIO),
+    bodega_id: bodegaIdInicial || "",
+  });
+
   const [items, setItems] = useState([]);
-  const [itemActual, setItemActual] = useState(() =>
-    detallesDonacion.length > 0 ? itemDesdeRenglonDeDonacion(detallesDonacion[0]) : ITEM_VACIO,
-  );
+  const [itemActual, setItemActual] = useState(itemInicial);
 
   const [resumenGuardado, setResumenGuardado] = useState(null);
   const [error, setError] = useState(null);
@@ -332,9 +340,7 @@ export function useRegistroIngreso({
     setProveedorId(proveedorIdInicial);
     setNumeroComprobante("");
     setItems([]);
-    setItemActual(
-      detallesDonacion.length > 0 ? itemDesdeRenglonDeDonacion(detallesDonacion[0]) : ITEM_VACIO,
-    );
+    setItemActual(itemInicial());
     setResumenGuardado(null);
     setError(null);
   };

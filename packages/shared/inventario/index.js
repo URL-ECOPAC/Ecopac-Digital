@@ -28,6 +28,7 @@ export * from "./presentaciones.api.js";
 export * from "./presentaciones.permisos.js";
 export * from "./medicamentos.api.js";
 export * from "./medicamentos.permisos.js";
+export * from "./medicamentos.validaciones.js";
 export * from "./lotes.api.js";
 export * from "./existencias.api.js";
 export * from "./entrega.api.js";
@@ -100,6 +101,7 @@ export {
 // Los helpers internos de cada archivo -resultadoDeListado(), nombreDe(), filasDeKardex()- no
 // son API del paquete y no salen.
 export {
+  esProveedorDeDonante,
   TIPO_BODEGA,
   TIPO_PROVEEDOR,
   useAdministracionBodegasProveedores,

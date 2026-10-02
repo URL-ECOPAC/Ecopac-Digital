@@ -8,7 +8,7 @@ import { describe, expect, it } from "vitest";
 
 import { TIPOS_DE_DONACION } from "../enums.js";
 import { TIPOS_DE_DONANTE } from "../enums.js";
-import { validarAnulacionDeDonacion, validarDonacion, validarDonante } from "./validaciones.js";
+import { validarDonacion, validarDonante } from "./validaciones.js";
 
 function hoy() {
   return new Date().toISOString();
@@ -276,12 +276,5 @@ describe("validarDonacion", () => {
       detalles: [{ descripcion: "Traslado", monto: 0 }],
     });
     expect(cero.detalles_0_monto).toBeUndefined();
-  });
-});
-
-describe("validarAnulacionDeDonacion", () => {
-  it("exige el motivo que pide chk_donaciones_anulacion_coherente", () => {
-    expect(validarAnulacionDeDonacion({}).motivo).toBeDefined();
-    expect(validarAnulacionDeDonacion({ motivo: "Duplicada" })).toEqual({});
   });
 });

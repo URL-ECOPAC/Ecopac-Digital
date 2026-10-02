@@ -219,13 +219,3 @@ export function camposDeRenglonDeDonacion(tipo) {
   if (!campos) throw new Error(`Tipo de donacion sin campos de renglon: ${tipo}`);
   return campos;
 }
-
-/** Formulario de anulacion de una donacion (validarAnulacionDeDonacion, validaciones.js). */
-export const CAMPOS_ANULACION_DONACION = [
-  {
-    id: "motivo",
-    label: "Motivo de anulación",
-    tipo: TIPOS_DE_CAMPO.TEXTO_LARGO,
-    validacion: { requerido: true },
-  },
-];
