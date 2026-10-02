@@ -93,8 +93,7 @@ export default function GraficaDeBarras({
     // Con todo en cero, un maximo de 0 daria una division por cero al calcular las alturas.
     1,
   );
-  const tope = redondearHaciaArriba(maximo);
-  const marcas = marcasDelEje(tope);
+  const { tope, marcas } = escalaDelEje(maximo);
 
   const anchoGrupo = areaAncho / rotulos.length;
   // Deja aire entre grupos; con N series, cada barra ocupa la N-esima parte de lo disponible.
@@ -161,7 +160,25 @@ export default function GraficaDeBarras({
                   const etiquetaDelPunto = conjunto.etiquetasPropias?.[indice] ?? rotulo;
 
                   if (valor === null || valor === undefined) {
-                    return etiquetaDeNulo ? (
+                    if (!etiquetaDeNulo) return null;
+                    const titulo = `${etiquetaDelPunto} · ${conjunto.nombre}: ${etiquetaDeNulo}`;
+                    // Con barras angostas el texto se encimaria con el de la barra vecina: se
+                    // dibuja una marca corta sobre el eje y el texto queda en el tooltip y la tabla.
+                    if (anchoBarra < 30) {
+                      return (
+                        <rect
+                          key={posicion}
+                          x={x + 1}
+                          y={MARGEN.arriba + areaAlto - 4}
+                          width={Math.max(anchoBarra - 2, 2)}
+                          height={4}
+                          className={`ec-gr-nulo-marca ${conjunto.serie ?? ""}`}
+                        >
+                          <title>{titulo}</title>
+                        </rect>
+                      );
+                    }
+                    return (
                       <text
                         key={posicion}
                         x={x + anchoBarra / 2}
@@ -170,9 +187,9 @@ export default function GraficaDeBarras({
                         textAnchor="middle"
                       >
                         {etiquetaDeNulo}
-                        <title>{`${etiquetaDelPunto} · ${conjunto.nombre}: ${etiquetaDeNulo}`}</title>
+                        <title>{titulo}</title>
                       </text>
-                    ) : null;
+                    );
                   }
 
                   return (
@@ -200,7 +217,11 @@ export default function GraficaDeBarras({
                     className="ec-gr-etiqueta"
                     textAnchor="middle"
                   >
-                    {recortar(rotulo, rotulos.length)}
+                    {lineasDeRotulo(rotulo, anchoGrupo * saltoEtiqueta).map((linea, numero) => (
+                      <tspan key={numero} x={centro} dy={numero === 0 ? 0 : 14}>
+                        {linea}
+                      </tspan>
+                    ))}
                     <title>{rotulo}</title>
                   </text>
                 )}
@@ -240,66 +261,90 @@ export default function GraficaDeBarras({
 
       {/* La misma informacion, para quien no ve la grafica. `visually-hidden` de Bootstrap la
           saca de la vista sin sacarla del arbol de accesibilidad, al contrario que display:none. */}
-      <table className="visually-hidden">
-        <caption>{titulo}</caption>
-        <thead>
-          <tr>
-            <th scope="col">{encabezadoDeEtiquetas}</th>
-            {conjuntos.map((conjunto, posicion) => (
-              <th scope="col" key={posicion}>
-                {conjunto.nombre}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rotulos.map((rotulo, indice) => (
-            <tr key={indice}>
-              <th scope="row">{rotulo}</th>
-              {conjuntos.map((conjunto, posicion) => {
-                const valor = conjunto.valores[indice];
-                return (
-                  <td key={posicion}>
-                    {valor === null || valor === undefined ? (etiquetaDeNulo ?? "") : valor}
-                  </td>
-                );
-              })}
+      {/* El envoltorio lleva visually-hidden y no la <table>: una tabla ignora el width de 1px de
+          esa clase y, con muchas columnas, desbordaba la pagina en horizontal. */}
+      <div className="visually-hidden">
+        <table>
+          <caption>{titulo}</caption>
+          <thead>
+            <tr>
+              <th scope="col">{encabezadoDeEtiquetas}</th>
+              {conjuntos.map((conjunto, posicion) => (
+                <th scope="col" key={posicion}>
+                  {conjunto.nombre}
+                </th>
+              ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {rotulos.map((rotulo, indice) => (
+              <tr key={indice}>
+                <th scope="row">{rotulo}</th>
+                {conjuntos.map((conjunto, posicion) => {
+                  const valor = conjunto.valores[indice];
+                  return (
+                    <td key={posicion}>
+                      {valor === null || valor === undefined ? (etiquetaDeNulo ?? "") : valor}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </figure>
   );
 }
 
-/** Sube el maximo al siguiente numero redondo, para que el eje termine en una cifra legible. */
-function redondearHaciaArriba(maximo) {
-  const magnitud = 10 ** Math.floor(Math.log10(maximo));
-  return Math.ceil(maximo / magnitud) * magnitud;
-}
-
 /**
- * Marcas del eje Y: cero, el tope y hasta tres intermedias, SIN REPETIR.
+ * La escala del eje Y: el tope y sus marcas, con un paso "redondo" (1, 2 o 5 por una potencia de
+ * diez) para que cada linea guia caiga en una cifra legible.
  *
- * El `new Set` no es cosmetico. Con un tope pequeno -el caso normal de una base recien sembrada,
- * o de un periodo con pocos datos- redondear las cinco fracciones daba numeros repetidos: con
- * tope 1 salia [0, 0, 1, 1, 1]. Eso dibujaba la misma linea guia cinco veces y, como la marca era
- * tambien la `key` de React, llenaba la consola de "Encountered two children with the same key".
- *
- * Ademas de quitar el aviso, arregla el eje: un eje que repite el mismo numero tres veces no se
- * puede leer.
+ * Antes el tope se redondeaba a la potencia de diez y las marcas eran cuartos de el, redondeados:
+ * con un maximo de 22 salia un eje de 0, 8, 15, 23, 30, que no se lee. Ahora sale 0, 10, 20, 30.
+ * Las marcas son enteras y no se repiten aunque el maximo sea 1 (el caso de una base recien
+ * sembrada), que era el defecto que vigilaba el `new Set` de antes.
  */
-function marcasDelEje(tope) {
-  const valores = [0, 0.25, 0.5, 0.75, 1].map((fraccion) => Math.round(tope * fraccion));
-  return [...new Set(valores)];
+function escalaDelEje(maximo) {
+  const bruto = Math.max(maximo, 1) / 4;
+  const magnitud = 10 ** Math.floor(Math.log10(bruto));
+  const paso = Math.max(
+    1,
+    [1, 2, 5, 10].map((m) => m * magnitud).find((p) => p >= bruto),
+  );
+  const tope = Math.ceil(Math.max(maximo, 1) / paso) * paso;
+  const marcas = [];
+  for (let marca = 0; marca <= tope; marca += paso) marcas.push(marca);
+  return { tope, marcas };
 }
 
 /**
  * Un rotulo largo ("Infeccion respiratoria aguda") no cabe bajo su grupo cuando hay muchos: se
- * corta con puntos suspensivos y el nombre completo queda en el <title> y en la tabla accesible.
+ * reparte en dos lineas por palabras, segun el ancho que le toca, y lo que no cabe se corta con
+ * puntos suspensivos. El nombre completo queda en el <title> y en la tabla accesible.
+ *
+ * El ancho de un caracter se estima en 7 unidades del viewBox, el de --texto-xs.
  */
-function recortar(texto, cantidadDeGrupos) {
-  const maximo = cantidadDeGrupos > 8 ? 10 : cantidadDeGrupos > 4 ? 16 : 28;
-  const cadena = String(texto ?? "");
-  return cadena.length > maximo ? `${cadena.slice(0, maximo - 1)}…` : cadena;
+function lineasDeRotulo(texto, anchoDisponible) {
+  const porLinea = Math.max(4, Math.floor(anchoDisponible / 7));
+  const palabras = String(texto ?? "")
+    .split(/\s+/)
+    .filter(Boolean);
+  const lineas = [""];
+
+  for (const palabra of palabras) {
+    const actual = lineas[lineas.length - 1];
+    const junto = actual ? `${actual} ${palabra}` : palabra;
+    if (junto.length <= porLinea) lineas[lineas.length - 1] = junto;
+    else if (lineas.length < 2) lineas.push(palabra);
+    else {
+      lineas[1] = `${lineas[1]} ${palabra}`;
+      break;
+    }
+  }
+
+  return lineas.map((linea) =>
+    linea.length > porLinea ? `${linea.slice(0, porLinea - 1)}…` : linea,
+  );
 }

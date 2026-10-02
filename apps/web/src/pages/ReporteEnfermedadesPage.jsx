@@ -159,6 +159,28 @@ export default function ReporteEnfermedadesPage({ incrustado = false }) {
           activo={vista}
           onElegir={setVista}
         />
+        {/* Que se cuenta y de que comunidad: no son recortes de los datos sino la definicion del
+            conteo, por eso van junto a la vista y no entre los filtros. */}
+        <div className="reporte-opciones">
+          <div className="ec-filtro">
+            <Selector
+              label="Contar"
+              value={conteo}
+              options={opcionesDeConteo}
+              onSelect={(valor) => valor && setConteo(valor)}
+              style={{ marginBottom: 0 }}
+            />
+          </div>
+          <div className="ec-filtro">
+            <Selector
+              label="Comunidad que cuenta"
+              value={comunidadDe}
+              options={opcionesDeComunidadDe}
+              onSelect={(valor) => valor && setComunidadDe(valor)}
+              style={{ marginBottom: 0 }}
+            />
+          </div>
+        </div>
       </section>
 
       <FilterBar
@@ -174,26 +196,7 @@ export default function ReporteEnfermedadesPage({ incrustado = false }) {
         }
         onLimpiar={limpiarFiltros}
         hayFiltros={hayFiltros}
-      >
-        <div className="ec-filtro">
-          <Selector
-            label="Contar"
-            value={conteo}
-            options={opcionesDeConteo}
-            onSelect={(valor) => valor && setConteo(valor)}
-            style={{ marginBottom: 0 }}
-          />
-        </div>
-        <div className="ec-filtro">
-          <Selector
-            label="Comunidad que cuenta"
-            value={comunidadDe}
-            options={opcionesDeComunidadDe}
-            onSelect={(valor) => valor && setComunidadDe(valor)}
-            style={{ marginBottom: 0 }}
-          />
-        </div>
-      </FilterBar>
+      />
 
       {vista === VISTAS_DE_ENFERMEDADES.JORNADAS && (
         <Card className="reporte-seccion">
@@ -247,7 +250,8 @@ export default function ReporteEnfermedadesPage({ incrustado = false }) {
       </p>
       <p className="ec-campo-nota reporte-nota">
         Para proteger la identidad de los pacientes, las cifras de 1 a {umbral - 1} casos se
-        muestran como «{cifraProtegida}», y con ellas el desglose por sexo o edad de esa fila.
+        muestran como «{cifraProtegida}», y con ellas el desglose por sexo o edad de esa fila. En la
+        gráfica, una marca punteada sobre el eje es una cifra protegida.
       </p>
 
       {error && <ErrorState message={error.mensaje} onRetry={recargar} />}

@@ -1482,6 +1482,15 @@ textarea.form-control {
   background-color: var(--ec-serie);
 }
 
+/* La misma cifra protegida cuando la barra es demasiado angosta para escribirla: una marca corta,
+   con borde del color de su serie, que se distingue de un cero (sin marca). */
+.ec-gr-nulo-marca {
+  fill: var(--color-surface);
+  stroke: var(--ec-serie, var(--color-text-muted));
+  stroke-dasharray: 2 2;
+  stroke-width: 1;
+}
+
 /* Grafica de lineas (GraficaDeLineas.jsx): la evolucion en el tiempo. */
 .ec-gr-linea {
   stroke: var(--ec-serie, var(--color-primary));

@@ -411,3 +411,11 @@
 .reporte-nota {
   margin: var(--spacing-xs) 0 var(--spacing-md);
 }
+
+.reporte-opciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-md);
+  margin-top: var(--spacing-md);
+  max-width: 720px;
+}

@@ -42,8 +42,7 @@ export default function GraficaDeLineas({
     ...series.flatMap((serie) => serie.valores.map((valor) => Number(valor) || 0)),
     1,
   );
-  const tope = redondearHaciaArriba(maximo);
-  const marcas = marcasDelEje(tope);
+  const { tope, marcas } = escalaDelEje(maximo);
 
   // Con un solo punto no hay tramo que dibujar: el punto va al centro.
   const pasoX = etiquetas.length > 1 ? areaAncho / (etiquetas.length - 1) : 0;
@@ -167,34 +166,38 @@ export default function GraficaDeLineas({
         </ul>
       )}
 
-      <table className="visually-hidden">
-        <caption>{titulo}</caption>
-        <thead>
-          <tr>
-            <th scope="col">{encabezadoDeEtiquetas}</th>
-            {series.map((serie, posicion) => (
-              <th scope="col" key={posicion}>
-                {serie.nombre}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {etiquetas.map((etiqueta, indice) => (
-            <tr key={indice}>
-              <th scope="row">{etiqueta}</th>
-              {series.map((serie, posicion) => {
-                const valor = serie.valores[indice];
-                return (
-                  <td key={posicion}>
-                    {valor === null || valor === undefined ? (etiquetaDeNulo ?? "") : valor}
-                  </td>
-                );
-              })}
+      {/* El envoltorio lleva visually-hidden y no la <table>: una tabla ignora el width de 1px de
+          esa clase y, con muchas columnas, desbordaba la pagina en horizontal. */}
+      <div className="visually-hidden">
+        <table>
+          <caption>{titulo}</caption>
+          <thead>
+            <tr>
+              <th scope="col">{encabezadoDeEtiquetas}</th>
+              {series.map((serie, posicion) => (
+                <th scope="col" key={posicion}>
+                  {serie.nombre}
+                </th>
+              ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {etiquetas.map((etiqueta, indice) => (
+              <tr key={indice}>
+                <th scope="row">{etiqueta}</th>
+                {series.map((serie, posicion) => {
+                  const valor = serie.valores[indice];
+                  return (
+                    <td key={posicion}>
+                      {valor === null || valor === undefined ? (etiquetaDeNulo ?? "") : valor}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </figure>
   );
 }
@@ -218,14 +221,24 @@ function tramosSinNulos(valores) {
   return tramos.filter((tramo) => tramo.length > 1);
 }
 
-/** Sube el maximo al siguiente numero redondo, como en GraficaDeBarras. */
-function redondearHaciaArriba(maximo) {
-  const magnitud = 10 ** Math.floor(Math.log10(maximo));
-  return Math.ceil(maximo / magnitud) * magnitud;
-}
-
-/** Cero, el tope y hasta tres intermedias, sin repetir (ver GraficaDeBarras). */
-function marcasDelEje(tope) {
-  const valores = [0, 0.25, 0.5, 0.75, 1].map((fraccion) => Math.round(tope * fraccion));
-  return [...new Set(valores)];
+/**
+ * La escala del eje Y: el tope y sus marcas, con un paso "redondo" (1, 2 o 5 por una potencia de
+ * diez) para que cada linea guia caiga en una cifra legible.
+ *
+ * Antes el tope se redondeaba a la potencia de diez y las marcas eran cuartos de el, redondeados:
+ * con un maximo de 22 salia un eje de 0, 8, 15, 23, 30, que no se lee. Ahora sale 0, 10, 20, 30.
+ * Las marcas son enteras y no se repiten aunque el maximo sea 1 (el caso de una base recien
+ * sembrada), que era el defecto que vigilaba el `new Set` de antes.
+ */
+function escalaDelEje(maximo) {
+  const bruto = Math.max(maximo, 1) / 4;
+  const magnitud = 10 ** Math.floor(Math.log10(bruto));
+  const paso = Math.max(
+    1,
+    [1, 2, 5, 10].map((m) => m * magnitud).find((p) => p >= bruto),
+  );
+  const tope = Math.ceil(Math.max(maximo, 1) / paso) * paso;
+  const marcas = [];
+  for (let marca = 0; marca <= tope; marca += paso) marcas.push(marca);
+  return { tope, marcas };
 }
