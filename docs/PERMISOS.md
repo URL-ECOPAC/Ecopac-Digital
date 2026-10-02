@@ -779,6 +779,7 @@ tabla:
 | ------------------------- | ----------------------- | ---------------------------------------------------------------------------------- | ------------------------- |
 | `vista_reporte_impacto`   | **DEFINER**             | `puede_consultar_reportes()` en el `WHERE`: administrador, los dos consultivos, quien tiene `reportes.exportar` y el rol al que la matriz le abre Reportes | `00027`, `00054`, `00064`, `00080`, `00086`, `00148` |
 | `vista_reporte_impacto_por_comunidad` | **DEFINER**  | `puede_consultar_reportes()`, igual que la anterior; `GRANT SELECT` a `authenticated`, nada a `anon`. Mismos indicadores con grano (jornada, comunidad de origen del paciente). Nada identifica a un paciente | `00155` |
+| `fn_reporte_enfermedades`, `fn_opciones_reporte_enfermedades` | **DEFINER** (funciones) | `puede_consultar_reportes()` en el cuerpo; `EXECUTE` a `authenticated`, nada a `anon`. Solo conteos, con las cifras de 1 a 4 suprimidas | `00177` |
 | `pacientes_reporte`       | **DEFINER**             | `puede_consultar_reportes()`, igual que la anterior. Solo expone `id` y `comunidad_id` | `00041`, `00080`, `00086`, `00148` |
 | `perfiles_directorio`     | **DEFINER**             | administrador y el propio; desde la `00148` tambien quien tiene `usuarios.gestionar_permisos`, `jornadas.gestionar` o `proyectos.gestionar`, y el rol al que la matriz le abre Colaboradores. Enmascara telefono y correo | `00038`, `00141`, `00148` |
 | `nombres_de_perfiles`     | **DEFINER**             | toda persona activa (`rol_actual() IS NOT NULL`). Solo `id`, `nombres`, `apellidos` y `activo`: pone nombre a los ids que el RLS de cada tabla ya deja ver (equipo y responsable de una jornada, responsable de un proyecto, encargado y registro de un gasto). `perfiles` sigue cerrada | `00161` |
@@ -803,6 +804,26 @@ consultas, recetas), los diagnosticos mas frecuentes, los medicamentos mas entre
 con su total de atenciones. Nada identifica a un paciente. Hasta ahi el cliente armaba el reporte
 leyendo `atenciones`, `consultas` y `recetas` con la sesion, y los roles consultivos -que no leen
 filas clinicas- recibian un reporte vacio. La guarda es `puede_consultar_reportes()` o ser medico.
+
+**El reporte de enfermedades son dos funciones agregadas (`00177`, issue #916).**
+`fn_reporte_enfermedades(...)` cuenta los diagnosticos del catalogo (`consulta_diagnostico`) por
+jornada, comunidad (la de la jornada o la del paciente) o mes, con desglose por sexo y edad, y
+`fn_opciones_reporte_enfermedades()` entrega las jornadas, proyectos y diagnosticos para elegir. Las
+dos son SECURITY DEFINER con la guarda `puede_consultar_reportes()` en el cuerpo (`42501` si no),
+`EXECUTE` solo para `authenticated` y nada para `anon`. Hacen falta las dos porque los roles
+consultivos no leen `consultas`, `consulta_diagnostico`, `jornadas`, `proyectos` ni
+`diagnosticos`: sin la de opciones, sus selectores saldrian vacios.
+
+Nada identifica a un paciente, y ademas **la base suprime las cifras bajas**: todo conteo de 1 a 4
+sale `NULL` (`suprimido = true`) y la pantalla lo muestra como "< 5", para todos los roles,
+tambien en CSV y en papel. Si una celda del desglose por sexo o por edad queda bajo el umbral, se
+suprime el desglose entero de esa fila, porque restando del total se deduciria. La supresion vive
+en la funcion, no en el cliente: si la hiciera la pantalla, la cifra exacta viajaria igual en la
+respuesta. Limite conocido: el umbral protege cada respuesta por separado, no la combinacion de
+varias (el total de una enfermedad en el ranking menos sus cifras visibles por jornada puede
+acotar una cifra protegida); cerrarlo del todo pediria redondear o agregar ruido, y queda fuera
+de esta issue. Espejo en el cliente: `puedeVerReporteDeEnfermedades` en `reportes/permisos.js`. El
+medico no lo tiene: a diferencia del reporte de una jornada, ninguna pantalla de campo lo monta.
 
 Reflejo en el cliente: `reportes/permisos.js` (issue #396), que absorbio
 `puedeVerIndicadoresDeImpacto` y `puedeVerReporteDePacientes`, sueltas hasta ahora fuera de un
