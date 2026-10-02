@@ -51,16 +51,32 @@ function aDetalleParaEntrega(renglon, disponiblePorLote) {
     // Sin lote no hay fila de existencias que consultar: null (indeterminado), nunca 0, para
     // no leerse como "agotado" cuando en realidad es "no se eligio lote a esta receta" (00019,
     // receta_detalle.lote_id es nullable).
-    cantidadDisponible: renglon.loteId ? (disponiblePorLote.get(renglon.loteId) ?? 0) : null,
+    cantidadDisponible: renglon.loteId ? disponibleDelRenglon(renglon, disponiblePorLote) : null,
   };
 }
 
+/** Clave de una existencia: el lote en una bodega. */
+function claveDeExistencia(loteId, bodegaId) {
+  return `${loteId}|${bodegaId}`;
+}
+
 /**
- * Existencia disponible de cada lote, sumada entre bodegas.
- *
- * Mismo criterio que fn_generar_receta calcula inline en el servidor (00112):
- * SUM(cantidad_disponible) FROM existencias WHERE lote_id = ... — aqui hace falta para varios
- * lotes a la vez, uno por renglon de la receta.
+ * Lo que queda del lote de un renglon en la bodega de la que salio. Desde la 00176 lo que se receta
+ * en una jornada sale solo de su bodega, y fn_generar_receta compara la existencia de ESA bodega:
+ * sumar todas las bodegas, como antes, mostraba en el puesto de entrega unidades que la jornada no
+ * tiene. Un renglon sin bodega (anterior a la 00128) cae a la suma de todas.
+ */
+function disponibleDelRenglon(renglon, disponiblePorLote) {
+  const clave = renglon.bodegaId
+    ? claveDeExistencia(renglon.loteId, renglon.bodegaId)
+    : renglon.loteId;
+  return disponiblePorLote.get(clave) ?? 0;
+}
+
+/**
+ * Existencia disponible de cada lote: por lote y bodega (clave `lote|bodega`) y, ademas, sumada
+ * entre bodegas (clave `lote`) para los renglones sin bodega. Hace falta para varios lotes a la
+ * vez, uno por renglon de la receta.
  *
  * @param {string[]} loteIds
  * @returns {Promise<{ disponiblePorLote: Map<string, number>, error: object|null }>}
@@ -72,15 +88,17 @@ async function obtenerDisponiblePorLote(loteIds) {
   try {
     const { data, error } = await obtenerSupabase()
       .from("existencias")
-      .select("loteId:lote_id, cantidadDisponible:cantidad_disponible")
+      .select("loteId:lote_id, bodegaId:bodega_id, cantidadDisponible:cantidad_disponible")
       .in("lote_id", idsUnicos);
 
     if (error) return { disponiblePorLote: new Map(), error: normalizarError(error) };
 
     const disponiblePorLote = new Map();
     for (const fila of data ?? []) {
-      const acumulado = disponiblePorLote.get(fila.loteId) ?? 0;
-      disponiblePorLote.set(fila.loteId, acumulado + Number(fila.cantidadDisponible ?? 0));
+      const cantidad = Number(fila.cantidadDisponible ?? 0);
+      disponiblePorLote.set(fila.loteId, (disponiblePorLote.get(fila.loteId) ?? 0) + cantidad);
+      const clave = claveDeExistencia(fila.loteId, fila.bodegaId);
+      disponiblePorLote.set(clave, (disponiblePorLote.get(clave) ?? 0) + cantidad);
     }
     return { disponiblePorLote, error: null };
   } catch (error) {

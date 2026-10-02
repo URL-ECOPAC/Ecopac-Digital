@@ -35,7 +35,6 @@ import {
 } from "@ecopac/shared";
 
 import {
-  bodegaPrincipal,
   cerrarConexion,
   consultar,
   DEMO,
@@ -73,9 +72,21 @@ let bodega = null;
 let existenciasIniciales = [];
 let diagnosticoId = null;
 
+/** Lo que la prueba deja en la bodega movil para recetar; afterAll la devuelve a como estaba. */
+const EXISTENCIA_PARA_RECETAR = 50;
+
 beforeAll(async () => {
-  bodega = await bodegaPrincipal();
+  // Lo que se receta en una jornada sale de su bodega movil (00176), obligatoria desde la 00178: la
+  // de la jornada en curso del seed. Se le pone existencia del lote sano, como si se hubiera cargado
+  // desde la pestana Insumos.
+  bodega = DEMO.bodegaMovil;
   existenciasIniciales = await instantaneaDeExistencias([[DEMO.loteSano, bodega]]);
+  await consultar(
+    `INSERT INTO existencias (lote_id, bodega_id, cantidad_disponible)
+     VALUES ($1, $2, $3)
+     ON CONFLICT (lote_id, bodega_id) DO UPDATE SET cantidad_disponible = EXCLUDED.cantidad_disponible`,
+    [DEMO.loteSano, bodega, EXISTENCIA_PARA_RECETAR],
+  );
 });
 
 afterAll(async () => {
@@ -208,7 +219,7 @@ describe("Flujo critico: atencion clinica completa", () => {
     // movimiento exista desde el primer momento en vez de depender de una segunda llamada.
     const disponible = await existenciaDe(DEMO.loteSano, bodega);
 
-    expect(disponible).toBe(existenciasIniciales[0].cantidad);
+    expect(disponible).toBe(EXISTENCIA_PARA_RECETAR);
   });
 
   it("8. la salida la creo la propia receta, pendiente y sin segunda llamada", async () => {
@@ -257,7 +268,7 @@ describe("Flujo critico: atencion clinica completa", () => {
     expect(datos.estado).toBe("aprobado");
 
     const disponible = await existenciaDe(DEMO.loteSano, bodega);
-    expect(disponible).toBe(existenciasIniciales[0].cantidad - CANTIDAD_RECETADA);
+    expect(disponible).toBe(EXISTENCIA_PARA_RECETAR - CANTIDAD_RECETADA);
   });
 
   // issue #759: la pestana de Recetas de la web fallaba siempre con PGRST108, porque
@@ -288,6 +299,6 @@ describe("Flujo critico: atencion clinica completa", () => {
     expect(renglon.cantidadEntregada).toBe(CANTIDAD_RECETADA);
     // La aprobacion del paso 9 ya descarto CANTIDAD_RECETADA del lote: la existencia que ve el
     // puesto de entrega tiene que reflejar ese descuento, no la cantidad original del lote.
-    expect(renglon.cantidadDisponible).toBe(existenciasIniciales[0].cantidad - CANTIDAD_RECETADA);
+    expect(renglon.cantidadDisponible).toBe(EXISTENCIA_PARA_RECETAR - CANTIDAD_RECETADA);
   });
 });

@@ -144,6 +144,28 @@ describe("obtenerRecetaPorAtencion", () => {
     });
   });
 
+  // 00176: lo que se receta sale solo de la bodega de la jornada; la existencia que importa es la de
+  // esa bodega, no la suma de todas.
+  it("con bodega en el renglon, la existencia es la del lote en esa bodega", async () => {
+    dobles.cliente = crearCliente({
+      recetas: {
+        data: [{ ...FILA_RECETA, detalle: [{ ...RENGLON_CON_LOTE, bodegaId: "bod-movil" }] }],
+        error: null,
+      },
+      existencias: {
+        data: [
+          { loteId: "lot-1", bodegaId: "bod-principal", cantidadDisponible: 300 },
+          { loteId: "lot-1", bodegaId: "bod-movil", cantidadDisponible: 45 },
+        ],
+        error: null,
+      },
+    });
+
+    const { detalles } = await obtenerRecetaPorAtencion("aten-1");
+
+    expect(detalles[0].cantidadDisponible).toBe(45);
+  });
+
   it("un renglon sin lote_id muestra cantidadDisponible null, nunca 0", async () => {
     dobles.cliente = crearCliente({
       recetas: { data: [FILA_RECETA], error: null },
