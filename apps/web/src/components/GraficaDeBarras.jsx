@@ -19,24 +19,64 @@ import { useId } from "react";
  * mismos numeros. Un lector de pantalla lee la tabla; quien ve la pantalla, las barras. Es la
  * unica forma de que el dato no dependa del color ni de la altura.
  *
+ * VARIAS SERIES (issue #916). El reporte de enfermedades compara dos o mas jornadas o comunidades
+ * lado a lado. Para eso se pasan `etiquetas` y `series` en vez de `serie`/`serieComparacion`: una
+ * barra por serie en cada grupo, cada serie con su color de `chartSeries` (--color-serie-N). Un
+ * valor `null` es un dato que no se puede mostrar -una cifra protegida por privacidad-: no dibuja
+ * barra y, si se da `etiquetaDeNulo`, la escribe sobre el eje para que no se lea como cero.
+ *
  * @param {object} props
- * @param {Array<{etiqueta: string, valor: number}>} props.serie
+ * @param {Array<{etiqueta: string, valor: number}>} [props.serie]
  * @param {Array<{etiqueta: string, valor: number}>} [props.serieComparacion]
+ * @param {string[]} [props.etiquetas] Rotulos del eje X, con `series`.
+ * @param {Array<{nombre: string, valores: Array<number|null>}>} [props.series]
  * @param {string} props.titulo Lo que mide la grafica ("Pacientes atendidos por mes").
  * @param {string} [props.nombreSerie] Rotulo de la serie principal en la leyenda.
  * @param {string} [props.nombreComparacion]
+ * @param {string} [props.encabezadoDeEtiquetas] Encabezado de la primera columna de la tabla
+ *   accesible ("Período", "Enfermedad").
+ * @param {string} [props.etiquetaDeNulo] Que escribir donde un valor es null ("< 5").
  */
 export default function GraficaDeBarras({
   serie = [],
   serieComparacion = [],
+  etiquetas,
+  series,
   titulo,
   nombreSerie = "Principal",
   nombreComparacion = "Comparación",
+  encabezadoDeEtiquetas = "Período",
+  etiquetaDeNulo,
 }) {
   const id = useId();
-  const hayComparacion = serieComparacion.length > 0;
 
-  if (serie.length === 0) {
+  // Las dos formas de llamarla se reducen a una sola: rotulos del eje y series de valores.
+  const multiserie = Array.isArray(series);
+  const rotulos = multiserie ? (etiquetas ?? []) : serie.map((punto) => punto.etiqueta);
+  const conjuntos = multiserie
+    ? series.map((s, indice) => ({
+        nombre: s.nombre,
+        valores: s.valores ?? [],
+        // El color sale de la clase ec-gr-serie-N de ui.css, que lee --color-serie-N.
+        clase: `ec-gr-barra ec-gr-barra--serie ec-gr-serie-${(indice % 6) + 1}`,
+        serie: `ec-gr-serie-${(indice % 6) + 1}`,
+      }))
+    : [
+        { nombre: nombreSerie, valores: serie.map((p) => p.valor), clase: "ec-gr-barra" },
+        ...(serieComparacion.length > 0
+          ? [
+              {
+                nombre: nombreComparacion,
+                valores: rotulos.map((_, indice) => serieComparacion[indice]?.valor ?? null),
+                clase: "ec-gr-barra ec-gr-barra--comparacion",
+                etiquetasPropias: serieComparacion.map((p) => p.etiqueta),
+              },
+            ]
+          : []),
+      ];
+  const hayLeyenda = conjuntos.length > 1;
+
+  if (rotulos.length === 0 || conjuntos.length === 0) {
     return <p className="ec-gr-vacio">Sin datos para graficar en el período seleccionado.</p>;
   }
 
@@ -49,30 +89,26 @@ export default function GraficaDeBarras({
   const areaAlto = ALTO - MARGEN.arriba - MARGEN.abajo;
 
   const maximo = Math.max(
-    ...serie.map((p) => Number(p.valor) || 0),
-    ...serieComparacion.map((p) => Number(p.valor) || 0),
+    ...conjuntos.flatMap((conjunto) => conjunto.valores.map((valor) => Number(valor) || 0)),
     // Con todo en cero, un maximo de 0 daria una division por cero al calcular las alturas.
     1,
   );
-  const tope = redondearHaciaArriba(maximo);
-  const marcas = marcasDelEje(tope);
+  const { tope, marcas } = escalaDelEje(maximo);
 
-  const anchoGrupo = areaAncho / serie.length;
-  // Deja aire entre grupos; con dos series, cada barra ocupa la mitad de lo disponible.
+  const anchoGrupo = areaAncho / rotulos.length;
+  // Deja aire entre grupos; con N series, cada barra ocupa la N-esima parte de lo disponible.
   //
   // El tope de 72 unidades es lo que impide que con dos o tres puntos salgan losas del ancho de
   // media grafica: una barra muy ancha deja de leerse como barra y el ojo la toma por un bloque
   // de color. Por debajo de ese tope manda el reparto proporcional.
   const ANCHO_MAXIMO_DE_BARRA = 72;
-  const anchoBarra = Math.min(
-    (anchoGrupo * 0.62) / (hayComparacion ? 2 : 1),
-    ANCHO_MAXIMO_DE_BARRA,
-  );
+  const anchoBarra = Math.min((anchoGrupo * 0.62) / conjuntos.length, ANCHO_MAXIMO_DE_BARRA);
 
   const alturaDe = (valor) => ((Number(valor) || 0) / tope) * areaAlto;
 
   // Con muchos puntos las etiquetas no caben: se muestra una de cada N en vez de encimarlas.
-  const saltoEtiqueta = Math.ceil(serie.length / 12);
+  const saltoEtiqueta = Math.ceil(rotulos.length / 12);
+  const formatear = (valor) => Number(valor).toLocaleString("es-GT");
 
   return (
     <figure className="ec-grafica">
@@ -80,12 +116,12 @@ export default function GraficaDeBarras({
 
       {/* El scroll aparece solo cuando hay tantos puntos que una barra bajaria de ~28 unidades.
           Con pocos, la grafica ocupa el ancho disponible sin barra de desplazamiento. */}
-      <div className="ec-gr-lienzo" style={{ overflowX: serie.length > 16 ? "auto" : "visible" }}>
+      <div className="ec-gr-lienzo" style={{ overflowX: rotulos.length > 16 ? "auto" : "visible" }}>
         <svg
           viewBox={`0 0 ${ANCHO} ${ALTO}`}
           preserveAspectRatio="xMidYMid meet"
           className="ec-gr-svg"
-          style={{ minWidth: serie.length > 16 ? `${serie.length * 42}px` : undefined }}
+          style={{ minWidth: rotulos.length > 16 ? `${rotulos.length * 42}px` : undefined }}
           role="img"
           aria-labelledby={`${id}-titulo`}
         >
@@ -110,37 +146,69 @@ export default function GraficaDeBarras({
             );
           })}
 
-          {serie.map((punto, indice) => {
+          {rotulos.map((rotulo, indice) => {
             const xGrupo = MARGEN.izquierda + indice * anchoGrupo;
-            const comparado = serieComparacion[indice];
             const centro = xGrupo + anchoGrupo / 2;
-            const xPrincipal = hayComparacion ? centro - anchoBarra : centro - anchoBarra / 2;
+            // Las barras del grupo quedan centradas sobre su rotulo, una junto a otra.
+            const xInicial = centro - (anchoBarra * conjuntos.length) / 2;
 
             return (
               <g key={indice}>
-                <rect
-                  x={xPrincipal}
-                  y={MARGEN.arriba + areaAlto - alturaDe(punto.valor)}
-                  width={anchoBarra}
-                  height={alturaDe(punto.valor)}
-                  className="ec-gr-barra"
-                >
-                  <title>{`${punto.etiqueta}: ${Number(punto.valor).toLocaleString("es-GT")}`}</title>
-                </rect>
+                {conjuntos.map((conjunto, posicion) => {
+                  const valor = conjunto.valores[indice];
+                  const x = xInicial + posicion * anchoBarra;
+                  const etiquetaDelPunto = conjunto.etiquetasPropias?.[indice] ?? rotulo;
 
-                {hayComparacion && comparado && (
-                  <rect
-                    x={centro}
-                    y={MARGEN.arriba + areaAlto - alturaDe(comparado.valor)}
-                    width={anchoBarra}
-                    height={alturaDe(comparado.valor)}
-                    className="ec-gr-barra ec-gr-barra--comparacion"
-                  >
-                    <title>
-                      {`${comparado.etiqueta}: ${Number(comparado.valor).toLocaleString("es-GT")}`}
-                    </title>
-                  </rect>
-                )}
+                  if (valor === null || valor === undefined) {
+                    if (!etiquetaDeNulo) return null;
+                    const titulo = `${etiquetaDelPunto} · ${conjunto.nombre}: ${etiquetaDeNulo}`;
+                    // Con barras angostas el texto se encimaria con el de la barra vecina: se
+                    // dibuja una marca corta sobre el eje y el texto queda en el tooltip y la tabla.
+                    if (anchoBarra < 30) {
+                      return (
+                        <rect
+                          key={posicion}
+                          x={x + 1}
+                          y={MARGEN.arriba + areaAlto - 4}
+                          width={Math.max(anchoBarra - 2, 2)}
+                          height={4}
+                          className={`ec-gr-nulo-marca ${conjunto.serie ?? ""}`}
+                        >
+                          <title>{titulo}</title>
+                        </rect>
+                      );
+                    }
+                    return (
+                      <text
+                        key={posicion}
+                        x={x + anchoBarra / 2}
+                        y={MARGEN.arriba + areaAlto - 4}
+                        className="ec-gr-nulo"
+                        textAnchor="middle"
+                      >
+                        {etiquetaDeNulo}
+                        <title>{titulo}</title>
+                      </text>
+                    );
+                  }
+
+                  return (
+                    <rect
+                      key={posicion}
+                      x={x}
+                      y={MARGEN.arriba + areaAlto - alturaDe(valor)}
+                      width={anchoBarra}
+                      height={alturaDe(valor)}
+                      className={conjunto.clase}
+                    >
+                      <title>
+                        {hayLeyenda && multiserie
+                          ? `${etiquetaDelPunto} · ${conjunto.nombre}: ${formatear(valor)}`
+                          : `${etiquetaDelPunto}: ${formatear(valor)}`}
+                      </title>
+                    </rect>
+                  );
+                })}
 
                 {indice % saltoEtiqueta === 0 && (
                   <text
@@ -149,7 +217,12 @@ export default function GraficaDeBarras({
                     className="ec-gr-etiqueta"
                     textAnchor="middle"
                   >
-                    {punto.etiqueta}
+                    {lineasDeRotulo(rotulo, anchoGrupo * saltoEtiqueta).map((linea, numero) => (
+                      <tspan key={numero} x={centro} dy={numero === 0 ? 0 : 14}>
+                        {linea}
+                      </tspan>
+                    ))}
+                    <title>{rotulo}</title>
                   </text>
                 )}
               </g>
@@ -166,62 +239,112 @@ export default function GraficaDeBarras({
         </svg>
       </div>
 
-      {hayComparacion && (
+      {hayLeyenda && (
         <ul className="ec-gr-leyenda">
-          <li>
-            <span className="ec-gr-muestra" aria-hidden="true" />
-            {nombreSerie}
-          </li>
-          <li>
-            <span className="ec-gr-muestra ec-gr-muestra--comparacion" aria-hidden="true" />
-            {nombreComparacion}
-          </li>
+          {conjuntos.map((conjunto, posicion) => (
+            <li key={posicion}>
+              <span
+                className={
+                  conjunto.serie
+                    ? `ec-gr-muestra ec-gr-muestra--serie ${conjunto.serie}`
+                    : conjunto.clase.includes("comparacion")
+                      ? "ec-gr-muestra ec-gr-muestra--comparacion"
+                      : "ec-gr-muestra"
+                }
+                aria-hidden="true"
+              />
+              {conjunto.nombre}
+            </li>
+          ))}
         </ul>
       )}
 
       {/* La misma informacion, para quien no ve la grafica. `visually-hidden` de Bootstrap la
           saca de la vista sin sacarla del arbol de accesibilidad, al contrario que display:none. */}
-      <table className="visually-hidden">
-        <caption>{titulo}</caption>
-        <thead>
-          <tr>
-            <th scope="col">Período</th>
-            <th scope="col">{nombreSerie}</th>
-            {hayComparacion && <th scope="col">{nombreComparacion}</th>}
-          </tr>
-        </thead>
-        <tbody>
-          {serie.map((punto, indice) => (
-            <tr key={indice}>
-              <th scope="row">{punto.etiqueta}</th>
-              <td>{punto.valor}</td>
-              {hayComparacion && <td>{serieComparacion[indice]?.valor ?? ""}</td>}
+      {/* El envoltorio lleva visually-hidden y no la <table>: una tabla ignora el width de 1px de
+          esa clase y, con muchas columnas, desbordaba la pagina en horizontal. */}
+      <div className="visually-hidden">
+        <table>
+          <caption>{titulo}</caption>
+          <thead>
+            <tr>
+              <th scope="col">{encabezadoDeEtiquetas}</th>
+              {conjuntos.map((conjunto, posicion) => (
+                <th scope="col" key={posicion}>
+                  {conjunto.nombre}
+                </th>
+              ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {rotulos.map((rotulo, indice) => (
+              <tr key={indice}>
+                <th scope="row">{rotulo}</th>
+                {conjuntos.map((conjunto, posicion) => {
+                  const valor = conjunto.valores[indice];
+                  return (
+                    <td key={posicion}>
+                      {valor === null || valor === undefined ? (etiquetaDeNulo ?? "") : valor}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </figure>
   );
 }
 
-/** Sube el maximo al siguiente numero redondo, para que el eje termine en una cifra legible. */
-function redondearHaciaArriba(maximo) {
-  const magnitud = 10 ** Math.floor(Math.log10(maximo));
-  return Math.ceil(maximo / magnitud) * magnitud;
+/**
+ * La escala del eje Y: el tope y sus marcas, con un paso "redondo" (1, 2 o 5 por una potencia de
+ * diez) para que cada linea guia caiga en una cifra legible.
+ *
+ * Antes el tope se redondeaba a la potencia de diez y las marcas eran cuartos de el, redondeados:
+ * con un maximo de 22 salia un eje de 0, 8, 15, 23, 30, que no se lee. Ahora sale 0, 10, 20, 30.
+ * Las marcas son enteras y no se repiten aunque el maximo sea 1 (el caso de una base recien
+ * sembrada), que era el defecto que vigilaba el `new Set` de antes.
+ */
+function escalaDelEje(maximo) {
+  const bruto = Math.max(maximo, 1) / 4;
+  const magnitud = 10 ** Math.floor(Math.log10(bruto));
+  const paso = Math.max(
+    1,
+    [1, 2, 5, 10].map((m) => m * magnitud).find((p) => p >= bruto),
+  );
+  const tope = Math.ceil(Math.max(maximo, 1) / paso) * paso;
+  const marcas = [];
+  for (let marca = 0; marca <= tope; marca += paso) marcas.push(marca);
+  return { tope, marcas };
 }
 
 /**
- * Marcas del eje Y: cero, el tope y hasta tres intermedias, SIN REPETIR.
+ * Un rotulo largo ("Infeccion respiratoria aguda") no cabe bajo su grupo cuando hay muchos: se
+ * reparte en dos lineas por palabras, segun el ancho que le toca, y lo que no cabe se corta con
+ * puntos suspensivos. El nombre completo queda en el <title> y en la tabla accesible.
  *
- * El `new Set` no es cosmetico. Con un tope pequeno -el caso normal de una base recien sembrada,
- * o de un periodo con pocos datos- redondear las cinco fracciones daba numeros repetidos: con
- * tope 1 salia [0, 0, 1, 1, 1]. Eso dibujaba la misma linea guia cinco veces y, como la marca era
- * tambien la `key` de React, llenaba la consola de "Encountered two children with the same key".
- *
- * Ademas de quitar el aviso, arregla el eje: un eje que repite el mismo numero tres veces no se
- * puede leer.
+ * El ancho de un caracter se estima en 7 unidades del viewBox, el de --texto-xs.
  */
-function marcasDelEje(tope) {
-  const valores = [0, 0.25, 0.5, 0.75, 1].map((fraccion) => Math.round(tope * fraccion));
-  return [...new Set(valores)];
+function lineasDeRotulo(texto, anchoDisponible) {
+  const porLinea = Math.max(4, Math.floor(anchoDisponible / 7));
+  const palabras = String(texto ?? "")
+    .split(/\s+/)
+    .filter(Boolean);
+  const lineas = [""];
+
+  for (const palabra of palabras) {
+    const actual = lineas[lineas.length - 1];
+    const junto = actual ? `${actual} ${palabra}` : palabra;
+    if (junto.length <= porLinea) lineas[lineas.length - 1] = junto;
+    else if (lineas.length < 2) lineas.push(palabra);
+    else {
+      lineas[1] = `${lineas[1]} ${palabra}`;
+      break;
+    }
+  }
+
+  return lineas.map((linea) =>
+    linea.length > porLinea ? `${linea.slice(0, porLinea - 1)}…` : linea,
+  );
 }

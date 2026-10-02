@@ -1439,6 +1439,73 @@ textarea.form-control {
   text-align: center;
 }
 
+/* Una cifra que no se puede mostrar (protegida por privacidad, issue #916): se escribe sobre el eje
+   en vez de dibujar una barra, para que no se lea como cero. */
+.ec-gr-nulo {
+  fill: var(--color-text-muted);
+  font-family: var(--fuente-base);
+  font-size: var(--texto-xxs);
+}
+
+/* Una serie por jornada o comunidad comparada (issue #916). La clase de la serie fija --ec-serie y
+   cada pieza -barra, linea, punto, muestra de la leyenda- la lee. Los colores son chartSeries de
+   @ecopac/ui-tokens, publicados por theme.js. */
+.ec-gr-serie-1 {
+  --ec-serie: var(--color-serie-1);
+}
+
+.ec-gr-serie-2 {
+  --ec-serie: var(--color-serie-2);
+}
+
+.ec-gr-serie-3 {
+  --ec-serie: var(--color-serie-3);
+}
+
+.ec-gr-serie-4 {
+  --ec-serie: var(--color-serie-4);
+}
+
+.ec-gr-serie-5 {
+  --ec-serie: var(--color-serie-5);
+}
+
+.ec-gr-serie-6 {
+  --ec-serie: var(--color-serie-6);
+}
+
+.ec-gr-barra--serie {
+  fill: var(--ec-serie);
+}
+
+.ec-gr-muestra--serie {
+  background-color: var(--ec-serie);
+}
+
+/* La misma cifra protegida cuando la barra es demasiado angosta para escribirla: una marca corta,
+   con borde del color de su serie, que se distingue de un cero (sin marca). */
+.ec-gr-nulo-marca {
+  fill: var(--color-surface);
+  stroke: var(--ec-serie, var(--color-text-muted));
+  stroke-dasharray: 2 2;
+  stroke-width: 1;
+}
+
+/* Grafica de lineas (GraficaDeLineas.jsx): la evolucion en el tiempo. */
+.ec-gr-linea {
+  stroke: var(--ec-serie, var(--color-primary));
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.5;
+}
+
+.ec-gr-punto {
+  fill: var(--ec-serie, var(--color-primary));
+  stroke: var(--color-surface);
+  stroke-width: 2;
+}
+
 /* Fila de "elegir y agregar" (equipo y jornadas del proyecto): los controles comparten la fila y
    el boton conserva su ancho natural, en una sola linea. Antes el selector ocupaba todo lo que
    podia y el boton se partia en dos renglones. En pantalla angosta pasa a columna. */

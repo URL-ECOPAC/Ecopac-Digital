@@ -1,4 +1,5 @@
 import {
+  chartSeries,
   colors,
   spacing,
   moduleAccents,
@@ -20,6 +21,11 @@ export function aplicarTokens(elemento = document.documentElement) {
   for (const [nombre, valor] of Object.entries(colors)) {
     elemento.style.setProperty(`--color-${kebab(nombre)}`, valor);
   }
+
+  // Una grafica que compara varias jornadas o comunidades da un color a cada una (issue #916).
+  chartSeries.forEach((valor, indice) => {
+    elemento.style.setProperty(`--color-serie-${indice + 1}`, valor);
+  });
 
   for (const [nombre, valor] of Object.entries(spacing)) {
     elemento.style.setProperty(`--spacing-${nombre}`, `${valor}px`);

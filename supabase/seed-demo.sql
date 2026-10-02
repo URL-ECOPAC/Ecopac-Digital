@@ -615,6 +615,135 @@ INSERT INTO gastos (id, jornada_id, concepto, categoria, monto, fecha, responsab
    'de000001-0000-0000-0000-000000000004', 'aprobado', 'de000001-0000-0000-0000-000000000001', 'de000001-0000-0000-0000-000000000001', CURRENT_DATE - 29 + TIME '10:10')
 ON CONFLICT (id) DO NOTHING;
 
+-- ============================================================================
+-- 17. Historial de jornadas para el reporte de enfermedades (issue #916)
+-- ============================================================================
+-- Tres jornadas ya cerradas en meses anteriores, una por comunidad, con veinte pacientes cada una.
+-- Sin ellas el reporte de enfermedades no tiene nada que comparar ni ninguna evolucion que
+-- dibujar: el resto de este archivo trae dos diagnosticos en una sola jornada.
+--
+-- El reparto esta pensado para el reporte: la infeccion respiratoria sube y baja entre las tres
+-- jornadas, algunas enfermedades pasan de cinco casos y otras no (para ver la cifra protegida
+-- "< 5"), y uno de cada cuatro pacientes no tiene comunidad asignada o viene de otra, para que
+-- "comunidad de la jornada" y "comunidad del paciente" den resultados distintos.
+--
+-- Sigue dentro del bloque con session_replication_role = replica, por la misma razon que El
+-- Rosario: son jornadas finalizadas.
+INSERT INTO jornadas (id, nombre, fecha, comunidad_id, responsable_id, estado, proyecto_id, created_at, fecha_inicio_real, fecha_fin_real) VALUES
+  ('de00000a-0000-0000-0000-000000000004', 'Jornada Demo Nueva Esperanza - primera visita', CURRENT_DATE - 150,
+   (SELECT id FROM comunidades WHERE municipio_id = 1601 AND nombre = 'Comunidad Nueva Esperanza Demo'), 'de000001-0000-0000-0000-000000000001', 'finalizada',
+   'de00000e-0000-0000-0000-000000000001', CURRENT_DATE - 155, CURRENT_DATE - 150 + TIME '07:30', CURRENT_DATE - 150 + TIME '15:30'),
+  ('de00000a-0000-0000-0000-000000000005', 'Jornada Demo El Rosario - seguimiento', CURRENT_DATE - 95,
+   (SELECT id FROM comunidades WHERE municipio_id = 106 AND nombre = 'Caserio El Rosario Demo'), 'de000001-0000-0000-0000-000000000004', 'finalizada',
+   'de00000e-0000-0000-0000-000000000001', CURRENT_DATE - 100, CURRENT_DATE - 95 + TIME '07:30', CURRENT_DATE - 95 + TIME '15:30'),
+  ('de00000a-0000-0000-0000-000000000006', 'Jornada Demo Vista Hermosa - primera visita', CURRENT_DATE - 60,
+   (SELECT id FROM comunidades WHERE municipio_id = 401 AND nombre = 'Aldea Vista Hermosa Demo'), 'de000001-0000-0000-0000-000000000005', 'finalizada',
+   'de00000e-0000-0000-0000-000000000002', CURRENT_DATE - 65, CURRENT_DATE - 60 + TIME '07:30', CURRENT_DATE - 60 + TIME '15:30')
+ON CONFLICT (id) DO UPDATE SET
+  fecha = EXCLUDED.fecha,
+  created_at = EXCLUDED.created_at,
+  fecha_inicio_real = EXCLUDED.fecha_inicio_real,
+  fecha_fin_real = EXCLUDED.fecha_fin_real,
+  updated_at = NOW();
+
+INSERT INTO jornada_personal (id, jornada_id, perfil_id, rol_en_jornada, hora_inicio, hora_fin, responsabilidad) VALUES
+  ('de00000b-0000-0000-0000-000000000007', 'de00000a-0000-0000-0000-000000000004', 'de000001-0000-0000-0000-000000000004', 'medico', '07:30', '15:30', 'Consulta general'),
+  ('de00000b-0000-0000-0000-000000000008', 'de00000a-0000-0000-0000-000000000005', 'de000001-0000-0000-0000-000000000004', 'medico', '07:30', '15:30', 'Consulta general'),
+  ('de00000b-0000-0000-0000-000000000009', 'de00000a-0000-0000-0000-000000000006', 'de000001-0000-0000-0000-000000000005', 'medico', '07:30', '15:30', 'Consulta general')
+ON CONFLICT (id) DO NOTHING;
+
+-- Sesenta pacientes inventados, del 101 al 160. Del 101 al 120 se atienden en Nueva Esperanza,
+-- del 121 al 140 en El Rosario y del 141 al 160 en Vista Hermosa. La comunidad de cada uno rota
+-- entre las tres y "sin comunidad", asi que muchos no son de la comunidad de su jornada. Las
+-- edades van de 2 a 80 anios y el sexo se alterna.
+INSERT INTO pacientes (id, nombres, apellidos, fecha_nacimiento, sexo, comunidad_id, idioma)
+SELECT
+  ('de000005-0000-0000-0000-000000000' || n)::uuid,
+  (ARRAY['Ixchel', 'Kenan', 'Itzel', 'Balam', 'Nayeli', 'Tecun', 'Sak', 'Ajpu', 'Ixmucane', 'Kaqchi'])[(n % 10) + 1],
+  'Demo ' || n,
+  CURRENT_DATE - ((n * 397) % 28500 + 730),
+  (CASE WHEN n % 2 = 0 THEN 'Femenino' ELSE 'Masculino' END)::sexo_paciente,
+  CASE n % 4
+    WHEN 0 THEN (SELECT id FROM comunidades WHERE municipio_id = 106 AND nombre = 'Caserio El Rosario Demo')
+    WHEN 1 THEN (SELECT id FROM comunidades WHERE municipio_id = 401 AND nombre = 'Aldea Vista Hermosa Demo')
+    WHEN 2 THEN (SELECT id FROM comunidades WHERE municipio_id = 1601 AND nombre = 'Comunidad Nueva Esperanza Demo')
+    ELSE NULL
+  END,
+  'espanol'
+FROM generate_series(101, 160) AS n
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO expedientes (id, paciente_id, numero_ficha)
+SELECT ('de000006-0000-0000-0000-000000000' || n)::uuid,
+       ('de000005-0000-0000-0000-000000000' || n)::uuid,
+       'DEMO-0' || n
+FROM generate_series(101, 160) AS n
+ON CONFLICT (id) DO NOTHING;
+
+-- La jornada de cada paciente y la fecha de su consulta. Tabla temporal y no CTE porque la leen
+-- tres INSERT; se borra al final del bloque.
+DROP TABLE IF EXISTS demo_916_atendidos;
+CREATE TEMP TABLE demo_916_atendidos AS
+SELECT
+  n,
+  CASE WHEN n <= 120 THEN 'de00000a-0000-0000-0000-000000000004'
+       WHEN n <= 140 THEN 'de00000a-0000-0000-0000-000000000005'
+       ELSE 'de00000a-0000-0000-0000-000000000006' END::uuid AS jornada_id,
+  CASE WHEN n <= 120 THEN CURRENT_DATE - 150
+       WHEN n <= 140 THEN CURRENT_DATE - 95
+       ELSE CURRENT_DATE - 60 END + TIME '08:00' + (((n - 1) % 20) * INTERVAL '20 minutes') AS momento,
+  CASE WHEN n <= 140 THEN 'de000001-0000-0000-0000-000000000004'
+       ELSE 'de000001-0000-0000-0000-000000000005' END::uuid AS medico_id,
+  -- Diagnostico principal, por posicion dentro de su jornada.
+  CASE
+    WHEN n <= 120 THEN (ARRAY['J06.9', 'J06.9', 'A09', 'J06.9', 'B82.9', 'J06.9', 'A09', 'J06.9', 'E44.0', 'A09',
+                              'J06.9', 'B82.9', 'A09', 'J06.9', 'A09', 'B82.9', 'J06.9', 'E44.0', 'A09', 'B82.9'])[n - 100]
+    WHEN n <= 140 THEN (ARRAY['I10', 'J06.9', 'E11', 'I10', 'A09', 'J06.9', 'I10', 'E11', 'M54.5', 'J06.9',
+                              'I10', 'A09', 'E11', 'J06.9', 'I10', 'M54.5', 'E11', 'A09', 'I10', 'J06.9'])[n - 120]
+    ELSE (ARRAY['J06.9', 'A09', 'J06.9', 'K02.9', 'J06.9', 'B82.9', 'A09', 'J06.9', 'J06.9', 'K02.9',
+                'A09', 'J06.9', 'B82.9', 'J06.9', 'A09', 'K02.9', 'J06.9', 'B82.9', 'A09', 'J06.9'])[n - 140]
+  END AS principal
+FROM generate_series(101, 160) AS n;
+
+INSERT INTO atenciones (id, paciente_id, jornada_id, created_at, updated_at, cerrada_en, motivo_cierre)
+SELECT ('de000014-0000-0000-0000-000000000' || n)::uuid,
+       ('de000005-0000-0000-0000-000000000' || n)::uuid,
+       jornada_id, momento, momento, momento + INTERVAL '40 minutes', 'Atencion completada'
+FROM demo_916_atendidos
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO consultas (id, expediente_id, atencion_id, medico_id, jornada_id, motivo_consulta, created_at, updated_at)
+SELECT ('de000016-0000-0000-0000-000000000' || n)::uuid,
+       ('de000006-0000-0000-0000-000000000' || n)::uuid,
+       ('de000014-0000-0000-0000-000000000' || n)::uuid,
+       medico_id, jornada_id, 'Consulta general', momento + INTERVAL '15 minutes', momento + INTERVAL '15 minutes'
+FROM demo_916_atendidos
+ON CONFLICT (id) DO NOTHING;
+
+-- El principal de cada consulta, y dos secundarios frecuentes: fiebre en uno de cada tres y anemia
+-- en uno de cada cuatro. Con "principal y secundarios" el reporte los cuenta; con "solo
+-- principal", no.
+INSERT INTO consulta_diagnostico (id, consulta_id, diagnostico_id, es_principal)
+SELECT v.id, v.consulta_id, d.id, v.es_principal
+FROM (
+  SELECT ('de000017-0000-0000-0000-000000000' || n)::uuid AS id,
+         ('de000016-0000-0000-0000-000000000' || n)::uuid AS consulta_id,
+         principal AS codigo, TRUE AS es_principal
+  FROM demo_916_atendidos
+  UNION ALL
+  SELECT ('de000017-0000-0000-0000-000000000' || (n + 100))::uuid,
+         ('de000016-0000-0000-0000-000000000' || n)::uuid, 'R50.9', FALSE
+  FROM demo_916_atendidos WHERE n % 3 = 0 AND principal <> 'R50.9'
+  UNION ALL
+  SELECT ('de000017-0000-0000-0000-000000000' || (n + 200))::uuid,
+         ('de000016-0000-0000-0000-000000000' || n)::uuid, 'D50.9', FALSE
+  FROM demo_916_atendidos WHERE n % 4 = 0
+) AS v
+JOIN diagnosticos d ON d.codigo = v.codigo
+ON CONFLICT (id) DO NOTHING;
+
+DROP TABLE demo_916_atendidos;
+
 SET session_replication_role = DEFAULT;
 
 -- Las alertas de vencimiento no se siembran: las genera la rutina programada
