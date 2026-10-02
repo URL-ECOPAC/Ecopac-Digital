@@ -407,7 +407,7 @@ export async function actualizarJornada(id, datos, { rol } = {}) {
 
     const { data: filaActual, error: errorDeLectura } = await supabase
       .from("jornadas")
-      .select("estado")
+      .select("estado, botiquinBodegaId:botiquin_bodega_id")
       .eq("id", id)
       .maybeSingle();
 
@@ -439,6 +439,19 @@ export async function actualizarJornada(id, datos, { rol } = {}) {
 }
 
 /**
+ * Por que no se puede usar una bodega movil que ya esta en otra jornada en curso (00179).
+ *
+ * @param {string} otraJornada Nombre de la jornada que la tiene.
+ * @returns {string}
+ */
+export function mensajeDeBodegaOcupada(otraJornada) {
+  return (
+    `La bodega móvil ya está en la jornada «${otraJornada}», que sigue en curso. ` +
+    "Finalízala o elige otra bodega para esta jornada."
+  );
+}
+
+/**
  * Cambia el estado de una jornada, validando que la transicion sea legal (issue #171).
  *
  * Solo se lee la columna estado (no obtenerJornada() completa): igual que actualizarJornada(),
@@ -465,7 +478,7 @@ export async function cambiarEstadoJornada(id, nuevoEstado, { rol } = {}) {
 
     const { data: filaActual, error: errorDeLectura } = await supabase
       .from("jornadas")
-      .select("estado")
+      .select("estado, botiquinBodegaId:botiquin_bodega_id")
       .eq("id", id)
       .maybeSingle();
 
@@ -484,6 +497,28 @@ export async function cambiarEstadoJornada(id, nuevoEstado, { rol } = {}) {
         jornada: null,
         error: { ...construirError(CODIGOS_DE_ERROR_DE_SUPABASE.CHECK), mensaje: errores.estado },
       };
+    }
+
+    // 00179: la bodega movil no esta en dos jornadas en curso. La base lo rechaza igual, pero su
+    // mensaje no llega a la pantalla; aqui se dice cual es la otra jornada.
+    if (nuevoEstado === ESTADOS_JORNADA.EN_CURSO && filaActual.botiquinBodegaId) {
+      const { data: otra } = await supabase
+        .from("jornadas")
+        .select("nombre")
+        .eq("botiquin_bodega_id", filaActual.botiquinBodegaId)
+        .eq("estado", ESTADOS_JORNADA.EN_CURSO)
+        .neq("id", id)
+        .limit(1)
+        .maybeSingle();
+      if (otra) {
+        return {
+          jornada: null,
+          error: {
+            ...construirError(CODIGOS_DE_ERROR_DE_SUPABASE.CHECK),
+            mensaje: mensajeDeBodegaOcupada(otra.nombre),
+          },
+        };
+      }
     }
 
     const { data, error } = await supabase

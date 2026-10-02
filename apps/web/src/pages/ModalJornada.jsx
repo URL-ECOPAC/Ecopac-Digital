@@ -52,6 +52,10 @@ export default function ModalJornada({ visible = true, jornada, rol, onClose, on
     registrarComunidad,
     erroresComunidad,
     creandoComunidad,
+    puedeCrearBodega,
+    registrarBodegaMovil,
+    erroresBodega,
+    creandoBodega,
   } = useFormularioJornada({ jornada, rol });
 
   // Deshabilita el formulario mientras se envia Y mientras se carga la jornada completa para
@@ -143,6 +147,37 @@ export default function ModalJornada({ visible = true, jornada, rol, onClose, on
           onChange={(valor) => setCampo(campo.id, valor)}
           error={errores[campo.id]}
           disabled={bloqueado}
+        />
+      );
+    }
+
+    // Toda jornada lleva bodega movil (00178): si no hay ninguna, se crea aqui mismo.
+    if (campo.id === "botiquinBodega") {
+      const opciones = catalogos.bodegas ?? [];
+      let placeholder = "Selecciona una bodega móvil";
+      if (opciones.length === 0) {
+        placeholder = catalogosCargados?.bodegas
+          ? "No hay bodegas móviles: crea una"
+          : "Cargando...";
+      }
+      return (
+        <SelectorConAlta
+          key={campo.id}
+          label={campo.label}
+          requerido={campo.validacion?.requerido}
+          value={valores.botiquinBodega || null}
+          options={opciones}
+          onSelect={(valor) => setCampo("botiquinBodega", valor)}
+          placeholder={placeholder}
+          // Sin opciones el selector no se bloquea: el boton de crear vive en el mismo control.
+          disabled={bloqueado}
+          error={errores.botiquinBodega}
+          puedeCrear={puedeCrearBodega}
+          etiquetaAlta="Crear una bodega móvil"
+          labelNuevo="Nombre de la bodega móvil"
+          onCrear={registrarBodegaMovil}
+          erroresAlta={erroresBodega}
+          creando={creandoBodega}
         />
       );
     }

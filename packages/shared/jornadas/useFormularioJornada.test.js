@@ -137,6 +137,17 @@ describe("opcionesDeBodegaDeBotiquin", () => {
     expect(opcionesDeBodegaDeBotiquin(bodegas)).toEqual([{ value: "b2", label: "Botiquin A" }]);
   });
 
+  it("dice si la bodega esta en otra jornada en curso (00179), pero no si es esta misma", () => {
+    const bodegas = [{ id: "b2", nombre: "Botiquin A", esMovil: true }];
+    const ocupadas = { b2: { id: "j-otra", nombre: "Jornada Norte" } };
+    expect(opcionesDeBodegaDeBotiquin(bodegas, { ocupadas })).toEqual([
+      { value: "b2", label: "Botiquin A (en curso en Jornada Norte)" },
+    ]);
+    expect(opcionesDeBodegaDeBotiquin(bodegas, { ocupadas, jornadaId: "j-otra" })).toEqual([
+      { value: "b2", label: "Botiquin A" },
+    ]);
+  });
+
   it("sin ninguna movil no ofrece nada", () => {
     expect(opcionesDeBodegaDeBotiquin([{ id: "b1", nombre: "Bodega Principal" }])).toEqual([]);
     expect(opcionesDeBodegaDeBotiquin(null)).toEqual([]);

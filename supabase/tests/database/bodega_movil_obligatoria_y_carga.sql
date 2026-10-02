@@ -1,4 +1,4 @@
--- Pruebas de la 00178: toda jornada nueva lleva bodega movil, la administradora la carga desde
+-- Pruebas de la 00178 y la 00179: toda jornada nueva lleva bodega movil, la administradora la carga desde
 -- otra bodega, y fn_consumo_de_insumos_de_jornada dice lo cargado, lo entregado y lo que queda.
 -- Corre con: supabase test db
 --
@@ -10,7 +10,7 @@
 
 BEGIN;
 
-SELECT plan(17);
+SELECT plan(27);
 
 -- ============================================================================
 -- Setup
@@ -222,6 +222,82 @@ SELECT is(
    WHERE lote_id = 'd4000000-0000-0000-0000-000000000001'),
   0,
   'una receta anulada no cuenta como entregada'
+);
+
+-- ============================================================================
+-- 4. Traslados y devolucion (00179)
+-- ============================================================================
+SELECT set_config('request.jwt.claim.sub', 'd0000000-0000-0000-0000-000000000179', TRUE);
+
+SELECT throws_ok(
+  $$ SELECT fn_trasladar_entre_bodegas('d4000000-0000-0000-0000-000000000001',
+       'd1000000-0000-0000-0000-000000000001', 'd1000000-0000-0000-0000-000000000003', 5) $$,
+  '42501', NULL,
+  'solo la administradora traslada entre bodegas'
+);
+
+SELECT set_config('request.jwt.claim.sub', 'd0000000-0000-0000-0000-000000000178', TRUE);
+
+SELECT lives_ok(
+  $$ SELECT fn_trasladar_entre_bodegas('d4000000-0000-0000-0000-000000000001',
+       'd1000000-0000-0000-0000-000000000001', 'd1000000-0000-0000-0000-000000000003', 5) $$,
+  'la administradora traslada 5 unidades'
+);
+
+SELECT is(
+  pg_temp.stock('d4000000-0000-0000-0000-000000000001', 'd1000000-0000-0000-0000-000000000003'),
+  5,
+  'el traslado entra a la bodega destino, no se pierde'
+);
+
+SELECT is(
+  pg_temp.stock('d4000000-0000-0000-0000-000000000001', 'd1000000-0000-0000-0000-000000000001'),
+  25,
+  'y sale del origen'
+);
+
+SELECT throws_ok(
+  $$ SELECT fn_devolver_de_bodega_de_jornada('d7000000-0000-0000-0000-000000000178',
+       'd4000000-0000-0000-0000-000000000001', 'd1000000-0000-0000-0000-000000000003', 1) $$,
+  '23514', NULL,
+  'lo que sobra se devuelve a una bodega fija'
+);
+
+SELECT lives_ok(
+  $$ SELECT fn_devolver_de_bodega_de_jornada('d7000000-0000-0000-0000-000000000178',
+       'd4000000-0000-0000-0000-000000000001', 'd1000000-0000-0000-0000-000000000001', 8) $$,
+  'se devuelven 8 a la bodega fija'
+);
+
+SELECT results_eq(
+  $$ SELECT cargado::int, devuelto::int, en_bodega::int
+     FROM fn_consumo_de_insumos_de_jornada('d7000000-0000-0000-0000-000000000178')
+     WHERE lote_id = 'd4000000-0000-0000-0000-000000000001' $$,
+  $$ VALUES (20, 8, 12) $$,
+  'el consumo cuenta lo devuelto y el ingreso a la fija no pasa por cargado'
+);
+
+-- ============================================================================
+-- 5. Una bodega movil no esta en dos jornadas en curso (00179)
+-- ============================================================================
+INSERT INTO jornadas (id, nombre, fecha, comunidad_id, responsable_id, proyecto_id, botiquin_bodega_id)
+VALUES ('d7000000-0000-0000-0000-000000000179', 'Otra jornada 179',
+        (NOW() AT TIME ZONE 'America/Guatemala')::date,
+        'd6000000-0000-0000-0000-000000000178', 'd0000000-0000-0000-0000-000000000178',
+        'd5000000-0000-0000-0000-000000000178', 'd1000000-0000-0000-0000-000000000002');
+
+SELECT pass('una jornada planificada si comparte la bodega con otra en curso');
+
+SELECT throws_ok(
+  $$ UPDATE jornadas SET estado = 'en curso' WHERE id = 'd7000000-0000-0000-0000-000000000179' $$,
+  '55000', NULL,
+  'no se inicia con una bodega que esta en otra jornada en curso'
+);
+
+SELECT lives_ok(
+  $$ UPDATE jornadas SET botiquin_bodega_id = 'd1000000-0000-0000-0000-000000000003', estado = 'en curso'
+     WHERE id = 'd7000000-0000-0000-0000-000000000179' $$,
+  'con otra bodega movil si se inicia'
 );
 
 SELECT * FROM finish();

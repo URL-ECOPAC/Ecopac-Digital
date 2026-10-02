@@ -45,7 +45,8 @@ const FILA = {
   costo_unitario: "0.50",
   cargado: 200,
   entregado: 35,
-  en_bodega: 165,
+  devuelto: 15,
+  en_bodega: 150,
 };
 
 describe("aConsumoDeLote", () => {
@@ -59,10 +60,12 @@ describe("aConsumoDeLote", () => {
       costoUnitario: 0.5,
       cargado: 200,
       entregado: 35,
-      enBodega: 165,
+      devuelto: 15,
+      enBodega: 150,
       valorCargado: 100,
       valorEntregado: 17.5,
-      valorEnBodega: 82.5,
+      valorDevuelto: 7.5,
+      valorEnBodega: 75,
     });
   });
 
@@ -80,7 +83,8 @@ describe("resumirConsumoDeJornada", () => {
     expect(resumirConsumoDeJornada(consumo)).toEqual({
       valorCargado: 100,
       valorEntregado: 17.5,
-      valorEnBodega: 82.5,
+      valorDevuelto: 7.5,
+      valorEnBodega: 75,
       unidadesEntregadas: 70,
       lotesSinCosto: 1,
     });

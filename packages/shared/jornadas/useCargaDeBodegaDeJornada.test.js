@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { estadoDeLaCarga } from "./useCargaDeBodegaDeJornada.js";
+import { opcionesDeBodegaDeDevolucion } from "./useDevolucionDeBodegaDeJornada.js";
 
 const LOTE = { loteId: "l-1", bodegaId: "b-1", bodega: "Bodega Principal", cantidadDisponible: 30 };
 
@@ -36,5 +37,21 @@ describe("estadoDeLaCarga", () => {
 
   it("mientras carga los lotes no dice que no hay existencia", () => {
     expect(estadoDeLaCarga({ medicamentoId: "m-1", cargando: true }).sinExistencia).toBe(false);
+  });
+});
+
+describe("opcionesDeBodegaDeDevolucion", () => {
+  it("ofrece solo bodegas fijas, la principal primero", () => {
+    expect(
+      opcionesDeBodegaDeDevolucion([
+        { id: "b1", nombre: "Bodega Norte", esMovil: false },
+        { id: "b2", nombre: "Botiquin A", esMovil: true },
+        { id: "b3", nombre: "Bodega Principal", esMovil: false, esPrincipal: true },
+      ]),
+    ).toEqual([
+      { value: "b3", label: "Bodega Principal" },
+      { value: "b1", label: "Bodega Norte" },
+    ]);
+    expect(opcionesDeBodegaDeDevolucion(null)).toEqual([]);
   });
 });

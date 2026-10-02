@@ -3,7 +3,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import { claveDeLoteDeSalida, estadoDeLaSalida } from "./useRegistroSalida.js";
+import { claveDeLoteDeSalida, estadoDeLaSalida, motivosDeSalida } from "./useRegistroSalida.js";
 
 const LOTE = { loteId: "l-1", bodegaId: "b-1", cantidadDisponible: 40 };
 
@@ -63,5 +63,21 @@ describe("estadoDeLaSalida", () => {
     expect(estadoDeLaSalida({ ...completo, cantidad: "" }).puedeGuardar).toBe(false);
     expect(estadoDeLaSalida({ ...completo, cantidad: "2.5" }).puedeGuardar).toBe(false);
     expect(estadoDeLaSalida({ ...completo, cantidad: "0" }).puedeGuardar).toBe(false);
+  });
+});
+
+// 00179: un traslado mueve el lote a otra bodega; antes solo salia del origen.
+describe("traslado entre bodegas", () => {
+  const LOTE = { loteId: "l-1", bodegaId: "b-1", cantidadDisponible: 10 };
+
+  it("sin bodega destino no se puede guardar", () => {
+    const base = { motivo: "traslado", medicamentoId: "m-1", loteSeleccionado: LOTE, cantidad: 2 };
+    expect(estadoDeLaSalida(base).puedeGuardar).toBe(false);
+    expect(estadoDeLaSalida({ ...base, bodegaDestinoId: "b-2" }).puedeGuardar).toBe(true);
+  });
+
+  it("solo la administradora ve el motivo traslado", () => {
+    expect(motivosDeSalida("administrador").map((opcion) => opcion.value)).toContain("traslado");
+    expect(motivosDeSalida("medico").map((opcion) => opcion.value)).not.toContain("traslado");
   });
 });

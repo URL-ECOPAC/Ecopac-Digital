@@ -48,18 +48,52 @@ export async function cargarInsumoABodegaDeJornada({
 }
 
 /**
+ * Devuelve `cantidad` de un lote de la bodega movil de la jornada a una bodega fija
+ * (fn_devolver_de_bodega_de_jornada, 00179). Es lo que sobra al terminar la jornada; se puede con la
+ * jornada finalizada. Solo la administradora.
+ *
+ * @param {{ jornadaId: string, loteId: string, bodegaDestinoId: string,
+ *   cantidad: number|string }} datos
+ * @returns {Promise<{ ingresoId: string|null, error: object|null }>}
+ */
+export async function devolverDeBodegaDeJornada({
+  jornadaId,
+  loteId,
+  bodegaDestinoId,
+  cantidad,
+} = {}) {
+  if (!jornadaId || !loteId || !bodegaDestinoId) return { ingresoId: null, error: null };
+
+  try {
+    const { data, error } = await obtenerSupabase().rpc("fn_devolver_de_bodega_de_jornada", {
+      p_jornada_id: jornadaId,
+      p_lote_id: loteId,
+      p_bodega_destino_id: bodegaDestinoId,
+      p_cantidad: Number(cantidad),
+    });
+
+    if (error) return { ingresoId: null, error: normalizarError(error) };
+    return { ingresoId: data ?? null, error: null };
+  } catch (error) {
+    return { ingresoId: null, error: normalizarError(error) };
+  }
+}
+
+/**
  * Una fila de fn_consumo_de_insumos_de_jornada con sus valores. Un costo desconocido deja los
  * valores en null: "no se sabe" no es cero. Pura y exportada para probarla sin Supabase.
  *
  * @param {object} fila
  * @returns {object} Con: loteId, medicamentoId, articulo, numeroLote, fechaVencimiento,
- *   costoUnitario, cargado, entregado, enBodega, valorCargado, valorEntregado, valorEnBodega.
+ *   costoUnitario, cargado, entregado, devuelto, enBodega, valorCargado, valorEntregado,
+ *   valorDevuelto, valorEnBodega.
  */
 export function aConsumoDeLote(fila) {
   const tieneCosto = fila.costo_unitario !== null && fila.costo_unitario !== undefined;
   const costo = tieneCosto ? Number(fila.costo_unitario) : null;
   const cargado = Number(fila.cargado ?? 0);
   const entregado = Number(fila.entregado ?? 0);
+  const devuelto = Number(fila.devuelto ?? 0);
   const enBodega = Number(fila.en_bodega ?? 0);
   const valorDe = (cantidad) => (tieneCosto ? aCentavos(costo * cantidad) : null);
 
@@ -72,26 +106,29 @@ export function aConsumoDeLote(fila) {
     costoUnitario: costo,
     cargado,
     entregado,
+    devuelto,
     enBodega,
     valorCargado: valorDe(cargado),
     valorEntregado: valorDe(entregado),
+    valorDevuelto: valorDe(devuelto),
     valorEnBodega: valorDe(enBodega),
   };
 }
 
 /**
- * Totales del consumo de una jornada: el valor cargado, el entregado y el que queda en la bodega,
+ * Totales del consumo de una jornada: el valor cargado, el entregado, el devuelto y el que queda,
  * sumando solo lo que tiene costo, y cuantos lotes no lo tienen.
  *
  * @param {ReturnType<typeof aConsumoDeLote>[]} consumo
- * @returns {{ valorCargado: number, valorEntregado: number, valorEnBodega: number,
- *   unidadesEntregadas: number, lotesSinCosto: number }}
+ * @returns {{ valorCargado: number, valorEntregado: number, valorDevuelto: number,
+ *   valorEnBodega: number, unidadesEntregadas: number, lotesSinCosto: number }}
  */
 export function resumirConsumoDeJornada(consumo = []) {
   const suma = (clave) => aCentavos(consumo.reduce((total, fila) => total + (fila[clave] ?? 0), 0));
   return {
     valorCargado: suma("valorCargado"),
     valorEntregado: suma("valorEntregado"),
+    valorDevuelto: suma("valorDevuelto"),
     valorEnBodega: suma("valorEnBodega"),
     unidadesEntregadas: consumo.reduce((total, fila) => total + fila.entregado, 0),
     lotesSinCosto: consumo.filter((fila) => fila.costoUnitario === null).length,
@@ -100,7 +137,7 @@ export function resumirConsumoDeJornada(consumo = []) {
 
 /**
  * Lo que consumio una jornada, lote por lote (fn_consumo_de_insumos_de_jornada, 00178): lo cargado
- * a su bodega movil, lo entregado en sus recetas y lo que queda en la bodega.
+ * a su bodega movil, lo entregado en sus recetas, lo devuelto (00179) y lo que queda en la bodega.
  *
  * @param {string} jornadaId UUID de la jornada.
  * @returns {Promise<{ consumo: object[], error: object|null }>}

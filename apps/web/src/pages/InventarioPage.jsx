@@ -1068,6 +1068,7 @@ export default function InventarioPage() {
           onExito={cargarDatos}
           medicamentos={inventarioRaw}
           usuarioId={usuarioActual?.id}
+          rol={rol}
         />
       )}
 

@@ -112,7 +112,7 @@ export const COLUMNAS_HISTORIAL_JORNADA = [
 
 /**
  * Consumo de insumos de una jornada (fn_consumo_de_insumos_de_jornada, 00178), lote por lote: lo
- * cargado a su bodega movil, lo entregado en sus recetas y lo que queda, con lo que vale lo
+ * cargado a su bodega movil, lo entregado en sus recetas, lo devuelto y lo que queda, con lo que vale lo
  * entregado. Las filas salen de aConsumoDeLote() (bodega.api.js).
  */
 export const COLUMNAS_CONSUMO_DE_JORNADA = [
@@ -120,6 +120,7 @@ export const COLUMNAS_CONSUMO_DE_JORNADA = [
   { id: "numeroLote", label: "Lote", tipo: TIPOS_DE_PRESENTACION.TEXTO },
   { id: "cargado", label: "Cargado", tipo: TIPOS_DE_PRESENTACION.NUMERO },
   { id: "entregado", label: "Entregado", tipo: TIPOS_DE_PRESENTACION.NUMERO },
+  { id: "devuelto", label: "Devuelto", tipo: TIPOS_DE_PRESENTACION.NUMERO },
   { id: "enBodega", label: "En la bodega", tipo: TIPOS_DE_PRESENTACION.NUMERO },
   { id: "costoUnitario", label: "Costo unitario", tipo: TIPOS_DE_PRESENTACION.MONEDA },
   { id: "valorEntregado", label: "Valor entregado", tipo: TIPOS_DE_PRESENTACION.MONEDA },

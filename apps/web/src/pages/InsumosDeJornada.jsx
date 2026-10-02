@@ -3,9 +3,10 @@ import { Alert, Button } from "react-bootstrap";
 
 import { formatearMoneda, puedeCargarBodegaDeJornada, useInsumosDeJornada } from "@ecopac/shared";
 
-import { DataList, PrimaryButton, StatCard } from "../components";
+import { DataList, PrimaryButton, SecondaryButton, StatCard } from "../components";
 import ContenidoDeBodega from "../components/ContenidoDeBodega";
 import ModalCargaABodega from "./ModalCargaABodega";
+import ModalDevolucionDeBodega from "./ModalDevolucionDeBodega";
 import ModalInsumoPrevisto from "./ModalInsumoPrevisto";
 
 // Pestana Insumos del detalle de una jornada. Desde la 00178 sus insumos son lo que hay en su bodega
@@ -15,7 +16,8 @@ import ModalInsumoPrevisto from "./ModalInsumoPrevisto";
 // La lista de previstos (jornada_insumos, 00151) ya no se llena; si una jornada anterior la tiene,
 // se sigue viendo debajo, con su total, y se puede corregir o quitar.
 //
-// `soloConsulta`: la jornada esta finalizada; nada se carga ni se corrige.
+// `soloConsulta`: la jornada esta finalizada; nada se carga ni se corrige. Lo que sobra si se
+// devuelve a una bodega fija ("Devolver a otra bodega", 00179): es justo cuando sobra.
 export default function InsumosDeJornada({
   jornadaId,
   bodega = null,
@@ -44,6 +46,7 @@ export default function InsumosDeJornada({
   const [insumoEnEdicion, setInsumoEnEdicion] = useState(null);
   const [insumoPorQuitar, setInsumoPorQuitar] = useState(null);
   const [cargandoABodega, setCargandoABodega] = useState(false);
+  const [devolviendo, setDevolviendo] = useState(false);
   const [aviso, setAviso] = useState(null);
   const modifica = puedeGestionar && !soloConsulta;
   const puedeCargar = puedeCargarBodegaDeJornada(rol) && Boolean(bodega?.id);
@@ -88,11 +91,18 @@ export default function InsumosDeJornada({
               </p>
             </div>
             {puedeCargar && (
-              <PrimaryButton
-                title="Cargar a la bodega"
-                onClick={() => setCargandoABodega(true)}
-                disabled={soloConsulta}
-              />
+              <div className="d-flex flex-wrap gap-2">
+                <SecondaryButton
+                  title="Devolver a otra bodega"
+                  onClick={() => setDevolviendo(true)}
+                  disabled={existenciasDeBodega.contenido.length === 0}
+                />
+                <PrimaryButton
+                  title="Cargar a la bodega"
+                  onClick={() => setCargandoABodega(true)}
+                  disabled={soloConsulta}
+                />
+              </div>
             )}
           </div>
           <ContenidoDeBodega
@@ -175,6 +185,21 @@ export default function InsumosDeJornada({
           errores={errores}
           onClose={() => setInsumoEnEdicion(null)}
           onGuardar={guardar}
+        />
+      )}
+
+      {devolviendo && (
+        <ModalDevolucionDeBodega
+          visible
+          jornadaId={jornadaId}
+          bodega={bodega}
+          contenido={existenciasDeBodega.contenido}
+          rol={rol}
+          onClose={() => setDevolviendo(false)}
+          onDevuelto={() => {
+            recargarBodega();
+            alCargar?.();
+          }}
         />
       )}
 

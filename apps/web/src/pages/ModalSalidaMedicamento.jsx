@@ -1,4 +1,4 @@
-import { useRegistroSalida } from "@ecopac/shared";
+import { MOTIVO_TRASLADO, useRegistroSalida } from "@ecopac/shared";
 import { useCerrarAlTocarFuera } from "../hooks/useCerrarAlTocarFuera";
 import PrimaryButton from "../components/PrimaryButton";
 import SecondaryButton from "../components/SecondaryButton";
@@ -10,10 +10,15 @@ export function ModalSalidaMedicamento({
   onExito,
   medicamentos = [],
   usuarioId,
+  rol,
 }) {
   const {
+    motivos,
     motivo,
     setMotivo,
+    bodegasDestino,
+    bodegaDestinoId,
+    setBodegaDestinoId,
     medicamentoId,
     setMedicamentoId,
     claveLoteSeleccionado,
@@ -29,6 +34,7 @@ export function ModalSalidaMedicamento({
     guardarSalida,
   } = useRegistroSalida({
     usuarioId,
+    rol,
     // onExito (issue #859) faltaba: el modal se cerraba solo, sin avisarle al padre que recargara
     // lotesRaw/existenciasRaw. La salida SI descontaba el stock en la base -para administracion,
     // en el acto (fn_autoaprobar_movimiento_inventario); para medico y voluntario, al aprobarse-,
@@ -160,12 +166,52 @@ export function ModalSalidaMedicamento({
                 }}
               >
                 <option value="">Seleccione motivo...</option>
-                <option value="entrega">Entrega a paciente</option>
-                <option value="traslado">Traslado entre bodegas</option>
-                <option value="baja">Baja por vencimiento</option>
-                <option value="donacion">Donación a terceros</option>
+                {motivos.map((opcion) => (
+                  <option key={opcion.value} value={opcion.value}>
+                    {opcion.label}
+                  </option>
+                ))}
               </select>
             </div>
+
+            {/* 00179: un traslado entra a otra bodega; antes solo salia del origen y el
+                inventario desaparecia. */}
+            {motivo === MOTIVO_TRASLADO && (
+              <div>
+                <label
+                  htmlFor="bodega-destino-salida"
+                  style={{
+                    display: "block",
+                    fontSize: "var(--texto-xs)",
+                    fontWeight: "var(--peso-bold)",
+                    color: "var(--color-text)",
+                    marginBottom: "6px",
+                  }}
+                >
+                  Bodega destino *
+                </label>
+                <select
+                  id="bodega-destino-salida"
+                  value={bodegaDestinoId}
+                  onChange={(e) => setBodegaDestinoId(e.target.value)}
+                  style={{
+                    width: "100%",
+                    padding: "10px 14px",
+                    borderRadius: "10px",
+                    border: "1px solid var(--color-border)",
+                    fontSize: "var(--texto-xs)",
+                    backgroundColor: "var(--color-background)",
+                  }}
+                >
+                  <option value="">Seleccione bodega...</option>
+                  {bodegasDestino.map((bodega) => (
+                    <option key={bodega.value} value={bodega.value}>
+                      {bodega.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             {/* Selección de Medicamento */}
             <div>

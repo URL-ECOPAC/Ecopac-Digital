@@ -36,6 +36,7 @@ export * from "./useAsignacionPersonal.js";
 export * from "./useCargaDeBodegaDeJornada.js";
 export * from "./useConsumoDeJornada.js";
 export * from "./useCuadroTurnos.js";
+export * from "./useDevolucionDeBodegaDeJornada.js";
 export * from "./useDetalleJornada.js";
 export * from "./useEdicionTurno.js";
 export * from "./useFormularioJornada.js";

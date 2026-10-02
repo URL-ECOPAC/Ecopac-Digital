@@ -43,7 +43,9 @@
 -- La bodega principal ya la siembra la migracion 00017; aqui solo se agrega la bodega
 -- movil que "viaja" con la jornada en curso.
 INSERT INTO bodegas (id, nombre, ubicacion, es_movil) VALUES
-  ('de000002-0000-0000-0000-000000000001', 'Bodega Movil Demo', NULL, TRUE)
+  ('de000002-0000-0000-0000-000000000001', 'Bodega Movil Demo', NULL, TRUE),
+  -- 00179: una bodega movil no esta en dos jornadas en curso; la planificada lleva la suya.
+  ('de000002-0000-0000-0000-000000000002', 'Bodega Movil Demo 2', NULL, TRUE)
 ON CONFLICT DO NOTHING;
 
 INSERT INTO proveedores (id, nombre, contacto, tipo) VALUES
@@ -424,7 +426,7 @@ ON CONFLICT (id) DO NOTHING;
 INSERT INTO jornadas (id, nombre, fecha, comunidad_id, responsable_id, estado, proyecto_id, botiquin_bodega_id) VALUES
   ('de00000a-0000-0000-0000-000000000003', 'Jornada Demo Nueva Esperanza', CURRENT_DATE + 20,
    (SELECT id FROM comunidades WHERE municipio_id = 1601 AND nombre = 'Comunidad Nueva Esperanza Demo'), 'de000001-0000-0000-0000-000000000001', 'planificada',
-   'de00000e-0000-0000-0000-000000000001', (SELECT id FROM bodegas WHERE nombre = 'Bodega Movil Demo'))
+   'de00000e-0000-0000-0000-000000000001', (SELECT id FROM bodegas WHERE nombre = 'Bodega Movil Demo 2'))
 ON CONFLICT (id) DO UPDATE SET fecha = EXCLUDED.fecha, botiquin_bodega_id = EXCLUDED.botiquin_bodega_id, updated_at = NOW();
 
 INSERT INTO jornada_personal (id, jornada_id, perfil_id, rol_en_jornada, hora_inicio, hora_fin, responsabilidad) VALUES

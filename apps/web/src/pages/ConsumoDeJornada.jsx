@@ -5,7 +5,8 @@ import { formatearMoneda, useConsumoDeJornada } from "@ecopac/shared";
 import { DataList, StatCard } from "../components";
 
 // Pestana Consumo del detalle de una jornada (00178): lote por lote, lo que se cargo a su bodega
-// movil, lo que se entrego en sus recetas y lo que sigue en la bodega, con su valor. El calculo y
+// movil, lo que se entrego en sus recetas, lo que se devolvio (00179) y lo que sigue en la bodega,
+// con su valor. El calculo y
 // los totales viven en useConsumoDeJornada(); aqui solo se dibuja.
 export default function ConsumoDeJornada({ jornadaId, rol }) {
   const { columnas, consumo, resumen, cargando, error } = useConsumoDeJornada({ jornadaId, rol });
@@ -26,9 +27,15 @@ export default function ConsumoDeJornada({ jornadaId, rol }) {
           accent="var(--color-success)"
         />
         <StatCard
+          label="Devuelto"
+          value={formatearMoneda(resumen.valorDevuelto)}
+          caption="Regresó a una bodega fija"
+          accent="var(--accent-presupuestos)"
+        />
+        <StatCard
           label="Queda en la bodega"
           value={formatearMoneda(resumen.valorEnBodega)}
-          caption="Disponible para entregar"
+          caption="Disponible para entregar o devolver"
           accent="var(--accent-jornadas)"
         />
       </div>

@@ -3,7 +3,7 @@ import { StyleSheet, Text } from "react-native";
 import {
   formatearFechaCorta,
   listarMedicamentos,
-  OPCIONES_MOTIVO_SALIDA,
+  MOTIVO_TRASLADO,
   useRegistroSalida,
 } from "@ecopac/shared";
 import { colors, moduleAccents, spacing, typography } from "@ecopac/ui-tokens";
@@ -32,13 +32,17 @@ function etiquetaDeLote(lote) {
 }
 
 export default function RegistroSalidaScreen({ navigation }) {
-  const { perfil } = useSesionCompartida();
+  const { perfil, rol } = useSesionCompartida();
   const [medicamentos, setMedicamentos] = useState([]);
   const [errorCatalogo, setErrorCatalogo] = useState(null);
 
   const {
+    motivos,
     motivo,
     setMotivo,
+    bodegasDestino,
+    bodegaDestinoId,
+    setBodegaDestinoId,
     medicamentoId,
     setMedicamentoId,
     loteSeleccionado,
@@ -55,6 +59,7 @@ export default function RegistroSalidaScreen({ navigation }) {
     guardarSalida,
   } = useRegistroSalida({
     usuarioId: perfil?.id,
+    rol,
     onExito: () => navigation?.goBack(),
   });
 
@@ -85,8 +90,9 @@ export default function RegistroSalidaScreen({ navigation }) {
 
       <Selector
         label="Motivo de la salida"
+        requerido
         value={motivo}
-        options={OPCIONES_MOTIVO_SALIDA}
+        options={motivos}
         onSelect={setMotivo}
         placeholder="Elegir motivo"
         disabled={cargando}
@@ -129,6 +135,19 @@ export default function RegistroSalidaScreen({ navigation }) {
         <Text style={estilos.nota}>
           Quedan {loteSeleccionado.cantidadDisponible} unidades en {loteSeleccionado.bodega}.
         </Text>
+      ) : null}
+
+      {/* 00179: un traslado entra a otra bodega; sin ella el inventario desapareceria. */}
+      {motivo === MOTIVO_TRASLADO ? (
+        <Selector
+          label="Bodega destino"
+          requerido
+          value={bodegaDestinoId || null}
+          options={bodegasDestino}
+          onSelect={setBodegaDestinoId}
+          placeholder="Elegir bodega"
+          disabled={cargando}
+        />
       ) : null}
 
       <NumberField
