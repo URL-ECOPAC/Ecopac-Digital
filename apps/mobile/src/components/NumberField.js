@@ -36,7 +36,19 @@ function aNumero(texto) {
 }
 
 const NumberField = forwardRef(function NumberField(
-  { label, value = null, onChange, min, max, step = 1, suffix, error, style, ...inputProps },
+  {
+    label,
+    requerido,
+    value = null,
+    onChange,
+    min,
+    max,
+    step = 1,
+    suffix,
+    error,
+    style,
+    ...inputProps
+  },
   ref,
 ) {
   const [texto, setTexto] = useState(() => aTexto(value));
@@ -70,6 +82,7 @@ const NumberField = forwardRef(function NumberField(
         <TextField
           ref={ref}
           label={label}
+          requerido={requerido}
           error={error}
           value={texto}
           onChangeText={alCambiar}

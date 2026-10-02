@@ -83,6 +83,7 @@ export default function ModalProyecto({ visible, proyecto, catalogos, onClose, o
               <Selector
                 key={campo.id}
                 label={campo.label}
+                requerido={campo.validacion?.requerido}
                 value={valores[campo.id]}
                 options={opciones}
                 onSelect={(valor) => cambiar(campo.id, valor)}
@@ -97,6 +98,7 @@ export default function ModalProyecto({ visible, proyecto, catalogos, onClose, o
               <DateField
                 key={campo.id}
                 label={campo.label}
+                requerido={campo.validacion?.requerido}
                 value={valores[campo.id] || null}
                 onChange={(valor) => cambiar(campo.id, valor)}
                 error={errores[campo.id]}
@@ -109,6 +111,7 @@ export default function ModalProyecto({ visible, proyecto, catalogos, onClose, o
             <TextField
               key={campo.id}
               label={campo.label}
+              requerido={campo.validacion?.requerido}
               as={campo.tipo === TIPOS_DE_CAMPO.TEXTO_LARGO ? "textarea" : undefined}
               rows={campo.tipo === TIPOS_DE_CAMPO.TEXTO_LARGO ? 3 : undefined}
               maxLength={campo.validacion?.maxLongitud}

@@ -588,6 +588,43 @@ jornada (la administradora puede las dos), y todo ocurre en una transaccion. Ref
 `puedeVerInsumosDeJornada()` y `puedeGestionarInsumosDeJornada()` en `jornadas/permisos.js`, y
 `jornadas/insumos.api.js`. Lo afirma `jornada_insumos.sql`.
 
+**La bodega movil de la jornada (`00178`).** Desde la `00178` toda jornada nueva lleva una bodega
+movil (`botiquin_bodega_id`), y la lista de previstos ya no se llena: los insumos de la jornada son
+lo que hay en esa bodega.
+
+- `fn_cargar_insumo_a_bodega_de_jornada()` traslada un lote desde otra bodega a la de la jornada:
+  un ingreso y una salida con `movimientos_inventario.jornada_id`. **SECURITY INVOKER** y **solo la
+  administradora** (`es_administrador()`, `42501` para cualquier otro rol), como la reubicacion de
+  `fn_atender_alerta_caducidad()`: sus movimientos nacen aprobados por la `00028` y el traslado
+  queda completo en el acto. Con otro rol nacerian pendientes por separado, y aprobar la salida sin
+  el ingreso haria desaparecer el inventario. Rechaza una jornada finalizada o de un proyecto
+  cancelado o finalizado.
+- `fn_consumo_de_insumos_de_jornada()` dice, por lote, lo cargado, lo entregado en las recetas
+  emitidas de la jornada y lo que queda en su bodega, con el costo del lote. **SECURITY DEFINER**,
+  porque quien ve los insumos no necesariamente lee las recetas; solo devuelve cantidades por lote,
+  nada del paciente, y comprueba ella misma la condicion de la politica de SELECT de
+  `jornada_insumos` (`42501` si no se cumple).
+
+Reflejo en el cliente: `puedeCargarBodegaDeJornada()` (solo administrador) y
+`puedeVerInsumosDeJornada()` para la pestaña Consumo, en `jornadas/permisos.js`, y
+`jornadas/bodega.api.js`. Lo afirma `bodega_movil_obligatoria_y_carga.sql`.
+
+**Traslados entre bodegas y devolucion (`00179`).** Las tres funciones son **SECURITY INVOKER** y
+**solo de la administradora** (`42501` para cualquier otro rol), por el mismo motivo que la carga:
+dos movimientos que tienen que nacer aprobados juntos.
+
+- `fn_trasladar_entre_bodegas()` mueve un lote de una bodega a otra (ingreso en la destino y salida
+  del origen). Es lo que hace ahora el motivo "Traslado entre bodegas" de Registrar salida, que
+  antes solo registraba la salida y el inventario desaparecia; por eso ese motivo ya no se le ofrece
+  a otro rol (`motivosDeSalida()`, `inventario/useRegistroSalida.js`). La carga de la `00178` pasa a
+  usarla.
+- `fn_devolver_de_bodega_de_jornada()` devuelve lo que sobra en la bodega movil a una bodega fija,
+  marcado con la jornada; se puede con la jornada finalizada. `fn_consumo_de_insumos_de_jornada()`
+  lo cuenta como `devuelto`.
+- Un trigger impide que una bodega movil este en dos jornadas **en curso** a la vez (`55000`);
+  varias planificadas si la comparten. El cliente lo dice antes de intentarlo
+  (`mensajeDeBodegaOcupada()`, `jornadas/api.js`).
+
 **El equipo del proyecto es la union (`00150`).** `equipo_de_proyecto(proyecto_id)` devuelve, ademas
 de las filas de `proyecto_personal`, a quien esta en el equipo de alguna jornada del proyecto
 (`jornada_personal`), con las jornadas en que esta (`jornadas`) y si esta tambien en el equipo del

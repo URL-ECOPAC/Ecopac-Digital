@@ -151,6 +151,7 @@ export default function ModalConsulta({
                 <MultiSelector
                   key={campo.id}
                   label={campo.label}
+                  requerido={campo.validacion?.requerido}
                   value={c.consulta[campo.id] ?? []}
                   options={c.catalogos[campo.opcionesDesde] ?? []}
                   onChange={(elegidos) => c.setCampoDeConsulta(campo.id, elegidos)}

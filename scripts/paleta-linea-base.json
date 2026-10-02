@@ -86,6 +86,7 @@
     "#f7941d",
     "#f7f8fa"
   ],
+  "apps/mobile/src/components/RotuloDeCampo.js": ["#7a7a8a", "#e91e8c"],
   "apps/mobile/src/components/ScreenContainer.js": ["#f7f8fa"],
   "apps/mobile/src/components/SecondaryButton.js": ["#3db648", "#4d4d4d", "#e91e8c", "#f7f8fa"],
   "apps/mobile/src/components/SectionHeader.js": ["#2d2d2d", "#3db648", "#7a7a8a"],
@@ -360,6 +361,7 @@
     "#f7f8fa",
     "#ffffff"
   ],
+  "apps/web/src/pages/ConsumoDeJornada.jsx": ["#3db648"],
   "apps/web/src/pages/DashboardMetricasPage.jsx": ["#29abe2", "#3db648", "#e91e8c", "#f7941d"],
   "apps/web/src/pages/DonacionesPage.jsx": ["#3db648", "#e91e8c", "#f7941d"],
   "apps/web/src/pages/DonantesPage.jsx": ["#29abe2", "#3db648", "#f7941d"],
@@ -421,6 +423,7 @@
     "#e2e4e9",
     "#e91e8c"
   ],
+  "apps/web/src/pages/ProyectosSocialesPage.jsx": ["#3db648", "#f7941d"],
   "apps/web/src/pages/RecetaImprimible.jsx": ["#2d2d2d", "#e91e8c"],
   "apps/web/src/pages/reportes.css": [
     "#29abe2",

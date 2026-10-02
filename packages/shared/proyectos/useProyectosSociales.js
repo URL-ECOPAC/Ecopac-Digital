@@ -23,7 +23,11 @@ import {
   listarBodegasDeLasJornadasDelProyecto,
   listarInsumosDeLasJornadasDelProyecto,
 } from "../jornadas/insumos.api.js";
-import { listarContenidoDeBodegas } from "../inventario/existencias.api.js";
+import {
+  listarContenidoDeBodegas,
+  valorizarContenidoDeBodega,
+} from "../inventario/existencias.api.js";
+import { ESTADOS_DE_GASTO } from "../enums.js";
 import { resumirInsumosPrevistos } from "../jornadas/useInsumosDeJornada.js";
 import { listarGastos, obtenerPresupuestoProyecto } from "../presupuestos/api.js";
 import { listarUsuarios } from "../usuarios/api.js";
@@ -89,6 +93,27 @@ function nombreDePerfil(perfil) {
 export function validacionDeProyecto(valores) {
   const errores = validarProyecto(valores);
   return { ok: !hayErrores(errores), errores };
+}
+
+/**
+ * Total de los gastos de las jornadas de un proyecto: lo aprobado, lo que espera aprobacion y
+ * cuantos se rechazaron. Lo rechazado no se suma: no se gasto. Pura y exportada para probarla.
+ *
+ * @param {Array<{ monto: number|string, estado: string }>} gastos
+ * @returns {{ aprobado: number, pendiente: number, rechazados: number }}
+ */
+export function resumirGastosDeProyecto(gastos = []) {
+  const sumar = (estado) =>
+    Math.round(
+      gastos
+        .filter((gasto) => gasto.estado === estado)
+        .reduce((total, gasto) => total + Number(gasto.monto ?? 0), 0) * 100,
+    ) / 100;
+  return {
+    aprobado: sumar(ESTADOS_DE_GASTO.APROBADO),
+    pendiente: sumar(ESTADOS_DE_GASTO.PENDIENTE),
+    rechazados: gastos.filter((gasto) => gasto.estado === ESTADOS_DE_GASTO.RECHAZADO).length,
+  };
 }
 
 /**
@@ -559,6 +584,7 @@ export function useProyectosSociales({ usuarioRol } = {}) {
     presupuestoProyecto,
     columnasGastos: COLUMNAS_GASTO_DE_PROYECTO,
     gastosProyecto,
+    resumenDeGastos: resumirGastosDeProyecto(gastosProyecto),
     cargandoGastos,
     errorGastos,
     recargarGastos: cargarGastosDelProyecto,
@@ -568,6 +594,7 @@ export function useProyectosSociales({ usuarioRol } = {}) {
     insumosSinJornada,
     bodegasDeJornadas,
     existenciasEnBodegas,
+    valorDeBodegas: valorizarContenidoDeBodega(existenciasEnBodegas),
     cargandoInsumos,
     errorInsumos,
     columnasInsumos: COLUMNAS_INSUMO_PROYECTO,

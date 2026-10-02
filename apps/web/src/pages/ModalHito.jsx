@@ -65,6 +65,7 @@ export default function ModalHito({ visible, hito, campos, errores, onClose, onG
               <DateField
                 key={campo.id}
                 label={campo.label}
+                requerido={campo.validacion?.requerido}
                 value={valores[campo.id] || null}
                 onChange={(valor) => cambiar(campo.id, valor)}
                 error={errores?.[campo.id]}
@@ -77,6 +78,7 @@ export default function ModalHito({ visible, hito, campos, errores, onClose, onG
             <TextField
               key={campo.id}
               label={campo.label}
+              requerido={campo.validacion?.requerido}
               as={campo.tipo === TIPOS_DE_CAMPO.TEXTO_LARGO ? "textarea" : undefined}
               rows={campo.tipo === TIPOS_DE_CAMPO.TEXTO_LARGO ? 2 : undefined}
               maxLength={campo.validacion?.maxLongitud}

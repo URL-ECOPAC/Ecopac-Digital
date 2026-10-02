@@ -101,6 +101,7 @@ export default function ModalAltaPaciente({ onClose, onRegistrado, rol }) {
               return (
                 <CascadaDeComunidad
                   label={campo.label}
+                  requerido={campo.validacion?.requerido}
                   comunidadId={valores.comunidad}
                   error={errores.comunidad}
                   catalogos={catalogos}

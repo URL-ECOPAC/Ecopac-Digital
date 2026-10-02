@@ -42,6 +42,9 @@ export default function CampoDeFormulario({
     );
   }
 
+  // Obligatorio u opcional, segun el descriptor (RotuloDeCampo).
+  const requerido = campo.validacion?.requerido;
+
   const opciones =
     campo.opciones ?? (campo.opcionesDesde ? (catalogos[campo.opcionesDesde] ?? []) : []);
 
@@ -49,6 +52,7 @@ export default function CampoDeFormulario({
     return (
       <Selector
         label={campo.label}
+        requerido={requerido}
         value={valor ?? null}
         options={opciones}
         onSelect={onChange}
@@ -62,6 +66,7 @@ export default function CampoDeFormulario({
     return (
       <MultiSelector
         label={campo.label}
+        requerido={requerido}
         value={Array.isArray(valor) ? valor : []}
         options={opciones}
         onChange={onChange}
@@ -74,7 +79,13 @@ export default function CampoDeFormulario({
 
   if (campo.tipo === TIPOS_DE_CAMPO.FECHA) {
     return (
-      <DateField label={campo.label} value={valor || null} onChange={onChange} error={error} />
+      <DateField
+        label={campo.label}
+        requerido={requerido}
+        value={valor || null}
+        onChange={onChange}
+        error={error}
+      />
     );
   }
 
@@ -82,6 +93,7 @@ export default function CampoDeFormulario({
     return (
       <NumberField
         label={campo.label}
+        requerido={requerido}
         value={valor === "" || valor === undefined ? null : Number(valor)}
         suffix={campo.sufijo}
         min={campo.validacion?.min}
@@ -98,6 +110,7 @@ export default function CampoDeFormulario({
     return (
       <Selector
         label={campo.label}
+        requerido={requerido}
         value={valor === true ? "si" : valor === false ? "no" : null}
         options={[
           { value: "si", label: "Sí" },
@@ -115,6 +128,7 @@ export default function CampoDeFormulario({
   return (
     <TextField
       label={campo.label}
+      requerido={requerido}
       value={valor ?? ""}
       onChangeText={onChange}
       placeholder={campo.placeholder}

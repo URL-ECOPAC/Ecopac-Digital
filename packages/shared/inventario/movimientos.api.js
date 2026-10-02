@@ -393,3 +393,36 @@ export async function editarMovimiento(idMovimiento, datosNuevos, usuarioActualI
 // funcionalidad a disenar entera: valor nuevo en el enum via migracion, politica RLS que lo
 // permita -- la de UPDATE de hoy solo admite administrador o `inventario.aprobar` (00086) -- y su
 // fila en la matriz de permisos.
+
+/**
+ * Traslada `cantidad` de un lote de una bodega a otra (fn_trasladar_entre_bodegas, 00179): un
+ * ingreso en la destino y una salida del origen, aprobados en una sola transaccion. Antes un
+ * "traslado" era solo la salida del origen, y el inventario desaparecia del sistema. Solo la
+ * administradora; la base comprueba ademas que el lote no este vencido y que haya existencia.
+ *
+ * @param {{ loteId: string, bodegaOrigenId: string, bodegaDestinoId: string,
+ *   cantidad: number|string }} datos
+ * @returns {Promise<{ ingresoId: string|null, error: object|null }>}
+ */
+export async function trasladarEntreBodegas({
+  loteId,
+  bodegaOrigenId,
+  bodegaDestinoId,
+  cantidad,
+} = {}) {
+  if (!loteId || !bodegaOrigenId || !bodegaDestinoId) return { ingresoId: null, error: null };
+
+  try {
+    const { data, error } = await obtenerSupabase().rpc("fn_trasladar_entre_bodegas", {
+      p_lote_id: loteId,
+      p_bodega_origen_id: bodegaOrigenId,
+      p_bodega_destino_id: bodegaDestinoId,
+      p_cantidad: Number(cantidad),
+    });
+
+    if (error) return { ingresoId: null, error: normalizarError(error) };
+    return { ingresoId: data ?? null, error: null };
+  } catch (error) {
+    return { ingresoId: null, error: normalizarError(error) };
+  }
+}

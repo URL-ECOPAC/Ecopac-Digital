@@ -24,8 +24,15 @@ const LOTE_DE_EJEMPLO = {
 };
 
 const mockEstadoHook = {
+  motivos: [
+    { value: "entrega", label: "Entrega a paciente" },
+    { value: "traslado", label: "Traslado entre bodegas" },
+  ],
   motivo: "",
   setMotivo: vi.fn(),
+  bodegasDestino: [{ value: "b-2", label: "Botiquin Norte" }],
+  bodegaDestinoId: "",
+  setBodegaDestinoId: vi.fn(),
   medicamentoId: "",
   setMedicamentoId: vi.fn(),
   loteSeleccionado: null,
@@ -44,6 +51,9 @@ const mockEstadoHook = {
 };
 
 vi.mock("../../../../packages/shared/inventario/useRegistroSalida", () => ({
+  MOTIVO_TRASLADO: "traslado",
+  claveDeLoteDeSalida: (lote) => (lote ? `${lote.loteId}|${lote.bodegaId ?? ""}` : ""),
+  motivosDeSalida: () => [],
   useRegistroSalida: vi.fn(() => mockEstadoHook),
 }));
 
@@ -87,6 +97,16 @@ describe("ModalSalidaMedicamento", () => {
 
     expect(screen.getByText("Entrega a paciente")).toBeInTheDocument();
     expect(screen.getByText("Loratadina (10mg)")).toBeInTheDocument();
+    // La bodega destino solo aparece en un traslado (00179).
+    expect(screen.queryByLabelText(/Bodega destino/)).not.toBeInTheDocument();
+  });
+
+  it("un traslado pide la bodega destino (00179)", () => {
+    mockEstadoHook.motivo = "traslado";
+    pantalla();
+    expect(screen.getByLabelText(/Bodega destino/)).toBeInTheDocument();
+    expect(screen.getByText("Botiquin Norte")).toBeInTheDocument();
+    mockEstadoHook.motivo = "";
   });
 
   it("con lotes disponibles, el selector de lote FEFO los lista", () => {

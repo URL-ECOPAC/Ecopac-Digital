@@ -85,6 +85,7 @@ export default function ModalPrincipioActivo({
         <TextField
           key={campo.id}
           label={campo.label}
+          requerido={campo.validacion?.requerido}
           placeholder={campo.placeholder}
           maxLength={campo.validacion?.maxLongitud}
           value={valores[campo.id] ?? ""}

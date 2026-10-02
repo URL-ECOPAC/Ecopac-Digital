@@ -4,6 +4,7 @@ import { buscarOpcionPorEtiqueta } from "@ecopac/shared";
 import { colors, radii, spacing, typography } from "@ecopac/ui-tokens";
 
 import Selector from "./Selector";
+import RotuloDeCampo from "./RotuloDeCampo";
 
 /**
  * Seleccion multiple sobre un catalogo.
@@ -20,6 +21,7 @@ import Selector from "./Selector";
  */
 export default function MultiSelector({
   label,
+  requerido,
   value = [],
   options = [],
   onChange,
@@ -92,7 +94,7 @@ export default function MultiSelector({
 
   return (
     <View style={[styles.grupo, style]}>
-      {label ? <Text style={styles.etiqueta}>{label}</Text> : null}
+      {label ? <RotuloDeCampo texto={label} requerido={requerido} style={styles.etiqueta} /> : null}
 
       {seleccionados.length > 0 ? (
         <View style={styles.chips}>

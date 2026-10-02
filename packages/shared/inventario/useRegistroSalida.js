@@ -1,8 +1,28 @@
 import { useEffect, useState } from "react";
 
+import { esAdministrador } from "../usuarios/roles.js";
+import { listarBodegas } from "./bodegas.api.js";
+import { OPCIONES_MOTIVO_SALIDA } from "./campos.js";
 import { consultarLotesDisponibles } from "./existencias.api.js";
-import { registrarSalida } from "./movimientos.api.js";
+import { registrarSalida, trasladarEntreBodegas } from "./movimientos.api.js";
 import { recargarAlertasMontadas } from "./useAlertasVencimiento.js";
+
+/** Codigo del motivo "Traslado entre bodegas" (OPCIONES_MOTIVO_SALIDA). */
+export const MOTIVO_TRASLADO = "traslado";
+
+/**
+ * Motivos de salida que el rol puede elegir. El traslado (00179) mueve el lote a otra bodega con
+ * dos movimientos que nacen aprobados juntos, y eso solo lo hace la administradora: con otro rol
+ * nacerian pendientes por separado.
+ *
+ * @param {string} rol
+ * @returns {{ value: string, label: string }[]}
+ */
+export function motivosDeSalida(rol) {
+  return OPCIONES_MOTIVO_SALIDA.filter(
+    (opcion) => opcion.value !== MOTIVO_TRASLADO || esAdministrador(rol),
+  );
+}
 
 /**
  * Identifica un lote del desplegable. Un mismo lote puede estar en dos bodegas (existencias se
@@ -24,8 +44,11 @@ export function claveDeLoteDeSalida(lote) {
  * navegador muestre "Please select an item in the list" o que el servidor rechace una cantidad que
  * no hay.
  *
+ * Un traslado (00179) necesita ademas la bodega destino.
+ *
  * @param {{ motivo?: string, medicamentoId?: string, loteSeleccionado?: object|null,
- *   cantidad?: string|number, lotesDisponibles?: object[], cargando?: boolean }} estado
+ *   cantidad?: string|number, lotesDisponibles?: object[], cargando?: boolean,
+ *   bodegaDestinoId?: string }} estado
  * @returns {{ sinExistencia: boolean, avisoCantidad: string|null, puedeGuardar: boolean }}
  */
 export function estadoDeLaSalida({
@@ -35,6 +58,7 @@ export function estadoDeLaSalida({
   cantidad,
   lotesDisponibles = [],
   cargando = false,
+  bodegaDestinoId = "",
 } = {}) {
   const sinExistencia = Boolean(medicamentoId) && !cargando && lotesDisponibles.length === 0;
   const pedida = Number(cantidad);
@@ -48,6 +72,7 @@ export function estadoDeLaSalida({
   const puedeGuardar =
     !cargando &&
     Boolean(motivo) &&
+    (motivo !== MOTIVO_TRASLADO || Boolean(bodegaDestinoId)) &&
     Boolean(loteSeleccionado) &&
     pedida > 0 &&
     Number.isInteger(pedida) &&
@@ -91,11 +116,30 @@ export function estadoDeLaSalida({
  * dejan a la pantalla deshabilitar "Registrar salida" y decir que no hay existencia, en vez de
  * habilitar el boton y que lo frene el aviso del navegador.
  *
- * @param {{ usuarioId?: string, onExito?: (datos: object) => void }} [opciones]
- * @returns {object} Con: motivo, setMotivo, medicamentoId, setMedicamentoId, loteSeleccionado, seleccionarLote, seleccionarLotePorClave, claveLoteSeleccionado, cantidad, setCantidad, lotesDisponibles, sinExistencia, avisoCantidad, puedeGuardar, error, cargando, guardarSalida.
+ * TRASLADO (00179). Con motivo "traslado" se elige la bodega destino y se guarda con
+ * trasladarEntreBodegas(): antes era solo la salida del origen y el inventario desaparecia. Solo lo
+ * ofrece a la administradora (motivosDeSalida).
+ *
+ * @param {{ usuarioId?: string, rol?: string, onExito?: (datos: object) => void }} [opciones]
+ * @returns {object} Con: motivos, motivo, setMotivo, bodegasDestino, bodegaDestinoId, setBodegaDestinoId, medicamentoId, setMedicamentoId, loteSeleccionado, seleccionarLote, seleccionarLotePorClave, claveLoteSeleccionado, cantidad, setCantidad, lotesDisponibles, sinExistencia, avisoCantidad, puedeGuardar, error, cargando, guardarSalida.
  */
-export function useRegistroSalida({ usuarioId, onExito } = {}) {
+export function useRegistroSalida({ usuarioId, rol, onExito } = {}) {
   const [motivo, setMotivo] = useState("");
+  const [bodegas, setBodegas] = useState([]);
+  const [bodegaDestinoId, setBodegaDestinoId] = useState("");
+  const esTraslado = motivo === MOTIVO_TRASLADO;
+
+  // Las bodegas destino se piden solo si es un traslado.
+  useEffect(() => {
+    if (!esTraslado) return undefined;
+    let vigente = true;
+    listarBodegas().then(({ bodegas: filas }) => {
+      if (vigente) setBodegas(filas ?? []);
+    });
+    return () => {
+      vigente = false;
+    };
+  }, [esTraslado]);
   const [medicamentoId, setMedicamentoId] = useState("");
   const [loteSeleccionado, setLoteSeleccionado] = useState(null);
   const [cantidad, setCantidad] = useState("");
@@ -156,7 +200,13 @@ export function useRegistroSalida({ usuarioId, onExito } = {}) {
     cantidad,
     lotesDisponibles,
     cargando,
+    bodegaDestinoId,
   });
+
+  // Cualquier bodega menos la del lote elegido.
+  const bodegasDestino = bodegas
+    .filter((bodega) => bodega.id !== loteSeleccionado?.bodegaId)
+    .map((bodega) => ({ value: bodega.id, label: bodega.nombre }));
 
   const guardarSalida = async (e) => {
     e?.preventDefault?.();
@@ -186,7 +236,29 @@ export function useRegistroSalida({ usuarioId, onExito } = {}) {
       return;
     }
 
+    if (esTraslado && !bodegaDestinoId) {
+      setError("Elige la bodega a la que se traslada.");
+      return;
+    }
+
     setCargando(true);
+
+    if (esTraslado) {
+      const { ingresoId, error: falloTraslado } = await trasladarEntreBodegas({
+        loteId: loteSeleccionado.loteId,
+        bodegaOrigenId: loteSeleccionado.bodegaId,
+        bodegaDestinoId,
+        cantidad,
+      });
+      setCargando(false);
+      if (falloTraslado) {
+        setError(falloTraslado.mensaje);
+        return;
+      }
+      recargarAlertasMontadas();
+      if (onExito) onExito({ id: ingresoId });
+      return;
+    }
 
     const { datos, error: fallo } = await registrarSalida({
       bodega_id: loteSeleccionado.bodegaId,
@@ -213,8 +285,12 @@ export function useRegistroSalida({ usuarioId, onExito } = {}) {
   };
 
   return {
+    motivos: motivosDeSalida(rol),
     motivo,
     setMotivo,
+    bodegasDestino,
+    bodegaDestinoId,
+    setBodegaDestinoId: (valor) => setBodegaDestinoId(valor ?? ""),
     medicamentoId,
     setMedicamentoId,
     loteSeleccionado,

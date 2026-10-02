@@ -166,7 +166,7 @@ describe("PanelAlertasVencimiento", () => {
     fireEvent.change(screen.getAllByRole("combobox").at(-1), {
       target: { value: "descartado" },
     });
-    fireEvent.change(screen.getByLabelText("Cantidad *"), { target: { value: "40" } });
+    fireEvent.change(screen.getByLabelText("Cantidad"), { target: { value: "40" } });
     fireEvent.click(screen.getByText("Agregar acción"));
     fireEvent.click(screen.getByText("Confirmar"));
 
@@ -189,14 +189,14 @@ describe("PanelAlertasVencimiento", () => {
     fireEvent.click(screen.getByText("Atender"));
 
     fireEvent.change(screen.getAllByRole("combobox").at(-1), { target: { value: "donado" } });
-    fireEvent.change(screen.getByLabelText("Cantidad *"), { target: { value: "10" } });
+    fireEvent.change(screen.getByLabelText("Cantidad"), { target: { value: "10" } });
     fireEvent.click(screen.getByText("Agregar acción"));
 
     expect(screen.getByText("Faltan 30 de 40 unidades por asignar.")).toBeInTheDocument();
     expect(screen.getByText("Confirmar")).toBeDisabled();
 
     fireEvent.change(screen.getAllByRole("combobox").at(-1), { target: { value: "descartado" } });
-    fireEvent.change(screen.getByLabelText("Cantidad *"), { target: { value: "30" } });
+    fireEvent.change(screen.getByLabelText("Cantidad"), { target: { value: "30" } });
     fireEvent.click(screen.getByText("Agregar acción"));
 
     expect(screen.getByText("Todas las unidades quedaron asignadas.")).toBeInTheDocument();
@@ -223,7 +223,7 @@ describe("PanelAlertasVencimiento", () => {
 
     fireEvent.click(screen.getByText("Atender"));
     fireEvent.change(screen.getAllByRole("combobox").at(-1), { target: { value: "descartado" } });
-    fireEvent.change(screen.getByLabelText("Cantidad *"), { target: { value: "40" } });
+    fireEvent.change(screen.getByLabelText("Cantidad"), { target: { value: "40" } });
     fireEvent.click(screen.getByText("Agregar acción"));
     fireEvent.click(screen.getByText("Confirmar"));
 
@@ -266,7 +266,7 @@ describe("PanelAlertasVencimiento", () => {
 
     fireEvent.click(screen.getByText("Atender"));
     fireEvent.change(screen.getAllByRole("combobox").at(-1), { target: { value: "descartado" } });
-    fireEvent.change(screen.getByLabelText("Cantidad *"), { target: { value: "40" } });
+    fireEvent.change(screen.getByLabelText("Cantidad"), { target: { value: "40" } });
 
     expect(screen.getByText(/Se dan de baja 40 unidades del lote/)).toBeInTheDocument();
   });
@@ -277,7 +277,7 @@ describe("PanelAlertasVencimiento", () => {
 
     fireEvent.click(screen.getByText("Atender"));
     fireEvent.change(screen.getAllByRole("combobox").at(-1), { target: { value: "reubicado" } });
-    fireEvent.change(screen.getByLabelText("Cantidad *"), { target: { value: "40" } });
+    fireEvent.change(screen.getByLabelText("Cantidad"), { target: { value: "40" } });
 
     expect(screen.getByText("Agregar acción")).toBeDisabled();
 

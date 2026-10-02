@@ -11,7 +11,7 @@ const COLUMNAS_DEL_CONTENIDO = [
   "cantidadDisponible:cantidad_disponible",
   "bodega:bodegas(nombre)",
   "lote:lotes(numeroLote:numero_lote, fechaVencimiento:fecha_vencimiento, " +
-    "medicamentoId:medicamento_id, " +
+    "medicamentoId:medicamento_id, costoUnitario:costo_unitario, " +
     "articulo:medicamentos(nombre, concentracion, tipoArticulo:tipo_articulo))",
 ].join(", ");
 
@@ -21,12 +21,16 @@ const COLUMNAS_DEL_CONTENIDO = [
  *
  * @param {object} fila
  * @param {string} [hoy] Fecha local AAAA-MM-DD; se inyecta en las pruebas.
- * @returns {object} Con: loteId, bodegaId, bodega, numeroLote, fechaVencimiento, vencido, medicamentoId, articulo, tipoArticulo, cantidadDisponible.
+ * `costoUnitario` es el del lote (00121) y `valor` lo que vale lo que queda; los dos en null cuando
+ * no se conoce el costo, que no es lo mismo que cero.
+ *
+ * @returns {object} Con: loteId, bodegaId, bodega, numeroLote, fechaVencimiento, vencido, medicamentoId, articulo, tipoArticulo, cantidadDisponible, costoUnitario, valor.
  */
 export function aContenidoDeBodega(fila, hoy = aCadenaFechaLocal()) {
   const lote = fila.lote ?? {};
   const articulo = lote.articulo ?? {};
   const fechaVencimiento = lote.fechaVencimiento ?? null;
+  const tieneCosto = lote.costoUnitario !== null && lote.costoUnitario !== undefined;
   return {
     loteId: fila.loteId,
     bodegaId: fila.bodegaId,
@@ -40,6 +44,25 @@ export function aContenidoDeBodega(fila, hoy = aCadenaFechaLocal()) {
       : (articulo.nombre ?? ""),
     tipoArticulo: articulo.tipoArticulo ?? null,
     cantidadDisponible: Number(fila.cantidadDisponible ?? 0),
+    costoUnitario: tieneCosto ? Number(lote.costoUnitario) : null,
+    valor: tieneCosto
+      ? Math.round(Number(lote.costoUnitario) * Number(fila.cantidadDisponible ?? 0) * 100) / 100
+      : null,
+  };
+}
+
+/**
+ * Valor de lo que hay en una o varias bodegas (listarContenidoDeBodegas()): la suma de lo que tiene
+ * costo y cuantos lotes no lo tienen. No se finge un total para los que no se conocen.
+ *
+ * @param {Array<{ valor: number|null }>} contenido
+ * @returns {{ valor: number, lotesSinCosto: number, unidades: number }}
+ */
+export function valorizarContenidoDeBodega(contenido = []) {
+  return {
+    valor: Math.round(contenido.reduce((suma, fila) => suma + (fila.valor ?? 0), 0) * 100) / 100,
+    lotesSinCosto: contenido.filter((fila) => fila.valor === null).length,
+    unidades: contenido.reduce((suma, fila) => suma + fila.cantidadDisponible, 0),
   };
 }
 

@@ -1,5 +1,5 @@
 import { Badge, Spinner, Table } from "react-bootstrap";
-import { formatearFechaCorta } from "@ecopac/shared";
+import { formatearFechaCorta, formatearMoneda } from "@ecopac/shared";
 
 import ErrorState from "./ErrorState";
 
@@ -8,7 +8,8 @@ import ErrorState from "./ErrorState";
  *
  * Lo usan "Ver contenido" de Bodegas y la pestana Insumos de la jornada y del proyecto, que suman
  * lo que hay en la bodega de botiquin. `mostrarBodega` agrega la columna cuando la lista junta
- * varias bodegas.
+ * varias bodegas. `conValor` agrega el costo unitario del lote y lo que vale lo que queda (00178):
+ * solo donde el rol ve dinero, como las pestanas Insumos.
  */
 export default function ContenidoDeBodega({
   contenido = [],
@@ -16,6 +17,7 @@ export default function ContenidoDeBodega({
   error = null,
   vacio = "Esta bodega no tiene existencias.",
   mostrarBodega = false,
+  conValor = false,
 }) {
   if (cargando) {
     return (
@@ -33,6 +35,8 @@ export default function ContenidoDeBodega({
   }
 
   const total = contenido.reduce((suma, fila) => suma + fila.cantidadDisponible, 0);
+  const valorTotal = contenido.reduce((suma, fila) => suma + (fila.valor ?? 0), 0);
+  const sinCosto = contenido.filter((fila) => fila.valor === null).length;
 
   return (
     <div className="ec-tabla">
@@ -44,6 +48,8 @@ export default function ContenidoDeBodega({
             <th>Lote</th>
             <th>Vence</th>
             <th className="text-end">Cantidad</th>
+            {conValor && <th className="text-end">Costo unitario</th>}
+            {conValor && <th className="text-end">Valor</th>}
           </tr>
         </thead>
         <tbody>
@@ -61,6 +67,16 @@ export default function ContenidoDeBodega({
                 )}
               </td>
               <td className="text-end">{fila.cantidadDisponible}</td>
+              {conValor && (
+                <td className="text-end">
+                  {fila.costoUnitario === null ? "—" : formatearMoneda(fila.costoUnitario)}
+                </td>
+              )}
+              {conValor && (
+                <td className="text-end">
+                  {fila.valor === null ? "Sin costo" : formatearMoneda(fila.valor)}
+                </td>
+              )}
             </tr>
           ))}
         </tbody>
@@ -68,6 +84,17 @@ export default function ContenidoDeBodega({
           <tr>
             <th colSpan={mostrarBodega ? 4 : 3}>Total</th>
             <th className="text-end">{total}</th>
+            {conValor && <th />}
+            {conValor && (
+              <th className="text-end">
+                {formatearMoneda(Math.round(valorTotal * 100) / 100)}
+                {sinCosto > 0 && (
+                  <span className="d-block small fw-normal text-muted">
+                    {sinCosto === 1 ? "1 lote sin costo" : `${sinCosto} lotes sin costo`}
+                  </span>
+                )}
+              </th>
+            )}
           </tr>
         </tfoot>
       </Table>

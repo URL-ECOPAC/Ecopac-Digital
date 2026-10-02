@@ -41,6 +41,7 @@ export const SECCIONES_DETALLE_JORNADA = Object.freeze([
   "presupuesto",
   "gastos",
   "insumos",
+  "consumo",
   "cierre",
 ]);
 
@@ -70,6 +71,18 @@ export function puedeVerInsumosDeJornada(rol) {
  */
 export function puedeGestionarInsumosDeJornada(rol) {
   return puedeAdministrarJornadas(rol);
+}
+
+/**
+ * Puede cargar la bodega movil de una jornada desde otra bodega (00178). Espejo de
+ * fn_cargar_insumo_a_bodega_de_jornada: solo la administradora, porque el traslado son dos
+ * movimientos de inventario que tienen que nacer aprobados juntos.
+ *
+ * @param {string} rol
+ * @returns {boolean}
+ */
+export function puedeCargarBodegaDeJornada(rol) {
+  return esAdministrador(rol);
 }
 
 /**

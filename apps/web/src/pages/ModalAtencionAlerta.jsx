@@ -82,7 +82,8 @@ export default function ModalAtencionAlerta({ atencion, errorBodegas = null }) {
           {/* Un lote vencido no se reubica: opcionesAccion ya lo deja fuera, la misma regla que
               aplica fn_atender_alerta_caducidad en la base. */}
           <Selector
-            label="Acción *"
+            label="Acción"
+            requerido
             value={atencion.accionActual || null}
             options={atencion.opcionesAccion}
             onSelect={atencion.setAccionActual}
@@ -90,7 +91,8 @@ export default function ModalAtencionAlerta({ atencion, errorBodegas = null }) {
           />
 
           <NumberField
-            label="Cantidad *"
+            label="Cantidad"
+            requerido
             value={atencion.cantidadActual}
             onChange={atencion.setCantidadActual}
             min={1}
@@ -101,7 +103,8 @@ export default function ModalAtencionAlerta({ atencion, errorBodegas = null }) {
             <>
               {errorBodegas && <ErrorState message={errorBodegas.mensaje} />}
               <Selector
-                label="Bodega destino *"
+                label="Bodega destino"
+                requerido
                 value={atencion.bodegaDestinoActual || null}
                 options={atencion.opcionesBodega}
                 onSelect={(valor) => atencion.setBodegaDestinoActual(valor ?? "")}

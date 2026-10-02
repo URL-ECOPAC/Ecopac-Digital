@@ -69,7 +69,7 @@ describe("RegistroPacienteScreen", () => {
     pantalla();
 
     expect(screen.getByText(/Identidad · paso 1 de 4/)).toBeTruthy();
-    expect(screen.getByText("Nombres")).toBeTruthy();
+    expect(screen.getByText(/^Nombres/)).toBeTruthy();
   });
 
   it("Siguiente avanza al segundo paso sin llamar a registrar()", () => {

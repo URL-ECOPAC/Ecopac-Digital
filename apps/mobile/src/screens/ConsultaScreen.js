@@ -195,6 +195,7 @@ export default function ConsultaScreen() {
                   {/* Con un catalogo largo, el selector abre con busqueda (G4). */}
                   <MultiSelector
                     label={campo.label}
+                    requerido={campo.validacion?.requerido}
                     value={c.consulta[campo.id] ?? []}
                     options={c.catalogos[campo.opcionesDesde] ?? []}
                     onChange={(elegidos) => c.setCampoDeConsulta(campo.id, elegidos)}

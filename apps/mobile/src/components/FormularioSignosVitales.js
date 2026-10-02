@@ -35,6 +35,7 @@ export default function FormularioSignosVitales({
           <View key={campo.id}>
             <NumberField
               label={campo.label}
+              requerido={campo.validacion?.requerido}
               suffix={campo.sufijo}
               step={campo.paso ?? 1}
               value={valores[campo.id] === "" ? null : Number(valores[campo.id])}

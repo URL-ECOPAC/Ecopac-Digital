@@ -14,6 +14,7 @@ import SelectorConAlta from "./SelectorConAlta";
  */
 export default function CascadaDeComunidad({
   label,
+  requerido,
   comunidadId,
   error,
   catalogos,
@@ -32,6 +33,7 @@ export default function CascadaDeComunidad({
     <View>
       <Selector
         label="Departamento"
+        requerido={requerido}
         value={departamentoId}
         options={catalogos.departamentos}
         onSelect={onDepartamento}
@@ -40,6 +42,7 @@ export default function CascadaDeComunidad({
       />
       <Selector
         label="Municipio"
+        requerido={requerido}
         value={municipioId}
         options={catalogos.municipios}
         onSelect={onMunicipio}
@@ -50,6 +53,7 @@ export default function CascadaDeComunidad({
           catalogo: se crea aqui mismo, igual que en la web (issue #838). */}
       <SelectorConAlta
         label={label}
+        requerido={requerido}
         value={comunidadId || null}
         options={catalogos.comunidades}
         onSelect={onComunidad}

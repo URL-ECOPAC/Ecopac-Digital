@@ -43,7 +43,9 @@
 -- La bodega principal ya la siembra la migracion 00017; aqui solo se agrega la bodega
 -- movil que "viaja" con la jornada en curso.
 INSERT INTO bodegas (id, nombre, ubicacion, es_movil) VALUES
-  ('de000002-0000-0000-0000-000000000001', 'Bodega Movil Demo', NULL, TRUE)
+  ('de000002-0000-0000-0000-000000000001', 'Bodega Movil Demo', NULL, TRUE),
+  -- 00179: una bodega movil no esta en dos jornadas en curso; la planificada lleva la suya.
+  ('de000002-0000-0000-0000-000000000002', 'Bodega Movil Demo 2', NULL, TRUE)
 ON CONFLICT DO NOTHING;
 
 INSERT INTO proveedores (id, nombre, contacto, tipo) VALUES
@@ -324,17 +326,18 @@ ON CONFLICT (id) DO UPDATE SET
 -- el cuadro de turnos de El Rosario y es el responsable de Vista Hermosa, asi que ve los dos
 -- proyectos; Miriam (el otro medico) solo esta en Vista Hermosa y ve solo el suyo. Es lo que
 -- hace visible en pantalla la politica de SELECT de `proyectos` de la 00141.
-INSERT INTO jornadas (id, nombre, fecha, comunidad_id, responsable_id, estado, presupuesto_asignado, proyecto_id, created_at) VALUES
+INSERT INTO jornadas (id, nombre, fecha, comunidad_id, responsable_id, estado, presupuesto_asignado, proyecto_id, created_at, botiquin_bodega_id) VALUES
   ('de00000a-0000-0000-0000-000000000001', 'Jornada Demo El Rosario', CURRENT_DATE - 30,
    (SELECT id FROM comunidades WHERE municipio_id = 106 AND nombre = 'Caserio El Rosario Demo'), 'de000001-0000-0000-0000-000000000001', 'finalizada', 5000,
-   'de00000e-0000-0000-0000-000000000001', CURRENT_DATE - 35),
+   'de00000e-0000-0000-0000-000000000001', CURRENT_DATE - 35, (SELECT id FROM bodegas WHERE nombre = 'Bodega Movil Demo')),
   ('de00000a-0000-0000-0000-000000000002', 'Jornada Demo Vista Hermosa', CURRENT_DATE,
    (SELECT id FROM comunidades WHERE municipio_id = 401 AND nombre = 'Aldea Vista Hermosa Demo'), 'de000001-0000-0000-0000-000000000004', 'en curso', 3000,
-   'de00000e-0000-0000-0000-000000000002', NOW())
+   'de00000e-0000-0000-0000-000000000002', NOW(), (SELECT id FROM bodegas WHERE nombre = 'Bodega Movil Demo'))
 ON CONFLICT (id) DO UPDATE SET
   fecha = EXCLUDED.fecha,
   estado = EXCLUDED.estado,
   proyecto_id = EXCLUDED.proyecto_id,
+  botiquin_bodega_id = EXCLUDED.botiquin_bodega_id,
   created_at = EXCLUDED.created_at,
   updated_at = NOW();
 
@@ -420,11 +423,11 @@ ON CONFLICT (id) DO NOTHING;
 -- ============================================================================
 -- 12. Una tercera jornada, planificada: la preparacion y el destino del sobrante
 -- ============================================================================
-INSERT INTO jornadas (id, nombre, fecha, comunidad_id, responsable_id, estado, proyecto_id) VALUES
+INSERT INTO jornadas (id, nombre, fecha, comunidad_id, responsable_id, estado, proyecto_id, botiquin_bodega_id) VALUES
   ('de00000a-0000-0000-0000-000000000003', 'Jornada Demo Nueva Esperanza', CURRENT_DATE + 20,
    (SELECT id FROM comunidades WHERE municipio_id = 1601 AND nombre = 'Comunidad Nueva Esperanza Demo'), 'de000001-0000-0000-0000-000000000001', 'planificada',
-   'de00000e-0000-0000-0000-000000000001')
-ON CONFLICT (id) DO UPDATE SET fecha = EXCLUDED.fecha, updated_at = NOW();
+   'de00000e-0000-0000-0000-000000000001', (SELECT id FROM bodegas WHERE nombre = 'Bodega Movil Demo 2'))
+ON CONFLICT (id) DO UPDATE SET fecha = EXCLUDED.fecha, botiquin_bodega_id = EXCLUDED.botiquin_bodega_id, updated_at = NOW();
 
 INSERT INTO jornada_personal (id, jornada_id, perfil_id, rol_en_jornada, hora_inicio, hora_fin, responsabilidad) VALUES
   ('de00000b-0000-0000-0000-000000000005', 'de00000a-0000-0000-0000-000000000003', 'de000001-0000-0000-0000-000000000004', 'medico', '08:00', '14:00', 'Consulta general'),

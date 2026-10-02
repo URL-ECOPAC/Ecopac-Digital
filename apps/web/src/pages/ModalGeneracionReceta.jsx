@@ -117,6 +117,7 @@ export default function ModalGeneracionReceta({
           {!consultaFijada && (
             <Selector
               label="Consulta sobre la que se receta"
+              requerido
               value={consultaId}
               options={opcionesDeConsulta}
               onSelect={setConsultaElegida}
@@ -229,6 +230,7 @@ export default function ModalGeneracionReceta({
                     />
                     <TextField
                       label="Dosis"
+                      requerido
                       value={renglon.dosis}
                       onChange={(evento) =>
                         editarRenglon(renglon.clave, "dosis", evento.target.value)
@@ -236,6 +238,7 @@ export default function ModalGeneracionReceta({
                     />
                     <TextField
                       label="Frecuencia"
+                      requerido
                       value={renglon.frecuencia}
                       onChange={(evento) =>
                         editarRenglon(renglon.clave, "frecuencia", evento.target.value)
@@ -243,6 +246,7 @@ export default function ModalGeneracionReceta({
                     />
                     <TextField
                       label="Duración"
+                      requerido
                       value={renglon.duracion}
                       onChange={(evento) =>
                         editarRenglon(renglon.clave, "duracion", evento.target.value)
@@ -250,6 +254,7 @@ export default function ModalGeneracionReceta({
                     />
                     <NumberField
                       label="Cantidad a entregar"
+                      requerido
                       min={1}
                       value={
                         renglon.cantidadEntregada === "" ? null : Number(renglon.cantidadEntregada)
@@ -279,6 +284,7 @@ export default function ModalGeneracionReceta({
             </div>
             <TextField
               label="Indicaciones generales"
+              requerido={false}
               as="textarea"
               rows={3}
               value={indicacionesGenerales}

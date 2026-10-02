@@ -25,28 +25,20 @@
 // `atenciones` directo, cuyo SELECT (00033) tampoco alcanza a junta directiva ni a socio fundador --
 // puedeVerAtenciones() de mas abajo gatea esa llamada tambien, por la misma razon.
 //
-// "Movimientos pendientes de validar" (criterio 2, segunda mitad) es lo unico que faltaba.
-// movimientos_inventario no tiene jornada_id (cuelga de bodega_id, ver movimientos.api.js:9-12): el
-// botiquin de una jornada es jornadas.botiquin_bodega_id (00036, nullable). listarMovimientos() ya
-// acepta filtrar por bodega_id (movimientos.api.js), asi que "pendientes del botiquin de esta
-// jornada" es ese filtro con estado 'pendiente', sin RPC ni tabla nueva. usePendientesValidacion.js
-// (#158) no se toca: cuenta pendientes globales, no por jornada, y ese archivo no es dueño de esa
-// distincion.
+// "Movimientos pendientes de validar" (criterio 2, segunda mitad): los pendientes de la bodega movil
+// de la jornada (jornadas.botiquin_bodega_id, obligatoria desde la 00178). listarMovimientos() ya
+// acepta filtrar por bodega_id (movimientos.api.js), asi que es ese filtro con estado pendiente, sin
+// RPC ni tabla nueva. usePendientesValidacion.js (#158) no se toca: cuenta pendientes globales.
+// movimientos_inventario.jornada_id (00178) solo marca la carga de la bodega, que nace aprobada, asi
+// que no sirve para esto.
 //
 // SELECT sobre movimientos_inventario esta abierto a cualquier sesion activa (politica "Sesion
 // activa lee movimientos_inventario", 00079:204-205: `USING (public.rol_actual() IS NOT NULL)`), a
 // diferencia de consultas/atenciones/recetas: no hace falta gatear este conteo por rol.
 //
 // "Del botiquin de esta jornada", no "de esta jornada" (a proposito, ver el texto que arma
-// DetalleJornadaPage.jsx con este numero): jornadas.botiquin_bodega_id NO tiene UNIQUE (00036), asi
-// que nada en el esquema impide que dos jornadas compartan bodega -- si eso pasara, el numero
-// incluiria movimientos de la otra jornada. En la practica esto no se puede probar hoy: campos.js
-// declara el campo `botiquinBodega` (CAMPOS_JORNADA) pero lo excluye a proposito de
-// IDS_CAMPOS_FORMULARIO_JORNADA (el subconjunto que arma ModalJornada.jsx, issue #179), asi que
-// ninguna pantalla del repo permite asignarle un botiquin a una jornada: botiquinBodegaId es null
-// para toda jornada creada desde la UI, y esta advertencia no tiene con que dispararse todavia.
-// Corregir eso es tocar el formulario de alta/edicion de jornada, fuera de la excepcion de alcance
-// de #183 (solo DetalleJornadaPage.jsx y la pagina del Kanban) -- queda reportado, no arreglado aca.
+// DetalleJornadaPage.jsx con este numero): jornadas.botiquin_bodega_id NO tiene UNIQUE, asi que dos
+// jornadas pueden compartir bodega, y entonces el numero incluye movimientos de la otra.
 
 import { contarPacientesDeJornada } from "../atenciones/api.js";
 import { ESTADOS_MOVIMIENTO } from "../enums.js";
@@ -81,8 +73,8 @@ const puedeVerAtencionesIncompletas = puedeVerDatosClinicos;
 /**
  * Cuenta los movimientos de inventario pendientes de validar contra el botiquin de una jornada.
  *
- * Una jornada sin botiquin asignado (botiquinBodegaId null -- hoy, todas: ver el encabezado de
- * este archivo) no tiene bodega que consultar: devuelve 0, no un error ni un guion, porque no hay
+ * Una jornada sin botiquin asignado (botiquinBodegaId null: solo las anteriores a la 00178) no
+ * tiene bodega que consultar: devuelve 0, no un error ni un guion, porque no hay
  * ningun movimiento que pudiera estar pendiente sin una bodega que los agrupe.
  *
  * @param {string|null|undefined} botiquinBodegaId

@@ -87,6 +87,7 @@ export default function ModalEdicionPaciente({ visible, paciente, onClose, onGua
                 <CascadaDeComunidad
                   key="comunidad"
                   label={campo.label}
+                  requerido={campo.validacion?.requerido}
                   comunidadId={valores.comunidad}
                   error={errores.comunidad}
                   catalogos={catalogos}
@@ -110,6 +111,7 @@ export default function ModalEdicionPaciente({ visible, paciente, onClose, onGua
                 <Selector
                   key={campo.id}
                   label={campo.label}
+                  requerido={campo.validacion?.requerido}
                   value={valores[campo.id] || null}
                   options={opciones}
                   onSelect={(valor) => setCampo(campo.id, valor)}
@@ -124,6 +126,7 @@ export default function ModalEdicionPaciente({ visible, paciente, onClose, onGua
                 <DateField
                   key={campo.id}
                   label={campo.label}
+                  requerido={campo.validacion?.requerido}
                   value={valores[campo.id] || null}
                   onChange={(valor) => setCampo(campo.id, valor)}
                   error={errores[campo.id]}
@@ -136,6 +139,7 @@ export default function ModalEdicionPaciente({ visible, paciente, onClose, onGua
               <TextField
                 key={campo.id}
                 label={campo.label}
+                requerido={campo.validacion?.requerido}
                 value={valores[campo.id] ?? ""}
                 onChangeText={(texto) => setCampo(campo.id, texto)}
                 keyboardType={TECLADO_DE_CAMPO[campo.tipo] ?? "default"}

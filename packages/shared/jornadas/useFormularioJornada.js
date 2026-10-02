@@ -32,7 +32,9 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { listarBodegas } from "../inventario/bodegas.api.js";
+import { listarBodegas, registrarBodega } from "../inventario/bodegas.api.js";
+import { puedeAdministrarBodegas } from "../inventario/bodegas.permisos.js";
+import { ESTADOS_JORNADA } from "../enums.js";
 import { listarProyectos } from "../proyectos/api.js";
 import { proyectosQueAdmitenCambios } from "../proyectos/validaciones.js";
 import {
@@ -43,7 +45,13 @@ import {
 } from "../territorio/api.js";
 import { useAltaDeComunidadEnLinea } from "../territorio/useAltaDeComunidadEnLinea.js";
 import { listarUsuarios } from "../usuarios/api.js";
-import { actualizarJornada, listarJornadas, obtenerJornada, registrarJornada } from "./api.js";
+import {
+  actualizarJornada,
+  listarJornadas,
+  mensajeDeBodegaOcupada,
+  obtenerJornada,
+  registrarJornada,
+} from "./api.js";
 import { advertirJornadaDuplicada, validarJornada } from "./validaciones.js";
 
 /**
@@ -84,8 +92,8 @@ export function valoresInicialesDeJornada(jornada) {
  * Traduce `valores` del formulario a lo que registrarJornada()/actualizarJornada() esperan.
  *
  * Solo normaliza `proyecto` y `botiquinBodega` (issue #756): los dos se resuelven con un
- * `<select>`, y un `''` sin elegir no es un UUID valido. `botiquinBodega` es opcional; `proyecto`
- * es obligatorio desde la 00169 y validarJornada() ya lo exige, pero si un `''` se colara igual
+ * `<select>`, y un `''` sin elegir no es un UUID valido. `botiquinBodega` (00178) y `proyecto`
+ * (00169) son obligatorios y validarJornada() ya los exige, pero si un `''` se colara igual
  * viaja como null y la base lo rechaza como dato obligatorio, no como UUID mal formado.
  * `cupoEstimado` no necesita normalizarse aca: NumberField ya entrega numero o `null`. El resto
  * de campos viaja tal cual.
@@ -107,19 +115,29 @@ function aOpciones(filas, etiquetaDe) {
 }
 
 /**
- * Opciones del selector de bodega de botiquin: todas las bodegas, las moviles primero y con
- * "(movil)" en la etiqueta. Se exporta aparte para poder probarla sin montar el hook.
+ * Opciones del selector de bodega de botiquin: solo las bodegas moviles (00178: la base rechaza una
+ * fija). La que ya esta en otra jornada en curso lo dice en la etiqueta (00179: no se puede iniciar
+ * esta jornada con ella mientras la otra siga en curso). Se exporta aparte para probarla sin montar
+ * el hook.
  *
  * @param {{ id: string, nombre: string, esMovil?: boolean }[]} bodegas
+ * @param {{ ocupadas?: Record<string, { id: string, nombre: string }>, jornadaId?: string|null }}
+ *   [opciones] `ocupadas`: por id de bodega, la jornada en curso que la tiene.
  * @returns {{ value: string, label: string }[]}
  */
-export function opcionesDeBodegaDeBotiquin(bodegas) {
-  return [...(bodegas ?? [])]
-    .sort((una, otra) => Number(Boolean(otra.esMovil)) - Number(Boolean(una.esMovil)))
-    .map((bodega) => ({
-      value: bodega.id,
-      label: bodega.esMovil ? `${bodega.nombre} (móvil)` : bodega.nombre,
-    }));
+export function opcionesDeBodegaDeBotiquin(bodegas, { ocupadas = {}, jornadaId = null } = {}) {
+  return (bodegas ?? [])
+    .filter((bodega) => bodega.esMovil)
+    .map((bodega) => {
+      const otra = ocupadas[bodega.id];
+      return {
+        value: bodega.id,
+        label:
+          otra && otra.id !== jornadaId
+            ? `${bodega.nombre} (en curso en ${otra.nombre})`
+            : bodega.nombre,
+      };
+    });
 }
 
 function nombreDePerfil(perfil) {
@@ -155,6 +173,10 @@ function nombreDePerfil(perfil) {
  *   registrarComunidad: (nombre: string) => Promise<object>,
  *   erroresComunidad: Record<string, string>,
  *   creandoComunidad: boolean,
+ *   puedeCrearBodega: boolean,
+ *   registrarBodegaMovil: (nombre: string) => Promise<object>,
+ *   erroresBodega: Record<string, string>,
+ *   creandoBodega: boolean,
  * }}
  */
 export function useFormularioJornada({ jornada, rol } = {}) {
@@ -181,6 +203,11 @@ export function useFormularioJornada({ jornada, rol } = {}) {
   const [perfiles, setPerfiles] = useState([]);
   const [proyectos, setProyectos] = useState([]);
   const [bodegas, setBodegas] = useState([]);
+  // 00179: por id de bodega, la jornada en curso que la tiene.
+  const [bodegasOcupadas, setBodegasOcupadas] = useState({});
+  const [erroresBodega, setErroresBodega] = useState({});
+  const [creandoBodega, setCreandoBodega] = useState(false);
+  const puedeCrearBodega = puedeAdministrarBodegas(rol);
 
   const [advertenciaDuplicado, setAdvertenciaDuplicado] = useState(null);
 
@@ -213,13 +240,21 @@ export function useFormularioJornada({ jornada, rol } = {}) {
       marcarCargado("proyectos");
     });
 
-    // botiquin_bodega_id (00036) es la bodega que viaja a la jornada. Se pedian solo las moviles, y
-    // una organizacion sin ninguna marcada como movil se quedaba sin opciones: el selector no
-    // cargaba nunca. Ahora van todas, las moviles primero y rotuladas.
-    listarBodegas().then(({ bodegas: filas }) => {
+    // botiquin_bodega_id (00036) es la bodega que viaja a la jornada, obligatoria y movil desde la
+    // 00178. Sin ninguna bodega movil se puede crear aqui mismo (registrarBodegaMovil).
+    listarBodegas({ esMovil: true }).then(({ bodegas: filas }) => {
       if (!vigente) return;
-      setBodegas(opcionesDeBodegaDeBotiquin(filas));
+      setBodegas(filas ?? []);
       marcarCargado("bodegas");
+    });
+
+    listarJornadas({ estado: ESTADOS_JORNADA.EN_CURSO }).then(({ jornadas: filas }) => {
+      if (!vigente) return;
+      const ocupadas = {};
+      for (const fila of filas ?? []) {
+        if (fila.botiquinBodegaId) ocupadas[fila.botiquinBodegaId] = fila;
+      }
+      setBodegasOcupadas(ocupadas);
     });
 
     return () => {
@@ -379,6 +414,34 @@ export function useFormularioJornada({ jornada, rol } = {}) {
     [proyectos, jornadaBase],
   );
 
+  const opcionesDeBodega = useMemo(
+    () => opcionesDeBodegaDeBotiquin(bodegas, { ocupadas: bodegasOcupadas, jornadaId }),
+    [bodegas, bodegasOcupadas, jornadaId],
+  );
+
+  // Alta de bodega movil sin salir del modal: toda jornada lleva una (00178), y si no hay ninguna
+  // la unica salida era ir a Inventario > Bodegas. Queda elegida al crearse.
+  const registrarBodegaMovil = useCallback(async (nombre) => {
+    const limpio = String(nombre ?? "").trim();
+    if (!limpio) {
+      const errores = { nombre: "Escribe el nombre de la bodega móvil." };
+      setErroresBodega(errores);
+      return { errores };
+    }
+    setErroresBodega({});
+    setCreandoBodega(true);
+    const { bodega, error: fallo } = await registrarBodega({ nombre: limpio, esMovil: true });
+    if (fallo) {
+      setCreandoBodega(false);
+      return { error: fallo };
+    }
+    const { bodegas: filas } = await listarBodegas({ esMovil: true });
+    setBodegas(filas ?? []);
+    setValores((anteriores) => ({ ...anteriores, botiquinBodega: bodega.id }));
+    setCreandoBodega(false);
+    return { bodega };
+  }, []);
+
   const cancelar = useCallback(() => {
     setValores(valoresInicialesDeJornada(esEdicion ? jornadaBase : jornada));
     setErrores({});
@@ -389,6 +452,11 @@ export function useFormularioJornada({ jornada, rol } = {}) {
 
   const enviar = useCallback(async () => {
     const erroresDeValidacion = validarJornada(valores);
+    // 00179: una jornada en curso no toma una bodega que esta en otra jornada en curso.
+    const otra = bodegasOcupadas[valores.botiquinBodega];
+    if (jornadaBase?.estado === ESTADOS_JORNADA.EN_CURSO && otra && otra.id !== jornadaId) {
+      erroresDeValidacion.botiquinBodega = mensajeDeBodegaOcupada(otra.nombre);
+    }
     if (Object.keys(erroresDeValidacion).length > 0) {
       setErrores(erroresDeValidacion);
       return { ok: false };
@@ -411,7 +479,7 @@ export function useFormularioJornada({ jornada, rol } = {}) {
 
     if (!esEdicion) setValores(valoresInicialesDeJornada(null));
     return { ok: true, jornada: resultado.jornada };
-  }, [valores, esEdicion, jornadaId, rol]);
+  }, [valores, esEdicion, jornadaId, rol, bodegasOcupadas, jornadaBase]);
 
   return {
     valores,
@@ -426,7 +494,7 @@ export function useFormularioJornada({ jornada, rol } = {}) {
       comunidades,
       perfiles,
       proyectos: opcionesDeProyecto,
-      bodegas,
+      bodegas: opcionesDeBodega,
     },
     catalogosCargados,
     departamentoId,
@@ -441,5 +509,9 @@ export function useFormularioJornada({ jornada, rol } = {}) {
     registrarComunidad,
     erroresComunidad,
     creandoComunidad,
+    puedeCrearBodega,
+    registrarBodegaMovil,
+    erroresBodega,
+    creandoBodega,
   };
 }

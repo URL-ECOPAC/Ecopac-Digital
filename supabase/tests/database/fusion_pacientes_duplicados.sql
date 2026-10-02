@@ -38,6 +38,15 @@ INSERT INTO proyectos (id, nombre) VALUES
   ('5f000000-0000-0000-0000-000000000169', 'Proyecto de prueba 00169');
 ALTER TABLE jornadas ALTER COLUMN proyecto_id SET DEFAULT '5f000000-0000-0000-0000-000000000169';
 
+-- Desde la 00178 toda jornada nueva lleva una bodega movil. Estas pruebas no tratan de bodegas:
+-- sus jornadas reciben una de prueba como DEFAULT de la columna, que el ROLLBACK del final deshace.
+INSERT INTO bodegas (id, nombre, es_movil) VALUES
+  ('5b000000-0000-0000-0000-000000000178', 'Bodega movil de prueba 00178', TRUE);
+ALTER TABLE jornadas ALTER COLUMN botiquin_bodega_id SET DEFAULT '5b000000-0000-0000-0000-000000000178';
+-- Aqui varias jornadas estan en curso a la vez con esa misma bodega, que la 00179 no permite; la
+-- regla no es de lo que tratan estas pruebas.
+ALTER TABLE jornadas DISABLE TRIGGER trg_jornadas_requiere_bodega_movil_libre;
+
 -- ============================================================================
 -- Setup: una comunidad, un administrador (fusiona) y un medico (dueno de consultas/recetas).
 -- ============================================================================

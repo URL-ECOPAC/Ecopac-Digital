@@ -1,5 +1,6 @@
 import { Form } from "react-bootstrap";
 import { useId } from "react";
+import MarcaDeRequerido from "./MarcaDeRequerido";
 
 /**
  * Selector tipo dropdown.
@@ -17,6 +18,7 @@ import { useId } from "react";
  */
 export default function Selector({
   label,
+  requerido,
   value,
   options = [],
   onSelect,
@@ -46,12 +48,14 @@ export default function Selector({
   return (
     <Form.Group className="mb-3" style={style}>
       {label && <Form.Label htmlFor={id}>{label}</Form.Label>}
+      {label && <MarcaDeRequerido requerido={requerido} />}
       <Form.Select
         id={id}
         value={value ?? ""}
         onChange={alCambiar}
         isInvalid={Boolean(error)}
         disabled={disabled}
+        aria-required={requerido === true || undefined}
         {...rest}
       >
         <option value="">{placeholder}</option>

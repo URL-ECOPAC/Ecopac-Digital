@@ -129,21 +129,27 @@ describe("aDatosDeJornada", () => {
 });
 
 describe("opcionesDeBodegaDeBotiquin", () => {
-  it("ofrece todas las bodegas, las moviles primero y rotuladas", () => {
+  it("ofrece solo las bodegas moviles (00178)", () => {
     const bodegas = [
       { id: "b1", nombre: "Bodega Principal", esMovil: false },
       { id: "b2", nombre: "Botiquin A", esMovil: true },
     ];
-    expect(opcionesDeBodegaDeBotiquin(bodegas)).toEqual([
-      { value: "b2", label: "Botiquin A (móvil)" },
-      { value: "b1", label: "Bodega Principal" },
+    expect(opcionesDeBodegaDeBotiquin(bodegas)).toEqual([{ value: "b2", label: "Botiquin A" }]);
+  });
+
+  it("dice si la bodega esta en otra jornada en curso (00179), pero no si es esta misma", () => {
+    const bodegas = [{ id: "b2", nombre: "Botiquin A", esMovil: true }];
+    const ocupadas = { b2: { id: "j-otra", nombre: "Jornada Norte" } };
+    expect(opcionesDeBodegaDeBotiquin(bodegas, { ocupadas })).toEqual([
+      { value: "b2", label: "Botiquin A (en curso en Jornada Norte)" },
+    ]);
+    expect(opcionesDeBodegaDeBotiquin(bodegas, { ocupadas, jornadaId: "j-otra" })).toEqual([
+      { value: "b2", label: "Botiquin A" },
     ]);
   });
 
-  it("sin ninguna movil, igual ofrece las fijas (antes el selector no cargaba nunca)", () => {
-    expect(opcionesDeBodegaDeBotiquin([{ id: "b1", nombre: "Bodega Principal" }])).toEqual([
-      { value: "b1", label: "Bodega Principal" },
-    ]);
+  it("sin ninguna movil no ofrece nada", () => {
+    expect(opcionesDeBodegaDeBotiquin([{ id: "b1", nombre: "Bodega Principal" }])).toEqual([]);
     expect(opcionesDeBodegaDeBotiquin(null)).toEqual([]);
   });
 });

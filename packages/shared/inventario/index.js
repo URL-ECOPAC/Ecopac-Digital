@@ -113,7 +113,12 @@ export {
   TIPO_MOVIMIENTO,
   useKardexMovimientos,
 } from "./useKardexMovimientos.js";
-export { useRegistroSalida } from "./useRegistroSalida.js";
+export {
+  claveDeLoteDeSalida,
+  MOTIVO_TRASLADO,
+  motivosDeSalida,
+  useRegistroSalida,
+} from "./useRegistroSalida.js";
 export {
   filaDeMisMovimientos,
   useMisMovimientos,

@@ -15,11 +15,13 @@ export const COLUMNAS_JORNADA = [
   { id: "fecha", label: "Fecha", tipo: TIPOS_DE_PRESENTACION.FECHA },
   { id: "estado", label: "Estado", tipo: TIPOS_DE_PRESENTACION.CHIP },
   { id: "responsable", label: "Responsable", tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  // Para el detalle de la jornada, como botiquinBodega: el tablero no la pinta.
+  { id: "proyecto", label: "Proyecto", tipo: TIPOS_DE_PRESENTACION.TEXTO },
   { id: "cupoEstimado", label: "Cupo estimado", tipo: TIPOS_DE_PRESENTACION.NUMERO },
   // Issue #756: se agrega para que DetalleJornadaPage.jsx tenga una etiqueta que mostrar junto
   // al valor; JornadasPage.jsx no la selecciona para el tablero/kanban (mismo criterio que
   // "codigo", ver la nota de abajo).
-  { id: "botiquinBodega", label: "Bodega de botiquín", tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  { id: "botiquinBodega", label: "Bodega móvil (botiquín)", tipo: TIPOS_DE_PRESENTACION.TEXTO },
   // Issue #178, criterio 1. No sale de listarJornadas(): se mezcla en el hook de pantalla desde
   // contarPacientesAtendidosPorJornada() (api.js), que consulta vista_reporte_impacto en lote.
   // Esa vista no da SELECT a medico ni voluntario (00064): para esos roles la tarjeta no trae
@@ -106,4 +108,20 @@ export const COLUMNAS_HISTORIAL_JORNADA = [
   { id: "estadoNuevo", label: "Estado nuevo", tipo: TIPOS_DE_PRESENTACION.CHIP, principal: true },
   { id: "cambiadoPor", label: "Quien", tipo: TIPOS_DE_PRESENTACION.TEXTO },
   { id: "cuando", label: "Cuando", tipo: TIPOS_DE_PRESENTACION.TEXTO },
+];
+
+/**
+ * Consumo de insumos de una jornada (fn_consumo_de_insumos_de_jornada, 00178), lote por lote: lo
+ * cargado a su bodega movil, lo entregado en sus recetas, lo devuelto y lo que queda, con lo que vale lo
+ * entregado. Las filas salen de aConsumoDeLote() (bodega.api.js).
+ */
+export const COLUMNAS_CONSUMO_DE_JORNADA = [
+  { id: "articulo", label: "Artículo", tipo: TIPOS_DE_PRESENTACION.TEXTO, principal: true },
+  { id: "numeroLote", label: "Lote", tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  { id: "cargado", label: "Cargado", tipo: TIPOS_DE_PRESENTACION.NUMERO },
+  { id: "entregado", label: "Entregado", tipo: TIPOS_DE_PRESENTACION.NUMERO },
+  { id: "devuelto", label: "Devuelto", tipo: TIPOS_DE_PRESENTACION.NUMERO },
+  { id: "enBodega", label: "En la bodega", tipo: TIPOS_DE_PRESENTACION.NUMERO },
+  { id: "costoUnitario", label: "Costo unitario", tipo: TIPOS_DE_PRESENTACION.MONEDA },
+  { id: "valorEntregado", label: "Valor entregado", tipo: TIPOS_DE_PRESENTACION.MONEDA },
 ];

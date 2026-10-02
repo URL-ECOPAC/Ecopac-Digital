@@ -22,6 +22,12 @@ INSERT INTO proyectos (id, nombre) VALUES
   ('5f000000-0000-0000-0000-000000000169', 'Proyecto de prueba 00169');
 ALTER TABLE jornadas ALTER COLUMN proyecto_id SET DEFAULT '5f000000-0000-0000-0000-000000000169';
 
+-- Desde la 00178 toda jornada nueva lleva una bodega movil. Estas pruebas no tratan de bodegas:
+-- sus jornadas reciben una de prueba como DEFAULT de la columna, que el ROLLBACK del final deshace.
+INSERT INTO bodegas (id, nombre, es_movil) VALUES
+  ('5b000000-0000-0000-0000-000000000178', 'Bodega movil de prueba 00178', TRUE);
+ALTER TABLE jornadas ALTER COLUMN botiquin_bodega_id SET DEFAULT '5b000000-0000-0000-0000-000000000178';
+
 -- ============================================================================
 -- Setup: una jornada en curso, un medico y un voluntario asignados, uno sin asignar,
 -- y cuatro pacientes, uno por etapa del flujo.

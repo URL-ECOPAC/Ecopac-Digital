@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { listarContenidoDeBodegas } from "../inventario/existencias.api.js";
+import {
+  listarContenidoDeBodegas,
+  valorizarContenidoDeBodega,
+} from "../inventario/existencias.api.js";
 import { listarMedicamentos } from "../inventario/medicamentos.api.js";
 import { COLUMNAS_INSUMO_PROYECTO } from "../proyectos/columnas.js";
 import { CAMPOS_INSUMO_PROYECTO } from "../proyectos/campos.js";
@@ -35,19 +38,17 @@ export function resumirInsumosPrevistos(insumos = []) {
 }
 
 /**
- * View model de la pestana Insumos del detalle de una jornada (00151): lo previsto para la jornada,
- * con alta, correccion y baja para quien la administra. Mismos campos, validacion y columnas que
- * tenian los insumos del proyecto, que ahora solo los muestra.
+ * View model de la pestana Insumos del detalle de una jornada.
  *
- * Con `bodegaId` (la bodega de botiquin de la jornada) suma ademas lo que hay en esa bodega
- * (issue #911): es parte de los insumos de la jornada sin que nadie tenga que volver a anotarlo.
- * Llega aparte, en `existenciasDeBodega`, porque no es una prevision con costo estimado sino lo que
- * fisicamente hay, lote por lote.
+ * Desde la 00178 los insumos de la jornada son lo que hay en su bodega movil (`bodegaId`), que se
+ * carga desde otra bodega (useCargaDeBodegaDeJornada): llega en `existenciasDeBodega`, lote por
+ * lote, y `valorDeBodega` dice cuanto vale. La lista de previstos (jornada_insumos, 00151) ya no se
+ * llena: queda la de las jornadas anteriores, que se puede corregir o quitar.
  *
  * @param {{ jornadaId?: string, bodegaId?: string|null, rol?: string, activo?: boolean }} opciones
  *   `activo` en false no consulta nada: la pestana se carga al abrirse.
  *
- * @returns {object} Con: puedeVer, puedeGestionar, columnas, campos, catalogos, insumos, resumen, existenciasDeBodega, cargando, error, errores, ocupado, guardar, quitar, recargar.
+ * @returns {object} Con: puedeVer, puedeGestionar, columnas, campos, catalogos, insumos, resumen, existenciasDeBodega, valorDeBodega, cargando, error, errores, ocupado, guardar, quitar, recargar, recargarBodega.
  */
 export function useInsumosDeJornada({ jornadaId, bodegaId = null, rol, activo = true } = {}) {
   const puedeVer = puedeVerInsumosDeJornada(rol);
@@ -182,6 +183,7 @@ export function useInsumosDeJornada({ jornadaId, bodegaId = null, rol, activo = 
     insumos,
     resumen: resumirInsumosPrevistos(insumos),
     existenciasDeBodega,
+    valorDeBodega: valorizarContenidoDeBodega(existenciasDeBodega.contenido),
     cargando,
     error,
     errores,
@@ -189,5 +191,6 @@ export function useInsumosDeJornada({ jornadaId, bodegaId = null, rol, activo = 
     guardar,
     quitar,
     recargar: cargar,
+    recargarBodega: cargarExistencias,
   };
 }

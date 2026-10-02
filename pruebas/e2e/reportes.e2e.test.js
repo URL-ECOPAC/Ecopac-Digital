@@ -53,13 +53,32 @@ const JORNADA_VACIA_ID = "40000772-0000-0000-0000-000000000001";
 
 beforeAll(async () => {
   bodega = await bodegaPrincipal();
-  existenciasIniciales = await instantaneaDeExistencias([[DEMO.loteSano, bodega]]);
+  // Lo que se receta en una jornada sale de su bodega movil (00176/00178), no de la principal: se
+  // le pone existencia del lote sano, y afterAll la devuelve a como estaba.
+  existenciasIniciales = await instantaneaDeExistencias([
+    [DEMO.loteSano, bodega],
+    [DEMO.loteSano, DEMO.bodegaMovil],
+  ]);
+  await consultar(
+    `INSERT INTO existencias (lote_id, bodega_id, cantidad_disponible)
+     VALUES ($1, $2, 50)
+     ON CONFLICT (lote_id, bodega_id) DO UPDATE SET cantidad_disponible = EXCLUDED.cantidad_disponible`,
+    [DEMO.loteSano, DEMO.bodegaMovil],
+  );
 
   await consultar(
-    `INSERT INTO jornadas (id, nombre, fecha, comunidad_id, responsable_id, proyecto_id)
-     VALUES ($1, 'Jornada vacia (prueba e2e #772)', CURRENT_DATE + 60, $2, $3, $4)
+    // Desde la 00178 toda jornada lleva bodega movil; planificada, puede compartir la del seed.
+    `INSERT INTO jornadas (id, nombre, fecha, comunidad_id, responsable_id, proyecto_id,
+                           botiquin_bodega_id)
+     VALUES ($1, 'Jornada vacia (prueba e2e #772)', CURRENT_DATE + 60, $2, $3, $4, $5)
      ON CONFLICT (id) DO NOTHING`,
-    [JORNADA_VACIA_ID, DEMO.comunidad, CUENTAS.ADMINISTRADORA.perfilId, DEMO.proyecto],
+    [
+      JORNADA_VACIA_ID,
+      DEMO.comunidad,
+      CUENTAS.ADMINISTRADORA.perfilId,
+      DEMO.proyecto,
+      DEMO.bodegaMovil,
+    ],
   );
 
   // Flujo minimo para que los reportes "con datos" tengan algo real que agregar.
@@ -99,7 +118,7 @@ beforeAll(async () => {
       {
         medicamento: DEMO.medicamentoSano,
         loteId: DEMO.loteSano,
-        bodegaId: bodega,
+        bodegaId: DEMO.bodegaMovil,
         dosis: "1 tableta",
         frecuencia: "cada 12 horas",
         duracion: "3 dias",

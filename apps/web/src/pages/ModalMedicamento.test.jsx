@@ -32,8 +32,8 @@ describe("ModalMedicamento", () => {
     pantalla("medicamento");
 
     expect(screen.getByText("Nuevo medicamento")).toBeInTheDocument();
-    expect(screen.getByLabelText("Principio activo *")).toBeInTheDocument();
-    expect(screen.getByLabelText("Concentración *")).toBeInTheDocument();
+    expect(screen.getByLabelText("Principio activo")).toBeInTheDocument();
+    expect(screen.getByLabelText("Concentración")).toBeInTheDocument();
     expect(screen.getByLabelText("Es de uso pediatrico")).toBeInTheDocument();
   });
 
@@ -41,17 +41,17 @@ describe("ModalMedicamento", () => {
     pantalla("insumo");
 
     expect(screen.getByText("Nuevo insumo")).toBeInTheDocument();
-    expect(screen.queryByLabelText("Principio activo *")).not.toBeInTheDocument();
-    expect(screen.queryByLabelText("Concentración *")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Principio activo")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Concentración")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Forma farmacéutica")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Es de uso pediatrico")).not.toBeInTheDocument();
-    expect(screen.getByLabelText("Marca / laboratorio *")).toBeInTheDocument();
+    expect(screen.getByLabelText("Marca / laboratorio")).toBeInTheDocument();
   });
 
   it("al editar, el principio activo se puede cambiar (00166)", () => {
     pantalla("medicamento", { modoEdicion: true });
 
-    expect(screen.getByLabelText("Principio activo *")).toBeEnabled();
+    expect(screen.getByLabelText("Principio activo")).toBeEnabled();
     expect(screen.queryByText(/no se puede cambiar/)).not.toBeInTheDocument();
   });
 });
