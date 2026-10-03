@@ -45,13 +45,26 @@ export function resumirInsumosPrevistos(insumos = []) {
  * lote, y `valorDeBodega` dice cuanto vale. La lista de previstos (jornada_insumos, 00151) ya no se
  * llena: queda la de las jornadas anteriores, que se puede corregir o quitar.
  *
- * @param {{ jornadaId?: string, bodegaId?: string|null, rol?: string, activo?: boolean }} opciones
- *   `activo` en false no consulta nada: la pestana se carga al abrirse.
+ * Con la bodega principal (`bodegaEsPrincipal`, 00181) no hay nada que mostrar de la bodega: su
+ * existencia es la de toda la organizacion, no la de la jornada. No se consulta, y
+ * `usaBodegaPrincipal` le dice a la pantalla que lo explique; lo entregado esta en Consumo.
  *
- * @returns {object} Con: puedeVer, puedeGestionar, columnas, campos, catalogos, insumos, resumen, existenciasDeBodega, valorDeBodega, cargando, error, errores, ocupado, guardar, quitar, recargar, recargarBodega.
+ * @param {{ jornadaId?: string, bodegaId?: string|null, bodegaEsPrincipal?: boolean, rol?: string,
+ *   activo?: boolean }} opciones `activo` en false no consulta nada: la pestana se carga al abrirse.
+ *
+ * @returns {object} Con: puedeVer, puedeGestionar, usaBodegaPrincipal, columnas, campos, catalogos, insumos, resumen, existenciasDeBodega, valorDeBodega, cargando, error, errores, ocupado, guardar, quitar, recargar, recargarBodega.
  */
-export function useInsumosDeJornada({ jornadaId, bodegaId = null, rol, activo = true } = {}) {
+export function useInsumosDeJornada({
+  jornadaId,
+  bodegaId: bodegaDeLaJornada = null,
+  bodegaEsPrincipal = false,
+  rol,
+  activo = true,
+} = {}) {
   const puedeVer = puedeVerInsumosDeJornada(rol);
+  const usaBodegaPrincipal = Boolean(bodegaDeLaJornada) && bodegaEsPrincipal;
+  // La bodega cuyo contenido se muestra: solo una movil.
+  const bodegaId = usaBodegaPrincipal ? null : bodegaDeLaJornada;
   const puedeGestionar = puedeGestionarInsumosDeJornada(rol);
 
   const [insumos, setInsumos] = useState([]);
@@ -177,6 +190,7 @@ export function useInsumosDeJornada({ jornadaId, bodegaId = null, rol, activo = 
   return {
     puedeVer,
     puedeGestionar,
+    usaBodegaPrincipal,
     columnas: COLUMNAS_INSUMO_PROYECTO,
     campos: CAMPOS_INSUMO_PROYECTO,
     catalogos: { articulos: articulosDisponibles },

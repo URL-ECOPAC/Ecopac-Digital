@@ -131,6 +131,26 @@ describe("obtenerResumenCierre", () => {
     });
   });
 
+  it("con la bodega principal no cuenta sus movimientos pendientes (00181)", async () => {
+    dobles.contarPacientesDeJornada.mockResolvedValue({ cantidad: 1, error: null });
+    dobles.contarConsultasDeJornada.mockResolvedValue({ cantidad: 1, error: null });
+    dobles.contarRecetasDeJornada.mockResolvedValue({ cantidad: 1, error: null });
+    dobles.contarAtencionesIncompletas.mockResolvedValue({ cantidad: 0, error: null });
+    dobles.listarMovimientos.mockResolvedValue({ datos: [{ id: "m1" }], error: null });
+
+    const resumen = await obtenerResumenCierre(
+      {
+        id: "jor-1",
+        botiquinBodegaId: "principal",
+        botiquinBodega: { nombre: "Bodega Principal", esPrincipal: true },
+      },
+      { rol: ROLES.ADMINISTRADOR },
+    );
+
+    expect(resumen.movimientosPendientes).toBe(0);
+    expect(dobles.listarMovimientos).not.toHaveBeenCalled();
+  });
+
   it("medico ve pacientesAtendidos y atencionesIncompletas reales, igual que administrador", async () => {
     dobles.contarPacientesDeJornada.mockResolvedValue({ cantidad: 5, error: null });
     dobles.contarAtencionesIncompletas.mockResolvedValue({ cantidad: 1, error: null });

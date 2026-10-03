@@ -14,8 +14,11 @@ vi.mock("../api/cliente.js", () => ({
 const {
   aConsumoDeLote,
   cargarInsumoABodegaDeJornada,
+  jornadaUsaBodegaPrincipal,
   listarConsumoDeInsumosDeJornada,
+  mensajeDeInventarioCargado,
   resumirConsumoDeJornada,
+  tieneInventarioCargado,
 } = await import("./bodega.api.js");
 
 function dobleRpc(respuesta) {
@@ -144,5 +147,34 @@ describe("listarConsumoDeInsumosDeJornada", () => {
     expect(error).toBeNull();
     expect(consumo).toHaveLength(1);
     expect(consumo[0].valorEntregado).toBe(17.5);
+  });
+});
+
+describe("bodega principal en la jornada (00181)", () => {
+  it("la jornada usa la principal solo si su bodega lo es", () => {
+    expect(
+      jornadaUsaBodegaPrincipal({ botiquinBodegaId: "b-1", botiquinBodega: { esPrincipal: true } }),
+    ).toBe(true);
+    expect(
+      jornadaUsaBodegaPrincipal({
+        botiquinBodegaId: "b-2",
+        botiquinBodega: { esPrincipal: false },
+      }),
+    ).toBe(false);
+    expect(jornadaUsaBodegaPrincipal({ botiquinBodegaId: null })).toBe(false);
+    expect(jornadaUsaBodegaPrincipal(null)).toBe(false);
+  });
+
+  it("hay inventario cargado si algun lote se cargo y sigue en la bodega", () => {
+    expect(tieneInventarioCargado([{ cargado: 10, enBodega: 4 }])).toBe(true);
+    expect(tieneInventarioCargado([{ cargado: 10, enBodega: 0 }])).toBe(false);
+    // Lo que la bodega trae de otra jornada no es de esta.
+    expect(tieneInventarioCargado([{ cargado: 0, enBodega: 30 }])).toBe(false);
+    expect(tieneInventarioCargado()).toBe(false);
+  });
+
+  it("el mensaje nombra la bodega cuando se conoce", () => {
+    expect(mensajeDeInventarioCargado("Botiquin A")).toMatch(/«Botiquin A»/);
+    expect(mensajeDeInventarioCargado()).toMatch(/^La bodega todavía tiene inventario cargado/);
   });
 });

@@ -20,6 +20,7 @@ import {
   seccionesDeDetalleJornada,
   mayusculaInicial,
   puedeVerInsumosDeJornada,
+  jornadaUsaBodegaPrincipal,
   useCuadroTurnos,
   useDetalleJornada,
   useResumenCierreJornada,
@@ -498,7 +499,11 @@ export default function DetalleJornadaPage() {
               jornadaId={jornada.id}
               bodega={
                 jornada.botiquinBodegaId
-                  ? { id: jornada.botiquinBodegaId, nombre: jornada.botiquinBodega?.nombre ?? "" }
+                  ? {
+                      id: jornada.botiquinBodegaId,
+                      nombre: jornada.botiquinBodega?.nombre ?? "",
+                      esPrincipal: jornadaUsaBodegaPrincipal(jornada),
+                    }
                   : null
               }
               rol={rol}
@@ -506,7 +511,13 @@ export default function DetalleJornadaPage() {
             />
           )}
 
-          {pestaniaMostrada === "consumo" && <ConsumoDeJornada jornadaId={jornada.id} rol={rol} />}
+          {pestaniaMostrada === "consumo" && (
+            <ConsumoDeJornada
+              jornadaId={jornada.id}
+              rol={rol}
+              usaBodegaPrincipal={jornadaUsaBodegaPrincipal(jornada)}
+            />
+          )}
 
           {pestaniaMostrada === "cierre" && (
             <>

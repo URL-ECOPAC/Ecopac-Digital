@@ -24,6 +24,10 @@ import {
   listarInsumosDeLasJornadasDelProyecto,
 } from "../jornadas/insumos.api.js";
 import {
+  listarConsumoDeInsumosDeJornada,
+  resumirConsumoDeJornada,
+} from "../jornadas/bodega.api.js";
+import {
   listarContenidoDeBodegas,
   valorizarContenidoDeBodega,
 } from "../inventario/existencias.api.js";
@@ -40,6 +44,7 @@ import {
   listarProyectos,
 } from "./api.js";
 import {
+  COLUMNAS_ENTREGADO_DESDE_LA_PRINCIPAL,
   COLUMNAS_GASTO_DE_PROYECTO,
   COLUMNAS_INSUMO_PROYECTO,
   COLUMNAS_PROYECTO,
@@ -168,6 +173,7 @@ export function useProyectosSociales({ usuarioRol } = {}) {
   // Lo que hay en las bodegas de botiquin de sus jornadas (issue #911).
   const [bodegasDeJornadas, setBodegasDeJornadas] = useState([]);
   const [existenciasEnBodegas, setExistenciasEnBodegas] = useState([]);
+  const [entregadoDesdeLaPrincipal, setEntregadoDesdeLaPrincipal] = useState([]);
   const [equipo, setEquipo] = useState([]);
   const [cargandoEquipo, setCargandoEquipo] = useState(false);
   const [errorEquipo, setErrorEquipo] = useState(null);
@@ -310,13 +316,16 @@ export function useProyectosSociales({ usuarioRol } = {}) {
   // ve insumos y gastos (#864).
   //
   // Ademas, lo que hay en la bodega de botiquin de cada jornada tambien es insumo del proyecto
-  // (issue #911): se suma aparte, lote por lote y con su bodega.
+  // (issue #911): se suma aparte, lote por lote y con su bodega. De las jornadas que entregan de la
+  // bodega principal (00181) solo cuenta lo entregado en ellas: la existencia de la principal es de
+  // toda la organizacion.
   const cargarInsumos = useCallback(async () => {
     if (!proyectoSeleccionadoId || !permisos.puedeVerInsumosYGastos) {
       setInsumos([]);
       setInsumosSinJornada([]);
       setBodegasDeJornadas([]);
       setExistenciasEnBodegas([]);
+      setEntregadoDesdeLaPrincipal([]);
       return;
     }
     setCargandoInsumos(true);
@@ -325,14 +334,30 @@ export function useProyectosSociales({ usuarioRol } = {}) {
       listarInsumosDelProyecto(proyectoSeleccionadoId),
       listarBodegasDeLasJornadasDelProyecto(proyectoSeleccionadoId),
     ]);
-    const enBodegas = await listarContenidoDeBodegas(
-      deBodegas.bodegas.map((bodega) => bodega.bodegaId),
+    const [enBodegas, ...consumos] = await Promise.all([
+      listarContenidoDeBodegas(deBodegas.bodegas.map((bodega) => bodega.bodegaId)),
+      ...deBodegas.jornadasConBodegaPrincipal.map((jornada) =>
+        listarConsumoDeInsumosDeJornada(jornada.id),
+      ),
+    ]);
+    const entregado = deBodegas.jornadasConBodegaPrincipal.flatMap((jornada, indice) =>
+      consumos[indice].consumo
+        .filter((fila) => fila.entregado > 0)
+        .map((fila) => ({ ...fila, id: `${jornada.id}:${fila.loteId}`, jornada: jornada.nombre })),
     );
     setInsumos(deJornadas.insumos);
     setInsumosSinJornada(sinJornada.insumos);
     setBodegasDeJornadas(deBodegas.bodegas);
     setExistenciasEnBodegas(enBodegas.contenido);
-    setErrorInsumos(deJornadas.error ?? sinJornada.error ?? deBodegas.error ?? enBodegas.error);
+    setEntregadoDesdeLaPrincipal(entregado);
+    setErrorInsumos(
+      deJornadas.error ??
+        sinJornada.error ??
+        deBodegas.error ??
+        enBodegas.error ??
+        consumos.find((respuesta) => respuesta.error)?.error ??
+        null,
+    );
     setCargandoInsumos(false);
   }, [proyectoSeleccionadoId, permisos.puedeVerInsumosYGastos]);
 
@@ -595,6 +620,10 @@ export function useProyectosSociales({ usuarioRol } = {}) {
     bodegasDeJornadas,
     existenciasEnBodegas,
     valorDeBodegas: valorizarContenidoDeBodega(existenciasEnBodegas),
+    entregadoDesdeLaPrincipal,
+    valorEntregadoDesdeLaPrincipal:
+      resumirConsumoDeJornada(entregadoDesdeLaPrincipal).valorEntregado,
+    columnasEntregadoDesdeLaPrincipal: COLUMNAS_ENTREGADO_DESDE_LA_PRINCIPAL,
     cargandoInsumos,
     errorInsumos,
     columnasInsumos: COLUMNAS_INSUMO_PROYECTO,

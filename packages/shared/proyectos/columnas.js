@@ -76,6 +76,19 @@ export const COLUMNAS_HISTORIAL_PROYECTO = [
  * Insumos previstos de un proyecto (proyecto_insumos, 00147); campos ya en camelCase por
  * insumos.api.js. El total no es una columna de la tabla: lo calcula esa API.
  */
+/**
+ * Lo entregado en las jornadas del proyecto que usan la bodega principal (00181), lote por lote. Las
+ * filas salen de aConsumoDeLote() (jornadas/bodega.api.js) con el nombre de su jornada.
+ */
+export const COLUMNAS_ENTREGADO_DESDE_LA_PRINCIPAL = [
+  { id: "articulo", label: "Artículo", tipo: TIPOS_DE_PRESENTACION.TEXTO, principal: true },
+  { id: "numeroLote", label: "Lote", tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  { id: "jornada", label: "Jornada", tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  { id: "entregado", label: "Entregado", tipo: TIPOS_DE_PRESENTACION.NUMERO },
+  { id: "costoUnitario", label: "Costo unitario", tipo: TIPOS_DE_PRESENTACION.MONEDA },
+  { id: "valorEntregado", label: "Valor entregado", tipo: TIPOS_DE_PRESENTACION.MONEDA },
+];
+
 export const COLUMNAS_INSUMO_PROYECTO = [
   {
     id: "articuloNombre",

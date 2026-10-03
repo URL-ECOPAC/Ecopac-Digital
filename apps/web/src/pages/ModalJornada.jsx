@@ -151,14 +151,13 @@ export default function ModalJornada({ visible = true, jornada, rol, onClose, on
       );
     }
 
-    // Toda jornada lleva bodega movil (00178): si no hay ninguna, se crea aqui mismo.
+    // Toda jornada lleva bodega (00178): una movil o la principal (00181). Si no hay ninguna
+    // movil, se crea aqui mismo.
     if (campo.id === "botiquinBodega") {
       const opciones = catalogos.bodegas ?? [];
-      let placeholder = "Selecciona una bodega móvil";
+      let placeholder = "Selecciona la bodega principal o una móvil";
       if (opciones.length === 0) {
-        placeholder = catalogosCargados?.bodegas
-          ? "No hay bodegas móviles: crea una"
-          : "Cargando...";
+        placeholder = catalogosCargados?.bodegas ? "No hay bodegas: crea una móvil" : "Cargando...";
       }
       return (
         <SelectorConAlta

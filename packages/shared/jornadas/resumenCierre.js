@@ -36,6 +36,9 @@
 // activa lee movimientos_inventario", 00079:204-205: `USING (public.rol_actual() IS NOT NULL)`), a
 // diferencia de consultas/atenciones/recetas: no hace falta gatear este conteo por rol.
 //
+// Con la bodega principal (00181) no se cuentan: la principal es la de toda la organizacion y sus
+// pendientes no son de la jornada. El conteo queda en 0, como el de una jornada sin botiquin.
+//
 // "Del botiquin de esta jornada", no "de esta jornada" (a proposito, ver el texto que arma
 // DetalleJornadaPage.jsx con este numero): jornadas.botiquin_bodega_id NO tiene UNIQUE, asi que dos
 // jornadas pueden compartir bodega, y entonces el numero incluye movimientos de la otra.
@@ -48,6 +51,7 @@ import { puedeVerHistorial as puedeVerDatosClinicos } from "../pacientes/permiso
 import { contarRecetasDeJornada } from "../pacientes/recetas.api.js";
 import { esAdministrador, ROLES } from "../usuarios/roles.js";
 import { contarAtencionesIncompletas } from "./api.js";
+import { jornadaUsaBodegaPrincipal } from "./bodega.api.js";
 
 /**
  * Puede ver cuantos pacientes tiene registrados una jornada.
@@ -105,7 +109,7 @@ export async function contarMovimientosPendientesDelBotiquin(botiquinBodegaId) {
  * sin dejar de mostrar lo que si se pudo calcular. Mismo criterio que obtenerJornadasDePersona()
  * (api.js) usa para su propio Promise.all.
  *
- * @param {{ id: string, botiquinBodegaId?: string|null }} jornada
+ * @param {{ id: string, botiquinBodegaId?: string|null, botiquinBodega?: { esPrincipal?: boolean }|null }} jornada
  * @param {{ rol?: string }} [opciones]
  * @returns {Promise<{
  *   indicadores: { pacientesAtendidos: number|null, consultasRealizadas: number|null, tratamientosEntregados: number|null },
@@ -143,7 +147,9 @@ export async function obtenerResumenCierre(jornada, { rol } = {}) {
     contarConsultasDeJornada(jornadaId, { rol }),
     contarRecetasDeJornada(jornadaId, { rol }),
     puedeVerAtencionesIncompletas(rol) ? contarAtencionesIncompletas(jornadaId) : sinDato,
-    contarMovimientosPendientesDelBotiquin(jornada?.botiquinBodegaId),
+    contarMovimientosPendientesDelBotiquin(
+      jornadaUsaBodegaPrincipal(jornada) ? null : jornada?.botiquinBodegaId,
+    ),
   ]);
 
   return {

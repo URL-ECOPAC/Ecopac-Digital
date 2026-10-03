@@ -33,6 +33,11 @@ import {
   normalizarError,
 } from "../api/errores-de-supabase.js";
 import { esAdministrador } from "../usuarios/roles.js";
+import {
+  listarConsumoDeInsumosDeJornada,
+  mensajeDeInventarioCargado,
+  tieneInventarioCargado,
+} from "./bodega.api.js";
 import { puedeVerHistorialJornada } from "./permisos.js";
 import { ESTADOS_JORNADA } from "../enums.js";
 import {
@@ -69,7 +74,8 @@ const COLUMNAS_DE_JORNADA = [
   "updatedAt:updated_at",
   "comunidad:comunidades(nombre)",
   "responsable:nombres_de_perfiles(nombres, apellidos)",
-  "botiquinBodega:bodegas(nombre)",
+  // esPrincipal: la jornada entrega directo de la bodega principal (00181), sin carga ni devolucion.
+  "botiquinBodega:bodegas(nombre, esPrincipal:es_principal)",
   // El detalle dice a que proyecto pertenece. Si RLS no deja leer el proyecto, llega en null.
   "proyecto:proyectos(nombre)",
 ].join(", ");
@@ -407,7 +413,7 @@ export async function actualizarJornada(id, datos, { rol } = {}) {
 
     const { data: filaActual, error: errorDeLectura } = await supabase
       .from("jornadas")
-      .select("estado, botiquinBodegaId:botiquin_bodega_id")
+      .select("estado, botiquinBodegaId:botiquin_bodega_id, botiquinBodega:bodegas(nombre)")
       .eq("id", id)
       .maybeSingle();
 
@@ -422,6 +428,26 @@ export async function actualizarJornada(id, datos, { rol } = {}) {
             "Una jornada finalizada no se puede editar. Solo la administradora puede modificarla.",
         },
       };
+    }
+
+    // 00181: no se cambia de bodega mientras la anterior conserve lo que se cargo para esta
+    // jornada. La base lo rechaza igual (trg_jornadas_sin_inventario_cargado_al_cambiar_bodega),
+    // pero su mensaje no llega a la pantalla.
+    const cambiaDeBodega =
+      fila.botiquin_bodega_id !== undefined &&
+      filaActual?.botiquinBodegaId &&
+      fila.botiquin_bodega_id !== filaActual.botiquinBodegaId;
+    if (cambiaDeBodega) {
+      const { consumo } = await listarConsumoDeInsumosDeJornada(id);
+      if (tieneInventarioCargado(consumo)) {
+        return {
+          jornada: null,
+          error: {
+            ...construirError(CODIGOS_DE_ERROR_DE_SUPABASE.CHECK),
+            mensaje: mensajeDeInventarioCargado(filaActual.botiquinBodega?.nombre),
+          },
+        };
+      }
     }
 
     const { data, error } = await supabase
@@ -478,7 +504,9 @@ export async function cambiarEstadoJornada(id, nuevoEstado, { rol } = {}) {
 
     const { data: filaActual, error: errorDeLectura } = await supabase
       .from("jornadas")
-      .select("estado, botiquinBodegaId:botiquin_bodega_id")
+      .select(
+        "estado, botiquinBodegaId:botiquin_bodega_id, botiquinBodega:bodegas(esPrincipal:es_principal)",
+      )
       .eq("id", id)
       .maybeSingle();
 
@@ -500,8 +528,13 @@ export async function cambiarEstadoJornada(id, nuevoEstado, { rol } = {}) {
     }
 
     // 00179: la bodega movil no esta en dos jornadas en curso. La base lo rechaza igual, pero su
-    // mensaje no llega a la pantalla; aqui se dice cual es la otra jornada.
-    if (nuevoEstado === ESTADOS_JORNADA.EN_CURSO && filaActual.botiquinBodegaId) {
+    // mensaje no llega a la pantalla; aqui se dice cual es la otra jornada. La principal no se
+    // ocupa: varias jornadas en curso pueden usarla (00181).
+    if (
+      nuevoEstado === ESTADOS_JORNADA.EN_CURSO &&
+      filaActual.botiquinBodegaId &&
+      !filaActual.botiquinBodega?.esPrincipal
+    ) {
       const { data: otra } = await supabase
         .from("jornadas")
         .select("nombre")

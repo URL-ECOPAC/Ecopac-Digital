@@ -129,12 +129,24 @@ describe("aDatosDeJornada", () => {
 });
 
 describe("opcionesDeBodegaDeBotiquin", () => {
-  it("ofrece solo las bodegas moviles (00178)", () => {
+  it("ofrece las bodegas moviles y la principal, primero la principal (00181)", () => {
     const bodegas = [
-      { id: "b1", nombre: "Bodega Principal", esMovil: false },
       { id: "b2", nombre: "Botiquin A", esMovil: true },
+      { id: "b1", nombre: "Bodega Principal", esMovil: false, esPrincipal: true },
+      { id: "b3", nombre: "Bodega fija", esMovil: false },
     ];
-    expect(opcionesDeBodegaDeBotiquin(bodegas)).toEqual([{ value: "b2", label: "Botiquin A" }]);
+    expect(opcionesDeBodegaDeBotiquin(bodegas)).toEqual([
+      { value: "b1", label: "Bodega Principal (principal, entrega directo)" },
+      { value: "b2", label: "Botiquin A" },
+    ]);
+  });
+
+  it("la principal nunca sale como ocupada: varias jornadas en curso la usan", () => {
+    const bodegas = [{ id: "b1", nombre: "Bodega Principal", esPrincipal: true }];
+    const ocupadas = { b1: { id: "j-otra", nombre: "Jornada Norte" } };
+    expect(opcionesDeBodegaDeBotiquin(bodegas, { ocupadas })).toEqual([
+      { value: "b1", label: "Bodega Principal (principal, entrega directo)" },
+    ]);
   });
 
   it("dice si la bodega esta en otra jornada en curso (00179), pero no si es esta misma", () => {
@@ -148,8 +160,8 @@ describe("opcionesDeBodegaDeBotiquin", () => {
     ]);
   });
 
-  it("sin ninguna movil no ofrece nada", () => {
-    expect(opcionesDeBodegaDeBotiquin([{ id: "b1", nombre: "Bodega Principal" }])).toEqual([]);
+  it("sin ninguna movil ni principal no ofrece nada", () => {
+    expect(opcionesDeBodegaDeBotiquin([{ id: "b1", nombre: "Bodega fija" }])).toEqual([]);
     expect(opcionesDeBodegaDeBotiquin(null)).toEqual([]);
   });
 });
