@@ -4,19 +4,14 @@ import { colors, spacing, typography } from "@ecopac/ui-tokens";
 import { TIPOS_DE_CAMPO, useEdicionPaciente } from "@ecopac/shared";
 
 import {
+  CampoDeFormulario,
   CascadaDeComunidad,
   DateField,
   Modal,
   PrimaryButton,
   SecondaryButton,
-  Selector,
-  TextField,
 } from "../components";
 import { useSesionCompartida } from "../contexto/SesionProvider";
-
-const TECLADO_DE_CAMPO = {
-  [TIPOS_DE_CAMPO.TELEFONO]: "phone-pad",
-};
 
 /**
  * Edicion de los datos del paciente en movil (issue #756). Espejo de
@@ -66,9 +61,6 @@ export default function ModalEdicionPaciente({ visible, paciente, onClose, onGua
     if (resultado.ok) onGuardado?.(resultado.paciente);
   };
 
-  const opcionesDe = (campo) =>
-    campo.opciones ?? (campo.opcionesDesde ? (catalogos[campo.opcionesDesde] ?? []) : []);
-
   return (
     <>
       <Modal
@@ -105,22 +97,6 @@ export default function ModalEdicionPaciente({ visible, paciente, onClose, onGua
               );
             }
 
-            if (campo.tipo === TIPOS_DE_CAMPO.SELECT) {
-              const opciones = opcionesDe(campo);
-              return (
-                <Selector
-                  key={campo.id}
-                  label={campo.label}
-                  requerido={campo.validacion?.requerido}
-                  value={valores[campo.id] || null}
-                  options={opciones}
-                  onSelect={(valor) => setCampo(campo.id, valor)}
-                  error={errores[campo.id]}
-                  disabled={enviando || opciones.length === 0}
-                />
-              );
-            }
-
             if (campo.tipo === TIPOS_DE_CAMPO.FECHA) {
               return (
                 <DateField
@@ -135,17 +111,17 @@ export default function ModalEdicionPaciente({ visible, paciente, onClose, onGua
               );
             }
 
+            // El resto, desde el descriptor (issue #927): un switch propio aqui no conocia
+            // MULTI_SELECT y dibujaba las areas como un campo de texto vacio.
             return (
-              <TextField
+              <CampoDeFormulario
                 key={campo.id}
-                label={campo.label}
-                requerido={campo.validacion?.requerido}
-                value={valores[campo.id] ?? ""}
-                onChangeText={(texto) => setCampo(campo.id, texto)}
-                keyboardType={TECLADO_DE_CAMPO[campo.tipo] ?? "default"}
-                maxLength={campo.validacion?.maxLongitud}
+                campo={campo}
+                valor={valores[campo.id]}
+                onChange={(valor) => setCampo(campo.id, valor)}
                 error={errores[campo.id]}
-                editable={!enviando}
+                catalogos={catalogos}
+                disabled={enviando}
               />
             );
           })}
