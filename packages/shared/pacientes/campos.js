@@ -100,6 +100,15 @@ export const CAMPOS_REGISTRO_PACIENTE = [
     validacion: { requerido: false },
   },
   {
+    // Areas de atencion en las que esta el paciente (issue #927, 00182). Opcional y multiple. Las
+    // opciones son las vigentes mas las retiradas que ya tenga (opcionesDeAreas, areas.campos.js).
+    id: "areas",
+    label: "Áreas de atención",
+    tipo: TIPOS_DE_CAMPO.MULTI_SELECT,
+    opcionesDesde: "areasAtencion",
+    validacion: { requerido: false },
+  },
+  {
     id: "nombreResponsable",
     label: "Nombre del responsable",
     tipo: TIPOS_DE_CAMPO.TEXTO,
@@ -144,7 +153,7 @@ export const SECCIONES_PACIENTE = Object.freeze([
   {
     id: "clinicos",
     titulo: "Datos clínicos",
-    campos: ["tipoSangre"],
+    campos: ["tipoSangre", "areas"],
   },
   {
     id: "responsable",

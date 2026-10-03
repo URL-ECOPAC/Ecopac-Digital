@@ -94,6 +94,14 @@ export const FILTROS_PACIENTE = [
     label: "Condición crónica",
     opcionesDesde: "condicionesCronicas",
   },
+  {
+    // Issue #927 (00182). Ofrece tambien las areas retiradas, marcadas: los pacientes que ya las
+    // tienen las conservan.
+    id: "areas",
+    tipo: TIPOS_DE_FILTRO.SELECT,
+    label: "Área de atención",
+    opcionesDesde: "areasAtencion",
+  },
 ];
 
 /** Valor inicial de los filtros, para que ambas apps arranquen en el mismo estado. */
@@ -103,4 +111,5 @@ export const FILTROS_PACIENTE_VACIOS = {
   sexo: null,
   rangoEdad: null,
   condicionCronica: null,
+  areas: null,
 };

@@ -241,6 +241,29 @@
  * @property {TipoSanguineo|null} tipoSangre
  * @property {string|null} nombreResponsable
  * @property {string|null} parentescoResponsable
+ * @property {string|null} registradoPor Quien registro al paciente (00182); null en los anteriores.
+ */
+
+/**
+ * Fila de `areas_atencion` (00182_areas_de_atencion.sql): catalogo de areas de atencion
+ * (Odontologia, Psicologia, Medicina General, ...). Se retiran con `esVigente`, no se borran.
+ *
+ * @typedef {object} AreaAtencion
+ * @property {string} id
+ * @property {string} nombre
+ * @property {string|null} descripcion
+ * @property {boolean} esVigente
+ * @property {string} createdAt
+ * @property {string} updatedAt
+ */
+
+/**
+ * Fila de `paciente_area` (00182_areas_de_atencion.sql): un area en la que esta un paciente.
+ *
+ * @typedef {object} PacienteArea
+ * @property {string} pacienteId
+ * @property {string} areaId
+ * @property {string} createdAt
  */
 
 /**

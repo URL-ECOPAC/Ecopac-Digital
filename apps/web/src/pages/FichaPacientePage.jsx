@@ -244,6 +244,22 @@ export default function FichaPacientePage() {
                 </div>
               </div>
             )}
+
+            {/* Areas de atencion (issue #927): una retirada sale marcada y en gris. */}
+            {cabecera.areas.length > 0 && (
+              <div className="pac-datos">
+                <p className="pac-rotulo mb-2">Áreas de atención</p>
+                <div className="d-flex flex-wrap gap-2">
+                  {cabecera.areas.map((area) => (
+                    <StatusChip
+                      key={area.id}
+                      status={area.vigente ? "activo" : "inactivo"}
+                      label={area.etiqueta}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
           </Card>
 
           {/* Criterio 6 de #637: una fusion hecha por error se tiene que poder consultar

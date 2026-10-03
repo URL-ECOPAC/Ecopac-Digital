@@ -5,11 +5,15 @@ import { useAltaDeComunidadEnLinea } from "../territorio/useAltaDeComunidadEnLin
 import { useCascadaTerritorial } from "../territorio/useCascadaTerritorial.js";
 import { listarIdiomas } from "./idiomas.api.js";
 import { buscarPacientes, registrarPaciente } from "./api.js";
+import { obtenerCatalogoDeAreas } from "./areas.api.js";
+import { opcionesDeAreas } from "./areas.campos.js";
 import { CAMPOS_REGISTRO_PACIENTE, OPCIONES_SEXO } from "./campos.js";
+import { TIPOS_DE_CAMPO } from "../descriptores.js";
 import { advertirPacienteDuplicado } from "./validaciones.js";
 
+// Un campo multiple (las areas, 00182) arranca como lista vacia, no como texto.
 const VALORES_INICIALES = CAMPOS_REGISTRO_PACIENTE.reduce((valores, campo) => {
-  valores[campo.id] = "";
+  valores[campo.id] = campo.tipo === TIPOS_DE_CAMPO.MULTI_SELECT ? [] : "";
   return valores;
 }, {});
 
@@ -35,6 +39,7 @@ export function useRegistroPaciente({ comunidadInicial = null, nombresInicial = 
   const [registrado, setRegistrado] = useState(null);
 
   const [idiomas, setIdiomas] = useState([]);
+  const [areas, setAreas] = useState([]);
   const [advertenciaDuplicado, setAdvertenciaDuplicado] = useState(null);
 
   useEffect(() => {
@@ -42,6 +47,10 @@ export function useRegistroPaciente({ comunidadInicial = null, nombresInicial = 
     // listarIdiomas() ya devuelve las opciones con value/label.
     listarIdiomas().then(({ idiomas: opciones }) => {
       if (vigente) setIdiomas(opciones);
+    });
+    // Solo las vigentes: un paciente nuevo no se registra en un area retirada (00182).
+    obtenerCatalogoDeAreas({ soloVigentes: true }).then(({ areas: filas }) => {
+      if (vigente) setAreas(filas);
     });
     return () => {
       vigente = false;
@@ -172,6 +181,11 @@ export function useRegistroPaciente({ comunidadInicial = null, nombresInicial = 
     registrarComunidad,
     erroresComunidad,
     creandoComunidad,
-    catalogos: { ...catalogosDeTerritorio, idiomas, sexo: OPCIONES_SEXO },
+    catalogos: {
+      ...catalogosDeTerritorio,
+      idiomas,
+      sexo: OPCIONES_SEXO,
+      areasAtencion: opcionesDeAreas(areas, valores.areas),
+    },
   };
 }

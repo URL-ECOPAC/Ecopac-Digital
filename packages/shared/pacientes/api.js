@@ -26,6 +26,7 @@ import { normalizarTexto } from "../validations/index.js";
 import { calcularEdad } from "../formato/fechas.js";
 import { ESTADOS_CONDICION_CRONICA } from "../enums.js";
 import { validarRegistroPaciente } from "./validaciones.js";
+import { aAreasDelPaciente, sincronizarAreasDelPaciente } from "./areas.api.js";
 
 // Las columnas se enumeran en lugar de pedir "*" para que una columna nueva en pacientes no
 // empiece a viajar sola hasta el cliente. comunidad se pide embebida (comunidades.nombre) para
@@ -55,6 +56,17 @@ const COLUMNAS_DEL_PACIENTE = [
   // PostgREST resuelve los tres niveles en la misma peticion.
   "comunidad:comunidades(nombre, municipio:municipios(nombre, departamento:departamentos(nombre)))",
 ].join(", ");
+
+/**
+ * Los ids de area que viajan a fn_registrar_paciente: sin repetidos, o null si no hay ninguno.
+ *
+ * @param {unknown} areas Valor del campo `areas` del formulario.
+ * @returns {string[]|null}
+ */
+function idsDeAreas(areas) {
+  const ids = Array.isArray(areas) ? [...new Set(areas.filter(Boolean))] : [];
+  return ids.length > 0 ? ids : null;
+}
 
 const COLUMNAS_DEL_EXPEDIENTE = [
   "id",
@@ -228,6 +240,8 @@ export async function registrarPaciente(datos = {}) {
         p_tipo_sangre: nuloSiVacio("tipoSangre", datos.tipoSangre),
         p_nombre_responsable: nuloSiVacio("nombreResponsable", datos.nombreResponsable),
         p_parentesco_responsable: nuloSiVacio("parentescoResponsable", datos.parentescoResponsable),
+        // 00182: las areas entran en la misma transaccion que el paciente.
+        p_area_ids: idsDeAreas(datos.areas),
       })
       .single();
 
@@ -265,18 +279,24 @@ export async function obtenerPaciente(id) {
 
   try {
     const supabase = obtenerSupabase();
-    const [respuestaPaciente, respuestaExpediente, respuestaCondiciones] = await Promise.all([
-      supabase.from("pacientes").select(COLUMNAS_DEL_PACIENTE).eq("id", id).maybeSingle(),
-      supabase
-        .from("expedientes")
-        .select(COLUMNAS_DEL_EXPEDIENTE)
-        .eq("paciente_id", id)
-        .maybeSingle(),
-      supabase
-        .from("padecimientos_cronicos")
-        .select(COLUMNAS_DE_CONDICION_CRONICA)
-        .eq("paciente_id", id),
-    ]);
+    const [respuestaPaciente, respuestaExpediente, respuestaCondiciones, respuestaAreas] =
+      await Promise.all([
+        supabase.from("pacientes").select(COLUMNAS_DEL_PACIENTE).eq("id", id).maybeSingle(),
+        supabase
+          .from("expedientes")
+          .select(COLUMNAS_DEL_EXPEDIENTE)
+          .eq("paciente_id", id)
+          .maybeSingle(),
+        supabase
+          .from("padecimientos_cronicos")
+          .select(COLUMNAS_DE_CONDICION_CRONICA)
+          .eq("paciente_id", id),
+        // Areas de atencion (00182), con su nombre y si siguen vigentes.
+        supabase
+          .from("paciente_area")
+          .select(`area:areas_atencion(id, nombre, descripcion, esVigente:es_vigente)`)
+          .eq("paciente_id", id),
+      ]);
 
     if (respuestaPaciente.error)
       return { paciente: null, error: normalizarError(respuestaPaciente.error) };
@@ -284,6 +304,8 @@ export async function obtenerPaciente(id) {
       return { paciente: null, error: normalizarError(respuestaExpediente.error) };
     if (respuestaCondiciones.error)
       return { paciente: null, error: normalizarError(respuestaCondiciones.error) };
+    if (respuestaAreas.error)
+      return { paciente: null, error: normalizarError(respuestaAreas.error) };
 
     const fila = respuestaPaciente.data;
     if (!fila) return { paciente: null, error: null };
@@ -293,6 +315,7 @@ export async function obtenerPaciente(id) {
         ...fila,
         expediente: respuestaExpediente.data ?? null,
         condicionesCronicas: respuestaCondiciones.data ?? [],
+        areas: aAreasDelPaciente(respuestaAreas.data),
       },
       error: null,
     };
@@ -337,7 +360,11 @@ export async function actualizarPaciente(id, datos = {}) {
   }
 
   const fila = aColumnasDeTabla(datos);
-  if (Object.keys(fila).length === 0) return { paciente: null, errores: {}, error: null };
+  // Las areas (00182) no son una columna de pacientes: se sincronizan aparte, despues.
+  const cambiaAreas = Array.isArray(datos?.areas);
+  if (Object.keys(fila).length === 0 && !cambiaAreas) {
+    return { paciente: null, errores: {}, error: null };
+  }
 
   const erroresCompletos = validarRegistroPaciente(datos);
   const errores = {};
@@ -359,15 +386,25 @@ export async function actualizarPaciente(id, datos = {}) {
   }
 
   try {
-    const { data, error } = await obtenerSupabase()
-      .from("pacientes")
-      .update(fila)
-      .eq("id", id)
-      .select(COLUMNAS_DEL_PACIENTE)
-      .maybeSingle();
+    let paciente = null;
+    if (Object.keys(fila).length > 0) {
+      const { data, error } = await obtenerSupabase()
+        .from("pacientes")
+        .update(fila)
+        .eq("id", id)
+        .select(COLUMNAS_DEL_PACIENTE)
+        .maybeSingle();
 
-    if (error) return { paciente: null, errores: {}, error: normalizarError(error) };
-    return { paciente: data ?? null, errores: {}, error: null };
+      if (error) return { paciente: null, errores: {}, error: normalizarError(error) };
+      paciente = data ?? null;
+    }
+
+    if (cambiaAreas) {
+      const { error } = await sincronizarAreasDelPaciente(id, datos.areas);
+      if (error) return { paciente, errores: {}, error };
+    }
+
+    return { paciente, errores: {}, error: null };
   } catch (error) {
     return { paciente: null, errores: {}, error: normalizarError(error) };
   }
@@ -419,6 +456,8 @@ const COLUMNAS_DE_BUSQUEDA_PACIENTE = [
   "fechaBaja:fecha_baja",
   "comunidad:comunidades(nombre)",
   `condicionesCronicas:padecimientos_cronicos(${COLUMNAS_DE_CONDICION_CRONICA})`,
+  // Solo para filtrar por area la busqueda por ficha o DPI (00182); no sigue viaje.
+  "areasDelPaciente:paciente_area(areaId:area_id)",
 ].join(", ");
 
 /**
@@ -497,6 +536,7 @@ export async function buscarPacientePorFicha(numeroFicha, { signal } = {}) {
     };
     delete paciente.fechaBaja;
     delete paciente.condicionesCronicas;
+    delete paciente.areasDelPaciente;
     return { paciente, error: null };
   } catch (error) {
     if (esErrorDeCancelacion(error)) return { paciente: null, error: null, cancelada: true };
@@ -595,7 +635,7 @@ export function calidadDeCoincidencia(valor, digitos) {
  */
 export async function buscarPacientesPorIdentificador(
   digitos,
-  { signal, comunidadId, sexo, edadMin, edadMax, condicionCronicaId } = {},
+  { signal, comunidadId, sexo, edadMin, edadMax, condicionCronicaId, areaId } = {},
 ) {
   if (!digitos) return { pacientes: [], error: null };
 
@@ -666,6 +706,7 @@ export async function buscarPacientesPorIdentificador(
       };
       delete resultado.fechaBaja;
       delete resultado.condicionesCronicas;
+      delete resultado.areasDelPaciente;
       delete resultado.expediente;
       // El DPI se pide solo para poder ordenar por calidad de coincidencia; no es una columna de
       // la lista de resultados (COLUMNAS_PACIENTE) y no tiene por que seguir viaje.
@@ -687,6 +728,10 @@ export async function buscarPacientesPorIdentificador(
           (uno) => uno?.estado !== ESTADOS_CONDICION_CRONICA.RESUELTA,
         );
         if (!vigentes.some((uno) => uno?.condicionId === condicionCronicaId)) return false;
+      }
+      // El area (00182), vigente o retirada, igual que fn_buscar_pacientes.
+      if (areaId && !(paciente.areasDelPaciente ?? []).some((uno) => uno?.areaId === areaId)) {
+        return false;
       }
       return true;
     };
@@ -749,7 +794,7 @@ export async function buscarPacientesPorIdentificador(
  * hay resultados" para quien la llama.
  *
  * @param {{ termino?: string, comunidadId?: string, condicionCronicaId?: string,
- *   sexo?: string, edadMin?: number, edadMax?: number, listarTodos?: boolean,
+ *   sexo?: string, edadMin?: number, edadMax?: number, areaId?: string, listarTodos?: boolean,
  *   pagina?: number, porPagina?: number }} [filtros]
  * @returns {Promise<{
  *   pacientes: object[],
@@ -768,6 +813,7 @@ export async function buscarPacientes({
   sexo,
   edadMin,
   edadMax,
+  areaId,
   listarTodos = false,
   pagina = 1,
   porPagina = POR_PAGINA_POR_DEFECTO,
@@ -802,7 +848,7 @@ export async function buscarPacientes({
   // por sexo, edad o condicion cronica tambien devolvia vacio sin consultar. Ahora cualquier
   // filtro cuenta como criterio.
   const hayAlgunFiltro = Boolean(
-    comunidadId || condicionCronicaId || sexo || edadMin != null || edadMax != null,
+    comunidadId || condicionCronicaId || sexo || edadMin != null || edadMax != null || areaId,
   );
 
   // `listarTodos` es la puerta explicita para una pantalla de LISTADO, no de busqueda: la #124
@@ -824,6 +870,7 @@ export async function buscarPacientes({
       edadMin,
       edadMax,
       condicionCronicaId,
+      areaId,
     });
     if (cancelada) return respuestaCancelada();
     if (error) return respuestaVacia(error);
@@ -874,6 +921,7 @@ export async function buscarPacientes({
             p_sexo: sexo || null,
             p_edad_min: edadMin ?? null,
             p_edad_max: edadMax ?? null,
+            p_area_id: areaId || null,
           })
         : Promise.resolve({ data: [], error: null }),
       // La sonda de ficha no tiene minimo de longitud: numero_ficha no tiene formato ni

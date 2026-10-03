@@ -18,6 +18,14 @@ export * from "./condiciones.filtros.js";
 export * from "./condiciones.permisos.js";
 export * from "./condiciones.validaciones.js";
 export * from "./condiciones.api.js";
+// Areas de atencion (issue #927, 00182).
+export * from "./areas.api.js";
+export * from "./areas.campos.js";
+export * from "./areas.columnas.js";
+export * from "./areas.filtros.js";
+export * from "./areas.permisos.js";
+export * from "./areas.validaciones.js";
+export * from "./useCatalogoAreas.js";
 export * from "./idiomas.api.js";
 export * from "./usePacientesListado.js";
 export * from "./usePaciente.js";
