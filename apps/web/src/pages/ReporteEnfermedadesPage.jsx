@@ -99,8 +99,6 @@ export default function ReporteEnfermedadesPage({ incrustado = false }) {
     irAPagina,
     grafica,
     gruposFueraDeGrafica,
-    umbral,
-    cifraProtegida,
   } = useReporteEnfermedades({ rol });
 
   if (!tieneAcceso) {
@@ -248,11 +246,6 @@ export default function ReporteEnfermedadesPage({ incrustado = false }) {
       <p className="ec-rotulo reporte-criterios">
         {rotuloDeConteo} · {rotuloDeComunidad}
       </p>
-      <p className="ec-campo-nota reporte-nota">
-        Para proteger la identidad de los pacientes, las cifras de 1 a {umbral - 1} casos se
-        muestran como «{cifraProtegida}», y con ellas el desglose por sexo o edad de esa fila. En la
-        gráfica, una marca punteada sobre el eje es una cifra protegida.
-      </p>
 
       {error && <ErrorState message={error.mensaje} onRetry={recargar} />}
       {!error && cargando && <LoadingState message="Calculando el reporte..." />}
@@ -266,7 +259,6 @@ export default function ReporteEnfermedadesPage({ incrustado = false }) {
                 etiquetas={grafica.etiquetas}
                 series={grafica.series}
                 encabezadoDeEtiquetas="Mes"
-                etiquetaDeNulo={cifraProtegida}
               />
             ) : (
               <GraficaDeBarras
@@ -274,7 +266,6 @@ export default function ReporteEnfermedadesPage({ incrustado = false }) {
                 etiquetas={grafica.etiquetas}
                 series={grafica.series}
                 encabezadoDeEtiquetas="Enfermedad"
-                etiquetaDeNulo={cifraProtegida}
               />
             )}
             {gruposFueraDeGrafica > 0 && (
@@ -318,7 +309,6 @@ export default function ReporteEnfermedadesPage({ incrustado = false }) {
             catalogos,
             rotuloDeConteo,
             rotuloDeComunidad,
-            cifraProtegida,
           })}
           secciones={[{ columnas, filas: filasCompletas }]}
           alTerminar={() => setImprimiendo(false)}
@@ -329,13 +319,7 @@ export default function ReporteEnfermedadesPage({ incrustado = false }) {
 }
 
 /** Los criterios del reporte, en texto, para que el papel diga que se conto y como. */
-function criteriosParaPapel({
-  valores,
-  catalogos,
-  rotuloDeConteo,
-  rotuloDeComunidad,
-  cifraProtegida,
-}) {
+function criteriosParaPapel({ valores, catalogos, rotuloDeConteo, rotuloDeComunidad }) {
   const etiqueta = (lista, valor) =>
     lista?.find((opcion) => opcion.value === valor)?.label ?? valor;
 
@@ -362,6 +346,5 @@ function criteriosParaPapel({
       etiqueta: "Jornada",
       valor: etiqueta(catalogos.jornadas, valores.jornada),
     },
-    { etiqueta: "Cifras protegidas", valor: `${cifraProtegida} casos` },
   ].filter(Boolean);
 }

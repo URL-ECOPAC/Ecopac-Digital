@@ -22,8 +22,7 @@ import { useId } from "react";
  * VARIAS SERIES (issue #916). El reporte de enfermedades compara dos o mas jornadas o comunidades
  * lado a lado. Para eso se pasan `etiquetas` y `series` en vez de `serie`/`serieComparacion`: una
  * barra por serie en cada grupo, cada serie con su color de `chartSeries` (--color-serie-N). Un
- * valor `null` es un dato que no se puede mostrar -una cifra protegida por privacidad-: no dibuja
- * barra y, si se da `etiquetaDeNulo`, la escribe sobre el eje para que no se lea como cero.
+ * valor `null` es un dato que falta: no dibuja barra.
  *
  * @param {object} props
  * @param {Array<{etiqueta: string, valor: number}>} [props.serie]
@@ -35,7 +34,6 @@ import { useId } from "react";
  * @param {string} [props.nombreComparacion]
  * @param {string} [props.encabezadoDeEtiquetas] Encabezado de la primera columna de la tabla
  *   accesible ("Período", "Enfermedad").
- * @param {string} [props.etiquetaDeNulo] Que escribir donde un valor es null ("< 5").
  */
 export default function GraficaDeBarras({
   serie = [],
@@ -46,7 +44,6 @@ export default function GraficaDeBarras({
   nombreSerie = "Principal",
   nombreComparacion = "Comparación",
   encabezadoDeEtiquetas = "Período",
-  etiquetaDeNulo,
 }) {
   const id = useId();
 
@@ -159,38 +156,7 @@ export default function GraficaDeBarras({
                   const x = xInicial + posicion * anchoBarra;
                   const etiquetaDelPunto = conjunto.etiquetasPropias?.[indice] ?? rotulo;
 
-                  if (valor === null || valor === undefined) {
-                    if (!etiquetaDeNulo) return null;
-                    const titulo = `${etiquetaDelPunto} · ${conjunto.nombre}: ${etiquetaDeNulo}`;
-                    // Con barras angostas el texto se encimaria con el de la barra vecina: se
-                    // dibuja una marca corta sobre el eje y el texto queda en el tooltip y la tabla.
-                    if (anchoBarra < 30) {
-                      return (
-                        <rect
-                          key={posicion}
-                          x={x + 1}
-                          y={MARGEN.arriba + areaAlto - 4}
-                          width={Math.max(anchoBarra - 2, 2)}
-                          height={4}
-                          className={`ec-gr-nulo-marca ${conjunto.serie ?? ""}`}
-                        >
-                          <title>{titulo}</title>
-                        </rect>
-                      );
-                    }
-                    return (
-                      <text
-                        key={posicion}
-                        x={x + anchoBarra / 2}
-                        y={MARGEN.arriba + areaAlto - 4}
-                        className="ec-gr-nulo"
-                        textAnchor="middle"
-                      >
-                        {etiquetaDeNulo}
-                        <title>{titulo}</title>
-                      </text>
-                    );
-                  }
+                  if (valor === null || valor === undefined) return null;
 
                   return (
                     <rect
@@ -282,11 +248,7 @@ export default function GraficaDeBarras({
                 <th scope="row">{rotulo}</th>
                 {conjuntos.map((conjunto, posicion) => {
                   const valor = conjunto.valores[indice];
-                  return (
-                    <td key={posicion}>
-                      {valor === null || valor === undefined ? (etiquetaDeNulo ?? "") : valor}
-                    </td>
-                  );
+                  return <td key={posicion}>{valor ?? ""}</td>;
                 })}
               </tr>
             ))}

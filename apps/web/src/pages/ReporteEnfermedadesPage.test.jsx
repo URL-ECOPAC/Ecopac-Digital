@@ -8,7 +8,6 @@ import * as matchers from "@testing-library/jest-dom/matchers";
 import { MemoryRouter } from "react-router-dom";
 
 import {
-  CIFRA_PROTEGIDA,
   COLUMNAS_RANKING_ENFERMEDADES,
   FILTROS_ENFERMEDADES,
   FILTROS_ENFERMEDADES_VACIOS,
@@ -38,18 +37,27 @@ const FILAS = [
     adultos: 6,
     adultosMayores: 0,
   },
-  {
-    id: "dx-2",
-    diagnostico: "Diarrea",
-    codigo: "A09",
-    casos: CIFRA_PROTEGIDA,
-    hombres: CIFRA_PROTEGIDA,
+  // Cifras de 1 a 4: desde la issue #926 salen con su numero, no como "< 5".
+  ...[
+    ["dx-2", "Diarrea", "A09", 4],
+    ["dx-3", "Parasitosis intestinal", "B82.9", 3],
+    ["dx-4", "Anemia", "D64.9", 2],
+    ["dx-5", "Conjuntivitis", "H10.9", 1],
+  ].map(([id, diagnostico, codigo, casos]) => ({
+    id,
+    diagnostico,
+    codigo,
+    casos,
+    hombres: casos,
     mujeres: 0,
-    menores: CIFRA_PROTEGIDA,
+    menores: casos,
     adultos: 0,
     adultosMayores: 0,
-  },
+  })),
 ];
+
+/** Las enfermedades de 1 a 4 casos, con su cifra. */
+const CIFRAS_BAJAS = FILAS.slice(1).map((fila) => [fila.diagnostico, fila.casos]);
 
 function estadoBase() {
   return {
@@ -102,13 +110,10 @@ function estadoBase() {
     irAPagina: vi.fn(),
     grafica: {
       tipo: "barras",
-      etiquetas: ["Infección respiratoria aguda", "Diarrea"],
-      series: [{ nombre: "Casos", valores: [12, null] }],
+      etiquetas: FILAS.map((fila) => fila.diagnostico),
+      series: [{ nombre: "Casos", valores: FILAS.map((fila) => fila.casos) }],
     },
     gruposFueraDeGrafica: 0,
-    haySuprimidos: true,
-    umbral: 5,
-    cifraProtegida: CIFRA_PROTEGIDA,
   };
 }
 
@@ -153,15 +158,29 @@ describe("ReporteEnfermedadesPage", () => {
     ).toBeInTheDocument();
   });
 
-  it("explica la regla de privacidad y muestra la cifra protegida en la tabla", () => {
-    pantalla();
+  it("1, 2, 3 y 4 casos salen con su numero en la tabla y en la grafica", () => {
+    const { container } = pantalla();
 
-    expect(screen.getByText(/las cifras de 1 a 4 casos se muestran como/)).toBeInTheDocument();
+    expect(screen.queryByText(/< ?5/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/marca punteada/)).not.toBeInTheDocument();
 
-    const filaDeDiarrea = screen
-      .getAllByRole("row")
-      .find((fila) => /Diarrea/.test(fila.textContent));
-    expect(within(filaDeDiarrea).getAllByText(CIFRA_PROTEGIDA).length).toBeGreaterThan(0);
+    const barras = [...container.querySelectorAll("svg rect title")].map(
+      (titulo) => titulo.textContent,
+    );
+
+    for (const [diagnostico, casos] of CIFRAS_BAJAS) {
+      // Una fila en la tabla del reporte y otra en la tabla accesible de la grafica.
+      const filas = screen
+        .getAllByRole("row")
+        .filter((fila) => fila.textContent.includes(diagnostico));
+      expect(filas.length).toBeGreaterThanOrEqual(2);
+      for (const fila of filas) {
+        expect(within(fila).getAllByText(String(casos)).length).toBeGreaterThan(0);
+      }
+
+      // La barra se dibuja, con su cifra en el tooltip.
+      expect(barras).toContain(`${diagnostico}: ${casos}`);
+    }
   });
 
   it("dibuja la grafica con el titulo de la vista y la tabla debajo", () => {
@@ -196,7 +215,7 @@ describe("ReporteEnfermedadesPage", () => {
       grafica: {
         tipo: "lineas",
         etiquetas: ["ene 2026", "feb 2026"],
-        series: [{ nombre: "Diarrea", valores: [6, null] }],
+        series: [{ nombre: "Diarrea", valores: [6, 2] }],
       },
     };
     pantalla();
