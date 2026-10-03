@@ -21,6 +21,14 @@
 // (1:1), `consultas` y, de la consulta, `recetas`. Este hook no inventa ninguna tabla: decide que
 // escribir en cada una al guardar.
 //
+// VARIAS CONSULTAS POR VISITA (issue #927)
+//
+// Una visita puede tener una consulta por cita, ademas de la que no salio de ninguna. Por eso el
+// hook trabaja sobre UNA consulta de la visita (consultaObjetivoDeVisita): la de la cita que se
+// atiende, la que se eligio en el historial, o la que no salio de una cita. Con cita, la consulta
+// es siempre nueva en la visita (la primera no se sobrescribe), lleva cita_id y su area queda fija.
+// Los signos siguen siendo uno por visita.
+//
 // LA RECETA
 //
 // No se escribe aqui: necesita la consulta ya guardada (cuelga de ella) y tiene su propio flujo
@@ -32,6 +40,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { resolverAtencion } from "../atenciones/api.js";
 import { puedeRegistrarEnJornada } from "../jornadas/validaciones.js";
 import { calcularEdad } from "../formato/fechas.js";
+import { obtenerCatalogoDeAreas } from "./areas.api.js";
+import { opcionesDeAreas } from "./areas.campos.js";
 import { CAMPOS_CONSULTA, CAMPOS_TRIAJE } from "./campos.js";
 import {
   actualizarConsulta,
@@ -42,7 +52,7 @@ import {
   registrarConsulta,
 } from "./consultas.api.js";
 import { seccionesConCampos } from "./consultas.secciones.js";
-import { obtenerVisitasDePaciente } from "./historial.api.js";
+import { detalleDeConsultaAgendada, obtenerVisitasDePaciente } from "./historial.api.js";
 import {
   puedeAdministrarDiagnosticos,
   puedeCorregirConsulta,
@@ -75,8 +85,45 @@ export const RETARDO_DE_BORRADOR_MS = 800;
  * @param {string} jornadaId
  * @returns {string}
  */
-export function claveDeBorrador(pacienteId, jornadaId) {
-  return `ecopac:consulta:${pacienteId}:${jornadaId}`;
+export function claveDeBorrador(pacienteId, jornadaId, citaId = null) {
+  // Con cita, un borrador por cita: el paciente puede tener otra cita en la misma jornada.
+  return citaId
+    ? `ecopac:consulta:${pacienteId}:${jornadaId}:${citaId}`
+    : `ecopac:consulta:${pacienteId}:${jornadaId}`;
+}
+
+/**
+ * Si la consulta es agendada y con que detalle (issue #927): la que se atiende desde una cita, o
+ * una que ya salio de una cita y se reabre desde el historial. En las dos el area es la de la cita
+ * y no se cambia: la base la vuelve a poner (fn_consulta_de_cita_antes, 00184).
+ *
+ * @param {{ detalle?: string|null }|null} cita La cita que se atiende, si se atiende una.
+ * @param {object|null} consulta La consulta sobre la que se trabaja.
+ * @returns {{ detalle: string|null }|null}
+ */
+export function agendadaDeConsulta(cita, consulta) {
+  if (cita) return { detalle: cita.detalle ?? null };
+  if (consulta?.citaId) return { detalle: detalleDeConsultaAgendada(consulta) };
+  return null;
+}
+
+/**
+ * La consulta de la visita sobre la que se trabaja (issue #927). Pura.
+ *
+ * - Con `cita`: la que salio de esa cita, o ninguna (se va a crear).
+ * - Con `consultaId`: esa (se eligio en el historial).
+ * - Sin nada: la que no salio de una cita, como antes de las citas: una consulta sin cita completa
+ *   o corrige la de la visita, no crea otra.
+ *
+ * @param {object|null} visita Lo que devuelve aVisita().
+ * @param {{ cita?: { id: string }|null, consultaId?: string|null }} [opciones]
+ * @returns {object|null}
+ */
+export function consultaObjetivoDeVisita(visita, { cita = null, consultaId = null } = {}) {
+  const consultas = visita?.consultas ?? (visita?.consulta ? [visita.consulta] : []);
+  if (cita?.id) return consultas.find((consulta) => consulta.citaId === cita.id) ?? null;
+  if (consultaId) return consultas.find((consulta) => consulta.id === consultaId) ?? null;
+  return consultas.find((consulta) => !consulta.citaId) ?? null;
 }
 
 /**
@@ -115,14 +162,20 @@ export function hayBorradorConDatos(valores = {}) {
  * @param {string} opciones.atencionId
  * @param {string} opciones.medicoId
  * @param {string} opciones.jornadaId
- * @returns {object} Con: expediente, atencion, medico, jornada, motivoConsulta, antecedentes, sintomas, exploracion, tratamiento, observaciones, planSeguimiento, diagnosticos.
+ * @param {string|null} [opciones.citaId] La cita de la que sale la consulta (00184).
+ * @returns {object} Con: expediente, atencion, medico, jornada, citaId, areaId, motivoConsulta, antecedentes, sintomas, exploracion, tratamiento, observaciones, planSeguimiento, diagnosticos.
  */
-export function aDatosDeConsulta(valores = {}, { expedienteId, atencionId, medicoId, jornadaId }) {
+export function aDatosDeConsulta(
+  valores = {},
+  { expedienteId, atencionId, medicoId, jornadaId, citaId = null },
+) {
   return {
     expediente: expedienteId,
     atencion: atencionId,
     medico: medicoId,
     jornada: jornadaId,
+    citaId,
+    areaId: valores.areaId || null,
     motivoConsulta: valores.motivoConsulta,
     antecedentes: valores.antecedentes || null,
     sintomas: valores.sintomas || null,
@@ -158,10 +211,10 @@ export function valoresDeSignos(visita) {
  * principal.
  *
  * @param {object|null} visita
+ * @param {object|null} [consulta] La consulta de la visita a mostrar; por defecto la primera.
  * @returns {object}
  */
-export function valoresDeConsulta(visita) {
-  const consulta = visita?.consulta;
+export function valoresDeConsulta(visita, consulta = visita?.consulta) {
   const valores = Object.fromEntries(
     IDS_DE_TEXTO_DE_CONSULTA.map((id) => [id, consulta?.[id] ?? ""]),
   );
@@ -215,11 +268,17 @@ export function cambiosDeDiagnosticos(elegidos = [], guardados = []) {
  * @param {string} rol
  * @param {object|null} visita
  * @param {string|null} perfilId
+ * @param {object|null} [consultaExistente] La consulta sobre la que se trabaja; por defecto la
+ *   primera de la visita.
  * @returns {{ signos: boolean, consulta: boolean, receta: boolean }}
  */
-export function permisosDeConsulta(rol, visita, perfilId) {
+export function permisosDeConsulta(
+  rol,
+  visita,
+  perfilId,
+  consultaExistente = visita?.consulta ?? null,
+) {
   const signosExistentes = Boolean(visita?.signos);
-  const consultaExistente = visita?.consulta ?? null;
   return {
     signos: signosExistentes ? puedeCorregirTriaje(rol) : puedeTomarTriaje(rol),
     consulta: consultaExistente
@@ -236,6 +295,9 @@ export function permisosDeConsulta(rol, visita, perfilId) {
  *   corregirla. Sin ella, es una consulta nueva en `jornadaId`.
  * @param {string|null} [opciones.jornadaId] Jornada de una consulta nueva.
  * @param {string} [opciones.estadoDeJornada]
+ * @param {{ id: string, jornadaId: string, areaId: string }|null} [opciones.cita] La cita que se
+ *   atiende (issue #927): la consulta se crea con ella y su area queda fija.
+ * @param {string|null} [opciones.consultaId] Que consulta de la visita corregir, cuando tiene varias.
  * @param {string} opciones.perfilId
  * @param {string} opciones.rol
  * @param {object} [opciones.almacenamiento] Adaptador de la app (AsyncStorage/localStorage). Con
@@ -248,18 +310,29 @@ export function useConsulta({
   paciente,
   visita: visitaInicial = null,
   jornadaId: jornadaElegida = null,
+  cita = null,
+  consultaId = null,
   estadoDeJornada,
   perfilId,
   rol,
   almacenamiento,
 } = {}) {
   const [visita, setVisita] = useState(visitaInicial);
-  const jornadaId = visita?.jornadaId ?? jornadaElegida;
+  const jornadaId = visita?.jornadaId ?? jornadaElegida ?? cita?.jornadaId ?? null;
+  const citaId = cita?.id ?? null;
+  const citaAreaId = cita?.areaId ?? null;
 
-  const iniciales = useMemo(
-    () => ({ signos: valoresDeSignos(visita), consulta: valoresDeConsulta(visita) }),
-    [visita],
+  const consultaObjetivo = useMemo(
+    () => consultaObjetivoDeVisita(visita, { cita: citaId ? { id: citaId } : null, consultaId }),
+    [visita, citaId, consultaId],
   );
+
+  const iniciales = useMemo(() => {
+    const valores = valoresDeConsulta(visita, consultaObjetivo);
+    // Una consulta nueva de una cita arranca con el area de la cita.
+    if (!consultaObjetivo && citaAreaId) valores.areaId = citaAreaId;
+    return { signos: valoresDeSignos(visita), consulta: valores };
+  }, [visita, consultaObjetivo, citaAreaId]);
   const [signos, setSignos] = useState(iniciales.signos);
   const [consulta, setConsulta] = useState(iniciales.consulta);
   const [errores, setErrores] = useState({ signos: {}, consulta: {} });
@@ -267,6 +340,7 @@ export function useConsulta({
   const [enviando, setEnviando] = useState(false);
   const [guardadaAlMenosUnaVez, setGuardadaAlMenosUnaVez] = useState(false);
   const [diagnosticos, setDiagnosticos] = useState([]);
+  const [areas, setAreas] = useState([]);
   const [errorDiagnostico, setErrorDiagnostico] = useState(null);
 
   // Al cambiar la visita (se guardo, o se eligio otra jornada que ya tenia una) el formulario
@@ -279,12 +353,13 @@ export function useConsulta({
 
   // Una consulta "nueva" en una jornada donde el paciente ya tiene visita no es nueva: es esa
   // visita, a completar. atenciones es UNIQUE (paciente, jornada), asi que crear otra fallaria.
+  const jornadaABuscar = jornadaElegida ?? cita?.jornadaId ?? null;
   useEffect(() => {
-    if (visitaInicial || !paciente?.id || !jornadaElegida || !puedeVerHistorial(rol)) {
+    if (visitaInicial || !paciente?.id || !jornadaABuscar || !puedeVerHistorial(rol)) {
       return undefined;
     }
     let vigente = true;
-    obtenerVisitasDePaciente(paciente.id, { rol, jornadaId: jornadaElegida }).then(
+    obtenerVisitasDePaciente(paciente.id, { rol, jornadaId: jornadaABuscar }).then(
       ({ visitas }) => {
         if (vigente) setVisita(visitas[0] ?? null);
       },
@@ -292,7 +367,7 @@ export function useConsulta({
     return () => {
       vigente = false;
     };
-  }, [visitaInicial, paciente?.id, jornadaElegida, rol]);
+  }, [visitaInicial, paciente?.id, jornadaABuscar, rol]);
 
   useEffect(() => {
     let vigente = true;
@@ -305,12 +380,16 @@ export function useConsulta({
         })),
       );
     });
+    // Todas: una consulta vieja puede tener un area retirada (opcionesDeAreas la deja visible).
+    obtenerCatalogoDeAreas().then(({ areas: filas }) => {
+      if (vigente) setAreas(filas ?? []);
+    });
     return () => {
       vigente = false;
     };
   }, []);
 
-  const permisos = permisosDeConsulta(rol, visita, perfilId);
+  const permisos = permisosDeConsulta(rol, visita, perfilId, consultaObjetivo);
 
   // Agregar una parte que falta solo se puede en una jornada que acepta registros. Corregir lo
   // que ya esta no depende de la jornada: un error de digitacion se corrige cuando se ve.
@@ -326,9 +405,11 @@ export function useConsulta({
   const avisos = useMemo(() => avisosDeSignos(signos, edad), [signos, edad]);
   const imc = useMemo(() => calcularImc(signos.peso, signos.talla), [signos.peso, signos.talla]);
 
-  // Borrador: solo para una consulta nueva. Una visita existente ya esta guardada en la base.
+  // Borrador: solo para una consulta nueva. Una consulta existente ya esta guardada en la base.
   const claveBorrador =
-    !visita && paciente?.id && jornadaId ? claveDeBorrador(paciente.id, jornadaId) : null;
+    !consultaObjetivo && paciente?.id && jornadaId
+      ? claveDeBorrador(paciente.id, jornadaId, citaId)
+      : null;
   const borradorCargado = useRef(null);
 
   useEffect(() => {
@@ -394,7 +475,7 @@ export function useConsulta({
   const guardar = useCallback(async () => {
     setError(null);
     const signosExistentes = visita?.signos ?? null;
-    const consultaExistente = visita?.consulta ?? null;
+    const consultaExistente = consultaObjetivo;
     const hayConsulta = hayBorradorConDatos(consulta);
     const haySignos = haySignosCapturados(signos);
     const cambiosSignos = signosExistentes ? cambiosDeSignos(signos, iniciales.signos) : {};
@@ -478,6 +559,7 @@ export function useConsulta({
                   atencionId,
                   medicoId: perfilId,
                   jornadaId,
+                  citaId,
                 }),
                 { estadoDeJornada },
               )
@@ -498,6 +580,8 @@ export function useConsulta({
     }
   }, [
     visita,
+    consultaObjetivo,
+    citaId,
     consulta,
     signos,
     iniciales,
@@ -533,7 +617,24 @@ export function useConsulta({
     return diagnostico.id;
   }, []);
 
-  const consultaGuardada = visita?.consulta ?? null;
+  const consultaGuardada = consultaObjetivo;
+
+  const agendada = useMemo(
+    () => agendadaDeConsulta(cita, consultaObjetivo),
+    [cita, consultaObjetivo],
+  );
+  const esAgendada = Boolean(agendada);
+
+  const seccionesDeConsulta = useMemo(
+    () =>
+      seccionesConCampos().map((seccion) => ({
+        ...seccion,
+        campos: seccion.campos.map((campo) =>
+          campo.id === "areaId" && esAgendada ? { ...campo, soloLectura: true } : campo,
+        ),
+      })),
+    [esAgendada],
+  );
 
   return {
     visita,
@@ -549,10 +650,14 @@ export function useConsulta({
     imc,
     signosTomadosPor: visita?.signosTomadosPor ?? null,
 
-    seccionesDeConsulta: seccionesConCampos(),
+    seccionesDeConsulta,
     consulta,
     setCampoDeConsulta,
-    catalogos: { diagnosticos },
+    catalogos: { diagnosticos, areasAtencion: opcionesDeAreas(areas, [consulta.areaId]) },
+    // La consulta sobre la que se trabaja (null si se va a crear) y, si es agendada, su cita.
+    consultaActual: consultaObjetivo,
+    cita,
+    agendada,
     crearDiagnosticoNuevo: puedeAdministrarDiagnosticos(rol) ? crearDiagnosticoNuevo : null,
     errorDiagnostico,
 
@@ -570,7 +675,7 @@ export function useConsulta({
 
     // El tercer paso. Una receta cuelga de la consulta guardada.
     receta: {
-      existentes: visita?.recetas ?? [],
+      existentes: consultaObjetivo?.recetas ?? visita?.recetas ?? [],
       consultaId: consultaGuardada?.id ?? null,
       puedeAgregar: permisos.receta && Boolean(consultaGuardada),
     },

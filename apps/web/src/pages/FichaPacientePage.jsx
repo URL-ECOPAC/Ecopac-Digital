@@ -311,7 +311,9 @@ export default function FichaPacientePage() {
                 paciente={paciente}
                 rol={rol}
                 perfilId={perfil?.id}
-                onEditarVisita={(visita) => setConsultaAbierta({ visita })}
+                onEditarVisita={(visita, consultaId = null) =>
+                  setConsultaAbierta({ visita, consultaId })
+                }
               />
             )}
           </Tabs>
@@ -339,6 +341,7 @@ export default function FichaPacientePage() {
           <ModalConsulta
             paciente={paciente}
             visita={consultaAbierta.visita}
+            consultaId={consultaAbierta.consultaId ?? null}
             rol={rol}
             perfilId={perfil?.id}
             onClose={() => setConsultaAbierta(null)}

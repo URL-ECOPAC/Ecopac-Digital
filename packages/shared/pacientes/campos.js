@@ -259,6 +259,15 @@ export const CAMPOS_CONSULTA = [
     validacion: { requerido: true },
   },
   {
+    // Issue #927 (00184): el area en que se atiende. Opcional; precargada y bloqueada cuando la
+    // consulta sale de una cita (useConsulta la marca soloLectura).
+    id: "areaId",
+    label: "Área de atención",
+    tipo: TIPOS_DE_CAMPO.SELECT,
+    opcionesDesde: "areasAtencion",
+    validacion: { requerido: false },
+  },
+  {
     id: "antecedentes",
     label: "Antecedentes",
     tipo: TIPOS_DE_CAMPO.TEXTO_LARGO,
