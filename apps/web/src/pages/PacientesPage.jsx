@@ -6,6 +6,7 @@ import {
   puedeRegistrarPaciente,
   puedeVerCatalogoComunidades,
   puedeVerCatalogoDeAreas,
+  puedeVerCatalogoDeClinicas,
   puedeVerCatalogoDeCondiciones,
   puedeVerCatalogoDiagnosticos,
   puedeVerCondiciones,
@@ -84,6 +85,14 @@ export default function PacientesPage() {
     acciones.push({
       label: "Áreas de atención",
       onClick: () => navigate("/pacientes/areas"),
+      variant: "secondary",
+    });
+  }
+
+  if (puedeVerCatalogoDeClinicas(rol)) {
+    acciones.push({
+      label: "Clínicas",
+      onClick: () => navigate("/pacientes/clinicas"),
       variant: "secondary",
     });
   }

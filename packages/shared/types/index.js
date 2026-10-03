@@ -267,6 +267,18 @@
  */
 
 /**
+ * Fila de `clinicas` (00183_clinicas.sql): donde se atienden las citas, con su numero de salas.
+ *
+ * @typedef {object} Clinica
+ * @property {string} id
+ * @property {string} nombre
+ * @property {number} salasDisponibles
+ * @property {boolean} esVigente
+ * @property {string} createdAt
+ * @property {string} updatedAt
+ */
+
+/**
  * Fila de `expedientes` (00009_pacientes_expedientes.sql).
  *
  * `numero_ficha` es `varchar` y no un entero: desde la 00081 lo genera una secuencia y la columna
