@@ -1,7 +1,12 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { COLUMNAS_DUPLICADOS_PACIENTE, useDuplicadosPacientes } from "@ecopac/shared";
+import { Alert } from "react-bootstrap";
+import {
+  COLUMNAS_DUPLICADOS_PACIENTE,
+  mensajeDeFusion,
+  useDuplicadosPacientes,
+} from "@ecopac/shared";
 
 import DataList from "../components/DataList";
 import EmptyState from "../components/EmptyState";
@@ -30,6 +35,7 @@ export default function PosiblesDuplicadosPage() {
   const navigate = useNavigate();
   const { rol } = useSesionCompartida();
   const [parSeleccionado, setParSeleccionado] = useState(null);
+  const [aviso, setAviso] = useState(null);
 
   const { filas, total, cargando, error, recargar, permitido } = useDuplicadosPacientes({ rol });
 
@@ -74,6 +80,12 @@ export default function PosiblesDuplicadosPage() {
           actions={[{ label: "Volver", onClick: () => navigate("/pacientes"), variant: "neutra" }]}
         />
 
+        {aviso && (
+          <Alert variant="info" className="py-2 px-3 small">
+            {aviso}
+          </Alert>
+        )}
+
         <DataList
           columnas={COLUMNAS_DUPLICADOS_PACIENTE}
           datos={filas}
@@ -90,7 +102,8 @@ export default function PosiblesDuplicadosPage() {
             pacienteBId={parSeleccionado.pacienteBId}
             rol={rol}
             onClose={() => setParSeleccionado(null)}
-            onFusionado={async () => {
+            onFusionado={async (fusion) => {
+              setAviso(mensajeDeFusion(fusion));
               setParSeleccionado(null);
               await recargar();
             }}

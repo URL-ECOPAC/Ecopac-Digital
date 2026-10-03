@@ -125,7 +125,10 @@ SELECT is(
 RESET ROLE;
 
 SELECT is(
-  (SELECT count(*)::int FROM eventos_auditoria WHERE tabla_afectada = 'clinicas'),
+  (SELECT count(*)::int FROM eventos_auditoria
+    WHERE tabla_afectada = 'clinicas'
+      -- Solo los de esta transaccion: now() es su inicio, y la base local puede traer otros.
+      AND realizado_en >= now()),
   5,
   'crear, editar, retirar, reactivar y borrar quedan en la bitacora (el retiro rechazado no)'
 );

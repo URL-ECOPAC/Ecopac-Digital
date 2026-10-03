@@ -185,3 +185,13 @@ describe("filtrar por area", () => {
     expect(pacientes[0]).not.toHaveProperty("areasDelPaciente");
   });
 });
+
+describe("aviso de la fusion (00184)", async () => {
+  const { mensajeDeFusion } = await import("./duplicados.api.js");
+
+  it("avisa cuando quedaron citas traslapadas", () => {
+    expect(mensajeDeFusion({ citasTraslapadas: 2 })).toMatch(/2 citas/);
+    expect(mensajeDeFusion({ citasTraslapadas: 0 })).toBe("Expedientes fusionados.");
+    expect(mensajeDeFusion(null)).toBe("Expedientes fusionados.");
+  });
+});
