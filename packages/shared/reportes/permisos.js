@@ -153,7 +153,7 @@ export function puedeVerReporteDeVencimientos(rol) {
  *
  * Espejo de la guarda de fn_reporte_enfermedades y fn_opciones_reporte_enfermedades (00177):
  * quien consulta reportes. Los dos roles consultivos entran, porque Reportes es su pantalla y la
- * funcion solo devuelve conteos, con las cifras de 1 a 4 suprimidas. El medico no: a diferencia
+ * funcion solo devuelve conteos agregados, nunca una fila por paciente. El medico no: a diferencia
  * del reporte de una jornada, este no lo monta ninguna pantalla de campo.
  *
  * @param {string} rol

@@ -1,11 +1,11 @@
 // Pruebas de las transformaciones del reporte de enfermedades y de las funciones puras de su hook
-// (issue #916). Conteos inventados.
+// (issue #916). Conteos inventados. Desde la issue #926 toda cifra llega con su numero, tambien las
+// de 1 a 4.
 
 import { describe, expect, it } from "vitest";
 
 import { CONTEO_DE_DIAGNOSTICOS } from "./campos.js";
 import {
-  cifraVisible,
   diagnosticoMasFrecuente,
   etiquetaDeMes,
   filasDeRankingDeEnfermedades,
@@ -13,7 +13,7 @@ import {
   pivotearComparacionDeEnfermedades,
   serieDeEvolucionDeEnfermedad,
 } from "./enfermedades.js";
-import { CIFRA_PROTEGIDA, COMUNIDAD_DE, VISTAS_DE_ENFERMEDADES } from "./enfermedades.api.js";
+import { COMUNIDAD_DE, VISTAS_DE_ENFERMEDADES } from "./enfermedades.api.js";
 import { FILTROS_ENFERMEDADES_VACIOS } from "./filtros.js";
 import {
   catalogosDeEnfermedades,
@@ -31,7 +31,6 @@ function caso(parcial) {
     diagnostico: "IRA",
     orden: 1,
     casos: 10,
-    suprimido: false,
     hombres: 5,
     mujeres: 5,
     menores: 0,
@@ -40,15 +39,6 @@ function caso(parcial) {
     ...parcial,
   };
 }
-
-describe("cifraVisible", () => {
-  it("una cifra suprimida se presenta como la cifra protegida, y el cero sigue siendo cero", () => {
-    expect(cifraVisible(null)).toBe(CIFRA_PROTEGIDA);
-    expect(cifraVisible(undefined)).toBe(CIFRA_PROTEGIDA);
-    expect(cifraVisible(0)).toBe(0);
-    expect(cifraVisible(7)).toBe(7);
-  });
-});
 
 describe("etiquetaDeMes", () => {
   it("abrevia el mes en espanol", () => {
@@ -69,31 +59,60 @@ describe("ranking", () => {
       diagnostico: "VIH",
       codigo: null,
       orden: 2,
-      casos: null,
-      suprimido: true,
-      hombres: null,
-      mujeres: null,
-      adultos: null,
+      casos: 3,
+      hombres: 1,
+      mujeres: 2,
+      adultos: 3,
     }),
   ];
 
-  it("una fila por enfermedad, con las cifras suprimidas como '< 5'", () => {
+  it("una fila por enfermedad, con el numero real tambien en las cifras bajas", () => {
     const filas = filasDeRankingDeEnfermedades(casos);
 
     expect(filas[0]).toMatchObject({ id: "dx-ira", casos: 10, hombres: 5, codigo: "J06.9" });
-    expect(filas[1]).toMatchObject({
+    expect(filas[1]).toEqual({
       id: "dx-vih",
-      casos: CIFRA_PROTEGIDA,
-      hombres: CIFRA_PROTEGIDA,
-      menores: 0,
+      diagnostico: "VIH",
       codigo: "",
+      casos: 3,
+      hombres: 1,
+      mujeres: 2,
+      menores: 0,
+      adultos: 3,
+      adultosMayores: 0,
     });
   });
 
-  it("la grafica no inventa una barra para la cifra suprimida", () => {
+  it("1, 2, 3 y 4 casos salen con su numero en la tabla y en la grafica", () => {
+    const bajos = [1, 2, 3, 4].map((cifra) =>
+      caso({
+        diagnosticoId: `dx-${cifra}`,
+        diagnostico: `Enfermedad ${cifra}`,
+        orden: 5 - cifra,
+        casos: cifra,
+        hombres: cifra,
+        mujeres: 0,
+        adultos: cifra,
+      }),
+    );
+
+    const filas = filasDeRankingDeEnfermedades(bajos);
+    expect(filas.map((fila) => [fila.casos, fila.hombres, fila.adultos])).toEqual([
+      [1, 1, 1],
+      [2, 2, 2],
+      [3, 3, 3],
+      [4, 4, 4],
+    ]);
+    expect(graficaDeRankingDeEnfermedades(bajos)).toEqual({
+      etiquetas: ["Enfermedad 4", "Enfermedad 3", "Enfermedad 2", "Enfermedad 1"],
+      series: [{ nombre: "Casos", valores: [4, 3, 2, 1] }],
+    });
+  });
+
+  it("la grafica dibuja la cifra baja como una barra mas", () => {
     expect(graficaDeRankingDeEnfermedades(casos)).toEqual({
       etiquetas: ["IRA", "VIH"],
-      series: [{ nombre: "Casos", valores: [10, null] }],
+      series: [{ nombre: "Casos", valores: [10, 3] }],
     });
   });
 
@@ -121,8 +140,7 @@ describe("comparacion entre jornadas", () => {
       diagnostico: "Diarrea",
       codigo: "A09",
       orden: 2,
-      casos: null,
-      suprimido: true,
+      casos: 2,
     }),
     caso({ grupoId: "jor-2", grupo: "Jornada 2", casos: 6 }),
   ];
@@ -135,11 +153,11 @@ describe("comparacion entre jornadas", () => {
     ]);
   });
 
-  it("la enfermedad que no aparece en una jornada cuenta cero ahi; la suprimida, '< 5'", () => {
+  it("la enfermedad que no aparece en una jornada cuenta cero ahi; la cifra baja, su numero", () => {
     const { filas } = pivotearComparacionDeEnfermedades(casos);
     expect(filas).toEqual([
       { id: "dx-ira", diagnostico: "IRA", codigo: "J06.9", grupo_1: 8, grupo_2: 6 },
-      { id: "dx-dia", diagnostico: "Diarrea", codigo: "A09", grupo_1: CIFRA_PROTEGIDA, grupo_2: 0 },
+      { id: "dx-dia", diagnostico: "Diarrea", codigo: "A09", grupo_1: 2, grupo_2: 0 },
     ]);
   });
 
@@ -148,7 +166,7 @@ describe("comparacion entre jornadas", () => {
     expect(grafica).toEqual({
       etiquetas: ["IRA", "Diarrea"],
       series: [
-        { nombre: "Jornada 1", valores: [8, null] },
+        { nombre: "Jornada 1", valores: [8, 2] },
         { nombre: "Jornada 2", valores: [6, 0] },
       ],
     });
@@ -172,8 +190,7 @@ describe("evolucion de una enfermedad", () => {
       grupoId: "2026-03",
       grupo: "2026-03",
       grupoFecha: "2026-03-01",
-      casos: null,
-      suprimido: true,
+      casos: 4,
     }),
     caso({
       grupoId: "2026-02",
@@ -184,12 +201,12 @@ describe("evolucion de una enfermedad", () => {
     }),
   ];
 
-  it("rellena los meses sin casos con cero y suprime los bajos", () => {
+  it("rellena los meses sin casos con cero y deja los bajos con su numero", () => {
     const { filas } = serieDeEvolucionDeEnfermedad(casos, "dx-ira");
     expect(filas.map((fila) => [fila.periodo, fila.casos])).toEqual([
       ["ene 2026", 6],
       ["feb 2026", 0],
-      ["mar 2026", CIFRA_PROTEGIDA],
+      ["mar 2026", 4],
     ]);
   });
 
@@ -199,7 +216,7 @@ describe("evolucion de una enfermedad", () => {
       hasta: "2026-04-30",
     });
     expect(grafica.etiquetas).toEqual(["dic 2025", "ene 2026", "feb 2026", "mar 2026", "abr 2026"]);
-    expect(grafica.series[0]).toEqual({ nombre: "IRA", valores: [0, 6, 0, null, 0] });
+    expect(grafica.series[0]).toEqual({ nombre: "IRA", valores: [0, 6, 0, 4, 0] });
   });
 
   it("sin enfermedad elegida no hay serie", () => {

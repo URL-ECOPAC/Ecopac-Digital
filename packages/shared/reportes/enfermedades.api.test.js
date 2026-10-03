@@ -16,9 +16,7 @@ vi.mock("../api/cliente.js", () => ({
 
 const { ROLES } = await import("../usuarios/roles.js");
 const {
-  CIFRA_PROTEGIDA,
   COMUNIDAD_DE,
-  UMBRAL_DE_CONTEO,
   VISTAS_DE_ENFERMEDADES,
   obtenerOpcionesReporteEnfermedades,
   obtenerReporteEnfermedades,
@@ -44,10 +42,9 @@ const FILA = {
   diagnostico: "Infección respiratoria aguda",
   orden_diagnostico: 1,
   casos: 12,
-  suprimido: false,
   hombres: 5,
   mujeres: 7,
-  menores: null,
+  menores: 3,
   adultos: 9,
   adultos_mayores: 0,
 };
@@ -119,7 +116,7 @@ describe("obtenerReporteEnfermedades", () => {
     expect(parametros.p_comunidad_de).toBe("jornada");
   });
 
-  it("devuelve los casos con nombres de JS y conserva el NULL de una cifra suprimida", async () => {
+  it("devuelve los casos con nombres de JS, con las cifras de 1 a 4 como numero", async () => {
     dobles.cliente = crearCliente({ respuesta: { data: [FILA], error: null } });
 
     const { casos, error } = await obtenerReporteEnfermedades({ rol: ROLES.SOCIO_FUNDADOR });
@@ -135,10 +132,9 @@ describe("obtenerReporteEnfermedades", () => {
         diagnostico: "Infección respiratoria aguda",
         orden: 1,
         casos: 12,
-        suprimido: false,
         hombres: 5,
         mujeres: 7,
-        menores: null,
+        menores: 3,
         adultos: 9,
         adultosMayores: 0,
       },
@@ -200,9 +196,25 @@ describe("obtenerOpcionesReporteEnfermedades", () => {
   });
 });
 
-describe("umbral de privacidad", () => {
-  it("la cifra protegida dice el mismo umbral que aplica la base (00177)", () => {
-    expect(UMBRAL_DE_CONTEO).toBe(5);
-    expect(CIFRA_PROTEGIDA).toBe("< 5");
+describe("cifras reales (issue #926)", () => {
+  it("1, 2, 3 y 4 casos llegan como numero, sin texto en su lugar", async () => {
+    const filas = [1, 2, 3, 4].map((cifra) => ({
+      ...FILA,
+      diagnostico_id: `dx-${cifra}`,
+      casos: cifra,
+      hombres: cifra,
+      mujeres: 0,
+    }));
+    dobles.cliente = crearCliente({ respuesta: { data: filas, error: null } });
+
+    const { casos } = await obtenerReporteEnfermedades({ rol: ROLES.ADMINISTRADOR });
+
+    expect(casos.map((caso) => [caso.casos, caso.hombres])).toEqual([
+      [1, 1],
+      [2, 2],
+      [3, 3],
+      [4, 4],
+    ]);
+    expect(casos.every((caso) => !("suprimido" in caso))).toBe(true);
   });
 });

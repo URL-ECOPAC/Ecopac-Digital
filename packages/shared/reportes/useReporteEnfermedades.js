@@ -34,12 +34,10 @@ import {
   serieDeEvolucionDeEnfermedad,
 } from "./enfermedades.js";
 import {
-  CIFRA_PROTEGIDA,
   COMUNIDAD_DE,
   obtenerOpcionesReporteEnfermedades,
   obtenerReporteEnfermedades,
   puedeVerReporteDeEnfermedades,
-  UMBRAL_DE_CONTEO,
   VISTAS_DE_ENFERMEDADES,
 } from "./enfermedades.api.js";
 import { FILTROS_ENFERMEDADES, FILTROS_ENFERMEDADES_VACIOS } from "./filtros.js";
@@ -146,7 +144,7 @@ export function parametrosDeReporteEnfermedades({
  * @param {object} [opciones]
  * @param {string} [opciones.rol] Rol de quien consulta.
  * @param {number} [opciones.retardoMs] Espera antes de aplicar los filtros; se baja en pruebas.
- * @returns {object} Con: tieneAcceso, cargando, error, recargar, vista, setVista, opcionesDeVista, comunidadDe, setComunidadDe, opcionesDeComunidadDe, rotuloDeComunidad, conteo, setConteo, opcionesDeConteo, rotuloDeConteo, definicionDeFiltros, valores, setFiltro, limpiarFiltros, hayFiltros, presets, presetActivo, setPreset, catalogos, errorDeCatalogos, jornadasAComparar, setJornadasAComparar, comunidadesAComparar, setComunidadesAComparar, diagnosticoEvolucion, setDiagnosticoEvolucion, nombreDeEnfermedad, columnas, filas, filasCompletas, total, orden, alternarOrden, numeroDePagina, totalPaginas, irAPagina, grafica, gruposFueraDeGrafica, haySuprimidos, umbral, cifraProtegida.
+ * @returns {object} Con: tieneAcceso, cargando, error, recargar, vista, setVista, opcionesDeVista, comunidadDe, setComunidadDe, opcionesDeComunidadDe, rotuloDeComunidad, conteo, setConteo, opcionesDeConteo, rotuloDeConteo, definicionDeFiltros, valores, setFiltro, limpiarFiltros, hayFiltros, presets, presetActivo, setPreset, catalogos, errorDeCatalogos, jornadasAComparar, setJornadasAComparar, comunidadesAComparar, setComunidadesAComparar, diagnosticoEvolucion, setDiagnosticoEvolucion, nombreDeEnfermedad, columnas, filas, filasCompletas, total, orden, alternarOrden, numeroDePagina, totalPaginas, irAPagina, grafica, gruposFueraDeGrafica.
  */
 export function useReporteEnfermedades({ rol, retardoMs = RETARDO_DE_FILTROS_MS } = {}) {
   const tieneAcceso = puedeVerReporteDeEnfermedades(rol);
@@ -399,8 +397,5 @@ export function useReporteEnfermedades({ rol, retardoMs = RETARDO_DE_FILTROS_MS 
     irAPagina,
     grafica: forma.grafica,
     gruposFueraDeGrafica: forma.gruposFueraDeGrafica,
-    haySuprimidos: forma.filas.some((fila) => Object.values(fila).includes(CIFRA_PROTEGIDA)),
-    umbral: UMBRAL_DE_CONTEO,
-    cifraProtegida: CIFRA_PROTEGIDA,
   };
 }
