@@ -42,8 +42,14 @@
 // "Del botiquin de esta jornada", no "de esta jornada" (a proposito, ver el texto que arma
 // DetalleJornadaPage.jsx con este numero): jornadas.botiquin_bodega_id NO tiene UNIQUE, asi que dos
 // jornadas pueden compartir bodega, y entonces el numero incluye movimientos de la otra.
+//
+// "Citas pendientes" (issue #927, 00184): las creadas o en atencion. Al finalizar la jornada la base
+// las cancela con el motivo "No atendida al cerrar la jornada", y se avisa antes de confirmar. Quien
+// no ve citas (junta directiva, socios fundadores) recibe `null`, no un 0 que diria "ninguna".
 
 import { contarPacientesDeJornada } from "../atenciones/api.js";
+import { contarCitasPendientesDeJornada } from "../citas/api.js";
+import { puedeVerCitas } from "../citas/permisos.js";
 import { ESTADOS_MOVIMIENTO } from "../enums.js";
 import { listarMovimientos } from "../inventario/movimientos.api.js";
 import { contarConsultasDeJornada } from "../pacientes/consultas.api.js";
@@ -115,6 +121,7 @@ export async function contarMovimientosPendientesDelBotiquin(botiquinBodegaId) {
  *   indicadores: { pacientesAtendidos: number|null, consultasRealizadas: number|null, tratamientosEntregados: number|null },
  *   atencionesIncompletas: number|null,
  *   movimientosPendientes: number,
+ *   citasPendientes: number|null,
  *   error: object|null,
  * }>}
  */
@@ -130,6 +137,7 @@ export async function obtenerResumenCierre(jornada, { rol } = {}) {
       },
       atencionesIncompletas: null,
       movimientosPendientes: 0,
+      citasPendientes: null,
       error: null,
     };
   }
@@ -142,6 +150,7 @@ export async function obtenerResumenCierre(jornada, { rol } = {}) {
     respuestaRecetas,
     respuestaIncompletas,
     respuestaPendientes,
+    respuestaCitas,
   ] = await Promise.all([
     puedeVerAtenciones(rol) ? contarPacientesDeJornada(jornadaId) : sinDato,
     contarConsultasDeJornada(jornadaId, { rol }),
@@ -150,6 +159,7 @@ export async function obtenerResumenCierre(jornada, { rol } = {}) {
     contarMovimientosPendientesDelBotiquin(
       jornadaUsaBodegaPrincipal(jornada) ? null : jornada?.botiquinBodegaId,
     ),
+    puedeVerCitas(rol) ? contarCitasPendientesDeJornada(jornadaId) : sinDato,
   ]);
 
   return {
@@ -160,12 +170,14 @@ export async function obtenerResumenCierre(jornada, { rol } = {}) {
     },
     atencionesIncompletas: respuestaIncompletas.cantidad,
     movimientosPendientes: respuestaPendientes.cantidad,
+    citasPendientes: respuestaCitas.cantidad,
     error:
       respuestaPacientes.error ??
       respuestaConsultas.error ??
       respuestaRecetas.error ??
       respuestaIncompletas.error ??
       respuestaPendientes.error ??
+      respuestaCitas.error ??
       null,
   };
 }
@@ -185,9 +197,27 @@ export async function obtenerResumenCierre(jornada, { rol } = {}) {
  * "Advertir" nunca es "impedir" (criterio 8): esta funcion solo decide si se pinta el aviso, nunca
  * si el boton de confirmar se deshabilita.
  *
- * @param {{ atencionesIncompletas: number|null, movimientosPendientes: number }} resumen
+ * @param {{ atencionesIncompletas: number|null, movimientosPendientes: number,
+ *   citasPendientes?: number|null }} resumen
  * @returns {boolean}
  */
 export function hayAdvertenciasDeCierre(resumen) {
-  return (resumen?.atencionesIncompletas ?? 0) > 0 || (resumen?.movimientosPendientes ?? 0) > 0;
+  return (
+    (resumen?.atencionesIncompletas ?? 0) > 0 ||
+    (resumen?.movimientosPendientes ?? 0) > 0 ||
+    (resumen?.citasPendientes ?? 0) > 0
+  );
+}
+
+/**
+ * El aviso de citas pendientes antes de cerrar la jornada (issue #927), o null si no hay.
+ *
+ * @param {number|null} cantidad
+ * @returns {string|null}
+ */
+export function mensajeDeCitasPendientesAlCerrar(cantidad) {
+  if (!cantidad || cantidad <= 0) return null;
+  return cantidad === 1
+    ? 'Hay 1 cita creada o en atención: al cerrar la jornada se cancelará como "No atendida al cerrar la jornada".'
+    : `Hay ${cantidad} citas creadas o en atención: al cerrar la jornada se cancelarán como "No atendida al cerrar la jornada".`;
 }

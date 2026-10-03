@@ -50,7 +50,7 @@ const COLUMNAS_DEL_HISTORIAL = [
     // null por RLS (otra jornada): la etiqueta Agendada sale de cita_id, que siempre se ve.
     "citaId:cita_id, areaId:area_id, area:areas_atencion(nombre, esVigente:es_vigente),",
     "cita:citas(iniciaEn:inicia_en, terminaEn:termina_en, clinica:clinicas(nombre),",
-    "profesionalDeLaCita:perfiles!citas_profesional_id_fkey(nombres, apellidos)),",
+    "profesionalDeLaCita:nombres_de_perfiles!citas_profesional_id_fkey(nombres, apellidos)),",
     "profesional:perfiles(nombres, apellidos),",
     "diagnosticos:consulta_diagnostico(id, esPrincipal:es_principal, diagnostico:diagnosticos(id, codigo, nombre)),",
     "recetas(id, folio, estado, createdAt:created_at,",

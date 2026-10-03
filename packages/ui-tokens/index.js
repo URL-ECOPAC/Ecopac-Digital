@@ -112,6 +112,10 @@ export const statusColors = {
   // estado_receta (recetas.estado, 00066_recetas_anulacion_y_generacion.sql). 'anulada' ya
   // estaba arriba con estado_donacion, que usa el mismo valor y el mismo color.
   emitida: colors.success,
+  // estado_cita (citas.estado, 00184). 'atendida' y 'cancelada' ya estaban arriba, con el mismo
+  // color.
+  creada: colors.info,
+  en_atencion: colors.primary,
   // estado_condicion_cronica (padecimientos_cronicos.estado, 00010_condiciones_cronicas.sql)
   activa: colors.warning,
   controlada: colors.success,

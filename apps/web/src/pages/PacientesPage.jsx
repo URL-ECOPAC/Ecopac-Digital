@@ -7,6 +7,7 @@ import {
   puedeVerCatalogoComunidades,
   puedeVerCatalogoDeAreas,
   puedeVerCatalogoDeClinicas,
+  puedeVerCitas,
   puedeVerCatalogoDeCondiciones,
   puedeVerCatalogoDiagnosticos,
   puedeVerCondiciones,
@@ -93,6 +94,14 @@ export default function PacientesPage() {
     acciones.push({
       label: "Clínicas",
       onClick: () => navigate("/pacientes/clinicas"),
+      variant: "secondary",
+    });
+  }
+
+  if (puedeVerCitas(rol)) {
+    acciones.push({
+      label: "Citas",
+      onClick: () => navigate("/pacientes/citas"),
       variant: "secondary",
     });
   }

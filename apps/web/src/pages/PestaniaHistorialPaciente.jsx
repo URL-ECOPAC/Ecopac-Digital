@@ -196,9 +196,7 @@ function Visita({ visita, abierta, onAlternar, onEditar, recetasPorId, receta })
             <ParteDeVisita
               key={consulta.id}
               titulo={
-                consultas.length > 1
-                  ? `Consulta ${indice + 1} de ${consultas.length}`
-                  : "Consulta"
+                consultas.length > 1 ? `Consulta ${indice + 1} de ${consultas.length}` : "Consulta"
               }
             >
               <Consulta consulta={consulta} />
