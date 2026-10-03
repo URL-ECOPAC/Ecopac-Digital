@@ -6,10 +6,8 @@
 // fila por fila al cliente seria exponerselas a los roles consultivos aunque solo se mostraran
 // totales.
 //
-// PRIVACIDAD. La base devuelve NULL en toda cifra de 1 a 4 (`suprimido`), para que un conteo bajo
-// en una comunidad pequena no identifique a una persona; si una celda del desglose por sexo o por
-// edad cae bajo el umbral, el desglose entero sale en NULL, porque restando del total se deduciria.
-// Aqui no se reconstruye nada: el NULL se conserva y la pantalla lo presenta como CIFRA_PROTEGIDA.
+// Solo llegan conteos agregados, nunca una fila por paciente. Cada cifra trae su numero real, tambien
+// las de 1 a 4: la 00177 las ocultaba como "< 5" y la organizacion pidio verlas (issue #926, 00180).
 
 import { obtenerSupabase } from "../api/cliente.js";
 import { normalizarError } from "../api/errores-de-supabase.js";
@@ -40,20 +38,10 @@ export const COMUNIDAD_DE = Object.freeze({
   PACIENTE: "paciente",
 });
 
-/**
- * Por debajo de esta cifra la base no da el numero. Espejo de `v_umbral` en
- * fn_reporte_enfermedades (00177): cambiar uno sin el otro haria que la pantalla dijera un umbral
- * que no es el que se aplica.
- */
-export const UMBRAL_DE_CONTEO = 5;
-
-/** Como se presenta una cifra suprimida, en pantalla, en el CSV y en papel. */
-export const CIFRA_PROTEGIDA = `< ${UMBRAL_DE_CONTEO}`;
-
 const MENSAJE_SIN_PERMISO =
   "Solo administración, los roles consultivos o quien tiene acceso a Reportes consultan el reporte de enfermedades.";
 
-/** Una fila de la funcion, con nombres de JS. `casos` y el desglose son null si se suprimieron. */
+/** Una fila de la funcion, con nombres de JS. */
 function aCasoDeEnfermedad(fila) {
   return {
     grupoId: fila.grupo_id,
@@ -64,7 +52,6 @@ function aCasoDeEnfermedad(fila) {
     diagnostico: fila.diagnostico,
     orden: fila.orden_diagnostico,
     casos: fila.casos,
-    suprimido: Boolean(fila.suprimido),
     hombres: fila.hombres,
     mujeres: fila.mujeres,
     menores: fila.menores,

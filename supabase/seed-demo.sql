@@ -626,9 +626,10 @@ ON CONFLICT (id) DO NOTHING;
 -- dibujar: el resto de este archivo trae dos diagnosticos en una sola jornada.
 --
 -- El reparto esta pensado para el reporte: la infeccion respiratoria sube y baja entre las tres
--- jornadas, algunas enfermedades pasan de cinco casos y otras no (para ver la cifra protegida
--- "< 5"), y uno de cada cuatro pacientes no tiene comunidad asignada o viene de otra, para que
--- "comunidad de la jornada" y "comunidad del paciente" den resultados distintos.
+-- jornadas, algunas enfermedades pasan de cinco casos y otras tienen de uno a cuatro (que el reporte
+-- muestra con su numero real, issue #926), y uno de cada cuatro pacientes no tiene comunidad
+-- asignada o viene de otra, para que "comunidad de la jornada" y "comunidad del paciente" den
+-- resultados distintos.
 --
 -- Sigue dentro del bloque con session_replication_role = replica, por la misma razon que El
 -- Rosario: son jornadas finalizadas.

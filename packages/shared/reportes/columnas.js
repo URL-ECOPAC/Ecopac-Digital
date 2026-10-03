@@ -327,9 +327,7 @@ export const COLUMNAS_VENCIMIENTO = [
 // Reporte de enfermedades (issue #916)
 // ---------------------------------------------------------------------------------------------
 //
-// Las cifras de estas tablas pueden llegar como CIFRA_PROTEGIDA ("< 5") en vez de un numero: la
-// base suprime toda cifra de 1 a 4, y el hook pone ese texto en la celda. La columna sigue siendo
-// NUMERO para que se alinee y se ordene como cifra; "< 5" ordena por debajo de cualquier numero.
+// Toda cifra de estas tablas es el numero real de casos, tambien las de 1 a 4 (issue #926).
 
 /** Desglose por sexo y grupo de edad, comun a las tablas del reporte. */
 const COLUMNAS_DESGLOSE_ENFERMEDADES = [

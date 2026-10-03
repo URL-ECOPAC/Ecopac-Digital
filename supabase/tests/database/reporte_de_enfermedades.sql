@@ -1,4 +1,5 @@
--- Pruebas de la 00177: reporte de enfermedades (issue #916). Corre con: supabase test db
+-- Pruebas de la 00177: reporte de enfermedades (issue #916), con las cifras reales que trae la 00180
+-- (issue #926). Corre con: supabase test db
 --
 -- Dos comunidades (A y B) y dos jornadas en meses distintos:
 --   Jornada 1, en A, proyecto 1: seis pacientes de la comunidad B con la enfermedad X como
@@ -10,7 +11,7 @@
 
 BEGIN;
 
-SELECT plan(26);
+SELECT plan(28);
 
 -- Desde la 00178 toda jornada nueva lleva una bodega movil. Estas pruebas no tratan de bodegas:
 -- sus jornadas reciben una de prueba como DEFAULT de la columna, que el ROLLBACK del final deshace.
@@ -58,7 +59,8 @@ INSERT INTO jornadas (id, nombre, fecha, comunidad_id, responsable_id, proyecto_
 
 INSERT INTO diagnosticos (id, codigo, nombre) VALUES
   ('90000000-0000-0000-0000-000000177001', 'Z99.177', 'Enfermedad X 177'),
-  ('90000000-0000-0000-0000-000000177002', NULL, 'Enfermedad Y 177');
+  ('90000000-0000-0000-0000-000000177002', NULL, 'Enfermedad Y 177'),
+  ('90000000-0000-0000-0000-000000177003', NULL, 'Enfermedad W 177');
 
 -- Trece pacientes. n = 1..6: de B, en la jornada 1, el 6 es hombre. n = 7..8: sin comunidad, en
 -- la jornada 1. n = 9..13: de A, en la jornada 2.
@@ -115,6 +117,11 @@ SELECT ('60000000-0000-0000-0000-000000177' || lpad(n::text, 3, '0'))::uuid,
        '90000000-0000-0000-0000-000000177002', TRUE
 FROM generate_series(7, 8) AS n;
 
+-- W, solo como secundario del paciente 1: un caso, y un nombre que va antes que Y. Sirve para ver
+-- que dentro de un grupo manda la cantidad y no el nombre.
+INSERT INTO consulta_diagnostico (consulta_id, diagnostico_id, es_principal) VALUES
+  ('60000000-0000-0000-0000-000000177001', '90000000-0000-0000-0000-000000177003', FALSE);
+
 -- ============================================================================
 -- Privilegios
 -- ============================================================================
@@ -158,18 +165,38 @@ SELECT is(
   'todos los diagnosticos: X cuenta tambien los dos secundarios'
 );
 
-SELECT ok(
-  (SELECT casos IS NULL AND suprimido FROM fn_reporte_enfermedades('ninguno',
-     p_jornada_ids => (SELECT ids FROM jornadas_177))
+SELECT is(
+  (SELECT casos FROM fn_reporte_enfermedades('ninguno', p_jornada_ids => (SELECT ids FROM jornadas_177))
     WHERE diagnostico_id = '90000000-0000-0000-0000-000000177002'),
-  'Y tiene 2 casos: la cifra sale NULL y marcada como suprimida'
+  2,
+  'Y tiene 2 casos: una cifra de 1 a 4 sale con su numero real (00180)'
 );
 
-SELECT is(
-  (SELECT suprimido FROM fn_reporte_enfermedades('ninguno', p_jornada_ids => (SELECT ids FROM jornadas_177))
-    WHERE diagnostico_id = '90000000-0000-0000-0000-000000177001'),
-  false,
-  'una cifra de 5 o mas no se suprime'
+SELECT results_eq(
+  $$ SELECT casos, hombres, mujeres FROM fn_reporte_enfermedades('ninguno',
+       p_jornada_ids => (SELECT ids FROM jornadas_177))
+     WHERE diagnostico_id = '90000000-0000-0000-0000-000000177002' $$,
+  $$ VALUES (2, 0, 2) $$,
+  'el desglose de una cifra baja tambien sale con su numero'
+);
+
+SELECT ok(
+  NOT EXISTS (
+    SELECT 1
+    FROM pg_proc, unnest(proargnames) AS argumento
+    WHERE oid = 'public.fn_reporte_enfermedades(text, date, date, uuid[], uuid[], integer, integer, uuid, uuid, boolean, text)'::regprocedure
+      AND argumento = 'suprimido'
+  ),
+  'la funcion ya no devuelve la columna suprimido'
+);
+
+SELECT results_eq(
+  $$ SELECT diagnostico_id, casos FROM fn_reporte_enfermedades('ninguno',
+       p_jornada_ids => (SELECT ids FROM jornadas_177), p_solo_principales => false) $$,
+  $$ VALUES ('90000000-0000-0000-0000-000000177001'::uuid, 13),
+            ('90000000-0000-0000-0000-000000177002'::uuid, 2),
+            ('90000000-0000-0000-0000-000000177003'::uuid, 1) $$,
+  'dentro de un grupo se ordena por casos: Y (2) antes que W (1), aunque W vaya antes por nombre'
 );
 
 SELECT is(
@@ -232,8 +259,8 @@ SELECT results_eq(
   $$ SELECT mujeres, hombres, adultos, menores FROM fn_reporte_enfermedades('jornada',
        p_jornada_ids => ARRAY['40000000-0000-0000-0000-000000177001']::uuid[])
      WHERE diagnostico_id = '90000000-0000-0000-0000-000000177001' $$,
-  $$ VALUES (NULL::int, NULL::int, 6, 0) $$,
-  'desglose: 1 hombre suprime todo el desglose por sexo (5 mujeres de 6 casos lo delataria); la edad, sin cifras bajas, sale exacta'
+  $$ VALUES (5, 1, 6, 0) $$,
+  'desglose: 5 mujeres y 1 hombre salen con su numero, sin ocultar el desglose por sexo'
 );
 
 SELECT is(

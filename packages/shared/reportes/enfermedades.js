@@ -4,13 +4,10 @@
 // forma que pide cada vista -una fila por enfermedad, una columna por jornada, un punto por mes- y
 // la serie de la grafica. Viven aparte del hook para probarlas sin montar React.
 //
-// NINGUNA FUNCION DE AQUI RECONSTRUYE UNA CIFRA SUPRIMIDA. Una celda que la base devolvio en NULL
-// se presenta como CIFRA_PROTEGIDA en la tabla y como `null` en la grafica (sin barra). Sumar
-// cifras visibles para sacar un total tampoco se hace: el total saldria por debajo de la verdad y
-// restandole lo visible se podria deducir lo que se protegio.
+// Cada cifra viaja como numero, tambien las de 1 a 4 (issue #926): la tabla, el CSV y la grafica
+// muestran el mismo valor que entrego la base.
 
 import { MESES } from "../formato/fechas.js";
-import { CIFRA_PROTEGIDA } from "./enfermedades.api.js";
 
 /** Cuantas enfermedades entran en una grafica de comparacion; la tabla las trae todas. */
 export const MAXIMO_DE_ENFERMEDADES_EN_GRAFICA = 10;
@@ -22,21 +19,6 @@ export const MAXIMO_DE_GRUPOS_EN_GRAFICA = 6;
 const MAXIMO_DE_MESES = 240;
 
 const DESGLOSE = ["hombres", "mujeres", "menores", "adultos", "adultosMayores"];
-
-/**
- * La cifra tal como se muestra: el numero, o CIFRA_PROTEGIDA si la base la suprimio.
- *
- * @param {number|null|undefined} valor
- * @returns {number|string}
- */
-export function cifraVisible(valor) {
-  return valor === null || valor === undefined ? CIFRA_PROTEGIDA : valor;
-}
-
-/** La cifra para la grafica: el numero, o null si se suprimio (la barra no se dibuja). */
-function cifraGraficable(valor) {
-  return valor === null || valor === undefined ? null : valor;
-}
 
 /**
  * "2026-03" -> "mar 2026".
@@ -76,9 +58,8 @@ export function filasDeRankingDeEnfermedades(casos = []) {
     id: caso.diagnosticoId,
     diagnostico: caso.diagnostico,
     codigo: caso.codigo ?? "",
-    casos: cifraVisible(caso.casos),
-    suprimido: caso.suprimido,
-    ...Object.fromEntries(DESGLOSE.map((clave) => [clave, cifraVisible(caso[clave])])),
+    casos: caso.casos,
+    ...Object.fromEntries(DESGLOSE.map((clave) => [clave, caso[clave]])),
   }));
 }
 
@@ -87,7 +68,7 @@ export function filasDeRankingDeEnfermedades(casos = []) {
  *
  * @param {object[]} casos
  * @param {{ maximo?: number }} [opciones]
- * @returns {{ etiquetas: string[], series: Array<{ nombre: string, valores: Array<number|null> }> }}
+ * @returns {{ etiquetas: string[], series: Array<{ nombre: string, valores: number[] }> }}
  */
 export function graficaDeRankingDeEnfermedades(
   casos = [],
@@ -96,7 +77,7 @@ export function graficaDeRankingDeEnfermedades(
   const primeros = [...casos].sort((uno, otro) => uno.orden - otro.orden).slice(0, maximo);
   return {
     etiquetas: primeros.map((caso) => caso.diagnostico),
-    series: [{ nombre: "Casos", valores: primeros.map((caso) => cifraGraficable(caso.casos)) }],
+    series: [{ nombre: "Casos", valores: primeros.map((caso) => caso.casos) }],
   };
 }
 
@@ -112,7 +93,7 @@ export function graficaDeRankingDeEnfermedades(
  *
  * @param {object[]} casos
  * @param {{ maximoDeEnfermedades?: number, maximoDeGrupos?: number }} [opciones]
- * @returns {{ grupos: Array<{ clave: string, id: string, nombre: string }>, filas: object[], grafica: { etiquetas: string[], series: Array<{ nombre: string, valores: Array<number|null> }> }, gruposFueraDeGrafica: number }}
+ * @returns {{ grupos: Array<{ clave: string, id: string, nombre: string }>, filas: object[], grafica: { etiquetas: string[], series: Array<{ nombre: string, valores: number[] }> }, gruposFueraDeGrafica: number }}
  */
 export function pivotearComparacionDeEnfermedades(
   casos = [],
@@ -152,9 +133,7 @@ export function pivotearComparacionDeEnfermedades(
     id: enfermedad.id,
     diagnostico: enfermedad.diagnostico,
     codigo: enfermedad.codigo,
-    ...Object.fromEntries(
-      grupos.map((grupo) => [grupo.clave, cifraVisible(valorDe(grupo, enfermedad))]),
-    ),
+    ...Object.fromEntries(grupos.map((grupo) => [grupo.clave, valorDe(grupo, enfermedad)])),
   }));
 
   const enGrafica = enOrden.slice(0, maximoDeEnfermedades);
@@ -167,7 +146,7 @@ export function pivotearComparacionDeEnfermedades(
       etiquetas: enGrafica.map((enfermedad) => enfermedad.diagnostico),
       series: gruposEnGrafica.map((grupo) => ({
         nombre: grupo.nombre,
-        valores: enGrafica.map((enfermedad) => cifraGraficable(valorDe(grupo, enfermedad))),
+        valores: enGrafica.map((enfermedad) => valorDe(grupo, enfermedad)),
       })),
     },
     gruposFueraDeGrafica: grupos.length - gruposEnGrafica.length,
@@ -209,7 +188,7 @@ function mesesEntre(desde, hasta) {
  * @param {object[]} casos Filas agrupadas por mes (todas las enfermedades).
  * @param {string|null} diagnosticoId
  * @param {{ desde?: string|null, hasta?: string|null }} [rango] Fechas AAAA-MM-DD.
- * @returns {{ filas: object[], grafica: { etiquetas: string[], series: Array<{ nombre: string, valores: Array<number|null> }> } }}
+ * @returns {{ filas: object[], grafica: { etiquetas: string[], series: Array<{ nombre: string, valores: number[] }> } }}
  */
 export function serieDeEvolucionDeEnfermedad(casos = [], diagnosticoId, { desde, hasta } = {}) {
   const vacia = { filas: [], grafica: { etiquetas: [], series: [] } };
@@ -231,8 +210,8 @@ export function serieDeEvolucionDeEnfermedad(casos = [], diagnosticoId, { desde,
     return {
       id: mes,
       periodo: etiquetaDeMes(mes),
-      casos: caso ? cifraVisible(caso.casos) : 0,
-      ...Object.fromEntries(DESGLOSE.map((clave) => [clave, caso ? cifraVisible(caso[clave]) : 0])),
+      casos: caso ? caso.casos : 0,
+      ...Object.fromEntries(DESGLOSE.map((clave) => [clave, caso ? caso[clave] : 0])),
     };
   });
 
@@ -245,7 +224,7 @@ export function serieDeEvolucionDeEnfermedad(casos = [], diagnosticoId, { desde,
           nombre,
           valores: meses.map((mes) => {
             const caso = porMes.get(mes);
-            return caso ? cifraGraficable(caso.casos) : 0;
+            return caso ? caso.casos : 0;
           }),
         },
       ],

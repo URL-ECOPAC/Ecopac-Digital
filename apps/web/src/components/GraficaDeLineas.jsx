@@ -8,23 +8,20 @@ import { useId } from "react";
  * pantalla. Las clases son las `ec-gr-*` de ui.css, asi que las dos graficas se ven de la misma
  * familia; el color de cada serie lo pone `ec-gr-serie-N`.
  *
- * Un valor `null` es un dato que no se puede mostrar -una cifra protegida por privacidad-: corta
- * la linea en ese punto en vez de unirlo como si fuera cero, y si se da `etiquetaDeNulo` la
- * escribe sobre el eje.
+ * Un valor `null` es un dato que falta: corta la linea en ese punto en vez de unirlo como si
+ * fuera cero.
  *
  * @param {object} props
  * @param {string[]} props.etiquetas Rotulos del eje X, en orden.
  * @param {Array<{nombre: string, valores: Array<number|null>}>} props.series
  * @param {string} props.titulo Lo que mide la grafica.
  * @param {string} [props.encabezadoDeEtiquetas] Encabezado de la primera columna de la tabla.
- * @param {string} [props.etiquetaDeNulo] Que escribir donde un valor es null ("< 5").
  */
 export default function GraficaDeLineas({
   etiquetas = [],
   series = [],
   titulo,
   encabezadoDeEtiquetas = "Período",
-  etiquetaDeNulo,
 }) {
   const id = useId();
 
@@ -99,20 +96,7 @@ export default function GraficaDeLineas({
                 ))}
 
                 {serie.valores.map((valor, indice) =>
-                  valor === null || valor === undefined ? (
-                    etiquetaDeNulo && (
-                      <text
-                        key={indice}
-                        x={xDe(indice)}
-                        y={MARGEN.arriba + areaAlto - 4}
-                        className="ec-gr-nulo"
-                        textAnchor="middle"
-                      >
-                        {etiquetaDeNulo}
-                        <title>{`${etiquetas[indice]}: ${etiquetaDeNulo}`}</title>
-                      </text>
-                    )
-                  ) : (
+                  valor === null || valor === undefined ? null : (
                     <circle
                       key={indice}
                       cx={xDe(indice)}
@@ -187,11 +171,7 @@ export default function GraficaDeLineas({
                 <th scope="row">{etiqueta}</th>
                 {series.map((serie, posicion) => {
                   const valor = serie.valores[indice];
-                  return (
-                    <td key={posicion}>
-                      {valor === null || valor === undefined ? (etiquetaDeNulo ?? "") : valor}
-                    </td>
-                  );
+                  return <td key={posicion}>{valor ?? ""}</td>;
                 })}
               </tr>
             ))}
