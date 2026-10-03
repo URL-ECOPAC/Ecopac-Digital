@@ -160,8 +160,8 @@ el numero del backlog. Este documento usa siempre la numeracion de la matriz.
 | CP-RF07-06 | Dashboard y pantallas de reportes en web | Muestran los indicadores y el error cuando la consulta falla | `apps/web/src/pages/DashboardMetricasPage.test.jsx`, `ReportesPage.test.jsx`, `ReportePacientesPage.test.jsx`, `ReporteInventarioPage.test.jsx`, `ReporteJornada.test.jsx` |
 | CP-RF07-07 | Resumen de jornada en movil | Muestra el cierre de la jornada | `apps/mobile/src/screens/ResumenJornadaScreen.test.js` |
 | CP-RF07-08 | Reporte de enfermedades: conteo en la base | Cuenta diagnosticos del catalogo, solo principales o todos, por jornada, comunidad (de la jornada o del paciente) y mes, con filtros de territorio, proyecto y jornadas | `reporte_de_enfermedades.sql` (26) |
-| CP-RF07-09 | Reporte de enfermedades: privacidad | Las cifras de 1 a 4 salen suprimidas, y con ellas el desglose entero; medico y voluntario no lo consultan, junta directiva y socio fundador si | `reporte_de_enfermedades.sql` (26), `packages/shared/reportes/permisos.test.js` |
-| CP-RF07-10 | Reporte de enfermedades: vistas y pantalla | Ranking, comparacion entre jornadas y comunidades, evolucion mensual con meses en cero, grafica y tabla, "< 5" en pantalla | `packages/shared/reportes/enfermedades.test.js`, `enfermedades.api.test.js`, `apps/web/src/pages/ReporteEnfermedadesPage.test.jsx` |
+| CP-RF07-09 | Reporte de enfermedades: acceso y cifras reales | Las cifras de 1 a 4 y su desglose salen con su numero real, ordenadas por casos y sin columna `suprimido` (00180); medico y voluntario no lo consultan, junta directiva y socio fundador si | `reporte_de_enfermedades.sql` (28), `packages/shared/reportes/permisos.test.js` |
+| CP-RF07-10 | Reporte de enfermedades: vistas y pantalla | Ranking, comparacion entre jornadas y comunidades, evolucion mensual con meses en cero, grafica y tabla; 1, 2, 3 y 4 casos con su numero en la tabla y en la grafica | `packages/shared/reportes/enfermedades.test.js`, `enfermedades.api.test.js`, `apps/web/src/pages/ReporteEnfermedadesPage.test.jsx` |
 
 ## Requerimientos no funcionales
 

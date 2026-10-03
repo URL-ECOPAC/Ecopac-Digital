@@ -47,8 +47,8 @@ este seed corresponde a una persona o lugar real (regla de confidencialidad de
 - Historial para el reporte de enfermedades (issue #916): 3 jornadas mas, ya `finalizadas`, una por
   comunidad y en meses distintos (hace 150, 95 y 60 dias), con 20 consultas cada una. Cada
   consulta lleva su diagnostico principal y, en parte, dos secundarios (fiebre y anemia). El
-  reparto da enfermedades con 5 casos o mas y otras con menos, para ver las cifras protegidas
-  ("< 5"), y uno de cada cuatro pacientes no tiene comunidad o es de otra, para que "comunidad de
+  reparto da enfermedades con 5 casos o mas y otras con 1 a 4, que salen con su numero real (issue
+  #926), y uno de cada cuatro pacientes no tiene comunidad o es de otra, para que "comunidad de
   la jornada" y "comunidad del paciente" den resultados distintos.
 
 Las alertas de vencimiento no se siembran: las genera la rutina programada
