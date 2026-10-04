@@ -54,17 +54,32 @@ export function partesEnGuatemala(instante) {
   };
 }
 
-/** "10:30" */
+/**
+ * La hora en Guatemala de un instante.
+ *
+ * @param {string|Date|null} instante
+ * @returns {string} "10:30", o cadena vacia.
+ */
 export function horaEnGuatemala(instante) {
   return partesEnGuatemala(instante)?.hora ?? "";
 }
 
-/** "AAAA-MM-DD" */
+/**
+ * La fecha en Guatemala de un instante.
+ *
+ * @param {string|Date|null} instante
+ * @returns {string} "AAAA-MM-DD", o cadena vacia.
+ */
 export function fechaEnGuatemala(instante) {
   return partesEnGuatemala(instante)?.fecha ?? "";
 }
 
-/** "03/10/2026 10:30" */
+/**
+ * Fecha y hora de una cita en Guatemala.
+ *
+ * @param {string|Date|null} instante
+ * @returns {string} "03/10/2026 10:30", o cadena vacia.
+ */
 export function formatearFechaHoraDeCita(instante) {
   const partes = partesEnGuatemala(instante);
   if (!partes) return "";
@@ -72,7 +87,12 @@ export function formatearFechaHoraDeCita(instante) {
   return `${dia}/${mes}/${anio} ${partes.hora}`;
 }
 
-/** "10:30 - 11:00" */
+/**
+ * El horario de una cita en Guatemala.
+ *
+ * @param {{ iniciaEn?: string, terminaEn?: string }|null} cita
+ * @returns {string} "10:30 - 11:00".
+ */
 export function formatearHorarioDeCita(cita) {
   const inicio = horaEnGuatemala(cita?.iniciaEn);
   const fin = horaEnGuatemala(cita?.terminaEn);
@@ -93,14 +113,24 @@ export function sumarMinutos(hora, minutos) {
   return `${conDosDigitos(Math.floor(total / 60))}:${conDosDigitos(total % 60)}`;
 }
 
-/** "HH:MM" a minutos desde la medianoche, o null. */
+/**
+ * "HH:MM" a minutos desde la medianoche.
+ *
+ * @param {string|null} hora
+ * @returns {number|null}
+ */
 export function minutosDelDia(hora) {
   const partes = SOLO_HORA.exec(String(hora ?? ""));
   if (!partes) return null;
   return Number(partes[1]) * 60 + Number(partes[2]);
 }
 
-/** Hoy en Guatemala, "AAAA-MM-DD". */
+/**
+ * Hoy en Guatemala.
+ *
+ * @param {Date} [ahora] Entra por parametro para probarlo sin depender del reloj.
+ * @returns {string} "AAAA-MM-DD".
+ */
 export function hoyEnGuatemala(ahora = new Date()) {
   return fechaEnGuatemala(ahora);
 }
@@ -133,7 +163,12 @@ export function rangoDelDia(fecha) {
   return desde && siguiente ? { desde, hasta: siguiente } : null;
 }
 
-/** Milisegundos de un instante, o NaN. */
+/**
+ * Milisegundos de un instante.
+ *
+ * @param {string|Date|null} instante
+ * @returns {number} NaN si no es un instante.
+ */
 export function msDe(instante) {
   return aFechaLocal(instante)?.getTime() ?? Number.NaN;
 }

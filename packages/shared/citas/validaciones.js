@@ -72,7 +72,12 @@ export function validarCancelacion(motivo = "") {
   return {};
 }
 
-/** El motivo tal como se guarda: sin espacios de mas, o null si quedo vacio. */
+/**
+ * El motivo tal como se guarda: sin espacios de mas, o null si quedo vacio.
+ *
+ * @param {string|null} motivo
+ * @returns {string|null}
+ */
 export function motivoDeCancelacion(motivo) {
   const limpio = normalizarTexto(motivo ?? "");
   return esTextoVacio(limpio) ? null : limpio;

@@ -73,17 +73,6 @@ export async function listarPosiblesDuplicados({ rolUsuario } = {}) {
 }
 
 /**
- * Fusiona dos expedientes: el `absorbidoId` queda dado de baja y su historial se reasigna al
- * `sobrevivienteId` (fn_fusionar_pacientes, migracion 00101). Una fila puntual que chocaria con
- * una restriccion UNIQUE del sobreviviente (misma jornada ya atendida, misma condicion cronica
- * ya registrada) se conserva sin reasignar bajo el absorbido: nada se pierde ni se borra.
- *
- * @param {string} sobrevivienteId Paciente que conserva su identidad.
- * @param {string} absorbidoId Paciente que queda dado de baja y fusionado en el anterior.
- * @param {{ rolUsuario: string }} contexto
- * @returns {Promise<{ fusion: object|null, error: object|null }>}
- */
-/**
  * Que decir despues de fusionar (issue #927): la fusion mueve las citas del absorbido, y si alguna
  * queda a la misma hora que otra del sobreviviente se conservan las dos para que alguien decida.
  *
@@ -101,6 +90,17 @@ export function mensajeDeFusion(fusion) {
   return "Expedientes fusionados.";
 }
 
+/**
+ * Fusiona dos expedientes: el `absorbidoId` queda dado de baja y su historial se reasigna al
+ * `sobrevivienteId` (fn_fusionar_pacientes, migracion 00101). Una fila puntual que chocaria con
+ * una restriccion UNIQUE del sobreviviente (misma jornada ya atendida, misma condicion cronica
+ * ya registrada) se conserva sin reasignar bajo el absorbido: nada se pierde ni se borra.
+ *
+ * @param {string} sobrevivienteId Paciente que conserva su identidad.
+ * @param {string} absorbidoId Paciente que queda dado de baja y fusionado en el anterior.
+ * @param {{ rolUsuario: string }} contexto
+ * @returns {Promise<{ fusion: object|null, error: object|null }>}
+ */
 export async function fusionarPacientes(sobrevivienteId, absorbidoId, { rolUsuario } = {}) {
   if (!puedeFusionarPacientes(rolUsuario)) {
     return {

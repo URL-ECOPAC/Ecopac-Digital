@@ -43,17 +43,32 @@ export function puedePasarCitaA(desde, hacia) {
   return (TRANSICIONES_CITA[desde] ?? []).includes(hacia);
 }
 
-/** Una cita que todavia ocupa sala: la cancelada la libera. */
+/**
+ * Una cita que todavia ocupa sala: la cancelada la libera.
+ *
+ * @param {{ estado: string }|null} cita
+ * @returns {boolean}
+ */
 export function citaOcupaSala(cita) {
   return Boolean(cita) && cita.estado !== ESTADOS_CITA.CANCELADA;
 }
 
-/** Solo una cita creada se reagenda; atendida y cancelada solo cambian sus notas. */
+/**
+ * Solo una cita creada se reagenda; atendida y cancelada solo cambian sus notas.
+ *
+ * @param {{ estado: string }|null} cita
+ * @returns {boolean}
+ */
 export function citaSeReagenda(cita) {
   return cita?.estado === ESTADOS_CITA.CREADA;
 }
 
-/** Pendiente para el cierre de la jornada: creada o en atencion. */
+/**
+ * Pendiente para el cierre de la jornada: creada o en atencion.
+ *
+ * @param {{ estado: string }|null} cita
+ * @returns {boolean}
+ */
 export function citaPendiente(cita) {
   return cita?.estado === ESTADOS_CITA.CREADA || cita?.estado === ESTADOS_CITA.EN_ATENCION;
 }

@@ -55,7 +55,12 @@ function nombreDe(persona) {
   return nombre || null;
 }
 
-/** Como queda una cita en el cliente. */
+/**
+ * Como queda una cita en el cliente: los nombres aplanados y el id de su consulta, si la tiene.
+ *
+ * @param {object|null} fila Fila de citas con sus embebidos.
+ * @returns {object|null}
+ */
 export function aCita(fila) {
   if (!fila) return null;
   const consulta = Array.isArray(fila.consulta) ? fila.consulta[0] : fila.consulta;

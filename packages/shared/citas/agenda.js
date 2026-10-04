@@ -201,7 +201,12 @@ export function mesesDelAnio(fecha, citas = [], hoy = "") {
   });
 }
 
-/** "1 cita" o "3 citas". */
+/**
+ * "1 cita" o "3 citas".
+ *
+ * @param {number} cantidad
+ * @returns {string}
+ */
 export function textoDeCantidadDeCitas(cantidad) {
   return cantidad === 1 ? "1 cita" : `${cantidad} citas`;
 }
