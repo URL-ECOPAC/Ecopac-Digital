@@ -121,6 +121,37 @@
     "#ffffff"
   ],
   "apps/mobile/src/screens/AccesoDenegadoScreen.js": ["#7a7a8a", "#e91e8c", "#ffffff"],
+  "apps/mobile/src/screens/agenda-citas/AgendaDelDia.js": [
+    "#2d2d2d",
+    "#4d4d4d",
+    "#7a7a8a",
+    "#e2e4e9",
+    "#e91e8c",
+    "#f7f8fa",
+    "#ffffff"
+  ],
+  "apps/mobile/src/screens/agenda-citas/CalendarioAnio.js": [
+    "#2d2d2d",
+    "#3db648",
+    "#7a7a8a",
+    "#e2e4e9",
+    "#ffffff"
+  ],
+  "apps/mobile/src/screens/agenda-citas/CalendarioMes.js": [
+    "#2d2d2d",
+    "#3db648",
+    "#7a7a8a",
+    "#f7f8fa",
+    "#ffffff"
+  ],
+  "apps/mobile/src/screens/agenda-citas/ModalDetalleCita.js": ["#2d2d2d", "#7a7a8a", "#e91e8c"],
+  "apps/mobile/src/screens/AgendaCitasScreen.js": [
+    "#2d2d2d",
+    "#3db648",
+    "#7a7a8a",
+    "#e2e4e9",
+    "#ffffff"
+  ],
   "apps/mobile/src/screens/AjustesScreen.js": ["#2d2d2d", "#3db648", "#7a7a8a"],
   "apps/mobile/src/screens/AppSoloParaCampoScreen.js": [
     "#2d2d2d",
@@ -352,6 +383,18 @@
     "#ffffff"
   ],
   "apps/web/src/pages/BitacoraAuditoriaPage.jsx": ["#7a7a8a"],
+  "apps/web/src/pages/CalendarioCitas.jsx": ["#4d4d4d"],
+  "apps/web/src/pages/citas.css": [
+    "#1e7a28",
+    "#2d2d2d",
+    "#3db648",
+    "#4d4d4d",
+    "#7a7a8a",
+    "#e2e4e9",
+    "#e91e8c",
+    "#f7f8fa",
+    "#ffffff"
+  ],
   "apps/web/src/pages/ColaboradoresPage.jsx": [
     "#2d2d2d",
     "#3db648",
