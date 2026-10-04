@@ -219,7 +219,7 @@ export function useRegistroIngreso({
       !itemActual.bodega_id
     ) {
       setError(
-        "Completa los campos obligatorios del medicamento (Medicamento, Lote, Cantidad y Bodega).",
+        "Completa los campos obligatorios del artículo (Producto o insumo, Lote, Cantidad y Bodega).",
       );
       return;
     }
@@ -275,7 +275,7 @@ export function useRegistroIngreso({
   /** @returns {Promise<boolean>} Si el ingreso completo (todos sus items) se registro sin error. */
   const guardarMovimiento = async () => {
     if (items.length === 0) {
-      setError("Debes agregar al menos un medicamento al ingreso.");
+      setError("Debes agregar al menos un artículo al ingreso.");
       return false;
     }
 

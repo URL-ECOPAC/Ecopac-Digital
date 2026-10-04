@@ -63,6 +63,21 @@ export function opcionesDeDestinoDeSobrante(origen, hayJornadasDestino) {
 }
 
 /**
+ * Que decir cuando no hay sobrante que liquidar. Una jornada sin presupuesto no "gasto todo su
+ * presupuesto": no tuvo (issue #925). Pura y exportada para probarla sin montar el hook.
+ *
+ * @param {{ liquidados?: object[], presupuestoAsignado?: number|string|null }} datos
+ * @returns {string}
+ */
+export function mensajeSinSobrante({ liquidados = [], presupuestoAsignado = null } = {}) {
+  if (liquidados.length > 0) return "No queda sobrante por liquidar.";
+  if (!(Number(presupuestoAsignado) > 0)) {
+    return "Esta jornada no tuvo presupuesto asignado: no hay sobrante.";
+  }
+  return "La jornada gastó todo su presupuesto: no hay sobrante.";
+}
+
+/**
  * Las decisiones que se mandan a la base, o los errores por aporte si falta elegir a donde.
  *
  * @param {{ origenId: string }[]} filas Aportes con sobrante.
@@ -90,8 +105,8 @@ export function armarDecisionesDeSobrante(filas, decisiones) {
  *   onLiquidado?: () => void }} opciones `onLiquidado` avisa a la pantalla que el presupuesto de
  *   la jornada cambio.
  * @returns {object} Con: visible, puedeLiquidar, cargando, error, filas, liquidados, totalSobrante,
- *   hayGastosPendientes, jornadasDestino, decisiones, errores, setDestino, setJornadaDestino,
- *   liquidar, liquidando, errorAlLiquidar, recargar.
+ *   hayGastosPendientes, mensajeSinSobrante, jornadasDestino, decisiones, errores, setDestino,
+ *   setJornadaDestino, liquidar, liquidando, errorAlLiquidar, recargar.
  */
 export function useSobranteDeJornada({ jornada, rol, onLiquidado } = {}) {
   const permisos = permisosDeOrigenDePresupuesto(rol);
@@ -235,6 +250,10 @@ export function useSobranteDeJornada({ jornada, rol, onLiquidado } = {}) {
     liquidados,
     totalSobrante,
     hayGastosPendientes: pendiente > 0,
+    mensajeSinSobrante: mensajeSinSobrante({
+      liquidados,
+      presupuestoAsignado: jornada?.presupuestoAsignado,
+    }),
     jornadasDestino,
     opcionesDeDestino: (origen) => opcionesDeDestinoDeSobrante(origen, jornadasDestino.length > 0),
     decisiones,

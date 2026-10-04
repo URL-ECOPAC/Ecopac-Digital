@@ -76,6 +76,7 @@ export function useFormularioGasto({
     valoresInicialesDeGasto(gasto, estadoInicial, jornadaId),
   );
   const [errores, setErrores] = useState([]);
+  const [erroresPorCampo, setErroresPorCampo] = useState({});
   const [error, setError] = useState(null);
   const [enviando, setEnviando] = useState(false);
   const [sucio, setSucio] = useState(false);
@@ -177,6 +178,7 @@ export function useFormularioGasto({
   const cancelar = useCallback(() => {
     setValores(valoresInicialesDeGasto(gasto, estadoInicial, jornadaId));
     setErrores([]);
+    setErroresPorCampo({});
     setError(null);
     setEnviando(false);
     setSucio(false);
@@ -186,8 +188,10 @@ export function useFormularioGasto({
     const resultado = validarGasto(valores, contextoDeJornada);
     if (!resultado.valido) {
       setErrores(resultado.errores);
+      setErroresPorCampo(resultado.erroresPorCampo);
       return { ok: false };
     }
+    setErroresPorCampo({});
     setEnviando(true);
     setError(null);
 
@@ -244,6 +248,7 @@ export function useFormularioGasto({
   return {
     valores,
     errores,
+    erroresPorCampo,
     error,
     enviando,
     esEdicion,

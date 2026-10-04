@@ -100,7 +100,9 @@ export function filtrarPorRangoDeFecha(movimientos, fechaDesde, fechaHasta) {
  * @returns {{ movimientos: number, ingresos: number, salidas: number, saldo: number }}
  */
 export function resumenDeKardex(movimientos) {
-  const aprobados = movimientos.filter((mov) => mov.afectaSaldo);
+  // Un cambio de bodega (traslado, carga, devolucion, traspaso) no es entrada ni salida del lote:
+  // contarlo en los dos lados inflaba ingresos y salidas con el mismo inventario (issue #925).
+  const aprobados = movimientos.filter((mov) => mov.afectaSaldo && !mov.esCambioDeBodega);
   const sumar = (tipo) =>
     aprobados.filter((mov) => mov.tipo === tipo).reduce((total, mov) => total + mov.cantidad, 0);
 
@@ -124,8 +126,50 @@ export function ordenarMovimientosPorFecha(movimientos = []) {
 }
 
 /**
+ * "+30" para un ingreso y "−30" para una salida. Antes la salida salia sin signo y se leia como
+ * una entrada mas. Pura y exportada para probarla.
+ *
+ * @param {{ tipo: string, cantidad: number }} mov
+ * @returns {string}
+ */
+export function cantidadConSigno(mov) {
+  if (mov?.tipo === TIPO_MOVIMIENTO.INGRESO) return `+${mov.cantidad}`;
+  if (mov?.tipo === TIPO_MOVIMIENTO.SALIDA) return `−${mov.cantidad}`;
+  return String(mov?.cantidad ?? "");
+}
+
+/**
+ * Los momentos (created_at) en que el lote solo cambio de bodega: entro y salio la misma cantidad
+ * aprobada en la misma transaccion. Es lo que registran un traslado, una carga o devolucion de la
+ * bodega de una jornada y el traspaso al iniciarla (00179, 00186).
+ *
+ * @param {object[]} movimientos
+ * @returns {Set<string>}
+ */
+function momentosDeCambioDeBodega(movimientos) {
+  const porMomento = new Map();
+  for (const mov of movimientos) {
+    if (mov.estado !== ESTADO_MOVIMIENTO.APROBADO) continue;
+    const grupo = porMomento.get(mov.created_at) ?? { ingresos: 0, salidas: 0 };
+    if (mov.tipo === TIPO_MOVIMIENTO.INGRESO) grupo.ingresos += mov.cantidad;
+    else if (mov.tipo === TIPO_MOVIMIENTO.SALIDA) grupo.salidas += mov.cantidad;
+    porMomento.set(mov.created_at, grupo);
+  }
+  const momentos = new Set();
+  for (const [momento, grupo] of porMomento) {
+    if (grupo.ingresos > 0 && grupo.ingresos === grupo.salidas) momentos.add(momento);
+  }
+  return momentos;
+}
+
+/**
  * Movimientos del kardex en orden cronologico, cada uno con el saldo que queda despues de el.
  * Solo los APROBADOS mueven el saldo; pendientes y rechazados se muestran sin tocarlo.
+ *
+ * Un cambio de bodega tampoco lo mueve: el kardex es del lote, y el lote no cambia por pasar de
+ * una bodega a otra. Antes el traslado registraba el ingreso en la destino antes que la salida del
+ * origen (00143, a proposito) y el saldo pasaba por un valor que nunca existio: 300, 350, 300
+ * (issue #925). Esas filas llevan `esCambioDeBodega`.
  *
  * Del mas antiguo al mas reciente, como se lee un kardex. listarMovimientos() los devuelve del mas
  * reciente al mas antiguo, y acumular en ese orden restaba la salida antes de sumar el ingreso: un
@@ -135,14 +179,22 @@ export function ordenarMovimientosPorFecha(movimientos = []) {
  * @returns {Array<object>} Cada movimiento con `saldoAcumulado` y `afectaSaldo`.
  */
 export function conSaldoAcumulado(movimientos = []) {
+  const cambiosDeBodega = momentosDeCambioDeBodega(movimientos);
   let saldo = 0;
   return ordenarMovimientosPorFecha(movimientos).map((mov) => {
     const esAprobado = mov.estado === ESTADO_MOVIMIENTO.APROBADO;
-    if (esAprobado) {
+    const esCambioDeBodega = esAprobado && cambiosDeBodega.has(mov.created_at);
+    if (esAprobado && !esCambioDeBodega) {
       if (mov.tipo === TIPO_MOVIMIENTO.INGRESO) saldo += mov.cantidad;
       else if (mov.tipo === TIPO_MOVIMIENTO.SALIDA) saldo -= mov.cantidad;
     }
-    return { ...mov, saldoAcumulado: saldo, afectaSaldo: esAprobado };
+    return {
+      ...mov,
+      saldoAcumulado: saldo,
+      afectaSaldo: esAprobado,
+      esCambioDeBodega,
+      cantidadConSigno: cantidadConSigno(mov),
+    };
   });
 }
 

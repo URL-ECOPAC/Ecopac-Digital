@@ -429,14 +429,6 @@
   "apps/web/src/pages/ModalGeneracionReceta.jsx": ["#7a7a8a"],
   "apps/web/src/pages/ModalPermisosUsuario.jsx": ["#3db648"],
   "apps/web/src/pages/ModalRegistroIngreso.jsx": ["#2d2d2d"],
-  "apps/web/src/pages/ModalSalidaMedicamento.jsx": [
-    "#2d2d2d",
-    "#7a7a8a",
-    "#e2e4e9",
-    "#e91e8c",
-    "#f7f8fa",
-    "#ffffff"
-  ],
   "apps/web/src/pages/pacientes.css": [
     "#29abe2",
     "#2d2d2d",

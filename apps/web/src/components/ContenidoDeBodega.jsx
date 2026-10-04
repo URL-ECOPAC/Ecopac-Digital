@@ -8,8 +8,9 @@ import ErrorState from "./ErrorState";
  *
  * Lo usan "Ver contenido" de Bodegas y la pestana Insumos de la jornada y del proyecto, que suman
  * lo que hay en la bodega de botiquin. `mostrarBodega` agrega la columna cuando la lista junta
- * varias bodegas. `conValor` agrega el costo unitario del lote y lo que vale lo que queda (00178):
- * solo donde el rol ve dinero, como las pestanas Insumos.
+ * varias bodegas, y `mostrarJornada` la de la jornada a la que le queda (insumos del proyecto,
+ * 00186). `conValor` agrega el costo unitario del lote y lo que vale lo que queda (00178): solo
+ * donde el rol ve dinero, como las pestanas Insumos.
  */
 export default function ContenidoDeBodega({
   contenido = [],
@@ -17,14 +18,17 @@ export default function ContenidoDeBodega({
   error = null,
   vacio = "Esta bodega no tiene existencias.",
   mostrarBodega = false,
+  mostrarJornada = false,
   conValor = false,
 }) {
+  // Un div y no un p: el Spinner de react-bootstrap es un div, y un div dentro de un p es HTML
+  // invalido (React lo avisaba en consola, issue #925).
   if (cargando) {
     return (
-      <p className="text-muted small text-center py-3 mb-0">
+      <div className="text-muted small text-center py-3 mb-0">
         <Spinner animation="border" size="sm" className="me-2" />
         Cargando existencias...
-      </p>
+      </div>
     );
   }
 
@@ -44,6 +48,7 @@ export default function ContenidoDeBodega({
         <thead>
           <tr>
             <th>Artículo</th>
+            {mostrarJornada && <th>Jornada</th>}
             {mostrarBodega && <th>Bodega</th>}
             <th>Lote</th>
             <th>Vence</th>
@@ -54,8 +59,9 @@ export default function ContenidoDeBodega({
         </thead>
         <tbody>
           {contenido.map((fila) => (
-            <tr key={`${fila.loteId}|${fila.bodegaId}`}>
+            <tr key={`${fila.loteId}|${fila.bodegaId}|${fila.jornadaId ?? ""}`}>
               <td>{fila.articulo}</td>
+              {mostrarJornada && <td>{fila.jornada ?? "—"}</td>}
               {mostrarBodega && <td>{fila.bodega ?? "—"}</td>}
               <td>{fila.numeroLote ?? "—"}</td>
               <td>
@@ -82,7 +88,7 @@ export default function ContenidoDeBodega({
         </tbody>
         <tfoot>
           <tr>
-            <th colSpan={mostrarBodega ? 4 : 3}>Total</th>
+            <th colSpan={3 + Number(mostrarBodega) + Number(mostrarJornada)}>Total</th>
             <th className="text-end">{total}</th>
             {conValor && <th />}
             {conValor && (

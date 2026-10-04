@@ -192,6 +192,9 @@ function TarjetaJornada({
     : 0;
 
   const esReapertura = jornada.estado === ESTADOS_JORNADA.FINALIZADA;
+  // Reabrir una jornada finalizada la devuelve a "en curso": se pide confirmar, porque un clic
+  // suelto en "Atras" la reabria sin aviso (issue #925).
+  const [confirmandoReapertura, setConfirmandoReapertura] = useState(false);
   const [destino] = transicionesDeJornadaDesde(jornada.estado);
   const puedeMover = (esReapertura ? puedeReabrir : puedeEditar) && Boolean(destino);
 
@@ -235,6 +238,30 @@ function TarjetaJornada({
         )}
       </div>
 
+      {confirmandoReapertura && (
+        <div className="alert alert-warning py-2 px-3 small mb-2" role="alert">
+          <p className="mb-2">¿Reabrir la jornada? Vuelve a quedar en curso.</p>
+          <div className="d-flex gap-2">
+            <PrimaryButton
+              title="Reabrir"
+              size="sm"
+              loading={moviendo}
+              onClick={() => {
+                setConfirmandoReapertura(false);
+                onMover(jornada.id, jornada.estado, destino);
+              }}
+            />
+            <SecondaryButton
+              title="Cancelar"
+              variant="neutra"
+              size="sm"
+              onClick={() => setConfirmandoReapertura(false)}
+              disabled={moviendo}
+            />
+          </div>
+        </div>
+      )}
+
       <div className="ec-jornada-acciones">
         <div className="d-flex gap-2">
           <SecondaryButton
@@ -244,13 +271,13 @@ function TarjetaJornada({
             onClick={onVerDetalle}
             disabled={moviendo}
           />
-          {puedeMover && esReapertura && (
+          {puedeMover && esReapertura && !confirmandoReapertura && (
             <SecondaryButton
               title="Atrás"
               variant="neutra"
               size="sm"
               icon={<ArrowLeft size={16} aria-hidden="true" />}
-              onClick={() => onMover(jornada.id, jornada.estado, destino)}
+              onClick={() => setConfirmandoReapertura(true)}
               disabled={moviendo}
             />
           )}

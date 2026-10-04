@@ -16,6 +16,7 @@ const dobles = vi.hoisted(() => ({
   contarAtencionesIncompletas: vi.fn(),
   listarMovimientos: vi.fn(),
   contarCitasPendientesDeJornada: vi.fn(),
+  listarConsumoDeInsumosDeJornada: vi.fn(),
 }));
 
 vi.mock("../atenciones/api.js", () => ({
@@ -36,6 +37,11 @@ vi.mock("../citas/api.js", () => ({
 vi.mock("./api.js", () => ({
   contarAtencionesIncompletas: dobles.contarAtencionesIncompletas,
 }));
+// Lo que le queda a la jornada en su bodega (00186): el resto de bodega.api.js es real.
+vi.mock("./bodega.api.js", async (importOriginal) => ({
+  ...(await importOriginal()),
+  listarConsumoDeInsumosDeJornada: dobles.listarConsumoDeInsumosDeJornada,
+}));
 
 const {
   contarMovimientosPendientesDelBotiquin,
@@ -47,6 +53,7 @@ const { ROLES } = await import("../usuarios/roles.js");
 
 beforeEach(() => {
   vi.clearAllMocks();
+  dobles.listarConsumoDeInsumosDeJornada.mockResolvedValue({ consumo: [], error: null });
   dobles.contarPacientesDeJornada.mockResolvedValue({ cantidad: 0, error: null });
   dobles.contarConsultasDeJornada.mockResolvedValue({ cantidad: 0, error: null });
   dobles.contarRecetasDeJornada.mockResolvedValue({ cantidad: 0, error: null });
@@ -104,6 +111,7 @@ describe("obtenerResumenCierre", () => {
       atencionesIncompletas: null,
       movimientosPendientes: 0,
       citasPendientes: null,
+      inventarioQueQueda: null,
       error: null,
     });
     expect(dobles.contarPacientesDeJornada).not.toHaveBeenCalled();
@@ -116,6 +124,13 @@ describe("obtenerResumenCierre", () => {
     dobles.contarAtencionesIncompletas.mockResolvedValue({ cantidad: 2, error: null });
     dobles.listarMovimientos.mockResolvedValue({ datos: [{ id: "m1" }], error: null });
     dobles.contarCitasPendientesDeJornada.mockResolvedValue({ cantidad: 3, error: null });
+    dobles.listarConsumoDeInsumosDeJornada.mockResolvedValue({
+      consumo: [
+        { queda: 4, costoUnitario: 2.5, valorQueda: 10 },
+        { queda: 0, costoUnitario: null, valorQueda: null },
+      ],
+      error: null,
+    });
 
     const resumen = await obtenerResumenCierre(
       { id: "jor-1", botiquinBodegaId: "bodega-1" },
@@ -127,6 +142,8 @@ describe("obtenerResumenCierre", () => {
       atencionesIncompletas: 2,
       movimientosPendientes: 1,
       citasPendientes: 3,
+      // 00186: el cierre dice lo que le queda a la jornada en su bodega movil.
+      inventarioQueQueda: { unidades: 4, valor: 10, lotesSinCosto: 0 },
       error: null,
     });
     expect(dobles.contarCitasPendientesDeJornada).toHaveBeenCalledWith("jor-1");

@@ -8,12 +8,12 @@ import PrimaryButton from "../components/PrimaryButton";
 import SecondaryButton from "../components/SecondaryButton";
 import Selector from "../components/Selector";
 
-/** "Amoxicilina (500 mg) · Lote L-1 · vence 31/01/2027 · 30 en la bodega" */
+/** "Amoxicilina (500 mg) · Lote L-1 · vence 31/01/2027 · 30 de esta jornada" */
 function etiquetaDeLote(fila) {
   const vence = fila.fechaVencimiento
     ? `vence ${formatearFechaCorta(fila.fechaVencimiento)}`
     : "no vence";
-  return `${fila.articulo} · Lote ${fila.numeroLote ?? "—"} · ${vence} · ${fila.cantidadDisponible} en la bodega`;
+  return `${fila.articulo} · Lote ${fila.numeroLote ?? "—"} · ${vence} · ${fila.cantidadDisponible} de esta jornada`;
 }
 
 /**

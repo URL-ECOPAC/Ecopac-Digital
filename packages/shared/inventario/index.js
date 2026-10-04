@@ -40,6 +40,8 @@ export * from "./bodegas.api.js";
 export * from "./proveedores.api.js";
 export * from "./bodegas.permisos.js";
 export * from "./movimientos.api.js";
+export * from "./rechazos.js";
+export * from "./entregasDeReceta.js";
 export * from "./alertas.api.js";
 export * from "./configuracionAlertas.api.js";
 export * from "./configuracionAlertas.validaciones.js";

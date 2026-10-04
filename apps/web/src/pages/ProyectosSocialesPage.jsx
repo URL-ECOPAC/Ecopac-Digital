@@ -367,7 +367,7 @@ export default function ProyectosSocialesPage({ usuarioRol }) {
               <div className="d-flex flex-column gap-3">
                 <div className="ec-kpis">
                   <StatCard
-                    label="Valor en las bodegas"
+                    label="Les queda a sus jornadas"
                     value={formatearMoneda(valorDeBodegas.valor)}
                     caption={
                       valorDeBodegas.lotesSinCosto > 0
@@ -398,9 +398,9 @@ export default function ProyectosSocialesPage({ usuarioRol }) {
                   )}
                 </div>
                 <p className="text-muted small mb-0">
-                  Si la jornada tiene una bodega asignada, su inventario pasa a ser parte de los
-                  insumos de la jornada. Se carga desde el detalle de cada jornada, en su pestaña
-                  Insumos, y lo que se consumió está en su pestaña Consumo.
+                  Es lo que le queda a cada jornada del proyecto en su bodega móvil: lo cargado
+                  menos lo entregado y lo devuelto. Se carga y se devuelve desde el detalle de cada
+                  jornada, en su pestaña Insumos, y lo que se consumió está en su pestaña Consumo.
                 </p>
                 {errorInsumos && (
                   <Alert variant="danger" className="mb-0 py-2 px-3 small">
@@ -435,7 +435,8 @@ export default function ProyectosSocialesPage({ usuarioRol }) {
                     <ContenidoDeBodega
                       contenido={existenciasEnBodegas}
                       cargando={cargandoInsumos}
-                      vacio="Las bodegas móviles de sus jornadas no tienen existencias."
+                      vacio="A sus jornadas no les queda nada en las bodegas móviles."
+                      mostrarJornada
                       mostrarBodega={bodegasDeJornadas.length > 1}
                       conValor
                     />

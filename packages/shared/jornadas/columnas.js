@@ -120,8 +120,12 @@ export const COLUMNAS_CONSUMO_DE_JORNADA = [
   { id: "numeroLote", label: "Lote", tipo: TIPOS_DE_PRESENTACION.TEXTO },
   { id: "cargado", label: "Cargado", tipo: TIPOS_DE_PRESENTACION.NUMERO },
   { id: "entregado", label: "Entregado", tipo: TIPOS_DE_PRESENTACION.NUMERO },
+  // Salidas de sus recetas que esperan aprobacion (1B, 00186): ya cuentan en Entregado.
+  { id: "pendiente", label: "Por aprobar", tipo: TIPOS_DE_PRESENTACION.NUMERO },
   { id: "devuelto", label: "Devuelto", tipo: TIPOS_DE_PRESENTACION.NUMERO },
-  { id: "enBodega", label: "En la bodega", tipo: TIPOS_DE_PRESENTACION.NUMERO },
+  // Lo que le queda a la jornada: cargado - entregado - devuelto (2A, 00186). Antes era lo que
+  // hubiera en toda la bodega, tambien lo de otras jornadas.
+  { id: "queda", label: "Queda", tipo: TIPOS_DE_PRESENTACION.NUMERO },
   { id: "costoUnitario", label: "Costo unitario", tipo: TIPOS_DE_PRESENTACION.MONEDA },
   { id: "valorEntregado", label: "Valor entregado", tipo: TIPOS_DE_PRESENTACION.MONEDA },
 ];
@@ -131,5 +135,5 @@ export const COLUMNAS_CONSUMO_DE_JORNADA = [
  * ni "lo que queda" propio de la jornada, solo lo entregado y su valor.
  */
 export const COLUMNAS_CONSUMO_CON_BODEGA_PRINCIPAL = COLUMNAS_CONSUMO_DE_JORNADA.filter(
-  (columna) => !["cargado", "devuelto", "enBodega"].includes(columna.id),
+  (columna) => !["cargado", "devuelto", "queda"].includes(columna.id),
 );

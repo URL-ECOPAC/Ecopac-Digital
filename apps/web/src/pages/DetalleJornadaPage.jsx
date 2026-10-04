@@ -22,6 +22,7 @@ import {
   mensajeDeCitasPendientesAlCerrar,
   puedeVerInsumosDeJornada,
   jornadaUsaBodegaPrincipal,
+  motivoParaNoCargarBodega,
   useCuadroTurnos,
   useDetalleJornada,
   useResumenCierreJornada,
@@ -99,7 +100,8 @@ const INDICADORES_DEL_DIA = [
 const INDICADORES_DEL_CIERRE = [
   { clave: "pacientesAtendidos", etiqueta: "Pacientes atendidos" },
   { clave: "consultasRealizadas", etiqueta: "Consultas registradas" },
-  { clave: "tratamientosEntregados", etiqueta: "Medicamentos entregados" },
+  // Son recetas emitidas (contarRecetasDeJornada), no unidades: las unidades estan en Consumo.
+  { clave: "tratamientosEntregados", etiqueta: "Recetas emitidas" },
 ];
 
 /** Componente auxiliar para datos de ficha */
@@ -509,6 +511,7 @@ export default function DetalleJornadaPage() {
               }
               rol={rol}
               soloConsulta={jornadaFinalizada}
+              motivoSinCarga={motivoParaNoCargarBodega(jornada)}
             />
           )}
 
@@ -555,8 +558,27 @@ export default function DetalleJornadaPage() {
                     {resumenCierre.movimientosPendientes > 0 && (
                       <div className="alert alert-warning" role="alert">
                         {resumenCierre.movimientosPendientes === 1
-                          ? "Hay 1 movimiento de inventario del botiquín de esta jornada pendiente de validar."
-                          : `Hay ${resumenCierre.movimientosPendientes} movimientos de inventario del botiquín de esta jornada pendientes de validar.`}
+                          ? "Hay 1 movimiento de inventario de la bodega de esta jornada pendiente de validar."
+                          : `Hay ${resumenCierre.movimientosPendientes} movimientos de inventario de la bodega de esta jornada pendientes de validar.`}
+                      </div>
+                    )}
+                    {resumenCierre.inventarioQueQueda?.unidades > 0 && (
+                      <div className="alert alert-warning" role="alert">
+                        <div>
+                          A la jornada le quedan {resumenCierre.inventarioQueQueda.unidades}{" "}
+                          unidad(es) en su bodega móvil
+                          {resumenCierre.inventarioQueQueda.valor > 0 &&
+                            ` (${formatearMoneda(resumenCierre.inventarioQueQueda.valor)})`}
+                          . Lo que no se devuelva pasa a la próxima jornada que use la bodega.
+                        </div>
+                        {puedeVerInsumosDeJornada(rol) && (
+                          <SecondaryButton
+                            title="Ir a Insumos para devolver"
+                            size="sm"
+                            className="mt-2"
+                            onClick={() => setPestaniaActiva("insumos")}
+                          />
+                        )}
                       </div>
                     )}
                     {mensajeDeCitasPendientesAlCerrar(resumenCierre.citasPendientes) && (

@@ -152,5 +152,8 @@ export const CAMPOS_GASTO = [
     label: "Responsable",
     tipo: TIPOS_DE_CAMPO.SELECT,
     opcionesDesde: "perfiles",
+    // Opcional (columna nullable); sin `validacion` el formulario no decia ni "*" ni "(opcional)"
+    // (issue #925).
+    validacion: { requerido: false },
   },
 ];

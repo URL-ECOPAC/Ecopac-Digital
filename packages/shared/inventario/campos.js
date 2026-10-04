@@ -23,6 +23,7 @@
 
 import { TIPOS_DE_CAMPO } from "../descriptores.js";
 import { camposDeEdicion } from "../formularios.js";
+import { formatearFechaCorta } from "../formato/fechas.js";
 import {
   ACCIONES_DE_ALERTA,
   ESTADOS_MOVIMIENTO,
@@ -83,6 +84,34 @@ export const OPCIONES_MOTIVO_SALIDA = Object.freeze([
 export function etiquetaDeMotivoDeMovimiento(motivo) {
   if (!motivo) return "";
   return OPCIONES_MOTIVO_SALIDA.find((opcion) => opcion.value === motivo)?.label ?? motivo;
+}
+
+/**
+ * Nombre de un articulo con su concentracion entre parentesis, si la tiene. Un insumo no tiene
+ * concentracion (00164) y se mostraba "Guantes de nitrilo ()" (issue #925).
+ *
+ * @param {{ nombre?: string, concentracion?: string|null }} articulo
+ * @returns {string}
+ */
+export function etiquetaDeArticulo(articulo) {
+  const nombre = articulo?.nombre ?? "";
+  return articulo?.concentracion ? `${nombre} (${articulo.concentracion})` : nombre;
+}
+
+/**
+ * Una opcion del selector de lote de "Registrar salida": "Lote: L-1 · Bodega Principal ·
+ * vence 16/02/2028 · 280 disponibles". El vencimiento salia en ISO ("2028-02-16"), distinto del
+ * resto de la app (issue #925).
+ *
+ * @param {{ numeroLote?: string, bodega?: string, fechaVencimiento?: string|null,
+ *   cantidadDisponible?: number }} lote
+ * @returns {string}
+ */
+export function etiquetaDeLoteDeSalida(lote) {
+  const vence = lote?.fechaVencimiento
+    ? `vence ${formatearFechaCorta(lote.fechaVencimiento)}`
+    : "no vence";
+  return `Lote: ${lote?.numeroLote ?? "—"} · ${lote?.bodega ?? "—"} · ${vence} · ${lote?.cantidadDisponible ?? 0} disponibles`;
 }
 
 /**

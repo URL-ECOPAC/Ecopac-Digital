@@ -748,6 +748,8 @@
  * @property {boolean} aprobacionAutomatica
  * @property {string|null} motivoRechazo
  * @property {string|null} jornadaId Jornada para la que se cargo su bodega movil (00178).
+ * @property {string|null} recetaId Receta de la que sale: su entrega, su ajuste o su devolucion
+ *   al anularla (00186).
  */
 
 /**

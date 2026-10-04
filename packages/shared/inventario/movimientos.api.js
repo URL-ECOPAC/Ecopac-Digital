@@ -1,6 +1,7 @@
 import { obtenerSupabase } from "../api/cliente.js";
-import { normalizarError } from "../api/errores-de-supabase.js";
+import { normalizarError, normalizarErrorConReglas } from "../api/errores-de-supabase.js";
 import { esLoteEntregable } from "./lotes.validaciones.js";
+import { REGLAS_DE_RECHAZO_DE_INVENTARIO } from "./rechazos.js";
 import { ESTADOS_MOVIMIENTO, ORIGENES_DE_LOTE, TIPOS_DE_MOVIMIENTO } from "../enums.js";
 
 /**
@@ -420,7 +421,12 @@ export async function trasladarEntreBodegas({
       p_cantidad: Number(cantidad),
     });
 
-    if (error) return { ingresoId: null, error: normalizarError(error) };
+    if (error) {
+      return {
+        ingresoId: null,
+        error: normalizarErrorConReglas(error, REGLAS_DE_RECHAZO_DE_INVENTARIO),
+      };
+    }
     return { ingresoId: data ?? null, error: null };
   } catch (error) {
     return { ingresoId: null, error: normalizarError(error) };
