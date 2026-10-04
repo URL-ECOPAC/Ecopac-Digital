@@ -74,6 +74,8 @@ const MODULOS = [
       "fusiones_pacientes",
       "padecimientos_cronicos",
       "condiciones_cronicas",
+      "areas_atencion",
+      "paciente_area",
       "triajes",
     ],
   },
@@ -87,6 +89,8 @@ const MODULOS = [
       "consulta_diagnostico",
       "recetas",
       "receta_detalle",
+      "clinicas",
+      "citas",
     ],
   },
   {
