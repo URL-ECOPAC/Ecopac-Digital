@@ -11,7 +11,8 @@ import ModalInsumoPrevisto from "./ModalInsumoPrevisto";
 
 // Pestana Insumos del detalle de una jornada. Desde la 00178 sus insumos son lo que hay en su bodega
 // movil: se cargan aqui desde otra bodega ("Cargar a la bodega") y de ella salen las entregas de la
-// jornada. Lo que se consumio esta en la pestana Consumo.
+// jornada. Lo que se consumio esta en la pestana Consumo. Con la bodega principal (00181) no hay
+// nada que cargar ni devolver: la pestana lo explica en lugar de mostrar la bodega.
 //
 // La lista de previstos (jornada_insumos, 00151) ya no se llena; si una jornada anterior la tiene,
 // se sigue viendo debajo, con su total, y se puede corregir o quitar.
@@ -27,6 +28,7 @@ export default function InsumosDeJornada({
 }) {
   const {
     puedeGestionar,
+    usaBodegaPrincipal,
     columnas,
     campos,
     catalogos,
@@ -41,7 +43,12 @@ export default function InsumosDeJornada({
     guardar,
     quitar,
     recargarBodega,
-  } = useInsumosDeJornada({ jornadaId, bodegaId: bodega?.id ?? null, rol });
+  } = useInsumosDeJornada({
+    jornadaId,
+    bodegaId: bodega?.id ?? null,
+    bodegaEsPrincipal: Boolean(bodega?.esPrincipal),
+    rol,
+  });
 
   const [insumoEnEdicion, setInsumoEnEdicion] = useState(null);
   const [insumoPorQuitar, setInsumoPorQuitar] = useState(null);
@@ -49,21 +56,23 @@ export default function InsumosDeJornada({
   const [devolviendo, setDevolviendo] = useState(false);
   const [aviso, setAviso] = useState(null);
   const modifica = puedeGestionar && !soloConsulta;
-  const puedeCargar = puedeCargarBodegaDeJornada(rol) && Boolean(bodega?.id);
+  const puedeCargar = puedeCargarBodegaDeJornada(rol) && Boolean(bodega?.id) && !usaBodegaPrincipal;
 
   return (
     <div className="d-flex flex-column gap-3">
       <div className="ec-kpis">
-        <StatCard
-          label="Valor en la bodega"
-          value={bodega?.id ? formatearMoneda(valorDeBodega.valor) : "—"}
-          caption={
-            valorDeBodega.lotesSinCosto > 0
-              ? `${valorDeBodega.lotesSinCosto} lote(s) sin costo no se suman`
-              : `${valorDeBodega.unidades} unidades`
-          }
-          accent="var(--accent-inventario)"
-        />
+        {!usaBodegaPrincipal && (
+          <StatCard
+            label="Valor en la bodega"
+            value={bodega?.id ? formatearMoneda(valorDeBodega.valor) : "—"}
+            caption={
+              valorDeBodega.lotesSinCosto > 0
+                ? `${valorDeBodega.lotesSinCosto} lote(s) sin costo no se suman`
+                : `${valorDeBodega.unidades} unidades`
+            }
+            accent="var(--accent-inventario)"
+          />
+        )}
         {insumos.length > 0 && (
           <StatCard
             label="Previsto (estimado)"
@@ -80,7 +89,17 @@ export default function InsumosDeJornada({
         </Alert>
       )}
 
-      {bodega?.id ? (
+      {usaBodegaPrincipal && (
+        <section className="d-flex flex-column gap-2">
+          <h3 className="ec-seccion-titulo mb-0">Bodega principal: {bodega.nombre}</h3>
+          <Alert variant="info" className="mb-0 py-2 px-3 small">
+            Esta jornada entrega directo de la bodega principal: no hay nada que cargar ni que
+            devolver. Lo que se entregue en sus recetas aparece en la pestaña Consumo, con su valor.
+          </Alert>
+        </section>
+      )}
+
+      {!usaBodegaPrincipal && bodega?.id && (
         <section className="d-flex flex-column gap-2">
           <div className="d-flex flex-wrap justify-content-between align-items-end gap-2">
             <div>
@@ -113,7 +132,9 @@ export default function InsumosDeJornada({
             conValor
           />
         </section>
-      ) : (
+      )}
+
+      {!bodega?.id && (
         <Alert variant="warning" className="mb-0 py-2 px-3 small">
           Esta jornada no tiene bodega móvil. Asígnale una con &laquo;Editar jornada&raquo; para
           cargarle insumos.

@@ -1,13 +1,52 @@
-// La bodega movil de una jornada (00178): cargarla desde otra bodega y ver lo que consumio.
+// La bodega de una jornada (00178): cargarla desde otra bodega y ver lo que consumio.
 //
-// Toda jornada lleva una bodega movil (jornadas.botiquin_bodega_id). Lo que se lleva a la jornada
-// se carga a ella desde la pestana Insumos -un traslado de un lote desde otra bodega, normalmente
-// la principal-, y de ella salen los medicamentos que se recetan en la jornada (00176).
+// Toda jornada lleva una bodega (jornadas.botiquin_bodega_id). Si es movil, lo que se lleva a la
+// jornada se carga a ella desde la pestana Insumos -un traslado de un lote desde otra bodega,
+// normalmente la principal-, y de ella salen los medicamentos que se recetan en la jornada (00176).
+// Desde la 00181 tambien puede ser la bodega principal: entrega directo, no se carga ni se devuelve,
+// y su consumo es solo lo entregado.
 //
 // Todas devuelven `{ ..., error }` en vez de lanzar.
 
 import { obtenerSupabase } from "../api/cliente.js";
 import { normalizarError } from "../api/errores-de-supabase.js";
+
+/**
+ * La jornada entrega directo de la bodega principal (00181): no se carga ni se devuelve, y su
+ * consumo es solo lo entregado. Lee el embebido `botiquinBodega` que trae obtenerJornada().
+ *
+ * @param {{ botiquinBodegaId?: string|null, botiquinBodega?: { esPrincipal?: boolean }|null }} jornada
+ * @returns {boolean}
+ */
+export function jornadaUsaBodegaPrincipal(jornada) {
+  return Boolean(jornada?.botiquinBodegaId && jornada?.botiquinBodega?.esPrincipal);
+}
+
+/**
+ * La bodega movil todavia conserva algo de lo que se cargo para la jornada: un lote con carga y con
+ * existencia en ella. Espejo de trg_jornadas_sin_inventario_cargado_al_cambiar_bodega (00181), que
+ * impide cambiar de bodega en ese caso.
+ *
+ * @param {Array<{ cargado: number, enBodega: number }>} consumo Filas de
+ *   listarConsumoDeInsumosDeJornada().
+ * @returns {boolean}
+ */
+export function tieneInventarioCargado(consumo = []) {
+  return consumo.some((fila) => fila.cargado > 0 && fila.enBodega > 0);
+}
+
+/**
+ * Por que no se puede cambiar la bodega de la jornada (00181).
+ *
+ * @param {string} [bodega] Nombre de la bodega actual.
+ * @returns {string}
+ */
+export function mensajeDeInventarioCargado(bodega) {
+  return (
+    `La bodega ${bodega ? `«${bodega}» ` : ""}todavía tiene inventario cargado para esta ` +
+    "jornada. Devuélvelo desde la pestaña Insumos antes de cambiar de bodega."
+  );
+}
 
 /** Redondeo a centavos: cantidad x costo puede arrastrar cola binaria (3 x 0.1). */
 function aCentavos(valor) {

@@ -114,7 +114,22 @@ describe("cabeceraDePaciente", () => {
       edad: null,
       comunidad: null,
       condiciones: [],
+      areas: [],
     });
+  });
+
+  it("muestra las areas del paciente y marca la retirada (00182)", () => {
+    const cabecera = cabeceraDePaciente({
+      id: "p-3",
+      areas: [
+        { id: "a-1", nombre: "Odontologia", esVigente: true },
+        { id: "a-2", nombre: "Nutricion", esVigente: false },
+      ],
+    });
+    expect(cabecera.areas).toEqual([
+      { id: "a-1", etiqueta: "Odontologia", vigente: true },
+      { id: "a-2", etiqueta: "Nutricion (inactiva)", vigente: false },
+    ]);
   });
 });
 

@@ -52,6 +52,7 @@ import EntregaMedicamentosScreen from "../screens/EntregaMedicamentosScreen";
 import PacientesCronicosScreen from "../screens/PacientesCronicosScreen";
 import CatalogoCondicionesScreen from "../screens/CatalogoCondicionesScreen";
 import CatalogoDiagnosticosScreen from "../screens/CatalogoDiagnosticosScreen";
+import AgendaCitasScreen from "../screens/AgendaCitasScreen";
 import ProyectosScreen from "../screens/ProyectosScreen";
 import NotificacionesScreen from "../screens/NotificacionesScreen";
 
@@ -203,6 +204,11 @@ const PANTALLAS_PACIENTES = [
     name: ROUTES.CATALOGO_DIAGNOSTICOS,
     componente: conGuardaDeRol(CatalogoDiagnosticosScreen, "pacientes"),
     titulo: "Diagnosticos",
+  },
+  {
+    name: ROUTES.AGENDA_CITAS,
+    componente: conGuardaDeRol(AgendaCitasScreen, "pacientes"),
+    titulo: "Citas",
   },
 ];
 

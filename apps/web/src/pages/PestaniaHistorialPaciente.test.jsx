@@ -111,6 +111,35 @@ describe("PestaniaHistorialPaciente", () => {
     expect(onEditarVisita).toHaveBeenCalledWith(VISITA);
   });
 
+  it("una visita con dos consultas las muestra a las dos, la agendada con su etiqueta (#927)", () => {
+    const primera = { ...VISITA.consulta, id: "con-1", agendada: false };
+    const agendada = {
+      id: "con-2",
+      motivoConsulta: "Control dental",
+      diagnosticos: [],
+      agendada: true,
+      area: "Odontología",
+      cita: { clinica: "Clínica Central", iniciaEn: null, profesional: "Ana Medica" },
+    };
+    mockVisitas.visitas = [{ ...VISITA, consulta: primera, consultas: [primera, agendada] }];
+    const onEditarVisita = vi.fn();
+    pantalla({ onEditarVisita });
+
+    expect(screen.getByText("Consulta 1 de 2")).toBeInTheDocument();
+    expect(screen.getByText("Consulta 2 de 2")).toBeInTheDocument();
+    expect(screen.getByText("Dolor de garganta", { exact: false })).toBeInTheDocument();
+    expect(screen.getByText("Control dental", { exact: false })).toBeInTheDocument();
+    expect(screen.getByText("Agendada")).toBeInTheDocument();
+    expect(screen.getByText("Clínica Central · Ana Medica")).toBeInTheDocument();
+    expect(screen.getByText("Odontología")).toBeInTheDocument();
+
+    fireEvent.click(screen.getAllByText("Editar esta consulta")[1]);
+    expect(onEditarVisita).toHaveBeenCalledWith(
+      expect.objectContaining({ atencionId: "at-1" }),
+      "con-2",
+    );
+  });
+
   it("la evolucion de los signos se ve desde el mismo historial", () => {
     pantalla();
 

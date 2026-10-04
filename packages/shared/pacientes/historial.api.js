@@ -7,6 +7,8 @@ import {
 export { puedeVerHistorial } from "./permisos.js";
 import { puedeVerHistorial } from "./permisos.js";
 import { ESTADOS_RECETA } from "../enums.js";
+import { formatearFechaConHora } from "../formato/fechas.js";
+import { etiquetaDeArea } from "./areas.campos.js";
 
 export const TIPOS_DE_EVENTO = {
   TRIAJE: "triaje",
@@ -44,6 +46,11 @@ const COLUMNAS_DEL_HISTORIAL = [
     "id, createdAt:created_at, motivoConsulta:motivo_consulta, antecedentes, sintomas,",
     "exploracion, tratamiento, observaciones, planSeguimiento:plan_seguimiento,",
     "medicoId:medico_id,",
+    // 00184: la consulta agendada, con su area y los datos de la cita. La cita puede llegar en
+    // null por RLS (otra jornada): la etiqueta Agendada sale de cita_id, que siempre se ve.
+    "citaId:cita_id, areaId:area_id, area:areas_atencion(nombre, esVigente:es_vigente),",
+    "cita:citas(iniciaEn:inicia_en, terminaEn:termina_en, clinica:clinicas(nombre),",
+    "profesionalDeLaCita:nombres_de_perfiles!citas_profesional_id_fkey(nombres, apellidos)),",
     "profesional:perfiles(nombres, apellidos),",
     "diagnosticos:consulta_diagnostico(id, esPrincipal:es_principal, diagnostico:diagnosticos(id, codigo, nombre)),",
     "recetas(id, folio, estado, createdAt:created_at,",
@@ -131,6 +138,19 @@ export function aEventos(atencion) {
       tratamiento: consulta.tratamiento ?? null,
       observaciones: consulta.observaciones ?? null,
       planSeguimiento: consulta.planSeguimiento ?? null,
+      // 00184: el area y, si salio de una cita, la consulta agendada.
+      areaId: consulta.areaId ?? null,
+      area: consulta.area ? etiquetaDeArea(consulta.area) : null,
+      citaId: consulta.citaId ?? null,
+      agendada: Boolean(consulta.citaId),
+      cita: consulta.cita
+        ? {
+            iniciaEn: consulta.cita.iniciaEn ?? null,
+            terminaEn: consulta.cita.terminaEn ?? null,
+            clinica: consulta.cita.clinica?.nombre ?? null,
+            profesional: nombreDe(consulta.cita.profesionalDeLaCita),
+          }
+        : null,
       diagnosticos,
       diagnosticoPrincipal: diagnosticos.find((uno) => uno.esPrincipal) ?? null,
     });
@@ -261,6 +281,24 @@ export async function obtenerHistorialMedico(pacienteId, { rol, desde, hasta, li
 }
 
 /**
+ * La linea de una consulta agendada (issue #927): clinica, hora y profesional de la cita, lo que se
+ * vea de ellos. Null si la consulta no salio de una cita o la cita no se pudo leer (RLS).
+ *
+ * @param {{ cita?: { clinica?: string|null, iniciaEn?: string|null, profesional?: string|null }|null }} consulta
+ * @returns {string|null}
+ */
+export function detalleDeConsultaAgendada(consulta) {
+  const cita = consulta?.cita;
+  if (!cita) return null;
+  const partes = [
+    cita.clinica,
+    cita.iniciaEn ? formatearFechaConHora(cita.iniciaEn) : null,
+    cita.profesional,
+  ].filter(Boolean);
+  return partes.length > 0 ? partes.join(" · ") : null;
+}
+
+/**
  * Una atencion como UNA VISITA del historial clinico (issue #840, bloque F).
  *
  * aEventos() aplana la atencion en eventos sueltos -triaje, consulta, receta- que las pantallas
@@ -280,8 +318,11 @@ export function aVisita(atencion) {
   const eventos = aEventos(atencion);
   const signos = eventos.find((evento) => evento.tipo === TIPOS_DE_EVENTO.TRIAJE) ?? null;
   const recetas = eventos.filter((evento) => evento.tipo === TIPOS_DE_EVENTO.RECETA);
+  // Varias consultas por visita (issue #927: una por cita), de la primera a la ultima: el embebido
+  // de PostgREST no garantiza orden.
   const consultas = eventos
     .filter((evento) => evento.tipo === TIPOS_DE_EVENTO.CONSULTA)
+    .sort((una, otra) => String(una.fecha ?? "").localeCompare(String(otra.fecha ?? "")))
     .map((consulta) => ({
       ...consulta,
       recetas: recetas.filter((receta) => receta.consultaId === consulta.id),
@@ -299,8 +340,8 @@ export function aVisita(atencion) {
     // Los signos con el id del triaje: la correccion los actualiza por ese id.
     signos: signos ? { id: signos.id, ...signos.signos } : null,
     signosTomadosPor: signos?.profesional ?? null,
-    // Casi siempre hay una sola consulta por atencion. `consulta` es la primera, que es la que se
-    // edita desde la visita; `consultas` las conserva todas para no esconder ninguna.
+    // `consulta` es la primera; `consultas`, todas, en orden. Desde la issue #927 una visita puede
+    // tener una consulta por cita, ademas de la que no salio de ninguna.
     consulta,
     consultas,
     recetas,

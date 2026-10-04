@@ -1,0 +1,343 @@
+/* Agenda de citas (issue #927). Calendario propio: apps/web no tiene libreria de calendario y la
+   issue pide no agregar una si no hace falta. Todo color, espacio y tamano sale de los tokens. */
+
+.cit-barra {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-md);
+}
+
+.cit-navegacion {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.cit-titulo {
+  font-size: var(--texto-lg);
+  font-weight: var(--peso-semibold);
+  margin: 0 var(--spacing-sm);
+}
+
+/* Mes */
+.cit-mes {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  border: 1px solid var(--color-border);
+  border-radius: var(--radio-lg);
+  overflow: hidden;
+  background: var(--color-surface);
+}
+
+.cit-mes-cabecera {
+  padding: var(--spacing-xs) var(--spacing-sm);
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-semibold);
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.cit-dia {
+  min-height: 7rem;
+  padding: var(--spacing-xs);
+  border-right: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  min-width: 0;
+}
+
+.cit-dia:nth-child(7n) {
+  border-right: none;
+}
+
+.cit-dia--fuera {
+  background: var(--color-background);
+  color: var(--color-text-muted);
+}
+
+.cit-dia-numero {
+  align-self: flex-start;
+  background: none;
+  border: none;
+  padding: 0 var(--spacing-xs);
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-semibold);
+  color: inherit;
+  border-radius: var(--radio-pill);
+}
+
+.cit-dia-numero:hover {
+  color: var(--color-primary);
+}
+
+.cit-dia--hoy .cit-dia-numero {
+  background: var(--color-primary);
+  color: var(--color-surface);
+}
+
+.cit-mas {
+  font-size: var(--texto-xs);
+  color: var(--color-text-muted);
+  background: none;
+  border: none;
+  padding: 0;
+  text-align: left;
+}
+
+/* Una cita: en el mes es una linea, en el dia una tarjeta. El borde izquierdo lleva el color del
+   estado (--estado-*, publicado por theme.js). */
+.cit-cita {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-left: 4px solid var(--cit-estado, var(--color-secondary));
+  border-radius: var(--radio-sm);
+  padding: calc(var(--spacing-xs) / 2) var(--spacing-xs);
+  font-size: var(--texto-xs);
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cit-cita:hover,
+.cit-cita:focus-visible {
+  border-color: var(--color-primary);
+}
+
+.cit-cita--cancelada {
+  text-decoration: line-through;
+  color: var(--color-text-muted);
+}
+
+.cit-cita-hora {
+  font-family: var(--fuente-mono);
+  font-weight: var(--peso-semibold);
+  margin-right: var(--spacing-xs);
+}
+
+/* Dia */
+.cit-horarios {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radio-lg);
+  background: var(--color-surface);
+  overflow: hidden;
+}
+
+.cit-horario {
+  display: grid;
+  grid-template-columns: 5rem minmax(0, 1fr);
+  border-bottom: 1px solid var(--color-border);
+  min-height: 3rem;
+}
+
+.cit-horario:last-child {
+  border-bottom: none;
+}
+
+.cit-horario-hora {
+  padding: var(--spacing-sm);
+  font-family: var(--fuente-mono);
+  font-size: var(--texto-sm);
+  color: var(--color-text-muted);
+  border-right: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--spacing-xs) / 2);
+}
+
+.cit-salas {
+  font-family: var(--fuente-base);
+  font-size: var(--texto-xxs);
+}
+
+.cit-salas--llena {
+  color: var(--color-danger);
+  font-weight: var(--peso-semibold);
+}
+
+.cit-horario-citas {
+  padding: var(--spacing-xs) var(--spacing-sm);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--spacing-xs);
+}
+
+.cit-horario-citas .cit-cita {
+  width: auto;
+  max-width: 100%;
+  font-size: var(--texto-sm);
+  padding: var(--spacing-xs) var(--spacing-sm);
+}
+
+.cit-horario-vacio {
+  background: none;
+  border: none;
+  flex: 1;
+  min-height: 2rem;
+  border-radius: var(--radio-sm);
+}
+
+.cit-horario-vacio:hover,
+.cit-horario-vacio:focus-visible {
+  background: var(--color-background);
+}
+
+/* Anio: doce meses chicos. El dia con citas lleva el color de la marca; el numero, en el titulo
+   del mes y en el aviso al pasar el mouse. */
+.cit-anio {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--spacing-md);
+}
+
+.cit-mini-mes {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radio-lg);
+  padding: var(--spacing-sm);
+}
+
+.cit-mini-mes-titulo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 0 0 var(--spacing-xs);
+  font-weight: var(--peso-semibold);
+  color: var(--color-text);
+  text-align: left;
+}
+
+.cit-mini-mes-titulo:hover {
+  color: var(--color-primary);
+}
+
+.cit-cantidad {
+  background: var(--color-primary);
+  color: var(--color-surface);
+  border-radius: var(--radio-pill);
+  font-size: var(--texto-xs);
+  padding: 0 var(--spacing-sm);
+}
+
+.cit-mini-mes-dias {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: calc(var(--spacing-xs) / 2);
+  text-align: center;
+}
+
+.cit-mini-cabecera {
+  font-size: var(--texto-xxs);
+  color: var(--color-text-muted);
+}
+
+.cit-mini-dia {
+  background: none;
+  border: none;
+  border-radius: var(--radio-pill);
+  font-size: var(--texto-xs);
+  color: var(--color-text);
+  padding: calc(var(--spacing-xs) / 2) 0;
+}
+
+.cit-mini-dia:hover,
+.cit-mini-dia:focus-visible {
+  background: var(--color-background);
+}
+
+.cit-mini-dia--con-citas {
+  background: var(--color-primary);
+  color: var(--color-surface);
+  font-weight: var(--peso-semibold);
+}
+
+.cit-mini-dia--con-citas:hover,
+.cit-mini-dia--con-citas:focus-visible {
+  background: var(--color-primary-dark);
+}
+
+.cit-mini-dia--hoy {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
+}
+
+/* Selector de paciente del formulario */
+.cit-resultados {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 var(--spacing-sm);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radio-md);
+  max-height: 14rem;
+  overflow-y: auto;
+}
+
+.cit-resultado {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--color-border);
+  padding: var(--spacing-sm);
+}
+
+.cit-resultados li:last-child .cit-resultado {
+  border-bottom: none;
+}
+
+.cit-resultado:hover,
+.cit-resultado:focus-visible {
+  background: var(--color-background);
+}
+
+.cit-paciente-elegido {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radio-md);
+  margin-bottom: var(--spacing-md);
+}
+
+@media (max-width: 1199.98px) {
+  .cit-anio {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 767.98px) {
+  .cit-anio {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .cit-dia {
+    min-height: 4rem;
+  }
+
+  /* En el ancho de un telefono el mes solo marca cuantas citas hay; el detalle va en el dia. */
+  .cit-dia .cit-cita {
+    display: none;
+  }
+
+  .cit-horario {
+    grid-template-columns: 4rem minmax(0, 1fr);
+  }
+}

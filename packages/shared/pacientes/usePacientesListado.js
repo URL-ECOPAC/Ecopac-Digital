@@ -4,6 +4,8 @@ import { useBusquedaPacientes } from "../hooks/useBusquedaPacientes.js";
 import { calcularEdad } from "../formato/fechas.js";
 import { listarComunidades } from "../territorio/api.js";
 import { obtenerCatalogoDeCondiciones } from "./condiciones.api.js";
+import { obtenerCatalogoDeAreas } from "./areas.api.js";
+import { opcionesDeFiltroDeAreas } from "./areas.campos.js";
 import { OPCIONES_SEXO } from "./campos.js";
 import { FILTROS_PACIENTE_VACIOS } from "./filtros.js";
 import { useCambiosEnTiempoReal } from "../hooks/useCambiosEnTiempoReal.js";
@@ -72,6 +74,7 @@ export function aFiltrosDeBusqueda(filtros = {}) {
     // mostrar pacientes. Sin esta bandera buscarPacientes() devuelve vacio a proposito.
     listarTodos: true,
     condicionCronicaId: filtros.condicionCronica || undefined,
+    areaId: filtros.areas || undefined,
     sexo: filtros.sexo || undefined,
     edadMin: filtros.rangoEdad?.min ?? undefined,
     edadMax: filtros.rangoEdad?.max ?? undefined,
@@ -82,10 +85,10 @@ export function aFiltrosDeBusqueda(filtros = {}) {
  * View model del listado de pacientes, compartido por la pantalla web (#124) y la movil (#133).
  *
  * La busqueda con retardo y el descarte de respuestas obsoletas no se reimplementan aqui: los
- * pone useBusquedaPacientes() (#116). Este hook agrega los otros cuatro filtros, arma las filas
+ * pone useBusquedaPacientes() (#116). Este hook agrega los demas filtros, arma las filas
  * y resuelve los catalogos que alimentan los selects.
  *
- * Los cinco filtros se aplican en el servidor. Filtrar en el cliente sobre una lista paginada
+ * Los filtros se aplican en el servidor. Filtrar en el cliente sobre una lista paginada
  * recortaria solo la pagina actual y dejaria el total mintiendo.
  *
  * @param {{ porPagina?: number }} [opciones]
@@ -95,6 +98,7 @@ export function usePacientesListado({ porPagina } = {}) {
   const [filtros, setFiltros] = useState(FILTROS_PACIENTE_VACIOS);
   const [condicionesCronicas, setCondicionesCronicas] = useState([]);
   const [comunidades, setComunidades] = useState([]);
+  const [areasAtencion, setAreasAtencion] = useState([]);
 
   const filtrosDeServidor = useMemo(() => aFiltrosDeBusqueda(filtros), [filtros]);
 
@@ -124,6 +128,10 @@ export function usePacientesListado({ porPagina } = {}) {
       setCondicionesCronicas(
         catalogo.map((condicion) => ({ value: condicion.id, label: condicion.nombre })),
       );
+    });
+
+    obtenerCatalogoDeAreas().then(({ areas }) => {
+      if (vigente) setAreasAtencion(opcionesDeFiltroDeAreas(areas));
     });
     return () => {
       vigente = false;
@@ -170,6 +178,7 @@ export function usePacientesListado({ porPagina } = {}) {
       comunidades,
       sexo: OPCIONES_SEXO,
       condicionesCronicas,
+      areasAtencion,
     },
   };
 }

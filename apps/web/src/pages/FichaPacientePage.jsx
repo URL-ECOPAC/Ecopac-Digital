@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { HeartPulse, Pencil, Stethoscope } from "lucide-react";
+import { CalendarPlus, HeartPulse, Pencil, Stethoscope } from "lucide-react";
 
 import {
   cabeceraDePaciente,
@@ -8,6 +8,7 @@ import {
   formatearFechaCorta,
   permisosDeFicha,
   pestaniasDeFicha,
+  puedeAgendarCitas,
   resolverPestaniaDeFicha,
   textoDeCampoDeFicha,
   useFusionesDelPaciente,
@@ -28,6 +29,8 @@ import {
   Tabs,
 } from "../components";
 import { useSesionCompartida } from "../contexto/SesionProvider";
+import CitasDelPaciente from "./CitasDelPaciente";
+import FlujoDeCita from "./FlujoDeCita";
 import ModalCondicionesPaciente from "./ModalCondicionesPaciente";
 import ModalConsulta from "./ModalConsulta";
 import ModalEdicionPaciente from "./ModalEdicionPaciente";
@@ -64,6 +67,8 @@ export default function FichaPacientePage() {
   // Reemplaza a los tres modales de captura -tomar signos, registrar consulta, generar receta-,
   // que se abrian cada uno desde su pestana.
   const [consultaAbierta, setConsultaAbierta] = useState(null);
+  // Las citas del paciente (issue #927): detalle, alta y edicion, y la consulta de Atender.
+  const [citaAbierta, setCitaAbierta] = useState(null);
   // Se incrementa despues de guardar algo, y va como `key` de la pestania abierta para forzarla
   // a montarse de nuevo: cada pestania tiene su propio hook y no se entera de lo que acaba de
   // guardar un modal hermano.
@@ -125,8 +130,9 @@ export default function FichaPacientePage() {
   // dicen a quien se va a editar.
   // "Nueva consulta" es LA accion de la ficha (issue #840): llega el paciente, se busca y se le
   // atiende. Por eso es la primaria; editar sus datos pasa a secundaria.
+  const puedeAgendar = puedeAgendarCitas(rol) && !paciente.fechaBaja;
   const accionesDeLaFicha =
-    permisos.puedeEditar || permisos.puedeNuevaConsulta ? (
+    permisos.puedeEditar || permisos.puedeNuevaConsulta || puedeAgendar ? (
       <>
         {permisos.puedeEditar && (
           <SecondaryButton
@@ -140,6 +146,21 @@ export default function FichaPacientePage() {
             title="Editar datos"
             icon={<Pencil size={16} aria-hidden="true" />}
             onClick={() => setEditando(true)}
+          />
+        )}
+        {puedeAgendar && (
+          <SecondaryButton
+            title="Agendar cita"
+            icon={<CalendarPlus size={16} aria-hidden="true" />}
+            onClick={() =>
+              setCitaAbierta({
+                tipo: "nueva",
+                inicial: {
+                  pacienteId: paciente.id,
+                  paciente: [paciente.nombres, paciente.apellidos].filter(Boolean).join(" "),
+                },
+              })
+            }
           />
         )}
         {permisos.puedeNuevaConsulta && (
@@ -244,6 +265,22 @@ export default function FichaPacientePage() {
                 </div>
               </div>
             )}
+
+            {/* Areas de atencion (issue #927): una retirada sale marcada y en gris. */}
+            {cabecera.areas.length > 0 && (
+              <div className="pac-datos">
+                <p className="pac-rotulo mb-2">Áreas de atención</p>
+                <div className="d-flex flex-wrap gap-2">
+                  {cabecera.areas.map((area) => (
+                    <StatusChip
+                      key={area.id}
+                      status={area.vigente ? "activo" : "inactivo"}
+                      label={area.etiqueta}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
           </Card>
 
           {/* Criterio 6 de #637: una fusion hecha por error se tiene que poder consultar
@@ -286,6 +323,16 @@ export default function FichaPacientePage() {
                 </dl>
               </Card>
             )}
+            {pestaniaActiva === "generales" && (
+              <div className="mt-3">
+                <CitasDelPaciente
+                  key={`citas-${version}`}
+                  pacienteId={paciente.id}
+                  rol={rol}
+                  onAbrir={(cita) => setCitaAbierta({ tipo: "detalle", cita })}
+                />
+              </div>
+            )}
 
             {/* El historial es una lista de visitas; cada una trae dentro sus signos, su consulta
               y su receta (issue #840). "Editar" abre el mismo formulario que "Nueva consulta". */}
@@ -295,7 +342,9 @@ export default function FichaPacientePage() {
                 paciente={paciente}
                 rol={rol}
                 perfilId={perfil?.id}
-                onEditarVisita={(visita) => setConsultaAbierta({ visita })}
+                onEditarVisita={(visita, consultaId = null) =>
+                  setConsultaAbierta({ visita, consultaId })
+                }
               />
             )}
           </Tabs>
@@ -319,10 +368,19 @@ export default function FichaPacientePage() {
           />
         )}
 
+        <FlujoDeCita
+          abierto={citaAbierta}
+          setAbierto={setCitaAbierta}
+          rol={rol}
+          perfilId={perfil?.id}
+          onCambio={refrescar}
+        />
+
         {consultaAbierta && (
           <ModalConsulta
             paciente={paciente}
             visita={consultaAbierta.visita}
+            consultaId={consultaAbierta.consultaId ?? null}
             rol={rol}
             perfilId={perfil?.id}
             onClose={() => setConsultaAbierta(null)}

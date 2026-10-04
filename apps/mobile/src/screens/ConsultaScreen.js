@@ -12,6 +12,7 @@ import {
 import { colors, spacing, typography } from "@ecopac/ui-tokens";
 
 import {
+  CampoDeFormulario,
   Card,
   ErrorState,
   FormularioSignosVitales,
@@ -74,12 +75,16 @@ export default function ConsultaScreen() {
 
   const { paciente, cargando: cargandoPaciente } = usePaciente(pacienteId, { rol });
   const { jornadaId: jornadaActivaId, jornada } = useJornadaActivaCompartida();
-  const jornadaId = params?.jornadaId ?? jornadaActivaId;
+  // Issue #927: una cita trae su jornada; `consultaId` elige cual consulta de la visita corregir.
+  const cita = params?.cita ?? null;
+  const jornadaId = cita?.jornadaId ?? params?.jornadaId ?? jornadaActivaId;
   const esLaActiva = jornadaId === jornadaActivaId;
 
   const c = useConsulta({
     paciente,
     jornadaId,
+    cita,
+    consultaId: params?.consultaId ?? null,
     estadoDeJornada: esLaActiva ? jornada?.estado : undefined,
     perfilId: perfil?.id,
     rol,
@@ -120,9 +125,11 @@ export default function ConsultaScreen() {
   }
 
   const nombre = nombreCompletoDePaciente(paciente) ?? "Paciente";
-  const subtitulo = c.esNueva
-    ? (jornada?.nombre ?? "Nueva consulta")
-    : [formatearFechaCorta(c.visita?.fecha), c.visita?.jornada].filter(Boolean).join(" · ");
+  const subtitulo = c.agendada
+    ? ["Consulta agendada", c.agendada.detalle].filter(Boolean).join(" · ")
+    : c.esNueva
+      ? (jornada?.nombre ?? "Nueva consulta")
+      : [formatearFechaCorta(c.visita?.fecha), c.visita?.jornada].filter(Boolean).join(" · ");
 
   return (
     <ScreenContainer>
@@ -178,7 +185,7 @@ export default function ConsultaScreen() {
       >
         {!c.permisos.consulta ? (
           <Text style={styles.textoTenue}>
-            {c.visita?.consulta
+            {c.consultaActual
               ? "Solo quien registró la consulta, o la administración, puede cambiarla."
               : "La consulta la registra el personal médico."}
           </Text>
@@ -210,6 +217,17 @@ export default function ConsultaScreen() {
                     </Text>
                   ) : null}
                 </View>
+              ) : campo.tipo === TIPOS_DE_CAMPO.SELECT ? (
+                // El area (issue #927): fija cuando la consulta sale de una cita.
+                <CampoDeFormulario
+                  key={campo.id}
+                  campo={campo}
+                  valor={c.consulta[campo.id] || null}
+                  onChange={(valor) => c.setCampoDeConsulta(campo.id, valor)}
+                  error={c.errores.consulta[campo.id]}
+                  catalogos={c.catalogos}
+                  disabled={c.enviando || !c.permisos.consulta}
+                />
               ) : (
                 <TextField
                   key={campo.id}

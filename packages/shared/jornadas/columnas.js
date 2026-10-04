@@ -21,7 +21,7 @@ export const COLUMNAS_JORNADA = [
   // Issue #756: se agrega para que DetalleJornadaPage.jsx tenga una etiqueta que mostrar junto
   // al valor; JornadasPage.jsx no la selecciona para el tablero/kanban (mismo criterio que
   // "codigo", ver la nota de abajo).
-  { id: "botiquinBodega", label: "Bodega móvil (botiquín)", tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  { id: "botiquinBodega", label: "Bodega de la jornada", tipo: TIPOS_DE_PRESENTACION.TEXTO },
   // Issue #178, criterio 1. No sale de listarJornadas(): se mezcla en el hook de pantalla desde
   // contarPacientesAtendidosPorJornada() (api.js), que consulta vista_reporte_impacto en lote.
   // Esa vista no da SELECT a medico ni voluntario (00064): para esos roles la tarjeta no trae
@@ -125,3 +125,11 @@ export const COLUMNAS_CONSUMO_DE_JORNADA = [
   { id: "costoUnitario", label: "Costo unitario", tipo: TIPOS_DE_PRESENTACION.MONEDA },
   { id: "valorEntregado", label: "Valor entregado", tipo: TIPOS_DE_PRESENTACION.MONEDA },
 ];
+
+/**
+ * El consumo de una jornada que entrega de la bodega principal (00181): no hay carga, devolucion
+ * ni "lo que queda" propio de la jornada, solo lo entregado y su valor.
+ */
+export const COLUMNAS_CONSUMO_CON_BODEGA_PRINCIPAL = COLUMNAS_CONSUMO_DE_JORNADA.filter(
+  (columna) => !["cargado", "devuelto", "enBodega"].includes(columna.id),
+);

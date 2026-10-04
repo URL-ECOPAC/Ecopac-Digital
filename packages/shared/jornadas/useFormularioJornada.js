@@ -115,19 +115,27 @@ function aOpciones(filas, etiquetaDe) {
 }
 
 /**
- * Opciones del selector de bodega de botiquin: solo las bodegas moviles (00178: la base rechaza una
- * fija). La que ya esta en otra jornada en curso lo dice en la etiqueta (00179: no se puede iniciar
- * esta jornada con ella mientras la otra siga en curso). Se exporta aparte para probarla sin montar
- * el hook.
+ * Opciones del selector de bodega de la jornada: las bodegas moviles y la principal (00178 y
+ * 00181: la base rechaza cualquier otra fija). La principal va primero y lo dice en la etiqueta.
+ * La movil que ya esta en otra jornada en curso tambien lo dice (00179: no se puede iniciar esta
+ * jornada con ella mientras la otra siga en curso); la principal no se ocupa. Se exporta aparte
+ * para probarla sin montar el hook.
  *
- * @param {{ id: string, nombre: string, esMovil?: boolean }[]} bodegas
+ * @param {{ id: string, nombre: string, esMovil?: boolean, esPrincipal?: boolean }[]} bodegas
  * @param {{ ocupadas?: Record<string, { id: string, nombre: string }>, jornadaId?: string|null }}
  *   [opciones] `ocupadas`: por id de bodega, la jornada en curso que la tiene.
  * @returns {{ value: string, label: string }[]}
  */
 export function opcionesDeBodegaDeBotiquin(bodegas, { ocupadas = {}, jornadaId = null } = {}) {
-  return (bodegas ?? [])
-    .filter((bodega) => bodega.esMovil)
+  const lista = bodegas ?? [];
+  const principal = lista
+    .filter((bodega) => bodega.esPrincipal)
+    .map((bodega) => ({
+      value: bodega.id,
+      label: `${bodega.nombre} (principal, entrega directo)`,
+    }));
+  const moviles = lista
+    .filter((bodega) => bodega.esMovil && !bodega.esPrincipal)
     .map((bodega) => {
       const otra = ocupadas[bodega.id];
       return {
@@ -138,6 +146,7 @@ export function opcionesDeBodegaDeBotiquin(bodegas, { ocupadas = {}, jornadaId =
             : bodega.nombre,
       };
     });
+  return [...principal, ...moviles];
 }
 
 function nombreDePerfil(perfil) {
@@ -240,9 +249,10 @@ export function useFormularioJornada({ jornada, rol } = {}) {
       marcarCargado("proyectos");
     });
 
-    // botiquin_bodega_id (00036) es la bodega que viaja a la jornada, obligatoria y movil desde la
-    // 00178. Sin ninguna bodega movil se puede crear aqui mismo (registrarBodegaMovil).
-    listarBodegas({ esMovil: true }).then(({ bodegas: filas }) => {
+    // botiquin_bodega_id (00036) es la bodega de la jornada, obligatoria desde la 00178: una movil
+    // o la principal (00181). Se piden todas y opcionesDeBodegaDeBotiquin() deja esas. Sin ninguna
+    // bodega movil se puede crear aqui mismo (registrarBodegaMovil).
+    listarBodegas().then(({ bodegas: filas }) => {
       if (!vigente) return;
       setBodegas(filas ?? []);
       marcarCargado("bodegas");
@@ -435,7 +445,7 @@ export function useFormularioJornada({ jornada, rol } = {}) {
       setCreandoBodega(false);
       return { error: fallo };
     }
-    const { bodegas: filas } = await listarBodegas({ esMovil: true });
+    const { bodegas: filas } = await listarBodegas();
     setBodegas(filas ?? []);
     setValores((anteriores) => ({ ...anteriores, botiquinBodega: bodega.id }));
     setCreandoBodega(false);
@@ -452,8 +462,12 @@ export function useFormularioJornada({ jornada, rol } = {}) {
 
   const enviar = useCallback(async () => {
     const erroresDeValidacion = validarJornada(valores);
-    // 00179: una jornada en curso no toma una bodega que esta en otra jornada en curso.
-    const otra = bodegasOcupadas[valores.botiquinBodega];
+    // 00179: una jornada en curso no toma una bodega movil que esta en otra jornada en curso. La
+    // principal no se ocupa (00181).
+    const esLaPrincipal = bodegas.some(
+      (bodega) => bodega.id === valores.botiquinBodega && bodega.esPrincipal,
+    );
+    const otra = esLaPrincipal ? null : bodegasOcupadas[valores.botiquinBodega];
     if (jornadaBase?.estado === ESTADOS_JORNADA.EN_CURSO && otra && otra.id !== jornadaId) {
       erroresDeValidacion.botiquinBodega = mensajeDeBodegaOcupada(otra.nombre);
     }
@@ -479,7 +493,7 @@ export function useFormularioJornada({ jornada, rol } = {}) {
 
     if (!esEdicion) setValores(valoresInicialesDeJornada(null));
     return { ok: true, jornada: resultado.jornada };
-  }, [valores, esEdicion, jornadaId, rol, bodegasOcupadas, jornadaBase]);
+  }, [valores, esEdicion, jornadaId, rol, bodegas, bodegasOcupadas, jornadaBase]);
 
   return {
     valores,

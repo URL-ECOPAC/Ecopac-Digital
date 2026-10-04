@@ -6,14 +6,13 @@ import { TIPOS_DE_CAMPO, pasosConCampos, pasosConError, useRegistroPaciente } fr
 import { colors, spacing, typography } from "@ecopac/ui-tokens";
 
 import {
+  CampoDeFormulario,
   Card,
   CascadaDeComunidad,
   DateField,
   PrimaryButton,
   ScreenContainer,
   SecondaryButton,
-  Selector,
-  TextField,
 } from "../components";
 import { EnFormulario } from "../components/contextoDeFormulario";
 import { useJornadaActivaCompartida } from "../contexto/JornadaActivaProvider";
@@ -143,22 +142,6 @@ export default function RegistroPacienteScreen() {
           );
         }
 
-        if (campo.tipo === TIPOS_DE_CAMPO.SELECT) {
-          const opciones = campo.opciones ?? catalogos[campo.opcionesDesde] ?? [];
-          return (
-            <Selector
-              key={campo.id}
-              label={campo.label}
-              requerido={campo.validacion?.requerido}
-              value={valores[campo.id] || null}
-              options={opciones}
-              onSelect={(valor) => setCampo(campo.id, valor)}
-              error={errores[campo.id]}
-              disabled={enviando || opciones.length === 0}
-            />
-          );
-        }
-
         if (campo.tipo === TIPOS_DE_CAMPO.FECHA) {
           return (
             <View key={campo.id}>
@@ -175,17 +158,17 @@ export default function RegistroPacienteScreen() {
           );
         }
 
+        // El resto, desde el descriptor (issue #927): un switch propio aqui no conocia
+        // MULTI_SELECT y dibujaba las areas como un campo de texto.
         return (
-          <TextField
+          <CampoDeFormulario
             key={campo.id}
-            label={campo.label}
-            requerido={campo.validacion?.requerido}
-            value={valores[campo.id] ?? ""}
-            onChangeText={(texto) => setCampo(campo.id, texto)}
-            keyboardType={campo.tipo === TIPOS_DE_CAMPO.TELEFONO ? "phone-pad" : "default"}
-            maxLength={campo.validacion?.maxLongitud}
+            campo={campo}
+            valor={valores[campo.id]}
+            onChange={(valor) => setCampo(campo.id, valor)}
             error={errores[campo.id]}
-            editable={!enviando}
+            catalogos={catalogos}
+            disabled={enviando}
           />
         );
       })}

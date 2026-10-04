@@ -241,6 +241,63 @@
  * @property {TipoSanguineo|null} tipoSangre
  * @property {string|null} nombreResponsable
  * @property {string|null} parentescoResponsable
+ * @property {string|null} registradoPor Quien registro al paciente (00182); null en los anteriores.
+ */
+
+/**
+ * Fila de `areas_atencion` (00182_areas_de_atencion.sql): catalogo de areas de atencion
+ * (Odontologia, Psicologia, Medicina General, ...). Se retiran con `esVigente`, no se borran.
+ *
+ * @typedef {object} AreaAtencion
+ * @property {string} id
+ * @property {string} nombre
+ * @property {string|null} descripcion
+ * @property {boolean} esVigente
+ * @property {string} createdAt
+ * @property {string} updatedAt
+ */
+
+/**
+ * Fila de `paciente_area` (00182_areas_de_atencion.sql): un area en la que esta un paciente.
+ *
+ * @typedef {object} PacienteArea
+ * @property {string} pacienteId
+ * @property {string} areaId
+ * @property {string} createdAt
+ */
+
+/**
+ * Fila de `citas` (00184_citas.sql): un paciente en una jornada, una clinica y un area, a una hora.
+ *
+ * @typedef {object} Cita
+ * @property {string} id
+ * @property {string} pacienteId
+ * @property {string} jornadaId
+ * @property {string} clinicaId
+ * @property {string} areaId
+ * @property {string|null} profesionalId
+ * @property {string} iniciaEn
+ * @property {string} terminaEn
+ * @property {"creada"|"en_atencion"|"atendida"|"cancelada"} estado
+ * @property {string|null} notas
+ * @property {string|null} registradaPor
+ * @property {string|null} canceladaPor
+ * @property {string|null} canceladaEn
+ * @property {string|null} motivoCancelacion
+ * @property {string} createdAt
+ * @property {string} updatedAt
+ */
+
+/**
+ * Fila de `clinicas` (00183_clinicas.sql): donde se atienden las citas, con su numero de salas.
+ *
+ * @typedef {object} Clinica
+ * @property {string} id
+ * @property {string} nombre
+ * @property {number} salasDisponibles
+ * @property {boolean} esVigente
+ * @property {string} createdAt
+ * @property {string} updatedAt
  */
 
 /**
@@ -304,6 +361,7 @@
  * @property {string} pacienteSobrevivienteId
  * @property {string|null} realizadaPor
  * @property {string} realizadaEn
+ * @property {number} citasTraslapadas Citas del sobreviviente que quedaron traslapadas (00184).
  */
 
 // --- Jornadas -------------------------------------------------------------------------------
@@ -472,6 +530,8 @@
  * @property {string|null} planSeguimiento
  * @property {string} createdAt
  * @property {string} updatedAt
+ * @property {string|null} citaId La cita de la que salio: la consulta agendada (00184).
+ * @property {string|null} areaId Area de atencion de la consulta (00184).
  */
 
 /**

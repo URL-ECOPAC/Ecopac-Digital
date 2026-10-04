@@ -5,6 +5,9 @@ import {
   puedeFusionarPacientes,
   puedeRegistrarPaciente,
   puedeVerCatalogoComunidades,
+  puedeVerCatalogoDeAreas,
+  puedeVerCatalogoDeClinicas,
+  puedeVerCitas,
   puedeVerCatalogoDeCondiciones,
   puedeVerCatalogoDiagnosticos,
   puedeVerCondiciones,
@@ -75,6 +78,30 @@ export default function PacientesPage() {
     acciones.push({
       label: "Catalogo de comunidades",
       onClick: () => navigate("/pacientes/comunidades"),
+      variant: "secondary",
+    });
+  }
+
+  if (puedeVerCatalogoDeAreas(rol)) {
+    acciones.push({
+      label: "Áreas de atención",
+      onClick: () => navigate("/pacientes/areas"),
+      variant: "secondary",
+    });
+  }
+
+  if (puedeVerCatalogoDeClinicas(rol)) {
+    acciones.push({
+      label: "Clínicas",
+      onClick: () => navigate("/pacientes/clinicas"),
+      variant: "secondary",
+    });
+  }
+
+  if (puedeVerCitas(rol)) {
+    acciones.push({
+      label: "Citas",
+      onClick: () => navigate("/pacientes/citas"),
       variant: "secondary",
     });
   }

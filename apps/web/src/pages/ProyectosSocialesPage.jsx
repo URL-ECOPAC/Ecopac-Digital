@@ -66,6 +66,9 @@ export default function ProyectosSocialesPage({ usuarioRol }) {
     bodegasDeJornadas,
     existenciasEnBodegas,
     valorDeBodegas,
+    entregadoDesdeLaPrincipal,
+    valorEntregadoDesdeLaPrincipal,
+    columnasEntregadoDesdeLaPrincipal,
     cargandoInsumos,
     errorInsumos,
     columnasInsumos,
@@ -373,6 +376,14 @@ export default function ProyectosSocialesPage({ usuarioRol }) {
                     }
                     accent="var(--accent-inventario)"
                   />
+                  {entregadoDesdeLaPrincipal.length > 0 && (
+                    <StatCard
+                      label="Entregado de la bodega principal"
+                      value={formatearMoneda(valorEntregadoDesdeLaPrincipal)}
+                      caption="En las recetas de sus jornadas"
+                      accent="var(--color-success)"
+                    />
+                  )}
                   {(insumosPorJornada.length > 0 || insumosSinJornada.length > 0) && (
                     <StatCard
                       label="Previsto (estimado)"
@@ -399,6 +410,7 @@ export default function ProyectosSocialesPage({ usuarioRol }) {
                 {cargandoInsumos && <p className="text-muted small mb-0">Cargando insumos...</p>}
                 {!cargandoInsumos &&
                   bodegasDeJornadas.length === 0 &&
+                  entregadoDesdeLaPrincipal.length === 0 &&
                   insumosPorJornada.length === 0 &&
                   insumosSinJornada.length === 0 && (
                     <p className="text-muted small mb-0">
@@ -426,6 +438,23 @@ export default function ProyectosSocialesPage({ usuarioRol }) {
                       vacio="Las bodegas móviles de sus jornadas no tienen existencias."
                       mostrarBodega={bodegasDeJornadas.length > 1}
                       conValor
+                    />
+                  </div>
+                )}
+
+                {/* 00181: de la bodega principal solo cuenta lo entregado en sus jornadas; su
+                    existencia es de toda la organizacion. */}
+                {entregadoDesdeLaPrincipal.length > 0 && (
+                  <div>
+                    <h6 className="fw-bold mb-1">Entregado de la bodega principal</h6>
+                    <p className="text-muted small mb-2">
+                      Lo que salió en las recetas de las jornadas que entregan directo de la bodega
+                      principal.
+                    </p>
+                    <DataList
+                      columnas={columnasEntregadoDesdeLaPrincipal}
+                      datos={entregadoDesdeLaPrincipal}
+                      cargando={cargandoInsumos}
                     />
                   </div>
                 )}

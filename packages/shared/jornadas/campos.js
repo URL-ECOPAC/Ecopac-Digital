@@ -85,11 +85,12 @@ export const CAMPOS_JORNADA = [
     tipo: TIPOS_DE_CAMPO.NUMERO,
     validacion: { requerido: false, min: 0 },
   },
-  // Obligatoria desde la 00178: toda jornada lleva una bodega movil, que se carga desde su pestana
-  // Insumos y de la que salen sus entregas. La base rechaza crearla sin bodega o con una fija.
+  // Obligatoria desde la 00178: toda jornada lleva una bodega, de la que salen sus entregas. Una
+  // movil, que se carga desde su pestana Insumos, o la principal, que entrega directo (00181). La
+  // base rechaza crearla sin bodega o con otra bodega fija.
   {
     id: "botiquinBodega",
-    label: "Bodega móvil (botiquín)",
+    label: "Bodega de la jornada",
     tipo: TIPOS_DE_CAMPO.SELECT,
     opcionesDesde: "bodegas",
     validacion: { requerido: true },

@@ -183,7 +183,8 @@ eso abrir es de solo lectura y no hay que confiar en que el cliente esconda los 
 
 ### Funciones delegadas por persona
 
-Los nueve permisos finos (ver "Los permisos finos") se conceden a una persona desde Colaboradores.
+Los once permisos finos (ver "Los permisos finos") se conceden o revocan a una persona desde
+Colaboradores.
 Desde la `00148`:
 
 - **El cliente los lee.** Al iniciar sesion, `useSesion()` llama a `mis_accesos()` (modulos abiertos
@@ -193,7 +194,8 @@ Desde la `00148`:
   falla, la sesion no se da por resuelta: una persona con una funcion delegada no puede verse como
   una sin ella.
 - **Quien recibe una funcion llega a su modulo**: `donaciones.registrar` abre Donaciones,
-  `presupuestos.*` Presupuestos, `usuarios.gestionar_permisos` Colaboradores, etc.
+  `presupuestos.*` Presupuestos, `usuarios.gestionar_permisos` Colaboradores, `citas.agendar`
+  Pacientes (donde vive la agenda), etc.
   (`MODULO_DE_PERMISO_FINO`).
 - **Las delegaciones leen lo que necesitan.** `jornadas.gestionar` ve todas las jornadas, su
   historial y asigna personal (`jornada_personal`); `proyectos.gestionar` lee y escribe hitos,
@@ -203,7 +205,8 @@ Desde la `00148`:
   `perfil_id <> auth.uid()` salvo a la administradora.
 - `rol_permiso` **deja de editarse desde la aplicacion** (`00148` retira sus politicas y el `GRANT`
   de escritura): queda como el valor por defecto de cada rol, sembrado por migracion. La `00148` le
-  suma `pacientes.editar` al voluntario general.
+  suma `pacientes.editar` al voluntario general, y la `00185` siembra `citas.agendar` en
+  administrador, medico y voluntario general.
 
 Lo prueba `supabase/tests/database/acceso_a_modulos_por_rol.sql`.
 
@@ -246,13 +249,17 @@ no llevan a ningun lado.
 | `expedientes`             | C R U         | —                                | C R U  | C R U              | `00032` + `00086` + `00148`, mismo cambio                                                                              |
 | `triajes`                 | C R U         | —                                | C R U  | C R U              | `00033` + `00148` (el UPDATE, que era de administrador y medico, suma al voluntario). El `imc` es columna generada y no se envia |
 | `atenciones`              | C R U         | —                                | C R U  | C R                | `00033`; cola de la jornada en `00060`                                                                                 |
-| `consultas`               | C R U         | —                                | C R U  | R                  | `00033` + `00148` (el voluntario lee). El INSERT exige `medico_id = auth.uid()` **y** `participa_en_jornada()`; el UPDATE, ser el medico que atendio |
+| `consultas`               | C R U         | —                                | C R U  | R                  | `00033` + `00148` (el voluntario lee). El INSERT exige `medico_id = auth.uid()` **y** `participa_en_jornada()`; el UPDATE, ser el medico que atendio. Con `cita_id` (`00184`): la cita tiene que estar en atencion y, si tiene profesional, solo el o la administradora registran la consulta; la consulta toma el area de la cita y deja la cita atendida en la misma transaccion (triggers DEFINER) |
 | `consulta_diagnostico`    | C R D         | —                                | C R D  | R                  | `00033` (INSERT sin exigir consulta propia) + `00082` (INSERT: medico solo en su propia consulta, `EXISTS` contra `consultas.medico_id`) + `00127` (issue #756: mismo actor de la `00082` para DELETE, para corregir un diagnostico mal elegido) + `00148` (el voluntario lee) |
 | `recetas`                 | C R U         | —                                | C R U  | R                  | `00033`; anulacion en `00066`. El UPDATE exige ser el medico que la firmo **y** que siga `emitida` (`00075`). `00148`: el voluntario lee |
 | `receta_detalle`          | C R           | —                                | C R    | R                  | `00033` + `00148` (el voluntario lee)                                                                                  |
 | `padecimientos_cronicos`  | C R U D       | —                                | C R U  | C R U              | `00010` + `00148` (el voluntario lee, registra y corrige). Unica tabla clinica con DELETE, y solo para administrador. Auditada desde la `00070` |
 | `diagnosticos` (catalogo) | C R U         | —                                | C R U  | C R U              | `00033` (lectura) + `00105` (mantenimiento) + `00148` (el personal de campo lee, agrega y corrige). **Retirarlo (`activo = false`) es solo de la administradora**: trigger `impedir_desactivar_sin_ser_administrador` (`00148`). **Sin DELETE:** `consulta_diagnostico` lo referencia `ON DELETE RESTRICT` (`00018`) y un diagnostico ya usado es historia clinica |
 | `fusiones_pacientes`      | R             | —                                | —      | —                  | `00101` (issue #140). Solo administrador lee; sin politicas de escritura, la unica que inserta es `fn_fusionar_pacientes()` (SECURITY DEFINER) |
+| `areas_atencion` (catalogo) | C R U       | R                                | R      | R                  | `00182` (issue #927). Lee toda sesion activa; crea y edita **solo la administradora** (un area nueva es decision de la organizacion). Retirar (`es_vigente = false`) tambien es suyo: trigger `impedir_retirar_sin_ser_administrador`. Sin DELETE |
+| `paciente_area`           | C R D         | —                                | C R D  | C R D              | `00182`. Lee quien lee pacientes. Asigna y quita la administradora, `tiene_permiso('pacientes.editar')` o quien registro al paciente (`pacientes.registrado_por`, columna nueva de la `00182`). Un trigger rechaza asignar un area retirada |
+| `clinicas`                | C R U D       | R                                | R      | R                  | `00183` (issue #927). Lee toda sesion activa; crea y edita la administradora o `tiene_permiso('jornadas.gestionar')`; retirar, reactivar y DELETE solo la administradora. `fn_eliminar_clinica()` (DEFINER) borra la que nunca tuvo citas y retira la que si (`00184`); bajar `salas_disponibles` por debajo de lo agendado a futuro lo rechaza un trigger |
+| `citas`                   | C R U         | —                                | C R U en sus jornadas | C R U en sus jornadas | `00184` + `00185` (issue #927). Lee la administradora, `tiene_permiso('jornadas.gestionar')` o quien pertenece a la jornada (`pertenece_a_jornada()`: cuadro de turnos o responsable), **nunca un rol consultivo**. Agenda (INSERT) la administradora, `jornadas.gestionar`, o `tiene_permiso('citas.agendar')` **y** pertenecer a la jornada (`00185`). UPDATE: la administradora, `jornadas.gestionar` y el personal de campo de la jornada; sin `citas.agendar` solo cambia el estado entre creada y en atencion (Atender, Regresar a creada), trigger `fn_cita_exige_permiso_de_agenda`. Las reglas de cupo, traslapes, cuadro de turnos y transiciones las hace cumplir `fn_validar_cita` (DEFINER). Sin DELETE: se cancela. Ver una cita no da permiso de registrar su consulta: eso sigue siendo la politica de `consultas` |
 
 **Casi ninguna tabla clinica tiene politica de DELETE**: las excepciones son
 `padecimientos_cronicos` y, desde la `00127` (issue #756), `consulta_diagnostico`. La baja de un
@@ -923,6 +930,7 @@ su rol no tiene, sin cambiarle el rol.**
 | `presupuestos.registrar`      | administrador                                  | **Si** — INSERT de `gastos` (`00052`); lectura de `gastos` (`00148`)                 |
 | `presupuestos.aprobar`        | administrador                                  | **Si** — UPDATE de `gastos` (`00052`); lectura de `gastos` (`00148`)                 |
 | `pacientes.editar`            | administrador, medico, voluntario general (`00148`) | **Si** — UPDATE de `pacientes` y `expedientes` (`00086`)                        |
+| `citas.agendar`               | administrador, medico, voluntario general (`00185`) | **Si** — INSERT de `citas` (con pertenecer a la jornada) y, en el UPDATE, reagendar, cancelar y cambiar notas (`00185`, issue #927). Sin el, el personal de campo de la jornada solo abre la cita y la regresa a creada |
 | `inventario.aprobar`          | administrador                                  | **Si** — UPDATE de `movimientos_inventario` (`00086`)                                |
 | `inventario.configurar_alertas` | administrador                                | **Si** — UPDATE de `configuracion_alertas_caducidad` y `fn_sincronizar_alertas_caducidad` (`00162`, issue #899). No da permiso para atender alertas |
 | `donaciones.registrar`        | administrador                                  | **Si** — INSERT de `donantes`, `donaciones` y `donacion_detalle` (`00086`)           |
@@ -930,9 +938,10 @@ su rol no tiene, sin cambiarle el rol.**
 | `usuarios.gestionar_permisos` | administrador                                  | **Si** — INSERT/UPDATE/DELETE de `usuario_permiso` (`00086`)                         |
 | `reportes.exportar`           | administrador, junta directiva, socio fundador | **Si** — `vista_reporte_impacto`, `pacientes_reporte`, `fn_reporte_pacientes_atendidos` (`00086`) |
 
-**Los diez permisos gobiernan de verdad una politica.** Concederlos o revocarlos en
+**Los once permisos gobiernan de verdad una politica.** Concederlos o revocarlos en
 `usuario_permiso` cambia lo que el servidor permite. Resuelto por la issue #409 (migracion
-`00086`); `inventario.configurar_alertas` nace conectado (`00162`, issue #899).
+`00086`); `inventario.configurar_alertas` nace conectado (`00162`, issue #899), y `citas.agendar`
+tambien (`00185`, issue #927).
 
 **Las ocho politicas conectadas por la `00086` son siempre `es_administrador() OR
 tiene_permiso(clave)`, nunca solo `tiene_permiso(clave)`.** Consecuencia directa: para el rol
@@ -1053,6 +1062,11 @@ completo de su jornada; que da de alta un medicamento; y que el responsable de u
 aunque no este en su cuadro de turnos. Desde la `00148` el personal de campo tambien corrige el
 medicamento, pero no lo desactiva: lo afirman `permisos_por_rol_864.sql` y
 `acceso_a_modulos_por_rol.sql`.
+
+Lo de la issue #927 lo afirman `areas_de_atencion.sql`, `clinicas.sql`, `citas.sql` y
+`permiso_agendar_citas.sql`: que el medico de la jornada ve sus citas y el de fuera no, que el
+voluntario las ve, que junta directiva recibe cero filas, que agendar pide `citas.agendar` y
+pertenecer a la jornada, y que sin el permiso solo se abre la cita y se regresa a creada.
 
 Para comprobar una celda a mano contra la base local, el patron es el de esas suites:
 

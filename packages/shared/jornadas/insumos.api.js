@@ -91,25 +91,39 @@ export async function listarInsumosDeLasJornadasDelProyecto(proyectoId) {
  * (issue #911). Lo que hay en ellas es parte de los insumos del proyecto; dos jornadas pueden
  * compartir bodega, y entonces se cuenta una vez.
  *
+ * La bodega principal no entra en `bodegas` (00181): su existencia es la de toda la organizacion,
+ * no la del proyecto. Las jornadas que la usan salen aparte, en `jornadasConBodegaPrincipal`, para
+ * sumar solo lo que se entrego en ellas.
+ *
  * @param {string} proyectoId UUID del proyecto.
  * @returns {Promise<{ bodegas: { bodegaId: string, bodegaNombre: string|null,
- *   jornadas: string[] }[], error: object|null }>}
+ *   jornadas: string[] }[], jornadasConBodegaPrincipal: { id: string, nombre: string }[],
+ *   error: object|null }>}
  */
 export async function listarBodegasDeLasJornadasDelProyecto(proyectoId) {
-  if (!proyectoId) return { bodegas: [], error: null };
+  if (!proyectoId) return { bodegas: [], jornadasConBodegaPrincipal: [], error: null };
 
   try {
     const { data, error } = await obtenerSupabase()
       .from("jornadas")
-      .select("nombre, fecha, bodegaId:botiquin_bodega_id, bodega:bodegas(nombre)")
+      .select(
+        "id, nombre, fecha, bodegaId:botiquin_bodega_id, bodega:bodegas(nombre, esPrincipal:es_principal)",
+      )
       .eq("proyecto_id", proyectoId)
       .not("botiquin_bodega_id", "is", null)
       .order("fecha", { ascending: true });
 
-    if (error) return { bodegas: [], error: normalizarError(error) };
+    if (error) {
+      return { bodegas: [], jornadasConBodegaPrincipal: [], error: normalizarError(error) };
+    }
 
     const porBodega = new Map();
+    const jornadasConBodegaPrincipal = [];
     for (const jornada of data ?? []) {
+      if (jornada.bodega?.esPrincipal) {
+        jornadasConBodegaPrincipal.push({ id: jornada.id, nombre: jornada.nombre });
+        continue;
+      }
       if (!porBodega.has(jornada.bodegaId)) {
         porBodega.set(jornada.bodegaId, {
           bodegaId: jornada.bodegaId,
@@ -119,9 +133,9 @@ export async function listarBodegasDeLasJornadasDelProyecto(proyectoId) {
       }
       porBodega.get(jornada.bodegaId).jornadas.push(jornada.nombre);
     }
-    return { bodegas: [...porBodega.values()], error: null };
+    return { bodegas: [...porBodega.values()], jornadasConBodegaPrincipal, error: null };
   } catch (error) {
-    return { bodegas: [], error: normalizarError(error) };
+    return { bodegas: [], jornadasConBodegaPrincipal: [], error: normalizarError(error) };
   }
 }
 

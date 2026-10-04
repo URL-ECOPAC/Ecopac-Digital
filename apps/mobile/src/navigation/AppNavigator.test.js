@@ -64,6 +64,7 @@ jest.mock("../screens/EntregaMedicamentosScreen", () => mockPantalla("entrega-me
 jest.mock("../screens/PacientesCronicosScreen", () => mockPantalla("pacientes-cronicos"));
 jest.mock("../screens/CatalogoCondicionesScreen", () => mockPantalla("catalogo-condiciones"));
 jest.mock("../screens/CatalogoDiagnosticosScreen", () => mockPantalla("catalogo-diagnosticos"));
+jest.mock("../screens/AgendaCitasScreen", () => mockPantalla("agenda-citas"));
 jest.mock("../screens/ProyectosScreen", () => mockPantalla("proyectos"));
 jest.mock("../screens/SeleccionJornadaScreen", () => mockPantalla("seleccion-jornada"));
 jest.mock("../screens/JornadaEnCursoScreen", () => mockPantalla("jornada-en-curso"));
