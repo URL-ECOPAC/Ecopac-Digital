@@ -1,11 +1,12 @@
 // Pruebas de la agenda del dia en el telefono (issue #927). Datos inventados. Los horarios salen de
 // horariosDelDia() de @ecopac/shared, el mismo que usa la web: no se inventa su forma aqui.
 
-import React from "react";
 import { fireEvent, render, screen } from "@testing-library/react-native";
-import { horariosDelDia } from "@ecopac/shared";
+import { horariosDelDia, mesesDelAnio, semanasDelMes } from "@ecopac/shared";
 
 import AgendaDelDia from "../AgendaDelDia";
+import CalendarioAnio from "../CalendarioAnio";
+import CalendarioMes from "../CalendarioMes";
 import ModalDetalleCita from "../ModalDetalleCita";
 
 const CITA = {
@@ -106,5 +107,36 @@ describe("ModalDetalleCita (movil)", () => {
     );
     expect(screen.queryByText("Atender")).toBeNull();
     expect(screen.queryByText("Cancelar cita")).toBeNull();
+  });
+});
+
+describe("CalendarioMes y CalendarioAnio (movil)", () => {
+  const OTRA = { ...CITA, id: "cita-2", iniciaEn: "2026-10-03T12:00:00-06:00" };
+  const CANCELADA = { ...CITA, id: "cita-3", estado: "cancelada" };
+
+  it("el mes dice cuantas citas activas tiene cada dia y abre su lista", () => {
+    const onAbrirDia = jest.fn();
+    render(
+      <CalendarioMes
+        semanas={semanasDelMes("2026-10-01", [CITA, OTRA, CANCELADA], "2026-10-03")}
+        onAbrirDia={onAbrirDia}
+      />,
+    );
+    fireEvent.press(screen.getByLabelText("Ver el 3, 2 citas"));
+    expect(onAbrirDia).toHaveBeenCalledWith("2026-10-03");
+    expect(screen.getByLabelText("Ver el 4, sin citas")).toBeTruthy();
+  });
+
+  it("el anio marca los meses con citas y abre el mes", () => {
+    const onAbrirMes = jest.fn();
+    render(
+      <CalendarioAnio
+        meses={mesesDelAnio("2026-10-03", [CITA, OTRA], "2026-10-03")}
+        onAbrirMes={onAbrirMes}
+      />,
+    );
+    expect(screen.getByLabelText("Ver Enero, sin citas")).toBeTruthy();
+    fireEvent.press(screen.getByLabelText("Ver Octubre, 2 citas"));
+    expect(onAbrirMes).toHaveBeenCalledWith("2026-10-01");
   });
 });

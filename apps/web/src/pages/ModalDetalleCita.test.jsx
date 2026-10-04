@@ -5,9 +5,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import * as matchers from "@testing-library/jest-dom/matchers";
 
-import { semanasDelMes } from "@ecopac/shared";
+import { mesesDelAnio, semanasDelMes } from "@ecopac/shared";
 
-import { AgendaDelDia, CalendarioMes } from "./CalendarioCitas";
+import { AgendaDelDia, CalendarioAnio, CalendarioMes } from "./CalendarioCitas";
 import ModalDetalleCita from "./ModalDetalleCita";
 
 expect.extend(matchers);
@@ -115,5 +115,28 @@ describe("CalendarioCitas", () => {
     expect(screen.getByText("1 sala libre")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Agendar a las 10:00" }));
     expect(onAgendarEn).toHaveBeenCalledWith("10:00");
+  });
+});
+
+describe("CalendarioAnio", () => {
+  it("marca los dias con citas, abre el dia o el mes", () => {
+    const onAbrirMes = vi.fn();
+    const onAbrirDia = vi.fn();
+    render(
+      <CalendarioAnio
+        meses={mesesDelAnio("2026-10-03", [CITA], "2026-10-03")}
+        onAbrirMes={onAbrirMes}
+        onAbrirDia={onAbrirDia}
+      />,
+    );
+    const dia = screen.getByRole("button", { name: "3 de Octubre, 1 cita" });
+    expect(dia).toHaveClass("cit-mini-dia--con-citas");
+    fireEvent.click(dia);
+    expect(onAbrirDia).toHaveBeenCalledWith("2026-10-03");
+    expect(screen.getByRole("button", { name: "4 de Octubre" })).not.toHaveClass(
+      "cit-mini-dia--con-citas",
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Ver Octubre, 1 cita" }));
+    expect(onAbrirMes).toHaveBeenCalledWith("2026-10-01");
   });
 });

@@ -1,5 +1,8 @@
-// El calendario de la agenda (issue #927): la cuadricula del mes y los horarios del dia, como datos.
-// Las apps solo los dibujan. Funciones puras: se prueban sin montar nada.
+// El calendario de la agenda (issue #927): el anio, la cuadricula del mes y los horarios del dia,
+// como datos. Las apps solo los dibujan. Funciones puras: se prueban sin montar nada.
+//
+// El anio y el mes sirven tambien para moverse: cada dia dice cuantas citas activas tiene (las no
+// canceladas), y al tocarlo se abre su dia.
 //
 // La semana empieza el lunes, como se lee un calendario en Guatemala.
 
@@ -14,7 +17,14 @@ import {
 } from "./horas.js";
 import { salasLibres } from "./validaciones.js";
 
-export const VISTAS_AGENDA = Object.freeze({ MES: "mes", DIA: "dia" });
+export const VISTAS_AGENDA = Object.freeze({ ANIO: "anio", MES: "mes", DIA: "dia" });
+
+/** Las vistas en el orden de los botones: de lo general a lo particular. */
+export const OPCIONES_VISTA_AGENDA = Object.freeze([
+  { value: VISTAS_AGENDA.ANIO, label: "Año" },
+  { value: VISTAS_AGENDA.MES, label: "Mes" },
+  { value: VISTAS_AGENDA.DIA, label: "Día" },
+]);
 
 /** Los dias de la semana en la cabecera del mes, de lunes a domingo. */
 export const DIAS_DE_LA_SEMANA_AGENDA = Object.freeze([
@@ -47,7 +57,7 @@ function diaDeLaSemana(fecha) {
 }
 
 /**
- * "Octubre de 2026" o "Sábado 3 de octubre de 2026", segun la vista.
+ * "2026", "Octubre de 2026" o "Sábado 3 de octubre de 2026", segun la vista.
  *
  * @param {string} vista
  * @param {string} fecha "AAAA-MM-DD"
@@ -58,6 +68,7 @@ export function tituloDeLaAgenda(vista, fecha) {
     .split("-")
     .map(Number);
   if (!anio) return "";
+  if (vista === VISTAS_AGENDA.ANIO) return String(anio);
   const nombreDelMes = MESES[mes - 1];
   if (vista === VISTAS_AGENDA.MES) {
     return `${nombreDelMes.charAt(0).toUpperCase()}${nombreDelMes.slice(1)} de ${anio}`;
@@ -67,7 +78,7 @@ export function tituloDeLaAgenda(vista, fecha) {
 }
 
 /**
- * El rango de fechas que cubre la vista: el dia, o las semanas completas del mes.
+ * El rango de fechas que cubre la vista: el dia, las semanas completas del mes, o el anio.
  *
  * @param {string} vista
  * @param {string} fecha
@@ -83,6 +94,14 @@ export function rangoDeLaVista(vista, fecha) {
     };
   }
   const [anio, mes] = fecha.split("-").map(Number);
+  if (vista === VISTAS_AGENDA.ANIO) {
+    return {
+      primerDia: `${anio}-01-01`,
+      ultimoDia: `${anio}-12-31`,
+      desde: aInstanteDeGuatemala(`${anio}-01-01`, "00:00"),
+      hasta: aInstanteDeGuatemala(`${anio + 1}-01-01`, "00:00"),
+    };
+  }
   const primeroDelMes = `${anio}-${conDosDigitos(mes)}-01`;
   const ultimoDelMes = sumarDias(
     `${mes === 12 ? anio + 1 : anio}-${conDosDigitos(mes === 12 ? 1 : mes + 1)}-01`,
@@ -109,6 +128,7 @@ export function rangoDeLaVista(vista, fecha) {
 export function moverFecha(vista, fecha, sentido) {
   if (vista === VISTAS_AGENDA.DIA) return sumarDias(fecha, sentido);
   const [anio, mes] = fecha.split("-").map(Number);
+  if (vista === VISTAS_AGENDA.ANIO) return `${anio + sentido}-${conDosDigitos(mes)}-01`;
   const indice = anio * 12 + (mes - 1) + sentido;
   return `${Math.floor(indice / 12)}-${conDosDigitos((indice % 12) + 1)}-01`;
 }
@@ -131,7 +151,8 @@ function citasPorDia(citas) {
  * @param {string} fecha Cualquier dia del mes.
  * @param {object[]} citas Las citas ya filtradas.
  * @param {string} hoy "AAAA-MM-DD"
- * @returns {{ fecha: string, dia: number, delMes: boolean, esHoy: boolean, citas: object[] }[][]}
+ * @returns {{ fecha: string, dia: number, delMes: boolean, esHoy: boolean, citas: object[],
+ *   activas: number }[][]} `activas`: las que no estan canceladas, para el numero del dia.
  */
 export function semanasDelMes(fecha, citas = [], hoy = "") {
   const { primerDia, ultimoDia } = rangoDeLaVista(VISTAS_AGENDA.MES, fecha);
@@ -146,9 +167,43 @@ export function semanasDelMes(fecha, citas = [], hoy = "") {
       delMes: dia.slice(0, 7) === mes,
       esHoy: dia === hoy,
       citas: porDia.get(dia) ?? [],
+      activas: (porDia.get(dia) ?? []).filter(citaOcupaSala).length,
     });
   }
   return semanas;
+}
+
+/**
+ * Los doce meses del anio, cada uno con su cuadricula y cuantas citas activas tiene.
+ *
+ * @param {string} fecha Cualquier dia del anio.
+ * @param {object[]} citas Las citas ya filtradas.
+ * @param {string} hoy "AAAA-MM-DD"
+ * @returns {{ fecha: string, nombre: string, activas: number,
+ *   semanas: ReturnType<typeof semanasDelMes> }[]}
+ */
+export function mesesDelAnio(fecha, citas = [], hoy = "") {
+  const anio = Number(String(fecha).slice(0, 4));
+  const porMes = new Map();
+  citas.forEach((cita) => {
+    const mes = fechaEnGuatemala(cita.iniciaEn).slice(0, 7);
+    porMes.set(mes, [...(porMes.get(mes) ?? []), cita]);
+  });
+  return MESES.map((nombre, indice) => {
+    const primero = `${anio}-${conDosDigitos(indice + 1)}-01`;
+    const delMes = porMes.get(primero.slice(0, 7)) ?? [];
+    return {
+      fecha: primero,
+      nombre: `${nombre.charAt(0).toUpperCase()}${nombre.slice(1)}`,
+      activas: delMes.filter(citaOcupaSala).length,
+      semanas: semanasDelMes(primero, delMes, hoy),
+    };
+  });
+}
+
+/** "1 cita" o "3 citas". */
+export function textoDeCantidadDeCitas(cantidad) {
+  return cantidad === 1 ? "1 cita" : `${cantidad} citas`;
 }
 
 /**

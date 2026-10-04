@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import {
   FILTROS_AGENDA_CITAS,
+  OPCIONES_VISTA_AGENDA,
   useAgendaCitas,
   useCambioEstadoCita,
   VISTAS_AGENDA,
 } from "@ecopac/shared";
-import { colors, moduleAccents, spacing, typography } from "@ecopac/ui-tokens";
+import { colors, moduleAccents, radii, spacing, typography } from "@ecopac/ui-tokens";
 
 import {
   ErrorState,
@@ -21,11 +22,16 @@ import { useJornadaActivaCompartida } from "../contexto/JornadaActivaProvider";
 import { useSesionCompartida } from "../contexto/SesionProvider";
 import { ROUTES } from "../navigation/rutas";
 import AgendaDelDia from "./agenda-citas/AgendaDelDia";
+import CalendarioAnio from "./agenda-citas/CalendarioAnio";
+import CalendarioMes from "./agenda-citas/CalendarioMes";
 import ModalDetalleCita from "./agenda-citas/ModalDetalleCita";
 
 // La agenda de citas en el telefono (issue #927): el dia, por horario, de la jornada activa. Los
 // mismos filtros que la web, el cambio de estado y Atender, que abre la consulta movil de siempre
 // con la cita. No se agenda desde aqui: la issue pide la agenda del dia, no el formulario.
+//
+// Arranca en el dia. El mes y el anio sirven para moverse (pedido en la revision de la fase 7):
+// cada dia dice cuantas citas tiene, y al tocarlo se vuelve a la lista de ese dia.
 //
 // Todo lo que decide es useAgendaCitas() y useCambioEstadoCita() en shared, como en la web.
 export default function AgendaCitasScreen() {
@@ -86,6 +92,25 @@ export default function AgendaCitasScreen() {
         catalogos={agenda.catalogos}
       />
 
+      <View style={estilos.vistas} accessibilityRole="tablist">
+        {OPCIONES_VISTA_AGENDA.map((opcion) => {
+          const activa = agenda.vista === opcion.value;
+          return (
+            <Pressable
+              key={opcion.value}
+              onPress={() => agenda.setVista(opcion.value)}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: activa }}
+              style={[estilos.vista, activa && estilos.vistaActiva]}
+            >
+              <Text style={[estilos.vistaTexto, activa && estilos.vistaTextoActiva]}>
+                {opcion.label}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+
       <View style={estilos.barra}>
         <SecondaryButton title="Anterior" size="sm" variant="neutra" onPress={agenda.anterior} />
         <SecondaryButton title="Hoy" size="sm" variant="neutra" onPress={agenda.irAHoy} />
@@ -112,7 +137,7 @@ export default function AgendaCitasScreen() {
         </View>
       ) : null}
 
-      {!agenda.clinicaFiltrada ? (
+      {agenda.vista === VISTAS_AGENDA.DIA && !agenda.clinicaFiltrada ? (
         <Text style={estilos.nota}>
           Filtra por una clínica para ver cuántas salas quedan libres en cada horario.
         </Text>
@@ -122,6 +147,13 @@ export default function AgendaCitasScreen() {
         <ErrorState message={agenda.error.mensaje} onRetry={agenda.recargar} />
       ) : agenda.cargando && agenda.citas.length === 0 ? (
         <LoadingState />
+      ) : agenda.vista === VISTAS_AGENDA.ANIO ? (
+        <CalendarioAnio
+          meses={agenda.meses}
+          onAbrirMes={(fecha) => agenda.irA(fecha, VISTAS_AGENDA.MES)}
+        />
+      ) : agenda.vista === VISTAS_AGENDA.MES ? (
+        <CalendarioMes semanas={agenda.semanas} onAbrirDia={(fecha) => agenda.irA(fecha)} />
       ) : (
         <AgendaDelDia
           horarios={agenda.horarios}
@@ -169,6 +201,32 @@ export default function AgendaCitasScreen() {
 }
 
 const estilos = StyleSheet.create({
+  vistas: {
+    flexDirection: "row",
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radii.pill,
+    padding: spacing.xs,
+    marginBottom: spacing.sm,
+    backgroundColor: colors.surface,
+  },
+  vista: {
+    flex: 1,
+    alignItems: "center",
+    paddingVertical: spacing.sm,
+    borderRadius: radii.pill,
+  },
+  vistaActiva: {
+    backgroundColor: colors.primary,
+  },
+  vistaTexto: {
+    fontSize: typography.sizes.md,
+    color: colors.text,
+  },
+  vistaTextoActiva: {
+    color: colors.surface,
+    fontWeight: typography.weights.semibold,
+  },
   barra: {
     flexDirection: "row",
     flexWrap: "wrap",

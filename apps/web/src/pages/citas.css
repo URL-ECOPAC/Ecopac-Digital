@@ -193,6 +193,88 @@
   background: var(--color-background);
 }
 
+/* Anio: doce meses chicos. El dia con citas lleva el color de la marca; el numero, en el titulo
+   del mes y en el aviso al pasar el mouse. */
+.cit-anio {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--spacing-md);
+}
+
+.cit-mini-mes {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radio-lg);
+  padding: var(--spacing-sm);
+}
+
+.cit-mini-mes-titulo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 0 0 var(--spacing-xs);
+  font-weight: var(--peso-semibold);
+  color: var(--color-text);
+  text-align: left;
+}
+
+.cit-mini-mes-titulo:hover {
+  color: var(--color-primary);
+}
+
+.cit-cantidad {
+  background: var(--color-primary);
+  color: var(--color-surface);
+  border-radius: var(--radio-pill);
+  font-size: var(--texto-xs);
+  padding: 0 var(--spacing-sm);
+}
+
+.cit-mini-mes-dias {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: calc(var(--spacing-xs) / 2);
+  text-align: center;
+}
+
+.cit-mini-cabecera {
+  font-size: var(--texto-xxs);
+  color: var(--color-text-muted);
+}
+
+.cit-mini-dia {
+  background: none;
+  border: none;
+  border-radius: var(--radio-pill);
+  font-size: var(--texto-xs);
+  color: var(--color-text);
+  padding: calc(var(--spacing-xs) / 2) 0;
+}
+
+.cit-mini-dia:hover,
+.cit-mini-dia:focus-visible {
+  background: var(--color-background);
+}
+
+.cit-mini-dia--con-citas {
+  background: var(--color-primary);
+  color: var(--color-surface);
+  font-weight: var(--peso-semibold);
+}
+
+.cit-mini-dia--con-citas:hover,
+.cit-mini-dia--con-citas:focus-visible {
+  background: var(--color-primary-dark);
+}
+
+.cit-mini-dia--hoy {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
+}
+
 /* Selector de paciente del formulario */
 .cit-resultados {
   list-style: none;
@@ -235,7 +317,17 @@
   margin-bottom: var(--spacing-md);
 }
 
+@media (max-width: 1199.98px) {
+  .cit-anio {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 767.98px) {
+  .cit-anio {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .cit-dia {
     min-height: 4rem;
   }

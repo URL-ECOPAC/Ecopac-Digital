@@ -2,13 +2,16 @@ import {
   DIAS_DE_LA_SEMANA_AGENDA,
   etiquetaDeEstadoDeCita,
   horaEnGuatemala,
+  textoDeCantidadDeCitas,
   VISTAS_AGENDA,
 } from "@ecopac/shared";
 
 import "./citas.css";
 
-// El calendario de la agenda de citas (issue #927): el mes y el dia por horario. Los datos -las
-// semanas, los horarios, las salas libres- los arma useAgendaCitas en shared; aqui solo se dibujan.
+// El calendario de la agenda de citas (issue #927): el anio, el mes y el dia por horario. Los datos
+// -los meses, las semanas, los horarios, las salas libres- los arma useAgendaCitas en shared; aqui
+// solo se dibujan. El anio sirve para moverse: el dia con citas va marcado con su numero, y al
+// tocarlo se abre el dia; al tocar el nombre de un mes, el mes.
 
 /** Citas por dia que caben en la celda del mes antes de "+N mas". */
 const CITAS_VISIBLES_POR_DIA = 3;
@@ -128,7 +131,63 @@ export function AgendaDelDia({ horarios, clinica, puedeAgendar, onAbrirCita, onA
   );
 }
 
+export function CalendarioAnio({ meses, onAbrirMes, onAbrirDia }) {
+  return (
+    <div className="cit-anio" aria-label="Citas del año">
+      {meses.map((mes) => (
+        <section key={mes.fecha} className="cit-mini-mes">
+          <button
+            type="button"
+            className="cit-mini-mes-titulo"
+            onClick={() => onAbrirMes(mes.fecha)}
+            aria-label={`Ver ${mes.nombre}${mes.activas ? `, ${textoDeCantidadDeCitas(mes.activas)}` : ""}`}
+          >
+            <span>{mes.nombre}</span>
+            {mes.activas > 0 && <span className="cit-cantidad">{mes.activas}</span>}
+          </button>
+          <div className="cit-mini-mes-dias">
+            {DIAS_DE_LA_SEMANA_AGENDA.map((dia) => (
+              <span key={dia} className="cit-mini-cabecera" aria-hidden="true">
+                {dia.charAt(0)}
+              </span>
+            ))}
+            {mes.semanas.flat().map((dia) =>
+              dia.delMes ? (
+                <button
+                  key={dia.fecha}
+                  type="button"
+                  className={`cit-mini-dia${dia.activas ? " cit-mini-dia--con-citas" : ""}${
+                    dia.esHoy ? " cit-mini-dia--hoy" : ""
+                  }`}
+                  title={dia.activas ? textoDeCantidadDeCitas(dia.activas) : undefined}
+                  aria-label={`${dia.dia} de ${mes.nombre}${
+                    dia.activas ? `, ${textoDeCantidadDeCitas(dia.activas)}` : ""
+                  }`}
+                  onClick={() => onAbrirDia(dia.fecha)}
+                >
+                  {dia.dia}
+                </button>
+              ) : (
+                <span key={dia.fecha} aria-hidden="true" />
+              ),
+            )}
+          </div>
+        </section>
+      ))}
+    </div>
+  );
+}
+
 export default function CalendarioCitas({ agenda, onAbrirCita, onAgendarEn }) {
+  if (agenda.vista === VISTAS_AGENDA.ANIO) {
+    return (
+      <CalendarioAnio
+        meses={agenda.meses}
+        onAbrirMes={(fecha) => agenda.irA(fecha, VISTAS_AGENDA.MES)}
+        onAbrirDia={(fecha) => agenda.irA(fecha)}
+      />
+    );
+  }
   if (agenda.vista === VISTAS_AGENDA.MES) {
     return (
       <CalendarioMes

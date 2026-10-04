@@ -17,6 +17,7 @@ import { opcionesDeFiltroDeAreas } from "../pacientes/areas.campos.js";
 import { ROLES } from "../usuarios/roles.js";
 import {
   horariosDelDia,
+  mesesDelAnio,
   moverFecha,
   rangoDeLaVista,
   semanasDelMes,
@@ -50,7 +51,7 @@ export function opcionesDeProfesionalesDeCitas(citas = []) {
  * @param {{ rol?: string, perfilId?: string|null, fechaInicial?: string, vistaInicial?: string }} [opciones]
  *   La movil arranca en el dia (`VISTAS_AGENDA.DIA`): la issue pide la agenda del dia, sin mes.
  * @returns {object} Con: vista, setVista, fecha, irA, anterior, siguiente, irAHoy, titulo,
- *   semanas, horarios, citas, filtros, setFiltro, limpiarFiltros, hayFiltros, misCitas,
+ *   meses (vista de anio), semanas, horarios, citas, filtros, setFiltro, limpiarFiltros, hayFiltros, misCitas,
  *   setMisCitas, puedeVerMisCitas, catalogos, cargando, error, recargar, permitido, puedeAgendar.
  */
 export function useAgendaCitas({
@@ -117,6 +118,10 @@ export function useAgendaCitas({
 
   const hoy = hoyEnGuatemala();
   const semanas = useMemo(() => semanasDelMes(fecha, filtradas, hoy), [fecha, filtradas, hoy]);
+  const meses = useMemo(
+    () => (vista === VISTAS_AGENDA.ANIO ? mesesDelAnio(fecha, filtradas, hoy) : []),
+    [vista, fecha, filtradas, hoy],
+  );
 
   const clinicaFiltrada = clinicas.find((clinica) => clinica.id === filtros.clinicaId) ?? null;
   const horarios = useMemo(
@@ -165,6 +170,7 @@ export function useAgendaCitas({
     siguiente: () => setFecha((actual) => moverFecha(vista, actual, 1)),
     irAHoy: () => setFecha(hoyEnGuatemala()),
     titulo: tituloDeLaAgenda(vista, fecha),
+    meses,
     semanas,
     horarios,
     clinicaFiltrada,

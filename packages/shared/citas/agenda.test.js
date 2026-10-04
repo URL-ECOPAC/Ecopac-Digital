@@ -4,9 +4,12 @@ import { describe, expect, it } from "vitest";
 
 import {
   horariosDelDia,
+  mesesDelAnio,
   moverFecha,
+  OPCIONES_VISTA_AGENDA,
   rangoDeLaVista,
   semanasDelMes,
+  textoDeCantidadDeCitas,
   tituloDeLaAgenda,
   VISTAS_AGENDA,
 } from "./agenda.js";
@@ -284,5 +287,48 @@ describe("filtros y presentacion", () => {
       "profesional",
     ]);
     expect(detalleDeCita(null)).toEqual([]);
+  });
+});
+
+describe("el anio de la agenda", () => {
+  it("las vistas van de lo general a lo particular", () => {
+    expect(OPCIONES_VISTA_AGENDA.map((vista) => vista.value)).toEqual(["anio", "mes", "dia"]);
+  });
+
+  it("el anio cubre del 1 de enero al 31 de diciembre y se mueve de anio en anio", () => {
+    expect(rangoDeLaVista(VISTAS_AGENDA.ANIO, "2026-10-03")).toEqual({
+      primerDia: "2026-01-01",
+      ultimoDia: "2026-12-31",
+      desde: "2026-01-01T00:00:00-06:00",
+      hasta: "2027-01-01T00:00:00-06:00",
+    });
+    expect(moverFecha(VISTAS_AGENDA.ANIO, "2026-10-03", 1)).toBe("2027-10-01");
+    expect(moverFecha(VISTAS_AGENDA.ANIO, "2026-10-03", -1)).toBe("2025-10-01");
+    expect(tituloDeLaAgenda(VISTAS_AGENDA.ANIO, "2026-10-03")).toBe("2026");
+  });
+
+  it("doce meses, cada uno con sus citas activas por mes y por dia; la cancelada no cuenta", () => {
+    const meses = mesesDelAnio(
+      "2026-10-03",
+      [
+        cita("a", "2026-10-03", "10:30", "11:00"),
+        cita("b", "2026-10-03", "11:00", "11:30"),
+        cita("c", "2026-10-03", "12:00", "12:30", { estado: "cancelada" }),
+        cita("d", "2026-12-24", "09:00", "09:30"),
+      ],
+      "2026-10-03",
+    );
+    expect(meses).toHaveLength(12);
+    expect(meses[0]).toMatchObject({ fecha: "2026-01-01", nombre: "Enero", activas: 0 });
+    expect(meses[9]).toMatchObject({ fecha: "2026-10-01", nombre: "Octubre", activas: 2 });
+    expect(meses[11].activas).toBe(1);
+    const tres = meses[9].semanas.flat().find((dia) => dia.fecha === "2026-10-03");
+    expect(tres).toMatchObject({ activas: 2, esHoy: true });
+    expect(tres.citas).toHaveLength(3);
+  });
+
+  it("dice la cantidad en singular o plural", () => {
+    expect(textoDeCantidadDeCitas(1)).toBe("1 cita");
+    expect(textoDeCantidadDeCitas(3)).toBe("3 citas");
   });
 });

@@ -2,7 +2,12 @@ import { useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
-import { FILTROS_AGENDA_CITAS, useAgendaCitas, VISTAS_AGENDA } from "@ecopac/shared";
+import {
+  FILTROS_AGENDA_CITAS,
+  OPCIONES_VISTA_AGENDA,
+  useAgendaCitas,
+  VISTAS_AGENDA,
+} from "@ecopac/shared";
 
 import ErrorState from "../components/ErrorState";
 import FilterBar from "../components/FilterBar";
@@ -16,7 +21,7 @@ import "./citas.css";
 import FlujoDeCita from "./FlujoDeCita";
 import "./pacientes.css";
 
-// La agenda de citas (issue #927): calendario de mes y de dia, filtros por jornada, clinica, area,
+// La agenda de citas (issue #927): calendario de anio, mes y dia, filtros por jornada, clinica, area,
 // profesional y estado, y "Mis citas" para el medico. Con una clinica filtrada, el dia dice cuantas
 // salas le quedan en cada horario. Clic en una cita: su detalle y Atender, que abre la consulta de
 // siempre con la cita. Clic en un horario vacio del dia: agendar ahi.
@@ -121,22 +126,17 @@ export default function AgendaCitasPage() {
             <h2 className="cit-titulo">{agenda.titulo}</h2>
           </div>
           <div className="btn-group" role="group" aria-label="Vista del calendario">
-            <SecondaryButton
-              title="Mes"
-              size="sm"
-              variant="outline"
-              className={agenda.vista === VISTAS_AGENDA.MES ? "active" : ""}
-              aria-pressed={agenda.vista === VISTAS_AGENDA.MES}
-              onClick={() => agenda.setVista(VISTAS_AGENDA.MES)}
-            />
-            <SecondaryButton
-              title="Día"
-              size="sm"
-              variant="outline"
-              className={agenda.vista === VISTAS_AGENDA.DIA ? "active" : ""}
-              aria-pressed={agenda.vista === VISTAS_AGENDA.DIA}
-              onClick={() => agenda.setVista(VISTAS_AGENDA.DIA)}
-            />
+            {OPCIONES_VISTA_AGENDA.map((opcion) => (
+              <SecondaryButton
+                key={opcion.value}
+                title={opcion.label}
+                size="sm"
+                variant="outline"
+                className={agenda.vista === opcion.value ? "active" : ""}
+                aria-pressed={agenda.vista === opcion.value}
+                onClick={() => agenda.setVista(opcion.value)}
+              />
+            ))}
           </div>
         </div>
 
