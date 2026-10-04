@@ -5,7 +5,7 @@
 
 BEGIN;
 
-SELECT plan(14);
+SELECT plan(15);
 
 -- ============================================================================
 -- Setup
@@ -196,6 +196,17 @@ SELECT lives_ok(
 );
 
 RESET ROLE;
+
+-- ============================================================================
+-- 6. Sin sesion (el seed, el service_role) la regla no aplica
+-- ============================================================================
+SELECT set_config('request.jwt.claim.sub', '', TRUE);
+
+SELECT lives_ok(
+  $$ UPDATE citas SET notas = 'Desde el seed'
+     WHERE jornada_id = '40000000-0000-0000-0000-000000185001' AND estado = 'creada' $$,
+  'sin sesion se puede cambiar una cita (seed de demostracion)'
+);
 
 SELECT * FROM finish();
 ROLLBACK;

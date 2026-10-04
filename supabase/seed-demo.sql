@@ -753,3 +753,68 @@ SET session_replication_role = DEFAULT;
 -- Las alertas de vencimiento no se siembran: las genera la rutina programada
 -- (supabase/functions/alertas-vencimiento), y las pruebas de alertas crean las suyas sobre estos
 -- mismos lotes.
+
+-- ============================================================================
+-- 18. Areas de atencion, clinicas y agenda de citas (issue #927)
+-- ============================================================================
+-- Fuera del bloque con session_replication_role = replica, a proposito: las citas pasan por
+-- fn_validar_cita (cupo, traslapes, cuadro de turnos) y la consulta agendada por los triggers que
+-- dejan la cita atendida y le ponen el area. Asi el dato demo es uno que la base acepta.
+--
+-- Las areas las siembra la 00182 (Odontología, Psicología, Medicina General). Las citas de hoy son
+-- de la jornada en curso, en sus horas de Guatemala; una de cada estado. Sofia ya tenia su visita
+-- en esta jornada: la cita atendida le agrega una segunda consulta, la agendada.
+
+INSERT INTO clinicas (id, nombre, salas_disponibles) VALUES
+  ('de00001d-0000-0000-0000-000000000001', 'Clínica Central Demo', 3),
+  ('de00001d-0000-0000-0000-000000000002', 'Puesto de Salud Demo', 1)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO paciente_area (paciente_id, area_id)
+SELECT v.paciente_id::uuid, a.id
+FROM (VALUES
+  ('de000005-0000-0000-0000-000000000005', 'Odontología'),
+  ('de000005-0000-0000-0000-000000000005', 'Medicina General'),
+  ('de000005-0000-0000-0000-000000000011', 'Medicina General'),
+  ('de000005-0000-0000-0000-000000000012', 'Psicología')
+) AS v (paciente_id, area)
+JOIN areas_atencion a ON a.nombre = v.area
+ON CONFLICT DO NOTHING;
+
+INSERT INTO citas (id, paciente_id, jornada_id, clinica_id, area_id, profesional_id, inicia_en, notas)
+SELECT v.id::uuid, v.paciente_id::uuid, v.jornada_id::uuid, v.clinica_id::uuid, a.id,
+       v.profesional_id::uuid,
+       ((CURRENT_DATE + v.dias + v.hora::time) AT TIME ZONE 'America/Guatemala'), v.notas
+FROM (VALUES
+  -- Hoy, jornada en curso: la que se atiende, dos que esperan y una que se cancela.
+  ('de00001e-0000-0000-0000-000000000001', 'de000005-0000-0000-0000-000000000005', 'de00000a-0000-0000-0000-000000000002',
+   'de00001d-0000-0000-0000-000000000001', 'Odontología', 'de000001-0000-0000-0000-000000000005', 0, '10:30', NULL),
+  ('de00001e-0000-0000-0000-000000000002', 'de000005-0000-0000-0000-000000000011', 'de00000a-0000-0000-0000-000000000002',
+   'de00001d-0000-0000-0000-000000000001', 'Medicina General', 'de000001-0000-0000-0000-000000000005', 0, '11:00', NULL),
+  ('de00001e-0000-0000-0000-000000000003', 'de000005-0000-0000-0000-000000000012', 'de00000a-0000-0000-0000-000000000002',
+   'de00001d-0000-0000-0000-000000000001', 'Psicología', NULL, 0, '11:00', 'Primera consulta de psicologia'),
+  ('de00001e-0000-0000-0000-000000000004', 'de000005-0000-0000-0000-000000000101', 'de00000a-0000-0000-0000-000000000002',
+   'de00001d-0000-0000-0000-000000000002', 'Medicina General', NULL, 0, '09:00', NULL),
+  -- En la jornada planificada, para la agenda del mes que viene.
+  ('de00001e-0000-0000-0000-000000000005', 'de000005-0000-0000-0000-000000000102', 'de00000a-0000-0000-0000-000000000003',
+   'de00001d-0000-0000-0000-000000000001', 'Odontología', 'de000001-0000-0000-0000-000000000004', 20, '09:00', NULL)
+) AS v (id, paciente_id, jornada_id, clinica_id, area, profesional_id, dias, hora, notas)
+JOIN areas_atencion a ON a.nombre = v.area
+ON CONFLICT (id) DO NOTHING;
+
+-- Cancelada con su motivo. El WHERE la deja quieta en una segunda corrida: una cita cancelada ya
+-- no cambia (fn_validar_cita).
+UPDATE citas SET estado = 'cancelada', motivo_cancelacion = 'El paciente aviso que no podia venir'
+WHERE id = 'de00001e-0000-0000-0000-000000000004' AND estado = 'creada';
+
+-- Atendida: Atender la pasa a en atencion y la consulta, al guardarse con cita_id, la deja atendida
+-- y toma el area de la cita.
+UPDATE citas SET estado = 'en_atencion'
+WHERE id = 'de00001e-0000-0000-0000-000000000001' AND estado = 'creada';
+
+INSERT INTO consultas (id, expediente_id, atencion_id, medico_id, jornada_id, cita_id, motivo_consulta, tratamiento)
+VALUES ('de000016-0000-0000-0000-000000000927', 'de000006-0000-0000-0000-000000000005',
+        'de000014-0000-0000-0000-000000000005', 'de000001-0000-0000-0000-000000000005',
+        'de00000a-0000-0000-0000-000000000002', 'de00001e-0000-0000-0000-000000000001',
+        'Control dental agendado', 'Limpieza y fluor')
+ON CONFLICT (id) DO NOTHING;

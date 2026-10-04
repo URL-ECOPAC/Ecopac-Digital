@@ -20,8 +20,8 @@
 --
 -- Los cambios que no hace una persona sino el sistema no pasan por la regla: la consulta que deja
 -- la cita atendida (ecopac.cita_atendida_por_consulta), la fusion de pacientes
--- (ecopac.fusionando_pacientes) y el cierre o la cancelacion de la jornada, que hace quien
--- gestiona jornadas.
+-- (ecopac.fusionando_pacientes), el cierre o la cancelacion de la jornada, que hace quien
+-- gestiona jornadas, y lo que corre sin sesion (el seed de demostracion, el service_role).
 -- ============================================================================
 
 -- ----------------------------------------------------------------------------
@@ -61,7 +61,10 @@ SECURITY DEFINER
 SET search_path = ''
 AS $$
 BEGIN
-  IF current_setting('ecopac.cita_atendida_por_consulta', TRUE) = 'on'
+  -- Sin sesion (auth.uid() nulo) no es una persona: es el seed, una migracion o el service_role.
+  -- anon no llega aqui, porque la politica de UPDATE de citas no lo admite.
+  IF auth.uid() IS NULL
+     OR current_setting('ecopac.cita_atendida_por_consulta', TRUE) = 'on'
      OR current_setting('ecopac.fusionando_pacientes', TRUE) = 'on'
      OR public.es_administrador()
      OR public.tiene_permiso('jornadas.gestionar')
@@ -82,7 +85,7 @@ END;
 $$;
 
 COMMENT ON FUNCTION public.fn_cita_exige_permiso_de_agenda() IS
-  'Sin citas.agendar (ni administracion ni jornadas.gestionar), una cita solo cambia de estado entre creada y en atencion: Atender y Regresar a creada (00185). Los cambios del sistema (consulta, fusion) no pasan por la regla.';
+  'Sin citas.agendar (ni administracion ni jornadas.gestionar), una cita solo cambia de estado entre creada y en atencion: Atender y Regresar a creada (00185). Los cambios del sistema (consulta, fusion, sin sesion) no pasan por la regla.';
 
 REVOKE EXECUTE ON FUNCTION public.fn_cita_exige_permiso_de_agenda() FROM PUBLIC, anon, authenticated;
 

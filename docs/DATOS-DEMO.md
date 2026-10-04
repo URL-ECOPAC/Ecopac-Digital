@@ -51,6 +51,16 @@ este seed corresponde a una persona o lugar real (regla de confidencialidad de
   #926), y uno de cada cuatro pacientes no tiene comunidad o es de otra, para que "comunidad de
   la jornada" y "comunidad del paciente" den resultados distintos.
 
+- Areas de atencion, clinicas y agenda de citas (issue #927): las tres areas las siembra la
+  `00182`; el seed asigna areas a cuatro pacientes y agrega "Clínica Central Demo" (3 salas) y
+  "Puesto de Salud Demo" (1 sala). Cinco citas, una de cada estado: en la jornada en curso, la de
+  Sofia (Odontología, 10:30 con Miriam) ya atendida, con su consulta agendada como segunda
+  consulta de la visita; dos creadas a las 11:00 (una sin profesional); una cancelada con su
+  motivo; y una creada en la jornada planificada, para la agenda del mes que viene. Las citas
+  pasan por `fn_validar_cita`: el seed de esta seccion corre con los triggers activos.
+  La hora es la de Guatemala sobre `CURRENT_DATE` de la base (UTC), como la fecha de las
+  jornadas: despues de las 18:00 de Guatemala la base ya va en el dia siguiente.
+
 Las alertas de vencimiento no se siembran: las genera la rutina programada
 (`supabase/functions/alertas-vencimiento`) sobre los lotes de arriba.
 
