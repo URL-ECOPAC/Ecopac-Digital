@@ -47,13 +47,19 @@ export function opcionesDeProfesionalesDeCitas(citas = []) {
 }
 
 /**
- * @param {{ rol?: string, perfilId?: string|null, fechaInicial?: string }} [opciones]
+ * @param {{ rol?: string, perfilId?: string|null, fechaInicial?: string, vistaInicial?: string }} [opciones]
+ *   La movil arranca en el dia (`VISTAS_AGENDA.DIA`): la issue pide la agenda del dia, sin mes.
  * @returns {object} Con: vista, setVista, fecha, irA, anterior, siguiente, irAHoy, titulo,
  *   semanas, horarios, citas, filtros, setFiltro, limpiarFiltros, hayFiltros, misCitas,
  *   setMisCitas, puedeVerMisCitas, catalogos, cargando, error, recargar, permitido, puedeAgendar.
  */
-export function useAgendaCitas({ rol, perfilId = null, fechaInicial } = {}) {
-  const [vista, setVista] = useState(VISTAS_AGENDA.MES);
+export function useAgendaCitas({
+  rol,
+  perfilId = null,
+  fechaInicial,
+  vistaInicial = VISTAS_AGENDA.MES,
+} = {}) {
+  const [vista, setVista] = useState(vistaInicial);
   const [fecha, setFecha] = useState(fechaInicial ?? hoyEnGuatemala());
   const [filtros, setFiltros] = useState(FILTROS_AGENDA_CITAS_VACIOS);
   const [misCitas, setMisCitas] = useState(false);

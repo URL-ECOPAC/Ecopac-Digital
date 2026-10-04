@@ -63,6 +63,7 @@ const ROLES_ESPERADOS = {
   [ROUTES.PACIENTES_CRONICOS]: rolesDelModulo("pacientes"),
   [ROUTES.CATALOGO_CONDICIONES]: rolesDelModulo("pacientes"),
   [ROUTES.CATALOGO_DIAGNOSTICOS]: rolesDelModulo("pacientes"),
+  [ROUTES.AGENDA_CITAS]: rolesDelModulo("pacientes"),
 
   [ROUTES.SELECCION_JORNADA]: rolesDelModulo("jornadas"),
   [ROUTES.JORNADA_EN_CURSO]: rolesDelModulo("jornadas"),

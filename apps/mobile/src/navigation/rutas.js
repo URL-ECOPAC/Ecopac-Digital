@@ -27,6 +27,7 @@ export const ROUTES = {
   PACIENTES_CRONICOS: "PacientesCronicos",
   CATALOGO_CONDICIONES: "CatalogoCondiciones",
   CATALOGO_DIAGNOSTICOS: "CatalogoDiagnosticos",
+  AGENDA_CITAS: "AgendaCitas",
 
   SELECCION_JORNADA: "SeleccionJornada",
   JORNADA_EN_CURSO: "JornadaEnCurso",
