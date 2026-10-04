@@ -101,6 +101,10 @@ const MENSAJES_DE_LA_BASE = [
   ["con la jornada en curso", "Una cita se atiende con la jornada en curso."],
   ["Solo se cambia la agenda de una cita creada", "Solo se reagenda una cita creada."],
   ["ya no se edita", "Esta cita ya no se edita; solo sus notas."],
+  [
+    "Sin el permiso de agendar citas",
+    "No tienes el permiso de agendar citas: solo puedes abrir la cita o regresarla a creada.",
+  ],
 ];
 
 /**

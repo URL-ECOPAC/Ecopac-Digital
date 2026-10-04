@@ -1,11 +1,13 @@
-// Que puede hacer cada rol con la agenda de citas (issue #927, 00184).
+// Que puede hacer cada rol con la agenda de citas (issue #927, 00184 y 00185).
 //
 // ESTO DECIDE QUE MUESTRA LA INTERFAZ, NO QUE PROTEGE EL SERVIDOR: quien protege son las politicas
-// de citas y fn_validar_cita (00184), y la RLS de consultas para guardar la consulta de la cita.
+// de citas, fn_validar_cita (00184), fn_cita_exige_permiso_de_agenda (00185) y la RLS de
+// consultas para guardar la consulta de la cita.
 // La pertenencia a la jornada (pertenece_a_jornada) no se replica: la base filtra las citas que se
 // ven y rechaza las que no se pueden escribir.
 
 import { puedeAdministrarJornadas } from "../jornadas/permisos.js";
+import { tienePermisoFino } from "../usuarios/acceso.js";
 import { esAdministrador, esConsultivo, ROLES, ROLES_DE_CAMPO } from "../usuarios/roles.js";
 import { ESTADOS_CITA, puedePasarCitaA } from "./estados.js";
 
@@ -21,14 +23,16 @@ export function puedeVerCitas(rol) {
 }
 
 /**
- * Puede agendar, editar y cancelar: la administradora, quien tiene jornadas.gestionar y el personal
- * de campo (medico y voluntario) de la jornada.
+ * Puede agendar, reagendar y cancelar: la administradora, quien tiene jornadas.gestionar y quien
+ * tiene el permiso fino citas.agendar (00185). Por defecto lo tienen el medico y el voluntario
+ * general; se concede o revoca por persona en Colaboradores > Permisos. En la base, ademas, hay que
+ * pertenecer a la jornada.
  *
  * @param {string} rol
  * @returns {boolean}
  */
 export function puedeAgendarCitas(rol) {
-  return puedeAdministrarJornadas(rol) || ROLES_DE_CAMPO.includes(rol);
+  return puedeAdministrarJornadas(rol) || tienePermisoFino(rol, "citas.agendar");
 }
 
 /**
@@ -63,14 +67,18 @@ export function puedeCancelarCita(rol, cita) {
 }
 
 /**
- * Puede regresar a creada una cita que se abrio por error.
+ * Puede regresar a creada una cita que se abrio por error: quien agenda, y tambien el personal de
+ * campo sin citas.agendar, que la abre para atender (fn_cita_exige_permiso_de_agenda, 00185).
  *
  * @param {string} rol
  * @param {{ estado: string }} cita
  * @returns {boolean}
  */
 export function puedeRegresarCitaACreada(rol, cita) {
-  return puedeAgendarCitas(rol) && cita?.estado === ESTADOS_CITA.EN_ATENCION;
+  return (
+    (puedeAgendarCitas(rol) || ROLES_DE_CAMPO.includes(rol)) &&
+    cita?.estado === ESTADOS_CITA.EN_ATENCION
+  );
 }
 
 /**

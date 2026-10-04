@@ -28,6 +28,8 @@ import { esAdministrador, ROLES } from "./roles.js";
  */
 export const MODULO_DE_PERMISO_FINO = Object.freeze({
   "pacientes.editar": "pacientes",
+  // La agenda vive en Pacientes (/pacientes/citas, issue #927).
+  "citas.agendar": "pacientes",
   "inventario.aprobar": "inventario",
   "inventario.configurar_alertas": "inventario",
   "jornadas.gestionar": "jornadas",
@@ -40,12 +42,13 @@ export const MODULO_DE_PERMISO_FINO = Object.freeze({
 });
 
 /**
- * Permisos finos que cada rol trae por defecto: espejo de las filas de rol_permiso (00003, 00037
- * y 00148). La administradora los tiene todos y no aparece. Solo se usa cuando la sesion todavia
+ * Permisos finos que cada rol trae por defecto: espejo de las filas de rol_permiso (00003, 00037,
+ * 00148 y 00185). La administradora los tiene todos y no aparece. Solo se usa cuando la sesion todavia
  * no cargo sus accesos, o para responder por un rol que no es el de la sesion.
  */
 const PERMISOS_POR_DEFECTO = Object.freeze({
   "pacientes.editar": [ROLES.MEDICO, ROLES.VOLUNTARIO],
+  "citas.agendar": [ROLES.MEDICO, ROLES.VOLUNTARIO],
   "reportes.exportar": [ROLES.JUNTA_DIRECTIVA, ROLES.SOCIO_FUNDADOR],
 });
 

@@ -15,6 +15,7 @@ vi.mock("../api/cliente.js", () => ({
 }));
 
 const { ROLES } = await import("../usuarios/roles.js");
+const { fijarAccesoDeSesion, limpiarAccesoDeSesion } = await import("../usuarios/acceso.js");
 const {
   avisoDeFueraDeTurno,
   conflictosDeCita,
@@ -251,6 +252,31 @@ describe("permisos de la agenda", () => {
     expect(puedeAgendarCitas(ROLES.MEDICO)).toBe(true);
     expect(puedeAgendarCitas(ROLES.VOLUNTARIO)).toBe(true);
     expect(puedeAgendarCitas(ROLES.JUNTA_DIRECTIVA)).toBe(false);
+  });
+
+  it("agendar es el permiso fino citas.agendar: se revoca o se concede por persona (00185)", () => {
+    // Sin sesion cargada responde el valor por defecto del rol.
+    expect(puedeAgendarCitas(ROLES.VOLUNTARIO)).toBe(true);
+    try {
+      // Al voluntario de la sesion se le revoco: no agenda, no cancela, no reagenda...
+      fijarAccesoDeSesion({ rol: ROLES.VOLUNTARIO, permisos: [] });
+      expect(puedeAgendarCitas(ROLES.VOLUNTARIO)).toBe(false);
+      expect(puedeCancelarCita(ROLES.VOLUNTARIO, creada)).toBe(false);
+      expect(edicionDeCita(ROLES.VOLUNTARIO, creada)).toEqual({ agenda: false, notas: false });
+      // ...pero sigue abriendo la cita y regresandola a creada.
+      expect(puedeAtenderCita(ROLES.VOLUNTARIO, creada, "vol")).toBe(true);
+      expect(puedeRegresarCitaACreada(ROLES.VOLUNTARIO, { estado: "en_atencion" })).toBe(true);
+
+      // A alguien que no es personal de campo se le concede.
+      fijarAccesoDeSesion({ rol: ROLES.JUNTA_DIRECTIVA, permisos: ["citas.agendar"] });
+      expect(puedeAgendarCitas(ROLES.JUNTA_DIRECTIVA)).toBe(true);
+
+      // Quien gestiona jornadas agenda aunque no tenga citas.agendar.
+      fijarAccesoDeSesion({ rol: ROLES.MEDICO, permisos: ["jornadas.gestionar"] });
+      expect(puedeAgendarCitas(ROLES.MEDICO)).toBe(true);
+    } finally {
+      limpiarAccesoDeSesion();
+    }
   });
 
   it("atiende el profesional de la cita, la administradora, o cualquier medico si no tiene", () => {
@@ -585,6 +611,14 @@ describe("api de citas", () => {
   it("errorDeCita deja pasar un error que no es de la agenda", () => {
     const generico = { codigo: "fallo_de_red", mensaje: "Sin conexion", detalle: "" };
     expect(errorDeCita(generico)).toBe(generico);
+    expect(
+      errorDeCita({
+        codigo: "permiso_denegado",
+        mensaje: "x",
+        detalle:
+          "42501 | Sin el permiso de agendar citas solo se abre la cita (Atender) o se regresa a creada.",
+      }).mensaje,
+    ).toMatch(/^No tienes el permiso de agendar citas/);
     expect(errorDeCita(null)).toBeNull();
     expect(
       errorDeCita({
