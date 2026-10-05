@@ -137,6 +137,9 @@ export default function JornadaEnCursoScreen() {
   return (
     <ScreenContainer>
       <Text style={styles.titulo}>{jornada?.nombre ?? "Jornada en curso"}</Text>
+      {jornada?.proyecto?.nombre ? (
+        <Text style={styles.subtitulo}>Proyecto: {jornada.proyecto.nombre}</Text>
+      ) : null}
 
       {!puedeRegistrar && motivoBloqueo && (
         <Card style={styles.avisoBloqueo}>
@@ -196,6 +199,11 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.xl,
     fontWeight: typography.weights.bold,
     color: colors.text,
+  },
+  subtitulo: {
+    fontFamily: typography.fontFamilyBase,
+    fontSize: typography.sizes.sm,
+    color: colors.textMuted,
     marginBottom: spacing.sm,
   },
   avisoBloqueo: {

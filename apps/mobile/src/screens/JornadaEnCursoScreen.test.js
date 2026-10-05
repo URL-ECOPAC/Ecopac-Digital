@@ -114,6 +114,27 @@ describe("JornadaEnCursoScreen", () => {
     expect(screen.getByText("Todavía no hay pacientes atendidos en esta jornada.")).toBeTruthy();
   });
 
+  // Issue #925: el detalle de la jornada muestra su proyecto. El dato ya llega embebido en
+  // jornada.proyecto (COLUMNAS_DE_JORNADA, packages/shared/jornadas/api.js); esta pantalla solo
+  // tenia que pintarlo.
+  it("muestra el proyecto de la jornada cuando tiene uno", () => {
+    mockEstadoJornadaActiva.jornada = {
+      nombre: "Jornada Vista Hermosa",
+      proyecto: { nombre: "Salud Rural 2026", estado: "en curso" },
+    };
+    pantalla();
+
+    expect(screen.getByText("Proyecto: Salud Rural 2026")).toBeTruthy();
+
+    mockEstadoJornadaActiva.jornada = { nombre: "Jornada Vista Hermosa" };
+  });
+
+  it("sin proyecto asociado, no muestra la fila de proyecto", () => {
+    pantalla();
+
+    expect(screen.queryByText(/^Proyecto:/)).toBeNull();
+  });
+
   // Issue #840: las colas por etapa se retiran de la interfaz. Queda una lista sin etapas, y
   // tocar a alguien abre su ficha, desde donde se abre la consulta.
   it("los pacientes aparecen en una sola lista, sin colas, y tocarlo abre su ficha", () => {

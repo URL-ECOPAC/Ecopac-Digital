@@ -33,6 +33,7 @@ import SeleccionJornadaScreen from "../screens/SeleccionJornadaScreen";
 import JornadaEnCursoScreen from "../screens/JornadaEnCursoScreen";
 import JornadasAsignadasScreen from "../screens/JornadasAsignadasScreen";
 import KanbanJornadasScreen from "../screens/KanbanJornadasScreen";
+import DetalleJornadaScreen from "../screens/DetalleJornadaScreen";
 import BusquedaPacienteScreen from "../screens/BusquedaPacienteScreen";
 import FichaPacienteScreen from "../screens/FichaPacienteScreen";
 import HistorialPacienteScreen from "../screens/HistorialPacienteScreen";
@@ -232,6 +233,11 @@ const PANTALLAS_JORNADAS = [
     name: ROUTES.KANBAN_JORNADAS,
     componente: conGuardaDeRol(KanbanJornadasScreen, "jornadas"),
     titulo: "Tablero de Jornadas",
+  },
+  {
+    name: ROUTES.DETALLE_JORNADA,
+    componente: conGuardaDeRol(DetalleJornadaScreen, "jornadas"),
+    titulo: "Detalle de la jornada",
   },
   {
     name: ROUTES.PROYECTOS,
