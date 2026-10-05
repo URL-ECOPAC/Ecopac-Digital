@@ -104,8 +104,18 @@ function TarjetaJornada({ jornada, puedeReabrir, moviendo, onMover, onVerDetalle
 export default function KanbanJornadasScreen() {
   const navigation = useNavigation();
   const { rol } = useSesionCompartida();
-  const { cargando, error, columnas, recargar, puedeEditar, puedeReabrir, moverJornada, moviendo } =
-    useJornadasKanban(rol);
+  const {
+    cargando,
+    error,
+    columnas,
+    recargar,
+    puedeEditar,
+    puedeReabrir,
+    moverJornada,
+    moviendo,
+    errorMovimiento,
+    descartarErrorMovimiento,
+  } = useJornadasKanban(rol);
 
   const verDetalle = (jornada) => {
     navigation.navigate(ROUTES.DETALLE_JORNADA, { jornadaId: jornada.id, titulo: jornada.nombre });
@@ -123,6 +133,19 @@ export default function KanbanJornadasScreen() {
 
       {cargando && <LoadingState message="Cargando tablero..." />}
       {error && <ErrorState message={error.mensaje} onRetry={recargar} />}
+
+      {/* Issue #925: el mensaje dice por que no se pudo mover (p. ej. la bodega ya esta en otra
+          jornada en curso, y dice cual). Antes se perdia: nada en pantalla lo mostraba. */}
+      {errorMovimiento && (
+        <Card style={estilos.avisoMovimiento}>
+          <Text style={estilos.textoAvisoMovimiento}>{errorMovimiento.mensaje}</Text>
+          <SecondaryButton
+            title="Descartar"
+            onPress={descartarErrorMovimiento}
+            style={estilos.botonDescartar}
+          />
+        </Card>
+      )}
 
       {!cargando && !error && (
         <KanbanBoard
@@ -163,6 +186,19 @@ const estilos = StyleSheet.create({
     fontSize: 13,
     color: colors.textMuted,
     marginTop: 2,
+  },
+  avisoMovimiento: {
+    marginBottom: spacing.md,
+    borderColor: colors.danger,
+    gap: spacing.sm,
+  },
+  textoAvisoMovimiento: {
+    fontFamily: typography.fontFamilyBase,
+    fontSize: typography.sizes.sm,
+    color: colors.danger,
+  },
+  botonDescartar: {
+    alignSelf: "flex-start",
   },
   tarjeta: {
     width: 250,

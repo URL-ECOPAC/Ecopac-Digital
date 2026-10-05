@@ -20,6 +20,7 @@ jest.mock("../contexto/SesionProvider", () => ({
 }));
 
 const mockMoverJornada = jest.fn();
+const mockDescartarErrorMovimiento = jest.fn();
 const JORNADA_EN_CURSO = {
   id: "jor-1",
   nombre: "Jornada Vista Hermosa",
@@ -51,6 +52,8 @@ const mockEstadoKanban = {
   puedeReabrir: true,
   moverJornada: mockMoverJornada,
   moviendo: false,
+  errorMovimiento: null,
+  descartarErrorMovimiento: mockDescartarErrorMovimiento,
 };
 
 jest.mock("@ecopac/shared", () => ({
@@ -71,8 +74,10 @@ describe("KanbanJornadasScreen", () => {
     mockEstadoKanban.puedeEditar = true;
     mockEstadoKanban.puedeReabrir = true;
     mockEstadoKanban.moviendo = false;
+    mockEstadoKanban.errorMovimiento = null;
     useJornadasKanban.mockClear();
     mockMoverJornada.mockClear();
+    mockDescartarErrorMovimiento.mockClear();
     mockNavigate.mockClear();
   });
 
@@ -144,5 +149,29 @@ describe("KanbanJornadasScreen", () => {
     expect(screen.getByText("No se pudo cargar el tablero.")).toBeTruthy();
     fireEvent.press(screen.getByText("Reintentar"));
     expect(mockEstadoKanban.recargar).toHaveBeenCalled();
+  });
+
+  // Issue #925: si no se puede mover una jornada (su bodega esta en otra jornada en curso), el
+  // mensaje tiene que decir cual es esa jornada. Antes nada en pantalla lo mostraba.
+  it("si un movimiento falla, muestra el motivo y se puede descartar", () => {
+    mockEstadoKanban.errorMovimiento = {
+      jornadaId: "jor-1",
+      mensaje: "La bodega móvil ya está en la jornada «Jornada Norte», que sigue en curso.",
+    };
+    pantalla();
+
+    expect(
+      screen.getByText(
+        "La bodega móvil ya está en la jornada «Jornada Norte», que sigue en curso.",
+      ),
+    ).toBeTruthy();
+
+    fireEvent.press(screen.getByText("Descartar"));
+    expect(mockDescartarErrorMovimiento).toHaveBeenCalled();
+  });
+
+  it("sin error de movimiento, no muestra ningun aviso", () => {
+    pantalla();
+    expect(screen.queryByText("Descartar")).toBeNull();
   });
 });
