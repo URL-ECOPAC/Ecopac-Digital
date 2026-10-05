@@ -231,7 +231,8 @@ export default function ConsultaScreen() {
               ) : (
                 <TextField
                   key={campo.id}
-                  label={campo.validacion?.requerido ? `${campo.label} *` : campo.label}
+                  label={campo.label}
+                  requerido={campo.validacion?.requerido}
                   value={c.consulta[campo.id] ?? ""}
                   onChangeText={(texto) => c.setCampoDeConsulta(campo.id, texto)}
                   error={c.errores.consulta[campo.id]}

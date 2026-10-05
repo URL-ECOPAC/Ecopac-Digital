@@ -100,6 +100,7 @@ export default function RegistroSalidaScreen({ navigation }) {
 
       <Selector
         label="Medicamento"
+        requerido
         value={medicamentoId}
         options={medicamentos.map((medicamento) => ({
           value: medicamento.id,
@@ -113,6 +114,7 @@ export default function RegistroSalidaScreen({ navigation }) {
       {/* El valor es lote Y bodega: un lote en dos bodegas daba dos opciones con el mismo valor. */}
       <Selector
         label="Lote"
+        requerido
         value={claveLoteSeleccionado}
         options={lotesDisponibles.map((lote) => ({
           value: `${lote.loteId}|${lote.bodegaId ?? ""}`,
@@ -152,6 +154,7 @@ export default function RegistroSalidaScreen({ navigation }) {
 
       <NumberField
         label="Cantidad a retirar"
+        requerido
         value={cantidad}
         onChangeText={setCantidad}
         min={1}
