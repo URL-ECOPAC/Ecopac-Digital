@@ -249,7 +249,13 @@
     "#7a7a8a",
     "#e2e4e9"
   ],
-  "apps/mobile/src/screens/KanbanJornadasScreen.js": ["#2d2d2d", "#7a7a8a", "#f7941d", "#f7f8fa"],
+  "apps/mobile/src/screens/KanbanJornadasScreen.js": [
+    "#2d2d2d",
+    "#7a7a8a",
+    "#e91e8c",
+    "#f7941d",
+    "#f7f8fa"
+  ],
   "apps/mobile/src/screens/LoginScreen.js": [
     "#29abe2",
     "#2d2d2d",
