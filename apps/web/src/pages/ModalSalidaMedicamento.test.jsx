@@ -152,9 +152,10 @@ describe("ModalSalidaMedicamento", () => {
   });
 
   it("enviar el formulario dispara guardarSalida()", () => {
-    const { container } = pantalla();
+    pantalla();
 
-    fireEvent.submit(container.querySelector("form"));
+    // El Modal del catalogo se monta en un portal sobre document.body, no dentro del contenedor.
+    fireEvent.submit(document.querySelector("form"));
 
     expect(mockEstadoHook.guardarSalida).toHaveBeenCalled();
   });

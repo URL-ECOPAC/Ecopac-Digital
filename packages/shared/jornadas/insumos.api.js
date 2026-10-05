@@ -140,6 +140,57 @@ export async function listarBodegasDeLasJornadasDelProyecto(proyectoId) {
 }
 
 /**
+ * Una fila de fn_insumos_de_proyecto con la forma de listarContenidoDeBodegas() (aContenidoDeBodega),
+ * mas la jornada a la que le queda. `cantidadDisponible` es lo que le queda a la jornada, no lo que
+ * hay en la bodega. Pura y exportada para probarla sin Supabase.
+ *
+ * @param {object} fila
+ * @returns {object}
+ */
+export function aInsumoQueQuedaEnProyecto(fila) {
+  const tieneCosto = fila.costo_unitario !== null && fila.costo_unitario !== undefined;
+  const cantidad = Number(fila.queda ?? 0);
+  return {
+    jornadaId: fila.jornada_id,
+    jornada: fila.jornada ?? null,
+    loteId: fila.lote_id,
+    bodegaId: null,
+    bodega: fila.bodega ?? null,
+    numeroLote: fila.numero_lote ?? null,
+    fechaVencimiento: fila.fecha_vencimiento ?? null,
+    vencido: false,
+    articulo: fila.concentracion ? `${fila.articulo} (${fila.concentracion})` : fila.articulo,
+    cantidadDisponible: cantidad,
+    costoUnitario: tieneCosto ? Number(fila.costo_unitario) : null,
+    valor: tieneCosto ? Math.round(Number(fila.costo_unitario) * cantidad * 100) / 100 : null,
+  };
+}
+
+/**
+ * Lo que les queda a las jornadas de un proyecto en sus bodegas moviles, por jornada y lote
+ * (fn_insumos_de_proyecto, 00186). Antes el proyecto sumaba el contenido de toda bodega que alguna
+ * de sus jornadas hubiera usado, y una bodega compartida con otro proyecto contaba en los dos
+ * (issue #925).
+ *
+ * @param {string} proyectoId UUID del proyecto.
+ * @returns {Promise<{ insumos: object[], error: object|null }>}
+ */
+export async function listarInsumosQueQuedanEnElProyecto(proyectoId) {
+  if (!proyectoId) return { insumos: [], error: null };
+
+  try {
+    const { data, error } = await obtenerSupabase().rpc("fn_insumos_de_proyecto", {
+      p_proyecto_id: proyectoId,
+    });
+
+    if (error) return { insumos: [], error: normalizarError(error) };
+    return { insumos: (data ?? []).map(aInsumoQueQuedaEnProyecto), error: null };
+  } catch (error) {
+    return { insumos: [], error: normalizarError(error) };
+  }
+}
+
+/**
  * Agrega un insumo previsto a una jornada. Un articulo figura una sola vez por jornada: repetirlo
  * llega como violacion de unicidad ya normalizada.
  *

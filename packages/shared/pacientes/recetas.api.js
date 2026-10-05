@@ -305,6 +305,8 @@ export async function obtenerRecetas(pacienteId, { soloEmitidas = false } = {}) 
  * SELECT sobre recetas en absoluto: para ese rol la funcion devuelve `cantidad: null` sin llamar
  * a la base, nunca un cero inventado.
  *
+ * Solo cuenta las recetas emitidas: una anulada no se entrego (issue #925).
+ *
  * @param {string} jornadaId UUID de la jornada.
  * @param {object} [opciones]
  * @param {string} [opciones.rol] Rol de quien consulta, para el chequeo previo.
@@ -318,7 +320,9 @@ export async function contarRecetasDeJornada(jornadaId, { rol } = {}) {
     const { count, error } = await obtenerSupabase()
       .from("recetas")
       .select("id, consultas!inner(jornada_id)", { count: "exact", head: true })
-      .eq("consultas.jornada_id", jornadaId);
+      .eq("consultas.jornada_id", jornadaId)
+      // Una receta anulada no se entrego (4A, issue #925): contarla inflaba el cierre.
+      .eq("estado", ESTADOS_RECETA.EMITIDA);
 
     if (error) return { cantidad: null, error: normalizarError(error) };
     return { cantidad: count ?? 0, error: null };

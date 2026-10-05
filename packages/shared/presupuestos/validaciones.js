@@ -74,33 +74,41 @@ export function validarOrigenDePresupuesto(
  *   comprometido?: number }|null} [jornada] La jornada del gasto: su fecha, su estado, su
  *   presupuesto y lo que ya tiene comprometido sin contar este gasto.
  * @param {Date} [hoy] Entra por parametro para poder probarlo sin depender del reloj.
- * @returns {{ valido: boolean, errores: string[], esExcedente: boolean,
- *   mensajeExcedente: string|null }}
+ * @returns {{ valido: boolean, errores: string[], erroresPorCampo: Record<string, string>,
+ *   esExcedente: boolean, mensajeExcedente: string|null }}
  */
 export function validarGasto(gasto = {}, jornada = null, hoy = new Date()) {
   const errores = [];
+  // El mismo mensaje, indexado por el campo al que corresponde, para que el formulario lo dibuje
+  // bajo ese campo y no solo en la lista de arriba (issue #925). `errores` se queda como lista:
+  // la usan otras pantallas y pruebas.
+  const erroresPorCampo = {};
+  const anotar = (campo, mensaje) => {
+    errores.push(mensaje);
+    if (campo && !erroresPorCampo[campo]) erroresPorCampo[campo] = mensaje;
+  };
   let esExcedente = false;
   let mensajeExcedente = null;
 
   // 1. Concepto obligatorio (columna NOT NULL).
   if (estaVacio(gasto.concepto)) {
-    errores.push("El concepto del gasto es obligatorio.");
+    anotar("concepto", "El concepto del gasto es obligatorio.");
   }
 
   // 2. Categoria obligatoria. Que exista en el catalogo lo decide la llave foranea (00158).
   if (estaVacio(gasto.categoria)) {
-    errores.push("La categoría de gasto es obligatoria.");
+    anotar("categoria", "La categoría de gasto es obligatoria.");
   }
 
   // 2a. Jornada obligatoria: gastos.jornada_id es NOT NULL (00025) y sin ella no hay presupuesto
   //     contra el que comparar.
   if (estaVacio(gasto.jornada_id)) {
-    errores.push("La jornada del gasto es obligatoria.");
+    anotar("jornada_id", "La jornada del gasto es obligatoria.");
   }
 
   // 2b. Una jornada que ya cerro no admite gastos nuevos (00159).
   if (jornada?.estado === ESTADOS_JORNADA.FINALIZADA) {
-    errores.push("La jornada ya cerró: no admite gastos nuevos.");
+    anotar("jornada_id", "La jornada ya cerró: no admite gastos nuevos.");
   }
 
   // 3. Monto mayor que cero. Lo mismo exige CHECK (monto > 0) en la tabla; se adelanta aqui para
@@ -108,18 +116,18 @@ export function validarGasto(gasto = {}, jornada = null, hoy = new Date()) {
   const monto = Number(gasto.monto);
   const montoEsNumero = !estaVacio(gasto.monto) && !Number.isNaN(monto);
   if (!montoEsNumero || monto <= 0) {
-    errores.push("El monto del gasto debe ser mayor que cero.");
+    anotar("monto", "El monto del gasto debe ser mayor que cero.");
   }
 
   // 4. Fecha: hasta el dia de la jornada, o hasta hoy si la jornada ya paso.
   if (estaVacio(gasto.fecha)) {
-    errores.push("La fecha del gasto es obligatoria.");
+    anotar("fecha", "La fecha del gasto es obligatoria.");
   } else {
     // aFechaLocal() y no new Date(): la columna es DATE, llega como "AAAA-MM-DD", y new Date()
     // la lee como medianoche UTC -en Guatemala, las 18:00 del dia anterior- (issue #840).
     const fecha = aFechaLocal(gasto.fecha);
     if (fecha === null) {
-      errores.push("La fecha proporcionada no es valida.");
+      anotar("fecha", "La fecha proporcionada no es válida.");
     } else {
       // Fin del dia de hoy: un gasto registrado hoy no puede contar como futuro por la hora. No
       // se muta `hoy` directo -aFechaLocal() devuelve la misma referencia si ya es un Date- para
@@ -137,7 +145,8 @@ export function validarGasto(gasto = {}, jornada = null, hoy = new Date()) {
       const diaDeJornada = jornada?.fecha ? aFechaLocal(jornada.fecha) : null;
       const limite = diaDeJornada && diaDeJornada > finDeHoy ? diaDeJornada : finDeHoy;
       if (fecha > limite) {
-        errores.push(
+        anotar(
+          "fecha",
           diaDeJornada
             ? `La fecha de un gasto llega hasta el día de su jornada (${formatearFechaCorta(jornada.fecha)}) o hasta hoy si ya pasó.`
             : "La fecha de un gasto no puede ser posterior a hoy.",
@@ -157,13 +166,14 @@ export function validarGasto(gasto = {}, jornada = null, hoy = new Date()) {
         `Este gasto pasa el presupuesto de la jornada por ` +
         `${formatearMoneda(comprometido + monto - asignado)}: le quedan ` +
         `${formatearMoneda(disponible)} contando los gastos pendientes de aprobar.`;
-      errores.push("El gasto pasa el presupuesto disponible de la jornada.");
+      anotar("monto", "El gasto pasa el presupuesto disponible de la jornada.");
     }
   }
 
   return {
     valido: errores.length === 0,
     errores,
+    erroresPorCampo,
     esExcedente,
     mensajeExcedente,
   };

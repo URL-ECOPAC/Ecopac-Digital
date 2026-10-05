@@ -248,10 +248,17 @@ export default function RegistroIngresoScreen() {
     <ScreenContainer>
       <PageHeader title="Registrar ingreso" subtitle="Ingreso rápido de medicamentos en campo" />
 
-      <Selector label="Origen" value={origen} options={OPCIONES_ORIGEN_LOTE} onSelect={setOrigen} />
+      <Selector
+        label="Origen"
+        requerido
+        value={origen}
+        options={OPCIONES_ORIGEN_LOTE}
+        onSelect={setOrigen}
+      />
 
       <Selector
         label={origen === "donacion" ? "Donante" : "Proveedor"}
+        requerido
         value={proveedorId || null}
         options={aOpciones(catalogos.proveedores)}
         onSelect={setProveedorId}
@@ -259,7 +266,8 @@ export default function RegistroIngresoScreen() {
       />
 
       <TextField
-        label="No. de comprobante (opcional)"
+        label="No. de comprobante"
+        requerido={false}
         value={numeroComprobante}
         onChangeText={setNumeroComprobante}
       />
@@ -267,6 +275,7 @@ export default function RegistroIngresoScreen() {
       <View style={styles.filaMedicamento}>
         <Selector
           label="Medicamento"
+          requerido
           value={itemActual.medicamento_id || null}
           options={aOpciones(catalogos.medicamentos, {
             label: "nombre",
@@ -286,13 +295,15 @@ export default function RegistroIngresoScreen() {
 
       <TextField
         label="Número de lote"
+        requerido
         value={itemActual.numero_lote}
         onChangeText={(texto) => setItemActual({ ...itemActual, numero_lote: texto })}
       />
 
       {/* Solo un insumo puede ir sin vencimiento (00171). */}
       <DateField
-        label={vencimientoObligatorio ? "Fecha de vencimiento" : "Fecha de vencimiento (opcional)"}
+        label="Fecha de vencimiento"
+        requerido={vencimientoObligatorio}
         value={itemActual.fecha_vencimiento || null}
         onChange={(valor) => setItemActual({ ...itemActual, fecha_vencimiento: valor ?? "" })}
         minDate={ANIO_MINIMO_VENCIMIENTO}
@@ -300,13 +311,15 @@ export default function RegistroIngresoScreen() {
 
       <NumberField
         label="Cantidad"
+        requerido
         value={itemActual.cantidad === "" ? null : Number(itemActual.cantidad)}
         onChange={(valor) => setItemActual({ ...itemActual, cantidad: valor ?? "" })}
         min={1}
       />
 
       <NumberField
-        label="Costo unitario (Q, opcional)"
+        label="Costo unitario (Q)"
+        requerido={false}
         value={itemActual.costo_unitario === "" ? null : Number(itemActual.costo_unitario)}
         onChange={(valor) => setItemActual({ ...itemActual, costo_unitario: valor ?? "" })}
         min={0}
@@ -314,6 +327,7 @@ export default function RegistroIngresoScreen() {
 
       <Selector
         label="Bodega"
+        requerido
         value={itemActual.bodega_id || null}
         options={aOpciones(catalogos.bodegas)}
         onSelect={(valor) => setItemActual({ ...itemActual, bodega_id: valor })}
@@ -355,11 +369,13 @@ export default function RegistroIngresoScreen() {
         <ScrollView keyboardShouldPersistTaps="handled">
           <TextField
             label="Nombre"
+            requerido
             value={formMedicamento.nombre}
             onChangeText={(texto) => setFormMedicamento({ ...formMedicamento, nombre: texto })}
           />
           <TextField
             label="Concentración"
+            requerido
             value={formMedicamento.concentracion}
             onChangeText={(texto) =>
               setFormMedicamento({ ...formMedicamento, concentracion: texto })
@@ -367,17 +383,20 @@ export default function RegistroIngresoScreen() {
           />
           <Selector
             label="Presentación"
+            requerido
             value={formMedicamento.presentacionId || null}
             options={aOpciones(presentaciones)}
             onSelect={(valor) => setFormMedicamento({ ...formMedicamento, presentacionId: valor })}
           />
           <TextField
             label="Marca"
+            requerido
             value={formMedicamento.marca}
             onChangeText={(texto) => setFormMedicamento({ ...formMedicamento, marca: texto })}
           />
           <Selector
             label="Principio activo"
+            requerido
             value={formMedicamento.principioActivoId || null}
             options={aOpciones(principiosActivos)}
             onSelect={(valor) =>

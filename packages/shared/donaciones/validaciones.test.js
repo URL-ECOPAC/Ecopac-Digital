@@ -78,7 +78,7 @@ describe("validarDonacion", () => {
       detalles: [{ descripcion: "Aporte mensual", monto: 100 }],
     });
 
-    expect(errores.fecha).toBe("La fecha de la donacion no puede ser futura.");
+    expect(errores.fecha).toBe("La fecha de la donación no puede ser futura.");
   });
 
   it("rechaza una fecha de manana dada como AAAA-MM-DD (issue #694: antes pasaba por el desfase de zona horaria)", () => {
@@ -89,7 +89,7 @@ describe("validarDonacion", () => {
       detalles: [{ descripcion: "Aporte mensual", monto: 100 }],
     });
 
-    expect(errores.fecha).toBe("La fecha de la donacion no puede ser futura.");
+    expect(errores.fecha).toBe("La fecha de la donación no puede ser futura.");
   });
 
   it("acepta una donacion registrada hoy", () => {
@@ -111,7 +111,32 @@ describe("validarDonacion", () => {
       detalles: [{ descripcion: "Aporte mensual" }],
     });
 
-    expect(errores.monto).toBe("Una donacion en dinero exige un monto mayor a cero.");
+    expect(errores.monto).toBe("Una donación en dinero exige un monto mayor a cero.");
+  });
+
+  // Issue #925: el monto de cada renglon en dinero esta marcado como obligatorio, y solo se pedia
+  // que la suma fuera mayor a cero.
+  it("en dinero, cada renglon necesita su propio monto", () => {
+    const errores = validarDonacion({
+      donanteId: "uuid-1",
+      tipo: TIPOS_DE_DONACION.DINERO,
+      fecha: hoy(),
+      detalles: [{ descripcion: "Aporte mensual", monto: 100 }, { descripcion: "Aporte extra" }],
+    });
+
+    expect(errores.monto).toBeUndefined();
+    expect(errores.detalles_1_monto).toBe("El renglón 2 necesita un monto mayor a cero.");
+  });
+
+  it("el error de la descripcion nombra el campo como lo ve la persona", () => {
+    const errores = validarDonacion({
+      donanteId: "uuid-1",
+      tipo: TIPOS_DE_DONACION.DINERO,
+      fecha: hoy(),
+      detalles: [{ monto: 100 }],
+    });
+
+    expect(errores.detalles_0_descripcion).toBe("El renglón 1 necesita el concepto.");
   });
 
   it("exige al menos un renglon de detalle", () => {
@@ -204,7 +229,7 @@ describe("validarDonacion", () => {
       detalles: [{ descripcion: "Camilla" }],
     });
 
-    expect(errores.tipo).toBe("El tipo de donacion seleccionado no es valido.");
+    expect(errores.tipo).toBe("El tipo de donación seleccionado no es válido.");
   });
 
   // Los casos de abajo son las reglas que la medicion de cobertura (issue #219) encontro sin
@@ -222,9 +247,9 @@ describe("validarDonacion", () => {
   it("distingue la fecha ilegible de la fecha ausente", () => {
     // Son dos mensajes distintos a proposito: "falta la fecha" y "esa fecha no se entiende" le
     // piden cosas distintas a quien llena el formulario.
-    expect(validarDonacion({ fecha: "" }).fecha).toBe("La fecha de la donacion es obligatoria.");
+    expect(validarDonacion({ fecha: "" }).fecha).toBe("La fecha de la donación es obligatoria.");
     expect(validarDonacion({ fecha: "31/02/2026" }).fecha).toBe(
-      "La fecha proporcionada no es valida.",
+      "La fecha proporcionada no es válida.",
     );
   });
 

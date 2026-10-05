@@ -17,6 +17,7 @@ const {
   jornadaUsaBodegaPrincipal,
   listarConsumoDeInsumosDeJornada,
   mensajeDeInventarioCargado,
+  motivoParaNoCargarBodega,
   resumirConsumoDeJornada,
   tieneInventarioCargado,
 } = await import("./bodega.api.js");
@@ -50,6 +51,9 @@ const FILA = {
   entregado: 35,
   devuelto: 15,
   en_bodega: 150,
+  // 00186: lo que espera aprobacion y lo que le queda a la jornada (200 - 35 - 15).
+  pendiente: 5,
+  queda: 150,
 };
 
 describe("aConsumoDeLote", () => {
@@ -65,11 +69,24 @@ describe("aConsumoDeLote", () => {
       entregado: 35,
       devuelto: 15,
       enBodega: 150,
+      pendiente: 5,
+      queda: 150,
+      // En la bodega hay 150, de los que 150 son de la jornada; los 5 pendientes ya cuentan
+      // como entregados: nada es de otra jornada.
+      deOtros: 0,
       valorCargado: 100,
       valorEntregado: 17.5,
       valorDevuelto: 7.5,
       valorEnBodega: 75,
+      valorQueda: 75,
     });
+  });
+
+  // Issue #925 (2A): "queda" es de la jornada; lo demas de la bodega es de otra.
+  it("separa lo que es de la jornada de lo que hay en la bodega", () => {
+    const fila = aConsumoDeLote({ ...FILA, en_bodega: 180, pendiente: 0, queda: 150 });
+    expect(fila.queda).toBe(150);
+    expect(fila.deOtros).toBe(30);
   });
 
   it("sin costo conocido, los valores quedan en null y no en cero", () => {
@@ -88,7 +105,10 @@ describe("resumirConsumoDeJornada", () => {
       valorEntregado: 17.5,
       valorDevuelto: 7.5,
       valorEnBodega: 75,
+      valorQueda: 75,
       unidadesEntregadas: 70,
+      unidadesPendientes: 10,
+      unidadesDeOtros: 0,
       lotesSinCosto: 1,
     });
   });
@@ -165,16 +185,41 @@ describe("bodega principal en la jornada (00181)", () => {
     expect(jornadaUsaBodegaPrincipal(null)).toBe(false);
   });
 
-  it("hay inventario cargado si algun lote se cargo y sigue en la bodega", () => {
-    expect(tieneInventarioCargado([{ cargado: 10, enBodega: 4 }])).toBe(true);
-    expect(tieneInventarioCargado([{ cargado: 10, enBodega: 0 }])).toBe(false);
+  it("hay inventario cargado si a la jornada le queda algo (00186)", () => {
+    expect(tieneInventarioCargado([{ cargado: 10, enBodega: 4, queda: 4 }])).toBe(true);
+    expect(tieneInventarioCargado([{ cargado: 10, enBodega: 0, queda: 0 }])).toBe(false);
     // Lo que la bodega trae de otra jornada no es de esta.
-    expect(tieneInventarioCargado([{ cargado: 0, enBodega: 30 }])).toBe(false);
+    expect(tieneInventarioCargado([{ cargado: 0, enBodega: 30, queda: 0 }])).toBe(false);
+    // Despues del traspaso a la jornada siguiente, lo que sigue en la bodega ya no es suyo.
+    expect(tieneInventarioCargado([{ cargado: 10, enBodega: 10, queda: 0 }])).toBe(false);
     expect(tieneInventarioCargado()).toBe(false);
   });
 
   it("el mensaje nombra la bodega cuando se conoce", () => {
     expect(mensajeDeInventarioCargado("Botiquin A")).toMatch(/«Botiquin A»/);
     expect(mensajeDeInventarioCargado()).toMatch(/^La bodega todavía tiene inventario cargado/);
+  });
+});
+
+// Issue #925: "Cargar a la bodega" seguia habilitado con el proyecto cancelado.
+describe("motivoParaNoCargarBodega", () => {
+  it("una jornada finalizada ya no se carga", () => {
+    expect(motivoParaNoCargarBodega({ estado: "finalizada" })).toMatch(/finalizó/);
+  });
+
+  it("un proyecto cancelado o finalizado no se modifica", () => {
+    expect(
+      motivoParaNoCargarBodega({ estado: "en curso", proyecto: { estado: "cancelado" } }),
+    ).toMatch(/cancelado/);
+    expect(
+      motivoParaNoCargarBodega({ estado: "planificada", proyecto: { estado: "finalizado" } }),
+    ).toMatch(/finalizado/);
+  });
+
+  it("en cualquier otro caso se puede cargar", () => {
+    expect(
+      motivoParaNoCargarBodega({ estado: "en curso", proyecto: { estado: "en curso" } }),
+    ).toBeNull();
+    expect(motivoParaNoCargarBodega({ estado: "planificada", proyecto: null })).toBeNull();
   });
 });

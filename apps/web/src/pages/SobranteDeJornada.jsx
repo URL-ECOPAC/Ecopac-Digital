@@ -15,6 +15,7 @@ export default function SobranteDeJornada({ jornada, rol, alLiquidar }) {
     liquidados,
     totalSobrante,
     hayGastosPendientes,
+    mensajeSinSobrante,
     jornadasDestino,
     opcionesDeDestino,
     decisiones,
@@ -49,11 +50,7 @@ export default function SobranteDeJornada({ jornada, rol, alLiquidar }) {
           )}
 
           {filas.length === 0 ? (
-            <p className="text-body-secondary small mb-0">
-              {liquidados.length > 0
-                ? "No queda sobrante por liquidar."
-                : "La jornada gastó todo su presupuesto: no hay sobrante."}
-            </p>
+            <p className="text-body-secondary small mb-0">{mensajeSinSobrante}</p>
           ) : (
             <>
               <p className="mb-0">

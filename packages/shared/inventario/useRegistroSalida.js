@@ -37,6 +37,20 @@ export function claveDeLoteDeSalida(lote) {
 }
 
 /**
+ * La bodega destino de un traslado, o "" si ya no vale: no puede ser la bodega del lote elegido.
+ * Al cambiar de lote, esa opcion desaparecia del selector pero el valor seguia guardado, el boton
+ * quedaba habilitado y el servidor rechazaba el traslado (issue #925). Pura y exportada para
+ * probarla sin montar el hook.
+ *
+ * @param {string} bodegaDestinoId
+ * @param {{ bodegaId?: string|null }|null} loteSeleccionado
+ * @returns {string}
+ */
+export function bodegaDestinoValidaParaLote(bodegaDestinoId, loteSeleccionado) {
+  return bodegaDestinoId && bodegaDestinoId !== loteSeleccionado?.bodegaId ? bodegaDestinoId : "";
+}
+
+/**
  * Que impide registrar la salida, en el orden en que la persona llena el formulario. Pura y
  * exportada para probarla sin montar el hook (issue #911).
  *
@@ -193,6 +207,10 @@ export function useRegistroSalida({ usuarioId, rol, onExito } = {}) {
     if (lote) seleccionarLote(lote);
   };
 
+  // Se deriva en vez de limpiarlo en cada camino que cambia el lote (elegirlo a mano, o el FEFO al
+  // cambiar de medicamento).
+  const bodegaDestinoValida = bodegaDestinoValidaParaLote(bodegaDestinoId, loteSeleccionado);
+
   const { sinExistencia, avisoCantidad, puedeGuardar } = estadoDeLaSalida({
     motivo,
     medicamentoId,
@@ -200,7 +218,7 @@ export function useRegistroSalida({ usuarioId, rol, onExito } = {}) {
     cantidad,
     lotesDisponibles,
     cargando,
-    bodegaDestinoId,
+    bodegaDestinoId: bodegaDestinoValida,
   });
 
   // Cualquier bodega menos la del lote elegido.
@@ -236,7 +254,7 @@ export function useRegistroSalida({ usuarioId, rol, onExito } = {}) {
       return;
     }
 
-    if (esTraslado && !bodegaDestinoId) {
+    if (esTraslado && !bodegaDestinoValida) {
       setError("Elige la bodega a la que se traslada.");
       return;
     }
@@ -247,7 +265,7 @@ export function useRegistroSalida({ usuarioId, rol, onExito } = {}) {
       const { ingresoId, error: falloTraslado } = await trasladarEntreBodegas({
         loteId: loteSeleccionado.loteId,
         bodegaOrigenId: loteSeleccionado.bodegaId,
-        bodegaDestinoId,
+        bodegaDestinoId: bodegaDestinoValida,
         cantidad,
       });
       setCargando(false);
@@ -289,7 +307,7 @@ export function useRegistroSalida({ usuarioId, rol, onExito } = {}) {
     motivo,
     setMotivo,
     bodegasDestino,
-    bodegaDestinoId,
+    bodegaDestinoId: bodegaDestinoValida,
     setBodegaDestinoId: (valor) => setBodegaDestinoId(valor ?? ""),
     medicamentoId,
     setMedicamentoId,

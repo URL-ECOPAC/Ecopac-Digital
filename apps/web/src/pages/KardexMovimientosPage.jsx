@@ -312,10 +312,7 @@ export default function KardexMovimientosPage({
                   <td>
                     <EtiquetaTipo tipo={mov.tipo} />
                   </td>
-                  <td className="text-end fw-semibold">
-                    {mov.tipo === TIPO_MOVIMIENTO.INGRESO ? "+" : ""}
-                    {mov.cantidad}
-                  </td>
+                  <td className="text-end fw-semibold">{mov.cantidadConSigno}</td>
                   <td>{etiquetaDeMotivoDeMovimiento(mov.motivo)}</td>
                   <td>{mov.bodega_nombre || "—"}</td>
                   <td>{mov.registrado_por_nombre || "—"}</td>
@@ -390,10 +387,7 @@ export default function KardexMovimientosPage({
                 <tr key={mov.id}>
                   <td>{formatoFecha(mov.created_at)}</td>
                   <td>{ETIQUETAS_TIPO[mov.tipo] ?? mov.tipo}</td>
-                  <td>
-                    {mov.tipo === TIPO_MOVIMIENTO.INGRESO ? "+" : ""}
-                    {mov.cantidad}
-                  </td>
+                  <td>{mov.cantidadConSigno}</td>
                   <td>{etiquetaDeMotivoDeMovimiento(mov.motivo)}</td>
                   <td>{mov.bodega_nombre || "—"}</td>
                   <td>{mov.registrado_por_nombre || "—"}</td>

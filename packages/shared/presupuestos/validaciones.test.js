@@ -347,3 +347,30 @@ describe("validarGasto", () => {
     });
   });
 });
+
+// Issue #925: cada error tambien va indexado por su campo, para dibujarlo bajo el campo.
+describe("validarGasto: errores por campo", () => {
+  it("indexa cada mensaje por el campo al que corresponde", () => {
+    const { errores, erroresPorCampo } = validarGasto({});
+    expect(erroresPorCampo).toMatchObject({
+      concepto: "El concepto del gasto es obligatorio.",
+      categoria: "La categoría de gasto es obligatoria.",
+      jornada_id: "La jornada del gasto es obligatoria.",
+      monto: "El monto del gasto debe ser mayor que cero.",
+      fecha: "La fecha del gasto es obligatoria.",
+    });
+    // La lista se mantiene: la usan otras pantallas.
+    expect(errores).toContain("El concepto del gasto es obligatorio.");
+  });
+
+  it("un gasto valido no tiene errores por campo", () => {
+    const { erroresPorCampo } = validarGasto({
+      concepto: "Gasolina",
+      categoria: "logistica",
+      jornada_id: "j-1",
+      monto: 50,
+      fecha: aCadenaFechaLocal(new Date()),
+    });
+    expect(erroresPorCampo).toEqual({});
+  });
+});

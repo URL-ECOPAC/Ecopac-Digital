@@ -12,12 +12,18 @@ import PrimaryButton from "../components/PrimaryButton";
 import SecondaryButton from "../components/SecondaryButton";
 import Selector from "../components/Selector";
 
-/** "Lote L-1 · Bodega Principal · vence 31/01/2027 · 30 disponibles" */
+/**
+ * "Lote L-1 · Bodega Principal · vence 31/01/2027 · 30 disponibles". Si la bodega esta en otra
+ * jornada en curso, lo dice: "Bodega Movil (en curso en Jornada X)".
+ */
 function etiquetaDeLote(lote) {
   const vence = lote.fechaVencimiento
     ? `vence ${formatearFechaCorta(lote.fechaVencimiento)}`
     : "no vence";
-  return `Lote ${lote.numeroLote} · ${lote.bodega} · ${vence} · ${lote.cantidadDisponible} disponibles`;
+  const bodega = lote.jornadaDeOrigen
+    ? `${lote.bodega} (en curso en ${lote.jornadaDeOrigen.nombre})`
+    : lote.bodega;
+  return `Lote ${lote.numeroLote} · ${bodega} · ${vence} · ${lote.cantidadDisponible} disponibles`;
 }
 
 /**
@@ -36,7 +42,9 @@ export default function ModalCargaABodega({ visible, jornadaId, bodega, rol, onC
     cantidad,
     setCantidad,
     sinExistencia,
+    mensajeSinExistencia,
     avisoCantidad,
+    avisoOrigen,
     puedeGuardar,
     cargando,
     guardando,
@@ -91,12 +99,14 @@ export default function ModalCargaABodega({ visible, jornadaId, bodega, rol, onC
           onSelect={(valor) => seleccionarLotePorClave(valor ?? "")}
           placeholder={cargando ? "Cargando..." : "Seleccionar"}
           disabled={guardando || !medicamentoId || lotesDeOrigen.length === 0}
-          error={
-            sinExistencia
-              ? "No hay existencia de este artículo en otra bodega: regístrala primero en Inventario."
-              : undefined
-          }
+          error={sinExistencia ? mensajeSinExistencia : undefined}
         />
+
+        {avisoOrigen && (
+          <div className="alert alert-warning py-2 px-3 small" role="status">
+            {avisoOrigen}
+          </div>
+        )}
 
         <NumberField
           label="Cantidad"

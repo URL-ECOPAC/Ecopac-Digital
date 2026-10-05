@@ -35,6 +35,7 @@ function estado(cambios = {}) {
     liquidados: [],
     totalSobrante: 100,
     hayGastosPendientes: false,
+    mensajeSinSobrante: "La jornada gastó todo su presupuesto: no hay sobrante.",
     jornadasDestino: [{ value: "j2", label: "Jornada B · 10/10/2026" }],
     opcionesDeDestino: () => [
       { value: "devolver", label: "Devolver a la donación" },

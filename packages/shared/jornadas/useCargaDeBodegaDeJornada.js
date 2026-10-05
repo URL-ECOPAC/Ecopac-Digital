@@ -1,10 +1,48 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { consultarLotesDisponibles } from "../inventario/existencias.api.js";
+import { ESTADOS_JORNADA } from "../enums.js";
+import {
+  consultarLotesDisponibles,
+  tieneExistenciaVencida,
+} from "../inventario/existencias.api.js";
 import { listarMedicamentos } from "../inventario/medicamentos.api.js";
 import { claveDeLoteDeSalida } from "../inventario/useRegistroSalida.js";
+import { listarJornadas } from "./api.js";
 import { cargarInsumoABodegaDeJornada } from "./bodega.api.js";
 import { puedeCargarBodegaDeJornada } from "./permisos.js";
+
+/**
+ * Por que no hay lotes que cargar de un articulo (issue #925): no es lo mismo que no haya nada a
+ * que lo que hay este vencido, y el mensaje de antes ("registrala primero en Inventario") mandaba a
+ * registrar de nuevo algo que ya estaba.
+ *
+ * @param {{ vencida?: boolean }} [motivo]
+ * @returns {string}
+ */
+export function mensajeDeCargaSinExistencia({ vencida = false } = {}) {
+  return vencida
+    ? "Lo que hay de este artículo está vencido: se da de baja desde su alerta, no se carga."
+    : "No hay existencia de este artículo en otra bodega: regístrala primero en Inventario.";
+}
+
+/**
+ * Los lotes de origen con la jornada en curso que tiene su bodega, si la hay (3B, 00186): cargar
+ * desde ahi queda como devuelto en esa jornada y como cargado en esta. Pura y exportada para
+ * probarla sin montar el hook.
+ *
+ * @param {object[]} lotes Filas de consultarLotesDisponibles().
+ * @param {Record<string, { id: string, nombre: string }>} jornadasEnCursoPorBodega
+ * @returns {object[]} Las mismas filas con `jornadaDeOrigen` (`{ id, nombre }` o null).
+ */
+export function conJornadaDeOrigen(lotes = [], jornadasEnCursoPorBodega = {}) {
+  return lotes.map((lote) => {
+    const jornada = jornadasEnCursoPorBodega[lote.bodegaId];
+    return {
+      ...lote,
+      jornadaDeOrigen: jornada ? { id: jornada.id, nombre: jornada.nombre } : null,
+    };
+  });
+}
 
 /**
  * Que impide cargar, en el orden en que se llena el formulario. Pura y exportada para probarla sin
@@ -49,9 +87,12 @@ export function estadoDeLaCarga({
  * @param {{ jornadaId?: string, bodegaId?: string|null, rol?: string, activo?: boolean,
  *   onCargado?: Function }} opciones `activo` en false no consulta nada: el formulario se carga al
  *   abrirse.
+ * Un lote que esta en la bodega movil de otra jornada en curso se puede cargar (3B, 00186): queda
+ * registrado como devuelto alla y cargado aqui, y `avisoOrigen` lo dice antes de guardar.
+ *
  * @returns {object} Con: puedeCargar, articulos, medicamentoId, setMedicamentoId, lotesDeOrigen,
- *   claveLote, seleccionarLotePorClave, cantidad, setCantidad, sinExistencia, avisoCantidad,
- *   puedeGuardar, cargando, guardando, error, guardar.
+ *   claveLote, seleccionarLotePorClave, cantidad, setCantidad, sinExistencia, mensajeSinExistencia,
+ *   avisoCantidad, avisoOrigen, puedeGuardar, cargando, guardando, error, guardar.
  */
 export function useCargaDeBodegaDeJornada({
   jornadaId,
@@ -67,6 +108,8 @@ export function useCargaDeBodegaDeJornada({
   const [lotesDeOrigen, setLotesDeOrigen] = useState([]);
   const [claveLote, setClaveLote] = useState("");
   const [cantidad, setCantidad] = useState("");
+  const [existenciaVencida, setExistenciaVencida] = useState(false);
+  const [jornadasEnCursoPorBodega, setJornadasEnCursoPorBodega] = useState({});
   const [cargando, setCargando] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState(null);
@@ -92,18 +135,45 @@ export function useCargaDeBodegaDeJornada({
     };
   }, [activo, puedeCargar]);
 
+  // Que bodega movil esta en que jornada en curso, para nombrarla junto al lote (3B).
+  useEffect(() => {
+    if (!activo || !puedeCargar) return undefined;
+    let vigente = true;
+    listarJornadas({ estado: ESTADOS_JORNADA.EN_CURSO }).then(({ jornadas }) => {
+      if (!vigente) return;
+      const porBodega = {};
+      for (const jornada of jornadas ?? []) {
+        if (jornada.botiquinBodegaId && jornada.id !== jornadaId) {
+          porBodega[jornada.botiquinBodegaId] = jornada;
+        }
+      }
+      setJornadasEnCursoPorBodega(porBodega);
+    });
+    return () => {
+      vigente = false;
+    };
+  }, [activo, puedeCargar, jornadaId]);
+
   // Los lotes del articulo con existencia en otra bodega, el que vence antes primero (FEFO).
   useEffect(() => {
     if (!activo || !medicamentoId) {
       setLotesDeOrigen([]);
       setClaveLote("");
+      setExistenciaVencida(false);
       return undefined;
     }
     let vigente = true;
     setCargando(true);
-    consultarLotesDisponibles(medicamentoId).then(({ lotes, error: fallo }) => {
+    consultarLotesDisponibles(medicamentoId).then(async ({ lotes, error: fallo }) => {
       if (!vigente) return;
       const deOtraBodega = (lotes ?? []).filter((lote) => lote.bodegaId !== bodegaId);
+      // Sin lotes que cargar, se averigua si es porque lo que hay esta vencido.
+      const { vencida } =
+        deOtraBodega.length === 0 && !fallo
+          ? await tieneExistenciaVencida(medicamentoId)
+          : { vencida: false };
+      if (!vigente) return;
+      setExistenciaVencida(vencida);
       setLotesDeOrigen(deOtraBodega);
       setClaveLote(deOtraBodega[0] ? claveDeLoteDeSalida(deOtraBodega[0]) : "");
       setError(fallo);
@@ -114,10 +184,20 @@ export function useCargaDeBodegaDeJornada({
     };
   }, [activo, medicamentoId, bodegaId]);
 
-  const lote = useMemo(
-    () => lotesDeOrigen.find((fila) => claveDeLoteDeSalida(fila) === claveLote) ?? null,
-    [lotesDeOrigen, claveLote],
+  const lotesConJornada = useMemo(
+    () => conJornadaDeOrigen(lotesDeOrigen, jornadasEnCursoPorBodega),
+    [lotesDeOrigen, jornadasEnCursoPorBodega],
   );
+
+  const lote = useMemo(
+    () => lotesConJornada.find((fila) => claveDeLoteDeSalida(fila) === claveLote) ?? null,
+    [lotesConJornada, claveLote],
+  );
+
+  const avisoOrigen = lote?.jornadaDeOrigen
+    ? `Este lote está en la bodega de la jornada ${lote.jornadaDeOrigen.nombre}, que sigue en ` +
+      "curso: se registra como devuelto en esa jornada y como cargado en esta."
+    : null;
 
   const estado = estadoDeLaCarga({ medicamentoId, lote, cantidad, lotesDeOrigen, cargando });
 
@@ -155,12 +235,14 @@ export function useCargaDeBodegaDeJornada({
     articulos,
     medicamentoId,
     setMedicamentoId,
-    lotesDeOrigen,
+    lotesDeOrigen: lotesConJornada,
     claveLote,
     seleccionarLotePorClave: setClaveLote,
     cantidad,
     setCantidad,
     ...estado,
+    mensajeSinExistencia: mensajeDeCargaSinExistencia({ vencida: existenciaVencida }),
+    avisoOrigen,
     cargando,
     guardando,
     error,

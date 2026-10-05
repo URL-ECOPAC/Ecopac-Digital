@@ -3,7 +3,12 @@
 
 import { describe, expect, it } from "vitest";
 
-import { claveDeLoteDeSalida, estadoDeLaSalida, motivosDeSalida } from "./useRegistroSalida.js";
+import {
+  bodegaDestinoValidaParaLote,
+  claveDeLoteDeSalida,
+  estadoDeLaSalida,
+  motivosDeSalida,
+} from "./useRegistroSalida.js";
 
 const LOTE = { loteId: "l-1", bodegaId: "b-1", cantidadDisponible: 40 };
 
@@ -79,5 +84,34 @@ describe("traslado entre bodegas", () => {
   it("solo la administradora ve el motivo traslado", () => {
     expect(motivosDeSalida("administrador").map((opcion) => opcion.value)).toContain("traslado");
     expect(motivosDeSalida("medico").map((opcion) => opcion.value)).not.toContain("traslado");
+  });
+});
+
+// Issue #925: elegir la destino y despues un lote que ya esta en ella dejaba el valor guardado, el
+// boton habilitado y un rechazo generico del servidor.
+describe("bodegaDestinoValidaParaLote", () => {
+  it("conserva la destino si es otra bodega", () => {
+    expect(bodegaDestinoValidaParaLote("b-2", LOTE)).toBe("b-2");
+  });
+
+  it("la descarta si es la bodega del lote elegido", () => {
+    expect(bodegaDestinoValidaParaLote("b-1", LOTE)).toBe("");
+  });
+
+  it("sin destino o sin lote no inventa nada", () => {
+    expect(bodegaDestinoValidaParaLote("", LOTE)).toBe("");
+    expect(bodegaDestinoValidaParaLote("b-2", null)).toBe("b-2");
+  });
+
+  it("con la destino descartada, el traslado no se puede guardar", () => {
+    const estado = estadoDeLaSalida({
+      motivo: "traslado",
+      medicamentoId: "m-1",
+      loteSeleccionado: LOTE,
+      cantidad: "5",
+      lotesDisponibles: [LOTE],
+      bodegaDestinoId: bodegaDestinoValidaParaLote("b-1", LOTE),
+    });
+    expect(estado.puedeGuardar).toBe(false);
   });
 });

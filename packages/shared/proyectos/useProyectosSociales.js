@@ -22,15 +22,13 @@ import { listarJornadas } from "../jornadas/api.js";
 import {
   listarBodegasDeLasJornadasDelProyecto,
   listarInsumosDeLasJornadasDelProyecto,
+  listarInsumosQueQuedanEnElProyecto,
 } from "../jornadas/insumos.api.js";
 import {
   listarConsumoDeInsumosDeJornada,
   resumirConsumoDeJornada,
 } from "../jornadas/bodega.api.js";
-import {
-  listarContenidoDeBodegas,
-  valorizarContenidoDeBodega,
-} from "../inventario/existencias.api.js";
+import { valorizarContenidoDeBodega } from "../inventario/existencias.api.js";
 import { ESTADOS_DE_GASTO } from "../enums.js";
 import { resumirInsumosPrevistos } from "../jornadas/useInsumosDeJornada.js";
 import { listarGastos, obtenerPresupuestoProyecto } from "../presupuestos/api.js";
@@ -315,8 +313,8 @@ export function useProyectosSociales({ usuarioRol } = {}) {
   // jornada"), que se pueden pasar a una de sus jornadas. Planificacion con dinero: solo para quien
   // ve insumos y gastos (#864).
   //
-  // Ademas, lo que hay en la bodega de botiquin de cada jornada tambien es insumo del proyecto
-  // (issue #911): se suma aparte, lote por lote y con su bodega. De las jornadas que entregan de la
+  // Ademas, lo que le queda a cada jornada en su bodega de botiquin tambien es insumo del proyecto
+  // (issue #911; por jornada desde la 00186): se suma aparte, lote por lote, con jornada y bodega. De las jornadas que entregan de la
   // bodega principal (00181) solo cuenta lo entregado en ellas: la existencia de la principal es de
   // toda la organizacion.
   const cargarInsumos = useCallback(async () => {
@@ -334,8 +332,13 @@ export function useProyectosSociales({ usuarioRol } = {}) {
       listarInsumosDelProyecto(proyectoSeleccionadoId),
       listarBodegasDeLasJornadasDelProyecto(proyectoSeleccionadoId),
     ]);
+    // Lo que les queda a sus jornadas (00186), no el contenido de las bodegas: una bodega movil
+    // compartida con otro proyecto contaba en los dos (issue #925).
     const [enBodegas, ...consumos] = await Promise.all([
-      listarContenidoDeBodegas(deBodegas.bodegas.map((bodega) => bodega.bodegaId)),
+      listarInsumosQueQuedanEnElProyecto(proyectoSeleccionadoId).then(({ insumos, error }) => ({
+        contenido: insumos,
+        error,
+      })),
       ...deBodegas.jornadasConBodegaPrincipal.map((jornada) =>
         listarConsumoDeInsumosDeJornada(jornada.id),
       ),

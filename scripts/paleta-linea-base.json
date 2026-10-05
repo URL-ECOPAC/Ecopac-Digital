@@ -7,6 +7,7 @@
   "apps/mobile/src/components/BotonCerrarSesion.js": ["#2d2d2d", "#4d4d4d"],
   "apps/mobile/src/components/CampanaNotificaciones.js": ["#4d4d4d", "#f7941d", "#ffffff"],
   "apps/mobile/src/components/Card.js": ["#2d2d2d", "#7a7a8a", "#e2e4e9", "#ffffff"],
+  "apps/mobile/src/components/ContenidoDeBodega.js": ["#2d2d2d", "#7a7a8a", "#e2e4e9"],
   "apps/mobile/src/components/DataList.js": [
     "#2d2d2d",
     "#3db648",
@@ -175,6 +176,8 @@
     "#f7941d",
     "#ffffff"
   ],
+  "apps/mobile/src/screens/ConsumoDeJornada.js": ["#3db648", "#7a7a8a", "#e91e8c"],
+  "apps/mobile/src/screens/DetalleJornadaScreen.js": ["#2d2d2d", "#7a7a8a"],
   "apps/mobile/src/screens/DetalleLoteScreen.js": [
     "#2d2d2d",
     "#3db648",
@@ -223,6 +226,7 @@
     "#e2e4e9",
     "#ffffff"
   ],
+  "apps/mobile/src/screens/InsumosDeJornada.js": ["#2d2d2d", "#7a7a8a", "#e91e8c", "#ffffff"],
   "apps/mobile/src/screens/InventarioResumenAlertasScreen.js": [
     "#2d2d2d",
     "#7a7a8a",
@@ -245,7 +249,13 @@
     "#7a7a8a",
     "#e2e4e9"
   ],
-  "apps/mobile/src/screens/KanbanJornadasScreen.js": ["#2d2d2d", "#7a7a8a", "#f7f8fa"],
+  "apps/mobile/src/screens/KanbanJornadasScreen.js": [
+    "#2d2d2d",
+    "#7a7a8a",
+    "#e91e8c",
+    "#f7941d",
+    "#f7f8fa"
+  ],
   "apps/mobile/src/screens/LoginScreen.js": [
     "#29abe2",
     "#2d2d2d",
@@ -256,8 +266,10 @@
   ],
   "apps/mobile/src/screens/MisMovimientosScreen.js": ["#7a7a8a"],
   "apps/mobile/src/screens/ModalAjusteEntrega.js": ["#2d2d2d", "#7a7a8a", "#e91e8c"],
+  "apps/mobile/src/screens/ModalCargaABodega.js": ["#7a7a8a", "#e91e8c", "#f7941d"],
   "apps/mobile/src/screens/ModalCorreccionLote.js": ["#7a7a8a", "#e91e8c"],
   "apps/mobile/src/screens/ModalCorreccionMovimiento.js": ["#7a7a8a", "#e91e8c", "#f7941d"],
+  "apps/mobile/src/screens/ModalDevolucionDeBodega.js": ["#7a7a8a", "#e91e8c"],
   "apps/mobile/src/screens/ModalDiagnostico.js": ["#e91e8c"],
   "apps/mobile/src/screens/ModalEdicionPaciente.js": ["#2d2d2d", "#e91e8c"],
   "apps/mobile/src/screens/ModalPrincipioActivo.js": ["#2d2d2d", "#e91e8c", "#f7941d"],
@@ -429,14 +441,6 @@
   "apps/web/src/pages/ModalGeneracionReceta.jsx": ["#7a7a8a"],
   "apps/web/src/pages/ModalPermisosUsuario.jsx": ["#3db648"],
   "apps/web/src/pages/ModalRegistroIngreso.jsx": ["#2d2d2d"],
-  "apps/web/src/pages/ModalSalidaMedicamento.jsx": [
-    "#2d2d2d",
-    "#7a7a8a",
-    "#e2e4e9",
-    "#e91e8c",
-    "#f7f8fa",
-    "#ffffff"
-  ],
   "apps/web/src/pages/pacientes.css": [
     "#29abe2",
     "#2d2d2d",

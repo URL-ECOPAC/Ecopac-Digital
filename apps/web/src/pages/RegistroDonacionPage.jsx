@@ -21,6 +21,7 @@ import { ACCION_VOLVER_A_DONACIONES } from "./donacionesNavegacion";
 import ScreenContainer from "../components/ScreenContainer";
 import AltaDeMedicamentoEnLinea from "../components/AltaDeMedicamentoEnLinea";
 import CampoDeFormulario from "../components/CampoDeFormulario";
+import MarcaDeRequerido from "../components/MarcaDeRequerido";
 import ModalRegistroIngreso from "./ModalRegistroIngreso.jsx";
 import { Plus, Trash2 } from "lucide-react";
 import SecondaryButton from "../components/SecondaryButton";
@@ -163,8 +164,12 @@ export default function RegistroDonacionPage({ usuarioRol }) {
           <Row className="g-3">
             <Col md={6}>
               <Form.Group controlId="formTipoDonacion">
+                {/* Las marcas siguen a validarDonacion(): tipo, fecha y donante son obligatorios
+                    (issue #925; antes ningun campo de esta tarjeta decia nada). */}
                 <Form.Label>Tipo de Donación</Form.Label>
+                <MarcaDeRequerido requerido />
                 <Form.Select
+                  aria-required
                   disabled={!permisos?.puedeEscribir}
                   value={tipoDonacion}
                   onChange={(e) => setTipoDonacion(e.target.value)}
@@ -181,8 +186,10 @@ export default function RegistroDonacionPage({ usuarioRol }) {
             <Col md={6}>
               <Form.Group controlId="formFecha">
                 <Form.Label>Fecha</Form.Label>
+                <MarcaDeRequerido requerido />
                 <Form.Control
                   type="date"
+                  aria-required
                   disabled={!permisos?.puedeEscribir}
                   value={fecha}
                   onChange={(e) => setFecha(e.target.value)}
@@ -193,7 +200,10 @@ export default function RegistroDonacionPage({ usuarioRol }) {
             <Col md={6}>
               <Form.Group controlId="formDonante">
                 <div className="d-flex justify-content-between align-items-center mb-1">
-                  <Form.Label className="mb-0">Donante</Form.Label>
+                  <span>
+                    <Form.Label className="mb-0">Donante</Form.Label>
+                    <MarcaDeRequerido requerido />
+                  </span>
                   {permisos?.puedeEscribir && (
                     <Button
                       variant="link"
@@ -207,6 +217,7 @@ export default function RegistroDonacionPage({ usuarioRol }) {
                   )}
                 </div>
                 <Form.Select
+                  aria-required
                   disabled={!permisos?.puedeEscribir}
                   value={donanteId}
                   onChange={(e) => setDonanteId(e.target.value)}
@@ -225,6 +236,7 @@ export default function RegistroDonacionPage({ usuarioRol }) {
             <Col md={6}>
               <Form.Group controlId="formJornada">
                 <Form.Label>Jornada</Form.Label>
+                <MarcaDeRequerido requerido={false} />
                 <Form.Select
                   disabled={!permisos?.puedeEscribir}
                   value={jornadaId}
@@ -243,6 +255,7 @@ export default function RegistroDonacionPage({ usuarioRol }) {
             <Col md={6}>
               <Form.Group controlId="formProyecto">
                 <Form.Label>Proyecto Asociado</Form.Label>
+                <MarcaDeRequerido requerido={false} />
                 <Form.Select
                   disabled={!permisos?.puedeEscribir || proyectoFijadoPorJornada}
                   value={proyectoId}
@@ -264,6 +277,7 @@ export default function RegistroDonacionPage({ usuarioRol }) {
             <Col md={12}>
               <Form.Group controlId="formObservaciones">
                 <Form.Label>Observaciones</Form.Label>
+                <MarcaDeRequerido requerido={false} />
                 <Form.Control
                   as="textarea"
                   rows={2}
@@ -501,7 +515,9 @@ export default function RegistroDonacionPage({ usuarioRol }) {
 
           <Form.Group controlId="formNuevoDonanteNombre" className="mb-3">
             <Form.Label>Nombre</Form.Label>
+            <MarcaDeRequerido requerido />
             <Form.Control
+              aria-required
               placeholder="Nombre del Donante"
               value={nuevoDonanteNombre}
               onChange={(e) => setNuevoDonanteNombre(e.target.value)}
@@ -511,7 +527,9 @@ export default function RegistroDonacionPage({ usuarioRol }) {
 
           <Form.Group controlId="formNuevoDonanteTipo">
             <Form.Label>Tipo</Form.Label>
+            <MarcaDeRequerido requerido />
             <Form.Select
+              aria-required
               value={nuevoDonanteTipo}
               onChange={(e) => setNuevoDonanteTipo(e.target.value)}
               disabled={guardandoNuevoDonante}

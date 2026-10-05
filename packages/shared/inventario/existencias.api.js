@@ -115,6 +115,35 @@ export async function listarContenidoDeBodegas(bodegaIds = []) {
   }
 }
 
+/**
+ * Si un articulo tiene existencia, pero solo en lotes vencidos. Lo usa "Cargar a la bodega" para
+ * no decir "no hay existencia" cuando si la hay y lo que pasa es que vencio (issue #925): eso se da
+ * de baja desde su alerta, no se registra de nuevo.
+ *
+ * @param {string} medicamentoId
+ * @returns {Promise<{ vencida: boolean, error: object|null }>}
+ */
+export async function tieneExistenciaVencida(medicamentoId) {
+  if (!medicamentoId) return { vencida: false, error: null };
+
+  try {
+    const { count, error } = await obtenerSupabase()
+      .from("existencias")
+      .select("lote_id, lotes!inner(medicamento_id, fecha_vencimiento)", {
+        count: "exact",
+        head: true,
+      })
+      .gt("cantidad_disponible", 0)
+      .eq("lotes.medicamento_id", medicamentoId)
+      .lt("lotes.fecha_vencimiento", aCadenaFechaLocal());
+
+    if (error) return { vencida: false, error: normalizarError(error) };
+    return { vencida: (count ?? 0) > 0, error: null };
+  } catch (error) {
+    return { vencida: false, error: normalizarError(error) };
+  }
+}
+
 function aExistencia(fila) {
   if (!fila) return null;
 

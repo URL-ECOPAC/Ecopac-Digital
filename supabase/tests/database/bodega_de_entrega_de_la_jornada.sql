@@ -155,6 +155,8 @@ SELECT lives_ok(
 );
 
 -- La existencia que se compara es la del lote en ESA bodega (20), no la suma de las dos (50).
+-- Desde la 00186 se descuenta ademas lo comprometido: la receta de 5 de arriba quedo pendiente,
+-- asi que lo disponible es 15 (issue #925).
 SELECT throws_ok(
   $$ SELECT fn_generar_receta(
        '60000000-0000-0000-0000-000000001761',
@@ -166,7 +168,7 @@ SELECT throws_ok(
           "dosis": "1 tableta", "frecuencia": "cada 8h", "duracion": "5 dias",
           "cantidad_entregada": 40}]'::jsonb
      ) $$,
-  'Existencia insuficiente en el lote a0000000-0000-0000-0000-000000001761. Disponible: 20, solicitado: 40.',
+  'Existencia insuficiente en el lote a0000000-0000-0000-0000-000000001761. Disponible: 15, solicitado: 40.',
   'la existencia se cuenta en la bodega de entrega, no en todas'
 );
 

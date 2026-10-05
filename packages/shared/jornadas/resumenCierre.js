@@ -57,7 +57,37 @@ import { puedeVerHistorial as puedeVerDatosClinicos } from "../pacientes/permiso
 import { contarRecetasDeJornada } from "../pacientes/recetas.api.js";
 import { esAdministrador, ROLES } from "../usuarios/roles.js";
 import { contarAtencionesIncompletas } from "./api.js";
-import { jornadaUsaBodegaPrincipal } from "./bodega.api.js";
+import {
+  jornadaUsaBodegaPrincipal,
+  listarConsumoDeInsumosDeJornada,
+  resumirConsumoDeJornada,
+} from "./bodega.api.js";
+import { puedeVerInsumosDeJornada } from "./permisos.js";
+
+/**
+ * Lo que le queda a la jornada en su bodega movil al cerrarla (2A, issue #925): las unidades y su
+ * valor. Antes el cierre no lo mencionaba y la jornada se cerraba con el botiquin lleno sin que
+ * nadie lo notara. `null` si no aplica (bodega principal, sin bodega, rol que no ve insumos) o si
+ * no se pudo calcular: este dato nunca tumba el resto del resumen.
+ *
+ * @param {object} jornada
+ * @param {string} [rol]
+ * @returns {Promise<{ unidades: number, valor: number, lotesSinCosto: number }|null>}
+ */
+export async function obtenerInventarioQueQueda(jornada, rol) {
+  if (!jornada?.id || !jornada?.botiquinBodegaId || jornadaUsaBodegaPrincipal(jornada)) return null;
+  if (!puedeVerInsumosDeJornada(rol)) return null;
+
+  const { consumo, error } = await listarConsumoDeInsumosDeJornada(jornada.id);
+  if (error) return null;
+
+  const resumen = resumirConsumoDeJornada(consumo);
+  return {
+    unidades: consumo.reduce((total, fila) => total + Math.max(0, fila.queda), 0),
+    valor: resumen.valorQueda,
+    lotesSinCosto: consumo.filter((fila) => fila.queda > 0 && fila.costoUnitario === null).length,
+  };
+}
 
 /**
  * Puede ver cuantos pacientes tiene registrados una jornada.
@@ -122,6 +152,7 @@ export async function contarMovimientosPendientesDelBotiquin(botiquinBodegaId) {
  *   atencionesIncompletas: number|null,
  *   movimientosPendientes: number,
  *   citasPendientes: number|null,
+ *   inventarioQueQueda: { unidades: number, valor: number, lotesSinCosto: number }|null,
  *   error: object|null,
  * }>}
  */
@@ -138,6 +169,7 @@ export async function obtenerResumenCierre(jornada, { rol } = {}) {
       atencionesIncompletas: null,
       movimientosPendientes: 0,
       citasPendientes: null,
+      inventarioQueQueda: null,
       error: null,
     };
   }
@@ -151,6 +183,7 @@ export async function obtenerResumenCierre(jornada, { rol } = {}) {
     respuestaIncompletas,
     respuestaPendientes,
     respuestaCitas,
+    inventarioQueQueda,
   ] = await Promise.all([
     puedeVerAtenciones(rol) ? contarPacientesDeJornada(jornadaId) : sinDato,
     contarConsultasDeJornada(jornadaId, { rol }),
@@ -160,6 +193,7 @@ export async function obtenerResumenCierre(jornada, { rol } = {}) {
       jornadaUsaBodegaPrincipal(jornada) ? null : jornada?.botiquinBodegaId,
     ),
     puedeVerCitas(rol) ? contarCitasPendientesDeJornada(jornadaId) : sinDato,
+    obtenerInventarioQueQueda(jornada, rol),
   ]);
 
   return {
@@ -171,6 +205,7 @@ export async function obtenerResumenCierre(jornada, { rol } = {}) {
     atencionesIncompletas: respuestaIncompletas.cantidad,
     movimientosPendientes: respuestaPendientes.cantidad,
     citasPendientes: respuestaCitas.cantidad,
+    inventarioQueQueda,
     error:
       respuestaPacientes.error ??
       respuestaConsultas.error ??
@@ -205,7 +240,8 @@ export function hayAdvertenciasDeCierre(resumen) {
   return (
     (resumen?.atencionesIncompletas ?? 0) > 0 ||
     (resumen?.movimientosPendientes ?? 0) > 0 ||
-    (resumen?.citasPendientes ?? 0) > 0
+    (resumen?.citasPendientes ?? 0) > 0 ||
+    (resumen?.inventarioQueQueda?.unidades ?? 0) > 0
   );
 }
 

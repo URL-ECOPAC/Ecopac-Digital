@@ -1,6 +1,6 @@
 # Diccionario de datos
 
-> **Documento generado.** No se edita a mano: sale de `npm run docs:diccionario` (`scripts/generar-diccionario-de-datos.mjs`), que lee el catalogo de PostgreSQL de una base con todas las migraciones aplicadas, hasta la `00185_permiso_agendar_citas.sql`. Las descripciones son los `COMMENT ON` de las migraciones: si falta una, se agrega con una migracion nueva y se regenera.
+> **Documento generado.** No se edita a mano: sale de `npm run docs:diccionario` (`scripts/generar-diccionario-de-datos.mjs`), que lee el catalogo de PostgreSQL de una base con todas las migraciones aplicadas, hasta la `00186_consumo_por_jornada_y_lo_comprometido.sql`. Las descripciones son los `COMMENT ON` de las migraciones: si falta una, se agrega con una migracion nueva y se regenera.
 
 Complementa a [MODELO-DE-DATOS.md](MODELO-DE-DATOS.md), que explica el porque de cada decision, y a [PERMISOS.md](PERMISOS.md), que explica que puede hacer cada rol. Este documento es la referencia exhaustiva: cada tabla, cada campo, cada restriccion, cada politica y cada trigger.
 
@@ -12,13 +12,13 @@ Complementa a [MODELO-DE-DATOS.md](MODELO-DE-DATOS.md), que explica el porque de
 | Tablas con RLS activo | 60 |
 | Vistas | 9 |
 | Tipos enumerados | 23 |
-| Columnas (tablas y vistas) | 542 |
-| Llaves foraneas | 112 |
+| Columnas (tablas y vistas) | 545 |
+| Llaves foraneas | 113 |
 | Restricciones CHECK | 70 |
 | Politicas RLS | 157 |
-| Triggers | 149 |
-| Funciones (sin contar las de trigger) | 69 |
-| Funciones de trigger | 62 |
+| Triggers | 151 |
+| Funciones (sin contar las de trigger) | 77 |
+| Funciones de trigger | 64 |
 
 ### Como leer las tablas de este documento
 
@@ -504,6 +504,7 @@ erDiagram
   expedientes ||--o{ consultas : "expediente_id"
   jornadas ||--o{ consultas : "jornada_id"
   perfiles ||--o{ consultas : "medico_id"
+  recetas |o--o{ movimientos_inventario : "receta_id"
   perfiles |o--o{ receta_detalle : "ajustada_por"
   bodegas |o--o{ receta_detalle : "bodega_id"
   lotes |o--o{ receta_detalle : "lote_id"
@@ -605,6 +606,7 @@ erDiagram
     boolean aprobacion_automatica
     text motivo_rechazo
     uuid jornada_id FK
+    uuid receta_id FK
   }
   alertas_caducidad {
     uuid id PK
@@ -665,6 +667,7 @@ erDiagram
   bodegas ||--o{ movimientos_inventario : "bodega_id"
   jornadas |o--o{ movimientos_inventario : "jornada_id"
   lotes ||--o{ movimientos_inventario : "lote_id"
+  recetas |o--o{ movimientos_inventario : "receta_id"
   perfiles ||--o{ movimientos_inventario : "registrado_por"
   donantes |o--o| proveedores : "donante_id"
   medicamentos ||--o{ proyecto_insumos : "medicamento_id"
@@ -1618,7 +1621,7 @@ Areas de atencion en las que esta cada paciente; un paciente puede estar en vari
 | `paciente_area_paciente_id_fkey` | FK | `FOREIGN KEY (paciente_id) REFERENCES pacientes(id) ON DELETE RESTRICT` (al borrar: RESTRICT) |
 | `paciente_area_pkey` | PK | `PRIMARY KEY (paciente_id, area_id)` |
 
-**Proteccion.** RLS activo. Privilegios: `authenticated`: DELETE, INSERT, SELECT, UPDATE; `anon`: ninguno.
+**Proteccion.** RLS activo. Privilegios: `authenticated`: DELETE, INSERT, SELECT; `anon`: ninguno.
 
 | Politica | Operacion | Roles | USING | WITH CHECK |
 | --- | --- | --- | --- | --- |
@@ -1890,7 +1893,7 @@ Receta emitida en una consulta. Se anula, no se borra: queda con su motivo y qui
 | `recetas_pkey` | PK | `PRIMARY KEY (id)` |
 | `recetas_folio_key` | UNIQUE | `UNIQUE (folio)` |
 
-**La referencian:** `receta_detalle.receta_id` (CASCADE).
+**La referencian:** `movimientos_inventario.receta_id` (SET NULL), `receta_detalle.receta_id` (CASCADE).
 
 **Proteccion.** RLS activo. Privilegios: `authenticated`: INSERT, SELECT, UPDATE; `anon`: ninguno.
 
@@ -1905,6 +1908,7 @@ Receta emitida en una consulta. Se anula, no se borra: queda con su motivo y qui
 | Trigger | Cuando | Funcion |
 | --- | --- | --- |
 | `trg_recetas_auditoria` | AFTER INSERT OR DELETE OR UPDATE | `registrar_evento_auditoria()` |
+| `trg_recetas_devolver_inventario_al_anular` | AFTER UPDATE OF estado cuando `((old.estado = 'emitida'::estado_receta) AND (new.estado = 'anulada'::estado_receta))` | `fn_devolver_inventario_de_receta_anulada()` |
 | `trg_recetas_updated_at` | BEFORE UPDATE | `actualizar_timestamp_updated_at()` |
 
 #### receta_detalle
@@ -2387,6 +2391,7 @@ Ingresos y salidas de inventario. Un movimiento pendiente no cambia existencias;
 | `aprobacion_automatica` | `boolean` | no | `false` |  | TRUE cuando el estado aprobado lo fijo el trigger tr_autoaprobar_movimiento_inventario al insertar (administrador). FALSE en el flujo manual de aprobacion de #80, incluido el caso en el que un administrador aprueba manualmente un movimiento pendiente ya existente. |
 | `motivo_rechazo` | `text` | si |  |  | Motivo obligatorio al rechazar un movimiento (issue #491, mismo patron que gastos.motivo_rechazo de la 00071). El CHECK chk_movimientos_motivo_rechazo_coherente obliga a que viaje junto con estado = rechazado y a que este en NULL en cualquier otro estado. |
 | `jornada_id` | `uuid` | si |  | FK -> `jornadas` | Jornada para la que se movio el inventario: la carga de su bodega movil (fn_cargar_insumo_a_bodega_de_jornada, 00178). NULL en cualquier otro movimiento. |
+| `receta_id` | `uuid` | si |  | FK -> `recetas` | Receta de la que sale el movimiento: la salida que registra fn_generar_receta, el ajuste de fn_ajustar_entrega_receta y la devolucion al anularla (00186). NULL en cualquier otro movimiento. |
 
 **Llaves y restricciones**
 
@@ -2398,6 +2403,7 @@ Ingresos y salidas de inventario. Un movimiento pendiente no cambia existencias;
 | `movimientos_inventario_bodega_id_fkey` | FK | `FOREIGN KEY (bodega_id) REFERENCES bodegas(id) ON DELETE RESTRICT` (al borrar: RESTRICT) |
 | `movimientos_inventario_jornada_id_fkey` | FK | `FOREIGN KEY (jornada_id) REFERENCES jornadas(id) ON DELETE RESTRICT` (al borrar: RESTRICT) |
 | `movimientos_inventario_lote_id_fkey` | FK | `FOREIGN KEY (lote_id) REFERENCES lotes(id) ON DELETE RESTRICT` (al borrar: RESTRICT) |
+| `movimientos_inventario_receta_id_fkey` | FK | `FOREIGN KEY (receta_id) REFERENCES recetas(id) ON DELETE SET NULL` (al borrar: SET NULL) |
 | `movimientos_inventario_registrado_por_fkey` | FK | `FOREIGN KEY (registrado_por) REFERENCES perfiles(id) ON DELETE RESTRICT` (al borrar: RESTRICT) |
 | `movimientos_inventario_pkey` | PK | `PRIMARY KEY (id)` |
 
@@ -2633,6 +2639,7 @@ Jornada medica o dental en una comunidad: su fecha, responsable, estado, presupu
 | `trg_jornadas_requiere_bodega_movil_al_crear` | BEFORE INSERT | `fn_jornada_exige_bodega_movil()` |
 | `trg_jornadas_requiere_bodega_movil_libre` | BEFORE INSERT OR UPDATE OF estado, botiquin_bodega_id | `fn_jornada_bodega_movil_libre()` |
 | `trg_jornadas_sin_inventario_cargado_al_cambiar_bodega` | BEFORE UPDATE OF botiquin_bodega_id cuando `(old.botiquin_bodega_id IS DISTINCT FROM new.botiquin_bodega_id)` | `fn_jornada_sin_inventario_cargado_al_cambiar_bodega()` |
+| `trg_jornadas_traspasar_sobrante_al_iniciar` | AFTER UPDATE OF estado cuando `((old.estado = 'planificada'::estado_jornada) AND (new.estado = 'en curso'::estado_jornada))` | `fn_traspasar_sobrante_al_iniciar_jornada()` |
 | `trg_jornadas_updated_at` | BEFORE UPDATE | `actualizar_timestamp_updated_at()` |
 
 #### jornada_personal
@@ -3504,7 +3511,7 @@ Seguridad: corre con los permisos de su dueno; filtra con su propio WHERE. Privi
 
 ### vista_lotes_disponibles
 
-Muestra las combinaciones (lote, bodega) con stock positivo cuyo lote no ha alcanzado su fecha de vencimiento, o no tiene (un insumo, 00171). security_invoker = TRUE hace que respete las politicas RLS de existencias, lotes, medicamentos y bodegas (00034). Issue #369: reconstruida sobre lotes/existencias (antes lotes_existencias); una fila por bodega en vez de una fila por lote, porque existencias trackea cantidad por bodega.
+Combinaciones (lote, bodega) que se pueden entregar: lote vigente (o sin fecha, 00171) y existencia que no este comprometida en una salida pendiente (00186). cantidad_disponible es lo neto; cantidad_fisica y cantidad_comprometida, de donde sale. security_invoker = TRUE respeta la RLS de existencias, lotes, medicamentos y bodegas (00034).
 
 Seguridad: `security_invoker = true` (aplica la RLS de quien consulta). Privilegios: `authenticated`: SELECT; `anon`: ninguno.
 
@@ -3520,6 +3527,8 @@ Seguridad: `security_invoker = true` (aplica la RLS de quien consulta). Privileg
 | `updated_at` | `timestamptz` |
 | `bodega_id` | `uuid` |
 | `bodega_nombre` | `varchar(100)` |
+| `cantidad_fisica` | `integer` |
+| `cantidad_comprometida` | `integer` |
 
 ### vista_reporte_impacto
 
@@ -3613,19 +3622,25 @@ Seguridad: corre con los permisos de su dueno; filtra con su propio WHERE. Privi
 | `fn_bodega_de_entrega_de_consulta(p_consulta_id uuid)` | `uuid` | DEFINER | authenticated | Bodega de la que sale lo que se receta en una consulta: la de botiquin de su jornada o, si no tiene, la principal (00176). |
 | `fn_buscar_pacientes(p_termino text, p_comunidad_id uuid, p_pagina integer, p_por_pagina integer, p_condicion_cronica_id uuid, p_sexo text, p_edad_min integer, p_edad_max integer, p_area_id uuid)` | `TABLE(paciente_id uuid, nombres character varying, apellidos character varying, fecha_nacimiento date, sexo character varying, comunidad_id uuid, comunidad_nombre character varying, numero_ficha character varying, ultima_atencion date, condiciones text[], relevancia real, pagina integer, por_pagina integer, total bigint)` | INVOKER | authenticated | Busca pacientes por nombre (tolerando acentos y errores de tipeo, via el indice de trigramas de 00011 y el operador <% de word_similarity), filtrando opcionalmente por comunidad, condicion cronica vigente, sexo, edad y area de atencion (p_area_id, 00182), con resultados paginados y ordenados por relevancia. Si la pagina pedida cae despues del final devuelve la ultima pagina real. Excluye pacientes con fecha_baja. Cuenta contra el limite de busquedas (00134). SECURITY INVOKER: respeta las politicas de SELECT de pacientes, padecimientos_cronicos y paciente_area. |
 | `fn_cambiar_principio_de_medicamento(p_medicamento_id uuid, p_principio_id uuid)` | `void` | INVOKER | authenticated | Deja al medicamento con este principio activo y ningun otro, en una transaccion (00166). A un insumo le quita los que tenga. No es SECURITY DEFINER: la deciden las politicas de medicamento_principio. |
+| `fn_cantidad_comprometida(p_lote_id uuid, p_bodega_id uuid)` | `integer` | DEFINER | authenticated | Unidades de un lote en una bodega con una salida pendiente de aprobar: ya estan en la existencia pero ya no se pueden entregar (00186, issue #925). |
 | `fn_cargar_insumo_a_bodega_de_jornada(p_jornada_id uuid, p_lote_id uuid, p_bodega_origen_id uuid, p_cantidad integer)` | `uuid` | INVOKER | authenticated | Traslada p_cantidad de un lote desde p_bodega_origen_id a la bodega movil de la jornada: un ingreso y una salida aprobados, con jornada_id (00178). Solo la administradora. Devuelve el id del ingreso. |
-| `fn_consumo_de_insumos_de_jornada(p_jornada_id uuid)` | `TABLE(lote_id uuid, medicamento_id uuid, articulo text, concentracion text, numero_lote text, fecha_vencimiento date, costo_unitario numeric, cargado bigint, entregado bigint, devuelto bigint, en_bodega bigint)` | DEFINER | authenticated | Por lote: lo cargado a la bodega movil de la jornada, lo entregado en sus recetas emitidas, lo devuelto y lo que queda en la bodega, con el costo unitario del lote (00178, devuelto desde la 00179). Con la bodega principal solo cuenta lo entregado (00181). Lo ve quien ve los insumos de la jornada. |
+| `fn_consumo_de_insumos_de_jornada(p_jornada_id uuid)` | `TABLE(lote_id uuid, medicamento_id uuid, articulo text, concentracion text, numero_lote text, fecha_vencimiento date, costo_unitario numeric, cargado bigint, entregado bigint, devuelto bigint, en_bodega bigint, pendiente bigint, queda bigint)` | DEFINER | authenticated | Por lote: lo cargado a la bodega movil de la jornada, lo entregado en sus recetas emitidas (con el ajuste si lo hay), lo devuelto, lo que hay hoy en toda la bodega (en_bodega), lo que espera aprobacion (pendiente) y lo que le queda a la jornada (queda = cargado - entregado - devuelto). 00178, 00181; pendiente y queda desde la 00186 (issue #925). |
 | `fn_contar_atenciones_incompletas(p_jornada_id uuid)` | `integer` | INVOKER | authenticated | Cuenta las atenciones de una jornada que todavia no tienen consulta asociada. jornadas/api.js la consulta antes de finalizar una jornada para advertir -sin bloquear- si hay atenciones incompletas (issue #171, criterio de aceptacion 4). No es SECURITY DEFINER: respeta las politicas de SELECT de atenciones/consultas (00033). |
 | `fn_crear_usuario_administrativo(p_correo text, p_nombres text, p_apellidos text, p_rol rol_usuario)` | `uuid` | DEFINER | nadie | Da de alta a una persona con el rol indicado, sin contrasena: la establece con "olvide mi contrasena". Es el camino administrativo mientras no exista la Edge Function invitar-usuario. No se concede a ningun rol de la aplicacion: se ejecuta desde el SQL editor del Dashboard. |
 | `fn_detectar_pacientes_duplicados()` | `TABLE(paciente_a_id uuid, nombres_a character varying, apellidos_a character varying, numero_ficha_a character varying, paciente_b_id uuid, nombres_b character varying, apellidos_b character varying, numero_ficha_b character varying, fecha_nacimiento date, similitud real)` | INVOKER | authenticated | Posibles pacientes duplicados: misma fecha de nacimiento y nombre similar (pg_trgm), ordenados por similitud. SECURITY INVOKER: la ve quien ya puede leer pacientes (00032). |
 | `fn_devolver_de_bodega_de_jornada(p_jornada_id uuid, p_lote_id uuid, p_bodega_destino_id uuid, p_cantidad integer)` | `uuid` | INVOKER | authenticated | Devuelve p_cantidad de un lote de la bodega movil de la jornada a una bodega fija (fn_trasladar_entre_bodegas, marcado con la jornada) (00179). Solo la administradora; tambien con la jornada finalizada. |
+| `fn_disponible_neto(p_lote_id uuid, p_bodega_id uuid)` | `integer` | DEFINER | authenticated | Existencia de un lote en una bodega menos lo comprometido en salidas pendientes (00186). Es lo que se puede recetar, cargar, devolver o trasladar. |
 | `fn_eliminar_clinica(p_clinica_id uuid)` | `text` | INVOKER | authenticated | Borra una clinica que nunca tuvo citas; si las tuvo, la retira (es_vigente = false). Devuelve eliminada o retirada. Solo la administradora (00183, 00184). |
+| `fn_es_aprobacion_de_sistema()` | `boolean` | INVOKER | authenticated | TRUE mientras una funcion del sistema (traspaso al iniciar una jornada, anulacion de una receta) registra movimientos que impone una regla y no una persona (00186). Los aprueba solos y les deja cambiar de estado. |
 | `fn_etapa_caducidad(p_dias integer, p_umbrales integer[])` | `integer` | INVOKER | authenticated | Etapa de aviso de un lote a p_dias de vencer: 0 si vence hoy o ya vencio (aviso obligatorio), si no la antelacion mas corta que ya alcanzo, o NULL si todavia esta fuera de la ventana. packages/shared/inventario/configuracionAlertas.validaciones.js (etapaDeVencimiento) la replica. |
 | `fn_existencias_disponibles(p_bodega_id uuid, p_busqueda text, p_limite integer, p_desplazamiento integer)` | `TABLE(medicamento_id uuid, medicamento text, concentracion text, presentacion text, marca text, componentes text[], cantidad_disponible integer, fecha_vencimiento_proxima date, lotes_disponibles integer, total_medicamentos bigint)` | INVOKER | authenticated | Inventario disponible agregado por medicamento: cantidad total, fecha de vencimiento mas proxima y numero de lotes con existencia. Se apoya en vista_lotes_disponibles (00047), que ya excluye lo vencido y lo que tiene cantidad cero, asi que la exclusion de vencidos no se repite aqui. p_bodega_id nulo suma todas las bodegas; con valor, agrupa despues de filtrar, que es el motivo por el que esto es una funcion y no una vista de granularidad fija. p_busqueda compara sin acentos contra nombre, marca, concentracion y los principios activos del medicamento. total_medicamentos repite en cada fila el total sin paginar, para que quien consume sepa cuantas paginas hay sin una segunda consulta. SECURITY INVOKER: respeta las politicas RLS de existencias, lotes, medicamentos y bodegas (00034), igual que la vista. Issue #145 (RF-18). |
 | `fn_fusionar_pacientes(p_sobreviviente_id uuid, p_absorbido_id uuid)` | `fusiones_pacientes` | DEFINER | authenticated | Fusiona dos expedientes: reasigna atenciones/condiciones/consultas sin violar sus UNIQUE, da de baja al absorbido y registra la fusion. Solo administrador (issue #140). Aborta si a alguno de los dos les falta el expediente, en vez de fusionar a medias (issue #637). |
 | `fn_generar_alertas_caducidad()` | `integer` | DEFINER | nadie | Rutina de vencimientos (issue #899). Con la fecha de Guatemala y las antelaciones de configuracion_alertas_caducidad: cierra las alertas pendientes sin existencia, crea una alerta por lote con existencia dentro de la ventana (incluidos los vencidos) que no tenga una pendiente ni una atendida en la misma etapa, y registra un aviso -con su notificacion- cada vez que una alerta pendiente llega a una etapa mas cercana: cada antelacion y el dia del vencimiento. Idempotente. Devuelve cuantas alertas nuevas creo. SECURITY DEFINER; la invocan la Edge Function programada y fn_sincronizar_alertas_caducidad(). |
 | `fn_generar_receta(p_consulta_id uuid, p_medico_id uuid, p_indicaciones_generales text, p_detalle jsonb)` | `uuid` | INVOKER | authenticated | Crea una receta con todos sus renglones Y registra la salida de inventario correspondiente, todo en una sola transaccion (issues #120 y #711): si un renglon o una salida falla, no queda ni la receta ni el movimiento. Antes de insertar cada renglon con lote comprueba que el lote no este vencido, que la existencia alcance y que venga la bodega de la que sale. Los renglones sin lote no se comprueban ni generan movimiento: recetar sin especificar lote es valido (receta_detalle.lote_id es nullable en la 00019) y ahi el control ocurre al despachar. Los movimientos se agrupan por (lote, bodega), asi que dos renglones del mismo lote dan una sola salida. Desde la issue #764 tambien persiste bodega_id en receta_detalle, que fn_ajustar_entrega_receta() necesita para corregir la cantidad entregada mas adelante sin descontar el inventario dos veces. SECURITY INVOKER: quien puede crear la receta y quien puede registrar el movimiento lo deciden las politicas de la 00033 y la 00034, no esta funcion; el flujo de aprobacion no cambia (administrador autoaprueba por la 00028, medico y voluntario dejan el movimiento pendiente). |
 | `fn_hoy_guatemala(p_instante timestamp with time zone)` | `date` | INVOKER | authenticated | Fecha calendario de Guatemala en el instante dado (por defecto, ahora). La base corre en UTC, asi que CURRENT_DATE se adelanta un dia entre las 18:00 y las 23:59 de Guatemala (issue #899). |
+| `fn_insumos_de_proyecto(p_proyecto_id uuid)` | `TABLE(jornada_id uuid, jornada text, bodega text, lote_id uuid, articulo text, concentracion text, numero_lote text, fecha_vencimiento date, costo_unitario numeric, queda bigint)` | DEFINER | authenticated | Lo que les queda a las jornadas del proyecto en sus bodegas moviles, por jornada y lote (queda de fn_consumo_de_insumos_de_jornada). Cada unidad cuenta en una sola jornada, asi que una bodega compartida no se suma en dos proyectos (00186, issue #925). |
+| `fn_jornada_duena_de_bodega(p_bodega_id uuid, p_excluir uuid)` | `uuid` | DEFINER | authenticated | De que jornada es hoy el inventario de una bodega movil: la que la tiene en curso o, si no hay, la ultima que recibio inventario en ella (00186). p_excluir deja fuera una jornada. |
+| `fn_jornada_en_curso_de_bodega(p_bodega_id uuid)` | `uuid` | DEFINER | authenticated | La jornada en curso que tiene esta bodega movil, o NULL (00186). |
 | `fn_liquidar_sobrante_de_jornada(p_jornada_id uuid, p_decisiones jsonb)` | `integer` | DEFINER | authenticated | Liquida el sobrante de una jornada finalizada sin gastos pendientes: por cada aporte elegido, lo devuelve a su origen o lo traspasa a otra jornada planificada o en curso del mismo proyecto (00160). Lo devuelto que no es de una donacion entra a la caja (00168). Administradora o jornadas.gestionar. |
 | `fn_lotes_en_ventana_de_caducidad(p_hoy date, p_umbrales integer[])` | `TABLE(lote_id uuid, dias integer, etapa integer, cantidad integer)` | INVOKER | nadie | Lotes con existencia total mayor que cero que vencen dentro de la antelacion mas larga, incluidos los ya vencidos, con sus dias restantes y su etapa de aviso. Uso interno de fn_generar_alertas_caducidad(). |
 | `fn_maximo_de_citas_simultaneas(p_clinica_id uuid, p_desde timestamp with time zone, p_hasta timestamp with time zone, p_excluir_id uuid, OUT cantidad integer, OUT momento timestamp with time zone)` | `record` | DEFINER | authenticated | Cuantas citas no canceladas de la clinica coinciden a la vez como maximo dentro del intervalo, y en que momento (00184). La usan fn_validar_cita y la regla de salas de clinicas. |
@@ -3633,18 +3648,20 @@ Seguridad: corre con los permisos de su dueno; filtra con su propio WHERE. Privi
 | `fn_notificar_administradores(p_categoria categoria_notificacion, p_titulo text, p_cuerpo text, p_enlace text, p_origen_tabla text, p_origen_id uuid)` | `integer` | DEFINER | nadie | Crea la misma notificacion para cada administrador activo (un perfil desactivado no recibe nada, mismo criterio que la 00079). Devuelve cuantas creo. Solo la llaman los triggers de la 00138: sin EXECUTE para ningun rol de aplicacion. |
 | `fn_opciones_reporte_enfermedades()` | `jsonb` | DEFINER | authenticated | Jornadas y diagnosticos con casos, y proyectos con jornadas, para los selectores del reporte de enfermedades. Existe porque los roles consultivos no leen esas tablas por RLS (issue #916, 00177). |
 | `fn_pasar_insumo_de_proyecto_a_jornada(p_insumo_id uuid, p_jornada_id uuid)` | `uuid` | INVOKER | authenticated | Pasa un insumo previsto a nivel proyecto (proyecto_insumos) a una jornada de ese proyecto (jornada_insumos), en una sola transaccion (00151). |
+| `fn_queda_de_jornada_en_lote(p_jornada_id uuid, p_lote_id uuid)` | `integer` | DEFINER | authenticated | Lo que le queda a una jornada de un lote en su bodega: cargado - entregado - devuelto (00186, issue #925). Entregado cuenta las recetas emitidas aunque su salida siga pendiente. |
 | `fn_reclamar_correos_de_notificaciones(p_limite integer)` | `TABLE(id uuid, email text, nombres text, categoria categoria_notificacion, titulo text, cuerpo text, enlace text, created_at timestamp with time zone)` | DEFINER | nadie | Marca como en curso hasta p_limite notificaciones sin correo enviado, en orden de llegada, y las devuelve con el correo de su destinatario (issue #755). Solo service_role. |
 | `fn_registrar_donacion(p_donante_id uuid, p_tipo tipo_donacion, p_fecha date, p_detalle jsonb, p_proyecto_id uuid, p_observaciones text, p_jornada_id uuid)` | `jsonb` | INVOKER | authenticated | Registra una donacion con sus renglones en una transaccion. En medicamentos e insumos cada renglon elige un articulo del catalogo de su mismo tipo, y la descripcion y la unidad salen de el (00135, 00170). |
 | `fn_registrar_medicamento(p_nombre character varying, p_concentracion character varying, p_presentacion_id uuid, p_marca character varying, p_principios_ids uuid[], p_forma_farmaceutica character varying, p_es_pediatrico boolean, p_tipo_articulo tipo_articulo)` | `medicamentos` | INVOKER | authenticated | Registra un articulo del catalogo en una transaccion. Un medicamento exige al menos un principio activo y su concentracion; un insumo no guarda principio, concentracion, forma farmaceutica ni uso pediatrico (00164). |
 | `fn_registrar_paciente(p_nombres character varying, p_apellidos character varying, p_fecha_nacimiento date, p_sexo character varying, p_comunidad_id uuid, p_telefono_contacto character varying, p_idioma character varying, p_dpi character varying, p_tipo_sangre tipo_sanguineo, p_nombre_responsable character varying, p_parentesco_responsable character varying, p_area_ids uuid[])` | `TABLE(id uuid, nombres character varying, apellidos character varying, fecha_nacimiento date, sexo character varying, comunidad_id uuid, telefono_contacto character varying, idioma character varying, dpi character varying, tipo_sangre tipo_sanguineo, nombre_responsable character varying, parentesco_responsable character varying, fecha_baja date, created_at timestamp with time zone, updated_at timestamp with time zone, numero_ficha character varying)` | INVOKER | authenticated | Inserta un paciente, su expediente y sus areas de atencion (p_area_ids, 00182) en una sola transaccion. numero_ficha lo genera el DEFAULT de expedientes (nextval, 00081), asi que dos dispositivos registrando a la vez no colisionan. No es SECURITY DEFINER: las politicas de INSERT de pacientes, expedientes (00032) y paciente_area (00182) deciden quien puede llamarla. p_idioma es un codigo del catalogo idiomas (issue #663). |
+| `fn_registrar_salida_a_cuenta_de_jornada(p_lote_id uuid, p_bodega_id uuid, p_cantidad integer, p_motivo text, p_jornada_id uuid, p_registrado_por uuid)` | `void` | INVOKER | authenticated | Saca p_cantidad de una bodega movil: a cuenta de p_jornada_id hasta lo que le queda de ese lote, y el resto sin jornada (00186). p_registrado_por, si viene, reemplaza a auth.uid() (el traspaso iniciado sin sesion). |
 | `fn_reporte_enfermedades(p_agrupar_por text, p_desde date, p_hasta date, p_jornada_ids uuid[], p_comunidad_ids uuid[], p_municipio_id integer, p_departamento_id integer, p_proyecto_id uuid, p_diagnostico_id uuid, p_solo_principales boolean, p_comunidad_de text)` | `TABLE(grupo_id text, grupo text, grupo_fecha date, diagnostico_id uuid, codigo text, diagnostico text, orden_diagnostico integer, casos integer, hombres integer, mujeres integer, menores integer, adultos integer, adultos_mayores integer)` | DEFINER | authenticated | Casos por diagnostico del catalogo, agrupados por nada, jornada, comunidad (de la jornada o del paciente) o mes, con desglose por sexo y edad. Solo conteos agregados, siempre con su numero real; ninguna fila por paciente (issue #916, 00177; sin supresion desde la issue #926, 00180). |
 | `fn_reporte_jornada(p_jornada_id uuid)` | `jsonb` | DEFINER | authenticated | Reporte de resultados de una jornada, ya agregado: totales, diagnosticos, medicamentos y personal. Sin filas de paciente. NULL si la jornada no existe. |
 | `fn_reporte_pacientes_atendidos(p_agrupar_por text, p_jornada_id uuid, p_comunidad_id uuid, p_desde date, p_hasta date)` | `TABLE(grupo_id text, grupo text, pacientes integer, nuevos integer, recurrentes integer, hombres integer, mujeres integer, menores integer, adultos integer, adultos_mayores integer)` | DEFINER | authenticated | Pacientes atendidos agregados por jornada, comunidad o mes, con el desglose por sexo y por rango de edad y la distincion entre pacientes nuevos y recurrentes (issue #202, RF-31). Cuenta pacientes distintos, no atenciones: dos atenciones del mismo paciente en la misma jornada son un solo paciente atendido. La edad se calcula a la fecha de la jornada, no a la de hoy, para que un reporte de hace tres anios no envejezca con el tiempo. SECURITY DEFINER con guarda de rol explicita: los roles consultivos no tienen politica de SELECT sobre pacientes (00032) y esta funcion necesita sexo y fecha_nacimiento para los desgloses. Devuelve UNICAMENTE agregados: ninguna fila del resultado identifica a un paciente, que es la regla que fija la 00054 (issue #407). La 00095 corrigio dos errores de calculo (issue #596): el sexo se comparaba contra la inicial cuando la columna guardaba la palabra completa, asi que hombres y mujeres salian en cero; y un paciente recurrente contaba como nuevo en todos sus grupos. La 00132 (issue #699) retira el parche que dejo la 00095: con sexo convertido en el enum sexo_paciente, el desglose vuelve a compararse por igualdad y no por la inicial con LIKE. |
 | `fn_saldo_de_caja_sin_filtro()` | `numeric` | DEFINER | nadie | Saldo de la caja sin pasar por RLS (00168). Solo la usan los triggers; la pantalla lee saldo_de_caja(). |
 | `fn_sincronizar_alertas_caducidad()` | `integer` | DEFINER | authenticated | Ejecuta fn_generar_alertas_caducidad() a peticion de la administracion o de quien tenga inventario.configurar_alertas, para no depender de cuando corrio la rutina programada (issues #838 y #899). Devuelve cuantas alertas nuevas creo. Sin ese rol o permiso lanza 42501. |
 | `fn_sincronizar_proveedor_de_donante(p_donante_id uuid)` | `uuid` | DEFINER | nadie | Crea o actualiza el proveedor de tipo donante de un donante, con su mismo nombre y su contacto (00175). |
-| `fn_texto_de_hora_guatemala(p_momento timestamp with time zone)` | `text` | INVOKER | authenticated | Fecha y hora en America/Guatemala (DD/MM/YYYY HH24:MI) para los mensajes de la agenda (00184). |
-| `fn_trasladar_entre_bodegas(p_lote_id uuid, p_bodega_origen_id uuid, p_bodega_destino_id uuid, p_cantidad integer, p_motivo text, p_jornada_id uuid)` | `uuid` | INVOKER | authenticated | Traslada p_cantidad de un lote de una bodega a otra: un ingreso en la destino y una salida del origen, aprobados y en una transaccion (00179). Solo la administradora. p_jornada_id marca la carga o la devolucion de la bodega movil de una jornada. Devuelve el id del ingreso. |
+| `fn_texto_de_hora_guatemala(p_momento timestamp with time zone)` | `text` | INVOKER | nadie | Fecha y hora en America/Guatemala (DD/MM/YYYY HH24:MI) para los mensajes de la agenda (00184). |
+| `fn_trasladar_entre_bodegas(p_lote_id uuid, p_bodega_origen_id uuid, p_bodega_destino_id uuid, p_cantidad integer, p_motivo text, p_jornada_id uuid)` | `uuid` | INVOKER | authenticated | Traslada p_cantidad de un lote de una bodega a otra: un ingreso en la destino y la salida del origen, aprobados y en una transaccion (00179). Solo la administradora. Desde la 00186 compara con lo disponible neto y registra cada lado movil en su jornada: el ingreso en la jornada indicada o en la que tiene la bodega en curso; la salida en la indicada o en la duena, hasta lo que le queda. Devuelve el id del ingreso. |
 | `fn_umbrales_caducidad_validos(p_umbrales integer[])` | `boolean` | INVOKER | authenticated | Regla de las antelaciones de aviso de vencimiento: de 0 a 4 valores, distintos, entre 1 y 365 dias. La usa el CHECK de configuracion_alertas_caducidad; packages/shared/inventario/configuracionAlertas.validaciones.js replica la misma regla. |
 | `fn_valor_de_inventario_disponible(p_bodega_id uuid)` | `TABLE(bodega_id uuid, bodega text, medicamento_id uuid, medicamento text, origen origen_lote, cantidad_disponible bigint, valor_disponible numeric, unidades_sin_costo bigint, lotes_sin_costo bigint)` | DEFINER | authenticated | Valor monetario del inventario disponible (existencias.cantidad_disponible, no lotes.cantidad_ingresada), agregado por bodega, medicamento y origen. p_bodega_id nulo suma todas las bodegas. valor_disponible solo suma lotes con costo_unitario conocido; unidades_sin_costo y lotes_sin_costo cuentan aparte lo que no tiene costo capturado, para que el reporte declare cuanto del inventario queda sin valorizar en vez de contarlo como cero. SECURITY DEFINER: solo administrador y los roles consultivos (junta directiva, socio fundador) reciben resultado, por la misma razon que protege presupuesto_de_jornada/proyecto/sistema (00080) y obtenerIndicadoresImpacto (reportes/api.js) -- costo_unitario es informacion financiera que la 00121 no pudo restringir a nivel de columna. Issue #752. |
 | `fn_verificar_limite_busqueda_pacientes()` | `void` | DEFINER | authenticated | Limite de busquedas por usuario (issue #761): 60 cada minuto. La llama fn_buscar_pacientes() en una CTE al inicio, antes de la busqueda real. SECURITY DEFINER para poder escribir en limites_de_uso, que authenticated no puede tocar directamente; se concede EXECUTE a authenticated porque fn_buscar_pacientes corre SECURITY INVOKER y necesita poder llamarla. |
@@ -3675,13 +3692,14 @@ Seguridad: corre con los permisos de su dueno; filtra con su propio WHERE. Privi
 | `crear_perfil_nuevo_usuario()` | DEFINER | Crea el perfil correspondiente cada vez que se inserta un usuario en auth.users, y rechaza el alta si viene del registro publico de GoTrue sin la marca administrativa (issue #508). |
 | `fn_actualizar_existencias()` | INVOKER | Aplica el ajuste de existencias cuando un movimiento pasa a aprobado (00023, sobre existencias desde la 00047). Desde la 00112 lleva SET search_path = '' y llama calificado, por el mismo motivo que fn_autoaprobar_movimiento_inventario. |
 | `fn_autoaprobar_gasto_administrador()` | INVOKER | Si quien inserta es administrador (es_administrador(), leido del rol en perfiles via auth.uid(), nunca de un campo del cliente), hace nacer el gasto en estado aprobado, con aprobado_por y aprobado_en fijados automaticamente. Espejo de fn_autoaprobar_movimiento_inventario (00094), sin ajuste de existencias: un gasto no mueve inventario (00089). Cualquier otro rol conserva el DEFAULT 'pendiente' de la columna estado (00025), sin cambios. |
-| `fn_autoaprobar_movimiento_inventario()` | INVOKER | Si quien inserta es administrador (es_administrador(), leido del rol en perfiles via auth.uid(), nunca de un campo del cliente), hace nacer el movimiento en estado aprobado, con aprobado_por, aprobado_en y aprobacion_automatica fijados automaticamente, y aplica el ajuste de existencias correspondiente. Cualquier otro rol conserva el DEFAULT 'pendiente' de la columna estado (00023), sin cambios. Desde la 00112 lleva SET search_path = '' y llama calificado: antes dependia de que quien disparara el trigger tuviera public en su search_path, y fallaba al insertarse desde una funcion endurecida. |
+| `fn_autoaprobar_movimiento_inventario()` | INVOKER | Hace nacer aprobado el movimiento que inserta la administradora, o el que registra el sistema (fn_es_aprobacion_de_sistema, 00186), con aprobado_por, aprobado_en y aprobacion_automatica, y aplica el ajuste de existencias. Cualquier otro caso conserva el DEFAULT 'pendiente' (00023). SET search_path = '' desde la 00112. |
 | `fn_bloquear_gasto_finalizado()` | INVOKER | Trigger: un gasto aprobado o rechazado ya no se modifica ni se borra. |
 | `fn_bloquear_movimiento_finalizado()` | DEFINER | Un movimiento aprobado o rechazado no lo edita quien lo registro, y ni siquiera la administradora puede cambiar lo que movio stock (tipo, lote, bodega, cantidad, estado, registrado_por): eso se corrige con un movimiento compensatorio. Ella si puede corregir el texto -motivo, motivo_rechazo-, que antes tambien quedaba congelado sin que eso protegiera ninguna integridad (issue #625). El DELETE sigue prohibido para todos. |
 | `fn_cita_exige_permiso_de_agenda()` | DEFINER | Sin citas.agendar (ni administracion ni jornadas.gestionar), una cita solo cambia de estado entre creada y en atencion: Atender y Regresar a creada (00185). Los cambios del sistema (consulta, fusion, sin sesion) no pasan por la regla. |
 | `fn_clinica_salas_cubren_lo_agendado()` | DEFINER | Rechaza bajar salas_disponibles por debajo de las citas que ya coinciden en algun horario futuro, diciendo en que fecha y hora (00184). |
 | `fn_consulta_de_cita_antes()` | DEFINER | Antes de guardar una consulta con cita (00184): la cita esta en atencion, es del mismo paciente y jornada, la atiende su profesional o la administradora, y la consulta toma el area de la cita. |
 | `fn_consulta_de_cita_despues()` | DEFINER | Despues de guardar una consulta con cita (00184): la cita pasa a atendida y, si no tenia profesional, queda quien registro la consulta. |
+| `fn_devolver_inventario_de_receta_anulada()` | DEFINER | Al anular una receta (4A, issue #925): rechaza sus movimientos pendientes y devuelve a la bodega lo que ya se habia descontado, con un ingreso enlazado a la receta (00186). |
 | `fn_disparar_correo_de_notificaciones()` | DEFINER | Trigger: pide a la Edge Function de correo (pg_net) que envie por correo la notificacion recien creada (00138). |
 | `fn_fechas_reales_de_jornada()` | INVOKER | Fija fecha_inicio_real al pasar una jornada a en curso y fecha_fin_real al finalizarla; reabrirla borra el cierre (00174). |
 | `fn_fijar_registrado_por_origen_de_presupuesto()` | INVOKER | Trigger: pone registrado_por con auth.uid() en un origen de presupuesto; el cliente no lo manda ni lo puede falsear. |
@@ -3692,7 +3710,7 @@ Seguridad: corre con los permisos de su dueno; filtra con su propio WHERE. Privi
 | `fn_jornada_cancela_citas_pendientes()` | DEFINER | Al cancelar o finalizar una jornada, cancela sus citas creadas o en atencion con el motivo que corresponde (00184). |
 | `fn_jornada_exige_bodega_movil()` | DEFINER | Rechaza crear una jornada sin bodega, quitarsela, o darle una que no es movil ni la principal (00178; la principal se acepta desde la 00181). |
 | `fn_jornada_exige_proyecto()` | INVOKER | Rechaza crear una jornada sin proyecto o quitarle el que tiene (00169). |
-| `fn_jornada_sin_inventario_cargado_al_cambiar_bodega()` | DEFINER | Rechaza cambiar la bodega de una jornada mientras su bodega movil conserve inventario que se cargo para ella; primero se devuelve (00181). |
+| `fn_jornada_sin_inventario_cargado_al_cambiar_bodega()` | DEFINER | Rechaza cambiar la bodega de una jornada mientras le quede inventario en su bodega movil (cargado - entregado - devuelto > 0); primero se devuelve (00181, por jornada desde la 00186). |
 | `fn_lote_de_medicamento_tiene_vencimiento()` | DEFINER | Rechaza un lote de medicamento sin fecha de vencimiento; un lote de insumo puede no tenerla (00171). |
 | `fn_normalizar_configuracion_alertas_caducidad()` | INVOKER | Trigger: ordena las antelaciones de mayor a menor y registra quien guardo el cambio. |
 | `fn_notificar_aviso_caducidad()` | DEFINER | Trigger: avisa en el buzon (y por correo) de la administracion cada vez que se registra un aviso de vencimiento: "Lote por vencer en N dias", "Lote vence hoy" o "Lote vencido" (issue #899). Reemplaza a fn_notificar_alerta_caducidad (00138), que avisaba una sola vez por alerta. |
@@ -3701,7 +3719,7 @@ Seguridad: corre con los permisos de su dueno; filtra con su propio WHERE. Privi
 | `fn_notificar_movimiento_por_validar()` | DEFINER | Trigger: avisa a quien valida movimientos cuando se registra uno pendiente (00138). |
 | `fn_origen_del_presupuesto_inicial()` | DEFINER | Trigger: una jornada que se crea con presupuesto_asignado mayor que cero registra ese monto como un origen sin_clasificar, para que el asignado siga siendo la suma de sus origenes (00135). |
 | `fn_paciente_area_area_vigente()` | DEFINER | Rechaza asignar a un paciente un area de atencion retirada (00182). |
-| `fn_proteger_decision_de_movimiento()` | DEFINER | Impide que quien registro un movimiento escriba las columnas que documentan la decision de quien lo aprueba o lo rechaza (issue #625). La politica RLS ya le impide cambiar estado; esto cubre las cuatro columnas que la acompanian, que WITH CHECK no puede vigilar porque lo que importa es el cambio y no el valor final. |
+| `fn_proteger_decision_de_movimiento()` | DEFINER | Impide que quien registro un movimiento escriba las columnas que documentan la decision de quien lo aprueba o lo rechaza (issue #625). Desde la 00186 tampoco frena al sistema (fn_es_aprobacion_de_sistema): la anulacion de una receta rechaza sus salidas pendientes. |
 | `fn_proteger_presupuesto_comprometido()` | DEFINER | Trigger de jornada_presupuesto_origen (00159): quitar o rebajar un aporte no puede dejar la jornada con menos presupuesto que lo comprometido en gastos. |
 | `fn_proveedor_sigue_al_donante()` | DEFINER | Al registrar un donante o cambiar su nombre o contacto, crea o actualiza su proveedor (00175). |
 | `fn_proyecto_cancelado_no_se_modifica()` | INVOKER | Rechaza cualquier UPDATE de un proyecto cuyo estado ya es cancelado (00154) o finalizado (00172). |
@@ -3709,6 +3727,7 @@ Seguridad: corre con los permisos de su dueno; filtra con su propio WHERE. Privi
 | `fn_proyecto_de_la_jornada_de_la_donacion()` | DEFINER | Trigger: si una donacion es para una jornada, su proyecto es el de esa jornada (00153). |
 | `fn_registrar_salida_de_caja()` | DEFINER | Trigger de jornada_presupuesto_origen (00168): un aporte con origen caja deja su salida en movimientos_de_caja. |
 | `fn_sincronizar_presupuesto_de_jornada()` | DEFINER | Mantiene jornadas.presupuesto_asignado igual a la suma de sus filas de jornada_presupuesto_origen (issue #840). Es la unica via que escribe esa columna. |
+| `fn_traspasar_sobrante_al_iniciar_jornada()` | DEFINER | Al iniciar una jornada con bodega movil, lo que haya en la bodega y no sea ya suyo pasa a su cuenta: devuelto en la jornada anterior, cargado en esta. El inventario fisico no cambia (00186, issue #925). |
 | `fn_validar_aporte_de_caja()` | DEFINER | Trigger de jornada_presupuesto_origen (00168): un aporte con origen caja no saca mas de lo que hay en ella. |
 | `fn_validar_cita()` | DEFINER | Reglas de la cita (00184): cupo de la clinica con bloqueo, traslapes de paciente y profesional, profesional del cuadro de turnos, estado de la jornada, fecha, paciente sin baja, clinica y area vigentes, transiciones e inmutabilidad de la atendida o cancelada. |
 | `fn_validar_gasto_contra_presupuesto()` | DEFINER | Trigger de gastos (00159): una jornada finalizada no admite gastos nuevos, la fecha llega hasta el dia de la jornada o hasta hoy, y un gasto que compromete mas dinero no deja lo comprometido (pendiente + aprobado) por encima del presupuesto asignado. |

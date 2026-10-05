@@ -555,6 +555,12 @@ INSERT INTO receta_detalle (id, receta_id, medicamento_id, lote_id, bodega_id, d
    'de000009-0000-0000-0000-000000000002', (SELECT id FROM bodegas WHERE nombre = 'Bodega Movil Demo'), '1 tableta', 'Cada 8 horas', '3 dias', 9)
 ON CONFLICT (id) DO NOTHING;
 
+-- Vista Hermosa recibio su inventario por un ingreso directo (arriba), no por "Cargar a la bodega".
+-- Desde la 00186 lo que le queda a una jornada es cargado - entregado - devuelto, asi que sin esto
+-- su Consumo diria "Queda" en negativo. Es lo mismo que la 00186 hace al aplicarse con las
+-- jornadas que ya estaban en curso. En una segunda corrida no hay nada que traspasar.
+SELECT fn_traspasar_sobrante_a_jornada('de00000a-0000-0000-0000-000000000002');
+
 -- El Rosario ya esta finalizada, y las atenciones, consultas y gastos solo entran en una jornada
 -- que no cerro (trg_validar_jornada_en_curso y 00159). Para sembrar su historia se apagan los
 -- triggers de esta sesion con session_replication_role = replica: las filas quedan como si se

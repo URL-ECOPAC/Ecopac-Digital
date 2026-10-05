@@ -155,6 +155,7 @@ La unidad de operacion. Casi todo lo clinico exige una jornada `en curso`.
 | [ResumenJornadaScreen.js](../apps/mobile/src/screens/ResumenJornadaScreen.js) | `useReporteJornada` (dentro de Jornada en curso) | Conectada |
 | [JornadasAsignadasScreen.js](../apps/mobile/src/screens/JornadasAsignadasScreen.js) | `useJornadasAsignadas`           | Conectada |
 | [KanbanJornadasScreen.js](../apps/mobile/src/screens/KanbanJornadasScreen.js) | `useJornadasKanban`                     | Conectada |
+| [DetalleJornadaScreen.js](../apps/mobile/src/screens/DetalleJornadaScreen.js) (version acotada: Resumen, Insumos, Consumo) | `useDetalleJornada`, `useInsumosDeJornada`, `useConsumoDeJornada` | Conectada |
 
 ### Contra que trabaja
 
@@ -171,10 +172,18 @@ La unidad de operacion. Casi todo lo clinico exige una jornada `en curso`.
   no se puede finalizar con atenciones abiertas: eso lo hace cumplir la base
   (`fn_contar_atenciones_incompletas`).
 - Las transiciones validas viven en `TRANSICIONES_JORNADA` y las revalida un trigger en Postgres.
-
----
-
-## 3. Inventario
+- **Detalle de jornada en movil (issue #925)**: `DetalleJornadaScreen.js` es una version acotada
+  de `DetalleJornadaPage.jsx` (web): solo Resumen, Insumos y Consumo, los mismos hooks que la web
+  (`useDetalleJornada`, `useInsumosDeJornada`/`useConsumoDeJornada` via `InsumosDeJornada.js`/
+  `ConsumoDeJornada.js`, `ModalCargaABodega.js`/`ModalDevolucionDeBodega.js` para cargar/devolver).
+  Equipo, Pacientes atendidos, Historial, Presupuesto, Gastos y Cierre siguen siendo exclusivos
+  de la web -no tienen pantalla movil-. Se llega ahi desde el tablero (`KanbanJornadasScreen.js`,
+  boton "Ver detalle" de cada tarjeta), que antes navegaba a una ruta inexistente y ademas
+  dibujaba cada tarjeta vacia (le faltaba `renderTarjeta`, y llamaba a `useJornadasKanban({ rol })`
+  con un objeto en vez del rol como string -rompia `permisosDeJornadas()` por dentro-).
+- **Proyecto > Insumos en movil**: `ProyectosScreen.js` sigue siendo solo el listado (sin pestanas
+  de insumos/gastos por proyecto, que si tiene `ProyectosSocialesPage.jsx` en la web). Queda fuera
+  del alcance cubierto por la issue #925 en movil; no es un hueco nuevo, es el mismo estado previo.
 
 ### Web
 

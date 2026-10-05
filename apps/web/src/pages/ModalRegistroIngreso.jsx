@@ -197,12 +197,15 @@ export default function ModalRegistroIngreso({
                 <div className="row g-3">
                   <div className="col-md-6">
                     <label
+                      htmlFor="ingreso-proveedor"
                       className="form-label fw-semibold text-secondary"
                       style={{ fontSize: "var(--texto-xs)" }}
                     >
                       {origen === "compra" ? "Proveedor *" : "Donante *"}
                     </label>
                     <select
+                      id="ingreso-proveedor"
+                      aria-required="true"
                       className="form-select form-select-sm rounded-3"
                       value={proveedorId}
                       onChange={(e) => setProveedorId(e.target.value)}
@@ -218,12 +221,14 @@ export default function ModalRegistroIngreso({
 
                   <div className="col-md-6">
                     <label
+                      htmlFor="ingreso-comprobante"
                       className="form-label fw-semibold text-secondary"
                       style={{ fontSize: "var(--texto-xs)" }}
                     >
                       No. Factura / Comprobante (opcional)
                     </label>
                     <input
+                      id="ingreso-comprobante"
                       type="text"
                       className="form-control form-control-sm rounded-3"
                       placeholder="Ej. FAC-1029"
@@ -299,12 +304,15 @@ export default function ModalRegistroIngreso({
                     <div className="row g-2">
                       <div className="col-md-6">
                         <label
+                          htmlFor="ingreso-producto"
                           className="form-label text-muted mb-1"
                           style={{ fontSize: "var(--texto-xxs)" }}
                         >
                           Producto / Insumo *
                         </label>
                         <select
+                          id="ingreso-producto"
+                          aria-required="true"
                           className="form-select form-select-sm rounded-2"
                           value={itemActual.medicamento_id}
                           onChange={(e) =>
@@ -323,12 +331,15 @@ export default function ModalRegistroIngreso({
 
                       <div className="col-md-3">
                         <label
+                          htmlFor="ingreso-lote"
                           className="form-label text-muted mb-1"
                           style={{ fontSize: "var(--texto-xxs)" }}
                         >
                           No. Lote *
                         </label>
                         <input
+                          id="ingreso-lote"
+                          aria-required="true"
                           type="text"
                           placeholder="LOT-123"
                           className="form-control form-control-sm rounded-2"
@@ -341,12 +352,15 @@ export default function ModalRegistroIngreso({
 
                       <div className="col-md-3">
                         <label
+                          htmlFor="ingreso-bodega"
                           className="form-label text-muted mb-1"
                           style={{ fontSize: "var(--texto-xxs)" }}
                         >
                           Bodega *
                         </label>
                         <select
+                          id="ingreso-bodega"
+                          aria-required="true"
                           className="form-select form-select-sm rounded-2"
                           value={itemActual.bodega_id}
                           onChange={(e) =>
@@ -364,12 +378,15 @@ export default function ModalRegistroIngreso({
 
                       <div className="col-md-3">
                         <label
+                          htmlFor="ingreso-cantidad"
                           className="form-label text-muted mb-1"
                           style={{ fontSize: "var(--texto-xxs)" }}
                         >
                           Cantidad *
                         </label>
                         <input
+                          id="ingreso-cantidad"
+                          aria-required="true"
                           type="number"
                           placeholder="100"
                           className="form-control form-control-sm rounded-2"
@@ -382,12 +399,14 @@ export default function ModalRegistroIngreso({
 
                       <div className="col-md-3">
                         <label
+                          htmlFor="ingreso-costo"
                           className="form-label text-muted mb-1"
                           style={{ fontSize: "var(--texto-xxs)" }}
                         >
                           Costo Unitario (Q) (opcional)
                         </label>
                         <input
+                          id="ingreso-costo"
                           type="number"
                           min="0"
                           step="0.01"
@@ -402,6 +421,7 @@ export default function ModalRegistroIngreso({
 
                       <div className="col-md-6">
                         <label
+                          htmlFor="ingreso-vencimiento"
                           className="form-label text-muted mb-1"
                           style={{ fontSize: "var(--texto-xxs)" }}
                         >
@@ -412,6 +432,8 @@ export default function ModalRegistroIngreso({
                         </label>
                         <div className="d-flex gap-2">
                           <input
+                            id="ingreso-vencimiento"
+                            aria-required={vencimientoObligatorio || undefined}
                             type="date"
                             className="form-control form-control-sm rounded-2"
                             value={itemActual.fecha_vencimiento}

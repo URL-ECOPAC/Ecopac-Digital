@@ -120,9 +120,13 @@ export default function ModalConsulta({
         </div>
       )}
 
+      {/* Con solo signos vitales no se crea la consulta (el motivo es lo que la registra), y
+          decir "Consulta guardada" hacia creer que si (issue #925). */}
       {c.guardadaAlMenosUnaVez && !c.error && (
         <div className="alert alert-success" role="status">
-          Consulta guardada.
+          {c.consultaActual
+            ? "Consulta guardada."
+            : "Signos vitales guardados. La consulta se registra al escribir su motivo."}
         </div>
       )}
 
@@ -150,7 +154,10 @@ export default function ModalConsulta({
         />
       </Seccion>
 
-      <Seccion titulo="2. Consulta">
+      <Seccion
+        titulo="2. Consulta"
+        descripcion="El motivo es lo que registra la consulta; los signos vitales se pueden guardar solos."
+      >
         {!c.permisos.consulta && (
           <p className="ec-campo-nota">
             {c.consultaActual
@@ -188,9 +195,12 @@ export default function ModalConsulta({
                   disabled={c.enviando || !c.permisos.consulta}
                 />
               ) : (
+                // `requerido` y no un "*" escrito en el texto: asi lleva aria-required y los demas
+                // dicen "(opcional)", como en el resto de formularios (issue #925).
                 <TextField
                   key={campo.id}
-                  label={campo.validacion?.requerido ? `${campo.label} *` : campo.label}
+                  label={campo.label}
+                  requerido={campo.validacion?.requerido ?? false}
                   as="textarea"
                   rows={campo.id === "motivoConsulta" ? 2 : 3}
                   value={c.consulta[campo.id] ?? ""}

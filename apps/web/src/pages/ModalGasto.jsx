@@ -42,6 +42,7 @@ export default function ModalGasto({
   const {
     valores,
     errores,
+    erroresPorCampo = {},
     error,
     enviando,
     esEdicion,
@@ -165,13 +166,10 @@ export default function ModalGasto({
           </div>
         )}
 
+        {/* Cada error va bajo su campo (erroresPorCampo, issue #925); arriba solo el aviso. */}
         {errores.length > 0 && (
           <div className="alert alert-danger" role="alert">
-            <ul className="mb-0 ps-3">
-              {errores.map((mensaje) => (
-                <li key={mensaje}>{mensaje}</li>
-              ))}
-            </ul>
+            Revisa los campos marcados antes de guardar.
           </div>
         )}
 
@@ -204,6 +202,7 @@ export default function ModalGasto({
                       }}
                       placeholder={opciones.length === 0 ? "Cargando..." : "Seleccionar"}
                       disabled={bloqueado || (campo.validacion?.requerido && opciones.length === 0)}
+                      error={erroresPorCampo[campo.id]}
                     />
                     {!bloqueado && puedeCrearCategoria && (
                       <SecondaryButton
@@ -268,6 +267,7 @@ export default function ModalGasto({
                   (campo.id === "jornada_id" && jornadaFija) ||
                   (campo.validacion?.requerido && opciones.length === 0)
                 }
+                error={erroresPorCampo[campo.id]}
               />
             );
           }
@@ -283,6 +283,7 @@ export default function ModalGasto({
                 step={0.01}
                 onChange={(valor) => setCampo(campo.id, valor ?? "")}
                 disabled={bloqueado}
+                error={erroresPorCampo[campo.id]}
               />
             );
           }
@@ -296,6 +297,7 @@ export default function ModalGasto({
                 value={valores[campo.id] || null}
                 onChange={(valor) => setCampo(campo.id, valor || "")}
                 disabled={bloqueado}
+                error={erroresPorCampo[campo.id]}
               />
             );
           }
@@ -309,6 +311,7 @@ export default function ModalGasto({
               value={valores[campo.id] ?? ""}
               onChange={(evento) => setCampo(campo.id, evento.target.value)}
               disabled={bloqueado}
+              error={erroresPorCampo[campo.id]}
             />
           );
         })}

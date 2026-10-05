@@ -308,6 +308,8 @@ nada en vez de despues. El flujo de aprobacion no cambia: al administrador se lo
 `00028` y el stock baja en el acto; a medico y voluntario el movimiento les nace `pendiente` y el
 stock espera a que administracion lo apruebe. Lo que la `00112` garantiza no es que el stock baje
 siempre en el momento, sino que **nunca exista una receta emitida sin su movimiento registrado**.
+Desde la `00186` lo pendiente queda comprometido: la receta siguiente ya no lo ve disponible (ver
+"El inventario se cuenta por jornada" en Proyectos y presupuestos).
 No hace falta ningun `GRANT` nuevo: el que ya tenia (`authenticated`) sigue siendo el mismo.
 
 Desde la `00176` (issue #911) `fn_generar_receta()` solo descuenta de la **bodega de entrega** de la
@@ -631,6 +633,48 @@ dos movimientos que tienen que nacer aprobados juntos.
 - Un trigger impide que una bodega movil este en dos jornadas **en curso** a la vez (`55000`);
   varias planificadas si la comparten. El cliente lo dice antes de intentarlo
   (`mensajeDeBodegaOcupada()`, `jornadas/api.js`).
+
+**El inventario se cuenta por jornada y lo pendiente ya esta comprometido (`00186`, issue #925).**
+Las decisiones de la issue cambian que se puede hacer con el inventario de una bodega movil, no
+quien puede hacerlo: carga, devolucion y traslado siguen siendo solo de la administradora.
+
+- **Lo comprometido.** Una salida pendiente (la receta de un medico) ya no se puede dar a nadie mas.
+  `vista_lotes_disponibles.cantidad_disponible` es lo neto (`cantidad_fisica -
+  cantidad_comprometida`), y la receta, su ajuste, la carga, la devolucion y el traslado comparan
+  contra `fn_disponible_neto()`. `fn_cantidad_comprometida()` y `fn_disponible_neto()` son
+  SECURITY DEFINER (la vista es `security_invoker` y quien la lee puede no ver los movimientos de
+  otros) y solo devuelven un numero.
+- **Cada lado movil de un traslado es de una jornada.** El ingreso a una bodega movil se registra en
+  la jornada indicada o en la que la tiene en curso; la salida de una bodega movil, en su duena
+  (`fn_jornada_duena_de_bodega()`) hasta lo que le queda, y el resto sin jornada. Asi cargar desde
+  la bodega de otra jornada en curso queda como devuelto en esa y cargado en esta.
+- **Devolver** solo hasta lo que le queda a la jornada (`23514` si se pasa), y **cargar** se rechaza
+  si la bodega esta en curso en otra jornada (`55000`).
+- **Aprobacion de sistema.** El traspaso al iniciar una jornada y la anulacion de una receta
+  registran movimientos que impone la regla, no una persona. Una variable local a la transaccion
+  (`ecopac.aprobacion_de_sistema`, `fn_es_aprobacion_de_sistema()`) hace que
+  `fn_autoaprobar_movimiento_inventario()` los apruebe y que `fn_proteger_decision_de_movimiento()`
+  deje rechazar las salidas pendientes de una receta anulada. Solo la encienden y apagan dos
+  funciones SECURITY DEFINER de la `00186`, dentro de un trigger: PostgREST no expone `set_config`
+  ni deja ejecutar SQL suelto, asi que una sesion del cliente no puede encenderla. Quien inicia la
+  jornada puede ser alguien con `jornadas.gestionar` y quien anula, el medico: ninguno aprueba
+  movimientos, y sin esto el traspaso nacia pendiente y llenaba la bandeja de Validacion.
+- **Anular una receta** (la politica de la `00075` decide quien) rechaza sus movimientos pendientes
+  y devuelve lo ya descontado con un ingreso enlazado (`movimientos_inventario.receta_id`). Ese
+  ingreso sigue la regla de siempre: aprobado si lo registra la administradora, pendiente si es el
+  medico.
+- **La entrega de una receta se valida completa.** Sus salidas (una por lote) avisan una sola vez,
+  con la receta como origen de la notificacion, y la bandeja las muestra como una fila. Aprobar una
+  aprueba las demas en la misma transaccion (trigger SECURITY DEFINER; si a una le falta
+  existencia no se aprueba ninguna).
+- **Rechazar la entrega de una receta la anula.** En la bandeja de Validacion, rechazar la salida
+  "Entrega por receta medica ..." anula la receta entera (trigger SECURITY DEFINER, a nombre de quien
+  rechazo, con motivo "Anulada por la administracion al rechazar su salida de inventario: ..."), y
+  la anulacion hace lo de arriba con el resto. Rechazar un ajuste no anula la receta.
+- `fn_insumos_de_proyecto()` (SECURITY DEFINER, misma guarda que `fn_consumo_de_insumos_de_jornada()`)
+  devuelve lo que les queda a las jornadas de un proyecto; `anon` no la ejecuta.
+
+Lo afirma `consumo_por_jornada_y_lo_comprometido.sql`.
 
 **El equipo del proyecto es la union (`00150`).** `equipo_de_proyecto(proyecto_id)` devuelve, ademas
 de las filas de `proyecto_personal`, a quien esta en el equipo de alguna jornada del proyecto

@@ -30,6 +30,7 @@ export default function SelectorDeJornada({ captura }) {
       {opcionesDeJornada.length > 1 && (
         <Selector
           label="Jornada"
+          requerido
           value={jornadaId}
           options={opcionesDeJornada}
           onSelect={elegirJornada}

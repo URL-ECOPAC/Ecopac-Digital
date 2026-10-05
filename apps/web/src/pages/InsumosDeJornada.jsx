@@ -19,11 +19,13 @@ import ModalInsumoPrevisto from "./ModalInsumoPrevisto";
 //
 // `soloConsulta`: la jornada esta finalizada; nada se carga ni se corrige. Lo que sobra si se
 // devuelve a una bodega fija ("Devolver a otra bodega", 00179): es justo cuando sobra.
+// `motivoSinCarga` (motivoParaNoCargarBodega) dice por que "Cargar a la bodega" esta deshabilitado.
 export default function InsumosDeJornada({
   jornadaId,
   bodega = null,
   rol,
   soloConsulta = false,
+  motivoSinCarga = null,
   alCargar,
 }) {
   const {
@@ -36,6 +38,9 @@ export default function InsumosDeJornada({
     resumen,
     existenciasDeBodega,
     valorDeBodega,
+    lotesDevolvibles,
+    unidadesDeOtrasJornadas,
+    motivoBodegaOcupada,
     cargando,
     error,
     errores,
@@ -57,11 +62,12 @@ export default function InsumosDeJornada({
   const [aviso, setAviso] = useState(null);
   const modifica = puedeGestionar && !soloConsulta;
   const puedeCargar = puedeCargarBodegaDeJornada(rol) && Boolean(bodega?.id) && !usaBodegaPrincipal;
+  const motivoParaNoCargar = motivoSinCarga ?? motivoBodegaOcupada;
 
   return (
     <div className="d-flex flex-column gap-3">
       <div className="ec-kpis">
-        {!usaBodegaPrincipal && (
+        {!usaBodegaPrincipal && bodega?.id && (
           <StatCard
             label="Valor en la bodega"
             value={bodega?.id ? formatearMoneda(valorDeBodega.valor) : "—"}
@@ -105,8 +111,8 @@ export default function InsumosDeJornada({
             <div>
               <h3 className="ec-seccion-titulo mb-0">Bodega móvil: {bodega.nombre}</h3>
               <p className="text-muted small mb-0">
-                Si la jornada tiene una bodega asignada, su inventario pasa a ser parte de los
-                insumos de la jornada. De ella salen los medicamentos que se recetan aquí.
+                De esta bodega salen los medicamentos que se recetan en la jornada. Se carga desde
+                otra bodega, y lo que sobra se devuelve a una bodega fija.
               </p>
             </div>
             {puedeCargar && (
@@ -114,16 +120,26 @@ export default function InsumosDeJornada({
                 <SecondaryButton
                   title="Devolver a otra bodega"
                   onClick={() => setDevolviendo(true)}
-                  disabled={existenciasDeBodega.contenido.length === 0}
+                  disabled={lotesDevolvibles.length === 0}
                 />
                 <PrimaryButton
                   title="Cargar a la bodega"
                   onClick={() => setCargandoABodega(true)}
-                  disabled={soloConsulta}
+                  disabled={soloConsulta || Boolean(motivoParaNoCargar)}
                 />
               </div>
             )}
           </div>
+          {puedeCargar && motivoParaNoCargar && (
+            <p className="text-muted small mb-0">{motivoParaNoCargar}</p>
+          )}
+          {unidadesDeOtrasJornadas > 0 && (
+            <Alert variant="info" className="mb-0 py-2 px-3 small">
+              {unidadesDeOtrasJornadas} unidad(es) de esta bodega no son de esta jornada: son el
+              sobrante de otra jornada o entraron sin jornada. No cuentan en su consumo y se
+              devuelven desde la jornada que las tiene.
+            </Alert>
+          )}
           <ContenidoDeBodega
             contenido={existenciasDeBodega.contenido}
             cargando={existenciasDeBodega.cargando}
@@ -135,9 +151,10 @@ export default function InsumosDeJornada({
       )}
 
       {!bodega?.id && (
-        <Alert variant="warning" className="mb-0 py-2 px-3 small">
-          Esta jornada no tiene bodega móvil. Asígnale una con &laquo;Editar jornada&raquo; para
-          cargarle insumos.
+        <Alert variant={soloConsulta ? "info" : "warning"} className="mb-0 py-2 px-3 small">
+          {soloConsulta
+            ? "Esta jornada es anterior a las bodegas de jornada: sus insumos no se registraron en una bodega."
+            : "Esta jornada no tiene bodega. Asígnale una bodega móvil o la principal con «Editar jornada» para cargarle insumos."}
         </Alert>
       )}
 
@@ -214,7 +231,7 @@ export default function InsumosDeJornada({
           visible
           jornadaId={jornadaId}
           bodega={bodega}
-          contenido={existenciasDeBodega.contenido}
+          contenido={lotesDevolvibles}
           rol={rol}
           onClose={() => setDevolviendo(false)}
           onDevuelto={() => {

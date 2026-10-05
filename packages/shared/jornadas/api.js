@@ -76,8 +76,10 @@ const COLUMNAS_DE_JORNADA = [
   "responsable:nombres_de_perfiles(nombres, apellidos)",
   // esPrincipal: la jornada entrega directo de la bodega principal (00181), sin carga ni devolucion.
   "botiquinBodega:bodegas(nombre, esPrincipal:es_principal)",
-  // El detalle dice a que proyecto pertenece. Si RLS no deja leer el proyecto, llega en null.
-  "proyecto:proyectos(nombre)",
+  // El detalle dice a que proyecto pertenece. Si RLS no deja leer el proyecto, llega en null. El
+  // estado dice si todavia se puede cargar su bodega (un proyecto cancelado o finalizado no se
+  // modifica, 00154/00172).
+  "proyecto:proyectos(nombre, estado)",
 ].join(", ");
 
 // Personal asignado a una jornada, con el nombre del perfil embebido para el detalle.

@@ -9,7 +9,9 @@
 // Todas devuelven `{ ..., error }` en vez de lanzar.
 
 import { obtenerSupabase } from "../api/cliente.js";
-import { normalizarError } from "../api/errores-de-supabase.js";
+import { normalizarError, normalizarErrorConReglas } from "../api/errores-de-supabase.js";
+import { ESTADOS_JORNADA, ESTADOS_PROYECTO } from "../enums.js";
+import { REGLAS_DE_RECHAZO_DE_INVENTARIO } from "../inventario/rechazos.js";
 
 /**
  * La jornada entrega directo de la bodega principal (00181): no se carga ni se devuelve, y su
@@ -23,16 +25,37 @@ export function jornadaUsaBodegaPrincipal(jornada) {
 }
 
 /**
- * La bodega movil todavia conserva algo de lo que se cargo para la jornada: un lote con carga y con
- * existencia en ella. Espejo de trg_jornadas_sin_inventario_cargado_al_cambiar_bodega (00181), que
- * impide cambiar de bodega en ese caso.
+ * Por que no se puede cargar la bodega de la jornada, o null si se puede. Es lo mismo que comprueba
+ * fn_cargar_insumo_a_bodega_de_jornada (00181/00186), dicho antes de abrir el formulario: antes el
+ * boton quedaba habilitado con el proyecto cancelado y el rechazo llegaba al guardar (issue #925).
  *
- * @param {Array<{ cargado: number, enBodega: number }>} consumo Filas de
- *   listarConsumoDeInsumosDeJornada().
+ * @param {{ estado?: string, proyecto?: { estado?: string }|null }} jornada
+ * @returns {string|null}
+ */
+export function motivoParaNoCargarBodega(jornada) {
+  if (jornada?.estado === ESTADOS_JORNADA.FINALIZADA) {
+    return "La jornada ya finalizó: su bodega ya no se carga. Lo que sobra se puede devolver.";
+  }
+  const estadoProyecto = jornada?.proyecto?.estado;
+  if (
+    estadoProyecto === ESTADOS_PROYECTO.CANCELADO ||
+    estadoProyecto === ESTADOS_PROYECTO.FINALIZADO
+  ) {
+    return `El proyecto está ${estadoProyecto}: ya no se puede modificar su inventario.`;
+  }
+  return null;
+}
+
+/**
+ * A la jornada todavia le queda algo en su bodega movil: un lote con `queda` (cargado - entregado
+ * - devuelto) mayor que cero. Espejo de trg_jornadas_sin_inventario_cargado_al_cambiar_bodega
+ * (00181, con `queda` desde la 00186), que impide cambiar de bodega en ese caso.
+ *
+ * @param {Array<{ queda: number }>} consumo Filas de listarConsumoDeInsumosDeJornada().
  * @returns {boolean}
  */
 export function tieneInventarioCargado(consumo = []) {
-  return consumo.some((fila) => fila.cargado > 0 && fila.enBodega > 0);
+  return consumo.some((fila) => fila.queda > 0);
 }
 
 /**
@@ -79,7 +102,12 @@ export async function cargarInsumoABodegaDeJornada({
       p_cantidad: Number(cantidad),
     });
 
-    if (error) return { ingresoId: null, error: normalizarError(error) };
+    if (error) {
+      return {
+        ingresoId: null,
+        error: normalizarErrorConReglas(error, REGLAS_DE_RECHAZO_DE_INVENTARIO),
+      };
+    }
     return { ingresoId: data ?? null, error: null };
   } catch (error) {
     return { ingresoId: null, error: normalizarError(error) };
@@ -89,7 +117,8 @@ export async function cargarInsumoABodegaDeJornada({
 /**
  * Devuelve `cantidad` de un lote de la bodega movil de la jornada a una bodega fija
  * (fn_devolver_de_bodega_de_jornada, 00179). Es lo que sobra al terminar la jornada; se puede con la
- * jornada finalizada. Solo la administradora.
+ * jornada finalizada. Solo la administradora, y desde la 00186 solo hasta lo que le queda a la
+ * jornada de ese lote: lo que hay en la bodega y es de otra jornada se devuelve desde esa.
  *
  * @param {{ jornadaId: string, loteId: string, bodegaDestinoId: string,
  *   cantidad: number|string }} datos
@@ -111,7 +140,12 @@ export async function devolverDeBodegaDeJornada({
       p_cantidad: Number(cantidad),
     });
 
-    if (error) return { ingresoId: null, error: normalizarError(error) };
+    if (error) {
+      return {
+        ingresoId: null,
+        error: normalizarErrorConReglas(error, REGLAS_DE_RECHAZO_DE_INVENTARIO),
+      };
+    }
     return { ingresoId: data ?? null, error: null };
   } catch (error) {
     return { ingresoId: null, error: normalizarError(error) };
@@ -123,9 +157,13 @@ export async function devolverDeBodegaDeJornada({
  * valores en null: "no se sabe" no es cero. Pura y exportada para probarla sin Supabase.
  *
  * @param {object} fila
+ * `queda` es lo que le queda a la jornada (cargado - entregado - devuelto, 00186) y `enBodega` lo
+ * que hay hoy en toda la bodega. `deOtros` es lo de la bodega que no es de esta jornada ni espera
+ * aprobacion: sobrante de otra jornada o lo que entro sin jornada.
+ *
  * @returns {object} Con: loteId, medicamentoId, articulo, numeroLote, fechaVencimiento,
- *   costoUnitario, cargado, entregado, devuelto, enBodega, valorCargado, valorEntregado,
- *   valorDevuelto, valorEnBodega.
+ *   costoUnitario, cargado, entregado, devuelto, enBodega, pendiente, queda, deOtros,
+ *   valorCargado, valorEntregado, valorDevuelto, valorEnBodega, valorQueda.
  */
 export function aConsumoDeLote(fila) {
   const tieneCosto = fila.costo_unitario !== null && fila.costo_unitario !== undefined;
@@ -134,6 +172,8 @@ export function aConsumoDeLote(fila) {
   const entregado = Number(fila.entregado ?? 0);
   const devuelto = Number(fila.devuelto ?? 0);
   const enBodega = Number(fila.en_bodega ?? 0);
+  const pendiente = Number(fila.pendiente ?? 0);
+  const queda = Number(fila.queda ?? 0);
   const valorDe = (cantidad) => (tieneCosto ? aCentavos(costo * cantidad) : null);
 
   return {
@@ -147,20 +187,26 @@ export function aConsumoDeLote(fila) {
     entregado,
     devuelto,
     enBodega,
+    pendiente,
+    queda,
+    deOtros: Math.max(0, enBodega - Math.max(queda, 0) - pendiente),
     valorCargado: valorDe(cargado),
     valorEntregado: valorDe(entregado),
     valorDevuelto: valorDe(devuelto),
     valorEnBodega: valorDe(enBodega),
+    valorQueda: valorDe(Math.max(queda, 0)),
   };
 }
 
 /**
- * Totales del consumo de una jornada: el valor cargado, el entregado, el devuelto y el que queda,
- * sumando solo lo que tiene costo, y cuantos lotes no lo tienen.
+ * Totales del consumo de una jornada: el valor cargado, el entregado, el devuelto y el que le
+ * queda a la jornada, sumando solo lo que tiene costo, y cuantos lotes no lo tienen. Ademas las
+ * unidades que esperan aprobacion y las que hay en la bodega sin ser de esta jornada.
  *
  * @param {ReturnType<typeof aConsumoDeLote>[]} consumo
  * @returns {{ valorCargado: number, valorEntregado: number, valorDevuelto: number,
- *   valorEnBodega: number, unidadesEntregadas: number, lotesSinCosto: number }}
+ *   valorEnBodega: number, valorQueda: number, unidadesEntregadas: number,
+ *   unidadesPendientes: number, unidadesDeOtros: number, lotesSinCosto: number }}
  */
 export function resumirConsumoDeJornada(consumo = []) {
   const suma = (clave) => aCentavos(consumo.reduce((total, fila) => total + (fila[clave] ?? 0), 0));
@@ -169,14 +215,18 @@ export function resumirConsumoDeJornada(consumo = []) {
     valorEntregado: suma("valorEntregado"),
     valorDevuelto: suma("valorDevuelto"),
     valorEnBodega: suma("valorEnBodega"),
+    valorQueda: suma("valorQueda"),
     unidadesEntregadas: consumo.reduce((total, fila) => total + fila.entregado, 0),
+    unidadesPendientes: consumo.reduce((total, fila) => total + (fila.pendiente ?? 0), 0),
+    unidadesDeOtros: consumo.reduce((total, fila) => total + (fila.deOtros ?? 0), 0),
     lotesSinCosto: consumo.filter((fila) => fila.costoUnitario === null).length,
   };
 }
 
 /**
  * Lo que consumio una jornada, lote por lote (fn_consumo_de_insumos_de_jornada, 00178): lo cargado
- * a su bodega movil, lo entregado en sus recetas, lo devuelto (00179) y lo que queda en la bodega.
+ * a su bodega movil, lo entregado en sus recetas, lo devuelto (00179), lo que espera aprobacion y
+ * lo que le queda a la jornada (00186).
  *
  * @param {string} jornadaId UUID de la jornada.
  * @returns {Promise<{ consumo: object[], error: object|null }>}

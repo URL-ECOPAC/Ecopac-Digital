@@ -68,6 +68,7 @@ const ROLES_ESPERADOS = {
   [ROUTES.SELECCION_JORNADA]: rolesDelModulo("jornadas"),
   [ROUTES.JORNADA_EN_CURSO]: rolesDelModulo("jornadas"),
   [ROUTES.JORNADAS_ASIGNADAS]: rolesDelModulo("jornadas"),
+  [ROUTES.DETALLE_JORNADA]: rolesDelModulo("jornadas"),
   [ROUTES.PROYECTOS]: rolesDelModulo("proyectos"),
 
   [ROUTES.STOCK]: rolesDelModulo("inventario"),
